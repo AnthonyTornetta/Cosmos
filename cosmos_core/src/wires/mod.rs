@@ -12,7 +12,7 @@ use crate::{
     structure::{coordinates::BlockCoordinate, loading::StructureLoadingSet, Structure},
 };
 
-fn wire_place_event_listener(
+fn logic_block_placed_event_listner(
     mut evr_block_updated: EventReader<BlockChangedEvent>,
     blocks: Res<Registry<Block>>,
     logic_blocks: Res<Registry<LogicBlock>>,
@@ -39,6 +39,8 @@ fn wire_place_event_listener(
         }
     }
 }
+
+// fn update_logic
 
 #[derive(Debug, Copy, Clone, PartialEq)]
 /// Defines the types of logic ports, which read and write logic values.
@@ -169,7 +171,7 @@ impl LogicGroup {
     }
 }
 
-#[derive(Debug, Default, Reflect, Hash, PartialEq, Eq, Clone)]
+#[derive(Debug, Default, Reflect, Hash, PartialEq, Eq, Clone, Copy)]
 struct Port {
     coords: BlockCoordinate,
     local_face: BlockFace,
@@ -194,8 +196,10 @@ struct WireGraph {
     /// As new logic groups are created, this tracks which ID is the next available.
     next_group_id: usize,
     groups: HashMap<usize, LogicGroup>,
-    producers: HashMap<Port, usize>,
-    consumers: HashMap<Port, usize>,
+    group_of_output_port: HashMap<Port, usize>,
+    group_of_input_port: HashMap<Port, usize>,
+    output_ports_of_group: HashMap<usize, Vec<Port>>,
+    input_ports_of_group: HashMap<usize, Vec<Port>>,
 }
 
 impl WireGraph {
@@ -204,22 +208,58 @@ impl WireGraph {
         self.next_group_id - 1
     }
 
-    fn add_group(&mut self, coords: Option<BlockCoordinate>) -> usize {
+    fn new_group(&mut self, on: bool, coords: Option<BlockCoordinate>) -> usize {
         let id = self.new_group_id();
-        self.groups.insert(id, LogicGroup::new(false, coords));
+        self.groups.insert(id, LogicGroup::new(on, coords));
+        self.output_ports_of_group.insert(id, Vec::new());
+        self.input_ports_of_group.insert(id, Vec::new());
         id
     }
 
-    fn add_port(
+    fn add_completed_group(
+        &mut self,
+        id: usize,
+        on: bool,
+        coords: Option<BlockCoordinate>,
+        output_ports: Vec<Port>,
+        input_ports: Vec<Port>,
+    ) {
+        self.groups.insert(id, LogicGroup::new(on, coords));
+        self.output_ports_of_group.insert(id, output_ports);
+        self.input_ports_of_group.insert(id, input_ports);
+    }
+
+    fn remove_group(&mut self, id: usize) -> LogicGroup {
+        self.output_ports_of_group.remove(&id);
+        self.input_ports_of_group.remove(&id);
+        self.groups.remove(&id).expect("Removed logic group should have existed.")
+    }
+
+    fn add_port(&mut self, coords: BlockCoordinate, local_face: BlockFace, group_id: usize, port_type: PortType) {
+        match port_type {
+            PortType::Input => &mut self.group_of_input_port,
+            PortType::Output => &mut self.group_of_output_port,
+        }
+        .insert(Port::new(coords, local_face), group_id);
+        match port_type {
+            PortType::Input => &mut self.input_ports_of_group,
+            PortType::Output => &mut self.output_ports_of_group,
+        }
+        .get_mut(&group_id)
+        .expect("Group should have vectors of input and output ports.")
+        .push(Port::new(coords, local_face));
+    }
+
+    fn neighbor_port(
         &mut self,
         coords: BlockCoordinate,
-        face: BlockFace,
+        global_face: BlockFace,
         port_type: PortType,
         structure: &Structure,
         blocks: &Registry<Block>,
         logic_blocks: &Registry<LogicBlock>,
     ) {
-        let local_face = structure.block_rotation(coords).global_to_local(face);
+        let local_face = structure.block_rotation(coords).global_to_local(global_face);
         // If the neighbor coordinates don't exist, no port is added (and thus no new group).
         if let Ok(neighbor_coords) = coords.step(local_face) {
             let maybe_group = self.find_group(
@@ -230,12 +270,8 @@ impl WireGraph {
                 blocks,
                 logic_blocks,
             );
-            let group_id = maybe_group.unwrap_or_else(|| self.add_group(None));
-            match port_type {
-                PortType::Input => &mut self.consumers,
-                PortType::Output => &mut self.producers,
-            }
-            .insert(Port::new(coords, local_face), group_id);
+            let group_id = maybe_group.unwrap_or_else(|| self.new_group(false, None));
+            self.add_port(coords, local_face, group_id, port_type);
         }
     }
 
@@ -254,8 +290,8 @@ impl WireGraph {
         if let Ok(neighbor_coords) = coords.step(local_face) {
             let port = Port::new(coords, local_face);
             let Some(&group_id) = match port_type {
-                PortType::Input => &mut self.consumers,
-                PortType::Output => &mut self.producers,
+                PortType::Input => &mut self.group_of_input_port,
+                PortType::Output => &mut self.group_of_output_port,
             }
             .get(&port) else {
                 return;
@@ -273,13 +309,26 @@ impl WireGraph {
                 )
                 .is_none()
             {
-                self.groups.remove(&group_id);
+                self.remove_group(group_id);
+            } else {
+                // Delete it from the list of ports of its group.
+                let group_ports = match port_type {
+                    PortType::Input => &mut self.input_ports_of_group,
+                    PortType::Output => &mut self.output_ports_of_group,
+                }
+                .get_mut(&group_id)
+                .expect("Removed logic port's group should have a vector of ports.");
+                let index = group_ports
+                    .iter()
+                    .position(|x| *x == port)
+                    .expect("Removed port should be in it's group's vector.");
+                group_ports.remove(index);
             }
 
             // Delete the port.
             match port_type {
-                PortType::Input => &mut self.consumers,
-                PortType::Output => &mut self.producers,
+                PortType::Input => &mut self.group_of_input_port,
+                PortType::Output => &mut self.group_of_output_port,
             }
             .remove(&port);
         }
@@ -295,12 +344,12 @@ impl WireGraph {
     ) {
         // Adding input faces as consumers to their connected group, or a new group if there is no connected group.
         for input_face in logic_block.input_faces() {
-            self.add_port(coords, input_face, PortType::Input, structure, blocks, logic_blocks)
+            self.neighbor_port(coords, input_face, PortType::Input, structure, blocks, logic_blocks)
         }
 
         // Adding output faces as consumers to their connected group, or a new group if there is no connected group.
         for output_face in logic_block.output_faces() {
-            self.add_port(coords, output_face, PortType::Output, structure, blocks, logic_blocks)
+            self.neighbor_port(coords, output_face, PortType::Output, structure, blocks, logic_blocks)
         }
 
         // Connect wire faces to all existing groups (by creating one new group that includes all adjacent groups).
@@ -326,10 +375,7 @@ impl WireGraph {
 
             // Create a group if none exists, add to adjacent group if one exists, or merge all adjacent groups if there are multiple.
             match group_ids.len() {
-                0 => {
-                    let id = self.new_group_id();
-                    self.groups.insert(id, LogicGroup::new(false, Some(coords)));
-                }
+                0 => drop(self.new_group(false, Some(coords))),
                 1 => drop(self.groups.get_mut(group_ids.iter().next().unwrap()).unwrap().recent_wire_coords = Some(coords)),
                 _ => self.merge_adjacent_groups(&group_ids, coords),
             };
@@ -366,10 +412,7 @@ impl WireGraph {
                     self.find_group_all_faces(logic_block, coords, structure, &mut Port::all_for(coords), blocks, logic_blocks)
                         .expect("Block with 'wire' logic connection should have a logic group.")
                 });
-            let removed_group = self
-                .groups
-                .remove(&group_id)
-                .expect("Logic group ID found in logic graph should have an entry in the groups set.");
+            let removed_group = self.remove_group(group_id);
 
             // Setting new group IDs.
             let mut visited = Port::all_for(coords);
@@ -379,8 +422,8 @@ impl WireGraph {
                     continue;
                 };
                 // For now, takes a new ID for every call, even though some (like air blocks or already visited wires) don't need it.
-                let id = self.new_group_id();
-                let (add_new_group, maybe_wire_coords) = self.rename_group(
+                let id = self.new_group(removed_group.on, None);
+                let used_new_group = self.rename_group(
                     id,
                     neighbor_coords,
                     local_face.inverse(),
@@ -389,8 +432,8 @@ impl WireGraph {
                     blocks,
                     logic_blocks,
                 );
-                if add_new_group {
-                    self.groups.insert(id, LogicGroup::new(removed_group.on, maybe_wire_coords));
+                if !used_new_group {
+                    self.remove_group(id);
                 }
             }
         }
@@ -399,14 +442,18 @@ impl WireGraph {
     fn merge_adjacent_groups(&mut self, group_ids: &HashSet<usize>, coords: BlockCoordinate) {
         // Rewrite all output and input ports of adjacent groups to use the new ID number.
         let new_group_id = self.new_group_id();
-        for group_id in self.producers.values_mut() {
+        let mut output_ports = Vec::new();
+        for (&output_port, group_id) in self.group_of_output_port.iter_mut() {
             if group_ids.contains(group_id) {
                 *group_id = new_group_id;
+                output_ports.push(output_port);
             }
         }
-        for group_id in self.consumers.values_mut() {
+        let mut input_ports = Vec::new();
+        for (&input_port, group_id) in self.group_of_input_port.iter_mut() {
             if group_ids.contains(group_id) {
                 *group_id = new_group_id;
+                input_ports.push(input_port);
             }
         }
 
@@ -414,18 +461,12 @@ impl WireGraph {
         let new_group_on = group_ids.iter().fold(false, |or, group_id| or || self.groups[group_id].on);
 
         // Remove the old groups.
-        for group_id in group_ids {
-            self.groups.remove(group_id);
+        for &group_id in group_ids {
+            self.remove_group(group_id);
         }
 
         // Creating the new group. The most recent block added is the current block.
-        self.groups.insert(
-            new_group_id,
-            LogicGroup {
-                on: new_group_on,
-                recent_wire_coords: Some(coords),
-            },
-        );
+        self.add_completed_group(new_group_id, new_group_on, Some(coords), output_ports, input_ports);
     }
 
     fn find_group(
@@ -445,8 +486,12 @@ impl WireGraph {
 
         let encountered_face = structure.block_rotation(coords).local_to_global(encountered_local_face);
         match logic_block.connection_on(encountered_face) {
-            Some(LogicConnection::Port(PortType::Input)) => self.consumers.get(&Port::new(coords, encountered_local_face)).copied(),
-            Some(LogicConnection::Port(PortType::Output)) => self.producers.get(&Port::new(coords, encountered_local_face)).copied(),
+            Some(LogicConnection::Port(PortType::Input)) => {
+                self.group_of_input_port.get(&Port::new(coords, encountered_local_face)).copied()
+            }
+            Some(LogicConnection::Port(PortType::Output)) => {
+                self.group_of_output_port.get(&Port::new(coords, encountered_local_face)).copied()
+            }
             Some(LogicConnection::Wire) => self
                 .groups
                 .iter()
@@ -507,26 +552,21 @@ impl WireGraph {
         visited: &mut HashSet<Port>,
         blocks: &Registry<Block>,
         logic_blocks: &Registry<LogicBlock>,
-    ) -> (bool, Option<BlockCoordinate>) {
+    ) -> bool {
         if visited.contains(&Port::new(coords, encountered_local_face)) {
             // Renaming on this portion already completed.
-            return (false, None);
+            return false;
         }
         let block = structure.block_at(coords, blocks);
         let Some(logic_block) = logic_blocks.from_id(block.unlocalized_name()) else {
             // Not a logic block.
-            return (false, None);
+            return false;
         };
 
         let encountered_face = structure.block_rotation(coords).local_to_global(encountered_local_face);
         match logic_block.connection_on(encountered_face) {
             Some(LogicConnection::Port(port_type)) => {
-                match port_type {
-                    PortType::Input => &mut self.consumers,
-                    PortType::Output => &mut self.producers,
-                }
-                .insert(Port::new(coords, encountered_local_face), new_group_id);
-                (true, None)
+                self.add_port(coords, encountered_local_face, new_group_id, port_type);
             }
             Some(LogicConnection::Wire) => {
                 // Recurse to continue marking the ports reachable from this wire.
@@ -550,11 +590,15 @@ impl WireGraph {
                         logic_blocks,
                     );
                 }
-                // The first wire coords are always returned, because the only recursive call is in this arm, and its return value is not used.
-                (true, Some(coords))
+                // The first wire coords are always set last (so they take effect), the only recursive call is in this arm.
+                self.groups
+                    .get_mut(&new_group_id)
+                    .expect("New logic group for renamed portion should exist.")
+                    .recent_wire_coords = Some(coords);
             }
-            None => (false, None),
+            None => {}
         }
+        logic_block.connection_on(encountered_face).is_some()
     }
 }
 
@@ -572,7 +616,7 @@ pub(super) fn register<T: States>(app: &mut App, post_loading_state: T, playing_
             Update,
             (
                 add_default_wire_graph.in_set(StructureLoadingSet::AddStructureComponents),
-                wire_place_event_listener,
+                logic_block_placed_event_listner,
             )
                 .run_if(in_state(playing_state)),
         )
