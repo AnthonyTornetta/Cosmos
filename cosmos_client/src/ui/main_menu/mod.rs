@@ -56,6 +56,8 @@ impl ButtonEvent for ConnectButtonEvent {
 }
 
 fn create_main_menu(mut commands: Commands, asset_server: Res<AssetServer>) {
+    let cool_blue = Color::hex("00FFFF").unwrap();
+
     let text_style = TextStyle {
         color: Color::WHITE,
         font_size: 32.0,
@@ -67,7 +69,7 @@ fn create_main_menu(mut commands: Commands, asset_server: Res<AssetServer>) {
         font: asset_server.load("fonts/PixeloidSans.ttf"),
     };
     let text_style_large = TextStyle {
-        color: Color::WHITE,
+        color: cool_blue,
         font_size: 256.0,
         font: asset_server.load("fonts/PixeloidSans.ttf"),
     };
@@ -125,7 +127,7 @@ fn create_main_menu(mut commands: Commands, asset_server: Res<AssetServer>) {
 
             p.spawn(ButtonBundle::<ConnectButtonEvent> {
                 node_bundle: NodeBundle {
-                    border_color: Color::AQUAMARINE.into(),
+                    border_color: cool_blue.into(),
                     style: Style {
                         border: UiRect::all(Val::Px(2.0)),
                         width: Val::Px(500.0),
@@ -155,8 +157,8 @@ fn create_main_menu(mut commands: Commands, asset_server: Res<AssetServer>) {
                 },
                 value: InputValue::new("localhost"),
                 node_bundle: NodeBundle {
-                    border_color: Color::AQUAMARINE.into(),
-                    background_color: Color::hex("333333").unwrap().into(),
+                    border_color: Color::hex("555555").unwrap().into(),
+                    background_color: Color::hex("111111").unwrap().into(),
                     style: Style {
                         border: UiRect::all(Val::Px(2.0)),
                         width: Val::Px(500.0),
