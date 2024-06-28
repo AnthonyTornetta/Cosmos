@@ -159,7 +159,7 @@ impl Structure {
         }
     }
 
-    /// Returns None for unloaded/empty chunks - panics for chunks that are out of bounds in debug mode
+    /// Returns None for unloaded/empty chunks or chunks that are out of bounds
     ///  
     /// (0, 0, 0) => chunk @ 0, 0, 0\
     /// (1, 0, 0) => chunk @ 1, 0, 0
@@ -182,7 +182,7 @@ impl Structure {
         }
     }
 
-    /// Gets the mutable chunk for these chunk coordinates. If the chunk is unloaded OR empty, this will return None.
+    /// Gets the mutable chunk for these chunk coordinates. If the chunk is unloaded, empty, or out of bounds, this will return None.
     ///
     /// ## Be careful with this!!
     ///

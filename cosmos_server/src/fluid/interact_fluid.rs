@@ -177,12 +177,10 @@ fn on_interact_with_tank(
                 continue;
             };
 
-            println!("Fluid holder not same!");
             if fluid_holder.convert_to_item_id() == is.item_id() {
                 continue;
             }
 
-            println!("Decreased qty");
             if inventory.decrease_quantity_at(slot, 1, &mut commands) != 0 {
                 continue;
             }
@@ -190,10 +188,8 @@ fn on_interact_with_tank(
             let item = items.from_numeric_id(fluid_holder.convert_to_item_id());
 
             let fluid_data = if stored_fluid_block.fluid_stored <= fluid_holder.max_capacity() {
-                println!("Filled to not max cap");
                 let block_data = stored_fluid_block;
 
-                info!("Removing stored fluid.");
                 **block_fluid_data = BlockFluidData::NoFluid;
 
                 FluidItemData::Filled {
@@ -204,8 +200,6 @@ fn on_interact_with_tank(
                 let BlockFluidData::Fluid(stored_fluid_block) = block_fluid_data.as_mut() else {
                     continue;
                 };
-
-                println!("Filled to max cap");
 
                 stored_fluid_block.fluid_stored -= fluid_holder.max_capacity();
                 FluidItemData::Filled {

@@ -227,9 +227,7 @@ impl ItemStack {
     /// * `inventory_pointer` - If this is a part of an inventory, this should be (inventory_entity, slot).
     pub fn insert_itemstack_data<T: Bundle>(&mut self, inventory_pointer: (Entity, u32), data: T, commands: &mut Commands) -> Entity {
         if let Some(data_ent) = self.data_entity {
-            if let Some(mut ecmds) = commands.get_entity(data_ent) {
-                ecmds.insert(data).log_components();
-            } else {
+            if commands.get_entity(data_ent).is_none() {
                 warn!("Invalid itemstack entity - {data_ent:?}. Creating new one.");
 
                 return self.create_itemstack_data_entity(commands, data, inventory_pointer);
@@ -250,8 +248,6 @@ impl ItemStack {
                 item_id: self.item_id,
             },
         ));
-
-        ecmds.log_components();
 
         ecmds.set_parent(inventory_pointer.0);
 

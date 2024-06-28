@@ -271,9 +271,7 @@ fn server_listen_messages(
                     }
                 }
                 ClientReliableMessages::RequestEntityData { entity } => {
-                    println!("Pre-Requested: {entity:?}");
                     if commands.get_entity(entity).is_some() {
-                        println!("Requested: {entity:?}");
                         requested_entities_writer.send(RequestedEntityEvent { client_id, entity });
                     }
                 }

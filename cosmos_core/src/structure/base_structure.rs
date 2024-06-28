@@ -184,8 +184,6 @@ impl BaseStructure {
     /// (0, 0, 0) => chunk @ 0, 0, 0\
     /// (1, 0, 0) => chunk @ 1, 0, 0
     pub fn chunk_at(&self, coords: ChunkCoordinate) -> Option<&Chunk> {
-        self.debug_assert_coords_within(coords);
-
         self.chunks.get(&self.flatten(coords))
     }
 
@@ -199,11 +197,7 @@ impl BaseStructure {
             return None;
         };
 
-        if self.chunk_coords_within(bounded) {
-            self.chunk_at(bounded)
-        } else {
-            None
-        }
+        self.chunk_at(bounded)
     }
 
     /// Gets the mutable chunk for these chunk coordinates. If the chunk is unloaded OR empty, this will return None.
@@ -214,8 +208,6 @@ impl BaseStructure {
     /// Unless you know what you're doing, you should use a mutable structure instead
     /// of a mutable chunk to make changes!
     pub fn mut_chunk_at(&mut self, coords: ChunkCoordinate) -> Option<&mut Chunk> {
-        self.debug_assert_coords_within(coords);
-
         self.chunks.get_mut(&self.flatten(coords))
     }
 

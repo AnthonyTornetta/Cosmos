@@ -86,8 +86,6 @@ fn on_render_tanks(
             continue;
         }
 
-        println!("Custom render contains tank!");
-
         let Some(tank_block_entry) = fluid_tank_blocks.from_id("cosmos:tank") else {
             warn!("Tank cannot store fluids.");
             continue;
