@@ -30,6 +30,7 @@ use crate::{
 mod custom_blocks;
 mod lod_renderer;
 pub mod mesh_delayer;
+mod panorama;
 pub(crate) mod structure_renderer;
 
 #[derive(Component, Debug)]
@@ -907,6 +908,7 @@ pub(super) fn register(app: &mut App) {
     lod_renderer::register(app);
     mesh_delayer::register(app);
     custom_blocks::register(app);
+    panorama::register(app);
 
     app.add_systems(OnEnter(GameState::Loading), register_meshes).add_systems(
         OnExit(GameState::PostLoading),

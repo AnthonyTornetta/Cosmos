@@ -34,9 +34,9 @@ pub mod ui;
 pub mod universe;
 pub mod window;
 
-use bevy::core::TaskPoolThreadAssignmentPolicy;
 use bevy::prelude::*;
 use bevy::window::WindowMode;
+use bevy::{core::TaskPoolThreadAssignmentPolicy, window::WindowResolution};
 use bevy_hanabi::HanabiPlugin;
 use bevy_mod_debugdump::schedule_graph;
 use bevy_obj::ObjPlugin;
@@ -98,6 +98,8 @@ fn main() {
                 } else {
                     WindowMode::Windowed
                 },
+                resolution: WindowResolution::new(500.0, 500.0),
+                decorations: false,
                 ..Default::default()
             }),
             ..Default::default()

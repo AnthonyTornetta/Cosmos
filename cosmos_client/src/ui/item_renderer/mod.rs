@@ -66,7 +66,7 @@ pub struct RenderItem {
 }
 
 #[derive(Debug, Component, Reflect)]
-struct RenderedItem {
+pub struct RenderedItem {
     /// Points to the UI entity that had the `RenderItem` that created this
     ui_element_entity: Entity,
     item_id: u16,
