@@ -19,21 +19,31 @@ fn handle_block_event(
     blocks: Res<Registry<Block>>,
 ) {
     for ev in interact_events.read() {
-        if let Ok(structure) = s_query.get(ev.structure_entity) {
-            if let Some(block) = blocks.from_id("cosmos:ship_core") {
-                let block_id = ev.structure_block.block_id(structure);
+        let Some(s_block) = ev.block else {
+            continue;
+        };
 
-                if block_id == block.id() {
-                    // Only works on ships (maybe replace this with pilotable component instead of only checking ships)
-                    // Cannot pilot a ship that already has a pilot
-                    if pilot_query.get(ev.structure_entity).is_err() {
-                        change_pilot_event.send(ChangePilotEvent {
-                            structure_entity: ev.structure_entity,
-                            pilot_entity: Some(ev.interactor),
-                        });
-                    }
-                }
-            }
+        let Ok(structure) = s_query.get(s_block.structure_entity) else {
+            continue;
+        };
+
+        let Some(block) = blocks.from_id("cosmos:ship_core") else {
+            continue;
+        };
+
+        let block_id = s_block.structure_block.block_id(structure);
+
+        if block_id != block.id() {
+            continue;
+        }
+
+        // Only works on ships (maybe replace this with pilotable component instead of only checking ships)
+        // Cannot pilot a ship that already has a pilot
+        if !pilot_query.contains(s_block.structure_entity) {
+            change_pilot_event.send(ChangePilotEvent {
+                structure_entity: s_block.structure_entity,
+                pilot_entity: Some(ev.interactor),
+            });
         }
     }
 }

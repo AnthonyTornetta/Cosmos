@@ -14,7 +14,7 @@ use bevy::{
 };
 use serde::{Deserialize, Serialize};
 
-use crate::netty::sync::{sync_component, ClientAuthority, SyncableComponent};
+use crate::netty::sync::{sync_component, ClientAuthority, IdentifiableComponent, SyncableComponent};
 
 use super::{
     line_system::{LineProperty, LinePropertyCalculator, LineSystem},
@@ -59,7 +59,7 @@ impl LinePropertyCalculator<MissileLauncherProperty> for MissileLauncherCalculat
     }
 }
 
-#[derive(Debug, Serialize, Deserialize, Component, Clone, Copy, Default, Reflect)]
+#[derive(Debug, Serialize, Deserialize, Component, Clone, Copy, Default, Reflect, PartialEq, Eq)]
 /// Tracks how long the current target has been targetted by the missile system.
 pub enum MissileLauncherFocus {
     #[default]
@@ -120,17 +120,19 @@ impl MissileLauncherFocus {
     }
 }
 
-impl SyncableComponent for MissileLauncherFocus {
+impl IdentifiableComponent for MissileLauncherFocus {
     fn get_component_unlocalized_name() -> &'static str {
         "cosmos:missile_launcher_focus"
     }
+}
 
+impl SyncableComponent for MissileLauncherFocus {
     fn get_sync_type() -> crate::netty::sync::SyncType {
         crate::netty::sync::SyncType::ServerAuthoritative
     }
 }
 
-#[derive(Default, Debug, Serialize, Deserialize, Component, Clone, Copy, Reflect)]
+#[derive(Default, Debug, Serialize, Deserialize, Component, Clone, Copy, Reflect, PartialEq, Eq)]
 /// Prefers focusing this entity if there are many potential candidates
 pub struct MissileLauncherPreferredFocus {
     /// The **SERVER** entity that is being focused. Even on the client, this
@@ -139,11 +141,13 @@ pub struct MissileLauncherPreferredFocus {
     pub focusing_server_entity: Option<Entity>,
 }
 
-impl SyncableComponent for MissileLauncherPreferredFocus {
+impl IdentifiableComponent for MissileLauncherPreferredFocus {
     fn get_component_unlocalized_name() -> &'static str {
         "cosmos:missile_launcher_preferred_focus"
     }
+}
 
+impl SyncableComponent for MissileLauncherPreferredFocus {
     fn get_sync_type() -> crate::netty::sync::SyncType {
         crate::netty::sync::SyncType::ClientAuthoritative(ClientAuthority::Piloting)
     }

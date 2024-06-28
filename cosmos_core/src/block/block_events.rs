@@ -1,11 +1,15 @@
 //! Contains the various types of block events
 
 use bevy::prelude::*;
+use serde::{Deserialize, Serialize};
 
 use crate::{
     blockitems::BlockItems,
     events::block_events::BlockChangedEvent,
-    inventory::Inventory,
+    inventory::{
+        itemstack::{ItemShouldHaveData, ItemStackSystemSet},
+        Inventory,
+    },
     item::Item,
     registry::{identifiable::Identifiable, Registry},
     structure::{
@@ -29,15 +33,29 @@ pub struct BlockBreakEvent {
     pub block: StructureBlock,
 }
 
-/// This is sent whenever a player interacts with a block
-#[derive(Debug, Event)]
-pub struct BlockInteractEvent {
+#[derive(Debug, Serialize, Deserialize, Clone, Copy)]
+/// this is stupid.
+pub struct StructureBlockPair {
     /// The block interacted with
     pub structure_block: StructureBlock,
     /// The structure it is on
     pub structure_entity: Entity,
+}
+
+/// This is sent whenever a player interacts with a block
+#[derive(Debug, Event)]
+pub struct BlockInteractEvent {
+    /// The block that was interacted with by the player
+    pub block: Option<StructureBlockPair>,
+    /// Includes blocks normally ignored by most interaction checks
+    pub block_including_fluids: StructureBlockPair,
     /// The player that interacted with the block
     pub interactor: Entity,
+    /// If this is true, the player was crouching while interacting with this block
+    ///
+    /// If the block being interacted with has two modes of interaction, this should be used to trigger
+    /// the second mode.
+    pub alternate: bool,
 }
 
 /// This is sent whenever a player places a block
@@ -67,6 +85,7 @@ fn handle_block_break_events(
     mut event_writer: EventWriter<BlockChangedEvent>,
     mut q_inventory_block_data: Query<(&BlockData, &mut Inventory)>,
     mut commands: Commands,
+    has_data: Res<ItemShouldHaveData>,
 ) {
     for ev in event_reader.read() {
         // This is a temporary fix for mining lasers - eventually these items will have specified destinations,
@@ -106,7 +125,7 @@ fn handle_block_break_events(
                     .iter_mut()
                     .filter(|(block_data, _)| block_data.identifier.structure_entity == ev.breaker)
                 {
-                    if inventory.insert(item, 1) == 0 {
+                    if inventory.insert_item(item, 1, &mut commands, &has_data).0 == 0 {
                         break;
                     }
                 }
@@ -149,7 +168,7 @@ fn handle_block_break_events(
                         if let Some(item_id) = block_items.item_from_block(block) {
                             let item = items.from_numeric_id(item_id);
 
-                            inventory.insert(item, 1);
+                            inventory.insert_item(item, 1, &mut commands, &has_data);
                         }
 
                         structure.remove_block_at(coord, &blocks, Some(&mut event_writer));
@@ -334,6 +353,7 @@ fn handle_block_place_events(
     items: Res<Registry<Item>>,
     blocks: Res<Registry<Block>>,
     block_items: Res<BlockItems>,
+    mut commands: Commands,
 ) {
     for ev in event_reader.read() {
         let Ok((mut inv, build_mode, parent)) = player_query.get_mut(ev.placer) else {
@@ -350,7 +370,7 @@ fn handle_block_place_events(
         }
 
         for (coords, block_up) in structure_blocks {
-            if structure.has_block_at(coords) {
+            if structure.has_block_at(coords) && !structure.block_at(coords, &blocks).is_fluid() {
                 continue;
             }
 
@@ -375,7 +395,7 @@ fn handle_block_place_events(
                 break;
             }
 
-            if inv.decrease_quantity_at(ev.inventory_slot, 1) == 0 {
+            if inv.decrease_quantity_at(ev.inventory_slot, 1, &mut commands) == 0 {
                 structure.set_block_at(coords, block, block_up, &blocks, Some(&mut event_writer));
             } else {
                 break;
@@ -387,19 +407,27 @@ fn handle_block_place_events(
 #[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
 /// The event set used for processing block events
 pub enum BlockEventsSet {
-    /// All block event processing happens here
+    /// All block events processing happens here - during this set the block is NOT guarenteed to be placed yet or have its data created
     ProcessEvents,
+    /// If your event processing relies on the block being placed, run it in this set
+    ProcessEventsPostPlacement,
 }
 
 pub(super) fn register(app: &mut App) {
-    app.configure_sets(Update, BlockEventsSet::ProcessEvents);
+    app.configure_sets(
+        Update,
+        (BlockEventsSet::ProcessEvents, BlockEventsSet::ProcessEventsPostPlacement).chain(),
+    );
 
     app.add_event::<BlockBreakEvent>()
         .add_event::<BlockPlaceEvent>()
         .add_event::<BlockInteractEvent>()
         .add_systems(
             Update,
-            (handle_block_break_events, handle_block_place_events)
+            (
+                handle_block_break_events.in_set(ItemStackSystemSet::CreateDataEntity),
+                handle_block_place_events,
+            )
                 .chain()
                 .in_set(BlockEventsSet::ProcessEvents),
         );

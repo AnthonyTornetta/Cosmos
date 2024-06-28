@@ -3,7 +3,7 @@
 use bevy::{
     ecs::query::{Added, Or, With},
     log::warn,
-    prelude::{in_state, App, Changed, Entity, EventReader, IntoSystemConfigs, Query, Res, ResMut, Update},
+    prelude::{in_state, App, EventReader, IntoSystemConfigs, Query, Res, ResMut, Update},
 };
 use bevy_renet::renet::RenetServer;
 use cosmos_core::{
@@ -13,10 +13,7 @@ use cosmos_core::{
         Block,
     },
     entities::player::Player,
-    netty::{
-        cosmos_encoder, server_reliable_messages::ServerReliableMessages, sync::server_entity_syncing::RequestedEntityEvent,
-        NettyChannelServer,
-    },
+    netty::{cosmos_encoder, server_reliable_messages::ServerReliableMessages, NettyChannelServer},
     registry::{identifiable::Identifiable, Registry},
     structure::{
         coordinates::{BlockCoordinate, CoordinateType, UnboundBlockCoordinate},
@@ -396,18 +393,22 @@ fn on_interact_reactor(
     player_query: Query<&Player>,
 ) {
     for ev in interaction.read() {
-        let Ok((structure, mut reactors)) = structure_query.get_mut(ev.structure_entity) else {
+        let Some(s_block) = ev.block else {
             continue;
         };
 
-        let block = structure.block_at(ev.structure_block.coords(), &blocks);
+        let Ok((structure, mut reactors)) = structure_query.get_mut(s_block.structure_entity) else {
+            continue;
+        };
+
+        let block = structure.block_at(s_block.structure_block.coords(), &blocks);
 
         if block.unlocalized_name() == "cosmos:reactor_controller" {
-            if reactors.iter().any(|reactor| reactor.controller_block() == ev.structure_block) {
+            if reactors.iter().any(|reactor| reactor.controller_block() == s_block.structure_block) {
                 continue;
             }
 
-            if let Some(bounds) = check_is_valid_multiblock(&structure, ev.structure_block.coords(), &blocks) {
+            if let Some(bounds) = check_is_valid_multiblock(&structure, s_block.structure_block.coords(), &blocks) {
                 match check_valid(bounds, &structure, &blocks) {
                     ReactorValidity::MissingCasing(_) => {
                         let Ok(player) = player_query.get(ev.interactor) else {
@@ -434,7 +435,7 @@ fn on_interact_reactor(
                         );
                     }
                     ReactorValidity::Valid => {
-                        let reactor = create_reactor(&structure, &blocks, &reactor_blocks, bounds, ev.structure_block);
+                        let reactor = create_reactor(&structure, &blocks, &reactor_blocks, bounds, s_block.structure_block);
 
                         reactors.add_reactor(reactor);
                     }
@@ -455,38 +456,9 @@ fn on_interact_reactor(
     }
 }
 
-fn request_reactor_event(query: Query<&Reactors>, mut event_reader: EventReader<RequestedEntityEvent>, mut server: ResMut<RenetServer>) {
-    for ev in event_reader.read() {
-        if let Ok(reactors) = query.get(ev.entity) {
-            server.send_message(
-                ev.client_id,
-                NettyChannelServer::Reliable,
-                cosmos_encoder::serialize(&ServerReliableMessages::Reactors {
-                    reactors: reactors.clone(),
-                    structure: ev.entity,
-                }),
-            );
-        }
-    }
-}
-
-fn on_change_reactors(query: Query<(Entity, &Reactors), Changed<Reactors>>, mut server: ResMut<RenetServer>) {
-    for (entity, changed_reactor) in query.iter() {
-        server.broadcast_message(
-            NettyChannelServer::Reliable,
-            cosmos_encoder::serialize(&ServerReliableMessages::Reactors {
-                reactors: changed_reactor.clone(),
-                structure: entity,
-            }),
-        );
-    }
-}
-
 pub(super) fn register(app: &mut App) {
     app.add_systems(
         Update,
-        (on_interact_reactor, on_piloted_by_ai, request_reactor_event, on_change_reactors)
-            .chain()
-            .run_if(in_state(GameState::Playing)),
+        (on_interact_reactor, on_piloted_by_ai).chain().run_if(in_state(GameState::Playing)),
     );
 }

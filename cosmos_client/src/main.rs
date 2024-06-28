@@ -11,9 +11,11 @@ pub mod economy;
 pub mod ecs;
 pub mod entities;
 pub mod events;
+pub mod fluid;
 pub mod input;
 pub mod interactions;
 pub mod inventory;
+pub mod item;
 pub mod lang;
 pub mod loading;
 pub mod music;
@@ -107,7 +109,6 @@ fn main() {
 
     app.insert_resource(HostConfig { host_name })
         .insert_resource(RapierConfiguration {
-            gravity: Vec3::ZERO,
             timestep_mode: TimestepMode::Interpolated {
                 dt: 1.0 / 60.0,
                 time_scale: 1.0,
@@ -158,6 +159,7 @@ fn main() {
     ecs::register(&mut app);
     shop::register(&mut app);
     economy::register(&mut app);
+    fluid::register(&mut app);
 
     if cfg!(feature = "print-schedule") {
         println!(

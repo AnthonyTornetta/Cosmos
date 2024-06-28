@@ -130,7 +130,7 @@ fn place_symmetries(
     let clearing = input_handler.check_pressed(CosmosInputs::ClearSymmetry);
 
     let looking_at_block = if !clearing {
-        looking_at.looking_at_block.map(|x| x.1)
+        looking_at.looking_at_any.map(|x| x.block)
     } else {
         None
     };

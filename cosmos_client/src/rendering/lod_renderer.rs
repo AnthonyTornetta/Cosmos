@@ -95,12 +95,12 @@ struct ChunkRenderer {
 }
 
 impl ChunkRenderer {
-    fn new() -> Self {
+    pub fn new() -> Self {
         Self::default()
     }
 
     /// Renders a chunk into mesh information that can then be turned into a bevy mesh
-    fn render(
+    pub fn render(
         &mut self,
         scale: f32,
         materials: &ManyToOneRegistry<Block, BlockMaterialMapping>,

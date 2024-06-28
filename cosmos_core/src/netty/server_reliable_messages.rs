@@ -3,18 +3,20 @@
 //! Do not add more stuff to this, but prefer to break it into a seperate message enum & seperate channel.
 //! In the future, this itself will be broken up.
 
-use bevy::prelude::{Component, Entity};
+use bevy::{
+    prelude::{Component, Entity},
+    utils::HashMap,
+};
 use bevy_renet::renet::ClientId;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    block::{multiblock::reactor::Reactors, BlockRotation},
-    economy::Credits,
+    block::BlockRotation,
     entities::player::render_distance::RenderDistance,
     physics::location::Location,
     structure::{
         chunk::netty::SerializedChunkBlockData,
-        coordinates::{ChunkCoordinate, CoordinateType},
+        coordinates::{ChunkBlockCoordinate, ChunkCoordinate, CoordinateType},
         loading::ChunksNeedLoaded,
         planet::{generation::terrain_generation::GpuPermutationTable, Planet},
         shared::build_mode::BuildMode,
@@ -23,7 +25,7 @@ use crate::{
     universe::star::Star,
 };
 
-use super::netty_rigidbody::NettyRigidBody;
+use super::{netty_rigidbody::NettyRigidBody, sync::ComponentEntityIdentifier};
 
 #[derive(Debug, Serialize, Deserialize, Component)]
 /// The data for a singular block changed.
@@ -66,12 +68,8 @@ pub enum ServerReliableMessages {
         id: ClientId,
         /// The player's rigidbody.
         body: NettyRigidBody,
-        /// The player's inventory.
-        inventory_serialized: Vec<u8>,
         /// The player's render distance.
         render_distance: Option<RenderDistance>,
-        /// The player's credits
-        credits: Credits,
     },
     /// This contains the information for a star entity.
     Star {
@@ -88,7 +86,7 @@ pub enum ServerReliableMessages {
     /// An entity has been despawned, and the client should remove it.
     EntityDespawn {
         /// The server's version of the entity.
-        entity: Entity,
+        entity: ComponentEntityIdentifier,
     },
     /// This represents the data for a serialized chunk.
     ChunkData {
@@ -98,6 +96,8 @@ pub enum ServerReliableMessages {
         serialized_chunk: Vec<u8>,
         /// The chunk's block data in serialized form
         serialized_block_data: Option<SerializedChunkBlockData>,
+        /// The chunk's block entities that need to be requested from the server
+        block_entities: HashMap<(u16, ChunkBlockCoordinate), Entity>,
     },
     /// This represents the data for an empty chunk.
     EmptyChunk {
@@ -201,13 +201,6 @@ pub enum ServerReliableMessages {
     InvalidReactor {
         /// The reason the reactor failed to be created
         reason: String,
-    },
-    /// Updates the reactors for a specific structure
-    Reactors {
-        /// The reactors the structure now has
-        reactors: Reactors,
-        /// The structure this the reactors are a part of
-        structure: Entity,
     },
     /// This signifies that the server is sending information for a requested entity
     RequestedEntityReceived(Entity),

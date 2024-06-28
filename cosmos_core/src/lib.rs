@@ -9,6 +9,7 @@ pub mod economy;
 pub mod ecs;
 pub mod entities;
 pub mod events;
+pub mod fluid;
 pub mod inventory;
 pub mod item;
 pub mod loader;

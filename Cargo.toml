@@ -7,7 +7,7 @@ resolver = "2"
 
 [workspace.dependencies]
 bevy = { version = "0.13.1", default-features = false }
-bevy_rapier3d = { git = "https://github.com/AnthonyTornetta/bevy_rapier/", version = "0.25.0", features = [
+bevy_rapier3d = { git = "https://github.com/AnthonyTornetta/bevy_rapier/", version = "0.26.0", features = [
   "simd-stable",
   "serde-serialize",
 ] }

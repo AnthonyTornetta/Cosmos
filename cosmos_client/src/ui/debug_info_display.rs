@@ -113,13 +113,13 @@ fn update_looking_at_text(
         return;
     };
 
-    if let Some((structure_ent, structure_block)) = looking_at.looking_at_block {
-        let Ok(structure) = q_structure.get(structure_ent) else {
+    if let Some(looking_at) = looking_at.looking_at_any {
+        let Ok(structure) = q_structure.get(looking_at.structure_entity) else {
             return;
         };
 
-        let block = structure.block_at(structure_block.coords(), &blocks);
-        let block_rotation = structure.block_rotation(structure_block.coords());
+        let block = structure.block_at(looking_at.block.coords(), &blocks);
+        let block_rotation = structure.block_rotation(looking_at.block.coords());
 
         text.sections[1].value = format!(
             "{}: {:?}, {:?}",

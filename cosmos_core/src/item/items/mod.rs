@@ -16,6 +16,9 @@ fn add_cosmos_items(
 
     items.register(Item::new("cosmos:test_crystal", DEFAULT_MAX_STACK_SIZE));
 
+    items.register(Item::new("cosmos:fluid_cell", DEFAULT_MAX_STACK_SIZE));
+    items.register(Item::new("cosmos:fluid_cell_filled", 1));
+
     loading.finish_loading(id, &mut end_writer);
 }
 

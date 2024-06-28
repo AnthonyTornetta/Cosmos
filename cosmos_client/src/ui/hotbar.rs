@@ -4,7 +4,7 @@ use std::marker::PhantomData;
 
 use bevy::{input::mouse::MouseWheel, prelude::*};
 use cosmos_core::{
-    inventory::{itemstack::ItemStack, Inventory},
+    inventory::{held_item_slot::HeldItemSlot, itemstack::ItemStack, Inventory},
     item::Item,
     netty::client::LocalPlayer,
     registry::{identifiable::Identifiable, Registry},
@@ -51,7 +51,17 @@ impl HotbarContents {
     }
 
     /// Clears any items that are in the contents
-    pub fn clear_contents(&mut self) {
+    ///
+    /// Unless you have safely transferred the data of the ItemStacks within this
+    /// inventory over to other entities, or manually removed those data entities
+    /// from the world, you should provide this with the Some value for the commands argument.
+    pub fn clear_contents(&mut self, remove_data_entities: Option<&mut Commands>) {
+        if let Some(cmds) = remove_data_entities {
+            for is in self.items.iter_mut().flat_map(|x| x) {
+                is.remove(cmds);
+            }
+        }
+
         let n_slots = self.items.len();
         self.items = vec![None; n_slots];
     }
@@ -160,69 +170,66 @@ fn image_path(selected: bool) -> &'static str {
     }
 }
 
-fn listen_button_presses(input_handler: InputChecker, mut scroll_evr: EventReader<MouseWheel>, mut hotbar: Query<&mut Hotbar>) {
+fn listen_button_presses(
+    input_handler: InputChecker,
+    mut scroll_evr: EventReader<MouseWheel>,
+    mut q_held_item_slot: Query<&mut HeldItemSlot, With<LocalPlayer>>,
+    mut hotbar: Query<&mut Hotbar>,
+) {
+    let Ok(mut hotbar) = hotbar.get_single_mut() else {
+        return;
+    };
+
     for ev in scroll_evr.read() {
-        if let Ok(mut hotbar) = hotbar.get_single_mut() {
-            if ev.y > 0.0 {
-                if hotbar.selected_slot == 0 {
-                    hotbar.selected_slot = hotbar.max_slots - 1;
-                } else {
-                    hotbar.selected_slot -= 1;
-                }
-            } else if ev.y < 0.0 {
-                if hotbar.selected_slot == hotbar.max_slots - 1 {
-                    hotbar.selected_slot = 0;
-                } else {
-                    hotbar.selected_slot += 1;
-                }
+        if ev.y > 0.0 {
+            if hotbar.selected_slot == 0 {
+                hotbar.selected_slot = hotbar.max_slots - 1;
+            } else {
+                hotbar.selected_slot -= 1;
+            }
+        } else if ev.y < 0.0 {
+            if hotbar.selected_slot == hotbar.max_slots - 1 {
+                hotbar.selected_slot = 0;
+            } else {
+                hotbar.selected_slot += 1;
             }
         }
     }
 
     if input_handler.check_just_pressed(CosmosInputs::HotbarSlot1) {
-        if let Ok(mut hotbar) = hotbar.get_single_mut() {
-            hotbar.selected_slot = 0;
-        }
+        hotbar.selected_slot = 0;
     }
     if input_handler.check_just_pressed(CosmosInputs::HotbarSlot2) {
-        if let Ok(mut hotbar) = hotbar.get_single_mut() {
-            hotbar.selected_slot = 1;
-        }
+        hotbar.selected_slot = 1;
     }
     if input_handler.check_just_pressed(CosmosInputs::HotbarSlot3) {
-        if let Ok(mut hotbar) = hotbar.get_single_mut() {
-            hotbar.selected_slot = 2;
-        }
+        hotbar.selected_slot = 2;
     }
     if input_handler.check_just_pressed(CosmosInputs::HotbarSlot4) {
-        if let Ok(mut hotbar) = hotbar.get_single_mut() {
-            hotbar.selected_slot = 3;
-        }
+        hotbar.selected_slot = 3;
     }
     if input_handler.check_just_pressed(CosmosInputs::HotbarSlot5) {
-        if let Ok(mut hotbar) = hotbar.get_single_mut() {
-            hotbar.selected_slot = 4;
-        }
+        hotbar.selected_slot = 4;
     }
     if input_handler.check_just_pressed(CosmosInputs::HotbarSlot6) {
-        if let Ok(mut hotbar) = hotbar.get_single_mut() {
-            hotbar.selected_slot = 5;
-        }
+        hotbar.selected_slot = 5;
     }
     if input_handler.check_just_pressed(CosmosInputs::HotbarSlot7) {
-        if let Ok(mut hotbar) = hotbar.get_single_mut() {
-            hotbar.selected_slot = 6;
-        }
+        hotbar.selected_slot = 6;
     }
     if input_handler.check_just_pressed(CosmosInputs::HotbarSlot8) {
-        if let Ok(mut hotbar) = hotbar.get_single_mut() {
-            hotbar.selected_slot = 7;
-        }
+        hotbar.selected_slot = 7;
     }
     if input_handler.check_just_pressed(CosmosInputs::HotbarSlot9) {
-        if let Ok(mut hotbar) = hotbar.get_single_mut() {
-            hotbar.selected_slot = 8;
-        }
+        hotbar.selected_slot = 8;
+    }
+
+    let Ok(mut held_item_slot) = q_held_item_slot.get_single_mut() else {
+        return;
+    };
+
+    if hotbar.selected_slot as u32 != held_item_slot.slot() {
+        held_item_slot.set_slot(hotbar.selected_slot as u32);
     }
 }
 

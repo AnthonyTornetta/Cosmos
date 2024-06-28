@@ -1,0 +1,111 @@
+{
+    "texture": {
+        "Sides": {
+            "left": {
+                "Connected": [
+                    "cosmos:tank_0",
+                    "cosmos:tank_1",
+                    "cosmos:tank_2",
+                    "cosmos:tank_3",
+                    "cosmos:tank_4",
+                    "cosmos:tank_5",
+                    "cosmos:tank_6",
+                    "cosmos:tank_7",
+                    "cosmos:tank_8",
+                    "cosmos:tank_9",
+                    "cosmos:tank_10",
+                    "cosmos:tank_11",
+                    "cosmos:tank_12",
+                    "cosmos:tank_13",
+                    "cosmos:tank_14",
+                    "cosmos:tank_15"
+                ]
+            },
+            "right": {
+                "Connected": [
+                    "cosmos:tank_0",
+                    "cosmos:tank_1",
+                    "cosmos:tank_2",
+                    "cosmos:tank_3",
+                    "cosmos:tank_4",
+                    "cosmos:tank_5",
+                    "cosmos:tank_6",
+                    "cosmos:tank_7",
+                    "cosmos:tank_8",
+                    "cosmos:tank_9",
+                    "cosmos:tank_10",
+                    "cosmos:tank_11",
+                    "cosmos:tank_12",
+                    "cosmos:tank_13",
+                    "cosmos:tank_14",
+                    "cosmos:tank_15"
+                ]
+            },
+            "back": {
+                "Connected": [
+                    "cosmos:tank_0",
+                    "cosmos:tank_1",
+                    "cosmos:tank_2",
+                    "cosmos:tank_3",
+                    "cosmos:tank_4",
+                    "cosmos:tank_5",
+                    "cosmos:tank_6",
+                    "cosmos:tank_7",
+                    "cosmos:tank_8",
+                    "cosmos:tank_9",
+                    "cosmos:tank_10",
+                    "cosmos:tank_11",
+                    "cosmos:tank_12",
+                    "cosmos:tank_13",
+                    "cosmos:tank_14",
+                    "cosmos:tank_15"
+                ]
+            },
+            "front": {
+                "Connected": [
+                    "cosmos:tank_0",
+                    "cosmos:tank_1",
+                    "cosmos:tank_2",
+                    "cosmos:tank_3",
+                    "cosmos:tank_4",
+                    "cosmos:tank_5",
+                    "cosmos:tank_6",
+                    "cosmos:tank_7",
+                    "cosmos:tank_8",
+                    "cosmos:tank_9",
+                    "cosmos:tank_10",
+                    "cosmos:tank_11",
+                    "cosmos:tank_12",
+                    "cosmos:tank_13",
+                    "cosmos:tank_14",
+                    "cosmos:tank_15"
+                ]
+            },
+            "top": {
+                "Single": "cosmos:tank_top_bottom"
+            },
+            "bottom": {
+                "Single": "cosmos:tank_top_bottom"
+            }
+        }
+    },
+    "model": {
+        "Sides": {
+            "name": "cosmos:tank",
+            "top": "cosmos:base_top",
+            "bottom": "cosmos:base_bottom",
+            "left": "cosmos:base_left",
+            "right": "cosmos:base_right",
+            "front": "cosmos:base_front",
+            "back": "cosmos:base_back",
+            "connected": {
+                "top": "none",
+                "bottom": "none",
+                "left": "none",
+                "right": "none",
+                "front": "none",
+                "back": "none"
+            }
+        }
+    }
+}

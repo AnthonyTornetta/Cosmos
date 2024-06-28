@@ -26,6 +26,7 @@ pub mod blocks;
 pub mod commands;
 pub mod entities;
 pub mod events;
+pub mod fluid;
 pub mod init;
 pub mod inventory;
 pub mod netty;
@@ -76,7 +77,6 @@ fn main() {
         // This must be the first thing added or systems don't get added correctly
         .init_state::<GameState>()
         .insert_resource(RapierConfiguration {
-            gravity: Vec3::ZERO,
             timestep_mode: TimestepMode::Interpolated {
                 dt: 1.0 / 60.0,
                 time_scale: 1.0,

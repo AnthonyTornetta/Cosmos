@@ -5,9 +5,17 @@
 
 use crate::netty::netty_rigidbody::{NettyRigidBody, NettyRigidBodyLocation};
 use bevy::{
+    ecs::component::Component,
     prelude::{Entity, Resource},
+    reflect::Reflect,
     utils::HashMap,
 };
+
+/// This is the server entity that refers to this entity.
+///
+/// This is mostly for debugging purposes.
+#[derive(Component, Reflect, PartialEq, Eq)]
+pub struct ServerEntity(pub Entity);
 
 #[derive(Default, Resource)]
 /// Used to map server entities to client entities and client entities to server entities.

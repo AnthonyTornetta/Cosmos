@@ -13,6 +13,7 @@ use serde::{Deserialize, Serialize};
 use crate::{
     block::Block,
     events::block_events::BlockChangedEvent,
+    netty::sync::{sync_component, IdentifiableComponent, SyncableComponent},
     registry::{create_registry, identifiable::Identifiable, Registry},
     structure::{
         coordinates::BlockCoordinate,
@@ -23,7 +24,7 @@ use crate::{
     },
 };
 
-#[derive(Debug, Clone, Copy, Reflect, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, Reflect, Serialize, Deserialize, PartialEq, Eq)]
 /// The inclusive bounds of a reactor, including its casing
 pub struct ReactorBounds {
     /// Inclusive negative-most coordinates of a reactor (include casing)
@@ -32,7 +33,7 @@ pub struct ReactorBounds {
     pub positive_coords: BlockCoordinate,
 }
 
-#[derive(Clone, Copy, Debug, Reflect, Serialize, Deserialize)]
+#[derive(Clone, Copy, Debug, Reflect, Serialize, Deserialize, PartialEq)]
 /// Represents a constructed reactor
 pub struct Reactor {
     controller: StructureBlock,
@@ -67,7 +68,7 @@ impl Reactor {
     }
 }
 
-#[derive(Debug, Component, Default, Reflect, DerefMut, Deref, Serialize, Deserialize, Clone)]
+#[derive(Debug, Component, Default, Reflect, DerefMut, Deref, Serialize, Deserialize, Clone, PartialEq)]
 /// Stores the entities of all the reactors in a structure and their controller blocks for quick access
 pub struct Reactors(Vec<Reactor>);
 
@@ -75,6 +76,18 @@ impl Reactors {
     /// Adds a reactor to the structure
     pub fn add_reactor(&mut self, reactor: Reactor) {
         self.0.push(reactor);
+    }
+}
+
+impl IdentifiableComponent for Reactors {
+    fn get_component_unlocalized_name() -> &'static str {
+        "cosmos:reactors"
+    }
+}
+
+impl SyncableComponent for Reactors {
+    fn get_sync_type() -> crate::netty::sync::SyncType {
+        crate::netty::sync::SyncType::ServerAuthoritative
     }
 }
 
@@ -201,6 +214,7 @@ fn generate_power(
 
 pub(super) fn register<T: States>(app: &mut App, post_loading_state: T, playing_state: T) {
     create_registry::<ReactorPowerGenerationBlock>(app, "cosmos:power_generation_blocks");
+    sync_component::<Reactors>(app);
 
     app.add_systems(OnEnter(post_loading_state), register_power_blocks)
         .add_systems(

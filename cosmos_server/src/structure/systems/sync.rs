@@ -3,7 +3,7 @@ use bevy::{
     ecs::{
         entity::Entity,
         event::EventReader,
-        query::{Added, Changed},
+        query::{Added, Changed, Without},
         removal_detection::RemovedComponents,
         schedule::{common_conditions::in_state, IntoSystemConfigs, OnExit},
         system::{Query, Res, ResMut},
@@ -14,6 +14,7 @@ use cosmos_core::{
     item::Item,
     netty::{
         cosmos_encoder, server_replication::ReplicationMessage, sync::server_entity_syncing::RequestedEntityEvent, NettyChannelServer,
+        NoSendEntity,
     },
     registry::{identifiable::Identifiable, Registry},
     structure::systems::{sync::SyncableSystem, StructureSystem, StructureSystemType, StructureSystems, SystemActive},
@@ -21,7 +22,10 @@ use cosmos_core::{
 
 use crate::{registry::sync_registry, state::GameState};
 
-fn sync_system<T: SyncableSystem>(mut server: ResMut<RenetServer>, q_changed_systems: Query<(&T, &StructureSystem), Changed<T>>) {
+fn sync_system<T: SyncableSystem>(
+    mut server: ResMut<RenetServer>,
+    q_changed_systems: Query<(&T, &StructureSystem), (Without<NoSendEntity>, Changed<T>)>,
+) {
     for (changed_system, structure_system) in q_changed_systems.iter() {
         server.broadcast_message(
             NettyChannelServer::SystemReplication,

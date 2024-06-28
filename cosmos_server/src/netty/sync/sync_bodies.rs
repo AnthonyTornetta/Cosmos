@@ -4,19 +4,22 @@ use bevy::prelude::*;
 use bevy_rapier3d::prelude::Velocity;
 use bevy_renet::renet::RenetServer;
 use cosmos_core::{
+    block::data::BlockData,
     ecs::{despawn_needed, NeedsDespawned},
     entities::player::{render_distance::RenderDistance, Player},
+    inventory::itemstack::ItemStackData,
     netty::{
         cosmos_encoder,
         netty_rigidbody::{NettyRigidBody, NettyRigidBodyLocation},
         server_reliable_messages::ServerReliableMessages,
         server_unreliable_messages::ServerUnreliableMessages,
-        sync::server_entity_syncing::RequestedEntityEvent,
+        sync::{server_entity_syncing::RequestedEntityEvent, ComponentEntityIdentifier},
         system_sets::NetworkingSystemsSet,
         NettyChannelServer, NoSendEntity,
     },
     persistence::LoadingDistance,
     physics::location::{add_previous_location, Location},
+    structure::systems::StructureSystem,
 };
 
 use crate::netty::network_helpers::NetworkTick;
@@ -82,7 +85,7 @@ fn server_sync_bodies(
                 transform.rotation,
                 match parent.map(|p| p.get()) {
                     Some(parent_entity) => NettyRigidBodyLocation::Relative(
-                        (*location - location_query.get(parent_entity).copied().unwrap_or(Location::default())).absolute_coords_f32(),
+                        (*location - location_query.get(parent_entity).copied().unwrap_or_default()).absolute_coords_f32(),
                         parent_entity,
                     ),
                     None => NettyRigidBodyLocation::Absolute(*location),
@@ -140,12 +143,39 @@ fn pinger(mut server: ResMut<RenetServer>, mut event_reader: EventReader<Request
 
 fn notify_despawned_entities(
     removed_components: Query<Entity, (With<NeedsDespawned>, Without<DontNotifyClientOfDespawn>)>,
+    q_identifier: Query<(Option<&StructureSystem>, Option<&ItemStackData>, Option<&BlockData>)>,
     mut server: ResMut<RenetServer>,
 ) {
     for killed_entity in removed_components.iter() {
+        let Ok((structure_system, is_data, block_data)) = q_identifier.get(killed_entity) else {
+            continue;
+        };
+
+        let entity_identifier = if let Some(structure_system) = structure_system {
+            ComponentEntityIdentifier::StructureSystem {
+                structure_entity: structure_system.structure_entity(),
+                id: structure_system.id(),
+            }
+        } else if let Some(is_data) = is_data {
+            ComponentEntityIdentifier::ItemData {
+                inventory_entity: is_data.inventory_pointer.0,
+                item_slot: is_data.inventory_pointer.1,
+                server_data_entity: killed_entity,
+            }
+        } else if let Some(block_data) = block_data {
+            ComponentEntityIdentifier::BlockData {
+                identifier: block_data.identifier,
+                server_data_entity: killed_entity,
+            }
+        } else {
+            ComponentEntityIdentifier::Entity(killed_entity)
+        };
+
+        info!("Notifying of entity despawn -- {entity_identifier:?}");
+
         server.broadcast_message(
             NettyChannelServer::Reliable,
-            cosmos_encoder::serialize(&ServerReliableMessages::EntityDespawn { entity: killed_entity }),
+            cosmos_encoder::serialize(&ServerReliableMessages::EntityDespawn { entity: entity_identifier }),
         );
     }
 }

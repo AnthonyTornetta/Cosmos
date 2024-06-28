@@ -21,11 +21,11 @@ use bevy_rapier3d::{
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    netty::sync::{sync_component, ComponentSyncingSet, SyncableComponent},
+    netty::sync::{sync_component, ComponentSyncingSet, IdentifiableComponent, SyncableComponent},
     physics::location::{CosmosBundleSet, LocationPhysicsSet},
 };
 
-#[derive(Component, Debug, Serialize, Deserialize, Clone)]
+#[derive(Component, Debug, Serialize, Deserialize, Clone, PartialEq)]
 /// A missile is something that flies in a straight line & may collide with a block, causing
 /// it to take damage.
 pub struct Missile {
@@ -39,11 +39,13 @@ pub struct Missile {
     pub color: Option<Color>,
 }
 
-impl SyncableComponent for Missile {
+impl IdentifiableComponent for Missile {
     fn get_component_unlocalized_name() -> &'static str {
         "cosmos:missile"
     }
+}
 
+impl SyncableComponent for Missile {
     fn get_sync_type() -> crate::netty::sync::SyncType {
         crate::netty::sync::SyncType::ServerAuthoritative
     }
@@ -63,7 +65,7 @@ fn on_add_missile(q_added_missile: Query<Entity, Added<Missile>>, mut commands: 
     }
 }
 
-#[derive(Component, Debug, Reflect, Clone, Copy, Serialize, Deserialize)]
+#[derive(Component, Debug, Reflect, Clone, Copy, Serialize, Deserialize, PartialEq)]
 /// Something that will cause damage to nearby entities that it hits.
 pub struct Explosion {
     /// The power of the explosion is used to calculate its radius & effectiveness against blocks.
@@ -75,11 +77,13 @@ pub struct Explosion {
     pub color: Option<Color>,
 }
 
-impl SyncableComponent for Explosion {
+impl IdentifiableComponent for Explosion {
     fn get_component_unlocalized_name() -> &'static str {
         "cosmos:explosion"
     }
+}
 
+impl SyncableComponent for Explosion {
     fn get_sync_type() -> crate::netty::sync::SyncType {
         crate::netty::sync::SyncType::ServerAuthoritative
     }

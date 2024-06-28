@@ -22,14 +22,22 @@ fn interact_with_block(
     blocks: Res<Registry<Block>>,
 ) {
     for ev in event_reader.read() {
-        if let Ok(structure) = structure_query.get(ev.structure_entity) {
-            if ev.structure_block.block(structure, &blocks).unlocalized_name() == "cosmos:build_block" {
-                enter_writer.send(EnterBuildModeEvent {
-                    player_entity: ev.interactor,
-                    structure_entity: ev.structure_entity,
-                });
-            }
+        let Some(s_block) = ev.block else {
+            continue;
+        };
+
+        let Ok(structure) = structure_query.get(s_block.structure_entity) else {
+            continue;
+        };
+
+        if s_block.structure_block.block(structure, &blocks).unlocalized_name() != "cosmos:build_block" {
+            continue;
         }
+
+        enter_writer.send(EnterBuildModeEvent {
+            player_entity: ev.interactor,
+            structure_entity: s_block.structure_entity,
+        });
     }
 }
 

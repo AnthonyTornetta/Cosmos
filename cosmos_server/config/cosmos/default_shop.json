@@ -197,14 +197,14 @@
   },
   {
     "Selling": {
-      "item_id": "cosmos:cheese",
+      "item_id": "cosmos:lava",
       "max_quantity_selling": 10000,
       "price_per": 10
     }
   },
   {
     "Buying": {
-      "item_id": "cosmos:cheese",
+      "item_id": "cosmos:lava",
       "max_quantity_buying": null,
       "price_per": 9
     }

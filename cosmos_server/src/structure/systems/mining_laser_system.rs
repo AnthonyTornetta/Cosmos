@@ -8,6 +8,7 @@ use bevy_rapier3d::{
 use cosmos_core::{
     block::{
         block_events::{BlockBreakEvent, BlockEventsSet},
+        blocks::fluid::FLUID_COLLISION_GROUP,
         Block,
     },
     ecs::NeedsDespawned,
@@ -177,8 +178,8 @@ fn update_mining_beams(
                 }
             })
             .groups(CollisionGroups::new(
-                Group::ALL & !SHIELD_COLLISION_GROUP,
-                Group::ALL & !SHIELD_COLLISION_GROUP,
+                Group::ALL & !(SHIELD_COLLISION_GROUP | FLUID_COLLISION_GROUP),
+                Group::ALL & !(SHIELD_COLLISION_GROUP | FLUID_COLLISION_GROUP),
             )),
         ) else {
             continue;

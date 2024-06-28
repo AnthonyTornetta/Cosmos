@@ -10,7 +10,7 @@ use crate::{
 
 use super::ALL_BLOCK_FACES;
 
-#[derive(Debug, Clone, Event, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, Event, PartialEq, Eq)]
 /// This event is sent whenever an adjacent block is changed
 pub struct BlockUpdate {
     structure_entity: Entity,

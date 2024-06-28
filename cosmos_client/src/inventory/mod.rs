@@ -10,9 +10,7 @@ use cosmos_core::{
         netty::{ClientInventoryMessages, InventoryIdentifier},
         HeldItemStack, Inventory,
     },
-    item::Item,
     netty::{client::LocalPlayer, cosmos_encoder, sync::mapping::NetworkMapping, NettyChannelClient},
-    registry::Registry,
 };
 
 use crate::{
@@ -34,6 +32,7 @@ fn get_server_inventory_identifier(entity: Entity, mapping: &NetworkMapping, q_b
             structure_entity: mapping
                 .server_from_client(&block_data.identifier.structure_entity)
                 .expect("Unable to map inventory to server inventory"),
+            block_id: block_data.identifier.block_id,
         })
     } else {
         InventoryIdentifier::Entity(
@@ -135,7 +134,7 @@ fn toggle_inventory_rendering(
             let server_inventory_holder = get_server_inventory_identifier(inventory_holder, &mapping, &q_block_data);
 
             // Try to put it in its original spot first
-            let leftover = local_inventory.insert_item_stack_at(displayed_item.slot_number, &held_item_stack);
+            let leftover = local_inventory.insert_itemstack_at(displayed_item.slot_number, &held_item_stack, &mut commands);
 
             if leftover != held_item_stack.quantity() {
                 // Only send information to server if there is a point to the move
@@ -153,7 +152,7 @@ fn toggle_inventory_rendering(
 
             if !held_item_stack.is_empty() {
                 // Put it wherever it can fit if it couldn't go back to its original spot
-                let leftover = local_inventory.insert_itemstack(&held_item_stack);
+                let (leftover, _) = local_inventory.insert_itemstack(&held_item_stack, &mut commands);
 
                 if leftover != held_item_stack.quantity() {
                     // Only send information to server if there is a point to the insertion
@@ -502,7 +501,6 @@ fn handle_interactions(
     mapping: Res<NetworkMapping>,
     q_block_data: Query<&BlockData>,
     asset_server: Res<AssetServer>,
-    items: Res<Registry<Item>>,
     open_inventories: Query<Entity, With<NeedsDisplayed>>,
 ) {
     let lmb = input_handler.mouse_inputs().just_pressed(MouseButton::Left);
@@ -545,7 +543,9 @@ fn handle_interactions(
             };
 
             if other_inventory == server_inventory_holder {
-                inventory.auto_move(slot_num, quantity).expect("Bad inventory slot values");
+                inventory
+                    .auto_move(slot_num, quantity, &mut commands)
+                    .expect("Bad inventory slot values");
             }
             // logic is handled on server otherwise, don't feel like copying it here
 
@@ -563,13 +563,15 @@ fn handle_interactions(
         let clicked_slot = displayed_item_clicked.slot_number;
 
         if let Ok(mut inventory) = inventory_query.get_mut(displayed_item_clicked.inventory_holder) {
-            let item = items.from_numeric_id(held_item_stack.item_id());
-
             if inventory.can_move_itemstack_to(&held_item_stack, clicked_slot) {
                 let move_quantity = if lmb { held_item_stack.quantity() } else { 1 };
+
+                let mut moving_itemstack = held_item_stack.clone();
+                moving_itemstack.set_quantity(move_quantity);
+
                 let over_quantity = held_item_stack.quantity() - move_quantity;
 
-                let leftover = inventory.insert_item_at(clicked_slot, item, move_quantity);
+                let leftover = inventory.insert_itemstack_at(clicked_slot, &moving_itemstack, &mut commands);
 
                 held_item_stack.set_quantity(over_quantity + leftover);
 
@@ -590,9 +592,13 @@ fn handle_interactions(
 
                 if is_here.as_ref().map(|is| is.quantity() == 1).unwrap_or(true) || lmb {
                     let quantity = if lmb { held_item_stack.quantity() } else { 1 };
+
+                    let mut moving_itemstack = held_item_stack.clone();
+                    moving_itemstack.set_quantity(quantity);
+
                     let unused_itemstack = held_item_stack.quantity() - quantity;
 
-                    let leftover = inventory.insert_item_at(clicked_slot, item, quantity);
+                    let leftover = inventory.insert_itemstack_at(clicked_slot, &moving_itemstack, &mut commands);
 
                     assert_eq!(
                         leftover, 0,
@@ -625,7 +631,7 @@ fn handle_interactions(
 
                     client.send_message(NettyChannelClient::Inventory, message);
                 } else {
-                    inventory.set_itemstack_at(clicked_slot, is_here);
+                    inventory.set_itemstack_at(clicked_slot, is_here, &mut commands);
                 }
             }
         }

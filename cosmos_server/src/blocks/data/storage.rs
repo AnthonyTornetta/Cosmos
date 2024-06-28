@@ -5,53 +5,22 @@ use bevy::{
         event::{EventReader, EventWriter},
         query::With,
         schedule::IntoSystemConfigs,
-        system::{Commands, Query, Res},
+        system::{Query, Res},
     },
-    hierarchy::{BuildChildren, Parent},
-    log::warn,
 };
 use cosmos_core::{
     block::{
-        data::{BlockData, BlockDataIdentifier},
+        data::BlockData,
         storage::storage_blocks::{on_add_storage, PopulateBlockInventoryEvent},
         Block,
     },
+    events::block_events::BlockDataSystemParams,
     inventory::Inventory,
     registry::{identifiable::Identifiable, Registry},
-    structure::{
-        chunk::netty::SerializedBlockData,
-        coordinates::{ChunkBlockCoordinate, ChunkCoordinate},
-        Structure,
-    },
+    structure::Structure,
 };
 
-use crate::{
-    persistence::{
-        loading::{LoadingBlueprintSystemSet, NeedsBlueprintLoaded, LOADING_SCHEDULE},
-        saving::SAVING_SCHEDULE,
-    },
-    structure::{
-        persistence::{chunk::BlockDataSavingSet, BlockDataNeedsSaved},
-        planet::chunk::SerializeChunkBlockDataSet,
-    },
-};
-
-fn save_storage(
-    q_storage_blocks: Query<(&Parent, &Inventory, &BlockData), With<BlockDataNeedsSaved>>,
-    mut q_chunk: Query<&mut SerializedBlockData>,
-) {
-    q_storage_blocks.iter().for_each(|(parent, inventory, block_data)| {
-        let mut serialized_block_data = q_chunk
-            .get_mut(parent.get())
-            .expect("Block data's parent didn't have SerializedBlockData???");
-
-        serialized_block_data.serialize_data(
-            ChunkBlockCoordinate::for_block_coordinate(block_data.identifier.block.coords()),
-            "cosmos:inventory",
-            inventory,
-        );
-    });
-}
+use crate::persistence::loading::{LoadingBlueprintSystemSet, NeedsBlueprintLoaded, LOADING_SCHEDULE};
 
 fn on_load_blueprint_storage(
     needs_blueprint_loaded_structure: Query<(Entity, &Structure), With<NeedsBlueprintLoaded>>,
@@ -74,7 +43,8 @@ fn on_load_blueprint_storage(
 fn populate_inventory(
     mut q_structure: Query<&mut Structure>,
     mut q_block_data: Query<&mut BlockData>,
-    mut commands: Commands,
+    q_has_inventory: Query<(), With<Inventory>>,
+    mut params: BlockDataSystemParams,
     mut ev_reader: EventReader<PopulateBlockInventoryEvent>,
 ) {
     for ev in ev_reader.read() {
@@ -84,57 +54,20 @@ fn populate_inventory(
             continue;
         };
 
-        let inv = Inventory::new("Storage", 9 * 5, None);
-
-        if let Some(data_ent) = structure.block_data(coords) {
-            // TODO:
-            // If the BlockData was added the same frame as this from another system, this can cause the below if statement to be false,
-            // which could lead to issues if 2 pieces of block data are added in the same frame.
-            // This will need to be addressed in the future, as it will lead to data that holds nothing in blocks
-            // A simple method would be to remove the error-prone counting and just send out mutable events every time this entity is changed
-            // that would signal whether or not to remove this entity.
-            //
-            // For now, since there is only one possible type of data, this won't cause any issues (probably), but as soon as
-            // more than just storage blocks exist, this will be a problem
-            if let Ok(mut count) = q_block_data.get_mut(data_ent) {
-                count.increment();
-            }
-
-            if let Some(mut ecmds) = commands.get_entity(data_ent) {
-                ecmds.insert(inv);
-            }
-        } else {
-            let Some(chunk_ent) = structure.chunk_entity(ChunkCoordinate::for_block_coordinate(coords)) else {
-                warn!("Missing chunk entity but got block change event? How???");
-                continue;
-            };
-
-            let data_ent = commands
-                .spawn((
-                    BlockData {
-                        identifier: BlockDataIdentifier {
-                            block: ev.block,
-                            structure_entity: ev.structure_entity,
-                        },
-                        data_count: 1,
-                    },
-                    inv,
-                ))
-                .id();
-
-            commands.entity(chunk_ent).add_child(data_ent);
-            structure.set_block_data(coords, data_ent);
-        };
+        structure.insert_block_data_with_entity(
+            coords,
+            |e| Inventory::new("Storage", 9 * 5, None, e),
+            &mut params,
+            &mut q_block_data,
+            &q_has_inventory,
+        );
     }
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_systems(Update, populate_inventory.after(on_add_storage))
-        .add_systems(SAVING_SCHEDULE, save_storage.in_set(BlockDataSavingSet::SaveBlockData))
-        .add_systems(Update, save_storage.in_set(SerializeChunkBlockDataSet::Serialize))
-        .add_systems(
-            LOADING_SCHEDULE,
-            // Need structure to be populated first, thus `DoneLoadingBlueprints` instead of `DoLoadingBlueprints``
-            on_load_blueprint_storage.in_set(LoadingBlueprintSystemSet::DoneLoadingBlueprints),
-        );
+    app.add_systems(Update, populate_inventory.after(on_add_storage)).add_systems(
+        LOADING_SCHEDULE,
+        // Need structure to be populated first, thus `DoneLoadingBlueprints` instead of `DoLoadingBlueprints``
+        on_load_blueprint_storage.in_set(LoadingBlueprintSystemSet::DoneLoadingBlueprints),
+    );
 }

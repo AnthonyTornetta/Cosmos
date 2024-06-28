@@ -66,7 +66,7 @@ fn begin_serialization(
             continue;
         };
 
-        let Some(chunk) = structure.chunk_from_chunk_coordinates(chunk_ent.chunk_location) else {
+        let Some(chunk) = structure.chunk_at(chunk_ent.chunk_location) else {
             continue;
         };
 
@@ -103,10 +103,11 @@ fn send_chunks(
             structure_entity: chunk_ent.structure_entity,
             serialized_chunk: cosmos_encoder::serialize(chunk),
             serialized_block_data: serialized_chunk_block_data.map(|mut x| x.take_save_data()),
+            block_entities: chunk.all_block_data_entities().clone(),
         });
 
         structure
-            .chunk_from_chunk_coordinates(chunk_ent.chunk_location)
+            .chunk_at(chunk_ent.chunk_location)
             .expect("Chunk must still be loaded")
             .all_block_data_entities()
             .iter()

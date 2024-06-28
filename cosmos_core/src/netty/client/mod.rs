@@ -4,9 +4,13 @@
 
 use bevy::prelude::Component;
 
-#[derive(Component, Default)]
+#[derive(Component, Default, Debug)]
 /// Only the player that is this specific client will have this.
 ///
 /// This is only available to use in the Client project, you will get
 /// a compilation error if the server tries to use this in any way.
 pub struct LocalPlayer;
+
+/// This component indicates that this entity needs to be loaded by the server
+#[derive(Component, Default, Debug)]
+pub struct NeedsLoadedFromServer;

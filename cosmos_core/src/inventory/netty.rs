@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::block::data::BlockDataIdentifier;
 
-use super::{HeldItemStack, Inventory};
+use super::HeldItemStack;
 
 #[derive(Debug, Serialize, Deserialize, Clone, Copy, PartialEq, Eq)]
 /// A way of identifying where the inventory is
@@ -17,15 +17,8 @@ pub enum InventoryIdentifier {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-/// All the laser cannon system messages
+/// All the inventory messages
 pub enum ServerInventoryMessages {
-    /// Represents the inventory that an entity has.
-    UpdateInventory {
-        /// The serialized version of an inventory.
-        inventory: Inventory,
-        /// The owner of this inventory.
-        owner: InventoryIdentifier,
-    },
     /// Updates what is currently held by the player
     HeldItemstack {
         /// The currently held itemstack, if they are holding one
@@ -39,7 +32,7 @@ pub enum ServerInventoryMessages {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-/// All the laser cannon system messages
+/// All the client inventory messages
 pub enum ClientInventoryMessages {
     /// Asks the server to swap inventory slots.
     SwapSlots {
