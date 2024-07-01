@@ -11,6 +11,7 @@ use bevy::{
         system::{Commands, Res, ResMut, Resource},
     },
     log::{error, info},
+    prelude::OnEnter,
     reflect::erased_serde::Serialize,
 };
 use bevy_renet::renet::RenetClient;
@@ -96,6 +97,10 @@ fn transition_state(
     }
 }
 
+fn create_registries_left_to_sync(mut commands: Commands) {
+    commands.init_resource::<RegistriesLeftToSync>();
+}
+
 pub(super) fn register(app: &mut App) {
     app.add_systems(
         Update,
@@ -104,6 +109,6 @@ pub(super) fn register(app: &mut App) {
             .chain()
             .run_if(in_state(GameState::LoadingData)),
     )
-    .init_resource::<RegistriesLeftToSync>()
+    .add_systems(OnEnter(GameState::Connecting), create_registries_left_to_sync)
     .add_event::<ReceivedRegistryEvent>();
 }

@@ -7,7 +7,7 @@ use bevy::{
     render::render_resource::{TextureViewDescriptor, TextureViewDimension},
 };
 
-use crate::{rendering::MainCamera, state::game_state::GameState};
+use crate::state::game_state::GameState;
 
 use super::MainMenuCamera;
 

@@ -25,6 +25,7 @@ use crate::{
     },
     item::item_mesh::create_item_mesh,
     rendering::{BlockMeshRegistry, CosmosMeshBuilder, MeshBuilder},
+    state::game_state::GameState,
 };
 
 use super::{UiSystemSet, UiTopRoot};
@@ -421,7 +422,7 @@ pub(super) fn register(app: &mut App) {
             .in_set(RenderItemSystemSet::RenderItems),),
     );
 
-    app.add_systems(Startup, create_ui_camera)
+    app.add_systems(OnEnter(GameState::Playing), create_ui_camera)
         .register_type::<RenderItem>()
         .register_type::<RenderedItem>();
 }

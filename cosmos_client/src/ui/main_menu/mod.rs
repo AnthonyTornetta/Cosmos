@@ -1,29 +1,14 @@
 use bevy::{app::App, core_pipeline::bloom::BloomSettings, hierarchy::DespawnRecursiveExt, prelude::*, render::camera::Camera};
 use bevy_kira_audio::prelude::AudioReceiver;
 
-use crate::{
-    lang::Lang,
-    state::game_state::GameState,
-    ui::{
-        components::{
-            button::{register_button, Button, ButtonBundle, ButtonEvent, ButtonStyles},
-            scollable_container::{ScrollBox, ScrollBundle},
-            slider::{Slider, SliderBundle},
-            text_input::{InputType, TextInput, TextInputBundle},
-            window::{GuiWindow, WindowBundle},
-            Disabled,
-        },
-        reactivity::{add_reactable_type, BindValue, BindValues, ReactableFields, ReactableValue},
-        UiSystemSet,
-    },
-};
+use crate::{state::game_state::GameState, ui::UiSystemSet};
 
-use super::{
-    components::{show_cursor::ShowCursor, text_input::InputValue},
-    UiRoot,
-};
+use super::{components::show_cursor::ShowCursor, UiRoot};
 
+mod disconnect_screen;
 mod menu_panorama;
+mod title_screen;
+mod triggers;
 
 #[derive(Component)]
 struct DespawnOnSwitchState;
@@ -32,76 +17,62 @@ struct DespawnOnSwitchState;
 struct MainMenuCamera;
 
 #[derive(Component)]
-struct MainMenuRootUiNode(f32);
+struct MainMenuRootUiNode;
 
-fn despawn_all_main_menu_ents(mut commands: Commands, q_main_menu_entities: Query<Entity, With<DespawnOnSwitchState>>) {
+#[derive(Component)]
+struct BackgroundColorNode;
+
+#[derive(Debug, Default, Resource)]
+struct MainMenuTime(f32);
+
+#[derive(Component)]
+pub struct SurviveMainMenu;
+
+#[derive(Debug, Resource, Default, Clone, PartialEq, Eq)]
+pub enum MainMenuSubState {
+    #[default]
+    TitleScreen,
+    Settings,
+    Disconnect,
+}
+
+fn despawn_all_main_menu_ents<T: Component>(mut commands: Commands, q_main_menu_entities: Query<Entity, With<T>>) {
     for e in q_main_menu_entities.iter() {
         commands.entity(e).despawn_recursive();
     }
 }
 
-fn spin_camera(mut q_main_menu_camera: Query<&mut Transform, With<MainMenuCamera>>, time: Res<Time>) {
-    for mut trans in q_main_menu_camera.iter_mut() {
-        trans.rotation *= Quat::from_axis_angle(Vec3::Y, time.delta_seconds() / 30.0);
-    }
-}
-
-#[derive(Default, Event, Debug)]
-struct ConnectButtonEvent;
-
-impl ButtonEvent for ConnectButtonEvent {
-    fn create_event(_: Entity) -> Self {
-        Self
-    }
-}
-
-fn create_main_menu(mut commands: Commands, asset_server: Res<AssetServer>) {
-    let cool_blue = Color::hex("00FFFF").unwrap();
-
-    let text_style = TextStyle {
-        color: Color::WHITE,
-        font_size: 32.0,
-        font: asset_server.load("fonts/PixeloidSans.ttf"),
-    };
-    let text_style_small = TextStyle {
-        color: Color::WHITE,
-        font_size: 24.0,
-        font: asset_server.load("fonts/PixeloidSans.ttf"),
-    };
-    let text_style_large = TextStyle {
-        color: cool_blue,
-        font_size: 256.0,
-        font: asset_server.load("fonts/PixeloidSans.ttf"),
+fn create_main_menu_background_node(mut commands: Commands, q_main_menu_camera: Query<Entity, With<MainMenuCamera>>) {
+    let Ok(cam_ent) = q_main_menu_camera.get_single() else {
+        return;
     };
 
-    let cam_id = commands
-        .spawn((
-            DespawnOnSwitchState,
-            MainMenuCamera,
-            Camera3dBundle {
-                camera: Camera {
-                    hdr: true,
-                    ..Default::default()
-                },
-                transform: Transform::default(),
-                projection: Projection::from(PerspectiveProjection {
-                    fov: (90.0 / 180.0) * std::f32::consts::PI,
-                    ..default()
-                }),
-                ..default()
+    commands.spawn((
+        BackgroundColorNode,
+        TargetCamera(cam_ent),
+        DespawnOnSwitchState,
+        NodeBundle {
+            style: Style {
+                width: Val::Percent(100.0),
+                height: Val::Percent(100.0),
+                align_content: AlignContent::Center,
+                justify_content: JustifyContent::Center,
+                flex_direction: FlexDirection::Column,
+                ..Default::default()
             },
-            BloomSettings { ..Default::default() },
-            Name::new("Main Menu Camera"),
-            UiRoot,
-            AudioReceiver,
-            ShowCursor,
-        ))
-        .id();
+            ..Default::default()
+        },
+    ));
+}
 
-    commands
-        .spawn((
-            MainMenuRootUiNode(0.0),
-            TargetCamera(cam_id),
+fn create_main_menu_root_node(q_bg_node: Query<Entity, With<BackgroundColorNode>>, mut commands: Commands) {
+    let Ok(ent) = q_bg_node.get_single() else {
+        return;
+    };
+
+    commands.entity(ent).with_children(|p| {
+        p.spawn((
+            MainMenuRootUiNode,
             NodeBundle {
                 style: Style {
                     width: Val::Percent(100.0),
@@ -113,92 +84,122 @@ fn create_main_menu(mut commands: Commands, asset_server: Res<AssetServer>) {
                 },
                 ..Default::default()
             },
-        ))
-        .with_children(|p| {
-            p.spawn(TextBundle {
-                text: Text::from_section("COSMOS", text_style_large),
-                style: Style {
-                    margin: UiRect::bottom(Val::Px(200.0)),
-                    align_self: AlignSelf::Center,
-                    ..Default::default()
-                },
-                ..Default::default()
-            });
-
-            p.spawn(ButtonBundle::<ConnectButtonEvent> {
-                node_bundle: NodeBundle {
-                    border_color: cool_blue.into(),
-                    style: Style {
-                        border: UiRect::all(Val::Px(2.0)),
-                        width: Val::Px(500.0),
-                        height: Val::Px(70.0),
-                        align_self: AlignSelf::Center,
-                        ..Default::default()
-                    },
-                    ..Default::default()
-                },
-                button: Button {
-                    button_styles: Some(ButtonStyles {
-                        background_color: Color::hex("333333").unwrap(),
-                        hover_background_color: Color::hex("232323").unwrap(),
-                        press_background_color: Color::hex("111111").unwrap(),
-                        ..Default::default()
-                    }),
-                    text: Some(("Connect".into(), text_style.clone())),
-                    ..Default::default()
-                },
-            });
-
-            p.spawn(TextInputBundle {
-                text_input: TextInput {
-                    style: text_style_small.clone(),
-                    input_type: InputType::Text { max_length: None },
-                    ..Default::default()
-                },
-                value: InputValue::new("localhost"),
-                node_bundle: NodeBundle {
-                    border_color: Color::hex("555555").unwrap().into(),
-                    background_color: Color::hex("111111").unwrap().into(),
-                    style: Style {
-                        border: UiRect::all(Val::Px(2.0)),
-                        width: Val::Px(500.0),
-                        height: Val::Px(45.0),
-                        align_self: AlignSelf::Center,
-                        margin: UiRect::top(Val::Px(20.0)),
-                        padding: UiRect {
-                            top: Val::Px(4.0),
-                            bottom: Val::Px(4.0),
-                            ..Default::default()
-                        },
-                        ..Default::default()
-                    },
-                    ..Default::default()
-                },
-                ..Default::default()
-            });
-        });
+        ));
+    });
 }
 
-fn fade_in_background(mut q_root_node: Query<(&mut MainMenuRootUiNode, &mut BackgroundColor)>, time: Res<Time>) {
-    for (mut root, mut bg) in q_root_node.iter_mut() {
+fn spin_camera(mut q_main_menu_camera: Query<&mut Transform, With<MainMenuCamera>>, time: Res<Time>) {
+    for mut trans in q_main_menu_camera.iter_mut() {
+        trans.rotation *= Quat::from_axis_angle(Vec3::Y, time.delta_seconds() / 30.0);
+    }
+}
+
+fn fade_in_background(
+    mut q_root_node: Query<&mut BackgroundColor, With<BackgroundColorNode>>,
+    mut main_menu_time: ResMut<MainMenuTime>,
+    time: Res<Time>,
+) {
+    for mut bg in q_root_node.iter_mut() {
         const MIN_A: f32 = 0.6;
 
-        let alpha_now = (1.0 / (6.0 * root.0) + MIN_A).min(1.0);
+        let alpha_now = (1.0 / (6.0 * main_menu_time.0) + MIN_A).min(1.0);
 
         bg.0 = Color::rgba(bg.0.r(), bg.0.g(), bg.0.b(), alpha_now);
-
-        root.0 += time.delta_seconds();
     }
+
+    main_menu_time.0 += time.delta_seconds();
+}
+
+fn create_main_menu_camera(mut commands: Commands) {
+    commands.spawn((
+        DespawnOnSwitchState,
+        MainMenuCamera,
+        Camera3dBundle {
+            camera: Camera {
+                hdr: true,
+                ..Default::default()
+            },
+            transform: Transform::default(),
+            projection: Projection::from(PerspectiveProjection {
+                fov: (90.0 / 180.0) * std::f32::consts::PI,
+                ..default()
+            }),
+            ..default()
+        },
+        BloomSettings { ..Default::default() },
+        Name::new("Main Menu Camera"),
+        UiRoot,
+        AudioReceiver,
+        ShowCursor,
+    ));
+}
+
+fn create_main_menu_resource(
+    q_entity: Query<Entity, (Without<SurviveMainMenu>, Without<Window>, Without<Parent>)>,
+    mut commands: Commands,
+    mm_resource: Option<Res<MainMenuSubState>>,
+) {
+    for ent in q_entity.iter() {
+        commands.entity(ent).despawn_recursive();
+    }
+
+    // trigger change detection, even if the resource already exists
+    commands.insert_resource(mm_resource.map(|x| x.clone()).unwrap_or_default());
+    commands.init_resource::<MainMenuTime>();
+}
+
+fn remove_main_menu_resource(mut commands: Commands) {
+    commands.remove_resource::<MainMenuSubState>();
+    commands.remove_resource::<MainMenuTime>();
+}
+
+#[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
+pub enum MainMenuSystemSet {
+    /// If there is an old menu, cleans it up
+    CleanupMenu,
+    /// Creates your new menu
+    InitializeMenu,
+    /// Listens to any menu events and responds to them
+    UpdateMenu,
+}
+
+fn in_main_menu_state(state: MainMenuSubState) -> impl Fn(Option<Res<MainMenuSubState>>) -> bool {
+    move |mms: Option<Res<MainMenuSubState>>| mms.map(|x| *x == state).unwrap_or(false)
 }
 
 pub(super) fn register(app: &mut App) {
     menu_panorama::register(app);
+    title_screen::register(app);
+    disconnect_screen::register(app);
+    triggers::register(app);
 
-    register_button::<ConnectButtonEvent>(app);
+    app.configure_sets(
+        Update,
+        (
+            MainMenuSystemSet::CleanupMenu,
+            MainMenuSystemSet::InitializeMenu.before(UiSystemSet::DoUi),
+            MainMenuSystemSet::UpdateMenu.after(UiSystemSet::FinishUi),
+        )
+            .chain()
+            .run_if(in_state(GameState::MainMenu)),
+    );
 
-    app.add_systems(OnEnter(GameState::MainMenu), create_main_menu);
+    app.add_systems(
+        OnEnter(GameState::MainMenu),
+        (create_main_menu_resource, create_main_menu_camera, create_main_menu_background_node).chain(),
+    ); //create_main_menu);
 
     app.add_systems(Update, (spin_camera, fade_in_background).run_if(in_state(GameState::MainMenu)));
 
-    app.add_systems(OnExit(GameState::MainMenu), despawn_all_main_menu_ents);
+    app.add_systems(
+        Update,
+        (despawn_all_main_menu_ents::<MainMenuRootUiNode>, create_main_menu_root_node)
+            .chain()
+            .run_if(resource_exists_and_changed::<MainMenuSubState>)
+            .in_set(MainMenuSystemSet::CleanupMenu),
+    );
+    app.add_systems(
+        OnExit(GameState::MainMenu),
+        (despawn_all_main_menu_ents::<DespawnOnSwitchState>, remove_main_menu_resource).chain(),
+    );
 }
