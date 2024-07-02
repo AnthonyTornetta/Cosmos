@@ -18,7 +18,7 @@ use bevy_renet::renet::RenetServer;
 use cosmos_core::{
     block::{
         block_events::{BlockBreakEvent, BlockInteractEvent},
-        gravity_well::GravityWell,
+        specific_blocks::gravity_well::GravityWell,
         Block,
     },
     netty::{

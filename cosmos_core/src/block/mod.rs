@@ -16,8 +16,8 @@ pub mod block_events;
 pub mod block_update;
 pub mod blocks;
 pub mod data;
-pub mod gravity_well;
 pub mod multiblock;
+pub mod specific_blocks;
 pub mod storage;
 
 #[derive(Reflect, Debug, Eq, PartialEq, Clone, Copy, Hash)]
@@ -802,7 +802,7 @@ pub(super) fn register<T: States + Clone + Copy>(
     multiblock::register(app, post_loading_state, playing_state);
     block_update::register(app);
     storage::register(app);
-    gravity_well::register(app);
+    specific_blocks::register(app);
     data::register(app);
 
     app.register_type::<BlockFace>();

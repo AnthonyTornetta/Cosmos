@@ -13,7 +13,7 @@ use crate::{
     structure::{loading::StructureLoadingSet, Structure},
 };
 
-mod wire_graph;
+pub mod wire_graph;
 
 fn logic_block_placed_event_listener(
     mut evr_block_updated: EventReader<BlockChangedEvent>,
@@ -45,14 +45,14 @@ fn logic_block_placed_event_listener(
 }
 
 #[derive(Event, Debug)]
-struct LogicOutputEvent {
+pub struct LogicOutputEvent {
     logic_group_id: usize,
     output_port: Port,
     entity: Entity,
 }
 
 #[derive(Event, Debug)]
-struct LogicInputEvent {
+pub struct LogicInputEvent {
     logic_group_id: usize,
     input_port: Port,
     entity: Entity,
@@ -74,23 +74,6 @@ fn logic_output_event_listener(
         };
     }
     // evw_logic_input.send(LogicInputEvent {  })
-}
-
-fn logic_input_event_listener(
-    mut evr_logic_output: EventReader<LogicOutputEvent>,
-    mut evw_logic_input: EventWriter<LogicInputEvent>,
-    logic_blocks: Res<Registry<LogicBlock>>,
-    mut q_wire_graph: Query<&mut WireGraph>,
-    mut q_structure: Query<&mut Structure>,
-) {
-    for ev in evr_logic_output.read() {
-        let Ok(structure) = q_structure.get_mut(ev.entity) else {
-            return;
-        };
-        let Ok(mut wire_graph) = q_wire_graph.get_mut(ev.entity) else {
-            return;
-        };
-    }
 }
 
 fn add_default_wire_graph(q_needs_wire_graph: Query<Entity, (With<Structure>, Without<WireGraph>)>, mut commands: Commands) {
@@ -128,7 +111,7 @@ pub(super) fn register<T: States>(app: &mut App, post_loading_state: T, playing_
             (
                 add_default_wire_graph.in_set(StructureLoadingSet::AddStructureComponents),
                 logic_block_placed_event_listener,
-                (logic_output_event_listener, logic_input_event_listener).chain(),
+                // (logic_output_event_listener, light_logic_input_event_listener).chain(),
             )
                 .run_if(in_state(playing_state)),
         )
