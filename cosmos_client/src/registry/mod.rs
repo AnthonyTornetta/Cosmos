@@ -8,10 +8,9 @@ use bevy::{
             common_conditions::{in_state, resource_exists},
             IntoSystemConfigs, NextState,
         },
-        system::{Commands, Res, ResMut, Resource},
+        system::{Res, ResMut, Resource},
     },
     log::{error, info},
-    prelude::OnEnter,
     reflect::erased_serde::Serialize,
 };
 use bevy_renet::renet::RenetClient;
@@ -21,7 +20,10 @@ use cosmos_core::{
 };
 use serde::de::DeserializeOwned;
 
-use crate::state::game_state::GameState;
+use crate::{
+    ecs::{add_multi_statebound_resource, add_statebound_resource},
+    state::game_state::GameState,
+};
 
 #[derive(Event)]
 struct ReceivedRegistryEvent {
@@ -84,21 +86,11 @@ fn registry_listen_netty(
     }
 }
 
-fn transition_state(
-    mut state_changer: ResMut<NextState<GameState>>,
-    mut commands: Commands,
-    loading_registries: Res<RegistriesLeftToSync>,
-) {
+fn transition_state(mut state_changer: ResMut<NextState<GameState>>, loading_registries: Res<RegistriesLeftToSync>) {
     if loading_registries.0.is_some_and(|x| x == 0) {
         info!("Got all registries from server - loading world!");
         state_changer.set(GameState::LoadingWorld);
-
-        commands.remove_resource::<RegistriesLeftToSync>();
     }
-}
-
-fn create_registries_left_to_sync(mut commands: Commands) {
-    commands.init_resource::<RegistriesLeftToSync>();
 }
 
 pub(super) fn register(app: &mut App) {
@@ -109,6 +101,7 @@ pub(super) fn register(app: &mut App) {
             .chain()
             .run_if(in_state(GameState::LoadingData)),
     )
-    .add_systems(OnEnter(GameState::Connecting), create_registries_left_to_sync)
     .add_event::<ReceivedRegistryEvent>();
+
+    add_multi_statebound_resource::<RegistriesLeftToSync>(app, GameState::Connecting, GameState::LoadingData);
 }
