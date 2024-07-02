@@ -108,7 +108,7 @@ impl LogicBlock {
 }
 
 #[derive(Debug, Default, Reflect, PartialEq, Eq, Clone)]
-struct LogicGroup {
+pub struct LogicGroup {
     recent_wire_coords: Option<BlockCoordinate>,
     producers: HashMap<Port, bool>,
     consumers: HashSet<Port>,
@@ -181,7 +181,7 @@ impl WireGraph {
         self.groups.remove(&id).expect("Removed logic group should have existed.")
     }
 
-    fn add_port(&mut self, coords: BlockCoordinate, local_face: BlockFace, group_id: usize, port_type: PortType) {
+    fn add_port(&mut self, coords: BlockCoordinate, local_face: BlockFace, group_id: usize, port_type: PortType, on: bool) {
         match port_type {
             PortType::Input => &mut self.group_of_input_port,
             PortType::Output => &mut self.group_of_output_port,
@@ -194,11 +194,11 @@ impl WireGraph {
             .expect("Group should have vectors of input and output ports.");
         match port_type {
             PortType::Input => drop(logic_group.consumers.insert(Port::new(coords, local_face))),
-            PortType::Output => drop(logic_group.producers.insert(Port::new(coords, local_face), false)),
+            PortType::Output => drop(logic_group.producers.insert(Port::new(coords, local_face), on)),
         };
     }
 
-    fn neighbor_port(
+    fn placed_port(
         &mut self,
         coords: BlockCoordinate,
         global_face: BlockFace,
@@ -219,7 +219,7 @@ impl WireGraph {
                 logic_blocks,
             );
             let group_id = maybe_group.unwrap_or_else(|| self.new_group(None));
-            self.add_port(coords, local_face, group_id, port_type);
+            self.add_port(coords, local_face, group_id, port_type, false);
         }
     }
 
@@ -289,12 +289,12 @@ impl WireGraph {
     ) {
         // Adding input faces as consumers to their connected group, or a new group if there is no connected group.
         for input_face in logic_block.input_faces() {
-            self.neighbor_port(coords, input_face, PortType::Input, structure, blocks, logic_blocks)
+            self.placed_port(coords, input_face, PortType::Input, structure, blocks, logic_blocks)
         }
 
         // Adding output faces as consumers to their connected group, or a new group if there is no connected group.
         for output_face in logic_block.output_faces() {
-            self.neighbor_port(coords, output_face, PortType::Output, structure, blocks, logic_blocks)
+            self.placed_port(coords, output_face, PortType::Output, structure, blocks, logic_blocks)
         }
 
         // Connect wire faces to all existing groups (by creating one new group that includes all adjacent groups).
@@ -349,7 +349,7 @@ impl WireGraph {
         // For now, we just delete the group and start again every time to avoid edge cases.
         if logic_block.wire_faces().count() > 0 {
             // Old group ID either comes from being the stored wire coordinate for a group, or searching all your neighbors.
-            let group_id = self
+            let old_group_id = self
                 .groups
                 .iter()
                 .find_map(|(&id, group)| if group.recent_wire_coords == Some(coords) { Some(id) } else { None })
@@ -357,7 +357,6 @@ impl WireGraph {
                     self.find_group_all_faces(logic_block, coords, structure, &mut Port::all_for(coords), blocks, logic_blocks)
                         .expect("Block with 'wire' logic connection should have a logic group.")
                 });
-            self.remove_group(group_id);
 
             // Setting new group IDs.
             let mut visited = Port::all_for(coords);
@@ -381,6 +380,8 @@ impl WireGraph {
                     self.remove_group(id);
                 }
             }
+
+            self.remove_group(old_group_id);
         }
     }
 
@@ -518,7 +519,28 @@ impl WireGraph {
         let encountered_face = structure.block_rotation(coords).local_to_global(encountered_local_face);
         match logic_block.connection_on(encountered_face) {
             Some(LogicConnection::Port(port_type)) => {
-                self.add_port(coords, encountered_local_face, new_group_id, port_type);
+                // Deciding whether the port was on or off in the old group.
+                let on = match port_type {
+                    PortType::Input => false,
+                    PortType::Output => {
+                        let old_group = self
+                            .groups
+                            .get(
+                                self.group_of_output_port
+                                    .get(&Port::new(coords, encountered_local_face))
+                                    .expect("Port being renamed should have a previous group ID."),
+                            )
+                            .expect("Port being renamed should have a previous group.");
+
+                        *old_group
+                            .producers
+                            .get(&Port::new(coords, encountered_local_face))
+                            .expect("Existing output port should be either on or off")
+                    }
+                };
+
+                // Inserting the port into the port to group ID mapping also removes the old version.
+                self.add_port(coords, encountered_local_face, new_group_id, port_type, on);
             }
             Some(LogicConnection::Wire) => {
                 // Recurse to continue marking the ports reachable from this wire.

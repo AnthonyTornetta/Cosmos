@@ -4,7 +4,7 @@ use bevy::{
         in_state, Commands, Entity, Event, EventReader, EventWriter, IntoSystemConfigs, OnEnter, Query, Res, ResMut, States, With, Without,
     },
 };
-use wire_graph::{LogicBlock, LogicConnection, Port, PortType, WireGraph};
+use wire_graph::{LogicBlock, LogicConnection, LogicGroup, Port, PortType, WireGraph};
 
 use crate::{
     block::Block,
@@ -21,7 +21,7 @@ fn logic_block_placed_event_listener(
     logic_blocks: Res<Registry<LogicBlock>>,
     mut q_wire_graph: Query<&mut WireGraph>,
     mut q_structure: Query<&mut Structure>,
-    mut evw_logic_output: EventWriter<LogicOutputEvent>,
+    // mut evw_logic_output: EventWriter<LogicOutputEvent>,
 ) {
     for ev in evr_block_updated.read() {
         // If was logic block, remove from graph.
@@ -132,5 +132,8 @@ pub(super) fn register<T: States>(app: &mut App, post_loading_state: T, playing_
             )
                 .run_if(in_state(playing_state)),
         )
-        .register_type::<WireGraph>();
+        .register_type::<WireGraph>()
+        .register_type::<LogicGroup>()
+        .add_event::<LogicOutputEvent>()
+        .add_event::<LogicInputEvent>();
 }
