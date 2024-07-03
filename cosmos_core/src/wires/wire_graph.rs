@@ -107,11 +107,31 @@ impl LogicBlock {
     }
 }
 
+#[derive(Debug, Default, Reflect, Hash, PartialEq, Eq, Clone, Copy)]
+pub struct Port {
+    pub coords: BlockCoordinate,
+    pub local_face: BlockFace,
+}
+
+impl Port {
+    fn new(coords: BlockCoordinate, local_face: BlockFace) -> Port {
+        Port { coords, local_face }
+    }
+
+    fn all_for(coords: BlockCoordinate) -> HashSet<Port> {
+        let mut all = HashSet::new();
+        for i in 0..=5 {
+            all.insert(Port::new(coords, BlockFace::from_index(i)));
+        }
+        all
+    }
+}
+
 #[derive(Debug, Default, Reflect, PartialEq, Eq, Clone)]
 pub struct LogicGroup {
     recent_wire_coords: Option<BlockCoordinate>,
-    producers: HashMap<Port, bool>,
-    consumers: HashSet<Port>,
+    pub producers: HashMap<Port, bool>,
+    pub consumers: HashSet<Port>,
 }
 
 impl LogicGroup {
@@ -131,28 +151,8 @@ impl LogicGroup {
         }
     }
 
-    fn on(&self) -> bool {
+    pub fn on(&self) -> bool {
         self.producers.values().any(|&x| x)
-    }
-}
-
-#[derive(Debug, Default, Reflect, Hash, PartialEq, Eq, Clone, Copy)]
-pub struct Port {
-    coords: BlockCoordinate,
-    local_face: BlockFace,
-}
-
-impl Port {
-    fn new(coords: BlockCoordinate, local_face: BlockFace) -> Port {
-        Port { coords, local_face }
-    }
-
-    fn all_for(coords: BlockCoordinate) -> HashSet<Port> {
-        let mut all = HashSet::new();
-        for i in 0..=5 {
-            all.insert(Port::new(coords, BlockFace::from_index(i)));
-        }
-        all
     }
 }
 
@@ -160,7 +160,7 @@ impl Port {
 pub struct WireGraph {
     /// As new logic groups are created, this tracks which ID is the next available.
     next_group_id: usize,
-    groups: HashMap<usize, LogicGroup>,
+    pub groups: HashMap<usize, LogicGroup>,
     group_of_output_port: HashMap<Port, usize>,
     group_of_input_port: HashMap<Port, usize>,
 }

@@ -46,16 +46,16 @@ fn logic_block_placed_event_listener(
 
 #[derive(Event, Debug)]
 pub struct LogicOutputEvent {
-    logic_group_id: usize,
-    output_port: Port,
-    entity: Entity,
+    pub logic_group_id: usize,
+    pub output_port: Port,
+    pub entity: Entity,
 }
 
 #[derive(Event, Debug)]
 pub struct LogicInputEvent {
-    logic_group_id: usize,
-    input_port: Port,
-    entity: Entity,
+    pub logic_group_id: usize,
+    pub input_port: Port,
+    pub entity: Entity,
 }
 
 fn logic_output_event_listener(
