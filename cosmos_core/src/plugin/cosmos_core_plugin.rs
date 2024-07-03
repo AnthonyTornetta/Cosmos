@@ -7,7 +7,7 @@ use bevy_inspector_egui::quick::WorldInspectorPlugin;
 use bevy_rapier3d::prelude::RapierPhysicsPlugin;
 
 use crate::physics::collision_handling::CosmosPhysicsFilter;
-use crate::{block, economy, ecs, inventory, netty, persistence, projectiles, shop, universe, wires};
+use crate::{block, economy, ecs, fluid, inventory, netty, persistence, projectiles, shop, universe, wires};
 use crate::{blockitems, structure};
 use crate::{events, loader};
 use crate::{item, physics};
@@ -93,6 +93,7 @@ impl<T: States + Clone + Copy> Plugin for CosmosCorePlugin<T> {
         economy::register(app);
         shop::register(app);
         wires::register(app, self.post_loading_state, self.playing_state);
+        fluid::register(app);
     }
 }
 

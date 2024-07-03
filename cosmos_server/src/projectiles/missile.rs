@@ -78,7 +78,7 @@ fn respond_to_collisions(
     mut commands: Commands,
 ) {
     for ev in ev_reader.read() {
-        let &CollisionEvent::Started(e1, e2, _) = ev else {
+        let &CollisionEvent::Started(e1, e2, _, _) = ev else {
             continue;
         };
 

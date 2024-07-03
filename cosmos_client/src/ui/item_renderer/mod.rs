@@ -1,5 +1,7 @@
 //! Renders items as 3d models at based off the RenderItem present in a UI element
 
+use std::f32::consts::PI;
+
 use bevy::{
     prelude::*,
     render::{camera::ScalingMode, view::RenderLayers},
@@ -15,13 +17,15 @@ use cosmos_core::{
 
 use crate::{
     asset::{
-        asset_loading::{BlockNeighbors, BlockTextureIndex},
+        asset_loading::{BlockNeighbors, BlockTextureIndex, CosmosTextureAtlas, ItemTextureIndex},
         materials::{
-            add_materials, block_materials::ArrayTextureMaterial, remove_materials, AddMaterialEvent, BlockMaterialMapping,
-            MaterialDefinition, MaterialType,
+            add_materials, remove_materials, AddMaterialEvent, BlockMaterialMapping, ItemMaterialMapping, MaterialDefinition, MaterialType,
         },
+        texture_atlas::SquareTextureAtlas,
     },
+    item::item_mesh::create_item_mesh,
     rendering::{BlockMeshRegistry, CosmosMeshBuilder, MeshBuilder},
+    state::game_state::GameState,
 };
 
 use super::{UiSystemSet, UiTopRoot};
@@ -63,7 +67,7 @@ pub struct RenderItem {
 }
 
 #[derive(Debug, Component, Reflect)]
-struct RenderedItem {
+pub struct RenderedItem {
     /// Points to the UI entity that had the `RenderItem` that created this
     ui_element_entity: Entity,
     item_id: u16,
@@ -81,12 +85,20 @@ fn render_items(
     block_materials_registry: Res<ManyToOneRegistry<Block, BlockMaterialMapping>>,
     block_textures: Res<Registry<BlockTextureIndex>>,
     block_meshes: Res<BlockMeshRegistry>,
+    images: Res<Assets<Image>>,
 
-    mut removed_render_items: RemovedComponents<RenderItem>,
-    changed_render_items: Query<(Entity, &RenderItem, &GlobalTransform), Or<(Changed<RenderItem>, Changed<GlobalTransform>)>>,
-    rendered_items: Query<(Entity, &RenderedItem)>,
-    material_definitions_registry: Res<Registry<MaterialDefinition>>,
-    mut event_writer: EventWriter<AddMaterialEvent>,
+    (mut q_transform, mut removed_render_items, changed_render_items, rendered_items, material_definitions_registry, mut event_writer): (
+        Query<&mut Transform>,
+        RemovedComponents<RenderItem>,
+        Query<(Entity, &RenderItem, &GlobalTransform), Or<(Changed<RenderItem>, Changed<GlobalTransform>)>>,
+        Query<(Entity, &RenderedItem)>,
+        Res<Registry<MaterialDefinition>>,
+        EventWriter<AddMaterialEvent>,
+    ),
+
+    item_materials_registry: Res<ManyToOneRegistry<Item, ItemMaterialMapping>>,
+    atlas: Res<Registry<CosmosTextureAtlas>>,
+    item_textures: Res<Registry<ItemTextureIndex>>,
 ) {
     for entity in removed_render_items.read() {
         if let Some((rendered_item_entity, _)) = rendered_items
@@ -100,8 +112,9 @@ fn render_items(
     }
 
     for (entity, changed_render_item, transform) in changed_render_items.iter() {
-        let size = 0.8;
         let translation = transform.translation();
+
+        let item = items.from_numeric_id(changed_render_item.item_id);
 
         let to_create = if let Some((rendered_item_entity, rendered_item)) = rendered_items
             .iter()
@@ -112,76 +125,177 @@ fn render_items(
                 continue;
             }
 
+            let mut transform = q_transform.get_mut(rendered_item_entity).expect("This must have a transform");
+
+            transform.rotation = if block_items.block_from_item(item).is_some() {
+                // This makes blocks look cool
+                Quat::from_xyzw(-0.18800081, 0.31684527, 0.06422775, -0.9274371)
+            } else {
+                Quat::from_axis_angle(Vec3::X, PI / 2.0)
+            };
+
             rendered_item_entity
         } else {
-            let mut transform = Transform::from_rotation(Quat::from_xyzw(-0.18800081, 0.31684527, 0.06422775, -0.9274371)); // This makes it look cool
+            let mut transform = if block_items.block_from_item(item).is_some() {
+                // This makes blocks look cool
+                Transform::from_rotation(Quat::from_xyzw(-0.18800081, 0.31684527, 0.06422775, -0.9274371))
+            } else {
+                Transform::from_rotation(Quat::from_axis_angle(Vec3::X, PI / 2.0))
+            };
 
             // hide it till we position it properly
             transform.translation.x = -1000000.0;
 
             commands
-                .spawn(MaterialMeshBundle::<ArrayTextureMaterial> {
-                    transform,
-                    ..Default::default()
-                })
+                .spawn((TransformBundle::from_transform(transform), VisibilityBundle::default()))
                 .id()
         };
 
-        let item = items.from_numeric_id(changed_render_item.item_id);
+        if !generate_block_item_model(
+            item,
+            to_create,
+            translation,
+            entity,
+            changed_render_item,
+            &mut commands,
+            &mut meshes,
+            &block_items,
+            &blocks,
+            &block_materials_registry,
+            &block_textures,
+            &block_meshes,
+            &material_definitions_registry,
+            &mut event_writer,
+        ) {
+            generate_item_model(
+                item,
+                to_create,
+                translation,
+                entity,
+                changed_render_item,
+                &mut commands,
+                &mut meshes,
+                &images,
+                &item_materials_registry,
+                &atlas,
+                &item_textures,
+                &material_definitions_registry,
+                &mut event_writer,
+            );
+        }
+    }
+}
 
-        let Some(block_id) = block_items.block_from_item(item) else {
-            continue;
-        };
+fn generate_item_model(
+    item: &Item,
+    to_create: Entity,
+    translation: Vec3,
+    entity: Entity,
+    changed_render_item: &RenderItem,
+    commands: &mut Commands,
+    meshes: &mut Assets<Mesh>,
+    images: &Assets<Image>,
+    item_materials_registry: &ManyToOneRegistry<Item, ItemMaterialMapping>,
+    atlas: &Registry<CosmosTextureAtlas>,
+    item_textures: &Registry<ItemTextureIndex>,
+    material_definitions_registry: &Registry<MaterialDefinition>,
+    event_writer: &mut EventWriter<AddMaterialEvent>,
+) {
+    let size = 0.8;
 
-        let block = blocks.from_numeric_id(block_id);
+    let index = item_textures
+        .from_id(item.unlocalized_name())
+        .unwrap_or_else(|| item_textures.from_id("missing").expect("Missing texture should exist."));
 
-        let index = block_textures
-            .from_id(block.unlocalized_name())
-            .unwrap_or_else(|| block_textures.from_id("missing").expect("Missing texture should exist."));
+    let atlas = atlas.from_id("cosmos:main").unwrap();
 
-        let Some(block_mesh_info) = block_meshes.get_value(block) else {
-            continue;
-        };
+    let image_index = index.atlas_index();
 
-        let mut mesh_builder = CosmosMeshBuilder::default();
+    let texture_data = SquareTextureAtlas::get_sub_image_data(
+        images.get(atlas.texture_atlas.get_atlas_handle()).expect("Missing atlas image"),
+        image_index,
+    );
 
-        let Some(block_material_mapping) = block_materials_registry.get_value(block) else {
-            warn!("Missing material for block {}", block.unlocalized_name());
-            continue;
-        };
+    let Some(item_material_mapping) = item_materials_registry.get_value(item) else {
+        warn!("Missing material for block {}", item.unlocalized_name());
+        return;
+    };
+    let mat_id = item_material_mapping.material_id();
+    let material = material_definitions_registry.from_numeric_id(mat_id);
 
-        let mat_id = block_material_mapping.material_id();
+    let mesh = create_item_mesh(texture_data, item.id(), image_index, &material, size);
+    let mesh_handle = meshes.add(mesh);
 
-        let material = material_definitions_registry.from_numeric_id(mat_id);
+    commands.entity(to_create).insert((
+        RenderedItem {
+            based_off: translation,
+            ui_element_entity: entity,
+            item_id: changed_render_item.item_id,
+        },
+        mesh_handle,
+        RenderLayers::from_layers(&[INVENTORY_SLOT_LAYER]),
+        Name::new(format!("Rendered Inventory Item ({})", changed_render_item.item_id)),
+    ));
 
-        if block_mesh_info.has_multiple_face_meshes() {
-            for face in [BlockFace::Top, BlockFace::Right, BlockFace::Front] {
-                let Some(mut mesh_info) = block_mesh_info.info_for_face(face, false).cloned() else {
-                    break;
-                };
+    event_writer.send(AddMaterialEvent {
+        entity: to_create,
+        add_material_id: mat_id,
+        material_type: MaterialType::Unlit,
+    });
+}
 
-                mesh_info.scale(Vec3::new(size, size, size));
+fn generate_block_item_model(
+    item: &Item,
+    to_create: Entity,
+    translation: Vec3,
+    entity: Entity,
+    changed_render_item: &RenderItem,
+    commands: &mut Commands,
+    meshes: &mut Assets<Mesh>,
+    block_items: &BlockItems,
+    blocks: &Registry<Block>,
+    block_materials_registry: &ManyToOneRegistry<Block, BlockMaterialMapping>,
+    block_textures: &Registry<BlockTextureIndex>,
+    block_meshes: &BlockMeshRegistry,
+    material_definitions_registry: &Registry<MaterialDefinition>,
+    event_writer: &mut EventWriter<AddMaterialEvent>,
+) -> bool {
+    let size = 0.8;
 
-                let Some(image_index) = index.atlas_index_from_face(face, BlockNeighbors::empty()) else {
-                    continue;
-                };
+    let Some(block_id) = block_items.block_from_item(item) else {
+        return false;
+    };
 
-                mesh_builder.add_mesh_information(
-                    &mesh_info,
-                    Vec3::ZERO,
-                    Rect::new(0.0, 0.0, 1.0, 1.0),
-                    image_index,
-                    material.add_material_data(block_id, &mesh_info),
-                );
-            }
-        } else {
-            let Some(mut mesh_info) = block_mesh_info.info_for_whole_block().cloned() else {
+    let block = blocks.from_numeric_id(block_id);
+
+    let index = block_textures
+        .from_id(block.unlocalized_name())
+        .unwrap_or_else(|| block_textures.from_id("missing").expect("Missing texture should exist."));
+
+    let Some(block_mesh_info) = block_meshes.get_value(block) else {
+        return false;
+    };
+
+    let mut mesh_builder = CosmosMeshBuilder::default();
+
+    let Some(block_material_mapping) = block_materials_registry.get_value(block) else {
+        warn!("Missing material for block {}", block.unlocalized_name());
+        return false;
+    };
+
+    let mat_id = block_material_mapping.material_id();
+
+    let material = material_definitions_registry.from_numeric_id(mat_id);
+
+    if block_mesh_info.has_multiple_face_meshes() {
+        for face in [BlockFace::Top, BlockFace::Right, BlockFace::Front] {
+            let Some(mut mesh_info) = block_mesh_info.info_for_face(face, false).cloned() else {
                 break;
             };
 
             mesh_info.scale(Vec3::new(size, size, size));
 
-            let Some(image_index) = index.atlas_index_from_face(BlockFace::Front, BlockNeighbors::empty()) else {
+            let Some(image_index) = index.atlas_index_from_face(face, BlockNeighbors::empty()) else {
                 continue;
             };
 
@@ -193,25 +307,44 @@ fn render_items(
                 material.add_material_data(block_id, &mesh_info),
             );
         }
+    } else {
+        let Some(mut mesh_info) = block_mesh_info.info_for_whole_block().cloned() else {
+            return false;
+        };
 
-        commands.entity(to_create).insert((
-            RenderedItem {
-                based_off: translation,
-                ui_element_entity: entity,
-                item_id: changed_render_item.item_id,
-            },
-            meshes.add(mesh_builder.build_mesh()),
-            // material.unlit_material().clone(),
-            RenderLayers::from_layers(&[INVENTORY_SLOT_LAYER]),
-            Name::new(format!("Rendered Inventory Item ({})", changed_render_item.item_id)),
-        ));
+        mesh_info.scale(Vec3::new(size, size, size));
 
-        event_writer.send(AddMaterialEvent {
-            entity: to_create,
-            add_material_id: mat_id,
-            material_type: MaterialType::Unlit,
-        });
+        let Some(image_index) = index.atlas_index_from_face(BlockFace::Front, BlockNeighbors::empty()) else {
+            return false;
+        };
+
+        mesh_builder.add_mesh_information(
+            &mesh_info,
+            Vec3::ZERO,
+            Rect::new(0.0, 0.0, 1.0, 1.0),
+            image_index,
+            material.add_material_data(block_id, &mesh_info),
+        );
     }
+
+    commands.entity(to_create).insert((
+        RenderedItem {
+            based_off: translation,
+            ui_element_entity: entity,
+            item_id: changed_render_item.item_id,
+        },
+        meshes.add(mesh_builder.build_mesh()),
+        RenderLayers::from_layers(&[INVENTORY_SLOT_LAYER]),
+        Name::new(format!("Rendered Inventory Item ({})", changed_render_item.item_id)),
+    ));
+
+    event_writer.send(AddMaterialEvent {
+        entity: to_create,
+        add_material_id: mat_id,
+        material_type: MaterialType::Unlit,
+    });
+
+    true
 }
 
 fn update_rendered_items_transforms(
@@ -284,15 +417,12 @@ pub(super) fn register(app: &mut App) {
     )
     .add_systems(
         Update,
-        (
-            // Logic
-            (update_rendered_items_transforms, reposition_ui_items, render_items)
-                .in_set(RenderItemSystemSet::RenderItems)
-                .chain(),
-        ),
+        ((update_rendered_items_transforms, reposition_ui_items, render_items)
+            .chain()
+            .in_set(RenderItemSystemSet::RenderItems),),
     );
 
-    app.add_systems(Startup, create_ui_camera)
+    app.add_systems(OnEnter(GameState::Playing), create_ui_camera)
         .register_type::<RenderItem>()
         .register_type::<RenderedItem>();
 }

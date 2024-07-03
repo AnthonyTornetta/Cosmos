@@ -965,8 +965,8 @@ checksum = "ea003584000ef02b73800cc7cb62ee74792fff431e6a8df36863c43bf56fb491"
 
 [[package]]
 name = "bevy_rapier3d"
-version = "0.25.0"
-source = "git+https://github.com/AnthonyTornetta/bevy_rapier/#6307142f16b48ec05d27c8d8a94a461be312f47f"
+version = "0.26.0"
+source = "git+https://github.com/AnthonyTornetta/bevy_rapier/#8208823492118e15d07115155180942480452a29"
 dependencies = [
  "bevy",
  "bitflags 2.4.2",
@@ -3586,6 +3586,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "ordered-float"
+version = "4.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a76df7075c7d4d01fdcb46c912dd17fba5b60c78ea480b475f2b6ab6f666584e"
+dependencies = [
+ "num-traits",
+]
+
+[[package]]
 name = "overload"
 version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3631,15 +3640,16 @@ dependencies = [
 
 [[package]]
 name = "parry3d"
-version = "0.13.6"
+version = "0.15.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "13d0bdaf533851feec5cba9af11cefcc753ecefba05f758cf6abe886086bc3f5"
+checksum = "aa342e0cdfc774fed0196714290ba2d85408b8ce9f295c40a0b1e05f3f8256ab"
 dependencies = [
  "approx",
  "arrayvec",
  "bitflags 1.3.2",
  "downcast-rs",
  "either",
+ "log",
  "nalgebra",
  "num-derive 0.4.2",
  "num-traits",
@@ -3907,8 +3917,8 @@ checksum = "9c8a99fddc9f0ba0a85884b8d14e3592853e787d581ca1816c91349b10e4eeab"
 
 [[package]]
 name = "rapier3d"
-version = "0.18.0"
-source = "git+https://github.com/AnthonyTornetta/rapier#2d595c7eff8747ef5e106061005e99c6136893fe"
+version = "0.19.0"
+source = "git+https://github.com/AnthonyTornetta/rapier#34fc84795879f98d9844a85e82de88b0d3705a98"
 dependencies = [
  "approx",
  "arrayvec",
@@ -3916,9 +3926,11 @@ dependencies = [
  "bitflags 1.3.2",
  "crossbeam",
  "downcast-rs",
+ "log",
  "nalgebra",
  "num-derive 0.4.2",
  "num-traits",
+ "ordered-float",
  "parry3d",
  "rustc-hash",
  "serde",

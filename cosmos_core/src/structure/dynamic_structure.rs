@@ -117,7 +117,7 @@ impl DynamicStructure {
         let chunk_block_coords = ChunkBlockCoordinate::for_block_coordinate(coords);
 
         let mut send_event = true;
-        if let Some(chunk) = self.mut_chunk_from_chunk_coordinates(chunk_coords) {
+        if let Some(chunk) = self.mut_chunk_at(chunk_coords) {
             chunk.set_block_at(chunk_block_coords, block, block_rotation);
 
             if chunk.is_empty() {

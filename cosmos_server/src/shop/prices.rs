@@ -108,7 +108,7 @@ fn create_default_shop_entires(mut commands: Commands, items: Res<Registry<Item>
             price_per: 10,
         },
         PrettyShopEntry::Selling {
-            item_id: "cosmos:cheese".into(),
+            item_id: "cosmos:lava".into(),
             max_quantity_selling: 10_000,
             price_per: 10,
         },

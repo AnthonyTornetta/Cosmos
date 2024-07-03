@@ -11,9 +11,11 @@ pub mod economy;
 pub mod ecs;
 pub mod entities;
 pub mod events;
+pub mod fluid;
 pub mod input;
 pub mod interactions;
 pub mod inventory;
+pub mod item;
 pub mod lang;
 pub mod loading;
 pub mod music;
@@ -32,9 +34,9 @@ pub mod ui;
 pub mod universe;
 pub mod window;
 
-use bevy::core::TaskPoolThreadAssignmentPolicy;
 use bevy::prelude::*;
 use bevy::window::WindowMode;
+use bevy::{core::TaskPoolThreadAssignmentPolicy, window::WindowResolution};
 use bevy_hanabi::HanabiPlugin;
 use bevy_mod_debugdump::schedule_graph;
 use bevy_obj::ObjPlugin;
@@ -96,6 +98,9 @@ fn main() {
                 } else {
                     WindowMode::Windowed
                 },
+                // for panorama generation:
+                // resolution: WindowResolution::new(1000.0, 1000.0),
+                // decorations: false,
                 ..Default::default()
             }),
             ..Default::default()
@@ -107,7 +112,6 @@ fn main() {
 
     app.insert_resource(HostConfig { host_name })
         .insert_resource(RapierConfiguration {
-            gravity: Vec3::ZERO,
             timestep_mode: TimestepMode::Interpolated {
                 dt: 1.0 / 60.0,
                 time_scale: 1.0,
@@ -123,7 +127,7 @@ fn main() {
             GameState::PreLoading,
             GameState::Loading,
             GameState::PostLoading,
-            GameState::Connecting,
+            GameState::MainMenu,
             GameState::Playing,
         ))
         .add_plugins((RenetClientPlugin, NetcodeClientPlugin, ObjPlugin, HanabiPlugin))
@@ -158,6 +162,7 @@ fn main() {
     ecs::register(&mut app);
     shop::register(&mut app);
     economy::register(&mut app);
+    fluid::register(&mut app);
 
     if cfg!(feature = "print-schedule") {
         println!(

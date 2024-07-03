@@ -15,16 +15,22 @@ use cosmos_core::{
         NeedsDespawned,
     },
     entities::player::{render_distance::RenderDistance, Player},
-    events::{block_events::BlockChangedEvent, structure::change_pilot_event::ChangePilotEvent},
-    inventory::Inventory,
+    events::{
+        block_events::{BlockChangedEvent, BlockDataChangedEvent},
+        structure::change_pilot_event::ChangePilotEvent,
+    },
+    inventory::{held_item_slot::HeldItemSlot, Inventory},
     netty::{
-        client::LocalPlayer,
+        client::{LocalPlayer, NeedsLoadedFromServer},
         client_reliable_messages::ClientReliableMessages,
         cosmos_encoder,
         netty_rigidbody::{NettyRigidBody, NettyRigidBodyLocation},
         server_reliable_messages::ServerReliableMessages,
         server_unreliable_messages::ServerUnreliableMessages,
-        sync::mapping::{Mappable, NetworkMapping},
+        sync::{
+            mapping::{Mappable, NetworkMapping, ServerEntity},
+            ComponentEntityIdentifier,
+        },
         NettyChannelClient, NettyChannelServer,
     },
     persistence::LoadingDistance,
@@ -42,7 +48,7 @@ use cosmos_core::{
         shared::build_mode::{EnterBuildModeEvent, ExitBuildModeEvent},
         ship::{pilot::Pilot, ship_builder::TShipBuilder, Ship},
         station::station_builder::TStationBuilder,
-        systems::dock_system::Docked,
+        systems::{dock_system::Docked, StructureSystems},
         ChunkInitEvent, Structure,
     },
 };
@@ -184,13 +190,26 @@ fn client_sync_players(
         ResMut<ClientLobby>,
         ResMut<NetworkMapping>,
     ),
-    (mut set_chunk_event_writer, mut block_change_event_writer, mut take_damage_event_writer, mut set_terrain_data_ev_writer): (
+    (
+        mut set_chunk_event_writer,
+        mut block_change_event_writer,
+        mut take_damage_event_writer,
+        mut set_terrain_data_ev_writer,
+        mut evw_block_data_changed,
+    ): (
         EventWriter<ChunkInitEvent>,
         EventWriter<BlockChangedEvent>,
         EventWriter<BlockTakeDamageEvent>,
         EventWriter<SetTerrainGenData>,
+        EventWriter<BlockDataChangedEvent>,
     ),
-    (query_player, parent_query): (Query<&Player>, Query<&Parent>),
+    (query_player, parent_query, q_structure_systems, mut q_inventory, mut q_structure): (
+        Query<&Player>,
+        Query<&Parent>,
+        Query<&StructureSystems>,
+        Query<&mut Inventory>,
+        Query<&mut Structure>,
+    ),
     mut query_body: Query<
         (
             Option<&mut Location>,
@@ -201,8 +220,8 @@ fn client_sync_players(
         ),
         Without<LocalPlayer>,
     >,
+    q_needs_loaded: Query<(), With<NeedsLoadedFromServer>>,
     q_parent: Query<&Parent>,
-    mut query_structure: Query<&mut Structure>,
     blocks: Res<Registry<Block>>,
     mut pilot_change_event_writer: EventWriter<ChangePilotEvent>,
     mut requested_entities: ResMut<RequestedEntities>,
@@ -238,7 +257,20 @@ fn client_sync_players(
                     };
 
                     if let Some(entity) = network_mapping.client_from_server(server_entity) {
-                        if let Ok((location, transform, velocity, net_tick, lerp_towards)) = query_body.get_mut(entity) {
+                        if q_needs_loaded.contains(entity) {
+                            commands.entity(entity).remove::<NeedsLoadedFromServer>();
+
+                            requested_entities.entities.push(RequestedEntity {
+                                server_entity: *server_entity,
+                                client_entity: entity,
+                                seconds_since_request: 0.0,
+                            });
+
+                            client.send_message(
+                                NettyChannelClient::Reliable,
+                                cosmos_encoder::serialize(&ClientReliableMessages::RequestEntityData { entity: *server_entity }),
+                            );
+                        } else if let Ok((location, transform, velocity, net_tick, lerp_towards)) = query_body.get_mut(entity) {
                             if let Some(mut net_tick) = net_tick {
                                 if net_tick.0 >= time_stamp {
                                     // Received position packet for previous time, disregard.
@@ -284,7 +316,7 @@ fn client_sync_players(
                             }
                         }
                     } else if !requested_entities.entities.iter().any(|x| x.server_entity == *server_entity) {
-                        let client_entity = commands.spawn_empty().id();
+                        let client_entity = commands.spawn(ServerEntity(*server_entity)).id();
 
                         requested_entities.entities.push(RequestedEntity {
                             server_entity: *server_entity,
@@ -293,6 +325,7 @@ fn client_sync_players(
                         });
                         network_mapping.add_mapping(client_entity, *server_entity);
 
+                        println!("That's odd, leme ask.");
                         client.send_message(
                             NettyChannelClient::Reliable,
                             cosmos_encoder::serialize(&ClientReliableMessages::RequestEntityData { entity: *server_entity }),
@@ -312,14 +345,13 @@ fn client_sync_players(
         let msg: ServerReliableMessages = cosmos_encoder::deserialize(&message).unwrap();
 
         match msg {
+            // TODO: Get player data via the normal request entity function!
             ServerReliableMessages::PlayerCreate {
                 body,
                 id,
                 entity: server_entity,
                 name,
-                inventory_serialized,
                 render_distance: _,
-                credits,
             } => {
                 // Prevents creation of duplicate players
                 if lobby.players.contains_key(&id) {
@@ -333,9 +365,12 @@ fn client_sync_players(
 
                 info!("Player {} ({}) connected!", name.as_str(), id);
 
-                let mut entity_cmds = commands.spawn_empty();
-
-                let inventory: Inventory = cosmos_encoder::deserialize(&inventory_serialized).unwrap();
+                // The player entity may have already been created if some of their components were already synced.
+                let mut entity_cmds = if let Some(player_entity) = network_mapping.client_from_server(&server_entity) {
+                    commands.entity(player_entity)
+                } else {
+                    commands.spawn_empty()
+                };
 
                 let mut loc = match body.location {
                     NettyRigidBodyLocation::Absolute(location) => location,
@@ -346,9 +381,7 @@ fn client_sync_players(
                     }
                 };
 
-                // This should be set via the server, but just in case,
                 // this will avoid any position mismatching
-                // ** future note: this may not be needed??
                 loc.last_transform_loc = Some(loc.local);
 
                 entity_cmds.insert((
@@ -366,8 +399,7 @@ fn client_sync_players(
                     Player::new(name, id),
                     ReadMassProperties::default(),
                     ActiveEvents::COLLISION_EVENTS,
-                    inventory,
-                    credits,
+                    ServerEntity(server_entity),
                 ));
 
                 let client_entity = entity_cmds.id();
@@ -382,9 +414,20 @@ fn client_sync_players(
 
                 let camera_offset = Vec3::new(0.0, 0.75, 0.0);
 
+                // Requests all components needed for the player
+                client.send_message(
+                    NettyChannelClient::Reliable,
+                    cosmos_encoder::serialize(&ClientReliableMessages::RequestEntityData { entity: server_entity }),
+                );
+
                 if client_id == id {
                     entity_cmds
-                        .insert((LocalPlayer, RenderDistance::default(), CameraPlayerOffset(camera_offset)))
+                        .insert((
+                            LocalPlayer,
+                            HeldItemSlot::new(0).unwrap(),
+                            RenderDistance::default(),
+                            CameraPlayerOffset(camera_offset),
+                        ))
                         .with_children(|parent| {
                             parent.spawn((
                                 Camera3dBundle {
@@ -538,13 +581,22 @@ fn client_sync_players(
                 structure_entity: server_structure_entity,
                 serialized_chunk,
                 serialized_block_data,
+                block_entities,
             } => {
                 if let Some(s_entity) = network_mapping.client_from_server(&server_structure_entity) {
-                    if let Ok(mut structure) = query_structure.get_mut(s_entity) {
+                    if let Ok(mut structure) = q_structure.get_mut(s_entity) {
                         let chunk: Chunk = cosmos_encoder::deserialize(&serialized_chunk).expect("Unable to deserialize chunk from server");
                         let chunk_coords = chunk.chunk_coordinates();
 
                         structure.set_chunk(chunk);
+
+                        for (_, block_data_entity) in block_entities {
+                            info!("New block data -- asking.");
+                            client.send_message(
+                                NettyChannelClient::Reliable,
+                                cosmos_encoder::serialize(&ClientReliableMessages::RequestEntityData { entity: block_data_entity }),
+                            );
+                        }
 
                         set_chunk_event_writer.send(ChunkInitEvent {
                             coords: chunk_coords,
@@ -556,7 +608,7 @@ fn client_sync_players(
             }
             ServerReliableMessages::EmptyChunk { structure_entity, coords } => {
                 if let Some(s_entity) = network_mapping.client_from_server(&structure_entity) {
-                    if let Ok(mut structure) = query_structure.get_mut(s_entity) {
+                    if let Ok(mut structure) = q_structure.get_mut(s_entity) {
                         structure.set_to_empty_chunk(coords);
 
                         set_chunk_event_writer.send(ChunkInitEvent {
@@ -568,8 +620,17 @@ fn client_sync_players(
                 }
             }
             ServerReliableMessages::EntityDespawn { entity: server_entity } => {
-                if let Some(entity) = network_mapping.client_from_server(&server_entity) {
-                    commands.entity(entity).insert(NeedsDespawned);
+                if let Some(entity) = get_entity_identifier_entity_for_despawning(
+                    server_entity,
+                    &network_mapping,
+                    &q_structure_systems,
+                    &mut q_inventory,
+                    &mut q_structure,
+                    &mut evw_block_data_changed,
+                ) {
+                    if let Some(mut ecmds) = commands.get_entity(entity) {
+                        ecmds.insert(NeedsDespawned);
+                    }
                 }
             }
             ServerReliableMessages::MOTD { motd } => {
@@ -581,7 +642,7 @@ fn client_sync_players(
             } => {
                 // Sometimes you'll get block updates for structures that don't exist
                 if let Some(client_ent) = network_mapping.client_from_server(&structure_entity) {
-                    if let Ok(mut structure) = query_structure.get_mut(client_ent) {
+                    if let Ok(mut structure) = q_structure.get_mut(client_ent) {
                         for block_changed in blocks_changed_packet.0 {
                             structure.set_block_at(
                                 block_changed.coordinates.coords(),
@@ -713,11 +774,6 @@ fn client_sync_players(
                     Color::ORANGE_RED,
                 ));
             }
-            ServerReliableMessages::Reactors { reactors, structure } => {
-                if let Some(structure_entity) = network_mapping.client_from_server(&structure) {
-                    commands.entity(structure_entity).insert(reactors);
-                }
-            }
             ServerReliableMessages::RequestedEntityReceived(entity) => {
                 requested_entities.entities.retain(|x| x.server_entity != entity);
             }
@@ -741,6 +797,126 @@ fn client_sync_players(
                     permutation_table,
                 });
             }
+        }
+    }
+}
+
+fn get_entity_identifier_entity_for_despawning(
+    entity_identifier: ComponentEntityIdentifier,
+    network_mapping: &NetworkMapping,
+    q_structure_systems: &Query<&StructureSystems, ()>,
+    q_inventory: &mut Query<&mut Inventory>,
+    q_structure: &mut Query<&mut Structure>,
+    block_data_changed: &mut EventWriter<BlockDataChangedEvent>,
+) -> Option<Entity> {
+    let identifier_entities = match entity_identifier {
+        ComponentEntityIdentifier::Entity(entity) => network_mapping.client_from_server(&entity),
+        ComponentEntityIdentifier::StructureSystem { structure_entity, id } => {
+            network_mapping.client_from_server(&structure_entity).and_then(|structure_entity| {
+                let structure_systems = q_structure_systems.get(structure_entity).ok()?;
+
+                let system_entity = structure_systems.get_system_entity(id)?;
+
+                Some(system_entity)
+            })
+        }
+        ComponentEntityIdentifier::ItemData {
+            inventory_entity,
+            item_slot,
+            server_data_entity,
+        } => network_mapping.client_from_server(&inventory_entity).and_then(|inventory_entity| {
+            let mut inventory = q_inventory.get_mut(inventory_entity).ok()?;
+
+            let de = inventory
+                .mut_itemstack_at(item_slot as usize)
+                .map(|x| {
+                    let de = x.data_entity();
+                    x.set_data_entity(None);
+                    de
+                })
+                .flatten();
+
+            // If de is none, the inventory was already synced from the server, so the itemstack has no data pointer. Thus,
+            // all we have to do is despawn the data entity.
+            if de.is_none() {
+                network_mapping.client_from_server(&server_data_entity)
+            } else {
+                de
+            }
+        }),
+        ComponentEntityIdentifier::BlockData {
+            identifier,
+            server_data_entity,
+        } => network_mapping
+            .client_from_server(&identifier.structure_entity)
+            .and_then(|structure_entity| {
+                let mut structure = q_structure.get_mut(structure_entity).ok()?;
+
+                let bd = structure.block_data(identifier.block.coords());
+
+                if let Some(bd) = bd {
+                    // If we have already cleaned up this entity, we don't want to replace the new one.
+                    if network_mapping
+                        .server_from_client(&bd)
+                        .map(|x| x != server_data_entity)
+                        .unwrap_or(true)
+                    {
+                        return None;
+                    }
+
+                    structure.set_block_data_entity(identifier.block.coords(), None);
+
+                    block_data_changed.send(BlockDataChangedEvent {
+                        block: identifier.block,
+                        structure_entity,
+                        block_data_entity: None,
+                    });
+                }
+
+                Some(bd)
+            })
+            .unwrap_or_else(|| {
+                network_mapping
+                    .client_from_server(&server_data_entity)
+                    .and_then(|block_data_entity| Some(block_data_entity))
+            }),
+    };
+
+    if let Some(identifier_entities) = identifier_entities {
+        return Some(identifier_entities);
+    }
+
+    match entity_identifier {
+        ComponentEntityIdentifier::Entity(entity) => {
+            warn!(
+                "Got entity to despawn, but no valid entity exists for it! ({entity:?}). In the future, this should try again once we receive the correct entity from the server."
+            );
+            None
+        }
+        ComponentEntityIdentifier::StructureSystem { structure_entity, id } => {
+            warn!(
+                    "Got structure system to despawn, but no valid structure exists for it! ({structure_entity:?}, {id:?}). In the future, this should try again once we receive the correct structure from the server."
+            );
+            None
+        }
+        ComponentEntityIdentifier::ItemData {
+            inventory_entity,
+            item_slot,
+            server_data_entity,
+        } => {
+            warn!(
+                "Got itemdata to despawn, but no valid inventory OR itemstack exists for it! ({inventory_entity:?}, {item_slot} {server_data_entity:?}). In the future, this should try again once we receive the correct inventory from the server."
+            );
+            None
+        }
+        ComponentEntityIdentifier::BlockData {
+            identifier,
+            server_data_entity,
+        } => {
+            warn!(
+                "Got block data to despawn, but no valid structure OR block exists for it! ({identifier:?}, {server_data_entity:?}). In the future, this should try again once we receive the correct structure+block from the server."
+            );
+            None
         }
     }
 }

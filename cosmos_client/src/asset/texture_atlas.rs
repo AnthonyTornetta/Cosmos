@@ -13,7 +13,8 @@ use bevy::{
 
 /// Similar to bevy's default texture atlas, but the order they are inserted matters and assumes every texture is the same size and a square.
 ///
-/// If an image is > than the size, it is assumed to be an array of textures and will be treated as unique textures
+/// If an image is > than the `height` field, it is assumed to be an array of textures and will be treated as unique textures. This is useful
+/// when you need textures to be next to each other in the atlas (such as for animated textures).
 #[derive(Reflect, Clone, Debug)]
 pub struct SquareTextureAtlas {
     indices: HashMap<Handle<Image>, u32>,
@@ -35,6 +36,14 @@ impl SquareTextureAtlas {
         &self.atlas_texture
     }
 
+    /// Returns the image data for just this texture image as bytes.
+    ///
+    /// The bits are formatted in the U8rgba format. I think.
+    pub fn get_sub_image_data<'a>(atlas_image: &'a Image, index: u32) -> &'a [u8] {
+        &atlas_image.data[(index * atlas_image.width() * atlas_image.width() * 4) as usize
+            ..(((1 + index) * atlas_image.width() * atlas_image.width() * 4) as usize)]
+    }
+
     /// Do not rely on the internal image's width and height, use this instead.
     ///
     /// The atlas image's width
@@ -53,6 +62,7 @@ impl SquareTextureAtlas {
 /// Similar to bevy's default texture atlas, but the order they are inserted matters and assumes every texture is the same size and a square.
 ///
 /// If an image is > than the size, it is assumed to be an array of textures and will be treated as unique textures
+#[derive(Debug, Clone)]
 pub struct SquareTextureAtlasBuilder {
     images: Vec<Handle<Image>>,
     texture_dimensions: u32,

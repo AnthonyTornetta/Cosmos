@@ -72,7 +72,7 @@ fn save_fixed_structure_block_data(
         // Don't waste time removing all the block data needs saved from a structure that's going to be despawned anyway
         if let Ok(structure) = q_structure.get(chunk_ent.structure_entity) {
             structure
-                .chunk_from_chunk_coordinates(chunk_ent.chunk_location)
+                .chunk_at(chunk_ent.chunk_location)
                 .expect("Chunk must still be loaded")
                 .all_block_data_entities()
                 .iter()

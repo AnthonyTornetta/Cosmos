@@ -27,9 +27,11 @@ use crate::{
     state::game_state::GameState,
 };
 
+mod custom_blocks;
 mod lod_renderer;
 pub mod mesh_delayer;
-mod structure_renderer;
+mod panorama;
+pub(crate) mod structure_renderer;
 
 #[derive(Component, Debug)]
 /// The player's active camera will have this component
@@ -71,6 +73,7 @@ pub struct CosmosMeshBuilder {
     uvs: Vec<[f32; 2]>,
     positions: Vec<[f32; 3]>,
     normals: Vec<[f32; 3]>,
+    no_array_texture: bool,
     array_texture_ids: Vec<u32>,
     additional_info: Vec<(MeshVertexAttribute, VertexAttributeValues)>,
 }
@@ -349,7 +352,10 @@ impl MeshBuilder for CosmosMeshBuilder {
         mesh.insert_attribute(Mesh::ATTRIBUTE_POSITION, self.positions);
         mesh.insert_attribute(Mesh::ATTRIBUTE_NORMAL, self.normals);
         mesh.insert_attribute(Mesh::ATTRIBUTE_UV_0, self.uvs);
-        mesh.insert_attribute(ATTRIBUTE_TEXTURE_INDEX, self.array_texture_ids);
+
+        if !self.no_array_texture {
+            mesh.insert_attribute(ATTRIBUTE_TEXTURE_INDEX, self.array_texture_ids);
+        }
 
         for (attribute, values) in self.additional_info {
             mesh.insert_attribute(attribute, values);
@@ -901,6 +907,8 @@ pub(super) fn register(app: &mut App) {
     structure_renderer::register(app);
     lod_renderer::register(app);
     mesh_delayer::register(app);
+    custom_blocks::register(app);
+    panorama::register(app);
 
     app.add_systems(OnEnter(GameState::Loading), register_meshes).add_systems(
         OnExit(GameState::PostLoading),

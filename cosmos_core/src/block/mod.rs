@@ -1,6 +1,10 @@
 //! Blocks are the smallest thing found on any structure
 
-use std::{f32::consts::PI, fmt::Display};
+use std::{
+    f32::consts::PI,
+    fmt::Display,
+    hash::{DefaultHasher, Hash, Hasher},
+};
 
 use bevy::{
     math::Quat,
@@ -33,6 +37,8 @@ pub enum BlockProperty {
     FaceFront,
     /// This block can be rotated on all axis (such as ramps)
     FullyRotatable,
+    /// This block is a fluid
+    Fluid,
 }
 
 #[derive(Debug, PartialEq, Eq, Reflect, Default, Copy, Clone, Serialize, Deserialize, Hash)]
@@ -606,13 +612,14 @@ impl Display for BlockFace {
 }
 
 impl BlockProperty {
-    fn id(&self) -> u8 {
+    const fn id(&self) -> u8 {
         match *self {
             Self::Transparent => 0b1,
             Self::Full => 0b10,
             Self::Empty => 0b100,
             Self::FaceFront => 0b1000,
             Self::FullyRotatable => 0b10000,
+            Self::Fluid => 0b100000,
         }
     }
 
@@ -694,26 +701,26 @@ impl Block {
         self.connect_to_groups.iter().any(|group| other.connection_groups.contains(group))
     }
 
-    #[inline]
+    #[inline(always)]
     /// Returns true if this block can be seen through
     pub fn is_see_through(&self) -> bool {
         self.is_transparent() || !self.is_full()
     }
 
     /// Returns true if this block is transparent
-    #[inline]
+    #[inline(always)]
     pub fn is_transparent(&self) -> bool {
         self.property_flags & BlockProperty::Transparent.id() != 0
     }
 
     /// Returns true if this block takes up the full 1x1x1 meters of space
-    #[inline]
+    #[inline(always)]
     pub fn is_full(&self) -> bool {
         self.property_flags & BlockProperty::Full.id() != 0
     }
 
     /// Returns true if this block takes up no space
-    #[inline]
+    #[inline(always)]
     pub fn is_empty(&self) -> bool {
         self.property_flags & BlockProperty::Empty.id() != 0
     }
@@ -722,7 +729,7 @@ impl Block {
     ///
     /// If this is enabled on a full block, instead of sub-rotations the block will
     /// have its front face equal the top face of the block it was placed on.
-    #[inline]
+    #[inline(always)]
     pub fn should_face_front(&self) -> bool {
         self.property_flags & BlockProperty::FaceFront.id() != 0
     }
@@ -731,13 +738,13 @@ impl Block {
     ///
     /// If this is enabled on a full block, instead of sub-rotations the block will
     /// have its front face equal the top face of the block it was placed on.
-    #[inline]
+    #[inline(always)]
     pub fn is_fully_rotatable(&self) -> bool {
         self.property_flags & BlockProperty::FullyRotatable.id() != 0
     }
 
     /// Returns the density of this block
-    #[inline]
+    #[inline(always)]
     pub fn density(&self) -> f32 {
         self.density
     }
@@ -745,7 +752,7 @@ impl Block {
     /// Returns the hardness of this block (how resistant it is to breaking)
     ///
     /// Air: 0, Leaves: 1, Grass/Dirt: 10, Stone: 50, Hull: 100,
-    #[inline]
+    #[inline(always)]
     pub fn hardness(&self) -> f32 {
         self.hardness
     }
@@ -753,40 +760,63 @@ impl Block {
     /// How resistant this block is to being mined.
     ///
     /// This is (for now) how long it takes 1 mining beam to mine this block in seconds
-    #[inline]
+    #[inline(always)]
     pub fn mining_resistance(&self) -> f32 {
         self.mining_resistance
     }
 
     /// If the block's [`Self::mining_resistance`] is `f32::INFINITY` this will be false
-    #[inline]
+    #[inline(always)]
     pub fn can_be_mined(&self) -> bool {
         self.mining_resistance != f32::INFINITY
+    }
+
+    #[inline(always)]
+    /// Returns true if this block is a fluid
+    pub fn is_fluid(&self) -> bool {
+        self.property_flags & BlockProperty::Fluid.id() != 0
     }
 }
 
 impl PartialEq for Block {
+    #[inline(always)]
     fn eq(&self, other: &Self) -> bool {
         self.id == other.id
     }
 }
 
-#[derive(Clone, Serialize, Deserialize, Debug, PartialEq, Eq, Hash, Reflect)]
+#[derive(Clone, Serialize, Deserialize, Debug, Eq, Hash, Reflect)]
 /// This is how you signify which blocks should connect to which other blocks.
 ///
 /// For example, wires will connect to anything with the group "cosmos:machine".
-pub struct ConnectionGroup(String);
+pub struct ConnectionGroup {
+    unlocalized_name: String,
+    hash: u64,
+}
+
+// This should be super quick because of how often it will happen
+impl PartialEq for ConnectionGroup {
+    #[inline(always)]
+    fn eq(&self, other: &Self) -> bool {
+        self.hash == other.hash
+    }
+}
 
 impl ConnectionGroup {
     /// Creates a connection group from this unlocalized name.
     pub fn new(unlocalized_name: impl Into<String>) -> Self {
-        Self(unlocalized_name.into())
+        let unlocalized_name = unlocalized_name.into();
+        let mut hasher = DefaultHasher::default();
+        unlocalized_name.hash(&mut hasher);
+        let hash = hasher.finish();
+
+        Self { unlocalized_name, hash }
     }
 }
 
 impl From<&str> for ConnectionGroup {
     fn from(value: &str) -> Self {
-        Self(value.to_owned())
+        Self::new(value)
     }
 }
 
@@ -797,7 +827,7 @@ pub(super) fn register<T: States + Clone + Copy>(
     post_loading_state: T,
     playing_state: T,
 ) {
-    blocks::register(app, pre_loading_state, loading_state);
+    blocks::register(app, pre_loading_state, loading_state, post_loading_state);
     block_events::register(app);
     multiblock::register(app, post_loading_state, playing_state);
     block_update::register(app);

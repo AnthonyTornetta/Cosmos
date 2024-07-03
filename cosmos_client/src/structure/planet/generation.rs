@@ -2,7 +2,12 @@
 
 use std::fs;
 
-use crate::{netty::connect::WaitingOnServer, registry::sync_registry, state::game_state::GameState};
+use crate::{
+    ecs::{add_multi_statebound_resource, add_statebound_resource, init_resource},
+    netty::connect::WaitingOnServer,
+    registry::sync_registry,
+    state::game_state::GameState,
+};
 use bevy::prelude::*;
 use bevy_app_compute::prelude::*;
 use cosmos_core::structure::planet::{
@@ -131,8 +136,12 @@ pub(super) fn register(app: &mut App) {
             .run_if(resource_exists::<NeedsTerrainDataFlag>)
             .run_if(in_state(GameState::LoadingWorld)),
     )
-    .add_systems(OnEnter(GameState::Playing), send_permutation_table_to_worker)
-    .init_resource::<ChunkData>()
-    .init_resource::<SetPermutationTable>()
+    .add_systems(
+        OnEnter(GameState::Playing),
+        send_permutation_table_to_worker.after(init_resource::<SetPermutationTable>),
+    )
     .add_event::<SetTerrainGenData>();
+
+    add_multi_statebound_resource::<SetPermutationTable>(app, GameState::LoadingData, GameState::Playing);
+    add_statebound_resource::<ChunkData>(app, GameState::Playing);
 }

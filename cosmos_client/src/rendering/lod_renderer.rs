@@ -47,6 +47,7 @@ use crate::{
         asset_loading::{BlockNeighbors, BlockTextureIndex},
         materials::{add_materials, remove_materials, AddMaterialEvent, BlockMaterialMapping, MaterialDefinition, MaterialType},
     },
+    ecs::add_statebound_resource,
     state::game_state::GameState,
 };
 
@@ -95,12 +96,12 @@ struct ChunkRenderer {
 }
 
 impl ChunkRenderer {
-    fn new() -> Self {
+    pub fn new() -> Self {
         Self::default()
     }
 
     /// Renders a chunk into mesh information that can then be turned into a bevy mesh
-    fn render(
+    pub fn render(
         &mut self,
         scale: f32,
         materials: &ManyToOneRegistry<Block, BlockMaterialMapping>,
@@ -630,7 +631,9 @@ fn poll_rendering_lods(
                 }
             }
 
-            let mut entity_commands = commands.entity(structure_entity);
+            let Some(mut entity_commands) = commands.get_entity(structure_entity) else {
+                continue;
+            };
 
             for (entity, offset, scale, mesh) in entities_to_add {
                 let mut to_kill = vec![];
@@ -941,8 +944,9 @@ pub(super) fn register(app: &mut App) {
             .before(remove_materials)
             .before(add_materials)
             .run_if(in_state(GameState::Playing)),
-    )
-    .insert_resource(RenderingLods::default())
-    .insert_resource(NeedLods::default())
-    .init_resource::<MeshesToCompute>();
+    );
+
+    add_statebound_resource::<RenderingLods>(app, GameState::Playing);
+    add_statebound_resource::<NeedLods>(app, GameState::Playing);
+    add_statebound_resource::<MeshesToCompute>(app, GameState::Playing);
 }

@@ -13,11 +13,11 @@ use bevy::{
 use bevy_rapier3d::geometry::{Collider, ColliderMassProperties, CollisionGroups, Group, Sensor};
 use serde::{Deserialize, Serialize};
 
-use crate::netty::sync::{sync_component, SyncableComponent};
+use crate::netty::sync::{sync_component, IdentifiableComponent, SyncableComponent};
 
 use super::{coordinates::BlockCoordinate, shared::DespawnWithStructure};
 
-#[derive(Component, Reflect, Clone, Debug, Serialize, Deserialize)]
+#[derive(Component, Reflect, Clone, Debug, Serialize, Deserialize, PartialEq)]
 /// Blocks projectiles that are within the shields bounds
 pub struct Shield {
     /// How big the shield's radius is
@@ -48,11 +48,13 @@ impl Shield {
     }
 }
 
-impl SyncableComponent for Shield {
+impl IdentifiableComponent for Shield {
     fn get_component_unlocalized_name() -> &'static str {
         "cosmos:shield"
     }
+}
 
+impl SyncableComponent for Shield {
     fn get_sync_type() -> crate::netty::sync::SyncType {
         crate::netty::sync::SyncType::ServerAuthoritative
     }

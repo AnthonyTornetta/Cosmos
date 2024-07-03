@@ -20,6 +20,7 @@ use cosmos_core::{
 };
 
 pub mod loading;
+pub mod make_persistent;
 pub mod player_loading;
 pub mod saving;
 
