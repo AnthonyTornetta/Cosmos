@@ -1,7 +1,8 @@
 use bevy::{
     app::{App, Update},
     prelude::{
-        in_state, Commands, Entity, Event, EventReader, EventWriter, IntoSystemConfigs, OnEnter, Query, Res, ResMut, States, With, Without,
+        in_state, Commands, Entity, Event, EventReader, EventWriter, IntoSystemConfigs, OnEnter, Query, Res, ResMut, States, SystemSet,
+        With, Without,
     },
 };
 use wire_graph::{LogicBlock, LogicConnection, LogicGroup, Port, PortType, WireGraph};
@@ -13,6 +14,8 @@ use crate::{
     structure::{loading::StructureLoadingSet, Structure},
 };
 
+use bevy::prelude::IntoSystemSetConfigs;
+
 pub mod wire_graph;
 
 fn logic_block_placed_event_listener(
@@ -21,14 +24,23 @@ fn logic_block_placed_event_listener(
     logic_blocks: Res<Registry<LogicBlock>>,
     mut q_wire_graph: Query<&mut WireGraph>,
     mut q_structure: Query<&mut Structure>,
-    // mut evw_logic_output: EventWriter<LogicOutputEvent>,
+    mut evw_logic_output: EventWriter<LogicOutputEvent>,
+    mut evw_logic_input: EventWriter<LogicInputEvent>,
 ) {
     for ev in evr_block_updated.read() {
         // If was logic block, remove from graph.
         if let Some(logic_block) = logic_blocks.from_id(blocks.from_numeric_id(ev.old_block).unlocalized_name()) {
             if let Ok(structure) = q_structure.get_mut(ev.structure_entity) {
                 if let Ok(mut wire_graph) = q_wire_graph.get_mut(ev.structure_entity) {
-                    wire_graph.remove_logic_block(logic_block, ev.block.coords(), &structure, &blocks, &logic_blocks)
+                    wire_graph.remove_logic_block(
+                        logic_block,
+                        ev.block.coords(),
+                        &structure,
+                        &blocks,
+                        &logic_blocks,
+                        &mut evw_logic_output,
+                        &mut evw_logic_input,
+                    )
                 }
             }
         }
@@ -37,7 +49,15 @@ fn logic_block_placed_event_listener(
         if let Some(logic_block) = logic_blocks.from_id(blocks.from_numeric_id(ev.new_block).unlocalized_name()) {
             if let Ok(structure) = q_structure.get_mut(ev.structure_entity) {
                 if let Ok(mut wire_graph) = q_wire_graph.get_mut(ev.structure_entity) {
-                    wire_graph.add_logic_block(logic_block, ev.block.coords(), &structure, &blocks, &logic_blocks)
+                    wire_graph.add_logic_block(
+                        logic_block,
+                        ev.block.coords(),
+                        &structure,
+                        &blocks,
+                        &logic_blocks,
+                        &mut evw_logic_output,
+                        &mut evw_logic_input,
+                    )
                 }
             }
         }
@@ -46,34 +66,16 @@ fn logic_block_placed_event_listener(
 
 #[derive(Event, Debug)]
 pub struct LogicOutputEvent {
-    pub logic_group_id: usize,
+    pub group_id: usize,
     pub output_port: Port,
     pub entity: Entity,
 }
 
 #[derive(Event, Debug)]
 pub struct LogicInputEvent {
-    pub logic_group_id: usize,
+    pub group_id: usize,
     pub input_port: Port,
     pub entity: Entity,
-}
-
-fn logic_output_event_listener(
-    mut evr_logic_output: EventReader<LogicOutputEvent>,
-    mut evw_logic_input: EventWriter<LogicInputEvent>,
-    logic_blocks: Res<Registry<LogicBlock>>,
-    mut q_wire_graph: Query<&mut WireGraph>,
-    mut q_structure: Query<&mut Structure>,
-) {
-    for ev in evr_logic_output.read() {
-        let Ok(structure) = q_structure.get_mut(ev.entity) else {
-            return;
-        };
-        let Ok(mut wire_graph) = q_wire_graph.get_mut(ev.entity) else {
-            return;
-        };
-    }
-    // evw_logic_input.send(LogicInputEvent {  })
 }
 
 fn add_default_wire_graph(q_needs_wire_graph: Query<Entity, (With<Structure>, Without<WireGraph>)>, mut commands: Commands) {
@@ -101,9 +103,16 @@ impl Registry<LogicBlock> {
         self.from_id(block.unlocalized_name())
     }
 }
+#[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
+pub enum LogicSystemSet {
+    Producing,
+    Consuming,
+}
 
 pub(super) fn register<T: States>(app: &mut App, post_loading_state: T, playing_state: T) {
     create_registry::<LogicBlock>(app, "cosmos:logic_blocks");
+
+    app.configure_sets(Update, (LogicSystemSet::Producing, LogicSystemSet::Consuming).chain());
 
     app.add_systems(OnEnter(post_loading_state), register_logic_blocks)
         .add_systems(
@@ -111,7 +120,6 @@ pub(super) fn register<T: States>(app: &mut App, post_loading_state: T, playing_
             (
                 add_default_wire_graph.in_set(StructureLoadingSet::AddStructureComponents),
                 logic_block_placed_event_listener,
-                // (logic_output_event_listener, light_logic_input_event_listener).chain(),
             )
                 .run_if(in_state(playing_state)),
         )

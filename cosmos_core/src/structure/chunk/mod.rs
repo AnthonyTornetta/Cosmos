@@ -549,7 +549,7 @@ impl Chunk {
 /// This represents the information for a block. The first 3 rightmost bits are reserved for rotation data.
 ///
 /// All other bits can be used for anything else
-pub struct BlockInfo(u8);
+pub struct BlockInfo(pub u8);
 
 impl BlockInfo {
     #[inline]

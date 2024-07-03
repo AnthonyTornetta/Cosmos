@@ -1,6 +1,6 @@
 use bevy::{
     app::{App, Update},
-    prelude::{EventReader, EventWriter, Query, Res},
+    prelude::{EventReader, EventWriter, IntoSystemConfigs, Query, Res},
 };
 
 use crate::{
@@ -9,7 +9,7 @@ use crate::{
     structure::Structure,
     wires::{
         wire_graph::{LogicBlock, WireGraph},
-        LogicInputEvent, LogicOutputEvent,
+        LogicInputEvent, LogicOutputEvent, LogicSystemSet,
     },
 };
 
@@ -34,7 +34,7 @@ fn logic_on_logic_output_event_listener(
 
         let logic_group = wire_graph
             .groups
-            .get_mut(&ev.logic_group_id)
+            .get_mut(&ev.group_id)
             .expect("Logic On block port should have a logic group.");
 
         // Set this port to 'on' in it's logic group.
@@ -43,7 +43,7 @@ fn logic_on_logic_output_event_listener(
         // Notify the input ports in this port's group.
         for &input_port in logic_group.consumers.iter() {
             evw_logic_input.send(LogicInputEvent {
-                logic_group_id: ev.logic_group_id,
+                group_id: ev.group_id,
                 input_port,
                 entity: ev.entity,
             });
@@ -52,5 +52,5 @@ fn logic_on_logic_output_event_listener(
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_systems(Update, logic_on_logic_output_event_listener);
+    app.add_systems(Update, logic_on_logic_output_event_listener.in_set(LogicSystemSet::Producing));
 }

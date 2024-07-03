@@ -1,5 +1,5 @@
 use bevy::{
-    prelude::Component,
+    prelude::{Component, Entity, EventWriter},
     reflect::Reflect,
     utils::{HashMap, HashSet},
 };
@@ -9,6 +9,8 @@ use crate::{
     registry::{identifiable::Identifiable, Registry},
     structure::{coordinates::BlockCoordinate, Structure},
 };
+
+use super::{LogicInputEvent, LogicOutputEvent};
 
 #[derive(Debug, Copy, Clone, PartialEq)]
 /// Defines the types of logic ports, which read and write logic values.
@@ -114,7 +116,7 @@ pub struct Port {
 }
 
 impl Port {
-    fn new(coords: BlockCoordinate, local_face: BlockFace) -> Port {
+    pub fn new(coords: BlockCoordinate, local_face: BlockFace) -> Port {
         Port { coords, local_face }
     }
 
@@ -161,8 +163,8 @@ pub struct WireGraph {
     /// As new logic groups are created, this tracks which ID is the next available.
     next_group_id: usize,
     pub groups: HashMap<usize, LogicGroup>,
-    group_of_output_port: HashMap<Port, usize>,
-    group_of_input_port: HashMap<Port, usize>,
+    pub group_of_output_port: HashMap<Port, usize>,
+    pub group_of_input_port: HashMap<Port, usize>,
 }
 
 impl WireGraph {
@@ -181,7 +183,17 @@ impl WireGraph {
         self.groups.remove(&id).expect("Removed logic group should have existed.")
     }
 
-    fn add_port(&mut self, coords: BlockCoordinate, local_face: BlockFace, group_id: usize, port_type: PortType, on: bool) {
+    fn add_port(
+        &mut self,
+        coords: BlockCoordinate,
+        local_face: BlockFace,
+        group_id: usize,
+        port_type: PortType,
+        on: bool,
+        entity: Entity,
+        evw_logic_output: &mut EventWriter<LogicOutputEvent>,
+        evw_logic_input: &mut EventWriter<LogicInputEvent>,
+    ) {
         match port_type {
             PortType::Input => &mut self.group_of_input_port,
             PortType::Output => &mut self.group_of_output_port,
@@ -193,8 +205,22 @@ impl WireGraph {
             .get_mut(&group_id)
             .expect("Group should have vectors of input and output ports.");
         match port_type {
-            PortType::Input => drop(logic_group.consumers.insert(Port::new(coords, local_face))),
-            PortType::Output => drop(logic_group.producers.insert(Port::new(coords, local_face), on)),
+            PortType::Input => {
+                logic_group.consumers.insert(Port::new(coords, local_face));
+                evw_logic_input.send(LogicInputEvent {
+                    group_id,
+                    input_port: Port::new(coords, local_face),
+                    entity,
+                });
+            }
+            PortType::Output => {
+                logic_group.producers.insert(Port::new(coords, local_face), on);
+                evw_logic_output.send(LogicOutputEvent {
+                    group_id,
+                    output_port: Port::new(coords, local_face),
+                    entity,
+                });
+            }
         };
     }
 
@@ -206,6 +232,8 @@ impl WireGraph {
         structure: &Structure,
         blocks: &Registry<Block>,
         logic_blocks: &Registry<LogicBlock>,
+        evw_logic_output: &mut EventWriter<LogicOutputEvent>,
+        evw_logic_input: &mut EventWriter<LogicInputEvent>,
     ) {
         let local_face = structure.block_rotation(coords).global_to_local(global_face);
         // If the neighbor coordinates don't exist, no port is added (and thus no new group).
@@ -219,7 +247,16 @@ impl WireGraph {
                 logic_blocks,
             );
             let group_id = maybe_group.unwrap_or_else(|| self.new_group(None));
-            self.add_port(coords, local_face, group_id, port_type, false);
+            self.add_port(
+                coords,
+                local_face,
+                group_id,
+                port_type,
+                false,
+                structure.get_entity().expect("Structure should have entity."),
+                evw_logic_output,
+                evw_logic_input,
+            );
         }
     }
 
@@ -231,6 +268,7 @@ impl WireGraph {
         structure: &Structure,
         blocks: &Registry<Block>,
         logic_blocks: &Registry<LogicBlock>,
+        evw_logic_input: &mut EventWriter<LogicInputEvent>,
     ) {
         let local_face = structure.block_rotation(coords).global_to_local(face);
 
@@ -268,6 +306,17 @@ impl WireGraph {
                     PortType::Input => drop(logic_group.consumers.remove(&port)),
                     PortType::Output => drop(logic_group.producers.remove(&port)),
                 };
+
+                // Ping all inputs in this group to let them know this output port is gone.
+                if port_type == PortType::Output {
+                    for &input_port in self.groups.get(&group_id).expect("Port should have logic group.").consumers.iter() {
+                        evw_logic_input.send(LogicInputEvent {
+                            group_id,
+                            input_port,
+                            entity: structure.get_entity().expect("Structure should have entity."),
+                        });
+                    }
+                }
             }
 
             // Delete the port.
@@ -286,15 +335,35 @@ impl WireGraph {
         structure: &Structure,
         blocks: &Registry<Block>,
         logic_blocks: &Registry<LogicBlock>,
+        evw_logic_output: &mut EventWriter<LogicOutputEvent>,
+        evw_logic_input: &mut EventWriter<LogicInputEvent>,
     ) {
         // Adding input faces as consumers to their connected group, or a new group if there is no connected group.
         for input_face in logic_block.input_faces() {
-            self.placed_port(coords, input_face, PortType::Input, structure, blocks, logic_blocks)
+            self.placed_port(
+                coords,
+                input_face,
+                PortType::Input,
+                structure,
+                blocks,
+                logic_blocks,
+                evw_logic_output,
+                evw_logic_input,
+            )
         }
 
         // Adding output faces as consumers to their connected group, or a new group if there is no connected group.
         for output_face in logic_block.output_faces() {
-            self.placed_port(coords, output_face, PortType::Output, structure, blocks, logic_blocks)
+            self.placed_port(
+                coords,
+                output_face,
+                PortType::Output,
+                structure,
+                blocks,
+                logic_blocks,
+                evw_logic_output,
+                evw_logic_input,
+            )
         }
 
         // Connect wire faces to all existing groups (by creating one new group that includes all adjacent groups).
@@ -322,7 +391,12 @@ impl WireGraph {
             match group_ids.len() {
                 0 => drop(self.new_group(Some(coords))),
                 1 => drop(self.groups.get_mut(group_ids.iter().next().unwrap()).unwrap().recent_wire_coords = Some(coords)),
-                _ => self.merge_adjacent_groups(&group_ids, coords),
+                _ => self.merge_adjacent_groups(
+                    &group_ids,
+                    coords,
+                    structure.get_entity().expect("Structure should have entity."),
+                    evw_logic_input,
+                ),
             };
         }
     }
@@ -334,15 +408,33 @@ impl WireGraph {
         structure: &Structure,
         blocks: &Registry<Block>,
         logic_blocks: &Registry<LogicBlock>,
+        evw_logic_output: &mut EventWriter<LogicOutputEvent>,
+        evw_logic_input: &mut EventWriter<LogicInputEvent>,
     ) {
         // Removing input ports from their groups.
         for input_face in logic_block.input_faces() {
-            self.remove_port(coords, input_face, PortType::Input, structure, blocks, logic_blocks)
+            self.remove_port(
+                coords,
+                input_face,
+                PortType::Input,
+                structure,
+                blocks,
+                logic_blocks,
+                evw_logic_input,
+            )
         }
 
         // Removing output ports from their groups.
         for output_face in logic_block.output_faces() {
-            self.remove_port(coords, output_face, PortType::Output, structure, blocks, logic_blocks)
+            self.remove_port(
+                coords,
+                output_face,
+                PortType::Output,
+                structure,
+                blocks,
+                logic_blocks,
+                evw_logic_input,
+            )
         }
 
         // For wire faces, 1 connection means just delete the wire. 2+ means delete the wire's group and make a new one for each connection.
@@ -366,18 +458,34 @@ impl WireGraph {
                     continue;
                 };
                 // For now, takes a new ID for every call, even though some (like air blocks or already visited wires) don't need it.
-                let id = self.new_group(None);
+                let group_id = self.new_group(None);
                 let used_new_group = self.rename_group(
-                    id,
+                    group_id,
                     neighbor_coords,
                     local_face.inverse(),
                     structure,
                     &mut visited,
                     blocks,
                     logic_blocks,
+                    evw_logic_output,
+                    evw_logic_input,
                 );
                 if !used_new_group {
-                    self.remove_group(id);
+                    self.remove_group(group_id);
+                } else {
+                    for &input_port in self
+                        .groups
+                        .get(&group_id)
+                        .expect("New group for created ID should exist")
+                        .consumers
+                        .iter()
+                    {
+                        evw_logic_input.send(LogicInputEvent {
+                            group_id,
+                            input_port,
+                            entity: structure.get_entity().expect("Structure should have entity."),
+                        });
+                    }
                 }
             }
 
@@ -385,7 +493,13 @@ impl WireGraph {
         }
     }
 
-    fn merge_adjacent_groups(&mut self, group_ids: &HashSet<usize>, coords: BlockCoordinate) {
+    fn merge_adjacent_groups(
+        &mut self,
+        group_ids: &HashSet<usize>,
+        coords: BlockCoordinate,
+        entity: Entity,
+        evw_logic_input: &mut EventWriter<LogicInputEvent>,
+    ) {
         // Rewrite all output and input ports of adjacent groups to use the new ID number.
         let new_group_id = self.new_group_id();
         for group_id in self.group_of_output_port.values_mut() {
@@ -420,6 +534,21 @@ impl WireGraph {
         // Creating the new group. The most recent block added is the current block.
         self.groups
             .insert(new_group_id, LogicGroup::new_with_ports(Some(coords), producers, consumers));
+
+        // Notify all the input ports in the new group that their group's value may have changed.
+        for &input_port in self
+            .groups
+            .get(&new_group_id)
+            .expect("Merged logic group should exist.")
+            .consumers
+            .iter()
+        {
+            evw_logic_input.send(LogicInputEvent {
+                group_id: new_group_id,
+                input_port,
+                entity,
+            });
+        }
     }
 
     fn find_group(
@@ -505,6 +634,8 @@ impl WireGraph {
         visited: &mut HashSet<Port>,
         blocks: &Registry<Block>,
         logic_blocks: &Registry<LogicBlock>,
+        evw_logic_output: &mut EventWriter<LogicOutputEvent>,
+        evw_logic_input: &mut EventWriter<LogicInputEvent>,
     ) -> bool {
         if visited.contains(&Port::new(coords, encountered_local_face)) {
             // Renaming on this portion already completed.
@@ -540,7 +671,16 @@ impl WireGraph {
                 };
 
                 // Inserting the port into the port to group ID mapping also removes the old version.
-                self.add_port(coords, encountered_local_face, new_group_id, port_type, on);
+                self.add_port(
+                    coords,
+                    encountered_local_face,
+                    new_group_id,
+                    port_type,
+                    on,
+                    structure.get_entity().expect("Structure should have entity"),
+                    evw_logic_output,
+                    evw_logic_input,
+                );
             }
             Some(LogicConnection::Wire) => {
                 // Recurse to continue marking the ports reachable from this wire.
@@ -562,6 +702,8 @@ impl WireGraph {
                         visited,
                         blocks,
                         logic_blocks,
+                        evw_logic_output,
+                        evw_logic_input,
                     );
                 }
                 // The first wire coords are always set last (so they take effect), the only recursive call is in this arm.

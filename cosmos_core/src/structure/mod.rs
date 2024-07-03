@@ -45,7 +45,7 @@ use crate::block::data::persistence::ChunkLoadBlockDataEvent;
 use crate::block::data::BlockData;
 use crate::block::{Block, BlockFace, BlockRotation};
 use crate::ecs::NeedsDespawned;
-use crate::events::block_events::{BlockChangedEvent, BlockDataSystemParams};
+use crate::events::block_events::{BlockChangedEvent, BlockDataChangedEvent, BlockDataSystemParams};
 use crate::netty::NoSendEntity;
 use crate::physics::location::Location;
 use crate::registry::Registry;
@@ -668,10 +668,15 @@ impl Structure {
     }
 
     /// Sets the small block information storage (for example, rotation) for this block within the chunk.
-    pub fn set_block_info_at(&mut self, coords: BlockCoordinate, block_info: BlockInfo) {
+    pub fn set_block_info_at(
+        &mut self,
+        coords: BlockCoordinate,
+        block_info: BlockInfo,
+        evw_block_data_changed: &mut EventWriter<BlockDataChangedEvent>,
+    ) {
         match self {
-            Self::Full(fs) => fs.set_block_info_at(coords, block_info),
-            Self::Dynamic(ds) => ds.set_block_info_at(coords, block_info),
+            Self::Full(fs) => fs.set_block_info_at(coords, block_info, evw_block_data_changed),
+            Self::Dynamic(ds) => ds.set_block_info_at(coords, block_info, evw_block_data_changed),
         }
     }
 

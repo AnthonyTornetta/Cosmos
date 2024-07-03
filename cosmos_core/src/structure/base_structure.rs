@@ -17,6 +17,7 @@ use bevy::{
 };
 use serde::{Deserialize, Serialize};
 
+use crate::events::block_events::BlockDataChangedEvent;
 use crate::{
     block::{blocks::AIR_BLOCK_ID, data::BlockData, Block, BlockFace, BlockRotation},
     physics::location::Location,
@@ -845,9 +846,21 @@ impl BaseStructure {
 
     /// Sets the small block information storage (for example, rotation) for this block within the chunk.
     /// Does not set the information if the chunk is unloaded.
-    pub fn set_block_info_at(&mut self, coords: BlockCoordinate, block_info: BlockInfo) {
+    pub fn set_block_info_at(
+        &mut self,
+        coords: BlockCoordinate,
+        block_info: BlockInfo,
+        evw_block_data_changed: &mut EventWriter<BlockDataChangedEvent>,
+    ) {
         if let Some(chunk) = self.mut_chunk_at_block_coordinates(coords) {
             chunk.set_block_info_at(ChunkBlockCoordinate::for_block_coordinate(coords), block_info);
+            if let Some(structure_entity) = self.get_entity() {
+                evw_block_data_changed.send(BlockDataChangedEvent {
+                    block_data_entity: self.block_data(coords),
+                    block: StructureBlock::new(coords),
+                    structure_entity,
+                });
+            }
         }
     }
 
