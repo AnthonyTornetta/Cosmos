@@ -5,37 +5,50 @@ use std::fs;
 use bevy::{
     app::Update,
     prelude::{
-        in_state, not, resource_changed, resource_exists, AmbientLight, App, Commands, IntoSystemConfigs, OnEnter, OnExit, Res, ResMut,
-        Resource,
+        in_state, not, resource_changed, resource_exists, resource_exists_and_changed, AmbientLight, App, Commands, IntoSystemConfigs,
+        OnEnter, OnExit, Res, ResMut, Resource,
     },
     utils::HashMap,
 };
 use cosmos_core::registry::{create_registry, identifiable::Identifiable, Registry};
 use serde::{Deserialize, Serialize};
 
-use crate::state::game_state::GameState;
+use crate::{lang::Lang, state::game_state::GameState};
 
-#[derive(Debug, PartialEq, Eq, Clone, Copy, Serialize, Deserialize)]
+#[derive(Debug, PartialEq, Eq, Hash, Clone, Copy, Serialize, Deserialize, PartialOrd, Ord)]
+/// Category this setting belongs to (for display purposes only)
 pub enum SettingCategory {
+    /// Graphical related stuff
     Graphics,
+    /// Mouse
     Mouse,
 }
 
 #[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
+/// The data this setting contains (also encodes type information)
 pub enum SettingData {
+    /// Contains a float
     F32(f32),
+    /// Contains a string
     String(String),
 }
 
 #[derive(Debug, PartialEq, Clone, Serialize, Deserialize, Resource)]
+/// A piece of data that can be set by the user
+///
+/// BEWARE: This is NOT guarenteed to be within any sort of bounds, since the user is free to changed
+/// the settings file to whatever they want.
 pub struct Setting {
     id: u16,
     unlocalized_name: String,
-    data: SettingData,
-    setting_category: SettingCategory,
+    /// The data this stores. Please see warning for [`Self`].
+    pub data: SettingData,
+    /// The category this setting should be under (for display purposes)
+    pub setting_category: SettingCategory,
 }
 
 impl Setting {
+    /// Creates a new setting that can be changed by the user
     pub fn new(unlocalized_name: impl Into<String>, default_value: SettingData, category: SettingCategory) -> Self {
         Self {
             data: default_value,
@@ -46,27 +59,27 @@ impl Setting {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
-pub struct SettingBound<T: PartialOrd + Clone + std::fmt::Debug + PartialEq + Send + Sync + 'static> {
-    id: u16,
-    unlocalized_name: String,
-    min: Option<T>,
-    max: Option<T>,
-}
+// #[derive(Debug, Clone, PartialEq)]
+// pub struct SettingBound<T: PartialOrd + Clone + std::fmt::Debug + PartialEq + Send + Sync + 'static> {
+//     id: u16,
+//     unlocalized_name: String,
+//     min: Option<T>,
+//     max: Option<T>,
+// }
 
-impl<T: PartialOrd + Clone + std::fmt::Debug + PartialEq + Send + Sync + 'static> Identifiable for SettingBound<T> {
-    fn id(&self) -> u16 {
-        self.id
-    }
+// impl<T: PartialOrd + Clone + std::fmt::Debug + PartialEq + Send + Sync + 'static> Identifiable for SettingBound<T> {
+//     fn id(&self) -> u16 {
+//         self.id
+//     }
 
-    fn set_numeric_id(&mut self, id: u16) {
-        self.id = id;
-    }
+//     fn set_numeric_id(&mut self, id: u16) {
+//         self.id = id;
+//     }
 
-    fn unlocalized_name(&self) -> &str {
-        &self.unlocalized_name
-    }
-}
+//     fn unlocalized_name(&self) -> &str {
+//         &self.unlocalized_name
+//     }
+// }
 
 impl Identifiable for Setting {
     fn id(&self) -> u16 {
@@ -82,12 +95,16 @@ impl Identifiable for Setting {
     }
 }
 
+/// Ease-of-use methods for the `Registry<Setting>``
 pub trait SettingsRegistry {
+    /// If this setting contains an f32 value, it will return that. Otherwise, the default will be returned.
     fn f32_or(&self, unlocalized_name: &str, default: f32) -> f32;
+    /// If this setting contains a &str value, it will return that. Otherwise, the default will be returned.
     fn str_or<'a>(&'a self, unlocalized_name: &str, default: &'a str) -> &'a str;
 }
 
 #[derive(Resource)]
+/// Controlls how sensitive the camera should be to mouse movements
 pub struct MouseSensitivity(pub f32);
 
 impl SettingsRegistry for Registry<Setting> {
@@ -199,8 +216,21 @@ fn process_setting(setting: &str, value: &str, settings: &mut Registry<Setting>)
     Some(())
 }
 
+fn insert_settings_lang(mut langs: ResMut<Lang<Setting>>, settings: Res<Registry<Setting>>) {
+    for setting in settings.iter() {
+        langs.register(setting);
+    }
+}
+
+fn init_settings_lang(mut commands: Commands) {
+    commands.insert_resource(Lang::<Setting>::new("en_us", vec!["settings"]));
+}
+
 pub(super) fn register(app: &mut App) {
     create_registry::<Setting>(app, "cosmos:settings");
+
+    app.add_systems(OnEnter(GameState::PreLoading), init_settings_lang)
+        .add_systems(OnExit(GameState::PostLoading), insert_settings_lang);
 
     app.add_systems(
         Update,
@@ -214,6 +244,8 @@ pub(super) fn register(app: &mut App) {
 
     app.add_systems(OnEnter(GameState::PreLoading), register_settings);
 
-    app.add_systems(OnEnter(GameState::Loading), load_settings.chain())
-        .add_systems(OnExit(GameState::Loading), (load_gamma, load_mouse_sensitivity));
+    app.add_systems(OnEnter(GameState::Loading), load_settings.chain()).add_systems(
+        Update,
+        (load_gamma, load_mouse_sensitivity).run_if(resource_exists_and_changed::<Registry<Setting>>),
+    );
 }

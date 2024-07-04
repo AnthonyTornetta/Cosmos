@@ -1,6 +1,9 @@
 use std::net::ToSocketAddrs;
 
-use bevy::{app::App, prelude::*};
+use bevy::{
+    app::{App, AppExit},
+    prelude::*,
+};
 
 use crate::{
     netty::connect::HostConfig,
@@ -158,6 +161,31 @@ fn create_main_menu(mut commands: Commands, asset_server: Res<AssetServer>, q_ui
                 ..Default::default()
             },
         });
+
+        p.spawn(ButtonBundle::<QuitButtonEvent> {
+            node_bundle: NodeBundle {
+                border_color: cool_blue.into(),
+                style: Style {
+                    border: UiRect::all(Val::Px(2.0)),
+                    width: Val::Px(500.0),
+                    height: Val::Px(70.0),
+                    align_self: AlignSelf::Center,
+                    margin: UiRect::top(Val::Px(20.0)),
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            button: Button {
+                button_styles: Some(ButtonStyles {
+                    background_color: Color::hex("333333").unwrap(),
+                    hover_background_color: Color::hex("232323").unwrap(),
+                    press_background_color: Color::hex("111111").unwrap(),
+                    ..Default::default()
+                }),
+                text: Some(("Quit".into(), text_style.clone())),
+                ..Default::default()
+            },
+        });
     });
 }
 
@@ -174,6 +202,15 @@ impl ButtonEvent for ConnectButtonEvent {
 struct SettingsButtonEvent;
 
 impl ButtonEvent for SettingsButtonEvent {
+    fn create_event(_: Entity) -> Self {
+        Self
+    }
+}
+
+#[derive(Default, Event, Debug)]
+struct QuitButtonEvent;
+
+impl ButtonEvent for QuitButtonEvent {
     fn create_event(_: Entity) -> Self {
         Self
     }
@@ -237,9 +274,14 @@ fn trigger_connection(
     state.set(GameState::Connecting);
 }
 
+fn quit_game(mut evw_app_exit: EventWriter<AppExit>) {
+    evw_app_exit.send(AppExit::default());
+}
+
 pub(super) fn register(app: &mut App) {
     register_button::<ConnectButtonEvent>(app);
     register_button::<SettingsButtonEvent>(app);
+    register_button::<QuitButtonEvent>(app);
 
     add_reactable_type::<ConnectionString>(app);
 
@@ -261,6 +303,13 @@ pub(super) fn register(app: &mut App) {
         Update,
         trigger_connection
             .run_if(on_event::<ConnectButtonEvent>())
+            .run_if(in_main_menu_state(MainMenuSubState::TitleScreen))
+            .in_set(MainMenuSystemSet::UpdateMenu),
+    )
+    .add_systems(
+        Update,
+        quit_game
+            .run_if(on_event::<QuitButtonEvent>())
             .run_if(in_main_menu_state(MainMenuSubState::TitleScreen))
             .in_set(MainMenuSystemSet::UpdateMenu),
     );

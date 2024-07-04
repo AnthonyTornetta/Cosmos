@@ -82,9 +82,9 @@ impl<T: Identifiable + Send + Sync> Lang<T> {
     /// Gets the text for an entry based off its unlocalized name.
     ///
     /// Make sure `register(item)` was called first!
-    pub fn get_name_from_id(&self, id: &str) -> Option<&String> {
+    pub fn get_name_from_id(&self, id: &str) -> Option<&str> {
         match self.id_map.get(id) {
-            Some(id) => self.map.get(id),
+            Some(id) => self.map.get(id).map(String::as_str),
             None => None,
         }
     }
