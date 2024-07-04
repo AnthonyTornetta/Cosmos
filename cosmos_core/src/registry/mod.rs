@@ -140,6 +140,11 @@ impl<T: Identifiable + Sync + Send> Registry<T> {
     pub fn contains(&self, unlocalized_name: &str) -> bool {
         self.unlocalized_name_to_id.contains_key(unlocalized_name)
     }
+
+    /// Returns true if this registry contains nothing
+    pub fn is_empty(&self) -> bool {
+        self.unlocalized_name_to_id.is_empty()
+    }
 }
 
 /// Represents a bunch of values that are identifiable by their unlocalized name + numeric ids.

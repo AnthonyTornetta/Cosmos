@@ -3,7 +3,7 @@
 //! This does not add them to the bevy systems by default, and they must be manually added when needed.
 
 use std::{
-    net::UdpSocket,
+    net::{ToSocketAddrs, UdpSocket},
     time::{SystemTime, UNIX_EPOCH},
 };
 
@@ -22,10 +22,18 @@ use crate::{
     state::game_state::GameState,
 };
 
-fn new_netcode_transport(host: &str) -> NetcodeClientTransport {
-    let port: u16 = 1337;
+fn new_netcode_transport(mut host: &str, port: u16) -> NetcodeClientTransport {
+    if host == "localhost" {
+        host = "127.0.0.1"; // to_socket_addrs turns localhost into an ipv6 IP, which breaks renet.
+    }
 
-    let server_addr = format!("{host}:{port}").parse().unwrap();
+    let addr = format!("{host}:{port}");
+    let server_addr = addr
+        .parse()
+        .unwrap_or_else(|e| panic!("Error creating IP address for {host}:{port}. Error: {e:?}"));
+
+    info!("Server Addr: {server_addr:?}");
+
     let socket = UdpSocket::bind("0.0.0.0:0").unwrap();
 
     socket.set_nonblocking(true).expect("Unable to make UDP non-blocking!");
@@ -57,9 +65,13 @@ fn new_netcode_transport(host: &str) -> NetcodeClientTransport {
 
 #[derive(Resource)]
 /// Used to setup the connection with the server
+///
+/// This must be present before entering the `GameState::Connecting` state.
 pub struct HostConfig {
-    /// The server's host
+    /// The server's host (excluding port)
     pub host_name: String,
+    /// The server's port
+    pub port: u16,
 }
 
 /// Establishes a connection with the server.
@@ -70,7 +82,7 @@ pub fn establish_connection(mut commands: Commands, host_config: Res<HostConfig>
     commands.insert_resource(ClientLobby::default());
     commands.insert_resource(MostRecentTick(None));
     commands.insert_resource(RenetClient::new(connection_config()));
-    commands.insert_resource(new_netcode_transport(host_config.host_name.as_str()));
+    commands.insert_resource(new_netcode_transport(host_config.host_name.as_str(), host_config.port));
     commands.init_resource::<NetworkMapping>();
 }
 

@@ -88,6 +88,13 @@ impl<T: ReactableValue> BindValues<T> {
     pub fn new(items: Vec<BindValue<T>>) -> Self {
         Self(items)
     }
+
+    /// Binds a value to this component.
+    ///
+    /// Specify the values to bind in this vec
+    pub fn single(items: BindValue<T>) -> Self {
+        Self::new(vec![items])
+    }
 }
 
 #[derive(Event)]

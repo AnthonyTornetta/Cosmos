@@ -74,9 +74,9 @@ fn main() {
 
     let args = Args::parse();
 
-    let host_name = args.ip.unwrap_or_else(get_local_ipaddress);
+    // let host_name = args.ip.unwrap_or_else(get_local_ipaddress);
 
-    info!("Host: {host_name}");
+    // info!("Host: {host_name}");
 
     let mut app = App::new();
 
@@ -110,7 +110,8 @@ fn main() {
     #[cfg(feature = "print-schedule")]
     let default_plugins = default_plugins.disable::<LogPlugin>();
 
-    app.insert_resource(HostConfig { host_name })
+    app
+        // .insert_resource(HostConfig { host_name })
         .insert_resource(RapierConfiguration {
             timestep_mode: TimestepMode::Interpolated {
                 dt: 1.0 / 60.0,

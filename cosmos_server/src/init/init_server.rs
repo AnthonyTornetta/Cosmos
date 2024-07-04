@@ -3,7 +3,7 @@
 //! Use `init` to do this.
 
 use std::{
-    net::{SocketAddr, UdpSocket},
+    net::{ToSocketAddrs, UdpSocket},
     time::SystemTime,
 };
 
@@ -17,14 +17,21 @@ use cosmos_core::netty::{connection_config, get_local_ipaddress, server::ServerL
 use crate::netty::network_helpers::{ClientTicks, NetworkTick};
 
 /// Sets up the server & makes it ready to be connected to
-pub fn init(app: &mut App, address: Option<String>) {
-    let port: u16 = 1337;
+pub fn init(app: &mut App, address: Option<String>, port: u16) {
+    // let addr = address.unwrap_or(get_local_ipaddress());
 
-    let local_addr = address.unwrap_or(get_local_ipaddress());
+    // let public_addr = format!("{addr}:{port}")
+    //     .to_socket_addrs()
+    //     .unwrap_or_else(|e| panic!("Error creating IP address for \"{addr}\". Error: {e:?}"))
+    //     .next()
+    //     .unwrap();
 
-    let public_addr: SocketAddr = format!("{local_addr}:{port}").parse().unwrap();
     let socket = UdpSocket::bind(format!("0.0.0.0:{port}")).unwrap();
+    info!("Server Local Addr: {:?}", socket.local_addr());
+
     socket.set_nonblocking(true).expect("Cannot set non-blocking mode!");
+
+    let public_addr = socket.local_addr().unwrap();
 
     let current_time = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).unwrap();
 
@@ -45,5 +52,5 @@ pub fn init(app: &mut App, address: Option<String>) {
         .insert_resource(server)
         .insert_resource(transport);
 
-    info!("Setup server on {local_addr}:{port}");
+    info!("Public address: {public_addr}");
 }

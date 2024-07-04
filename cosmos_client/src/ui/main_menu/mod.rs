@@ -7,6 +7,7 @@ use super::{components::show_cursor::ShowCursor, UiRoot};
 
 mod disconnect_screen;
 mod menu_panorama;
+mod settings_screen;
 mod title_screen;
 mod triggers;
 
@@ -172,6 +173,7 @@ pub(super) fn register(app: &mut App) {
     title_screen::register(app);
     disconnect_screen::register(app);
     triggers::register(app);
+    settings_screen::register(app);
 
     app.configure_sets(
         Update,
