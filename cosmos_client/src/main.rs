@@ -39,7 +39,7 @@ use bevy::prelude::*;
 use bevy::window::WindowMode;
 use bevy_hanabi::HanabiPlugin;
 use bevy_mod_debugdump::schedule_graph;
-use bevy_obj::ObjPlugin;
+// use bevy_obj::ObjPlugin;
 use bevy_rapier3d::prelude::{RapierConfiguration, TimestepMode};
 use bevy_renet::transport::NetcodeClientPlugin;
 use bevy_renet::RenetClientPlugin;
@@ -130,7 +130,7 @@ fn main() {
             GameState::MainMenu,
             GameState::Playing,
         ))
-        .add_plugins((RenetClientPlugin, NetcodeClientPlugin, ObjPlugin, HanabiPlugin))
+        .add_plugins((RenetClientPlugin, NetcodeClientPlugin, /*ObjPlugin,*/ HanabiPlugin))
         // .add_plugins(RapierDebugRenderPlugin::default())
         .add_systems(OnEnter(GameState::Connecting), connect::establish_connection)
         .add_systems(Update, connect::wait_for_connection.run_if(in_state(GameState::Connecting)))
@@ -165,18 +165,18 @@ fn main() {
     fluid::register(&mut app);
 
     if cfg!(feature = "print-schedule") {
-        println!(
-            "{}",
-            bevy_mod_debugdump::schedule_graph_dot(
-                &mut app,
-                Update,
-                &schedule_graph::Settings {
-                    ambiguity_enable: false,
-                    ambiguity_enable_on_world: false,
-                    ..Default::default()
-                }
-            )
-        );
+        // println!(
+        //     "{}",
+        //     bevy_mod_debugdump::schedule_graph_dot(
+        //         &mut app,
+        //         Update,
+        //         &schedule_graph::Settings {
+        //             ambiguity_enable: false,
+        //             ambiguity_enable_on_world: false,
+        //             ..Default::default()
+        //         }
+        //     )
+        // );
         return;
     }
 

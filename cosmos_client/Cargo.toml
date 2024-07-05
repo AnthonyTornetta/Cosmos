@@ -14,6 +14,9 @@ print-schedule = []
 default = [
     "bevy/animation",
     "bevy/bevy_asset",
+    "bevy/bevy_state",
+    "bevy/bevy_color",
+    "bevy/bevy_gilrs",
     "bevy/bevy_scene",
     "bevy/bevy_winit",
     "bevy/bevy_core_pipeline",
@@ -23,13 +26,17 @@ default = [
     "bevy/bevy_sprite",
     "bevy/bevy_text",
     "bevy/bevy_ui",
+    "bevy/multi_threaded",
     "bevy/png",
     "bevy/hdr",
-    "bevy/zstd",
     "bevy/x11",
-    "bevy/ktx2",
-    "bevy/multi-threaded",
+    "bevy/bevy_gizmos",
+    "bevy/android_shared_stdcxx",
     "bevy/tonemapping_luts",
+    "bevy/smaa_luts",
+    "bevy/default_font",
+    "bevy/webgl2",
+    "bevy/sysinfo_plugin",
 ]
 
 [dependencies]
@@ -65,9 +72,9 @@ thread-priority = { workspace = true }
 anyhow = { workspace = true }
 thiserror = { workspace = true }
 bitflags = { workspace = true }
-bevy_mod_debugdump = { workspace = true }
+# bevy_mod_debugdump = { workspace = true }
 derive_more = { workspace = true }
 clap = { workspace = true, features = ["derive"] }
 bevy_app_compute = { workspace = true }
-bevy_obj = { workspace = true }
+# bevy_obj = { workspace = true }
 bevy_hanabi = { workspace = true }
