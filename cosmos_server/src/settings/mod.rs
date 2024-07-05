@@ -9,7 +9,7 @@ use clap::{arg, Parser};
 pub struct Args {
     /// Ip of the server
     #[arg(long)]
-    ip: Option<String>,
+    port: Option<u16>,
 
     /// If this is true, no enemies will spawn
     #[arg(long, default_value_t = false)]
@@ -28,7 +28,7 @@ pub struct Args {
 /// Settings for the server from the command line
 pub struct ServerSettings {
     /// The IP the server should run on
-    pub ip: Option<String>,
+    pub port: Option<u16>,
     /// If enemies shouldn't spawn
     pub peaceful: bool,
     /// If asteroids should spawn
@@ -42,7 +42,7 @@ pub(super) fn read_server_settings() -> ServerSettings {
     let args = Args::parse();
 
     ServerSettings {
-        ip: args.ip,
+        port: args.port,
         peaceful: args.peaceful,
         spawn_planets: !args.no_planets,
         spawn_asteroids: !args.no_asteroids,

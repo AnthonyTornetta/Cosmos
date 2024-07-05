@@ -12,14 +12,14 @@ use crate::{
 ///
 /// Contains all the systems + resources needed for a server
 pub struct ServerPlugin {
-    /// The server's IP because renet needs this
-    pub ip: Option<String>,
+    /// The port this server will be run on
+    pub port: u16,
 }
 
 impl Plugin for ServerPlugin {
     fn build(&self, app: &mut bevy::prelude::App) {
         info!("Setting up server");
-        init_server::init(app, self.ip.clone(), 1337);
+        init_server::init(app, self.port);
         commands::register(app);
         init::register(app);
         registry::register(app);

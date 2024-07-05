@@ -24,15 +24,16 @@ use crate::{
 
 fn new_netcode_transport(mut host: &str, port: u16) -> NetcodeClientTransport {
     if host == "localhost" {
-        host = "127.0.0.1"; // to_socket_addrs turns localhost into an ipv6 IP, which breaks renet.
+        host = "127.0.0.1"; // to_socket_addrs turns localhost into an ipv6 IP, which fails to connect to the server listening on an ipv4 address.
     }
 
     let addr = format!("{host}:{port}");
-    let server_addr = addr
-        .parse()
-        .unwrap_or_else(|e| panic!("Error creating IP address for {host}:{port}. Error: {e:?}"));
 
-    info!("Server Addr: {server_addr:?}");
+    let server_addr = addr
+        .to_socket_addrs()
+        .unwrap_or_else(|e| panic!("Error creating IP address for \"{addr}\". Error: {e:?}"))
+        .next()
+        .unwrap();
 
     let socket = UdpSocket::bind("0.0.0.0:0").unwrap();
 
