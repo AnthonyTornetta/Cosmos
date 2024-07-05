@@ -1,28 +1,29 @@
+//! The game's logic system: for wires, logic gates, etc.
+
 use bevy::{
     app::{App, Update},
     prelude::{
-        in_state, Commands, Entity, Event, EventReader, EventWriter, IntoSystemConfigs, OnEnter, Query, Res, ResMut, States, SystemSet,
-        With, Without,
+        in_state, Commands, Entity, Event, EventReader, EventWriter, IntoSystemConfigs, Query, Res, States, SystemSet, With, Without,
     },
 };
-use wire_graph::{LogicBlock, LogicConnection, LogicGroup, Port, PortType, WireGraph};
+use logic_graph::{LogicBlock, LogicGraph, LogicGroup};
 
 use crate::{
     block::Block,
     events::block_events::BlockChangedEvent,
     registry::{create_registry, identifiable::Identifiable, Registry},
-    structure::{loading::StructureLoadingSet, Structure},
+    structure::{loading::StructureLoadingSet, structure_block::StructureBlock, Structure},
 };
 
 use bevy::prelude::IntoSystemSetConfigs;
 
-pub mod wire_graph;
+pub mod logic_graph;
 
 fn logic_block_placed_event_listener(
     mut evr_block_updated: EventReader<BlockChangedEvent>,
     blocks: Res<Registry<Block>>,
     logic_blocks: Res<Registry<LogicBlock>>,
-    mut q_wire_graph: Query<&mut WireGraph>,
+    mut q_wire_graph: Query<&mut LogicGraph>,
     mut q_structure: Query<&mut Structure>,
     mut evw_logic_output: EventWriter<LogicOutputEvent>,
     mut evw_logic_input: EventWriter<LogicInputEvent>,
@@ -65,35 +66,28 @@ fn logic_block_placed_event_listener(
 }
 
 #[derive(Event, Debug)]
+/// Sent when a block's logic output changes.
+/// For example, sent when the block is placed or one frame after its inputs change.
 pub struct LogicOutputEvent {
-    pub group_id: usize,
-    pub output_port: Port,
+    /// The block coordinates.
+    pub block: StructureBlock,
+    /// The entity containing the structure and wiregraph this block is in.
     pub entity: Entity,
 }
 
 #[derive(Event, Debug)]
+/// Sent when a block's logic inputs change.
+/// For example, when the block is placed or in the same frame another block with an output [`Port`] in its [`LogicGroup`] changes its output.
 pub struct LogicInputEvent {
-    pub group_id: usize,
-    pub input_port: Port,
+    /// The block coordinates.
+    pub block: StructureBlock,
+    /// The entity containing the structure and wiregraph this block is in.
     pub entity: Entity,
 }
 
-fn add_default_wire_graph(q_needs_wire_graph: Query<Entity, (With<Structure>, Without<WireGraph>)>, mut commands: Commands) {
+fn add_default_wire_graph(q_needs_wire_graph: Query<Entity, (With<Structure>, Without<LogicGraph>)>, mut commands: Commands) {
     for entity in q_needs_wire_graph.iter() {
-        commands.entity(entity).insert(WireGraph::default());
-    }
-}
-
-fn register_logic_blocks(blocks: Res<Registry<Block>>, mut registry: ResMut<Registry<LogicBlock>>) {
-    use LogicConnection as LC;
-    if let Some(logic_wire) = blocks.from_id("cosmos:logic_wire") {
-        registry.register(LogicBlock::new(logic_wire, [Some(LC::Wire); 6]));
-    }
-    if let Some(logic_on) = blocks.from_id("cosmos:logic_on") {
-        registry.register(LogicBlock::new(logic_on, [Some(LC::Port(PortType::Output)); 6]));
-    }
-    if let Some(light) = blocks.from_id("cosmos:light") {
-        registry.register(LogicBlock::new(light, [Some(LC::Port(PortType::Input)); 6]));
+        commands.entity(entity).insert(LogicGraph::default());
     }
 }
 
@@ -104,27 +98,29 @@ impl Registry<LogicBlock> {
     }
 }
 #[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
+/// Separates the logic update events into two sets to maintain the timing of logic circuits.
 pub enum LogicSystemSet {
+    /// All output [`Port`]s. These push their values to their [`LogicGroup`]s first in each frame.
     Producing,
+    /// All input [`Port`]s. These pull their values from their [`LogicGroup`]s second in each frame.
     Consuming,
 }
 
-pub(super) fn register<T: States>(app: &mut App, post_loading_state: T, playing_state: T) {
+pub(super) fn register<T: States>(app: &mut App, playing_state: T) {
     create_registry::<LogicBlock>(app, "cosmos:logic_blocks");
 
     app.configure_sets(Update, (LogicSystemSet::Producing, LogicSystemSet::Consuming).chain());
 
-    app.add_systems(OnEnter(post_loading_state), register_logic_blocks)
-        .add_systems(
-            Update,
-            (
-                add_default_wire_graph.in_set(StructureLoadingSet::AddStructureComponents),
-                logic_block_placed_event_listener,
-            )
-                .run_if(in_state(playing_state)),
+    app.add_systems(
+        Update,
+        (
+            add_default_wire_graph.in_set(StructureLoadingSet::AddStructureComponents),
+            logic_block_placed_event_listener,
         )
-        .register_type::<WireGraph>()
-        .register_type::<LogicGroup>()
-        .add_event::<LogicOutputEvent>()
-        .add_event::<LogicInputEvent>();
+            .run_if(in_state(playing_state)),
+    )
+    .register_type::<LogicGraph>()
+    .register_type::<LogicGroup>()
+    .add_event::<LogicOutputEvent>()
+    .add_event::<LogicInputEvent>();
 }

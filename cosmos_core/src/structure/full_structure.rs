@@ -19,7 +19,7 @@ use crate::{
 use super::{
     base_structure::BaseStructure,
     block_storage::BlockStorer,
-    chunk::{BlockInfo, Chunk},
+    chunk::Chunk,
     coordinates::{BlockCoordinate, ChunkBlockCoordinate, ChunkCoordinate, CoordinateType},
     structure_block::StructureBlock,
     ChunkState, Structure,

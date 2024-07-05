@@ -160,6 +160,14 @@ impl BlockRotation {
         self.inverse().global_to_local(face)
     }
 
+    /// Returns an array of all 6 block faces.
+    /// Entries are ordered by the global BlockFace index, but contain the local direction that BlockFace is pointing.\
+    ///
+    /// For example, if [`BlockFace::Top`] is locally pointing right, the entry at index 2 ([`BlockFace::Top`]'s index) will be [`BlockFace::Right`].
+    pub fn all_local_faces(&self) -> [BlockFace; 6] {
+        ALL_BLOCK_FACES.map(|face| self.global_to_local(face))
+    }
+
     /// Gets the face that should be used for this "absolute" side.
     ///
     /// "Absolute" means that +Y is [`BlockFace::Top`], -X is [`BlockFace::Left`], etc.
@@ -832,7 +840,7 @@ pub(super) fn register<T: States + Clone + Copy>(
     multiblock::register(app, post_loading_state, playing_state);
     block_update::register(app);
     storage::register(app);
-    specific_blocks::register(app);
+    specific_blocks::register(app, post_loading_state);
     data::register(app);
 
     app.register_type::<BlockFace>();

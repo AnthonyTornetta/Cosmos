@@ -12,8 +12,8 @@ use crate::{
 };
 
 use super::{
-    chunk::{BlockInfo, Chunk},
-    coordinates::{ChunkBlockCoordinate, ChunkCoordinate, Coordinate, CoordinateType},
+    chunk::BlockInfo,
+    coordinates::{ChunkBlockCoordinate, Coordinate, CoordinateType},
 };
 
 #[derive(Debug, Reflect, Serialize, Deserialize, Clone)]

@@ -18,8 +18,7 @@ use bevy::{
     utils::HashMap,
 };
 use cosmos_core::{
-    block::{specific_blocks::light::LightBlockInfo, Block, ALL_BLOCK_FACES},
-    ecs::NeedsDespawned,
+    block::{specific_blocks::logic_indicator::LogicIndicatorBlockInfo, Block, ALL_BLOCK_FACES},
     registry::{identifiable::Identifiable, many_to_one::ManyToOneRegistry, Registry},
     structure::{
         chunk::CHUNK_DIMENSIONSF,
@@ -42,22 +41,21 @@ use crate::{
     state::game_state::GameState,
 };
 
-fn set_custom_rendering_for_light(mut rendering_modes: ResMut<BlockRenderingModes>, blocks: Res<Registry<Block>>) {
-    if let Some(light) = blocks.from_id("cosmos:light") {
-        rendering_modes.set_rendering_mode(light, RenderingMode::Custom);
+fn set_custom_rendering_for_logic_indicator(mut rendering_modes: ResMut<BlockRenderingModes>, blocks: Res<Registry<Block>>) {
+    if let Some(logic_indicator) = blocks.from_id("cosmos:logic_indicator") {
+        rendering_modes.set_rendering_mode(logic_indicator, RenderingMode::Custom);
     }
 }
 
 #[derive(Component, Reflect)]
-struct LightRenders(Vec<Entity>);
+struct LogicIndicatorRenders(Vec<Entity>);
 
-fn on_render_light(
-    q_light_renders: Query<&LightRenders>,
+fn on_render_logic_indicator(
+    q_logic_indicator_renders: Query<&LogicIndicatorRenders>,
     mut ev_reader: EventReader<ChunkNeedsCustomBlocksRendered>,
     blocks: Res<Registry<Block>>,
     mut commands: Commands,
     q_structure: Query<&Structure>,
-    // block_rendering_info: Res<Registry<BlockRenderingInfo>>,
     materials: Res<ManyToOneRegistry<Block, BlockMaterialMapping>>,
     block_textures: Res<Registry<BlockTextureIndex>>,
     block_mesh_registry: Res<BlockMeshRegistry>,
@@ -66,16 +64,18 @@ fn on_render_light(
     mut evw_add_material: EventWriter<AddMaterialEvent>,
 ) {
     for ev in ev_reader.read() {
-        if let Ok(light_renders) = q_light_renders.get(ev.mesh_entity_parent) {
-            for e in light_renders.0.iter().copied() {
+        if let Ok(logic_indicator_renders) = q_logic_indicator_renders.get(ev.mesh_entity_parent) {
+            for e in logic_indicator_renders.0.iter().copied() {
                 commands.entity(e).despawn_recursive();
             }
 
-            commands.entity(ev.mesh_entity_parent).remove::<LightRenders>();
+            commands.entity(ev.mesh_entity_parent).remove::<LogicIndicatorRenders>();
         }
-        let light_block = blocks.from_id("cosmos:light").expect("Light block should exist.");
-        let light_id = light_block.id();
-        if !ev.block_ids.contains(&light_id) {
+        let logic_indicator_block = blocks
+            .from_id("cosmos:logic_indicator")
+            .expect("Logic Indicator block should exist.");
+        let logic_indicator_id = logic_indicator_block.id();
+        if !ev.block_ids.contains(&logic_indicator_id) {
             continue;
         }
 
@@ -86,15 +86,15 @@ fn on_render_light(
         let mut material_meshes: HashMap<(MaterialType, u16), CosmosMeshBuilder> = HashMap::default();
 
         for block in structure.block_iter_for_chunk(ev.chunk_coordinate, true) {
-            if structure.block_id_at(block.coords()) != light_id {
+            if structure.block_id_at(block.coords()) != logic_indicator_id {
                 continue;
             }
 
-            let Some(material_definition) = materials.get_value(light_block) else {
+            let Some(material_definition) = materials.get_value(logic_indicator_block) else {
                 continue;
             };
 
-            let Some(block_mesh_info) = block_mesh_registry.get_value(light_block) else {
+            let Some(block_mesh_info) = block_mesh_registry.get_value(logic_indicator_block) else {
                 continue;
             };
 
@@ -107,7 +107,7 @@ fn on_render_light(
 
             let rotation = block_rotation.as_quat();
 
-            let material_type = if structure.block_info_at(block.coords()).light_on() {
+            let material_type = if structure.block_info_at(block.coords()).indicator_on() {
                 MaterialType::Unlit
             } else {
                 MaterialType::Normal
@@ -141,7 +141,7 @@ fn on_render_light(
                 };
 
                 let index = block_textures
-                    .from_id(light_block.unlocalized_name())
+                    .from_id(logic_indicator_block.unlocalized_name())
                     .unwrap_or_else(|| block_textures.from_id("missing").expect("Missing texture should exist."));
 
                 let neighbors = BlockNeighbors::empty();
@@ -165,7 +165,7 @@ fn on_render_light(
 
                 let structure_coords = block.coords();
 
-                let additional_info = material_definition.add_material_data(light_id, &mesh_info);
+                let additional_info = material_definition.add_material_data(logic_indicator_id, &mesh_info);
 
                 let coords = ChunkBlockCoordinate::for_block_coordinate(structure_coords);
                 const CHUNK_DIMS_HALVED: f32 = CHUNK_DIMENSIONSF / 2.0;
@@ -199,7 +199,7 @@ fn on_render_light(
                     TransformBundle::default(),
                     VisibilityBundle::default(),
                     meshes.add(mesh),
-                    Name::new("Rendered Lights"),
+                    Name::new("Rendered Logic Indicators"),
                 ))
                 .set_parent(ev.mesh_entity_parent)
                 .id();
@@ -214,15 +214,15 @@ fn on_render_light(
         }
 
         if !ents.is_empty() {
-            commands.entity(ev.mesh_entity_parent).insert(LightRenders(ents));
+            commands.entity(ev.mesh_entity_parent).insert(LogicIndicatorRenders(ents));
         }
     }
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_systems(OnEnter(GameState::PostLoading), set_custom_rendering_for_light);
+    app.add_systems(OnEnter(GameState::PostLoading), set_custom_rendering_for_logic_indicator);
 
-    app.add_systems(Update, on_render_light.in_set(StructureRenderingSet::CustomRendering));
+    app.add_systems(Update, on_render_logic_indicator.in_set(StructureRenderingSet::CustomRendering));
 
-    app.register_type::<LightRenders>();
+    app.register_type::<LogicIndicatorRenders>();
 }

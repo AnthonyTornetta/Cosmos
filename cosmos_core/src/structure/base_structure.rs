@@ -1,11 +1,8 @@
 //! Internally used common logic between dynamic + full structures.
 
-use std::array;
-
 use std::{cell::RefCell, rc::Rc};
 
 use bevy::{
-    a11y::accesskit::AriaCurrent,
     ecs::{
         component::Component,
         query::{QueryData, QueryFilter, ROQueryItem, With},

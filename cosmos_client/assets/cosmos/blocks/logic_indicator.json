@@ -1,0 +1,24 @@
+{
+    "texture": {
+        "Sides": {
+            "left": {
+                "Single": "cosmos:light"
+            },
+            "right": {
+                "Single": "cosmos:light"
+            },
+            "front": {
+                "Single": "cosmos:light"
+            },
+            "back": {
+                "Single": "cosmos:light"
+            },
+            "top": {
+                "Single": "cosmos:light"
+            },
+            "bottom": {
+                "Single": "cosmos:light"
+            }
+        }
+    }
+}
