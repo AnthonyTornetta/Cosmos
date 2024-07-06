@@ -108,7 +108,7 @@ fn on_render_logic_indicator(
             let rotation = block_rotation.as_quat();
 
             let material_type = if structure.block_info_at(block.coords()).indicator_on() {
-                MaterialType::Unlit
+                MaterialType::Illuminated
             } else {
                 MaterialType::Normal
             };

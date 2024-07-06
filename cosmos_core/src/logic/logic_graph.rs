@@ -198,6 +198,9 @@ pub struct LogicGraph {
     pub input_port_group_id: HashMap<Port, usize>,
 }
 
+// Use "LogicGraph" or some similar name for the unsafe (everything with expects) core data manipulation.
+// Rename to "LogicDriver" or some other thing for the safe methods with outside functionality.
+
 impl LogicGraph {
     fn new_group_id(&mut self) -> usize {
         self.next_group_id += 1;
@@ -689,14 +692,8 @@ impl LogicGraph {
                     PortType::Input => false,
                     PortType::Output => {
                         let old_group = self
-                            .groups
-                            .get(
-                                self.output_port_group_id
-                                    .get(&Port::new(coords, encountered_local_face))
-                                    .expect("Port being renamed should have a previous group ID."),
-                            )
+                            .logic_group_of(&Port::new(coords, encountered_local_face), PortType::Output)
                             .expect("Port being renamed should have a previous group.");
-
                         *old_group
                             .producers
                             .get(&Port::new(coords, encountered_local_face))

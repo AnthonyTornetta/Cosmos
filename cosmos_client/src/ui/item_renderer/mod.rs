@@ -241,7 +241,7 @@ fn generate_item_model(
     event_writer.send(AddMaterialEvent {
         entity: to_create,
         add_material_id: mat_id,
-        material_type: MaterialType::Unlit,
+        material_type: MaterialType::Illuminated,
     });
 }
 
@@ -342,7 +342,7 @@ fn generate_block_item_model(
     event_writer.send(AddMaterialEvent {
         entity: to_create,
         add_material_id: mat_id,
-        material_type: MaterialType::Unlit,
+        material_type: MaterialType::Illuminated,
     });
 
     true
