@@ -1,5 +1,7 @@
 {
     "texture": {
-        "Single": "cosmos:light"
+        "All": {
+            "Single": "cosmos:light"
+        }
     }
 }
