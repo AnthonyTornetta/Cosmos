@@ -7,7 +7,7 @@ use clap::{arg, Parser};
 #[command(version, about, long_about = None)]
 /// Command line arguments for the server
 pub struct Args {
-    /// Ip of the server
+    /// Port the server should listen on (defaults to 1337)
     #[arg(long)]
     port: Option<u16>,
 
