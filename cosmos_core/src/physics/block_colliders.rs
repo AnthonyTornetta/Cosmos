@@ -3,6 +3,7 @@
 use std::f32::consts::PI;
 
 use bevy::{
+    ecs::schedule::{IntoSystemSetConfigs, SystemSet},
     math::Quat,
     prelude::{App, IntoSystemConfigs, OnEnter, Res, ResMut, States, Vec3},
 };
@@ -72,6 +73,8 @@ pub enum BlockColliderType {
     Custom(Vec<CustomCollider>),
     /// Represents a collider that will change when this is connected to other blocks
     Connected(Box<ConnectedCollider>),
+    /// This collider is based on the fluid's state, and will be computed
+    Fluid,
     /// No collider at all
     Empty,
 }
@@ -101,7 +104,7 @@ fn register_custom_colliders(blocks: Res<Registry<Block>>, mut registry: ResMut<
 
     const EPSILON: f32 = 0.001;
 
-    if blocks.from_id("cosmos:short_grass").is_some() {
+    if blocks.contains("cosmos:short_grass") {
         registry.register(BlockCollider::new(
             BlockColliderType::Custom(vec![CustomCollider {
                 collider: Collider::cuboid(0.5, 0.2, 0.5),
@@ -113,7 +116,7 @@ fn register_custom_colliders(blocks: Res<Registry<Block>>, mut registry: ResMut<
         ));
     }
 
-    if blocks.from_id("cosmos:ramp").is_some() {
+    if blocks.contains("cosmos:ramp") {
         registry.register(BlockCollider::new(
             BlockColliderType::Custom(vec![
                 // top
@@ -156,7 +159,7 @@ fn register_custom_colliders(blocks: Res<Registry<Block>>, mut registry: ResMut<
         ));
     }
 
-    if blocks.from_id("cosmos:power_cable").is_some() {
+    if blocks.contains("cosmos:power_cable") {
         registry.register(BlockCollider::new(
             BlockColliderType::Connected(Box::new(ConnectedCollider {
                 top: FaceColldier {
@@ -274,11 +277,40 @@ impl Identifiable for BlockCollider {
     }
 }
 
+#[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
+/// If you are doing custom collider logic for your blocks, make sure you register
+/// the collider in the correct set.
+pub enum ColliderRegistrationSet {
+    /// Custom colliders should be registered in this set.
+    RegisterCustomColliders,
+    /// Any logic that has to happen between custom colliders being made and remaining colliders
+    /// being completed should be placed here.
+    ///
+    /// For example, assigning the fluid collider to blocks that don't have a custom collider otherwise
+    /// specified.
+    PreRegisterRemainingColliders,
+    /// The blocks that haven't had their colliders set will have the default 1x1x1 cube set as their collider.
+    RegisterRemainingColliders,
+}
+
 pub(super) fn register<T: States + Copy>(app: &mut App, post_loading_state: T) {
     create_registry::<BlockCollider>(app, "cosmos:block_colliders");
 
+    app.configure_sets(
+        OnEnter(post_loading_state),
+        (
+            ColliderRegistrationSet::RegisterCustomColliders,
+            ColliderRegistrationSet::PreRegisterRemainingColliders,
+            ColliderRegistrationSet::RegisterRemainingColliders,
+        )
+            .chain(),
+    );
+
     app.add_systems(
         OnEnter(post_loading_state),
-        (register_custom_colliders, register_all_colliders).chain(),
+        (
+            register_custom_colliders.in_set(ColliderRegistrationSet::RegisterCustomColliders),
+            register_all_colliders.in_set(ColliderRegistrationSet::RegisterRemainingColliders),
+        ),
     );
 }

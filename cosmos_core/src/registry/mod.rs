@@ -135,6 +135,11 @@ impl<T: Identifiable + Sync + Send> Registry<T> {
     pub fn iter_mut(&mut self) -> IterMut<T> {
         self.contents.iter_mut()
     }
+
+    /// Returns true if an item with this unlocalized name exists & has been registered.
+    pub fn contains(&self, unlocalized_name: &str) -> bool {
+        self.unlocalized_name_to_id.contains_key(unlocalized_name)
+    }
 }
 
 /// Represents a bunch of values that are identifiable by their unlocalized name + numeric ids.

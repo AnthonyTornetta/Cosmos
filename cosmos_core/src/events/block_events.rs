@@ -2,12 +2,18 @@
 
 use crate::block::BlockRotation;
 use crate::structure::structure_block::StructureBlock;
+use bevy::ecs::event::EventWriter;
+use bevy::ecs::system::Commands;
+use bevy::ecs::system::SystemParam;
 use bevy::prelude::App;
 use bevy::prelude::Entity;
 use bevy::prelude::Event;
 
 #[derive(Debug, Event)]
 /// Sent when a block is changed (destroyed or placed)
+///
+/// This is NOT SENT when a block's data is modified.
+/// See [`BlockDataChangedEvent`] for that.
 pub struct BlockChangedEvent {
     /// The block that was changed
     ///
@@ -25,6 +31,30 @@ pub struct BlockChangedEvent {
     pub new_block_rotation: BlockRotation,
 }
 
+#[derive(Event, Debug, Clone)]
+/// Whenever a block's data is changed, this event will be sent.
+///
+/// Assuming you use `structure.insert_block_data` or `structure.remove_block_data`, this event will automatically be sent.
+/// This will be sent on the removal, insertion, and modification of block data. NOTE that if you query_mut block data,
+/// the change event will NOT be sent.
+pub struct BlockDataChangedEvent {
+    /// The block data entity (or None if it was removed)
+    pub block_data_entity: Option<Entity>,
+    /// The block this is referring to
+    pub block: StructureBlock,
+    /// The structure's entity
+    pub structure_entity: Entity,
+}
+
+#[derive(SystemParam)]
+/// Bevy SystemParams that the structure needs to properly handle block data
+pub struct BlockDataSystemParams<'w, 's> {
+    /// Commands
+    pub commands: Commands<'w, 's>,
+    /// Sent whenever the structure thinks the BlockData is changing
+    pub ev_writer: EventWriter<'w, BlockDataChangedEvent>,
+}
+
 pub(super) fn register(app: &mut App) {
-    app.add_event::<BlockChangedEvent>();
+    app.add_event::<BlockDataChangedEvent>().add_event::<BlockChangedEvent>();
 }

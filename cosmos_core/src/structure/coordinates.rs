@@ -363,6 +363,15 @@ create_coordinate!(
     "coordinate in range [0, structure.blocks_(width/height/length)())"
 );
 
+impl BlockCoordinate {
+    /// +1 in the X direction
+    pub const X: BlockCoordinate = BlockCoordinate::new(1, 0, 0);
+    /// +1 in the Y direction
+    pub const Y: BlockCoordinate = BlockCoordinate::new(0, 1, 0);
+    /// +1 in the Z direction
+    pub const Z: BlockCoordinate = BlockCoordinate::new(0, 0, 1);
+}
+
 impl Add<ChunkBlockCoordinate> for BlockCoordinate {
     type Output = Self;
 

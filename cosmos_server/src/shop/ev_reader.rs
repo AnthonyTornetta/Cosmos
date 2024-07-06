@@ -4,7 +4,10 @@ use cosmos_core::{
     block::{block_events::BlockInteractEvent, Block},
     economy::Credits,
     entities::player::Player,
-    inventory::Inventory,
+    inventory::{
+        itemstack::{ItemShouldHaveData, ItemStackSystemSet},
+        Inventory,
+    },
     item::Item,
     netty::{cosmos_encoder, server::ServerLobby, system_sets::NetworkingSystemsSet, NettyChannelClient, NettyChannelServer},
     registry::{identifiable::Identifiable, Registry},
@@ -35,15 +38,19 @@ fn on_interact_with_shop(
     default_shop_entries: Res<DefaultShopEntries>,
 ) {
     for ev in ev_reader.read() {
+        let Some(s_block) = ev.block else {
+            continue;
+        };
+
         let Ok(player) = q_player.get(ev.interactor) else {
             continue;
         };
 
-        let Ok(structure) = q_structure.get(ev.structure_entity) else {
+        let Ok(structure) = q_structure.get(s_block.structure_entity) else {
             continue;
         };
 
-        let block = ev.structure_block.block(structure, &blocks);
+        let block = s_block.structure_block.block(structure, &blocks);
 
         if block.unlocalized_name() == "cosmos:shop" {
             let fake_shop_data = generate_fake_shop(&default_shop_entries);
@@ -52,8 +59,8 @@ fn on_interact_with_shop(
                 player.id(),
                 NettyChannelServer::Shop,
                 cosmos_encoder::serialize(&ServerShopMessages::OpenShop {
-                    shop_block: ev.structure_block.coords(),
-                    structure_entity: ev.structure_entity,
+                    shop_block: s_block.structure_block.coords(),
+                    structure_entity: s_block.structure_entity,
                     shop_data: fake_shop_data,
                 }),
             );
@@ -104,6 +111,7 @@ fn listen_sell_events(
     mut q_player: Query<(&mut Inventory, &mut Credits)>,
     items: Res<Registry<Item>>,
     default_shop_entries: Res<DefaultShopEntries>,
+    mut commands: Commands,
 ) {
     for &SellEvent {
         client_id,
@@ -154,7 +162,7 @@ fn listen_sell_events(
                 details: if let Err(error) = shop.sell(item_id, quantity, &mut credits) {
                     Err(error)
                 } else {
-                    inventory.take_item(item, quantity as usize);
+                    inventory.take_and_remove_item(item, quantity as usize, &mut commands);
 
                     Ok(shop.clone())
                 },
@@ -172,6 +180,8 @@ fn listen_buy_events(
     mut q_player: Query<(&mut Inventory, &mut Credits)>,
     items: Res<Registry<Item>>,
     default_shop_entries: Res<DefaultShopEntries>,
+    mut commands: Commands,
+    has_data: Res<ItemShouldHaveData>,
 ) {
     for &BuyEvent {
         client_id,
@@ -225,7 +235,7 @@ fn listen_buy_events(
                     }),
                 );
 
-                inventory.insert(item, quantity as u16);
+                inventory.insert_item(item, quantity as u16, &mut commands, &has_data);
             }
             Err(msg) => {
                 server.send_message(
@@ -299,7 +309,8 @@ pub(super) fn register(app: &mut App) {
         )
             .chain()
             .run_if(in_state(GameState::Playing))
-            .after(NetworkingSystemsSet::ProcessReceivedMessages),
+            .after(NetworkingSystemsSet::ProcessReceivedMessages)
+            .before(ItemStackSystemSet::CreateDataEntity),
     )
     .add_event::<BuyEvent>()
     .add_event::<SellEvent>();

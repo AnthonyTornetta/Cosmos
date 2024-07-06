@@ -10,11 +10,12 @@ use bevy_renet::renet::ClientId;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
 use crate::{
+    block::data::BlockDataIdentifier,
     registry::{create_registry, identifiable::Identifiable, Registry},
     structure::systems::StructureSystemId,
 };
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 enum ComponentReplicationMessage {
     ComponentReplication {
         component_id: u16,
@@ -73,11 +74,8 @@ pub enum SyncType {
     /// Client will sync this with the server, and the server will not sync this
     /// with the client.
     ClientAuthoritative(ClientAuthority),
-    // Both the server and client will sync each other on changes.
-    // This is commented out because I don't have anything to use this on, and logic
-    // will have to be added to prevent the server + client from repeatedly detecting
-    // changes.
-    // BothAuthoritative,
+    /// Both the server and client will sync each other on changes.
+    BothAuthoritative(ClientAuthority),
 }
 
 /// Clients can rarely (if ever) sync components that belong to anything.
@@ -95,10 +93,42 @@ pub enum ClientAuthority {
     Themselves,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
-enum ComponentEntityIdentifier {
+#[derive(Debug, Serialize, Deserialize, Clone, Copy)]
+/// Used to identify an entity sent from the client/server.
+pub enum ComponentEntityIdentifier {
+    /// Just a normal entity
     Entity(Entity),
-    StructureSystem { structure_entity: Entity, id: StructureSystemId },
+    /// This entity is a structure system
+    StructureSystem {
+        /// The structure this system is a part of
+        structure_entity: Entity,
+        /// The system's ID within the structure
+        id: StructureSystemId,
+    },
+    /// This entity represents data for an itemstack
+    ItemData {
+        /// The inventory the ItemStack is in
+        inventory_entity: Entity,
+        /// The slot the ItemStack is in
+        item_slot: u32,
+        /// The server's entity that represents this ItemStack's data
+        server_data_entity: Entity,
+    },
+    /// This entity represents data for a block
+    BlockData {
+        /// The identifier for the BlockData
+        identifier: BlockDataIdentifier,
+        /// The server's entity that represents this block's data
+        server_data_entity: Entity,
+    },
+}
+
+/// Used to uniquely identify components
+pub trait IdentifiableComponent: Component {
+    /// This string should be a unique identifier for the component, using the `modid:name` format.
+    ///
+    /// For example, `cosmos:missile_focused`.
+    fn get_component_unlocalized_name() -> &'static str;
 }
 
 /// Indicates that a component can be synchronized either from `Server -> Client` or `Client -> Server`.
@@ -112,15 +142,16 @@ enum ComponentEntityIdentifier {
 /// of the entity before it will sync it.  This is most commonly done via the [`super::server_unreliable_messages::ServerUnreliableMessages::BulkBodies`] networking request.
 /// Note that this requires the following components to sync the entity:
 /// `Location`, `Transform`, `Velocity`, and `LoadingDistance`. Additionally, the player must be within the `LoadingDistance`.
-pub trait SyncableComponent: Component + Serialize + DeserializeOwned + Clone + std::fmt::Debug {
+pub trait SyncableComponent: Serialize + DeserializeOwned + Clone + std::fmt::Debug + PartialEq + IdentifiableComponent {
     /// Returns how this component should be synced
     ///
     /// Either from `server -> client` or `client -> server`.
     fn get_sync_type() -> SyncType;
-    /// Returns an unlocalized name that should be unique to this component.
-    ///
-    /// A good practice is to use `mod_id:component_name` format. For example, `cosmos:missile_focused`
-    fn get_component_unlocalized_name() -> &'static str;
+
+    /// Returns true if this is a valid instance of this component, false if this should be ignored
+    fn validate(&self) -> bool {
+        true
+    }
 
     /// The [`SyncableComponent::convert_entities_client_to_server`] function requires cloning this struct,
     /// so to avoid clones on structs without any entities this method can be used.

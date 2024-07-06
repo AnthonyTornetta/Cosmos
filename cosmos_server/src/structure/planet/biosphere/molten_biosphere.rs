@@ -65,7 +65,7 @@ impl TBiosphere<MoltenBiosphereMarker, MoltenChunkNeedsGeneratedEvent> for Molte
 // fn make_block_ranges(block_registry: Res<Registry<Block>>, mut commands: Commands) {
 //     commands.insert_resource(
 //         BlockLayers::default()
-//             .with_sea_level_block("cosmos:cheese", &block_registry, 620)
+//             .with_sea_level_block("cosmos:lava", &block_registry, 620)
 //             .expect("Cheese missing!")
 //             .add_noise_layer("cosmos:molten_stone", &block_registry, 160, 0.10, 7.0, 9)
 //             .expect("Molten Stone missing"),
@@ -189,7 +189,7 @@ pub(super) fn register(app: &mut App) {
         app,
         TemperatureRange::new(450.0, f32::MAX),
         0.75,
-        Some("cosmos:cheese"),
+        Some("cosmos:lava"),
     );
 
     app.add_systems(OnEnter(GameState::PostLoading), register_biosphere_biomes);

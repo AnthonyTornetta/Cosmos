@@ -180,11 +180,16 @@ fn server_listen_messages(
                         });
                     }
                 }
-                ClientReliableMessages::InteractWithBlock { structure_entity, block } => {
+                ClientReliableMessages::InteractWithBlock {
+                    block,
+                    block_including_fluids,
+                    alternate,
+                } => {
                     block_interact_event.send(BlockInteractEvent {
-                        structure_entity,
-                        structure_block: block,
+                        block,
+                        block_including_fluids,
                         interactor: lobby.player_from_id(client_id).unwrap(),
+                        alternate,
                     });
                 }
                 ClientReliableMessages::CreateShip { name: _name } => {
@@ -202,7 +207,8 @@ fn server_listen_messages(
                         continue;
                     };
 
-                    if inventory.take_item(ship_core, 1) != 0 {
+                    let (remaining_didnt_take, _) = inventory.take_and_remove_item(ship_core, 1, &mut commands);
+                    if remaining_didnt_take != 0 {
                         info!("Does not have ship core");
                         continue;
                     }
