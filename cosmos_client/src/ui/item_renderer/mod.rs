@@ -25,6 +25,7 @@ use crate::{
     },
     item::item_mesh::create_item_mesh,
     rendering::{BlockMeshRegistry, CosmosMeshBuilder, MeshBuilder},
+    state::game_state::GameState,
 };
 
 use super::{UiSystemSet, UiTopRoot};
@@ -66,7 +67,8 @@ pub struct RenderItem {
 }
 
 #[derive(Debug, Component, Reflect)]
-struct RenderedItem {
+/// Represents an item that is currently rendered to the screen (in a UI).
+pub struct RenderedItem {
     /// Points to the UI entity that had the `RenderItem` that created this
     ui_element_entity: Entity,
     item_id: u16,
@@ -222,7 +224,7 @@ fn generate_item_model(
     let mat_id = item_material_mapping.material_id();
     let material = material_definitions_registry.from_numeric_id(mat_id);
 
-    let mesh = create_item_mesh(texture_data, item.id(), image_index, &material, size);
+    let mesh = create_item_mesh(texture_data, item.id(), image_index, material, size);
     let mesh_handle = meshes.add(mesh);
 
     commands.entity(to_create).insert((
@@ -421,7 +423,7 @@ pub(super) fn register(app: &mut App) {
             .in_set(RenderItemSystemSet::RenderItems),),
     );
 
-    app.add_systems(Startup, create_ui_camera)
+    app.add_systems(OnEnter(GameState::Playing), create_ui_camera)
         .register_type::<RenderItem>()
         .register_type::<RenderedItem>();
 }

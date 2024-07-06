@@ -44,9 +44,8 @@ use bevy_rapier3d::prelude::{RapierConfiguration, TimestepMode};
 use bevy_renet::transport::NetcodeClientPlugin;
 use bevy_renet::RenetClientPlugin;
 use clap::{arg, Parser};
-use cosmos_core::netty::get_local_ipaddress;
 use cosmos_core::plugin::cosmos_core_plugin::CosmosCorePluginGroup;
-use netty::connect::{self, HostConfig};
+use netty::connect::{self};
 use state::game_state::GameState;
 use thread_priority::{set_current_thread_priority, ThreadPriority};
 
@@ -56,9 +55,9 @@ use bevy::log::LogPlugin;
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
 struct Args {
-    /// Ip of the server to connect to
+    /// Connection string of the server to connect to (ip/url:port)
     #[arg(long)]
-    ip: Option<String>,
+    server: Option<String>,
 
     /// If this is fullscreen, the app will start in fullscreen
     #[arg(short, long, default_value_t = false)]
@@ -74,9 +73,9 @@ fn main() {
 
     let args = Args::parse();
 
-    let host_name = args.ip.unwrap_or_else(get_local_ipaddress);
+    // let host_name = args.ip.unwrap_or_else(get_local_ipaddress);
 
-    info!("Host: {host_name}");
+    // info!("Host: {host_name}");
 
     let mut app = App::new();
 
@@ -98,6 +97,9 @@ fn main() {
                 } else {
                     WindowMode::Windowed
                 },
+                // for panorama generation:
+                // resolution: WindowResolution::new(1000.0, 1000.0),
+                // decorations: false,
                 ..Default::default()
             }),
             ..Default::default()
@@ -107,7 +109,8 @@ fn main() {
     #[cfg(feature = "print-schedule")]
     let default_plugins = default_plugins.disable::<LogPlugin>();
 
-    app.insert_resource(HostConfig { host_name })
+    app
+        // .insert_resource(HostConfig { host_name })
         .insert_resource(RapierConfiguration {
             timestep_mode: TimestepMode::Interpolated {
                 dt: 1.0 / 60.0,
@@ -124,7 +127,7 @@ fn main() {
             GameState::PreLoading,
             GameState::Loading,
             GameState::PostLoading,
-            GameState::Connecting,
+            GameState::MainMenu,
             GameState::Playing,
         ))
         .add_plugins((RenetClientPlugin, NetcodeClientPlugin, ObjPlugin, HanabiPlugin))

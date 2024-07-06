@@ -50,6 +50,11 @@ struct CursorFlashTime(f32);
 pub struct InputValue(String);
 
 impl InputValue {
+    /// Creates an input value with this value. This is not checked for validity.
+    pub fn new(value: impl Into<String>) -> Self {
+        Self(value.into())
+    }
+
     /// Sets the value
     pub fn set_value(&mut self, value: impl Into<String>) {
         self.0 = value.into();

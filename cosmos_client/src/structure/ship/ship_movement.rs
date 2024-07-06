@@ -16,6 +16,7 @@ use cosmos_core::structure::systems::dock_system::Docked;
 
 use crate::input::inputs::{CosmosInputs, InputChecker, InputHandler};
 use crate::rendering::MainCamera;
+use crate::settings::MouseSensitivity;
 use crate::state::game_state::GameState;
 use crate::ui::components::show_cursor::no_open_menus;
 use crate::ui::crosshair::CrosshairOffset;
@@ -31,6 +32,7 @@ fn process_ship_movement(
     cursor_delta_position: Res<DeltaCursorPosition>,
     primary_query: Query<&Window, With<PrimaryWindow>>,
     cursor_flags: Res<CursorFlags>,
+    mouse_sensitivity: Res<MouseSensitivity>,
 ) {
     let Ok(pilot) = q_local_pilot.get_single() else {
         return;
@@ -115,8 +117,10 @@ fn process_ship_movement(
 
         // Prevents you from moving cursor off screen
         // Reduces cursor movement the closer you get to edge of screen until it reaches 0 at hw/2 or hh/2
-        crosshair_offset.x += cursor_delta_position.x - (cursor_delta_position.x * (crosshair_offset.x.abs() / max_w));
-        crosshair_offset.y += cursor_delta_position.y - (cursor_delta_position.y * (crosshair_offset.y.abs() / max_h));
+        crosshair_offset.x +=
+            mouse_sensitivity.0 * (cursor_delta_position.x - (cursor_delta_position.x * (crosshair_offset.x.abs() / max_w)));
+        crosshair_offset.y +=
+            mouse_sensitivity.0 * (cursor_delta_position.y - (cursor_delta_position.y * (crosshair_offset.y.abs() / max_h)));
 
         crosshair_offset.x = crosshair_offset.x.clamp(-hw, hw);
         crosshair_offset.y = crosshair_offset.y.clamp(-hh, hh);

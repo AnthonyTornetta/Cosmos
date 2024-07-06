@@ -778,7 +778,7 @@ impl PartialEq for Block {
     }
 }
 
-#[derive(Clone, Serialize, Deserialize, Debug, Eq, Hash, Reflect)]
+#[derive(Clone, Serialize, Deserialize, Debug, Eq, Reflect)]
 /// This is how you signify which blocks should connect to which other blocks.
 ///
 /// For example, wires will connect to anything with the group "cosmos:machine".
@@ -792,6 +792,12 @@ impl PartialEq for ConnectionGroup {
     #[inline(always)]
     fn eq(&self, other: &Self) -> bool {
         self.hash == other.hash
+    }
+}
+
+impl Hash for ConnectionGroup {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        state.write_u64(self.hash)
     }
 }
 

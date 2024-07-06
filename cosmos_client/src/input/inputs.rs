@@ -106,6 +106,11 @@ pub enum CosmosInputs {
 
     /// When interacting with a block, if this key is pressed the "alternative" interaction mode should be used instead.
     AlternateInteraction,
+
+    /// Take Panorama Screenshot
+    ///
+    /// This will cause super lag
+    PanoramaScreenshot,
 }
 
 fn init_input(mut input_handler: ResMut<CosmosInputHandler>) {
@@ -164,6 +169,8 @@ fn init_input(mut input_handler: ResMut<CosmosInputHandler>) {
     input_handler.set_keycode(CosmosInputs::SwapCameraRight, KeyCode::ArrowRight);
 
     input_handler.set_keycode(CosmosInputs::AlternateInteraction, KeyCode::ShiftLeft);
+
+    input_handler.set_keycode(CosmosInputs::PanoramaScreenshot, KeyCode::F9);
 }
 
 #[derive(Resource, Default, Debug)]

@@ -295,7 +295,7 @@ impl SerializedData {
 
 /// Returns true if a sector has at some point been generated at this location
 pub fn is_sector_generated(sector: Sector) -> bool {
-    fs::try_exists(SaveFileIdentifier::get_sector_path(sector)).unwrap_or(false)
+    fs::exists(SaveFileIdentifier::get_sector_path(sector)).unwrap_or(false)
 }
 
 pub(super) fn register(app: &mut App) {

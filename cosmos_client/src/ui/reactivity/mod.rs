@@ -71,7 +71,7 @@ pub struct BindValue<T: ReactableValue> {
 impl<T: ReactableValue> BindValue<T> {
     /// - The `bound_entity` field should corruspond to the entity that has the `T` component on it to read from/write to.
     /// - The `field` is the marker of the field you want to link to. Be sure to check the component's documentation to see what
-    /// fields you can bind to.
+    ///   fields you can bind to.
     pub fn new(bound_entity: Entity, field: ReactableFields) -> Self {
         Self {
             bound_entity,
@@ -87,6 +87,13 @@ impl<T: ReactableValue> BindValues<T> {
     /// Specify the values to bind in this vec
     pub fn new(items: Vec<BindValue<T>>) -> Self {
         Self(items)
+    }
+
+    /// Binds a value to this component.
+    ///
+    /// Specify the values to bind in this vec
+    pub fn single(items: BindValue<T>) -> Self {
+        Self::new(vec![items])
     }
 }
 
