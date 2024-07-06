@@ -2,29 +2,24 @@
 //!
 //! Use `init` to do this.
 
-use std::{
-    net::{SocketAddr, UdpSocket},
-    time::SystemTime,
-};
+use std::{net::UdpSocket, time::SystemTime};
 
 use bevy::prelude::*;
 use bevy_renet::renet::{
     transport::{NetcodeServerTransport, ServerAuthentication, ServerConfig},
     RenetServer,
 };
-use cosmos_core::netty::{connection_config, get_local_ipaddress, server::ServerLobby, PROTOCOL_ID};
+use cosmos_core::netty::{connection_config, server::ServerLobby, PROTOCOL_ID};
 
 use crate::netty::network_helpers::{ClientTicks, NetworkTick};
 
 /// Sets up the server & makes it ready to be connected to
-pub fn init(app: &mut App, address: Option<String>) {
-    let port: u16 = 1337;
-
-    let local_addr = address.unwrap_or(get_local_ipaddress());
-
-    let public_addr: SocketAddr = format!("{local_addr}:{port}").parse().unwrap();
+pub fn init(app: &mut App, port: u16) {
     let socket = UdpSocket::bind(format!("0.0.0.0:{port}")).unwrap();
+
     socket.set_nonblocking(true).expect("Cannot set non-blocking mode!");
+
+    let public_addr = socket.local_addr().unwrap();
 
     let current_time = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).unwrap();
 
@@ -45,5 +40,5 @@ pub fn init(app: &mut App, address: Option<String>) {
         .insert_resource(server)
         .insert_resource(transport);
 
-    info!("Setup server on {local_addr}:{port}");
+    info!("Public address: {public_addr}");
 }

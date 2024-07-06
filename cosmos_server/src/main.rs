@@ -53,7 +53,7 @@ fn main() {
 
     let server_settings = read_server_settings();
 
-    let ip = server_settings.ip.clone();
+    let port = server_settings.port.unwrap_or(1337);
 
     let mut app = App::new();
 
@@ -92,7 +92,7 @@ fn main() {
             GameState::Playing,
             GameState::Playing,
         ))
-        .add_plugins((RenetServerPlugin, NetcodeServerPlugin, ServerPlugin { ip }))
+        .add_plugins((RenetServerPlugin, NetcodeServerPlugin, ServerPlugin { port }))
         .insert_resource(server_settings);
 
     if cfg!(feature = "print-schedule") {

@@ -34,9 +34,9 @@ pub mod ui;
 pub mod universe;
 pub mod window;
 
+use bevy::core::TaskPoolThreadAssignmentPolicy;
 use bevy::prelude::*;
 use bevy::window::WindowMode;
-use bevy::{core::TaskPoolThreadAssignmentPolicy, window::WindowResolution};
 use bevy_hanabi::HanabiPlugin;
 use bevy_mod_debugdump::schedule_graph;
 use bevy_obj::ObjPlugin;
@@ -44,9 +44,8 @@ use bevy_rapier3d::prelude::{RapierConfiguration, TimestepMode};
 use bevy_renet::transport::NetcodeClientPlugin;
 use bevy_renet::RenetClientPlugin;
 use clap::{arg, Parser};
-use cosmos_core::netty::get_local_ipaddress;
 use cosmos_core::plugin::cosmos_core_plugin::CosmosCorePluginGroup;
-use netty::connect::{self, HostConfig};
+use netty::connect::{self};
 use state::game_state::GameState;
 use thread_priority::{set_current_thread_priority, ThreadPriority};
 
@@ -74,9 +73,9 @@ fn main() {
 
     let args = Args::parse();
 
-    let host_name = args.ip.unwrap_or_else(get_local_ipaddress);
+    // let host_name = args.ip.unwrap_or_else(get_local_ipaddress);
 
-    info!("Host: {host_name}");
+    // info!("Host: {host_name}");
 
     let mut app = App::new();
 
@@ -110,7 +109,8 @@ fn main() {
     #[cfg(feature = "print-schedule")]
     let default_plugins = default_plugins.disable::<LogPlugin>();
 
-    app.insert_resource(HostConfig { host_name })
+    app
+        // .insert_resource(HostConfig { host_name })
         .insert_resource(RapierConfiguration {
             timestep_mode: TimestepMode::Interpolated {
                 dt: 1.0 / 60.0,

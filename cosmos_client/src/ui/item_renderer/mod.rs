@@ -67,6 +67,7 @@ pub struct RenderItem {
 }
 
 #[derive(Debug, Component, Reflect)]
+/// Represents an item that is currently rendered to the screen (in a UI).
 pub struct RenderedItem {
     /// Points to the UI entity that had the `RenderItem` that created this
     ui_element_entity: Entity,

@@ -541,8 +541,6 @@ fn register_meshes(mut registry: ResMut<BlockMeshRegistry>) {
 }
 
 fn stupid_parse(file: &str) -> Option<MeshInformation> {
-    info!("Parsing stupid file: {file}");
-
     let obj = fs::read_to_string(file);
     if let Ok(obj) = obj {
         let split = obj

@@ -8,6 +8,7 @@ use cosmos_core::{netty::client::LocalPlayer, structure::ship::pilot::Pilot};
 
 use crate::{
     rendering::MainCamera,
+    settings::MouseSensitivity,
     state::game_state::GameState,
     window::setup::{CursorFlags, DeltaCursorPosition},
 };
@@ -24,6 +25,7 @@ fn process_player_camera(
     is_pilot_query: Query<&LocalPlayer, With<Pilot>>,
     cursor_delta: Res<DeltaCursorPosition>,
     cursor_flags: Res<CursorFlags>,
+    sensitivity: Res<MouseSensitivity>,
 ) {
     if !cursor_flags.is_cursor_locked() {
         return;
@@ -34,8 +36,8 @@ fn process_player_camera(
     let (mut camera_transform, mut camera_helper) = query.single_mut();
 
     if is_pilot_query.is_empty() {
-        camera_helper.angle_x += cursor_delta.y * 0.005;
-        camera_helper.angle_y += -cursor_delta.x * 0.005;
+        camera_helper.angle_x += cursor_delta.y * 0.005 * sensitivity.0;
+        camera_helper.angle_y += -cursor_delta.x * 0.005 * sensitivity.0;
 
         // looking straight down/up breaks movement - too lazy to make better fix
         camera_helper.angle_x = clamp(camera_helper.angle_x, -PI / 2.0 + 0.001, PI / 2.0 - 0.001);

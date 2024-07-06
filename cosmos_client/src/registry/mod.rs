@@ -20,10 +20,7 @@ use cosmos_core::{
 };
 use serde::de::DeserializeOwned;
 
-use crate::{
-    ecs::{add_multi_statebound_resource, add_statebound_resource},
-    state::game_state::GameState,
-};
+use crate::{ecs::add_multi_statebound_resource, state::game_state::GameState};
 
 #[derive(Event)]
 struct ReceivedRegistryEvent {

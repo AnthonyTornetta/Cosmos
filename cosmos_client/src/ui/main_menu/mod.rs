@@ -1,3 +1,5 @@
+//! The menu that first appears when you load into the game.
+
 use bevy::{app::App, core_pipeline::bloom::BloomSettings, hierarchy::DespawnRecursiveExt, prelude::*, render::camera::Camera};
 use bevy_kira_audio::prelude::AudioReceiver;
 
@@ -7,6 +9,7 @@ use super::{components::show_cursor::ShowCursor, UiRoot};
 
 mod disconnect_screen;
 mod menu_panorama;
+mod settings_screen;
 mod title_screen;
 mod triggers;
 
@@ -26,13 +29,18 @@ struct BackgroundColorNode;
 struct MainMenuTime(f32);
 
 #[derive(Component)]
+/// This component prevents something from being despawned when a transition to the main menu happens.
 pub struct SurviveMainMenu;
 
 #[derive(Debug, Resource, Default, Clone, PartialEq, Eq)]
+/// The "substate" of the menu we are in -- will be redone when bevy 0.14 is integrated.
 pub enum MainMenuSubState {
     #[default]
+    /// The landing screen that shows the title
     TitleScreen,
+    /// Settings menu
     Settings,
+    /// When the player is disconnected from a server, this will display the latest disconnect message.
     Disconnect,
 }
 
@@ -154,6 +162,7 @@ fn remove_main_menu_resource(mut commands: Commands) {
 }
 
 #[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
+/// Contains the ordering of operations that should take place within the main menu
 pub enum MainMenuSystemSet {
     /// If there is an old menu, cleans it up
     CleanupMenu,
@@ -172,6 +181,7 @@ pub(super) fn register(app: &mut App) {
     title_screen::register(app);
     disconnect_screen::register(app);
     triggers::register(app);
+    settings_screen::register(app);
 
     app.configure_sets(
         Update,
