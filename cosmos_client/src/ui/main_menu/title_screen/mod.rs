@@ -133,7 +133,6 @@ fn create_main_menu(mut commands: Commands, asset_server: Res<AssetServer>, q_ui
                     },
                     ..Default::default()
                 },
-                ..Default::default()
             },
         ));
 
@@ -275,7 +274,7 @@ fn trigger_connection(
 }
 
 fn quit_game(mut evw_app_exit: EventWriter<AppExit>) {
-    evw_app_exit.send(AppExit::default());
+    evw_app_exit.send(AppExit);
 }
 
 pub(super) fn register(app: &mut App) {

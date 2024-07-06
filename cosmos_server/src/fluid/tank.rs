@@ -150,8 +150,8 @@ fn balance_tanks(
         // By ensuring the ordering of tanks is always the same, micro amounts of fluid won't be "swished" around,
         // causing tons of change detection for no reason and causing super-lag.
         coords.sort_by(|a, b| {
-            let a = a.x as u128 + (a.z as u128) << CoordinateType::BITS;
-            let b = b.x as u128 + (b.z as u128) << CoordinateType::BITS;
+            let a = (a.x as u128 + (a.z as u128)) << CoordinateType::BITS;
+            let b = (b.x as u128 + (b.z as u128)) << CoordinateType::BITS;
 
             a.partial_cmp(&b).expect("comparing u128s will never fail")
         });

@@ -39,7 +39,7 @@ fn create_disconnect_screen(
             ..Default::default()
         });
 
-        let dc_reason = client.map(|x| x.disconnect_reason()).flatten();
+        let dc_reason = client.and_then(|x| x.disconnect_reason());
 
         info!("Disconnected: {dc_reason:?}");
 

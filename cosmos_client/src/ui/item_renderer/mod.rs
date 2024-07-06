@@ -224,7 +224,7 @@ fn generate_item_model(
     let mat_id = item_material_mapping.material_id();
     let material = material_definitions_registry.from_numeric_id(mat_id);
 
-    let mesh = create_item_mesh(texture_data, item.id(), image_index, &material, size);
+    let mesh = create_item_mesh(texture_data, item.id(), image_index, material, size);
     let mesh_handle = meshes.add(mesh);
 
     commands.entity(to_create).insert((

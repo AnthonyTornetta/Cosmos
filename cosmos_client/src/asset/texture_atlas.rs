@@ -39,7 +39,7 @@ impl SquareTextureAtlas {
     /// Returns the image data for just this texture image as bytes.
     ///
     /// The bits are formatted in the U8rgba format. I think.
-    pub fn get_sub_image_data<'a>(atlas_image: &'a Image, index: u32) -> &'a [u8] {
+    pub fn get_sub_image_data(atlas_image: &Image, index: u32) -> &[u8] {
         &atlas_image.data[(index * atlas_image.width() * atlas_image.width() * 4) as usize
             ..(((1 + index) * atlas_image.width() * atlas_image.width() * 4) as usize)]
     }
