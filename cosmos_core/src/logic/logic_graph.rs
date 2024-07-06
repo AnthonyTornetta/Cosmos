@@ -73,7 +73,7 @@ impl LogicBlock {
     }
 
     /// Returns an iterator over all block faces with any port.
-    pub fn faces<'a>(&'a self) -> impl Iterator<Item = BlockFace> + 'a {
+    pub fn faces(&self) -> impl Iterator<Item = BlockFace> + '_ {
         self.connections
             .iter()
             .enumerate()
@@ -82,7 +82,7 @@ impl LogicBlock {
     }
 
     /// Returns an iterator over all block faces with the specified port type - for example: input or output.
-    pub fn faces_with<'a>(&'a self, connection: Option<LogicConnection>) -> impl Iterator<Item = BlockFace> + 'a {
+    pub fn faces_with(&self, connection: Option<LogicConnection>) -> impl Iterator<Item = BlockFace> + '_ {
         self.connections
             .iter()
             .enumerate()
@@ -91,22 +91,22 @@ impl LogicBlock {
     }
 
     /// Returns an iterator over all of this logic block's faces with input ports.
-    pub fn input_faces<'a>(&'a self) -> impl Iterator<Item = BlockFace> + 'a {
+    pub fn input_faces(&self) -> impl Iterator<Item = BlockFace> + '_ {
         self.faces_with(Some(LogicConnection::Port(PortType::Input)))
     }
 
     /// Returns an iterator over all of this logic block's faces with output ports.
-    pub fn output_faces<'a>(&'a self) -> impl Iterator<Item = BlockFace> + 'a {
+    pub fn output_faces(&self) -> impl Iterator<Item = BlockFace> + '_ {
         self.faces_with(Some(LogicConnection::Port(PortType::Output)))
     }
 
     /// Returns an iterator over all of this logic block's faces with wire connections.
-    pub fn wire_faces<'a>(&'a self) -> impl Iterator<Item = BlockFace> + 'a {
+    pub fn wire_faces(&self) -> impl Iterator<Item = BlockFace> + '_ {
         self.faces_with(Some(LogicConnection::Wire))
     }
 
     /// Returns an iterator over all of this logic block's faces with no logic connections.
-    pub fn non_logic_faces<'a>(&'a self) -> impl Iterator<Item = BlockFace> + 'a {
+    pub fn non_logic_faces(&self) -> impl Iterator<Item = BlockFace> + '_ {
         self.faces_with(None)
     }
 }
@@ -424,7 +424,10 @@ impl LogicGraph {
             // Create a group if none exists, add to adjacent group if one exists, or merge all adjacent groups if there are multiple.
             match group_ids.len() {
                 0 => drop(self.new_group(Some(coords))),
-                1 => drop(self.groups.get_mut(group_ids.iter().next().unwrap()).unwrap().recent_wire_coords = Some(coords)),
+                1 => {
+                    self.groups.get_mut(group_ids.iter().next().unwrap()).unwrap().recent_wire_coords = Some(coords);
+                    drop(())
+                }
                 _ => self.merge_adjacent_groups(
                     &group_ids,
                     coords,
@@ -574,7 +577,7 @@ impl LogicGraph {
                     }
                     None
                 }),
-            None => return None,
+            None => None,
         }
     }
 
