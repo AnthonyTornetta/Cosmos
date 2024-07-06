@@ -157,7 +157,7 @@ fn done_saving(
 ) {
     for dead_save in dead_saves_query.iter() {
         let path = dead_save.get_save_file_path();
-        if fs::try_exists(&path).unwrap_or(false) {
+        if fs::exists(&path).unwrap_or(false) {
             fs::remove_file(path).expect("Error deleting old save file!");
 
             if let SaveFileIdentifierType::Base(entity_id, Some(sector), load_distance) = &dead_save.identifier_type {
@@ -183,7 +183,7 @@ fn done_saving(
 
         if let Some(save_file_identifier) = save_file_identifier {
             let path = save_file_identifier.get_save_file_path();
-            if fs::try_exists(&path).unwrap_or(false) {
+            if fs::exists(&path).unwrap_or(false) {
                 if fs::remove_file(&path).is_err() {
                     warn!("Error deleting old save file at {path}!");
                 }
