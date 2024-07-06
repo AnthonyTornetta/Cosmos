@@ -1,6 +1,5 @@
 //! Contains all the logic for the server-side of Cosmos.
 
-#![feature(fs_try_exists)]
 #![feature(get_many_mut)]
 #![feature(duration_constructors)]
 #![feature(iter_array_chunks)]

@@ -442,7 +442,7 @@ fn get_entries(entries: Vec<PrettyShopEntry>, items: &Registry<Item>) -> Vec<Sho
 pub struct DefaultShopEntries(pub Vec<ShopEntry>);
 
 pub(super) fn register(app: &mut App) {
-    if !std::fs::try_exists("./config/cosmos/default_shop.json").unwrap_or(false) {
+    if !std::fs::exists("./config/cosmos/default_shop.json").unwrap_or(false) {
         app.add_systems(OnEnter(GameState::Playing), create_default_shop_entires);
     } else {
         app.add_systems(OnEnter(GameState::Playing), load_default_shop_data);
