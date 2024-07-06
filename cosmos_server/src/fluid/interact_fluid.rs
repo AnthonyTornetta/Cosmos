@@ -84,13 +84,11 @@ fn on_interact_with_fluid(
             };
 
             // Attempt to insert item into its original spot, if that fails try to insert it anywhere
-            if inventory.insert_item_with_data_at(slot, item, 1, &mut commands, fluid_data) != 0 {
-                if inventory.insert_item_with_data(item, 1, &mut commands, fluid_data).1.is_none() {
-                    info!("TODO: Throw item because it doesn't fit in inventory");
-                }
+            if inventory.insert_item_with_data_at(slot, item, 1, &mut commands, fluid_data) != 0 && inventory.insert_item_with_data(item, 1, &mut commands, fluid_data).1.is_none() {
+                info!("TODO: Throw item because it doesn't fit in inventory");
             }
         } else {
-            let Some(mut data) = is.data_entity().map(|x| q_fluid_data.get_mut(x).ok()).flatten() else {
+            let Some(mut data) = is.data_entity().and_then(|x| q_fluid_data.get_mut(x).ok()) else {
                 continue;
             };
 
@@ -209,10 +207,8 @@ fn on_interact_with_tank(
             };
 
             // Attempt to insert item into its original spot, if that fails try to insert it anywhere
-            if inventory.insert_item_with_data_at(slot, item, 1, &mut commands, fluid_data) != 0 {
-                if inventory.insert_item_with_data(item, 1, &mut commands, fluid_data).1.is_none() {
-                    info!("TODO: Throw item because it doesn't fit in inventory");
-                }
+            if inventory.insert_item_with_data_at(slot, item, 1, &mut commands, fluid_data) != 0 && inventory.insert_item_with_data(item, 1, &mut commands, fluid_data).1.is_none() {
+                info!("TODO: Throw item because it doesn't fit in inventory");
             }
 
             continue;
@@ -313,10 +309,8 @@ fn on_interact_with_tank(
                         let item = items.from_numeric_id(fluid_holder.convert_from_item_id());
 
                         // Attempt to insert item into its original spot, if that fails try to insert it anywhere
-                        if inventory.insert_item_at(slot, item, 1, &mut commands, &needs_data) != 0 {
-                            if inventory.insert_item(item, 1, &mut commands, &needs_data).1.is_none() {
-                                info!("TODO: Throw item because it doesn't fit in inventory");
-                            }
+                        if inventory.insert_item_at(slot, item, 1, &mut commands, &needs_data) != 0 && inventory.insert_item(item, 1, &mut commands, &needs_data).1.is_none() {
+                            info!("TODO: Throw item because it doesn't fit in inventory");
                         }
                     }
                 } else if let Some(block_fluid_data) = structure.query_block_data(coords, &q_stored_fluid_block) {

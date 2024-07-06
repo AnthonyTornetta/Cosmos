@@ -127,7 +127,7 @@ impl Inventory {
     }
 
     fn update_itemstack_data_parent(&self, slot: InventorySlot, commands: &mut Commands) {
-        if let Some(is) = self.items.get(slot as usize).map(|x| x.as_ref()).flatten() {
+        if let Some(is) = self.items.get(slot).and_then(|x| x.as_ref()) {
             if let Some(de) = is.data_entity() {
                 if let Some(mut ecmds) = commands.get_entity(de) {
                     ecmds.set_parent(self.self_entity).insert(ItemStackData {

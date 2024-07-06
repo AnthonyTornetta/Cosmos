@@ -55,9 +55,9 @@ use bevy::log::LogPlugin;
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
 struct Args {
-    /// Ip of the server to connect to
+    /// Connection string of the server to connect to (ip/url:port)
     #[arg(long)]
-    ip: Option<String>,
+    server: Option<String>,
 
     /// If this is fullscreen, the app will start in fullscreen
     #[arg(short, long, default_value_t = false)]

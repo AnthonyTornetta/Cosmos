@@ -829,12 +829,11 @@ fn get_entity_identifier_entity_for_despawning(
 
             let de = inventory
                 .mut_itemstack_at(item_slot as usize)
-                .map(|x| {
+                .and_then(|x| {
                     let de = x.data_entity();
                     x.set_data_entity(None);
                     de
-                })
-                .flatten();
+                });
 
             // If de is none, the inventory was already synced from the server, so the itemstack has no data pointer. Thus,
             // all we have to do is despawn the data entity.
@@ -878,7 +877,6 @@ fn get_entity_identifier_entity_for_despawning(
             .unwrap_or_else(|| {
                 network_mapping
                     .client_from_server(&server_data_entity)
-                    .and_then(|block_data_entity| Some(block_data_entity))
             }),
     };
 

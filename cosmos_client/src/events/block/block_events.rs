@@ -91,15 +91,14 @@ fn handle_block_interact(
                 },
                 block: ev
                     .block
-                    .map(|b| {
+                    .and_then(|b| {
                         network_mapping
                             .server_from_client(&b.structure_entity)
                             .map(|ent| StructureBlockPair {
                                 structure_block: b.structure_block,
                                 structure_entity: ent,
                             })
-                    })
-                    .flatten(),
+                    }),
                 alternate: ev.alternate,
             }),
         );
