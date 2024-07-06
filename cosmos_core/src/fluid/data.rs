@@ -53,8 +53,7 @@ impl FluidHolder {
     /// convert_to and convert_from fields can be of use. If this is not needed, simply make
     /// these the same item as the `item` field.
     ///
-    /// * `convert_to` - When fluid is attempted to be added to this item, this item will turn into the item provided
-    /// here.
+    /// * `convert_to` - When fluid is attempted to be added to this item, this item will turn into the item provided here.
     /// * `convert_from` - If this item should turn into another item when empty, provide that item here.
     pub fn new(item: &Item, convert_to: &Item, convert_from: &Item, max_capacity: u32) -> Self {
         Self {

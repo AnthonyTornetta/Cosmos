@@ -796,7 +796,7 @@ impl PartialEq for Block {
 #[derive(Clone, Serialize, Deserialize, Debug, Eq, Hash, Reflect)]
 /// This is how you signify which blocks should connect to which other blocks.
 ///
-/// For example, wires will connect to anything with the group "cosmos:machine".
+/// For example, wires will connect to anything with the group "cosmos:uses_logic".
 pub struct ConnectionGroup {
     unlocalized_name: String,
     hash: u64,

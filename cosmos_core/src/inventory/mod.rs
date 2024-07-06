@@ -88,7 +88,7 @@ impl SyncableComponent for Inventory {
     fn convert_entities_server_to_client(mut self, mapping: &crate::netty::sync::mapping::NetworkMapping) -> Option<Self> {
         self.self_entity = mapping.client_from_server(&self.self_entity)?;
 
-        for is in self.items.iter_mut().flat_map(|x| x) {
+        for is in self.items.iter_mut().flatten() {
             if let Some(de) = is.data_entity() {
                 is.set_data_entity(mapping.client_from_server(&de));
             }
