@@ -431,12 +431,18 @@ pub(super) struct RenderingChunk(pub Task<ChunkRenderResult>);
 #[derive(Resource, Debug, DerefMut, Deref, Default)]
 pub(super) struct RenderingChunks(pub Vec<RenderingChunk>);
 
-#[derive(Event)]
+#[derive(Event, Eq)]
 pub struct ChunkNeedsCustomBlocksRendered {
     pub structure_entity: Entity,
     pub chunk_coordinate: ChunkCoordinate,
     pub mesh_entity_parent: Entity,
     pub block_ids: HashSet<u16>,
+}
+
+impl PartialEq for ChunkNeedsCustomBlocksRendered {
+    fn eq(&self, other: &Self) -> bool {
+        self.structure_entity == other.structure_entity && self.chunk_coordinate == other.chunk_coordinate
+    }
 }
 
 pub(super) fn register(app: &mut App) {
