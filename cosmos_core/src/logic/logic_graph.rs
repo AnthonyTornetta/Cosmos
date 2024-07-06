@@ -424,10 +424,7 @@ impl LogicGraph {
             // Create a group if none exists, add to adjacent group if one exists, or merge all adjacent groups if there are multiple.
             match group_ids.len() {
                 0 => drop(self.new_group(Some(coords))),
-                1 => {
-                    self.groups.get_mut(group_ids.iter().next().unwrap()).unwrap().recent_wire_coords = Some(coords);
-                    drop(())
-                }
+                1 => drop(self.groups.get_mut(group_ids.iter().next().unwrap()).unwrap().recent_wire_coords = Some(coords)),
                 _ => self.merge_adjacent_groups(
                     &group_ids,
                     coords,
