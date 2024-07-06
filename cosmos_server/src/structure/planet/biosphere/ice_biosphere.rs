@@ -15,7 +15,7 @@ use cosmos_core::{
 
 use crate::GameState;
 
-use super::{register_biosphere, BiosphereMarkerComponent, TBiosphere, TGenerateChunkEvent, TemperatureRange};
+use super::{register_biosphere, BiosphereMarkerComponent, TGenerateChunkEvent, TemperatureRange};
 
 #[derive(Component, Debug, Default, Clone, Copy, TypePath)]
 /// Marks that this is for a grass biosphere
@@ -48,20 +48,6 @@ impl TGenerateChunkEvent for IceChunkNeedsGeneratedEvent {
 
     fn get_chunk_coordinates(&self) -> ChunkCoordinate {
         self.chunk_coords
-    }
-}
-
-#[derive(Default, Debug)]
-/// Creates a ice planet
-struct IceBiosphere;
-
-impl TBiosphere<IceBiosphereMarker, IceChunkNeedsGeneratedEvent> for IceBiosphere {
-    fn get_marker_component(&self) -> IceBiosphereMarker {
-        IceBiosphereMarker {}
-    }
-
-    fn get_generate_chunk_event(&self, chunk_coords: ChunkCoordinate, structure_entity: Entity) -> IceChunkNeedsGeneratedEvent {
-        IceChunkNeedsGeneratedEvent::new(chunk_coords, structure_entity)
     }
 }
 
