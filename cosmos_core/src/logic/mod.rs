@@ -19,6 +19,10 @@ use bevy::prelude::IntoSystemSetConfigs;
 
 pub mod logic_graph;
 
+/// The number of bits to shift to set or read the logic on/off value from the [`BlockInfo`] of a block.
+/// Equivalently, the bit index of the logic value.
+pub const LOGIC_BIT: usize = 7;
+
 fn logic_block_placed_event_listener(
     mut evr_block_updated: EventReader<BlockChangedEvent>,
     blocks: Res<Registry<Block>>,

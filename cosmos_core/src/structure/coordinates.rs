@@ -208,7 +208,7 @@ macro_rules! create_coordinate {
             }
         }
 
-        #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Reflect, Hash)]
+        #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Reflect, Hash, Default)]
         #[doc=$structComment]
         ///
         /// Note that an unbound coordinate can be outside the structure  in both the

@@ -10,7 +10,7 @@ use crate::{
     events::block_events::BlockDataChangedEvent,
     logic::{
         logic_graph::{LogicBlock, LogicConnection, LogicGraph, PortType},
-        LogicInputEvent, LogicSystemSet,
+        LogicInputEvent, LogicSystemSet, LOGIC_BIT,
     },
     registry::{identifiable::Identifiable, Registry},
     structure::{chunk::BlockInfo, Structure},
@@ -34,16 +34,16 @@ pub trait LogicIndicatorBlockInfo {
 
 impl LogicIndicatorBlockInfo for BlockInfo {
     fn indicator_on(&self) -> bool {
-        (self.0 >> 7) & 1 == 0
+        (self.0 >> LOGIC_BIT) & 1 == 0
     }
 
     // 'On' has the 8th bit (from right to left) set to zero.
     fn set_indicator_on(&mut self) {
-        self.0 &= !(1 << 7);
+        self.0 &= !(1 << LOGIC_BIT);
     }
 
     fn set_indicator_off(&mut self) {
-        self.0 |= 1 << 7;
+        self.0 |= 1 << LOGIC_BIT;
     }
 }
 
