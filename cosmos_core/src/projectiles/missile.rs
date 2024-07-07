@@ -4,6 +4,7 @@
 use std::time::Duration;
 
 use bevy::{
+    color::Color,
     core::Name,
     ecs::{
         query::Added,
@@ -12,7 +13,6 @@ use bevy::{
     pbr::{NotShadowCaster, NotShadowReceiver},
     prelude::{App, Commands, Component, Entity, Query, Update},
     reflect::Reflect,
-    render::color::Color,
 };
 use bevy_rapier3d::{
     geometry::{ActiveEvents, ActiveHooks, Collider},

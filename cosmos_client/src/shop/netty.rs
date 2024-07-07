@@ -6,7 +6,7 @@ use bevy::{
         system::ResMut,
     },
 };
-use bevy_renet::renet::RenetClient;
+use bevy_renet2::renet2::RenetClient;
 use cosmos_core::{
     ecs::mut_events::MutEvent,
     netty::{cosmos_encoder, system_sets::NetworkingSystemsSet, NettyChannelServer},

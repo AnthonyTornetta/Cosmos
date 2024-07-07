@@ -1,5 +1,5 @@
 use bevy::{prelude::*, utils::HashMap};
-use bevy_renet::renet::RenetServer;
+use bevy_renet2::renet2::RenetServer;
 use cosmos_core::{
     events::block_events::BlockChangedEvent,
     netty::{

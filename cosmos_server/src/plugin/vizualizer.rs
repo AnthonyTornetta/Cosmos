@@ -2,7 +2,7 @@
 
 use bevy::prelude::*;
 use bevy_inspector_egui::bevy_egui::EguiContexts;
-use bevy_renet::renet::RenetServer;
+use bevy_renet2::renet2::RenetServer;
 use renet_visualizer::RenetServerVisualizer;
 
 fn update_visulizer_system(

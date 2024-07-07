@@ -18,7 +18,7 @@ pub mod system_sets;
 pub mod world_tick;
 
 use bevy::prelude::{App, Component};
-use bevy_renet::renet::{ChannelConfig, ConnectionConfig, SendType};
+use bevy_renet2::renet2::{ChannelConfig, ConnectionConfig, SendType};
 use local_ip_address::local_ip;
 use std::time::Duration;
 

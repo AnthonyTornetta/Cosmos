@@ -4,7 +4,7 @@
 pub mod render_distance;
 
 use bevy::prelude::Component;
-use bevy_renet::renet::ClientId;
+use bevy_renet2::renet2::ClientId;
 
 #[derive(Component, Debug)]
 /// Represents a player

@@ -2,7 +2,7 @@
 
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::DEFAULT_WORLD_ID;
-use bevy_renet::renet::*;
+use bevy_renet2::renet2::*;
 use cosmos_core::{
     ecs::bundles::CosmosPbrBundle,
     netty::{

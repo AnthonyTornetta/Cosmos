@@ -6,7 +6,7 @@ use bevy::{
     app::App,
     ecs::{component::Component, entity::Entity, event::Event, schedule::SystemSet, system::ResMut},
 };
-use bevy_renet::renet::ClientId;
+use bevy_renet2::renet2::ClientId;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
 use crate::{

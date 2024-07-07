@@ -14,7 +14,7 @@ use bevy::{
     math::Vec3,
     prelude::Res,
 };
-use bevy_renet::renet::RenetServer;
+use bevy_renet2::renet2::RenetServer;
 use cosmos_core::{
     block::{
         block_events::{BlockBreakEvent, BlockInteractEvent},

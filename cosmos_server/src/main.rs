@@ -9,7 +9,7 @@
 use bevy::{core::TaskPoolThreadAssignmentPolicy, prelude::*};
 use bevy_mod_debugdump::schedule_graph;
 use bevy_rapier3d::prelude::{RapierConfiguration, TimestepMode};
-use bevy_renet::{transport::NetcodeServerPlugin, RenetServerPlugin};
+use bevy_renet2::{transport::NetcodeServerPlugin, RenetServerPlugin};
 use cosmos_core::plugin::cosmos_core_plugin::CosmosCorePluginGroup;
 
 use plugin::server_plugin::ServerPlugin;
@@ -76,11 +76,7 @@ fn main() {
         // This must be the first thing added or systems don't get added correctly
         .init_state::<GameState>()
         .insert_resource(RapierConfiguration {
-            timestep_mode: TimestepMode::Interpolated {
-                dt: 1.0 / 60.0,
-                time_scale: 1.0,
-                substeps: 2,
-            },
+            gravity: Vec3::ZERO,
             ..default()
         })
         .add_plugins(default_plugins)

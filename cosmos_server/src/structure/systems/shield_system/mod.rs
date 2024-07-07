@@ -24,7 +24,7 @@ use bevy::{
     utils::hashbrown::HashMap,
 };
 
-use bevy_renet::renet::RenetServer;
+use bevy_renet2::renet2::RenetServer;
 use cosmos_core::{
     block::Block,
     ecs::NeedsDespawned,

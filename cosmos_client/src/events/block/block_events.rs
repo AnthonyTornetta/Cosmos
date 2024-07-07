@@ -1,7 +1,7 @@
 //! All events that are related to blocks
 
 use bevy::prelude::*;
-use bevy_renet::renet::RenetClient;
+use bevy_renet2::renet2::RenetClient;
 use cosmos_core::{
     block::{
         block_events::{BlockInteractEvent, StructureBlockPair},
@@ -89,16 +89,14 @@ fn handle_block_interact(
                     structure_block: ev.block_including_fluids.structure_block,
                     structure_entity: any_ent,
                 },
-                block: ev
-                    .block
-                    .and_then(|b| {
-                        network_mapping
-                            .server_from_client(&b.structure_entity)
-                            .map(|ent| StructureBlockPair {
-                                structure_block: b.structure_block,
-                                structure_entity: ent,
-                            })
-                    }),
+                block: ev.block.and_then(|b| {
+                    network_mapping
+                        .server_from_client(&b.structure_entity)
+                        .map(|ent| StructureBlockPair {
+                            structure_block: b.structure_block,
+                            structure_entity: ent,
+                        })
+                }),
                 alternate: ev.alternate,
             }),
         );

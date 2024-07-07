@@ -1,7 +1,7 @@
 //! Used to get structure data from the server
 
 use bevy::prelude::*;
-use bevy_renet::renet::RenetClient;
+use bevy_renet2::renet2::RenetClient;
 use cosmos_core::netty::client::LocalPlayer;
 use cosmos_core::netty::client_reliable_messages::ClientReliableMessages;
 use cosmos_core::netty::sync::mapping::NetworkMapping;

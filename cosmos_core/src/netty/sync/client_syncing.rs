@@ -36,7 +36,7 @@ use bevy::{
     },
     log::error,
 };
-use bevy_renet::renet::{ClientId, RenetClient};
+use bevy_renet2::renet2::{ClientId, RenetClient};
 
 fn client_deserialize_component<T: SyncableComponent>(
     components_registry: Res<Registry<SyncedComponentId>>,

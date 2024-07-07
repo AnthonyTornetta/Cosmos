@@ -1,7 +1,7 @@
 //! Handles server-side build mode logic
 
 use bevy::prelude::{in_state, App, Changed, EventReader, EventWriter, IntoSystemConfigs, Query, Res, ResMut, Update};
-use bevy_renet::renet::RenetServer;
+use bevy_renet2::renet2::RenetServer;
 use cosmos_core::{
     block::{block_events::BlockInteractEvent, Block},
     entities::player::Player,

@@ -8,7 +8,7 @@ use std::{
 };
 
 use bevy::prelude::*;
-use bevy_renet::renet::{
+use bevy_renet2::renet2::{
     transport::{ClientAuthentication, NetcodeClientTransport},
     RenetClient,
 };

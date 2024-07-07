@@ -7,10 +7,11 @@ use bevy::{
     ecs::{
         component::Component,
         event::EventReader,
-        schedule::{common_conditions::in_state, IntoSystemConfigs, States},
+        schedule::IntoSystemConfigs,
         system::{Commands, Res},
     },
     reflect::Reflect,
+    state::{condition::in_state, state::States},
 };
 
 use crate::{

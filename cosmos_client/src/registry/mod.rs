@@ -13,7 +13,7 @@ use bevy::{
     log::{error, info},
     reflect::erased_serde::Serialize,
 };
-use bevy_renet::renet::RenetClient;
+use bevy_renet2::renet2::RenetClient;
 use cosmos_core::{
     netty::{cosmos_encoder, server_registry::RegistrySyncing, NettyChannelServer},
     registry::{identifiable::Identifiable, Registry},

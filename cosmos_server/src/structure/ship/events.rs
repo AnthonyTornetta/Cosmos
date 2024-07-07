@@ -7,7 +7,7 @@ use bevy::{
     prelude::{in_state, App, Entity, Event, EventReader, IntoSystemConfigs, Query, ResMut, Update},
 };
 use bevy_rapier3d::dynamics::Velocity;
-use bevy_renet::renet::RenetServer;
+use bevy_renet2::renet2::RenetServer;
 use cosmos_core::{
     events::structure::change_pilot_event::ChangePilotEvent,
     netty::{

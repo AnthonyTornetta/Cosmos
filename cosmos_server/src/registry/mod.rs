@@ -10,7 +10,7 @@ use bevy::{
     log::{info, warn},
     prelude::Deref,
 };
-use bevy_renet::renet::RenetServer;
+use bevy_renet2::renet2::RenetServer;
 use cosmos_core::{
     entities::player::Player,
     netty::{cosmos_encoder, server_registry::RegistrySyncing, system_sets::NetworkingSystemsSet, NettyChannelServer},

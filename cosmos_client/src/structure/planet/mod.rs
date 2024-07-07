@@ -1,7 +1,7 @@
 //! Handles client-related planet things
 
 use bevy::prelude::{in_state, App, Commands, Entity, EventWriter, IntoSystemConfigs, Query, Res, ResMut, Update, Vec3, With};
-use bevy_renet::renet::RenetClient;
+use bevy_renet2::renet2::RenetClient;
 use cosmos_core::{
     netty::{
         client::LocalPlayer, client_reliable_messages::ClientReliableMessages, cosmos_encoder, sync::mapping::NetworkMapping,

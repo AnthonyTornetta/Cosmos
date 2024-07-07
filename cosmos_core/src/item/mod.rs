@@ -2,7 +2,7 @@
 
 pub mod items;
 
-use bevy::{ecs::schedule::States, prelude::App};
+use bevy::{prelude::App, prelude::States};
 
 use crate::registry::identifiable::Identifiable;
 

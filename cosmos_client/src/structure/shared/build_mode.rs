@@ -10,7 +10,7 @@ use bevy::{
     time::Time,
 };
 use bevy_rapier3d::prelude::Velocity;
-use bevy_renet::renet::RenetClient;
+use bevy_renet2::renet2::RenetClient;
 use cosmos_core::{
     netty::{client::LocalPlayer, client_reliable_messages::ClientReliableMessages, cosmos_encoder, NettyChannelClient},
     structure::{

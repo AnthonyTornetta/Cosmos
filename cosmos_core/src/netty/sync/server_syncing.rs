@@ -29,7 +29,7 @@ use bevy::{
     },
     log::error,
 };
-use bevy_renet::renet::RenetServer;
+use bevy_renet2::renet2::RenetServer;
 
 fn server_remove_component<T: SyncableComponent>(
     components_registry: Res<Registry<SyncedComponentId>>,

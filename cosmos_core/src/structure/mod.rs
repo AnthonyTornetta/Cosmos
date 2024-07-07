@@ -12,9 +12,9 @@ use bevy::app::Update;
 use bevy::ecs::query::{QueryData, QueryFilter, ROQueryItem, With};
 use bevy::prelude::{App, Event, IntoSystemConfigs, Name, PreUpdate, VisibilityBundle};
 use bevy::reflect::Reflect;
-use bevy::transform::TransformBundle;
+use bevy::transform::bundles::TransformBundle;
 use bevy::utils::{HashMap, HashSet};
-use bevy_rapier3d::prelude::PhysicsWorld;
+use bevy_rapier3d::plugin::RapierContextEntityLink;
 use query::MutBlockData;
 
 pub mod asteroid;
@@ -700,7 +700,7 @@ fn spawn_chunk_entity(
     structure: &mut Structure,
     chunk_coordinate: ChunkCoordinate,
     structure_entity: Entity,
-    body_world: Option<&PhysicsWorld>,
+    body_world: Option<&RapierContextEntityLink>,
     chunk_set_events: &mut HashSet<ChunkSetEvent>,
 ) {
     let mut entity_cmds = commands.spawn((
@@ -714,8 +714,8 @@ fn spawn_chunk_entity(
         },
     ));
 
-    if let Some(bw) = body_world {
-        entity_cmds.insert(*bw);
+    if let Some(ent_link) = body_world {
+        entity_cmds.insert(*ent_link);
     }
 
     let entity = entity_cmds.id();
@@ -733,7 +733,7 @@ fn spawn_chunk_entity(
 fn add_chunks_system(
     mut chunk_init_reader: EventReader<ChunkInitEvent>,
     mut block_reader: EventReader<BlockChangedEvent>,
-    mut structure_query: Query<(&mut Structure, Option<&PhysicsWorld>)>,
+    mut structure_query: Query<(&mut Structure, Option<&RapierContextEntityLink>)>,
     mut chunk_set_event_writer: EventWriter<ChunkSetEvent>,
     mut commands: Commands,
     mut ev_writer: EventWriter<ChunkLoadBlockDataEvent>,
@@ -767,7 +767,7 @@ fn add_chunks_system(
     }
 
     for (structure_entity, chunk_coordinate) in s_chunks {
-        let Ok((mut structure, body_world)) = structure_query.get_mut(structure_entity) else {
+        let Ok((mut structure, rapier_ent_link)) = structure_query.get_mut(structure_entity) else {
             continue;
         };
 
@@ -781,7 +781,7 @@ fn add_chunks_system(
                 &mut structure,
                 chunk_coordinate,
                 structure_entity,
-                body_world,
+                rapier_ent_link,
                 &mut chunk_set_events,
             );
         }

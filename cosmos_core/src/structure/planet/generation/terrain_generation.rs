@@ -6,12 +6,12 @@ use std::{mem::size_of, time::Duration};
 
 use crate::structure::chunk::CHUNK_DIMENSIONS_USIZE;
 use bevy::{
-    core::{Pod, Zeroable},
     ecs::{system::Resource, world::World},
     math::{Vec3, Vec4},
     reflect::TypePath,
 };
 use bevy_app_compute::prelude::*;
+use bytemuck::{Pod, Zeroable};
 use serde::{Deserialize, Serialize};
 
 /// If you change this, make sure to modify the '@workgroup_size' value in the shader aswell.

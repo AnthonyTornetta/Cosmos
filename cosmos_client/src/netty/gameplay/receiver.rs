@@ -7,7 +7,7 @@ use std::sync::{Arc, Mutex};
 use bevy::{core_pipeline::bloom::BloomSettings, prelude::*, window::PrimaryWindow};
 use bevy_kira_audio::prelude::AudioReceiver;
 use bevy_rapier3d::prelude::*;
-use bevy_renet::renet::{transport::NetcodeClientTransport, RenetClient};
+use bevy_renet2::renet2::{transport::NetcodeClientTransport, RenetClient};
 use cosmos_core::{
     block::Block,
     ecs::{
@@ -827,13 +827,11 @@ fn get_entity_identifier_entity_for_despawning(
         } => network_mapping.client_from_server(&inventory_entity).and_then(|inventory_entity| {
             let mut inventory = q_inventory.get_mut(inventory_entity).ok()?;
 
-            let de = inventory
-                .mut_itemstack_at(item_slot as usize)
-                .and_then(|x| {
-                    let de = x.data_entity();
-                    x.set_data_entity(None);
-                    de
-                });
+            let de = inventory.mut_itemstack_at(item_slot as usize).and_then(|x| {
+                let de = x.data_entity();
+                x.set_data_entity(None);
+                de
+            });
 
             // If de is none, the inventory was already synced from the server, so the itemstack has no data pointer. Thus,
             // all we have to do is despawn the data entity.
@@ -874,10 +872,7 @@ fn get_entity_identifier_entity_for_despawning(
 
                 Some(bd)
             })
-            .unwrap_or_else(|| {
-                network_mapping
-                    .client_from_server(&server_data_entity)
-            }),
+            .unwrap_or_else(|| network_mapping.client_from_server(&server_data_entity)),
     };
 
     if let Some(identifier_entities) = identifier_entities {

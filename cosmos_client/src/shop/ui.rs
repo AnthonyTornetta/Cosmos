@@ -21,7 +21,7 @@ use bevy::{
         BackgroundColor, FlexDirection, JustifyContent, Style, UiRect, Val,
     },
 };
-use bevy_renet::renet::RenetClient;
+use bevy_renet2::renet2::RenetClient;
 use cosmos_core::{
     economy::Credits,
     ecs::{

@@ -21,7 +21,7 @@ use bevy::prelude::{
     Res, Transform,
 };
 use bevy::reflect::Reflect;
-use bevy::transform::TransformBundle;
+use bevy::transform::bundles::TransformBundle;
 use bevy::utils::HashSet;
 use bevy_rapier3d::geometry::{CollisionGroups, Group};
 use bevy_rapier3d::math::Vect;

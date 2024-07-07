@@ -5,7 +5,7 @@ use bevy::{
     prelude::{in_state, App, BuildChildren, Commands, Entity, IntoSystemConfigs, Parent, Query, ResMut, Transform, Update, With, Without},
 };
 use bevy_rapier3d::pipeline::CollisionEvent;
-use bevy_renet::renet::RenetClient;
+use bevy_renet2::renet2::RenetClient;
 use cosmos_core::{
     netty::{client::LocalPlayer, client_reliable_messages::ClientReliableMessages, cosmos_encoder, NettyChannelClient},
     physics::location::Location,

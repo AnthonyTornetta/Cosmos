@@ -24,9 +24,9 @@ use bevy::{
         Added, App, Children, Commands, Component, Deref, DerefMut, Entity, Parent, Quat, Query, Transform, Update, Vec3, With, Without,
     },
     reflect::Reflect,
-    transform::TransformBundle,
+    transform::bundles::TransformBundle,
 };
-use bevy_rapier3d::{na::Vector3, prelude::PhysicsWorld};
+use bevy_rapier3d::{na::Vector3, plugin::RapierContextEntityLink};
 use bigdecimal::{BigDecimal, FromPrimitive};
 use serde::{Deserialize, Serialize};
 
@@ -523,7 +523,7 @@ pub fn handle_child_syncing(
 
 fn on_add_location_without_transform(
     mut query: Query<(Entity, &mut Location, Option<&BundleStartingRotation>), (Added<Location>, Without<Transform>, Without<PlayerWorld>)>,
-    worlds: Query<(&Location, &PhysicsWorld), With<PlayerWorld>>,
+    q_worlds: Query<(&Location, &RapierContextEntityLink), With<PlayerWorld>>,
     mut commands: Commands,
 ) {
     for (needs_transform_entity, mut my_loc, starting_rotation) in query.iter_mut() {
@@ -531,7 +531,7 @@ fn on_add_location_without_transform(
         let mut best_physics_world = None;
         let mut best_player_world_loc = None;
 
-        for (world_loc, phys_world) in worlds.iter() {
+        for (world_loc, phys_world) in q_worlds.iter() {
             let dist = world_loc.distance_sqrd(&my_loc);
 
             if dist < best_dist {

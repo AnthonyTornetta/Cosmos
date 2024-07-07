@@ -14,7 +14,7 @@ use bevy::{
     prelude::{Deref, DerefMut},
     utils::HashMap,
 };
-use bevy_renet::renet::RenetClient;
+use bevy_renet2::renet2::RenetClient;
 use cosmos_core::{
     block::gravity_well::GravityWell,
     netty::{cosmos_encoder, server_replication::ReplicationMessage, sync::mapping::NetworkMapping, NettyChannelServer},

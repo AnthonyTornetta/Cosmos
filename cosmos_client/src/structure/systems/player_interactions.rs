@@ -4,7 +4,7 @@ use bevy::{
     prelude::{in_state, Added, App, Commands, Component, Entity, IntoSystemConfigs, Query, RemovedComponents, ResMut, Update, With},
     reflect::Reflect,
 };
-use bevy_renet::renet::RenetClient;
+use bevy_renet2::renet2::RenetClient;
 use cosmos_core::{
     netty::{client::LocalPlayer, client_unreliable_messages::ClientUnreliableMessages, cosmos_encoder, NettyChannelClient},
     structure::{ship::pilot::Pilot, systems::ShipActiveSystem},

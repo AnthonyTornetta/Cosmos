@@ -9,7 +9,7 @@ use bevy::{
         system::{Query, Res, ResMut},
     },
 };
-use bevy_renet::renet::RenetServer;
+use bevy_renet2::renet2::RenetServer;
 use cosmos_core::{
     item::Item,
     netty::{

@@ -2,8 +2,8 @@
 
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::*;
-use bevy_renet::renet::transport::NetcodeServerTransport;
-use bevy_renet::renet::{ClientId, RenetServer, ServerEvent};
+use bevy_renet2::renet2::transport::NetcodeServerTransport;
+use bevy_renet2::renet2::{ClientId, RenetServer, ServerEvent};
 use cosmos_core::economy::Credits;
 use cosmos_core::ecs::NeedsDespawned;
 use cosmos_core::entities::player::render_distance::RenderDistance;

@@ -1,7 +1,7 @@
 //! Contains useful resources for the network
 
 use bevy::{prelude::Resource, utils::HashMap};
-use bevy_renet::renet::ClientId;
+use bevy_renet2::renet2::ClientId;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Default, Resource, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord, Clone, Copy)]

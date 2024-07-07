@@ -6,7 +6,7 @@
 //! Just if you ever remove a call to `register_loader` or `finish_loading` you may have to add it to another
 //! system in that state.
 
-use bevy::{prelude::*, utils::HashSet};
+use bevy::{prelude::*, state::state::FreelyMutableState, utils::HashSet};
 
 /// Using the LoadingManager struct avoids passing ugly generics around the code, rather than directly using the LoadingStatus struct
 #[derive(Default, Resource)]
@@ -57,7 +57,7 @@ impl<T: States + Copy> LoadingStatus<T> {
     }
 }
 
-fn monitor_loading<T: States + Clone + Copy>(
+fn monitor_loading<T: States + Clone + Copy + FreelyMutableState>(
     mut event_done_reader: EventReader<DoneLoadingEvent>,
     mut event_start_reader: EventReader<AddLoadingEvent>,
     mut loading_status: ResMut<LoadingStatus<T>>,

@@ -1,5 +1,5 @@
 use bevy::{app::App, prelude::*};
-use bevy_renet::renet::{DisconnectReason, RenetClient};
+use bevy_renet2::renet2::{DisconnectReason, RenetClient};
 
 use crate::ui::components::button::{register_button, Button, ButtonBundle, ButtonEvent, ButtonStyles};
 

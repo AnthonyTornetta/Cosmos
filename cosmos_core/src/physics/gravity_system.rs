@@ -1,8 +1,9 @@
 //! Handles gravity
 
 use bevy::prelude::*;
-use bevy_rapier3d::prelude::{
-    ExternalImpulse, PhysicsWorld, RapierContext, RapierRigidBodyHandle, ReadMassProperties, RigidBody, RigidBodyDisabled,
+use bevy_rapier3d::{
+    plugin::{RapierContextAccess, RapierContextEntityLink},
+    prelude::{ExternalImpulse, RapierContext, RapierRigidBodyHandle, ReadMassProperties, RigidBody, RigidBodyDisabled},
 };
 
 use crate::structure::planet::Planet;
@@ -14,28 +15,29 @@ fn fix_read_mass_props(
         &GlobalTransform,
         &mut ReadMassProperties,
         &RapierRigidBodyHandle,
-        Option<&PhysicsWorld>,
+        &RapierContextEntityLink,
     )>,
-    context: Res<RapierContext>,
+    rapier_context_access: RapierContextAccess,
 ) {
     for (g_trans, mut prop, handle, physics_world) in query.iter_mut() {
         let physics_world = physics_world.copied().unwrap_or_default();
 
         // https://github.com/dimforge/bevy_rapier/issues/271
 
-        if let Some(info) = &context
-            .get_world(physics_world.world_id)
-            .expect("Missing world")
-            .bodies
-            .get(handle.0)
-        {
-            let mass = info.mass();
-            let world_com: Vec3 = (*info.center_of_mass()).into();
-            let local_com = g_trans.translation() - world_com;
+        // if let Some(info) = rapier_context_access
+        //     .context(physics_world)
+        //     .get_world(physics_world.world_id)
+        //     .expect("Missing world")
+        //     .bodies
+        //     .get(handle.0)
+        // {
+        //     let mass = info.mass();
+        //     let world_com: Vec3 = (*info.center_of_mass()).into();
+        //     let local_com = g_trans.translation() - world_com;
 
-            prop.0.mass = mass;
-            prop.0.local_center_of_mass = local_com;
-        }
+        //     prop.0.mass = mass;
+        //     prop.0.local_center_of_mass = local_com;
+        // }
     }
 }
 
@@ -86,11 +88,11 @@ fn gravity_system(
 
                     let grav_dir = -rotation.mul_vec3(face.direction_vec3());
 
-                    force += (prop.0.mass * force_per_kilogram * ratio) * grav_dir;
+                    force += (prop.get().mass * force_per_kilogram * ratio) * grav_dir;
                 } else if ratio >= 0.1 {
                     let grav_dir = -relative_position.normalize();
 
-                    force += (prop.0.mass * force_per_kilogram * ratio) * grav_dir;
+                    force += (prop.get().mass * force_per_kilogram * ratio) * grav_dir;
                 }
             }
 

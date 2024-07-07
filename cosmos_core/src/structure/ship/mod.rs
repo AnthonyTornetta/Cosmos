@@ -4,7 +4,6 @@
 
 use bevy::app::Update;
 use bevy::ecs::event::EventReader;
-use bevy::ecs::schedule::common_conditions::in_state;
 use bevy::ecs::schedule::IntoSystemConfigs;
 use bevy::ecs::system::Commands;
 use bevy::ecs::system::Res;
@@ -12,6 +11,7 @@ use bevy::prelude::App;
 use bevy::prelude::Component;
 use bevy::prelude::States;
 use bevy::reflect::Reflect;
+use bevy::state::condition::in_state;
 
 use crate::block::Block;
 use crate::events::block_events::BlockChangedEvent;

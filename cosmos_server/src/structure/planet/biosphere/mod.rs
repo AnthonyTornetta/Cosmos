@@ -11,7 +11,7 @@ use bevy::{
     reflect::TypePath,
     tasks::Task,
 };
-use bevy_renet::renet::RenetServer;
+use bevy_renet2::renet2::RenetServer;
 use cosmos_core::{
     netty::{cosmos_encoder, server_reliable_messages::ServerReliableMessages, NettyChannelServer},
     physics::location::Location,

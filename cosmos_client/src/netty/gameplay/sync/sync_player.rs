@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::Velocity;
-use bevy_renet::renet::{transport::NetcodeClientTransport, RenetClient};
+use bevy_renet2::renet2::{transport::NetcodeClientTransport, RenetClient};
 use cosmos_core::{
     netty::{
         client::LocalPlayer,
