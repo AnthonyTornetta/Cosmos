@@ -1,9 +1,8 @@
-use bevy::pbr::ExtendedMaterial;
-use block_materials::ArrayTextureMaterialExtension;
+use block_materials::ArrayTextureMaterial;
 
 use crate::asset::asset_loading::{AllTexturesDoneLoadingEvent, AssetsDoneLoadingEvent, CosmosTextureAtlas};
 
-use super::super::{block_materials::ArrayTextureMaterial, *};
+use super::super::*;
 
 #[derive(Resource)]
 pub(crate) struct DefaultMaterial(pub Handle<ArrayTextureMaterial>);
@@ -60,36 +59,27 @@ fn respond_to_remove_materails_event(mut event_reader: EventReader<RemoveAllMate
     }
 }
 
-fn create_main_material(image_handle: Handle<Image>, unlit: bool) -> ExtendedMaterial<StandardMaterial, ArrayTextureMaterialExtension> {
-    ExtendedMaterial {
-        base: StandardMaterial {
-            base_color_texture: Some(image_handle),
-            alpha_mode: AlphaMode::Mask(0.5),
-            unlit,
-            metallic: 0.0,
-            reflectance: 0.0,
-            perceptual_roughness: 1.0,
-            ..Default::default()
-        },
-        extension: ArrayTextureMaterialExtension::default(),
+fn create_main_material(image_handle: Handle<Image>, unlit: bool) -> ArrayTextureMaterial {
+    ArrayTextureMaterial {
+        base_color_texture: Some(image_handle),
+        alpha_mode: AlphaMode::Mask(0.5),
+        unlit,
+        metallic: 0.0,
+        reflectance: 0.0,
+        perceptual_roughness: 1.0,
+        ..Default::default()
     }
 }
 
-fn create_transparent_material(
-    image_handle: Handle<Image>,
-    unlit: bool,
-) -> ExtendedMaterial<StandardMaterial, ArrayTextureMaterialExtension> {
-    ExtendedMaterial {
-        base: StandardMaterial {
-            base_color_texture: Some(image_handle),
-            alpha_mode: AlphaMode::Add,
-            unlit,
-            metallic: 0.0,
-            reflectance: 0.0,
-            perceptual_roughness: 1.0,
-            ..Default::default()
-        },
-        extension: ArrayTextureMaterialExtension::default(),
+fn create_transparent_material(image_handle: Handle<Image>, unlit: bool) -> ArrayTextureMaterial {
+    ArrayTextureMaterial {
+        base_color_texture: Some(image_handle),
+        alpha_mode: AlphaMode::Add,
+        unlit,
+        metallic: 0.0,
+        reflectance: 0.0,
+        perceptual_roughness: 1.0,
+        ..Default::default()
     }
 }
 

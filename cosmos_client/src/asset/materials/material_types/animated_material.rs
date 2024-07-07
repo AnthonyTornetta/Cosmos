@@ -78,7 +78,6 @@ fn respond_to_remove_materails_event(mut event_reader: EventReader<RemoveAllMate
 fn create_main_material(image_handle: Handle<Image>, unlit: bool) -> AnimatedArrayTextureMaterial {
     ExtendedMaterial {
         base: StandardMaterial {
-            base_color_texture: Some(image_handle),
             alpha_mode: AlphaMode::Mask(0.5),
             unlit,
             metallic: 0.0,
@@ -86,14 +85,15 @@ fn create_main_material(image_handle: Handle<Image>, unlit: bool) -> AnimatedArr
             perceptual_roughness: 1.0,
             ..Default::default()
         },
-        extension: AnimatedArrayTextureMaterialExtension::default(),
+        extension: AnimatedArrayTextureMaterialExtension {
+            base_color_texture: Some(image_handle),
+        },
     }
 }
 
 fn create_transparent_material(image_handle: Handle<Image>, unlit: bool) -> AnimatedArrayTextureMaterial {
     ExtendedMaterial {
         base: StandardMaterial {
-            base_color_texture: Some(image_handle),
             alpha_mode: AlphaMode::Add,
             unlit,
             metallic: 0.0,
@@ -101,7 +101,9 @@ fn create_transparent_material(image_handle: Handle<Image>, unlit: bool) -> Anim
             perceptual_roughness: 1.0,
             ..Default::default()
         },
-        extension: AnimatedArrayTextureMaterialExtension::default(),
+        extension: AnimatedArrayTextureMaterialExtension {
+            base_color_texture: Some(image_handle),
+        },
     }
 }
 

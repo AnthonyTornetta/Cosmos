@@ -121,8 +121,8 @@ fn main() {
         })
         .insert_resource(ClearColor(Color::BLACK))
         // This must be registered here, before it is used anywhere
-        .init_state::<GameState>()
         .add_plugins(default_plugins)
+        .init_state::<GameState>()
         .add_plugins(CosmosCorePluginGroup::new(
             GameState::PreLoading,
             GameState::Loading,

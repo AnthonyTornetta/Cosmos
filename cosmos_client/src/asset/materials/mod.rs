@@ -313,7 +313,7 @@ pub(super) fn register(app: &mut App) {
     shield::register(app);
     material_types::register(app);
     block_materials::register(app);
-    // animated_material::register(app);
+    animated_material::register(app);
 
     app.add_systems(
         OnExit(GameState::PostLoading),

@@ -67,6 +67,12 @@ impl MaterialExtension for AnimatedArrayTextureMaterialExtension {
     }
 }
 
+pub(super) fn register(app: &mut App) {
+    app.add_plugins(MaterialPlugin::<
+        ExtendedMaterial<StandardMaterial, AnimatedArrayTextureMaterialExtension>,
+    >::default());
+}
+
 // use bevy::bevy_asset::Asset;
 // use bevy::bevy_color::{Alpha, ColorToComponents};
 // use bevy::bevy_math::{vec2, Affine2, Affine3, Mat2, Mat3, Vec2, Vec3, Vec4};

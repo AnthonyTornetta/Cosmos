@@ -75,27 +75,26 @@ fn main() {
     #[cfg(feature = "print-schedule")]
     let default_plugins = default_plugins.disable::<LogPlugin>();
 
-    app
-        // This must be the first thing added or systems don't get added correctly
-        .init_state::<GameState>()
-        .insert_resource(TimestepMode::Interpolated {
-            dt: 1.0 / 60.0,
-            time_scale: 1.0,
-            substeps: 2,
-        })
-        .add_plugins(default_plugins)
-        .add_plugins(CosmosCorePluginGroup::new(
-            GameState::PreLoading,
-            GameState::Loading,
-            GameState::PostLoading,
-            GameState::Playing,
-            GameState::Playing,
-        ))
-        .add_plugins(
-            RapierPhysicsPlugin::<CosmosPhysicsFilter>::default().with_default_world(RapierContextInitialization::NoAutomaticRapierContext),
-        )
-        .add_plugins((RenetServerPlugin, NetcodeServerPlugin, ServerPlugin { port }))
-        .insert_resource(server_settings);
+    app.insert_resource(TimestepMode::Interpolated {
+        dt: 1.0 / 60.0,
+        time_scale: 1.0,
+        substeps: 2,
+    })
+    .add_plugins(default_plugins)
+    // This must be the first thing added or systems don't get added correctly, but after default plugins.
+    .init_state::<GameState>()
+    .add_plugins(CosmosCorePluginGroup::new(
+        GameState::PreLoading,
+        GameState::Loading,
+        GameState::PostLoading,
+        GameState::Playing,
+        GameState::Playing,
+    ))
+    .add_plugins(
+        RapierPhysicsPlugin::<CosmosPhysicsFilter>::default().with_default_world(RapierContextInitialization::NoAutomaticRapierContext),
+    )
+    .add_plugins((RenetServerPlugin, NetcodeServerPlugin, ServerPlugin { port }))
+    .insert_resource(server_settings);
 
     if cfg!(feature = "print-schedule") {
         println!(
