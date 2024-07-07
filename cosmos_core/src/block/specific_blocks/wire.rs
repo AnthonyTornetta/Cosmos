@@ -7,7 +7,7 @@ use bevy::{
 
 use crate::{
     block::Block,
-    logic::logic_graph::{LogicBlock, LogicConnection},
+    logic::{LogicBlock, LogicConnection},
     registry::Registry,
 };
 

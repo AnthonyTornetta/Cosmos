@@ -7,10 +7,7 @@ use bevy::{
 
 use crate::{
     block::Block,
-    logic::{
-        logic_graph::{LogicBlock, LogicConnection, LogicGraph, Port, PortType},
-        LogicInputEvent, LogicOutputEvent, LogicSystemSet,
-    },
+    logic::{logic::Logic, LogicBlock, LogicConnection, LogicInputEvent, LogicOutputEvent, LogicSystemSet, Port, PortType},
     registry::{identifiable::Identifiable, Registry},
     structure::Structure,
 };
@@ -25,7 +22,7 @@ fn logic_on_logic_output_event_listener(
     mut evr_logic_output: EventReader<LogicOutputEvent>,
     mut evw_logic_input: EventWriter<LogicInputEvent>,
     blocks: Res<Registry<Block>>,
-    mut q_wire_graph: Query<&mut LogicGraph>,
+    mut q_logic: Query<&mut Logic>,
     mut q_structure: Query<&mut Structure>,
 ) {
     for ev in evr_logic_output.read() {
@@ -35,17 +32,14 @@ fn logic_on_logic_output_event_listener(
         if structure.block_at(ev.block.coords(), &blocks).unlocalized_name() != "cosmos:logic_on" {
             continue;
         }
-        let Ok(mut wire_graph) = q_wire_graph.get_mut(ev.entity) else {
+        let Ok(mut logic) = q_logic.get_mut(ev.entity) else {
             continue;
         };
 
         // Set all this block's ports to "on" in their logic groups.
         for local_face in structure.block_rotation(ev.block.coords()).all_local_faces() {
             let port = Port::new(ev.block.coords(), local_face);
-            wire_graph
-                .mut_logic_group_of(&port, PortType::Output)
-                .expect("Logic On block output port should have logic group ID.")
-                .update_producer(port, true, &mut evw_logic_input, ev.entity);
+            logic.update_producer(port, true, &mut evw_logic_input, ev.entity);
         }
     }
 }
