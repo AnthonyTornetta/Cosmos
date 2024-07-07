@@ -6,7 +6,7 @@ use bevy::{
         component::Component,
         entity::Entity,
         event::{EventReader, EventWriter},
-        schedule::{IntoSystemConfigs, OnEnter},
+        schedule::IntoSystemConfigs,
         system::{Commands, Query, Res, ResMut},
     },
     hierarchy::BuildChildren,
@@ -14,7 +14,8 @@ use bevy::{
     math::{Rect, Vec3},
     reflect::Reflect,
     render::{mesh::Mesh, view::VisibilityBundle},
-    transform::TransformBundle,
+    state::state::OnEnter,
+    transform::bundles::TransformBundle,
     utils::HashMap,
 };
 use cosmos_core::{

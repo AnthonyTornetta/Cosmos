@@ -5,6 +5,7 @@ use std::time::Duration;
 use bevy::{
     app::Update,
     asset::{Assets, Handle},
+    color::palettes::css,
     core::Name,
     ecs::{
         component::Component,
@@ -14,11 +15,11 @@ use bevy::{
         system::{Commands, Query, Res, ResMut},
     },
     math::{Vec3, Vec4},
-    pbr::{AlphaMode, NotShadowCaster, StandardMaterial},
+    pbr::{NotShadowCaster, StandardMaterial},
     prelude::App,
     render::{
-        color::Color,
-        mesh::{Mesh, SphereKind, SphereMeshBuilder},
+        alpha::AlphaMode,
+        mesh::{Mesh, MeshBuilder, SphereKind, SphereMeshBuilder},
         view::{Visibility, VisibilityBundle},
     },
     time::Time,
@@ -127,7 +128,7 @@ fn on_add_shield_create_rendering(
                 base: StandardMaterial {
                     // unlit: true,
                     alpha_mode: AlphaMode::Add,
-                    base_color: Color::BLUE,
+                    base_color: css::BLUE,
                     ..Default::default()
                 },
                 extension: ShieldMaterialExtension {

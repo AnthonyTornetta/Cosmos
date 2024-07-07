@@ -7,6 +7,7 @@ use bevy::{
     a11y::Focus,
     app::{App, Update},
     asset::{AssetId, AssetServer, Handle},
+    color::{palettes::css, Color},
     core::Name,
     ecs::{
         bundle::Bundle,
@@ -25,7 +26,6 @@ use bevy::{
     },
     log::{info, warn},
     prelude::Deref,
-    render::color::Color,
     text::{Text, TextSection, TextStyle},
     time::Time,
     ui::{
@@ -128,7 +128,7 @@ impl Default for TextInput {
             highlight_begin: None,
             input_type: InputType::Text { max_length: None },
             style: TextStyle {
-                color: Color::WHITE,
+                color: css::WHITE,
                 font_size: 12.0,
                 font: Default::default(), // font assigned later
             },

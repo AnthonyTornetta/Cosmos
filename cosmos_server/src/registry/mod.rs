@@ -4,11 +4,12 @@ use bevy::{
     app::{App, Startup, Update},
     ecs::{
         event::EventReader,
-        schedule::{common_conditions::in_state, IntoSystemConfigs},
+        schedule::IntoSystemConfigs,
         system::{Query, Res, ResMut, Resource},
     },
     log::{info, warn},
     prelude::Deref,
+    state::condition::in_state,
 };
 use bevy_renet2::renet2::RenetServer;
 use cosmos_core::{

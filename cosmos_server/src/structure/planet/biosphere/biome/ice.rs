@@ -1,11 +1,9 @@
 //! Ice biome generation
 
 use bevy::{
-    ecs::{
-        schedule::OnExit,
-        system::{Res, ResMut},
-    },
+    ecs::system::{Res, ResMut},
     prelude::App,
+    state::state::OnExit,
 };
 use cosmos_core::{
     block::Block,

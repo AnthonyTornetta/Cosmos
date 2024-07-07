@@ -1,7 +1,7 @@
 //! Handles the creation of lasers
 
 use bevy::prelude::*;
-use bevy_rapier3d::prelude::DEFAULT_WORLD_ID;
+use bevy_rapier3d::plugin::{RapierContext, RapierContextEntityLink};
 use bevy_renet2::renet2::*;
 use cosmos_core::{
     ecs::bundles::CosmosPbrBundle,
@@ -38,6 +38,7 @@ fn lasers_netty(
     mut ev_writer_laser_cannon_fired: EventWriter<LaserCannonSystemFiredEvent>,
     mut ev_writer_missile_launcher_fired: EventWriter<MissileLauncherSystemFiredEvent>,
     mut q_shield_render: Query<&mut ShieldRender>,
+    q_default_world: Query<Entity, With<RapierContext>>,
 ) {
     while let Some(message) = client.receive_message(NettyChannelServer::StructureSystems) {
         let msg: ServerStructureSystemMessages = cosmos_encoder::deserialize(&message).unwrap();
@@ -74,7 +75,7 @@ fn lasers_netty(
                         ..Default::default()
                     },
                     &time,
-                    DEFAULT_WORLD_ID,
+                    RapierContextEntityLink(q_default_world.single()),
                     &mut commands,
                 );
             }

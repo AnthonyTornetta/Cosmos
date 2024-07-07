@@ -3,7 +3,7 @@
 use bevy::prelude::*;
 use bevy_rapier3d::{
     plugin::{RapierContextAccess, RapierContextEntityLink},
-    prelude::{ExternalImpulse, RapierContext, RapierRigidBodyHandle, ReadMassProperties, RigidBody, RigidBodyDisabled},
+    prelude::{ExternalImpulse, RapierRigidBodyHandle, ReadMassProperties, RigidBody, RigidBodyDisabled},
 };
 
 use crate::structure::planet::Planet;
@@ -20,7 +20,7 @@ fn fix_read_mass_props(
     rapier_context_access: RapierContextAccess,
 ) {
     for (g_trans, mut prop, handle, physics_world) in query.iter_mut() {
-        let physics_world = physics_world.copied().unwrap_or_default();
+        // let physics_world = physics_world.copied().unwrap_or_default();
 
         // https://github.com/dimforge/bevy_rapier/issues/271
 

@@ -1,7 +1,5 @@
 //! Responsible for the collider generation of a structure.structure_physics.rs
 
-use std::sync::{Arc, Mutex};
-
 use crate::block::blocks::fluid::FLUID_COLLISION_GROUP;
 use crate::block::Block;
 use crate::events::block_events::BlockChangedEvent;
@@ -526,100 +524,107 @@ fn listen_for_new_physics_event(
 
     // create new colliders
 
-    let new_physics_entities = Mutex::new(vec![]);
+    let processed_chunk_colliders = todo
+        .into_par_iter()
+        .flat_map(|(chunk_coord, structure_entity)| {
+            let Ok(structure) = structure_query.get(structure_entity) else {
+                return None;
+            };
 
-    let commands = Arc::new(Mutex::new(commands));
+            let Some(chunk) = structure.chunk_at(chunk_coord) else {
+                return None;
+            };
 
-    todo.into_par_iter().for_each(|(chunk_coord, structure_entity)| {
-        let Ok(structure) = structure_query.get(structure_entity) else {
-            return;
-        };
+            let Some(chunk_entity) = structure.chunk_entity(chunk_coord) else {
+                return None;
+            };
 
-        let Some(chunk) = structure.chunk_at(chunk_coord) else {
-            return;
-        };
+            // let chunk_colliders = vec![(Collider::cuboid(16.0, 16.0, 16.0), 10.0, BlockColliderMode::NormalCollider)];
 
-        let Some(chunk_entity) = structure.chunk_entity(chunk_coord) else {
-            return;
-        };
+            Some((
+                chunk_entity,
+                structure_entity,
+                generate_chunk_collider(structure, chunk, &blocks, &colliders),
+            ))
+        })
+        .collect_vec_list();
 
-        // let chunk_colliders = vec![(Collider::cuboid(16.0, 16.0, 16.0), 10.0, BlockColliderMode::NormalCollider)];
+    let mut new_physics_entities = vec![];
 
-        let chunk_colliders = generate_chunk_collider(structure, chunk, &blocks, &colliders);
+    for processed in processed_chunk_colliders {
+        for (chunk_entity, structure_entity, chunk_colliders) in processed {
+            let mut first = true;
 
-        let mut first = true;
+            if let Some(mut chunk_entity_commands) = commands.get_entity(chunk_entity) {
+                chunk_entity_commands.remove::<(Collider, Sensor, Group)>();
+            }
 
-        let mut commands = commands.lock().unwrap();
+            for (collider, mass, collider_mode, collision_group) in chunk_colliders {
+                if first {
+                    if let Some(mut entity_commands) = commands.get_entity(chunk_entity) {
+                        entity_commands.insert((
+                            collider,
+                            ColliderMassProperties::Mass(mass),
+                            ChunkPhysicsPart {
+                                chunk_entity,
+                                structure_entity,
+                            },
+                        ));
 
-        if let Some(mut chunk_entity_commands) = commands.get_entity(chunk_entity) {
-            chunk_entity_commands.remove::<(Collider, Sensor, Group)>();
-        }
+                        if let Some(group) = collision_group {
+                            entity_commands.insert(group);
+                        }
 
-        for (collider, mass, collider_mode, collision_group) in chunk_colliders {
-            if first {
-                if let Some(mut entity_commands) = commands.get_entity(chunk_entity) {
-                    entity_commands.insert((
-                        collider,
-                        ColliderMassProperties::Mass(mass),
+                        if matches!(collider_mode, BlockColliderMode::SensorCollider) {
+                            entity_commands.insert(Sensor);
+                        }
+                    } else {
+                        break; // No chunk found - may have been deleted
+                    }
+
+                    first = false;
+                } else {
+                    let chunk_trans = transform_query
+                        .get(chunk_entity)
+                        .expect("No transform on a chunk??? (megamind face)");
+
+                    let mut child = commands.spawn((
                         ChunkPhysicsPart {
                             chunk_entity,
                             structure_entity,
                         },
+                        TransformBundle::from_transform(*chunk_trans),
+                        collider,
+                        ColliderMassProperties::Mass(mass),
                     ));
 
                     if let Some(group) = collision_group {
-                        entity_commands.insert(group);
+                        child.insert(CollisionGroups::new(group, group));
                     }
 
                     if matches!(collider_mode, BlockColliderMode::SensorCollider) {
-                        entity_commands.insert(Sensor);
+                        child.insert(Sensor);
                     }
-                } else {
-                    break; // No chunk found - may have been deleted
-                }
 
-                first = false;
-            } else {
-                let chunk_trans = transform_query
-                    .get(chunk_entity)
-                    .expect("No transform on a chunk??? (megamind face)");
+                    let child_entity = child.id();
+                    if let Some(mut chunk_entity_cmds) = commands.get_entity(structure_entity) {
+                        chunk_entity_cmds.add_child(child_entity);
 
-                let mut child = commands.spawn((
-                    ChunkPhysicsPart {
-                        chunk_entity,
-                        structure_entity,
-                    },
-                    TransformBundle::from_transform(*chunk_trans),
-                    collider,
-                    ColliderMassProperties::Mass(mass),
-                ));
-
-                if let Some(group) = collision_group {
-                    child.insert(CollisionGroups::new(group, group));
-                }
-
-                if matches!(collider_mode, BlockColliderMode::SensorCollider) {
-                    child.insert(Sensor);
-                }
-
-                let child_entity = child.id();
-                if let Some(mut chunk_entity_cmds) = commands.get_entity(structure_entity) {
-                    chunk_entity_cmds.add_child(child_entity);
-
-                    // Store these children in a container so they can be properly deleted when new colliders are generated
-                    new_physics_entities.lock().unwrap().push((
-                        ColliderChunkPair {
-                            chunk_entity,
-                            collider_entity: child_entity,
-                        },
-                        structure_entity,
-                    ));
+                        // Store these children in a container so they can be properly deleted when new colliders are generated
+                        new_physics_entities.push((
+                            ColliderChunkPair {
+                                chunk_entity,
+                                collider_entity: child_entity,
+                            },
+                            structure_entity,
+                        ));
+                    }
                 }
             }
         }
-    });
+    }
 
-    for (pair, structure_entity) in new_physics_entities.into_inner().unwrap() {
+    for (pair, structure_entity) in new_physics_entities {
         let Ok(mut chunk_phys_parts) = physics_components_query.get_mut(structure_entity) else {
             continue;
         };

@@ -8,10 +8,9 @@ use bevy::{
 };
 use bevy_kira_audio::prelude::*;
 use bevy_rapier3d::{
-    dynamics::PhysicsWorld,
     geometry::{CollisionGroups, Group},
     pipeline::QueryFilter,
-    plugin::RapierContext,
+    plugin::{RapierContextAccess, RapierContextEntityLink},
 };
 use cosmos_core::{
     block::BlockFace,
@@ -103,7 +102,7 @@ fn apply_mining_effects(
     audio: Res<Audio>,
     audio_handles: Res<LaserCannonFireHandles>,
 
-    q_structure: Query<(&Structure, &PhysicsWorld)>,
+    q_structure: Query<(&Structure, &RapierContextEntityLink)>,
     mut materials_cache: ResMut<MiningLaserMaterialCache>,
     mut materials: ResMut<Assets<StandardMaterial>>,
     mesh: Res<MiningLaserMesh>,
@@ -217,9 +216,9 @@ fn apply_mining_effects(
 
 fn resize_mining_lasers(
     q_parent: Query<&Parent>,
-    mut q_lasers: Query<(&GlobalTransform, &mut Transform, &PhysicsWorld, &MiningLaser, &Parent)>,
+    mut q_lasers: Query<(&GlobalTransform, &mut Transform, &RapierContextEntityLink, &MiningLaser, &Parent)>,
     q_global_trans: Query<&GlobalTransform>,
-    rapier_context: Res<RapierContext>,
+    rapier_context_access: RapierContextAccess,
 ) {
     for (g_trans, mut trans, phys_world, mining_laser, parent) in q_lasers.iter_mut() {
         let parent_structure_ent = parent.get();
@@ -235,8 +234,7 @@ fn resize_mining_lasers(
 
         laser_start = parent_g_trans.translation() + parent_rot.mul_vec3(laser_start);
 
-        let toi = match rapier_context.cast_ray(
-            phys_world.world_id,
+        let toi = match rapier_context_access.context(phys_world).cast_ray(
             laser_start,
             g_trans.forward(),
             mining_laser.max_length,

@@ -6,9 +6,10 @@ use bevy::{
         entity::Entity,
         query::{Added, Changed, Or, With},
         removal_detection::RemovedComponents,
-        schedule::{common_conditions::in_state, IntoSystemConfigs},
+        schedule::IntoSystemConfigs,
         system::{Commands, Query, Res},
     },
+    state::condition::in_state,
 };
 use cosmos_core::{
     inventory::itemstack::{ItemShouldHaveData, ItemStack, ItemStackSystemSet},

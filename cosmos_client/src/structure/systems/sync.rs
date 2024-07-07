@@ -6,12 +6,13 @@ use bevy::{
         entity::Entity,
         event::{Event, EventReader, EventWriter},
         query::With,
-        schedule::{common_conditions::in_state, IntoSystemConfigs},
+        schedule::IntoSystemConfigs,
         system::{Commands, Query, Res, ResMut, Resource},
     },
     hierarchy::BuildChildren,
     log::{error, warn},
     prelude::{Deref, DerefMut},
+    state::condition::in_state,
     utils::HashMap,
 };
 use bevy_renet2::renet2::RenetClient;

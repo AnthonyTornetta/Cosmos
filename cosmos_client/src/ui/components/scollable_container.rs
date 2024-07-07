@@ -4,6 +4,7 @@
 
 use bevy::{
     app::{App, Update},
+    color::Color,
     core::Name,
     ecs::{
         bundle::Bundle,
@@ -22,7 +23,6 @@ use bevy::{
     },
     log::error,
     reflect::Reflect,
-    render::color::Color,
     transform::components::GlobalTransform,
     ui::{node_bundles::NodeBundle, FlexDirection, Interaction, Node, Overflow, PositionType, Style, UiRect, UiScale, Val},
     window::{PrimaryWindow, Window},

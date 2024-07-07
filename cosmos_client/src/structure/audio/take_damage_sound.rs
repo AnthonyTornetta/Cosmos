@@ -3,7 +3,7 @@ use bevy::{
         resource_exists, App, BuildChildren, Commands, EventReader, Handle, IntoSystemConfigs, Name, Query, Res, Resource, Transform,
         Update,
     },
-    transform::TransformBundle,
+    transform::bundles::TransformBundle,
 };
 use bevy_kira_audio::{Audio, AudioControl, AudioInstance, AudioSource};
 use cosmos_core::structure::{block_health::events::BlockTakeDamageEvent, shared::DespawnWithStructure, Structure};

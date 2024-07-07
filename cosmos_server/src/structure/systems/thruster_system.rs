@@ -143,7 +143,7 @@ fn update_movement(
             };
 
             if movement.braking {
-                let mut brake_vec = -velocity.linvel * readmass.0.mass;
+                let mut brake_vec = -velocity.linvel * readmass.get().mass;
                 let delta = time.delta_seconds() * MAX_BRAKE_DELTA_PER_THRUST * thruster_system.thrust_total();
 
                 if brake_vec.length_squared() >= delta * delta {

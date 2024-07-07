@@ -4,14 +4,12 @@ use bevy::{
     app::{App, Update},
     ecs::{
         event::{Event, EventReader, EventWriter},
-        schedule::{
-            common_conditions::{in_state, resource_exists},
-            IntoSystemConfigs, NextState,
-        },
+        schedule::{common_conditions::resource_exists, IntoSystemConfigs},
         system::{Res, ResMut, Resource},
     },
     log::{error, info},
     reflect::erased_serde::Serialize,
+    state::{condition::in_state, state::NextState},
 };
 use bevy_renet2::renet2::RenetClient;
 use cosmos_core::{

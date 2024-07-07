@@ -2,6 +2,7 @@
 
 use bevy::app::PluginGroupBuilder;
 use bevy::prelude::{App, Plugin, PluginGroup, States};
+use bevy::state::state::FreelyMutableState;
 use bevy_app_compute::prelude::AppComputePlugin;
 use bevy_inspector_egui::quick::WorldInspectorPlugin;
 use bevy_rapier3d::prelude::RapierPhysicsPlugin;
@@ -62,7 +63,7 @@ impl<T: States + Clone + Copy> CosmosCorePluginGroup<T> {
     }
 }
 
-impl<T: States + Clone + Copy> Plugin for CosmosCorePlugin<T> {
+impl<T: States + Clone + Copy + FreelyMutableState> Plugin for CosmosCorePlugin<T> {
     fn build(&self, app: &mut App) {
         loader::register(
             app,
@@ -96,7 +97,7 @@ impl<T: States + Clone + Copy> Plugin for CosmosCorePlugin<T> {
     }
 }
 
-impl<T: States + Clone + Copy> PluginGroup for CosmosCorePluginGroup<T> {
+impl<T: States + Clone + Copy + FreelyMutableState> PluginGroup for CosmosCorePluginGroup<T> {
     fn build(self) -> PluginGroupBuilder {
         PluginGroupBuilder::start::<Self>()
             // .add(LogPlugin::default())

@@ -115,7 +115,7 @@ impl<T: States + Clone + Copy> LoadingStatus<T> {
     }
 }
 
-pub(super) fn register<T: States + Clone + Copy>(
+pub(super) fn register<T: States + Clone + Copy + FreelyMutableState>(
     app: &mut App,
     pre_loading_state: T,
     loading_state: T,

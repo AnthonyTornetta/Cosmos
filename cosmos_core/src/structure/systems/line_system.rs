@@ -71,9 +71,9 @@ pub struct LineColorBlock {
     pub properties: LineColorProperty,
 }
 
-impl From<Color> for LineColorProperty {
-    fn from(color: Color) -> Self {
-        Self { color }
+impl From<Srgba> for LineColorProperty {
+    fn from(color: Srgba) -> Self {
+        Self { color: color.into() }
     }
 }
 

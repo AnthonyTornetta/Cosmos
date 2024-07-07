@@ -17,10 +17,10 @@ use bevy::{
 };
 
 use bevy_rapier3d::{
-    dynamics::{FixedJointBuilder, ImpulseJoint, PhysicsWorld, Velocity},
+    dynamics::{FixedJointBuilder, ImpulseJoint, Velocity},
     geometry::{CollisionGroups, Group},
     pipeline::QueryFilter,
-    plugin::RapierContext,
+    plugin::{RapierContextAccess, RapierContextEntityLink},
 };
 use cosmos_core::{
     block::Block,
@@ -101,9 +101,9 @@ fn dock_structure_loaded_event_processor(
 struct JustUndocked;
 
 fn on_active(
-    context: Res<RapierContext>,
+    context_access: RapierContextAccess,
     q_docked: Query<&Docked>,
-    mut q_structure: Query<(&mut Structure, &GlobalTransform, &PhysicsWorld)>,
+    mut q_structure: Query<(&mut Structure, &GlobalTransform, &RapierContextEntityLink)>,
     q_active: Query<(Entity, &StructureSystem, &DockSystem, Ref<SystemActive>, Option<&JustUndocked>)>,
     q_inactive: Query<Entity, (With<DockSystem>, Without<SystemActive>, With<JustUndocked>)>,
     q_chunk_entity: Query<&ChunkPhysicsPart>,
@@ -151,8 +151,9 @@ fn on_active(
             let my_rotation = Quat::from_affine3(&g_trans.affine());
             let ray_dir = my_rotation.mul_vec3(front_direction);
 
-            let Ok(Some((entity, intersection))) = context.cast_ray_and_get_normal(
-                pw.world_id,
+            let context = context_access.context(pw);
+
+            let Some((entity, intersection)) = context.cast_ray_and_get_normal(
                 abs_block_pos,
                 ray_dir,
                 MAX_DOCK_CHECK,
@@ -237,7 +238,7 @@ fn on_active(
             unreachable!("Guarenteed because only entities that are in this list are valid structures from above for loop.");
         };
 
-        let world_id = pw.world_id;
+        let context = context_access.context(pw);
 
         let (min, max) = computed_total_aabb(
             entity,
@@ -252,18 +253,15 @@ fn on_active(
 
         let mut hit_something_bad = false;
 
-        context
-            .colliders_with_aabb_intersecting_aabb(world_id, aabb, |e| {
-                //
-                if let Ok(ce) = q_chunk_entity.get(e) {
-                    if ce.structure_entity != entity && !check_docked_entities(&ce.structure_entity, &q_docked_list, &e) {
-                        hit_something_bad = true;
-                    }
+        context.colliders_with_aabb_intersecting_aabb(aabb, |e| {
+            if let Ok(ce) = q_chunk_entity.get(e) {
+                if ce.structure_entity != entity && !check_docked_entities(&ce.structure_entity, &q_docked_list, &e) {
+                    hit_something_bad = true;
                 }
+            }
 
-                true
-            })
-            .expect("This should work");
+            true
+        });
 
         if !hit_something_bad {
             commands.entity(entity).insert(docked);
@@ -294,7 +292,7 @@ fn computed_total_aabb(
     delta_position: Vec3,
     q_docked_list: &Query<&DockedEntities>,
     base_translation: Vec3,
-    q_structure: &mut Query<(&mut Structure, &GlobalTransform, &PhysicsWorld)>,
+    q_structure: &mut Query<(&mut Structure, &GlobalTransform, &RapierContextEntityLink)>,
 ) -> (Vec3, Vec3) {
     let Ok((mut structure, g_trans, _)) = q_structure.get_mut(entity) else {
         unreachable!("Guarenteed because only entities that are in this list are valid structures from above for loop.");

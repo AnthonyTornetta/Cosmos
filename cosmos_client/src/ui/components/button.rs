@@ -4,6 +4,7 @@ use std::marker::PhantomData;
 
 use bevy::{
     app::{App, Update},
+    color::Color,
     core::Name,
     ecs::{
         bundle::Bundle,
@@ -18,7 +19,6 @@ use bevy::{
     },
     hierarchy::{BuildChildren, Children},
     log::error,
-    render::color::Color,
     text::{Text, TextSection, TextStyle},
     ui::{
         node_bundles::{NodeBundle, TextBundle},

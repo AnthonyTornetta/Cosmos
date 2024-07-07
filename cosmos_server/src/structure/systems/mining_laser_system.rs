@@ -2,8 +2,7 @@ use bevy::{prelude::*, utils::HashMap};
 use bevy_rapier3d::{
     geometry::{CollisionGroups, Group},
     pipeline::QueryFilter,
-    plugin::RapierContext,
-    prelude::PhysicsWorld,
+    plugin::{RapierContextAccess, RapierContextEntityLink},
 };
 use cosmos_core::{
     block::{
@@ -111,14 +110,14 @@ fn check_should_break(
 
 fn update_mining_beams(
     mut commands: Commands,
-    mut q_mining_beams: Query<(Entity, &mut MiningBeam, &PhysicsWorld, &GlobalTransform)>,
+    mut q_mining_beams: Query<(Entity, &mut MiningBeam, &RapierContextEntityLink, &GlobalTransform)>,
     q_systems: Query<&StructureSystems>,
     mut q_energy_storage_system: Query<&mut EnergyStorageSystem>,
     q_structure: Query<(&Structure, &GlobalTransform), Without<CannotBeMinedByMiningLaser>>,
     mut q_mining_block: Query<&mut MiningBlock>,
     mut q_being_mined: Query<&mut BeingMined>,
     q_is_system_active: Query<(), With<SystemActive>>,
-    rapier_context: Res<RapierContext>,
+    rapier_context_access: RapierContextAccess,
     q_parent: Query<&Parent>,
     time: Res<Time>,
 ) {
@@ -162,10 +161,11 @@ fn update_mining_beams(
         let ray_start = g_trans.translation();
         let ray_dir = g_trans.forward();
 
-        let Ok(Some((hit_entity, toi))) = rapier_context.cast_ray(
-            p_world.world_id,
+        let rapier_context = rapier_context_access.context(p_world);
+
+        let Some((hit_entity, toi)) = rapier_context.cast_ray(
             ray_start,
-            ray_dir,
+            ray_dir.into(),
             BEAM_MAX_RANGE,
             true,
             QueryFilter::predicate(QueryFilter::default(), &|entity| {
@@ -279,7 +279,7 @@ struct MiningBeam {
 fn on_activate_system(
     mut query: Query<(Entity, &MiningLaserSystem, &StructureSystem), Added<SystemActive>>,
     mut es_query: Query<&mut EnergyStorageSystem>,
-    systems: Query<(Entity, &StructureSystems, &Structure, Option<&PhysicsWorld>)>,
+    systems: Query<(Entity, &StructureSystems, &Structure, &RapierContextEntityLink)>,
     time: Res<Time>,
     mut commands: Commands,
 ) {
@@ -287,8 +287,6 @@ fn on_activate_system(
         if let Ok((ship_entity, systems, structure, physics_world)) = systems.get(system.structure_entity()) {
             if let Ok(mut energy_storage_system) = systems.query_mut(&mut es_query) {
                 let sec = time.delta_seconds();
-
-                let world_id = physics_world.map(|bw| bw.world_id).unwrap_or_default();
 
                 for line in mining_system.lines.iter() {
                     let energy = line.property.energy_per_second * sec;
@@ -309,7 +307,7 @@ fn on_activate_system(
                                 },
                                 DespawnWithStructure,
                                 TransformBundle::from_transform(Transform::from_translation(rel_pos).looking_to(beam_direction, Vec3::Y)),
-                                PhysicsWorld { world_id },
+                                *physics_world,
                             ))
                             .id();
 

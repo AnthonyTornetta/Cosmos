@@ -1,10 +1,7 @@
 use bevy::{
     app::{App, Update},
-    ecs::{
-        event::EventWriter,
-        schedule::{common_conditions::in_state, IntoSystemConfigs},
-        system::ResMut,
-    },
+    ecs::{event::EventWriter, schedule::IntoSystemConfigs, system::ResMut},
+    state::condition::in_state,
 };
 use bevy_renet2::renet2::RenetClient;
 use cosmos_core::{

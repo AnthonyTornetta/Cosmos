@@ -500,7 +500,7 @@ impl From<Color> for ArrayTextureMaterial {
     fn from(color: Color) -> Self {
         ArrayTextureMaterial {
             base_color: color,
-            alpha_mode: if color.a() < 1.0 { AlphaMode::Blend } else { AlphaMode::Opaque },
+            alpha_mode: if color.alpha() < 1.0 { AlphaMode::Blend } else { AlphaMode::Opaque },
             ..Default::default()
         }
     }

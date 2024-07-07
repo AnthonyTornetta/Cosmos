@@ -46,6 +46,7 @@ cosmos_core = { version = "0.0.6", path = "../cosmos_core", features = [
 
 bevy = { workspace = true }
 bevy_renet2 = { workspace = true, features = ["serde"] }
+renet2 = { workspace = true, features = ["bevy", "serde"] }
 serde = { workspace = true }
 bincode = { workspace = true }
 local-ip-address = { workspace = true }
@@ -77,4 +78,4 @@ derive_more = { workspace = true }
 clap = { workspace = true, features = ["derive"] }
 bevy_app_compute = { workspace = true }
 bevy_obj = { workspace = true }
-bevy_hanabi = { workspace = true }
+# bevy_hanabi = { workspace = true }

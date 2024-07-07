@@ -248,7 +248,7 @@ fn toggle_inventory_rendering(
                                 ..default()
                             },
 
-                            background_color: BackgroundColor(Color::hex("2D2D2D0A").unwrap()),
+                            background_color: BackgroundColor(Srgba::hex("2D2D2D0A").unwrap().into()),
                             ..default()
                         },
                     ))
@@ -274,7 +274,7 @@ fn toggle_inventory_rendering(
 
                                     ..default()
                                 },
-                                border_color: BorderColor(Color::hex("222222").unwrap()),
+                                border_color: BorderColor(Srgba::hex("222222").unwrap().into()),
                                 background_color: BackgroundColor(Color::WHITE),
                                 ..default()
                             },
@@ -398,7 +398,7 @@ fn create_inventory_slot(
                 ..default()
             },
 
-            border_color: BorderColor(Color::hex("222222").unwrap()),
+            border_color: BorderColor(Srgba::hex("222222").unwrap().into()),
             ..default()
         },
         Interaction::None,

@@ -1,6 +1,7 @@
 use bevy::{
     app::{App, Update},
     asset::AssetServer,
+    color::palettes::css,
     core::Name,
     ecs::{
         component::Component,
@@ -11,7 +12,6 @@ use bevy::{
         system::{Commands, Query, Res},
     },
     hierarchy::BuildChildren,
-    render::color::Color,
     text::{Text, TextStyle},
     ui::{
         node_bundles::{NodeBundle, TextBundle},
@@ -51,12 +51,12 @@ fn create_nodes(
         let font = asset_server.load("fonts/PixeloidSans.ttf");
 
         let text_style_energy = TextStyle {
-            color: Color::YELLOW,
+            color: css::YELLOW,
             font_size: 32.0,
             font: font.clone(),
         };
         let text_style_speed = TextStyle {
-            color: Color::AQUAMARINE,
+            color: css::AQUAMARINE,
             font_size: 32.0,
             font: font.clone(),
         };

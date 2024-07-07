@@ -1,8 +1,9 @@
 //! Contains logic related to the localized formation of terrain
 
 use bevy::{
-    ecs::{entity::Entity, event::Event, schedule::OnEnter},
+    ecs::{entity::Entity, event::Event},
     prelude::{App, OnExit, ResMut},
+    state::state::OnEnter,
     utils::HashSet,
 };
 use cosmos_core::{

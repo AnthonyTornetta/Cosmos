@@ -11,7 +11,11 @@ use bevy::{
     transform::components::{GlobalTransform, Transform},
     utils::HashSet,
 };
-use bevy_rapier3d::{geometry::Collider, pipeline::QueryFilter, plugin::RapierContext, prelude::PhysicsWorld};
+use bevy_rapier3d::{
+    geometry::Collider,
+    pipeline::QueryFilter,
+    plugin::{RapierContextAccess, RapierContextEntityLink},
+};
 
 use cosmos_core::{
     block::Block,
@@ -51,12 +55,12 @@ pub struct ExplosionHitEvent {
 
 fn respond_to_explosion(
     mut commands: Commands,
-    q_explosions: Query<(Entity, &Location, &WorldWithin, Option<&PhysicsWorld>, &Explosion), Added<Explosion>>,
+    q_explosions: Query<(Entity, &Location, &WorldWithin, &RapierContextEntityLink, &Explosion), Added<Explosion>>,
     q_player_world: Query<&Location, With<PlayerWorld>>,
     q_excluded: Query<(), Or<(With<Explosion>, Without<Collider>)>>,
 
     mut q_structure: Query<(&GlobalTransform, &Location, &mut Structure)>,
-    context: Res<RapierContext>,
+    context_access: RapierContextAccess,
 
     q_chunk: Query<&ChunkPhysicsPart>,
     blocks_registry: Res<Registry<Block>>,
@@ -75,28 +79,25 @@ fn respond_to_explosion(
 
         let max_radius = explosion.power.sqrt();
 
-        let physics_world = physics_world.copied().unwrap_or_default();
-
         // Have to do this by hand because `GlobalTransform` doesn't have enough time to
         // propagate down
         let explosion_rapier_coordinates = (explosion_loc - *player_world_loc).absolute_coords_f32();
 
         let mut hits = vec![];
 
-        context
-            .intersections_with_shape(
-                physics_world.world_id,
-                explosion_rapier_coordinates,
-                Quat::IDENTITY,
-                &Collider::ball(max_radius),
-                QueryFilter::default().exclude_collider(ent).predicate(&|x| !q_excluded.contains(x)),
-                |hit_entity| {
-                    hits.push(hit_entity);
+        let context = context_access.context(physics_world);
 
-                    true
-                },
-            )
-            .expect("Invalid world id used in explosion!");
+        context.intersections_with_shape(
+            explosion_rapier_coordinates,
+            Quat::IDENTITY,
+            &Collider::ball(max_radius),
+            QueryFilter::default().exclude_collider(ent).predicate(&|x| !q_excluded.contains(x)),
+            |hit_entity| {
+                hits.push(hit_entity);
+
+                true
+            },
+        );
 
         let mut ents = HashSet::new();
         for ent in hits {
@@ -159,15 +160,12 @@ fn respond_to_explosion(
                 // This ray will only find shields
                 if context
                     .cast_ray(
-                        physics_world.world_id,
                         block_coord,
                         explosion_rapier_coordinates - block_coord,
                         1.0,
                         true,
                         QueryFilter::default().predicate(&|e| q_shield.get(e).map(|s| s.is_enabled()).unwrap_or(false)),
                     )
-                    .ok()
-                    .flatten()
                     .is_none()
                 {
                     let cur_health = structure.get_block_health(block, &blocks_registry);

@@ -8,7 +8,7 @@ use bevy::pbr::PbrPlugin;
 use bevy::prelude::AnimationPlugin;
 use bevy::text::TextPlugin;
 use bevy::ui::UiPlugin;
-use bevy::winit::WinitPlugin;
+use bevy::winit::{WakeUp, WinitPlugin};
 
 #[derive(Default)]
 /// Every plugin needed for the client to run.
@@ -17,7 +17,7 @@ pub struct ClientPluginGroup;
 impl PluginGroup for ClientPluginGroup {
     fn build(self) -> PluginGroupBuilder {
         PluginGroupBuilder::start::<Self>()
-            .add(WinitPlugin { run_on_any_thread: false })
+            .add(WinitPlugin::<WakeUp>::default())
             .add(TextPlugin)
             .add(UiPlugin)
             .add(PbrPlugin::default())

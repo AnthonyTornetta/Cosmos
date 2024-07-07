@@ -37,10 +37,10 @@ pub mod window;
 use bevy::core::TaskPoolThreadAssignmentPolicy;
 use bevy::prelude::*;
 use bevy::window::WindowMode;
-use bevy_hanabi::HanabiPlugin;
+// use bevy_hanabi::HanabiPlugin;
 use bevy_mod_debugdump::schedule_graph;
 use bevy_obj::ObjPlugin;
-use bevy_rapier3d::prelude::{RapierConfiguration, TimestepMode};
+use bevy_rapier3d::prelude::TimestepMode;
 use bevy_renet2::transport::NetcodeClientPlugin;
 use bevy_renet2::RenetClientPlugin;
 use clap::{arg, Parser};
@@ -111,13 +111,10 @@ fn main() {
 
     app
         // .insert_resource(HostConfig { host_name })
-        .insert_resource(RapierConfiguration {
-            timestep_mode: TimestepMode::Interpolated {
-                dt: 1.0 / 60.0,
-                time_scale: 1.0,
-                substeps: 2,
-            },
-            ..default()
+        .insert_resource(TimestepMode::Interpolated {
+            dt: 1.0 / 60.0,
+            time_scale: 1.0,
+            substeps: 2,
         })
         .insert_resource(ClearColor(Color::BLACK))
         // This must be registered here, before it is used anywhere
@@ -130,7 +127,7 @@ fn main() {
             GameState::MainMenu,
             GameState::Playing,
         ))
-        .add_plugins((RenetClientPlugin, NetcodeClientPlugin, ObjPlugin, HanabiPlugin))
+        .add_plugins((RenetClientPlugin, NetcodeClientPlugin, ObjPlugin /*HanabiPlugin*/))
         // .add_plugins(RapierDebugRenderPlugin::default())
         .add_systems(OnEnter(GameState::Connecting), connect::establish_connection)
         .add_systems(Update, connect::wait_for_connection.run_if(in_state(GameState::Connecting)))

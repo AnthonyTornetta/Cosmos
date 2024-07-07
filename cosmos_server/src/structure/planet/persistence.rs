@@ -3,7 +3,7 @@
 use std::fs;
 
 use bevy::prelude::*;
-use bevy_rapier3d::prelude::PhysicsWorld;
+use bevy_rapier3d::plugin::RapierContextEntityLink;
 use cosmos_core::{
     block::data::persistence::ChunkLoadBlockDataEvent,
     netty::{cosmos_encoder, NoSendEntity},
@@ -89,12 +89,12 @@ fn structure_created(created: Query<Entity, (Added<Structure>, Without<EntityId>
 }
 
 fn populate_chunks(
-    query: Query<(Entity, &ChunkNeedsPopulated)>,
-    structure_query: Query<(&EntityId, Option<&SaveFileIdentifier>, &Location, &PhysicsWorld)>,
+    q_chunk_needs_populated: Query<(Entity, &ChunkNeedsPopulated)>,
+    q_structure: Query<(&EntityId, Option<&SaveFileIdentifier>, &Location, &RapierContextEntityLink)>,
     mut commands: Commands,
 ) {
-    for (entity, needs) in query.iter() {
-        let Ok((entity_id, structure_svi, loc, physics_world)) = structure_query.get(needs.structure_entity) else {
+    for (entity, needs) in q_chunk_needs_populated.iter() {
+        let Ok((entity_id, structure_svi, loc, physics_world)) = q_structure.get(needs.structure_entity) else {
             commands.entity(entity).remove::<ChunkNeedsPopulated>();
 
             continue;

@@ -1,16 +1,16 @@
 use bevy::{
     app::App,
     asset::AssetServer,
+    color::palettes::css,
     core::Name,
     ecs::{
         entity::Entity,
         query::With,
-        schedule::OnEnter,
         system::{Commands, Query, Res},
     },
     hierarchy::BuildChildren,
     log::error,
-    render::color::Color,
+    state::state::OnEnter,
     text::{Text, TextSection, TextStyle},
     ui::{
         node_bundles::{NodeBundle, TextBundle},
@@ -32,7 +32,7 @@ fn create_credits_node(mut commands: Commands, asset_server: Res<AssetServer>, l
     let font = asset_server.load("fonts/PixeloidSans.ttf");
 
     let text_style = TextStyle {
-        color: Color::WHITE,
+        color: css::WHITE,
         font_size: 24.0,
         font: font.clone(),
     };

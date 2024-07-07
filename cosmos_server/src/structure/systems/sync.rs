@@ -5,9 +5,10 @@ use bevy::{
         event::EventReader,
         query::{Added, Changed, Without},
         removal_detection::RemovedComponents,
-        schedule::{common_conditions::in_state, IntoSystemConfigs, OnExit},
+        schedule::IntoSystemConfigs,
         system::{Query, Res, ResMut},
     },
+    state::{condition::in_state, state::OnExit},
 };
 use bevy_renet2::renet2::RenetServer;
 use cosmos_core::{

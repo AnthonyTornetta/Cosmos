@@ -20,7 +20,7 @@ use bevy::{
     },
     hierarchy::DespawnRecursiveExt,
     prelude::{Deref, DerefMut},
-    transform::{components::GlobalTransform, TransformBundle},
+    transform::{bundles::TransformBundle, components::GlobalTransform},
     utils::hashbrown::HashMap,
 };
 use bevy_kira_audio::{prelude::*, AudioSystemSet};

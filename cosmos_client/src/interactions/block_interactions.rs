@@ -3,7 +3,8 @@
 use bevy::prelude::*;
 use bevy_rapier3d::{
     geometry::{CollisionGroups, Group, RayIntersection},
-    prelude::{QueryFilter, RapierContext, DEFAULT_WORLD_ID},
+    plugin::DefaultRapierContextAccess,
+    prelude::{QueryFilter, RapierContext},
 };
 use cosmos_core::{
     block::{
@@ -64,7 +65,7 @@ pub(crate) fn process_player_interaction(
     input_handler: InputChecker,
     camera: Query<&GlobalTransform, With<MainCamera>>,
     mut player_body: Query<(Entity, &mut Inventory, &mut LookingAt), (With<LocalPlayer>, Without<Pilot>)>,
-    rapier_context: Res<RapierContext>,
+    rapier_context_access: DefaultRapierContextAccess,
     q_chunk_physics_part: Query<&ChunkPhysicsPart>,
     q_structure: Query<(&Structure, &GlobalTransform, Option<&Planet>)>,
     mut break_writer: EventWriter<RequestBlockBreakEvent>,
@@ -76,6 +77,8 @@ pub(crate) fn process_player_interaction(
     block_items: Res<BlockItems>,
     mut commands: Commands,
 ) {
+    let rapier_context = rapier_context_access.single();
+
     // this fails if the player is a pilot
     let Ok((player_entity, mut inventory, mut looking_at)) = player_body.get_single_mut() else {
         return;
@@ -324,19 +327,15 @@ fn send_ray<'a>(
     q_structure: &'a Query<(&Structure, &GlobalTransform, Option<&Planet>)>,
     collision_group: Group,
 ) -> Option<(LookedAtBlock, &'a Structure, &'a GlobalTransform, Option<&'a Planet>)> {
-    let (entity, intersection) = rapier_context
-        .cast_ray_and_get_normal(
-            DEFAULT_WORLD_ID,
-            cam_trans.translation(),
-            cam_trans.forward(),
-            10.0,
-            true,
-            QueryFilter::new()
-                .exclude_rigid_body(player_entity)
-                .groups(CollisionGroups::new(collision_group, collision_group)), // don't want to hit yourself
-        )
-        .ok()
-        .flatten()?;
+    let (entity, intersection) = rapier_context.cast_ray_and_get_normal(
+        cam_trans.translation(),
+        cam_trans.forward().into(),
+        10.0,
+        true,
+        QueryFilter::new()
+            .exclude_rigid_body(player_entity)
+            .groups(CollisionGroups::new(collision_group, collision_group)), // don't want to hit yourself
+    )?;
 
     let structure_entity = q_chunk_physics_part.get(entity).map(|x| x.structure_entity).ok()?;
 

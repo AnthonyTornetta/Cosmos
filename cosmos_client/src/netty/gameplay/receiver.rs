@@ -4,7 +4,7 @@
 
 use std::sync::{Arc, Mutex};
 
-use bevy::{core_pipeline::bloom::BloomSettings, prelude::*, window::PrimaryWindow};
+use bevy::{color::palettes::css, core_pipeline::bloom::BloomSettings, prelude::*, window::PrimaryWindow};
 use bevy_kira_audio::prelude::AudioReceiver;
 use bevy_rapier3d::prelude::*;
 use bevy_renet2::renet2::{transport::NetcodeClientTransport, RenetClient};
@@ -452,14 +452,7 @@ fn client_sync_players(
                             ));
                         });
 
-                    commands.spawn((
-                        PlayerWorld { player: client_entity },
-                        Name::new("Player World"),
-                        loc,
-                        PhysicsWorld {
-                            world_id: DEFAULT_WORLD_ID,
-                        },
-                    ));
+                    commands.spawn((PlayerWorld { player: client_entity }, Name::new("Player World"), loc));
                 }
             }
             ServerReliableMessages::PlayerRemove { id } => {
@@ -771,7 +764,7 @@ fn client_sync_players(
             ServerReliableMessages::InvalidReactor { reason } => {
                 hud_messages.display_message(HudMessage::with_colored_string(
                     format!("Invalid reactor setup: {reason}"),
-                    Color::ORANGE_RED,
+                    css::ORANGE_RED.into(),
                 ));
             }
             ServerReliableMessages::RequestedEntityReceived(entity) => {

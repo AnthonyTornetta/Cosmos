@@ -3,7 +3,7 @@
 use std::time::Duration;
 
 use bevy::prelude::*;
-use bevy_rapier3d::prelude::{PhysicsWorld, Velocity, DEFAULT_WORLD_ID};
+use bevy_rapier3d::{plugin::RapierContextEntityLink, prelude::Velocity};
 use bevy_renet2::renet2::RenetServer;
 use cosmos_core::{
     block::Block,
@@ -54,7 +54,7 @@ fn update_system(
         &Location,
         &GlobalTransform,
         &Velocity,
-        Option<&PhysicsWorld>,
+        &RapierContextEntityLink,
     )>,
     time: Res<Time>,
     mut commands: Commands,
@@ -69,8 +69,6 @@ fn update_system(
 
                 if sec - cooldown.last_use_time > cooldown.cooldown_time.as_secs_f32() {
                     cooldown.last_use_time = sec;
-
-                    let world_id = physics_world.map(|bw| bw.world_id).unwrap_or(DEFAULT_WORLD_ID);
 
                     let mut any_fired = false;
 
@@ -94,7 +92,7 @@ fn update_system(
                                 strength,
                                 no_hit,
                                 &time,
-                                world_id,
+                                *physics_world,
                                 &mut commands,
                             );
 

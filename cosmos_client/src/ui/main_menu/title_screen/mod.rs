@@ -274,7 +274,7 @@ fn trigger_connection(
 }
 
 fn quit_game(mut evw_app_exit: EventWriter<AppExit>) {
-    evw_app_exit.send(AppExit);
+    evw_app_exit.send(AppExit::Success);
 }
 
 pub(super) fn register(app: &mut App) {

@@ -18,8 +18,8 @@ use bevy::{
     reflect::Reflect,
     time::Time,
     transform::{
+        bundles::TransformBundle,
         components::{GlobalTransform, Transform},
-        TransformBundle,
     },
     utils::hashbrown::HashMap,
 };

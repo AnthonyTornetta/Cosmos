@@ -101,7 +101,7 @@ fn missile_lockon(
         let mut best_target = preferred_focus.focusing_server_entity.and_then(|ent| {
             let (ent, loc) = q_targettable.get(ent).ok()?;
 
-            calculate_focusable_properties(ent, structure_system, loc, structure_location, targetting_forward)?;
+            calculate_focusable_properties(ent, structure_system, loc, structure_location, targetting_forward.into())?;
 
             Some(ent)
         });
@@ -110,7 +110,8 @@ fn missile_lockon(
             best_target = q_targettable
                 .iter()
                 .filter_map(|(ent, loc)| {
-                    let (dist, dot) = calculate_focusable_properties(ent, structure_system, loc, structure_location, targetting_forward)?;
+                    let (dist, dot) =
+                        calculate_focusable_properties(ent, structure_system, loc, structure_location, targetting_forward.into())?;
 
                     // Closer focusable targets will be somewhat preferred over distant ones.
                     Some((

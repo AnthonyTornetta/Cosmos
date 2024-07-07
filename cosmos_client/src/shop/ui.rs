@@ -1,19 +1,20 @@
 use bevy::{
     app::{App, Update},
     asset::AssetServer,
+    color::{palettes::css, Color, Srgba},
     core::Name,
     ecs::{
         component::Component,
         entity::Entity,
         event::{Event, EventReader},
         query::{Added, Changed, Or, With},
-        schedule::{common_conditions::in_state, IntoSystemConfigs, IntoSystemSetConfigs, SystemSet},
+        schedule::{IntoSystemConfigs, IntoSystemSetConfigs, SystemSet},
         system::{Commands, Query, Res, ResMut},
     },
     hierarchy::{BuildChildren, DespawnRecursiveExt},
     log::{error, info},
     reflect::Reflect,
-    render::color::Color,
+    state::condition::in_state,
     text::{Text, TextSection, TextStyle},
     ui::{
         node_bundles::{NodeBundle, TextBundle},
@@ -254,13 +255,13 @@ fn render_shop_ui(
     let name = &shop_ui.shop.name;
 
     let text_style = TextStyle {
-        color: Color::WHITE,
+        color: css::WHITE.into(),
         font_size: 32.0,
         font: asset_server.load("fonts/PixeloidSans.ttf"),
     };
 
     let text_style_small = TextStyle {
-        color: Color::WHITE,
+        color: css::WHITE.into(),
         font_size: 24.0,
         font: asset_server.load("fonts/PixeloidSans.ttf"),
     };
@@ -290,7 +291,7 @@ fn render_shop_ui(
             Name::new("Shop UI"),
             WindowBundle {
                 node_bundle: NodeBundle {
-                    background_color: Color::hex("2D2D2D").unwrap().into(),
+                    background_color: Srgba::hex("2D2D2D").unwrap().into(),
                     style: Style {
                         width: Val::Px(1000.0),
                         height: Val::Px(800.0),
@@ -336,9 +337,9 @@ fn render_shop_ui(
                         },
                         button: Button {
                             button_styles: Some(ButtonStyles {
-                                background_color: Color::hex("880000").unwrap(),
-                                hover_background_color: Color::hex("880000").unwrap(),
-                                press_background_color: Color::hex("880000").unwrap(),
+                                background_color: Srgba::hex("880000").unwrap().into(),
+                                hover_background_color: Srgba::hex("880000").unwrap().into(),
+                                press_background_color: Srgba::hex("880000").unwrap().into(),
                                 ..Default::default()
                             }),
                             text: Some(("Sell".into(), text_style.clone())),
@@ -359,9 +360,9 @@ fn render_shop_ui(
                         },
                         button: Button {
                             button_styles: Some(ButtonStyles {
-                                background_color: Color::DARK_GREEN,
-                                hover_background_color: Color::DARK_GREEN,
-                                press_background_color: Color::DARK_GREEN,
+                                background_color: css::DARK_GREEN.into(),
+                                hover_background_color: css::DARK_GREEN.into(),
+                                press_background_color: css::DARK_GREEN.into(),
                                 ..Default::default()
                             }),
                             text: Some(("Buy".into(), text_style.clone())),
@@ -374,7 +375,7 @@ fn render_shop_ui(
             p.spawn((
                 Name::new("Body"),
                 NodeBundle {
-                    border_color: Color::hex("1C1C1C").unwrap().into(),
+                    border_color: Srgba::hex("1C1C1C").unwrap().into(),
                     style: Style {
                         border: UiRect {
                             bottom: Val::Px(4.0),
@@ -491,7 +492,7 @@ fn render_shop_ui(
                 body.spawn((
                     Name::new("Shop Categories"),
                     NodeBundle {
-                        border_color: Color::hex("1C1C1C").unwrap().into(),
+                        border_color: Srgba::hex("1C1C1C").unwrap().into(),
                         style: Style {
                             flex_direction: FlexDirection::Column,
                             width: Val::Px(400.0),
@@ -533,8 +534,8 @@ fn render_shop_ui(
                                 ..Default::default()
                             },
                             node_bundle: NodeBundle {
-                                border_color: Color::hex("111111").unwrap().into(),
-                                background_color: Color::hex("555555").unwrap().into(),
+                                border_color: Srgba::hex("111111").unwrap().into(),
+                                background_color: Srgba::hex("555555").unwrap().into(),
                                 style: Style {
                                     border: UiRect::all(Val::Px(2.0)),
                                     padding: UiRect {
@@ -666,7 +667,7 @@ fn render_shop_ui(
                     ));
 
                     p.spawn(NodeBundle {
-                        border_color: Color::hex("555555").unwrap().into(),
+                        border_color: Srgba::hex("555555").unwrap().into(),
                         style: Style {
                             border: UiRect {
                                 top: Val::Px(5.0),
@@ -720,8 +721,8 @@ fn render_shop_ui(
                                         padding: UiRect::all(Val::Px(10.0)),
                                         ..Default::default()
                                     },
-                                    border_color: Color::hex("111111").unwrap().into(),
-                                    background_color: Color::hex("555555").unwrap().into(),
+                                    border_color: Srgba::hex("111111").unwrap().into(),
+                                    background_color: Srgba::hex("555555").unwrap().into(),
                                     ..Default::default()
                                 },
                                 text_input: TextInput {
@@ -787,9 +788,9 @@ fn render_shop_ui(
                                     slider: Slider {
                                         min: 0,
                                         max: 1,
-                                        background_color: Color::hex("999999").unwrap(),
-                                        foreground_color: Color::AQUAMARINE,
-                                        square_color: Color::hex("555555").unwrap(),
+                                        background_color: Srgba::hex("999999").unwrap().into(),
+                                        foreground_color: css::AQUAMARINE.into(),
+                                        square_color: Srgba::hex("555555").unwrap().into(),
                                         ..Default::default()
                                     },
                                     ..Default::default()
@@ -813,9 +814,9 @@ fn render_shop_ui(
                                 button: Button {
                                     text: Some(("BUY".into(), text_style.clone())),
                                     button_styles: Some(ButtonStyles {
-                                        background_color: Color::hex("008000").unwrap(),
-                                        hover_background_color: Color::DARK_GREEN,
-                                        press_background_color: Color::DARK_GREEN,
+                                        background_color: Srgba::hex("008000").unwrap().into(),
+                                        hover_background_color: css::DARK_GREEN.into(),
+                                        press_background_color: css::DARK_GREEN.into(),
                                         ..Default::default()
                                     }),
                                     ..Default::default()
@@ -902,7 +903,7 @@ fn click_item_event(
 
         commands.entity(shop_ui_ent.0).insert(PrevClickedEntity(ev.0));
         if let Ok(mut background_color) = q_background_color.get_mut(ev.0) {
-            *background_color = Color::AQUAMARINE.into();
+            *background_color = css::AQUAMARINE.into();
         }
 
         if shop_ui.selected_item.as_ref().map(|x| x.entry != *entry).unwrap_or(true) {
@@ -1003,7 +1004,7 @@ fn update_search(
 ) {
     for (ui_ent, shop_ents, shop_ui, shop_mode, search_item_query) in &q_search {
         let text_style_small = TextStyle {
-            color: Color::WHITE,
+            color: css::WHITE.into(),
             font_size: 24.0,
             font: asset_server.load("fonts/PixeloidSans.ttf"),
         };
@@ -1312,15 +1313,15 @@ fn on_change_shop_mode(
 
             btn.button_styles = Some(match shop_mode {
                 ShopMode::Buy => ButtonStyles {
-                    background_color: Color::DARK_GREEN,
-                    hover_background_color: Color::DARK_GREEN,
-                    press_background_color: Color::DARK_GREEN,
+                    background_color: css::DARK_GREEN.into(),
+                    hover_background_color: css::DARK_GREEN.into(),
+                    press_background_color: css::DARK_GREEN.into(),
                     ..Default::default()
                 },
                 ShopMode::Sell => ButtonStyles {
-                    background_color: Color::hex("880000").unwrap(),
-                    hover_background_color: Color::hex("880000").unwrap(),
-                    press_background_color: Color::hex("880000").unwrap(),
+                    background_color: Srgba::hex("880000").unwrap().into(),
+                    hover_background_color: Srgba::hex("880000").unwrap().into(),
+                    press_background_color: Srgba::hex("880000").unwrap().into(),
                     ..Default::default()
                 },
             });

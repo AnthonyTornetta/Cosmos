@@ -5,11 +5,12 @@ use bevy::{
         entity::Entity,
         query::{Added, Changed, With, Without},
         removal_detection::RemovedComponents,
-        schedule::{common_conditions::in_state, IntoSystemConfigs},
+        schedule::IntoSystemConfigs,
         system::{Commands, Query},
     },
     math::{Quat, Vec3},
     reflect::Reflect,
+    state::condition::in_state,
     transform::components::Transform,
 };
 use cosmos_core::{

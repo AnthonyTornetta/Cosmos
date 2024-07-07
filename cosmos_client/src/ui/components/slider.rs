@@ -4,6 +4,7 @@
 
 use bevy::{
     app::{App, Update},
+    color::Color,
     ecs::{
         bundle::Bundle,
         change_detection::DetectChanges,
@@ -16,7 +17,6 @@ use bevy::{
     },
     hierarchy::BuildChildren,
     reflect::Reflect,
-    render::color::Color,
     transform::components::GlobalTransform,
     ui::{node_bundles::NodeBundle, BackgroundColor, Interaction, Node, PositionType, Style, UiRect, UiScale, Val},
     window::{PrimaryWindow, Window},

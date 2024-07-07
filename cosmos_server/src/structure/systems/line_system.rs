@@ -1,11 +1,12 @@
 use bevy::{
     app::{App, Update},
+    color::{palettes::css, Color, Srgba},
     ecs::{
         event::EventReader,
-        schedule::{common_conditions::in_state, IntoSystemConfigs, OnEnter},
+        schedule::IntoSystemConfigs,
         system::{Commands, Query, Res, ResMut},
     },
-    render::color::Color,
+    state::{condition::in_state, state::OnEnter},
 };
 use cosmos_core::{
     block::{Block, BlockFace, BlockRotation},
@@ -106,55 +107,55 @@ fn structure_loaded_event<T: LineProperty, S: LinePropertyCalculator<T>>(
 
 fn add_colors(mut colors: ResMut<Registry<LineColorBlock>>, blocks: Res<Registry<Block>>) {
     if let Some(block) = blocks.from_id("cosmos:glass_white") {
-        colors.insert(block, Color::WHITE.into());
+        colors.insert(block, css::WHITE.into());
     }
     if let Some(block) = blocks.from_id("cosmos:glass_blue") {
-        colors.insert(block, Color::BLUE.into());
+        colors.insert(block, css::BLUE.into());
     }
     if let Some(block) = blocks.from_id("cosmos:glass_dark_blue") {
-        colors.insert(block, Color::hex("2658FE").unwrap().into());
+        colors.insert(block, Srgba::hex("2658FE").unwrap().into());
     }
     if let Some(block) = blocks.from_id("cosmos:glass_brown") {
-        colors.insert(block, Color::hex("943D00").unwrap().into());
+        colors.insert(block, Srgba::hex("943D00").unwrap().into());
     }
     if let Some(block) = blocks.from_id("cosmos:glass_green") {
-        colors.insert(block, Color::GREEN.into());
+        colors.insert(block, css::GREEN.into());
     }
     if let Some(block) = blocks.from_id("cosmos:glass_dark_green") {
-        colors.insert(block, Color::DARK_GREEN.into());
+        colors.insert(block, css::DARK_GREEN.into());
     }
     if let Some(block) = blocks.from_id("cosmos:glass_orange") {
-        colors.insert(block, Color::ORANGE.into());
+        colors.insert(block, css::ORANGE.into());
     }
     if let Some(block) = blocks.from_id("cosmos:glass_dark_orange") {
-        colors.insert(block, Color::hex("CCA120").unwrap().into());
+        colors.insert(block, Srgba::hex("CCA120").unwrap().into());
     }
     if let Some(block) = blocks.from_id("cosmos:glass_pink") {
-        colors.insert(block, Color::PINK.into());
+        colors.insert(block, css::PINK.into());
     }
     if let Some(block) = blocks.from_id("cosmos:glass_dark_pink") {
-        colors.insert(block, Color::hex("CC0170").unwrap().into());
+        colors.insert(block, Srgba::hex("CC0170").unwrap().into());
     }
     if let Some(block) = blocks.from_id("cosmos:glass_purple") {
-        colors.insert(block, Color::PURPLE.into());
+        colors.insert(block, css::PURPLE.into());
     }
     if let Some(block) = blocks.from_id("cosmos:glass_dark_purple") {
-        colors.insert(block, Color::hex("AB1EB6").unwrap().into());
+        colors.insert(block, Srgba::hex("AB1EB6").unwrap().into());
     }
     if let Some(block) = blocks.from_id("cosmos:glass_red") {
-        colors.insert(block, Color::RED.into());
+        colors.insert(block, css::RED.into());
     }
     if let Some(block) = blocks.from_id("cosmos:glass_dark_red") {
-        colors.insert(block, Color::hex("AB1EB6").unwrap().into());
+        colors.insert(block, Srgba::hex("AB1EB6").unwrap().into());
     }
     if let Some(block) = blocks.from_id("cosmos:glass_yellow") {
-        colors.insert(block, Color::YELLOW.into());
+        colors.insert(block, css::YELLOW.into());
     }
     if let Some(block) = blocks.from_id("cosmos:glass_dark_yellow") {
-        colors.insert(block, Color::hex("CCA120").unwrap().into());
+        colors.insert(block, Srgba::hex("CCA120").unwrap().into());
     }
     if let Some(block) = blocks.from_id("cosmos:glass_mint") {
-        colors.insert(block, Color::hex("28FF9E").unwrap().into());
+        colors.insert(block, Srgba::hex("28FF9E").unwrap().into());
     }
 }
 
@@ -366,15 +367,24 @@ fn calculate_color_for_line<T: LineProperty, S: LinePropertyCalculator<T>>(
 
         let averaged_color = colors
             .into_iter()
-            .map(|x| x.color)
-            .reduce(|x, y| Color::rgb(x.r() + y.r(), x.g() + y.g(), x.b() + y.b()))
-            .unwrap_or(Color::WHITE);
+            .map(|x| Srgba::from(x.color))
+            .reduce(|x, y| Srgba {
+                red: x.red + y.red,
+                green: x.green + y.green,
+                blue: x.blue + y.blue,
+                alpha: 1.0,
+            })
+            .unwrap_or(css::WHITE);
 
-        Some(Color::rgb(
-            averaged_color.r() / len as f32,
-            averaged_color.g() / len as f32,
-            averaged_color.b() / len as f32,
-        ))
+        Some(
+            Srgba {
+                red: averaged_color.red / len as f32,
+                green: averaged_color.green / len as f32,
+                blue: averaged_color.blue / len as f32,
+                alpha: 1.0,
+            }
+            .into(),
+        )
     } else {
         None
     }
