@@ -51,12 +51,12 @@ fn create_nodes(
         let font = asset_server.load("fonts/PixeloidSans.ttf");
 
         let text_style_energy = TextStyle {
-            color: css::YELLOW,
+            color: css::YELLOW.into(),
             font_size: 32.0,
             font: font.clone(),
         };
         let text_style_speed = TextStyle {
-            color: css::AQUAMARINE,
+            color: css::AQUAMARINE.into(),
             font_size: 32.0,
             font: font.clone(),
         };

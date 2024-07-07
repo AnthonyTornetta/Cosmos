@@ -235,14 +235,15 @@ fn listen_button_presses(
 
 fn tick_text_alpha_down(mut query: Query<&mut Text, With<ItemNameDisplay>>, time: Res<Time>) {
     if let Ok(mut text) = query.get_single_mut() {
-        let col = text.sections[0].style.color;
+        let col: Srgba = text.sections[0].style.color.into();
 
-        text.sections[0].style.color = Color::rgba(
-            col.r(),
-            col.g(),
-            col.b(),
-            (col.a() - time.delta_seconds() / ITEM_NAME_FADE_DURATION_SEC).max(0.0),
-        );
+        text.sections[0].style.color = Srgba {
+            red: col.red,
+            green: col.green,
+            blue: col.blue,
+            alpha: (col.alpha - time.delta_seconds() / ITEM_NAME_FADE_DURATION_SEC).max(0.0),
+        }
+        .into();
     }
 }
 

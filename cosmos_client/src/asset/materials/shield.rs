@@ -6,7 +6,7 @@ use bevy::{
     math::Vec4,
     pbr::{ExtendedMaterial, MaterialExtension, MaterialPlugin, StandardMaterial},
     reflect::TypePath,
-    render::render_resource::AsBindGroup,
+    render::{mesh::MeshVertexBufferLayoutRef, render_resource::AsBindGroup},
 };
 
 /// The maximum number of shield hits that can be rendered
@@ -33,7 +33,7 @@ impl MaterialExtension for ShieldMaterialExtension {
     fn specialize(
         _pipeline: &bevy::pbr::MaterialExtensionPipeline,
         descriptor: &mut bevy::render::render_resource::RenderPipelineDescriptor,
-        _layout: &bevy::render::mesh::MeshVertexBufferLayout,
+        _layout: &MeshVertexBufferLayoutRef,
         _key: bevy::pbr::MaterialExtensionKey<Self>,
     ) -> Result<(), bevy::render::render_resource::SpecializedMeshPipelineError> {
         descriptor.primitive.cull_mode = None;
