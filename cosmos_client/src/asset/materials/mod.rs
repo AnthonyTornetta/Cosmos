@@ -30,7 +30,7 @@ pub enum MaterialType {
     /// The normal behavior of your material, like when it's placed on a structure.
     Normal,
     /// Used in the UI and should not respond to any lighting.
-    Unlit,
+    Illuminated,
     /// Used in LODs when the blocks are at a certani scale, so if your material should be dumbed down a bit use this.
     ///
     /// For example, all transparent blocks are made opqaue by default.

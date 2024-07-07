@@ -39,6 +39,10 @@ fn poll_rendering_chunks(
 
     std::mem::swap(&mut rendering_chunks.0, &mut todo);
 
+    // Reverse to iterate from most recent to least recent
+    todo.reverse();
+    let mut events_to_send = Vec::new();
+
     for mut rendering_chunk in todo {
         if let Some(rendered_chunk) = future::block_on(future::poll_once(&mut rendering_chunk.0)) {
             let (entity, mut chunk_mesh) = (rendered_chunk.chunk_entity, rendered_chunk.mesh);
@@ -51,12 +55,19 @@ fn poll_rendering_chunks(
             if let Ok(chunk_entity) = q_chunk_entity.get(entity) {
                 // This should be sent even if there are no custom blocks, because the chunk may have had
                 // custom blocks in the past that need their rendering info cleaned up
-                ev_writer.send(ChunkNeedsCustomBlocksRendered {
+                let ev = ChunkNeedsCustomBlocksRendered {
                     block_ids: rendered_chunk.custom_blocks,
                     chunk_coordinate: chunk_entity.chunk_location,
                     mesh_entity_parent: entity,
                     structure_entity: chunk_entity.structure_entity,
-                });
+                };
+
+                if events_to_send.contains(&ev) {
+                    // We have already rendered a more up-to-date version of this chunk, so don't bother doing anything else.
+                    continue;
+                }
+
+                events_to_send.push(ev);
             }
 
             let mut old_mesh_entities = Vec::new();
@@ -184,14 +195,14 @@ fn poll_rendering_chunks(
 
                 let mesh_material = chunk_mesh.mesh_materials.pop().expect("This has one element in it");
 
+                let aabb = mesh_material.mesh.compute_aabb();
                 let mesh = meshes.add(mesh_material.mesh);
-                let s = (CHUNK_DIMENSIONS / 2) as f32;
 
                 commands.entity(entity).insert((
                     mesh,
                     // mesh_material.material_id,
                     // Remove this once https://github.com/bevyengine/bevy/issues/4294 is done (when bevy ~0.10~ ~0.11~ ~0.12~ 0.13 is released)
-                    Aabb::from_min_max(Vec3::new(-s, -s, -s), Vec3::new(s, s, s)),
+                    aabb.unwrap_or_default(),
                 ));
 
                 event_writer.send(AddMaterialEvent {
@@ -220,6 +231,11 @@ fn poll_rendering_chunks(
             rendering_chunks.push(rendering_chunk);
         }
     }
+
+    // Undo the reverse above
+    rendering_chunks.0.reverse();
+
+    ev_writer.send_batch(events_to_send);
 }
 
 /// Performance hot spot

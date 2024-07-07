@@ -5,7 +5,7 @@ use bevy::ecs::entity::Entity;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    block::gravity_well::GravityWell,
+    block::specific_blocks::gravity_well::GravityWell,
     structure::systems::{StructureSystemId, StructureSystemTypeId},
 };
 

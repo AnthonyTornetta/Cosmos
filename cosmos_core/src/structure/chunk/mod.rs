@@ -72,6 +72,14 @@ impl BlockStorer for Chunk {
         self.block_storage.block_info_iterator()
     }
 
+    fn block_info_at(&self, coords: ChunkBlockCoordinate) -> BlockInfo {
+        self.block_storage.block_info_at(coords)
+    }
+
+    fn set_block_info_at(&mut self, coords: ChunkBlockCoordinate, block_info: BlockInfo) {
+        self.block_storage.set_block_info_at(coords, block_info);
+    }
+
     #[inline(always)]
     fn block_rotation(&self, coords: ChunkBlockCoordinate) -> BlockRotation {
         self.block_storage.block_rotation(coords)
@@ -541,7 +549,7 @@ impl Chunk {
 /// This represents the information for a block. The first 3 rightmost bits are reserved for rotation data.
 ///
 /// All other bits can be used for anything else
-pub struct BlockInfo(u8);
+pub struct BlockInfo(pub u8);
 
 impl BlockInfo {
     #[inline]

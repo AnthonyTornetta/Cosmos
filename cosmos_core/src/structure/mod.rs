@@ -15,6 +15,7 @@ use bevy::reflect::Reflect;
 use bevy::transform::TransformBundle;
 use bevy::utils::{HashMap, HashSet};
 use bevy_rapier3d::prelude::PhysicsWorld;
+use chunk::BlockInfo;
 use query::MutBlockData;
 
 pub mod asteroid;
@@ -44,7 +45,7 @@ use crate::block::data::persistence::ChunkLoadBlockDataEvent;
 use crate::block::data::BlockData;
 use crate::block::{Block, BlockFace, BlockRotation};
 use crate::ecs::NeedsDespawned;
-use crate::events::block_events::{BlockChangedEvent, BlockDataSystemParams};
+use crate::events::block_events::{BlockChangedEvent, BlockDataChangedEvent, BlockDataSystemParams};
 use crate::netty::NoSendEntity;
 use crate::physics::location::Location;
 use crate::registry::Registry;
@@ -655,6 +656,45 @@ impl Structure {
         match self {
             Self::Full(fs) => fs.raycast_iter(start_relative_position, direction, max_length, include_air),
             Self::Dynamic(ds) => ds.raycast_iter(start_relative_position, direction, max_length, include_air),
+        }
+    }
+
+    /// Returns the small block information storage (for example, rotation) for this block within the chunk.
+    pub fn block_info_at(&self, coords: BlockCoordinate) -> BlockInfo {
+        match self {
+            Self::Full(fs) => fs.block_info_at(coords),
+            Self::Dynamic(ds) => ds.block_info_at(coords),
+        }
+    }
+
+    /// Sets the small block information storage (for example, rotation) for this block within the chunk.
+    pub fn set_block_info_at(
+        &mut self,
+        coords: BlockCoordinate,
+        block_info: BlockInfo,
+        evw_block_data_changed: &mut EventWriter<BlockDataChangedEvent>,
+    ) {
+        match self {
+            Self::Full(fs) => fs.set_block_info_at(coords, block_info, evw_block_data_changed),
+            Self::Dynamic(ds) => ds.set_block_info_at(coords, block_info, evw_block_data_changed),
+        }
+    }
+
+    /// Returns the 6 block IDs adjacent to the given coordinates.
+    /// Any error causes that entry to be AIR_BLOCK_ID.
+    pub fn block_ids_surrounding(&self, coords: BlockCoordinate) -> [u16; 6] {
+        match self {
+            Self::Full(fs) => fs.block_ids_surrounding(coords),
+            Self::Dynamic(ds) => ds.block_ids_surrounding(coords),
+        }
+    }
+
+    /// Returns the 6 blocks adjacent to the given coordinates.
+    /// Any error causes that entry to be air.
+    pub fn blocks_surrounding<'a>(&self, coords: BlockCoordinate, blocks: &'a Registry<Block>) -> [&'a Block; 6] {
+        match self {
+            Self::Full(fs) => fs.blocks_surrounding(coords, blocks),
+            Self::Dynamic(ds) => ds.blocks_surrounding(coords, blocks),
         }
     }
 }

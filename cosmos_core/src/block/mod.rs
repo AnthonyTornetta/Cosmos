@@ -20,8 +20,8 @@ pub mod block_events;
 pub mod block_update;
 pub mod blocks;
 pub mod data;
-pub mod gravity_well;
 pub mod multiblock;
+pub mod specific_blocks;
 pub mod storage;
 
 #[derive(Reflect, Debug, Eq, PartialEq, Clone, Copy, Hash)]
@@ -88,37 +88,37 @@ impl BlockRotation {
     #[inline(always)]
     /// Returns the `BlockFace` that is this rotations's top
     pub fn local_top(&self) -> BlockFace {
-        Self::which_face_is(self, BlockFace::Top)
+        Self::global_to_local(self, BlockFace::Top)
     }
 
     #[inline(always)]
     /// Returns the `BlockFace` that is this rotations's bottom
     pub fn local_bottom(&self) -> BlockFace {
-        Self::which_face_is(self, BlockFace::Bottom)
+        Self::global_to_local(self, BlockFace::Bottom)
     }
 
     #[inline(always)]
     /// Returns the `BlockFace` that is this rotations's left
     pub fn local_left(&self) -> BlockFace {
-        Self::which_face_is(self, BlockFace::Left)
+        Self::global_to_local(self, BlockFace::Left)
     }
 
     #[inline(always)]
     /// Returns the `BlockFace` that is this rotations's right
     pub fn local_right(&self) -> BlockFace {
-        Self::which_face_is(self, BlockFace::Right)
+        Self::global_to_local(self, BlockFace::Right)
     }
 
     #[inline(always)]
     /// Returns the `BlockFace` that is this rotations's back
     pub fn local_back(&self) -> BlockFace {
-        Self::which_face_is(self, BlockFace::Back)
+        Self::global_to_local(self, BlockFace::Back)
     }
 
     #[inline(always)]
     /// Returns the `BlockFace` that is this rotations's front
     pub fn local_front(&self) -> BlockFace {
-        Self::which_face_is(self, BlockFace::Front)
+        Self::global_to_local(self, BlockFace::Front)
     }
 
     #[inline(always)]
@@ -130,10 +130,10 @@ impl BlockRotation {
         }
     }
 
-    /// Returns which face of this rotation represents the given face.
+    /// Returns which local face of this rotation represents the given global face.
     ///
-    /// For example, if your left face is [`BlockFace::Front`] and you ask for the [`BlockFace::Left`], you will be given [`BlockFace::Front`]
-    pub fn which_face_is(&self, face: BlockFace) -> BlockFace {
+    /// For example, if the front of the block is locally pointing left and you provide [`BlockFace::Front`], you will be given [`BlockFace::Left`].
+    pub fn global_to_local(&self, face: BlockFace) -> BlockFace {
         let direction = face.direction_vec3();
         let q = self.as_quat();
         let rotated = q.mul_vec3(direction);
@@ -151,6 +151,21 @@ impl BlockRotation {
         } else {
             BlockFace::Back
         }
+    }
+
+    /// Returns which global face of this rotation represents the given local face.
+    ///
+    /// For example, if the front of the block is locally pointing left and you provide [`BlockFace::Left`], you will be given [`BlockFace::Front`].
+    pub fn local_to_global(&self, face: BlockFace) -> BlockFace {
+        self.inverse().global_to_local(face)
+    }
+
+    /// Returns an array of all 6 block faces.
+    /// Entries are ordered by the global BlockFace index, but contain the local direction that BlockFace is pointing.\
+    ///
+    /// For example, if [`BlockFace::Top`] is locally pointing right, the entry at index 2 ([`BlockFace::Top`]'s index) will be [`BlockFace::Right`].
+    pub fn all_local_faces(&self) -> [BlockFace; 6] {
+        ALL_BLOCK_FACES.map(|face| self.global_to_local(face))
     }
 
     /// Gets the face that should be used for this "absolute" side.
@@ -628,7 +643,7 @@ impl BlockProperty {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, Reflect)]
+#[derive(Debug, Clone, Serialize, Deserialize, Reflect, Default)]
 /// A block is the smallest unit used on a structure.
 ///
 /// A block takes a maximum of 1x1x1 meters of space, but can take up less than that.
@@ -781,7 +796,7 @@ impl PartialEq for Block {
 #[derive(Clone, Serialize, Deserialize, Debug, Eq, Reflect)]
 /// This is how you signify which blocks should connect to which other blocks.
 ///
-/// For example, wires will connect to anything with the group "cosmos:machine".
+/// For example, wires will connect to anything with the group "cosmos:uses_logic".
 pub struct ConnectionGroup {
     unlocalized_name: String,
     hash: u64,
@@ -831,7 +846,7 @@ pub(super) fn register<T: States + Clone + Copy>(
     multiblock::register(app, post_loading_state, playing_state);
     block_update::register(app);
     storage::register(app);
-    gravity_well::register(app);
+    specific_blocks::register(app, post_loading_state);
     data::register(app);
 
     app.register_type::<BlockFace>();

@@ -89,16 +89,14 @@ fn handle_block_interact(
                     structure_block: ev.block_including_fluids.structure_block,
                     structure_entity: any_ent,
                 },
-                block: ev
-                    .block
-                    .and_then(|b| {
-                        network_mapping
-                            .server_from_client(&b.structure_entity)
-                            .map(|ent| StructureBlockPair {
-                                structure_block: b.structure_block,
-                                structure_entity: ent,
-                            })
-                    }),
+                block: ev.block.and_then(|b| {
+                    network_mapping
+                        .server_from_client(&b.structure_entity)
+                        .map(|ent| StructureBlockPair {
+                            structure_block: b.structure_block,
+                            structure_entity: ent,
+                        })
+                }),
                 alternate: ev.alternate,
             }),
         );
