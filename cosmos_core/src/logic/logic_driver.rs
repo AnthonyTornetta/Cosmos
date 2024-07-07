@@ -16,11 +16,11 @@ use super::{logic_graph::LogicGraph, LogicBlock, LogicInputEvent, LogicOutputEve
 
 #[derive(Debug, Default, Reflect, Component)]
 /// The public interface for accessing and mutating an [`Entity`]'s [`LogicGraph`].
-pub struct Logic {
+pub struct LogicDriver {
     logic_graph: LogicGraph,
 }
 
-impl Logic {
+impl LogicDriver {
     /// Returns an array of the Boolean value of the given block's input port groups.
     /// A block face without an input port is assigned false.
     /// Global face means these values are immediately usable for computing a block's logic formula with no further rotations.

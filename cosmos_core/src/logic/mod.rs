@@ -8,7 +8,7 @@ use bevy::{
     reflect::Reflect,
     utils::HashSet,
 };
-use logic::Logic;
+use logic_driver::LogicDriver;
 use logic_graph::{LogicGraph, LogicGroup};
 
 use crate::{
@@ -20,7 +20,7 @@ use crate::{
 
 use bevy::prelude::IntoSystemSetConfigs;
 
-pub mod logic;
+pub mod logic_driver;
 pub mod logic_graph;
 
 /// The number of bits to shift to set or read the logic on/off value from the [`BlockInfo`] of a block.
@@ -153,7 +153,7 @@ impl Port {
 pub struct LogicOutputEvent {
     /// The block coordinates.
     pub block: StructureBlock,
-    /// The entity containing the structure and wiregraph this block is in.
+    /// The entity containing the structure and logic graph this block is in.
     pub entity: Entity,
 }
 
@@ -163,7 +163,7 @@ pub struct LogicOutputEvent {
 pub struct LogicInputEvent {
     /// The block coordinates.
     pub block: StructureBlock,
-    /// The entity containing the structure and wiregraph this block is in.
+    /// The entity containing the structure and logic graph this block is in.
     pub entity: Entity,
 }
 
@@ -171,13 +171,13 @@ fn logic_block_placed_event_listener(
     mut evr_block_updated: EventReader<BlockChangedEvent>,
     blocks: Res<Registry<Block>>,
     logic_blocks: Res<Registry<LogicBlock>>,
-    mut q_logic: Query<&mut Logic>,
+    mut q_logic: Query<&mut LogicDriver>,
     mut q_structure: Query<&mut Structure>,
     mut evw_logic_output: EventWriter<LogicOutputEvent>,
     mut evw_logic_input: EventWriter<LogicInputEvent>,
 ) {
     for ev in evr_block_updated.read() {
-        // If was logic block, remove from graph.
+        // If was logic block, remove from the logic graph.
         if let Some(logic_block) = logic_blocks.from_id(blocks.from_numeric_id(ev.old_block).unlocalized_name()) {
             if let Ok(structure) = q_structure.get_mut(ev.structure_entity) {
                 if let Ok(mut logic) = q_logic.get_mut(ev.structure_entity) {
@@ -195,7 +195,7 @@ fn logic_block_placed_event_listener(
             }
         }
 
-        // If is now logic block, add to graph.
+        // If is now logic block, add to the logic graph.
         if let Some(logic_block) = logic_blocks.from_id(blocks.from_numeric_id(ev.new_block).unlocalized_name()) {
             if let Ok(structure) = q_structure.get_mut(ev.structure_entity) {
                 if let Ok(mut logic) = q_logic.get_mut(ev.structure_entity) {
@@ -215,9 +215,9 @@ fn logic_block_placed_event_listener(
     }
 }
 
-fn add_default_logic(q_needs_wire_graph: Query<Entity, (With<Structure>, Without<Logic>)>, mut commands: Commands) {
-    for entity in q_needs_wire_graph.iter() {
-        commands.entity(entity).insert(Logic::default());
+fn add_default_logic(q_needs_logic_driver: Query<Entity, (With<Structure>, Without<LogicDriver>)>, mut commands: Commands) {
+    for entity in q_needs_logic_driver.iter() {
+        commands.entity(entity).insert(LogicDriver::default());
     }
 }
 

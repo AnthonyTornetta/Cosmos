@@ -8,7 +8,7 @@ use bevy::{
 use crate::{
     block::Block,
     events::block_events::BlockDataChangedEvent,
-    logic::{logic::Logic, LogicBlock, LogicConnection, LogicInputEvent, LogicSystemSet, PortType, LOGIC_BIT},
+    logic::{logic_driver::LogicDriver, LogicBlock, LogicConnection, LogicInputEvent, LogicSystemSet, PortType, LOGIC_BIT},
     registry::{identifiable::Identifiable, Registry},
     structure::{chunk::BlockInfo, Structure},
 };
@@ -48,7 +48,7 @@ fn logic_indicator_logic_input_event_listener(
     mut evw_block_data_changed: EventWriter<BlockDataChangedEvent>,
     mut evr_logic_input: EventReader<LogicInputEvent>,
     blocks: Res<Registry<Block>>,
-    mut q_logic: Query<&mut Logic>,
+    mut q_logic_driver: Query<&mut LogicDriver>,
     mut q_structure: Query<&mut Structure>,
 ) {
     for ev in evr_logic_input.read() {
@@ -58,11 +58,11 @@ fn logic_indicator_logic_input_event_listener(
         if structure.block_at(ev.block.coords(), &blocks).unlocalized_name() != "cosmos:logic_indicator" {
             continue;
         }
-        let Ok(logic) = q_logic.get_mut(ev.entity) else {
+        let Ok(logic_driver) = q_logic_driver.get_mut(ev.entity) else {
             continue;
         };
 
-        let on = logic
+        let on = logic_driver
             .global_port_inputs(ev.block.coords(), structure.block_rotation(ev.block.coords()))
             .iter()
             .any(|port_on| *port_on);
