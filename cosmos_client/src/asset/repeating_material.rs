@@ -3,7 +3,7 @@
 use bevy::{
     asset::Asset,
     color::LinearRgba,
-    prelude::{AlphaMode, App, Color, Handle, Image, Material, MaterialPlugin},
+    prelude::{AlphaMode, App, Handle, Image, Material, MaterialPlugin},
     reflect::{Reflect, TypePath},
     render::render_resource::{AsBindGroup, ShaderRef, ShaderType},
 };

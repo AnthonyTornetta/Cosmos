@@ -3,7 +3,7 @@ use crate::{
         asset_loading::{AllTexturesDoneLoadingEvent, AssetsDoneLoadingEvent, CosmosTextureAtlas},
         materials::{
             add_materials,
-            animated_material::{AnimatedArrayTextureMaterial, AnimatedArrayTextureMaterialExtension, ATTRIBUTE_PACKED_ANIMATION_DATA},
+            animated_material::{AnimatedArrayTextureMaterial, ATTRIBUTE_PACKED_ANIMATION_DATA},
             remove_materials, AddMaterialEvent, MaterialDefinition, MaterialMeshInformationGenerator, MaterialType,
             RemoveAllMaterialsEvent,
         },
@@ -12,7 +12,6 @@ use crate::{
     state::game_state::GameState,
 };
 use bevy::{
-    pbr::ExtendedMaterial,
     prelude::*,
     render::mesh::{MeshVertexAttribute, VertexAttributeValues},
     utils::HashMap,
@@ -76,34 +75,26 @@ fn respond_to_remove_materails_event(mut event_reader: EventReader<RemoveAllMate
 }
 
 fn create_main_material(image_handle: Handle<Image>, unlit: bool) -> AnimatedArrayTextureMaterial {
-    ExtendedMaterial {
-        base: StandardMaterial {
-            alpha_mode: AlphaMode::Mask(0.5),
-            unlit,
-            metallic: 0.0,
-            reflectance: 0.0,
-            perceptual_roughness: 1.0,
-            ..Default::default()
-        },
-        extension: AnimatedArrayTextureMaterialExtension {
-            base_color_texture: Some(image_handle),
-        },
+    AnimatedArrayTextureMaterial {
+        alpha_mode: AlphaMode::Mask(0.5),
+        unlit,
+        metallic: 0.0,
+        reflectance: 0.0,
+        perceptual_roughness: 1.0,
+        base_color_texture: Some(image_handle),
+        ..Default::default()
     }
 }
 
 fn create_transparent_material(image_handle: Handle<Image>, unlit: bool) -> AnimatedArrayTextureMaterial {
-    ExtendedMaterial {
-        base: StandardMaterial {
-            alpha_mode: AlphaMode::Add,
-            unlit,
-            metallic: 0.0,
-            reflectance: 0.0,
-            perceptual_roughness: 1.0,
-            ..Default::default()
-        },
-        extension: AnimatedArrayTextureMaterialExtension {
-            base_color_texture: Some(image_handle),
-        },
+    AnimatedArrayTextureMaterial {
+        alpha_mode: AlphaMode::Add,
+        unlit,
+        metallic: 0.0,
+        reflectance: 0.0,
+        perceptual_roughness: 1.0,
+        base_color_texture: Some(image_handle),
+        ..Default::default()
     }
 }
 
