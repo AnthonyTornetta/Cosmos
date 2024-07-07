@@ -185,7 +185,6 @@ fn create_disconnect_screen(
                                     },
                                     ..Default::default()
                                 },
-                                ..Default::default()
                             },
                         ));
                     });

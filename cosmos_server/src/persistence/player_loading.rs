@@ -124,7 +124,7 @@ fn load_near(
                         } else {
                             let dir = format!("world/{}_{}_{}", sector.x(), sector.y(), sector.z());
 
-                            if fs::try_exists(&dir).unwrap_or(false) {
+                            if fs::exists(&dir).unwrap_or(false) {
                                 for file in WalkDir::new(&dir)
                                     .max_depth(1)
                                     .into_iter()

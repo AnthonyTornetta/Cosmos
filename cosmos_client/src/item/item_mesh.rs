@@ -1,3 +1,5 @@
+//! Mesh-creation logic for items
+
 use bevy::{
     math::{Rect, Vec2, Vec3},
     render::{color::Color, mesh::Mesh},
@@ -9,6 +11,7 @@ use crate::{
     rendering::{CosmosMeshBuilder, MeshBuilder, MeshInformation},
 };
 
+/// Creates a mesh for an item based on its image data.
 pub fn create_item_mesh(square_image_data: &[u8], item_id: u16, image_index: u32, mat: &MaterialDefinition, scale: f32) -> Mesh {
     // Data is assumed to be a square image
     let w = ((square_image_data.len() / 4) as f32).sqrt() as usize;

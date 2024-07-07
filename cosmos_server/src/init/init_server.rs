@@ -2,32 +2,20 @@
 //!
 //! Use `init` to do this.
 
-use std::{
-    net::{ToSocketAddrs, UdpSocket},
-    time::SystemTime,
-};
+use std::{net::UdpSocket, time::SystemTime};
 
 use bevy::prelude::*;
 use bevy_renet::renet::{
     transport::{NetcodeServerTransport, ServerAuthentication, ServerConfig},
     RenetServer,
 };
-use cosmos_core::netty::{connection_config, get_local_ipaddress, server::ServerLobby, PROTOCOL_ID};
+use cosmos_core::netty::{connection_config, server::ServerLobby, PROTOCOL_ID};
 
 use crate::netty::network_helpers::{ClientTicks, NetworkTick};
 
 /// Sets up the server & makes it ready to be connected to
-pub fn init(app: &mut App, address: Option<String>, port: u16) {
-    // let addr = address.unwrap_or(get_local_ipaddress());
-
-    // let public_addr = format!("{addr}:{port}")
-    //     .to_socket_addrs()
-    //     .unwrap_or_else(|e| panic!("Error creating IP address for \"{addr}\". Error: {e:?}"))
-    //     .next()
-    //     .unwrap();
-
+pub fn init(app: &mut App, port: u16) {
     let socket = UdpSocket::bind(format!("0.0.0.0:{port}")).unwrap();
-    info!("Server Local Addr: {:?}", socket.local_addr());
 
     socket.set_nonblocking(true).expect("Cannot set non-blocking mode!");
 
