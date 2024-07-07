@@ -7,7 +7,7 @@
 #![warn(missing_docs)]
 
 use bevy::{core::TaskPoolThreadAssignmentPolicy, prelude::*};
-// use bevy_mod_debugdump::schedule_graph;
+use bevy_mod_debugdump::schedule_graph;
 use bevy_rapier3d::prelude::{RapierConfiguration, TimestepMode};
 use bevy_renet::{transport::NetcodeServerPlugin, RenetServerPlugin};
 use cosmos_core::plugin::cosmos_core_plugin::CosmosCorePluginGroup;
@@ -95,18 +95,18 @@ fn main() {
         .insert_resource(server_settings);
 
     if cfg!(feature = "print-schedule") {
-        // println!(
-        //     "{}",
-        //     bevy_mod_debugdump::schedule_graph_dot(
-        //         &mut app,
-        //         Update,
-        //         &schedule_graph::Settings {
-        //             ambiguity_enable: false,
-        //             ambiguity_enable_on_world: false,
-        //             ..Default::default()
-        //         }
-        //     )
-        // );
+        println!(
+            "{}",
+            bevy_mod_debugdump::schedule_graph_dot(
+                &mut app,
+                Update,
+                &schedule_graph::Settings {
+                    ambiguity_enable: false,
+                    ambiguity_enable_on_world: false,
+                    ..Default::default()
+                }
+            )
+        );
         return;
     }
 

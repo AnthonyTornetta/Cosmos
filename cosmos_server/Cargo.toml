@@ -71,7 +71,7 @@ thread-priority = { workspace = true }
 anyhow = { workspace = true }
 thiserror = { workspace = true }
 bitflags = { workspace = true }
-# bevy_mod_debugdump = { workspace = true }
+bevy_mod_debugdump = { workspace = true }
 derive_more = { workspace = true }
 
 bevy_app_compute = { workspace = true }

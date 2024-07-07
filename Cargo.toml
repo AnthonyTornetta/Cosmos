@@ -12,7 +12,7 @@ bevy_rapier3d = { path = "../bevy_rapier_component/bevy_rapier3d/", version = "0
   "serde-serialize",
 ] }
 
-bevy_app_compute = { git = "https://github.com/AnthonyTornetta/bevy_app_compute", branch = "no-build-worker", version = "0.13.0" }
+bevy_app_compute = { git = "https://github.com/AnthonyTornetta/bevy_app_compute", branch = "no-build-worker", version = "0.14.0" }
 
 renet = "0.0.15"
 serde = "1.0.203"
@@ -28,24 +28,24 @@ rayon = "1.10.0"
 futures-lite = "2.3.0"
 local-ip-address = "0.6.1"
 image = { version = "0.25.1", default-features = false, features = ["png"] }
-bevy-inspector-egui = "0.24.0"
+bevy-inspector-egui = "0.25.0"
 crossterm = { version = "0.27.0", features = ["event-stream"] }
 renet_visualizer = { version = "0.0.8", features = ["bevy"] }
 walkdir = "2.5.0"
 toml = "0.8.14"
 lz4_flex = "0.11.3"
 thread-priority = "1.1.0"
-bevy_kira_audio = { git = "https://github.com/NiklasEi/bevy_kira_audio", version = "*" }
+bevy_kira_audio = "0.20.0"
 anyhow = "1.0.86"
 thiserror = "1.0.61"
 bitflags = "2.6.0"
-# bevy_mod_debugdump = "0.10.0"
+bevy_mod_debugdump = "0.11.0"
 arboard = "3.4.0"
 derive_more = "0.99.18"
 clap = "4.5.8"
 bytemuck = "1.16.1"
-# bevy_obj = "0.13"
-bevy_hanabi = "0.11.0"
+bevy_obj = "0.14"
+bevy_hanabi = { git = "https://github.com/djeedai/bevy_hanabi", branch = "bevy_main" }
 
 # For any non workspace package
 [profile.dev.package."*"]
