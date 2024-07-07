@@ -69,6 +69,7 @@ impl LogicGroup {
 
 #[derive(Debug, Default, Reflect)]
 /// Stores all Boolean logic relationships for a single structure.
+/// An entity's [`LogicGraph`] should never be accessed directly, except by the [`super::logic_driver::LogicDriver`].
 pub(super) struct LogicGraph {
     /// As new logic groups are created, this tracks which ID is the next available.
     next_group_id: usize,
