@@ -4,7 +4,7 @@
 
 use bevy::{
     app::{App, Update},
-    color::Color,
+    color::{palettes::css, Color},
     ecs::{
         bundle::Bundle,
         change_detection::DetectChanges,
@@ -82,9 +82,9 @@ pub struct SliderStyles {
 impl Default for Slider {
     fn default() -> Self {
         Self {
-            background_color: Color::RED,
-            foreground_color: Color::GRAY,
-            square_color: Color::AQUAMARINE,
+            background_color: css::RED.into(),
+            foreground_color: css::GRAY.into(),
+            square_color: css::AQUAMARINE.into(),
             min: 0,
             max: 100,
             slider_styles: Default::default(),

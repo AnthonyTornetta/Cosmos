@@ -4,7 +4,7 @@ use std::marker::PhantomData;
 
 use bevy::{
     app::{App, Update},
-    color::Color,
+    color::{palettes::css, Color, Srgba},
     core::Name,
     ecs::{
         bundle::Bundle,
@@ -78,12 +78,12 @@ pub struct ButtonStyles {
 impl Default for ButtonStyles {
     fn default() -> Self {
         Self {
-            background_color: Color::GRAY,
-            foreground_color: Color::WHITE,
-            hover_background_color: Color::GRAY,
-            hover_foreground_color: Color::WHITE,
-            press_background_color: Color::hex("333333").unwrap(),
-            press_foreground_color: Color::WHITE,
+            background_color: css::GRAY.into(),
+            foreground_color: css::WHITE.into(),
+            hover_background_color: css::GRAY.into(),
+            hover_foreground_color: css::WHITE.into(),
+            press_background_color: Srgba::hex("333333").unwrap().into(),
+            press_foreground_color: css::WHITE.into(),
         }
     }
 }

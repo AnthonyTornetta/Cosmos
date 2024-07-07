@@ -30,7 +30,7 @@ use crate::{
 
 use super::{UiSystemSet, UiTopRoot};
 
-const INVENTORY_SLOT_LAYER: u8 = 0b1;
+const INVENTORY_SLOT_LAYER: usize = 0b1;
 
 #[derive(Component)]
 struct UICamera;

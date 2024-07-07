@@ -39,7 +39,7 @@ fn create_disconnect_screen(
     settings: Res<Registry<Setting>>,
     lang: Res<Lang<Setting>>,
 ) {
-    let cool_blue = Color::hex("00FFFF").unwrap();
+    let cool_blue = Srgba::hex("00FFFF").unwrap().into();
 
     let text_style_large = TextStyle {
         color: cool_blue,
@@ -169,8 +169,8 @@ fn create_disconnect_screen(
                                 },
                                 value: InputValue::new(input_value),
                                 node_bundle: NodeBundle {
-                                    border_color: Color::hex("555555").unwrap().into(),
-                                    background_color: Color::hex("111111").unwrap().into(),
+                                    border_color: Srgba::hex("555555").unwrap().into(),
+                                    background_color: Srgba::hex("111111").unwrap().into(),
                                     style: Style {
                                         border: UiRect::all(Val::Px(2.0)),
                                         width: Val::Px(150.0),
@@ -218,9 +218,9 @@ fn create_disconnect_screen(
                 },
                 button: Button {
                     button_styles: Some(ButtonStyles {
-                        background_color: Color::hex("333333").unwrap(),
-                        hover_background_color: Color::hex("232323").unwrap(),
-                        press_background_color: Color::hex("111111").unwrap(),
+                        background_color: Srgba::hex("333333").unwrap().into(),
+                        hover_background_color: Srgba::hex("232323").unwrap().into(),
+                        press_background_color: Srgba::hex("111111").unwrap().into(),
                         ..Default::default()
                     }),
                     text: Some(("Cancel".into(), text_style.clone())),
@@ -243,9 +243,9 @@ fn create_disconnect_screen(
                 },
                 button: Button {
                     button_styles: Some(ButtonStyles {
-                        background_color: Color::hex("333333").unwrap(),
-                        hover_background_color: Color::hex("232323").unwrap(),
-                        press_background_color: Color::hex("111111").unwrap(),
+                        background_color: Srgba::hex("333333").unwrap().into(),
+                        hover_background_color: Srgba::hex("232323").unwrap().into(),
+                        press_background_color: Srgba::hex("111111").unwrap().into(),
                         ..Default::default()
                     }),
                     text: Some(("Done".into(), text_style.clone())),

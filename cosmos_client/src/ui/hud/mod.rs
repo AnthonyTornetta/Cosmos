@@ -32,7 +32,7 @@ fn create_credits_node(mut commands: Commands, asset_server: Res<AssetServer>, l
     let font = asset_server.load("fonts/PixeloidSans.ttf");
 
     let text_style = TextStyle {
-        color: css::WHITE,
+        color: css::WHITE.into(),
         font_size: 24.0,
         font: font.clone(),
     };

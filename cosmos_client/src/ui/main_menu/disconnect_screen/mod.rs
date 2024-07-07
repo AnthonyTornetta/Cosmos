@@ -11,7 +11,7 @@ fn create_disconnect_screen(
     q_ui_root: Query<Entity, With<MainMenuRootUiNode>>,
     client: Option<Res<RenetClient>>,
 ) {
-    let cool_blue = Color::hex("00FFFF").unwrap();
+    let cool_blue: Color = Srgba::hex("00FFFF").unwrap().into();
 
     let text_style = TextStyle {
         color: Color::WHITE,
@@ -84,9 +84,9 @@ fn create_disconnect_screen(
             },
             button: Button {
                 button_styles: Some(ButtonStyles {
-                    background_color: Color::hex("333333").unwrap(),
-                    hover_background_color: Color::hex("232323").unwrap(),
-                    press_background_color: Color::hex("111111").unwrap(),
+                    background_color: Srgba::hex("333333").unwrap().into(),
+                    hover_background_color: Srgba::hex("232323").unwrap().into(),
+                    press_background_color: Srgba::hex("111111").unwrap().into(),
                     ..Default::default()
                 }),
                 text: Some(("OK".into(), text_style.clone())),

@@ -1,9 +1,23 @@
-use crate::asset::{
-    asset_loading::{AllTexturesDoneLoadingEvent, AssetsDoneLoadingEvent, CosmosTextureAtlas},
-    materials::animated_material::{AnimatedArrayTextureMaterial, ATTRIBUTE_PACKED_ANIMATION_DATA},
+use crate::{
+    asset::{
+        asset_loading::{AllTexturesDoneLoadingEvent, AssetsDoneLoadingEvent, CosmosTextureAtlas},
+        materials::{
+            add_materials,
+            animated_material::{AnimatedArrayTextureMaterial, AnimatedArrayTextureMaterialExtension, ATTRIBUTE_PACKED_ANIMATION_DATA},
+            remove_materials, AddMaterialEvent, MaterialDefinition, MaterialMeshInformationGenerator, MaterialType,
+            RemoveAllMaterialsEvent,
+        },
+    },
+    rendering::MeshInformation,
+    state::game_state::GameState,
 };
-
-use super::super::*;
+use bevy::{
+    pbr::ExtendedMaterial,
+    prelude::*,
+    render::mesh::{MeshVertexAttribute, VertexAttributeValues},
+    utils::HashMap,
+};
+use cosmos_core::registry::{identifiable::Identifiable, Registry};
 use serde::{Deserialize, Serialize};
 
 #[derive(Resource)]
@@ -62,26 +76,32 @@ fn respond_to_remove_materails_event(mut event_reader: EventReader<RemoveAllMate
 }
 
 fn create_main_material(image_handle: Handle<Image>, unlit: bool) -> AnimatedArrayTextureMaterial {
-    AnimatedArrayTextureMaterial {
-        base_color_texture: Some(image_handle),
-        alpha_mode: AlphaMode::Mask(0.5),
-        unlit,
-        metallic: 0.0,
-        reflectance: 0.0,
-        perceptual_roughness: 1.0,
-        ..Default::default()
+    ExtendedMaterial {
+        base: StandardMaterial {
+            base_color_texture: Some(image_handle),
+            alpha_mode: AlphaMode::Mask(0.5),
+            unlit,
+            metallic: 0.0,
+            reflectance: 0.0,
+            perceptual_roughness: 1.0,
+            ..Default::default()
+        },
+        extension: AnimatedArrayTextureMaterialExtension::default(),
     }
 }
 
 fn create_transparent_material(image_handle: Handle<Image>, unlit: bool) -> AnimatedArrayTextureMaterial {
-    AnimatedArrayTextureMaterial {
-        base_color_texture: Some(image_handle),
-        alpha_mode: AlphaMode::Add,
-        unlit,
-        metallic: 0.0,
-        reflectance: 0.0,
-        perceptual_roughness: 1.0,
-        ..Default::default()
+    ExtendedMaterial {
+        base: StandardMaterial {
+            base_color_texture: Some(image_handle),
+            alpha_mode: AlphaMode::Add,
+            unlit,
+            metallic: 0.0,
+            reflectance: 0.0,
+            perceptual_roughness: 1.0,
+            ..Default::default()
+        },
+        extension: AnimatedArrayTextureMaterialExtension::default(),
     }
 }
 
@@ -219,5 +239,5 @@ pub(super) fn register(app: &mut App) {
         )
             .run_if(in_state(GameState::Playing)),
     )
-    .add_systems(Update, (create_materials,).run_if(in_state(GameState::PostLoading)));
+    .add_systems(Update, create_materials.run_if(in_state(GameState::PostLoading)));
 }

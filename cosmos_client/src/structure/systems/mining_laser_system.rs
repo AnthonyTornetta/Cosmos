@@ -52,12 +52,12 @@ struct MiningLaserMesh(Handle<Mesh>);
 #[derive(Resource, Default)]
 struct MiningLaserMaterialCache(HashMap<u32, Handle<StandardMaterial>>);
 
-fn color_hash(color: Color) -> u32 {
+fn color_hash(color: Srgba) -> u32 {
     let (r, g, b, a) = (
-        (color.r() * 255.0) as u8,
-        (color.g() * 255.0) as u8,
-        (color.b() * 255.0) as u8,
-        (color.a() * 255.0) as u8,
+        (color.red * 255.0) as u8,
+        (color.green * 255.0) as u8,
+        (color.blue * 255.0) as u8,
+        (color.alpha * 255.0) as u8,
     );
 
     u32::from_be_bytes([r, g, b, a])
@@ -161,6 +161,7 @@ fn apply_mining_effects(
             for line in &mining_laser_system.lines {
                 let color = line.color.unwrap_or(Color::WHITE);
 
+                let color = color.into();
                 let hashed = color_hash(color);
 
                 if !materials_cache.0.contains_key(&hashed) {
@@ -168,13 +169,14 @@ fn apply_mining_effects(
                         hashed,
                         materials.add(StandardMaterial {
                             unlit: true,
-                            base_color: Color::Rgba {
-                                red: color.r(),
-                                green: color.g(),
-                                blue: color.b(),
+                            base_color: Srgba {
+                                red: color.red,
+                                green: color.green,
+                                blue: color.blue,
                                 alpha: 0.8,
-                            },
-                            emissive: color,
+                            }
+                            .into(),
+                            emissive: color.into(),
                             alpha_mode: AlphaMode::Add,
                             ..Default::default()
                         }),
@@ -236,7 +238,7 @@ fn resize_mining_lasers(
 
         let toi = match rapier_context_access.context(phys_world).cast_ray(
             laser_start,
-            g_trans.forward(),
+            g_trans.forward().into(),
             mining_laser.max_length,
             true,
             QueryFilter::predicate(QueryFilter::default(), &|entity| {
@@ -253,7 +255,7 @@ fn resize_mining_lasers(
                 Group::ALL & !SHIELD_COLLISION_GROUP,
             )),
         ) {
-            Ok(Some((_, toi))) => toi,
+            Some((_, toi)) => toi,
             _ => mining_laser.max_length,
         };
 

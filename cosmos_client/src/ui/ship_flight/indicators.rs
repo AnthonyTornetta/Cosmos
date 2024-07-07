@@ -111,11 +111,13 @@ fn create_indicator(
             },
         ))
         .with_children(|p| {
+            let c = Srgba::from(color);
+
             let (r, g, b, a) = (
-                (color.r() * 255.0) as u8,
-                (color.g() * 255.0) as u8,
-                (color.b() * 255.0) as u8,
-                (color.a() * 255.0) as u8,
+                (c.red * 255.0) as u8,
+                (c.green * 255.0) as u8,
+                (c.blue * 255.0) as u8,
+                (c.alpha * 255.0) as u8,
             );
 
             let color_hash = u32::from_be_bytes([r, g, b, 0]);
@@ -247,35 +249,35 @@ fn added(
 ) {
     ship_query.iter().for_each(|ent| {
         commands.entity(ent).insert(IndicatorSettings {
-            color: Color::hex("FF57337F").unwrap(),
+            color: Srgba::hex("FF57337F").unwrap().into(),
             max_distance: 20_000.0,
             offset: Vec3::new(0.5, 0.5, 0.5), // Accounts for the ship core being at 0.5, 0.5, 0.5 instead of the origin
         });
     });
     station_query.iter().for_each(|ent| {
         commands.entity(ent).insert(IndicatorSettings {
-            color: Color::hex("5b4fff7F").unwrap(),
+            color: Srgba::hex("5b4fff7F").unwrap().into(),
             max_distance: 20_000.0,
             offset: Vec3::new(0.5, 0.5, 0.5), // Accounts for the station core being at 0.5, 0.5, 0.5 instead of the origin
         });
     });
     planet_query.iter().for_each(|ent| {
         commands.entity(ent).insert(IndicatorSettings {
-            color: Color::hex("BC8F8F7F").unwrap(),
+            color: Srgba::hex("BC8F8F7F").unwrap().into(),
             max_distance: 200_000.0,
             offset: Vec3::ZERO,
         });
     });
     asteroid_query.iter().for_each(|ent| {
         commands.entity(ent).insert(IndicatorSettings {
-            color: Color::hex("6159427F").unwrap(),
+            color: Srgba::hex("6159427F").unwrap().into(),
             max_distance: 20_000.0,
             offset: Vec3::ZERO,
         });
     });
     player_query.iter().for_each(|ent| {
         commands.entity(ent).insert(IndicatorSettings {
-            color: Color::hex("FFFFFF7F").unwrap(),
+            color: Srgba::hex("FFFFFF7F").unwrap().into(),
             max_distance: 5_000.0,
             offset: Vec3::ZERO,
         });

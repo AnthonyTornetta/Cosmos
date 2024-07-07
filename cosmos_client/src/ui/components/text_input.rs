@@ -128,7 +128,7 @@ impl Default for TextInput {
             highlight_begin: None,
             input_type: InputType::Text { max_length: None },
             style: TextStyle {
-                color: css::WHITE,
+                color: css::WHITE.into(),
                 font_size: 12.0,
                 font: Default::default(), // font assigned later
             },

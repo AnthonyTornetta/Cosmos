@@ -29,7 +29,7 @@ fn respond_to_collisions(
     mut renet_client: ResMut<RenetClient>,
 ) {
     for ev in ev_reader.read() {
-        let CollisionEvent::Started(e1, e2, _, _) = ev else {
+        let CollisionEvent::Started(e1, e2, _) = ev else {
             continue;
         };
 

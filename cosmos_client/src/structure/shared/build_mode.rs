@@ -1,6 +1,7 @@
 //! Handles the build mode logic on the client-side
 
 use bevy::{
+    color::LinearRgba,
     math::primitives::Cuboid,
     pbr::{NotShadowCaster, NotShadowReceiver},
     prelude::{
@@ -256,7 +257,12 @@ fn change_visuals(
                                     ..Default::default()
                                 },
                                 texture: texture_handle.clone(),
-                                color: Color::rgb(1.0, 0.0, 0.0),
+                                color: LinearRgba {
+                                    red: 1.0,
+                                    green: 0.0,
+                                    blue: 0.0,
+                                    alpha: 1.0,
+                                },
                             }),
                             transform: Transform::from_xyz(coords.x, 0.5, 0.5),
                             ..Default::default()
@@ -287,7 +293,12 @@ fn change_visuals(
                                     ..Default::default()
                                 },
                                 texture: texture_handle.clone(),
-                                color: Color::rgb(0.0, 1.0, 0.0),
+                                color: LinearRgba {
+                                    red: 0.0,
+                                    green: 1.0,
+                                    blue: 0.0,
+                                    alpha: 1.0,
+                                },
                             }),
                             transform: Transform::from_xyz(0.5, coords.y, 0.5),
                             ..Default::default()
@@ -318,7 +329,12 @@ fn change_visuals(
                                     ..Default::default()
                                 },
                                 texture: texture_handle.clone(),
-                                color: Color::rgb(0.0, 0.0, 1.0),
+                                color: LinearRgba {
+                                    red: 0.0,
+                                    green: 0.0,
+                                    blue: 1.0,
+                                    alpha: 1.0,
+                                },
                             }),
                             transform: Transform::from_xyz(0.5, 0.5, coords.z),
                             ..Default::default()

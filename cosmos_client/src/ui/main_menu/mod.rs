@@ -111,8 +111,15 @@ fn fade_in_background(
         const MIN_A: f32 = 0.6;
 
         let alpha_now = (1.0 / (6.0 * main_menu_time.0) + MIN_A).min(1.0);
+        let old_bg = Srgba::from(bg.0);
 
-        bg.0 = Color::rgba(bg.0.r(), bg.0.g(), bg.0.b(), alpha_now);
+        bg.0 = Srgba {
+            red: old_bg.red,
+            green: old_bg.green,
+            blue: old_bg.blue,
+            alpha: alpha_now,
+        }
+        .into();
     }
 
     main_menu_time.0 += time.delta_seconds();

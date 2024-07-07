@@ -247,6 +247,7 @@ fn render_lockon_status(
                                     texture: lockon_graphic.0.clone_weak(),
                                     flip_x: false,
                                     flip_y: false,
+                                    ..Default::default()
                                 },
                                 style: Style {
                                     width: Val::Px(64.0),
@@ -267,6 +268,7 @@ fn render_lockon_status(
                                     texture: lockon_graphic.0.clone_weak(),
                                     flip_x: false,
                                     flip_y: true,
+                                    ..Default::default()
                                 },
                                 style: Style {
                                     width: Val::Px(64.0),
@@ -302,6 +304,7 @@ fn render_lockon_status(
                                     texture: lockon_graphic.0.clone_weak(),
                                     flip_x: true,
                                     flip_y: false,
+                                    ..Default::default()
                                 },
                                 style: Style {
                                     width: Val::Px(64.0),
@@ -322,6 +325,7 @@ fn render_lockon_status(
                                     texture: lockon_graphic.0.clone_weak(),
                                     flip_x: true,
                                     flip_y: true,
+                                    ..Default::default()
                                 },
                                 style: Style {
                                     width: Val::Px(64.0),

@@ -4,7 +4,7 @@
 
 use bevy::{
     app::{App, Update},
-    color::Color,
+    color::{Color, Srgba},
     core::Name,
     ecs::{
         bundle::Bundle,
@@ -61,10 +61,10 @@ pub struct ScrollerStyles {
 impl Default for ScrollerStyles {
     fn default() -> Self {
         Self {
-            scrollbar_background_color: Color::hex("555555").unwrap(),
+            scrollbar_background_color: Srgba::hex("555555").unwrap().into(),
             // hover_scrollbar_background_color: Color::GRAY,
             // press_scrollbar_background_color: Color::AQUAMARINE,
-            scrollbar_color: Color::hex("999999").unwrap(),
+            scrollbar_color: Srgba::hex("999999").unwrap().into(),
             // hover_scrollbar_color: Color::GRAY,
             // press_scrollbar_color: Color::AQUAMARINE,
         }

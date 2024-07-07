@@ -123,7 +123,7 @@ fn add_window(
                             text: Text::from_section(
                                 &window.title,
                                 TextStyle {
-                                    color: css::WHITE,
+                                    color: css::WHITE.into(),
                                     font_size: 24.0,
                                     font: font.clone(),
                                 },
@@ -154,7 +154,7 @@ fn add_window(
                                 text: Some((
                                     "X".into(),
                                     TextStyle {
-                                        color: css::WHITE,
+                                        color: css::WHITE.into(),
                                         font_size: 24.0,
                                         font: font.clone(),
                                     },

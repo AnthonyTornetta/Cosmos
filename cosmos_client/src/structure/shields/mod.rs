@@ -128,7 +128,7 @@ fn on_add_shield_create_rendering(
                 base: StandardMaterial {
                     // unlit: true,
                     alpha_mode: AlphaMode::Add,
-                    base_color: css::BLUE,
+                    base_color: css::BLUE.into(),
                     ..Default::default()
                 },
                 extension: ShieldMaterialExtension {
