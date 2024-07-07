@@ -6,13 +6,14 @@ use bevy::{
         event::EventReader,
         query::Changed,
         removal_detection::RemovedComponents,
-        schedule::{common_conditions::in_state, IntoSystemConfigs},
+        schedule::IntoSystemConfigs,
         system::{Commands, Query, ResMut},
     },
     hierarchy::{BuildChildren, Parent},
     log::info,
     math::Vec3,
     prelude::Res,
+    state::condition::in_state,
 };
 use bevy_renet2::renet2::RenetServer;
 use cosmos_core::{

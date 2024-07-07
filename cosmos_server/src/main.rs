@@ -8,9 +8,12 @@
 
 use bevy::{core::TaskPoolThreadAssignmentPolicy, prelude::*};
 use bevy_mod_debugdump::schedule_graph;
-use bevy_rapier3d::prelude::{RapierConfiguration, TimestepMode};
+use bevy_rapier3d::{
+    plugin::{RapierContextInitialization, RapierPhysicsPlugin},
+    prelude::TimestepMode,
+};
 use bevy_renet2::{transport::NetcodeServerPlugin, RenetServerPlugin};
-use cosmos_core::plugin::cosmos_core_plugin::CosmosCorePluginGroup;
+use cosmos_core::{physics::collision_handling::CosmosPhysicsFilter, plugin::cosmos_core_plugin::CosmosCorePluginGroup};
 
 use plugin::server_plugin::ServerPlugin;
 use settings::read_server_settings;
@@ -88,6 +91,9 @@ fn main() {
             GameState::Playing,
             GameState::Playing,
         ))
+        .add_plugins(
+            RapierPhysicsPlugin::<CosmosPhysicsFilter>::default().with_default_world(RapierContextInitialization::NoAutomaticRapierContext),
+        )
         .add_plugins((RenetServerPlugin, NetcodeServerPlugin, ServerPlugin { port }))
         .insert_resource(server_settings);
 

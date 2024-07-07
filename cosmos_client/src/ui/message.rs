@@ -3,6 +3,7 @@
 use std::{collections::VecDeque, time::Duration};
 
 use bevy::{
+    color::Alpha,
     prelude::{
         in_state, App, AssetServer, BuildChildren, Color, Commands, Component, DespawnRecursiveExt, IntoSystemConfigs, Name, NodeBundle,
         Parent, Query, Res, ResMut, Resource, TextBundle, Update,
@@ -146,7 +147,10 @@ fn display_hud_messages(
             hud_messages.1 = None;
         } else {
             for section in text.sections.iter_mut() {
-                section.style.color.set_a((time_remaining / FADE_DURATION.as_secs_f32()).min(1.0));
+                section
+                    .style
+                    .color
+                    .set_alpha((time_remaining / FADE_DURATION.as_secs_f32()).min(1.0));
             }
         }
     } else if let Some(hud_message) = hud_messages.0.pop_front() {

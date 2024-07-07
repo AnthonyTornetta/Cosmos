@@ -4,8 +4,8 @@
 
 use bevy::{prelude::*, utils::HashSet};
 use bevy_rapier3d::{
-    plugin::WorldId,
-    prelude::{PhysicsWorld, RapierContext, RapierWorld, DEFAULT_WORLD_ID},
+    plugin::{RapierConfiguration, RapierContextEntityLink},
+    prelude::RapierContext,
 };
 use cosmos_core::{
     entities::player::Player,
@@ -21,60 +21,54 @@ use crate::state::GameState;
 const WORLD_SWITCH_DISTANCE: f32 = SECTOR_DIMENSIONS / 2.0;
 const WORLD_SWITCH_DISTANCE_SQRD: f32 = WORLD_SWITCH_DISTANCE * WORLD_SWITCH_DISTANCE;
 
+fn create_physics_world(commands: &mut Commands) -> RapierContextEntityLink {
+    let mut config = RapierConfiguration::new(1.0);
+    config.gravity = Vec3::ZERO;
+    let rw = commands.spawn((RapierContext::default(), config)).id();
+    RapierContextEntityLink(rw)
+}
+
 /// This is used to assign a player to a specific rapier world.
 pub fn assign_player_world(
-    player_worlds: &Query<(&Location, &WorldWithin, &PhysicsWorld), (With<Player>, Without<Parent>)>,
+    q_player_worlds: &Query<(&Location, &WorldWithin, &RapierContextEntityLink), (With<Player>, Without<Parent>)>,
     player_entity: Entity,
     location: &Location,
     commands: &mut Commands,
-    rapier_context: &mut RapierContext,
 ) {
     let mut best_distance = None;
     let mut best_world = None;
     let mut best_world_id = None;
 
-    for (loc, ww, body_world) in player_worlds.iter() {
+    for (loc, ww, body_world) in q_player_worlds.iter() {
         let distance = location.distance_sqrd(loc);
 
         if distance <= WORLD_SWITCH_DISTANCE && (best_distance.is_none() || distance < best_distance.unwrap()) {
             best_distance = Some(distance);
             best_world = Some(*ww);
-            best_world_id = Some(body_world.world_id);
+            best_world_id = Some(*body_world);
         }
     }
 
     if let Some(world) = best_world {
-        commands.entity(player_entity).insert(world).insert(PhysicsWorld {
-            world_id: best_world_id.expect("This should never be None if world is some."),
-        });
-    } else {
-        let mut rw = RapierWorld::default();
-        rw.set_gravity(Vec3::ZERO);
-
-        let world_id = rapier_context.add_world(rw);
-
-        let world_entity = commands
-            .spawn((
-                Name::new("Player World"),
-                PlayerWorld { player: player_entity },
-                *location,
-                PhysicsWorld { world_id },
-            ))
-            .id();
-
         commands
             .entity(player_entity)
-            .insert(WorldWithin(world_entity))
-            .insert(PhysicsWorld { world_id });
+            .insert(world)
+            .insert(best_world_id.expect("This should never be None if world is some."));
+    } else {
+        let link = create_physics_world(commands);
+
+        let world_entity = commands
+            .spawn((Name::new("Player World"), PlayerWorld { player: player_entity }, *location, link))
+            .id();
+
+        commands.entity(player_entity).insert(WorldWithin(world_entity)).insert(link);
     }
 }
 
 fn move_players_between_worlds(
     players: Query<(Entity, &Location), (With<WorldWithin>, With<Player>)>,
-    mut world_within_query: Query<(&mut WorldWithin, &mut PhysicsWorld)>,
-
+    mut world_within_query: Query<(&mut WorldWithin, &mut RapierContextEntityLink)>,
     mut commands: Commands,
-    mut rapier_context: ResMut<RapierContext>,
 ) {
     let mut changed = true;
 
@@ -91,10 +85,8 @@ fn move_players_between_worlds(
                     continue;
                 }
 
-                let (other_world_entity, other_body_world) = world_within_query
-                    .get(other_entity)
-                    .map(|(ent, world)| (ent.0, world.world_id))
-                    .unwrap();
+                let (other_world_entity, other_body_world) =
+                    world_within_query.get(other_entity).map(|(ent, world)| (ent.0, *world)).unwrap();
 
                 let (mut world_currently_in, mut body_world) = world_within_query.get_mut(entity).unwrap();
 
@@ -103,7 +95,7 @@ fn move_players_between_worlds(
                 if distance < WORLD_SWITCH_DISTANCE_SQRD {
                     if world_currently_in.0 != other_world_entity {
                         world_currently_in.0 = other_world_entity;
-                        body_world.world_id = other_body_world;
+                        *body_world = other_body_world;
 
                         needs_new_world = false;
                         changed = true;
@@ -117,32 +109,27 @@ fn move_players_between_worlds(
             if needs_new_world {
                 getting_new_world.push(entity);
 
-                let mut rw = RapierWorld::default();
-                rw.set_gravity(Vec3::ZERO);
-
-                let world_id = rapier_context.add_world(rw);
+                let link = create_physics_world(&mut commands);
 
                 let world_entity = commands
-                    .spawn((
-                        Name::new("Player World"),
-                        PlayerWorld { player: entity },
-                        *location,
-                        PhysicsWorld { world_id },
-                    ))
+                    .spawn((Name::new("Player World"), PlayerWorld { player: entity }, *location, link))
                     .id();
 
                 let (mut world_within, mut body_world) = world_within_query.get_mut(entity).unwrap();
 
                 world_within.0 = world_entity;
-                body_world.world_id = world_id;
+                *body_world = link;
             }
         }
     }
 }
 
 fn move_non_players_between_worlds(
-    mut needs_world: Query<(Entity, &Location, Option<&mut WorldWithin>, Option<&mut PhysicsWorld>), (Without<Player>, Without<Parent>)>,
-    players_with_worlds: Query<(&WorldWithin, &Location, &PhysicsWorld), With<Player>>,
+    mut needs_world: Query<
+        (Entity, &Location, Option<&mut WorldWithin>, Option<&mut RapierContextEntityLink>),
+        (Without<Player>, Without<Parent>),
+    >,
+    players_with_worlds: Query<(&WorldWithin, &Location, &RapierContextEntityLink), With<Player>>,
     mut commands: Commands,
 ) {
     for (entity, location, maybe_within, maybe_body_world) in needs_world.iter_mut() {
@@ -156,24 +143,24 @@ fn move_non_players_between_worlds(
             if best_ww.is_none() || dist < best_dist.unwrap() {
                 best_ww = Some(*ww);
                 best_dist = Some(dist);
-                best_world_id = Some(body_world.world_id);
+                best_world_id = Some(*body_world);
             }
         }
 
         if let Some(ww) = best_ww {
-            let world_id = best_world_id.expect("This should have a value if ww is some");
+            let world_link = best_world_id.expect("This should have a value if ww is some");
 
             if let Some(mut world_within) = maybe_within {
-                let mut body_world = maybe_body_world.expect("Something should have a PhysicsWorld if it has a WorldWithin.");
+                let mut body_world = maybe_body_world.expect("Something should have a `RapierContextEntityLink` if it has a WorldWithin.");
 
-                if body_world.world_id != world_id {
-                    body_world.world_id = world_id;
+                if *body_world != world_link {
+                    *body_world = world_link;
                 }
                 if world_within.0 != ww.0 {
                     world_within.0 = ww.0;
                 }
             } else {
-                commands.entity(entity).insert(ww).insert(PhysicsWorld { world_id });
+                commands.entity(entity).insert(ww).insert(world_link);
             }
         }
     }
@@ -183,42 +170,39 @@ fn move_non_players_between_worlds(
 ///
 /// This should be run not every frame because it can be expensive and not super necessary
 fn remove_empty_worlds(
-    query: Query<&PhysicsWorld>,
-    worlds_query: Query<(Entity, &PhysicsWorld), With<PlayerWorld>>,
-    everything_query: Query<&PhysicsWorld>,
-    mut context: ResMut<RapierContext>,
+    q_rapier_entity_links: Query<&RapierContextEntityLink>,
+    q_worlds: Query<(Entity, &RapierContextEntityLink), With<PlayerWorld>>,
     mut commands: Commands,
+    q_rapier_contexts: Query<Entity, With<RapierContext>>,
 ) {
     let mut worlds = HashSet::new();
 
-    for w in query.iter() {
-        worlds.insert(w.world_id);
+    for w in q_rapier_entity_links.iter() {
+        worlds.insert(w.0);
     }
 
     let mut to_remove = Vec::new();
-    for (world_id, _) in context.worlds.iter() {
-        if *world_id != DEFAULT_WORLD_ID && !worlds.contains(world_id) {
-            to_remove.push(*world_id);
+    for world_id in q_rapier_contexts.iter() {
+        if !worlds.contains(&world_id) {
+            to_remove.push(world_id);
         }
     }
 
     'world_loop: for world_id in to_remove {
         // Verify that nothing else is a part of this world before removing it.
-        for body_world in everything_query.iter().map(|bw| bw.world_id) {
+        for body_world in q_rapier_entity_links.iter().map(|bw| bw.0) {
             if world_id == body_world {
                 continue 'world_loop;
             }
         }
 
-        for (entity, bw) in worlds_query.iter() {
-            if bw.world_id == world_id {
+        for (entity, bw) in q_worlds.iter() {
+            if bw.0 == world_id {
                 commands.entity(entity).despawn_recursive();
             }
         }
 
-        context
-            .remove_world(world_id)
-            .expect("This world was just found to exist, so it should.");
+        commands.entity(world_id).despawn_recursive();
     }
 }
 
@@ -239,7 +223,7 @@ fn find_need_fixed(
 fn fix_location(
     mut q_location_info: Query<(&mut Location, Option<&mut Transform>), Without<PlayerWorld>>,
     q_children: Query<&Children>,
-    q_player_worlds: Query<(&Location, &WorldWithin, &PhysicsWorld), With<PlayerWorld>>,
+    q_player_worlds: Query<(&Location, &WorldWithin, &RapierContextEntityLink), With<PlayerWorld>>,
     mut commands: Commands,
     q_player_world_loc: Query<&Location, With<PlayerWorld>>,
     mut fix: ResMut<FixParentLocation>,
@@ -258,7 +242,7 @@ fn fix_location(
             if best_distance.is_none() || distance < best_distance.unwrap() {
                 best_distance = Some(distance);
                 best_world = Some(*ww);
-                best_world_id = Some(body_world.world_id);
+                best_world_id = Some(*body_world);
             }
         }
 
@@ -296,7 +280,7 @@ fn recursively_fix_locations(
     q_children: &Query<&Children>,
     commands: &mut Commands,
     world: WorldWithin,
-    world_id: WorldId,
+    world_id: RapierContextEntityLink,
 ) {
     let Ok((mut my_loc, my_trans)) = q_info.get_mut(entity) else {
         return;
@@ -306,7 +290,7 @@ fn recursively_fix_locations(
 
     my_loc.last_transform_loc = Some(translation);
 
-    commands.entity(entity).insert((world, PhysicsWorld { world_id }));
+    commands.entity(entity).insert((world, world_id));
 
     if let Some(mut my_trans) = my_trans {
         my_trans.translation = translation;

@@ -40,11 +40,14 @@ use bevy::window::WindowMode;
 // use bevy_hanabi::HanabiPlugin;
 use bevy_mod_debugdump::schedule_graph;
 use bevy_obj::ObjPlugin;
-use bevy_rapier3d::prelude::TimestepMode;
+use bevy_rapier3d::{
+    plugin::{RapierContextInitialization, RapierPhysicsPlugin},
+    prelude::TimestepMode,
+};
 use bevy_renet2::transport::NetcodeClientPlugin;
 use bevy_renet2::RenetClientPlugin;
 use clap::{arg, Parser};
-use cosmos_core::plugin::cosmos_core_plugin::CosmosCorePluginGroup;
+use cosmos_core::{physics::collision_handling::CosmosPhysicsFilter, plugin::cosmos_core_plugin::CosmosCorePluginGroup};
 use netty::connect::{self};
 use state::game_state::GameState;
 use thread_priority::{set_current_thread_priority, ThreadPriority};
@@ -127,6 +130,7 @@ fn main() {
             GameState::MainMenu,
             GameState::Playing,
         ))
+        .add_plugins(RapierPhysicsPlugin::<CosmosPhysicsFilter>::default().with_default_world(RapierContextInitialization::default()))
         .add_plugins((RenetClientPlugin, NetcodeClientPlugin, ObjPlugin /*HanabiPlugin*/))
         // .add_plugins(RapierDebugRenderPlugin::default())
         .add_systems(OnEnter(GameState::Connecting), connect::establish_connection)

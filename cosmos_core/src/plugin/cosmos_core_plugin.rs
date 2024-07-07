@@ -1,17 +1,14 @@
 //! This should contain everything needed for a cosmos application to run
 
+use crate::{block, economy, ecs, fluid, inventory, netty, persistence, projectiles, shop, universe};
+use crate::{blockitems, structure};
+use crate::{events, loader};
+use crate::{item, physics};
 use bevy::app::PluginGroupBuilder;
 use bevy::prelude::{App, Plugin, PluginGroup, States};
 use bevy::state::state::FreelyMutableState;
 use bevy_app_compute::prelude::AppComputePlugin;
 use bevy_inspector_egui::quick::WorldInspectorPlugin;
-use bevy_rapier3d::prelude::RapierPhysicsPlugin;
-
-use crate::physics::collision_handling::CosmosPhysicsFilter;
-use crate::{block, economy, ecs, fluid, inventory, netty, persistence, projectiles, shop, universe};
-use crate::{blockitems, structure};
-use crate::{events, loader};
-use crate::{item, physics};
 
 /// This plugin group should contain everything needed for a cosmos application to run
 pub struct CosmosCorePluginGroup<T>
@@ -114,7 +111,6 @@ impl<T: States + Clone + Copy + FreelyMutableState> PluginGroup for CosmosCorePl
             // .add(AssetPlugin::default())
             // .add(ScenePlugin::default())
             // .add(RenderPlugin::default())
-            .add(RapierPhysicsPlugin::<CosmosPhysicsFilter>::default())
             // .add(ImagePlugin::default_nearest())
             .add(AppComputePlugin)
             .add(WorldInspectorPlugin::default())

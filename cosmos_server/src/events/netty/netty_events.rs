@@ -23,7 +23,7 @@ use cosmos_core::registry::identifiable::Identifiable;
 use cosmos_core::registry::Registry;
 use cosmos_core::structure::chunk::CHUNK_DIMENSIONSF;
 use cosmos_core::{entities::player::Player, netty::netty_rigidbody::NettyRigidBody};
-use renet_visualizer::RenetServerVisualizer;
+use renet2_visualizer::RenetServerVisualizer;
 
 use crate::entities::player::PlayerLooking;
 use crate::netty::network_helpers::ClientTicks;
@@ -62,10 +62,9 @@ fn handle_server_events(
     mut lobby: ResMut<ServerLobby>,
     mut client_ticks: ResMut<ClientTicks>,
     q_players: Query<(Entity, &Player, &Transform, &Location, &Velocity, &RenderDistance)>,
-    player_worlds: Query<(&Location, &WorldWithin, &PhysicsWorld), (With<Player>, Without<Parent>)>,
+    player_worlds: Query<(&Location, &WorldWithin, &RapierContextEntityLink), (With<Player>, Without<Parent>)>,
     items: Res<Registry<Item>>,
     mut visualizer: ResMut<RenetServerVisualizer<200>>,
-    mut rapier_context: ResMut<RapierContext>,
     mut requested_entity: EventWriter<RequestedEntityEvent>,
     mut player_join_ev_writer: EventWriter<PlayerConnectedEvent>,
     needs_data: Res<ItemShouldHaveData>,
@@ -131,7 +130,7 @@ fn handle_server_events(
 
                 lobby.add_player(client_id, player_entity);
 
-                assign_player_world(&player_worlds, player_entity, &location, &mut commands, &mut rapier_context);
+                assign_player_world(&player_worlds, player_entity, &location, &mut commands);
 
                 let msg = cosmos_encoder::serialize(&ServerReliableMessages::PlayerCreate {
                     entity: player_entity,

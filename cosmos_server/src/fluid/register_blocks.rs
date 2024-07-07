@@ -1,9 +1,7 @@
 use bevy::{
     app::App,
-    ecs::{
-        schedule::OnEnter,
-        system::{Res, ResMut},
-    },
+    ecs::system::{Res, ResMut},
+    state::state::OnEnter,
 };
 
 use cosmos_core::fluid::registry::Fluid;

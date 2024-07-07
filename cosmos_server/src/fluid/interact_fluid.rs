@@ -8,10 +8,11 @@ use bevy::{
         entity::Entity,
         event::EventReader,
         query::{With, Without},
-        schedule::{IntoSystemConfigs, OnEnter},
+        schedule::IntoSystemConfigs,
         system::{Commands, Query, Res, ResMut},
     },
     log::{error, info},
+    state::state::OnEnter,
 };
 use cosmos_core::{
     block::{block_events::BlockInteractEvent, data::BlockData, Block},
@@ -84,7 +85,9 @@ fn on_interact_with_fluid(
             };
 
             // Attempt to insert item into its original spot, if that fails try to insert it anywhere
-            if inventory.insert_item_with_data_at(slot, item, 1, &mut commands, fluid_data) != 0 && inventory.insert_item_with_data(item, 1, &mut commands, fluid_data).1.is_none() {
+            if inventory.insert_item_with_data_at(slot, item, 1, &mut commands, fluid_data) != 0
+                && inventory.insert_item_with_data(item, 1, &mut commands, fluid_data).1.is_none()
+            {
                 info!("TODO: Throw item because it doesn't fit in inventory");
             }
         } else {
@@ -207,7 +210,9 @@ fn on_interact_with_tank(
             };
 
             // Attempt to insert item into its original spot, if that fails try to insert it anywhere
-            if inventory.insert_item_with_data_at(slot, item, 1, &mut commands, fluid_data) != 0 && inventory.insert_item_with_data(item, 1, &mut commands, fluid_data).1.is_none() {
+            if inventory.insert_item_with_data_at(slot, item, 1, &mut commands, fluid_data) != 0
+                && inventory.insert_item_with_data(item, 1, &mut commands, fluid_data).1.is_none()
+            {
                 info!("TODO: Throw item because it doesn't fit in inventory");
             }
 
@@ -309,7 +314,9 @@ fn on_interact_with_tank(
                         let item = items.from_numeric_id(fluid_holder.convert_from_item_id());
 
                         // Attempt to insert item into its original spot, if that fails try to insert it anywhere
-                        if inventory.insert_item_at(slot, item, 1, &mut commands, &needs_data) != 0 && inventory.insert_item(item, 1, &mut commands, &needs_data).1.is_none() {
+                        if inventory.insert_item_at(slot, item, 1, &mut commands, &needs_data) != 0
+                            && inventory.insert_item(item, 1, &mut commands, &needs_data).1.is_none()
+                        {
                             info!("TODO: Throw item because it doesn't fit in inventory");
                         }
                     }
