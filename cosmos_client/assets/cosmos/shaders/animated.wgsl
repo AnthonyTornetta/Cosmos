@@ -845,7 +845,7 @@ fn pbr_input_from_standard_material(
 #endif // VERTEX_TANGENTS
 
     if ((pbr_bindings::material.flags & pbr_types::STANDARD_MATERIAL_FLAGS_BASE_COLOR_TEXTURE_BIT) != 0u) {
-        textureSample(my_array_texture, my_array_texture_sampler, uv, in.texture_index);
+        pbr_input.material.base_color *= textureSample(my_array_texture, my_array_texture_sampler, uv, in.texture_index);
 
 #ifdef ALPHA_TO_COVERAGE
     // Sharpen alpha edges.

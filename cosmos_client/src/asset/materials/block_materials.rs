@@ -1143,9 +1143,14 @@ impl Material for ArrayTextureMaterial {
             depth_stencil.bias.constant = (key.bind_group_data.bits() >> STANDARD_MATERIAL_KEY_DEPTH_BIAS_SHIFT) as i32;
         }
 
-        let vertex_layout = layout.0.get_layout(&[ATTRIBUTE_TEXTURE_INDEX.at_shader_location(20)])?;
+        let vertex_layout = layout.0.get_layout(&[
+            Mesh::ATTRIBUTE_POSITION.at_shader_location(0),
+            Mesh::ATTRIBUTE_NORMAL.at_shader_location(1),
+            Mesh::ATTRIBUTE_UV_0.at_shader_location(2),
+            ATTRIBUTE_TEXTURE_INDEX.at_shader_location(20),
+        ])?;
 
-        descriptor.vertex.buffers.push(vertex_layout);
+        descriptor.vertex.buffers = vec![vertex_layout];
 
         Ok(())
     }
