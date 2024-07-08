@@ -1034,19 +1034,19 @@ impl From<&ArrayTextureMaterial> for BlockMaterialKey {
 
 impl Material for ArrayTextureMaterial {
     fn prepass_vertex_shader() -> ShaderRef {
-        "cosmos/shaders/animated_prepass.wgsl".into()
+        "cosmos/shaders/block_prepass.wgsl".into()
     }
 
     fn prepass_fragment_shader() -> ShaderRef {
-        "cosmos/shaders/animated_prepass.wgsl".into()
+        "cosmos/shaders/block_prepass.wgsl".into()
     }
 
     fn vertex_shader() -> ShaderRef {
-        "cosmos/shaders/animated.wgsl".into()
+        "cosmos/shaders/block.wgsl".into()
     }
 
     fn fragment_shader() -> ShaderRef {
-        "cosmos/shaders/animated.wgsl".into()
+        "cosmos/shaders/block.wgsl".into()
     }
 
     #[inline]

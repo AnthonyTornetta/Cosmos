@@ -2,6 +2,7 @@
 
 use bevy::{app::App, core_pipeline::bloom::BloomSettings, hierarchy::DespawnRecursiveExt, prelude::*, render::camera::Camera};
 use bevy_kira_audio::prelude::AudioReceiver;
+use bevy_rapier3d::plugin::DefaultRapierContext;
 
 use crate::{state::game_state::GameState, ui::UiSystemSet};
 
@@ -150,7 +151,15 @@ fn create_main_menu_camera(mut commands: Commands) {
 }
 
 fn create_main_menu_resource(
-    q_entity: Query<Entity, (Without<SurviveMainMenu>, Without<Window>, Without<Parent>)>,
+    q_entity: Query<
+        Entity,
+        (
+            Without<SurviveMainMenu>,
+            Without<Window>,
+            Without<DefaultRapierContext>,
+            Without<Parent>,
+        ),
+    >,
     mut commands: Commands,
     mm_resource: Option<Res<MainMenuSubState>>,
 ) {

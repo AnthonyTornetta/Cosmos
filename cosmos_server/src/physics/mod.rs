@@ -57,6 +57,8 @@ pub fn assign_player_world(
     } else {
         let link = create_physics_world(commands);
 
+        info!("Creating new physics world!");
+
         let world_entity = commands
             .spawn((Name::new("Player World"), PlayerWorld { player: player_entity }, *location, link))
             .id();
@@ -111,6 +113,7 @@ fn move_players_between_worlds(
 
                 let link = create_physics_world(&mut commands);
 
+                info!("Creating new physics world!");
                 let world_entity = commands
                     .spawn((Name::new("Player World"), PlayerWorld { player: entity }, *location, link))
                     .id();

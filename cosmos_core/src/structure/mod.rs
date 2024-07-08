@@ -10,6 +10,7 @@ use std::sync::{Arc, Mutex};
 
 use bevy::app::Update;
 use bevy::ecs::query::{QueryData, QueryFilter, ROQueryItem, With};
+use bevy::log::info;
 use bevy::prelude::{App, Event, IntoSystemConfigs, Name, PreUpdate, VisibilityBundle};
 use bevy::reflect::Reflect;
 use bevy::transform::bundles::TransformBundle;
@@ -700,7 +701,7 @@ fn spawn_chunk_entity(
     structure: &mut Structure,
     chunk_coordinate: ChunkCoordinate,
     structure_entity: Entity,
-    body_world: Option<&RapierContextEntityLink>,
+    q_entity_link: Option<&RapierContextEntityLink>,
     chunk_set_events: &mut HashSet<ChunkSetEvent>,
 ) {
     let mut entity_cmds = commands.spawn((
@@ -714,8 +715,10 @@ fn spawn_chunk_entity(
         },
     ));
 
-    if let Some(ent_link) = body_world {
+    if let Some(ent_link) = q_entity_link {
         entity_cmds.insert(*ent_link);
+    } else {
+        info!("No physics world for structure!");
     }
 
     let entity = entity_cmds.id();

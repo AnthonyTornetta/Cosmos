@@ -23,6 +23,7 @@ use bevy::transform::bundles::TransformBundle;
 use bevy::utils::HashSet;
 use bevy_rapier3d::geometry::{CollisionGroups, Group};
 use bevy_rapier3d::math::Vect;
+use bevy_rapier3d::plugin::RapierContextEntityLink;
 use bevy_rapier3d::prelude::{Collider, ColliderMassProperties, ReadMassProperties, Rot, Sensor};
 use rayon::prelude::{IntoParallelIterator, ParallelIterator};
 
@@ -461,6 +462,7 @@ struct ChunkNeedsPhysicsEvent {
 fn listen_for_new_physics_event(
     mut commands: Commands,
     structure_query: Query<&Structure>,
+    q_entity_link: Query<&RapierContextEntityLink>,
     mut event_reader: EventReader<ChunkNeedsPhysicsEvent>,
     blocks: Res<Registry<Block>>,
     colliders: Res<Registry<BlockCollider>>,
@@ -559,6 +561,8 @@ fn listen_for_new_physics_event(
                 chunk_entity_commands.remove::<(Collider, Sensor, Group)>();
             }
 
+            let ent_link = q_entity_link.get(structure_entity).ok();
+
             for (collider, mass, collider_mode, collision_group) in chunk_colliders {
                 if first {
                     if let Some(mut entity_commands) = commands.get_entity(chunk_entity) {
@@ -597,6 +601,10 @@ fn listen_for_new_physics_event(
                         collider,
                         ColliderMassProperties::Mass(mass),
                     ));
+
+                    if let Some(ent_link) = ent_link {
+                        child.insert(*ent_link);
+                    }
 
                     if let Some(group) = collision_group {
                         child.insert(CollisionGroups::new(group, group));
