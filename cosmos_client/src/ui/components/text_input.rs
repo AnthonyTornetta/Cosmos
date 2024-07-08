@@ -20,7 +20,7 @@ use bevy::{
     },
     hierarchy::BuildChildren,
     input::{
-        keyboard::{KeyCode, KeyboardInput},
+        keyboard::{Key, KeyCode, KeyboardInput},
         mouse::MouseButton,
         ButtonInput, ButtonState,
     },
@@ -32,7 +32,6 @@ use bevy::{
         node_bundles::{NodeBundle, TextBundle},
         AlignSelf, FocusPolicy, Interaction, Style,
     },
-    window::ReceivedCharacter,
 };
 
 use crate::ui::UiSystemSet;
@@ -224,21 +223,18 @@ fn added_text_input_bundle(
 
 fn send_key_inputs(
     mut evr_keyboard: EventReader<KeyboardInput>,
-    mut evr_char: EventReader<ReceivedCharacter>,
     focused: Res<Focus>,
     mut q_focused_input_field: Query<(&mut TextInput, &mut InputValue, &Interaction)>,
     inputs: Res<ButtonInput<KeyCode>>,
 ) {
     let Some(focused) = focused.0 else {
         // Consumes the event so they don't all pile up and are released when we regain focus
-        evr_char.clear();
         evr_keyboard.clear();
         return;
     };
 
     let Ok((mut focused_input_field, mut text, _)) = q_focused_input_field.get_mut(focused) else {
         // Consumes the event so they don't all pile up and are released when we regain focus
-        evr_char.clear();
         evr_keyboard.clear();
         return;
     };
@@ -246,6 +242,37 @@ fn send_key_inputs(
     for pressed in evr_keyboard.read() {
         if pressed.state != ButtonState::Pressed {
             continue;
+        }
+
+        if !inputs.pressed(KeyCode::ControlLeft) && !inputs.pressed(KeyCode::ControlRight) {
+            match &pressed.logical_key {
+                Key::Character(smol_str) => {
+                    let mut new_value = text.0.clone();
+                    let new_cursor_pos;
+
+                    if let Some(range) = focused_input_field.get_highlighted_range() {
+                        let replace_string = smol_str;
+                        new_cursor_pos = range.start + replace_string.len();
+
+                        text.0.replace_range(range, &replace_string);
+                    } else if focused_input_field.cursor_pos == text.len() {
+                        new_value.push_str(smol_str.as_str());
+
+                        new_cursor_pos = focused_input_field.cursor_pos + 1;
+                    } else {
+                        new_value.insert_str(focused_input_field.cursor_pos, smol_str.as_str());
+
+                        new_cursor_pos = focused_input_field.cursor_pos + 1;
+                    }
+
+                    if verify_input(&focused_input_field, &new_value) {
+                        text.0 = new_value;
+                        focused_input_field.cursor_pos = new_cursor_pos;
+                        focused_input_field.highlight_begin = None;
+                    }
+                }
+                _ => {}
+            }
         }
 
         match pressed.key_code {
@@ -279,40 +306,6 @@ fn send_key_inputs(
                 }
             }
             _ => {}
-        }
-    }
-
-    if inputs.pressed(KeyCode::ControlLeft) || inputs.pressed(KeyCode::ControlRight) {
-        return;
-    }
-
-    for ev in evr_char.read() {
-        for c in ev.char.chars() {
-            if !c.is_control() {
-                let mut new_value = text.0.clone();
-                let new_cursor_pos;
-
-                if let Some(range) = focused_input_field.get_highlighted_range() {
-                    let replace_string = c.to_string();
-                    new_cursor_pos = range.start + replace_string.len();
-
-                    text.0.replace_range(range, &replace_string);
-                } else if focused_input_field.cursor_pos == text.len() {
-                    new_value.push(c);
-
-                    new_cursor_pos = focused_input_field.cursor_pos + 1;
-                } else {
-                    new_value.insert(focused_input_field.cursor_pos, c);
-
-                    new_cursor_pos = focused_input_field.cursor_pos + 1;
-                }
-
-                if verify_input(&focused_input_field, &new_value) {
-                    text.0 = new_value;
-                    focused_input_field.cursor_pos = new_cursor_pos;
-                    focused_input_field.highlight_begin = None;
-                }
-            }
         }
     }
 }

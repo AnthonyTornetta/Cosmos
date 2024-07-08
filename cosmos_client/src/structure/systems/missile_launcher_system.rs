@@ -179,7 +179,13 @@ fn render_lockon_status(
     };
 
     let gap = (1.0 - percentage) * 100.0; // 100px is a decent number
-    let color = Color::rgba(1.0, 1.0 - percentage, 1.0 - percentage, 0.7);
+    let color: Color = Srgba {
+        red: 1.0,
+        green: 1.0 - percentage,
+        blue: 1.0 - percentage,
+        alpha: 0.7,
+    }
+    .into();
 
     if let Ok((_, focus_ui)) = focus_ui {
         update_corner_styles(&mut q_style, focus_ui.top_left, -gap, color);
