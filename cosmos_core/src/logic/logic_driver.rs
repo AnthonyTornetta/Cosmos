@@ -66,7 +66,7 @@ impl LogicDriver {
             local_face,
             group_id,
             port_type,
-            false,
+            0,
             entity,
             evw_logic_output,
             evw_logic_input,
@@ -238,7 +238,7 @@ impl LogicDriver {
     }
 
     /// Sets the on/off value of the given port (which must be an output port) in the logic graph.
-    pub fn update_producer(&mut self, port: Port, on: bool, evw_logic_input: &mut EventWriter<LogicInputEvent>, entity: Entity) {
-        self.logic_graph.update_producer(port, on, evw_logic_input, entity);
+    pub fn update_producer(&mut self, port: Port, signal: i32, evw_logic_input: &mut EventWriter<LogicInputEvent>, entity: Entity) {
+        self.logic_graph.update_producer(port, signal, evw_logic_input, entity);
     }
 }

@@ -23,7 +23,7 @@ pub(super) struct LogicGroup {
     /// If this wire is removed, an adjacent wire's coordinates are used. If there are no adjacent wires, it becomes [`None`].
     recent_wire_coords: Option<BlockCoordinate>,
     /// All output [`Port`]s in this group. They update first in each frame, pushing any change in their output values to the consumers.
-    pub producers: HashMap<Port, bool>,
+    pub producers: HashMap<Port, i32>,
     /// All input [`Port`]s in this group. They update second in each frame, using their new input values to recalculate their block's logic formula.
     pub consumers: HashSet<Port>,
 }
@@ -37,7 +37,7 @@ impl LogicGroup {
         }
     }
 
-    fn new_with_ports(recent_wire_coords: Option<BlockCoordinate>, producers: HashMap<Port, bool>, consumers: HashSet<Port>) -> LogicGroup {
+    fn new_with_ports(recent_wire_coords: Option<BlockCoordinate>, producers: HashMap<Port, i32>, consumers: HashSet<Port>) -> LogicGroup {
         LogicGroup {
             recent_wire_coords,
             producers,
@@ -45,17 +45,22 @@ impl LogicGroup {
         }
     }
 
-    /// Returns [`true`] if any of this group's producers are on (producing), [`false`] otherwise.
+    /// The signal on the group, which is the sum of all signals being produced by the group's producers.
+    pub fn signal(&self) -> i32 {
+        self.producers.values().sum()
+    }
+
+    // Any non-zero signal is considered "on".
     pub fn on(&self) -> bool {
-        self.producers.values().any(|&x| x)
+        self.signal() != 0
     }
 
     /// Changes a producer value and propogates the signal to all consumers if the "on" value of the group has changed.
-    pub fn update_producer(&mut self, port: Port, on: bool, evw_logic_input: &mut EventWriter<LogicInputEvent>, entity: Entity) {
-        let was_on = self.on();
-        self.producers.insert(port, on);
+    pub fn update_producer(&mut self, port: Port, signal: i32, evw_logic_input: &mut EventWriter<LogicInputEvent>, entity: Entity) {
+        let &old_signal = self.producers.get(&port).expect("Output port to be updated should exist.");
+        self.producers.insert(port, signal);
 
-        if self.on() != was_on {
+        if self.signal() != old_signal {
             // Notify the input ports in this port's group.
             for &input_port in self.consumers.iter() {
                 evw_logic_input.send(LogicInputEvent {
@@ -233,7 +238,7 @@ impl LogicGraph {
         local_face: BlockFace,
         group_id: usize,
         port_type: PortType,
-        on: bool,
+        signal: i32,
         entity: Entity,
         evw_logic_output: &mut EventWriter<LogicOutputEvent>,
         evw_logic_input: &mut EventWriter<LogicInputEvent>,
@@ -257,7 +262,7 @@ impl LogicGraph {
                 });
             }
             PortType::Output => {
-                logic_group.producers.insert(Port::new(coords, local_face), on);
+                logic_group.producers.insert(Port::new(coords, local_face), signal);
                 evw_logic_output.send(LogicOutputEvent {
                     block: StructureBlock::new(coords),
                     entity,
@@ -419,9 +424,9 @@ impl LogicGraph {
         let encountered_face = structure.block_rotation(coords).local_to_global(encountered_local_face);
         match logic_block.connection_on(encountered_face) {
             Some(LogicConnection::Port(port_type)) => {
-                // Deciding whether the port was on or off in the old group.
-                let on = match port_type {
-                    PortType::Input => false,
+                // Getting the port's output value in the previous group.
+                let old_signal = match port_type {
+                    PortType::Input => 0,
                     PortType::Output => {
                         let old_group = self
                             .group_of(&Port::new(coords, encountered_local_face), PortType::Output)
@@ -439,7 +444,7 @@ impl LogicGraph {
                     encountered_local_face,
                     new_group_id,
                     port_type,
-                    on,
+                    old_signal,
                     structure.get_entity().expect("Structure should have entity"),
                     evw_logic_output,
                     evw_logic_input,
@@ -480,9 +485,9 @@ impl LogicGraph {
         logic_block.connection_on(encountered_face).is_some()
     }
 
-    pub fn update_producer(&mut self, port: Port, on: bool, evw_logic_input: &mut EventWriter<LogicInputEvent>, entity: Entity) {
+    pub fn update_producer(&mut self, port: Port, signal: i32, evw_logic_input: &mut EventWriter<LogicInputEvent>, entity: Entity) {
         self.mut_group_of(&port, PortType::Output)
             .expect("Updated logic port should have a logic group ID.")
-            .update_producer(port, on, evw_logic_input, entity);
+            .update_producer(port, signal, evw_logic_input, entity);
     }
 }
