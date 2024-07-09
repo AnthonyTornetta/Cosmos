@@ -36,7 +36,7 @@ use cosmos_core::{
     persistence::LoadingDistance,
     physics::{
         location::{add_previous_location, handle_child_syncing, CosmosBundleSet, Location, LocationPhysicsSet, SYSTEM_SECTORS},
-        player_world::PlayerWorld,
+        player_world::{PlayerWorld, WorldWithin},
     },
     registry::Registry,
     structure::{
@@ -203,7 +203,8 @@ fn client_sync_players(
         EventWriter<SetTerrainGenData>,
         EventWriter<BlockDataChangedEvent>,
     ),
-    (query_player, parent_query, q_structure_systems, mut q_inventory, mut q_structure): (
+    (q_default_rapier_context, query_player, parent_query, q_structure_systems, mut q_inventory, mut q_structure): (
+        Query<Entity, With<DefaultRapierContext>>,
         Query<&Player>,
         Query<&Parent>,
         Query<&StructureSystems>,
@@ -447,12 +448,21 @@ fn client_sync_players(
                                 Name::new("Main Camera"),
                                 MainCamera,
                                 UiRoot,
-                                // No double UI rendering
                                 AudioReceiver,
                             ));
                         });
 
-                    commands.spawn((PlayerWorld { player: client_entity }, Name::new("Player World"), loc));
+                    info!("Player world!");
+                    commands.spawn((
+                        PlayerWorld { player: client_entity },
+                        Name::new("Player World"),
+                        loc,
+                        RapierContextEntityLink(
+                            q_default_rapier_context
+                                .get_single()
+                                .expect("The client has no default rapier context!"),
+                        ),
+                    ));
                 }
             }
             ServerReliableMessages::PlayerRemove { id } => {
@@ -910,19 +920,20 @@ fn get_entity_identifier_entity_for_despawning(
 /// Handles any just-added locations that need to sync up to their transforms
 fn fix_location(
     mut query: Query<(Entity, &mut Location, Option<&mut Transform>), (Added<Location>, Without<PlayerWorld>, Without<Parent>)>,
-    player_worlds: Query<&Location, With<PlayerWorld>>,
+    player_worlds: Query<(Entity, &Location), With<PlayerWorld>>,
     mut commands: Commands,
 ) {
     for (entity, mut location, transform) in query.iter_mut() {
         match player_worlds.get_single() {
-            Ok(loc) => {
+            Ok((pw, loc)) => {
                 let translation = loc.relative_coords_to(&location);
                 if let Some(mut transform) = transform {
                     transform.translation = translation;
                 } else {
-                    commands
-                        .entity(entity)
-                        .insert(TransformBundle::from_transform(Transform::from_translation(translation)));
+                    commands.entity(entity).insert((
+                        WorldWithin(pw),
+                        TransformBundle::from_transform(Transform::from_translation(translation)),
+                    ));
                 }
                 location.last_transform_loc = Some(translation);
             }
