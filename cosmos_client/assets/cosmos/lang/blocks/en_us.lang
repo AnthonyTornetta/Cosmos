@@ -75,8 +75,10 @@ cosmos:ramp=Ramp
 cosmos:missile_launcher=Missile Launcher
 cosmos:shield_projector=Shield Projector
 cosmos:shield_generator=Shield Generator
-cosmos:logic_wire=Logical Wire
-cosmos:logic_on=Logic On
 cosmos:power_cable=Power Cable
 cosmos:ship_dock=Ship Docking Unit
+
 cosmos:logic_indicator=Logic Indicator
+cosmos:logic_wire=Logical Wire
+cosmos:logic_on=Logic On
+cosmos:and_gate=And Gate
