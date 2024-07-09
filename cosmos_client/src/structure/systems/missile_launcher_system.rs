@@ -141,7 +141,8 @@ fn render_lockon_status(
     q_missile_focus: Query<&MissileLauncherFocus>,
     q_ui_root: Query<Entity, With<UiRoot>>,
     q_missile_focus_ui: Query<(Entity, &MissileFocusUi)>,
-    mut q_style: Query<(&mut Style, &mut BackgroundColor)>,
+    mut q_style: Query<(&mut Style, &mut UiImage)>,
+    mut q_column_style: Query<&mut Style, Without<UiImage>>,
 ) {
     let focus_ui = q_missile_focus_ui.get_single();
 
@@ -193,11 +194,11 @@ fn render_lockon_status(
         update_corner_styles(&mut q_style, focus_ui.top_right, -gap, color);
         update_corner_styles(&mut q_style, focus_ui.bottom_right, gap, color);
 
-        if let Ok((mut style, _)) = q_style.get_mut(focus_ui.left_column) {
+        if let Ok(mut style) = q_column_style.get_mut(focus_ui.left_column) {
             style.margin = UiRect::right(Val::Px(gap));
         }
 
-        if let Ok((mut style, _)) = q_style.get_mut(focus_ui.right_column) {
+        if let Ok(mut style) = q_column_style.get_mut(focus_ui.right_column) {
             style.margin = UiRect::left(Val::Px(gap));
         }
     } else {
@@ -351,13 +352,13 @@ fn render_lockon_status(
     }
 }
 
-fn update_corner_styles(q_style: &mut Query<(&mut Style, &mut BackgroundColor)>, entity: Entity, gap: f32, color: Color) {
-    let Ok((mut style, mut bg)) = q_style.get_mut(entity) else {
+fn update_corner_styles(q_style: &mut Query<(&mut Style, &mut UiImage)>, entity: Entity, gap: f32, color: Color) {
+    let Ok((mut style, mut img)) = q_style.get_mut(entity) else {
         return;
     };
 
     style.top = Val::Px(gap);
-    *bg = color.into();
+    img.color = color.into();
 }
 
 pub(super) fn register(app: &mut App) {

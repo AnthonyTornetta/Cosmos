@@ -275,7 +275,6 @@ fn toggle_inventory_rendering(
                                     ..default()
                                 },
                                 border_color: BorderColor(Srgba::hex("222222").unwrap().into()),
-                                background_color: BackgroundColor(Color::WHITE),
                                 ..default()
                             },
                             UiImage {
