@@ -45,7 +45,7 @@ derive_more = "0.99.18"
 clap = "4.5.8"
 bytemuck = "1.16.1"
 bevy_obj = "0.14"
-# bevy_hanabi = { git = "https://github.com/djeedai/bevy_hanabi", branch = "bevy_main" }
+bevy_hanabi = { git = "https://github.com/djeedai/bevy_hanabi", version = "0.12.0" }
 
 # For any non workspace package
 [profile.dev.package."*"]

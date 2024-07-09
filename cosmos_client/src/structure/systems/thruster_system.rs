@@ -57,7 +57,7 @@ fn apply_thruster_sound(
                     emissions: vec![AudioEmission {
                         instance: playing_sound,
                         max_distance: 100.0,
-                        peak_volume: 0.3,
+                        peak_volume: 0.3 * 5.0,
                         stop_tween,
                         handle: audio_handle.0.clone_weak(),
                     }],

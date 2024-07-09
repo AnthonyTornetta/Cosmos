@@ -37,7 +37,7 @@ pub mod window;
 use bevy::core::TaskPoolThreadAssignmentPolicy;
 use bevy::prelude::*;
 use bevy::window::WindowMode;
-// use bevy_hanabi::HanabiPlugin;
+use bevy_hanabi::HanabiPlugin;
 use bevy_mod_debugdump::schedule_graph;
 use bevy_obj::ObjPlugin;
 use bevy_rapier3d::{
@@ -131,7 +131,7 @@ fn main() {
             GameState::Playing,
         ))
         .add_plugins(RapierPhysicsPlugin::<CosmosPhysicsFilter>::default().with_default_world(RapierContextInitialization::default()))
-        .add_plugins((RenetClientPlugin, NetcodeClientPlugin, ObjPlugin /*HanabiPlugin*/))
+        .add_plugins((RenetClientPlugin, NetcodeClientPlugin, ObjPlugin, HanabiPlugin))
         // .add_plugins(RapierDebugRenderPlugin::default())
         .add_systems(OnEnter(GameState::Connecting), connect::establish_connection)
         .add_systems(Update, connect::wait_for_connection.run_if(in_state(GameState::Connecting)))
