@@ -5,13 +5,18 @@ use crate::asset::asset_loading::{AllTexturesDoneLoadingEvent, AssetsDoneLoading
 use super::super::*;
 
 #[derive(Resource)]
-pub(crate) struct DefaultMaterial(pub Handle<ArrayTextureMaterial>);
+pub(crate) struct DefaultMaterial(pub MaterialAccessor);
 #[derive(Resource)]
-pub(crate) struct UnlitMaterial(pub Handle<ArrayTextureMaterial>);
+pub(crate) struct UnlitMaterial(pub MaterialAccessor);
 #[derive(Resource)]
-pub(crate) struct TransparentMaterial(pub Handle<ArrayTextureMaterial>);
+pub(crate) struct TransparentMaterial(pub MaterialAccessor);
 #[derive(Resource)]
-pub(crate) struct UnlitTransparentMaterial(pub Handle<ArrayTextureMaterial>);
+pub(crate) struct UnlitTransparentMaterial(pub MaterialAccessor);
+
+struct MaterialAccessor {
+    // atlas_index: u32,
+    handles: Vec<Handle<ArrayTextureMaterial>>,
+}
 
 fn respond_to_add_materials_event(
     material_registry: Res<Registry<MaterialDefinition>>,
@@ -93,7 +98,7 @@ fn create_materials(
 ) {
     if !event_reader.is_empty() {
         if let Some(atlas) = texture_atlases.from_id("cosmos:main") {
-            let default_material = materials.add(create_main_material(atlas.texture_atlas.get_atlas_handle().clone(), false));
+            let default_material = materials.add(create_main_material(atlas.get_atlas_handle().clone(), false));
             let unlit_default_material = materials.add(create_main_material(atlas.texture_atlas.get_atlas_handle().clone(), true));
             let transparent_material = materials.add(create_transparent_material(atlas.texture_atlas.get_atlas_handle().clone(), false));
             let unlit_transparent_material =

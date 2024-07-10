@@ -15,7 +15,7 @@ use bevy::{
 ///
 /// If an image is > than the `height` field, it is assumed to be an array of textures and will be treated as unique textures. This is useful
 /// when you need textures to be next to each other in the atlas (such as for animated textures).
-#[derive(Reflect, Clone, Debug)]
+#[derive(Reflect, Clone, Debug, Default)]
 pub struct SquareTextureAtlas {
     indices: HashMap<Handle<Image>, u32>,
     atlas_texture: Handle<Image>,
@@ -57,6 +57,11 @@ impl SquareTextureAtlas {
     pub fn height(&self) -> u32 {
         self.height
     }
+
+    /// Each image will be `N`x`N` dimensions, where this function returns the `N`.
+    pub fn individual_image_dimensions(&self) -> u32 {
+        self.width
+    }
 }
 
 /// Similar to bevy's default texture atlas, but the order they are inserted matters and assumes every texture is the same size and a square.
@@ -65,7 +70,7 @@ impl SquareTextureAtlas {
 #[derive(Debug, Clone)]
 pub struct SquareTextureAtlasBuilder {
     images: Vec<Handle<Image>>,
-    texture_dimensions: u32,
+    pub texture_dimensions: u32,
 }
 
 impl SquareTextureAtlasBuilder {
