@@ -1,65 +1,18 @@
 //! Handles gravity
 
 use bevy::prelude::*;
-use bevy_rapier3d::{
-    plugin::{RapierContextAccess, RapierContextEntityLink},
-    prelude::{ExternalImpulse, RapierRigidBodyHandle, ReadMassProperties, RigidBody, RigidBodyDisabled},
-};
+use bevy_rapier3d::prelude::{ExternalImpulse, ReadMassProperties, RigidBody, RigidBodyDisabled};
 
 use crate::structure::planet::Planet;
 
 use super::location::Location;
 
-fn fix_read_mass_props(
-    mut query: Query<(
-        &GlobalTransform,
-        &mut ReadMassProperties,
-        &RapierRigidBodyHandle,
-        &RapierContextEntityLink,
-    )>,
-    rapier_context_access: RapierContextAccess,
-) {
-    for (g_trans, mut prop, handle, physics_world) in query.iter_mut() {
-        // let physics_world = physics_world.copied().unwrap_or_default();
-
-        // https://github.com/dimforge/bevy_rapier/issues/271
-
-        // if let Some(info) = rapier_context_access
-        //     .context(physics_world)
-        //     .get_world(physics_world.world_id)
-        //     .expect("Missing world")
-        //     .bodies
-        //     .get(handle.0)
-        // {
-        //     let mass = info.mass();
-        //     let world_com: Vec3 = (*info.center_of_mass()).into();
-        //     let local_com = g_trans.translation() - world_com;
-
-        //     prop.0.mass = mass;
-        //     prop.0.local_center_of_mass = local_com;
-        // }
-    }
-}
-
-/// See https://github.com/dimforge/bevy_rapier/issues/271
 fn gravity_system(
     emitters: Query<(Entity, &GravityEmitter, &GlobalTransform, &Location)>,
     mut receiver: Query<(Entity, &Location, &ReadMassProperties, &RigidBody, Option<&mut ExternalImpulse>), Without<RigidBodyDisabled>>,
     time: Res<Time>,
     mut commands: Commands,
 ) {
-    // let mut gravs: Vec<(Entity, &GravityEmitter, &Location)> = Vec::with_capacity(emitters.iter().len());
-
-    // for (entity, emitter, trans, location) in emitters.iter() {
-    //     gravs.push((
-    //         entity,
-    //         emitter.force_per_kg,
-    //         emitter.radius,
-    //         *location,
-    //         Quat::from_affine3(&trans.affine()),
-    //     ));
-    // }
-
     let gravs = emitters
         .iter()
         .map(|(ent, emitter, global_transform, location)| {
@@ -122,5 +75,5 @@ pub struct GravityEmitter {
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_systems(Update, (fix_read_mass_props, gravity_system));
+    app.add_systems(Update, gravity_system);
 }
