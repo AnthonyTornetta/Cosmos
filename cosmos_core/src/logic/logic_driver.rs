@@ -26,7 +26,7 @@ impl LogicDriver {
     /// A block face without an input port is assigned false.
     /// Global face means these values are immediately usable for computing a block's logic formula with no further rotations.
     pub fn global_port_input(&self, coords: BlockCoordinate, rotation: BlockRotation, global_face: BlockFace) -> i32 {
-        let local_face = rotation.rotate_face(global_face);
+        let local_face = rotation.global_to_local(global_face);
         self.logic_graph
             .group_of(&Port::new(coords, local_face), PortType::Input)
             .map(|group| group.signal())
@@ -50,7 +50,7 @@ impl LogicDriver {
         evw_logic_output: &mut EventWriter<LogicOutputEvent>,
         evw_logic_input: &mut EventWriter<LogicInputEvent>,
     ) {
-        let local_face = structure.block_rotation(coords).rotate_face(global_face);
+        let local_face = structure.block_rotation(coords).global_to_local(global_face);
         // If the neighbor coordinates don't exist, no port is added (and thus no new group).
         let Ok(neighbor_coords) = coords.step(local_face) else {
             return;
@@ -130,7 +130,7 @@ impl LogicDriver {
 
         // Get all adjacent group IDs.
         for wire_face in logic_block.wire_faces() {
-            let local_face = structure.block_rotation(coords).rotate_face(wire_face);
+            let local_face = structure.block_rotation(coords).global_to_local(wire_face);
             if let Ok(neighbor_coords) = coords.step(local_face) {
                 if let Some(group_id) = self.logic_graph.dfs_for_group(
                     neighbor_coords,
@@ -206,7 +206,7 @@ impl LogicDriver {
         // Setting new group IDs.
         let mut visited = Port::all_for(coords);
         for wire_face in logic_block.wire_faces() {
-            let local_face = structure.block_rotation(coords).rotate_face(wire_face);
+            let local_face = structure.block_rotation(coords).global_to_local(wire_face);
             let Ok(neighbor_coords) = coords.step(local_face) else {
                 continue;
             };
