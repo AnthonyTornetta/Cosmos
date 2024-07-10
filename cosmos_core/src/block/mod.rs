@@ -138,7 +138,7 @@ impl BlockRotation {
         let q = self.as_quat();
         let rotated = q.mul_vec3(direction);
 
-        if rotated.x > 0.9 {
+        let output = if rotated.x > 0.9 {
             BlockFace::Right
         } else if rotated.x < -0.9 {
             BlockFace::Left
@@ -150,6 +150,12 @@ impl BlockRotation {
             BlockFace::Front
         } else {
             BlockFace::Back
+        };
+
+        // TODO: Make less evil.
+        match face {
+            BlockFace::Left | BlockFace::Right => output.inverse(),
+            _ => output,
         }
     }
 

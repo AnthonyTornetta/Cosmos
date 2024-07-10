@@ -152,8 +152,9 @@ impl LogicGraph {
         };
 
         let encountered_face = structure.block_rotation(coords).global_to_local(encountered_local_face);
+        println!("Rotation: {:?}", structure.block_rotation(coords));
         let name = block.unlocalized_name();
-        println!("Encountered {name} through global face: {encountered_face} (pointing {encountered_local_face}.");
+        println!("Encountered {name} through global face: {encountered_face} (pointing {encountered_local_face}).");
         match logic_block.connection_on(encountered_face) {
             Some(LogicConnection::Port(PortType::Input)) => {
                 println!("Input Port!");
@@ -171,7 +172,7 @@ impl LogicGraph {
                     // This wire block does not tell us what group we're in. Recurse on its neighbors.
                     visited.insert(Port::new(coords, encountered_local_face));
                     for face in logic_block.wire_faces() {
-                        let local_face = structure.block_rotation(coords).rotate_face(face);
+                        let local_face = structure.block_rotation(coords).global_to_local(face);
                         visited.insert(Port::new(coords, local_face));
                         let Ok(neighbor_coords) = coords.step(local_face) else {
                             continue;
@@ -201,7 +202,7 @@ impl LogicGraph {
         logic_blocks: &Registry<LogicBlock>,
     ) -> Option<usize> {
         for wire_face in logic_block.wire_faces() {
-            let local_face = structure.block_rotation(coords).rotate_face(wire_face);
+            let local_face = structure.block_rotation(coords).global_to_local(wire_face);
             let Ok(neighbor_coords) = coords.step(local_face) else {
                 continue;
             };
@@ -285,7 +286,7 @@ impl LogicGraph {
         logic_blocks: &Registry<LogicBlock>,
         evw_logic_input: &mut EventWriter<LogicInputEvent>,
     ) {
-        let local_face = structure.block_rotation(coords).rotate_face(global_face);
+        let local_face = structure.block_rotation(coords).global_to_local(global_face);
 
         // If the neighbor coordinates don't exist, no port is removed.
         let Ok(neighbor_coords) = coords.step(local_face) else {
@@ -425,7 +426,7 @@ impl LogicGraph {
             return false;
         };
 
-        let encountered_face = structure.block_rotation(coords).rotate_face(encountered_local_face);
+        let encountered_face = structure.block_rotation(coords).global_to_local(encountered_local_face);
         match logic_block.connection_on(encountered_face) {
             Some(LogicConnection::Port(port_type)) => {
                 // Getting the port's output value in the previous group.
@@ -458,7 +459,7 @@ impl LogicGraph {
                 // Recurse to continue marking the ports reachable from this wire.
                 visited.insert(Port::new(coords, encountered_local_face));
                 for face in logic_block.wire_faces() {
-                    let local_face = structure.block_rotation(coords).rotate_face(face);
+                    let local_face = structure.block_rotation(coords).global_to_local(face);
                     visited.insert(Port::new(coords, local_face));
                     let Ok(neighbor_coords) = coords.step(local_face) else {
                         continue;
