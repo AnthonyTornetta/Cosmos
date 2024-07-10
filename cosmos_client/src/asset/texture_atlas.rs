@@ -70,6 +70,9 @@ impl SquareTextureAtlas {
 #[derive(Debug, Clone)]
 pub struct SquareTextureAtlasBuilder {
     images: Vec<Handle<Image>>,
+    /// The texture dimensions that this atlas builder is for
+    ///
+    /// Do not add textures that don't have this dimensions (based on image's width - not height)
     pub texture_dimensions: u32,
 }
 

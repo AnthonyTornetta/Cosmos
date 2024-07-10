@@ -120,14 +120,24 @@ impl CosmosTextureAtlas {
         }
     }
 
+    /// Returns all texture atlases for the different texture sizes that need to be accounted for.
+    ///
+    /// The ordering of this WILL match the `texture_dimensions_index` passed in the [`super::materials::AddMaterialEvent`].
     pub fn texture_atlases(&self) -> impl Iterator<Item = &'_ SquareTextureAtlas> {
         self.texture_atlases.iter()
     }
 
+    /// Returns the square texture atlas given this dimension index.
+    ///
+    /// This index should correspond to the ordering of [`Self::texture_atlases`], which should be automatically passed to the
+    /// material in the [`super::materials::AddMaterialEvent`].
     pub fn get_atlas_for_dimension_index(&self, dimension_index: u32) -> Option<&SquareTextureAtlas> {
         self.texture_atlases.get(dimension_index as usize)
     }
 
+    /// Returns the texture index for this image handle.
+    ///
+    /// This image handle has to have been loaded first (run this after [`GameState::PostLoading`]).
     pub fn get_texture_index(&self, handle: &Handle<Image>, images: &Assets<Image>) -> Option<TextureIndex> {
         images
             .get(handle)
@@ -154,8 +164,11 @@ impl CosmosTextureAtlas {
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize, Hash, Reflect)]
+/// The index for usage with the [`CosmosTextureAtlas`] for this block.
 pub struct TextureIndex {
+    /// The atlas that should be used for this block's texture dimensions. Pass this to the [`super::materials::AddMaterialEvent`] event.
     pub dimension_index: u32,
+    /// The index within the atlas for this block. This should be used after getting the proper atlas via the [`Self::dimension_index`].
     pub texture_index: u32,
 }
 
@@ -188,10 +201,7 @@ fn check_assets_ready(
             let asset = server.get_id_handle::<LoadedFolder>(*id).unwrap();
 
             if let Some(loaded_folder) = loaded_folders.get(&asset) {
-                if let Some(loading_texture_atlases) = loading
-                    .iter_mut()
-                    .find(|x| x.atlas_builders.is_empty() && x.folder_handle.contains(&asset))
-                {
+                if let Some(loading_texture_atlases) = loading.iter_mut().find(|x| x.folder_handle.contains(&asset)) {
                     // all assets are now ready, construct texture atlas for better performance
 
                     // let mut texture_atlas_builder = SquareTextureAtlasBuilder::new(16);
@@ -200,11 +210,6 @@ fn check_assets_ready(
                         let Some(img) = images.get(&handle) else {
                             continue;
                         };
-
-                        if img.width() != img.height() {
-                            error!("Image width & height were not the same!");
-                            continue;
-                        }
 
                         let dims = img.width();
 
@@ -253,6 +258,7 @@ fn check_assets_ready(
                         // Clear out handles to avoid continually checking
                         commands.remove_resource::<Registry<LoadingTextureAtlas>>();
 
+                        info!("Sending all textures done loading event!");
                         event_writer.send(AllTexturesDoneLoadingEvent);
                     }
                 }
