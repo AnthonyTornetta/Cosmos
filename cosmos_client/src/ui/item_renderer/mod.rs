@@ -213,8 +213,15 @@ fn generate_item_model(
     let image_index = index.atlas_index();
 
     let texture_data = SquareTextureAtlas::get_sub_image_data(
-        images.get(atlas.texture_atlas.get_atlas_handle()).expect("Missing atlas image"),
-        image_index,
+        images
+            .get(
+                atlas
+                    .get_atlas_for_dimension_index(image_index.dimension_index)
+                    .expect("Invalid dimension index passed!")
+                    .get_atlas_handle(),
+            )
+            .expect("Missing atlas image"),
+        image_index.texture_index,
     );
 
     let Some(item_material_mapping) = item_materials_registry.get_value(item) else {
@@ -224,7 +231,7 @@ fn generate_item_model(
     let mat_id = item_material_mapping.material_id();
     let material = material_definitions_registry.from_numeric_id(mat_id);
 
-    let mesh = create_item_mesh(texture_data, item.id(), image_index, material, size);
+    let mesh = create_item_mesh(texture_data, item.id(), image_index.texture_index, material, size);
     let mesh_handle = meshes.add(mesh);
 
     commands.entity(to_create).insert((
@@ -241,6 +248,7 @@ fn generate_item_model(
     event_writer.send(AddMaterialEvent {
         entity: to_create,
         add_material_id: mat_id,
+        texture_dimensions_index: image_index.dimension_index,
         material_type: MaterialType::Unlit,
     });
 }
@@ -288,6 +296,8 @@ fn generate_block_item_model(
 
     let material = material_definitions_registry.from_numeric_id(mat_id);
 
+    let mut texture_dimensions_index = None;
+
     if block_mesh_info.has_multiple_face_meshes() {
         for face in [BlockFace::Top, BlockFace::Right, BlockFace::Front] {
             let Some(mut mesh_info) = block_mesh_info.info_for_face(face, false).cloned() else {
@@ -300,11 +310,13 @@ fn generate_block_item_model(
                 continue;
             };
 
+            texture_dimensions_index = Some(image_index.dimension_index);
+
             mesh_builder.add_mesh_information(
                 &mesh_info,
                 Vec3::ZERO,
                 Rect::new(0.0, 0.0, 1.0, 1.0),
-                image_index,
+                image_index.texture_index,
                 material.add_material_data(block_id, &mesh_info),
             );
         }
@@ -319,14 +331,20 @@ fn generate_block_item_model(
             return false;
         };
 
+        texture_dimensions_index = Some(image_index.dimension_index);
+
         mesh_builder.add_mesh_information(
             &mesh_info,
             Vec3::ZERO,
             Rect::new(0.0, 0.0, 1.0, 1.0),
-            image_index,
+            image_index.texture_index,
             material.add_material_data(block_id, &mesh_info),
         );
     }
+
+    let Some(texture_dimensions_index) = texture_dimensions_index else {
+        return false;
+    };
 
     commands.entity(to_create).insert((
         RenderedItem {
@@ -342,6 +360,7 @@ fn generate_block_item_model(
     event_writer.send(AddMaterialEvent {
         entity: to_create,
         add_material_id: mat_id,
+        texture_dimensions_index,
         material_type: MaterialType::Unlit,
     });
 

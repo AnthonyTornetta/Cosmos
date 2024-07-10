@@ -5,18 +5,13 @@ use crate::asset::asset_loading::{AllTexturesDoneLoadingEvent, AssetsDoneLoading
 use super::super::*;
 
 #[derive(Resource)]
-pub(crate) struct DefaultMaterial(pub MaterialAccessor);
+pub(crate) struct DefaultMaterial(pub Vec<Handle<ArrayTextureMaterial>>);
 #[derive(Resource)]
-pub(crate) struct UnlitMaterial(pub MaterialAccessor);
+pub(crate) struct UnlitMaterial(pub Vec<Handle<ArrayTextureMaterial>>);
 #[derive(Resource)]
-pub(crate) struct TransparentMaterial(pub MaterialAccessor);
+pub(crate) struct TransparentMaterial(pub Vec<Handle<ArrayTextureMaterial>>);
 #[derive(Resource)]
-pub(crate) struct UnlitTransparentMaterial(pub MaterialAccessor);
-
-struct MaterialAccessor {
-    // atlas_index: u32,
-    handles: Vec<Handle<ArrayTextureMaterial>>,
-}
+pub(crate) struct UnlitTransparentMaterial(pub Vec<Handle<ArrayTextureMaterial>>);
 
 fn respond_to_add_materials_event(
     material_registry: Res<Registry<MaterialDefinition>>,
@@ -31,26 +26,28 @@ fn respond_to_add_materials_event(
     for ev in event_reader.read() {
         let mat = material_registry.from_numeric_id(ev.add_material_id);
 
+        let idx = ev.texture_dimensions_index as usize;
+
         match mat.unlocalized_name() {
             "cosmos:main" => {
                 commands.entity(ev.entity).insert(match ev.material_type {
-                    MaterialType::Normal => default_material.0.clone_weak(),
-                    MaterialType::Unlit => unlit_material.0.clone_weak(),
-                    MaterialType::FarAway => default_material.0.clone_weak(),
+                    MaterialType::Normal => default_material.0[idx].clone_weak(),
+                    MaterialType::Unlit => unlit_material.0[idx].clone_weak(),
+                    MaterialType::FarAway => default_material.0[idx].clone_weak(),
                 });
             }
             "cosmos:illuminated" => {
                 commands.entity(ev.entity).insert(match ev.material_type {
-                    MaterialType::Normal => unlit_material.0.clone_weak(),
-                    MaterialType::Unlit => unlit_material.0.clone_weak(),
-                    MaterialType::FarAway => unlit_material.0.clone_weak(),
+                    MaterialType::Normal => unlit_material.0[idx].clone_weak(),
+                    MaterialType::Unlit => unlit_material.0[idx].clone_weak(),
+                    MaterialType::FarAway => unlit_material.0[idx].clone_weak(),
                 });
             }
             "cosmos:transparent" => {
                 commands.entity(ev.entity).insert(match ev.material_type {
-                    MaterialType::Normal => transparent_material.0.clone_weak(),
-                    MaterialType::Unlit => unlit_transparent_material.0.clone_weak(),
-                    MaterialType::FarAway => default_material.0.clone_weak(),
+                    MaterialType::Normal => transparent_material.0[idx].clone_weak(),
+                    MaterialType::Unlit => unlit_transparent_material.0[idx].clone_weak(),
+                    MaterialType::FarAway => default_material.0[idx].clone_weak(),
                 });
             }
             _ => {}
@@ -98,11 +95,18 @@ fn create_materials(
 ) {
     if !event_reader.is_empty() {
         if let Some(atlas) = texture_atlases.from_id("cosmos:main") {
-            let default_material = materials.add(create_main_material(atlas.get_atlas_handle().clone(), false));
-            let unlit_default_material = materials.add(create_main_material(atlas.texture_atlas.get_atlas_handle().clone(), true));
-            let transparent_material = materials.add(create_transparent_material(atlas.texture_atlas.get_atlas_handle().clone(), false));
-            let unlit_transparent_material =
-                materials.add(create_transparent_material(atlas.texture_atlas.get_atlas_handle().clone(), true));
+            let mut default_material = vec![];
+            let mut unlit_default_material = vec![];
+            let mut transparent_material = vec![];
+            let mut unlit_transparent_material = vec![];
+
+            for dimension_atlas in atlas.texture_atlases() {
+                default_material.push(materials.add(create_main_material(dimension_atlas.get_atlas_handle().clone(), false)));
+                unlit_default_material.push(materials.add(create_main_material(dimension_atlas.get_atlas_handle().clone(), true)));
+                transparent_material.push(materials.add(create_transparent_material(dimension_atlas.get_atlas_handle().clone(), false)));
+                unlit_transparent_material
+                    .push(materials.add(create_transparent_material(dimension_atlas.get_atlas_handle().clone(), true)));
+            }
 
             commands.insert_resource(DefaultMaterial(default_material));
             commands.insert_resource(UnlitMaterial(unlit_default_material));

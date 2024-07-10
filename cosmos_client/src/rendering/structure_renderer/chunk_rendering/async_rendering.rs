@@ -173,6 +173,7 @@ fn poll_rendering_chunks(
                     event_writer.send(AddMaterialEvent {
                         entity: ent,
                         add_material_id: mesh_material.material_id,
+                        texture_dimensions_index: mesh_material.texture_dimensions_index,
                         material_type: MaterialType::Normal,
                     });
 
@@ -197,6 +198,7 @@ fn poll_rendering_chunks(
                 event_writer.send(AddMaterialEvent {
                     entity,
                     add_material_id: mesh_material.material_id,
+                    texture_dimensions_index: mesh_material.texture_dimensions_index,
                     material_type: MaterialType::Normal,
                 });
             }

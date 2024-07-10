@@ -57,10 +57,16 @@ pub struct RemoveAllMaterialsEvent {
 pub struct AddMaterialEvent {
     /// The entity to add your material to
     pub entity: Entity,
-    /// The materal's id referring to the `Registry<MaterialDefinition]`
+    /// The materal's id referring to the `Registry<MaterialDefinition>`.
     pub add_material_id: u16,
     /// The state the material should be in
     pub material_type: MaterialType,
+    /// The texture dimensions index this material should use
+    ///
+    /// This should correlate with the atlas instance
+    ///
+    /// If the texture dimensions index is invalid, the program will panic when it tries to add the material for that texture dimension size.
+    pub texture_dimensions_index: u32,
 }
 
 /// Add all event listeners for `AddMaterialEvent` after this to prevent any 1-frame delays

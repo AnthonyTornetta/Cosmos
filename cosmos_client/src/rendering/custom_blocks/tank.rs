@@ -96,7 +96,7 @@ fn on_render_tanks(
             continue;
         };
 
-        let mut material_meshes: HashMap<u16, CosmosMeshBuilder> = HashMap::default();
+        let mut material_meshes: HashMap<(u16, u32), CosmosMeshBuilder> = HashMap::default();
 
         for block in structure.block_iter_for_chunk(ev.chunk_coordinate, true) {
             if structure.block_id_at(block.coords()) != tank_id {
@@ -133,8 +133,6 @@ fn on_render_tanks(
 
             let rotation = block_rotation.as_quat();
 
-            let mesh_builder = material_meshes.entry(mat_id).or_default();
-
             let faces = ALL_BLOCK_FACES.iter().copied().filter(|face| {
                 if let Ok(new_coord) = BlockCoordinate::try_from(block.coords() + face.direction_coordinates()) {
                     if structure.block_id_at(new_coord) == tank_id {
@@ -147,6 +145,8 @@ fn on_render_tanks(
 
                 true
             });
+
+            let mut mesh_builder = None;
 
             for (_, face) in faces.map(|face| (face, block_rotation.rotate_face(face))) {
                 let Some(mut mesh_info) = block_mesh_info
@@ -262,11 +262,16 @@ fn on_render_tanks(
                     coords.y as f32 - CHUNK_DIMS_HALVED + 0.5 + y_offset,
                     coords.z as f32 - CHUNK_DIMS_HALVED + 0.5 + z_offset,
                 );
-                mesh_builder.add_mesh_information(
+
+                if mesh_builder.is_none() {
+                    mesh_builder = Some(material_meshes.entry((mat_id, image_index.dimension_index)).or_default());
+                }
+
+                mesh_builder.as_mut().unwrap().add_mesh_information(
                     &mesh_info,
                     Vec3::new(center_offset_x, center_offset_y, center_offset_z),
                     uvs,
-                    image_index,
+                    image_index.texture_index,
                     additional_info,
                 );
 
@@ -278,7 +283,7 @@ fn on_render_tanks(
 
         let mut ents = vec![];
 
-        for (mat_id, mesh_builder) in material_meshes {
+        for ((mat_id, texture_dimensions_index), mesh_builder) in material_meshes {
             let mesh = mesh_builder.build_mesh();
 
             let entity = commands
@@ -294,6 +299,7 @@ fn on_render_tanks(
             evw_add_material.send(AddMaterialEvent {
                 entity,
                 add_material_id: mat_id,
+                texture_dimensions_index: texture_dimensions_index,
                 material_type: MaterialType::Normal,
             });
 

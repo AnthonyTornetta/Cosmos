@@ -105,7 +105,7 @@ fn assets_done_loading(
 /// A newtype wrapper around a bevy `TextureAtlas`
 pub struct CosmosTextureAtlas {
     /// The texture atlas
-    texture_atlas: Vec<SquareTextureAtlas>,
+    texture_atlases: Vec<SquareTextureAtlas>,
     unlocalized_name: String,
     id: u16,
 }
@@ -116,8 +116,16 @@ impl CosmosTextureAtlas {
         Self {
             unlocalized_name: unlocalized_name.into(),
             id: 0,
-            texture_atlas: atlases,
+            texture_atlases: atlases,
         }
+    }
+
+    pub fn texture_atlases(&self) -> impl Iterator<Item = &'_ SquareTextureAtlas> {
+        self.texture_atlases.iter()
+    }
+
+    pub fn get_atlas_for_dimension_index(&self, dimension_index: u32) -> Option<&SquareTextureAtlas> {
+        self.texture_atlases.get(dimension_index as usize)
     }
 
     pub fn get_texture_index(&self, handle: &Handle<Image>, images: &Assets<Image>) -> Option<TextureIndex> {
@@ -127,7 +135,7 @@ impl CosmosTextureAtlas {
                 let dims = img.width();
 
                 let texture_atlas = self
-                    .texture_atlas
+                    .texture_atlases
                     .iter()
                     .enumerate()
                     .find(|(_, x)| x.individual_image_dimensions() == dims);
@@ -147,8 +155,8 @@ impl CosmosTextureAtlas {
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize, Hash, Reflect)]
 pub struct TextureIndex {
-    dimension_index: u32,
-    texture_index: u32,
+    pub dimension_index: u32,
+    pub texture_index: u32,
 }
 
 impl Identifiable for CosmosTextureAtlas {
