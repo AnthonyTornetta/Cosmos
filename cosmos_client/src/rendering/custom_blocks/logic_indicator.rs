@@ -18,7 +18,8 @@ use bevy::{
     utils::HashMap,
 };
 use cosmos_core::{
-    block::{specific_blocks::logic_indicator::LogicIndicatorBlockInfo, Block, ALL_BLOCK_FACES},
+    block::{Block, ALL_BLOCK_FACES},
+    logic::BlockLogicData,
     registry::{identifiable::Identifiable, many_to_one::ManyToOneRegistry, Registry},
     structure::{
         chunk::CHUNK_DIMENSIONSF,
@@ -56,6 +57,7 @@ fn on_render_logic_indicator(
     blocks: Res<Registry<Block>>,
     mut commands: Commands,
     q_structure: Query<&Structure>,
+    q_logic_data: Query<&BlockLogicData>,
     materials: Res<ManyToOneRegistry<Block, BlockMaterialMapping>>,
     block_textures: Res<Registry<BlockTextureIndex>>,
     block_mesh_registry: Res<BlockMeshRegistry>,
@@ -107,7 +109,11 @@ fn on_render_logic_indicator(
 
             let rotation = block_rotation.as_quat();
 
-            let material_type = if structure.block_info_at(block.coords()).indicator_on() {
+            let Some(&logic_data) = structure.query_block_data(block.coords(), &q_logic_data) else {
+                continue;
+            };
+
+            let material_type = if logic_data.on() {
                 MaterialType::Illuminated
             } else {
                 MaterialType::Normal

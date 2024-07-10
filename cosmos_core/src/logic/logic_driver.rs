@@ -7,7 +7,7 @@ use bevy::{
 };
 
 use crate::{
-    block::{Block, BlockFace, BlockRotation},
+    block::{Block, BlockFace, BlockRotation, ALL_BLOCK_FACES},
     registry::Registry,
     structure::{coordinates::BlockCoordinate, structure_block::StructureBlock, Structure},
 };
@@ -25,13 +25,17 @@ impl LogicDriver {
     /// Returns an array of the Boolean value of the given block's input port groups.
     /// A block face without an input port is assigned false.
     /// Global face means these values are immediately usable for computing a block's logic formula with no further rotations.
-    pub fn global_port_inputs(&self, coords: BlockCoordinate, rotation: BlockRotation) -> [bool; 6] {
-        rotation.all_local_faces().map(|face| {
-            self.logic_graph
-                .group_of(&Port::new(coords, face), PortType::Input)
-                .map(|group| group.on())
-                .unwrap_or(false)
-        })
+    pub fn global_port_input(&self, coords: BlockCoordinate, rotation: BlockRotation, global_face: BlockFace) -> i32 {
+        let local_face = rotation.rotate_face(global_face);
+        self.logic_graph
+            .group_of(&Port::new(coords, local_face), PortType::Input)
+            .map(|group| group.signal())
+            .unwrap_or(0)
+    }
+
+    /// Gets the input signals of all 6 faces, in the global order.
+    pub fn all_global_port_inputs(&self, coords: BlockCoordinate, rotation: BlockRotation) -> [i32; 6] {
+        ALL_BLOCK_FACES.map(|global_face| self.global_port_input(coords, rotation, global_face))
     }
 
     fn port_placed(
@@ -46,7 +50,7 @@ impl LogicDriver {
         evw_logic_output: &mut EventWriter<LogicOutputEvent>,
         evw_logic_input: &mut EventWriter<LogicInputEvent>,
     ) {
-        let local_face = structure.block_rotation(coords).global_to_local(global_face);
+        let local_face = structure.block_rotation(coords).rotate_face(global_face);
         // If the neighbor coordinates don't exist, no port is added (and thus no new group).
         let Ok(neighbor_coords) = coords.step(local_face) else {
             return;
@@ -126,7 +130,7 @@ impl LogicDriver {
 
         // Get all adjacent group IDs.
         for wire_face in logic_block.wire_faces() {
-            let local_face = structure.block_rotation(coords).global_to_local(wire_face);
+            let local_face = structure.block_rotation(coords).rotate_face(wire_face);
             if let Ok(neighbor_coords) = coords.step(local_face) {
                 if let Some(group_id) = self.logic_graph.dfs_for_group(
                     neighbor_coords,
@@ -202,7 +206,7 @@ impl LogicDriver {
         // Setting new group IDs.
         let mut visited = Port::all_for(coords);
         for wire_face in logic_block.wire_faces() {
-            let local_face = structure.block_rotation(coords).global_to_local(wire_face);
+            let local_face = structure.block_rotation(coords).rotate_face(wire_face);
             let Ok(neighbor_coords) = coords.step(local_face) else {
                 continue;
             };

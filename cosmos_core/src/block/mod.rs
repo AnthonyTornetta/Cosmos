@@ -88,37 +88,37 @@ impl BlockRotation {
     #[inline(always)]
     /// Returns the `BlockFace` that is this rotations's top
     pub fn local_top(&self) -> BlockFace {
-        Self::global_to_local(self, BlockFace::Top)
+        Self::rotate_face(self, BlockFace::Top)
     }
 
     #[inline(always)]
     /// Returns the `BlockFace` that is this rotations's bottom
     pub fn local_bottom(&self) -> BlockFace {
-        Self::global_to_local(self, BlockFace::Bottom)
+        Self::rotate_face(self, BlockFace::Bottom)
     }
 
     #[inline(always)]
     /// Returns the `BlockFace` that is this rotations's left
     pub fn local_left(&self) -> BlockFace {
-        Self::global_to_local(self, BlockFace::Left)
+        Self::rotate_face(self, BlockFace::Left)
     }
 
     #[inline(always)]
     /// Returns the `BlockFace` that is this rotations's right
     pub fn local_right(&self) -> BlockFace {
-        Self::global_to_local(self, BlockFace::Right)
+        Self::rotate_face(self, BlockFace::Right)
     }
 
     #[inline(always)]
     /// Returns the `BlockFace` that is this rotations's back
     pub fn local_back(&self) -> BlockFace {
-        Self::global_to_local(self, BlockFace::Back)
+        Self::rotate_face(self, BlockFace::Back)
     }
 
     #[inline(always)]
     /// Returns the `BlockFace` that is this rotations's front
     pub fn local_front(&self) -> BlockFace {
-        Self::global_to_local(self, BlockFace::Front)
+        Self::rotate_face(self, BlockFace::Front)
     }
 
     #[inline(always)]
@@ -161,7 +161,7 @@ impl BlockRotation {
     }
 
     /// Returns an array of all 6 block faces.
-    /// Entries are ordered by the global BlockFace index, but contain the local direction that BlockFace is pointing.\
+    /// Entries are ordered by the global BlockFace index, but contain the local direction that BlockFace is pointing.
     ///
     /// For example, if [`BlockFace::Top`] is locally pointing right, the entry at index 2 ([`BlockFace::Top`]'s index) will be [`BlockFace::Right`].
     pub fn all_local_faces(&self) -> [BlockFace; 6] {
@@ -180,7 +180,7 @@ impl BlockRotation {
         match self.block_up {
             BF::Right => match self.sub_rotation {
                 BlockSubRotation::None => BlockFace::rotate_face(face, self.block_up),
-                BlockSubRotation::CCW => match face {
+                BlockSubRotation::CW => match face {
                     BF::Top => BF::Front,
                     BF::Bottom => BF::Back,
                     BF::Right => BF::Top,
@@ -188,7 +188,7 @@ impl BlockRotation {
                     BF::Back => BF::Left,
                     BF::Front => BF::Right,
                 },
-                BlockSubRotation::CW => match face {
+                BlockSubRotation::CCW => match face {
                     BF::Top => BF::Back,
                     BF::Bottom => BF::Front,
                     BF::Right => BF::Top,
@@ -207,7 +207,7 @@ impl BlockRotation {
             },
             BF::Left => match self.sub_rotation {
                 BlockSubRotation::None => BlockFace::rotate_face(face, self.block_up),
-                BlockSubRotation::CCW => match face {
+                BlockSubRotation::CW => match face {
                     BF::Top => BF::Back,
                     BF::Bottom => BF::Front,
                     BF::Right => BF::Bottom,
@@ -215,7 +215,7 @@ impl BlockRotation {
                     BF::Back => BF::Left,
                     BF::Front => BF::Right,
                 },
-                BlockSubRotation::CW => match face {
+                BlockSubRotation::CCW => match face {
                     BF::Top => BF::Front,
                     BF::Bottom => BF::Back,
                     BF::Right => BF::Bottom,
@@ -234,7 +234,7 @@ impl BlockRotation {
             },
             BF::Front => match self.sub_rotation {
                 BlockSubRotation::None => BlockFace::rotate_face(face, self.block_up),
-                BlockSubRotation::CCW => match face {
+                BlockSubRotation::CW => match face {
                     BF::Top => BF::Left,
                     BF::Bottom => BF::Right,
                     BF::Right => BF::Back,
@@ -242,7 +242,7 @@ impl BlockRotation {
                     BF::Back => BF::Bottom,
                     BF::Front => BF::Top,
                 },
-                BlockSubRotation::CW => match face {
+                BlockSubRotation::CCW => match face {
                     BF::Top => BF::Right,
                     BF::Bottom => BF::Left,
                     BF::Right => BF::Front,
@@ -261,7 +261,7 @@ impl BlockRotation {
             },
             BF::Back => match self.sub_rotation {
                 BlockSubRotation::None => BlockFace::rotate_face(face, self.block_up),
-                BlockSubRotation::CCW => match face {
+                BlockSubRotation::CW => match face {
                     BF::Top => BF::Right,
                     BF::Bottom => BF::Left,
                     BF::Right => BF::Back,
@@ -269,7 +269,7 @@ impl BlockRotation {
                     BF::Back => BF::Top,
                     BF::Front => BF::Bottom,
                 },
-                BlockSubRotation::CW => match face {
+                BlockSubRotation::CCW => match face {
                     BF::Top => BF::Left,
                     BF::Bottom => BF::Right,
                     BF::Right => BF::Front,
@@ -288,7 +288,7 @@ impl BlockRotation {
             },
             BF::Bottom => match self.sub_rotation {
                 BlockSubRotation::None => BlockFace::rotate_face(face, self.block_up),
-                BlockSubRotation::CCW => match face {
+                BlockSubRotation::CW => match face {
                     BF::Top => BF::Bottom,
                     BF::Bottom => BF::Top,
                     BF::Right => BF::Front,
@@ -296,7 +296,7 @@ impl BlockRotation {
                     BF::Back => BF::Left,
                     BF::Front => BF::Right,
                 },
-                BlockSubRotation::CW => match face {
+                BlockSubRotation::CCW => match face {
                     BF::Top => BF::Bottom,
                     BF::Bottom => BF::Top,
                     BF::Right => BF::Back,
@@ -315,7 +315,7 @@ impl BlockRotation {
             },
             BF::Top => match self.sub_rotation {
                 BlockSubRotation::None => BlockFace::rotate_face(face, self.block_up),
-                BlockSubRotation::CCW => match face {
+                BlockSubRotation::CW => match face {
                     BF::Top => BF::Top,
                     BF::Bottom => BF::Bottom,
                     BF::Right => BF::Front,
@@ -323,7 +323,7 @@ impl BlockRotation {
                     BF::Back => BF::Right,
                     BF::Front => BF::Left,
                 },
-                BlockSubRotation::CW => match face {
+                BlockSubRotation::CCW => match face {
                     BF::Top => BF::Top,
                     BF::Bottom => BF::Bottom,
                     BF::Right => BF::Back,

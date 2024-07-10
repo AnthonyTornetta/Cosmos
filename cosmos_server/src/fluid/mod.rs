@@ -2,12 +2,13 @@
 
 use bevy::{
     app::{App, Update},
-    prelude::{EventReader, IntoSystemConfigs, Query, With},
+    prelude::{EventReader, IntoSystemConfigs, Query, Res, With},
 };
 use cosmos_core::{
-    block::{block_events::BlockEventsSet, data::BlockData},
+    block::{block_events::BlockEventsSet, data::BlockData, Block},
     events::block_events::{BlockChangedEvent, BlockDataSystemParams},
     fluid::data::{BlockFluidData, FluidItemData, FluidTankBlock},
+    registry::{identifiable::Identifiable, Registry},
     structure::Structure,
 };
 
@@ -29,17 +30,20 @@ fn on_place_tank(
     q_has_data: Query<(), With<BlockFluidData>>,
     mut q_block_data: Query<&mut BlockData>,
     mut bs_params: BlockDataSystemParams,
+    blocks: Res<Registry<Block>>,
 ) {
     for ev in evr_changed_block.read() {
         let Ok(mut structure) = q_structure.get_mut(ev.structure_entity) else {
             continue;
         };
-
         let coords = ev.block.coords();
-
-        if structure.query_block_data(coords, &q_has_data).is_some() {
+        if structure.block_at(coords, &blocks).unlocalized_name() != "cosmos:tank" {
             continue;
         }
+
+        // if structure.query_block_data(coords, &q_has_data).is_some() {
+        //     continue;
+        // }
 
         structure.insert_block_data(coords, BlockFluidData::NoFluid, &mut bs_params, &mut q_block_data, &q_has_data);
     }

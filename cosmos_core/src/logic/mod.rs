@@ -3,7 +3,8 @@
 use bevy::{
     app::{App, Update},
     prelude::{
-        in_state, Commands, Entity, Event, EventReader, EventWriter, IntoSystemConfigs, Query, Res, States, SystemSet, With, Without,
+        in_state, Commands, Component, Entity, Event, EventReader, EventWriter, IntoSystemConfigs, Query, Res, States, SystemSet, With,
+        Without,
     },
     reflect::Reflect,
     utils::HashSet,
@@ -12,8 +13,8 @@ use logic_driver::LogicDriver;
 use logic_graph::{LogicGraph, LogicGroup};
 
 use crate::{
-    block::{Block, BlockFace, ALL_BLOCK_FACES},
-    events::block_events::BlockChangedEvent,
+    block::{data::BlockData, Block, BlockFace, ALL_BLOCK_FACES},
+    events::block_events::{BlockChangedEvent, BlockDataSystemParams},
     registry::{create_registry, identifiable::Identifiable, Registry},
     structure::{coordinates::BlockCoordinate, loading::StructureLoadingSet, structure_block::StructureBlock, Structure},
 };
@@ -72,6 +73,7 @@ impl Identifiable for LogicBlock {
 
 impl LogicBlock {
     /// Creates a link to a block to define its logic connections.
+    /// Right, Left, Top, Bottom, Front, Back.
     pub fn new(block: &Block, connections: [Option<LogicConnection>; 6]) -> Self {
         Self {
             connections,
@@ -167,16 +169,31 @@ pub struct LogicInputEvent {
     pub entity: Entity,
 }
 
+#[derive(Component, Clone, Copy, Reflect, PartialEq, Eq, Debug, Default)]
+/// The logic signal this block is holding. Note: each block might interact with this data slightly differently.
+/// Usually, a block with an output port will calculate this value the frame before outputting it and store it here.
+pub struct BlockLogicData(pub i32);
+
+impl BlockLogicData {
+    /// For Boolean applications. 0 is "off" or "false", anything else is "on" or "true".
+    pub fn on(&self) -> bool {
+        self.0 != 0
+    }
+}
+
 fn logic_block_placed_event_listener(
-    mut evr_block_updated: EventReader<BlockChangedEvent>,
+    mut evr_block_changed: EventReader<BlockChangedEvent>,
     blocks: Res<Registry<Block>>,
     logic_blocks: Res<Registry<LogicBlock>>,
     mut q_logic: Query<&mut LogicDriver>,
     mut q_structure: Query<&mut Structure>,
     mut evw_logic_output: EventWriter<LogicOutputEvent>,
     mut evw_logic_input: EventWriter<LogicInputEvent>,
+    q_has_data: Query<(), With<BlockLogicData>>,
+    mut q_block_data: Query<&mut BlockData>,
+    mut bs_params: BlockDataSystemParams,
 ) {
-    for ev in evr_block_updated.read() {
+    for ev in evr_block_changed.read() {
         // If was logic block, remove from the logic graph.
         if let Some(logic_block) = logic_blocks.from_id(blocks.from_numeric_id(ev.old_block).unlocalized_name()) {
             if let Ok(structure) = q_structure.get_mut(ev.structure_entity) {
@@ -197,18 +214,21 @@ fn logic_block_placed_event_listener(
 
         // If is now logic block, add to the logic graph.
         if let Some(logic_block) = logic_blocks.from_id(blocks.from_numeric_id(ev.new_block).unlocalized_name()) {
-            if let Ok(structure) = q_structure.get_mut(ev.structure_entity) {
+            if let Ok(mut structure) = q_structure.get_mut(ev.structure_entity) {
                 if let Ok(mut logic) = q_logic.get_mut(ev.structure_entity) {
+                    let coords = ev.block.coords();
                     logic.add_logic_block(
                         logic_block,
-                        ev.block.coords(),
+                        coords,
                         &structure,
                         structure.get_entity().expect("Structure should have entity"),
                         &blocks,
                         &logic_blocks,
                         &mut evw_logic_output,
                         &mut evw_logic_input,
-                    )
+                    );
+                    // Add the logic block's internal data storage to the structure.
+                    structure.insert_block_data(coords, BlockLogicData(0), &mut bs_params, &mut q_block_data, &q_has_data);
                 }
             }
         }
@@ -230,25 +250,31 @@ impl Registry<LogicBlock> {
 #[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
 /// Separates the logic update events into two sets to maintain the timing of logic circuits.
 pub enum LogicSystemSet {
+    /// New [`LogicBlock`]s are added before anyone produces or consumes, so they have a chance to do both in their first frame.
+    Place,
     /// All output [`Port`]s. These push their values to their [`LogicGroup`]s first in each frame.
-    Producing,
+    Produce,
     /// All input [`Port`]s. These pull their values from their [`LogicGroup`]s second in each frame.
-    Consuming,
+    Consume,
 }
 
 pub(super) fn register<T: States>(app: &mut App, playing_state: T) {
     create_registry::<LogicBlock>(app, "cosmos:logic_blocks");
 
-    app.configure_sets(Update, (LogicSystemSet::Producing, LogicSystemSet::Consuming).chain());
+    app.configure_sets(
+        Update,
+        (LogicSystemSet::Place, LogicSystemSet::Produce, LogicSystemSet::Consume).chain(),
+    );
 
     app.add_systems(
         Update,
         (
             add_default_logic.in_set(StructureLoadingSet::AddStructureComponents),
-            logic_block_placed_event_listener,
+            logic_block_placed_event_listener.in_set(LogicSystemSet::Place),
         )
             .run_if(in_state(playing_state)),
     )
+    .register_type::<LogicDriver>()
     .register_type::<LogicGraph>()
     .register_type::<LogicGroup>()
     .add_event::<LogicOutputEvent>()
