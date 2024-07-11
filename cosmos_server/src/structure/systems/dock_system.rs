@@ -144,7 +144,7 @@ fn on_active(
             let rel_pos = structure.block_relative_position(docking_block);
             let block_rotation = structure.block_rotation(docking_block);
             let docking_look_face = block_rotation.local_front();
-            let front_direction = docking_look_face.direction_vec3();
+            let front_direction = docking_look_face.to_direction_vec3();
 
             let abs_block_pos = g_trans.transform_point(rel_pos);
 
@@ -197,7 +197,7 @@ fn on_active(
 
             let hit_block_face = hit_structure.block_rotation(hit_coords).local_front();
             let hit_rotation = Quat::from_affine3(&hit_g_trans.affine());
-            let front_direction = hit_rotation.mul_vec3(hit_block_face.direction_vec3());
+            let front_direction = hit_rotation.mul_vec3(hit_block_face.to_direction_vec3());
 
             let dotted = ray_dir.dot(front_direction);
 
@@ -212,7 +212,7 @@ fn on_active(
 
             let rel_pos = hit_structure.block_relative_position(hit_coords)
                 - relative_docked_ship_rotation
-                    .mul_vec3(structure.block_relative_position(docking_block) + docking_look_face.direction_vec3());
+                    .mul_vec3(structure.block_relative_position(docking_block) + docking_look_face.to_direction_vec3());
 
             let delta_position = rel_pos - (g_trans.translation() - hit_g_trans.translation());
 

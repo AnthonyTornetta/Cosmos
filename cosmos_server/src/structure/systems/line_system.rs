@@ -171,7 +171,7 @@ impl<T: LineProperty, S: LinePropertyCalculator<T>> BlockStructureSystem<T> for 
         let mut link_to = None;
 
         for (i, line) in self.lines.iter_mut().filter(|x| x.direction == block_direction).enumerate() {
-            let d = block_direction.direction_coordinates();
+            let d = block_direction.to_direction_coordinates();
 
             let start: UnboundBlockCoordinate = line.start.coords().into();
 

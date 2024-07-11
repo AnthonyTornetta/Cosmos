@@ -68,7 +68,7 @@ pub fn send_block_updates(
             };
 
             Some(ALL_BLOCK_FACES.iter().filter_map(|face| {
-                let coord = face.direction_coordinates() + ev.block.coords();
+                let coord = face.to_direction_coordinates() + ev.block.coords();
                 let Ok(coord) = BlockCoordinate::try_from(coord) else {
                     return None;
                 };

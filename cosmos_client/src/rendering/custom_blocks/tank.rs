@@ -135,7 +135,7 @@ fn on_render_tanks(
             let mesh_builder = material_meshes.entry(mat_id).or_default();
 
             let faces = ALL_BLOCK_FACES.iter().copied().filter(|face| {
-                if let Ok(new_coord) = BlockCoordinate::try_from(block.coords() + face.direction_coordinates()) {
+                if let Ok(new_coord) = BlockCoordinate::try_from(block.coords() + face.to_direction_coordinates()) {
                     if structure.block_id_at(new_coord) == tank_id {
                         return match structure.query_block_data(new_coord, &q_stored_fluid) {
                             Some(BlockFluidData::Fluid(sf)) => sf.fluid_stored == 0,

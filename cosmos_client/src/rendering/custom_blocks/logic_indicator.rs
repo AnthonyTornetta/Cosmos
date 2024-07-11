@@ -121,7 +121,7 @@ fn on_render_logic_indicator(
             let mesh_builder = material_meshes.entry((material_type, mat_id)).or_default();
 
             let faces = ALL_BLOCK_FACES.iter().copied().filter(|face| {
-                if let Ok(new_coord) = BlockCoordinate::try_from(block.coords() + face.direction_coordinates()) {
+                if let Ok(new_coord) = BlockCoordinate::try_from(block.coords() + face.to_direction_coordinates()) {
                     return structure.block_at(new_coord, &blocks).is_see_through();
                 }
                 true

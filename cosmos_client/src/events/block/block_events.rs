@@ -34,7 +34,7 @@ pub struct RequestBlockPlaceEvent {
     /// The block's id
     pub block_id: u16,
     /// The block's rotation
-    pub block_up: BlockRotation,
+    pub block_rotation: BlockRotation,
 }
 
 fn handle_block_break(
@@ -65,7 +65,7 @@ fn handle_block_place(
                 structure_entity: network_mapping.server_from_client(&ev.structure_entity).unwrap(),
                 block: ev.block,
                 block_id: ev.block_id,
-                block_rotation: ev.block_up,
+                block_rotation: ev.block_rotation,
                 inventory_slot: ev.inventory_slot as u32,
             }),
         );

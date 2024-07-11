@@ -112,7 +112,7 @@ fn check_is_valid_multiblock(structure: &Structure, controller_coords: BlockCoor
     let mut found_coords = None;
 
     {
-        let search_direction = direction.local_back().direction_coordinates();
+        let search_direction = direction.local_back().to_direction_coordinates();
 
         // Start 2 back to now allow a 2x2x2 reactor - minimum size is 3x3x3
         let mut check_coords = search_direction + search_direction;
@@ -137,8 +137,8 @@ fn check_is_valid_multiblock(structure: &Structure, controller_coords: BlockCoor
     let (left_wall_coords, right_wall_coords) = find_wall_coords(
         ub_controller_coords,
         structure,
-        direction.local_left().direction_coordinates(),
-        direction.local_right().direction_coordinates(),
+        direction.local_left().to_direction_coordinates(),
+        direction.local_right().to_direction_coordinates(),
         blocks,
         &valid_blocks,
     )?;
@@ -146,8 +146,8 @@ fn check_is_valid_multiblock(structure: &Structure, controller_coords: BlockCoor
     let (down_wall_coords, up_wall_coords) = find_wall_coords(
         ub_controller_coords,
         structure,
-        direction.local_bottom().direction_coordinates(),
-        direction.local_top().direction_coordinates(),
+        direction.local_bottom().to_direction_coordinates(),
+        direction.local_top().to_direction_coordinates(),
         blocks,
         &valid_blocks,
     )?;

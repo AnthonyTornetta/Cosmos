@@ -61,7 +61,13 @@ impl BlockRotation {
 
     /// Returns this rotation's representation as a quaternion
     pub fn as_quat(&self) -> Quat {
-        match self.block_up {
+        match self.sub_rotation {
+            BlockSubRotation::None => Quat::IDENTITY,
+            BlockSubRotation::CCW => Quat::from_axis_angle(Vec3::Y, PI / 2.0),
+            BlockSubRotation::CW => Quat::from_axis_angle(Vec3::Y, -PI / 2.0),
+            BlockSubRotation::Flip => Quat::from_axis_angle(Vec3::Y, PI),
+        }
+        .mul_quat(match self.block_up {
             BlockFace::Top => Quat::IDENTITY,
             BlockFace::Bottom => Quat::from_axis_angle(Vec3::X, PI),
             BlockFace::Front => Quat::from_axis_angle(Vec3::Y, PI)
@@ -71,18 +77,13 @@ impl BlockRotation {
                 .mul_quat(Quat::from_axis_angle(Vec3::X, PI / 2.0))
                 .normalize(),
             BlockFace::Left => Quat::from_axis_angle(Vec3::X, PI)
-                .mul_quat(Quat::from_axis_angle(Vec3::Z, PI / 2.0))
-                .normalize(),
-            BlockFace::Right => Quat::from_axis_angle(Vec3::X, -PI)
                 .mul_quat(Quat::from_axis_angle(Vec3::Z, -PI / 2.0))
                 .normalize(),
-        }
-        .mul_quat(match self.sub_rotation {
-            BlockSubRotation::None => Quat::IDENTITY,
-            BlockSubRotation::CCW => Quat::from_axis_angle(Vec3::Y, PI / 2.0),
-            BlockSubRotation::CW => Quat::from_axis_angle(Vec3::Y, -PI / 2.0),
-            BlockSubRotation::Flip => Quat::from_axis_angle(Vec3::Y, PI),
+            BlockFace::Right => Quat::from_axis_angle(Vec3::X, -PI)
+                .mul_quat(Quat::from_axis_angle(Vec3::Z, PI / 2.0))
+                .normalize(),
         })
+        .normalize()
     }
 
     #[inline(always)]
@@ -134,7 +135,7 @@ impl BlockRotation {
     ///
     /// For example, if the front of the block is locally pointing left and you provide [`BlockFace::Left`], you will be given [`BlockFace::Front`].
     pub fn local_to_global(&self, face: BlockFace) -> BlockFace {
-        let direction = face.direction_vec3();
+        let direction = face.to_direction_vec3();
         let q = self.as_quat();
         let rotated = q.mul_vec3(direction);
 
@@ -353,6 +354,58 @@ impl BlockRotation {
             },
         }
     }
+
+    /// Given the directions the top and front faces are pointing, return the corresponding rotation.
+    /// Assumes the primary axis of rotation is the Z axis (to rotate top to bottom, rotate through front/back, not right/left).
+    /// Only rotate top through the X axis if it is pointing right/left.
+    /// Sub rotations are applied globally before the primary rotation: CW means rotated 90-degrees clockwise while looking from the top down.
+    pub fn from_faces(top_pointing: BlockFace, front_pointing: BlockFace) -> Self {
+        use BlockFace as BF;
+        match top_pointing {
+            BF::Top => match front_pointing {
+                BF::Front => Self::new(BF::Top, BlockSubRotation::None),
+                BF::Right => Self::new(BF::Top, BlockSubRotation::CW),
+                BF::Back => Self::new(BF::Top, BlockSubRotation::Flip),
+                BF::Left => Self::new(BF::Top, BlockSubRotation::CCW),
+                _ => panic!("Invalid combination of top and front face directions."),
+            },
+            BF::Bottom => match front_pointing {
+                BF::Back => Self::new(BF::Bottom, BlockSubRotation::None),
+                BF::Right => Self::new(BF::Bottom, BlockSubRotation::CW),
+                BF::Front => Self::new(BF::Bottom, BlockSubRotation::Flip),
+                BF::Left => Self::new(BF::Bottom, BlockSubRotation::CCW),
+                _ => panic!("Invalid combination of top and front face directions."),
+            },
+            BF::Right => match front_pointing {
+                BF::Front => Self::new(BF::Left, BlockSubRotation::None),
+                BF::Bottom => Self::new(BF::Back, BlockSubRotation::CW),
+                BF::Back => Self::new(BF::Right, BlockSubRotation::Flip),
+                BF::Top => Self::new(BF::Front, BlockSubRotation::CCW),
+                _ => panic!("Invalid combination of top and front face directions."),
+            },
+            BF::Left => match front_pointing {
+                BF::Front => Self::new(BF::Right, BlockSubRotation::None),
+                BF::Top => Self::new(BF::Front, BlockSubRotation::CW),
+                BF::Back => Self::new(BF::Left, BlockSubRotation::Flip),
+                BF::Bottom => Self::new(BF::Back, BlockSubRotation::CCW),
+                _ => panic!("Invalid combination of top and front face directions."),
+            },
+            BF::Front => match front_pointing {
+                BF::Bottom => Self::new(BF::Back, BlockSubRotation::None),
+                BF::Right => Self::new(BF::Right, BlockSubRotation::CW),
+                BF::Top => Self::new(BF::Front, BlockSubRotation::Flip),
+                BF::Left => Self::new(BF::Left, BlockSubRotation::CCW),
+                _ => panic!("Invalid combination of top and front face directions."),
+            },
+            BF::Back => match front_pointing {
+                BF::Top => Self::new(BF::Front, BlockSubRotation::None),
+                BF::Right => Self::new(BF::Left, BlockSubRotation::CW),
+                BF::Bottom => Self::new(BF::Back, BlockSubRotation::Flip),
+                BF::Left => Self::new(BF::Right, BlockSubRotation::CCW),
+                _ => panic!("Invalid combination of top and front face directions."),
+            },
+        }
+    }
 }
 
 impl From<BlockFace> for BlockRotation {
@@ -374,7 +427,7 @@ pub enum BlockSubRotation {
     CCW,
     /// 90 degree rotation counter-clockwise
     CW,
-    /// 180 degree rotation
+    /// 180 degree rotation.
     Flip,
 }
 
@@ -469,7 +522,7 @@ impl BlockFace {
     }
 
     /// Returns the direction each face represents as a Vec3
-    pub const fn direction_vec3(&self) -> Vec3 {
+    pub const fn to_direction_vec3(&self) -> Vec3 {
         match *self {
             Self::Front => Vec3::Z,
             Self::Back => Vec3::NEG_Z,
@@ -480,8 +533,28 @@ impl BlockFace {
         }
     }
 
+    /// Vector must have one entry non-zero and all others 0.
+    pub fn from_direction_vec3(vec: Vec3) -> Self {
+        assert!((vec.x != 0.0) as u8 + (vec.y != 0.0) as u8 + (vec.z != 0.0) as u8 == 1);
+        if vec.x > 0.0 {
+            Self::Right
+        } else if vec.x < 0.0 {
+            Self::Left
+        } else if vec.y > 0.0 {
+            Self::Top
+        } else if vec.y < 0.0 {
+            Self::Bottom
+        } else if vec.z > 0.0 {
+            Self::Front
+        } else if vec.z < 0.0 {
+            Self::Back
+        } else {
+            panic!("UnboundBlockCoordinate converting to BlockFace should have exactly one entry non-zero but had none.");
+        }
+    }
+
     /// Returns the direction each face represents as an UnboundBlockCoordinate
-    pub const fn direction_coordinates(&self) -> UnboundBlockCoordinate {
+    pub const fn to_direction_coordinates(&self) -> UnboundBlockCoordinate {
         match *self {
             Self::Front => UnboundBlockCoordinate::new(0, 0, 1),
             Self::Back => UnboundBlockCoordinate::new(0, 0, -1),
@@ -489,6 +562,26 @@ impl BlockFace {
             Self::Right => UnboundBlockCoordinate::new(1, 0, 0),
             Self::Top => UnboundBlockCoordinate::new(0, 1, 0),
             Self::Bottom => UnboundBlockCoordinate::new(0, -1, 0),
+        }
+    }
+
+    /// Coordinates must have one entry non-zero and all others 0.
+    pub fn from_direction_coordinates(coords: UnboundBlockCoordinate) -> Self {
+        assert!((coords.x != 0) as u8 + (coords.y != 0) as u8 + (coords.z != 0) as u8 == 1);
+        if coords.x > 0 {
+            Self::Right
+        } else if coords.x < 0 {
+            Self::Left
+        } else if coords.y > 0 {
+            Self::Top
+        } else if coords.y < 0 {
+            Self::Bottom
+        } else if coords.z > 0 {
+            Self::Front
+        } else if coords.z < 0 {
+            Self::Back
+        } else {
+            panic!("UnboundBlockCoordinate converting to BlockFace should have exactly one entry non-zero but had none.");
         }
     }
 
