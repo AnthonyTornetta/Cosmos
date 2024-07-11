@@ -88,37 +88,37 @@ impl BlockRotation {
     #[inline(always)]
     /// Returns the `BlockFace` that is this rotations's top
     pub fn local_top(&self) -> BlockFace {
-        Self::global_to_local(self, BlockFace::Top)
+        Self::local_to_global(self, BlockFace::Top)
     }
 
     #[inline(always)]
     /// Returns the `BlockFace` that is this rotations's bottom
     pub fn local_bottom(&self) -> BlockFace {
-        Self::global_to_local(self, BlockFace::Bottom)
+        Self::local_to_global(self, BlockFace::Bottom)
     }
 
     #[inline(always)]
     /// Returns the `BlockFace` that is this rotations's left
     pub fn local_left(&self) -> BlockFace {
-        Self::global_to_local(self, BlockFace::Left)
+        Self::local_to_global(self, BlockFace::Left)
     }
 
     #[inline(always)]
     /// Returns the `BlockFace` that is this rotations's right
     pub fn local_right(&self) -> BlockFace {
-        Self::global_to_local(self, BlockFace::Right)
+        Self::local_to_global(self, BlockFace::Right)
     }
 
     #[inline(always)]
     /// Returns the `BlockFace` that is this rotations's back
     pub fn local_back(&self) -> BlockFace {
-        Self::global_to_local(self, BlockFace::Back)
+        Self::local_to_global(self, BlockFace::Back)
     }
 
     #[inline(always)]
     /// Returns the `BlockFace` that is this rotations's front
     pub fn local_front(&self) -> BlockFace {
-        Self::global_to_local(self, BlockFace::Front)
+        Self::local_to_global(self, BlockFace::Front)
     }
 
     #[inline(always)]
@@ -130,10 +130,10 @@ impl BlockRotation {
         }
     }
 
-    /// Returns which local face of this rotation represents the given global face.
+    /// Returns which global face of this rotation represents the given local face.
     ///
-    /// For example, if the front of the block is locally pointing left and you provide [`BlockFace::Front`], you will be given [`BlockFace::Left`].
-    pub fn global_to_local(&self, face: BlockFace) -> BlockFace {
+    /// For example, if the front of the block is locally pointing left and you provide [`BlockFace::Left`], you will be given [`BlockFace::Front`].
+    pub fn local_to_global(&self, face: BlockFace) -> BlockFace {
         let direction = face.direction_vec3();
         let q = self.as_quat();
         let rotated = q.mul_vec3(direction);
@@ -159,11 +159,11 @@ impl BlockRotation {
         }
     }
 
-    /// Returns which global face of this rotation represents the given local face.
+    /// Returns which local face of this rotation represents the given global face.
     ///
-    /// For example, if the front of the block is locally pointing left and you provide [`BlockFace::Left`], you will be given [`BlockFace::Front`].
-    pub fn local_to_global(&self, face: BlockFace) -> BlockFace {
-        self.inverse().global_to_local(face)
+    /// For example, if the front of the block is locally pointing left and you provide [`BlockFace::Front`], you will be given [`BlockFace::Left`].
+    pub fn global_to_local(&self, face: BlockFace) -> BlockFace {
+        self.inverse().local_to_global(face)
     }
 
     /// Returns an array of all 6 block faces.
@@ -171,7 +171,7 @@ impl BlockRotation {
     ///
     /// For example, if [`BlockFace::Top`] is locally pointing right, the entry at index 2 ([`BlockFace::Top`]'s index) will be [`BlockFace::Right`].
     pub fn all_local_faces(&self) -> [BlockFace; 6] {
-        ALL_BLOCK_FACES.map(|face| self.global_to_local(face))
+        ALL_BLOCK_FACES.map(|face| self.local_to_global(face))
     }
 
     /// Gets the face that should be used for this "absolute" side.

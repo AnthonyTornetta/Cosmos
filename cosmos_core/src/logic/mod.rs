@@ -133,13 +133,13 @@ pub struct Port {
     pub coords: BlockCoordinate,
     /// Which face of the block this port is on.
     /// Any wires or other ports one step in this direction are connected to this port.
-    pub local_face: BlockFace,
+    pub global_face: BlockFace,
 }
 
 impl Port {
     /// Convenience constructor for Ports.
-    pub fn new(coords: BlockCoordinate, local_face: BlockFace) -> Port {
-        Port { coords, local_face }
+    pub fn new(coords: BlockCoordinate, global_face: BlockFace) -> Port {
+        Port { coords, global_face }
     }
 
     /// Convenience method for getting a set of all six ports the block at these coordinates have (one for each face).

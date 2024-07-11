@@ -25,10 +25,10 @@ impl LogicDriver {
     /// Returns an array of the Boolean value of the given block's input port groups.
     /// A block face without an input port is assigned false.
     /// Global face means these values are immediately usable for computing a block's logic formula with no further rotations.
-    pub fn global_port_input(&self, coords: BlockCoordinate, rotation: BlockRotation, global_face: BlockFace) -> i32 {
-        let local_face = rotation.global_to_local(global_face);
+    pub fn global_port_input(&self, coords: BlockCoordinate, rotation: BlockRotation, local_face: BlockFace) -> i32 {
+        let global_face = rotation.local_to_global(local_face);
         self.logic_graph
-            .group_of(&Port::new(coords, local_face), PortType::Input)
+            .group_of(&Port::new(coords, global_face), PortType::Input)
             .map(|group| group.signal())
             .unwrap_or(0)
     }
@@ -41,7 +41,7 @@ impl LogicDriver {
     fn port_placed(
         &mut self,
         coords: BlockCoordinate,
-        global_face: BlockFace,
+        local_face: BlockFace,
         port_type: PortType,
         structure: &Structure,
         entity: Entity,
@@ -50,15 +50,15 @@ impl LogicDriver {
         evw_logic_output: &mut EventWriter<LogicOutputEvent>,
         evw_logic_input: &mut EventWriter<LogicInputEvent>,
     ) {
-        let local_face = structure.block_rotation(coords).global_to_local(global_face);
+        let global_face = structure.block_rotation(coords).local_to_global(local_face);
         // If the neighbor coordinates don't exist, no port is added (and thus no new group).
-        let Ok(neighbor_coords) = coords.step(local_face) else {
+        let Ok(neighbor_coords) = coords.step(global_face) else {
             return;
         };
 
         let maybe_group = self.logic_graph.dfs_for_group(
             neighbor_coords,
-            local_face.inverse(),
+            global_face.inverse(),
             structure,
             &mut Port::all_for(coords),
             blocks,
@@ -67,7 +67,7 @@ impl LogicDriver {
         let group_id = maybe_group.unwrap_or_else(|| self.logic_graph.new_group(None));
         self.logic_graph.add_port(
             coords,
-            local_face,
+            global_face,
             group_id,
             port_type,
             0,
@@ -130,11 +130,11 @@ impl LogicDriver {
 
         // Get all adjacent group IDs.
         for wire_face in logic_block.wire_faces() {
-            let local_face = structure.block_rotation(coords).global_to_local(wire_face);
-            if let Ok(neighbor_coords) = coords.step(local_face) {
+            let global_face = structure.block_rotation(coords).local_to_global(wire_face);
+            if let Ok(neighbor_coords) = coords.step(global_face) {
                 if let Some(group_id) = self.logic_graph.dfs_for_group(
                     neighbor_coords,
-                    local_face.inverse(),
+                    global_face.inverse(),
                     structure,
                     &mut Port::all_for(coords),
                     blocks,
@@ -206,8 +206,8 @@ impl LogicDriver {
         // Setting new group IDs.
         let mut visited = Port::all_for(coords);
         for wire_face in logic_block.wire_faces() {
-            let local_face = structure.block_rotation(coords).global_to_local(wire_face);
-            let Ok(neighbor_coords) = coords.step(local_face) else {
+            let global_face = structure.block_rotation(coords).local_to_global(wire_face);
+            let Ok(neighbor_coords) = coords.step(global_face) else {
                 continue;
             };
             // For now, takes a new ID for every call, even though some (like air blocks or already visited wires) don't need it.
@@ -215,7 +215,7 @@ impl LogicDriver {
             let used_new_group = self.logic_graph.rename_group(
                 group_id,
                 neighbor_coords,
-                local_face.inverse(),
+                global_face.inverse(),
                 structure,
                 &mut visited,
                 blocks,

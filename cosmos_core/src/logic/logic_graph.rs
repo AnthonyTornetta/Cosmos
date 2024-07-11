@@ -139,7 +139,7 @@ impl LogicGraph {
     pub fn dfs_for_group(
         &self,
         coords: BlockCoordinate,
-        encountered_local_face: BlockFace,
+        encountered_global_face: BlockFace,
         structure: &Structure,
         visited: &mut HashSet<Port>,
         blocks: &Registry<Block>,
@@ -151,18 +151,18 @@ impl LogicGraph {
             return None;
         };
 
-        let encountered_face = structure.block_rotation(coords).global_to_local(encountered_local_face);
+        let encountered_face = structure.block_rotation(coords).local_to_global(encountered_global_face);
         println!("Rotation: {:?}", structure.block_rotation(coords));
         let name = block.unlocalized_name();
-        println!("Encountered {name} through global face: {encountered_face} (pointing {encountered_local_face}).");
+        println!("Encountered {name} through global face: {encountered_face} (pointing {encountered_global_face}).");
         match logic_block.connection_on(encountered_face) {
             Some(LogicConnection::Port(PortType::Input)) => {
                 println!("Input Port!");
-                self.input_port_group_id.get(&Port::new(coords, encountered_local_face)).copied()
+                self.input_port_group_id.get(&Port::new(coords, encountered_global_face)).copied()
             }
             Some(LogicConnection::Port(PortType::Output)) => {
                 println!("Output Port!");
-                self.output_port_group_id.get(&Port::new(coords, encountered_local_face)).copied()
+                self.output_port_group_id.get(&Port::new(coords, encountered_global_face)).copied()
             }
             Some(LogicConnection::Wire) => self
                 .groups
@@ -170,18 +170,18 @@ impl LogicGraph {
                 .find_map(|(&id, group)| if group.recent_wire_coords == Some(coords) { Some(id) } else { None })
                 .or_else(|| {
                     // This wire block does not tell us what group we're in. Recurse on its neighbors.
-                    visited.insert(Port::new(coords, encountered_local_face));
+                    visited.insert(Port::new(coords, encountered_global_face));
                     for face in logic_block.wire_faces() {
-                        let local_face = structure.block_rotation(coords).global_to_local(face);
-                        visited.insert(Port::new(coords, local_face));
-                        let Ok(neighbor_coords) = coords.step(local_face) else {
+                        let global_face = structure.block_rotation(coords).local_to_global(face);
+                        visited.insert(Port::new(coords, global_face));
+                        let Ok(neighbor_coords) = coords.step(global_face) else {
                             continue;
                         };
-                        if visited.contains(&Port::new(neighbor_coords, local_face.inverse())) {
+                        if visited.contains(&Port::new(neighbor_coords, global_face.inverse())) {
                             continue;
                         }
                         if let Some(group) =
-                            self.dfs_for_group(neighbor_coords, local_face.inverse(), structure, visited, blocks, logic_blocks)
+                            self.dfs_for_group(neighbor_coords, global_face.inverse(), structure, visited, blocks, logic_blocks)
                         {
                             return Some(group);
                         }
@@ -202,11 +202,11 @@ impl LogicGraph {
         logic_blocks: &Registry<LogicBlock>,
     ) -> Option<usize> {
         for wire_face in logic_block.wire_faces() {
-            let local_face = structure.block_rotation(coords).global_to_local(wire_face);
-            let Ok(neighbor_coords) = coords.step(local_face) else {
+            let global_face = structure.block_rotation(coords).local_to_global(wire_face);
+            let Ok(neighbor_coords) = coords.step(global_face) else {
                 continue;
             };
-            if let Some(group_id) = self.dfs_for_group(neighbor_coords, local_face.inverse(), structure, visited, blocks, logic_blocks) {
+            if let Some(group_id) = self.dfs_for_group(neighbor_coords, global_face.inverse(), structure, visited, blocks, logic_blocks) {
                 return Some(group_id);
             }
         }
@@ -240,7 +240,7 @@ impl LogicGraph {
     pub fn add_port(
         &mut self,
         coords: BlockCoordinate,
-        local_face: BlockFace,
+        global_face: BlockFace,
         group_id: usize,
         port_type: PortType,
         signal: i32,
@@ -252,7 +252,7 @@ impl LogicGraph {
             PortType::Input => &mut self.input_port_group_id,
             PortType::Output => &mut self.output_port_group_id,
         }
-        .insert(Port::new(coords, local_face), group_id);
+        .insert(Port::new(coords, global_face), group_id);
 
         let logic_group = &mut self
             .groups
@@ -260,14 +260,14 @@ impl LogicGraph {
             .expect("Group should have vectors of input and output ports.");
         match port_type {
             PortType::Input => {
-                logic_group.consumers.insert(Port::new(coords, local_face));
+                logic_group.consumers.insert(Port::new(coords, global_face));
                 evw_logic_input.send(LogicInputEvent {
                     block: StructureBlock::new(coords),
                     entity,
                 });
             }
             PortType::Output => {
-                logic_group.producers.insert(Port::new(coords, local_face), signal);
+                logic_group.producers.insert(Port::new(coords, global_face), signal);
                 evw_logic_output.send(LogicOutputEvent {
                     block: StructureBlock::new(coords),
                     entity,
@@ -279,21 +279,21 @@ impl LogicGraph {
     pub fn remove_port(
         &mut self,
         coords: BlockCoordinate,
-        global_face: BlockFace,
+        local_face: BlockFace,
         port_type: PortType,
         structure: &Structure,
         blocks: &Registry<Block>,
         logic_blocks: &Registry<LogicBlock>,
         evw_logic_input: &mut EventWriter<LogicInputEvent>,
     ) {
-        let local_face = structure.block_rotation(coords).global_to_local(global_face);
+        let global_face = structure.block_rotation(coords).local_to_global(local_face);
 
         // If the neighbor coordinates don't exist, no port is removed.
-        let Ok(neighbor_coords) = coords.step(local_face) else {
+        let Ok(neighbor_coords) = coords.step(global_face) else {
             return;
         };
 
-        let port = Port::new(coords, local_face);
+        let port = Port::new(coords, global_face);
         let Some(&group_id) = match port_type {
             PortType::Input => &mut self.input_port_group_id,
             PortType::Output => &mut self.output_port_group_id,
@@ -306,7 +306,7 @@ impl LogicGraph {
         if self
             .dfs_for_group(
                 neighbor_coords,
-                local_face.inverse(),
+                global_face.inverse(),
                 structure,
                 &mut Port::all_for(coords),
                 blocks,
@@ -408,7 +408,7 @@ impl LogicGraph {
         &mut self,
         new_group_id: usize,
         coords: BlockCoordinate,
-        encountered_local_face: BlockFace,
+        encountered_global_face: BlockFace,
         structure: &Structure,
         visited: &mut HashSet<Port>,
         blocks: &Registry<Block>,
@@ -416,7 +416,7 @@ impl LogicGraph {
         evw_logic_output: &mut EventWriter<LogicOutputEvent>,
         evw_logic_input: &mut EventWriter<LogicInputEvent>,
     ) -> bool {
-        if visited.contains(&Port::new(coords, encountered_local_face)) {
+        if visited.contains(&Port::new(coords, encountered_global_face)) {
             // Renaming on this portion already completed.
             return false;
         }
@@ -426,7 +426,7 @@ impl LogicGraph {
             return false;
         };
 
-        let encountered_face = structure.block_rotation(coords).global_to_local(encountered_local_face);
+        let encountered_face = structure.block_rotation(coords).global_to_local(encountered_global_face);
         match logic_block.connection_on(encountered_face) {
             Some(LogicConnection::Port(port_type)) => {
                 // Getting the port's output value in the previous group.
@@ -434,11 +434,11 @@ impl LogicGraph {
                     PortType::Input => 0,
                     PortType::Output => {
                         let old_group = self
-                            .group_of(&Port::new(coords, encountered_local_face), PortType::Output)
+                            .group_of(&Port::new(coords, encountered_global_face), PortType::Output)
                             .expect("Port being renamed should have a previous group.");
                         *old_group
                             .producers
-                            .get(&Port::new(coords, encountered_local_face))
+                            .get(&Port::new(coords, encountered_global_face))
                             .expect("Existing output port should be either on or off")
                     }
                 };
@@ -446,7 +446,7 @@ impl LogicGraph {
                 // Inserting the port into the port to group ID mapping also removes the old version.
                 self.add_port(
                     coords,
-                    encountered_local_face,
+                    encountered_global_face,
                     new_group_id,
                     port_type,
                     old_signal,
@@ -457,20 +457,20 @@ impl LogicGraph {
             }
             Some(LogicConnection::Wire) => {
                 // Recurse to continue marking the ports reachable from this wire.
-                visited.insert(Port::new(coords, encountered_local_face));
+                visited.insert(Port::new(coords, encountered_global_face));
                 for face in logic_block.wire_faces() {
-                    let local_face = structure.block_rotation(coords).global_to_local(face);
-                    visited.insert(Port::new(coords, local_face));
-                    let Ok(neighbor_coords) = coords.step(local_face) else {
+                    let global_face = structure.block_rotation(coords).local_to_global(face);
+                    visited.insert(Port::new(coords, global_face));
+                    let Ok(neighbor_coords) = coords.step(global_face) else {
                         continue;
                     };
-                    if visited.contains(&Port::new(neighbor_coords, local_face.inverse())) {
+                    if visited.contains(&Port::new(neighbor_coords, global_face.inverse())) {
                         continue;
                     }
                     self.rename_group(
                         new_group_id,
                         neighbor_coords,
-                        local_face.inverse(),
+                        global_face.inverse(),
                         structure,
                         visited,
                         blocks,
