@@ -138,7 +138,7 @@ impl BlockRotation {
         let q = self.as_quat();
         let rotated = q.mul_vec3(direction);
 
-        let output = if rotated.x > 0.9 {
+        if rotated.x > 0.9 {
             BlockFace::Right
         } else if rotated.x < -0.9 {
             BlockFace::Left
@@ -150,27 +150,32 @@ impl BlockRotation {
             BlockFace::Front
         } else {
             BlockFace::Back
-        };
+        }
 
         // TODO: Make less evil.
-        match face {
-            BlockFace::Left | BlockFace::Right => output.inverse(),
-            _ => output,
-        }
+        // match face {
+        //     BlockFace::Left | BlockFace::Right => output.inverse(),
+        //     _ => output,
+        // }
     }
 
     /// Returns which local face of this rotation represents the given global face.
     ///
     /// For example, if the front of the block is locally pointing left and you provide [`BlockFace::Front`], you will be given [`BlockFace::Left`].
     pub fn global_to_local(&self, face: BlockFace) -> BlockFace {
-        self.inverse().local_to_global(face)
+        BlockFace::from_index(
+            self.all_global_faces()
+                .iter()
+                .position(|&found| found == face)
+                .expect("Global face must have some local face."),
+        )
     }
 
     /// Returns an array of all 6 block faces.
     /// Entries are ordered by the global BlockFace index, but contain the local direction that BlockFace is pointing.\
     ///
     /// For example, if [`BlockFace::Top`] is locally pointing right, the entry at index 2 ([`BlockFace::Top`]'s index) will be [`BlockFace::Right`].
-    pub fn all_local_faces(&self) -> [BlockFace; 6] {
+    pub fn all_global_faces(&self) -> [BlockFace; 6] {
         ALL_BLOCK_FACES.map(|face| self.local_to_global(face))
     }
 

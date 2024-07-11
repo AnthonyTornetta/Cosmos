@@ -151,7 +151,7 @@ impl LogicGraph {
             return None;
         };
 
-        let encountered_face = structure.block_rotation(coords).local_to_global(encountered_global_face);
+        let encountered_face = structure.block_rotation(coords).global_to_local(encountered_global_face);
         println!("Rotation: {:?}", structure.block_rotation(coords));
         let name = block.unlocalized_name();
         println!("Encountered {name} through global face: {encountered_face} (pointing {encountered_global_face}).");
