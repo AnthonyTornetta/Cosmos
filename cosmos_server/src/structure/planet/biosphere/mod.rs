@@ -6,9 +6,10 @@ use bevy::{
     log::{info, warn},
     prelude::{
         in_state, Added, App, Commands, Component, Entity, Event, EventReader, EventWriter, IntoSystemConfigs, Query, Res, ResMut,
-        Resource, Startup, Update, With, Without,
+        Resource, Startup, SystemSet, Update, With, Without,
     },
     reflect::TypePath,
+    state::state::OnEnter,
     tasks::Task,
 };
 use bevy_renet2::renet2::RenetServer;
@@ -291,15 +292,21 @@ fn on_connect(
     }
 }
 
+#[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
+pub enum RegisterBiomesSet {
+    RegisterBiomes,
+}
+
 pub(super) fn register(app: &mut App) {
     sync_registry::<Biosphere>(app);
     sync_registry::<Biome>(app);
     sync_registry::<BiosphereBiomesRegistry>(app);
 
+    app.configure_sets(OnEnter(GameState::PostLoading), RegisterBiomesSet::RegisterBiomes);
+
     app.add_event::<NeedsBiosphereEvent>()
         .insert_resource(BiosphereTemperatureRegistry::default())
-        .add_systems(Update, add_biosphere)
-        .add_systems(Update, on_connect.run_if(in_state(GameState::Playing)));
+        .add_systems(Update, (on_connect, add_biosphere).run_if(in_state(GameState::Playing)));
 
     biosphere_generation::register(app);
     biome::register(app);

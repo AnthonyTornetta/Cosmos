@@ -1,6 +1,6 @@
 //! This should contain everything needed for a cosmos application to run
 
-use crate::{block, economy, ecs, fluid, inventory, netty, persistence, projectiles, shop, universe};
+use crate::{block, debug, economy, ecs, fluid, inventory, netty, persistence, projectiles, shop, universe};
 use crate::{blockitems, structure};
 use crate::{events, loader};
 use crate::{item, physics};
@@ -78,11 +78,11 @@ impl<T: States + Clone + Copy + FreelyMutableState> Plugin for CosmosCorePlugin<
             self.playing_state,
         );
         item::register(app, self.loading_state);
-        blockitems::register(app, self.post_loading_state);
+        blockitems::register(app, self.loading_state);
         physics::register(app, self.post_loading_state);
         events::register(app, self.playing_state);
         structure::register(app, self.playing_state);
-        inventory::register(app);
+        inventory::register(app, self.playing_state);
         projectiles::register(app);
         ecs::register(app);
         persistence::register(app);
@@ -91,6 +91,7 @@ impl<T: States + Clone + Copy + FreelyMutableState> Plugin for CosmosCorePlugin<
         economy::register(app);
         shop::register(app);
         fluid::register(app);
+        debug::register(app);
     }
 }
 
