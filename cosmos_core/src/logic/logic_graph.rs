@@ -294,7 +294,7 @@ impl LogicGraph {
         };
 
         let port = Port::new(coords, global_face);
-        println!("Removing Port: {coords:?}, {global_face:?}");
+        println!("Removing Port: {coords:?}, {global_face:?}\n");
         let &group_id = match port_type {
             PortType::Input => &mut self.input_port_group_id,
             PortType::Output => &mut self.output_port_group_id,

@@ -70,18 +70,10 @@ impl BlockRotation {
         .mul_quat(match self.block_up {
             BlockFace::Top => Quat::IDENTITY,
             BlockFace::Bottom => Quat::from_axis_angle(Vec3::X, PI),
-            BlockFace::Back => Quat::from_axis_angle(Vec3::Y, PI)
-                .mul_quat(Quat::from_axis_angle(Vec3::X, -PI / 2.0))
-                .normalize(),
-            BlockFace::Front => Quat::from_axis_angle(Vec3::Y, -PI)
-                .mul_quat(Quat::from_axis_angle(Vec3::X, PI / 2.0))
-                .normalize(),
-            BlockFace::Left => Quat::from_axis_angle(Vec3::X, PI)
-                .mul_quat(Quat::from_axis_angle(Vec3::Z, -PI / 2.0))
-                .normalize(),
-            BlockFace::Right => Quat::from_axis_angle(Vec3::X, -PI)
-                .mul_quat(Quat::from_axis_angle(Vec3::Z, PI / 2.0))
-                .normalize(),
+            BlockFace::Back => Quat::from_axis_angle(Vec3::X, PI / 2.0),
+            BlockFace::Front => Quat::from_axis_angle(Vec3::X, -PI / 2.0),
+            BlockFace::Left => Quat::from_axis_angle(Vec3::Z, -PI / 2.0),
+            BlockFace::Right => Quat::from_axis_angle(Vec3::Z, PI / 2.0),
         })
         .normalize()
     }
@@ -137,7 +129,9 @@ impl BlockRotation {
     pub fn local_to_global(&self, face: BlockFace) -> BlockFace {
         let direction = face.to_direction_vec3();
         let q = self.as_quat();
+        println!("Quaternion: {q:?}");
         let rotated = q.mul_vec3(direction);
+        println!("Old direction: {direction}; New direction: {rotated}");
 
         if rotated.x > 0.9 {
             BlockFace::Right
