@@ -886,12 +886,12 @@ pub fn rotate(
             (ub_block_coord.y - delta.y),
             (ub_block_coord.z + delta.z),
         ),
-        BlockFace::Right => (
+        BlockFace::Left => (
             (ub_block_coord.x + delta.y),
             (ub_block_coord.y + delta.x),
             (ub_block_coord.z + delta.z),
         ),
-        BlockFace::Left => (
+        BlockFace::Right => (
             (ub_block_coord.x - delta.y),
             (ub_block_coord.y + delta.x),
             (ub_block_coord.z + delta.z),

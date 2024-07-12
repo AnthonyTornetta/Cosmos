@@ -79,8 +79,8 @@ fn redwood_tree(
     branch(
         coords,
         vec![
-            ((1, h, 0).into(), BlockFace::Right),
-            ((-1, h, 0).into(), BlockFace::Left),
+            ((1, h, 0).into(), BlockFace::Left),
+            ((-1, h, 0).into(), BlockFace::Right),
             ((0, h, 1).into(), BlockFace::Front),
             ((0, h, -1).into(), BlockFace::Back),
         ],
@@ -98,10 +98,10 @@ fn redwood_tree(
         branch(
             coords,
             vec![
-                ((1, h, 0).into(), BlockFace::Right),
-                ((2, h - 1, 0).into(), BlockFace::Right),
-                ((-1, h, 0).into(), BlockFace::Left),
-                ((-2, h - 1, 0).into(), BlockFace::Left),
+                ((1, h, 0).into(), BlockFace::Left),
+                ((2, h - 1, 0).into(), BlockFace::Left),
+                ((-1, h, 0).into(), BlockFace::Right),
+                ((-2, h - 1, 0).into(), BlockFace::Right),
                 ((0, h, 1).into(), BlockFace::Front),
                 ((0, h - 1, 2).into(), BlockFace::Front),
                 ((0, h, -1).into(), BlockFace::Back),
@@ -204,26 +204,26 @@ fn redwood_tree(
             branch(
                 coords,
                 vec![
-                    ((2, h, 0).into(), BlockFace::Right),
-                    ((3, h, 0).into(), BlockFace::Right),
-                    ((4, h - 1, 0).into(), BlockFace::Right),
-                    ((-2, h, 0).into(), BlockFace::Left),
-                    ((-3, h, 0).into(), BlockFace::Left),
-                    ((-4, h - 1, 0).into(), BlockFace::Left),
+                    ((2, h, 0).into(), BlockFace::Left),
+                    ((3, h, 0).into(), BlockFace::Left),
+                    ((4, h - 1, 0).into(), BlockFace::Left),
+                    ((-2, h, 0).into(), BlockFace::Right),
+                    ((-3, h, 0).into(), BlockFace::Right),
+                    ((-4, h - 1, 0).into(), BlockFace::Right),
                     ((0, h, 2).into(), BlockFace::Front),
                     ((0, h, 3).into(), BlockFace::Front),
                     ((0, h - 1, 4).into(), BlockFace::Front),
                     ((0, h, -2).into(), BlockFace::Back),
                     ((0, h, -3).into(), BlockFace::Back),
                     ((0, h - 1, -4).into(), BlockFace::Back),
-                    ((2, h, 2).into(), BlockFace::Right),
-                    ((3, h - 1, 3).into(), BlockFace::Right),
+                    ((2, h, 2).into(), BlockFace::Left),
+                    ((3, h - 1, 3).into(), BlockFace::Left),
                     ((-2, h, 2).into(), BlockFace::Front),
                     ((-3, h - 1, 3).into(), BlockFace::Front),
                     ((2, h, -2).into(), BlockFace::Back),
                     ((3, h - 1, -3).into(), BlockFace::Back),
-                    ((-2, h, -2).into(), BlockFace::Left),
-                    ((-3, h - 1, -3).into(), BlockFace::Left),
+                    ((-2, h, -2).into(), BlockFace::Right),
+                    ((-3, h - 1, -3).into(), BlockFace::Right),
                 ],
                 planet_face,
                 structure,
@@ -268,22 +268,22 @@ fn redwood_tree(
             branch(
                 coords,
                 vec![
-                    ((2, h, 0).into(), BlockFace::Right),
-                    ((3, h - 1, 0).into(), BlockFace::Right),
-                    ((-2, h, 0).into(), BlockFace::Left),
-                    ((-3, h - 1, 0).into(), BlockFace::Left),
+                    ((2, h, 0).into(), BlockFace::Left),
+                    ((3, h - 1, 0).into(), BlockFace::Left),
+                    ((-2, h, 0).into(), BlockFace::Right),
+                    ((-3, h - 1, 0).into(), BlockFace::Right),
                     ((0, h, 2).into(), BlockFace::Front),
                     ((0, h - 1, 3).into(), BlockFace::Front),
                     ((0, h, -2).into(), BlockFace::Back),
                     ((0, h - 1, -3).into(), BlockFace::Back),
-                    ((1, h, 1).into(), BlockFace::Right),
-                    ((2, h - 1, 2).into(), BlockFace::Right),
+                    ((1, h, 1).into(), BlockFace::Left),
+                    ((2, h - 1, 2).into(), BlockFace::Left),
                     ((-1, h, 1).into(), BlockFace::Front),
                     ((-2, h - 1, 2).into(), BlockFace::Front),
                     ((1, h, -1).into(), BlockFace::Back),
                     ((2, h - 1, -2).into(), BlockFace::Back),
-                    ((-1, h, -1).into(), BlockFace::Left),
-                    ((-2, h - 1, -2).into(), BlockFace::Left),
+                    ((-1, h, -1).into(), BlockFace::Right),
+                    ((-2, h - 1, -2).into(), BlockFace::Right),
                 ],
                 planet_face,
                 structure,
@@ -436,7 +436,7 @@ fn generate_chunk_features(
     for block_up in faces.iter() {
         // Getting the noise value for every block in the chunk, to find where to put trees.
         let noise_height = match block_up {
-            BlockFace::Front | BlockFace::Top | BlockFace::Right => s_dimension,
+            BlockFace::Front | BlockFace::Top | BlockFace::Left => s_dimension,
             _ => 0,
         };
 
@@ -456,7 +456,7 @@ fn generate_chunk_features(
                         noise_height as f64,
                         (first_block_coords.z + z) as f64 - DIST_BETWEEN_TREES as f64,
                     ),
-                    BlockFace::Right | BlockFace::Left => (
+                    BlockFace::Left | BlockFace::Right => (
                         noise_height as f64,
                         (first_block_coords.y + x) as f64 - DIST_BETWEEN_TREES as f64,
                         (first_block_coords.z + z) as f64 - DIST_BETWEEN_TREES as f64,
@@ -491,7 +491,7 @@ fn generate_chunk_features(
                 let coords: BlockCoordinate = match block_up {
                     BlockFace::Front | BlockFace::Back => (first_block_coords.x + x, first_block_coords.y + z, first_block_coords.z),
                     BlockFace::Top | BlockFace::Bottom => (first_block_coords.x + x, first_block_coords.y, first_block_coords.z + z),
-                    BlockFace::Right | BlockFace::Left => (first_block_coords.x, first_block_coords.y + x, first_block_coords.z + z),
+                    BlockFace::Left | BlockFace::Right => (first_block_coords.x, first_block_coords.y + x, first_block_coords.z + z),
                 }
                 .into();
 

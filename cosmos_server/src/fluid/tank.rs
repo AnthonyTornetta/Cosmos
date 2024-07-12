@@ -119,8 +119,8 @@ fn balance_tanks(
         let level = match tank_rotation.block_up {
             BlockFace::Top => coord.y as UnboundCoordinateType,
             BlockFace::Bottom => -(coord.y as UnboundCoordinateType),
-            BlockFace::Right => coord.x as UnboundCoordinateType,
-            BlockFace::Left => -(coord.x as UnboundCoordinateType),
+            BlockFace::Left => coord.x as UnboundCoordinateType,
+            BlockFace::Right => -(coord.x as UnboundCoordinateType),
             BlockFace::Front => coord.z as UnboundCoordinateType,
             BlockFace::Back => -(coord.z as UnboundCoordinateType),
         };

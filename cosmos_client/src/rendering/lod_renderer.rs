@@ -157,7 +157,7 @@ impl ChunkRenderer {
                         .map(|c| check(c, block_id, actual_block, blocks, ChunkBlockCoordinate::new(0, y, z)))
                         .unwrap_or(true)))
             {
-                faces.push(BlockFace::Right);
+                faces.push(BlockFace::Left);
             }
             // left
             if (x != 0
@@ -181,7 +181,7 @@ impl ChunkRenderer {
                         })
                         .unwrap_or(true)))
             {
-                faces.push(BlockFace::Left);
+                faces.push(BlockFace::Right);
             }
 
             // top

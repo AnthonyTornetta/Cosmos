@@ -114,7 +114,7 @@ impl ChunkRenderer {
                     actual_block,
                     blocks,
                     coords.right(),
-                    &mut block_connections[BlockFace::Right.index()],
+                    &mut block_connections[BlockFace::Left.index()],
                 ))
                 || (x == CHUNK_DIMENSIONS - 1
                     && (right
@@ -124,12 +124,12 @@ impl ChunkRenderer {
                                 actual_block,
                                 blocks,
                                 ChunkBlockCoordinate::new(0, y, z),
-                                &mut block_connections[BlockFace::Right.index()],
+                                &mut block_connections[BlockFace::Left.index()],
                             )
                         })
                         .unwrap_or(true)))
             {
-                faces.push(BlockFace::Right);
+                faces.push(BlockFace::Left);
             }
             // left
             if (x != 0
@@ -138,7 +138,7 @@ impl ChunkRenderer {
                     actual_block,
                     blocks,
                     coords.left().expect("Checked in first condition"),
-                    &mut block_connections[BlockFace::Left.index()],
+                    &mut block_connections[BlockFace::Right.index()],
                 ))
                 || (x == 0
                     && (left
@@ -148,12 +148,12 @@ impl ChunkRenderer {
                                 actual_block,
                                 blocks,
                                 ChunkBlockCoordinate::new(CHUNK_DIMENSIONS - 1, y, z),
-                                &mut block_connections[BlockFace::Left.index()],
+                                &mut block_connections[BlockFace::Right.index()],
                             )
                         })
                         .unwrap_or(true)))
             {
-                faces.push(BlockFace::Left);
+                faces.push(BlockFace::Right);
             }
 
             // top
@@ -308,10 +308,10 @@ impl ChunkRenderer {
 
                     match og_face {
                         BlockFace::Front | BlockFace::Back => {
-                            if block_connections[BlockFace::Right.index()] {
+                            if block_connections[BlockFace::Left.index()] {
                                 neighbors |= BlockNeighbors::Right;
                             }
-                            if block_connections[BlockFace::Left.index()] {
+                            if block_connections[BlockFace::Right.index()] {
                                 neighbors |= BlockNeighbors::Left;
                             }
                             if block_connections[BlockFace::Top.index()] {
@@ -322,10 +322,10 @@ impl ChunkRenderer {
                             }
                         }
                         BlockFace::Top | BlockFace::Bottom => {
-                            if block_connections[BlockFace::Right.index()] {
+                            if block_connections[BlockFace::Left.index()] {
                                 neighbors |= BlockNeighbors::Right;
                             }
-                            if block_connections[BlockFace::Left.index()] {
+                            if block_connections[BlockFace::Right.index()] {
                                 neighbors |= BlockNeighbors::Left;
                             }
                             if block_connections[BlockFace::Front.index()] {
@@ -336,7 +336,7 @@ impl ChunkRenderer {
                             }
                         }
                         // idk why right and left have to separate, and I don't want to know why
-                        BlockFace::Right => {
+                        BlockFace::Left => {
                             if block_connections[BlockFace::Front.index()] {
                                 neighbors |= BlockNeighbors::Right;
                             }
@@ -350,7 +350,7 @@ impl ChunkRenderer {
                                 neighbors |= BlockNeighbors::Bottom;
                             }
                         }
-                        BlockFace::Left => {
+                        BlockFace::Right => {
                             if block_connections[BlockFace::Back.index()] {
                                 neighbors |= BlockNeighbors::Right;
                             }

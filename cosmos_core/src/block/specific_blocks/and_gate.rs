@@ -93,8 +93,8 @@ fn and_gate_input_event_listener(
 
         let coords = ev.block.coords();
         let rotation = structure.block_rotation(ev.block.coords());
-        let left = logic_driver.global_port_input(coords, rotation, BlockFace::Left) != 0;
-        let right = logic_driver.global_port_input(coords, rotation, BlockFace::Right) != 0;
+        let left = logic_driver.global_port_input(coords, rotation, BlockFace::Right) != 0;
+        let right = logic_driver.global_port_input(coords, rotation, BlockFace::Left) != 0;
         // let temp1 = rotation.local_left();
         // let temp2 = rotation.local_right();
         // println!("Left (pointing {temp1}): {left}, Right (pointing {temp2}): {right}");

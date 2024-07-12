@@ -187,7 +187,7 @@ pub(crate) fn generate_chunks_from_gpu_data<T: BiosphereMarkerComponent>(
                         let face = Planet::planet_face_relative(block_relative_coord);
 
                         let coord = match face {
-                            BlockFace::Left | BlockFace::Right => block_relative_coord.x,
+                            BlockFace::Right | BlockFace::Left => block_relative_coord.x,
                             BlockFace::Top | BlockFace::Bottom => block_relative_coord.y,
                             BlockFace::Front | BlockFace::Back => block_relative_coord.z,
                         };

@@ -265,8 +265,8 @@ fn resize_mining_lasers(
             BlockFace::Back => trans.translation.z = mining_laser.start_loc.z - toi / 2.0,
             BlockFace::Top => trans.translation.y = mining_laser.start_loc.y + toi / 2.0,
             BlockFace::Bottom => trans.translation.y = mining_laser.start_loc.y - toi / 2.0,
-            BlockFace::Right => trans.translation.x = mining_laser.start_loc.x + toi / 2.0,
-            BlockFace::Left => trans.translation.x = mining_laser.start_loc.x - toi / 2.0,
+            BlockFace::Left => trans.translation.x = mining_laser.start_loc.x + toi / 2.0,
+            BlockFace::Right => trans.translation.x = mining_laser.start_loc.x - toi / 2.0,
         }
     }
 }

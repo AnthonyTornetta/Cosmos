@@ -419,8 +419,8 @@ impl BlockMeshInformation {
         back: Option<MeshInformation>,
     ) -> Self {
         // If this ever fails, change the `mesh_info` ordering + comment below
-        debug_assert!(BlockFace::Right.index() == 0);
-        debug_assert!(BlockFace::Left.index() == 1);
+        debug_assert!(BlockFace::Left.index() == 0);
+        debug_assert!(BlockFace::Right.index() == 1);
         debug_assert!(BlockFace::Top.index() == 2);
         debug_assert!(BlockFace::Bottom.index() == 3);
         debug_assert!(BlockFace::Front.index() == 4);
