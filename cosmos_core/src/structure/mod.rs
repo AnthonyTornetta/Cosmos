@@ -161,7 +161,7 @@ impl Structure {
     }
 
     /// Returns None for unloaded/empty chunks or chunks that are out of bounds
-    ///  
+    ///
     /// (0, 0, 0) => chunk @ 0, 0, 0\
     /// (1, 0, 0) => chunk @ 1, 0, 0
     pub fn chunk_at(&self, coords: ChunkCoordinate) -> Option<&Chunk> {

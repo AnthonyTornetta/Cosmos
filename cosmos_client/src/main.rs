@@ -114,11 +114,11 @@ fn main() {
 
     app
         // .insert_resource(HostConfig { host_name })
-        .insert_resource(TimestepMode::Interpolated {
-            dt: 1.0 / 60.0,
-            time_scale: 1.0,
-            substeps: 2,
-        })
+        // .insert_resource(TimestepMode::Interpolated {
+        //     dt: 1.0 / 60.0,
+        //     time_scale: 1.0,
+        //     substeps: 2,
+        // })
         .insert_resource(ClearColor(Color::BLACK))
         // This must be registered here, before it is used anywhere
         .add_plugins(default_plugins)
@@ -130,7 +130,11 @@ fn main() {
             GameState::MainMenu,
             GameState::Playing,
         ))
-        .add_plugins(RapierPhysicsPlugin::<CosmosPhysicsFilter>::default().with_default_world(RapierContextInitialization::default()))
+        .add_plugins(
+            RapierPhysicsPlugin::<CosmosPhysicsFilter>::default()
+                // .in_schedule(FixedUpdate)
+                .with_default_world(RapierContextInitialization::default()),
+        )
         .add_plugins((RenetClientPlugin, NetcodeClientPlugin, ObjPlugin, HanabiPlugin))
         // .add_plugins(RapierDebugRenderPlugin::default())
         .add_systems(OnEnter(GameState::Connecting), connect::establish_connection)
