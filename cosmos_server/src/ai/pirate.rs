@@ -17,6 +17,7 @@ use bevy_rapier3d::dynamics::Velocity;
 use cosmos_core::{
     ecs::NeedsDespawned,
     entities::player::Player,
+    events::structure::StructureEventListenerSet,
     physics::location::Location,
     projectiles::laser::LASER_LIVE_TIME,
     structure::{
@@ -237,13 +238,18 @@ fn on_load_pirate(mut commands: Commands, query: Query<(Entity, &SerializedData)
 }
 
 pub(super) fn register(app: &mut App) {
-    app.configure_sets(Update, PirateSystemSet::PirateAiLogic.after(LoadingSystemSet::DoneLoading))
-        .add_systems(
-            Update,
-            (on_melt_down, add_pirate_ai, add_pirate_targets, handle_pirate_movement)
-                .in_set(PirateSystemSet::PirateAiLogic)
-                .chain(),
-        )
-        .add_systems(LOADING_SCHEDULE, on_load_pirate.in_set(LoadingSystemSet::DoLoading))
-        .add_systems(SAVING_SCHEDULE, on_save_pirate.in_set(SavingSystemSet::DoSaving));
+    app.configure_sets(
+        Update,
+        PirateSystemSet::PirateAiLogic
+            .after(LoadingSystemSet::DoneLoading)
+            .after(StructureEventListenerSet::ChangePilotListener),
+    )
+    .add_systems(
+        Update,
+        (on_melt_down, add_pirate_ai, add_pirate_targets, handle_pirate_movement)
+            .in_set(PirateSystemSet::PirateAiLogic)
+            .chain(),
+    )
+    .add_systems(LOADING_SCHEDULE, on_load_pirate.in_set(LoadingSystemSet::DoLoading))
+    .add_systems(SAVING_SCHEDULE, on_save_pirate.in_set(SavingSystemSet::DoSaving));
 }

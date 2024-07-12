@@ -388,6 +388,7 @@ pub(super) fn register(app: &mut App) {
                 power_shields,
             )
                 .chain()
+                .before(ShieldHitProcessing::OnShieldHit)
                 .run_if(in_state(GameState::Playing)),
         )
         .add_systems(Update, send_shield_hits.after(ShieldHitProcessing::OnShieldHit))

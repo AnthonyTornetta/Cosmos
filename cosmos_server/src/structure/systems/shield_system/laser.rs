@@ -30,5 +30,10 @@ fn handle_laser_hits(
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_systems(Update, handle_laser_hits.in_set(ShieldHitProcessing::OnShieldHit));
+    app.add_systems(
+        Update,
+        handle_laser_hits
+            .in_set(ShieldHitProcessing::OnShieldHit)
+            .ambiguous_with(ShieldHitProcessing::OnShieldHit),
+    );
 }
