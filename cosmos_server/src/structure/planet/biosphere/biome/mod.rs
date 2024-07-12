@@ -2,7 +2,7 @@
 
 use bevy::{
     ecs::{entity::Entity, event::Event},
-    prelude::{App, OnExit, ResMut},
+    prelude::{App, OnExit, ResMut, SystemSet},
     state::state::OnEnter,
     utils::HashSet,
 };
@@ -53,9 +53,16 @@ pub struct GenerateChunkFeaturesEvent {
     pub structure_entity: Entity,
 }
 
+#[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
+pub enum RegisterBiomesSet {
+    RegisterBiomes,
+}
+
 pub(super) fn register(app: &mut App) {
     app.add_event::<GenerateChunkFeaturesEvent>()
         .add_systems(OnExit(GameState::PostLoading), construct_lookup_tables);
+
+    app.configure_sets(OnExit(GameState::Loading), RegisterBiomesSet::RegisterBiomes);
 
     ice::register(app);
     molten::register(app);

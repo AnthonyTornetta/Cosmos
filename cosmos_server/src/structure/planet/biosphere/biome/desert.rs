@@ -24,7 +24,7 @@ use crate::{
     structure::planet::biosphere::biosphere_generation::BiosphereGenerationSet,
 };
 
-use super::{Biome, GenerateChunkFeaturesEvent};
+use super::{Biome, GenerateChunkFeaturesEvent, RegisterBiomesSet};
 
 const MAX_CACTUS_HEIGHT: CoordinateType = 3;
 const MAX_CACTUS_ITERATIONS_PER_FACE: i64 = 200;
@@ -164,7 +164,13 @@ fn register_biome(mut registry: ResMut<Registry<Biome>>, block_registry: Res<Reg
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_systems(OnExit(GameState::Loading), register_biome).add_systems(
+    app.add_systems(
+        OnExit(GameState::Loading),
+        register_biome
+            .in_set(RegisterBiomesSet::RegisterBiomes)
+            .ambiguous_with(RegisterBiomesSet::RegisterBiomes),
+    )
+    .add_systems(
         Update,
         desert_generate_chunk_features.in_set(BiosphereGenerationSet::GenerateChunkFeatures),
     );

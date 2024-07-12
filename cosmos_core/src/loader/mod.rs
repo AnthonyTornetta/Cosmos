@@ -129,5 +129,8 @@ pub(super) fn register<T: States + Clone + Copy + FreelyMutableState>(
             monitor_loading::<T>.run_if(in_state(pre_loading_state).or_else(in_state(loading_state).or_else(in_state(post_loading_state)))),
         )
         .insert_resource(LoadingStatus::new(pre_loading_state, loading_state, post_loading_state, done_state))
-        .insert_resource(LoadingManager::default());
+        .insert_resource(LoadingManager::default())
+        .allow_ambiguous_resource::<Events<DoneLoadingEvent>>()
+        .allow_ambiguous_resource::<Events<AddLoadingEvent>>()
+        .allow_ambiguous_resource::<LoadingManager>();
 }
