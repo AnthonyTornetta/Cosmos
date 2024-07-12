@@ -873,9 +873,9 @@ impl BaseStructure {
         if let Ok(bottom) = coords.bottom() {
             surroundings[BlockFace::Bottom.index()] = self.block_id_at(bottom);
         }
-        surroundings[BlockFace::Front.index()] = self.block_id_at(coords.front());
+        surroundings[BlockFace::Back.index()] = self.block_id_at(coords.front());
         if let Ok(back) = coords.back() {
-            surroundings[BlockFace::Back.index()] = self.block_id_at(back);
+            surroundings[BlockFace::Front.index()] = self.block_id_at(back);
         }
         surroundings
     }

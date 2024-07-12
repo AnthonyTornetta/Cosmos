@@ -866,12 +866,12 @@ pub fn rotate(
     let ub_block_coord = UnboundBlockCoordinate::from(block_coord);
 
     let ub_coords = UnboundBlockCoordinate::from(match block_up {
-        BlockFace::Front => (
+        BlockFace::Back => (
             (ub_block_coord.x + delta.x),
             (ub_block_coord.y + delta.z),
             (ub_block_coord.z + delta.y),
         ),
-        BlockFace::Back => (
+        BlockFace::Front => (
             (ub_block_coord.x + delta.x),
             (ub_block_coord.y + delta.z),
             (ub_block_coord.z - delta.y),

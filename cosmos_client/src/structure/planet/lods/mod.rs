@@ -635,7 +635,7 @@ pub(crate) fn generate_chunks_from_gpu_data(
                         let coord = match face {
                             BlockFace::Left | BlockFace::Right => block_relative_coord.x,
                             BlockFace::Top | BlockFace::Bottom => block_relative_coord.y,
-                            BlockFace::Front | BlockFace::Back => block_relative_coord.z,
+                            BlockFace::Back | BlockFace::Front => block_relative_coord.z,
                         };
 
                         if (coord.abs()) as CoordinateType <= sea_level_coordinate {

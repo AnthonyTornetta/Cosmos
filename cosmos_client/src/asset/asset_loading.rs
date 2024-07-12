@@ -261,8 +261,8 @@ impl BlockTextureIndex {
                 BlockFace::Left => get_texture_index_from_type(&sides.left, neighbors),
                 BlockFace::Top => get_texture_index_from_type(&sides.top, neighbors),
                 BlockFace::Bottom => get_texture_index_from_type(&sides.bottom, neighbors),
-                BlockFace::Front => get_texture_index_from_type(&sides.front, neighbors),
-                BlockFace::Back => get_texture_index_from_type(&sides.back, neighbors),
+                BlockFace::Back => get_texture_index_from_type(&sides.front, neighbors),
+                BlockFace::Front => get_texture_index_from_type(&sides.back, neighbors),
             },
         }
     }

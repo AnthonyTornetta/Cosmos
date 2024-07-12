@@ -283,7 +283,7 @@ fn calculate_build_mode_blocks(
                             sub_rotation: block_rotation.sub_rotation.inverse(),
                         },
                         BlockRotation {
-                            block_up: BlockFace::Front | BlockFace::Back,
+                            block_up: BlockFace::Back | BlockFace::Front,
                             sub_rotation: BlockSubRotation::Flip | BlockSubRotation::None,
                         } => BlockRotation {
                             block_up: block_rotation.block_up,
@@ -314,11 +314,11 @@ fn calculate_build_mode_blocks(
                 if structure.is_within_blocks(new_block_coords) {
                     let new_block_rotation = match block_rotation {
                         BlockRotation {
-                            block_up: BlockFace::Front | BlockFace::Back,
+                            block_up: BlockFace::Back | BlockFace::Front,
                             sub_rotation: BlockSubRotation::None | BlockSubRotation::Flip,
                         } => block_rotation.inverse(),
                         BlockRotation {
-                            block_up: BlockFace::Front | BlockFace::Back,
+                            block_up: BlockFace::Back | BlockFace::Front,
                             sub_rotation: BlockSubRotation::CCW | BlockSubRotation::CW,
                         } => BlockRotation {
                             block_up: block_rotation.block_up.inverse(),

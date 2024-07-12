@@ -81,8 +81,8 @@ fn redwood_tree(
         vec![
             ((1, h, 0).into(), BlockFace::Right),
             ((-1, h, 0).into(), BlockFace::Left),
-            ((0, h, 1).into(), BlockFace::Front),
-            ((0, h, -1).into(), BlockFace::Back),
+            ((0, h, 1).into(), BlockFace::Back),
+            ((0, h, -1).into(), BlockFace::Front),
         ],
         planet_face,
         structure,
@@ -102,10 +102,10 @@ fn redwood_tree(
                 ((2, h - 1, 0).into(), BlockFace::Right),
                 ((-1, h, 0).into(), BlockFace::Left),
                 ((-2, h - 1, 0).into(), BlockFace::Left),
-                ((0, h, 1).into(), BlockFace::Front),
-                ((0, h - 1, 2).into(), BlockFace::Front),
-                ((0, h, -1).into(), BlockFace::Back),
-                ((0, h - 1, -2).into(), BlockFace::Back),
+                ((0, h, 1).into(), BlockFace::Back),
+                ((0, h - 1, 2).into(), BlockFace::Back),
+                ((0, h, -1).into(), BlockFace::Front),
+                ((0, h - 1, -2).into(), BlockFace::Front),
             ],
             planet_face,
             structure,
@@ -210,18 +210,18 @@ fn redwood_tree(
                     ((-2, h, 0).into(), BlockFace::Left),
                     ((-3, h, 0).into(), BlockFace::Left),
                     ((-4, h - 1, 0).into(), BlockFace::Left),
-                    ((0, h, 2).into(), BlockFace::Front),
-                    ((0, h, 3).into(), BlockFace::Front),
-                    ((0, h - 1, 4).into(), BlockFace::Front),
-                    ((0, h, -2).into(), BlockFace::Back),
-                    ((0, h, -3).into(), BlockFace::Back),
-                    ((0, h - 1, -4).into(), BlockFace::Back),
+                    ((0, h, 2).into(), BlockFace::Back),
+                    ((0, h, 3).into(), BlockFace::Back),
+                    ((0, h - 1, 4).into(), BlockFace::Back),
+                    ((0, h, -2).into(), BlockFace::Front),
+                    ((0, h, -3).into(), BlockFace::Front),
+                    ((0, h - 1, -4).into(), BlockFace::Front),
                     ((2, h, 2).into(), BlockFace::Right),
                     ((3, h - 1, 3).into(), BlockFace::Right),
-                    ((-2, h, 2).into(), BlockFace::Front),
-                    ((-3, h - 1, 3).into(), BlockFace::Front),
-                    ((2, h, -2).into(), BlockFace::Back),
-                    ((3, h - 1, -3).into(), BlockFace::Back),
+                    ((-2, h, 2).into(), BlockFace::Back),
+                    ((-3, h - 1, 3).into(), BlockFace::Back),
+                    ((2, h, -2).into(), BlockFace::Front),
+                    ((3, h - 1, -3).into(), BlockFace::Front),
                     ((-2, h, -2).into(), BlockFace::Left),
                     ((-3, h - 1, -3).into(), BlockFace::Left),
                 ],
@@ -272,16 +272,16 @@ fn redwood_tree(
                     ((3, h - 1, 0).into(), BlockFace::Right),
                     ((-2, h, 0).into(), BlockFace::Left),
                     ((-3, h - 1, 0).into(), BlockFace::Left),
-                    ((0, h, 2).into(), BlockFace::Front),
-                    ((0, h - 1, 3).into(), BlockFace::Front),
-                    ((0, h, -2).into(), BlockFace::Back),
-                    ((0, h - 1, -3).into(), BlockFace::Back),
+                    ((0, h, 2).into(), BlockFace::Back),
+                    ((0, h - 1, 3).into(), BlockFace::Back),
+                    ((0, h, -2).into(), BlockFace::Front),
+                    ((0, h - 1, -3).into(), BlockFace::Front),
                     ((1, h, 1).into(), BlockFace::Right),
                     ((2, h - 1, 2).into(), BlockFace::Right),
-                    ((-1, h, 1).into(), BlockFace::Front),
-                    ((-2, h - 1, 2).into(), BlockFace::Front),
-                    ((1, h, -1).into(), BlockFace::Back),
-                    ((2, h - 1, -2).into(), BlockFace::Back),
+                    ((-1, h, 1).into(), BlockFace::Back),
+                    ((-2, h - 1, 2).into(), BlockFace::Back),
+                    ((1, h, -1).into(), BlockFace::Front),
+                    ((2, h - 1, -2).into(), BlockFace::Front),
                     ((-1, h, -1).into(), BlockFace::Left),
                     ((-2, h - 1, -2).into(), BlockFace::Left),
                 ],
@@ -436,7 +436,7 @@ fn generate_chunk_features(
     for block_up in faces.iter() {
         // Getting the noise value for every block in the chunk, to find where to put trees.
         let noise_height = match block_up {
-            BlockFace::Front | BlockFace::Top | BlockFace::Right => s_dimension,
+            BlockFace::Back | BlockFace::Top | BlockFace::Right => s_dimension,
             _ => 0,
         };
 
@@ -446,7 +446,7 @@ fn generate_chunk_features(
         for (z, slice) in noise_cache.iter_mut().enumerate().map(|(z, noise)| (z as CoordinateType, noise)) {
             for (x, noise) in slice.iter_mut().enumerate().map(|(x, noise)| (x as CoordinateType, noise)) {
                 let (nx, ny, nz) = match block_up {
-                    BlockFace::Front | BlockFace::Back => (
+                    BlockFace::Back | BlockFace::Front => (
                         (first_block_coords.x + x) as f64 - DIST_BETWEEN_TREES as f64,
                         (first_block_coords.z + z) as f64 - DIST_BETWEEN_TREES as f64,
                         noise_height as f64,
@@ -489,7 +489,7 @@ fn generate_chunk_features(
                 }
 
                 let coords: BlockCoordinate = match block_up {
-                    BlockFace::Front | BlockFace::Back => (first_block_coords.x + x, first_block_coords.y + z, first_block_coords.z),
+                    BlockFace::Back | BlockFace::Front => (first_block_coords.x + x, first_block_coords.y + z, first_block_coords.z),
                     BlockFace::Top | BlockFace::Bottom => (first_block_coords.x + x, first_block_coords.y, first_block_coords.z + z),
                     BlockFace::Right | BlockFace::Left => (first_block_coords.x, first_block_coords.y + x, first_block_coords.z + z),
                 }

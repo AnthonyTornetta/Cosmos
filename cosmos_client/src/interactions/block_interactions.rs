@@ -176,20 +176,20 @@ pub(crate) fn process_player_interaction(
                     UnboundBlockCoordinate { x: 1, y: 0, z: 0 } => BlockFace::Right,
                     UnboundBlockCoordinate { x: 0, y: -1, z: 0 } => BlockFace::Bottom,
                     UnboundBlockCoordinate { x: 0, y: 1, z: 0 } => BlockFace::Top,
-                    UnboundBlockCoordinate { x: 0, y: 0, z: -1 } => BlockFace::Back,
-                    UnboundBlockCoordinate { x: 0, y: 0, z: 1 } => BlockFace::Front,
+                    UnboundBlockCoordinate { x: 0, y: 0, z: -1 } => BlockFace::Front,
+                    UnboundBlockCoordinate { x: 0, y: 0, z: 1 } => BlockFace::Back,
                     _ => return None, // invalid direction, something wonky happened w/ the block selection logic
                 };
 
                 if block.should_face_front() {
                     // Front face always points perpendicular out from the block being placed on.
                     match perpendicular_direction {
-                        BlockFace::Front => BlockRotation::new(BlockFace::Top, BlockSubRotation::None),
-                        BlockFace::Back => BlockRotation::new(BlockFace::Top, BlockSubRotation::Flip),
+                        BlockFace::Back => BlockRotation::new(BlockFace::Top, BlockSubRotation::None),
+                        BlockFace::Front => BlockRotation::new(BlockFace::Top, BlockSubRotation::Flip),
                         BlockFace::Right => BlockRotation::new(BlockFace::Top, BlockSubRotation::CCW),
                         BlockFace::Left => BlockRotation::new(BlockFace::Top, BlockSubRotation::CW),
-                        BlockFace::Top => BlockRotation::new(BlockFace::Front, BlockSubRotation::None),
-                        BlockFace::Bottom => BlockRotation::new(BlockFace::Back, BlockSubRotation::None),
+                        BlockFace::Top => BlockRotation::new(BlockFace::Back, BlockSubRotation::None),
+                        BlockFace::Bottom => BlockRotation::new(BlockFace::Front, BlockSubRotation::None),
                     }
                 } else {
                     // Fully rotatable - the top texture of the block should always face the player.
@@ -217,7 +217,7 @@ pub(crate) fn process_player_interaction(
                             };
                             BlockFace::from_direction_vec3(Vec3::new(0.0, y, z))
                         }
-                        BlockFace::Front | BlockFace::Back => {
+                        BlockFace::Back | BlockFace::Front => {
                             let (x, y) = if point.x.abs() > point.y.abs() {
                                 (point.x, 0.0)
                             } else {

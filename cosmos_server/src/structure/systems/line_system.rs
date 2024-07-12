@@ -160,7 +160,7 @@ fn add_colors(mut colors: ResMut<Registry<LineColorBlock>>, blocks: Res<Registry
 
 impl<T: LineProperty, S: LinePropertyCalculator<T>> BlockStructureSystem<T> for LineSystem<T, S> {
     fn add_block(&mut self, block: &StructureBlock, block_rotation: BlockRotation, prop: &T) {
-        let block_direction = block_rotation.local_to_global(BlockFace::Front);
+        let block_direction = block_rotation.local_to_global(BlockFace::Back);
 
         let mut found_line = None;
         // If a structure has two lines like this: (XXXXX XXXXXX) and an X is placed
@@ -218,8 +218,8 @@ impl<T: LineProperty, S: LinePropertyCalculator<T>> BlockStructureSystem<T> for 
 
                 // Must use the one before the other in the line so the properties line up
                 if match l1.direction {
-                    BlockFace::Front => l1.start.z > l2.start.z,
-                    BlockFace::Back => l1.start.z < l2.start.z,
+                    BlockFace::Back => l1.start.z > l2.start.z,
+                    BlockFace::Front => l1.start.z < l2.start.z,
                     BlockFace::Right => l1.start.x > l2.start.x,
                     BlockFace::Left => l1.start.x < l2.start.x,
                     BlockFace::Top => l1.start.y > l2.start.y,
@@ -278,8 +278,8 @@ impl<T: LineProperty, S: LinePropertyCalculator<T>> BlockStructureSystem<T> for 
                 }
             } else if line.within(sb) {
                 let l1_len = match line.direction {
-                    BlockFace::Front => sb.z - line.start.z,
-                    BlockFace::Back => line.start.z - sb.z,
+                    BlockFace::Back => sb.z - line.start.z,
+                    BlockFace::Front => line.start.z - sb.z,
                     BlockFace::Right => sb.x - line.start.x,
                     BlockFace::Left => line.start.x - sb.x,
                     BlockFace::Top => sb.y - line.start.y,
@@ -340,8 +340,8 @@ impl<T: LineProperty, S: LinePropertyCalculator<T>> BlockStructureSystem<T> for 
 
 fn is_in_line_with(testing_block: &StructureBlock, direction: BlockFace, line_coord: &BlockCoordinate) -> bool {
     match direction {
-        BlockFace::Front => line_coord.x == testing_block.x && line_coord.y == testing_block.y && line_coord.z >= testing_block.z,
-        BlockFace::Back => line_coord.x == testing_block.x && line_coord.y == testing_block.y && line_coord.z <= testing_block.z,
+        BlockFace::Back => line_coord.x == testing_block.x && line_coord.y == testing_block.y && line_coord.z >= testing_block.z,
+        BlockFace::Front => line_coord.x == testing_block.x && line_coord.y == testing_block.y && line_coord.z <= testing_block.z,
         BlockFace::Top => line_coord.x == testing_block.x && line_coord.y >= testing_block.y && line_coord.z == testing_block.z,
         BlockFace::Bottom => line_coord.x == testing_block.x && line_coord.y <= testing_block.y && line_coord.z == testing_block.z,
         BlockFace::Right => line_coord.x >= testing_block.x && line_coord.y == testing_block.y && line_coord.z == testing_block.z,

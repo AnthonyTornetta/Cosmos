@@ -121,8 +121,8 @@ fn balance_tanks(
             BlockFace::Bottom => -(coord.y as UnboundCoordinateType),
             BlockFace::Right => coord.x as UnboundCoordinateType,
             BlockFace::Left => -(coord.x as UnboundCoordinateType),
-            BlockFace::Front => coord.z as UnboundCoordinateType,
-            BlockFace::Back => -(coord.z as UnboundCoordinateType),
+            BlockFace::Back => coord.z as UnboundCoordinateType,
+            BlockFace::Front => -(coord.z as UnboundCoordinateType),
         };
 
         if let Some((idx, (closest, v))) = levels.iter_mut().enumerate().find(|(_, x)| x.0 >= level) {
