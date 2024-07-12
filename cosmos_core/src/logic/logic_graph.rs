@@ -287,20 +287,20 @@ impl LogicGraph {
         evw_logic_input: &mut EventWriter<LogicInputEvent>,
     ) {
         let global_face = structure.block_rotation(coords).local_to_global(local_face);
-
+        println!("Converted local face {local_face:?} to global face {global_face:?}");
         // If the neighbor coordinates don't exist, no port is removed.
         let Ok(neighbor_coords) = coords.step(global_face) else {
             return;
         };
 
         let port = Port::new(coords, global_face);
-        let Some(&group_id) = match port_type {
+        println!("Removing Port: {coords:?}, {global_face:?}");
+        let &group_id = match port_type {
             PortType::Input => &mut self.input_port_group_id,
             PortType::Output => &mut self.output_port_group_id,
         }
-        .get(&port) else {
-            return;
-        };
+        .get(&port)
+        .expect("Port to be removed should exist.");
 
         // Check if this port is the last block of its group, and delete the group if so.
         if self

@@ -38,6 +38,8 @@ impl LogicDriver {
         ALL_BLOCK_FACES.map(|global_face| self.global_port_input(coords, rotation, global_face))
     }
 
+    // TODO: Input gate not being added to existing output gate group (again!).
+    // TODO: Make sure logic ports are removed when their block is removed.
     fn port_placed(
         &mut self,
         coords: BlockCoordinate,
