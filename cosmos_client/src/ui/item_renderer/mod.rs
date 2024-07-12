@@ -289,7 +289,7 @@ fn generate_block_item_model(
     let material = material_definitions_registry.from_numeric_id(mat_id);
 
     if block_mesh_info.has_multiple_face_meshes() {
-        for face in [BlockFace::Top, BlockFace::Left, BlockFace::Front] {
+        for face in [BlockFace::Top, BlockFace::Right, BlockFace::Front] {
             let Some(mut mesh_info) = block_mesh_info.info_for_face(face, false).cloned() else {
                 break;
             };

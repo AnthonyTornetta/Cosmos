@@ -865,9 +865,9 @@ impl BaseStructure {
     /// Any error causes that entry to be AIR_BLOCK_ID.
     pub fn block_ids_surrounding(&self, coords: BlockCoordinate) -> [u16; 6] {
         let mut surroundings: [u16; 6] = [AIR_BLOCK_ID; 6];
-        surroundings[BlockFace::Left.index()] = self.block_id_at(coords.right());
+        surroundings[BlockFace::Right.index()] = self.block_id_at(coords.right());
         if let Ok(left) = coords.left() {
-            surroundings[BlockFace::Right.index()] = self.block_id_at(left);
+            surroundings[BlockFace::Left.index()] = self.block_id_at(left);
         }
         surroundings[BlockFace::Top.index()] = self.block_id_at(coords.top());
         if let Ok(bottom) = coords.bottom() {

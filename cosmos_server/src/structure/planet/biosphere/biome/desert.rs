@@ -107,7 +107,7 @@ fn generate_chunk_features(
             let coords: BlockCoordinate = match block_up {
                 BlockFace::Front | BlockFace::Back => (first_block_coords.x + x, first_block_coords.y + z, first_block_coords.z),
                 BlockFace::Top | BlockFace::Bottom => (first_block_coords.x + x, first_block_coords.y, first_block_coords.z + z),
-                BlockFace::Left | BlockFace::Right => (first_block_coords.x, first_block_coords.y + x, first_block_coords.z + z),
+                BlockFace::Right | BlockFace::Left => (first_block_coords.x, first_block_coords.y + x, first_block_coords.z + z),
             }
             .into();
 

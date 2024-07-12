@@ -257,8 +257,8 @@ impl BlockTextureIndex {
         match &self.texture {
             LoadedTexture::All(texture_type) => get_texture_index_from_type(texture_type, neighbors),
             LoadedTexture::Sides(sides) => match face {
-                BlockFace::Left => get_texture_index_from_type(&sides.right, neighbors),
-                BlockFace::Right => get_texture_index_from_type(&sides.left, neighbors),
+                BlockFace::Right => get_texture_index_from_type(&sides.right, neighbors),
+                BlockFace::Left => get_texture_index_from_type(&sides.left, neighbors),
                 BlockFace::Top => get_texture_index_from_type(&sides.top, neighbors),
                 BlockFace::Bottom => get_texture_index_from_type(&sides.bottom, neighbors),
                 BlockFace::Front => get_texture_index_from_type(&sides.front, neighbors),

@@ -70,13 +70,13 @@ impl Planet {
         } else if normalized.y.is_negative() && abs.y == max {
             BlockFace::Bottom
         } else if normalized.x.is_negative() && abs.x == max {
-            BlockFace::Right
+            BlockFace::Left
         } else if abs.z == max {
             BlockFace::Front
         } else if abs.y == max {
             BlockFace::Top
         } else {
-            BlockFace::Left
+            BlockFace::Right
         }
     }
 
@@ -108,9 +108,9 @@ impl Planet {
                         }
                         ChunkFaces::Edge(up1, up2) => {
                             if up1 != up && up2 != up {
-                                let x_up = if matches!(up1, BlockFace::Left | BlockFace::Right) {
+                                let x_up = if matches!(up1, BlockFace::Right | BlockFace::Left) {
                                     up1
-                                } else if matches!(up2, BlockFace::Left | BlockFace::Right) {
+                                } else if matches!(up2, BlockFace::Right | BlockFace::Left) {
                                     up2
                                 } else {
                                     up

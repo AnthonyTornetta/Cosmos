@@ -50,7 +50,7 @@ fn align_player(
                 if let Some(a) = alignment {
                     let old_atlas = match face {
                         BlockFace::Front | BlockFace::Back => Axis::Z,
-                        BlockFace::Right | BlockFace::Left => Axis::X,
+                        BlockFace::Left | BlockFace::Right => Axis::X,
                         BlockFace::Top | BlockFace::Bottom => Axis::Y,
                     };
 
@@ -83,11 +83,11 @@ fn align_player(
                             commands.entity(entity).insert(PlayerAlignment(Axis::Z));
                             Quat::from_axis_angle(Vec3::X, PI / 2.0)
                         }
-                        BlockFace::Left => {
+                        BlockFace::Right => {
                             commands.entity(entity).insert(PlayerAlignment(Axis::X));
                             Quat::from_axis_angle(Vec3::Z, -PI / 2.0)
                         }
-                        BlockFace::Right => {
+                        BlockFace::Left => {
                             commands.entity(entity).insert(PlayerAlignment(Axis::X));
                             Quat::from_axis_angle(Vec3::Z, PI / 2.0)
                         }

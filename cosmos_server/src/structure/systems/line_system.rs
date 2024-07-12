@@ -220,8 +220,8 @@ impl<T: LineProperty, S: LinePropertyCalculator<T>> BlockStructureSystem<T> for 
                 if match l1.direction {
                     BlockFace::Front => l1.start.z > l2.start.z,
                     BlockFace::Back => l1.start.z < l2.start.z,
-                    BlockFace::Left => l1.start.x > l2.start.x,
-                    BlockFace::Right => l1.start.x < l2.start.x,
+                    BlockFace::Right => l1.start.x > l2.start.x,
+                    BlockFace::Left => l1.start.x < l2.start.x,
                     BlockFace::Top => l1.start.y > l2.start.y,
                     BlockFace::Bottom => l1.start.y < l2.start.y,
                 } {
@@ -280,8 +280,8 @@ impl<T: LineProperty, S: LinePropertyCalculator<T>> BlockStructureSystem<T> for 
                 let l1_len = match line.direction {
                     BlockFace::Front => sb.z - line.start.z,
                     BlockFace::Back => line.start.z - sb.z,
-                    BlockFace::Left => sb.x - line.start.x,
-                    BlockFace::Right => line.start.x - sb.x,
+                    BlockFace::Right => sb.x - line.start.x,
+                    BlockFace::Left => line.start.x - sb.x,
                     BlockFace::Top => sb.y - line.start.y,
                     BlockFace::Bottom => line.start.y - sb.y,
                 };
@@ -344,8 +344,8 @@ fn is_in_line_with(testing_block: &StructureBlock, direction: BlockFace, line_co
         BlockFace::Back => line_coord.x == testing_block.x && line_coord.y == testing_block.y && line_coord.z <= testing_block.z,
         BlockFace::Top => line_coord.x == testing_block.x && line_coord.y >= testing_block.y && line_coord.z == testing_block.z,
         BlockFace::Bottom => line_coord.x == testing_block.x && line_coord.y <= testing_block.y && line_coord.z == testing_block.z,
-        BlockFace::Left => line_coord.x >= testing_block.x && line_coord.y == testing_block.y && line_coord.z == testing_block.z,
-        BlockFace::Right => line_coord.x <= testing_block.x && line_coord.y == testing_block.y && line_coord.z == testing_block.z,
+        BlockFace::Right => line_coord.x >= testing_block.x && line_coord.y == testing_block.y && line_coord.z == testing_block.z,
+        BlockFace::Left => line_coord.x <= testing_block.x && line_coord.y == testing_block.y && line_coord.z == testing_block.z,
     }
 }
 

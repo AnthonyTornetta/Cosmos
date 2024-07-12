@@ -172,8 +172,8 @@ pub(crate) fn process_player_interaction(
 
                 // Which way the placed block extends out from the block it's placed on.
                 let perpendicular_direction = match delta {
-                    UnboundBlockCoordinate { x: -1, y: 0, z: 0 } => BlockFace::Right,
-                    UnboundBlockCoordinate { x: 1, y: 0, z: 0 } => BlockFace::Left,
+                    UnboundBlockCoordinate { x: -1, y: 0, z: 0 } => BlockFace::Left,
+                    UnboundBlockCoordinate { x: 1, y: 0, z: 0 } => BlockFace::Right,
                     UnboundBlockCoordinate { x: 0, y: -1, z: 0 } => BlockFace::Bottom,
                     UnboundBlockCoordinate { x: 0, y: 1, z: 0 } => BlockFace::Top,
                     UnboundBlockCoordinate { x: 0, y: 0, z: -1 } => BlockFace::Back,
@@ -186,8 +186,8 @@ pub(crate) fn process_player_interaction(
                     match perpendicular_direction {
                         BlockFace::Front => BlockRotation::new(BlockFace::Top, BlockSubRotation::None),
                         BlockFace::Back => BlockRotation::new(BlockFace::Top, BlockSubRotation::Flip),
-                        BlockFace::Left => BlockRotation::new(BlockFace::Top, BlockSubRotation::CCW),
-                        BlockFace::Right => BlockRotation::new(BlockFace::Top, BlockSubRotation::CW),
+                        BlockFace::Right => BlockRotation::new(BlockFace::Top, BlockSubRotation::CCW),
+                        BlockFace::Left => BlockRotation::new(BlockFace::Top, BlockSubRotation::CW),
                         BlockFace::Top => BlockRotation::new(BlockFace::Front, BlockSubRotation::None),
                         BlockFace::Bottom => BlockRotation::new(BlockFace::Back, BlockSubRotation::None),
                     }
@@ -209,7 +209,7 @@ pub(crate) fn process_player_interaction(
                             };
                             BlockFace::from_direction_vec3(Vec3::new(x, 0.0, z))
                         }
-                        BlockFace::Left | BlockFace::Right => {
+                        BlockFace::Right | BlockFace::Left => {
                             let (y, z) = if point.y.abs() > point.z.abs() {
                                 (point.y, 0.0)
                             } else {

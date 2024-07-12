@@ -633,7 +633,7 @@ pub(crate) fn generate_chunks_from_gpu_data(
                         let sea_level_coordinate = biosphere.sea_level(structure_dimensions) as CoordinateType;
 
                         let coord = match face {
-                            BlockFace::Right | BlockFace::Left => block_relative_coord.x,
+                            BlockFace::Left | BlockFace::Right => block_relative_coord.x,
                             BlockFace::Top | BlockFace::Bottom => block_relative_coord.y,
                             BlockFace::Front | BlockFace::Back => block_relative_coord.z,
                         };
