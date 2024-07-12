@@ -23,7 +23,7 @@ use bevy_rapier3d::{
     plugin::{RapierContextAccess, RapierContextEntityLink},
 };
 use cosmos_core::{
-    block::Block,
+    block::{block_events::BlockEventsSet, Block},
     events::block_events::BlockChangedEvent,
     physics::structure_physics::ChunkPhysicsPart,
     registry::{identifiable::Identifiable, Registry},
@@ -424,15 +424,20 @@ pub(super) fn register(app: &mut App) {
     app.add_systems(
         Update,
         (
-            dock_structure_loaded_event_processor.in_set(StructureLoadingSet::StructureLoaded),
-            dock_block_update_system,
-            on_active,
-            monitor_removed_dock_blocks,
-            add_dock_list,
-            add_dock_properties,
-        )
-            .chain()
-            .run_if(in_state(GameState::Playing)),
+            dock_structure_loaded_event_processor
+                .in_set(StructureLoadingSet::StructureLoaded)
+                .run_if(in_state(GameState::Playing)),
+            (
+                dock_block_update_system,
+                on_active,
+                monitor_removed_dock_blocks,
+                add_dock_list,
+                add_dock_properties,
+            )
+                .chain()
+                .in_set(BlockEventsSet::ProcessEventsPostPlacement)
+                .run_if(in_state(GameState::Playing)),
+        ),
     )
     .register_type::<DockedEntities>();
 

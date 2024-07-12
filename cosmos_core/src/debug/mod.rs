@@ -7,6 +7,8 @@ use bevy::{
 };
 use renet2::{RenetClient, RenetServer};
 
+use crate::structure::Structure;
+
 /// FIXME: bevy should not have any ambiguities, but it takes time to clean these up,
 /// so we're juste ignoring those for now.
 ///
@@ -59,6 +61,8 @@ pub(super) fn register(app: &mut App) {
 
     app.allow_ambiguous_resource::<RenetClient>();
     app.allow_ambiguous_resource::<RenetServer>();
+
+    app.allow_ambiguous_component::<Structure>();
 
     // app.finish();
     // app.cleanup();

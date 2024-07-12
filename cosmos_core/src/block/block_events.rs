@@ -1,10 +1,13 @@
 //! Contains the various types of block events
 
+use std::borrow::Borrow;
+
 use bevy::prelude::*;
 use serde::{Deserialize, Serialize};
 
 use crate::{
     blockitems::BlockItems,
+    ecs::mut_events::{MutEvent, MutEventsCommand},
     events::block_events::BlockChangedEvent,
     inventory::{
         itemstack::{ItemShouldHaveData, ItemStackSystemSet},
@@ -14,6 +17,7 @@ use crate::{
     registry::{identifiable::Identifiable, Registry},
     structure::{
         coordinates::{BlockCoordinate, CoordinateType, UnboundCoordinateType},
+        loading::StructureLoadingSet,
         shared::build_mode::{BuildAxis, BuildMode},
         structure_block::StructureBlock,
         Structure,
@@ -58,9 +62,15 @@ pub struct BlockInteractEvent {
     pub alternate: bool,
 }
 
-/// This is sent whenever a player places a block
 #[derive(Debug, Event)]
-pub struct BlockPlaceEvent {
+pub enum BlockPlaceEvent {
+    Cancelled,
+    Event(BlockPlaceEventData),
+}
+
+/// This is sent whenever a player places a block
+#[derive(Debug, Event, Clone, Copy)]
+pub struct BlockPlaceEventData {
     /// The structure the block was placed on
     pub structure_entity: Entity,
     /// Where the block is placed
@@ -347,7 +357,7 @@ fn calculate_build_mode_blocks(
 
 fn handle_block_place_events(
     mut query: Query<&mut Structure>,
-    mut event_reader: EventReader<BlockPlaceEvent>,
+    mut event_reader: EventReader<MutEvent<BlockPlaceEvent>>,
     mut event_writer: EventWriter<BlockChangedEvent>,
     mut player_query: Query<(&mut Inventory, Option<&BuildMode>, Option<&Parent>)>,
     items: Res<Registry<Item>>,
@@ -356,17 +366,30 @@ fn handle_block_place_events(
     mut commands: Commands,
 ) {
     for ev in event_reader.read() {
-        let Ok((mut inv, build_mode, parent)) = player_query.get_mut(ev.placer) else {
+        let place_event = ev.read();
+
+        let BlockPlaceEvent::Event(place_event_data) = *place_event else {
             continue;
         };
 
-        let Ok(mut structure) = query.get_mut(ev.structure_entity) else {
+        let Ok((mut inv, build_mode, parent)) = player_query.get_mut(place_event_data.placer) else {
             continue;
         };
-        let mut structure_blocks = vec![(ev.structure_block.coords(), ev.block_up)];
+
+        let Ok(mut structure) = query.get_mut(place_event_data.structure_entity) else {
+            continue;
+        };
+        let mut structure_blocks = vec![(place_event_data.structure_block.coords(), place_event_data.block_up)];
 
         if let (Some(build_mode), Some(parent)) = (build_mode, parent) {
-            structure_blocks = calculate_build_mode_blocks(structure_blocks, build_mode, parent, ev.structure_entity, &mut inv, &structure);
+            structure_blocks = calculate_build_mode_blocks(
+                structure_blocks,
+                build_mode,
+                parent,
+                place_event_data.structure_entity,
+                &mut inv,
+                &structure,
+            );
         }
 
         for (coords, block_up) in structure_blocks {
@@ -374,7 +397,7 @@ fn handle_block_place_events(
                 continue;
             }
 
-            let Some(is) = inv.itemstack_at(ev.inventory_slot) else {
+            let Some(is) = inv.itemstack_at(place_event_data.inventory_slot) else {
                 break;
             };
 
@@ -384,7 +407,8 @@ fn handle_block_place_events(
                 break;
             };
 
-            if block_id != ev.block_id {
+            if block_id != place_event_data.block_id {
+                *ev.write() = BlockPlaceEvent::Cancelled;
                 // May have run out of the item or it was swapped with something else (not really possible currently, but more checks never hurt anyone)
                 break;
             }
@@ -395,7 +419,7 @@ fn handle_block_place_events(
                 break;
             }
 
-            if inv.decrease_quantity_at(ev.inventory_slot, 1, &mut commands) == 0 {
+            if inv.decrease_quantity_at(place_event_data.inventory_slot, 1, &mut commands) == 0 {
                 structure.set_block_at(coords, block, block_up, &blocks, Some(&mut event_writer));
             } else {
                 break;
@@ -407,6 +431,8 @@ fn handle_block_place_events(
 #[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
 /// The event set used for processing block events
 pub enum BlockEventsSet {
+    /// In this set, you should put systems that can be cancel/remove events.
+    PreProcessEvents,
     /// All block events processing happens here - during this set the block is NOT guarenteed to be placed yet or have its data created
     ProcessEvents,
     /// If your event processing relies on the block being placed, run it in this set
@@ -416,11 +442,17 @@ pub enum BlockEventsSet {
 pub(super) fn register(app: &mut App) {
     app.configure_sets(
         Update,
-        (BlockEventsSet::ProcessEvents, BlockEventsSet::ProcessEventsPostPlacement).chain(),
+        (
+            BlockEventsSet::PreProcessEvents,
+            BlockEventsSet::ProcessEvents,
+            BlockEventsSet::ProcessEventsPostPlacement,
+        )
+            .chain()
+            .after(StructureLoadingSet::StructureLoaded),
     );
 
     app.add_event::<BlockBreakEvent>()
-        .add_event::<BlockPlaceEvent>()
+        .add_mut_event::<BlockPlaceEvent>()
         .add_event::<BlockInteractEvent>()
         .add_systems(
             Update,

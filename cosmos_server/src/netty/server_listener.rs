@@ -6,7 +6,8 @@ use bevy::prelude::*;
 use bevy::utils::HashMap;
 use bevy_rapier3d::prelude::Velocity;
 use bevy_renet2::renet2::{ClientId, RenetServer};
-use cosmos_core::block::block_events::{BlockBreakEvent, BlockInteractEvent, BlockPlaceEvent};
+use cosmos_core::block::block_events::{BlockBreakEvent, BlockInteractEvent, BlockPlaceEvent, BlockPlaceEventData};
+use cosmos_core::ecs::mut_events::MutEvent;
 use cosmos_core::inventory::Inventory;
 use cosmos_core::item::Item;
 use cosmos_core::netty::netty_rigidbody::NettyRigidBodyLocation;
@@ -59,7 +60,7 @@ fn server_listen_messages(
     ): (
         Query<&mut StructureSystems>,
         EventWriter<BlockBreakEvent>,
-        EventWriter<BlockPlaceEvent>,
+        EventWriter<MutEvent<BlockPlaceEvent>>,
         EventWriter<BlockInteractEvent>,
         EventWriter<ExitBuildModeEvent>,
         EventWriter<CreateShipEvent>,
@@ -170,14 +171,17 @@ fn server_listen_messages(
                     inventory_slot,
                 } => {
                     if let Some(player_entity) = lobby.player_from_id(client_id) {
-                        place_block_event.send(BlockPlaceEvent {
-                            structure_entity,
-                            structure_block: block,
-                            block_id,
-                            block_up,
-                            inventory_slot: inventory_slot as usize,
-                            placer: player_entity,
-                        });
+                        place_block_event.send(
+                            BlockPlaceEvent::Event(BlockPlaceEventData {
+                                structure_entity,
+                                structure_block: block,
+                                block_id,
+                                block_up,
+                                inventory_slot: inventory_slot as usize,
+                                placer: player_entity,
+                            })
+                            .into(),
+                        );
                     }
                 }
                 ClientReliableMessages::InteractWithBlock {

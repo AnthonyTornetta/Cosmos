@@ -360,7 +360,7 @@ pub(super) fn register(app: &mut App) {
             update_mining_beams,
             check_should_break,
         )
-            .before(BlockEventsSet::ProcessEvents)
+            .before(BlockEventsSet::PreProcessEvents)
             .run_if(in_state(GameState::Playing)),
     )
     .add_systems(OnEnter(GameState::PostLoading), register_laser_blocks);
