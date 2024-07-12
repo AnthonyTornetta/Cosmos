@@ -129,6 +129,7 @@ impl BlockRotation {
     pub fn local_to_global(&self, face: BlockFace) -> BlockFace {
         let direction = face.to_direction_vec3();
         let q = self.as_quat();
+        println!("Rotation: {:?}, {:?}", self.block_up, self.sub_rotation);
         println!("Quaternion: {q:?}");
         let rotated = q.mul_vec3(direction);
         println!("Old direction: {direction}; New direction: {rotated}");
