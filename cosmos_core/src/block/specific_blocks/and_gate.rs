@@ -57,9 +57,9 @@ fn and_gate_output_event_listener(
             continue;
         };
 
-        println!("And Output Event Signal: {signal}");
+        // println!("And Output Event Signal: {signal}");
         let front = structure.block_rotation(ev.block.coords()).local_front();
-        println!("Front face is pointing: {front}");
+        // println!("Front face is pointing: {front}");
         let port = Port::new(ev.block.coords(), structure.block_rotation(ev.block.coords()).local_front());
         logic_driver.update_producer(port, signal, &mut evw_logic_input, ev.entity);
     }
@@ -89,15 +89,15 @@ fn and_gate_input_event_listener(
             continue;
         };
 
-        println!("And Input Event");
+        // println!("And Input Event");
 
         let coords = ev.block.coords();
         let rotation = structure.block_rotation(ev.block.coords());
         let left = logic_driver.global_port_input(coords, rotation, BlockFace::Left) != 0;
         let right = logic_driver.global_port_input(coords, rotation, BlockFace::Right) != 0;
-        let temp1 = rotation.local_left();
-        let temp2 = rotation.local_right();
-        println!("Left (pointing {temp1}): {left}, Right (pointing {temp2}): {right}");
+        // let temp1 = rotation.local_left();
+        // let temp2 = rotation.local_right();
+        // println!("Left (pointing {temp1}): {left}, Right (pointing {temp2}): {right}");
         let new_state = BlockLogicData((left && right) as i32);
 
         if **logic_data != new_state {
