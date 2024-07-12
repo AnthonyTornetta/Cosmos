@@ -113,13 +113,13 @@ impl BlockRotation {
     #[inline(always)]
     /// Returns the `BlockFace` that is this rotations's back
     pub fn local_back(&self) -> BlockFace {
-        Self::local_to_global(self, BlockFace::Front)
+        Self::local_to_global(self, BlockFace::Back)
     }
 
     #[inline(always)]
     /// Returns the `BlockFace` that is this rotations's front
     pub fn local_front(&self) -> BlockFace {
-        Self::local_to_global(self, BlockFace::Back)
+        Self::local_to_global(self, BlockFace::Front)
     }
 
     #[inline(always)]
@@ -363,45 +363,45 @@ impl BlockRotation {
         use BlockFace as BF;
         match top_pointing {
             BF::Top => match front_pointing {
-                BF::Back => Self::new(BF::Top, BlockSubRotation::None),
+                BF::Front => Self::new(BF::Top, BlockSubRotation::None),
                 BF::Right => Self::new(BF::Top, BlockSubRotation::CW),
-                BF::Front => Self::new(BF::Top, BlockSubRotation::Flip),
+                BF::Back => Self::new(BF::Top, BlockSubRotation::Flip),
                 BF::Left => Self::new(BF::Top, BlockSubRotation::CCW),
                 _ => panic!("Invalid combination of top and front face directions."),
             },
             BF::Bottom => match front_pointing {
-                BF::Front => Self::new(BF::Bottom, BlockSubRotation::None),
-                BF::Right => Self::new(BF::Bottom, BlockSubRotation::CW),
-                BF::Back => Self::new(BF::Bottom, BlockSubRotation::Flip),
-                BF::Left => Self::new(BF::Bottom, BlockSubRotation::CCW),
+                BF::Back => Self::new(BF::Bottom, BlockSubRotation::None),
+                BF::Left => Self::new(BF::Bottom, BlockSubRotation::CW),
+                BF::Front => Self::new(BF::Bottom, BlockSubRotation::Flip),
+                BF::Right => Self::new(BF::Bottom, BlockSubRotation::CCW),
                 _ => panic!("Invalid combination of top and front face directions."),
             },
             BF::Right => match front_pointing {
                 BF::Back => Self::new(BF::Left, BlockSubRotation::None),
-                BF::Bottom => Self::new(BF::Front, BlockSubRotation::CW),
+                BF::Top => Self::new(BF::Front, BlockSubRotation::CW),
                 BF::Front => Self::new(BF::Right, BlockSubRotation::Flip),
-                BF::Top => Self::new(BF::Back, BlockSubRotation::CCW),
+                BF::Bottom => Self::new(BF::Back, BlockSubRotation::CCW),
                 _ => panic!("Invalid combination of top and front face directions."),
             },
             BF::Left => match front_pointing {
                 BF::Back => Self::new(BF::Right, BlockSubRotation::None),
-                BF::Top => Self::new(BF::Back, BlockSubRotation::CW),
+                BF::Bottom => Self::new(BF::Back, BlockSubRotation::CW),
                 BF::Front => Self::new(BF::Left, BlockSubRotation::Flip),
-                BF::Bottom => Self::new(BF::Front, BlockSubRotation::CCW),
+                BF::Top => Self::new(BF::Front, BlockSubRotation::CCW),
                 _ => panic!("Invalid combination of top and front face directions."),
             },
             BF::Back => match front_pointing {
-                BF::Bottom => Self::new(BF::Front, BlockSubRotation::None),
-                BF::Right => Self::new(BF::Right, BlockSubRotation::CW),
-                BF::Top => Self::new(BF::Back, BlockSubRotation::Flip),
-                BF::Left => Self::new(BF::Left, BlockSubRotation::CCW),
+                BF::Bottom => Self::new(BF::Back, BlockSubRotation::None),
+                BF::Left => Self::new(BF::Left, BlockSubRotation::CW),
+                BF::Top => Self::new(BF::Front, BlockSubRotation::Flip),
+                BF::Right => Self::new(BF::Right, BlockSubRotation::CCW),
                 _ => panic!("Invalid combination of top and front face directions."),
             },
             BF::Front => match front_pointing {
-                BF::Top => Self::new(BF::Back, BlockSubRotation::None),
-                BF::Right => Self::new(BF::Left, BlockSubRotation::CW),
-                BF::Bottom => Self::new(BF::Front, BlockSubRotation::Flip),
-                BF::Left => Self::new(BF::Right, BlockSubRotation::CCW),
+                BF::Top => Self::new(BF::Front, BlockSubRotation::None),
+                BF::Left => Self::new(BF::Right, BlockSubRotation::CW),
+                BF::Bottom => Self::new(BF::Back, BlockSubRotation::Flip),
+                BF::Right => Self::new(BF::Left, BlockSubRotation::CCW),
                 _ => panic!("Invalid combination of top and front face directions."),
             },
         }
@@ -504,8 +504,8 @@ impl BlockFace {
             BlockFace::Left => 1,
             BlockFace::Top => 2,
             BlockFace::Bottom => 3,
-            BlockFace::Back => 4,
-            BlockFace::Front => 5,
+            BlockFace::Front => 4,
+            BlockFace::Back => 5,
         }
     }
 
@@ -607,8 +607,8 @@ impl BlockFace {
             1 => BlockFace::Left,
             2 => BlockFace::Top,
             3 => BlockFace::Bottom,
-            4 => BlockFace::Back,
-            5 => BlockFace::Front,
+            4 => BlockFace::Front,
+            5 => BlockFace::Back,
             _ => panic!("Index must be 0 <= {index} <= 5"),
         }
     }

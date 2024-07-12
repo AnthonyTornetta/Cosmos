@@ -58,7 +58,7 @@ fn and_gate_output_event_listener(
         };
 
         // println!("And Output Event Signal: {signal}");
-        let front = structure.block_rotation(ev.block.coords()).local_front();
+        // let front = structure.block_rotation(ev.block.coords()).local_front();
         // println!("Front face is pointing: {front}");
         let port = Port::new(ev.block.coords(), structure.block_rotation(ev.block.coords()).local_front());
         logic_driver.update_producer(port, signal, &mut evw_logic_input, ev.entity);

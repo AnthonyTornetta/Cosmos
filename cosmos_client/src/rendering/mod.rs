@@ -423,8 +423,8 @@ impl BlockMeshInformation {
         debug_assert!(BlockFace::Left.index() == 1);
         debug_assert!(BlockFace::Top.index() == 2);
         debug_assert!(BlockFace::Bottom.index() == 3);
-        debug_assert!(BlockFace::Back.index() == 4);
-        debug_assert!(BlockFace::Front.index() == 5);
+        debug_assert!(BlockFace::Front.index() == 4);
+        debug_assert!(BlockFace::Back.index() == 5);
 
         Self {
             /*
@@ -432,10 +432,11 @@ impl BlockMeshInformation {
                BlockFace::Left => 1,
                BlockFace::Top => 2,
                BlockFace::Bottom => 3,
-               BlockFace::Front => 4,
-               BlockFace::Back => 5,
+                BlockFace::Back => 4,
+               BlockFace::Front => 5,
+
             */
-            mesh_info: MeshType::MultipleFaceMesh(Box::new([right, left, top, bottom, front, back])),
+            mesh_info: MeshType::MultipleFaceMesh(Box::new([right, left, top, bottom, back, front])),
             id: 0,
             unlocalized_name: unlocalized_name.into(),
         }
