@@ -505,7 +505,7 @@ fn register_meshes(mut registry: ResMut<BlockMeshRegistry>) {
         .into(),
         MeshInformation {
             indices: vec![0, 1, 2, 2, 3, 0],
-            uvs: vec![[0.0, 1.0], [0.0, 0.0], [1.0, 0.0], [1.0, 1.0]],
+            uvs: vec![[1.0, 1.0], [1.0, 0.0], [0.0, 0.0], [0.0, 1.0]],
             positions: vec![[-0.5, -0.5, 0.5], [-0.5, 0.5, 0.5], [-0.5, 0.5, -0.5], [-0.5, -0.5, -0.5]],
             normals: [[-1.0, 0.0, 0.0]; 4].to_vec(),
         }
