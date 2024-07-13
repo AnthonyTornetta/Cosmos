@@ -436,7 +436,7 @@ impl BlockMeshInformation {
                BlockFace::Front => 5,
 
             */
-            mesh_info: MeshType::MultipleFaceMesh(Box::new([right, left, top, bottom, back, front])),
+            mesh_info: MeshType::MultipleFaceMesh(Box::new([right, left, top, bottom, front, back])),
             id: 0,
             unlocalized_name: unlocalized_name.into(),
         }

@@ -130,7 +130,7 @@ fn render_items(
 
             transform.rotation = if block_items.block_from_item(item).is_some() {
                 // This makes blocks look cool
-                Quat::from_xyzw(-0.18800081, 0.31684527, 0.06422775, -0.9274371)
+                Quat::from_xyzw(0.07383737, 0.9098635, 0.18443844, 0.3642514)
             } else {
                 Quat::from_axis_angle(Vec3::X, PI / 2.0)
             };
@@ -139,7 +139,7 @@ fn render_items(
         } else {
             let mut transform = if block_items.block_from_item(item).is_some() {
                 // This makes blocks look cool
-                Transform::from_rotation(Quat::from_xyzw(-0.18800081, 0.31684527, 0.06422775, -0.9274371))
+                Transform::from_rotation(Quat::from_xyzw(0.07383737, 0.9098635, 0.18443844, 0.3642514))
             } else {
                 Transform::from_rotation(Quat::from_axis_angle(Vec3::X, PI / 2.0))
             };
@@ -289,7 +289,7 @@ fn generate_block_item_model(
     let material = material_definitions_registry.from_numeric_id(mat_id);
 
     if block_mesh_info.has_multiple_face_meshes() {
-        for face in [BlockFace::Top, BlockFace::Right, BlockFace::Back] {
+        for face in [BlockFace::Top, BlockFace::Left, BlockFace::Front] {
             let Some(mut mesh_info) = block_mesh_info.info_for_face(face, false).cloned() else {
                 break;
             };
@@ -315,7 +315,7 @@ fn generate_block_item_model(
 
         mesh_info.scale(Vec3::new(size, size, size));
 
-        let Some(image_index) = index.atlas_index_from_face(BlockFace::Back, BlockNeighbors::empty()) else {
+        let Some(image_index) = index.atlas_index_from_face(BlockFace::Front, BlockNeighbors::empty()) else {
             return false;
         };
 
