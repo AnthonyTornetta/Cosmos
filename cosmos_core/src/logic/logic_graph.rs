@@ -279,15 +279,13 @@ impl LogicGraph {
     pub fn remove_port(
         &mut self,
         coords: BlockCoordinate,
-        local_face: BlockFace,
+        global_face: BlockFace,
         port_type: PortType,
         structure: &Structure,
         blocks: &Registry<Block>,
         logic_blocks: &Registry<LogicBlock>,
         evw_logic_input: &mut EventWriter<LogicInputEvent>,
     ) {
-        let global_face = structure.block_rotation(coords).local_to_global(local_face);
-        println!("Converted local face {local_face:?} to global face {global_face:?}");
         // If the neighbor coordinates don't exist, no port is removed.
         let Ok(neighbor_coords) = coords.step(global_face) else {
             return;

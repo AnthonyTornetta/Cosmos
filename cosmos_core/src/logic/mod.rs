@@ -200,9 +200,10 @@ fn logic_block_placed_event_listener(
                 if let Ok(mut logic) = q_logic.get_mut(ev.structure_entity) {
                     logic.remove_logic_block(
                         logic_block,
+                        ev.old_block_rotation,
                         ev.block.coords(),
                         &structure,
-                        structure.get_entity().expect("Structure should have entity"),
+                        structure.get_entity().expect("Structure should have entity."),
                         &blocks,
                         &logic_blocks,
                         &mut evw_logic_output,
@@ -219,6 +220,7 @@ fn logic_block_placed_event_listener(
                     let coords = ev.block.coords();
                     logic.add_logic_block(
                         logic_block,
+                        ev.new_block_rotation,
                         coords,
                         &structure,
                         structure.get_entity().expect("Structure should have entity"),

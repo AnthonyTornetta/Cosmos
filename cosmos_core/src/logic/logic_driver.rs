@@ -43,7 +43,7 @@ impl LogicDriver {
     fn port_placed(
         &mut self,
         coords: BlockCoordinate,
-        local_face: BlockFace,
+        global_face: BlockFace,
         port_type: PortType,
         structure: &Structure,
         entity: Entity,
@@ -52,7 +52,6 @@ impl LogicDriver {
         evw_logic_output: &mut EventWriter<LogicOutputEvent>,
         evw_logic_input: &mut EventWriter<LogicInputEvent>,
     ) {
-        let global_face = structure.block_rotation(coords).local_to_global(local_face);
         // If the neighbor coordinates don't exist, no port is added (and thus no new group).
         let Ok(neighbor_coords) = coords.step(global_face) else {
             return;
@@ -84,6 +83,7 @@ impl LogicDriver {
     pub fn add_logic_block(
         &mut self,
         logic_block: &LogicBlock,
+        rotation: BlockRotation,
         coords: BlockCoordinate,
         structure: &Structure,
         entity: Entity,
@@ -94,9 +94,14 @@ impl LogicDriver {
     ) {
         // Adding input faces as consumers to their connected group, or a new group if there is no connected group.
         for input_face in logic_block.input_faces() {
+            println!(
+                "Adding input port on local face: {:?} (pointing {:?})",
+                input_face,
+                rotation.local_to_global(input_face)
+            );
             self.port_placed(
                 coords,
-                input_face,
+                rotation.local_to_global(input_face),
                 PortType::Input,
                 structure,
                 entity,
@@ -109,9 +114,14 @@ impl LogicDriver {
 
         // Adding output faces as consumers to their connected group, or a new group if there is no connected group.
         for output_face in logic_block.output_faces() {
+            println!(
+                "Adding output port on local face: {:?} (pointing {:?})",
+                output_face,
+                rotation.local_to_global(output_face)
+            );
             self.port_placed(
                 coords,
-                output_face,
+                rotation.local_to_global(output_face),
                 PortType::Output,
                 structure,
                 entity,
@@ -160,6 +170,7 @@ impl LogicDriver {
     pub fn remove_logic_block(
         &mut self,
         logic_block: &LogicBlock,
+        rotation: BlockRotation,
         coords: BlockCoordinate,
         structure: &Structure,
         entity: Entity,
@@ -172,7 +183,7 @@ impl LogicDriver {
         for input_face in logic_block.input_faces() {
             self.logic_graph.remove_port(
                 coords,
-                input_face,
+                rotation.local_to_global(input_face),
                 PortType::Input,
                 structure,
                 blocks,
@@ -185,7 +196,7 @@ impl LogicDriver {
         for output_face in logic_block.output_faces() {
             self.logic_graph.remove_port(
                 coords,
-                output_face,
+                rotation.local_to_global(output_face),
                 PortType::Output,
                 structure,
                 blocks,

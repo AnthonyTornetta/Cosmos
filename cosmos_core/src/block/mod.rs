@@ -51,15 +51,15 @@ pub struct BlockRotation {
 }
 
 impl BlockRotation {
-    /// Represents no rotation
+    /// Represents no rotation.
     pub const IDENTITY: BlockRotation = BlockRotation::new(BlockFace::Top, BlockSubRotation::None);
 
-    /// Creates a new block rotation
+    /// Creates a new block rotation.
     pub const fn new(block_up: BlockFace, sub_rotation: BlockSubRotation) -> Self {
         Self { block_up, sub_rotation }
     }
 
-    /// Returns this rotation's representation as a quaternion
+    /// Returns this rotation's representation as a quaternion.
     pub fn as_quat(&self) -> Quat {
         match self.sub_rotation {
             BlockSubRotation::None => Quat::IDENTITY,
@@ -79,39 +79,39 @@ impl BlockRotation {
     }
 
     #[inline(always)]
-    /// Returns the `BlockFace` that is this rotations's top
+    /// Returns the `BlockFace` that is this rotations's top.
     pub fn local_top(&self) -> BlockFace {
-        Self::local_to_global(self, BlockFace::Top)
+        Self::global_to_local(self, BlockFace::Top)
     }
 
     #[inline(always)]
     /// Returns the `BlockFace` that is this rotations's bottom
     pub fn local_bottom(&self) -> BlockFace {
-        Self::local_to_global(self, BlockFace::Bottom)
+        Self::global_to_local(self, BlockFace::Bottom)
     }
 
     #[inline(always)]
     /// Returns the `BlockFace` that is this rotations's left
     pub fn local_left(&self) -> BlockFace {
-        Self::local_to_global(self, BlockFace::Left)
+        Self::global_to_local(self, BlockFace::Left)
     }
 
     #[inline(always)]
     /// Returns the `BlockFace` that is this rotations's right
     pub fn local_right(&self) -> BlockFace {
-        Self::local_to_global(self, BlockFace::Right)
+        Self::global_to_local(self, BlockFace::Right)
     }
 
     #[inline(always)]
     /// Returns the `BlockFace` that is this rotations's back
     pub fn local_back(&self) -> BlockFace {
-        Self::local_to_global(self, BlockFace::Back)
+        Self::global_to_local(self, BlockFace::Back)
     }
 
     #[inline(always)]
     /// Returns the `BlockFace` that is this rotations's front
     pub fn local_front(&self) -> BlockFace {
-        Self::local_to_global(self, BlockFace::Front)
+        Self::global_to_local(self, BlockFace::Front)
     }
 
     #[inline(always)]
