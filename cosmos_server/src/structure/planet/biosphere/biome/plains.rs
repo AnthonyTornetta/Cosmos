@@ -507,7 +507,7 @@ fn generate_chunk_features(
                 // // No grass block to grow tree from.
                 if let Ok(rotated) = rotate(coords, UnboundBlockCoordinate::new(0, height, 0), s_dims, block_up) {
                     let block = structure.block_at(rotated, blocks);
-                    if height < 0 || (block != grass && block != short_grass) || structure.block_rotation(rotated).block_up != block_up {
+                    if height < 0 || (block != grass && block != short_grass) || structure.block_rotation(rotated).face_pointing_pos_y != block_up {
                         continue 'next;
                     }
 

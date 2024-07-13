@@ -116,7 +116,7 @@ fn balance_tanks(
     let mut levels: Vec<(UnboundCoordinateType, Vec<BlockCoordinate>)> = vec![];
 
     for &coord in &all_tanks_within {
-        let level = match tank_rotation.block_up {
+        let level = match tank_rotation.face_pointing_pos_y {
             BlockFace::Top => coord.y as UnboundCoordinateType,
             BlockFace::Bottom => -(coord.y as UnboundCoordinateType),
             BlockFace::Right => coord.x as UnboundCoordinateType,

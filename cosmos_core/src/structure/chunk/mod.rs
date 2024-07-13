@@ -560,12 +560,12 @@ impl BlockInfo {
         let block_up = BlockFace::from_index((self.0 & 0b111) as usize);
         let sub_rotation = BlockSubRotation::from_index(((self.0 >> 3) & 0b11) as usize);
 
-        BlockRotation { block_up, sub_rotation }
+        BlockRotation { face_pointing_pos_y: block_up, sub_rotation }
     }
 
     /// Sets the rotation data
     pub fn set_rotation(&mut self, rotation: BlockRotation) {
-        self.0 = self.0 & !0b11111 | (rotation.block_up.index() as u8 | (rotation.sub_rotation.index() << 3) as u8);
+        self.0 = self.0 & !0b11111 | (rotation.face_pointing_pos_y.index() as u8 | (rotation.sub_rotation.index() << 3) as u8);
     }
 }
 

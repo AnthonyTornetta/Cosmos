@@ -151,7 +151,7 @@ impl LogicGraph {
             return None;
         };
 
-        let encountered_face = structure.block_rotation(coords).global_to_local(encountered_global_face);
+        let encountered_face = structure.block_rotation(coords).block_face_pointing(encountered_global_face);
         println!("Rotation: {:?}", structure.block_rotation(coords));
         let name = block.unlocalized_name();
         println!("Encountered {name} through global face: {encountered_face} (pointing {encountered_global_face}).");
@@ -172,7 +172,7 @@ impl LogicGraph {
                     // This wire block does not tell us what group we're in. Recurse on its neighbors.
                     visited.insert(Port::new(coords, encountered_global_face));
                     for face in logic_block.wire_faces() {
-                        let global_face = structure.block_rotation(coords).local_to_global(face);
+                        let global_face = structure.block_rotation(coords).direction_of(face);
                         visited.insert(Port::new(coords, global_face));
                         let Ok(neighbor_coords) = coords.step(global_face) else {
                             continue;
@@ -202,7 +202,7 @@ impl LogicGraph {
         logic_blocks: &Registry<LogicBlock>,
     ) -> Option<usize> {
         for wire_face in logic_block.wire_faces() {
-            let global_face = structure.block_rotation(coords).local_to_global(wire_face);
+            let global_face = structure.block_rotation(coords).direction_of(wire_face);
             let Ok(neighbor_coords) = coords.step(global_face) else {
                 continue;
             };
@@ -424,7 +424,7 @@ impl LogicGraph {
             return false;
         };
 
-        let encountered_face = structure.block_rotation(coords).global_to_local(encountered_global_face);
+        let encountered_face = structure.block_rotation(coords).block_face_pointing(encountered_global_face);
         match logic_block.connection_on(encountered_face) {
             Some(LogicConnection::Port(port_type)) => {
                 // Getting the port's output value in the previous group.
@@ -457,7 +457,7 @@ impl LogicGraph {
                 // Recurse to continue marking the ports reachable from this wire.
                 visited.insert(Port::new(coords, encountered_global_face));
                 for face in logic_block.wire_faces() {
-                    let global_face = structure.block_rotation(coords).local_to_global(face);
+                    let global_face = structure.block_rotation(coords).direction_of(face);
                     visited.insert(Port::new(coords, global_face));
                     let Ok(neighbor_coords) = coords.step(global_face) else {
                         continue;

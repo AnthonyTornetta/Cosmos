@@ -228,7 +228,7 @@ pub(crate) fn process_player_interaction(
                     };
 
                     println!("Top pointing: {}; Front pointing: {}", perpendicular_direction, front_facing);
-                    BlockRotation::from_faces(perpendicular_direction, front_facing)
+                    BlockRotation::from_face_directions(perpendicular_direction, front_facing)
                 }
             } else {
                 let block_up = if is_planet.is_some() {

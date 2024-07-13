@@ -160,7 +160,7 @@ fn add_colors(mut colors: ResMut<Registry<LineColorBlock>>, blocks: Res<Registry
 
 impl<T: LineProperty, S: LinePropertyCalculator<T>> BlockStructureSystem<T> for LineSystem<T, S> {
     fn add_block(&mut self, block: &StructureBlock, block_rotation: BlockRotation, prop: &T) {
-        let block_direction = block_rotation.local_to_global(BlockFace::Back);
+        let block_direction = block_rotation.direction_of(BlockFace::Back);
 
         let mut found_line = None;
         // If a structure has two lines like this: (XXXXX XXXXXX) and an X is placed

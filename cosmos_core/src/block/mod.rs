@@ -25,28 +25,28 @@ pub mod specific_blocks;
 pub mod storage;
 
 #[derive(Reflect, Debug, Eq, PartialEq, Clone, Copy, Hash)]
-/// Represents different properties a block can has
+/// Represents different properties a block can has.
 pub enum BlockProperty {
-    /// Is this block see-through
+    /// Is this block see-through.
     Transparent,
     /// Does this block always take up the full 1x1x1 space.
     Full,
-    /// Does this block not take up any space (such as air)
+    /// Does this block not take up any space (such as air).
     Empty,
-    /// This block, when placed, should have the front direction facing in a specified direction
+    /// This block, when placed, should have the front direction facing in a specified direction.
     FaceFront,
-    /// This block can be rotated on all axis (such as ramps)
+    /// This block can be rotated on all axis (such as ramps).
     FullyRotatable,
-    /// This block is a fluid
+    /// This block is a fluid.
     Fluid,
 }
 
 #[derive(Debug, PartialEq, Eq, Reflect, Default, Copy, Clone, Serialize, Deserialize, Hash)]
-/// Stores a block's rotation data
+/// Stores a block's rotation data.
 pub struct BlockRotation {
-    /// The block's top face
-    pub block_up: BlockFace,
-    /// The rotation of the block in respect to its block up (for ramps and stuff like that)
+    /// The block's top face.
+    pub face_pointing_pos_y: BlockFace,
+    /// The rotation of the block in respect to its block up (for ramps and stuff like that).
     pub sub_rotation: BlockSubRotation,
 }
 
@@ -55,8 +55,11 @@ impl BlockRotation {
     pub const IDENTITY: BlockRotation = BlockRotation::new(BlockFace::Top, BlockSubRotation::None);
 
     /// Creates a new block rotation.
-    pub const fn new(block_up: BlockFace, sub_rotation: BlockSubRotation) -> Self {
-        Self { block_up, sub_rotation }
+    pub const fn new(face_pointing_pos_y: BlockFace, sub_rotation: BlockSubRotation) -> Self {
+        Self {
+            face_pointing_pos_y,
+            sub_rotation,
+        }
     }
 
     /// Returns this rotation's representation as a quaternion.
@@ -67,7 +70,7 @@ impl BlockRotation {
             BlockSubRotation::CW => Quat::from_axis_angle(Vec3::Y, -PI / 2.0),
             BlockSubRotation::Flip => Quat::from_axis_angle(Vec3::Y, PI),
         }
-        .mul_quat(match self.block_up {
+        .mul_quat(match self.face_pointing_pos_y {
             BlockFace::Top => Quat::IDENTITY,
             BlockFace::Bottom => Quat::from_axis_angle(Vec3::X, PI),
             BlockFace::Back => Quat::from_axis_angle(Vec3::X, PI / 2.0),
@@ -79,324 +82,100 @@ impl BlockRotation {
     }
 
     #[inline(always)]
-    /// Returns the `BlockFace` that is this rotations's top.
-    pub fn local_top(&self) -> BlockFace {
-        Self::global_to_local(self, BlockFace::Top)
-    }
-
-    #[inline(always)]
-    /// Returns the `BlockFace` that is this rotations's bottom
-    pub fn local_bottom(&self) -> BlockFace {
-        Self::global_to_local(self, BlockFace::Bottom)
-    }
-
-    #[inline(always)]
-    /// Returns the `BlockFace` that is this rotations's left
-    pub fn local_left(&self) -> BlockFace {
-        Self::global_to_local(self, BlockFace::Left)
-    }
-
-    #[inline(always)]
-    /// Returns the `BlockFace` that is this rotations's right
-    pub fn local_right(&self) -> BlockFace {
-        Self::global_to_local(self, BlockFace::Right)
-    }
-
-    #[inline(always)]
-    /// Returns the `BlockFace` that is this rotations's back
-    pub fn local_back(&self) -> BlockFace {
-        Self::global_to_local(self, BlockFace::Back)
-    }
-
-    #[inline(always)]
-    /// Returns the `BlockFace` that is this rotations's front
-    pub fn local_front(&self) -> BlockFace {
-        Self::global_to_local(self, BlockFace::Front)
-    }
-
-    #[inline(always)]
     /// Gets the complete opposite of this rotation
     pub fn inverse(&self) -> Self {
         Self {
-            block_up: self.block_up.inverse(),
+            face_pointing_pos_y: self.face_pointing_pos_y.inverse(),
             sub_rotation: self.sub_rotation.inverse(),
         }
     }
 
-    /// Returns which global face of this rotation represents the given local face.
+    /// Returns which [`Direction`] the given [`BlockFace`] points after applying this [`BlockRotation`].
     ///
-    /// For example, if the front of the block is locally pointing left and you provide [`BlockFace::Left`], you will be given [`BlockFace::Front`].
-    pub fn local_to_global(&self, face: BlockFace) -> BlockFace {
-        let direction = face.to_direction_vec3();
-        let q = self.as_quat();
-        println!("Rotation: {:?}, {:?}", self.block_up, self.sub_rotation);
-        println!("Quaternion: {q:?}");
-        let rotated = q.mul_vec3(direction);
-        println!("Old direction: {direction}; New direction: {rotated}");
-
-        if rotated.x > 0.9 {
-            BlockFace::Right
-        } else if rotated.x < -0.9 {
-            BlockFace::Left
-        } else if rotated.y > 0.9 {
-            BlockFace::Top
-        } else if rotated.y < -0.9 {
-            BlockFace::Bottom
-        } else if rotated.z > 0.9 {
-            BlockFace::Back
-        } else {
-            BlockFace::Front
-        }
-
-        // TODO: Make less evil.
-        // match face {
-        //     BlockFace::Left | BlockFace::Right => output.inverse(),
-        //     _ => output,
-        // }
+    /// For example, if this rotation makes [`BlockFace::Front`] point [`Direction::NegX`]
+    /// and you provide [`BlockFace::Front`], you will be given [`Direction::NegX`].
+    pub fn direction_of(&self, face: BlockFace) -> Direction {
+        let unrotated_vec3 = face.unrotated_direction().to_vec3();
+        let rotated_vec3 = self.as_quat().mul_vec3(unrotated_vec3);
+        Direction::from_vec3(rotated_vec3)
     }
 
     /// Returns which local face of this rotation represents the given global face.
     ///
     /// For example, if the front of the block is locally pointing left and you provide [`BlockFace::Front`], you will be given [`BlockFace::Left`].
-    pub fn global_to_local(&self, face: BlockFace) -> BlockFace {
+    /// Might later change to quaternion math with the rotation's inverse.
+    pub fn block_face_pointing(&self, direction: Direction) -> BlockFace {
         BlockFace::from_index(
-            self.all_global_faces()
+            self.direction_of_all_faces()
                 .iter()
-                .position(|&found| found == face)
-                .expect("Global face must have some local face."),
+                .position(|&found| found == direction)
+                .expect("Some block face should point in any given direction."),
         )
     }
 
-    /// Returns an array of all 6 block faces.
-    /// Entries are ordered by the global BlockFace index, but contain the local direction that BlockFace is pointing.\
+    /// Returns an array of all 6 [`Direction`]s in positions corresponding to the index of the [`BlockFace`] pointing that direction after this rotation.
     ///
-    /// For example, if [`BlockFace::Top`] is locally pointing right, the entry at index 2 ([`BlockFace::Top`]'s index) will be [`BlockFace::Right`].
-    pub fn all_global_faces(&self) -> [BlockFace; 6] {
-        ALL_BLOCK_FACES.map(|face| self.local_to_global(face))
+    /// For example, if this rotation makes [`BlockFace::Top`] point [`Direction::PosX`], the entry at index 2 ([`BlockFace::Top`]'s index) will be [`Direction::PosX`].
+    pub fn direction_of_all_faces(&self) -> [Direction; 6] {
+        ALL_BLOCK_FACES.map(|face| self.direction_of(face))
     }
 
-    /// Gets the face that should be used for this "absolute" side.
+    /// Returns an array of all 6 [`BlockFace`]s in positions corresponding to the index of the [`Direction`] that block face is pointing after this rotation.
     ///
-    /// "Absolute" means that +Y is [`BlockFace::Top`], -X is [`BlockFace::Left`], etc.
-    ///
-    /// This is mainly used for rendering, when we know which "absolute" side should be rendered,
-    /// but we need to know what side that actually represents for this specific rotation.
-    pub fn rotate_face(&self, face: BlockFace) -> BlockFace {
-        use BlockFace as BF;
-
-        match self.block_up {
-            BF::Right => match self.sub_rotation {
-                BlockSubRotation::None => BlockFace::rotate_face(face, self.block_up),
-                BlockSubRotation::CCW => match face {
-                    BF::Top => BF::Back,
-                    BF::Bottom => BF::Front,
-                    BF::Right => BF::Top,
-                    BF::Left => BF::Bottom,
-                    BF::Front => BF::Left,
-                    BF::Back => BF::Right,
-                },
-                BlockSubRotation::CW => match face {
-                    BF::Top => BF::Front,
-                    BF::Bottom => BF::Back,
-                    BF::Right => BF::Top,
-                    BF::Left => BF::Bottom,
-                    BF::Front => BF::Right,
-                    BF::Back => BF::Left,
-                },
-                BlockSubRotation::Flip => match face {
-                    BF::Top => BF::Left,
-                    BF::Bottom => BF::Right,
-                    BF::Right => BF::Top,
-                    BF::Left => BF::Bottom,
-                    BF::Front => BF::Front,
-                    BF::Back => BF::Back,
-                },
-            },
-            BF::Left => match self.sub_rotation {
-                BlockSubRotation::None => BlockFace::rotate_face(face, self.block_up),
-                BlockSubRotation::CCW => match face {
-                    BF::Top => BF::Front,
-                    BF::Bottom => BF::Back,
-                    BF::Right => BF::Bottom,
-                    BF::Left => BF::Top,
-                    BF::Front => BF::Left,
-                    BF::Back => BF::Right,
-                },
-                BlockSubRotation::CW => match face {
-                    BF::Top => BF::Back,
-                    BF::Bottom => BF::Front,
-                    BF::Right => BF::Bottom,
-                    BF::Left => BF::Top,
-                    BF::Front => BF::Right,
-                    BF::Back => BF::Left,
-                },
-                BlockSubRotation::Flip => match face {
-                    BF::Top => BF::Right,
-                    BF::Bottom => BF::Left,
-                    BF::Right => BF::Bottom,
-                    BF::Left => BF::Top,
-                    BF::Front => BF::Front,
-                    BF::Back => BF::Back,
-                },
-            },
-            BF::Back => match self.sub_rotation {
-                BlockSubRotation::None => BlockFace::rotate_face(face, self.block_up),
-                BlockSubRotation::CCW => match face {
-                    BF::Top => BF::Left,
-                    BF::Bottom => BF::Right,
-                    BF::Right => BF::Front,
-                    BF::Left => BF::Back,
-                    BF::Front => BF::Bottom,
-                    BF::Back => BF::Top,
-                },
-                BlockSubRotation::CW => match face {
-                    BF::Top => BF::Right,
-                    BF::Bottom => BF::Left,
-                    BF::Right => BF::Back,
-                    BF::Left => BF::Front,
-                    BF::Front => BF::Bottom,
-                    BF::Back => BF::Top,
-                },
-                BlockSubRotation::Flip => match face {
-                    BF::Top => BF::Front,
-                    BF::Bottom => BF::Back,
-                    BF::Right => BF::Right,
-                    BF::Left => BF::Left,
-                    BF::Front => BF::Bottom,
-                    BF::Back => BF::Top,
-                },
-            },
-            BF::Front => match self.sub_rotation {
-                BlockSubRotation::None => BlockFace::rotate_face(face, self.block_up),
-                BlockSubRotation::CCW => match face {
-                    BF::Top => BF::Right,
-                    BF::Bottom => BF::Left,
-                    BF::Right => BF::Front,
-                    BF::Left => BF::Back,
-                    BF::Front => BF::Top,
-                    BF::Back => BF::Bottom,
-                },
-                BlockSubRotation::CW => match face {
-                    BF::Top => BF::Left,
-                    BF::Bottom => BF::Right,
-                    BF::Right => BF::Back,
-                    BF::Left => BF::Front,
-                    BF::Front => BF::Top,
-                    BF::Back => BF::Bottom,
-                },
-                BlockSubRotation::Flip => match face {
-                    BF::Top => BF::Back,
-                    BF::Bottom => BF::Front,
-                    BF::Right => BF::Right,
-                    BF::Left => BF::Left,
-                    BF::Front => BF::Top,
-                    BF::Back => BF::Bottom,
-                },
-            },
-            BF::Bottom => match self.sub_rotation {
-                BlockSubRotation::None => BlockFace::rotate_face(face, self.block_up),
-                BlockSubRotation::CCW => match face {
-                    BF::Top => BF::Bottom,
-                    BF::Bottom => BF::Top,
-                    BF::Right => BF::Back,
-                    BF::Left => BF::Front,
-                    BF::Front => BF::Left,
-                    BF::Back => BF::Right,
-                },
-                BlockSubRotation::CW => match face {
-                    BF::Top => BF::Bottom,
-                    BF::Bottom => BF::Top,
-                    BF::Right => BF::Front,
-                    BF::Left => BF::Back,
-                    BF::Front => BF::Right,
-                    BF::Back => BF::Left,
-                },
-                BlockSubRotation::Flip => match face {
-                    BF::Top => BF::Bottom,
-                    BF::Bottom => BF::Top,
-                    BF::Right => BF::Left,
-                    BF::Left => BF::Right,
-                    BF::Front => BF::Front,
-                    BF::Back => BF::Back,
-                },
-            },
-            BF::Top => match self.sub_rotation {
-                BlockSubRotation::None => BlockFace::rotate_face(face, self.block_up),
-                BlockSubRotation::CCW => match face {
-                    BF::Top => BF::Top,
-                    BF::Bottom => BF::Bottom,
-                    BF::Right => BF::Back,
-                    BF::Left => BF::Front,
-                    BF::Front => BF::Right,
-                    BF::Back => BF::Left,
-                },
-                BlockSubRotation::CW => match face {
-                    BF::Top => BF::Top,
-                    BF::Bottom => BF::Bottom,
-                    BF::Right => BF::Front,
-                    BF::Left => BF::Back,
-                    BF::Front => BF::Left,
-                    BF::Back => BF::Right,
-                },
-                BlockSubRotation::Flip => match face {
-                    BF::Top => BF::Top,
-                    BF::Bottom => BF::Bottom,
-                    BF::Right => BF::Left,
-                    BF::Left => BF::Right,
-                    BF::Front => BF::Back,
-                    BF::Back => BF::Front,
-                },
-            },
-        }
+    /// For example, if this rotation makes [`BlockFace::Top`] point [`Direction::PosX`], the entry at index 0 ([`Direction::PosX`]'s index) will be [`BlockFace::Top`].
+    pub fn faces_pointing_each_direction(&self) -> [BlockFace; 6] {
+        ALL_DIRECTIONS.map(|direction| self.block_face_pointing(direction))
     }
 
     /// Given the directions the top and front faces are pointing, return the corresponding rotation.
     /// Assumes the primary axis of rotation is the Z axis (to rotate top to bottom, rotate through front/back, not right/left).
     /// Only rotate top through the X axis if it is pointing right/left.
     /// Sub rotations are applied globally before the primary rotation: CW means rotated 90-degrees clockwise while looking from the top down.
-    pub fn from_faces(top_pointing: BlockFace, front_pointing: BlockFace) -> Self {
+    pub fn from_face_directions(top_face_pointing: Direction, front_face_pointing: Direction) -> Self {
         use BlockFace as BF;
-        match top_pointing {
-            BF::Top => match front_pointing {
-                BF::Front => Self::new(BF::Top, BlockSubRotation::None),
-                BF::Right => Self::new(BF::Top, BlockSubRotation::CW),
-                BF::Back => Self::new(BF::Top, BlockSubRotation::Flip),
-                BF::Left => Self::new(BF::Top, BlockSubRotation::CCW),
+        use Direction as D;
+        match top_face_pointing {
+            D::PosX => match front_face_pointing {
+                // The inner match arms are ordered by the resulting sub-rotation to make them easier to visualize.
+                D::PosZ => Self::new(BF::Left, BlockSubRotation::None),
+                D::PosY => Self::new(BF::Front, BlockSubRotation::CW),
+                D::NegZ => Self::new(BF::Right, BlockSubRotation::Flip),
+                D::NegY => Self::new(BF::Back, BlockSubRotation::CCW),
                 _ => panic!("Invalid combination of top and front face directions."),
             },
-            BF::Bottom => match front_pointing {
-                BF::Back => Self::new(BF::Bottom, BlockSubRotation::None),
-                BF::Left => Self::new(BF::Bottom, BlockSubRotation::CW),
-                BF::Front => Self::new(BF::Bottom, BlockSubRotation::Flip),
-                BF::Right => Self::new(BF::Bottom, BlockSubRotation::CCW),
+            D::NegX => match front_face_pointing {
+                D::PosZ => Self::new(BF::Right, BlockSubRotation::None),
+                D::NegY => Self::new(BF::Back, BlockSubRotation::CW),
+                D::NegZ => Self::new(BF::Left, BlockSubRotation::Flip),
+                D::PosY => Self::new(BF::Front, BlockSubRotation::CCW),
                 _ => panic!("Invalid combination of top and front face directions."),
             },
-            BF::Right => match front_pointing {
-                BF::Back => Self::new(BF::Left, BlockSubRotation::None),
-                BF::Top => Self::new(BF::Front, BlockSubRotation::CW),
-                BF::Front => Self::new(BF::Right, BlockSubRotation::Flip),
-                BF::Bottom => Self::new(BF::Back, BlockSubRotation::CCW),
+            D::PosY => match front_face_pointing {
+                D::NegZ => Self::new(BF::Top, BlockSubRotation::None),
+                D::PosX => Self::new(BF::Top, BlockSubRotation::CW),
+                D::PosZ => Self::new(BF::Top, BlockSubRotation::Flip),
+                D::NegX => Self::new(BF::Top, BlockSubRotation::CCW),
                 _ => panic!("Invalid combination of top and front face directions."),
             },
-            BF::Left => match front_pointing {
-                BF::Back => Self::new(BF::Right, BlockSubRotation::None),
-                BF::Bottom => Self::new(BF::Back, BlockSubRotation::CW),
-                BF::Front => Self::new(BF::Left, BlockSubRotation::Flip),
-                BF::Top => Self::new(BF::Front, BlockSubRotation::CCW),
+            D::NegY => match front_face_pointing {
+                D::PosZ => Self::new(BF::Bottom, BlockSubRotation::None),
+                D::NegX => Self::new(BF::Bottom, BlockSubRotation::CW),
+                D::NegZ => Self::new(BF::Bottom, BlockSubRotation::Flip),
+                D::PosX => Self::new(BF::Bottom, BlockSubRotation::CCW),
                 _ => panic!("Invalid combination of top and front face directions."),
             },
-            BF::Back => match front_pointing {
-                BF::Bottom => Self::new(BF::Back, BlockSubRotation::None),
-                BF::Left => Self::new(BF::Left, BlockSubRotation::CW),
-                BF::Top => Self::new(BF::Front, BlockSubRotation::Flip),
-                BF::Right => Self::new(BF::Right, BlockSubRotation::CCW),
+            D::PosZ => match front_face_pointing {
+                D::NegY => Self::new(BF::Back, BlockSubRotation::None),
+                D::NegX => Self::new(BF::Left, BlockSubRotation::CW),
+                D::PosY => Self::new(BF::Front, BlockSubRotation::Flip),
+                D::PosX => Self::new(BF::Right, BlockSubRotation::CCW),
                 _ => panic!("Invalid combination of top and front face directions."),
             },
-            BF::Front => match front_pointing {
-                BF::Top => Self::new(BF::Front, BlockSubRotation::None),
-                BF::Left => Self::new(BF::Right, BlockSubRotation::CW),
-                BF::Bottom => Self::new(BF::Back, BlockSubRotation::Flip),
-                BF::Right => Self::new(BF::Left, BlockSubRotation::CCW),
+            D::NegZ => match front_face_pointing {
+                D::PosY => Self::new(BF::Front, BlockSubRotation::None),
+                D::NegX => Self::new(BF::Right, BlockSubRotation::CW),
+                D::NegY => Self::new(BF::Back, BlockSubRotation::Flip),
+                D::PosX => Self::new(BF::Left, BlockSubRotation::CCW),
                 _ => panic!("Invalid combination of top and front face directions."),
             },
         }
@@ -406,7 +185,7 @@ impl BlockRotation {
 impl From<BlockFace> for BlockRotation {
     fn from(value: BlockFace) -> Self {
         Self {
-            block_up: value,
+            face_pointing_pos_y: value,
             sub_rotation: BlockSubRotation::default(),
         }
     }
@@ -459,8 +238,9 @@ impl BlockSubRotation {
     }
 }
 
+#[derive(PartialEq, Debug, Copy, Clone, Reflect)]
 /// Enumerates the 6 possible directions: a positive and negative direction for each of the 3 axes of 3-dimensional space.
-/// Moving in the direction indicated by each of these variants should always change the corresponding coordinate in the indicated direction.
+/// Moving in the direction indicated by each of these variants should always change the corresponding coordinate in the indicated direction (relative to the structure).
 pub enum Direction {
     /// The positive X direction.
     PosX,
@@ -601,6 +381,14 @@ impl Direction {
     }
 }
 
+impl Display for Direction {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(self.as_str())?;
+
+        Ok(())
+    }
+}
+
 #[derive(Debug, PartialEq, Eq, Reflect, Default, Copy, Clone, Serialize, Deserialize, Hash)]
 /// Represents the different faces of a block.
 ///
@@ -699,95 +487,6 @@ impl BlockFace {
             Self::Bottom => Direction::NegY,
             Self::Front => Direction::NegZ, // IMPORTANT: Due to Bevy's right hand rule, "front" points negative Z.
             Self::Back => Direction::PosZ,  // IMPORTANT: Due to Bevy's right hand rule, "back" points positive Z.
-        }
-    }
-
-    #[inline(always)]
-    /// Returns the `BlockFace` that is this blockface's top
-    pub fn local_top(self) -> Self {
-        Self::rotate_face(self, Self::Top)
-    }
-
-    #[inline(always)]
-    /// Returns the `BlockFace` that is this blockface's bottom
-    pub fn local_bottom(self) -> Self {
-        Self::rotate_face(self, Self::Bottom)
-    }
-
-    #[inline(always)]
-    /// Returns the `BlockFace` that is this blockface's left
-    pub fn local_left(self) -> Self {
-        Self::rotate_face(self, Self::Left)
-    }
-
-    #[inline(always)]
-    /// Returns the `BlockFace` that is this blockface's right
-    pub fn local_right(self) -> Self {
-        Self::rotate_face(self, Self::Right)
-    }
-
-    #[inline(always)]
-    /// Returns the `BlockFace` that is this blockface's back
-    pub fn local_back(self) -> Self {
-        Self::rotate_face(self, Self::Front)
-    }
-
-    #[inline(always)]
-    /// Returns the `BlockFace` that is this blockface's front
-    pub fn local_front(self) -> Self {
-        Self::rotate_face(self, Self::Back)
-    }
-
-    /// Rotates a block face assuming it's "up" orientation is [`BlockFace::Top`].
-    /// For example, if `face` is [`BlockFace::Left`], and `top_face` is [`BlockFace::Right`],
-    /// this means the "top" direction of this block is facing to +X direction. So, the +Y direction
-    /// would then be [`BlockFace::Left`], so this function would return the [`BlockFace`] that
-    /// represents the +Y direction - [`BlockFace::Top`].
-    ///
-    /// - `face` - The face of the block being rotated
-    /// - `top_face` - The face to rotate the given face by. [`BlockFace::Top`] will result in no rotation being made
-    pub fn rotate_face(face: BlockFace, top_face: BlockFace) -> BlockFace {
-        match top_face {
-            Self::Top => face,
-            Self::Bottom => match face {
-                Self::Top => Self::Bottom,
-                Self::Bottom => Self::Top,
-                Self::Front => Self::Back,
-                Self::Back => Self::Front,
-                _ => face,
-            },
-            Self::Left => match face {
-                Self::Top => Self::Left,
-                Self::Bottom => Self::Right,
-                Self::Right => Self::Bottom,
-                Self::Left => Self::Top,
-                Self::Front => Self::Back,
-                Self::Back => Self::Front,
-            },
-            Self::Right => match face {
-                Self::Right => Self::Top,
-                Self::Left => Self::Bottom,
-                Self::Top => Self::Right,
-                Self::Bottom => Self::Left,
-                Self::Front => Self::Back,
-                Self::Back => Self::Front,
-            },
-            Self::Back => match face {
-                Self::Front => Self::Bottom,
-                Self::Bottom => Self::Front,
-                Self::Back => Self::Top,
-                Self::Top => Self::Back,
-                Self::Left => Self::Right,
-                Self::Right => Self::Left,
-            },
-            Self::Front => match face {
-                Self::Back => Self::Bottom,
-                Self::Front => Self::Top,
-                Self::Top => Self::Front,
-                Self::Bottom => Self::Back,
-                Self::Left => Self::Right,
-                Self::Right => Self::Left,
-            },
         }
     }
 }

@@ -38,7 +38,7 @@ fn logic_on_output_event_listener(
 
         // Set all this block's ports to 1 in their logic groups.
         // TODO: Signal should be customizable.
-        for local_face in structure.block_rotation(ev.block.coords()).all_global_faces() {
+        for local_face in structure.block_rotation(ev.block.coords()).direction_of_all_faces() {
             let port = Port::new(ev.block.coords(), local_face);
             logic_driver.update_producer(port, 1, &mut evw_logic_input, ev.entity);
         }
