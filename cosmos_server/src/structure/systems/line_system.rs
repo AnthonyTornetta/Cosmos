@@ -9,7 +9,7 @@ use bevy::{
     state::{condition::in_state, state::OnEnter},
 };
 use cosmos_core::{
-    block::{Block, BlockFace, BlockRotation},
+    block::{block_events::BlockEventsSet, Block, BlockFace, BlockRotation},
     events::block_events::BlockChangedEvent,
     registry::Registry,
     structure::{
@@ -414,7 +414,7 @@ pub fn add_line_system<T: LineProperty, S: LinePropertyCalculator<T>>(app: &mut 
         Update,
         (
             structure_loaded_event::<T, S>.in_set(StructureLoadingSet::StructureLoaded),
-            block_update_system::<T, S>,
+            block_update_system::<T, S>.in_set(BlockEventsSet::ProcessEventsPostPlacement),
         )
             .run_if(in_state(GameState::Playing)),
     )

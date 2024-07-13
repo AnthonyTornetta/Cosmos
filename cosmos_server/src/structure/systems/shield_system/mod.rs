@@ -26,7 +26,7 @@ use bevy::{
 
 use bevy_renet2::renet2::RenetServer;
 use cosmos_core::{
-    block::Block,
+    block::{block_events::BlockEventsSet, Block},
     ecs::NeedsDespawned,
     events::block_events::BlockChangedEvent,
     netty::{cosmos_encoder, server_laser_cannon_system_messages::ServerStructureSystemMessages, NettyChannelServer},
@@ -384,7 +384,7 @@ pub(super) fn register(app: &mut App) {
                 recalculate_shields_if_needed, // before so this runs next frame (so the globaltransform has been added to the structure)
                 fill_ai_controlled_shields_on_spawn,
                 structure_loaded_event.in_set(StructureLoadingSet::StructureLoaded),
-                block_update_system,
+                block_update_system.in_set(BlockEventsSet::ProcessEventsPostPlacement),
                 power_shields,
             )
                 .chain()

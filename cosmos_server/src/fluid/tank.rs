@@ -324,7 +324,7 @@ pub(super) fn register(app: &mut App) {
         Update,
         (on_add_tank, listen_for_changed_fluid_data, call_balance_tanks)
             .chain()
-            .in_set(BlockEventsSet::ProcessEventsPostPlacement),
+            .in_set(BlockEventsSet::PostProcessEvents),
     )
     .init_resource::<TanksToBalance>();
 }

@@ -172,6 +172,8 @@ pub(super) fn register(app: &mut App) {
     )
     .add_systems(
         Update,
-        desert_generate_chunk_features.in_set(BiosphereGenerationSet::GenerateChunkFeatures),
+        desert_generate_chunk_features
+            .in_set(BiosphereGenerationSet::GenerateChunkFeatures)
+            .ambiguous_with(BiosphereGenerationSet::GenerateChunkFeatures),
     );
 }

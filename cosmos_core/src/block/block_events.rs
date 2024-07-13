@@ -437,6 +437,8 @@ pub enum BlockEventsSet {
     ProcessEvents,
     /// If your event processing relies on the block being placed, run it in this set
     ProcessEventsPostPlacement,
+    /// For systems that need information set in the [`BlockEventsSet::ProcessEventsPostPlacement`] stage.
+    PostProcessEvents,
 }
 
 pub(super) fn register(app: &mut App) {
@@ -446,6 +448,7 @@ pub(super) fn register(app: &mut App) {
             BlockEventsSet::PreProcessEvents,
             BlockEventsSet::ProcessEvents,
             BlockEventsSet::ProcessEventsPostPlacement,
+            BlockEventsSet::PostProcessEvents,
         )
             .chain()
             .after(StructureLoadingSet::StructureLoaded),
@@ -456,11 +459,8 @@ pub(super) fn register(app: &mut App) {
         .add_event::<BlockInteractEvent>()
         .add_systems(
             Update,
-            (
-                handle_block_break_events.in_set(ItemStackSystemSet::CreateDataEntity),
-                handle_block_place_events,
-            )
-                .chain()
+            handle_block_break_events
+                .in_set(ItemStackSystemSet::CreateDataEntity)
                 .in_set(BlockEventsSet::ProcessEvents),
         );
 }

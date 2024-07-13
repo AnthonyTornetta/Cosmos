@@ -3,7 +3,7 @@
 use bevy::prelude::{in_state, App, Commands, EventReader, IntoSystemConfigs, OnEnter, Query, Res, ResMut, Update};
 
 use cosmos_core::{
-    block::Block,
+    block::{block_events::BlockEventsSet, Block},
     events::block_events::BlockChangedEvent,
     registry::Registry,
     structure::{
@@ -83,7 +83,7 @@ pub(super) fn register(app: &mut App) {
             Update,
             (
                 structure_loaded_event.in_set(StructureLoadingSet::StructureLoaded),
-                block_update_system,
+                block_update_system.in_set(BlockEventsSet::ProcessEventsPostPlacement),
             )
                 .run_if(in_state(GameState::Playing)),
         )

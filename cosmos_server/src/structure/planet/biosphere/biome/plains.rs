@@ -551,6 +551,8 @@ pub(super) fn register(app: &mut App) {
     )
     .add_systems(
         Update,
-        plains_generate_chunk_features.in_set(BiosphereGenerationSet::GenerateChunkFeatures),
+        plains_generate_chunk_features
+            .ambiguous_with(BiosphereGenerationSet::GenerateChunkFeatures)
+            .in_set(BiosphereGenerationSet::GenerateChunkFeatures),
     );
 }

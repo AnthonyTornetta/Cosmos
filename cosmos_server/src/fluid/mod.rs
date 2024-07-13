@@ -50,7 +50,7 @@ pub(super) fn register(app: &mut App) {
     interact_fluid::register(app);
     tank::register(app);
 
-    app.add_systems(Update, on_place_tank.in_set(BlockEventsSet::ProcessEvents));
+    app.add_systems(Update, on_place_tank.in_set(BlockEventsSet::ProcessEventsPostPlacement));
 
     sync_registry::<FluidTankBlock>(app);
     make_persistent::<FluidItemData>(app);

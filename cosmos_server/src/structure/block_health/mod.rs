@@ -1,9 +1,11 @@
 //! This handles what to do when a block is destroyed
 
-use bevy::prelude::{in_state, App, EventReader, EventWriter, IntoSystemConfigs, Query, Res, ResMut, Update};
+use bevy::prelude::{
+    in_state, App, EventReader, EventWriter, IntoSystemConfigs, IntoSystemSetConfigs, Query, Res, ResMut, SystemSet, Update,
+};
 use bevy_renet2::renet2::RenetServer;
 use cosmos_core::{
-    block::Block,
+    block::{block_events::BlockEventsSet, Block},
     events::block_events::BlockChangedEvent,
     netty::{
         cosmos_encoder,
@@ -13,11 +15,14 @@ use cosmos_core::{
     registry::Registry,
     structure::{
         block_health::events::{BlockDestroyedEvent, BlockTakeDamageEvent},
+        loading::StructureLoadingSet,
         Structure,
     },
 };
 
 use crate::state::GameState;
+
+use super::planet::biosphere::biosphere_generation::BiosphereGenerationSet;
 
 fn monitor_block_destroyed(
     mut event_reader: EventReader<BlockDestroyedEvent>,
@@ -50,9 +55,25 @@ fn monitor_block_health_changed(mut server: ResMut<RenetServer>, mut event_reade
     }
 }
 
+#[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
+pub enum BlockHealthSet {
+    ProcessHealthChanges,
+}
+
 pub(super) fn register(app: &mut App) {
+    app.configure_sets(
+        Update,
+        BlockHealthSet::ProcessHealthChanges
+            .after(BiosphereGenerationSet::GenerateChunkFeatures)
+            .after(StructureLoadingSet::StructureLoaded)
+            .after(BlockEventsSet::PostProcessEvents),
+    );
+
     app.add_systems(
         Update,
-        (monitor_block_destroyed, monitor_block_health_changed).run_if(in_state(GameState::Playing)),
+        (monitor_block_health_changed, monitor_block_destroyed)
+            .in_set(BlockHealthSet::ProcessHealthChanges)
+            .chain()
+            .run_if(in_state(GameState::Playing)),
     );
 }

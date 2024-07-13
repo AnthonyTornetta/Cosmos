@@ -183,8 +183,12 @@ pub fn register_biosphere<T: BiosphereMarkerComponent + Default + Clone, E: Send
                 .in_set(LoadingSystemSet::DoLoading),
                 // Checks if any blocks need generated for this biosphere
                 ((
-                    biosphere_generation::generate_planet::<T, E>.in_set(BiosphereGenerationSet::FlagChunksNeedGenerated),
-                    biosphere_generation::generate_chunks_from_gpu_data::<T>.in_set(BiosphereGenerationSet::GenerateChunks),
+                    biosphere_generation::generate_planet::<T, E>
+                        .in_set(BiosphereGenerationSet::FlagChunksNeedGenerated)
+                        .ambiguous_with(BiosphereGenerationSet::FlagChunksNeedGenerated),
+                    biosphere_generation::generate_chunks_from_gpu_data::<T>
+                        .in_set(BiosphereGenerationSet::GenerateChunks)
+                        .ambiguous_with(BiosphereGenerationSet::GenerateChunks),
                     // generate_chunk_features::<T>.in_set(BiosphereGenerationSet::GenerateChunkFeatures),
                     check_needs_generated_system::<E, T>,
                 )
