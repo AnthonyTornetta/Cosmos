@@ -19,7 +19,7 @@ use cosmos_core::{
 
 use crate::state::GameState;
 
-use super::sync::register_structure_system;
+use super::{sync::register_structure_system, InitStructureSystemsSet};
 
 fn register_camera_blocks(blocks: Res<Registry<Block>>, mut camera_blocks: ResMut<CameraBlocks>) {
     if let Some(block) = blocks.from_id("cosmos:camera") {
@@ -82,7 +82,9 @@ pub(super) fn register(app: &mut App) {
         .add_systems(
             Update,
             (
-                camera_structure_loaded_event_processor.in_set(StructureLoadingSet::StructureLoaded),
+                camera_structure_loaded_event_processor
+                    .in_set(InitStructureSystemsSet::InitSystems)
+                    .ambiguous_with(InitStructureSystemsSet::InitSystems),
                 camera_block_update_system.in_set(BlockEventsSet::ProcessEventsPostPlacement),
             )
                 .run_if(in_state(GameState::Playing)),

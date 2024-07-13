@@ -35,7 +35,7 @@ use cosmos_core::{
     },
 };
 
-use crate::netty::sync::sync_bodies::DontNotifyClientOfDespawn;
+use crate::{netty::sync::sync_bodies::DontNotifyClientOfDespawn, structure::systems::shield_system::ShieldHitProcessing};
 
 /// 1 unit of explosion power = this amount of health. Bigger this number is, the more damage explosives will do.
 const HEALTH_PER_EXPLOSION_POWER: f32 = 8.0;
@@ -228,5 +228,10 @@ fn calculate_block_explosion_power(
 pub(super) fn register(app: &mut App) {
     app.add_event::<ExplosionHitEvent>();
 
-    app.add_systems(Update, respond_to_explosion.in_set(ExplosionSystemSet::ProcessExplosions));
+    app.add_systems(
+        Update,
+        respond_to_explosion
+            .in_set(ExplosionSystemSet::ProcessExplosions)
+            .before(ShieldHitProcessing::OnShieldHit),
+    );
 }

@@ -36,10 +36,5 @@ fn respond_to_explosion_damage(
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_systems(
-        Update,
-        respond_to_explosion_damage
-            .in_set(ShieldHitProcessing::OnShieldHit)
-            .in_set(ShieldHitProcessing::OnShieldHit),
-    );
+    app.add_systems(Update, respond_to_explosion_damage.in_set(ShieldHitProcessing::OnShieldHit));
 }

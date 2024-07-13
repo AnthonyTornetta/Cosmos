@@ -1,7 +1,13 @@
 //! Contains projectile systems needed on the server
 
-use bevy::prelude::App;
-use cosmos_core::{block::BlockRotation, structure::structure_block::StructureBlock};
+use bevy::{
+    app::Update,
+    prelude::{App, IntoSystemSetConfigs, SystemSet},
+};
+use cosmos_core::{
+    block::BlockRotation,
+    structure::{loading::StructureLoadingSet, structure_block::StructureBlock},
+};
 
 mod camera_system;
 mod dock_system;
@@ -11,7 +17,7 @@ pub mod laser_cannon_system;
 mod line_system;
 mod mining_laser_system;
 pub mod missile_launcher_system;
-mod shield_system;
+pub mod shield_system;
 pub(crate) mod sync;
 mod thruster_system;
 
@@ -23,7 +29,17 @@ pub trait BlockStructureSystem<T> {
     fn remove_block(&mut self, sb: &StructureBlock);
 }
 
+#[derive(SystemSet, Debug, Hash, PartialEq, Eq, Clone)]
+pub enum InitStructureSystemsSet {
+    InitSystems,
+}
+
 pub(super) fn register(app: &mut App) {
+    app.configure_sets(
+        Update,
+        InitStructureSystemsSet::InitSystems.in_set(StructureLoadingSet::StructureLoaded),
+    );
+
     sync::register(app);
     dock_system::register(app);
     line_system::register(app);

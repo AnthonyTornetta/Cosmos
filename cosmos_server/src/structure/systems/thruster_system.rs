@@ -11,7 +11,6 @@ use cosmos_core::{
     registry::Registry,
     structure::{
         events::StructureLoadedEvent,
-        loading::StructureLoadingSet,
         ship::{pilot::Pilot, ship_movement::ShipMovement},
         systems::{
             dock_system::Docked,
@@ -25,7 +24,7 @@ use cosmos_core::{
 
 use crate::state::GameState;
 
-use super::sync::register_structure_system;
+use super::{sync::register_structure_system, InitStructureSystemsSet};
 
 const MAX_SHIP_SPEED: f32 = 200.0;
 const MAX_BRAKE_DELTA_PER_THRUST: f32 = 300.0;
@@ -187,7 +186,9 @@ pub(super) fn register(app: &mut App) {
         .add_systems(
             Update,
             (
-                structure_loaded_event.in_set(StructureLoadingSet::StructureLoaded),
+                structure_loaded_event
+                    .in_set(InitStructureSystemsSet::InitSystems)
+                    .ambiguous_with(InitStructureSystemsSet::InitSystems),
                 block_update_system,
                 update_movement,
             )

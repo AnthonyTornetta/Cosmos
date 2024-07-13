@@ -19,7 +19,7 @@ use cosmos_core::{
     entities::player::Player,
     events::structure::StructureEventListenerSet,
     physics::location::Location,
-    projectiles::laser::LASER_LIVE_TIME,
+    projectiles::{laser::LASER_LIVE_TIME, missile::Missile},
     structure::{
         shared::{DespawnWithStructure, MeltingDown},
         ship::{pilot::Pilot, ship_movement::ShipMovement, Ship},
@@ -73,7 +73,7 @@ fn handle_pirate_movement(
             &mut PirateAi,
             &GlobalTransform,
         ),
-        With<Pirate>,
+        (With<Pirate>, Without<Missile>), // Without<Missile> fixes ambiguity issues
     >,
     q_parent: Query<&Parent>,
     q_velocity: Query<&Velocity>,

@@ -15,7 +15,6 @@ use cosmos_core::{
     structure::{
         coordinates::{BlockCoordinate, CoordinateType, UnboundBlockCoordinate, UnboundCoordinateType},
         events::StructureLoadedEvent,
-        loading::StructureLoadingSet,
         structure_block::StructureBlock,
         systems::{
             line_system::{Line, LineBlocks, LineColorBlock, LineColorProperty, LineProperty, LinePropertyCalculator, LineSystem},
@@ -27,7 +26,7 @@ use cosmos_core::{
 
 use crate::state::GameState;
 
-use super::BlockStructureSystem;
+use super::{BlockStructureSystem, InitStructureSystemsSet};
 
 fn block_update_system<T: LineProperty, S: LinePropertyCalculator<T>>(
     mut event: EventReader<BlockChangedEvent>,
@@ -413,7 +412,9 @@ pub fn add_line_system<T: LineProperty, S: LinePropertyCalculator<T>>(app: &mut 
     app.add_systems(
         Update,
         (
-            structure_loaded_event::<T, S>.in_set(StructureLoadingSet::StructureLoaded),
+            structure_loaded_event::<T, S>
+                .in_set(InitStructureSystemsSet::InitSystems)
+                .ambiguous_with(InitStructureSystemsSet::InitSystems),
             block_update_system::<T, S>.in_set(BlockEventsSet::ProcessEventsPostPlacement),
         )
             .run_if(in_state(GameState::Playing)),

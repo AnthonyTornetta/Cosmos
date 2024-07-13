@@ -8,7 +8,6 @@ use cosmos_core::{
     registry::Registry,
     structure::{
         events::StructureLoadedEvent,
-        loading::StructureLoadingSet,
         systems::{
             energy_storage_system::{EnergyStorageBlocks, EnergyStorageProperty, EnergyStorageSystem},
             StructureSystemType, StructureSystems,
@@ -19,7 +18,7 @@ use cosmos_core::{
 
 use crate::state::GameState;
 
-use super::sync::register_structure_system;
+use super::{sync::register_structure_system, InitStructureSystemsSet};
 
 fn register_energy_blocks(blocks: Res<Registry<Block>>, mut storage: ResMut<EnergyStorageBlocks>) {
     if let Some(block) = blocks.from_id("cosmos:energy_cell") {
@@ -82,7 +81,9 @@ pub(super) fn register(app: &mut App) {
         .add_systems(
             Update,
             (
-                structure_loaded_event.in_set(StructureLoadingSet::StructureLoaded),
+                structure_loaded_event
+                    .in_set(InitStructureSystemsSet::InitSystems)
+                    .ambiguous_with(InitStructureSystemsSet::InitSystems),
                 block_update_system.in_set(BlockEventsSet::ProcessEventsPostPlacement),
             )
                 .run_if(in_state(GameState::Playing)),
