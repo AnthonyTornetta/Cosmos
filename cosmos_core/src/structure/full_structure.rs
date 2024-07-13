@@ -109,6 +109,8 @@ impl FullStructure {
             return;
         }
 
+        let old_block_rotation = self.block_rotation(coords);
+
         let chunk_coords = ChunkCoordinate::for_block_coordinate(coords);
         let chunk_block_coords = ChunkBlockCoordinate::for_block_coordinate(coords);
         let mut send_event = false;
@@ -152,7 +154,7 @@ impl FullStructure {
             old_block,
             structure_entity: self_entity,
             block: StructureBlock::new(coords),
-            old_block_rotation: self.block_rotation(coords),
+            old_block_rotation,
             new_block_rotation: block_rotation,
         });
     }

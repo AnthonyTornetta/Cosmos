@@ -198,6 +198,7 @@ fn logic_block_placed_event_listener(
         if let Some(logic_block) = logic_blocks.from_id(blocks.from_numeric_id(ev.old_block).unlocalized_name()) {
             if let Ok(structure) = q_structure.get_mut(ev.structure_entity) {
                 if let Ok(mut logic) = q_logic.get_mut(ev.structure_entity) {
+                    println!("Removed block rotation: {:?}", ev.old_block_rotation);
                     logic.remove_logic_block(
                         logic_block,
                         ev.old_block_rotation,
