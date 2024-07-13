@@ -7,7 +7,7 @@ use std::{
 };
 
 use bevy::{
-    math::Quat,
+    math::{vec3, Quat},
     prelude::{App, States, Vec3},
     reflect::Reflect,
 };
@@ -459,24 +459,166 @@ impl BlockSubRotation {
     }
 }
 
+/// Enumerates the 6 possible directions: a positive and negative direction for each of the 3 axes of 3-dimensional space.
+/// Moving in the direction indicated by each of these variants should always change the corresponding coordinate in the indicated direction.
+pub enum Direction {
+    /// The positive X direction.
+    PosX,
+    /// The negative X direction.
+    NegX,
+    /// The positive Y direction.
+    PosY,
+    /// The negative Y direction.
+    NegY,
+    /// The positive Z direction.
+    PosZ,
+    /// The negative Z direction.
+    NegZ,
+}
+
+/// Contains each direction, in the order their `index` method returns.
+pub const ALL_DIRECTIONS: [Direction; 6] = [
+    Direction::PosX,
+    Direction::NegX,
+    Direction::PosY,
+    Direction::NegY,
+    Direction::PosZ,
+    Direction::NegZ,
+];
+
+impl Direction {
+    /// Returns the index for each direction [0, 5].
+    ///
+    /// Useful for storing directions in an array.
+    /// This index does not directly correspond to any `BlockFace` index. Use `unrotated_block_face` to convert.
+    pub const fn index(&self) -> usize {
+        match *self {
+            Self::PosX => 0,
+            Self::NegX => 1,
+            Self::PosY => 2,
+            Self::NegY => 3,
+            Self::PosZ => 4,
+            Self::NegZ => 5,
+        }
+    }
+
+    /// Gets a direction from its index.
+    ///
+    /// Note this will panic if index is not between 0 and 5 inclusive.
+    /// This index does not directly correspond to any `BlockFace` index. Use `unrotated_block_face` to convert.
+    #[inline]
+    pub fn from_index(index: usize) -> Self {
+        match index {
+            0 => Self::PosX,
+            1 => Self::NegX,
+            2 => Self::PosY,
+            3 => Self::NegY,
+            4 => Self::PosZ,
+            5 => Self::NegZ,
+            _ => panic!("Direction index must be 0 <= {index} <= 5"),
+        }
+    }
+
+    /// Returns the direction each face represents as a Vec3.
+    pub const fn to_vec3(&self) -> Vec3 {
+        match *self {
+            Self::PosX => Vec3::X,
+            Self::NegX => Vec3::NEG_X,
+            Self::PosY => Vec3::Y,
+            Self::NegY => Vec3::NEG_Y,
+            Self::PosZ => Vec3::Z,
+            Self::NegZ => Vec3::NEG_Z,
+        }
+    }
+
+    /// Returns the `Direction` this vec3 represents.
+    /// Vector must have one entry non-zero and all others 0.
+    pub fn from_vec3(vec: Vec3) -> Self {
+        assert!((vec.x != 0.0) as u8 + (vec.y != 0.0) as u8 + (vec.z != 0.0) as u8 == 1);
+        if vec.x > 0.0 {
+            Self::PosX
+        } else if vec.x < 0.0 {
+            Self::NegX
+        } else if vec.y > 0.0 {
+            Self::PosY
+        } else if vec.y < 0.0 {
+            Self::NegY
+        } else if vec.z > 0.0 {
+            Self::PosZ
+        } else {
+            Self::NegZ
+        }
+    }
+
+    /// Returns the integer tuple this direction represents.
+    pub const fn to_i32_tuple(&self) -> (i32, i32, i32) {
+        let vec = self.to_vec3();
+        (vec.x as i32, vec.y as i32, vec.z as i32)
+    }
+
+    /// Returns the `Direction` this integer tuple represents.
+    /// Tuple must have one entry non-zero and all others 0.
+    pub fn from_i32_tuple(tuple: (i32, i32, i32)) -> Self {
+        Self::from_vec3(vec3(tuple.0 as f32, tuple.1 as f32, tuple.2 as f32))
+    }
+
+    /// Returns the direction each face represents as an UnboundBlockCoordinate
+    pub const fn to_coordinates(&self) -> UnboundBlockCoordinate {
+        let vec = self.to_vec3();
+        UnboundBlockCoordinate::new(vec.x as i64, vec.y as i64, vec.z as i64)
+    }
+
+    /// Returns the `Direction` this block coordinate represents.
+    /// Coordinates must have one entry non-zero and all others 0.
+    pub fn from_coordinates(coords: UnboundBlockCoordinate) -> Self {
+        Self::from_vec3(vec3(coords.x as f32, coords.y as f32, coords.z as f32))
+    }
+
+    /// Returns the `BlockFace` pointing in this `Direction` if the block and it's structure are not rotated.
+    ///
+    /// Most blocks have some rotation, so be careful to call the proper `BlockRotation` method instead if the block is rotated.
+    pub fn unrotated_block_face(self) -> BlockFace {
+        match self {
+            Self::PosX => BlockFace::Right,
+            Self::NegX => BlockFace::Left,
+            Self::PosY => BlockFace::Top,
+            Self::NegY => BlockFace::Bottom,
+            Self::PosZ => BlockFace::Back, // IMPORTANT: Due to Bevy's right hand rule, "back" points positive Z.
+            Self::NegZ => BlockFace::Front, // IMPORTANT: Due to Bevy's right hand rule, "front" points negative Z.
+        }
+    }
+
+    /// Returns the string representation of this face.
+    pub const fn as_str(&self) -> &'static str {
+        match *self {
+            Self::PosX => "positive X",
+            Self::NegX => "negative X",
+            Self::PosY => "positive Y",
+            Self::NegY => "negative Y",
+            Self::PosZ => "positive Z",
+            Self::NegZ => "negative Z",
+        }
+    }
+}
+
 #[derive(Debug, PartialEq, Eq, Reflect, Default, Copy, Clone, Serialize, Deserialize, Hash)]
 /// Represents the different faces of a block.
 ///
 /// Even non-cube blocks will have this.
 pub enum BlockFace {
-    /// +Z (because of Bevy right hand rule.)
-    Back,
-    /// -Z (because of Bevy right hand rule.)
-    Front,
+    /// +X
+    Right,
+    /// -X
+    Left,
     /// +Y
     #[default]
     Top,
     /// -Y
     Bottom,
-    /// +X
-    Right,
-    /// -X
-    Left,
+    /// -Z (because of Bevy right hand rule.)
+    Front,
+    /// +Z (because of Bevy right hand rule.)
+    Back,
 }
 
 /// Contains each block face a block can have in the order their `index` method returns.
@@ -485,175 +627,115 @@ pub const ALL_BLOCK_FACES: [BlockFace; 6] = [
     BlockFace::Left,
     BlockFace::Top,
     BlockFace::Bottom,
-    BlockFace::Back,
     BlockFace::Front,
+    BlockFace::Back,
 ];
 
 impl BlockFace {
     /// Returns the index for each block face [0, 5].
     ///
-    /// Useful for storing faces in an array
+    /// Useful for storing faces in an array.
+    /// This index does not directly correspond to any `Direction` index. Use `unrotated_direction` to convert.
     pub const fn index(&self) -> usize {
         match *self {
-            BlockFace::Right => 0,
-            BlockFace::Left => 1,
-            BlockFace::Top => 2,
-            BlockFace::Bottom => 3,
-            BlockFace::Front => 4,
-            BlockFace::Back => 5,
+            Self::Right => 0,
+            Self::Left => 1,
+            Self::Top => 2,
+            Self::Bottom => 3,
+            Self::Front => 4,
+            Self::Back => 5,
         }
     }
 
-    /// Returns the integer direction each face represents
-    pub const fn direction(&self) -> (i32, i32, i32) {
-        match *self {
-            Self::Back => (0, 0, 1),
-            Self::Front => (0, 0, -1),
-            Self::Left => (-1, 0, 0),
-            Self::Right => (1, 0, 0),
-            Self::Top => (0, 1, 0),
-            Self::Bottom => (0, -1, 0),
-        }
-    }
-
-    /// Returns the direction each face represents as a Vec3
-    pub const fn to_direction_vec3(&self) -> Vec3 {
-        match *self {
-            Self::Back => Vec3::Z,
-            Self::Front => Vec3::NEG_Z,
-            Self::Left => Vec3::NEG_X,
-            Self::Right => Vec3::X,
-            Self::Top => Vec3::Y,
-            Self::Bottom => Vec3::NEG_Y,
-        }
-    }
-
-    /// Vector must have one entry non-zero and all others 0.
-    pub fn from_direction_vec3(vec: Vec3) -> Self {
-        assert!((vec.x != 0.0) as u8 + (vec.y != 0.0) as u8 + (vec.z != 0.0) as u8 == 1);
-        if vec.x > 0.0 {
-            Self::Right
-        } else if vec.x < 0.0 {
-            Self::Left
-        } else if vec.y > 0.0 {
-            Self::Top
-        } else if vec.y < 0.0 {
-            Self::Bottom
-        } else if vec.z > 0.0 {
-            Self::Back
-        } else if vec.z < 0.0 {
-            Self::Front
-        } else {
-            panic!("UnboundBlockCoordinate converting to BlockFace should have exactly one entry non-zero but had none.");
-        }
-    }
-
-    /// Returns the direction each face represents as an UnboundBlockCoordinate
-    pub const fn to_direction_coordinates(&self) -> UnboundBlockCoordinate {
-        match *self {
-            Self::Back => UnboundBlockCoordinate::new(0, 0, 1),
-            Self::Front => UnboundBlockCoordinate::new(0, 0, -1),
-            Self::Left => UnboundBlockCoordinate::new(-1, 0, 0),
-            Self::Right => UnboundBlockCoordinate::new(1, 0, 0),
-            Self::Top => UnboundBlockCoordinate::new(0, 1, 0),
-            Self::Bottom => UnboundBlockCoordinate::new(0, -1, 0),
-        }
-    }
-
-    /// Coordinates must have one entry non-zero and all others 0.
-    pub fn from_direction_coordinates(coords: UnboundBlockCoordinate) -> Self {
-        assert!((coords.x != 0) as u8 + (coords.y != 0) as u8 + (coords.z != 0) as u8 == 1);
-        if coords.x > 0 {
-            Self::Right
-        } else if coords.x < 0 {
-            Self::Left
-        } else if coords.y > 0 {
-            Self::Top
-        } else if coords.y < 0 {
-            Self::Bottom
-        } else if coords.z > 0 {
-            Self::Back
-        } else if coords.z < 0 {
-            Self::Front
-        } else {
-            panic!("UnboundBlockCoordinate converting to BlockFace should have exactly one entry non-zero but had none.");
+    /// Gets this block face from its index.
+    ///
+    /// This will panic if index is not between 0 and 5 inclusive.
+    /// This index does not directly correspond to any `Direction` index. Use `unrotated_direction` to convert.
+    #[inline]
+    pub fn from_index(index: usize) -> Self {
+        match index {
+            0 => Self::Right,
+            1 => Self::Left,
+            2 => Self::Top,
+            3 => Self::Bottom,
+            4 => Self::Front,
+            5 => Self::Back,
+            _ => panic!("BlockFace index {index} is not between 0 and 5 inclusive."),
         }
     }
 
     /// Returns the string representation of this face.
     pub const fn as_str(&self) -> &'static str {
         match *self {
-            Self::Back => "back",
-            Self::Front => "front",
-            Self::Left => "left",
             Self::Right => "right",
+            Self::Left => "left",
             Self::Top => "top",
             Self::Bottom => "bottom",
-        }
-    }
-
-    /// Get's this block face from its index.
-    ///
-    /// Note this will panic if index is not <= 5.
-    #[inline]
-    pub fn from_index(index: usize) -> Self {
-        match index {
-            0 => BlockFace::Right,
-            1 => BlockFace::Left,
-            2 => BlockFace::Top,
-            3 => BlockFace::Bottom,
-            4 => BlockFace::Front,
-            5 => BlockFace::Back,
-            _ => panic!("Index must be 0 <= {index} <= 5"),
+            Self::Front => "front",
+            Self::Back => "back",
         }
     }
 
     /// Gets the opposite face for this block face (example: `BlockFace::Left` -> `BlockFace::Right`)
     pub fn inverse(&self) -> BlockFace {
         match self {
+            Self::Right => Self::Left,
+            Self::Left => Self::Right,
             Self::Top => Self::Bottom,
             Self::Bottom => Self::Top,
-            Self::Left => Self::Right,
-            Self::Right => Self::Left,
             Self::Front => Self::Back,
             Self::Back => Self::Front,
         }
     }
 
+    /// Returns the `Direction` this `BlockFace` points if the block and it's structure are not rotated.
+    ///
+    /// Most blocks have some rotation, so be careful to call the proper `BlockRotation` method instead if the block is rotated.
+    pub fn unrotated_direction(self) -> Direction {
+        match self {
+            Self::Right => Direction::PosX,
+            Self::Left => Direction::NegX,
+            Self::Top => Direction::PosY,
+            Self::Bottom => Direction::NegY,
+            Self::Front => Direction::NegZ, // IMPORTANT: Due to Bevy's right hand rule, "front" points negative Z.
+            Self::Back => Direction::PosZ,  // IMPORTANT: Due to Bevy's right hand rule, "back" points positive Z.
+        }
+    }
+
     #[inline(always)]
     /// Returns the `BlockFace` that is this blockface's top
-    pub fn local_top(self) -> BlockFace {
-        Self::rotate_face(self, BlockFace::Top)
+    pub fn local_top(self) -> Self {
+        Self::rotate_face(self, Self::Top)
     }
 
     #[inline(always)]
     /// Returns the `BlockFace` that is this blockface's bottom
-    pub fn local_bottom(self) -> BlockFace {
-        Self::rotate_face(self, BlockFace::Bottom)
+    pub fn local_bottom(self) -> Self {
+        Self::rotate_face(self, Self::Bottom)
     }
 
     #[inline(always)]
     /// Returns the `BlockFace` that is this blockface's left
-    pub fn local_left(self) -> BlockFace {
-        Self::rotate_face(self, BlockFace::Left)
+    pub fn local_left(self) -> Self {
+        Self::rotate_face(self, Self::Left)
     }
 
     #[inline(always)]
     /// Returns the `BlockFace` that is this blockface's right
-    pub fn local_right(self) -> BlockFace {
-        Self::rotate_face(self, BlockFace::Right)
+    pub fn local_right(self) -> Self {
+        Self::rotate_face(self, Self::Right)
     }
 
     #[inline(always)]
     /// Returns the `BlockFace` that is this blockface's back
-    pub fn local_back(self) -> BlockFace {
-        Self::rotate_face(self, BlockFace::Front)
+    pub fn local_back(self) -> Self {
+        Self::rotate_face(self, Self::Front)
     }
 
     #[inline(always)]
     /// Returns the `BlockFace` that is this blockface's front
-    pub fn local_front(self) -> BlockFace {
-        Self::rotate_face(self, BlockFace::Back)
+    pub fn local_front(self) -> Self {
+        Self::rotate_face(self, Self::Back)
     }
 
     /// Rotates a block face assuming it's "up" orientation is [`BlockFace::Top`].
