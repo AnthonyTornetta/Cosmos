@@ -137,39 +137,39 @@ fn generate_colliders(
                             let block_rotation = chunk.block_rotation(coord).as_quat();
 
                             // check connections
-                            let left = coord
+                            let neg_x = coord
                                 .to_block_coordinate(chunk.chunk_coordinates())
-                                .left()
+                                .neg_x()
                                 .map(|x| block.should_connect_with(structure.block_at(x, blocks)))
                                 .unwrap_or(false);
-                            let bottom = coord
+                            let neg_y = coord
                                 .to_block_coordinate(chunk.chunk_coordinates())
-                                .bottom()
+                                .neg_y()
                                 .map(|x| block.should_connect_with(structure.block_at(x, blocks)))
                                 .unwrap_or(false);
-                            let back = coord
+                            let neg_z = coord
                                 .to_block_coordinate(chunk.chunk_coordinates())
-                                .back()
+                                .neg_z()
                                 .map(|x| block.should_connect_with(structure.block_at(x, blocks)))
                                 .unwrap_or(false);
 
-                            let right = block.should_connect_with(
-                                structure.block_at(coord.right().to_block_coordinate(chunk.chunk_coordinates()), blocks),
+                            let pos_x = block.should_connect_with(
+                                structure.block_at(coord.pos_x().to_block_coordinate(chunk.chunk_coordinates()), blocks),
                             );
-                            let top = block.should_connect_with(
-                                structure.block_at(coord.top().to_block_coordinate(chunk.chunk_coordinates()), blocks),
+                            let pos_y = block.should_connect_with(
+                                structure.block_at(coord.pos_y().to_block_coordinate(chunk.chunk_coordinates()), blocks),
                             );
-                            let front = block.should_connect_with(
-                                structure.block_at(coord.front().to_block_coordinate(chunk.chunk_coordinates()), blocks),
+                            let pos_z = block.should_connect_with(
+                                structure.block_at(coord.pos_z().to_block_coordinate(chunk.chunk_coordinates()), blocks),
                             );
 
                             process_connected_colliders(
-                                right,
-                                left,
-                                top,
-                                bottom,
-                                front,
-                                back,
+                                pos_x,
+                                neg_x,
+                                pos_y,
+                                neg_y,
+                                pos_z,
+                                neg_z,
                                 connected_colliders,
                                 location,
                                 block_rotation,
@@ -494,30 +494,30 @@ fn listen_for_new_physics_event(
             // This isn't super efficient, and in the future we should check if there are any connected
             // blocks in neighborin chunks before doing this. Maybe cache that?
 
-            if let Ok(coord) = ev.chunk.left() {
+            if let Ok(coord) = ev.chunk.neg_x() {
                 if !todo.iter().any(|(c, se)| *c == coord && *se == ev.structure_entity) {
                     todo.push((coord, ev.structure_entity));
                 }
             }
-            if let Ok(coord) = ev.chunk.bottom() {
+            if let Ok(coord) = ev.chunk.neg_y() {
                 if !todo.iter().any(|(c, se)| *c == coord && *se == ev.structure_entity) {
                     todo.push((coord, ev.structure_entity));
                 }
             }
-            if let Ok(coord) = ev.chunk.back() {
+            if let Ok(coord) = ev.chunk.neg_z() {
                 if !todo.iter().any(|(c, se)| *c == coord && *se == ev.structure_entity) {
                     todo.push((coord, ev.structure_entity));
                 }
             }
-            let coord = ev.chunk.right();
+            let coord = ev.chunk.pos_x();
             if !todo.iter().any(|(c, se)| *c == coord && *se == ev.structure_entity) {
                 todo.push((coord, ev.structure_entity));
             }
-            let coord = ev.chunk.top();
+            let coord = ev.chunk.pos_y();
             if !todo.iter().any(|(c, se)| *c == coord && *se == ev.structure_entity) {
                 todo.push((coord, ev.structure_entity));
             }
-            let coord = ev.chunk.front();
+            let coord = ev.chunk.pos_z();
             if !todo.iter().any(|(c, se)| *c == coord && *se == ev.structure_entity) {
                 todo.push((coord, ev.structure_entity));
             }

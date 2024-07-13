@@ -14,7 +14,7 @@ use bevy::{
 };
 use serde::{Deserialize, Serialize};
 
-use crate::events::block_events::BlockDataChangedEvent;
+use crate::{block::ALL_BLOCK_DIRECTIONS, events::block_events::BlockDataChangedEvent};
 use crate::{
     block::{blocks::AIR_BLOCK_ID, data::BlockData, Block, BlockFace, BlockRotation},
     physics::location::Location,
@@ -861,23 +861,14 @@ impl BaseStructure {
         }
     }
 
-    /// Returns the 6 block IDs adjacent to the given coordinates.
+    /// Returns the 6 block IDs adjacent to the given coordinates, in the order of the [`BlockDirection`] indices.
     /// Any error causes that entry to be AIR_BLOCK_ID.
     pub fn block_ids_surrounding(&self, coords: BlockCoordinate) -> [u16; 6] {
-        let mut surroundings: [u16; 6] = [AIR_BLOCK_ID; 6];
-        surroundings[BlockFace::Right.index()] = self.block_id_at(coords.right());
-        if let Ok(left) = coords.left() {
-            surroundings[BlockFace::Left.index()] = self.block_id_at(left);
-        }
-        surroundings[BlockFace::Top.index()] = self.block_id_at(coords.top());
-        if let Ok(bottom) = coords.bottom() {
-            surroundings[BlockFace::Bottom.index()] = self.block_id_at(bottom);
-        }
-        surroundings[BlockFace::Back.index()] = self.block_id_at(coords.front());
-        if let Ok(back) = coords.back() {
-            surroundings[BlockFace::Front.index()] = self.block_id_at(back);
-        }
-        surroundings
+        ALL_BLOCK_DIRECTIONS.map(|direction| {
+            coords
+                .step(direction)
+                .map_or(AIR_BLOCK_ID, |neighbor_coords| self.block_id_at(neighbor_coords))
+        })
     }
 
     /// Returns the 6 blocks adjacent to the given coordinates.

@@ -11,7 +11,7 @@ use bevy::{
 };
 use bitflags::bitflags;
 use cosmos_core::{
-    block::{Block, BlockFace},
+    block::{Block, Direction},
     blockitems::BlockItems,
     item::Item,
     loader::{AddLoadingEvent, DoneLoadingEvent, LoadingManager},

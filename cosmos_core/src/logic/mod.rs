@@ -13,7 +13,7 @@ use logic_driver::LogicDriver;
 use logic_graph::{LogicGraph, LogicGroup};
 
 use crate::{
-    block::{data::BlockData, Block, BlockFace, ALL_BLOCK_FACES},
+    block::{data::BlockData, Block, BlockDirection, BlockFace, ALL_BLOCK_DIRECTIONS, ALL_BLOCK_FACES},
     events::block_events::{BlockChangedEvent, BlockDataSystemParams},
     registry::{create_registry, identifiable::Identifiable, Registry},
     structure::{coordinates::BlockCoordinate, loading::StructureLoadingSet, structure_block::StructureBlock, Structure},
@@ -131,21 +131,21 @@ impl LogicBlock {
 pub struct Port {
     /// The coordinates of the logic block.
     pub coords: BlockCoordinate,
-    /// Which face of the block this port is on.
+    /// Which direction this port points (accounting for block rotation).
     /// Any wires or other ports one step in this direction are connected to this port.
-    pub global_face: BlockFace,
+    pub direction: BlockDirection,
 }
 
 impl Port {
     /// Convenience constructor for Ports.
-    pub fn new(coords: BlockCoordinate, global_face: BlockFace) -> Port {
-        Port { coords, global_face }
+    pub fn new(coords: BlockCoordinate, direction: BlockDirection) -> Port {
+        Port { coords, direction }
     }
 
     /// Convenience method for getting a set of all six ports the block at these coordinates have (one for each face).
     /// HashSet format is needed for some DFS methods.
     pub fn all_for(coords: BlockCoordinate) -> HashSet<Port> {
-        HashSet::from_iter(ALL_BLOCK_FACES.map(|face| Port::new(coords, face)))
+        HashSet::from_iter(ALL_BLOCK_DIRECTIONS.map(|direction| Port::new(coords, direction)))
     }
 }
 

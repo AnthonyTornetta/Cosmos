@@ -46,7 +46,7 @@ fn logic_indicator_input_event_listener(
 
         let new_state = BlockLogicData(
             logic_driver
-                .all_global_port_inputs(ev.block.coords(), structure.block_rotation(ev.block.coords()))
+                .read_all_inputs(ev.block.coords(), structure.block_rotation(ev.block.coords()))
                 .iter()
                 .any(|signal| *signal != 0) as i32,
         );

@@ -121,15 +121,15 @@ fn on_render_logic_indicator(
             let mesh_builder = material_meshes.entry((material_type, mat_id)).or_default();
 
             let faces = ALL_BLOCK_FACES.iter().copied().filter(|face| {
-                if let Ok(new_coord) = BlockCoordinate::try_from(block.coords() + face.to_direction_coordinates()) {
+                if let Ok(new_coord) = BlockCoordinate::try_from(block.coords() + face.unrotated_direction().to_coordinates()) {
                     return structure.block_at(new_coord, &blocks).is_see_through();
                 }
                 true
             });
 
-            for (_, face) in faces.map(|face| (face, block_rotation.rotate_face(face))) {
+            for (_, direction) in faces.map(|face| (face, block_rotation.direction_of(face))) {
                 let Some(mut mesh_info) = block_mesh_info
-                    .info_for_face(face, false)
+                    .info_for_face(direction, false)
                     .map(Some)
                     .unwrap_or_else(|| {
                         let single_mesh = block_mesh_info.info_for_whole_block();
@@ -152,8 +152,8 @@ fn on_render_logic_indicator(
 
                 let neighbors = BlockNeighbors::empty();
 
-                let Some(image_index) = index.atlas_index_from_face(face, neighbors) else {
-                    warn!("Missing image index for face {face} -- {index:?}");
+                let Some(image_index) = index.atlas_index_from_face(direction, neighbors) else {
+                    warn!("Missing image index for face {direction} -- {index:?}");
                     continue;
                 };
 

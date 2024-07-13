@@ -7,7 +7,7 @@ use bevy::{
 };
 
 use crate::{
-    block::{Block, BlockFace, BlockRotation, ALL_BLOCK_FACES},
+    block::{Block, BlockDirection, BlockFace, BlockRotation, ALL_BLOCK_DIRECTIONS, ALL_BLOCK_FACES},
     registry::Registry,
     structure::{coordinates::BlockCoordinate, structure_block::StructureBlock, Structure},
 };
@@ -23,19 +23,17 @@ pub struct LogicDriver {
 
 impl LogicDriver {
     /// Returns an array of the Boolean value of the given block's input port groups.
-    /// A block face without an input port is assigned false.
-    /// Global face means these values are immediately usable for computing a block's logic formula with no further rotations.
-    pub fn global_port_input(&self, coords: BlockCoordinate, rotation: BlockRotation, local_face: BlockFace) -> i32 {
-        let global_face = rotation.direction_of(local_face);
+    /// A block face without an input port is assigned `0`.
+    pub fn read_input(&self, coords: BlockCoordinate, direction: BlockDirection) -> i32 {
         self.logic_graph
-            .group_of(&Port::new(coords, global_face), PortType::Input)
+            .group_of(&Port::new(coords, direction), PortType::Input)
             .map(|group| group.signal())
             .unwrap_or(0)
     }
 
-    /// Gets the input signals of all 6 faces, in the global order.
-    pub fn all_global_port_inputs(&self, coords: BlockCoordinate, rotation: BlockRotation) -> [i32; 6] {
-        ALL_BLOCK_FACES.map(|global_face| self.global_port_input(coords, rotation, global_face))
+    /// Gets the input signals of all 6 faces, in the order of the [`Direction`] indices.
+    pub fn read_all_inputs(&self, coords: BlockCoordinate, rotation: BlockRotation) -> [i32; 6] {
+        ALL_BLOCK_FACES.map(|face| self.read_input(coords, rotation.direction_of(face)))
     }
 
     // TODO: Input gate not being added to existing output gate group (again!).
@@ -43,7 +41,7 @@ impl LogicDriver {
     fn port_placed(
         &mut self,
         coords: BlockCoordinate,
-        global_face: BlockFace,
+        direction: BlockDirection,
         port_type: PortType,
         structure: &Structure,
         entity: Entity,
@@ -53,29 +51,21 @@ impl LogicDriver {
         evw_logic_input: &mut EventWriter<LogicInputEvent>,
     ) {
         // If the neighbor coordinates don't exist, no port is added (and thus no new group).
-        let Ok(neighbor_coords) = coords.step(global_face) else {
+        let Ok(neighbor_coords) = coords.step(direction) else {
             return;
         };
 
         let maybe_group = self.logic_graph.dfs_for_group(
             neighbor_coords,
-            global_face.inverse(),
+            direction.inverse(),
             structure,
             &mut Port::all_for(coords),
             blocks,
             logic_blocks,
         );
         let group_id = maybe_group.unwrap_or_else(|| self.logic_graph.new_group(None));
-        self.logic_graph.add_port(
-            coords,
-            global_face,
-            group_id,
-            port_type,
-            0,
-            entity,
-            evw_logic_output,
-            evw_logic_input,
-        );
+        self.logic_graph
+            .add_port(coords, direction, group_id, port_type, 0, entity, evw_logic_output, evw_logic_input);
     }
 
     /// Adds a logic block, along with all of its ports and wire connections, to the graph.
@@ -142,11 +132,11 @@ impl LogicDriver {
 
         // Get all adjacent group IDs.
         for wire_face in logic_block.wire_faces() {
-            let global_face = structure.block_rotation(coords).direction_of(wire_face);
-            if let Ok(neighbor_coords) = coords.step(global_face) {
+            let direction = structure.block_rotation(coords).direction_of(wire_face);
+            if let Ok(neighbor_coords) = coords.step(direction) {
                 if let Some(group_id) = self.logic_graph.dfs_for_group(
                     neighbor_coords,
-                    global_face.inverse(),
+                    direction.inverse(),
                     structure,
                     &mut Port::all_for(coords),
                     blocks,
@@ -219,8 +209,8 @@ impl LogicDriver {
         // Setting new group IDs.
         let mut visited = Port::all_for(coords);
         for wire_face in logic_block.wire_faces() {
-            let global_face = structure.block_rotation(coords).direction_of(wire_face);
-            let Ok(neighbor_coords) = coords.step(global_face) else {
+            let direction = structure.block_rotation(coords).direction_of(wire_face);
+            let Ok(neighbor_coords) = coords.step(direction) else {
                 continue;
             };
             // For now, takes a new ID for every call, even though some (like air blocks or already visited wires) don't need it.
@@ -228,7 +218,7 @@ impl LogicDriver {
             let used_new_group = self.logic_graph.rename_group(
                 group_id,
                 neighbor_coords,
-                global_face.inverse(),
+                direction.inverse(),
                 structure,
                 &mut visited,
                 blocks,

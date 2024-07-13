@@ -94,19 +94,19 @@ impl BlockRotation {
     ///
     /// For example, if this rotation makes [`BlockFace::Front`] point [`Direction::NegX`]
     /// and you provide [`BlockFace::Front`], you will be given [`Direction::NegX`].
-    pub fn direction_of(&self, face: BlockFace) -> Direction {
+    pub fn direction_of(&self, face: BlockFace) -> BlockDirection {
         let unrotated_vec3 = face.unrotated_direction().to_vec3();
         let rotated_vec3 = self.as_quat().mul_vec3(unrotated_vec3);
-        Direction::from_vec3(rotated_vec3)
+        BlockDirection::from_vec3(rotated_vec3)
     }
 
     /// Returns which local face of this rotation represents the given global face.
     ///
     /// For example, if the front of the block is locally pointing left and you provide [`BlockFace::Front`], you will be given [`BlockFace::Left`].
     /// Might later change to quaternion math with the rotation's inverse.
-    pub fn block_face_pointing(&self, direction: Direction) -> BlockFace {
+    pub fn block_face_pointing(&self, direction: BlockDirection) -> BlockFace {
         BlockFace::from_index(
-            self.direction_of_all_faces()
+            self.directions_of_each_face()
                 .iter()
                 .position(|&found| found == direction)
                 .expect("Some block face should point in any given direction."),
@@ -116,7 +116,7 @@ impl BlockRotation {
     /// Returns an array of all 6 [`Direction`]s in positions corresponding to the index of the [`BlockFace`] pointing that direction after this rotation.
     ///
     /// For example, if this rotation makes [`BlockFace::Top`] point [`Direction::PosX`], the entry at index 2 ([`BlockFace::Top`]'s index) will be [`Direction::PosX`].
-    pub fn direction_of_all_faces(&self) -> [Direction; 6] {
+    pub fn directions_of_each_face(&self) -> [BlockDirection; 6] {
         ALL_BLOCK_FACES.map(|face| self.direction_of(face))
     }
 
@@ -124,16 +124,16 @@ impl BlockRotation {
     ///
     /// For example, if this rotation makes [`BlockFace::Top`] point [`Direction::PosX`], the entry at index 0 ([`Direction::PosX`]'s index) will be [`BlockFace::Top`].
     pub fn faces_pointing_each_direction(&self) -> [BlockFace; 6] {
-        ALL_DIRECTIONS.map(|direction| self.block_face_pointing(direction))
+        ALL_BLOCK_DIRECTIONS.map(|direction| self.block_face_pointing(direction))
     }
 
     /// Given the directions the top and front faces are pointing, return the corresponding rotation.
     /// Assumes the primary axis of rotation is the Z axis (to rotate top to bottom, rotate through front/back, not right/left).
     /// Only rotate top through the X axis if it is pointing right/left.
     /// Sub rotations are applied globally before the primary rotation: CW means rotated 90-degrees clockwise while looking from the top down.
-    pub fn from_face_directions(top_face_pointing: Direction, front_face_pointing: Direction) -> Self {
+    pub fn from_face_directions(top_face_pointing: BlockDirection, front_face_pointing: BlockDirection) -> Self {
+        use BlockDirection as D;
         use BlockFace as BF;
-        use Direction as D;
         match top_face_pointing {
             D::PosX => match front_face_pointing {
                 // The inner match arms are ordered by the resulting sub-rotation to make them easier to visualize.
@@ -238,14 +238,15 @@ impl BlockSubRotation {
     }
 }
 
-#[derive(PartialEq, Debug, Copy, Clone, Reflect)]
+#[derive(Default, PartialEq, Eq, Debug, Copy, Clone, Reflect, Hash, Serialize, Deserialize)]
 /// Enumerates the 6 possible directions: a positive and negative direction for each of the 3 axes of 3-dimensional space.
 /// Moving in the direction indicated by each of these variants should always change the corresponding coordinate in the indicated direction (relative to the structure).
-pub enum Direction {
+pub enum BlockDirection {
     /// The positive X direction.
     PosX,
     /// The negative X direction.
     NegX,
+    #[default]
     /// The positive Y direction.
     PosY,
     /// The negative Y direction.
@@ -257,16 +258,16 @@ pub enum Direction {
 }
 
 /// Contains each direction, in the order their `index` method returns.
-pub const ALL_DIRECTIONS: [Direction; 6] = [
-    Direction::PosX,
-    Direction::NegX,
-    Direction::PosY,
-    Direction::NegY,
-    Direction::PosZ,
-    Direction::NegZ,
+pub const ALL_BLOCK_DIRECTIONS: [BlockDirection; 6] = [
+    BlockDirection::PosX,
+    BlockDirection::NegX,
+    BlockDirection::PosY,
+    BlockDirection::NegY,
+    BlockDirection::PosZ,
+    BlockDirection::NegZ,
 ];
 
-impl Direction {
+impl BlockDirection {
     /// Returns the index for each direction [0, 5].
     ///
     /// Useful for storing directions in an array.
@@ -368,6 +369,20 @@ impl Direction {
         }
     }
 
+    /// Gets the opposite direction for this direction, equivalent to rotating the vector 180 degrees.
+    ///
+    /// Example: [`Direction::PosZ`] -> [`Direction::NegZ`])
+    pub fn inverse(&self) -> Self {
+        match self {
+            Self::PosX => Self::NegX,
+            Self::NegX => Self::PosX,
+            Self::PosY => Self::NegY,
+            Self::NegY => Self::PosY,
+            Self::PosZ => Self::NegZ,
+            Self::NegZ => Self::PosZ,
+        }
+    }
+
     /// Returns the string representation of this face.
     pub const fn as_str(&self) -> &'static str {
         match *self {
@@ -381,7 +396,7 @@ impl Direction {
     }
 }
 
-impl Display for Direction {
+impl Display for BlockDirection {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_str(self.as_str())?;
 
@@ -464,8 +479,8 @@ impl BlockFace {
         }
     }
 
-    /// Gets the opposite face for this block face (example: `BlockFace::Left` -> `BlockFace::Right`)
-    pub fn inverse(&self) -> BlockFace {
+    /// Gets the opposite face for this block face (example: [`BlockFace::Left`] -> [`BlockFace::Right`])
+    pub fn inverse(&self) -> Self {
         match self {
             Self::Right => Self::Left,
             Self::Left => Self::Right,
@@ -476,17 +491,17 @@ impl BlockFace {
         }
     }
 
-    /// Returns the `Direction` this `BlockFace` points if the block and it's structure are not rotated.
+    /// Returns the [`Direction`] this [`BlockFace`] points if the block and it's structure are not rotated.
     ///
     /// Most blocks have some rotation, so be careful to call the proper `BlockRotation` method instead if the block is rotated.
-    pub fn unrotated_direction(self) -> Direction {
+    pub fn unrotated_direction(self) -> BlockDirection {
         match self {
-            Self::Right => Direction::PosX,
-            Self::Left => Direction::NegX,
-            Self::Top => Direction::PosY,
-            Self::Bottom => Direction::NegY,
-            Self::Front => Direction::NegZ, // IMPORTANT: Due to Bevy's right hand rule, "front" points negative Z.
-            Self::Back => Direction::PosZ,  // IMPORTANT: Due to Bevy's right hand rule, "back" points positive Z.
+            Self::Right => BlockDirection::PosX,
+            Self::Left => BlockDirection::NegX,
+            Self::Top => BlockDirection::PosY,
+            Self::Bottom => BlockDirection::NegY,
+            Self::Front => BlockDirection::NegZ, // IMPORTANT: Due to Bevy's right hand rule, "front" points negative Z.
+            Self::Back => BlockDirection::PosZ,  // IMPORTANT: Due to Bevy's right hand rule, "back" points positive Z.
         }
     }
 }
