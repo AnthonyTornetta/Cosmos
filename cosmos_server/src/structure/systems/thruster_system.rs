@@ -6,7 +6,7 @@ use bevy::{
 };
 use bevy_rapier3d::prelude::{ExternalImpulse, ReadMassProperties, Velocity};
 use cosmos_core::{
-    block::Block,
+    block::{block_events::BlockEventsSet, Block},
     events::block_events::BlockChangedEvent,
     registry::Registry,
     structure::{
@@ -24,7 +24,7 @@ use cosmos_core::{
 
 use crate::state::GameState;
 
-use super::{sync::register_structure_system, InitStructureSystemsSet};
+use super::{sync::register_structure_system, StructureSystemsSet};
 
 const MAX_SHIP_SPEED: f32 = 200.0;
 const MAX_BRAKE_DELTA_PER_THRUST: f32 = 300.0;
@@ -187,9 +187,11 @@ pub(super) fn register(app: &mut App) {
             Update,
             (
                 structure_loaded_event
-                    .in_set(InitStructureSystemsSet::InitSystems)
-                    .ambiguous_with(InitStructureSystemsSet::InitSystems),
-                block_update_system,
+                    .in_set(StructureSystemsSet::InitSystems)
+                    .ambiguous_with(StructureSystemsSet::InitSystems),
+                block_update_system
+                    .in_set(BlockEventsSet::ProcessEventsPostPlacement)
+                    .in_set(StructureSystemsSet::UpdateSystems),
                 update_movement,
             )
                 .run_if(in_state(GameState::Playing)),

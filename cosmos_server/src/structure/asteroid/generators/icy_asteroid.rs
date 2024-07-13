@@ -29,7 +29,7 @@ struct IcyAsteroidMarker;
 
 impl AsteroidGeneratorComponent for IcyAsteroidMarker {}
 
-fn start_generating_asteroid(
+fn start_generating_icy_asteroid(
     q_icy_asteroids: Query<(Entity, &Structure, &Location), With<IcyAsteroidMarker>>,
     mut ev_reader: EventReader<GenerateAsteroidEvent>,
     noise: Res<ReadOnlyNoise>,
@@ -120,8 +120,9 @@ pub(super) fn register(app: &mut App) {
 
     app.add_systems(
         Update,
-        start_generating_asteroid
+        start_generating_icy_asteroid
             .in_set(AsteroidGenerationSet::GenerateAsteroid)
+            .ambiguous_with(AsteroidGenerationSet::GenerateAsteroid)
             .run_if(in_state(GameState::Playing)),
     );
 }

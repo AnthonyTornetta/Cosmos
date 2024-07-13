@@ -22,7 +22,7 @@ use crate::{
     },
 };
 
-fn on_blueprint_structure(mut query: Query<(&mut SerializedData, &Structure, &mut NeedsBlueprinted, &Asteroid)>, mut commands: Commands) {
+fn on_blueprint_asteroid(mut query: Query<(&mut SerializedData, &Structure, &mut NeedsBlueprinted, &Asteroid)>, mut commands: Commands) {
     for (mut s_data, structure, mut blueprint, asteroid) in query.iter_mut() {
         blueprint.subdir_name = "asteroid".into();
 
@@ -31,7 +31,7 @@ fn on_blueprint_structure(mut query: Query<(&mut SerializedData, &Structure, &mu
     }
 }
 
-fn on_save_structure(mut query: Query<(&mut SerializedData, &Structure, &Asteroid), With<NeedsSaved>>, mut commands: Commands) {
+fn on_save_asteroid(mut query: Query<(&mut SerializedData, &Structure, &Asteroid), With<NeedsSaved>>, mut commands: Commands) {
     for (mut s_data, structure, asteroid) in query.iter_mut() {
         save_structure(structure, &mut s_data, &mut commands);
         s_data.serialize_data("cosmos:asteroid", &asteroid.temperature());
@@ -88,7 +88,7 @@ fn load_structure(
     }
 }
 
-fn on_load_blueprint(
+fn on_load_asteroid_blueprint(
     query: Query<(Entity, &SerializedData, &NeedsBlueprintLoaded)>,
     mut commands: Commands,
     mut chunk_load_block_data_event_writer: EventWriter<ChunkLoadBlockDataEvent>,
@@ -114,7 +114,7 @@ fn on_load_blueprint(
     }
 }
 
-fn on_load_structure(
+fn on_load_asteroid(
     query: Query<(Entity, &SerializedData), With<NeedsLoaded>>,
     mut commands: Commands,
     mut chunk_load_block_data_event_writer: EventWriter<ChunkLoadBlockDataEvent>,
@@ -148,15 +148,23 @@ pub(super) fn register(app: &mut App) {
     app.add_systems(
         SAVING_SCHEDULE,
         (
-            on_blueprint_structure.in_set(BlueprintingSystemSet::DoBlueprinting),
-            on_save_structure.in_set(SavingSystemSet::DoSaving),
+            on_blueprint_asteroid
+                .in_set(BlueprintingSystemSet::DoBlueprinting)
+                .ambiguous_with(BlueprintingSystemSet::DoBlueprinting),
+            on_save_asteroid
+                .in_set(SavingSystemSet::DoSaving)
+                .ambiguous_with(SavingSystemSet::DoSaving),
         ),
     )
     .add_systems(
         LOADING_SCHEDULE,
         (
-            on_load_blueprint.in_set(LoadingBlueprintSystemSet::DoLoadingBlueprints),
-            on_load_structure.in_set(LoadingSystemSet::DoLoading),
+            on_load_asteroid_blueprint
+                .in_set(LoadingBlueprintSystemSet::DoLoadingBlueprints)
+                .ambiguous_with(LoadingBlueprintSystemSet::DoLoadingBlueprints),
+            on_load_asteroid
+                .in_set(LoadingSystemSet::DoLoading)
+                .ambiguous_with(LoadingSystemSet::DoLoading),
         ),
     );
 }

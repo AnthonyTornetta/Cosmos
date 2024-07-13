@@ -43,7 +43,7 @@ use cosmos_core::{
 
 use crate::state::GameState;
 
-use super::sync::register_structure_system;
+use super::{sync::register_structure_system, StructureSystemsSet};
 
 const MAX_DOCK_CHECK: f32 = 1.3;
 
@@ -426,11 +426,17 @@ pub(super) fn register(app: &mut App) {
         (
             dock_structure_loaded_event_processor
                 .in_set(StructureLoadingSet::StructureLoaded)
+                .in_set(StructureSystemsSet::InitSystems)
+                .ambiguous_with(StructureSystemsSet::InitSystems)
                 .run_if(in_state(GameState::Playing)),
             (
-                dock_block_update_system,
+                dock_block_update_system
+                    .in_set(BlockEventsSet::ProcessEventsPostPlacement)
+                    .in_set(StructureSystemsSet::UpdateSystems),
                 on_active,
-                monitor_removed_dock_blocks,
+                monitor_removed_dock_blocks
+                    .in_set(BlockEventsSet::ProcessEventsPostPlacement)
+                    .in_set(StructureSystemsSet::UpdateSystems),
                 add_dock_list,
                 add_dock_properties,
             )

@@ -3,7 +3,7 @@
 use bevy::prelude::*;
 
 use cosmos_core::{
-    block::Block,
+    block::{block_events::BlockEventsSet, Block},
     events::block_events::BlockChangedEvent,
     registry::Registry,
     structure::{
@@ -19,7 +19,7 @@ use cosmos_core::{
 
 use crate::state::GameState;
 
-use super::{sync::register_structure_system, InitStructureSystemsSet};
+use super::{sync::register_structure_system, StructureSystemsSet};
 
 fn register_energy_blocks(blocks: Res<Registry<Block>>, mut generation: ResMut<EnergyGenerationBlocks>) {
     if let Some(block) = blocks.from_id("cosmos:reactor") {
@@ -98,9 +98,11 @@ pub(super) fn register(app: &mut App) {
             Update,
             (
                 structure_loaded_event
-                    .in_set(InitStructureSystemsSet::InitSystems)
-                    .ambiguous_with(InitStructureSystemsSet::InitSystems),
-                block_update_system,
+                    .in_set(StructureSystemsSet::InitSystems)
+                    .ambiguous_with(StructureSystemsSet::InitSystems),
+                block_update_system
+                    .in_set(BlockEventsSet::ProcessEventsPostPlacement)
+                    .in_set(StructureSystemsSet::UpdateSystems),
                 update_energy,
             )
                 .run_if(in_state(GameState::Playing)),

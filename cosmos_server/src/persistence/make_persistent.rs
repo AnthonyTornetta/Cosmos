@@ -112,7 +112,9 @@ pub fn make_persistent<T: PersistentComponent>(app: &mut App) {
         // Block Data
         .add_systems(
             Update,
-            load_component_from_block_data::<T>.in_set(StructureLoadingSet::LoadChunkData),
+            load_component_from_block_data::<T>
+                .in_set(StructureLoadingSet::LoadChunkData)
+                .ambiguous_with(StructureLoadingSet::LoadChunkData),
         )
         .add_systems(
             SAVING_SCHEDULE,

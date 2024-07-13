@@ -58,7 +58,7 @@ use crate::{
     state::GameState,
 };
 
-use super::{sync::register_structure_system, InitStructureSystemsSet};
+use super::{sync::register_structure_system, StructureSystemsSet};
 
 mod explosion;
 mod laser;
@@ -384,9 +384,11 @@ pub(super) fn register(app: &mut App) {
                 recalculate_shields_if_needed, // before so this runs next frame (so the globaltransform has been added to the structure)
                 fill_ai_controlled_shields_on_spawn,
                 structure_loaded_event
-                    .in_set(InitStructureSystemsSet::InitSystems)
-                    .ambiguous_with(InitStructureSystemsSet::InitSystems),
-                block_update_system.in_set(BlockEventsSet::ProcessEventsPostPlacement),
+                    .in_set(StructureSystemsSet::InitSystems)
+                    .ambiguous_with(StructureSystemsSet::InitSystems),
+                block_update_system
+                    .in_set(BlockEventsSet::ProcessEventsPostPlacement)
+                    .in_set(StructureSystemsSet::UpdateSystems),
                 power_shields,
             )
                 .chain()

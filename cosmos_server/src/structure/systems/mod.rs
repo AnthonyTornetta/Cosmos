@@ -30,14 +30,19 @@ pub trait BlockStructureSystem<T> {
 }
 
 #[derive(SystemSet, Debug, Hash, PartialEq, Eq, Clone)]
-pub enum InitStructureSystemsSet {
+pub enum StructureSystemsSet {
     InitSystems,
+    UpdateSystems,
 }
 
 pub(super) fn register(app: &mut App) {
     app.configure_sets(
         Update,
-        InitStructureSystemsSet::InitSystems.in_set(StructureLoadingSet::StructureLoaded),
+        (
+            StructureSystemsSet::InitSystems.in_set(StructureLoadingSet::StructureLoaded),
+            StructureSystemsSet::UpdateSystems,
+        )
+            .chain(),
     );
 
     sync::register(app);

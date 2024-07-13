@@ -26,7 +26,7 @@ use cosmos_core::{
 
 use crate::state::GameState;
 
-use super::{BlockStructureSystem, InitStructureSystemsSet};
+use super::{BlockStructureSystem, StructureSystemsSet};
 
 fn block_update_system<T: LineProperty, S: LinePropertyCalculator<T>>(
     mut event: EventReader<BlockChangedEvent>,
@@ -413,9 +413,11 @@ pub fn add_line_system<T: LineProperty, S: LinePropertyCalculator<T>>(app: &mut 
         Update,
         (
             structure_loaded_event::<T, S>
-                .in_set(InitStructureSystemsSet::InitSystems)
-                .ambiguous_with(InitStructureSystemsSet::InitSystems),
-            block_update_system::<T, S>.in_set(BlockEventsSet::ProcessEventsPostPlacement),
+                .in_set(StructureSystemsSet::InitSystems)
+                .ambiguous_with(StructureSystemsSet::InitSystems),
+            block_update_system::<T, S>
+                .in_set(BlockEventsSet::ProcessEventsPostPlacement)
+                .in_set(StructureSystemsSet::UpdateSystems),
         )
             .run_if(in_state(GameState::Playing)),
     )

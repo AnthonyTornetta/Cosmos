@@ -72,6 +72,7 @@ pub(super) fn register(app: &mut App) {
         Update,
         create_ships
             .in_set(StructureLoadingSet::LoadStructure)
+            .ambiguous_with(StructureLoadingSet::LoadStructure)
             .after(create_ship_event_reader)
             .run_if(in_state(GameState::Playing)),
     );

@@ -23,6 +23,8 @@ use cosmos_core::{
 
 use crate::{registry::sync_registry, state::GameState};
 
+use super::StructureSystemsSet;
+
 fn sync_system<T: SyncableSystem>(
     mut server: ResMut<RenetServer>,
     q_changed_systems: Query<(&T, &StructureSystem), (Without<NoSendEntity>, Changed<T>)>,
@@ -110,7 +112,9 @@ pub fn register_structure_system<T: SyncableSystem>(app: &mut App, activatable: 
 
     app.add_systems(
         Update,
-        (sync_system::<T>, sync_active_systems, on_request_systems_entity::<T>).run_if(in_state(GameState::Playing)),
+        (sync_system::<T>, sync_active_systems, on_request_systems_entity::<T>)
+            .after(StructureSystemsSet::UpdateSystems)
+            .run_if(in_state(GameState::Playing)),
     )
     .add_systems(
         OnExit(GameState::PostLoading),
