@@ -415,8 +415,8 @@ impl BlockMeshInformation {
         left: Option<MeshInformation>,
         top: Option<MeshInformation>,
         bottom: Option<MeshInformation>,
-        front: Option<MeshInformation>,
         back: Option<MeshInformation>,
+        front: Option<MeshInformation>,
     ) -> Self {
         // If this ever fails, change the `mesh_info` ordering + comment below
         debug_assert!(BlockFace::Right.index() == 0);
@@ -498,7 +498,7 @@ fn register_meshes(mut registry: ResMut<BlockMeshRegistry>) {
         "cosmos:base_block",
         MeshInformation {
             indices: vec![0, 1, 2, 2, 3, 0],
-            uvs: vec![[0.0, 1.0], [0.0, 0.0], [1.0, 0.0], [1.0, 1.0]],
+            uvs: vec![[1.0, 1.0], [1.0, 0.0], [0.0, 0.0], [0.0, 1.0]],
             positions: vec![[0.5, -0.5, -0.5], [0.5, 0.5, -0.5], [0.5, 0.5, 0.5], [0.5, -0.5, 0.5]],
             normals: [[1.0, 0.0, 0.0]; 4].to_vec(),
         }
@@ -512,23 +512,16 @@ fn register_meshes(mut registry: ResMut<BlockMeshRegistry>) {
         .into(),
         MeshInformation {
             indices: vec![0, 1, 2, 2, 3, 0],
-            uvs: vec![[1.0, 1.0], [0.0, 1.0], [0.0, 0.0], [1.0, 0.0]],
+            uvs: vec![[1.0, 0.0], [0.0, 0.0], [0.0, 1.0], [1.0, 1.0]],
             positions: vec![[0.5, 0.5, -0.5], [-0.5, 0.5, -0.5], [-0.5, 0.5, 0.5], [0.5, 0.5, 0.5]],
             normals: [[0.0, 1.0, 0.0]; 4].to_vec(),
         }
         .into(),
         MeshInformation {
             indices: vec![0, 1, 2, 2, 3, 0],
-            uvs: vec![[1.0, 0.0], [0.0, 0.0], [0.0, 1.0], [1.0, 1.0]],
+            uvs: vec![[1.0, 1.0], [0.0, 1.0], [0.0, 0.0], [1.0, 0.0]],
             positions: vec![[0.5, -0.5, 0.5], [-0.5, -0.5, 0.5], [-0.5, -0.5, -0.5], [0.5, -0.5, -0.5]],
             normals: [[0.0, -1.0, 0.0]; 4].to_vec(),
-        }
-        .into(),
-        MeshInformation {
-            indices: vec![0, 1, 2, 2, 3, 0],
-            uvs: vec![[0.0, 1.0], [1.0, 1.0], [1.0, 0.0], [0.0, 0.0]],
-            positions: vec![[-0.5, -0.5, 0.5], [0.5, -0.5, 0.5], [0.5, 0.5, 0.5], [-0.5, 0.5, 0.5]],
-            normals: [[0.0, 0.0, 1.0]; 4].to_vec(),
         }
         .into(),
         MeshInformation {
@@ -536,6 +529,13 @@ fn register_meshes(mut registry: ResMut<BlockMeshRegistry>) {
             uvs: vec![[0.0, 0.0], [1.0, 0.0], [1.0, 1.0], [0.0, 1.0]],
             positions: vec![[-0.5, 0.5, -0.5], [0.5, 0.5, -0.5], [0.5, -0.5, -0.5], [-0.5, -0.5, -0.5]],
             normals: [[0.0, 0.0, -1.0]; 4].to_vec(),
+        }
+        .into(),
+        MeshInformation {
+            indices: vec![0, 1, 2, 2, 3, 0],
+            uvs: vec![[0.0, 1.0], [1.0, 1.0], [1.0, 0.0], [0.0, 0.0]],
+            positions: vec![[-0.5, -0.5, 0.5], [0.5, -0.5, 0.5], [0.5, 0.5, 0.5], [-0.5, 0.5, 0.5]],
+            normals: [[0.0, 0.0, 1.0]; 4].to_vec(),
         }
         .into(),
     ));
