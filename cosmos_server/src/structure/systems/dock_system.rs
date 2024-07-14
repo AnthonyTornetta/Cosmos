@@ -425,7 +425,6 @@ pub(super) fn register(app: &mut App) {
         Update,
         (
             dock_structure_loaded_event_processor
-                .in_set(StructureLoadingSet::StructureLoaded)
                 .in_set(StructureSystemsSet::InitSystems)
                 .ambiguous_with(StructureSystemsSet::InitSystems)
                 .run_if(in_state(GameState::Playing)),

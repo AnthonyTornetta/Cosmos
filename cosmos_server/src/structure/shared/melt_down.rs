@@ -28,7 +28,6 @@ pub(super) fn register(app: &mut App) {
     app.add_systems(
         Update,
         monitor_block_events
-            .in_set(BlockEventsSet::ProcessEventsPostPlacement)
             .in_set(MeltingDownSet::StartMeltingDown)
             .run_if(in_state(GameState::Playing)),
     );

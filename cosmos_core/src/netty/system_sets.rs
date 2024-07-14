@@ -15,7 +15,7 @@ pub enum NetworkingSystemsSet {
     /// Does any additional processes needed for messages
     ProcessReceivedMessages,
 
-    /// After everything has been received, before sending information. Most systems should go here.
+    /// After networking information been received this frame, before sending out networking information.
     Between,
 
     /// Systems that communicate entity changes should be in this set.

@@ -13,6 +13,7 @@ use cosmos_core::{
     ecs::mut_events::MutEvent,
     events::block_events::{BlockChangedEvent, BlockDataChangedEvent, BlockDataSystemParams},
     fluid::data::{BlockFluidData, FluidTankBlock, StoredFluidData},
+    netty::system_sets::NetworkingSystemsSet,
     registry::{identifiable::Identifiable, Registry},
     structure::{
         coordinates::{BlockCoordinate, CoordinateType, UnboundCoordinateType},
@@ -324,7 +325,8 @@ pub(super) fn register(app: &mut App) {
         Update,
         (on_add_tank, listen_for_changed_fluid_data, call_balance_tanks)
             .chain()
-            .in_set(BlockEventsSet::PostProcessEvents),
+            .in_set(BlockEventsSet::PostProcessEvents)
+            .in_set(NetworkingSystemsSet::Between),
     )
     .init_resource::<TanksToBalance>();
 }

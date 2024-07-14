@@ -7,7 +7,7 @@ use bevy_renet2::renet2::RenetServer;
 use cosmos_core::{
     netty::{
         cosmos_encoder, server_reliable_messages::ServerReliableMessages, sync::server_entity_syncing::RequestedEntityEvent,
-        NettyChannelServer,
+        system_sets::NetworkingSystemsSet, NettyChannelServer,
     },
     physics::location::Location,
     universe::star::Star,
@@ -65,6 +65,11 @@ pub fn calculate_temperature_at(stars: Iter<'_, (Location, Star)>, location: &Lo
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_systems(Update, on_request_star.run_if(in_state(GameState::Playing)))
-        .add_systems(SAVING_SCHEDULE, on_save_star.in_set(SavingSystemSet::DoSaving));
+    app.add_systems(
+        Update,
+        on_request_star
+            .in_set(NetworkingSystemsSet::SendChangedComponents)
+            .run_if(in_state(GameState::Playing)),
+    )
+    .add_systems(SAVING_SCHEDULE, on_save_star.in_set(SavingSystemSet::DoSaving));
 }

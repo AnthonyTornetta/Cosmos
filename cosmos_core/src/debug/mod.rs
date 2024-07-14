@@ -63,6 +63,7 @@ pub(super) fn register(app: &mut App) {
     app.allow_ambiguous_resource::<RenetServer>();
 
     app.allow_ambiguous_component::<Structure>();
+    app.allow_ambiguous_component::<Transform>();
 
     // app.finish();
     // app.cleanup();

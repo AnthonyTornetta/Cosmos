@@ -283,7 +283,7 @@ pub(super) fn register(app: &mut App) {
     .add_systems(
         Update,
         (add_missile_targettable, on_add_missile_launcher, missile_lockon)
-            .after(NetworkingSystemsSet::ProcessReceivedMessages)
+            .in_set(NetworkingSystemsSet::Between)
             .chain(),
     );
 

@@ -7,6 +7,7 @@ use crate::block::data::BlockData;
 use crate::inventory::itemstack::ItemStackData;
 use crate::netty::server::ServerLobby;
 use crate::netty::sync::{GotComponentToRemoveEvent, GotComponentToSyncEvent};
+use crate::netty::system_sets::NetworkingSystemsSet;
 use crate::netty::{cosmos_encoder, NettyChannelClient, NettyChannelServer, NoSendEntity};
 use crate::physics::location::CosmosBundleSet;
 use crate::registry::{identifiable::Identifiable, Registry};
@@ -432,6 +433,7 @@ pub(super) fn setup_server(app: &mut App) {
             ComponentSyncingSet::PostComponentSyncing,
         )
             .after(CosmosBundleSet::HandleCosmosBundles)
+            .in_set(NetworkingSystemsSet::SendChangedComponents)
             .chain(),
     );
 
