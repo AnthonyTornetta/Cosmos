@@ -6,6 +6,7 @@ use bevy_app_compute::prelude::*;
 use cosmos_core::{
     block::{block_events::BlockEventsSet, Block, BlockFace},
     ecs::mut_events::{EventWriterCustomSend, MutEvent, MutEventsCommand},
+    netty::system_sets::NetworkingSystemsSet,
     physics::location::Location,
     registry::{identifiable::Identifiable, Registry},
     structure::{
@@ -400,6 +401,7 @@ pub(super) fn register(app: &mut App) {
         )
             .before(StructureLoadingSet::CreateChunkEntities)
             .before(BlockEventsSet::PreProcessEvents)
+            .in_set(NetworkingSystemsSet::Between)
             .in_set(StructureTypeSet::Planet)
             .run_if(in_state(GameState::Playing))
             .chain(),

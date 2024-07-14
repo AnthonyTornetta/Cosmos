@@ -37,7 +37,7 @@ use cosmos_core::{
 
 use crate::{
     netty::sync::sync_bodies::DontNotifyClientOfDespawn,
-    structure::{block_health::BlockHealthSet, shared::MeltingDownSet, systems::shield_system::ShieldHitProcessing},
+    structure::{block_health::BlockHealthSet, shared::MeltingDownSet, systems::shield_system::ShieldSet},
 };
 
 /// 1 unit of explosion power = this amount of health. Bigger this number is, the more damage explosives will do.
@@ -237,6 +237,7 @@ pub(super) fn register(app: &mut App) {
             .ambiguous_with(MeltingDownSet::ProcessMeltingDown)
             .in_set(ExplosionSystemSet::ProcessExplosions)
             .before(BlockHealthSet::ProcessHealthChanges)
-            .before(ShieldHitProcessing::OnShieldHit),
+            .after(ShieldSet::RechargeShields)
+            .before(ShieldSet::OnShieldHit),
     );
 }

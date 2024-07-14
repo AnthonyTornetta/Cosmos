@@ -9,7 +9,7 @@ use bevy::{
 };
 use cosmos_core::{projectiles::laser::LaserCollideEvent, structure::shields::Shield};
 
-use super::{ShieldHitEvent, ShieldHitProcessing};
+use super::{ShieldHitEvent, ShieldSet};
 
 fn handle_laser_hits(
     mut ev_reader: EventReader<LaserCollideEvent>,
@@ -33,7 +33,7 @@ pub(super) fn register(app: &mut App) {
     app.add_systems(
         Update,
         handle_laser_hits
-            .in_set(ShieldHitProcessing::OnShieldHit)
-            .ambiguous_with(ShieldHitProcessing::OnShieldHit),
+            .in_set(ShieldSet::OnShieldHit)
+            .ambiguous_with(ShieldSet::OnShieldHit),
     );
 }

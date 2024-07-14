@@ -5,7 +5,7 @@ use bevy_renet2::renet2::RenetServer;
 use cosmos_core::{
     block::{block_events::BlockInteractEvent, Block},
     entities::player::Player,
-    netty::{cosmos_encoder, server_reliable_messages::ServerReliableMessages, NettyChannelServer},
+    netty::{cosmos_encoder, server_reliable_messages::ServerReliableMessages, system_sets::NetworkingSystemsSet, NettyChannelServer},
     registry::{identifiable::Identifiable, Registry},
     structure::{
         shared::build_mode::{BuildMode, EnterBuildModeEvent, ExitBuildModeEvent},
@@ -77,7 +77,12 @@ fn sync_build_mode(changed_build_modes: Query<(&Player, &BuildMode), Changed<Bui
 pub(super) fn register(app: &mut App) {
     app.add_systems(
         Update,
-        (interact_with_block, enter_build_mode, exit_build_mode, sync_build_mode)
+        (
+            (interact_with_block, enter_build_mode, exit_build_mode)
+                .chain()
+                .in_set(NetworkingSystemsSet::Between),
+            sync_build_mode.in_set(NetworkingSystemsSet::SendChangedComponents),
+        )
             .chain()
             .run_if(in_state(GameState::Playing)),
     );

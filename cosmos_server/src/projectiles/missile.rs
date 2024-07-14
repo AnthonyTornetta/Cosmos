@@ -18,6 +18,7 @@ use bevy_rapier3d::{
 
 use cosmos_core::{
     ecs::NeedsDespawned,
+    netty::system_sets::NetworkingSystemsSet,
     persistence::LoadingDistance,
     physics::{
         collision_handling::CollisionBlacklist,
@@ -150,6 +151,7 @@ pub(super) fn register(app: &mut App) {
         Update,
         (look_towards_target, apply_missile_thrust)
             .after(CosmosBundleSet::HandleCosmosBundles)
+            .in_set(NetworkingSystemsSet::Between)
             .chain(),
     );
 }
