@@ -276,12 +276,16 @@ pub(super) fn register(app: &mut App) {
         Update,
         update_missile_system
             .run_if(in_state(GameState::Playing))
-            .before(NetworkingSystemsSet::SyncEntities)
             .before(CosmosBundleSet::HandleCosmosBundles)
-            .before(ComponentSyncingSet::PreComponentSyncing),
+            .before(NetworkingSystemsSet::SendChangedComponents),
     )
     .add_systems(OnEnter(GameState::PostLoading), register_missile_launcher_blocks)
-    .add_systems(Update, (add_missile_targettable, on_add_missile_launcher, missile_lockon).chain());
+    .add_systems(
+        Update,
+        (add_missile_targettable, on_add_missile_launcher, missile_lockon)
+            .after(NetworkingSystemsSet::ProcessReceivedMessages)
+            .chain(),
+    );
 
     register_structure_system::<MissileLauncherSystem>(app, true, "cosmos:missile_launcher");
 }

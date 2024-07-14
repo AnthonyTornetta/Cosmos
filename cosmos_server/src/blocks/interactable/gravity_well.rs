@@ -23,7 +23,8 @@ use cosmos_core::{
         Block,
     },
     netty::{
-        cosmos_encoder, server_replication::ReplicationMessage, sync::server_entity_syncing::RequestedEntityEvent, NettyChannelServer,
+        cosmos_encoder, server_replication::ReplicationMessage, sync::server_entity_syncing::RequestedEntityEvent,
+        system_sets::NetworkingSystemsSet, NettyChannelServer,
     },
     registry::{identifiable::Identifiable, Registry},
     structure::Structure,
@@ -160,7 +161,7 @@ pub(super) fn register(app: &mut App) {
             grav_well_handle_block_event,
             remove_gravity_wells,
             sync_gravity_well,
-            on_request_under_grav,
+            on_request_under_grav.in_set(NetworkingSystemsSet::SendChangedComponents),
         )
             .chain()
             .run_if(in_state(GameState::Playing)),

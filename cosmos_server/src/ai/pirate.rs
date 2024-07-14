@@ -35,7 +35,7 @@ use crate::{
         saving::{SavingSystemSet, SAVING_SCHEDULE},
         SerializedData,
     },
-    structure::systems::laser_cannon_system::LASER_BASE_VELOCITY,
+    structure::{systems::laser_cannon_system::LASER_BASE_VELOCITY, StructureTypeSet},
     universe::spawners::pirate::Pirate,
 };
 
@@ -247,6 +247,7 @@ pub(super) fn register(app: &mut App) {
     app.configure_sets(
         Update,
         PirateSystemSet::PirateAiLogic
+            .in_set(StructureTypeSet::Ship)
             .after(LoadingSystemSet::DoneLoading)
             .after(StructureEventListenerSet::ChangePilotListener),
     )

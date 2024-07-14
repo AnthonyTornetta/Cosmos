@@ -11,6 +11,7 @@ use crate::inventory::Inventory;
 use crate::netty::client::{LocalPlayer, NeedsLoadedFromServer};
 use crate::netty::client_reliable_messages::ClientReliableMessages;
 use crate::netty::sync::GotComponentToSyncEvent;
+use crate::netty::system_sets::NetworkingSystemsSet;
 use crate::netty::{cosmos_encoder, NettyChannelClient};
 use crate::netty::{NettyChannelServer, NoSendEntity};
 use crate::physics::location::CosmosBundleSet;
@@ -613,6 +614,7 @@ pub(super) fn setup_client(app: &mut App) {
             ComponentSyncingSet::PostComponentSyncing,
         )
             .before(CosmosBundleSet::HandleCosmosBundles)
+            .in_set(NetworkingSystemsSet::SendChangedComponents)
             .chain(),
     );
 

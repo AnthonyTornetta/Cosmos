@@ -21,7 +21,10 @@ use bevy_rapier3d::{
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    netty::sync::{sync_component, ComponentSyncingSet, IdentifiableComponent, SyncableComponent},
+    netty::{
+        sync::{sync_component, ComponentSyncingSet, IdentifiableComponent, SyncableComponent},
+        system_sets::NetworkingSystemsSet,
+    },
     physics::location::{CosmosBundleSet, LocationPhysicsSet},
 };
 
@@ -117,11 +120,11 @@ pub(super) fn register(app: &mut App) {
                 ExplosionSystemSet::PreProcessExplosions
                     .before(LocationPhysicsSet::DoPhysics)
                     .before(CosmosBundleSet::HandleCosmosBundles)
-                    .before(ComponentSyncingSet::PreComponentSyncing),
+                    .before(NetworkingSystemsSet::SendChangedComponents),
                 ExplosionSystemSet::ProcessExplosions
                     .after(LocationPhysicsSet::DoPhysics)
                     .after(CosmosBundleSet::HandleCosmosBundles)
-                    .after(ComponentSyncingSet::PreComponentSyncing),
+                    .after(NetworkingSystemsSet::SendChangedComponents),
             )
                 .chain(),
         );
@@ -135,7 +138,7 @@ pub(super) fn register(app: &mut App) {
                 ExplosionSystemSet::PreProcessExplosions
                     .before(LocationPhysicsSet::DoPhysics)
                     .before(CosmosBundleSet::HandleCosmosBundles)
-                    .after(ComponentSyncingSet::PreComponentSyncing),
+                    .after(NetworkingSystemsSet::SendChangedComponents),
                 ExplosionSystemSet::ProcessExplosions
                     .after(LocationPhysicsSet::DoPhysics)
                     .after(CosmosBundleSet::HandleCosmosBundles),

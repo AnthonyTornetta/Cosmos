@@ -7,11 +7,14 @@ use cosmos_core::{
         netty_rigidbody::{NettyRigidBody, NettyRigidBodyLocation},
         server_reliable_messages::ServerReliableMessages,
         sync::server_entity_syncing::RequestedEntityEvent,
+        system_sets::NetworkingSystemsSet,
         NettyChannelServer,
     },
     physics::location::Location,
     structure::{station::Station, Structure},
 };
+
+use crate::structure::StructureTypeSet;
 
 fn on_request_station(
     mut event_reader: EventReader<RequestedEntityEvent>,
@@ -45,5 +48,10 @@ fn on_request_station(
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_systems(Update, on_request_station);
+    app.add_systems(
+        Update,
+        on_request_station
+            .in_set(StructureTypeSet::Station)
+            .before(NetworkingSystemsSet::SendChangedComponents),
+    );
 }
