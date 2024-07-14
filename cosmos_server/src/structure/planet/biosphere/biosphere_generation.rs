@@ -2,7 +2,7 @@
 
 use crate::{init::init_world::ServerSeed, state::GameState, structure::planet::biosphere::biome::GenerateChunkFeaturesEvent};
 use bevy::{prelude::*, utils::hashbrown::HashSet};
-use bevy_app_compute::prelude::*;
+use bevy_easy_compute::prelude::*;
 use cosmos_core::{
     block::{block_events::BlockEventsSet, Block, BlockFace},
     ecs::mut_events::{EventWriterCustomSend, MutEvent, MutEventsCommand},

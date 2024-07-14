@@ -13,7 +13,9 @@ use bevy::{
 };
 use bevy_renet2::renet2::RenetClient;
 use cosmos_core::{
-    netty::{cosmos_encoder, server_registry::RegistrySyncing, NettyChannelServer},
+    netty::{
+        cosmos_encoder, server_registry::RegistrySyncing, sync::ComponentSyncingSet, system_sets::NetworkingSystemsSet, NettyChannelServer,
+    },
     registry::{identifiable::Identifiable, Registry},
 };
 use serde::de::DeserializeOwned;
@@ -55,7 +57,13 @@ fn sync<T: Identifiable + Serialize + DeserializeOwned + std::fmt::Debug>(
 
 /// Call this function on the client-side to signal that this registry should be synced with the server
 pub fn sync_registry<T: Identifiable + Serialize + DeserializeOwned + std::fmt::Debug>(app: &mut App) {
-    app.add_systems(Update, sync::<T>.run_if(in_state(GameState::LoadingData)));
+    app.add_systems(
+        Update,
+        sync::<T>
+            .in_set(NetworkingSystemsSet::ReceiveMessages)
+            .before(ComponentSyncingSet::DoComponentSyncing)
+            .run_if(in_state(GameState::LoadingData)),
+    );
 }
 
 fn registry_listen_netty(

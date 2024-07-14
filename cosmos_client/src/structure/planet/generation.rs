@@ -9,7 +9,7 @@ use crate::{
     state::game_state::GameState,
 };
 use bevy::prelude::*;
-use bevy_app_compute::prelude::*;
+use bevy_easy_compute::prelude::*;
 use cosmos_core::structure::planet::{
     biosphere::Biosphere,
     generation::{

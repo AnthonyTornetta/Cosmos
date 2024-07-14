@@ -16,7 +16,7 @@ use bevy::{
         in_state, App, Commands, Component, Entity, GlobalTransform, IntoSystemConfigs, Quat, Query, Res, ResMut, Resource, Update, With,
     },
 };
-use bevy_app_compute::prelude::AppComputeWorker;
+use bevy_easy_compute::prelude::AppComputeWorker;
 use cosmos_core::{
     block::{Block, BlockFace},
     ecs::mut_events::{EventWriterCustomSend, MutEvent, MutEventsCommand},

@@ -8,11 +8,11 @@ resolver = "2"
 [workspace.dependencies]
 bevy = { version = "0.14.0", default-features = false }
 bevy_rapier3d = { path = "../bevy_rapier/bevy_rapier3d", version = "0.27.0", features = [
-  "simd-stable",
-  "serde-serialize",
+    "simd-stable",
+    "serde-serialize",
 ] }
 
-bevy_app_compute = { git = "https://github.com/AnthonyTornetta/bevy_app_compute", branch = "no-build-worker", version = "0.14.0" }
+bevy_easy_compute = { git = "https://github.com/AnthonyTornetta/bevy_easy_compute", branch = "no-build-worker", version = "0.14.0" }
 
 renet2 = { git = "https://github.com/UkoeHB/renet2", tag = "0.0.5" }
 serde = "1.0.203"

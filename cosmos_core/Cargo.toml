@@ -50,7 +50,7 @@ image = { workspace = true }
 bigdecimal = { workspace = true }
 noise = { workspace = true }
 rand = { workspace = true }
-bevy_app_compute = { workspace = true }
+bevy_easy_compute = { workspace = true }
 bytemuck = { workspace = true }
 
 bevy_rapier3d = { workspace = true }

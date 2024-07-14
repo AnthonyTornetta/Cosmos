@@ -22,11 +22,11 @@ pub struct ShieldMaterialExtension {
 }
 
 impl MaterialExtension for ShieldMaterialExtension {
-    fn fragment_shader() -> bevy_app_compute::prelude::ShaderRef {
+    fn fragment_shader() -> bevy_easy_compute::prelude::ShaderRef {
         "cosmos/shaders/shield.wgsl".into()
     }
 
-    fn deferred_fragment_shader() -> bevy_app_compute::prelude::ShaderRef {
+    fn deferred_fragment_shader() -> bevy_easy_compute::prelude::ShaderRef {
         "cosmos/shaders/shield.wgsl".into()
     }
 

@@ -497,19 +497,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "bevy_app_compute"
-version = "0.14.0"
-source = "git+https://github.com/AnthonyTornetta/bevy_app_compute?branch=no-build-worker#6f10509f49399724c56cae4947bc4fa26c432e9b"
-dependencies = [
- "bevy",
- "bytemuck",
- "naga",
- "naga_oil",
- "parking_lot",
- "wgpu",
-]
-
-[[package]]
 name = "bevy_asset"
 version = "0.14.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -652,6 +639,19 @@ dependencies = [
  "bevy_utils",
  "const-fnv1a-hash",
  "sysinfo",
+]
+
+[[package]]
+name = "bevy_easy_compute"
+version = "0.14.0"
+source = "git+https://github.com/AnthonyTornetta/bevy_easy_compute?branch=no-build-worker#35f6e7eb52c8198bb96b88fcb9003a90380b3f63"
+dependencies = [
+ "bevy",
+ "bytemuck",
+ "naga",
+ "naga_oil",
+ "parking_lot",
+ "wgpu",
 ]
 
 [[package]]
@@ -1903,7 +1903,7 @@ dependencies = [
  "arboard",
  "bevy",
  "bevy-inspector-egui",
- "bevy_app_compute",
+ "bevy_easy_compute",
  "bevy_hanabi",
  "bevy_kira_audio",
  "bevy_mod_debugdump",
@@ -1939,7 +1939,7 @@ dependencies = [
  "anyhow",
  "bevy",
  "bevy-inspector-egui",
- "bevy_app_compute",
+ "bevy_easy_compute",
  "bevy_rapier3d",
  "bevy_renet2",
  "bigdecimal",
@@ -1965,7 +1965,7 @@ dependencies = [
  "anyhow",
  "bevy",
  "bevy-inspector-egui",
- "bevy_app_compute",
+ "bevy_easy_compute",
  "bevy_mod_debugdump",
  "bevy_rapier3d",
  "bevy_renet2",

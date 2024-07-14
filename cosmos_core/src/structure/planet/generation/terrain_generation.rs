@@ -10,7 +10,7 @@ use bevy::{
     math::{Vec3, Vec4},
     reflect::TypePath,
 };
-use bevy_app_compute::prelude::*;
+use bevy_easy_compute::prelude::*;
 use bytemuck::{Pod, Zeroable};
 use serde::{Deserialize, Serialize};
 
@@ -87,7 +87,7 @@ impl ChunkData {
 }
 
 #[derive(TypePath, Default)]
-/// Internally used by `bevy_app_compute`
+/// Internally used by `bevy_easy_compute`
 struct ComputeShaderInstance;
 
 impl ComputeShader for ComputeShaderInstance {
