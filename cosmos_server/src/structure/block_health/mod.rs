@@ -22,7 +22,7 @@ use cosmos_core::{
 
 use crate::state::GameState;
 
-use super::planet::biosphere::biosphere_generation::BiosphereGenerationSet;
+use super::{planet::biosphere::biosphere_generation::BiosphereGenerationSet, shared::MeltingDownSet};
 
 fn monitor_block_destroyed(
     mut event_reader: EventReader<BlockDestroyedEvent>,
@@ -66,7 +66,8 @@ pub(super) fn register(app: &mut App) {
         BlockHealthSet::ProcessHealthChanges
             .after(BiosphereGenerationSet::GenerateChunkFeatures)
             .after(StructureLoadingSet::StructureLoaded)
-            .after(BlockEventsSet::PostProcessEvents),
+            .after(BlockEventsSet::PostProcessEvents)
+            .after(MeltingDownSet::ProcessMeltingDown),
     );
 
     app.add_systems(

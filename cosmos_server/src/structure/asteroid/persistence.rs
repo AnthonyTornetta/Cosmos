@@ -19,6 +19,7 @@ use crate::{
     structure::{
         asteroid::server_asteroid_builder::ServerAsteroidBuilder,
         persistence::{chunk::AllBlockData, save_structure},
+        StructureTypesBlueprintingSystemSet, StructureTypesLoadingSystemSet,
     },
 };
 
@@ -159,12 +160,8 @@ pub(super) fn register(app: &mut App) {
     .add_systems(
         LOADING_SCHEDULE,
         (
-            on_load_asteroid_blueprint
-                .in_set(LoadingBlueprintSystemSet::DoLoadingBlueprints)
-                .ambiguous_with(LoadingBlueprintSystemSet::DoLoadingBlueprints),
-            on_load_asteroid
-                .in_set(LoadingSystemSet::DoLoading)
-                .ambiguous_with(LoadingSystemSet::DoLoading),
+            on_load_asteroid_blueprint.in_set(StructureTypesBlueprintingSystemSet::Asteroid),
+            on_load_asteroid.in_set(StructureTypesLoadingSystemSet::Asteroid),
         ),
     );
 }

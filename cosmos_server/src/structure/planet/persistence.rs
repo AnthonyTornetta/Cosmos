@@ -18,10 +18,13 @@ use cosmos_core::{
 };
 use serde::{Deserialize, Serialize};
 
-use crate::persistence::{
-    loading::{LoadingSystemSet, NeedsLoaded, LOADING_SCHEDULE},
-    saving::{NeedsSaved, SavingSystemSet, SAVING_SCHEDULE},
-    EntityId, SaveFileIdentifier, SerializedData,
+use crate::{
+    persistence::{
+        loading::{LoadingSystemSet, NeedsLoaded, LOADING_SCHEDULE},
+        saving::{NeedsSaved, SavingSystemSet, SAVING_SCHEDULE},
+        EntityId, SaveFileIdentifier, SerializedData,
+    },
+    structure::StructureTypesLoadingSystemSet,
 };
 
 use super::{generation::planet_generator::ChunkNeedsGenerated, server_planet_builder::ServerPlanetBuilder};
@@ -198,6 +201,6 @@ fn load_chunk(
 pub(super) fn register(app: &mut App) {
     app.add_systems(Update, (structure_created, populate_chunks).chain())
         .add_systems(SAVING_SCHEDULE, on_save_structure.in_set(SavingSystemSet::DoSaving))
-        .add_systems(LOADING_SCHEDULE, on_load_structure.in_set(LoadingSystemSet::DoLoading))
-        .add_systems(LOADING_SCHEDULE, load_chunk.in_set(LoadingSystemSet::DoLoading));
+        .add_systems(LOADING_SCHEDULE, on_load_structure.in_set(StructureTypesLoadingSystemSet::Planet))
+        .add_systems(LOADING_SCHEDULE, load_chunk.in_set(StructureTypesLoadingSystemSet::Planet));
 }

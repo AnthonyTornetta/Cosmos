@@ -10,6 +10,7 @@ use bevy::{
     },
     hierarchy::{BuildChildren, Parent},
     math::{Quat, Vec3},
+    prelude::Has,
     time::Time,
     transform::components::{GlobalTransform, Transform},
 };
@@ -77,7 +78,7 @@ fn handle_pirate_movement(
     >,
     q_parent: Query<&Parent>,
     q_velocity: Query<&Velocity>,
-    q_targets: Query<(Entity, &Location, &Velocity, Option<&MeltingDown>), (Without<Pirate>, With<PirateTarget>)>,
+    q_targets: Query<(Entity, &Location, &Velocity, Has<MeltingDown>), (Without<Pirate>, With<PirateTarget>)>,
     time: Res<Time>,
 ) {
     for (
@@ -95,7 +96,12 @@ fn handle_pirate_movement(
             .iter()
             .filter(|x| x.1.is_within_reasonable_range(pirate_loc))
             // add a large penalty for something that's melting down so they prioritize non-melting down things
-            .min_by_key(|x| x.1.distance_sqrd(pirate_loc).floor() as u64 + x.3.map(|_| 100_000_000_000).unwrap_or(0))
+            .min_by_key(|(_, this_loc, _, melting_down)| {
+                // Makes it only target melting down targets if they're the only one nearby
+                let melting_down_punishment = if *melting_down { 100_000_000_000_000 } else { 0 };
+
+                this_loc.distance_sqrd(pirate_loc).floor() as u64 + melting_down_punishment
+            })
         else {
             continue;
         };

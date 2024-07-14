@@ -5,7 +5,7 @@ use bevy::{
     time::Time,
 };
 use cosmos_core::{
-    block::Block,
+    block::{block_events::BlockEventsSet, Block},
     ecs::NeedsDespawned,
     events::{block_events::BlockChangedEvent, structure::change_pilot_event::ChangePilotEvent},
     registry::Registry,
@@ -50,14 +50,17 @@ fn on_melting_down(
 
 #[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
 pub enum MeltingDownSet {
-    ProcessMeltingDown,
     StartMeltingDown,
+    ProcessMeltingDown,
 }
 
 pub(super) fn register(app: &mut App) {
     app.configure_sets(
         Update,
-        (MeltingDownSet::ProcessMeltingDown, MeltingDownSet::StartMeltingDown)
+        (
+            MeltingDownSet::StartMeltingDown,
+            MeltingDownSet::ProcessMeltingDown.after(BlockEventsSet::PostProcessEvents),
+        )
             .chain()
             .after(StructureLoadingSet::StructureLoaded)
             .run_if(in_state(GameState::Playing)),

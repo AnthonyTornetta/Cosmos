@@ -12,6 +12,7 @@ use cosmos_core::{
         block_storage::BlockStorer,
         chunk::{Chunk, CHUNK_DIMENSIONS, CHUNK_DIMENSIONSF, CHUNK_DIMENSIONS_USIZE},
         coordinates::{ChunkBlockCoordinate, CoordinateType},
+        loading::StructureLoadingSet,
         planet::{
             generation::{
                 biome::{Biome, BiomeParameters, BiosphereBiomesRegistry},
@@ -397,6 +398,7 @@ pub(super) fn register(app: &mut App) {
             BiosphereGenerationSet::GenerateChunks,
             BiosphereGenerationSet::GenerateChunkFeatures,
         )
+            .before(StructureLoadingSet::CreateChunkEntities)
             .before(BlockEventsSet::PreProcessEvents)
             .run_if(in_state(GameState::Playing))
             .chain(),

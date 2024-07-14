@@ -17,7 +17,10 @@ use crate::{
         saving::{BlueprintingSystemSet, NeedsBlueprinted, NeedsSaved, SavingSystemSet, SAVING_SCHEDULE},
         SerializedData,
     },
-    structure::persistence::{chunk::AllBlockData, save_structure},
+    structure::{
+        persistence::{chunk::AllBlockData, save_structure},
+        StructureTypesBlueprintingSystemSet, StructureTypesLoadingSystemSet,
+    },
 };
 
 use super::server_ship_builder::ServerShipBuilder;
@@ -155,8 +158,8 @@ pub(super) fn register(app: &mut App) {
     .add_systems(
         LOADING_SCHEDULE,
         (
-            on_load_ship_blueprint.in_set(LoadingBlueprintSystemSet::DoLoadingBlueprints),
-            on_load_ship.in_set(LoadingSystemSet::DoLoading),
+            on_load_ship_blueprint.in_set(StructureTypesBlueprintingSystemSet::Ship),
+            on_load_ship.in_set(StructureTypesLoadingSystemSet::Ship),
         ),
     );
 }
