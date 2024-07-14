@@ -370,7 +370,6 @@ fn on_load_shield(
 #[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
 pub enum ShieldSet {
     RechargeShields,
-    SendShieldHitEvents,
     OnShieldHit,
 }
 
@@ -378,10 +377,7 @@ pub(super) fn register(app: &mut App) {
     laser::register(app);
     explosion::register(app);
 
-    app.configure_sets(
-        Update,
-        (ShieldSet::RechargeShields, ShieldSet::SendShieldHitEvents, ShieldSet::OnShieldHit).chain(),
-    );
+    app.configure_sets(Update, (ShieldSet::RechargeShields, ShieldSet::OnShieldHit).chain());
 
     app.init_resource::<ShieldProjectorBlocks>()
         .init_resource::<ShieldGeneratorBlocks>()

@@ -18,7 +18,7 @@ use bevy_rapier3d::{
 };
 
 use cosmos_core::{
-    block::Block,
+    block::{block_events::BlockEventsSet, Block},
     ecs::NeedsDespawned,
     events::block_events::BlockChangedEvent,
     physics::{
@@ -236,8 +236,9 @@ pub(super) fn register(app: &mut App) {
         respond_to_explosion
             .ambiguous_with(MeltingDownSet::ProcessMeltingDown)
             .in_set(ExplosionSystemSet::ProcessExplosions)
-            .before(BlockHealthSet::ProcessHealthChanges)
+            .in_set(BlockEventsSet::SendEventsForNextFrame)
             .after(ShieldSet::RechargeShields)
-            .before(ShieldSet::OnShieldHit),
+            .before(ShieldSet::OnShieldHit)
+            .before(BlockHealthSet::ProcessHealthChanges),
     );
 }

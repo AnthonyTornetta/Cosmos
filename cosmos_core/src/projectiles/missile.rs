@@ -119,12 +119,10 @@ pub(super) fn register(app: &mut App) {
             (
                 ExplosionSystemSet::PreProcessExplosions
                     .before(LocationPhysicsSet::DoPhysics)
-                    .before(CosmosBundleSet::HandleCosmosBundles)
-                    .before(NetworkingSystemsSet::SendChangedComponents),
+                    .before(CosmosBundleSet::HandleCosmosBundles),
                 ExplosionSystemSet::ProcessExplosions
                     .after(LocationPhysicsSet::DoPhysics)
-                    .after(CosmosBundleSet::HandleCosmosBundles)
-                    .after(NetworkingSystemsSet::SendChangedComponents),
+                    .after(CosmosBundleSet::HandleCosmosBundles),
             )
                 .chain(),
         );

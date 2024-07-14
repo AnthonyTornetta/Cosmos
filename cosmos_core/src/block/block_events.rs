@@ -452,6 +452,7 @@ pub(super) fn register(app: &mut App) {
             BlockEventsSet::ProcessEvents,
             BlockEventsSet::ProcessEventsPostPlacement,
             BlockEventsSet::PostProcessEvents,
+            BlockEventsSet::SendEventsForNextFrame,
         )
             .chain()
             .after(StructureLoadingSet::StructureLoaded),

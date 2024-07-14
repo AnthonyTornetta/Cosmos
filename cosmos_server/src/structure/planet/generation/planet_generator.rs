@@ -14,7 +14,10 @@ use bevy_renet2::renet2::{ClientId, RenetServer};
 use cosmos_core::{
     ecs::NeedsDespawned,
     entities::player::Player,
-    netty::{cosmos_encoder, server_reliable_messages::ServerReliableMessages, NettyChannelServer, NoSendEntity},
+    netty::{
+        cosmos_encoder, server_reliable_messages::ServerReliableMessages, system_sets::NetworkingSystemsSet, NettyChannelServer,
+        NoSendEntity,
+    },
     physics::location::Location,
     structure::{
         chunk::{netty::SerializedBlockData, ChunkUnloadEvent, CHUNK_DIMENSIONSF},
@@ -443,6 +446,7 @@ pub(super) fn register(app: &mut App) {
         Update,
         (generate_chunks_near_players, get_requested_chunk, bounce_events)
             .chain()
+            .in_set(NetworkingSystemsSet::Between)
             .run_if(in_state(GameState::Playing)),
     )
     .add_systems(
