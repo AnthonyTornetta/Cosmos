@@ -25,6 +25,7 @@ use cosmos_core::{
         shared::{DespawnWithStructure, MeltingDown},
         ship::{pilot::Pilot, ship_movement::ShipMovement, Ship},
         systems::{laser_cannon_system::LaserCannonSystem, StructureSystems, SystemActive},
+        StructureTypeSet,
     },
 };
 use serde::{Deserialize, Serialize};
@@ -35,7 +36,7 @@ use crate::{
         saving::{SavingSystemSet, SAVING_SCHEDULE},
         SerializedData,
     },
-    structure::{systems::laser_cannon_system::LASER_BASE_VELOCITY, StructureTypeSet},
+    structure::systems::laser_cannon_system::LASER_BASE_VELOCITY,
     universe::spawners::pirate::Pirate,
 };
 

@@ -6,8 +6,10 @@ use bevy_rapier3d::prelude::{RigidBody, Sensor};
 
 use crate::entities::player::Player;
 use crate::events::structure::change_pilot_event::ChangePilotEvent;
+use crate::netty::system_sets::NetworkingSystemsSet;
 use crate::physics::location::{Location, LocationPhysicsSet};
 use crate::structure::ship::pilot::Pilot;
+use crate::structure::StructureTypeSet;
 
 #[derive(Component, Debug)]
 struct PilotStartingDelta(Vec3, Quat);
@@ -155,6 +157,8 @@ pub(super) fn register<T: States + Clone + Copy>(app: &mut App, playing_state: T
             event_listener,
         )
             .in_set(PilotEventSystemSet::ChangePilotListener)
+            .in_set(NetworkingSystemsSet::Between)
+            .in_set(StructureTypeSet::Ship)
             .chain()
             .run_if(in_state(playing_state)),
     )

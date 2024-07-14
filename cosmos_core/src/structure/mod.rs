@@ -11,7 +11,7 @@ use std::sync::{Arc, Mutex};
 use bevy::app::Update;
 use bevy::ecs::query::{QueryData, QueryFilter, ROQueryItem, With};
 use bevy::log::info;
-use bevy::prelude::{App, Event, IntoSystemConfigs, Name, PreUpdate, VisibilityBundle};
+use bevy::prelude::{App, Event, IntoSystemConfigs, IntoSystemSetConfigs, Name, PreUpdate, SystemSet, VisibilityBundle};
 use bevy::reflect::Reflect;
 use bevy::transform::bundles::TransformBundle;
 use bevy::utils::{HashMap, HashSet};
@@ -67,6 +67,21 @@ use self::full_structure::FullStructure;
 use self::loading::StructureLoadingSet;
 use self::structure_block::StructureBlock;
 use self::structure_iterator::{BlockIterator, ChunkIterator};
+
+#[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
+/// These systems don't run at any specific time.
+/// Rather, they are used to remove ambiguities between different types of structures that will never share the same modifications.
+///
+/// Because we can't statically prove something with a "Ship" cannot have a "Station" component, using these systems is a way
+/// to remove ambiguity errors from systems designed with this valid assumption.
+pub enum StructureTypeSet {
+    Ship,
+    Planet,
+    Station,
+    Asteroid,
+    /// Put systems in here that are ambiguous w/ a type of structure(s) but wouldn't in practice.
+    None,
+}
 
 /// Represents the state a chunk is in for loading
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -888,6 +903,39 @@ pub(super) fn register(app: &mut App) {
     shields::register(app);
     block_health::register(app);
     structure_block::register(app);
+
+    use StructureTypeSet as S;
+
+    app.configure_sets(
+        Update,
+        (
+            S::Ship
+                .ambiguous_with(S::Planet)
+                .ambiguous_with(S::Station)
+                .ambiguous_with(S::Asteroid)
+                .ambiguous_with(S::None),
+            S::Planet
+                .ambiguous_with(S::Ship)
+                .ambiguous_with(S::Station)
+                .ambiguous_with(S::Asteroid)
+                .ambiguous_with(S::None),
+            S::Station
+                .ambiguous_with(S::Ship)
+                .ambiguous_with(S::Planet)
+                .ambiguous_with(S::Asteroid)
+                .ambiguous_with(S::None),
+            S::Asteroid
+                .ambiguous_with(S::Ship)
+                .ambiguous_with(S::Planet)
+                .ambiguous_with(S::Station)
+                .ambiguous_with(S::None),
+            S::None
+                .ambiguous_with(S::Ship)
+                .ambiguous_with(S::Planet)
+                .ambiguous_with(S::Station)
+                .ambiguous_with(S::Asteroid),
+        ),
+    );
 
     app.add_systems(Update, add_chunks_system.in_set(StructureLoadingSet::CreateChunkEntities))
         .add_systems(PreUpdate, remove_empty_chunks);

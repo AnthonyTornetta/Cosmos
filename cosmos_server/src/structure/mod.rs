@@ -21,21 +21,6 @@ pub mod station;
 pub mod systems;
 
 #[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
-/// These systems don't run at any specific time.
-/// Rather, they are used to remove ambiguities between different types of structures that will never share the same modifications.
-///
-/// Because we can't statically prove something with a "Ship" cannot have a "Station" component, using these systems is a way
-/// to remove ambiguity errors from systems designed with this valid assumption.
-pub enum StructureTypeSet {
-    Ship,
-    Planet,
-    Station,
-    Asteroid,
-    /// Put systems in here that are ambiguous w/ a type of structure(s) but wouldn't in practice.
-    None,
-}
-
-#[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
 pub enum StructureTypesLoadingSystemSet {
     Ship,
     Planet,
@@ -60,39 +45,6 @@ pub(super) fn register(app: &mut App) {
     persistence::register(app);
     shared::register(app);
     station::register(app);
-
-    use StructureTypeSet as S;
-
-    app.configure_sets(
-        Update,
-        (
-            S::Ship
-                .ambiguous_with(S::Planet)
-                .ambiguous_with(S::Station)
-                .ambiguous_with(S::Asteroid)
-                .ambiguous_with(S::None),
-            S::Planet
-                .ambiguous_with(S::Ship)
-                .ambiguous_with(S::Station)
-                .ambiguous_with(S::Asteroid)
-                .ambiguous_with(S::None),
-            S::Station
-                .ambiguous_with(S::Ship)
-                .ambiguous_with(S::Planet)
-                .ambiguous_with(S::Asteroid)
-                .ambiguous_with(S::None),
-            S::Asteroid
-                .ambiguous_with(S::Ship)
-                .ambiguous_with(S::Planet)
-                .ambiguous_with(S::Station)
-                .ambiguous_with(S::None),
-            S::None
-                .ambiguous_with(S::Ship)
-                .ambiguous_with(S::Planet)
-                .ambiguous_with(S::Station)
-                .ambiguous_with(S::Asteroid),
-        ),
-    );
 
     use StructureTypesLoadingSystemSet as X;
 

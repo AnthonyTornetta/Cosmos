@@ -34,8 +34,8 @@ use cosmos_core::{
 use rand::Rng;
 
 use crate::{
-    events::netty::netty_events::PlayerConnectedEvent,
     init::init_world::ServerSeed,
+    netty::server_events::PlayerConnectedEvent,
     persistence::{
         loading::{LoadingSystemSet, NeedsLoaded},
         saving::{NeedsSaved, SavingSystemSet, SAVING_SCHEDULE},

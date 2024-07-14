@@ -8,6 +8,7 @@ use bevy_rapier3d::prelude::Velocity;
 use bevy_renet2::renet2::{ClientId, RenetServer};
 use cosmos_core::block::block_events::{BlockBreakEvent, BlockInteractEvent, BlockPlaceEvent, BlockPlaceEventData};
 use cosmos_core::ecs::mut_events::MutEvent;
+use cosmos_core::inventory::itemstack::ItemStackSystemSet;
 use cosmos_core::inventory::Inventory;
 use cosmos_core::item::Item;
 use cosmos_core::netty::netty_rigidbody::NettyRigidBodyLocation;
@@ -31,10 +32,13 @@ use cosmos_core::{
 };
 
 use crate::entities::player::PlayerLooking;
+use crate::state::GameState;
 use crate::structure::planet::chunk::ChunkNeedsSent;
 use crate::structure::planet::generation::planet_generator::RequestChunkEvent;
 use crate::structure::ship::events::{CreateShipEvent, ShipSetMovementEvent};
 use crate::structure::station::events::CreateStationEvent;
+
+use super::server_events::handle_server_events;
 
 #[derive(Resource, Default)]
 struct SendAllChunks(HashMap<Entity, Vec<ClientId>>);
@@ -370,9 +374,11 @@ fn send_all_chunks(
 pub(super) fn register(app: &mut App) {
     app.add_systems(
         Update,
-        (server_listen_messages, send_all_chunks)
+        (handle_server_events, server_listen_messages, send_all_chunks)
             .chain()
-            .in_set(NetworkingSystemsSet::ReceiveMessages),
+            .in_set(NetworkingSystemsSet::ReceiveMessages)
+            .before(ItemStackSystemSet::CreateDataEntity)
+            .run_if(in_state(GameState::Playing)),
     )
     .init_resource::<SendAllChunks>();
 }

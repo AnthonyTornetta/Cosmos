@@ -14,7 +14,7 @@ use cosmos_core::{
     structure::{station::Station, Structure},
 };
 
-use crate::structure::StructureTypeSet;
+use cosmos_core::structure::StructureTypeSet;
 
 fn on_request_station(
     mut event_reader: EventReader<RequestedEntityEvent>,

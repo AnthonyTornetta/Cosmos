@@ -19,7 +19,7 @@ use cosmos_core::{
 };
 use serde::{Deserialize, Serialize};
 
-use crate::{events::netty::netty_events::PlayerConnectedEvent, state::GameState};
+use crate::{netty::server_events::PlayerConnectedEvent, state::GameState};
 
 #[derive(Resource, Deref, Debug, Default)]
 /// Keeps track of the number of registries a client must be sent to be considered done loading registries.

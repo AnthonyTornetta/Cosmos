@@ -8,7 +8,7 @@ use cosmos_core::{
         coordinates::BlockCoordinate,
         loading::{ChunksNeedLoaded, StructureLoadingSet},
         structure_iterator::ChunkIteratorResult,
-        ChunkInitEvent, Structure,
+        ChunkInitEvent, Structure, StructureTypeSet,
     },
 };
 
@@ -70,6 +70,7 @@ pub(super) fn register(app: &mut App) {
         Update,
         create_stations
             .in_set(StructureLoadingSet::LoadStructure)
+            .in_set(StructureTypeSet::Station)
             .ambiguous_with(StructureLoadingSet::LoadStructure)
             .after(create_station_event_reader)
             .run_if(in_state(GameState::Playing)),

@@ -7,14 +7,13 @@ use bevy_renet2::renet2::{ClientId, RenetServer, ServerEvent};
 use cosmos_core::economy::Credits;
 use cosmos_core::ecs::NeedsDespawned;
 use cosmos_core::entities::player::render_distance::RenderDistance;
-use cosmos_core::inventory::itemstack::{ItemShouldHaveData, ItemStackSystemSet};
+use cosmos_core::inventory::itemstack::ItemShouldHaveData;
 use cosmos_core::inventory::Inventory;
 use cosmos_core::item::Item;
 use cosmos_core::netty::netty_rigidbody::NettyRigidBodyLocation;
 use cosmos_core::netty::server::ServerLobby;
 use cosmos_core::netty::server_reliable_messages::ServerReliableMessages;
 use cosmos_core::netty::sync::server_entity_syncing::RequestedEntityEvent;
-use cosmos_core::netty::system_sets::NetworkingSystemsSet;
 use cosmos_core::netty::{cosmos_encoder, NettyChannelServer};
 use cosmos_core::persistence::LoadingDistance;
 use cosmos_core::physics::location::{Location, Sector};
@@ -28,7 +27,6 @@ use renet2_visualizer::RenetServerVisualizer;
 use crate::entities::player::PlayerLooking;
 use crate::netty::network_helpers::ClientTicks;
 use crate::physics::assign_player_world;
-use crate::state::GameState;
 
 fn generate_player_inventory(
     inventory_entity: Entity,
@@ -54,7 +52,7 @@ pub struct PlayerConnectedEvent {
     pub client_id: ClientId,
 }
 
-fn handle_server_events(
+pub(super) fn handle_server_events(
     mut commands: Commands,
     mut server: ResMut<RenetServer>,
     transport: Res<NetcodeServerTransport>,
@@ -170,12 +168,5 @@ fn handle_server_events(
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_systems(
-        Update,
-        handle_server_events
-            .run_if(in_state(GameState::Playing))
-            .in_set(NetworkingSystemsSet::ReceiveMessages)
-            .before(ItemStackSystemSet::CreateDataEntity),
-    )
-    .add_event::<PlayerConnectedEvent>();
+    app.add_event::<PlayerConnectedEvent>();
 }

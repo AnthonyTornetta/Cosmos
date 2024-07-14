@@ -11,7 +11,7 @@ use cosmos_core::{
         loading::{ChunksNeedLoaded, StructureLoadingSet},
         ship::Ship,
         structure_iterator::ChunkIteratorResult,
-        ChunkInitEvent, Structure,
+        ChunkInitEvent, Structure, StructureTypeSet,
     },
 };
 
@@ -72,6 +72,7 @@ pub(super) fn register(app: &mut App) {
         Update,
         create_ships
             .in_set(StructureLoadingSet::LoadStructure)
+            .in_set(StructureTypeSet::Ship)
             .ambiguous_with(StructureLoadingSet::LoadStructure)
             .after(create_ship_event_reader)
             .run_if(in_state(GameState::Playing)),

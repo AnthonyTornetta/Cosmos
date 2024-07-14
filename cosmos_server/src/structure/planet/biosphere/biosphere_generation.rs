@@ -23,7 +23,7 @@ use cosmos_core::{
             },
             Planet,
         },
-        ChunkInitEvent, Structure,
+        ChunkInitEvent, Structure, StructureTypeSet,
     },
     utils::array_utils::{flatten, flatten_4d},
 };
@@ -400,6 +400,7 @@ pub(super) fn register(app: &mut App) {
         )
             .before(StructureLoadingSet::CreateChunkEntities)
             .before(BlockEventsSet::PreProcessEvents)
+            .in_set(StructureTypeSet::Planet)
             .run_if(in_state(GameState::Playing))
             .chain(),
     )

@@ -17,7 +17,7 @@ use cosmos_core::structure::{
     chunk::Chunk,
     loading::{ChunksNeedLoaded, StructureLoadingSet},
     structure_iterator::ChunkIteratorResult,
-    ChunkInitEvent, Structure,
+    ChunkInitEvent, Structure, StructureTypeSet,
 };
 use futures_lite::future;
 
@@ -149,7 +149,8 @@ pub(super) fn register(app: &mut App) {
             AsteroidGenerationSet::NotifyFinished,
         )
             .chain()
-            .in_set(StructureLoadingSet::LoadStructure),
+            .in_set(StructureLoadingSet::LoadStructure)
+            .in_set(StructureTypeSet::Asteroid),
     );
 
     app.add_systems(
