@@ -10,6 +10,7 @@ use cosmos_core::{
     fluid::data::{BlockFluidData, FluidItemData, FluidTankBlock},
     structure::Structure,
 };
+use interact_fluid::FluidInteractionSet;
 
 use crate::{
     persistence::make_persistent::{make_persistent, PersistentComponent},
@@ -50,7 +51,12 @@ pub(super) fn register(app: &mut App) {
     interact_fluid::register(app);
     tank::register(app);
 
-    app.add_systems(Update, on_place_tank.in_set(BlockEventsSet::ProcessEventsPostPlacement));
+    app.add_systems(
+        Update,
+        on_place_tank
+            .in_set(FluidInteractionSet::InteractWithFluidBlocks)
+            .ambiguous_with(FluidInteractionSet::InteractWithFluidBlocks),
+    );
 
     sync_registry::<FluidTankBlock>(app);
     make_persistent::<FluidItemData>(app);

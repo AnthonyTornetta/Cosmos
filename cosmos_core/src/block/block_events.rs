@@ -431,6 +431,7 @@ fn handle_block_place_events(
 #[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
 /// The event set used for processing block events
 pub enum BlockEventsSet {
+    SendEventsForThisFrame,
     /// In this set, you should put systems that can be cancel/remove events.
     PreProcessEvents,
     /// All block events processing happens here - during this set the block is NOT guarenteed to be placed yet or have its data created
@@ -439,6 +440,8 @@ pub enum BlockEventsSet {
     ProcessEventsPostPlacement,
     /// For systems that need information set in the [`BlockEventsSet::ProcessEventsPostPlacement`] stage.
     PostProcessEvents,
+    /// Put systems that send events you want read the next frame here.
+    SendEventsForNextFrame,
 }
 
 pub(super) fn register(app: &mut App) {

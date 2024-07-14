@@ -1,7 +1,7 @@
 //! Shared systems between different structure types
 
 use bevy::{
-    prelude::{in_state, App, Commands, Entity, EventWriter, IntoSystemConfigs, Query, Res, Update},
+    prelude::{in_state, App, Commands, Entity, EventWriter, IntoSystemConfigs, IntoSystemSetConfigs, Query, Res, SystemSet, Update},
     time::Time,
 };
 use cosmos_core::{
@@ -9,12 +9,13 @@ use cosmos_core::{
     ecs::NeedsDespawned,
     events::{block_events::BlockChangedEvent, structure::change_pilot_event::ChangePilotEvent},
     registry::Registry,
-    structure::{shared::MeltingDown, ship::pilot::Pilot, Structure},
+    structure::{loading::StructureLoadingSet, shared::MeltingDown, ship::pilot::Pilot, Structure},
 };
 
 use crate::state::GameState;
 
 pub mod build_mode;
+pub mod melt_down;
 
 fn on_melting_down(
     mut commands: Commands,
@@ -47,8 +48,23 @@ fn on_melting_down(
     }
 }
 
+#[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
+pub enum MeltingDownSet {
+    ProcessMeltingDown,
+    StartMeltingDown,
+}
+
 pub(super) fn register(app: &mut App) {
-    app.add_systems(Update, on_melting_down.run_if(in_state(GameState::Playing)));
+    app.configure_sets(
+        Update,
+        (MeltingDownSet::ProcessMeltingDown, MeltingDownSet::StartMeltingDown)
+            .chain()
+            .after(StructureLoadingSet::StructureLoaded)
+            .run_if(in_state(GameState::Playing)),
+    );
+
+    app.add_systems(Update, on_melting_down.in_set(MeltingDownSet::ProcessMeltingDown));
 
     build_mode::register(app);
+    melt_down::register(app);
 }

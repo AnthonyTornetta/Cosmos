@@ -8,10 +8,11 @@ use bevy::{
         entity::Entity,
         event::EventReader,
         query::{With, Without},
-        schedule::IntoSystemConfigs,
+        schedule::{IntoSystemConfigs, IntoSystemSetConfigs},
         system::{Commands, Query, Res, ResMut},
     },
     log::{error, info},
+    prelude::SystemSet,
     state::state::OnEnter,
 };
 use cosmos_core::{
@@ -409,15 +410,27 @@ fn fill_tank_registry(mut tank_reg: ResMut<Registry<FluidTankBlock>>, blocks: Re
     }
 }
 
+#[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
+pub enum FluidInteractionSet {
+    InteractWithFluidBlocks,
+}
+
 pub(super) fn register(app: &mut App) {
+    app.configure_sets(
+        Update,
+        FluidInteractionSet::InteractWithFluidBlocks.in_set(BlockEventsSet::ProcessEventsPostPlacement),
+    );
+
     app.add_systems(OnEnter(GameState::PostLoading), (register_fluid_holder_items, fill_tank_registry))
         .add_systems(
             Update,
             (
-                on_interact_with_tank.in_set(ItemStackSystemSet::CreateDataEntity),
+                on_interact_with_tank
+                    .in_set(ItemStackSystemSet::CreateDataEntity)
+                    .ambiguous_with(FluidInteractionSet::InteractWithFluidBlocks),
                 add_item_fluid_data.in_set(ItemStackSystemSet::FillDataEntity),
                 on_interact_with_fluid.after(ItemStackSystemSet::FillDataEntity),
             )
-                .in_set(BlockEventsSet::ProcessEventsPostPlacement),
+                .in_set(FluidInteractionSet::InteractWithFluidBlocks),
         );
 }
