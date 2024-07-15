@@ -572,6 +572,8 @@ fn on_add_location_without_transform(
 /// Make sure to put anything that creates a custom bundle before this set.
 pub enum CosmosBundleSet {
     /// Make sure to put anything that creates a custom bundle before this set.
+    ///
+    /// It's also a good idea to put anything that adds a Location to an entity before this set.
     HandleCosmosBundles,
 }
 

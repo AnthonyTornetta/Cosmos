@@ -6,7 +6,7 @@ use bevy::prelude::*;
 use bevy_rapier3d::plugin::RapierContextEntityLink;
 use cosmos_core::{
     block::data::persistence::ChunkLoadBlockDataEvent,
-    netty::{cosmos_encoder, NoSendEntity},
+    netty::{cosmos_encoder, system_sets::NetworkingSystemsSet, NoSendEntity},
     physics::location::Location,
     structure::{
         chunk::{netty::SerializedChunkBlockData, Chunk, ChunkEntity},
@@ -199,8 +199,11 @@ fn load_chunk(
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_systems(Update, (structure_created, populate_chunks).chain())
-        .add_systems(SAVING_SCHEDULE, on_save_structure.in_set(SavingSystemSet::DoSaving))
-        .add_systems(LOADING_SCHEDULE, on_load_structure.in_set(StructureTypesLoadingSystemSet::Planet))
-        .add_systems(LOADING_SCHEDULE, load_chunk.in_set(StructureTypesLoadingSystemSet::Planet));
+    app.add_systems(
+        Update,
+        (structure_created, populate_chunks).in_set(NetworkingSystemsSet::Between).chain(),
+    )
+    .add_systems(SAVING_SCHEDULE, on_save_structure.in_set(SavingSystemSet::DoSaving))
+    .add_systems(LOADING_SCHEDULE, on_load_structure.in_set(StructureTypesLoadingSystemSet::Planet))
+    .add_systems(LOADING_SCHEDULE, load_chunk.in_set(StructureTypesLoadingSystemSet::Planet));
 }

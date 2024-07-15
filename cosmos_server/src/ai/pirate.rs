@@ -19,6 +19,7 @@ use cosmos_core::{
     ecs::NeedsDespawned,
     entities::player::Player,
     events::structure::StructureEventListenerSet,
+    netty::system_sets::NetworkingSystemsSet,
     physics::location::Location,
     projectiles::{laser::LASER_LIVE_TIME, missile::Missile},
     structure::{
@@ -75,7 +76,7 @@ fn handle_pirate_movement(
             &mut PirateAi,
             &GlobalTransform,
         ),
-        (With<Pirate>, Without<Missile>), // Without<Missile> fixes ambiguity issues
+        (With<Pirate>, Without<Missile>, With<AiControlled>), // Without<Missile> fixes ambiguity issues
     >,
     q_parent: Query<&Parent>,
     q_velocity: Query<&Velocity>,
@@ -255,6 +256,7 @@ pub(super) fn register(app: &mut App) {
     .add_systems(
         Update,
         (on_melt_down, add_pirate_ai, add_pirate_targets, handle_pirate_movement)
+            .in_set(NetworkingSystemsSet::Between)
             .in_set(PirateSystemSet::PirateAiLogic)
             .chain(),
     )

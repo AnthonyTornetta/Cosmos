@@ -30,7 +30,7 @@ use cosmos_core::{
 
 use crate::state::GameState;
 
-use super::{line_system::add_line_system, sync::register_structure_system};
+use super::{line_system::add_line_system, sync::register_structure_system, StructureSystemsSet};
 
 const BEAM_MAX_RANGE: f32 = 250.0;
 const BREAK_DECAY_RATIO: f32 = 1.5;
@@ -360,6 +360,8 @@ pub(super) fn register(app: &mut App) {
             update_mining_beams,
             check_should_break,
         )
+            .chain()
+            .in_set(StructureSystemsSet::UpdateSystems)
             .before(BlockEventsSet::PreProcessEvents)
             .run_if(in_state(GameState::Playing)),
     )

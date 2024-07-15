@@ -191,6 +191,7 @@ fn on_modify_reactor(
     }
 }
 
+// TODO: move this to server
 fn generate_power(
     reactors: Query<(&Reactors, Entity)>,
     structure: Query<&StructureSystems>,

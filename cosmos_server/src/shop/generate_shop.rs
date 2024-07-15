@@ -11,7 +11,7 @@ use bevy::{
 };
 use cosmos_core::{
     entities::player::Player,
-    physics::location::{Location, Sector, SystemUnit, SECTOR_DIMENSIONS},
+    physics::location::{CosmosBundleSet, Location, Sector, SystemUnit, SECTOR_DIMENSIONS},
     structure::station::{station_builder::STATION_LOAD_DISTANCE, Station},
 };
 use rand::Rng;
@@ -140,6 +140,7 @@ pub(super) fn register(app: &mut App) {
         Update,
         spawn_shop
             .before(LoadingBlueprintSystemSet::BeginLoadingBlueprints)
+            .before(CosmosBundleSet::HandleCosmosBundles)
             .run_if(on_timer(Duration::from_secs(1)))
             .run_if(in_state(GameState::Playing)),
     )

@@ -16,6 +16,7 @@ use cosmos_core::{
     },
     events::block_events::BlockDataSystemParams,
     inventory::Inventory,
+    netty::system_sets::NetworkingSystemsSet,
     registry::{identifiable::Identifiable, Registry},
     structure::Structure,
 };
@@ -65,7 +66,11 @@ fn populate_inventory(
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_systems(Update, populate_inventory.after(on_add_storage)).add_systems(
+    app.add_systems(
+        Update,
+        populate_inventory.in_set(NetworkingSystemsSet::Between).after(on_add_storage),
+    )
+    .add_systems(
         LOADING_SCHEDULE,
         // Need structure to be populated first, thus `DoneLoadingBlueprints` instead of `DoLoadingBlueprints``
         on_load_blueprint_storage.in_set(LoadingBlueprintSystemSet::DoneLoadingBlueprints),
