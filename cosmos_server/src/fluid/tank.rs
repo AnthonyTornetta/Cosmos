@@ -73,31 +73,31 @@ fn balance_tanks(
                 total_fluid += sf.fluid_stored;
             }
 
-            let right = coord.right();
-            if !all_tanks_within.contains(&right) && !checking.contains(&right) {
-                to_check.insert(right);
+            let pos_x = coord.pos_x();
+            if !all_tanks_within.contains(&pos_x) && !checking.contains(&pos_x) {
+                to_check.insert(pos_x);
             }
-            if let Ok(left) = coord.left() {
-                if !all_tanks_within.contains(&left) && !checking.contains(&left) {
-                    to_check.insert(left);
+            if let Ok(neg_x) = coord.neg_x() {
+                if !all_tanks_within.contains(&neg_x) && !checking.contains(&neg_x) {
+                    to_check.insert(neg_x);
                 }
             }
-            let top = coord.top();
-            if !all_tanks_within.contains(&top) && !checking.contains(&top) {
-                to_check.insert(top);
+            let pos_y = coord.pos_y();
+            if !all_tanks_within.contains(&pos_y) && !checking.contains(&pos_y) {
+                to_check.insert(pos_y);
             }
-            if let Ok(bottom) = coord.bottom() {
-                if !all_tanks_within.contains(&bottom) && !checking.contains(&bottom) {
-                    to_check.insert(bottom);
+            if let Ok(neg_y) = coord.neg_y() {
+                if !all_tanks_within.contains(&neg_y) && !checking.contains(&neg_y) {
+                    to_check.insert(neg_y);
                 }
             }
-            let front = coord.front();
-            if !all_tanks_within.contains(&front) && !checking.contains(&front) {
-                to_check.insert(front);
+            let pos_z = coord.pos_z();
+            if !all_tanks_within.contains(&pos_z) && !checking.contains(&pos_z) {
+                to_check.insert(pos_z);
             }
-            if let Ok(back) = coord.back() {
-                if !all_tanks_within.contains(&back) && !checking.contains(&back) {
-                    to_check.insert(back);
+            if let Ok(neg_z) = coord.neg_z() {
+                if !all_tanks_within.contains(&neg_z) && !checking.contains(&neg_z) {
+                    to_check.insert(neg_z);
                 }
             }
 

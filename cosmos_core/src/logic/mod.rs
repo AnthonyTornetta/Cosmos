@@ -13,7 +13,7 @@ use logic_driver::LogicDriver;
 use logic_graph::{LogicGraph, LogicGroup};
 
 use crate::{
-    block::{data::BlockData, Block, BlockDirection, BlockFace, ALL_BLOCK_DIRECTIONS, ALL_BLOCK_FACES},
+    block::{data::BlockData, Block, BlockDirection, BlockFace, ALL_BLOCK_DIRECTIONS},
     events::block_events::{BlockChangedEvent, BlockDataSystemParams},
     registry::{create_registry, identifiable::Identifiable, Registry},
     structure::{coordinates::BlockCoordinate, loading::StructureLoadingSet, structure_block::StructureBlock, Structure},

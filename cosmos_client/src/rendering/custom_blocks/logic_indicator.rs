@@ -129,7 +129,7 @@ fn on_render_logic_indicator(
 
             for (_, direction) in faces.map(|face| (face, block_rotation.direction_of(face))) {
                 let Some(mut mesh_info) = block_mesh_info
-                    .info_for_face(direction, false)
+                    .info_for_face(direction.unrotated_block_face(), false)
                     .map(Some)
                     .unwrap_or_else(|| {
                         let single_mesh = block_mesh_info.info_for_whole_block();
@@ -152,7 +152,7 @@ fn on_render_logic_indicator(
 
                 let neighbors = BlockNeighbors::empty();
 
-                let Some(image_index) = index.atlas_index_from_face(direction, neighbors) else {
+                let Some(image_index) = index.atlas_index_from_face(direction.unrotated_block_face(), neighbors) else {
                     warn!("Missing image index for face {direction} -- {index:?}");
                     continue;
                 };

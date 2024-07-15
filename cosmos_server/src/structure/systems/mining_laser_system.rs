@@ -294,7 +294,7 @@ fn on_activate_system(
                     let energy = line.property.energy_per_second * sec;
 
                     if energy_storage_system.decrease_energy(energy) == 0.0 {
-                        let beam_direction = line.direction.to_direction_vec3();
+                        let beam_direction = line.direction.to_vec3();
 
                         let beam_begin = line.end();
                         let rel_pos = structure.block_relative_position(beam_begin.coords());

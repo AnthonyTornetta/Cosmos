@@ -175,14 +175,7 @@ pub(crate) fn process_player_interaction(
 
                 if block.should_face_front() {
                     // Front face always points perpendicular out from the block being placed on.
-                    match perpendicular_direction {
-                        BlockDirection::NegZ => BlockRotation::new(BlockFace::Top, BlockSubRotation::None),
-                        BlockDirection::NegX => BlockRotation::new(BlockFace::Top, BlockSubRotation::CW),
-                        BlockDirection::PosZ => BlockRotation::new(BlockFace::Top, BlockSubRotation::Flip),
-                        BlockDirection::PosX => BlockRotation::new(BlockFace::Top, BlockSubRotation::CCW),
-                        BlockDirection::PosY => BlockRotation::new(BlockFace::Back, BlockSubRotation::None),
-                        BlockDirection::NegY => BlockRotation::new(BlockFace::Front, BlockSubRotation::None),
-                    }
+                    BlockRotation::face_front(perpendicular_direction)
                 } else {
                     // Fully rotatable - the top texture of the block should always face the player.
                     let point = (point - point.floor()) - Vec3::new(0.5, 0.5, 0.5);

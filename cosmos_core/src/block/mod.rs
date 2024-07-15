@@ -180,6 +180,69 @@ impl BlockRotation {
             },
         }
     }
+
+    /// Defines the rotation of a block with FaceForward rotation type based on which way the front of the block points.
+    pub fn face_front(front_face_pointing: BlockDirection) -> Self {
+        match front_face_pointing {
+            BlockDirection::NegZ => Self::new(BlockFace::Top, BlockSubRotation::None),
+            BlockDirection::NegX => Self::new(BlockFace::Top, BlockSubRotation::CW),
+            BlockDirection::PosZ => Self::new(BlockFace::Top, BlockSubRotation::Flip),
+            BlockDirection::PosX => Self::new(BlockFace::Top, BlockSubRotation::CCW),
+            BlockDirection::PosY => Self::new(BlockFace::Front, BlockSubRotation::None),
+            BlockDirection::NegY => Self::new(BlockFace::Back, BlockSubRotation::None),
+        }
+    }
+
+    /// Combines the subrotations and main rotations (as two separate steps).
+    ///
+    /// This was written as part of a huge overhaul of rotations and not properly tested. It may need a rewrite.
+    pub fn combine(&self, other: Self) -> Self {
+        use BlockFace as BF;
+        let face_pointing_pos_y = match self.face_pointing_pos_y {
+            BF::Top => other.face_pointing_pos_y,
+            BF::Bottom => match other.face_pointing_pos_y {
+                BF::Top => BF::Bottom,
+                BF::Bottom => BF::Top,
+                BF::Back => BF::Front,
+                BF::Front => BF::Back,
+                _ => other.face_pointing_pos_y,
+            },
+            BF::Left => match other.face_pointing_pos_y {
+                BF::Top => BF::Left,
+                BF::Bottom => BF::Right,
+                BF::Right => BF::Bottom,
+                BF::Left => BF::Top,
+                BF::Back => BF::Front,
+                BF::Front => BF::Back,
+            },
+            BF::Right => match other.face_pointing_pos_y {
+                BF::Right => BF::Top,
+                BF::Left => BF::Bottom,
+                BF::Top => BF::Right,
+                BF::Bottom => BF::Left,
+                BF::Back => BF::Front,
+                BF::Front => BF::Back,
+            },
+            BF::Front => match other.face_pointing_pos_y {
+                BF::Back => BF::Bottom,
+                BF::Bottom => BF::Back,
+                BF::Front => BF::Top,
+                BF::Top => BF::Front,
+                BF::Left => BF::Right,
+                BF::Right => BF::Left,
+            },
+            BF::Back => match other.face_pointing_pos_y {
+                BF::Front => BF::Bottom,
+                BF::Back => BF::Top,
+                BF::Top => BF::Back,
+                BF::Bottom => BF::Front,
+                BF::Left => BF::Right,
+                BF::Right => BF::Left,
+            },
+        };
+        let sub_rotation = self.sub_rotation.combine(other.sub_rotation);
+        BlockRotation::new(face_pointing_pos_y, sub_rotation)
+    }
 }
 
 impl From<BlockFace> for BlockRotation {
@@ -197,22 +260,24 @@ pub enum BlockSubRotation {
     #[default]
     /// No rotation
     None,
-    /// 90 degree rotation clockwise
-    CCW,
     /// 90 degree rotation counter-clockwise
     CW,
     /// 180 degree rotation.
     Flip,
+    /// 90 degree rotation clockwise
+    CCW,
 }
 
 impl BlockSubRotation {
-    /// Returns the index of this rotation. For use in conjunction with [`Self::from_index`]
+    /// Returns the index of this rotation. For use in conjunction with [`Self::from_index`].
+    ///
+    /// Indices begin from [`BlockSubRotation::None`] and count up clockwise. This is important for the [`Self::combine`] function.
     pub fn index(&self) -> usize {
         match *self {
             BlockSubRotation::None => 0,
-            BlockSubRotation::CCW => 1,
-            BlockSubRotation::CW => 2,
-            BlockSubRotation::Flip => 3,
+            BlockSubRotation::CW => 1,
+            BlockSubRotation::Flip => 2,
+            BlockSubRotation::CCW => 3,
         }
     }
 
@@ -220,21 +285,23 @@ impl BlockSubRotation {
     pub fn from_index(index: usize) -> Self {
         match index {
             0 => Self::None,
-            1 => Self::CCW,
-            2 => Self::CW,
-            3 => Self::Flip,
-            _ => panic!("Index must be 0 <= {index} <= 3"),
+            1 => Self::CW,
+            2 => Self::Flip,
+            3 => Self::CCW,
+            _ => panic!("Given index ({index}) is not between 0 and 3 inclusive."),
         }
     }
 
-    /// Inverts this sub rotation to be its opposite
+    /// Gets the opposite subrotation from the given one. Example: [`BlockSubRotation::None`] becomes [`BlockSubRotation::Flip`].
     pub fn inverse(&self) -> Self {
-        match self {
-            BlockSubRotation::None => BlockSubRotation::Flip,
-            BlockSubRotation::Flip => BlockSubRotation::None,
-            BlockSubRotation::CW => BlockSubRotation::CCW,
-            BlockSubRotation::CCW => BlockSubRotation::CW,
-        }
+        self.combine(BlockSubRotation::Flip)
+    }
+
+    /// Combines two subrotations into a single subrotation, which is where you'd end up after applying one on the other.
+    ///
+    /// For example: [`BlockSubRotation::CW`] combined with [`BlockSubRotation::Flip`] would give [`BlockSubRotation::CCW`].
+    pub fn combine(&self, other: Self) -> Self {
+        Self::from_index((self.index() + other.index()) & 3)
     }
 }
 

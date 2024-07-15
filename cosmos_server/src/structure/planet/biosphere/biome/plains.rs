@@ -6,7 +6,7 @@ use bevy::{
     prelude::{App, EventWriter, OnExit, Res, ResMut},
 };
 use cosmos_core::{
-    block::{Block, BlockFace},
+    block::{Block, BlockFace, BlockRotation, BlockSubRotation},
     events::block_events::BlockChangedEvent,
     physics::location::Location,
     registry::{identifiable::Identifiable, Registry},
@@ -326,7 +326,7 @@ fn redwood_tree(
             structure.set_block_at(
                 rotated,
                 log,
-                BlockFace::rotate_face(BlockFace::Top, planet_face).into(),
+                BlockRotation::new(BlockFace::Top, BlockSubRotation::None).combine(BlockRotation::new(planet_face, BlockSubRotation::None)),
                 blocks,
                 Some(block_event_writer),
             );
@@ -377,7 +377,7 @@ fn branch(
             structure.set_block_at(
                 rotated,
                 log,
-                BlockFace::rotate_face(block_up, planet_face).into(),
+                BlockRotation::new(block_up, BlockSubRotation::None).combine(BlockRotation::new(planet_face, BlockSubRotation::None)),
                 blocks,
                 Some(event_writer),
             );
@@ -507,7 +507,10 @@ fn generate_chunk_features(
                 // // No grass block to grow tree from.
                 if let Ok(rotated) = rotate(coords, UnboundBlockCoordinate::new(0, height, 0), s_dims, block_up) {
                     let block = structure.block_at(rotated, blocks);
-                    if height < 0 || (block != grass && block != short_grass) || structure.block_rotation(rotated).face_pointing_pos_y != block_up {
+                    if height < 0
+                        || (block != grass && block != short_grass)
+                        || structure.block_rotation(rotated).face_pointing_pos_y != block_up
+                    {
                         continue 'next;
                     }
 

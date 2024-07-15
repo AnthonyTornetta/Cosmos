@@ -7,7 +7,7 @@ use bevy::{
 };
 
 use crate::{
-    block::{Block, BlockDirection, BlockFace, BlockRotation, ALL_BLOCK_DIRECTIONS, ALL_BLOCK_FACES},
+    block::{Block, BlockDirection, BlockRotation, ALL_BLOCK_FACES},
     registry::Registry,
     structure::{coordinates::BlockCoordinate, structure_block::StructureBlock, Structure},
 };

@@ -2,7 +2,7 @@
 
 use bevy::prelude::EventWriter;
 use cosmos_core::{
-    block::{Block, BlockFace},
+    block::{Block, BlockFace, BlockRotation},
     events::block_events::BlockChangedEvent,
     registry::Registry,
     structure::{
@@ -27,7 +27,7 @@ pub(crate) fn fill(
             structure.set_block_at(
                 rotated_block_pos,
                 block,
-                BlockFace::rotate_face(block_up, planet_face).into(),
+                BlockRotation::from_face_directions(block_up.unrotated_direction(), planet_face.unrotated_direction()).into(),
                 blocks,
                 Some(event_writer),
             );

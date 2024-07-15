@@ -107,13 +107,13 @@ impl ChunkRenderer {
 
             let mut block_connections = [false; 6];
 
-            // right
+            // Positive X.
             if (x != CHUNK_DIMENSIONS - 1
                 && check_should_render(
                     chunk,
                     actual_block,
                     blocks,
-                    coords.right(),
+                    coords.pos_x(),
                     &mut block_connections[BlockFace::Right.index()],
                 ))
                 || (x == CHUNK_DIMENSIONS - 1
@@ -131,13 +131,13 @@ impl ChunkRenderer {
             {
                 faces.push(BlockFace::Right);
             }
-            // left
+            // Negative X.
             if (x != 0
                 && check_should_render(
                     chunk,
                     actual_block,
                     blocks,
-                    coords.left().expect("Checked in first condition"),
+                    coords.neg_x().expect("Checked in first condition"),
                     &mut block_connections[BlockFace::Left.index()],
                 ))
                 || (x == 0
@@ -156,13 +156,13 @@ impl ChunkRenderer {
                 faces.push(BlockFace::Left);
             }
 
-            // top
+            // Positive Y.
             if (y != CHUNK_DIMENSIONS - 1
                 && check_should_render(
                     chunk,
                     actual_block,
                     blocks,
-                    coords.top(),
+                    coords.pos_y(),
                     &mut block_connections[BlockFace::Top.index()],
                 ))
                 || (y == CHUNK_DIMENSIONS - 1
@@ -180,13 +180,13 @@ impl ChunkRenderer {
             {
                 faces.push(BlockFace::Top);
             }
-            // bottom
+            // Negative Y.
             if (y != 0
                 && check_should_render(
                     chunk,
                     actual_block,
                     blocks,
-                    coords.bottom().expect("Checked in first condition"),
+                    coords.neg_y().expect("Checked in first condition"),
                     &mut block_connections[BlockFace::Bottom.index()],
                 ))
                 || (y == 0
@@ -205,13 +205,13 @@ impl ChunkRenderer {
                 faces.push(BlockFace::Bottom);
             }
 
-            // front
+            // Positive Z.
             if (z != CHUNK_DIMENSIONS - 1
                 && check_should_render(
                     chunk,
                     actual_block,
                     blocks,
-                    coords.front(),
+                    coords.pos_z(),
                     &mut block_connections[BlockFace::Back.index()],
                 ))
                 || (z == CHUNK_DIMENSIONS - 1
@@ -229,13 +229,13 @@ impl ChunkRenderer {
             {
                 faces.push(BlockFace::Back);
             }
-            // back
+            // Negative Z.
             if (z != 0
                 && check_should_render(
                     chunk,
                     actual_block,
                     blocks,
-                    coords.back().expect("Checked in first condition"),
+                    coords.neg_z().expect("Checked in first condition"),
                     &mut block_connections[BlockFace::Front.index()],
                 ))
                 || (z == 0
@@ -279,11 +279,11 @@ impl ChunkRenderer {
 
                 let rotation = block_rotation.as_quat();
 
-                for (og_face, face) in faces.iter().map(|face| (*face, block_rotation.rotate_face(*face))) {
+                for (og_face, direction) in faces.iter().map(|face| (*face, block_rotation.direction_of(*face))) {
                     let mut one_mesh_only = false;
 
                     let Some(mut mesh_info) = mesh
-                        .info_for_face(face, block_connections[og_face.index()])
+                        .info_for_face(direction.unrotated_block_face(), block_connections[og_face.index()])
                         .map(Some)
                         .unwrap_or_else(|| {
                             let single_mesh = mesh.info_for_whole_block();
@@ -366,8 +366,8 @@ impl ChunkRenderer {
                         }
                     }
 
-                    let Some(image_index) = index.atlas_index_from_face(face, neighbors) else {
-                        warn!("Missing image index for face {face} -- {index:?}");
+                    let Some(image_index) = index.atlas_index_from_face(direction.unrotated_block_face(), neighbors) else {
+                        warn!("Missing image index for face {direction} -- {index:?}");
                         continue;
                     };
 
