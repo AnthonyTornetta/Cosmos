@@ -325,7 +325,7 @@ fn client_sync_players(
                         });
                         network_mapping.add_mapping(client_entity, *server_entity);
 
-                        println!("That's odd, leme ask.");
+                        // println!("That's odd, leme ask.");
                         client.send_message(
                             NettyChannelClient::Reliable,
                             cosmos_encoder::serialize(&ClientReliableMessages::RequestEntityData { entity: *server_entity }),
