@@ -14,7 +14,7 @@
                 "Single": "cosmos:2_input_gate_back"
             },
             "top": {
-                "Single": "cosmos:and_gate_top"
+                "Single": "cosmos:or_gate_top"
             },
             "bottom": {
                 "Single": "cosmos:logic_block"
