@@ -16,7 +16,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{block::ALL_BLOCK_DIRECTIONS, events::block_events::BlockDataChangedEvent};
 use crate::{
-    block::{blocks::AIR_BLOCK_ID, data::BlockData, Block, BlockFace, BlockRotation},
+    block::{blocks::AIR_BLOCK_ID, data::BlockData, Block, BlockRotation},
     physics::location::Location,
     registry::Registry,
 };

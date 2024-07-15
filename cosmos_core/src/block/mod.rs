@@ -64,21 +64,17 @@ impl BlockRotation {
 
     /// Returns this rotation's representation as a quaternion.
     pub fn as_quat(&self) -> Quat {
-        match self.sub_rotation {
-            BlockSubRotation::None => Quat::IDENTITY,
-            BlockSubRotation::CCW => Quat::from_axis_angle(Vec3::Y, PI / 2.0),
-            BlockSubRotation::CW => Quat::from_axis_angle(Vec3::Y, -PI / 2.0),
-            BlockSubRotation::Flip => Quat::from_axis_angle(Vec3::Y, PI),
-        }
-        .mul_quat(match self.face_pointing_pos_y {
-            BlockFace::Top => Quat::IDENTITY,
-            BlockFace::Bottom => Quat::from_axis_angle(Vec3::X, PI),
-            BlockFace::Back => Quat::from_axis_angle(Vec3::X, PI / 2.0),
-            BlockFace::Front => Quat::from_axis_angle(Vec3::X, -PI / 2.0),
-            BlockFace::Left => Quat::from_axis_angle(Vec3::Z, -PI / 2.0),
-            BlockFace::Right => Quat::from_axis_angle(Vec3::Z, PI / 2.0),
-        })
-        .normalize()
+        self.sub_rotation
+            .as_quat()
+            .mul_quat(match self.face_pointing_pos_y {
+                BlockFace::Top => Quat::IDENTITY,
+                BlockFace::Bottom => Quat::from_axis_angle(Vec3::X, PI),
+                BlockFace::Back => Quat::from_axis_angle(Vec3::X, -PI / 2.0),
+                BlockFace::Front => Quat::from_axis_angle(Vec3::X, PI / 2.0),
+                BlockFace::Left => Quat::from_axis_angle(Vec3::Z, -PI / 2.0),
+                BlockFace::Right => Quat::from_axis_angle(Vec3::Z, PI / 2.0),
+            })
+            .normalize()
     }
 
     #[inline(always)]
@@ -97,6 +93,7 @@ impl BlockRotation {
     pub fn direction_of(&self, face: BlockFace) -> BlockDirection {
         let unrotated_vec3 = face.unrotated_direction().to_vec3();
         let rotated_vec3 = self.as_quat().mul_vec3(unrotated_vec3);
+        // println!("Unrotated vector: {:?}; Rotated vector: {:?}", unrotated_vec3, rotated_vec3);
         BlockDirection::from_vec3(rotated_vec3)
     }
 
@@ -105,6 +102,7 @@ impl BlockRotation {
     /// For example, if the front of the block is locally pointing left and you provide [`BlockFace::Front`], you will be given [`BlockFace::Left`].
     /// Might later change to quaternion math with the rotation's inverse.
     pub fn block_face_pointing(&self, direction: BlockDirection) -> BlockFace {
+        // println!("Looking for {:?} in {:?}", direction, self.directions_of_each_face());
         BlockFace::from_index(
             self.directions_of_each_face()
                 .iter()
@@ -137,10 +135,10 @@ impl BlockRotation {
         match top_face_pointing {
             D::PosX => match front_face_pointing {
                 // The inner match arms are ordered by the resulting sub-rotation to make them easier to visualize.
-                D::PosZ => Self::new(BF::Left, BlockSubRotation::None),
-                D::PosY => Self::new(BF::Front, BlockSubRotation::CW),
-                D::NegZ => Self::new(BF::Right, BlockSubRotation::Flip),
-                D::NegY => Self::new(BF::Back, BlockSubRotation::CCW),
+                D::NegZ => Self::new(BF::Left, BlockSubRotation::None),
+                D::NegY => Self::new(BF::Back, BlockSubRotation::CW),
+                D::PosZ => Self::new(BF::Right, BlockSubRotation::Flip),
+                D::PosY => Self::new(BF::Front, BlockSubRotation::CCW),
                 _ => panic!("Invalid combination of top and front face directions."),
             },
             D::NegX => match front_face_pointing {
@@ -303,6 +301,16 @@ impl BlockSubRotation {
     pub fn combine(&self, other: Self) -> Self {
         Self::from_index((self.index() + other.index()) & 3)
     }
+
+    /// Returns the quaternion associated with this sub rotation. All sub-rotations rotate around the Y axis.
+    pub fn as_quat(&self) -> Quat {
+        match self {
+            Self::None => Quat::IDENTITY,
+            Self::CCW => Quat::from_axis_angle(Vec3::Y, PI / 2.0),
+            Self::CW => Quat::from_axis_angle(Vec3::Y, -PI / 2.0),
+            Self::Flip => Quat::from_axis_angle(Vec3::Y, PI),
+        }
+    }
 }
 
 #[derive(Default, PartialEq, Eq, Debug, Copy, Clone, Reflect, Hash, Serialize, Deserialize)]
@@ -380,18 +388,19 @@ impl BlockDirection {
     }
 
     /// Returns the `Direction` this vec3 represents.
-    /// Vector must have one entry non-zero and all others 0.
+    /// Vector must have one entry non-zero and all others 0 (within tolerance).
     pub fn from_vec3(vec: Vec3) -> Self {
-        assert!((vec.x != 0.0) as u8 + (vec.y != 0.0) as u8 + (vec.z != 0.0) as u8 == 1);
-        if vec.x > 0.0 {
+        // println!("Block Direction from vec: {:?}", vec);
+        debug_assert!((vec.x.abs() > f32::EPSILON) as u8 + (vec.y.abs() > f32::EPSILON) as u8 + (vec.z.abs() > f32::EPSILON) as u8 == 1);
+        if vec.x > f32::EPSILON {
             Self::PosX
-        } else if vec.x < 0.0 {
+        } else if vec.x < -f32::EPSILON {
             Self::NegX
-        } else if vec.y > 0.0 {
+        } else if vec.y > f32::EPSILON {
             Self::PosY
-        } else if vec.y < 0.0 {
+        } else if vec.y < -f32::EPSILON {
             Self::NegY
-        } else if vec.z > 0.0 {
+        } else if vec.z > f32::EPSILON {
             Self::PosZ
         } else {
             Self::NegZ

@@ -14,7 +14,7 @@ use bevy_rapier3d::{
     plugin::RapierContext,
 };
 use cosmos_core::{
-    block::{BlockDirection, BlockFace},
+    block::BlockDirection,
     ecs::NeedsDespawned,
     structure::{
         shared::DespawnWithStructure,
