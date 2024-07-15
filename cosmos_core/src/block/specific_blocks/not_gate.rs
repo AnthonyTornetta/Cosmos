@@ -20,23 +20,23 @@ use crate::{
 };
 
 fn register_logic_connections(blocks: Res<Registry<Block>>, mut registry: ResMut<Registry<LogicBlock>>) {
-    if let Some(and_gate) = blocks.from_id("cosmos:or_gate") {
+    if let Some(not_gate) = blocks.from_id("cosmos:not_gate") {
         registry.register(LogicBlock::new(
-            and_gate,
+            not_gate,
             [
-                Some(LogicConnection::Port(PortType::Input)),
-                Some(LogicConnection::Port(PortType::Input)),
+                None,
+                None,
                 None,
                 None,
                 Some(LogicConnection::Port(PortType::Output)),
-                None,
+                Some(LogicConnection::Port(PortType::Input)),
             ],
-            0,
+            1,
         ));
     }
 }
 
-fn or_gate_output_event_listener(
+fn not_gate_output_event_listener(
     mut evr_logic_output: EventReader<LogicOutputEvent>,
     mut evw_logic_input: EventWriter<LogicInputEvent>,
     blocks: Res<Registry<Block>>,
@@ -48,7 +48,7 @@ fn or_gate_output_event_listener(
         let Ok(structure) = q_structure.get_mut(ev.entity) else {
             continue;
         };
-        if structure.block_at(ev.block.coords(), &blocks).unlocalized_name() != "cosmos:or_gate" {
+        if structure.block_at(ev.block.coords(), &blocks).unlocalized_name() != "cosmos:not_gate" {
             continue;
         }
         let Ok(mut logic_driver) = q_logic_driver.get_mut(ev.entity) else {
@@ -66,7 +66,7 @@ fn or_gate_output_event_listener(
     }
 }
 
-fn or_gate_input_event_listener(
+fn not_gate_input_event_listener(
     mut evr_logic_input: EventReader<LogicInputEvent>,
     mut evw_queue_logic_output: EventWriter<QueueLogicOutputEvent>,
     blocks: Res<Registry<Block>>,
@@ -80,7 +80,7 @@ fn or_gate_input_event_listener(
         let Ok(structure) = q_structure.get(ev.entity) else {
             continue;
         };
-        if structure.block_at(ev.block.coords(), &blocks).unlocalized_name() != "cosmos:or_gate" {
+        if structure.block_at(ev.block.coords(), &blocks).unlocalized_name() != "cosmos:not_gate" {
             continue;
         }
         let Ok(logic_driver) = q_logic_driver.get_mut(ev.entity) else {
@@ -92,12 +92,12 @@ fn or_gate_input_event_listener(
 
         let coords = ev.block.coords();
         let rotation = structure.block_rotation(ev.block.coords());
-        let left = logic_driver.read_input(coords, rotation.direction_of(BlockFace::Left)) != 0;
-        let right = logic_driver.read_input(coords, rotation.direction_of(BlockFace::Right)) != 0;
-        let new_state = BlockLogicData((left || right) as i32);
+        let input = logic_driver.read_input(coords, rotation.direction_of(BlockFace::Back)) != 0;
+        // println!("Not Gate Input Event gets input: {input}");
+        let new_state = BlockLogicData(!input as i32);
 
         if **logic_data != new_state {
-            // Don't trigger unneccesary change detection
+            // Don't trigger unneccesary change detection.
             **logic_data = new_state;
             evw_queue_logic_output.send(QueueLogicOutputEvent::new(ev.block, ev.entity));
         }
@@ -106,6 +106,6 @@ fn or_gate_input_event_listener(
 
 pub(super) fn register<T: States>(app: &mut App, post_loading_state: T) {
     app.add_systems(OnEnter(post_loading_state), register_logic_connections)
-        .add_systems(Update, or_gate_output_event_listener.in_set(LogicSystemSet::Produce))
-        .add_systems(Update, or_gate_input_event_listener.in_set(LogicSystemSet::Consume));
+        .add_systems(Update, not_gate_output_event_listener.in_set(LogicSystemSet::Produce))
+        .add_systems(Update, not_gate_input_event_listener.in_set(LogicSystemSet::Consume));
 }

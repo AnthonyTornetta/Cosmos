@@ -14,7 +14,7 @@ use crate::{
 
 fn register_logic_connections(blocks: Res<Registry<Block>>, mut registry: ResMut<Registry<LogicBlock>>) {
     if let Some(logic_on) = blocks.from_id("cosmos:logic_on") {
-        registry.register(LogicBlock::new(logic_on, [Some(LogicConnection::Port(PortType::Output)); 6]));
+        registry.register(LogicBlock::new(logic_on, [Some(LogicConnection::Port(PortType::Output)); 6], 1));
     }
 }
 
@@ -35,6 +35,8 @@ fn logic_on_output_event_listener(
         let Ok(mut logic_driver) = q_logic_driver.get_mut(ev.entity) else {
             continue;
         };
+
+        // println!("Logic On Output Event.");
 
         // Set all this block's ports to 1 in their logic groups.
         // TODO: Signal should be customizable.

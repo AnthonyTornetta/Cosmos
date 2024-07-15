@@ -13,7 +13,7 @@ use crate::{
     events::block_events::BlockDataSystemParams,
     logic::{
         logic_driver::LogicDriver, BlockLogicData, LogicBlock, LogicConnection, LogicInputEvent, LogicOutputEvent, LogicSystemSet, Port,
-        PortType,
+        PortType, QueueLogicOutputEvent,
     },
     registry::{identifiable::Identifiable, Registry},
     structure::Structure,
@@ -31,6 +31,7 @@ fn register_logic_connections(blocks: Res<Registry<Block>>, mut registry: ResMut
                 Some(LogicConnection::Port(PortType::Output)),
                 None,
             ],
+            0,
         ));
     }
 }
@@ -70,7 +71,7 @@ fn and_gate_output_event_listener(
 
 fn and_gate_input_event_listener(
     mut evr_logic_input: EventReader<LogicInputEvent>,
-    mut evw_logic_output: EventWriter<LogicOutputEvent>,
+    mut evw_queue_logic_output: EventWriter<QueueLogicOutputEvent>,
     blocks: Res<Registry<Block>>,
     mut q_logic_driver: Query<&mut LogicDriver>,
     q_structure: Query<&Structure>,
@@ -106,10 +107,7 @@ fn and_gate_input_event_listener(
         if **logic_data != new_state {
             // Don't trigger unneccesary change detection
             **logic_data = new_state;
-            evw_logic_output.send(LogicOutputEvent {
-                block: ev.block,
-                entity: ev.entity,
-            });
+            evw_queue_logic_output.send(QueueLogicOutputEvent::new(ev.block, ev.entity));
         }
     }
 }

@@ -1,12 +1,15 @@
 //! The game's logic system: for wires, logic gates, etc.
 
+use std::{collections::VecDeque, time::Duration};
+
 use bevy::{
     app::{App, Update},
     prelude::{
-        in_state, Commands, Component, Entity, Event, EventReader, EventWriter, IntoSystemConfigs, Query, Res, States, SystemSet, With,
-        Without,
+        in_state, Commands, Component, Entity, Event, EventReader, EventWriter, IntoSystemConfigs, Query, Res, ResMut, Resource, States,
+        SystemSet, With, Without,
     },
     reflect::Reflect,
+    time::common_conditions::on_timer,
     utils::HashSet,
 };
 use logic_driver::LogicDriver;
@@ -52,6 +55,7 @@ pub enum LogicConnection {
 pub struct LogicBlock {
     // Specifies the roles of the 6 block faces, ordered by BlockFace index.
     connections: [Option<LogicConnection>; 6],
+    initial_signal: i32,
 
     id: u16,
     unlocalized_name: String,
@@ -74,9 +78,10 @@ impl Identifiable for LogicBlock {
 impl LogicBlock {
     /// Creates a link to a block to define its logic connections.
     /// Right, Left, Top, Bottom, Front, Back.
-    pub fn new(block: &Block, connections: [Option<LogicConnection>; 6]) -> Self {
+    pub fn new(block: &Block, connections: [Option<LogicConnection>; 6], initial_signal: i32) -> Self {
         Self {
             connections,
+            initial_signal,
             id: 0,
             unlocalized_name: block.unlocalized_name().to_owned(),
         }
@@ -149,9 +154,9 @@ impl Port {
     }
 }
 
-#[derive(Event, Debug)]
+#[derive(Event, Debug, Clone)]
 /// Sent when a block's logic output changes.
-/// For example, sent when the block is placed or one frame after its inputs change.
+/// For example, sent when the block is placed or one tick after its inputs change.
 pub struct LogicOutputEvent {
     /// The block coordinates.
     pub block: StructureBlock,
@@ -160,14 +165,31 @@ pub struct LogicOutputEvent {
 }
 
 #[derive(Event, Debug)]
+/// Sent when a block's logic output changes for a reason outside a logic tick, like placing a new logic block.
+pub struct QueueLogicOutputEvent(LogicOutputEvent);
+
+impl QueueLogicOutputEvent {
+    /// Convenience constructor to avoid having to construct the inner type.
+    pub fn new(block: StructureBlock, entity: Entity) -> Self {
+        Self {
+            0: LogicOutputEvent { block, entity },
+        }
+    }
+}
+
+#[derive(Event, Debug, Clone)]
 /// Sent when a block's logic inputs change.
-/// For example, when the block is placed or in the same frame another block with an output [`Port`] in its [`LogicGroup`] changes its output.
+/// For example, in the same tick another block with an output [`Port`] in its [`LogicGroup`] changes its output.
 pub struct LogicInputEvent {
     /// The block coordinates.
     pub block: StructureBlock,
     /// The entity containing the structure and logic graph this block is in.
     pub entity: Entity,
 }
+
+#[derive(Event, Debug)]
+/// Sent when a block's logic input changes for a reason outside a logic tick, like placing a new logic block.
+pub struct QueueLogicInputEvent(LogicInputEvent);
 
 #[derive(Component, Clone, Copy, Reflect, PartialEq, Eq, Debug, Default)]
 /// The logic signal this block is holding. Note: each block might interact with this data slightly differently.
@@ -187,11 +209,11 @@ fn logic_block_placed_event_listener(
     logic_blocks: Res<Registry<LogicBlock>>,
     mut q_logic: Query<&mut LogicDriver>,
     mut q_structure: Query<&mut Structure>,
-    mut evw_logic_output: EventWriter<LogicOutputEvent>,
-    mut evw_logic_input: EventWriter<LogicInputEvent>,
     q_has_data: Query<(), With<BlockLogicData>>,
     mut q_block_data: Query<&mut BlockData>,
     mut bs_params: BlockDataSystemParams,
+    mut evw_queue_logic_output: EventWriter<QueueLogicOutputEvent>,
+    mut evw_queue_logic_input: EventWriter<QueueLogicInputEvent>,
 ) {
     for ev in evr_block_changed.read() {
         // If was logic block, remove from the logic graph.
@@ -207,8 +229,8 @@ fn logic_block_placed_event_listener(
                         structure.get_entity().expect("Structure should have entity."),
                         &blocks,
                         &logic_blocks,
-                        &mut evw_logic_output,
-                        &mut evw_logic_input,
+                        &mut evw_queue_logic_output,
+                        &mut evw_queue_logic_input,
                     )
                 }
             }
@@ -227,15 +249,57 @@ fn logic_block_placed_event_listener(
                         structure.get_entity().expect("Structure should have entity"),
                         &blocks,
                         &logic_blocks,
-                        &mut evw_logic_output,
-                        &mut evw_logic_input,
+                        &mut evw_queue_logic_output,
+                        &mut evw_queue_logic_input,
                     );
                     // Add the logic block's internal data storage to the structure.
-                    structure.insert_block_data(coords, BlockLogicData(0), &mut bs_params, &mut q_block_data, &q_has_data);
+                    structure.insert_block_data(
+                        coords,
+                        BlockLogicData(logic_block.initial_signal),
+                        &mut bs_params,
+                        &mut q_block_data,
+                        &q_has_data,
+                    );
                 }
             }
         }
     }
+}
+
+#[derive(Resource, Default)]
+struct LogicOutputEventQueue(VecDeque<LogicOutputEvent>);
+
+#[derive(Resource, Default)]
+struct LogicInputEventQueue(VecDeque<LogicInputEvent>);
+
+fn queue_logic_producers(
+    mut evr_queue_logic_output: EventReader<QueueLogicOutputEvent>,
+    mut logic_output_event_queue: ResMut<LogicOutputEventQueue>,
+) {
+    for ev in evr_queue_logic_output.read() {
+        // println!("Output Event Queued: {:?}", ev.0);
+        logic_output_event_queue.0.push_back(ev.0.clone());
+    }
+}
+
+fn queue_logic_consumers(
+    mut evr_queue_logic_input: EventReader<QueueLogicInputEvent>,
+    mut logic_input_event_queue: ResMut<LogicInputEventQueue>,
+) {
+    for ev in evr_queue_logic_input.read() {
+        // println!("Input Event Queued: {:?}", ev.0);
+        logic_input_event_queue.0.push_back(ev.0.clone());
+    }
+}
+
+fn send_queued_logic_events(
+    mut outputs: ResMut<LogicOutputEventQueue>,
+    mut inputs: ResMut<LogicInputEventQueue>,
+    mut evw_logic_output: EventWriter<LogicOutputEvent>,
+    mut evw_logic_input: EventWriter<LogicInputEvent>,
+) {
+    evw_logic_output.send_batch(outputs.0.drain(..));
+    evw_logic_input.send_batch(inputs.0.drain(..));
 }
 
 fn add_default_logic(q_needs_logic_driver: Query<Entity, (With<Structure>, Without<LogicDriver>)>, mut commands: Commands) {
@@ -250,30 +314,53 @@ impl Registry<LogicBlock> {
         self.from_id(block.unlocalized_name())
     }
 }
+
 #[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
 /// Separates the logic update events into two sets to maintain the timing of logic circuits.
 pub enum LogicSystemSet {
-    /// New [`LogicBlock`]s are added before anyone produces or consumes, so they have a chance to do both in their first frame.
-    Place,
-    /// All output [`Port`]s. These push their values to their [`LogicGroup`]s first in each frame.
+    /// [`LogicBlock`]s are added or removed before anyone produces or consumes, so they have a chance to do both in their first logic tick.
+    EditLogicGraph,
+    /// If something (like placing a logic block) tries to produce before a logic tick, this adds that event to a queue for later processing.
+    QueueProducers,
+    /// If something (like placing a logic block) tries to consume before a logic tick, this adds that event to a queue for later processing.
+    QueueConsumers,
+    /// If something (like placing a logic block) tried to produce or consume on an earlier frame, this sends the event on the next logic tick.
+    SendQueues,
+    /// All output [`Port`]s. These push their values to their [`LogicGroup`]s first in each logic tick.
     Produce,
-    /// All input [`Port`]s. These pull their values from their [`LogicGroup`]s second in each frame.
+    /// All input [`Port`]s. These pull their values from their [`LogicGroup`]s second in each logic tick.
     Consume,
 }
 
+/// All logic signal production and consumption happens on ticks that occur with this many milliseconds between them.
+pub const LOGIC_TICKS_PER_SECOND: u64 = 20;
+
 pub(super) fn register<T: States>(app: &mut App, playing_state: T) {
     create_registry::<LogicBlock>(app, "cosmos:logic_blocks");
+    app.init_resource::<LogicOutputEventQueue>();
+    app.init_resource::<LogicInputEventQueue>();
 
     app.configure_sets(
         Update,
-        (LogicSystemSet::Place, LogicSystemSet::Produce, LogicSystemSet::Consume).chain(),
+        (
+            LogicSystemSet::EditLogicGraph,
+            LogicSystemSet::QueueProducers,
+            LogicSystemSet::QueueConsumers,
+            (LogicSystemSet::SendQueues, LogicSystemSet::Produce, LogicSystemSet::Consume)
+                .chain()
+                .run_if(on_timer(Duration::from_millis(1000 / LOGIC_TICKS_PER_SECOND))),
+        )
+            .chain(),
     );
 
     app.add_systems(
         Update,
         (
             add_default_logic.in_set(StructureLoadingSet::AddStructureComponents),
-            logic_block_placed_event_listener.in_set(LogicSystemSet::Place),
+            logic_block_placed_event_listener.in_set(LogicSystemSet::EditLogicGraph),
+            queue_logic_producers.in_set(LogicSystemSet::QueueProducers),
+            queue_logic_consumers.in_set(LogicSystemSet::QueueConsumers),
+            send_queued_logic_events.in_set(LogicSystemSet::SendQueues),
         )
             .run_if(in_state(playing_state)),
     )
@@ -281,5 +368,7 @@ pub(super) fn register<T: States>(app: &mut App, playing_state: T) {
     .register_type::<LogicGraph>()
     .register_type::<LogicGroup>()
     .add_event::<LogicOutputEvent>()
-    .add_event::<LogicInputEvent>();
+    .add_event::<LogicInputEvent>()
+    .add_event::<QueueLogicOutputEvent>()
+    .add_event::<QueueLogicInputEvent>();
 }

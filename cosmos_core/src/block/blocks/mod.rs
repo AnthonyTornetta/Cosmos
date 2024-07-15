@@ -412,6 +412,14 @@ fn add_cosmos_blocks(
             .add_connection_group("cosmos:uses_logic")
             .create(),
     );
+
+    blocks.register(
+        BlockBuilder::new("cosmos:not_gate", 0.1, 20.0, 5.0)
+            .add_property(BlockProperty::Full)
+            .add_property(BlockProperty::FullyRotatable)
+            .add_connection_group("cosmos:uses_logic")
+            .create(),
+    );
     loading.finish_loading(id, &mut end_writer);
 }
 

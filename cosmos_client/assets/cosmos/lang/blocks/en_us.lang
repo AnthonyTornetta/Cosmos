@@ -83,3 +83,4 @@ cosmos:logic_wire=Logical Wire
 cosmos:logic_on=Logic On
 cosmos:and_gate=And Gate
 cosmos:or_gate=Or Gate
+cosmos:not_gate=Not Gate

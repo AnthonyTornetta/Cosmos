@@ -12,7 +12,7 @@ use crate::{
     structure::{coordinates::BlockCoordinate, structure_block::StructureBlock, Structure},
 };
 
-use super::{LogicBlock, LogicConnection, LogicInputEvent, LogicOutputEvent, Port, PortType};
+use super::{LogicBlock, LogicConnection, LogicInputEvent, Port, PortType, QueueLogicInputEvent, QueueLogicOutputEvent};
 
 #[derive(Debug, Default, Reflect, PartialEq, Eq, Clone)]
 /// A single component of a [`LogicGraph`], connected by wires.
@@ -249,8 +249,8 @@ impl LogicGraph {
         port_type: PortType,
         signal: i32,
         entity: Entity,
-        evw_logic_output: &mut EventWriter<LogicOutputEvent>,
-        evw_logic_input: &mut EventWriter<LogicInputEvent>,
+        evw_queue_logic_output: &mut EventWriter<QueueLogicOutputEvent>,
+        evw_queue_logic_input: &mut EventWriter<QueueLogicInputEvent>,
     ) {
         match port_type {
             PortType::Input => &mut self.input_port_group_id,
@@ -265,17 +265,16 @@ impl LogicGraph {
         match port_type {
             PortType::Input => {
                 logic_group.consumers.insert(Port::new(coords, direction));
-                evw_logic_input.send(LogicInputEvent {
-                    block: StructureBlock::new(coords),
-                    entity,
+                evw_queue_logic_input.send(QueueLogicInputEvent {
+                    0: LogicInputEvent {
+                        block: StructureBlock::new(coords),
+                        entity,
+                    },
                 });
             }
             PortType::Output => {
                 logic_group.producers.insert(Port::new(coords, direction), signal);
-                evw_logic_output.send(LogicOutputEvent {
-                    block: StructureBlock::new(coords),
-                    entity,
-                });
+                evw_queue_logic_output.send(QueueLogicOutputEvent::new(StructureBlock::new(coords), entity));
             }
         };
     }
@@ -288,7 +287,7 @@ impl LogicGraph {
         structure: &Structure,
         blocks: &Registry<Block>,
         logic_blocks: &Registry<LogicBlock>,
-        evw_logic_input: &mut EventWriter<LogicInputEvent>,
+        evw_queue_logic_input: &mut EventWriter<QueueLogicInputEvent>,
     ) {
         // If the neighbor coordinates don't exist, no port is removed.
         let Ok(neighbor_coords) = coords.step(direction) else {
@@ -331,9 +330,11 @@ impl LogicGraph {
             // Ping all inputs in this group to let them know this output port is gone.
             if port_type == PortType::Output {
                 for &input_port in self.groups.get(&group_id).expect("Port should have logic group.").consumers.iter() {
-                    evw_logic_input.send(LogicInputEvent {
-                        block: StructureBlock::new(input_port.coords),
-                        entity: structure.get_entity().expect("Structure should have entity."),
+                    evw_queue_logic_input.send(QueueLogicInputEvent {
+                        0: LogicInputEvent {
+                            block: StructureBlock::new(input_port.coords),
+                            entity: structure.get_entity().expect("Structure should have entity."),
+                        },
                     });
                 }
             }
@@ -352,7 +353,7 @@ impl LogicGraph {
         group_ids: &HashSet<usize>,
         coords: BlockCoordinate,
         entity: Entity,
-        evw_logic_input: &mut EventWriter<LogicInputEvent>,
+        evw_queue_logic_input: &mut EventWriter<QueueLogicInputEvent>,
     ) {
         // Rewrite all output and input ports of adjacent groups to use the new ID number.
         let new_group_id = self.new_group_id();
@@ -397,9 +398,11 @@ impl LogicGraph {
             .consumers
             .iter()
         {
-            evw_logic_input.send(LogicInputEvent {
-                block: StructureBlock::new(input_port.coords),
-                entity,
+            evw_queue_logic_input.send(QueueLogicInputEvent {
+                0: LogicInputEvent {
+                    block: StructureBlock::new(input_port.coords),
+                    entity,
+                },
             });
         }
     }
@@ -415,8 +418,8 @@ impl LogicGraph {
         visited: &mut HashSet<Port>,
         blocks: &Registry<Block>,
         logic_blocks: &Registry<LogicBlock>,
-        evw_logic_output: &mut EventWriter<LogicOutputEvent>,
-        evw_logic_input: &mut EventWriter<LogicInputEvent>,
+        evw_queue_logic_output: &mut EventWriter<QueueLogicOutputEvent>,
+        evw_queue_logic_input: &mut EventWriter<QueueLogicInputEvent>,
     ) -> bool {
         if visited.contains(&Port::new(coords, encountered_from_direction)) {
             // Renaming on this portion already completed.
@@ -453,8 +456,8 @@ impl LogicGraph {
                     port_type,
                     old_signal,
                     structure.get_entity().expect("Structure should have entity"),
-                    evw_logic_output,
-                    evw_logic_input,
+                    evw_queue_logic_output,
+                    evw_queue_logic_input,
                 );
             }
             Some(LogicConnection::Wire) => {
@@ -477,8 +480,8 @@ impl LogicGraph {
                         visited,
                         blocks,
                         logic_blocks,
-                        evw_logic_output,
-                        evw_logic_input,
+                        evw_queue_logic_output,
+                        evw_queue_logic_input,
                     );
                 }
                 // The first wire coords are always set last (so they take effect), the only recursive call is in this arm.
