@@ -9,7 +9,7 @@ use bevy::{
 use bigdecimal::Signed;
 use serde::{Deserialize, Serialize};
 
-use crate::{block::BlockFace, physics::location::SYSTEM_SECTORS};
+use crate::{block::block_face::BlockFace, physics::location::SYSTEM_SECTORS};
 
 use super::{
     chunk::CHUNK_DIMENSIONS,

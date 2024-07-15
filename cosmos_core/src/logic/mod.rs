@@ -13,7 +13,7 @@ use logic_driver::LogicDriver;
 use logic_graph::{LogicGraph, LogicGroup};
 
 use crate::{
-    block::{data::BlockData, Block, BlockDirection, BlockFace, ALL_BLOCK_DIRECTIONS},
+    block::{block_direction::BlockDirection, block_direction::ALL_BLOCK_DIRECTIONS, block_face::BlockFace, data::BlockData, Block},
     events::block_events::{BlockChangedEvent, BlockDataSystemParams},
     registry::{create_registry, identifiable::Identifiable, Registry},
     structure::{coordinates::BlockCoordinate, loading::StructureLoadingSet, structure_block::StructureBlock, Structure},
@@ -198,7 +198,7 @@ fn logic_block_placed_event_listener(
         if let Some(logic_block) = logic_blocks.from_id(blocks.from_numeric_id(ev.old_block).unlocalized_name()) {
             if let Ok(structure) = q_structure.get_mut(ev.structure_entity) {
                 if let Ok(mut logic) = q_logic.get_mut(ev.structure_entity) {
-                    println!("Removed block rotation: {:?}", ev.old_block_rotation);
+                    // println!("Removed block rotation: {:?}", ev.old_block_rotation);
                     logic.remove_logic_block(
                         logic_block,
                         ev.old_block_rotation,

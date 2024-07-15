@@ -8,7 +8,7 @@ use bevy::{
     window::PrimaryWindow,
 };
 use cosmos_core::{
-    block::{Block, BlockFace},
+    block::{block_face::BlockFace, Block},
     blockitems::BlockItems,
     ecs::NeedsDespawned,
     item::Item,

@@ -43,7 +43,7 @@ pub mod systems;
 
 use crate::block::data::persistence::ChunkLoadBlockDataEvent;
 use crate::block::data::BlockData;
-use crate::block::{Block, BlockFace, BlockRotation};
+use crate::block::{block_face::BlockFace, block_rotation::BlockRotation, Block};
 use crate::ecs::NeedsDespawned;
 use crate::events::block_events::{BlockChangedEvent, BlockDataChangedEvent, BlockDataSystemParams};
 use crate::netty::NoSendEntity;

@@ -7,9 +7,13 @@ use bevy_rapier3d::{
 };
 use cosmos_core::{
     block::{
+        block_direction::BlockDirection,
         block_events::{BlockInteractEvent, StructureBlockPair},
+        block_face::BlockFace,
+        block_rotation::BlockRotation,
+        block_rotation::BlockSubRotation,
         blocks::fluid::FLUID_COLLISION_GROUP,
-        Block, BlockDirection, BlockFace, BlockRotation, BlockSubRotation,
+        Block,
     },
     blockitems::BlockItems,
     inventory::Inventory,
@@ -181,7 +185,7 @@ pub(crate) fn process_player_interaction(
                     let point = (point - point.floor()) - Vec3::new(0.5, 0.5, 0.5);
 
                     // Unused coordinate is always within tolerance of +-0.25 (+ side on top/right/front).
-                    println!("Final point: {point:?}");
+                    // println!("Final point: {point:?}");
 
                     // The front texture always points in the direction decided by where on the anchor block the player clicked.
                     let front_facing = match perpendicular_direction {
@@ -212,7 +216,7 @@ pub(crate) fn process_player_interaction(
                         }
                     };
 
-                    println!("Top pointing: {}; Front pointing: {}", perpendicular_direction, front_facing);
+                    // println!("Top pointing: {}; Front pointing: {}", perpendicular_direction, front_facing);
                     BlockRotation::from_face_directions(perpendicular_direction, front_facing)
                 }
             } else {

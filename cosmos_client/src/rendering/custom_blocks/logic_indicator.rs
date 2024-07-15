@@ -18,7 +18,7 @@ use bevy::{
     utils::HashMap,
 };
 use cosmos_core::{
-    block::{Block, ALL_BLOCK_FACES},
+    block::{block_face::ALL_BLOCK_FACES, Block},
     logic::BlockLogicData,
     registry::{identifiable::Identifiable, many_to_one::ManyToOneRegistry, Registry},
     structure::{

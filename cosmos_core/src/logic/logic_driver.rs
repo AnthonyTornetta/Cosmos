@@ -7,7 +7,7 @@ use bevy::{
 };
 
 use crate::{
-    block::{Block, BlockDirection, BlockRotation, ALL_BLOCK_FACES},
+    block::{block_direction::BlockDirection, block_face::ALL_BLOCK_FACES, block_rotation::BlockRotation, Block},
     registry::Registry,
     structure::{coordinates::BlockCoordinate, structure_block::StructureBlock, Structure},
 };
@@ -84,11 +84,11 @@ impl LogicDriver {
     ) {
         // Adding input faces as consumers to their connected group, or a new group if there is no connected group.
         for input_face in logic_block.input_faces() {
-            println!(
-                "Adding input port on local face: {:?} (pointing {:?})",
-                input_face,
-                rotation.direction_of(input_face)
-            );
+            // println!(
+            //     "Adding input port on local face: {:?} (pointing {:?})",
+            //     input_face,
+            //     rotation.direction_of(input_face)
+            // );
             self.port_placed(
                 coords,
                 rotation.direction_of(input_face),
@@ -104,11 +104,11 @@ impl LogicDriver {
 
         // Adding output faces as consumers to their connected group, or a new group if there is no connected group.
         for output_face in logic_block.output_faces() {
-            println!(
-                "Adding output port on local face: {:?} (pointing {:?})",
-                output_face,
-                rotation.direction_of(output_face)
-            );
+            // println!(
+            //     "Adding output port on local face: {:?} (pointing {:?})",
+            //     output_face,
+            //     rotation.direction_of(output_face)
+            // );
             self.port_placed(
                 coords,
                 rotation.direction_of(output_face),

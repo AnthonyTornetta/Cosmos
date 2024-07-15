@@ -9,8 +9,9 @@ use bevy_renet::renet::RenetServer;
 use cosmos_core::{
     block::{
         block_events::BlockInteractEvent,
+        block_face::BlockFace,
         multiblock::reactor::{Reactor, ReactorBounds, ReactorPowerGenerationBlock, Reactors},
-        Block, BlockFace,
+        Block,
     },
     entities::player::Player,
     netty::{cosmos_encoder, server_reliable_messages::ServerReliableMessages, NettyChannelServer},

@@ -18,7 +18,7 @@ use bevy::{
 };
 use bevy_app_compute::prelude::AppComputeWorker;
 use cosmos_core::{
-    block::{Block, BlockFace},
+    block::{block_face::BlockFace, Block},
     ecs::mut_events::{EventWriterCustomSend, MutEvent, MutEventsCommand},
     physics::location::Location,
     registry::Registry,

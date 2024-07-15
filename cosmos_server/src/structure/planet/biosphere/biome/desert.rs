@@ -6,7 +6,7 @@ use bevy::{
     prelude::{App, EventWriter, OnExit, Res, ResMut},
 };
 use cosmos_core::{
-    block::{Block, BlockFace},
+    block::{block_face::BlockFace, Block},
     events::block_events::BlockChangedEvent,
     physics::location::Location,
     registry::{identifiable::Identifiable, Registry},

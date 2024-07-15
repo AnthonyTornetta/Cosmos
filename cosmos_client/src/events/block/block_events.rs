@@ -5,7 +5,7 @@ use bevy_renet::renet::RenetClient;
 use cosmos_core::{
     block::{
         block_events::{BlockInteractEvent, StructureBlockPair},
-        BlockRotation,
+        block_rotation::BlockRotation,
     },
     netty::{client_reliable_messages::ClientReliableMessages, cosmos_encoder, sync::mapping::NetworkMapping, NettyChannelClient},
     structure::structure_block::StructureBlock,

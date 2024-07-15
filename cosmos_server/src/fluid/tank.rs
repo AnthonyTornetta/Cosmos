@@ -9,7 +9,7 @@ use bevy::{
     utils::{hashbrown::HashSet, HashMap},
 };
 use cosmos_core::{
-    block::{block_events::BlockEventsSet, block_update::BlockUpdate, data::BlockData, Block, BlockFace},
+    block::{block_events::BlockEventsSet, block_face::BlockFace, block_update::BlockUpdate, data::BlockData, Block},
     ecs::mut_events::MutEvent,
     events::block_events::{BlockChangedEvent, BlockDataChangedEvent, BlockDataSystemParams},
     fluid::data::{BlockFluidData, FluidTankBlock, StoredFluidData},

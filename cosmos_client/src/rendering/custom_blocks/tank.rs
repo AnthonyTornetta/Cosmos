@@ -18,7 +18,7 @@ use bevy::{
     utils::HashMap,
 };
 use cosmos_core::{
-    block::{Block, BlockDirection, ALL_BLOCK_FACES},
+    block::{block_direction::BlockDirection, block_face::ALL_BLOCK_FACES, Block},
     ecs::NeedsDespawned,
     fluid::{
         data::{BlockFluidData, FluidTankBlock},

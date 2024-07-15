@@ -7,7 +7,7 @@ use std::ops::{Add, Neg, Sub};
 use bevy::reflect::Reflect;
 use serde::{Deserialize, Serialize};
 
-use crate::block::BlockDirection;
+use crate::block::block_direction::BlockDirection;
 
 use crate::utils::array_utils;
 

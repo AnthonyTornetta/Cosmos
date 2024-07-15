@@ -7,7 +7,7 @@ use bevy::{
 };
 
 use crate::{
-    block::{Block, BlockDirection},
+    block::{block_direction::BlockDirection, Block},
     registry::{identifiable::Identifiable, Registry},
     structure::{coordinates::BlockCoordinate, structure_block::StructureBlock, Structure},
 };
@@ -152,18 +152,18 @@ impl LogicGraph {
         };
 
         let encountered_face = structure.block_rotation(coords).block_face_pointing(encountered_from_direction);
-        println!("Rotation: {:?}", structure.block_rotation(coords));
-        let name = block.unlocalized_name();
-        println!("Encountered {name} through global face: {encountered_face} (pointing {encountered_from_direction}).");
+        // println!("Rotation: {:?}", structure.block_rotation(coords));
+        // let name = block.unlocalized_name();
+        // println!("Encountered {name} through global face: {encountered_face} (pointing {encountered_from_direction}).");
         match logic_block.connection_on(encountered_face) {
             Some(LogicConnection::Port(PortType::Input)) => {
-                println!("Input Port!");
+                // println!("Input Port!");
                 self.input_port_group_id
                     .get(&Port::new(coords, encountered_from_direction))
                     .copied()
             }
             Some(LogicConnection::Port(PortType::Output)) => {
-                println!("Output Port!");
+                // println!("Output Port!");
                 self.output_port_group_id
                     .get(&Port::new(coords, encountered_from_direction))
                     .copied()
@@ -296,7 +296,7 @@ impl LogicGraph {
         };
 
         let port = Port::new(coords, direction);
-        println!("Removing Port: {coords:?}, {direction:?}\n");
+        // println!("Removing Port: {coords:?}, {direction:?}\n");
         let &group_id = match port_type {
             PortType::Input => &mut self.input_port_group_id,
             PortType::Output => &mut self.output_port_group_id,
@@ -493,8 +493,8 @@ impl LogicGraph {
     }
 
     pub fn update_producer(&mut self, port: Port, signal: i32, evw_logic_input: &mut EventWriter<LogicInputEvent>, entity: Entity) {
-        let id = self.output_port_group_id.get(&port);
-        println!("Output Port ID: {id:?}");
+        // let id = self.output_port_group_id.get(&port);
+        // println!("Output Port ID: {id:?}");
         self.mut_group_of(&port, PortType::Output)
             .expect("Updated logic port should have a logic group ID.")
             .update_producer(port, signal, evw_logic_input, entity);

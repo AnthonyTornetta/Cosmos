@@ -23,7 +23,7 @@ use bevy_rapier3d::{
     plugin::RapierContext,
 };
 use cosmos_core::{
-    block::{Block, BlockFace},
+    block::{block_face::BlockFace, Block},
     events::block_events::BlockChangedEvent,
     physics::structure_physics::ChunkPhysicsPart,
     registry::{identifiable::Identifiable, Registry},

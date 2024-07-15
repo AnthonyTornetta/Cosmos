@@ -4,7 +4,7 @@ use crate::{init::init_world::ServerSeed, state::GameState, structure::planet::b
 use bevy::{prelude::*, utils::hashbrown::HashSet};
 use bevy_app_compute::prelude::*;
 use cosmos_core::{
-    block::{Block, BlockFace},
+    block::{block_face::BlockFace, Block},
     ecs::mut_events::{EventWriterCustomSend, MutEvent, MutEventsCommand},
     physics::location::Location,
     registry::{identifiable::Identifiable, Registry},

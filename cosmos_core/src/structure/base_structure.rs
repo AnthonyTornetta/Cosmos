@@ -14,9 +14,9 @@ use bevy::{
 };
 use serde::{Deserialize, Serialize};
 
-use crate::{block::ALL_BLOCK_DIRECTIONS, events::block_events::BlockDataChangedEvent};
+use crate::{block::block_direction::ALL_BLOCK_DIRECTIONS, events::block_events::BlockDataChangedEvent};
 use crate::{
-    block::{blocks::AIR_BLOCK_ID, data::BlockData, Block, BlockRotation},
+    block::{block_rotation::BlockRotation, blocks::AIR_BLOCK_ID, data::BlockData, Block},
     physics::location::Location,
     registry::Registry,
 };

@@ -15,7 +15,7 @@ use bevy::utils::HashMap;
 use serde::{Deserialize, Serialize};
 
 use crate::block::data::{BlockData, BlockDataIdentifier};
-use crate::block::{Block, BlockFace, BlockRotation, BlockSubRotation};
+use crate::block::{block_face::BlockFace, block_rotation::BlockRotation, block_rotation::BlockSubRotation, Block};
 use crate::ecs::NeedsDespawned;
 use crate::events::block_events::{BlockDataChangedEvent, BlockDataSystemParams};
 use crate::registry::identifiable::Identifiable;
@@ -560,7 +560,10 @@ impl BlockInfo {
         let block_up = BlockFace::from_index((self.0 & 0b111) as usize);
         let sub_rotation = BlockSubRotation::from_index(((self.0 >> 3) & 0b11) as usize);
 
-        BlockRotation { face_pointing_pos_y: block_up, sub_rotation }
+        BlockRotation {
+            face_pointing_pos_y: block_up,
+            sub_rotation,
+        }
     }
 
     /// Sets the rotation data

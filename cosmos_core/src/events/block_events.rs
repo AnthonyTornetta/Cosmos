@@ -1,6 +1,6 @@
 //! Events that are related to blocks
 
-use crate::block::BlockRotation;
+use crate::block::block_rotation::BlockRotation;
 use crate::structure::structure_block::StructureBlock;
 use bevy::ecs::event::EventWriter;
 use bevy::ecs::system::Commands;

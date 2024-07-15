@@ -8,7 +8,7 @@ use bevy::{
     render::color::Color,
 };
 use cosmos_core::{
-    block::{Block, BlockDirection, BlockFace, BlockRotation},
+    block::{block_direction::BlockDirection, block_face::BlockFace, block_rotation::BlockRotation, Block},
     events::block_events::BlockChangedEvent,
     registry::Registry,
     structure::{

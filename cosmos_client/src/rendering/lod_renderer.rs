@@ -22,7 +22,7 @@ use bevy::{
 use futures_lite::future;
 
 use cosmos_core::{
-    block::{Block, BlockFace},
+    block::{block_face::BlockFace, Block},
     ecs::NeedsDespawned,
     registry::{
         identifiable::Identifiable,

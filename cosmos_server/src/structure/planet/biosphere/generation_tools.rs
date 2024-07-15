@@ -2,7 +2,7 @@
 
 use bevy::prelude::EventWriter;
 use cosmos_core::{
-    block::{Block, BlockFace, BlockRotation},
+    block::{block_face::BlockFace, block_rotation::BlockRotation, Block},
     events::block_events::BlockChangedEvent,
     registry::Registry,
     structure::{

@@ -11,7 +11,7 @@ use bevy::{
     },
 };
 use cosmos_core::{
-    block::{Block, BlockFace},
+    block::{block_face::BlockFace, Block},
     registry::{
         identifiable::Identifiable,
         many_to_one::{self, ManyToOneRegistry, ReadOnlyManyToOneRegistry},

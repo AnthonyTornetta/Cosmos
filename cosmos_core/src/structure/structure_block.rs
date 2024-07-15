@@ -7,7 +7,7 @@ use bevy::{
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    block::{Block, BlockRotation},
+    block::{block_rotation::BlockRotation, Block},
     registry::Registry,
 };
 

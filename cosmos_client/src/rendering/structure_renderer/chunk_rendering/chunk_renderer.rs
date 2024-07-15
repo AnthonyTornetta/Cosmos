@@ -7,7 +7,7 @@ use bevy::log::warn;
 use bevy::prelude::{App, Deref, DerefMut, Entity, Rect, Resource, Vec3};
 use bevy::tasks::Task;
 use bevy::utils::hashbrown::HashMap;
-use cosmos_core::block::{Block, BlockDirection};
+use cosmos_core::block::{block_direction::BlockDirection, Block};
 use cosmos_core::registry::identifiable::Identifiable;
 use cosmos_core::registry::many_to_one::ManyToOneRegistry;
 use cosmos_core::registry::Registry;
@@ -283,10 +283,10 @@ impl ChunkRenderer {
                     .iter()
                     .map(|direction| (*direction, block_rotation.block_face_pointing(*direction)))
                 {
-                    println!(
-                        "{:?}: Block face {:?} rendered pointing {:?} due to rotation {:?}",
-                        coords, face, direction, block_rotation
-                    );
+                    // println!(
+                    //     "{:?}: Block face {:?} rendered pointing {:?} due to rotation {:?}",
+                    //     coords, face, direction, block_rotation
+                    // );
 
                     let mut one_mesh_only = false;
 
