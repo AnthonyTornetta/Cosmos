@@ -17,7 +17,10 @@ pub mod sync;
 pub mod system_sets;
 pub mod world_tick;
 
-use bevy::prelude::{App, Component};
+use bevy::{
+    prelude::{App, Component},
+    state::state::States,
+};
 use bevy_renet2::renet2::{ChannelConfig, ConnectionConfig, SendType};
 use local_ip_address::local_ip;
 use std::time::Duration;
@@ -236,8 +239,8 @@ pub fn get_local_ipaddress() -> String {
     local_ip().map(|x| x.to_string()).unwrap_or("127.0.0.1".to_owned())
 }
 
-pub(super) fn register(app: &mut App) {
+pub(super) fn register<T: States>(app: &mut App, playing_state: T) {
     sync::register(app);
     world_tick::register(app);
-    system_sets::register(app);
+    system_sets::register(app, playing_state);
 }

@@ -18,7 +18,7 @@ use cosmos_core::{
         structure_block::StructureBlock,
         systems::{
             line_system::{Line, LineBlocks, LineColorBlock, LineColorProperty, LineProperty, LinePropertyCalculator, LineSystem},
-            StructureSystemType, StructureSystems,
+            StructureSystemType, StructureSystems, StructureSystemsSet,
         },
         Structure,
     },
@@ -26,7 +26,7 @@ use cosmos_core::{
 
 use crate::state::GameState;
 
-use super::{BlockStructureSystem, StructureSystemsSet};
+use super::BlockStructureSystem;
 
 fn block_update_system<T: LineProperty, S: LinePropertyCalculator<T>>(
     mut event: EventReader<BlockChangedEvent>,

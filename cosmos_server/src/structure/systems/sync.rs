@@ -18,12 +18,10 @@ use cosmos_core::{
         NoSendEntity,
     },
     registry::{identifiable::Identifiable, Registry},
-    structure::systems::{sync::SyncableSystem, StructureSystem, StructureSystemType, StructureSystems, SystemActive},
+    structure::systems::{sync::SyncableSystem, StructureSystem, StructureSystemType, StructureSystems, StructureSystemsSet, SystemActive},
 };
 
 use crate::{registry::sync_registry, state::GameState};
-
-use super::StructureSystemsSet;
 
 fn sync_system<T: SyncableSystem>(
     mut server: ResMut<RenetServer>,

@@ -11,7 +11,7 @@ use cosmos_core::{
         loading::StructureLoadingSet,
         systems::{
             camera_system::{CameraBlocks, CameraSystem},
-            StructureSystemType, StructureSystems,
+            StructureSystemType, StructureSystems, StructureSystemsSet,
         },
         Structure,
     },
@@ -19,7 +19,7 @@ use cosmos_core::{
 
 use crate::state::GameState;
 
-use super::{sync::register_structure_system, StructureSystemsSet};
+use super::sync::register_structure_system;
 
 fn register_camera_blocks(blocks: Res<Registry<Block>>, mut camera_blocks: ResMut<CameraBlocks>) {
     if let Some(block) = blocks.from_id("cosmos:camera") {

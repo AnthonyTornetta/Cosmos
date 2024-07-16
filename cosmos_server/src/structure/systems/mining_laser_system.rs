@@ -22,7 +22,7 @@ use cosmos_core::{
             energy_storage_system::EnergyStorageSystem,
             line_system::LineBlocks,
             mining_laser_system::{MiningLaserProperty, MiningLaserPropertyCalculator, MiningLaserSystem},
-            StructureSystem, StructureSystems, SystemActive,
+            StructureSystem, StructureSystems, StructureSystemsSet, SystemActive,
         },
         Structure,
     },
@@ -30,7 +30,7 @@ use cosmos_core::{
 
 use crate::state::GameState;
 
-use super::{line_system::add_line_system, sync::register_structure_system, StructureSystemsSet};
+use super::{line_system::add_line_system, sync::register_structure_system};
 
 const BEAM_MAX_RANGE: f32 = 250.0;
 const BREAK_DECAY_RATIO: f32 = 1.5;

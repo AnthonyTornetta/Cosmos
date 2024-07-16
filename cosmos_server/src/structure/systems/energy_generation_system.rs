@@ -11,7 +11,7 @@ use cosmos_core::{
         systems::{
             energy_generation_system::{EnergyGenerationBlocks, EnergyGenerationProperty, EnergyGenerationSystem},
             energy_storage_system::EnergyStorageSystem,
-            StructureSystem, StructureSystemType, StructureSystems,
+            StructureSystem, StructureSystemType, StructureSystems, StructureSystemsSet,
         },
         Structure,
     },
@@ -19,7 +19,7 @@ use cosmos_core::{
 
 use crate::state::GameState;
 
-use super::{sync::register_structure_system, StructureSystemsSet};
+use super::sync::register_structure_system;
 
 fn register_energy_blocks(blocks: Res<Registry<Block>>, mut generation: ResMut<EnergyGenerationBlocks>) {
     if let Some(block) = blocks.from_id("cosmos:reactor") {

@@ -29,22 +29,7 @@ pub trait BlockStructureSystem<T> {
     fn remove_block(&mut self, sb: &StructureBlock);
 }
 
-#[derive(SystemSet, Debug, Hash, PartialEq, Eq, Clone)]
-pub enum StructureSystemsSet {
-    InitSystems,
-    UpdateSystems,
-}
-
 pub(super) fn register(app: &mut App) {
-    app.configure_sets(
-        Update,
-        (
-            StructureSystemsSet::InitSystems.in_set(StructureLoadingSet::StructureLoaded),
-            StructureSystemsSet::UpdateSystems,
-        )
-            .chain(),
-    );
-
     sync::register(app);
     dock_system::register(app);
     line_system::register(app);

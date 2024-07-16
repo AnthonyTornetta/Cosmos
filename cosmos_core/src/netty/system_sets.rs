@@ -3,6 +3,7 @@
 use bevy::{
     app::{App, Update},
     ecs::schedule::{IntoSystemSetConfigs, SystemSet},
+    state::{condition::in_state, state::States},
 };
 
 use crate::physics::location::CosmosBundleSet;
@@ -24,18 +25,18 @@ pub enum NetworkingSystemsSet {
     SendChangedComponents,
 }
 
-pub(super) fn register(app: &mut App) {
+pub(super) fn register<T: States>(app: &mut App, playing_state: T) {
     #[cfg(feature = "server")]
     {
         app.configure_sets(
             Update,
             (
-                NetworkingSystemsSet::ReceiveMessages,
-                NetworkingSystemsSet::ProcessReceivedMessages,
+                (NetworkingSystemsSet::ReceiveMessages, NetworkingSystemsSet::ProcessReceivedMessages).chain(),
+                // .before(CosmosBundleSet::HandleCosmosBundles),
                 NetworkingSystemsSet::Between,
-                NetworkingSystemsSet::SendChangedComponents,
+                NetworkingSystemsSet::SendChangedComponents.after(CosmosBundleSet::HandleCosmosBundles),
             )
-                .after(CosmosBundleSet::HandleCosmosBundles)
+                .run_if(in_state(playing_state.clone()))
                 .chain(),
         );
     }
@@ -45,12 +46,12 @@ pub(super) fn register(app: &mut App) {
         app.configure_sets(
             Update,
             (
-                NetworkingSystemsSet::ReceiveMessages,
-                NetworkingSystemsSet::ProcessReceivedMessages,
+                (NetworkingSystemsSet::ReceiveMessages, NetworkingSystemsSet::ProcessReceivedMessages).chain(),
+                // .before(CosmosBundleSet::HandleCosmosBundles),
                 NetworkingSystemsSet::Between,
-                NetworkingSystemsSet::SendChangedComponents,
+                NetworkingSystemsSet::SendChangedComponents.after(CosmosBundleSet::HandleCosmosBundles),
             )
-                .before(CosmosBundleSet::HandleCosmosBundles)
+                .run_if(in_state(playing_state))
                 .chain(),
         );
     }

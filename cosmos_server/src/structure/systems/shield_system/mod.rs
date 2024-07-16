@@ -44,7 +44,7 @@ use cosmos_core::{
         systems::{
             energy_storage_system::EnergyStorageSystem,
             shield_system::{ShieldGeneratorBlocks, ShieldGeneratorProperty, ShieldProjectorBlocks, ShieldProjectorProperty, ShieldSystem},
-            StructureSystem, StructureSystemType, StructureSystems,
+            StructureSystem, StructureSystemType, StructureSystems, StructureSystemsSet,
         },
         Structure,
     },
@@ -61,7 +61,7 @@ use crate::{
     state::GameState,
 };
 
-use super::{sync::register_structure_system, StructureSystemsSet};
+use super::sync::register_structure_system;
 
 mod explosion;
 mod laser;

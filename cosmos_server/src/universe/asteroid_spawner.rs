@@ -9,7 +9,8 @@ use bevy::{
 };
 use cosmos_core::{
     entities::player::Player,
-    physics::location::{Location, Sector, SystemUnit, SECTOR_DIMENSIONS},
+    netty::system_sets::NetworkingSystemsSet,
+    physics::location::{CosmosBundleSet, Location, Sector, SystemUnit, SECTOR_DIMENSIONS},
     structure::{
         asteroid::{asteroid_builder::TAsteroidBuilder, loading::AsteroidNeedsCreated, Asteroid, ASTEROID_LOAD_RADIUS},
         coordinates::ChunkCoordinate,
@@ -132,6 +133,7 @@ pub(super) fn register(app: &mut App) {
     app.add_systems(
         Update,
         spawn_asteroid
+            .in_set(NetworkingSystemsSet::Between)
             .run_if(on_timer(Duration::from_secs(1)))
             .run_if(in_state(GameState::Playing)),
     )

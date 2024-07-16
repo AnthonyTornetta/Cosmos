@@ -1,7 +1,5 @@
 //! Contains the various types of block events
 
-use std::borrow::Borrow;
-
 use bevy::prelude::*;
 use serde::{Deserialize, Serialize};
 
@@ -434,6 +432,8 @@ pub enum BlockEventsSet {
     SendEventsForThisFrame,
     /// In this set, you should put systems that can be cancel/remove events.
     PreProcessEvents,
+    /// Block updates are sent here
+    SendBlockUpdateEvents,
     /// All block events processing happens here - during this set the block is NOT guarenteed to be placed yet or have its data created
     ProcessEvents,
     /// If your event processing relies on the block being placed, run it in this set
@@ -448,7 +448,9 @@ pub(super) fn register(app: &mut App) {
     app.configure_sets(
         Update,
         (
+            BlockEventsSet::SendEventsForThisFrame,
             BlockEventsSet::PreProcessEvents,
+            BlockEventsSet::SendBlockUpdateEvents,
             BlockEventsSet::ProcessEvents,
             BlockEventsSet::ProcessEventsPostPlacement,
             BlockEventsSet::PostProcessEvents,
@@ -463,7 +465,8 @@ pub(super) fn register(app: &mut App) {
         .add_event::<BlockInteractEvent>()
         .add_systems(
             Update,
-            handle_block_break_events
+            (handle_block_break_events, handle_block_place_events)
+                .chain()
                 .in_set(ItemStackSystemSet::CreateDataEntity)
                 .in_set(BlockEventsSet::ProcessEvents),
         );

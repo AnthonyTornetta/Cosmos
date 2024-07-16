@@ -13,8 +13,8 @@ use cosmos_core::{
     ecs::bundles::CosmosPbrBundle,
     entities::player::Player,
     netty::{
-        cosmos_encoder, server_laser_cannon_system_messages::ServerStructureSystemMessages, sync::ComponentSyncingSet,
-        system_sets::NetworkingSystemsSet, NettyChannelServer,
+        cosmos_encoder, server_laser_cannon_system_messages::ServerStructureSystemMessages, system_sets::NetworkingSystemsSet,
+        NettyChannelServer,
     },
     persistence::LoadingDistance,
     physics::{

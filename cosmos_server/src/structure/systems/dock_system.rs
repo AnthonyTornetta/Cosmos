@@ -34,7 +34,7 @@ use cosmos_core::{
         shields::SHIELD_COLLISION_GROUP,
         systems::{
             dock_system::{DockSystem, Docked},
-            StructureSystem, StructureSystemType, StructureSystems, SystemActive,
+            StructureSystem, StructureSystemType, StructureSystems, StructureSystemsSet, SystemActive,
         },
         Structure,
     },
@@ -43,7 +43,7 @@ use cosmos_core::{
 
 use crate::state::GameState;
 
-use super::{sync::register_structure_system, StructureSystemsSet};
+use super::sync::register_structure_system;
 
 const MAX_DOCK_CHECK: f32 = 1.3;
 

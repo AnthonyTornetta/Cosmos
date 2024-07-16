@@ -19,7 +19,7 @@ use cosmos_core::{
             energy_storage_system::EnergyStorageSystem,
             laser_cannon_system::{LaserCannonCalculator, LaserCannonProperty, LaserCannonSystem, SystemCooldown},
             line_system::LineBlocks,
-            StructureSystem, StructureSystems, SystemActive,
+            StructureSystem, StructureSystems, StructureSystemsSet, SystemActive,
         },
         Structure,
     },
@@ -27,7 +27,7 @@ use cosmos_core::{
 
 use crate::state::GameState;
 
-use super::{line_system::add_line_system, sync::register_structure_system, StructureSystemsSet};
+use super::{line_system::add_line_system, sync::register_structure_system};
 
 fn on_add_laser(mut commands: Commands, query: Query<Entity, Added<LaserCannonSystem>>) {
     for ent in query.iter() {
