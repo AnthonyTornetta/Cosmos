@@ -25,7 +25,10 @@ use crate::persistence::{
     EntityId, SaveFileIdentifier, SerializedData,
 };
 
-use super::{generation::planet_generator::ChunkNeedsGenerated, server_planet_builder::ServerPlanetBuilder};
+use super::{
+    biosphere::biosphere_generation::BiosphereGenerationSet, generation::planet_generator::ChunkNeedsGenerated,
+    server_planet_builder::ServerPlanetBuilder,
+};
 
 #[derive(Debug, Serialize, Deserialize)]
 struct PlanetSaveData {
@@ -209,7 +212,11 @@ pub(super) fn register(app: &mut App) {
     .add_systems(SAVING_SCHEDULE, on_save_structure.in_set(SavingSystemSet::DoSaving))
     .add_systems(
         LOADING_SCHEDULE,
-        (on_load_structure, load_chunk)
+        (
+            on_load_structure,
+            // This will not interfere with the generation of chunks, so their relative ordering does not matter.
+            load_chunk.ambiguous_with(BiosphereGenerationSet::GenerateChunkFeatures),
+        )
             .chain()
             .in_set(LoadingSystemSet::DoLoading)
             .in_set(StructureTypeSet::Planet),

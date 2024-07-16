@@ -22,7 +22,6 @@ pub mod blocks;
 pub mod data;
 pub mod gravity_well;
 pub mod multiblock;
-pub mod storage;
 
 #[derive(Reflect, Debug, Eq, PartialEq, Clone, Copy, Hash)]
 /// Represents different properties a block can has
@@ -830,7 +829,6 @@ pub(super) fn register<T: States + Clone + Copy>(
     block_events::register(app);
     multiblock::register(app, post_loading_state, playing_state);
     block_update::register(app);
-    storage::register(app);
     gravity_well::register(app);
     data::register(app);
 
