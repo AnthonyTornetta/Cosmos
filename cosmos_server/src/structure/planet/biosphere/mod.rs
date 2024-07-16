@@ -5,8 +5,8 @@ use std::marker::PhantomData;
 use bevy::{
     log::{info, warn},
     prelude::{
-        in_state, Added, App, Commands, Component, Entity, Event, EventReader, EventWriter, IntoSystemConfigs, Query, Res, ResMut,
-        Resource, Startup, SystemSet, Update, With, Without,
+        in_state, Added, App, Commands, Component, Entity, Event, EventReader, EventWriter, IntoSystemConfigs, IntoSystemSetConfigs, Query,
+        Res, ResMut, Resource, Startup, SystemSet, Update, With, Without,
     },
     reflect::TypePath,
     state::state::OnEnter,
@@ -14,7 +14,7 @@ use bevy::{
 };
 use bevy_renet2::renet2::RenetServer;
 use cosmos_core::{
-    netty::{cosmos_encoder, server_reliable_messages::ServerReliableMessages, NettyChannelServer},
+    netty::{cosmos_encoder, server_reliable_messages::ServerReliableMessages, system_sets::NetworkingSystemsSet, NettyChannelServer},
     physics::location::Location,
     registry::Registry,
     structure::{
@@ -74,6 +74,12 @@ pub trait BiosphereMarkerComponent: Component + Default + Clone + Copy + TypePat
 struct NeedsBiosphereEvent {
     biosphere_id: String,
     entity: Entity,
+}
+
+#[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
+enum NeedsBiosphereSet {
+    SendEvent,
+    AddBiosphere,
 }
 
 /// This has to be redone.
@@ -180,7 +186,8 @@ pub fn register_biosphere<T: BiosphereMarkerComponent + Default + Clone, E: Send
                         }
                     }
                 })
-                .in_set(LoadingSystemSet::DoLoading),
+                .in_set(LoadingSystemSet::DoLoading)
+                .in_set(NeedsBiosphereSet::AddBiosphere),
                 // Checks if any blocks need generated for this biosphere
                 ((
                     biosphere_generation::generate_planet::<T, E>
@@ -310,7 +317,21 @@ pub(super) fn register(app: &mut App) {
 
     app.add_event::<NeedsBiosphereEvent>()
         .insert_resource(BiosphereTemperatureRegistry::default())
-        .add_systems(Update, (on_connect, add_biosphere).run_if(in_state(GameState::Playing)));
+        .add_systems(
+            Update,
+            (
+                on_connect.in_set(NetworkingSystemsSet::SendChangedComponents),
+                add_biosphere.in_set(NeedsBiosphereSet::SendEvent),
+            )
+                .run_if(in_state(GameState::Playing)),
+        );
+
+    app.configure_sets(
+        Update,
+        (NeedsBiosphereSet::SendEvent, NeedsBiosphereSet::AddBiosphere)
+            .chain()
+            .in_set(NetworkingSystemsSet::Between),
+    );
 
     biosphere_generation::register(app);
     biome::register(app);
