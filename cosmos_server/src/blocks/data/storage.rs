@@ -12,7 +12,7 @@ use bevy::{
     prelude::Event,
 };
 use cosmos_core::{
-    block::{data::BlockData, Block},
+    block::{block_events::BlockEventsSet, data::BlockData, Block},
     events::block_events::{BlockChangedEvent, BlockDataSystemParams},
     inventory::Inventory,
     netty::system_sets::NetworkingSystemsSet,
@@ -122,15 +122,17 @@ fn populate_inventory(
 pub(super) fn register(app: &mut App) {
     app.add_systems(
         Update,
-        (on_add_storage, populate_inventory).chain().in_set(NetworkingSystemsSet::Between),
+        (
+            on_add_storage.in_set(BlockEventsSet::ProcessEventsPostPlacement),
+            populate_inventory,
+        )
+            .chain()
+            .in_set(NetworkingSystemsSet::Between),
     )
     .add_systems(
         LOADING_SCHEDULE,
         // Need structure to be populated first, thus `DoneLoadingBlueprints` instead of `DoLoadingBlueprints``
-        on_load_blueprint_storage
-            .in_set(LoadingBlueprintSystemSet::DoneLoadingBlueprints)
-            .after(on_add_storage)
-            .after(populate_inventory),
+        on_load_blueprint_storage.in_set(LoadingBlueprintSystemSet::DoneLoadingBlueprints),
     )
     .add_event::<PopulateBlockInventoryEvent>();
 }
