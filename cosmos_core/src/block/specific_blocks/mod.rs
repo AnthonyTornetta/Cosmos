@@ -9,6 +9,7 @@ pub mod logic_on;
 pub mod not_gate;
 pub mod or_gate;
 pub mod wire;
+pub mod xor_gate;
 
 pub(super) fn register<T: States + Clone + Copy>(app: &mut App, post_loading_state: T) {
     gravity_well::register(app);
@@ -18,4 +19,5 @@ pub(super) fn register<T: States + Clone + Copy>(app: &mut App, post_loading_sta
     and_gate::register(app, post_loading_state);
     or_gate::register(app, post_loading_state);
     not_gate::register(app, post_loading_state);
+    xor_gate::register(app, post_loading_state);
 }
