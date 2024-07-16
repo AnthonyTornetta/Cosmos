@@ -3,10 +3,12 @@
 use std::fmt::Display;
 
 use bevy::{
-    prelude::{App, Component, Query, Update, Vec3, Without},
+    prelude::{App, Component, IntoSystemConfigs, Query, Update, Vec3, Without},
     reflect::Reflect,
 };
 use serde::{Deserialize, Serialize};
+
+use crate::netty::system_sets::NetworkingSystemsSet;
 
 use super::pilot::Pilot;
 
@@ -50,5 +52,5 @@ fn clear_movement_when_no_pilot(mut query: Query<&mut ShipMovement, Without<Pilo
 
 pub(super) fn register(app: &mut App) {
     app.register_type::<ShipMovement>()
-        .add_systems(Update, clear_movement_when_no_pilot);
+        .add_systems(Update, clear_movement_when_no_pilot.in_set(NetworkingSystemsSet::Between));
 }

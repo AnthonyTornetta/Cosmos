@@ -8,6 +8,7 @@ use cosmos_core::{
     block::{block_events::BlockEventsSet, data::BlockData},
     events::block_events::{BlockChangedEvent, BlockDataSystemParams},
     fluid::data::{BlockFluidData, FluidItemData, FluidTankBlock},
+    netty::system_sets::NetworkingSystemsSet,
     structure::Structure,
 };
 use interact_fluid::FluidInteractionSet;
@@ -54,6 +55,8 @@ pub(super) fn register(app: &mut App) {
     app.add_systems(
         Update,
         on_place_tank
+            .in_set(NetworkingSystemsSet::Between)
+            .in_set(BlockEventsSet::SendEventsForThisFrame)
             .in_set(FluidInteractionSet::InteractWithFluidBlocks)
             .ambiguous_with(FluidInteractionSet::InteractWithFluidBlocks),
     );

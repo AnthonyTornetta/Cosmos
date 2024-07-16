@@ -20,7 +20,10 @@ use cosmos_core::{
     structure::{structure_block::StructureBlock, Structure},
 };
 
-use crate::persistence::loading::{LoadingBlueprintSystemSet, NeedsBlueprintLoaded, LOADING_SCHEDULE};
+use crate::{
+    fluid::interact_fluid::FluidInteractionSet,
+    persistence::loading::{LoadingBlueprintSystemSet, NeedsBlueprintLoaded, LOADING_SCHEDULE},
+};
 
 #[derive(Event, Debug)]
 /// Sent whenever an entity needs an inventory populated.
@@ -123,8 +126,10 @@ pub(super) fn register(app: &mut App) {
     app.add_systems(
         Update,
         (
-            on_add_storage.in_set(BlockEventsSet::ProcessEventsPostPlacement),
-            populate_inventory,
+            on_add_storage
+                .in_set(BlockEventsSet::ProcessEventsPostPlacement)
+                .ambiguous_with(FluidInteractionSet::InteractWithFluidBlocks),
+            populate_inventory.in_set(BlockEventsSet::SendEventsForNextFrame),
         )
             .chain()
             .in_set(NetworkingSystemsSet::Between),

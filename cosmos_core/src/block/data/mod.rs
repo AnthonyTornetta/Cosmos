@@ -1,7 +1,7 @@
 //! Handles the backbone for blocks that store their own data, such as containers
 
 use bevy::{
-    app::{App, Update},
+    app::{App, First, Update},
     core::Name,
     ecs::{
         component::Component,
@@ -69,5 +69,5 @@ fn name_block_data(query: Query<(Entity, &BlockData), Without<Name>>, mut comman
 pub(super) fn register(app: &mut App) {
     persistence::register(app);
 
-    app.add_systems(Update, name_block_data).register_type::<BlockData>();
+    app.add_systems(First, name_block_data).register_type::<BlockData>();
 }

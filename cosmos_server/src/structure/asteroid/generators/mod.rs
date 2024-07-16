@@ -2,6 +2,7 @@
 
 use bevy::prelude::*;
 use cosmos_core::{
+    netty::system_sets::NetworkingSystemsSet,
     physics::location::Location,
     structure::{asteroid::Asteroid, Structure},
 };
@@ -150,7 +151,7 @@ pub(super) fn register(app: &mut App) {
     icy_asteroid::register(app);
     molten_asteroid::register(app);
 
-    app.add_systems(Update, add_asteroid_generator)
+    app.add_systems(Update, add_asteroid_generator.in_set(NetworkingSystemsSet::Between))
         .init_resource::<AsteroidTemperatureRegistry>()
         .add_event::<AsteroidNeedsGeneratorEvent>();
 }

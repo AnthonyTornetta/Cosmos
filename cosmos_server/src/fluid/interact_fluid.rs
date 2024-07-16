@@ -32,6 +32,7 @@ use cosmos_core::{
         Inventory,
     },
     item::Item,
+    netty::system_sets::NetworkingSystemsSet,
     registry::{identifiable::Identifiable, Registry},
     structure::Structure,
 };
@@ -416,10 +417,7 @@ pub enum FluidInteractionSet {
 }
 
 pub(super) fn register(app: &mut App) {
-    app.configure_sets(
-        Update,
-        FluidInteractionSet::InteractWithFluidBlocks.in_set(BlockEventsSet::ProcessEventsPostPlacement),
-    );
+    app.configure_sets(Update, FluidInteractionSet::InteractWithFluidBlocks);
 
     app.add_systems(OnEnter(GameState::PostLoading), (register_fluid_holder_items, fill_tank_registry))
         .add_systems(
@@ -427,10 +425,12 @@ pub(super) fn register(app: &mut App) {
             (
                 on_interact_with_tank
                     .in_set(ItemStackSystemSet::CreateDataEntity)
+                    .in_set(BlockEventsSet::ProcessEventsPostPlacement)
                     .ambiguous_with(FluidInteractionSet::InteractWithFluidBlocks),
                 add_item_fluid_data.in_set(ItemStackSystemSet::FillDataEntity),
                 on_interact_with_fluid.after(ItemStackSystemSet::FillDataEntity),
             )
+                .in_set(NetworkingSystemsSet::Between)
                 .in_set(FluidInteractionSet::InteractWithFluidBlocks),
         );
 }
