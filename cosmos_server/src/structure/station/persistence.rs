@@ -6,7 +6,7 @@ use cosmos_core::{
         events::StructureLoadedEvent,
         station::{station_builder::TStationBuilder, Station},
         structure_iterator::ChunkIteratorResult,
-        ChunkInitEvent, Structure,
+        ChunkInitEvent, Structure, StructureTypeSet,
     },
 };
 
@@ -16,10 +16,7 @@ use crate::{
         saving::{BlueprintingSystemSet, NeedsBlueprinted, NeedsSaved, SavingSystemSet, SAVING_SCHEDULE},
         SerializedData,
     },
-    structure::{
-        persistence::{chunk::AllBlockData, save_structure},
-        StructureTypesBlueprintingSystemSet, StructureTypesLoadingSystemSet,
-    },
+    structure::persistence::{chunk::AllBlockData, save_structure},
 };
 
 use super::server_station_builder::ServerStationBuilder;
@@ -152,13 +149,15 @@ pub(super) fn register(app: &mut App) {
         (
             on_blueprint_structure.in_set(BlueprintingSystemSet::DoBlueprinting),
             on_save_structure.in_set(SavingSystemSet::DoSaving),
-        ),
+        )
+            .in_set(StructureTypeSet::Station),
     )
     .add_systems(
         LOADING_SCHEDULE,
         (
-            on_load_blueprint.in_set(StructureTypesBlueprintingSystemSet::Station),
-            on_load_structure.in_set(StructureTypesLoadingSystemSet::Station),
-        ),
+            on_load_blueprint.in_set(LoadingBlueprintSystemSet::DoLoadingBlueprints),
+            on_load_structure.in_set(LoadingSystemSet::DoLoading),
+        )
+            .in_set(StructureTypeSet::Station),
     );
 }

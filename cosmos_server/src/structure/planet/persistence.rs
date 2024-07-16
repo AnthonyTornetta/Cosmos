@@ -12,19 +12,17 @@ use cosmos_core::{
         chunk::{netty::SerializedChunkBlockData, Chunk, ChunkEntity},
         coordinates::{ChunkCoordinate, CoordinateType},
         dynamic_structure::DynamicStructure,
+        loading::StructureLoadingSet,
         planet::{planet_builder::TPlanetBuilder, Planet},
-        ChunkInitEvent, Structure,
+        ChunkInitEvent, Structure, StructureTypeSet,
     },
 };
 use serde::{Deserialize, Serialize};
 
-use crate::{
-    persistence::{
-        loading::{LoadingSystemSet, NeedsLoaded, LOADING_SCHEDULE},
-        saving::{NeedsSaved, SavingSystemSet, SAVING_SCHEDULE},
-        EntityId, SaveFileIdentifier, SerializedData,
-    },
-    structure::StructureTypesLoadingSystemSet,
+use crate::persistence::{
+    loading::{LoadingSystemSet, NeedsLoaded, LOADING_SCHEDULE},
+    saving::{NeedsSaved, SavingSystemSet, SAVING_SCHEDULE},
+    EntityId, SaveFileIdentifier, SerializedData,
 };
 
 use super::{generation::planet_generator::ChunkNeedsGenerated, server_planet_builder::ServerPlanetBuilder};
@@ -201,9 +199,19 @@ fn load_chunk(
 pub(super) fn register(app: &mut App) {
     app.add_systems(
         Update,
-        (structure_created, populate_chunks).in_set(NetworkingSystemsSet::Between).chain(),
+        (
+            structure_created.in_set(StructureLoadingSet::CreateChunkEntities),
+            populate_chunks.in_set(StructureLoadingSet::LoadChunkData),
+        )
+            .in_set(NetworkingSystemsSet::Between)
+            .chain(),
     )
     .add_systems(SAVING_SCHEDULE, on_save_structure.in_set(SavingSystemSet::DoSaving))
-    .add_systems(LOADING_SCHEDULE, on_load_structure.in_set(StructureTypesLoadingSystemSet::Planet))
-    .add_systems(LOADING_SCHEDULE, load_chunk.in_set(StructureTypesLoadingSystemSet::Planet));
+    .add_systems(
+        LOADING_SCHEDULE,
+        (on_load_structure, load_chunk)
+            .chain()
+            .in_set(LoadingSystemSet::DoLoading)
+            .in_set(StructureTypeSet::Planet),
+    );
 }

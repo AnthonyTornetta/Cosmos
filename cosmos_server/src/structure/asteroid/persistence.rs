@@ -5,8 +5,9 @@ use cosmos_core::{
     structure::{
         asteroid::{asteroid_builder::TAsteroidBuilder, Asteroid},
         events::StructureLoadedEvent,
+        loading::StructureLoadingSet,
         structure_iterator::ChunkIteratorResult,
-        ChunkInitEvent, Structure,
+        ChunkInitEvent, Structure, StructureTypeSet,
     },
 };
 
@@ -19,7 +20,6 @@ use crate::{
     structure::{
         asteroid::server_asteroid_builder::ServerAsteroidBuilder,
         persistence::{chunk::AllBlockData, save_structure},
-        StructureTypesBlueprintingSystemSet, StructureTypesLoadingSystemSet,
     },
 };
 
@@ -151,17 +151,23 @@ pub(super) fn register(app: &mut App) {
         (
             on_blueprint_asteroid
                 .in_set(BlueprintingSystemSet::DoBlueprinting)
+                .in_set(StructureTypeSet::Asteroid)
                 .ambiguous_with(BlueprintingSystemSet::DoBlueprinting),
             on_save_asteroid
                 .in_set(SavingSystemSet::DoSaving)
+                .in_set(StructureTypeSet::Asteroid)
                 .ambiguous_with(SavingSystemSet::DoSaving),
         ),
     )
     .add_systems(
         LOADING_SCHEDULE,
         (
-            on_load_asteroid_blueprint.in_set(StructureTypesBlueprintingSystemSet::Asteroid),
-            on_load_asteroid.in_set(StructureTypesLoadingSystemSet::Asteroid),
+            on_load_asteroid_blueprint
+                .in_set(LoadingBlueprintSystemSet::DoLoadingBlueprints)
+                .in_set(StructureTypeSet::Asteroid),
+            on_load_asteroid
+                .in_set(LoadingSystemSet::DoLoading)
+                .in_set(StructureTypeSet::Asteroid),
         ),
     );
 }
