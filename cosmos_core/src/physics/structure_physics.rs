@@ -32,12 +32,6 @@ use super::block_colliders::{BlockCollider, BlockColliderMode, BlockColliderType
 
 type GenerateCollider = (Collider, f32, BlockColliderMode, Option<Group>);
 
-/// Sometimes the ReadMassProperties is wrong, so this component fixes it
-#[derive(Component, Debug, Reflect, PartialEq, Clone, Copy)]
-struct StructureMass {
-    mass: f32,
-}
-
 #[derive(Component, Debug, Reflect, Clone, Copy)]
 /// Often times chunks will need multiple entities to store their physics information.
 ///
