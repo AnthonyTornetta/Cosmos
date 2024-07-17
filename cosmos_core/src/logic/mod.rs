@@ -171,9 +171,7 @@ pub struct QueueLogicInputEvent(LogicInputEvent);
 impl QueueLogicInputEvent {
     /// Convenience constructor to avoid having to construct the inner type.
     pub fn new(block: StructureBlock, entity: Entity) -> Self {
-        Self {
-            0: LogicInputEvent { block, entity },
-        }
+        Self(LogicInputEvent { block, entity })
     }
 }
 
@@ -194,9 +192,7 @@ pub struct QueueLogicOutputEvent(LogicOutputEvent);
 impl QueueLogicOutputEvent {
     /// Convenience constructor to avoid having to construct the inner type.
     pub fn new(block: StructureBlock, entity: Entity) -> Self {
-        Self {
-            0: LogicOutputEvent { block, entity },
-        }
+        Self(LogicOutputEvent { block, entity })
     }
 }
 
@@ -323,7 +319,7 @@ pub fn default_logic_block_output(
         let Ok(structure) = q_structure.get_mut(ev.entity) else {
             continue;
         };
-        if structure.block_at(ev.block.coords(), &blocks).unlocalized_name() != block_name {
+        if structure.block_at(ev.block.coords(), blocks).unlocalized_name() != block_name {
             continue;
         }
         let Ok(mut logic_driver) = q_logic_driver.get_mut(ev.entity) else {

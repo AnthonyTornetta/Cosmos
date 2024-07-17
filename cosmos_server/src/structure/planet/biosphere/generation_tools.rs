@@ -27,7 +27,7 @@ pub(crate) fn fill(
             structure.set_block_at(
                 rotated_block_pos,
                 block,
-                BlockRotation::from_face_directions(block_up.unrotated_direction(), planet_face.unrotated_direction()).into(),
+                BlockRotation::from_face_directions(block_up.unrotated_direction(), planet_face.unrotated_direction()),
                 blocks,
                 Some(event_writer),
             );
