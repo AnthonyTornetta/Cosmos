@@ -8,7 +8,7 @@ use bevy::{
         system::{Query, Res, ResMut, Resource},
     },
     log::{info, warn},
-    prelude::Deref,
+    prelude::{Deref, IntoSystemSetConfigs, SystemSet},
     state::condition::in_state,
 };
 use bevy_renet2::renet2::RenetServer;
@@ -74,15 +74,23 @@ fn send_number_of_registries(
     }
 }
 
+#[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
+enum IncrementSet {
+    Increment,
+}
+
 /// Call this function on the server-side to signal that this registry should be synced with the client
 pub fn sync_registry<'a, T: Identifiable + Serialize + Deserialize<'a>>(app: &mut App) {
-    app.add_systems(Startup, incr_registries_to_sync).add_systems(
-        Update,
-        sync::<T>.run_if(in_state(GameState::Playing)).after(send_number_of_registries),
-    );
+    app.add_systems(Startup, incr_registries_to_sync.in_set(IncrementSet::Increment))
+        .add_systems(
+            Update,
+            sync::<T>.run_if(in_state(GameState::Playing)).after(send_number_of_registries),
+        );
 }
 
 pub(super) fn register(app: &mut App) {
+    app.configure_sets(Startup, IncrementSet::Increment.ambiguous_with(IncrementSet::Increment));
+
     app.add_systems(
         Update,
         send_number_of_registries
