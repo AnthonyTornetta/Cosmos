@@ -13,7 +13,7 @@ use crate::{
     events::block_events::BlockDataSystemParams,
     logic::{
         logic_driver::LogicDriver, BlockLogicData, LogicBlock, LogicConnection, LogicInputEvent, LogicOutputEvent, LogicSystemSet, Port,
-        PortType, QueueLogicOutputEvent,
+        PortType, QueueLogicInputEvent,
     },
     registry::{identifiable::Identifiable, Registry},
     structure::Structure,
@@ -36,39 +36,9 @@ fn register_logic_connections(blocks: Res<Registry<Block>>, mut registry: ResMut
     }
 }
 
-fn xor_gate_output_event_listener(
-    mut evr_logic_output: EventReader<LogicOutputEvent>,
-    mut evw_logic_input: EventWriter<LogicInputEvent>,
-    blocks: Res<Registry<Block>>,
-    mut q_logic_driver: Query<&mut LogicDriver>,
-    mut q_structure: Query<&mut Structure>,
-    q_logic_data: Query<&BlockLogicData>,
-) {
-    for ev in evr_logic_output.read() {
-        let Ok(structure) = q_structure.get_mut(ev.entity) else {
-            continue;
-        };
-        if structure.block_at(ev.block.coords(), &blocks).unlocalized_name() != "cosmos:xor_gate" {
-            continue;
-        }
-        let Ok(mut logic_driver) = q_logic_driver.get_mut(ev.entity) else {
-            continue;
-        };
-        let Some(&BlockLogicData(signal)) = structure.query_block_data(ev.block.coords(), &q_logic_data) else {
-            continue;
-        };
-
-        let port = Port::new(
-            ev.block.coords(),
-            structure.block_rotation(ev.block.coords()).direction_of(BlockFace::Front),
-        );
-        logic_driver.update_producer(port, signal, &mut evw_logic_input, ev.entity);
-    }
-}
-
 fn xor_gate_input_event_listener(
     mut evr_logic_input: EventReader<LogicInputEvent>,
-    mut evw_queue_logic_output: EventWriter<QueueLogicOutputEvent>,
+    mut evw_logic_output: EventWriter<LogicOutputEvent>,
     blocks: Res<Registry<Block>>,
     mut q_logic_driver: Query<&mut LogicDriver>,
     q_structure: Query<&Structure>,
@@ -99,8 +69,41 @@ fn xor_gate_input_event_listener(
         if **logic_data != new_state {
             // Don't trigger unneccesary change detection
             **logic_data = new_state;
-            evw_queue_logic_output.send(QueueLogicOutputEvent::new(ev.block, ev.entity));
+            evw_logic_output.send(LogicOutputEvent {
+                block: ev.block,
+                entity: ev.entity,
+            });
         }
+    }
+}
+
+fn xor_gate_output_event_listener(
+    mut evr_logic_output: EventReader<LogicOutputEvent>,
+    mut evw_queue_logic_input: EventWriter<QueueLogicInputEvent>,
+    blocks: Res<Registry<Block>>,
+    mut q_logic_driver: Query<&mut LogicDriver>,
+    mut q_structure: Query<&mut Structure>,
+    q_logic_data: Query<&BlockLogicData>,
+) {
+    for ev in evr_logic_output.read() {
+        let Ok(structure) = q_structure.get_mut(ev.entity) else {
+            continue;
+        };
+        if structure.block_at(ev.block.coords(), &blocks).unlocalized_name() != "cosmos:xor_gate" {
+            continue;
+        }
+        let Ok(mut logic_driver) = q_logic_driver.get_mut(ev.entity) else {
+            continue;
+        };
+        let Some(&BlockLogicData(signal)) = structure.query_block_data(ev.block.coords(), &q_logic_data) else {
+            continue;
+        };
+
+        let port = Port::new(
+            ev.block.coords(),
+            structure.block_rotation(ev.block.coords()).direction_of(BlockFace::Front),
+        );
+        logic_driver.update_producer(port, signal, &mut evw_queue_logic_input, ev.entity);
     }
 }
 

@@ -7,7 +7,9 @@ use bevy::{
 
 use crate::{
     block::Block,
-    logic::{logic_driver::LogicDriver, LogicBlock, LogicConnection, LogicInputEvent, LogicOutputEvent, LogicSystemSet, Port, PortType},
+    logic::{
+        logic_driver::LogicDriver, LogicBlock, LogicConnection, LogicOutputEvent, LogicSystemSet, Port, PortType, QueueLogicInputEvent,
+    },
     registry::{identifiable::Identifiable, Registry},
     structure::Structure,
 };
@@ -20,7 +22,7 @@ fn register_logic_connections(blocks: Res<Registry<Block>>, mut registry: ResMut
 
 fn logic_on_output_event_listener(
     mut evr_logic_output: EventReader<LogicOutputEvent>,
-    mut evw_logic_input: EventWriter<LogicInputEvent>,
+    mut evw_queue_logic_input: EventWriter<QueueLogicInputEvent>,
     blocks: Res<Registry<Block>>,
     mut q_logic_driver: Query<&mut LogicDriver>,
     mut q_structure: Query<&mut Structure>,
@@ -42,7 +44,7 @@ fn logic_on_output_event_listener(
         // TODO: Signal should be customizable.
         for direction in structure.block_rotation(ev.block.coords()).directions_of_each_face() {
             let port = Port::new(ev.block.coords(), direction);
-            logic_driver.update_producer(port, 1, &mut evw_logic_input, ev.entity);
+            logic_driver.update_producer(port, 1, &mut evw_queue_logic_input, ev.entity);
         }
     }
 }

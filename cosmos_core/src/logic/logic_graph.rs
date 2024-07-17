@@ -12,7 +12,7 @@ use crate::{
     structure::{coordinates::BlockCoordinate, structure_block::StructureBlock, Structure},
 };
 
-use super::{LogicBlock, LogicConnection, LogicInputEvent, Port, PortType, QueueLogicInputEvent, QueueLogicOutputEvent};
+use super::{LogicBlock, LogicConnection, Port, PortType, QueueLogicInputEvent, QueueLogicOutputEvent};
 
 #[derive(Debug, Default, Reflect, PartialEq, Eq, Clone)]
 /// A single component of a [`LogicGraph`], connected by wires.
@@ -56,18 +56,23 @@ impl LogicGroup {
     }
 
     /// Changes a producer value and propogates the signal to all consumers if the "on" value of the group has changed.
-    pub fn update_producer(&mut self, port: Port, signal: i32, evw_logic_input: &mut EventWriter<LogicInputEvent>, entity: Entity) {
+    pub fn update_producer(
+        &mut self,
+        port: Port,
+        signal: i32,
+        evw_queue_logic_input: &mut EventWriter<QueueLogicInputEvent>,
+        entity: Entity,
+    ) {
         let &old_signal = self.producers.get(&port).expect("Output port to be updated should exist.");
         self.producers.insert(port, signal);
 
         if self.signal() != old_signal {
             // Notify the input ports in this port's group if the group's total signal has changed.
-            for &input_port in self.consumers.iter() {
-                evw_logic_input.send(LogicInputEvent {
-                    block: StructureBlock::new(input_port.coords),
-                    entity,
-                });
-            }
+            evw_queue_logic_input.send_batch(
+                self.consumers
+                    .iter()
+                    .map(|input_port| QueueLogicInputEvent::new(StructureBlock::new(input_port.coords), entity)),
+            );
         }
     }
 }
@@ -265,12 +270,7 @@ impl LogicGraph {
         match port_type {
             PortType::Input => {
                 logic_group.consumers.insert(Port::new(coords, direction));
-                evw_queue_logic_input.send(QueueLogicInputEvent {
-                    0: LogicInputEvent {
-                        block: StructureBlock::new(coords),
-                        entity,
-                    },
-                });
+                evw_queue_logic_input.send(QueueLogicInputEvent::new(StructureBlock::new(coords), entity));
             }
             PortType::Output => {
                 logic_group.producers.insert(Port::new(coords, direction), signal);
@@ -330,12 +330,10 @@ impl LogicGraph {
             // Ping all inputs in this group to let them know this output port is gone.
             if port_type == PortType::Output {
                 for &input_port in self.groups.get(&group_id).expect("Port should have logic group.").consumers.iter() {
-                    evw_queue_logic_input.send(QueueLogicInputEvent {
-                        0: LogicInputEvent {
-                            block: StructureBlock::new(input_port.coords),
-                            entity: structure.get_entity().expect("Structure should have entity."),
-                        },
-                    });
+                    evw_queue_logic_input.send(QueueLogicInputEvent::new(
+                        StructureBlock::new(input_port.coords),
+                        structure.get_entity().expect("Structure should have entity."),
+                    ));
                 }
             }
         }
@@ -398,12 +396,7 @@ impl LogicGraph {
             .consumers
             .iter()
         {
-            evw_queue_logic_input.send(QueueLogicInputEvent {
-                0: LogicInputEvent {
-                    block: StructureBlock::new(input_port.coords),
-                    entity,
-                },
-            });
+            evw_queue_logic_input.send(QueueLogicInputEvent::new(StructureBlock::new(input_port.coords), entity));
         }
     }
 
@@ -495,11 +488,17 @@ impl LogicGraph {
         logic_block.connection_on(encountered_face).is_some()
     }
 
-    pub fn update_producer(&mut self, port: Port, signal: i32, evw_logic_input: &mut EventWriter<LogicInputEvent>, entity: Entity) {
+    pub fn update_producer(
+        &mut self,
+        port: Port,
+        signal: i32,
+        evw_queue_logic_input: &mut EventWriter<QueueLogicInputEvent>,
+        entity: Entity,
+    ) {
         // let id = self.output_port_group_id.get(&port);
         // println!("Output Port ID: {id:?}");
         self.mut_group_of(&port, PortType::Output)
             .expect("Updated logic port should have a logic group ID.")
-            .update_producer(port, signal, evw_logic_input, entity);
+            .update_producer(port, signal, evw_queue_logic_input, entity);
     }
 }

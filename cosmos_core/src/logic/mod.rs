@@ -155,6 +155,29 @@ impl Port {
 }
 
 #[derive(Event, Debug, Clone)]
+/// Sent when a block's logic inputs change.
+/// For example, in the same tick another block with an output [`Port`] in its [`LogicGroup`] changes its output.
+pub struct LogicInputEvent {
+    /// The block coordinates.
+    pub block: StructureBlock,
+    /// The entity containing the structure and logic graph this block is in.
+    pub entity: Entity,
+}
+
+#[derive(Event, Debug)]
+/// Sent when a block's logic input changes for a reason outside a logic tick, like placing a new logic block.
+pub struct QueueLogicInputEvent(LogicInputEvent);
+
+impl QueueLogicInputEvent {
+    /// Convenience constructor to avoid having to construct the inner type.
+    pub fn new(block: StructureBlock, entity: Entity) -> Self {
+        Self {
+            0: LogicInputEvent { block, entity },
+        }
+    }
+}
+
+#[derive(Event, Debug, Clone)]
 /// Sent when a block's logic output changes.
 /// For example, sent when the block is placed or one tick after its inputs change.
 pub struct LogicOutputEvent {
@@ -176,20 +199,6 @@ impl QueueLogicOutputEvent {
         }
     }
 }
-
-#[derive(Event, Debug, Clone)]
-/// Sent when a block's logic inputs change.
-/// For example, in the same tick another block with an output [`Port`] in its [`LogicGroup`] changes its output.
-pub struct LogicInputEvent {
-    /// The block coordinates.
-    pub block: StructureBlock,
-    /// The entity containing the structure and logic graph this block is in.
-    pub entity: Entity,
-}
-
-#[derive(Event, Debug)]
-/// Sent when a block's logic input changes for a reason outside a logic tick, like placing a new logic block.
-pub struct QueueLogicInputEvent(LogicInputEvent);
 
 #[derive(Component, Clone, Copy, Reflect, PartialEq, Eq, Debug, Default)]
 /// The logic signal this block is holding. Note: each block might interact with this data slightly differently.
@@ -272,16 +281,6 @@ struct LogicOutputEventQueue(VecDeque<LogicOutputEvent>);
 #[derive(Resource, Default)]
 struct LogicInputEventQueue(VecDeque<LogicInputEvent>);
 
-fn queue_logic_producers(
-    mut evr_queue_logic_output: EventReader<QueueLogicOutputEvent>,
-    mut logic_output_event_queue: ResMut<LogicOutputEventQueue>,
-) {
-    for ev in evr_queue_logic_output.read() {
-        // println!("Output Event Queued: {:?}", ev.0);
-        logic_output_event_queue.0.push_back(ev.0.clone());
-    }
-}
-
 fn queue_logic_consumers(
     mut evr_queue_logic_input: EventReader<QueueLogicInputEvent>,
     mut logic_input_event_queue: ResMut<LogicInputEventQueue>,
@@ -292,14 +291,24 @@ fn queue_logic_consumers(
     }
 }
 
+fn queue_logic_producers(
+    mut evr_queue_logic_output: EventReader<QueueLogicOutputEvent>,
+    mut logic_output_event_queue: ResMut<LogicOutputEventQueue>,
+) {
+    for ev in evr_queue_logic_output.read() {
+        // println!("Output Event Queued: {:?}", ev.0);
+        logic_output_event_queue.0.push_back(ev.0.clone());
+    }
+}
+
 fn send_queued_logic_events(
     mut outputs: ResMut<LogicOutputEventQueue>,
     mut inputs: ResMut<LogicInputEventQueue>,
     mut evw_logic_output: EventWriter<LogicOutputEvent>,
     mut evw_logic_input: EventWriter<LogicInputEvent>,
 ) {
-    evw_logic_output.send_batch(outputs.0.drain(..));
     evw_logic_input.send_batch(inputs.0.drain(..));
+    evw_logic_output.send_batch(outputs.0.drain(..));
 }
 
 fn add_default_logic(q_needs_logic_driver: Query<Entity, (With<Structure>, Without<LogicDriver>)>, mut commands: Commands) {
@@ -320,16 +329,16 @@ impl Registry<LogicBlock> {
 pub enum LogicSystemSet {
     /// [`LogicBlock`]s are added or removed before anyone produces or consumes, so they have a chance to do both in their first logic tick.
     EditLogicGraph,
-    /// If something (like placing a logic block) tries to produce before a logic tick, this adds that event to a queue for later processing.
-    QueueProducers,
     /// If something (like placing a logic block) tries to consume before a logic tick, this adds that event to a queue for later processing.
     QueueConsumers,
+    /// If something (like placing a logic block) tries to produce before a logic tick, this adds that event to a queue for later processing.
+    QueueProducers,
     /// If something (like placing a logic block) tried to produce or consume on an earlier frame, this sends the event on the next logic tick.
     SendQueues,
-    /// All output [`Port`]s. These push their values to their [`LogicGroup`]s first in each logic tick.
-    Produce,
-    /// All input [`Port`]s. These pull their values from their [`LogicGroup`]s second in each logic tick.
+    /// All input [`Port`]s. These pull their values from their [`LogicGroup`]s first in each logic tick.
     Consume,
+    /// All output [`Port`]s. These push their values to their [`LogicGroup`]s second in each logic tick.
+    Produce,
 }
 
 /// All logic signal production and consumption happens on ticks that occur with this many milliseconds between them.
@@ -344,9 +353,9 @@ pub(super) fn register<T: States>(app: &mut App, playing_state: T) {
         Update,
         (
             LogicSystemSet::EditLogicGraph,
-            LogicSystemSet::QueueProducers,
             LogicSystemSet::QueueConsumers,
-            (LogicSystemSet::SendQueues, LogicSystemSet::Produce, LogicSystemSet::Consume)
+            LogicSystemSet::QueueProducers,
+            (LogicSystemSet::SendQueues, LogicSystemSet::Consume, LogicSystemSet::Produce)
                 .chain()
                 .run_if(on_timer(Duration::from_millis(1000 / LOGIC_TICKS_PER_SECOND))),
         )
@@ -368,7 +377,7 @@ pub(super) fn register<T: States>(app: &mut App, playing_state: T) {
     .register_type::<LogicGraph>()
     .register_type::<LogicGroup>()
     .add_event::<LogicOutputEvent>()
-    .add_event::<LogicInputEvent>()
+    .add_event::<QueueLogicInputEvent>()
     .add_event::<QueueLogicOutputEvent>()
     .add_event::<QueueLogicInputEvent>();
 }

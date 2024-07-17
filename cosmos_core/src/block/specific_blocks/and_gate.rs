@@ -13,7 +13,7 @@ use crate::{
     events::block_events::BlockDataSystemParams,
     logic::{
         logic_driver::LogicDriver, BlockLogicData, LogicBlock, LogicConnection, LogicInputEvent, LogicOutputEvent, LogicSystemSet, Port,
-        PortType, QueueLogicOutputEvent,
+        PortType, QueueLogicInputEvent,
     },
     registry::{identifiable::Identifiable, Registry},
     structure::Structure,
@@ -36,42 +36,9 @@ fn register_logic_connections(blocks: Res<Registry<Block>>, mut registry: ResMut
     }
 }
 
-fn and_gate_output_event_listener(
-    mut evr_logic_output: EventReader<LogicOutputEvent>,
-    mut evw_logic_input: EventWriter<LogicInputEvent>,
-    blocks: Res<Registry<Block>>,
-    mut q_logic_driver: Query<&mut LogicDriver>,
-    mut q_structure: Query<&mut Structure>,
-    q_logic_data: Query<&BlockLogicData>,
-) {
-    for ev in evr_logic_output.read() {
-        let Ok(structure) = q_structure.get_mut(ev.entity) else {
-            continue;
-        };
-        if structure.block_at(ev.block.coords(), &blocks).unlocalized_name() != "cosmos:and_gate" {
-            continue;
-        }
-        let Ok(mut logic_driver) = q_logic_driver.get_mut(ev.entity) else {
-            continue;
-        };
-        let Some(&BlockLogicData(signal)) = structure.query_block_data(ev.block.coords(), &q_logic_data) else {
-            continue;
-        };
-
-        // println!("And Output Event Signal: {signal}");
-        // let front = structure.block_rotation(ev.block.coords()).local_front();
-        // println!("Front face is pointing: {front}");
-        let port = Port::new(
-            ev.block.coords(),
-            structure.block_rotation(ev.block.coords()).direction_of(BlockFace::Front),
-        );
-        logic_driver.update_producer(port, signal, &mut evw_logic_input, ev.entity);
-    }
-}
-
 fn and_gate_input_event_listener(
     mut evr_logic_input: EventReader<LogicInputEvent>,
-    mut evw_queue_logic_output: EventWriter<QueueLogicOutputEvent>,
+    mut evw_logic_output: EventWriter<LogicOutputEvent>,
     blocks: Res<Registry<Block>>,
     mut q_logic_driver: Query<&mut LogicDriver>,
     q_structure: Query<&Structure>,
@@ -107,13 +74,49 @@ fn and_gate_input_event_listener(
         if **logic_data != new_state {
             // Don't trigger unneccesary change detection
             **logic_data = new_state;
-            evw_queue_logic_output.send(QueueLogicOutputEvent::new(ev.block, ev.entity));
+            evw_logic_output.send(LogicOutputEvent {
+                block: ev.block,
+                entity: ev.entity,
+            });
         }
+    }
+}
+
+fn and_gate_output_event_listener(
+    mut evr_logic_output: EventReader<LogicOutputEvent>,
+    mut evw_queue_logic_input: EventWriter<QueueLogicInputEvent>,
+    blocks: Res<Registry<Block>>,
+    mut q_logic_driver: Query<&mut LogicDriver>,
+    mut q_structure: Query<&mut Structure>,
+    q_logic_data: Query<&BlockLogicData>,
+) {
+    for ev in evr_logic_output.read() {
+        let Ok(structure) = q_structure.get_mut(ev.entity) else {
+            continue;
+        };
+        if structure.block_at(ev.block.coords(), &blocks).unlocalized_name() != "cosmos:and_gate" {
+            continue;
+        }
+        let Ok(mut logic_driver) = q_logic_driver.get_mut(ev.entity) else {
+            continue;
+        };
+        let Some(&BlockLogicData(signal)) = structure.query_block_data(ev.block.coords(), &q_logic_data) else {
+            continue;
+        };
+
+        // println!("And Output Event Signal: {signal}");
+        // let front = structure.block_rotation(ev.block.coords()).local_front();
+        // println!("Front face is pointing: {front}");
+        let port = Port::new(
+            ev.block.coords(),
+            structure.block_rotation(ev.block.coords()).direction_of(BlockFace::Front),
+        );
+        logic_driver.update_producer(port, signal, &mut evw_queue_logic_input, ev.entity);
     }
 }
 
 pub(super) fn register<T: States>(app: &mut App, post_loading_state: T) {
     app.add_systems(OnEnter(post_loading_state), register_logic_connections)
-        .add_systems(Update, and_gate_output_event_listener.in_set(LogicSystemSet::Produce))
-        .add_systems(Update, and_gate_input_event_listener.in_set(LogicSystemSet::Consume));
+        .add_systems(Update, and_gate_input_event_listener.in_set(LogicSystemSet::Consume))
+        .add_systems(Update, and_gate_output_event_listener.in_set(LogicSystemSet::Produce));
 }

@@ -12,7 +12,7 @@ use crate::{
     structure::{coordinates::BlockCoordinate, structure_block::StructureBlock, Structure},
 };
 
-use super::{logic_graph::LogicGraph, LogicBlock, LogicInputEvent, Port, PortType, QueueLogicInputEvent, QueueLogicOutputEvent};
+use super::{logic_graph::LogicGraph, LogicBlock, Port, PortType, QueueLogicInputEvent, QueueLogicOutputEvent};
 
 #[derive(Debug, Default, Reflect, Component)]
 /// The public interface for accessing and mutating an [`Entity`]'s [`LogicGraph`].
@@ -240,14 +240,12 @@ impl LogicDriver {
                 let new_group = self.logic_graph.get_group(group_id);
                 if new_group.on() != was_on {
                     // Update the inputs to every input port in this newly created group, if the value of the group has changed.
-                    for &input_port in new_group.consumers.iter() {
-                        evw_queue_logic_input.send(QueueLogicInputEvent {
-                            0: LogicInputEvent {
-                                block: StructureBlock::new(input_port.coords),
-                                entity,
-                            },
-                        });
-                    }
+                    evw_queue_logic_input.send_batch(
+                        new_group
+                            .consumers
+                            .iter()
+                            .map(|input_port| QueueLogicInputEvent::new(StructureBlock::new(input_port.coords), entity)),
+                    );
                 }
             }
         }
@@ -255,8 +253,13 @@ impl LogicDriver {
     }
 
     /// Sets the on/off value of the given port (which must be an output port) in the logic graph.
-    /// Should only be called by systems running on a logic tick, as it writes a logic input event directly instead of queueing it.
-    pub fn update_producer(&mut self, port: Port, signal: i32, evw_logic_input: &mut EventWriter<LogicInputEvent>, entity: Entity) {
-        self.logic_graph.update_producer(port, signal, evw_logic_input, entity);
+    pub fn update_producer(
+        &mut self,
+        port: Port,
+        signal: i32,
+        evw_queue_logic_input: &mut EventWriter<QueueLogicInputEvent>,
+        entity: Entity,
+    ) {
+        self.logic_graph.update_producer(port, signal, evw_queue_logic_input, entity);
     }
 }
