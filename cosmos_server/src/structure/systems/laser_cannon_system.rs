@@ -27,7 +27,7 @@ use cosmos_core::{
 
 use crate::state::GameState;
 
-use super::{line_system::add_line_system, sync::register_structure_system};
+use super::{line_system::add_line_system, sync::register_structure_system, thruster_system};
 
 fn on_add_laser(mut commands: Commands, query: Query<Entity, Added<LaserCannonSystem>>) {
     for ent in query.iter() {
@@ -135,6 +135,7 @@ pub(super) fn register(app: &mut App) {
     app.add_systems(
         Update,
         update_system
+            .ambiguous_with(thruster_system::update_ship_force_and_velocity)
             .after(BlockEventsSet::ProcessEventsPostPlacement)
             .in_set(StructureSystemsSet::UpdateSystems)
             .in_set(NetworkingSystemsSet::Between)

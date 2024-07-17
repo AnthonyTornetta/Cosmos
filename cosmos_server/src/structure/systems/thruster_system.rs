@@ -1,17 +1,24 @@
 use std::ops::Mul;
 
 use bevy::{
-    prelude::{in_state, App, Commands, EventReader, IntoSystemConfigs, OnEnter, Quat, Query, Res, ResMut, Transform, Update, Vec3, With},
+    prelude::{
+        in_state, App, Commands, EventReader, IntoSystemConfigs, OnEnter, Quat, Query, Res, ResMut, SystemSet, Transform, Update, Vec3,
+        With,
+    },
     time::Time,
 };
 use bevy_rapier3d::prelude::{ExternalImpulse, ReadMassProperties, Velocity};
 use cosmos_core::{
     block::{block_events::BlockEventsSet, Block},
     events::block_events::BlockChangedEvent,
+    netty::system_sets::NetworkingSystemsSet,
     registry::Registry,
     structure::{
         events::StructureLoadedEvent,
-        ship::{pilot::Pilot, ship_movement::ShipMovement},
+        ship::{
+            pilot::Pilot,
+            ship_movement::{ShipMovement, ShipMovementSet},
+        },
         systems::{
             dock_system::Docked,
             energy_storage_system::EnergyStorageSystem,
@@ -73,7 +80,7 @@ fn block_update_system(
     }
 }
 
-fn update_movement(
+pub(super) fn update_ship_force_and_velocity(
     thrusters_query: Query<(&ThrusterSystem, &StructureSystem)>,
     mut query: Query<
         (
@@ -180,7 +187,14 @@ fn structure_loaded_event(
     }
 }
 
+#[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
+pub enum ThrusterSystemSet {
+    ApplyThrusters,
+}
+
 pub(super) fn register(app: &mut App) {
+    app.configure_sets(Update, ThrusterSystemSet::ApplyThrusters);
+
     app.insert_resource(ThrusterBlocks::default())
         .add_systems(OnEnter(GameState::PostLoading), register_thruster_blocks)
         .add_systems(
@@ -192,8 +206,13 @@ pub(super) fn register(app: &mut App) {
                 block_update_system
                     .in_set(BlockEventsSet::ProcessEventsPostPlacement)
                     .in_set(StructureSystemsSet::UpdateSystems),
-                update_movement,
+                update_ship_force_and_velocity
+                    .after(ShipMovementSet::RemoveShipMovement)
+                    .in_set(ThrusterSystemSet::ApplyThrusters)
+                    .in_set(StructureSystemsSet::UpdateSystems),
             )
+                .chain()
+                .in_set(NetworkingSystemsSet::Between)
                 .run_if(in_state(GameState::Playing)),
         )
         .register_type::<ThrusterSystem>();

@@ -4,7 +4,8 @@
 
 use bevy::{
     prelude::{
-        App, BuildChildren, Changed, Commands, Component, Entity, Event, EventReader, EventWriter, Parent, Query, Update, With, Without,
+        App, BuildChildren, Changed, Commands, Component, Entity, Event, EventReader, EventWriter, IntoSystemConfigs, Parent, Query,
+        Update, With, Without,
     },
     reflect::Reflect,
 };
@@ -14,7 +15,7 @@ use bevy_rapier3d::{
 };
 use serde::{Deserialize, Serialize};
 
-use crate::structure::coordinates::CoordinateType;
+use crate::{block::block_events::BlockEventsSet, netty::system_sets::NetworkingSystemsSet, structure::coordinates::CoordinateType};
 
 type BuildModeSymmetries = (Option<CoordinateType>, Option<CoordinateType>, Option<CoordinateType>);
 
@@ -144,7 +145,9 @@ pub(super) fn register(app: &mut App) {
             enter_build_mode_listener,
             exit_build_mode_when_parent_dies,
             exit_build_mode_listener,
-        ),
+        )
+            .in_set(NetworkingSystemsSet::Between)
+            .in_set(BlockEventsSet::ProcessEventsPostPlacement),
     )
     .add_event::<EnterBuildModeEvent>()
     .add_event::<ExitBuildModeEvent>()

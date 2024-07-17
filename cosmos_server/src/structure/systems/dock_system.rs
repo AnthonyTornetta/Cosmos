@@ -43,7 +43,7 @@ use cosmos_core::{
 
 use crate::state::GameState;
 
-use super::sync::register_structure_system;
+use super::{sync::register_structure_system, thruster_system::ThrusterSystemSet};
 
 const MAX_DOCK_CHECK: f32 = 1.3;
 
@@ -432,8 +432,9 @@ pub(super) fn register(app: &mut App) {
                 dock_block_update_system
                     .in_set(BlockEventsSet::ProcessEventsPostPlacement)
                     .in_set(StructureSystemsSet::UpdateSystems),
-                on_active,
+                on_active.after(ThrusterSystemSet::ApplyThrusters),
                 monitor_removed_dock_blocks
+                    .after(ThrusterSystemSet::ApplyThrusters) // velocity is changed in `ApplyThrusters`, which is needed here.
                     .in_set(BlockEventsSet::ProcessEventsPostPlacement)
                     .in_set(StructureSystemsSet::UpdateSystems),
                 add_dock_list,

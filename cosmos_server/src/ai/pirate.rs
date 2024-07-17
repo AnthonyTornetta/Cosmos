@@ -24,7 +24,11 @@ use cosmos_core::{
     projectiles::{laser::LASER_LIVE_TIME, missile::Missile},
     structure::{
         shared::{DespawnWithStructure, MeltingDown},
-        ship::{pilot::Pilot, ship_movement::ShipMovement, Ship},
+        ship::{
+            pilot::Pilot,
+            ship_movement::{ShipMovement, ShipMovementSet},
+            Ship,
+        },
         systems::{laser_cannon_system::LaserCannonSystem, StructureSystems, SystemActive},
         StructureTypeSet,
     },
@@ -255,7 +259,12 @@ pub(super) fn register(app: &mut App) {
     )
     .add_systems(
         Update,
-        (on_melt_down, add_pirate_ai, add_pirate_targets, handle_pirate_movement)
+        (
+            on_melt_down,
+            add_pirate_ai,
+            add_pirate_targets,
+            handle_pirate_movement.before(ShipMovementSet::RemoveShipMovement),
+        )
             .in_set(NetworkingSystemsSet::Between)
             .in_set(PirateSystemSet::PirateAiLogic)
             .chain(),
