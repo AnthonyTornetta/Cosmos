@@ -430,18 +430,18 @@ pub(super) fn register(app: &mut App) {
                 .run_if(in_state(GameState::Playing)),
             (
                 dock_block_update_system
-                    .in_set(BlockEventsSet::ProcessEventsPostPlacement)
+                    .in_set(BlockEventsSet::ProcessEvents)
                     .in_set(StructureSystemsSet::UpdateSystems),
                 on_active.after(ThrusterSystemSet::ApplyThrusters),
                 monitor_removed_dock_blocks
                     .after(ThrusterSystemSet::ApplyThrusters) // velocity is changed in `ApplyThrusters`, which is needed here.
-                    .in_set(BlockEventsSet::ProcessEventsPostPlacement)
+                    .in_set(BlockEventsSet::ProcessEvents)
                     .in_set(StructureSystemsSet::UpdateSystems),
                 add_dock_list,
                 add_dock_properties,
             )
                 .chain()
-                .in_set(BlockEventsSet::ProcessEventsPostPlacement)
+                .in_set(BlockEventsSet::ProcessEvents)
                 .run_if(in_state(GameState::Playing)),
         ),
     )

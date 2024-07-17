@@ -425,7 +425,7 @@ pub(super) fn register(app: &mut App) {
             (
                 on_interact_with_tank
                     .in_set(ItemStackSystemSet::CreateDataEntity)
-                    .in_set(BlockEventsSet::ProcessEventsPostPlacement)
+                    .in_set(BlockEventsSet::ProcessEvents)
                     .ambiguous_with(FluidInteractionSet::InteractWithFluidBlocks),
                 add_item_fluid_data.in_set(ItemStackSystemSet::FillDataEntity),
                 on_interact_with_fluid.after(ItemStackSystemSet::FillDataEntity),

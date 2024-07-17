@@ -391,7 +391,7 @@ pub(super) fn register(app: &mut App) {
                     .in_set(StructureSystemsSet::InitSystems)
                     .ambiguous_with(StructureSystemsSet::InitSystems),
                 block_update_system
-                    .in_set(BlockEventsSet::ProcessEventsPostPlacement)
+                    .in_set(BlockEventsSet::ProcessEvents)
                     .in_set(StructureSystemsSet::UpdateSystems),
                 power_shields,
             )

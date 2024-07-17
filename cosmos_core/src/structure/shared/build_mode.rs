@@ -147,7 +147,7 @@ pub(super) fn register(app: &mut App) {
             exit_build_mode_listener,
         )
             .in_set(NetworkingSystemsSet::Between)
-            .in_set(BlockEventsSet::ProcessEventsPostPlacement),
+            .in_set(BlockEventsSet::ProcessEvents),
     )
     .add_event::<EnterBuildModeEvent>()
     .add_event::<ExitBuildModeEvent>()

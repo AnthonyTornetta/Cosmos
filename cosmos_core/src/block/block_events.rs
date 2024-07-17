@@ -434,11 +434,11 @@ pub enum BlockEventsSet {
     PreProcessEvents,
     /// Block updates are sent here
     SendBlockUpdateEvents,
-    /// All block events processing happens here - during this set the block is NOT guarenteed to be placed yet or have its data created
+    /// All block events processing happens here - during this set the block is NOT guarenteed to be placed or removed yet or have its data created
+    ProcessEventsPrePlacement,
+    /// If your event processing relies on the block being placed, run it in this set. The data still is no guarenteed to be present.
     ProcessEvents,
-    /// If your event processing relies on the block being placed, run it in this set
-    ProcessEventsPostPlacement,
-    /// For systems that need information set in the [`BlockEventsSet::ProcessEventsPostPlacement`] stage.
+    /// For systems that need information set in the [`BlockEventsSet::ProcessEventsPostPlacement`] stage. Block data should be present.
     PostProcessEvents,
     /// Put systems that send events you want read the next frame here.
     SendEventsForNextFrame,
@@ -451,8 +451,8 @@ pub(super) fn register(app: &mut App) {
             BlockEventsSet::SendEventsForThisFrame,
             BlockEventsSet::PreProcessEvents,
             BlockEventsSet::SendBlockUpdateEvents,
+            BlockEventsSet::ProcessEventsPrePlacement,
             BlockEventsSet::ProcessEvents,
-            BlockEventsSet::ProcessEventsPostPlacement,
             BlockEventsSet::PostProcessEvents,
             BlockEventsSet::SendEventsForNextFrame,
         )
@@ -468,6 +468,6 @@ pub(super) fn register(app: &mut App) {
             (handle_block_break_events, handle_block_place_events)
                 .chain()
                 .in_set(ItemStackSystemSet::CreateDataEntity)
-                .in_set(BlockEventsSet::ProcessEvents),
+                .in_set(BlockEventsSet::ProcessEventsPrePlacement),
         );
 }

@@ -136,7 +136,7 @@ pub(super) fn register(app: &mut App) {
         Update,
         update_system
             .ambiguous_with(thruster_system::update_ship_force_and_velocity)
-            .after(BlockEventsSet::ProcessEventsPostPlacement)
+            .after(BlockEventsSet::ProcessEvents)
             .in_set(StructureSystemsSet::UpdateSystems)
             .in_set(NetworkingSystemsSet::Between)
             .run_if(in_state(GameState::Playing)),

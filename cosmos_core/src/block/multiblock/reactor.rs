@@ -225,7 +225,7 @@ pub(super) fn register<T: States>(app: &mut App, post_loading_state: T, playing_
             Update,
             (
                 add_reactor_to_structure.in_set(StructureLoadingSet::AddStructureComponents),
-                (on_modify_reactor.in_set(BlockEventsSet::ProcessEventsPostPlacement), generate_power)
+                (on_modify_reactor.in_set(BlockEventsSet::ProcessEvents), generate_power)
                     .in_set(StructureSystemsSet::UpdateSystems)
                     .chain(),
             )

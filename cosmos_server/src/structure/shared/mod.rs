@@ -58,7 +58,7 @@ pub(super) fn register(app: &mut App) {
     app.configure_sets(
         Update,
         (
-            MeltingDownSet::StartMeltingDown.in_set(BlockEventsSet::ProcessEventsPostPlacement),
+            MeltingDownSet::StartMeltingDown.in_set(BlockEventsSet::ProcessEvents),
             MeltingDownSet::ProcessMeltingDown.after(BlockEventsSet::PostProcessEvents),
         )
             .chain()

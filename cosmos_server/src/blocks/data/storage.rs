@@ -127,7 +127,7 @@ pub(super) fn register(app: &mut App) {
         Update,
         (
             on_add_storage
-                .in_set(BlockEventsSet::ProcessEventsPostPlacement)
+                .in_set(BlockEventsSet::ProcessEvents)
                 .ambiguous_with(FluidInteractionSet::InteractWithFluidBlocks),
             populate_inventory.in_set(BlockEventsSet::SendEventsForNextFrame),
         )
