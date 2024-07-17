@@ -1,9 +1,10 @@
 use bevy::prelude::{in_state, App, EventReader, EventWriter, IntoSystemConfigs, Query, Res, Update};
 
 use cosmos_core::{
-    block::{block_update::BlockUpdate, Block},
+    block::{block_events::BlockEventsSet, block_update::BlockUpdate, Block},
     ecs::mut_events::MutEvent,
     events::block_events::BlockChangedEvent,
+    netty::system_sets::NetworkingSystemsSet,
     registry::{identifiable::Identifiable, Registry},
     structure::{coordinates::BlockCoordinate, Structure},
 };
@@ -46,5 +47,12 @@ fn monitor_grass_updated(
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_systems(Update, monitor_grass_updated.run_if(in_state(GameState::Playing)));
+    app.add_systems(
+        Update,
+        monitor_grass_updated
+            .in_set(BlockEventsSet::SendEventsForNextFrame)
+            .ambiguous_with(BlockEventsSet::SendEventsForNextFrame) // Order of blocks being updated doesn't matter
+            .in_set(NetworkingSystemsSet::Between)
+            .run_if(in_state(GameState::Playing)),
+    );
 }

@@ -8,16 +8,17 @@ use bevy::{
 use bevy_renet2::renet2::RenetServer;
 use cosmos_core::{
     block::{
-        block_events::BlockInteractEvent,
+        block_events::{BlockEventsSet, BlockInteractEvent},
         multiblock::reactor::{Reactor, ReactorBounds, ReactorPowerGenerationBlock, Reactors},
         Block,
     },
     entities::player::Player,
-    netty::{cosmos_encoder, server_reliable_messages::ServerReliableMessages, NettyChannelServer},
+    netty::{cosmos_encoder, server_reliable_messages::ServerReliableMessages, system_sets::NetworkingSystemsSet, NettyChannelServer},
     registry::{identifiable::Identifiable, Registry},
     structure::{
         coordinates::{BlockCoordinate, CoordinateType, UnboundBlockCoordinate},
         structure_block::StructureBlock,
+        systems::StructureSystemsSet,
         Structure,
     },
 };
@@ -459,6 +460,14 @@ fn on_interact_reactor(
 pub(super) fn register(app: &mut App) {
     app.add_systems(
         Update,
-        (on_interact_reactor, on_piloted_by_ai).chain().run_if(in_state(GameState::Playing)),
+        (
+            on_piloted_by_ai.in_set(StructureSystemsSet::InitSystems),
+            on_interact_reactor
+                .in_set(BlockEventsSet::PostProcessEvents)
+                .after(StructureSystemsSet::UpdateSystems),
+        )
+            .in_set(NetworkingSystemsSet::Between)
+            .chain()
+            .run_if(in_state(GameState::Playing)),
     );
 }

@@ -25,6 +25,7 @@ use cosmos_core::{
         location::{CosmosBundleSet, Location},
     },
     projectiles::missile::{Explosion, ExplosionSystemSet, Missile},
+    structure::StructureTypeSet,
 };
 
 #[derive(Component)]
@@ -149,7 +150,7 @@ pub(super) fn register(app: &mut App) {
 
     app.add_systems(
         Update,
-        (look_towards_target, apply_missile_thrust)
+        (look_towards_target.ambiguous_with(StructureTypeSet::Ship), apply_missile_thrust)
             .after(CosmosBundleSet::HandleCosmosBundles)
             .in_set(NetworkingSystemsSet::Between)
             .chain(),

@@ -1,15 +1,17 @@
 use bevy::{prelude::*, utils::HashMap};
 use bevy_renet2::renet2::RenetServer;
 use cosmos_core::{
+    block::block_events::BlockEventsSet,
     events::block_events::BlockChangedEvent,
     netty::{
         cosmos_encoder,
         server_reliable_messages::{BlockChanged, BlocksChangedPacket, ServerReliableMessages},
+        system_sets::NetworkingSystemsSet,
         NettyChannelServer,
     },
 };
 
-use crate::state::GameState;
+use crate::{state::GameState, structure::block_health::BlockHealthSet};
 
 fn handle_block_changed_event(mut event_reader: EventReader<BlockChangedEvent>, mut server: ResMut<RenetServer>) {
     let iter_len = event_reader.read().len();
@@ -37,5 +39,11 @@ fn handle_block_changed_event(mut event_reader: EventReader<BlockChangedEvent>, 
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_systems(Update, handle_block_changed_event.run_if(in_state(GameState::Playing)));
+    app.add_systems(
+        Update,
+        handle_block_changed_event
+            .in_set(NetworkingSystemsSet::SyncComponents)
+            .after(BlockHealthSet::ProcessHealthChanges)
+            .run_if(in_state(GameState::Playing)),
+    );
 }

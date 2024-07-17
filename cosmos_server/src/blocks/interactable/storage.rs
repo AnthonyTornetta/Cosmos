@@ -4,10 +4,14 @@ use bevy::{
 };
 use bevy_renet2::renet2::RenetServer;
 use cosmos_core::{
-    block::{block_events::BlockInteractEvent, data::BlockDataIdentifier, Block},
+    block::{
+        block_events::{BlockEventsSet, BlockInteractEvent},
+        data::BlockDataIdentifier,
+        Block,
+    },
     entities::player::Player,
     inventory::netty::{InventoryIdentifier, ServerInventoryMessages},
-    netty::{cosmos_encoder, NettyChannelServer},
+    netty::{cosmos_encoder, system_sets::NetworkingSystemsSet, NettyChannelServer},
     registry::{identifiable::Identifiable, Registry},
     structure::Structure,
 };
@@ -57,5 +61,11 @@ fn handle_block_event(
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_systems(Update, handle_block_event.run_if(in_state(GameState::Playing)));
+    app.add_systems(
+        Update,
+        handle_block_event
+            .in_set(NetworkingSystemsSet::Between)
+            .in_set(BlockEventsSet::ProcessEvents)
+            .run_if(in_state(GameState::Playing)),
+    );
 }

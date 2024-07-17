@@ -9,6 +9,7 @@ use bevy::{
 use bevy_rapier3d::dynamics::Velocity;
 use bevy_renet2::renet2::RenetServer;
 use cosmos_core::{
+    block::block_events::BlockEventsSet,
     events::structure::change_pilot_event::ChangePilotEvent,
     netty::{
         cosmos_encoder, server_reliable_messages::ServerReliableMessages, server_unreliable_messages::ServerUnreliableMessages,
@@ -98,6 +99,7 @@ pub(super) fn register(app: &mut App) {
     app.add_event::<ShipSetMovementEvent>().add_systems(
         Update,
         (monitor_pilot_changes, monitor_set_movement_events)
+            .after(BlockEventsSet::PostProcessEvents)
             .in_set(StructureTypeSet::Ship)
             .in_set(NetworkingSystemsSet::SyncComponents)
             .run_if(in_state(GameState::Playing)),

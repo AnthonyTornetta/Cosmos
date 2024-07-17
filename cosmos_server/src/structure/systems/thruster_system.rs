@@ -18,6 +18,7 @@ use cosmos_core::{
         ship::{
             pilot::Pilot,
             ship_movement::{ShipMovement, ShipMovementSet},
+            Ship,
         },
         systems::{
             dock_system::Docked,
@@ -25,7 +26,7 @@ use cosmos_core::{
             thruster_system::{ThrusterBlocks, ThrusterProperty, ThrusterSystem},
             StructureSystem, StructureSystemType, StructureSystems, StructureSystemsSet,
         },
-        Structure,
+        Structure, StructureTypeSet,
     },
 };
 
@@ -92,7 +93,7 @@ pub(super) fn update_ship_force_and_velocity(
             &ReadMassProperties,
             Option<&Docked>,
         ),
-        With<Pilot>,
+        (With<Ship>, With<Pilot>),
     >,
     mut energy_query: Query<&mut EnergyStorageSystem>,
     time: Res<Time>,
@@ -209,7 +210,8 @@ pub(super) fn register(app: &mut App) {
                 update_ship_force_and_velocity
                     .after(ShipMovementSet::RemoveShipMovement)
                     .in_set(ThrusterSystemSet::ApplyThrusters)
-                    .in_set(StructureSystemsSet::UpdateSystems),
+                    .in_set(StructureSystemsSet::UpdateSystems)
+                    .in_set(StructureTypeSet::Ship),
             )
                 .chain()
                 .in_set(NetworkingSystemsSet::Between)

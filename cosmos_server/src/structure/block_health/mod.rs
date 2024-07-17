@@ -74,6 +74,8 @@ pub(super) fn register(app: &mut App) {
         Update,
         (monitor_block_health_changed, monitor_block_destroyed)
             .in_set(BlockHealthSet::ProcessHealthChanges)
+            .in_set(BlockEventsSet::SendEventsForNextFrame)
+            .ambiguous_with(BlockEventsSet::SendEventsForNextFrame) // Order of events doesn't matter
             .chain()
             .run_if(in_state(GameState::Playing)),
     );

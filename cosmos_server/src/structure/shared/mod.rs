@@ -59,7 +59,9 @@ pub(super) fn register(app: &mut App) {
         Update,
         (
             MeltingDownSet::StartMeltingDown.in_set(BlockEventsSet::ProcessEvents),
-            MeltingDownSet::ProcessMeltingDown.after(BlockEventsSet::PostProcessEvents),
+            MeltingDownSet::ProcessMeltingDown
+                .in_set(BlockEventsSet::SendEventsForNextFrame)
+                .ambiguous_with(BlockEventsSet::SendEventsForNextFrame),
         )
             .chain()
             .after(StructureLoadingSet::StructureLoaded)
