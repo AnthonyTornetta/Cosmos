@@ -81,7 +81,7 @@ pub(super) fn register(app: &mut App) {
             (interact_with_block, enter_build_mode, exit_build_mode)
                 .chain()
                 .in_set(NetworkingSystemsSet::Between),
-            sync_build_mode.in_set(NetworkingSystemsSet::SendChangedComponents),
+            sync_build_mode.in_set(NetworkingSystemsSet::SyncComponents),
         )
             .chain()
             .run_if(in_state(GameState::Playing)),

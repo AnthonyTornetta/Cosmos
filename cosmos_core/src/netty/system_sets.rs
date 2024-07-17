@@ -22,7 +22,7 @@ pub enum NetworkingSystemsSet {
     /// Systems that communicate entity changes should be in this set.
     ///
     /// If you are changing a component this frame, and need it to be sent this frame, make sure it is done before this set.
-    SendChangedComponents,
+    SyncComponents,
 }
 
 pub(super) fn register<T: States>(app: &mut App, playing_state: T) {
@@ -34,7 +34,7 @@ pub(super) fn register<T: States>(app: &mut App, playing_state: T) {
                 (NetworkingSystemsSet::ReceiveMessages, NetworkingSystemsSet::ProcessReceivedMessages).chain(),
                 // .before(CosmosBundleSet::HandleCosmosBundles),
                 NetworkingSystemsSet::Between,
-                NetworkingSystemsSet::SendChangedComponents.after(CosmosBundleSet::HandleCosmosBundles),
+                NetworkingSystemsSet::SyncComponents.after(CosmosBundleSet::HandleCosmosBundles),
             )
                 .run_if(in_state(playing_state.clone()))
                 .chain(),
@@ -49,7 +49,7 @@ pub(super) fn register<T: States>(app: &mut App, playing_state: T) {
                 (NetworkingSystemsSet::ReceiveMessages, NetworkingSystemsSet::ProcessReceivedMessages).chain(),
                 // .before(CosmosBundleSet::HandleCosmosBundles),
                 NetworkingSystemsSet::Between,
-                NetworkingSystemsSet::SendChangedComponents.after(CosmosBundleSet::HandleCosmosBundles),
+                NetworkingSystemsSet::SyncComponents.after(CosmosBundleSet::HandleCosmosBundles),
             )
                 .run_if(in_state(playing_state))
                 .chain(),

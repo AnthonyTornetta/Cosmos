@@ -99,7 +99,7 @@ pub(super) fn register(app: &mut App) {
         Update,
         (monitor_pilot_changes, monitor_set_movement_events)
             .in_set(StructureTypeSet::Ship)
-            .in_set(NetworkingSystemsSet::SendChangedComponents)
+            .in_set(NetworkingSystemsSet::SyncComponents)
             .run_if(in_state(GameState::Playing)),
     );
 

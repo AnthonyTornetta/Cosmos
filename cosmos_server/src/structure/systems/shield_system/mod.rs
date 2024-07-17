@@ -402,7 +402,7 @@ pub(super) fn register(app: &mut App) {
         .add_systems(
             Update,
             send_shield_hits
-                .in_set(NetworkingSystemsSet::SendChangedComponents)
+                .in_set(NetworkingSystemsSet::SyncComponents)
                 .after(ShieldSet::OnShieldHit),
         )
         .add_systems(SAVING_SCHEDULE, on_save_shield.in_set(SavingSystemSet::DoSaving))

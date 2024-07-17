@@ -136,7 +136,7 @@ pub(super) fn register(app: &mut App) {
                 ExplosionSystemSet::PreProcessExplosions
                     .before(LocationPhysicsSet::DoPhysics)
                     .before(CosmosBundleSet::HandleCosmosBundles)
-                    .after(NetworkingSystemsSet::SendChangedComponents),
+                    .after(NetworkingSystemsSet::SyncComponents),
                 ExplosionSystemSet::ProcessExplosions
                     .after(LocationPhysicsSet::DoPhysics)
                     .after(CosmosBundleSet::HandleCosmosBundles),

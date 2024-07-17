@@ -68,7 +68,7 @@ pub(super) fn register(app: &mut App) {
     app.add_systems(
         Update,
         on_request_star
-            .in_set(NetworkingSystemsSet::SendChangedComponents)
+            .in_set(NetworkingSystemsSet::SyncComponents)
             .run_if(in_state(GameState::Playing)),
     )
     .add_systems(SAVING_SCHEDULE, on_save_star.in_set(SavingSystemSet::DoSaving));

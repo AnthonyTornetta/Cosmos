@@ -52,6 +52,6 @@ pub(super) fn register(app: &mut App) {
         Update,
         on_request_station
             .in_set(StructureTypeSet::Station)
-            .in_set(NetworkingSystemsSet::SendChangedComponents),
+            .in_set(NetworkingSystemsSet::SyncComponents),
     );
 }

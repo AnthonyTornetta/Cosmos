@@ -277,7 +277,7 @@ pub(super) fn register(app: &mut App) {
         update_missile_system
             .run_if(in_state(GameState::Playing))
             .before(CosmosBundleSet::HandleCosmosBundles)
-            .before(NetworkingSystemsSet::SendChangedComponents),
+            .before(NetworkingSystemsSet::SyncComponents),
     )
     .add_systems(OnEnter(GameState::PostLoading), register_missile_launcher_blocks)
     .add_systems(

@@ -320,7 +320,7 @@ pub(super) fn register(app: &mut App) {
         .add_systems(
             Update,
             (
-                on_connect.in_set(NetworkingSystemsSet::SendChangedComponents),
+                on_connect.in_set(NetworkingSystemsSet::SyncComponents),
                 add_biosphere.in_set(NeedsBiosphereSet::SendEvent),
             )
                 .run_if(in_state(GameState::Playing)),

@@ -51,7 +51,7 @@ pub(super) fn register(app: &mut App) {
     app.add_systems(
         Update,
         on_request_ship
-            .in_set(NetworkingSystemsSet::SendChangedComponents)
+            .in_set(NetworkingSystemsSet::SyncComponents)
             .run_if(in_state(GameState::Playing)),
     );
 }

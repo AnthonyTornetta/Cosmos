@@ -161,7 +161,7 @@ pub(super) fn register(app: &mut App) {
             grav_well_handle_block_event,
             remove_gravity_wells,
             sync_gravity_well,
-            on_request_under_grav.in_set(NetworkingSystemsSet::SendChangedComponents),
+            on_request_under_grav.in_set(NetworkingSystemsSet::SyncComponents),
         )
             .chain()
             .run_if(in_state(GameState::Playing)),

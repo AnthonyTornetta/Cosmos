@@ -433,7 +433,7 @@ pub(super) fn setup_server(app: &mut App) {
             ComponentSyncingSet::PostComponentSyncing,
         )
             .after(CosmosBundleSet::HandleCosmosBundles)
-            .in_set(NetworkingSystemsSet::SendChangedComponents)
+            .in_set(NetworkingSystemsSet::SyncComponents)
             .chain(),
     );
 
