@@ -4,8 +4,8 @@
 
 use bevy::{
     prelude::{
-        App, BuildChildren, Changed, Commands, Component, Entity, Event, EventReader, EventWriter, IntoSystemConfigs, Parent, Query,
-        Update, With, Without,
+        App, BuildChildren, Changed, Commands, Component, Entity, Event, EventReader, EventWriter, IntoSystemConfigs, IntoSystemSetConfigs,
+        Parent, Query, SystemSet, Update, With, Without,
     },
     reflect::Reflect,
 };
@@ -138,14 +138,34 @@ fn exit_build_mode_when_parent_dies(
     }
 }
 
+#[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
+pub enum BuildModeSet {
+    SendEnterBuildModeEvent,
+    EnterBuildMode,
+    SendExitBuildModeEvent,
+    ExitBuildMode,
+}
+
 pub(super) fn register(app: &mut App) {
+    app.configure_sets(
+        Update,
+        (
+            BuildModeSet::SendEnterBuildModeEvent,
+            BuildModeSet::EnterBuildMode,
+            BuildModeSet::SendExitBuildModeEvent,
+            BuildModeSet::ExitBuildMode,
+        )
+            .chain(),
+    );
+
     app.add_systems(
         Update,
         (
-            enter_build_mode_listener,
-            exit_build_mode_when_parent_dies,
-            exit_build_mode_listener,
+            enter_build_mode_listener.in_set(BuildModeSet::EnterBuildMode),
+            exit_build_mode_when_parent_dies.in_set(BuildModeSet::SendExitBuildModeEvent),
+            exit_build_mode_listener.in_set(BuildModeSet::ExitBuildMode),
         )
+            .chain()
             .in_set(NetworkingSystemsSet::Between)
             .in_set(BlockEventsSet::ProcessEvents),
     )

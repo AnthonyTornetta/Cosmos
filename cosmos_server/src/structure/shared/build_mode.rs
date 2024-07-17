@@ -8,7 +8,7 @@ use cosmos_core::{
     netty::{cosmos_encoder, server_reliable_messages::ServerReliableMessages, system_sets::NetworkingSystemsSet, NettyChannelServer},
     registry::{identifiable::Identifiable, Registry},
     structure::{
-        shared::build_mode::{BuildMode, EnterBuildModeEvent, ExitBuildModeEvent},
+        shared::build_mode::{BuildMode, BuildModeSet, EnterBuildModeEvent, ExitBuildModeEvent},
         Structure,
     },
 };
@@ -41,7 +41,7 @@ fn interact_with_block(
     }
 }
 
-fn enter_build_mode(mut server: ResMut<RenetServer>, mut event_reader: EventReader<EnterBuildModeEvent>) {
+fn sync_enter_build_mode(mut server: ResMut<RenetServer>, mut event_reader: EventReader<EnterBuildModeEvent>) {
     for ev in event_reader.read() {
         server.broadcast_message(
             NettyChannelServer::Reliable,
@@ -53,7 +53,7 @@ fn enter_build_mode(mut server: ResMut<RenetServer>, mut event_reader: EventRead
     }
 }
 
-fn exit_build_mode(mut server: ResMut<RenetServer>, mut event_reader: EventReader<ExitBuildModeEvent>) {
+fn sync_exit_build_mode(mut server: ResMut<RenetServer>, mut event_reader: EventReader<ExitBuildModeEvent>) {
     for ev in event_reader.read() {
         server.broadcast_message(
             NettyChannelServer::Reliable,
@@ -78,7 +78,11 @@ pub(super) fn register(app: &mut App) {
     app.add_systems(
         Update,
         (
-            (interact_with_block, enter_build_mode, exit_build_mode)
+            (
+                interact_with_block.in_set(BuildModeSet::SendEnterBuildModeEvent),
+                sync_enter_build_mode.in_set(BuildModeSet::EnterBuildMode),
+                sync_exit_build_mode.in_set(BuildModeSet::ExitBuildMode),
+            )
                 .chain()
                 .in_set(NetworkingSystemsSet::Between),
             sync_build_mode.in_set(NetworkingSystemsSet::SyncComponents),

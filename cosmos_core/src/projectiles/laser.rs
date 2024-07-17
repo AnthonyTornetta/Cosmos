@@ -7,8 +7,8 @@ use bevy::{
     log::warn,
     pbr::{NotShadowCaster, NotShadowReceiver},
     prelude::{
-        App, Commands, Component, Entity, Event, EventWriter, GlobalTransform, Parent, Quat, Query, Res, Transform, Update, Vec3, With,
-        Without,
+        App, Commands, Component, Entity, Event, EventWriter, GlobalTransform, IntoSystemConfigs, Parent, Quat, Query, Res, SystemSet,
+        Transform, Update, Vec3, With, Without,
     },
     time::Time,
 };
@@ -19,7 +19,7 @@ use bevy_rapier3d::{
 
 use crate::{
     ecs::{bundles::CosmosPbrBundle, NeedsDespawned},
-    netty::NoSendEntity,
+    netty::{system_sets::NetworkingSystemsSet, NoSendEntity},
     physics::{
         location::Location,
         player_world::{PlayerWorld, WorldWithin},
@@ -174,7 +174,7 @@ impl Laser {
     }
 }
 
-fn handle_events(
+fn send_laser_hit_events(
     mut query: Query<
         (
             &RapierContextEntityLink,
@@ -285,7 +285,17 @@ fn despawn_lasers(mut commands: Commands, query: Query<(Entity, &FireTime), With
     }
 }
 
+#[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
+pub enum LaserSystemSet {
+    SendHitEvents,
+}
+
 pub(super) fn register(app: &mut App) {
-    app.add_systems(Update, (handle_events, despawn_lasers))
-        .add_event::<LaserCollideEvent>();
+    app.add_systems(
+        Update,
+        (send_laser_hit_events.in_set(LaserSystemSet::SendHitEvents), despawn_lasers)
+            .in_set(NetworkingSystemsSet::Between)
+            .chain(),
+    )
+    .add_event::<LaserCollideEvent>();
 }

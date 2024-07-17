@@ -6,6 +6,7 @@ use bevy::prelude::{in_state, App, Commands, IntoSystemConfigs, Name, Query, Res
 use bevy_rapier3d::prelude::Velocity;
 use cosmos_core::{
     entities::player::Player,
+    netty::system_sets::NetworkingSystemsSet,
     persistence::LoadingDistance,
     physics::location::{Location, Sector, SystemUnit, UniverseSystem, SYSTEM_SECTORS},
     universe::star::{Star, MAX_TEMPERATURE, MIN_TEMPERATURE},
@@ -130,6 +131,8 @@ pub(super) fn register(app: &mut App) {
     app.add_systems(
         Update,
         // planet_spawner::spawn_planet system requires stars to have been generated first
-        load_stars_near_players.run_if(in_state(GameState::Playing)),
+        load_stars_near_players
+            .in_set(NetworkingSystemsSet::Between)
+            .run_if(in_state(GameState::Playing)),
     );
 }

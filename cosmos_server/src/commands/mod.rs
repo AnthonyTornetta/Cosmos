@@ -3,7 +3,7 @@
 use std::time::Duration;
 
 use bevy::{
-    prelude::{App, Event, EventWriter, ResMut, Resource, Update},
+    prelude::{App, Event, EventWriter, Events, ResMut, Resource, Update},
     reflect::Reflect,
     utils::HashMap,
 };
@@ -133,6 +133,9 @@ pub(super) fn register(app: &mut App) {
         .insert_resource(CurrentlyWriting::default())
         .add_systems(Update, monitor_inputs)
         .add_event::<CosmosCommandSent>();
+
+    // This should all be rewritten, so make sure to remove this when that happens.
+    app.allow_ambiguous_resource::<Events<CosmosCommandSent>>();
 
     cosmos_command_handler::register(app);
 }

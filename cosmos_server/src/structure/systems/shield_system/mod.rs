@@ -35,6 +35,7 @@ use cosmos_core::{
     },
     persistence::LoadingDistance,
     physics::location::Location,
+    projectiles::laser::LaserSystemSet,
     registry::{identifiable::Identifiable, Registry},
     structure::{
         coordinates::BlockCoordinate,
@@ -377,7 +378,14 @@ pub(super) fn register(app: &mut App) {
     laser::register(app);
     explosion::register(app);
 
-    app.configure_sets(Update, (ShieldSet::RechargeShields, ShieldSet::OnShieldHit).chain());
+    app.configure_sets(
+        Update,
+        (
+            ShieldSet::RechargeShields,
+            ShieldSet::OnShieldHit.after(LaserSystemSet::SendHitEvents),
+        )
+            .chain(),
+    );
 
     app.init_resource::<ShieldProjectorBlocks>()
         .init_resource::<ShieldGeneratorBlocks>()

@@ -437,7 +437,7 @@ pub(super) fn setup_server(app: &mut App) {
             .chain(),
     );
 
-    app.add_systems(Update, server_receive_components)
+    app.add_systems(Update, server_receive_components.in_set(ComponentSyncingSet::PreComponentSyncing))
         .add_event::<RequestedEntityEvent>();
 }
 
