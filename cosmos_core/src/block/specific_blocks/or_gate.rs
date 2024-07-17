@@ -12,8 +12,8 @@ use crate::{
     block::{Block, BlockFace},
     events::block_events::BlockDataSystemParams,
     logic::{
-        logic_driver::LogicDriver, BlockLogicData, LogicBlock, LogicConnection, LogicInputEvent, LogicOutputEvent, LogicSystemSet, Port,
-        PortType, QueueLogicInputEvent,
+        default_logic_block_output, logic_driver::LogicDriver, BlockLogicData, LogicBlock, LogicConnection, LogicInputEvent,
+        LogicOutputEvent, LogicSystemSet, PortType, QueueLogicInputEvent,
     },
     registry::{identifiable::Identifiable, Registry},
     structure::Structure,
@@ -78,33 +78,24 @@ fn or_gate_input_event_listener(
 }
 
 fn or_gate_output_event_listener(
-    mut evr_logic_output: EventReader<LogicOutputEvent>,
-    mut evw_logic_input: EventWriter<QueueLogicInputEvent>,
+    evr_logic_output: EventReader<LogicOutputEvent>,
+    evw_queue_logic_input: EventWriter<QueueLogicInputEvent>,
+    logic_blocks: Res<Registry<LogicBlock>>,
     blocks: Res<Registry<Block>>,
-    mut q_logic_driver: Query<&mut LogicDriver>,
-    mut q_structure: Query<&mut Structure>,
+    q_logic_driver: Query<&mut LogicDriver>,
+    q_structure: Query<&mut Structure>,
     q_logic_data: Query<&BlockLogicData>,
 ) {
-    for ev in evr_logic_output.read() {
-        let Ok(structure) = q_structure.get_mut(ev.entity) else {
-            continue;
-        };
-        if structure.block_at(ev.block.coords(), &blocks).unlocalized_name() != "cosmos:or_gate" {
-            continue;
-        }
-        let Ok(mut logic_driver) = q_logic_driver.get_mut(ev.entity) else {
-            continue;
-        };
-        let Some(&BlockLogicData(signal)) = structure.query_block_data(ev.block.coords(), &q_logic_data) else {
-            continue;
-        };
-
-        let port = Port::new(
-            ev.block.coords(),
-            structure.block_rotation(ev.block.coords()).direction_of(BlockFace::Front),
-        );
-        logic_driver.update_producer(port, signal, &mut evw_logic_input, ev.entity);
-    }
+    default_logic_block_output(
+        "cosmos:or_gate",
+        evr_logic_output,
+        evw_queue_logic_input,
+        &logic_blocks,
+        &blocks,
+        q_logic_driver,
+        q_structure,
+        q_logic_data,
+    );
 }
 
 pub(super) fn register<T: States>(app: &mut App, post_loading_state: T) {

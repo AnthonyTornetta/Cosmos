@@ -229,7 +229,6 @@ fn logic_block_placed_event_listener(
         if let Some(logic_block) = logic_blocks.from_id(blocks.from_numeric_id(ev.old_block).unlocalized_name()) {
             if let Ok(structure) = q_structure.get_mut(ev.structure_entity) {
                 if let Ok(mut logic) = q_logic.get_mut(ev.structure_entity) {
-                    // println!("Removed block rotation: {:?}", ev.old_block_rotation);
                     logic.remove_logic_block(
                         logic_block,
                         ev.old_block_rotation,
@@ -286,7 +285,6 @@ fn queue_logic_consumers(
     mut logic_input_event_queue: ResMut<LogicInputEventQueue>,
 ) {
     for ev in evr_queue_logic_input.read() {
-        // println!("Input Event Queued: {:?}", ev.0);
         logic_input_event_queue.0.push_back(ev.0.clone());
     }
 }
@@ -296,7 +294,6 @@ fn queue_logic_producers(
     mut logic_output_event_queue: ResMut<LogicOutputEventQueue>,
 ) {
     for ev in evr_queue_logic_output.read() {
-        // println!("Output Event Queued: {:?}", ev.0);
         logic_output_event_queue.0.push_back(ev.0.clone());
     }
 }
@@ -309,6 +306,42 @@ fn send_queued_logic_events(
 ) {
     evw_logic_input.send_batch(inputs.0.drain(..));
     evw_logic_output.send_batch(outputs.0.drain(..));
+}
+
+/// Many logic blocks simply push their block logic data to their output ports on
+pub fn default_logic_block_output(
+    block_name: &str,
+    mut evr_logic_output: EventReader<LogicOutputEvent>,
+    mut evw_queue_logic_input: EventWriter<QueueLogicInputEvent>,
+    logic_blocks: &Registry<LogicBlock>,
+    blocks: &Registry<Block>,
+    mut q_logic_driver: Query<&mut LogicDriver>,
+    mut q_structure: Query<&mut Structure>,
+    q_logic_data: Query<&BlockLogicData>,
+) {
+    for ev in evr_logic_output.read() {
+        let Ok(structure) = q_structure.get_mut(ev.entity) else {
+            continue;
+        };
+        if structure.block_at(ev.block.coords(), &blocks).unlocalized_name() != block_name {
+            continue;
+        }
+        let Ok(mut logic_driver) = q_logic_driver.get_mut(ev.entity) else {
+            continue;
+        };
+        let Some(&BlockLogicData(signal)) = structure.query_block_data(ev.block.coords(), &q_logic_data) else {
+            continue;
+        };
+        // Could cause performance problems if many of the same logic block are updated in a single frame. Might move this lookup somewhere else.
+        let Some(logic_block) = logic_blocks.from_id(block_name) else {
+            continue;
+        };
+
+        for face in logic_block.output_faces() {
+            let port = Port::new(ev.block.coords(), structure.block_rotation(ev.block.coords()).direction_of(face));
+            logic_driver.update_producer(port, signal, &mut evw_queue_logic_input, ev.entity);
+        }
+    }
 }
 
 fn add_default_logic(q_needs_logic_driver: Query<Entity, (With<Structure>, Without<LogicDriver>)>, mut commands: Commands) {
@@ -376,8 +409,8 @@ pub(super) fn register<T: States>(app: &mut App, playing_state: T) {
     .register_type::<LogicDriver>()
     .register_type::<LogicGraph>()
     .register_type::<LogicGroup>()
+    .add_event::<LogicInputEvent>()
     .add_event::<LogicOutputEvent>()
     .add_event::<QueueLogicInputEvent>()
-    .add_event::<QueueLogicOutputEvent>()
-    .add_event::<QueueLogicInputEvent>();
+    .add_event::<QueueLogicOutputEvent>();
 }

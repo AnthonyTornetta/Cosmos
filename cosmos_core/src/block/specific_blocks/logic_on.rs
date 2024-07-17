@@ -8,9 +8,10 @@ use bevy::{
 use crate::{
     block::Block,
     logic::{
-        logic_driver::LogicDriver, LogicBlock, LogicConnection, LogicOutputEvent, LogicSystemSet, Port, PortType, QueueLogicInputEvent,
+        default_logic_block_output, logic_driver::LogicDriver, BlockLogicData, LogicBlock, LogicConnection, LogicOutputEvent,
+        LogicSystemSet, PortType, QueueLogicInputEvent,
     },
-    registry::{identifiable::Identifiable, Registry},
+    registry::Registry,
     structure::Structure,
 };
 
@@ -21,32 +22,24 @@ fn register_logic_connections(blocks: Res<Registry<Block>>, mut registry: ResMut
 }
 
 fn logic_on_output_event_listener(
-    mut evr_logic_output: EventReader<LogicOutputEvent>,
-    mut evw_queue_logic_input: EventWriter<QueueLogicInputEvent>,
+    evr_logic_output: EventReader<LogicOutputEvent>,
+    evw_queue_logic_input: EventWriter<QueueLogicInputEvent>,
+    logic_blocks: Res<Registry<LogicBlock>>,
     blocks: Res<Registry<Block>>,
-    mut q_logic_driver: Query<&mut LogicDriver>,
-    mut q_structure: Query<&mut Structure>,
+    q_logic_driver: Query<&mut LogicDriver>,
+    q_structure: Query<&mut Structure>,
+    q_logic_data: Query<&BlockLogicData>,
 ) {
-    for ev in evr_logic_output.read() {
-        let Ok(structure) = q_structure.get_mut(ev.entity) else {
-            continue;
-        };
-        if structure.block_at(ev.block.coords(), &blocks).unlocalized_name() != "cosmos:logic_on" {
-            continue;
-        }
-        let Ok(mut logic_driver) = q_logic_driver.get_mut(ev.entity) else {
-            continue;
-        };
-
-        // println!("Logic On Output Event.");
-
-        // Set all this block's ports to 1 in their logic groups.
-        // TODO: Signal should be customizable.
-        for direction in structure.block_rotation(ev.block.coords()).directions_of_each_face() {
-            let port = Port::new(ev.block.coords(), direction);
-            logic_driver.update_producer(port, 1, &mut evw_queue_logic_input, ev.entity);
-        }
-    }
+    default_logic_block_output(
+        "cosmos:logic_on",
+        evr_logic_output,
+        evw_queue_logic_input,
+        &logic_blocks,
+        &blocks,
+        q_logic_driver,
+        q_structure,
+        q_logic_data,
+    );
 }
 
 pub(super) fn register<T: States>(app: &mut App, post_loading_state: T) {

@@ -62,7 +62,6 @@ impl BlockRotation {
     pub fn direction_of(&self, face: BlockFace) -> BlockDirection {
         let unrotated_vec3 = face.unrotated_direction().to_vec3();
         let rotated_vec3 = self.as_quat().mul_vec3(unrotated_vec3);
-        // println!("Unrotated vector: {:?}; Rotated vector: {:?}", unrotated_vec3, rotated_vec3);
         BlockDirection::from_vec3(rotated_vec3)
     }
 
@@ -71,7 +70,6 @@ impl BlockRotation {
     /// For example, if the front of the block is locally pointing left and you provide [`BlockFace::Front`], you will be given [`BlockFace::Left`].
     /// Might later change to quaternion math with the rotation's inverse.
     pub fn block_face_pointing(&self, direction: BlockDirection) -> BlockFace {
-        // println!("Looking for {:?} in {:?}", direction, self.directions_of_each_face());
         BlockFace::from_index(
             self.directions_of_each_face()
                 .iter()

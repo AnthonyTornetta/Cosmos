@@ -158,9 +158,6 @@ pub(crate) fn process_player_interaction(
             let block = blocks.from_numeric_id(block_id);
 
             let moved_point = looking_at_block.intersection.point + looking_at_block.intersection.normal * 0.75;
-            // println!("Intersection Point: {:?}", looking_at_block.intersection.point);
-            // println!("Normal: {:?}", looking_at_block.intersection.normal);
-            // println!("Moved Point: {:?}", moved_point);
             let point = structure_g_transform.compute_matrix().inverse().transform_point3(moved_point);
 
             let place_at_coords = structure.relative_coords_to_local_coords_checked(point.x, point.y, point.z).ok()?;
@@ -185,7 +182,6 @@ pub(crate) fn process_player_interaction(
                     let point = (point - point.floor()) - Vec3::new(0.5, 0.5, 0.5);
 
                     // Unused coordinate is always within tolerance of +-0.25 (+ side on top/right/front).
-                    // println!("Final point: {point:?}");
 
                     // The front texture always points in the direction decided by where on the anchor block the player clicked.
                     let front_facing = match perpendicular_direction {
@@ -216,7 +212,6 @@ pub(crate) fn process_player_interaction(
                         }
                     };
 
-                    // println!("Top pointing: {}; Front pointing: {}", perpendicular_direction, front_facing);
                     BlockRotation::from_face_directions(perpendicular_direction, front_facing)
                 }
             } else {

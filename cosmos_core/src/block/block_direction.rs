@@ -89,7 +89,6 @@ impl BlockDirection {
     /// Returns the `Direction` this vec3 represents.
     /// Vector must have one entry non-zero and all others 0 (within tolerance).
     pub fn from_vec3(vec: Vec3) -> Self {
-        // println!("Block Direction from vec: {:?}", vec);
         debug_assert!((vec.x.abs() > f32::EPSILON) as u8 + (vec.y.abs() > f32::EPSILON) as u8 + (vec.z.abs() > f32::EPSILON) as u8 == 1);
         if vec.x > f32::EPSILON {
             Self::PosX

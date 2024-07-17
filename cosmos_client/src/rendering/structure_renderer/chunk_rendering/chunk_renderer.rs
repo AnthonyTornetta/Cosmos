@@ -283,11 +283,6 @@ impl ChunkRenderer {
                     .iter()
                     .map(|direction| (*direction, block_rotation.block_face_pointing(*direction)))
                 {
-                    // println!(
-                    //     "{:?}: Block face {:?} rendered pointing {:?} due to rotation {:?}",
-                    //     coords, face, direction, block_rotation
-                    // );
-
                     let mut one_mesh_only = false;
 
                     let Some(mut mesh_info) = mesh
