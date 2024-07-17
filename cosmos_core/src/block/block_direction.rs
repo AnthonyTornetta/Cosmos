@@ -45,7 +45,7 @@ impl BlockDirection {
     /// Returns the index for each direction [0, 5].
     ///
     /// Useful for storing directions in an array.
-    /// This index does not directly correspond to any `BlockFace` index. Use `unrotated_block_face` to convert.
+    /// This index does not directly correspond to any `BlockFace` index. Use `block_face` to convert.
     pub const fn index(&self) -> usize {
         match *self {
             Self::PosX => 0,
@@ -60,7 +60,7 @@ impl BlockDirection {
     /// Gets a direction from its index.
     ///
     /// Note this will panic if index is not between 0 and 5 inclusive.
-    /// This index does not directly correspond to any `BlockFace` index. Use `unrotated_block_face` to convert.
+    /// This index does not directly correspond to any `BlockFace` index. Use `block_face` to convert.
     #[inline]
     pub fn from_index(index: usize) -> Self {
         match index {
@@ -132,7 +132,7 @@ impl BlockDirection {
     /// Returns the `BlockFace` pointing in this `Direction` if the block and it's structure are not rotated.
     ///
     /// Most blocks have some rotation, so be careful to call the proper `BlockRotation` method instead if the block is rotated.
-    pub fn unrotated_block_face(self) -> BlockFace {
+    pub fn block_face(self) -> BlockFace {
         match self {
             Self::PosX => BlockFace::Right,
             Self::NegX => BlockFace::Left,

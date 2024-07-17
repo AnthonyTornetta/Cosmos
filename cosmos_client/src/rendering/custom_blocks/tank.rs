@@ -135,7 +135,7 @@ fn on_render_tanks(
             let mesh_builder = material_meshes.entry(mat_id).or_default();
 
             let faces = ALL_BLOCK_FACES.iter().copied().filter(|face| {
-                if let Ok(new_coord) = BlockCoordinate::try_from(block.coords() + face.unrotated_direction().to_coordinates()) {
+                if let Ok(new_coord) = BlockCoordinate::try_from(block.coords() + face.direction().to_coordinates()) {
                     if structure.block_id_at(new_coord) == tank_id {
                         return match structure.query_block_data(new_coord, &q_stored_fluid) {
                             Some(BlockFluidData::Fluid(sf)) => sf.fluid_stored == 0,
@@ -149,7 +149,7 @@ fn on_render_tanks(
 
             for (_, direction) in faces.map(|face| (face, block_rotation.direction_of(face))) {
                 let Some(mut mesh_info) = block_mesh_info
-                    .info_for_face(direction.unrotated_block_face(), false)
+                    .info_for_face(direction.block_face(), false)
                     .map(Some)
                     .unwrap_or_else(|| {
                         let single_mesh = block_mesh_info.info_for_whole_block();
@@ -172,7 +172,7 @@ fn on_render_tanks(
 
                 let neighbors = BlockNeighbors::empty();
 
-                let Some(image_index) = index.atlas_index_from_face(direction.unrotated_block_face(), neighbors) else {
+                let Some(image_index) = index.atlas_index_from_face(direction.block_face(), neighbors) else {
                     warn!("Missing image index for face {direction} -- {index:?}");
                     continue;
                 };
