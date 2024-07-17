@@ -11,7 +11,7 @@ use bevy_renet::renet::ClientId;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    block::BlockRotation,
+    block::block_rotation::BlockRotation,
     entities::player::render_distance::RenderDistance,
     physics::location::Location,
     structure::{

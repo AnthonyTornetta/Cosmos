@@ -9,6 +9,7 @@ use bevy_renet::renet::RenetServer;
 use cosmos_core::{
     block::{
         block_events::BlockInteractEvent,
+        block_face::BlockFace,
         multiblock::reactor::{Reactor, ReactorBounds, ReactorPowerGenerationBlock, Reactors},
         Block,
     },
@@ -105,14 +106,14 @@ fn check_is_valid_multiblock(structure: &Structure, controller_coords: BlockCoor
             .expect("Missing cosmos:reactor_controller"),
     ];
 
-    let direction = structure.block_rotation(controller_coords);
+    let rotation = structure.block_rotation(controller_coords);
 
     let ub_controller_coords = UnboundBlockCoordinate::from(controller_coords);
 
     let mut found_coords = None;
 
     {
-        let search_direction = direction.local_back().direction_coordinates();
+        let search_direction = rotation.direction_of(BlockFace::Back).to_coordinates();
 
         // Start 2 back to now allow a 2x2x2 reactor - minimum size is 3x3x3
         let mut check_coords = search_direction + search_direction;
@@ -137,8 +138,8 @@ fn check_is_valid_multiblock(structure: &Structure, controller_coords: BlockCoor
     let (left_wall_coords, right_wall_coords) = find_wall_coords(
         ub_controller_coords,
         structure,
-        direction.local_left().direction_coordinates(),
-        direction.local_right().direction_coordinates(),
+        rotation.direction_of(BlockFace::Left).to_coordinates(),
+        rotation.direction_of(BlockFace::Right).to_coordinates(),
         blocks,
         &valid_blocks,
     )?;
@@ -146,8 +147,8 @@ fn check_is_valid_multiblock(structure: &Structure, controller_coords: BlockCoor
     let (down_wall_coords, up_wall_coords) = find_wall_coords(
         ub_controller_coords,
         structure,
-        direction.local_bottom().direction_coordinates(),
-        direction.local_top().direction_coordinates(),
+        rotation.direction_of(BlockFace::Bottom).to_coordinates(),
+        rotation.direction_of(BlockFace::Top).to_coordinates(),
         blocks,
         &valid_blocks,
     )?;

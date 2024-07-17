@@ -6,7 +6,7 @@ use bevy::reflect::Reflect;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    block::{blocks::AIR_BLOCK_ID, Block, BlockRotation},
+    block::{block_rotation::BlockRotation, blocks::AIR_BLOCK_ID, Block},
     registry::{identifiable::Identifiable, Registry},
     structure::chunk::CHUNK_DIMENSIONS,
 };

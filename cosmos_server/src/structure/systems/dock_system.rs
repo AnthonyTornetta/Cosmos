@@ -23,7 +23,7 @@ use bevy_rapier3d::{
     plugin::RapierContext,
 };
 use cosmos_core::{
-    block::Block,
+    block::{block_face::BlockFace, Block},
     events::block_events::BlockChangedEvent,
     physics::structure_physics::ChunkPhysicsPart,
     registry::{identifiable::Identifiable, Registry},
@@ -143,8 +143,8 @@ fn on_active(
         for &docking_block in ds.block_locations() {
             let rel_pos = structure.block_relative_position(docking_block);
             let block_rotation = structure.block_rotation(docking_block);
-            let docking_look_face = block_rotation.local_front();
-            let front_direction = docking_look_face.direction_vec3();
+            let docking_look_direction = block_rotation.direction_of(BlockFace::Front);
+            let front_direction = docking_look_direction.to_vec3();
 
             let abs_block_pos = g_trans.transform_point(rel_pos);
 
@@ -195,9 +195,9 @@ fn on_active(
                 continue;
             };
 
-            let hit_block_face = hit_structure.block_rotation(hit_coords).local_front();
+            let hit_block_direction = hit_structure.block_rotation(hit_coords).direction_of(BlockFace::Front);
             let hit_rotation = Quat::from_affine3(&hit_g_trans.affine());
-            let front_direction = hit_rotation.mul_vec3(hit_block_face.direction_vec3());
+            let front_direction = hit_rotation.mul_vec3(hit_block_direction.to_vec3());
 
             let dotted = ray_dir.dot(front_direction);
 
@@ -212,7 +212,7 @@ fn on_active(
 
             let rel_pos = hit_structure.block_relative_position(hit_coords)
                 - relative_docked_ship_rotation
-                    .mul_vec3(structure.block_relative_position(docking_block) + docking_look_face.direction_vec3());
+                    .mul_vec3(structure.block_relative_position(docking_block) + docking_look_direction.to_vec3());
 
             let delta_position = rel_pos - (g_trans.translation() - hit_g_trans.translation());
 

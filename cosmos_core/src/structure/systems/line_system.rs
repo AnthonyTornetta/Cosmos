@@ -6,7 +6,7 @@ use bevy::{prelude::*, reflect::Reflect, utils::HashMap};
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    block::{Block, BlockFace},
+    block::{block_direction::BlockDirection, Block},
     registry::{create_registry, identifiable::Identifiable, Registry},
     structure::{
         coordinates::{BlockCoordinate, CoordinateType},
@@ -124,7 +124,7 @@ pub struct Line<T: LineProperty> {
     /// The block at the start
     pub start: StructureBlock,
     /// The direction this line is facing
-    pub direction: BlockFace,
+    pub direction: BlockDirection,
     /// How many blocks this line has
     pub len: CoordinateType,
     /// The color of the line
@@ -139,7 +139,7 @@ impl<T: LineProperty> Line<T> {
     #[inline]
     /// Returns the ending structure block
     pub fn end(&self) -> StructureBlock {
-        let (dx, dy, dz) = self.direction.direction();
+        let (dx, dy, dz) = self.direction.to_i32_tuple();
         let delta = self.len as i32 - 1;
 
         StructureBlock::new(BlockCoordinate::new(
@@ -152,12 +152,24 @@ impl<T: LineProperty> Line<T> {
     /// Returns true if a structure block is within this line
     pub fn within(&self, sb: &StructureBlock) -> bool {
         match self.direction {
-            BlockFace::Front => sb.x == self.start.x && sb.y == self.start.y && (sb.z >= self.start.z && sb.z < self.start.z + self.len),
-            BlockFace::Back => sb.x == self.start.x && sb.y == self.start.y && (sb.z <= self.start.z && sb.z > self.start.z - self.len),
-            BlockFace::Right => sb.z == self.start.z && sb.y == self.start.y && (sb.x >= self.start.x && sb.x < self.start.x + self.len),
-            BlockFace::Left => sb.z == self.start.z && sb.y == self.start.y && (sb.x <= self.start.x && sb.x > self.start.x - self.len),
-            BlockFace::Top => sb.x == self.start.x && sb.z == self.start.z && (sb.y >= self.start.y && sb.y < self.start.y + self.len),
-            BlockFace::Bottom => sb.x == self.start.x && sb.z == self.start.z && (sb.y <= self.start.y && sb.y > self.start.y - self.len),
+            BlockDirection::PosX => {
+                sb.z == self.start.z && sb.y == self.start.y && (sb.x >= self.start.x && sb.x < self.start.x + self.len)
+            }
+            BlockDirection::NegX => {
+                sb.z == self.start.z && sb.y == self.start.y && (sb.x <= self.start.x && sb.x > self.start.x - self.len)
+            }
+            BlockDirection::PosY => {
+                sb.x == self.start.x && sb.z == self.start.z && (sb.y >= self.start.y && sb.y < self.start.y + self.len)
+            }
+            BlockDirection::NegY => {
+                sb.x == self.start.x && sb.z == self.start.z && (sb.y <= self.start.y && sb.y > self.start.y - self.len)
+            }
+            BlockDirection::PosZ => {
+                sb.x == self.start.x && sb.y == self.start.y && (sb.z >= self.start.z && sb.z < self.start.z + self.len)
+            }
+            BlockDirection::NegZ => {
+                sb.x == self.start.x && sb.y == self.start.y && (sb.z <= self.start.z && sb.z > self.start.z - self.len)
+            }
         }
     }
 }

@@ -22,7 +22,7 @@ use bevy::{
 use futures_lite::future;
 
 use cosmos_core::{
-    block::{Block, BlockFace},
+    block::{block_face::BlockFace, Block},
     ecs::NeedsDespawned,
     registry::{
         identifiable::Identifiable,
@@ -150,8 +150,8 @@ impl ChunkRenderer {
 
             let (x, y, z) = (coords.x, coords.y, coords.z);
 
-            // right
-            if (x != CHUNK_DIMENSIONS - 1 && check(lod, block_id, actual_block, blocks, coords.right()))
+            // Positive X.
+            if (x != CHUNK_DIMENSIONS - 1 && check(lod, block_id, actual_block, blocks, coords.pos_x()))
                 || (x == CHUNK_DIMENSIONS - 1
                     && (right
                         .map(|c| check(c, block_id, actual_block, blocks, ChunkBlockCoordinate::new(0, y, z)))
@@ -159,14 +159,14 @@ impl ChunkRenderer {
             {
                 faces.push(BlockFace::Right);
             }
-            // left
+            // Negative X.
             if (x != 0
                 && check(
                     lod,
                     block_id,
                     actual_block,
                     blocks,
-                    coords.left().expect("Checked in first condition"),
+                    coords.neg_x().expect("Checked in first condition"),
                 ))
                 || (x == 0
                     && (left
@@ -184,8 +184,8 @@ impl ChunkRenderer {
                 faces.push(BlockFace::Left);
             }
 
-            // top
-            if (y != CHUNK_DIMENSIONS - 1 && check(lod, block_id, actual_block, blocks, coords.top()))
+            // Positive Y.
+            if (y != CHUNK_DIMENSIONS - 1 && check(lod, block_id, actual_block, blocks, coords.pos_y()))
                 || (y == CHUNK_DIMENSIONS - 1
                     && top
                         .map(|c| check(c, block_id, actual_block, blocks, ChunkBlockCoordinate::new(x, 0, z)))
@@ -193,14 +193,14 @@ impl ChunkRenderer {
             {
                 faces.push(BlockFace::Top);
             }
-            // bottom
+            // Negative Y.
             if (y != 0
                 && check(
                     lod,
                     block_id,
                     actual_block,
                     blocks,
-                    coords.bottom().expect("Checked in first condition"),
+                    coords.neg_y().expect("Checked in first condition"),
                 ))
                 || (y == 0
                     && (bottom
@@ -218,23 +218,23 @@ impl ChunkRenderer {
                 faces.push(BlockFace::Bottom);
             }
 
-            // front
-            if (z != CHUNK_DIMENSIONS - 1 && check(lod, block_id, actual_block, blocks, coords.front()))
+            // Positive Z.
+            if (z != CHUNK_DIMENSIONS - 1 && check(lod, block_id, actual_block, blocks, coords.pos_z()))
                 || (z == CHUNK_DIMENSIONS - 1
                     && (front
                         .map(|c| check(c, block_id, actual_block, blocks, ChunkBlockCoordinate::new(x, y, 0)))
                         .unwrap_or(true)))
             {
-                faces.push(BlockFace::Front);
+                faces.push(BlockFace::Back);
             }
-            // back
+            // Negative Z.
             if (z != 0
                 && check(
                     lod,
                     block_id,
                     actual_block,
                     blocks,
-                    coords.back().expect("Checked in first condition"),
+                    coords.neg_z().expect("Checked in first condition"),
                 ))
                 || (z == 0
                     && (back
@@ -249,7 +249,7 @@ impl ChunkRenderer {
                         })
                         .unwrap_or(true)))
             {
-                faces.push(BlockFace::Back);
+                faces.push(BlockFace::Front);
             }
 
             if !faces.is_empty() {
@@ -277,7 +277,8 @@ impl ChunkRenderer {
 
                 let rotation = block_rotation.as_quat();
 
-                for face in faces.iter().map(|face| block_rotation.rotate_face(*face)) {
+                for direction in faces.iter().map(|face| block_rotation.direction_of(*face)) {
+                    let face = direction.block_face();
                     let index = block_textures
                         .from_id(block.unlocalized_name())
                         .unwrap_or_else(|| block_textures.from_id("missing").expect("Missing texture should exist."));

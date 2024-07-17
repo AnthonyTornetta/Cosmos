@@ -124,7 +124,7 @@ fn update_looking_at_text(
         text.sections[1].value = format!(
             "{}: {:?}, {:?}",
             lang.get_name(block).unwrap_or(block.unlocalized_name()),
-            block_rotation.block_up,
+            block_rotation.face_pointing_pos_y,
             block_rotation.sub_rotation
         );
     } else {

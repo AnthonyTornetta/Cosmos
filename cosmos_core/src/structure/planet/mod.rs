@@ -9,7 +9,7 @@ use bevy::{
 use bigdecimal::Signed;
 use serde::{Deserialize, Serialize};
 
-use crate::{block::BlockFace, physics::location::SYSTEM_SECTORS};
+use crate::{block::block_face::BlockFace, physics::location::SYSTEM_SECTORS};
 
 use super::{
     chunk::CHUNK_DIMENSIONS,
@@ -66,13 +66,13 @@ impl Planet {
         let max = abs.x.max(abs.y).max(abs.z);
 
         if normalized.z.is_negative() && abs.z == max {
-            BlockFace::Back
+            BlockFace::Front
         } else if normalized.y.is_negative() && abs.y == max {
             BlockFace::Bottom
         } else if normalized.x.is_negative() && abs.x == max {
             BlockFace::Left
         } else if abs.z == max {
-            BlockFace::Front
+            BlockFace::Back
         } else if abs.y == max {
             BlockFace::Top
         } else {
@@ -122,9 +122,9 @@ impl Planet {
                                 } else {
                                     up
                                 };
-                                let z_up = if matches!(up1, BlockFace::Front | BlockFace::Back) {
+                                let z_up = if matches!(up1, BlockFace::Back | BlockFace::Front) {
                                     up1
-                                } else if matches!(up2, BlockFace::Front | BlockFace::Back) {
+                                } else if matches!(up2, BlockFace::Back | BlockFace::Front) {
                                     up2
                                 } else {
                                     up

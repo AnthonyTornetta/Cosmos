@@ -7,12 +7,12 @@ use bevy::{
 };
 
 use crate::{
-    block::{Block, BlockFace, BlockRotation},
+    block::{block_direction::BlockDirection, block_face::ALL_BLOCK_FACES, block_rotation::BlockRotation, Block},
     registry::Registry,
     structure::{coordinates::BlockCoordinate, structure_block::StructureBlock, Structure},
 };
 
-use super::{logic_graph::LogicGraph, LogicBlock, LogicInputEvent, LogicOutputEvent, Port, PortType};
+use super::{logic_graph::LogicGraph, LogicBlock, Port, PortType, QueueLogicInputEvent, QueueLogicOutputEvent};
 
 #[derive(Debug, Default, Reflect, Component)]
 /// The public interface for accessing and mutating an [`Entity`]'s [`LogicGraph`].
@@ -23,38 +23,39 @@ pub struct LogicDriver {
 
 impl LogicDriver {
     /// Returns an array of the Boolean value of the given block's input port groups.
-    /// A block face without an input port is assigned false.
-    /// Global face means these values are immediately usable for computing a block's logic formula with no further rotations.
-    pub fn global_port_inputs(&self, coords: BlockCoordinate, rotation: BlockRotation) -> [bool; 6] {
-        rotation.all_local_faces().map(|face| {
-            self.logic_graph
-                .group_of(&Port::new(coords, face), PortType::Input)
-                .map(|group| group.on())
-                .unwrap_or(false)
-        })
+    /// A block face without an input port is assigned `0`.
+    pub fn read_input(&self, coords: BlockCoordinate, direction: BlockDirection) -> i32 {
+        self.logic_graph
+            .group_of(&Port::new(coords, direction), PortType::Input)
+            .map(|group| group.signal())
+            .unwrap_or(0)
+    }
+
+    /// Gets the input signals of all 6 faces, in the order of the [`Direction`] indices.
+    pub fn read_all_inputs(&self, coords: BlockCoordinate, rotation: BlockRotation) -> [i32; 6] {
+        ALL_BLOCK_FACES.map(|face| self.read_input(coords, rotation.direction_of(face)))
     }
 
     fn port_placed(
         &mut self,
         coords: BlockCoordinate,
-        global_face: BlockFace,
+        direction: BlockDirection,
         port_type: PortType,
         structure: &Structure,
         entity: Entity,
         blocks: &Registry<Block>,
         logic_blocks: &Registry<LogicBlock>,
-        evw_logic_output: &mut EventWriter<LogicOutputEvent>,
-        evw_logic_input: &mut EventWriter<LogicInputEvent>,
+        evw_queue_logic_output: &mut EventWriter<QueueLogicOutputEvent>,
+        evw_queue_logic_input: &mut EventWriter<QueueLogicInputEvent>,
     ) {
-        let local_face = structure.block_rotation(coords).global_to_local(global_face);
         // If the neighbor coordinates don't exist, no port is added (and thus no new group).
-        let Ok(neighbor_coords) = coords.step(local_face) else {
+        let Ok(neighbor_coords) = coords.step(direction) else {
             return;
         };
 
         let maybe_group = self.logic_graph.dfs_for_group(
             neighbor_coords,
-            local_face.inverse(),
+            direction.inverse(),
             structure,
             &mut Port::all_for(coords),
             blocks,
@@ -63,13 +64,13 @@ impl LogicDriver {
         let group_id = maybe_group.unwrap_or_else(|| self.logic_graph.new_group(None));
         self.logic_graph.add_port(
             coords,
-            local_face,
+            direction,
             group_id,
             port_type,
             0,
             entity,
-            evw_logic_output,
-            evw_logic_input,
+            evw_queue_logic_output,
+            evw_queue_logic_input,
         );
     }
 
@@ -78,26 +79,27 @@ impl LogicDriver {
     pub fn add_logic_block(
         &mut self,
         logic_block: &LogicBlock,
+        rotation: BlockRotation,
         coords: BlockCoordinate,
         structure: &Structure,
         entity: Entity,
         blocks: &Registry<Block>,
         logic_blocks: &Registry<LogicBlock>,
-        evw_logic_output: &mut EventWriter<LogicOutputEvent>,
-        evw_logic_input: &mut EventWriter<LogicInputEvent>,
+        evw_queue_logic_output: &mut EventWriter<QueueLogicOutputEvent>,
+        evw_queue_logic_input: &mut EventWriter<QueueLogicInputEvent>,
     ) {
         // Adding input faces as consumers to their connected group, or a new group if there is no connected group.
         for input_face in logic_block.input_faces() {
             self.port_placed(
                 coords,
-                input_face,
+                rotation.direction_of(input_face),
                 PortType::Input,
                 structure,
                 entity,
                 blocks,
                 logic_blocks,
-                evw_logic_output,
-                evw_logic_input,
+                evw_queue_logic_output,
+                evw_queue_logic_input,
             )
         }
 
@@ -105,14 +107,14 @@ impl LogicDriver {
         for output_face in logic_block.output_faces() {
             self.port_placed(
                 coords,
-                output_face,
+                rotation.direction_of(output_face),
                 PortType::Output,
                 structure,
                 entity,
                 blocks,
                 logic_blocks,
-                evw_logic_output,
-                evw_logic_input,
+                evw_queue_logic_output,
+                evw_queue_logic_input,
             )
         }
 
@@ -126,11 +128,11 @@ impl LogicDriver {
 
         // Get all adjacent group IDs.
         for wire_face in logic_block.wire_faces() {
-            let local_face = structure.block_rotation(coords).global_to_local(wire_face);
-            if let Ok(neighbor_coords) = coords.step(local_face) {
+            let direction = structure.block_rotation(coords).direction_of(wire_face);
+            if let Ok(neighbor_coords) = coords.step(direction) {
                 if let Some(group_id) = self.logic_graph.dfs_for_group(
                     neighbor_coords,
-                    local_face.inverse(),
+                    direction.inverse(),
                     structure,
                     &mut Port::all_for(coords),
                     blocks,
@@ -145,7 +147,9 @@ impl LogicDriver {
         match group_ids.len() {
             0 => drop(self.logic_graph.new_group(Some(coords))),
             1 => self.logic_graph.set_group_recent_wire(*group_ids.iter().next().unwrap(), coords),
-            _ => self.logic_graph.merge_adjacent_groups(&group_ids, coords, entity, evw_logic_input),
+            _ => self
+                .logic_graph
+                .merge_adjacent_groups(&group_ids, coords, entity, evw_queue_logic_input),
         };
     }
 
@@ -154,24 +158,25 @@ impl LogicDriver {
     pub fn remove_logic_block(
         &mut self,
         logic_block: &LogicBlock,
+        rotation: BlockRotation,
         coords: BlockCoordinate,
         structure: &Structure,
         entity: Entity,
         blocks: &Registry<Block>,
         logic_blocks: &Registry<LogicBlock>,
-        evw_logic_output: &mut EventWriter<LogicOutputEvent>,
-        evw_logic_input: &mut EventWriter<LogicInputEvent>,
+        evw_queue_logic_output: &mut EventWriter<QueueLogicOutputEvent>,
+        evw_queue_logic_input: &mut EventWriter<QueueLogicInputEvent>,
     ) {
         // Removing input ports from their groups.
         for input_face in logic_block.input_faces() {
             self.logic_graph.remove_port(
                 coords,
-                input_face,
+                rotation.direction_of(input_face),
                 PortType::Input,
                 structure,
                 blocks,
                 logic_blocks,
-                evw_logic_input,
+                evw_queue_logic_input,
             )
         }
 
@@ -179,12 +184,12 @@ impl LogicDriver {
         for output_face in logic_block.output_faces() {
             self.logic_graph.remove_port(
                 coords,
-                output_face,
+                rotation.direction_of(output_face),
                 PortType::Output,
                 structure,
                 blocks,
                 logic_blocks,
-                evw_logic_input,
+                evw_queue_logic_input,
             )
         }
 
@@ -202,8 +207,8 @@ impl LogicDriver {
         // Setting new group IDs.
         let mut visited = Port::all_for(coords);
         for wire_face in logic_block.wire_faces() {
-            let local_face = structure.block_rotation(coords).global_to_local(wire_face);
-            let Ok(neighbor_coords) = coords.step(local_face) else {
+            let direction = structure.block_rotation(coords).direction_of(wire_face);
+            let Ok(neighbor_coords) = coords.step(direction) else {
                 continue;
             };
             // For now, takes a new ID for every call, even though some (like air blocks or already visited wires) don't need it.
@@ -211,13 +216,13 @@ impl LogicDriver {
             let used_new_group = self.logic_graph.rename_group(
                 group_id,
                 neighbor_coords,
-                local_face.inverse(),
+                direction.inverse(),
                 structure,
                 &mut visited,
                 blocks,
                 logic_blocks,
-                evw_logic_output,
-                evw_logic_input,
+                evw_queue_logic_output,
+                evw_queue_logic_input,
             );
             if !used_new_group {
                 self.logic_graph.remove_group(group_id);
@@ -225,12 +230,12 @@ impl LogicDriver {
                 let new_group = self.logic_graph.get_group(group_id);
                 if new_group.on() != was_on {
                     // Update the inputs to every input port in this newly created group, if the value of the group has changed.
-                    for &input_port in new_group.consumers.iter() {
-                        evw_logic_input.send(LogicInputEvent {
-                            block: StructureBlock::new(input_port.coords),
-                            entity,
-                        });
-                    }
+                    evw_queue_logic_input.send_batch(
+                        new_group
+                            .consumers
+                            .iter()
+                            .map(|input_port| QueueLogicInputEvent::new(StructureBlock::new(input_port.coords), entity)),
+                    );
                 }
             }
         }
@@ -238,7 +243,13 @@ impl LogicDriver {
     }
 
     /// Sets the on/off value of the given port (which must be an output port) in the logic graph.
-    pub fn update_producer(&mut self, port: Port, signal: i32, evw_logic_input: &mut EventWriter<LogicInputEvent>, entity: Entity) {
-        self.logic_graph.update_producer(port, signal, evw_logic_input, entity);
+    pub fn update_producer(
+        &mut self,
+        port: Port,
+        signal: i32,
+        evw_queue_logic_input: &mut EventWriter<QueueLogicInputEvent>,
+        entity: Entity,
+    ) {
+        self.logic_graph.update_producer(port, signal, evw_queue_logic_input, entity);
     }
 }

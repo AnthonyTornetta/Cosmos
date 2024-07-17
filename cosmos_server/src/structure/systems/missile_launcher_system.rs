@@ -209,7 +209,7 @@ fn update_missile_system(
 
                 let location = structure.block_world_location(line.start.coords(), global_transform, location);
 
-                let relative_direction = line.direction.direction_vec3();
+                let relative_direction = line.direction.to_vec3();
 
                 let missile_vel = MISSILE_BASE_VELOCITY + (line.len as f32 * MISSILE_SPEED_DIVIDER + 1.0).ln() * MISSILE_SPEED_MULTIPLIER;
 

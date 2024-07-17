@@ -11,7 +11,7 @@ use bevy::{
     },
 };
 use cosmos_core::{
-    block::{Block, BlockFace},
+    block::{block_face::BlockFace, Block},
     registry::{
         identifiable::Identifiable,
         many_to_one::{self, ManyToOneRegistry, ReadOnlyManyToOneRegistry},
@@ -415,8 +415,8 @@ impl BlockMeshInformation {
         left: Option<MeshInformation>,
         top: Option<MeshInformation>,
         bottom: Option<MeshInformation>,
-        front: Option<MeshInformation>,
         back: Option<MeshInformation>,
+        front: Option<MeshInformation>,
     ) -> Self {
         // If this ever fails, change the `mesh_info` ordering + comment below
         debug_assert!(BlockFace::Right.index() == 0);
@@ -432,8 +432,9 @@ impl BlockMeshInformation {
                BlockFace::Left => 1,
                BlockFace::Top => 2,
                BlockFace::Bottom => 3,
-               BlockFace::Front => 4,
-               BlockFace::Back => 5,
+                BlockFace::Back => 4,
+               BlockFace::Front => 5,
+
             */
             mesh_info: MeshType::MultipleFaceMesh(Box::new([right, left, top, bottom, front, back])),
             id: 0,
@@ -497,28 +498,28 @@ fn register_meshes(mut registry: ResMut<BlockMeshRegistry>) {
         "cosmos:base_block",
         MeshInformation {
             indices: vec![0, 1, 2, 2, 3, 0],
-            uvs: vec![[0.0, 1.0], [0.0, 0.0], [1.0, 0.0], [1.0, 1.0]],
+            uvs: vec![[1.0, 1.0], [1.0, 0.0], [0.0, 0.0], [0.0, 1.0]],
             positions: vec![[0.5, -0.5, -0.5], [0.5, 0.5, -0.5], [0.5, 0.5, 0.5], [0.5, -0.5, 0.5]],
             normals: [[1.0, 0.0, 0.0]; 4].to_vec(),
         }
         .into(),
         MeshInformation {
             indices: vec![0, 1, 2, 2, 3, 0],
-            uvs: vec![[0.0, 1.0], [0.0, 0.0], [1.0, 0.0], [1.0, 1.0]],
+            uvs: vec![[1.0, 1.0], [1.0, 0.0], [0.0, 0.0], [0.0, 1.0]],
             positions: vec![[-0.5, -0.5, 0.5], [-0.5, 0.5, 0.5], [-0.5, 0.5, -0.5], [-0.5, -0.5, -0.5]],
             normals: [[-1.0, 0.0, 0.0]; 4].to_vec(),
         }
         .into(),
         MeshInformation {
             indices: vec![0, 1, 2, 2, 3, 0],
-            uvs: vec![[1.0, 1.0], [0.0, 1.0], [0.0, 0.0], [1.0, 0.0]],
+            uvs: vec![[1.0, 0.0], [0.0, 0.0], [0.0, 1.0], [1.0, 1.0]],
             positions: vec![[0.5, 0.5, -0.5], [-0.5, 0.5, -0.5], [-0.5, 0.5, 0.5], [0.5, 0.5, 0.5]],
             normals: [[0.0, 1.0, 0.0]; 4].to_vec(),
         }
         .into(),
         MeshInformation {
             indices: vec![0, 1, 2, 2, 3, 0],
-            uvs: vec![[1.0, 0.0], [0.0, 0.0], [0.0, 1.0], [1.0, 1.0]],
+            uvs: vec![[1.0, 1.0], [0.0, 1.0], [0.0, 0.0], [1.0, 0.0]],
             positions: vec![[0.5, -0.5, 0.5], [-0.5, -0.5, 0.5], [-0.5, -0.5, -0.5], [0.5, -0.5, -0.5]],
             normals: [[0.0, -1.0, 0.0]; 4].to_vec(),
         }

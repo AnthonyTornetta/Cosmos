@@ -20,7 +20,9 @@ use crate::{
     },
 };
 
-use super::{blocks::AIR_BLOCK_ID, data::BlockData, Block, BlockFace, BlockRotation, BlockSubRotation};
+use super::{
+    block_face::BlockFace, block_rotation::BlockRotation, block_rotation::BlockSubRotation, blocks::AIR_BLOCK_ID, data::BlockData, Block,
+};
 
 /// This is sent whenever a player breaks a block
 #[derive(Debug, Event)]
@@ -223,21 +225,21 @@ fn calculate_build_mode_blocks(
                 if structure.is_within_blocks(new_block_coords) {
                     let new_block_rotation = match block_rotation {
                         BlockRotation {
-                            block_up: BlockFace::Left | BlockFace::Right,
+                            face_pointing_pos_y: BlockFace::Left | BlockFace::Right,
                             sub_rotation: BlockSubRotation::CCW | BlockSubRotation::CW,
                         } => block_rotation.inverse(),
                         BlockRotation {
-                            block_up: BlockFace::Left | BlockFace::Right,
+                            face_pointing_pos_y: BlockFace::Left | BlockFace::Right,
                             sub_rotation: BlockSubRotation::None | BlockSubRotation::Flip,
                         } => BlockRotation {
-                            block_up: block_rotation.block_up.inverse(),
+                            face_pointing_pos_y: block_rotation.face_pointing_pos_y.inverse(),
                             sub_rotation: block_rotation.sub_rotation,
                         },
                         BlockRotation {
-                            block_up: _,
+                            face_pointing_pos_y: _,
                             sub_rotation: BlockSubRotation::CCW | BlockSubRotation::CW,
                         } => BlockRotation {
-                            block_up: block_rotation.block_up,
+                            face_pointing_pos_y: block_rotation.face_pointing_pos_y,
                             sub_rotation: block_rotation.sub_rotation.inverse(),
                         },
                         _ => block_rotation,
@@ -265,28 +267,28 @@ fn calculate_build_mode_blocks(
                 if structure.is_within_blocks(new_block_coords) {
                     let new_block_rotation = match block_rotation {
                         BlockRotation {
-                            block_up: BlockFace::Top | BlockFace::Bottom,
+                            face_pointing_pos_y: BlockFace::Top | BlockFace::Bottom,
                             sub_rotation: BlockSubRotation::Flip | BlockSubRotation::None,
                         } => block_rotation.inverse(),
                         BlockRotation {
-                            block_up: BlockFace::Top | BlockFace::Bottom,
+                            face_pointing_pos_y: BlockFace::Top | BlockFace::Bottom,
                             sub_rotation: BlockSubRotation::CCW | BlockSubRotation::CW,
                         } => BlockRotation {
-                            block_up: block_rotation.block_up.inverse(),
+                            face_pointing_pos_y: block_rotation.face_pointing_pos_y.inverse(),
                             sub_rotation: block_rotation.sub_rotation,
                         },
                         BlockRotation {
-                            block_up: BlockFace::Right | BlockFace::Left,
+                            face_pointing_pos_y: BlockFace::Right | BlockFace::Left,
                             sub_rotation: BlockSubRotation::CCW | BlockSubRotation::CW,
                         } => BlockRotation {
-                            block_up: block_rotation.block_up,
+                            face_pointing_pos_y: block_rotation.face_pointing_pos_y,
                             sub_rotation: block_rotation.sub_rotation.inverse(),
                         },
                         BlockRotation {
-                            block_up: BlockFace::Front | BlockFace::Back,
+                            face_pointing_pos_y: BlockFace::Back | BlockFace::Front,
                             sub_rotation: BlockSubRotation::Flip | BlockSubRotation::None,
                         } => BlockRotation {
-                            block_up: block_rotation.block_up,
+                            face_pointing_pos_y: block_rotation.face_pointing_pos_y,
                             sub_rotation: block_rotation.sub_rotation.inverse(),
                         },
                         _ => block_rotation,
@@ -314,21 +316,21 @@ fn calculate_build_mode_blocks(
                 if structure.is_within_blocks(new_block_coords) {
                     let new_block_rotation = match block_rotation {
                         BlockRotation {
-                            block_up: BlockFace::Front | BlockFace::Back,
+                            face_pointing_pos_y: BlockFace::Back | BlockFace::Front,
                             sub_rotation: BlockSubRotation::None | BlockSubRotation::Flip,
                         } => block_rotation.inverse(),
                         BlockRotation {
-                            block_up: BlockFace::Front | BlockFace::Back,
+                            face_pointing_pos_y: BlockFace::Back | BlockFace::Front,
                             sub_rotation: BlockSubRotation::CCW | BlockSubRotation::CW,
                         } => BlockRotation {
-                            block_up: block_rotation.block_up.inverse(),
+                            face_pointing_pos_y: block_rotation.face_pointing_pos_y.inverse(),
                             sub_rotation: block_rotation.sub_rotation,
                         },
                         BlockRotation {
-                            block_up: _,
+                            face_pointing_pos_y: _,
                             sub_rotation: BlockSubRotation::None | BlockSubRotation::Flip,
                         } => BlockRotation {
-                            block_up: block_rotation.block_up,
+                            face_pointing_pos_y: block_rotation.face_pointing_pos_y,
                             sub_rotation: block_rotation.sub_rotation.inverse(),
                         },
                         _ => block_rotation,

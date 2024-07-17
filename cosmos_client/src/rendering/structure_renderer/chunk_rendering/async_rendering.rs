@@ -281,12 +281,12 @@ fn monitor_needs_rendered_system(
 
         let unbound = UnboundChunkCoordinate::from(coords);
 
-        let left = structure.chunk_at_unbound(unbound.left()).cloned();
-        let right = structure.chunk_at_unbound(unbound.right()).cloned();
-        let bottom = structure.chunk_at_unbound(unbound.bottom()).cloned();
-        let top = structure.chunk_at_unbound(unbound.top()).cloned();
-        let back = structure.chunk_at_unbound(unbound.back()).cloned();
-        let front = structure.chunk_at_unbound(unbound.front()).cloned();
+        let pos_x = structure.chunk_at_unbound(unbound.pos_x()).cloned();
+        let neg_x = structure.chunk_at_unbound(unbound.neg_x()).cloned();
+        let pos_y = structure.chunk_at_unbound(unbound.pos_y()).cloned();
+        let neg_y = structure.chunk_at_unbound(unbound.neg_y()).cloned();
+        let pos_z = structure.chunk_at_unbound(unbound.pos_z()).cloned();
+        let neg_z = structure.chunk_at_unbound(unbound.neg_z()).cloned();
 
         // "gee, you sure have a way with the borrow checker"
 
@@ -306,12 +306,12 @@ fn monitor_needs_rendered_system(
                 &materials_registry.registry(),
                 &lighting.registry(),
                 &chunk,
-                left.as_ref(),
-                right.as_ref(),
-                bottom.as_ref(),
-                top.as_ref(),
-                back.as_ref(),
-                front.as_ref(),
+                neg_x.as_ref(),
+                pos_x.as_ref(),
+                neg_y.as_ref(),
+                pos_y.as_ref(),
+                neg_z.as_ref(),
+                pos_z.as_ref(),
                 &blocks.registry(),
                 &meshes_registry.registry(),
                 &block_rendering_mode,

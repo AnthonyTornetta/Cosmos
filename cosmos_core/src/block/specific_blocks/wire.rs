@@ -13,7 +13,7 @@ use crate::{
 
 fn register_logic_connections(blocks: Res<Registry<Block>>, mut registry: ResMut<Registry<LogicBlock>>) {
     if let Some(logic_on) = blocks.from_id("cosmos:logic_wire") {
-        registry.register(LogicBlock::new(logic_on, [Some(LogicConnection::Wire); 6]));
+        registry.register(LogicBlock::new(logic_on, [Some(LogicConnection::Wire); 6], 0));
     }
 }
 

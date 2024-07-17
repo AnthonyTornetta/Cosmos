@@ -14,7 +14,7 @@ use bevy_rapier3d::{
     plugin::RapierContext,
 };
 use cosmos_core::{
-    block::BlockFace,
+    block::block_direction::BlockDirection,
     ecs::NeedsDespawned,
     structure::{
         shared::DespawnWithStructure,
@@ -69,7 +69,7 @@ struct MiningLaser {
     /// Relative to structure
     start_loc: Vec3,
     max_length: f32,
-    laser_direction: BlockFace, // which direction (relative to ship's core) the laser is going. (ex: Front is +Z)
+    laser_direction: BlockDirection, // which direction (relative to ship's core) the laser is going.
 }
 
 #[derive(Component, Debug)]
@@ -184,7 +184,7 @@ fn apply_mining_effects(
 
                 let material = materials_cache.0.get(&hashed).expect("Added above");
 
-                let beam_direction = line.direction.direction_vec3();
+                let beam_direction = line.direction.to_vec3();
 
                 let laser_start = structure.block_relative_position(line.start.coords());
                 let beam_ent = p
@@ -261,12 +261,12 @@ fn resize_mining_lasers(
 
         trans.scale.z = toi * 2.0;
         match mining_laser.laser_direction {
-            BlockFace::Front => trans.translation.z = mining_laser.start_loc.z + toi / 2.0,
-            BlockFace::Back => trans.translation.z = mining_laser.start_loc.z - toi / 2.0,
-            BlockFace::Top => trans.translation.y = mining_laser.start_loc.y + toi / 2.0,
-            BlockFace::Bottom => trans.translation.y = mining_laser.start_loc.y - toi / 2.0,
-            BlockFace::Right => trans.translation.x = mining_laser.start_loc.x + toi / 2.0,
-            BlockFace::Left => trans.translation.x = mining_laser.start_loc.x - toi / 2.0,
+            BlockDirection::PosX => trans.translation.x = mining_laser.start_loc.x + toi / 2.0,
+            BlockDirection::NegX => trans.translation.x = mining_laser.start_loc.x - toi / 2.0,
+            BlockDirection::PosY => trans.translation.y = mining_laser.start_loc.y + toi / 2.0,
+            BlockDirection::NegY => trans.translation.y = mining_laser.start_loc.y - toi / 2.0,
+            BlockDirection::PosZ => trans.translation.z = mining_laser.start_loc.z + toi / 2.0,
+            BlockDirection::NegZ => trans.translation.z = mining_laser.start_loc.z - toi / 2.0,
         }
     }
 }
@@ -279,8 +279,7 @@ fn create_mining_laser_mesh(mut commands: Commands, mut meshes: ResMut<Assets<Me
 
 fn rotate_mining_lasers(time: Res<Time>, mut q_transforms: Query<(&mut Transform, &MiningLaser)>) {
     for (mut trans, mining_laser) in q_transforms.iter_mut() {
-        trans.rotation =
-            Quat::from_axis_angle(mining_laser.laser_direction.direction_vec3(), time.delta_seconds()).mul_quat(trans.rotation);
+        trans.rotation = Quat::from_axis_angle(mining_laser.laser_direction.to_vec3(), time.delta_seconds()).mul_quat(trans.rotation);
     }
 }
 

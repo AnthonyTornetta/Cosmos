@@ -7,45 +7,42 @@ use bevy::{
 
 use crate::{
     block::Block,
-    logic::{logic_driver::LogicDriver, LogicBlock, LogicConnection, LogicInputEvent, LogicOutputEvent, LogicSystemSet, Port, PortType},
-    registry::{identifiable::Identifiable, Registry},
+    logic::{
+        default_logic_block_output, logic_driver::LogicDriver, BlockLogicData, LogicBlock, LogicConnection, LogicOutputEvent,
+        LogicSystemSet, PortType, QueueLogicInputEvent,
+    },
+    registry::Registry,
     structure::Structure,
 };
 
 fn register_logic_connections(blocks: Res<Registry<Block>>, mut registry: ResMut<Registry<LogicBlock>>) {
     if let Some(logic_on) = blocks.from_id("cosmos:logic_on") {
-        registry.register(LogicBlock::new(logic_on, [Some(LogicConnection::Port(PortType::Output)); 6]));
+        registry.register(LogicBlock::new(logic_on, [Some(LogicConnection::Port(PortType::Output)); 6], 1));
     }
 }
 
-fn logic_on_logic_output_event_listener(
-    mut evr_logic_output: EventReader<LogicOutputEvent>,
-    mut evw_logic_input: EventWriter<LogicInputEvent>,
+fn logic_on_output_event_listener(
+    evr_logic_output: EventReader<LogicOutputEvent>,
+    evw_queue_logic_input: EventWriter<QueueLogicInputEvent>,
+    logic_blocks: Res<Registry<LogicBlock>>,
     blocks: Res<Registry<Block>>,
-    mut q_logic_driver: Query<&mut LogicDriver>,
-    mut q_structure: Query<&mut Structure>,
+    q_logic_driver: Query<&mut LogicDriver>,
+    q_structure: Query<&mut Structure>,
+    q_logic_data: Query<&BlockLogicData>,
 ) {
-    for ev in evr_logic_output.read() {
-        let Ok(structure) = q_structure.get_mut(ev.entity) else {
-            continue;
-        };
-        if structure.block_at(ev.block.coords(), &blocks).unlocalized_name() != "cosmos:logic_on" {
-            continue;
-        }
-        let Ok(mut logic_driver) = q_logic_driver.get_mut(ev.entity) else {
-            continue;
-        };
-
-        // Set all this block's ports to 1 in their logic groups.
-        // TODO: Signal should be customizable.
-        for local_face in structure.block_rotation(ev.block.coords()).all_local_faces() {
-            let port = Port::new(ev.block.coords(), local_face);
-            logic_driver.update_producer(port, 1, &mut evw_logic_input, ev.entity);
-        }
-    }
+    default_logic_block_output(
+        "cosmos:logic_on",
+        evr_logic_output,
+        evw_queue_logic_input,
+        &logic_blocks,
+        &blocks,
+        q_logic_driver,
+        q_structure,
+        q_logic_data,
+    );
 }
 
 pub(super) fn register<T: States>(app: &mut App, post_loading_state: T) {
     app.add_systems(OnEnter(post_loading_state), register_logic_connections)
-        .add_systems(Update, logic_on_logic_output_event_listener.in_set(LogicSystemSet::Producing));
+        .add_systems(Update, logic_on_output_event_listener.in_set(LogicSystemSet::Produce));
 }

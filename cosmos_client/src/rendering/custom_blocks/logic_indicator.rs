@@ -18,7 +18,8 @@ use bevy::{
     utils::HashMap,
 };
 use cosmos_core::{
-    block::{specific_blocks::logic_indicator::LogicIndicatorBlockInfo, Block, ALL_BLOCK_FACES},
+    block::{block_face::ALL_BLOCK_FACES, Block},
+    logic::BlockLogicData,
     registry::{identifiable::Identifiable, many_to_one::ManyToOneRegistry, Registry},
     structure::{
         chunk::CHUNK_DIMENSIONSF,
@@ -56,6 +57,7 @@ fn on_render_logic_indicator(
     blocks: Res<Registry<Block>>,
     mut commands: Commands,
     q_structure: Query<&Structure>,
+    q_logic_data: Query<&BlockLogicData>,
     materials: Res<ManyToOneRegistry<Block, BlockMaterialMapping>>,
     block_textures: Res<Registry<BlockTextureIndex>>,
     block_mesh_registry: Res<BlockMeshRegistry>,
@@ -107,7 +109,11 @@ fn on_render_logic_indicator(
 
             let rotation = block_rotation.as_quat();
 
-            let material_type = if structure.block_info_at(block.coords()).indicator_on() {
+            let Some(&logic_data) = structure.query_block_data(block.coords(), &q_logic_data) else {
+                continue;
+            };
+
+            let material_type = if logic_data.on() {
                 MaterialType::Illuminated
             } else {
                 MaterialType::Normal
@@ -115,15 +121,15 @@ fn on_render_logic_indicator(
             let mesh_builder = material_meshes.entry((material_type, mat_id)).or_default();
 
             let faces = ALL_BLOCK_FACES.iter().copied().filter(|face| {
-                if let Ok(new_coord) = BlockCoordinate::try_from(block.coords() + face.direction_coordinates()) {
+                if let Ok(new_coord) = BlockCoordinate::try_from(block.coords() + face.direction().to_coordinates()) {
                     return structure.block_at(new_coord, &blocks).is_see_through();
                 }
                 true
             });
 
-            for (_, face) in faces.map(|face| (face, block_rotation.rotate_face(face))) {
+            for (_, direction) in faces.map(|face| (face, block_rotation.direction_of(face))) {
                 let Some(mut mesh_info) = block_mesh_info
-                    .info_for_face(face, false)
+                    .info_for_face(direction.block_face(), false)
                     .map(Some)
                     .unwrap_or_else(|| {
                         let single_mesh = block_mesh_info.info_for_whole_block();
@@ -146,8 +152,8 @@ fn on_render_logic_indicator(
 
                 let neighbors = BlockNeighbors::empty();
 
-                let Some(image_index) = index.atlas_index_from_face(face, neighbors) else {
-                    warn!("Missing image index for face {face} -- {index:?}");
+                let Some(image_index) = index.atlas_index_from_face(direction.block_face(), neighbors) else {
+                    warn!("Missing image index for face {direction} -- {index:?}");
                     continue;
                 };
 

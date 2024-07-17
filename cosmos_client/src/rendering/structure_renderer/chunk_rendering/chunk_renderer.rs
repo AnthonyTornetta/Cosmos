@@ -7,7 +7,7 @@ use bevy::log::warn;
 use bevy::prelude::{App, Deref, DerefMut, Entity, Rect, Resource, Vec3};
 use bevy::tasks::Task;
 use bevy::utils::hashbrown::HashMap;
-use cosmos_core::block::{Block, BlockFace};
+use cosmos_core::block::{block_direction::BlockDirection, Block};
 use cosmos_core::registry::identifiable::Identifiable;
 use cosmos_core::registry::many_to_one::ManyToOneRegistry;
 use cosmos_core::registry::Registry;
@@ -107,14 +107,14 @@ impl ChunkRenderer {
 
             let mut block_connections = [false; 6];
 
-            // right
+            // Positive X.
             if (x != CHUNK_DIMENSIONS - 1
                 && check_should_render(
                     chunk,
                     actual_block,
                     blocks,
-                    coords.right(),
-                    &mut block_connections[BlockFace::Right.index()],
+                    coords.pos_x(),
+                    &mut block_connections[BlockDirection::PosX.index()],
                 ))
                 || (x == CHUNK_DIMENSIONS - 1
                     && (right
@@ -124,21 +124,21 @@ impl ChunkRenderer {
                                 actual_block,
                                 blocks,
                                 ChunkBlockCoordinate::new(0, y, z),
-                                &mut block_connections[BlockFace::Right.index()],
+                                &mut block_connections[BlockDirection::PosX.index()],
                             )
                         })
                         .unwrap_or(true)))
             {
-                faces.push(BlockFace::Right);
+                faces.push(BlockDirection::PosX);
             }
-            // left
+            // Negative X.
             if (x != 0
                 && check_should_render(
                     chunk,
                     actual_block,
                     blocks,
-                    coords.left().expect("Checked in first condition"),
-                    &mut block_connections[BlockFace::Left.index()],
+                    coords.neg_x().expect("Checked in first condition"),
+                    &mut block_connections[BlockDirection::NegX.index()],
                 ))
                 || (x == 0
                     && (left
@@ -148,22 +148,22 @@ impl ChunkRenderer {
                                 actual_block,
                                 blocks,
                                 ChunkBlockCoordinate::new(CHUNK_DIMENSIONS - 1, y, z),
-                                &mut block_connections[BlockFace::Left.index()],
+                                &mut block_connections[BlockDirection::NegX.index()],
                             )
                         })
                         .unwrap_or(true)))
             {
-                faces.push(BlockFace::Left);
+                faces.push(BlockDirection::NegX);
             }
 
-            // top
+            // Positive Y.
             if (y != CHUNK_DIMENSIONS - 1
                 && check_should_render(
                     chunk,
                     actual_block,
                     blocks,
-                    coords.top(),
-                    &mut block_connections[BlockFace::Top.index()],
+                    coords.pos_y(),
+                    &mut block_connections[BlockDirection::PosY.index()],
                 ))
                 || (y == CHUNK_DIMENSIONS - 1
                     && top
@@ -173,21 +173,21 @@ impl ChunkRenderer {
                                 actual_block,
                                 blocks,
                                 ChunkBlockCoordinate::new(x, 0, z),
-                                &mut block_connections[BlockFace::Top.index()],
+                                &mut block_connections[BlockDirection::PosY.index()],
                             )
                         })
                         .unwrap_or(true))
             {
-                faces.push(BlockFace::Top);
+                faces.push(BlockDirection::PosY);
             }
-            // bottom
+            // Negative Y.
             if (y != 0
                 && check_should_render(
                     chunk,
                     actual_block,
                     blocks,
-                    coords.bottom().expect("Checked in first condition"),
-                    &mut block_connections[BlockFace::Bottom.index()],
+                    coords.neg_y().expect("Checked in first condition"),
+                    &mut block_connections[BlockDirection::NegY.index()],
                 ))
                 || (y == 0
                     && (bottom
@@ -197,22 +197,22 @@ impl ChunkRenderer {
                                 actual_block,
                                 blocks,
                                 ChunkBlockCoordinate::new(x, CHUNK_DIMENSIONS - 1, z),
-                                &mut block_connections[BlockFace::Bottom.index()],
+                                &mut block_connections[BlockDirection::NegY.index()],
                             )
                         })
                         .unwrap_or(true)))
             {
-                faces.push(BlockFace::Bottom);
+                faces.push(BlockDirection::NegY);
             }
 
-            // front
+            // Positive Z.
             if (z != CHUNK_DIMENSIONS - 1
                 && check_should_render(
                     chunk,
                     actual_block,
                     blocks,
-                    coords.front(),
-                    &mut block_connections[BlockFace::Front.index()],
+                    coords.pos_z(),
+                    &mut block_connections[BlockDirection::PosZ.index()],
                 ))
                 || (z == CHUNK_DIMENSIONS - 1
                     && (front
@@ -222,21 +222,21 @@ impl ChunkRenderer {
                                 actual_block,
                                 blocks,
                                 ChunkBlockCoordinate::new(x, y, 0),
-                                &mut block_connections[BlockFace::Front.index()],
+                                &mut block_connections[BlockDirection::PosZ.index()],
                             )
                         })
                         .unwrap_or(true)))
             {
-                faces.push(BlockFace::Front);
+                faces.push(BlockDirection::PosZ);
             }
-            // back
+            // Negative Z.
             if (z != 0
                 && check_should_render(
                     chunk,
                     actual_block,
                     blocks,
-                    coords.back().expect("Checked in first condition"),
-                    &mut block_connections[BlockFace::Back.index()],
+                    coords.neg_z().expect("Checked in first condition"),
+                    &mut block_connections[BlockDirection::NegZ.index()],
                 ))
                 || (z == 0
                     && (back
@@ -246,12 +246,12 @@ impl ChunkRenderer {
                                 actual_block,
                                 blocks,
                                 ChunkBlockCoordinate::new(x, y, CHUNK_DIMENSIONS - 1),
-                                &mut block_connections[BlockFace::Back.index()],
+                                &mut block_connections[BlockDirection::NegZ.index()],
                             )
                         })
                         .unwrap_or(true)))
             {
-                faces.push(BlockFace::Back);
+                faces.push(BlockDirection::NegZ);
             }
 
             if !faces.is_empty() {
@@ -279,11 +279,14 @@ impl ChunkRenderer {
 
                 let rotation = block_rotation.as_quat();
 
-                for (og_face, face) in faces.iter().map(|face| (*face, block_rotation.rotate_face(*face))) {
+                for (direction, face) in faces
+                    .iter()
+                    .map(|direction| (*direction, block_rotation.block_face_pointing(*direction)))
+                {
                     let mut one_mesh_only = false;
 
                     let Some(mut mesh_info) = mesh
-                        .info_for_face(face, block_connections[og_face.index()])
+                        .info_for_face(face, block_connections[direction.index()])
                         .map(Some)
                         .unwrap_or_else(|| {
                             let single_mesh = mesh.info_for_whole_block();
@@ -306,68 +309,68 @@ impl ChunkRenderer {
 
                     let mut neighbors = BlockNeighbors::empty();
 
-                    match og_face {
-                        BlockFace::Front | BlockFace::Back => {
-                            if block_connections[BlockFace::Right.index()] {
+                    match direction {
+                        BlockDirection::PosZ | BlockDirection::NegZ => {
+                            if block_connections[BlockDirection::PosX.index()] {
                                 neighbors |= BlockNeighbors::Right;
                             }
-                            if block_connections[BlockFace::Left.index()] {
+                            if block_connections[BlockDirection::NegX.index()] {
                                 neighbors |= BlockNeighbors::Left;
                             }
-                            if block_connections[BlockFace::Top.index()] {
+                            if block_connections[BlockDirection::PosY.index()] {
                                 neighbors |= BlockNeighbors::Top;
                             }
-                            if block_connections[BlockFace::Bottom.index()] {
+                            if block_connections[BlockDirection::NegY.index()] {
                                 neighbors |= BlockNeighbors::Bottom;
                             }
                         }
-                        BlockFace::Top | BlockFace::Bottom => {
-                            if block_connections[BlockFace::Right.index()] {
+                        BlockDirection::PosY | BlockDirection::NegY => {
+                            if block_connections[BlockDirection::PosX.index()] {
                                 neighbors |= BlockNeighbors::Right;
                             }
-                            if block_connections[BlockFace::Left.index()] {
+                            if block_connections[BlockDirection::NegX.index()] {
                                 neighbors |= BlockNeighbors::Left;
                             }
-                            if block_connections[BlockFace::Front.index()] {
+                            if block_connections[BlockDirection::PosZ.index()] {
                                 neighbors |= BlockNeighbors::Top;
                             }
-                            if block_connections[BlockFace::Back.index()] {
+                            if block_connections[BlockDirection::NegZ.index()] {
                                 neighbors |= BlockNeighbors::Bottom;
                             }
                         }
                         // idk why right and left have to separate, and I don't want to know why
-                        BlockFace::Right => {
-                            if block_connections[BlockFace::Front.index()] {
+                        BlockDirection::PosX => {
+                            if block_connections[BlockDirection::PosZ.index()] {
                                 neighbors |= BlockNeighbors::Right;
                             }
-                            if block_connections[BlockFace::Back.index()] {
+                            if block_connections[BlockDirection::NegZ.index()] {
                                 neighbors |= BlockNeighbors::Left;
                             }
-                            if block_connections[BlockFace::Top.index()] {
+                            if block_connections[BlockDirection::PosY.index()] {
                                 neighbors |= BlockNeighbors::Top;
                             }
-                            if block_connections[BlockFace::Bottom.index()] {
+                            if block_connections[BlockDirection::NegY.index()] {
                                 neighbors |= BlockNeighbors::Bottom;
                             }
                         }
-                        BlockFace::Left => {
-                            if block_connections[BlockFace::Back.index()] {
+                        BlockDirection::NegX => {
+                            if block_connections[BlockDirection::NegZ.index()] {
                                 neighbors |= BlockNeighbors::Right;
                             }
-                            if block_connections[BlockFace::Front.index()] {
+                            if block_connections[BlockDirection::PosZ.index()] {
                                 neighbors |= BlockNeighbors::Left;
                             }
-                            if block_connections[BlockFace::Top.index()] {
+                            if block_connections[BlockDirection::PosY.index()] {
                                 neighbors |= BlockNeighbors::Top;
                             }
-                            if block_connections[BlockFace::Bottom.index()] {
+                            if block_connections[BlockDirection::NegY.index()] {
                                 neighbors |= BlockNeighbors::Bottom;
                             }
                         }
                     }
 
                     let Some(image_index) = index.atlas_index_from_face(face, neighbors) else {
-                        warn!("Missing image index for face {face} -- {index:?}");
+                        warn!("Missing image index for face {direction} -- {index:?}");
                         continue;
                     };
 

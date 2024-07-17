@@ -8,7 +8,7 @@ use crate::{
     structure::{coordinates::BlockCoordinate, structure_block::StructureBlock, Structure},
 };
 
-use super::ALL_BLOCK_FACES;
+use super::block_face::ALL_BLOCK_FACES;
 
 #[derive(Debug, Clone, Copy, Event, PartialEq, Eq)]
 /// This event is sent whenever an adjacent block is changed
@@ -68,7 +68,7 @@ pub fn send_block_updates(
             };
 
             Some(ALL_BLOCK_FACES.iter().filter_map(|face| {
-                let coord = face.direction_coordinates() + ev.block.coords();
+                let coord = face.direction().to_coordinates() + ev.block.coords();
                 let Ok(coord) = BlockCoordinate::try_from(coord) else {
                     return None;
                 };

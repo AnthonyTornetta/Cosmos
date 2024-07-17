@@ -4,7 +4,7 @@ use std::f32::consts::PI;
 
 use bevy::prelude::{App, Commands, Component, Entity, Parent, Quat, Query, Transform, Update, Vec3, With, Without};
 use cosmos_core::{
-    block::BlockFace,
+    block::block_face::BlockFace,
     netty::client::LocalPlayer,
     physics::{gravity_system::GravityEmitter, location::Location},
     structure::{planet::Planet, ship::pilot::Pilot},
@@ -49,7 +49,7 @@ fn align_player(
 
                 if let Some(a) = alignment {
                     let old_atlas = match face {
-                        BlockFace::Front | BlockFace::Back => Axis::Z,
+                        BlockFace::Back | BlockFace::Front => Axis::Z,
                         BlockFace::Left | BlockFace::Right => Axis::X,
                         BlockFace::Top | BlockFace::Bottom => Axis::Y,
                     };
@@ -75,11 +75,11 @@ fn align_player(
                                 _ => Quat::from_axis_angle(Vec3::X, PI),
                             }
                         }
-                        BlockFace::Back => {
+                        BlockFace::Front => {
                             commands.entity(entity).insert(PlayerAlignment(Axis::Z));
                             Quat::from_axis_angle(Vec3::X, -PI / 2.0)
                         }
-                        BlockFace::Front => {
+                        BlockFace::Back => {
                             commands.entity(entity).insert(PlayerAlignment(Axis::Z));
                             Quat::from_axis_angle(Vec3::X, PI / 2.0)
                         }

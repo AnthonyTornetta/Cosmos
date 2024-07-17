@@ -5,7 +5,7 @@ use bevy::prelude::{Component, Entity};
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    block::{block_events::StructureBlockPair, BlockRotation},
+    block::{block_events::StructureBlockPair, block_rotation::BlockRotation},
     entities::player::render_distance::RenderDistance,
     structure::{
         coordinates::{ChunkCoordinate, CoordinateType},
