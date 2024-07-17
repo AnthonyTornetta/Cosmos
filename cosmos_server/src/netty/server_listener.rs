@@ -374,11 +374,12 @@ fn send_all_chunks(
 pub(super) fn register(app: &mut App) {
     app.add_systems(
         Update,
-        (handle_server_events, server_listen_messages, send_all_chunks)
+        (handle_server_events, server_listen_messages)
             .chain()
             .in_set(NetworkingSystemsSet::ReceiveMessages)
             .before(ItemStackSystemSet::CreateDataEntity)
             .run_if(in_state(GameState::Playing)),
     )
+    .add_systems(Update, send_all_chunks.in_set(NetworkingSystemsSet::SyncComponents))
     .init_resource::<SendAllChunks>();
 }
