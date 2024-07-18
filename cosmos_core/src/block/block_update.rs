@@ -8,7 +8,7 @@ use crate::{
     structure::{coordinates::BlockCoordinate, structure_block::StructureBlock, Structure},
 };
 
-use super::{block_events::BlockEventsSet, ALL_BLOCK_FACES};
+use super::{block_events::BlockEventsSet, block_face::ALL_BLOCK_FACES};
 
 #[derive(Debug, Clone, Copy, Event, PartialEq, Eq)]
 /// This event is sent whenever an adjacent block is changed

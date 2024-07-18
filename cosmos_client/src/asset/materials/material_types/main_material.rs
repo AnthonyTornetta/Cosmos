@@ -32,21 +32,21 @@ fn respond_to_add_materials_event(
             "cosmos:main" => {
                 commands.entity(ev.entity).insert(match ev.material_type {
                     MaterialType::Normal => default_material.0[idx].clone_weak(),
-                    MaterialType::Unlit => unlit_material.0[idx].clone_weak(),
+                    MaterialType::Illuminated => unlit_material.0[idx].clone_weak(),
                     MaterialType::FarAway => default_material.0[idx].clone_weak(),
                 });
             }
             "cosmos:illuminated" => {
                 commands.entity(ev.entity).insert(match ev.material_type {
                     MaterialType::Normal => unlit_material.0[idx].clone_weak(),
-                    MaterialType::Unlit => unlit_material.0[idx].clone_weak(),
+                    MaterialType::Illuminated => unlit_material.0[idx].clone_weak(),
                     MaterialType::FarAway => unlit_material.0[idx].clone_weak(),
                 });
             }
             "cosmos:transparent" => {
                 commands.entity(ev.entity).insert(match ev.material_type {
                     MaterialType::Normal => transparent_material.0[idx].clone_weak(),
-                    MaterialType::Unlit => unlit_transparent_material.0[idx].clone_weak(),
+                    MaterialType::Illuminated => unlit_transparent_material.0[idx].clone_weak(),
                     MaterialType::FarAway => default_material.0[idx].clone_weak(),
                 });
             }

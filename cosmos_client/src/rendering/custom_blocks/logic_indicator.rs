@@ -6,7 +6,7 @@ use bevy::{
         component::Component,
         entity::Entity,
         event::{EventReader, EventWriter},
-        schedule::{IntoSystemConfigs, OnEnter},
+        schedule::IntoSystemConfigs,
         system::{Commands, Query, Res, ResMut},
     },
     hierarchy::{BuildChildren, DespawnRecursiveExt},
@@ -14,7 +14,8 @@ use bevy::{
     math::{Rect, Vec3},
     reflect::Reflect,
     render::{mesh::Mesh, view::VisibilityBundle},
-    transform::TransformBundle,
+    state::state::OnEnter,
+    transform::bundles::TransformBundle,
     utils::HashMap,
 };
 use cosmos_core::{
@@ -85,7 +86,7 @@ fn on_render_logic_indicator(
             continue;
         };
 
-        let mut material_meshes: HashMap<(MaterialType, u16), CosmosMeshBuilder> = HashMap::default();
+        let mut material_meshes: HashMap<(MaterialType, u16, u32), CosmosMeshBuilder> = HashMap::default();
 
         for block in structure.block_iter_for_chunk(ev.chunk_coordinate, true) {
             if structure.block_id_at(block.coords()) != logic_indicator_id {
@@ -118,7 +119,9 @@ fn on_render_logic_indicator(
             } else {
                 MaterialType::Normal
             };
-            let mesh_builder = material_meshes.entry((material_type, mat_id)).or_default();
+
+            let mut mesh_builder = None;
+            // let mesh_builder = material_meshes.entry((material_type, mat_id)).or_default();
 
             let faces = ALL_BLOCK_FACES.iter().copied().filter(|face| {
                 if let Ok(new_coord) = BlockCoordinate::try_from(block.coords() + face.direction().to_coordinates()) {
@@ -181,11 +184,19 @@ fn on_render_logic_indicator(
                     coords.y as f32 - CHUNK_DIMS_HALVED + 0.5,
                     coords.z as f32 - CHUNK_DIMS_HALVED + 0.5,
                 );
-                mesh_builder.add_mesh_information(
+                if mesh_builder.is_none() {
+                    mesh_builder = Some(
+                        material_meshes
+                            .entry((material_type, mat_id, image_index.dimension_index))
+                            .or_default(),
+                    );
+                }
+
+                mesh_builder.as_mut().unwrap().add_mesh_information(
                     &mesh_info,
                     Vec3::new(center_offset_x, center_offset_y, center_offset_z),
                     uvs,
-                    image_index,
+                    image_index.texture_index,
                     additional_info,
                 );
 
@@ -197,7 +208,7 @@ fn on_render_logic_indicator(
 
         let mut ents = vec![];
 
-        for ((material_type, mat_id), mesh_builder) in material_meshes {
+        for ((material_type, mat_id, texture_dimensions_index), mesh_builder) in material_meshes {
             let mesh = mesh_builder.build_mesh();
 
             let entity = commands
@@ -213,6 +224,7 @@ fn on_render_logic_indicator(
             evw_add_material.send(AddMaterialEvent {
                 entity,
                 add_material_id: mat_id,
+                texture_dimensions_index,
                 material_type,
             });
 
