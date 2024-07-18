@@ -1,6 +1,6 @@
 //! This should contain everything needed for a cosmos application to run
 
-use crate::{block, debug, economy, ecs, fluid, inventory, netty, persistence, projectiles, shop, universe};
+use crate::{block, debug, economy, ecs, fluid, inventory, logic, netty, persistence, projectiles, shop, universe};
 use crate::{blockitems, structure};
 use crate::{events, loader};
 use crate::{item, physics};
