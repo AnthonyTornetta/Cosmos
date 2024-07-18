@@ -47,6 +47,8 @@ use crate::{
     state::game_state::GameState,
 };
 
+use super::RenderingModesSet;
+
 fn set_custom_rendering_for_tank(mut rendering_modes: ResMut<BlockRenderingModes>, blocks: Res<Registry<Block>>) {
     if let Some(tank) = blocks.from_id("cosmos:tank") {
         rendering_modes.set_rendering_mode(tank, RenderingMode::Both);
@@ -313,7 +315,10 @@ fn on_render_tanks(
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_systems(OnEnter(GameState::PostLoading), set_custom_rendering_for_tank);
+    app.add_systems(
+        OnEnter(GameState::PostLoading),
+        set_custom_rendering_for_tank.in_set(RenderingModesSet::SetRenderingModes),
+    );
 
     app.add_systems(Update, on_render_tanks.in_set(StructureRenderingSet::CustomRendering));
 

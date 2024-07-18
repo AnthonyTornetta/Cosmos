@@ -30,6 +30,7 @@ pub mod entities;
 pub mod fluid;
 pub mod init;
 pub mod inventory;
+pub mod logic;
 pub mod netty;
 pub mod persistence;
 pub mod physics;

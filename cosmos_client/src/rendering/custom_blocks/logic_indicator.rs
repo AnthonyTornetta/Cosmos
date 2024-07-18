@@ -43,6 +43,8 @@ use crate::{
     state::game_state::GameState,
 };
 
+use super::RenderingModesSet;
+
 fn set_custom_rendering_for_logic_indicator(mut rendering_modes: ResMut<BlockRenderingModes>, blocks: Res<Registry<Block>>) {
     if let Some(logic_indicator) = blocks.from_id("cosmos:logic_indicator") {
         rendering_modes.set_rendering_mode(logic_indicator, RenderingMode::Custom);
@@ -238,7 +240,10 @@ fn on_render_logic_indicator(
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_systems(OnEnter(GameState::PostLoading), set_custom_rendering_for_logic_indicator);
+    app.add_systems(
+        OnEnter(GameState::PostLoading),
+        set_custom_rendering_for_logic_indicator.in_set(RenderingModesSet::SetRenderingModes),
+    );
 
     app.add_systems(Update, on_render_logic_indicator.in_set(StructureRenderingSet::CustomRendering));
 
