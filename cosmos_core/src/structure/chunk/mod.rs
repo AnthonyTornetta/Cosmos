@@ -15,7 +15,7 @@ use bevy::utils::HashMap;
 use serde::{Deserialize, Serialize};
 
 use crate::block::data::{BlockData, BlockDataIdentifier};
-use crate::block::{Block, BlockFace, BlockRotation, BlockSubRotation};
+use crate::block::{block_face::BlockFace, block_rotation::BlockRotation, block_rotation::BlockSubRotation, Block};
 use crate::ecs::NeedsDespawned;
 use crate::events::block_events::{BlockDataChangedEvent, BlockDataSystemParams};
 use crate::registry::identifiable::Identifiable;
@@ -70,6 +70,14 @@ impl BlockStorer for Chunk {
     #[inline(always)]
     fn block_info_iterator(&self) -> std::slice::Iter<BlockInfo> {
         self.block_storage.block_info_iterator()
+    }
+
+    fn block_info_at(&self, coords: ChunkBlockCoordinate) -> BlockInfo {
+        self.block_storage.block_info_at(coords)
+    }
+
+    fn set_block_info_at(&mut self, coords: ChunkBlockCoordinate, block_info: BlockInfo) {
+        self.block_storage.set_block_info_at(coords, block_info);
     }
 
     #[inline(always)]
@@ -541,7 +549,7 @@ impl Chunk {
 /// This represents the information for a block. The first 3 rightmost bits are reserved for rotation data.
 ///
 /// All other bits can be used for anything else
-pub struct BlockInfo(u8);
+pub struct BlockInfo(pub u8);
 
 impl BlockInfo {
     #[inline]
@@ -552,12 +560,15 @@ impl BlockInfo {
         let block_up = BlockFace::from_index((self.0 & 0b111) as usize);
         let sub_rotation = BlockSubRotation::from_index(((self.0 >> 3) & 0b11) as usize);
 
-        BlockRotation { block_up, sub_rotation }
+        BlockRotation {
+            face_pointing_pos_y: block_up,
+            sub_rotation,
+        }
     }
 
     /// Sets the rotation data
     pub fn set_rotation(&mut self, rotation: BlockRotation) {
-        self.0 = self.0 & !0b11111 | (rotation.block_up.index() as u8 | (rotation.sub_rotation.index() << 3) as u8);
+        self.0 = self.0 & !0b11111 | (rotation.face_pointing_pos_y.index() as u8 | (rotation.sub_rotation.index() << 3) as u8);
     }
 }
 

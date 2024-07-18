@@ -90,6 +90,7 @@ impl<T: States + Clone + Copy + FreelyMutableState> Plugin for CosmosCorePlugin<
         netty::register(app, self.playing_state);
         economy::register(app);
         shop::register(app);
+        logic::register(app, self.playing_state);
         fluid::register(app);
         debug::register(app);
     }

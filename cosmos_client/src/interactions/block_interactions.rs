@@ -8,9 +8,13 @@ use bevy_rapier3d::{
 };
 use cosmos_core::{
     block::{
+        block_direction::BlockDirection,
         block_events::{BlockInteractEvent, StructureBlockPair},
+        block_face::BlockFace,
+        block_rotation::BlockRotation,
+        block_rotation::BlockSubRotation,
         blocks::fluid::FLUID_COLLISION_GROUP,
-        Block, BlockFace, BlockRotation, BlockSubRotation,
+        Block,
     },
     blockitems::BlockItems,
     inventory::Inventory,
@@ -157,7 +161,6 @@ pub(crate) fn process_player_interaction(
             let block = blocks.from_numeric_id(block_id);
 
             let moved_point = looking_at_block.intersection.point + looking_at_block.intersection.normal * 0.75;
-
             let point = structure_g_transform.compute_matrix().inverse().transform_point3(moved_point);
 
             let place_at_coords = structure.relative_coords_to_local_coords_checked(point.x, point.y, point.z).ok()?;
@@ -168,113 +171,51 @@ pub(crate) fn process_player_interaction(
 
             inventory.decrease_quantity_at(inventory_slot, 1, &mut commands);
 
-            let (block_up, block_sub_rotation) = if block.is_fully_rotatable() || block.should_face_front() {
+            let block_rotation = if block.is_fully_rotatable() || block.should_face_front() {
                 let delta = UnboundBlockCoordinate::from(place_at_coords) - UnboundBlockCoordinate::from(looking_at_block.block.coords());
 
-                let block_front = match delta {
-                    UnboundBlockCoordinate { x: -1, y: 0, z: 0 } => BlockFace::Left,
-                    UnboundBlockCoordinate { x: 1, y: 0, z: 0 } => BlockFace::Right,
-                    UnboundBlockCoordinate { x: 0, y: -1, z: 0 } => BlockFace::Bottom,
-                    UnboundBlockCoordinate { x: 0, y: 1, z: 0 } => BlockFace::Top,
-                    UnboundBlockCoordinate { x: 0, y: 0, z: -1 } => BlockFace::Back,
-                    UnboundBlockCoordinate { x: 0, y: 0, z: 1 } => BlockFace::Front,
-                    _ => return None, // invalid direction, something wonky happened w/ the block selection logic
-                };
+                // Which way the placed block extends out from the block it's placed on.
+                let perpendicular_direction = BlockDirection::from_coordinates(delta);
 
                 if block.should_face_front() {
-                    match block_front {
-                        BlockFace::Front => (BlockFace::Top, BlockSubRotation::None),
-                        BlockFace::Back => (BlockFace::Top, BlockSubRotation::Flip),
-                        BlockFace::Right => (BlockFace::Top, BlockSubRotation::CCW),
-                        BlockFace::Left => (BlockFace::Top, BlockSubRotation::CW),
-                        BlockFace::Top => (BlockFace::Front, BlockSubRotation::None),
-                        BlockFace::Bottom => (BlockFace::Back, BlockSubRotation::None),
-                    }
+                    // Front face always points perpendicular out from the block being placed on.
+                    BlockRotation::face_front(perpendicular_direction)
                 } else {
+                    // Fully rotatable - the top texture of the block should always face the player.
                     let point = (point - point.floor()) - Vec3::new(0.5, 0.5, 0.5);
 
-                    let block_sub_rotation = match block_front {
-                        BlockFace::Top => {
-                            if point.x.abs() > point.z.abs() {
-                                if point.x < 0.0 {
-                                    BlockSubRotation::CW
-                                } else {
-                                    BlockSubRotation::CCW
-                                }
-                            } else if point.z < 0.0 {
-                                BlockSubRotation::Flip
+                    // Unused coordinate is always within tolerance of +-0.25 (+ side on top/right/front).
+
+                    // The front texture always points in the direction decided by where on the anchor block the player clicked.
+                    let front_facing = match perpendicular_direction {
+                        BlockDirection::PosX | BlockDirection::NegX => {
+                            let (y, z) = if point.y.abs() > point.z.abs() {
+                                (point.y, 0.0)
                             } else {
-                                BlockSubRotation::None
-                            }
+                                (0.0, point.z)
+                            };
+                            BlockDirection::from_vec3(Vec3::new(0.0, y, z))
                         }
-                        BlockFace::Bottom => {
-                            if point.x.abs() > point.z.abs() {
-                                if point.x < 0.0 {
-                                    BlockSubRotation::CW
-                                } else {
-                                    BlockSubRotation::CCW
-                                }
-                            } else if point.z < 0.0 {
-                                BlockSubRotation::None
+                        BlockDirection::PosY | BlockDirection::NegY => {
+                            // Only the largest coordinate is kept, but it's sign must be retained.
+                            let (x, z) = if point.x.abs() > point.z.abs() {
+                                (point.x, 0.0)
                             } else {
-                                BlockSubRotation::Flip
-                            }
+                                (0.0, point.z)
+                            };
+                            BlockDirection::from_vec3(Vec3::new(x, 0.0, z))
                         }
-                        BlockFace::Right => {
-                            if point.y.abs() > point.z.abs() {
-                                if point.y < 0.0 {
-                                    BlockSubRotation::CW
-                                } else {
-                                    BlockSubRotation::CCW
-                                }
-                            } else if point.z < 0.0 {
-                                BlockSubRotation::None
+                        BlockDirection::PosZ | BlockDirection::NegZ => {
+                            let (x, y) = if point.x.abs() > point.y.abs() {
+                                (point.x, 0.0)
                             } else {
-                                BlockSubRotation::Flip
-                            }
-                        }
-                        BlockFace::Left => {
-                            if point.y.abs() > point.z.abs() {
-                                if point.y < 0.0 {
-                                    BlockSubRotation::CCW
-                                } else {
-                                    BlockSubRotation::CW
-                                }
-                            } else if point.z < 0.0 {
-                                BlockSubRotation::None
-                            } else {
-                                BlockSubRotation::Flip
-                            }
-                        }
-                        BlockFace::Front => {
-                            if point.x.abs() > point.y.abs() {
-                                if point.x < 0.0 {
-                                    BlockSubRotation::CCW
-                                } else {
-                                    BlockSubRotation::CW
-                                }
-                            } else if point.y < 0.0 {
-                                BlockSubRotation::Flip
-                            } else {
-                                BlockSubRotation::None
-                            }
-                        }
-                        BlockFace::Back => {
-                            if point.x.abs() > point.y.abs() {
-                                if point.x < 0.0 {
-                                    BlockSubRotation::CCW
-                                } else {
-                                    BlockSubRotation::CW
-                                }
-                            } else if point.y < 0.0 {
-                                BlockSubRotation::None
-                            } else {
-                                BlockSubRotation::Flip
-                            }
+                                (0.0, point.y)
+                            };
+                            BlockDirection::from_vec3(Vec3::new(x, y, 0.0))
                         }
                     };
 
-                    (block_front, block_sub_rotation)
+                    BlockRotation::from_face_directions(perpendicular_direction, front_facing)
                 }
             } else {
                 let block_up = if is_planet.is_some() {
@@ -283,7 +224,7 @@ pub(crate) fn process_player_interaction(
                     BlockFace::Top
                 };
 
-                (block_up, BlockSubRotation::None)
+                BlockRotation::new(block_up, BlockSubRotation::None)
             };
 
             place_writer.send(RequestBlockPlaceEvent {
@@ -291,10 +232,7 @@ pub(crate) fn process_player_interaction(
                 block: StructureBlock::new(place_at_coords),
                 inventory_slot,
                 block_id,
-                block_up: BlockRotation {
-                    block_up,
-                    sub_rotation: block_sub_rotation,
-                },
+                block_rotation,
             });
 
             None

@@ -5,7 +5,7 @@ use bevy::{
     prelude::{App, IntoSystemSetConfigs, SystemSet},
 };
 use cosmos_core::{
-    block::BlockRotation,
+    block::block_rotation::BlockRotation,
     structure::{loading::StructureLoadingSet, structure_block::StructureBlock},
 };
 

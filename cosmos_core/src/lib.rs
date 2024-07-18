@@ -14,6 +14,7 @@ pub mod fluid;
 pub mod inventory;
 pub mod item;
 pub mod loader;
+pub mod logic;
 pub mod netty;
 pub mod persistence;
 pub mod physics;

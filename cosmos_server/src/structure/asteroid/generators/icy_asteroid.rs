@@ -1,6 +1,6 @@
 use bevy::{prelude::*, tasks::AsyncComputeTaskPool, utils::HashMap};
 use cosmos_core::{
-    block::{Block, BlockRotation},
+    block::{block_rotation::BlockRotation, Block},
     physics::location::Location,
     registry::ReadOnlyRegistry,
     structure::{

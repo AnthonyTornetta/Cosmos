@@ -14,8 +14,9 @@ use bevy::{
 };
 use serde::{Deserialize, Serialize};
 
+use crate::{block::block_direction::ALL_BLOCK_DIRECTIONS, events::block_events::BlockDataChangedEvent};
 use crate::{
-    block::{blocks::AIR_BLOCK_ID, data::BlockData, Block, BlockRotation},
+    block::{block_rotation::BlockRotation, blocks::AIR_BLOCK_ID, data::BlockData, Block},
     physics::location::Location,
     registry::Registry,
 };
@@ -23,7 +24,7 @@ use crate::{
 use super::{
     block_health::events::{BlockDestroyedEvent, BlockTakeDamageEvent},
     block_storage::BlockStorer,
-    chunk::{Chunk, CHUNK_DIMENSIONS},
+    chunk::{BlockInfo, Chunk, CHUNK_DIMENSIONS},
     coordinates::{
         BlockCoordinate, ChunkBlockCoordinate, ChunkCoordinate, Coordinate, CoordinateType, UnboundBlockCoordinate, UnboundChunkCoordinate,
         UnboundCoordinateType,
@@ -830,6 +831,50 @@ impl BaseStructure {
             max_length_sqrd: max_length * max_length,
             include_air,
         }
+    }
+
+    /// Returns the small block information storage (for example, rotation) for this block within the chunk.
+    /// Returns the default block info if the chunk is unloaded.
+    pub fn block_info_at(&self, coords: BlockCoordinate) -> BlockInfo {
+        self.chunk_at_block_coordinates(coords)
+            .map(|x| x.block_info_at(ChunkBlockCoordinate::for_block_coordinate(coords)))
+            .unwrap_or_default()
+    }
+
+    /// Sets the small block information storage (for example, rotation) for this block within the chunk.
+    /// Does not set the information if the chunk is unloaded.
+    pub fn set_block_info_at(
+        &mut self,
+        coords: BlockCoordinate,
+        block_info: BlockInfo,
+        evw_block_data_changed: &mut EventWriter<BlockDataChangedEvent>,
+    ) {
+        if let Some(chunk) = self.mut_chunk_at_block_coordinates(coords) {
+            chunk.set_block_info_at(ChunkBlockCoordinate::for_block_coordinate(coords), block_info);
+            if let Some(structure_entity) = self.get_entity() {
+                evw_block_data_changed.send(BlockDataChangedEvent {
+                    block_data_entity: self.block_data(coords),
+                    block: StructureBlock::new(coords),
+                    structure_entity,
+                });
+            }
+        }
+    }
+
+    /// Returns the 6 block IDs adjacent to the given coordinates, in the order of the [`BlockDirection`] indices.
+    /// Any error causes that entry to be AIR_BLOCK_ID.
+    pub fn block_ids_surrounding(&self, coords: BlockCoordinate) -> [u16; 6] {
+        ALL_BLOCK_DIRECTIONS.map(|direction| {
+            coords
+                .step(direction)
+                .map_or(AIR_BLOCK_ID, |neighbor_coords| self.block_id_at(neighbor_coords))
+        })
+    }
+
+    /// Returns the 6 blocks adjacent to the given coordinates.
+    /// Any error causes that entry to be air.
+    pub fn blocks_surrounding<'a>(&self, coords: BlockCoordinate, blocks: &'a Registry<Block>) -> [&'a Block; 6] {
+        self.block_ids_surrounding(coords).map(|id| blocks.from_numeric_id(id))
     }
 }
 

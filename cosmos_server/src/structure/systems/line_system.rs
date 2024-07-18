@@ -9,7 +9,7 @@ use bevy::{
     state::{condition::in_state, state::OnEnter},
 };
 use cosmos_core::{
-    block::{block_events::BlockEventsSet, Block, BlockFace, BlockRotation},
+    block::{block_direction::BlockDirection, block_events::BlockEventsSet, block_face::BlockFace, block_rotation::BlockRotation, Block},
     events::block_events::BlockChangedEvent,
     registry::Registry,
     structure::{
@@ -160,7 +160,7 @@ fn add_colors(mut colors: ResMut<Registry<LineColorBlock>>, blocks: Res<Registry
 
 impl<T: LineProperty, S: LinePropertyCalculator<T>> BlockStructureSystem<T> for LineSystem<T, S> {
     fn add_block(&mut self, block: &StructureBlock, block_rotation: BlockRotation, prop: &T) {
-        let block_direction = block_rotation.which_face_is(BlockFace::Front);
+        let block_direction = block_rotation.direction_of(BlockFace::Back);
 
         let mut found_line = None;
         // If a structure has two lines like this: (XXXXX XXXXXX) and an X is placed
@@ -171,7 +171,7 @@ impl<T: LineProperty, S: LinePropertyCalculator<T>> BlockStructureSystem<T> for 
         let mut link_to = None;
 
         for (i, line) in self.lines.iter_mut().filter(|x| x.direction == block_direction).enumerate() {
-            let d = block_direction.direction_coordinates();
+            let d = block_direction.to_coordinates();
 
             let start: UnboundBlockCoordinate = line.start.coords().into();
 
@@ -216,14 +216,14 @@ impl<T: LineProperty, S: LinePropertyCalculator<T>> BlockStructureSystem<T> for 
             if let Some(l2_i) = link_to {
                 let [l1, l2] = self.lines.get_many_mut([l1_i, l2_i]).expect("From and to should never be the same");
 
-                // Must use the one before the other in the line so the properties line up
+                // Must use the one before the other in the line so the properties line up.
                 if match l1.direction {
-                    BlockFace::Front => l1.start.z > l2.start.z,
-                    BlockFace::Back => l1.start.z < l2.start.z,
-                    BlockFace::Right => l1.start.x > l2.start.x,
-                    BlockFace::Left => l1.start.x < l2.start.x,
-                    BlockFace::Top => l1.start.y > l2.start.y,
-                    BlockFace::Bottom => l1.start.y < l2.start.y,
+                    BlockDirection::PosX => l1.start.x > l2.start.x,
+                    BlockDirection::NegX => l1.start.x < l2.start.x,
+                    BlockDirection::PosY => l1.start.y > l2.start.y,
+                    BlockDirection::NegY => l1.start.y < l2.start.y,
+                    BlockDirection::PosZ => l1.start.z > l2.start.z,
+                    BlockDirection::NegZ => l1.start.z < l2.start.z,
                 } {
                     std::mem::swap(l1, l2);
                 }
@@ -258,7 +258,7 @@ impl<T: LineProperty, S: LinePropertyCalculator<T>> BlockStructureSystem<T> for 
     fn remove_block(&mut self, sb: &StructureBlock) {
         for (i, line) in self.lines.iter_mut().enumerate() {
             if line.start == *sb {
-                let (dx, dy, dz) = line.direction.direction();
+                let (dx, dy, dz) = line.direction.to_i32_tuple();
 
                 line.start.x = (line.start.x as i32 + dx) as CoordinateType;
                 line.start.y = (line.start.y as i32 + dy) as CoordinateType;
@@ -278,12 +278,12 @@ impl<T: LineProperty, S: LinePropertyCalculator<T>> BlockStructureSystem<T> for 
                 }
             } else if line.within(sb) {
                 let l1_len = match line.direction {
-                    BlockFace::Front => sb.z - line.start.z,
-                    BlockFace::Back => line.start.z - sb.z,
-                    BlockFace::Right => sb.x - line.start.x,
-                    BlockFace::Left => line.start.x - sb.x,
-                    BlockFace::Top => sb.y - line.start.y,
-                    BlockFace::Bottom => line.start.y - sb.y,
+                    BlockDirection::PosX => sb.x - line.start.x,
+                    BlockDirection::NegX => line.start.x - sb.x,
+                    BlockDirection::PosY => sb.y - line.start.y,
+                    BlockDirection::NegY => line.start.y - sb.y,
+                    BlockDirection::PosZ => sb.z - line.start.z,
+                    BlockDirection::NegZ => line.start.z - sb.z,
                 };
 
                 let l2_len = line.len as CoordinateType - l1_len - 1;
@@ -311,7 +311,7 @@ impl<T: LineProperty, S: LinePropertyCalculator<T>> BlockStructureSystem<T> for 
                     color: line.color,
                 };
 
-                let (dx, dy, dz) = line.direction.direction();
+                let (dx, dy, dz) = line.direction.to_i32_tuple();
 
                 let dist = l1_len as i32 + 1;
 
@@ -338,21 +338,21 @@ impl<T: LineProperty, S: LinePropertyCalculator<T>> BlockStructureSystem<T> for 
     }
 }
 
-fn is_in_line_with(testing_block: &StructureBlock, direction: BlockFace, line_coord: &BlockCoordinate) -> bool {
+fn is_in_line_with(testing_block: &StructureBlock, direction: BlockDirection, line_coord: &BlockCoordinate) -> bool {
     match direction {
-        BlockFace::Front => line_coord.x == testing_block.x && line_coord.y == testing_block.y && line_coord.z >= testing_block.z,
-        BlockFace::Back => line_coord.x == testing_block.x && line_coord.y == testing_block.y && line_coord.z <= testing_block.z,
-        BlockFace::Top => line_coord.x == testing_block.x && line_coord.y >= testing_block.y && line_coord.z == testing_block.z,
-        BlockFace::Bottom => line_coord.x == testing_block.x && line_coord.y <= testing_block.y && line_coord.z == testing_block.z,
-        BlockFace::Right => line_coord.x >= testing_block.x && line_coord.y == testing_block.y && line_coord.z == testing_block.z,
-        BlockFace::Left => line_coord.x <= testing_block.x && line_coord.y == testing_block.y && line_coord.z == testing_block.z,
+        BlockDirection::PosX => line_coord.x >= testing_block.x && line_coord.y == testing_block.y && line_coord.z == testing_block.z,
+        BlockDirection::NegX => line_coord.x <= testing_block.x && line_coord.y == testing_block.y && line_coord.z == testing_block.z,
+        BlockDirection::PosY => line_coord.x == testing_block.x && line_coord.y >= testing_block.y && line_coord.z == testing_block.z,
+        BlockDirection::NegY => line_coord.x == testing_block.x && line_coord.y <= testing_block.y && line_coord.z == testing_block.z,
+        BlockDirection::PosZ => line_coord.x == testing_block.x && line_coord.y == testing_block.y && line_coord.z >= testing_block.z,
+        BlockDirection::NegZ => line_coord.x == testing_block.x && line_coord.y == testing_block.y && line_coord.z <= testing_block.z,
     }
 }
 
 fn calculate_color_for_line<T: LineProperty, S: LinePropertyCalculator<T>>(
     line_system: &LineSystem<T, S>,
     block: &StructureBlock,
-    direction: BlockFace,
+    direction: BlockDirection,
 ) -> Option<Color> {
     let colors = line_system
         .colors

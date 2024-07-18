@@ -6,7 +6,7 @@ use bevy::reflect::Reflect;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    block::{Block, BlockRotation},
+    block::{block_rotation::BlockRotation, Block},
     registry::Registry,
 };
 
@@ -50,6 +50,14 @@ impl BlockStorer for LodChunk {
     #[inline(always)]
     fn block_info_iterator(&self) -> std::slice::Iter<BlockInfo> {
         self.0.block_info_iterator()
+    }
+
+    fn block_info_at(&self, coords: ChunkBlockCoordinate) -> BlockInfo {
+        self.0.block_info_at(coords)
+    }
+
+    fn set_block_info_at(&mut self, coords: ChunkBlockCoordinate, block_info: BlockInfo) {
+        self.0.set_block_info_at(coords, block_info);
     }
 
     #[inline(always)]

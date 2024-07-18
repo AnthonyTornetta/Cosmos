@@ -17,7 +17,7 @@ use bevy::{
 };
 use bevy_renet2::renet2::RenetClient;
 use cosmos_core::{
-    block::gravity_well::GravityWell,
+    block::specific_blocks::gravity_well::GravityWell,
     netty::{cosmos_encoder, server_replication::ReplicationMessage, sync::mapping::NetworkMapping, NettyChannelServer},
     physics::location::LocationPhysicsSet,
     registry::{identifiable::Identifiable, Registry},

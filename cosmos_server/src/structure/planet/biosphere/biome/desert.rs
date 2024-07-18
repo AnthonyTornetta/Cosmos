@@ -6,7 +6,7 @@ use bevy::{
     prelude::{App, EventWriter, OnExit, Res, ResMut},
 };
 use cosmos_core::{
-    block::{Block, BlockFace},
+    block::{block_face::BlockFace, Block},
     events::block_events::BlockChangedEvent,
     physics::location::Location,
     registry::{identifiable::Identifiable, Registry},
@@ -105,7 +105,7 @@ fn generate_chunk_features(
                 % CHUNK_DIMENSIONS;
 
             let coords: BlockCoordinate = match block_up {
-                BlockFace::Front | BlockFace::Back => (first_block_coords.x + x, first_block_coords.y + z, first_block_coords.z),
+                BlockFace::Back | BlockFace::Front => (first_block_coords.x + x, first_block_coords.y + z, first_block_coords.z),
                 BlockFace::Top | BlockFace::Bottom => (first_block_coords.x + x, first_block_coords.y, first_block_coords.z + z),
                 BlockFace::Right | BlockFace::Left => (first_block_coords.x, first_block_coords.y + x, first_block_coords.z + z),
             }
@@ -123,7 +123,7 @@ fn generate_chunk_features(
             // No sand block to grow cactus from.
             if let Ok(rotated) = rotate(coords, UnboundBlockCoordinate::new(0, height, 0), s_dims, block_up) {
                 let block = structure.block_at(rotated, blocks);
-                if height < 0 || block != sand || structure.block_rotation(rotated).block_up != block_up {
+                if height < 0 || block != sand || structure.block_rotation(rotated).face_pointing_pos_y != block_up {
                     continue;
                 }
 

@@ -7,6 +7,8 @@ use std::ops::{Add, Neg, Sub};
 use bevy::reflect::Reflect;
 use serde::{Deserialize, Serialize};
 
+use crate::block::block_direction::BlockDirection;
+
 use crate::utils::array_utils;
 
 use super::chunk::{CHUNK_DIMENSIONS, CHUNK_DIMENSIONSF, CHUNK_DIMENSIONS_UB};
@@ -38,7 +40,7 @@ pub enum BoundsError {
 
 macro_rules! create_coordinate {
     ($name: ident, $unbounded: ident, $structComment: literal, $fieldComment: literal) => {
-        #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Reflect, Hash)]
+        #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Reflect, Hash, Default)]
         #[doc=$structComment]
         pub struct $name {
             #[doc=$fieldComment]
@@ -60,6 +62,16 @@ macro_rules! create_coordinate {
                 Self { x, y, z }
             }
 
+            #[inline(always)]
+            /// Creates a new unbounded coordinate from a single tuple argument.
+            pub const fn new_from_tuple(tuple: (CoordinateType, CoordinateType, CoordinateType)) -> Self {
+                Self {
+                    x: tuple.0,
+                    y: tuple.1,
+                    z: tuple.2,
+                }
+            }
+
             #[doc=$structComment]
             ///
             /// - `all` The value of every coordinate
@@ -68,11 +80,17 @@ macro_rules! create_coordinate {
                 Self::new(all, all, all)
             }
 
+            /// Computes self + (1, 0, 0)
+            #[inline(always)]
+            pub fn pos_x(&self) -> Self {
+                Self::new(self.x + 1, self.y, self.z)
+            }
+
             /// Computes self - (1, 0, 0)
             ///
             /// Will return an err if the result would be negative
             #[inline(always)]
-            pub fn left(&self) -> Result<Self, BoundsError> {
+            pub fn neg_x(&self) -> Result<Self, BoundsError> {
                 if self.x == 0 {
                     Err(BoundsError::Negative)
                 } else {
@@ -80,17 +98,17 @@ macro_rules! create_coordinate {
                 }
             }
 
-            /// Computes self + (1, 0, 0)
+            /// Computes self + (0, 1, 0)
             #[inline(always)]
-            pub fn right(&self) -> Self {
-                Self::new(self.x + 1, self.y, self.z)
+            pub fn pos_y(&self) -> Self {
+                Self::new(self.x, self.y + 1, self.z)
             }
 
             /// Computes self - (0, 1, 0)
             ///
             /// Will return an err if the result would be negative
             #[inline(always)]
-            pub fn bottom(&self) -> Result<Self, BoundsError> {
+            pub fn neg_y(&self) -> Result<Self, BoundsError> {
                 if self.y == 0 {
                     Err(BoundsError::Negative)
                 } else {
@@ -98,17 +116,17 @@ macro_rules! create_coordinate {
                 }
             }
 
-            /// Computes self + (0, 1, 0)
+            /// Computes self + (0, 0, 1)
             #[inline(always)]
-            pub fn top(&self) -> Self {
-                Self::new(self.x, self.y + 1, self.z)
+            pub fn pos_z(&self) -> Self {
+                Self::new(self.x, self.y, self.z + 1)
             }
 
             /// Computes self - (0, 0, 1)
             ///
             /// Will return an err if the result would be negative
             #[inline(always)]
-            pub fn back(&self) -> Result<Self, BoundsError> {
+            pub fn neg_z(&self) -> Result<Self, BoundsError> {
                 if self.z == 0 {
                     Err(BoundsError::Negative)
                 } else {
@@ -116,10 +134,17 @@ macro_rules! create_coordinate {
                 }
             }
 
-            /// Computes self + (0, 0, 1)
+            /// Computes self + the direction change indicated by the BlockFace.
             #[inline(always)]
-            pub fn front(&self) -> Self {
-                Self::new(self.x, self.y, self.z + 1)
+            pub fn step(&self, direction: BlockDirection) -> Result<Self, BoundsError> {
+                match direction {
+                    BlockDirection::PosX => Ok(self.pos_x()),
+                    BlockDirection::NegX => self.neg_x(),
+                    BlockDirection::PosY => Ok(self.pos_y()),
+                    BlockDirection::NegY => self.neg_y(),
+                    BlockDirection::PosZ => Ok(self.pos_z()),
+                    BlockDirection::NegZ => self.neg_z(),
+                }
             }
         }
 
@@ -183,11 +208,11 @@ macro_rules! create_coordinate {
             }
         }
 
-        #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Reflect, Hash)]
+        #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Reflect, Hash, Default)]
         #[doc=$structComment]
         ///
         /// Note that an unbound coordinate can be outside the structure  in both the
-        /// positive and nagative directionand should always be treated with caution.
+        /// positive and negative direction and should always be treated with caution.
         pub struct $unbounded {
             #[doc=$fieldComment]
             pub x: UnboundCoordinateType,
@@ -204,6 +229,16 @@ macro_rules! create_coordinate {
                 Self { x, y, z }
             }
 
+            #[inline(always)]
+            /// Creates a new unbounded coordinate from a single tuple argument.
+            pub const fn new_from_tuple(tuple: (UnboundCoordinateType, UnboundCoordinateType, UnboundCoordinateType)) -> Self {
+                Self {
+                    x: tuple.0,
+                    y: tuple.1,
+                    z: tuple.2,
+                }
+            }
+
             /// Creates a new unbounded version that can have negative as well as positive values.
             ///
             /// - `all` The value of every coordinate
@@ -212,40 +247,47 @@ macro_rules! create_coordinate {
                 Self::new(all, all, all)
             }
 
-            /// Computes self - (1, 0, 0)
+            /// Computes self + (1, 0, 0).
             #[inline(always)]
-            pub fn left(&self) -> Self {
-                Self::new(self.x - 1, self.y, self.z)
-            }
-
-            /// Computes self + (1, 0, 0)
-            #[inline(always)]
-            pub fn right(&self) -> Self {
+            pub fn pos_x(&self) -> Self {
                 Self::new(self.x + 1, self.y, self.z)
             }
 
-            /// Computes self - (0, 1, 0)
+            /// Computes self - (1, 0, 0).
             #[inline(always)]
-            pub fn bottom(&self) -> Self {
-                Self::new(self.x, self.y - 1, self.z)
+            pub fn neg_x(&self) -> Self {
+                Self::new(self.x - 1, self.y, self.z)
             }
 
-            /// Computes self + (0, 1, 0)
+            /// Computes self + (0, 1, 0).
             #[inline(always)]
-            pub fn top(&self) -> Self {
+            pub fn pos_y(&self) -> Self {
                 Self::new(self.x, self.y + 1, self.z)
             }
 
-            /// Computes self - (0, 0, 1)
+            /// Computes self - (0, 1, 0).
             #[inline(always)]
-            pub fn back(&self) -> Self {
+            pub fn neg_y(&self) -> Self {
+                Self::new(self.x, self.y - 1, self.z)
+            }
+
+            /// Computes self + (0, 0, 1).
+            #[inline(always)]
+            pub fn pos_z(&self) -> Self {
+                Self::new(self.x, self.y, self.z + 1)
+            }
+
+            /// Computes self - (0, 0, 1).
+            #[inline(always)]
+            pub fn neg_z(&self) -> Self {
                 Self::new(self.x, self.y, self.z - 1)
             }
 
-            /// Computes self + (0, 0, 1)
+            /// Computes self + the change indicated by the given Direction, for example +1 to the X coordinate for [`Direction::PosX`].
             #[inline(always)]
-            pub fn front(&self) -> Self {
-                Self::new(self.x, self.y, self.z + 1)
+            pub fn step(&self, direction: BlockDirection) -> Self {
+                let delta = direction.to_coordinates();
+                Self::new(self.x + delta.x, self.y + delta.y, self.z + delta.z)
             }
 
             /// Computes the abs() of each value and converts to a bounded coordinate type

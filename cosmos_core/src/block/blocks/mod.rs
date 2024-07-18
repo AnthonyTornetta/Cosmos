@@ -14,7 +14,7 @@ use super::{Block, BlockProperty};
 pub mod fluid;
 
 /// Air's ID - this block will always exist
-pub static AIR_BLOCK_ID: u16 = 0;
+pub const AIR_BLOCK_ID: u16 = 0;
 
 fn add_cosmos_blocks(
     mut blocks: ResMut<Registry<Block>>,
@@ -390,6 +390,44 @@ fn add_cosmos_blocks(
             .create(),
     );
 
+    blocks.register(
+        BlockBuilder::new("cosmos:logic_indicator", 0.1, 20.0, 5.0)
+            .add_property(BlockProperty::Full)
+            .add_connection_group("cosmos:uses_logic")
+            .create(),
+    );
+
+    blocks.register(
+        BlockBuilder::new("cosmos:and_gate", 0.1, 20.0, 5.0)
+            .add_property(BlockProperty::Full)
+            .add_property(BlockProperty::FullyRotatable)
+            .add_connection_group("cosmos:uses_logic")
+            .create(),
+    );
+
+    blocks.register(
+        BlockBuilder::new("cosmos:or_gate", 0.1, 20.0, 5.0)
+            .add_property(BlockProperty::Full)
+            .add_property(BlockProperty::FullyRotatable)
+            .add_connection_group("cosmos:uses_logic")
+            .create(),
+    );
+
+    blocks.register(
+        BlockBuilder::new("cosmos:not_gate", 0.1, 20.0, 5.0)
+            .add_property(BlockProperty::Full)
+            .add_property(BlockProperty::FullyRotatable)
+            .add_connection_group("cosmos:uses_logic")
+            .create(),
+    );
+
+    blocks.register(
+        BlockBuilder::new("cosmos:xor_gate", 0.1, 20.0, 5.0)
+            .add_property(BlockProperty::Full)
+            .add_property(BlockProperty::FullyRotatable)
+            .add_connection_group("cosmos:uses_logic")
+            .create(),
+    );
     loading.finish_loading(id, &mut end_writer);
 }
 

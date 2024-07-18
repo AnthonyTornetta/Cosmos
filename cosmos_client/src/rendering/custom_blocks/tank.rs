@@ -19,7 +19,7 @@ use bevy::{
     utils::HashMap,
 };
 use cosmos_core::{
-    block::{Block, BlockFace, ALL_BLOCK_FACES},
+    block::{block_direction::BlockDirection, block_face::ALL_BLOCK_FACES, Block},
     ecs::NeedsDespawned,
     fluid::{
         data::{BlockFluidData, FluidTankBlock},
@@ -134,7 +134,7 @@ fn on_render_tanks(
             let rotation = block_rotation.as_quat();
 
             let faces = ALL_BLOCK_FACES.iter().copied().filter(|face| {
-                if let Ok(new_coord) = BlockCoordinate::try_from(block.coords() + face.direction_coordinates()) {
+                if let Ok(new_coord) = BlockCoordinate::try_from(block.coords() + face.direction().to_coordinates()) {
                     if structure.block_id_at(new_coord) == tank_id {
                         return match structure.query_block_data(new_coord, &q_stored_fluid) {
                             Some(BlockFluidData::Fluid(sf)) => sf.fluid_stored == 0,
@@ -148,9 +148,9 @@ fn on_render_tanks(
 
             let mut mesh_builder = None;
 
-            for (_, face) in faces.map(|face| (face, block_rotation.rotate_face(face))) {
+            for (_, direction) in faces.map(|face| (face, block_rotation.direction_of(face))) {
                 let Some(mut mesh_info) = block_mesh_info
-                    .info_for_face(face, false)
+                    .info_for_face(direction.block_face(), false)
                     .map(Some)
                     .unwrap_or_else(|| {
                         let single_mesh = block_mesh_info.info_for_whole_block();
@@ -173,8 +173,8 @@ fn on_render_tanks(
 
                 let neighbors = BlockNeighbors::empty();
 
-                let Some(image_index) = index.atlas_index_from_face(face, neighbors) else {
-                    warn!("Missing image index for face {face} -- {index:?}");
+                let Some(image_index) = index.atlas_index_from_face(direction.block_face(), neighbors) else {
+                    warn!("Missing image index for face {direction} -- {index:?}");
                     continue;
                 };
 
@@ -184,7 +184,7 @@ fn on_render_tanks(
                     0.0,
                     0.0,
                     1.0,
-                    if face != BlockFace::Top && face != BlockFace::Bottom {
+                    if direction != BlockDirection::PosY && direction != BlockDirection::NegY {
                         y_scale
                     } else {
                         1.0

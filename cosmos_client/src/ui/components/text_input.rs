@@ -160,9 +160,9 @@ fn monitor_clicked(
 
             if *interaction == Interaction::Pressed {
                 focused.0 = Some(ent);
-            } else if focused.0.map(|x| x == ent).unwrap_or(false) {
+                // } else if focused.0.map(|x| x == ent).unwrap_or(false) {
                 // Only clear out focused ent if it was one of the ones we're worried about
-                focused.0 = None;
+                // focused.0 = None;
             }
         }
     }

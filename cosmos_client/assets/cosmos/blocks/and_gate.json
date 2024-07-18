@@ -1,0 +1,24 @@
+{
+    "texture": {
+        "Sides": {
+            "right": {
+                "Single": "cosmos:logic_pointing_left"
+            },
+            "left": {
+                "Single": "cosmos:logic_pointing_right"
+            },
+            "front": {
+                "Single": "cosmos:logic_pointing_up"
+            },
+            "back": {
+                "Single": "cosmos:2_input_gate_back"
+            },
+            "top": {
+                "Single": "cosmos:and_gate_top"
+            },
+            "bottom": {
+                "Single": "cosmos:logic_block"
+            }
+        }
+    }
+}

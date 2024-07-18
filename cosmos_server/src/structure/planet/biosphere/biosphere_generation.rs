@@ -4,7 +4,7 @@ use crate::{init::init_world::ServerSeed, state::GameState, structure::planet::b
 use bevy::{prelude::*, utils::hashbrown::HashSet};
 use bevy_easy_compute::prelude::*;
 use cosmos_core::{
-    block::{block_events::BlockEventsSet, Block, BlockFace},
+    block::{block_events::BlockEventsSet, block_face::BlockFace, Block},
     ecs::mut_events::{EventWriterCustomSend, MutEvent, MutEventsCommand},
     netty::system_sets::NetworkingSystemsSet,
     physics::location::Location,
@@ -191,7 +191,7 @@ pub(crate) fn generate_chunks_from_gpu_data<T: BiosphereMarkerComponent>(
                         let coord = match face {
                             BlockFace::Left | BlockFace::Right => block_relative_coord.x,
                             BlockFace::Top | BlockFace::Bottom => block_relative_coord.y,
-                            BlockFace::Front | BlockFace::Back => block_relative_coord.z,
+                            BlockFace::Back | BlockFace::Front => block_relative_coord.z,
                         };
 
                         if (coord.abs()) as CoordinateType <= sea_level_coordinate {

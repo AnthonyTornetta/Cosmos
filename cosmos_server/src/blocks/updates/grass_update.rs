@@ -32,7 +32,7 @@ fn monitor_grass_updated(
 
         if block.unlocalized_name() == "cosmos:short_grass" {
             let block_up = ev.block().block_up(&structure);
-            let down_coord = block_up.block_up.inverse().direction_coordinates() + ev.block().coords();
+            let down_coord = block_up.face_pointing_pos_y.inverse().direction().to_coordinates() + ev.block().coords();
 
             let Ok(down_coord) = BlockCoordinate::try_from(down_coord) else {
                 structure.remove_block_at(ev.block().coords(), &blocks, Some(&mut event_writer));
