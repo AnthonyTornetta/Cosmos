@@ -132,15 +132,10 @@ pub(super) fn register(app: &mut App) {
         // Receive explosions from server before processing them
         app.configure_sets(
             Update,
-            (
-                ExplosionSystemSet::PreProcessExplosions
-                    .before(LocationPhysicsSet::DoPhysics)
-                    .before(CosmosBundleSet::HandleCosmosBundles)
-                    .after(NetworkingSystemsSet::SyncComponents),
-                ExplosionSystemSet::ProcessExplosions
-                    .after(LocationPhysicsSet::DoPhysics)
-                    .after(CosmosBundleSet::HandleCosmosBundles),
-            )
+            (ExplosionSystemSet::PreProcessExplosions, ExplosionSystemSet::ProcessExplosions)
+                .after(LocationPhysicsSet::DoPhysics)
+                .after(NetworkingSystemsSet::SyncComponents)
+                .after(CosmosBundleSet::HandleCosmosBundles)
                 .chain(),
         );
     }

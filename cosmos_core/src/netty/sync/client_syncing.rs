@@ -613,7 +613,7 @@ pub(super) fn setup_client(app: &mut App) {
             ComponentSyncingSet::DoComponentSyncing,
             ComponentSyncingSet::PostComponentSyncing,
         )
-            .before(CosmosBundleSet::HandleCosmosBundles)
+            .after(CosmosBundleSet::HandleCosmosBundles)
             .in_set(NetworkingSystemsSet::SyncComponents)
             .chain(),
     );

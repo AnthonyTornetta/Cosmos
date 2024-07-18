@@ -61,7 +61,6 @@ pub fn sync_registry<T: Identifiable + Serialize + DeserializeOwned + std::fmt::
         Update,
         sync::<T>
             .in_set(NetworkingSystemsSet::ReceiveMessages)
-            .before(ComponentSyncingSet::DoComponentSyncing)
             .run_if(in_state(GameState::LoadingData)),
     );
 }
