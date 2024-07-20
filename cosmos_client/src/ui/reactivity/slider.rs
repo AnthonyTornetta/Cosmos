@@ -4,6 +4,7 @@ use bevy::{
     app::{App, Update},
     ecs::{event::EventReader, query::Changed, system::Query},
     log::{error, warn},
+    prelude::IntoSystemConfigs,
 };
 
 use crate::ui::components::slider::{Slider, SliderValue};
@@ -86,5 +87,5 @@ fn on_update_slider_value<T: ReactableValue>(
 }
 
 pub(super) fn register<T: ReactableValue>(app: &mut App) {
-    app.add_systems(Update, (on_update_bound_values::<T>, on_update_slider_value::<T>));
+    app.add_systems(Update, (on_update_bound_values::<T>, on_update_slider_value::<T>).chain());
 }

@@ -115,6 +115,12 @@ impl<T: States + Clone + Copy> LoadingStatus<T> {
     }
 }
 
+#[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
+/// Used for ambiguity detection
+pub enum MonitorLoadingSet {
+    MonitorLoading,
+}
+
 pub(super) fn register<T: States + Clone + Copy + FreelyMutableState>(
     app: &mut App,
     pre_loading_state: T,
@@ -122,11 +128,15 @@ pub(super) fn register<T: States + Clone + Copy + FreelyMutableState>(
     post_loading_state: T,
     done_state: T,
 ) {
+    app.configure_sets(Update, MonitorLoadingSet::MonitorLoading);
+
     app.add_event::<DoneLoadingEvent>()
         .add_event::<AddLoadingEvent>()
         .add_systems(
             Update,
-            monitor_loading::<T>.run_if(in_state(pre_loading_state).or_else(in_state(loading_state).or_else(in_state(post_loading_state)))),
+            monitor_loading::<T>
+                .in_set(MonitorLoadingSet::MonitorLoading)
+                .run_if(in_state(pre_loading_state).or_else(in_state(loading_state).or_else(in_state(post_loading_state)))),
         )
         .insert_resource(LoadingStatus::new(pre_loading_state, loading_state, post_loading_state, done_state))
         .insert_resource(LoadingManager::default())

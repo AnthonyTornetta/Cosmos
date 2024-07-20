@@ -3,7 +3,10 @@ use bevy_renet2::renet2::{DisconnectReason, RenetClient};
 
 use crate::ui::components::button::{register_button, Button, ButtonBundle, ButtonEvent, ButtonStyles};
 
-use super::{in_main_menu_state, MainMenuRootUiNode, MainMenuSubState, MainMenuSystemSet};
+use super::{
+    in_main_menu_state, settings_screen::SettingsMenuSet, title_screen::TitleScreenSet, MainMenuRootUiNode, MainMenuSubState,
+    MainMenuSystemSet,
+};
 
 fn create_disconnect_screen(
     mut commands: Commands,
@@ -109,21 +112,34 @@ fn ok_clicked(mut mms: ResMut<MainMenuSubState>) {
     *mms = MainMenuSubState::TitleScreen;
 }
 
+#[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
+pub(super) enum DisconnectMenuSet {
+    DisconnectMenuInteractions,
+}
+
 pub(super) fn register(app: &mut App) {
     register_button::<OkButtonEvent>(app);
 
+    app.configure_sets(
+        Update,
+        DisconnectMenuSet::DisconnectMenuInteractions
+            .ambiguous_with(SettingsMenuSet::SettingsMenuInteractions)
+            .ambiguous_with(TitleScreenSet::TitleScreenInteractions),
+    );
+
     app.add_systems(
         Update,
-        create_disconnect_screen
-            .run_if(in_main_menu_state(MainMenuSubState::Disconnect))
-            .run_if(resource_exists_and_changed::<MainMenuSubState>)
-            .in_set(MainMenuSystemSet::InitializeMenu),
-    )
-    .add_systems(
-        Update,
-        ok_clicked
-            .run_if(on_event::<OkButtonEvent>())
-            .run_if(in_main_menu_state(MainMenuSubState::Disconnect))
-            .in_set(MainMenuSystemSet::UpdateMenu),
+        (
+            create_disconnect_screen
+                .run_if(in_main_menu_state(MainMenuSubState::Disconnect))
+                .run_if(resource_exists_and_changed::<MainMenuSubState>)
+                .in_set(MainMenuSystemSet::InitializeMenu),
+            ok_clicked
+                .run_if(on_event::<OkButtonEvent>())
+                .run_if(in_main_menu_state(MainMenuSubState::Disconnect))
+                .in_set(MainMenuSystemSet::UpdateMenu),
+        )
+            .in_set(DisconnectMenuSet::DisconnectMenuInteractions)
+            .chain(),
     );
 }

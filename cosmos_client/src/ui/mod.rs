@@ -7,6 +7,8 @@ use bevy::{
         schedule::{IntoSystemSetConfigs, SystemSet},
     },
     prelude::App,
+    text::Text,
+    ui::{BackgroundColor, Style},
 };
 
 pub mod components;
@@ -54,4 +56,9 @@ pub(super) fn register(app: &mut App) {
     hud::register(app);
 
     app.configure_sets(Update, (UiSystemSet::DoUi, UiSystemSet::FinishUi).chain());
+
+    // These probably don't matter
+    app.allow_ambiguous_component::<Text>();
+    app.allow_ambiguous_component::<BackgroundColor>();
+    app.allow_ambiguous_component::<Style>();
 }

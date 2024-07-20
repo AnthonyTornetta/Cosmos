@@ -305,7 +305,8 @@ pub fn register_button<T: ButtonEvent>(app: &mut App) {
             on_add_button::<T>.in_set(ButtonUiSystemSet::AddButtonBundle),
             on_change_button::<T>.in_set(ButtonUiSystemSet::SendButtonEvents),
             on_interact_button::<T>.in_set(ButtonUiSystemSet::SendButtonEvents),
-        ),
+        )
+            .chain(),
     )
     .add_event::<T>();
 }

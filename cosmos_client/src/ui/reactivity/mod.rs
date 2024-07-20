@@ -12,10 +12,13 @@ use bevy::{
         event::{Event, EventWriter},
         query::Changed,
         schedule::IntoSystemConfigs,
+        schedule::IntoSystemSetConfigs,
         system::Query,
     },
-    prelude::Deref,
+    prelude::{Deref, SystemSet},
 };
+
+use super::UiSystemSet;
 
 pub mod slider;
 pub mod text;
@@ -125,6 +128,13 @@ pub(crate) fn add_reactable_type<T: ReactableValue>(app: &mut App) {
     text_input::register::<T>(app);
 }
 
+#[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
+pub enum ReactiveUiSystemSet {
+    ProcessChanges,
+}
+
 pub(super) fn register(app: &mut App) {
     app.add_event::<NeedsValueFetched>();
+
+    app.configure_sets(Update, (ReactiveUiSystemSet::ProcessChanges).in_set(UiSystemSet::DoUi));
 }

@@ -14,7 +14,10 @@ use crate::{
     },
 };
 
-use super::{in_main_menu_state, MainMenuRootUiNode, MainMenuSubState, MainMenuSystemSet};
+use super::{
+    disconnect_screen::DisconnectMenuSet, in_main_menu_state, title_screen::TitleScreenSet, MainMenuRootUiNode, MainMenuSubState,
+    MainMenuSystemSet,
+};
 
 #[derive(Debug, Clone, PartialEq, Eq, Component)]
 struct WrittenSetting {
@@ -299,31 +302,41 @@ fn done_clicked(mut mms: ResMut<MainMenuSubState>, mut settings: ResMut<Registry
     *mms = MainMenuSubState::TitleScreen;
 }
 
+#[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
+pub(super) enum SettingsMenuSet {
+    SettingsMenuInteractions,
+}
+
 pub(super) fn register(app: &mut App) {
     register_button::<CancelButtonEvent>(app);
     register_button::<DoneButtonEvent>(app);
 
     add_reactable_type::<WrittenSetting>(app);
 
+    app.configure_sets(
+        Update,
+        SettingsMenuSet::SettingsMenuInteractions
+            .ambiguous_with(DisconnectMenuSet::DisconnectMenuInteractions)
+            .ambiguous_with(TitleScreenSet::TitleScreenInteractions),
+    );
+
     app.add_systems(
         Update,
-        create_disconnect_screen
-            .run_if(in_main_menu_state(MainMenuSubState::Settings))
-            .run_if(resource_exists_and_changed::<MainMenuSubState>)
-            .in_set(MainMenuSystemSet::InitializeMenu),
-    )
-    .add_systems(
-        Update,
-        cancel_clicked
-            .run_if(on_event::<CancelButtonEvent>())
-            .run_if(in_main_menu_state(MainMenuSubState::Settings))
-            .in_set(MainMenuSystemSet::UpdateMenu),
-    )
-    .add_systems(
-        Update,
-        done_clicked
-            .run_if(on_event::<DoneButtonEvent>())
-            .run_if(in_main_menu_state(MainMenuSubState::Settings))
-            .in_set(MainMenuSystemSet::UpdateMenu),
+        (
+            create_disconnect_screen
+                .run_if(in_main_menu_state(MainMenuSubState::Settings))
+                .run_if(resource_exists_and_changed::<MainMenuSubState>)
+                .in_set(MainMenuSystemSet::InitializeMenu),
+            cancel_clicked
+                .run_if(on_event::<CancelButtonEvent>())
+                .run_if(in_main_menu_state(MainMenuSubState::Settings))
+                .in_set(MainMenuSystemSet::UpdateMenu),
+            done_clicked
+                .run_if(on_event::<DoneButtonEvent>())
+                .run_if(in_main_menu_state(MainMenuSubState::Settings))
+                .in_set(MainMenuSystemSet::UpdateMenu),
+        )
+            .in_set(SettingsMenuSet::SettingsMenuInteractions)
+            .chain(),
     );
 }
