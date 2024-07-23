@@ -36,7 +36,7 @@ use cosmos_core::{
 use crate::{
     asset::{
         asset_loading::{BlockNeighbors, BlockTextureIndex},
-        materials::{AddMaterialEvent, BlockMaterialMapping, MaterialDefinition, MaterialType},
+        materials::{AddMaterialEvent, BlockMaterialMapping, MaterialDefinition, MaterialType, MaterialsSystemSet},
     },
     rendering::{
         structure_renderer::{
@@ -320,7 +320,13 @@ pub(super) fn register(app: &mut App) {
         set_custom_rendering_for_tank.in_set(RenderingModesSet::SetRenderingModes),
     );
 
-    app.add_systems(Update, on_render_tanks.in_set(StructureRenderingSet::CustomRendering));
+    app.add_systems(
+        Update,
+        on_render_tanks
+            .in_set(StructureRenderingSet::CustomRendering)
+            .in_set(MaterialsSystemSet::AddMaterials)
+            .ambiguous_with(MaterialsSystemSet::AddMaterials),
+    );
 
     app.register_type::<TankRenders>();
 }

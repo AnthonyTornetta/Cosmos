@@ -18,9 +18,7 @@ use cosmos_core::{
 use crate::{
     asset::{
         asset_loading::{BlockNeighbors, BlockTextureIndex, CosmosTextureAtlas, ItemTextureIndex},
-        materials::{
-            add_materials, remove_materials, AddMaterialEvent, BlockMaterialMapping, ItemMaterialMapping, MaterialDefinition, MaterialType,
-        },
+        materials::{AddMaterialEvent, BlockMaterialMapping, ItemMaterialMapping, MaterialDefinition, MaterialType, MaterialsSystemSet},
         texture_atlas::SquareTextureAtlas,
     },
     item::item_mesh::create_item_mesh,
@@ -431,7 +429,7 @@ pub enum RenderItemSystemSet {
 pub(super) fn register(app: &mut App) {
     app.configure_sets(
         Update,
-        (RenderItemSystemSet::RenderItems.before(remove_materials).before(add_materials),)
+        (RenderItemSystemSet::RenderItems.in_set(MaterialsSystemSet::AddMaterials))
             .chain()
             .in_set(UiSystemSet::DoUi),
     )

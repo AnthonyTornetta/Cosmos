@@ -5,9 +5,9 @@ use bevy_renet2::renet2::RenetClient;
 use cosmos_core::{
     netty::{
         client::LocalPlayer, client_reliable_messages::ClientReliableMessages, cosmos_encoder, sync::mapping::NetworkMapping,
-        NettyChannelClient,
+        system_sets::NetworkingSystemsSet, NettyChannelClient,
     },
-    physics::location::Location,
+    physics::location::{Location, LocationPhysicsSet},
     structure::{
         chunk::{Chunk, ChunkUnloadEvent},
         coordinates::{UnboundChunkCoordinate, UnboundCoordinateType},
@@ -91,7 +91,7 @@ fn load_planet_chunks(
 /// This system unloads chunks that are too far for a player to see.
 ///
 /// Put systems that mess with chunks before this.
-pub fn unload_chunks_far_from_players(
+pub(crate) fn unload_chunks_far_from_players(
     player: Query<&Location, With<LocalPlayer>>,
     mut planets: Query<(&Location, &mut Structure), With<Planet>>,
     mut event_writer: EventWriter<ChunkUnloadEvent>,
@@ -145,6 +145,10 @@ pub(super) fn register(app: &mut App) {
 
     app.add_systems(
         Update,
-        (load_planet_chunks, unload_chunks_far_from_players).run_if(in_state(GameState::Playing)),
+        (load_planet_chunks, unload_chunks_far_from_players)
+            .chain()
+            .in_set(NetworkingSystemsSet::Between)
+            .after(LocationPhysicsSet::DoPhysics)
+            .run_if(in_state(GameState::Playing)),
     );
 }

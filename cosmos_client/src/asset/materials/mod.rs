@@ -69,10 +69,15 @@ pub struct AddMaterialEvent {
     pub texture_dimensions_index: u32,
 }
 
-/// Add all event listeners for `AddMaterialEvent` after this to prevent any 1-frame delays
-pub fn add_materials() {}
-/// Add all event listeners for `RemoveAllMaterialsEvent` after this and before `add_materials` to ensure your material is removed at the right time.
-pub fn remove_materials() {}
+#[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
+pub enum MaterialsSystemSet {
+    /// Add all event listeners for [`AddMaterialEvent`] to this set this to prevent any 1-frame delays
+    AddMaterials,
+    ProcessAddMaterialsEvents,
+    /// Add all event listeners for [`RemoveAllMaterialsEvent`] in this to ensure your material is removed at the right time.
+    RemoveMaterials,
+    ProcessRemoveMaterialsEvents,
+}
 
 /// Generates any extra information need for meshes that use this material
 pub trait MaterialMeshInformationGenerator: Send + Sync {
@@ -321,11 +326,21 @@ pub(super) fn register(app: &mut App) {
     block_materials::register(app);
     animated_material::register(app);
 
+    app.configure_sets(
+        Update,
+        (
+            MaterialsSystemSet::AddMaterials,
+            MaterialsSystemSet::ProcessAddMaterialsEvents,
+            MaterialsSystemSet::RemoveMaterials,
+            MaterialsSystemSet::ProcessRemoveMaterialsEvents,
+        )
+            .chain(),
+    );
+
     app.add_systems(
         OnExit(GameState::PostLoading),
         register_materials.after(load_block_rendering_information),
     )
-    .add_systems(Update, (remove_materials, add_materials).chain())
     .add_event::<RemoveAllMaterialsEvent>()
     .add_event::<AddMaterialEvent>();
 }

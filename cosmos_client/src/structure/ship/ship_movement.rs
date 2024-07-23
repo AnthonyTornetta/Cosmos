@@ -163,13 +163,11 @@ fn reset_cursor(
 pub(super) fn register(app: &mut App) {
     app.add_systems(
         Update,
-        (
-            process_ship_movement
-                .in_set(NetworkingSystemsSet::Between)
-                .after(UiSystemSet::FinishUi)
-                .run_if(no_open_menus),
-            reset_cursor,
-        )
+        (reset_cursor, process_ship_movement)
+            .after(UiSystemSet::FinishUi)
+            .run_if(no_open_menus)
+            .in_set(NetworkingSystemsSet::Between)
+            .chain()
             .run_if(in_state(GameState::Playing)),
     );
 }

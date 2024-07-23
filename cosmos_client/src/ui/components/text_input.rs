@@ -568,6 +568,8 @@ pub enum TextInputUiSystemSet {
     ///
     /// Sets up any [`TextInput`] components added.
     AddTextInputBundle,
+    /// Updates the slider to contain any values that have been set via the "react" system
+    HandleReactValues,
     /// Sends user input to the various [`TextInput`] components.
     SendKeyInputs,
     /// Updates any components based on the value being changed in this [`TextInput`]
@@ -581,6 +583,7 @@ pub(super) fn register(app: &mut App) {
         Update,
         (
             TextInputUiSystemSet::AddTextInputBundle,
+            TextInputUiSystemSet::HandleReactValues,
             TextInputUiSystemSet::SendKeyInputs,
             TextInputUiSystemSet::ValueChanged,
         )

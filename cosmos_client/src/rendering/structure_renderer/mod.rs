@@ -1,4 +1,4 @@
-use crate::asset::materials::{add_materials, remove_materials};
+use crate::asset::materials::MaterialsSystemSet;
 use crate::state::game_state::GameState;
 use crate::structure::planet::unload_chunks_far_from_players;
 use bevy::ecs::schedule::{IntoSystemSetConfigs, SystemSet};
@@ -72,8 +72,7 @@ pub(super) fn register(app: &mut App) {
             .chain()
             .run_if(in_state(GameState::Playing))
             .before(unload_chunks_far_from_players)
-            .before(remove_materials)
-            .before(add_materials),
+            .in_set(MaterialsSystemSet::AddMaterials),
     );
 
     app.add_systems(OnExit(GameState::PostLoading), fill_rendering_mode);

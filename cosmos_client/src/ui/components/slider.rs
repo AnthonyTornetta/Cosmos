@@ -126,8 +126,8 @@ const BASE_SQUARE_SIZE: f32 = 10.0;
 const X_MARGIN: f32 = BASE_SQUARE_SIZE;
 const Y_MARGIN: f32 = BASE_SQUARE_SIZE / 2.0;
 
-fn on_add_slider(mut commands: Commands, mut q_added_button: Query<(Entity, &mut Style, &Slider, &SliderValue), Added<Slider>>) {
-    for (ent, mut style, slider, slider_value) in q_added_button.iter_mut() {
+fn on_add_slider(mut commands: Commands, mut q_added_slider: Query<(Entity, &mut Style, &Slider, &SliderValue), Added<Slider>>) {
+    for (ent, mut style, slider, slider_value) in q_added_slider.iter_mut() {
         style.height = Val::Px(slider.height + BASE_SQUARE_SIZE);
 
         let mut bar_entity = None;
@@ -284,15 +284,17 @@ fn on_change_value(
 }
 
 #[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
-/// System set the [`Button`]` component uses. Make sure you add any [`Button`] components before this set!
+/// System set the [`Slider`]` component uses. Make sure you add any [`Slider`] components before this set!
 pub enum SliderUiSystemSet {
-    /// Make sure you add any [`Button`] components before this set!
+    /// Make sure you add any [`Slider`] components before this set!
     ///
-    /// Sets up any [`Button`] components added.
+    /// Sets up any [`Slider`] components added.
     AddSliderBundle,
-    /// Sends user events from the various [`Button`] components.
+    /// Updates the slider to contain any values that have been set via the "react" system
+    HandleReactValues,
+    /// Sends user events from the various [`Slider`] components.
     SliderInteraction,
-    /// Sends user events from the various [`Button`] components.
+    /// Sends user events from the various [`Slider`] components.
     UpdateSliderDisplay,
 }
 
@@ -301,6 +303,7 @@ pub(super) fn register(app: &mut App) {
         Update,
         (
             SliderUiSystemSet::AddSliderBundle,
+            SliderUiSystemSet::HandleReactValues,
             SliderUiSystemSet::SliderInteraction,
             SliderUiSystemSet::UpdateSliderDisplay,
         )

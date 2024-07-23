@@ -74,7 +74,7 @@ fn taking_panorama(
     }
 }
 
-fn restore_stuffers(
+fn restore_ui_after_panorama(
     mut commands: Commands,
     q_pan_locked: Query<Entity, With<PanLocked>>,
     mut q_ui_elements: Query<(Entity, &mut Visibility, &OldVis), Or<(With<Node>, With<RenderedItem>)>>,
@@ -109,7 +109,7 @@ pub(super) fn register(app: &mut App) {
             taking_panorama
                 .run_if(resource_exists::<PanAngle>)
                 .run_if(on_timer(Duration::from_millis(100))),
-            (take_panorama, restore_stuffers.run_if(resource_exists::<FinishedPan>))
+            (take_panorama, restore_ui_after_panorama.run_if(resource_exists::<FinishedPan>))
                 .chain()
                 .run_if(not(resource_exists::<PanAngle>)),
         )

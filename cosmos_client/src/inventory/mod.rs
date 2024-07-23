@@ -714,7 +714,7 @@ pub(super) fn register(app: &mut App) {
             InventorySet::FollowCursor,
             InventorySet::ToggleInventoryRendering,
         )
-            .before(UiSystemSet::DoUi)
+            .before(UiSystemSet::PreDoUi)
             .chain(),
     )
     .add_systems(

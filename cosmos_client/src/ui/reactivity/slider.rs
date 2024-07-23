@@ -1,18 +1,13 @@
 //! Reactivity for sliders
 
+use super::{BindValues, NeedsValueFetched, ReactableFields, ReactableValue, ReactiveUiSystemSet};
+use crate::ui::components::slider::{Slider, SliderValue};
 use bevy::{
     app::{App, Update},
     ecs::{event::EventReader, query::Changed, system::Query},
     log::{error, warn},
     prelude::IntoSystemConfigs,
 };
-
-use crate::ui::{
-    components::slider::{Slider, SliderValue},
-    UiSystemSet,
-};
-
-use super::{BindValues, NeedsValueFetched, ReactableFields, ReactableValue, ReactiveUiSystemSet};
 
 fn on_update_bound_values<T: ReactableValue>(
     q_react_value: Query<&T>,

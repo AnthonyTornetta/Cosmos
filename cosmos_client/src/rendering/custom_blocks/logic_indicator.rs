@@ -32,7 +32,7 @@ use cosmos_core::{
 use crate::{
     asset::{
         asset_loading::{BlockNeighbors, BlockTextureIndex},
-        materials::{AddMaterialEvent, BlockMaterialMapping, MaterialDefinition, MaterialType},
+        materials::{AddMaterialEvent, BlockMaterialMapping, MaterialDefinition, MaterialType, MaterialsSystemSet},
     },
     rendering::{
         structure_renderer::{
@@ -245,7 +245,13 @@ pub(super) fn register(app: &mut App) {
         set_custom_rendering_for_logic_indicator.in_set(RenderingModesSet::SetRenderingModes),
     );
 
-    app.add_systems(Update, on_render_logic_indicator.in_set(StructureRenderingSet::CustomRendering));
+    app.add_systems(
+        Update,
+        on_render_logic_indicator
+            .in_set(MaterialsSystemSet::AddMaterials)
+            .ambiguous_with(MaterialsSystemSet::AddMaterials)
+            .in_set(StructureRenderingSet::CustomRendering),
+    );
 
     app.register_type::<LogicIndicatorRenders>();
 }

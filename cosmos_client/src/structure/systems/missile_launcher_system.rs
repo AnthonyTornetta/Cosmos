@@ -4,7 +4,7 @@ use bevy::{asset::LoadState, prelude::*};
 use bevy_kira_audio::prelude::*;
 use cosmos_core::{
     ecs::NeedsDespawned,
-    netty::{client::LocalPlayer, sync::mapping::NetworkMapping},
+    netty::{client::LocalPlayer, sync::mapping::NetworkMapping, system_sets::NetworkingSystemsSet},
     physics::location::Location,
     structure::{
         ship::pilot::Pilot,
@@ -386,6 +386,9 @@ pub(super) fn register(app: &mut App) {
 
     app.add_event::<MissileLauncherSystemFiredEvent>().add_systems(
         Update,
-        (focus_looking_at, apply_shooting_sound, render_lockon_status).run_if(in_state(GameState::Playing)),
+        (focus_looking_at, apply_shooting_sound, render_lockon_status)
+            .chain()
+            .in_set(NetworkingSystemsSet::Between)
+            .run_if(in_state(GameState::Playing)),
     );
 }

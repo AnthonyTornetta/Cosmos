@@ -4,12 +4,14 @@
 //!
 //! I'm sorry. I'll fix it when I feel inspired.
 
-use std::{
-    collections::VecDeque,
-    mem::swap,
-    sync::{Arc, Mutex},
+use crate::{
+    asset::{
+        asset_loading::{BlockNeighbors, BlockTextureIndex},
+        materials::{AddMaterialEvent, BlockMaterialMapping, MaterialDefinition, MaterialType, MaterialsSystemSet},
+    },
+    ecs::add_statebound_resource,
+    state::game_state::GameState,
 };
-
 use bevy::{
     prelude::*,
     render::{
@@ -19,8 +21,6 @@ use bevy::{
     tasks::{AsyncComputeTaskPool, Task},
     utils::{hashbrown::HashMap, HashSet},
 };
-use futures_lite::future;
-
 use cosmos_core::{
     block::{block_face::BlockFace, Block},
     ecs::NeedsDespawned,
@@ -40,15 +40,12 @@ use cosmos_core::{
     },
     utils::array_utils::expand,
 };
+use futures_lite::future;
 use rayon::prelude::{IndexedParallelIterator, IntoParallelRefIterator, ParallelIterator};
-
-use crate::{
-    asset::{
-        asset_loading::{BlockNeighbors, BlockTextureIndex},
-        materials::{add_materials, remove_materials, AddMaterialEvent, BlockMaterialMapping, MaterialDefinition, MaterialType},
-    },
-    ecs::add_statebound_resource,
-    state::game_state::GameState,
+use std::{
+    collections::VecDeque,
+    mem::swap,
+    sync::{Arc, Mutex},
 };
 
 use super::{BlockMeshRegistry, CosmosMeshBuilder, MeshBuilder, MeshInformation, ReadOnlyBlockMeshRegistry};
@@ -945,8 +942,7 @@ pub(super) fn register(app: &mut App) {
             compute_meshes_and_kill_dead_entities,
         )
             .chain()
-            .before(remove_materials)
-            .before(add_materials)
+            .in_set(MaterialsSystemSet::AddMaterials)
             .run_if(in_state(GameState::Playing)),
     );
 

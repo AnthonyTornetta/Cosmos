@@ -3,8 +3,8 @@
 use bevy::{
     ecs::event::EventReader,
     prelude::{
-        in_state, App, BuildChildren, Commands, Entity, IntoSystemConfigs, Parent, Query, ResMut, SystemSet, Transform, Update, With,
-        Without,
+        in_state, App, BuildChildren, Commands, Entity, IntoSystemConfigs, IntoSystemSetConfigs, Parent, Query, ResMut, SystemSet,
+        Transform, Update, With, Without,
     },
 };
 use bevy_rapier3d::pipeline::CollisionEvent;
@@ -14,7 +14,7 @@ use cosmos_core::{
         client::LocalPlayer, client_reliable_messages::ClientReliableMessages, cosmos_encoder, system_sets::NetworkingSystemsSet,
         NettyChannelClient,
     },
-    physics::location::Location,
+    physics::location::{Location, LocationPhysicsSet},
     structure::{chunk::CHUNK_DIMENSIONSF, planet::Planet, shared::build_mode::BuildMode, ship::pilot::Pilot, Structure},
 };
 
@@ -134,9 +134,12 @@ pub(super) fn register(app: &mut App) {
     create_ship::register(app);
     ui::register(app);
 
+    app.configure_sets(Update, PlayerParentChangingSet::ChangeParent.before(LocationPhysicsSet::DoPhysics));
+
     app.add_systems(
         Update,
         (respond_to_collisions, remove_parent_when_too_far)
+            .chain()
             .in_set(NetworkingSystemsSet::Between)
             .in_set(PlayerParentChangingSet::ChangeParent)
             .run_if(in_state(GameState::Playing)),
