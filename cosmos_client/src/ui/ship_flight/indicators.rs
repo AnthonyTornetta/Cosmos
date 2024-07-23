@@ -3,7 +3,7 @@
 use bevy::{asset::LoadState, prelude::*, utils::HashMap};
 use cosmos_core::{
     entities::player::Player,
-    netty::client::LocalPlayer,
+    netty::{client::LocalPlayer, system_sets::NetworkingSystemsSet},
     physics::location::Location,
     structure::{
         asteroid::Asteroid,
@@ -425,6 +425,12 @@ fn is_target_visible(normalized_screen_position: Vec3) -> bool {
         && normalized_screen_position.y <= 1.0
 }
 
+#[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
+pub enum WaypointSet {
+    CreateWaypoints,
+    FocusWaypoints,
+}
+
 pub(super) fn register(app: &mut App) {
     load_assets::<Image, IndicatorImage>(
         app,
@@ -440,16 +446,19 @@ pub(super) fn register(app: &mut App) {
         },
     );
 
+    app.configure_sets(Update, (WaypointSet::CreateWaypoints, WaypointSet::FocusWaypoints).chain());
+
     app.init_resource::<IndicatorImages>()
         .init_resource::<ClosestWaypoint>()
         .add_systems(
             Update,
             (
-                add_indicators.run_if(resource_exists::<IndicatorImage>),
-                added,
-                position_diamonds,
-                focus_waypoint.run_if(no_open_menus),
+                (add_indicators.run_if(resource_exists::<IndicatorImage>), added, position_diamonds)
+                    .chain()
+                    .in_set(WaypointSet::CreateWaypoints),
+                focus_waypoint.in_set(WaypointSet::FocusWaypoints).run_if(no_open_menus),
             )
+                .in_set(NetworkingSystemsSet::Between)
                 .chain()
                 .run_if(in_state(GameState::Playing)),
         );

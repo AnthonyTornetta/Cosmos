@@ -134,7 +134,7 @@ pub(super) fn register(app: &mut App) {
             Update,
             (ExplosionSystemSet::PreProcessExplosions, ExplosionSystemSet::ProcessExplosions)
                 .after(LocationPhysicsSet::DoPhysics)
-                .after(NetworkingSystemsSet::SyncComponents)
+                .in_set(NetworkingSystemsSet::Between)
                 .after(CosmosBundleSet::HandleCosmosBundles)
                 .chain(),
         );

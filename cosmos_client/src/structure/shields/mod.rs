@@ -24,9 +24,12 @@ use bevy::{
     },
     time::Time,
 };
-use cosmos_core::structure::shields::Shield;
+use cosmos_core::{netty::system_sets::NetworkingSystemsSet, structure::shields::Shield};
 
-use crate::asset::materials::shield::{ShieldMaterial, ShieldMaterialExtension, MAX_SHIELD_HIT_POINTS};
+use crate::{
+    asset::materials::shield::{ShieldMaterial, ShieldMaterialExtension, MAX_SHIELD_HIT_POINTS},
+    ui::ship_flight::indicators::WaypointSet,
+};
 
 #[derive(Component)]
 struct OldRadius(f32);
@@ -146,9 +149,10 @@ pub(super) fn register(app: &mut App) {
         Update,
         (
             on_add_shield_create_rendering,
-            on_change_shield_update_rendering,
+            on_change_shield_update_rendering.ambiguous_with(WaypointSet::FocusWaypoints),
             update_shield_times,
         )
+            .after(NetworkingSystemsSet::Between)
             .chain(),
     );
 }

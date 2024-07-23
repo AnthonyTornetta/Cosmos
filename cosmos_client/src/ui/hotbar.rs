@@ -6,7 +6,7 @@ use bevy::{input::mouse::MouseWheel, prelude::*};
 use cosmos_core::{
     inventory::{held_item_slot::HeldItemSlot, itemstack::ItemStack, Inventory},
     item::Item,
-    netty::client::LocalPlayer,
+    netty::{client::LocalPlayer, system_sets::NetworkingSystemsSet},
     registry::{identifiable::Identifiable, Registry},
 };
 
@@ -503,6 +503,7 @@ pub(super) fn register(app: &mut App) {
                 listen_button_presses.run_if(no_open_menus),
                 tick_text_alpha_down,
             )
+                .in_set(NetworkingSystemsSet::Between)
                 .chain()
                 .run_if(in_state(GameState::Playing))
                 .run_if(is_hotbar_enabled),

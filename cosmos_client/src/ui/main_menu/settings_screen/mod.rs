@@ -3,7 +3,7 @@ use cosmos_core::registry::{identifiable::Identifiable, Registry};
 
 use crate::{
     lang::Lang,
-    settings::{Setting, SettingCategory, SettingData},
+    settings::{Setting, SettingCategory, SettingData, SettingsSet},
     ui::{
         components::{
             button::{register_button, Button, ButtonBundle, ButtonEvent, ButtonStyles},
@@ -334,7 +334,8 @@ pub(super) fn register(app: &mut App) {
             done_clicked
                 .run_if(on_event::<DoneButtonEvent>())
                 .run_if(in_main_menu_state(MainMenuSubState::Settings))
-                .in_set(MainMenuSystemSet::UpdateMenu),
+                .in_set(MainMenuSystemSet::UpdateMenu)
+                .in_set(SettingsSet::ChangeSettings),
         )
             .in_set(SettingsMenuSet::SettingsMenuInteractions)
             .chain(),

@@ -7,9 +7,12 @@ use bevy::{
     prelude::IntoSystemConfigs,
 };
 
-use crate::ui::components::slider::{Slider, SliderValue};
+use crate::ui::{
+    components::slider::{Slider, SliderValue},
+    UiSystemSet,
+};
 
-use super::{BindValues, NeedsValueFetched, ReactableFields, ReactableValue};
+use super::{BindValues, NeedsValueFetched, ReactableFields, ReactableValue, ReactiveUiSystemSet};
 
 fn on_update_bound_values<T: ReactableValue>(
     q_react_value: Query<&T>,
@@ -87,5 +90,11 @@ fn on_update_slider_value<T: ReactableValue>(
 }
 
 pub(super) fn register<T: ReactableValue>(app: &mut App) {
-    app.add_systems(Update, (on_update_bound_values::<T>, on_update_slider_value::<T>).chain());
+    app.add_systems(
+        Update,
+        (on_update_bound_values::<T>, on_update_slider_value::<T>)
+            .in_set(ReactiveUiSystemSet::ProcessSliderValueChanges)
+            .ambiguous_with(ReactiveUiSystemSet::ProcessSliderValueChanges)
+            .chain(),
+    );
 }

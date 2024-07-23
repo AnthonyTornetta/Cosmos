@@ -6,7 +6,7 @@ use bevy_hanabi::prelude::*;
 use bevy_kira_audio::{Audio, AudioControl, AudioInstance, AudioSource};
 use cosmos_core::{
     ecs::NeedsDespawned,
-    netty::{client::LocalPlayer, sync::ComponentSyncingSet},
+    netty::{client::LocalPlayer, sync::ComponentSyncingSet, system_sets::NetworkingSystemsSet},
     physics::location::Location,
     projectiles::missile::{Explosion, ExplosionSystemSet, Missile},
 };
@@ -15,6 +15,7 @@ use crate::{
     asset::asset_loader::load_assets,
     audio::{AudioEmission, AudioEmitterBundle, CosmosAudioEmitter, DespawnOnNoEmissions},
     state::game_state::GameState,
+    structure::ship::PlayerParentChangingSet,
 };
 
 #[derive(Component)]
@@ -255,6 +256,7 @@ pub(super) fn register(app: &mut App) {
         (start_explosion_particle_system, respond_to_explosion)
             .chain()
             .in_set(ExplosionSystemSet::ProcessExplosions)
+            .ambiguous_with(PlayerParentChangingSet::ChangeParent)
             .run_if(in_state(GameState::Playing)),
     )
     .add_systems(

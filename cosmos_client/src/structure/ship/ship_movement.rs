@@ -8,6 +8,7 @@ use bevy_renet2::renet2::RenetClient;
 use cosmos_core::netty::client::LocalPlayer;
 use cosmos_core::netty::client_reliable_messages::ClientReliableMessages;
 use cosmos_core::netty::client_unreliable_messages::ClientUnreliableMessages;
+use cosmos_core::netty::system_sets::NetworkingSystemsSet;
 use cosmos_core::netty::{cosmos_encoder, NettyChannelClient};
 use cosmos_core::structure::shared::build_mode::BuildMode;
 use cosmos_core::structure::ship::pilot::Pilot;
@@ -20,6 +21,7 @@ use crate::settings::MouseSensitivity;
 use crate::state::game_state::GameState;
 use crate::ui::components::show_cursor::no_open_menus;
 use crate::ui::crosshair::CrosshairOffset;
+use crate::ui::UiSystemSet;
 use crate::window::setup::{CursorFlags, DeltaCursorPosition};
 
 fn process_ship_movement(
@@ -161,6 +163,13 @@ fn reset_cursor(
 pub(super) fn register(app: &mut App) {
     app.add_systems(
         Update,
-        (process_ship_movement.run_if(no_open_menus), reset_cursor).run_if(in_state(GameState::Playing)),
+        (
+            process_ship_movement
+                .in_set(NetworkingSystemsSet::Between)
+                .after(UiSystemSet::FinishUi)
+                .run_if(no_open_menus),
+            reset_cursor,
+        )
+            .run_if(in_state(GameState::Playing)),
     );
 }

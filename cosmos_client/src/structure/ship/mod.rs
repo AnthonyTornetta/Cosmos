@@ -2,12 +2,18 @@
 
 use bevy::{
     ecs::event::EventReader,
-    prelude::{in_state, App, BuildChildren, Commands, Entity, IntoSystemConfigs, Parent, Query, ResMut, Transform, Update, With, Without},
+    prelude::{
+        in_state, App, BuildChildren, Commands, Entity, IntoSystemConfigs, Parent, Query, ResMut, SystemSet, Transform, Update, With,
+        Without,
+    },
 };
 use bevy_rapier3d::pipeline::CollisionEvent;
 use bevy_renet2::renet2::RenetClient;
 use cosmos_core::{
-    netty::{client::LocalPlayer, client_reliable_messages::ClientReliableMessages, cosmos_encoder, NettyChannelClient},
+    netty::{
+        client::LocalPlayer, client_reliable_messages::ClientReliableMessages, cosmos_encoder, system_sets::NetworkingSystemsSet,
+        NettyChannelClient,
+    },
     physics::location::Location,
     structure::{chunk::CHUNK_DIMENSIONSF, planet::Planet, shared::build_mode::BuildMode, ship::pilot::Pilot, Structure},
 };
@@ -117,6 +123,11 @@ fn remove_parent_when_too_far(
     }
 }
 
+#[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
+pub enum PlayerParentChangingSet {
+    ChangeParent,
+}
+
 pub(super) fn register(app: &mut App) {
     client_ship_builder::register(app);
     ship_movement::register(app);
@@ -125,6 +136,9 @@ pub(super) fn register(app: &mut App) {
 
     app.add_systems(
         Update,
-        (respond_to_collisions, remove_parent_when_too_far).run_if(in_state(GameState::Playing)),
+        (respond_to_collisions, remove_parent_when_too_far)
+            .in_set(NetworkingSystemsSet::Between)
+            .in_set(PlayerParentChangingSet::ChangeParent)
+            .run_if(in_state(GameState::Playing)),
     );
 }

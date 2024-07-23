@@ -17,8 +17,9 @@ use bevy::{
     },
     prelude::{Deref, SystemSet},
 };
+use cosmos_core::netty::system_sets::NetworkingSystemsSet;
 
-use super::UiSystemSet;
+use super::{components::scollable_container::SliderUiSystemSet, UiSystemSet};
 
 pub mod slider;
 pub mod text;
@@ -130,11 +131,26 @@ pub(crate) fn add_reactable_type<T: ReactableValue>(app: &mut App) {
 
 #[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
 pub enum ReactiveUiSystemSet {
+    ProcessTextValueChanges,
+    ProcessSliderValueChanges,
+
     ProcessChanges,
 }
 
 pub(super) fn register(app: &mut App) {
     app.add_event::<NeedsValueFetched>();
 
-    app.configure_sets(Update, (ReactiveUiSystemSet::ProcessChanges).in_set(UiSystemSet::DoUi));
+    app.configure_sets(
+        Update,
+        (
+            ReactiveUiSystemSet::ProcessTextValueChanges,
+            ReactiveUiSystemSet::ProcessSliderValueChanges,
+            ReactiveUiSystemSet::ProcessChanges,
+        )
+            .after(SliderUiSystemSet::AddSliderBundle)
+            .before(SliderUiSystemSet::SliderInteraction)
+            .chain()
+            .in_set(NetworkingSystemsSet::Between)
+            .in_set(UiSystemSet::DoUi),
+    );
 }
