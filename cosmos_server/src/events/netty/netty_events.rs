@@ -36,7 +36,7 @@ fn generate_player_inventory(
     commands: &mut Commands,
     has_data: &ItemShouldHaveData,
 ) -> Inventory {
-    let mut inventory = Inventory::new("Inventory", 9 * 10, Some(0..9), inventory_entity);
+    let mut inventory = Inventory::new("Inventory", 9 * 12, Some(0..9), inventory_entity);
 
     for item in items.iter().rev().filter(|item| item.unlocalized_name() != "cosmos:air") {
         inventory.insert_item(item, item.max_stack_size(), commands, has_data);

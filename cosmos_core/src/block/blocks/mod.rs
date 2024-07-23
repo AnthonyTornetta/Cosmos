@@ -169,7 +169,7 @@ fn add_cosmos_blocks(
     );
 
     // Grey registered above to keep id consistency (move down here in future)
-    let ship_hulls = [
+    let ship_hull_colors = [
         "black",
         "dark_grey",
         "white",
@@ -191,9 +191,9 @@ fn add_cosmos_blocks(
         "mint",
     ];
 
-    for ship_hull in ship_hulls {
+    for color in ship_hull_colors {
         blocks.register(
-            BlockBuilder::new(format!("cosmos:ship_hull_{ship_hull}"), 4.0, 100.0, 10.0)
+            BlockBuilder::new(format!("cosmos:ship_hull_{color}"), 4.0, 100.0, 10.0)
                 .add_property(BlockProperty::Full)
                 .create(),
         );
@@ -357,14 +357,6 @@ fn add_cosmos_blocks(
     );
 
     blocks.register(
-        BlockBuilder::new("cosmos:logic_wire", 0.1, 20.0, 5.0)
-            .add_connection_group("cosmos:logic_wire")
-            .connect_to_group("cosmos:uses_logic")
-            .connect_to_group("cosmos:logic_wire")
-            .create(),
-    );
-
-    blocks.register(
         BlockBuilder::new("cosmos:power_cable", 0.1, 20.0, 5.0)
             .add_connection_group("cosmos:power_cable")
             .connect_to_group("cosmos:consumes_power")
@@ -428,6 +420,49 @@ fn add_cosmos_blocks(
             .add_connection_group("cosmos:uses_logic")
             .create(),
     );
+
+    let logic_wire_colors = [
+        "grey",
+        "black",
+        "dark_grey",
+        "white",
+        "blue",
+        "dark_blue",
+        "brown",
+        "green",
+        "dark_green",
+        "orange",
+        "dark_orange",
+        "pink",
+        "dark_pink",
+        "purple",
+        "dark_purple",
+        "red",
+        "dark_red",
+        "yellow",
+        "dark_yellow",
+        "mint",
+    ];
+
+    // Buses carry all color signals but cannot go into logic gates (as this would require some implicit reduction to a single signal).
+    let mut logic_bus_builder = BlockBuilder::new("cosmos:logic_bus", 0.1, 20.0, 5.0)
+        .add_connection_group("cosmos:logic_bus")
+        .connect_to_group("cosmos:logic_bus");
+    for color in logic_wire_colors {
+        let colored_wire_name = format!("cosmos:logic_wire_{color}");
+        blocks.register(
+            BlockBuilder::new(colored_wire_name.clone(), 0.1, 20.0, 5.0)
+                .add_connection_group(colored_wire_name.as_ref())
+                .connect_to_group(colored_wire_name.as_ref())
+                .connect_to_group("cosmos:logic_bus")
+                .connect_to_group("cosmos:uses_logic")
+                .create(),
+        );
+        logic_bus_builder = logic_bus_builder.connect_to_group(colored_wire_name.as_ref());
+    }
+
+    blocks.register(logic_bus_builder.create());
+
     loading.finish_loading(id, &mut end_writer);
 }
 
