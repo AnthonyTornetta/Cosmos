@@ -31,6 +31,7 @@ use cosmos_core::{
             mapping::{Mappable, NetworkMapping, ServerEntity},
             ComponentEntityIdentifier,
         },
+        system_sets::NetworkingSystemsSet,
         NettyChannelClient, NettyChannelServer,
     },
     persistence::LoadingDistance,
@@ -1014,24 +1015,31 @@ pub(super) fn register(app: &mut App) {
         .add_systems(Update, (update_crosshair, insert_last_rotation))
         .add_systems(
             Update,
-            client_sync_players
+            (
+                fix_location,
+                client_sync_players
+                    .in_set(NetworkingSystemsSet::ProcessReceivedMessages)
+                    .before(CosmosBundleSet::HandleCosmosBundles),
+            )
                 .run_if(in_state(GameState::Playing).or_else(in_state(GameState::LoadingWorld)))
-                .before(CosmosBundleSet::HandleCosmosBundles),
+                .chain(),
         )
         .add_systems(
             Update,
             (
-                fix_location.before(client_sync_players),
-                lerp_towards.after(client_sync_players),
+                // Also run first above
+                fix_location,
                 (
+                    lerp_towards,
                     player_changed_parent,
                     sync_transforms_and_locations,
                     handle_child_syncing,
                     add_previous_location,
                 )
-                    .chain()
-                    .in_set(LocationPhysicsSet::DoPhysics),
+                    .after(CosmosBundleSet::HandleCosmosBundles)
+                    .chain(),
             )
+                .in_set(LocationPhysicsSet::DoPhysics)
                 .chain()
                 .run_if(in_state(GameState::Playing)),
         );

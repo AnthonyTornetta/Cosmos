@@ -22,6 +22,7 @@ use bevy_rapier3d::dynamics::Velocity;
 use cosmos_core::{
     ecs::NeedsDespawned,
     netty::{client::LocalPlayer, system_sets::NetworkingSystemsSet},
+    physics::location::LocationPhysicsSet,
     structure::{
         ship::pilot::Pilot,
         systems::{energy_storage_system::EnergyStorageSystem, StructureSystems, StructureSystemsSet},
@@ -154,6 +155,7 @@ pub(super) fn register(app: &mut App) {
         Update,
         (create_nodes, update_nodes, despawn_nodes)
             .after(StructureSystemsSet::UpdateSystems)
+            .after(LocationPhysicsSet::DoPhysics)
             .in_set(NetworkingSystemsSet::Between)
             .chain(),
     );

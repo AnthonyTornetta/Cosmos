@@ -31,12 +31,14 @@ pub(super) fn register<T: States>(app: &mut App, playing_state: T) {
         app.configure_sets(
             Update,
             (
+                // These can happen even when not playing for client
                 (NetworkingSystemsSet::ReceiveMessages, NetworkingSystemsSet::ProcessReceivedMessages).chain(),
-                // .before(CosmosBundleSet::HandleCosmosBundles),
-                NetworkingSystemsSet::Between,
-                NetworkingSystemsSet::SyncComponents.after(CosmosBundleSet::HandleCosmosBundles),
+                // These should always only happen when playing
+                NetworkingSystemsSet::Between.run_if(in_state(playing_state.clone())),
+                NetworkingSystemsSet::SyncComponents
+                    .after(CosmosBundleSet::HandleCosmosBundles)
+                    .run_if(in_state(playing_state.clone())),
             )
-                .run_if(in_state(playing_state.clone()))
                 .chain(),
         );
     }

@@ -254,6 +254,7 @@ pub(super) fn register(app: &mut App) {
             serialize_settings.run_if(resource_changed::<Registry<Setting>>),
         )
             .chain()
+            .after(SettingsSet::LoadSettings)
             .run_if(not(in_state(GameState::PreLoading))),
     );
 
