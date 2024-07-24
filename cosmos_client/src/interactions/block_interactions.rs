@@ -9,17 +9,16 @@ use bevy_rapier3d::{
 use cosmos_core::{
     block::{
         block_direction::BlockDirection,
-        block_events::{BlockInteractEvent, StructureBlockPair},
+        block_events::{BlockEventsSet, BlockInteractEvent, StructureBlockPair},
         block_face::BlockFace,
-        block_rotation::BlockRotation,
-        block_rotation::BlockSubRotation,
+        block_rotation::{BlockRotation, BlockSubRotation},
         blocks::fluid::FLUID_COLLISION_GROUP,
         Block,
     },
     blockitems::BlockItems,
     inventory::Inventory,
     item::Item,
-    netty::client::LocalPlayer,
+    netty::{client::LocalPlayer, system_sets::NetworkingSystemsSet},
     physics::structure_physics::ChunkPhysicsPart,
     registry::Registry,
     structure::{
@@ -302,6 +301,8 @@ pub(super) fn register(app: &mut App) {
         Update,
         (add_looking_at_component, process_player_interaction)
             .chain()
+            .in_set(NetworkingSystemsSet::Between)
+            .in_set(BlockEventsSet::SendEventsForThisFrame)
             .run_if(no_open_menus)
             .run_if(in_state(GameState::Playing)),
     );

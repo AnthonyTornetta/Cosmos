@@ -29,6 +29,8 @@ use cosmos_core::{
     },
 };
 
+use crate::entities::player::player_movement::PlayerMovementSet;
+
 #[derive(Component)]
 struct StatsNodes;
 
@@ -153,7 +155,11 @@ fn despawn_nodes(
 pub(super) fn register(app: &mut App) {
     app.add_systems(
         Update,
-        (create_nodes, update_nodes, despawn_nodes)
+        (
+            create_nodes,
+            update_nodes.after(PlayerMovementSet::ProcessPlayerMovement),
+            despawn_nodes,
+        )
             .after(StructureSystemsSet::UpdateSystems)
             .after(LocationPhysicsSet::DoPhysics)
             .in_set(NetworkingSystemsSet::Between)

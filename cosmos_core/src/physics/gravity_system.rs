@@ -5,7 +5,7 @@ use bevy_rapier3d::prelude::{ExternalImpulse, ReadMassProperties, RigidBody, Rig
 
 use crate::{netty::system_sets::NetworkingSystemsSet, structure::planet::Planet};
 
-use super::location::Location;
+use super::location::{Location, LocationPhysicsSet};
 
 fn gravity_system(
     emitters: Query<(Entity, &GravityEmitter, &GlobalTransform, &Location)>,
@@ -75,7 +75,12 @@ pub struct GravityEmitter {
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_systems(Update, gravity_system.in_set(NetworkingSystemsSet::Between));
+    app.add_systems(
+        Update,
+        gravity_system
+            .after(LocationPhysicsSet::DoPhysics)
+            .in_set(NetworkingSystemsSet::Between),
+    );
 
     // This shouldn't ever matter which order access it.
     app.allow_ambiguous_component::<ExternalImpulse>();

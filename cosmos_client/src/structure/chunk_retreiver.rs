@@ -5,6 +5,7 @@ use bevy_renet2::renet2::RenetClient;
 use cosmos_core::netty::client::LocalPlayer;
 use cosmos_core::netty::client_reliable_messages::ClientReliableMessages;
 use cosmos_core::netty::sync::mapping::NetworkMapping;
+use cosmos_core::netty::system_sets::NetworkingSystemsSet;
 use cosmos_core::netty::{cosmos_encoder, NettyChannelClient};
 use cosmos_core::physics::location::{Location, SECTOR_DIMENSIONS};
 use cosmos_core::structure::Structure;
@@ -50,9 +51,8 @@ fn populate_structures(
 pub(super) fn register(app: &mut App) {
     app.add_systems(
         Update,
-        (
-            populate_structures.run_if(in_state(GameState::Playing)),
-            populate_structures.run_if(in_state(GameState::LoadingWorld)),
-        ),
+        populate_structures
+            .in_set(NetworkingSystemsSet::SyncComponents)
+            .run_if(in_state(GameState::LoadingWorld).or_else(in_state(GameState::Playing))),
     );
 }

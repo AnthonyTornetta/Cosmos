@@ -10,11 +10,14 @@ use crate::{
 };
 use bevy::prelude::*;
 use bevy_easy_compute::prelude::*;
-use cosmos_core::structure::planet::{
-    biosphere::Biosphere,
-    generation::{
-        biome::{Biome, BiosphereBiomesRegistry},
-        terrain_generation::{add_terrain_compute_worker, BiosphereShaderWorker, ChunkData, GpuPermutationTable},
+use cosmos_core::{
+    netty::system_sets::NetworkingSystemsSet,
+    structure::planet::{
+        biosphere::Biosphere,
+        generation::{
+            biome::{Biome, BiosphereBiomesRegistry},
+            terrain_generation::{add_terrain_compute_worker, BiosphereShaderWorker, ChunkData, GpuPermutationTable},
+        },
     },
 };
 
@@ -134,6 +137,7 @@ pub(super) fn register(app: &mut App) {
         Update,
         setup_lod_generation
             .run_if(resource_exists::<NeedsTerrainDataFlag>)
+            .in_set(NetworkingSystemsSet::ProcessReceivedMessages)
             .run_if(in_state(GameState::LoadingWorld)),
     )
     .add_systems(

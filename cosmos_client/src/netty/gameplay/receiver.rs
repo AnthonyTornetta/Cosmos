@@ -61,7 +61,7 @@ use crate::{
     state::game_state::GameState,
     structure::{
         planet::{client_planet_builder::ClientPlanetBuilder, generation::SetTerrainGenData},
-        ship::client_ship_builder::ClientShipBuilder,
+        ship::{client_ship_builder::ClientShipBuilder, ship_movement::ClientCreateShipMovementSet},
         station::client_station_builder::ClientStationBuilder,
     },
     ui::{
@@ -1012,7 +1012,13 @@ fn player_changed_parent(
 pub(super) fn register(app: &mut App) {
     app.insert_resource(RequestedEntities::default())
         .configure_sets(Update, LocationPhysicsSet::DoPhysics)
-        .add_systems(Update, (update_crosshair, insert_last_rotation))
+        .add_systems(
+            Update,
+            (insert_last_rotation, update_crosshair)
+                .after(ClientCreateShipMovementSet::ProcessShipMovement)
+                .in_set(NetworkingSystemsSet::Between)
+                .chain(),
+        )
         .add_systems(
             Update,
             (

@@ -160,13 +160,23 @@ fn reset_cursor(
     }
 }
 
+/// Assembles the movement request to send to the server
+#[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
+pub enum ClientCreateShipMovementSet {
+    /// Assembles the movement request to send to the server
+    ProcessShipMovement,
+}
+
 pub(super) fn register(app: &mut App) {
+    app.configure_sets(Update, ClientCreateShipMovementSet::ProcessShipMovement);
+
     app.add_systems(
         Update,
         (reset_cursor, process_ship_movement)
             .after(UiSystemSet::FinishUi)
             .run_if(no_open_menus)
             .in_set(NetworkingSystemsSet::Between)
+            .in_set(ClientCreateShipMovementSet::ProcessShipMovement)
             .chain()
             .run_if(in_state(GameState::Playing)),
     );

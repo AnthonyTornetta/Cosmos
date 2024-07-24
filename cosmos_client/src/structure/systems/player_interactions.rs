@@ -1,12 +1,17 @@
 //! Player interactions with structures
 
 use bevy::{
-    prelude::{in_state, Added, App, Commands, Component, Entity, IntoSystemConfigs, Query, RemovedComponents, ResMut, Update, With},
+    prelude::{
+        in_state, Added, App, Commands, Component, Entity, IntoSystemConfigs, Query, RemovedComponents, ResMut, SystemSet, Update, With,
+    },
     reflect::Reflect,
 };
 use bevy_renet2::renet2::RenetClient;
 use cosmos_core::{
-    netty::{client::LocalPlayer, client_unreliable_messages::ClientUnreliableMessages, cosmos_encoder, NettyChannelClient},
+    netty::{
+        client::LocalPlayer, client_unreliable_messages::ClientUnreliableMessages, cosmos_encoder, system_sets::NetworkingSystemsSet,
+        NettyChannelClient,
+    },
     structure::{ship::pilot::Pilot, systems::ShipActiveSystem},
 };
 
@@ -62,10 +67,21 @@ fn check_removed_pilot(mut commands: Commands, mut removed: RemovedComponents<Pi
     }
 }
 
+#[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
+pub enum SystemUsageSet {
+    ChangeSystemBeingUsed,
+}
+
 pub(super) fn register(app: &mut App) {
+    app.configure_sets(Update, SystemUsageSet::ChangeSystemBeingUsed);
+
     app.add_systems(
         Update,
-        (check_system_in_use.run_if(no_open_menus), check_became_pilot, check_removed_pilot).run_if(in_state(GameState::Playing)),
+        (check_system_in_use.run_if(no_open_menus), check_became_pilot, check_removed_pilot)
+            .in_set(NetworkingSystemsSet::Between)
+            .in_set(SystemUsageSet::ChangeSystemBeingUsed)
+            .chain()
+            .run_if(in_state(GameState::Playing)),
     )
     .register_type::<HoveredSystem>();
 }

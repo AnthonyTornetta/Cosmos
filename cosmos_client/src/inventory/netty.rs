@@ -12,7 +12,7 @@ use cosmos_core::{
         netty::{InventoryIdentifier, ServerInventoryMessages},
         Inventory,
     },
-    netty::{client::LocalPlayer, cosmos_encoder, sync::mapping::NetworkMapping, NettyChannelServer},
+    netty::{client::LocalPlayer, cosmos_encoder, sync::mapping::NetworkMapping, system_sets::NetworkingSystemsSet, NettyChannelServer},
     structure::Structure,
 };
 
@@ -102,5 +102,9 @@ fn sync(
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_systems(Update, sync.run_if(in_state(GameState::Playing)));
+    app.add_systems(
+        Update,
+        sync.in_set(NetworkingSystemsSet::SyncComponents)
+            .run_if(in_state(GameState::Playing)),
+    );
 }

@@ -8,7 +8,7 @@ use bevy::{
     },
     prelude::App,
     text::Text,
-    ui::{BackgroundColor, Style},
+    ui::{BackgroundColor, Style, UiImage},
 };
 
 pub mod components;
@@ -63,4 +63,5 @@ pub(super) fn register(app: &mut App) {
     app.allow_ambiguous_component::<Text>();
     app.allow_ambiguous_component::<BackgroundColor>();
     app.allow_ambiguous_component::<Style>();
+    app.allow_ambiguous_component::<UiImage>();
 }

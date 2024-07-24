@@ -3,14 +3,17 @@
 use bevy::{ecs::system::EntityCommands, prelude::*, window::PrimaryWindow};
 use bevy_renet2::renet2::RenetClient;
 use cosmos_core::{
-    block::data::{BlockData, BlockDataIdentifier},
+    block::{
+        block_events::BlockEventsSet,
+        data::{BlockData, BlockDataIdentifier},
+    },
     ecs::NeedsDespawned,
     inventory::{
         itemstack::ItemStack,
         netty::{ClientInventoryMessages, InventoryIdentifier},
         HeldItemStack, Inventory,
     },
-    netty::{client::LocalPlayer, cosmos_encoder, sync::mapping::NetworkMapping, NettyChannelClient},
+    netty::{client::LocalPlayer, cosmos_encoder, sync::mapping::NetworkMapping, system_sets::NetworkingSystemsSet, NettyChannelClient},
 };
 
 use crate::{
@@ -715,6 +718,7 @@ pub(super) fn register(app: &mut App) {
             InventorySet::ToggleInventoryRendering,
         )
             .before(UiSystemSet::PreDoUi)
+            .after(BlockEventsSet::SendEventsForNextFrame)
             .chain(),
     )
     .add_systems(
@@ -726,6 +730,7 @@ pub(super) fn register(app: &mut App) {
             follow_cursor.in_set(InventorySet::FollowCursor),
             toggle_inventory_rendering.in_set(InventorySet::ToggleInventoryRendering),
         )
+            .in_set(NetworkingSystemsSet::Between)
             .run_if(in_state(GameState::Playing)),
     )
     .register_type::<DisplayedItemFromInventory>();

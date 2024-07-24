@@ -5,7 +5,7 @@ use bevy_kira_audio::prelude::*;
 use cosmos_core::{
     ecs::NeedsDespawned,
     netty::{client::LocalPlayer, sync::mapping::NetworkMapping, system_sets::NetworkingSystemsSet},
-    physics::location::Location,
+    physics::location::{Location, LocationPhysicsSet},
     structure::{
         ship::pilot::Pilot,
         systems::{
@@ -25,7 +25,10 @@ use crate::{
     },
 };
 
-use super::{player_interactions::HoveredSystem, sync::sync_system};
+use super::{
+    player_interactions::{HoveredSystem, SystemUsageSet},
+    sync::sync_system,
+};
 
 #[derive(Event)]
 /// This event is fired whenever a laser cannon system is fired
@@ -388,7 +391,9 @@ pub(super) fn register(app: &mut App) {
         Update,
         (focus_looking_at, apply_shooting_sound, render_lockon_status)
             .chain()
+            .after(SystemUsageSet::ChangeSystemBeingUsed)
             .in_set(NetworkingSystemsSet::Between)
+            .after(LocationPhysicsSet::DoPhysics)
             .run_if(in_state(GameState::Playing)),
     );
 }

@@ -3,7 +3,7 @@
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::Velocity;
 use cosmos_core::{
-    netty::client::LocalPlayer,
+    netty::{client::LocalPlayer, system_sets::NetworkingSystemsSet},
     structure::{shared::build_mode::BuildMode, ship::pilot::Pilot},
 };
 
@@ -154,6 +154,19 @@ fn process_player_movement(
     }
 }
 
+#[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
+pub enum PlayerMovementSet {
+    ProcessPlayerMovement,
+}
+
 pub(super) fn register(app: &mut App) {
-    app.add_systems(Update, process_player_movement.run_if(in_state(GameState::Playing)));
+    app.configure_sets(Update, PlayerMovementSet::ProcessPlayerMovement);
+
+    app.add_systems(
+        Update,
+        process_player_movement
+            .in_set(NetworkingSystemsSet::Between)
+            .in_set(PlayerMovementSet::ProcessPlayerMovement)
+            .run_if(in_state(GameState::Playing)),
+    );
 }

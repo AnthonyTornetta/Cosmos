@@ -4,6 +4,7 @@ use std::marker::PhantomData;
 
 use bevy::{input::mouse::MouseWheel, prelude::*};
 use cosmos_core::{
+    block::block_events::BlockEventsSet,
     inventory::{held_item_slot::HeldItemSlot, itemstack::ItemStack, Inventory},
     item::Item,
     netty::{client::LocalPlayer, system_sets::NetworkingSystemsSet},
@@ -14,6 +15,7 @@ use crate::{
     input::inputs::{CosmosInputs, InputChecker, InputHandler},
     lang::Lang,
     state::game_state::GameState,
+    structure::ship::ui::system_selection::SystemSelectionSet,
 };
 
 use super::{components::show_cursor::no_open_menus, item_renderer::RenderItem};
@@ -497,10 +499,12 @@ pub(super) fn register(app: &mut App) {
             (
                 add_inventory_to_priority_queue,
                 add_hotbar_contents_to_player,
-                sync_inventory,
+                sync_hotbar_to_inventory.after(BlockEventsSet::SendEventsForNextFrame),
                 populate_hotbar,
                 listen_for_change_events,
-                listen_button_presses.run_if(no_open_menus),
+                listen_button_presses
+                    .before(SystemSelectionSet::ApplyUserChanges)
+                    .run_if(no_open_menus),
                 tick_text_alpha_down,
             )
                 .in_set(NetworkingSystemsSet::Between)
@@ -521,7 +525,7 @@ fn add_inventory_to_priority_queue(
     }
 }
 
-fn sync_inventory(
+fn sync_hotbar_to_inventory(
     q_inventory: Query<&Inventory, With<LocalPlayer>>,
     q_inventory_changed: Query<(), (Changed<Inventory>, With<LocalPlayer>)>,
     q_priority_changed: Query<(), (Changed<HotbarPriorityQueue>, With<LocalPlayerHotbar>)>,

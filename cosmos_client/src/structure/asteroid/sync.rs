@@ -7,6 +7,7 @@ use cosmos_core::{
         cosmos_encoder,
         netty_rigidbody::NettyRigidBodyLocation,
         sync::mapping::{Mappable, NetworkMapping},
+        system_sets::NetworkingSystemsSet,
         NettyChannelServer,
     },
     physics::location::Location,
@@ -67,5 +68,10 @@ fn receive_asteroids(
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_systems(Update, receive_asteroids.run_if(resource_exists::<RenetClient>));
+    app.add_systems(
+        Update,
+        receive_asteroids
+            .in_set(NetworkingSystemsSet::ReceiveMessages)
+            .run_if(resource_exists::<RenetClient>),
+    );
 }
