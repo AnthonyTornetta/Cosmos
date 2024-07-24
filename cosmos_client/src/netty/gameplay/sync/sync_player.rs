@@ -8,6 +8,7 @@ use cosmos_core::{
         cosmos_encoder,
         netty_rigidbody::{NettyRigidBody, NettyRigidBodyLocation},
         sync::mapping::NetworkMapping,
+        system_sets::NetworkingSystemsSet,
         NettyChannelClient,
     },
     physics::location::Location,
@@ -66,5 +67,11 @@ fn send_disconnect(input_handler: InputChecker, transport: Option<ResMut<Netcode
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_systems(Update, (send_position, send_disconnect).run_if(in_state(GameState::Playing)));
+    app.add_systems(
+        Update,
+        (send_position, send_disconnect)
+            .in_set(NetworkingSystemsSet::SyncComponents)
+            .chain()
+            .run_if(in_state(GameState::Playing)),
+    );
 }

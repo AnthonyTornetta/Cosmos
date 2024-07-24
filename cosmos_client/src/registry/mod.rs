@@ -65,6 +65,7 @@ pub fn sync_registry<T: Identifiable + Serialize + DeserializeOwned + std::fmt::
     app.add_systems(
         Update,
         sync::<T>
+            .before(transition_state)
             .in_set(LoadingRegistriesSet::LoadRegistriesFromServer)
             .ambiguous_with(LoadingRegistriesSet::LoadRegistriesFromServer)
             .run_if(in_state(GameState::LoadingData)),

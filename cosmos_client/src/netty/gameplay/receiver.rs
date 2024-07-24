@@ -1024,7 +1024,7 @@ pub(super) fn register(app: &mut App) {
             (
                 fix_location,
                 client_sync_players
-                    .in_set(NetworkingSystemsSet::ProcessReceivedMessages)
+                    .in_set(NetworkingSystemsSet::ReceiveMessages)
                     .before(CosmosBundleSet::HandleCosmosBundles),
             )
                 .run_if(in_state(GameState::Playing).or_else(in_state(GameState::LoadingWorld)))

@@ -4,6 +4,8 @@ use bevy::prelude::*;
 use bevy_rapier3d::prelude::Velocity;
 use cosmos_core::{
     netty::{client::LocalPlayer, system_sets::NetworkingSystemsSet},
+    physics::location::LocationPhysicsSet,
+    projectiles::laser::LaserSystemSet,
     structure::{shared::build_mode::BuildMode, ship::pilot::Pilot},
 };
 
@@ -165,8 +167,10 @@ pub(super) fn register(app: &mut App) {
     app.add_systems(
         Update,
         process_player_movement
+            .ambiguous_with(LaserSystemSet::SendHitEvents)
             .in_set(NetworkingSystemsSet::Between)
             .in_set(PlayerMovementSet::ProcessPlayerMovement)
+            .before(LocationPhysicsSet::DoPhysics)
             .run_if(in_state(GameState::Playing)),
     );
 }

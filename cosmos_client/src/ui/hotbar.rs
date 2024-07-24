@@ -502,11 +502,10 @@ pub(super) fn register(app: &mut App) {
                 sync_hotbar_to_inventory.after(BlockEventsSet::SendEventsForNextFrame),
                 populate_hotbar,
                 listen_for_change_events,
-                listen_button_presses
-                    .before(SystemSelectionSet::ApplyUserChanges)
-                    .run_if(no_open_menus),
+                listen_button_presses.run_if(no_open_menus),
                 tick_text_alpha_down,
             )
+                .before(SystemSelectionSet::ApplyUserChanges)
                 .in_set(NetworkingSystemsSet::Between)
                 .chain()
                 .run_if(in_state(GameState::Playing))

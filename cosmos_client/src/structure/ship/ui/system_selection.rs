@@ -166,10 +166,9 @@ pub(super) fn register(app: &mut App) {
         (
             add_priority_when_flying,
             sync_ship_systems.in_set(ItemStackSystemSet::CreateDataEntity),
-            on_change_hotbar
-                .in_set(SystemSelectionSet::ApplyUserChanges)
-                .before(SystemUsageSet::ChangeSystemBeingUsed),
+            on_change_hotbar.before(SystemUsageSet::ChangeSystemBeingUsed),
         )
+            .in_set(SystemSelectionSet::ApplyUserChanges)
             .in_set(NetworkingSystemsSet::Between)
             .chain()
             .run_if(in_state(GameState::Playing)),
