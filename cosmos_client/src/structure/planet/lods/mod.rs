@@ -758,7 +758,4 @@ pub(super) fn register(app: &mut App) {
     .add_mut_event::<DoneGeneratingChunkEvent>()
     .init_resource::<NeedGeneratedLodChunks>()
     .init_resource::<GeneratingLodChunks>();
-
-    // TODO: remove once bevy_easy_compute 0.14.1 is released
-    app.allow_ambiguous_resource::<AppComputeWorker<BiosphereShaderWorker>>();
 }
