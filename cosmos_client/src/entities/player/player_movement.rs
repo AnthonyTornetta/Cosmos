@@ -17,7 +17,7 @@ use crate::{
     ui::components::show_cursor::ShowCursor,
 };
 
-fn process_player_movement(
+pub(crate) fn process_player_movement(
     time: Res<Time>,
     input_handler: InputChecker,
     mut query: Query<

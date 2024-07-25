@@ -13,6 +13,7 @@ use bevy::{
 use bevy_rapier3d::prelude::Velocity;
 use bevy_renet2::renet2::RenetClient;
 use cosmos_core::{
+    block::block_events::BlockEventsSet,
     netty::{client::LocalPlayer, client_reliable_messages::ClientReliableMessages, cosmos_encoder, NettyChannelClient},
     structure::{
         chunk::CHUNK_DIMENSIONSF,
@@ -27,7 +28,7 @@ use cosmos_core::{
 
 use crate::{
     asset::repeating_material::{Repeats, UnlitRepeatedMaterial},
-    entities::player::player_movement::PlayerMovementSet,
+    entities::player::player_movement::{process_player_movement, PlayerMovementSet},
     input::inputs::{CosmosInputs, InputChecker, InputHandler},
     interactions::block_interactions::LookingAt,
     rendering::MainCamera,
@@ -356,9 +357,12 @@ pub(super) fn register(app: &mut App) {
             (
                 place_symmetries,
                 exit_build_mode,
-                control_build_mode.in_set(PlayerMovementSet::ProcessPlayerMovement),
+                control_build_mode
+                    .in_set(PlayerMovementSet::ProcessPlayerMovement)
+                    .ambiguous_with(process_player_movement), // this system will run if process_player_movement doesn't
             )
                 .chain()
+                .in_set(BlockEventsSet::ProcessEvents)
                 .run_if(no_open_menus),
             change_visuals,
             clear_visuals.after(BuildModeSet::ExitBuildMode),
