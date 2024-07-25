@@ -36,7 +36,7 @@ pub mod mapping;
 pub mod server_entity_syncing;
 
 #[cfg(feature = "client")]
-mod client_syncing;
+pub mod client_syncing;
 #[cfg(feature = "server")]
 mod server_syncing;
 

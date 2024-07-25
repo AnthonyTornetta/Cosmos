@@ -20,6 +20,7 @@ use bevy_easy_compute::prelude::AppComputeWorker;
 use cosmos_core::{
     block::{block_face::BlockFace, Block},
     ecs::mut_events::{EventWriterCustomSend, MutEvent, MutEventsCommand},
+    netty::system_sets::NetworkingSystemsSet,
     physics::location::Location,
     registry::Registry,
     structure::{
@@ -750,6 +751,7 @@ pub(super) fn register(app: &mut App) {
             generate_chunks_from_gpu_data,
             on_change_being_generated,
         )
+            .in_set(NetworkingSystemsSet::Between)
             .chain()
             .run_if(in_state(GameState::Playing)),
     )

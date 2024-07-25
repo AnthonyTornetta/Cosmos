@@ -40,7 +40,7 @@ fn sync<T: Identifiable + Serialize + DeserializeOwned + std::fmt::Debug>(
             continue;
         }
 
-        let new_amt = left_to_sync.0.expect("left_to_sync not initialized yet!") - 1;
+        let new_amt = left_to_sync.0.unwrap_or(0) - 1;
 
         left_to_sync.0 = Some(new_amt);
 
@@ -112,7 +112,10 @@ pub(super) fn register(app: &mut App) {
 
     app.add_systems(
         Update,
-        (registry_listen_netty, transition_state)
+        (
+            registry_listen_netty.before(LoadingRegistriesSet::LoadRegistriesFromServer),
+            transition_state,
+        )
             .run_if(resource_exists::<RegistriesLeftToSync>)
             .chain()
             .run_if(in_state(GameState::LoadingData)),

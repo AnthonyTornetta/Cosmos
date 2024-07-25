@@ -15,7 +15,7 @@ use cosmos_core::{
 
 use crate::{rendering::MeshInformation, state::game_state::GameState};
 
-use super::asset_loading::{load_block_rendering_information, BlockRenderingInfo, ItemRenderingInfo};
+use super::asset_loading::{load_block_rendering_information, AssetsSet, BlockRenderingInfo, ItemRenderingInfo};
 
 pub mod animated_material;
 pub mod block_materials;
@@ -334,6 +334,7 @@ pub(super) fn register(app: &mut App) {
             MaterialsSystemSet::RemoveMaterials,
             MaterialsSystemSet::ProcessRemoveMaterialsEvents,
         )
+            .in_set(AssetsSet::AssetsReady)
             .chain(),
     );
 

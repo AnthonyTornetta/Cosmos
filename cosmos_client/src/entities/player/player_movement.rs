@@ -162,7 +162,10 @@ pub enum PlayerMovementSet {
 }
 
 pub(super) fn register(app: &mut App) {
-    app.configure_sets(Update, PlayerMovementSet::ProcessPlayerMovement);
+    app.configure_sets(
+        Update,
+        PlayerMovementSet::ProcessPlayerMovement.before(LocationPhysicsSet::DoPhysics),
+    );
 
     app.add_systems(
         Update,
@@ -170,7 +173,6 @@ pub(super) fn register(app: &mut App) {
             .ambiguous_with(LaserSystemSet::SendHitEvents)
             .in_set(NetworkingSystemsSet::Between)
             .in_set(PlayerMovementSet::ProcessPlayerMovement)
-            .before(LocationPhysicsSet::DoPhysics)
             .run_if(in_state(GameState::Playing)),
     );
 }

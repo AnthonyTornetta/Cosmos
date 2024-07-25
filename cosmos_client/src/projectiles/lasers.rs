@@ -7,7 +7,7 @@ use cosmos_core::{
     ecs::bundles::CosmosPbrBundle,
     netty::{
         cosmos_encoder, server_laser_cannon_system_messages::ServerStructureSystemMessages, sync::mapping::NetworkMapping,
-        NettyChannelServer,
+        system_sets::NetworkingSystemsSet, NettyChannelServer,
     },
     physics::location::CosmosBundleSet,
     projectiles::laser::Laser,
@@ -115,6 +115,8 @@ pub(super) fn register(app: &mut App) {
     app.add_systems(OnEnter(GameState::Loading), create_laser_mesh).add_systems(
         Update,
         lasers_netty
+            .in_set(NetworkingSystemsSet::ReceiveMessages)
+            .ambiguous_with(NetworkingSystemsSet::ReceiveMessages)
             .before(CosmosBundleSet::HandleCosmosBundles)
             .run_if(in_state(GameState::Playing)),
     );

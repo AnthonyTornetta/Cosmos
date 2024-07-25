@@ -7,7 +7,7 @@ use bevy::{
     render::render_resource::{TextureViewDescriptor, TextureViewDimension},
 };
 
-use crate::rendering::MainCamera;
+use crate::{rendering::MainCamera, state::game_state::GameState};
 
 /// Order from top to bottom:
 /// Right, Left, Top, Bottom, Front, Back
@@ -53,7 +53,7 @@ fn asset_loaded(asset_server: Res<AssetServer>, mut images: ResMut<Assets<Image>
     }
 }
 
-fn on_add_main_camera(cubemap: Res<Cubemap>, mut commands: Commands, query: Query<Entity, Added<MainCamera>>) {
+fn on_add_main_camera(cubemap: Res<Cubemap>, mut commands: Commands, query: Query<Entity, With<MainCamera>>) {
     for ent in query.iter() {
         commands.entity(ent).insert(Skybox {
             image: cubemap.image_handle.clone(),
@@ -65,5 +65,6 @@ fn on_add_main_camera(cubemap: Res<Cubemap>, mut commands: Commands, query: Quer
 pub(super) fn register(app: &mut App) {
     app //.add_plugin(MaterialPlugin::<CubemapMaterial>::default())
         .add_systems(Startup, setup)
-        .add_systems(Update, (added_skybox, on_add_main_camera, asset_loaded));
+        .add_systems(Update, (added_skybox, asset_loaded).chain())
+        .add_systems(OnEnter(GameState::Playing), on_add_main_camera);
 }

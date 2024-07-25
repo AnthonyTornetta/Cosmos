@@ -55,7 +55,7 @@ fn asset_loaded(asset_server: Res<AssetServer>, mut images: ResMut<Assets<Image>
     }
 }
 
-fn on_add_main_menu_camera(cubemap: Res<Cubemap>, mut commands: Commands, query: Query<Entity, Added<MainMenuCamera>>) {
+fn on_add_main_menu_camera(cubemap: Res<Cubemap>, mut commands: Commands, query: Query<Entity, With<MainMenuCamera>>) {
     for ent in query.iter() {
         commands.entity(ent).insert(Skybox {
             image: cubemap.image_handle.clone(),
@@ -67,8 +67,6 @@ fn on_add_main_menu_camera(cubemap: Res<Cubemap>, mut commands: Commands, query:
 pub(super) fn register(app: &mut App) {
     app //.add_plugin(MaterialPlugin::<CubemapMaterial>::default())
         .add_systems(Startup, setup)
-        .add_systems(
-            Update,
-            (added_skybox, on_add_main_menu_camera, asset_loaded).run_if(in_state(GameState::MainMenu)),
-        );
+        .add_systems(Update, (added_skybox, asset_loaded).run_if(in_state(GameState::MainMenu)))
+        .add_systems(OnEnter(GameState::MainMenu), on_add_main_menu_camera);
 }

@@ -131,5 +131,10 @@ pub(super) fn register(app: &mut App) {
         )
             .run_if(in_state(GameState::Playing)),
     )
-    .add_systems(Update, (create_materials,).run_if(in_state(GameState::PostLoading)));
+    .add_systems(
+        Update,
+        (create_materials,)
+            .in_set(AssetsSet::AssetsLoading)
+            .run_if(in_state(GameState::PostLoading)),
+    );
 }

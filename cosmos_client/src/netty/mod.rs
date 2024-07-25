@@ -6,7 +6,7 @@ use cosmos_core::netty::sync::SyncedComponentId;
 use crate::registry::sync_registry;
 
 pub mod connect;
-mod gameplay;
+pub mod gameplay;
 pub mod lobby;
 
 pub(super) fn register(app: &mut App) {

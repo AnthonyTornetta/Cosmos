@@ -35,9 +35,7 @@ pub(super) fn register<T: States>(app: &mut App, playing_state: T) {
                 (NetworkingSystemsSet::ReceiveMessages, NetworkingSystemsSet::ProcessReceivedMessages).chain(),
                 // These should always only happen when playing
                 NetworkingSystemsSet::Between.run_if(in_state(playing_state.clone())),
-                NetworkingSystemsSet::SyncComponents
-                    .after(CosmosBundleSet::HandleCosmosBundles)
-                    .run_if(in_state(playing_state.clone())),
+                NetworkingSystemsSet::SyncComponents.after(CosmosBundleSet::HandleCosmosBundles),
             )
                 .chain(),
         );

@@ -104,7 +104,10 @@ fn sync(
 pub(super) fn register(app: &mut App) {
     app.add_systems(
         Update,
+        // TODO: This really shouldn't be done manually here, in the future this should be automatically
+        // synced using some sort of easy server events framework
         sync.in_set(NetworkingSystemsSet::SyncComponents)
+            .ambiguous_with(NetworkingSystemsSet::SyncComponents)
             .run_if(in_state(GameState::Playing)),
     );
 }

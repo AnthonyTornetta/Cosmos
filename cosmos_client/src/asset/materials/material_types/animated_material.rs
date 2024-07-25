@@ -1,6 +1,6 @@
 use crate::{
     asset::{
-        asset_loading::{AllTexturesDoneLoadingEvent, AssetsDoneLoadingEvent, CosmosTextureAtlas},
+        asset_loading::{AllTexturesDoneLoadingEvent, AssetsDoneLoadingEvent, AssetsSet, CosmosTextureAtlas},
         materials::{
             animated_material::{AnimatedArrayTextureMaterial, ATTRIBUTE_PACKED_ANIMATION_DATA},
             AddMaterialEvent, MaterialDefinition, MaterialMeshInformationGenerator, MaterialType, MaterialsSystemSet,
@@ -240,5 +240,10 @@ pub(super) fn register(app: &mut App) {
         )
             .run_if(in_state(GameState::Playing)),
     )
-    .add_systems(Update, create_materials.run_if(in_state(GameState::PostLoading)));
+    .add_systems(
+        Update,
+        create_materials
+            .in_set(AssetsSet::AssetsLoading)
+            .run_if(in_state(GameState::PostLoading)),
+    );
 }

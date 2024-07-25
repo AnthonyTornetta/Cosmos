@@ -858,6 +858,16 @@ fn process_loading_texture_type(
     }
 }
 
+/// This is to resolve ambiguity issues. Because ambiguity detection can't detect
+/// different state run conditions, this set is used to let bevy understand they're different
+#[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
+pub enum AssetsSet {
+    /// Run in [`GameState::PostLoading`] to load assets.
+    AssetsLoading,
+    /// Run in [`GameState::Playing`] to use those loaded assets.
+    AssetsReady,
+}
+
 pub(super) fn register(app: &mut App) {
     registry::create_registry::<BlockTextureIndex>(app, "cosmos:block_texture_index");
     registry::create_registry::<ItemTextureIndex>(app, "cosmos:item_texture_index");
@@ -865,6 +875,8 @@ pub(super) fn register(app: &mut App) {
     registry::create_registry::<BlockRenderingInfo>(app, "cosmos:block_rendering_info");
     registry::create_registry::<ItemRenderingInfo>(app, "cosmos:item_rendering_info");
     registry::create_registry::<CosmosTextureAtlas>(app, "cosmos:texture_atlas");
+
+    app.configure_sets(Update, (AssetsSet::AssetsLoading, AssetsSet::AssetsReady).chain());
 
     app.add_event::<AssetsDoneLoadingEvent>()
         .add_event::<AllTexturesDoneLoadingEvent>()
@@ -874,11 +886,15 @@ pub(super) fn register(app: &mut App) {
                 check_assets_ready.run_if(resource_exists::<Registry<LoadingTextureAtlas>>),
                 assets_done_loading,
             )
+                .in_set(AssetsSet::AssetsLoading)
+                .chain()
                 .run_if(in_state(GameState::PostLoading)),
         )
         .add_systems(OnEnter(GameState::PostLoading), setup_textures)
         .add_systems(
             OnExit(GameState::PostLoading),
-            (load_item_rendering_information, load_block_rendering_information).chain(),
+            (load_item_rendering_information, load_block_rendering_information)
+                .in_set(AssetsSet::AssetsLoading)
+                .chain(),
         );
 }

@@ -18,6 +18,8 @@ use cosmos_core::{
     },
 };
 
+use crate::netty::gameplay::receiver::client_sync_players;
+
 use super::client_asteroid_builder::ClientAsteroidBuilder;
 
 fn receive_asteroids(
@@ -71,7 +73,9 @@ pub(super) fn register(app: &mut App) {
     app.add_systems(
         Update,
         receive_asteroids
+            .after(client_sync_players)
             .in_set(NetworkingSystemsSet::ReceiveMessages)
+            .ambiguous_with(NetworkingSystemsSet::ReceiveMessages)
             .run_if(resource_exists::<RenetClient>),
     );
 }

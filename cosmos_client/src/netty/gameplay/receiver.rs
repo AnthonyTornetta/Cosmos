@@ -28,6 +28,7 @@ use cosmos_core::{
         server_reliable_messages::ServerReliableMessages,
         server_unreliable_messages::ServerUnreliableMessages,
         sync::{
+            client_syncing::ClientReceiveComponents,
             mapping::{Mappable, NetworkMapping, ServerEntity},
             ComponentEntityIdentifier,
         },
@@ -182,7 +183,7 @@ fn lerp_towards(
 }
 
 /// TODO: super split this up
-fn client_sync_players(
+pub(crate) fn client_sync_players(
     mut commands: Commands,
     (mut meshes, mut client, transport, mut lobby, mut network_mapping): (
         ResMut<Assets<Mesh>>,
@@ -1024,6 +1025,7 @@ pub(super) fn register(app: &mut App) {
             (
                 fix_location,
                 client_sync_players
+                    .before(ClientReceiveComponents::ClientReceiveComponents)
                     .in_set(NetworkingSystemsSet::ReceiveMessages)
                     .before(CosmosBundleSet::HandleCosmosBundles),
             )

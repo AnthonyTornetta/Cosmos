@@ -18,7 +18,7 @@ use cosmos_core::{
         chunk::CHUNK_DIMENSIONSF,
         coordinates::BlockCoordinate,
         shared::{
-            build_mode::{BuildAxis, BuildMode, ExitBuildModeEvent},
+            build_mode::{BuildAxis, BuildMode, BuildModeSet, ExitBuildModeEvent},
             DespawnWithStructure,
         },
         Structure,
@@ -27,6 +27,7 @@ use cosmos_core::{
 
 use crate::{
     asset::repeating_material::{Repeats, UnlitRepeatedMaterial},
+    entities::player::player_movement::PlayerMovementSet,
     input::inputs::{CosmosInputs, InputChecker, InputHandler},
     interactions::block_interactions::LookingAt,
     rendering::MainCamera,
@@ -352,11 +353,15 @@ pub(super) fn register(app: &mut App) {
     app.add_systems(
         Update,
         (
-            (place_symmetries, exit_build_mode, control_build_mode)
+            (
+                place_symmetries,
+                exit_build_mode,
+                control_build_mode.in_set(PlayerMovementSet::ProcessPlayerMovement),
+            )
                 .chain()
                 .run_if(no_open_menus),
             change_visuals,
-            clear_visuals,
+            clear_visuals.after(BuildModeSet::ExitBuildMode),
         )
             .chain()
             .run_if(in_state(GameState::Playing)),

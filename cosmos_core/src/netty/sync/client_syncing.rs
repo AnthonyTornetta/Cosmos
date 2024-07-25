@@ -1,3 +1,5 @@
+//! Exposes [`ClientReceiveComponents::ClientReceiveComponents`] - this is to remove ambiguity
+
 use super::mapping::{NetworkMapping, ServerEntity};
 use super::{
     register_component, ClientAuthority, ComponentEntityIdentifier, ComponentReplicationMessage, ComponentSyncingSet,
@@ -27,6 +29,7 @@ use bevy::ecs::schedule::common_conditions::resource_exists;
 use bevy::ecs::schedule::{IntoSystemConfigs, IntoSystemSetConfigs};
 use bevy::ecs::system::{Commands, Resource};
 use bevy::log::warn;
+use bevy::prelude::SystemSet;
 use bevy::{
     app::{App, Startup, Update},
     ecs::{
@@ -282,6 +285,13 @@ fn compute_entity_identifier(
 
 #[derive(Resource, Default)]
 struct WaitingData(Vec<ComponentReplicationMessage>);
+
+#[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
+/// Receives auto-synced components from the server
+pub enum ClientReceiveComponents {
+    /// Receives auto-synced components from the server
+    ClientReceiveComponents,
+}
 
 fn client_receive_components(
     mut client: ResMut<RenetClient>,
@@ -606,6 +616,8 @@ fn get_entity_identifier_info(
 }
 
 pub(super) fn setup_client(app: &mut App) {
+    app.configure_sets(Update, ClientReceiveComponents::ClientReceiveComponents);
+
     app.configure_sets(
         Update,
         (
@@ -621,6 +633,8 @@ pub(super) fn setup_client(app: &mut App) {
     app.add_systems(
         Update,
         client_receive_components
+            .in_set(ClientReceiveComponents::ClientReceiveComponents)
+            .in_set(NetworkingSystemsSet::ReceiveMessages)
             .run_if(resource_exists::<RenetClient>)
             .run_if(resource_exists::<NetworkMapping>),
     )
