@@ -1,9 +1,9 @@
 //! Displays the crosshair the player sees in & out of a ship
 
 use bevy::prelude::*;
-use cosmos_core::utils::smooth_clamp::SmoothClamp;
+use cosmos_core::{netty::system_sets::NetworkingSystemsSet, utils::smooth_clamp::SmoothClamp};
 
-use crate::state::game_state::GameState;
+use crate::{state::game_state::GameState, window::setup::CursorFlagsSet};
 
 fn add_crosshair(mut commands: Commands, asset_server: Res<AssetServer>) {
     commands
@@ -88,8 +88,25 @@ impl SmoothClamp for CrosshairOffset {
     }
 }
 
+#[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
+pub enum CrosshairOffsetSet {
+    ApplyCrosshairChanges,
+}
+
 pub(super) fn register(app: &mut App) {
+    app.configure_sets(
+        Update,
+        CrosshairOffsetSet::ApplyCrosshairChanges.after(CursorFlagsSet::ApplyCursorFlagsUpdates),
+    );
+
     app.insert_resource(CrosshairOffset::default())
         .add_systems(OnEnter(GameState::Playing), add_crosshair)
-        .add_systems(Update, update_cursor_pos.run_if(in_state(GameState::Playing)));
+        .add_systems(
+            Update,
+            update_cursor_pos
+                .after(CrosshairOffsetSet::ApplyCrosshairChanges)
+                .after(CursorFlagsSet::ApplyCursorFlagsUpdates)
+                .in_set(NetworkingSystemsSet::Between)
+                .run_if(in_state(GameState::Playing)),
+        );
 }

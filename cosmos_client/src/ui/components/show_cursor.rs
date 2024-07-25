@@ -48,7 +48,7 @@ pub(super) fn register(app: &mut App) {
     app.add_systems(
         Update,
         show_cursor
-            .after(CursorFlagsSet::ApplyCursorFlagsUpdates)
+            .in_set(CursorFlagsSet::ApplyCursorFlagsUpdates)
             .in_set(UiSystemSet::FinishUi),
     );
 }

@@ -30,14 +30,6 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
     });
 }
 
-fn added_skybox(mut query: Query<&mut Skybox, Added<Skybox>>, cubemap: Res<Cubemap>) {
-    for mut skybox in query.iter_mut() {
-        if cubemap.is_loaded {
-            skybox.image = cubemap.image_handle.clone();
-        }
-    }
-}
-
 fn asset_loaded(asset_server: Res<AssetServer>, mut images: ResMut<Assets<Image>>, mut cubemap: ResMut<Cubemap>) {
     if !cubemap.is_loaded && asset_server.get_load_state(cubemap.image_handle.id()) == Some(LoadState::Loaded) {
         let image = images.get_mut(&cubemap.image_handle).unwrap();
@@ -55,7 +47,16 @@ fn asset_loaded(asset_server: Res<AssetServer>, mut images: ResMut<Assets<Image>
     }
 }
 
-fn on_add_main_menu_camera(cubemap: Res<Cubemap>, mut commands: Commands, query: Query<Entity, With<MainMenuCamera>>) {
+fn on_enter_main_menu(cubemap: Res<Cubemap>, mut commands: Commands, query: Query<Entity, With<MainMenuCamera>>) {
+    for ent in query.iter() {
+        commands.entity(ent).insert(Skybox {
+            image: cubemap.image_handle.clone(),
+            brightness: 1000.0,
+        });
+    }
+}
+
+fn on_add_main_menu_camera(cubemap: Res<Cubemap>, mut commands: Commands, query: Query<Entity, Added<MainMenuCamera>>) {
     for ent in query.iter() {
         commands.entity(ent).insert(Skybox {
             image: cubemap.image_handle.clone(),
@@ -67,6 +68,11 @@ fn on_add_main_menu_camera(cubemap: Res<Cubemap>, mut commands: Commands, query:
 pub(super) fn register(app: &mut App) {
     app //.add_plugin(MaterialPlugin::<CubemapMaterial>::default())
         .add_systems(Startup, setup)
-        .add_systems(Update, (added_skybox, asset_loaded).run_if(in_state(GameState::MainMenu)))
-        .add_systems(OnEnter(GameState::MainMenu), on_add_main_menu_camera);
+        .add_systems(
+            Update,
+            (asset_loaded, on_add_main_menu_camera)
+                .chain()
+                .run_if(in_state(GameState::MainMenu)),
+        )
+        .add_systems(OnEnter(GameState::MainMenu), on_enter_main_menu);
 }

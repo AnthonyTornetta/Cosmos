@@ -897,4 +897,8 @@ pub(super) fn register(app: &mut App) {
                 .in_set(AssetsSet::AssetsLoading)
                 .chain(),
         );
+
+    // It's probably fine
+    // app.allow_ambiguous_resource::<Events<AllTexturesDoneLoadingEvent>>();
+    // app.allow_ambiguous_resource::<Registry<CosmosTextureAtlas>>();
 }

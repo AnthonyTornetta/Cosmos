@@ -244,6 +244,7 @@ pub(super) fn register(app: &mut App) {
         Update,
         create_materials
             .in_set(AssetsSet::AssetsLoading)
+            .ambiguous_with(AssetsSet::AssetsLoading)
             .run_if(in_state(GameState::PostLoading)),
     );
 }

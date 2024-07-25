@@ -14,7 +14,7 @@ use cosmos_core::{
 
 use crate::{
     asset::asset_loader::load_assets,
-    audio::{AudioEmission, BufferedStopAudio, CosmosAudioEmitter},
+    audio::{AudioEmission, AudioSet, BufferedStopAudio, CosmosAudioEmitter},
     state::game_state::GameState,
 };
 
@@ -94,6 +94,7 @@ pub(super) fn register(app: &mut App) {
         Update,
         apply_thruster_sound
             .in_set(NetworkingSystemsSet::Between)
+            .in_set(AudioSet::CreateSounds)
             .after(ShipMovementSet::RemoveShipMovement)
             .run_if(in_state(GameState::Playing)),
     );

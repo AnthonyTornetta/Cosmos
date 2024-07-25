@@ -16,10 +16,11 @@ use bevy::{
         query::{Changed, With},
         removal_detection::RemovedComponents,
         schedule::IntoSystemConfigs,
+        schedule::IntoSystemSetConfigs,
         system::{Commands, Query, ResMut, Resource},
     },
     hierarchy::DespawnRecursiveExt,
-    prelude::{Deref, DerefMut},
+    prelude::{Deref, DerefMut, SystemSet},
     transform::{bundles::TransformBundle, components::GlobalTransform},
     utils::hashbrown::HashMap,
 };
@@ -268,9 +269,22 @@ fn stop_audio_sources(mut stop_later: ResMut<BufferedStopAudio>) {
     }
 }
 
+#[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
+pub enum AudioSet {
+    CreateSounds,
+    ProcessSounds,
+}
+
 pub(super) fn register(app: &mut App) {
+    app.configure_sets(Update, (AudioSet::CreateSounds, AudioSet::ProcessSounds).chain());
+
     app.add_systems(PreUpdate, cleanup_stopped_spacial_instances.in_set(AudioSystemSet::InstanceCleanup))
-        .add_systems(Update, (monitor_attached_audio_sources, cleanup_despawning_audio_sources).chain())
+        .add_systems(
+            Update,
+            (monitor_attached_audio_sources, cleanup_despawning_audio_sources)
+                .in_set(AudioSet::ProcessSounds)
+                .chain(),
+        )
         .add_systems(PostUpdate, (stop_audio_sources, run_spacial_audio).chain())
         .init_resource::<AttachedAudioSources>()
         .init_resource::<BufferedStopAudio>();

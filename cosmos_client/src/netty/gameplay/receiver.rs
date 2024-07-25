@@ -66,10 +66,11 @@ use crate::{
         station::client_station_builder::ClientStationBuilder,
     },
     ui::{
-        crosshair::CrosshairOffset,
+        crosshair::{CrosshairOffset, CrosshairOffsetSet},
         message::{HudMessage, HudMessages},
         UiRoot,
     },
+    window::setup::CursorFlagsSet,
 };
 
 #[derive(Component)]
@@ -1015,9 +1016,13 @@ pub(super) fn register(app: &mut App) {
         .configure_sets(Update, LocationPhysicsSet::DoPhysics)
         .add_systems(
             Update,
-            (insert_last_rotation, update_crosshair)
+            (
+                insert_last_rotation,
+                update_crosshair.in_set(CrosshairOffsetSet::ApplyCrosshairChanges),
+            )
                 .after(ClientCreateShipMovementSet::ProcessShipMovement)
                 .in_set(NetworkingSystemsSet::Between)
+                .after(CursorFlagsSet::ApplyCursorFlagsUpdates)
                 .chain(),
         )
         .add_systems(

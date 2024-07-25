@@ -22,7 +22,7 @@ use crate::state::game_state::GameState;
 use crate::ui::components::show_cursor::no_open_menus;
 use crate::ui::crosshair::CrosshairOffset;
 use crate::ui::UiSystemSet;
-use crate::window::setup::{CursorFlags, DeltaCursorPosition};
+use crate::window::setup::{CursorFlags, CursorFlagsSet, DeltaCursorPosition};
 
 fn process_ship_movement(
     input_handler: InputChecker,
@@ -176,6 +176,7 @@ pub(super) fn register(app: &mut App) {
             .after(UiSystemSet::FinishUi)
             .run_if(no_open_menus)
             .in_set(NetworkingSystemsSet::Between)
+            .after(CursorFlagsSet::ApplyCursorFlagsUpdates)
             .in_set(ClientCreateShipMovementSet::ProcessShipMovement)
             .chain()
             .run_if(in_state(GameState::Playing)),
