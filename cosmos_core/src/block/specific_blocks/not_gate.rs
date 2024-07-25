@@ -31,7 +31,6 @@ fn register_logic_connections(blocks: Res<Registry<Block>>, mut registry: ResMut
                 Some(LogicConnection::Port(PortType::Output)),
                 Some(LogicConnection::Port(PortType::Input)),
             ],
-            1,
         ));
     }
 }

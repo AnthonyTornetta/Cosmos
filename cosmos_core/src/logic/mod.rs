@@ -55,7 +55,6 @@ pub enum LogicConnection {
 pub struct LogicBlock {
     // Specifies the roles of the 6 block faces, ordered by BlockFace index.
     connections: [Option<LogicConnection>; 6],
-    initial_signal: i32,
 
     id: u16,
     unlocalized_name: String,
@@ -78,10 +77,9 @@ impl Identifiable for LogicBlock {
 impl LogicBlock {
     /// Creates a link to a block to define its logic connections.
     /// Right, Left, Top, Bottom, Front, Back.
-    pub fn new(block: &Block, connections: [Option<LogicConnection>; 6], initial_signal: i32) -> Self {
+    pub fn new(block: &Block, connections: [Option<LogicConnection>; 6]) -> Self {
         Self {
             connections,
-            initial_signal,
             id: 0,
             unlocalized_name: block.unlocalized_name().to_owned(),
         }
@@ -257,13 +255,7 @@ fn logic_block_placed_event_listener(
                         &mut evw_queue_logic_input,
                     );
                     // Add the logic block's internal data storage to the structure.
-                    structure.insert_block_data(
-                        coords,
-                        BlockLogicData(logic_block.initial_signal),
-                        &mut bs_params,
-                        &mut q_block_data,
-                        &q_has_data,
-                    );
+                    structure.insert_block_data(coords, BlockLogicData(0), &mut bs_params, &mut q_block_data, &q_has_data);
                 }
             }
         }

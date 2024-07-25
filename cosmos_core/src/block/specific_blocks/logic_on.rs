@@ -17,7 +17,7 @@ use crate::{
 
 fn register_logic_connections(blocks: Res<Registry<Block>>, mut registry: ResMut<Registry<LogicBlock>>) {
     if let Some(logic_on) = blocks.from_id("cosmos:logic_on") {
-        registry.register(LogicBlock::new(logic_on, [Some(LogicConnection::Port(PortType::Output)); 6], 1));
+        registry.register(LogicBlock::new(logic_on, [Some(LogicConnection::Port(PortType::Output)); 6]));
     }
 }
 
