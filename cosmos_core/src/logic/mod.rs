@@ -53,8 +53,18 @@ pub enum WireType {
 }
 
 impl WireType {
-    pub fn connects_to(&self, other: &Self) -> bool {
-        // Either is All, or the color IDs match.
+    pub fn connects_to_color(self, id: u16) -> bool {
+        match self {
+            Self::All => true,
+            Self::Color(self_color_id) => self_color_id == id,
+        }
+    }
+
+    pub fn connects_to_wire_type(self, other: Self) -> bool {
+        match self {
+            Self::All => true,
+            Self::Color(self_color_id) => other.connects_to_color(self_color_id),
+        }
     }
 }
 
@@ -137,7 +147,23 @@ impl LogicBlock {
 
     /// Returns an iterator over all of this logic block's faces with wire connections.
     pub fn wire_faces(&self) -> impl Iterator<Item = BlockFace> + '_ {
-        self.faces_with(Some(LogicConnection::Wire))
+        self.connections
+            .iter()
+            .enumerate()
+            .filter(move |(_, maybe_connection)| matches!(**maybe_connection, Some(LogicConnection::Wire(_))))
+            .map(|(idx, _)| BlockFace::from_index(idx))
+    }
+
+    // Returns an iterator over all of this logic block's faces with wire connections that connect to the given wire type.
+    pub fn wire_faces_connecting_to(&self, wire_type: WireType) -> impl Iterator<Item = BlockFace> + '_ {
+        self.connections
+            .iter()
+            .enumerate()
+            .filter(move |(_, maybe_connection)| match **maybe_connection {
+                Some(LogicConnection::Wire(encountered_wire_type)) => encountered_wire_type.connects_to(&wire_type),
+                _ => false,
+            })
+            .map(|(idx, _)| BlockFace::from_index(idx))
     }
 
     /// Returns an iterator over all of this logic block's faces with no logic connections.
