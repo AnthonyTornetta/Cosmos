@@ -166,7 +166,7 @@ impl LogicGraph {
                 .output_port_group_id
                 .get(&Port::new(coords, encountered_from_direction))
                 .copied(),
-            Some(LogicConnection::Wire) => self
+            Some(LogicConnection::Wire(connects_to)) => self
                 .groups
                 .iter()
                 .find_map(|(&id, group)| if group.recent_wire_coords == Some(coords) { Some(id) } else { None })

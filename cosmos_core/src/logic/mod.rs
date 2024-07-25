@@ -14,6 +14,7 @@ use bevy::{
 };
 use logic_driver::LogicDriver;
 use logic_graph::{LogicGraph, LogicGroup};
+use serde::{Deserialize, Serialize};
 
 use crate::{
     block::{block_direction::BlockDirection, block_direction::ALL_BLOCK_DIRECTIONS, block_face::BlockFace, data::BlockData, Block},
@@ -42,12 +43,28 @@ pub enum PortType {
 }
 
 #[derive(Debug, Copy, Clone, PartialEq)]
+/// Defines the types of logic wires and how they connect to each other.
+/// Each block face with a logic connection might be a logic port.
+pub enum WireType {
+    /// Connects to all colors, for example the logic bus.
+    All,
+    /// Connects to only a single color, identified by the logic wire color registry ID.
+    Color(u16),
+}
+
+impl WireType {
+    pub fn connects_to(&self, other: &Self) -> bool {
+        // Either is All, or the color IDs match.
+    }
+}
+
+#[derive(Debug, Copy, Clone, PartialEq)]
 /// Defines how a block face interacts with adjacent logic blocks.
 pub enum LogicConnection {
     /// An input or output port.
     Port(PortType),
     /// Joins adjacent logic groups without interrupting them or having delayed inputs or outputs.
-    Wire,
+    Wire(WireType),
 }
 
 #[derive(Debug, Clone)]
@@ -149,6 +166,121 @@ impl Port {
     /// HashSet format is needed for some DFS methods.
     pub fn all_for(coords: BlockCoordinate) -> HashSet<Port> {
         HashSet::from_iter(ALL_BLOCK_DIRECTIONS.map(|direction| Port::new(coords, direction)))
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Reflect, Default)]
+/// A type to be registered for each color of logic wire, so their IDs can be used to check connections in the logic graph.
+pub struct LogicWireColors {
+    id: u16,
+    unlocalized_name: String,
+}
+
+impl Identifiable for LogicWireColors {
+    #[inline]
+    fn id(&self) -> u16 {
+        self.id
+    }
+
+    fn set_numeric_id(&mut self, id: u16) {
+        self.id = id;
+    }
+
+    #[inline]
+    fn unlocalized_name(&self) -> &str {
+        &self.unlocalized_name
+    }
+}
+
+impl LogicWireColors {
+    /// Creates a wire color.
+    ///
+    /// * `unlocalized_name` This should be unique for that block with the following formatting: `mod_id:color_name`. Such as: `cosmos:dark_red`.
+    pub fn new(id: u16, unlocalized_name: String) -> Self {
+        Self { id, unlocalized_name }
+    }
+
+    #[inline(always)]
+    /// Returns true if this block can be seen through
+    pub fn is_see_through(&self) -> bool {
+        self.is_transparent() || !self.is_full()
+    }
+
+    /// Returns true if this block is transparent
+    #[inline(always)]
+    pub fn is_transparent(&self) -> bool {
+        self.property_flags & BlockProperty::Transparent.id() != 0
+    }
+
+    /// Returns true if this block takes up the full 1x1x1 meters of space
+    #[inline(always)]
+    pub fn is_full(&self) -> bool {
+        self.property_flags & BlockProperty::Full.id() != 0
+    }
+
+    /// Returns true if this block takes up no space
+    #[inline(always)]
+    pub fn is_empty(&self) -> bool {
+        self.property_flags & BlockProperty::Empty.id() != 0
+    }
+
+    /// Returns true if this block can have sub-rotations.
+    ///
+    /// If this is enabled on a full block, instead of sub-rotations the block will
+    /// have its front face equal the top face of the block it was placed on.
+    #[inline(always)]
+    pub fn should_face_front(&self) -> bool {
+        self.property_flags & BlockProperty::FaceFront.id() != 0
+    }
+
+    /// Returns true if this block can have sub-rotations.
+    ///
+    /// If this is enabled on a full block, instead of sub-rotations the block will
+    /// have its front face equal the top face of the block it was placed on.
+    #[inline(always)]
+    pub fn is_fully_rotatable(&self) -> bool {
+        self.property_flags & BlockProperty::FullyRotatable.id() != 0
+    }
+
+    /// Returns the density of this block
+    #[inline(always)]
+    pub fn density(&self) -> f32 {
+        self.density
+    }
+
+    /// Returns the hardness of this block (how resistant it is to breaking)
+    ///
+    /// Air: 0, Leaves: 1, Grass/Dirt: 10, Stone: 50, Hull: 100,
+    #[inline(always)]
+    pub fn hardness(&self) -> f32 {
+        self.hardness
+    }
+
+    /// How resistant this block is to being mined.
+    ///
+    /// This is (for now) how long it takes 1 mining beam to mine this block in seconds
+    #[inline(always)]
+    pub fn mining_resistance(&self) -> f32 {
+        self.mining_resistance
+    }
+
+    /// If the block's [`Self::mining_resistance`] is `f32::INFINITY` this will be false
+    #[inline(always)]
+    pub fn can_be_mined(&self) -> bool {
+        self.mining_resistance != f32::INFINITY
+    }
+
+    #[inline(always)]
+    /// Returns true if this block is a fluid
+    pub fn is_fluid(&self) -> bool {
+        self.property_flags & BlockProperty::Fluid.id() != 0
+    }
+}
+
+impl PartialEq for Block {
+    #[inline(always)]
+    fn eq(&self, other: &Self) -> bool {
+        self.id == other.id
     }
 }
 
