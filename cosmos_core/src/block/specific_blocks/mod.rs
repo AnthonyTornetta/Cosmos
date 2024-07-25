@@ -3,6 +3,7 @@
 use bevy::{app::App, prelude::States};
 
 pub mod and_gate;
+pub mod colored_logic_wires;
 pub mod gravity_well;
 pub mod logic_bus;
 pub mod logic_indicator;
@@ -20,4 +21,5 @@ pub(super) fn register<T: States + Clone + Copy>(app: &mut App, post_loading_sta
     or_gate::register(app, post_loading_state);
     not_gate::register(app, post_loading_state);
     xor_gate::register(app, post_loading_state);
+    colored_logic_wires::register(app, post_loading_state)
 }

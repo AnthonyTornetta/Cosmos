@@ -1,4 +1,4 @@
-//! Logic behavior of the logic bus block, a block with all faces connecting to logic, but no inputs, outputs, or internal formula.
+//! Logic behavior of the logic wire block (of every color), a block with all faces connecting to logic, but no inputs, outputs, or internal formula.
 
 use bevy::{
     app::App,
