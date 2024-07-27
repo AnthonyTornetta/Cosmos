@@ -70,12 +70,19 @@ pub struct AddMaterialEvent {
 }
 
 #[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
+/// Used to dynamically attach materials to entities
 pub enum MaterialsSystemSet {
-    /// Add all event listeners for [`AddMaterialEvent`] to this set this to prevent any 1-frame delays
+    /// When requesting materials to be added to your entity (via [`AddMaterialEvent`]), add your system here to
+    /// prevent 1-frame delays.
     AddMaterials,
+    /// Add materials to those entities
+    ///
+    /// Add all event listeners for [`AddMaterialEvent`] to this set this to prevent any 1-frame delays
     ProcessAddMaterialsEvents,
-    /// Add all event listeners for [`RemoveAllMaterialsEvent`] in this to ensure your material is removed at the right time.
+    /// When requesting materials to be removed from your entity (via [`RemoveAllMaterialsEvent`]), add your system here to
+    /// prevent 1-frame delays.
     RemoveMaterials,
+    /// Add all event listeners for [`RemoveAllMaterialsEvent`] in this to ensure your material is removed at the right time.
     ProcessRemoveMaterialsEvents,
 }
 

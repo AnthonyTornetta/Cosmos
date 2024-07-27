@@ -51,7 +51,9 @@ fn clear_movement_when_no_pilot(mut query: Query<&mut ShipMovement, Without<Pilo
 }
 
 #[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
+/// Handles ship movement requests from its pilot -- DOES NOT change the ship's velocity. That is done via the thruster systems.
 pub enum ShipMovementSet {
+    /// Handles when there is no pilot and removes the ship's movement
     RemoveShipMovement,
 }
 

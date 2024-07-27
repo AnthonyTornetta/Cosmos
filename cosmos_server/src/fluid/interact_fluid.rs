@@ -8,7 +8,7 @@ use bevy::{
         entity::Entity,
         event::EventReader,
         query::{With, Without},
-        schedule::{IntoSystemConfigs, IntoSystemSetConfigs},
+        schedule::IntoSystemConfigs,
         system::{Commands, Query, Res, ResMut},
     },
     log::{error, info},
@@ -412,7 +412,9 @@ fn fill_tank_registry(mut tank_reg: ResMut<Registry<FluidTankBlock>>, blocks: Re
 }
 
 #[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
+/// Logic for interacting with fluid blocks
 pub enum FluidInteractionSet {
+    /// Logic for interacting with fluid blocks
     InteractWithFluidBlocks,
 }
 

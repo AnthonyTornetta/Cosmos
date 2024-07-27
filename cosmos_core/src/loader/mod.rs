@@ -117,7 +117,7 @@ impl<T: States + Clone + Copy> LoadingStatus<T> {
 
 #[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
 /// Used for ambiguity detection
-pub enum MonitorLoadingSet {
+enum MonitorLoadingSet {
     MonitorLoading,
 }
 

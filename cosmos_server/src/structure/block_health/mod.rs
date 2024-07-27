@@ -56,7 +56,9 @@ fn monitor_block_health_changed(mut server: ResMut<RenetServer>, mut event_reade
 }
 
 #[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
+/// Handles block health changes
 pub enum BlockHealthSet {
+    /// Health changes of blocks will be processed (removing blocks with health <= 0)
     ProcessHealthChanges,
 }
 

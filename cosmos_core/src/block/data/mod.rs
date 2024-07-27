@@ -1,7 +1,7 @@
 //! Handles the backbone for blocks that store their own data, such as containers
 
 use bevy::{
-    app::{App, First, Update},
+    app::{App, First},
     core::Name,
     ecs::{
         component::Component,

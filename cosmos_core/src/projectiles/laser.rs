@@ -286,7 +286,9 @@ fn despawn_lasers(mut commands: Commands, query: Query<(Entity, &FireTime), With
 }
 
 #[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
+/// Laser systems should be put here
 pub enum LaserSystemSet {
+    /// When a laser hits something, the set that sends the [`LaserCollideEvent`] event will be here
     SendHitEvents,
 }
 

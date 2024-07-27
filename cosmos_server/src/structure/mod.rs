@@ -1,14 +1,6 @@
 //! Contains all structure-related information for the server
 
-use bevy::{
-    app::Update,
-    prelude::{App, IntoSystemSetConfigs, SystemSet},
-};
-
-use crate::persistence::{
-    loading::{LoadingSystemSet, LOADING_SCHEDULE},
-    saving::{BlueprintingSystemSet, SAVING_SCHEDULE},
-};
+use bevy::prelude::App;
 
 pub mod asteroid;
 pub mod block_health;
@@ -30,41 +22,4 @@ pub(super) fn register(app: &mut App) {
     persistence::register(app);
     shared::register(app);
     station::register(app);
-
-    // use StructureTypesLoadingSystemSet as X;
-
-    // app.configure_sets(
-    //     LOADING_SCHEDULE,
-    //     (
-    //         X::Ship
-    //             .ambiguous_with(X::Planet)
-    //             .ambiguous_with(X::Station)
-    //             .ambiguous_with(X::Asteroid),
-    //         X::Planet
-    //             .ambiguous_with(X::Ship)
-    //             .ambiguous_with(X::Station)
-    //             .ambiguous_with(X::Asteroid),
-    //         X::Station
-    //             .ambiguous_with(X::Ship)
-    //             .ambiguous_with(X::Planet)
-    //             .ambiguous_with(X::Asteroid),
-    //         X::Asteroid
-    //             .ambiguous_with(X::Ship)
-    //             .ambiguous_with(X::Planet)
-    //             .ambiguous_with(X::Station),
-    //     )
-    //         .in_set(LoadingSystemSet::DoLoading),
-    // );
-
-    // use StructureTypesBlueprintingSystemSet as Y;
-
-    // app.configure_sets(
-    //     SAVING_SCHEDULE,
-    //     (
-    //         Y::Ship.ambiguous_with(Y::Station).ambiguous_with(Y::Asteroid),
-    //         Y::Station.ambiguous_with(Y::Ship).ambiguous_with(Y::Asteroid),
-    //         Y::Asteroid.ambiguous_with(Y::Ship).ambiguous_with(Y::Station),
-    //     )
-    //         .in_set(BlueprintingSystemSet::DoBlueprinting),
-    // );
 }

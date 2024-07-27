@@ -1,7 +1,6 @@
 use bevy::{prelude::*, utils::HashMap};
 use bevy_renet2::renet2::RenetServer;
 use cosmos_core::{
-    block::block_events::BlockEventsSet,
     events::block_events::BlockChangedEvent,
     netty::{
         cosmos_encoder,

@@ -30,7 +30,6 @@ use cosmos_core::{
     structure::{
         events::StructureLoadedEvent,
         full_structure::FullStructure,
-        loading::StructureLoadingSet,
         shields::SHIELD_COLLISION_GROUP,
         systems::{
             dock_system::{DockSystem, Docked},

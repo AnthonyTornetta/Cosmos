@@ -66,7 +66,9 @@ pub struct GenerateChunkFeaturesEvent {
 }
 
 #[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
+/// When registering a new biome, put it here
 pub enum RegisterBiomesSet {
+    /// When registering a new biome, put it here. You should also make yourself ambiguous with this set.
     RegisterBiomes,
 }
 
@@ -76,7 +78,7 @@ pub(super) fn register(app: &mut App) {
 
     app.configure_sets(OnEnter(GameState::PreLoading), CreateBiosphereSet::CreateBiospheres);
 
-    app.configure_sets(OnExit(GameState::Loading), RegisterBiomesSet::RegisterBiomes);
+    app.configure_sets(OnEnter(GameState::PostLoading), RegisterBiomesSet::RegisterBiomes);
 
     ice::register(app);
     molten::register(app);

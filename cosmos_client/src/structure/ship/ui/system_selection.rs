@@ -154,7 +154,9 @@ fn on_change_hotbar(
 }
 
 #[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
+/// This set handles the player (client) changing their selected system set.
 pub enum SystemSelectionSet {
+    /// This set handles the player (client) changing their selected system set.
     ApplyUserChanges,
 }
 

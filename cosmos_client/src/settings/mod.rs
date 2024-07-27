@@ -227,8 +227,11 @@ fn init_settings_lang(mut commands: Commands) {
 }
 
 #[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
+/// Set for changing + loading settings
 pub enum SettingsSet {
+    /// Settings changes should be here
     ChangeSettings,
+    /// Responding to changed settings/initially loading settings should be done here.
     LoadSettings,
 }
 

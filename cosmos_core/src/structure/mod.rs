@@ -51,9 +51,7 @@ use crate::netty::NoSendEntity;
 use crate::physics::location::Location;
 use crate::registry::Registry;
 use crate::structure::chunk::Chunk;
-use bevy::prelude::{
-    BuildChildren, Commands, Component, Entity, EventReader, EventWriter, GlobalTransform, Query, States, Transform, Vec3,
-};
+use bevy::prelude::{BuildChildren, Commands, Component, Entity, EventReader, EventWriter, GlobalTransform, Query, Transform, Vec3};
 use serde::{Deserialize, Serialize};
 
 use self::base_structure::RaycastIter;
@@ -76,9 +74,13 @@ use self::structure_iterator::{BlockIterator, ChunkIterator};
 /// Because we can't statically prove something with a "Ship" cannot have a "Station" component, using these systems is a way
 /// to remove ambiguity errors from systems designed with this valid assumption.
 pub enum StructureTypeSet {
+    /// If you're working with a Ship, put it here.
     Ship,
+    /// If you're working with a Planet, put it here.
     Planet,
+    /// If you're working with a Station, put it here.
     Station,
+    /// If you're working with a Asteroid, put it here.
     Asteroid,
     /// Put systems in here that are ambiguous w/ a type of structure(s) but wouldn't in practice.
     None,

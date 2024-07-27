@@ -89,7 +89,9 @@ impl SmoothClamp for CrosshairOffset {
 }
 
 #[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
+/// Changing the offset of the crosshair (such as when piloting a ship) should be done here
 pub enum CrosshairOffsetSet {
+    /// Changing the offset of the crosshair (such as when piloting a ship) should be done here
     ApplyCrosshairChanges,
 }
 

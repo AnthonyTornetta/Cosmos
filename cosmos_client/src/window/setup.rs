@@ -126,8 +126,11 @@ fn apply_cursor_flags_on_change(cursor_flags: Res<CursorFlags>, mut primary_quer
 }
 
 #[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
+/// Handles when the cursor should be shown/hidden
 pub enum CursorFlagsSet {
+    /// Additions/removals of the [`CursorUnlocker`] component should be done in or before this.
     UpdateCursorFlags,
+    /// The cursor is shown/hidden based on the existence of any [`CursorUnlocker`] entities.
     ApplyCursorFlagsUpdates,
 }
 

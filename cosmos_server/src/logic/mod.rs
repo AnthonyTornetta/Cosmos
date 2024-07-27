@@ -1,3 +1,5 @@
+//! Handles logic blocks
+
 use bevy::{
     app::App,
     prelude::{IntoSystemSetConfigs, SystemSet},
@@ -7,7 +9,9 @@ use bevy::{
 use crate::state::GameState;
 
 #[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
+/// Logic blocks should be registered here and can be ambiguous with this set
 pub enum LogicSystemRegistrySet {
+    /// Logic blocks should be registered here and can be ambiguous with this set
     RegisterLogicBlocks,
 }
 

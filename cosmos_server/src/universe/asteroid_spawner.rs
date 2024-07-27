@@ -10,7 +10,7 @@ use bevy::{
 use cosmos_core::{
     entities::player::Player,
     netty::system_sets::NetworkingSystemsSet,
-    physics::location::{CosmosBundleSet, Location, Sector, SystemUnit, SECTOR_DIMENSIONS},
+    physics::location::{Location, Sector, SystemUnit, SECTOR_DIMENSIONS},
     structure::{
         asteroid::{asteroid_builder::TAsteroidBuilder, loading::AsteroidNeedsCreated, Asteroid, ASTEROID_LOAD_RADIUS},
         coordinates::ChunkCoordinate,

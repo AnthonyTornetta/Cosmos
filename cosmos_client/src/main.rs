@@ -131,7 +131,7 @@ fn main() {
         .add_plugins(
             RapierPhysicsPlugin::<CosmosPhysicsFilter>::default()
                 // .in_schedule(FixedUpdate)
-                .with_default_world(RapierContextInitialization::default()),
+                .with_custom_initialization(RapierContextInitialization::default()),
         )
         .add_plugins((RenetClientPlugin, NetcodeClientPlugin, ObjPlugin, HanabiPlugin))
         // .add_plugins(RapierDebugRenderPlugin::default())

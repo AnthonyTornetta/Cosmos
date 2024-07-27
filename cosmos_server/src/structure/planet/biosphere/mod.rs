@@ -13,6 +13,7 @@ use bevy::{
     tasks::Task,
 };
 use bevy_renet2::renet2::RenetServer;
+use biome::RegisterBiomesSet;
 use cosmos_core::{
     netty::{cosmos_encoder, server_reliable_messages::ServerReliableMessages, system_sets::NetworkingSystemsSet, NettyChannelServer},
     physics::location::Location,
@@ -313,10 +314,10 @@ fn on_connect(
     }
 }
 
-#[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
-pub enum RegisterBiomesSet {
-    RegisterBiomes,
-}
+// #[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
+// pub enum RegisterBiomesSet {
+//     RegisterBiomes,
+// }
 
 pub(super) fn register(app: &mut App) {
     sync_registry::<Biosphere>(app);

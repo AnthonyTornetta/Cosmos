@@ -270,8 +270,11 @@ fn stop_audio_sources(mut stop_later: ResMut<BufferedStopAudio>) {
 }
 
 #[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
+/// When creating spacial audio, use this set
 pub enum AudioSet {
+    /// Create any spacial audio bundles here
     CreateSounds,
+    /// The volume will be adjusted in regards to their transforms.
     ProcessSounds,
 }
 

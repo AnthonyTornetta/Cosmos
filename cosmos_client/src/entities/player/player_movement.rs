@@ -157,7 +157,9 @@ pub(crate) fn process_player_movement(
 }
 
 #[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
+/// Player movement inputs are handled and applied to their velocity
 pub enum PlayerMovementSet {
+    /// Player movement inputs are handled and applied to their velocity
     ProcessPlayerMovement,
 }
 

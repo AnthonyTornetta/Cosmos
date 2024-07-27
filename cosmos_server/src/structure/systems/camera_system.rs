@@ -8,7 +8,6 @@ use cosmos_core::{
     registry::Registry,
     structure::{
         events::StructureLoadedEvent,
-        loading::StructureLoadingSet,
         systems::{
             camera_system::{CameraBlocks, CameraSystem},
             StructureSystemType, StructureSystems, StructureSystemsSet,

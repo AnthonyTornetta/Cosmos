@@ -68,7 +68,9 @@ fn check_removed_pilot(mut commands: Commands, mut removed: RemovedComponents<Pi
 }
 
 #[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
+/// Used by the client to indicate which system they are currently activating
 pub enum SystemUsageSet {
+    /// Used by the client to indicate which system they are currently activating
     ChangeSystemBeingUsed,
 }
 

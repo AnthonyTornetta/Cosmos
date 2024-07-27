@@ -49,8 +49,11 @@ fn on_melting_down(
 }
 
 #[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
+/// Handles the melting down of ships
 pub enum MeltingDownSet {
+    /// Triggers the actual meltdown
     StartMeltingDown,
+    /// Processes the ship's melting down status
     ProcessMeltingDown,
 }
 

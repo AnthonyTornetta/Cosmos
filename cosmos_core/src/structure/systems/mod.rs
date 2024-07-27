@@ -61,8 +61,11 @@ pub enum ShipActiveSystem {
 }
 
 #[derive(SystemSet, Debug, Hash, PartialEq, Eq, Clone)]
+/// Holds some of the logic of Structure systems
 pub enum StructureSystemsSet {
+    /// Initialize your structure systems here (from [`super::events::StructureLoadedEvent`]s being generated)
     InitSystems,
+    /// Update systems when new blocks are placed (from [`crate::events::block_events::BlockChangedEvent`]s)
     UpdateSystems,
 }
 

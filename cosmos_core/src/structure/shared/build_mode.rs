@@ -139,10 +139,15 @@ fn exit_build_mode_when_parent_dies(
 }
 
 #[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
+/// Build mode interactions
 pub enum BuildModeSet {
+    /// When the player attempts to enter build mode, their event will be sent here
     SendEnterBuildModeEvent,
+    /// The player will enter build mode
     EnterBuildMode,
+    /// When the player attempts to exit build mode, their event will be sent here
     SendExitBuildModeEvent,
+    /// The player will exit build mode
     ExitBuildMode,
 }
 

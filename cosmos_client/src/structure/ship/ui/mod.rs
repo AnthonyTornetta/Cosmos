@@ -1,3 +1,5 @@
+//! Ship UI
+
 use bevy::app::App;
 
 pub mod system_selection;

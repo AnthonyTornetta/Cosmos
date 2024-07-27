@@ -36,7 +36,7 @@ use cosmos_core::{
 use crate::{
     asset::{
         asset_loading::{BlockNeighbors, BlockTextureIndex},
-        materials::{AddMaterialEvent, BlockMaterialMapping, MaterialDefinition, MaterialType, MaterialsSystemSet},
+        materials::{AddMaterialEvent, BlockMaterialMapping, MaterialDefinition, MaterialType},
     },
     rendering::{
         structure_renderer::{

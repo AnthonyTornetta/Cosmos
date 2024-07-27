@@ -40,7 +40,6 @@ use cosmos_core::{
     structure::{
         coordinates::BlockCoordinate,
         events::StructureLoadedEvent,
-        loading::StructureLoadingSet,
         shields::Shield,
         systems::{
             energy_storage_system::EnergyStorageSystem,
@@ -74,6 +73,7 @@ Shield radius based on max dimensions of projectors
 */
 
 #[derive(Event)]
+/// Sent when a shield is hit
 pub struct ShieldHitEvent {
     shield_entity: Entity,
     relative_position: Vec3,
@@ -369,8 +369,11 @@ fn on_load_shield(
 }
 
 #[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
+/// Shield logic
 pub enum ShieldSet {
+    /// Shields consume power and recharge themselves
     RechargeShields,
+    /// Shields receive incoming damage and deplete their charge (potentially going down)
     OnShieldHit,
 }
 

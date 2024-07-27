@@ -127,7 +127,9 @@ fn remove_parent_when_too_far(
 }
 
 #[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
+/// When the player's parent is changing, it should be done in this set
 pub enum PlayerParentChangingSet {
+    /// When the player's parent is changing, it should be done in this set
     ChangeParent,
 }
 

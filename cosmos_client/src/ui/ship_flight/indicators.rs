@@ -426,8 +426,11 @@ fn is_target_visible(normalized_screen_position: Vec3) -> bool {
 }
 
 #[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
+/// The creation and focusing of waypoints when flying a ship
 pub enum WaypointSet {
+    /// Creates waypoints when the player becomes a pilot or new entities enter within range
     CreateWaypoints,
+    /// Handles the user focusing/unfocusing waypoints
     FocusWaypoints,
 }
 

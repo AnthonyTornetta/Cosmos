@@ -1,10 +1,12 @@
+//! Server logic for handling melting down ships
+
 use bevy::{
     app::Update,
     prelude::{App, Commands, EventReader, IntoSystemConfigs, Res},
     state::condition::in_state,
 };
 use cosmos_core::{
-    block::{block_events::BlockEventsSet, Block},
+    block::Block,
     events::block_events::BlockChangedEvent,
     registry::{identifiable::Identifiable, Registry},
     structure::shared::MeltingDown,

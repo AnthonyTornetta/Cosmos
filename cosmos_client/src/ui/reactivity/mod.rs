@@ -143,11 +143,14 @@ pub(crate) fn add_reactable_type<T: ReactableValue>(app: &mut App) {
 }
 
 #[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
+/// Contains all the different reactive UI elements sets to run within.
+///
+/// These are all run in order to avoid ambiguity issues.
 pub enum ReactiveUiSystemSet {
+    /// Text Value reactive UI element is processed here
     ProcessTextValueChanges,
+    /// Slider reactive UI element is processed here
     ProcessSliderValueChanges,
-
-    ProcessChanges,
 }
 
 pub(super) fn register(app: &mut App) {
@@ -158,7 +161,6 @@ pub(super) fn register(app: &mut App) {
         (
             ReactiveUiSystemSet::ProcessTextValueChanges.in_set(TextInputUiSystemSet::HandleReactValues),
             ReactiveUiSystemSet::ProcessSliderValueChanges.in_set(SliderUiSystemSet::HandleReactValues),
-            ReactiveUiSystemSet::ProcessChanges,
         )
             .chain()
             .in_set(NetworkingSystemsSet::Between),

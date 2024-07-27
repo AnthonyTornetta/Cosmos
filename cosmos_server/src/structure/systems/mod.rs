@@ -1,13 +1,7 @@
 //! Contains projectile systems needed on the server
 
-use bevy::{
-    app::Update,
-    prelude::{App, IntoSystemSetConfigs, SystemSet},
-};
-use cosmos_core::{
-    block::block_rotation::BlockRotation,
-    structure::{loading::StructureLoadingSet, structure_block::StructureBlock},
-};
+use bevy::prelude::App;
+use cosmos_core::{block::block_rotation::BlockRotation, structure::structure_block::StructureBlock};
 
 mod camera_system;
 mod dock_system;
