@@ -71,19 +71,18 @@ pub struct AddMaterialEvent {
 
 #[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
 /// Used to dynamically attach materials to entities
+///
+/// Note that remove is run first, then add. So if you add a material and remove it within the same
+/// frame before/after this set is run, the material you added will not get removed.
 pub enum MaterialsSystemSet {
-    /// When requesting materials to be added to your entity (via [`AddMaterialEvent`]), add your system here to
-    /// prevent 1-frame delays.
-    AddMaterials,
+    /// When you want materials to be dynamically added/removed, do that in this set.
+    RequestMaterialChanges,
+    /// Add all event listeners for [`RemoveAllMaterialsEvent`] in this to ensure your material is removed at the right time.
+    ProcessRemoveMaterialsEvents,
     /// Add materials to those entities
     ///
     /// Add all event listeners for [`AddMaterialEvent`] to this set this to prevent any 1-frame delays
     ProcessAddMaterialsEvents,
-    /// When requesting materials to be removed from your entity (via [`RemoveAllMaterialsEvent`]), add your system here to
-    /// prevent 1-frame delays.
-    RemoveMaterials,
-    /// Add all event listeners for [`RemoveAllMaterialsEvent`] in this to ensure your material is removed at the right time.
-    ProcessRemoveMaterialsEvents,
 }
 
 /// Generates any extra information need for meshes that use this material
@@ -336,10 +335,9 @@ pub(super) fn register(app: &mut App) {
     app.configure_sets(
         Update,
         (
-            MaterialsSystemSet::AddMaterials,
-            MaterialsSystemSet::ProcessAddMaterialsEvents,
-            MaterialsSystemSet::RemoveMaterials,
+            MaterialsSystemSet::RequestMaterialChanges,
             MaterialsSystemSet::ProcessRemoveMaterialsEvents,
+            MaterialsSystemSet::ProcessAddMaterialsEvents,
         )
             .in_set(AssetsSet::AssetsReady)
             .chain(),

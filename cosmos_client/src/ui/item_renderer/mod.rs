@@ -429,7 +429,7 @@ pub enum RenderItemSystemSet {
 pub(super) fn register(app: &mut App) {
     app.configure_sets(
         Update,
-        (RenderItemSystemSet::RenderItems.in_set(MaterialsSystemSet::AddMaterials))
+        (RenderItemSystemSet::RenderItems.in_set(MaterialsSystemSet::RequestMaterialChanges))
             .chain()
             .in_set(UiSystemSet::DoUi),
     )

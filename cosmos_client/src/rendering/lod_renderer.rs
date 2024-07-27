@@ -942,7 +942,7 @@ pub(super) fn register(app: &mut App) {
             compute_meshes_and_kill_dead_entities,
         )
             .chain()
-            .in_set(MaterialsSystemSet::AddMaterials)
+            .in_set(MaterialsSystemSet::RequestMaterialChanges)
             .run_if(in_state(GameState::Playing)),
     );
 

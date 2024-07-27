@@ -75,7 +75,7 @@ pub(super) fn register(app: &mut App) {
             .run_if(in_state(GameState::Playing))
             .before(unload_chunks_far_from_players)
             .in_set(NetworkingSystemsSet::Between)
-            .in_set(MaterialsSystemSet::AddMaterials)
+            .in_set(MaterialsSystemSet::RequestMaterialChanges)
             .after(BlockEventsSet::SendEventsForNextFrame),
     );
 
