@@ -129,6 +129,11 @@ impl<T: BiosphereMarkerComponent> GeneratingChunk<T> {
     }
 }
 
+#[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
+enum BiosphereRegistrationSet {
+    RegisterBiospheres,
+}
+
 /// Use this to register a biosphere
 ///
 /// T: The biosphere's marker component type
@@ -147,13 +152,18 @@ pub fn register_biosphere<T: BiosphereMarkerComponent + Default + Clone, E: Send
 
     let sea_level_block = sea_level_block.map(|x| x.to_owned());
 
+    let register_biosphere_system =
+        move |mut instance_registry: ResMut<Registry<Biosphere>>, mut temperature_registry: ResMut<BiosphereTemperatureRegistry>| {
+            instance_registry.register(Biosphere::new(biosphere_id, sea_level_percent, sea_level_block.clone()));
+            temperature_registry.register(biosphere_id.to_owned(), temperature_range);
+        };
+
     app.add_event::<E>()
         .add_systems(
             Startup,
-            move |mut instance_registry: ResMut<Registry<Biosphere>>, mut temperature_registry: ResMut<BiosphereTemperatureRegistry>| {
-                instance_registry.register(Biosphere::new(biosphere_id, sea_level_percent, sea_level_block.clone()));
-                temperature_registry.register(biosphere_id.to_owned(), temperature_range);
-            },
+            register_biosphere_system
+                .in_set(BiosphereRegistrationSet::RegisterBiospheres)
+                .ambiguous_with(BiosphereRegistrationSet::RegisterBiospheres),
         )
         .add_systems(
             SAVING_SCHEDULE,
@@ -313,6 +323,7 @@ pub(super) fn register(app: &mut App) {
     sync_registry::<Biome>(app);
     sync_registry::<BiosphereBiomesRegistry>(app);
 
+    app.configure_sets(Startup, BiosphereRegistrationSet::RegisterBiospheres);
     app.configure_sets(OnEnter(GameState::PostLoading), RegisterBiomesSet::RegisterBiomes);
 
     app.add_event::<NeedsBiosphereEvent>()

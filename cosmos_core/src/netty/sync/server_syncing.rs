@@ -1,7 +1,7 @@
 use super::server_entity_syncing::RequestedEntityEvent;
 use super::{
-    register_component, ClientAuthority, ComponentEntityIdentifier, ComponentReplicationMessage, ComponentSyncingSet, SyncType,
-    SyncableComponent, SyncedComponentId,
+    register_component, ClientAuthority, ComponentEntityIdentifier, ComponentReplicationMessage, ComponentSyncingSet, RegisterComponentSet,
+    SyncType, SyncableComponent, SyncedComponentId,
 };
 use crate::block::data::BlockData;
 use crate::inventory::itemstack::ItemStackData;
@@ -443,7 +443,12 @@ pub(super) fn setup_server(app: &mut App) {
 
 #[allow(unused)] // This function is used, but the LSP can't figure that out.
 pub(super) fn sync_component_server<T: SyncableComponent>(app: &mut App) {
-    app.add_systems(Startup, register_component::<T>);
+    app.add_systems(
+        Startup,
+        register_component::<T>
+            .in_set(RegisterComponentSet::RegisterComponent)
+            .ambiguous_with(RegisterComponentSet::RegisterComponent),
+    );
 
     match T::get_sync_type() {
         SyncType::ServerAuthoritative => {

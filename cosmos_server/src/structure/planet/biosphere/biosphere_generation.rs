@@ -414,6 +414,7 @@ pub(super) fn register(app: &mut App) {
         Update,
         (send_chunks_to_gpu, read_gpu_data)
             .in_set(BiosphereGenerationSet::GpuInteraction)
+            .before(BevyEasyComputeSet::ExtractPipelines)
             .chain(),
     )
     .add_systems(Update, send_chunk_init_event.in_set(BiosphereGenerationSet::GenerateChunkFeatures))
@@ -422,7 +423,4 @@ pub(super) fn register(app: &mut App) {
     .init_resource::<ChunkData>()
     .init_resource::<SentToGpuTime>()
     .add_mut_event::<DoneGeneratingChunkEvent>();
-
-    // TODO: Don't allow this once https://github.com/AnthonyTornetta/bevy_easy_compute/issues/4 is fixed.
-    app.allow_ambiguous_resource::<AppComputeWorker<BiosphereShaderWorker>>();
 }

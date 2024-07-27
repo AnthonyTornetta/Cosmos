@@ -3,7 +3,7 @@
 use super::mapping::{NetworkMapping, ServerEntity};
 use super::{
     register_component, ClientAuthority, ComponentEntityIdentifier, ComponentReplicationMessage, ComponentSyncingSet,
-    GotComponentToRemoveEvent, SyncType, SyncableComponent, SyncedComponentId,
+    GotComponentToRemoveEvent, RegisterComponentSet, SyncType, SyncableComponent, SyncedComponentId,
 };
 use crate::block::data::BlockData;
 use crate::ecs::NeedsDespawned;
@@ -643,7 +643,12 @@ pub(super) fn setup_client(app: &mut App) {
 
 #[allow(unused)] // This function is used, but the LSP can't figure that out.
 pub(super) fn sync_component_client<T: SyncableComponent>(app: &mut App) {
-    app.add_systems(Startup, register_component::<T>);
+    app.add_systems(
+        Startup,
+        register_component::<T>
+            .in_set(RegisterComponentSet::RegisterComponent)
+            .ambiguous_with(RegisterComponentSet::RegisterComponent),
+    );
 
     app.register_type::<ServerEntity>();
 
