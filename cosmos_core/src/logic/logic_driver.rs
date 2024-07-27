@@ -8,7 +8,7 @@ use bevy::{
 
 use crate::{
     block::{block_direction::BlockDirection, block_face::ALL_BLOCK_FACES, block_rotation::BlockRotation, Block},
-    registry::Registry,
+    registry::{identifiable::Identifiable, Registry},
     structure::{coordinates::BlockCoordinate, structure_block::StructureBlock, Structure},
 };
 
@@ -57,12 +57,13 @@ impl LogicDriver {
             neighbor_coords,
             direction.inverse(),
             None,
+            false,
             structure,
             &mut Port::all_for(coords),
             blocks,
             logic_blocks,
         );
-        let group_id = maybe_group.unwrap_or_else(|| self.logic_graph.new_group(None));
+        let group_id = maybe_group.unwrap_or_else(|| self.logic_graph.new_group(None, None));
         self.logic_graph.add_port(
             coords,
             direction,
@@ -90,6 +91,7 @@ impl LogicDriver {
         evw_queue_logic_output: &mut EventWriter<QueueLogicOutputEvent>,
         evw_queue_logic_input: &mut EventWriter<QueueLogicInputEvent>,
     ) {
+        println!("\nAdding {} at {}", logic_block.unlocalized_name(), coords);
         // Adding input faces as consumers to their connected group, or a new group if there is no connected group.
         for input_face in logic_block.input_faces() {
             self.port_placed(
@@ -133,6 +135,7 @@ impl LogicDriver {
                         neighbor_coords,
                         direction.inverse(),
                         Some(wire_color_id),
+                        false,
                         structure,
                         &mut Port::all_for(coords),
                         blocks,
@@ -145,11 +148,13 @@ impl LogicDriver {
 
             // Create a group if none exists, add to adjacent group if one exists, or merge all adjacent groups if there are multiple.
             match group_ids.len() {
-                0 => drop(self.logic_graph.new_group(Some(coords))),
-                1 => self.logic_graph.set_group_recent_wire(*group_ids.iter().next().unwrap(), coords),
+                0 => drop(self.logic_graph.new_group(Some(wire_color_id), Some(coords))),
+                1 => self
+                    .logic_graph
+                    .set_group_recent_wire(*group_ids.iter().next().unwrap(), wire_color_id, coords),
                 _ => self
                     .logic_graph
-                    .merge_adjacent_groups(&group_ids, coords, entity, evw_queue_logic_input),
+                    .merge_adjacent_groups(wire_color_id, &group_ids, coords, entity, evw_queue_logic_input),
             };
         }
     }
@@ -169,6 +174,7 @@ impl LogicDriver {
         evw_queue_logic_output: &mut EventWriter<QueueLogicOutputEvent>,
         evw_queue_logic_input: &mut EventWriter<QueueLogicInputEvent>,
     ) {
+        println!("\nRemoving {} at {}", logic_block.unlocalized_name(), coords);
         // Removing input ports from their groups.
         for input_face in logic_block.input_faces() {
             self.logic_graph.remove_port(
@@ -211,11 +217,12 @@ impl LogicDriver {
                     continue;
                 };
                 // For now, takes a new ID for every call, even though some (like air blocks or already visited wires) don't need it.
-                let group_id = self.logic_graph.new_group(None);
+                let group_id = self.logic_graph.new_group(None, None);
                 let used_new_group = self.logic_graph.rename_group(
                     group_id,
                     neighbor_coords,
                     direction.inverse(),
+                    wire_color_id,
                     structure,
                     &mut visited,
                     blocks,
