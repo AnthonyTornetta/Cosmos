@@ -20,11 +20,11 @@ use bevy_rapier3d::{
 };
 use serde::{Deserialize, Serialize};
 
+#[cfg(feature = "client")]
+use crate::netty::system_sets::NetworkingSystemsSet;
+
 use crate::{
-    netty::{
-        sync::{sync_component, ComponentSyncingSet, IdentifiableComponent, SyncableComponent},
-        system_sets::NetworkingSystemsSet,
-    },
+    netty::sync::{sync_component, ComponentSyncingSet, IdentifiableComponent, SyncableComponent},
     physics::location::{CosmosBundleSet, LocationPhysicsSet},
 };
 
