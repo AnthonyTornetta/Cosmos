@@ -7,13 +7,22 @@ use bevy::{
 
 use crate::{
     block::Block,
-    logic::{LogicBlock, LogicConnection},
-    registry::Registry,
+    logic::{LogicBlock, LogicConnection, LogicWireColor, WireType},
+    registry::{identifiable::Identifiable, Registry},
 };
 
-fn register_logic_connections(blocks: Res<Registry<Block>>, mut registry: ResMut<Registry<LogicBlock>>) {
-    if let Some(logic_on) = blocks.from_id("cosmos:logic_bus") {
-        registry.register(LogicBlock::new(logic_on, [Some(LogicConnection::Wire); 6]));
+fn register_logic_connections(
+    blocks: Res<Registry<Block>>,
+    mut logic_blocks: ResMut<Registry<LogicBlock>>,
+    logic_wire_colors: Res<Registry<LogicWireColor>>,
+) {
+    for wire_color in logic_wire_colors.iter() {
+        if let Some(logic_wire) = blocks.from_id(wire_color.unlocalized_name()) {
+            logic_blocks.register(LogicBlock::new(
+                logic_wire,
+                [Some(LogicConnection::Wire(WireType::Color(wire_color.id()))); 6],
+            ));
+        }
     }
 }
 

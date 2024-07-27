@@ -47,7 +47,7 @@ pub enum PortType {
 /// Each block face with a logic connection might be a logic port.
 pub enum WireType {
     /// Connects to all colors, for example the logic bus.
-    All,
+    Bus,
     /// Connects to only a single color, identified by the logic wire color registry ID.
     Color(u16),
 }
@@ -55,14 +55,14 @@ pub enum WireType {
 impl WireType {
     pub fn connects_to_color(self, id: u16) -> bool {
         match self {
-            Self::All => true,
+            Self::Bus => true,
             Self::Color(self_color_id) => self_color_id == id,
         }
     }
 
     pub fn connects_to_wire_type(self, other: Self) -> bool {
         match self {
-            Self::All => true,
+            Self::Bus => true,
             Self::Color(self_color_id) => other.connects_to_color(self_color_id),
         }
     }
@@ -107,7 +107,7 @@ impl LogicBlock {
     pub fn new(block: &Block, connections: [Option<LogicConnection>; 6]) -> Self {
         Self {
             connections,
-            id: 0,
+            id: u16::MAX,
             unlocalized_name: block.unlocalized_name().to_owned(),
         }
     }
@@ -154,16 +154,39 @@ impl LogicBlock {
             .map(|(idx, _)| BlockFace::from_index(idx))
     }
 
-    // Returns an iterator over all of this logic block's faces with wire connections that connect to the given wire type.
+    /// Returns an iterator over all of this logic block's faces with wire connections that connect to the given wire type.
     pub fn wire_faces_connecting_to(&self, wire_type: WireType) -> impl Iterator<Item = BlockFace> + '_ {
         self.connections
             .iter()
             .enumerate()
             .filter(move |(_, maybe_connection)| match **maybe_connection {
-                Some(LogicConnection::Wire(encountered_wire_type)) => encountered_wire_type.connects_to(&wire_type),
+                Some(LogicConnection::Wire(encountered_wire_type)) => encountered_wire_type.connects_to_wire_type(wire_type),
                 _ => false,
             })
             .map(|(idx, _)| BlockFace::from_index(idx))
+    }
+
+    fn wire_face_colors_no_bus(&self) -> impl Iterator<Item = u16> + '_ {
+        let color_set: HashSet<u16> = self
+            .connections
+            .iter()
+            .filter_map(|connection| match connection {
+                Some(LogicConnection::Wire(WireType::Color(color_id))) => Some(*color_id),
+                _ => None,
+            })
+            .collect();
+        color_set.into_iter()
+    }
+
+    /// Returns an iterator over every wire color ID any wire face of this block connects to.
+    ///
+    /// Returns the iterator over all wire color IDs if any of the faces are logic bus.
+    pub fn wire_face_colors<'a>(&'a self, logic_wire_colors: &'a Registry<LogicWireColor>) -> Box<dyn Iterator<Item = u16> + '_> {
+        if self.faces_with(Some(LogicConnection::Wire(WireType::Bus))).next().is_some() {
+            Box::new(logic_wire_colors.all_ids())
+        } else {
+            Box::new(self.wire_face_colors_no_bus())
+        }
     }
 
     /// Returns an iterator over all of this logic block's faces with no logic connections.
@@ -197,12 +220,12 @@ impl Port {
 
 #[derive(Debug, Clone, Serialize, Deserialize, Reflect, Default)]
 /// A type to be registered for each color of logic wire, so their IDs can be used to check connections in the logic graph.
-pub struct LogicWireColors {
+pub struct LogicWireColor {
     id: u16,
     unlocalized_name: String,
 }
 
-impl Identifiable for LogicWireColors {
+impl Identifiable for LogicWireColor {
     #[inline]
     fn id(&self) -> u16 {
         self.id
@@ -218,92 +241,19 @@ impl Identifiable for LogicWireColors {
     }
 }
 
-impl LogicWireColors {
+impl LogicWireColor {
     /// Creates a wire color.
     ///
     /// * `unlocalized_name` This should be unique for that block with the following formatting: `mod_id:color_name`. Such as: `cosmos:dark_red`.
-    pub fn new(id: u16, unlocalized_name: String) -> Self {
-        Self { id, unlocalized_name }
-    }
-
-    #[inline(always)]
-    /// Returns true if this block can be seen through
-    pub fn is_see_through(&self) -> bool {
-        self.is_transparent() || !self.is_full()
-    }
-
-    /// Returns true if this block is transparent
-    #[inline(always)]
-    pub fn is_transparent(&self) -> bool {
-        self.property_flags & BlockProperty::Transparent.id() != 0
-    }
-
-    /// Returns true if this block takes up the full 1x1x1 meters of space
-    #[inline(always)]
-    pub fn is_full(&self) -> bool {
-        self.property_flags & BlockProperty::Full.id() != 0
-    }
-
-    /// Returns true if this block takes up no space
-    #[inline(always)]
-    pub fn is_empty(&self) -> bool {
-        self.property_flags & BlockProperty::Empty.id() != 0
-    }
-
-    /// Returns true if this block can have sub-rotations.
-    ///
-    /// If this is enabled on a full block, instead of sub-rotations the block will
-    /// have its front face equal the top face of the block it was placed on.
-    #[inline(always)]
-    pub fn should_face_front(&self) -> bool {
-        self.property_flags & BlockProperty::FaceFront.id() != 0
-    }
-
-    /// Returns true if this block can have sub-rotations.
-    ///
-    /// If this is enabled on a full block, instead of sub-rotations the block will
-    /// have its front face equal the top face of the block it was placed on.
-    #[inline(always)]
-    pub fn is_fully_rotatable(&self) -> bool {
-        self.property_flags & BlockProperty::FullyRotatable.id() != 0
-    }
-
-    /// Returns the density of this block
-    #[inline(always)]
-    pub fn density(&self) -> f32 {
-        self.density
-    }
-
-    /// Returns the hardness of this block (how resistant it is to breaking)
-    ///
-    /// Air: 0, Leaves: 1, Grass/Dirt: 10, Stone: 50, Hull: 100,
-    #[inline(always)]
-    pub fn hardness(&self) -> f32 {
-        self.hardness
-    }
-
-    /// How resistant this block is to being mined.
-    ///
-    /// This is (for now) how long it takes 1 mining beam to mine this block in seconds
-    #[inline(always)]
-    pub fn mining_resistance(&self) -> f32 {
-        self.mining_resistance
-    }
-
-    /// If the block's [`Self::mining_resistance`] is `f32::INFINITY` this will be false
-    #[inline(always)]
-    pub fn can_be_mined(&self) -> bool {
-        self.mining_resistance != f32::INFINITY
-    }
-
-    #[inline(always)]
-    /// Returns true if this block is a fluid
-    pub fn is_fluid(&self) -> bool {
-        self.property_flags & BlockProperty::Fluid.id() != 0
+    pub fn new(unlocalized_name: String) -> Self {
+        Self {
+            id: u16::MAX,
+            unlocalized_name,
+        }
     }
 }
 
-impl PartialEq for Block {
+impl PartialEq for LogicWireColor {
     #[inline(always)]
     fn eq(&self, other: &Self) -> bool {
         self.id == other.id
@@ -368,6 +318,7 @@ fn logic_block_placed_event_listener(
     mut evr_block_changed: EventReader<BlockChangedEvent>,
     blocks: Res<Registry<Block>>,
     logic_blocks: Res<Registry<LogicBlock>>,
+    logic_wire_colors: Res<Registry<LogicWireColor>>,
     mut q_logic: Query<&mut LogicDriver>,
     mut q_structure: Query<&mut Structure>,
     q_has_data: Query<(), With<BlockLogicData>>,
@@ -389,6 +340,7 @@ fn logic_block_placed_event_listener(
                         structure.get_entity().expect("Structure should have entity."),
                         &blocks,
                         &logic_blocks,
+                        &logic_wire_colors,
                         &mut evw_queue_logic_output,
                         &mut evw_queue_logic_input,
                     )
@@ -409,6 +361,7 @@ fn logic_block_placed_event_listener(
                         structure.get_entity().expect("Structure should have entity"),
                         &blocks,
                         &logic_blocks,
+                        &logic_wire_colors,
                         &mut evw_queue_logic_output,
                         &mut evw_queue_logic_input,
                     );
@@ -525,6 +478,7 @@ pub const LOGIC_TICKS_PER_SECOND: u64 = 20;
 
 pub(super) fn register<T: States>(app: &mut App, playing_state: T) {
     create_registry::<LogicBlock>(app, "cosmos:logic_blocks");
+    create_registry::<LogicWireColor>(app, "cosmos:logic_wire_colors");
     app.init_resource::<LogicOutputEventQueue>();
     app.init_resource::<LogicInputEventQueue>();
 

@@ -145,7 +145,7 @@ impl LogicGraph {
         &self,
         coords: BlockCoordinate,
         encountered_from_direction: BlockDirection,
-        wire_color_id: u16,
+        mut maybe_color_id: Option<u16>,
         structure: &Structure,
         visited: &mut HashSet<Port>,
         blocks: &Registry<Block>,
@@ -168,6 +168,14 @@ impl LogicGraph {
                 .get(&Port::new(coords, encountered_from_direction))
                 .copied(),
             Some(LogicConnection::Wire(wire_type)) => {
+                // Logic buses should not interact with logic that doesn't have a wire color.
+                if maybe_color_id.is_none() && wire_type == WireType::Bus {
+                    return None;
+                }
+                let wire_color_id = *maybe_color_id.get_or_insert(match wire_type {
+                    WireType::Bus => panic!("Logic bus encountered during uncolored DFS."),
+                    WireType::Color(id) => id,
+                });
                 if wire_type.connects_to_color(wire_color_id) {
                     self.groups
                         .iter()
@@ -187,7 +195,7 @@ impl LogicGraph {
                                 if let Some(group) = self.dfs_for_group(
                                     neighbor_coords,
                                     direction.inverse(),
-                                    wire_color_id,
+                                    Some(wire_color_id),
                                     structure,
                                     visited,
                                     blocks,
@@ -209,34 +217,37 @@ impl LogicGraph {
     fn group_dfs_all_faces(
         &self,
         logic_block: &LogicBlock,
+        wire_color_id: u16,
         coords: BlockCoordinate,
         structure: &Structure,
         visited: &mut HashSet<Port>,
         blocks: &Registry<Block>,
         logic_blocks: &Registry<LogicBlock>,
     ) -> Option<usize> {
-        for wire_face in logic_block.wire_faces() {
+        for wire_face in logic_block.wire_faces_connecting_to(WireType::Color(wire_color_id)) {
             let direction = structure.block_rotation(coords).direction_of(wire_face);
             let Ok(neighbor_coords) = coords.step(direction) else {
                 continue;
             };
-            match logic_block.connection_on(wire_face) {
-                Some(LogicConnection::Wire(WireType::All)) => 
-                Some(LogicConnection::Wire(WireType::Color(color_id))) =>
-                _ => {},
-            }
-            if let Some(group_id) = self.dfs_for_group(neighbor_coords, direction.inverse(), structure, visited, blocks, logic_blocks) {
+            if let Some(group_id) = self.dfs_for_group(
+                neighbor_coords,
+                direction.inverse(),
+                Some(wire_color_id),
+                structure,
+                visited,
+                blocks,
+                logic_blocks,
+            ) {
                 return Some(group_id);
             }
         }
         None
     }
 
-    pub fn group_dfs_bus
-
     pub fn get_wire_group(
         &self,
         coords: BlockCoordinate,
+        wire_color_id: u16,
         logic_block: &LogicBlock,
         structure: &Structure,
         blocks: &Registry<Block>,
@@ -246,8 +257,16 @@ impl LogicGraph {
             .iter()
             .find_map(|(&id, group)| if group.recent_wire_coords == Some(coords) { Some(id) } else { None })
             .unwrap_or_else(|| {
-                self.group_dfs_all_faces(logic_block, coords, structure, &mut Port::all_for(coords), blocks, logic_blocks)
-                    .expect("Logic block with wire connections is not part of any logic group.")
+                self.group_dfs_all_faces(
+                    logic_block,
+                    wire_color_id,
+                    coords,
+                    structure,
+                    &mut Port::all_for(coords),
+                    blocks,
+                    logic_blocks,
+                )
+                .expect("Logic block with wire connections is not part of any logic group.")
             })
     }
 
@@ -319,6 +338,7 @@ impl LogicGraph {
             .dfs_for_group(
                 neighbor_coords,
                 direction.inverse(),
+                None,
                 structure,
                 &mut Port::all_for(coords),
                 blocks,

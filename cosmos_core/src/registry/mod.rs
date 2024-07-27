@@ -136,6 +136,11 @@ impl<T: Identifiable + Sync + Send> Registry<T> {
         self.contents.iter_mut()
     }
 
+    /// Returns an iterator over all item IDs.
+    pub fn all_ids(&self) -> impl Iterator<Item = u16> + '_ {
+        self.iter().map(|item| item.id())
+    }
+
     /// Returns true if an item with this unlocalized name exists & has been registered.
     pub fn contains(&self, unlocalized_name: &str) -> bool {
         self.unlocalized_name_to_id.contains_key(unlocalized_name)

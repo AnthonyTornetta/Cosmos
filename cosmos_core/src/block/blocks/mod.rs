@@ -6,6 +6,7 @@
 
 use crate::block::block_builder::BlockBuilder;
 use crate::loader::{AddLoadingEvent, DoneLoadingEvent, LoadingManager};
+use crate::logic::LogicWireColor;
 use crate::registry::{self, Registry};
 use bevy::prelude::{App, EventWriter, OnEnter, ResMut, States};
 
@@ -19,6 +20,7 @@ pub const AIR_BLOCK_ID: u16 = 0;
 fn add_cosmos_blocks(
     mut blocks: ResMut<Registry<Block>>,
     mut loading: ResMut<LoadingManager>,
+    mut logic_wire_colors: ResMut<Registry<LogicWireColor>>,
     mut end_writer: EventWriter<DoneLoadingEvent>,
     mut start_writer: EventWriter<AddLoadingEvent>,
 ) {
@@ -421,7 +423,7 @@ fn add_cosmos_blocks(
             .create(),
     );
 
-    let logic_wire_colors = [
+    let logic_wire_colors_array = [
         "grey",
         "black",
         "dark_grey",
@@ -448,7 +450,7 @@ fn add_cosmos_blocks(
     let mut logic_bus_builder = BlockBuilder::new("cosmos:logic_bus", 0.1, 20.0, 5.0)
         .add_connection_group("cosmos:logic_bus")
         .connect_to_group("cosmos:logic_bus");
-    for color in logic_wire_colors {
+    for color in logic_wire_colors_array {
         let colored_wire_name = format!("cosmos:logic_wire_{color}");
         blocks.register(
             BlockBuilder::new(colored_wire_name.clone(), 0.1, 20.0, 5.0)
@@ -459,6 +461,7 @@ fn add_cosmos_blocks(
                 .create(),
         );
         logic_bus_builder = logic_bus_builder.connect_to_group(colored_wire_name.as_ref());
+        logic_wire_colors.register(LogicWireColor::new(colored_wire_name));
     }
 
     blocks.register(logic_bus_builder.create());
@@ -486,7 +489,6 @@ fn add_air_block(
 
 pub(super) fn register<T: States>(app: &mut App, pre_loading_state: T, loading_state: T, post_loading_state: T) {
     registry::create_registry::<Block>(app, "cosmos:blocks");
-    registry::create_registry::<(app, registry_name)
     fluid::register(app, post_loading_state);
 
     app.add_systems(OnEnter(pre_loading_state), add_air_block);

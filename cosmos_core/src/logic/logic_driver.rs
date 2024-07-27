@@ -12,7 +12,7 @@ use crate::{
     structure::{coordinates::BlockCoordinate, structure_block::StructureBlock, Structure},
 };
 
-use super::{logic_graph::LogicGraph, LogicBlock, Port, PortType, QueueLogicInputEvent, QueueLogicOutputEvent};
+use super::{logic_graph::LogicGraph, LogicBlock, LogicWireColor, Port, PortType, QueueLogicInputEvent, QueueLogicOutputEvent, WireType};
 
 #[derive(Debug, Default, Reflect, Component)]
 /// The public interface for accessing and mutating an [`Entity`]'s [`LogicGraph`].
@@ -56,6 +56,7 @@ impl LogicDriver {
         let maybe_group = self.logic_graph.dfs_for_group(
             neighbor_coords,
             direction.inverse(),
+            None,
             structure,
             &mut Port::all_for(coords),
             blocks,
@@ -85,6 +86,7 @@ impl LogicDriver {
         entity: Entity,
         blocks: &Registry<Block>,
         logic_blocks: &Registry<LogicBlock>,
+        logic_wire_colors: &Registry<LogicWireColor>,
         evw_queue_logic_output: &mut EventWriter<QueueLogicOutputEvent>,
         evw_queue_logic_input: &mut EventWriter<QueueLogicInputEvent>,
     ) {
@@ -118,39 +120,38 @@ impl LogicDriver {
             )
         }
 
-        // If there are not wire faces, we're done.
-        if logic_block.wire_faces().next().is_none() {
-            return;
-        };
+        // A block with no wire faces will have an empty wire face colors iterator.
+        for wire_color_id in logic_block.wire_face_colors(logic_wire_colors) {
+            // Connect wire faces to all existing groups (by creating one new group that includes all adjacent groups).
+            let mut group_ids: HashSet<usize> = HashSet::new();
 
-        // Connect wire faces to all existing groups (by creating one new group that includes all adjacent groups).
-        let mut group_ids: HashSet<usize> = HashSet::new();
-
-        // Get all adjacent group IDs.
-        for wire_face in logic_block.wire_faces() {
-            let direction = structure.block_rotation(coords).direction_of(wire_face);
-            if let Ok(neighbor_coords) = coords.step(direction) {
-                if let Some(group_id) = self.logic_graph.dfs_for_group(
-                    neighbor_coords,
-                    direction.inverse(),
-                    structure,
-                    &mut Port::all_for(coords),
-                    blocks,
-                    logic_blocks,
-                ) {
-                    group_ids.insert(group_id);
+            // Get all adjacent group IDs.
+            for wire_face in logic_block.wire_faces_connecting_to(WireType::Color(wire_color_id)) {
+                let direction = structure.block_rotation(coords).direction_of(wire_face);
+                if let Ok(neighbor_coords) = coords.step(direction) {
+                    if let Some(group_id) = self.logic_graph.dfs_for_group(
+                        neighbor_coords,
+                        direction.inverse(),
+                        Some(wire_color_id),
+                        structure,
+                        &mut Port::all_for(coords),
+                        blocks,
+                        logic_blocks,
+                    ) {
+                        group_ids.insert(group_id);
+                    }
                 }
             }
-        }
 
-        // Create a group if none exists, add to adjacent group if one exists, or merge all adjacent groups if there are multiple.
-        match group_ids.len() {
-            0 => drop(self.logic_graph.new_group(Some(coords))),
-            1 => self.logic_graph.set_group_recent_wire(*group_ids.iter().next().unwrap(), coords),
-            _ => self
-                .logic_graph
-                .merge_adjacent_groups(&group_ids, coords, entity, evw_queue_logic_input),
-        };
+            // Create a group if none exists, add to adjacent group if one exists, or merge all adjacent groups if there are multiple.
+            match group_ids.len() {
+                0 => drop(self.logic_graph.new_group(Some(coords))),
+                1 => self.logic_graph.set_group_recent_wire(*group_ids.iter().next().unwrap(), coords),
+                _ => self
+                    .logic_graph
+                    .merge_adjacent_groups(&group_ids, coords, entity, evw_queue_logic_input),
+            };
+        }
     }
 
     /// Removes a logic block, along with all of its ports and wire connections, from the graph.
@@ -164,6 +165,7 @@ impl LogicDriver {
         entity: Entity,
         blocks: &Registry<Block>,
         logic_blocks: &Registry<LogicBlock>,
+        logic_wire_colors: &Registry<LogicWireColor>,
         evw_queue_logic_output: &mut EventWriter<QueueLogicOutputEvent>,
         evw_queue_logic_input: &mut EventWriter<QueueLogicInputEvent>,
     ) {
@@ -193,53 +195,51 @@ impl LogicDriver {
             )
         }
 
-        // If the block has no wire faces, we're done.
-        if logic_block.wire_faces().next().is_none() {
-            return;
-        }
+        // A block with no wire faces will have an empty wire face colors iterator.
+        for wire_color_id in logic_block.wire_face_colors(logic_wire_colors) {
+            // Old group ID either comes from being the stored wire coordinate for a group, or searching all your neighbors.
+            let old_group_id = self
+                .logic_graph
+                .get_wire_group(coords, wire_color_id, logic_block, structure, blocks, logic_blocks);
+            let was_on = self.logic_graph.get_group(old_group_id).on();
 
-        // Old group ID either comes from being the stored wire coordinate for a group, or searching all your neighbors.
-        let old_group_id = self
-            .logic_graph
-            .get_wire_group(coords, logic_block, structure, blocks, logic_blocks);
-        let was_on = self.logic_graph.get_group(old_group_id).on();
-
-        // Setting new group IDs.
-        let mut visited = Port::all_for(coords);
-        for wire_face in logic_block.wire_faces() {
-            let direction = structure.block_rotation(coords).direction_of(wire_face);
-            let Ok(neighbor_coords) = coords.step(direction) else {
-                continue;
-            };
-            // For now, takes a new ID for every call, even though some (like air blocks or already visited wires) don't need it.
-            let group_id = self.logic_graph.new_group(None);
-            let used_new_group = self.logic_graph.rename_group(
-                group_id,
-                neighbor_coords,
-                direction.inverse(),
-                structure,
-                &mut visited,
-                blocks,
-                logic_blocks,
-                evw_queue_logic_output,
-                evw_queue_logic_input,
-            );
-            if !used_new_group {
-                self.logic_graph.remove_group(group_id);
-            } else {
-                let new_group = self.logic_graph.get_group(group_id);
-                if new_group.on() != was_on {
-                    // Update the inputs to every input port in this newly created group, if the value of the group has changed.
-                    evw_queue_logic_input.send_batch(
-                        new_group
-                            .consumers
-                            .iter()
-                            .map(|input_port| QueueLogicInputEvent::new(StructureBlock::new(input_port.coords), entity)),
-                    );
+            // Setting new group IDs.
+            let mut visited = Port::all_for(coords);
+            for wire_face in logic_block.wire_faces() {
+                let direction = structure.block_rotation(coords).direction_of(wire_face);
+                let Ok(neighbor_coords) = coords.step(direction) else {
+                    continue;
+                };
+                // For now, takes a new ID for every call, even though some (like air blocks or already visited wires) don't need it.
+                let group_id = self.logic_graph.new_group(None);
+                let used_new_group = self.logic_graph.rename_group(
+                    group_id,
+                    neighbor_coords,
+                    direction.inverse(),
+                    structure,
+                    &mut visited,
+                    blocks,
+                    logic_blocks,
+                    evw_queue_logic_output,
+                    evw_queue_logic_input,
+                );
+                if !used_new_group {
+                    self.logic_graph.remove_group(group_id);
+                } else {
+                    let new_group = self.logic_graph.get_group(group_id);
+                    if new_group.on() != was_on {
+                        // Update the inputs to every input port in this newly created group, if the value of the group has changed.
+                        evw_queue_logic_input.send_batch(
+                            new_group
+                                .consumers
+                                .iter()
+                                .map(|input_port| QueueLogicInputEvent::new(StructureBlock::new(input_port.coords), entity)),
+                        );
+                    }
                 }
             }
+            self.logic_graph.remove_group(old_group_id);
         }
-        self.logic_graph.remove_group(old_group_id);
     }
 
     /// Sets the on/off value of the given port (which must be an output port) in the logic graph.
