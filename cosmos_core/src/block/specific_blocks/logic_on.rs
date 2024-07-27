@@ -1,5 +1,7 @@
 //! Logic behavior for "Logic On", a block that outputs a logic signal on all 6 faces.
 
+use std::{cell::RefCell, rc::Rc};
+
 use bevy::{
     app::{App, Update},
     prelude::{EventReader, EventWriter, IntoSystemConfigs, OnEnter, Query, Res, ResMut, States},
@@ -7,11 +9,12 @@ use bevy::{
 
 use crate::{
     block::Block,
+    events::block_events::BlockDataSystemParams,
     logic::{
         default_logic_block_output, logic_driver::LogicDriver, BlockLogicData, LogicBlock, LogicConnection, LogicOutputEvent,
-        LogicSystemSet, PortType, QueueLogicInputEvent,
+        LogicSystemSet, Port, PortType, QueueLogicInputEvent,
     },
-    registry::Registry,
+    registry::{identifiable::Identifiable, Registry},
     structure::Structure,
 };
 
@@ -22,24 +25,35 @@ fn register_logic_connections(blocks: Res<Registry<Block>>, mut registry: ResMut
 }
 
 fn logic_on_output_event_listener(
-    evr_logic_output: EventReader<LogicOutputEvent>,
-    evw_queue_logic_input: EventWriter<QueueLogicInputEvent>,
+    mut evr_logic_output: EventReader<LogicOutputEvent>,
+    mut evw_queue_logic_input: EventWriter<QueueLogicInputEvent>,
     logic_blocks: Res<Registry<LogicBlock>>,
     blocks: Res<Registry<Block>>,
-    q_logic_driver: Query<&mut LogicDriver>,
-    q_structure: Query<&mut Structure>,
-    q_logic_data: Query<&BlockLogicData>,
+    mut q_logic_driver: Query<&mut LogicDriver>,
+    mut q_structure: Query<&mut Structure>,
 ) {
-    default_logic_block_output(
-        "cosmos:logic_on",
-        evr_logic_output,
-        evw_queue_logic_input,
-        &logic_blocks,
-        &blocks,
-        q_logic_driver,
-        q_structure,
-        q_logic_data,
-    );
+    // Internal logic signal should later be set to 1 (or some other value) with a GUI.
+    for ev in evr_logic_output.read() {
+        let Ok(structure) = q_structure.get_mut(ev.entity) else {
+            continue;
+        };
+        if structure.block_at(ev.block.coords(), &blocks).unlocalized_name() != "cosmos:logic_on" {
+            continue;
+        }
+        let Ok(mut logic_driver) = q_logic_driver.get_mut(ev.entity) else {
+            continue;
+        };
+
+        // Could cause performance problems if many of the same logic block are updated in a single frame. Might move this lookup somewhere else.
+        let Some(logic_block) = logic_blocks.from_id("cosmos:logic_on") else {
+            continue;
+        };
+
+        for face in logic_block.output_faces() {
+            let port = Port::new(ev.block.coords(), structure.block_rotation(ev.block.coords()).direction_of(face));
+            logic_driver.update_producer(port, 1, &mut evw_queue_logic_input, ev.entity);
+        }
+    }
 }
 
 pub(super) fn register<T: States>(app: &mut App, post_loading_state: T) {
