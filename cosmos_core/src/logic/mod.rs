@@ -19,6 +19,7 @@ use logic_graph::{LogicGraph, LogicGroup};
 use crate::{
     block::{
         block_direction::{BlockDirection, ALL_BLOCK_DIRECTIONS},
+        block_events::BlockEventsSet,
         block_face::BlockFace,
         data::BlockData,
         Block,
@@ -388,7 +389,10 @@ pub(super) fn register<T: States>(app: &mut App, playing_state: T) {
     app.configure_sets(
         Update,
         (
-            LogicSystemSet::EditLogicGraph,
+            LogicSystemSet::EditLogicGraph
+                .in_set(BlockEventsSet::ProcessEvents)
+                // This may be a bad idea?
+                .ambiguous_with(BlockEventsSet::ProcessEvents),
             LogicSystemSet::QueueConsumers,
             LogicSystemSet::QueueProducers,
             (LogicSystemSet::SendQueues, LogicSystemSet::Consume, LogicSystemSet::Produce)

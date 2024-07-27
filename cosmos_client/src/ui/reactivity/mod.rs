@@ -161,8 +161,7 @@ pub(super) fn register(app: &mut App) {
             ReactiveUiSystemSet::ProcessChanges,
         )
             .chain()
-            .in_set(NetworkingSystemsSet::Between)
-            .in_set(UiSystemSet::DoUi),
+            .in_set(NetworkingSystemsSet::Between),
     )
     .configure_sets(Update, DoReactorsSet::DoReactors);
 }

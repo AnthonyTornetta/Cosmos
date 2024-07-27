@@ -247,9 +247,9 @@ pub(super) fn register(app: &mut App) {
 
     app.add_systems(
         Update,
-        on_render_logic_indicator, // .in_set(MaterialsSystemSet::AddMaterials)
-                                   // .ambiguous_with(MaterialsSystemSet::AddMaterials)
-                                   // .in_set(StructureRenderingSet::CustomRendering),
+        on_render_logic_indicator
+            .ambiguous_with(MaterialsSystemSet::AddMaterials)
+            .in_set(StructureRenderingSet::CustomRendering),
     );
 
     app.register_type::<LogicIndicatorRenders>();

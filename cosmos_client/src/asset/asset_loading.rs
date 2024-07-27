@@ -619,6 +619,8 @@ pub fn load_block_rendering_information(
     mut registry: ResMut<Registry<BlockTextureIndex>>,
     mut info_registry: ResMut<Registry<BlockRenderingInfo>>,
 ) {
+    info!("Loading block JSON files!");
+
     let missing_texture_index = atlas_registry
         .from_id("cosmos:main")
         .expect("Missing main atlas!")
@@ -722,6 +724,8 @@ fn load_item_rendering_information(
     mut info_registry: ResMut<Registry<ItemRenderingInfo>>,
     block_items: Res<BlockItems>,
 ) {
+    info!("Loading item JSON files!");
+
     let missing_texture_index = atlas_registry
         .from_id("cosmos:main")
         .expect("Missing main atlas!")
@@ -893,9 +897,7 @@ pub(super) fn register(app: &mut App) {
         .add_systems(OnEnter(GameState::PostLoading), setup_textures)
         .add_systems(
             OnExit(GameState::PostLoading),
-            (load_item_rendering_information, load_block_rendering_information)
-                .in_set(AssetsSet::AssetsLoading)
-                .chain(),
+            (load_item_rendering_information, load_block_rendering_information).chain(),
         );
 
     // It's probably fine

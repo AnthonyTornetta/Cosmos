@@ -322,9 +322,8 @@ pub(super) fn register(app: &mut App) {
 
     app.add_systems(
         Update,
-        on_render_tanks, // .in_set(StructureRenderingSet::CustomRendering)
-                         // .in_set(MaterialsSystemSet::AddMaterials)
-                         // .ambiguous_with(MaterialsSystemSet::AddMaterials),
+        on_render_tanks.in_set(StructureRenderingSet::CustomRendering), // .in_set(MaterialsSystemSet::AddMaterials)
+                                                                        // .ambiguous_with(MaterialsSystemSet::AddMaterials),
     );
 
     app.register_type::<TankRenders>();

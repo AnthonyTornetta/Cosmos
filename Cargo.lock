@@ -644,7 +644,7 @@ dependencies = [
 [[package]]
 name = "bevy_easy_compute"
 version = "0.14.0"
-source = "git+https://github.com/AnthonyTornetta/bevy_easy_compute?branch=no-build-worker#ed2faefbe9d0ca21acc8912d551a465a69ffbdc3"
+source = "git+https://github.com/AnthonyTornetta/bevy_easy_compute?branch=no-build-worker#b4c25f7e84aca73f689f779b1058d9c125b0aa49"
 dependencies = [
  "bevy",
  "bytemuck",
