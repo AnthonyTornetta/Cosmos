@@ -92,7 +92,6 @@ impl LogicDriver {
         evw_queue_logic_output: &mut EventWriter<QueueLogicOutputEvent>,
         evw_queue_logic_input: &mut EventWriter<QueueLogicInputEvent>,
     ) {
-        // println!("\nAdding {} at {}", logic_block.unlocalized_name(), coords);
         // Adding input faces as consumers to their connected group, or a new group if there is no connected group.
         for input_face in logic_block.input_faces() {
             self.port_placed(
@@ -175,7 +174,6 @@ impl LogicDriver {
         evw_queue_logic_output: &mut EventWriter<QueueLogicOutputEvent>,
         evw_queue_logic_input: &mut EventWriter<QueueLogicInputEvent>,
     ) {
-        // println!("\nRemoving {} at {}", logic_block.unlocalized_name(), coords);
         // Removing input ports from their groups.
         for input_face in logic_block.input_faces() {
             self.logic_graph.remove_port(
@@ -233,10 +231,8 @@ impl LogicDriver {
                     evw_queue_logic_input,
                 );
                 if !used_new_group {
-                    // println!("Removing unused new group for color {}", wire_color_id);
                     self.logic_graph.remove_group(group_id);
                 } else {
-                    // println!("Keeping new group for color {}", wire_color_id);
                     let new_group = self.logic_graph.get_group(group_id);
                     if new_group.on() != was_on {
                         // Update the inputs to every input port in this newly created group, if the value of the group has changed.
@@ -249,7 +245,6 @@ impl LogicDriver {
                     }
                 }
             }
-            // println!("Removing old group for color {}", wire_color_id);
             self.logic_graph.remove_group(old_group_id);
         }
     }
