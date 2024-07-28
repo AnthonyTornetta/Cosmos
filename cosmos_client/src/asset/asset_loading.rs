@@ -139,25 +139,22 @@ impl CosmosTextureAtlas {
     ///
     /// This image handle has to have been loaded first (run this after [`GameState::PostLoading`]).
     pub fn get_texture_index(&self, handle: &Handle<Image>, images: &Assets<Image>) -> Option<TextureIndex> {
-        images
-            .get(handle)
-            .and_then(|img| {
-                let dims = img.width();
+        images.get(handle).and_then(|img| {
+            let dims = img.width();
 
-                let texture_atlas = self
-                    .texture_atlases
-                    .iter()
-                    .enumerate()
-                    .find(|(_, x)| x.individual_image_dimensions() == dims);
+            let texture_atlas = self
+                .texture_atlases
+                .iter()
+                .enumerate()
+                .find(|(_, x)| x.individual_image_dimensions() == dims);
 
-                texture_atlas
-                    .and_then(|(dimension_index, x)| {
-                        x.get_texture_index(handle).map(|texture_index| TextureIndex {
-                            dimension_index: dimension_index as u32,
-                            texture_index,
-                        })
-                    })
+            texture_atlas.and_then(|(dimension_index, x)| {
+                x.get_texture_index(handle).map(|texture_index| TextureIndex {
+                    dimension_index: dimension_index as u32,
+                    texture_index,
+                })
             })
+        })
     }
 }
 
