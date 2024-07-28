@@ -131,13 +131,8 @@ impl LogicGraph {
         }
         .get(port)?;
         Some(
-            self.groups.get(group_id).expect(
-                format!(
-                    "Logic {:?} port at {:?} with a group ID {:?} should have a logic group.",
-                    port_type, port, group_id
-                )
-                .as_ref(),
-            ),
+            self.groups.get(group_id).unwrap_or_else(|| panic!("Logic {:?} port at {:?} with a group ID {:?} should have a logic group.",
+                    port_type, port, group_id)),
         )
     }
 
@@ -150,13 +145,8 @@ impl LogicGraph {
         }
         .get(port)?;
         Some(
-            self.groups.get_mut(group_id).expect(
-                format!(
-                    "Logic {:?} port at {:?} with a group ID {:?} should have a mutable logic group.",
-                    port_type, port, group_id
-                )
-                .as_ref(),
-            ),
+            self.groups.get_mut(group_id).unwrap_or_else(|| panic!("Logic {:?} port at {:?} with a group ID {:?} should have a mutable logic group.",
+                    port_type, port, group_id)),
         )
     }
 
@@ -326,13 +316,8 @@ impl LogicGraph {
                     blocks,
                     logic_blocks,
                 )
-                .expect(
-                    format!(
-                        "Logic block with wire connections (color {}) is not part of any logic group.",
-                        wire_color_id
-                    )
-                    .as_ref(),
-                )
+                .unwrap_or_else(|| panic!("Logic block with wire connections (color {}) is not part of any logic group.",
+                        wire_color_id))
             })
     }
 

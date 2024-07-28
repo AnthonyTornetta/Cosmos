@@ -1,6 +1,5 @@
 //! Logic behavior for "Logic On", a block that outputs a logic signal on all 6 faces.
 
-use std::{cell::RefCell, rc::Rc};
 
 use bevy::{
     app::{App, Update},
@@ -9,9 +8,8 @@ use bevy::{
 
 use crate::{
     block::Block,
-    events::block_events::BlockDataSystemParams,
     logic::{
-        default_logic_block_output, logic_driver::LogicDriver, BlockLogicData, LogicBlock, LogicConnection, LogicOutputEvent,
+        logic_driver::LogicDriver, LogicBlock, LogicConnection, LogicOutputEvent,
         LogicSystemSet, Port, PortType, QueueLogicInputEvent,
     },
     registry::{identifiable::Identifiable, Registry},

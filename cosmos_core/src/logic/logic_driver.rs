@@ -9,7 +9,7 @@ use bevy::{
 use crate::{
     block::{block_direction::BlockDirection, block_face::ALL_BLOCK_FACES, block_rotation::BlockRotation, Block},
     logic::LogicConnection,
-    registry::{identifiable::Identifiable, Registry},
+    registry::Registry,
     structure::{coordinates::BlockCoordinate, structure_block::StructureBlock, Structure},
 };
 

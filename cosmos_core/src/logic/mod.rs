@@ -53,6 +53,7 @@ pub enum WireType {
 }
 
 impl WireType {
+    /// Returns true if this wire type connects to the given color, false otherwise.
     pub fn connects_to_color(self, id: u16) -> bool {
         match self {
             Self::Bus => true,
@@ -60,6 +61,7 @@ impl WireType {
         }
     }
 
+    /// Returns true if this wire type connects to the given wire type, false otherwise.
     pub fn connects_to_wire_type(self, other: Self) -> bool {
         match self {
             Self::Bus => true,
