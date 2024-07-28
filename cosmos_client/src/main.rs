@@ -7,6 +7,7 @@ pub mod asset;
 pub mod audio;
 pub mod block;
 pub mod camera;
+pub mod debug;
 pub mod economy;
 pub mod ecs;
 pub mod entities;
@@ -40,11 +41,11 @@ use bevy::window::WindowMode;
 use bevy_hanabi::HanabiPlugin;
 use bevy_mod_debugdump::schedule_graph;
 use bevy_obj::ObjPlugin;
-use bevy_rapier3d::prelude::{RapierConfiguration, TimestepMode};
-use bevy_renet::transport::NetcodeClientPlugin;
-use bevy_renet::RenetClientPlugin;
+
+use bevy_rapier3d::plugin::{RapierContextInitialization, RapierPhysicsPlugin};
+use bevy_renet2::{transport::NetcodeClientPlugin, RenetClientPlugin};
 use clap::{arg, Parser};
-use cosmos_core::plugin::cosmos_core_plugin::CosmosCorePluginGroup;
+use cosmos_core::{physics::collision_handling::CosmosPhysicsFilter, plugin::cosmos_core_plugin::CosmosCorePluginGroup};
 use netty::connect::{self};
 use state::game_state::GameState;
 use thread_priority::{set_current_thread_priority, ThreadPriority};
@@ -111,18 +112,15 @@ fn main() {
 
     app
         // .insert_resource(HostConfig { host_name })
-        .insert_resource(RapierConfiguration {
-            timestep_mode: TimestepMode::Interpolated {
-                dt: 1.0 / 60.0,
-                time_scale: 1.0,
-                substeps: 2,
-            },
-            ..default()
-        })
+        // .insert_resource(TimestepMode::Interpolated {
+        //     dt: 1.0 / 60.0,
+        //     time_scale: 1.0,
+        //     substeps: 2,
+        // })
         .insert_resource(ClearColor(Color::BLACK))
         // This must be registered here, before it is used anywhere
-        .init_state::<GameState>()
         .add_plugins(default_plugins)
+        .init_state::<GameState>()
         .add_plugins(CosmosCorePluginGroup::new(
             GameState::PreLoading,
             GameState::Loading,
@@ -130,6 +128,11 @@ fn main() {
             GameState::MainMenu,
             GameState::Playing,
         ))
+        .add_plugins(
+            RapierPhysicsPlugin::<CosmosPhysicsFilter>::default()
+                // .in_schedule(FixedUpdate)
+                .with_custom_initialization(RapierContextInitialization::default()),
+        )
         .add_plugins((RenetClientPlugin, NetcodeClientPlugin, ObjPlugin, HanabiPlugin))
         // .add_plugins(RapierDebugRenderPlugin::default())
         .add_systems(OnEnter(GameState::Connecting), connect::establish_connection)
@@ -163,6 +166,7 @@ fn main() {
     shop::register(&mut app);
     economy::register(&mut app);
     fluid::register(&mut app);
+    debug::register(&mut app);
 
     if cfg!(feature = "print-schedule") {
         println!(

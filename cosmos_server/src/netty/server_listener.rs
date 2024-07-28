@@ -5,8 +5,10 @@
 use bevy::prelude::*;
 use bevy::utils::HashMap;
 use bevy_rapier3d::prelude::Velocity;
-use bevy_renet::renet::{ClientId, RenetServer};
-use cosmos_core::block::block_events::{BlockBreakEvent, BlockInteractEvent, BlockPlaceEvent};
+use bevy_renet2::renet2::{ClientId, RenetServer};
+use cosmos_core::block::block_events::{BlockBreakEvent, BlockInteractEvent, BlockPlaceEvent, BlockPlaceEventData};
+use cosmos_core::ecs::mut_events::MutEvent;
+use cosmos_core::inventory::itemstack::ItemStackSystemSet;
 use cosmos_core::inventory::Inventory;
 use cosmos_core::item::Item;
 use cosmos_core::netty::netty_rigidbody::NettyRigidBodyLocation;
@@ -30,10 +32,13 @@ use cosmos_core::{
 };
 
 use crate::entities::player::PlayerLooking;
+use crate::state::GameState;
 use crate::structure::planet::chunk::ChunkNeedsSent;
 use crate::structure::planet::generation::planet_generator::RequestChunkEvent;
 use crate::structure::ship::events::{CreateShipEvent, ShipSetMovementEvent};
 use crate::structure::station::events::CreateStationEvent;
+
+use super::server_events::handle_server_events;
 
 #[derive(Resource, Default)]
 struct SendAllChunks(HashMap<Entity, Vec<ClientId>>);
@@ -59,7 +64,7 @@ fn server_listen_messages(
     ): (
         Query<&mut StructureSystems>,
         EventWriter<BlockBreakEvent>,
-        EventWriter<BlockPlaceEvent>,
+        EventWriter<MutEvent<BlockPlaceEvent>>,
         EventWriter<BlockInteractEvent>,
         EventWriter<ExitBuildModeEvent>,
         EventWriter<CreateShipEvent>,
@@ -170,14 +175,17 @@ fn server_listen_messages(
                     inventory_slot,
                 } => {
                     if let Some(player_entity) = lobby.player_from_id(client_id) {
-                        place_block_event.send(BlockPlaceEvent {
-                            structure_entity,
-                            structure_block: block,
-                            block_id,
-                            block_up,
-                            inventory_slot: inventory_slot as usize,
-                            placer: player_entity,
-                        });
+                        place_block_event.send(
+                            BlockPlaceEvent::Event(BlockPlaceEventData {
+                                structure_entity,
+                                structure_block: block,
+                                block_id,
+                                block_up,
+                                inventory_slot: inventory_slot as usize,
+                                placer: player_entity,
+                            })
+                            .into(),
+                        );
                     }
                 }
                 ClientReliableMessages::InteractWithBlock {
@@ -366,9 +374,12 @@ fn send_all_chunks(
 pub(super) fn register(app: &mut App) {
     app.add_systems(
         Update,
-        (server_listen_messages, send_all_chunks)
+        (handle_server_events, server_listen_messages)
             .chain()
-            .in_set(NetworkingSystemsSet::ReceiveMessages),
+            .in_set(NetworkingSystemsSet::ReceiveMessages)
+            .before(ItemStackSystemSet::CreateDataEntity)
+            .run_if(in_state(GameState::Playing)),
     )
+    .add_systems(Update, send_all_chunks.in_set(NetworkingSystemsSet::SyncComponents))
     .init_resource::<SendAllChunks>();
 }

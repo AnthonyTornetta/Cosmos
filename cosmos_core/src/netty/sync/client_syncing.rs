@@ -1,7 +1,9 @@
+//! Exposes [`ClientReceiveComponents::ClientReceiveComponents`] - this is to remove ambiguity
+
 use super::mapping::{NetworkMapping, ServerEntity};
 use super::{
     register_component, ClientAuthority, ComponentEntityIdentifier, ComponentReplicationMessage, ComponentSyncingSet,
-    GotComponentToRemoveEvent, SyncType, SyncableComponent, SyncedComponentId,
+    GotComponentToRemoveEvent, RegisterComponentSet, SyncType, SyncableComponent, SyncedComponentId,
 };
 use crate::block::data::BlockData;
 use crate::ecs::NeedsDespawned;
@@ -11,6 +13,7 @@ use crate::inventory::Inventory;
 use crate::netty::client::{LocalPlayer, NeedsLoadedFromServer};
 use crate::netty::client_reliable_messages::ClientReliableMessages;
 use crate::netty::sync::GotComponentToSyncEvent;
+use crate::netty::system_sets::NetworkingSystemsSet;
 use crate::netty::{cosmos_encoder, NettyChannelClient};
 use crate::netty::{NettyChannelServer, NoSendEntity};
 use crate::physics::location::CosmosBundleSet;
@@ -26,6 +29,7 @@ use bevy::ecs::schedule::common_conditions::resource_exists;
 use bevy::ecs::schedule::{IntoSystemConfigs, IntoSystemSetConfigs};
 use bevy::ecs::system::{Commands, Resource};
 use bevy::log::warn;
+use bevy::prelude::SystemSet;
 use bevy::{
     app::{App, Startup, Update},
     ecs::{
@@ -36,7 +40,7 @@ use bevy::{
     },
     log::error,
 };
-use bevy_renet::renet::{ClientId, RenetClient};
+use bevy_renet2::renet2::{ClientId, RenetClient};
 
 fn client_deserialize_component<T: SyncableComponent>(
     components_registry: Res<Registry<SyncedComponentId>>,
@@ -281,6 +285,13 @@ fn compute_entity_identifier(
 
 #[derive(Resource, Default)]
 struct WaitingData(Vec<ComponentReplicationMessage>);
+
+#[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
+/// Receives auto-synced components from the server
+pub enum ClientReceiveComponents {
+    /// Receives auto-synced components from the server
+    ClientReceiveComponents,
+}
 
 fn client_receive_components(
     mut client: ResMut<RenetClient>,
@@ -605,6 +616,8 @@ fn get_entity_identifier_info(
 }
 
 pub(super) fn setup_client(app: &mut App) {
+    app.configure_sets(Update, ClientReceiveComponents::ClientReceiveComponents);
+
     app.configure_sets(
         Update,
         (
@@ -612,13 +625,16 @@ pub(super) fn setup_client(app: &mut App) {
             ComponentSyncingSet::DoComponentSyncing,
             ComponentSyncingSet::PostComponentSyncing,
         )
-            .before(CosmosBundleSet::HandleCosmosBundles)
+            .after(CosmosBundleSet::HandleCosmosBundles)
+            .in_set(NetworkingSystemsSet::SyncComponents)
             .chain(),
     );
 
     app.add_systems(
         Update,
         client_receive_components
+            .in_set(ClientReceiveComponents::ClientReceiveComponents)
+            .in_set(NetworkingSystemsSet::ReceiveMessages)
             .run_if(resource_exists::<RenetClient>)
             .run_if(resource_exists::<NetworkMapping>),
     )
@@ -627,7 +643,12 @@ pub(super) fn setup_client(app: &mut App) {
 
 #[allow(unused)] // This function is used, but the LSP can't figure that out.
 pub(super) fn sync_component_client<T: SyncableComponent>(app: &mut App) {
-    app.add_systems(Startup, register_component::<T>);
+    app.add_systems(
+        Startup,
+        register_component::<T>
+            .in_set(RegisterComponentSet::RegisterComponent)
+            .ambiguous_with(RegisterComponentSet::RegisterComponent),
+    );
 
     app.register_type::<ServerEntity>();
 

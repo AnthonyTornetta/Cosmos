@@ -1,6 +1,6 @@
 use std::time::Duration;
 
-use bevy::{asset::LoadState, prelude::*, utils::HashMap};
+use bevy::{asset::LoadState, color::palettes::css, prelude::*, utils::HashMap};
 use bevy_hanabi::prelude::*;
 
 use bevy_kira_audio::{Audio, AudioControl, AudioInstance, AudioSource};
@@ -15,6 +15,7 @@ use crate::{
     asset::asset_loader::load_assets,
     audio::{AudioEmission, AudioEmitterBundle, CosmosAudioEmitter, DespawnOnNoEmissions},
     state::game_state::GameState,
+    structure::ship::PlayerParentChangingSet,
 };
 
 #[derive(Component)]
@@ -46,7 +47,7 @@ fn create_missile_mesh(asset_server: Res<AssetServer>, mut materials: ResMut<Ass
     commands.insert_resource(MissileRenderingInfo(
         asset_server.load("cosmos/models/misc/missile.obj"),
         materials.add(StandardMaterial {
-            base_color: Color::DARK_GRAY,
+            base_color: css::DARK_GRAY.into(),
             ..Default::default()
         }),
     ));
@@ -65,12 +66,13 @@ fn on_add_missile(mut commands: Commands, missile_mesh: Res<MissileRenderingInfo
 #[derive(Component)]
 struct ExplosionParticle;
 
-fn color_hash(color: Color) -> u32 {
+fn color_hash(color: impl Into<Srgba>) -> u32 {
+    let Srgba { red, green, blue, alpha } = color.into();
     let (r, g, b, a) = (
-        (color.r() * 255.0) as u8,
-        (color.g() * 255.0) as u8,
-        (color.b() * 255.0) as u8,
-        (color.a() * 255.0) as u8,
+        (red * 255.0) as u8,
+        (green * 255.0) as u8,
+        (blue * 255.0) as u8,
+        (alpha * 255.0) as u8,
     );
 
     u32::from_be_bytes([r, g, b, a])
@@ -162,10 +164,11 @@ fn create_particle_fx(color: Option<Color>, effects: &mut Assets<EffectAsset>) -
 
     let mut color_gradient1 = Gradient::new();
     if let Some(color) = color {
-        color_gradient1.add_key(0.0, color.rgba_to_vec4() * Vec4::new(4.0, 4.0, 4.0, 1.0));
-        color_gradient1.add_key(0.1, color.rgba_to_vec4() * Vec4::new(3.0, 3.0, 3.0, 1.0));
-        color_gradient1.add_key(0.9, color.rgba_to_vec4() * Vec4::new(2.0, 2.0, 2.0, 1.0));
-        color_gradient1.add_key(1.0, color.rgba_to_vec4() * Vec4::new(2.0, 2.0, 2.0, 0.0));
+        let col_vec = Srgba::from(color).to_vec4();
+        color_gradient1.add_key(0.0, col_vec * Vec4::new(4.0, 4.0, 4.0, 1.0));
+        color_gradient1.add_key(0.1, col_vec * Vec4::new(3.0, 3.0, 3.0, 1.0));
+        color_gradient1.add_key(0.9, col_vec * Vec4::new(2.0, 2.0, 2.0, 1.0));
+        color_gradient1.add_key(1.0, col_vec * Vec4::new(2.0, 2.0, 2.0, 0.0));
     } else {
         color_gradient1.add_key(0.0, Vec4::new(4.0, 4.0, 4.0, 1.0));
         color_gradient1.add_key(0.1, Vec4::new(4.0, 4.0, 0.0, 1.0));
@@ -205,7 +208,7 @@ fn create_particle_fx(color: Option<Color>, effects: &mut Assets<EffectAsset>) -
         speed: (writer.rand(ScalarType::Float) * writer.lit(20.) + writer.lit(20.)).expr(),
     };
 
-    let effect = EffectAsset::new(32768, Spawner::once(1250.0.into(), true), writer.finish())
+    let effect = EffectAsset::new(vec![32768], Spawner::once(1250.0.into(), true), writer.finish())
         .with_name("explosion")
         .init(init_pos)
         .init(init_vel)
@@ -253,6 +256,7 @@ pub(super) fn register(app: &mut App) {
         (start_explosion_particle_system, respond_to_explosion)
             .chain()
             .in_set(ExplosionSystemSet::ProcessExplosions)
+            .ambiguous_with(PlayerParentChangingSet::ChangeParent)
             .run_if(in_state(GameState::Playing)),
     )
     .add_systems(

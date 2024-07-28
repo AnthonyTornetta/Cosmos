@@ -10,15 +10,20 @@ use bevy::{
         query::Added,
         system::{Commands, Query},
     },
+    prelude::IntoSystemConfigs,
     reflect::Reflect,
 };
 use serde::{Deserialize, Serialize};
 
-use crate::netty::sync::{sync_component, ClientAuthority, IdentifiableComponent, SyncableComponent};
+use crate::netty::{
+    sync::{sync_component, ClientAuthority, IdentifiableComponent, SyncableComponent},
+    system_sets::NetworkingSystemsSet,
+};
 
 use super::{
     line_system::{LineProperty, LinePropertyCalculator, LineSystem},
     sync::SyncableSystem,
+    StructureSystemsSet,
 };
 
 /// A ship system that stores information about the missile cannons
@@ -165,7 +170,12 @@ pub(super) fn register(app: &mut App) {
     sync_component::<MissileLauncherPreferredFocus>(app);
     sync_component::<MissileLauncherFocus>(app);
 
-    app.add_systems(Update, add_focus_to_new_missile_system)
-        .register_type::<MissileLauncherPreferredFocus>()
-        .register_type::<MissileLauncherFocus>();
+    app.add_systems(
+        Update,
+        add_focus_to_new_missile_system
+            .after(StructureSystemsSet::UpdateSystems)
+            .in_set(NetworkingSystemsSet::Between),
+    )
+    .register_type::<MissileLauncherPreferredFocus>()
+    .register_type::<MissileLauncherFocus>();
 }

@@ -30,16 +30,8 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
     });
 }
 
-fn added_skybox(mut query: Query<&mut Skybox, Added<Skybox>>, cubemap: Res<Cubemap>) {
-    for mut skybox in query.iter_mut() {
-        if cubemap.is_loaded {
-            skybox.image = cubemap.image_handle.clone();
-        }
-    }
-}
-
 fn asset_loaded(asset_server: Res<AssetServer>, mut images: ResMut<Assets<Image>>, mut cubemap: ResMut<Cubemap>) {
-    if !cubemap.is_loaded && asset_server.get_load_state(cubemap.image_handle.clone_weak()) == Some(LoadState::Loaded) {
+    if !cubemap.is_loaded && asset_server.get_load_state(cubemap.image_handle.id()) == Some(LoadState::Loaded) {
         let image = images.get_mut(&cubemap.image_handle).unwrap();
         // NOTE: PNGs do not have any metadata that could indicate they contain a cubemap texture,
         // so they appear as one texture. The following code reconfigures the texture as necessary.
@@ -52,6 +44,15 @@ fn asset_loaded(asset_server: Res<AssetServer>, mut images: ResMut<Assets<Image>
         }
 
         cubemap.is_loaded = true;
+    }
+}
+
+fn on_enter_main_menu(cubemap: Res<Cubemap>, mut commands: Commands, query: Query<Entity, With<MainMenuCamera>>) {
+    for ent in query.iter() {
+        commands.entity(ent).insert(Skybox {
+            image: cubemap.image_handle.clone(),
+            brightness: 1000.0,
+        });
     }
 }
 
@@ -69,6 +70,9 @@ pub(super) fn register(app: &mut App) {
         .add_systems(Startup, setup)
         .add_systems(
             Update,
-            (added_skybox, on_add_main_menu_camera, asset_loaded).run_if(in_state(GameState::MainMenu)),
-        );
+            (asset_loaded, on_add_main_menu_camera)
+                .chain()
+                .run_if(in_state(GameState::MainMenu)),
+        )
+        .add_systems(OnEnter(GameState::MainMenu), on_enter_main_menu);
 }

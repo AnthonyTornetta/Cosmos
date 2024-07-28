@@ -2,14 +2,23 @@
 
 use bevy::{
     ecs::event::EventReader,
-    prelude::{in_state, App, BuildChildren, Commands, Entity, IntoSystemConfigs, Parent, Query, ResMut, Transform, Update, With, Without},
+    prelude::{
+        in_state, App, BuildChildren, Commands, Entity, IntoSystemConfigs, IntoSystemSetConfigs, Parent, Query, ResMut, SystemSet,
+        Transform, Update, With, Without,
+    },
 };
 use bevy_rapier3d::pipeline::CollisionEvent;
-use bevy_renet::renet::RenetClient;
+use bevy_renet2::renet2::RenetClient;
 use cosmos_core::{
-    netty::{client::LocalPlayer, client_reliable_messages::ClientReliableMessages, cosmos_encoder, NettyChannelClient},
-    physics::location::Location,
-    structure::{chunk::CHUNK_DIMENSIONSF, planet::Planet, shared::build_mode::BuildMode, ship::pilot::Pilot, Structure},
+    netty::{
+        client::LocalPlayer, client_reliable_messages::ClientReliableMessages, cosmos_encoder, system_sets::NetworkingSystemsSet,
+        NettyChannelClient,
+    },
+    physics::location::{CosmosBundleSet, Location, LocationPhysicsSet},
+    structure::{
+        chunk::CHUNK_DIMENSIONSF, loading::StructureLoadingSet, planet::Planet, shared::build_mode::BuildMode, ship::pilot::Pilot,
+        Structure,
+    },
 };
 
 use crate::state::game_state::GameState;
@@ -17,7 +26,7 @@ use crate::state::game_state::GameState;
 pub mod client_ship_builder;
 pub mod create_ship;
 pub mod ship_movement;
-mod ui;
+pub mod ui;
 
 fn respond_to_collisions(
     mut ev_reader: EventReader<CollisionEvent>,
@@ -29,7 +38,7 @@ fn respond_to_collisions(
     mut renet_client: ResMut<RenetClient>,
 ) {
     for ev in ev_reader.read() {
-        let CollisionEvent::Started(e1, e2, _, _) = ev else {
+        let CollisionEvent::Started(e1, e2, _) = ev else {
             continue;
         };
 
@@ -117,14 +126,29 @@ fn remove_parent_when_too_far(
     }
 }
 
+#[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
+/// When the player's parent is changing, it should be done in this set
+pub enum PlayerParentChangingSet {
+    /// When the player's parent is changing, it should be done in this set
+    ChangeParent,
+}
+
 pub(super) fn register(app: &mut App) {
     client_ship_builder::register(app);
     ship_movement::register(app);
     create_ship::register(app);
     ui::register(app);
 
+    app.configure_sets(Update, PlayerParentChangingSet::ChangeParent.before(LocationPhysicsSet::DoPhysics));
+
     app.add_systems(
         Update,
-        (respond_to_collisions, remove_parent_when_too_far).run_if(in_state(GameState::Playing)),
+        (respond_to_collisions, remove_parent_when_too_far)
+            .chain()
+            .in_set(NetworkingSystemsSet::Between)
+            .after(CosmosBundleSet::HandleCosmosBundles)
+            .after(StructureLoadingSet::StructureLoaded)
+            .in_set(PlayerParentChangingSet::ChangeParent)
+            .run_if(in_state(GameState::Playing)),
     );
 }

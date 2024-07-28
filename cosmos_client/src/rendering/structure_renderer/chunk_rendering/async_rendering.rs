@@ -9,7 +9,7 @@ use bevy::prelude::{
 };
 use bevy::render::primitives::Aabb;
 use bevy::tasks::AsyncComputeTaskPool;
-use bevy::transform::TransformBundle;
+use bevy::transform::bundles::TransformBundle;
 use cosmos_core::block::Block;
 use cosmos_core::netty::client::LocalPlayer;
 use cosmos_core::physics::location::SECTOR_DIMENSIONS;
@@ -184,6 +184,7 @@ fn poll_rendering_chunks(
                     event_writer.send(AddMaterialEvent {
                         entity: ent,
                         add_material_id: mesh_material.material_id,
+                        texture_dimensions_index: mesh_material.texture_dimensions_index,
                         material_type: MaterialType::Normal,
                     });
 
@@ -208,6 +209,7 @@ fn poll_rendering_chunks(
                 event_writer.send(AddMaterialEvent {
                     entity,
                     add_material_id: mesh_material.material_id,
+                    texture_dimensions_index: mesh_material.texture_dimensions_index,
                     material_type: MaterialType::Normal,
                 });
             }

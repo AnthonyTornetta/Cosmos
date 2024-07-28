@@ -1,16 +1,19 @@
 //! Renders the inventory slots and handles all the logic for moving items around
 
 use bevy::{ecs::system::EntityCommands, prelude::*, window::PrimaryWindow};
-use bevy_renet::renet::RenetClient;
+use bevy_renet2::renet2::RenetClient;
 use cosmos_core::{
-    block::data::{BlockData, BlockDataIdentifier},
+    block::{
+        block_events::BlockEventsSet,
+        data::{BlockData, BlockDataIdentifier},
+    },
     ecs::NeedsDespawned,
     inventory::{
         itemstack::ItemStack,
         netty::{ClientInventoryMessages, InventoryIdentifier},
         HeldItemStack, Inventory,
     },
-    netty::{client::LocalPlayer, cosmos_encoder, sync::mapping::NetworkMapping, NettyChannelClient},
+    netty::{client::LocalPlayer, cosmos_encoder, sync::mapping::NetworkMapping, system_sets::NetworkingSystemsSet, NettyChannelClient},
 };
 
 use crate::{
@@ -248,7 +251,7 @@ fn toggle_inventory_rendering(
                                 ..default()
                             },
 
-                            background_color: BackgroundColor(Color::hex("2D2D2D0A").unwrap()),
+                            background_color: BackgroundColor(Srgba::hex("2D2D2D0A").unwrap().into()),
                             ..default()
                         },
                     ))
@@ -274,8 +277,7 @@ fn toggle_inventory_rendering(
 
                                     ..default()
                                 },
-                                border_color: BorderColor(Color::hex("222222").unwrap()),
-                                background_color: BackgroundColor(Color::WHITE),
+                                border_color: BorderColor(Srgba::hex("222222").unwrap().into()),
                                 ..default()
                             },
                             UiImage {
@@ -398,7 +400,7 @@ fn create_inventory_slot(
                 ..default()
             },
 
-            border_color: BorderColor(Color::hex("222222").unwrap()),
+            border_color: BorderColor(Srgba::hex("222222").unwrap().into()),
             ..default()
         },
         Interaction::None,
@@ -715,7 +717,8 @@ pub(super) fn register(app: &mut App) {
             InventorySet::FollowCursor,
             InventorySet::ToggleInventoryRendering,
         )
-            .before(UiSystemSet::DoUi)
+            .before(UiSystemSet::PreDoUi)
+            .after(BlockEventsSet::SendEventsForNextFrame)
             .chain(),
     )
     .add_systems(
@@ -727,6 +730,7 @@ pub(super) fn register(app: &mut App) {
             follow_cursor.in_set(InventorySet::FollowCursor),
             toggle_inventory_rendering.in_set(InventorySet::ToggleInventoryRendering),
         )
+            .in_set(NetworkingSystemsSet::Between)
             .run_if(in_state(GameState::Playing)),
     )
     .register_type::<DisplayedItemFromInventory>();

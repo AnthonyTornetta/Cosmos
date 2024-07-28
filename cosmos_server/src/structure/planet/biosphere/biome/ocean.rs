@@ -1,11 +1,11 @@
 //! Desert biome
 
-use bevy::prelude::{App, OnExit, Res, ResMut};
+use bevy::prelude::{App, IntoSystemConfigs, OnExit, Res, ResMut};
 use cosmos_core::{block::Block, registry::Registry, structure::planet::generation::block_layers::BlockLayers};
 
 use crate::state::GameState;
 
-use super::Biome;
+use super::{Biome, RegisterBiomesSet};
 
 fn register_biome(mut registry: ResMut<Registry<Biome>>, block_registry: Res<Registry<Block>>) {
     registry.register(Biome::new(
@@ -19,5 +19,10 @@ fn register_biome(mut registry: ResMut<Registry<Biome>>, block_registry: Res<Reg
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_systems(OnExit(GameState::Loading), register_biome);
+    app.add_systems(
+        OnExit(GameState::Loading),
+        register_biome
+            .in_set(RegisterBiomesSet::RegisterBiomes)
+            .ambiguous_with(RegisterBiomesSet::RegisterBiomes),
+    );
 }

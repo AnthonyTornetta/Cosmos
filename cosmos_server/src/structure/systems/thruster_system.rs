@@ -1,25 +1,32 @@
 use std::ops::Mul;
 
 use bevy::{
-    prelude::{in_state, App, Commands, EventReader, IntoSystemConfigs, OnEnter, Quat, Query, Res, ResMut, Transform, Update, Vec3, With},
+    prelude::{
+        in_state, App, Commands, EventReader, IntoSystemConfigs, OnEnter, Quat, Query, Res, ResMut, SystemSet, Transform, Update, Vec3,
+        With,
+    },
     time::Time,
 };
 use bevy_rapier3d::prelude::{ExternalImpulse, ReadMassProperties, Velocity};
 use cosmos_core::{
-    block::Block,
+    block::{block_events::BlockEventsSet, Block},
     events::block_events::BlockChangedEvent,
+    netty::system_sets::NetworkingSystemsSet,
     registry::Registry,
     structure::{
         events::StructureLoadedEvent,
-        loading::StructureLoadingSet,
-        ship::{pilot::Pilot, ship_movement::ShipMovement},
+        ship::{
+            pilot::Pilot,
+            ship_movement::{ShipMovement, ShipMovementSet},
+            Ship,
+        },
         systems::{
             dock_system::Docked,
             energy_storage_system::EnergyStorageSystem,
             thruster_system::{ThrusterBlocks, ThrusterProperty, ThrusterSystem},
-            StructureSystem, StructureSystemType, StructureSystems,
+            StructureSystem, StructureSystemType, StructureSystems, StructureSystemsSet,
         },
-        Structure,
+        Structure, StructureTypeSet,
     },
 };
 
@@ -74,7 +81,7 @@ fn block_update_system(
     }
 }
 
-fn update_movement(
+pub(super) fn update_ship_force_and_velocity(
     thrusters_query: Query<(&ThrusterSystem, &StructureSystem)>,
     mut query: Query<
         (
@@ -86,7 +93,7 @@ fn update_movement(
             &ReadMassProperties,
             Option<&Docked>,
         ),
-        With<Pilot>,
+        (With<Ship>, With<Pilot>),
     >,
     mut energy_query: Query<&mut EnergyStorageSystem>,
     time: Res<Time>,
@@ -143,7 +150,7 @@ fn update_movement(
             };
 
             if movement.braking {
-                let mut brake_vec = -velocity.linvel * readmass.0.mass;
+                let mut brake_vec = -velocity.linvel * readmass.get().mass;
                 let delta = time.delta_seconds() * MAX_BRAKE_DELTA_PER_THRUST * thruster_system.thrust_total();
 
                 if brake_vec.length_squared() >= delta * delta {
@@ -181,16 +188,33 @@ fn structure_loaded_event(
     }
 }
 
+#[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
+pub enum ThrusterSystemSet {
+    ApplyThrusters,
+}
+
 pub(super) fn register(app: &mut App) {
+    app.configure_sets(Update, ThrusterSystemSet::ApplyThrusters);
+
     app.insert_resource(ThrusterBlocks::default())
         .add_systems(OnEnter(GameState::PostLoading), register_thruster_blocks)
         .add_systems(
             Update,
             (
-                structure_loaded_event.in_set(StructureLoadingSet::StructureLoaded),
-                block_update_system,
-                update_movement,
+                structure_loaded_event
+                    .in_set(StructureSystemsSet::InitSystems)
+                    .ambiguous_with(StructureSystemsSet::InitSystems),
+                block_update_system
+                    .in_set(BlockEventsSet::ProcessEvents)
+                    .in_set(StructureSystemsSet::UpdateSystems),
+                update_ship_force_and_velocity
+                    .after(ShipMovementSet::RemoveShipMovement)
+                    .in_set(ThrusterSystemSet::ApplyThrusters)
+                    .in_set(StructureSystemsSet::UpdateSystems)
+                    .in_set(StructureTypeSet::Ship),
             )
+                .chain()
+                .in_set(NetworkingSystemsSet::Between)
                 .run_if(in_state(GameState::Playing)),
         )
         .register_type::<ThrusterSystem>();

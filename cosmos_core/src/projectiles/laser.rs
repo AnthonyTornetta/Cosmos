@@ -7,16 +7,19 @@ use bevy::{
     log::warn,
     pbr::{NotShadowCaster, NotShadowReceiver},
     prelude::{
-        App, Commands, Component, Entity, Event, EventWriter, GlobalTransform, Parent, Quat, Query, Res, Transform, Update, Vec3, With,
-        Without,
+        App, Commands, Component, Entity, Event, EventWriter, GlobalTransform, IntoSystemConfigs, Parent, Quat, Query, Res, SystemSet,
+        Transform, Update, Vec3, With, Without,
     },
     time::Time,
 };
-use bevy_rapier3d::prelude::{LockedAxes, PhysicsWorld, QueryFilter, RapierContext, RigidBody, Velocity, WorldId, DEFAULT_WORLD_ID};
+use bevy_rapier3d::{
+    plugin::RapierContextEntityLink,
+    prelude::{LockedAxes, QueryFilter, RapierContext, RigidBody, Velocity},
+};
 
 use crate::{
     ecs::{bundles::CosmosPbrBundle, NeedsDespawned},
-    netty::NoSendEntity,
+    netty::{system_sets::NetworkingSystemsSet, NoSendEntity},
     physics::{
         location::Location,
         player_world::{PlayerWorld, WorldWithin},
@@ -101,7 +104,7 @@ impl Laser {
         no_collide_entity: Option<Entity>,
         mut pbr: CosmosPbrBundle,
         time: &Time,
-        world_id: WorldId,
+        context_entity_link: RapierContextEntityLink,
         commands: &mut Commands,
     ) -> Entity {
         pbr.rotation = Transform::from_xyz(0.0, 0.0, 0.0)
@@ -130,7 +133,7 @@ impl Laser {
             FireTime {
                 time: time.elapsed_seconds(),
             },
-            PhysicsWorld { world_id },
+            context_entity_link,
             NotShadowCaster,
             NotShadowReceiver,
             NoSendEntity,
@@ -154,7 +157,7 @@ impl Laser {
         strength: f32,
         no_collide_entity: Option<Entity>,
         time: &Time,
-        world_id: WorldId,
+        context_entity_link: RapierContextEntityLink,
         commands: &mut Commands,
     ) -> Entity {
         Self::spawn_custom_pbr(
@@ -165,16 +168,16 @@ impl Laser {
             no_collide_entity,
             CosmosPbrBundle { ..Default::default() },
             time,
-            world_id,
+            context_entity_link,
             commands,
         )
     }
 }
 
-fn handle_events(
+fn send_laser_hit_events(
     mut query: Query<
         (
-            Option<&PhysicsWorld>,
+            &RapierContextEntityLink,
             &Location,
             Entity,
             Option<&NoCollide>,
@@ -186,19 +189,17 @@ fn handle_events(
     >,
     mut commands: Commands,
     mut event_writer: EventWriter<LaserCollideEvent>,
-    rapier_context: Res<RapierContext>,
     parent_query: Query<&Parent>,
     chunk_parent_query: Query<&Parent, With<ChunkEntity>>,
     transform_query: Query<&GlobalTransform, Without<Laser>>,
-    worlds: Query<(&Location, &PhysicsWorld, Entity), With<PlayerWorld>>,
+    worlds: Query<(&Location, &RapierContextEntityLink, Entity), With<PlayerWorld>>,
+    q_rapier_context: Query<&RapierContext>,
 ) {
     for (world, location, laser_entity, no_collide_entity, mut laser, velocity, world_within) in query.iter_mut() {
         if laser.active {
             let last_pos = laser.last_position;
             let delta_position = last_pos.relative_coords_to(location);
             laser.last_position = *location;
-
-            let world_id = world.map(|bw| bw.world_id).unwrap_or(DEFAULT_WORLD_ID);
 
             let coords: Option<Vec3> = world_within
                 .map(|world_within| {
@@ -224,8 +225,7 @@ fn handle_events(
             // so rather use its actual delta position for direction of travel calculations
             let ray_direction = delta_position.normalize_or_zero();
 
-            if let Ok(Some((entity, toi))) = rapier_context.cast_ray(
-                world_id,
+            if let Some((entity, toi)) = q_rapier_context.get(world.0).expect("Missing world!").cast_ray(
                 ray_start, // sometimes lasers pass through things that are next to where they are spawned, thus we check starting a bit behind them
                 ray_direction,
                 ray_distance,
@@ -285,7 +285,19 @@ fn despawn_lasers(mut commands: Commands, query: Query<(Entity, &FireTime), With
     }
 }
 
+#[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
+/// Laser systems should be put here
+pub enum LaserSystemSet {
+    /// When a laser hits something, the set that sends the [`LaserCollideEvent`] event will be here
+    SendHitEvents,
+}
+
 pub(super) fn register(app: &mut App) {
-    app.add_systems(Update, (handle_events, despawn_lasers))
-        .add_event::<LaserCollideEvent>();
+    app.add_systems(
+        Update,
+        (send_laser_hit_events.in_set(LaserSystemSet::SendHitEvents), despawn_lasers)
+            .in_set(NetworkingSystemsSet::Between)
+            .chain(),
+    )
+    .add_event::<LaserCollideEvent>();
 }

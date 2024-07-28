@@ -4,13 +4,16 @@ use std::f32::consts::PI;
 
 use bevy::prelude::*;
 use bevy_rapier3d::na::clamp;
-use cosmos_core::{netty::client::LocalPlayer, structure::ship::pilot::Pilot};
+use cosmos_core::{
+    netty::{client::LocalPlayer, system_sets::NetworkingSystemsSet},
+    structure::ship::pilot::Pilot,
+};
 
 use crate::{
     rendering::MainCamera,
     settings::MouseSensitivity,
     state::game_state::GameState,
-    window::setup::{CursorFlags, DeltaCursorPosition},
+    window::setup::{CursorFlags, CursorFlagsSet, DeltaCursorPosition},
 };
 
 /// Attach this to the player to give it a first person camera
@@ -51,5 +54,11 @@ fn process_player_camera(
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_systems(Update, process_player_camera.run_if(in_state(GameState::Playing)));
+    app.add_systems(
+        Update,
+        process_player_camera
+            .in_set(NetworkingSystemsSet::Between)
+            .after(CursorFlagsSet::ApplyCursorFlagsUpdates)
+            .run_if(in_state(GameState::Playing)),
+    );
 }

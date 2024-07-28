@@ -4,15 +4,16 @@ use bevy::{
     ecs::system::Commands,
     log::info,
     math::Quat,
-    prelude::{in_state, App, Entity, Event, EventReader, IntoSystemConfigs, Query, ResMut, Update},
+    prelude::{in_state, App, Entity, Event, EventReader, IntoSystemConfigs, Query, ResMut, Update, Without},
 };
 use bevy_rapier3d::dynamics::Velocity;
-use bevy_renet::renet::RenetServer;
+use bevy_renet2::renet2::RenetServer;
 use cosmos_core::{
+    block::block_events::BlockEventsSet,
     events::structure::change_pilot_event::ChangePilotEvent,
     netty::{
         cosmos_encoder, server_reliable_messages::ServerReliableMessages, server_unreliable_messages::ServerUnreliableMessages,
-        NettyChannelServer,
+        system_sets::NetworkingSystemsSet, NettyChannelServer,
     },
     physics::location::Location,
     structure::{
@@ -20,11 +21,11 @@ use cosmos_core::{
         full_structure::FullStructure,
         loading::StructureLoadingSet,
         ship::{ship_builder::TShipBuilder, ship_movement::ShipMovement},
-        Structure,
+        Structure, StructureTypeSet,
     },
 };
 
-use crate::state::GameState;
+use crate::{ai::AiControlled, state::GameState};
 
 use super::{loading::ShipNeedsCreated, server_ship_builder::ServerShipBuilder};
 
@@ -38,7 +39,7 @@ pub struct ShipSetMovementEvent {
 }
 
 fn monitor_set_movement_events(
-    mut query: Query<&mut ShipMovement>,
+    mut query: Query<&mut ShipMovement, Without<AiControlled>>, // don't sync AI controlled movements to not give players that knowledge
     mut event_reader: EventReader<ShipSetMovementEvent>,
     mut server: ResMut<RenetServer>,
 ) {
@@ -97,7 +98,11 @@ pub(crate) fn create_ship_event_reader(mut event_reader: EventReader<CreateShipE
 pub(super) fn register(app: &mut App) {
     app.add_event::<ShipSetMovementEvent>().add_systems(
         Update,
-        (monitor_pilot_changes, monitor_set_movement_events).run_if(in_state(GameState::Playing)),
+        (monitor_pilot_changes, monitor_set_movement_events)
+            .after(BlockEventsSet::PostProcessEvents)
+            .in_set(StructureTypeSet::Ship)
+            .in_set(NetworkingSystemsSet::SyncComponents)
+            .run_if(in_state(GameState::Playing)),
     );
 
     app.add_event::<CreateShipEvent>().add_systems(

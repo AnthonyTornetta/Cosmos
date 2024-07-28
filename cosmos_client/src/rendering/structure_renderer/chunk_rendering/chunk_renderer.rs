@@ -21,7 +21,7 @@ use super::{BlockMeshRegistry, ChunkMesh, ChunkRenderResult, MeshBuilder, MeshIn
 
 #[derive(Default, Debug)]
 pub struct ChunkRenderer {
-    meshes: HashMap<u16, MeshInfo>,
+    meshes: HashMap<(u16, u32), MeshInfo>,
     lights: HashMap<ChunkBlockCoordinate, BlockLightProperties>,
 }
 
@@ -267,17 +267,13 @@ impl ChunkRenderer {
                     continue;
                 };
 
-                if !self.meshes.contains_key(&mat_id) {
-                    self.meshes.insert(mat_id, Default::default());
-                }
-
                 let material_definition = materials_registry.from_numeric_id(mat_id);
-
-                let mesh_builder = self.meshes.get_mut(&mat_id).unwrap();
 
                 let block_rotation = block_info.get_rotation();
 
                 let rotation = block_rotation.as_quat();
+
+                let mut mesh_builder = None;
 
                 for (direction, face) in faces
                     .iter()
@@ -386,11 +382,15 @@ impl ChunkRenderer {
 
                     let additional_info = material_definition.add_material_data(block_id, &mesh_info);
 
-                    mesh_builder.add_mesh_information(
+                    if mesh_builder.is_none() {
+                        mesh_builder = Some(self.meshes.entry((mat_id, image_index.dimension_index)).or_default());
+                    }
+
+                    mesh_builder.as_mut().unwrap().add_mesh_information(
                         &mesh_info,
                         Vec3::new(center_offset_x, center_offset_y, center_offset_z),
                         uvs,
-                        image_index,
+                        image_index.texture_index,
                         additional_info,
                     );
 
@@ -413,11 +413,12 @@ impl ChunkRenderer {
     pub fn create_mesh(self) -> ChunkMesh {
         let mut mesh_materials = Vec::new();
 
-        for (material, chunk_mesh_info) in self.meshes {
+        for ((material, texture_dimensions_index), chunk_mesh_info) in self.meshes {
             let mesh = chunk_mesh_info.build_mesh();
 
             mesh_materials.push(MeshMaterial {
                 material_id: material,
+                texture_dimensions_index,
                 mesh,
             });
         }

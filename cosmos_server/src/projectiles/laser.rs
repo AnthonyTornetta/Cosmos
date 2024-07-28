@@ -1,7 +1,8 @@
 use bevy::prelude::*;
 use cosmos_core::{
     block::Block,
-    projectiles::laser::{Laser, LaserCollideEvent},
+    netty::system_sets::NetworkingSystemsSet,
+    projectiles::laser::{Laser, LaserCollideEvent, LaserSystemSet},
     registry::Registry,
     structure::{
         block_health::events::{BlockDestroyedEvent, BlockTakeDamageEvent},
@@ -15,6 +16,7 @@ use crate::{
         SerializedData,
     },
     state::GameState,
+    structure::{block_health::BlockHealthSet, systems::shield_system::ShieldSet},
 };
 
 /// Called when the laser hits a structure at a given position
@@ -74,6 +76,14 @@ fn on_save_laser(mut query: Query<&mut SerializedData, (With<NeedsSaved>, With<L
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_systems(Update, respond_laser_hit_event.run_if(in_state(GameState::Playing)))
-        .add_systems(SAVING_SCHEDULE, on_save_laser.in_set(SavingSystemSet::DoSaving));
+    app.add_systems(
+        Update,
+        respond_laser_hit_event
+            .in_set(NetworkingSystemsSet::Between)
+            .before(BlockHealthSet::ProcessHealthChanges)
+            .after(LaserSystemSet::SendHitEvents)
+            .after(ShieldSet::OnShieldHit)
+            .run_if(in_state(GameState::Playing)),
+    )
+    .add_systems(SAVING_SCHEDULE, on_save_laser.in_set(SavingSystemSet::DoSaving));
 }

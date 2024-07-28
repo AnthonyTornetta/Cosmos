@@ -6,7 +6,7 @@ use bevy::{
     app::Update,
     prelude::{
         in_state, not, resource_changed, resource_exists, resource_exists_and_changed, AmbientLight, App, Commands, IntoSystemConfigs,
-        OnEnter, OnExit, Res, ResMut, Resource,
+        IntoSystemSetConfigs, OnEnter, OnExit, Res, ResMut, Resource, SystemSet,
     },
     utils::HashMap,
 };
@@ -226,11 +226,29 @@ fn init_settings_lang(mut commands: Commands) {
     commands.insert_resource(Lang::<Setting>::new("en_us", vec!["settings"]));
 }
 
+#[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
+/// Set for changing + loading settings
+pub enum SettingsSet {
+    /// Settings changes should be here
+    ChangeSettings,
+    /// Responding to changed settings/initially loading settings should be done here.
+    LoadSettings,
+}
+
 pub(super) fn register(app: &mut App) {
     create_registry::<Setting>(app, "cosmos:settings");
 
     app.add_systems(OnEnter(GameState::PreLoading), init_settings_lang)
         .add_systems(OnExit(GameState::PostLoading), insert_settings_lang);
+
+    app.configure_sets(
+        Update,
+        (
+            SettingsSet::ChangeSettings,
+            SettingsSet::LoadSettings.run_if(resource_exists_and_changed::<Registry<Setting>>),
+        )
+            .chain(),
+    );
 
     app.add_systems(
         Update,
@@ -239,13 +257,12 @@ pub(super) fn register(app: &mut App) {
             serialize_settings.run_if(resource_changed::<Registry<Setting>>),
         )
             .chain()
+            .after(SettingsSet::LoadSettings)
             .run_if(not(in_state(GameState::PreLoading))),
     );
 
     app.add_systems(OnEnter(GameState::PreLoading), register_settings);
 
-    app.add_systems(OnEnter(GameState::Loading), load_settings.chain()).add_systems(
-        Update,
-        (load_gamma, load_mouse_sensitivity).run_if(resource_exists_and_changed::<Registry<Setting>>),
-    );
+    app.add_systems(OnEnter(GameState::Loading), load_settings)
+        .add_systems(Update, (load_gamma, load_mouse_sensitivity).in_set(SettingsSet::LoadSettings));
 }

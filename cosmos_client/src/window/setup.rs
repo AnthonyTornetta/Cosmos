@@ -125,11 +125,24 @@ fn apply_cursor_flags_on_change(cursor_flags: Res<CursorFlags>, mut primary_quer
     apply_cursor_flags(&mut window, *cursor_flags);
 }
 
+#[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
+/// Handles when the cursor should be shown/hidden
+pub enum CursorFlagsSet {
+    /// Additions/removals of the [`CursorUnlocker`] component should be done in or before this.
+    UpdateCursorFlags,
+    /// The cursor is shown/hidden based on the existence of any [`CursorUnlocker`] entities.
+    ApplyCursorFlagsUpdates,
+}
+
 pub(super) fn register(app: &mut App) {
     app.insert_resource(CursorFlags {
         locked: true,
         visible: false,
     })
+    .configure_sets(
+        Update,
+        (CursorFlagsSet::UpdateCursorFlags, CursorFlagsSet::ApplyCursorFlagsUpdates).chain(),
+    )
     .insert_resource(DeltaCursorPosition { x: 0.0, y: 0.0 })
     .add_systems(Startup, setup_window)
     .add_systems(
@@ -138,8 +151,11 @@ pub(super) fn register(app: &mut App) {
             update_mouse_deltas,
             toggle_mouse_freeze,
             window_focus_changed,
-            apply_cursor_flags_on_change,
+            apply_cursor_flags_on_change.in_set(CursorFlagsSet::UpdateCursorFlags),
         )
             .chain(),
     );
+
+    // This never matters
+    app.allow_ambiguous_component::<Window>();
 }

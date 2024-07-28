@@ -3,17 +3,18 @@
 use std::fs;
 
 use bevy::prelude::*;
-use bevy_rapier3d::prelude::PhysicsWorld;
+use bevy_rapier3d::plugin::RapierContextEntityLink;
 use cosmos_core::{
     block::data::persistence::ChunkLoadBlockDataEvent,
-    netty::{cosmos_encoder, NoSendEntity},
+    netty::{cosmos_encoder, system_sets::NetworkingSystemsSet, NoSendEntity},
     physics::location::Location,
     structure::{
         chunk::{netty::SerializedChunkBlockData, Chunk, ChunkEntity},
         coordinates::{ChunkCoordinate, CoordinateType},
         dynamic_structure::DynamicStructure,
+        loading::StructureLoadingSet,
         planet::{planet_builder::TPlanetBuilder, Planet},
-        ChunkInitEvent, Structure,
+        ChunkInitEvent, Structure, StructureTypeSet,
     },
 };
 use serde::{Deserialize, Serialize};
@@ -24,7 +25,10 @@ use crate::persistence::{
     EntityId, SaveFileIdentifier, SerializedData,
 };
 
-use super::{generation::planet_generator::ChunkNeedsGenerated, server_planet_builder::ServerPlanetBuilder};
+use super::{
+    biosphere::biosphere_generation::BiosphereGenerationSet, generation::planet_generator::ChunkNeedsGenerated,
+    server_planet_builder::ServerPlanetBuilder,
+};
 
 #[derive(Debug, Serialize, Deserialize)]
 struct PlanetSaveData {
@@ -89,12 +93,12 @@ fn structure_created(created: Query<Entity, (Added<Structure>, Without<EntityId>
 }
 
 fn populate_chunks(
-    query: Query<(Entity, &ChunkNeedsPopulated)>,
-    structure_query: Query<(&EntityId, Option<&SaveFileIdentifier>, &Location, &PhysicsWorld)>,
+    q_chunk_needs_populated: Query<(Entity, &ChunkNeedsPopulated)>,
+    q_structure: Query<(&EntityId, Option<&SaveFileIdentifier>, &Location, &RapierContextEntityLink)>,
     mut commands: Commands,
 ) {
-    for (entity, needs) in query.iter() {
-        let Ok((entity_id, structure_svi, loc, physics_world)) = structure_query.get(needs.structure_entity) else {
+    for (entity, needs) in q_chunk_needs_populated.iter() {
+        let Ok((entity_id, structure_svi, loc, physics_world)) = q_structure.get(needs.structure_entity) else {
             commands.entity(entity).remove::<ChunkNeedsPopulated>();
 
             continue;
@@ -196,8 +200,25 @@ fn load_chunk(
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_systems(Update, (structure_created, populate_chunks).chain())
-        .add_systems(SAVING_SCHEDULE, on_save_structure.in_set(SavingSystemSet::DoSaving))
-        .add_systems(LOADING_SCHEDULE, on_load_structure.in_set(LoadingSystemSet::DoLoading))
-        .add_systems(LOADING_SCHEDULE, load_chunk.in_set(LoadingSystemSet::DoLoading));
+    app.add_systems(
+        Update,
+        (
+            structure_created.in_set(StructureLoadingSet::CreateChunkEntities),
+            populate_chunks.in_set(StructureLoadingSet::LoadChunkData),
+        )
+            .in_set(NetworkingSystemsSet::Between)
+            .chain(),
+    )
+    .add_systems(SAVING_SCHEDULE, on_save_structure.in_set(SavingSystemSet::DoSaving))
+    .add_systems(
+        LOADING_SCHEDULE,
+        (
+            on_load_structure,
+            // This will not interfere with the generation of chunks, so their relative ordering does not matter.
+            load_chunk.ambiguous_with(BiosphereGenerationSet::GenerateChunkFeatures),
+        )
+            .chain()
+            .in_set(LoadingSystemSet::DoLoading)
+            .in_set(StructureTypeSet::Planet),
+    );
 }

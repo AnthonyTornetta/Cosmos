@@ -15,6 +15,7 @@ pub mod chunk_renderer;
 struct MeshMaterial {
     mesh: Mesh,
     material_id: u16,
+    texture_dimensions_index: u32,
 }
 
 #[derive(Debug)]

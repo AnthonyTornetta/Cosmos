@@ -2,6 +2,7 @@
 
 use bevy::{app::App, core_pipeline::bloom::BloomSettings, hierarchy::DespawnRecursiveExt, prelude::*, render::camera::Camera};
 use bevy_kira_audio::prelude::AudioReceiver;
+use bevy_rapier3d::plugin::DefaultRapierContext;
 
 use crate::{state::game_state::GameState, ui::UiSystemSet};
 
@@ -111,8 +112,15 @@ fn fade_in_background(
         const MIN_A: f32 = 0.6;
 
         let alpha_now = (1.0 / (6.0 * main_menu_time.0) + MIN_A).min(1.0);
+        let old_bg = Srgba::from(bg.0);
 
-        bg.0 = Color::rgba(bg.0.r(), bg.0.g(), bg.0.b(), alpha_now);
+        bg.0 = Srgba {
+            red: old_bg.red,
+            green: old_bg.green,
+            blue: old_bg.blue,
+            alpha: alpha_now,
+        }
+        .into();
     }
 
     main_menu_time.0 += time.delta_seconds();
@@ -143,7 +151,15 @@ fn create_main_menu_camera(mut commands: Commands) {
 }
 
 fn create_main_menu_resource(
-    q_entity: Query<Entity, (Without<SurviveMainMenu>, Without<Window>, Without<Parent>)>,
+    q_entity: Query<
+        Entity,
+        (
+            Without<SurviveMainMenu>,
+            Without<Window>,
+            Without<DefaultRapierContext>,
+            Without<Parent>,
+        ),
+    >,
     mut commands: Commands,
     mm_resource: Option<Res<MainMenuSubState>>,
 ) {

@@ -2,7 +2,7 @@
 
 use bevy::{
     log::warn,
-    prelude::{App, Component, Entity, Event, OnEnter, Res, ResMut},
+    prelude::{App, Component, Entity, Event, IntoSystemConfigs, OnEnter, Res, ResMut},
     reflect::TypePath,
 };
 use cosmos_core::{
@@ -15,7 +15,7 @@ use cosmos_core::{
 
 use crate::GameState;
 
-use super::{register_biosphere, BiosphereMarkerComponent, TBiosphere, TGenerateChunkEvent, TemperatureRange};
+use super::{biome::RegisterBiomesSet, register_biosphere, BiosphereMarkerComponent, TBiosphere, TGenerateChunkEvent, TemperatureRange};
 
 #[derive(Component, Debug, Default, Clone, Copy, TypePath)]
 /// Marks that this is for a grass biosphere
@@ -118,5 +118,10 @@ pub(super) fn register(app: &mut App) {
         Some("cosmos:water"),
     );
 
-    app.add_systems(OnEnter(GameState::PostLoading), register_biosphere_biomes);
+    app.add_systems(
+        OnEnter(GameState::PostLoading),
+        register_biosphere_biomes
+            .in_set(RegisterBiomesSet::RegisterBiomes)
+            .ambiguous_with(RegisterBiomesSet::RegisterBiomes),
+    );
 }

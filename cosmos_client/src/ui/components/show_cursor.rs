@@ -10,7 +10,10 @@ use bevy::{
     },
 };
 
-use crate::{ui::UiSystemSet, window::setup::CursorFlags};
+use crate::{
+    ui::UiSystemSet,
+    window::setup::{CursorFlags, CursorFlagsSet},
+};
 
 #[derive(Component, Default, Debug, Clone, Copy)]
 /// If any entity has this component, the cursor will be shown.
@@ -42,5 +45,10 @@ pub fn no_open_menus(q_show_cursor: Query<(), With<ShowCursor>>) -> bool {
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_systems(Update, show_cursor.in_set(UiSystemSet::FinishUi));
+    app.add_systems(
+        Update,
+        show_cursor
+            .in_set(CursorFlagsSet::ApplyCursorFlagsUpdates)
+            .in_set(UiSystemSet::FinishUi),
+    );
 }

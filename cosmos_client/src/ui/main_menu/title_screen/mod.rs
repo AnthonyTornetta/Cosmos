@@ -17,7 +17,10 @@ use crate::{
     },
 };
 
-use super::{super::components::text_input::InputValue, in_main_menu_state, MainMenuRootUiNode, MainMenuSubState, MainMenuSystemSet};
+use super::{
+    super::components::text_input::InputValue, disconnect_screen::DisconnectMenuSet, in_main_menu_state, settings_screen::SettingsMenuSet,
+    MainMenuRootUiNode, MainMenuSubState, MainMenuSystemSet,
+};
 
 #[derive(Debug, Clone, Component, PartialEq, Eq)]
 struct ConnectionString(String);
@@ -46,7 +49,7 @@ impl ReactableValue for ErrorMessage {
 }
 
 fn create_main_menu(mut commands: Commands, asset_server: Res<AssetServer>, q_ui_root: Query<Entity, With<MainMenuRootUiNode>>) {
-    let cool_blue = Color::hex("00FFFF").unwrap();
+    let cool_blue = Srgba::hex("00FFFF").unwrap().into();
 
     let text_style = TextStyle {
         color: Color::WHITE,
@@ -94,9 +97,9 @@ fn create_main_menu(mut commands: Commands, asset_server: Res<AssetServer>, q_ui
             },
             button: Button {
                 button_styles: Some(ButtonStyles {
-                    background_color: Color::hex("333333").unwrap(),
-                    hover_background_color: Color::hex("232323").unwrap(),
-                    press_background_color: Color::hex("111111").unwrap(),
+                    background_color: Srgba::hex("333333").unwrap().into(),
+                    hover_background_color: Srgba::hex("232323").unwrap().into(),
+                    press_background_color: Srgba::hex("111111").unwrap().into(),
                     ..Default::default()
                 }),
                 text: Some(("Connect".into(), text_style.clone())),
@@ -116,8 +119,8 @@ fn create_main_menu(mut commands: Commands, asset_server: Res<AssetServer>, q_ui
                 },
                 value: InputValue::new("localhost"),
                 node_bundle: NodeBundle {
-                    border_color: Color::hex("555555").unwrap().into(),
-                    background_color: Color::hex("111111").unwrap().into(),
+                    border_color: Srgba::hex("555555").unwrap().into(),
+                    background_color: Srgba::hex("111111").unwrap().into(),
                     style: Style {
                         border: UiRect::all(Val::Px(2.0)),
                         width: Val::Px(500.0),
@@ -151,9 +154,9 @@ fn create_main_menu(mut commands: Commands, asset_server: Res<AssetServer>, q_ui
             },
             button: Button {
                 button_styles: Some(ButtonStyles {
-                    background_color: Color::hex("333333").unwrap(),
-                    hover_background_color: Color::hex("232323").unwrap(),
-                    press_background_color: Color::hex("111111").unwrap(),
+                    background_color: Srgba::hex("333333").unwrap().into(),
+                    hover_background_color: Srgba::hex("232323").unwrap().into(),
+                    press_background_color: Srgba::hex("111111").unwrap().into(),
                     ..Default::default()
                 }),
                 text: Some(("Settings".into(), text_style.clone())),
@@ -176,9 +179,9 @@ fn create_main_menu(mut commands: Commands, asset_server: Res<AssetServer>, q_ui
             },
             button: Button {
                 button_styles: Some(ButtonStyles {
-                    background_color: Color::hex("333333").unwrap(),
-                    hover_background_color: Color::hex("232323").unwrap(),
-                    press_background_color: Color::hex("111111").unwrap(),
+                    background_color: Srgba::hex("333333").unwrap().into(),
+                    hover_background_color: Srgba::hex("232323").unwrap().into(),
+                    press_background_color: Srgba::hex("111111").unwrap().into(),
                     ..Default::default()
                 }),
                 text: Some(("Quit".into(), text_style.clone())),
@@ -274,7 +277,12 @@ fn trigger_connection(
 }
 
 fn quit_game(mut evw_app_exit: EventWriter<AppExit>) {
-    evw_app_exit.send(AppExit);
+    evw_app_exit.send(AppExit::Success);
+}
+
+#[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
+pub(super) enum TitleScreenSet {
+    TitleScreenInteractions,
 }
 
 pub(super) fn register(app: &mut App) {
@@ -284,32 +292,35 @@ pub(super) fn register(app: &mut App) {
 
     add_reactable_type::<ConnectionString>(app);
 
+    app.configure_sets(
+        Update,
+        TitleScreenSet::TitleScreenInteractions
+            .ambiguous_with(DisconnectMenuSet::DisconnectMenuInteractions)
+            .ambiguous_with(SettingsMenuSet::SettingsMenuInteractions),
+    );
+
     app.add_systems(
         Update,
-        create_main_menu
-            .run_if(in_main_menu_state(MainMenuSubState::TitleScreen))
-            .run_if(resource_exists_and_changed::<MainMenuSubState>)
-            .in_set(MainMenuSystemSet::InitializeMenu),
-    )
-    .add_systems(
-        Update,
-        goto_settings
-            .run_if(on_event::<SettingsButtonEvent>())
-            .run_if(in_main_menu_state(MainMenuSubState::TitleScreen))
-            .in_set(MainMenuSystemSet::UpdateMenu),
-    )
-    .add_systems(
-        Update,
-        trigger_connection
-            .run_if(on_event::<ConnectButtonEvent>())
-            .run_if(in_main_menu_state(MainMenuSubState::TitleScreen))
-            .in_set(MainMenuSystemSet::UpdateMenu),
-    )
-    .add_systems(
-        Update,
-        quit_game
-            .run_if(on_event::<QuitButtonEvent>())
-            .run_if(in_main_menu_state(MainMenuSubState::TitleScreen))
-            .in_set(MainMenuSystemSet::UpdateMenu),
+        (
+            create_main_menu
+                .run_if(in_main_menu_state(MainMenuSubState::TitleScreen))
+                .run_if(resource_exists_and_changed::<MainMenuSubState>)
+                .in_set(MainMenuSystemSet::InitializeMenu),
+            goto_settings
+                .run_if(on_event::<SettingsButtonEvent>())
+                .run_if(in_main_menu_state(MainMenuSubState::TitleScreen))
+                .in_set(MainMenuSystemSet::UpdateMenu),
+            trigger_connection
+                .run_if(in_state(GameState::MainMenu))
+                .run_if(on_event::<ConnectButtonEvent>())
+                .run_if(in_main_menu_state(MainMenuSubState::TitleScreen))
+                .in_set(MainMenuSystemSet::UpdateMenu),
+            quit_game
+                .run_if(on_event::<QuitButtonEvent>())
+                .run_if(in_main_menu_state(MainMenuSubState::TitleScreen))
+                .in_set(MainMenuSystemSet::UpdateMenu),
+        )
+            .in_set(TitleScreenSet::TitleScreenInteractions)
+            .chain(),
     );
 }

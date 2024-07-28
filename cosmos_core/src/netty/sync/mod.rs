@@ -3,10 +3,10 @@
 //! See [`sync_component`]
 
 use bevy::{
-    app::App,
+    app::{App, Startup},
     ecs::{component::Component, entity::Entity, event::Event, schedule::SystemSet, system::ResMut},
 };
-use bevy_renet::renet::ClientId;
+use bevy_renet2::renet2::ClientId;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
 use crate::{
@@ -36,7 +36,7 @@ pub mod mapping;
 pub mod server_entity_syncing;
 
 #[cfg(feature = "client")]
-mod client_syncing;
+pub mod client_syncing;
 #[cfg(feature = "server")]
 mod server_syncing;
 
@@ -202,6 +202,11 @@ struct GotComponentToRemoveEvent {
     authority_entity: Entity,
 }
 
+#[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
+enum RegisterComponentSet {
+    RegisterComponent,
+}
+
 fn register_component<T: SyncableComponent>(mut registry: ResMut<Registry<SyncedComponentId>>) {
     registry.register(SyncedComponentId {
         unlocalized_name: T::get_component_unlocalized_name().to_owned(),
@@ -243,6 +248,8 @@ pub(super) fn register(app: &mut App) {
     create_registry::<SyncedComponentId>(app, "cosmos:syncable_components");
 
     app.add_event::<GotComponentToSyncEvent>().add_event::<GotComponentToRemoveEvent>();
+
+    app.configure_sets(Startup, RegisterComponentSet::RegisterComponent);
 
     #[cfg(feature = "client")]
     {

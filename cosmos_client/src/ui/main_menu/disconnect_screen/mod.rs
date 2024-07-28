@@ -1,9 +1,12 @@
 use bevy::{app::App, prelude::*};
-use bevy_renet::renet::{DisconnectReason, RenetClient};
+use bevy_renet2::renet2::{DisconnectReason, RenetClient};
 
 use crate::ui::components::button::{register_button, Button, ButtonBundle, ButtonEvent, ButtonStyles};
 
-use super::{in_main_menu_state, MainMenuRootUiNode, MainMenuSubState, MainMenuSystemSet};
+use super::{
+    in_main_menu_state, settings_screen::SettingsMenuSet, title_screen::TitleScreenSet, MainMenuRootUiNode, MainMenuSubState,
+    MainMenuSystemSet,
+};
 
 fn create_disconnect_screen(
     mut commands: Commands,
@@ -11,7 +14,7 @@ fn create_disconnect_screen(
     q_ui_root: Query<Entity, With<MainMenuRootUiNode>>,
     client: Option<Res<RenetClient>>,
 ) {
-    let cool_blue = Color::hex("00FFFF").unwrap();
+    let cool_blue: Color = Srgba::hex("00FFFF").unwrap().into();
 
     let text_style = TextStyle {
         color: Color::WHITE,
@@ -84,9 +87,9 @@ fn create_disconnect_screen(
             },
             button: Button {
                 button_styles: Some(ButtonStyles {
-                    background_color: Color::hex("333333").unwrap(),
-                    hover_background_color: Color::hex("232323").unwrap(),
-                    press_background_color: Color::hex("111111").unwrap(),
+                    background_color: Srgba::hex("333333").unwrap().into(),
+                    hover_background_color: Srgba::hex("232323").unwrap().into(),
+                    press_background_color: Srgba::hex("111111").unwrap().into(),
                     ..Default::default()
                 }),
                 text: Some(("OK".into(), text_style.clone())),
@@ -109,21 +112,34 @@ fn ok_clicked(mut mms: ResMut<MainMenuSubState>) {
     *mms = MainMenuSubState::TitleScreen;
 }
 
+#[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
+pub(super) enum DisconnectMenuSet {
+    DisconnectMenuInteractions,
+}
+
 pub(super) fn register(app: &mut App) {
     register_button::<OkButtonEvent>(app);
 
+    app.configure_sets(
+        Update,
+        DisconnectMenuSet::DisconnectMenuInteractions
+            .ambiguous_with(SettingsMenuSet::SettingsMenuInteractions)
+            .ambiguous_with(TitleScreenSet::TitleScreenInteractions),
+    );
+
     app.add_systems(
         Update,
-        create_disconnect_screen
-            .run_if(in_main_menu_state(MainMenuSubState::Disconnect))
-            .run_if(resource_exists_and_changed::<MainMenuSubState>)
-            .in_set(MainMenuSystemSet::InitializeMenu),
-    )
-    .add_systems(
-        Update,
-        ok_clicked
-            .run_if(on_event::<OkButtonEvent>())
-            .run_if(in_main_menu_state(MainMenuSubState::Disconnect))
-            .in_set(MainMenuSystemSet::UpdateMenu),
+        (
+            create_disconnect_screen
+                .run_if(in_main_menu_state(MainMenuSubState::Disconnect))
+                .run_if(resource_exists_and_changed::<MainMenuSubState>)
+                .in_set(MainMenuSystemSet::InitializeMenu),
+            ok_clicked
+                .run_if(on_event::<OkButtonEvent>())
+                .run_if(in_main_menu_state(MainMenuSubState::Disconnect))
+                .in_set(MainMenuSystemSet::UpdateMenu),
+        )
+            .in_set(DisconnectMenuSet::DisconnectMenuInteractions)
+            .chain(),
     );
 }

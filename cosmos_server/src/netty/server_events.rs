@@ -2,19 +2,18 @@
 
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::*;
-use bevy_renet::renet::transport::NetcodeServerTransport;
-use bevy_renet::renet::{ClientId, RenetServer, ServerEvent};
+use bevy_renet2::renet2::transport::NetcodeServerTransport;
+use bevy_renet2::renet2::{ClientId, RenetServer, ServerEvent};
 use cosmos_core::economy::Credits;
 use cosmos_core::ecs::NeedsDespawned;
 use cosmos_core::entities::player::render_distance::RenderDistance;
-use cosmos_core::inventory::itemstack::{ItemShouldHaveData, ItemStackSystemSet};
+use cosmos_core::inventory::itemstack::ItemShouldHaveData;
 use cosmos_core::inventory::Inventory;
 use cosmos_core::item::Item;
 use cosmos_core::netty::netty_rigidbody::NettyRigidBodyLocation;
 use cosmos_core::netty::server::ServerLobby;
 use cosmos_core::netty::server_reliable_messages::ServerReliableMessages;
 use cosmos_core::netty::sync::server_entity_syncing::RequestedEntityEvent;
-use cosmos_core::netty::system_sets::NetworkingSystemsSet;
 use cosmos_core::netty::{cosmos_encoder, NettyChannelServer};
 use cosmos_core::persistence::LoadingDistance;
 use cosmos_core::physics::location::{Location, Sector};
@@ -23,12 +22,11 @@ use cosmos_core::registry::identifiable::Identifiable;
 use cosmos_core::registry::Registry;
 use cosmos_core::structure::chunk::CHUNK_DIMENSIONSF;
 use cosmos_core::{entities::player::Player, netty::netty_rigidbody::NettyRigidBody};
-use renet_visualizer::RenetServerVisualizer;
+use renet2_visualizer::RenetServerVisualizer;
 
 use crate::entities::player::PlayerLooking;
 use crate::netty::network_helpers::ClientTicks;
 use crate::physics::assign_player_world;
-use crate::state::GameState;
 
 fn generate_player_inventory(
     inventory_entity: Entity,
@@ -54,7 +52,7 @@ pub struct PlayerConnectedEvent {
     pub client_id: ClientId,
 }
 
-fn handle_server_events(
+pub(super) fn handle_server_events(
     mut commands: Commands,
     mut server: ResMut<RenetServer>,
     transport: Res<NetcodeServerTransport>,
@@ -62,10 +60,9 @@ fn handle_server_events(
     mut lobby: ResMut<ServerLobby>,
     mut client_ticks: ResMut<ClientTicks>,
     q_players: Query<(Entity, &Player, &Transform, &Location, &Velocity, &RenderDistance)>,
-    player_worlds: Query<(&Location, &WorldWithin, &PhysicsWorld), (With<Player>, Without<Parent>)>,
+    player_worlds: Query<(&Location, &WorldWithin, &RapierContextEntityLink), (With<Player>, Without<Parent>)>,
     items: Res<Registry<Item>>,
     mut visualizer: ResMut<RenetServerVisualizer<200>>,
-    mut rapier_context: ResMut<RapierContext>,
     mut requested_entity: EventWriter<RequestedEntityEvent>,
     mut player_join_ev_writer: EventWriter<PlayerConnectedEvent>,
     needs_data: Res<ItemShouldHaveData>,
@@ -131,7 +128,7 @@ fn handle_server_events(
 
                 lobby.add_player(client_id, player_entity);
 
-                assign_player_world(&player_worlds, player_entity, &location, &mut commands, &mut rapier_context);
+                assign_player_world(&player_worlds, player_entity, &location, &mut commands);
 
                 let msg = cosmos_encoder::serialize(&ServerReliableMessages::PlayerCreate {
                     entity: player_entity,
@@ -171,12 +168,5 @@ fn handle_server_events(
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_systems(
-        Update,
-        handle_server_events
-            .run_if(in_state(GameState::Playing))
-            .in_set(NetworkingSystemsSet::ReceiveMessages)
-            .before(ItemStackSystemSet::CreateDataEntity),
-    )
-    .add_event::<PlayerConnectedEvent>();
+    app.add_event::<PlayerConnectedEvent>();
 }

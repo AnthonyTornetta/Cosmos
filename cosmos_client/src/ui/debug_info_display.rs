@@ -165,6 +165,8 @@ fn update_fps(mut query: Query<(&mut Text, &mut FPSCounter)>, time: Res<Time>) {
 pub(super) fn register(app: &mut App) {
     app.add_systems(OnEnter(GameState::Playing), add_text).add_systems(
         Update,
-        (update_coords, update_looking_at_text, update_fps).run_if(in_state(GameState::Playing)),
+        (update_coords, update_looking_at_text, update_fps)
+            .ambiguous_with_all() // none of these matter
+            .run_if(in_state(GameState::Playing)),
     );
 }

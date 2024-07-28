@@ -4,8 +4,9 @@ use std::fs;
 
 use bevy::{
     app::App,
-    ecs::{schedule::OnEnter, system::Res},
+    ecs::system::Res,
     prelude::{Commands, Resource},
+    state::state::OnEnter,
 };
 use cosmos_core::{item::Item, registry::Registry};
 use cosmos_core::{registry::identifiable::Identifiable, shop::ShopEntry};

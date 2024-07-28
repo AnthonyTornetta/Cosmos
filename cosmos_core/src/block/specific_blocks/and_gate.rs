@@ -100,6 +100,16 @@ fn and_gate_output_event_listener(
 
 pub(super) fn register<T: States>(app: &mut App, post_loading_state: T) {
     app.add_systems(OnEnter(post_loading_state), register_logic_connections)
-        .add_systems(Update, and_gate_input_event_listener.in_set(LogicSystemSet::Consume))
-        .add_systems(Update, and_gate_output_event_listener.in_set(LogicSystemSet::Produce));
+        .add_systems(
+            Update,
+            and_gate_input_event_listener
+                .in_set(LogicSystemSet::Consume)
+                .ambiguous_with(LogicSystemSet::Consume),
+        )
+        .add_systems(
+            Update,
+            and_gate_output_event_listener
+                .in_set(LogicSystemSet::Produce)
+                .ambiguous_with(LogicSystemSet::Produce),
+        );
 }

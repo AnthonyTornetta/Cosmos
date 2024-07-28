@@ -7,14 +7,14 @@ use bevy_rapier3d::{
     geometry::{CollisionGroups, Group},
     prelude::Velocity,
 };
-use bevy_renet::renet::RenetServer;
+use bevy_renet2::renet2::RenetServer;
 use cosmos_core::{
     block::Block,
     ecs::bundles::CosmosPbrBundle,
     entities::player::Player,
     netty::{
-        cosmos_encoder, server_laser_cannon_system_messages::ServerStructureSystemMessages, sync::ComponentSyncingSet,
-        system_sets::NetworkingSystemsSet, NettyChannelServer,
+        cosmos_encoder, server_laser_cannon_system_messages::ServerStructureSystemMessages, system_sets::NetworkingSystemsSet,
+        NettyChannelServer,
     },
     persistence::LoadingDistance,
     physics::{
@@ -101,7 +101,7 @@ fn missile_lockon(
         let mut best_target = preferred_focus.focusing_server_entity.and_then(|ent| {
             let (ent, loc) = q_targettable.get(ent).ok()?;
 
-            calculate_focusable_properties(ent, structure_system, loc, structure_location, targetting_forward)?;
+            calculate_focusable_properties(ent, structure_system, loc, structure_location, targetting_forward.into())?;
 
             Some(ent)
         });
@@ -110,7 +110,8 @@ fn missile_lockon(
             best_target = q_targettable
                 .iter()
                 .filter_map(|(ent, loc)| {
-                    let (dist, dot) = calculate_focusable_properties(ent, structure_system, loc, structure_location, targetting_forward)?;
+                    let (dist, dot) =
+                        calculate_focusable_properties(ent, structure_system, loc, structure_location, targetting_forward.into())?;
 
                     // Closer focusable targets will be somewhat preferred over distant ones.
                     Some((
@@ -275,12 +276,16 @@ pub(super) fn register(app: &mut App) {
         Update,
         update_missile_system
             .run_if(in_state(GameState::Playing))
-            .before(NetworkingSystemsSet::SyncEntities)
             .before(CosmosBundleSet::HandleCosmosBundles)
-            .before(ComponentSyncingSet::PreComponentSyncing),
+            .before(NetworkingSystemsSet::SyncComponents),
     )
     .add_systems(OnEnter(GameState::PostLoading), register_missile_launcher_blocks)
-    .add_systems(Update, (add_missile_targettable, on_add_missile_launcher, missile_lockon).chain());
+    .add_systems(
+        Update,
+        (add_missile_targettable, on_add_missile_launcher, missile_lockon)
+            .in_set(NetworkingSystemsSet::Between)
+            .chain(),
+    );
 
     register_structure_system::<MissileLauncherSystem>(app, true, "cosmos:missile_launcher");
 }

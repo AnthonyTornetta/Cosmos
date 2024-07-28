@@ -5,6 +5,7 @@
 
 pub mod block;
 pub mod blockitems;
+pub mod debug;
 pub mod economy;
 pub mod ecs;
 pub mod entities;
@@ -18,6 +19,7 @@ pub mod netty;
 pub mod persistence;
 pub mod physics;
 pub mod plugin;
+pub mod prelude;
 pub mod projectiles;
 pub mod registry;
 pub mod shop;

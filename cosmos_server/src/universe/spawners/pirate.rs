@@ -9,11 +9,12 @@ use bevy::{
         component::Component,
         entity::Entity,
         query::{With, Without},
-        schedule::{common_conditions::in_state, IntoSystemConfigs, IntoSystemSetConfigs, SystemSet},
+        schedule::{IntoSystemConfigs, IntoSystemSetConfigs, SystemSet},
         system::{Commands, Query, Res, Resource},
     },
     math::{Quat, Vec3},
     reflect::Reflect,
+    state::condition::in_state,
     time::{common_conditions::on_timer, Time},
     utils::hashbrown::HashMap,
 };

@@ -3,6 +3,7 @@
 use std::{collections::VecDeque, time::Duration};
 
 use bevy::{
+    color::Alpha,
     prelude::{
         in_state, App, AssetServer, BuildChildren, Color, Commands, Component, DespawnRecursiveExt, IntoSystemConfigs, Name, NodeBundle,
         Parent, Query, Res, ResMut, Resource, TextBundle, Update,
@@ -11,6 +12,7 @@ use bevy::{
     time::Time,
     ui::{JustifyContent, PositionType, Style, Val},
 };
+use cosmos_core::netty::system_sets::NetworkingSystemsSet;
 
 use crate::state::game_state::GameState;
 
@@ -146,7 +148,10 @@ fn display_hud_messages(
             hud_messages.1 = None;
         } else {
             for section in text.sections.iter_mut() {
-                section.style.color.set_a((time_remaining / FADE_DURATION.as_secs_f32()).min(1.0));
+                section
+                    .style
+                    .color
+                    .set_alpha((time_remaining / FADE_DURATION.as_secs_f32()).min(1.0));
             }
         }
     } else if let Some(hud_message) = hud_messages.0.pop_front() {
@@ -205,6 +210,10 @@ fn display_hud_messages(
 }
 
 pub(super) fn register(app: &mut App) {
-    app.init_resource::<HudMessages>()
-        .add_systems(Update, display_hud_messages.run_if(in_state(GameState::Playing)));
+    app.init_resource::<HudMessages>().add_systems(
+        Update,
+        display_hud_messages
+            .in_set(NetworkingSystemsSet::Between)
+            .run_if(in_state(GameState::Playing)),
+    );
 }

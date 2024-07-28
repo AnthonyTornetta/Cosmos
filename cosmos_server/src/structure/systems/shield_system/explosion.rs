@@ -6,11 +6,11 @@ use bevy::{
         system::Query,
     },
 };
-use cosmos_core::{physics::location::Location, structure::shields::Shield};
+use cosmos_core::{netty::system_sets::NetworkingSystemsSet, physics::location::Location, structure::shields::Shield};
 
 use crate::projectiles::explosion::ExplosionHitEvent;
 
-use super::{ShieldHitEvent, ShieldHitProcessing};
+use super::{ShieldHitEvent, ShieldSet};
 
 fn respond_to_explosion_damage(
     mut ev_reader: EventReader<ExplosionHitEvent>,
@@ -36,5 +36,10 @@ fn respond_to_explosion_damage(
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_systems(Update, respond_to_explosion_damage.in_set(ShieldHitProcessing::OnShieldHit));
+    app.add_systems(
+        Update,
+        respond_to_explosion_damage
+            .in_set(NetworkingSystemsSet::Between)
+            .in_set(ShieldSet::OnShieldHit),
+    );
 }

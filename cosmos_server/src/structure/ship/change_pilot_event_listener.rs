@@ -1,5 +1,5 @@
 use bevy::prelude::{in_state, App, Entity, Event, EventReader, IntoSystemConfigs, ResMut, Update};
-use bevy_renet::renet::RenetServer;
+use bevy_renet2::renet2::RenetServer;
 use cosmos_core::netty::{cosmos_encoder, server_reliable_messages::ServerReliableMessages, NettyChannelServer};
 
 use crate::state::GameState;

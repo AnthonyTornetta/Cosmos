@@ -3,7 +3,8 @@
 //! Used in something like an inventory.
 
 use bevy::{
-    prelude::{App, EventWriter, OnEnter, Res, ResMut, Resource, States},
+    prelude::{App, EventWriter, Res, ResMut, Resource, States},
+    state::state::OnExit,
     utils::HashMap,
 };
 
@@ -88,9 +89,9 @@ fn create_links(
     loader.finish_loading(id, &mut done_event_writer);
 }
 
-pub(super) fn register<T: States + Clone + Copy>(app: &mut App, post_loading_state: T) {
+pub(super) fn register<T: States + Clone + Copy>(app: &mut App, loading_state: T) {
     app.insert_resource(BlockItems::default());
 
     // All blocks & items must be added before this system runs
-    app.add_systems(OnEnter(post_loading_state), create_links);
+    app.add_systems(OnExit(loading_state), create_links);
 }

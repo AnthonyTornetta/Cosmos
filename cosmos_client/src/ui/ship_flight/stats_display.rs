@@ -1,6 +1,7 @@
 use bevy::{
     app::{App, Update},
     asset::AssetServer,
+    color::palettes::css,
     core::Name,
     ecs::{
         component::Component,
@@ -11,7 +12,6 @@ use bevy::{
         system::{Commands, Query, Res},
     },
     hierarchy::BuildChildren,
-    render::color::Color,
     text::{Text, TextStyle},
     ui::{
         node_bundles::{NodeBundle, TextBundle},
@@ -21,12 +21,15 @@ use bevy::{
 use bevy_rapier3d::dynamics::Velocity;
 use cosmos_core::{
     ecs::NeedsDespawned,
-    netty::client::LocalPlayer,
+    netty::{client::LocalPlayer, system_sets::NetworkingSystemsSet},
+    physics::location::LocationPhysicsSet,
     structure::{
         ship::pilot::Pilot,
-        systems::{energy_storage_system::EnergyStorageSystem, StructureSystems},
+        systems::{energy_storage_system::EnergyStorageSystem, StructureSystems, StructureSystemsSet},
     },
 };
+
+use crate::entities::player::player_movement::PlayerMovementSet;
 
 #[derive(Component)]
 struct StatsNodes;
@@ -51,12 +54,12 @@ fn create_nodes(
         let font = asset_server.load("fonts/PixeloidSans.ttf");
 
         let text_style_energy = TextStyle {
-            color: Color::YELLOW,
+            color: css::YELLOW.into(),
             font_size: 32.0,
             font: font.clone(),
         };
         let text_style_speed = TextStyle {
-            color: Color::AQUAMARINE,
+            color: css::AQUAMARINE.into(),
             font_size: 32.0,
             font: font.clone(),
         };
@@ -150,5 +153,16 @@ fn despawn_nodes(
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_systems(Update, (create_nodes, update_nodes, despawn_nodes).chain());
+    app.add_systems(
+        Update,
+        (
+            create_nodes,
+            update_nodes.after(PlayerMovementSet::ProcessPlayerMovement),
+            despawn_nodes,
+        )
+            .after(StructureSystemsSet::UpdateSystems)
+            .after(LocationPhysicsSet::DoPhysics)
+            .in_set(NetworkingSystemsSet::Between)
+            .chain(),
+    );
 }

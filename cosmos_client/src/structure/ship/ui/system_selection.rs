@@ -6,14 +6,16 @@ use bevy::{
         entity::Entity,
         query::{Added, Changed, Or, With},
         removal_detection::RemovedComponents,
-        schedule::{common_conditions::in_state, IntoSystemConfigs},
+        schedule::IntoSystemConfigs,
         system::{Commands, Query, Res},
     },
+    prelude::SystemSet,
+    state::condition::in_state,
 };
 use cosmos_core::{
     inventory::itemstack::{ItemShouldHaveData, ItemStack, ItemStackSystemSet},
     item::Item,
-    netty::client::LocalPlayer,
+    netty::{client::LocalPlayer, system_sets::NetworkingSystemsSet},
     registry::Registry,
     structure::{
         ship::pilot::Pilot,
@@ -23,7 +25,7 @@ use cosmos_core::{
 
 use crate::{
     state::game_state::GameState,
-    structure::systems::player_interactions::HoveredSystem,
+    structure::systems::player_interactions::{HoveredSystem, SystemUsageSet},
     ui::hotbar::{Hotbar, HotbarContents, HotbarPriorityQueue, LocalPlayerHotbar},
 };
 
@@ -151,14 +153,25 @@ fn on_change_hotbar(
     selected_system.hovered_system_index = selected;
 }
 
+#[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
+/// This set handles the player (client) changing their selected system set.
+pub enum SystemSelectionSet {
+    /// This set handles the player (client) changing their selected system set.
+    ApplyUserChanges,
+}
+
 pub(super) fn register(app: &mut App) {
+    app.configure_sets(Update, SystemSelectionSet::ApplyUserChanges);
+
     app.add_systems(
         Update,
         (
             add_priority_when_flying,
             sync_ship_systems.in_set(ItemStackSystemSet::CreateDataEntity),
-            on_change_hotbar,
+            on_change_hotbar.before(SystemUsageSet::ChangeSystemBeingUsed),
         )
+            .in_set(SystemSelectionSet::ApplyUserChanges)
+            .in_set(NetworkingSystemsSet::Between)
             .chain()
             .run_if(in_state(GameState::Playing)),
     );

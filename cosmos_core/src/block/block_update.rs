@@ -1,6 +1,6 @@
 //! Events sent to adjacent blocks on block changes
 
-use bevy::prelude::{App, Entity, Event, EventReader, EventWriter, Query, Update};
+use bevy::prelude::{App, Entity, Event, EventReader, EventWriter, IntoSystemConfigs, Query, Update};
 
 use crate::{
     ecs::mut_events::{MutEvent, MutEventsCommand},
@@ -8,7 +8,7 @@ use crate::{
     structure::{coordinates::BlockCoordinate, structure_block::StructureBlock, Structure},
 };
 
-use super::block_face::ALL_BLOCK_FACES;
+use super::{block_events::BlockEventsSet, block_face::ALL_BLOCK_FACES};
 
 #[derive(Debug, Clone, Copy, Event, PartialEq, Eq)]
 /// This event is sent whenever an adjacent block is changed
@@ -89,5 +89,6 @@ pub fn send_block_updates(
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_systems(Update, send_block_updates).add_mut_event::<BlockUpdate>();
+    app.add_systems(Update, send_block_updates.in_set(BlockEventsSet::SendBlockUpdateEvents))
+        .add_mut_event::<BlockUpdate>();
 }

@@ -1,11 +1,9 @@
 //! Molten biome generation
 
 use bevy::{
-    ecs::{
-        schedule::OnExit,
-        system::{Res, ResMut},
-    },
-    prelude::App,
+    ecs::system::{Res, ResMut},
+    prelude::{App, IntoSystemConfigs},
+    state::state::OnExit,
 };
 use cosmos_core::{
     block::Block,
@@ -14,6 +12,8 @@ use cosmos_core::{
 };
 
 use crate::state::GameState;
+
+use super::RegisterBiomesSet;
 
 fn register_biome_molten(mut registry: ResMut<Registry<Biome>>, blocks: Res<Registry<Block>>) {
     registry.register(Biome::new(
@@ -25,5 +25,10 @@ fn register_biome_molten(mut registry: ResMut<Registry<Biome>>, blocks: Res<Regi
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_systems(OnExit(GameState::Loading), register_biome_molten);
+    app.add_systems(
+        OnExit(GameState::Loading),
+        register_biome_molten
+            .in_set(RegisterBiomesSet::RegisterBiomes)
+            .ambiguous_with(RegisterBiomesSet::RegisterBiomes),
+    );
 }

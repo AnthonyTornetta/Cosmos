@@ -6,7 +6,7 @@ use bevy::{
     prelude::{Entity, Resource},
     utils::HashMap,
 };
-use bevy_renet::renet::ClientId;
+use bevy_renet2::renet2::ClientId;
 
 #[derive(Debug, Default, Resource)]
 /// Maps each player's id to their player entity

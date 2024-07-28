@@ -1,9 +1,10 @@
 //! Handles fluid-specific block logic, such as their colliders.
 
+use bevy::state::state::{OnEnter, States};
 use bevy::{
     app::App,
     ecs::{
-        schedule::{IntoSystemConfigs, OnEnter, States},
+        schedule::IntoSystemConfigs,
         system::{Res, ResMut},
     },
 };

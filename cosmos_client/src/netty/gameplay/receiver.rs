@@ -4,10 +4,10 @@
 
 use std::sync::{Arc, Mutex};
 
-use bevy::{core_pipeline::bloom::BloomSettings, prelude::*, window::PrimaryWindow};
+use bevy::{color::palettes::css, core_pipeline::bloom::BloomSettings, prelude::*, window::PrimaryWindow};
 use bevy_kira_audio::prelude::AudioReceiver;
 use bevy_rapier3d::prelude::*;
-use bevy_renet::renet::{transport::NetcodeClientTransport, RenetClient};
+use bevy_renet2::renet2::{transport::NetcodeClientTransport, RenetClient};
 use cosmos_core::{
     block::Block,
     ecs::{
@@ -28,15 +28,17 @@ use cosmos_core::{
         server_reliable_messages::ServerReliableMessages,
         server_unreliable_messages::ServerUnreliableMessages,
         sync::{
+            client_syncing::ClientReceiveComponents,
             mapping::{Mappable, NetworkMapping, ServerEntity},
             ComponentEntityIdentifier,
         },
+        system_sets::NetworkingSystemsSet,
         NettyChannelClient, NettyChannelServer,
     },
     persistence::LoadingDistance,
     physics::{
         location::{add_previous_location, handle_child_syncing, CosmosBundleSet, Location, LocationPhysicsSet, SYSTEM_SECTORS},
-        player_world::PlayerWorld,
+        player_world::{PlayerWorld, WorldWithin},
     },
     registry::Registry,
     structure::{
@@ -60,14 +62,15 @@ use crate::{
     state::game_state::GameState,
     structure::{
         planet::{client_planet_builder::ClientPlanetBuilder, generation::SetTerrainGenData},
-        ship::client_ship_builder::ClientShipBuilder,
+        ship::{client_ship_builder::ClientShipBuilder, ship_movement::ClientCreateShipMovementSet},
         station::client_station_builder::ClientStationBuilder,
     },
     ui::{
-        crosshair::CrosshairOffset,
+        crosshair::{CrosshairOffset, CrosshairOffsetSet},
         message::{HudMessage, HudMessages},
         UiRoot,
     },
+    window::setup::CursorFlagsSet,
 };
 
 #[derive(Component)]
@@ -181,7 +184,7 @@ fn lerp_towards(
 }
 
 /// TODO: super split this up
-fn client_sync_players(
+pub(crate) fn client_sync_players(
     mut commands: Commands,
     (mut meshes, mut client, transport, mut lobby, mut network_mapping): (
         ResMut<Assets<Mesh>>,
@@ -203,7 +206,8 @@ fn client_sync_players(
         EventWriter<SetTerrainGenData>,
         EventWriter<BlockDataChangedEvent>,
     ),
-    (query_player, parent_query, q_structure_systems, mut q_inventory, mut q_structure): (
+    (q_default_rapier_context, query_player, parent_query, q_structure_systems, mut q_inventory, mut q_structure): (
+        Query<Entity, With<DefaultRapierContext>>,
         Query<&Player>,
         Query<&Parent>,
         Query<&StructureSystems>,
@@ -446,18 +450,20 @@ fn client_sync_players(
                                 Name::new("Main Camera"),
                                 MainCamera,
                                 UiRoot,
-                                // No double UI rendering
                                 AudioReceiver,
                             ));
                         });
 
+                    info!("Player world!");
                     commands.spawn((
                         PlayerWorld { player: client_entity },
                         Name::new("Player World"),
                         loc,
-                        PhysicsWorld {
-                            world_id: DEFAULT_WORLD_ID,
-                        },
+                        RapierContextEntityLink(
+                            q_default_rapier_context
+                                .get_single()
+                                .expect("The client has no default rapier context!"),
+                        ),
                     ));
                 }
             }
@@ -770,7 +776,7 @@ fn client_sync_players(
             ServerReliableMessages::InvalidReactor { reason } => {
                 hud_messages.display_message(HudMessage::with_colored_string(
                     format!("Invalid reactor setup: {reason}"),
-                    Color::ORANGE_RED,
+                    css::ORANGE_RED.into(),
                 ));
             }
             ServerReliableMessages::RequestedEntityReceived(entity) => {
@@ -916,19 +922,20 @@ fn get_entity_identifier_entity_for_despawning(
 /// Handles any just-added locations that need to sync up to their transforms
 fn fix_location(
     mut query: Query<(Entity, &mut Location, Option<&mut Transform>), (Added<Location>, Without<PlayerWorld>, Without<Parent>)>,
-    player_worlds: Query<&Location, With<PlayerWorld>>,
+    player_worlds: Query<(Entity, &Location), With<PlayerWorld>>,
     mut commands: Commands,
 ) {
     for (entity, mut location, transform) in query.iter_mut() {
         match player_worlds.get_single() {
-            Ok(loc) => {
+            Ok((pw, loc)) => {
                 let translation = loc.relative_coords_to(&location);
                 if let Some(mut transform) = transform {
                     transform.translation = translation;
                 } else {
-                    commands
-                        .entity(entity)
-                        .insert(TransformBundle::from_transform(Transform::from_translation(translation)));
+                    commands.entity(entity).insert((
+                        WorldWithin(pw),
+                        TransformBundle::from_transform(Transform::from_translation(translation)),
+                    ));
                 }
                 location.last_transform_loc = Some(translation);
             }
@@ -1007,27 +1014,45 @@ fn player_changed_parent(
 pub(super) fn register(app: &mut App) {
     app.insert_resource(RequestedEntities::default())
         .configure_sets(Update, LocationPhysicsSet::DoPhysics)
-        .add_systems(Update, (update_crosshair, insert_last_rotation))
         .add_systems(
             Update,
-            client_sync_players
-                .run_if(in_state(GameState::Playing).or_else(in_state(GameState::LoadingWorld)))
-                .before(CosmosBundleSet::HandleCosmosBundles),
+            (
+                insert_last_rotation,
+                update_crosshair.in_set(CrosshairOffsetSet::ApplyCrosshairChanges),
+            )
+                .after(ClientCreateShipMovementSet::ProcessShipMovement)
+                .in_set(NetworkingSystemsSet::Between)
+                .after(CursorFlagsSet::ApplyCursorFlagsUpdates)
+                .chain(),
         )
         .add_systems(
             Update,
             (
-                fix_location.before(client_sync_players),
-                lerp_towards.after(client_sync_players),
+                fix_location,
+                client_sync_players
+                    .before(ClientReceiveComponents::ClientReceiveComponents)
+                    .in_set(NetworkingSystemsSet::ReceiveMessages)
+                    .before(CosmosBundleSet::HandleCosmosBundles),
+            )
+                .run_if(in_state(GameState::Playing).or_else(in_state(GameState::LoadingWorld)))
+                .chain(),
+        )
+        .add_systems(
+            Update,
+            (
+                // Also run first above
+                fix_location,
                 (
+                    lerp_towards,
                     player_changed_parent,
                     sync_transforms_and_locations,
                     handle_child_syncing,
                     add_previous_location,
                 )
-                    .chain()
-                    .in_set(LocationPhysicsSet::DoPhysics),
+                    .after(CosmosBundleSet::HandleCosmosBundles)
+                    .chain(),
             )
+                .in_set(LocationPhysicsSet::DoPhysics)
                 .chain()
                 .run_if(in_state(GameState::Playing)),
         );

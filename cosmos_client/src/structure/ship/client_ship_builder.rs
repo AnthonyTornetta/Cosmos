@@ -6,7 +6,7 @@ use bevy::{
         resource_exists, Added, App, BuildChildren, Commands, Entity, Handle, IntoSystemConfigs, Name, Query, Res, Resource, Transform,
         Update,
     },
-    transform::TransformBundle,
+    transform::bundles::TransformBundle,
 };
 use bevy_kira_audio::{Audio, AudioControl, AudioInstance, AudioSource};
 use bevy_rapier3d::prelude::Velocity;
@@ -61,7 +61,7 @@ fn client_on_add_ship(
         let idle_emitter = CosmosAudioEmitter::with_emissions(vec![AudioEmission {
             instance: playing_sound,
             max_distance: 20.0,
-            peak_volume: 0.15,
+            peak_volume: 0.15 * 5.0,
             ..Default::default()
         }]);
 

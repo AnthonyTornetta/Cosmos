@@ -15,7 +15,7 @@ use cosmos_core::{
 
 use crate::{rendering::MeshInformation, state::game_state::GameState};
 
-use super::asset_loading::{load_block_rendering_information, BlockRenderingInfo, ItemRenderingInfo};
+use super::asset_loading::{load_block_rendering_information, AssetsSet, BlockRenderingInfo, ItemRenderingInfo};
 
 pub mod animated_material;
 pub mod block_materials;
@@ -57,16 +57,33 @@ pub struct RemoveAllMaterialsEvent {
 pub struct AddMaterialEvent {
     /// The entity to add your material to
     pub entity: Entity,
-    /// The materal's id referring to the `Registry<MaterialDefinition]`
+    /// The materal's id referring to the `Registry<MaterialDefinition>`.
     pub add_material_id: u16,
     /// The state the material should be in
     pub material_type: MaterialType,
+    /// The texture dimensions index this material should use
+    ///
+    /// This should correlate with the atlas instance
+    ///
+    /// If the texture dimensions index is invalid, the program will panic when it tries to add the material for that texture dimension size.
+    pub texture_dimensions_index: u32,
 }
 
-/// Add all event listeners for `AddMaterialEvent` after this to prevent any 1-frame delays
-pub fn add_materials() {}
-/// Add all event listeners for `RemoveAllMaterialsEvent` after this and before `add_materials` to ensure your material is removed at the right time.
-pub fn remove_materials() {}
+#[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
+/// Used to dynamically attach materials to entities
+///
+/// Note that remove is run first, then add. So if you add a material and remove it within the same
+/// frame before/after this set is run, the material you added will not get removed.
+pub enum MaterialsSystemSet {
+    /// When you want materials to be dynamically added/removed, do that in this set.
+    RequestMaterialChanges,
+    /// Add all event listeners for [`RemoveAllMaterialsEvent`] in this to ensure your material is removed at the right time.
+    ProcessRemoveMaterialsEvents,
+    /// Add materials to those entities
+    ///
+    /// Add all event listeners for [`AddMaterialEvent`] to this set this to prevent any 1-frame delays
+    ProcessAddMaterialsEvents,
+}
 
 /// Generates any extra information need for meshes that use this material
 pub trait MaterialMeshInformationGenerator: Send + Sync {
@@ -315,11 +332,21 @@ pub(super) fn register(app: &mut App) {
     block_materials::register(app);
     animated_material::register(app);
 
+    app.configure_sets(
+        Update,
+        (
+            MaterialsSystemSet::RequestMaterialChanges,
+            MaterialsSystemSet::ProcessRemoveMaterialsEvents,
+            MaterialsSystemSet::ProcessAddMaterialsEvents,
+        )
+            .in_set(AssetsSet::AssetsReady)
+            .chain(),
+    );
+
     app.add_systems(
         OnExit(GameState::PostLoading),
         register_materials.after(load_block_rendering_information),
     )
-    .add_systems(Update, (remove_materials, add_materials).chain())
     .add_event::<RemoveAllMaterialsEvent>()
     .add_event::<AddMaterialEvent>();
 }

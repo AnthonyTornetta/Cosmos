@@ -8,7 +8,7 @@ use std::{
 };
 
 use bevy::prelude::*;
-use bevy_renet::renet::{
+use bevy_renet2::renet2::{
     transport::{ClientAuthentication, NetcodeClientTransport},
     RenetClient,
 };
@@ -16,6 +16,7 @@ use cosmos_core::{
     entities::player::Player,
     netty::{client::LocalPlayer, connection_config, sync::mapping::NetworkMapping, PROTOCOL_ID},
 };
+use renet2::transport::NativeSocket;
 
 use crate::{
     netty::lobby::{ClientLobby, MostRecentTick},
@@ -35,9 +36,7 @@ fn new_netcode_transport(mut host: &str, port: u16) -> NetcodeClientTransport {
         .next()
         .unwrap();
 
-    let socket = UdpSocket::bind("0.0.0.0:0").unwrap();
-
-    socket.set_nonblocking(true).expect("Unable to make UDP non-blocking!");
+    let socket = NativeSocket::new(UdpSocket::bind("0.0.0.0:0").unwrap()).unwrap();
 
     let current_time = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();
     let client_id = current_time.as_millis() as u64;
@@ -53,6 +52,7 @@ fn new_netcode_transport(mut host: &str, port: u16) -> NetcodeClientTransport {
     }
 
     let auth = ClientAuthentication::Unsecure {
+        socket_id: 0, // for native sockets, use 0
         client_id,
         protocol_id: PROTOCOL_ID,
         server_addr,

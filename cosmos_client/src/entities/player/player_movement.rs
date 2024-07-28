@@ -3,7 +3,9 @@
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::Velocity;
 use cosmos_core::{
-    netty::client::LocalPlayer,
+    netty::{client::LocalPlayer, system_sets::NetworkingSystemsSet},
+    physics::location::LocationPhysicsSet,
+    projectiles::laser::LaserSystemSet,
     structure::{shared::build_mode::BuildMode, ship::pilot::Pilot},
 };
 
@@ -15,7 +17,7 @@ use crate::{
     ui::components::show_cursor::ShowCursor,
 };
 
-fn process_player_movement(
+pub(crate) fn process_player_movement(
     time: Res<Time>,
     input_handler: InputChecker,
     mut query: Query<
@@ -154,6 +156,25 @@ fn process_player_movement(
     }
 }
 
+#[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
+/// Player movement inputs are handled and applied to their velocity
+pub enum PlayerMovementSet {
+    /// Player movement inputs are handled and applied to their velocity
+    ProcessPlayerMovement,
+}
+
 pub(super) fn register(app: &mut App) {
-    app.add_systems(Update, process_player_movement.run_if(in_state(GameState::Playing)));
+    app.configure_sets(
+        Update,
+        PlayerMovementSet::ProcessPlayerMovement.before(LocationPhysicsSet::DoPhysics),
+    );
+
+    app.add_systems(
+        Update,
+        process_player_movement
+            .ambiguous_with(LaserSystemSet::SendHitEvents)
+            .in_set(NetworkingSystemsSet::Between)
+            .in_set(PlayerMovementSet::ProcessPlayerMovement)
+            .run_if(in_state(GameState::Playing)),
+    );
 }

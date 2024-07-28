@@ -8,9 +8,9 @@
 
 use bevy::{core::TaskPoolThreadAssignmentPolicy, prelude::*};
 use bevy_mod_debugdump::schedule_graph;
-use bevy_rapier3d::prelude::{RapierConfiguration, TimestepMode};
-use bevy_renet::{transport::NetcodeServerPlugin, RenetServerPlugin};
-use cosmos_core::plugin::cosmos_core_plugin::CosmosCorePluginGroup;
+use bevy_rapier3d::plugin::{RapierContextInitialization, RapierPhysicsPlugin};
+use bevy_renet2::{transport::NetcodeServerPlugin, RenetServerPlugin};
+use cosmos_core::{physics::collision_handling::CosmosPhysicsFilter, plugin::cosmos_core_plugin::CosmosCorePluginGroup};
 
 use plugin::server_plugin::ServerPlugin;
 use settings::read_server_settings;
@@ -24,10 +24,10 @@ pub mod ai;
 pub mod blocks;
 pub mod commands;
 pub mod entities;
-pub mod events;
 pub mod fluid;
 pub mod init;
 pub mod inventory;
+pub mod logic;
 pub mod netty;
 pub mod persistence;
 pub mod physics;
@@ -73,17 +73,14 @@ fn main() {
     let default_plugins = default_plugins.disable::<LogPlugin>();
 
     app
-        // This must be the first thing added or systems don't get added correctly
-        .init_state::<GameState>()
-        .insert_resource(RapierConfiguration {
-            timestep_mode: TimestepMode::Interpolated {
-                dt: 1.0 / 60.0,
-                time_scale: 1.0,
-                substeps: 2,
-            },
-            ..default()
-        })
+        // .insert_resource(TimestepMode::Interpolated {
+        //     dt: 1.0 / 60.0,
+        //     time_scale: 1.0,
+        //     substeps: 2,
+        // })
         .add_plugins(default_plugins)
+        // This must be the first thing added or systems don't get added correctly, but after default plugins.
+        .init_state::<GameState>()
         .add_plugins(CosmosCorePluginGroup::new(
             GameState::PreLoading,
             GameState::Loading,
@@ -91,6 +88,11 @@ fn main() {
             GameState::Playing,
             GameState::Playing,
         ))
+        .add_plugins(
+            RapierPhysicsPlugin::<CosmosPhysicsFilter>::default()
+                // .in_schedule(FixedUpdate)
+                .with_custom_initialization(RapierContextInitialization::NoAutomaticRapierContext),
+        )
         .add_plugins((RenetServerPlugin, NetcodeServerPlugin, ServerPlugin { port }))
         .insert_resource(server_settings);
 

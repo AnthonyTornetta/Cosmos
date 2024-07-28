@@ -16,8 +16,15 @@ use logic_driver::LogicDriver;
 use logic_graph::{LogicGraph, LogicGroup};
 
 use crate::{
-    block::{block_direction::BlockDirection, block_direction::ALL_BLOCK_DIRECTIONS, block_face::BlockFace, data::BlockData, Block},
+    block::{
+        block_direction::{BlockDirection, ALL_BLOCK_DIRECTIONS},
+        block_events::BlockEventsSet,
+        block_face::BlockFace,
+        data::BlockData,
+        Block,
+    },
     events::block_events::{BlockChangedEvent, BlockDataSystemParams},
+    netty::system_sets::NetworkingSystemsSet,
     registry::{create_registry, identifiable::Identifiable, Registry},
     structure::{coordinates::BlockCoordinate, loading::StructureLoadingSet, structure_block::StructureBlock, Structure},
 };
@@ -381,13 +388,17 @@ pub(super) fn register<T: States>(app: &mut App, playing_state: T) {
     app.configure_sets(
         Update,
         (
-            LogicSystemSet::EditLogicGraph,
+            LogicSystemSet::EditLogicGraph
+                .in_set(BlockEventsSet::ProcessEvents)
+                // This may be a bad idea?
+                .ambiguous_with(BlockEventsSet::ProcessEvents),
             LogicSystemSet::QueueConsumers,
             LogicSystemSet::QueueProducers,
             (LogicSystemSet::SendQueues, LogicSystemSet::Consume, LogicSystemSet::Produce)
                 .chain()
                 .run_if(on_timer(Duration::from_millis(1000 / LOGIC_TICKS_PER_SECOND))),
         )
+            .in_set(NetworkingSystemsSet::Between)
             .chain(),
     );
 

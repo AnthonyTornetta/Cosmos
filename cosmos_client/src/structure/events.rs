@@ -1,6 +1,7 @@
 use bevy::prelude::{resource_exists, App, EventReader, IntoSystemConfigs, Query, Res, Update};
 use cosmos_core::{
-    block::Block,
+    block::{block_events::BlockEventsSet, Block},
+    netty::system_sets::NetworkingSystemsSet,
     registry::Registry,
     structure::{block_health::events::BlockTakeDamageEvent, Structure},
 };
@@ -21,5 +22,11 @@ fn take_damage_reader(
     }
 }
 pub(super) fn register(app: &mut App) {
-    app.add_systems(Update, take_damage_reader.run_if(resource_exists::<Registry<Block>>));
+    app.add_systems(
+        Update,
+        take_damage_reader
+            .in_set(NetworkingSystemsSet::Between)
+            .after(BlockEventsSet::ProcessEvents)
+            .run_if(resource_exists::<Registry<Block>>),
+    );
 }

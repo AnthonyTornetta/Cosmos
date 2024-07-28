@@ -1,6 +1,7 @@
 //! Handles all the blocks with lighting in the game
 
 use bevy::{
+    color::Srgba,
     log::warn,
     prelude::{App, Color, OnExit, Res, ResMut},
     reflect::Reflect,
@@ -79,7 +80,13 @@ fn register_all_lights(blocks: Res<Registry<Block>>, mut registry: ResMut<Regist
 
     register_light(
         BlockLightProperties {
-            color: Color::rgb(81.0 / 255.0, 143.0 / 255.0, 225.0 / 255.0),
+            color: Srgba {
+                red: 81.0 / 255.0,
+                green: 143.0 / 255.0,
+                blue: 225.0 / 255.0,
+                alpha: 1.0,
+            }
+            .into(),
             intensity: 20_000.0,
             range: 6.0,
             ..Default::default()
@@ -91,7 +98,13 @@ fn register_all_lights(blocks: Res<Registry<Block>>, mut registry: ResMut<Regist
 
     register_light(
         BlockLightProperties {
-            color: Color::rgb(81.0 / 255.0, 225.0 / 255.0, 143.0 / 255.0),
+            color: Srgba {
+                red: 81.0 / 255.0,
+                green: 225.0 / 255.0,
+                blue: 143.0 / 255.0,
+                alpha: 1.0,
+            }
+            .into(),
             intensity: 20_000.0,
             range: 6.0,
             ..Default::default()

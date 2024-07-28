@@ -4,10 +4,8 @@ use std::{ffi::OsStr, fs};
 
 use bevy::{
     app::App,
-    ecs::{
-        schedule::OnEnter,
-        system::{Commands, Res, Resource},
-    },
+    ecs::system::{Commands, Res, Resource},
+    state::state::OnEnter,
     utils::hashbrown::HashSet,
 };
 use cosmos_core::{

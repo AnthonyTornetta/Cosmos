@@ -1,23 +1,25 @@
 //! Handles the build mode logic on the client-side
 
 use bevy::{
+    color::LinearRgba,
     math::primitives::Cuboid,
     pbr::{NotShadowCaster, NotShadowReceiver},
     prelude::{
-        in_state, App, AssetServer, Assets, BuildChildren, Changed, Color, Commands, Component, DespawnRecursiveExt, Entity, EventReader,
+        in_state, App, AssetServer, Assets, BuildChildren, Changed, Commands, Component, DespawnRecursiveExt, Entity, EventReader,
         IntoSystemConfigs, MaterialMeshBundle, Mesh, Name, Parent, Query, Res, ResMut, Transform, Update, Vec3, With, Without,
     },
     time::Time,
 };
 use bevy_rapier3d::prelude::Velocity;
-use bevy_renet::renet::RenetClient;
+use bevy_renet2::renet2::RenetClient;
 use cosmos_core::{
+    block::block_events::BlockEventsSet,
     netty::{client::LocalPlayer, client_reliable_messages::ClientReliableMessages, cosmos_encoder, NettyChannelClient},
     structure::{
         chunk::CHUNK_DIMENSIONSF,
         coordinates::BlockCoordinate,
         shared::{
-            build_mode::{BuildAxis, BuildMode, ExitBuildModeEvent},
+            build_mode::{BuildAxis, BuildMode, BuildModeSet, ExitBuildModeEvent},
             DespawnWithStructure,
         },
         Structure,
@@ -26,6 +28,7 @@ use cosmos_core::{
 
 use crate::{
     asset::repeating_material::{Repeats, UnlitRepeatedMaterial},
+    entities::player::player_movement::{process_player_movement, PlayerMovementSet},
     input::inputs::{CosmosInputs, InputChecker, InputHandler},
     interactions::block_interactions::LookingAt,
     rendering::MainCamera,
@@ -256,7 +259,12 @@ fn change_visuals(
                                     ..Default::default()
                                 },
                                 texture: texture_handle.clone(),
-                                color: Color::rgb(1.0, 0.0, 0.0),
+                                color: LinearRgba {
+                                    red: 1.0,
+                                    green: 0.0,
+                                    blue: 0.0,
+                                    alpha: 1.0,
+                                },
                             }),
                             transform: Transform::from_xyz(coords.x, 0.5, 0.5),
                             ..Default::default()
@@ -287,7 +295,12 @@ fn change_visuals(
                                     ..Default::default()
                                 },
                                 texture: texture_handle.clone(),
-                                color: Color::rgb(0.0, 1.0, 0.0),
+                                color: LinearRgba {
+                                    red: 0.0,
+                                    green: 1.0,
+                                    blue: 0.0,
+                                    alpha: 1.0,
+                                },
                             }),
                             transform: Transform::from_xyz(0.5, coords.y, 0.5),
                             ..Default::default()
@@ -318,7 +331,12 @@ fn change_visuals(
                                     ..Default::default()
                                 },
                                 texture: texture_handle.clone(),
-                                color: Color::rgb(0.0, 0.0, 1.0),
+                                color: LinearRgba {
+                                    red: 0.0,
+                                    green: 0.0,
+                                    blue: 1.0,
+                                    alpha: 1.0,
+                                },
                             }),
                             transform: Transform::from_xyz(0.5, 0.5, coords.z),
                             ..Default::default()
@@ -336,11 +354,18 @@ pub(super) fn register(app: &mut App) {
     app.add_systems(
         Update,
         (
-            (place_symmetries, exit_build_mode, control_build_mode)
+            (
+                place_symmetries,
+                exit_build_mode,
+                control_build_mode
+                    .in_set(PlayerMovementSet::ProcessPlayerMovement)
+                    .ambiguous_with(process_player_movement), // this system will run if process_player_movement doesn't
+            )
                 .chain()
+                .in_set(BlockEventsSet::ProcessEvents)
                 .run_if(no_open_menus),
             change_visuals,
-            clear_visuals,
+            clear_visuals.after(BuildModeSet::ExitBuildMode),
         )
             .chain()
             .run_if(in_state(GameState::Playing)),

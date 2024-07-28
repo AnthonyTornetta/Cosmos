@@ -8,13 +8,19 @@ use bevy::{
         entity::Entity,
         event::EventReader,
         query::{With, Without},
-        schedule::{IntoSystemConfigs, OnEnter},
+        schedule::IntoSystemConfigs,
         system::{Commands, Query, Res, ResMut},
     },
     log::{error, info},
+    prelude::SystemSet,
+    state::state::OnEnter,
 };
 use cosmos_core::{
-    block::{block_events::BlockInteractEvent, data::BlockData, Block},
+    block::{
+        block_events::{BlockEventsSet, BlockInteractEvent},
+        data::BlockData,
+        Block,
+    },
     events::block_events::BlockDataSystemParams,
     fluid::{
         data::{BlockFluidData, FluidHolder, FluidItemData, FluidTankBlock, StoredFluidData},
@@ -26,6 +32,7 @@ use cosmos_core::{
         Inventory,
     },
     item::Item,
+    netty::system_sets::NetworkingSystemsSet,
     registry::{identifiable::Identifiable, Registry},
     structure::Structure,
 };
@@ -404,9 +411,28 @@ fn fill_tank_registry(mut tank_reg: ResMut<Registry<FluidTankBlock>>, blocks: Re
     }
 }
 
+#[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
+/// Logic for interacting with fluid blocks
+pub enum FluidInteractionSet {
+    /// Logic for interacting with fluid blocks
+    InteractWithFluidBlocks,
+}
+
 pub(super) fn register(app: &mut App) {
+    app.configure_sets(Update, FluidInteractionSet::InteractWithFluidBlocks);
+
     app.add_systems(OnEnter(GameState::PostLoading), (register_fluid_holder_items, fill_tank_registry))
-        .add_systems(Update, on_interact_with_tank.before(ItemStackSystemSet::CreateDataEntity))
-        .add_systems(Update, add_item_fluid_data.in_set(ItemStackSystemSet::FillDataEntity))
-        .add_systems(Update, on_interact_with_fluid.after(ItemStackSystemSet::FillDataEntity));
+        .add_systems(
+            Update,
+            (
+                on_interact_with_tank
+                    .in_set(ItemStackSystemSet::CreateDataEntity)
+                    .in_set(BlockEventsSet::ProcessEvents)
+                    .ambiguous_with(FluidInteractionSet::InteractWithFluidBlocks),
+                add_item_fluid_data.in_set(ItemStackSystemSet::FillDataEntity),
+                on_interact_with_fluid.after(ItemStackSystemSet::FillDataEntity),
+            )
+                .in_set(NetworkingSystemsSet::Between)
+                .in_set(FluidInteractionSet::InteractWithFluidBlocks),
+        );
 }

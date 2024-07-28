@@ -1,17 +1,20 @@
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::Velocity;
-use bevy_renet::renet::RenetServer;
+use bevy_renet2::renet2::RenetServer;
 use cosmos_core::{
     netty::{
         cosmos_encoder,
         netty_rigidbody::{NettyRigidBody, NettyRigidBodyLocation},
         server_reliable_messages::ServerReliableMessages,
         sync::server_entity_syncing::RequestedEntityEvent,
+        system_sets::NetworkingSystemsSet,
         NettyChannelServer,
     },
     physics::location::Location,
     structure::{ship::Ship, Structure},
 };
+
+use crate::state::GameState;
 
 fn on_request_ship(
     mut event_reader: EventReader<RequestedEntityEvent>,
@@ -45,5 +48,10 @@ fn on_request_ship(
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_systems(Update, on_request_ship);
+    app.add_systems(
+        Update,
+        on_request_ship
+            .in_set(NetworkingSystemsSet::SyncComponents)
+            .run_if(in_state(GameState::Playing)),
+    );
 }

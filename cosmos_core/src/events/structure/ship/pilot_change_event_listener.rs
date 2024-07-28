@@ -1,6 +1,6 @@
 use bevy::prelude::{
-    in_state, Added, App, BuildChildren, Commands, Component, Entity, Event, EventReader, EventWriter, IntoSystemConfigs, Quat, Query,
-    RemovedComponents, States, Transform, Update, Vec3, With,
+    in_state, Added, App, BuildChildren, Commands, Component, Entity, Event, EventReader, EventWriter, IntoSystemConfigs,
+    IntoSystemSetConfigs, Quat, Query, RemovedComponents, States, SystemSet, Transform, Update, Vec3, With,
 };
 use bevy_rapier3d::prelude::{RigidBody, Sensor};
 
@@ -8,6 +8,7 @@ use crate::entities::player::Player;
 use crate::events::structure::change_pilot_event::ChangePilotEvent;
 use crate::physics::location::{Location, LocationPhysicsSet};
 use crate::structure::ship::pilot::Pilot;
+use crate::structure::StructureTypeSet;
 
 #[derive(Component, Debug)]
 struct PilotStartingDelta(Vec3, Quat);
@@ -130,7 +131,20 @@ fn verify_pilot_exists(mut commands: Commands, query: Query<(Entity, &Pilot)>) {
     }
 }
 
+#[derive(SystemSet, Debug, Hash, PartialEq, Eq, Clone)]
+pub enum PilotEventSystemSet {
+    ChangePilotListener,
+}
+
 pub(super) fn register<T: States + Clone + Copy>(app: &mut App, playing_state: T) {
+    app.configure_sets(
+        Update,
+        PilotEventSystemSet::ChangePilotListener
+            // Normally you'd want to put parent-changing systems before this set, but this was all designed before this was a thing.
+            // Perhaps in the future refactor this? To see how you should actually change parents, see the GravityWell logic.
+            .after(LocationPhysicsSet::DoPhysics),
+    );
+
     app.add_systems(
         Update,
         (
@@ -141,9 +155,8 @@ pub(super) fn register<T: States + Clone + Copy>(app: &mut App, playing_state: T
             verify_pilot_exists,
             event_listener,
         )
-            // Normally you'd want to put parent-changing systems before this set, but this was all designed before this was a thing.
-            // Perhaps in the future refactor this? To see how you should actually change parents, see the GravityWell logic.
-            .after(LocationPhysicsSet::DoPhysics)
+            .in_set(PilotEventSystemSet::ChangePilotListener)
+            .in_set(StructureTypeSet::Ship)
             .chain()
             .run_if(in_state(playing_state)),
     )

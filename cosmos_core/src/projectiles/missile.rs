@@ -4,6 +4,7 @@
 use std::time::Duration;
 
 use bevy::{
+    color::Color,
     core::Name,
     ecs::{
         query::Added,
@@ -12,13 +13,15 @@ use bevy::{
     pbr::{NotShadowCaster, NotShadowReceiver},
     prelude::{App, Commands, Component, Entity, Query, Update},
     reflect::Reflect,
-    render::color::Color,
 };
 use bevy_rapier3d::{
     geometry::{ActiveEvents, ActiveHooks, Collider},
     prelude::RigidBody,
 };
 use serde::{Deserialize, Serialize};
+
+#[cfg(feature = "client")]
+use crate::netty::system_sets::NetworkingSystemsSet;
 
 use crate::{
     netty::sync::{sync_component, ComponentSyncingSet, IdentifiableComponent, SyncableComponent},
@@ -116,12 +119,10 @@ pub(super) fn register(app: &mut App) {
             (
                 ExplosionSystemSet::PreProcessExplosions
                     .before(LocationPhysicsSet::DoPhysics)
-                    .before(CosmosBundleSet::HandleCosmosBundles)
-                    .before(ComponentSyncingSet::PreComponentSyncing),
+                    .before(CosmosBundleSet::HandleCosmosBundles),
                 ExplosionSystemSet::ProcessExplosions
                     .after(LocationPhysicsSet::DoPhysics)
-                    .after(CosmosBundleSet::HandleCosmosBundles)
-                    .after(ComponentSyncingSet::PreComponentSyncing),
+                    .after(CosmosBundleSet::HandleCosmosBundles),
             )
                 .chain(),
         );
@@ -131,15 +132,10 @@ pub(super) fn register(app: &mut App) {
         // Receive explosions from server before processing them
         app.configure_sets(
             Update,
-            (
-                ExplosionSystemSet::PreProcessExplosions
-                    .before(LocationPhysicsSet::DoPhysics)
-                    .before(CosmosBundleSet::HandleCosmosBundles)
-                    .after(ComponentSyncingSet::PreComponentSyncing),
-                ExplosionSystemSet::ProcessExplosions
-                    .after(LocationPhysicsSet::DoPhysics)
-                    .after(CosmosBundleSet::HandleCosmosBundles),
-            )
+            (ExplosionSystemSet::PreProcessExplosions, ExplosionSystemSet::ProcessExplosions)
+                .after(LocationPhysicsSet::DoPhysics)
+                .in_set(NetworkingSystemsSet::Between)
+                .after(CosmosBundleSet::HandleCosmosBundles)
                 .chain(),
         );
     }

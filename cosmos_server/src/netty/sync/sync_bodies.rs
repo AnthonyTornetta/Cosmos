@@ -2,7 +2,7 @@
 
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::Velocity;
-use bevy_renet::renet::RenetServer;
+use bevy_renet2::renet2::RenetServer;
 use cosmos_core::{
     block::data::BlockData,
     ecs::{despawn_needed, NeedsDespawned},
@@ -129,7 +129,11 @@ fn server_sync_bodies(
     }
 }
 
-fn pinger(mut server: ResMut<RenetServer>, mut event_reader: EventReader<RequestedEntityEvent>, mut commands: Commands) {
+fn notify_client_of_successful_entity_request(
+    mut server: ResMut<RenetServer>,
+    mut event_reader: EventReader<RequestedEntityEvent>,
+    mut commands: Commands,
+) {
     for ev in event_reader.read() {
         if commands.get_entity(ev.entity).is_some() {
             server.send_message(
@@ -186,11 +190,10 @@ pub(super) fn register(app: &mut App) {
         // This really needs to run immediately after `add_previous_location` to make sure nothing causes any desync
         // in location + transform, but for now it's fine.
         (
-            server_sync_bodies
-                .after(add_previous_location)
-                .before(NetworkingSystemsSet::ReceiveMessages),
-            pinger,
-        ),
+            notify_client_of_successful_entity_request,
+            server_sync_bodies.after(add_previous_location),
+        )
+            .in_set(NetworkingSystemsSet::SyncComponents),
     )
     .add_systems(First, notify_despawned_entities.before(despawn_needed));
 }

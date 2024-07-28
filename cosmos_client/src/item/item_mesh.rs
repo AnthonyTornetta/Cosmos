@@ -1,8 +1,9 @@
 //! Mesh-creation logic for items
 
 use bevy::{
+    color::Srgba,
     math::{Rect, Vec2, Vec3},
-    render::{color::Color, mesh::Mesh},
+    render::mesh::Mesh,
 };
 use cosmos_core::utils::array_utils::{expand_2d, flatten_2d};
 
@@ -35,12 +36,12 @@ pub fn create_item_mesh(square_image_data: &[u8], item_id: u16, image_index: u32
                 continue;
             }
 
-            pixels[flatten_2d(x, y, w)] = Some(Color::rgba(
-                r as f32 / u8::MAX as f32,
-                g as f32 / u8::MAX as f32,
-                b as f32 / u8::MAX as f32,
-                a as f32 / u8::MAX as f32,
-            ));
+            pixels[flatten_2d(x, y, w)] = Some(Srgba {
+                red: r as f32 / u8::MAX as f32,
+                green: g as f32 / u8::MAX as f32,
+                blue: b as f32 / u8::MAX as f32,
+                alpha: a as f32 / u8::MAX as f32,
+            });
         }
     }
 
@@ -106,52 +107,3 @@ pub fn create_item_mesh(square_image_data: &[u8], item_id: u16, image_index: u32
 
     cmbuilder.build_mesh()
 }
-
-/*
-
-egistry.insert_value(BlockMeshInformation::new_multi_face(
-        "cosmos:base_block",
-        MeshInformation {
-            indices: vec![0, 1, 2, 2, 3, 0],
-            uvs: vec![[0.0, 1.0], [0.0, 0.0], [1.0, 0.0], [1.0, 1.0]],
-            positions: vec![[0.5, -0.5, -0.5], [0.5, 0.5, -0.5], [0.5, 0.5, 0.5], [0.5, -0.5, 0.5]],
-            normals: [[1.0, 0.0, 0.0]; 4].to_vec(),
-        }
-        .into(),
-        MeshInformation {
-            indices: vec![0, 1, 2, 2, 3, 0],
-            uvs: vec![[0.0, 1.0], [0.0, 0.0], [1.0, 0.0], [1.0, 1.0]],
-            positions: vec![[-0.5, -0.5, 0.5], [-0.5, 0.5, 0.5], [-0.5, 0.5, -0.5], [-0.5, -0.5, -0.5]],
-            normals: [[-1.0, 0.0, 0.0]; 4].to_vec(),
-        }
-        .into(),
-        MeshInformation {
-            indices: vec![0, 1, 2, 2, 3, 0],
-            uvs: vec![[1.0, 1.0], [0.0, 1.0], [0.0, 0.0], [1.0, 0.0]],
-            positions: vec![[0.5, 0.5, -0.5], [-0.5, 0.5, -0.5], [-0.5, 0.5, 0.5], [0.5, 0.5, 0.5]],
-            normals: [[0.0, 1.0, 0.0]; 4].to_vec(),
-        }
-        .into(),
-        MeshInformation {
-            indices: vec![0, 1, 2, 2, 3, 0],
-            uvs: vec![[1.0, 0.0], [0.0, 0.0], [0.0, 1.0], [1.0, 1.0]],
-            positions: vec![[0.5, -0.5, 0.5], [-0.5, -0.5, 0.5], [-0.5, -0.5, -0.5], [0.5, -0.5, -0.5]],
-            normals: [[0.0, -1.0, 0.0]; 4].to_vec(),
-        }
-        .into(),
-        MeshInformation {
-            indices: vec![0, 1, 2, 2, 3, 0],
-            uvs: vec![[0.0, 1.0], [1.0, 1.0], [1.0, 0.0], [0.0, 0.0]],
-            positions: vec![[-0.5, -0.5, 0.5], [0.5, -0.5, 0.5], [0.5, 0.5, 0.5], [-0.5, 0.5, 0.5]],
-            normals: [[0.0, 0.0, 1.0]; 4].to_vec(),
-        }
-        .into(),
-        MeshInformation {
-            indices: vec![0, 1, 2, 2, 3, 0],
-            uvs: vec![[0.0, 0.0], [1.0, 0.0], [1.0, 1.0], [0.0, 1.0]],
-            positions: vec![[-0.5, 0.5, -0.5], [0.5, 0.5, -0.5], [0.5, -0.5, -0.5], [-0.5, -0.5, -0.5]],
-            normals: [[0.0, 0.0, -1.0]; 4].to_vec(),
-        }
-        .into(),
-    ));
-*/

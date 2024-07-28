@@ -11,7 +11,7 @@ pub mod laser_cannon_system;
 mod line_system;
 mod mining_laser_system;
 pub mod missile_launcher_system;
-mod shield_system;
+pub mod shield_system;
 pub(crate) mod sync;
 mod thruster_system;
 

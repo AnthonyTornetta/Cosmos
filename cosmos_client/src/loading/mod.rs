@@ -1,12 +1,12 @@
 //! Responsible for unloading far entities
 
-use bevy::prelude::{App, Commands, Entity, Parent, Query, Update, With, Without};
+use bevy::prelude::{App, Commands, Entity, IntoSystemConfigs, Parent, Query, Update, With, Without};
 use cosmos_core::{
     ecs::NeedsDespawned,
     entities::player::Player,
-    netty::client::LocalPlayer,
+    netty::{client::LocalPlayer, system_sets::NetworkingSystemsSet},
     persistence::LoadingDistance,
-    physics::location::{Location, SectorUnit},
+    physics::location::{Location, LocationPhysicsSet, SectorUnit},
 };
 
 fn unload_far_entities(
@@ -26,5 +26,10 @@ fn unload_far_entities(
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_systems(Update, unload_far_entities);
+    app.add_systems(
+        Update,
+        unload_far_entities
+            .in_set(NetworkingSystemsSet::Between)
+            .after(LocationPhysicsSet::DoPhysics),
+    );
 }

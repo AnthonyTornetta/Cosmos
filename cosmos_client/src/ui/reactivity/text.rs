@@ -1,13 +1,13 @@
 //! Reactivity for text
 
+use super::{BindValues, NeedsValueFetched, ReactableFields, ReactableValue, ReactiveUiSystemSet};
 use bevy::{
     app::{App, Update},
     ecs::{event::EventReader, system::Query},
     log::{error, warn},
+    prelude::IntoSystemConfigs,
     text::Text,
 };
-
-use super::{BindValues, NeedsValueFetched, ReactableFields, ReactableValue};
 
 fn on_need_update_value<T: ReactableValue>(
     q_react_value: Query<&T>,
@@ -37,5 +37,10 @@ fn on_need_update_value<T: ReactableValue>(
 }
 
 pub(super) fn register<T: ReactableValue>(app: &mut App) {
-    app.add_systems(Update, on_need_update_value::<T>);
+    app.add_systems(
+        Update,
+        on_need_update_value::<T>
+            .in_set(ReactiveUiSystemSet::ProcessSliderValueChanges)
+            .ambiguous_with(ReactiveUiSystemSet::ProcessSliderValueChanges),
+    );
 }

@@ -96,5 +96,7 @@ impl EnergyStorageSystem {
 
 pub(super) fn register(app: &mut App) {
     app.insert_resource(EnergyStorageBlocks::default())
-        .register_type::<EnergyStorageSystem>();
+        .register_type::<EnergyStorageSystem>()
+        // This is allowed to be ambiguous, because it will be being replaced in the future, once electric wires are done.
+        .allow_ambiguous_component::<EnergyStorageSystem>();
 }

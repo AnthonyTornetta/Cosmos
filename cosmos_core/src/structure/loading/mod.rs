@@ -75,7 +75,9 @@ pub(super) fn register(app: &mut App) {
         Update,
         (
             listen_chunk_done_loading.in_set(StructureLoadingSet::LoadChunkData),
-            set_structure_done_loading.in_set(StructureLoadingSet::StructureLoaded),
+            set_structure_done_loading
+                .ambiguous_with(StructureLoadingSet::StructureLoaded)
+                .in_set(StructureLoadingSet::StructureLoaded),
         ),
     )
     .register_type::<ChunksNeedLoaded>();

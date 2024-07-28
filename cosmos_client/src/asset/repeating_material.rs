@@ -2,7 +2,8 @@
 
 use bevy::{
     asset::Asset,
-    prelude::{AlphaMode, App, Color, Handle, Image, Material, MaterialPlugin},
+    color::LinearRgba,
+    prelude::{AlphaMode, App, Handle, Image, Material, MaterialPlugin},
     reflect::{Reflect, TypePath},
     render::render_resource::{AsBindGroup, ShaderRef, ShaderType},
 };
@@ -24,7 +25,7 @@ pub(crate) struct UnlitRepeatedMaterial {
     #[uniform(2)]
     pub(crate) repeats: Repeats,
     #[uniform(3)]
-    pub(crate) color: Color,
+    pub(crate) color: LinearRgba,
 }
 
 impl Material for UnlitRepeatedMaterial {
