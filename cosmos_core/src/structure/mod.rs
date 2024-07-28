@@ -32,6 +32,7 @@ pub mod loading;
 pub mod lod;
 pub mod lod_chunk;
 pub mod planet;
+pub mod prelude;
 pub mod query;
 pub mod shared;
 pub mod shields;

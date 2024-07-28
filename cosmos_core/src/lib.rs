@@ -19,6 +19,7 @@ pub mod netty;
 pub mod persistence;
 pub mod physics;
 pub mod plugin;
+pub mod prelude;
 pub mod projectiles;
 pub mod registry;
 pub mod shop;
