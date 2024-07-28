@@ -114,6 +114,7 @@ impl LogicGraph {
     }
 
     pub fn remove_group(&mut self, group_id: usize) -> LogicGroup {
+        // println!("Removed group {group_id}.");
         self.groups.remove(&group_id).expect("Logic group to be removed should exist.")
     }
 
@@ -124,16 +125,19 @@ impl LogicGraph {
     /// Public convenience method to get the [`LogicGroup`] ID, then the [`LogicGroup`] instance itself.
     /// Returns None if the given [`Port`] and [`PortType`] are not in this logic graph.
     pub fn group_of(&self, port: &Port, port_type: PortType) -> Option<&LogicGroup> {
-        println!();
         let group_id = match port_type {
             PortType::Output => &self.output_port_group_id,
             PortType::Input => &self.input_port_group_id,
         }
         .get(port)?;
         Some(
-            self.groups
-                .get(group_id)
-                .expect("Logic port with a group ID should have a logic group."),
+            self.groups.get(group_id).expect(
+                format!(
+                    "Logic {:?} port at {:?} with a group ID {:?} should have a logic group.",
+                    port_type, port, group_id
+                )
+                .as_ref(),
+            ),
         )
     }
 
@@ -146,9 +150,13 @@ impl LogicGraph {
         }
         .get(port)?;
         Some(
-            self.groups
-                .get_mut(group_id)
-                .expect("Logic port with a group ID should have a logic group."),
+            self.groups.get_mut(group_id).expect(
+                format!(
+                    "Logic {:?} port at {:?} with a group ID {:?} should have a mutable logic group.",
+                    port_type, port, group_id
+                )
+                .as_ref(),
+            ),
         )
     }
 
@@ -156,8 +164,8 @@ impl LogicGraph {
         &self,
         coords: BlockCoordinate,
         encountered_from_direction: BlockDirection,
-        mut maybe_from_wire_type: Option<u16>,
-        mut from_bus: bool,
+        mut required_color_id: Option<u16>,
+        from_bus: bool,
         structure: &Structure,
         visited: &mut HashSet<Port>,
         blocks: &Registry<Block>,
@@ -168,7 +176,7 @@ impl LogicGraph {
             // Not a logic block.
             return None;
         };
-        println!("DFS encountered {} at {}", logic_block.unlocalized_name(), coords);
+        // println!("DFS encountered {} at {}", logic_block.unlocalized_name(), coords);
 
         let encountered_face = structure.block_rotation(coords).block_face_pointing(encountered_from_direction);
         match logic_block.connection_on(encountered_face) {
@@ -192,20 +200,20 @@ impl LogicGraph {
             }
             Some(LogicConnection::Wire(wire_type)) => {
                 // Logic buses should not interact with logic that doesn't have a wire color.
-                if maybe_from_wire_type.is_none() && wire_type == WireType::Bus {
+                if required_color_id.is_none() && wire_type == WireType::Bus {
                     return None;
                 }
-                let wire_color_id = *maybe_from_wire_type.get_or_insert(match wire_type {
+                let wire_color_id = *required_color_id.get_or_insert(match wire_type {
                     WireType::Bus => u16::MAX, // If statement above means this value should never be used.
                     WireType::Color(id) => id,
                 });
                 if wire_type.connects_to_color(wire_color_id) {
-                    println!(" - Encountered color {:?} matches desired color {}", wire_type, wire_color_id);
+                    // println!(" - Encountered color {:?} matches desired color {}", wire_type, wire_color_id);
                     self.groups
                         .iter()
                         .find_map(|(&id, group)| {
                             if group.wire_color_id == Some(wire_color_id) && group.recent_wire_coords == Some(coords) {
-                                println!(" - Most recent wire for logic group {}", id);
+                                // println!(" - Most recent wire for logic group {}", id);
                                 Some(id)
                             } else {
                                 None
@@ -214,12 +222,12 @@ impl LogicGraph {
                         .or_else(|| {
                             // This wire block does not tell us what group we're in. Recurse on its neighbors.
                             visited.insert(Port::new(coords, encountered_from_direction));
-                            println!(
-                                " - Searching out from faces: {:?}",
-                                logic_block
-                                    .wire_faces_connecting_to(wire_type)
-                                    .fold(String::new(), |s, face| s + &face.to_string() + ", ")
-                            );
+                            // println!(
+                            //     " - Searching out from faces: {:?}",
+                            //     logic_block
+                            //         .wire_faces_connecting_to(wire_type)
+                            //         .fold(String::new(), |s, face| s + &face.to_string() + ", ")
+                            // );
                             for face in logic_block.wire_faces_connecting_to(wire_type) {
                                 let direction = structure.block_rotation(coords).direction_of(face);
                                 visited.insert(Port::new(coords, direction));
@@ -239,18 +247,18 @@ impl LogicGraph {
                                     blocks,
                                     logic_blocks,
                                 ) {
-                                    println!("Found group {} through face {:?}", group, face);
+                                    // println!("Found group {} through face {:?}", group, face);
                                     return Some(group);
                                 }
                             }
-                            println!("None of the faces returned a group");
+                            // println!("None of the faces returned a group");
                             None
                         })
                 } else {
-                    println!(
-                        " - Encountered color {:?} does not match desired color {}",
-                        wire_type, wire_color_id
-                    );
+                    // println!(
+                    //     " - Encountered color {:?} does not match desired color {}",
+                    //     wire_type, wire_color_id
+                    // );
                     None
                 }
             }
@@ -308,6 +316,7 @@ impl LogicGraph {
                 }
             })
             .unwrap_or_else(|| {
+                println!("Running DFS for color {}", wire_color_id);
                 self.group_dfs_all_faces(
                     logic_block,
                     wire_color_id,
@@ -495,13 +504,14 @@ impl LogicGraph {
     }
 
     /// Explores a logic group using DFS, renaming any ports encountered with a new group ID.
-    /// Returns the coordinates of the first wire connection block encountered (if it exists) so it can be added to the new group.
+    /// Returns whether the new group ID passed in was used (true), or should be deleted (false).
     pub fn rename_group(
         &mut self,
         new_group_id: usize,
         coords: BlockCoordinate,
         encountered_from_direction: BlockDirection,
         wire_color_id: u16,
+        from_bus: bool,
         structure: &Structure,
         visited: &mut HashSet<Port>,
         blocks: &Registry<Block>,
@@ -519,34 +529,42 @@ impl LogicGraph {
             return false;
         };
 
+        // Return true (the group ID was used) if this block connects to the original block.
+        // This recursive function does not pass it's return value between calls. This return only cares about the first block.
         let encountered_face = structure.block_rotation(coords).block_face_pointing(encountered_from_direction);
         match logic_block.connection_on(encountered_face) {
             Some(LogicConnection::Port(port_type)) => {
-                // Getting the port's output value in the previous group.
-                let old_signal = match port_type {
-                    PortType::Input => 0,
-                    PortType::Output => {
-                        let old_group = self
-                            .group_of(&Port::new(coords, encountered_from_direction), PortType::Output)
-                            .expect("Port being renamed should have a previous group.");
-                        *old_group
-                            .producers
-                            .get(&Port::new(coords, encountered_from_direction))
-                            .expect("Existing output port should be either on or off")
-                    }
-                };
+                // Logic buses do not interact with input/output ports.
+                if from_bus {
+                    false
+                } else {
+                    // Getting the port's output value in the previous group.
+                    let old_signal = match port_type {
+                        PortType::Input => 0,
+                        PortType::Output => {
+                            let old_group = self
+                                .group_of(&Port::new(coords, encountered_from_direction), PortType::Output)
+                                .expect("Port being renamed should have a previous group.");
+                            *old_group
+                                .producers
+                                .get(&Port::new(coords, encountered_from_direction))
+                                .expect("Existing output port should be either on or off")
+                        }
+                    };
 
-                // Inserting the port into the port to group ID mapping also removes the old version.
-                self.add_port(
-                    coords,
-                    encountered_from_direction,
-                    new_group_id,
-                    port_type,
-                    old_signal,
-                    structure.get_entity().expect("Structure should have entity"),
-                    evw_queue_logic_output,
-                    evw_queue_logic_input,
-                );
+                    // Inserting the port into the port to group ID mapping also removes the old version.
+                    self.add_port(
+                        coords,
+                        encountered_from_direction,
+                        new_group_id,
+                        port_type,
+                        old_signal,
+                        structure.get_entity().expect("Structure should have entity"),
+                        evw_queue_logic_output,
+                        evw_queue_logic_input,
+                    );
+                    true
+                }
             }
             Some(LogicConnection::Wire(wire_type)) => {
                 if wire_type.connects_to_color(wire_color_id) {
@@ -566,6 +584,7 @@ impl LogicGraph {
                             neighbor_coords,
                             direction.inverse(),
                             wire_color_id,
+                            wire_type == WireType::Bus,
                             structure,
                             visited,
                             blocks,
@@ -576,11 +595,13 @@ impl LogicGraph {
                     }
                     // The first wire coords are always set last (so they take effect), the only recursive call is in this arm.
                     self.set_group_recent_wire(new_group_id, wire_color_id, coords);
+                    true
+                } else {
+                    false
                 }
             }
-            None => {}
+            None => false,
         }
-        logic_block.connection_on(encountered_face).is_some()
     }
 
     pub fn update_producer(
