@@ -95,7 +95,7 @@ pub(crate) fn process_player_interaction(
     };
 
     let Some((hit_block, mut structure, mut structure_g_transform, mut is_planet)) = send_ray(
-        &rapier_context,
+        rapier_context,
         cam_trans,
         player_entity,
         &q_chunk_physics_part,
@@ -115,7 +115,7 @@ pub(crate) fn process_player_interaction(
 
     if structure.block_at(hit_block.block.coords(), &blocks).is_fluid() {
         if let Some((hit_block, s, sgt, ip)) = send_ray(
-            &rapier_context,
+            rapier_context,
             cam_trans,
             player_entity,
             &q_chunk_physics_part,

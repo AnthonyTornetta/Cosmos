@@ -301,7 +301,7 @@ fn on_render_tanks(
             evw_add_material.send(AddMaterialEvent {
                 entity,
                 add_material_id: mat_id,
-                texture_dimensions_index: texture_dimensions_index,
+                texture_dimensions_index,
                 material_type: MaterialType::Normal,
             });
 

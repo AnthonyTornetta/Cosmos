@@ -245,33 +245,30 @@ fn send_key_inputs(
         }
 
         if !inputs.pressed(KeyCode::ControlLeft) && !inputs.pressed(KeyCode::ControlRight) {
-            match &pressed.logical_key {
-                Key::Character(smol_str) => {
-                    let mut new_value = text.0.clone();
-                    let new_cursor_pos;
+            if let Key::Character(smol_str) = &pressed.logical_key {
+                let mut new_value = text.0.clone();
+                let new_cursor_pos;
 
-                    if let Some(range) = focused_input_field.get_highlighted_range() {
-                        let replace_string = smol_str;
-                        new_cursor_pos = range.start + replace_string.len();
+                if let Some(range) = focused_input_field.get_highlighted_range() {
+                    let replace_string = smol_str;
+                    new_cursor_pos = range.start + replace_string.len();
 
-                        text.0.replace_range(range, &replace_string);
-                    } else if focused_input_field.cursor_pos == text.len() {
-                        new_value.push_str(smol_str.as_str());
+                    text.0.replace_range(range, replace_string);
+                } else if focused_input_field.cursor_pos == text.len() {
+                    new_value.push_str(smol_str.as_str());
 
-                        new_cursor_pos = focused_input_field.cursor_pos + 1;
-                    } else {
-                        new_value.insert_str(focused_input_field.cursor_pos, smol_str.as_str());
+                    new_cursor_pos = focused_input_field.cursor_pos + 1;
+                } else {
+                    new_value.insert_str(focused_input_field.cursor_pos, smol_str.as_str());
 
-                        new_cursor_pos = focused_input_field.cursor_pos + 1;
-                    }
-
-                    if verify_input(&focused_input_field, &new_value) {
-                        text.0 = new_value;
-                        focused_input_field.cursor_pos = new_cursor_pos;
-                        focused_input_field.highlight_begin = None;
-                    }
+                    new_cursor_pos = focused_input_field.cursor_pos + 1;
                 }
-                _ => {}
+
+                if verify_input(&focused_input_field, &new_value) {
+                    text.0 = new_value;
+                    focused_input_field.cursor_pos = new_cursor_pos;
+                    focused_input_field.highlight_begin = None;
+                }
             }
         }
 

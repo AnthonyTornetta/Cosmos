@@ -361,7 +361,7 @@ fn update_corner_styles(q_style: &mut Query<(&mut Style, &mut UiImage)>, entity:
     };
 
     style.top = Val::Px(gap);
-    img.color = color.into();
+    img.color = color;
 }
 
 pub(super) fn register(app: &mut App) {

@@ -518,22 +518,14 @@ fn listen_for_new_physics_event(
         }
     }
 
-    // create new colliders
+    // Create new colliders
 
     let processed_chunk_colliders = todo
         .into_par_iter()
         .flat_map(|(chunk_coord, structure_entity)| {
-            let Ok(structure) = structure_query.get(structure_entity) else {
-                return None;
-            };
-
-            let Some(chunk) = structure.chunk_at(chunk_coord) else {
-                return None;
-            };
-
-            let Some(chunk_entity) = structure.chunk_entity(chunk_coord) else {
-                return None;
-            };
+            let structure = structure_query.get(structure_entity).ok()?;
+            let chunk = structure.chunk_at(chunk_coord)?;
+            let chunk_entity = structure.chunk_entity(chunk_coord)?;
 
             // let chunk_colliders = vec![(Collider::cuboid(16.0, 16.0, 16.0), 10.0, BlockColliderMode::NormalCollider)];
 

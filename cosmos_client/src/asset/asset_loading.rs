@@ -141,7 +141,7 @@ impl CosmosTextureAtlas {
     pub fn get_texture_index(&self, handle: &Handle<Image>, images: &Assets<Image>) -> Option<TextureIndex> {
         images
             .get(handle)
-            .map(|img| {
+            .and_then(|img| {
                 let dims = img.width();
 
                 let texture_atlas = self
@@ -151,15 +151,13 @@ impl CosmosTextureAtlas {
                     .find(|(_, x)| x.individual_image_dimensions() == dims);
 
                 texture_atlas
-                    .map(|(dimension_index, x)| {
+                    .and_then(|(dimension_index, x)| {
                         x.get_texture_index(handle).map(|texture_index| TextureIndex {
                             dimension_index: dimension_index as u32,
                             texture_index,
                         })
                     })
-                    .flatten()
             })
-            .flatten()
     }
 }
 
