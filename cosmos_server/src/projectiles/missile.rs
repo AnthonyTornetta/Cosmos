@@ -142,7 +142,7 @@ fn despawn_missiles(mut commands: Commands, mut query: Query<(Entity, &Velocity,
 pub(super) fn register(app: &mut App) {
     app.add_systems(
         Update,
-        (respond_to_collisions, despawn_missiles)
+        (respond_to_collisions.before(NetworkingSystemsSet::SyncComponents), despawn_missiles)
             .before(ExplosionSystemSet::PreProcessExplosions)
             .before(CosmosBundleSet::HandleCosmosBundles)
             .chain(),

@@ -320,7 +320,28 @@ pub(crate) fn client_sync_players(
                             }
                         }
                     } else if !requested_entities.entities.iter().any(|x| x.server_entity == *server_entity) {
-                        let client_entity = commands.spawn(ServerEntity(*server_entity)).id();
+                        let (loc, parent_ent) = match body.location {
+                            NettyRigidBodyLocation::Absolute(location) => (location, None),
+                            NettyRigidBodyLocation::Relative(rel_trans, parent_ent) => {
+                                let parent_loc = query_body.get(parent_ent).map(|x| x.0.copied()).unwrap_or(None).unwrap_or_default();
+
+                                (parent_loc + rel_trans, Some(parent_ent))
+                            }
+                        };
+
+                        let mut client_entity_ecmds = commands.spawn((
+                            ServerEntity(*server_entity),
+                            loc,
+                            BundleStartingRotation(body.rotation),
+                            body.create_velocity(),
+                            LerpTowards(body),
+                        ));
+
+                        if let Some(parent_ent) = parent_ent {
+                            client_entity_ecmds.set_parent(parent_ent);
+                        }
+
+                        let client_entity = client_entity_ecmds.id();
 
                         requested_entities.entities.push(RequestedEntity {
                             server_entity: *server_entity,

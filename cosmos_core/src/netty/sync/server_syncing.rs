@@ -469,7 +469,7 @@ pub(super) fn sync_component_server<T: SyncableComponent>(app: &mut App) {
                 Update,
                 (server_deserialize_component::<T>, server_remove_component::<T>)
                     .chain()
-                    .in_set(ComponentSyncingSet::DoComponentSyncing),
+                    .in_set(NetworkingSystemsSet::ProcessReceivedMessages),
             );
         }
         SyncType::BothAuthoritative(_) => {
@@ -488,7 +488,7 @@ pub(super) fn sync_component_server<T: SyncableComponent>(app: &mut App) {
                 Update,
                 (server_deserialize_component::<T>, server_remove_component::<T>)
                     .chain()
-                    .in_set(ComponentSyncingSet::DoComponentSyncing),
+                    .in_set(NetworkingSystemsSet::ProcessReceivedMessages),
             );
         }
     }

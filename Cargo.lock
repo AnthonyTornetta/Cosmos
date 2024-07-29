@@ -802,8 +802,9 @@ dependencies = [
 
 [[package]]
 name = "bevy_hanabi"
-version = "0.12.0"
-source = "git+https://github.com/djeedai/bevy_hanabi#4874c48f2d92c9a8a1f980bf808add9378c74402"
+version = "0.12.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3741d31b161dd5fde0c629f5c9bfd1043347c6d66a3b9b9c500e14d79f7bdb69"
 dependencies = [
  "anyhow",
  "bevy",
@@ -1023,7 +1024,7 @@ checksum = "c115c97a5c8a263bd0aa7001b999772c744ac5ba797d07c86f25734ce381ea69"
 [[package]]
 name = "bevy_rapier3d"
 version = "0.27.0"
-source = "git+https://github.com/AnthonyTornetta/bevy_rapier?branch=context-component#1b6bf5f12df91d0c09347bf492c5bca29cd76f67"
+source = "git+https://github.com/AnthonyTornetta/bevy_rapier?branch=context-component#f3ef621a80c9019dbbac3eaf5f74e5c41548154f"
 dependencies = [
  "bevy",
  "bitflags 2.6.0",

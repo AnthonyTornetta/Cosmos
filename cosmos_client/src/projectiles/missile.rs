@@ -53,12 +53,16 @@ fn create_missile_mesh(asset_server: Res<AssetServer>, mut materials: ResMut<Ass
     ));
 }
 
-fn on_add_missile(mut commands: Commands, missile_mesh: Res<MissileRenderingInfo>, q_added_missile: Query<Entity, Added<Missile>>) {
+fn on_add_missile(
+    mut commands: Commands,
+    missile_rendering_info: Res<MissileRenderingInfo>,
+    q_added_missile: Query<Entity, Added<Missile>>,
+) {
     for ent in &q_added_missile {
         commands.entity(ent).insert((
             VisibilityBundle::default(),
-            missile_mesh.0.clone_weak(),
-            missile_mesh.1.clone_weak(),
+            missile_rendering_info.0.clone_weak(),
+            missile_rendering_info.1.clone_weak(),
         ));
     }
 }
@@ -84,7 +88,8 @@ struct ParticleEffectsForColor(HashMap<u32, Handle<EffectAsset>>);
 fn respond_to_explosion(
     mut commands: Commands,
     q_local_player: Query<&GlobalTransform, With<LocalPlayer>>,
-    q_explosions: Query<(Entity, &Location, &GlobalTransform, &Explosion), Added<Explosion>>,
+    // q_explosions needs &Transform not &GlobalTransform since &GlobalTransform won't be setup yet.
+    q_explosions: Query<(Entity, &Location, &Transform, &Explosion), Added<Explosion>>,
     audio: Res<Audio>,
     audio_sources: Res<ExplosionAudio>,
     mut particles: ResMut<ParticleEffectsForColor>,
@@ -94,15 +99,13 @@ fn respond_to_explosion(
         return;
     };
 
-    for (ent, explosion_loc, g_trans, explosion) in q_explosions.iter() {
-        // Makes the particles appear 3d
-
+    for (ent, explosion_loc, transform, explosion) in q_explosions.iter() {
         let hash = explosion.color.map(color_hash).unwrap_or(0);
 
-        let particle_handle = particles.0.get(&hash).map(|x| x.clone_weak()).unwrap_or_else(|| {
+        let particle_handle = particles.0.get(&hash).cloned().unwrap_or_else(|| {
             let fx_handle = create_particle_fx(explosion.color, &mut effects);
 
-            let fx_handle_weak = fx_handle.clone_weak();
+            let fx_handle_weak = fx_handle.clone();
 
             particles.0.insert(hash, fx_handle);
 
@@ -119,7 +122,8 @@ fn respond_to_explosion(
             ExplosionParticle,
             ParticleEffectBundle {
                 effect: ParticleEffect::new(particle_handle),
-                transform: Transform::from_translation(g_trans.translation()).looking_at(local_g_trans.translation(), Vec3::Y),
+                // Makes the particles appear 3d by looking them at the player
+                transform: Transform::from_translation(transform.translation).looking_at(local_g_trans.translation(), Vec3::Y),
                 ..Default::default()
             },
         ));
@@ -140,7 +144,7 @@ fn respond_to_explosion(
                     peak_volume: 1.0,
                     ..Default::default()
                 }]),
-                transform: TransformBundle::from_transform(Transform::from_translation(g_trans.translation())),
+                transform: TransformBundle::from_transform(Transform::from_translation(transform.translation)),
             },
         ));
     }
