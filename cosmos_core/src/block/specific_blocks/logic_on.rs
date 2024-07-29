@@ -1,6 +1,5 @@
 //! Logic behavior for "Logic On", a block that outputs a logic signal on all 6 faces.
 
-
 use bevy::{
     app::{App, Update},
     prelude::{EventReader, EventWriter, IntoSystemConfigs, OnEnter, Query, Res, ResMut, States},
@@ -9,8 +8,7 @@ use bevy::{
 use crate::{
     block::Block,
     logic::{
-        logic_driver::LogicDriver, LogicBlock, LogicConnection, LogicOutputEvent,
-        LogicSystemSet, Port, PortType, QueueLogicInputEvent,
+        logic_driver::LogicDriver, LogicBlock, LogicConnection, LogicOutputEvent, LogicSystemSet, Port, PortType, QueueLogicInputEvent,
     },
     registry::{identifiable::Identifiable, Registry},
     structure::Structure,
