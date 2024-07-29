@@ -1,0 +1,21 @@
+{
+    "model": {
+        "Sides": {
+            "name": "cosmos:logic_wire",
+            "left": "cosmos:logic_wire_left",
+            "right": "cosmos:logic_wire_right",
+            "top": "cosmos:logic_wire_top",
+            "bottom": "cosmos:logic_wire_bottom",
+            "front": "cosmos:logic_wire_front",
+            "back": "cosmos:logic_wire_back",
+            "connected": {
+                "right": "cosmos:logic_wire_right_connected",
+                "left": "cosmos:logic_wire_left_connected",
+                "top": "cosmos:logic_wire_top_connected",
+                "bottom": "cosmos:logic_wire_bottom_connected",
+                "front": "cosmos:logic_wire_front_connected",
+                "back": "cosmos:logic_wire_back_connected"
+            }
+        }
+    }
+}

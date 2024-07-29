@@ -14,6 +14,7 @@ use bevy::{
 };
 use logic_driver::LogicDriver;
 use logic_graph::{LogicGraph, LogicGroup};
+use serde::{Deserialize, Serialize};
 
 use crate::{
     block::{
@@ -49,12 +50,40 @@ pub enum PortType {
 }
 
 #[derive(Debug, Copy, Clone, PartialEq)]
+/// Defines the types of logic wires and how they connect to each other.
+/// Each block face with a logic connection might be a logic port.
+pub enum WireType {
+    /// Connects to all colors, for example the logic bus.
+    Bus,
+    /// Connects to only a single color, identified by the logic wire color registry ID.
+    Color(u16),
+}
+
+impl WireType {
+    /// Returns true if this wire type connects to the given color, false otherwise.
+    pub fn connects_to_color(self, id: u16) -> bool {
+        match self {
+            Self::Bus => true,
+            Self::Color(self_color_id) => self_color_id == id,
+        }
+    }
+
+    /// Returns true if this wire type connects to the given wire type, false otherwise.
+    pub fn connects_to_wire_type(self, other: Self) -> bool {
+        match self {
+            Self::Bus => true,
+            Self::Color(self_color_id) => other.connects_to_color(self_color_id),
+        }
+    }
+}
+
+#[derive(Debug, Copy, Clone, PartialEq)]
 /// Defines how a block face interacts with adjacent logic blocks.
 pub enum LogicConnection {
     /// An input or output port.
     Port(PortType),
     /// Joins adjacent logic groups without interrupting them or having delayed inputs or outputs.
-    Wire,
+    Wire(WireType),
 }
 
 #[derive(Debug, Clone)]
@@ -62,7 +91,6 @@ pub enum LogicConnection {
 pub struct LogicBlock {
     // Specifies the roles of the 6 block faces, ordered by BlockFace index.
     connections: [Option<LogicConnection>; 6],
-    initial_signal: i32,
 
     id: u16,
     unlocalized_name: String,
@@ -85,11 +113,10 @@ impl Identifiable for LogicBlock {
 impl LogicBlock {
     /// Creates a link to a block to define its logic connections.
     /// Right, Left, Top, Bottom, Front, Back.
-    pub fn new(block: &Block, connections: [Option<LogicConnection>; 6], initial_signal: i32) -> Self {
+    pub fn new(block: &Block, connections: [Option<LogicConnection>; 6]) -> Self {
         Self {
             connections,
-            initial_signal,
-            id: 0,
+            id: u16::MAX,
             unlocalized_name: block.unlocalized_name().to_owned(),
         }
     }
@@ -129,7 +156,46 @@ impl LogicBlock {
 
     /// Returns an iterator over all of this logic block's faces with wire connections.
     pub fn wire_faces(&self) -> impl Iterator<Item = BlockFace> + '_ {
-        self.faces_with(Some(LogicConnection::Wire))
+        self.connections
+            .iter()
+            .enumerate()
+            .filter(move |(_, maybe_connection)| matches!(**maybe_connection, Some(LogicConnection::Wire(_))))
+            .map(|(idx, _)| BlockFace::from_index(idx))
+    }
+
+    /// Returns an iterator over all of this logic block's faces with wire connections that connect to the given wire type.
+    pub fn wire_faces_connecting_to(&self, wire_type: WireType) -> impl Iterator<Item = BlockFace> + '_ {
+        self.connections
+            .iter()
+            .enumerate()
+            .filter(move |(_, maybe_connection)| match **maybe_connection {
+                Some(LogicConnection::Wire(encountered_wire_type)) => encountered_wire_type.connects_to_wire_type(wire_type),
+                _ => false,
+            })
+            .map(|(idx, _)| BlockFace::from_index(idx))
+    }
+
+    fn wire_face_colors_no_bus(&self) -> impl Iterator<Item = u16> + '_ {
+        let color_set: HashSet<u16> = self
+            .connections
+            .iter()
+            .filter_map(|connection| match connection {
+                Some(LogicConnection::Wire(WireType::Color(color_id))) => Some(*color_id),
+                _ => None,
+            })
+            .collect();
+        color_set.into_iter()
+    }
+
+    /// Returns an iterator over every wire color ID any wire face of this block connects to.
+    ///
+    /// Returns the iterator over all wire color IDs if any of the faces are logic bus.
+    pub fn wire_face_colors<'a>(&'a self, logic_wire_colors: &'a Registry<LogicWireColor>) -> Box<dyn Iterator<Item = u16> + '_> {
+        if self.faces_with(Some(LogicConnection::Wire(WireType::Bus))).next().is_some() {
+            Box::new(logic_wire_colors.all_ids())
+        } else {
+            Box::new(self.wire_face_colors_no_bus())
+        }
     }
 
     /// Returns an iterator over all of this logic block's faces with no logic connections.
@@ -158,6 +224,48 @@ impl Port {
     /// HashSet format is needed for some DFS methods.
     pub fn all_for(coords: BlockCoordinate) -> HashSet<Port> {
         HashSet::from_iter(ALL_BLOCK_DIRECTIONS.map(|direction| Port::new(coords, direction)))
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Reflect, Default)]
+/// A type to be registered for each color of logic wire, so their IDs can be used to check connections in the logic graph.
+pub struct LogicWireColor {
+    id: u16,
+    unlocalized_name: String,
+}
+
+impl Identifiable for LogicWireColor {
+    #[inline]
+    fn id(&self) -> u16 {
+        self.id
+    }
+
+    fn set_numeric_id(&mut self, id: u16) {
+        self.id = id;
+    }
+
+    #[inline]
+    fn unlocalized_name(&self) -> &str {
+        &self.unlocalized_name
+    }
+}
+
+impl LogicWireColor {
+    /// Creates a wire color.
+    ///
+    /// * `unlocalized_name` This should be unique for that block with the following formatting: `mod_id:color_name`. Such as: `cosmos:dark_red`.
+    pub fn new(unlocalized_name: String) -> Self {
+        Self {
+            id: u16::MAX,
+            unlocalized_name,
+        }
+    }
+}
+
+impl PartialEq for LogicWireColor {
+    #[inline(always)]
+    fn eq(&self, other: &Self) -> bool {
+        self.id == other.id
     }
 }
 
@@ -219,6 +327,7 @@ fn logic_block_placed_event_listener(
     mut evr_block_changed: EventReader<BlockChangedEvent>,
     blocks: Res<Registry<Block>>,
     logic_blocks: Res<Registry<LogicBlock>>,
+    logic_wire_colors: Res<Registry<LogicWireColor>>,
     mut q_logic: Query<&mut LogicDriver>,
     mut q_structure: Query<&mut Structure>,
     q_has_data: Query<(), With<BlockLogicData>>,
@@ -240,6 +349,7 @@ fn logic_block_placed_event_listener(
                         structure.get_entity().expect("Structure should have entity."),
                         &blocks,
                         &logic_blocks,
+                        &logic_wire_colors,
                         &mut evw_queue_logic_output,
                         &mut evw_queue_logic_input,
                     )
@@ -260,17 +370,12 @@ fn logic_block_placed_event_listener(
                         structure.get_entity().expect("Structure should have entity"),
                         &blocks,
                         &logic_blocks,
+                        &logic_wire_colors,
                         &mut evw_queue_logic_output,
                         &mut evw_queue_logic_input,
                     );
                     // Add the logic block's internal data storage to the structure.
-                    structure.insert_block_data(
-                        coords,
-                        BlockLogicData(logic_block.initial_signal),
-                        &mut bs_params,
-                        &mut q_block_data,
-                        &q_has_data,
-                    );
+                    structure.insert_block_data(coords, BlockLogicData(0), &mut bs_params, &mut q_block_data, &q_has_data);
                 }
             }
         }
@@ -382,6 +487,7 @@ pub const LOGIC_TICKS_PER_SECOND: u64 = 20;
 
 pub(super) fn register<T: States>(app: &mut App, playing_state: T) {
     create_registry::<LogicBlock>(app, "cosmos:logic_blocks");
+    create_registry::<LogicWireColor>(app, "cosmos:logic_wire_colors");
     app.init_resource::<LogicOutputEventQueue>();
     app.init_resource::<LogicInputEventQueue>();
 

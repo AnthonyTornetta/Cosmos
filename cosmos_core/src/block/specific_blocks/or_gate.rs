@@ -20,9 +20,9 @@ use crate::{
 };
 
 fn register_logic_connections(blocks: Res<Registry<Block>>, mut registry: ResMut<Registry<LogicBlock>>) {
-    if let Some(and_gate) = blocks.from_id("cosmos:or_gate") {
+    if let Some(or_gate) = blocks.from_id("cosmos:or_gate") {
         registry.register(LogicBlock::new(
-            and_gate,
+            or_gate,
             [
                 Some(LogicConnection::Port(PortType::Input)),
                 Some(LogicConnection::Port(PortType::Input)),
@@ -31,7 +31,6 @@ fn register_logic_connections(blocks: Res<Registry<Block>>, mut registry: ResMut
                 Some(LogicConnection::Port(PortType::Output)),
                 None,
             ],
-            0,
         ));
     }
 }

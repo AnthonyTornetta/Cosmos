@@ -118,7 +118,7 @@ impl<T: Identifiable + Sync + Send> Registry<T> {
         }
     }
 
-    /// Adds an item to this registry
+    /// Adds an item to this registry.
     pub fn register(&mut self, mut item: T) {
         let id = self.contents.len() as u16;
         item.set_numeric_id(id);
@@ -126,14 +126,19 @@ impl<T: Identifiable + Sync + Send> Registry<T> {
         self.contents.push(item);
     }
 
-    /// Iterates over every registered value
+    /// Iterates over every registered value.
     pub fn iter(&self) -> Iter<T> {
         self.contents.iter()
     }
 
-    /// Iterates over every registered value mutably
+    /// Iterates over every registered value mutably.
     pub fn iter_mut(&mut self) -> IterMut<T> {
         self.contents.iter_mut()
+    }
+
+    /// Returns an iterator over all item IDs.
+    pub fn all_ids(&self) -> impl Iterator<Item = u16> + '_ {
+        self.iter().map(|item| item.id())
     }
 
     /// Returns true if an item with this unlocalized name exists & has been registered.
@@ -141,7 +146,7 @@ impl<T: Identifiable + Sync + Send> Registry<T> {
         self.unlocalized_name_to_id.contains_key(unlocalized_name)
     }
 
-    /// Returns true if this registry contains nothing
+    /// Returns true if this registry contains nothing.
     pub fn is_empty(&self) -> bool {
         self.unlocalized_name_to_id.is_empty()
     }

@@ -16,8 +16,8 @@ use crate::{
 };
 
 fn register_logic_ports(blocks: Res<Registry<Block>>, mut registry: ResMut<Registry<LogicBlock>>) {
-    if let Some(light) = blocks.from_id("cosmos:logic_indicator") {
-        registry.register(LogicBlock::new(light, [Some(LogicConnection::Port(PortType::Input)); 6], 0));
+    if let Some(logic_indicator) = blocks.from_id("cosmos:logic_indicator") {
+        registry.register(LogicBlock::new(logic_indicator, [Some(LogicConnection::Port(PortType::Input)); 6]));
     }
 }
 
