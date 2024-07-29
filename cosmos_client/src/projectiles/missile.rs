@@ -88,7 +88,8 @@ struct ParticleEffectsForColor(HashMap<u32, Handle<EffectAsset>>);
 fn respond_to_explosion(
     mut commands: Commands,
     q_local_player: Query<&GlobalTransform, With<LocalPlayer>>,
-    q_explosions: Query<(Entity, &Location, &GlobalTransform, &Explosion), Added<Explosion>>,
+    // q_explosions needs &Transform not &GlobalTransform since &GlobalTransform won't be setup yet.
+    q_explosions: Query<(Entity, &Location, &Transform, &Explosion), Added<Explosion>>,
     audio: Res<Audio>,
     audio_sources: Res<ExplosionAudio>,
     mut particles: ResMut<ParticleEffectsForColor>,
@@ -98,9 +99,7 @@ fn respond_to_explosion(
         return;
     };
 
-    for (ent, explosion_loc, g_trans, explosion) in q_explosions.iter() {
-        // Makes the particles appear 3d
-
+    for (ent, explosion_loc, transform, explosion) in q_explosions.iter() {
         let hash = explosion.color.map(color_hash).unwrap_or(0);
 
         let particle_handle = particles.0.get(&hash).map(|x| x.clone()).unwrap_or_else(|| {
@@ -123,7 +122,8 @@ fn respond_to_explosion(
             ExplosionParticle,
             ParticleEffectBundle {
                 effect: ParticleEffect::new(particle_handle),
-                transform: Transform::from_translation(g_trans.translation()).looking_at(local_g_trans.translation(), Vec3::Y),
+                // Makes the particles appear 3d by looking them at the player
+                transform: Transform::from_translation(transform.translation).looking_at(local_g_trans.translation(), Vec3::Y),
                 ..Default::default()
             },
         ));
@@ -144,7 +144,7 @@ fn respond_to_explosion(
                     peak_volume: 1.0,
                     ..Default::default()
                 }]),
-                transform: TransformBundle::from_transform(Transform::from_translation(g_trans.translation())),
+                transform: TransformBundle::from_transform(Transform::from_translation(transform.translation)),
             },
         ));
     }
