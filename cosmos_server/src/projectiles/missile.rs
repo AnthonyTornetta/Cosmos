@@ -103,8 +103,6 @@ fn respond_to_collisions(
 
         commands.entity(missile_entity).insert(NeedsDespawned);
 
-        info!("HIT - BOOM!");
-
         commands.spawn((
             *location,
             *velocity,
