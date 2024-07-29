@@ -669,7 +669,7 @@ pub(super) fn sync_component_client<T: SyncableComponent>(app: &mut App) {
                     .chain()
                     .run_if(resource_exists::<NetworkMapping>)
                     .run_if(resource_exists::<Registry<SyncedComponentId>>)
-                    .in_set(ComponentSyncingSet::DoComponentSyncing),
+                    .in_set(NetworkingSystemsSet::ProcessReceivedMessages),
             );
         }
         SyncType::BothAuthoritative(_) => {
@@ -686,7 +686,7 @@ pub(super) fn sync_component_client<T: SyncableComponent>(app: &mut App) {
                     .chain()
                     .run_if(resource_exists::<NetworkMapping>)
                     .run_if(resource_exists::<Registry<SyncedComponentId>>)
-                    .in_set(ComponentSyncingSet::DoComponentSyncing),
+                    .in_set(NetworkingSystemsSet::ProcessReceivedMessages),
             );
         }
     }

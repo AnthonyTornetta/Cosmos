@@ -53,12 +53,16 @@ fn create_missile_mesh(asset_server: Res<AssetServer>, mut materials: ResMut<Ass
     ));
 }
 
-fn on_add_missile(mut commands: Commands, missile_mesh: Res<MissileRenderingInfo>, q_added_missile: Query<Entity, Added<Missile>>) {
+fn on_add_missile(
+    mut commands: Commands,
+    missile_rendering_info: Res<MissileRenderingInfo>,
+    q_added_missile: Query<Entity, Added<Missile>>,
+) {
     for ent in &q_added_missile {
         commands.entity(ent).insert((
             VisibilityBundle::default(),
-            missile_mesh.0.clone_weak(),
-            missile_mesh.1.clone_weak(),
+            missile_rendering_info.0.clone_weak(),
+            missile_rendering_info.1.clone_weak(),
         ));
     }
 }
@@ -99,10 +103,10 @@ fn respond_to_explosion(
 
         let hash = explosion.color.map(color_hash).unwrap_or(0);
 
-        let particle_handle = particles.0.get(&hash).map(|x| x.clone_weak()).unwrap_or_else(|| {
+        let particle_handle = particles.0.get(&hash).map(|x| x.clone()).unwrap_or_else(|| {
             let fx_handle = create_particle_fx(explosion.color, &mut effects);
 
-            let fx_handle_weak = fx_handle.clone_weak();
+            let fx_handle_weak = fx_handle.clone();
 
             particles.0.insert(hash, fx_handle);
 
