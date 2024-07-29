@@ -100,7 +100,7 @@ See [the issues page](https://github.com/AnthonyTornetta/Cosmos/issues) for the 
 - [x] Planet generation & LOD overhaul
   - [x] Performance improvements
   - [x] GPU-based generation
-- [ ] Remove bevy system ambiguities
+- [x] Remove bevy system ambiguities
 - [x] Support NxN texture loading (where n is power of 2)
 - [x] Update to bevy 0.14
 
