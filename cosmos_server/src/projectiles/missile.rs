@@ -5,7 +5,6 @@ use std::time::Duration;
 use bevy::{
     ecs::{component::Component, event::EventReader, schedule::IntoSystemConfigs},
     hierarchy::Parent,
-    log::info,
     math::Vec3,
     prelude::{App, Commands, Entity, Query, Res, Update, With},
     time::Time,

@@ -102,7 +102,7 @@ fn respond_to_explosion(
     for (ent, explosion_loc, transform, explosion) in q_explosions.iter() {
         let hash = explosion.color.map(color_hash).unwrap_or(0);
 
-        let particle_handle = particles.0.get(&hash).map(|x| x.clone()).unwrap_or_else(|| {
+        let particle_handle = particles.0.get(&hash).cloned().unwrap_or_else(|| {
             let fx_handle = create_particle_fx(explosion.color, &mut effects);
 
             let fx_handle_weak = fx_handle.clone();
