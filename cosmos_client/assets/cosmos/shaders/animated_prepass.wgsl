@@ -8,11 +8,11 @@
     pbr_bindings,
     skinning,
     mesh_functions,
-    morph,
+    morph
 }
-#import bevy_render::instance_index::get_instance_index
 
 #import bevy_render::globals::Globals
+#import bevy_render::instance_index::get_instance_index
 
 #ifdef DEFERRED_PREPASS
 #import bevy_pbr::rgb9e5
@@ -25,7 +25,6 @@ var<uniform> globals: Globals;
 var my_array_texture: texture_2d_array<f32>;
 @group(2) @binding(2)
 var my_array_texture_sampler: sampler;
-
 
 // Most of these attributes are not used in the default prepass fragment shader, but they are still needed so we can
 // pass them to custom prepass shaders like pbr_prepass.wgsl.
@@ -122,7 +121,7 @@ fn vertex(vertex_no_morph: Vertex) -> VertexOutput {
     var out: VertexOutput;
 
 #ifdef MORPH_TARGETS
-    var vertex = morph::morph_vertex(vertex_no_morph);
+    var vertex = bevy_pbr::morph::morph_vertex(vertex_no_morph);
 #else
     var vertex = vertex_no_morph;
 #endif
@@ -132,7 +131,7 @@ fn vertex(vertex_no_morph: Vertex) -> VertexOutput {
 #else // SKINNED
     // Use vertex_no_morph.instance_index instead of vertex.instance_index to work around a wgpu dx12 bug.
     // See https://github.com/gfx-rs/naga/issues/2416
-    var model = mesh_functions::get_model_matrix(vertex_no_morph.instance_index);
+    var model = mesh_functions::get_world_from_local(vertex_no_morph.instance_index);
 #endif // SKINNED
 
     out.position = mesh_functions::mesh_position_local_to_clip(model, vec4(vertex.position, 1.0));
@@ -300,4 +299,3 @@ fn prepass_alpha_discard(in: VertexOutput) {
 
 #endif // MAY_DISCARD
 }
-

@@ -4,11 +4,17 @@ use std::time::Duration;
 
 use bevy::prelude::*;
 use bevy_kira_audio::prelude::*;
-use cosmos_core::structure::{ship::ship_movement::ShipMovement, systems::thruster_system::ThrusterSystem};
+use cosmos_core::{
+    netty::system_sets::NetworkingSystemsSet,
+    structure::{
+        ship::ship_movement::{ShipMovement, ShipMovementSet},
+        systems::thruster_system::ThrusterSystem,
+    },
+};
 
 use crate::{
     asset::asset_loader::load_assets,
-    audio::{AudioEmission, BufferedStopAudio, CosmosAudioEmitter},
+    audio::{AudioEmission, AudioSet, BufferedStopAudio, CosmosAudioEmitter},
     state::game_state::GameState,
 };
 
@@ -57,7 +63,7 @@ fn apply_thruster_sound(
                     emissions: vec![AudioEmission {
                         instance: playing_sound,
                         max_distance: 100.0,
-                        peak_volume: 0.3,
+                        peak_volume: 0.3 * 5.0,
                         stop_tween,
                         handle: audio_handle.0.clone_weak(),
                     }],
@@ -84,5 +90,12 @@ pub(super) fn register(app: &mut App) {
         },
     );
 
-    app.add_systems(Update, apply_thruster_sound.run_if(in_state(GameState::Playing)));
+    app.add_systems(
+        Update,
+        apply_thruster_sound
+            .in_set(NetworkingSystemsSet::Between)
+            .in_set(AudioSet::CreateSounds)
+            .after(ShipMovementSet::RemoveShipMovement)
+            .run_if(in_state(GameState::Playing)),
+    );
 }

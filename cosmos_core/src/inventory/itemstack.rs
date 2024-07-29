@@ -15,6 +15,7 @@ use bevy::{
     log::warn,
     prelude::App,
     reflect::Reflect,
+    state::{condition::in_state, state::States},
     utils::HashSet,
 };
 use serde::{Deserialize, Serialize};
@@ -447,7 +448,7 @@ fn remove_needs_filled(q_needs_filled: Query<Entity, With<ItemStackNeedsDataCrea
     }
 }
 
-pub(super) fn register(app: &mut App) {
+pub(super) fn register<T: States>(app: &mut App, playing_state: T) {
     app.register_type::<ItemStack>();
 
     app.configure_sets(
@@ -463,6 +464,7 @@ pub(super) fn register(app: &mut App) {
             // ItemStackSystemSet::CopyItemStackData,
             // ItemStackSystemSet::RemoveCopyFlag,
         )
+            .run_if(in_state(playing_state))
             .chain(),
     )
     // .add_systems(Update, create_itemstack_data_entity.in_set(ItemStackSystemSet::CreateDataEntity))

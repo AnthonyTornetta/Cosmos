@@ -60,6 +60,15 @@ pub enum ShipActiveSystem {
     Active(u32),
 }
 
+#[derive(SystemSet, Debug, Hash, PartialEq, Eq, Clone)]
+/// Holds some of the logic of Structure systems
+pub enum StructureSystemsSet {
+    /// Initialize your structure systems here (from [`super::events::StructureLoadedEvent`]s being generated)
+    InitSystems,
+    /// Update systems when new blocks are placed (from [`crate::events::block_events::BlockChangedEvent`]s)
+    UpdateSystems,
+}
+
 fn remove_system_actives_when_melting_down(
     mut commands: Commands,
     q_system_active: Query<Entity, With<SystemActive>>,
@@ -488,11 +497,20 @@ impl Identifiable for StructureSystemType {
 pub(super) fn register(app: &mut App) {
     create_registry::<StructureSystemType>(app, "cosmos:structure_system_types");
 
+    app.configure_sets(
+        Update,
+        (
+            StructureSystemsSet::InitSystems.in_set(StructureLoadingSet::StructureLoaded),
+            StructureSystemsSet::UpdateSystems,
+        )
+            .chain(),
+    );
+
     app.add_systems(
         Update,
         (
             add_structure.in_set(StructureLoadingSet::LoadChunkData),
-            remove_system_actives_when_melting_down,
+            remove_system_actives_when_melting_down.in_set(StructureSystemsSet::UpdateSystems),
         ),
     )
     .register_type::<StructureSystem>()

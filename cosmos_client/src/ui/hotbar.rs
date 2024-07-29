@@ -4,9 +4,10 @@ use std::marker::PhantomData;
 
 use bevy::{input::mouse::MouseWheel, prelude::*};
 use cosmos_core::{
+    block::block_events::BlockEventsSet,
     inventory::{held_item_slot::HeldItemSlot, itemstack::ItemStack, Inventory},
     item::Item,
-    netty::client::LocalPlayer,
+    netty::{client::LocalPlayer, system_sets::NetworkingSystemsSet},
     registry::{identifiable::Identifiable, Registry},
 };
 
@@ -14,6 +15,7 @@ use crate::{
     input::inputs::{CosmosInputs, InputChecker, InputHandler},
     lang::Lang,
     state::game_state::GameState,
+    structure::ship::ui::system_selection::SystemSelectionSet,
 };
 
 use super::{components::show_cursor::no_open_menus, item_renderer::RenderItem};
@@ -235,14 +237,15 @@ fn listen_button_presses(
 
 fn tick_text_alpha_down(mut query: Query<&mut Text, With<ItemNameDisplay>>, time: Res<Time>) {
     if let Ok(mut text) = query.get_single_mut() {
-        let col = text.sections[0].style.color;
+        let col: Srgba = text.sections[0].style.color.into();
 
-        text.sections[0].style.color = Color::rgba(
-            col.r(),
-            col.g(),
-            col.b(),
-            (col.a() - time.delta_seconds() / ITEM_NAME_FADE_DURATION_SEC).max(0.0),
-        );
+        text.sections[0].style.color = Srgba {
+            red: col.red,
+            green: col.green,
+            blue: col.blue,
+            alpha: (col.alpha - time.delta_seconds() / ITEM_NAME_FADE_DURATION_SEC).max(0.0),
+        }
+        .into();
     }
 }
 
@@ -496,12 +499,14 @@ pub(super) fn register(app: &mut App) {
             (
                 add_inventory_to_priority_queue,
                 add_hotbar_contents_to_player,
-                sync_inventory,
+                sync_hotbar_to_inventory.after(BlockEventsSet::SendEventsForNextFrame),
                 populate_hotbar,
                 listen_for_change_events,
                 listen_button_presses.run_if(no_open_menus),
                 tick_text_alpha_down,
             )
+                .before(SystemSelectionSet::ApplyUserChanges)
+                .in_set(NetworkingSystemsSet::Between)
                 .chain()
                 .run_if(in_state(GameState::Playing))
                 .run_if(is_hotbar_enabled),
@@ -519,7 +524,7 @@ fn add_inventory_to_priority_queue(
     }
 }
 
-fn sync_inventory(
+fn sync_hotbar_to_inventory(
     q_inventory: Query<&Inventory, With<LocalPlayer>>,
     q_inventory_changed: Query<(), (Changed<Inventory>, With<LocalPlayer>)>,
     q_priority_changed: Query<(), (Changed<HotbarPriorityQueue>, With<LocalPlayerHotbar>)>,

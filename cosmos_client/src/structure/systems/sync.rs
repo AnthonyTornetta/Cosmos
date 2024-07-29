@@ -6,18 +6,23 @@ use bevy::{
         entity::Entity,
         event::{Event, EventReader, EventWriter},
         query::With,
-        schedule::{common_conditions::in_state, IntoSystemConfigs},
+        schedule::IntoSystemConfigs,
+        schedule::IntoSystemSetConfigs,
         system::{Commands, Query, Res, ResMut, Resource},
     },
     hierarchy::BuildChildren,
     log::{error, warn},
-    prelude::{Deref, DerefMut},
+    prelude::{Deref, DerefMut, SystemSet},
+    state::condition::in_state,
     utils::HashMap,
 };
-use bevy_renet::renet::RenetClient;
+use bevy_renet2::renet2::RenetClient;
 use cosmos_core::{
     block::specific_blocks::gravity_well::GravityWell,
-    netty::{cosmos_encoder, server_replication::ReplicationMessage, sync::mapping::NetworkMapping, NettyChannelServer},
+    netty::{
+        cosmos_encoder, server_replication::ReplicationMessage, sync::mapping::NetworkMapping, system_sets::NetworkingSystemsSet,
+        NettyChannelServer,
+    },
     physics::location::LocationPhysicsSet,
     registry::{identifiable::Identifiable, Registry},
     structure::{
@@ -206,10 +211,21 @@ fn sync<T: StructureSystemImpl + Serialize + DeserializeOwned>(
     }
 }
 
+#[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
+enum SystemSyncingSet {
+    SyncSystems,
+}
+
 pub fn sync_system<T: StructureSystemImpl + Serialize + DeserializeOwned>(app: &mut App) {
+    app.configure_sets(Update, SystemSyncingSet::SyncSystems.in_set(NetworkingSystemsSet::SyncComponents));
+
     app.add_systems(
         Update,
-        sync::<T>.run_if(in_state(GameState::Playing)).after(replication_listen_netty),
+        sync::<T>
+            .in_set(SystemSyncingSet::SyncSystems)
+            .ambiguous_with(SystemSyncingSet::SyncSystems)
+            .run_if(in_state(GameState::Playing))
+            .after(replication_listen_netty),
     )
     .init_resource::<SystemsQueue<T>>();
 }

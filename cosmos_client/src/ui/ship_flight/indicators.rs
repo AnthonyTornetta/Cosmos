@@ -3,7 +3,7 @@
 use bevy::{asset::LoadState, prelude::*, utils::HashMap};
 use cosmos_core::{
     entities::player::Player,
-    netty::client::LocalPlayer,
+    netty::{client::LocalPlayer, system_sets::NetworkingSystemsSet},
     physics::location::Location,
     structure::{
         asteroid::Asteroid,
@@ -111,11 +111,13 @@ fn create_indicator(
             },
         ))
         .with_children(|p| {
+            let c = Srgba::from(color);
+
             let (r, g, b, a) = (
-                (color.r() * 255.0) as u8,
-                (color.g() * 255.0) as u8,
-                (color.b() * 255.0) as u8,
-                (color.a() * 255.0) as u8,
+                (c.red * 255.0) as u8,
+                (c.green * 255.0) as u8,
+                (c.blue * 255.0) as u8,
+                (c.alpha * 255.0) as u8,
             );
 
             let color_hash = u32::from_be_bytes([r, g, b, 0]);
@@ -247,35 +249,35 @@ fn added(
 ) {
     ship_query.iter().for_each(|ent| {
         commands.entity(ent).insert(IndicatorSettings {
-            color: Color::hex("FF57337F").unwrap(),
+            color: Srgba::hex("FF57337F").unwrap().into(),
             max_distance: 20_000.0,
             offset: Vec3::new(0.5, 0.5, 0.5), // Accounts for the ship core being at 0.5, 0.5, 0.5 instead of the origin
         });
     });
     station_query.iter().for_each(|ent| {
         commands.entity(ent).insert(IndicatorSettings {
-            color: Color::hex("5b4fff7F").unwrap(),
+            color: Srgba::hex("5b4fff7F").unwrap().into(),
             max_distance: 20_000.0,
             offset: Vec3::new(0.5, 0.5, 0.5), // Accounts for the station core being at 0.5, 0.5, 0.5 instead of the origin
         });
     });
     planet_query.iter().for_each(|ent| {
         commands.entity(ent).insert(IndicatorSettings {
-            color: Color::hex("BC8F8F7F").unwrap(),
+            color: Srgba::hex("BC8F8F7F").unwrap().into(),
             max_distance: 200_000.0,
             offset: Vec3::ZERO,
         });
     });
     asteroid_query.iter().for_each(|ent| {
         commands.entity(ent).insert(IndicatorSettings {
-            color: Color::hex("6159427F").unwrap(),
+            color: Srgba::hex("6159427F").unwrap().into(),
             max_distance: 20_000.0,
             offset: Vec3::ZERO,
         });
     });
     player_query.iter().for_each(|ent| {
         commands.entity(ent).insert(IndicatorSettings {
-            color: Color::hex("FFFFFF7F").unwrap(),
+            color: Srgba::hex("FFFFFF7F").unwrap().into(),
             max_distance: 5_000.0,
             offset: Vec3::ZERO,
         });
@@ -423,6 +425,15 @@ fn is_target_visible(normalized_screen_position: Vec3) -> bool {
         && normalized_screen_position.y <= 1.0
 }
 
+#[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
+/// The creation and focusing of waypoints when flying a ship
+pub enum WaypointSet {
+    /// Creates waypoints when the player becomes a pilot or new entities enter within range
+    CreateWaypoints,
+    /// Handles the user focusing/unfocusing waypoints
+    FocusWaypoints,
+}
+
 pub(super) fn register(app: &mut App) {
     load_assets::<Image, IndicatorImage>(
         app,
@@ -438,16 +449,19 @@ pub(super) fn register(app: &mut App) {
         },
     );
 
+    app.configure_sets(Update, (WaypointSet::CreateWaypoints, WaypointSet::FocusWaypoints).chain());
+
     app.init_resource::<IndicatorImages>()
         .init_resource::<ClosestWaypoint>()
         .add_systems(
             Update,
             (
-                add_indicators.run_if(resource_exists::<IndicatorImage>),
-                added,
-                position_diamonds,
-                focus_waypoint.run_if(no_open_menus),
+                (add_indicators.run_if(resource_exists::<IndicatorImage>), added, position_diamonds)
+                    .chain()
+                    .in_set(WaypointSet::CreateWaypoints),
+                focus_waypoint.in_set(WaypointSet::FocusWaypoints).run_if(no_open_menus),
             )
+                .in_set(NetworkingSystemsSet::Between)
                 .chain()
                 .run_if(in_state(GameState::Playing)),
         );

@@ -10,7 +10,7 @@ use bevy::{
     log::warn,
     prelude::{App, Component, IntoSystemConfigs, Query, With},
 };
-use bevy_renet::renet::{ClientId, RenetServer};
+use bevy_renet2::renet2::{ClientId, RenetServer};
 use cosmos_core::{
     netty::{cosmos_encoder, server_reliable_messages::ServerReliableMessages, system_sets::NetworkingSystemsSet, NettyChannelServer},
     structure::{

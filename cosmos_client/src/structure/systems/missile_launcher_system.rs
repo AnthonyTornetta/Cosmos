@@ -4,8 +4,8 @@ use bevy::{asset::LoadState, prelude::*};
 use bevy_kira_audio::prelude::*;
 use cosmos_core::{
     ecs::NeedsDespawned,
-    netty::{client::LocalPlayer, sync::mapping::NetworkMapping},
-    physics::location::Location,
+    netty::{client::LocalPlayer, sync::mapping::NetworkMapping, system_sets::NetworkingSystemsSet},
+    physics::location::{Location, LocationPhysicsSet},
     structure::{
         ship::pilot::Pilot,
         systems::{
@@ -25,7 +25,10 @@ use crate::{
     },
 };
 
-use super::{player_interactions::HoveredSystem, sync::sync_system};
+use super::{
+    player_interactions::{HoveredSystem, SystemUsageSet},
+    sync::sync_system,
+};
 
 #[derive(Event)]
 /// This event is fired whenever a laser cannon system is fired
@@ -141,7 +144,8 @@ fn render_lockon_status(
     q_missile_focus: Query<&MissileLauncherFocus>,
     q_ui_root: Query<Entity, With<UiRoot>>,
     q_missile_focus_ui: Query<(Entity, &MissileFocusUi)>,
-    mut q_style: Query<(&mut Style, &mut BackgroundColor)>,
+    mut q_style: Query<(&mut Style, &mut UiImage)>,
+    mut q_column_style: Query<&mut Style, Without<UiImage>>,
 ) {
     let focus_ui = q_missile_focus_ui.get_single();
 
@@ -179,7 +183,13 @@ fn render_lockon_status(
     };
 
     let gap = (1.0 - percentage) * 100.0; // 100px is a decent number
-    let color = Color::rgba(1.0, 1.0 - percentage, 1.0 - percentage, 0.7);
+    let color: Color = Srgba {
+        red: 1.0,
+        green: 1.0 - percentage,
+        blue: 1.0 - percentage,
+        alpha: 0.7,
+    }
+    .into();
 
     if let Ok((_, focus_ui)) = focus_ui {
         update_corner_styles(&mut q_style, focus_ui.top_left, -gap, color);
@@ -187,11 +197,11 @@ fn render_lockon_status(
         update_corner_styles(&mut q_style, focus_ui.top_right, -gap, color);
         update_corner_styles(&mut q_style, focus_ui.bottom_right, gap, color);
 
-        if let Ok((mut style, _)) = q_style.get_mut(focus_ui.left_column) {
+        if let Ok(mut style) = q_column_style.get_mut(focus_ui.left_column) {
             style.margin = UiRect::right(Val::Px(gap));
         }
 
-        if let Ok((mut style, _)) = q_style.get_mut(focus_ui.right_column) {
+        if let Ok(mut style) = q_column_style.get_mut(focus_ui.right_column) {
             style.margin = UiRect::left(Val::Px(gap));
         }
     } else {
@@ -247,6 +257,7 @@ fn render_lockon_status(
                                     texture: lockon_graphic.0.clone_weak(),
                                     flip_x: false,
                                     flip_y: false,
+                                    ..Default::default()
                                 },
                                 style: Style {
                                     width: Val::Px(64.0),
@@ -267,6 +278,7 @@ fn render_lockon_status(
                                     texture: lockon_graphic.0.clone_weak(),
                                     flip_x: false,
                                     flip_y: true,
+                                    ..Default::default()
                                 },
                                 style: Style {
                                     width: Val::Px(64.0),
@@ -302,6 +314,7 @@ fn render_lockon_status(
                                     texture: lockon_graphic.0.clone_weak(),
                                     flip_x: true,
                                     flip_y: false,
+                                    ..Default::default()
                                 },
                                 style: Style {
                                     width: Val::Px(64.0),
@@ -322,6 +335,7 @@ fn render_lockon_status(
                                     texture: lockon_graphic.0.clone_weak(),
                                     flip_x: true,
                                     flip_y: true,
+                                    ..Default::default()
                                 },
                                 style: Style {
                                     width: Val::Px(64.0),
@@ -341,13 +355,13 @@ fn render_lockon_status(
     }
 }
 
-fn update_corner_styles(q_style: &mut Query<(&mut Style, &mut BackgroundColor)>, entity: Entity, gap: f32, color: Color) {
-    let Ok((mut style, mut bg)) = q_style.get_mut(entity) else {
+fn update_corner_styles(q_style: &mut Query<(&mut Style, &mut UiImage)>, entity: Entity, gap: f32, color: Color) {
+    let Ok((mut style, mut img)) = q_style.get_mut(entity) else {
         return;
     };
 
     style.top = Val::Px(gap);
-    *bg = color.into();
+    img.color = color;
 }
 
 pub(super) fn register(app: &mut App) {
@@ -375,6 +389,11 @@ pub(super) fn register(app: &mut App) {
 
     app.add_event::<MissileLauncherSystemFiredEvent>().add_systems(
         Update,
-        (focus_looking_at, apply_shooting_sound, render_lockon_status).run_if(in_state(GameState::Playing)),
+        (focus_looking_at, apply_shooting_sound, render_lockon_status)
+            .chain()
+            .after(SystemUsageSet::ChangeSystemBeingUsed)
+            .in_set(NetworkingSystemsSet::Between)
+            .after(LocationPhysicsSet::DoPhysics)
+            .run_if(in_state(GameState::Playing)),
     );
 }

@@ -1,9 +1,12 @@
-use crate::asset::materials::{add_materials, remove_materials};
+use crate::asset::materials::MaterialsSystemSet;
 use crate::state::game_state::GameState;
 use crate::structure::planet::unload_chunks_far_from_players;
-use bevy::ecs::schedule::{IntoSystemSetConfigs, OnExit, SystemSet};
+use bevy::ecs::schedule::{IntoSystemSetConfigs, SystemSet};
 use bevy::prelude::{in_state, App, Res, ResMut, Resource, Update};
+use bevy::state::state::OnExit;
+use cosmos_core::block::block_events::BlockEventsSet;
 use cosmos_core::block::Block;
+use cosmos_core::netty::system_sets::NetworkingSystemsSet;
 use cosmos_core::registry::identifiable::Identifiable;
 use cosmos_core::registry::Registry;
 
@@ -71,8 +74,9 @@ pub(super) fn register(app: &mut App) {
             .chain()
             .run_if(in_state(GameState::Playing))
             .before(unload_chunks_far_from_players)
-            .before(remove_materials)
-            .before(add_materials),
+            .in_set(NetworkingSystemsSet::Between)
+            .in_set(MaterialsSystemSet::RequestMaterialChanges)
+            .after(BlockEventsSet::SendEventsForNextFrame),
     );
 
     app.add_systems(OnExit(GameState::PostLoading), fill_rendering_mode);

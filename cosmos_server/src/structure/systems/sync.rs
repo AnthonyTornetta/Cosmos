@@ -5,11 +5,12 @@ use bevy::{
         event::EventReader,
         query::{Added, Changed, Without},
         removal_detection::RemovedComponents,
-        schedule::{common_conditions::in_state, IntoSystemConfigs, OnExit},
+        schedule::IntoSystemConfigs,
         system::{Query, Res, ResMut},
     },
+    state::{condition::in_state, state::OnExit},
 };
-use bevy_renet::renet::RenetServer;
+use bevy_renet2::renet2::RenetServer;
 use cosmos_core::{
     item::Item,
     netty::{
@@ -17,7 +18,7 @@ use cosmos_core::{
         NoSendEntity,
     },
     registry::{identifiable::Identifiable, Registry},
-    structure::systems::{sync::SyncableSystem, StructureSystem, StructureSystemType, StructureSystems, SystemActive},
+    structure::systems::{sync::SyncableSystem, StructureSystem, StructureSystemType, StructureSystems, StructureSystemsSet, SystemActive},
 };
 
 use crate::{registry::sync_registry, state::GameState};
@@ -109,7 +110,9 @@ pub fn register_structure_system<T: SyncableSystem>(app: &mut App, activatable: 
 
     app.add_systems(
         Update,
-        (sync_system::<T>, sync_active_systems, on_request_systems_entity::<T>).run_if(in_state(GameState::Playing)),
+        (sync_system::<T>, sync_active_systems, on_request_systems_entity::<T>)
+            .after(StructureSystemsSet::UpdateSystems)
+            .run_if(in_state(GameState::Playing)),
     )
     .add_systems(
         OnExit(GameState::PostLoading),

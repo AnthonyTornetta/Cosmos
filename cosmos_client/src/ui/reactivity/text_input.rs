@@ -10,11 +10,12 @@ use bevy::{
         system::{Query, Res},
     },
     log::{error, warn},
+    prelude::IntoSystemConfigs,
 };
 
 use crate::ui::components::text_input::{InputType, InputValue, TextInput};
 
-use super::{BindValues, NeedsValueFetched, ReactableFields, ReactableValue};
+use super::{BindValues, NeedsValueFetched, ReactableFields, ReactableValue, ReactiveUiSystemSet};
 
 fn on_update_bound_values<T: ReactableValue>(
     q_react_value: Query<&T>,
@@ -117,5 +118,10 @@ fn on_update_text_value<T: ReactableValue>(
 }
 
 pub(super) fn register<T: ReactableValue>(app: &mut App) {
-    app.add_systems(Update, (on_update_bound_values::<T>, on_update_text_value::<T>));
+    app.add_systems(
+        Update,
+        (on_update_bound_values::<T>, on_update_text_value::<T>)
+            .in_set(ReactiveUiSystemSet::ProcessTextValueChanges)
+            .ambiguous_with(ReactiveUiSystemSet::ProcessTextValueChanges),
+    );
 }

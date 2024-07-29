@@ -136,6 +136,8 @@ pub fn create_many_to_one_registry<K: Identifiable + 'static, V: Identifiable + 
         .insert_resource(ReadOnlyManyToOneRegistry::<K, V>::new())
         .add_systems(
             Update,
-            apply_changes::<K, V>.run_if(resource_exists_and_changed::<ManyToOneRegistry<K, V>>),
+            apply_changes::<K, V>
+                .ambiguous_with_all() // This function will only ever run if the registry is changed, which should never happen.
+                .run_if(resource_exists_and_changed::<ManyToOneRegistry<K, V>>),
         );
 }

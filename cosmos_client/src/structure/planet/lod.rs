@@ -4,7 +4,7 @@
 //     prelude::{in_state, App, Commands, Deref, DerefMut, Entity, IntoSystemConfigs, Query, Res, ResMut, Resource, Update},
 //     tasks::{AsyncComputeTaskPool, Task},
 // };
-// use bevy_renet::renet::RenetClient;
+// use bevy_renet2::renet2::RenetClient;
 // use cosmos_core::{
 //     netty::{cosmos_encoder, NettyChannelServer},
 //     structure::lod::{Lod, LodDelta, LodNetworkMessage, SetLodMessage},

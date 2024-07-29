@@ -5,6 +5,7 @@ use std::time::Duration;
 use bevy::{
     app::Update,
     asset::{Assets, Handle},
+    color::palettes::css,
     core::Name,
     ecs::{
         component::Component,
@@ -14,18 +15,21 @@ use bevy::{
         system::{Commands, Query, Res, ResMut},
     },
     math::{Vec3, Vec4},
-    pbr::{AlphaMode, NotShadowCaster, StandardMaterial},
+    pbr::{NotShadowCaster, StandardMaterial},
     prelude::App,
     render::{
-        color::Color,
-        mesh::{Mesh, SphereKind, SphereMeshBuilder},
+        alpha::AlphaMode,
+        mesh::{Mesh, MeshBuilder, SphereKind, SphereMeshBuilder},
         view::{Visibility, VisibilityBundle},
     },
     time::Time,
 };
-use cosmos_core::structure::shields::Shield;
+use cosmos_core::{netty::system_sets::NetworkingSystemsSet, structure::shields::Shield};
 
-use crate::asset::materials::shield::{ShieldMaterial, ShieldMaterialExtension, MAX_SHIELD_HIT_POINTS};
+use crate::{
+    asset::materials::shield::{ShieldMaterial, ShieldMaterialExtension, MAX_SHIELD_HIT_POINTS},
+    ui::ship_flight::indicators::WaypointSet,
+};
 
 #[derive(Component)]
 struct OldRadius(f32);
@@ -127,7 +131,7 @@ fn on_add_shield_create_rendering(
                 base: StandardMaterial {
                     // unlit: true,
                     alpha_mode: AlphaMode::Add,
-                    base_color: Color::BLUE,
+                    base_color: css::BLUE.into(),
                     ..Default::default()
                 },
                 extension: ShieldMaterialExtension {
@@ -145,9 +149,10 @@ pub(super) fn register(app: &mut App) {
         Update,
         (
             on_add_shield_create_rendering,
-            on_change_shield_update_rendering,
+            on_change_shield_update_rendering.ambiguous_with(WaypointSet::FocusWaypoints),
             update_shield_times,
         )
+            .after(NetworkingSystemsSet::Between)
             .chain(),
     );
 }

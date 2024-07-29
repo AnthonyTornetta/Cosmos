@@ -3,7 +3,7 @@ use cosmos_core::registry::{identifiable::Identifiable, Registry};
 
 use crate::{
     lang::Lang,
-    settings::{Setting, SettingCategory, SettingData},
+    settings::{Setting, SettingCategory, SettingData, SettingsSet},
     ui::{
         components::{
             button::{register_button, Button, ButtonBundle, ButtonEvent, ButtonStyles},
@@ -14,7 +14,10 @@ use crate::{
     },
 };
 
-use super::{in_main_menu_state, MainMenuRootUiNode, MainMenuSubState, MainMenuSystemSet};
+use super::{
+    disconnect_screen::DisconnectMenuSet, in_main_menu_state, title_screen::TitleScreenSet, MainMenuRootUiNode, MainMenuSubState,
+    MainMenuSystemSet,
+};
 
 #[derive(Debug, Clone, PartialEq, Eq, Component)]
 struct WrittenSetting {
@@ -39,7 +42,7 @@ fn create_disconnect_screen(
     settings: Res<Registry<Setting>>,
     lang: Res<Lang<Setting>>,
 ) {
-    let cool_blue = Color::hex("00FFFF").unwrap();
+    let cool_blue = Srgba::hex("00FFFF").unwrap().into();
 
     let text_style_large = TextStyle {
         color: cool_blue,
@@ -169,8 +172,8 @@ fn create_disconnect_screen(
                                 },
                                 value: InputValue::new(input_value),
                                 node_bundle: NodeBundle {
-                                    border_color: Color::hex("555555").unwrap().into(),
-                                    background_color: Color::hex("111111").unwrap().into(),
+                                    border_color: Srgba::hex("555555").unwrap().into(),
+                                    background_color: Srgba::hex("111111").unwrap().into(),
                                     style: Style {
                                         border: UiRect::all(Val::Px(2.0)),
                                         width: Val::Px(150.0),
@@ -218,9 +221,9 @@ fn create_disconnect_screen(
                 },
                 button: Button {
                     button_styles: Some(ButtonStyles {
-                        background_color: Color::hex("333333").unwrap(),
-                        hover_background_color: Color::hex("232323").unwrap(),
-                        press_background_color: Color::hex("111111").unwrap(),
+                        background_color: Srgba::hex("333333").unwrap().into(),
+                        hover_background_color: Srgba::hex("232323").unwrap().into(),
+                        press_background_color: Srgba::hex("111111").unwrap().into(),
                         ..Default::default()
                     }),
                     text: Some(("Cancel".into(), text_style.clone())),
@@ -243,9 +246,9 @@ fn create_disconnect_screen(
                 },
                 button: Button {
                     button_styles: Some(ButtonStyles {
-                        background_color: Color::hex("333333").unwrap(),
-                        hover_background_color: Color::hex("232323").unwrap(),
-                        press_background_color: Color::hex("111111").unwrap(),
+                        background_color: Srgba::hex("333333").unwrap().into(),
+                        hover_background_color: Srgba::hex("232323").unwrap().into(),
+                        press_background_color: Srgba::hex("111111").unwrap().into(),
                         ..Default::default()
                     }),
                     text: Some(("Done".into(), text_style.clone())),
@@ -299,31 +302,42 @@ fn done_clicked(mut mms: ResMut<MainMenuSubState>, mut settings: ResMut<Registry
     *mms = MainMenuSubState::TitleScreen;
 }
 
+#[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
+pub(super) enum SettingsMenuSet {
+    SettingsMenuInteractions,
+}
+
 pub(super) fn register(app: &mut App) {
     register_button::<CancelButtonEvent>(app);
     register_button::<DoneButtonEvent>(app);
 
     add_reactable_type::<WrittenSetting>(app);
 
+    app.configure_sets(
+        Update,
+        SettingsMenuSet::SettingsMenuInteractions
+            .ambiguous_with(DisconnectMenuSet::DisconnectMenuInteractions)
+            .ambiguous_with(TitleScreenSet::TitleScreenInteractions),
+    );
+
     app.add_systems(
         Update,
-        create_disconnect_screen
-            .run_if(in_main_menu_state(MainMenuSubState::Settings))
-            .run_if(resource_exists_and_changed::<MainMenuSubState>)
-            .in_set(MainMenuSystemSet::InitializeMenu),
-    )
-    .add_systems(
-        Update,
-        cancel_clicked
-            .run_if(on_event::<CancelButtonEvent>())
-            .run_if(in_main_menu_state(MainMenuSubState::Settings))
-            .in_set(MainMenuSystemSet::UpdateMenu),
-    )
-    .add_systems(
-        Update,
-        done_clicked
-            .run_if(on_event::<DoneButtonEvent>())
-            .run_if(in_main_menu_state(MainMenuSubState::Settings))
-            .in_set(MainMenuSystemSet::UpdateMenu),
+        (
+            create_disconnect_screen
+                .run_if(in_main_menu_state(MainMenuSubState::Settings))
+                .run_if(resource_exists_and_changed::<MainMenuSubState>)
+                .in_set(MainMenuSystemSet::InitializeMenu),
+            cancel_clicked
+                .run_if(on_event::<CancelButtonEvent>())
+                .run_if(in_main_menu_state(MainMenuSubState::Settings))
+                .in_set(MainMenuSystemSet::UpdateMenu),
+            done_clicked
+                .run_if(on_event::<DoneButtonEvent>())
+                .run_if(in_main_menu_state(MainMenuSubState::Settings))
+                .in_set(MainMenuSystemSet::UpdateMenu)
+                .in_set(SettingsSet::ChangeSettings),
+        )
+            .in_set(SettingsMenuSet::SettingsMenuInteractions)
+            .chain(),
     );
 }

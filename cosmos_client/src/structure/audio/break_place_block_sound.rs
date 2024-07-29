@@ -3,10 +3,14 @@ use bevy::{
         resource_exists, App, BuildChildren, Commands, EventReader, Handle, IntoSystemConfigs, Name, Query, Res, Resource, Transform,
         Update,
     },
-    transform::TransformBundle,
+    transform::bundles::TransformBundle,
 };
 use bevy_kira_audio::{Audio, AudioControl, AudioInstance, AudioSource};
-use cosmos_core::structure::{shared::DespawnWithStructure, Structure};
+use cosmos_core::{
+    block::block_events::BlockEventsSet,
+    netty::system_sets::NetworkingSystemsSet,
+    structure::{shared::DespawnWithStructure, Structure},
+};
 
 use crate::{
     asset::asset_loader::load_assets,
@@ -119,6 +123,9 @@ pub(super) fn register(app: &mut App) {
         (
             play_block_place_sound.run_if(resource_exists::<BlockPlaceSound>),
             play_block_break_sound.run_if(resource_exists::<BlockBreakSound>),
-        ),
+        )
+            .chain()
+            .in_set(NetworkingSystemsSet::Between)
+            .after(BlockEventsSet::SendEventsForNextFrame),
     );
 }

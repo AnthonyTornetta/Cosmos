@@ -10,6 +10,7 @@ use bevy::{
     },
     hierarchy::{BuildChildren, Parent},
     math::{Quat, Vec3},
+    prelude::Has,
     time::Time,
     transform::components::{GlobalTransform, Transform},
 };
@@ -17,12 +18,19 @@ use bevy_rapier3d::dynamics::Velocity;
 use cosmos_core::{
     ecs::NeedsDespawned,
     entities::player::Player,
+    events::structure::StructureEventListenerSet,
+    netty::system_sets::NetworkingSystemsSet,
     physics::location::Location,
-    projectiles::laser::LASER_LIVE_TIME,
+    projectiles::{laser::LASER_LIVE_TIME, missile::Missile},
     structure::{
         shared::{DespawnWithStructure, MeltingDown},
-        ship::{pilot::Pilot, ship_movement::ShipMovement, Ship},
+        ship::{
+            pilot::Pilot,
+            ship_movement::{ShipMovement, ShipMovementSet},
+            Ship,
+        },
         systems::{laser_cannon_system::LaserCannonSystem, StructureSystems, SystemActive},
+        StructureTypeSet,
     },
 };
 use serde::{Deserialize, Serialize};
@@ -72,11 +80,11 @@ fn handle_pirate_movement(
             &mut PirateAi,
             &GlobalTransform,
         ),
-        With<Pirate>,
+        (With<Pirate>, Without<Missile>, With<AiControlled>), // Without<Missile> fixes ambiguity issues
     >,
     q_parent: Query<&Parent>,
     q_velocity: Query<&Velocity>,
-    q_targets: Query<(Entity, &Location, &Velocity, Option<&MeltingDown>), (Without<Pirate>, With<PirateTarget>)>,
+    q_targets: Query<(Entity, &Location, &Velocity, Has<MeltingDown>), (Without<Pirate>, With<PirateTarget>)>,
     time: Res<Time>,
 ) {
     for (
@@ -94,7 +102,12 @@ fn handle_pirate_movement(
             .iter()
             .filter(|x| x.1.is_within_reasonable_range(pirate_loc))
             // add a large penalty for something that's melting down so they prioritize non-melting down things
-            .min_by_key(|x| x.1.distance_sqrd(pirate_loc).floor() as u64 + x.3.map(|_| 100_000_000_000).unwrap_or(0))
+            .min_by_key(|(_, this_loc, _, melting_down)| {
+                // Makes it only target melting down targets if they're the only one nearby
+                let melting_down_punishment = if *melting_down { 100_000_000_000_000 } else { 0 };
+
+                this_loc.distance_sqrd(pirate_loc).floor() as u64 + melting_down_punishment
+            })
         else {
             continue;
         };
@@ -237,13 +250,25 @@ fn on_load_pirate(mut commands: Commands, query: Query<(Entity, &SerializedData)
 }
 
 pub(super) fn register(app: &mut App) {
-    app.configure_sets(Update, PirateSystemSet::PirateAiLogic.after(LoadingSystemSet::DoneLoading))
-        .add_systems(
-            Update,
-            (on_melt_down, add_pirate_ai, add_pirate_targets, handle_pirate_movement)
-                .in_set(PirateSystemSet::PirateAiLogic)
-                .chain(),
+    app.configure_sets(
+        Update,
+        PirateSystemSet::PirateAiLogic
+            .in_set(StructureTypeSet::Ship)
+            .after(LoadingSystemSet::DoneLoading)
+            .after(StructureEventListenerSet::ChangePilotListener),
+    )
+    .add_systems(
+        Update,
+        (
+            on_melt_down,
+            add_pirate_ai,
+            add_pirate_targets,
+            handle_pirate_movement.before(ShipMovementSet::RemoveShipMovement),
         )
-        .add_systems(LOADING_SCHEDULE, on_load_pirate.in_set(LoadingSystemSet::DoLoading))
-        .add_systems(SAVING_SCHEDULE, on_save_pirate.in_set(SavingSystemSet::DoSaving));
+            .in_set(NetworkingSystemsSet::Between)
+            .in_set(PirateSystemSet::PirateAiLogic)
+            .chain(),
+    )
+    .add_systems(LOADING_SCHEDULE, on_load_pirate.in_set(LoadingSystemSet::DoLoading))
+    .add_systems(SAVING_SCHEDULE, on_save_pirate.in_set(SavingSystemSet::DoSaving));
 }

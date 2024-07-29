@@ -7,6 +7,8 @@ use bevy::{
         schedule::{IntoSystemSetConfigs, SystemSet},
     },
     prelude::App,
+    text::Text,
+    ui::{BackgroundColor, Style, UiImage},
 };
 
 pub mod components;
@@ -23,6 +25,8 @@ pub mod ship_flight;
 #[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
 /// All systems that handle GUI interactions should be in here
 pub enum UiSystemSet {
+    /// Handles the logic behind detecting changed react values
+    PreDoUi,
     /// UI systems should do their work here
     DoUi,
     /// After this, all UI systems are finished
@@ -53,5 +57,11 @@ pub(super) fn register(app: &mut App) {
     main_menu::register(app);
     hud::register(app);
 
-    app.configure_sets(Update, (UiSystemSet::DoUi, UiSystemSet::FinishUi).chain());
+    app.configure_sets(Update, (UiSystemSet::PreDoUi, UiSystemSet::DoUi, UiSystemSet::FinishUi).chain());
+
+    // These probably don't matter
+    app.allow_ambiguous_component::<Text>();
+    app.allow_ambiguous_component::<BackgroundColor>();
+    app.allow_ambiguous_component::<Style>();
+    app.allow_ambiguous_component::<UiImage>();
 }

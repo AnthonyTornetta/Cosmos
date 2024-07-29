@@ -3,10 +3,12 @@
 use std::fmt::Display;
 
 use bevy::{
-    prelude::{App, Component, Query, Update, Vec3, Without},
+    prelude::{App, Component, IntoSystemConfigs, Query, SystemSet, Update, Vec3, Without},
     reflect::Reflect,
 };
 use serde::{Deserialize, Serialize};
+
+use crate::netty::system_sets::NetworkingSystemsSet;
 
 use super::pilot::Pilot;
 
@@ -48,7 +50,20 @@ fn clear_movement_when_no_pilot(mut query: Query<&mut ShipMovement, Without<Pilo
     }
 }
 
+#[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
+/// Handles ship movement requests from its pilot -- DOES NOT change the ship's velocity. That is done via the thruster systems.
+pub enum ShipMovementSet {
+    /// Handles when there is no pilot and removes the ship's movement
+    RemoveShipMovement,
+}
+
 pub(super) fn register(app: &mut App) {
-    app.register_type::<ShipMovement>()
-        .add_systems(Update, clear_movement_when_no_pilot);
+    app.configure_sets(Update, ShipMovementSet::RemoveShipMovement);
+
+    app.register_type::<ShipMovement>().add_systems(
+        Update,
+        clear_movement_when_no_pilot
+            .in_set(ShipMovementSet::RemoveShipMovement)
+            .in_set(NetworkingSystemsSet::Between),
+    );
 }

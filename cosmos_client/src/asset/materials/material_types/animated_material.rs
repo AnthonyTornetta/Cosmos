@@ -1,19 +1,31 @@
-use crate::asset::{
-    asset_loading::{AllTexturesDoneLoadingEvent, AssetsDoneLoadingEvent, CosmosTextureAtlas},
-    materials::animated_material::{AnimatedArrayTextureMaterial, ATTRIBUTE_PACKED_ANIMATION_DATA},
+use crate::{
+    asset::{
+        asset_loading::{AllTexturesDoneLoadingEvent, AssetsDoneLoadingEvent, AssetsSet, CosmosTextureAtlas},
+        materials::{
+            animated_material::{AnimatedArrayTextureMaterial, ATTRIBUTE_PACKED_ANIMATION_DATA},
+            AddMaterialEvent, MaterialDefinition, MaterialMeshInformationGenerator, MaterialType, MaterialsSystemSet,
+            RemoveAllMaterialsEvent,
+        },
+    },
+    rendering::MeshInformation,
+    state::game_state::GameState,
 };
-
-use super::super::*;
+use bevy::{
+    prelude::*,
+    render::mesh::{MeshVertexAttribute, VertexAttributeValues},
+    utils::HashMap,
+};
+use cosmos_core::registry::{identifiable::Identifiable, Registry};
 use serde::{Deserialize, Serialize};
 
 #[derive(Resource)]
-pub(crate) struct DefaultMaterial(pub Handle<AnimatedArrayTextureMaterial>);
+pub(crate) struct DefaultMaterial(pub Vec<Handle<AnimatedArrayTextureMaterial>>);
 #[derive(Resource)]
-pub(crate) struct UnlitMaterial(pub Handle<AnimatedArrayTextureMaterial>);
+pub(crate) struct UnlitMaterial(pub Vec<Handle<AnimatedArrayTextureMaterial>>);
 #[derive(Resource)]
-pub(crate) struct TransparentMaterial(pub Handle<AnimatedArrayTextureMaterial>);
+pub(crate) struct TransparentMaterial(pub Vec<Handle<AnimatedArrayTextureMaterial>>);
 #[derive(Resource)]
-pub(crate) struct UnlitTransparentMaterial(pub Handle<AnimatedArrayTextureMaterial>);
+pub(crate) struct UnlitTransparentMaterial(pub Vec<Handle<AnimatedArrayTextureMaterial>>);
 
 fn respond_to_add_materials_event(
     material_registry: Res<Registry<MaterialDefinition>>,
@@ -28,26 +40,28 @@ fn respond_to_add_materials_event(
     for ev in event_reader.read() {
         let mat = material_registry.from_numeric_id(ev.add_material_id);
 
+        let idx = ev.texture_dimensions_index as usize;
+
         match mat.unlocalized_name() {
             "cosmos:animated" => {
                 commands.entity(ev.entity).insert(match ev.material_type {
-                    MaterialType::Normal => default_material.0.clone_weak(),
-                    MaterialType::Illuminated => unlit_material.0.clone_weak(),
-                    MaterialType::FarAway => default_material.0.clone_weak(),
+                    MaterialType::Normal => default_material.0[idx].clone_weak(),
+                    MaterialType::Illuminated => unlit_material.0[idx].clone_weak(),
+                    MaterialType::FarAway => default_material.0[idx].clone_weak(),
                 });
             }
             "cosmos:animated_illuminated" => {
                 commands.entity(ev.entity).insert(match ev.material_type {
-                    MaterialType::Normal => unlit_material.0.clone_weak(),
-                    MaterialType::Illuminated => unlit_material.0.clone_weak(),
-                    MaterialType::FarAway => unlit_material.0.clone_weak(),
+                    MaterialType::Normal => unlit_material.0[idx].clone_weak(),
+                    MaterialType::Illuminated => unlit_material.0[idx].clone_weak(),
+                    MaterialType::FarAway => unlit_material.0[idx].clone_weak(),
                 });
             }
             "cosmos:animated_transparent" => {
                 commands.entity(ev.entity).insert(match ev.material_type {
-                    MaterialType::Normal => transparent_material.0.clone_weak(),
-                    MaterialType::Illuminated => unlit_transparent_material.0.clone_weak(),
-                    MaterialType::FarAway => default_material.0.clone_weak(),
+                    MaterialType::Normal => transparent_material.0[idx].clone_weak(),
+                    MaterialType::Illuminated => unlit_transparent_material.0[idx].clone_weak(),
+                    MaterialType::FarAway => default_material.0[idx].clone_weak(),
                 });
             }
             _ => {}
@@ -63,24 +77,24 @@ fn respond_to_remove_materails_event(mut event_reader: EventReader<RemoveAllMate
 
 fn create_main_material(image_handle: Handle<Image>, unlit: bool) -> AnimatedArrayTextureMaterial {
     AnimatedArrayTextureMaterial {
-        base_color_texture: Some(image_handle),
         alpha_mode: AlphaMode::Mask(0.5),
         unlit,
         metallic: 0.0,
         reflectance: 0.0,
         perceptual_roughness: 1.0,
+        base_color_texture: Some(image_handle),
         ..Default::default()
     }
 }
 
 fn create_transparent_material(image_handle: Handle<Image>, unlit: bool) -> AnimatedArrayTextureMaterial {
     AnimatedArrayTextureMaterial {
-        base_color_texture: Some(image_handle),
         alpha_mode: AlphaMode::Add,
         unlit,
         metallic: 0.0,
         reflectance: 0.0,
         perceptual_roughness: 1.0,
+        base_color_texture: Some(image_handle),
         ..Default::default()
     }
 }
@@ -181,11 +195,18 @@ fn create_materials(
 ) {
     if !event_reader.is_empty() {
         if let Some(atlas) = texture_atlases.from_id("cosmos:main") {
-            let unlit_default_material = materials.add(create_main_material(atlas.texture_atlas.get_atlas_handle().clone(), true));
-            let default_material = materials.add(create_main_material(atlas.texture_atlas.get_atlas_handle().clone(), false));
-            let transparent_material = materials.add(create_transparent_material(atlas.texture_atlas.get_atlas_handle().clone(), false));
-            let unlit_transparent_material =
-                materials.add(create_transparent_material(atlas.texture_atlas.get_atlas_handle().clone(), true));
+            let mut default_material = vec![];
+            let mut unlit_default_material = vec![];
+            let mut transparent_material = vec![];
+            let mut unlit_transparent_material = vec![];
+
+            for dimension_atlas in atlas.texture_atlases() {
+                default_material.push(materials.add(create_main_material(dimension_atlas.get_atlas_handle().clone(), false)));
+                unlit_default_material.push(materials.add(create_main_material(dimension_atlas.get_atlas_handle().clone(), true)));
+                transparent_material.push(materials.add(create_transparent_material(dimension_atlas.get_atlas_handle().clone(), false)));
+                unlit_transparent_material
+                    .push(materials.add(create_transparent_material(dimension_atlas.get_atlas_handle().clone(), true)));
+            }
 
             commands.insert_resource(DefaultMaterial(default_material));
             commands.insert_resource(UnlitMaterial(unlit_default_material));
@@ -214,10 +235,16 @@ pub(super) fn register(app: &mut App) {
     app.add_systems(
         Update,
         (
-            respond_to_remove_materails_event.after(remove_materials).before(add_materials),
-            respond_to_add_materials_event.after(add_materials),
+            respond_to_remove_materails_event.in_set(MaterialsSystemSet::ProcessRemoveMaterialsEvents),
+            respond_to_add_materials_event.in_set(MaterialsSystemSet::ProcessAddMaterialsEvents),
         )
             .run_if(in_state(GameState::Playing)),
     )
-    .add_systems(Update, (create_materials,).run_if(in_state(GameState::PostLoading)));
+    .add_systems(
+        Update,
+        create_materials
+            .in_set(AssetsSet::AssetsLoading)
+            .ambiguous_with(AssetsSet::AssetsLoading)
+            .run_if(in_state(GameState::PostLoading)),
+    );
 }

@@ -8,6 +8,7 @@ use bevy::{
         system::{Query, Res},
     },
     math::{Quat, Vec3},
+    prelude::IntoSystemConfigs,
     reflect::Reflect,
     time::Time,
     transform::components::GlobalTransform,
@@ -15,7 +16,7 @@ use bevy::{
 use bevy_rapier3d::dynamics::{ExternalImpulse, ReadMassProperties};
 use serde::{Deserialize, Serialize};
 
-use crate::structure::coordinates::BlockCoordinate;
+use crate::{netty::system_sets::NetworkingSystemsSet, structure::coordinates::BlockCoordinate};
 
 /// This component indicates the entity is under the affects of a gravity well.
 #[derive(Serialize, Deserialize, Component, Clone, Copy, Debug, Reflect)]
@@ -44,5 +45,6 @@ fn do_gravity_well(
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_systems(Update, do_gravity_well).register_type::<GravityWell>();
+    app.add_systems(Update, do_gravity_well.in_set(NetworkingSystemsSet::Between))
+        .register_type::<GravityWell>();
 }

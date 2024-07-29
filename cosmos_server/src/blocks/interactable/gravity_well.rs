@@ -6,15 +6,16 @@ use bevy::{
         event::EventReader,
         query::Changed,
         removal_detection::RemovedComponents,
-        schedule::{common_conditions::in_state, IntoSystemConfigs},
+        schedule::IntoSystemConfigs,
         system::{Commands, Query, ResMut},
     },
     hierarchy::{BuildChildren, Parent},
     log::info,
     math::Vec3,
     prelude::Res,
+    state::condition::in_state,
 };
-use bevy_renet::renet::RenetServer;
+use bevy_renet2::renet2::RenetServer;
 use cosmos_core::{
     block::{
         block_events::{BlockBreakEvent, BlockInteractEvent},
@@ -22,7 +23,8 @@ use cosmos_core::{
         Block,
     },
     netty::{
-        cosmos_encoder, server_replication::ReplicationMessage, sync::server_entity_syncing::RequestedEntityEvent, NettyChannelServer,
+        cosmos_encoder, server_replication::ReplicationMessage, sync::server_entity_syncing::RequestedEntityEvent,
+        system_sets::NetworkingSystemsSet, NettyChannelServer,
     },
     registry::{identifiable::Identifiable, Registry},
     structure::Structure,
@@ -159,7 +161,7 @@ pub(super) fn register(app: &mut App) {
             grav_well_handle_block_event,
             remove_gravity_wells,
             sync_gravity_well,
-            on_request_under_grav,
+            on_request_under_grav.in_set(NetworkingSystemsSet::SyncComponents),
         )
             .chain()
             .run_if(in_state(GameState::Playing)),

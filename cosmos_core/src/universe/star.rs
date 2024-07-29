@@ -1,6 +1,7 @@
 //! A light-emitting object in space
 
 use bevy::{
+    color::Srgba,
     prelude::{App, Color, Component},
     reflect::Reflect,
 };
@@ -438,11 +439,13 @@ impl Star {
         /// Makes the sun glow when HDR is enabled
         const STAR_BRIGHTNESS_MULTIPLIER: f32 = 10.0;
 
-        Color::rgb(
-            rgb[0] * STAR_BRIGHTNESS_MULTIPLIER,
-            rgb[1] * STAR_BRIGHTNESS_MULTIPLIER,
-            rgb[2] * STAR_BRIGHTNESS_MULTIPLIER,
-        )
+        Srgba {
+            red: rgb[0] * STAR_BRIGHTNESS_MULTIPLIER,
+            green: rgb[1] * STAR_BRIGHTNESS_MULTIPLIER,
+            blue: rgb[2] * STAR_BRIGHTNESS_MULTIPLIER,
+            alpha: 1.0,
+        }
+        .into()
     }
 
     /// Gets this star's temperature in Kelvin

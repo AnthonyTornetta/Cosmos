@@ -28,7 +28,7 @@ struct LoadingTextureAtlas {
     unlocalized_name: String,
     id: u16,
     folder_handle: Vec<Handle<LoadedFolder>>,
-    atlas_builder: Option<SquareTextureAtlasBuilder>,
+    atlas_builders: Vec<SquareTextureAtlasBuilder>,
 }
 
 impl Identifiable for LoadingTextureAtlas {
@@ -51,7 +51,7 @@ impl LoadingTextureAtlas {
             folder_handle: handles,
             id: 0,
             unlocalized_name: unlocalized_name.into(),
-            atlas_builder: Some(SquareTextureAtlasBuilder::new(16)),
+            atlas_builders: vec![],
         }
     }
 }
@@ -105,20 +105,66 @@ fn assets_done_loading(
 /// A newtype wrapper around a bevy `TextureAtlas`
 pub struct CosmosTextureAtlas {
     /// The texture atlas
-    pub texture_atlas: SquareTextureAtlas,
+    texture_atlases: Vec<SquareTextureAtlas>,
     unlocalized_name: String,
     id: u16,
 }
 
 impl CosmosTextureAtlas {
     /// Creates a new Cosmos texture atlas - a newtype wrapper around a bevy `TextureAtlas`
-    pub fn new(unlocalized_name: impl Into<String>, atlas: SquareTextureAtlas) -> Self {
+    pub fn new(unlocalized_name: impl Into<String>, atlases: Vec<SquareTextureAtlas>) -> Self {
         Self {
             unlocalized_name: unlocalized_name.into(),
             id: 0,
-            texture_atlas: atlas,
+            texture_atlases: atlases,
         }
     }
+
+    /// Returns all texture atlases for the different texture sizes that need to be accounted for.
+    ///
+    /// The ordering of this WILL match the `texture_dimensions_index` passed in the [`super::materials::AddMaterialEvent`].
+    pub fn texture_atlases(&self) -> impl Iterator<Item = &'_ SquareTextureAtlas> {
+        self.texture_atlases.iter()
+    }
+
+    /// Returns the square texture atlas given this dimension index.
+    ///
+    /// This index should correspond to the ordering of [`Self::texture_atlases`], which should be automatically passed to the
+    /// material in the [`super::materials::AddMaterialEvent`].
+    pub fn get_atlas_for_dimension_index(&self, dimension_index: u32) -> Option<&SquareTextureAtlas> {
+        self.texture_atlases.get(dimension_index as usize)
+    }
+
+    /// Returns the texture index for this image handle.
+    ///
+    /// This image handle has to have been loaded first (run this after [`GameState::PostLoading`]).
+    pub fn get_texture_index(&self, handle: &Handle<Image>, images: &Assets<Image>) -> Option<TextureIndex> {
+        images.get(handle).and_then(|img| {
+            let dims = img.width();
+
+            let texture_atlas = self
+                .texture_atlases
+                .iter()
+                .enumerate()
+                .find(|(_, x)| x.individual_image_dimensions() == dims);
+
+            texture_atlas.and_then(|(dimension_index, x)| {
+                x.get_texture_index(handle).map(|texture_index| TextureIndex {
+                    dimension_index: dimension_index as u32,
+                    texture_index,
+                })
+            })
+        })
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize, Hash, Reflect)]
+/// The index for usage with the [`CosmosTextureAtlas`] for this block.
+pub struct TextureIndex {
+    /// The atlas that should be used for this block's texture dimensions. Pass this to the [`super::materials::AddMaterialEvent`] event.
+    pub dimension_index: u32,
+    /// The index within the atlas for this block. This should be used after getting the proper atlas via the [`Self::dimension_index`].
+    pub texture_index: u32,
 }
 
 impl Identifiable for CosmosTextureAtlas {
@@ -150,45 +196,64 @@ fn check_assets_ready(
             let asset = server.get_id_handle::<LoadedFolder>(*id).unwrap();
 
             if let Some(loaded_folder) = loaded_folders.get(&asset) {
-                if let Some(id) = loading
-                    .iter_mut()
-                    .find(|x| x.atlas_builder.is_some() && x.folder_handle.contains(&asset))
-                {
+                if let Some(loading_texture_atlases) = loading.iter_mut().find(|x| x.folder_handle.contains(&asset)) {
                     // all assets are now ready, construct texture atlas for better performance
 
                     // let mut texture_atlas_builder = SquareTextureAtlasBuilder::new(16);
 
-                    for handle in loaded_folder.handles.iter() {
-                        id.atlas_builder.as_mut().unwrap().add_texture(handle.clone().typed::<Image>());
+                    for handle in loaded_folder.handles.iter().map(|x| x.clone().typed::<Image>()) {
+                        let Some(img) = images.get(&handle) else {
+                            continue;
+                        };
+
+                        let dims = img.width();
+
+                        if let Some(builder) = loading_texture_atlases
+                            .atlas_builders
+                            .iter_mut()
+                            .find(|x| x.texture_dimensions == dims)
+                        {
+                            builder.add_texture(handle);
+                        } else {
+                            let mut builder = SquareTextureAtlasBuilder::new(dims);
+                            builder.add_texture(handle);
+                            loading_texture_atlases.atlas_builders.push(builder);
+                        }
                     }
 
-                    let (idx, _) = id
+                    let (idx, _) = loading_texture_atlases
                         .folder_handle
                         .iter()
                         .enumerate()
                         .find(|(_, x)| *x == &asset)
                         .expect("Guarenteed above");
 
-                    id.folder_handle.remove(idx);
+                    loading_texture_atlases.folder_handle.remove(idx);
 
-                    if id.folder_handle.is_empty() {
-                        let id = std::mem::replace(
-                            id,
+                    if loading_texture_atlases.folder_handle.is_empty() {
+                        let loading_atlas = std::mem::replace(
+                            loading_texture_atlases,
                             LoadingTextureAtlas {
-                                atlas_builder: None,
+                                atlas_builders: vec![],
                                 folder_handle: vec![],
-                                id: id.id,
-                                unlocalized_name: id.unlocalized_name.to_owned(),
+                                id: loading_texture_atlases.id,
+                                unlocalized_name: loading_texture_atlases.unlocalized_name.to_owned(),
                             },
                         );
 
-                        let atlas = id.atlas_builder.unwrap().create_atlas(&mut images);
-
-                        texture_atlases.register(CosmosTextureAtlas::new(&id.unlocalized_name, atlas));
+                        texture_atlases.register(CosmosTextureAtlas::new(
+                            loading_atlas.unlocalized_name,
+                            loading_atlas
+                                .atlas_builders
+                                .into_iter()
+                                .map(|id| id.create_atlas(&mut images))
+                                .collect(),
+                        ));
 
                         // Clear out handles to avoid continually checking
                         commands.remove_resource::<Registry<LoadingTextureAtlas>>();
 
+                        info!("Sending all textures done loading event!");
                         event_writer.send(AllTexturesDoneLoadingEvent);
                     }
                 }
@@ -199,7 +264,7 @@ fn check_assets_ready(
     for folder_handle in loading.iter().map(|h| &h.folder_handle) {
         for handle in folder_handle {
             let load_state = server.get_load_state(handle);
-            if load_state == Some(LoadState::Loaded) || load_state == Some(LoadState::Failed) {
+            if load_state == Some(LoadState::Loaded) || matches!(load_state, Some(LoadState::Failed(_))) {
                 match server.get_recursive_dependency_load_state(handle) {
                     Some(RecursiveDependencyLoadState::Loaded) => {}
                     Some(RecursiveDependencyLoadState::Failed) => {
@@ -227,7 +292,7 @@ pub struct BlockTextureIndex {
 /// Links items to their correspoding atlas index.
 pub struct ItemTextureIndex {
     /// The item's texture index
-    texture: u32,
+    texture: TextureIndex,
     id: u16,
     unlocalized_name: String,
 }
@@ -253,7 +318,7 @@ bitflags! {
 impl BlockTextureIndex {
     #[inline]
     /// Returns the index for that block face, if one exists
-    pub fn atlas_index_from_face(&self, face: BlockFace, neighbors: BlockNeighbors) -> Option<u32> {
+    pub fn atlas_index_from_face(&self, face: BlockFace, neighbors: BlockNeighbors) -> Option<TextureIndex> {
         match &self.texture {
             LoadedTexture::All(texture_type) => get_texture_index_from_type(texture_type, neighbors),
             LoadedTexture::Sides(sides) => match face {
@@ -268,7 +333,7 @@ impl BlockTextureIndex {
     }
 
     /// Returns the atlas information for a simplified LOD texture
-    pub fn atlas_index_for_lod(&self, neighbors: BlockNeighbors) -> Option<u32> {
+    pub fn atlas_index_for_lod(&self, neighbors: BlockNeighbors) -> Option<TextureIndex> {
         match &self.lod_texture {
             Some(texture_type) => get_texture_index_from_type(texture_type, neighbors),
             None => None,
@@ -277,7 +342,7 @@ impl BlockTextureIndex {
 }
 
 #[inline(always)]
-fn get_texture_index_from_type(texture_type: &LoadedTextureType, neighbors: BlockNeighbors) -> Option<u32> {
+fn get_texture_index_from_type(texture_type: &LoadedTextureType, neighbors: BlockNeighbors) -> Option<TextureIndex> {
     match texture_type {
         LoadedTextureType::Single(index) => Some(*index),
         LoadedTextureType::Connected(connected) => Some(connected[neighbors.bits()]),
@@ -304,7 +369,7 @@ impl Identifiable for BlockTextureIndex {
 impl ItemTextureIndex {
     #[inline]
     /// Returns the index for that item
-    pub fn atlas_index(&self) -> u32 {
+    pub fn atlas_index(&self) -> TextureIndex {
         self.texture
     }
 }
@@ -503,13 +568,13 @@ pub enum LoadedTexture {
 /// Indicates if this texture is connected or is single
 pub enum LoadedTextureType {
     /// This texture will not respond to nearby blocks
-    Single(u32),
+    Single(TextureIndex),
     /// This texture will change based on nearby blocks.
     ///
     /// Index order is based on the bitwise value of [`BlockNeighbors`].
     /// Check the docs for how you should set these textures.
     /// TODO: make docs. For now just check out how glass works.
-    Connected([u32; 16]),
+    Connected([TextureIndex; 16]),
 }
 
 impl Identifiable for BlockRenderingInfo {
@@ -545,17 +610,20 @@ pub fn load_block_rendering_information(
     blocks: Res<Registry<Block>>,
     atlas_registry: Res<Registry<CosmosTextureAtlas>>,
     server: Res<AssetServer>,
+    images: Res<Assets<Image>>,
     mut registry: ResMut<Registry<BlockTextureIndex>>,
     mut info_registry: ResMut<Registry<BlockRenderingInfo>>,
 ) {
+    info!("Loading block JSON files!");
+
     let missing_texture_index = atlas_registry
         .from_id("cosmos:main")
         .expect("Missing main atlas!")
-        .texture_atlas
         .get_texture_index(
             &server
                 .get_handle("cosmos/images/blocks/missing.png")
                 .expect("Missing `missing` texture!!!! *world ends*"),
+            &images,
         )
         .expect("Missing `missing` texture index!!! *world double ends*");
 
@@ -604,6 +672,7 @@ pub fn load_block_rendering_information(
                 texture,
                 &atlas_registry,
                 &server,
+                &images,
                 missing_texture_index,
                 "blocks",
             )),
@@ -615,19 +684,19 @@ pub fn load_block_rendering_information(
                 front,
                 back,
             } => LoadedTexture::Sides(Box::new(LoadedTextureSides {
-                right: process_loading_texture_type(right, &atlas_registry, &server, missing_texture_index, "blocks"),
-                left: process_loading_texture_type(left, &atlas_registry, &server, missing_texture_index, "blocks"),
-                top: process_loading_texture_type(top, &atlas_registry, &server, missing_texture_index, "blocks"),
-                bottom: process_loading_texture_type(bottom, &atlas_registry, &server, missing_texture_index, "blocks"),
-                front: process_loading_texture_type(front, &atlas_registry, &server, missing_texture_index, "blocks"),
-                back: process_loading_texture_type(back, &atlas_registry, &server, missing_texture_index, "blocks"),
+                right: process_loading_texture_type(right, &atlas_registry, &server, &images, missing_texture_index, "blocks"),
+                left: process_loading_texture_type(left, &atlas_registry, &server, &images, missing_texture_index, "blocks"),
+                top: process_loading_texture_type(top, &atlas_registry, &server, &images, missing_texture_index, "blocks"),
+                bottom: process_loading_texture_type(bottom, &atlas_registry, &server, &images, missing_texture_index, "blocks"),
+                front: process_loading_texture_type(front, &atlas_registry, &server, &images, missing_texture_index, "blocks"),
+                back: process_loading_texture_type(back, &atlas_registry, &server, &images, missing_texture_index, "blocks"),
             })),
         };
 
         let lod_texture = block_info
             .lod_texture
             .as_ref()
-            .map(|x| process_loading_texture_type(x, &atlas_registry, &server, missing_texture_index, "blocks"));
+            .map(|x| process_loading_texture_type(x, &atlas_registry, &server, &images, missing_texture_index, "blocks"));
 
         registry.register(BlockTextureIndex {
             id: 0,
@@ -645,18 +714,21 @@ fn load_item_rendering_information(
     items: Res<Registry<Item>>,
     atlas_registry: Res<Registry<CosmosTextureAtlas>>,
     server: Res<AssetServer>,
+    images: Res<Assets<Image>>,
     mut registry: ResMut<Registry<ItemTextureIndex>>,
     mut info_registry: ResMut<Registry<ItemRenderingInfo>>,
     block_items: Res<BlockItems>,
 ) {
+    info!("Loading item JSON files!");
+
     let missing_texture_index = atlas_registry
         .from_id("cosmos:main")
         .expect("Missing main atlas!")
-        .texture_atlas
         .get_texture_index(
             &server
                 .get_handle("cosmos/images/items/missing.png")
                 .expect("Missing item `missing` texture!!!! *world ends*"),
+            &images,
         )
         .expect("Missing item `missing` texture index!!! *world double ends*");
 
@@ -702,6 +774,7 @@ fn load_item_rendering_information(
             &LoadingTextureType::Single(item_info.texture.clone()),
             &atlas_registry,
             &server,
+            &images,
             missing_texture_index,
             "items",
         );
@@ -723,7 +796,8 @@ fn process_loading_texture_type(
     texture: &LoadingTextureType,
     atlas_registry: &Registry<CosmosTextureAtlas>,
     server: &AssetServer,
-    missing_texture_index: u32,
+    images: &Assets<Image>,
+    missing_texture_index: TextureIndex,
     folder_name: &str,
 ) -> LoadedTextureType {
     match texture {
@@ -735,14 +809,14 @@ fn process_loading_texture_type(
                 .next()
                 .unwrap_or_else(|| panic!("Invalid texture - {texture_name}. Did you forget the 'cosmos:'?"));
 
-            let index: u32 = atlas_registry
+            let index = atlas_registry
                 .from_id("cosmos:main") // Eventually load this via the block_info file
                 .expect("No main atlas")
-                .texture_atlas
                 .get_texture_index(
                     &server
                         .get_handle(format!("{mod_id}/images/{folder_name}/{name}.png"))
                         .unwrap_or_default(),
+                    images,
                 )
                 .unwrap_or_else(|| {
                     warn!("Could not find texture with ID {mod_id}:{name}");
@@ -766,21 +840,31 @@ fn process_loading_texture_type(
                     atlas_registry
                         .from_id("cosmos:main") // Eventually load this via the block_info file
                         .expect("No main atlas")
-                        .texture_atlas
                         .get_texture_index(
                             &server
                                 .get_handle(format!("{mod_id}/images/{folder_name}/{name}.png"))
                                 .unwrap_or_default(),
+                            images,
                         )
                         .unwrap_or(missing_texture_index)
                 })
-                .collect::<Vec<u32>>()
+                .collect::<Vec<TextureIndex>>()
                 .try_into()
                 .unwrap();
 
             LoadedTextureType::Connected(texture_indices)
         }
     }
+}
+
+/// This is to resolve ambiguity issues. Because ambiguity detection can't detect
+/// different state run conditions, this set is used to let bevy understand they're different
+#[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
+pub enum AssetsSet {
+    /// Run in [`GameState::PostLoading`] to load assets.
+    AssetsLoading,
+    /// Run in [`GameState::Playing`] to use those loaded assets.
+    AssetsReady,
 }
 
 pub(super) fn register(app: &mut App) {
@@ -791,6 +875,8 @@ pub(super) fn register(app: &mut App) {
     registry::create_registry::<ItemRenderingInfo>(app, "cosmos:item_rendering_info");
     registry::create_registry::<CosmosTextureAtlas>(app, "cosmos:texture_atlas");
 
+    app.configure_sets(Update, (AssetsSet::AssetsLoading, AssetsSet::AssetsReady).chain());
+
     app.add_event::<AssetsDoneLoadingEvent>()
         .add_event::<AllTexturesDoneLoadingEvent>()
         .add_systems(
@@ -799,6 +885,8 @@ pub(super) fn register(app: &mut App) {
                 check_assets_ready.run_if(resource_exists::<Registry<LoadingTextureAtlas>>),
                 assets_done_loading,
             )
+                .in_set(AssetsSet::AssetsLoading)
+                .chain()
                 .run_if(in_state(GameState::PostLoading)),
         )
         .add_systems(OnEnter(GameState::PostLoading), setup_textures)
@@ -806,4 +894,8 @@ pub(super) fn register(app: &mut App) {
             OnExit(GameState::PostLoading),
             (load_item_rendering_information, load_block_rendering_information).chain(),
         );
+
+    // It's probably fine
+    // app.allow_ambiguous_resource::<Events<AllTexturesDoneLoadingEvent>>();
+    // app.allow_ambiguous_resource::<Registry<CosmosTextureAtlas>>();
 }

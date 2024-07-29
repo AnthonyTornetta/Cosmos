@@ -5,15 +5,16 @@ use bevy::{
         entity::Entity,
         query::{Added, Changed, With, Without},
         removal_detection::RemovedComponents,
-        schedule::{common_conditions::in_state, IntoSystemConfigs},
+        schedule::IntoSystemConfigs,
         system::{Commands, Query},
     },
     math::{Quat, Vec3},
     reflect::Reflect,
+    state::condition::in_state,
     transform::components::Transform,
 };
 use cosmos_core::{
-    netty::client::LocalPlayer,
+    netty::{client::LocalPlayer, system_sets::NetworkingSystemsSet},
     structure::{
         ship::{pilot::Pilot, Ship},
         systems::{camera_system::CameraSystem, StructureSystem, StructureSystems},
@@ -230,6 +231,7 @@ pub(super) fn register(app: &mut App) {
         Update,
         (on_add_camera_system, swap_camera, on_change_selected_camera, on_stop_piloting)
             .chain()
+            .in_set(NetworkingSystemsSet::Between)
             .run_if(in_state(GameState::Playing)),
     )
     .register_type::<SelectedCamera>();

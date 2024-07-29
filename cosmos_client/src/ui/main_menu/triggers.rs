@@ -2,7 +2,7 @@ use bevy::{
     app::{App, Update},
     prelude::{in_state, Commands, Condition, IntoSystemConfigs, NextState, Res, ResMut},
 };
-use bevy_renet::renet::{DisconnectReason, RenetClient};
+use bevy_renet2::renet2::{DisconnectReason, RenetClient};
 
 use crate::state::game_state::GameState;
 

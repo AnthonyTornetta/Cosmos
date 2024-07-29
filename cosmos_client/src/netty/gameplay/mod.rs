@@ -1,7 +1,12 @@
-use bevy::prelude::{resource_exists, App, IntoSystemConfigs, RemovedComponents, ResMut, Update};
-use cosmos_core::{netty::sync::mapping::NetworkMapping, physics::location::Location};
+//! Networking logic
 
-mod receiver;
+use bevy::prelude::{resource_exists, App, IntoSystemConfigs, RemovedComponents, ResMut, Update};
+use cosmos_core::{
+    netty::{sync::mapping::NetworkMapping, system_sets::NetworkingSystemsSet},
+    physics::location::Location,
+};
+
+pub mod receiver;
 mod sync;
 
 /// This assumes that when an entity is removed, its location component will also be removed.
@@ -19,5 +24,10 @@ pub(super) fn register(app: &mut App) {
     sync::register(app);
     receiver::register(app);
 
-    app.add_systems(Update, remove_despawned_entities.run_if(resource_exists::<NetworkMapping>));
+    app.add_systems(
+        Update,
+        remove_despawned_entities
+            .after(NetworkingSystemsSet::SyncComponents)
+            .run_if(resource_exists::<NetworkMapping>),
+    );
 }

@@ -7,7 +7,7 @@ use cosmos_core::{
         events::StructureLoadedEvent,
         ship::{ship_builder::TShipBuilder, Ship},
         structure_iterator::ChunkIteratorResult,
-        ChunkInitEvent, Structure,
+        ChunkInitEvent, Structure, StructureTypeSet,
     },
 };
 
@@ -150,13 +150,15 @@ pub(super) fn register(app: &mut App) {
         (
             on_blueprint_ship.in_set(BlueprintingSystemSet::DoBlueprinting),
             on_save_ship.in_set(SavingSystemSet::DoSaving),
-        ),
+        )
+            .in_set(StructureTypeSet::Ship),
     )
     .add_systems(
         LOADING_SCHEDULE,
         (
             on_load_ship_blueprint.in_set(LoadingBlueprintSystemSet::DoLoadingBlueprints),
             on_load_ship.in_set(LoadingSystemSet::DoLoading),
-        ),
+        )
+            .in_set(StructureTypeSet::Ship),
     );
 }

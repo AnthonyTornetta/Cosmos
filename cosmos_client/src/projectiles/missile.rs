@@ -1,6 +1,6 @@
 use std::time::Duration;
 
-use bevy::{asset::LoadState, prelude::*, utils::HashMap};
+use bevy::{asset::LoadState, color::palettes::css, prelude::*, utils::HashMap};
 use bevy_hanabi::prelude::*;
 
 use bevy_kira_audio::{Audio, AudioControl, AudioInstance, AudioSource};
@@ -15,6 +15,7 @@ use crate::{
     asset::asset_loader::load_assets,
     audio::{AudioEmission, AudioEmitterBundle, CosmosAudioEmitter, DespawnOnNoEmissions},
     state::game_state::GameState,
+    structure::ship::PlayerParentChangingSet,
 };
 
 #[derive(Component)]
@@ -46,18 +47,22 @@ fn create_missile_mesh(asset_server: Res<AssetServer>, mut materials: ResMut<Ass
     commands.insert_resource(MissileRenderingInfo(
         asset_server.load("cosmos/models/misc/missile.obj"),
         materials.add(StandardMaterial {
-            base_color: Color::DARK_GRAY,
+            base_color: css::DARK_GRAY.into(),
             ..Default::default()
         }),
     ));
 }
 
-fn on_add_missile(mut commands: Commands, missile_mesh: Res<MissileRenderingInfo>, q_added_missile: Query<Entity, Added<Missile>>) {
+fn on_add_missile(
+    mut commands: Commands,
+    missile_rendering_info: Res<MissileRenderingInfo>,
+    q_added_missile: Query<Entity, Added<Missile>>,
+) {
     for ent in &q_added_missile {
         commands.entity(ent).insert((
             VisibilityBundle::default(),
-            missile_mesh.0.clone_weak(),
-            missile_mesh.1.clone_weak(),
+            missile_rendering_info.0.clone_weak(),
+            missile_rendering_info.1.clone_weak(),
         ));
     }
 }
@@ -65,12 +70,13 @@ fn on_add_missile(mut commands: Commands, missile_mesh: Res<MissileRenderingInfo
 #[derive(Component)]
 struct ExplosionParticle;
 
-fn color_hash(color: Color) -> u32 {
+fn color_hash(color: impl Into<Srgba>) -> u32 {
+    let Srgba { red, green, blue, alpha } = color.into();
     let (r, g, b, a) = (
-        (color.r() * 255.0) as u8,
-        (color.g() * 255.0) as u8,
-        (color.b() * 255.0) as u8,
-        (color.a() * 255.0) as u8,
+        (red * 255.0) as u8,
+        (green * 255.0) as u8,
+        (blue * 255.0) as u8,
+        (alpha * 255.0) as u8,
     );
 
     u32::from_be_bytes([r, g, b, a])
@@ -82,7 +88,8 @@ struct ParticleEffectsForColor(HashMap<u32, Handle<EffectAsset>>);
 fn respond_to_explosion(
     mut commands: Commands,
     q_local_player: Query<&GlobalTransform, With<LocalPlayer>>,
-    q_explosions: Query<(Entity, &Location, &GlobalTransform, &Explosion), Added<Explosion>>,
+    // q_explosions needs &Transform not &GlobalTransform since &GlobalTransform won't be setup yet.
+    q_explosions: Query<(Entity, &Location, &Transform, &Explosion), Added<Explosion>>,
     audio: Res<Audio>,
     audio_sources: Res<ExplosionAudio>,
     mut particles: ResMut<ParticleEffectsForColor>,
@@ -92,15 +99,13 @@ fn respond_to_explosion(
         return;
     };
 
-    for (ent, explosion_loc, g_trans, explosion) in q_explosions.iter() {
-        // Makes the particles appear 3d
-
+    for (ent, explosion_loc, transform, explosion) in q_explosions.iter() {
         let hash = explosion.color.map(color_hash).unwrap_or(0);
 
-        let particle_handle = particles.0.get(&hash).map(|x| x.clone_weak()).unwrap_or_else(|| {
+        let particle_handle = particles.0.get(&hash).cloned().unwrap_or_else(|| {
             let fx_handle = create_particle_fx(explosion.color, &mut effects);
 
-            let fx_handle_weak = fx_handle.clone_weak();
+            let fx_handle_weak = fx_handle.clone();
 
             particles.0.insert(hash, fx_handle);
 
@@ -117,7 +122,8 @@ fn respond_to_explosion(
             ExplosionParticle,
             ParticleEffectBundle {
                 effect: ParticleEffect::new(particle_handle),
-                transform: Transform::from_translation(g_trans.translation()).looking_at(local_g_trans.translation(), Vec3::Y),
+                // Makes the particles appear 3d by looking them at the player
+                transform: Transform::from_translation(transform.translation).looking_at(local_g_trans.translation(), Vec3::Y),
                 ..Default::default()
             },
         ));
@@ -138,7 +144,7 @@ fn respond_to_explosion(
                     peak_volume: 1.0,
                     ..Default::default()
                 }]),
-                transform: TransformBundle::from_transform(Transform::from_translation(g_trans.translation())),
+                transform: TransformBundle::from_transform(Transform::from_translation(transform.translation)),
             },
         ));
     }
@@ -162,10 +168,11 @@ fn create_particle_fx(color: Option<Color>, effects: &mut Assets<EffectAsset>) -
 
     let mut color_gradient1 = Gradient::new();
     if let Some(color) = color {
-        color_gradient1.add_key(0.0, color.rgba_to_vec4() * Vec4::new(4.0, 4.0, 4.0, 1.0));
-        color_gradient1.add_key(0.1, color.rgba_to_vec4() * Vec4::new(3.0, 3.0, 3.0, 1.0));
-        color_gradient1.add_key(0.9, color.rgba_to_vec4() * Vec4::new(2.0, 2.0, 2.0, 1.0));
-        color_gradient1.add_key(1.0, color.rgba_to_vec4() * Vec4::new(2.0, 2.0, 2.0, 0.0));
+        let col_vec = Srgba::from(color).to_vec4();
+        color_gradient1.add_key(0.0, col_vec * Vec4::new(4.0, 4.0, 4.0, 1.0));
+        color_gradient1.add_key(0.1, col_vec * Vec4::new(3.0, 3.0, 3.0, 1.0));
+        color_gradient1.add_key(0.9, col_vec * Vec4::new(2.0, 2.0, 2.0, 1.0));
+        color_gradient1.add_key(1.0, col_vec * Vec4::new(2.0, 2.0, 2.0, 0.0));
     } else {
         color_gradient1.add_key(0.0, Vec4::new(4.0, 4.0, 4.0, 1.0));
         color_gradient1.add_key(0.1, Vec4::new(4.0, 4.0, 0.0, 1.0));
@@ -205,7 +212,7 @@ fn create_particle_fx(color: Option<Color>, effects: &mut Assets<EffectAsset>) -
         speed: (writer.rand(ScalarType::Float) * writer.lit(20.) + writer.lit(20.)).expr(),
     };
 
-    let effect = EffectAsset::new(32768, Spawner::once(1250.0.into(), true), writer.finish())
+    let effect = EffectAsset::new(vec![32768], Spawner::once(1250.0.into(), true), writer.finish())
         .with_name("explosion")
         .init(init_pos)
         .init(init_vel)
@@ -253,6 +260,7 @@ pub(super) fn register(app: &mut App) {
         (start_explosion_particle_system, respond_to_explosion)
             .chain()
             .in_set(ExplosionSystemSet::ProcessExplosions)
+            .ambiguous_with(PlayerParentChangingSet::ChangeParent)
             .run_if(in_state(GameState::Playing)),
     )
     .add_systems(

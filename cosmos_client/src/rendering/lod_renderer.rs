@@ -4,12 +4,14 @@
 //!
 //! I'm sorry. I'll fix it when I feel inspired.
 
-use std::{
-    collections::VecDeque,
-    mem::swap,
-    sync::{Arc, Mutex},
+use crate::{
+    asset::{
+        asset_loading::{BlockNeighbors, BlockTextureIndex},
+        materials::{AddMaterialEvent, BlockMaterialMapping, MaterialDefinition, MaterialType, MaterialsSystemSet},
+    },
+    ecs::add_statebound_resource,
+    state::game_state::GameState,
 };
-
 use bevy::{
     prelude::*,
     render::{
@@ -19,8 +21,6 @@ use bevy::{
     tasks::{AsyncComputeTaskPool, Task},
     utils::{hashbrown::HashMap, HashSet},
 };
-use futures_lite::future;
-
 use cosmos_core::{
     block::{block_face::BlockFace, Block},
     ecs::NeedsDespawned,
@@ -40,15 +40,12 @@ use cosmos_core::{
     },
     utils::array_utils::expand,
 };
+use futures_lite::future;
 use rayon::prelude::{IndexedParallelIterator, IntoParallelRefIterator, ParallelIterator};
-
-use crate::{
-    asset::{
-        asset_loading::{BlockNeighbors, BlockTextureIndex},
-        materials::{add_materials, remove_materials, AddMaterialEvent, BlockMaterialMapping, MaterialDefinition, MaterialType},
-    },
-    ecs::add_statebound_resource,
-    state::game_state::GameState,
+use std::{
+    collections::VecDeque,
+    mem::swap,
+    sync::{Arc, Mutex},
 };
 
 use super::{BlockMeshRegistry, CosmosMeshBuilder, MeshBuilder, MeshInformation, ReadOnlyBlockMeshRegistry};
@@ -56,6 +53,7 @@ use super::{BlockMeshRegistry, CosmosMeshBuilder, MeshBuilder, MeshInformation, 
 #[derive(Debug)]
 struct MeshMaterial {
     mesh: Mesh,
+    texture_dimension_index: u32,
     material_id: u16,
 }
 
@@ -91,7 +89,7 @@ impl MeshBuilder for MeshInfo {
 
 #[derive(Default, Debug)]
 struct ChunkRenderer {
-    meshes: HashMap<u16, MeshInfo>,
+    meshes: HashMap<(u16, u32), MeshInfo>,
     scale: f32,
 }
 
@@ -267,15 +265,11 @@ impl ChunkRenderer {
                     continue;
                 };
 
-                if !self.meshes.contains_key(&mat_id) {
-                    self.meshes.insert(mat_id, Default::default());
-                }
-
-                let mesh_builder = self.meshes.get_mut(&mat_id).unwrap();
-
                 let block_rotation = block_info.get_rotation();
 
                 let rotation = block_rotation.as_quat();
+
+                let mut mesh_builder = None;
 
                 for direction in faces.iter().map(|face| block_rotation.direction_of(*face)) {
                     let face = direction.block_face();
@@ -319,11 +313,15 @@ impl ChunkRenderer {
                         *norm = rotation.mul_vec3((*norm).into()).into();
                     }
 
-                    mesh_builder.add_mesh_information(
+                    if mesh_builder.is_none() {
+                        mesh_builder = Some(self.meshes.entry((mat_id, image_index.dimension_index)).or_default());
+                    }
+
+                    mesh_builder.as_mut().unwrap().add_mesh_information(
                         &mesh_info,
                         Vec3::new(center_offset_x * scale, center_offset_y * scale, center_offset_z * scale),
                         Rect::new(0.0, 0.0, 1.0, 1.0),
-                        image_index,
+                        image_index.texture_index,
                         material_definition.add_material_data(block_id, &mesh_info),
                     );
 
@@ -340,11 +338,12 @@ impl ChunkRenderer {
     fn create_mesh(self) -> LodMesh {
         let mut mesh_materials = Vec::new();
 
-        for (material, chunk_mesh_info) in self.meshes {
+        for ((material, texture_dimension_index), chunk_mesh_info) in self.meshes {
             let mesh = chunk_mesh_info.build_mesh();
 
             mesh_materials.push(MeshMaterial {
                 material_id: material,
+                texture_dimension_index,
                 mesh,
             });
         }
@@ -597,6 +596,7 @@ fn poll_rendering_lods(
                     event_writer.send(AddMaterialEvent {
                         entity: ent,
                         add_material_id: mesh_material.material_id,
+                        texture_dimensions_index: mesh_material.texture_dimension_index,
                         material_type: if scale >= 2 { MaterialType::FarAway } else { MaterialType::Normal },
                     });
 
@@ -942,8 +942,7 @@ pub(super) fn register(app: &mut App) {
             compute_meshes_and_kill_dead_entities,
         )
             .chain()
-            .before(remove_materials)
-            .before(add_materials)
+            .in_set(MaterialsSystemSet::RequestMaterialChanges)
             .run_if(in_state(GameState::Playing)),
     );
 

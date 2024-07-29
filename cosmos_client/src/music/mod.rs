@@ -5,7 +5,7 @@ use bevy_inspector_egui::prelude::*;
 use bevy_kira_audio::prelude::*;
 use cosmos_core::{
     netty::client::LocalPlayer,
-    physics::location::{Location, Sector},
+    physics::location::{Location, LocationPhysicsSet, Sector},
 };
 use std::time::Duration;
 
@@ -95,8 +95,9 @@ pub(super) fn register(app: &mut App) {
                 adjust_volume
                     .run_if(resource_changed::<VolumeSetting>)
                     .run_if(resource_exists::<BackgroundSong>),
-                play_music_when_enter_new_sector,
-            ),
+                play_music_when_enter_new_sector.after(LocationPhysicsSet::DoPhysics),
+            )
+                .chain(),
         )
         .init_resource::<VolumeSetting>()
         .register_type::<VolumeSetting>()

@@ -186,5 +186,10 @@ fn apply_changes<T: Identifiable + 'static>(registry: Res<Registry<T>>, mut mute
 pub fn create_registry<T: Identifiable + 'static>(app: &mut App, registry_name: impl Into<String> + Clone) {
     app.insert_resource(Registry::<T>::new(registry_name.clone()))
         .insert_resource(ReadOnlyRegistry::<T>::new(registry_name))
-        .add_systems(Update, apply_changes::<T>.run_if(resource_exists_and_changed::<Registry<T>>));
+        .add_systems(
+            Update,
+            apply_changes::<T>
+                .ambiguous_with_all() // This system will only run if the registry changes, which shouldn't really happen anyway.
+                .run_if(resource_exists_and_changed::<Registry<T>>),
+        );
 }

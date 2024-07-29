@@ -18,12 +18,14 @@ use bevy_rapier3d::{
 
 use cosmos_core::{
     ecs::NeedsDespawned,
+    netty::system_sets::NetworkingSystemsSet,
     persistence::LoadingDistance,
     physics::{
         collision_handling::CollisionBlacklist,
         location::{CosmosBundleSet, Location},
     },
     projectiles::missile::{Explosion, ExplosionSystemSet, Missile},
+    structure::StructureTypeSet,
 };
 
 #[derive(Component)]
@@ -78,7 +80,7 @@ fn respond_to_collisions(
     mut commands: Commands,
 ) {
     for ev in ev_reader.read() {
-        let &CollisionEvent::Started(e1, e2, _, _) = ev else {
+        let &CollisionEvent::Started(e1, e2, _) = ev else {
             continue;
         };
 
@@ -140,7 +142,7 @@ fn despawn_missiles(mut commands: Commands, mut query: Query<(Entity, &Velocity,
 pub(super) fn register(app: &mut App) {
     app.add_systems(
         Update,
-        (respond_to_collisions, despawn_missiles)
+        (respond_to_collisions.before(NetworkingSystemsSet::SyncComponents), despawn_missiles)
             .before(ExplosionSystemSet::PreProcessExplosions)
             .before(CosmosBundleSet::HandleCosmosBundles)
             .chain(),
@@ -148,8 +150,9 @@ pub(super) fn register(app: &mut App) {
 
     app.add_systems(
         Update,
-        (look_towards_target, apply_missile_thrust)
+        (look_towards_target.ambiguous_with(StructureTypeSet::Ship), apply_missile_thrust)
             .after(CosmosBundleSet::HandleCosmosBundles)
+            .in_set(NetworkingSystemsSet::Between)
             .chain(),
     );
 }

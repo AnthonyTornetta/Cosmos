@@ -1,6 +1,9 @@
 //! Represents client information for biospheres
 
-use bevy::prelude::{App, Color, ResMut, Startup};
+use bevy::{
+    color::palettes::css,
+    prelude::{App, Color, ResMut, Startup},
+};
 use cosmos_core::registry::{self, identifiable::Identifiable, Registry};
 
 #[derive(Debug, Clone)]
@@ -42,9 +45,9 @@ impl Identifiable for BiosphereColor {
 }
 
 fn register_biospheres(mut reigstry: ResMut<Registry<BiosphereColor>>) {
-    reigstry.register(BiosphereColor::new("cosmos:biosphere_grass", Color::GREEN));
-    reigstry.register(BiosphereColor::new("cosmos:biosphere_molten", Color::ORANGE_RED));
-    reigstry.register(BiosphereColor::new("cosmos:biosphere_ice", Color::CYAN));
+    reigstry.register(BiosphereColor::new("cosmos:biosphere_grass", css::GREEN.into()));
+    reigstry.register(BiosphereColor::new("cosmos:biosphere_molten", css::ORANGE_RED.into()));
+    reigstry.register(BiosphereColor::new("cosmos:biosphere_ice", css::AQUA.into()));
 }
 
 pub(super) fn register(app: &mut App) {

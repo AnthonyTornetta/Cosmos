@@ -4,7 +4,7 @@ use bevy::{
     prelude::{Entity, Resource},
     utils::HashMap,
 };
-use bevy_renet::renet::ClientId;
+use bevy_renet2::renet2::ClientId;
 
 #[derive(Debug, Resource)]
 /// Links up a player to their server-side equivalent entity.

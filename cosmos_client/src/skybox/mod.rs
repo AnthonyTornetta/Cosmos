@@ -7,7 +7,7 @@ use bevy::{
     render::render_resource::{TextureViewDescriptor, TextureViewDimension},
 };
 
-use crate::rendering::MainCamera;
+use crate::{rendering::MainCamera, state::game_state::GameState};
 
 /// Order from top to bottom:
 /// Right, Left, Top, Bottom, Front, Back
@@ -28,16 +28,16 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
     });
 }
 
-fn added_skybox(mut query: Query<&mut Skybox, Added<Skybox>>, cubemap: Res<Cubemap>) {
-    for mut skybox in query.iter_mut() {
-        if cubemap.is_loaded {
-            skybox.image = cubemap.image_handle.clone();
-        }
-    }
-}
+// fn added_skybox(mut query: Query<&mut Skybox, Added<Skybox>>, cubemap: Res<Cubemap>) {
+//     for mut skybox in query.iter_mut() {
+//         if cubemap.is_loaded {
+//             skybox.image = cubemap.image_handle.clone();
+//         }
+//     }
+// }
 
 fn asset_loaded(asset_server: Res<AssetServer>, mut images: ResMut<Assets<Image>>, mut cubemap: ResMut<Cubemap>) {
-    if !cubemap.is_loaded && asset_server.get_load_state(cubemap.image_handle.clone_weak()) == Some(LoadState::Loaded) {
+    if !cubemap.is_loaded && asset_server.get_load_state(cubemap.image_handle.id()) == Some(LoadState::Loaded) {
         let image = images.get_mut(&cubemap.image_handle).unwrap();
         // NOTE: PNGs do not have any metadata that could indicate they contain a cubemap texture,
         // so they appear as one texture. The following code reconfigures the texture as necessary.
@@ -53,7 +53,7 @@ fn asset_loaded(asset_server: Res<AssetServer>, mut images: ResMut<Assets<Image>
     }
 }
 
-fn on_add_main_camera(cubemap: Res<Cubemap>, mut commands: Commands, query: Query<Entity, Added<MainCamera>>) {
+fn on_enter_playing_state(cubemap: Res<Cubemap>, mut commands: Commands, query: Query<Entity, With<MainCamera>>) {
     for ent in query.iter() {
         commands.entity(ent).insert(Skybox {
             image: cubemap.image_handle.clone(),
@@ -65,5 +65,6 @@ fn on_add_main_camera(cubemap: Res<Cubemap>, mut commands: Commands, query: Quer
 pub(super) fn register(app: &mut App) {
     app //.add_plugin(MaterialPlugin::<CubemapMaterial>::default())
         .add_systems(Startup, setup)
-        .add_systems(Update, (added_skybox, on_add_main_camera, asset_loaded));
+        .add_systems(Update, (asset_loaded).chain())
+        .add_systems(OnEnter(GameState::Playing), on_enter_playing_state);
 }

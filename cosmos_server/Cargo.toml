@@ -8,12 +8,16 @@ edition = "2021"
 [features]
 print-schedule = []
 
+
 # Bevy defaults minus audio and some other not needed things
-# see https://github.com/bevyengine/bevy/blob/main/Cargo.toml#L31-L54
-# from https://github.com/NiklasEi/bevy_game_template/blob/main/Cargo.toml
+# see https://github.com/bevyengine/bevy/blob/main/Cargo.toml#L58-L85
+# based on https://github.com/NiklasEi/bevy_game_template/blob/main/Cargo.toml
 default = [
     "bevy/animation",
     "bevy/bevy_asset",
+    "bevy/bevy_state",
+    "bevy/bevy_color",
+    "bevy/bevy_gilrs",
     "bevy/bevy_scene",
     "bevy/bevy_winit",
     "bevy/bevy_core_pipeline",
@@ -23,13 +27,17 @@ default = [
     "bevy/bevy_sprite",
     "bevy/bevy_text",
     "bevy/bevy_ui",
+    "bevy/multi_threaded",
     "bevy/png",
     "bevy/hdr",
-    "bevy/zstd",
     "bevy/x11",
-    "bevy/ktx2",
-    "bevy/multi-threaded",
+    "bevy/bevy_gizmos",
+    "bevy/android_shared_stdcxx",
     "bevy/tonemapping_luts",
+    "bevy/smaa_luts",
+    "bevy/default_font",
+    "bevy/webgl2",
+    "bevy/sysinfo_plugin",
 ]
 
 [dependencies]
@@ -38,7 +46,8 @@ cosmos_core = { version = "0.0.6", path = "../cosmos_core", features = [
 ] }
 
 bevy = { workspace = true }
-bevy_renet = { workspace = true, features = ["serde"] }
+bevy_renet2 = { workspace = true, features = ["serde"] }
+renet2 = { workspace = true, features = ["bevy", "serde"] }
 serde = { workspace = true }
 bincode = { workspace = true }
 noise = { workspace = true }
@@ -49,7 +58,7 @@ clap = { workspace = true, features = ["derive"] }
 
 bevy_rapier3d = { workspace = true }
 crossterm = { workspace = true }
-renet_visualizer = { workspace = true }
+renet2_visualizer = { workspace = true, features = ["bevy"] }
 futures-lite = { workspace = true }
 serde_json = { workspace = true }
 
@@ -66,5 +75,5 @@ bitflags = { workspace = true }
 bevy_mod_debugdump = { workspace = true }
 derive_more = { workspace = true }
 
-bevy_app_compute = { workspace = true }
+bevy_easy_compute = { workspace = true }
 bytemuck = { workspace = true }

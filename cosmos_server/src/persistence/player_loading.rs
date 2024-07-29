@@ -9,17 +9,21 @@ use std::{
 use bevy::{
     log::warn,
     prelude::{App, Commands, Component, DespawnRecursiveExt, Entity, IntoSystemConfigs, Name, Query, ResMut, Update, With, Without},
+    state::condition::in_state,
     tasks::{AsyncComputeTaskPool, Task},
     time::common_conditions::on_timer,
 };
 use cosmos_core::{
     ecs::NeedsDespawned,
     entities::player::Player,
+    netty::system_sets::NetworkingSystemsSet,
     persistence::{LoadingDistance, LOAD_DISTANCE},
     physics::location::{Location, Sector, SectorUnit, SECTOR_DIMENSIONS},
 };
 use futures_lite::future;
 use walkdir::{DirEntry, WalkDir};
+
+use crate::state::GameState;
 
 use super::{loading::NeedsLoaded, saving::NeedsSaved, EntityId, SaveFileIdentifier, SectorsCache};
 
@@ -222,9 +226,14 @@ pub(super) fn register(app: &mut App) {
     app.insert_resource(SectorsCache::default()).add_systems(
         Update,
         (
-            unload_far.run_if(on_timer(Duration::from_millis(1000))),
-            load_near.run_if(on_timer(Duration::from_millis(1000))),
+            unload_far
+                .in_set(NetworkingSystemsSet::Between)
+                .run_if(on_timer(Duration::from_millis(1000))),
+            load_near
+                .in_set(NetworkingSystemsSet::Between)
+                .run_if(on_timer(Duration::from_millis(1000))),
             monitor_loading_task,
-        ),
+        )
+            .run_if(in_state(GameState::Playing)),
     );
 }

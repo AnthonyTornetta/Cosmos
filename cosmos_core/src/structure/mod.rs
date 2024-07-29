@@ -10,11 +10,12 @@ use std::sync::{Arc, Mutex};
 
 use bevy::app::Update;
 use bevy::ecs::query::{QueryData, QueryFilter, ROQueryItem, With};
-use bevy::prelude::{App, Event, IntoSystemConfigs, Name, PreUpdate, VisibilityBundle};
+use bevy::log::info;
+use bevy::prelude::{App, Event, IntoSystemConfigs, IntoSystemSetConfigs, Name, PreUpdate, SystemSet, VisibilityBundle};
 use bevy::reflect::Reflect;
-use bevy::transform::TransformBundle;
+use bevy::transform::bundles::TransformBundle;
 use bevy::utils::{HashMap, HashSet};
-use bevy_rapier3d::prelude::PhysicsWorld;
+use bevy_rapier3d::plugin::RapierContextEntityLink;
 use chunk::BlockInfo;
 use query::MutBlockData;
 
@@ -31,6 +32,7 @@ pub mod loading;
 pub mod lod;
 pub mod lod_chunk;
 pub mod planet;
+pub mod prelude;
 pub mod query;
 pub mod shared;
 pub mod shields;
@@ -50,9 +52,7 @@ use crate::netty::NoSendEntity;
 use crate::physics::location::Location;
 use crate::registry::Registry;
 use crate::structure::chunk::Chunk;
-use bevy::prelude::{
-    BuildChildren, Commands, Component, Entity, EventReader, EventWriter, GlobalTransform, Query, States, Transform, Vec3,
-};
+use bevy::prelude::{BuildChildren, Commands, Component, Entity, EventReader, EventWriter, GlobalTransform, Query, Transform, Vec3};
 use serde::{Deserialize, Serialize};
 
 use self::base_structure::RaycastIter;
@@ -67,6 +67,25 @@ use self::full_structure::FullStructure;
 use self::loading::StructureLoadingSet;
 use self::structure_block::StructureBlock;
 use self::structure_iterator::{BlockIterator, ChunkIterator};
+
+#[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
+/// These systems don't run at any specific time.
+/// Rather, they are used to remove ambiguities between different types of structures that will never share the same modifications.
+///
+/// Because we can't statically prove something with a "Ship" cannot have a "Station" component, using these systems is a way
+/// to remove ambiguity errors from systems designed with this valid assumption.
+pub enum StructureTypeSet {
+    /// If you're working with a Ship, put it here.
+    Ship,
+    /// If you're working with a Planet, put it here.
+    Planet,
+    /// If you're working with a Station, put it here.
+    Station,
+    /// If you're working with a Asteroid, put it here.
+    Asteroid,
+    /// Put systems in here that are ambiguous w/ a type of structure(s) but wouldn't in practice.
+    None,
+}
 
 /// Represents the state a chunk is in for loading
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -161,7 +180,7 @@ impl Structure {
     }
 
     /// Returns None for unloaded/empty chunks or chunks that are out of bounds
-    ///  
+    ///
     /// (0, 0, 0) => chunk @ 0, 0, 0\
     /// (1, 0, 0) => chunk @ 1, 0, 0
     pub fn chunk_at(&self, coords: ChunkCoordinate) -> Option<&Chunk> {
@@ -740,7 +759,7 @@ fn spawn_chunk_entity(
     structure: &mut Structure,
     chunk_coordinate: ChunkCoordinate,
     structure_entity: Entity,
-    body_world: Option<&PhysicsWorld>,
+    q_entity_link: Option<&RapierContextEntityLink>,
     chunk_set_events: &mut HashSet<ChunkSetEvent>,
 ) {
     let mut entity_cmds = commands.spawn((
@@ -754,8 +773,10 @@ fn spawn_chunk_entity(
         },
     ));
 
-    if let Some(bw) = body_world {
-        entity_cmds.insert(*bw);
+    if let Some(ent_link) = q_entity_link {
+        entity_cmds.insert(*ent_link);
+    } else {
+        info!("No physics world for structure!");
     }
 
     let entity = entity_cmds.id();
@@ -773,7 +794,7 @@ fn spawn_chunk_entity(
 fn add_chunks_system(
     mut chunk_init_reader: EventReader<ChunkInitEvent>,
     mut block_reader: EventReader<BlockChangedEvent>,
-    mut structure_query: Query<(&mut Structure, Option<&PhysicsWorld>)>,
+    mut structure_query: Query<(&mut Structure, Option<&RapierContextEntityLink>)>,
     mut chunk_set_event_writer: EventWriter<ChunkSetEvent>,
     mut commands: Commands,
     mut ev_writer: EventWriter<ChunkLoadBlockDataEvent>,
@@ -807,7 +828,7 @@ fn add_chunks_system(
     }
 
     for (structure_entity, chunk_coordinate) in s_chunks {
-        let Ok((mut structure, body_world)) = structure_query.get_mut(structure_entity) else {
+        let Ok((mut structure, rapier_ent_link)) = structure_query.get_mut(structure_entity) else {
             continue;
         };
 
@@ -821,7 +842,7 @@ fn add_chunks_system(
                 &mut structure,
                 chunk_coordinate,
                 structure_entity,
-                body_world,
+                rapier_ent_link,
                 &mut chunk_set_events,
             );
         }
@@ -909,13 +930,13 @@ pub fn rotate(
     }
 }
 
-pub(super) fn register<T: States + Clone + Copy>(app: &mut App, playing_state: T) {
+pub(super) fn register(app: &mut App) {
     app.register_type::<Structure>()
         .register_type::<Chunk>()
         .add_event::<ChunkInitEvent>();
 
-    ship::register(app, playing_state);
-    station::register(app, playing_state);
+    ship::register(app);
+    station::register(app);
     chunk::register(app);
     planet::register(app);
     events::register(app);
@@ -925,6 +946,39 @@ pub(super) fn register<T: States + Clone + Copy>(app: &mut App, playing_state: T
     shields::register(app);
     block_health::register(app);
     structure_block::register(app);
+
+    use StructureTypeSet as S;
+
+    app.configure_sets(
+        Update,
+        (
+            S::Ship
+                .ambiguous_with(S::Planet)
+                .ambiguous_with(S::Station)
+                .ambiguous_with(S::Asteroid)
+                .ambiguous_with(S::None),
+            S::Planet
+                .ambiguous_with(S::Ship)
+                .ambiguous_with(S::Station)
+                .ambiguous_with(S::Asteroid)
+                .ambiguous_with(S::None),
+            S::Station
+                .ambiguous_with(S::Ship)
+                .ambiguous_with(S::Planet)
+                .ambiguous_with(S::Asteroid)
+                .ambiguous_with(S::None),
+            S::Asteroid
+                .ambiguous_with(S::Ship)
+                .ambiguous_with(S::Planet)
+                .ambiguous_with(S::Station)
+                .ambiguous_with(S::None),
+            S::None
+                .ambiguous_with(S::Ship)
+                .ambiguous_with(S::Planet)
+                .ambiguous_with(S::Station)
+                .ambiguous_with(S::Asteroid),
+        ),
+    );
 
     app.add_systems(Update, add_chunks_system.in_set(StructureLoadingSet::CreateChunkEntities))
         .add_systems(PreUpdate, remove_empty_chunks);

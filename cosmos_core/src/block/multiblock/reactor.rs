@@ -11,15 +11,18 @@ use bevy::{
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    block::Block,
+    block::{block_events::BlockEventsSet, Block},
     events::block_events::BlockChangedEvent,
-    netty::sync::{sync_component, IdentifiableComponent, SyncableComponent},
+    netty::{
+        sync::{sync_component, IdentifiableComponent, SyncableComponent},
+        system_sets::NetworkingSystemsSet,
+    },
     registry::{create_registry, identifiable::Identifiable, Registry},
     structure::{
         coordinates::BlockCoordinate,
         loading::StructureLoadingSet,
         structure_block::StructureBlock,
-        systems::{energy_storage_system::EnergyStorageSystem, StructureSystems},
+        systems::{energy_storage_system::EnergyStorageSystem, StructureSystems, StructureSystemsSet},
         Structure,
     },
 };
@@ -191,6 +194,7 @@ fn on_modify_reactor(
     }
 }
 
+// TODO: move this to server
 fn generate_power(
     reactors: Query<(&Reactors, Entity)>,
     structure: Query<&StructureSystems>,
@@ -221,9 +225,13 @@ pub(super) fn register<T: States>(app: &mut App, post_loading_state: T, playing_
             Update,
             (
                 add_reactor_to_structure.in_set(StructureLoadingSet::AddStructureComponents),
-                generate_power,
-                on_modify_reactor,
+                (on_modify_reactor.in_set(BlockEventsSet::ProcessEvents), generate_power)
+                    .in_set(StructureSystemsSet::UpdateSystems)
+                    .in_set(NetworkingSystemsSet::Between)
+                    .chain(),
             )
+                .chain()
+                .in_set(NetworkingSystemsSet::Between)
                 .run_if(in_state(playing_state)),
         )
         .register_type::<Reactor>()

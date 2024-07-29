@@ -5,14 +5,14 @@ use bevy::{
     log::warn,
     prelude::{in_state, App, Commands, Entity, IntoSystemConfigs, Query, Res, ResMut, Update},
 };
-use bevy_renet::renet::RenetClient;
+use bevy_renet2::renet2::RenetClient;
 use cosmos_core::{
     ecs::NeedsDespawned,
     inventory::{
         netty::{InventoryIdentifier, ServerInventoryMessages},
         Inventory,
     },
-    netty::{client::LocalPlayer, cosmos_encoder, sync::mapping::NetworkMapping, NettyChannelServer},
+    netty::{client::LocalPlayer, cosmos_encoder, sync::mapping::NetworkMapping, system_sets::NetworkingSystemsSet, NettyChannelServer},
     structure::Structure,
 };
 
@@ -102,5 +102,12 @@ fn sync(
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_systems(Update, sync.run_if(in_state(GameState::Playing)));
+    app.add_systems(
+        Update,
+        // TODO: This really shouldn't be done manually here, in the future this should be automatically
+        // synced using some sort of easy server events framework
+        sync.in_set(NetworkingSystemsSet::SyncComponents)
+            .ambiguous_with(NetworkingSystemsSet::SyncComponents)
+            .run_if(in_state(GameState::Playing)),
+    );
 }

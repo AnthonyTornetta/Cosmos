@@ -2,8 +2,8 @@
 
 use bevy::prelude::*;
 use bevy_inspector_egui::bevy_egui::EguiContexts;
-use bevy_renet::renet::RenetServer;
-use renet_visualizer::RenetServerVisualizer;
+use bevy_renet2::renet2::RenetServer;
+use renet2_visualizer::RenetServerVisualizer;
 
 fn update_visulizer_system(
     q_windows: Query<(), With<Window>>,
@@ -19,5 +19,6 @@ fn update_visulizer_system(
 
 pub(super) fn register(app: &mut App) {
     app.insert_resource(RenetServerVisualizer::<200>::default())
+        .allow_ambiguous_resource::<RenetServerVisualizer<200>>()
         .add_systems(Update, update_visulizer_system);
 }

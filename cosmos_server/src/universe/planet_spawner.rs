@@ -14,6 +14,7 @@ use bevy::{
 };
 use cosmos_core::{
     entities::player::Player,
+    netty::system_sets::NetworkingSystemsSet,
     physics::location::{Location, Sector, SystemUnit},
     structure::{
         coordinates::CoordinateType,
@@ -179,7 +180,10 @@ pub fn is_planet_in_sector(sector: &Sector, seed: &ServerSeed) -> bool {
 pub(super) fn register(app: &mut App) {
     app.add_systems(
         Update,
-        (monitor_planets_to_spawn, spawn_planet.run_if(on_timer(Duration::from_millis(1000)))).run_if(in_state(GameState::Playing)),
+        (monitor_planets_to_spawn, spawn_planet.run_if(on_timer(Duration::from_millis(1000))))
+            .chain()
+            .in_set(NetworkingSystemsSet::Between)
+            .run_if(in_state(GameState::Playing)),
     )
     .insert_resource(CachedSectors::default());
 }

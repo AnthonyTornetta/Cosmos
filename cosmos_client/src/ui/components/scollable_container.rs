@@ -4,6 +4,7 @@
 
 use bevy::{
     app::{App, Update},
+    color::{Color, Srgba},
     core::Name,
     ecs::{
         bundle::Bundle,
@@ -22,7 +23,6 @@ use bevy::{
     },
     log::error,
     reflect::Reflect,
-    render::color::Color,
     transform::components::GlobalTransform,
     ui::{node_bundles::NodeBundle, FlexDirection, Interaction, Node, Overflow, PositionType, Style, UiRect, UiScale, Val},
     window::{PrimaryWindow, Window},
@@ -61,10 +61,10 @@ pub struct ScrollerStyles {
 impl Default for ScrollerStyles {
     fn default() -> Self {
         Self {
-            scrollbar_background_color: Color::hex("555555").unwrap(),
+            scrollbar_background_color: Srgba::hex("555555").unwrap().into(),
             // hover_scrollbar_background_color: Color::GRAY,
             // press_scrollbar_background_color: Color::AQUAMARINE,
-            scrollbar_color: Color::hex("999999").unwrap(),
+            scrollbar_color: Srgba::hex("999999").unwrap().into(),
             // hover_scrollbar_color: Color::GRAY,
             // press_scrollbar_color: Color::AQUAMARINE,
         }
@@ -297,25 +297,25 @@ fn handle_scrollbar(
 }
 
 #[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
-/// System set the [`Button`]` component uses. Make sure you add any [`Button`] components before this set!
-pub enum SliderUiSystemSet {
-    /// Make sure you add any [`Button`] components before this set!
+/// System set the [`ScrollBox`]` component uses. Make sure you add any [`ScrollBox`] components before this set!
+pub enum ScrollBoxUiSystemSet {
+    /// Make sure you add any [`ScrollBox`] components before this set!
     ///
-    /// Sets up any [`Button`] components added.
-    AddSliderBundle,
-    /// Sends user events from the various [`Button`] components.
-    SliderInteraction,
-    /// Sends user events from the various [`Button`] components.
-    UpdateSliderDisplay,
+    /// Sets up any [`ScrollBox`] components added.
+    AddScrollBoxBundle,
+    /// Sends user events from the various [`ScrollBox`] components.
+    ScrollBoxInteraction,
+    /// Sends user events from the various [`ScrollBox`] components.
+    UpdateScrollBoxDisplay,
 }
 
 pub(super) fn register(app: &mut App) {
     app.configure_sets(
         Update,
         (
-            SliderUiSystemSet::AddSliderBundle,
-            SliderUiSystemSet::SliderInteraction,
-            SliderUiSystemSet::UpdateSliderDisplay,
+            ScrollBoxUiSystemSet::AddScrollBoxBundle,
+            ScrollBoxUiSystemSet::ScrollBoxInteraction,
+            ScrollBoxUiSystemSet::UpdateScrollBoxDisplay,
         )
             .chain()
             .in_set(UiSystemSet::DoUi),
@@ -323,9 +323,9 @@ pub(super) fn register(app: &mut App) {
     .add_systems(
         Update,
         (
-            on_add_scrollbar.in_set(SliderUiSystemSet::AddSliderBundle),
-            on_interact_slider.in_set(SliderUiSystemSet::SliderInteraction),
-            handle_scrollbar.in_set(SliderUiSystemSet::UpdateSliderDisplay),
+            on_add_scrollbar.in_set(ScrollBoxUiSystemSet::AddScrollBoxBundle),
+            on_interact_slider.in_set(ScrollBoxUiSystemSet::ScrollBoxInteraction),
+            handle_scrollbar.in_set(ScrollBoxUiSystemSet::UpdateScrollBoxDisplay),
         ),
     );
 }

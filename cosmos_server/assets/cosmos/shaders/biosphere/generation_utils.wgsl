@@ -176,7 +176,7 @@ fn extrapolate(grid: vec3<f64>, delta: vec3<f64>) -> f64 {
 
 fn noise(x: f64, y: f64, z: f64) -> f64 {
     let input: vec3<f64> = vec3(x, y, z);
-    let stretch: vec3<f64> = input + ((-STRETCH_POINT) * (input.x + input.y + input.z));
+    let stretch: vec3<f64> = input + ((0.0 - STRETCH_POINT /* -STRETCH_POINT causes a compiler error. idk why */) * (input.x + input.y + input.z));
     let grid = floor(stretch);
 
     let squashed: vec3<f64> = grid + (SQUISH_POINT * (grid.x + grid.y + grid.z));

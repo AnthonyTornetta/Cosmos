@@ -1,12 +1,13 @@
 //! Syncs the client with the server for asteroids
 
 use bevy::prelude::{resource_exists, App, Commands, IntoSystemConfigs, Query, ResMut, Update};
-use bevy_renet::renet::RenetClient;
+use bevy_renet2::renet2::RenetClient;
 use cosmos_core::{
     netty::{
         cosmos_encoder,
         netty_rigidbody::NettyRigidBodyLocation,
         sync::mapping::{Mappable, NetworkMapping},
+        system_sets::NetworkingSystemsSet,
         NettyChannelServer,
     },
     physics::location::Location,
@@ -16,6 +17,8 @@ use cosmos_core::{
         Structure,
     },
 };
+
+use crate::netty::gameplay::receiver::client_sync_players;
 
 use super::client_asteroid_builder::ClientAsteroidBuilder;
 
@@ -67,5 +70,12 @@ fn receive_asteroids(
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_systems(Update, receive_asteroids.run_if(resource_exists::<RenetClient>));
+    app.add_systems(
+        Update,
+        receive_asteroids
+            .after(client_sync_players)
+            .in_set(NetworkingSystemsSet::ReceiveMessages)
+            .ambiguous_with(NetworkingSystemsSet::ReceiveMessages)
+            .run_if(resource_exists::<RenetClient>),
+    );
 }

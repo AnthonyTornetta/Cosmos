@@ -4,6 +4,10 @@
 
 use std::marker::PhantomData;
 
+use super::{
+    components::{slider::SliderUiSystemSet, text_input::TextInputUiSystemSet},
+    UiSystemSet,
+};
 use bevy::{
     app::{App, Update},
     ecs::{
@@ -12,10 +16,12 @@ use bevy::{
         event::{Event, EventWriter},
         query::Changed,
         schedule::IntoSystemConfigs,
+        schedule::IntoSystemSetConfigs,
         system::Query,
     },
-    prelude::Deref,
+    prelude::{Deref, SystemSet},
 };
+use cosmos_core::netty::system_sets::NetworkingSystemsSet;
 
 pub mod slider;
 pub mod text;
@@ -117,14 +123,47 @@ fn listen_changes_to_reactors<T: ReactableValue>(
     }
 }
 
+#[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
+enum DoReactorsSet {
+    DoReactors,
+}
+
 pub(crate) fn add_reactable_type<T: ReactableValue>(app: &mut App) {
-    app.add_systems(Update, (listen_changes_to_reactors::<T>,).chain());
+    app.add_systems(
+        Update,
+        listen_changes_to_reactors::<T>
+            .in_set(DoReactorsSet::DoReactors)
+            .ambiguous_with(DoReactorsSet::DoReactors)
+            .in_set(UiSystemSet::PreDoUi),
+    );
 
     slider::register::<T>(app);
     text::register::<T>(app);
     text_input::register::<T>(app);
 }
 
+#[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
+/// Contains all the different reactive UI elements sets to run within.
+///
+/// These are all run in order to avoid ambiguity issues.
+pub enum ReactiveUiSystemSet {
+    /// Text Value reactive UI element is processed here
+    ProcessTextValueChanges,
+    /// Slider reactive UI element is processed here
+    ProcessSliderValueChanges,
+}
+
 pub(super) fn register(app: &mut App) {
     app.add_event::<NeedsValueFetched>();
+
+    app.configure_sets(
+        Update,
+        (
+            ReactiveUiSystemSet::ProcessTextValueChanges.in_set(TextInputUiSystemSet::HandleReactValues),
+            ReactiveUiSystemSet::ProcessSliderValueChanges.in_set(SliderUiSystemSet::HandleReactValues),
+        )
+            .chain()
+            .in_set(NetworkingSystemsSet::Between),
+    )
+    .configure_sets(Update, DoReactorsSet::DoReactors);
 }

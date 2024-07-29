@@ -17,7 +17,7 @@ use cosmos_core::structure::{
     chunk::Chunk,
     loading::{ChunksNeedLoaded, StructureLoadingSet},
     structure_iterator::ChunkIteratorResult,
-    ChunkInitEvent, Structure,
+    ChunkInitEvent, Structure, StructureTypeSet,
 };
 use futures_lite::future;
 
@@ -136,6 +136,8 @@ pub enum AsteroidGenerationSet {
     StartGeneratingAsteroid,
     /// Triggers the generation of the actual blocks of the asteroid
     GenerateAsteroid,
+    /// Sends out events when asteroids are finished being generated
+    NotifyFinished,
 }
 
 pub(super) fn register(app: &mut App) {
@@ -144,16 +146,18 @@ pub(super) fn register(app: &mut App) {
         (
             AsteroidGenerationSet::StartGeneratingAsteroid,
             AsteroidGenerationSet::GenerateAsteroid,
+            AsteroidGenerationSet::NotifyFinished,
         )
             .chain()
-            .in_set(StructureLoadingSet::LoadStructure),
+            .in_set(StructureLoadingSet::LoadStructure)
+            .in_set(StructureTypeSet::Asteroid),
     );
 
     app.add_systems(
         Update,
         (
             send_events.in_set(AsteroidGenerationSet::StartGeneratingAsteroid),
-            notify_when_done_generating.after(AsteroidGenerationSet::GenerateAsteroid),
+            notify_when_done_generating.in_set(AsteroidGenerationSet::NotifyFinished),
         )
             .run_if(in_state(GameState::Playing)),
     )

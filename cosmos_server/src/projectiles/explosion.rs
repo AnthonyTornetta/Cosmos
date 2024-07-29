@@ -11,10 +11,14 @@ use bevy::{
     transform::components::{GlobalTransform, Transform},
     utils::HashSet,
 };
-use bevy_rapier3d::{geometry::Collider, pipeline::QueryFilter, plugin::RapierContext, prelude::PhysicsWorld};
+use bevy_rapier3d::{
+    geometry::Collider,
+    pipeline::QueryFilter,
+    plugin::{RapierContextAccess, RapierContextEntityLink},
+};
 
 use cosmos_core::{
-    block::Block,
+    block::{block_events::BlockEventsSet, Block},
     ecs::NeedsDespawned,
     events::block_events::BlockChangedEvent,
     physics::{
@@ -31,7 +35,10 @@ use cosmos_core::{
     },
 };
 
-use crate::netty::sync::sync_bodies::DontNotifyClientOfDespawn;
+use crate::{
+    netty::sync::sync_bodies::DontNotifyClientOfDespawn,
+    structure::{block_health::BlockHealthSet, shared::MeltingDownSet, systems::shield_system::ShieldSet},
+};
 
 /// 1 unit of explosion power = this amount of health. Bigger this number is, the more damage explosives will do.
 const HEALTH_PER_EXPLOSION_POWER: f32 = 8.0;
@@ -51,12 +58,12 @@ pub struct ExplosionHitEvent {
 
 fn respond_to_explosion(
     mut commands: Commands,
-    q_explosions: Query<(Entity, &Location, &WorldWithin, Option<&PhysicsWorld>, &Explosion), Added<Explosion>>,
+    q_explosions: Query<(Entity, &Location, &WorldWithin, &RapierContextEntityLink, &Explosion), Added<Explosion>>,
     q_player_world: Query<&Location, With<PlayerWorld>>,
     q_excluded: Query<(), Or<(With<Explosion>, Without<Collider>)>>,
 
     mut q_structure: Query<(&GlobalTransform, &Location, &mut Structure)>,
-    context: Res<RapierContext>,
+    context_access: RapierContextAccess,
 
     q_chunk: Query<&ChunkPhysicsPart>,
     blocks_registry: Res<Registry<Block>>,
@@ -75,28 +82,25 @@ fn respond_to_explosion(
 
         let max_radius = explosion.power.sqrt();
 
-        let physics_world = physics_world.copied().unwrap_or_default();
-
         // Have to do this by hand because `GlobalTransform` doesn't have enough time to
         // propagate down
         let explosion_rapier_coordinates = (explosion_loc - *player_world_loc).absolute_coords_f32();
 
         let mut hits = vec![];
 
-        context
-            .intersections_with_shape(
-                physics_world.world_id,
-                explosion_rapier_coordinates,
-                Quat::IDENTITY,
-                &Collider::ball(max_radius),
-                QueryFilter::default().exclude_collider(ent).predicate(&|x| !q_excluded.contains(x)),
-                |hit_entity| {
-                    hits.push(hit_entity);
+        let context = context_access.context(physics_world);
 
-                    true
-                },
-            )
-            .expect("Invalid world id used in explosion!");
+        context.intersections_with_shape(
+            explosion_rapier_coordinates,
+            Quat::IDENTITY,
+            &Collider::ball(max_radius),
+            QueryFilter::default().exclude_collider(ent).predicate(&|x| !q_excluded.contains(x)),
+            |hit_entity| {
+                hits.push(hit_entity);
+
+                true
+            },
+        );
 
         let mut ents = HashSet::new();
         for ent in hits {
@@ -159,15 +163,12 @@ fn respond_to_explosion(
                 // This ray will only find shields
                 if context
                     .cast_ray(
-                        physics_world.world_id,
                         block_coord,
                         explosion_rapier_coordinates - block_coord,
                         1.0,
                         true,
                         QueryFilter::default().predicate(&|e| q_shield.get(e).map(|s| s.is_enabled()).unwrap_or(false)),
                     )
-                    .ok()
-                    .flatten()
                     .is_none()
                 {
                     let cur_health = structure.get_block_health(block, &blocks_registry);
@@ -230,5 +231,15 @@ fn calculate_block_explosion_power(
 pub(super) fn register(app: &mut App) {
     app.add_event::<ExplosionHitEvent>();
 
-    app.add_systems(Update, respond_to_explosion.in_set(ExplosionSystemSet::ProcessExplosions));
+    app.add_systems(
+        Update,
+        respond_to_explosion
+            .ambiguous_with(MeltingDownSet::ProcessMeltingDown)
+            .in_set(ExplosionSystemSet::ProcessExplosions)
+            .in_set(BlockEventsSet::SendEventsForNextFrame)
+            .ambiguous_with(BlockEventsSet::SendEventsForNextFrame) // Order of blocks being updated doesn't matter
+            .after(ShieldSet::RechargeShields)
+            .before(ShieldSet::OnShieldHit)
+            .before(BlockHealthSet::ProcessHealthChanges),
+    );
 }

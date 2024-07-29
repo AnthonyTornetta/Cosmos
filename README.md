@@ -63,6 +63,9 @@ See [the issues page](https://github.com/AnthonyTornetta/Cosmos/issues) for the 
 
 ## Release 0.0.6a (In Progress)
 - [x] Place rotated blocks
+- [x] Add main menu
+  - [x] Customizable settings
+  - [x] Specify connection target
 - [x] Missiles
   - [x] Auto targetting
   - [x] Explosion logic
@@ -71,46 +74,66 @@ See [the issues page](https://github.com/AnthonyTornetta/Cosmos/issues) for the 
     - [x] Shield size based on multiblock structure
   - [x] Absorb incoming damage
 - [ ] Inventory UI improvements
-- [ ] Money
-  - [ ] Pay others
+  - [ ] Scrollable inventory
+  - [ ] An interface into all the storage devices connected to it?
+- [ ] Escape functionality
+  - [ ] Escape can now be used to close the foremost open UI menus
+  - [ ] If no such menus are available, it will instead open the pause menu
+    - [ ] Pause menu
+      - [ ] Resume
+      - [ ] Change Settings
+      - [ ] Disconnect
+      - [ ] Quit Game
+- [x] Block data
+  - [x] Storable fluids
+- [x] Item data
+- [x] Money
 - [ ] In-flight UI
   - [x] Weapons selection hotbar
-  - [ ] Speed display
-  - [ ] Energy display
+  - [x] Speed display
+  - [x] Energy display
   - [ ] Critical information alerts
   - [x] A way of selecting which systems to use preventing use of systems that are not meant to be actively used
-- [ ] Dropped item entity
-  - [ ] When storage is broken, drop items on ground
-  - [ ] If not enough inventory room when player is mining something, drop item
 - [ ] Wires
   - [ ] Electrical
   - [ ] Logic
+- [x] Planet generation & LOD overhaul
+  - [x] Performance improvements
+  - [x] GPU-based generation
+- [x] Remove bevy system ambiguities
+- [x] Support NxN texture loading (where n is power of 2)
+- [x] Update to bevy 0.14
+
+## Release 0.0.7a
 - [ ] Galaxy map
   - [ ] Able to view stars
   - [ ] Zoom in to view planets
   - [ ] Set waypoint
-- [ ] Planet generation & LOD overhaul
-  - [x] Performance improvements
-  - [x] GPU-based generation
-  - [ ] Biosphere Improvements
+- [ ] Biosphere Improvements
   - [ ] Ice biosphere glaciers
-    - [ ] Water block
-    - [ ] Lava block
-    - [ ] Structures
-      - [ ] Rocks spawning
-      - [ ] Undergrowth
-      - [ ] 1 More tree type
-    - [ ] Groundwork for biomes
-      - [ ] Planes
-      - [ ] Redwood forest
-      - [ ] 1 Additional forest
-      - [ ] Ocean
-    - [ ] On-planet skybox (maybe)
-      - [ ] Sun-side skybox
-        - [ ] Perhaps done via a sphere surrounding the planet that always faces the nearest star
-      - [ ] Sun-set skybox
-      - [ ] Night-side skybox
-- [ ] An interface into all the storage devices on the ship
+  - [ ] Better Water block
+  - [ ] Better Lava block
+  - [ ] Structures
+    - [ ] Rocks spawning
+    - [ ] Undergrowth
+    - [ ] 1 More tree type
+  - [ ] Groundwork for biomes
+    - [ ] Planes
+    - [ ] Redwood forest
+    - [ ] 1 Additional forest
+    - [ ] Ocean
+  - [ ] On-planet skybox (maybe)
+    - [ ] Sun-side skybox
+      - [ ] Perhaps done via a sphere surrounding the planet that always faces the nearest star
+    - [ ] Sun-set skybox
+    - [ ] Night-side skybox
+  - [ ] Volumetric lighting on planets
+- [ ] LOD Fixes
+  - [ ] Consolidate LOD + Normal chunk rendering into one source of truth
+  - [ ] LOD performance improvements via combining meshes + culling sides
+- [ ] Dropped item entity
+  - [ ] When storage is broken, drop items on ground
+  - [ ] If not enough inventory room when player is mining something, drop item
 
 ## Release 0.0.5a
 - [x] Add a gravity well block

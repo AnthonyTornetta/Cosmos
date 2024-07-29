@@ -1,8 +1,9 @@
 //! Contains logic related to the localized formation of terrain
 
 use bevy::{
-    ecs::{entity::Entity, event::Event, schedule::OnEnter},
-    prelude::{App, OnExit, ResMut},
+    ecs::{entity::Entity, event::Event},
+    prelude::{App, IntoSystemConfigs, OnExit, ResMut, SystemSet},
+    state::state::OnEnter,
     utils::HashSet,
 };
 use cosmos_core::{
@@ -29,6 +30,13 @@ fn construct_lookup_tables(mut registry: ResMut<Registry<BiosphereBiomesRegistry
     }
 }
 
+#[derive(SystemSet, Debug, Hash, PartialEq, Eq, Clone)]
+/// System set to avoid ambiguity issues
+pub enum CreateBiosphereSet {
+    /// Responsible for adding biospheres to the [`Registry<BiosphereBiomesRegistry>`].
+    CreateBiospheres,
+}
+
 fn create_biosphere_registry<T: BiosphereMarkerComponent>(mut registry: ResMut<Registry<BiosphereBiomesRegistry>>) {
     registry.register(BiosphereBiomesRegistry::new(T::unlocalized_name()));
 }
@@ -37,7 +45,12 @@ fn create_biosphere_registry<T: BiosphereMarkerComponent>(mut registry: ResMut<R
 ///
 /// You don't normally have to call this manually, because is automatically called in `register_biosphere`
 pub fn create_biosphere_biomes_registry<T: BiosphereMarkerComponent>(app: &mut App) {
-    app.add_systems(OnEnter(GameState::PreLoading), create_biosphere_registry::<T>);
+    app.add_systems(
+        OnEnter(GameState::PreLoading),
+        create_biosphere_registry::<T>
+            .in_set(CreateBiosphereSet::CreateBiospheres)
+            .ambiguous_with(CreateBiosphereSet::CreateBiospheres),
+    );
 }
 
 #[derive(Event)]
@@ -52,9 +65,20 @@ pub struct GenerateChunkFeaturesEvent {
     pub structure_entity: Entity,
 }
 
+#[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
+/// When registering a new biome, put it here
+pub enum RegisterBiomesSet {
+    /// When registering a new biome, put it here. You should also make yourself ambiguous with this set.
+    RegisterBiomes,
+}
+
 pub(super) fn register(app: &mut App) {
     app.add_event::<GenerateChunkFeaturesEvent>()
         .add_systems(OnExit(GameState::PostLoading), construct_lookup_tables);
+
+    app.configure_sets(OnEnter(GameState::PreLoading), CreateBiosphereSet::CreateBiospheres);
+
+    app.configure_sets(OnEnter(GameState::PostLoading), RegisterBiomesSet::RegisterBiomes);
 
     ice::register(app);
     molten::register(app);

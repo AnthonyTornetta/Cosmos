@@ -4,10 +4,11 @@ use std::f32::consts::PI;
 
 use bevy::prelude::*;
 use bevy::window::PrimaryWindow;
-use bevy_renet::renet::RenetClient;
+use bevy_renet2::renet2::RenetClient;
 use cosmos_core::netty::client::LocalPlayer;
 use cosmos_core::netty::client_reliable_messages::ClientReliableMessages;
 use cosmos_core::netty::client_unreliable_messages::ClientUnreliableMessages;
+use cosmos_core::netty::system_sets::NetworkingSystemsSet;
 use cosmos_core::netty::{cosmos_encoder, NettyChannelClient};
 use cosmos_core::structure::shared::build_mode::BuildMode;
 use cosmos_core::structure::ship::pilot::Pilot;
@@ -20,7 +21,8 @@ use crate::settings::MouseSensitivity;
 use crate::state::game_state::GameState;
 use crate::ui::components::show_cursor::no_open_menus;
 use crate::ui::crosshair::CrosshairOffset;
-use crate::window::setup::{CursorFlags, DeltaCursorPosition};
+use crate::ui::UiSystemSet;
+use crate::window::setup::{CursorFlags, CursorFlagsSet, DeltaCursorPosition};
 
 fn process_ship_movement(
     input_handler: InputChecker,
@@ -158,9 +160,25 @@ fn reset_cursor(
     }
 }
 
+/// Assembles the movement request to send to the server
+#[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
+pub enum ClientCreateShipMovementSet {
+    /// Assembles the movement request to send to the server
+    ProcessShipMovement,
+}
+
 pub(super) fn register(app: &mut App) {
+    app.configure_sets(Update, ClientCreateShipMovementSet::ProcessShipMovement);
+
     app.add_systems(
         Update,
-        (process_ship_movement.run_if(no_open_menus), reset_cursor).run_if(in_state(GameState::Playing)),
+        (reset_cursor, process_ship_movement)
+            .after(UiSystemSet::FinishUi)
+            .run_if(no_open_menus)
+            .in_set(NetworkingSystemsSet::Between)
+            .after(CursorFlagsSet::ApplyCursorFlagsUpdates)
+            .in_set(ClientCreateShipMovementSet::ProcessShipMovement)
+            .chain()
+            .run_if(in_state(GameState::Playing)),
     );
 }

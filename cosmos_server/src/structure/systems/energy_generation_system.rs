@@ -3,16 +3,16 @@
 use bevy::prelude::*;
 
 use cosmos_core::{
-    block::Block,
+    block::{block_events::BlockEventsSet, Block},
     events::block_events::BlockChangedEvent,
+    netty::system_sets::NetworkingSystemsSet,
     registry::Registry,
     structure::{
         events::StructureLoadedEvent,
-        loading::StructureLoadingSet,
         systems::{
             energy_generation_system::{EnergyGenerationBlocks, EnergyGenerationProperty, EnergyGenerationSystem},
             energy_storage_system::EnergyStorageSystem,
-            StructureSystem, StructureSystemType, StructureSystems,
+            StructureSystem, StructureSystemType, StructureSystems, StructureSystemsSet,
         },
         Structure,
     },
@@ -98,11 +98,17 @@ pub(super) fn register(app: &mut App) {
         .add_systems(
             Update,
             (
-                structure_loaded_event.in_set(StructureLoadingSet::StructureLoaded),
-                block_update_system,
-                update_energy,
-            )
-                .run_if(in_state(GameState::Playing)),
+                structure_loaded_event
+                    .in_set(StructureSystemsSet::InitSystems)
+                    .ambiguous_with(StructureSystemsSet::InitSystems),
+                (
+                    block_update_system.in_set(BlockEventsSet::ProcessEvents),
+                    update_energy.in_set(StructureSystemsSet::UpdateSystems),
+                )
+                    .run_if(in_state(GameState::Playing))
+                    .in_set(NetworkingSystemsSet::Between)
+                    .chain(),
+            ),
         )
         .register_type::<EnergyGenerationSystem>();
 

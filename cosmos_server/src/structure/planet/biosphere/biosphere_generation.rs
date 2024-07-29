@@ -2,16 +2,18 @@
 
 use crate::{init::init_world::ServerSeed, state::GameState, structure::planet::biosphere::biome::GenerateChunkFeaturesEvent};
 use bevy::{prelude::*, utils::hashbrown::HashSet};
-use bevy_app_compute::prelude::*;
+use bevy_easy_compute::prelude::*;
 use cosmos_core::{
-    block::{block_face::BlockFace, Block},
+    block::{block_events::BlockEventsSet, block_face::BlockFace, Block},
     ecs::mut_events::{EventWriterCustomSend, MutEvent, MutEventsCommand},
+    netty::system_sets::NetworkingSystemsSet,
     physics::location::Location,
     registry::{identifiable::Identifiable, Registry},
     structure::{
         block_storage::BlockStorer,
         chunk::{Chunk, CHUNK_DIMENSIONS, CHUNK_DIMENSIONSF, CHUNK_DIMENSIONS_USIZE},
         coordinates::{ChunkBlockCoordinate, CoordinateType},
+        loading::StructureLoadingSet,
         planet::{
             generation::{
                 biome::{Biome, BiomeParameters, BiosphereBiomesRegistry},
@@ -22,7 +24,7 @@ use cosmos_core::{
             },
             Planet,
         },
-        ChunkInitEvent, Structure,
+        ChunkInitEvent, Structure, StructureTypeSet,
     },
     utils::array_utils::{flatten, flatten_4d},
 };
@@ -397,6 +399,10 @@ pub(super) fn register(app: &mut App) {
             BiosphereGenerationSet::GenerateChunks,
             BiosphereGenerationSet::GenerateChunkFeatures,
         )
+            .before(StructureLoadingSet::CreateChunkEntities)
+            .before(BlockEventsSet::PreProcessEvents)
+            .in_set(NetworkingSystemsSet::Between)
+            .in_set(StructureTypeSet::Planet)
             .run_if(in_state(GameState::Playing))
             .chain(),
     )
@@ -408,6 +414,7 @@ pub(super) fn register(app: &mut App) {
         Update,
         (send_chunks_to_gpu, read_gpu_data)
             .in_set(BiosphereGenerationSet::GpuInteraction)
+            .before(BevyEasyComputeSet::ExtractPipelines)
             .chain(),
     )
     .add_systems(Update, send_chunk_init_event.in_set(BiosphereGenerationSet::GenerateChunkFeatures))

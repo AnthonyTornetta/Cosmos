@@ -5,15 +5,17 @@ use std::marker::PhantomData;
 use bevy::{
     log::{info, warn},
     prelude::{
-        in_state, Added, App, Commands, Component, Entity, Event, EventReader, EventWriter, IntoSystemConfigs, Query, Res, ResMut,
-        Resource, Startup, Update, With, Without,
+        in_state, Added, App, Commands, Component, Entity, Event, EventReader, EventWriter, IntoSystemConfigs, IntoSystemSetConfigs, Query,
+        Res, ResMut, Resource, Startup, SystemSet, Update, With, Without,
     },
     reflect::TypePath,
+    state::state::OnEnter,
     tasks::Task,
 };
-use bevy_renet::renet::RenetServer;
+use bevy_renet2::renet2::RenetServer;
+use biome::RegisterBiomesSet;
 use cosmos_core::{
-    netty::{cosmos_encoder, server_reliable_messages::ServerReliableMessages, NettyChannelServer},
+    netty::{cosmos_encoder, server_reliable_messages::ServerReliableMessages, system_sets::NetworkingSystemsSet, NettyChannelServer},
     physics::location::Location,
     registry::Registry,
     structure::{
@@ -33,8 +35,8 @@ use cosmos_core::{
 use rand::Rng;
 
 use crate::{
-    events::netty::netty_events::PlayerConnectedEvent,
     init::init_world::ServerSeed,
+    netty::server_events::PlayerConnectedEvent,
     persistence::{
         loading::{LoadingSystemSet, NeedsLoaded},
         saving::{NeedsSaved, SavingSystemSet, SAVING_SCHEDULE},
@@ -73,6 +75,12 @@ pub trait BiosphereMarkerComponent: Component + Default + Clone + Copy + TypePat
 struct NeedsBiosphereEvent {
     biosphere_id: String,
     entity: Entity,
+}
+
+#[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
+enum NeedsBiosphereSet {
+    SendEvent,
+    AddBiosphere,
 }
 
 /// This has to be redone.
@@ -122,6 +130,11 @@ impl<T: BiosphereMarkerComponent> GeneratingChunk<T> {
     }
 }
 
+#[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
+enum BiosphereRegistrationSet {
+    RegisterBiospheres,
+}
+
 /// Use this to register a biosphere
 ///
 /// T: The biosphere's marker component type
@@ -140,13 +153,18 @@ pub fn register_biosphere<T: BiosphereMarkerComponent + Default + Clone, E: Send
 
     let sea_level_block = sea_level_block.map(|x| x.to_owned());
 
+    let register_biosphere_system =
+        move |mut instance_registry: ResMut<Registry<Biosphere>>, mut temperature_registry: ResMut<BiosphereTemperatureRegistry>| {
+            instance_registry.register(Biosphere::new(biosphere_id, sea_level_percent, sea_level_block.clone()));
+            temperature_registry.register(biosphere_id.to_owned(), temperature_range);
+        };
+
     app.add_event::<E>()
         .add_systems(
             Startup,
-            move |mut instance_registry: ResMut<Registry<Biosphere>>, mut temperature_registry: ResMut<BiosphereTemperatureRegistry>| {
-                instance_registry.register(Biosphere::new(biosphere_id, sea_level_percent, sea_level_block.clone()));
-                temperature_registry.register(biosphere_id.to_owned(), temperature_range);
-            },
+            register_biosphere_system
+                .in_set(BiosphereRegistrationSet::RegisterBiospheres)
+                .ambiguous_with(BiosphereRegistrationSet::RegisterBiospheres),
         )
         .add_systems(
             SAVING_SCHEDULE,
@@ -179,11 +197,16 @@ pub fn register_biosphere<T: BiosphereMarkerComponent + Default + Clone, E: Send
                         }
                     }
                 })
-                .in_set(LoadingSystemSet::DoLoading),
+                .in_set(LoadingSystemSet::DoLoading)
+                .in_set(NeedsBiosphereSet::AddBiosphere),
                 // Checks if any blocks need generated for this biosphere
                 ((
-                    biosphere_generation::generate_planet::<T, E>.in_set(BiosphereGenerationSet::FlagChunksNeedGenerated),
-                    biosphere_generation::generate_chunks_from_gpu_data::<T>.in_set(BiosphereGenerationSet::GenerateChunks),
+                    biosphere_generation::generate_planet::<T, E>
+                        .in_set(BiosphereGenerationSet::FlagChunksNeedGenerated)
+                        .ambiguous_with(BiosphereGenerationSet::FlagChunksNeedGenerated),
+                    biosphere_generation::generate_chunks_from_gpu_data::<T>
+                        .in_set(BiosphereGenerationSet::GenerateChunks)
+                        .ambiguous_with(BiosphereGenerationSet::GenerateChunks),
                     // generate_chunk_features::<T>.in_set(BiosphereGenerationSet::GenerateChunkFeatures),
                     check_needs_generated_system::<E, T>,
                 )
@@ -291,15 +314,36 @@ fn on_connect(
     }
 }
 
+// #[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
+// pub enum RegisterBiomesSet {
+//     RegisterBiomes,
+// }
+
 pub(super) fn register(app: &mut App) {
     sync_registry::<Biosphere>(app);
     sync_registry::<Biome>(app);
     sync_registry::<BiosphereBiomesRegistry>(app);
 
+    app.configure_sets(Startup, BiosphereRegistrationSet::RegisterBiospheres);
+    app.configure_sets(OnEnter(GameState::PostLoading), RegisterBiomesSet::RegisterBiomes);
+
     app.add_event::<NeedsBiosphereEvent>()
         .insert_resource(BiosphereTemperatureRegistry::default())
-        .add_systems(Update, add_biosphere)
-        .add_systems(Update, on_connect.run_if(in_state(GameState::Playing)));
+        .add_systems(
+            Update,
+            (
+                on_connect.in_set(NetworkingSystemsSet::SyncComponents),
+                add_biosphere.in_set(NeedsBiosphereSet::SendEvent),
+            )
+                .run_if(in_state(GameState::Playing)),
+        );
+
+    app.configure_sets(
+        Update,
+        (NeedsBiosphereSet::SendEvent, NeedsBiosphereSet::AddBiosphere)
+            .chain()
+            .in_set(NetworkingSystemsSet::Between),
+    );
 
     biosphere_generation::register(app);
     biome::register(app);

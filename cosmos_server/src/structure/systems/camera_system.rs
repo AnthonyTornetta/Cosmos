@@ -3,15 +3,14 @@
 use bevy::prelude::{in_state, App, Commands, EventReader, IntoSystemConfigs, OnEnter, Query, Res, ResMut, Update};
 
 use cosmos_core::{
-    block::Block,
+    block::{block_events::BlockEventsSet, Block},
     events::block_events::BlockChangedEvent,
     registry::Registry,
     structure::{
         events::StructureLoadedEvent,
-        loading::StructureLoadingSet,
         systems::{
             camera_system::{CameraBlocks, CameraSystem},
-            StructureSystemType, StructureSystems,
+            StructureSystemType, StructureSystems, StructureSystemsSet,
         },
         Structure,
     },
@@ -82,8 +81,12 @@ pub(super) fn register(app: &mut App) {
         .add_systems(
             Update,
             (
-                camera_structure_loaded_event_processor.in_set(StructureLoadingSet::StructureLoaded),
-                camera_block_update_system,
+                camera_structure_loaded_event_processor
+                    .in_set(StructureSystemsSet::InitSystems)
+                    .ambiguous_with(StructureSystemsSet::InitSystems),
+                camera_block_update_system
+                    .in_set(BlockEventsSet::ProcessEvents)
+                    .in_set(StructureSystemsSet::UpdateSystems),
             )
                 .run_if(in_state(GameState::Playing)),
         )

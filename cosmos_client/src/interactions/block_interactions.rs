@@ -3,22 +3,22 @@
 use bevy::prelude::*;
 use bevy_rapier3d::{
     geometry::{CollisionGroups, Group, RayIntersection},
-    prelude::{QueryFilter, RapierContext, DEFAULT_WORLD_ID},
+    plugin::DefaultRapierContextAccess,
+    prelude::{QueryFilter, RapierContext},
 };
 use cosmos_core::{
     block::{
         block_direction::BlockDirection,
-        block_events::{BlockInteractEvent, StructureBlockPair},
+        block_events::{BlockEventsSet, BlockInteractEvent, StructureBlockPair},
         block_face::BlockFace,
-        block_rotation::BlockRotation,
-        block_rotation::BlockSubRotation,
+        block_rotation::{BlockRotation, BlockSubRotation},
         blocks::fluid::FLUID_COLLISION_GROUP,
         Block,
     },
     blockitems::BlockItems,
     inventory::Inventory,
     item::Item,
-    netty::client::LocalPlayer,
+    netty::{client::LocalPlayer, system_sets::NetworkingSystemsSet},
     physics::structure_physics::ChunkPhysicsPart,
     registry::Registry,
     structure::{
@@ -68,7 +68,7 @@ pub(crate) fn process_player_interaction(
     input_handler: InputChecker,
     camera: Query<&GlobalTransform, With<MainCamera>>,
     mut player_body: Query<(Entity, &mut Inventory, &mut LookingAt), (With<LocalPlayer>, Without<Pilot>)>,
-    rapier_context: Res<RapierContext>,
+    rapier_context_access: DefaultRapierContextAccess,
     q_chunk_physics_part: Query<&ChunkPhysicsPart>,
     q_structure: Query<(&Structure, &GlobalTransform, Option<&Planet>)>,
     mut break_writer: EventWriter<RequestBlockBreakEvent>,
@@ -80,6 +80,8 @@ pub(crate) fn process_player_interaction(
     block_items: Res<BlockItems>,
     mut commands: Commands,
 ) {
+    let rapier_context = rapier_context_access.single();
+
     // this fails if the player is a pilot
     let Ok((player_entity, mut inventory, mut looking_at)) = player_body.get_single_mut() else {
         return;
@@ -93,7 +95,7 @@ pub(crate) fn process_player_interaction(
     };
 
     let Some((hit_block, mut structure, mut structure_g_transform, mut is_planet)) = send_ray(
-        &rapier_context,
+        rapier_context,
         cam_trans,
         player_entity,
         &q_chunk_physics_part,
@@ -113,7 +115,7 @@ pub(crate) fn process_player_interaction(
 
     if structure.block_at(hit_block.block.coords(), &blocks).is_fluid() {
         if let Some((hit_block, s, sgt, ip)) = send_ray(
-            &rapier_context,
+            rapier_context,
             cam_trans,
             player_entity,
             &q_chunk_physics_part,
@@ -262,19 +264,15 @@ fn send_ray<'a>(
     q_structure: &'a Query<(&Structure, &GlobalTransform, Option<&Planet>)>,
     collision_group: Group,
 ) -> Option<(LookedAtBlock, &'a Structure, &'a GlobalTransform, Option<&'a Planet>)> {
-    let (entity, intersection) = rapier_context
-        .cast_ray_and_get_normal(
-            DEFAULT_WORLD_ID,
-            cam_trans.translation(),
-            cam_trans.forward(),
-            10.0,
-            true,
-            QueryFilter::new()
-                .exclude_rigid_body(player_entity)
-                .groups(CollisionGroups::new(collision_group, collision_group)), // don't want to hit yourself
-        )
-        .ok()
-        .flatten()?;
+    let (entity, intersection) = rapier_context.cast_ray_and_get_normal(
+        cam_trans.translation(),
+        cam_trans.forward().into(),
+        10.0,
+        true,
+        QueryFilter::new()
+            .exclude_rigid_body(player_entity)
+            .groups(CollisionGroups::new(collision_group, collision_group)), // don't want to hit yourself
+    )?;
 
     let structure_entity = q_chunk_physics_part.get(entity).map(|x| x.structure_entity).ok()?;
 
@@ -303,6 +301,8 @@ pub(super) fn register(app: &mut App) {
         Update,
         (add_looking_at_component, process_player_interaction)
             .chain()
+            .in_set(NetworkingSystemsSet::Between)
+            .in_set(BlockEventsSet::SendEventsForThisFrame)
             .run_if(no_open_menus)
             .run_if(in_state(GameState::Playing)),
     );

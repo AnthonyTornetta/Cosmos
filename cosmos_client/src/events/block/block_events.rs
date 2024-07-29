@@ -1,13 +1,16 @@
 //! All events that are related to blocks
 
 use bevy::prelude::*;
-use bevy_renet::renet::RenetClient;
+use bevy_renet2::renet2::RenetClient;
 use cosmos_core::{
     block::{
-        block_events::{BlockInteractEvent, StructureBlockPair},
+        block_events::{BlockEventsSet, BlockInteractEvent, StructureBlockPair},
         block_rotation::BlockRotation,
     },
-    netty::{client_reliable_messages::ClientReliableMessages, cosmos_encoder, sync::mapping::NetworkMapping, NettyChannelClient},
+    netty::{
+        client_reliable_messages::ClientReliableMessages, cosmos_encoder, sync::mapping::NetworkMapping, system_sets::NetworkingSystemsSet,
+        NettyChannelClient,
+    },
     structure::structure_block::StructureBlock,
 };
 
@@ -110,6 +113,8 @@ pub(super) fn register(app: &mut App) {
         .add_systems(
             Update,
             (handle_block_break, handle_block_place, handle_block_interact)
+                .in_set(NetworkingSystemsSet::Between)
+                .in_set(BlockEventsSet::ProcessEventsPrePlacement)
                 .after(process_player_interaction)
                 .run_if(in_state(GameState::Playing)),
         );

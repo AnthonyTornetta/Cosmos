@@ -14,34 +14,37 @@ use bevy::{
     hierarchy::{BuildChildren, Parent},
     log::warn,
     math::Vec3,
-    prelude::{in_state, App, Commands, EventReader, IntoSystemConfigs, OnEnter, Query, Res, ResMut, Update},
+    prelude::{in_state, App, Commands, EventReader, IntoSystemConfigs, IntoSystemSetConfigs, OnEnter, Query, Res, ResMut, Update},
     reflect::Reflect,
     time::Time,
     transform::{
+        bundles::TransformBundle,
         components::{GlobalTransform, Transform},
-        TransformBundle,
     },
     utils::hashbrown::HashMap,
 };
 
-use bevy_renet::renet::RenetServer;
+use bevy_renet2::renet2::RenetServer;
 use cosmos_core::{
-    block::Block,
+    block::{block_events::BlockEventsSet, Block},
     ecs::NeedsDespawned,
     events::block_events::BlockChangedEvent,
-    netty::{cosmos_encoder, server_laser_cannon_system_messages::ServerStructureSystemMessages, NettyChannelServer},
+    netty::{
+        cosmos_encoder, server_laser_cannon_system_messages::ServerStructureSystemMessages, system_sets::NetworkingSystemsSet,
+        NettyChannelServer,
+    },
     persistence::LoadingDistance,
     physics::location::Location,
+    projectiles::laser::LaserSystemSet,
     registry::{identifiable::Identifiable, Registry},
     structure::{
         coordinates::BlockCoordinate,
         events::StructureLoadedEvent,
-        loading::StructureLoadingSet,
         shields::Shield,
         systems::{
             energy_storage_system::EnergyStorageSystem,
             shield_system::{ShieldGeneratorBlocks, ShieldGeneratorProperty, ShieldProjectorBlocks, ShieldProjectorProperty, ShieldSystem},
-            StructureSystem, StructureSystemType, StructureSystems,
+            StructureSystem, StructureSystemType, StructureSystems, StructureSystemsSet,
         },
         Structure,
     },
@@ -70,6 +73,7 @@ Shield radius based on max dimensions of projectors
 */
 
 #[derive(Event)]
+/// Sent when a shield is hit
 pub struct ShieldHitEvent {
     shield_entity: Entity,
     relative_position: Vec3,
@@ -365,7 +369,11 @@ fn on_load_shield(
 }
 
 #[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
-enum ShieldHitProcessing {
+/// Shield logic
+pub enum ShieldSet {
+    /// Shields consume power and recharge themselves
+    RechargeShields,
+    /// Shields receive incoming damage and deplete their charge (potentially going down)
     OnShieldHit,
 }
 
@@ -373,7 +381,14 @@ pub(super) fn register(app: &mut App) {
     laser::register(app);
     explosion::register(app);
 
-    app.configure_sets(Update, ShieldHitProcessing::OnShieldHit);
+    app.configure_sets(
+        Update,
+        (
+            ShieldSet::RechargeShields,
+            ShieldSet::OnShieldHit.after(LaserSystemSet::SendHitEvents),
+        )
+            .chain(),
+    );
 
     app.init_resource::<ShieldProjectorBlocks>()
         .init_resource::<ShieldGeneratorBlocks>()
@@ -383,14 +398,24 @@ pub(super) fn register(app: &mut App) {
             (
                 recalculate_shields_if_needed, // before so this runs next frame (so the globaltransform has been added to the structure)
                 fill_ai_controlled_shields_on_spawn,
-                structure_loaded_event.in_set(StructureLoadingSet::StructureLoaded),
-                block_update_system,
+                structure_loaded_event
+                    .in_set(StructureSystemsSet::InitSystems)
+                    .ambiguous_with(StructureSystemsSet::InitSystems),
+                block_update_system
+                    .in_set(BlockEventsSet::ProcessEvents)
+                    .in_set(StructureSystemsSet::UpdateSystems),
                 power_shields,
             )
                 .chain()
+                .in_set(ShieldSet::RechargeShields)
                 .run_if(in_state(GameState::Playing)),
         )
-        .add_systems(Update, send_shield_hits.after(ShieldHitProcessing::OnShieldHit))
+        .add_systems(
+            Update,
+            send_shield_hits
+                .in_set(NetworkingSystemsSet::SyncComponents)
+                .after(ShieldSet::OnShieldHit),
+        )
         .add_systems(SAVING_SCHEDULE, on_save_shield.in_set(SavingSystemSet::DoSaving))
         .add_systems(LOADING_SCHEDULE, on_load_shield.in_set(LoadingSystemSet::DoLoading))
         .register_type::<ShieldSystem>()

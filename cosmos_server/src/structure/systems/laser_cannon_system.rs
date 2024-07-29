@@ -3,11 +3,14 @@
 use std::time::Duration;
 
 use bevy::prelude::*;
-use bevy_rapier3d::prelude::{PhysicsWorld, Velocity, DEFAULT_WORLD_ID};
-use bevy_renet::renet::RenetServer;
+use bevy_rapier3d::{plugin::RapierContextEntityLink, prelude::Velocity};
+use bevy_renet2::renet2::RenetServer;
 use cosmos_core::{
-    block::Block,
-    netty::{cosmos_encoder, server_laser_cannon_system_messages::ServerStructureSystemMessages, NettyChannelServer},
+    block::{block_events::BlockEventsSet, Block},
+    netty::{
+        cosmos_encoder, server_laser_cannon_system_messages::ServerStructureSystemMessages, system_sets::NetworkingSystemsSet,
+        NettyChannelServer,
+    },
     physics::location::Location,
     projectiles::laser::Laser,
     registry::Registry,
@@ -16,7 +19,7 @@ use cosmos_core::{
             energy_storage_system::EnergyStorageSystem,
             laser_cannon_system::{LaserCannonCalculator, LaserCannonProperty, LaserCannonSystem, SystemCooldown},
             line_system::LineBlocks,
-            StructureSystem, StructureSystems, SystemActive,
+            StructureSystem, StructureSystems, StructureSystemsSet, SystemActive,
         },
         Structure,
     },
@@ -24,7 +27,7 @@ use cosmos_core::{
 
 use crate::state::GameState;
 
-use super::{line_system::add_line_system, sync::register_structure_system};
+use super::{line_system::add_line_system, sync::register_structure_system, thruster_system};
 
 fn on_add_laser(mut commands: Commands, query: Query<Entity, Added<LaserCannonSystem>>) {
     for ent in query.iter() {
@@ -54,7 +57,7 @@ fn update_system(
         &Location,
         &GlobalTransform,
         &Velocity,
-        Option<&PhysicsWorld>,
+        &RapierContextEntityLink,
     )>,
     time: Res<Time>,
     mut commands: Commands,
@@ -69,8 +72,6 @@ fn update_system(
 
                 if sec - cooldown.last_use_time > cooldown.cooldown_time.as_secs_f32() {
                     cooldown.last_use_time = sec;
-
-                    let world_id = physics_world.map(|bw| bw.world_id).unwrap_or(DEFAULT_WORLD_ID);
 
                     let mut any_fired = false;
 
@@ -94,7 +95,7 @@ fn update_system(
                                 strength,
                                 no_hit,
                                 &time,
-                                world_id,
+                                *physics_world,
                                 &mut commands,
                             );
 
@@ -131,9 +132,17 @@ fn update_system(
 pub(super) fn register(app: &mut App) {
     add_line_system::<LaserCannonProperty, LaserCannonCalculator>(app);
 
-    app.add_systems(Update, update_system.run_if(in_state(GameState::Playing)))
-        .add_systems(OnEnter(GameState::PostLoading), register_laser_blocks)
-        .add_systems(Update, on_add_laser);
+    app.add_systems(
+        Update,
+        update_system
+            .ambiguous_with(thruster_system::update_ship_force_and_velocity)
+            .after(BlockEventsSet::ProcessEvents)
+            .in_set(StructureSystemsSet::UpdateSystems)
+            .in_set(NetworkingSystemsSet::Between)
+            .run_if(in_state(GameState::Playing)),
+    )
+    .add_systems(OnEnter(GameState::PostLoading), register_laser_blocks)
+    .add_systems(Update, on_add_laser.after(StructureSystemsSet::UpdateSystems));
 
     register_structure_system::<LaserCannonSystem>(app, true, "cosmos:laser_cannon");
 }

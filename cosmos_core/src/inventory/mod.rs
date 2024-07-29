@@ -14,6 +14,7 @@ use bevy::{
     hierarchy::{BuildChildren, DespawnRecursiveExt},
     prelude::{App, Component, Deref, DerefMut},
     reflect::Reflect,
+    state::state::States,
 };
 use serde::{Deserialize, Serialize};
 
@@ -823,8 +824,8 @@ impl Inventory {
     }
 }
 
-pub(super) fn register(app: &mut App) {
-    itemstack::register(app);
+pub(super) fn register<T: States>(app: &mut App, playing_state: T) {
+    itemstack::register(app, playing_state);
     held_item_slot::register(app);
 
     sync_component::<Inventory>(app);

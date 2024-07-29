@@ -7,7 +7,7 @@ use bevy::{
     prelude::{Component, Entity},
     utils::HashMap,
 };
-use bevy_renet::renet::ClientId;
+use bevy_renet2::renet2::ClientId;
 use serde::{Deserialize, Serialize};
 
 use crate::{

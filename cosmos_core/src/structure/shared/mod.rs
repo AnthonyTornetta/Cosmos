@@ -4,9 +4,11 @@ use bevy::{
     prelude::{App, BuildChildren, Children, Commands, Component, Or, PostUpdate, Query, With},
     reflect::Reflect,
 };
+use serde::{Deserialize, Serialize};
 
 use crate::{
     ecs::NeedsDespawned,
+    netty::sync::{IdentifiableComponent, SyncableComponent},
     structure::{chunk::ChunkEntity, systems::StructureSystem},
 };
 
@@ -14,9 +16,21 @@ use super::Structure;
 
 pub mod build_mode;
 
-#[derive(Component, Default, Reflect, Debug, Copy, Clone)]
+#[derive(Component, Default, Reflect, Debug, Copy, Clone, Serialize, Deserialize, PartialEq)]
 /// Represents the time since the last block was broken
 pub struct MeltingDown(pub f32);
+
+impl IdentifiableComponent for MeltingDown {
+    fn get_component_unlocalized_name() -> &'static str {
+        "cosmos:melting_down"
+    }
+}
+
+impl SyncableComponent for MeltingDown {
+    fn get_sync_type() -> crate::netty::sync::SyncType {
+        crate::netty::sync::SyncType::ServerAuthoritative
+    }
+}
 
 #[derive(Component)]
 /// Marks a child of a structure as needing to be despawned when the structure itself is despawned.

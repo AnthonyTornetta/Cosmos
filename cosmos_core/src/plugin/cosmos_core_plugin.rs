@@ -1,16 +1,14 @@
 //! This should contain everything needed for a cosmos application to run
 
-use bevy::app::PluginGroupBuilder;
-use bevy::prelude::{App, Plugin, PluginGroup, States};
-use bevy_app_compute::prelude::AppComputePlugin;
-use bevy_inspector_egui::quick::WorldInspectorPlugin;
-use bevy_rapier3d::prelude::RapierPhysicsPlugin;
-
-use crate::physics::collision_handling::CosmosPhysicsFilter;
-use crate::{block, economy, ecs, fluid, inventory, logic, netty, persistence, projectiles, shop, universe};
+use crate::{block, debug, economy, ecs, fluid, inventory, logic, netty, persistence, projectiles, shop, universe};
 use crate::{blockitems, structure};
 use crate::{events, loader};
 use crate::{item, physics};
+use bevy::app::PluginGroupBuilder;
+use bevy::prelude::{App, Plugin, PluginGroup, States};
+use bevy::state::state::FreelyMutableState;
+use bevy_easy_compute::prelude::AppComputePlugin;
+use bevy_inspector_egui::quick::WorldInspectorPlugin;
 
 /// This plugin group should contain everything needed for a cosmos application to run
 pub struct CosmosCorePluginGroup<T>
@@ -62,7 +60,7 @@ impl<T: States + Clone + Copy> CosmosCorePluginGroup<T> {
     }
 }
 
-impl<T: States + Clone + Copy> Plugin for CosmosCorePlugin<T> {
+impl<T: States + Clone + Copy + FreelyMutableState> Plugin for CosmosCorePlugin<T> {
     fn build(&self, app: &mut App) {
         loader::register(
             app,
@@ -80,24 +78,25 @@ impl<T: States + Clone + Copy> Plugin for CosmosCorePlugin<T> {
             self.playing_state,
         );
         item::register(app, self.loading_state);
-        blockitems::register(app, self.post_loading_state);
+        blockitems::register(app, self.loading_state);
         physics::register(app, self.post_loading_state);
         events::register(app, self.playing_state);
-        structure::register(app, self.playing_state);
-        inventory::register(app);
+        structure::register(app);
+        inventory::register(app, self.playing_state);
         projectiles::register(app);
         ecs::register(app);
         persistence::register(app);
         universe::register(app);
-        netty::register(app);
+        netty::register(app, self.playing_state);
         economy::register(app);
         shop::register(app);
         logic::register(app, self.playing_state);
         fluid::register(app);
+        debug::register(app);
     }
 }
 
-impl<T: States + Clone + Copy> PluginGroup for CosmosCorePluginGroup<T> {
+impl<T: States + Clone + Copy + FreelyMutableState> PluginGroup for CosmosCorePluginGroup<T> {
     fn build(self) -> PluginGroupBuilder {
         PluginGroupBuilder::start::<Self>()
             // .add(LogPlugin::default())
@@ -114,7 +113,6 @@ impl<T: States + Clone + Copy> PluginGroup for CosmosCorePluginGroup<T> {
             // .add(AssetPlugin::default())
             // .add(ScenePlugin::default())
             // .add(RenderPlugin::default())
-            .add(RapierPhysicsPlugin::<CosmosPhysicsFilter>::default())
             // .add(ImagePlugin::default_nearest())
             .add(AppComputePlugin)
             .add(WorldInspectorPlugin::default())

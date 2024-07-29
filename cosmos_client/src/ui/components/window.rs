@@ -3,6 +3,7 @@
 use bevy::{
     app::{App, Update},
     asset::AssetServer,
+    color::palettes::css,
     core::Name,
     ecs::{
         bundle::Bundle,
@@ -14,7 +15,6 @@ use bevy::{
         system::{Commands, Query, Res},
     },
     hierarchy::{BuildChildren, Children},
-    render::color::Color,
     text::{JustifyText, Text, TextStyle},
     transform::components::GlobalTransform,
     ui::{
@@ -107,7 +107,7 @@ fn add_window(
 
                             ..default()
                         },
-                        background_color: Color::WHITE.into(),
+                        background_color: css::WHITE.into(),
                         ..default()
                     },
                     UiImage {
@@ -123,7 +123,7 @@ fn add_window(
                             text: Text::from_section(
                                 &window.title,
                                 TextStyle {
-                                    color: Color::WHITE,
+                                    color: css::WHITE.into(),
                                     font_size: 24.0,
                                     font: font.clone(),
                                 },
@@ -138,7 +138,7 @@ fn add_window(
                         close_button,
                         ButtonBundle {
                             node_bundle: NodeBundle {
-                                background_color: Color::WHITE.into(),
+                                background_color: css::WHITE.into(),
                                 style: Style {
                                     width: Val::Px(50.0),
                                     height: Val::Px(50.0),
@@ -154,7 +154,7 @@ fn add_window(
                                 text: Some((
                                     "X".into(),
                                     TextStyle {
-                                        color: Color::WHITE,
+                                        color: css::WHITE.into(),
                                         font_size: 24.0,
                                         font: font.clone(),
                                     },

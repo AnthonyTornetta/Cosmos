@@ -1,12 +1,13 @@
 use super::server_entity_syncing::RequestedEntityEvent;
 use super::{
-    register_component, ClientAuthority, ComponentEntityIdentifier, ComponentReplicationMessage, ComponentSyncingSet, SyncType,
-    SyncableComponent, SyncedComponentId,
+    register_component, ClientAuthority, ComponentEntityIdentifier, ComponentReplicationMessage, ComponentSyncingSet, RegisterComponentSet,
+    SyncType, SyncableComponent, SyncedComponentId,
 };
 use crate::block::data::BlockData;
 use crate::inventory::itemstack::ItemStackData;
 use crate::netty::server::ServerLobby;
 use crate::netty::sync::{GotComponentToRemoveEvent, GotComponentToSyncEvent};
+use crate::netty::system_sets::NetworkingSystemsSet;
 use crate::netty::{cosmos_encoder, NettyChannelClient, NettyChannelServer, NoSendEntity};
 use crate::physics::location::CosmosBundleSet;
 use crate::registry::{identifiable::Identifiable, Registry};
@@ -29,7 +30,7 @@ use bevy::{
     },
     log::error,
 };
-use bevy_renet::renet::RenetServer;
+use bevy_renet2::renet2::RenetServer;
 
 fn server_remove_component<T: SyncableComponent>(
     components_registry: Res<Registry<SyncedComponentId>>,
@@ -432,16 +433,22 @@ pub(super) fn setup_server(app: &mut App) {
             ComponentSyncingSet::PostComponentSyncing,
         )
             .after(CosmosBundleSet::HandleCosmosBundles)
+            .in_set(NetworkingSystemsSet::SyncComponents)
             .chain(),
     );
 
-    app.add_systems(Update, server_receive_components)
+    app.add_systems(Update, server_receive_components.in_set(ComponentSyncingSet::PreComponentSyncing))
         .add_event::<RequestedEntityEvent>();
 }
 
 #[allow(unused)] // This function is used, but the LSP can't figure that out.
 pub(super) fn sync_component_server<T: SyncableComponent>(app: &mut App) {
-    app.add_systems(Startup, register_component::<T>);
+    app.add_systems(
+        Startup,
+        register_component::<T>
+            .in_set(RegisterComponentSet::RegisterComponent)
+            .ambiguous_with(RegisterComponentSet::RegisterComponent),
+    );
 
     match T::get_sync_type() {
         SyncType::ServerAuthoritative => {
@@ -462,7 +469,7 @@ pub(super) fn sync_component_server<T: SyncableComponent>(app: &mut App) {
                 Update,
                 (server_deserialize_component::<T>, server_remove_component::<T>)
                     .chain()
-                    .in_set(ComponentSyncingSet::DoComponentSyncing),
+                    .in_set(NetworkingSystemsSet::ProcessReceivedMessages),
             );
         }
         SyncType::BothAuthoritative(_) => {
@@ -481,7 +488,7 @@ pub(super) fn sync_component_server<T: SyncableComponent>(app: &mut App) {
                 Update,
                 (server_deserialize_component::<T>, server_remove_component::<T>)
                     .chain()
-                    .in_set(ComponentSyncingSet::DoComponentSyncing),
+                    .in_set(NetworkingSystemsSet::ProcessReceivedMessages),
             );
         }
     }
