@@ -20,7 +20,10 @@ use crate::{
     input::inputs::{CosmosInputs, InputChecker, InputHandler},
     state::game_state::GameState,
     ui::{
-        components::window::{GuiWindow, WindowBundle},
+        components::{
+            scollable_container::ScrollBundle,
+            window::{GuiWindow, WindowBundle},
+        },
         item_renderer::RenderItem,
         UiRoot, UiSystemSet, UiTopRoot,
     },
@@ -200,6 +203,7 @@ fn toggle_inventory_rendering(
         let inventory_border_size = 2.0;
         let n_slots_per_row: usize = 9;
         let slot_size = 64.0;
+        let scrollbar_width = 15.0;
 
         let (left, right) = if needs_displayed.0 == InventorySide::Right {
             (Val::Auto, Val::Px(100.0))
@@ -229,7 +233,7 @@ fn toggle_inventory_rendering(
                             right,
                             left,
                             top: Val::Px(100.0),
-                            width: Val::Px(n_slots_per_row as f32 * slot_size + inventory_border_size * 2.0),
+                            width: Val::Px(n_slots_per_row as f32 * slot_size + inventory_border_size * 2.0 + scrollbar_width),
                             border: UiRect::all(Val::Px(inventory_border_size)),
                             ..default()
                         },
@@ -245,7 +249,21 @@ fn toggle_inventory_rendering(
                 parent
                     .spawn((
                         Name::new("Non-Hotbar Slots"),
-                        NodeBundle {
+                        ScrollBundle {
+                            node_bundle: NodeBundle {
+                                style: Style {
+                                    width: Val::Percent(100.0),
+                                    min_height: Val::Px(600.0),
+                                    ..default()
+                                },
+                                background_color: BackgroundColor(Srgba::hex("3D3D3D").unwrap().into()),
+                                ..default()
+                            },
+                            ..Default::default()
+                        },
+                    ))
+                    .with_children(|p| {
+                        p.spawn(NodeBundle {
                             style: Style {
                                 display: Display::Grid,
                                 flex_grow: 1.0,
@@ -256,18 +274,17 @@ fn toggle_inventory_rendering(
                                 )],
                                 ..default()
                             },
-                            background_color: BackgroundColor(Srgba::hex("2D2D2D").unwrap().into()),
-                            ..default()
-                        },
-                    ))
-                    .with_children(|slots| {
-                        for (slot_number, slot) in inventory
-                            .iter()
-                            .enumerate()
-                            .filter(|(slot, _)| priority_slots.as_ref().map(|x| !x.contains(slot)).unwrap_or(true))
-                        {
-                            create_inventory_slot(inventory_holder, slot_number, slots, slot.as_ref(), text_style.clone(), top_ui_root);
-                        }
+                            ..Default::default()
+                        })
+                        .with_children(|slots| {
+                            for (slot_number, slot) in inventory
+                                .iter()
+                                .enumerate()
+                                .filter(|(slot, _)| priority_slots.as_ref().map(|x| !x.contains(slot)).unwrap_or(true))
+                            {
+                                create_inventory_slot(inventory_holder, slot_number, slots, slot.as_ref(), text_style.clone(), top_ui_root);
+                            }
+                        });
                     });
 
                 if let Some(priority_slots) = priority_slots {
