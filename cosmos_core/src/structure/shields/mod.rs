@@ -8,9 +8,13 @@ use bevy::{
         query::Changed,
         system::{Commands, Query},
     },
+    prelude::Parent,
     reflect::Reflect,
 };
-use bevy_rapier3d::geometry::{Collider, ColliderMassProperties, CollisionGroups, Group, Sensor};
+use bevy_rapier3d::{
+    geometry::{Collider, ColliderMassProperties, Group, Sensor},
+    plugin::RapierContextEntityLink,
+};
 use serde::{Deserialize, Serialize};
 
 use crate::netty::sync::{sync_component, IdentifiableComponent, SyncableComponent};
@@ -63,8 +67,12 @@ impl SyncableComponent for Shield {
 /// Things that should collide with shields should be put into this group
 pub const SHIELD_COLLISION_GROUP: Group = Group::GROUP_3;
 
-fn on_add_shield(q_added_shield: Query<(Entity, &Shield), Changed<Shield>>, mut commands: Commands) {
-    for (ent, shield) in q_added_shield.iter() {
+fn on_add_shield(
+    q_rapier_entity_link: Query<&RapierContextEntityLink>,
+    q_added_shield: Query<(Entity, &Shield, &Parent), Changed<Shield>>,
+    mut commands: Commands,
+) {
+    for (ent, shield, parent) in q_added_shield.iter() {
         assert!(shield.radius > 0.0, "Shield radius cannot be <= 0.0!");
 
         let mut ecmds = commands.entity(ent);
@@ -73,7 +81,10 @@ fn on_add_shield(q_added_shield: Query<(Entity, &Shield), Changed<Shield>>, mut 
             ecmds.insert((
                 DespawnWithStructure,
                 Collider::ball(shield.radius),
-                CollisionGroups::new(SHIELD_COLLISION_GROUP, SHIELD_COLLISION_GROUP),
+                // CollisionGroups::new(SHIELD_COLLISION_GROUP, SHIELD_COLLISION_GROUP),
+                *q_rapier_entity_link
+                    .get(parent.get())
+                    .expect("Missing rapier entity link on shield's parent"),
                 ColliderMassProperties::Mass(0.0),
                 Sensor,
             ));
@@ -81,7 +92,10 @@ fn on_add_shield(q_added_shield: Query<(Entity, &Shield), Changed<Shield>>, mut 
             ecmds
                 .insert((
                     DespawnWithStructure,
-                    CollisionGroups::new(SHIELD_COLLISION_GROUP, SHIELD_COLLISION_GROUP),
+                    // CollisionGroups::new(SHIELD_COLLISION_GROUP, SHIELD_COLLISION_GROUP),
+                    *q_rapier_entity_link
+                        .get(parent.get())
+                        .expect("Missing rapier entity link on shield's parent"),
                     ColliderMassProperties::Mass(0.0),
                     Sensor,
                 ))
