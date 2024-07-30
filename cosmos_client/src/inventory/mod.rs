@@ -22,7 +22,7 @@ use crate::{
     ui::{
         components::window::{GuiWindow, WindowBundle},
         item_renderer::RenderItem,
-        UiSystemSet,
+        UiRoot, UiSystemSet, UiTopRoot,
     },
 };
 
@@ -115,6 +115,8 @@ fn toggle_inventory_rendering(
     mapping: Res<NetworkMapping>,
     mut removed_components: RemovedComponents<NeedsDisplayed>,
     q_block_data: Query<&BlockData>,
+    q_ui_normal_root: Query<Entity, With<UiRoot>>,
+    q_ui_top_root: Query<Entity, With<UiTopRoot>>,
 ) {
     for removed in removed_components.read() {
         let Ok((inventory_holder, mut local_inventory, open_inventory_entity)) = without_needs_displayed_inventories.get_mut(removed)
@@ -205,8 +207,12 @@ fn toggle_inventory_rendering(
             (Val::Px(100.0), Val::Auto)
         };
 
+        let ui_root = q_ui_normal_root.single();
+        let top_ui_root = q_ui_top_root.single();
+
         let open_inventory = commands
             .spawn((
+                TargetCamera(ui_root),
                 Name::new("Rendered Inventory"),
                 RenderedInventory { inventory_holder },
                 WindowBundle {
@@ -250,8 +256,7 @@ fn toggle_inventory_rendering(
                                 )],
                                 ..default()
                             },
-
-                            background_color: BackgroundColor(Srgba::hex("2D2D2D0A").unwrap().into()),
+                            background_color: BackgroundColor(Srgba::hex("2D2D2D").unwrap().into()),
                             ..default()
                         },
                     ))
@@ -261,7 +266,7 @@ fn toggle_inventory_rendering(
                             .enumerate()
                             .filter(|(slot, _)| priority_slots.as_ref().map(|x| !x.contains(slot)).unwrap_or(true))
                         {
-                            create_inventory_slot(inventory_holder, slot_number, slots, slot.as_ref(), text_style.clone());
+                            create_inventory_slot(inventory_holder, slot_number, slots, slot.as_ref(), text_style.clone(), top_ui_root);
                         }
                     });
 
@@ -293,6 +298,7 @@ fn toggle_inventory_rendering(
                                     slots,
                                     inventory.itemstack_at(slot_number),
                                     text_style.clone(),
+                                    top_ui_root,
                                 );
                             }
                         });
@@ -317,8 +323,11 @@ fn on_update_inventory(
     mut held_item_query: Query<(Entity, &HeldItemStack, &mut DisplayedItemFromInventory), Changed<HeldItemStack>>,
     mut current_slots: Query<(Entity, &mut DisplayedItemFromInventory), Without<HeldItemStack>>,
     asset_server: Res<AssetServer>,
+    q_top_ui_root: Query<Entity, With<UiTopRoot>>,
 ) {
     for (inventory_entity, inventory) in q_inventory.iter() {
+        let top_ui_root = q_top_ui_root.single();
+
         for (display_entity, mut displayed_slot) in current_slots.iter_mut() {
             if displayed_slot.inventory_holder == inventory_entity
                 && displayed_slot.item_stack.as_ref() != inventory.itemstack_at(displayed_slot.slot_number)
@@ -329,7 +338,7 @@ fn on_update_inventory(
                     continue;
                 };
 
-                rerender_inventory_slot(&mut ecmds, &displayed_slot, &asset_server, true);
+                rerender_inventory_slot(&mut ecmds, &displayed_slot, &asset_server, true, top_ui_root);
             }
         }
     }
@@ -340,7 +349,8 @@ fn on_update_inventory(
         displayed_item.item_stack = Some(held_item_stack.0.clone());
 
         if let Some(mut ecmds) = commands.get_entity(entity) {
-            rerender_inventory_slot(&mut ecmds, &displayed_item, &asset_server, false);
+            let top_ui_root = q_top_ui_root.single();
+            rerender_inventory_slot(&mut ecmds, &displayed_item, &asset_server, false, top_ui_root);
         }
     }
 }
@@ -350,6 +360,7 @@ fn rerender_inventory_slot(
     displayed_item: &DisplayedItemFromInventory,
     asset_server: &AssetServer,
     as_child: bool,
+    top_ui_root: Entity,
 ) {
     ecmds.despawn_descendants();
 
@@ -371,10 +382,10 @@ fn rerender_inventory_slot(
 
         if as_child {
             ecmds.with_children(|p| {
-                create_item_stack_slot_data(is, &mut p.spawn_empty(), text_style, quantity);
+                create_item_stack_slot_data(is, &mut p.spawn_empty(), text_style, quantity, top_ui_root);
             });
         } else {
-            create_item_stack_slot_data(is, ecmds, text_style, quantity);
+            create_item_stack_slot_data(is, ecmds, text_style, quantity, top_ui_root);
         }
     }
 }
@@ -388,6 +399,7 @@ fn create_inventory_slot(
     slots: &mut ChildBuilder,
     item_stack: Option<&ItemStack>,
     text_style: TextStyle,
+    top_ui_root: Entity,
 ) {
     let mut ecmds = slots.spawn((
         Name::new("Inventory Item"),
@@ -415,7 +427,7 @@ fn create_inventory_slot(
         ecmds.with_children(|p| {
             let mut ecmds = p.spawn_empty();
 
-            create_item_stack_slot_data(item_stack, &mut ecmds, text_style, item_stack.quantity());
+            create_item_stack_slot_data(item_stack, &mut ecmds, text_style, item_stack.quantity(), top_ui_root);
         });
     }
 }
@@ -438,6 +450,7 @@ fn pickup_item_into_cursor(
     asset_server: &AssetServer,
     client: &mut RenetClient,
     server_inventory_holder: InventoryIdentifier,
+    top_ui_root: Entity,
 ) {
     let Some(is) = displayed_item_clicked.item_stack.as_ref() else {
         return;
@@ -469,6 +482,7 @@ fn pickup_item_into_cursor(
         &mut ecmds,
         text_style,
         pickup_quantity,
+        top_ui_root,
     );
 
     ecmds.insert((displayed_item, HeldItemStack(new_is)));
@@ -504,6 +518,7 @@ fn handle_interactions(
     q_block_data: Query<&BlockData>,
     asset_server: Res<AssetServer>,
     open_inventories: Query<Entity, With<NeedsDisplayed>>,
+    q_top_ui_root: Query<Entity, With<UiTopRoot>>,
 ) {
     let lmb = input_handler.mouse_inputs().just_pressed(MouseButton::Left);
     let rmb = input_handler.mouse_inputs().just_pressed(MouseButton::Right);
@@ -640,6 +655,8 @@ fn handle_interactions(
     } else if let Ok(mut inventory) = inventory_query.get_mut(displayed_item_clicked.inventory_holder) {
         let quantity_multiplier = if lmb { 1.0 } else { 0.5 };
 
+        let top_ui_root = q_top_ui_root.single();
+
         pickup_item_into_cursor(
             displayed_item_clicked,
             &mut commands,
@@ -648,6 +665,7 @@ fn handle_interactions(
             &asset_server,
             &mut client,
             server_inventory_holder,
+            top_ui_root,
         );
     }
 }
@@ -656,7 +674,16 @@ fn handle_interactions(
  * End moving items around
  */
 
-fn create_item_stack_slot_data(item_stack: &ItemStack, ecmds: &mut EntityCommands, text_style: TextStyle, quantity: u16) {
+#[derive(Component)]
+struct ItemQtyText;
+
+fn create_item_stack_slot_data(
+    item_stack: &ItemStack,
+    ecmds: &mut EntityCommands,
+    text_style: TextStyle,
+    quantity: u16,
+    top_ui_root: Entity,
+) {
     ecmds
         .insert((
             Name::new("Render Item"),
@@ -676,14 +703,18 @@ fn create_item_stack_slot_data(item_stack: &ItemStack, ecmds: &mut EntityCommand
             },
         ))
         .with_children(|p| {
-            p.spawn(TextBundle {
-                style: Style {
-                    margin: UiRect::new(Val::Px(0.0), Val::Px(5.0), Val::Px(0.0), Val::Px(5.0)),
+            p.spawn((
+                TargetCamera(top_ui_root),
+                ItemQtyText,
+                TextBundle {
+                    style: Style {
+                        margin: UiRect::new(Val::Px(0.0), Val::Px(5.0), Val::Px(0.0), Val::Px(5.0)),
+                        ..default()
+                    },
+                    text: Text::from_section(format!("{quantity}"), text_style),
                     ..default()
                 },
-                text: Text::from_section(format!("{quantity}"), text_style),
-                ..default()
-            });
+            ));
         });
 }
 
@@ -695,6 +726,25 @@ fn follow_cursor(mut query: Query<&mut Style, With<FollowCursor>>, primary_windo
         style.position_type = PositionType::Absolute;
         style.left = Val::Px(cursor_pos.x - 32.0);
         style.top = Val::Px(cursor_pos.y - 32.0);
+    }
+}
+
+/// Bevy doesn't normally support multiple target cameras in the same UI heirarchy
+///
+/// Thus, it initially switches all the children to be for the same camera, but we need them
+/// to be different. This will switch the ones we care about back after bevy changes them.
+fn text_fixer(
+    q_top_ui_root: Query<Entity, With<UiTopRoot>>,
+    mut q_txt: Query<&mut TargetCamera, (Changed<TargetCamera>, With<ItemQtyText>)>,
+) {
+    let Ok(top_root) = q_top_ui_root.get_single() else {
+        return;
+    };
+
+    for mut text in q_txt.iter_mut() {
+        if text.0 != top_root {
+            text.0 = top_root;
+        }
     }
 }
 
@@ -724,11 +774,15 @@ pub(super) fn register(app: &mut App) {
     .add_systems(
         Update,
         (
-            (toggle_inventory, close_button_system).in_set(InventorySet::ToggleInventory),
+            (toggle_inventory, close_button_system)
+                .chain()
+                .in_set(InventorySet::ToggleInventory),
             on_update_inventory.in_set(InventorySet::UpdateInventory),
             handle_interactions.in_set(InventorySet::HandleInteractions),
             follow_cursor.in_set(InventorySet::FollowCursor),
-            toggle_inventory_rendering.in_set(InventorySet::ToggleInventoryRendering),
+            (toggle_inventory_rendering, text_fixer)
+                .chain()
+                .in_set(InventorySet::ToggleInventoryRendering),
         )
             .in_set(NetworkingSystemsSet::Between)
             .run_if(in_state(GameState::Playing)),
