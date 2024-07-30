@@ -14,6 +14,7 @@ use bevy::{
 use bevy_rapier3d::{
     geometry::{Collider, ColliderMassProperties, Group, Sensor},
     plugin::RapierContextEntityLink,
+    prelude::CollisionGroups,
 };
 use serde::{Deserialize, Serialize};
 
@@ -81,7 +82,7 @@ fn on_add_shield(
             ecmds.insert((
                 DespawnWithStructure,
                 Collider::ball(shield.radius),
-                // CollisionGroups::new(SHIELD_COLLISION_GROUP, SHIELD_COLLISION_GROUP),
+                CollisionGroups::new(SHIELD_COLLISION_GROUP, SHIELD_COLLISION_GROUP),
                 *q_rapier_entity_link
                     .get(parent.get())
                     .expect("Missing rapier entity link on shield's parent"),
@@ -92,7 +93,7 @@ fn on_add_shield(
             ecmds
                 .insert((
                     DespawnWithStructure,
-                    // CollisionGroups::new(SHIELD_COLLISION_GROUP, SHIELD_COLLISION_GROUP),
+                    CollisionGroups::new(SHIELD_COLLISION_GROUP, SHIELD_COLLISION_GROUP),
                     *q_rapier_entity_link
                         .get(parent.get())
                         .expect("Missing rapier entity link on shield's parent"),
