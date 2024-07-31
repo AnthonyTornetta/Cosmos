@@ -26,16 +26,14 @@ use crate::{
     state::game_state::GameState,
 };
 
-use super::{UiSystemSet, UiTopRoot};
+use super::{UiMiddleRoot, UiSystemSet, UiTopRoot};
 
-const INVENTORY_SLOT_LAYER: usize = 0b1;
+const INVENTORY_SLOT_LAYER: usize = 0b01;
+const MIDDLE_INVENTORY_SLOT_LAYER: usize = 0b10;
 
-#[derive(Component)]
-struct UICamera;
-
-fn create_ui_camera(mut commands: Commands) {
+fn create_ui_camera(mut meshes: ResMut<Assets<Mesh>>, mut materials: ResMut<Assets<StandardMaterial>>, mut commands: Commands) {
     commands.spawn((
-        Name::new("UI Camera"),
+        Name::new("UI Top Camera"),
         UiTopRoot,
         Camera3dBundle {
             projection: Projection::Orthographic(OrthographicProjection {
@@ -44,17 +42,49 @@ fn create_ui_camera(mut commands: Commands) {
             }),
             camera_3d: Camera3d::default(),
             camera: Camera {
-                order: 1,
-                clear_color: ClearColorConfig::None,
-                hdr: true, // this has to be true or the camera doesn't render over the main one correctly.
+                order: 2,
+                clear_color: ClearColorConfig::Custom(Color::NONE),
+                hdr: false, // Don't stack HDR renderings
                 ..Default::default()
             },
             transform: Transform::from_xyz(0.0, 0.0, 1.0).looking_at(Vec3::ZERO, Vec3::Y),
             ..Default::default()
         },
-        UICamera,
         RenderLayers::from_layers(&[INVENTORY_SLOT_LAYER]),
     ));
+
+    commands.spawn((
+        Name::new("UI Middle Camera"),
+        UiMiddleRoot,
+        Camera3dBundle {
+            projection: Projection::Orthographic(OrthographicProjection {
+                scaling_mode: ScalingMode::WindowSize(40.0),
+                ..Default::default()
+            }),
+            camera_3d: Camera3d::default(),
+            camera: Camera {
+                order: 1,
+                clear_color: ClearColorConfig::Custom(Color::NONE),
+                hdr: false, // Don't stack HDR renderings
+                ..Default::default()
+            },
+            transform: Transform::from_xyz(0.0, 0.0, 1.0).looking_at(Vec3::ZERO, Vec3::Y),
+            ..Default::default()
+        },
+        RenderLayers::from_layers(&[MIDDLE_INVENTORY_SLOT_LAYER]),
+    ));
+
+    // commands.spawn((
+    //     RenderLayers::from_layers(&[INVENTORY_SLOT_LAYER]),
+    //     PbrBundle {
+    //         mesh: meshes.add(Cuboid::new(0.5, 0.5, 0.5)),
+    //         material: materials.add(StandardMaterial {
+    //             base_color: Color::NONE,
+    //             ..Default::default()
+    //         }),
+    //         ..Default::default()
+    //     },
+    // ));
 }
 
 #[derive(Debug, Component, Reflect)]
@@ -62,6 +92,13 @@ fn create_ui_camera(mut commands: Commands) {
 pub struct RenderItem {
     /// The item's id
     pub item_id: u16,
+}
+
+#[derive(Eq, PartialEq, Default, Component, Debug, Clone, Copy, Reflect)]
+pub enum ItemRenderLayer {
+    #[default]
+    Top,
+    Middle,
 }
 
 #[derive(Debug, Component, Reflect)]
@@ -89,7 +126,10 @@ fn render_items(
     (mut q_transform, mut removed_render_items, changed_render_items, rendered_items, material_definitions_registry, mut event_writer): (
         Query<&mut Transform>,
         RemovedComponents<RenderItem>,
-        Query<(Entity, &RenderItem, &GlobalTransform), Or<(Changed<RenderItem>, Changed<GlobalTransform>)>>,
+        Query<
+            (Entity, &RenderItem, &GlobalTransform, Option<&ItemRenderLayer>),
+            Or<(Changed<RenderItem>, Changed<ItemRenderLayer>, Changed<GlobalTransform>)>,
+        >,
         Query<(Entity, &RenderedItem)>,
         Res<Registry<MaterialDefinition>>,
         EventWriter<AddMaterialEvent>,
@@ -110,7 +150,7 @@ fn render_items(
         }
     }
 
-    for (entity, changed_render_item, transform) in changed_render_items.iter() {
+    for (entity, changed_render_item, transform, render_layer) in changed_render_items.iter() {
         let translation = transform.translation();
 
         let item = items.from_numeric_id(changed_render_item.item_id);
@@ -150,6 +190,11 @@ fn render_items(
                 .id()
         };
 
+        let render_layer = match render_layer {
+            Some(ItemRenderLayer::Top) | None => INVENTORY_SLOT_LAYER,
+            Some(ItemRenderLayer::Middle) => MIDDLE_INVENTORY_SLOT_LAYER,
+        };
+
         if !generate_block_item_model(
             item,
             to_create,
@@ -165,6 +210,7 @@ fn render_items(
             &block_meshes,
             &material_definitions_registry,
             &mut event_writer,
+            render_layer,
         ) {
             generate_item_model(
                 item,
@@ -180,6 +226,7 @@ fn render_items(
                 &item_textures,
                 &material_definitions_registry,
                 &mut event_writer,
+                render_layer,
             );
         }
     }
@@ -199,6 +246,7 @@ fn generate_item_model(
     item_textures: &Registry<ItemTextureIndex>,
     material_definitions_registry: &Registry<MaterialDefinition>,
     event_writer: &mut EventWriter<AddMaterialEvent>,
+    render_layer: usize,
 ) {
     let size = 0.8;
 
@@ -239,7 +287,7 @@ fn generate_item_model(
             item_id: changed_render_item.item_id,
         },
         mesh_handle,
-        RenderLayers::from_layers(&[INVENTORY_SLOT_LAYER]),
+        RenderLayers::from_layers(&[render_layer]),
         Name::new(format!("Rendered Inventory Item ({})", changed_render_item.item_id)),
     ));
 
@@ -266,6 +314,7 @@ fn generate_block_item_model(
     block_meshes: &BlockMeshRegistry,
     material_definitions_registry: &Registry<MaterialDefinition>,
     event_writer: &mut EventWriter<AddMaterialEvent>,
+    render_layer: usize,
 ) -> bool {
     let size = 0.8;
 
@@ -351,7 +400,7 @@ fn generate_block_item_model(
             item_id: changed_render_item.item_id,
         },
         meshes.add(mesh_builder.build_mesh()),
-        RenderLayers::from_layers(&[INVENTORY_SLOT_LAYER]),
+        RenderLayers::from_layers(&[render_layer]),
         Name::new(format!("Rendered Inventory Item ({})", changed_render_item.item_id)),
     ));
 
@@ -442,5 +491,6 @@ pub(super) fn register(app: &mut App) {
 
     app.add_systems(OnEnter(GameState::Playing), create_ui_camera)
         .register_type::<RenderItem>()
-        .register_type::<RenderedItem>();
+        .register_type::<RenderedItem>()
+        .register_type::<ItemRenderLayer>();
 }

@@ -40,7 +40,13 @@ pub enum UiSystemSet {
 pub struct UiRoot;
 
 #[derive(Component)]
-/// Append UI nodes you want to display in front of 3d-models to this.
+/// Append UI nodes you want to display in front of mid-level 3d-models to this.
+///
+/// If you're not dealing with 3d model weirdness, please prefer to use `UiRoot`.
+pub struct UiMiddleRoot;
+
+#[derive(Component)]
+/// Append UI nodes you want to display in front of all 3d-models to this.
 ///
 /// If you're not dealing with 3d model weirdness, please prefer to use `UiRoot`.
 pub struct UiTopRoot;
