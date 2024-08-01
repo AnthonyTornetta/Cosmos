@@ -18,7 +18,10 @@ use cosmos_core::{
 use crate::{
     asset::{
         asset_loading::{BlockNeighbors, BlockTextureIndex, CosmosTextureAtlas, ItemTextureIndex},
-        materials::{AddMaterialEvent, BlockMaterialMapping, ItemMaterialMapping, MaterialDefinition, MaterialType, MaterialsSystemSet},
+        materials::{
+            AddMaterialEvent, BlockMaterialMapping, ItemMaterialMapping, MaterialDefinition, MaterialType, MaterialsSystemSet,
+            RemoveAllMaterialsEvent,
+        },
         texture_atlas::SquareTextureAtlas,
     },
     item::item_mesh::create_item_mesh,
@@ -31,7 +34,7 @@ use super::{UiMiddleRoot, UiSystemSet, UiTopRoot};
 const INVENTORY_SLOT_LAYER: usize = 0b01;
 const MIDDLE_INVENTORY_SLOT_LAYER: usize = 0b10;
 
-fn create_ui_camera(mut meshes: ResMut<Assets<Mesh>>, mut materials: ResMut<Assets<StandardMaterial>>, mut commands: Commands) {
+fn create_ui_camera(mut commands: Commands) {
     commands.spawn((
         Name::new("UI Top Camera"),
         UiTopRoot,
@@ -44,7 +47,7 @@ fn create_ui_camera(mut meshes: ResMut<Assets<Mesh>>, mut materials: ResMut<Asse
             camera: Camera {
                 order: 2,
                 clear_color: ClearColorConfig::Custom(Color::NONE),
-                hdr: false, // Don't stack HDR renderings
+                hdr: true, // Transparent stuff fails to render properly if this is off - this may be a bevy bug?
                 ..Default::default()
             },
             transform: Transform::from_xyz(0.0, 0.0, 1.0).looking_at(Vec3::ZERO, Vec3::Y),
@@ -65,7 +68,7 @@ fn create_ui_camera(mut meshes: ResMut<Assets<Mesh>>, mut materials: ResMut<Asse
             camera: Camera {
                 order: 1,
                 clear_color: ClearColorConfig::Custom(Color::NONE),
-                hdr: false, // Don't stack HDR renderings
+                hdr: true, // Transparent stuff fails to render properly if this is off - this may be a bevy bug?
                 ..Default::default()
             },
             transform: Transform::from_xyz(0.0, 0.0, 1.0).looking_at(Vec3::ZERO, Vec3::Y),
@@ -73,18 +76,6 @@ fn create_ui_camera(mut meshes: ResMut<Assets<Mesh>>, mut materials: ResMut<Asse
         },
         RenderLayers::from_layers(&[MIDDLE_INVENTORY_SLOT_LAYER]),
     ));
-
-    // commands.spawn((
-    //     RenderLayers::from_layers(&[INVENTORY_SLOT_LAYER]),
-    //     PbrBundle {
-    //         mesh: meshes.add(Cuboid::new(0.5, 0.5, 0.5)),
-    //         material: materials.add(StandardMaterial {
-    //             base_color: Color::NONE,
-    //             ..Default::default()
-    //         }),
-    //         ..Default::default()
-    //     },
-    // ));
 }
 
 #[derive(Debug, Component, Reflect)]
@@ -95,9 +86,16 @@ pub struct RenderItem {
 }
 
 #[derive(Eq, PartialEq, Default, Component, Debug, Clone, Copy, Reflect)]
+/// For advanced item rendering, it may be required to have some UI elements behind it, and others in front of it.
 pub enum ItemRenderLayer {
     #[default]
+    /// The item should be rendered on the top-most item layer.
+    ///
+    /// Only UI elements targetting the [`UiTopRoot`] entity will be rendered over this.
     Top,
+    /// The item will be rendered in the middle layer.
+    ///
+    /// All UI elements placed in the [`UiMiddleRoot`] and higher and anything rendered in higher order cameras will render over this.
     Middle,
 }
 
@@ -123,7 +121,15 @@ fn render_items(
     block_meshes: Res<BlockMeshRegistry>,
     images: Res<Assets<Image>>,
 
-    (mut q_transform, mut removed_render_items, changed_render_items, rendered_items, material_definitions_registry, mut event_writer): (
+    (
+        mut q_transform,
+        mut removed_render_items,
+        changed_render_items,
+        rendered_items,
+        material_definitions_registry,
+        mut event_writer,
+        mut evw_remove_materials,
+    ): (
         Query<&mut Transform>,
         RemovedComponents<RenderItem>,
         Query<
@@ -133,6 +139,7 @@ fn render_items(
         Query<(Entity, &RenderedItem)>,
         Res<Registry<MaterialDefinition>>,
         EventWriter<AddMaterialEvent>,
+        EventWriter<RemoveAllMaterialsEvent>,
     ),
 
     item_materials_registry: Res<ManyToOneRegistry<Item, ItemMaterialMapping>>,
@@ -194,6 +201,9 @@ fn render_items(
             Some(ItemRenderLayer::Top) | None => INVENTORY_SLOT_LAYER,
             Some(ItemRenderLayer::Middle) => MIDDLE_INVENTORY_SLOT_LAYER,
         };
+
+        // Clear out any materials that were previously on this entity from previous renders
+        evw_remove_materials.send(RemoveAllMaterialsEvent { entity: to_create });
 
         if !generate_block_item_model(
             item,

@@ -22,10 +22,10 @@ use crate::{
     ui::{
         components::{
             scollable_container::ScrollBundle,
-            window::{GuiWindow, WindowBundle},
+            window::{GuiWindow, UiWindowSystemSet, WindowBundle},
         },
         item_renderer::{ItemRenderLayer, RenderItem},
-        UiMiddleRoot, UiRoot, UiSystemSet, UiTopRoot,
+        UiMiddleRoot, UiRoot, UiSystemSet,
     },
 };
 
@@ -106,13 +106,16 @@ pub enum InventorySide {
 
 #[derive(Component)]
 /// Holds a reference to the opened inventory GUI
-struct OpenInventoryEntity(Entity);
+struct OpenInventoryEntity(Vec<Entity>);
 
 #[derive(Component)]
-struct MiddleCameraRendering;
+struct InventoryTitleBar(Vec<Entity>);
 
 #[derive(Component)]
-struct LowCameraRendering;
+struct StyleOffsets {
+    left: f32,
+    top: f32,
+}
 
 fn toggle_inventory_rendering(
     mut commands: Commands,
@@ -124,7 +127,8 @@ fn toggle_inventory_rendering(
     mapping: Res<NetworkMapping>,
     mut removed_components: RemovedComponents<NeedsDisplayed>,
     q_block_data: Query<&BlockData>,
-    q_inventory_root_camera: Query<Entity, With<UiMiddleRoot>>,
+    q_middle_root: Query<Entity, With<UiMiddleRoot>>,
+    q_bottom_root: Query<Entity, With<UiRoot>>,
 ) {
     for removed in removed_components.read() {
         let Ok((inventory_holder, mut local_inventory, open_inventory_entity)) = without_needs_displayed_inventories.get_mut(removed)
@@ -136,11 +140,11 @@ fn toggle_inventory_rendering(
             continue;
         };
 
-        let entity = open_ent.0;
-
         commands.entity(inventory_holder).remove::<OpenInventoryEntity>();
-        if let Some(mut ecmds) = commands.get_entity(entity) {
-            ecmds.insert(NeedsDespawned);
+        for &entity in &open_ent.0 {
+            if let Some(mut ecmds) = commands.get_entity(entity) {
+                ecmds.insert(NeedsDespawned);
+            }
         }
 
         if let Ok((entity, displayed_item, mut held_item_stack)) = holding_item.get_single_mut() {
@@ -216,126 +220,197 @@ fn toggle_inventory_rendering(
             (Val::Px(100.0), Val::Auto)
         };
 
-        let ui_root = q_inventory_root_camera.single();
+        let middle_root = q_middle_root.single();
+        let bottom_root = q_bottom_root.single();
 
-        let open_inventory = commands
-            .spawn((
-                TargetCamera(ui_root),
-                Name::new("Rendered Inventory"),
-                RenderedInventory { inventory_holder },
-                WindowBundle {
-                    window: GuiWindow {
-                        title: inventory.name().into(),
-                        body_styles: Style {
-                            flex_direction: FlexDirection::Column,
-                            ..Default::default()
-                        },
-                    },
-                    node_bundle: NodeBundle {
-                        style: Style {
-                            position_type: PositionType::Absolute,
-                            right,
-                            left,
-                            top: Val::Px(100.0),
-                            width: Val::Px(n_slots_per_row as f32 * slot_size + inventory_border_size * 2.0 + scrollbar_width),
-                            border: UiRect::all(Val::Px(inventory_border_size)),
-                            ..default()
-                        },
-                        border_color: BorderColor(Color::BLACK),
-                        ..default()
-                    },
-                    ..Default::default()
-                },
-            ))
-            .with_children(|parent| {
-                let priority_slots = inventory.priority_slots();
+        let width = Val::Px(n_slots_per_row as f32 * slot_size + inventory_border_size * 2.0 + scrollbar_width);
 
-                parent
-                    .spawn((
-                        Name::new("Non-Hotbar Slots"),
-                        ScrollBundle {
-                            node_bundle: NodeBundle {
-                                style: Style {
-                                    width: Val::Percent(100.0),
-                                    min_height: Val::Px(600.0),
-                                    ..default()
-                                },
-                                background_color: BackgroundColor(Srgba::hex("3D3D3D").unwrap().into()),
+        let mut ents = vec![];
+
+        let priority_slots = inventory.priority_slots();
+        let title_bar_height = GuiWindow::TITLE_BAR_HEIGHT_PX;
+
+        let border_color = BorderColor(Srgba::hex("222222").unwrap().into());
+
+        const MAX_INVENTORY_HEIGHT_PX: f32 = 500.0;
+
+        let non_hotbar_height = (((inventory.len() as f32 - inventory.priority_slots().map(|x| x.len()).unwrap_or(0) as f32) / 9.0).ceil()
+            * INVENTORY_SLOTS_DIMS)
+            .min(MAX_INVENTORY_HEIGHT_PX);
+
+        ents.push(
+            commands
+                .spawn((
+                    TargetCamera(bottom_root),
+                    Name::new("Rendered Inventory Non-Hotbar Slots"),
+                    StyleOffsets {
+                        left: 0.0,
+                        top: title_bar_height,
+                    },
+                    ScrollBundle {
+                        node_bundle: NodeBundle {
+                            style: Style {
+                                width,
+                                position_type: PositionType::Absolute,
+                                right,
+                                border: UiRect::horizontal(Val::Px(inventory_border_size)),
+                                min_height: Val::Px(non_hotbar_height),
                                 ..default()
                             },
+                            border_color,
+                            background_color: BackgroundColor(Srgba::hex("3D3D3D").unwrap().into()),
+                            ..default()
+                        },
+                        ..Default::default()
+                    },
+                ))
+                .with_children(|p| {
+                    p.spawn(NodeBundle {
+                        style: Style {
+                            display: Display::Grid,
+                            flex_grow: 1.0,
+                            grid_column: GridPlacement::end(n_slots_per_row as i16),
+                            grid_template_columns: vec![RepeatedGridTrack::px(
+                                GridTrackRepetition::Count(n_slots_per_row as u16),
+                                slot_size,
+                            )],
+                            ..default()
+                        },
+                        ..Default::default()
+                    })
+                    .with_children(|slots| {
+                        for (slot_number, slot) in inventory
+                            .iter()
+                            .enumerate()
+                            .filter(|(slot, _)| priority_slots.as_ref().map(|x| !x.contains(slot)).unwrap_or(true))
+                        {
+                            create_inventory_slot(
+                                inventory_holder,
+                                slot_number,
+                                slots,
+                                slot.as_ref(),
+                                text_style.clone(),
+                                ItemRenderLayer::Middle,
+                            );
+                        }
+                    });
+                })
+                .id(),
+        );
+
+        if let Some(priority_slots) = priority_slots {
+            ents.push(
+                commands
+                    .spawn((
+                        TargetCamera(middle_root),
+                        Name::new("Rendered Inventory Hotbar Slots"),
+                        StyleOffsets {
+                            left: 0.0,
+                            top: non_hotbar_height + title_bar_height,
+                        },
+                        NodeBundle {
+                            style: Style {
+                                display: Display::Flex,
+                                height: Val::Px(5.0 + slot_size + 2.0),
+                                border: UiRect::new(
+                                    Val::Px(inventory_border_size),
+                                    Val::Px(inventory_border_size),
+                                    Val::Px(5.0),
+                                    Val::Px(inventory_border_size),
+                                ),
+                                position_type: PositionType::Absolute,
+                                right,
+                                width,
+                                ..default()
+                            },
+                            border_color,
+                            ..default()
+                        },
+                        UiImage {
+                            texture: asset_server.load("cosmos/images/ui/inventory-footer.png"),
                             ..Default::default()
                         },
                     ))
-                    .with_children(|p| {
-                        p.spawn(NodeBundle {
-                            style: Style {
-                                display: Display::Grid,
-                                flex_grow: 1.0,
-                                grid_column: GridPlacement::end(n_slots_per_row as i16),
-                                grid_template_columns: vec![RepeatedGridTrack::px(
-                                    GridTrackRepetition::Count(n_slots_per_row as u16),
-                                    slot_size,
-                                )],
-                                ..default()
-                            },
-                            ..Default::default()
-                        })
-                        .with_children(|slots| {
-                            for (slot_number, slot) in inventory
-                                .iter()
-                                .enumerate()
-                                .filter(|(slot, _)| priority_slots.as_ref().map(|x| !x.contains(slot)).unwrap_or(true))
-                            {
-                                create_inventory_slot(
-                                    inventory_holder,
-                                    slot_number,
-                                    slots,
-                                    slot.as_ref(),
-                                    text_style.clone(),
-                                    ItemRenderLayer::Middle,
-                                );
-                            }
-                        });
-                    });
+                    .with_children(|slots| {
+                        for slot_number in priority_slots {
+                            create_inventory_slot(
+                                inventory_holder,
+                                slot_number,
+                                slots,
+                                inventory.itemstack_at(slot_number),
+                                text_style.clone(),
+                                ItemRenderLayer::Top,
+                            );
+                        }
+                    })
+                    .id(),
+            );
+        }
 
-                if let Some(priority_slots) = priority_slots {
-                    parent
-                        .spawn((
-                            MiddleCameraRendering,
-                            Name::new("Hotbar Slots"),
-                            NodeBundle {
-                                style: Style {
-                                    display: Display::Flex,
-                                    height: Val::Px(5.0 + slot_size),
-                                    border: UiRect::new(Val::Px(0.0), Val::Px(0.0), Val::Px(5.0), Val::Px(0.0)),
+        let current_ents = ents.clone();
 
-                                    ..default()
-                                },
-                                border_color: BorderColor(Srgba::hex("222222").unwrap().into()),
-                                ..default()
-                            },
-                            UiImage {
-                                texture: asset_server.load("cosmos/images/ui/inventory-footer.png"),
+        ents.push(
+            commands
+                .spawn((
+                    TargetCamera(middle_root),
+                    Name::new("Rendered Inventory Title Bar"),
+                    RenderedInventory { inventory_holder },
+                    InventoryTitleBar(current_ents),
+                    WindowBundle {
+                        window: GuiWindow {
+                            title: inventory.name().into(),
+                            body_styles: Style {
+                                flex_direction: FlexDirection::Column,
                                 ..Default::default()
                             },
-                        ))
-                        .with_children(|slots| {
-                            for slot_number in priority_slots {
-                                create_inventory_slot(
-                                    inventory_holder,
-                                    slot_number,
-                                    slots,
-                                    inventory.itemstack_at(slot_number),
-                                    text_style.clone(),
-                                    ItemRenderLayer::Top,
-                                );
-                            }
-                        });
-                }
-            })
-            .id();
+                        },
+                        node_bundle: NodeBundle {
+                            style: Style {
+                                position_type: PositionType::Absolute,
+                                right,
+                                left,
+                                top: Val::Px(100.0),
+                                width,
+                                border: UiRect::all(Val::Px(inventory_border_size)),
+                                ..default()
+                            },
+                            border_color: BorderColor(Color::BLACK),
+                            ..default()
+                        },
+                        ..Default::default()
+                    },
+                ))
+                .id(),
+        );
 
-        commands.entity(inventory_holder).insert(OpenInventoryEntity(open_inventory));
+        commands.entity(inventory_holder).insert(OpenInventoryEntity(ents));
+    }
+}
+
+fn reposition_window_children(
+    mut q_style: Query<(&StyleOffsets, &mut Style), Without<InventoryTitleBar>>,
+    q_changed_window_pos: Query<(&Style, &InventoryTitleBar), Changed<Style>>,
+) {
+    for (style, title_bar) in q_changed_window_pos.iter() {
+        let Val::Px(top) = style.top else {
+            continue;
+        };
+
+        let left = style.left;
+        let right = style.right;
+
+        for ent in &title_bar.0 {
+            let Ok((style_offsets, mut style)) = q_style.get_mut(*ent) else {
+                continue;
+            };
+
+            style.top = Val::Px(style_offsets.top + top);
+            if let Val::Px(left) = left {
+                style.left = Val::Px(left + style_offsets.left);
+            } else if let Val::Px(right) = right {
+                style.right = Val::Px(right - style_offsets.left);
+            }
+        }
     }
 }
 
@@ -428,6 +503,8 @@ fn rerender_inventory_slot(
 #[derive(Component, Debug)]
 struct InventoryItemMarker;
 
+const INVENTORY_SLOTS_DIMS: f32 = 64.0;
+
 fn create_inventory_slot(
     inventory_holder: Entity,
     slot_number: usize,
@@ -439,12 +516,11 @@ fn create_inventory_slot(
     let mut ecmds = slots.spawn((
         Name::new("Inventory Item"),
         InventoryItemMarker,
-        LowCameraRendering,
         NodeBundle {
             style: Style {
                 border: UiRect::all(Val::Px(2.0)),
-                width: Val::Px(64.0),
-                height: Val::Px(64.0),
+                width: Val::Px(INVENTORY_SLOTS_DIMS),
+                height: Val::Px(INVENTORY_SLOTS_DIMS),
                 ..default()
             },
 
@@ -458,10 +534,6 @@ fn create_inventory_slot(
             item_stack: item_stack.cloned(),
         },
     ));
-
-    if render_layer == ItemRenderLayer::Top {
-        ecmds.insert(MiddleCameraRendering);
-    }
 
     if let Some(item_stack) = item_stack {
         ecmds.with_children(|p| {
@@ -515,13 +587,7 @@ fn pickup_item_into_cursor(
 
     let mut ecmds = commands.spawn(FollowCursor);
 
-    create_item_stack_slot_data(
-        displayed_item.item_stack.as_ref().expect("This was added above"),
-        &mut ecmds,
-        text_style,
-        pickup_quantity,
-        ItemRenderLayer::Top,
-    );
+    create_item_stack_slot_data(&new_is, &mut ecmds, text_style, pickup_quantity, ItemRenderLayer::Top);
 
     ecmds.insert((displayed_item, HeldItemStack(new_is)));
 
@@ -709,7 +775,7 @@ fn handle_interactions(
  */
 
 #[derive(Component)]
-struct ItemQtyText;
+struct RenderMiddleCameraUi;
 
 fn create_item_stack_slot_data(
     item_stack: &ItemStack,
@@ -738,7 +804,7 @@ fn create_item_stack_slot_data(
             },
         ))
         .with_children(|p| {
-            p.spawn((TextBundle {
+            let mut child_ecmds = p.spawn((TextBundle {
                 style: Style {
                     margin: UiRect::new(Val::Px(0.0), Val::Px(5.0), Val::Px(0.0), Val::Px(5.0)),
                     ..default()
@@ -746,6 +812,10 @@ fn create_item_stack_slot_data(
                 text: Text::from_section(format!("{quantity}"), text_style),
                 ..default()
             },));
+
+            if render_layer == ItemRenderLayer::Middle {
+                child_ecmds.insert(RenderMiddleCameraUi);
+            }
         });
 }
 
@@ -760,63 +830,6 @@ fn follow_cursor(mut query: Query<&mut Style, With<FollowCursor>>, primary_windo
     }
 }
 
-/// Bevy doesn't normally support multiple target cameras in the same UI heirarchy
-///
-/// Thus, it initially switches all the children to be for the same camera, but we need them
-/// to be different. This will switch the ones we care about back after bevy changes them.
-fn text_fixer(
-    q_top_ui_root: Query<Entity, With<UiTopRoot>>,
-    mut q_txt: Query<&mut TargetCamera, (Changed<TargetCamera>, With<ItemQtyText>)>,
-) {
-    let Ok(top_root) = q_top_ui_root.get_single() else {
-        return;
-    };
-
-    for mut text in q_txt.iter_mut() {
-        if text.0 != top_root {
-            text.0 = top_root;
-        }
-    }
-}
-
-/// Bevy doesn't normally support multiple target cameras in the same UI heirarchy
-///
-/// Thus, it initially switches all the children to be for the same camera, but we need them
-/// to be different. This will switch the ones we care about back after bevy changes them.
-fn middle_fixer(
-    q_top_ui_root: Query<Entity, With<UiMiddleRoot>>,
-    mut q_txt: Query<&mut TargetCamera, (Changed<TargetCamera>, With<MiddleCameraRendering>)>,
-) {
-    let Ok(middle_root) = q_top_ui_root.get_single() else {
-        return;
-    };
-
-    for mut text in q_txt.iter_mut() {
-        if text.0 != middle_root {
-            text.0 = middle_root;
-        }
-    }
-}
-
-/// Bevy doesn't normally support multiple target cameras in the same UI heirarchy
-///
-/// Thus, it initially switches all the children to be for the same camera, but we need them
-/// to be different. This will switch the ones we care about back after bevy changes them.
-fn bottom_fixer(
-    q_top_ui_root: Query<Entity, With<UiRoot>>,
-    mut q_txt: Query<&mut TargetCamera, (Changed<TargetCamera>, With<LowCameraRendering>)>,
-) {
-    let Ok(middle_root) = q_top_ui_root.get_single() else {
-        return;
-    };
-
-    for mut text in q_txt.iter_mut() {
-        if text.0 != middle_root {
-            text.0 = middle_root;
-        }
-    }
-}
-
 #[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
 enum InventorySet {
     ToggleInventory,
@@ -824,20 +837,39 @@ enum InventorySet {
     HandleInteractions,
     FollowCursor,
     ToggleInventoryRendering,
+    MoveWindows,
+}
+
+fn make_render_middle_camera(
+    q_mid_cam: Query<Entity, With<UiMiddleRoot>>,
+    mut q_target_cam: Query<&mut TargetCamera, (Changed<TargetCamera>, With<RenderMiddleCameraUi>)>,
+) {
+    for mut target_camera in q_target_cam.iter_mut() {
+        let middle_camera_entity = q_mid_cam.single();
+        if target_camera.0 != middle_camera_entity {
+            target_camera.0 = middle_camera_entity;
+        }
+    }
 }
 
 pub(super) fn register(app: &mut App) {
     app.configure_sets(
         Update,
         (
-            InventorySet::ToggleInventory,
-            InventorySet::UpdateInventory,
-            InventorySet::HandleInteractions,
-            InventorySet::FollowCursor,
-            InventorySet::ToggleInventoryRendering,
+            (
+                InventorySet::ToggleInventory,
+                InventorySet::UpdateInventory,
+                InventorySet::HandleInteractions,
+                InventorySet::FollowCursor,
+                InventorySet::ToggleInventoryRendering,
+            )
+                .before(UiSystemSet::PreDoUi)
+                .after(BlockEventsSet::SendEventsForNextFrame)
+                .chain(),
+            InventorySet::MoveWindows
+                .in_set(UiSystemSet::DoUi)
+                .after(UiWindowSystemSet::SendWindowEvents),
         )
-            .before(UiSystemSet::PreDoUi)
-            .after(BlockEventsSet::SendEventsForNextFrame)
             .chain(),
     )
     .add_systems(
@@ -849,9 +881,10 @@ pub(super) fn register(app: &mut App) {
             on_update_inventory.in_set(InventorySet::UpdateInventory),
             handle_interactions.in_set(InventorySet::HandleInteractions),
             follow_cursor.in_set(InventorySet::FollowCursor),
-            (toggle_inventory_rendering, text_fixer, middle_fixer, bottom_fixer)
+            (toggle_inventory_rendering, make_render_middle_camera)
                 .chain()
                 .in_set(InventorySet::ToggleInventoryRendering),
+            reposition_window_children.in_set(InventorySet::MoveWindows),
         )
             .in_set(NetworkingSystemsSet::Between)
             .run_if(in_state(GameState::Playing)),
