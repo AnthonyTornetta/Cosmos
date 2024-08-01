@@ -25,7 +25,7 @@ use crate::{
             window::{GuiWindow, UiWindowSystemSet, WindowBundle},
         },
         item_renderer::{ItemRenderLayer, RenderItem},
-        UiMiddleRoot, UiRoot, UiSystemSet,
+        UiMiddleRoot, UiRoot, UiSystemSet, UiTopRoot,
     },
 };
 
@@ -116,6 +116,12 @@ struct StyleOffsets {
     left: f32,
     top: f32,
 }
+
+#[derive(Component)]
+struct NonHotbarSlots;
+
+#[derive(Component)]
+struct InventoryRenderedItem;
 
 fn toggle_inventory_rendering(
     mut commands: Commands,
@@ -242,6 +248,7 @@ fn toggle_inventory_rendering(
             commands
                 .spawn((
                     TargetCamera(bottom_root),
+                    NonHotbarSlots,
                     Name::new("Rendered Inventory Non-Hotbar Slots"),
                     StyleOffsets {
                         left: 0.0,
@@ -775,7 +782,7 @@ fn handle_interactions(
  */
 
 #[derive(Component)]
-struct RenderMiddleCameraUi;
+struct TextNeedsTopRoot;
 
 fn create_item_stack_slot_data(
     item_stack: &ItemStack,
@@ -799,24 +806,64 @@ fn create_item_stack_slot_data(
                 ..Default::default()
             },
             render_layer,
+            InventoryRenderedItem,
             RenderItem {
                 item_id: item_stack.item_id(),
             },
         ))
         .with_children(|p| {
-            let mut child_ecmds = p.spawn((TextBundle {
-                style: Style {
-                    margin: UiRect::new(Val::Px(0.0), Val::Px(5.0), Val::Px(0.0), Val::Px(5.0)),
+            p.spawn((
+                TextBundle {
+                    style: Style {
+                        margin: UiRect::new(Val::Px(0.0), Val::Px(5.0), Val::Px(0.0), Val::Px(5.0)),
+                        ..default()
+                    },
+                    text: Text::from_section(format!("{quantity}"), text_style),
                     ..default()
                 },
-                text: Text::from_section(format!("{quantity}"), text_style),
-                ..default()
-            },));
-
-            if render_layer == ItemRenderLayer::Middle {
-                child_ecmds.insert(RenderMiddleCameraUi);
-            }
+                TextNeedsTopRoot,
+            ));
         });
+}
+
+fn hide_hidden(
+    q_non_hotbar_slots: Query<(&Node, &GlobalTransform), With<NonHotbarSlots>>,
+    q_parent: Query<&Parent>,
+    mut q_render_item: Query<(&Node, &mut Visibility, &Parent, &GlobalTransform), With<RenderItem>>,
+    ui_scale: Res<UiScale>,
+) {
+    for (node, mut vis, parent, g_trans) in q_render_item.iter_mut() {
+        // this is evil.
+
+        // The node should be hidden if parent -> parent -> parent -> parent is a non-hotbar slots rendering.
+
+        *vis = Visibility::Inherited;
+
+        let one = parent.get();
+        let Ok(two) = q_parent.get(one) else {
+            continue;
+        };
+        let Ok(three) = q_parent.get(two.get()) else {
+            continue;
+        };
+        let Ok(four) = q_parent.get(three.get()) else {
+            continue;
+        };
+
+        let maybe_non_hotbar = four.get();
+
+        let this_logical_rect = node.physical_rect(g_trans, 1.0, ui_scale.0);
+
+        let Ok((non_hotbar_node, g_trans)) = q_non_hotbar_slots.get(maybe_non_hotbar) else {
+            continue;
+        };
+
+        let dims = non_hotbar_node.physical_rect(g_trans, 1.0, ui_scale.0);
+
+        if !(dims.contains(this_logical_rect.min) || dims.contains(this_logical_rect.max)) {
+            *vis = Visibility::Hidden;
+        }
+    }
 }
 
 fn follow_cursor(mut query: Query<&mut Style, With<FollowCursor>>, primary_window_query: Query<&Window, With<PrimaryWindow>>) {
@@ -841,8 +888,8 @@ enum InventorySet {
 }
 
 fn make_render_middle_camera(
-    q_mid_cam: Query<Entity, With<UiMiddleRoot>>,
-    mut q_target_cam: Query<&mut TargetCamera, (Changed<TargetCamera>, With<RenderMiddleCameraUi>)>,
+    q_mid_cam: Query<Entity, With<UiTopRoot>>,
+    mut q_target_cam: Query<&mut TargetCamera, (Changed<TargetCamera>, With<TextNeedsTopRoot>)>,
 ) {
     for mut target_camera in q_target_cam.iter_mut() {
         let middle_camera_entity = q_mid_cam.single();
@@ -881,7 +928,7 @@ pub(super) fn register(app: &mut App) {
             on_update_inventory.in_set(InventorySet::UpdateInventory),
             handle_interactions.in_set(InventorySet::HandleInteractions),
             follow_cursor.in_set(InventorySet::FollowCursor),
-            (toggle_inventory_rendering, make_render_middle_camera)
+            (toggle_inventory_rendering, make_render_middle_camera, hide_hidden)
                 .chain()
                 .in_set(InventorySet::ToggleInventoryRendering),
             reposition_window_children.in_set(InventorySet::MoveWindows),

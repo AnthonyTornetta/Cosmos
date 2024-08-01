@@ -108,6 +108,34 @@ pub struct RenderedItem {
     based_off: Vec3,
 }
 
+fn change_item_visibility(
+    q_rendered_items: Query<(Entity, &RenderedItem)>,
+    mut q_visibility: Query<(&mut Visibility, &mut ViewVisibility), With<RenderedItem>>,
+    // Change detection actually breaks this =D
+    q_changed_view_visibility: Query<(Entity, &ViewVisibility), (Without<RenderedItem>, With<RenderItem>)>,
+) {
+    for (entity, view_visibility) in &q_changed_view_visibility {
+        let Some(rendered_item) = q_rendered_items
+            .iter()
+            .find(|(_, rendered_item)| rendered_item.ui_element_entity == entity)
+        else {
+            continue;
+        };
+
+        let rendered_item = rendered_item.0;
+
+        let (mut cur_vis, mut vv) = q_visibility.get_mut(rendered_item).expect("Rendered item has no visibility - BAD!");
+
+        if view_visibility.get() {
+            *cur_vis = Visibility::Inherited;
+            vv.set(); // sets it to visible
+        } else {
+            *cur_vis = Visibility::Hidden;
+            *vv = ViewVisibility::HIDDEN;
+        }
+    }
+}
+
 fn render_items(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
@@ -168,6 +196,7 @@ fn render_items(
         {
             if rendered_item.item_id == changed_render_item.item_id {
                 // We're already displaying that item, no need to recalculate everything
+
                 continue;
             }
 
@@ -179,6 +208,14 @@ fn render_items(
             } else {
                 Quat::from_axis_angle(Vec3::X, PI / 2.0)
             };
+
+            // let visibility = if visibility.get() {
+            //     Visibility::default()
+            // } else {
+            //     Visibility::Hidden
+            // };
+
+            // commands.entity(rendered_item_entity).insert(visibility);
 
             rendered_item_entity
         } else {
@@ -193,7 +230,18 @@ fn render_items(
             transform.translation.x = -1000000.0;
 
             commands
-                .spawn((TransformBundle::from_transform(transform), VisibilityBundle::default()))
+                .spawn((
+                    TransformBundle::from_transform(transform),
+                    VisibilityBundle::default(),
+                    // VisibilityBundle {
+                    //     visibility: if visibility.get() {
+                    //         Visibility::default()
+                    //     } else {
+                    //         Visibility::Hidden
+                    //     },
+                    //     ..Default::default()
+                    // },
+                ))
                 .id()
         };
 
@@ -494,7 +542,12 @@ pub(super) fn register(app: &mut App) {
     )
     .add_systems(
         Update,
-        ((update_rendered_items_transforms, reposition_ui_items, render_items)
+        ((
+            update_rendered_items_transforms,
+            reposition_ui_items,
+            render_items,
+            change_item_visibility,
+        )
             .chain()
             .in_set(RenderItemSystemSet::RenderItems),),
     );
