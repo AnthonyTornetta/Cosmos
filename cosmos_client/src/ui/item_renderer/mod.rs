@@ -112,9 +112,9 @@ fn change_item_visibility(
     q_rendered_items: Query<(Entity, &RenderedItem)>,
     mut q_visibility: Query<(&mut Visibility, &mut ViewVisibility), With<RenderedItem>>,
     // Change detection actually breaks this =D
-    q_changed_view_visibility: Query<(Entity, &ViewVisibility), (Without<RenderedItem>, With<RenderItem>)>,
+    q_changed_view_visibility: Query<(Entity, &ViewVisibility, &Visibility), (Without<RenderedItem>, With<RenderItem>)>,
 ) {
-    for (entity, view_visibility) in &q_changed_view_visibility {
+    for (entity, view_visibility, actual_vis) in &q_changed_view_visibility {
         let Some(rendered_item) = q_rendered_items
             .iter()
             .find(|(_, rendered_item)| rendered_item.ui_element_entity == entity)
@@ -126,7 +126,7 @@ fn change_item_visibility(
 
         let (mut cur_vis, mut vv) = q_visibility.get_mut(rendered_item).expect("Rendered item has no visibility - BAD!");
 
-        if view_visibility.get() {
+        if view_visibility.get() && actual_vis != Visibility::Hidden {
             *cur_vis = Visibility::Inherited;
             vv.set(); // sets it to visible
         } else {
