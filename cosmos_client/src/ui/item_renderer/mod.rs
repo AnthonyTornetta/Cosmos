@@ -215,14 +215,6 @@ fn render_items(
                 Quat::from_axis_angle(Vec3::X, PI / 2.0)
             };
 
-            // let visibility = if visibility.get() {
-            //     Visibility::default()
-            // } else {
-            //     Visibility::Hidden
-            // };
-
-            // commands.entity(rendered_item_entity).insert(visibility);
-
             rendered_item_entity
         } else {
             let mut transform = if block_items.block_from_item(item).is_some() {
@@ -236,18 +228,7 @@ fn render_items(
             transform.translation.x = -1000000.0;
 
             commands
-                .spawn((
-                    TransformBundle::from_transform(transform),
-                    VisibilityBundle::default(),
-                    // VisibilityBundle {
-                    //     visibility: if visibility.get() {
-                    //         Visibility::default()
-                    //     } else {
-                    //         Visibility::Hidden
-                    //     },
-                    //     ..Default::default()
-                    // },
-                ))
+                .spawn((TransformBundle::from_transform(transform), VisibilityBundle::default()))
                 .id()
         };
 
