@@ -1,6 +1,4 @@
-//! A UI component that is used to select a number between a range of values using a slider.
-//!
-//! Similar to the HTML `input type="range"`.use std::ops::Range;
+//! A UI component that is used to scroll through a larger UI element.
 
 use bevy::{
     app::{App, Update},
@@ -24,7 +22,7 @@ use bevy::{
     log::error,
     reflect::Reflect,
     transform::components::GlobalTransform,
-    ui::{node_bundles::NodeBundle, FlexDirection, Interaction, Node, Overflow, PositionType, Style, UiRect, UiScale, Val},
+    ui::{node_bundles::NodeBundle, FlexDirection, Interaction, Node, Overflow, PositionType, Style, UiScale, Val},
     window::{PrimaryWindow, Window},
 };
 
@@ -103,10 +101,6 @@ fn on_add_scrollbar(mut commands: Commands, mut q_added_button: Query<(Entity, &
                         position_type: PositionType::Absolute,
                         flex_direction: FlexDirection::Column,
                         width: Val::Percent(100.0),
-                        padding: UiRect {
-                            right: Val::Px(15.0),
-                            ..Default::default()
-                        },
                         ..Default::default()
                     },
                     ..Default::default()
@@ -121,11 +115,8 @@ fn on_add_scrollbar(mut commands: Commands, mut q_added_button: Query<(Entity, &
                 NodeBundle {
                     style: Style {
                         // Take the size of the parent node.
-                        position_type: PositionType::Relative,
-                        margin: UiRect {
-                            left: Val::Auto, // aligns it to right
-                            ..Default::default()
-                        },
+                        position_type: PositionType::Absolute,
+                        right: Val::Px(0.0), // aligns it to right
                         width: Val::Px(15.0),
                         height: Val::Percent(100.0),
                         flex_direction: FlexDirection::Column,

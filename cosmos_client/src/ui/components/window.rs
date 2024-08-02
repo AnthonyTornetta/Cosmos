@@ -42,6 +42,11 @@ pub struct GuiWindow {
     pub body_styles: Style,
 }
 
+impl GuiWindow {
+    /// The height of a window's title bar
+    pub const TITLE_BAR_HEIGHT_PX: f32 = 60.0;
+}
+
 #[derive(Bundle, Debug, Default)]
 /// A wrapper around ui components that will make them movable and have a title bar with a close button.
 pub struct WindowBundle {
@@ -76,7 +81,7 @@ struct TitleBar {
 
 fn add_window(
     mut commands: Commands,
-    mut q_added_window: Query<(Entity, &GuiWindow, &Children, &mut Style), Added<GuiWindow>>,
+    mut q_added_window: Query<(Entity, &GuiWindow, Option<&Children>, &mut Style), Added<GuiWindow>>,
     asset_server: Res<AssetServer>,
 ) {
     for (ent, window, children, mut style) in &mut q_added_window {
@@ -181,9 +186,11 @@ fn add_window(
             );
         });
 
-        let window_body = window_body.expect("Set above");
-        for &child in children {
-            commands.entity(child).set_parent(window_body);
+        if let Some(children) = children {
+            let window_body = window_body.expect("Set above");
+            for &child in children {
+                commands.entity(child).set_parent(window_body);
+            }
         }
     }
 }
@@ -239,8 +246,11 @@ fn close_event_listener(mut commands: Commands, q_close_button: Query<&CloseButt
 }
 
 #[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
-enum UiWindowSystemSet {
+/// UI Window system set
+pub enum UiWindowSystemSet {
+    /// Creates the window
     CreateWindow,
+    /// Events such as closing and moving the window are performed
     SendWindowEvents,
 }
 

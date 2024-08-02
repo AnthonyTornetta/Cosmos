@@ -18,7 +18,10 @@ use cosmos_core::{
 use crate::{
     asset::{
         asset_loading::{BlockNeighbors, BlockTextureIndex, CosmosTextureAtlas, ItemTextureIndex},
-        materials::{AddMaterialEvent, BlockMaterialMapping, ItemMaterialMapping, MaterialDefinition, MaterialType, MaterialsSystemSet},
+        materials::{
+            AddMaterialEvent, BlockMaterialMapping, ItemMaterialMapping, MaterialDefinition, MaterialType, MaterialsSystemSet,
+            RemoveAllMaterialsEvent,
+        },
         texture_atlas::SquareTextureAtlas,
     },
     item::item_mesh::create_item_mesh,
@@ -26,16 +29,14 @@ use crate::{
     state::game_state::GameState,
 };
 
-use super::{UiSystemSet, UiTopRoot};
+use super::{UiMiddleRoot, UiSystemSet, UiTopRoot};
 
-const INVENTORY_SLOT_LAYER: usize = 0b1;
-
-#[derive(Component)]
-struct UICamera;
+const INVENTORY_SLOT_LAYER: usize = 0b01;
+const MIDDLE_INVENTORY_SLOT_LAYER: usize = 0b10;
 
 fn create_ui_camera(mut commands: Commands) {
     commands.spawn((
-        Name::new("UI Camera"),
+        Name::new("UI Top Camera"),
         UiTopRoot,
         Camera3dBundle {
             projection: Projection::Orthographic(OrthographicProjection {
@@ -44,16 +45,36 @@ fn create_ui_camera(mut commands: Commands) {
             }),
             camera_3d: Camera3d::default(),
             camera: Camera {
-                order: 1,
-                clear_color: ClearColorConfig::None,
-                hdr: true, // this has to be true or the camera doesn't render over the main one correctly.
+                order: 2,
+                clear_color: ClearColorConfig::Custom(Color::NONE),
+                hdr: true, // Transparent stuff fails to render properly if this is off - this may be a bevy bug?
                 ..Default::default()
             },
             transform: Transform::from_xyz(0.0, 0.0, 1.0).looking_at(Vec3::ZERO, Vec3::Y),
             ..Default::default()
         },
-        UICamera,
         RenderLayers::from_layers(&[INVENTORY_SLOT_LAYER]),
+    ));
+
+    commands.spawn((
+        Name::new("UI Middle Camera"),
+        UiMiddleRoot,
+        Camera3dBundle {
+            projection: Projection::Orthographic(OrthographicProjection {
+                scaling_mode: ScalingMode::WindowSize(40.0),
+                ..Default::default()
+            }),
+            camera_3d: Camera3d::default(),
+            camera: Camera {
+                order: 1,
+                clear_color: ClearColorConfig::Custom(Color::NONE),
+                hdr: true, // Transparent stuff fails to render properly if this is off - this may be a bevy bug?
+                ..Default::default()
+            },
+            transform: Transform::from_xyz(0.0, 0.0, 1.0).looking_at(Vec3::ZERO, Vec3::Y),
+            ..Default::default()
+        },
+        RenderLayers::from_layers(&[MIDDLE_INVENTORY_SLOT_LAYER]),
     ));
 }
 
@@ -64,6 +85,20 @@ pub struct RenderItem {
     pub item_id: u16,
 }
 
+#[derive(Eq, PartialEq, Default, Component, Debug, Clone, Copy, Reflect)]
+/// For advanced item rendering, it may be required to have some UI elements behind it, and others in front of it.
+pub enum ItemRenderLayer {
+    #[default]
+    /// The item should be rendered on the top-most item layer.
+    ///
+    /// Only UI elements targetting the [`UiTopRoot`] entity will be rendered over this.
+    Top,
+    /// The item will be rendered in the middle layer.
+    ///
+    /// All UI elements placed in the [`UiMiddleRoot`] and higher and anything rendered in higher order cameras will render over this.
+    Middle,
+}
+
 #[derive(Debug, Component, Reflect)]
 /// Represents an item that is currently rendered to the screen (in a UI).
 pub struct RenderedItem {
@@ -71,6 +106,40 @@ pub struct RenderedItem {
     ui_element_entity: Entity,
     item_id: u16,
     based_off: Vec3,
+}
+
+fn change_item_visibility(
+    q_rendered_items: Query<(Entity, &RenderedItem)>,
+    mut q_visibility: Query<(&mut Visibility, &mut ViewVisibility), With<RenderedItem>>,
+    q_changed_view_visibility: Query<
+        (Entity, &ViewVisibility, &Visibility),
+        (
+            Or<(Changed<ViewVisibility>, Changed<Visibility>)>,
+            Without<RenderedItem>,
+            With<RenderItem>,
+        ),
+    >,
+) {
+    for (entity, view_visibility, actual_vis) in &q_changed_view_visibility {
+        let Some(rendered_item) = q_rendered_items
+            .iter()
+            .find(|(_, rendered_item)| rendered_item.ui_element_entity == entity)
+        else {
+            continue;
+        };
+
+        let rendered_item = rendered_item.0;
+
+        let (mut cur_vis, mut vv) = q_visibility.get_mut(rendered_item).expect("Rendered item has no visibility - BAD!");
+
+        if view_visibility.get() && actual_vis != Visibility::Hidden {
+            *cur_vis = Visibility::Inherited;
+            vv.set(); // sets it to visible
+        } else {
+            *cur_vis = Visibility::Hidden;
+            *vv = ViewVisibility::HIDDEN;
+        }
+    }
 }
 
 fn render_items(
@@ -86,13 +155,25 @@ fn render_items(
     block_meshes: Res<BlockMeshRegistry>,
     images: Res<Assets<Image>>,
 
-    (mut q_transform, mut removed_render_items, changed_render_items, rendered_items, material_definitions_registry, mut event_writer): (
+    (
+        mut q_transform,
+        mut removed_render_items,
+        changed_render_items,
+        rendered_items,
+        material_definitions_registry,
+        mut event_writer,
+        mut evw_remove_materials,
+    ): (
         Query<&mut Transform>,
         RemovedComponents<RenderItem>,
-        Query<(Entity, &RenderItem, &GlobalTransform), Or<(Changed<RenderItem>, Changed<GlobalTransform>)>>,
+        Query<
+            (Entity, &RenderItem, &GlobalTransform, Option<&ItemRenderLayer>),
+            Or<(Changed<RenderItem>, Changed<ItemRenderLayer>, Changed<GlobalTransform>)>,
+        >,
         Query<(Entity, &RenderedItem)>,
         Res<Registry<MaterialDefinition>>,
         EventWriter<AddMaterialEvent>,
+        EventWriter<RemoveAllMaterialsEvent>,
     ),
 
     item_materials_registry: Res<ManyToOneRegistry<Item, ItemMaterialMapping>>,
@@ -110,7 +191,7 @@ fn render_items(
         }
     }
 
-    for (entity, changed_render_item, transform) in changed_render_items.iter() {
+    for (entity, changed_render_item, transform, render_layer) in changed_render_items.iter() {
         let translation = transform.translation();
 
         let item = items.from_numeric_id(changed_render_item.item_id);
@@ -121,6 +202,7 @@ fn render_items(
         {
             if rendered_item.item_id == changed_render_item.item_id {
                 // We're already displaying that item, no need to recalculate everything
+
                 continue;
             }
 
@@ -150,6 +232,14 @@ fn render_items(
                 .id()
         };
 
+        let render_layer = match render_layer {
+            Some(ItemRenderLayer::Top) | None => INVENTORY_SLOT_LAYER,
+            Some(ItemRenderLayer::Middle) => MIDDLE_INVENTORY_SLOT_LAYER,
+        };
+
+        // Clear out any materials that were previously on this entity from previous renders
+        evw_remove_materials.send(RemoveAllMaterialsEvent { entity: to_create });
+
         if !generate_block_item_model(
             item,
             to_create,
@@ -165,6 +255,7 @@ fn render_items(
             &block_meshes,
             &material_definitions_registry,
             &mut event_writer,
+            render_layer,
         ) {
             generate_item_model(
                 item,
@@ -180,6 +271,7 @@ fn render_items(
                 &item_textures,
                 &material_definitions_registry,
                 &mut event_writer,
+                render_layer,
             );
         }
     }
@@ -199,6 +291,7 @@ fn generate_item_model(
     item_textures: &Registry<ItemTextureIndex>,
     material_definitions_registry: &Registry<MaterialDefinition>,
     event_writer: &mut EventWriter<AddMaterialEvent>,
+    render_layer: usize,
 ) {
     let size = 0.8;
 
@@ -239,7 +332,7 @@ fn generate_item_model(
             item_id: changed_render_item.item_id,
         },
         mesh_handle,
-        RenderLayers::from_layers(&[INVENTORY_SLOT_LAYER]),
+        RenderLayers::from_layers(&[render_layer]),
         Name::new(format!("Rendered Inventory Item ({})", changed_render_item.item_id)),
     ));
 
@@ -266,6 +359,7 @@ fn generate_block_item_model(
     block_meshes: &BlockMeshRegistry,
     material_definitions_registry: &Registry<MaterialDefinition>,
     event_writer: &mut EventWriter<AddMaterialEvent>,
+    render_layer: usize,
 ) -> bool {
     let size = 0.8;
 
@@ -351,7 +445,7 @@ fn generate_block_item_model(
             item_id: changed_render_item.item_id,
         },
         meshes.add(mesh_builder.build_mesh()),
-        RenderLayers::from_layers(&[INVENTORY_SLOT_LAYER]),
+        RenderLayers::from_layers(&[render_layer]),
         Name::new(format!("Rendered Inventory Item ({})", changed_render_item.item_id)),
     ));
 
@@ -435,12 +529,18 @@ pub(super) fn register(app: &mut App) {
     )
     .add_systems(
         Update,
-        ((update_rendered_items_transforms, reposition_ui_items, render_items)
+        ((
+            update_rendered_items_transforms,
+            reposition_ui_items,
+            render_items,
+            change_item_visibility,
+        )
             .chain()
             .in_set(RenderItemSystemSet::RenderItems),),
     );
 
     app.add_systems(OnEnter(GameState::Playing), create_ui_camera)
         .register_type::<RenderItem>()
-        .register_type::<RenderedItem>();
+        .register_type::<RenderedItem>()
+        .register_type::<ItemRenderLayer>();
 }
