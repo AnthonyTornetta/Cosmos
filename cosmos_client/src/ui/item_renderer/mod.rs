@@ -111,8 +111,14 @@ pub struct RenderedItem {
 fn change_item_visibility(
     q_rendered_items: Query<(Entity, &RenderedItem)>,
     mut q_visibility: Query<(&mut Visibility, &mut ViewVisibility), With<RenderedItem>>,
-    // Change detection actually breaks this =D
-    q_changed_view_visibility: Query<(Entity, &ViewVisibility, &Visibility), (Without<RenderedItem>, With<RenderItem>)>,
+    q_changed_view_visibility: Query<
+        (Entity, &ViewVisibility, &Visibility),
+        (
+            Or<(Changed<ViewVisibility>, Changed<Visibility>)>,
+            Without<RenderedItem>,
+            With<RenderItem>,
+        ),
+    >,
 ) {
     for (entity, view_visibility, actual_vis) in &q_changed_view_visibility {
         let Some(rendered_item) = q_rendered_items
