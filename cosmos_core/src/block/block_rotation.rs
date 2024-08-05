@@ -150,11 +150,11 @@ impl BlockRotation {
     pub fn face_front(front_face_pointing: BlockDirection) -> Self {
         match front_face_pointing {
             BlockDirection::NegZ => Self::new(BlockFace::Top, BlockSubRotation::None),
-            BlockDirection::NegX => Self::new(BlockFace::Top, BlockSubRotation::CW),
             BlockDirection::PosZ => Self::new(BlockFace::Top, BlockSubRotation::Flip),
-            BlockDirection::PosX => Self::new(BlockFace::Top, BlockSubRotation::CCW),
-            BlockDirection::PosY => Self::new(BlockFace::Front, BlockSubRotation::None),
+            BlockDirection::NegX => Self::new(BlockFace::Top, BlockSubRotation::CCW),
+            BlockDirection::PosX => Self::new(BlockFace::Top, BlockSubRotation::CW),
             BlockDirection::NegY => Self::new(BlockFace::Back, BlockSubRotation::None),
+            BlockDirection::PosY => Self::new(BlockFace::Front, BlockSubRotation::None),
         }
     }
 

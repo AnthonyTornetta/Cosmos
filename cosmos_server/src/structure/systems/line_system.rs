@@ -160,7 +160,7 @@ fn add_colors(mut colors: ResMut<Registry<LineColorBlock>>, blocks: Res<Registry
 
 impl<T: LineProperty, S: LinePropertyCalculator<T>> BlockStructureSystem<T> for LineSystem<T, S> {
     fn add_block(&mut self, block: &StructureBlock, block_rotation: BlockRotation, prop: &T) {
-        let block_direction = block_rotation.direction_of(BlockFace::Back);
+        let block_direction = block_rotation.direction_of(BlockFace::Front);
 
         let mut found_line = None;
         // If a structure has two lines like this: (XXXXX XXXXXX) and an X is placed
@@ -171,22 +171,22 @@ impl<T: LineProperty, S: LinePropertyCalculator<T>> BlockStructureSystem<T> for 
         let mut link_to = None;
 
         for (i, line) in self.lines.iter_mut().filter(|x| x.direction == block_direction).enumerate() {
-            let d = block_direction.to_coordinates();
+            let delta = block_direction.to_coordinates();
 
             let start: UnboundBlockCoordinate = line.start.coords().into();
 
             let block: UnboundBlockCoordinate = block.coords().into();
 
             // Block is before start
-            if start.x - d.x == block.x && start.y - d.y == block.y && start.z - d.z == block.z {
+            if start.x - delta.x == block.x && start.y - delta.y == block.y && start.z - delta.z == block.z {
                 if found_line.is_some() {
                     link_to = Some(i);
                     break;
                 } else {
                     // This should always be >= 0 because a block cannot placed at negative coordinates
-                    line.start.x = (start.x - d.x) as CoordinateType;
-                    line.start.y = (start.y - d.y) as CoordinateType;
-                    line.start.z = (start.z - d.z) as CoordinateType;
+                    line.start.x = (start.x - delta.x) as CoordinateType;
+                    line.start.y = (start.y - delta.y) as CoordinateType;
+                    line.start.z = (start.z - delta.z) as CoordinateType;
                     line.len += 1;
                     line.properties.insert(0, *prop);
                     line.property = S::calculate_property(&line.properties);
@@ -195,9 +195,9 @@ impl<T: LineProperty, S: LinePropertyCalculator<T>> BlockStructureSystem<T> for 
                 }
             }
             // Block is after end
-            else if start.x + d.x * (line.len as UnboundCoordinateType) == block.x
-                && start.y + d.y * (line.len as UnboundCoordinateType) == block.y
-                && start.z + d.z * (line.len as UnboundCoordinateType) == block.z
+            else if start.x + delta.x * (line.len as UnboundCoordinateType) == block.x
+                && start.y + delta.y * (line.len as UnboundCoordinateType) == block.y
+                && start.z + delta.z * (line.len as UnboundCoordinateType) == block.z
             {
                 if found_line.is_some() {
                     link_to = Some(i);
