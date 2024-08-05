@@ -193,16 +193,21 @@ fn adjust_camera(
 
     let local_pos = structure.block_relative_position(cam_block_coords);
 
-    let forward = match selected_camera {
-        SelectedCamera::ShipCore => Vec3::NEG_Z, // The ship core's forward face does not represent the looking direction
-        SelectedCamera::Camera(_) => structure.block_rotation(cam_block_coords).as_quat().mul_vec3(Vec3::Z),
-    }
-    .normalize();
+    let forward = Vec3::NEG_Z;
+
+    let (forward, up) = match selected_camera {
+        SelectedCamera::ShipCore => (forward, Vec3::Y),
+        SelectedCamera::Camera(_) => {
+            let quat = structure.block_rotation(cam_block_coords).as_quat();
+
+            (quat.mul_vec3(forward), quat.mul_vec3(Vec3::Y))
+        }
+    };
 
     let offset = cam_offset.0 - Vec3::splat(0.5);
 
     main_cam_trans.translation = local_pos + offset;
-    *main_cam_trans = main_cam_trans.looking_to(forward, Vec3::Y);
+    *main_cam_trans = main_cam_trans.looking_to(forward.normalize(), up.normalize());
 }
 
 fn on_stop_piloting(
