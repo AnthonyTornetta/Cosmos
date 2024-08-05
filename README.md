@@ -73,8 +73,8 @@ See [the issues page](https://github.com/AnthonyTornetta/Cosmos/issues) for the 
   - [x] Emit a spherical shield
     - [x] Shield size based on multiblock structure
   - [x] Absorb incoming damage
-- [ ] Inventory UI improvements
-  - [ ] Scrollable inventory
+- [x] Inventory UI improvements
+  - [x] Scrollable inventory
   - [ ] An interface into all the storage devices connected to it?
 - [ ] Escape functionality
   - [ ] Escape can now be used to close the foremost open UI menus
@@ -88,11 +88,10 @@ See [the issues page](https://github.com/AnthonyTornetta/Cosmos/issues) for the 
   - [x] Storable fluids
 - [x] Item data
 - [x] Money
-- [ ] In-flight UI
+- [x] In-flight UI
   - [x] Weapons selection hotbar
   - [x] Speed display
   - [x] Energy display
-  - [ ] Critical information alerts
   - [x] A way of selecting which systems to use preventing use of systems that are not meant to be actively used
 - [ ] Wires
   - [ ] Electrical
