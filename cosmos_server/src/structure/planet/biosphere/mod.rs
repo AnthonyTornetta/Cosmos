@@ -95,14 +95,6 @@ pub trait TGenerateChunkEvent: Event {
     fn get_chunk_coordinates(&self) -> ChunkCoordinate;
 }
 
-/// This has to be redone.
-pub trait TBiosphere<T: BiosphereMarkerComponent, E: TGenerateChunkEvent> {
-    /// Gets the marker component used to flag this planet's type
-    fn get_marker_component(&self) -> T;
-    /// Gets a component for this specific generate chunk event
-    fn get_generate_chunk_event(&self, coords: ChunkCoordinate, structure_entity: Entity) -> E;
-}
-
 #[derive(Debug)]
 /// Use this to asynchronously generate chunks
 pub struct GeneratingChunk<T: BiosphereMarkerComponent> {
