@@ -21,6 +21,7 @@ pub mod main_menu;
 pub mod message;
 pub mod pause;
 pub mod reactivity;
+pub mod settings;
 pub mod ship_flight;
 
 #[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
@@ -80,6 +81,7 @@ pub(super) fn register(app: &mut App) {
     main_menu::register(app);
     hud::register(app);
     pause::register(app);
+    settings::register(app);
 
     app.configure_sets(Update, (UiSystemSet::PreDoUi, UiSystemSet::DoUi, UiSystemSet::FinishUi).chain());
 
