@@ -5,12 +5,6 @@ use bevy::{
     prelude::*,
     window::{CursorGrabMode, PrimaryWindow, WindowFocused},
 };
-use cosmos_core::ecs::NeedsDespawned;
-
-use crate::{
-    input::inputs::{CosmosInputs, InputChecker, InputHandler},
-    ui::components::show_cursor::ShowCursor,
-};
 
 #[derive(Resource, Copy, Clone)]
 /// Resource containing the various flags about the cursor, like if it's hidden or not
@@ -76,19 +70,6 @@ fn update_mouse_deltas(mut delta: ResMut<DeltaCursorPosition>, mut ev_mouse_moti
     }
 }
 
-#[derive(Component)]
-struct CursorUnlocker;
-
-fn toggle_mouse_freeze(mut commands: Commands, q_cursor_unlocked: Query<Entity, With<CursorUnlocker>>, input_handler: InputChecker) {
-    if input_handler.check_just_pressed(CosmosInputs::UnlockMouse) {
-        if let Ok(ent) = q_cursor_unlocked.get_single() {
-            commands.entity(ent).insert(NeedsDespawned);
-        } else {
-            commands.spawn((Name::new("Cursor Unlocker"), CursorUnlocker, ShowCursor));
-        }
-    }
-}
-
 fn window_focus_changed(
     mut primary_query: Query<(Entity, &mut Window), With<PrimaryWindow>>,
     mut ev_focus: EventReader<WindowFocused>,
@@ -149,7 +130,6 @@ pub(super) fn register(app: &mut App) {
         Update,
         (
             update_mouse_deltas,
-            toggle_mouse_freeze,
             window_focus_changed,
             apply_cursor_flags_on_change.in_set(CursorFlagsSet::UpdateCursorFlags),
         )

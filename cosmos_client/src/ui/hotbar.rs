@@ -18,7 +18,7 @@ use crate::{
     structure::ship::ui::system_selection::SystemSelectionSet,
 };
 
-use super::{components::show_cursor::no_open_menus, item_renderer::RenderItem};
+use super::{components::show_cursor::no_open_menus, item_renderer::RenderItem, UiRoot};
 
 const ITEM_NAME_FADE_DURATION_SEC: f32 = 5.0;
 
@@ -312,20 +312,26 @@ fn listen_for_change_events(
     }
 }
 
-fn add_item_text(mut commands: Commands, asset_server: Res<AssetServer>) {
+fn add_item_text(mut commands: Commands, q_target_camera: Query<Entity, With<UiRoot>>, asset_server: Res<AssetServer>) {
+    let target_cam = q_target_camera.single();
+
     commands
-        .spawn(NodeBundle {
-            style: Style {
-                position_type: PositionType::Absolute,
-                display: Display::Flex,
-                justify_content: JustifyContent::Center,
-                align_items: AlignItems::FlexEnd,
-                width: Val::Percent(100.0),
-                height: Val::Percent(100.0),
+        .spawn((
+            Name::new("Item hotbar text"),
+            TargetCamera(target_cam),
+            NodeBundle {
+                style: Style {
+                    position_type: PositionType::Absolute,
+                    display: Display::Flex,
+                    justify_content: JustifyContent::Center,
+                    align_items: AlignItems::FlexEnd,
+                    width: Val::Percent(100.0),
+                    height: Val::Percent(100.0),
+                    ..default()
+                },
                 ..default()
             },
-            ..default()
-        })
+        ))
         .with_children(|parent| {
             parent
                 .spawn(TextBundle {
@@ -388,9 +394,12 @@ fn populate_hotbar(
     }
 }
 
-fn add_hotbar(mut commands: Commands, asset_server: Res<AssetServer>) {
+fn add_hotbar(mut commands: Commands, q_target_camera: Query<Entity, With<UiRoot>>, asset_server: Res<AssetServer>) {
+    let target_cam = q_target_camera.single();
+
     commands
         .spawn((
+            TargetCamera(target_cam),
             NodeBundle {
                 style: Style {
                     position_type: PositionType::Absolute,

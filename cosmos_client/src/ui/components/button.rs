@@ -55,7 +55,7 @@ pub struct Button<T: ButtonEvent> {
     pub image: Option<UiImage>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 /// Out-of-the-box color changing for the different
 /// states a button can be in.
 pub struct ButtonStyles {

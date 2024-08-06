@@ -47,7 +47,7 @@ fn create_ui_camera(mut commands: Commands) {
             camera: Camera {
                 order: 2,
                 clear_color: ClearColorConfig::Custom(Color::NONE),
-                hdr: true, // Transparent stuff fails to render properly if this is off - this may be a bevy bug?
+                hdr: false,
                 ..Default::default()
             },
             transform: Transform::from_xyz(0.0, 0.0, 1.0).looking_at(Vec3::ZERO, Vec3::Y),
