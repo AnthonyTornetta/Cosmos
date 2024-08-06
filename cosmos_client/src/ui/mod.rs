@@ -60,10 +60,20 @@ pub struct OpenMenu {
 }
 
 impl OpenMenu {
+    /// Creates an open menu with this "level" of being above every other menu.
+    ///
+    /// This doesn't effect rendering order, rather effects which menu the "Escape" button will target first.
+    /// Menus of the same level will all be closed together. Each escape press will remove the highest-level group of menus.
+    pub fn new(level: u32) -> Self {
+        Self { level }
+    }
+
+    /// Sets the level for this menu
     pub fn set_level(&mut self, level: u32) {
         self.level = level;
     }
 
+    /// Gets the level for this menu
     pub fn level(&self) -> u32 {
         self.level
     }

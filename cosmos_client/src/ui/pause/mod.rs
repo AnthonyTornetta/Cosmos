@@ -6,9 +6,11 @@ use bevy::{
     prelude::*,
 };
 use cosmos_core::ecs::NeedsDespawned;
+use renet2::RenetClient;
 
 use crate::{
     input::inputs::{CosmosInputs, InputChecker, InputHandler},
+    state::game_state::GameState,
     window::setup::CursorFlagsSet,
 };
 
@@ -17,7 +19,8 @@ use super::{
         button::{register_button, Button, ButtonBundle, ButtonEvent, ButtonStyles},
         show_cursor::ShowCursor,
     },
-    OpenMenu, UiTopRoot,
+    settings::{NeedsSettingsAdded, SettingsCancelButtonEvent, SettingsDoneButtonEvent, SettingsMenuSet},
+    OpenMenu, UiSystemSet, UiTopRoot,
 };
 
 #[derive(Resource)]
@@ -30,7 +33,7 @@ struct PauseMenu;
 fn toggle_pause_menu(
     mut commands: Commands,
     q_open_menus: Query<(Entity, &OpenMenu)>,
-    q_cursor_unlocked: Query<Entity, With<PauseMenu>>,
+    q_pause_menu: Query<Entity, With<PauseMenu>>,
     input_handler: InputChecker,
     q_ui_root: Query<Entity, With<UiTopRoot>>,
     asset_server: Res<AssetServer>,
@@ -40,11 +43,15 @@ fn toggle_pause_menu(
     }
 
     if !q_open_menus.is_empty() {
-        close_topmost_menus(&q_open_menus, &mut commands);
+        if close_topmost_menus(&q_open_menus, &mut commands) {
+            if let Ok(ent) = q_pause_menu.get_single() {
+                commands.entity(ent).insert(Visibility::Visible);
+            }
+        }
         return;
     }
 
-    if let Ok(ent) = q_cursor_unlocked.get_single() {
+    if let Ok(ent) = q_pause_menu.get_single() {
         commands.entity(ent).insert(NeedsDespawned);
         commands.remove_resource::<Paused>();
         return;
@@ -171,16 +178,83 @@ impl ButtonEvent for DisconnectButtonEvent {
     }
 }
 
-fn close_topmost_menus(q_open_menus: &Query<(Entity, &OpenMenu)>, commands: &mut Commands) {
+fn close_topmost_menus(q_open_menus: &Query<(Entity, &OpenMenu)>, commands: &mut Commands) -> bool {
     let mut open = q_open_menus.iter().collect::<Vec<(Entity, &OpenMenu)>>();
     open.sort_by(|a, b| b.1.level().cmp(&a.1.level()));
     let topmost = open[0].1.level();
     for (ent, open_menu) in open.iter() {
         if open_menu.level() != topmost {
-            break;
+            return false;
         }
         commands.entity(*ent).insert(NeedsDespawned);
     }
+
+    return true;
+}
+
+#[derive(Component)]
+struct PauseMenuSettingsMenu;
+
+fn settings_clicked(
+    mut commands: Commands,
+    q_target_camera: Query<Entity, With<UiTopRoot>>,
+    mut q_pause_menu: Query<&mut Visibility, With<PauseMenu>>,
+) {
+    if let Ok(mut vis) = q_pause_menu.get_single_mut() {
+        *vis = Visibility::Hidden;
+    }
+
+    let ui_root = q_target_camera.single();
+
+    commands.spawn((
+        TargetCamera(ui_root),
+        Name::new("Pause Menu Settings"),
+        NodeBundle {
+            style: Style {
+                width: Val::Percent(100.0),
+                height: Val::Percent(100.0),
+                ..Default::default()
+            },
+            background_color: Srgba {
+                red: 0.0,
+                green: 0.0,
+                blue: 0.0,
+                alpha: 0.3,
+            }
+            .into(),
+            z_index: ZIndex::Global(101),
+            ..Default::default()
+        },
+        OpenMenu::new(1),
+        NeedsSettingsAdded,
+        PauseMenuSettingsMenu,
+    ));
+}
+
+fn settings_done(
+    mut commands: Commands,
+    q_settings_menu: Query<Entity, With<PauseMenuSettingsMenu>>,
+    mut q_pause_visibility: Query<&mut Visibility, With<PauseMenu>>,
+) {
+    for ent in q_settings_menu.iter() {
+        commands.entity(ent).insert(NeedsDespawned);
+    }
+
+    for mut vis in q_pause_visibility.iter_mut() {
+        *vis = Visibility::default();
+    }
+}
+
+fn disconnect_clicked(mut client: ResMut<RenetClient>) {
+    client.disconnect();
+}
+
+fn resume(mut commands: Commands, q_pause_menu: Query<Entity, With<PauseMenu>>) {
+    if let Ok(pause_ent) = q_pause_menu.get_single() {
+        commands.entity(pause_ent).insert(NeedsDespawned);
+    }
+
+    commands.remove_resource::<Paused>();
 }
 
 pub(super) fn register(app: &mut App) {
@@ -188,5 +262,26 @@ pub(super) fn register(app: &mut App) {
     register_button::<DisconnectButtonEvent>(app);
     register_button::<SettingsButtonEvent>(app);
 
-    app.add_systems(Update, toggle_pause_menu.before(CursorFlagsSet::UpdateCursorFlags));
+    app.add_systems(
+        Update,
+        (
+            toggle_pause_menu,
+            settings_clicked.run_if(on_event::<SettingsButtonEvent>()).after(UiSystemSet::DoUi),
+        )
+            .chain()
+            .run_if(in_state(GameState::Playing))
+            .before(CursorFlagsSet::UpdateCursorFlags),
+    )
+    .add_systems(
+        Update,
+        (
+            settings_done
+                .run_if(on_event::<SettingsDoneButtonEvent>().or_else(on_event::<SettingsCancelButtonEvent>()))
+                .after(SettingsMenuSet::SettingsMenuInteractions),
+            resume.run_if(on_event::<ResumeButtonEvent>()).after(UiSystemSet::DoUi),
+            disconnect_clicked
+                .run_if(on_event::<DisconnectButtonEvent>())
+                .after(UiSystemSet::DoUi),
+        ),
+    );
 }

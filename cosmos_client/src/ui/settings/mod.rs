@@ -1,3 +1,5 @@
+//! Handles the rendering of the settings UI
+
 use bevy::{prelude::*, utils::hashbrown::HashMap};
 use cosmos_core::registry::{identifiable::Identifiable, Registry};
 
@@ -14,7 +16,7 @@ use crate::{
     },
 };
 
-use super::{components::button::register_button, reactivity::add_reactable_type};
+use super::{components::button::register_button, reactivity::add_reactable_type, UiSystemSet};
 
 #[derive(Component)]
 /// Add this to a UI NodeBundle when you need a settings screen added to it
@@ -45,6 +47,7 @@ fn create_settings_screen(
     q_ui_root: Query<Entity, (Without<SettingsMenu>, With<NeedsSettingsAdded>)>,
     settings: Res<Registry<Setting>>,
     lang: Res<Lang<Setting>>,
+    mut q_style: Query<&mut Style, With<NeedsSettingsAdded>>,
 ) {
     let Ok(main_menu_root) = q_ui_root.get_single() else {
         return;
@@ -67,6 +70,11 @@ fn create_settings_screen(
         font_size: 24.0,
         font: asset_server.load("fonts/PixeloidSans.ttf"),
     };
+
+    q_style
+        .get_mut(main_menu_root)
+        .expect("Attempted to insert settings menu into non-UI element")
+        .flex_direction = FlexDirection::Column;
 
     commands.entity(main_menu_root).insert(SettingsMenu).with_children(|p| {
         p.spawn(TextBundle {
@@ -263,6 +271,25 @@ fn create_settings_screen(
     });
 }
 
+fn done_clicked(mut settings: ResMut<Registry<Setting>>, q_written_settings: Query<&WrittenSetting>) {
+    for written_setting in q_written_settings.iter() {
+        let setting = settings.from_numeric_id_mut(written_setting.setting_id);
+
+        match setting.data {
+            SettingData::F32(_) => {
+                let Ok(parsed) = written_setting.value.parse::<f32>() else {
+                    continue;
+                };
+
+                setting.data = SettingData::F32(parsed);
+            }
+            SettingData::String(_) => {
+                setting.data = SettingData::String(written_setting.value.clone());
+            }
+        }
+    }
+}
+
 #[derive(Event, Debug)]
 /// The cancel button was clicked on the settings menu
 ///
@@ -298,5 +325,15 @@ pub(super) fn register(app: &mut App) {
 
     add_reactable_type::<WrittenSetting>(app);
 
-    app.add_systems(Update, create_settings_screen.before(SettingsMenuSet::SettingsMenuInteractions));
+    app.add_systems(
+        Update,
+        (
+            create_settings_screen
+                .in_set(UiSystemSet::DoUi)
+                .before(SettingsMenuSet::SettingsMenuInteractions),
+            done_clicked
+                .run_if(on_event::<SettingsDoneButtonEvent>())
+                .in_set(SettingsMenuSet::SettingsMenuInteractions),
+        ),
+    );
 }
