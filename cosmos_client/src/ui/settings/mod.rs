@@ -5,7 +5,7 @@ use cosmos_core::registry::{identifiable::Identifiable, Registry};
 
 use crate::{
     lang::Lang,
-    settings::{Setting, SettingCategory, SettingData},
+    settings::{Setting, SettingCategory, SettingConstraint, SettingData},
     ui::{
         components::{
             button::{Button, ButtonBundle, ButtonEvent, ButtonStyles},
@@ -16,13 +16,20 @@ use crate::{
     },
 };
 
-use super::{components::button::register_button, reactivity::add_reactable_type, UiSystemSet};
+use super::{
+    components::{
+        button::register_button,
+        slider::{Slider, SliderBundle, SliderValue},
+    },
+    reactivity::add_reactable_type,
+    UiSystemSet,
+};
 
 #[derive(Component)]
 /// Add this to a UI NodeBundle when you need a settings screen added to it
 pub struct NeedsSettingsAdded;
 
-#[derive(Debug, Clone, PartialEq, Eq, Component)]
+#[derive(Debug, Reflect, Clone, PartialEq, Eq, Component)]
 struct WrittenSetting {
     value: String,
     setting_id: u16,
@@ -146,7 +153,7 @@ fn create_settings_screen(
                     })
                     .with_children(|p| {
                         let input_value = match &setting.data {
-                            SettingData::F32(f) => format!("{f}"),
+                            SettingData::I32(f) => format!("{f}"),
                             SettingData::String(s) => s.to_owned(),
                         };
 
@@ -168,40 +175,92 @@ fn create_settings_screen(
                             ))
                             .id();
 
-                        p.spawn((
-                            BindValues::single(BindValue::<WrittenSetting>::new(data_ent, ReactableFields::Value)),
-                            TextInputBundle {
-                                text_input: TextInput {
-                                    style: text_style_small.clone(),
-                                    input_type: match &setting.data {
-                                        SettingData::F32(_) => InputType::Decimal {
-                                            min: f64::MIN,
-                                            max: f64::MAX,
-                                        },
-                                        SettingData::String(_) => InputType::Text { max_length: None },
-                                    },
-                                    ..Default::default()
-                                },
-                                value: InputValue::new(input_value),
-                                node_bundle: NodeBundle {
-                                    border_color: Srgba::hex("555555").unwrap().into(),
-                                    background_color: Srgba::hex("111111").unwrap().into(),
-                                    style: Style {
-                                        border: UiRect::all(Val::Px(2.0)),
-                                        width: Val::Px(150.0),
-                                        height: Val::Px(45.0),
-                                        align_self: AlignSelf::Center,
-                                        padding: UiRect {
-                                            top: Val::Px(4.0),
-                                            bottom: Val::Px(4.0),
+                        match setting.constraint {
+                            None => {
+                                p.spawn((
+                                    BindValues::single(BindValue::<WrittenSetting>::new(data_ent, ReactableFields::Value)),
+                                    TextInputBundle {
+                                        text_input: TextInput {
+                                            style: text_style_small.clone(),
+                                            input_type: match &setting.data {
+                                                SettingData::I32(_) => InputType::Integer {
+                                                    min: i32::MIN as i64,
+                                                    max: i32::MAX as i64,
+                                                },
+                                                SettingData::String(_) => InputType::Text { max_length: None },
+                                            },
                                             ..Default::default()
                                         },
+                                        value: InputValue::new(input_value),
+                                        node_bundle: NodeBundle {
+                                            border_color: Srgba::hex("555555").unwrap().into(),
+                                            background_color: Srgba::hex("111111").unwrap().into(),
+                                            style: Style {
+                                                border: UiRect::all(Val::Px(2.0)),
+                                                width: Val::Px(150.0),
+                                                height: Val::Px(45.0),
+                                                align_self: AlignSelf::Center,
+                                                padding: UiRect {
+                                                    top: Val::Px(4.0),
+                                                    bottom: Val::Px(4.0),
+                                                    ..Default::default()
+                                                },
+                                                ..Default::default()
+                                            },
+                                            ..Default::default()
+                                        },
+                                    },
+                                ));
+                            }
+                            Some(SettingConstraint::I32 { min, max }) => {
+                                let SettingData::I32(value) = setting.data else {
+                                    panic!("Cannot have f32 constraint for non-f32 value!");
+                                };
+
+                                p.spawn(NodeBundle {
+                                    style: Style {
+                                        width: Val::Px(300.0),
+                                        justify_content: JustifyContent::SpaceBetween,
                                         ..Default::default()
                                     },
                                     ..Default::default()
-                                },
-                            },
-                        ));
+                                })
+                                .with_children(|p| {
+                                    p.spawn((
+                                        BindValues::single(BindValue::<WrittenSetting>::new(data_ent, ReactableFields::Value)),
+                                        SliderBundle {
+                                            slider_value: SliderValue::new(value as i64),
+                                            slider: Slider {
+                                                min: min as i64,
+                                                max: max as i64,
+                                                background_color: Srgba::hex("111111").unwrap().into(),
+                                                foreground_color: Srgba::hex("555555").unwrap().into(),
+                                                ..Default::default()
+                                            },
+                                            node_bundle: NodeBundle {
+                                                style: Style {
+                                                    width: Val::Px(200.0),
+                                                    ..Default::default()
+                                                },
+                                                ..Default::default()
+                                            },
+                                            ..Default::default()
+                                        },
+                                    ));
+
+                                    p.spawn((
+                                        BindValues::single(BindValue::<WrittenSetting>::new(
+                                            data_ent,
+                                            ReactableFields::Text { section: 0 },
+                                        )),
+                                        TextBundle {
+                                            text: Text::from_section(format!("{value}"), text_style_small.clone()),
+                                            ..Default::default()
+                                        },
+                                    ));
+                                });
+                            }
+                        }
                     });
                 }
             }
@@ -272,21 +331,25 @@ fn create_settings_screen(
 }
 
 fn done_clicked(mut settings: ResMut<Registry<Setting>>, q_written_settings: Query<&WrittenSetting>) {
+    println!(":D");
     for written_setting in q_written_settings.iter() {
         let setting = settings.from_numeric_id_mut(written_setting.setting_id);
 
         match setting.data {
-            SettingData::F32(_) => {
-                let Ok(parsed) = written_setting.value.parse::<f32>() else {
+            SettingData::I32(_) => {
+                let Ok(parsed) = written_setting.value.parse::<i32>() else {
+                    warn!("Invalid i32 - {}", written_setting.value);
                     continue;
                 };
 
-                setting.data = SettingData::F32(parsed);
+                setting.data = SettingData::I32(parsed);
             }
             SettingData::String(_) => {
                 setting.data = SettingData::String(written_setting.value.clone());
             }
         }
+
+        info!("{setting:?}");
     }
 }
 
@@ -335,5 +398,6 @@ pub(super) fn register(app: &mut App) {
                 .run_if(on_event::<SettingsDoneButtonEvent>())
                 .in_set(SettingsMenuSet::SettingsMenuInteractions),
         ),
-    );
+    )
+    .register_type::<WrittenSetting>();
 }

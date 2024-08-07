@@ -2,7 +2,10 @@ use bevy::{app::App, prelude::*};
 
 use crate::{
     settings::SettingsSet,
-    ui::settings::{NeedsSettingsAdded, SettingsCancelButtonEvent, SettingsDoneButtonEvent},
+    ui::{
+        components::button::ButtonUiSystemSet,
+        settings::{NeedsSettingsAdded, SettingsCancelButtonEvent, SettingsDoneButtonEvent, SettingsMenuSet},
+    },
 };
 
 use super::{
@@ -24,12 +27,8 @@ fn cancel_clicked(mut mms: ResMut<MainMenuSubState>) {
 }
 
 fn done_clicked(mut mms: ResMut<MainMenuSubState>) {
+    println!("Changing state");
     *mms = MainMenuSubState::TitleScreen;
-}
-
-#[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
-pub(super) enum SettingsMenuSet {
-    SettingsMenuInteractions,
 }
 
 pub(super) fn register(app: &mut App) {
@@ -37,7 +36,9 @@ pub(super) fn register(app: &mut App) {
         Update,
         SettingsMenuSet::SettingsMenuInteractions
             .ambiguous_with(DisconnectMenuSet::DisconnectMenuInteractions)
-            .ambiguous_with(TitleScreenSet::TitleScreenInteractions),
+            .ambiguous_with(TitleScreenSet::TitleScreenInteractions)
+            .before(SettingsSet::ChangeSettings)
+            .after(ButtonUiSystemSet::SendButtonEvents),
     );
 
     app.add_systems(
@@ -46,18 +47,20 @@ pub(super) fn register(app: &mut App) {
             create_settings_screen
                 .run_if(in_main_menu_state(MainMenuSubState::Settings))
                 .run_if(resource_exists_and_changed::<MainMenuSubState>)
-                .in_set(MainMenuSystemSet::InitializeMenu),
+                .in_set(MainMenuSystemSet::InitializeMenu)
+                .before(SettingsMenuSet::SettingsMenuInteractions),
             cancel_clicked
                 .run_if(on_event::<SettingsCancelButtonEvent>())
                 .run_if(in_main_menu_state(MainMenuSubState::Settings))
-                .in_set(MainMenuSystemSet::UpdateMenu),
+                .in_set(MainMenuSystemSet::UpdateMenu)
+                .after(SettingsMenuSet::SettingsMenuInteractions),
             done_clicked
                 .run_if(on_event::<SettingsDoneButtonEvent>())
                 .run_if(in_main_menu_state(MainMenuSubState::Settings))
                 .in_set(MainMenuSystemSet::UpdateMenu)
-                .in_set(SettingsSet::ChangeSettings),
+                .after(SettingsSet::ChangeSettings)
+                .after(SettingsMenuSet::SettingsMenuInteractions),
         )
-            .in_set(SettingsMenuSet::SettingsMenuInteractions)
             .chain(),
     );
 }

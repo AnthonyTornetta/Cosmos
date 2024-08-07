@@ -66,7 +66,7 @@ fn on_update_slider_value<T: ReactableValue>(
     mut q_react_value: Query<&mut T>,
     q_changed_value: Query<(&SliderValue, &BindValues<T>), Changed<SliderValue>>,
 ) {
-    for (text_input_value, bind_values) in q_changed_value.iter() {
+    for (slider_value, bind_values) in q_changed_value.iter() {
         for bind_value in bind_values.iter() {
             if matches!(bind_value.field, ReactableFields::Value) {
                 let Ok(mut react_value) = q_react_value.get_mut(bind_value.bound_entity) else {
@@ -74,7 +74,7 @@ fn on_update_slider_value<T: ReactableValue>(
                     continue;
                 };
 
-                let num_as_str = format!("{}", text_input_value.value());
+                let num_as_str = format!("{}", slider_value.value());
 
                 if react_value.as_value() != num_as_str {
                     react_value.set_from_value(&num_as_str);

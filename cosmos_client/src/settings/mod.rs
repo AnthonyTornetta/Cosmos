@@ -28,15 +28,27 @@ pub enum SettingCategory {
 /// The data this setting contains (also encodes type information)
 pub enum SettingData {
     /// Contains a float
-    F32(f32),
+    I32(i32),
     /// Contains a string
     String(String),
+}
+
+#[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
+/// The data this setting contains (also encodes type information)
+pub enum SettingConstraint {
+    /// Setting contstraint for I32 values
+    I32 {
+        /// The minimum value (inclusive)
+        min: i32,
+        /// The maximum value (inclusive)
+        max: i32,
+    },
 }
 
 #[derive(Debug, PartialEq, Clone, Serialize, Deserialize, Resource)]
 /// A piece of data that can be set by the user
 ///
-/// BEWARE: This is NOT guarenteed to be within any sort of bounds, since the user is free to changed
+/// BEWARE: This is NOT guarenteed to be within any sort of bounds, since the user is free to change
 /// the settings file to whatever they want.
 pub struct Setting {
     id: u16,
@@ -45,16 +57,24 @@ pub struct Setting {
     pub data: SettingData,
     /// The category this setting should be under (for display purposes)
     pub setting_category: SettingCategory,
+    /// The setting's constraint
+    pub constraint: Option<SettingConstraint>,
 }
 
 impl Setting {
     /// Creates a new setting that can be changed by the user
-    pub fn new(unlocalized_name: impl Into<String>, default_value: SettingData, category: SettingCategory) -> Self {
+    pub fn new(
+        unlocalized_name: impl Into<String>,
+        default_value: SettingData,
+        category: SettingCategory,
+        constraint: Option<SettingConstraint>,
+    ) -> Self {
         Self {
             data: default_value,
             id: 0,
             setting_category: category,
             unlocalized_name: unlocalized_name.into(),
+            constraint,
         }
     }
 }
@@ -97,8 +117,8 @@ impl Identifiable for Setting {
 
 /// Ease-of-use methods for the `Registry<Setting>``
 pub trait SettingsRegistry {
-    /// If this setting contains an f32 value, it will return that. Otherwise, the default will be returned.
-    fn f32_or(&self, unlocalized_name: &str, default: f32) -> f32;
+    /// If this setting contains an i32 value, it will return that. Otherwise, the default will be returned.
+    fn i32_or(&self, unlocalized_name: &str, default: i32) -> i32;
     /// If this setting contains a &str value, it will return that. Otherwise, the default will be returned.
     fn str_or<'a>(&'a self, unlocalized_name: &str, default: &'a str) -> &'a str;
 }
@@ -108,9 +128,9 @@ pub trait SettingsRegistry {
 pub struct MouseSensitivity(pub f32);
 
 impl SettingsRegistry for Registry<Setting> {
-    fn f32_or(&self, unlocalized_name: &str, default: f32) -> f32 {
+    fn i32_or(&self, unlocalized_name: &str, default: i32) -> i32 {
         self.from_id(unlocalized_name)
-            .map(|x| if let SettingData::F32(d) = x.data { d } else { default })
+            .map(|x| if let SettingData::I32(d) = x.data { d } else { default })
             .unwrap_or(default)
     }
 
@@ -128,20 +148,34 @@ impl SettingsRegistry for Registry<Setting> {
 }
 
 fn load_gamma(settings: Res<Registry<Setting>>, mut ambient_light: ResMut<AmbientLight>) {
-    ambient_light.brightness = settings.f32_or("cosmos:brightness", 100.0);
+    ambient_light.brightness = settings.i32_or("cosmos:brightness", 100) as f32;
 }
 
 fn load_mouse_sensitivity(mut commands: Commands, settings: Res<Registry<Setting>>) {
-    commands.insert_resource(MouseSensitivity(settings.f32_or("cosmos:sensitivity", 0.75)));
+    commands.insert_resource(MouseSensitivity(settings.i32_or("cosmos:sensitivity", 75) as f32 / 100.0));
 }
 
 fn register_settings(mut registry: ResMut<Registry<Setting>>) {
     registry.register(Setting::new(
         "cosmos:brightness",
-        SettingData::F32(100.0),
+        SettingData::I32(100),
         SettingCategory::Graphics,
+        Some(SettingConstraint::I32 { min: 0, max: 200 }),
     ));
-    registry.register(Setting::new("cosmos:sensitivity", SettingData::F32(0.75), SettingCategory::Mouse));
+
+    registry.register(Setting::new(
+        "cosmos:sensitivity",
+        SettingData::I32(75),
+        SettingCategory::Mouse,
+        Some(SettingConstraint::I32 { min: 10, max: 200 }),
+    ));
+
+    registry.register(Setting::new(
+        "cosmos:fov",
+        SettingData::I32(90),
+        SettingCategory::Graphics,
+        Some(SettingConstraint::I32 { min: 30, max: 120 }),
+    ));
 }
 
 #[derive(Debug, PartialEq, Clone, Serialize, Deserialize, Resource, Default)]
@@ -167,7 +201,7 @@ fn serialize_settings(settings: Res<Registry<Setting>>) {
         serialized.0.insert(
             setting.unlocalized_name().to_owned(),
             match &setting.data {
-                SettingData::F32(val) => format!("{val}"),
+                SettingData::I32(val) => format!("{val}"),
                 SettingData::String(str) => str.to_owned(),
             },
         );
@@ -204,9 +238,9 @@ fn process_setting(setting: &str, value: &str, settings: &mut Registry<Setting>)
     let setting = settings.from_id_mut(setting)?;
 
     match setting.data {
-        SettingData::F32(_) => {
-            let f32_parsed = value.parse::<f32>().ok()?;
-            setting.data = SettingData::F32(f32_parsed);
+        SettingData::I32(_) => {
+            let i32_parsed = value.parse::<i32>().ok()?;
+            setting.data = SettingData::I32(i32_parsed);
         }
         SettingData::String(_) => {
             setting.data = SettingData::String(value.to_owned());

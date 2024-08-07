@@ -5,17 +5,19 @@
 use bevy::{
     app::{App, Update},
     color::{palettes::css, Color},
+    core::Name,
     ecs::{
         bundle::Bundle,
         change_detection::DetectChanges,
         component::Component,
         entity::Entity,
-        query::{Added, Changed, With, Without},
+        query::{Added, With, Without},
         schedule::{IntoSystemConfigs, IntoSystemSetConfigs, SystemSet},
         system::{Commands, Query, Res},
         world::Ref,
     },
     hierarchy::BuildChildren,
+    log::info,
     reflect::Reflect,
     transform::components::GlobalTransform,
     ui::{node_bundles::NodeBundle, BackgroundColor, Interaction, Node, PositionType, Style, UiRect, UiScale, Val},
@@ -52,6 +54,11 @@ pub struct Slider {
 pub struct SliderValue(i64);
 
 impl SliderValue {
+    /// Creates a SliderValue with this initial value
+    pub fn new(value: i64) -> Self {
+        Self(value)
+    }
+
     /// Gets the value currently selected
     pub fn value(&self) -> i64 {
         self.0
@@ -134,6 +141,8 @@ fn on_add_slider(mut commands: Commands, mut q_added_slider: Query<(Entity, &mut
         let mut square_entity = None;
         let mut empty_bar_entity = None;
 
+        info!("Slider init value: {slider_value:?}");
+
         commands.entity(ent).insert(Interaction::default()).with_children(|p| {
             empty_bar_entity = Some(
                 p.spawn(NodeBundle {
@@ -157,31 +166,37 @@ fn on_add_slider(mut commands: Commands, mut q_added_slider: Query<(Entity, &mut
                     let square_size = slider.height + BASE_SQUARE_SIZE;
 
                     bar_entity = Some(
-                        p.spawn(NodeBundle {
-                            background_color: slider.foreground_color.into(),
-                            style: Style {
-                                width: Val::Percent(percent_selected),
-                                height: Val::Percent(100.0),
+                        p.spawn((
+                            Name::new("Slider bar"),
+                            NodeBundle {
+                                background_color: slider.foreground_color.into(),
+                                style: Style {
+                                    width: Val::Percent(percent_selected),
+                                    height: Val::Percent(100.0),
+                                    ..Default::default()
+                                },
                                 ..Default::default()
                             },
-                            ..Default::default()
-                        })
+                        ))
                         .id(),
                     );
 
                     square_entity = Some(
-                        p.spawn(NodeBundle {
-                            background_color: slider.square_color.into(),
-                            style: Style {
-                                position_type: PositionType::Absolute,
-                                width: Val::Px(square_size),
-                                height: Val::Px(square_size),
-                                left: Val::Px(-BASE_SQUARE_SIZE),
-                                top: Val::Px(-BASE_SQUARE_SIZE / 2.0),
+                        p.spawn((
+                            Name::new("Slider square"),
+                            NodeBundle {
+                                background_color: slider.square_color.into(),
+                                style: Style {
+                                    position_type: PositionType::Absolute,
+                                    width: Val::Px(square_size),
+                                    height: Val::Px(square_size),
+                                    left: Val::Px(-BASE_SQUARE_SIZE),
+                                    top: Val::Px(-BASE_SQUARE_SIZE / 2.0),
+                                    ..Default::default()
+                                },
                                 ..Default::default()
                             },
-                            ..Default::default()
-                        })
+                        ))
                         .id(),
                     );
                 })
@@ -263,9 +278,10 @@ fn on_interact_slider(
 fn on_change_value(
     mut q_style: Query<&mut Style>,
     ui_scale: Res<UiScale>,
-    q_changed_value: Query<(&SliderProgressEntites, &SliderValue, &Slider, &Node, &GlobalTransform), Changed<SliderValue>>,
+    // Changed<SliderValue> fails here when SliderValue isn't the default value when the slider is just created.
+    q_slider_value: Query<(&SliderProgressEntites, &SliderValue, &Slider, &Node, &GlobalTransform)>,
 ) {
-    for (slider_progress_entity, slider_value, slider, node, g_trans) in q_changed_value.iter() {
+    for (slider_progress_entity, slider_value, slider, node, g_trans) in q_slider_value.iter() {
         let Ok(mut style) = q_style.get_mut(slider_progress_entity.bar_entity) else {
             continue;
         };

@@ -3,7 +3,6 @@
 use bevy::{
     app::{App, Update},
     ecs::schedule::{IntoSystemSetConfigs, SystemSet},
-    state::{condition::in_state, state::States},
 };
 
 use crate::physics::location::CosmosBundleSet;
@@ -25,33 +24,14 @@ pub enum NetworkingSystemsSet {
     SyncComponents,
 }
 
-pub(super) fn register<T: States>(app: &mut App, playing_state: T) {
-    // #[cfg(feature = "server")]
-    // {
-    //     app.configure_sets(
-    //         Update,
-    //         (
-    //             // These can happen even when not playing for client
-    //             (NetworkingSystemsSet::ReceiveMessages, NetworkingSystemsSet::ProcessReceivedMessages).chain(),
-    //             // These should always only happen when playing
-    //             NetworkingSystemsSet::Between.run_if(in_state(playing_state.clone())),
-    //             NetworkingSystemsSet::SyncComponents.after(CosmosBundleSet::HandleCosmosBundles),
-    //         )
-    //             .chain(),
-    //     );
-    // }
-
-    // #[cfg(feature = "client")]
-    // {
+pub(super) fn register(app: &mut App) {
     app.configure_sets(
         Update,
         (
             (NetworkingSystemsSet::ReceiveMessages, NetworkingSystemsSet::ProcessReceivedMessages).chain(),
-            // .before(CosmosBundleSet::HandleCosmosBundles),
-            NetworkingSystemsSet::Between.run_if(in_state(playing_state)),
+            NetworkingSystemsSet::Between,
             NetworkingSystemsSet::SyncComponents.after(CosmosBundleSet::HandleCosmosBundles),
         )
             .chain(),
     );
-    // }
 }

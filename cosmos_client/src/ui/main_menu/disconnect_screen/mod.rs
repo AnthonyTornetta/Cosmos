@@ -1,12 +1,12 @@
 use bevy::{app::App, prelude::*};
 use bevy_renet2::renet2::{DisconnectReason, RenetClient};
 
-use crate::ui::components::button::{register_button, Button, ButtonBundle, ButtonEvent, ButtonStyles};
-
-use super::{
-    in_main_menu_state, settings_screen::SettingsMenuSet, title_screen::TitleScreenSet, MainMenuRootUiNode, MainMenuSubState,
-    MainMenuSystemSet,
+use crate::ui::{
+    components::button::{register_button, Button, ButtonBundle, ButtonEvent, ButtonStyles},
+    settings::SettingsMenuSet,
 };
+
+use super::{in_main_menu_state, title_screen::TitleScreenSet, MainMenuRootUiNode, MainMenuSubState, MainMenuSystemSet};
 
 fn create_disconnect_screen(
     mut commands: Commands,
