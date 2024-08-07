@@ -25,7 +25,7 @@ use crate::{
             window::{GuiWindow, UiWindowSystemSet, WindowBundle},
         },
         item_renderer::{ItemRenderLayer, RenderItem},
-        UiMiddleRoot, UiRoot, UiSystemSet, UiTopRoot,
+        OpenMenu, UiMiddleRoot, UiRoot, UiSystemSet, UiTopRoot,
     },
 };
 
@@ -362,6 +362,7 @@ fn toggle_inventory_rendering(
                     TargetCamera(middle_root),
                     Name::new("Rendered Inventory Title Bar"),
                     RenderedInventory { inventory_holder },
+                    OpenMenu::new(0),
                     InventoryTitleBar(current_ents),
                     WindowBundle {
                         window: GuiWindow {
