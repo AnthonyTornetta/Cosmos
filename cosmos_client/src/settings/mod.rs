@@ -4,16 +4,17 @@ use std::fs;
 
 use bevy::{
     app::Update,
+    log::error,
     prelude::{
         in_state, not, resource_changed, resource_exists, resource_exists_and_changed, AmbientLight, App, Commands, IntoSystemConfigs,
-        IntoSystemSetConfigs, OnEnter, OnExit, Res, ResMut, Resource, SystemSet,
+        IntoSystemSetConfigs, OnEnter, OnExit, Projection, Query, Res, ResMut, Resource, SystemSet, With,
     },
     utils::HashMap,
 };
 use cosmos_core::registry::{create_registry, identifiable::Identifiable, Registry};
 use serde::{Deserialize, Serialize};
 
-use crate::{lang::Lang, state::game_state::GameState};
+use crate::{lang::Lang, rendering::MainCamera, state::game_state::GameState};
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Copy, Serialize, Deserialize, PartialOrd, Ord)]
 /// Category this setting belongs to (for display purposes only)
@@ -153,6 +154,25 @@ fn load_gamma(settings: Res<Registry<Setting>>, mut ambient_light: ResMut<Ambien
 
 fn load_mouse_sensitivity(mut commands: Commands, settings: Res<Registry<Setting>>) {
     commands.insert_resource(MouseSensitivity(settings.i32_or("cosmos:sensitivity", 75) as f32 / 100.0));
+}
+
+#[derive(Resource)]
+/// The FOV desired by the client. This is not guarenteed to be within any bounds.
+pub struct DesiredFov(pub f32);
+
+fn load_fov(mut commands: Commands, settings: Res<Registry<Setting>>) {
+    commands.insert_resource(DesiredFov(settings.i32_or("cosmos:fov", 90) as f32));
+}
+
+fn on_changed_desired_fov(mut q_cam: Query<&mut Projection, With<MainCamera>>, desired_fov: Res<DesiredFov>) {
+    for mut proj in q_cam.iter_mut() {
+        match proj.as_mut() {
+            Projection::Perspective(persp) => {
+                persp.fov = (desired_fov.0 / 180.0) * std::f32::consts::PI;
+            }
+            _ => error!("Unsupported main camera type -- not Projection::Perspective. Cannot change FOV!"),
+        }
+    }
 }
 
 fn register_settings(mut registry: ResMut<Registry<Setting>>) {
@@ -297,6 +317,12 @@ pub(super) fn register(app: &mut App) {
 
     app.add_systems(OnEnter(GameState::PreLoading), register_settings);
 
-    app.add_systems(OnEnter(GameState::Loading), load_settings)
-        .add_systems(Update, (load_gamma, load_mouse_sensitivity).in_set(SettingsSet::LoadSettings));
+    app.add_systems(OnEnter(GameState::Loading), load_settings).add_systems(
+        Update,
+        (
+            (load_gamma, load_mouse_sensitivity, load_fov).in_set(SettingsSet::LoadSettings),
+            on_changed_desired_fov,
+        )
+            .chain(),
+    );
 }

@@ -59,6 +59,7 @@ use crate::{
     camera::camera_controller::CameraHelper,
     netty::lobby::{ClientLobby, PlayerInfo},
     rendering::{CameraPlayerOffset, MainCamera},
+    settings::DesiredFov,
     state::game_state::GameState,
     structure::{
         planet::{client_planet_builder::ClientPlanetBuilder, generation::SetTerrainGenData},
@@ -224,6 +225,7 @@ pub(crate) fn client_sync_players(
         ),
         Without<LocalPlayer>,
     >,
+    desired_fov: Res<DesiredFov>,
     q_needs_loaded: Query<(), With<NeedsLoadedFromServer>>,
     q_parent: Query<&Parent>,
     blocks: Res<Registry<Block>>,
@@ -461,7 +463,7 @@ pub(crate) fn client_sync_players(
                                     },
                                     transform: Transform::from_translation(camera_offset),
                                     projection: Projection::from(PerspectiveProjection {
-                                        fov: (90.0 / 180.0) * std::f32::consts::PI,
+                                        fov: (desired_fov.0 / 180.0) * std::f32::consts::PI,
                                         ..default()
                                     }),
                                     ..default()

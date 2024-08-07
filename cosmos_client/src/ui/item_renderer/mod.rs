@@ -34,7 +34,7 @@ use super::{UiMiddleRoot, UiSystemSet, UiTopRoot};
 const INVENTORY_SLOT_LAYER: usize = 0b01;
 const MIDDLE_INVENTORY_SLOT_LAYER: usize = 0b10;
 
-fn create_ui_camera(mut commands: Commands) {
+pub(crate) fn create_ui_cameras(mut commands: Commands) {
     commands.spawn((
         Name::new("UI Top Camera"),
         UiTopRoot,
@@ -539,7 +539,7 @@ pub(super) fn register(app: &mut App) {
             .in_set(RenderItemSystemSet::RenderItems),),
     );
 
-    app.add_systems(OnEnter(GameState::Playing), create_ui_camera)
+    app.add_systems(OnEnter(GameState::Playing), create_ui_cameras)
         .register_type::<RenderItem>()
         .register_type::<RenderedItem>()
         .register_type::<ItemRenderLayer>();

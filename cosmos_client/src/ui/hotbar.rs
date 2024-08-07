@@ -18,7 +18,11 @@ use crate::{
     structure::ship::ui::system_selection::SystemSelectionSet,
 };
 
-use super::{components::show_cursor::no_open_menus, item_renderer::RenderItem, UiRoot};
+use super::{
+    components::show_cursor::no_open_menus,
+    item_renderer::{create_ui_cameras, RenderItem},
+    UiMiddleRoot, UiRoot,
+};
 
 const ITEM_NAME_FADE_DURATION_SEC: f32 = 5.0;
 
@@ -312,7 +316,7 @@ fn listen_for_change_events(
     }
 }
 
-fn add_item_text(mut commands: Commands, q_target_camera: Query<Entity, With<UiRoot>>, asset_server: Res<AssetServer>) {
+fn add_item_text(mut commands: Commands, q_target_camera: Query<Entity, With<UiMiddleRoot>>, asset_server: Res<AssetServer>) {
     let target_cam = q_target_camera.single();
 
     commands
@@ -502,7 +506,7 @@ fn add_hotbar_contents_to_player(
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_systems(OnEnter(GameState::Playing), (add_hotbar, add_item_text))
+    app.add_systems(OnEnter(GameState::Playing), (add_hotbar, add_item_text).after(create_ui_cameras))
         .add_systems(
             Update,
             (
