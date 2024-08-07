@@ -49,7 +49,7 @@ use crate::{
             Disabled,
         },
         reactivity::{add_reactable_type, BindValue, BindValues, ReactableFields, ReactableValue},
-        UiSystemSet,
+        OpenMenu, UiSystemSet,
     },
 };
 
@@ -228,12 +228,15 @@ fn open_shop_ui(mut commands: Commands, mut ev_reader: EventReader<MutEvent<Open
             commands.entity(ent).insert(NeedsDespawned);
         }
 
-        commands.spawn(ShopUi {
-            shop,
-            selected_item: None,
-            structure_block: ev.structure_block,
-            structure_entity: ev.structure_entity,
-        });
+        commands.spawn((
+            OpenMenu::new(0),
+            ShopUi {
+                shop,
+                selected_item: None,
+                structure_block: ev.structure_block,
+                structure_entity: ev.structure_entity,
+            },
+        ));
     }
 }
 

@@ -56,7 +56,7 @@ pub enum CosmosInputs {
     CreateStation,
 
     /// Unlocks the mouse from the window
-    UnlockMouse,
+    Pause,
 
     /// Change the selected inventory item
     HotbarSlot1,
@@ -136,7 +136,7 @@ fn init_input(mut input_handler: ResMut<CosmosInputHandler>) {
     input_handler.set_keycode(CosmosInputs::CreateShip, KeyCode::KeyX);
     input_handler.set_keycode(CosmosInputs::CreateStation, KeyCode::KeyY);
 
-    input_handler.set_keycode(CosmosInputs::UnlockMouse, KeyCode::Escape);
+    input_handler.set_keycode(CosmosInputs::Pause, KeyCode::Escape);
 
     input_handler.set_keycode(CosmosInputs::HotbarSlot1, KeyCode::Digit1);
     input_handler.set_keycode(CosmosInputs::HotbarSlot2, KeyCode::Digit2);

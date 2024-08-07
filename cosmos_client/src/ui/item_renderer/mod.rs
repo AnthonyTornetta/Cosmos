@@ -34,7 +34,7 @@ use super::{UiMiddleRoot, UiSystemSet, UiTopRoot};
 const INVENTORY_SLOT_LAYER: usize = 0b01;
 const MIDDLE_INVENTORY_SLOT_LAYER: usize = 0b10;
 
-fn create_ui_camera(mut commands: Commands) {
+pub(crate) fn create_ui_cameras(mut commands: Commands) {
     commands.spawn((
         Name::new("UI Top Camera"),
         UiTopRoot,
@@ -47,7 +47,7 @@ fn create_ui_camera(mut commands: Commands) {
             camera: Camera {
                 order: 2,
                 clear_color: ClearColorConfig::Custom(Color::NONE),
-                hdr: true, // Transparent stuff fails to render properly if this is off - this may be a bevy bug?
+                hdr: false,
                 ..Default::default()
             },
             transform: Transform::from_xyz(0.0, 0.0, 1.0).looking_at(Vec3::ZERO, Vec3::Y),
@@ -539,7 +539,7 @@ pub(super) fn register(app: &mut App) {
             .in_set(RenderItemSystemSet::RenderItems),),
     );
 
-    app.add_systems(OnEnter(GameState::Playing), create_ui_camera)
+    app.add_systems(OnEnter(GameState::Playing), create_ui_cameras)
         .register_type::<RenderItem>()
         .register_type::<RenderedItem>()
         .register_type::<ItemRenderLayer>();

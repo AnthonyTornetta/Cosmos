@@ -14,16 +14,24 @@ use bevy::{
     text::{Text, TextSection, TextStyle},
     ui::{
         node_bundles::{NodeBundle, TextBundle},
-        AlignContent, JustifyContent, PositionType, Style, UiRect, Val,
+        AlignContent, JustifyContent, PositionType, Style, TargetCamera, UiRect, Val,
     },
 };
 use cosmos_core::{economy::Credits, netty::client::LocalPlayer};
 
 use crate::state::game_state::GameState;
 
-use super::reactivity::{BindValue, BindValues, ReactableFields};
+use super::{
+    reactivity::{BindValue, BindValues, ReactableFields},
+    UiRoot,
+};
 
-fn create_credits_node(mut commands: Commands, asset_server: Res<AssetServer>, local_player: Query<(Entity, &Credits), With<LocalPlayer>>) {
+fn create_credits_node(
+    mut commands: Commands,
+    q_ui_root: Query<Entity, With<UiRoot>>,
+    asset_server: Res<AssetServer>,
+    local_player: Query<(Entity, &Credits), With<LocalPlayer>>,
+) {
     let Ok((local_player, credits)) = local_player.get_single() else {
         error!("Cannot display credits - local player entity missing!");
         return;
@@ -37,8 +45,11 @@ fn create_credits_node(mut commands: Commands, asset_server: Res<AssetServer>, l
         font: font.clone(),
     };
 
+    let ui_root = q_ui_root.single();
+
     commands
         .spawn((
+            TargetCamera(ui_root),
             Name::new("Credits display"),
             NodeBundle {
                 style: Style {

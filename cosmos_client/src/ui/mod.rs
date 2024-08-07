@@ -19,7 +19,9 @@ mod hud;
 pub mod item_renderer;
 pub mod main_menu;
 pub mod message;
+pub mod pause;
 pub mod reactivity;
+pub mod settings;
 pub mod ship_flight;
 
 #[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
@@ -51,6 +53,32 @@ pub struct UiMiddleRoot;
 /// If you're not dealing with 3d model weirdness, please prefer to use `UiRoot`.
 pub struct UiTopRoot;
 
+#[derive(Component, Debug, PartialEq, Eq, Hash)]
+/// When you make a menu that can be closed via the `Escape`/pause menu key, add this component to it.
+pub struct OpenMenu {
+    level: u32,
+}
+
+impl OpenMenu {
+    /// Creates an open menu with this "level" of being above every other menu.
+    ///
+    /// This doesn't effect rendering order, rather effects which menu the "Escape" button will target first.
+    /// Menus of the same level will all be closed together. Each escape press will remove the highest-level group of menus.
+    pub fn new(level: u32) -> Self {
+        Self { level }
+    }
+
+    /// Sets the level for this menu
+    pub fn set_level(&mut self, level: u32) {
+        self.level = level;
+    }
+
+    /// Gets the level for this menu
+    pub fn level(&self) -> u32 {
+        self.level
+    }
+}
+
 pub(super) fn register(app: &mut App) {
     crosshair::register(app);
     hotbar::register(app);
@@ -62,6 +90,8 @@ pub(super) fn register(app: &mut App) {
     reactivity::register(app);
     main_menu::register(app);
     hud::register(app);
+    pause::register(app);
+    settings::register(app);
 
     app.configure_sets(Update, (UiSystemSet::PreDoUi, UiSystemSet::DoUi, UiSystemSet::FinishUi).chain());
 

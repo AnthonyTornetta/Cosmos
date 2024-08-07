@@ -11,6 +11,8 @@ use cosmos_core::{
 
 use crate::{interactions::block_interactions::LookingAt, lang::Lang, state::game_state::GameState};
 
+use super::UiRoot;
+
 #[derive(Component, Debug, Default)]
 struct FPSCounter {
     count: usize,
@@ -26,7 +28,7 @@ struct CoordsCounter;
 #[derive(Component)]
 struct ActualCoordsCounter;
 
-fn add_text(mut commands: Commands, asset_server: Res<AssetServer>) {
+fn add_text(mut commands: Commands, q_target_camera: Query<Entity, With<UiRoot>>, asset_server: Res<AssetServer>) {
     let text_style = TextStyle {
         color: Color::WHITE,
         font_size: 32.0,
@@ -35,7 +37,10 @@ fn add_text(mut commands: Commands, asset_server: Res<AssetServer>) {
 
     let text_gap = 35.0;
 
+    let target_cam = TargetCamera(q_target_camera.single());
+
     commands.spawn((
+        target_cam.clone(),
         TextBundle {
             style: Style {
                 bottom: Val::Px(5.0),
@@ -50,6 +55,7 @@ fn add_text(mut commands: Commands, asset_server: Res<AssetServer>) {
     ));
 
     commands.spawn((
+        target_cam.clone(),
         TextBundle {
             style: Style {
                 bottom: Val::Px(5.0 + text_gap),
@@ -65,6 +71,7 @@ fn add_text(mut commands: Commands, asset_server: Res<AssetServer>) {
     ));
 
     commands.spawn((
+        target_cam.clone(),
         TextBundle {
             style: Style {
                 bottom: Val::Px(5.0 + text_gap * 2.0),
@@ -80,6 +87,7 @@ fn add_text(mut commands: Commands, asset_server: Res<AssetServer>) {
     ));
 
     commands.spawn((
+        target_cam,
         TextBundle {
             style: Style {
                 bottom: Val::Px(5.0 + text_gap * 3.0),

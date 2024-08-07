@@ -14,12 +14,13 @@ use crate::{
             text_input::{InputType, TextInput, TextInputBundle},
         },
         reactivity::{add_reactable_type, BindValue, BindValues, ReactableFields, ReactableValue},
+        settings::SettingsMenuSet,
     },
 };
 
 use super::{
-    super::components::text_input::InputValue, disconnect_screen::DisconnectMenuSet, in_main_menu_state, settings_screen::SettingsMenuSet,
-    MainMenuRootUiNode, MainMenuSubState, MainMenuSystemSet,
+    super::components::text_input::InputValue, disconnect_screen::DisconnectMenuSet, in_main_menu_state, MainMenuRootUiNode,
+    MainMenuSubState, MainMenuSystemSet,
 };
 
 #[derive(Debug, Clone, Component, PartialEq, Eq)]
