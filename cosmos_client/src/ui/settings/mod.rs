@@ -244,7 +244,6 @@ fn create_settings_screen(
                                                 },
                                                 ..Default::default()
                                             },
-                                            ..Default::default()
                                         },
                                     ));
 
