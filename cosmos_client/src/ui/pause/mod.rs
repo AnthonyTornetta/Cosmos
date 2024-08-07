@@ -189,7 +189,7 @@ fn close_topmost_menus(q_open_menus: &Query<(Entity, &OpenMenu)>, commands: &mut
         commands.entity(*ent).insert(NeedsDespawned);
     }
 
-    return true;
+    true
 }
 
 #[derive(Component)]
