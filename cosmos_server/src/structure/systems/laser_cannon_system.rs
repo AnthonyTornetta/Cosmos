@@ -80,7 +80,7 @@ fn update_system(
             ..Default::default()
         };
 
-        cooldown.remove_unused_cooldowns(&cannon_system);
+        cooldown.remove_unused_cooldowns(cannon_system);
 
         for line in cannon_system.lines.iter() {
             let cooldown = cooldown.lines.entry(line.start.coords()).or_insert(default_cooldown);

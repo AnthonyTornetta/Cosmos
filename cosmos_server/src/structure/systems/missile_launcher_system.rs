@@ -206,7 +206,7 @@ fn update_missile_system(
             ..Default::default()
         };
 
-        cooldown.remove_unused_cooldowns(&missile_launcher_system);
+        cooldown.remove_unused_cooldowns(missile_launcher_system);
 
         for line in missile_launcher_system.lines.iter() {
             let cooldown = cooldown.lines.entry(line.start.coords()).or_insert(default_cooldown);

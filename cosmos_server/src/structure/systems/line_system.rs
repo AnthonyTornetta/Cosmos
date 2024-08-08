@@ -324,7 +324,7 @@ impl<T: LineProperty, S: LinePropertyCalculator<T>> BlockStructureSystem<T> for 
                 l1.active_blocks = line
                     .active_blocks
                     .iter()
-                    .filter(|x| l1.within(*x))
+                    .filter(|x| l1.within(x))
                     .copied()
                     .collect::<Vec<BlockCoordinate>>();
 
@@ -351,7 +351,7 @@ impl<T: LineProperty, S: LinePropertyCalculator<T>> BlockStructureSystem<T> for 
                 l2.active_blocks = line
                     .active_blocks
                     .iter()
-                    .filter(|x| l2.within(*x))
+                    .filter(|x| l2.within(x))
                     .copied()
                     .collect::<Vec<BlockCoordinate>>();
 
