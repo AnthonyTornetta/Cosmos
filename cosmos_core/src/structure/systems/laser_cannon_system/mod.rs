@@ -69,6 +69,15 @@ pub struct LineSystemCooldown {
     pub lines: HashMap<BlockCoordinate, SystemCooldown>,
 }
 
+impl LineSystemCooldown {
+    /// Removes any no-longer used cooldowns.
+    pub fn remove_unused_cooldowns<T: LineProperty, S: LinePropertyCalculator<T>>(&mut self, line_system: &LineSystem<T, S>) {
+        // This could be made more efficient, but oh well.
+        self.lines
+            .retain(|&k, _| line_system.lines.iter().map(|x| x.start).any(|x| x.coords() == k));
+    }
+}
+
 fn name_laser_cannon_system(mut commands: Commands, q_added: Query<Entity, Added<LaserCannonSystem>>) {
     for e in q_added.iter() {
         commands.entity(e).insert(Name::new("Laser Cannon System"));

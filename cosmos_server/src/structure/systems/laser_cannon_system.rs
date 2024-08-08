@@ -80,6 +80,8 @@ fn update_system(
             ..Default::default()
         };
 
+        cooldown.remove_unused_cooldowns(&cannon_system);
+
         for line in cannon_system.lines.iter() {
             let cooldown = cooldown.lines.entry(line.start.coords()).or_insert(default_cooldown);
 
@@ -87,46 +89,46 @@ fn update_system(
                 continue;
             }
 
-            if (system_active || line.active()) && energy_storage_system.get_energy() >= line.property.energy_per_shot {
-                cooldown.last_use_time = sec;
-                any_fired = true;
-                energy_storage_system.decrease_energy(line.property.energy_per_shot);
+            if !((system_active || line.active()) && energy_storage_system.get_energy() >= line.property.energy_per_shot) {
+                continue;
+            }
 
-                let location = structure.block_world_location(line.start.coords(), global_transform, location);
+            cooldown.last_use_time = sec;
+            any_fired = true;
+            energy_storage_system.decrease_energy(line.property.energy_per_shot);
 
-                let relative_direction = line.direction.to_vec3();
-                let laser_velocity = global_transform.affine().matrix3.mul_vec3(relative_direction) * LASER_BASE_VELOCITY;
+            let location = structure.block_world_location(line.start.coords(), global_transform, location);
 
-                let strength = (5.0 * line.len as f32).powf(1.2);
-                let no_hit = Some(system.structure_entity());
+            let relative_direction = line.direction.to_vec3();
+            let laser_velocity = global_transform.affine().matrix3.mul_vec3(relative_direction) * LASER_BASE_VELOCITY;
 
-                Laser::spawn(
+            let strength = (5.0 * line.len as f32).powf(1.2);
+            let no_hit = Some(system.structure_entity());
+
+            Laser::spawn(
+                location,
+                laser_velocity,
+                ship_velocity.linvel,
+                strength,
+                no_hit,
+                &time,
+                *physics_world,
+                &mut commands,
+            );
+
+            let color = line.color;
+
+            server.broadcast_message(
+                NettyChannelServer::StructureSystems,
+                cosmos_encoder::serialize(&ServerStructureSystemMessages::CreateLaser {
+                    color,
                     location,
                     laser_velocity,
-                    ship_velocity.linvel,
+                    firer_velocity: ship_velocity.linvel,
                     strength,
                     no_hit,
-                    &time,
-                    *physics_world,
-                    &mut commands,
-                );
-
-                let color = line.color;
-
-                server.broadcast_message(
-                    NettyChannelServer::StructureSystems,
-                    cosmos_encoder::serialize(&ServerStructureSystemMessages::CreateLaser {
-                        color,
-                        location,
-                        laser_velocity,
-                        firer_velocity: ship_velocity.linvel,
-                        strength,
-                        no_hit,
-                    }),
-                );
-            } else {
-                break;
-            }
+                }),
+            );
         }
 
         if any_fired {

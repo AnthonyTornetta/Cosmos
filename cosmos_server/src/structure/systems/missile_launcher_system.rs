@@ -188,7 +188,7 @@ fn update_missile_system(
     mut commands: Commands,
     mut server: ResMut<RenetServer>,
 ) {
-    for (cannon_system, focus, system, mut cooldown, system_active) in query.iter_mut() {
+    for (missile_launcher_system, focus, system, mut cooldown, system_active) in query.iter_mut() {
         let Ok((ship_entity, systems, structure, location, global_transform, ship_velocity)) = systems.get(system.structure_entity())
         else {
             continue;
@@ -206,67 +206,69 @@ fn update_missile_system(
             ..Default::default()
         };
 
-        for line in cannon_system.lines.iter() {
+        cooldown.remove_unused_cooldowns(&missile_launcher_system);
+
+        for line in missile_launcher_system.lines.iter() {
             let cooldown = cooldown.lines.entry(line.start.coords()).or_insert(default_cooldown);
 
             if sec - cooldown.last_use_time <= cooldown.cooldown_time.as_secs_f32() {
                 continue;
             }
 
-            if (system_active || line.active()) && energy_storage_system.get_energy() >= line.property.energy_per_shot {
-                cooldown.last_use_time = sec;
-                any_fired = true;
-                energy_storage_system.decrease_energy(line.property.energy_per_shot);
+            if !((system_active || line.active()) && energy_storage_system.get_energy() >= line.property.energy_per_shot) {
+                continue;
+            }
 
-                let location = structure.block_world_location(line.start.coords(), global_transform, location);
+            cooldown.last_use_time = sec;
+            any_fired = true;
+            energy_storage_system.decrease_energy(line.property.energy_per_shot);
 
-                let relative_direction = line.direction.to_vec3();
+            let location = structure.block_world_location(line.start.coords(), global_transform, location);
 
-                let missile_vel = MISSILE_BASE_VELOCITY + (line.len as f32 * MISSILE_SPEED_DIVIDER + 1.0).ln() * MISSILE_SPEED_MULTIPLIER;
+            let relative_direction = line.direction.to_vec3();
 
-                let missile_velocity = global_transform.affine().matrix3.mul_vec3(relative_direction) * missile_vel;
+            let missile_vel = MISSILE_BASE_VELOCITY + (line.len as f32 * MISSILE_SPEED_DIVIDER + 1.0).ln() * MISSILE_SPEED_MULTIPLIER;
 
-                // TODO: Make missile launcher take item and strength is determined by the item they hold
-                let strength = 10.0; //(5.0 * line.len as f32).powf(1.2);
+            let missile_velocity = global_transform.affine().matrix3.mul_vec3(relative_direction) * missile_vel;
 
-                let lifetime = Duration::from_secs_f32(
-                    MISSILE_LIFETIME.as_secs_f32() + (MISSILE_LIFETIME_FUDGE.as_secs_f32() * (rand::random::<f32>() - 0.5) * 2.0),
-                );
+            // TODO: Make missile launcher take item and strength is determined by the item they hold
+            let strength = 10.0; //(5.0 * line.len as f32).powf(1.2);
 
-                let mut missile_cmds = commands.spawn((
-                    Missile {
-                        color: line.color,
-                        strength,
-                        lifetime,
-                    },
-                    CosmosPbrBundle {
-                        rotation: Transform::from_xyz(0.0, 0.0, 0.0)
-                            .looking_at(missile_velocity, Vec3::Y)
-                            .rotation
-                            .into(),
-                        location,
-                        ..Default::default()
-                    },
-                    Velocity {
-                        linvel: missile_velocity + ship_velocity.linvel,
-                        ..Default::default()
-                    },
-                    LoadingDistance::new(1, 2),
-                    CollisionGroups::new(Group::ALL, Group::ALL),
-                    CollisionBlacklist::single(CollisionBlacklistedEntity {
-                        entity: system.structure_entity(),
-                        search_parents: true,
-                    }),
-                ));
+            let lifetime = Duration::from_secs_f32(
+                MISSILE_LIFETIME.as_secs_f32() + (MISSILE_LIFETIME_FUDGE.as_secs_f32() * (rand::random::<f32>() - 0.5) * 2.0),
+            );
 
-                if let Some(targetting) = focus.locked_on_to() {
-                    missile_cmds.insert(MissileTargetting {
-                        targetting,
-                        targetting_fudge: Vec3::ZERO,
-                    });
-                }
-            } else {
-                break;
+            let mut missile_cmds = commands.spawn((
+                Missile {
+                    color: line.color,
+                    strength,
+                    lifetime,
+                },
+                CosmosPbrBundle {
+                    rotation: Transform::from_xyz(0.0, 0.0, 0.0)
+                        .looking_at(missile_velocity, Vec3::Y)
+                        .rotation
+                        .into(),
+                    location,
+                    ..Default::default()
+                },
+                Velocity {
+                    linvel: missile_velocity + ship_velocity.linvel,
+                    ..Default::default()
+                },
+                LoadingDistance::new(1, 2),
+                CollisionGroups::new(Group::ALL, Group::ALL),
+                CollisionBlacklist::single(CollisionBlacklistedEntity {
+                    entity: system.structure_entity(),
+                    search_parents: true,
+                }),
+            ));
+
+            if let Some(targetting) = focus.locked_on_to() {
+                missile_cmds.insert(MissileTargetting {
+                    targetting,
+                    targetting_fudge: Vec3::ZERO,
+                });
             }
         }
 
