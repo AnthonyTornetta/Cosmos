@@ -2,7 +2,7 @@
 
 use std::marker::PhantomData;
 
-use bevy::{prelude::*, reflect::Reflect, utils::HashMap};
+use bevy::{ecs::reflect, prelude::*, reflect::Reflect, utils::HashMap};
 use serde::{Deserialize, Serialize};
 
 use crate::{
@@ -17,7 +17,7 @@ use crate::{
 use super::StructureSystemImpl;
 
 /// Calculates the total property from a line of properties
-pub trait LinePropertyCalculator<T: LineProperty>: 'static + Send + Sync + std::fmt::Debug {
+pub trait LinePropertyCalculator<T: LineProperty>: 'static + Send + Sync + std::fmt::Debug + Reflect {
     /// Calculates the total property from a line of properties
     fn calculate_property(properties: &[T]) -> T;
 
@@ -26,7 +26,7 @@ pub trait LinePropertyCalculator<T: LineProperty>: 'static + Send + Sync + std::
 }
 
 /// Property each block adds to the line
-pub trait LineProperty: 'static + Send + Sync + Clone + Copy + std::fmt::Debug {}
+pub trait LineProperty: 'static + Send + Sync + Clone + Copy + std::fmt::Debug + Reflect {}
 
 #[derive(Resource)]
 /// The blocks that will effect this line
@@ -133,6 +133,13 @@ pub struct Line<T: LineProperty> {
     pub property: T,
     /// All the properties of the laser cannons in this line
     pub properties: Vec<T>,
+
+    /// How much power this line holds as a unit
+    pub power: f32,
+    /// A structure system can be wholly active, or it can have individual lines active (usually through logic).
+    ///
+    /// The line should be treated as active if this is true OR if the whole system is active.
+    pub active_blocks: Vec<BlockCoordinate>,
 }
 
 impl<T: LineProperty> Line<T> {
@@ -149,8 +156,30 @@ impl<T: LineProperty> Line<T> {
         ))
     }
 
+    pub fn active(&self) -> bool {
+        !self.active_blocks.is_empty()
+    }
+
+    pub fn mark_block_active(&mut self, coord: BlockCoordinate) {
+        if !self.within(&coord) {
+            return;
+        }
+
+        if self.active_blocks.contains(&coord) {
+            return;
+        }
+
+        self.active_blocks.push(coord);
+    }
+
+    pub fn mark_block_inactive(&mut self, coord: BlockCoordinate) {
+        if let Some((idx, _)) = self.active_blocks.iter().enumerate().find(|(_, x)| **x == coord) {
+            self.active_blocks.swap_remove(idx);
+        }
+    }
+
     /// Returns true if a structure block is within this line
-    pub fn within(&self, sb: &StructureBlock) -> bool {
+    pub fn within(&self, sb: &BlockCoordinate) -> bool {
         match self.direction {
             BlockDirection::PosX => {
                 sb.z == self.start.z && sb.y == self.start.y && (sb.x >= self.start.x && sb.x < self.start.x + self.len)
@@ -174,14 +203,24 @@ impl<T: LineProperty> Line<T> {
     }
 }
 
-#[derive(Component, Serialize, Deserialize, Debug)]
+#[derive(Component, Serialize, Deserialize, Debug, Reflect)]
 /// Represents all the laser cannons that are within this structure
 pub struct LineSystem<T: LineProperty, S: LinePropertyCalculator<T>> {
     /// All the lins that there are
     pub lines: Vec<Line<T>>,
     /// Any color changers that are placed on this structure
     pub colors: Vec<(BlockCoordinate, LineColorProperty)>,
+    #[reflect(ignore)]
     _phantom: PhantomData<S>,
+}
+
+impl<T: LineProperty, S: LinePropertyCalculator<T>> LineSystem<T, S> {
+    pub fn mut_line_containing(&mut self, block: StructureBlock) -> Option<&mut Line<T>> {
+        self.lines.iter_mut().find(|x| x.within(&block))
+    }
+    pub fn line_containing(&mut self, block: StructureBlock) -> Option<&Line<T>> {
+        self.lines.iter().find(|x| x.within(&block))
+    }
 }
 
 impl<T: LineProperty, S: LinePropertyCalculator<T>> StructureSystemImpl for LineSystem<T, S> {

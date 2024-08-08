@@ -42,7 +42,7 @@ pub struct MissileLauncherProperty {
 
 impl LineProperty for MissileLauncherProperty {}
 
-#[derive(Debug)]
+#[derive(Debug, Reflect)]
 /// Used internally by missile cannon system, but must be public for compiler to be happy.
 ///
 /// A simple strategy pattern that is never initialized

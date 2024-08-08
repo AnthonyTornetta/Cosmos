@@ -523,5 +523,6 @@ pub(super) fn register(app: &mut App) {
     energy_generation_system::register(app);
     thruster_system::register(app);
     missile_launcher_system::register(app);
+    laser_cannon_system::register(app);
     dock_system::register(app);
 }

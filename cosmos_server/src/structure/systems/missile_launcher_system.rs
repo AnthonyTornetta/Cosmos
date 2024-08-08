@@ -12,6 +12,7 @@ use cosmos_core::{
     block::Block,
     ecs::bundles::CosmosPbrBundle,
     entities::player::Player,
+    logic::{LogicBlock, LogicConnection, PortType},
     netty::{
         cosmos_encoder, server_laser_cannon_system_messages::ServerStructureSystemMessages, system_sets::NetworkingSystemsSet,
         NettyChannelServer,
@@ -26,7 +27,7 @@ use cosmos_core::{
     structure::{
         systems::{
             energy_storage_system::EnergyStorageSystem,
-            laser_cannon_system::SystemCooldown,
+            laser_cannon_system::{LineSystemCooldown, SystemCooldown},
             line_system::LineBlocks,
             missile_launcher_system::{
                 MissileLauncherCalculator, MissileLauncherFocus, MissileLauncherPreferredFocus, MissileLauncherProperty,
@@ -44,10 +45,7 @@ use super::{line_system::add_line_system, sync::register_structure_system};
 
 fn on_add_missile_launcher(mut commands: Commands, query: Query<Entity, Added<MissileLauncherSystem>>) {
     for ent in query.iter() {
-        commands.entity(ent).insert(SystemCooldown {
-            cooldown_time: Duration::from_secs(5),
-            ..Default::default()
-        });
+        commands.entity(ent).insert(LineSystemCooldown::default());
     }
 }
 
@@ -177,14 +175,20 @@ fn calculate_focusable_properties(
 }
 
 fn update_missile_system(
-    mut query: Query<(&MissileLauncherSystem, &MissileLauncherFocus, &StructureSystem, &mut SystemCooldown), With<SystemActive>>,
+    mut query: Query<(
+        &MissileLauncherSystem,
+        &MissileLauncherFocus,
+        &StructureSystem,
+        &mut LineSystemCooldown,
+        Has<SystemActive>,
+    )>,
     mut es_query: Query<&mut EnergyStorageSystem>,
     systems: Query<(Entity, &StructureSystems, &Structure, &Location, &GlobalTransform, &Velocity)>,
     time: Res<Time>,
     mut commands: Commands,
     mut server: ResMut<RenetServer>,
 ) {
-    for (cannon_system, focus, system, mut cooldown) in query.iter_mut() {
+    for (cannon_system, focus, system, mut cooldown, system_active) in query.iter_mut() {
         let Ok((ship_entity, systems, structure, location, global_transform, ship_velocity)) = systems.get(system.structure_entity())
         else {
             continue;
@@ -195,16 +199,22 @@ fn update_missile_system(
 
         let sec = time.elapsed_seconds();
 
-        if sec - cooldown.last_use_time <= cooldown.cooldown_time.as_secs_f32() {
-            continue;
-        }
-
-        cooldown.last_use_time = sec;
-
         let mut any_fired = false;
 
+        let default_cooldown = SystemCooldown {
+            cooldown_time: Duration::from_secs(5),
+            ..Default::default()
+        };
+
         for line in cannon_system.lines.iter() {
-            if energy_storage_system.get_energy() >= line.property.energy_per_shot {
+            let cooldown = cooldown.lines.entry(line.start.coords()).or_insert(default_cooldown);
+
+            if sec - cooldown.last_use_time <= cooldown.cooldown_time.as_secs_f32() {
+                continue;
+            }
+
+            if (system_active || line.active()) && energy_storage_system.get_energy() >= line.property.energy_per_shot {
+                cooldown.last_use_time = sec;
                 any_fired = true;
                 energy_storage_system.decrease_energy(line.property.energy_per_shot);
 
@@ -266,6 +276,12 @@ fn update_missile_system(
                 cosmos_encoder::serialize(&ServerStructureSystemMessages::MissileLauncherSystemFired { ship_entity }),
             );
         }
+    }
+}
+
+fn register_logic_connections_for_missile_launcher(blocks: Res<Registry<Block>>, mut registry: ResMut<Registry<LogicBlock>>) {
+    if let Some(block) = blocks.from_id("cosmos:missile_launcher") {
+        registry.register(LogicBlock::new(block, [Some(LogicConnection::Port(PortType::Input)); 6]));
     }
 }
 

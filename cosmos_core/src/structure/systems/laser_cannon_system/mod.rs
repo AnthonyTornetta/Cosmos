@@ -2,8 +2,10 @@
 
 use std::time::Duration;
 
-use bevy::{prelude::*, reflect::Reflect};
+use bevy::{prelude::*, reflect::Reflect, utils::HashMap};
 use serde::{Deserialize, Serialize};
+
+use crate::prelude::BlockCoordinate;
 
 use super::{
     line_system::{LineProperty, LinePropertyCalculator, LineSystem},
@@ -26,7 +28,7 @@ pub struct LaserCannonProperty {
 
 impl LineProperty for LaserCannonProperty {}
 
-#[derive(Debug)]
+#[derive(Debug, Reflect)]
 /// Used internally by laser cannon system, but must be public for compiler to be happy.
 ///
 /// A simple strategy pattern that is never initialized
@@ -48,11 +50,20 @@ impl LinePropertyCalculator<LaserCannonProperty> for LaserCannonCalculator {
     }
 }
 
-#[derive(Component, Default, Reflect)]
-/// Represents all the laser cannons that are within this structure
+#[derive(Component, Default, Reflect, Debug, Clone, Copy)]
 pub struct SystemCooldown {
     /// The time since this system was last fired.
     pub last_use_time: f32,
     /// How long the cooldown should be
     pub cooldown_time: Duration,
+}
+
+#[derive(Component, Default, Reflect, Debug)]
+/// Represents all the laser cannons that are within this structure
+pub struct LineSystemCooldown {
+    pub lines: HashMap<BlockCoordinate, SystemCooldown>,
+}
+
+pub(super) fn register(app: &mut App) {
+    app.register_type::<LaserCannonSystem>().register_type::<LineSystemCooldown>();
 }
