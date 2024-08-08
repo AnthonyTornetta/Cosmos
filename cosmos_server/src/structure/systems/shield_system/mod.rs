@@ -403,7 +403,7 @@ pub(super) fn register(app: &mut App) {
                     .ambiguous_with(StructureSystemsSet::InitSystems),
                 block_update_system
                     .in_set(BlockEventsSet::ProcessEvents)
-                    .in_set(StructureSystemsSet::UpdateSystems),
+                    .in_set(StructureSystemsSet::UpdateSystemsBlocks),
                 power_shields,
             )
                 .chain()

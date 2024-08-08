@@ -361,7 +361,7 @@ pub(super) fn register(app: &mut App) {
             check_should_break,
         )
             .chain()
-            .in_set(StructureSystemsSet::UpdateSystems)
+            .in_set(StructureSystemsSet::UpdateSystemsBlocks)
             .before(BlockEventsSet::PreProcessEvents)
             .run_if(in_state(GameState::Playing)),
     )

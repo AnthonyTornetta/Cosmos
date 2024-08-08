@@ -4,6 +4,7 @@ use std::time::Duration;
 
 use bevy::{
     app::{App, Update},
+    core::Name,
     ecs::{
         component::Component,
         entity::Entity,
@@ -42,7 +43,7 @@ pub struct MissileLauncherProperty {
 
 impl LineProperty for MissileLauncherProperty {}
 
-#[derive(Debug)]
+#[derive(Debug, Reflect)]
 /// Used internally by missile cannon system, but must be public for compiler to be happy.
 ///
 /// A simple strategy pattern that is never initialized
@@ -166,6 +167,12 @@ fn add_focus_to_new_missile_system(mut commands: Commands, q_added_missile_launc
     }
 }
 
+fn name_missile_launcher_system(mut commands: Commands, q_added: Query<Entity, Added<MissileLauncherSystem>>) {
+    for e in q_added.iter() {
+        commands.entity(e).insert(Name::new("Missile Launcher System"));
+    }
+}
+
 pub(super) fn register(app: &mut App) {
     sync_component::<MissileLauncherPreferredFocus>(app);
     sync_component::<MissileLauncherFocus>(app);
@@ -177,5 +184,11 @@ pub(super) fn register(app: &mut App) {
             .in_set(NetworkingSystemsSet::Between),
     )
     .register_type::<MissileLauncherPreferredFocus>()
-    .register_type::<MissileLauncherFocus>();
+    .register_type::<MissileLauncherFocus>()
+    .add_systems(
+        Update,
+        name_missile_launcher_system
+            .ambiguous_with_all() // doesn't matter if this is 1-frame delayed
+            .after(StructureSystemsSet::InitSystems),
+    );
 }

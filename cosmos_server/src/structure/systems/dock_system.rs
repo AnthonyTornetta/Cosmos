@@ -430,12 +430,12 @@ pub(super) fn register(app: &mut App) {
             (
                 dock_block_update_system
                     .in_set(BlockEventsSet::ProcessEvents)
-                    .in_set(StructureSystemsSet::UpdateSystems),
+                    .in_set(StructureSystemsSet::UpdateSystemsBlocks),
                 on_active.after(ThrusterSystemSet::ApplyThrusters),
                 monitor_removed_dock_blocks
                     .after(ThrusterSystemSet::ApplyThrusters) // velocity is changed in `ApplyThrusters`, which is needed here.
                     .in_set(BlockEventsSet::ProcessEvents)
-                    .in_set(StructureSystemsSet::UpdateSystems),
+                    .in_set(StructureSystemsSet::UpdateSystemsBlocks),
                 add_dock_list,
                 add_dock_properties,
             )
