@@ -261,9 +261,10 @@ impl<T: LineProperty, S: LinePropertyCalculator<T>> BlockStructureSystem<T> for 
 
     fn remove_block(&mut self, sb: &StructureBlock) {
         for (i, line) in self.lines.iter_mut().enumerate() {
+            line.mark_block_inactive(sb.coords());
+
             if line.start == *sb {
                 let (dx, dy, dz) = line.direction.to_i32_tuple();
-
                 line.start.x = (line.start.x as i32 + dx) as CoordinateType;
                 line.start.y = (line.start.y as i32 + dy) as CoordinateType;
                 line.start.z = (line.start.z as i32 + dz) as CoordinateType;
@@ -271,15 +272,15 @@ impl<T: LineProperty, S: LinePropertyCalculator<T>> BlockStructureSystem<T> for 
 
                 if line.len == 0 {
                     self.lines.swap_remove(i);
-                    return;
                 }
+                return;
             } else if line.end() == *sb {
                 line.len -= 1;
 
                 if line.len == 0 {
                     self.lines.swap_remove(i);
-                    return;
                 }
+                return;
             } else if line.within(sb) {
                 let l1_len = match line.direction {
                     BlockDirection::PosX => sb.x - line.start.x,
