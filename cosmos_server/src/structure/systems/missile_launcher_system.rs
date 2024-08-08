@@ -12,7 +12,7 @@ use cosmos_core::{
     block::Block,
     ecs::bundles::CosmosPbrBundle,
     entities::player::Player,
-    logic::{LogicBlock, LogicConnection, PortType},
+    logic::{logic_driver::LogicDriver, LogicBlock, LogicConnection, LogicInputEvent, LogicSystemSet, PortType},
     netty::{
         cosmos_encoder, server_laser_cannon_system_messages::ServerStructureSystemMessages, system_sets::NetworkingSystemsSet,
         NettyChannelServer,
@@ -23,7 +23,7 @@ use cosmos_core::{
         location::{CosmosBundleSet, Location},
     },
     projectiles::missile::Missile,
-    registry::Registry,
+    registry::{identifiable::Identifiable, Registry},
     structure::{
         systems::{
             energy_storage_system::EnergyStorageSystem,
@@ -285,6 +285,43 @@ fn register_logic_connections_for_missile_launcher(blocks: Res<Registry<Block>>,
     }
 }
 
+fn missile_launcher_input_event_listener(
+    mut evr_logic_input: EventReader<LogicInputEvent>,
+    blocks: Res<Registry<Block>>,
+    mut q_logic_driver: Query<&mut LogicDriver>,
+    q_structure: Query<(&Structure, &StructureSystems)>,
+    mut q_missile_launcher_system: Query<&mut MissileLauncherSystem>,
+) {
+    for ev in evr_logic_input.read() {
+        let Ok((structure, systems)) = q_structure.get(ev.entity) else {
+            continue;
+        };
+        if structure.block_at(ev.block.coords(), &blocks).unlocalized_name() != "cosmos:missile_launcher" {
+            continue;
+        }
+        let Ok(logic_driver) = q_logic_driver.get_mut(ev.entity) else {
+            continue;
+        };
+        let Ok(mut missile_launcher_system) = systems.query_mut(&mut q_missile_launcher_system) else {
+            continue;
+        };
+        let Some(line) = missile_launcher_system.mut_line_containing(ev.block) else {
+            continue;
+        };
+
+        let active = logic_driver
+            .read_all_inputs(ev.block.coords(), structure.block_rotation(ev.block.coords()))
+            .iter()
+            .any(|signal| *signal != 0);
+
+        if active {
+            line.mark_block_active(ev.block.coords());
+        } else {
+            line.mark_block_inactive(ev.block.coords());
+        }
+    }
+}
+
 pub(super) fn register(app: &mut App) {
     add_line_system::<MissileLauncherProperty, MissileLauncherCalculator>(app);
 
@@ -295,12 +332,21 @@ pub(super) fn register(app: &mut App) {
             .before(CosmosBundleSet::HandleCosmosBundles)
             .before(NetworkingSystemsSet::SyncComponents),
     )
-    .add_systems(OnEnter(GameState::PostLoading), register_missile_launcher_blocks)
+    .add_systems(
+        OnEnter(GameState::PostLoading),
+        (register_logic_connections_for_missile_launcher, register_missile_launcher_blocks),
+    )
     .add_systems(
         Update,
         (add_missile_targettable, on_add_missile_launcher, missile_lockon)
             .in_set(NetworkingSystemsSet::Between)
             .chain(),
+    )
+    .add_systems(
+        Update,
+        missile_launcher_input_event_listener
+            .in_set(LogicSystemSet::Consume)
+            .ambiguous_with(LogicSystemSet::Consume),
     );
 
     register_structure_system::<MissileLauncherSystem>(app, true, "cosmos:missile_launcher");
