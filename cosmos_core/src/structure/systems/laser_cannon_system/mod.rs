@@ -51,6 +51,7 @@ impl LinePropertyCalculator<LaserCannonProperty> for LaserCannonCalculator {
 }
 
 #[derive(Component, Default, Reflect, Debug, Clone, Copy)]
+/// Represents the cooldown for a single line
 pub struct SystemCooldown {
     /// The time since this system was last fired.
     pub last_use_time: f32,
@@ -59,8 +60,11 @@ pub struct SystemCooldown {
 }
 
 #[derive(Component, Default, Reflect, Debug)]
-/// Represents all the laser cannons that are within this structure
+/// Represents the cooldown for all lines that are within this structure
 pub struct LineSystemCooldown {
+    /// Each lines unique cooldown.
+    ///
+    /// TODO: This currently does not have old cooldowns removed once that line is removed. That should definitely happen.
     pub lines: HashMap<BlockCoordinate, SystemCooldown>,
 }
 

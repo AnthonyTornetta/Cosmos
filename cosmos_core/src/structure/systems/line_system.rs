@@ -2,7 +2,7 @@
 
 use std::marker::PhantomData;
 
-use bevy::{ecs::reflect, prelude::*, reflect::Reflect, utils::HashMap};
+use bevy::{prelude::*, reflect::Reflect, utils::HashMap};
 use serde::{Deserialize, Serialize};
 
 use crate::{
@@ -156,10 +156,17 @@ impl<T: LineProperty> Line<T> {
         ))
     }
 
+    /// Checks if this line is *individually* active.
+    /// A structure system can be wholly active, or it can have individual lines active (usually through logic).
+    ///
+    /// The line should be treated as active if this is true OR if the whole system is active.
     pub fn active(&self) -> bool {
         !self.active_blocks.is_empty()
     }
 
+    /// Marks a block within this line as being active.
+    ///
+    /// If the block given is not within this line or already active, nothing happens.
     pub fn mark_block_active(&mut self, coord: BlockCoordinate) {
         if !self.within(&coord) {
             return;
@@ -172,6 +179,9 @@ impl<T: LineProperty> Line<T> {
         self.active_blocks.push(coord);
     }
 
+    /// Marks a block within this line as being inactive.
+    ///
+    /// If the block given is not within this line or already active, nothing happens.
     pub fn mark_block_inactive(&mut self, coord: BlockCoordinate) {
         if let Some((idx, _)) = self.active_blocks.iter().enumerate().find(|(_, x)| **x == coord) {
             self.active_blocks.swap_remove(idx);
@@ -215,9 +225,11 @@ pub struct LineSystem<T: LineProperty, S: LinePropertyCalculator<T>> {
 }
 
 impl<T: LineProperty, S: LinePropertyCalculator<T>> LineSystem<T, S> {
+    /// Returns the line that contains this block (if any)
     pub fn mut_line_containing(&mut self, block: StructureBlock) -> Option<&mut Line<T>> {
         self.lines.iter_mut().find(|x| x.within(&block))
     }
+    /// Returns the line that contains this block (if any)
     pub fn line_containing(&mut self, block: StructureBlock) -> Option<&Line<T>> {
         self.lines.iter().find(|x| x.within(&block))
     }
