@@ -188,7 +188,7 @@ impl<T: LineProperty> Line<T> {
         }
     }
 
-    /// Returns true if a structure block is within this line
+    /// Returns true if a coordinate is within this line
     pub fn within(&self, sb: &BlockCoordinate) -> bool {
         match self.direction {
             BlockDirection::PosX => {

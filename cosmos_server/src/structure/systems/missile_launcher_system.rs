@@ -12,7 +12,7 @@ use cosmos_core::{
     block::Block,
     ecs::bundles::CosmosPbrBundle,
     entities::player::Player,
-    logic::{logic_driver::LogicDriver, LogicBlock, LogicConnection, LogicInputEvent, LogicSystemSet, PortType},
+    logic::{logic_driver::LogicDriver, LogicInputEvent, LogicSystemSet},
     netty::{
         cosmos_encoder, server_laser_cannon_system_messages::ServerStructureSystemMessages, system_sets::NetworkingSystemsSet,
         NettyChannelServer,
@@ -281,12 +281,6 @@ fn update_missile_system(
     }
 }
 
-fn register_logic_connections_for_missile_launcher(blocks: Res<Registry<Block>>, mut registry: ResMut<Registry<LogicBlock>>) {
-    if let Some(block) = blocks.from_id("cosmos:missile_launcher") {
-        registry.register(LogicBlock::new(block, [Some(LogicConnection::Port(PortType::Input)); 6]));
-    }
-}
-
 fn missile_launcher_input_event_listener(
     mut evr_logic_input: EventReader<LogicInputEvent>,
     blocks: Res<Registry<Block>>,
@@ -334,10 +328,7 @@ pub(super) fn register(app: &mut App) {
             .before(CosmosBundleSet::HandleCosmosBundles)
             .before(NetworkingSystemsSet::SyncComponents),
     )
-    .add_systems(
-        OnEnter(GameState::PostLoading),
-        (register_logic_connections_for_missile_launcher, register_missile_launcher_blocks),
-    )
+    .add_systems(OnEnter(GameState::PostLoading), register_missile_launcher_blocks)
     .add_systems(
         Update,
         (add_missile_targettable, on_add_missile_launcher, missile_lockon)

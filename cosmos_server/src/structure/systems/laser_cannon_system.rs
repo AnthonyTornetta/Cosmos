@@ -7,7 +7,7 @@ use bevy_rapier3d::{plugin::RapierContextEntityLink, prelude::Velocity};
 use bevy_renet2::renet2::RenetServer;
 use cosmos_core::{
     block::{block_events::BlockEventsSet, Block},
-    logic::{logic_driver::LogicDriver, LogicBlock, LogicConnection, LogicInputEvent, LogicSystemSet, PortType},
+    logic::{logic_driver::LogicDriver, LogicInputEvent, LogicSystemSet},
     netty::{
         cosmos_encoder, server_laser_cannon_system_messages::ServerStructureSystemMessages, system_sets::NetworkingSystemsSet,
         NettyChannelServer,
@@ -140,12 +140,6 @@ fn update_system(
     }
 }
 
-fn register_logic_connections_for_laser_cannon(blocks: Res<Registry<Block>>, mut registry: ResMut<Registry<LogicBlock>>) {
-    if let Some(block) = blocks.from_id("cosmos:laser_cannon") {
-        registry.register(LogicBlock::new(block, [Some(LogicConnection::Port(PortType::Input)); 6]));
-    }
-}
-
 fn laser_cannon_input_event_listener(
     mut evr_logic_input: EventReader<LogicInputEvent>,
     blocks: Res<Registry<Block>>,
@@ -195,10 +189,7 @@ pub(super) fn register(app: &mut App) {
             .in_set(NetworkingSystemsSet::Between)
             .run_if(in_state(GameState::Playing)),
     )
-    .add_systems(
-        OnEnter(GameState::PostLoading),
-        (register_logic_connections_for_laser_cannon, register_laser_blocks),
-    )
+    .add_systems(OnEnter(GameState::PostLoading), register_laser_blocks)
     .add_systems(
         Update,
         on_add_laser
