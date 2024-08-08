@@ -189,7 +189,7 @@ pub(super) fn register(app: &mut App) {
         update_system
             .ambiguous_with(thruster_system::update_ship_force_and_velocity)
             .after(BlockEventsSet::ProcessEvents)
-            .in_set(StructureSystemsSet::UpdateSystems)
+            .in_set(StructureSystemsSet::UpdateSystemsBlocks)
             .in_set(NetworkingSystemsSet::Between)
             .run_if(in_state(GameState::Playing)),
     )
@@ -197,10 +197,16 @@ pub(super) fn register(app: &mut App) {
         OnEnter(GameState::PostLoading),
         (register_logic_connections_for_laser_cannon, register_laser_blocks),
     )
-    .add_systems(Update, on_add_laser.after(StructureSystemsSet::UpdateSystems))
+    .add_systems(
+        Update,
+        on_add_laser
+            .before(laser_cannon_input_event_listener)
+            .after(StructureSystemsSet::UpdateSystemsBlocks),
+    )
     .add_systems(
         Update,
         laser_cannon_input_event_listener
+            .in_set(StructureSystemsSet::UpdateSystems)
             .in_set(LogicSystemSet::Consume)
             .ambiguous_with(LogicSystemSet::Consume),
     );

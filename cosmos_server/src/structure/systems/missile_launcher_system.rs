@@ -33,7 +33,7 @@ use cosmos_core::{
                 MissileLauncherCalculator, MissileLauncherFocus, MissileLauncherPreferredFocus, MissileLauncherProperty,
                 MissileLauncherSystem,
             },
-            StructureSystem, StructureSystems, SystemActive,
+            StructureSystem, StructureSystems, StructureSystemsSet, SystemActive,
         },
         Structure,
     },
@@ -346,6 +346,7 @@ pub(super) fn register(app: &mut App) {
         Update,
         missile_launcher_input_event_listener
             .in_set(LogicSystemSet::Consume)
+            .in_set(StructureSystemsSet::UpdateSystems)
             .ambiguous_with(LogicSystemSet::Consume),
     );
 

@@ -10,6 +10,7 @@ use crate::prelude::BlockCoordinate;
 use super::{
     line_system::{LineProperty, LinePropertyCalculator, LineSystem},
     sync::SyncableSystem,
+    StructureSystemsSet,
 };
 
 /// A ship system that stores information about the laser cannons
@@ -68,6 +69,19 @@ pub struct LineSystemCooldown {
     pub lines: HashMap<BlockCoordinate, SystemCooldown>,
 }
 
+fn name_laser_cannon_system(mut commands: Commands, q_added: Query<Entity, Added<LaserCannonSystem>>) {
+    for e in q_added.iter() {
+        commands.entity(e).insert(Name::new("Laser Cannon System"));
+    }
+}
+
 pub(super) fn register(app: &mut App) {
-    app.register_type::<LaserCannonSystem>().register_type::<LineSystemCooldown>();
+    app.register_type::<LaserCannonSystem>()
+        .register_type::<LineSystemCooldown>()
+        .add_systems(
+            Update,
+            name_laser_cannon_system
+                .ambiguous_with_all() // doesn't matter if this is 1-frame delayed
+                .after(StructureSystemsSet::InitSystems),
+        );
 }

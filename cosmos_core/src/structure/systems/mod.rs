@@ -66,6 +66,8 @@ pub enum StructureSystemsSet {
     /// Initialize your structure systems here (from [`super::events::StructureLoadedEvent`]s being generated)
     InitSystems,
     /// Update systems when new blocks are placed (from [`crate::events::block_events::BlockChangedEvent`]s)
+    UpdateSystemsBlocks,
+    /// Update systems post block placement.
     UpdateSystems,
 }
 
@@ -501,6 +503,7 @@ pub(super) fn register(app: &mut App) {
         Update,
         (
             StructureSystemsSet::InitSystems.in_set(StructureLoadingSet::StructureLoaded),
+            StructureSystemsSet::UpdateSystemsBlocks,
             StructureSystemsSet::UpdateSystems,
         )
             .chain(),
