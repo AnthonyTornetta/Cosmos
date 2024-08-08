@@ -63,9 +63,7 @@ pub struct SystemCooldown {
 #[derive(Component, Default, Reflect, Debug)]
 /// Represents the cooldown for all lines that are within this structure
 pub struct LineSystemCooldown {
-    /// Each lines unique cooldown.
-    ///
-    /// TODO: This currently does not have old cooldowns removed once that line is removed. That should definitely happen.
+    /// Each line's unique cooldown.
     pub lines: HashMap<BlockCoordinate, SystemCooldown>,
 }
 
