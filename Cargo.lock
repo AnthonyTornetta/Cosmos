@@ -1921,6 +1921,7 @@ dependencies = [
  "derive_more",
  "futures-lite",
  "image 0.25.1",
+ "iyes_perf_ui",
  "local-ip-address",
  "noise",
  "rand",
@@ -1979,6 +1980,7 @@ dependencies = [
  "crossterm",
  "derive_more",
  "futures-lite",
+ "iyes_perf_ui",
  "local-ip-address",
  "noise",
  "rand",
@@ -2921,6 +2923,16 @@ name = "itoa"
 version = "1.0.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b1a46d1a171d865aa5f83f92695765caa047a9b4cbae2cbf37dbd613a793fd4c"
+
+[[package]]
+name = "iyes_perf_ui"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3c7015cab699e6224bd5519854cff04280dddab4257090f4720e85d1095e66c8"
+dependencies = [
+ "bevy",
+ "num-traits",
+]
 
 [[package]]
 name = "jni"

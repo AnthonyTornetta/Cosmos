@@ -77,3 +77,4 @@ derive_more = { workspace = true }
 
 bevy_easy_compute = { workspace = true }
 bytemuck = { workspace = true }
+iyes_perf_ui = { workspace = true }

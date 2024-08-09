@@ -35,9 +35,10 @@ pub mod ui;
 pub mod universe;
 pub mod window;
 
-use bevy::core::TaskPoolThreadAssignmentPolicy;
+use bevy::diagnostic::{EntityCountDiagnosticsPlugin, SystemInformationDiagnosticsPlugin};
 use bevy::prelude::*;
 use bevy::window::WindowMode;
+use bevy::{core::TaskPoolThreadAssignmentPolicy, diagnostic::FrameTimeDiagnosticsPlugin};
 use bevy_hanabi::HanabiPlugin;
 use bevy_mod_debugdump::schedule_graph;
 use bevy_obj::ObjPlugin;
@@ -46,6 +47,7 @@ use bevy_rapier3d::plugin::{RapierContextInitialization, RapierPhysicsPlugin};
 use bevy_renet2::{transport::NetcodeClientPlugin, RenetClientPlugin};
 use clap::{arg, Parser};
 use cosmos_core::{physics::collision_handling::CosmosPhysicsFilter, plugin::cosmos_core_plugin::CosmosCorePluginGroup};
+use iyes_perf_ui::PerfUiPlugin;
 use netty::connect::{self};
 use state::game_state::GameState;
 use thread_priority::{set_current_thread_priority, ThreadPriority};
@@ -133,7 +135,17 @@ fn main() {
                 // .in_schedule(FixedUpdate)
                 .with_custom_initialization(RapierContextInitialization::default()),
         )
-        .add_plugins((RenetClientPlugin, NetcodeClientPlugin, ObjPlugin, HanabiPlugin))
+        .add_plugins((
+            RenetClientPlugin,
+            NetcodeClientPlugin,
+            ObjPlugin,
+            HanabiPlugin,
+            // Used for diagnostics
+            SystemInformationDiagnosticsPlugin,
+            EntityCountDiagnosticsPlugin,
+            FrameTimeDiagnosticsPlugin,
+            PerfUiPlugin,
+        ))
         // .add_plugins(RapierDebugRenderPlugin::default())
         .add_systems(OnEnter(GameState::Connecting), connect::establish_connection)
         .add_systems(Update, connect::wait_for_connection.run_if(in_state(GameState::Connecting)))
