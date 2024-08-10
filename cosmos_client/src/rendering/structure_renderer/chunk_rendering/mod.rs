@@ -10,6 +10,7 @@ use super::{BlockMeshRegistry, CosmosMeshBuilder, MeshBuilder, MeshInformation};
 
 mod async_rendering;
 pub mod chunk_renderer;
+pub mod neighbor_checking;
 
 #[derive(Debug)]
 struct MeshMaterial {

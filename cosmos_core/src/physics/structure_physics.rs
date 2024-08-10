@@ -84,7 +84,8 @@ fn generate_colliders(
     for z in offset.z..(offset.z + size) {
         for y in offset.y..(offset.y + size) {
             for x in offset.x..(offset.x + size) {
-                let coord = ChunkBlockCoordinate::new(x, y, z);
+                let coord = ChunkBlockCoordinate::new(x, y, z).expect("Invalid chunk coordinate");
+
                 let block = blocks.from_numeric_id(chunk.block_at(coord));
 
                 let block_mass = block.density(); // mass = volume * density = 1*1*1*density = density
@@ -146,15 +147,14 @@ fn generate_colliders(
                                 .map(|x| block.should_connect_with(structure.block_at(x, blocks)))
                                 .unwrap_or(false);
 
-                            let pos_x = block.should_connect_with(
-                                structure.block_at(coord.pos_x().to_block_coordinate(chunk.chunk_coordinates()), blocks),
-                            );
-                            let pos_y = block.should_connect_with(
-                                structure.block_at(coord.pos_y().to_block_coordinate(chunk.chunk_coordinates()), blocks),
-                            );
-                            let pos_z = block.should_connect_with(
-                                structure.block_at(coord.pos_z().to_block_coordinate(chunk.chunk_coordinates()), blocks),
-                            );
+                            let pos_x = coord.to_block_coordinate(chunk.chunk_coordinates()).pos_x();
+                            let pos_x = block.should_connect_with(structure.block_at(pos_x, blocks));
+
+                            let pos_y = coord.to_block_coordinate(chunk.chunk_coordinates()).pos_y();
+                            let pos_y = block.should_connect_with(structure.block_at(pos_y, blocks));
+
+                            let pos_z = coord.to_block_coordinate(chunk.chunk_coordinates()).pos_z();
+                            let pos_z = block.should_connect_with(structure.block_at(pos_z, blocks));
 
                             process_connected_colliders(
                                 pos_x,
@@ -192,7 +192,7 @@ fn generate_colliders(
                         sensor_colliders,
                         fluid_colliders,
                         Vect::new(location.x - s4, location.y - s4, location.z - s4),
-                        ChunkBlockCoordinate::new(offset.x, offset.y, offset.z),
+                        ChunkBlockCoordinate::new(offset.x, offset.y, offset.z).expect("Invalid chunk coordinate"),
                         s2,
                         mass,
                     );
@@ -207,7 +207,7 @@ fn generate_colliders(
                         sensor_colliders,
                         fluid_colliders,
                         Vect::new(location.x + s4, location.y - s4, location.z - s4),
-                        ChunkBlockCoordinate::new(offset.x + s2, offset.y, offset.z),
+                        ChunkBlockCoordinate::new(offset.x + s2, offset.y, offset.z).expect("Invalid chunk coordinate"),
                         s2,
                         mass,
                     );
@@ -222,7 +222,7 @@ fn generate_colliders(
                         sensor_colliders,
                         fluid_colliders,
                         Vect::new(location.x - s4, location.y + s4, location.z - s4),
-                        ChunkBlockCoordinate::new(offset.x, offset.y + s2, offset.z),
+                        ChunkBlockCoordinate::new(offset.x, offset.y + s2, offset.z).expect("Invalid chunk coordinate"),
                         s2,
                         mass,
                     );
@@ -237,7 +237,7 @@ fn generate_colliders(
                         sensor_colliders,
                         fluid_colliders,
                         Vect::new(location.x - s4, location.y - s4, location.z + s4),
-                        ChunkBlockCoordinate::new(offset.x, offset.y, offset.z + s2),
+                        ChunkBlockCoordinate::new(offset.x, offset.y, offset.z + s2).expect("Invalid chunk coordinate"),
                         s2,
                         mass,
                     );
@@ -252,7 +252,7 @@ fn generate_colliders(
                         sensor_colliders,
                         fluid_colliders,
                         Vect::new(location.x + s4, location.y - s4, location.z + s4),
-                        ChunkBlockCoordinate::new(offset.x + s2, offset.y, offset.z + s2),
+                        ChunkBlockCoordinate::new(offset.x + s2, offset.y, offset.z + s2).expect("Invalid chunk coordinate"),
                         s2,
                         mass,
                     );
@@ -267,7 +267,7 @@ fn generate_colliders(
                         sensor_colliders,
                         fluid_colliders,
                         Vect::new(location.x - s4, location.y + s4, location.z + s4),
-                        ChunkBlockCoordinate::new(offset.x, offset.y + s2, offset.z + s2),
+                        ChunkBlockCoordinate::new(offset.x, offset.y + s2, offset.z + s2).expect("Invalid chunk coordinate"),
                         s2,
                         mass,
                     );
@@ -282,7 +282,7 @@ fn generate_colliders(
                         sensor_colliders,
                         fluid_colliders,
                         Vect::new(location.x + s4, location.y + s4, location.z + s4),
-                        ChunkBlockCoordinate::new(offset.x + s2, offset.y + s2, offset.z + s2),
+                        ChunkBlockCoordinate::new(offset.x + s2, offset.y + s2, offset.z + s2).expect("Invalid chunk coordinate"),
                         s2,
                         mass,
                     );
@@ -297,7 +297,7 @@ fn generate_colliders(
                         sensor_colliders,
                         fluid_colliders,
                         Vect::new(location.x + s4, location.y + s4, location.z - s4),
-                        ChunkBlockCoordinate::new(offset.x + s2, offset.y + s2, offset.z),
+                        ChunkBlockCoordinate::new(offset.x + s2, offset.y + s2, offset.z).expect("Invalid chunk coordinate"),
                         s2,
                         mass,
                     );
@@ -411,8 +411,8 @@ fn generate_chunk_collider(
         &mut colliders,
         &mut sensor_colliders,
         &mut fluid_colliders,
-        Vect::new(0.0, 0.0, 0.0),
-        ChunkBlockCoordinate::new(0, 0, 0),
+        Vect::ZERO,
+        ChunkBlockCoordinate::ZERO,
         CHUNK_DIMENSIONS,
         &mut mass,
     );

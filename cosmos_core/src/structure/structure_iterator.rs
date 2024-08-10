@@ -196,10 +196,9 @@ impl<'a> Iterator for BlockIterator<'a> {
                     }
                 }
 
-                while !body
-                    .cur_chunk
-                    .has_block_at(ChunkBlockCoordinate::new(body.body.at.x, body.body.at.y, body.body.at.z))
-                {
+                while !body.cur_chunk.has_block_at(
+                    ChunkBlockCoordinate::new(body.body.at.x, body.body.at.y, body.body.at.z).expect("Invalid chunk coordinate"),
+                ) {
                     if advance_body(body) {
                         self.state = BlockItrState::Invalid;
                         return None;

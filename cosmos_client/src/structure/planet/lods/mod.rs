@@ -626,7 +626,7 @@ pub(crate) fn generate_chunks_from_gpu_data(
                         // let block = blocks.from_id("cosmos:stone").expect("Missing stone?");
 
                         needs_generated_chunk.chunk.set_block_at(
-                            ChunkBlockCoordinate::new(x as CoordinateType, y as CoordinateType, z as CoordinateType),
+                            ChunkBlockCoordinate::new(x as CoordinateType, y as CoordinateType, z as CoordinateType).unwrap(),
                             block,
                             face.into(),
                         );
@@ -641,7 +641,7 @@ pub(crate) fn generate_chunks_from_gpu_data(
 
                         if (coord.abs()) as CoordinateType <= sea_level_coordinate {
                             needs_generated_chunk.chunk.set_block_at(
-                                ChunkBlockCoordinate::new(x as CoordinateType, y as CoordinateType, z as CoordinateType),
+                                ChunkBlockCoordinate::new(x as CoordinateType, y as CoordinateType, z as CoordinateType).unwrap(),
                                 sea_level_block,
                                 face.into(),
                             );
