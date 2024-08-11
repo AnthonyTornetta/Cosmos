@@ -6,39 +6,33 @@
 
 use crate::{
     asset::{
-        asset_loading::{BlockNeighbors, BlockTextureIndex},
+        asset_loading::BlockTextureIndex,
         materials::{AddMaterialEvent, BlockMaterialMapping, MaterialDefinition, MaterialType, MaterialsSystemSet},
     },
+    block::lighting::BlockLighting,
     ecs::add_statebound_resource,
     state::game_state::GameState,
 };
 use bevy::{
     prelude::*,
-    render::{
-        mesh::{MeshVertexAttribute, VertexAttributeValues},
-        primitives::Aabb,
-    },
     tasks::{AsyncComputeTaskPool, Task},
-    utils::{hashbrown::HashMap, HashSet},
+    utils::HashSet,
 };
 use cosmos_core::{
-    block::{block_face::BlockFace, Block},
+    block::Block,
     ecs::NeedsDespawned,
     registry::{
-        identifiable::Identifiable,
         many_to_one::{ManyToOneRegistry, ReadOnlyManyToOneRegistry},
         ReadOnlyRegistry, Registry,
     },
     structure::{
-        block_storage::BlockStorer,
         chunk::{CHUNK_DIMENSIONS, CHUNK_DIMENSIONSF},
-        coordinates::{ChunkBlockCoordinate, ChunkCoordinate, CoordinateType},
+        coordinates::{ChunkCoordinate, CoordinateType},
         lod::{Lod, LodComponent},
         lod_chunk::LodChunk,
         shared::DespawnWithStructure,
         ChunkState, Structure,
     },
-    utils::array_utils::expand,
 };
 use futures_lite::future;
 use rayon::prelude::{IndexedParallelIterator, IntoParallelRefIterator, ParallelIterator};
@@ -48,324 +42,27 @@ use std::{
     sync::{Arc, Mutex},
 };
 
-use super::{BlockMeshRegistry, CosmosMeshBuilder, MeshBuilder, MeshInformation, ReadOnlyBlockMeshRegistry};
-
-#[derive(Debug)]
-struct MeshMaterial {
-    mesh: Mesh,
-    texture_dimension_index: u32,
-    material_id: u16,
-}
-
-#[derive(Debug)]
-struct LodMesh {
-    mesh_materials: Vec<MeshMaterial>,
-    scale: f32,
-}
-
-#[derive(Default, Debug)]
-struct MeshInfo {
-    mesh_builder: CosmosMeshBuilder,
-}
-
-impl MeshBuilder for MeshInfo {
-    #[inline]
-    fn add_mesh_information(
-        &mut self,
-        mesh_info: &MeshInformation,
-        position: Vec3,
-        uvs: Rect,
-        texture_index: u32,
-        additional_info: Vec<(MeshVertexAttribute, VertexAttributeValues)>,
-    ) {
-        self.mesh_builder
-            .add_mesh_information(mesh_info, position, uvs, texture_index, additional_info);
-    }
-
-    fn build_mesh(self) -> Mesh {
-        self.mesh_builder.build_mesh()
-    }
-}
-
-#[derive(Default, Debug)]
-struct ChunkRenderer {
-    meshes: HashMap<(u16, u32), MeshInfo>,
-    scale: f32,
-}
-
-impl ChunkRenderer {
-    pub fn new() -> Self {
-        Self::default()
-    }
-
-    /// Renders a chunk into mesh information that can then be turned into a bevy mesh
-    pub fn render(
-        &mut self,
-        scale: f32,
-        materials: &ManyToOneRegistry<Block, BlockMaterialMapping>,
-        materials_registry: &Registry<MaterialDefinition>,
-        lod: &LodChunk,
-        left: Option<&LodChunk>,
-        right: Option<&LodChunk>,
-        bottom: Option<&LodChunk>,
-        top: Option<&LodChunk>,
-        back: Option<&LodChunk>,
-        front: Option<&LodChunk>,
-        blocks: &Registry<Block>,
-        meshes: &BlockMeshRegistry,
-        block_textures: &Registry<BlockTextureIndex>,
-    ) {
-        self.scale = scale;
-
-        let cd2 = CHUNK_DIMENSIONSF / 2.0;
-
-        let mut faces = Vec::with_capacity(6);
-
-        for (coords, (block_id, block_info)) in lod
-            .blocks()
-            .copied()
-            .zip(lod.block_info_iterator().copied())
-            .enumerate()
-            .map(|(i, block)| {
-                (
-                    ChunkBlockCoordinate::from(expand(i, CHUNK_DIMENSIONS as usize, CHUNK_DIMENSIONS as usize)),
-                    block,
-                )
-            })
-            .filter(|(coords, _)| lod.has_block_at(*coords))
-        {
-            let (center_offset_x, center_offset_y, center_offset_z) = (
-                coords.x as f32 - cd2 + 0.5,
-                coords.y as f32 - cd2 + 0.5,
-                coords.z as f32 - cd2 + 0.5,
-            );
-            let actual_block = blocks.from_numeric_id(block_id);
-
-            #[inline(always)]
-            fn check(c: &LodChunk, block: u16, actual_block: &Block, blocks: &Registry<Block>, coords: ChunkBlockCoordinate) -> bool {
-                (block != c.block_at(coords) || !actual_block.is_full()) && c.has_see_through_block_at(coords, blocks)
-            }
-
-            let (x, y, z) = (coords.x, coords.y, coords.z);
-
-            // // Positive X.
-            // if (x != CHUNK_DIMENSIONS - 1 && check(lod, block_id, actual_block, blocks, coords.pos_x()))
-            //     || (x == CHUNK_DIMENSIONS - 1
-            //         && (right
-            //             .map(|c| check(c, block_id, actual_block, blocks, ChunkBlockCoordinate::new(0, y, z)))
-            //             .unwrap_or(true)))
-            // {
-            //     faces.push(BlockFace::Right);
-            // }
-            // // Negative X.
-            // if (x != 0
-            //     && check(
-            //         lod,
-            //         block_id,
-            //         actual_block,
-            //         blocks,
-            //         coords.neg_x().expect("Checked in first condition"),
-            //     ))
-            //     || (x == 0
-            //         && (left
-            //             .map(|c| {
-            //                 check(
-            //                     c,
-            //                     block_id,
-            //                     actual_block,
-            //                     blocks,
-            //                     ChunkBlockCoordinate::new(CHUNK_DIMENSIONS - 1, y, z),
-            //                 )
-            //             })
-            //             .unwrap_or(true)))
-            // {
-            //     faces.push(BlockFace::Left);
-            // }
-
-            // // Positive Y.
-            // if (y != CHUNK_DIMENSIONS - 1 && check(lod, block_id, actual_block, blocks, coords.pos_y()))
-            //     || (y == CHUNK_DIMENSIONS - 1
-            //         && top
-            //             .map(|c| check(c, block_id, actual_block, blocks, ChunkBlockCoordinate::new(x, 0, z)))
-            //             .unwrap_or(true))
-            // {
-            //     faces.push(BlockFace::Top);
-            // }
-            // // Negative Y.
-            // if (y != 0
-            //     && check(
-            //         lod,
-            //         block_id,
-            //         actual_block,
-            //         blocks,
-            //         coords.neg_y().expect("Checked in first condition"),
-            //     ))
-            //     || (y == 0
-            //         && (bottom
-            //             .map(|c| {
-            //                 check(
-            //                     c,
-            //                     block_id,
-            //                     actual_block,
-            //                     blocks,
-            //                     ChunkBlockCoordinate::new(x, CHUNK_DIMENSIONS - 1, z),
-            //                 )
-            //             })
-            //             .unwrap_or(true)))
-            // {
-            //     faces.push(BlockFace::Bottom);
-            // }
-
-            // // Positive Z.
-            // if (z != CHUNK_DIMENSIONS - 1 && check(lod, block_id, actual_block, blocks, coords.pos_z()))
-            //     || (z == CHUNK_DIMENSIONS - 1
-            //         && (front
-            //             .map(|c| check(c, block_id, actual_block, blocks, ChunkBlockCoordinate::new(x, y, 0)))
-            //             .unwrap_or(true)))
-            // {
-            //     faces.push(BlockFace::Back);
-            // }
-            // // Negative Z.
-            // if (z != 0
-            //     && check(
-            //         lod,
-            //         block_id,
-            //         actual_block,
-            //         blocks,
-            //         coords.neg_z().expect("Checked in first condition"),
-            //     ))
-            //     || (z == 0
-            //         && (back
-            //             .map(|c| {
-            //                 check(
-            //                     c,
-            //                     block_id,
-            //                     actual_block,
-            //                     blocks,
-            //                     ChunkBlockCoordinate::new(x, y, CHUNK_DIMENSIONS - 1),
-            //                 )
-            //             })
-            //             .unwrap_or(true)))
-            // {
-            //     faces.push(BlockFace::Front);
-            // }
-
-            if !faces.is_empty() {
-                let block = blocks.from_numeric_id(block_id);
-
-                let Some(block_material_mapping) = materials.get_value(block) else {
-                    continue;
-                };
-
-                let mat_id = block_material_mapping.material_id();
-
-                let material_definition = materials_registry.from_numeric_id(mat_id);
-
-                let Some(mesh) = meshes.get_value(block) else {
-                    continue;
-                };
-
-                let block_rotation = block_info.get_rotation();
-
-                let rotation = block_rotation.as_quat();
-
-                let mut mesh_builder = None;
-
-                for direction in faces.iter().map(|face| block_rotation.direction_of(*face)) {
-                    let face = direction.block_face();
-                    let index = block_textures
-                        .from_id(block.unlocalized_name())
-                        .unwrap_or_else(|| block_textures.from_id("missing").expect("Missing texture should exist."));
-
-                    let neighbors = BlockNeighbors::empty();
-
-                    let maybe_img_idx = if self.scale > 8.0 {
-                        index
-                            .atlas_index_for_lod(neighbors)
-                            .map(Some)
-                            .unwrap_or_else(|| index.atlas_index_from_face(face, neighbors))
-                    } else {
-                        index.atlas_index_from_face(face, neighbors)
-                    };
-
-                    let Some(image_index) = maybe_img_idx else {
-                        warn!("Missing image index for face {face} -- {index:?}");
-                        continue;
-                    };
-
-                    let mut one_mesh_only = false;
-
-                    let mut mesh_info = mesh
-                        .info_for_face(face, false)
-                        .unwrap_or_else(|| {
-                            one_mesh_only = true;
-
-                            mesh.info_for_whole_block()
-                                .expect("Block must have either face or whole block meshes")
-                        })
-                        .clone();
-
-                    for pos in mesh_info.positions.iter_mut() {
-                        *pos = rotation.mul_vec3(Vec3::new(pos[0] * scale, pos[1] * scale, pos[2] * scale)).into();
-                    }
-
-                    for norm in mesh_info.normals.iter_mut() {
-                        *norm = rotation.mul_vec3((*norm).into()).into();
-                    }
-
-                    if mesh_builder.is_none() {
-                        mesh_builder = Some(self.meshes.entry((mat_id, image_index.dimension_index)).or_default());
-                    }
-
-                    mesh_builder.as_mut().unwrap().add_mesh_information(
-                        &mesh_info,
-                        Vec3::new(center_offset_x * scale, center_offset_y * scale, center_offset_z * scale),
-                        Rect::new(0.0, 0.0, 1.0, 1.0),
-                        image_index.texture_index,
-                        material_definition.add_material_data(block_id, &mesh_info),
-                    );
-
-                    if one_mesh_only {
-                        break;
-                    }
-                }
-
-                faces.clear();
-            }
-        }
-    }
-
-    fn create_mesh(self) -> LodMesh {
-        let mut mesh_materials = Vec::new();
-
-        for ((material, texture_dimension_index), chunk_mesh_info) in self.meshes {
-            let mesh = chunk_mesh_info.build_mesh();
-
-            mesh_materials.push(MeshMaterial {
-                material_id: material,
-                texture_dimension_index,
-                mesh,
-            });
-        }
-
-        LodMesh {
-            mesh_materials,
-            scale: self.scale,
-        }
-    }
-}
+use super::{
+    structure_renderer::{
+        chunk_rendering::{chunk_renderer::ChunkRenderer, lod_rendering::LodChunkRenderingChecker, ChunkMesh},
+        BlockRenderingModes,
+    },
+    BlockMeshRegistry, ReadOnlyBlockMeshRegistry,
+};
 
 #[derive(Component, Debug, Reflect, Default, Deref, DerefMut)]
 struct LodMeshes(Vec<Entity>);
 
 fn recursively_process_lod(
     lod_path: LodPath,
-    to_process: &Mutex<Option<Vec<(LodMesh, Vec3, CoordinateType)>>>,
+    to_process: &Mutex<Option<Vec<(ChunkMesh, Vec3, CoordinateType)>>>,
     blocks: &Registry<Block>,
     materials: &ManyToOneRegistry<Block, BlockMaterialMapping>,
     meshes_registry: &BlockMeshRegistry,
     block_textures: &Registry<BlockTextureIndex>,
     materials_registry: &Registry<MaterialDefinition>,
+    lighting: &Registry<BlockLighting>,
+    rendering_modes: &BlockRenderingModes,
 ) {
     let (lod_path_info, _) = match &lod_path {
         LodPath::Top(lod_path_info) => (lod_path_info, None),
@@ -407,6 +104,8 @@ fn recursively_process_lod(
                     meshes_registry,
                     block_textures,
                     materials_registry,
+                    lighting,
+                    rendering_modes,
                 );
             });
         }
@@ -419,22 +118,30 @@ fn recursively_process_lod(
 
             let mut neighbors = [None; 6];
 
+            // Neighbors Order: -x, +x, -y, +y, -z, +z
             lod_path.find_neighbors(lod_path_info, &mut neighbors);
 
+            let lod_rendering_backend = LodChunkRenderingChecker {
+                neg_x: neighbors[0],
+                pos_x: neighbors[1],
+                neg_y: neighbors[2],
+                pos_y: neighbors[3],
+                neg_z: neighbors[4],
+                pos_z: neighbors[5],
+                scale: lod_path_info.scale,
+            };
+
             renderer.render(
-                lod_path_info.scale,
                 materials,
                 materials_registry,
-                lod_chunk,
-                neighbors[0],
-                neighbors[1],
-                neighbors[2],
-                neighbors[3],
-                neighbors[4],
-                neighbors[5],
+                lighting,
+                lod_chunk.as_ref(),
                 blocks,
                 meshes_registry,
+                rendering_modes,
                 block_textures,
+                &lod_rendering_backend,
+                lod_path_info.scale,
             );
 
             let mut mutex = to_process.lock().expect("Error locking to_process vec!");
@@ -485,7 +192,7 @@ fn find_non_dirty(lod: &Lod, offset: Vec3, to_process: &mut Vec<Vec3>, scale: f3
 }
 
 #[derive(Debug)]
-struct RenderingLod(Task<(Vec<Vec3>, Vec<(LodMesh, Vec3, CoordinateType)>)>);
+struct RenderingLod(Task<(Vec<Vec3>, Vec<(ChunkMesh, Vec3, CoordinateType)>)>);
 
 #[derive(Component, Debug)]
 struct RenderedLod {
@@ -580,14 +287,13 @@ fn poll_rendering_lods(
 
             for (lod_mesh, offset, scale) in ent_meshes {
                 for mesh_material in lod_mesh.mesh_materials {
-                    let s = (CHUNK_DIMENSIONS / 2) as f32 * lod_mesh.scale;
+                    // let s = (CHUNK_DIMENSIONS / 2) as f32 * lod_mesh.scale;
 
                     let ent = commands
                         .spawn((
                             TransformBundle::from_transform(Transform::from_translation(offset)),
                             VisibilityBundle::default(),
-                            // Remove this once https://github.com/bevyengine/bevy/issues/4294 is done (when bevy ~0.10~ ~0.11~ ~0.12~ ~0.13~ 0.never is released)
-                            Aabb::from_min_max(Vec3::new(-s, -s, -s), Vec3::new(s, s, s)),
+                            // Aabb::from_min_max(Vec3::new(-s, -s, -s), Vec3::new(s, s, s)),
                             RenderedLod { scale },
                             DespawnWithStructure,
                         ))
@@ -596,7 +302,7 @@ fn poll_rendering_lods(
                     event_writer.send(AddMaterialEvent {
                         entity: ent,
                         add_material_id: mesh_material.material_id,
-                        texture_dimensions_index: mesh_material.texture_dimension_index,
+                        texture_dimensions_index: mesh_material.texture_dimensions_index,
                         material_type: if scale >= 2 { MaterialType::FarAway } else { MaterialType::Normal },
                     });
 
@@ -817,7 +523,7 @@ fn we_need_to_go_deeper<'a>(
 }
 
 impl<'a> LodPath<'a> {
-    /// Order: left, right, bottom, top, back, front
+    /// Neighbors Order: -x, +x, -y, +y, -z, +z
     fn find_neighbors(&self, searching_for_path_info: &PathInfo, neighbors: &mut [Option<&'a LodChunk>; 6]) {
         match self {
             LodPath::Top(path_info) => we_need_to_go_deeper(
@@ -840,6 +546,8 @@ fn trigger_lod_render(
     materials_registry: Res<ReadOnlyRegistry<MaterialDefinition>>,
     meshes_registry: Res<ReadOnlyBlockMeshRegistry>,
     block_textures: Res<ReadOnlyRegistry<BlockTextureIndex>>,
+    lighting: Res<ReadOnlyRegistry<BlockLighting>>,
+    block_rendering_mode: Res<BlockRenderingModes>,
     lods_query: Query<(&LodComponent, &Structure)>,
     mut rendering_lods: ResMut<RenderingLods>,
     mut lods_needed: ResMut<NeedLods>,
@@ -868,6 +576,9 @@ fn trigger_lod_render(
         let materials = materials.clone();
         let meshes_registry = meshes_registry.clone();
         let materials_registry = materials_registry.clone();
+        let lighting = lighting.clone();
+        // TODO: This one is expensive - make it less expensive.
+        let block_rendering_modes = block_rendering_mode.clone();
 
         let chunk_dimensions = structure.chunk_dimensions().x;
         let block_dimensions = structure.block_dimensions().x;
@@ -882,7 +593,7 @@ fn trigger_lod_render(
             // by making the Vec an Option<Vec> I can take ownership of it later, which I cannot do with
             // just a plain Mutex<Vec>.
             // https://stackoverflow.com/questions/30573188/cannot-move-data-out-of-a-mutex
-            let to_process: Mutex<Option<Vec<(LodMesh, Vec3, CoordinateType)>>> = Mutex::new(Some(Vec::new()));
+            let to_process: Mutex<Option<Vec<(ChunkMesh, Vec3, CoordinateType)>>> = Mutex::new(Some(Vec::new()));
 
             let blocks = blocks.registry();
             let block_textures = block_textures.registry();
@@ -890,6 +601,7 @@ fn trigger_lod_render(
             let meshes_registry: std::sync::RwLockReadGuard<'_, ManyToOneRegistry<Block, crate::rendering::BlockMeshInformation>> =
                 meshes_registry.registry();
             let materials_registry = materials_registry.registry();
+            let lighting = lighting.registry();
 
             // let mut cloned_lod = lod.clone();
 
@@ -907,6 +619,8 @@ fn trigger_lod_render(
                 &meshes_registry,
                 &block_textures,
                 &materials_registry,
+                &lighting,
+                &block_rendering_modes,
             );
 
             mark_non_dirty(&mut lod);

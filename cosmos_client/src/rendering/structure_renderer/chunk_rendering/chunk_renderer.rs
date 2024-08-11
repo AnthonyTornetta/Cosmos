@@ -1,4 +1,4 @@
-use crate::asset::asset_loading::{BlockNeighbors, BlockTextureIndex, TextureIndex};
+use crate::asset::asset_loading::{BlockNeighbors, BlockTextureIndex};
 use crate::asset::materials::{BlockMaterialMapping, MaterialDefinition};
 use crate::block::lighting::{BlockLightProperties, BlockLighting};
 use crate::rendering::structure_renderer::{BlockRenderingModes, RenderingMode};
@@ -7,7 +7,6 @@ use bevy::log::warn;
 use bevy::prelude::{App, Deref, DerefMut, Entity, Rect, Resource, Vec3};
 use bevy::tasks::Task;
 use bevy::utils::hashbrown::HashMap;
-use cosmos_core::block::block_face::BlockFace;
 use cosmos_core::block::{block_direction::BlockDirection, Block};
 use cosmos_core::registry::identifiable::Identifiable;
 use cosmos_core::registry::many_to_one::ManyToOneRegistry;
@@ -15,7 +14,6 @@ use cosmos_core::registry::Registry;
 use cosmos_core::structure::block_storage::BlockStorer;
 use cosmos_core::structure::chunk::{CHUNK_DIMENSIONS, CHUNK_DIMENSIONSF};
 use cosmos_core::structure::coordinates::{ChunkBlockCoordinate, ChunkCoordinate};
-use cosmos_core::structure::lod_chunk::LodChunk;
 use cosmos_core::utils::array_utils::expand;
 use std::collections::HashSet;
 
@@ -28,26 +26,6 @@ pub struct ChunkRenderer {
     lights: HashMap<ChunkBlockCoordinate, BlockLightProperties>,
 }
 
-trait TextureIndexGetter {
-    fn get_texture_index(scale: f32, index: &BlockTextureIndex, neighbors: BlockNeighbors, face: BlockFace) -> Option<TextureIndex>;
-}
-
-struct LodTextureIndexGetter;
-
-impl TextureIndexGetter for LodChunk {
-    fn get_texture_index(scale: f32, index: &BlockTextureIndex, neighbors: BlockNeighbors, face: BlockFace) -> Option<TextureIndex> {
-        let maybe_img_idx = if scale > 8.0 {
-            index
-                .atlas_index_for_lod(neighbors)
-                .map(Some)
-                .unwrap_or_else(|| index.atlas_index_from_face(face, neighbors))
-        } else {
-            index.atlas_index_from_face(face, neighbors)
-        };
-        maybe_img_idx
-    }
-}
-
 impl ChunkRenderer {
     pub fn new() -> Self {
         Self::default()
@@ -56,15 +34,15 @@ impl ChunkRenderer {
     /// Renders a chunk into mesh information that can then be turned into a bevy mesh
     pub fn render<C: BlockStorer, R: ChunkRendererBackend<C>>(
         &mut self,
-        materials: &ManyToOneRegistry<Block, BlockMaterialMapping>,
-        materials_registry: &Registry<MaterialDefinition>,
+        materials_registry: &ManyToOneRegistry<Block, BlockMaterialMapping>,
+        materials_definition_registry: &Registry<MaterialDefinition>,
         lighting: &Registry<BlockLighting>,
         chunk: &C,
         blocks: &Registry<Block>,
         meshes: &BlockMeshRegistry,
         rendering_modes: &BlockRenderingModes,
         block_textures: &Registry<BlockTextureIndex>,
-        rendering_checker: &R,
+        rendering_backend: &R,
         scale: f32,
     ) -> HashSet<u16> {
         let cd2 = CHUNK_DIMENSIONSF / 2.0;
@@ -98,16 +76,16 @@ impl ChunkRenderer {
             }
 
             let (center_offset_x, center_offset_y, center_offset_z) = (
-                coords.x as f32 - cd2 + 0.5,
-                coords.y as f32 - cd2 + 0.5,
-                coords.z as f32 - cd2 + 0.5,
+                (coords.x as f32 - cd2 + 0.5) * scale,
+                (coords.y as f32 - cd2 + 0.5) * scale,
+                (coords.z as f32 - cd2 + 0.5) * scale,
             );
             let block_here = blocks.from_numeric_id(block_id);
 
             let mut block_connections = [false; 6];
 
             let mut check_rendering = |direction: BlockDirection| {
-                if rendering_checker.check_should_render(
+                if rendering_backend.check_should_render(
                     chunk,
                     block_here,
                     coords,
@@ -130,7 +108,7 @@ impl ChunkRenderer {
             if !faces.is_empty() {
                 let block = blocks.from_numeric_id(block_id);
 
-                let Some(material) = materials.get_value(block) else {
+                let Some(material) = materials_registry.get_value(block) else {
                     continue;
                 };
 
@@ -140,7 +118,7 @@ impl ChunkRenderer {
                     continue;
                 };
 
-                let material_definition = materials_registry.from_numeric_id(mat_id);
+                let material_definition = materials_definition_registry.from_numeric_id(mat_id);
 
                 let block_rotation = block_info.get_rotation();
 
@@ -238,7 +216,7 @@ impl ChunkRenderer {
                         }
                     }
 
-                    let Some(image_index) = rendering_checker.get_texture_index(index, neighbors, face) else {
+                    let Some(image_index) = rendering_backend.get_texture_index(index, neighbors, face) else {
                         warn!("Missing image index for face {direction} -- {index:?}");
                         continue;
                     };

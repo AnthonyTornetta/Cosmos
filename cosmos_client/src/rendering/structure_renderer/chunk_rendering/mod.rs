@@ -14,16 +14,16 @@ pub mod lod_rendering;
 pub mod neighbor_checking;
 
 #[derive(Debug)]
-struct MeshMaterial {
-    mesh: Mesh,
-    material_id: u16,
-    texture_dimensions_index: u32,
+pub struct MeshMaterial {
+    pub mesh: Mesh,
+    pub material_id: u16,
+    pub texture_dimensions_index: u32,
 }
 
 #[derive(Debug)]
 pub struct ChunkMesh {
-    mesh_materials: Vec<MeshMaterial>,
-    lights: HashMap<ChunkBlockCoordinate, BlockLightProperties>,
+    pub mesh_materials: Vec<MeshMaterial>,
+    pub lights: HashMap<ChunkBlockCoordinate, BlockLightProperties>,
 }
 
 #[derive(Debug, Reflect, Clone, Copy)]
