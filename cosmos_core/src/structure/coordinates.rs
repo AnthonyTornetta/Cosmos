@@ -376,7 +376,7 @@ create_coordinate!(
     "This is for each block in a structure.\n\n0, 0, 0 represents the bottom, left, back block.",
     "coordinate in range [0, structure.blocks_(width/height/length)())",
     0,
-    CoordinateType::MAX
+    UnboundCoordinateType::MAX as CoordinateType
 );
 
 impl BlockCoordinate {
@@ -632,7 +632,7 @@ create_coordinate!(
     "This is for each chunk in a structure.\n\n0, 0, 0 represents the bottom, left, back chunk.",
     "coordinate in range [0, structure.chunks_(width/height/length)())",
     0,
-    CoordinateType::MAX
+    UnboundCoordinateType::MAX as CoordinateType
 );
 
 impl ChunkCoordinate {

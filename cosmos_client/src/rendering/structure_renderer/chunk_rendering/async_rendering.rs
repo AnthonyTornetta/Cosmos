@@ -21,6 +21,7 @@ use cosmos_core::structure::Structure;
 use futures_lite::future;
 
 use super::chunk_renderer::{ChunkNeedsCustomBlocksRendered, ChunkRenderer, RenderingChunk, RenderingChunks};
+use super::neighbor_checking::ChunkRenderingChecker;
 use super::{ChunkMeshes, ChunkNeedsRendered, ChunkRenderResult, LightEntry, LightsHolder};
 
 fn poll_rendering_chunks(
@@ -303,21 +304,25 @@ fn monitor_needs_rendered_system(
         let task = async_task_pool.spawn(async move {
             let mut renderer = ChunkRenderer::new();
 
+            let chunk_checker = ChunkRenderingChecker {
+                neg_x: neg_x.as_ref(),
+                neg_y: neg_y.as_ref(),
+                neg_z: neg_z.as_ref(),
+                pos_x: pos_x.as_ref(),
+                pos_y: pos_y.as_ref(),
+                pos_z: pos_z.as_ref(),
+            };
+
             let custom_blocks = renderer.render(
                 &materials.registry(),
                 &materials_registry.registry(),
                 &lighting.registry(),
                 &chunk,
-                neg_x.as_ref(),
-                pos_x.as_ref(),
-                neg_y.as_ref(),
-                pos_y.as_ref(),
-                neg_z.as_ref(),
-                pos_z.as_ref(),
                 &blocks.registry(),
                 &meshes_registry.registry(),
                 &block_rendering_mode,
                 &block_textures.registry(),
+                &chunk_checker,
             );
 
             ChunkRenderResult {

@@ -148,107 +148,107 @@ impl ChunkRenderer {
 
             let (x, y, z) = (coords.x, coords.y, coords.z);
 
-            // Positive X.
-            if (x != CHUNK_DIMENSIONS - 1 && check(lod, block_id, actual_block, blocks, coords.pos_x()))
-                || (x == CHUNK_DIMENSIONS - 1
-                    && (right
-                        .map(|c| check(c, block_id, actual_block, blocks, ChunkBlockCoordinate::new(0, y, z)))
-                        .unwrap_or(true)))
-            {
-                faces.push(BlockFace::Right);
-            }
-            // Negative X.
-            if (x != 0
-                && check(
-                    lod,
-                    block_id,
-                    actual_block,
-                    blocks,
-                    coords.neg_x().expect("Checked in first condition"),
-                ))
-                || (x == 0
-                    && (left
-                        .map(|c| {
-                            check(
-                                c,
-                                block_id,
-                                actual_block,
-                                blocks,
-                                ChunkBlockCoordinate::new(CHUNK_DIMENSIONS - 1, y, z),
-                            )
-                        })
-                        .unwrap_or(true)))
-            {
-                faces.push(BlockFace::Left);
-            }
+            // // Positive X.
+            // if (x != CHUNK_DIMENSIONS - 1 && check(lod, block_id, actual_block, blocks, coords.pos_x()))
+            //     || (x == CHUNK_DIMENSIONS - 1
+            //         && (right
+            //             .map(|c| check(c, block_id, actual_block, blocks, ChunkBlockCoordinate::new(0, y, z)))
+            //             .unwrap_or(true)))
+            // {
+            //     faces.push(BlockFace::Right);
+            // }
+            // // Negative X.
+            // if (x != 0
+            //     && check(
+            //         lod,
+            //         block_id,
+            //         actual_block,
+            //         blocks,
+            //         coords.neg_x().expect("Checked in first condition"),
+            //     ))
+            //     || (x == 0
+            //         && (left
+            //             .map(|c| {
+            //                 check(
+            //                     c,
+            //                     block_id,
+            //                     actual_block,
+            //                     blocks,
+            //                     ChunkBlockCoordinate::new(CHUNK_DIMENSIONS - 1, y, z),
+            //                 )
+            //             })
+            //             .unwrap_or(true)))
+            // {
+            //     faces.push(BlockFace::Left);
+            // }
 
-            // Positive Y.
-            if (y != CHUNK_DIMENSIONS - 1 && check(lod, block_id, actual_block, blocks, coords.pos_y()))
-                || (y == CHUNK_DIMENSIONS - 1
-                    && top
-                        .map(|c| check(c, block_id, actual_block, blocks, ChunkBlockCoordinate::new(x, 0, z)))
-                        .unwrap_or(true))
-            {
-                faces.push(BlockFace::Top);
-            }
-            // Negative Y.
-            if (y != 0
-                && check(
-                    lod,
-                    block_id,
-                    actual_block,
-                    blocks,
-                    coords.neg_y().expect("Checked in first condition"),
-                ))
-                || (y == 0
-                    && (bottom
-                        .map(|c| {
-                            check(
-                                c,
-                                block_id,
-                                actual_block,
-                                blocks,
-                                ChunkBlockCoordinate::new(x, CHUNK_DIMENSIONS - 1, z),
-                            )
-                        })
-                        .unwrap_or(true)))
-            {
-                faces.push(BlockFace::Bottom);
-            }
+            // // Positive Y.
+            // if (y != CHUNK_DIMENSIONS - 1 && check(lod, block_id, actual_block, blocks, coords.pos_y()))
+            //     || (y == CHUNK_DIMENSIONS - 1
+            //         && top
+            //             .map(|c| check(c, block_id, actual_block, blocks, ChunkBlockCoordinate::new(x, 0, z)))
+            //             .unwrap_or(true))
+            // {
+            //     faces.push(BlockFace::Top);
+            // }
+            // // Negative Y.
+            // if (y != 0
+            //     && check(
+            //         lod,
+            //         block_id,
+            //         actual_block,
+            //         blocks,
+            //         coords.neg_y().expect("Checked in first condition"),
+            //     ))
+            //     || (y == 0
+            //         && (bottom
+            //             .map(|c| {
+            //                 check(
+            //                     c,
+            //                     block_id,
+            //                     actual_block,
+            //                     blocks,
+            //                     ChunkBlockCoordinate::new(x, CHUNK_DIMENSIONS - 1, z),
+            //                 )
+            //             })
+            //             .unwrap_or(true)))
+            // {
+            //     faces.push(BlockFace::Bottom);
+            // }
 
-            // Positive Z.
-            if (z != CHUNK_DIMENSIONS - 1 && check(lod, block_id, actual_block, blocks, coords.pos_z()))
-                || (z == CHUNK_DIMENSIONS - 1
-                    && (front
-                        .map(|c| check(c, block_id, actual_block, blocks, ChunkBlockCoordinate::new(x, y, 0)))
-                        .unwrap_or(true)))
-            {
-                faces.push(BlockFace::Back);
-            }
-            // Negative Z.
-            if (z != 0
-                && check(
-                    lod,
-                    block_id,
-                    actual_block,
-                    blocks,
-                    coords.neg_z().expect("Checked in first condition"),
-                ))
-                || (z == 0
-                    && (back
-                        .map(|c| {
-                            check(
-                                c,
-                                block_id,
-                                actual_block,
-                                blocks,
-                                ChunkBlockCoordinate::new(x, y, CHUNK_DIMENSIONS - 1),
-                            )
-                        })
-                        .unwrap_or(true)))
-            {
-                faces.push(BlockFace::Front);
-            }
+            // // Positive Z.
+            // if (z != CHUNK_DIMENSIONS - 1 && check(lod, block_id, actual_block, blocks, coords.pos_z()))
+            //     || (z == CHUNK_DIMENSIONS - 1
+            //         && (front
+            //             .map(|c| check(c, block_id, actual_block, blocks, ChunkBlockCoordinate::new(x, y, 0)))
+            //             .unwrap_or(true)))
+            // {
+            //     faces.push(BlockFace::Back);
+            // }
+            // // Negative Z.
+            // if (z != 0
+            //     && check(
+            //         lod,
+            //         block_id,
+            //         actual_block,
+            //         blocks,
+            //         coords.neg_z().expect("Checked in first condition"),
+            //     ))
+            //     || (z == 0
+            //         && (back
+            //             .map(|c| {
+            //                 check(
+            //                     c,
+            //                     block_id,
+            //                     actual_block,
+            //                     blocks,
+            //                     ChunkBlockCoordinate::new(x, y, CHUNK_DIMENSIONS - 1),
+            //                 )
+            //             })
+            //             .unwrap_or(true)))
+            // {
+            //     faces.push(BlockFace::Front);
+            // }
 
             if !faces.is_empty() {
                 let block = blocks.from_numeric_id(block_id);

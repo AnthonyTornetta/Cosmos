@@ -1,6 +1,6 @@
 use cosmos_core::{
     block::{block_direction::BlockDirection, Block},
-    prelude::{ChunkBlockCoordinate, UnboundChunkBlockCoordinate},
+    prelude::ChunkBlockCoordinate,
     registry::Registry,
     structure::{
         block_storage::BlockStorer,
@@ -24,12 +24,12 @@ pub trait RenderingChecker<C: BlockStorer> {
 }
 
 pub struct ChunkRenderingChecker<'a> {
-    left: Option<&'a Chunk>,
-    right: Option<&'a Chunk>,
-    bottom: Option<&'a Chunk>,
-    top: Option<&'a Chunk>,
-    back: Option<&'a Chunk>,
-    front: Option<&'a Chunk>,
+    pub neg_x: Option<&'a Chunk>,
+    pub pos_x: Option<&'a Chunk>,
+    pub neg_y: Option<&'a Chunk>,
+    pub pos_y: Option<&'a Chunk>,
+    pub neg_z: Option<&'a Chunk>,
+    pub pos_z: Option<&'a Chunk>,
 }
 
 impl<'a> RenderingChecker<Chunk> for ChunkRenderingChecker<'a> {
@@ -49,7 +49,7 @@ impl<'a> RenderingChecker<Chunk> for ChunkRenderingChecker<'a> {
             .map(|coord| Some((c, coord)))
             .unwrap_or_else(|_| match BlockDirection::from_chunk_block_coordinates(delta_chunk_coords) {
                 BlockDirection::NegX => self
-                    .left
+                    .neg_x
                     .map(|left_chunk| {
                         Some((
                             left_chunk,
@@ -58,7 +58,7 @@ impl<'a> RenderingChecker<Chunk> for ChunkRenderingChecker<'a> {
                     })
                     .unwrap_or(None),
                 BlockDirection::PosX => self
-                    .right
+                    .pos_x
                     .map(|right_chunk| {
                         Some((
                             right_chunk,
@@ -67,7 +67,7 @@ impl<'a> RenderingChecker<Chunk> for ChunkRenderingChecker<'a> {
                     })
                     .unwrap_or(None),
                 BlockDirection::NegY => self
-                    .bottom
+                    .neg_y
                     .map(|bottom_chunk| {
                         Some((
                             bottom_chunk,
@@ -76,7 +76,7 @@ impl<'a> RenderingChecker<Chunk> for ChunkRenderingChecker<'a> {
                     })
                     .unwrap_or(None),
                 BlockDirection::PosY => self
-                    .top
+                    .pos_y
                     .map(|top_chunk| {
                         Some((
                             top_chunk,
@@ -85,7 +85,7 @@ impl<'a> RenderingChecker<Chunk> for ChunkRenderingChecker<'a> {
                     })
                     .unwrap_or(None),
                 BlockDirection::NegZ => self
-                    .front
+                    .neg_z
                     .map(|front_chunk| {
                         Some((
                             front_chunk,
@@ -94,7 +94,7 @@ impl<'a> RenderingChecker<Chunk> for ChunkRenderingChecker<'a> {
                     })
                     .unwrap_or(None),
                 BlockDirection::PosZ => self
-                    .back
+                    .pos_z
                     .map(|back_chunk| {
                         Some((
                             back_chunk,
