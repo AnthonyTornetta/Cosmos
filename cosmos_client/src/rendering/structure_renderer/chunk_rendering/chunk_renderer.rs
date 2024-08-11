@@ -1,4 +1,4 @@
-use crate::asset::asset_loading::{BlockNeighbors, BlockTextureIndex};
+use crate::asset::asset_loading::{BlockNeighbors, BlockTextureIndex, TextureIndex};
 use crate::asset::materials::{BlockMaterialMapping, MaterialDefinition};
 use crate::block::lighting::{BlockLightProperties, BlockLighting};
 use crate::rendering::structure_renderer::{BlockRenderingModes, RenderingMode};
@@ -7,17 +7,19 @@ use bevy::log::warn;
 use bevy::prelude::{App, Deref, DerefMut, Entity, Rect, Resource, Vec3};
 use bevy::tasks::Task;
 use bevy::utils::hashbrown::HashMap;
+use cosmos_core::block::block_face::BlockFace;
 use cosmos_core::block::{block_direction::BlockDirection, Block};
 use cosmos_core::registry::identifiable::Identifiable;
 use cosmos_core::registry::many_to_one::ManyToOneRegistry;
 use cosmos_core::registry::Registry;
 use cosmos_core::structure::block_storage::BlockStorer;
-use cosmos_core::structure::chunk::{Chunk, CHUNK_DIMENSIONS, CHUNK_DIMENSIONSF};
+use cosmos_core::structure::chunk::{CHUNK_DIMENSIONS, CHUNK_DIMENSIONSF};
 use cosmos_core::structure::coordinates::{ChunkBlockCoordinate, ChunkCoordinate};
+use cosmos_core::structure::lod_chunk::LodChunk;
 use cosmos_core::utils::array_utils::expand;
 use std::collections::HashSet;
 
-use super::neighbor_checking::RenderingChecker;
+use super::neighbor_checking::ChunkRendererBackend;
 use super::{BlockMeshRegistry, ChunkMesh, ChunkRenderResult, MeshBuilder, MeshInfo, MeshMaterial};
 
 #[derive(Default, Debug)]
@@ -26,23 +28,44 @@ pub struct ChunkRenderer {
     lights: HashMap<ChunkBlockCoordinate, BlockLightProperties>,
 }
 
+trait TextureIndexGetter {
+    fn get_texture_index(scale: f32, index: &BlockTextureIndex, neighbors: BlockNeighbors, face: BlockFace) -> Option<TextureIndex>;
+}
+
+struct LodTextureIndexGetter;
+
+impl TextureIndexGetter for LodChunk {
+    fn get_texture_index(scale: f32, index: &BlockTextureIndex, neighbors: BlockNeighbors, face: BlockFace) -> Option<TextureIndex> {
+        let maybe_img_idx = if scale > 8.0 {
+            index
+                .atlas_index_for_lod(neighbors)
+                .map(Some)
+                .unwrap_or_else(|| index.atlas_index_from_face(face, neighbors))
+        } else {
+            index.atlas_index_from_face(face, neighbors)
+        };
+        maybe_img_idx
+    }
+}
+
 impl ChunkRenderer {
     pub fn new() -> Self {
         Self::default()
     }
 
     /// Renders a chunk into mesh information that can then be turned into a bevy mesh
-    pub fn render<C: RenderingChecker<Chunk>>(
+    pub fn render<C: BlockStorer, R: ChunkRendererBackend<C>>(
         &mut self,
         materials: &ManyToOneRegistry<Block, BlockMaterialMapping>,
         materials_registry: &Registry<MaterialDefinition>,
         lighting: &Registry<BlockLighting>,
-        chunk: &Chunk,
+        chunk: &C,
         blocks: &Registry<Block>,
         meshes: &BlockMeshRegistry,
         rendering_modes: &BlockRenderingModes,
         block_textures: &Registry<BlockTextureIndex>,
-        rendering_checker: &C,
+        rendering_checker: &R,
+        scale: f32,
     ) -> HashSet<u16> {
         let cd2 = CHUNK_DIMENSIONSF / 2.0;
 
@@ -215,7 +238,7 @@ impl ChunkRenderer {
                         }
                     }
 
-                    let Some(image_index) = index.atlas_index_from_face(face, neighbors) else {
+                    let Some(image_index) = rendering_checker.get_texture_index(index, neighbors, face) else {
                         warn!("Missing image index for face {direction} -- {index:?}");
                         continue;
                     };
@@ -223,7 +246,7 @@ impl ChunkRenderer {
                     let uvs = Rect::new(0.0, 0.0, 1.0, 1.0);
 
                     for pos in mesh_info.positions.iter_mut() {
-                        *pos = rotation.mul_vec3((*pos).into()).into();
+                        *pos = rotation.mul_vec3(Vec3::from(*pos) * scale).into();
                     }
 
                     for norm in mesh_info.normals.iter_mut() {

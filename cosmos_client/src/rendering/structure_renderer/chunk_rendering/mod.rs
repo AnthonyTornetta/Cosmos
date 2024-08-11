@@ -10,6 +10,7 @@ use super::{BlockMeshRegistry, CosmosMeshBuilder, MeshBuilder, MeshInformation};
 
 mod async_rendering;
 pub mod chunk_renderer;
+pub mod lod_rendering;
 pub mod neighbor_checking;
 
 #[derive(Debug)]
@@ -39,6 +40,7 @@ struct LightsHolder {
 }
 
 #[derive(Component, Debug, Reflect, Default)]
+/// Keeps track of all children of a Chunk that are holding its meshes + materials
 struct ChunkMeshes(Vec<Entity>);
 
 #[derive(Debug)]

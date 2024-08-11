@@ -2,69 +2,43 @@ use cosmos_core::{
     block::{block_direction::BlockDirection, block_face::BlockFace, Block},
     prelude::ChunkBlockCoordinate,
     registry::Registry,
-    structure::{
-        block_storage::BlockStorer,
-        chunk::{Chunk, CHUNK_DIMENSIONS},
-    },
+    structure::{chunk::CHUNK_DIMENSIONS, lod_chunk::LodChunk},
 };
 
 use crate::{
     asset::asset_loading::{BlockNeighbors, BlockTextureIndex, TextureIndex},
-    rendering::structure_renderer::{BlockRenderingModes, RenderingMode},
+    rendering::structure_renderer::BlockRenderingModes,
 };
 
-pub trait ChunkRendererBackend<C: BlockStorer> {
-    fn check_should_render(
-        &self,
-        c: &C,
-        block_here: &Block,
-        block_coords: ChunkBlockCoordinate,
-        blocks: &Registry<Block>,
-        direction_to_check: BlockDirection,
-        should_connect: &mut bool,
-        rendering_modes: &BlockRenderingModes,
-    ) -> bool;
+use super::neighbor_checking::{check_block_at, ChunkRendererBackend};
 
-    fn get_texture_index(&self, index: &BlockTextureIndex, neighbors: BlockNeighbors, face: BlockFace) -> Option<TextureIndex>;
+pub struct LodChunkRenderingChecker<'a> {
+    pub scale: f32,
+    pub neg_x: Option<&'a LodChunk>,
+    pub pos_x: Option<&'a LodChunk>,
+    pub neg_y: Option<&'a LodChunk>,
+    pub pos_y: Option<&'a LodChunk>,
+    pub neg_z: Option<&'a LodChunk>,
+    pub pos_z: Option<&'a LodChunk>,
 }
 
-pub fn check_block_at<C: BlockStorer>(
-    chunk: &C,
-    check_coords: ChunkBlockCoordinate,
-    blocks: &Registry<Block>,
-    should_connect: &mut bool,
-    actual_block: &Block,
-    rendering_modes: &BlockRenderingModes,
-) -> bool {
-    let block_id_checking = chunk.block_at(check_coords);
-    let block_checking = blocks.from_numeric_id(block_id_checking);
-    *should_connect = actual_block.should_connect_with(block_checking);
-
-    let custom_rendered = rendering_modes.rendering_mode(block_id_checking);
-
-    // A block adjacent is custom
-    custom_rendered == RenderingMode::Custom
-        || (!(actual_block.is_fluid() && block_checking == actual_block) && (block_checking.is_see_through() || !actual_block.is_full()))
-}
-
-pub struct ChunkRenderingChecker<'a> {
-    pub neg_x: Option<&'a Chunk>,
-    pub pos_x: Option<&'a Chunk>,
-    pub neg_y: Option<&'a Chunk>,
-    pub pos_y: Option<&'a Chunk>,
-    pub neg_z: Option<&'a Chunk>,
-    pub pos_z: Option<&'a Chunk>,
-}
-
-impl<'a> ChunkRendererBackend<Chunk> for ChunkRenderingChecker<'a> {
+impl<'a> ChunkRendererBackend<LodChunk> for LodChunkRenderingChecker<'a> {
     #[inline(always)]
     fn get_texture_index(&self, index: &BlockTextureIndex, neighbors: BlockNeighbors, face: BlockFace) -> Option<TextureIndex> {
-        index.atlas_index_from_face(face, neighbors)
+        let maybe_img_idx = if self.scale > 8.0 {
+            index
+                .atlas_index_for_lod(neighbors)
+                .map(Some)
+                .unwrap_or_else(|| index.atlas_index_from_face(face, neighbors))
+        } else {
+            index.atlas_index_from_face(face, neighbors)
+        };
+        maybe_img_idx
     }
 
     fn check_should_render(
         &self,
-        c: &Chunk,
+        c: &LodChunk,
         block_here: &Block,
         block_coords: ChunkBlockCoordinate,
         blocks: &Registry<Block>,
