@@ -52,7 +52,7 @@ fn logic_indicator_input_event_listener(
         );
 
         if **logic_data != new_state {
-            // Don't trigger unneccesary change detection
+            // Don't trigger unneccesary change detection.
             **logic_data = new_state;
         }
     }

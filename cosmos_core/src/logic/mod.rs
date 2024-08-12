@@ -24,7 +24,7 @@ use crate::{
         data::BlockData,
         Block,
     },
-    events::block_events::{BlockChangedEvent, BlockDataSystemParams},
+    events::block_events::{BlockChangedEvent, BlockDataChangedEvent, BlockDataSystemParams},
     netty::system_sets::NetworkingSystemsSet,
     registry::{create_registry, identifiable::Identifiable, Registry},
     structure::{coordinates::BlockCoordinate, loading::StructureLoadingSet, structure_block::StructureBlock, Structure},
@@ -323,6 +323,31 @@ impl BlockLogicData {
     }
 }
 
+/// Whenever a block's logic data is modified, this system sends a block output event for that block.
+fn listen_for_changed_logic_data(
+    blocks: Res<Registry<Block>>,
+    logic_blocks: Res<Registry<LogicBlock>>,
+    mut evr_block_data_changed: EventReader<BlockDataChangedEvent>,
+    mut evw_logic_output: EventWriter<LogicOutputEvent>,
+    q_structure: Query<&Structure>,
+) {
+    evw_logic_output.send_batch(
+        evr_block_data_changed
+            .read()
+            .filter(|ev| {
+                let Ok(structure) = q_structure.get(ev.structure_entity) else {
+                    return false;
+                };
+                let id = structure.block_id_at(ev.block.coords());
+                logic_blocks.from_id(blocks.from_numeric_id(id).unlocalized_name()).is_some()
+            })
+            .map(|ev| LogicOutputEvent {
+                block: ev.block,
+                entity: ev.structure_entity,
+            }),
+    );
+}
+
 fn logic_block_placed_event_listener(
     mut evr_block_changed: EventReader<BlockChangedEvent>,
     blocks: Res<Registry<Block>>,
@@ -478,6 +503,8 @@ pub enum LogicSystemSet {
     SendQueues,
     /// All input [`Port`]s. These pull their values from their [`LogicGroup`]s first in each logic tick.
     Consume,
+    /// Changes to a block's internal logic data caused by consuming new inputs are detected and send producers here.
+    BlockLogicDataUpdate,
     /// All output [`Port`]s. These push their values to their [`LogicGroup`]s second in each logic tick.
     Produce,
 }
@@ -500,7 +527,12 @@ pub(super) fn register<T: States>(app: &mut App, playing_state: T) {
                 .ambiguous_with(BlockEventsSet::ProcessEvents),
             LogicSystemSet::QueueConsumers,
             LogicSystemSet::QueueProducers,
-            (LogicSystemSet::SendQueues, LogicSystemSet::Consume, LogicSystemSet::Produce)
+            (
+                LogicSystemSet::SendQueues,
+                LogicSystemSet::Consume,
+                LogicSystemSet::BlockLogicDataUpdate,
+                LogicSystemSet::Produce,
+            )
                 .chain()
                 .run_if(on_timer(Duration::from_millis(1000 / LOGIC_TICKS_PER_SECOND))),
         )
@@ -516,6 +548,7 @@ pub(super) fn register<T: States>(app: &mut App, playing_state: T) {
             queue_logic_producers.in_set(LogicSystemSet::QueueProducers),
             queue_logic_consumers.in_set(LogicSystemSet::QueueConsumers),
             send_queued_logic_events.in_set(LogicSystemSet::SendQueues),
+            listen_for_changed_logic_data.in_set(LogicSystemSet::BlockLogicDataUpdate),
         )
             .run_if(in_state(playing_state)),
     )
