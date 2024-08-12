@@ -37,7 +37,6 @@ fn register_logic_connections(blocks: Res<Registry<Block>>, mut registry: ResMut
 
 fn not_gate_input_event_listener(
     mut evr_logic_input: EventReader<LogicInputEvent>,
-    mut evw_logic_output: EventWriter<LogicOutputEvent>,
     blocks: Res<Registry<Block>>,
     mut q_logic_driver: Query<&mut LogicDriver>,
     q_structure: Query<&Structure>,
@@ -67,10 +66,6 @@ fn not_gate_input_event_listener(
         if **logic_data != new_state {
             // Don't trigger unneccesary change detection.
             **logic_data = new_state;
-            evw_logic_output.send(LogicOutputEvent {
-                block: ev.block,
-                entity: ev.entity,
-            });
         }
     }
 }

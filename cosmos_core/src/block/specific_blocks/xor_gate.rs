@@ -66,12 +66,8 @@ fn xor_gate_input_event_listener(
         let new_state = BlockLogicData((left ^ right) as i32);
 
         if **logic_data != new_state {
-            // Don't trigger unneccesary change detection
+            // Don't trigger unneccesary change detection.
             **logic_data = new_state;
-            evw_logic_output.send(LogicOutputEvent {
-                block: ev.block,
-                entity: ev.entity,
-            });
         }
     }
 }
