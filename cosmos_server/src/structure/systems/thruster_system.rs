@@ -206,11 +206,11 @@ pub(super) fn register(app: &mut App) {
                     .ambiguous_with(StructureSystemsSet::InitSystems),
                 block_update_system
                     .in_set(BlockEventsSet::ProcessEvents)
-                    .in_set(StructureSystemsSet::UpdateSystems),
+                    .in_set(StructureSystemsSet::UpdateSystemsBlocks),
                 update_ship_force_and_velocity
                     .after(ShipMovementSet::RemoveShipMovement)
                     .in_set(ThrusterSystemSet::ApplyThrusters)
-                    .in_set(StructureSystemsSet::UpdateSystems)
+                    .in_set(StructureSystemsSet::UpdateSystemsBlocks)
                     .in_set(StructureTypeSet::Ship),
             )
                 .chain()

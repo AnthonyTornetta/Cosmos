@@ -76,14 +76,14 @@ See [the issues page](https://github.com/AnthonyTornetta/Cosmos/issues) for the 
 - [x] Inventory UI improvements
   - [x] Scrollable inventory
   - [ ] An interface into all the storage devices connected to it?
-- [ ] Escape functionality
-  - [ ] Escape can now be used to close the foremost open UI menus
-  - [ ] If no such menus are available, it will instead open the pause menu
-    - [ ] Pause menu
-      - [ ] Resume
-      - [ ] Change Settings
-      - [ ] Disconnect
-      - [ ] Quit Game
+- [x] Escape functionality
+  - [x] Escape can now be used to close the foremost open UI menus
+  - [x] If no such menus are available, it will instead open the pause menu
+    - [x] Pause menu
+      - [x] Resume
+      - [x] Change Settings
+      - [x] Disconnect
+      - [x] Quit Game
 - [x] Block data
   - [x] Storable fluids
 - [x] Item data
@@ -95,7 +95,7 @@ See [the issues page](https://github.com/AnthonyTornetta/Cosmos/issues) for the 
   - [x] A way of selecting which systems to use preventing use of systems that are not meant to be actively used
 - [ ] Wires
   - [ ] Electrical
-  - [ ] Logic
+  - [x] Logic
 - [x] Planet generation & LOD overhaul
   - [x] Performance improvements
   - [x] GPU-based generation

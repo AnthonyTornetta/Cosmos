@@ -229,6 +229,8 @@ impl<T: LineProperty, S: LinePropertyCalculator<T>> BlockStructureSystem<T> for 
                 }
 
                 l1.len += l2.len;
+                l1.power += l2.power;
+                l1.active_blocks.append(&mut l2.active_blocks);
 
                 l1.properties.append(&mut l2.properties);
                 l1.property = S::calculate_property(&l1.properties);
@@ -252,14 +254,17 @@ impl<T: LineProperty, S: LinePropertyCalculator<T>> BlockStructureSystem<T> for 
             properties,
             property,
             color,
+            active_blocks: vec![],
+            power: 0.0,
         });
     }
 
     fn remove_block(&mut self, sb: &StructureBlock) {
         for (i, line) in self.lines.iter_mut().enumerate() {
+            line.mark_block_inactive(sb.coords());
+
             if line.start == *sb {
                 let (dx, dy, dz) = line.direction.to_i32_tuple();
-
                 line.start.x = (line.start.x as i32 + dx) as CoordinateType;
                 line.start.y = (line.start.y as i32 + dy) as CoordinateType;
                 line.start.z = (line.start.z as i32 + dz) as CoordinateType;
@@ -267,15 +272,15 @@ impl<T: LineProperty, S: LinePropertyCalculator<T>> BlockStructureSystem<T> for 
 
                 if line.len == 0 {
                     self.lines.swap_remove(i);
-                    return;
                 }
+                return;
             } else if line.end() == *sb {
                 line.len -= 1;
 
                 if line.len == 0 {
                     self.lines.swap_remove(i);
-                    return;
                 }
+                return;
             } else if line.within(sb) {
                 let l1_len = match line.direction {
                     BlockDirection::PosX => sb.x - line.start.x,
@@ -291,6 +296,9 @@ impl<T: LineProperty, S: LinePropertyCalculator<T>> BlockStructureSystem<T> for 
                 let mut l1_props = Vec::with_capacity(l1_len as usize);
                 let mut l2_props = Vec::with_capacity(l2_len as usize);
 
+                let percent_power_l1 = l1_len as f32 / line.len as f32;
+                let percent_power_l2 = l2_len as f32 / line.len as f32;
+
                 for prop in line.properties.iter().take(l1_len as usize) {
                     l1_props.push(*prop);
                 }
@@ -302,32 +310,50 @@ impl<T: LineProperty, S: LinePropertyCalculator<T>> BlockStructureSystem<T> for 
                 let l1_property = S::calculate_property(&l1_props);
 
                 // we are within a line, so split it into two seperate ones
-                let l1 = Line {
+                let mut l1 = Line {
                     start: line.start,
                     direction: line.direction,
                     len: l1_len,
                     properties: l1_props,
                     property: l1_property,
                     color: line.color,
+                    power: percent_power_l1 * line.power,
+                    active_blocks: vec![],
                 };
+
+                l1.active_blocks = line
+                    .active_blocks
+                    .iter()
+                    .filter(|x| l1.within(x))
+                    .copied()
+                    .collect::<Vec<BlockCoordinate>>();
 
                 let (dx, dy, dz) = line.direction.to_i32_tuple();
 
                 let dist = l1_len as i32 + 1;
 
                 let l2_property = S::calculate_property(&l2_props);
-                let l2 = Line {
+                let mut l2 = Line {
                     start: StructureBlock::new(BlockCoordinate::new(
                         (line.start.x as i32 + dx * dist) as CoordinateType,
                         (line.start.y as i32 + dy * dist) as CoordinateType,
                         (line.start.z as i32 + dz * dist) as CoordinateType,
                     )),
                     direction: line.direction,
-                    len: line.len - l1_len - 1,
+                    len: l2_len,
                     properties: l2_props,
                     property: l2_property,
                     color: line.color,
+                    power: percent_power_l2 * line.power,
+                    active_blocks: vec![], // this will probably have to be calculated later.
                 };
+
+                l2.active_blocks = line
+                    .active_blocks
+                    .iter()
+                    .filter(|x| l2.within(x))
+                    .copied()
+                    .collect::<Vec<BlockCoordinate>>();
 
                 self.lines[i] = l1;
                 self.lines.push(l2);
@@ -417,7 +443,7 @@ pub fn add_line_system<T: LineProperty, S: LinePropertyCalculator<T>>(app: &mut 
                 .ambiguous_with(StructureSystemsSet::InitSystems),
             block_update_system::<T, S>
                 .in_set(BlockEventsSet::ProcessEvents)
-                .in_set(StructureSystemsSet::UpdateSystems),
+                .in_set(StructureSystemsSet::UpdateSystemsBlocks),
         )
             .run_if(in_state(GameState::Playing)),
     )
