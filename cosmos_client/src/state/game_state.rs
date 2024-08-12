@@ -16,7 +16,7 @@ pub enum GameState {
     MainMenu,
     /// Connecting to the server
     Connecting,
-    /// Loading server data
+    /// Loading server data required for basic component syncing (such as registries)
     LoadingData,
     /// Loading the server's world
     LoadingWorld,

@@ -2,8 +2,8 @@
 
 use super::mapping::{NetworkMapping, ServerEntity};
 use super::{
-    register_component, ClientAuthority, ComponentEntityIdentifier, ComponentReplicationMessage, ComponentSyncingSet,
-    GotComponentToRemoveEvent, RegisterComponentSet, SyncType, SyncableComponent, SyncedComponentId,
+    ClientAuthority, ComponentEntityIdentifier, ComponentReplicationMessage, ComponentSyncingSet, GotComponentToRemoveEvent, SyncType,
+    SyncableComponent, SyncedComponentId,
 };
 use crate::block::data::BlockData;
 use crate::ecs::NeedsDespawned;
@@ -16,7 +16,6 @@ use crate::netty::sync::GotComponentToSyncEvent;
 use crate::netty::system_sets::NetworkingSystemsSet;
 use crate::netty::{cosmos_encoder, NettyChannelClient};
 use crate::netty::{NettyChannelServer, NoSendEntity};
-use crate::physics::location::CosmosBundleSet;
 use crate::registry::{identifiable::Identifiable, Registry};
 use crate::structure::ship::pilot::Pilot;
 use crate::structure::systems::{StructureSystem, StructureSystems};
@@ -26,12 +25,12 @@ use bevy::ecs::event::EventReader;
 use bevy::ecs::query::{With, Without};
 use bevy::ecs::removal_detection::RemovedComponents;
 use bevy::ecs::schedule::common_conditions::resource_exists;
-use bevy::ecs::schedule::{IntoSystemConfigs, IntoSystemSetConfigs};
+use bevy::ecs::schedule::IntoSystemConfigs;
 use bevy::ecs::system::{Commands, Resource};
 use bevy::log::warn;
 use bevy::prelude::SystemSet;
 use bevy::{
-    app::{App, Startup, Update},
+    app::{App, Update},
     ecs::{
         entity::Entity,
         event::EventWriter,
@@ -49,10 +48,12 @@ fn client_deserialize_component<T: SyncableComponent>(
     mapping: Res<NetworkMapping>,
     q_t: Query<&T>,
 ) {
+    // println!("{components_registry:?}");
+
     for ev in ev_reader.read() {
         let synced_id = components_registry
             .try_from_numeric_id(ev.component_id)
-            .unwrap_or_else(|| panic!("Missing component with id {}", ev.component_id));
+            .unwrap_or_else(|| panic!("Missing component with id {}\n\n{components_registry:?}\n\n", ev.component_id));
 
         if T::get_component_unlocalized_name() != synced_id.unlocalized_name {
             continue;
@@ -618,17 +619,7 @@ fn get_entity_identifier_info(
 pub(super) fn setup_client(app: &mut App) {
     app.configure_sets(Update, ClientReceiveComponents::ClientReceiveComponents);
 
-    app.configure_sets(
-        Update,
-        (
-            ComponentSyncingSet::PreComponentSyncing,
-            ComponentSyncingSet::DoComponentSyncing,
-            ComponentSyncingSet::PostComponentSyncing,
-        )
-            .after(CosmosBundleSet::HandleCosmosBundles)
-            .in_set(NetworkingSystemsSet::SyncComponents)
-            .chain(),
-    );
+    // ComponentSyncingSet configuration in cosmos_client/netty/mod
 
     app.add_systems(
         Update,
@@ -643,13 +634,6 @@ pub(super) fn setup_client(app: &mut App) {
 
 #[allow(unused)] // This function is used, but the LSP can't figure that out.
 pub(super) fn sync_component_client<T: SyncableComponent>(app: &mut App) {
-    app.add_systems(
-        Startup,
-        register_component::<T>
-            .in_set(RegisterComponentSet::RegisterComponent)
-            .ambiguous_with(RegisterComponentSet::RegisterComponent),
-    );
-
     app.register_type::<ServerEntity>();
 
     match T::get_sync_type() {
@@ -669,7 +653,7 @@ pub(super) fn sync_component_client<T: SyncableComponent>(app: &mut App) {
                     .chain()
                     .run_if(resource_exists::<NetworkMapping>)
                     .run_if(resource_exists::<Registry<SyncedComponentId>>)
-                    .in_set(NetworkingSystemsSet::ProcessReceivedMessages),
+                    .in_set(ComponentSyncingSet::ReceiveComponents),
             );
         }
         SyncType::BothAuthoritative(_) => {
@@ -686,7 +670,7 @@ pub(super) fn sync_component_client<T: SyncableComponent>(app: &mut App) {
                     .chain()
                     .run_if(resource_exists::<NetworkMapping>)
                     .run_if(resource_exists::<Registry<SyncedComponentId>>)
-                    .in_set(NetworkingSystemsSet::ProcessReceivedMessages),
+                    .in_set(ComponentSyncingSet::ReceiveComponents),
             );
         }
     }

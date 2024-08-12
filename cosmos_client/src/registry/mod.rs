@@ -62,6 +62,7 @@ enum LoadingRegistriesSet {
 
 /// Call this function on the client-side to signal that this registry should be synced with the server
 pub fn sync_registry<T: Identifiable + Serialize + DeserializeOwned + std::fmt::Debug>(app: &mut App) {
+    println!("Waiting for registries.");
     app.add_systems(
         Update,
         sync::<T>
