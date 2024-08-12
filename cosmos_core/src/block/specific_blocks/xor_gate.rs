@@ -37,7 +37,6 @@ fn register_logic_connections(blocks: Res<Registry<Block>>, mut registry: ResMut
 
 fn xor_gate_input_event_listener(
     mut evr_logic_input: EventReader<LogicInputEvent>,
-    mut evw_logic_output: EventWriter<LogicOutputEvent>,
     blocks: Res<Registry<Block>>,
     mut q_logic_driver: Query<&mut LogicDriver>,
     q_structure: Query<&Structure>,
