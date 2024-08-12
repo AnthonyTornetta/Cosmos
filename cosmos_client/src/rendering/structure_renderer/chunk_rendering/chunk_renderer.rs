@@ -44,6 +44,7 @@ impl ChunkRenderer {
         block_textures: &Registry<BlockTextureIndex>,
         rendering_backend: &R,
         scale: f32,
+        offset: Vec3,
     ) -> HashSet<u16> {
         let cd2 = CHUNK_DIMENSIONSF / 2.0;
 
@@ -224,7 +225,7 @@ impl ChunkRenderer {
                     let uvs = Rect::new(0.0, 0.0, 1.0, 1.0);
 
                     for pos in mesh_info.positions.iter_mut() {
-                        *pos = rotation.mul_vec3(Vec3::from(*pos) * scale).into();
+                        *pos = (offset + rotation.mul_vec3(Vec3::from(*pos) * scale)).into();
                     }
 
                     for norm in mesh_info.normals.iter_mut() {

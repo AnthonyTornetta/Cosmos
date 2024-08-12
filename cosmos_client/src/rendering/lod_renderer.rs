@@ -55,7 +55,7 @@ struct LodMeshes(Vec<Entity>);
 
 fn recursively_process_lod(
     lod_path: LodPath,
-    to_process: &Mutex<Option<Vec<(ChunkMesh, Vec3, CoordinateType)>>>,
+    // to_process: &Mutex<Option<Vec<(ChunkMesh, Vec3, CoordinateType)>>>,
     blocks: &Registry<Block>,
     materials: &ManyToOneRegistry<Block, BlockMaterialMapping>,
     meshes_registry: &BlockMeshRegistry,
@@ -63,6 +63,7 @@ fn recursively_process_lod(
     materials_registry: &Registry<MaterialDefinition>,
     lighting: &Registry<BlockLighting>,
     rendering_modes: &BlockRenderingModes,
+    renderer: &mut ChunkRenderer,
 ) {
     let (lod_path_info, _) = match &lod_path {
         LodPath::Top(lod_path_info) => (lod_path_info, None),
@@ -72,7 +73,7 @@ fn recursively_process_lod(
     match lod_path_info.lod {
         Lod::None => {}
         Lod::Children(children) => {
-            children.par_iter().enumerate().for_each(|(i, c)| {
+            children.iter().enumerate().for_each(|(i, c)| {
                 let s4 = lod_path_info.scale / 4.0;
 
                 let offset = lod_path_info.offset
@@ -98,7 +99,7 @@ fn recursively_process_lod(
                         },
                         &lod_path,
                     ),
-                    to_process,
+                    // to_process,
                     blocks,
                     materials,
                     meshes_registry,
@@ -106,6 +107,7 @@ fn recursively_process_lod(
                     materials_registry,
                     lighting,
                     rendering_modes,
+                    renderer,
                 );
             });
         }
@@ -113,8 +115,6 @@ fn recursively_process_lod(
             if !*dirty {
                 return;
             }
-
-            let mut renderer = ChunkRenderer::new();
 
             let mut neighbors = [None; 6];
 
@@ -131,6 +131,13 @@ fn recursively_process_lod(
                 scale: lod_path_info.scale,
             };
 
+            let offset = Vec3::new(
+                lod_path_info.offset.x * CHUNK_DIMENSIONSF,
+                lod_path_info.offset.y * CHUNK_DIMENSIONSF,
+                lod_path_info.offset.z * CHUNK_DIMENSIONSF,
+            );
+            let scale = lod_path_info.scale as CoordinateType;
+
             renderer.render(
                 materials,
                 materials_registry,
@@ -142,19 +149,8 @@ fn recursively_process_lod(
                 block_textures,
                 &lod_rendering_backend,
                 lod_path_info.scale,
+                offset,
             );
-
-            let mut mutex = to_process.lock().expect("Error locking to_process vec!");
-
-            mutex.as_mut().unwrap().push((
-                renderer.create_mesh(),
-                Vec3::new(
-                    lod_path_info.offset.x * CHUNK_DIMENSIONSF,
-                    lod_path_info.offset.y * CHUNK_DIMENSIONSF,
-                    lod_path_info.offset.z * CHUNK_DIMENSIONSF,
-                ),
-                lod_path_info.scale as CoordinateType,
-            ));
         }
     };
 }
@@ -192,12 +188,10 @@ fn find_non_dirty(lod: &Lod, offset: Vec3, to_process: &mut Vec<Vec3>, scale: f3
 }
 
 #[derive(Debug)]
-struct RenderingLod(Task<(Vec<Vec3>, Vec<(ChunkMesh, Vec3, CoordinateType)>)>);
+struct RenderingLod(Task<(Vec<Vec3>, Vec<ChunkMesh>)>);
 
 #[derive(Component, Debug)]
-struct RenderedLod {
-    scale: CoordinateType,
-}
+struct RenderedLod;
 
 #[derive(Debug, Clone, DerefMut, Deref)]
 struct LodRendersToDespawn(Arc<Mutex<(Entity, usize)>>);
@@ -285,16 +279,16 @@ fn poll_rendering_lods(
             // once the new entity's mesh is ready, decrease the counter
             // if the counter is 0, despawn the dirty entity.
 
-            for (lod_mesh, offset, scale) in ent_meshes {
+            for lod_mesh in ent_meshes {
                 for mesh_material in lod_mesh.mesh_materials {
                     // let s = (CHUNK_DIMENSIONS / 2) as f32 * lod_mesh.scale;
 
                     let ent = commands
                         .spawn((
-                            TransformBundle::from_transform(Transform::from_translation(offset)),
+                            TransformBundle::from_transform(Transform::from_translation(Vec3::ZERO)),
                             VisibilityBundle::default(),
                             // Aabb::from_min_max(Vec3::new(-s, -s, -s), Vec3::new(s, s, s)),
-                            RenderedLod { scale },
+                            RenderedLod,
                             DespawnWithStructure,
                         ))
                         .id();
@@ -303,10 +297,10 @@ fn poll_rendering_lods(
                         entity: ent,
                         add_material_id: mesh_material.material_id,
                         texture_dimensions_index: mesh_material.texture_dimensions_index,
-                        material_type: if scale >= 2 { MaterialType::FarAway } else { MaterialType::Normal },
+                        material_type: MaterialType::FarAway,
                     });
 
-                    entities_to_add.push((ent, offset, scale, mesh_material.mesh));
+                    entities_to_add.push((ent, mesh_material.mesh));
 
                     structure_meshes_component.0.push(ent);
                 }
@@ -330,11 +324,7 @@ fn poll_rendering_lods(
                         continue;
                     };
 
-                    to_despawn.push((
-                        transform.translation,
-                        rendered_lod.scale,
-                        LodRendersToDespawn(Arc::new(Mutex::new((mesh_entity, 0)))),
-                    ));
+                    to_despawn.push((transform.translation, LodRendersToDespawn(Arc::new(Mutex::new((mesh_entity, 0))))));
                 }
             }
 
@@ -342,14 +332,14 @@ fn poll_rendering_lods(
                 continue;
             };
 
-            for (entity, offset, scale, mesh) in entities_to_add {
+            for (entity, offset, mesh) in entities_to_add {
                 let mut to_kill = vec![];
 
-                for (other_offset, other_scale, counter) in to_despawn.iter() {
+                for (other_offset, counter) in to_despawn.iter() {
                     let diff = (offset - *other_offset).abs();
                     let max = diff.x.max(diff.y).max(diff.z);
 
-                    if CHUNK_DIMENSIONS * scale + CHUNK_DIMENSIONS * *other_scale < max.floor() as CoordinateType {
+                    if CHUNK_DIMENSIONS + CHUNK_DIMENSIONS < max.floor() as CoordinateType {
                         let counter = counter.clone();
 
                         counter.0.lock().expect("lock failed").1 += 1;
@@ -593,7 +583,7 @@ fn trigger_lod_render(
             // by making the Vec an Option<Vec> I can take ownership of it later, which I cannot do with
             // just a plain Mutex<Vec>.
             // https://stackoverflow.com/questions/30573188/cannot-move-data-out-of-a-mutex
-            let to_process: Mutex<Option<Vec<(ChunkMesh, Vec3, CoordinateType)>>> = Mutex::new(Some(Vec::new()));
+            let to_process: Mutex<Option<Vec<ChunkMesh>>> = Mutex::new(Some(Vec::new()));
 
             let blocks = blocks.registry();
             let block_textures = block_textures.registry();
@@ -611,9 +601,12 @@ fn trigger_lod_render(
                 scale: chunk_dimensions as f32,
                 offset: Vec3::ZERO,
             });
+
+            let mut renderer = ChunkRenderer::new();
+
             recursively_process_lod(
                 lod_path,
-                &to_process,
+                // &to_process,
                 &blocks,
                 &materials,
                 &meshes_registry,
@@ -621,7 +614,12 @@ fn trigger_lod_render(
                 &materials_registry,
                 &lighting,
                 &block_rendering_modes,
+                &mut renderer,
             );
+
+            let mut mutex = to_process.lock().expect("Error locking to_process vec!");
+
+            mutex.as_mut().unwrap().push(renderer.create_mesh());
 
             mark_non_dirty(&mut lod);
 
