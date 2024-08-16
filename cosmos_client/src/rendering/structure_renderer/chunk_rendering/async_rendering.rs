@@ -2,7 +2,7 @@ use crate::asset::asset_loading::BlockTextureIndex;
 use crate::asset::materials::{AddMaterialEvent, BlockMaterialMapping, MaterialDefinition, MaterialType, RemoveAllMaterialsEvent};
 use crate::block::lighting::{BlockLightProperties, BlockLighting};
 use crate::rendering::structure_renderer::{BlockRenderingModes, StructureRenderingSet};
-use crate::rendering::ReadOnlyBlockMeshRegistry;
+use crate::rendering::{CosmosMeshBuilder, ReadOnlyBlockMeshRegistry};
 use bevy::prelude::{
     App, Assets, BuildChildren, Commands, DespawnRecursiveExt, Entity, EventWriter, GlobalTransform, Handle, IntoSystemConfigs, Mesh,
     PointLight, PointLightBundle, Query, Res, ResMut, Transform, Update, Vec3, VisibilityBundle, With,
@@ -313,7 +313,7 @@ fn monitor_needs_rendered_system(
         let block_rendering_mode = block_rendering_mode.clone();
 
         let task = async_task_pool.spawn(async move {
-            let mut renderer = ChunkRenderer::new();
+            let mut renderer = ChunkRenderer::<CosmosMeshBuilder>::new();
 
             let chunk_checker = ChunkRenderingChecker {
                 neg_x: neg_x.as_ref(),
@@ -324,23 +324,31 @@ fn monitor_needs_rendered_system(
                 pos_z: pos_z.as_ref(),
             };
 
-            let custom_blocks = renderer.render(
-                &materials.registry(),
-                &materials_registry.registry(),
-                &lighting.registry(),
-                &chunk,
-                &blocks.registry(),
-                &meshes_registry.registry(),
-                &block_rendering_mode,
-                &block_textures.registry(),
-                &chunk_checker,
-                1.0,
-            );
+            // let custom_blocks = renderer.render(
+            //     &materials.registry(),
+            //     &materials_registry.registry(),
+            //     &lighting.registry(),
+            //     &chunk,
+            //     &blocks.registry(),
+            //     &meshes_registry.registry(),
+            //     &block_rendering_mode,
+            //     &block_textures.registry(),
+            //     &chunk_checker,
+            //     1.0,
+            //     Vec3::ZERO,
+            //     false,
+            // );
+
+            let custom_blocks = Default::default();
 
             ChunkRenderResult {
                 chunk_entity: entity,
                 custom_blocks,
-                mesh: renderer.create_mesh(),
+                mesh: super::ChunkMesh {
+                    lights: Default::default(),
+                    mesh_materials: Default::default(),
+                },
+                // mesh: renderer.create_mesh(),
             }
         });
 

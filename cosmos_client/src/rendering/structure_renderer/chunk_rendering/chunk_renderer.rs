@@ -21,12 +21,12 @@ use super::neighbor_checking::ChunkRendererBackend;
 use super::{BlockMeshRegistry, ChunkMesh, ChunkRenderResult, MeshBuilder, MeshInfo, MeshMaterial};
 
 #[derive(Default, Debug)]
-pub struct ChunkRenderer {
-    meshes: HashMap<(u16, u32), MeshInfo>,
+pub struct ChunkRenderer<M: MeshBuilder + Default> {
+    meshes: HashMap<(u16, u32), MeshInfo<M>>,
     lights: HashMap<ChunkBlockCoordinate, BlockLightProperties>,
 }
 
-impl ChunkRenderer {
+impl<M: MeshBuilder + Default> ChunkRenderer<M> {
     pub fn new() -> Self {
         Self::default()
     }
@@ -45,6 +45,7 @@ impl ChunkRenderer {
         rendering_backend: &R,
         scale: f32,
         offset: Vec3,
+        lod: bool,
     ) -> HashSet<u16> {
         let cd2 = CHUNK_DIMENSIONSF / 2.0;
 
@@ -109,17 +110,21 @@ impl ChunkRenderer {
             if !faces.is_empty() {
                 let block = blocks.from_numeric_id(block_id);
 
-                let Some(material) = materials_registry.get_value(block) else {
-                    continue;
-                };
+                let material_definition = if !lod {
+                    let Some(material) = materials_registry.get_value(block) else {
+                        continue;
+                    };
 
-                let mat_id = material.material_id();
+                    let mat_id = material.material_id();
+
+                    materials_definition_registry.from_numeric_id(mat_id)
+                } else {
+                    materials_definition_registry.from_id("cosmos:lod").expect("Missing LOD material.")
+                };
 
                 let Some(mesh) = meshes.get_value(block) else {
                     continue;
                 };
-
-                let material_definition = materials_definition_registry.from_numeric_id(mat_id);
 
                 let block_rotation = block_info.get_rotation();
 
@@ -235,7 +240,11 @@ impl ChunkRenderer {
                     let additional_info = material_definition.add_material_data(block_id, &mesh_info);
 
                     if mesh_builder.is_none() {
-                        mesh_builder = Some(self.meshes.entry((mat_id, image_index.dimension_index)).or_default());
+                        mesh_builder = Some(
+                            self.meshes
+                                .entry((material_definition.id(), image_index.dimension_index))
+                                .or_default(),
+                        );
                     }
 
                     mesh_builder.as_mut().unwrap().add_mesh_information(

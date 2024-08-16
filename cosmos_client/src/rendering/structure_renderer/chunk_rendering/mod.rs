@@ -55,11 +55,11 @@ struct ChunkRenderResult {
 pub(super) struct ChunkNeedsRendered;
 
 #[derive(Default, Debug)]
-struct MeshInfo {
-    mesh_builder: CosmosMeshBuilder,
+struct MeshInfo<M: MeshBuilder> {
+    mesh_builder: M,
 }
 
-impl MeshBuilder for MeshInfo {
+impl<M: MeshBuilder> MeshBuilder for MeshInfo<M> {
     #[inline]
     fn add_mesh_information(
         &mut self,

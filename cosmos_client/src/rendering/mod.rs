@@ -11,7 +11,7 @@ use bevy::{
     },
 };
 use cosmos_core::{
-    block::{block_face::BlockFace, Block},
+    block::{block_direction::BlockDirection, block_face::BlockFace, Block},
     registry::{
         identifiable::Identifiable,
         many_to_one::{self, ManyToOneRegistry, ReadOnlyManyToOneRegistry},
@@ -22,7 +22,7 @@ use cosmos_core::{
 use crate::{
     asset::{
         asset_loading::{load_block_rendering_information, BlockRenderingInfo, ModelData},
-        materials::block_materials::ATTRIBUTE_TEXTURE_INDEX,
+        materials::{block_materials::ATTRIBUTE_TEXTURE_INDEX, lod_materials::ATTRIBUTE_PACKED_DATA},
     },
     state::game_state::GameState,
 };
@@ -73,7 +73,6 @@ pub struct CosmosMeshBuilder {
     uvs: Vec<[f32; 2]>,
     positions: Vec<[f32; 3]>,
     normals: Vec<[f32; 3]>,
-    no_array_texture: bool,
     array_texture_ids: Vec<u32>,
     additional_info: Vec<(MeshVertexAttribute, VertexAttributeValues)>,
 }
@@ -125,9 +124,9 @@ impl MeshBuilder for CosmosMeshBuilder {
                 .map(|x| [x[0] * diff[0] + uvs.min.x, x[1] * diff[1] + uvs.min.y]),
         );
 
-        for index in mesh_info.indices.iter() {
-            self.indices.push(*index + self.last_index);
-            max_index = max_index.max(*index as i32);
+        for &index in mesh_info.indices.iter() {
+            self.indices.push(index + self.last_index);
+            max_index = max_index.max(index as i32);
         }
 
         if self.additional_info.is_empty() {
@@ -352,10 +351,7 @@ impl MeshBuilder for CosmosMeshBuilder {
         mesh.insert_attribute(Mesh::ATTRIBUTE_POSITION, self.positions);
         mesh.insert_attribute(Mesh::ATTRIBUTE_NORMAL, self.normals);
         mesh.insert_attribute(Mesh::ATTRIBUTE_UV_0, self.uvs);
-
-        if !self.no_array_texture {
-            mesh.insert_attribute(ATTRIBUTE_TEXTURE_INDEX, self.array_texture_ids);
-        }
+        mesh.insert_attribute(ATTRIBUTE_TEXTURE_INDEX, self.array_texture_ids);
 
         for (attribute, values) in self.additional_info {
             mesh.insert_attribute(attribute, values);
@@ -913,4 +909,293 @@ pub(super) fn register(app: &mut App) {
         OnExit(GameState::PostLoading),
         register_block_meshes.after(load_block_rendering_information),
     );
+}
+
+//
+
+// LOD STUFF
+
+#[derive(Default, Debug)]
+/// Default way to create a mesh from many different combined `MeshInformation` objects.
+pub struct LodMeshBuilder {
+    last_index: u32,
+    indices: Vec<u32>,
+    packed_data: Vec<u32>,
+    positions: Vec<[f32; 3]>,
+    additional_info: Vec<(MeshVertexAttribute, VertexAttributeValues)>,
+}
+
+impl MeshBuilder for LodMeshBuilder {
+    #[inline]
+    fn add_mesh_information(
+        &mut self,
+        mesh_info: &MeshInformation,
+        position: Vec3,
+        _: Rect,
+        texture_index: u32,
+        additional_info: Vec<(MeshVertexAttribute, VertexAttributeValues)>,
+    ) {
+        let mut max_index = -1;
+
+        self.positions.extend(mesh_info.positions.iter().map(|x| {
+            // We need another texture index vertex for every position we push
+            [x[0] + position.x, x[1] + position.y, x[2] + position.z]
+        }));
+
+        // GPU code relies on this to be correct
+        debug_assert!(
+            BlockDirection::PosX.index() == 0
+                && BlockDirection::NegX.index() == 1
+                && BlockDirection::PosY.index() == 2
+                && BlockDirection::NegY.index() == 3
+                && BlockDirection::PosZ.index() == 4
+                && BlockDirection::NegZ.index() == 5
+        );
+        self.packed_data
+            .extend(mesh_info.normals.iter().zip(mesh_info.uvs.iter()).map(|(normal, uvs)| {
+                let mut packed_uv: u32 = 0;
+
+                packed_uv |= ((uvs[0] > 0.5) as u32) << 1;
+                packed_uv |= (uvs[1] > 0.5) as u32;
+
+                let packed_normal = BlockDirection::from_vec3((*normal).into()).index() as u32;
+
+                let packed_data: u32 = packed_normal << 29 | packed_uv << 27 | (0b00000111_11111111_11111111_11111111 & texture_index);
+
+                packed_data
+            }));
+
+        for &index in mesh_info.indices.iter() {
+            self.indices.push(index + self.last_index);
+            max_index = max_index.max(index as i32);
+        }
+
+        if self.additional_info.is_empty() {
+            self.additional_info = additional_info;
+        } else {
+            // It is assumed these are always equal because it's coming from the same shader
+            debug_assert!(self.additional_info.len() == additional_info.len());
+
+            for ((adding_mesh_attr, adding_values), (current_mesh_attr, current_values)) in
+                additional_info.into_iter().zip(self.additional_info.iter_mut())
+            {
+                debug_assert!(adding_mesh_attr.id == current_mesh_attr.id); // This guarentees they are the same type, thus the unreachable! macros below.
+
+                match adding_values {
+                    VertexAttributeValues::Float32(vals) => {
+                        let VertexAttributeValues::Float32(cur_vals) = current_values else {
+                            unreachable!();
+                        };
+
+                        cur_vals.extend(vals);
+                    }
+                    VertexAttributeValues::Sint32(vals) => {
+                        let VertexAttributeValues::Sint32(cur_vals) = current_values else {
+                            unreachable!();
+                        };
+
+                        cur_vals.extend(vals);
+                    }
+                    VertexAttributeValues::Uint32(vals) => {
+                        let VertexAttributeValues::Uint32(cur_vals) = current_values else {
+                            unreachable!();
+                        };
+
+                        cur_vals.extend(vals);
+                    }
+                    VertexAttributeValues::Float32x2(vals) => {
+                        let VertexAttributeValues::Float32x2(cur_vals) = current_values else {
+                            unreachable!();
+                        };
+
+                        cur_vals.extend(vals);
+                    }
+                    VertexAttributeValues::Sint32x2(vals) => {
+                        let VertexAttributeValues::Sint32x2(cur_vals) = current_values else {
+                            unreachable!();
+                        };
+
+                        cur_vals.extend(vals);
+                    }
+                    VertexAttributeValues::Uint32x2(vals) => {
+                        let VertexAttributeValues::Uint32x2(cur_vals) = current_values else {
+                            unreachable!();
+                        };
+
+                        cur_vals.extend(vals);
+                    }
+                    VertexAttributeValues::Float32x3(vals) => {
+                        let VertexAttributeValues::Float32x3(cur_vals) = current_values else {
+                            unreachable!();
+                        };
+
+                        cur_vals.extend(vals);
+                    }
+                    VertexAttributeValues::Sint32x3(vals) => {
+                        let VertexAttributeValues::Sint32x3(cur_vals) = current_values else {
+                            unreachable!();
+                        };
+
+                        cur_vals.extend(vals);
+                    }
+                    VertexAttributeValues::Uint32x3(vals) => {
+                        let VertexAttributeValues::Uint32x3(cur_vals) = current_values else {
+                            unreachable!();
+                        };
+
+                        cur_vals.extend(vals);
+                    }
+                    VertexAttributeValues::Float32x4(vals) => {
+                        let VertexAttributeValues::Float32x4(cur_vals) = current_values else {
+                            unreachable!();
+                        };
+
+                        cur_vals.extend(vals);
+                    }
+                    VertexAttributeValues::Sint32x4(vals) => {
+                        let VertexAttributeValues::Sint32x4(cur_vals) = current_values else {
+                            unreachable!();
+                        };
+
+                        cur_vals.extend(vals);
+                    }
+                    VertexAttributeValues::Uint32x4(vals) => {
+                        let VertexAttributeValues::Uint32x4(cur_vals) = current_values else {
+                            unreachable!();
+                        };
+
+                        cur_vals.extend(vals);
+                    }
+                    VertexAttributeValues::Sint16x2(vals) => {
+                        let VertexAttributeValues::Sint16x2(cur_vals) = current_values else {
+                            unreachable!();
+                        };
+
+                        cur_vals.extend(vals);
+                    }
+                    VertexAttributeValues::Snorm16x2(vals) => {
+                        let VertexAttributeValues::Snorm16x2(cur_vals) = current_values else {
+                            unreachable!();
+                        };
+
+                        cur_vals.extend(vals);
+                    }
+                    VertexAttributeValues::Uint16x2(vals) => {
+                        let VertexAttributeValues::Uint16x2(cur_vals) = current_values else {
+                            unreachable!();
+                        };
+
+                        cur_vals.extend(vals);
+                    }
+                    VertexAttributeValues::Unorm16x2(vals) => {
+                        let VertexAttributeValues::Unorm16x2(cur_vals) = current_values else {
+                            unreachable!();
+                        };
+
+                        cur_vals.extend(vals);
+                    }
+                    VertexAttributeValues::Sint16x4(vals) => {
+                        let VertexAttributeValues::Sint16x4(cur_vals) = current_values else {
+                            unreachable!();
+                        };
+
+                        cur_vals.extend(vals);
+                    }
+                    VertexAttributeValues::Snorm16x4(vals) => {
+                        let VertexAttributeValues::Snorm16x4(cur_vals) = current_values else {
+                            unreachable!();
+                        };
+
+                        cur_vals.extend(vals);
+                    }
+                    VertexAttributeValues::Uint16x4(vals) => {
+                        let VertexAttributeValues::Uint16x4(cur_vals) = current_values else {
+                            unreachable!();
+                        };
+
+                        cur_vals.extend(vals);
+                    }
+                    VertexAttributeValues::Unorm16x4(vals) => {
+                        let VertexAttributeValues::Unorm16x4(cur_vals) = current_values else {
+                            unreachable!();
+                        };
+
+                        cur_vals.extend(vals);
+                    }
+                    VertexAttributeValues::Sint8x2(vals) => {
+                        let VertexAttributeValues::Sint8x2(cur_vals) = current_values else {
+                            unreachable!();
+                        };
+
+                        cur_vals.extend(vals);
+                    }
+                    VertexAttributeValues::Snorm8x2(vals) => {
+                        let VertexAttributeValues::Snorm8x2(cur_vals) = current_values else {
+                            unreachable!();
+                        };
+
+                        cur_vals.extend(vals);
+                    }
+                    VertexAttributeValues::Uint8x2(vals) => {
+                        let VertexAttributeValues::Uint8x2(cur_vals) = current_values else {
+                            unreachable!();
+                        };
+
+                        cur_vals.extend(vals);
+                    }
+                    VertexAttributeValues::Unorm8x2(vals) => {
+                        let VertexAttributeValues::Unorm8x2(cur_vals) = current_values else {
+                            unreachable!();
+                        };
+
+                        cur_vals.extend(vals);
+                    }
+                    VertexAttributeValues::Sint8x4(vals) => {
+                        let VertexAttributeValues::Sint8x4(cur_vals) = current_values else {
+                            unreachable!();
+                        };
+
+                        cur_vals.extend(vals);
+                    }
+                    VertexAttributeValues::Snorm8x4(vals) => {
+                        let VertexAttributeValues::Snorm8x4(cur_vals) = current_values else {
+                            unreachable!();
+                        };
+
+                        cur_vals.extend(vals);
+                    }
+                    VertexAttributeValues::Uint8x4(vals) => {
+                        let VertexAttributeValues::Uint8x4(cur_vals) = current_values else {
+                            unreachable!();
+                        };
+
+                        cur_vals.extend(vals);
+                    }
+                    VertexAttributeValues::Unorm8x4(vals) => {
+                        let VertexAttributeValues::Unorm8x4(cur_vals) = current_values else {
+                            unreachable!();
+                        };
+
+                        cur_vals.extend(vals);
+                    }
+                }
+            }
+        }
+
+        self.last_index += (max_index + 1) as u32;
+    }
+
+    fn build_mesh(self) -> Mesh {
+        let mut mesh = Mesh::new(PrimitiveTopology::TriangleList, RenderAssetUsages::default());
+
+        mesh.insert_indices(Indices::U32(self.indices));
+        mesh.insert_attribute(Mesh::ATTRIBUTE_POSITION, self.positions);
+        mesh.insert_attribute(ATTRIBUTE_PACKED_DATA, self.packed_data);
+
+        for (attribute, values) in self.additional_info {
+            mesh.insert_attribute(attribute, values);
+        }
+
+        mesh
+    }
 }
