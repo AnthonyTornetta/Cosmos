@@ -26,10 +26,10 @@ pub mod generation;
 mod lod;
 mod lods;
 
-#[cfg(debug_assertions)]
+// #[cfg(debug_assertions)]
 const RENDER_DISTANCE: UnboundCoordinateType = 2;
-#[cfg(not(debug_assertions))]
-const RENDER_DISTANCE: UnboundCoordinateType = 4;
+// #[cfg(not(debug_assertions))]
+// const RENDER_DISTANCE: UnboundCoordinateType = 4;
 
 fn load_planet_chunks(
     query: Query<&Location, With<LocalPlayer>>,

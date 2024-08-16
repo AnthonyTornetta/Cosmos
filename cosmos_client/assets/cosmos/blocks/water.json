@@ -1,1 +1,24 @@
-{}
+{
+    "material": {
+        "name": "cosmos:transparent"
+    },
+    "model": {
+        "Sides": {
+            "name": "cosmos:water",
+            "top": "cosmos:base_top",
+            "bottom": "cosmos:base_bottom",
+            "left": "cosmos:base_left",
+            "right": "cosmos:base_right",
+            "front": "cosmos:base_front",
+            "back": "cosmos:base_back",
+            "connected": {
+                "top": "none",
+                "bottom": "none",
+                "left": "none",
+                "right": "none",
+                "front": "none",
+                "back": "none"
+            }
+        }
+    }
+}

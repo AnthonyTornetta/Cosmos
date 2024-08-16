@@ -79,44 +79,48 @@ fn vertex(vertex_no_morph: Vertex) -> VertexOutput {
     let normal_bits = vertex_no_morph.packed_data >> 29;
     let uv_bits = vertex_no_morph.packed_data >> 27 & 3;
 
-    var normal: vec3<f32> = vec3(0.0, 0.0, 0.0);    
-    /*
-        BlockDirection::PosX.index() == 0
-     && BlockDirection::NegX.index() == 1
-     && BlockDirection::PosY.index() == 2
-     && BlockDirection::NegY.index() == 3
-     && BlockDirection::PosZ.index() == 4
-     && BlockDirection::NegZ.index() == 5
-    */
-    switch(normal_bits) {
-        case u32(0): {
-            normal.x = 1.0;
-            break;
-        }
-        case u32(1): {
-            normal.x = -1.0;
-            break;
-        }
-        case u32(2): {
-            normal.y = 1.0;
-            break;
-        }
-        case u32(3): {
-            normal.y = -1.0;
-            break;
-        }
-        case u32(4): {
-            normal.z = 1.0;
-            break;
-        }
-        default: {
-            normal.z = -1.0;
-            break;
-        }
-    }
+    // var normal: vec3<f32> = vec3(0.0, 0.0, 0.0);    
+    // /*
+    //     BlockDirection::PosX.index() == 0
+    //  && BlockDirection::NegX.index() == 1
+    //  && BlockDirection::PosY.index() == 2
+    //  && BlockDirection::NegY.index() == 3
+    //  && BlockDirection::PosZ.index() == 4
+    //  && BlockDirection::NegZ.index() == 5
+    // */
+    // switch(normal_bits) {
+    //     case u32(0): {
+    //         normal.x = 1.0;
+    //         break;
+    //     }
+    //     case u32(1): {
+    //         normal.x = -1.0;
+    //         break;
+    //     }
+    //     case u32(2): {
+    //         normal.y = 1.0;
+    //         break;
+    //     }
+    //     case u32(3): {
+    //         normal.y = -1.0;
+    //         break;
+    //     }
+    //     case u32(4): {
+    //         normal.z = 1.0;
+    //         break;
+    //     }
+    //     default: {
+    //         normal.z = -1.0;
+    //         break;
+    //     }
+    // }
 
    
     let uvs = vec2<f32>(f32(uv_bits >> 1), f32(uv_bits & 1));
+    let normal_axis = vertex_no_morph.packed_data >> 30;
+    let normal_negative = (vertex_no_morph.packed_data >> 29) & 1;
+    var normal: vec3<f32> = vec3(0.0, 0.0, 0.0);
+    normal[normal_axis] = 1.0 - f32(normal_negative << 1);
     let texture_index = vertex_no_morph.packed_data & 134217727; // 134217727 == 0b00000111_11111111_11111111_11111111
 
     var vertex = vertex_no_morph;

@@ -246,10 +246,10 @@ fn get_requested_chunk(
     }
 }
 
-#[cfg(debug_assertions)]
+// #[cfg(debug_assertions)]
 const RENDER_DISTANCE: UnboundCoordinateType = 2;
-#[cfg(not(debug_assertions))]
-const RENDER_DISTANCE: UnboundCoordinateType = 4;
+// #[cfg(not(debug_assertions))]
+// const RENDER_DISTANCE: UnboundCoordinateType = 4;
 
 fn generate_chunks_near_players(
     players: Query<&Location, With<Player>>,
