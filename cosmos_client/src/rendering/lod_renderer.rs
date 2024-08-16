@@ -55,7 +55,7 @@ struct LodMeshes(Vec<Entity>);
 
 fn recursively_process_lod(
     lod_path: LodPath,
-    // to_process: &Vec<ChunkMesh>,
+    to_process: &Mutex<Option<Vec<(ChunkMesh, Vec3, CoordinateType)>>>,
     blocks: &Registry<Block>,
     materials: &ManyToOneRegistry<Block, BlockMaterialMapping>,
     meshes_registry: &BlockMeshRegistry,
@@ -63,7 +63,6 @@ fn recursively_process_lod(
     materials_registry: &Registry<MaterialDefinition>,
     lighting: &Registry<BlockLighting>,
     rendering_modes: &BlockRenderingModes,
-    renderer: &mut ChunkRenderer<LodMeshBuilder>,
 ) {
     let (lod_path_info, _) = match &lod_path {
         LodPath::Top(lod_path_info) => (lod_path_info, None),
@@ -73,7 +72,7 @@ fn recursively_process_lod(
     match lod_path_info.lod {
         Lod::None => {}
         Lod::Children(children) => {
-            children.iter().enumerate().for_each(|(i, c)| {
+            children.par_iter().enumerate().for_each(|(i, c)| {
                 let s4 = lod_path_info.scale / 4.0;
 
                 let offset = lod_path_info.offset
@@ -99,7 +98,7 @@ fn recursively_process_lod(
                         },
                         &lod_path,
                     ),
-                    // to_process,
+                    to_process,
                     blocks,
                     materials,
                     meshes_registry,
@@ -107,14 +106,15 @@ fn recursively_process_lod(
                     materials_registry,
                     lighting,
                     rendering_modes,
-                    renderer,
                 );
             });
         }
         Lod::Single(lod_chunk, dirty) => {
-            // if !*dirty {
-            //     return;
-            // }
+            if !*dirty {
+                return;
+            }
+
+            let mut renderer = ChunkRenderer::<LodMeshBuilder>::new();
 
             let mut neighbors = [None; 6];
 
@@ -142,9 +142,21 @@ fn recursively_process_lod(
                 block_textures,
                 &lod_rendering_backend,
                 lod_path_info.scale,
-                lod_path_info.offset * CHUNK_DIMENSIONS as f32,
+                Vec3::ZERO,
                 true,
             );
+
+            let mut mutex = to_process.lock().expect("Error locking to_process vec!");
+
+            mutex.as_mut().unwrap().push((
+                renderer.create_mesh(),
+                Vec3::new(
+                    lod_path_info.offset.x * CHUNK_DIMENSIONSF,
+                    lod_path_info.offset.y * CHUNK_DIMENSIONSF,
+                    lod_path_info.offset.z * CHUNK_DIMENSIONSF,
+                ),
+                lod_path_info.scale as CoordinateType,
+            ));
         }
     };
 }
@@ -182,10 +194,12 @@ fn find_non_dirty(lod: &Lod, offset: Vec3, to_process: &mut Vec<Vec3>, scale: f3
 }
 
 #[derive(Debug)]
-struct RenderingLod(Task<(Vec<Vec3>, Vec<ChunkMesh>)>);
+struct RenderingLod(Task<(Vec<Vec3>, Vec<(ChunkMesh, Vec3, CoordinateType)>)>);
 
 #[derive(Component, Debug)]
-struct RenderedLod {}
+struct RenderedLod {
+    scale: CoordinateType,
+}
 
 #[derive(Debug, Clone, DerefMut, Deref)]
 struct LodRendersToDespawn(Arc<Mutex<(Entity, usize)>>);
@@ -251,7 +265,6 @@ fn poll_rendering_lods(
     mut rendering_lods: ResMut<RenderingLods>,
     mut meshes_to_compute: ResMut<MeshesToCompute>,
     mut event_writer: EventWriter<AddMaterialEvent>,
-    mut meshes: ResMut<Assets<Mesh>>,
 ) {
     let mut todo = Vec::with_capacity(rendering_lods.0.capacity());
 
@@ -259,161 +272,117 @@ fn poll_rendering_lods(
 
     for (structure_entity, mut rendering_lod) in todo {
         if let Some((to_keep_locations, ent_meshes)) = future::block_on(future::poll_once(&mut rendering_lod.0)) {
-            // assert!(ent_meshes.len() == 1);
-            info!("Render done!");
+            let mut structure_meshes_component = LodMeshes::default();
+            let mut entities_to_add = Vec::new();
 
-            if let Ok(ent_meshes) = structure_lod_meshes_query.get(structure_entity) {
-                for e in ent_meshes.iter() {
-                    commands.entity(*e).despawn_recursive();
+            let old_mesh_entities = structure_lod_meshes_query
+                .get(structure_entity)
+                .map(|x| x.0.clone())
+                .unwrap_or_default();
+
+            // grab entities to kill
+            //   insert them into list of Arc<Mutex<(Entity, usize)>> where usize represents a counter
+            //   loop through every created lod and assign them the dirty entity where they go (or none)
+
+            // once the new entity's mesh is ready, decrease the counter
+            // if the counter is 0, despawn the dirty entity.
+
+            for (lod_mesh, offset, scale) in ent_meshes {
+                for mesh_material in lod_mesh.mesh_materials {
+                    // let s = (CHUNK_DIMENSIONS / 2) as f32 * lod_mesh.scale;
+
+                    let ent = commands
+                        .spawn((
+                            TransformBundle::from_transform(Transform::from_translation(offset)),
+                            VisibilityBundle::default(),
+                            // Aabb::from_min_max(Vec3::new(-s, -s, -s), Vec3::new(s, s, s)),
+                            RenderedLod { scale },
+                            DespawnWithStructure,
+                        ))
+                        .id();
+
+                    event_writer.send(AddMaterialEvent {
+                        entity: ent,
+                        add_material_id: mesh_material.material_id,
+                        texture_dimensions_index: mesh_material.texture_dimensions_index,
+                        material_type: if scale >= 2 { MaterialType::FarAway } else { MaterialType::Normal },
+                    });
+
+                    entities_to_add.push((ent, offset, scale, mesh_material.mesh));
+
+                    structure_meshes_component.0.push(ent);
                 }
             }
 
-            info!("# ent meshes: {}", ent_meshes.len());
+            let mut to_despawn = Vec::with_capacity(old_mesh_entities.len());
 
-            let mut structure_meshes_component = LodMeshes::default();
+            // Any dirty entities are useless now, so kill them
+            for mesh_entity in old_mesh_entities {
+                let Ok(transform) = transform_query.get(mesh_entity) else {
+                    unreachable!();
+                };
 
-            let mut ecmds = commands.entity(structure_entity);
+                let is_clean = to_keep_locations.iter().any(|&x| x == transform.translation);
+                if is_clean {
+                    structure_meshes_component.push(mesh_entity);
+                } else {
+                    let Ok(rendered_lod) = rendered_lod_query.get(mesh_entity) else {
+                        warn!("Invalid mesh entity {mesh_entity:?}!");
+                        commands.entity(mesh_entity).insert(NeedsDespawned);
+                        continue;
+                    };
 
-            ecmds.with_children(|p| {
-                for chunk_mesh in ent_meshes {
-                    println!("# Materials: {}", chunk_mesh.mesh_materials.len());
-                    for mesh_material in chunk_mesh.mesh_materials {
-                        let info = mesh_material.mesh.indices().map(|x| x.len()).unwrap_or_default();
-                        println!("N Indicies: {info} ({} MB)", info as f32 * 4.0 / 1024.0 / 1024.0);
-                        for (attrib, value) in mesh_material.mesh.attributes() {
-                            println!(
-                                "{attrib:?} => {} items -> || {} MB",
-                                value.len(),
-                                value.get_bytes().len() as f32 / 1024.0 / 1024.0
-                            );
-                        }
+                    to_despawn.push((
+                        transform.translation,
+                        rendered_lod.scale,
+                        LodRendersToDespawn(Arc::new(Mutex::new((mesh_entity, 0)))),
+                    ));
+                }
+            }
 
-                        let ent = p
-                            .spawn((
-                                Name::new("Rendered LOD"),
-                                TransformBundle::from_transform(Transform::from_translation(Vec3::ZERO)),
-                                VisibilityBundle::default(),
-                                // Aabb::from_min_max(Vec3::new(-s, -s, -s), Vec3::new(s, s, s)),
-                                meshes.add(mesh_material.mesh),
-                                RenderedLod {},
-                                DespawnWithStructure,
-                            ))
-                            .id();
+            let Some(mut entity_commands) = commands.get_entity(structure_entity) else {
+                continue;
+            };
 
-                        event_writer.send(AddMaterialEvent {
-                            entity: ent,
-                            add_material_id: mesh_material.material_id,
-                            texture_dimensions_index: mesh_material.texture_dimensions_index,
-                            material_type: MaterialType::FarAway,
-                        });
+            for (entity, offset, scale, mesh) in entities_to_add {
+                let mut to_kill = vec![];
 
-                        structure_meshes_component.push(ent);
+                for (other_offset, other_scale, counter) in to_despawn.iter() {
+                    let diff = (offset - *other_offset).abs();
+                    let max = diff.x.max(diff.y).max(diff.z);
+
+                    if CHUNK_DIMENSIONS * scale + CHUNK_DIMENSIONS * *other_scale < max.floor() as CoordinateType {
+                        let counter = counter.clone();
+
+                        counter.0.lock().expect("lock failed").1 += 1;
+
+                        to_kill.push(counter);
                     }
                 }
-            });
 
-            ecmds.insert(structure_meshes_component);
+                meshes_to_compute.0.push_back((mesh, entity, to_kill));
+                entity_commands.add_child(entity);
+            }
 
-            // let mut entities_to_add = Vec::new();
-
-            // let old_mesh_entities = structure_lod_meshes_query
-            //     .get(structure_entity)
-            //     .map(|x| x.0.clone())
-            //     .unwrap_or_default();
-
-            // // grab entities to kill
-            // //   insert them into list of Arc<Mutex<(Entity, usize)>> where usize represents a counter
-            // //   loop through every created lod and assign them the dirty entity where they go (or none)
-
-            // // once the new entity's mesh is ready, decrease the counter
-            // // if the counter is 0, despawn the dirty entity.
-
-            // for lod_mesh in ent_meshes {
-            //     for mesh_material in lod_mesh.mesh_materials {
-            //         // let s = (CHUNK_DIMENSIONS / 2) as f32 * lod_mesh.scale;
-
-            //         let ent = commands
-            //             .spawn((
-            //                 TransformBundle::from_transform(Transform::from_translation(Vec3::ZERO)),
-            //                 VisibilityBundle::default(),
-            //                 // Aabb::from_min_max(Vec3::new(-s, -s, -s), Vec3::new(s, s, s)),
-            //                 RenderedLod {},
-            //                 DespawnWithStructure,
-            //             ))
-            //             .id();
-
-            //         event_writer.send(AddMaterialEvent {
-            //             entity: ent,
-            //             add_material_id: mesh_material.material_id,
-            //             texture_dimensions_index: mesh_material.texture_dimensions_index,
-            //             material_type: MaterialType::FarAway,
-            //         });
-
-            //         entities_to_add.push((ent, mesh_material.mesh));
-
-            //         structure_meshes_component.0.push(ent);
-            //     }
+            // if let Ok(mut l) = lod_query.get_mut(structure_entity) {
+            //     // Avoid recursively re-rendering the lod. The only thing changing about the lod are the dirty flags.
+            //     // This could be refactored to store dirty flags elsewhere, but I'm not sure about the performance cost of that.
+            //     // *(l.bypass_change_detection()) = lod;
+            //     *l.0.lock().unwrap() = lod;
+            // } else {
+            //     entity_commands.insert(LodComponent(Arc::new(Mutex::new(lod))));
             // }
 
-            // // let mut to_despawn = Vec::with_capacity(old_mesh_entities.len());
+            entity_commands.insert(structure_meshes_component);
 
-            // // Any dirty entities are useless now, so kill them
-            // for mesh_entity in old_mesh_entities {
-            //     let Ok(transform) = transform_query.get(mesh_entity) else {
-            //         unreachable!();
-            //     };
-
-            //     let is_clean = to_keep_locations.iter().any(|&x| x == transform.translation);
-            //     if is_clean {
-            //         structure_meshes_component.push(mesh_entity);
-            //     } else {
-            //         commands.entity(mesh_entity).insert(NeedsDespawned);
-            //     }
-            // }
-
-            // let Some(mut entity_commands) = commands.get_entity(structure_entity) else {
-            //     continue;
-            // };
-
-            // for (entity, mesh) in entities_to_add {
-            //     let mut to_kill = vec![];
-
-            //     // for (other_offset, counter) in to_despawn.iter() {
-            //     //     let diff = (offset - *other_offset).abs();
-            //     //     let max = diff.x.max(diff.y).max(diff.z);
-
-            //     //     if CHUNK_DIMENSIONS * scale + CHUNK_DIMENSIONS * *other_scale < max.floor() as CoordinateType {
-            //     //         let counter = counter.clone();
-
-            //     //         counter.0.lock().expect("lock failed").1 += 1;
-
-            //     //         to_kill.push(counter);
-            //     //     }
-            //     // }
-
-            //     meshes_to_compute.0.push_back((mesh, entity, to_kill));
-            //     entity_commands.add_child(entity);
-            // }
-
-            // // if let Ok(mut l) = lod_query.get_mut(structure_entity) {
-            // //     // Avoid recursively re-rendering the lod. The only thing changing about the lod are the dirty flags.
-            // //     // This could be refactored to store dirty flags elsewhere, but I'm not sure about the performance cost of that.
-            // //     // *(l.bypass_change_detection()) = lod;
-            // //     *l.0.lock().unwrap() = lod;
-            // // } else {
-            // //     entity_commands.insert(LodComponent(Arc::new(Mutex::new(lod))));
-            // // }
-
-            // entity_commands.insert(structure_meshes_component);
-
-            // // for (_, _, counter) in to_despawn {
-            // //     let locked = counter.lock().expect("failed to lock");
-            // //     if locked.1 == 0 {
-            // //         if let Some(mut ecmds) = commands.get_entity(locked.0) {
-            // //             ecmds.insert(NeedsDespawned);
-            // //         }
-            // //     }
-            // // }
+            for (_, _, counter) in to_despawn {
+                let locked = counter.lock().expect("failed to lock");
+                if locked.1 == 0 {
+                    if let Some(mut ecmds) = commands.get_entity(locked.0) {
+                        ecmds.insert(NeedsDespawned);
+                    }
+                }
+            }
         } else {
             rendering_lods.0.push((structure_entity, rendering_lod))
         }
@@ -422,9 +391,9 @@ fn poll_rendering_lods(
 
 fn hide_lod(mut query: Query<(&Transform, &Parent, &mut Visibility, &RenderedLod)>, structure_query: Query<&Structure>) {
     for (transform, parent, mut vis, rendered_lod) in query.iter_mut() {
-        // if rendered_lod.scale != 1 {
-        //     continue;
-        // }
+        if rendered_lod.scale != 1 {
+            continue;
+        }
 
         let structure = structure_query.get(parent.get()).expect("This should always be a structure");
 
@@ -621,12 +590,12 @@ fn trigger_lod_render(
         let task = thread_pool.spawn(async move {
             let mut lod = lod.0.lock().unwrap();
             let mut non_dirty = vec![];
-            // find_non_dirty(&lod, Vec3::ZERO, &mut non_dirty, block_dimensions as f32);
+            find_non_dirty(&lod, Vec3::ZERO, &mut non_dirty, block_dimensions as f32);
 
             // by making the Vec an Option<Vec> I can take ownership of it later, which I cannot do with
             // just a plain Mutex<Vec>.
             // https://stackoverflow.com/questions/30573188/cannot-move-data-out-of-a-mutex
-            let mut to_process: Vec<ChunkMesh> = Vec::new();
+            let to_process: Mutex<Option<Vec<(ChunkMesh, Vec3, CoordinateType)>>> = Mutex::new(Some(Vec::new()));
 
             let blocks = blocks.registry();
             let block_textures = block_textures.registry();
@@ -644,13 +613,9 @@ fn trigger_lod_render(
                 scale: chunk_dimensions as f32,
                 offset: Vec3::ZERO,
             });
-
-            let mut renderer = ChunkRenderer::new();
-
-            info!("Starting LOD render!");
             recursively_process_lod(
                 lod_path,
-                // &to_process,
+                &to_process,
                 &blocks,
                 &materials,
                 &meshes_registry,
@@ -658,30 +623,26 @@ fn trigger_lod_render(
                 &materials_registry,
                 &lighting,
                 &block_rendering_modes,
-                &mut renderer,
             );
-            info!("Done rendering LOD.");
 
-            info!("Making mesh!");
-            to_process.push(renderer.create_mesh());
-            info!("Done making mesh.");
+            mark_non_dirty(&mut lod);
 
-            // mark_non_dirty(&mut lod);
+            let to_process_chunks = to_process.lock().unwrap().take().unwrap();
 
-            (non_dirty, to_process)
+            (non_dirty, to_process_chunks)
         });
 
         rendering_lods.push((entity, RenderingLod(task)));
     }
 }
 
-// fn mark_non_dirty(lod: &mut Lod) {
-//     match lod {
-//         Lod::None => {}
-//         Lod::Single(_, dirty) => *dirty = false,
-//         Lod::Children(children) => children.iter_mut().for_each(mark_non_dirty),
-//     }
-// }
+fn mark_non_dirty(lod: &mut Lod) {
+    match lod {
+        Lod::None => {}
+        Lod::Single(_, dirty) => *dirty = false,
+        Lod::Children(children) => children.iter_mut().for_each(mark_non_dirty),
+    }
+}
 
 #[derive(Resource, Debug, Default, Deref, DerefMut)]
 struct RenderingLods(Vec<(Entity, RenderingLod)>);

@@ -324,31 +324,31 @@ fn monitor_needs_rendered_system(
                 pos_z: pos_z.as_ref(),
             };
 
-            // let custom_blocks = renderer.render(
-            //     &materials.registry(),
-            //     &materials_registry.registry(),
-            //     &lighting.registry(),
-            //     &chunk,
-            //     &blocks.registry(),
-            //     &meshes_registry.registry(),
-            //     &block_rendering_mode,
-            //     &block_textures.registry(),
-            //     &chunk_checker,
-            //     1.0,
-            //     Vec3::ZERO,
-            //     false,
-            // );
+            let custom_blocks = renderer.render(
+                &materials.registry(),
+                &materials_registry.registry(),
+                &lighting.registry(),
+                &chunk,
+                &blocks.registry(),
+                &meshes_registry.registry(),
+                &block_rendering_mode,
+                &block_textures.registry(),
+                &chunk_checker,
+                1.0,
+                Vec3::ZERO,
+                false,
+            );
 
-            let custom_blocks = Default::default();
+            // let custom_blocks = Default::default();
 
             ChunkRenderResult {
                 chunk_entity: entity,
                 custom_blocks,
-                mesh: super::ChunkMesh {
-                    lights: Default::default(),
-                    mesh_materials: Default::default(),
-                },
-                // mesh: renderer.create_mesh(),
+                // mesh: super::ChunkMesh {
+                //     lights: Default::default(),
+                //     mesh_materials: Default::default(),
+                // },
+                mesh: renderer.create_mesh(),
             }
         });
 
