@@ -50,17 +50,8 @@ impl<'a> LodChunkRenderingChecker<'a> {
                         delta_chunk_coords.z * scale_ub,
                     ),
             ) else {
-                // println!(
-                //     "BAD: N-MOST COORD: {} SCALE: {} || CC: {}",
-                //     self.negative_most_coord, self.scale, chunk_block_coords
-                // );
                 return false;
             };
-
-            // println!(
-            //     "GOOD: N-MOST COORD: {} SCALE: {} || CC: {} || BC: {}",
-            //     self.negative_most_coord, self.scale, chunk_block_coords, coords
-            // );
 
             let s2 = self.scale / 2;
             match direction_to_check {
