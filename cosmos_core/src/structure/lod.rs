@@ -11,7 +11,15 @@ use bevy::{
 };
 use serde::{Deserialize, Serialize};
 
-use super::lod_chunk::LodChunk;
+use crate::block::blocks::AIR_BLOCK_ID;
+
+use super::{
+    block_storage::BlockStorer,
+    chunk::CHUNK_DIMENSIONS,
+    coordinates::CoordinateType,
+    lod_chunk::LodChunk,
+    prelude::{BlockCoordinate, ChunkBlockCoordinate},
+};
 
 #[derive(Debug, Clone, Component)]
 /// Represents a reduced-detail version of a planet
@@ -67,6 +75,47 @@ pub enum LodDelta {
     /// +-----------+
     /// ```
     Children(Box<[Self; 8]>),
+}
+
+impl Lod {
+    /// Returns true if there is a non-air block at these coords in this LOD representation.
+    pub fn has_block_at(&self, coords: BlockCoordinate, root_scale: CoordinateType) -> bool {
+        self.block_id_at(coords, root_scale) != AIR_BLOCK_ID
+    }
+
+    /// Returns the block at these coords in this LOD representation.
+    pub fn block_id_at(&self, coords: BlockCoordinate, root_scale: CoordinateType) -> u16 {
+        let scale = root_scale;
+        match self {
+            Lod::None => AIR_BLOCK_ID,
+            Lod::Single(lod, _) => {
+                // let scale = scale / 2;
+                let c = BlockCoordinate::new(coords.x / scale, coords.y / scale, coords.z / scale);
+
+                if let Ok(chunk_block_coord) = ChunkBlockCoordinate::try_from(c) {
+                    lod.block_at(chunk_block_coord)
+                } else {
+                    AIR_BLOCK_ID
+                }
+            }
+            Lod::Children(children) => {
+                let s2 = (scale * CHUNK_DIMENSIONS) / 2;
+
+                let (idx, coords) = match (coords.x < s2, coords.y < s2, coords.z < s2) {
+                    (true, true, true) => (0, coords),
+                    (true, true, false) => (1, BlockCoordinate::new(coords.x, coords.y, coords.z - s2)),
+                    (false, true, false) => (2, BlockCoordinate::new(coords.x - s2, coords.y, coords.z - s2)),
+                    (false, true, true) => (3, BlockCoordinate::new(coords.x - s2, coords.y, coords.z)),
+                    (true, false, true) => (4, BlockCoordinate::new(coords.x, coords.y - s2, coords.z)),
+                    (true, false, false) => (5, BlockCoordinate::new(coords.x, coords.y - s2, coords.z - s2)),
+                    (false, false, false) => (6, BlockCoordinate::new(coords.x - s2, coords.y - s2, coords.z - s2)),
+                    (false, false, true) => (7, BlockCoordinate::new(coords.x - s2, coords.y - s2, coords.z)),
+                };
+
+                children[idx].block_id_at(coords, scale / 2)
+            }
+        }
+    }
 }
 
 impl LodDelta {

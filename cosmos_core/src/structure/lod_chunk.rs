@@ -16,7 +16,7 @@ use super::{
     coordinates::ChunkBlockCoordinate,
 };
 
-#[derive(Reflect, Serialize, Deserialize, Clone)]
+#[derive(Reflect, Serialize, Deserialize, Clone, PartialEq, Eq)]
 /// A chunk that is scaled. The Lod's scale depends on the position in the octree and size of its structure.
 ///
 /// Lods only function properly on structures whos sizes are powers of two.

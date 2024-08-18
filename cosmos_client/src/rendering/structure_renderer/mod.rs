@@ -10,7 +10,7 @@ use cosmos_core::netty::system_sets::NetworkingSystemsSet;
 use cosmos_core::registry::identifiable::Identifiable;
 use cosmos_core::registry::Registry;
 
-use super::{BlockMeshRegistry, CosmosMeshBuilder, MeshBuilder, MeshInformation};
+use super::{BlockMeshRegistry, MeshBuilder, MeshInformation};
 
 pub mod chunk_rendering;
 mod monitor_needs_rerendered_chunks;

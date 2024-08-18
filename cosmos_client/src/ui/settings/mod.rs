@@ -330,7 +330,6 @@ fn create_settings_screen(
 }
 
 fn done_clicked(mut settings: ResMut<Registry<Setting>>, q_written_settings: Query<&WrittenSetting>) {
-    println!(":D");
     for written_setting in q_written_settings.iter() {
         let setting = settings.from_numeric_id_mut(written_setting.setting_id);
 

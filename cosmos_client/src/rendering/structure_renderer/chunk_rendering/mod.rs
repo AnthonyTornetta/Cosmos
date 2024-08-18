@@ -6,7 +6,7 @@ use bevy::utils::hashbrown::HashMap;
 use cosmos_core::structure::coordinates::ChunkBlockCoordinate;
 use std::collections::HashSet;
 
-use super::{BlockMeshRegistry, CosmosMeshBuilder, MeshBuilder, MeshInformation};
+use super::{BlockMeshRegistry, MeshBuilder, MeshInformation};
 
 mod async_rendering;
 pub mod chunk_renderer;

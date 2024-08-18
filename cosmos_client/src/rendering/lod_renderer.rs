@@ -21,6 +21,7 @@ use bevy::{
 use cosmos_core::{
     block::Block,
     ecs::NeedsDespawned,
+    prelude::BlockCoordinate,
     registry::{
         many_to_one::{ManyToOneRegistry, ReadOnlyManyToOneRegistry},
         ReadOnlyRegistry, Registry,
@@ -29,7 +30,6 @@ use cosmos_core::{
         chunk::{CHUNK_DIMENSIONS, CHUNK_DIMENSIONSF},
         coordinates::{ChunkCoordinate, CoordinateType},
         lod::{Lod, LodComponent},
-        lod_chunk::LodChunk,
         shared::DespawnWithStructure,
         ChunkState, Structure,
     },
@@ -54,7 +54,13 @@ use super::{
 struct LodMeshes(Vec<Entity>);
 
 fn recursively_process_lod(
-    lod_path: LodPath,
+    lod_root: &Lod,
+    lod_root_scale: CoordinateType,
+    scale: CoordinateType,
+    current_lod: &Lod,
+    negative_most_coord: BlockCoordinate,
+    offset: Vec3,
+    depth: u32,
     to_process: &Mutex<Option<Vec<(ChunkMesh, Vec3, CoordinateType)>>>,
     blocks: &Registry<Block>,
     materials: &ManyToOneRegistry<Block, BlockMaterialMapping>,
@@ -64,40 +70,40 @@ fn recursively_process_lod(
     lighting: &Registry<BlockLighting>,
     rendering_modes: &BlockRenderingModes,
 ) {
-    let (lod_path_info, _) = match &lod_path {
-        LodPath::Top(lod_path_info) => (lod_path_info, None),
-        LodPath::HasParent(lod_path_info, parent) => (lod_path_info, Some(parent)),
-    };
-
-    match lod_path_info.lod {
+    match current_lod {
         Lod::None => {}
         Lod::Children(children) => {
-            children.par_iter().enumerate().for_each(|(i, c)| {
-                let s4 = lod_path_info.scale / 4.0;
+            children.par_iter().enumerate().for_each(|(i, child_lod)| {
+                let s4 = scale as f32 / 4.0;
+                let s2 = scale / 2;
 
-                let offset = lod_path_info.offset
-                    + match i {
-                        0 => Vec3::new(-s4, -s4, -s4),
-                        1 => Vec3::new(-s4, -s4, s4),
-                        2 => Vec3::new(s4, -s4, s4),
-                        3 => Vec3::new(s4, -s4, -s4),
-                        4 => Vec3::new(-s4, s4, -s4),
-                        5 => Vec3::new(-s4, s4, s4),
-                        6 => Vec3::new(s4, s4, s4),
-                        7 => Vec3::new(s4, s4, -s4),
-                        _ => unreachable!(),
-                    };
+                let nmc = negative_most_coord;
+
+                let nmc_delta = s2 * CHUNK_DIMENSIONS;
+
+                let (offset, negative_most_coord) = match i {
+                    0 => (offset + Vec3::new(-s4, -s4, -s4), nmc),
+                    1 => (offset + Vec3::new(-s4, -s4, s4), nmc + BlockCoordinate::new(0, 0, nmc_delta)),
+                    2 => (offset + Vec3::new(s4, -s4, s4), nmc + BlockCoordinate::new(nmc_delta, 0, nmc_delta)),
+                    3 => (offset + Vec3::new(s4, -s4, -s4), nmc + BlockCoordinate::new(nmc_delta, 0, 0)),
+                    4 => (offset + Vec3::new(-s4, s4, -s4), nmc + BlockCoordinate::new(0, nmc_delta, 0)),
+                    5 => (offset + Vec3::new(-s4, s4, s4), nmc + BlockCoordinate::new(0, nmc_delta, nmc_delta)),
+                    6 => (
+                        offset + Vec3::new(s4, s4, s4),
+                        nmc + BlockCoordinate::new(nmc_delta, nmc_delta, nmc_delta),
+                    ),
+                    7 => (offset + Vec3::new(s4, s4, -s4), nmc + BlockCoordinate::new(nmc_delta, nmc_delta, 0)),
+                    _ => unreachable!(),
+                };
 
                 recursively_process_lod(
-                    LodPath::HasParent(
-                        PathInfo {
-                            lod: c,
-                            depth: lod_path_info.depth + 1,
-                            scale: lod_path_info.scale / 2.0,
-                            offset,
-                        },
-                        &lod_path,
-                    ),
+                    lod_root,
+                    lod_root_scale,
+                    s2,
+                    child_lod,
+                    negative_most_coord,
+                    offset,
+                    depth + 1,
                     to_process,
                     blocks,
                     materials,
@@ -116,19 +122,30 @@ fn recursively_process_lod(
 
             let mut renderer = ChunkRenderer::<LodMeshBuilder>::new();
 
-            let mut neighbors = [None; 6];
+            // let mut neighbors = [None; 6];
 
             // Neighbors Order: -x, +x, -y, +y, -z, +z
-            lod_path.find_neighbors(lod_path_info, &mut neighbors);
+            // lod_path.find_neighbors(lod_path_info, &mut neighbors);
+
+            // neighbors
+            //     .iter()
+            //     .flat_map(|x| x)
+            //     .map(|x| x.relative_scale)
+            //     .collect::<Vec<LodChunkRelativeScale>>();
+            // info!(
+            //     "NEIGHBOR SCALES: {:?}",
+            //     neighbors
+            //         .iter()
+            //         .flat_map(|x| x)
+            //         .map(|x| x.relative_scale)
+            //         .collect::<Vec<LodChunkRelativeScale>>()
+            // );
 
             let lod_rendering_backend = LodChunkRenderingChecker {
-                neg_x: neighbors[0],
-                pos_x: neighbors[1],
-                neg_y: neighbors[2],
-                pos_y: neighbors[3],
-                neg_z: neighbors[4],
-                pos_z: neighbors[5],
-                scale: lod_path_info.scale,
+                lod_root_scale,
+                negative_most_coord,
+                scale,
+                lod_root,
             };
 
             renderer.render(
@@ -141,7 +158,7 @@ fn recursively_process_lod(
                 rendering_modes,
                 block_textures,
                 &lod_rendering_backend,
-                lod_path_info.scale,
+                scale as f32,
                 Vec3::ZERO,
                 true,
             );
@@ -151,11 +168,11 @@ fn recursively_process_lod(
             mutex.as_mut().unwrap().push((
                 renderer.create_mesh(),
                 Vec3::new(
-                    lod_path_info.offset.x * CHUNK_DIMENSIONSF,
-                    lod_path_info.offset.y * CHUNK_DIMENSIONSF,
-                    lod_path_info.offset.z * CHUNK_DIMENSIONSF,
+                    offset.x * CHUNK_DIMENSIONSF,
+                    offset.y * CHUNK_DIMENSIONSF,
+                    offset.z * CHUNK_DIMENSIONSF,
                 ),
-                lod_path_info.scale as CoordinateType,
+                scale as CoordinateType,
             ));
         }
     };
@@ -420,126 +437,186 @@ fn monitor_lods_needs_rendered_system(lods_needed: Query<Entity, Changed<LodComp
     }
 }
 
-struct PathInfo<'a> {
-    lod: &'a Lod,
-    depth: usize,
-    scale: f32,
-    offset: Vec3,
-}
+// struct PathInfo<'a> {
+//     lod: &'a Lod,
+//     depth: usize,
+//     scale: f32,
+//     offset: Vec3,
+// }
 
-enum LodPath<'a> {
-    Top(PathInfo<'a>),
-    HasParent(PathInfo<'a>, &'a LodPath<'a>),
-}
+// enum LodPath<'a> {
+//     Top(PathInfo<'a>),
+//     HasParent(PathInfo<'a>, &'a LodPath<'a>),
+// }
 
 /// Checks if b is within or directly next to a
-#[must_use]
-fn check_within_or_next_to(a: (Vec3, f32), b: (Vec3, f32)) -> bool {
-    let (a_off, a_scale) = a;
-    let (b_off, b_scale) = b;
-    let s2 = a_scale / 2.0;
+// #[must_use]
+// fn check_within_or_next_to(a: (Vec3, f32), b: (Vec3, f32)) -> bool {
+//     let (a_off, a_scale) = a;
+//     let (b_off, b_scale) = b;
+//     let s2 = a_scale / 2.0;
 
-    let a_min = a_off - Vec3::splat(s2);
-    let a_max = a_off + Vec3::splat(s2);
+//     let a_min = a_off - Vec3::splat(s2);
+//     let a_max = a_off + Vec3::splat(s2);
 
-    let s2 = b_scale / 2.0;
+//     let s2 = b_scale / 2.0;
 
-    let b_min = b_off - Vec3::splat(s2);
-    let b_max = b_off + Vec3::splat(s2);
+//     let b_min = b_off - Vec3::splat(s2);
+//     let b_max = b_off + Vec3::splat(s2);
 
-    b_max.x >= a_min.x && b_max.y >= a_min.y && b_max.z >= a_min.z && b_min.x <= a_max.x && b_min.y <= a_max.y && b_min.z <= a_max.z
-}
+//     b_max.x >= a_min.x && b_max.y >= a_min.y && b_max.z >= a_min.z && b_min.x <= a_max.x && b_min.y <= a_max.y && b_min.z <= a_max.z
+// }
 
-fn we_need_to_go_deeper<'a>(
-    offset: Vec3,
-    scale: f32,
-    lod: &'a Lod,
-    depth: usize,
-    searching_for_path_info: &PathInfo,
-    neighbors: &mut [Option<&'a LodChunk>; 6],
-) {
-    if !neighbors.iter().any(|x| x.is_none()) {
-        // Neighbors have already been found, stop looking for more
-        return;
-    }
+// fn we_need_to_go_deeper<'a>(
+//     offset: Vec3,
+//     scale: f32,
+//     lod: &'a Lod,
+//     depth: usize,
+//     searching_for_path_info: &PathInfo,
+//     neighbors: &mut [Option<LodNeighbor<'a>>; 6],
+// ) {
+//     if !neighbors.iter().any(|x| x.is_none()) {
+//         // Neighbors have already been found, stop looking for more
+//         return;
+//     }
 
-    let bounds = (searching_for_path_info.offset, searching_for_path_info.scale);
+//     let bounds = (searching_for_path_info.offset, searching_for_path_info.scale);
 
-    if !check_within_or_next_to((offset, scale), bounds) {
-        return;
-    }
+//     if !check_within_or_next_to((offset, scale), bounds) {
+//         return;
+//     }
 
-    if let Lod::Children(children) = lod {
-        for (i, child_lod) in children.iter().enumerate() {
-            // if i == index {
-            //     // This will check against every single index, not just the ones that are a part of the same lod group as the index passed in.
-            //     // However, because a neighbor will never share the same index as the one we're checking, this check is perfectly fine.
-            //     continue;
-            // }
+//     if let Lod::Children(children) = lod {
+//         for (i, child_lod) in children.iter().enumerate() {
+//             // if i == index {
+//             //     // This will check against every single index, not just the ones that are a part of the same lod group as the index passed in.
+//             //     // However, because a neighbor will never share the same index as the one we're checking, this check is perfectly fine.
+//             //     continue;
+//             // }
 
-            let s4 = scale / 4.0;
+//             let s4 = scale / 4.0;
 
-            let new_offset = offset
-                + match i {
-                    0 => Vec3::new(-s4, -s4, -s4),
-                    1 => Vec3::new(-s4, -s4, s4),
-                    2 => Vec3::new(s4, -s4, s4),
-                    3 => Vec3::new(s4, -s4, -s4),
-                    4 => Vec3::new(-s4, s4, -s4),
-                    5 => Vec3::new(-s4, s4, s4),
-                    6 => Vec3::new(s4, s4, s4),
-                    7 => Vec3::new(s4, s4, -s4),
-                    _ => unreachable!(),
-                };
+//             let new_offset = offset
+//                 + match i {
+//                     0 => Vec3::new(-s4, -s4, -s4),
+//                     1 => Vec3::new(-s4, -s4, s4),
+//                     2 => Vec3::new(s4, -s4, s4),
+//                     3 => Vec3::new(s4, -s4, -s4),
+//                     4 => Vec3::new(-s4, s4, -s4),
+//                     5 => Vec3::new(-s4, s4, s4),
+//                     6 => Vec3::new(s4, s4, s4),
+//                     7 => Vec3::new(s4, s4, -s4),
+//                     _ => unreachable!(),
+//                 };
 
-            match child_lod {
-                Lod::Single(chunk, _) => {
-                    if searching_for_path_info.depth == depth + 1 && check_within_or_next_to((new_offset, scale / 2.0), bounds) {
-                        let diff = new_offset - searching_for_path_info.offset;
-                        if diff.y == 0.0 && diff.z == 0.0 {
-                            if diff.x < 0.0 {
-                                neighbors[0] = Some(chunk);
-                            } else if diff.x > 0.0 {
-                                neighbors[1] = Some(chunk);
-                            }
-                        } else if diff.x == 0.0 && diff.z == 0.0 {
-                            if diff.y < 0.0 {
-                                neighbors[2] = Some(chunk);
-                            } else if diff.y > 0.0 {
-                                neighbors[3] = Some(chunk);
-                            }
-                        } else if diff.x == 0.0 && diff.y == 0.0 {
-                            if diff.z < 0.0 {
-                                neighbors[4] = Some(chunk);
-                            } else if diff.z > 0.0 {
-                                neighbors[5] = Some(chunk);
-                            }
-                        }
-                    }
-                }
-                Lod::Children(_) => we_need_to_go_deeper(new_offset, scale / 2.0, child_lod, depth + 1, searching_for_path_info, neighbors),
-                Lod::None => {}
-            }
-        }
-    }
-}
+//             let scale_here = scale / 2.0;
 
-impl<'a> LodPath<'a> {
-    /// Neighbors Order: -x, +x, -y, +y, -z, +z
-    fn find_neighbors(&self, searching_for_path_info: &PathInfo, neighbors: &mut [Option<&'a LodChunk>; 6]) {
-        match self {
-            LodPath::Top(path_info) => we_need_to_go_deeper(
-                path_info.offset,
-                path_info.scale,
-                path_info.lod,
-                path_info.depth,
-                searching_for_path_info,
-                neighbors,
-            ),
-            LodPath::HasParent(_, parent) => parent.find_neighbors(searching_for_path_info, neighbors),
-        }
-    }
-}
+//             match child_lod {
+//                 Lod::Single(chunk, _) => {
+//                     if !(searching_for_path_info.depth <= depth + 2
+//                         && searching_for_path_info.depth >= depth
+//                         && check_within_or_next_to((new_offset, scale_here), bounds))
+//                     {
+//                         return;
+//                     }
+
+//                     let diff = new_offset - searching_for_path_info.offset;
+//                     let delta_pos = if scale_here == searching_for_path_info.scale {
+//                         0.0
+//                     } else if scale_here < searching_for_path_info.scale {
+//                         scale_here / 2.0
+//                     } else {
+//                         scale_here / 2.0
+//                     };
+
+//                     // These diff checks are wrong
+//                     let mut idx = None;
+//                     if diff.y.abs() == delta_pos && diff.z.abs() == delta_pos {
+//                         if diff.x < 0.0 {
+//                             idx = Some(0);
+//                         } else if diff.x > 0.0 {
+//                             idx = Some(1);
+//                         }
+//                     } else if diff.x.abs() == delta_pos && diff.z.abs() == delta_pos {
+//                         if diff.y < 0.0 {
+//                             idx = Some(2);
+//                         } else if diff.y > 0.0 {
+//                             idx = Some(3);
+//                         }
+//                     } else if diff.x.abs() == delta_pos && diff.y.abs() == delta_pos {
+//                         if diff.z < 0.0 {
+//                             idx = Some(4);
+//                         } else if diff.z > 0.0 {
+//                             idx = Some(5);
+//                         }
+//                     }
+
+//                     let Some(idx) = idx else {
+//                         return;
+//                     };
+
+//                     if scale_here == searching_for_path_info.scale {
+//                         let neighbor = LodNeighbor::Same { chunk };
+//                         neighbors[idx] = Some(neighbor);
+//                     } else if scale_here < searching_for_path_info.scale {
+//                         let neighbor = neighbors[idx].unwrap_or(LodNeighbor::Half {
+//                             negative: None,
+//                             negative_positive: None,
+//                             positive_negative: None,
+//                             positive: None,
+//                         });
+
+//                         if diff.y.abs() == delta_pos && diff.z.abs() == delta_pos {
+//                             if diff.x < 0.0 {
+
+//                                 idx = Some(0);
+//                             } else if diff.x > 0.0 {
+//                                 idx = Some(1);
+//                             }
+//                         } else if diff.x.abs() == delta_pos && diff.z.abs() == delta_pos {
+//                             if diff.y < 0.0 {
+//                                 idx = Some(2);
+//                             } else if diff.y > 0.0 {
+//                                 idx = Some(3);
+//                             }
+//                         } else if diff.x.abs() == delta_pos && diff.y.abs() == delta_pos {
+//                             if diff.z < 0.0 {
+//                                 idx = Some(4);
+//                             } else if diff.z > 0.0 {
+//                                 idx = Some(5);
+//                             }
+//                         }
+
+//                         neighbors[idx] = Some(neighbor);
+//                     } else {
+//                         todo!();
+//                         // let neighbor = LodNeighbor::Double { chunk };
+//                         // neighbors[idx] = Some(neighbor);
+//                     };
+//                 }
+//                 Lod::Children(_) => we_need_to_go_deeper(new_offset, scale_here, child_lod, depth + 1, searching_for_path_info, neighbors),
+//                 Lod::None => {}
+//             }
+//         }
+//     }
+// }
+
+// impl<'a> LodPath<'a> {
+//     /// Neighbors Order: -x, +x, -y, +y, -z, +z
+//     fn find_neighbors(&self, searching_for_path_info: &PathInfo, neighbors: &mut [Option<LodNeighbor<'a>>; 6]) {
+//         match self {
+//             LodPath::Top(path_info) => we_need_to_go_deeper(
+//                 path_info.offset,
+//                 path_info.scale,
+//                 path_info.lod,
+//                 path_info.depth,
+//                 searching_for_path_info,
+//                 neighbors,
+//             ),
+//             LodPath::HasParent(_, parent) => parent.find_neighbors(searching_for_path_info, neighbors),
+//         }
+//     }
+// }
 
 /// Performance hot spot
 fn trigger_lod_render(
@@ -607,14 +684,14 @@ fn trigger_lod_render(
 
             // let mut cloned_lod = lod.clone();
 
-            let lod_path = LodPath::Top(PathInfo {
-                lod: &lod,
-                depth: 1,
-                scale: chunk_dimensions as f32,
-                offset: Vec3::ZERO,
-            });
             recursively_process_lod(
-                lod_path,
+                &lod,
+                chunk_dimensions,
+                chunk_dimensions,
+                &lod,
+                BlockCoordinate::ZERO,
+                Vec3::ZERO,
+                1,
                 &to_process,
                 &blocks,
                 &materials,
@@ -666,3 +743,168 @@ pub(super) fn register(app: &mut App) {
     add_statebound_resource::<NeedLods>(app, GameState::Playing);
     add_statebound_resource::<MeshesToCompute>(app, GameState::Playing);
 }
+
+// #[cfg(test)]
+// mod test {
+//     use super::*;
+
+//     fn find_neighbors<'a>(lod_path: LodPath, looking_for: &LodChunk) -> Option<[Option<(LodChunk, LodChunkRelativeScale)>; 6]> {
+//         let lod_path_info = match &lod_path {
+//             LodPath::Top(lod_path_info) => lod_path_info,
+//             LodPath::HasParent(lod_path_info, _) => lod_path_info,
+//         };
+
+//         match lod_path_info.lod {
+//             Lod::None => None,
+//             Lod::Children(children) => {
+//                 for (i, c) in children.iter().enumerate() {
+//                     let s4 = lod_path_info.scale / 4.0;
+
+//                     let offset = lod_path_info.offset
+//                         + match i {
+//                             0 => Vec3::new(-s4, -s4, -s4),
+//                             1 => Vec3::new(-s4, -s4, s4),
+//                             2 => Vec3::new(s4, -s4, s4),
+//                             3 => Vec3::new(s4, -s4, -s4),
+//                             4 => Vec3::new(-s4, s4, -s4),
+//                             5 => Vec3::new(-s4, s4, s4),
+//                             6 => Vec3::new(s4, s4, s4),
+//                             7 => Vec3::new(s4, s4, -s4),
+//                             _ => unreachable!(),
+//                         };
+
+//                     if let Some(x) = find_neighbors(
+//                         LodPath::HasParent(
+//                             PathInfo {
+//                                 lod: c,
+//                                 depth: lod_path_info.depth + 1,
+//                                 scale: lod_path_info.scale / 2.0,
+//                                 offset,
+//                             },
+//                             &lod_path,
+//                         ),
+//                         looking_for,
+//                     ) {
+//                         return Some(x);
+//                     }
+//                 }
+
+//                 None
+//             }
+//             Lod::Single(lod_chunk, _) => {
+//                 if looking_for as *const LodChunk != (lod_chunk.as_ref()) as *const LodChunk {
+//                     return None;
+//                 }
+
+//                 let mut neighbors: [Option<LodNeighbor>; 6] = [None; 6];
+
+//                 // Neighbors Order: -x, +x, -y, +y, -z, +z
+//                 lod_path.find_neighbors(lod_path_info, &mut neighbors);
+
+//                 Some(neighbors.map(|x| x.map(|x| (x.chunk.clone(), x.relative_scale))))
+//             }
+//         }
+//     }
+
+//     #[test]
+//     fn test_different_sized_neighbors() {
+//         let lod = Lod::Children(Box::new([
+//             Lod::Single(Default::default(), Default::default()),
+//             Lod::Children(Box::new([
+//                 Lod::Single(Default::default(), Default::default()),
+//                 Lod::Single(Default::default(), Default::default()),
+//                 Lod::Single(Default::default(), Default::default()),
+//                 Lod::Single(Default::default(), Default::default()),
+//                 Lod::Single(Default::default(), Default::default()),
+//                 Lod::Single(Default::default(), Default::default()),
+//                 Lod::Single(Default::default(), Default::default()),
+//                 Lod::Single(Default::default(), Default::default()),
+//             ])),
+//             // Lod::Single(Default::default(), Default::default()),
+//             Lod::Single(Default::default(), Default::default()),
+//             Lod::Single(Default::default(), Default::default()),
+//             Lod::Single(Default::default(), Default::default()),
+//             Lod::Single(Default::default(), Default::default()),
+//             Lod::Single(Default::default(), Default::default()),
+//             Lod::Single(Default::default(), Default::default()),
+//         ]));
+
+//         let first = match &lod {
+//             Lod::Children(c) => match &c[0] {
+//                 Lod::Single(c, _) => c.as_ref(),
+//                 _ => unreachable!(),
+//             },
+//             _ => unreachable!(),
+//         };
+
+//         let scale = CHUNK_DIMENSIONSF * 2.0;
+//         let lod_path = LodPath::Top(PathInfo {
+//             lod: &lod,
+//             depth: 1,
+//             scale,
+//             offset: Vec3::ZERO,
+//         });
+
+//         let neighbors = find_neighbors(lod_path, first).expect("error in test code");
+
+//         assert_eq!(
+//             neighbors,
+//             [
+//                 None,
+//                 Some((LodChunk::default(), LodChunkRelativeScale::Same)),
+//                 None,
+//                 Some((LodChunk::default(), LodChunkRelativeScale::Same)),
+//                 None,
+//                 Some((LodChunk::default(), LodChunkRelativeScale::Same))
+//             ]
+//         );
+
+//         println!("{neighbors:?}");
+//     }
+
+//     #[test]
+//     fn test_all_same_neighbors() {
+//         let lod = Lod::Children(Box::new([
+//             Lod::Single(Default::default(), Default::default()),
+//             Lod::Single(Default::default(), Default::default()),
+//             Lod::Single(Default::default(), Default::default()),
+//             Lod::Single(Default::default(), Default::default()),
+//             Lod::Single(Default::default(), Default::default()),
+//             Lod::Single(Default::default(), Default::default()),
+//             Lod::Single(Default::default(), Default::default()),
+//             Lod::Single(Default::default(), Default::default()),
+//         ]));
+
+//         let first = match &lod {
+//             Lod::Children(c) => match &c[0] {
+//                 Lod::Single(c, _) => c.as_ref(),
+//                 _ => unreachable!(),
+//             },
+//             _ => unreachable!(),
+//         };
+
+//         let scale = CHUNK_DIMENSIONSF * 2.0;
+//         let lod_path = LodPath::Top(PathInfo {
+//             lod: &lod,
+//             depth: 1,
+//             scale,
+//             offset: Vec3::ZERO,
+//         });
+
+//         let neighbors = find_neighbors(lod_path, first).expect("error in test code");
+
+//         assert_eq!(
+//             neighbors,
+//             [
+//                 None,
+//                 Some((LodChunk::default(), LodChunkRelativeScale::Same)),
+//                 None,
+//                 Some((LodChunk::default(), LodChunkRelativeScale::Same)),
+//                 None,
+//                 Some((LodChunk::default(), LodChunkRelativeScale::Same))
+//             ]
+//         );
+
+//         println!("{neighbors:?}");
+//     }
+// }

@@ -27,7 +27,6 @@ fn cancel_clicked(mut mms: ResMut<MainMenuSubState>) {
 }
 
 fn done_clicked(mut mms: ResMut<MainMenuSubState>) {
-    println!("Changing state");
     *mms = MainMenuSubState::TitleScreen;
 }
 

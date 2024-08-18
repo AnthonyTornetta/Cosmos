@@ -530,6 +530,7 @@ impl ChunkBlockCoordinate {
     /// ```
     ///
     /// This is not made into a From to avoid accidental casting.
+    /// Use `try_from` to return a result if this block coordinate is not within the proper bounds.
     #[inline(always)]
     pub fn for_block_coordinate(value: BlockCoordinate) -> Self {
         // & (CHUNK_DIMENSIONS - 1) == % CHUNK_DIMENSIONS
@@ -587,6 +588,14 @@ impl ChunkBlockCoordinate {
             BlockDirection::PosZ => self.pos_z(),
             BlockDirection::NegZ => self.neg_z(),
         }
+    }
+}
+
+impl TryFrom<BlockCoordinate> for ChunkBlockCoordinate {
+    type Error = BoundsError;
+
+    fn try_from(value: BlockCoordinate) -> Result<Self, Self::Error> {
+        Self::new(value.x, value.y, value.z)
     }
 }
 
