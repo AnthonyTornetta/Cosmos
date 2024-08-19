@@ -7,7 +7,7 @@ use cosmos_core::{
         block_storage::BlockStorer,
         coordinates::{CoordinateType, UnboundCoordinateType},
         lod::Lod,
-        lod_chunk::{BlockScale, LodChunk},
+        lod_chunk::{LodBlockSubScale, LodChunk},
     },
 };
 
@@ -36,6 +36,7 @@ impl<'a> LodChunkRenderingChecker<'a> {
         blocks: &Registry<Block>,
     ) -> bool {
         let delta_chunk_coords = direction_to_check.to_chunk_block_coordinates();
+        let this_block_scale = chunk.block_scale(chunk_block_coords);
 
         let Ok(check_coords) = ChunkBlockCoordinate::try_from(chunk_block_coords + delta_chunk_coords) else {
             let scale_ub = self.scale as UnboundCoordinateType;
@@ -65,7 +66,7 @@ impl<'a> LodChunkRenderingChecker<'a> {
                                 .lod_root
                                 .block_id_at_and_scale(coords + BlockCoordinate::new(0, dy * s2, dz * s2), self.lod_root_scale);
 
-                            if check_block_should_render(this_block_id, other_block_id, other_block_scale, blocks) {
+                            if check_block_should_render(this_block_id, this_block_scale, other_block_id, other_block_scale, blocks) {
                                 return true;
                             }
                         }
@@ -78,7 +79,7 @@ impl<'a> LodChunkRenderingChecker<'a> {
                                 .lod_root
                                 .block_id_at_and_scale(coords + BlockCoordinate::new(dx * s2, 0, dz * s2), self.lod_root_scale);
 
-                            if check_block_should_render(this_block_id, other_block_id, other_block_scale, blocks) {
+                            if check_block_should_render(this_block_id, this_block_scale, other_block_id, other_block_scale, blocks) {
                                 return true;
                             }
                         }
@@ -91,7 +92,7 @@ impl<'a> LodChunkRenderingChecker<'a> {
                                 .lod_root
                                 .block_id_at_and_scale(coords + BlockCoordinate::new(dx * s2, dy * s2, 0), self.lod_root_scale);
 
-                            if check_block_should_render(this_block_id, other_block_id, other_block_scale, blocks) {
+                            if check_block_should_render(this_block_id, this_block_scale, other_block_id, other_block_scale, blocks) {
                                 return true;
                             }
                         }
@@ -104,13 +105,19 @@ impl<'a> LodChunkRenderingChecker<'a> {
 
         let other_block_id = chunk.block_at(check_coords);
         let other_block_scale = chunk.block_scale(check_coords);
-        check_block_should_render(this_block_id, other_block_id, other_block_scale, blocks)
+        check_block_should_render(this_block_id, this_block_scale, other_block_id, other_block_scale, blocks)
     }
 }
 
-fn check_block_should_render(this_block_id: u16, other_block_id: u16, other_block_scale: BlockScale, blocks: &Registry<Block>) -> bool {
+fn check_block_should_render(
+    this_block_id: u16,
+    this_block_scale: LodBlockSubScale,
+    other_block_id: u16,
+    other_block_scale: LodBlockSubScale,
+    blocks: &Registry<Block>,
+) -> bool {
     other_block_id == AIR_BLOCK_ID
-        || other_block_scale != BlockScale::default()
+        || other_block_scale != this_block_scale
         || (other_block_id != this_block_id && blocks.from_numeric_id(other_block_id).is_see_through())
 }
 
@@ -141,10 +148,11 @@ impl<'a> ChunkRendererBackend<LodChunk> for LodChunkRenderingChecker<'a> {
         self.inner_check_should_render(chunk, chunk_block_coords, direction_to_check, block_here.id(), blocks)
     }
 
-    fn transform_position(&self, chunk: &LodChunk, coords: ChunkBlockCoordinate, direction: BlockDirection, position: Vec3) -> Vec3 {
+    #[inline(always)]
+    fn transform_position(&self, chunk: &LodChunk, coords: ChunkBlockCoordinate, _direction: BlockDirection, position: Vec3) -> Vec3 {
         let bs = chunk.block_scale(coords);
 
-        position * Vec3::new(bs.de_scale_x, bs.de_scale_y, bs.de_scale_z) + Vec3::new(bs.x_offset, bs.y_offset, bs.z_offset)
+        position * Vec3::new(bs.scaling_x, bs.scaling_y, bs.scaling_z) + Vec3::new(bs.x_offset, bs.y_offset, bs.z_offset)
     }
 }
 

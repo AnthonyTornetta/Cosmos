@@ -11,7 +11,7 @@ use super::{
     block_storage::BlockStorer,
     chunk::CHUNK_DIMENSIONS,
     coordinates::CoordinateType,
-    lod_chunk::{BlockScale, LodChunk},
+    lod_chunk::{LodBlockSubScale, LodChunk},
     prelude::{BlockCoordinate, ChunkBlockCoordinate},
 };
 
@@ -78,10 +78,10 @@ impl Lod {
     }
 
     /// Returns the block at these coords in this LOD representation.
-    pub fn block_id_at_and_scale(&self, coords: BlockCoordinate, root_scale: CoordinateType) -> (u16, BlockScale) {
+    pub fn block_id_at_and_scale(&self, coords: BlockCoordinate, root_scale: CoordinateType) -> (u16, LodBlockSubScale) {
         let scale = root_scale;
         match self {
-            Lod::None => (AIR_BLOCK_ID, BlockScale::default()),
+            Lod::None => (AIR_BLOCK_ID, LodBlockSubScale::default()),
             Lod::Single(lod, _) => {
                 // let scale = scale / 2;
                 let c = BlockCoordinate::new(coords.x / scale, coords.y / scale, coords.z / scale);
@@ -89,7 +89,7 @@ impl Lod {
                 if let Ok(chunk_block_coord) = ChunkBlockCoordinate::try_from(c) {
                     (lod.block_at(chunk_block_coord), lod.block_scale(chunk_block_coord))
                 } else {
-                    (AIR_BLOCK_ID, BlockScale::default())
+                    (AIR_BLOCK_ID, LodBlockSubScale::default())
                 }
             }
             Lod::Children(children) => {

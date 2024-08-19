@@ -25,10 +25,10 @@ use cosmos_core::{
     registry::Registry,
     structure::{
         block_storage::BlockStorer,
-        chunk::{BlockInfo, CHUNK_DIMENSIONS, CHUNK_DIMENSIONS_USIZE},
+        chunk::{CHUNK_DIMENSIONS, CHUNK_DIMENSIONS_USIZE},
         coordinates::{BlockCoordinate, ChunkBlockCoordinate, CoordinateType, UnboundChunkCoordinate, UnboundCoordinateType},
         lod::{Lod, LodComponent},
-        lod_chunk::{BlockScale, LodChunk},
+        lod_chunk::{LodBlockSubScale, LodChunk},
         planet::{
             biosphere::Biosphere,
             generation::{
@@ -642,41 +642,41 @@ pub(crate) fn generate_chunks_from_gpu_data(
                             let multiple_faces = Planet::planet_face_relative_multiple(block_relative_coord);
 
                             let scale_scalar = needs_generated_chunk.scale as CoordinateType;
-                            let mut scale = BlockScale::default();
+                            let mut scale = LodBlockSubScale::default();
 
                             if abs_coord + scale_scalar > sea_level_coordinate {
+                                // this makes sure the sea level isn't drawn in other blocks
+                                let sea_level_coordinate = sea_level_coordinate + 1;
+
                                 let diff = (sea_level_coordinate - abs_coord) as f32;
 
-                                // let taken_away = scale_scalar as f32 - diff;
-                                // let new_scale = 1.0 - diff / scale_scalar as f32;
-
-                                let new_scale = (1.0 - diff / scale_scalar as f32).max(0.1);
-                                let taken_away = (1.0 - new_scale) * scale_scalar as f32;
+                                let taken_away = scale_scalar as f32 - diff;
+                                let new_scale = 1.0 - diff / scale_scalar as f32;
 
                                 for face in multiple_faces {
                                     match face {
                                         BlockFace::Left => {
-                                            scale.de_scale_x = new_scale;
+                                            scale.scaling_x = new_scale;
                                             scale.x_offset = taken_away;
                                         }
                                         BlockFace::Right => {
-                                            scale.de_scale_x = new_scale;
+                                            scale.scaling_x = new_scale;
                                             scale.x_offset = -taken_away;
                                         }
                                         BlockFace::Bottom => {
-                                            scale.de_scale_y = new_scale;
+                                            scale.scaling_y = new_scale;
                                             scale.y_offset = taken_away;
                                         }
                                         BlockFace::Top => {
-                                            scale.de_scale_y = new_scale;
+                                            scale.scaling_y = new_scale;
                                             scale.y_offset = -taken_away;
                                         }
                                         BlockFace::Front => {
-                                            scale.de_scale_z = new_scale;
+                                            scale.scaling_z = new_scale;
                                             scale.z_offset = taken_away;
                                         }
                                         BlockFace::Back => {
-                                            scale.de_scale_z = new_scale;
+                                            scale.scaling_z = new_scale;
                                             scale.z_offset = -taken_away;
                                         }
                                     }
