@@ -124,15 +124,15 @@ fn check_block_should_render(
 impl<'a> ChunkRendererBackend<LodChunk> for LodChunkRenderingChecker<'a> {
     #[inline(always)]
     fn get_texture_index(&self, index: &BlockTextureIndex, neighbors: BlockNeighbors, face: BlockFace) -> Option<TextureIndex> {
-        let maybe_img_idx = if self.scale > 8 {
+        
+        if self.scale > 8 {
             index
                 .atlas_index_for_lod(neighbors)
                 .map(Some)
                 .unwrap_or_else(|| index.atlas_index_from_face(face, neighbors))
         } else {
             index.atlas_index_from_face(face, neighbors)
-        };
-        maybe_img_idx
+        }
     }
 
     fn check_should_render(
@@ -178,13 +178,13 @@ mod test {
 
         let lod = Lod::Children(Box::new([
             Lod::Single(Box::new(lod_chunk), false),
-            Lod::Single(Box::new(LodChunk::default()), false),
-            Lod::Single(Box::new(LodChunk::default()), false),
-            Lod::Single(Box::new(LodChunk::default()), false),
-            Lod::Single(Box::new(LodChunk::default()), false),
-            Lod::Single(Box::new(LodChunk::default()), false),
-            Lod::Single(Box::new(LodChunk::default()), false),
-            Lod::Single(Box::new(LodChunk::default()), false),
+            Lod::Single(Box::default(), false),
+            Lod::Single(Box::default(), false),
+            Lod::Single(Box::default(), false),
+            Lod::Single(Box::default(), false),
+            Lod::Single(Box::default(), false),
+            Lod::Single(Box::default(), false),
+            Lod::Single(Box::default(), false),
         ]));
 
         let coords = BlockCoordinate::new(CHUNK_DIMENSIONS - 1, CHUNK_DIMENSIONS - 1, CHUNK_DIMENSIONS - 1);
@@ -215,23 +215,23 @@ mod test {
         lod_chunk.set_block_at(ChunkBlockCoordinate::new(0, 0, 0).unwrap(), &block, Default::default());
 
         let lod = Lod::Children(Box::new([
-            Lod::Single(Box::new(LodChunk::default()), false),
-            Lod::Single(Box::new(LodChunk::default()), false),
-            Lod::Single(Box::new(LodChunk::default()), false),
-            Lod::Single(Box::new(LodChunk::default()), false),
-            Lod::Single(Box::new(LodChunk::default()), false),
-            Lod::Single(Box::new(LodChunk::default()), false),
+            Lod::Single(Box::default(), false),
+            Lod::Single(Box::default(), false),
+            Lod::Single(Box::default(), false),
+            Lod::Single(Box::default(), false),
+            Lod::Single(Box::default(), false),
+            Lod::Single(Box::default(), false),
             Lod::Children(Box::new([
-                Lod::Single(Box::new(LodChunk::default()), false),
-                Lod::Single(Box::new(LodChunk::default()), false),
-                Lod::Single(Box::new(LodChunk::default()), false),
-                Lod::Single(Box::new(LodChunk::default()), false),
-                Lod::Single(Box::new(LodChunk::default()), false),
-                Lod::Single(Box::new(LodChunk::default()), false),
-                Lod::Single(Box::new(LodChunk::default()), false),
+                Lod::Single(Box::default(), false),
+                Lod::Single(Box::default(), false),
+                Lod::Single(Box::default(), false),
+                Lod::Single(Box::default(), false),
+                Lod::Single(Box::default(), false),
+                Lod::Single(Box::default(), false),
+                Lod::Single(Box::default(), false),
                 Lod::Single(Box::new(lod_chunk), false),
             ])),
-            Lod::Single(Box::new(LodChunk::default()), false),
+            Lod::Single(Box::default(), false),
         ]));
 
         let coords = BlockCoordinate::new(3 * CHUNK_DIMENSIONS, 3 * CHUNK_DIMENSIONS, 2 * CHUNK_DIMENSIONS);
@@ -285,7 +285,7 @@ mod test {
             Lod::Single(Box::new(full_lod_chunk.clone()), false),
             Lod::Single(Box::new(half_full_lod_chunk.clone()), false),
             Lod::Children(Box::new([
-                Lod::Single(Box::new(LodChunk::default()), false), // this one should not change the results
+                Lod::Single(Box::default(), false), // this one should not change the results
                 Lod::Single(Box::new(full_lod_chunk.clone()), false),
                 Lod::Single(Box::new(full_lod_chunk.clone()), false),
                 Lod::Single(Box::new(full_lod_chunk.clone()), false),

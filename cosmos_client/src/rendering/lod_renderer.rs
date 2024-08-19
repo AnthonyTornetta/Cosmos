@@ -60,7 +60,6 @@ fn recursively_process_lod(
     current_lod: &Lod,
     negative_most_coord: BlockCoordinate,
     offset: Vec3,
-    depth: u32,
     to_process: &Mutex<Option<Vec<(ChunkMesh, Vec3, CoordinateType)>>>,
     blocks: &Registry<Block>,
     materials: &ManyToOneRegistry<Block, BlockMaterialMapping>,
@@ -103,7 +102,6 @@ fn recursively_process_lod(
                     child_lod,
                     negative_most_coord,
                     offset,
-                    depth + 1,
                     to_process,
                     blocks,
                     materials,
@@ -482,8 +480,6 @@ fn trigger_lod_render(
             let materials_registry = materials_registry.registry();
             let lighting = lighting.registry();
 
-            // let mut cloned_lod = lod.clone();
-
             recursively_process_lod(
                 &lod,
                 chunk_dimensions,
@@ -491,7 +487,6 @@ fn trigger_lod_render(
                 &lod,
                 BlockCoordinate::ZERO,
                 Vec3::ZERO,
-                1,
                 &to_process,
                 &blocks,
                 &materials,

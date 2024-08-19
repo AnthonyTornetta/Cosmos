@@ -231,7 +231,7 @@ impl<M: MeshBuilder + Default> ChunkRenderer<M> {
 
                     for pos in mesh_info.positions.iter_mut() {
                         let position_vec3 =
-                            rendering_backend.transform_position(&chunk, coords, direction, rotation.mul_vec3(Vec3::from(*pos) * scale));
+                            rendering_backend.transform_position(chunk, coords, direction, rotation.mul_vec3(Vec3::from(*pos) * scale));
                         *pos = (offset + position_vec3).into();
                     }
 
