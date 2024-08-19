@@ -80,6 +80,37 @@ impl Planet {
         }
     }
 
+    /// Gets the face of a planet this location is closest to. Prioritizes negative sides to make positive-to-negative edges look ok.
+    pub fn planet_face_relative_multiple(relative_position: Vec3) -> Vec<BlockFace> {
+        let normalized = relative_position.normalize_or_zero();
+        let abs = normalized.abs();
+
+        let max = abs.x.max(abs.y).max(abs.z);
+
+        let mut res = vec![];
+
+        if normalized.z.is_negative() && abs.z == max {
+            res.push(BlockFace::Front);
+        }
+        if normalized.y.is_negative() && abs.y == max {
+            res.push(BlockFace::Bottom);
+        }
+        if normalized.x.is_negative() && abs.x == max {
+            res.push(BlockFace::Left);
+        }
+        if normalized.z.is_positive() && abs.z == max {
+            res.push(BlockFace::Back);
+        }
+        if normalized.y.is_positive() && abs.y == max {
+            res.push(BlockFace::Top);
+        }
+        if normalized.x.is_positive() && abs.x == max {
+            res.push(BlockFace::Right);
+        }
+
+        res
+    }
+
     /// Given the coordinates of a chunk, returns a tuple of 3 perpendicular chunk's "up" directions, None elements for no up on that axis.
     pub fn chunk_planet_faces(coords: BlockCoordinate, s_dimension: CoordinateType) -> ChunkFaces {
         Self::chunk_planet_faces_with_scale(coords, s_dimension, 1)

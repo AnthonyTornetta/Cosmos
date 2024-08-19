@@ -25,10 +25,10 @@ use cosmos_core::{
     registry::Registry,
     structure::{
         block_storage::BlockStorer,
-        chunk::{CHUNK_DIMENSIONS, CHUNK_DIMENSIONS_USIZE},
+        chunk::{BlockInfo, CHUNK_DIMENSIONS, CHUNK_DIMENSIONS_USIZE},
         coordinates::{BlockCoordinate, ChunkBlockCoordinate, CoordinateType, UnboundChunkCoordinate, UnboundCoordinateType},
         lod::{Lod, LodComponent},
-        lod_chunk::LodChunk,
+        lod_chunk::{BlockScale, LodChunk},
         planet::{
             biosphere::Biosphere,
             generation::{
@@ -438,12 +438,12 @@ fn read_gpu_data(
 
     let millis_took = SystemTime::now().duration_since(timer.0).unwrap().as_millis();
 
-    // if millis_took > 1000 {
-    warn!(
-        "Got lod chunks back from gpu after a long wait! Took {millis_took}ms for {} lod chunks.",
-        currently_generating_chunks.0.len()
-    );
-    // }
+    if millis_took > 1000 {
+        warn!(
+            "Got lod chunks back from gpu after a long wait! Took {millis_took}ms for {} lod chunks.",
+            currently_generating_chunks.0.len()
+        );
+    }
 
     let v: Vec<TerrainData> = worker.try_read_vec("values").expect("Failed to read chunk generation values!");
     *chunk_data = ChunkData::new(v);
@@ -604,6 +604,7 @@ pub(crate) fn generate_chunks_from_gpu_data(
                     let block_relative_coord = chunk_pos + Vec3::new(x as f32, y as f32, z as f32) * needs_generated_chunk.scale;
                     let face = Planet::planet_face_relative(block_relative_coord);
 
+                    let coords = ChunkBlockCoordinate::new(x as CoordinateType, y as CoordinateType, z as CoordinateType).unwrap();
                     if value.depth >= 0 {
                         // return temperature_u32 << 16 | humidity_u32 << 8 | elevation_u32;
                         let ideal_elevation = (value.data & 0xFF) as f32;
@@ -625,11 +626,7 @@ pub(crate) fn generate_chunks_from_gpu_data(
 
                         // let block = blocks.from_id("cosmos:stone").expect("Missing stone?");
 
-                        needs_generated_chunk.chunk.set_block_at(
-                            ChunkBlockCoordinate::new(x as CoordinateType, y as CoordinateType, z as CoordinateType).unwrap(),
-                            block,
-                            face.into(),
-                        );
+                        needs_generated_chunk.chunk.set_block_at(coords, block, face.into());
                     } else if let Some(sea_level_block) = sea_level_block {
                         let sea_level_coordinate = biosphere.sea_level(structure_dimensions) as CoordinateType;
 
@@ -639,12 +636,55 @@ pub(crate) fn generate_chunks_from_gpu_data(
                             BlockFace::Back | BlockFace::Front => block_relative_coord.z,
                         };
 
-                        if (coord.abs()) as CoordinateType <= sea_level_coordinate {
-                            needs_generated_chunk.chunk.set_block_at(
-                                ChunkBlockCoordinate::new(x as CoordinateType, y as CoordinateType, z as CoordinateType).unwrap(),
-                                sea_level_block,
-                                face.into(),
-                            );
+                        let abs_coord = coord.abs() as CoordinateType;
+
+                        if abs_coord <= sea_level_coordinate {
+                            let multiple_faces = Planet::planet_face_relative_multiple(block_relative_coord);
+
+                            let scale_scalar = needs_generated_chunk.scale as CoordinateType;
+                            let mut scale = BlockScale::default();
+
+                            if abs_coord + scale_scalar > sea_level_coordinate {
+                                let diff = (sea_level_coordinate - abs_coord) as f32;
+
+                                // let taken_away = scale_scalar as f32 - diff;
+                                // let new_scale = 1.0 - diff / scale_scalar as f32;
+
+                                let new_scale = (1.0 - diff / scale_scalar as f32).max(0.1);
+                                let taken_away = (1.0 - new_scale) * scale_scalar as f32;
+
+                                for face in multiple_faces {
+                                    match face {
+                                        BlockFace::Left => {
+                                            scale.de_scale_x = new_scale;
+                                            scale.x_offset = taken_away;
+                                        }
+                                        BlockFace::Right => {
+                                            scale.de_scale_x = new_scale;
+                                            scale.x_offset = -taken_away;
+                                        }
+                                        BlockFace::Bottom => {
+                                            scale.de_scale_y = new_scale;
+                                            scale.y_offset = taken_away;
+                                        }
+                                        BlockFace::Top => {
+                                            scale.de_scale_y = new_scale;
+                                            scale.y_offset = -taken_away;
+                                        }
+                                        BlockFace::Front => {
+                                            scale.de_scale_z = new_scale;
+                                            scale.z_offset = taken_away;
+                                        }
+                                        BlockFace::Back => {
+                                            scale.de_scale_z = new_scale;
+                                            scale.z_offset = -taken_away;
+                                        }
+                                    }
+                                }
+                            }
+
+                            needs_generated_chunk.chunk.set_block_at(coords, sea_level_block, face.into());
+                            needs_generated_chunk.chunk.set_block_scale_at(coords, scale);
                         }
                     }
                 }

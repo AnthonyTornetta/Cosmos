@@ -1,3 +1,4 @@
+use bevy::math::Vec3;
 use cosmos_core::{
     block::{block_direction::BlockDirection, block_face::BlockFace, Block},
     prelude::ChunkBlockCoordinate,
@@ -26,6 +27,8 @@ pub trait ChunkRendererBackend<C: BlockStorer> {
     ) -> bool;
 
     fn get_texture_index(&self, index: &BlockTextureIndex, neighbors: BlockNeighbors, face: BlockFace) -> Option<TextureIndex>;
+
+    fn transform_position(&self, chunk: &C, coords: ChunkBlockCoordinate, direction: BlockDirection, position: Vec3) -> Vec3;
 }
 
 pub fn check_block_at<C: BlockStorer>(
@@ -137,5 +140,10 @@ impl<'a> ChunkRendererBackend<Chunk> for ChunkRenderingChecker<'a> {
         };
 
         check_block_at(chunk, check_coords, blocks, should_connect, block_here, rendering_modes)
+    }
+
+    #[inline(always)]
+    fn transform_position(&self, _chunk: &Chunk, _coords: ChunkBlockCoordinate, _direction: BlockDirection, position: Vec3) -> Vec3 {
+        position
     }
 }

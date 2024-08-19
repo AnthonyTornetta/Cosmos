@@ -1,6 +1,6 @@
 //! Used to store the various blocks an Lod would be made of
 
-use std::fmt::Debug;
+use std::{fmt::Debug, num::NonZeroU8};
 
 use bevy::reflect::Reflect;
 use serde::{Deserialize, Serialize};
@@ -8,6 +8,7 @@ use serde::{Deserialize, Serialize};
 use crate::{
     block::{block_rotation::BlockRotation, Block},
     registry::Registry,
+    utils::array_utils::flatten,
 };
 
 use super::{
@@ -16,11 +17,35 @@ use super::{
     coordinates::ChunkBlockCoordinate,
 };
 
-#[derive(Reflect, Serialize, Deserialize, Clone, PartialEq, Eq)]
+#[derive(Reflect, Serialize, Deserialize, Clone, PartialEq)]
 /// A chunk that is scaled. The Lod's scale depends on the position in the octree and size of its structure.
 ///
 /// Lods only function properly on structures whos sizes are powers of two.
-pub struct LodChunk(BlockStorage);
+pub struct LodChunk(BlockStorage, Vec<BlockScale>);
+
+#[derive(Reflect, Serialize, Deserialize, Clone, PartialEq, Copy, Debug)]
+/// Scale = 2^n
+pub struct BlockScale {
+    pub de_scale_x: f32,
+    pub x_offset: f32,
+    pub de_scale_y: f32,
+    pub y_offset: f32,
+    pub de_scale_z: f32,
+    pub z_offset: f32,
+}
+
+impl Default for BlockScale {
+    fn default() -> Self {
+        Self {
+            de_scale_x: 1.0,
+            de_scale_y: 1.0,
+            de_scale_z: 1.0,
+            x_offset: 0.0,
+            y_offset: 0.0,
+            z_offset: 0.0,
+        }
+    }
+}
 
 impl Debug for LodChunk {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -37,7 +62,30 @@ impl Default for LodChunk {
 impl LodChunk {
     /// Creates a new Lod chunk
     pub fn new() -> Self {
-        Self(BlockStorage::new(CHUNK_DIMENSIONS, CHUNK_DIMENSIONS, CHUNK_DIMENSIONS))
+        Self(
+            BlockStorage::new(CHUNK_DIMENSIONS, CHUNK_DIMENSIONS, CHUNK_DIMENSIONS),
+            vec![BlockScale::default(); (CHUNK_DIMENSIONS * CHUNK_DIMENSIONS * CHUNK_DIMENSIONS) as usize],
+        )
+    }
+
+    pub fn set_block_scale_at(&mut self, coords: ChunkBlockCoordinate, scale: BlockScale) {
+        self.1[flatten(
+            coords.x as usize,
+            coords.y as usize,
+            coords.z as usize,
+            CHUNK_DIMENSIONS as usize,
+            CHUNK_DIMENSIONS as usize,
+        )] = scale;
+    }
+
+    pub fn block_scale(&self, coords: ChunkBlockCoordinate) -> BlockScale {
+        self.1[flatten(
+            coords.x as usize,
+            coords.y as usize,
+            coords.z as usize,
+            CHUNK_DIMENSIONS as usize,
+            CHUNK_DIMENSIONS as usize,
+        )]
     }
 }
 

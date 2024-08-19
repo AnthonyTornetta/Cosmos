@@ -1,12 +1,13 @@
+use bevy::math::Vec3;
 use cosmos_core::{
-    block::{block_direction::BlockDirection, block_face::BlockFace, Block},
+    block::{block_direction::BlockDirection, block_face::BlockFace, blocks::AIR_BLOCK_ID, Block},
     prelude::{BlockCoordinate, ChunkBlockCoordinate, UnboundBlockCoordinate},
-    registry::Registry,
+    registry::{identifiable::Identifiable, Registry},
     structure::{
         block_storage::BlockStorer,
         coordinates::{CoordinateType, UnboundCoordinateType},
         lod::Lod,
-        lod_chunk::LodChunk,
+        lod_chunk::{BlockScale, LodChunk},
     },
 };
 
@@ -31,6 +32,8 @@ impl<'a> LodChunkRenderingChecker<'a> {
         chunk: &LodChunk,
         chunk_block_coords: ChunkBlockCoordinate,
         direction_to_check: BlockDirection,
+        this_block_id: u16,
+        blocks: &Registry<Block>,
     ) -> bool {
         let delta_chunk_coords = direction_to_check.to_chunk_block_coordinates();
 
@@ -58,10 +61,11 @@ impl<'a> LodChunkRenderingChecker<'a> {
                 BlockDirection::NegX | BlockDirection::PosX => {
                     for dz in 0..2 {
                         for dy in 0..2 {
-                            if !self
+                            let (other_block_id, other_block_scale) = self
                                 .lod_root
-                                .has_block_at(coords + BlockCoordinate::new(0, dy * s2, dz * s2), self.lod_root_scale)
-                            {
+                                .block_id_at_and_scale(coords + BlockCoordinate::new(0, dy * s2, dz * s2), self.lod_root_scale);
+
+                            if check_block_should_render(this_block_id, other_block_id, other_block_scale, blocks) {
                                 return true;
                             }
                         }
@@ -70,10 +74,11 @@ impl<'a> LodChunkRenderingChecker<'a> {
                 BlockDirection::NegY | BlockDirection::PosY => {
                     for dz in 0..2 {
                         for dx in 0..2 {
-                            if !self
+                            let (other_block_id, other_block_scale) = self
                                 .lod_root
-                                .has_block_at(coords + BlockCoordinate::new(dx * s2, 0, dz * s2), self.lod_root_scale)
-                            {
+                                .block_id_at_and_scale(coords + BlockCoordinate::new(dx * s2, 0, dz * s2), self.lod_root_scale);
+
+                            if check_block_should_render(this_block_id, other_block_id, other_block_scale, blocks) {
                                 return true;
                             }
                         }
@@ -82,10 +87,11 @@ impl<'a> LodChunkRenderingChecker<'a> {
                 BlockDirection::NegZ | BlockDirection::PosZ => {
                     for dy in 0..2 {
                         for dx in 0..2 {
-                            if !self
+                            let (other_block_id, other_block_scale) = self
                                 .lod_root
-                                .has_block_at(coords + BlockCoordinate::new(dx * s2, dy * s2, 0), self.lod_root_scale)
-                            {
+                                .block_id_at_and_scale(coords + BlockCoordinate::new(dx * s2, dy * s2, 0), self.lod_root_scale);
+
+                            if check_block_should_render(this_block_id, other_block_id, other_block_scale, blocks) {
                                 return true;
                             }
                         }
@@ -96,8 +102,16 @@ impl<'a> LodChunkRenderingChecker<'a> {
             return false;
         };
 
-        !chunk.has_block_at(check_coords)
+        let other_block_id = chunk.block_at(check_coords);
+        let other_block_scale = chunk.block_scale(check_coords);
+        check_block_should_render(this_block_id, other_block_id, other_block_scale, blocks)
     }
+}
+
+fn check_block_should_render(this_block_id: u16, other_block_id: u16, other_block_scale: BlockScale, blocks: &Registry<Block>) -> bool {
+    other_block_id == AIR_BLOCK_ID
+        || other_block_scale != BlockScale::default()
+        || (other_block_id != this_block_id && blocks.from_numeric_id(other_block_id).is_see_through())
 }
 
 impl<'a> ChunkRendererBackend<LodChunk> for LodChunkRenderingChecker<'a> {
@@ -117,20 +131,29 @@ impl<'a> ChunkRendererBackend<LodChunk> for LodChunkRenderingChecker<'a> {
     fn check_should_render(
         &self,
         chunk: &LodChunk,
-        _block_here: &Block,
+        block_here: &Block,
         chunk_block_coords: ChunkBlockCoordinate,
-        _blocks: &Registry<Block>,
+        blocks: &Registry<Block>,
         direction_to_check: BlockDirection,
         _should_connect: &mut bool,
         _rendering_modes: &BlockRenderingModes,
     ) -> bool {
-        self.inner_check_should_render(chunk, chunk_block_coords, direction_to_check)
+        self.inner_check_should_render(chunk, chunk_block_coords, direction_to_check, block_here.id(), blocks)
+    }
+
+    fn transform_position(&self, chunk: &LodChunk, coords: ChunkBlockCoordinate, direction: BlockDirection, position: Vec3) -> Vec3 {
+        let bs = chunk.block_scale(coords);
+
+        position * Vec3::new(bs.de_scale_x, bs.de_scale_y, bs.de_scale_z) + Vec3::new(bs.x_offset, bs.y_offset, bs.z_offset)
     }
 }
 
 #[cfg(test)]
 mod test {
-    use cosmos_core::{block::block_direction::ALL_BLOCK_DIRECTIONS, structure::chunk::CHUNK_DIMENSIONS};
+    use cosmos_core::{
+        block::{block_direction::ALL_BLOCK_DIRECTIONS, BlockProperty},
+        structure::chunk::CHUNK_DIMENSIONS,
+    };
 
     use super::*;
 
@@ -158,17 +181,20 @@ mod test {
 
         let coords = BlockCoordinate::new(CHUNK_DIMENSIONS - 1, CHUNK_DIMENSIONS - 1, CHUNK_DIMENSIONS - 1);
 
-        assert_eq!(lod.block_id_at(coords, 2), BLOCK_ID);
+        assert_eq!(lod.block_id_at_and_scale(coords, 2).0, BLOCK_ID);
         assert_eq!(
-            lod.block_id_at(BlockCoordinate::new(coords.x * 2, coords.y * 2, coords.z * 2), 4),
+            lod.block_id_at_and_scale(BlockCoordinate::new(coords.x * 2, coords.y * 2, coords.z * 2), 4)
+                .0,
             BLOCK_ID
         );
         assert_eq!(
-            lod.block_id_at(BlockCoordinate::new(coords.x * 2 + 1, coords.y * 2 + 1, coords.z * 2 + 1), 4),
+            lod.block_id_at_and_scale(BlockCoordinate::new(coords.x * 2 + 1, coords.y * 2 + 1, coords.z * 2 + 1), 4)
+                .0,
             BLOCK_ID
         );
         assert_eq!(
-            lod.block_id_at(BlockCoordinate::new(coords.x * 2 + 2, coords.y * 2 + 2, coords.z * 2 + 2), 4),
+            lod.block_id_at_and_scale(BlockCoordinate::new(coords.x * 2 + 2, coords.y * 2 + 2, coords.z * 2 + 2), 4)
+                .0,
             0
         );
     }
@@ -202,15 +228,29 @@ mod test {
 
         let coords = BlockCoordinate::new(3 * CHUNK_DIMENSIONS, 3 * CHUNK_DIMENSIONS, 2 * CHUNK_DIMENSIONS);
 
-        assert_eq!(lod.block_id_at(coords, 4), BLOCK_ID);
-        assert_eq!(lod.block_id_at(coords + BlockCoordinate::new(1, 0, 0), 4), 0);
+        assert_eq!(lod.block_id_at_and_scale(coords, 4).0, BLOCK_ID);
+        assert_eq!(lod.block_id_at_and_scale(coords + BlockCoordinate::new(1, 0, 0), 4).0, 0);
     }
 
     #[test]
     fn test_renderer() {
         const BLOCK_ID: u16 = 1;
         let mut full_lod_chunk = LodChunk::default();
-        let block = Block::new(&[], BLOCK_ID, "a".into(), 0.0, 0.0, 0.0, vec![], vec![]);
+        let block = Block::new(
+            &[BlockProperty::Full],
+            BLOCK_ID,
+            "cosmos:test".into(),
+            0.0,
+            0.0,
+            0.0,
+            vec![],
+            vec![],
+        );
+
+        let mut blocks_registry = Registry::<Block>::new("cosmos:block");
+        blocks_registry.register(Block::new(&[], 0, "cosmos:air".into(), 0.0, 0.0, 0.0, vec![], vec![]));
+        blocks_registry.register(block.clone());
+
         for z in 0..CHUNK_DIMENSIONS {
             for y in 0..CHUNK_DIMENSIONS {
                 for x in 0..CHUNK_DIMENSIONS {
@@ -264,7 +304,13 @@ mod test {
                 for x in 0..CHUNK_DIMENSIONS {
                     for dir in ALL_BLOCK_DIRECTIONS {
                         assert_eq!(
-                            renderer.inner_check_should_render(&full_lod_chunk, ChunkBlockCoordinate::new(x, y, z).unwrap(), dir),
+                            renderer.inner_check_should_render(
+                                &full_lod_chunk,
+                                ChunkBlockCoordinate::new(x, y, z).unwrap(),
+                                dir,
+                                BLOCK_ID,
+                                &blocks_registry
+                            ),
                             x == 0 && (z / 2) % 2 == 1 && dir == BlockDirection::NegX
                         );
                     }

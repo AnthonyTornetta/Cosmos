@@ -11,7 +11,7 @@ use super::{
     block_storage::BlockStorer,
     chunk::CHUNK_DIMENSIONS,
     coordinates::CoordinateType,
-    lod_chunk::LodChunk,
+    lod_chunk::{BlockScale, LodChunk},
     prelude::{BlockCoordinate, ChunkBlockCoordinate},
 };
 
@@ -74,22 +74,22 @@ pub enum LodDelta {
 impl Lod {
     /// Returns true if there is a non-air block at these coords in this LOD representation.
     pub fn has_block_at(&self, coords: BlockCoordinate, root_scale: CoordinateType) -> bool {
-        self.block_id_at(coords, root_scale) != AIR_BLOCK_ID
+        self.block_id_at_and_scale(coords, root_scale).0 != AIR_BLOCK_ID
     }
 
     /// Returns the block at these coords in this LOD representation.
-    pub fn block_id_at(&self, coords: BlockCoordinate, root_scale: CoordinateType) -> u16 {
+    pub fn block_id_at_and_scale(&self, coords: BlockCoordinate, root_scale: CoordinateType) -> (u16, BlockScale) {
         let scale = root_scale;
         match self {
-            Lod::None => AIR_BLOCK_ID,
+            Lod::None => (AIR_BLOCK_ID, BlockScale::default()),
             Lod::Single(lod, _) => {
                 // let scale = scale / 2;
                 let c = BlockCoordinate::new(coords.x / scale, coords.y / scale, coords.z / scale);
 
                 if let Ok(chunk_block_coord) = ChunkBlockCoordinate::try_from(c) {
-                    lod.block_at(chunk_block_coord)
+                    (lod.block_at(chunk_block_coord), lod.block_scale(chunk_block_coord))
                 } else {
-                    AIR_BLOCK_ID
+                    (AIR_BLOCK_ID, BlockScale::default())
                 }
             }
             Lod::Children(children) => {
@@ -106,7 +106,7 @@ impl Lod {
                     (false, false, true) => (7, BlockCoordinate::new(coords.x - s2, coords.y - s2, coords.z)),
                 };
 
-                children[idx].block_id_at(coords, scale / 2)
+                children[idx].block_id_at_and_scale(coords, scale / 2)
             }
         }
     }

@@ -230,7 +230,9 @@ impl<M: MeshBuilder + Default> ChunkRenderer<M> {
                     let uvs = Rect::new(0.0, 0.0, 1.0, 1.0);
 
                     for pos in mesh_info.positions.iter_mut() {
-                        *pos = (offset + rotation.mul_vec3(Vec3::from(*pos) * scale)).into();
+                        let position_vec3 =
+                            rendering_backend.transform_position(&chunk, coords, direction, rotation.mul_vec3(Vec3::from(*pos) * scale));
+                        *pos = (offset + position_vec3).into();
                     }
 
                     for norm in mesh_info.normals.iter_mut() {
