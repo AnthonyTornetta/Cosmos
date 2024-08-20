@@ -165,9 +165,7 @@ fn recursively_process_lod(
 fn mark_adjacent_chunks_dirty(root_lod: &mut Lod, lod_root_scale: CoordinateType) {
     let mut to_make_dirty = vec![];
     find_adjacent_neighbors_that_need_dirty_flag(
-        &root_lod,
-        lod_root_scale,
-        &root_lod,
+        root_lod,
         &mut to_make_dirty,
         BlockCoordinate::ZERO,
         lod_root_scale,
@@ -181,8 +179,6 @@ fn mark_adjacent_chunks_dirty(root_lod: &mut Lod, lod_root_scale: CoordinateType
 /// If an LOD chunk is dirty, and is rerendered, its neighbors may have faces being culled that shouldn't be
 /// culled. Thus, we need to mark adjacent LODs as dirty to ensure everything is rendered properly.
 fn find_adjacent_neighbors_that_need_dirty_flag(
-    lod_root: &Lod,
-    root_scale_chunks: CoordinateType,
     lod: &Lod,
     coords_to_make_dirty: &mut Vec<BlockCoordinate>,
     negative_most_coord: BlockCoordinate,
@@ -210,7 +206,7 @@ fn find_adjacent_neighbors_that_need_dirty_flag(
                     _ => unreachable!(),
                 };
 
-                find_adjacent_neighbors_that_need_dirty_flag(lod_root, root_scale_chunks, c, coords_to_make_dirty, negative_most_coord, s2);
+                find_adjacent_neighbors_that_need_dirty_flag( c, coords_to_make_dirty, negative_most_coord, s2);
             });
         }
         Lod::Single(_, dirty) => {
