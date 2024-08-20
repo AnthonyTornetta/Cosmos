@@ -124,7 +124,6 @@ fn check_block_should_render(
 impl<'a> ChunkRendererBackend<LodChunk> for LodChunkRenderingChecker<'a> {
     #[inline(always)]
     fn get_texture_index(&self, index: &BlockTextureIndex, neighbors: BlockNeighbors, face: BlockFace) -> Option<TextureIndex> {
-        
         if self.scale > 8 {
             index
                 .atlas_index_for_lod(neighbors)
