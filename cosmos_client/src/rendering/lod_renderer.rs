@@ -19,16 +19,19 @@ use bevy::{
     utils::HashSet,
 };
 use cosmos_core::{
-    block::Block,
+    block::{
+        block_direction::{BlockDirection, ALL_BLOCK_DIRECTIONS},
+        Block,
+    },
     ecs::NeedsDespawned,
-    prelude::BlockCoordinate,
+    prelude::{BlockCoordinate, UnboundBlockCoordinate},
     registry::{
         many_to_one::{ManyToOneRegistry, ReadOnlyManyToOneRegistry},
         ReadOnlyRegistry, Registry,
     },
     structure::{
         chunk::{CHUNK_DIMENSIONS, CHUNK_DIMENSIONSF},
-        coordinates::{ChunkCoordinate, CoordinateType},
+        coordinates::{ChunkCoordinate, CoordinateType, UnboundCoordinateType},
         lod::{Lod, LodComponent},
         shared::DespawnWithStructure,
         ChunkState, Structure,
@@ -153,6 +156,131 @@ fn recursively_process_lod(
                 ),
                 scale as CoordinateType,
             ));
+        }
+    };
+}
+
+/// If an LOD chunk is dirty, and is rerendered, its neighbors may have faces being culled that shouldn't be
+/// culled. Thus, we need to mark adjacent LODs as dirty to ensure everything is rendered properly.
+fn mark_adjacent_chunks_dirty(root_lod: &mut Lod, lod_root_scale: CoordinateType) {
+    let mut to_make_dirty = vec![];
+    find_adjacent_neighbors_that_need_dirty_flag(
+        &root_lod,
+        lod_root_scale,
+        &root_lod,
+        &mut to_make_dirty,
+        BlockCoordinate::ZERO,
+        lod_root_scale,
+    );
+
+    for coords in to_make_dirty {
+        root_lod.mark_dirty(coords, lod_root_scale);
+    }
+}
+
+/// If an LOD chunk is dirty, and is rerendered, its neighbors may have faces being culled that shouldn't be
+/// culled. Thus, we need to mark adjacent LODs as dirty to ensure everything is rendered properly.
+fn find_adjacent_neighbors_that_need_dirty_flag(
+    lod_root: &Lod,
+    root_scale_chunks: CoordinateType,
+    lod: &Lod,
+    coords_to_make_dirty: &mut Vec<BlockCoordinate>,
+    negative_most_coord: BlockCoordinate,
+    scale: CoordinateType,
+) {
+    let s2 = scale / 2;
+
+    match lod {
+        Lod::None => {}
+        Lod::Children(children) => {
+            children.iter().enumerate().for_each(|(i, c)| {
+                let nmc_delta = s2 * CHUNK_DIMENSIONS;
+
+                debug_assert_ne!(nmc_delta, 0);
+
+                let negative_most_coord = match i {
+                    0 => negative_most_coord,
+                    1 => negative_most_coord + BlockCoordinate::new(0, 0, nmc_delta),
+                    2 => negative_most_coord + BlockCoordinate::new(nmc_delta, 0, nmc_delta),
+                    3 => negative_most_coord + BlockCoordinate::new(nmc_delta, 0, 0),
+                    4 => negative_most_coord + BlockCoordinate::new(0, nmc_delta, 0),
+                    5 => negative_most_coord + BlockCoordinate::new(0, nmc_delta, nmc_delta),
+                    6 => negative_most_coord + BlockCoordinate::new(nmc_delta, nmc_delta, nmc_delta),
+                    7 => negative_most_coord + BlockCoordinate::new(nmc_delta, nmc_delta, 0),
+                    _ => unreachable!(),
+                };
+
+                find_adjacent_neighbors_that_need_dirty_flag(lod_root, root_scale_chunks, c, coords_to_make_dirty, negative_most_coord, s2);
+            });
+        }
+        Lod::Single(_, dirty) => {
+            if !*dirty {
+                return;
+            }
+
+            const N_CHECKS: CoordinateType = 2;
+
+            let sn = scale / N_CHECKS;
+
+            for direction in ALL_BLOCK_DIRECTIONS {
+                let Ok(negative_most_coord) = BlockCoordinate::try_from(negative_most_coord + direction.to_coordinates()) else {
+                    continue;
+                };
+
+                match direction {
+                    BlockDirection::NegX => {
+                        for dz in 0..N_CHECKS {
+                            for dy in 0..N_CHECKS {
+                                if let Ok(coord) = BlockCoordinate::try_from(negative_most_coord + UnboundBlockCoordinate::new(-1, (dy * sn) as UnboundCoordinateType, (dz * sn) as UnboundCoordinateType)) {
+                                    coords_to_make_dirty.push(coord);
+                                }
+                            }
+                        }
+                    }
+                    BlockDirection::PosX => {
+                        for dz in 0..N_CHECKS {
+                            for dy in 0..N_CHECKS {
+                                coords_to_make_dirty
+                                    .push(negative_most_coord + BlockCoordinate::new(CHUNK_DIMENSIONS * scale, dy * sn, dz * sn));
+                            }
+                        }
+                    }
+                    BlockDirection::NegY => {
+                        for dz in 0..N_CHECKS {
+                            for dx in 0..N_CHECKS {
+                                if let Ok(coord) = BlockCoordinate::try_from(negative_most_coord + UnboundBlockCoordinate::new((dx * sn) as UnboundCoordinateType, -1, (dz * sn) as UnboundCoordinateType)) {
+                                    coords_to_make_dirty.push(coord);
+                                }
+                            }
+                        }
+                    }
+                    BlockDirection::PosY => {
+                        for dz in 0..N_CHECKS {
+                            for dx in 0..N_CHECKS {
+                                coords_to_make_dirty
+                                    .push(negative_most_coord + BlockCoordinate::new(dx * sn, CHUNK_DIMENSIONS * scale, dz * sn));
+                            }
+                        }
+                    }
+                    BlockDirection::NegZ => {
+                        for dy in 0..N_CHECKS {
+                            for dx in 0..N_CHECKS {
+                                if let Ok(coord) = BlockCoordinate::try_from(negative_most_coord + UnboundBlockCoordinate::new((dx * sn) as UnboundCoordinateType, (dy * sn) as UnboundCoordinateType, -1)) {
+                                    coords_to_make_dirty.push(coord);
+                                }
+                            }
+                        }
+                    }
+                    BlockDirection::PosZ => {
+                        for dy in 0..N_CHECKS {
+                            for dx in 0..N_CHECKS {
+                                coords_to_make_dirty
+                                    .push(negative_most_coord + BlockCoordinate::new(dx * sn, dy * sn, CHUNK_DIMENSIONS * scale));
+                            }
+                        }
+                    }
+                }
+            }
         }
     };
 }
@@ -465,6 +593,9 @@ fn trigger_lod_render(
         let task = thread_pool.spawn(async move {
             let mut lod = lod.0.lock().unwrap();
             let mut non_dirty = vec![];
+
+            mark_adjacent_chunks_dirty(&mut lod, chunk_dimensions);
+
             find_non_dirty(&lod, Vec3::ZERO, &mut non_dirty, block_dimensions as f32);
 
             // by making the Vec an Option<Vec> I can take ownership of it later, which I cannot do with
@@ -537,4 +668,231 @@ pub(super) fn register(app: &mut App) {
     add_statebound_resource::<RenderingLods>(app, GameState::Playing);
     add_statebound_resource::<NeedLods>(app, GameState::Playing);
     add_statebound_resource::<MeshesToCompute>(app, GameState::Playing);
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn test_make_dirty() {
+        let mut lod = Lod::Children(Box::new([
+            Lod::Single(Default::default(), false),
+            Lod::Single(Default::default(), false),
+            Lod::Single(Default::default(), false),
+            Lod::Single(Default::default(), false),
+            Lod::Single(Default::default(), false),
+            Lod::Single(Default::default(), false),
+            Lod::Single(Default::default(), true),
+            Lod::Single(Default::default(), false),
+        ]));
+
+        // 5 6 7 2
+
+        mark_adjacent_chunks_dirty(&mut lod, 2);
+
+        match lod {
+            Lod::Children(c) => {
+                assert!(
+                    matches!(
+                        c.as_ref(),
+                        [
+                            Lod::Single(_, false),
+                            Lod::Single(_, false),
+                            Lod::Single(_, true),
+                            Lod::Single(_, false),
+                            Lod::Single(_, false),
+                            Lod::Single(_, true),
+                            Lod::Single(_, true),
+                            Lod::Single(_, true),
+                        ]
+                    ),
+                    "{c:?}"
+                );
+            }
+            _ => unreachable!(),
+        }
+    }
+
+    #[test]
+    fn test_make_dirty_2() {
+        let mut lod = Lod::Children(Box::new([
+            Lod::Single(Default::default(), true),
+            Lod::Single(Default::default(), false),
+            Lod::Single(Default::default(), false),
+            Lod::Single(Default::default(), false),
+            Lod::Single(Default::default(), false),
+            Lod::Single(Default::default(), false),
+            Lod::Single(Default::default(), false),
+            Lod::Single(Default::default(), false),
+        ]));
+
+        mark_adjacent_chunks_dirty(&mut lod, 2);
+
+        match lod {
+            Lod::Children(c) => {
+                assert!(
+                    matches!(
+                        c.as_ref(),
+                        [
+                            Lod::Single(_, true),
+                            Lod::Single(_, true),
+                            Lod::Single(_, false),
+                            Lod::Single(_, true),
+                            Lod::Single(_, true),
+                            Lod::Single(_, false),
+                            Lod::Single(_, false),
+                            Lod::Single(_, false),
+                        ]
+                    ),
+                    "{c:?}"
+                );
+            }
+            _ => unreachable!(),
+        }
+    }
+
+    #[test]
+    fn test_make_dirty_sub_child() {
+        let mut lod = Lod::Children(Box::new([
+            Lod::Children(Box::new([
+                Lod::Single(Default::default(), false),
+                Lod::Single(Default::default(), false),
+                Lod::Single(Default::default(), false),
+                Lod::Single(Default::default(), false),
+                Lod::Single(Default::default(), false),
+                Lod::Single(Default::default(), false),
+                Lod::Single(Default::default(), false),
+                Lod::Single(Default::default(), true),
+            ])),
+            Lod::Single(Default::default(), false),
+            Lod::Single(Default::default(), false),
+            Lod::Single(Default::default(), false),
+            Lod::Single(Default::default(), false),
+            Lod::Single(Default::default(), false),
+            Lod::Single(Default::default(), false),
+            Lod::Single(Default::default(), false),
+        ]));
+
+        mark_adjacent_chunks_dirty(&mut lod, 4);
+
+        match lod {
+            Lod::Children(c) => match c.as_ref() {
+                #[rustfmt::skip]
+                [
+                    Lod::Children(c), 
+                    Lod::Single(_, false), 
+                    Lod::Single(_, false), 
+                    Lod::Single(_, true), 
+                    Lod::Single(_, true), 
+                    Lod::Single(_, false), 
+                    Lod::Single(_, false), 
+                    Lod::Single(_, false)
+                ] =>
+                    {
+                        match c.as_ref() {
+                            #[rustfmt::skip]
+                            [
+                                Lod::Single(_, false), 
+                                Lod::Single(_, false), 
+                                Lod::Single(_, false), 
+                                Lod::Single(_, true), 
+                                Lod::Single(_, true), 
+                                Lod::Single(_, false), 
+                                Lod::Single(_, true), 
+                                Lod::Single(_, true)
+                            ] =>
+                                {
+                                }
+                            _ => panic!("{c:?}"),
+                        }
+                    },
+                _ => panic!("{c:?}"),
+            },
+            _ => unreachable!(),
+        }
+    }
+
+    #[test]
+    fn test_make_dirty_sub_child_2() {
+        let mut lod = Lod::Children(Box::new([
+            Lod::Children(Box::new([
+                Lod::Children(Box::new([
+                    Lod::Single(Default::default(), false),
+                    Lod::Single(Default::default(), false),
+                    Lod::Single(Default::default(), false),
+                    Lod::Single(Default::default(), false),
+                    Lod::Single(Default::default(), false),
+                    Lod::Single(Default::default(), false),
+                    Lod::Single(Default::default(), false),
+                    Lod::Single(Default::default(), true),
+                ])),
+                Lod::Single(Default::default(), false),
+                Lod::Single(Default::default(), false),
+                Lod::Single(Default::default(), false),
+                Lod::Single(Default::default(), false),
+                Lod::Single(Default::default(), false),
+                Lod::Single(Default::default(), false),
+                Lod::Single(Default::default(), false),
+            ])),
+            Lod::Single(Default::default(), false),
+            Lod::Single(Default::default(), false),
+            Lod::Single(Default::default(), false),
+            Lod::Single(Default::default(), false),
+            Lod::Single(Default::default(), false),
+            Lod::Single(Default::default(), false),
+            Lod::Single(Default::default(), false),
+        ]));
+
+        mark_adjacent_chunks_dirty(&mut lod, 8);
+
+        match lod {
+            Lod::Children(c) => match c.as_ref() {
+                #[rustfmt::skip]
+                [
+                    Lod::Children(c), 
+                    Lod::Single(_, false), 
+                    Lod::Single(_, false), 
+                    Lod::Single(_, false), 
+                    Lod::Single(_, false), 
+                    Lod::Single(_, false), 
+                    Lod::Single(_, false), 
+                    Lod::Single(_, false)
+                ] =>
+                    {
+                        match c.as_ref() {
+                            #[rustfmt::skip]
+                            [
+                                Lod::Children(c), 
+                                Lod::Single(_, false), 
+                                Lod::Single(_, false), 
+                                Lod::Single(_, true), 
+                                Lod::Single(_, true), 
+                                Lod::Single(_, false), 
+                                Lod::Single(_, false), 
+                                Lod::Single(_, false)
+                            ] =>
+                                {
+                                    match c.as_ref() {
+                                        [
+                                            Lod::Single(_, false), 
+                                            Lod::Single(_, false), 
+                                            Lod::Single(_, false), 
+                                            Lod::Single(_, true), 
+                                            Lod::Single(_, true), 
+                                            Lod::Single(_, false), 
+                                            Lod::Single(_, true),
+                                            Lod::Single(_, true)
+                                        ] => {},
+                                        _ => panic!("{c:?}")
+                                    }
+                                }
+                            _ => panic!("{c:?}"),
+                        }
+                    },
+                _ => panic!("{c:?}"),
+            },
+            _ => unreachable!(),
+        }
+    }
 }

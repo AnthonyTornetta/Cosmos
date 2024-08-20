@@ -83,7 +83,6 @@ impl Lod {
         match self {
             Lod::None => (AIR_BLOCK_ID, LodBlockSubScale::default()),
             Lod::Single(lod, _) => {
-                // let scale = scale / 2;
                 let c = BlockCoordinate::new(coords.x / scale, coords.y / scale, coords.z / scale);
 
                 if let Ok(chunk_block_coord) = ChunkBlockCoordinate::try_from(c) {
@@ -107,6 +106,33 @@ impl Lod {
                 };
 
                 children[idx].block_id_at_and_scale(coords, scale / 2)
+            }
+        }
+    }
+
+    /// Returns the block at these coords in this LOD representation.
+    pub fn mark_dirty(&mut self, coords: BlockCoordinate, root_scale: CoordinateType) {
+        let scale = root_scale;
+        match self {
+            Lod::None => {}
+            Lod::Single(_, dirty) => {
+                *dirty = true;
+            }
+            Lod::Children(children) => {
+                let s2 = (scale * CHUNK_DIMENSIONS) / 2;
+
+                let (idx, coords) = match (coords.x < s2, coords.y < s2, coords.z < s2) {
+                    (true, true, true) => (0, coords),
+                    (true, true, false) => (1, BlockCoordinate::new(coords.x, coords.y, coords.z - s2)),
+                    (false, true, false) => (2, BlockCoordinate::new(coords.x - s2, coords.y, coords.z - s2)),
+                    (false, true, true) => (3, BlockCoordinate::new(coords.x - s2, coords.y, coords.z)),
+                    (true, false, true) => (4, BlockCoordinate::new(coords.x, coords.y - s2, coords.z)),
+                    (true, false, false) => (5, BlockCoordinate::new(coords.x, coords.y - s2, coords.z - s2)),
+                    (false, false, false) => (6, BlockCoordinate::new(coords.x - s2, coords.y - s2, coords.z - s2)),
+                    (false, false, true) => (7, BlockCoordinate::new(coords.x - s2, coords.y - s2, coords.z)),
+                };
+
+                children[idx].mark_dirty(coords, scale / 2)
             }
         }
     }
