@@ -484,15 +484,6 @@ fn poll_rendering_lods(
                 entity_commands.add_child(entity);
             }
 
-            // if let Ok(mut l) = lod_query.get_mut(structure_entity) {
-            //     // Avoid recursively re-rendering the lod. The only thing changing about the lod are the dirty flags.
-            //     // This could be refactored to store dirty flags elsewhere, but I'm not sure about the performance cost of that.
-            //     // *(l.bypass_change_detection()) = lod;
-            //     *l.0.lock().unwrap() = lod;
-            // } else {
-            //     entity_commands.insert(LodComponent(Arc::new(Mutex::new(lod))));
-            // }
-
             entity_commands.insert(structure_meshes_component);
 
             for (_, _, counter) in to_despawn {
