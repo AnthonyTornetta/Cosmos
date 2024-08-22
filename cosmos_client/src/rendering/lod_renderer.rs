@@ -164,12 +164,7 @@ fn recursively_process_lod(
 /// culled. Thus, we need to mark adjacent LODs as dirty to ensure everything is rendered properly.
 fn mark_adjacent_chunks_dirty(root_lod: &mut Lod, lod_root_scale: CoordinateType) {
     let mut to_make_dirty = vec![];
-    find_adjacent_neighbors_that_need_dirty_flag(
-        root_lod,
-        &mut to_make_dirty,
-        BlockCoordinate::ZERO,
-        lod_root_scale,
-    );
+    find_adjacent_neighbors_that_need_dirty_flag(root_lod, &mut to_make_dirty, BlockCoordinate::ZERO, lod_root_scale);
 
     for coords in to_make_dirty {
         root_lod.mark_dirty(coords, lod_root_scale);
@@ -206,7 +201,7 @@ fn find_adjacent_neighbors_that_need_dirty_flag(
                     _ => unreachable!(),
                 };
 
-                find_adjacent_neighbors_that_need_dirty_flag( c, coords_to_make_dirty, negative_most_coord, s2);
+                find_adjacent_neighbors_that_need_dirty_flag(c, coords_to_make_dirty, negative_most_coord, s2);
             });
         }
         Lod::Single(_, dirty) => {
@@ -227,7 +222,14 @@ fn find_adjacent_neighbors_that_need_dirty_flag(
                     BlockDirection::NegX => {
                         for dz in 0..N_CHECKS {
                             for dy in 0..N_CHECKS {
-                                if let Ok(coord) = BlockCoordinate::try_from(negative_most_coord + UnboundBlockCoordinate::new(-1, (dy * sn) as UnboundCoordinateType, (dz * sn) as UnboundCoordinateType)) {
+                                if let Ok(coord) = BlockCoordinate::try_from(
+                                    negative_most_coord
+                                        + UnboundBlockCoordinate::new(
+                                            -1,
+                                            (dy * sn) as UnboundCoordinateType,
+                                            (dz * sn) as UnboundCoordinateType,
+                                        ),
+                                ) {
                                     coords_to_make_dirty.push(coord);
                                 }
                             }
@@ -244,7 +246,14 @@ fn find_adjacent_neighbors_that_need_dirty_flag(
                     BlockDirection::NegY => {
                         for dz in 0..N_CHECKS {
                             for dx in 0..N_CHECKS {
-                                if let Ok(coord) = BlockCoordinate::try_from(negative_most_coord + UnboundBlockCoordinate::new((dx * sn) as UnboundCoordinateType, -1, (dz * sn) as UnboundCoordinateType)) {
+                                if let Ok(coord) = BlockCoordinate::try_from(
+                                    negative_most_coord
+                                        + UnboundBlockCoordinate::new(
+                                            (dx * sn) as UnboundCoordinateType,
+                                            -1,
+                                            (dz * sn) as UnboundCoordinateType,
+                                        ),
+                                ) {
                                     coords_to_make_dirty.push(coord);
                                 }
                             }
@@ -261,7 +270,14 @@ fn find_adjacent_neighbors_that_need_dirty_flag(
                     BlockDirection::NegZ => {
                         for dy in 0..N_CHECKS {
                             for dx in 0..N_CHECKS {
-                                if let Ok(coord) = BlockCoordinate::try_from(negative_most_coord + UnboundBlockCoordinate::new((dx * sn) as UnboundCoordinateType, (dy * sn) as UnboundCoordinateType, -1)) {
+                                if let Ok(coord) = BlockCoordinate::try_from(
+                                    negative_most_coord
+                                        + UnboundBlockCoordinate::new(
+                                            (dx * sn) as UnboundCoordinateType,
+                                            (dy * sn) as UnboundCoordinateType,
+                                            -1,
+                                        ),
+                                ) {
                                     coords_to_make_dirty.push(coord);
                                 }
                             }
@@ -765,35 +781,13 @@ mod test {
 
         match lod {
             Lod::Children(c) => match c.as_ref() {
-                #[rustfmt::skip]
-                [
-                    Lod::Children(c), 
-                    Lod::Single(_, false), 
-                    Lod::Single(_, false), 
-                    Lod::Single(_, true), 
-                    Lod::Single(_, true), 
-                    Lod::Single(_, false), 
-                    Lod::Single(_, false), 
-                    Lod::Single(_, false)
-                ] =>
-                    {
-                        match c.as_ref() {
-                            #[rustfmt::skip]
-                            [
-                                Lod::Single(_, false), 
-                                Lod::Single(_, false), 
-                                Lod::Single(_, false), 
-                                Lod::Single(_, true), 
-                                Lod::Single(_, true), 
-                                Lod::Single(_, false), 
-                                Lod::Single(_, true), 
-                                Lod::Single(_, true)
-                            ] =>
-                                {
-                                }
-                            _ => panic!("{c:?}"),
-                        }
-                    },
+                [Lod::Children(c), Lod::Single(_, false), Lod::Single(_, false), Lod::Single(_, true), Lod::Single(_, true), Lod::Single(_, false), Lod::Single(_, false), Lod::Single(_, false)] => {
+                    match c.as_ref() {
+                        [Lod::Single(_, false), Lod::Single(_, false), Lod::Single(_, false), Lod::Single(_, true), Lod::Single(_, true), Lod::Single(_, false), Lod::Single(_, true), Lod::Single(_, true)] =>
+                            {}
+                        _ => panic!("{c:?}"),
+                    }
+                }
                 _ => panic!("{c:?}"),
             },
             _ => unreachable!(),
@@ -835,48 +829,18 @@ mod test {
 
         match lod {
             Lod::Children(c) => match c.as_ref() {
-                #[rustfmt::skip]
-                [
-                    Lod::Children(c), 
-                    Lod::Single(_, false), 
-                    Lod::Single(_, false), 
-                    Lod::Single(_, false), 
-                    Lod::Single(_, false), 
-                    Lod::Single(_, false), 
-                    Lod::Single(_, false), 
-                    Lod::Single(_, false)
-                ] =>
-                    {
-                        match c.as_ref() {
-                            #[rustfmt::skip]
-                            [
-                                Lod::Children(c), 
-                                Lod::Single(_, false), 
-                                Lod::Single(_, false), 
-                                Lod::Single(_, true), 
-                                Lod::Single(_, true), 
-                                Lod::Single(_, false), 
-                                Lod::Single(_, false), 
-                                Lod::Single(_, false)
-                            ] =>
-                                {
-                                    match c.as_ref() {
-                                        [
-                                            Lod::Single(_, false), 
-                                            Lod::Single(_, false), 
-                                            Lod::Single(_, false), 
-                                            Lod::Single(_, true), 
-                                            Lod::Single(_, true), 
-                                            Lod::Single(_, false), 
-                                            Lod::Single(_, true),
-                                            Lod::Single(_, true)
-                                        ] => {},
-                                        _ => panic!("{c:?}")
-                                    }
-                                }
-                            _ => panic!("{c:?}"),
+                [Lod::Children(c), Lod::Single(_, false), Lod::Single(_, false), Lod::Single(_, false), Lod::Single(_, false), Lod::Single(_, false), Lod::Single(_, false), Lod::Single(_, false)] => {
+                    match c.as_ref() {
+                        [Lod::Children(c), Lod::Single(_, false), Lod::Single(_, false), Lod::Single(_, true), Lod::Single(_, true), Lod::Single(_, false), Lod::Single(_, false), Lod::Single(_, false)] => {
+                            match c.as_ref() {
+                                [Lod::Single(_, false), Lod::Single(_, false), Lod::Single(_, false), Lod::Single(_, true), Lod::Single(_, true), Lod::Single(_, false), Lod::Single(_, true), Lod::Single(_, true)] =>
+                                    {}
+                                _ => panic!("{c:?}"),
+                            }
                         }
-                    },
+                        _ => panic!("{c:?}"),
+                    }
+                }
                 _ => panic!("{c:?}"),
             },
             _ => unreachable!(),
