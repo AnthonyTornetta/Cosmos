@@ -1031,6 +1031,9 @@ impl From<&LodArrayTextureMaterial> for BlockMaterialKey {
 }
 
 impl Material for LodArrayTextureMaterial {
+    // prepasses aren't needed - default can be used since everything is expected
+    // to be cube.
+
     // fn prepass_vertex_shader() -> ShaderRef {
     //     "cosmos/shaders/lod_prepass.wgsl".into()
     // }
