@@ -75,7 +75,6 @@ See [the issues page](https://github.com/AnthonyTornetta/Cosmos/issues) for the 
   - [x] Absorb incoming damage
 - [x] Inventory UI improvements
   - [x] Scrollable inventory
-  - [ ] An interface into all the storage devices connected to it?
 - [x] Escape functionality
   - [x] Escape can now be used to close the foremost open UI menus
   - [x] If no such menus are available, it will instead open the pause menu
@@ -93,9 +92,11 @@ See [the issues page](https://github.com/AnthonyTornetta/Cosmos/issues) for the 
   - [x] Speed display
   - [x] Energy display
   - [x] A way of selecting which systems to use preventing use of systems that are not meant to be actively used
-- [ ] Wires
-  - [ ] Electrical
+- [x] Wires
   - [x] Logic
+    - [x] Logic blocks
+    - [x] Wiring system
+    - [x] Logic receivers
 - [x] Planet generation & LOD overhaul
   - [x] Performance improvements
   - [x] GPU-based generation
@@ -104,6 +105,8 @@ See [the issues page](https://github.com/AnthonyTornetta/Cosmos/issues) for the 
 - [x] Update to bevy 0.14
 
 ## Release 0.0.7a
+- [ ] Wires
+  - [ ] Electrical
 - [ ] Galaxy map
   - [ ] Able to view stars
   - [ ] Zoom in to view planets
