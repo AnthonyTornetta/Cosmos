@@ -6,7 +6,7 @@ use bevy::prelude::*;
 use bevy_rapier3d::plugin::RapierContextEntityLink;
 use cosmos_core::{
     block::data::persistence::ChunkLoadBlockDataEvent,
-    netty::{cosmos_encoder, system_sets::NetworkingSystemsSet, NoSendEntity},
+    netty::{cosmos_encoder, NoSendEntity},
     physics::location::Location,
     structure::{
         chunk::{netty::SerializedChunkBlockData, Chunk, ChunkEntity},
@@ -20,7 +20,7 @@ use cosmos_core::{
 use serde::{Deserialize, Serialize};
 
 use crate::persistence::{
-    loading::{LoadingSystemSet, NeedsLoaded, LOADING_SCHEDULE},
+    loading::{LoadingSystemSet, NeedsLoaded},
     saving::{NeedsSaved, SavingSystemSet, SAVING_SCHEDULE},
     EntityId, SaveFileIdentifier, SerializedData,
 };
@@ -86,7 +86,7 @@ pub(super) struct ChunkNeedsPopulated {
     pub structure_entity: Entity,
 }
 
-fn structure_created(created: Query<Entity, (Added<Structure>, Without<EntityId>)>, mut commands: Commands) {
+fn add_entity_id_to_new_structures(created: Query<Entity, (Added<Structure>, Without<EntityId>)>, mut commands: Commands) {
     for ent in created.iter() {
         commands.entity(ent).insert(EntityId::generate());
     }
@@ -123,7 +123,7 @@ fn populate_chunks(
 
             let serialized_data = cosmos_encoder::deserialize::<SerializedData>(&chunk).unwrap_or_else(|_| {
                 panic!(
-                    "Error parsing chunk @ {cx} {cy} {cz} - is the file corrupted? File len: {}",
+                    "Error parsing chunk @ {cx} {cy} {cz} ({svi:?}) - is the file corrupted? File len: {}",
                     chunk.len()
                 )
             });
@@ -158,67 +158,63 @@ fn populate_chunks(
 }
 
 fn load_chunk(
-    query: Query<(Entity, &SerializedData, &ChunkEntity), With<NeedsLoaded>>,
-    mut structure_query: Query<&mut Structure>,
-    mut chunk_init_event: EventWriter<ChunkInitEvent>,
+    q_chunk_needs_loaded: Query<(Entity, &SerializedData, &ChunkEntity), With<NeedsLoaded>>,
+    mut q_structure: Query<&mut Structure>,
+    mut evw_chunk_init: EventWriter<ChunkInitEvent>,
+    mut evw_chunk_load_block_data: EventWriter<ChunkLoadBlockDataEvent>,
     mut commands: Commands,
-    mut chunk_load_block_data_event_writer: EventWriter<ChunkLoadBlockDataEvent>,
 ) {
-    for (entity, sd, ce) in query.iter() {
-        if let Some(chunk) = sd.deserialize_data::<Chunk>("cosmos:chunk") {
-            if let Ok(mut structure) = structure_query.get_mut(ce.structure_entity) {
-                let coords = chunk.chunk_coordinates();
+    for (entity, sd, ce) in q_chunk_needs_loaded.iter() {
+        let Some(chunk) = sd.deserialize_data::<Chunk>("cosmos:chunk") else {
+            continue;
+        };
 
-                commands
-                    .entity(entity)
-                    .insert(TransformBundle::from_transform(Transform::from_translation(
-                        structure.chunk_relative_position(coords),
-                    )));
+        let Ok(mut structure) = q_structure.get_mut(ce.structure_entity) else {
+            continue;
+        };
 
-                structure.set_chunk_entity(coords, entity);
+        let coords = chunk.chunk_coordinates();
 
-                structure.set_chunk(chunk);
+        commands
+            .entity(entity)
+            .insert(TransformBundle::from_transform(Transform::from_translation(
+                structure.chunk_relative_position(coords),
+            )));
 
-                chunk_init_event.send(ChunkInitEvent {
-                    structure_entity: ce.structure_entity,
-                    coords,
-                    serialized_block_data: None,
-                });
+        structure.set_chunk_entity(coords, entity);
 
-                // Block data is stored per-chunk as `SerializedChunkBlockData` on dynamic structures,
-                // instead of fixed structures storing it as `AllBlockData` on the structure itself.
-                if let Some(data) = sd.deserialize_data::<SerializedChunkBlockData>("cosmos:block_data") {
-                    chunk_load_block_data_event_writer.send(ChunkLoadBlockDataEvent {
-                        data,
-                        chunk: coords,
-                        structure_entity: ce.structure_entity,
-                    });
-                }
-            }
+        structure.set_chunk(chunk);
+
+        evw_chunk_init.send(ChunkInitEvent {
+            structure_entity: ce.structure_entity,
+            coords,
+            serialized_block_data: None,
+        });
+
+        // Block data is stored per-chunk as `SerializedChunkBlockData` on dynamic structures,
+        // instead of fixed structures storing it as `AllBlockData` on the structure itself.
+        if let Some(data) = sd.deserialize_data::<SerializedChunkBlockData>("cosmos:block_data") {
+            evw_chunk_load_block_data.send(ChunkLoadBlockDataEvent {
+                data,
+                chunk: coords,
+                structure_entity: ce.structure_entity,
+            });
         }
     }
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_systems(
-        Update,
-        (
-            structure_created.in_set(StructureLoadingSet::CreateChunkEntities),
-            populate_chunks.in_set(StructureLoadingSet::LoadChunkData),
-        )
-            .in_set(NetworkingSystemsSet::Between)
-            .chain(),
-    )
-    .add_systems(SAVING_SCHEDULE, on_save_structure.in_set(SavingSystemSet::DoSaving))
-    .add_systems(
-        LOADING_SCHEDULE,
-        (
-            on_load_structure,
-            // This will not interfere with the generation of chunks, so their relative ordering does not matter.
-            load_chunk.ambiguous_with(BiosphereGenerationSet::GenerateChunkFeatures),
-        )
-            .chain()
-            .in_set(LoadingSystemSet::DoLoading)
-            .in_set(StructureTypeSet::Planet),
-    );
+    app.add_systems(SAVING_SCHEDULE, on_save_structure.in_set(SavingSystemSet::DoSaving))
+        .add_systems(
+            Update,
+            (
+                add_entity_id_to_new_structures.in_set(StructureLoadingSet::CreateChunkEntities),
+                populate_chunks.in_set(StructureLoadingSet::CreateChunkEntities).before(load_chunk),
+                load_chunk
+                    .in_set(StructureLoadingSet::LoadChunkBlocks)
+                    .ambiguous_with(BiosphereGenerationSet::GenerateChunkFeatures),
+                on_load_structure.in_set(LoadingSystemSet::DoLoading),
+            )
+                .in_set(StructureTypeSet::Planet),
+        );
 }
