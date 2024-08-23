@@ -57,6 +57,11 @@ impl<'a> LodChunkRenderingChecker<'a> {
                 return false;
             };
 
+            // 0..2 ranges in for loops below because an LOD is guarenteed to have neighbors
+            // that are between 0.5x to 2x the scale of this LOD. For LODs that are 0.5x the size,
+            // we need to check a 2x2 square of blocks to ensure this block should never be rendered.
+            // If the neighbor is > 0.5x the scale of this LOD, then these redundant checks will not matter.
+
             let s2 = self.scale / 2;
             match direction_to_check {
                 BlockDirection::NegX | BlockDirection::PosX => {
