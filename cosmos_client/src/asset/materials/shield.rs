@@ -8,6 +8,7 @@ use bevy::{
     reflect::TypePath,
     render::{mesh::MeshVertexBufferLayoutRef, render_resource::AsBindGroup},
 };
+use bevy_easy_compute::prelude::ShaderRef;
 
 /// The maximum number of shield hits that can be rendered
 pub const MAX_SHIELD_HIT_POINTS: usize = 100;
@@ -22,11 +23,11 @@ pub struct ShieldMaterialExtension {
 }
 
 impl MaterialExtension for ShieldMaterialExtension {
-    fn fragment_shader() -> bevy_easy_compute::prelude::ShaderRef {
+    fn fragment_shader() -> ShaderRef {
         "cosmos/shaders/shield.wgsl".into()
     }
 
-    fn deferred_fragment_shader() -> bevy_easy_compute::prelude::ShaderRef {
+    fn deferred_fragment_shader() -> ShaderRef {
         "cosmos/shaders/shield.wgsl".into()
     }
 

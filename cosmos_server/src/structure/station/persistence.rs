@@ -71,6 +71,8 @@ fn load_structure(
                 coords,
                 serialized_block_data: None,
             });
+        } else {
+            unreachable!("This will never execute because the `all_chunks_iter` include_empty is false");
         }
     }
 

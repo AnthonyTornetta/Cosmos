@@ -65,19 +65,54 @@ impl Planet {
 
         let max = abs.x.max(abs.y).max(abs.z);
 
-        if normalized.z.is_negative() && abs.z == max {
+        const EPSILON: f32 = f32::EPSILON;
+
+        if normalized.z.is_negative() && (abs.z - max).abs() < EPSILON {
             BlockFace::Front
-        } else if normalized.y.is_negative() && abs.y == max {
+        } else if normalized.y.is_negative() && (abs.y - max).abs() < EPSILON {
             BlockFace::Bottom
-        } else if normalized.x.is_negative() && abs.x == max {
+        } else if normalized.x.is_negative() && (abs.x - max).abs() < EPSILON {
             BlockFace::Left
-        } else if abs.z == max {
+        } else if (abs.z - max).abs() < EPSILON {
             BlockFace::Back
-        } else if abs.y == max {
+        } else if (abs.y - max).abs() < EPSILON {
             BlockFace::Top
         } else {
             BlockFace::Right
         }
+    }
+
+    /// Gets the face of a planet this location is closest to. Prioritizes negative sides to make positive-to-negative edges look ok.
+    pub fn planet_face_relative_multiple(relative_position: Vec3) -> Vec<BlockFace> {
+        let normalized = relative_position.normalize_or_zero();
+        let abs = normalized.abs();
+
+        let max = abs.x.max(abs.y).max(abs.z);
+
+        let mut res = vec![];
+
+        const EPSILON: f32 = f32::EPSILON;
+
+        if normalized.z.is_negative() && (abs.z - max).abs() < EPSILON {
+            res.push(BlockFace::Front);
+        }
+        if normalized.y.is_negative() && (abs.y - max).abs() < EPSILON {
+            res.push(BlockFace::Bottom);
+        }
+        if normalized.x.is_negative() && (abs.x - max).abs() < EPSILON {
+            res.push(BlockFace::Left);
+        }
+        if normalized.z.is_positive() && (abs.z - max).abs() < EPSILON {
+            res.push(BlockFace::Back);
+        }
+        if normalized.y.is_positive() && (abs.y - max).abs() < EPSILON {
+            res.push(BlockFace::Top);
+        }
+        if normalized.x.is_positive() && (abs.x - max).abs() < EPSILON {
+            res.push(BlockFace::Right);
+        }
+
+        res
     }
 
     /// Given the coordinates of a chunk, returns a tuple of 3 perpendicular chunk's "up" directions, None elements for no up on that axis.

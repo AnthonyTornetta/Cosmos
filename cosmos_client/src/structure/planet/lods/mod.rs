@@ -28,7 +28,7 @@ use cosmos_core::{
         chunk::{CHUNK_DIMENSIONS, CHUNK_DIMENSIONS_USIZE},
         coordinates::{BlockCoordinate, ChunkBlockCoordinate, CoordinateType, UnboundChunkCoordinate, UnboundCoordinateType},
         lod::{Lod, LodComponent},
-        lod_chunk::LodChunk,
+        lod_chunk::{LodBlockSubScale, LodChunk},
         planet::{
             biosphere::Biosphere,
             generation::{
@@ -438,12 +438,12 @@ fn read_gpu_data(
 
     let millis_took = SystemTime::now().duration_since(timer.0).unwrap().as_millis();
 
-    // if millis_took > 1000 {
-    warn!(
-        "Got lod chunks back from gpu after a long wait! Took {millis_took}ms for {} lod chunks.",
-        currently_generating_chunks.0.len()
-    );
-    // }
+    if millis_took > 1000 {
+        warn!(
+            "Got lod chunks back from gpu after a long wait! Took {millis_took}ms for {} lod chunks.",
+            currently_generating_chunks.0.len()
+        );
+    }
 
     let v: Vec<TerrainData> = worker.try_read_vec("values").expect("Failed to read chunk generation values!");
     *chunk_data = ChunkData::new(v);
@@ -601,9 +601,14 @@ pub(crate) fn generate_chunks_from_gpu_data(
                         needs_generated_chunk.generation_params.chunk_coords.z,
                     );
 
-                    let block_relative_coord = chunk_pos + Vec3::new(x as f32, y as f32, z as f32) * needs_generated_chunk.scale;
+                    // TODO: figure out why I need to subtract 1 from the X coordinate here?!?!??!
+                    let wacky_offset = Vec3::new(-1.0, 0.0, 0.0);
+                    let block_relative_coord =
+                        chunk_pos + Vec3::new(x as f32, y as f32, z as f32) * needs_generated_chunk.scale + wacky_offset;
+
                     let face = Planet::planet_face_relative(block_relative_coord);
 
+                    let coords = ChunkBlockCoordinate::new(x as CoordinateType, y as CoordinateType, z as CoordinateType).unwrap();
                     if value.depth >= 0 {
                         // return temperature_u32 << 16 | humidity_u32 << 8 | elevation_u32;
                         let ideal_elevation = (value.data & 0xFF) as f32;
@@ -623,13 +628,7 @@ pub(crate) fn generate_chunks_from_gpu_data(
 
                         let block = block_layers.block_for_depth(value.depth as u64);
 
-                        // let block = blocks.from_id("cosmos:stone").expect("Missing stone?");
-
-                        needs_generated_chunk.chunk.set_block_at(
-                            ChunkBlockCoordinate::new(x as CoordinateType, y as CoordinateType, z as CoordinateType),
-                            block,
-                            face.into(),
-                        );
+                        needs_generated_chunk.chunk.set_block_at(coords, block, face.into());
                     } else if let Some(sea_level_block) = sea_level_block {
                         let sea_level_coordinate = biosphere.sea_level(structure_dimensions) as CoordinateType;
 
@@ -639,12 +638,67 @@ pub(crate) fn generate_chunks_from_gpu_data(
                             BlockFace::Back | BlockFace::Front => block_relative_coord.z,
                         };
 
-                        if (coord.abs()) as CoordinateType <= sea_level_coordinate {
-                            needs_generated_chunk.chunk.set_block_at(
-                                ChunkBlockCoordinate::new(x as CoordinateType, y as CoordinateType, z as CoordinateType),
-                                sea_level_block,
-                                face.into(),
-                            );
+                        let abs_coord = coord.abs() as CoordinateType;
+
+                        if abs_coord <= sea_level_coordinate {
+                            let all_faces = Planet::planet_face_relative_multiple(block_relative_coord);
+
+                            let scale_scalar = needs_generated_chunk.scale as CoordinateType;
+                            let mut scale = LodBlockSubScale::default();
+
+                            if abs_coord + scale_scalar > sea_level_coordinate {
+                                // This prevents z-fighting. Note that this currently doesn't do anything to negative faces, since those
+                                // are commented out below, so they will still have z-fighting. Idk how to fix them, so I'll deal with that later.
+                                let sea_level_coordinate = sea_level_coordinate + 1;
+
+                                for face in all_faces {
+                                    let coord = match face {
+                                        BlockFace::Left | BlockFace::Right => block_relative_coord.x,
+                                        BlockFace::Top | BlockFace::Bottom => block_relative_coord.y,
+                                        BlockFace::Back | BlockFace::Front => block_relative_coord.z,
+                                    };
+
+                                    let abs_coord = coord.abs() as CoordinateType;
+
+                                    let diff = (sea_level_coordinate - abs_coord) as f32;
+
+                                    let new_scale = 1.0 - diff / scale_scalar as f32;
+
+                                    let taken_away = new_scale * scale_scalar as f32;
+
+                                    // Idk why this has the negative faces disabled. It's quite perplexing.
+                                    match face {
+                                        // BlockFace::Left => {
+                                        //     scale.scaling_x = new_scale;
+                                        //     scale.x_offset = taken_away;
+                                        // }
+                                        BlockFace::Right => {
+                                            scale.scaling_x = new_scale;
+                                            scale.x_offset = -taken_away;
+                                        }
+                                        // BlockFace::Bottom => {
+                                        //     scale.scaling_y = new_scale;
+                                        //     scale.y_offset = taken_away;
+                                        // }
+                                        BlockFace::Top => {
+                                            scale.scaling_y = new_scale;
+                                            scale.y_offset = -taken_away;
+                                        }
+                                        // BlockFace::Front => {
+                                        //     scale.scaling_z = new_scale;
+                                        //     scale.z_offset = taken_away;
+                                        // }
+                                        BlockFace::Back => {
+                                            scale.scaling_z = new_scale;
+                                            scale.z_offset = -taken_away;
+                                        }
+                                        _ => {}
+                                    }
+                                }
+                            }
+
+                            needs_generated_chunk.chunk.set_block_at(coords, sea_level_block, face.into());
+                            needs_generated_chunk.chunk.set_block_scale_at(coords, scale);
                         }
                     }
                 }

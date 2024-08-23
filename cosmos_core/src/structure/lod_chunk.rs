@@ -8,6 +8,7 @@ use serde::{Deserialize, Serialize};
 use crate::{
     block::{block_rotation::BlockRotation, Block},
     registry::Registry,
+    utils::array_utils::flatten,
 };
 
 use super::{
@@ -16,11 +17,56 @@ use super::{
     coordinates::ChunkBlockCoordinate,
 };
 
-#[derive(Reflect, Serialize, Deserialize, Clone)]
+#[derive(Reflect, Serialize, Deserialize, Clone, PartialEq)]
 /// A chunk that is scaled. The Lod's scale depends on the position in the octree and size of its structure.
 ///
 /// Lods only function properly on structures whos sizes are powers of two.
-pub struct LodChunk(BlockStorage);
+pub struct LodChunk(BlockStorage, Vec<LodBlockSubScale>);
+
+#[derive(Reflect, Serialize, Deserialize, Clone, PartialEq, Copy, Debug)]
+/// Represents how this block should be scaled - relative to the normal LOD scaling.
+///
+/// This is for sea-level blocks that should appear to be flat, even though they would normally get taller as the LOD
+/// scaling level increases.
+///
+/// ## TODO:
+/// **This struct is way too big (memory-wise) and should be shrunk at some point.**
+/// Potential optimizations:
+///   - The scaling_x/y/z variables are all <= 1.0, and f32 precision is definitely overkill.
+///   - Perhaps look into f16?
+pub struct LodBlockSubScale {
+    /// How much the scaling should be adjusted for X coordinates in the model's positions
+    pub scaling_x: f32,
+    /// How much X coordinates in the model's vertices should be offset by.
+    ///
+    /// This is to compensate for the decrease in scaling by lowering the block to not be hovering.
+    pub x_offset: f32,
+    /// How much the scaling should be adjusted for Y coordinates in the model's positions
+    pub scaling_y: f32,
+    /// How much Y coordinates in the model's vertices should be offset by.
+    ///
+    /// This is to compensate for the decrease in scaling by lowering the block to not be hovering.
+    pub y_offset: f32,
+    /// How much the scaling should be adjusted for Z coordinates in the model's positions
+    pub scaling_z: f32,
+    /// How much Z coordinates in the model's vertices should be offset by.
+    ///
+    /// This is to compensate for the decrease in scaling by lowering the block to not be hovering.
+    pub z_offset: f32,
+}
+
+impl Default for LodBlockSubScale {
+    fn default() -> Self {
+        Self {
+            scaling_x: 1.0,
+            scaling_y: 1.0,
+            scaling_z: 1.0,
+            x_offset: 0.0,
+            y_offset: 0.0,
+            z_offset: 0.0,
+        }
+    }
+}
 
 impl Debug for LodChunk {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -37,7 +83,32 @@ impl Default for LodChunk {
 impl LodChunk {
     /// Creates a new Lod chunk
     pub fn new() -> Self {
-        Self(BlockStorage::new(CHUNK_DIMENSIONS, CHUNK_DIMENSIONS, CHUNK_DIMENSIONS))
+        Self(
+            BlockStorage::new(CHUNK_DIMENSIONS, CHUNK_DIMENSIONS, CHUNK_DIMENSIONS),
+            vec![LodBlockSubScale::default(); (CHUNK_DIMENSIONS * CHUNK_DIMENSIONS * CHUNK_DIMENSIONS) as usize],
+        )
+    }
+
+    /// Sets the sub-scaling of this block within the LOD.
+    pub fn set_block_scale_at(&mut self, coords: ChunkBlockCoordinate, scale: LodBlockSubScale) {
+        self.1[flatten(
+            coords.x as usize,
+            coords.y as usize,
+            coords.z as usize,
+            CHUNK_DIMENSIONS as usize,
+            CHUNK_DIMENSIONS as usize,
+        )] = scale;
+    }
+
+    /// Gets the sub-scaling of this block within the LOD.
+    pub fn block_scale(&self, coords: ChunkBlockCoordinate) -> LodBlockSubScale {
+        self.1[flatten(
+            coords.x as usize,
+            coords.y as usize,
+            coords.z as usize,
+            CHUNK_DIMENSIONS as usize,
+            CHUNK_DIMENSIONS as usize,
+        )]
     }
 }
 

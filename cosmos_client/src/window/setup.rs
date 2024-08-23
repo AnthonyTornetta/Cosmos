@@ -5,6 +5,9 @@ use bevy::{
     prelude::*,
     window::{CursorGrabMode, PrimaryWindow, WindowFocused},
 };
+use iyes_perf_ui::entries::PerfUiBundle;
+
+use crate::state::game_state::GameState;
 
 #[derive(Resource, Copy, Clone)]
 /// Resource containing the various flags about the cursor, like if it's hidden or not
@@ -115,6 +118,10 @@ pub enum CursorFlagsSet {
     ApplyCursorFlagsUpdates,
 }
 
+fn create_debug(mut commands: Commands) {
+    commands.spawn(PerfUiBundle::default());
+}
+
 pub(super) fn register(app: &mut App) {
     app.insert_resource(CursorFlags {
         locked: true,
@@ -134,7 +141,8 @@ pub(super) fn register(app: &mut App) {
             apply_cursor_flags_on_change.in_set(CursorFlagsSet::UpdateCursorFlags),
         )
             .chain(),
-    );
+    )
+    .add_systems(OnEnter(GameState::Playing), create_debug);
 
     // This never matters
     app.allow_ambiguous_component::<Window>();

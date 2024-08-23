@@ -4,14 +4,14 @@
 
 use bevy::{
     app::{App, Startup},
-    ecs::{component::Component, entity::Entity, event::Event, schedule::SystemSet, system::ResMut},
+    ecs::{component::Component, entity::Entity, event::Event, schedule::SystemSet},
 };
 use bevy_renet2::renet2::ClientId;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
 use crate::{
     block::data::BlockDataIdentifier,
-    registry::{create_registry, identifiable::Identifiable, Registry},
+    registry::{create_registry, identifiable::Identifiable},
     structure::systems::StructureSystemId,
 };
 
@@ -207,16 +207,12 @@ enum RegisterComponentSet {
     RegisterComponent,
 }
 
-fn register_component<T: SyncableComponent>(mut registry: ResMut<Registry<SyncedComponentId>>) {
-    registry.register(SyncedComponentId {
-        unlocalized_name: T::get_component_unlocalized_name().to_owned(),
-        id: 0,
-    });
-}
-
 #[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
 /// Reads component data from incoming data and upates component data locally.
 pub enum ComponentSyncingSet {
+    /// Receives component networking requests from the other side
+    ReceiveComponents,
+
     /// Process any data needed before components are synced here
     PreComponentSyncing,
     /// Reads component data from incoming data and upates component data locally.

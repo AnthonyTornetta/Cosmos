@@ -122,6 +122,8 @@ fn add_cosmos_blocks(
 
     blocks.register(
         BlockBuilder::new("cosmos:ice".to_owned(), 1.9, 40.0, 10.0)
+            .add_connection_group("cosmos:ice")
+            .connect_to_group("cosmos:ice")
             .add_property(BlockProperty::Transparent)
             .add_property(BlockProperty::Full)
             .create(),

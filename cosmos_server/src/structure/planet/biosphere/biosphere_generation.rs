@@ -178,7 +178,7 @@ pub(crate) fn generate_chunks_from_gpu_data<T: BiosphereMarkerComponent>(
                         let face = Planet::planet_face_relative(block_relative_coord);
 
                         needs_generated_chunk.chunk.set_block_at(
-                            ChunkBlockCoordinate::new(x as CoordinateType, y as CoordinateType, z as CoordinateType),
+                            ChunkBlockCoordinate::new(x as CoordinateType, y as CoordinateType, z as CoordinateType).unwrap(),
                             block,
                             face.into(),
                         );
@@ -196,7 +196,7 @@ pub(crate) fn generate_chunks_from_gpu_data<T: BiosphereMarkerComponent>(
 
                         if (coord.abs()) as CoordinateType <= sea_level_coordinate {
                             needs_generated_chunk.chunk.set_block_at(
-                                ChunkBlockCoordinate::new(x as CoordinateType, y as CoordinateType, z as CoordinateType),
+                                ChunkBlockCoordinate::new(x as CoordinateType, y as CoordinateType, z as CoordinateType).unwrap(),
                                 sea_level_block,
                                 face.into(),
                             );

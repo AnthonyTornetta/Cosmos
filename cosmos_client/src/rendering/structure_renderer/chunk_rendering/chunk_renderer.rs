@@ -12,41 +12,40 @@ use cosmos_core::registry::identifiable::Identifiable;
 use cosmos_core::registry::many_to_one::ManyToOneRegistry;
 use cosmos_core::registry::Registry;
 use cosmos_core::structure::block_storage::BlockStorer;
-use cosmos_core::structure::chunk::{Chunk, CHUNK_DIMENSIONS, CHUNK_DIMENSIONSF};
+use cosmos_core::structure::chunk::{CHUNK_DIMENSIONS, CHUNK_DIMENSIONSF};
 use cosmos_core::structure::coordinates::{ChunkBlockCoordinate, ChunkCoordinate};
 use cosmos_core::utils::array_utils::expand;
 use std::collections::HashSet;
 
+use super::neighbor_checking::ChunkRendererBackend;
 use super::{BlockMeshRegistry, ChunkMesh, ChunkRenderResult, MeshBuilder, MeshInfo, MeshMaterial};
 
 #[derive(Default, Debug)]
-pub struct ChunkRenderer {
-    meshes: HashMap<(u16, u32), MeshInfo>,
+pub struct ChunkRenderer<M: MeshBuilder + Default> {
+    meshes: HashMap<(u16, u32), MeshInfo<M>>,
     lights: HashMap<ChunkBlockCoordinate, BlockLightProperties>,
 }
 
-impl ChunkRenderer {
+impl<M: MeshBuilder + Default> ChunkRenderer<M> {
     pub fn new() -> Self {
         Self::default()
     }
 
     /// Renders a chunk into mesh information that can then be turned into a bevy mesh
-    pub fn render(
+    pub fn render<C: BlockStorer, R: ChunkRendererBackend<C>>(
         &mut self,
-        materials: &ManyToOneRegistry<Block, BlockMaterialMapping>,
-        materials_registry: &Registry<MaterialDefinition>,
+        materials_registry: &ManyToOneRegistry<Block, BlockMaterialMapping>,
+        materials_definition_registry: &Registry<MaterialDefinition>,
         lighting: &Registry<BlockLighting>,
-        chunk: &Chunk,
-        left: Option<&Chunk>,
-        right: Option<&Chunk>,
-        bottom: Option<&Chunk>,
-        top: Option<&Chunk>,
-        back: Option<&Chunk>,
-        front: Option<&Chunk>,
+        chunk: &C,
         blocks: &Registry<Block>,
         meshes: &BlockMeshRegistry,
         rendering_modes: &BlockRenderingModes,
         block_textures: &Registry<BlockTextureIndex>,
+        rendering_backend: &R,
+        scale: f32,
+        offset: Vec3,
+        lod: bool,
     ) -> HashSet<u16> {
         let cd2 = CHUNK_DIMENSIONSF / 2.0;
 
@@ -71,203 +70,61 @@ impl ChunkRenderer {
 
             if rendering_mode == RenderingMode::Both || rendering_mode == RenderingMode::Custom {
                 custom_blocks.insert(block_id);
-            }
 
-            if rendering_mode == RenderingMode::Custom {
-                // If this is custom rendered, we shouldn't do the normal rendering logic here.
-                continue;
+                if rendering_mode == RenderingMode::Custom {
+                    // If this is custom rendered, we shouldn't do the normal rendering logic here.
+                    continue;
+                }
             }
 
             let (center_offset_x, center_offset_y, center_offset_z) = (
-                coords.x as f32 - cd2 + 0.5,
-                coords.y as f32 - cd2 + 0.5,
-                coords.z as f32 - cd2 + 0.5,
+                (coords.x as f32 - cd2 + 0.5) * scale,
+                (coords.y as f32 - cd2 + 0.5) * scale,
+                (coords.z as f32 - cd2 + 0.5) * scale,
             );
-            let actual_block = blocks.from_numeric_id(block_id);
-
-            let check_should_render = |c: &Chunk,
-                                       actual_block: &Block,
-                                       blocks: &Registry<Block>,
-                                       coords: ChunkBlockCoordinate,
-                                       should_connect: &mut bool|
-             -> bool {
-                let block_id_here = c.block_at(coords);
-                let block_here = blocks.from_numeric_id(block_id_here);
-                *should_connect = actual_block.should_connect_with(block_here);
-
-                let custom_rendered = rendering_modes.rendering_mode(block_id_here);
-
-                // A block adjacent is custom
-                custom_rendered == RenderingMode::Custom
-                    || (!(actual_block.is_fluid() && block_here == actual_block)
-                        && (block_here.is_see_through() || !actual_block.is_full()))
-            };
-
-            let (x, y, z) = (coords.x, coords.y, coords.z);
+            let block_here = blocks.from_numeric_id(block_id);
 
             let mut block_connections = [false; 6];
 
-            // Positive X.
-            if (x != CHUNK_DIMENSIONS - 1
-                && check_should_render(
+            let mut check_rendering = |direction: BlockDirection| {
+                if rendering_backend.check_should_render(
                     chunk,
-                    actual_block,
+                    block_here,
+                    coords,
                     blocks,
-                    coords.pos_x(),
-                    &mut block_connections[BlockDirection::PosX.index()],
-                ))
-                || (x == CHUNK_DIMENSIONS - 1
-                    && (right
-                        .map(|c| {
-                            check_should_render(
-                                c,
-                                actual_block,
-                                blocks,
-                                ChunkBlockCoordinate::new(0, y, z),
-                                &mut block_connections[BlockDirection::PosX.index()],
-                            )
-                        })
-                        .unwrap_or(true)))
-            {
-                faces.push(BlockDirection::PosX);
-            }
-            // Negative X.
-            if (x != 0
-                && check_should_render(
-                    chunk,
-                    actual_block,
-                    blocks,
-                    coords.neg_x().expect("Checked in first condition"),
-                    &mut block_connections[BlockDirection::NegX.index()],
-                ))
-                || (x == 0
-                    && (left
-                        .map(|c| {
-                            check_should_render(
-                                c,
-                                actual_block,
-                                blocks,
-                                ChunkBlockCoordinate::new(CHUNK_DIMENSIONS - 1, y, z),
-                                &mut block_connections[BlockDirection::NegX.index()],
-                            )
-                        })
-                        .unwrap_or(true)))
-            {
-                faces.push(BlockDirection::NegX);
-            }
+                    direction,
+                    &mut block_connections[direction.index()],
+                    rendering_modes,
+                ) {
+                    faces.push(direction);
+                }
+            };
 
-            // Positive Y.
-            if (y != CHUNK_DIMENSIONS - 1
-                && check_should_render(
-                    chunk,
-                    actual_block,
-                    blocks,
-                    coords.pos_y(),
-                    &mut block_connections[BlockDirection::PosY.index()],
-                ))
-                || (y == CHUNK_DIMENSIONS - 1
-                    && top
-                        .map(|c| {
-                            check_should_render(
-                                c,
-                                actual_block,
-                                blocks,
-                                ChunkBlockCoordinate::new(x, 0, z),
-                                &mut block_connections[BlockDirection::PosY.index()],
-                            )
-                        })
-                        .unwrap_or(true))
-            {
-                faces.push(BlockDirection::PosY);
-            }
-            // Negative Y.
-            if (y != 0
-                && check_should_render(
-                    chunk,
-                    actual_block,
-                    blocks,
-                    coords.neg_y().expect("Checked in first condition"),
-                    &mut block_connections[BlockDirection::NegY.index()],
-                ))
-                || (y == 0
-                    && (bottom
-                        .map(|c| {
-                            check_should_render(
-                                c,
-                                actual_block,
-                                blocks,
-                                ChunkBlockCoordinate::new(x, CHUNK_DIMENSIONS - 1, z),
-                                &mut block_connections[BlockDirection::NegY.index()],
-                            )
-                        })
-                        .unwrap_or(true)))
-            {
-                faces.push(BlockDirection::NegY);
-            }
-
-            // Positive Z.
-            if (z != CHUNK_DIMENSIONS - 1
-                && check_should_render(
-                    chunk,
-                    actual_block,
-                    blocks,
-                    coords.pos_z(),
-                    &mut block_connections[BlockDirection::PosZ.index()],
-                ))
-                || (z == CHUNK_DIMENSIONS - 1
-                    && (front
-                        .map(|c| {
-                            check_should_render(
-                                c,
-                                actual_block,
-                                blocks,
-                                ChunkBlockCoordinate::new(x, y, 0),
-                                &mut block_connections[BlockDirection::PosZ.index()],
-                            )
-                        })
-                        .unwrap_or(true)))
-            {
-                faces.push(BlockDirection::PosZ);
-            }
-            // Negative Z.
-            if (z != 0
-                && check_should_render(
-                    chunk,
-                    actual_block,
-                    blocks,
-                    coords.neg_z().expect("Checked in first condition"),
-                    &mut block_connections[BlockDirection::NegZ.index()],
-                ))
-                || (z == 0
-                    && (back
-                        .map(|c| {
-                            check_should_render(
-                                c,
-                                actual_block,
-                                blocks,
-                                ChunkBlockCoordinate::new(x, y, CHUNK_DIMENSIONS - 1),
-                                &mut block_connections[BlockDirection::NegZ.index()],
-                            )
-                        })
-                        .unwrap_or(true)))
-            {
-                faces.push(BlockDirection::NegZ);
-            }
+            check_rendering(BlockDirection::PosX);
+            check_rendering(BlockDirection::PosY);
+            check_rendering(BlockDirection::PosZ);
+            check_rendering(BlockDirection::NegX);
+            check_rendering(BlockDirection::NegY);
+            check_rendering(BlockDirection::NegZ);
 
             if !faces.is_empty() {
                 let block = blocks.from_numeric_id(block_id);
 
-                let Some(material) = materials.get_value(block) else {
-                    continue;
-                };
+                let material_definition = if !lod {
+                    let Some(material) = materials_registry.get_value(block) else {
+                        continue;
+                    };
 
-                let mat_id = material.material_id();
+                    let mat_id = material.material_id();
+
+                    materials_definition_registry.from_numeric_id(mat_id)
+                } else {
+                    materials_definition_registry.from_id("cosmos:lod").expect("Missing LOD material.")
+                };
 
                 let Some(mesh) = meshes.get_value(block) else {
                     continue;
                 };
-
-                let material_definition = materials_registry.from_numeric_id(mat_id);
 
                 let block_rotation = block_info.get_rotation();
 
@@ -365,7 +222,7 @@ impl ChunkRenderer {
                         }
                     }
 
-                    let Some(image_index) = index.atlas_index_from_face(face, neighbors) else {
+                    let Some(image_index) = rendering_backend.get_texture_index(index, neighbors, face) else {
                         warn!("Missing image index for face {direction} -- {index:?}");
                         continue;
                     };
@@ -373,7 +230,9 @@ impl ChunkRenderer {
                     let uvs = Rect::new(0.0, 0.0, 1.0, 1.0);
 
                     for pos in mesh_info.positions.iter_mut() {
-                        *pos = rotation.mul_vec3((*pos).into()).into();
+                        let position_vec3 =
+                            rendering_backend.transform_position(chunk, coords, direction, rotation.mul_vec3(Vec3::from(*pos) * scale));
+                        *pos = (offset + position_vec3).into();
                     }
 
                     for norm in mesh_info.normals.iter_mut() {
@@ -383,7 +242,11 @@ impl ChunkRenderer {
                     let additional_info = material_definition.add_material_data(block_id, &mesh_info);
 
                     if mesh_builder.is_none() {
-                        mesh_builder = Some(self.meshes.entry((mat_id, image_index.dimension_index)).or_default());
+                        mesh_builder = Some(
+                            self.meshes
+                                .entry((material_definition.id(), image_index.dimension_index))
+                                .or_default(),
+                        );
                     }
 
                     mesh_builder.as_mut().unwrap().add_mesh_information(

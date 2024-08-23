@@ -36,10 +36,12 @@ pub type UnboundCoordinateType = i64;
 pub enum BoundsError {
     /// If one of the coordinates was negative
     Negative,
+    /// If any of the coords would always be invalid in the positive direction for this type of Coordinate.
+    Positive,
 }
 
 macro_rules! create_coordinate {
-    ($name: ident, $unbounded: ident, $structComment: literal, $fieldComment: literal) => {
+    ($name: ident, $unbounded: ident, $structComment: literal, $fieldComment: literal, $boundMin: expr, $boundMax: expr) => {
         #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Reflect, Hash, Default)]
         #[doc=$structComment]
         pub struct $name {
@@ -52,39 +54,14 @@ macro_rules! create_coordinate {
         }
 
         impl $name {
-            #[doc=$structComment]
-            ///
-            /// - `x` The x coordinate
-            /// - `y` The y coordinate
-            /// - `z` The z coordinate
-            #[inline(always)]
-            pub const fn new(x: CoordinateType, y: CoordinateType, z: CoordinateType) -> Self {
-                Self { x, y, z }
-            }
-
-            #[inline(always)]
-            /// Creates a new unbounded coordinate from a single tuple argument.
-            pub const fn new_from_tuple(tuple: (CoordinateType, CoordinateType, CoordinateType)) -> Self {
-                Self {
-                    x: tuple.0,
-                    y: tuple.1,
-                    z: tuple.2,
-                }
-            }
-
-            #[doc=$structComment]
-            ///
-            /// - `all` The value of every coordinate
-            #[inline(always)]
-            pub fn splat(all: CoordinateType) -> Self {
-                Self::new(all, all, all)
-            }
-
-            /// Computes self + (1, 0, 0)
-            #[inline(always)]
-            pub fn pos_x(&self) -> Self {
-                Self::new(self.x + 1, self.y, self.z)
-            }
+            /// 0 in all directions
+            pub const ZERO: $name = $name { x: 0, y: 0, z: 0 };
+            /// +1 in the X direction
+            pub const X: $name = $name { x: 1, y: 0, z: 0 };
+            /// +1 in the Y direction
+            pub const Y: $name = $name { x: 0, y: 1, z: 0 };
+            /// +1 in the Z direction
+            pub const Z: $name = $name { x: 0, y: 0, z: 1 };
 
             /// Computes self - (1, 0, 0)
             ///
@@ -94,14 +71,12 @@ macro_rules! create_coordinate {
                 if self.x == 0 {
                     Err(BoundsError::Negative)
                 } else {
-                    Ok(Self::new(self.x - 1, self.y, self.z))
+                    Ok(Self {
+                        x: self.x - 1,
+                        y: self.y,
+                        z: self.z,
+                    })
                 }
-            }
-
-            /// Computes self + (0, 1, 0)
-            #[inline(always)]
-            pub fn pos_y(&self) -> Self {
-                Self::new(self.x, self.y + 1, self.z)
             }
 
             /// Computes self - (0, 1, 0)
@@ -112,14 +87,12 @@ macro_rules! create_coordinate {
                 if self.y == 0 {
                     Err(BoundsError::Negative)
                 } else {
-                    Ok(Self::new(self.x, self.y - 1, self.z))
+                    Ok(Self {
+                        x: self.x,
+                        y: self.y - 1,
+                        z: self.z,
+                    })
                 }
-            }
-
-            /// Computes self + (0, 0, 1)
-            #[inline(always)]
-            pub fn pos_z(&self) -> Self {
-                Self::new(self.x, self.y, self.z + 1)
             }
 
             /// Computes self - (0, 0, 1)
@@ -130,20 +103,11 @@ macro_rules! create_coordinate {
                 if self.z == 0 {
                     Err(BoundsError::Negative)
                 } else {
-                    Ok(Self::new(self.x, self.y, self.z - 1))
-                }
-            }
-
-            /// Computes self + the direction change indicated by the BlockFace.
-            #[inline(always)]
-            pub fn step(&self, direction: BlockDirection) -> Result<Self, BoundsError> {
-                match direction {
-                    BlockDirection::PosX => Ok(self.pos_x()),
-                    BlockDirection::NegX => self.neg_x(),
-                    BlockDirection::PosY => Ok(self.pos_y()),
-                    BlockDirection::NegY => self.neg_y(),
-                    BlockDirection::PosZ => Ok(self.pos_z()),
-                    BlockDirection::NegZ => self.neg_z(),
+                    Ok(Self {
+                        x: self.x,
+                        y: self.y,
+                        z: self.z - 1,
+                    })
                 }
             }
         }
@@ -192,14 +156,6 @@ macro_rules! create_coordinate {
             }
         }
 
-        impl Add<$name> for $name {
-            type Output = Self;
-
-            fn add(self, rhs: Self) -> Self::Output {
-                Self::new(self.x + rhs.x, self.y + rhs.y, self.z + rhs.z)
-            }
-        }
-
         impl Sub<$name> for $name {
             type Output = $unbounded;
 
@@ -223,6 +179,19 @@ macro_rules! create_coordinate {
         }
 
         impl $unbounded {
+            /// +X
+            pub const POS_X: Self = Self::new(1, 0, 0);
+            /// +Y
+            pub const POS_Y: Self = Self::new(0, 1, 0);
+            /// +Z
+            pub const POS_Z: Self = Self::new(0, 0, 1);
+            /// -X
+            pub const NEG_X: Self = Self::new(-1, 0, 0);
+            /// -Y
+            pub const NEG_Y: Self = Self::new(0, -1, 0);
+            /// -Z
+            pub const NEG_Z: Self = Self::new(0, 0, -1);
+
             #[inline(always)]
             /// Creates a new unbounded version that can have negative as well as positive values.
             pub const fn new(x: UnboundCoordinateType, y: UnboundCoordinateType, z: UnboundCoordinateType) -> Self {
@@ -289,11 +258,6 @@ macro_rules! create_coordinate {
                 let delta = direction.to_coordinates();
                 Self::new(self.x + delta.x, self.y + delta.y, self.z + delta.z)
             }
-
-            /// Computes the abs() of each value and converts to a bounded coordinate type
-            pub fn abs(&self) -> $name {
-                $name::new(self.x.unsigned_abs(), self.y.unsigned_abs(), self.z.unsigned_abs())
-            }
         }
 
         impl std::fmt::Display for $unbounded {
@@ -333,14 +297,22 @@ macro_rules! create_coordinate {
             /// Succeeds if none of the coordinates are negative. This may still be
             /// out of bounds in the positive direction.
             fn try_from(value: $unbounded) -> Result<Self, Self::Error> {
-                if value.x < 0 || value.y < 0 || value.z < 0 {
+                if value.x < $boundMin as UnboundCoordinateType
+                    || value.y < $boundMin as UnboundCoordinateType
+                    || value.z < $boundMin as UnboundCoordinateType
+                {
                     Err(BoundsError::Negative)
+                } else if value.x > $boundMax as UnboundCoordinateType
+                    || value.y > $boundMax as UnboundCoordinateType
+                    || value.z > $boundMax as UnboundCoordinateType
+                {
+                    Err(BoundsError::Positive)
                 } else {
-                    Ok($name::new(
-                        value.x as CoordinateType,
-                        value.y as CoordinateType,
-                        value.z as CoordinateType,
-                    ))
+                    Ok($name {
+                        x: value.x as CoordinateType,
+                        y: value.y as CoordinateType,
+                        z: value.z as CoordinateType,
+                    })
                 }
             }
         }
@@ -402,16 +374,78 @@ create_coordinate!(
     BlockCoordinate,
     UnboundBlockCoordinate,
     "This is for each block in a structure.\n\n0, 0, 0 represents the bottom, left, back block.",
-    "coordinate in range [0, structure.blocks_(width/height/length)())"
+    "coordinate in range [0, structure.blocks_(width/height/length)())",
+    0,
+    UnboundCoordinateType::MAX as CoordinateType
 );
 
 impl BlockCoordinate {
-    /// +1 in the X direction
-    pub const X: BlockCoordinate = BlockCoordinate::new(1, 0, 0);
-    /// +1 in the Y direction
-    pub const Y: BlockCoordinate = BlockCoordinate::new(0, 1, 0);
-    /// +1 in the Z direction
-    pub const Z: BlockCoordinate = BlockCoordinate::new(0, 0, 1);
+    /// This is for each block in a structure.\n\n0, 0, 0 represents the bottom, left, back block.
+    ///
+    /// - `x` The x coordinate
+    /// - `y` The y coordinate
+    /// - `z` The z coordinate
+    #[inline(always)]
+    pub const fn new(x: CoordinateType, y: CoordinateType, z: CoordinateType) -> Self {
+        Self { x, y, z }
+    }
+
+    #[inline(always)]
+    /// Creates a new unbounded coordinate from a single tuple argument.
+    pub const fn new_from_tuple(tuple: (CoordinateType, CoordinateType, CoordinateType)) -> Self {
+        Self {
+            x: tuple.0,
+            y: tuple.1,
+            z: tuple.2,
+        }
+    }
+
+    /// This is for each block in a structure.\n\n0, 0, 0 represents the bottom, left, back block.
+    ///
+    /// - `all` The value of every coordinate
+    #[inline(always)]
+    pub fn splat(all: CoordinateType) -> Self {
+        Self::new(all, all, all)
+    }
+
+    /// Computes self + (1, 0, 0)
+    #[inline(always)]
+    pub fn pos_x(&self) -> Self {
+        Self::new(self.x + 1, self.y, self.z)
+    }
+
+    /// Computes self + (0, 1, 0)
+    #[inline(always)]
+    pub fn pos_y(&self) -> Self {
+        Self::new(self.x, self.y + 1, self.z)
+    }
+
+    /// Computes self + (0, 0, 1)
+    #[inline(always)]
+    pub fn pos_z(&self) -> Self {
+        Self::new(self.x, self.y, self.z + 1)
+    }
+
+    /// Computes self + the direction change indicated by the BlockFace.
+    #[inline(always)]
+    pub fn step(&self, direction: BlockDirection) -> Result<Self, BoundsError> {
+        match direction {
+            BlockDirection::PosX => Ok(self.pos_x()),
+            BlockDirection::NegX => self.neg_x(),
+            BlockDirection::PosY => Ok(self.pos_y()),
+            BlockDirection::NegY => self.neg_y(),
+            BlockDirection::PosZ => Ok(self.pos_z()),
+            BlockDirection::NegZ => self.neg_z(),
+        }
+    }
+}
+
+impl Add<Self> for BlockCoordinate {
+    type Output = Self;
+
+    fn add(self, rhs: Self) -> Self::Output {
+        Self::new(self.x + rhs.x, self.y + rhs.y, self.z + rhs.z)
+    }
 }
 
 impl Add<ChunkBlockCoordinate> for BlockCoordinate {
@@ -431,10 +465,10 @@ impl Add<UnboundChunkBlockCoordinate> for UnboundBlockCoordinate {
 }
 
 impl Add<BlockCoordinate> for ChunkBlockCoordinate {
-    type Output = Self;
+    type Output = BlockCoordinate;
 
     fn add(self, rhs: BlockCoordinate) -> Self::Output {
-        Self::new(self.x + rhs.x, self.y + rhs.y, self.z + rhs.z)
+        BlockCoordinate::new(self.x + rhs.x, self.y + rhs.y, self.z + rhs.z)
     }
 }
 
@@ -450,10 +484,40 @@ create_coordinate!(
     ChunkBlockCoordinate,
     UnboundChunkBlockCoordinate,
     "This is for each block in a chunk.\n\n0, 0, 0 represents the bottom, left, back block.",
-    "coordinate in range [0, CHUNK_DIMENSIONS)"
+    "coordinate in range [0, CHUNK_DIMENSIONS)",
+    0,
+    CHUNK_DIMENSIONS - 1
 );
 
 impl ChunkBlockCoordinate {
+    /// This is for each block in a chunk.\n\n0, 0, 0 represents the bottom, left, back block.
+    ///
+    /// - `x` The x coordinate
+    /// - `y` The y coordinate
+    /// - `z` The z coordinate
+    #[inline(always)]
+    pub const fn new(x: CoordinateType, y: CoordinateType, z: CoordinateType) -> Result<Self, BoundsError> {
+        if x < CHUNK_DIMENSIONS && y < CHUNK_DIMENSIONS && z < CHUNK_DIMENSIONS {
+            Ok(Self { x, y, z })
+        } else {
+            Err(BoundsError::Positive)
+        }
+    }
+
+    #[inline(always)]
+    /// Creates a new unbounded coordinate from a single tuple argument.
+    pub const fn new_from_tuple((x, y, z): (CoordinateType, CoordinateType, CoordinateType)) -> Result<Self, BoundsError> {
+        Self::new(x, y, z)
+    }
+
+    /// This is for each block in a chunk.\n\n0, 0, 0 represents the bottom, left, back block.
+    ///
+    /// - `all` The value of every coordinate
+    #[inline(always)]
+    pub fn splat(all: CoordinateType) -> Result<Self, BoundsError> {
+        Self::new(all, all, all)
+    }
+
     /// This will get the chunk this BlockCoordinate would be in.
     ///
     /// Shorthand for
@@ -466,6 +530,7 @@ impl ChunkBlockCoordinate {
     /// ```
     ///
     /// This is not made into a From to avoid accidental casting.
+    /// Use `try_from` to return a result if this block coordinate is not within the proper bounds.
     #[inline(always)]
     pub fn for_block_coordinate(value: BlockCoordinate) -> Self {
         // & (CHUNK_DIMENSIONS - 1) == % CHUNK_DIMENSIONS
@@ -485,13 +550,60 @@ impl ChunkBlockCoordinate {
     #[inline]
     /// `Self::new(0, 0, 0)`
     pub fn min() -> Self {
-        Self::new(0, 0, 0)
+        Self::new(0, 0, 0).unwrap()
     }
 
     #[inline]
     /// `Self::new(CHUNK_DIMENSIONS, CHUNK_DIMENSIONS, CHUNK_DIMENSIONS)`
     pub fn max() -> Self {
-        Self::new(CHUNK_DIMENSIONS, CHUNK_DIMENSIONS, CHUNK_DIMENSIONS)
+        Self::new(CHUNK_DIMENSIONS - 1, CHUNK_DIMENSIONS - 1, CHUNK_DIMENSIONS - 1).unwrap()
+    }
+
+    /// Computes self + (1, 0, 0)
+    #[inline(always)]
+    pub fn pos_x(&self) -> Result<Self, BoundsError> {
+        Self::new(self.x + 1, self.y, self.z)
+    }
+
+    /// Computes self + (0, 1, 0)
+    #[inline(always)]
+    pub fn pos_y(&self) -> Result<Self, BoundsError> {
+        Self::new(self.x, self.y + 1, self.z)
+    }
+
+    /// Computes self + (0, 0, 1)
+    #[inline(always)]
+    pub fn pos_z(&self) -> Result<Self, BoundsError> {
+        Self::new(self.x, self.y, self.z + 1)
+    }
+
+    /// Computes self + the direction change indicated by the BlockFace.
+    #[inline(always)]
+    pub fn step(&self, direction: BlockDirection) -> Result<Self, BoundsError> {
+        match direction {
+            BlockDirection::PosX => self.pos_x(),
+            BlockDirection::NegX => self.neg_x(),
+            BlockDirection::PosY => self.pos_y(),
+            BlockDirection::NegY => self.neg_y(),
+            BlockDirection::PosZ => self.pos_z(),
+            BlockDirection::NegZ => self.neg_z(),
+        }
+    }
+}
+
+impl TryFrom<BlockCoordinate> for ChunkBlockCoordinate {
+    type Error = BoundsError;
+
+    fn try_from(value: BlockCoordinate) -> Result<Self, Self::Error> {
+        Self::new(value.x, value.y, value.z)
+    }
+}
+
+impl Add<Self> for ChunkBlockCoordinate {
+    type Output = UnboundChunkBlockCoordinate;
+
+    fn add(self, rhs: Self) -> Self::Output {
+        UnboundChunkBlockCoordinate::from(self) + UnboundChunkBlockCoordinate::from(rhs)
     }
 }
 
@@ -516,16 +628,51 @@ impl UnboundChunkBlockCoordinate {
             z: value.z & (CHUNK_DIMENSIONS_UB - 1),
         }
     }
+
+    /// Computes the abs() of each value and converts to a bounded coordinate type
+    pub fn abs(&self) -> Result<ChunkBlockCoordinate, BoundsError> {
+        ChunkBlockCoordinate::new(self.x.unsigned_abs(), self.y.unsigned_abs(), self.z.unsigned_abs())
+    }
 }
 
 create_coordinate!(
     ChunkCoordinate,
     UnboundChunkCoordinate,
     "This is for each chunk in a structure.\n\n0, 0, 0 represents the bottom, left, back chunk.",
-    "coordinate in range [0, structure.chunks_(width/height/length)())"
+    "coordinate in range [0, structure.chunks_(width/height/length)())",
+    0,
+    UnboundCoordinateType::MAX as CoordinateType
 );
 
 impl ChunkCoordinate {
+    /// This is for each chunk in a structure.\n\n0, 0, 0 represents the bottom, left, back chunk
+    ///
+    /// - `x` The x coordinate
+    /// - `y` The y coordinate
+    /// - `z` The z coordinate
+    #[inline(always)]
+    pub const fn new(x: CoordinateType, y: CoordinateType, z: CoordinateType) -> Self {
+        Self { x, y, z }
+    }
+
+    #[inline(always)]
+    /// Creates a new unbounded coordinate from a single tuple argument.
+    pub const fn new_from_tuple(tuple: (CoordinateType, CoordinateType, CoordinateType)) -> Self {
+        Self {
+            x: tuple.0,
+            y: tuple.1,
+            z: tuple.2,
+        }
+    }
+
+    /// This is for each chunk in a structure.\n\n0, 0, 0 represents the bottom, left, back chunk
+    ///
+    /// - `all` The value of every coordinate
+    #[inline(always)]
+    pub fn splat(all: CoordinateType) -> Self {
+        Self::new(all, all, all)
+    }
+
     /// This will get the chunk this BlockCoordinate would be in.
     ///
     /// Shorthand for
@@ -569,6 +716,45 @@ impl ChunkCoordinate {
             (self.y + 1) * CHUNK_DIMENSIONS - 1,
             (self.z + 1) * CHUNK_DIMENSIONS - 1,
         )
+    }
+
+    /// Computes self + (1, 0, 0)
+    #[inline(always)]
+    pub fn pos_x(&self) -> Self {
+        Self::new(self.x + 1, self.y, self.z)
+    }
+
+    /// Computes self + (0, 1, 0)
+    #[inline(always)]
+    pub fn pos_y(&self) -> Self {
+        Self::new(self.x, self.y + 1, self.z)
+    }
+
+    /// Computes self + (0, 0, 1)
+    #[inline(always)]
+    pub fn pos_z(&self) -> Self {
+        Self::new(self.x, self.y, self.z + 1)
+    }
+
+    /// Computes self + the direction change indicated by the BlockFace.
+    #[inline(always)]
+    pub fn step(&self, direction: BlockDirection) -> Result<Self, BoundsError> {
+        match direction {
+            BlockDirection::PosX => Ok(self.pos_x()),
+            BlockDirection::NegX => self.neg_x(),
+            BlockDirection::PosY => Ok(self.pos_y()),
+            BlockDirection::NegY => self.neg_y(),
+            BlockDirection::PosZ => Ok(self.pos_z()),
+            BlockDirection::NegZ => self.neg_z(),
+        }
+    }
+}
+
+impl Add<Self> for ChunkCoordinate {
+    type Output = Self;
+
+    fn add(self, rhs: Self) -> Self::Output {
+        Self::new(self.x + rhs.x, self.y + rhs.y, self.z + rhs.z)
     }
 }
 

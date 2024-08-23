@@ -6,22 +6,24 @@ use bevy::utils::hashbrown::HashMap;
 use cosmos_core::structure::coordinates::ChunkBlockCoordinate;
 use std::collections::HashSet;
 
-use super::{BlockMeshRegistry, CosmosMeshBuilder, MeshBuilder, MeshInformation};
+use super::{BlockMeshRegistry, MeshBuilder, MeshInformation};
 
 mod async_rendering;
 pub mod chunk_renderer;
+pub mod lod_rendering;
+pub mod neighbor_checking;
 
 #[derive(Debug)]
-struct MeshMaterial {
-    mesh: Mesh,
-    material_id: u16,
-    texture_dimensions_index: u32,
+pub struct MeshMaterial {
+    pub mesh: Mesh,
+    pub material_id: u16,
+    pub texture_dimensions_index: u32,
 }
 
 #[derive(Debug)]
 pub struct ChunkMesh {
-    mesh_materials: Vec<MeshMaterial>,
-    lights: HashMap<ChunkBlockCoordinate, BlockLightProperties>,
+    pub mesh_materials: Vec<MeshMaterial>,
+    pub lights: HashMap<ChunkBlockCoordinate, BlockLightProperties>,
 }
 
 #[derive(Debug, Reflect, Clone, Copy)]
@@ -38,6 +40,7 @@ struct LightsHolder {
 }
 
 #[derive(Component, Debug, Reflect, Default)]
+/// Keeps track of all children of a Chunk that are holding its meshes + materials
 struct ChunkMeshes(Vec<Entity>);
 
 #[derive(Debug)]
@@ -52,11 +55,11 @@ struct ChunkRenderResult {
 pub(super) struct ChunkNeedsRendered;
 
 #[derive(Default, Debug)]
-struct MeshInfo {
-    mesh_builder: CosmosMeshBuilder,
+struct MeshInfo<M: MeshBuilder> {
+    mesh_builder: M,
 }
 
-impl MeshBuilder for MeshInfo {
+impl<M: MeshBuilder> MeshBuilder for MeshInfo<M> {
     #[inline]
     fn add_mesh_information(
         &mut self,

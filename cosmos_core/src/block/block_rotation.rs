@@ -38,10 +38,10 @@ impl BlockRotation {
             .mul_quat(match self.face_pointing_pos_y {
                 BlockFace::Top => Quat::IDENTITY,
                 BlockFace::Bottom => Quat::from_axis_angle(Vec3::X, PI),
-                BlockFace::Back => Quat::from_axis_angle(Vec3::X, -PI / 2.0),
-                BlockFace::Front => Quat::from_axis_angle(Vec3::X, PI / 2.0),
-                BlockFace::Left => Quat::from_axis_angle(Vec3::Z, -PI / 2.0),
-                BlockFace::Right => Quat::from_axis_angle(Vec3::Z, PI / 2.0),
+                BlockFace::Back => Quat::from_axis_angle(Vec3::X, PI / 2.0),
+                BlockFace::Front => Quat::from_axis_angle(Vec3::X, -PI / 2.0),
+                BlockFace::Left => Quat::from_axis_angle(Vec3::Z, PI / 2.0),
+                BlockFace::Right => Quat::from_axis_angle(Vec3::Z, -PI / 2.0),
             })
             .normalize()
     }
@@ -153,8 +153,8 @@ impl BlockRotation {
             BlockDirection::PosZ => Self::new(BlockFace::Top, BlockSubRotation::Flip),
             BlockDirection::NegX => Self::new(BlockFace::Top, BlockSubRotation::CCW),
             BlockDirection::PosX => Self::new(BlockFace::Top, BlockSubRotation::CW),
-            BlockDirection::NegY => Self::new(BlockFace::Back, BlockSubRotation::None),
-            BlockDirection::PosY => Self::new(BlockFace::Front, BlockSubRotation::None),
+            BlockDirection::NegY => Self::new(BlockFace::Front, BlockSubRotation::None),
+            BlockDirection::PosY => Self::new(BlockFace::Back, BlockSubRotation::None),
         }
     }
 

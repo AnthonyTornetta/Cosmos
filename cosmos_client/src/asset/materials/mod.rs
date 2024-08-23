@@ -19,6 +19,7 @@ use super::asset_loading::{load_block_rendering_information, AssetsSet, BlockRen
 
 pub mod animated_material;
 pub mod block_materials;
+pub mod lod_materials;
 pub(super) mod material_types;
 pub mod shield;
 
@@ -329,6 +330,7 @@ pub(super) fn register(app: &mut App) {
     registry::many_to_one::create_many_to_one_registry::<Item, ItemMaterialMapping>(app);
     shield::register(app);
     material_types::register(app);
+    lod_materials::register(app);
     block_materials::register(app);
     animated_material::register(app);
 

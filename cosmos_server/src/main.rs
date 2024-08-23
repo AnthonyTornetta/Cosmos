@@ -6,12 +6,17 @@
 #![feature(iterator_try_collect)]
 #![warn(missing_docs)]
 
-use bevy::{core::TaskPoolThreadAssignmentPolicy, prelude::*};
+use bevy::{
+    core::TaskPoolThreadAssignmentPolicy,
+    diagnostic::{EntityCountDiagnosticsPlugin, FrameTimeDiagnosticsPlugin, SystemInformationDiagnosticsPlugin},
+    prelude::*,
+};
 use bevy_mod_debugdump::schedule_graph;
 use bevy_rapier3d::plugin::{RapierContextInitialization, RapierPhysicsPlugin};
 use bevy_renet2::{transport::NetcodeServerPlugin, RenetServerPlugin};
 use cosmos_core::{physics::collision_handling::CosmosPhysicsFilter, plugin::cosmos_core_plugin::CosmosCorePluginGroup};
 
+use iyes_perf_ui::PerfUiPlugin;
 use plugin::server_plugin::ServerPlugin;
 use settings::read_server_settings;
 use state::GameState;
@@ -23,6 +28,7 @@ use bevy::log::LogPlugin;
 pub mod ai;
 pub mod blocks;
 pub mod commands;
+mod debug;
 pub mod entities;
 pub mod fluid;
 pub mod init;
@@ -93,7 +99,16 @@ fn main() {
                 // .in_schedule(FixedUpdate)
                 .with_custom_initialization(RapierContextInitialization::NoAutomaticRapierContext),
         )
-        .add_plugins((RenetServerPlugin, NetcodeServerPlugin, ServerPlugin { port }))
+        .add_plugins((
+            RenetServerPlugin,
+            NetcodeServerPlugin,
+            ServerPlugin { port },
+            // Used for diagnostics
+            SystemInformationDiagnosticsPlugin,
+            EntityCountDiagnosticsPlugin,
+            FrameTimeDiagnosticsPlugin,
+            PerfUiPlugin,
+        ))
         .insert_resource(server_settings);
 
     if cfg!(feature = "print-schedule") {

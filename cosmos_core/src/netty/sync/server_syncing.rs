@@ -1,7 +1,7 @@
 use super::server_entity_syncing::RequestedEntityEvent;
 use super::{
-    register_component, ClientAuthority, ComponentEntityIdentifier, ComponentReplicationMessage, ComponentSyncingSet, RegisterComponentSet,
-    SyncType, SyncableComponent, SyncedComponentId,
+    ClientAuthority, ComponentEntityIdentifier, ComponentReplicationMessage, ComponentSyncingSet, RegisterComponentSet, SyncType,
+    SyncableComponent, SyncedComponentId,
 };
 use crate::block::data::BlockData;
 use crate::inventory::itemstack::ItemStackData;
@@ -437,8 +437,20 @@ pub(super) fn setup_server(app: &mut App) {
             .chain(),
     );
 
+    app.configure_sets(
+        Update,
+        ComponentSyncingSet::ReceiveComponents.in_set(NetworkingSystemsSet::ReceiveMessages),
+    );
+
     app.add_systems(Update, server_receive_components.in_set(ComponentSyncingSet::PreComponentSyncing))
         .add_event::<RequestedEntityEvent>();
+}
+
+fn register_component<T: SyncableComponent>(mut registry: ResMut<Registry<SyncedComponentId>>) {
+    registry.register(SyncedComponentId {
+        unlocalized_name: T::get_component_unlocalized_name().to_owned(),
+        id: 0,
+    });
 }
 
 #[allow(unused)] // This function is used, but the LSP can't figure that out.
@@ -469,7 +481,7 @@ pub(super) fn sync_component_server<T: SyncableComponent>(app: &mut App) {
                 Update,
                 (server_deserialize_component::<T>, server_remove_component::<T>)
                     .chain()
-                    .in_set(NetworkingSystemsSet::ProcessReceivedMessages),
+                    .in_set(ComponentSyncingSet::ReceiveComponents),
             );
         }
         SyncType::BothAuthoritative(_) => {
@@ -488,7 +500,7 @@ pub(super) fn sync_component_server<T: SyncableComponent>(app: &mut App) {
                 Update,
                 (server_deserialize_component::<T>, server_remove_component::<T>)
                     .chain()
-                    .in_set(NetworkingSystemsSet::ProcessReceivedMessages),
+                    .in_set(ComponentSyncingSet::ReceiveComponents),
             );
         }
     }

@@ -8,7 +8,10 @@ use bevy::{
 };
 use serde::{Deserialize, Serialize};
 
-use crate::structure::coordinates::UnboundBlockCoordinate;
+use crate::{
+    prelude::{UnboundChunkBlockCoordinate, UnboundChunkCoordinate},
+    structure::coordinates::UnboundBlockCoordinate,
+};
 
 use super::block_face::BlockFace;
 
@@ -126,9 +129,27 @@ impl BlockDirection {
         UnboundBlockCoordinate::new(vec.x as i64, vec.y as i64, vec.z as i64)
     }
 
+    /// Returns the direction each face represents as an UnboundChunkBlockCoordinate
+    pub const fn to_chunk_block_coordinates(&self) -> UnboundChunkBlockCoordinate {
+        let vec = self.to_vec3();
+        UnboundChunkBlockCoordinate::new(vec.x as i64, vec.y as i64, vec.z as i64)
+    }
+
     /// Returns the `Direction` this block coordinate represents.
     /// Coordinates must have one entry non-zero and all others 0.
     pub fn from_coordinates(coords: UnboundBlockCoordinate) -> Self {
+        Self::from_vec3(vec3(coords.x as f32, coords.y as f32, coords.z as f32))
+    }
+
+    /// Returns the `Direction` this block coordinate represents.
+    /// Coordinates must have one entry non-zero and all others 0.
+    pub fn from_chunk_coordinates(coords: UnboundChunkCoordinate) -> Self {
+        Self::from_vec3(vec3(coords.x as f32, coords.y as f32, coords.z as f32))
+    }
+
+    /// Returns the `Direction` this block coordinate represents.
+    /// Coordinates must have one entry non-zero and all others 0.
+    pub fn from_chunk_block_coordinates(coords: UnboundChunkBlockCoordinate) -> Self {
         Self::from_vec3(vec3(coords.x as f32, coords.y as f32, coords.z as f32))
     }
 
