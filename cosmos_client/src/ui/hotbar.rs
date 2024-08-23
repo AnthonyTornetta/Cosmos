@@ -21,7 +21,7 @@ use crate::{
 use super::{
     components::show_cursor::no_open_menus,
     item_renderer::{create_ui_cameras, RenderItem},
-    UiMiddleRoot, UiRoot,
+    UiMiddleRoot,
 };
 
 const ITEM_NAME_FADE_DURATION_SEC: f32 = 5.0;
@@ -398,7 +398,7 @@ fn populate_hotbar(
     }
 }
 
-fn add_hotbar(mut commands: Commands, q_target_camera: Query<Entity, With<UiRoot>>, asset_server: Res<AssetServer>) {
+fn add_hotbar(mut commands: Commands, q_target_camera: Query<Entity, With<UiMiddleRoot>>, asset_server: Res<AssetServer>) {
     let target_cam = q_target_camera.single();
 
     commands
