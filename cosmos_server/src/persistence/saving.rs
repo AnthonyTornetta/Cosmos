@@ -212,7 +212,7 @@ fn done_saving(
 
         let serialized: Vec<u8> = cosmos_encoder::serialize(&sd);
 
-        if let Err(e) = write_file(&save_file_identifier, &serialized) {
+        if let Err(e) = write_file(save_file_identifier, &serialized) {
             error!("Unable to save {entity:?}\n{e}");
         }
 
