@@ -137,7 +137,7 @@ fn create_entity_ids(mut commands: Commands, q_without_id: Query<(Entity, &Seria
 
 /// Make sure any systems that serialize data for saving are run before this
 fn done_saving(
-    query: Query<
+    q_needs_saved: Query<
         (
             Entity,
             Option<&Name>,
@@ -166,7 +166,7 @@ fn done_saving(
         }
     }
 
-    for (entity, name, sd, entity_id, loading_distance, save_file_identifier) in query.iter() {
+    for (entity, name, sd, entity_id, loading_distance, mut save_file_identifier) in q_needs_saved.iter() {
         commands.entity(entity).remove::<NeedsSaved>().remove::<SerializedData>();
 
         if !sd.should_save() {
@@ -179,40 +179,48 @@ fn done_saving(
             } else {
                 warn!("Missing load distance for {entity:?}");
             }
+
+            commands.entity(entity).log_components();
         }
 
-        if let Some(save_file_identifier) = save_file_identifier {
-            let path = save_file_identifier.get_save_file_path();
-            if fs::exists(&path).unwrap_or(false) {
-                if fs::remove_file(&path).is_err() {
-                    warn!("Error deleting old save file at {path}!");
-                }
+        // Required to be in the outer scope so the reference is still valid
+        let sfi: Option<SaveFileIdentifier>;
+        if save_file_identifier.is_none() {
+            sfi = calculate_sfi(entity, &q_parent, &q_entity_id, &q_serialized_data);
+            if let Some(sfi) = sfi.clone() {
+                commands.entity(entity).insert(sfi);
+            }
+            save_file_identifier = sfi.as_ref();
+        }
 
-                if let SaveFileIdentifierType::Base(entity_id, Some(sector), load_distance) = &save_file_identifier.identifier_type {
-                    sectors_cache.remove(entity_id, *sector, *load_distance);
-                }
+        let Some(save_file_identifier) = save_file_identifier else {
+            error!("Could not calculate save file identifier for {entity:?} - loggin components");
+            commands.entity(entity).log_components();
+            continue;
+        };
+
+        let path = save_file_identifier.get_save_file_path();
+        if fs::exists(&path).unwrap_or(false) {
+            if fs::remove_file(&path).is_err() {
+                warn!("Error deleting old save file at {path}!");
+            }
+
+            if let SaveFileIdentifierType::Base(entity_id, Some(sector), load_distance) = &save_file_identifier.identifier_type {
+                sectors_cache.remove(entity_id, *sector, *load_distance);
             }
         }
 
         let serialized: Vec<u8> = cosmos_encoder::serialize(&sd);
 
-        let Some(save_identifier) = calculate_sfi(entity, &q_parent, &q_entity_id, &q_serialized_data) else {
-            error!("Could not calculate save file identifier for {entity:?}");
-            continue;
-        };
-
-        if let Err(e) = write_file(&save_identifier, &serialized) {
-            warn!("{e}");
-            continue;
+        if let Err(e) = write_file(save_file_identifier, &serialized) {
+            error!("Unable to save {entity:?}\n{e}");
         }
 
-        if matches!(&save_identifier.identifier_type, SaveFileIdentifierType::Base(_, _, _)) {
+        if matches!(&save_file_identifier.identifier_type, SaveFileIdentifierType::Base(_, _, _)) {
             if let Some(loc) = sd.location {
                 sectors_cache.insert(loc.sector(), entity_id.clone(), loading_distance.map(|ld| ld.load_distance()));
             }
         }
-
-        commands.entity(entity).insert(save_identifier);
     }
 }
 

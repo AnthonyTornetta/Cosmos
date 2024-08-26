@@ -327,7 +327,7 @@ fn unload_chunks_far_from_players(
     mut event_writer: EventWriter<ChunkUnloadEvent>,
     mut commands: Commands,
 ) {
-    let mut potential_chunks = HashMap::<Entity, HashSet<ChunkCoordinate>>::new();
+    let mut chunks_to_unload = HashMap::<Entity, HashSet<ChunkCoordinate>>::new();
     for (_, planet, entity, _) in planets.iter() {
         let mut set = HashSet::new();
 
@@ -344,7 +344,7 @@ fn unload_chunks_far_from_players(
             }
         }
 
-        potential_chunks.insert(entity, set);
+        chunks_to_unload.insert(entity, set);
     }
 
     for player in players.iter() {
@@ -376,7 +376,7 @@ fn unload_chunks_far_from_players(
                 true,
             );
 
-            let set = potential_chunks.get_mut(&entity).expect("This was just added");
+            let set = chunks_to_unload.get_mut(&entity).expect("This was just added");
 
             for res in iterator {
                 let chunk_position = match res {
@@ -389,7 +389,7 @@ fn unload_chunks_far_from_players(
         }
     }
 
-    for (planet, chunk_coords) in potential_chunks {
+    for (planet, chunk_coords) in chunks_to_unload {
         if let Ok((location, mut structure, _, entity_id)) = planets.get_mut(planet) {
             let mut needs_id = false;
 

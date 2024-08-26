@@ -56,6 +56,25 @@ fn set_structure_done_loading(mut structure_query: Query<&mut Structure>, mut ev
     }
 }
 
+#[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
+/// Systems responsible for the creation & population of a structure
+pub enum StructureLoadingSet {
+    /// Initially sets up the structure being loaded, such as creating the `Structure` component
+    LoadStructure,
+    /// Adds structure components that need to be present
+    AddStructureComponents,
+    /// Creates all entnties the chunks would have
+    CreateChunkEntities,
+    /// Loads the chunk from disk, and creates their serialized data.
+    LoadChunkBlocks,
+    /// Sets up the `BlockData` components used by block data
+    InitializeChunkBlockData,
+    /// Loads any chunk's block data
+    LoadChunkData,
+    /// Run once the structure is finished loaded. Used to notify other systems a chunk is ready to be processed
+    StructureLoaded,
+}
+
 pub(super) fn register(app: &mut App) {
     app.configure_sets(
         Update,
@@ -63,6 +82,7 @@ pub(super) fn register(app: &mut App) {
             StructureLoadingSet::LoadStructure,
             StructureLoadingSet::AddStructureComponents,
             StructureLoadingSet::CreateChunkEntities,
+            StructureLoadingSet::LoadChunkBlocks,
             StructureLoadingSet::InitializeChunkBlockData,
             StructureLoadingSet::LoadChunkData,
             StructureLoadingSet::StructureLoaded,
@@ -81,21 +101,4 @@ pub(super) fn register(app: &mut App) {
         ),
     )
     .register_type::<ChunksNeedLoaded>();
-}
-
-#[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
-/// Systems responsible for the creation & population of a structure
-pub enum StructureLoadingSet {
-    /// Initially sets up the structure being loaded, such as creating the `Structure` component
-    LoadStructure,
-    /// Adds structure components that need to be present
-    AddStructureComponents,
-    /// Creates all entnties the chunks would have
-    CreateChunkEntities,
-    /// Sets up the `BlockData` components used by block data
-    InitializeChunkBlockData,
-    /// Loads any chunk's block data
-    LoadChunkData,
-    /// Run once the structure is finished loaded. Used to notify other systems a chunk is ready to be processed
-    StructureLoaded,
 }
