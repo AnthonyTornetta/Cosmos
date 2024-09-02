@@ -144,9 +144,7 @@ fn get_requested_chunk(
                     .iter()
                     .map(|player_loc| Vec3::from(*player_loc - *loc))
                     .any(|player_rel_pos| {
-                        let diff = (player_rel_pos - chunk_rel_pos);
-                        println!("DIFF: {diff}");
-                        diff.abs().max_element() / CHUNK_DIMENSIONSF < (RENDER_DISTANCE + 1) as f32
+                        (player_rel_pos - chunk_rel_pos).abs().max_element() / CHUNK_DIMENSIONSF < (RENDER_DISTANCE + 1) as f32
                     })
                 {
                     return;

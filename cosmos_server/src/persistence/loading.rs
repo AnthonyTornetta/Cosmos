@@ -19,7 +19,10 @@ use bevy::{
 use bevy_rapier3d::prelude::Velocity;
 
 use cosmos_core::{
-    ecs::NeedsDespawned, netty::cosmos_encoder, persistence::LoadingDistance, physics::location::Location,
+    ecs::{bundles::BundleStartingRotation, NeedsDespawned},
+    netty::cosmos_encoder,
+    persistence::LoadingDistance,
+    physics::location::Location,
     structure::loading::StructureLoadingSet,
 };
 
@@ -175,6 +178,9 @@ fn default_load(query: Query<(Entity, &SerializedData), With<NeedsLoaded>>, mut 
         }
         if let Some(loading_distance) = sd.deserialize_data::<LoadingDistance>("cosmos:loading_distance") {
             ecmds.insert(loading_distance);
+        }
+        if let Some(rotation) = sd.deserialize_data::<Quat>("cosmos:rotation") {
+            ecmds.insert(BundleStartingRotation(rotation));
         }
     }
 }

@@ -12,7 +12,7 @@ use bevy::{
     ecs::schedule::{IntoSystemSetConfigs, SystemSet},
     hierarchy::Parent,
     log::{error, warn},
-    prelude::{App, Commands, Component, Entity, First, IntoSystemConfigs, Query, ResMut, With, Without},
+    prelude::{App, Commands, Component, Entity, First, IntoSystemConfigs, Query, ResMut, Transform, With, Without},
     reflect::Reflect,
 };
 use bevy_rapier3d::prelude::Velocity;
@@ -268,8 +268,19 @@ fn write_file(save_identifier: &SaveFileIdentifier, serialized: &[u8]) -> io::Re
     Ok(())
 }
 
-fn default_save(mut query: Query<(&mut SerializedData, Option<&Location>, Option<&Velocity>, Option<&LoadingDistance>), With<NeedsSaved>>) {
-    for (mut data, loc, vel, loading_distance) in query.iter_mut() {
+fn default_save(
+    mut query: Query<
+        (
+            &mut SerializedData,
+            Option<&Location>,
+            Option<&Velocity>,
+            Option<&LoadingDistance>,
+            Option<&Transform>,
+        ),
+        With<NeedsSaved>,
+    >,
+) {
+    for (mut data, loc, vel, loading_distance, transform) in query.iter_mut() {
         if let Some(loc) = loc {
             data.set_location(loc);
         }
@@ -280,6 +291,10 @@ fn default_save(mut query: Query<(&mut SerializedData, Option<&Location>, Option
 
         if let Some(val) = loading_distance {
             data.serialize_data("cosmos:loading_distance", val);
+        }
+
+        if let Some(trans) = transform {
+            data.serialize_data("cosmos:rotation", &trans.rotation);
         }
     }
 }

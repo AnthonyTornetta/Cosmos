@@ -47,7 +47,7 @@ pub(crate) fn process_player_movement(
         let up = *player_transform.up();
 
         if let Some(player_alignment) = player_alignment {
-            match player_alignment.0 {
+            match player_alignment.axis {
                 align_player::Axis::X => {
                     forward.x = 0.0;
                     right.x = 0.0;
@@ -113,7 +113,7 @@ pub(crate) fn process_player_movement(
         }
 
         if let Some(player_alignment) = player_alignment {
-            match player_alignment.0 {
+            match player_alignment.axis {
                 align_player::Axis::X => {
                     let x = new_linvel.x;
 

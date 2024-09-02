@@ -76,7 +76,7 @@ fn control_build_mode(
     let mut right = *cam_trans.right();
     let up = *transform.up();
 
-    match player_alignment.copied().unwrap_or_default().0 {
+    match player_alignment.map(|x| x.axis).unwrap_or_default() {
         align_player::Axis::X => {
             forward.x = 0.0;
             right.x = 0.0;
