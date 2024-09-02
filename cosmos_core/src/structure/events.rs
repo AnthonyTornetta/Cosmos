@@ -26,7 +26,7 @@ impl ChunkSetEvent {
     /// Iterates over all the blocks of this structure.
     ///
     /// * `include_air` If this is true, air blocks will be included. If false, they will not be
-    pub fn iter_blocks<'a>(&'a self, structure: &'a Structure, include_air: bool) -> BlockIterator {
+    pub fn iter_blocks<'a>(&'a self, structure: &'a Structure, include_air: bool) -> BlockIterator<'a> {
         structure.block_iter_for_chunk(self.coords, include_air)
     }
 }

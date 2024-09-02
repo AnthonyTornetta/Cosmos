@@ -1,5 +1,7 @@
 //! Represents all the systems a structure has. You should access systems a specific structure has
-//! through this. It is, however, safe to query systems normally if you don't need a specific structure.
+//! through this.
+//!
+//! It is, however, safe to query systems normally if you don't need a specific structure.
 //! If you need information about the structure a system belongs to and you are querying through systems, include
 //! the `StructureSystem` component to your query to get the structure's entity.
 //!

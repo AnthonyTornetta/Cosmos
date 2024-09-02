@@ -17,6 +17,7 @@ use super::{logic_graph::LogicGraph, LogicBlock, LogicWireColor, Port, PortType,
 
 #[derive(Debug, Default, Reflect, Component)]
 /// The public interface for accessing and mutating an [`Entity`]'s [`LogicGraph`].
+///
 /// Any functionality needed for specific logic blocks (for example, wires and logic gates) should use this struct and never directly access the [`LogicGraph`].
 pub struct LogicDriver {
     logic_graph: LogicGraph,
