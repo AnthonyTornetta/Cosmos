@@ -312,7 +312,10 @@ impl QueueLogicOutputEvent {
 }
 
 #[derive(Component, Clone, Copy, Reflect, PartialEq, Eq, Debug, Default)]
-/// The logic signal this block is holding. Note: each block might interact with this data slightly differently.
+/// The logic signal this block is holding.
+///
+/// NOTE: Each block might interact with this data slightly differently.
+///
 /// Usually, a block with an output port will calculate this value the frame before outputting it and store it here.
 pub struct BlockLogicData(pub i32);
 
