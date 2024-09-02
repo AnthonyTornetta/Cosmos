@@ -23,6 +23,7 @@ use crate::*;
 pub const ATTRIBUTE_PACKED_DATA: MeshVertexAttribute = MeshVertexAttribute::new("PackedData", 923840840, VertexFormat::Uint32);
 
 /// An enum to define which UV attribute to use for a texture.
+///
 /// It is used for every texture in the [`LodArrayTextureMaterial`].
 /// It only supports two UV attributes, [`Mesh::ATTRIBUTE_UV_0`] and [`Mesh::ATTRIBUTE_UV_1`].
 /// The default is [`UvChannel::Uv0`].

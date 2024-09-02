@@ -25,6 +25,7 @@ pub const ATTRIBUTE_TEXTURE_INDEX: MeshVertexAttribute =
     MeshVertexAttribute::new("ArrayTextureIndex", 923840841, VertexFormat::Uint32);
 
 /// An enum to define which UV attribute to use for a texture.
+///
 /// It is used for every texture in the [`ArrayTextureMaterial`].
 /// It only supports two UV attributes, [`Mesh::ATTRIBUTE_UV_0`] and [`Mesh::ATTRIBUTE_UV_1`].
 /// The default is [`UvChannel::Uv0`].
