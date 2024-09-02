@@ -4,6 +4,7 @@ use std::time::Duration;
 
 use bevy::{
     core::Name,
+    math::Quat,
     prelude::{
         in_state, App, Commands, Component, Deref, DerefMut, DespawnRecursiveExt, Entity, IntoSystemConfigs, Query, Res, ResMut, Resource,
         Update, Vec3, With,
@@ -13,6 +14,7 @@ use bevy::{
     utils::HashSet,
 };
 use cosmos_core::{
+    ecs::bundles::BundleStartingRotation,
     entities::player::Player,
     netty::system_sets::NetworkingSystemsSet,
     physics::location::{Location, Sector, SystemUnit},
@@ -70,7 +72,7 @@ fn monitor_planets_to_spawn(
 
             builder.insert_planet(&mut entity_cmd, loc, &mut structure, Planet::new(temperature));
 
-            entity_cmd.insert(structure);
+            entity_cmd.insert((structure, BundleStartingRotation(Quat::from_axis_angle(Vec3::X, 0.9))));
         }
 
         *sectors_cache = cache;
