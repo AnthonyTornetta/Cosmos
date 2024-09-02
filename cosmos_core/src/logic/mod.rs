@@ -190,7 +190,7 @@ impl LogicBlock {
     /// Returns an iterator over every wire color ID any wire face of this block connects to.
     ///
     /// Returns the iterator over all wire color IDs if any of the faces are logic bus.
-    pub fn wire_face_colors<'a>(&'a self, logic_wire_colors: &'a Registry<LogicWireColor>) -> Box<dyn Iterator<Item = u16> + '_> {
+    pub fn wire_face_colors<'a>(&'a self, logic_wire_colors: &'a Registry<LogicWireColor>) -> Box<dyn Iterator<Item = u16> + 'a> {
         if self.faces_with(Some(LogicConnection::Wire(WireType::Bus))).next().is_some() {
             Box::new(logic_wire_colors.all_ids())
         } else {
