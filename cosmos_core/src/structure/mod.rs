@@ -875,7 +875,8 @@ impl Display for RotationError {
     }
 }
 
-/// Takes block coordinates, offsets, and the side of the planet you're on. Returns the result of applying the offsets.
+/// Takes block coordinates, offsets, and the side of the planet you're on and returns the result of applying the offsets.
+///
 /// On the +y (Top) side, the offsets affect their corresponding coordinate.
 /// On other sides, the offsets affect non-corresponding coordinates and may be flipped negative.
 pub fn rotate(

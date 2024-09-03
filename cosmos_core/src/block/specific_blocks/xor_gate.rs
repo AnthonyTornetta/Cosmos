@@ -1,4 +1,5 @@
 //! Logic behavior for "Xor Gate", a block with left and right inputs and a front output.
+//!
 //! Outputs 1 if exactly one input is present and 1. Outputs 0 if (both inputs are present and non-zero) or (both inputs are not present or zero).
 
 use std::{cell::RefCell, rc::Rc};

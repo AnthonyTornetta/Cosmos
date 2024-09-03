@@ -17,6 +17,7 @@ use super::block_face::BlockFace;
 
 #[derive(Default, PartialEq, Eq, Debug, Copy, Clone, Reflect, Hash, Serialize, Deserialize)]
 /// Enumerates the 6 possible directions: a positive and negative direction for each of the 3 axes of 3-dimensional space.
+///
 /// Moving in the direction indicated by each of these variants should always change the corresponding coordinate in the indicated direction (relative to the structure).
 pub enum BlockDirection {
     /// The positive X direction.

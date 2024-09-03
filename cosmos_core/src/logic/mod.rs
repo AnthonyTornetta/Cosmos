@@ -190,7 +190,7 @@ impl LogicBlock {
     /// Returns an iterator over every wire color ID any wire face of this block connects to.
     ///
     /// Returns the iterator over all wire color IDs if any of the faces are logic bus.
-    pub fn wire_face_colors<'a>(&'a self, logic_wire_colors: &'a Registry<LogicWireColor>) -> Box<dyn Iterator<Item = u16> + '_> {
+    pub fn wire_face_colors<'a>(&'a self, logic_wire_colors: &'a Registry<LogicWireColor>) -> Box<dyn Iterator<Item = u16> + 'a> {
         if self.faces_with(Some(LogicConnection::Wire(WireType::Bus))).next().is_some() {
             Box::new(logic_wire_colors.all_ids())
         } else {
@@ -312,7 +312,10 @@ impl QueueLogicOutputEvent {
 }
 
 #[derive(Component, Clone, Copy, Reflect, PartialEq, Eq, Debug, Default)]
-/// The logic signal this block is holding. Note: each block might interact with this data slightly differently.
+/// The logic signal this block is holding.
+///
+/// NOTE: Each block might interact with this data slightly differently.
+///
 /// Usually, a block with an output port will calculate this value the frame before outputting it and store it here.
 pub struct BlockLogicData(pub i32);
 
