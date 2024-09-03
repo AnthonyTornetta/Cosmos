@@ -1,10 +1,10 @@
 //! Responsible for spawning planets near stars, but for now just spawns a planet at 0, 0, 0.
 
-use std::time::Duration;
+use std::{f32::consts::TAU, time::Duration};
 
 use bevy::{
     core::Name,
-    math::Quat,
+    math::{Dir3, Quat},
     prelude::{
         in_state, App, Commands, Component, Deref, DerefMut, DespawnRecursiveExt, Entity, IntoSystemConfigs, Query, Res, ResMut, Resource,
         Update, Vec3, With,
@@ -53,6 +53,7 @@ fn monitor_planets_to_spawn(
     mut query: Query<(Entity, &mut PlanetSpawnerAsyncTask)>,
     mut commands: Commands,
     mut sectors_cache: ResMut<CachedSectors>,
+    server_seed: Res<ServerSeed>,
 ) {
     let Ok((entity, mut task)) = query.get_single_mut() else {
         return;
@@ -72,7 +73,12 @@ fn monitor_planets_to_spawn(
 
             builder.insert_planet(&mut entity_cmd, loc, &mut structure, Planet::new(temperature));
 
-            entity_cmd.insert((structure, BundleStartingRotation(Quat::from_axis_angle(Vec3::X, 0.9))));
+            let mut rng = get_rng_for_sector(&server_seed, &loc.sector);
+
+            let angle = rng.gen::<f32>() % TAU;
+            let axis = Dir3::new(Vec3::new(rng.gen(), rng.gen(), rng.gen()).normalize_or_zero()).unwrap_or(Dir3::Y);
+
+            entity_cmd.insert((structure, BundleStartingRotation(Quat::from_axis_angle(*axis, angle))));
         }
 
         *sectors_cache = cache;

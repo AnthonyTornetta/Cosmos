@@ -60,7 +60,7 @@ fn add_planet_rotation(
         let mut rng = get_rng_for_sector(&server_seed, &location.sector);
 
         commands.entity(ent).insert(PlanetRotation {
-            duration_per_revolution: Duration::from_mins(rng.gen_range(4..=5)),
+            duration_per_revolution: Duration::from_mins(rng.gen_range(20..=60)),
             axis: Dir3::new(Vec3::new(rng.gen(), rng.gen(), rng.gen()).normalize_or_zero()).unwrap_or(Dir3::Y),
         });
     }

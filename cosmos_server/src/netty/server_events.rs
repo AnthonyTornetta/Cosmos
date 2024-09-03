@@ -20,7 +20,6 @@ use cosmos_core::physics::location::{Location, Sector};
 use cosmos_core::physics::player_world::WorldWithin;
 use cosmos_core::registry::identifiable::Identifiable;
 use cosmos_core::registry::Registry;
-use cosmos_core::structure::chunk::CHUNK_DIMENSIONSF;
 use cosmos_core::{entities::player::Player, netty::netty_rigidbody::NettyRigidBody};
 use renet2_visualizer::RenetServerVisualizer;
 
@@ -101,7 +100,7 @@ pub(super) fn handle_server_events(
                 let player_entity = commands.spawn_empty().id();
 
                 let player = Player::new(name.clone(), client_id);
-                let starting_pos = Vec3::new(0.0, CHUNK_DIMENSIONSF * 70.0 / 2.0, 0.0);
+                let starting_pos = Vec3::new(0.0, 1900.0, 0.0);
                 let location = Location::new(starting_pos, Sector::new(25, 25, 25));
                 let velocity = Velocity::default();
                 let inventory = generate_player_inventory(player_entity, &items, &mut commands, &needs_data);
