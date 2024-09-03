@@ -48,14 +48,13 @@ fn align_player(
 
     if let Some((planet_ent, loc, ge, planet_g_trans)) = best_planet {
         let relative_position = loc.relative_coords_to(location);
+        let planet_rotation = Quat::from_affine3(&planet_g_trans.affine());
+        let relative_position = planet_rotation.inverse() * relative_position;
 
         let dist = relative_position.abs().max_element();
 
         if dist <= ge.radius {
-            let planet_rotation = Quat::from_affine3(&planet_g_trans.affine());
-            let relative_position = planet_rotation.inverse() * relative_position;
             let face = Planet::planet_face_relative(relative_position);
-
             if let Some(a) = alignment {
                 let old_atlas = match face {
                     BlockFace::Back | BlockFace::Front => Axis::Z,

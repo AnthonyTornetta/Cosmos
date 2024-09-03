@@ -37,7 +37,7 @@ fn gravity_system(
                 let ratio = ((radius * radius) / (dist * dist)).min(1.0);
 
                 if ratio >= 0.9 {
-                    let face = Planet::planet_face_relative(relative_position);
+                    let face = Planet::planet_face_relative(rotation.inverse() * relative_position);
 
                     let grav_dir = -(*rotation * face.direction().to_vec3());
 
