@@ -33,7 +33,7 @@ pub(crate) fn process_player_movement(
 ) {
     let any_open_menus = !q_show_cursor.is_empty();
 
-    let Ok(cam_g_trans) = q_camera_trans.get_single() else {
+    let Ok(cam_trans) = cam_query.get_single() else {
         return;
     };
 
@@ -46,9 +46,26 @@ pub(crate) fn process_player_movement(
         };
 
         // All relative to player
-        let mut forward = *cam_g_trans.forward();
-        let mut right = *cam_g_trans.right();
-        let mut up = *player_transform.up();
+        // let mut forward = *cam_g_trans.forward();
+        // let mut right = *cam_g_trans.right();
+        // let up = *player_transform.up();
+
+        let player_rot = Quat::from_affine3(&player_transform.affine());
+        let player_inv_rot = player_rot.inverse();
+
+        // forward = player_inv_rot * forward;
+        // forward.y = 0.0;
+        // forward = player_rot * forward;
+        // right = player_inv_rot * right;
+        // right.y = 0.0;
+        // right = player_rot * right;
+
+        let mut forward = *cam_trans.forward(); //Vec3::NEG_Z;
+        let mut right = *cam_trans.right();
+        let up = Vec3::Y;
+
+        forward.y = 0.0;
+        right.y = 0.0;
 
         // if let Some(player_alignment) = player_alignment {
         //     let aligned_rot = player_alignment
@@ -80,25 +97,26 @@ pub(crate) fn process_player_movement(
         //     right = aligned_rot * right;
         // }
 
-        forward = forward.normalize_or_zero() * 10.0;
-        right = right.normalize_or_zero() * 10.0;
+        forward = forward.normalize_or_zero() * 100.0;
+        right = right.normalize_or_zero() * 100.0;
         let movement_up = up.normalize_or_zero() * 2.0;
 
         let time = time.delta_seconds();
+        //
+        // let parent_rot = parent_query
+        //     .get(ent)
+        //     .map(|x| Some(x.get()))
+        //     .unwrap_or(player_alignment.map(|x| x.aligned_to).unwrap_or(None))
+        //     .map(|p| {
+        //         q_global_transform
+        //             .get(p)
+        //             .map(|x| Quat::from_affine3(&x.affine()))
+        //             .unwrap_or(Quat::IDENTITY)
+        //     })
+        //     .unwrap_or(Quat::IDENTITY);
+        //
 
-        let parent_rot = parent_query
-            .get(ent)
-            .map(|x| Some(x.get()))
-            .unwrap_or(player_alignment.map(|x| x.aligned_to).unwrap_or(None))
-            .map(|p| {
-                q_global_transform
-                    .get(p)
-                    .map(|x| Quat::from_affine3(&x.affine()))
-                    .unwrap_or(Quat::IDENTITY)
-            })
-            .unwrap_or(Quat::IDENTITY);
-
-        let mut new_linvel = velocity.linvel; //parent_rot.inverse().mul_vec3(velocity.linvel);
+        let mut new_linvel = player_inv_rot * velocity.linvel; //parent_rot.inverse().mul_vec3(velocity.linvel);
 
         if !any_open_menus {
             if input_handler.check_pressed(CosmosInputs::MoveForward) {
@@ -170,8 +188,21 @@ pub(crate) fn process_player_movement(
         // } else if new_linvel.dot(new_linvel) > max_speed * max_speed {
         //     new_linvel = new_linvel.normalize() * max_speed;
         // }
+        if player_alignment.is_some() {
+            let y = new_linvel.y;
 
-        velocity.linvel = new_linvel; //parent_rot.mul_vec3(new_linvel);
+            new_linvel.y = 0.0;
+
+            if new_linvel.dot(new_linvel) > max_speed * max_speed {
+                new_linvel = new_linvel.normalize_or_zero() * max_speed;
+            }
+
+            new_linvel.y = y;
+        } else if new_linvel.dot(new_linvel) > max_speed * max_speed {
+            new_linvel = new_linvel.normalize_or_zero() * max_speed;
+        }
+
+        velocity.linvel = player_rot * new_linvel; //parent_rot.mul_vec3(new_linvel);
     }
 }
 
