@@ -1,12 +1,12 @@
 use bevy::{
-    app::{FixedUpdate, Update},
+    app::Update,
     math::{Quat, Vec3},
     prelude::{App, Commands, Component, Entity, IntoSystemConfigs, Parent, Query, Transform, With, Without},
 };
 use cosmos_core::{
     netty::{client::LocalPlayer, system_sets::NetworkingSystemsSet},
     physics::location::Location,
-    prelude::{Planet, Structure, StructureTypeSet},
+    prelude::{Planet, Structure},
 };
 
 #[derive(Component, Debug, Clone, Copy)]
