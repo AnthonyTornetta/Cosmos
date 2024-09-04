@@ -29,6 +29,7 @@ pub mod biosphere;
 pub mod client_planet_builder;
 pub mod generation;
 mod lods;
+mod rotate_around_planet;
 
 // #[cfg(debug_assertions)]
 const RENDER_DISTANCE: UnboundCoordinateType = 2;
@@ -178,6 +179,7 @@ pub(super) fn register(app: &mut App) {
     align_player::register(app);
     biosphere::register(app);
     // lod::register(app);
+    rotate_around_planet::register(app);
     lods::register(app);
     generation::register(app);
 
