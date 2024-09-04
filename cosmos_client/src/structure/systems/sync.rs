@@ -145,7 +145,13 @@ fn replication_listen_netty(
                     grav_well.structure_entity = structure_entity;
 
                     ecmds
-                        .insert((grav_well, PlayerAlignment(align_player::Axis::Y)))
+                        .insert((
+                            grav_well,
+                            PlayerAlignment {
+                                axis: align_player::Axis::Y,
+                                aligned_to: None,
+                            },
+                        ))
                         .set_parent(structure_entity);
                 } else {
                     ecmds.remove::<GravityWell>();

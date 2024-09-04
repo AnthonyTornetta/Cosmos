@@ -103,7 +103,7 @@ fn bounce_events(mut event_reader: EventReader<RequestChunkBouncer>, mut event_w
 fn get_requested_chunk(
     mut event_reader: EventReader<RequestChunkEvent>,
     players: Query<&Location, With<Player>>,
-    mut q_structure: Query<(&mut Structure, &Location), With<Planet>>,
+    mut q_structure: Query<(&mut Structure, &Location, &GlobalTransform), With<Planet>>,
     mut event_writer: EventWriter<RequestChunkBouncer>,
     mut server: ResMut<RenetServer>,
     mut commands: Commands,
@@ -133,15 +133,20 @@ fn get_requested_chunk(
         // .collect::<Vec<RequestChunkEvent>>()
         // .par_iter()
         .for_each(|((structure_entity, chunk_coords), client_ids)| {
-            if let Ok((structure, loc)) = q_structure.get(structure_entity) {
+            if let Ok((structure, loc, structure_g_trans)) = q_structure.get(structure_entity) {
                 let cpos = structure.chunk_relative_position(chunk_coords);
 
-                let chunk_loc = *loc + cpos;
+                let structure_rot = Quat::from_affine3(&structure_g_trans.affine());
+                let chunk_rel_pos = structure_rot.mul_vec3(cpos);
 
                 // If no players are in range, do not send this chunk.
-                if !players.iter().any(|player| {
-                    player.relative_coords_to(&chunk_loc).abs().max_element() / CHUNK_DIMENSIONSF < (RENDER_DISTANCE + 1) as f32
-                }) {
+                if !players
+                    .iter()
+                    .map(|player_loc| Vec3::from(*player_loc - *loc))
+                    .any(|player_rel_pos| {
+                        (player_rel_pos - chunk_rel_pos).abs().max_element() / CHUNK_DIMENSIONSF < (RENDER_DISTANCE + 1) as f32
+                    })
+                {
                     return;
                 }
 
@@ -230,7 +235,7 @@ fn get_requested_chunk(
     }
 
     for (structure_entity, chunk_coords, client_ids) in todo.lock().expect("Failed to lock").take().unwrap() {
-        let Ok((mut structure, _)) = q_structure.get_mut(structure_entity) else {
+        let Ok((mut structure, _, _)) = q_structure.get_mut(structure_entity) else {
             continue;
         };
 
@@ -251,32 +256,43 @@ const RENDER_DISTANCE: UnboundCoordinateType = 2;
 // #[cfg(not(debug_assertions))]
 // const RENDER_DISTANCE: UnboundCoordinateType = 4;
 
+fn find_player_planet_location<'a>(
+    q_planets: &'a mut Query<(&Location, &mut Structure, Entity, &GlobalTransform), With<Planet>>,
+    player_location: &Location,
+) -> Option<(UnboundChunkCoordinate, Mut<'a, Structure>, Entity)> {
+    let mut best_planet = None;
+    let mut best_dist = f32::INFINITY;
+    for (location, structure, entity, planet_g_trans) in q_planets.iter_mut() {
+        let dist = location.distance_sqrd(player_location);
+        if dist < best_dist {
+            best_dist = dist;
+            best_planet = Some((location, structure, entity, planet_g_trans));
+        }
+    }
+
+    if let Some((location, best_planet, entity, planet_g_trans)) = best_planet {
+        let player_relative_position: Vec3 = (*player_location - *location).into();
+        let player_relative_position = Quat::from_affine3(&planet_g_trans.affine())
+            .inverse()
+            .mul_vec3(player_relative_position);
+
+        let ub_coords =
+            best_planet.relative_coords_to_local_coords(player_relative_position.x, player_relative_position.y, player_relative_position.z);
+
+        let ub_chunk_coords = UnboundChunkCoordinate::for_unbound_block_coordinate(ub_coords);
+        Some((ub_chunk_coords, best_planet, entity))
+    } else {
+        None
+    }
+}
+
 fn generate_chunks_near_players(
     players: Query<&Location, With<Player>>,
-    mut planets: Query<(&Location, &mut Structure, Entity), With<Planet>>,
+    mut q_planets: Query<(&Location, &mut Structure, Entity, &GlobalTransform), With<Planet>>,
     mut commands: Commands,
 ) {
-    for player in players.iter() {
-        let mut best_planet = None;
-        let mut best_dist = f32::INFINITY;
-        for (location, structure, entity) in planets.iter_mut() {
-            let dist = location.distance_sqrd(player);
-            if dist < best_dist {
-                best_dist = dist;
-                best_planet = Some((location, structure, entity));
-            }
-        }
-
-        if let Some((location, mut best_planet, entity)) = best_planet {
-            let player_relative_position: Vec3 = (*player - *location).into();
-            let ub_coords = best_planet.relative_coords_to_local_coords(
-                player_relative_position.x,
-                player_relative_position.y,
-                player_relative_position.z,
-            );
-
-            let ub_chunk_coords = UnboundChunkCoordinate::for_unbound_block_coordinate(ub_coords);
-
+    for player_location in players.iter() {
+        if let Some((ub_chunk_coords, mut best_planet, planet_entity)) = find_player_planet_location(&mut q_planets, player_location) {
             let rd = RENDER_DISTANCE;
 
             let iterator = best_planet.chunk_iter(
@@ -296,7 +312,7 @@ fn generate_chunks_near_players(
             }
 
             for coords in chunks {
-                mark_chunk_for_generation(&mut best_planet, &mut commands, coords, entity);
+                mark_chunk_for_generation(&mut best_planet, &mut commands, coords, planet_entity);
             }
         }
     }
@@ -323,12 +339,13 @@ fn mark_chunk_for_generation(structure: &mut Structure, commands: &mut Commands,
 
 fn unload_chunks_far_from_players(
     players: Query<&Location, With<Player>>,
-    mut planets: Query<(&Location, &mut Structure, Entity, Option<&EntityId>), With<Planet>>,
+    mut q_planets: Query<(&Location, &mut Structure, Entity, &GlobalTransform), With<Planet>>,
+    q_entity_id: Query<&EntityId>,
     mut event_writer: EventWriter<ChunkUnloadEvent>,
     mut commands: Commands,
 ) {
     let mut chunks_to_unload = HashMap::<Entity, HashSet<ChunkCoordinate>>::new();
-    for (_, planet, entity, _) in planets.iter() {
+    for (_, planet, entity, _) in q_planets.iter() {
         let mut set = HashSet::new();
 
         for chunk in planet.all_chunks_iter(false) {
@@ -347,27 +364,8 @@ fn unload_chunks_far_from_players(
         chunks_to_unload.insert(entity, set);
     }
 
-    for player in players.iter() {
-        let mut best_planet = None;
-        let mut best_dist = f32::INFINITY;
-        for (location, structure, entity, entity_id) in planets.iter_mut() {
-            let dist = location.distance_sqrd(player);
-            if dist < best_dist {
-                best_dist = dist;
-                best_planet = Some((location, structure, entity, entity_id));
-            }
-        }
-
-        if let Some((location, best_planet, entity, _)) = best_planet {
-            let player_relative_position: Vec3 = (*player - *location).into();
-            let ub_coords = best_planet.relative_coords_to_local_coords(
-                player_relative_position.x,
-                player_relative_position.y,
-                player_relative_position.z,
-            );
-
-            let ub_chunk_coords = UnboundChunkCoordinate::for_unbound_block_coordinate(ub_coords);
-
+    for player_location in players.iter() {
+        if let Some((ub_chunk_coords, best_planet, planet_entity)) = find_player_planet_location(&mut q_planets, player_location) {
             let rd = RENDER_DISTANCE + 1;
 
             let iterator = best_planet.chunk_iter(
@@ -376,7 +374,7 @@ fn unload_chunks_far_from_players(
                 true,
             );
 
-            let set = chunks_to_unload.get_mut(&entity).expect("This was just added");
+            let set = chunks_to_unload.get_mut(&planet_entity).expect("This was just added");
 
             for res in iterator {
                 let chunk_position = match res {
@@ -389,11 +387,13 @@ fn unload_chunks_far_from_players(
         }
     }
 
-    for (planet, chunk_coords) in chunks_to_unload {
-        if let Ok((location, mut structure, _, entity_id)) = planets.get_mut(planet) {
+    for (planet_entity, chunk_coords) in chunks_to_unload {
+        if let Ok((location, mut structure, _, _)) = q_planets.get_mut(planet_entity) {
             let mut needs_id = false;
 
-            let entity_id = if let Some(x) = entity_id {
+            let entity_id = q_entity_id.get(planet_entity);
+
+            let entity_id = if let Ok(x) = entity_id {
                 x.clone()
             } else {
                 needs_id = true;
@@ -435,7 +435,7 @@ fn unload_chunks_far_from_players(
             }
 
             if needs_id {
-                commands.entity(planet).insert((entity_id, NeedsSaved));
+                commands.entity(planet_entity).insert((entity_id, NeedsSaved));
             }
         }
     }

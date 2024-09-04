@@ -61,7 +61,39 @@ If you want to view the ordering of the systems, run (on linux) `cargo run --fea
 
 See [the issues page](https://github.com/AnthonyTornetta/Cosmos/issues) for the list of current features/bugs in development.
 
-## Release 0.0.6a (In Progress)
+## Release 0.0.7a (In Progress)
+- [ ] Wires
+  - [ ] Electrical
+- [ ] Galaxy map
+  - [ ] Able to view stars
+  - [ ] Zoom in to view planets
+  - [ ] Set waypoint
+- [x] Rotating Planet
+- [ ] Biosphere Improvements
+  - [ ] Ice biosphere glaciers
+  - [ ] Better Water block
+  - [ ] Better Lava block
+  - [ ] Structures
+    - [ ] Rocks spawning
+    - [ ] Undergrowth
+    - [ ] 1 More tree type
+  - [ ] Groundwork for biomes
+    - [ ] Planes
+    - [ ] Redwood forest
+    - [ ] 1 Additional forest
+    - [ ] Ocean
+  - [ ] On-planet skybox (maybe)
+    - [ ] Sun-side skybox
+      - [ ] Perhaps done via a sphere surrounding the planet that always faces the nearest star
+    - [ ] Sun-set skybox
+    - [ ] Night-side skybox
+  - [ ] Volumetric lighting on planets
+- [ ] Dropped item entity
+  - [ ] When storage is broken, drop items on ground
+  - [ ] If not enough inventory room when player is mining something, drop item
+- [ ] Fix missing chunks on planets
+
+## Release 0.0.6a
 - [x] Place rotated blocks
 - [x] Add main menu
   - [x] Customizable settings
@@ -83,6 +115,9 @@ See [the issues page](https://github.com/AnthonyTornetta/Cosmos/issues) for the 
       - [x] Change Settings
       - [x] Disconnect
       - [x] Quit Game
+- [x] LOD Fixes
+  - [x] Consolidate LOD + Normal chunk rendering into one source of truth
+  - [x] LOD performance improvements via combining meshes + culling sides
 - [x] Block data
   - [x] Storable fluids
 - [x] Item data
@@ -103,39 +138,6 @@ See [the issues page](https://github.com/AnthonyTornetta/Cosmos/issues) for the 
 - [x] Remove bevy system ambiguities
 - [x] Support NxN texture loading (where n is power of 2)
 - [x] Update to bevy 0.14
-
-## Release 0.0.7a
-- [ ] Wires
-  - [ ] Electrical
-- [ ] Galaxy map
-  - [ ] Able to view stars
-  - [ ] Zoom in to view planets
-  - [ ] Set waypoint
-- [ ] Biosphere Improvements
-  - [ ] Ice biosphere glaciers
-  - [ ] Better Water block
-  - [ ] Better Lava block
-  - [ ] Structures
-    - [ ] Rocks spawning
-    - [ ] Undergrowth
-    - [ ] 1 More tree type
-  - [ ] Groundwork for biomes
-    - [ ] Planes
-    - [ ] Redwood forest
-    - [ ] 1 Additional forest
-    - [ ] Ocean
-  - [ ] On-planet skybox (maybe)
-    - [ ] Sun-side skybox
-      - [ ] Perhaps done via a sphere surrounding the planet that always faces the nearest star
-    - [ ] Sun-set skybox
-    - [ ] Night-side skybox
-  - [ ] Volumetric lighting on planets
-- [ ] LOD Fixes
-  - [ ] Consolidate LOD + Normal chunk rendering into one source of truth
-  - [ ] LOD performance improvements via combining meshes + culling sides
-- [ ] Dropped item entity
-  - [ ] When storage is broken, drop items on ground
-  - [ ] If not enough inventory room when player is mining something, drop item
 
 ## Release 0.0.5a
 - [x] Add a gravity well block
@@ -369,7 +371,17 @@ See [the issues page](https://github.com/AnthonyTornetta/Cosmos/issues) for the 
 - [x] Add Crosshair
 - [x] Support re-sizable window
 
-## Everything that will still have to be done after 0.0.6a
+## Release 0.0.8a
+- [ ] More pirate ships
+- [ ] More asteroid types
+- [ ] Fuel for reactor
+- [ ] Performance fixes
+- [ ] Fix server instability
+- [ ] Reduce amount of packets server sends per second
+- [ ] Rebalance shop prices
+- [ ] Add more randomly generated structures (e.g. stations)
+
+## Everything that will still have to be done after 0.0.7a
 - [ ] Shops
   - [ ] Peace zone?
   - [ ] Prices based on supply + rarity
