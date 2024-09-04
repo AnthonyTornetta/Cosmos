@@ -15,7 +15,7 @@ use bevy::{
 use cosmos_core::{
     netty::{sync::IdentifiableComponent, system_sets::NetworkingSystemsSet},
     physics::location::Location,
-    prelude::{Planet, Structure, StructureTypeSet},
+    prelude::{Planet, Structure},
 };
 use rand::Rng;
 use serde::{Deserialize, Serialize};
@@ -89,7 +89,7 @@ fn add_planet_rotation(
         let mut rng = get_rng_for_sector(&server_seed, &location.sector);
 
         commands.entity(ent).insert(PlanetRotation {
-            duration_per_revolution: Duration::from_mins(rng.gen_range(1..=1)),
+            duration_per_revolution: Duration::from_mins(rng.gen_range(40..=180)),
             axis: Dir3::new(Vec3::new(rng.gen(), rng.gen(), rng.gen()).normalize_or_zero()).unwrap_or(Dir3::Y),
         });
     }
