@@ -109,7 +109,6 @@ fn load_planet_chunks(
     for coordinate in chunks {
         best_planet.set_chunk(Chunk::new(coordinate));
 
-        println!("Requesting chunk @ {coordinate:?}");
         client.send_message(
             NettyChannelClient::Reliable,
             cosmos_encoder::serialize(&ClientReliableMessages::SendSingleChunk {
