@@ -62,10 +62,14 @@ fn rotate_planets(
     time: Res<Time>,
 ) {
     for (planet_rotation, mut transform, planet_loc, structure) in q_planets.iter_mut() {
-        let delta_rot = Quat::from_axis_angle(
-            *planet_rotation.axis,
-            TAU * time.delta_seconds() / planet_rotation.duration_per_revolution.as_secs_f32(),
-        );
+        let delta_rot = if planet_rotation.duration_per_revolution != Duration::ZERO {
+            Quat::from_axis_angle(
+                *planet_rotation.axis,
+                TAU * time.delta_seconds() / planet_rotation.duration_per_revolution.as_secs_f32(),
+            )
+        } else {
+            Quat::IDENTITY
+        };
 
         transform.rotation = delta_rot * transform.rotation;
 
