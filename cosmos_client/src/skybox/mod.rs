@@ -2,9 +2,7 @@
 
 use bevy::{
     asset::LoadState,
-    color::palettes::css,
     core_pipeline::Skybox,
-    pbr::{NotShadowCaster, NotShadowReceiver},
     prelude::*,
     render::render_resource::{TextureViewDescriptor, TextureViewDimension},
 };
@@ -29,14 +27,6 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
         image_handle: skybox_handle,
     });
 }
-
-// fn added_skybox(mut query: Query<&mut Skybox, Added<Skybox>>, cubemap: Res<Cubemap>) {
-//     for mut skybox in query.iter_mut() {
-//         if cubemap.is_loaded {
-//             skybox.image = cubemap.image_handle.clone();
-//         }
-//     }
-// }
 
 fn asset_loaded(asset_server: Res<AssetServer>, mut images: ResMut<Assets<Image>>, mut cubemap: ResMut<Cubemap>) {
     if !cubemap.is_loaded && asset_server.get_load_state(cubemap.image_handle.id()) == Some(LoadState::Loaded) {
@@ -64,36 +54,9 @@ fn on_enter_playing_state(cubemap: Res<Cubemap>, mut commands: Commands, query: 
     }
 }
 
-fn spawn_planet_skysphere(mut meshes: ResMut<Assets<Mesh>>, mut materials: ResMut<Assets<StandardMaterial>>, mut commands: Commands) {
-    commands.spawn((
-        Name::new("Planet skybox"),
-        NotShadowCaster,
-        NotShadowReceiver,
-        PbrBundle {
-            mesh: meshes.add(Sphere {
-                radius: 1_000_000.0,
-                ..Default::default()
-            }),
-            material: materials.add(StandardMaterial {
-                unlit: true,
-                base_color: css::SKY_BLUE.into(),
-                alpha_mode: AlphaMode::Blend,
-                ..Default::default()
-            }),
-            transform: Transform {
-                // By setting the scale to -1, the model will be inverted, which is good since we
-                // want to see it while being inside of it.
-                scale: Vec3::NEG_ONE,
-                ..Default::default()
-            },
-            ..Default::default()
-        },
-    ));
-}
-
 pub(super) fn register(app: &mut App) {
     app //.add_plugin(MaterialPlugin::<CubemapMaterial>::default())
         .add_systems(Startup, setup)
         .add_systems(Update, (asset_loaded).chain())
-        .add_systems(OnEnter(GameState::Playing), (spawn_planet_skysphere, on_enter_playing_state));
+        .add_systems(OnEnter(GameState::Playing), on_enter_playing_state);
 }
