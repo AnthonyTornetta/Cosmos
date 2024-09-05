@@ -456,6 +456,12 @@ pub(crate) fn client_sync_players(
                         ))
                         .with_children(|parent| {
                             parent.spawn((
+                                // FogSettings {
+                                //     color: css::SKY_BLUE.into(),
+                                //     falloff: FogFalloff::Exponential { density: 0.01 },
+                                //
+                                //     ..Default::default()
+                                // },
                                 Camera3dBundle {
                                     camera: Camera {
                                         hdr: true,
