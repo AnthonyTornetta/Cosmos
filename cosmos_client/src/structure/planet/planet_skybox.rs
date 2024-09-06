@@ -8,9 +8,12 @@ use cosmos_core::{
     physics::location::Location,
     prelude::{Planet, Structure},
     structure::planet::planet_atmosphere::PlanetAtmosphere,
+    universe::star::Star,
 };
 
 use crate::state::game_state::GameState;
+
+use super::align_player::PlayerAlignment;
 
 #[derive(Component)]
 struct PlanetSkybox;
@@ -45,12 +48,13 @@ fn spawn_planet_skysphere(mut meshes: ResMut<Assets<Mesh>>, mut materials: ResMu
 }
 
 fn color_planet_skybox(
+    q_star_loc: Query<&Location, With<Star>>,
     mut q_planet_skybox: Query<(&mut Visibility, &Handle<StandardMaterial>), With<PlanetSkybox>>,
-    q_planets: Query<(&Location, &PlanetAtmosphere, &Structure), With<Planet>>,
-    q_player: Query<&Location, With<LocalPlayer>>,
+    q_planets: Query<(&Location, &PlanetAtmosphere, &Structure, &GlobalTransform), With<Planet>>,
+    q_player: Query<(&Location, &PlayerAlignment), With<LocalPlayer>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
-    let Ok(player_loc) = q_player.get_single() else {
+    let Ok((player_loc, player_alignment)) = q_player.get_single() else {
         return;
     };
 
@@ -58,7 +62,8 @@ fn color_planet_skybox(
         return;
     };
 
-    let Some((closest_planet_loc, atmosphere, structure)) = q_planets.iter().min_by_key(|x| x.0.distance_sqrd(player_loc).round() as u64)
+    let Some((closest_planet_loc, atmosphere, structure, planet_g_trans)) =
+        q_planets.iter().min_by_key(|x| x.0.distance_sqrd(player_loc).round() as u64)
     else {
         *vis = Visibility::Hidden;
         return;
@@ -69,10 +74,31 @@ fn color_planet_skybox(
     let dist_to_planet = closest_planet_loc.distance_sqrd(player_loc).sqrt();
     let planet_radius = structure.block_dimensions().x as f32 / 2.0;
 
+    let closest_star = q_star_loc.iter().min_by_key(|x| x.distance_sqrd(player_loc) as u64);
+
     // Fades out the alpha has you get further away from the planet
     //
     // 12800 is a random number I made up, feel free to adjust.
-    let new_alpha = 12800.0_f32.powf((planet_radius / dist_to_planet).powf(2.0) - 1.0).min(1.0);
+    let mut new_alpha = 12800.0_f32.powf((planet_radius / dist_to_planet).powf(2.0) - 1.0).min(1.0);
+
+    if let Some(closest_star) = closest_star {
+        let star_direction = Vec3::from(*closest_star - *player_loc).normalize_or_zero();
+        let planet_rot = Quat::from_affine3(&planet_g_trans.affine());
+        let planet_face_direction = planet_rot
+            * Planet::planet_face_relative(planet_rot.inverse() * Vec3::from(*player_loc - *closest_planet_loc))
+                .direction()
+                .to_vec3();
+
+        let dot = star_direction.dot(planet_face_direction);
+        const BEGIN_FADE: f32 = 0.2;
+        if dot < BEGIN_FADE {
+            new_alpha += 2.0 * (dot - BEGIN_FADE);
+            new_alpha = new_alpha.max(0.0);
+        }
+    } else {
+        new_alpha = 0.0;
+    }
+
     color.set_alpha(new_alpha);
 
     if color.alpha() < 0.001 {
