@@ -13,8 +13,6 @@ use cosmos_core::{
 
 use crate::state::game_state::GameState;
 
-use super::align_player::PlayerAlignment;
-
 #[derive(Component)]
 struct PlanetSkybox;
 
@@ -51,10 +49,10 @@ fn color_planet_skybox(
     q_star_loc: Query<&Location, With<Star>>,
     mut q_planet_skybox: Query<(&mut Visibility, &Handle<StandardMaterial>), With<PlanetSkybox>>,
     q_planets: Query<(&Location, &PlanetAtmosphere, &Structure, &GlobalTransform), With<Planet>>,
-    q_player: Query<(&Location, &PlayerAlignment), With<LocalPlayer>>,
+    q_player: Query<&Location, With<LocalPlayer>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
-    let Ok((player_loc, player_alignment)) = q_player.get_single() else {
+    let Ok(player_loc) = q_player.get_single() else {
         return;
     };
 
