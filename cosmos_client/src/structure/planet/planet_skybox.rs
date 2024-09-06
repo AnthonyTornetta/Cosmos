@@ -60,6 +60,7 @@ fn color_planet_skybox(
 
     let Some((closest_planet_loc, atmosphere, structure)) = q_planets.iter().min_by_key(|x| x.0.distance_sqrd(player_loc).round() as u64)
     else {
+        *vis = Visibility::Hidden;
         return;
     };
 

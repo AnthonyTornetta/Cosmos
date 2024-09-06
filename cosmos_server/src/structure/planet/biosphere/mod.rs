@@ -28,7 +28,7 @@ use cosmos_core::{
                 biome::{Biome, BiosphereBiomesRegistry},
                 terrain_generation::GpuPermutationTable,
             },
-            planet_color::PlanetAtmosphere,
+            planet_atmosphere::PlanetAtmosphere,
             Planet,
         },
         Structure,
