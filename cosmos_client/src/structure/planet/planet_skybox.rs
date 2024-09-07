@@ -24,7 +24,7 @@ fn spawn_planet_skysphere(mut meshes: ResMut<Assets<Mesh>>, mut materials: ResMu
         NotShadowReceiver,
         PbrBundle {
             mesh: meshes.add(Sphere {
-                radius: 1_000_000.0,
+                radius: 5_000_000.0,
                 ..Default::default()
             }),
             material: materials.add(StandardMaterial {
