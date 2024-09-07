@@ -169,7 +169,6 @@ pub(crate) fn unload_chunks_far_from_players(
         };
 
         for coordinate in chunks {
-            println!("Unloading chunk @ {coordinate:?}");
             planet.unload_chunk_at(coordinate, &mut commands, Some(&mut event_writer));
         }
     }
