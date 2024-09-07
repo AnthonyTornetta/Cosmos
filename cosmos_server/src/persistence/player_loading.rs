@@ -21,7 +21,7 @@ use cosmos_core::{
     physics::location::{Location, Sector, SectorUnit, SECTOR_DIMENSIONS},
 };
 use futures_lite::future;
-use walkdir::{DirEntry, WalkDir};
+use walkdir::WalkDir;
 
 use crate::state::GameState;
 
@@ -71,7 +71,8 @@ fn monitor_loading_task(
                     .entity_id()
                     .expect("A non-base SaveFileIdentifier was attempted to be loaded in load_near")
             }) {
-                commands.spawn((sfi, NeedsLoaded, Name::new("Needs Loaded Entity")));
+                let name = format!("Needs Loaded Entity - {:?}", sfi.entity_id());
+                commands.spawn((sfi, NeedsLoaded, Name::new(name)));
             }
         }
     }
@@ -177,17 +178,19 @@ fn load_near(
 
         let mut new_to_load = Vec::with_capacity(to_load.len());
         for sfi in to_load {
-            let child_dir = sfi.get_children_directory();
+            // TODO: Not sure why this exists... for now I'm keeping it, but remove this in the future.
 
-            for file in WalkDir::new(&child_dir)
-                .max_depth(1)
-                .into_iter()
-                .flatten()
-                .filter(|x| x.file_type().is_file())
-            {
-                load_all(sfi.clone(), file, &mut new_to_load);
-            }
-
+            // let child_dir = sfi.get_children_directory();
+            //
+            // for file in WalkDir::new(&child_dir)
+            //     .max_depth(1)
+            //     .into_iter()
+            //     .flatten()
+            //     .filter(|x| x.file_type().is_file())
+            // {
+            //     load_all(sfi.clone(), file, &mut new_to_load);
+            // }
+            //
             new_to_load.push(sfi);
         }
 
@@ -197,30 +200,32 @@ fn load_near(
     commands.spawn((Name::new("Loading near players async task"), LoadingTask(task)));
 }
 
-fn load_all(base: SaveFileIdentifier, file: DirEntry, to_load: &mut Vec<SaveFileIdentifier>) {
-    let path = file.path();
-
-    if path.extension() == Some(OsStr::new("cent")) {
-        let entity_information = path.file_stem().expect("Failed to get file stem").to_str().expect("to_str failed");
-
-        let entity_id = EntityId::new(entity_information.to_owned());
-
-        let sfi = SaveFileIdentifier::sub_entity(base, entity_id);
-
-        let child_dir = sfi.get_children_directory();
-
-        for file in WalkDir::new(child_dir)
-            .max_depth(1)
-            .into_iter()
-            .flatten()
-            .filter(|x| x.file_type().is_file())
-        {
-            load_all(sfi.clone(), file, to_load);
-        }
-
-        to_load.push(sfi);
-    }
-}
+// TODO: Goes with note above, not sure why this is here.
+//
+// fn load_all(base: SaveFileIdentifier, file: DirEntry, to_load: &mut Vec<SaveFileIdentifier>) {
+//     let path = file.path();
+//
+//     if path.extension() == Some(OsStr::new("cent")) {
+//         let entity_information = path.file_stem().expect("Failed to get file stem").to_str().expect("to_str failed");
+//
+//         let entity_id = EntityId::new(entity_information.to_owned());
+//
+//         let sfi = SaveFileIdentifier::sub_entity(base, entity_id);
+//
+//         let child_dir = sfi.get_children_directory();
+//
+//         for file in WalkDir::new(child_dir)
+//             .max_depth(1)
+//             .into_iter()
+//             .flatten()
+//             .filter(|x| x.file_type().is_file())
+//         {
+//             load_all(sfi.clone(), file, to_load);
+//         }
+//
+//         to_load.push(sfi);
+//     }
+// }
 
 pub(super) fn register(app: &mut App) {
     app.insert_resource(SectorsCache::default()).add_systems(

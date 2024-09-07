@@ -1,10 +1,5 @@
 //! Used to generate planets
 
-use std::sync::{
-    atomic::{AtomicI32, Ordering},
-    Mutex,
-};
-
 use bevy::{
     ecs::event::Event,
     prelude::*,
@@ -20,7 +15,7 @@ use cosmos_core::{
     },
     physics::location::Location,
     structure::{
-        chunk::{netty::SerializedBlockData, ChunkUnloadEvent, CHUNK_DIMENSIONSF},
+        chunk::{netty::SerializedBlockData, ChunkUnloadEvent},
         coordinates::{ChunkCoordinate, UnboundChunkCoordinate, UnboundCoordinateType},
         planet::Planet,
         structure_iterator::ChunkIteratorResult,
@@ -102,20 +97,15 @@ fn bounce_events(mut event_reader: EventReader<RequestChunkBouncer>, mut event_w
 /// Performance hot spot
 fn get_requested_chunk(
     mut event_reader: EventReader<RequestChunkEvent>,
-    players: Query<&Location, With<Player>>,
-    mut q_structure: Query<(&mut Structure, &Location, &GlobalTransform), With<Planet>>,
+    // players: Query<&Location, With<Player>>,
+    mut q_structure: Query<&mut Structure /*, &Location, &GlobalTransform*/, With<Planet>>,
     mut event_writer: EventWriter<RequestChunkBouncer>,
     mut server: ResMut<RenetServer>,
     mut commands: Commands,
 ) {
-    let todo = Mutex::new(Some(Vec::new()));
-    let serialized = Mutex::new(Some(Vec::new()));
-    let bounced = Mutex::new(Some(Vec::new()));
-
-    let non_empty_serializes = AtomicI32::new(0);
-    let empty_serializes = AtomicI32::new(0);
-
-    // let timer = UtilsTimer::start();
+    let mut todo = Vec::new();
+    let mut serialized = Vec::new();
+    let mut bounced = Vec::new();
 
     let mut requests = HashMap::new();
 
@@ -133,54 +123,37 @@ fn get_requested_chunk(
         // .collect::<Vec<RequestChunkEvent>>()
         // .par_iter()
         .for_each(|((structure_entity, chunk_coords), client_ids)| {
-            if let Ok((structure, loc, structure_g_trans)) = q_structure.get(structure_entity) {
-                let cpos = structure.chunk_relative_position(chunk_coords);
-
-                let structure_rot = Quat::from_affine3(&structure_g_trans.affine());
-                let chunk_rel_pos = structure_rot.mul_vec3(cpos);
-
-                // If no players are in range, do not send this chunk.
-                if !players
-                    .iter()
-                    .map(|player_loc| Vec3::from(*player_loc - *loc))
-                    .any(|player_rel_pos| {
-                        (player_rel_pos - chunk_rel_pos).abs().max_element() / CHUNK_DIMENSIONSF < (RENDER_DISTANCE + 1) as f32
-                    })
-                {
-                    return;
-                }
+            if let Ok(structure /*loc, structure_g_trans*/) = q_structure.get(structure_entity) {
+                // let cpos = structure.chunk_relative_position(chunk_coords);
+                //
+                // let structure_rot = Quat::from_affine3(&structure_g_trans.affine());
+                // let chunk_rel_pos = structure_rot.mul_vec3(cpos);
+                //
+                // // TODO: If no players are in range, do not send this chunk.
+                // //
+                // // Also...
+                // // TODO: We shold really ensure that the chunks a player is requesting are
+                // // valid chunks for that player to request - even if it's valid for one player it
+                // // may not be valid for the other.
+                // if !players
+                //     .iter()
+                //     .map(|player_loc| Vec3::from(*player_loc - *loc))
+                //     .any(|player_rel_pos| {
+                //         (player_rel_pos - chunk_rel_pos).abs().max_element() / CHUNK_DIMENSIONSF < (RENDER_DISTANCE + 1) as f32
+                //     })
+                // {
+                //     // TODO: We would have to send a denied message here, so the clients know to
+                //     // re-request the chunk.
+                //     return;
+                // }
 
                 match structure.get_chunk_state(chunk_coords) {
                     ChunkState::Loaded => {
                         if let Some(chunk) = structure.chunk_entity(chunk_coords) {
-                            // let mut mutex = serialized.lock().expect("Failed to lock");
-
-                            // let mut timer = UtilsTimer::start();
-                            // let _ = cosmos_encoder::serialize(chunk);
-                            // timer.log_duration("For bincode + compression:");
-                            // timer.reset();
-                            // let _ = bincode::serialize(chunk).unwrap();
-                            // timer.log_duration("For just bincode:");
-
-                            // mutex.as_mut().unwrap().push((
-                            //     ev.requester_id,
-                            //     cosmos_encoder::serialize(&ServerReliableMessages::ChunkData {
-                            //         structure_entity: ev.structure_entity,
-                            //         serialized_chunk: cosmos_encoder::serialize(chunk),
-                            //         serialized_block_data: 0,
-                            //     }),
-                            // ));
-
                             commands.entity(chunk).insert(ChunkNeedsSent { client_ids });
-
-                            non_empty_serializes.fetch_add(1, Ordering::SeqCst);
                         } else if structure.has_empty_chunk_at(chunk_coords) {
-                            let mut mutex = serialized.lock().expect("Failed to lock");
-
-                            let locked = mutex.as_mut().unwrap();
-
                             for client_id in client_ids {
-                                locked.push((
+                                serialized.push((
                                     client_id,
                                     cosmos_encoder::serialize(&ServerReliableMessages::EmptyChunk {
                                         structure_entity,
@@ -188,28 +161,18 @@ fn get_requested_chunk(
                                     }),
                                 ));
                             }
-
-                            empty_serializes.fetch_add(1, Ordering::SeqCst);
                         }
                     }
                     ChunkState::Loading => {
-                        let mut locked = bounced.lock().expect("Failed to lock");
-                        let locked = locked.as_mut().unwrap();
                         for client_id in client_ids {
-                            locked.push(RequestChunkBouncer(RequestChunkEvent {
+                            bounced.push(RequestChunkBouncer(RequestChunkEvent {
                                 chunk_coords,
                                 structure_entity,
                                 requester_id: client_id,
                             }));
                         }
                     }
-                    ChunkState::Unloaded => {
-                        todo.lock()
-                            .expect("Failed to lock")
-                            .as_mut()
-                            .unwrap()
-                            .push((structure_entity, chunk_coords, client_ids))
-                    }
+                    ChunkState::Unloaded => todo.push((structure_entity, chunk_coords, client_ids)),
                     ChunkState::Invalid => {
                         warn!("Client requested invalid chunk @ {}", chunk_coords);
                     }
@@ -217,25 +180,16 @@ fn get_requested_chunk(
             }
         });
 
-    // let non_empty_serializes = non_empty_serializes.into_inner();
-    // let empty_serializes = empty_serializes.into_inner();
-
-    // if non_empty_serializes != 0 || empty_serializes != 0 {
-    //     timer.log_duration(&format!(
-    //         "Time to serialize {non_empty_serializes} non-empty chunks & {empty_serializes} empty chunks:"
-    //     ));
-    // }
-
-    for bounce in bounced.lock().expect("Failed to lock").take().unwrap() {
+    for bounce in bounced {
         event_writer.send(bounce);
     }
 
-    for (client_id, serialized) in serialized.lock().expect("Failed to lock").take().unwrap() {
+    for (client_id, serialized) in serialized {
         server.send_message(client_id, NettyChannelServer::Reliable, serialized);
     }
 
-    for (structure_entity, chunk_coords, client_ids) in todo.lock().expect("Failed to lock").take().unwrap() {
-        let Ok((mut structure, _, _)) = q_structure.get_mut(structure_entity) else {
+    for (structure_entity, chunk_coords, client_ids) in todo {
+        let Ok(mut structure) = q_structure.get_mut(structure_entity) else {
             continue;
         };
 

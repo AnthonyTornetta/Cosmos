@@ -173,11 +173,17 @@ fn done_saving(
             continue;
         }
 
-        if loading_distance.is_none() {
+        if matches!(
+            save_file_identifier,
+            Some(SaveFileIdentifier {
+                identifier_type: SaveFileIdentifierType::Base(_, _, _)
+            })
+        ) && loading_distance.is_none()
+        {
             if let Some(name) = name {
-                warn!("Missing load distance for {name} {entity:?}");
+                warn!("Missing load distance for {name} {entity:?} w/ base savefileidentifier type!");
             } else {
-                warn!("Missing load distance for {entity:?}");
+                warn!("Missing load distance for {entity:?} w/ base savefileidentifier type!");
             }
 
             commands.entity(entity).log_components();

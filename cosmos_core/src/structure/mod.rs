@@ -10,7 +10,6 @@ use std::sync::{Arc, Mutex};
 
 use bevy::app::Update;
 use bevy::ecs::query::{QueryData, QueryFilter, ROQueryItem, With};
-use bevy::log::info;
 use bevy::prelude::{App, Event, IntoSystemConfigs, IntoSystemSetConfigs, Name, PreUpdate, SystemSet, VisibilityBundle};
 use bevy::reflect::Reflect;
 use bevy::transform::bundles::TransformBundle;
@@ -775,8 +774,6 @@ fn spawn_chunk_entity(
 
     if let Some(ent_link) = q_entity_link {
         entity_cmds.insert(*ent_link);
-    } else {
-        info!("No physics world for structure!");
     }
 
     let entity = entity_cmds.id();
