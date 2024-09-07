@@ -69,6 +69,7 @@ See [the issues page](https://github.com/AnthonyTornetta/Cosmos/issues) for the 
   - [ ] Zoom in to view planets
   - [ ] Set waypoint
 - [x] Rotating Planet
+  - [x] Planet Skybox
 - [ ] Biosphere Improvements
   - [ ] Ice biosphere glaciers
   - [ ] Better Water block
