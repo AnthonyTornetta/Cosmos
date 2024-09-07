@@ -3,6 +3,7 @@
 use std::marker::PhantomData;
 
 use bevy::{
+    color::palettes::css,
     log::{info, warn},
     prelude::{
         in_state, Added, App, Commands, Component, Entity, Event, EventReader, EventWriter, IntoSystemConfigs, IntoSystemSetConfigs, Query,
@@ -27,6 +28,7 @@ use cosmos_core::{
                 biome::{Biome, BiosphereBiomesRegistry},
                 terrain_generation::GpuPermutationTable,
             },
+            planet_atmosphere::PlanetAtmosphere,
             Planet,
         },
         Structure,
@@ -306,15 +308,19 @@ fn on_connect(
     }
 }
 
-// #[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
-// pub enum RegisterBiomesSet {
-//     RegisterBiomes,
-// }
+/// TODO: Put this not here.
+fn assign_planet_atmosphere(mut commands: Commands, q_needs_atmosphere: Query<Entity, (With<Planet>, Without<PlanetAtmosphere>)>) {
+    for ent in q_needs_atmosphere.iter() {
+        commands.entity(ent).insert(PlanetAtmosphere::new(css::SKY_BLUE.into()));
+    }
+}
 
 pub(super) fn register(app: &mut App) {
     sync_registry::<Biosphere>(app);
     sync_registry::<Biome>(app);
     sync_registry::<BiosphereBiomesRegistry>(app);
+
+    app.add_systems(Update, assign_planet_atmosphere);
 
     app.configure_sets(Startup, BiosphereRegistrationSet::RegisterBiospheres);
     app.configure_sets(OnEnter(GameState::PostLoading), RegisterBiomesSet::RegisterBiomes);

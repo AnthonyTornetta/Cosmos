@@ -82,12 +82,7 @@ See [the issues page](https://github.com/AnthonyTornetta/Cosmos/issues) for the 
     - [ ] Redwood forest
     - [ ] 1 Additional forest
     - [ ] Ocean
-  - [ ] On-planet skybox (maybe)
-    - [ ] Sun-side skybox
-      - [ ] Perhaps done via a sphere surrounding the planet that always faces the nearest star
-    - [ ] Sun-set skybox
-    - [ ] Night-side skybox
-  - [ ] Volumetric lighting on planets
+  - [x] On-planet skybox
 - [ ] Dropped item entity
   - [ ] When storage is broken, drop items on ground
   - [ ] If not enough inventory room when player is mining something, drop item

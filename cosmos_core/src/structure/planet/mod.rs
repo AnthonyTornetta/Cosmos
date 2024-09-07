@@ -20,6 +20,7 @@ use super::{
 
 pub mod biosphere;
 pub mod generation;
+pub mod planet_atmosphere;
 pub mod planet_builder;
 
 #[derive(Component, Debug, Reflect, Serialize, Deserialize, Clone, Copy)]
@@ -240,6 +241,7 @@ pub(super) fn register(app: &mut App) {
     biosphere::register(app);
     planet_builder::register(app);
     generation::register(app);
+    planet_atmosphere::register(app);
 
     app.register_type::<Planet>();
 }

@@ -28,14 +28,6 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
     });
 }
 
-// fn added_skybox(mut query: Query<&mut Skybox, Added<Skybox>>, cubemap: Res<Cubemap>) {
-//     for mut skybox in query.iter_mut() {
-//         if cubemap.is_loaded {
-//             skybox.image = cubemap.image_handle.clone();
-//         }
-//     }
-// }
-
 fn asset_loaded(asset_server: Res<AssetServer>, mut images: ResMut<Assets<Image>>, mut cubemap: ResMut<Cubemap>) {
     if !cubemap.is_loaded && asset_server.get_load_state(cubemap.image_handle.id()) == Some(LoadState::Loaded) {
         let image = images.get_mut(&cubemap.image_handle).unwrap();

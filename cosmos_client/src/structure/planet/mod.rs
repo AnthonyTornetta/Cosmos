@@ -29,6 +29,7 @@ pub mod biosphere;
 pub mod client_planet_builder;
 pub mod generation;
 mod lods;
+mod planet_skybox;
 mod rotate_around_planet;
 
 // #[cfg(debug_assertions)]
@@ -181,6 +182,7 @@ pub(super) fn register(app: &mut App) {
     rotate_around_planet::register(app);
     lods::register(app);
     generation::register(app);
+    planet_skybox::register(app);
 
     app.add_systems(
         Update,
