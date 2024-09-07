@@ -23,10 +23,7 @@ fn spawn_planet_skysphere(mut meshes: ResMut<Assets<Mesh>>, mut materials: ResMu
         NotShadowCaster,
         NotShadowReceiver,
         PbrBundle {
-            mesh: meshes.add(Sphere {
-                radius: 5_000_000.0,
-                ..Default::default()
-            }),
+            mesh: meshes.add(Sphere { radius: 5_000_000.0 }),
             material: materials.add(StandardMaterial {
                 unlit: true,
                 base_color: css::SKY_BLUE.into(),
