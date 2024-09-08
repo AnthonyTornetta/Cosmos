@@ -1,19 +1,192 @@
 //! Mesh-creation logic for items
 
 use bevy::{
+    asset::{Assets, Handle},
     color::Srgba,
+    log::warn,
     math::{Rect, Vec2, Vec3},
+    prelude::{App, Image, IntoSystemConfigs, OnEnter, OnExit, Res, ResMut},
     render::mesh::Mesh,
 };
-use cosmos_core::utils::array_utils::{expand_2d, flatten_2d};
+use cosmos_core::{
+    block::{
+        block_face::{BlockFace, ALL_BLOCK_FACES},
+        Block,
+    },
+    blockitems::BlockItems,
+    item::Item,
+    registry::{create_registry, identifiable::Identifiable, many_to_one::ManyToOneRegistry, Registry},
+    utils::array_utils::{expand_2d, flatten_2d},
+};
 
+use crate::{asset::asset_loading::BlockNeighbors, state::game_state::GameState};
 use crate::{
-    asset::materials::MaterialDefinition,
+    asset::{
+        asset_loading::{BlockTextureIndex, ItemLoadingSet},
+        materials::BlockMaterialMapping,
+    },
+    rendering::BlockMeshRegistry,
+};
+use crate::{
+    asset::{
+        asset_loading::{CosmosTextureAtlas, ItemTextureIndex},
+        materials::{ItemMaterialMapping, MaterialDefinition},
+        texture_atlas::SquareTextureAtlas,
+    },
     rendering::{CosmosMeshBuilder, MeshBuilder, MeshInformation},
 };
 
+#[derive(Clone, Debug)]
+/// Contains the information required to render an item.
+///
+/// TODO: Currently there will only be entries for items that aren't blocks.
+pub struct ItemMeshMaterial {
+    id: u16,
+    unlocalized_name: String,
+    handle: Handle<Mesh>,
+    material_id: u16,
+    dimension_index: u32,
+}
+
+impl ItemMeshMaterial {
+    /// Returns the handle to this item's mesh
+    pub fn mesh_handle(&self) -> &Handle<Mesh> {
+        &self.handle
+    }
+
+    /// Returns the id of the material this item uses.
+    ///
+    /// Used in the [`Registry<MaterialDefinition>`].
+    pub fn material_id(&self) -> u16 {
+        self.material_id
+    }
+
+    /// Returns the dimension_index (from [`crate::asset::asset_loading::TextureIndex`]) this item uses.
+    pub fn texture_dimension_index(&self) -> u32 {
+        self.dimension_index
+    }
+}
+
+impl Identifiable for ItemMeshMaterial {
+    fn id(&self) -> u16 {
+        self.id
+    }
+
+    fn set_numeric_id(&mut self, id: u16) {
+        self.id = id;
+    }
+
+    fn unlocalized_name(&self) -> &str {
+        self.unlocalized_name.as_str()
+    }
+}
+
+fn generate_item_model(
+    item: &Item,
+    images: &Assets<Image>,
+    item_materials_registry: &ManyToOneRegistry<Item, ItemMaterialMapping>,
+    atlas: &Registry<CosmosTextureAtlas>,
+    item_textures: &Registry<ItemTextureIndex>,
+    material_definitions_registry: &Registry<MaterialDefinition>,
+) -> Option<(Mesh, u16, u32)> {
+    let index = item_textures
+        .from_id(item.unlocalized_name())
+        .unwrap_or_else(|| item_textures.from_id("missing").expect("Missing texture should exist."));
+
+    let atlas = atlas.from_id("cosmos:main").unwrap();
+
+    let image_index = index.atlas_index();
+
+    let texture_data = SquareTextureAtlas::get_sub_image_data(
+        images
+            .get(
+                atlas
+                    .get_atlas_for_dimension_index(image_index.dimension_index)
+                    .expect("Invalid dimension index passed!")
+                    .get_atlas_handle(),
+            )
+            .expect("Missing atlas image"),
+        image_index.texture_index,
+    );
+
+    let Some(item_material_mapping) = item_materials_registry.get_value(item) else {
+        warn!("Missing material for block {}", item.unlocalized_name());
+        return None;
+    };
+    let mat_id = item_material_mapping.material_id();
+    let material = material_definitions_registry.from_numeric_id(mat_id);
+
+    let mesh = create_item_mesh(texture_data, item.id(), image_index.texture_index, material, 1.0);
+
+    Some((mesh, mat_id, image_index.dimension_index))
+}
+
+fn create_item_meshes(
+    block_items: Res<BlockItems>,
+    items: Res<Registry<Item>>,
+    blocks: Res<Registry<Block>>,
+    mut registry: ResMut<Registry<ItemMeshMaterial>>,
+    mut meshes: ResMut<Assets<Mesh>>,
+    images: Res<Assets<Image>>,
+    item_materials_registry: Res<ManyToOneRegistry<Item, ItemMaterialMapping>>,
+    atlas: Res<Registry<CosmosTextureAtlas>>,
+    item_textures: Res<Registry<ItemTextureIndex>>,
+    material_definitions_registry: Res<Registry<MaterialDefinition>>,
+    block_materials_registry: Res<ManyToOneRegistry<Block, BlockMaterialMapping>>,
+    block_textures: Res<Registry<BlockTextureIndex>>,
+    block_meshes: Res<BlockMeshRegistry>,
+) {
+    for item in items.iter() {
+        // Don't override existing models
+        if registry.contains(item.unlocalized_name()) {
+            continue;
+        }
+
+        let (mesh, material_id, dimension_index) = if let Some(block_id) = block_items.block_from_item(item) {
+            let block = blocks.from_numeric_id(block_id);
+
+            let Some(x) = generate_block_item_model(
+                block,
+                &block_materials_registry,
+                &block_textures,
+                &block_meshes,
+                &material_definitions_registry,
+            ) else {
+                continue;
+            };
+
+            x
+        } else {
+            let Some(x) = generate_item_model(
+                item,
+                &images,
+                &item_materials_registry,
+                &atlas,
+                &item_textures,
+                &material_definitions_registry,
+            ) else {
+                continue;
+            };
+
+            x
+        };
+
+        let mesh_handle = meshes.add(mesh);
+
+        registry.register(ItemMeshMaterial {
+            id: 0,
+            unlocalized_name: item.unlocalized_name().to_owned(),
+            handle: mesh_handle,
+            material_id,
+            dimension_index,
+        });
+    }
+
+    println!("{registry:?}");
+}
+
 /// Creates a mesh for an item based on its image data.
-pub fn create_item_mesh(square_image_data: &[u8], item_id: u16, image_index: u32, mat: &MaterialDefinition, scale: f32) -> Mesh {
+fn create_item_mesh(square_image_data: &[u8], item_id: u16, image_index: u32, mat: &MaterialDefinition, scale: f32) -> Mesh {
     // Data is assumed to be a square image
     let w = ((square_image_data.len() / 4) as f32).sqrt() as usize;
     let h = w;
@@ -106,4 +279,115 @@ pub fn create_item_mesh(square_image_data: &[u8], item_id: u16, image_index: u32
     }
 
     cmbuilder.build_mesh()
+}
+
+fn generate_block_item_model(
+    block: &Block,
+    block_materials_registry: &ManyToOneRegistry<Block, BlockMaterialMapping>,
+    block_textures: &Registry<BlockTextureIndex>,
+    block_meshes: &BlockMeshRegistry,
+    material_definitions_registry: &Registry<MaterialDefinition>,
+) -> Option<(Mesh, u16, u32)> {
+    let index = block_textures
+        .from_id(block.unlocalized_name())
+        .unwrap_or_else(|| block_textures.from_id("missing").expect("Missing texture should exist."));
+
+    let Some(block_mesh_info) = block_meshes.get_value(block) else {
+        return None;
+    };
+
+    let mut mesh_builder = CosmosMeshBuilder::default();
+
+    let Some(block_material_mapping) = block_materials_registry.get_value(block) else {
+        warn!("Missing material for block {}", block.unlocalized_name());
+        return None;
+    };
+
+    let mat_id = block_material_mapping.material_id();
+
+    let material = material_definitions_registry.from_numeric_id(mat_id);
+
+    let dimension_index = if block_mesh_info.has_multiple_face_meshes() {
+        let mut texture_dims = None;
+        for face in ALL_BLOCK_FACES {
+            let Some(mesh_info) = block_mesh_info.info_for_face(face, false) else {
+                break;
+            };
+
+            let Some(image_index) = index.atlas_index_from_face(face, BlockNeighbors::empty()) else {
+                continue;
+            };
+
+            if let Some(td) = texture_dims {
+                if td != image_index.dimension_index {
+                    panic!("Block contains textures with different dimensions on different faces!");
+                }
+            } else {
+                texture_dims = Some(image_index.dimension_index)
+            }
+
+            mesh_builder.add_mesh_information(
+                mesh_info,
+                Vec3::ZERO,
+                Rect::new(0.0, 0.0, 1.0, 1.0),
+                image_index.texture_index,
+                material.add_material_data(block.id(), &mesh_info),
+            );
+        }
+
+        texture_dims.expect("Set above")
+    } else {
+        let Some(mesh_info) = block_mesh_info.info_for_whole_block() else {
+            return None;
+        };
+
+        let Some(image_index) = index.atlas_index_from_face(BlockFace::Front, BlockNeighbors::empty()) else {
+            return None;
+        };
+
+        mesh_builder.add_mesh_information(
+            mesh_info,
+            Vec3::ZERO,
+            Rect::new(0.0, 0.0, 1.0, 1.0),
+            image_index.texture_index,
+            material.add_material_data(block.id(), &mesh_info),
+        );
+
+        image_index.dimension_index
+    };
+
+    let mesh = mesh_builder.build_mesh();
+
+    // To think: do I want to support the same block having multiple faces w/ different texture
+    // dimensions? Seems kinda pointless.
+
+    Some((mesh, mat_id, dimension_index))
+    // commands.entity(to_create).insert((
+    //     RenderedItem {
+    //         based_off: translation,
+    //         ui_element_entity: entity,
+    //         item_id: changed_render_item.item_id,
+    //     },
+    //     meshes.add(mesh_builder.build_mesh()),
+    //     RenderLayers::from_layers(&[render_layer]),
+    //     Name::new(format!("Rendered Inventory Item ({})", changed_render_item.item_id)),
+    // ));
+    //
+    // event_writer.send(AddMaterialEvent {
+    //     entity: to_create,
+    //     add_material_id: mat_id,
+    //     texture_dimensions_index,
+    //     material_type: MaterialType::Illuminated,
+    // });
+    //
+    // true
+}
+
+pub(super) fn register(app: &mut App) {
+    create_registry::<ItemMeshMaterial>(app, "cosmos:item_mesh_material");
+
+    app.add_systems(
+        OnExit(GameState::PostLoading),
+        create_item_meshes.in_set(ItemLoadingSet::GenerateMeshes),
+    );
 }

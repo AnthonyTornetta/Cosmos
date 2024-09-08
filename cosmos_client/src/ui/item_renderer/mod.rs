@@ -17,14 +17,12 @@ use cosmos_core::{
 
 use crate::{
     asset::{
-        asset_loading::{BlockNeighbors, BlockTextureIndex, CosmosTextureAtlas, ItemTextureIndex},
+        asset_loading::{BlockNeighbors, BlockTextureIndex},
         materials::{
-            AddMaterialEvent, BlockMaterialMapping, ItemMaterialMapping, MaterialDefinition, MaterialType, MaterialsSystemSet,
-            RemoveAllMaterialsEvent,
+            AddMaterialEvent, BlockMaterialMapping, MaterialDefinition, MaterialType, MaterialsSystemSet, RemoveAllMaterialsEvent,
         },
-        texture_atlas::SquareTextureAtlas,
     },
-    item::item_mesh::create_item_mesh,
+    item::item_mesh::ItemMeshMaterial,
     rendering::{BlockMeshRegistry, CosmosMeshBuilder, MeshBuilder},
     state::game_state::GameState,
 };
@@ -145,16 +143,12 @@ fn change_item_visibility(
 fn render_items(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
-
     block_items: Res<BlockItems>,
     items: Res<Registry<Item>>,
     blocks: Res<Registry<Block>>,
-
     block_materials_registry: Res<ManyToOneRegistry<Block, BlockMaterialMapping>>,
     block_textures: Res<Registry<BlockTextureIndex>>,
     block_meshes: Res<BlockMeshRegistry>,
-    images: Res<Assets<Image>>,
-
     (
         mut q_transform,
         mut removed_render_items,
@@ -175,10 +169,7 @@ fn render_items(
         EventWriter<AddMaterialEvent>,
         EventWriter<RemoveAllMaterialsEvent>,
     ),
-
-    item_materials_registry: Res<ManyToOneRegistry<Item, ItemMaterialMapping>>,
-    atlas: Res<Registry<CosmosTextureAtlas>>,
-    item_textures: Res<Registry<ItemTextureIndex>>,
+    item_mesh_materials: Res<Registry<ItemMeshMaterial>>,
 ) {
     for entity in removed_render_items.read() {
         if let Some((rendered_item_entity, _)) = rendered_items
@@ -239,41 +230,36 @@ fn render_items(
 
         // Clear out any materials that were previously on this entity from previous renders
         evw_remove_materials.send(RemoveAllMaterialsEvent { entity: to_create });
-
-        if !generate_block_item_model(
+        //
+        // if !generate_block_item_model(
+        //     item,
+        //     to_create,
+        //     translation,
+        //     entity,
+        //     changed_render_item,
+        //     &mut commands,
+        //     &mut meshes,
+        //     &block_items,
+        //     &blocks,
+        //     &block_materials_registry,
+        //     &block_textures,
+        //     &block_meshes,
+        //     &material_definitions_registry,
+        //     &mut event_writer,
+        //     render_layer,
+        // ) {
+        generate_item_model(
             item,
             to_create,
             translation,
             entity,
             changed_render_item,
             &mut commands,
-            &mut meshes,
-            &block_items,
-            &blocks,
-            &block_materials_registry,
-            &block_textures,
-            &block_meshes,
-            &material_definitions_registry,
             &mut event_writer,
             render_layer,
-        ) {
-            generate_item_model(
-                item,
-                to_create,
-                translation,
-                entity,
-                changed_render_item,
-                &mut commands,
-                &mut meshes,
-                &images,
-                &item_materials_registry,
-                &atlas,
-                &item_textures,
-                &material_definitions_registry,
-                &mut event_writer,
-                render_layer,
-            );
-        }
+            &item_mesh_materials,
+        );
+        // }
     }
 }
 
@@ -284,46 +270,15 @@ fn generate_item_model(
     entity: Entity,
     changed_render_item: &RenderItem,
     commands: &mut Commands,
-    meshes: &mut Assets<Mesh>,
-    images: &Assets<Image>,
-    item_materials_registry: &ManyToOneRegistry<Item, ItemMaterialMapping>,
-    atlas: &Registry<CosmosTextureAtlas>,
-    item_textures: &Registry<ItemTextureIndex>,
-    material_definitions_registry: &Registry<MaterialDefinition>,
     event_writer: &mut EventWriter<AddMaterialEvent>,
     render_layer: usize,
+    item_meshes: &Registry<ItemMeshMaterial>,
 ) {
-    let size = 0.8;
-
-    let index = item_textures
-        .from_id(item.unlocalized_name())
-        .unwrap_or_else(|| item_textures.from_id("missing").expect("Missing texture should exist."));
-
-    let atlas = atlas.from_id("cosmos:main").unwrap();
-
-    let image_index = index.atlas_index();
-
-    let texture_data = SquareTextureAtlas::get_sub_image_data(
-        images
-            .get(
-                atlas
-                    .get_atlas_for_dimension_index(image_index.dimension_index)
-                    .expect("Invalid dimension index passed!")
-                    .get_atlas_handle(),
-            )
-            .expect("Missing atlas image"),
-        image_index.texture_index,
-    );
-
-    let Some(item_material_mapping) = item_materials_registry.get_value(item) else {
-        warn!("Missing material for block {}", item.unlocalized_name());
+    let Some(item_mat_material) = item_meshes.from_id(item.unlocalized_name()) else {
+        info!("{item_meshes:?}");
+        warn!("Missing rendering material for item {}", item.unlocalized_name());
         return;
     };
-    let mat_id = item_material_mapping.material_id();
-    let material = material_definitions_registry.from_numeric_id(mat_id);
-
-    let mesh = create_item_mesh(texture_data, item.id(), image_index.texture_index, material, size);
-    let mesh_handle = meshes.add(mesh);
 
     commands.entity(to_create).insert((
         RenderedItem {
@@ -331,15 +286,15 @@ fn generate_item_model(
             ui_element_entity: entity,
             item_id: changed_render_item.item_id,
         },
-        mesh_handle,
+        item_mat_material.mesh_handle().clone_weak(),
         RenderLayers::from_layers(&[render_layer]),
         Name::new(format!("Rendered Inventory Item ({})", changed_render_item.item_id)),
     ));
 
     event_writer.send(AddMaterialEvent {
         entity: to_create,
-        add_material_id: mat_id,
-        texture_dimensions_index: image_index.dimension_index,
+        add_material_id: item_mat_material.material_id(),
+        texture_dimensions_index: item_mat_material.texture_dimension_index(),
         material_type: MaterialType::Illuminated,
     });
 }

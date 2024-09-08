@@ -178,6 +178,7 @@ fn main() {
     shop::register(&mut app);
     economy::register(&mut app);
     fluid::register(&mut app);
+    item::register(&mut app);
     debug::register(&mut app);
 
     if cfg!(feature = "print-schedule") {
