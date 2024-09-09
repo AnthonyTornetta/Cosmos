@@ -165,6 +165,7 @@ fn render_items(
         let translation = transform.translation();
 
         let item = items.from_numeric_id(changed_render_item.item_id);
+        let scale = 0.8;
 
         let to_create = if let Some((rendered_item_entity, rendered_item)) = rendered_items
             .iter()
@@ -184,6 +185,7 @@ fn render_items(
             } else {
                 Quat::from_axis_angle(Vec3::X, PI / 2.0)
             };
+            transform.scale = Vec3::splat(scale);
 
             rendered_item_entity
         } else {
@@ -193,6 +195,7 @@ fn render_items(
             } else {
                 Transform::from_rotation(Quat::from_axis_angle(Vec3::X, PI / 2.0))
             };
+            transform.scale = Vec3::splat(scale);
 
             // hide it till we position it properly
             transform.translation.x = -1000000.0;
