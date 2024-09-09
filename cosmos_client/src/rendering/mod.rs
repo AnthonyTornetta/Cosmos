@@ -21,7 +21,7 @@ use cosmos_core::{
 
 use crate::{
     asset::{
-        asset_loading::{load_block_rendering_information, BlockRenderingInfo, ModelData},
+        asset_loading::{BlockRenderingInfo, ItemLoadingSet, ModelData},
         materials::{block_materials::ATTRIBUTE_TEXTURE_INDEX, lod_materials::ATTRIBUTE_PACKED_DATA},
     },
     state::game_state::GameState,
@@ -896,21 +896,6 @@ pub type BlockMeshRegistry = ManyToOneRegistry<Block, BlockMeshInformation>;
 
 /// This is a `ReadOnlyManyToOneRegistry` mapping Blocks to `BlockMeshInformation`.
 pub type ReadOnlyBlockMeshRegistry = ReadOnlyManyToOneRegistry<Block, BlockMeshInformation>;
-
-pub(super) fn register(app: &mut App) {
-    many_to_one::create_many_to_one_registry::<Block, BlockMeshInformation>(app);
-    structure_renderer::register(app);
-    lod_renderer::register(app);
-    mesh_delayer::register(app);
-    custom_blocks::register(app);
-    panorama::register(app);
-
-    app.add_systems(OnEnter(GameState::Loading), register_meshes).add_systems(
-        OnExit(GameState::PostLoading),
-        register_block_meshes.after(load_block_rendering_information),
-    );
-}
-
 //
 
 // LOD STUFF
@@ -1198,4 +1183,18 @@ impl MeshBuilder for LodMeshBuilder {
 
         mesh
     }
+}
+
+pub(super) fn register(app: &mut App) {
+    many_to_one::create_many_to_one_registry::<Block, BlockMeshInformation>(app);
+    structure_renderer::register(app);
+    lod_renderer::register(app);
+    mesh_delayer::register(app);
+    custom_blocks::register(app);
+    panorama::register(app);
+
+    app.add_systems(OnEnter(GameState::Loading), register_meshes).add_systems(
+        OnExit(GameState::PostLoading),
+        register_block_meshes.in_set(ItemLoadingSet::LoadBlockModels),
+    );
 }

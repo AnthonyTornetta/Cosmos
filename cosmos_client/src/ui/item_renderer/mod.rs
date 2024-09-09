@@ -8,22 +8,15 @@ use bevy::{
     window::PrimaryWindow,
 };
 use cosmos_core::{
-    block::{block_face::BlockFace, Block},
     blockitems::BlockItems,
     ecs::NeedsDespawned,
     item::Item,
-    registry::{identifiable::Identifiable, many_to_one::ManyToOneRegistry, Registry},
+    registry::{identifiable::Identifiable, Registry},
 };
 
 use crate::{
-    asset::{
-        asset_loading::{BlockNeighbors, BlockTextureIndex},
-        materials::{
-            AddMaterialEvent, BlockMaterialMapping, MaterialDefinition, MaterialType, MaterialsSystemSet, RemoveAllMaterialsEvent,
-        },
-    },
+    asset::materials::{AddMaterialEvent, MaterialType, MaterialsSystemSet, RemoveAllMaterialsEvent},
     item::item_mesh::ItemMeshMaterial,
-    rendering::{BlockMeshRegistry, CosmosMeshBuilder, MeshBuilder},
     state::game_state::GameState,
 };
 
@@ -142,22 +135,9 @@ fn change_item_visibility(
 
 fn render_items(
     mut commands: Commands,
-    mut meshes: ResMut<Assets<Mesh>>,
     block_items: Res<BlockItems>,
     items: Res<Registry<Item>>,
-    blocks: Res<Registry<Block>>,
-    block_materials_registry: Res<ManyToOneRegistry<Block, BlockMaterialMapping>>,
-    block_textures: Res<Registry<BlockTextureIndex>>,
-    block_meshes: Res<BlockMeshRegistry>,
-    (
-        mut q_transform,
-        mut removed_render_items,
-        changed_render_items,
-        rendered_items,
-        material_definitions_registry,
-        mut event_writer,
-        mut evw_remove_materials,
-    ): (
+    (mut q_transform, mut removed_render_items, changed_render_items, rendered_items, mut event_writer, mut evw_remove_materials): (
         Query<&mut Transform>,
         RemovedComponents<RenderItem>,
         Query<
@@ -165,7 +145,6 @@ fn render_items(
             Or<(Changed<RenderItem>, Changed<ItemRenderLayer>, Changed<GlobalTransform>)>,
         >,
         Query<(Entity, &RenderedItem)>,
-        Res<Registry<MaterialDefinition>>,
         EventWriter<AddMaterialEvent>,
         EventWriter<RemoveAllMaterialsEvent>,
     ),
@@ -297,121 +276,6 @@ fn generate_item_model(
         texture_dimensions_index: item_mat_material.texture_dimension_index(),
         material_type: MaterialType::Illuminated,
     });
-}
-
-fn generate_block_item_model(
-    item: &Item,
-    to_create: Entity,
-    translation: Vec3,
-    entity: Entity,
-    changed_render_item: &RenderItem,
-    commands: &mut Commands,
-    meshes: &mut Assets<Mesh>,
-    block_items: &BlockItems,
-    blocks: &Registry<Block>,
-    block_materials_registry: &ManyToOneRegistry<Block, BlockMaterialMapping>,
-    block_textures: &Registry<BlockTextureIndex>,
-    block_meshes: &BlockMeshRegistry,
-    material_definitions_registry: &Registry<MaterialDefinition>,
-    event_writer: &mut EventWriter<AddMaterialEvent>,
-    render_layer: usize,
-) -> bool {
-    let size = 0.8;
-
-    let Some(block_id) = block_items.block_from_item(item) else {
-        return false;
-    };
-
-    let block = blocks.from_numeric_id(block_id);
-
-    let index = block_textures
-        .from_id(block.unlocalized_name())
-        .unwrap_or_else(|| block_textures.from_id("missing").expect("Missing texture should exist."));
-
-    let Some(block_mesh_info) = block_meshes.get_value(block) else {
-        return false;
-    };
-
-    let mut mesh_builder = CosmosMeshBuilder::default();
-
-    let Some(block_material_mapping) = block_materials_registry.get_value(block) else {
-        warn!("Missing material for block {}", block.unlocalized_name());
-        return false;
-    };
-
-    let mat_id = block_material_mapping.material_id();
-
-    let material = material_definitions_registry.from_numeric_id(mat_id);
-
-    let mut texture_dimensions_index = None;
-
-    if block_mesh_info.has_multiple_face_meshes() {
-        for face in [BlockFace::Top, BlockFace::Left, BlockFace::Front] {
-            let Some(mut mesh_info) = block_mesh_info.info_for_face(face, false).cloned() else {
-                break;
-            };
-
-            mesh_info.scale(Vec3::new(size, size, size));
-
-            let Some(image_index) = index.atlas_index_from_face(face, BlockNeighbors::empty()) else {
-                continue;
-            };
-
-            texture_dimensions_index = Some(image_index.dimension_index);
-
-            mesh_builder.add_mesh_information(
-                &mesh_info,
-                Vec3::ZERO,
-                Rect::new(0.0, 0.0, 1.0, 1.0),
-                image_index.texture_index,
-                material.add_material_data(block_id, &mesh_info),
-            );
-        }
-    } else {
-        let Some(mut mesh_info) = block_mesh_info.info_for_whole_block().cloned() else {
-            return false;
-        };
-
-        mesh_info.scale(Vec3::new(size, size, size));
-
-        let Some(image_index) = index.atlas_index_from_face(BlockFace::Front, BlockNeighbors::empty()) else {
-            return false;
-        };
-
-        texture_dimensions_index = Some(image_index.dimension_index);
-
-        mesh_builder.add_mesh_information(
-            &mesh_info,
-            Vec3::ZERO,
-            Rect::new(0.0, 0.0, 1.0, 1.0),
-            image_index.texture_index,
-            material.add_material_data(block_id, &mesh_info),
-        );
-    }
-
-    let Some(texture_dimensions_index) = texture_dimensions_index else {
-        return false;
-    };
-
-    commands.entity(to_create).insert((
-        RenderedItem {
-            based_off: translation,
-            ui_element_entity: entity,
-            item_id: changed_render_item.item_id,
-        },
-        meshes.add(mesh_builder.build_mesh()),
-        RenderLayers::from_layers(&[render_layer]),
-        Name::new(format!("Rendered Inventory Item ({})", changed_render_item.item_id)),
-    ));
-
-    event_writer.send(AddMaterialEvent {
-        entity: to_create,
-        add_material_id: mat_id,
-        texture_dimensions_index,
-        material_type: MaterialType::Illuminated,
-    });
-
-    true
 }
 
 fn update_rendered_items_transforms(

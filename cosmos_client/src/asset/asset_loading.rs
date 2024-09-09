@@ -869,10 +869,16 @@ pub enum AssetsSet {
 
 /// In PostLoading state.
 #[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
-pub enum ItemLoadingSet {
+pub enum ItemMeshingLoadingSet {
     /// Registries [`ItemTextureIndex`] and [`ItemRenderingInfo`] are setup.
     LoadItemRenderingInformation,
+    /// The model files for blocks are loaded.
+    LoadBlockModels,
+    /// The model files for items are loaded.
+    LoadItemModels,
     /// Meshes are inserted into the [`ItemRenderingInfo`] registry.
+    ///
+    /// This MUST happen after both block and item model files are properly loaded.
     GenerateMeshes,
 }
 
@@ -888,7 +894,13 @@ pub(super) fn register(app: &mut App) {
 
     app.configure_sets(
         OnExit(GameState::PostLoading),
-        (ItemLoadingSet::LoadItemRenderingInformation, ItemLoadingSet::GenerateMeshes).chain(),
+        (
+            ItemMeshingLoadingSet::LoadItemRenderingInformation,
+            ItemMeshingLoadingSet::LoadBlockModels,
+            ItemMeshingLoadingSet::LoadItemModels,
+            ItemMeshingLoadingSet::GenerateMeshes,
+        )
+            .chain(),
     );
 
     app.add_event::<AssetsDoneLoadingEvent>()
@@ -907,11 +919,7 @@ pub(super) fn register(app: &mut App) {
         .add_systems(
             OnExit(GameState::PostLoading),
             (load_item_rendering_information, load_block_rendering_information)
-                .in_set(ItemLoadingSet::LoadItemRenderingInformation)
+                .in_set(ItemMeshingLoadingSet::LoadItemRenderingInformation)
                 .chain(),
         );
-
-    // It's probably fine
-    // app.allow_ambiguous_resource::<Events<AllTexturesDoneLoadingEvent>>();
-    // app.allow_ambiguous_resource::<Registry<CosmosTextureAtlas>>();
 }

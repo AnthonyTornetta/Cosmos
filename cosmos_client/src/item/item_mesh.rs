@@ -5,7 +5,7 @@ use bevy::{
     color::Srgba,
     log::warn,
     math::{Rect, Vec2, Vec3},
-    prelude::{App, Image, IntoSystemConfigs, OnEnter, OnExit, Res, ResMut},
+    prelude::{App, Image, IntoSystemConfigs, OnExit, Res, ResMut},
     render::mesh::Mesh,
 };
 use cosmos_core::{
@@ -89,6 +89,7 @@ fn generate_item_model(
     item_textures: &Registry<ItemTextureIndex>,
     material_definitions_registry: &Registry<MaterialDefinition>,
 ) -> Option<(Mesh, u16, u32)> {
+    println!("{item_textures:?}");
     let index = item_textures
         .from_id(item.unlocalized_name())
         .unwrap_or_else(|| item_textures.from_id("missing").expect("Missing texture should exist."));
@@ -110,7 +111,7 @@ fn generate_item_model(
     );
 
     let Some(item_material_mapping) = item_materials_registry.get_value(item) else {
-        warn!("Missing material for block {}", item.unlocalized_name());
+        warn!("Missing material for item {}", item.unlocalized_name());
         return None;
     };
     let mat_id = item_material_mapping.material_id();
@@ -165,6 +166,7 @@ fn create_item_meshes(
                 &item_textures,
                 &material_definitions_registry,
             ) else {
+                warn!("Got no item model for {item:?}");
                 continue;
             };
 
@@ -181,8 +183,6 @@ fn create_item_meshes(
             dimension_index,
         });
     }
-
-    println!("{registry:?}");
 }
 
 /// Creates a mesh for an item based on its image data.
