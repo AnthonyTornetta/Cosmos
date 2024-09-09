@@ -22,7 +22,7 @@ use cosmos_core::{
 use crate::{asset::asset_loading::BlockNeighbors, state::game_state::GameState};
 use crate::{
     asset::{
-        asset_loading::{BlockTextureIndex, ItemLoadingSet},
+        asset_loading::{BlockTextureIndex, ItemMeshingLoadingSet},
         materials::BlockMaterialMapping,
     },
     rendering::BlockMeshRegistry,
@@ -111,7 +111,6 @@ fn generate_item_model(
     );
 
     let Some(item_material_mapping) = item_materials_registry.get_value(item) else {
-        warn!("Missing material for item {}", item.unlocalized_name());
         return None;
     };
     let mat_id = item_material_mapping.material_id();
@@ -388,6 +387,6 @@ pub(super) fn register(app: &mut App) {
 
     app.add_systems(
         OnExit(GameState::PostLoading),
-        create_item_meshes.in_set(ItemLoadingSet::GenerateMeshes),
+        create_item_meshes.in_set(ItemMeshingLoadingSet::GenerateMeshes),
     );
 }

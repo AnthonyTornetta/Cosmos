@@ -21,7 +21,7 @@ use cosmos_core::{
 
 use crate::{
     asset::{
-        asset_loading::{BlockRenderingInfo, ItemLoadingSet, ModelData},
+        asset_loading::{BlockRenderingInfo, ItemMeshingLoadingSet, ModelData},
         materials::{block_materials::ATTRIBUTE_TEXTURE_INDEX, lod_materials::ATTRIBUTE_PACKED_DATA},
     },
     state::game_state::GameState,
@@ -1195,6 +1195,6 @@ pub(super) fn register(app: &mut App) {
 
     app.add_systems(OnEnter(GameState::Loading), register_meshes).add_systems(
         OnExit(GameState::PostLoading),
-        register_block_meshes.in_set(ItemLoadingSet::LoadBlockModels),
+        register_block_meshes.in_set(ItemMeshingLoadingSet::LoadBlockModels),
     );
 }
