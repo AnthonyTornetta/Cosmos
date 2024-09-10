@@ -314,7 +314,7 @@ fn listen_for_inventory_messages(
                         continue;
                     };
 
-                    let Some(mut is) = inventory.remove_itemstack_at(slot as usize) else {
+                    let Some(is) = inventory.itemstack_at(slot as usize) else {
                         warn!("not able to remove.");
                         continue;
                     };
@@ -323,29 +323,38 @@ fn listen_for_inventory_messages(
                         warn!("no player");
                         continue;
                     };
-                    let quantity = quantity.min(is.quantity());
+                    let quantity_being_thrown = quantity.min(is.quantity());
 
                     let mut dropped_is = is.clone();
-                    dropped_is.set_quantity(quantity);
+                    dropped_is.set_quantity(quantity_being_thrown);
 
-                    if is.quantity() < quantity {
+                    if is.quantity() > quantity_being_thrown {
+                        let mut is = is.clone();
                         let qty = is.quantity();
-                        is.set_quantity(qty - quantity);
+                        is.set_quantity(qty - quantity_being_thrown);
                         inventory.set_itemstack_at(slot as usize, Some(is), &mut commands);
+                    } else {
+                        inventory.remove_itemstack_at(slot as usize);
                     }
 
                     let player_rot = player_looking.rotation * Quat::from_affine3(&g_trans.affine());
                     warn!("SPAWNED!");
-                    commands.spawn((
-                        PhysicalItem(dropped_is),
-                        *location,
-                        LoadingDistance::new(1, 2),
-                        BundleStartingRotation(player_rot),
-                        Velocity {
-                            linvel: player_rot * Vec3::NEG_Z + player_velocity.linvel,
-                            angvel: Vec3::ZERO,
-                        },
-                    ));
+                    let dropped_item_entity = commands
+                        .spawn((
+                            PhysicalItem,
+                            *location,
+                            LoadingDistance::new(1, 2),
+                            BundleStartingRotation(player_rot),
+                            Velocity {
+                                linvel: player_rot * Vec3::NEG_Z + player_velocity.linvel,
+                                angvel: Vec3::ZERO,
+                            },
+                        ))
+                        .id();
+
+                    let mut physical_item_inventory = Inventory::new("", 1, None, dropped_item_entity);
+                    physical_item_inventory.set_itemstack_at(0, Some(dropped_is), &mut commands);
+                    commands.entity(dropped_item_entity).insert(physical_item_inventory);
                 }
                 ClientInventoryMessages::ThrowHeldItemstack { quantity } => {
                     let Ok(mut held_item_stack) = held_item_query.get_mut(client_entity) else {
@@ -376,19 +385,26 @@ fn listen_for_inventory_messages(
 
                     let player_rot = player_looking.rotation * Quat::from_affine3(&g_trans.affine());
 
-                    commands.spawn((
-                        PhysicalItem(dropped_is),
-                        *location,
-                        LoadingDistance::new(1, 2),
-                        BundleStartingRotation(player_rot),
-                        Velocity {
-                            linvel: player_rot * Vec3::NEG_Z + player_velocity.linvel,
-                            angvel: Vec3::ZERO,
-                        },
-                    ));
+                    let dropped_item_entity = commands
+                        .spawn((
+                            PhysicalItem,
+                            *location,
+                            LoadingDistance::new(1, 2),
+                            BundleStartingRotation(player_rot),
+                            Velocity {
+                                linvel: player_rot * Vec3::NEG_Z + player_velocity.linvel,
+                                angvel: Vec3::ZERO,
+                            },
+                        ))
+                        .id();
+
+                    let mut physical_item_inventory = Inventory::new("", 1, None, dropped_item_entity);
+                    physical_item_inventory.set_itemstack_at(0, Some(dropped_is), &mut commands);
+                    commands.entity(dropped_item_entity).insert(physical_item_inventory);
 
                     if held_item_stack.is_empty() {
-                        held_item_stack.remove(&mut commands);
+                        // no longer remove since it's thrown, right?
+                        // held_item_stack.remove(&mut commands);
                         commands.entity(client_entity).remove::<HeldItemStack>();
                     }
                 }
