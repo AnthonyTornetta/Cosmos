@@ -9,6 +9,7 @@ use cosmos_core::{
     },
     ecs::NeedsDespawned,
     inventory::{
+        held_item_slot::HeldItemSlot,
         itemstack::ItemStack,
         netty::{ClientInventoryMessages, InventoryIdentifier},
         HeldItemStack, Inventory,
@@ -24,6 +25,7 @@ use crate::{
             scollable_container::ScrollBundle,
             window::{GuiWindow, UiWindowSystemSet, WindowBundle},
         },
+        hotbar::Hotbar,
         item_renderer::{ItemRenderLayer, RenderItem},
         OpenMenu, UiMiddleRoot, UiRoot, UiSystemSet, UiTopRoot,
     },
@@ -393,6 +395,46 @@ fn toggle_inventory_rendering(
 
         commands.entity(inventory_holder).insert(OpenInventoryEntity(ents));
     }
+}
+
+fn drop_item(
+    input_checker: InputChecker,
+    q_inventory: Query<(Entity, &Inventory, &HeldItemSlot), With<LocalPlayer>>,
+    mut client: ResMut<RenetClient>,
+    network_mapping: Res<NetworkMapping>,
+) {
+    if !input_checker.check_just_pressed(CosmosInputs::DropItem) {
+        return;
+    }
+
+    let Ok((local_player_entity, inventory, held_item_slot)) = q_inventory.get_single() else {
+        warn!("No local player!");
+        return;
+    };
+
+    let selected_slot = held_item_slot.slot() as usize;
+    let Some(is) = inventory.itemstack_at(selected_slot) else {
+        warn!("Not holding IS");
+        return;
+    };
+
+    let Some(server_player_ent) = network_mapping.server_from_client(&local_player_entity) else {
+        return;
+    };
+
+    info!("Sending message");
+    client.send_message(
+        NettyChannelClient::Inventory,
+        cosmos_encoder::serialize(&ClientInventoryMessages::ThrowItemstack {
+            quantity: if input_checker.check_pressed(CosmosInputs::BulkDropFlag) {
+                is.quantity()
+            } else {
+                1
+            },
+            slot: selected_slot as u32,
+            inventory_holder: InventoryIdentifier::Entity(server_player_ent),
+        }),
+    );
 }
 
 fn reposition_window_children(
@@ -923,6 +965,7 @@ pub(super) fn register(app: &mut App) {
     .add_systems(
         Update,
         (
+            drop_item,
             (toggle_inventory, close_button_system)
                 .chain()
                 .in_set(InventorySet::ToggleInventory),

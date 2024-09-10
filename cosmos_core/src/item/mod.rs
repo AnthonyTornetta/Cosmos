@@ -1,6 +1,7 @@
 //! Items are something that represent something that can be stored in inventories.
 
 pub mod items;
+pub mod physical_item;
 
 use bevy::{prelude::App, prelude::States};
 
@@ -51,4 +52,5 @@ impl Item {
 
 pub(super) fn register<T: States>(app: &mut App, loading_state: T) {
     items::register(app, loading_state);
+    physical_item::register(app);
 }

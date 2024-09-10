@@ -111,6 +111,11 @@ pub enum CosmosInputs {
     ///
     /// This will cause super lag
     PanoramaScreenshot,
+
+    /// Drops the held item
+    DropItem,
+    /// Indicates it should drop the whole stack
+    BulkDropFlag,
 }
 
 fn init_input(mut input_handler: ResMut<CosmosInputHandler>) {
@@ -171,6 +176,9 @@ fn init_input(mut input_handler: ResMut<CosmosInputHandler>) {
     input_handler.set_keycode(CosmosInputs::AlternateInteraction, KeyCode::ShiftLeft);
 
     input_handler.set_keycode(CosmosInputs::PanoramaScreenshot, KeyCode::F9);
+
+    input_handler.set_keycode(CosmosInputs::DropItem, KeyCode::KeyG);
+    input_handler.set_keycode(CosmosInputs::BulkDropFlag, KeyCode::ControlLeft);
 }
 
 #[derive(Resource, Default, Debug)]
