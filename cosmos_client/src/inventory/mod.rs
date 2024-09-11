@@ -407,13 +407,11 @@ fn drop_item(
     }
 
     let Ok((local_player_entity, inventory, held_item_slot)) = q_inventory.get_single() else {
-        warn!("No local player!");
         return;
     };
 
     let selected_slot = held_item_slot.slot() as usize;
     let Some(is) = inventory.itemstack_at(selected_slot) else {
-        warn!("Not holding IS");
         return;
     };
 
@@ -421,7 +419,6 @@ fn drop_item(
         return;
     };
 
-    info!("Sending message");
     client.send_message(
         NettyChannelClient::Inventory,
         cosmos_encoder::serialize(&ClientInventoryMessages::ThrowItemstack {

@@ -4,7 +4,7 @@ use bevy::app::Update;
 use bevy::core::Name;
 use bevy::prelude::{Added, App, Commands, Entity, IntoSystemConfigs, Query};
 use bevy::{prelude::Component, reflect::Reflect};
-use bevy_rapier3d::prelude::{Collider, RigidBody};
+use bevy_rapier3d::prelude::{Collider, ReadMassProperties, RigidBody};
 use serde::{Deserialize, Serialize};
 
 use crate::netty::sync::{sync_component, IdentifiableComponent, SyncableComponent};
@@ -28,9 +28,12 @@ impl SyncableComponent for PhysicalItem {
 
 fn on_add_physical_item(mut commands: Commands, q_added: Query<Entity, Added<PhysicalItem>>) {
     for ent in q_added.iter() {
-        commands
-            .entity(ent)
-            .insert((RigidBody::Dynamic, Collider::cuboid(0.1, 0.1, 0.1), Name::new("Physical Item")));
+        commands.entity(ent).insert((
+            RigidBody::Dynamic,
+            Collider::cuboid(0.1, 0.1, 0.1),
+            ReadMassProperties::default(),
+            Name::new("Physical Item"),
+        ));
     }
 }
 

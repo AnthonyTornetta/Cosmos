@@ -310,17 +310,14 @@ fn listen_for_inventory_messages(
                     inventory_holder,
                 } => {
                     let Some(mut inventory) = get_inventory_mut(inventory_holder, &mut q_inventory, &q_structure) else {
-                        warn!("No inve - {inventory_holder:?}");
                         continue;
                     };
 
                     let Some(is) = inventory.itemstack_at(slot as usize) else {
-                        warn!("not able to remove.");
                         continue;
                     };
 
                     let Ok((location, g_trans, player_looking, player_velocity)) = q_player.get(client_entity) else {
-                        warn!("no player");
                         continue;
                     };
                     let quantity_being_thrown = quantity.min(is.quantity());
@@ -337,10 +334,8 @@ fn listen_for_inventory_messages(
                         inventory.remove_itemstack_at(slot as usize);
                     }
 
-                    let player_rot = player_looking.rotation * Quat::from_affine3(&g_trans.affine());
-                    warn!("SPAWNED!");
-
-                    let linvel = player_rot * Vec3::NEG_Z + player_velocity.linvel;
+                    let player_rot = Quat::from_affine3(&g_trans.affine()) * player_looking.rotation;
+                    let linvel = player_rot * Vec3::NEG_Z * 4.0 + player_velocity.linvel;
 
                     let dropped_item_entity = commands
                         .spawn((
