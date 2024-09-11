@@ -80,7 +80,7 @@ pub(super) fn register(app: &mut App) {
         Update,
         respond_laser_hit_event
             .in_set(NetworkingSystemsSet::Between)
-            .before(BlockHealthSet::ProcessHealthChanges)
+            .in_set(BlockHealthSet::SendHealthChanges)
             .after(LaserSystemSet::SendHitEvents)
             .after(ShieldSet::OnShieldHit)
             .run_if(in_state(GameState::Playing)),

@@ -20,7 +20,6 @@ use bevy_rapier3d::{
 use cosmos_core::{
     block::{block_events::BlockEventsSet, Block},
     ecs::NeedsDespawned,
-    events::block_events::BlockChangedEvent,
     physics::{
         location::Location,
         player_world::{PlayerWorld, WorldWithin},
@@ -29,6 +28,7 @@ use cosmos_core::{
     projectiles::missile::{Explosion, ExplosionSystemSet},
     registry::Registry,
     structure::{
+        block_health::events::{BlockDestroyedEvent, BlockTakeDamageEvent},
         coordinates::{BlockCoordinate, UnboundBlockCoordinate, UnboundCoordinateType},
         shields::Shield,
         Structure,
@@ -67,8 +67,8 @@ fn respond_to_explosion(
 
     q_chunk: Query<&ChunkPhysicsPart>,
     blocks_registry: Res<Registry<Block>>,
-    mut ev_writer_block_changed: EventWriter<BlockChangedEvent>,
-
+    mut evw_block_take_damage: EventWriter<BlockTakeDamageEvent>,
+    mut evw_block_destroyed: EventWriter<BlockDestroyedEvent>,
     mut ev_writer_explosion_hit: EventWriter<ExplosionHitEvent>,
 
     q_shield: Query<&Shield>,
@@ -171,12 +171,12 @@ fn respond_to_explosion(
                     )
                     .is_none()
                 {
-                    let cur_health = structure.get_block_health(block, &blocks_registry);
-                    structure.set_block_health(block, cur_health - explosion_power * HEALTH_PER_EXPLOSION_POWER, &blocks_registry);
-
-                    if structure.get_block_health(block, &blocks_registry) <= 0.0 {
-                        structure.remove_block_at(block, &blocks_registry, Some(&mut ev_writer_block_changed));
-                    }
+                    structure.block_take_damage(
+                        block,
+                        &blocks_registry,
+                        explosion_power * HEALTH_PER_EXPLOSION_POWER,
+                        Some((&mut evw_block_take_damage, &mut evw_block_destroyed)),
+                    );
                 }
             }
         }
@@ -240,6 +240,6 @@ pub(super) fn register(app: &mut App) {
             .ambiguous_with(BlockEventsSet::SendEventsForNextFrame) // Order of blocks being updated doesn't matter
             .after(ShieldSet::RechargeShields)
             .before(ShieldSet::OnShieldHit)
-            .before(BlockHealthSet::ProcessHealthChanges),
+            .in_set(BlockHealthSet::SendHealthChanges),
     );
 }
