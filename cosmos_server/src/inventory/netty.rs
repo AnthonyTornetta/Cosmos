@@ -339,14 +339,17 @@ fn listen_for_inventory_messages(
 
                     let player_rot = player_looking.rotation * Quat::from_affine3(&g_trans.affine());
                     warn!("SPAWNED!");
+
+                    let linvel = player_rot * Vec3::NEG_Z + player_velocity.linvel;
+
                     let dropped_item_entity = commands
                         .spawn((
                             PhysicalItem,
-                            *location,
+                            *location + linvel.normalize(),
                             LoadingDistance::new(1, 2),
                             BundleStartingRotation(player_rot),
                             Velocity {
-                                linvel: player_rot * Vec3::NEG_Z + player_velocity.linvel,
+                                linvel,
                                 angvel: Vec3::ZERO,
                             },
                         ))
@@ -384,15 +387,16 @@ fn listen_for_inventory_messages(
                     dropped_is.set_quantity(amount);
 
                     let player_rot = player_looking.rotation * Quat::from_affine3(&g_trans.affine());
+                    let linvel = player_rot * Vec3::NEG_Z + player_velocity.linvel;
 
                     let dropped_item_entity = commands
                         .spawn((
                             PhysicalItem,
-                            *location,
+                            *location + linvel.normalize(),
                             LoadingDistance::new(1, 2),
                             BundleStartingRotation(player_rot),
                             Velocity {
-                                linvel: player_rot * Vec3::NEG_Z + player_velocity.linvel,
+                                linvel,
                                 angvel: Vec3::ZERO,
                             },
                         ))
