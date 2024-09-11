@@ -272,7 +272,101 @@ fn create_item_mesh(square_image_data: &[u8], item_id: u16, image_index: u32, ma
             mat.add_item_material_data(item_id, &info),
         );
 
-        // TODO: Add side meshes when needed
+        if x == 0 || pixels[flatten_2d(x - 1, y, w)].is_none() {
+            // draw left square
+            let mut info = MeshInformation {
+                indices: vec![0, 1, 2, 2, 3, 0],
+                uvs: vec![[1.0, 1.0], [1.0, 0.0], [0.0, 0.0], [0.0, 1.0]],
+                positions: vec![
+                    [pmin.x, -ph, pmax.y],
+                    [pmin.x, ph, pmax.y],
+                    [pmin.x, ph, pmin.y],
+                    [pmin.x, -ph, pmin.y],
+                ],
+                normals: [[-1.0, 0.0, 0.0]; 4].to_vec(),
+            };
+            info.scale(Vec3::splat(scale));
+
+            cmbuilder.add_mesh_information(
+                &info,
+                Vec3::ZERO,
+                Rect::from_corners(min, max),
+                image_index,
+                mat.add_item_material_data(item_id, &info),
+            );
+        }
+        if x + 1 == w || pixels[flatten_2d(x + 1, y, w)].is_none() {
+            // draw right square
+            let mut info = MeshInformation {
+                indices: vec![0, 1, 2, 2, 3, 0],
+                uvs: vec![[1.0, 1.0], [1.0, 0.0], [0.0, 0.0], [0.0, 1.0]],
+                positions: vec![
+                    [pmax.x, -ph, pmin.y],
+                    [pmax.x, ph, pmin.y],
+                    [pmax.x, ph, pmax.y],
+                    [pmax.x, -ph, pmax.y],
+                ],
+                normals: [[1.0, 0.0, 0.0]; 4].to_vec(),
+            };
+
+            info.scale(Vec3::splat(scale));
+
+            cmbuilder.add_mesh_information(
+                &info,
+                Vec3::ZERO,
+                Rect::from_corners(min, max),
+                image_index,
+                mat.add_item_material_data(item_id, &info),
+            );
+        }
+        if y == 0 || pixels[flatten_2d(x, y - 1, w)].is_none() {
+            // draw top square
+            let mut info = MeshInformation {
+                indices: vec![0, 1, 2, 2, 3, 0],
+                uvs: vec![[0.0, 0.0], [1.0, 0.0], [1.0, 1.0], [0.0, 1.0]],
+                positions: vec![
+                    [pmin.x, ph, pmin.y],
+                    [pmax.x, ph, pmin.y],
+                    [pmax.x, -ph, pmin.y],
+                    [pmin.x, -ph, pmin.y],
+                ],
+                normals: [[0.0, 0.0, -1.0]; 4].to_vec(),
+            };
+
+            info.scale(Vec3::splat(scale));
+
+            cmbuilder.add_mesh_information(
+                &info,
+                Vec3::ZERO,
+                Rect::from_corners(min, max),
+                image_index,
+                mat.add_item_material_data(item_id, &info),
+            );
+        }
+        if y + 1 == h || pixels[flatten_2d(x, y + 1, w)].is_none() {
+            // draw bottom square
+            let mut info = MeshInformation {
+                indices: vec![0, 1, 2, 2, 3, 0],
+                uvs: vec![[0.0, 1.0], [1.0, 1.0], [1.0, 0.0], [0.0, 0.0]],
+                positions: vec![
+                    [pmin.x, -ph, pmax.y],
+                    [pmax.x, -ph, pmax.y],
+                    [pmax.x, ph, pmax.y],
+                    [pmin.x, ph, pmax.y],
+                ],
+                normals: [[0.0, 0.0, 1.0]; 4].to_vec(),
+            };
+
+            info.scale(Vec3::splat(scale));
+
+            cmbuilder.add_mesh_information(
+                &info,
+                Vec3::ZERO,
+                Rect::from_corners(min, max),
+                image_index,
+                mat.add_item_material_data(item_id, &info),
+            );
+        }
     }
 
     cmbuilder.build_mesh()
