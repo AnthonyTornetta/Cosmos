@@ -39,7 +39,7 @@ use crate::{
 #[derive(Clone, Debug)]
 /// Contains the information required to render an item.
 ///
-/// TODO: Currently there will only be entries for items that aren't blocks.
+/// This also includes the information on how to render items that are blocks.
 pub struct ItemMeshMaterial {
     id: u16,
     unlocalized_name: String,

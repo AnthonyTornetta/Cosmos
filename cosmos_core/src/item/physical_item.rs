@@ -30,7 +30,7 @@ fn on_add_physical_item(mut commands: Commands, q_added: Query<Entity, Added<Phy
     for ent in q_added.iter() {
         commands
             .entity(ent)
-            .insert((RigidBody::Dynamic, Collider::cuboid(0.2, 0.2, 0.2), Name::new("Physical Item")));
+            .insert((RigidBody::Dynamic, Collider::cuboid(0.1, 0.1, 0.1), Name::new("Physical Item")));
     }
 }
 

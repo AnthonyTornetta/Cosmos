@@ -25,7 +25,6 @@ use crate::{
             scollable_container::ScrollBundle,
             window::{GuiWindow, UiWindowSystemSet, WindowBundle},
         },
-        hotbar::Hotbar,
         item_renderer::{ItemRenderLayer, RenderItem},
         OpenMenu, UiMiddleRoot, UiRoot, UiSystemSet, UiTopRoot,
     },
