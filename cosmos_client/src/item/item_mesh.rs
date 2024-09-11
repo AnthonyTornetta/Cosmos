@@ -446,25 +446,6 @@ fn generate_block_item_model(
     // dimensions? Seems kinda pointless.
 
     Some((mesh, mat_id, dimension_index))
-    // commands.entity(to_create).insert((
-    //     RenderedItem {
-    //         based_off: translation,
-    //         ui_element_entity: entity,
-    //         item_id: changed_render_item.item_id,
-    //     },
-    //     meshes.add(mesh_builder.build_mesh()),
-    //     RenderLayers::from_layers(&[render_layer]),
-    //     Name::new(format!("Rendered Inventory Item ({})", changed_render_item.item_id)),
-    // ));
-    //
-    // event_writer.send(AddMaterialEvent {
-    //     entity: to_create,
-    //     add_material_id: mat_id,
-    //     texture_dimensions_index,
-    //     material_type: MaterialType::Illuminated,
-    // });
-    //
-    // true
 }
 
 pub(super) fn register(app: &mut App) {

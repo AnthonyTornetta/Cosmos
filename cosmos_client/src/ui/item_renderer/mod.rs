@@ -212,24 +212,7 @@ fn render_items(
 
         // Clear out any materials that were previously on this entity from previous renders
         evw_remove_materials.send(RemoveAllMaterialsEvent { entity: to_create });
-        //
-        // if !generate_block_item_model(
-        //     item,
-        //     to_create,
-        //     translation,
-        //     entity,
-        //     changed_render_item,
-        //     &mut commands,
-        //     &mut meshes,
-        //     &block_items,
-        //     &blocks,
-        //     &block_materials_registry,
-        //     &block_textures,
-        //     &block_meshes,
-        //     &material_definitions_registry,
-        //     &mut event_writer,
-        //     render_layer,
-        // ) {
+
         generate_item_model(
             item,
             to_create,
@@ -241,7 +224,6 @@ fn render_items(
             render_layer,
             &item_mesh_materials,
         );
-        // }
     }
 }
 
