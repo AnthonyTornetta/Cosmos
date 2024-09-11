@@ -110,9 +110,7 @@ fn generate_item_model(
         image_index.texture_index,
     );
 
-    let Some(item_material_mapping) = item_materials_registry.get_value(item) else {
-        return None;
-    };
+    let item_material_mapping = item_materials_registry.get_value(item)?;
     let mat_id = item_material_mapping.material_id();
     let material = material_definitions_registry.from_numeric_id(mat_id);
 
@@ -291,9 +289,7 @@ fn generate_block_item_model(
         .from_id(block.unlocalized_name())
         .unwrap_or_else(|| block_textures.from_id("missing").expect("Missing texture should exist."));
 
-    let Some(block_mesh_info) = block_meshes.get_value(block) else {
-        return None;
-    };
+    let block_mesh_info = block_meshes.get_value(block)?;
 
     let mut mesh_builder = CosmosMeshBuilder::default();
 
@@ -330,26 +326,21 @@ fn generate_block_item_model(
                 Vec3::ZERO,
                 Rect::new(0.0, 0.0, 1.0, 1.0),
                 image_index.texture_index,
-                material.add_material_data(block.id(), &mesh_info),
+                material.add_material_data(block.id(), mesh_info),
             );
         }
 
         texture_dims.expect("Set above")
     } else {
-        let Some(mesh_info) = block_mesh_info.info_for_whole_block() else {
-            return None;
-        };
-
-        let Some(image_index) = index.atlas_index_from_face(BlockFace::Front, BlockNeighbors::empty()) else {
-            return None;
-        };
+        let mesh_info = block_mesh_info.info_for_whole_block()?;
+        let image_index = index.atlas_index_from_face(BlockFace::Front, BlockNeighbors::empty())?;
 
         mesh_builder.add_mesh_information(
             mesh_info,
             Vec3::ZERO,
             Rect::new(0.0, 0.0, 1.0, 1.0),
             image_index.texture_index,
-            material.add_material_data(block.id(), &mesh_info),
+            material.add_material_data(block.id(), mesh_info),
         );
 
         image_index.dimension_index

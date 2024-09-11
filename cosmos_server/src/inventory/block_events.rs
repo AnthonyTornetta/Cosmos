@@ -29,7 +29,7 @@ fn process_event(
         return;
     };
 
-    let Some(inventory_here) = structure.query_block_data(block.coords(), &q_inventory) else {
+    let Some(inventory_here) = structure.query_block_data(block.coords(), q_inventory) else {
         return;
     };
 
