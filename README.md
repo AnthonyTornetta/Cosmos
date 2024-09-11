@@ -85,7 +85,7 @@ See [the issues page](https://github.com/AnthonyTornetta/Cosmos/issues) for the 
   - [x] On-planet skybox
 - [x] Dropped item entity
   - [x] When storage is broken, drop items on ground
-  - [ ] If not enough inventory room when player is mining something, drop item
+  - [x] If not enough inventory room when player is mining something, drop item
 - [x] Fix missing chunks on planets
 
 ## Release 0.0.6a
