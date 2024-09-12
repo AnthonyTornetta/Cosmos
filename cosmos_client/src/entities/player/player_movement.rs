@@ -1,7 +1,10 @@
 //! Handles the basic player movement while walking around. This is not responsible for piloting ships. See [`ship_movement`] for that.
 
 use bevy::prelude::*;
-use bevy_rapier3d::prelude::Velocity;
+use bevy_rapier3d::{
+    plugin::{RapierContextAccess, RapierContextEntityLink},
+    prelude::{ActiveEvents, Collider, Sensor, Velocity},
+};
 use cosmos_core::{
     netty::{client::LocalPlayer, system_sets::NetworkingSystemsSet},
     physics::location::LocationPhysicsSet,
@@ -17,11 +20,61 @@ use crate::{
     ui::components::show_cursor::ShowCursor,
 };
 
+#[derive(Component, Debug)]
+/// Indicates if the player is touching the ground
+pub struct Grounded;
+
+#[derive(Component)]
+struct GroundedChecker;
+
+fn append_grounded_check(mut commands: Commands, q_player: Query<Entity, Added<LocalPlayer>>) {
+    let Ok(player_ent) = q_player.get_single() else {
+        return;
+    };
+    commands.entity(player_ent).with_children(|p| {
+        p.spawn((
+            GroundedChecker,
+            SpatialBundle {
+                transform: Transform::from_xyz(0.0, -0.80, 0.0),
+                ..Default::default()
+            },
+            Name::new("Ground checker"),
+            Collider::cuboid(0.1, 0.1, 0.1),
+            Sensor,
+            ActiveEvents::COLLISION_EVENTS,
+        ));
+    });
+}
+
+fn check_grounded(
+    mut commands: Commands,
+    rapier_context: RapierContextAccess,
+    q_player: Query<Entity, With<LocalPlayer>>,
+    q_ground_checker: Query<(&RapierContextEntityLink, Entity), With<GroundedChecker>>,
+) {
+    let Ok((rapier_link, collider_ent)) = q_ground_checker.get_single() else {
+        return;
+    };
+
+    let Ok(player_ent) = q_player.get_single() else {
+        return;
+    };
+
+    let context = rapier_context.context(rapier_link);
+
+    let touching_ground = context.intersection_pairs_with(collider_ent).any(|x| x.2);
+    if touching_ground {
+        commands.entity(player_ent).insert(Grounded);
+    } else {
+        commands.entity(player_ent).remove::<Grounded>();
+    }
+}
+
 pub(crate) fn process_player_movement(
     time: Res<Time>,
     input_handler: InputChecker,
     mut q_local_player: Query<
-        (&mut Velocity, &GlobalTransform, Option<&PlayerAlignment>),
+        (&mut Velocity, &GlobalTransform, Option<&PlayerAlignment>, Option<&Grounded>),
         (With<LocalPlayer>, Without<Pilot>, Without<BuildMode>),
     >,
     q_camera: Query<&Transform, With<MainCamera>>,
@@ -34,7 +87,7 @@ pub(crate) fn process_player_movement(
     };
 
     // This will be err if the player is piloting a ship
-    let Ok((mut velocity, player_transform, player_alignment)) = q_local_player.get_single_mut() else {
+    let Ok((mut velocity, player_transform, player_alignment, grounded)) = q_local_player.get_single_mut() else {
         return;
     };
 
@@ -61,6 +114,12 @@ pub(crate) fn process_player_movement(
     let time = time.delta_seconds();
 
     let mut new_linvel = player_inv_rot * velocity.linvel;
+
+    // Simulate friction
+    if grounded.is_some() {
+        new_linvel.x *= 0.5;
+        new_linvel.z *= 0.5;
+    }
 
     if !any_open_menus {
         if input_handler.check_pressed(CosmosInputs::MoveForward) {
@@ -121,6 +180,11 @@ pub(super) fn register(app: &mut App) {
     app.configure_sets(
         Update,
         PlayerMovementSet::ProcessPlayerMovement.before(LocationPhysicsSet::DoPhysics),
+    );
+
+    app.add_systems(
+        Update,
+        (append_grounded_check, check_grounded).run_if(in_state(GameState::Playing)).chain(),
     );
 
     app.add_systems(
