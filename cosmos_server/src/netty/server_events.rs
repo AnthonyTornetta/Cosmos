@@ -115,6 +115,10 @@ pub(super) fn handle_server_events(
                     RigidBody::Dynamic,
                     velocity,
                     Collider::capsule_y(0.65, 0.25),
+                    Friction {
+                        coefficient: 0.0,
+                        combine_rule: CoefficientCombineRule::Min,
+                    },
                     player,
                     ReadMassProperties::default(),
                     inventory,

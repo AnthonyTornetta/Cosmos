@@ -421,6 +421,10 @@ pub(crate) fn client_sync_players(
                     LockedAxes::ROTATION_LOCKED,
                     Name::new(format!("Player ({name})")),
                     RigidBody::Dynamic,
+                    Friction {
+                        coefficient: 0.0,
+                        combine_rule: CoefficientCombineRule::Min,
+                    },
                     body.create_velocity(),
                     Player::new(name, id),
                     ReadMassProperties::default(),

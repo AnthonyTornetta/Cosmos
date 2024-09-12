@@ -44,6 +44,7 @@ use bevy_mod_debugdump::schedule_graph;
 use bevy_obj::ObjPlugin;
 
 use bevy_rapier3d::plugin::{RapierContextInitialization, RapierPhysicsPlugin};
+// use bevy_rapier3d::render::RapierDebugRenderPlugin;
 use bevy_renet2::{transport::NetcodeClientPlugin, RenetClientPlugin};
 use clap::{arg, Parser};
 use cosmos_core::{physics::collision_handling::CosmosPhysicsFilter, plugin::cosmos_core_plugin::CosmosCorePluginGroup};

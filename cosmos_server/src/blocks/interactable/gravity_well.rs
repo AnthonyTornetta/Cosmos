@@ -12,7 +12,7 @@ use bevy::{
     hierarchy::{BuildChildren, Parent},
     log::info,
     math::Vec3,
-    prelude::Res,
+    prelude::{Res, With},
     state::condition::in_state,
 };
 use bevy_renet2::renet2::RenetServer;
@@ -36,7 +36,7 @@ fn grav_well_handle_block_event(
     q_grav_well: Query<&GravityWell>,
     q_structure: Query<&Structure>,
     blocks: Res<Registry<Block>>,
-    q_has_gravity_wells: Query<(Entity, &GravityWell)>,
+    q_has_gravity_wells: Query<Entity, With<GravityWell>>,
     mut commands: Commands,
 ) {
     for ev in interact_events.read() {
@@ -86,10 +86,8 @@ fn grav_well_handle_block_event(
             continue;
         }
 
-        for (ent, grav_well) in &q_has_gravity_wells {
-            if grav_well.block == ev.block.coords() && grav_well.structure_entity == ev.structure_entity {
-                commands.entity(ent).remove::<GravityWell>();
-            }
+        for ent in &q_has_gravity_wells {
+            commands.entity(ent).remove::<GravityWell>();
         }
     }
 }
