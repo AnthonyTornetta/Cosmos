@@ -58,6 +58,8 @@ fn monitor_block_health_changed(mut server: ResMut<RenetServer>, mut event_reade
 #[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
 /// Handles block health changes
 pub enum BlockHealthSet {
+    /// Block health changes should be processed (and [`BlockDestroyedEvent`]s sent)
+    SendHealthChanges,
     /// Health changes of blocks will be processed (removing blocks with health <= 0)
     ProcessHealthChanges,
 }
@@ -65,11 +67,15 @@ pub enum BlockHealthSet {
 pub(super) fn register(app: &mut App) {
     app.configure_sets(
         Update,
-        BlockHealthSet::ProcessHealthChanges
-            .after(BiosphereGenerationSet::GenerateChunkFeatures)
-            .after(StructureLoadingSet::StructureLoaded)
-            .after(BlockEventsSet::PostProcessEvents)
-            .after(MeltingDownSet::ProcessMeltingDown),
+        (
+            BlockHealthSet::SendHealthChanges,
+            BlockHealthSet::ProcessHealthChanges
+                .after(BiosphereGenerationSet::GenerateChunkFeatures)
+                .after(StructureLoadingSet::StructureLoaded)
+                .after(BlockEventsSet::PostProcessEvents)
+                .after(MeltingDownSet::ProcessMeltingDown),
+        )
+            .chain(),
     );
 
     app.add_systems(

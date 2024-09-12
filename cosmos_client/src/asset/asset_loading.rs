@@ -867,6 +867,21 @@ pub enum AssetsSet {
     AssetsReady,
 }
 
+/// In PostLoading state.
+#[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
+pub enum ItemMeshingLoadingSet {
+    /// Registries [`ItemTextureIndex`] and [`ItemRenderingInfo`] are setup.
+    LoadItemRenderingInformation,
+    /// The model files for blocks are loaded.
+    LoadBlockModels,
+    /// The model files for items are loaded.
+    LoadItemModels,
+    /// Meshes are inserted into the [`ItemRenderingInfo`] registry.
+    ///
+    /// This MUST happen after both block and item model files are properly loaded.
+    GenerateMeshes,
+}
+
 pub(super) fn register(app: &mut App) {
     registry::create_registry::<BlockTextureIndex>(app, "cosmos:block_texture_index");
     registry::create_registry::<ItemTextureIndex>(app, "cosmos:item_texture_index");
@@ -876,6 +891,17 @@ pub(super) fn register(app: &mut App) {
     registry::create_registry::<CosmosTextureAtlas>(app, "cosmos:texture_atlas");
 
     app.configure_sets(Update, (AssetsSet::AssetsLoading, AssetsSet::AssetsReady).chain());
+
+    app.configure_sets(
+        OnExit(GameState::PostLoading),
+        (
+            ItemMeshingLoadingSet::LoadItemRenderingInformation,
+            ItemMeshingLoadingSet::LoadBlockModels,
+            ItemMeshingLoadingSet::LoadItemModels,
+            ItemMeshingLoadingSet::GenerateMeshes,
+        )
+            .chain(),
+    );
 
     app.add_event::<AssetsDoneLoadingEvent>()
         .add_event::<AllTexturesDoneLoadingEvent>()
@@ -892,10 +918,8 @@ pub(super) fn register(app: &mut App) {
         .add_systems(OnEnter(GameState::PostLoading), setup_textures)
         .add_systems(
             OnExit(GameState::PostLoading),
-            (load_item_rendering_information, load_block_rendering_information).chain(),
+            (load_item_rendering_information, load_block_rendering_information)
+                .in_set(ItemMeshingLoadingSet::LoadItemRenderingInformation)
+                .chain(),
         );
-
-    // It's probably fine
-    // app.allow_ambiguous_resource::<Events<AllTexturesDoneLoadingEvent>>();
-    // app.allow_ambiguous_resource::<Registry<CosmosTextureAtlas>>();
 }

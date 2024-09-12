@@ -5,7 +5,7 @@ use bevy::{log::info, prelude::Plugin};
 use crate::{
     ai, blocks, commands, debug, fluid,
     init::{self, init_server},
-    inventory, logic, netty, persistence, physics, projectiles, registry, shop, structure, universe, utility_runs,
+    inventory, items, logic, netty, persistence, physics, projectiles, registry, shop, structure, universe, utility_runs,
 };
 
 /// The server's plugin
@@ -26,6 +26,7 @@ impl Plugin for ServerPlugin {
         netty::register(app);
         physics::register(app);
         blocks::register(app);
+        items::register(app);
         structure::register(app);
         inventory::register(app);
         super::register(app);

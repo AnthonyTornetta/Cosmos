@@ -3,20 +3,28 @@
 use bevy::{
     ecs::world::Mut,
     log::warn,
-    prelude::{in_state, App, Changed, Commands, Entity, IntoSystemConfigs, Query, RemovedComponents, Res, ResMut, Update},
+    math::{Quat, Vec3},
+    prelude::{
+        in_state, App, Changed, Commands, Entity, GlobalTransform, IntoSystemConfigs, Query, RemovedComponents, Res, ResMut, Update,
+    },
 };
+use bevy_rapier3d::prelude::Velocity;
 use bevy_renet2::renet2::RenetServer;
 use cosmos_core::{
+    ecs::bundles::BundleStartingRotation,
     entities::player::Player,
     inventory::{
         netty::{ClientInventoryMessages, InventoryIdentifier, ServerInventoryMessages},
         HeldItemStack, Inventory,
     },
+    item::physical_item::PhysicalItem,
     netty::{cosmos_encoder, server::ServerLobby, NettyChannelClient, NettyChannelServer},
+    persistence::LoadingDistance,
+    physics::location::Location,
     structure::Structure,
 };
 
-use crate::state::GameState;
+use crate::{entities::player::PlayerLooking, state::GameState};
 
 fn sync_held_items(
     query: Query<(&Player, &HeldItemStack), Changed<HeldItemStack>>,
@@ -100,6 +108,7 @@ fn listen_for_inventory_messages(
     q_structure: Query<&Structure>,
     mut held_item_query: Query<&mut HeldItemStack>,
     mut server: ResMut<RenetServer>,
+    q_player: Query<(&Location, &GlobalTransform, &PlayerLooking, &Velocity)>,
     lobby: Res<ServerLobby>,
 ) {
     for client_id in server.clients_id().into_iter() {
@@ -295,6 +304,56 @@ fn listen_for_inventory_messages(
                         }
                     }
                 }
+                ClientInventoryMessages::ThrowItemstack {
+                    quantity,
+                    slot,
+                    inventory_holder,
+                } => {
+                    let Some(mut inventory) = get_inventory_mut(inventory_holder, &mut q_inventory, &q_structure) else {
+                        continue;
+                    };
+
+                    let Some(is) = inventory.itemstack_at(slot as usize) else {
+                        continue;
+                    };
+
+                    let Ok((location, g_trans, player_looking, player_velocity)) = q_player.get(client_entity) else {
+                        continue;
+                    };
+                    let quantity_being_thrown = quantity.min(is.quantity());
+
+                    let mut dropped_is = is.clone();
+                    dropped_is.set_quantity(quantity_being_thrown);
+
+                    if is.quantity() > quantity_being_thrown {
+                        let mut is = is.clone();
+                        let qty = is.quantity();
+                        is.set_quantity(qty - quantity_being_thrown);
+                        inventory.set_itemstack_at(slot as usize, Some(is), &mut commands);
+                    } else {
+                        inventory.remove_itemstack_at(slot as usize);
+                    }
+
+                    let player_rot = Quat::from_affine3(&g_trans.affine()) * player_looking.rotation;
+                    let linvel = player_rot * Vec3::NEG_Z * 4.0 + player_velocity.linvel;
+
+                    let dropped_item_entity = commands
+                        .spawn((
+                            PhysicalItem,
+                            *location + linvel.normalize(),
+                            LoadingDistance::new(1, 2),
+                            BundleStartingRotation(player_rot),
+                            Velocity {
+                                linvel,
+                                angvel: Vec3::ZERO,
+                            },
+                        ))
+                        .id();
+
+                    let mut physical_item_inventory = Inventory::new("", 1, None, dropped_item_entity);
+                    physical_item_inventory.set_itemstack_at(0, Some(dropped_is), &mut commands);
+                    commands.entity(dropped_item_entity).insert(physical_item_inventory);
+                }
                 ClientInventoryMessages::ThrowHeldItemstack { quantity } => {
                     let Ok(mut held_item_stack) = held_item_query.get_mut(client_entity) else {
                         // Perhaps the client needs updated
@@ -306,14 +365,45 @@ fn listen_for_inventory_messages(
                         continue;
                     };
 
+                    if quantity == 0 {
+                        continue;
+                    }
+
+                    let Ok((location, g_trans, player_looking, player_velocity)) = q_player.get(client_entity) else {
+                        continue;
+                    };
+
                     let amount = held_item_stack.quantity().min(quantity);
 
                     // "Throws" item
                     held_item_stack.decrease_quantity(amount);
-                    warn!("Throwing not implemented yet - deleting {amount}.");
+
+                    let mut dropped_is = held_item_stack.0.clone();
+                    dropped_is.set_quantity(amount);
+
+                    let player_rot = player_looking.rotation * Quat::from_affine3(&g_trans.affine());
+                    let linvel = player_rot * Vec3::NEG_Z + player_velocity.linvel;
+
+                    let dropped_item_entity = commands
+                        .spawn((
+                            PhysicalItem,
+                            *location + linvel.normalize(),
+                            LoadingDistance::new(1, 2),
+                            BundleStartingRotation(player_rot),
+                            Velocity {
+                                linvel,
+                                angvel: Vec3::ZERO,
+                            },
+                        ))
+                        .id();
+
+                    let mut physical_item_inventory = Inventory::new("", 1, None, dropped_item_entity);
+                    physical_item_inventory.set_itemstack_at(0, Some(dropped_is), &mut commands);
+                    commands.entity(dropped_item_entity).insert(physical_item_inventory);
 
                     if held_item_stack.is_empty() {
-                        held_item_stack.remove(&mut commands);
+                        // no longer remove since it's thrown, right?
+                        // held_item_stack.remove(&mut commands);
                         commands.entity(client_entity).remove::<HeldItemStack>();
                     }
                 }

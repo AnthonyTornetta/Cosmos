@@ -1,17 +1,23 @@
 //! Contains the various types of block events
 
 use bevy::prelude::*;
+use bevy_rapier3d::prelude::Velocity;
 use serde::{Deserialize, Serialize};
 
 use crate::{
     blockitems::BlockItems,
-    ecs::mut_events::{MutEvent, MutEventsCommand},
+    ecs::{
+        bundles::BundleStartingRotation,
+        mut_events::{MutEvent, MutEventsCommand},
+    },
     events::block_events::BlockChangedEvent,
     inventory::{
         itemstack::{ItemShouldHaveData, ItemStackSystemSet},
         Inventory,
     },
-    item::Item,
+    item::{physical_item::PhysicalItem, Item},
+    persistence::LoadingDistance,
+    physics::location::Location,
     registry::{identifiable::Identifiable, Registry},
     structure::{
         coordinates::{BlockCoordinate, CoordinateType, UnboundCoordinateType},
@@ -91,7 +97,7 @@ pub struct BlockPlaceEventData {
 }
 
 fn handle_block_break_events(
-    mut q_structure: Query<&mut Structure>,
+    mut q_structure: Query<(&mut Structure, &Location, &GlobalTransform, &Velocity)>,
     mut event_reader: EventReader<BlockBreakEvent>,
     blocks: Res<Registry<Block>>,
     items: Res<Registry<Item>>,
@@ -108,7 +114,7 @@ fn handle_block_break_events(
         // structures in the game
 
         if q_structure.contains(ev.breaker) {
-            let Ok(mut structure) = q_structure.get_mut(ev.structure_entity) else {
+            let Ok((mut structure, _, _, _)) = q_structure.get_mut(ev.structure_entity) else {
                 continue;
             };
 
@@ -150,7 +156,7 @@ fn handle_block_break_events(
 
             structure.remove_block_at(coord, &blocks, Some(&mut event_writer));
         } else if let Ok((mut inventory, build_mode, parent)) = inventory_query.get_mut(ev.breaker) {
-            if let Ok(mut structure) = q_structure.get_mut(ev.structure_entity) {
+            if let Ok((mut structure, s_loc, g_trans, velocity)) = q_structure.get_mut(ev.structure_entity) {
                 let mut structure_blocks = vec![(ev.block.coords(), BlockRotation::default())];
 
                 if let (Some(build_mode), Some(parent)) = (build_mode, parent) {
@@ -183,7 +189,35 @@ fn handle_block_break_events(
                         if let Some(item_id) = block_items.item_from_block(block) {
                             let item = items.from_numeric_id(item_id);
 
-                            inventory.insert_item(item, 1, &mut commands, &has_data);
+                            let (left_over, _) = inventory.insert_item(item, 1, &mut commands, &has_data);
+
+                            if left_over != 0 {
+                                let structure_rot = Quat::from_affine3(&g_trans.affine());
+                                let item_spawn = *s_loc + structure_rot * structure.block_relative_position(coord);
+                                let item_vel = velocity.linvel;
+
+                                let dropped_item_entity = commands
+                                    .spawn((
+                                        PhysicalItem,
+                                        item_spawn,
+                                        LoadingDistance::new(1, 2),
+                                        BundleStartingRotation(structure_rot),
+                                        Velocity {
+                                            linvel: item_vel
+                                                + Vec3::new(
+                                                    rand::random::<f32>() - 0.5,
+                                                    rand::random::<f32>() - 0.5,
+                                                    rand::random::<f32>() - 0.5,
+                                                ),
+                                            angvel: Vec3::ZERO,
+                                        },
+                                    ))
+                                    .id();
+
+                                let mut physical_item_inventory = Inventory::new("", 1, None, dropped_item_entity);
+                                physical_item_inventory.insert_item(item, left_over, &mut commands, &has_data);
+                                commands.entity(dropped_item_entity).insert(physical_item_inventory);
+                            }
                         }
 
                         structure.remove_block_at(coord, &blocks, Some(&mut event_writer));
@@ -447,7 +481,7 @@ pub enum BlockEventsSet {
     /// Please note that at this point, the only event sent may be the [`BlockPlaceEvent`] - not the resulting [`BlockChangedEvent`].
     /// The [`BlockChangedEvent`] is only sent once the block is inserted into the structure (which happens during this set).
     ProcessEventsPrePlacement,
-    /// If your event processing relies on the block being placed, run it in this set. The data still is no guarenteed to be present.
+    /// If your event processing relies on the block being placed, run it in this set. The data still is not guarenteed to be present.
     ProcessEvents,
     /// For systems that need information set in the [`BlockEventsSet::ProcessEvents`] stage. Block data should be present.
     PostProcessEvents,

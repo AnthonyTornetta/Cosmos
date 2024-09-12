@@ -110,6 +110,17 @@ pub enum ClientInventoryMessages {
     /// "Throws" the currently held item in the cursor
     ///
     /// Note throwing isn't implemented yet, so for now it will simply delete the item.
+    ThrowItemstack {
+        /// The entity that has this inventory
+        inventory_holder: InventoryIdentifier,
+        /// The amount of the held item to throw (is checked on the server to not exceed the held quantity)
+        quantity: u16,
+        /// The slot of the inventory you are throwing
+        slot: u32,
+    },
+    /// "Throws" the currently held item in the cursor
+    ///
+    /// Note throwing isn't implemented yet, so for now it will simply delete the item.
     InsertHeldItem {
         /// The amount of the held item to insert into the inventory (is checked on the server to not exceed the held quantity)
         quantity: u16,
