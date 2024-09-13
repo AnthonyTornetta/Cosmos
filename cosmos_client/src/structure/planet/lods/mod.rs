@@ -352,7 +352,7 @@ fn add_new_needs_generated_chunk(
             biosphere_id: U32Vec4::splat(1),
             chunk_coords: Vec4::new(block_pos.x, block_pos.y, block_pos.z, 0.0),
             scale: Vec4::splat(scale as f32),
-            sea_level: Vec4::splat(0.75 * structure.block_dimensions().x as f32 / 2.0),
+            sea_level: Vec4::splat(0.5 * structure.block_dimensions().x as f32 / 2.0),
             structure_pos: Vec4::new(structure_loc.x, structure_loc.y, structure_loc.z, 0.0),
         },
         scale: scale as f32,
