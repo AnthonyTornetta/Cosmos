@@ -105,7 +105,7 @@ fn calculate_depth_at(coords_f32: vec3<f32>, sea_level: f32) -> i32 {
 
     var new_depth: f32 = f32(depth);
     let sign_depth = sign(new_depth);
-    new_depth = pow(abs(new_depth), 1.5) * sign_depth;
+    new_depth = pow(abs(new_depth), 1.6) * sign_depth;
     // new_depth = pow(new_depth, 1.1);
 
     var coord: f32 = coords_f32.x;
