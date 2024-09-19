@@ -1,0 +1,55 @@
+use bevy::{
+    prelude::{App, States},
+    state::state::FreelyMutableState,
+};
+use serde::{de::DeserializeOwned, Deserialize, Serialize};
+
+use crate::registry::identifiable::Identifiable;
+
+#[cfg(feature = "client")]
+mod client;
+#[cfg(feature = "server")]
+mod server;
+
+pub fn sync_registry<'a, T: Identifiable + Serialize + DeserializeOwned + std::fmt::Debug>(app: &mut App) {
+    #[cfg(feature = "server")]
+    server::sync_registry::<T>(app);
+    #[cfg(feature = "client")]
+    client::sync_registry::<T>(app);
+}
+
+#[derive(Clone, Copy)]
+pub enum RegistrySyncInit<T: States + Clone + Copy> {
+    #[cfg(feature = "client")]
+    Client {
+        connecting_state: T,
+        loading_data_state: T,
+        loading_world_state: T,
+    },
+    #[cfg(feature = "server")]
+    Server { playing_state: T },
+}
+
+pub(super) fn register<T: States + Clone + Copy + FreelyMutableState>(app: &mut App, registry_sync_init: RegistrySyncInit<T>) {
+    #[cfg(feature = "server")]
+    {
+        let RegistrySyncInit::Server { playing_state } = registry_sync_init else {
+            panic!("Invalid arg sent to server.")
+        };
+        server::register(app, playing_state);
+    }
+
+    #[cfg(feature = "client")]
+    {
+        let RegistrySyncInit::Client {
+            connecting_state,
+            loading_data_state,
+            loading_world_state,
+        } = registry_sync_init
+        else {
+            panic!("Invalid arg sent to client.")
+        };
+
+        client::register(app, connecting_state, loading_data_state, loading_world_state);
+    }
+}

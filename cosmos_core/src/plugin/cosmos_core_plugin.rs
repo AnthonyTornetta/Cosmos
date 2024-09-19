@@ -1,5 +1,6 @@
 //! This should contain everything needed for a cosmos application to run
 
+use crate::netty::sync::registry::RegistrySyncInit;
 use crate::{block, debug, economy, ecs, fluid, inventory, logic, netty, persistence, projectiles, shop, universe};
 use crate::{blockitems, structure};
 use crate::{events, loader};
@@ -13,49 +14,69 @@ use bevy_inspector_egui::quick::WorldInspectorPlugin;
 /// This plugin group should contain everything needed for a cosmos application to run
 pub struct CosmosCorePluginGroup<T>
 where
-    T: States + Clone + Copy,
+    T: States + Clone + Copy + FreelyMutableState,
 {
     pre_loading_state: T,
     loading_state: T,
     post_loading_state: T,
     done_loading_state: T,
     playing_game_state: T,
+    registry_sync_init: RegistrySyncInit<T>,
 }
 
 /// This plugin should contain everything needed for a cosmos application to run
 pub struct CosmosCorePlugin<T>
 where
-    T: States + Clone + Copy,
+    T: States + Clone + Copy + FreelyMutableState,
 {
     pre_loading_state: T,
     loading_state: T,
     post_loading_state: T,
     done_loading_state: T,
     playing_state: T,
+
+    registry_sync_init: RegistrySyncInit<T>,
 }
 
-impl<T: States + Clone + Copy> CosmosCorePlugin<T> {
+impl<T: States + Clone + Copy + FreelyMutableState> CosmosCorePlugin<T> {
     /// Creates the plugin with the given states
-    pub fn new(pre_loading_state: T, loading_state: T, post_loading_state: T, done_loading_state: T, playing_game_state: T) -> Self {
+    pub fn new(
+        pre_loading_state: T,
+        loading_state: T,
+        post_loading_state: T,
+        done_loading_state: T,
+        playing_game_state: T,
+        registry_sync_init: RegistrySyncInit<T>,
+    ) -> Self {
         Self {
             pre_loading_state,
             loading_state,
             post_loading_state,
             done_loading_state,
+            registry_sync_init,
             playing_state: playing_game_state,
         }
     }
 }
 
-impl<T: States + Clone + Copy> CosmosCorePluginGroup<T> {
+impl<T: States + Clone + Copy + FreelyMutableState> CosmosCorePluginGroup<T> {
     /// Creates the plugin group with the given states
-    pub fn new(pre_loading_state: T, loading_state: T, post_loading_state: T, done_loading_state: T, playing_game_state: T) -> Self {
+    pub fn new(
+        pre_loading_state: T,
+        loading_state: T,
+        post_loading_state: T,
+        done_loading_state: T,
+        playing_game_state: T,
+
+        registry_sync_init: RegistrySyncInit<T>,
+    ) -> Self {
         Self {
             pre_loading_state,
             loading_state,
             post_loading_state,
             done_loading_state,
             playing_game_state,
+            registry_sync_init,
         }
     }
 }
@@ -87,7 +108,7 @@ impl<T: States + Clone + Copy + FreelyMutableState> Plugin for CosmosCorePlugin<
         ecs::register(app);
         persistence::register(app);
         universe::register(app);
-        netty::register(app);
+        netty::register(app, self.registry_sync_init);
         economy::register(app);
         shop::register(app);
         logic::register(app, self.playing_state);
@@ -122,6 +143,7 @@ impl<T: States + Clone + Copy + FreelyMutableState> PluginGroup for CosmosCorePl
                 self.post_loading_state,
                 self.done_loading_state,
                 self.playing_game_state,
+                self.registry_sync_init,
             ))
     }
 }

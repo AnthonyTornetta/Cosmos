@@ -10,7 +10,6 @@ use crate::{
         materials::{AddMaterialEvent, BlockMaterialMapping, MaterialDefinition, MaterialType, MaterialsSystemSet},
     },
     block::lighting::BlockLighting,
-    ecs::add_statebound_resource,
     state::game_state::GameState,
 };
 use bevy::{
@@ -23,6 +22,7 @@ use cosmos_core::{
         block_direction::{BlockDirection, ALL_BLOCK_DIRECTIONS},
         Block,
     },
+    ecs::add_statebound_resource,
     ecs::NeedsDespawned,
     prelude::{BlockCoordinate, UnboundBlockCoordinate},
     registry::{
@@ -668,9 +668,9 @@ pub(super) fn register(app: &mut App) {
             .run_if(in_state(GameState::Playing)),
     );
 
-    add_statebound_resource::<RenderingLods>(app, GameState::Playing);
-    add_statebound_resource::<NeedLods>(app, GameState::Playing);
-    add_statebound_resource::<MeshesToCompute>(app, GameState::Playing);
+    add_statebound_resource::<RenderingLods, GameState>(app, GameState::Playing);
+    add_statebound_resource::<NeedLods, GameState>(app, GameState::Playing);
+    add_statebound_resource::<MeshesToCompute, GameState>(app, GameState::Playing);
 }
 
 #[cfg(test)]

@@ -1,5 +1,9 @@
 //! Handles client-side registry syncing logic
 
+use crate::{
+    netty::{cosmos_encoder, server_registry::RegistrySyncing, system_sets::NetworkingSystemsSet, NettyChannelServer},
+    registry::{identifiable::Identifiable, Registry},
+};
 use bevy::{
     app::{App, Update},
     ecs::{
@@ -8,19 +12,17 @@ use bevy::{
         system::{Res, ResMut, Resource},
     },
     log::{error, info},
-    prelude::{IntoSystemSetConfigs, SystemSet},
+    prelude::{IntoSystemSetConfigs, States, SystemSet},
     reflect::erased_serde::Serialize,
-    state::{condition::in_state, state::NextState},
+    state::{
+        condition::in_state,
+        state::{FreelyMutableState, NextState},
+    },
 };
 use bevy_renet2::renet2::RenetClient;
-use cosmos_core::{
-    ecs::add_multi_statebound_resource,
-    netty::{cosmos_encoder, server_registry::RegistrySyncing, system_sets::NetworkingSystemsSet, NettyChannelServer},
-    registry::{identifiable::Identifiable, Registry},
-};
 use serde::de::DeserializeOwned;
 
-use crate::state::game_state::GameState;
+use crate::ecs::add_multi_statebound_resource;
 
 #[derive(Event)]
 struct ReceivedRegistryEvent {
@@ -61,15 +63,19 @@ enum LoadingRegistriesSet {
     LoadRegistriesFromServer,
 }
 
+#[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
+enum TransitionStateSet {
+    TransitionState,
+}
+
 /// Call this function on the client-side to signal that this registry should be synced with the server
 pub fn sync_registry<T: Identifiable + Serialize + DeserializeOwned + std::fmt::Debug>(app: &mut App) {
     app.add_systems(
         Update,
         sync::<T>
-            .before(transition_state)
+            .before(TransitionStateSet::TransitionState)
             .in_set(LoadingRegistriesSet::LoadRegistriesFromServer)
-            .ambiguous_with(LoadingRegistriesSet::LoadRegistriesFromServer)
-            .run_if(in_state(GameState::LoadingData)),
+            .ambiguous_with(LoadingRegistriesSet::LoadRegistriesFromServer),
     );
 }
 
@@ -96,32 +102,39 @@ fn registry_listen_netty(
     }
 }
 
-fn transition_state(mut state_changer: ResMut<NextState<GameState>>, loading_registries: Res<RegistriesLeftToSync>) {
-    if loading_registries.0.is_some_and(|x| x == 0) {
-        info!("Got all registries from server - loading world!");
-        state_changer.set(GameState::LoadingWorld);
-    }
-}
-
-pub(super) fn register(app: &mut App) {
+pub(super) fn register<T: States + FreelyMutableState + Clone + Copy>(
+    app: &mut App,
+    connecting_state: T,
+    loading_data_state: T,
+    loading_world_state: T,
+) {
     app.configure_sets(
         Update,
         LoadingRegistriesSet::LoadRegistriesFromServer
-            .run_if(in_state(GameState::LoadingData))
+            .run_if(in_state(loading_data_state))
             .in_set(NetworkingSystemsSet::ReceiveMessages),
     );
+
+    app.configure_sets(Update, TransitionStateSet::TransitionState);
+
+    let transition_state = move |mut state_changer: ResMut<NextState<T>>, loading_registries: Res<RegistriesLeftToSync>| {
+        if loading_registries.0.is_some_and(|x| x == 0) {
+            info!("Got all registries from server - loading world!");
+            state_changer.set(loading_world_state);
+        }
+    };
 
     app.add_systems(
         Update,
         (
             registry_listen_netty.before(LoadingRegistriesSet::LoadRegistriesFromServer),
-            transition_state,
+            transition_state.in_set(TransitionStateSet::TransitionState),
         )
             .run_if(resource_exists::<RegistriesLeftToSync>)
             .chain()
-            .run_if(in_state(GameState::LoadingData)),
+            .run_if(in_state(loading_data_state)),
     )
     .add_event::<ReceivedRegistryEvent>();
 
-    add_multi_statebound_resource::<RegistriesLeftToSync, GameState>(app, GameState::Connecting, GameState::LoadingData);
+    add_multi_statebound_resource::<RegistriesLeftToSync, T>(app, connecting_state, loading_data_state);
 }

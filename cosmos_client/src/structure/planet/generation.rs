@@ -2,15 +2,11 @@
 
 use std::fs;
 
-use crate::{
-    ecs::{add_multi_statebound_resource, add_statebound_resource, init_resource},
-    netty::connect::WaitingOnServer,
-    registry::sync_registry,
-    state::game_state::GameState,
-};
+use crate::{netty::connect::WaitingOnServer, registry::sync_registry, state::game_state::GameState};
 use bevy::prelude::*;
 use bevy_easy_compute::prelude::*;
 use cosmos_core::{
+    ecs::{add_multi_statebound_resource, add_statebound_resource, init_resource},
     netty::system_sets::NetworkingSystemsSet,
     structure::planet::{
         biosphere::Biosphere,
@@ -146,6 +142,6 @@ pub(super) fn register(app: &mut App) {
     )
     .add_event::<SetTerrainGenData>();
 
-    add_multi_statebound_resource::<SetPermutationTable>(app, GameState::LoadingData, GameState::Playing);
-    add_statebound_resource::<ChunkData>(app, GameState::Playing);
+    add_multi_statebound_resource::<SetPermutationTable, GameState>(app, GameState::LoadingData, GameState::Playing);
+    add_statebound_resource::<ChunkData, GameState>(app, GameState::Playing);
 }

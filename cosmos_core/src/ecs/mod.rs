@@ -4,7 +4,7 @@
 pub mod bundles;
 pub mod mut_events;
 
-use bevy::prelude::{App, Commands, Component, DespawnRecursiveExt, Entity, First, Query, With};
+use bevy::prelude::{App, Commands, Component, DespawnRecursiveExt, Entity, First, OnEnter, OnExit, Query, Resource, States, With};
 
 #[derive(Component, Debug)]
 /// Marks an entity that needs to be recurisvely despawned.
@@ -29,4 +29,25 @@ pub fn despawn_needed(mut commands: Commands, needs_despawned_query: Query<Entit
 
 pub(super) fn register(app: &mut App) {
     app.add_systems(First, despawn_needed);
+}
+
+/// Runs `commands.init_resource` in a system. Useful for adding `run_if` statements quickly
+pub fn init_resource<R: Resource + Default>(mut commands: Commands) {
+    commands.init_resource::<R>();
+}
+
+/// A system that removes the given resource
+pub fn remove_resource<R: Resource>(mut commands: Commands) {
+    commands.remove_resource::<R>();
+}
+
+/// A system that adds a resource when entring this state, and removes it when exiting this state.
+pub fn add_statebound_resource<R: Resource + Default, S: States + Clone + Copy>(app: &mut App, state: S) {
+    add_multi_statebound_resource::<R, S>(app, state, state)
+}
+
+/// A system that adds a resource when entring the `add_state` state, and removes it when exiting the `remove_on_exit_state` state.
+pub fn add_multi_statebound_resource<R: Resource + Default, S: States>(app: &mut App, add_state: S, remove_on_exit_state: S) {
+    app.add_systems(OnEnter(add_state), init_resource::<R>)
+        .add_systems(OnExit(remove_on_exit_state), remove_resource::<R>);
 }

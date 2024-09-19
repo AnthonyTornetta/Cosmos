@@ -14,7 +14,10 @@ use bevy::{
 use bevy_mod_debugdump::schedule_graph;
 use bevy_rapier3d::plugin::{RapierContextInitialization, RapierPhysicsPlugin};
 use bevy_renet2::{transport::NetcodeServerPlugin, RenetServerPlugin};
-use cosmos_core::{physics::collision_handling::CosmosPhysicsFilter, plugin::cosmos_core_plugin::CosmosCorePluginGroup};
+use cosmos_core::{
+    netty::sync::registry::RegistrySyncInit, physics::collision_handling::CosmosPhysicsFilter,
+    plugin::cosmos_core_plugin::CosmosCorePluginGroup,
+};
 
 use iyes_perf_ui::PerfUiPlugin;
 use plugin::server_plugin::ServerPlugin;
@@ -94,6 +97,9 @@ fn main() {
             GameState::PostLoading,
             GameState::Playing,
             GameState::Playing,
+            RegistrySyncInit::Server {
+                playing_state: GameState::Playing,
+            },
         ))
         .add_plugins(
             RapierPhysicsPlugin::<CosmosPhysicsFilter>::default()
