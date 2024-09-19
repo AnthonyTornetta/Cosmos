@@ -12,7 +12,6 @@ pub mod economy;
 pub mod ecs;
 pub mod entities;
 pub mod events;
-pub mod fluid;
 pub mod input;
 pub mod interactions;
 pub mod inventory;
@@ -24,7 +23,6 @@ pub mod netty;
 pub mod physics;
 pub mod plugin;
 pub mod projectiles;
-pub mod registry;
 pub mod rendering;
 pub mod settings;
 pub mod shop;
@@ -166,7 +164,6 @@ fn main() {
     interactions::register(&mut app);
     camera::register(&mut app);
     ui::register(&mut app);
-    registry::register(&mut app);
     netty::register(&mut app);
     lang::register(&mut app);
     structure::register(&mut app);
@@ -184,7 +181,6 @@ fn main() {
     ecs::register(&mut app);
     shop::register(&mut app);
     economy::register(&mut app);
-    fluid::register(&mut app);
     item::register(&mut app);
     debug::register(&mut app);
 

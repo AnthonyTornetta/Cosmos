@@ -7,7 +7,7 @@ use bevy::{
 use cosmos_core::fluid::registry::Fluid;
 use cosmos_core::{block::Block, registry::Registry};
 
-use crate::{registry::sync_registry, state::GameState};
+use crate::state::GameState;
 
 fn register_fluid_blocks(blocks: Res<Registry<Block>>, mut fluid_registry: ResMut<Registry<Fluid>>) {
     if blocks.contains("cosmos:water") {
@@ -20,7 +20,5 @@ fn register_fluid_blocks(blocks: Res<Registry<Block>>, mut fluid_registry: ResMu
 }
 
 pub(super) fn register(app: &mut App) {
-    sync_registry::<Fluid>(app);
-
     app.add_systems(OnEnter(GameState::PostLoading), register_fluid_blocks);
 }

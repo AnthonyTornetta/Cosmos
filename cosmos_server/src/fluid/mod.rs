@@ -14,10 +14,7 @@ use cosmos_core::{
 };
 use interact_fluid::FluidInteractionSet;
 
-use crate::{
-    persistence::make_persistent::{make_persistent, PersistentComponent},
-    registry::sync_registry,
-};
+use crate::persistence::make_persistent::{make_persistent, PersistentComponent};
 
 pub mod interact_fluid;
 mod register_blocks;
@@ -65,7 +62,6 @@ pub(super) fn register(app: &mut App) {
             .ambiguous_with(FluidInteractionSet::InteractWithFluidBlocks),
     );
 
-    sync_registry::<FluidTankBlock>(app);
     make_persistent::<FluidItemData>(app);
     make_persistent::<BlockFluidData>(app);
 }

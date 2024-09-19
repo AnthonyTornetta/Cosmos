@@ -44,7 +44,6 @@ use crate::{
         saving::{NeedsSaved, SavingSystemSet, SAVING_SCHEDULE},
         SerializedData,
     },
-    registry::sync_registry,
     rng::get_rng_for_sector,
     state::GameState,
     structure::planet::{
@@ -316,10 +315,6 @@ fn assign_planet_atmosphere(mut commands: Commands, q_needs_atmosphere: Query<En
 }
 
 pub(super) fn register(app: &mut App) {
-    sync_registry::<Biosphere>(app);
-    sync_registry::<Biome>(app);
-    sync_registry::<BiosphereBiomesRegistry>(app);
-
     app.add_systems(Update, assign_planet_atmosphere);
 
     app.configure_sets(Startup, BiosphereRegistrationSet::RegisterBiospheres);

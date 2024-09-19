@@ -14,14 +14,16 @@ use bevy_renet2::renet2::RenetServer;
 use cosmos_core::{
     item::Item,
     netty::{
-        cosmos_encoder, server_replication::ReplicationMessage, sync::server_entity_syncing::RequestedEntityEvent, NettyChannelServer,
-        NoSendEntity,
+        cosmos_encoder,
+        server_replication::ReplicationMessage,
+        sync::{registry::sync_registry, server_entity_syncing::RequestedEntityEvent},
+        NettyChannelServer, NoSendEntity,
     },
     registry::{identifiable::Identifiable, Registry},
     structure::systems::{sync::SyncableSystem, StructureSystem, StructureSystemType, StructureSystems, StructureSystemsSet, SystemActive},
 };
 
-use crate::{registry::sync_registry, state::GameState};
+use crate::state::GameState;
 
 fn sync_system<T: SyncableSystem>(
     mut server: ResMut<RenetServer>,
@@ -126,6 +128,4 @@ pub fn register_structure_system<T: SyncableSystem>(app: &mut App, activatable: 
     );
 }
 
-pub(super) fn register(app: &mut App) {
-    sync_registry::<StructureSystemType>(app);
-}
+pub(super) fn register(app: &mut App) {}

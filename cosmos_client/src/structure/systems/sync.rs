@@ -36,7 +36,6 @@ use cosmos_core::{
 use serde::{de::DeserializeOwned, Serialize};
 
 use crate::{
-    registry::sync_registry,
     state::game_state::GameState,
     structure::planet::align_player::{self, PlayerAlignment},
 };
@@ -237,8 +236,6 @@ pub fn sync_system<T: StructureSystemImpl + Serialize + DeserializeOwned>(app: &
 }
 
 pub(super) fn register(app: &mut App) {
-    sync_registry::<StructureSystemType>(app);
-
     app.add_systems(
         Update,
         replication_listen_netty

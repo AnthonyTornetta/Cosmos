@@ -9,7 +9,7 @@ use bevy::{
     state::state::FreelyMutableState,
 };
 use bevy_renet2::renet2::ClientId;
-use registry::RegistrySyncInit;
+use registry::{sync_registry, RegistrySyncInit};
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
 use crate::{
@@ -248,6 +248,7 @@ pub fn sync_component<T: SyncableComponent>(_app: &mut App) {
 
 pub(super) fn register<T: States + Clone + Copy + FreelyMutableState>(app: &mut App, registry_syncing: RegistrySyncInit<T>) {
     create_registry::<SyncedComponentId>(app, "cosmos:syncable_components");
+    sync_registry::<SyncedComponentId>(app);
     registry::register(app, registry_syncing);
 
     app.add_event::<GotComponentToSyncEvent>().add_event::<GotComponentToRemoveEvent>();

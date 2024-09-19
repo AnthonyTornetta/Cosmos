@@ -16,7 +16,10 @@ use bevy::{
 };
 use serde::{Deserialize, Serialize};
 
-use crate::registry::{create_registry, identifiable::Identifiable, Registry};
+use crate::{
+    netty::sync::registry::sync_registry,
+    registry::{create_registry, identifiable::Identifiable, Registry},
+};
 
 use super::{loading::StructureLoadingSet, shared::MeltingDown, ship::Ship, Structure};
 
@@ -500,6 +503,7 @@ impl Identifiable for StructureSystemType {
 
 pub(super) fn register(app: &mut App) {
     create_registry::<StructureSystemType>(app, "cosmos:structure_system_types");
+    sync_registry::<StructureSystemType>(app);
 
     app.configure_sets(
         Update,

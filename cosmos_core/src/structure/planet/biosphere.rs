@@ -7,6 +7,7 @@ use bevy::{
 use serde::{Deserialize, Serialize};
 
 use crate::{
+    netty::sync::registry::sync_registry,
     registry::{create_registry, identifiable::Identifiable},
     structure::coordinates::CoordinateType,
 };
@@ -99,6 +100,7 @@ impl Identifiable for Biosphere {
 
 pub(super) fn register(app: &mut App) {
     create_registry::<Biosphere>(app, "cosmos:biosphere");
+    sync_registry::<Biosphere>(app);
 
     app.register_type::<BiosphereMarker>();
 }

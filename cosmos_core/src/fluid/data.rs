@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 use crate::{
     block::Block,
     item::Item,
-    netty::sync::{sync_component, IdentifiableComponent, SyncableComponent},
+    netty::sync::{registry::sync_registry, sync_component, IdentifiableComponent, SyncableComponent},
     registry::{create_registry, identifiable::Identifiable},
 };
 
@@ -182,6 +182,7 @@ pub(super) fn register(app: &mut App) {
     create_registry::<FluidHolder>(app, "cosmos:fluid_holder");
 
     create_registry::<FluidTankBlock>(app, "cosmos:tank_block");
+    sync_registry::<FluidTankBlock>(app);
 
     sync_component::<FluidItemData>(app);
     sync_component::<BlockFluidData>(app);
