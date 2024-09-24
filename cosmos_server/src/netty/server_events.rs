@@ -13,6 +13,7 @@ use cosmos_core::item::Item;
 use cosmos_core::netty::netty_rigidbody::NettyRigidBodyLocation;
 use cosmos_core::netty::server::ServerLobby;
 use cosmos_core::netty::server_reliable_messages::ServerReliableMessages;
+use cosmos_core::netty::sync::registry::server::SyncRegistriesEvent;
 use cosmos_core::netty::sync::server_entity_syncing::RequestedEntityEvent;
 use cosmos_core::netty::{cosmos_encoder, NettyChannelServer};
 use cosmos_core::persistence::LoadingDistance;
@@ -63,7 +64,8 @@ pub(super) fn handle_server_events(
     items: Res<Registry<Item>>,
     mut visualizer: ResMut<RenetServerVisualizer<200>>,
     mut requested_entity: EventWriter<RequestedEntityEvent>,
-    mut player_join_ev_writer: EventWriter<PlayerConnectedEvent>,
+    mut evw_player_join: EventWriter<PlayerConnectedEvent>,
+    mut evw_sync_registries: EventWriter<SyncRegistriesEvent>,
     needs_data: Res<ItemShouldHaveData>,
 ) {
     for event in server_events.read() {
@@ -151,7 +153,8 @@ pub(super) fn handle_server_events(
 
                 server.broadcast_message(NettyChannelServer::Reliable, msg);
 
-                player_join_ev_writer.send(PlayerConnectedEvent { player_entity, client_id });
+                evw_player_join.send(PlayerConnectedEvent { player_entity, client_id });
+                evw_sync_registries.send(SyncRegistriesEvent { player_entity });
             }
             ServerEvent::ClientDisconnected { client_id, reason } => {
                 info!("Client {client_id} disconnected: {reason}");

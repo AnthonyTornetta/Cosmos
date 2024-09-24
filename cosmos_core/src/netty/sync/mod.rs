@@ -44,6 +44,7 @@ pub mod client_syncing;
 mod server_syncing;
 
 pub mod events;
+/// Syncing of registries from server -> client
 pub mod registry;
 
 #[derive(Clone, Serialize, Deserialize, Debug)]

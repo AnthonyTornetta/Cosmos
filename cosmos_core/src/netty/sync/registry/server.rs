@@ -24,7 +24,10 @@ use serde::{Deserialize, Serialize};
 struct NumRegistriesToSync(u64);
 
 #[derive(Event)]
+/// This event signifies that this player needs to have their registries mapped to the server's
+/// registries. This should be sent whenever the player initially joins.
 pub struct SyncRegistriesEvent {
+    /// The player's entity
     pub player_entity: Entity,
 }
 
