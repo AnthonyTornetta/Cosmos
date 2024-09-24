@@ -476,6 +476,7 @@ pub(crate) fn client_sync_players(
                                 CameraHelper::default(),
                                 Name::new("Main Camera"),
                                 MainCamera,
+                                IsDefaultUiCamera,
                                 UiRoot,
                                 AudioReceiver,
                             ));

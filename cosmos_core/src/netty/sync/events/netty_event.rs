@@ -80,6 +80,8 @@ pub(super) struct GotNetworkEvent {
 
 impl SyncedEventImpl for App {
     fn add_netty_event<T: NettyEvent>(&mut self) {
+        self.add_event::<T>();
+
         #[cfg(feature = "client")]
         {
             if T::event_receiver() == EventReceiver::Client || T::event_receiver() == EventReceiver::Both {

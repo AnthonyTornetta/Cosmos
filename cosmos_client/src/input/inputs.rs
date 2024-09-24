@@ -116,6 +116,9 @@ pub enum CosmosInputs {
     DropItem,
     /// Indicates it should drop the whole stack
     BulkDropFlag,
+
+    /// Toggles the galaxy map
+    ToggleMap,
 }
 
 fn init_input(mut input_handler: ResMut<CosmosInputHandler>) {
@@ -179,6 +182,8 @@ fn init_input(mut input_handler: ResMut<CosmosInputHandler>) {
 
     input_handler.set_keycode(CosmosInputs::DropItem, KeyCode::KeyG);
     input_handler.set_keycode(CosmosInputs::BulkDropFlag, KeyCode::ControlLeft);
+
+    input_handler.set_keycode(CosmosInputs::ToggleMap, KeyCode::KeyM);
 }
 
 #[derive(Resource, Default, Debug)]

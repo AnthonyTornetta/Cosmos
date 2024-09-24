@@ -81,12 +81,20 @@ fn parse_event<T: NettyEvent>(
 }
 
 pub(super) fn client_send_event<T: NettyEvent>(app: &mut App) {
-    app.add_systems(Update, send_events::<T>);
+    app.add_systems(
+        Update,
+        send_events::<T>
+            .in_set(NetworkingSystemsSet::SyncComponents)
+            .run_if(resource_exists::<RenetClient>),
+    );
     app.add_event::<NettyEventToSend<T>>();
 }
 
 pub(super) fn client_receive_event<T: NettyEvent>(app: &mut App) {
-    app.add_systems(Update, parse_event::<T>);
+    app.add_systems(
+        Update,
+        parse_event::<T>.in_set(NetworkingSystemsSet::ReceiveMessages).after(receive_events),
+    );
 }
 
 pub(super) fn register(app: &mut App) {

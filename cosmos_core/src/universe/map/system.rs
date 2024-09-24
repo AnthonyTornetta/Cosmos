@@ -1,7 +1,8 @@
-use bevy::prelude::App;
+use bevy::prelude::{App, Event};
 use serde::{Deserialize, Serialize};
 
 use crate::{
+    netty::sync::events::netty_event::{IdentifiableEvent, NettyEvent, SyncedEventImpl},
     physics::location::{Location, Sector, UniverseSystem},
     universe::star::Star,
 };
@@ -81,9 +82,23 @@ impl SystemMap {
     }
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Event, Debug)]
 pub struct RequestSystemMap {
     system: UniverseSystem,
 }
 
-pub(super) fn register(app: &mut App) {}
+impl IdentifiableEvent for RequestSystemMap {
+    fn unlocalized_name() -> &'static str {
+        "cosmos:request_system_map"
+    }
+}
+
+impl NettyEvent for RequestSystemMap {
+    fn event_receiver() -> crate::netty::sync::events::netty_event::EventReceiver {
+        crate::netty::sync::events::netty_event::EventReceiver::Server
+    }
+}
+
+pub(super) fn register(app: &mut App) {
+    app.add_netty_event::<RequestSystemMap>();
+}
