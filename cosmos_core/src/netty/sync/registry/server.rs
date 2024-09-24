@@ -86,7 +86,7 @@ enum IncrementSet {
 }
 
 /// Call this function on the server-side to signal that this registry should be synced with the client
-pub fn sync_registry<'a, T: Identifiable + Serialize + Deserialize<'a>>(app: &mut App) {
+pub(super) fn sync_registry<'a, T: Identifiable + Serialize + Deserialize<'a>>(app: &mut App) {
     app.add_systems(Startup, incr_registries_to_sync.in_set(IncrementSet::Increment))
         .add_systems(Update, sync::<T>.after(send_number_of_registries));
 }

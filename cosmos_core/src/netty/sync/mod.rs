@@ -43,6 +43,7 @@ pub mod client_syncing;
 #[cfg(feature = "server")]
 mod server_syncing;
 
+/// Events that are synced from server->client and client->server.
 pub mod events;
 /// Syncing of registries from server -> client
 pub mod registry;
@@ -251,6 +252,7 @@ pub(super) fn register<T: States + Clone + Copy + FreelyMutableState>(app: &mut 
     create_registry::<SyncedComponentId>(app, "cosmos:syncable_components");
     sync_registry::<SyncedComponentId>(app);
     registry::register(app, registry_syncing);
+    events::register(app);
 
     app.add_event::<GotComponentToSyncEvent>().add_event::<GotComponentToRemoveEvent>();
 

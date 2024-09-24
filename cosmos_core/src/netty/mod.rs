@@ -56,6 +56,7 @@ pub enum NettyChannelServer {
     Shop,
     /// Generalized component syncing
     ComponentReplication,
+    /// Automatic syncing of events
     NettyEvent,
 }
 
@@ -73,6 +74,7 @@ pub enum NettyChannelClient {
     Shop,
     /// Generalized component syncing
     ComponentReplication,
+    /// Automatic syncing of events
     NettyEvent,
 }
 
