@@ -64,6 +64,9 @@ impl OpenMenu {
     ///
     /// This doesn't effect rendering order, rather effects which menu the "Escape" button will target first.
     /// Menus of the same level will all be closed together. Each escape press will remove the highest-level group of menus.
+    ///
+    /// Typically, if you are constructing a heirarchy of windows, you should start your base window
+    /// at 0 and count up from there.
     pub fn new(level: u32) -> Self {
         Self { level }
     }

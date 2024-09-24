@@ -14,14 +14,15 @@ use bevy::{
 };
 use cosmos_core::{
     ecs::NeedsDespawned,
-    netty::{client::LocalPlayer, system_sets::NetworkingSystemsSet},
+    netty::{client::LocalPlayer, sync::events::client_event::NettyEventWriter, system_sets::NetworkingSystemsSet},
     physics::location::{Location, UniverseSystem},
-    universe::map::system::SystemMap,
+    universe::map::system::{RequestSystemMap, SystemMap},
 };
 
 use crate::{
     input::inputs::{CosmosInputs, InputChecker, InputHandler},
     state::game_state::GameState,
+    ui::OpenMenu,
 };
 
 #[derive(Component)]
@@ -86,6 +87,7 @@ fn toggle_map(
     q_player: Query<&Location, With<LocalPlayer>>,
     mut commands: Commands,
     mut q_map_camera: Query<&mut Camera, With<MapCamera>>,
+    mut nevw_galaxy_map: NettyEventWriter<RequestSystemMap>,
 ) {
     if !input_handler.check_just_pressed(CosmosInputs::ToggleMap) {
         return;
@@ -105,13 +107,18 @@ fn toggle_map(
         return;
     };
 
+    let player_system = player_loc.get_system_coordinates();
+
     map_camera.is_active = true;
     commands.spawn((
-        GalaxyMapDisplay::Loading(player_loc.get_system_coordinates()),
+        GalaxyMapDisplay::Loading(player_system),
+        OpenMenu::new(0),
         RenderLayers::from_layers(&[CAMERA_LAYER]),
         TransformBundle::default(),
         VisibilityBundle::default(),
     ));
+    println!("Sending map!!");
+    nevw_galaxy_map.send(RequestSystemMap { system: player_system });
 }
 
 pub(super) fn register(app: &mut App) {

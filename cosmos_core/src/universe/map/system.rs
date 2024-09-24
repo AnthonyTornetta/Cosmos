@@ -84,7 +84,7 @@ impl SystemMap {
 
 #[derive(Serialize, Deserialize, Event, Debug)]
 pub struct RequestSystemMap {
-    system: UniverseSystem,
+    pub system: UniverseSystem,
 }
 
 impl IdentifiableEvent for RequestSystemMap {

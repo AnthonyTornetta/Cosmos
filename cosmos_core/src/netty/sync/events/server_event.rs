@@ -1,7 +1,7 @@
 use bevy::{
     app::{App, Update},
     log::error,
-    prelude::{resource_exists, Event, EventReader, EventWriter, IntoSystemConfigs, Res, ResMut},
+    prelude::{resource_exists, Event, EventReader, EventWriter, IntoSystemConfigs, OnEnter, Res, ResMut, States},
 };
 use renet2::{ClientId, RenetServer};
 
@@ -22,6 +22,7 @@ fn receive_event(mut server: ResMut<RenetServer>, mut evw_got_event: EventWriter
 
             match msg {
                 NettyEventMessage::SendNettyEvent { component_id, raw_data } => {
+                    println!("Sending comp id: {component_id}");
                     evw_got_event.send(GotNetworkEvent { component_id, raw_data });
                 }
             }
@@ -47,6 +48,8 @@ fn parse_event<T: NettyEvent>(
             error!("Got invalid event from client!");
             continue;
         };
+
+        println!("Received: {event:?}");
 
         evw_custom_event.send(event);
     }
@@ -103,6 +106,17 @@ pub(super) fn server_receive_event<T: NettyEvent>(app: &mut App) {
 pub(super) fn server_send_event<T: NettyEvent>(app: &mut App) {
     app.add_systems(Update, send_events::<T>.in_set(NetworkingSystemsSet::SyncComponents))
         .add_event::<NettyEventToSend<T>>();
+}
+
+fn register_event_type_impl<T: NettyEvent>(mut registry: ResMut<Registry<RegisteredNettyEvent>>) {
+    registry.register(RegisteredNettyEvent {
+        id: 0,
+        unlocalized_name: T::unlocalized_name().into(),
+    });
+}
+
+pub(super) fn register_event_type<T: NettyEvent, S: States>(app: &mut App, loading_state: S) {
+    app.add_systems(OnEnter(loading_state), register_event_type_impl::<T>);
 }
 
 pub(super) fn register(app: &mut App) {

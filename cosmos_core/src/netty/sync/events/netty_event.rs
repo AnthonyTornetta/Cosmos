@@ -54,8 +54,8 @@ pub trait SyncedEventImpl {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub(super) struct RegisteredNettyEvent {
-    id: u16,
-    unlocalized_name: String,
+    pub id: u16,
+    pub unlocalized_name: String,
 }
 
 impl Identifiable for RegisteredNettyEvent {
@@ -94,6 +94,8 @@ impl SyncedEventImpl for App {
 
         #[cfg(feature = "server")]
         {
+            server_event::register_event_type(app, loading_state);
+
             if T::event_receiver() == EventReceiver::Server || T::event_receiver() == EventReceiver::Both {
                 server_event::server_receive_event::<T>(self);
             }

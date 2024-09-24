@@ -1,6 +1,10 @@
 use bevy::{
     app::{App, Update},
-    log::error,
+    ecs::{
+        event::{EventId, SendBatchIds},
+        system::SystemParam,
+    },
+    log::{error, warn},
     prelude::{resource_exists, Event, EventReader, EventWriter, IntoSystemConfigs, Res, ResMut},
 };
 use renet2::RenetClient;
@@ -13,14 +17,47 @@ use crate::{
 
 use super::netty_event::{GotNetworkEvent, NettyEvent, NettyEventMessage, RegisteredNettyEvent};
 
-#[derive(Event)]
+#[derive(Event, Default, Debug)]
 /// Send this event before the [`NetworkingSystemsSet::SyncComponents`] set to automatically have
 /// the inner event sent to the server.
 pub struct NettyEventToSend<T: NettyEvent>(pub T);
 
 /// Send your [`NettyEvent`] via this before [`NetworkingSystemsSet::SyncComponents`] to have it
 /// automatically sent to the server.
-pub type NettyEventWriter<'w, T> = EventWriter<'w, NettyEventToSend<T>>;
+#[derive(SystemParam)]
+pub struct NettyEventWriter<'w, T: NettyEvent> {
+    ev_writer: EventWriter<'w, NettyEventToSend<T>>,
+}
+
+impl<'w, E: NettyEvent> NettyEventWriter<'w, E> {
+    /// Sends an `event`, which can later be read by [`EventReader`]s.
+    /// This method returns the [ID](`EventId`) of the sent `event`.
+    ///
+    /// See [`Events`] for details.
+    pub fn send(&mut self, event: E) -> EventId<NettyEventToSend<E>> {
+        self.ev_writer.send(NettyEventToSend(event))
+    }
+
+    /// Sends a list of `events` all at once, which can later be read by [`EventReader`]s.
+    /// This is more efficient than sending each event individually.
+    /// This method returns the [IDs](`EventId`) of the sent `events`.
+    ///
+    /// See [`Events`] for details.
+    pub fn send_batch(&mut self, events: impl IntoIterator<Item = E>) -> SendBatchIds<NettyEventToSend<E>> {
+        self.ev_writer.send_batch(events.into_iter().map(|x| NettyEventToSend(x)))
+    }
+
+    /// Sends the default value of the event. Useful when the event is an empty struct.
+    /// This method returns the [ID](`EventId`) of the sent `event`.
+    ///
+    /// See [`Events`] for details.
+    pub fn send_default(&mut self) -> EventId<NettyEventToSend<E>>
+    where
+        E: Default,
+    {
+        self.ev_writer.send_default()
+    }
+}
 
 fn send_events<T: NettyEvent>(
     mut client: ResMut<RenetClient>,
@@ -29,10 +66,17 @@ fn send_events<T: NettyEvent>(
 ) {
     for ev in evr.read() {
         let Some(registered_event) = netty_event_registry.from_id(T::unlocalized_name()) else {
+            warn!(
+                "Event not registered to be properly sent -- {}\n{:?}",
+                T::unlocalized_name(),
+                netty_event_registry
+            );
             continue;
         };
 
         let serialized = bincode::serialize(&ev.0).unwrap();
+
+        println!("SENDING {ev:?}");
         client.send_message(
             NettyChannelClient::NettyEvent,
             cosmos_encoder::serialize(&NettyEventMessage::SendNettyEvent {
