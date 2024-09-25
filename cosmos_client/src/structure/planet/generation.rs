@@ -2,12 +2,13 @@
 
 use std::fs;
 
-use crate::{netty::connect::WaitingOnServer, state::game_state::GameState};
+use crate::netty::connect::WaitingOnServer;
 use bevy::prelude::*;
 use bevy_easy_compute::prelude::*;
 use cosmos_core::{
     ecs::{add_multi_statebound_resource, add_statebound_resource, init_resource},
     netty::system_sets::NetworkingSystemsSet,
+    state::GameState,
     structure::planet::generation::terrain_generation::{
         add_terrain_compute_worker, BiosphereShaderWorker, ChunkData, GpuPermutationTable,
     },

@@ -3,8 +3,9 @@
 use bevy::{app::App, core_pipeline::bloom::BloomSettings, hierarchy::DespawnRecursiveExt, prelude::*, render::camera::Camera};
 use bevy_kira_audio::prelude::AudioReceiver;
 use bevy_rapier3d::plugin::DefaultRapierContext;
+use cosmos_core::state::GameState;
 
-use crate::{state::game_state::GameState, ui::UiSystemSet};
+use crate::ui::UiSystemSet;
 
 use super::{components::show_cursor::ShowCursor, UiRoot};
 

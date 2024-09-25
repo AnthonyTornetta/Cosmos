@@ -9,12 +9,12 @@ use cosmos_core::{
     netty::{client::LocalPlayer, sync::ComponentSyncingSet},
     physics::location::Location,
     projectiles::missile::{Explosion, ExplosionSystemSet, Missile},
+    state::GameState,
 };
 
 use crate::{
     asset::asset_loader::load_assets,
     audio::{AudioEmission, AudioEmitterBundle, CosmosAudioEmitter, DespawnOnNoEmissions},
-    state::game_state::GameState,
     structure::ship::PlayerParentChangingSet,
 };
 

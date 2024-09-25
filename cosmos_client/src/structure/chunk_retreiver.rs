@@ -8,9 +8,8 @@ use cosmos_core::netty::sync::mapping::NetworkMapping;
 use cosmos_core::netty::system_sets::NetworkingSystemsSet;
 use cosmos_core::netty::{cosmos_encoder, NettyChannelClient};
 use cosmos_core::physics::location::{Location, SECTOR_DIMENSIONS};
+use cosmos_core::state::GameState;
 use cosmos_core::structure::Structure;
-
-use crate::state::game_state::GameState;
 
 #[derive(Component, Default)]
 /// Put this on a structure that needs every single chunk populated by the server at once.

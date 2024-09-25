@@ -4,7 +4,6 @@ use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use crate::netty::sync::registry::sync_registry;
 use crate::registry::create_registry;
 use crate::registry::identifiable::Identifiable;
-use crate::state::GameState;
 
 #[cfg(feature = "client")]
 use super::client_event;

@@ -9,13 +9,13 @@ use cosmos_core::{
     netty::{client::LocalPlayer, system_sets::NetworkingSystemsSet},
     physics::location::LocationPhysicsSet,
     projectiles::laser::LaserSystemSet,
+    state::GameState,
     structure::{shared::build_mode::BuildMode, ship::pilot::Pilot},
 };
 
 use crate::{
     input::inputs::{CosmosInputs, InputChecker, InputHandler},
     rendering::MainCamera,
-    state::game_state::GameState,
     structure::planet::align_player::PlayerAlignment,
     ui::components::show_cursor::ShowCursor,
 };

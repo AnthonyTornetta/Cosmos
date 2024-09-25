@@ -7,9 +7,8 @@ use bevy::{
 use cosmos_core::{
     netty::{sync::ComponentSyncingSet, system_sets::NetworkingSystemsSet},
     physics::location::CosmosBundleSet,
+    state::GameState,
 };
-
-use crate::state::game_state::GameState;
 
 pub mod connect;
 pub mod gameplay;

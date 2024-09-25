@@ -9,10 +9,9 @@ use bevy::{
 use cosmos_core::{
     block::Block,
     registry::{self, identifiable::Identifiable, Registry},
+    state::GameState,
 };
 use serde::{Deserialize, Serialize};
-
-use crate::state::game_state::GameState;
 
 #[derive(Debug, Reflect, Default, Serialize, Deserialize, Clone, Copy, PartialEq)]
 /// If a block has light, it will have a block light property

@@ -15,12 +15,12 @@ use cosmos_core::{
         NettyChannelClient,
     },
     registry::Registry,
+    state::GameState,
     structure::shared::build_mode::BuildMode,
 };
 
 use crate::{
     input::inputs::{CosmosInputs, InputChecker, InputHandler},
-    state::game_state::GameState,
     ui::components::show_cursor::no_open_menus,
 };
 

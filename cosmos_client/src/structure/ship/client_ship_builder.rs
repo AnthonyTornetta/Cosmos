@@ -12,6 +12,7 @@ use bevy_kira_audio::{Audio, AudioControl, AudioInstance, AudioSource};
 use bevy_rapier3d::prelude::Velocity;
 use cosmos_core::{
     physics::location::Location,
+    state::GameState,
     structure::{
         loading::StructureLoadingSet,
         shared::DespawnWithStructure,
@@ -26,7 +27,6 @@ use cosmos_core::{
 use crate::{
     asset::asset_loader::load_assets,
     audio::{AudioEmission, CosmosAudioEmitter},
-    state::game_state::GameState,
     structure::{chunk_retreiver::NeedsPopulated, client_structure_builder::ClientStructureBuilder},
 };
 

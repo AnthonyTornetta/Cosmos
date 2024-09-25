@@ -41,6 +41,7 @@ use cosmos_core::{
         player_world::{PlayerWorld, WorldWithin},
     },
     registry::Registry,
+    state::GameState,
     structure::{
         block_health::events::BlockTakeDamageEvent,
         chunk::Chunk,
@@ -60,7 +61,6 @@ use crate::{
     netty::lobby::{ClientLobby, PlayerInfo},
     rendering::{CameraPlayerOffset, MainCamera},
     settings::DesiredFov,
-    state::game_state::GameState,
     structure::{
         planet::{client_planet_builder::ClientPlanetBuilder, generation::SetTerrainGenData},
         ship::{client_ship_builder::ClientShipBuilder, ship_movement::ClientCreateShipMovementSet},

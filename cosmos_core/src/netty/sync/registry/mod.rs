@@ -45,23 +45,25 @@ pub enum RegistrySyncInit<T: States + Clone + Copy> {
 pub(super) fn register<T: States + Clone + Copy + FreelyMutableState>(app: &mut App, registry_sync_init: RegistrySyncInit<T>) {
     #[cfg(feature = "server")]
     {
-        let RegistrySyncInit::Server { playing_state } = registry_sync_init else {
-            panic!("Invalid arg sent to server.")
-        };
-        server::register(app, playing_state);
+        #[cfg(not(feature = "client"))]
+        match registry_sync_init {
+            RegistrySyncInit::Server { playing_state } => {
+                server::register(app, playing_state);
+            }
+        }
     }
 
     #[cfg(feature = "client")]
     {
-        let RegistrySyncInit::Client {
-            connecting_state,
-            loading_data_state,
-            loading_world_state,
-        } = registry_sync_init
-        else {
-            panic!("Invalid arg sent to client.")
-        };
-
-        client::register(app, connecting_state, loading_data_state, loading_world_state);
+        #[cfg(not(feature = "server"))]
+        match registry_sync_init {
+            RegistrySyncInit::Client {
+                connecting_state,
+                loading_data_state,
+                loading_world_state,
+            } => {
+                client::register(app, connecting_state, loading_data_state, loading_world_state);
+            }
+        }
     }
 }

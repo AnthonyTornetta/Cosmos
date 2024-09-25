@@ -6,6 +6,7 @@ use cosmos_core::{
     ecs::NeedsDespawned,
     netty::{client::LocalPlayer, sync::mapping::NetworkMapping, system_sets::NetworkingSystemsSet},
     physics::location::{Location, LocationPhysicsSet},
+    state::GameState,
     structure::{
         ship::pilot::Pilot,
         systems::{
@@ -18,7 +19,6 @@ use cosmos_core::{
 use crate::{
     asset::asset_loader::load_assets,
     audio::{AudioEmission, CosmosAudioEmitter, DespawnOnNoEmissions},
-    state::game_state::GameState,
     ui::{
         ship_flight::indicators::{FocusedWaypointEntity, Indicating},
         UiRoot,

@@ -5,9 +5,8 @@ use bevy_renet2::renet2::RenetClient;
 use cosmos_core::{
     entities::player::render_distance::RenderDistance,
     netty::{client::LocalPlayer, client_reliable_messages::ClientReliableMessages, cosmos_encoder, NettyChannelClient},
+    state::GameState,
 };
-
-use crate::state::game_state::GameState;
 
 fn send_render_distance(query: Query<&RenderDistance, (With<LocalPlayer>, Changed<RenderDistance>)>, mut client: ResMut<RenetClient>) {
     if let Ok(render_distance) = query.get_single() {

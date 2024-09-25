@@ -13,10 +13,9 @@ use cosmos_core::{
         Inventory,
     },
     netty::{client::LocalPlayer, cosmos_encoder, sync::mapping::NetworkMapping, system_sets::NetworkingSystemsSet, NettyChannelServer},
+    state::GameState,
     structure::Structure,
 };
-
-use crate::state::game_state::GameState;
 
 use super::{HeldItemStack, InventorySide, NeedsDisplayed};
 

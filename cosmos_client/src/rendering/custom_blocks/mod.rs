@@ -3,8 +3,7 @@ use bevy::{
     prelude::{IntoSystemSetConfigs, SystemSet},
     state::state::OnEnter,
 };
-
-use crate::state::game_state::GameState;
+use cosmos_core::state::GameState;
 
 mod logic_indicator;
 mod tank;

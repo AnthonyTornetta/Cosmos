@@ -5,9 +5,8 @@ use bevy::{
     prelude::*,
     window::{CursorGrabMode, PrimaryWindow, WindowFocused},
 };
+use cosmos_core::state::GameState;
 use iyes_perf_ui::entries::PerfUiBundle;
-
-use crate::state::game_state::GameState;
 
 #[derive(Resource, Copy, Clone)]
 /// Resource containing the various flags about the cursor, like if it's hidden or not

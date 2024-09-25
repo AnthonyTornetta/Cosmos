@@ -13,6 +13,7 @@ use cosmos_core::{
         system_sets::NetworkingSystemsSet, NettyChannelClient,
     },
     physics::location::{Location, LocationPhysicsSet},
+    state::GameState,
     structure::{
         chunk::{Chunk, ChunkUnloadEvent},
         coordinates::{UnboundChunkCoordinate, UnboundCoordinateType},
@@ -21,8 +22,6 @@ use cosmos_core::{
         ChunkState, Structure,
     },
 };
-
-use crate::state::game_state::GameState;
 
 pub mod align_player;
 pub mod biosphere;

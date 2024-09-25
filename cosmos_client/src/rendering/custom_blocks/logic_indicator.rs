@@ -22,6 +22,7 @@ use cosmos_core::{
     block::{block_face::ALL_BLOCK_FACES, Block},
     logic::BlockLogicData,
     registry::{identifiable::Identifiable, many_to_one::ManyToOneRegistry, Registry},
+    state::GameState,
     structure::{
         chunk::CHUNK_DIMENSIONSF,
         coordinates::{BlockCoordinate, ChunkBlockCoordinate},
@@ -40,7 +41,6 @@ use crate::{
         },
         BlockMeshRegistry, CosmosMeshBuilder, MeshBuilder,
     },
-    state::game_state::GameState,
 };
 
 use super::RenderingModesSet;

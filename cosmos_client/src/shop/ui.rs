@@ -33,12 +33,12 @@ use cosmos_core::{
     netty::{client::LocalPlayer, cosmos_encoder, system_sets::NetworkingSystemsSet, NettyChannelClient},
     registry::{identifiable::Identifiable, Registry},
     shop::{netty::ClientShopMessages, Shop, ShopEntry},
+    state::GameState,
     structure::structure_block::StructureBlock,
 };
 
 use crate::{
     lang::Lang,
-    state::game_state::GameState,
     ui::{
         components::{
             button::{register_button, Button, ButtonBundle, ButtonEvent, ButtonStyles},

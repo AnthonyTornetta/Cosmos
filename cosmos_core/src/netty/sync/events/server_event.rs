@@ -1,7 +1,7 @@
 use bevy::{
     app::{App, Update},
     log::error,
-    prelude::{resource_exists, Event, EventReader, EventWriter, IntoSystemConfigs, OnEnter, Res, ResMut, States},
+    prelude::{resource_exists, Event, EventReader, EventWriter, IntoSystemConfigs, OnEnter, Res, ResMut},
 };
 use renet2::{ClientId, RenetServer};
 

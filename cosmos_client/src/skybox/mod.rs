@@ -6,8 +6,9 @@ use bevy::{
     prelude::*,
     render::render_resource::{TextureViewDescriptor, TextureViewDimension},
 };
+use cosmos_core::state::GameState;
 
-use crate::{rendering::MainCamera, state::game_state::GameState};
+use crate::rendering::MainCamera;
 
 /// Order from top to bottom:
 /// Right, Left, Top, Bottom, Front, Back

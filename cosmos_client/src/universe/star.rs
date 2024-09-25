@@ -10,9 +10,7 @@ use bevy::{
         Query, ResMut, StandardMaterial, Transform, Update, Vec3, With, Without,
     },
 };
-use cosmos_core::{physics::location::SECTOR_DIMENSIONS, universe::star::Star};
-
-use crate::state::game_state::GameState;
+use cosmos_core::{physics::location::SECTOR_DIMENSIONS, state::GameState, universe::star::Star};
 
 /// Determines how bright light is based off your distance from a star.
 ///

@@ -6,10 +6,11 @@ use cosmos_core::{
     netty::client::LocalPlayer,
     physics::location::Location,
     registry::{identifiable::Identifiable, Registry},
+    state::GameState,
     structure::Structure,
 };
 
-use crate::{interactions::block_interactions::LookingAt, lang::Lang, state::game_state::GameState};
+use crate::{interactions::block_interactions::LookingAt, lang::Lang};
 
 use super::UiRoot;
 

@@ -10,7 +10,6 @@ use crate::{
         materials::{AddMaterialEvent, BlockMaterialMapping, MaterialDefinition, MaterialType, MaterialsSystemSet},
     },
     block::lighting::BlockLighting,
-    state::game_state::GameState,
 };
 use bevy::{
     prelude::*,
@@ -22,13 +21,13 @@ use cosmos_core::{
         block_direction::{BlockDirection, ALL_BLOCK_DIRECTIONS},
         Block,
     },
-    ecs::add_statebound_resource,
-    ecs::NeedsDespawned,
+    ecs::{add_statebound_resource, NeedsDespawned},
     prelude::{BlockCoordinate, UnboundBlockCoordinate},
     registry::{
         many_to_one::{ManyToOneRegistry, ReadOnlyManyToOneRegistry},
         ReadOnlyRegistry, Registry,
     },
+    state::GameState,
     structure::{
         chunk::{CHUNK_DIMENSIONS, CHUNK_DIMENSIONSF},
         coordinates::{ChunkCoordinate, CoordinateType, UnboundCoordinateType},

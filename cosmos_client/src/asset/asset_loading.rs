@@ -16,10 +16,11 @@ use cosmos_core::{
     item::Item,
     loader::{AddLoadingEvent, DoneLoadingEvent, LoadingManager},
     registry::{self, identifiable::Identifiable, Registry},
+    state::GameState,
 };
 use serde::{Deserialize, Serialize};
 
-use crate::{asset::texture_atlas::SquareTextureAtlasBuilder, state::game_state::GameState};
+use crate::asset::texture_atlas::SquareTextureAtlasBuilder;
 
 use super::texture_atlas::SquareTextureAtlas;
 

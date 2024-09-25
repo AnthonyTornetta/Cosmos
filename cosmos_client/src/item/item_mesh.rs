@@ -16,10 +16,11 @@ use cosmos_core::{
     blockitems::BlockItems,
     item::Item,
     registry::{create_registry, identifiable::Identifiable, many_to_one::ManyToOneRegistry, Registry},
+    state::GameState,
     utils::array_utils::{expand_2d, flatten_2d},
 };
 
-use crate::{asset::asset_loading::BlockNeighbors, state::game_state::GameState};
+use crate::asset::asset_loading::BlockNeighbors;
 use crate::{
     asset::{
         asset_loading::{BlockTextureIndex, ItemMeshingLoadingSet},

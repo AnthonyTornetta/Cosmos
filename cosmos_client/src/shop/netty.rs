@@ -8,10 +8,9 @@ use cosmos_core::{
     ecs::mut_events::MutEvent,
     netty::{cosmos_encoder, system_sets::NetworkingSystemsSet, NettyChannelServer},
     shop::netty::ServerShopMessages,
+    state::GameState,
     structure::structure_block::StructureBlock,
 };
-
-use crate::state::game_state::GameState;
 
 use super::{ui::OpenShopUiEvent, PurchasedEvent, SoldEvent};
 

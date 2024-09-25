@@ -17,6 +17,7 @@ use cosmos_core::{
     item::Item,
     netty::{client::LocalPlayer, system_sets::NetworkingSystemsSet},
     registry::Registry,
+    state::GameState,
     structure::{
         ship::pilot::Pilot,
         systems::{StructureSystem, StructureSystemType, StructureSystems},
@@ -24,7 +25,6 @@ use cosmos_core::{
 };
 
 use crate::{
-    state::game_state::GameState,
     structure::systems::player_interactions::{HoveredSystem, SystemUsageSet},
     ui::hotbar::{Hotbar, HotbarContents, HotbarPriorityQueue, LocalPlayerHotbar},
 };

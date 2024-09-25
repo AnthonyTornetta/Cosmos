@@ -11,9 +11,10 @@ use cosmos_core::{
     block::Block,
     item::Item,
     registry::{self, identifiable::Identifiable, many_to_one::ManyToOneRegistry, Registry},
+    state::GameState,
 };
 
-use crate::{rendering::MeshInformation, state::game_state::GameState};
+use crate::rendering::MeshInformation;
 
 use super::asset_loading::{load_block_rendering_information, AssetsSet, BlockRenderingInfo, ItemMeshingLoadingSet, ItemRenderingInfo};
 

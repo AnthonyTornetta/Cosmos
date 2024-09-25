@@ -12,10 +12,11 @@ use cosmos_core::{
         NettyChannelClient,
     },
     physics::location::Location,
+    state::GameState,
 };
 
 use crate::input::inputs::{CosmosInputs, InputHandler};
-use crate::{input::inputs::InputChecker, rendering::MainCamera, state::game_state::GameState};
+use crate::{input::inputs::InputChecker, rendering::MainCamera};
 
 fn send_position(
     mut client: ResMut<RenetClient>,

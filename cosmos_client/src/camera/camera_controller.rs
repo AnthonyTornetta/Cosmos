@@ -6,13 +6,13 @@ use bevy::prelude::*;
 use bevy_rapier3d::na::clamp;
 use cosmos_core::{
     netty::{client::LocalPlayer, system_sets::NetworkingSystemsSet},
+    state::GameState,
     structure::ship::pilot::Pilot,
 };
 
 use crate::{
     rendering::MainCamera,
     settings::MouseSensitivity,
-    state::game_state::GameState,
     window::setup::{CursorFlags, CursorFlagsSet, DeltaCursorPosition},
 };
 

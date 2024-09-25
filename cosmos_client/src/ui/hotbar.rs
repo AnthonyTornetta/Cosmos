@@ -9,12 +9,12 @@ use cosmos_core::{
     item::Item,
     netty::{client::LocalPlayer, system_sets::NetworkingSystemsSet},
     registry::{identifiable::Identifiable, Registry},
+    state::GameState,
 };
 
 use crate::{
     input::inputs::{CosmosInputs, InputChecker, InputHandler},
     lang::Lang,
-    state::game_state::GameState,
     structure::ship::ui::system_selection::SystemSelectionSet,
 };
 

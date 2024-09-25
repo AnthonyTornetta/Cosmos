@@ -5,6 +5,7 @@ use cosmos_core::{
     entities::player::Player,
     netty::{client::LocalPlayer, system_sets::NetworkingSystemsSet},
     physics::location::Location,
+    state::GameState,
     structure::{
         asteroid::Asteroid,
         planet::Planet,
@@ -17,7 +18,6 @@ use crate::{
     asset::asset_loader::load_assets,
     input::inputs::{CosmosInputs, InputChecker, InputHandler},
     rendering::MainCamera,
-    state::game_state::GameState,
 };
 
 use super::super::components::show_cursor::no_open_menus;

@@ -27,7 +27,6 @@ pub mod rendering;
 pub mod settings;
 pub mod shop;
 pub mod skybox;
-pub mod state;
 pub mod structure;
 pub mod ui;
 pub mod universe;
@@ -46,10 +45,10 @@ use bevy_rapier3d::plugin::{RapierContextInitialization, RapierPhysicsPlugin};
 use bevy_renet2::{transport::NetcodeClientPlugin, RenetClientPlugin};
 use clap::{arg, Parser};
 use cosmos_core::netty::sync::registry::RegistrySyncInit;
+use cosmos_core::state::GameState;
 use cosmos_core::{physics::collision_handling::CosmosPhysicsFilter, plugin::cosmos_core_plugin::CosmosCorePluginGroup};
 use iyes_perf_ui::PerfUiPlugin;
 use netty::connect::{self};
-use state::game_state::GameState;
 use thread_priority::{set_current_thread_priority, ThreadPriority};
 
 #[cfg(feature = "print-schedule")]

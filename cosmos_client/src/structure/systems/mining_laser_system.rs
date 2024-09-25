@@ -15,6 +15,7 @@ use bevy_rapier3d::{
 use cosmos_core::{
     block::block_direction::BlockDirection,
     ecs::NeedsDespawned,
+    state::GameState,
     structure::{
         shared::DespawnWithStructure,
         shields::SHIELD_COLLISION_GROUP,
@@ -29,7 +30,6 @@ use cosmos_core::{
 use crate::{
     asset::asset_loader::load_assets,
     audio::{AudioEmission, CosmosAudioEmitter, DespawnOnNoEmissions},
-    state::game_state::GameState,
 };
 
 use super::sync::sync_system;

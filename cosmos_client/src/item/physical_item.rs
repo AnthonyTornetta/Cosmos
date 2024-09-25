@@ -13,12 +13,10 @@ use cosmos_core::{
     item::{physical_item::PhysicalItem, Item},
     netty::system_sets::NetworkingSystemsSet,
     registry::{identifiable::Identifiable, Registry},
+    state::GameState,
 };
 
-use crate::{
-    asset::materials::{AddMaterialEvent, MaterialType, MaterialsSystemSet, RemoveAllMaterialsEvent},
-    state::game_state::GameState,
-};
+use crate::asset::materials::{AddMaterialEvent, MaterialType, MaterialsSystemSet, RemoveAllMaterialsEvent};
 
 use super::item_mesh::ItemMeshMaterial;
 

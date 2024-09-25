@@ -1,9 +1,9 @@
 //! Displays the crosshair the player sees in & out of a ship
 
 use bevy::prelude::*;
-use cosmos_core::{netty::system_sets::NetworkingSystemsSet, utils::smooth_clamp::SmoothClamp};
+use cosmos_core::{netty::system_sets::NetworkingSystemsSet, state::GameState, utils::smooth_clamp::SmoothClamp};
 
-use crate::{state::game_state::GameState, window::setup::CursorFlagsSet};
+use crate::window::setup::CursorFlagsSet;
 
 fn add_crosshair(mut commands: Commands, asset_server: Res<AssetServer>) {
     commands

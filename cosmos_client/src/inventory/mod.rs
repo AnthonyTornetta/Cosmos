@@ -15,11 +15,11 @@ use cosmos_core::{
         HeldItemStack, Inventory,
     },
     netty::{client::LocalPlayer, cosmos_encoder, sync::mapping::NetworkMapping, system_sets::NetworkingSystemsSet, NettyChannelClient},
+    state::GameState,
 };
 
 use crate::{
     input::inputs::{CosmosInputs, InputChecker, InputHandler},
-    state::game_state::GameState,
     ui::{
         components::{
             scollable_container::ScrollBundle,

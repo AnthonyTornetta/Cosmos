@@ -4,24 +4,21 @@ use bevy::{
     core::Name,
     core_pipeline::bloom::BloomSettings,
     prelude::{
-        in_state, App, Camera, Camera3d, Camera3dBundle, Commands, Component, Entity, IntoSystemConfigs, OnEnter, PerspectiveProjection,
-        Projection, Query, Transform, TransformBundle, VisibilityBundle, With,
+        in_state, App, Camera, Camera3dBundle, Commands, Component, Entity, IntoSystemConfigs, OnEnter, PerspectiveProjection, Projection,
+        Query, Transform, TransformBundle, VisibilityBundle, With,
     },
-    render::{
-        camera::RenderTarget,
-        view::{ColorGrading, RenderLayers},
-    },
+    render::view::RenderLayers,
 };
 use cosmos_core::{
     ecs::NeedsDespawned,
     netty::{client::LocalPlayer, sync::events::client_event::NettyEventWriter, system_sets::NetworkingSystemsSet},
     physics::location::{Location, UniverseSystem},
+    state::GameState,
     universe::map::system::{RequestSystemMap, SystemMap},
 };
 
 use crate::{
     input::inputs::{CosmosInputs, InputChecker, InputHandler},
-    state::game_state::GameState,
     ui::OpenMenu,
 };
 

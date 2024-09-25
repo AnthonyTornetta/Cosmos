@@ -11,14 +11,12 @@ use cosmos_core::{
     },
     physics::location::CosmosBundleSet,
     projectiles::laser::Laser,
+    state::GameState,
 };
 
-use crate::{
-    state::game_state::GameState,
-    structure::{
-        shields::ShieldRender,
-        systems::{laser_cannon_system::LaserCannonSystemFiredEvent, missile_launcher_system::MissileLauncherSystemFiredEvent},
-    },
+use crate::structure::{
+    shields::ShieldRender,
+    systems::{laser_cannon_system::LaserCannonSystemFiredEvent, missile_launcher_system::MissileLauncherSystemFiredEvent},
 };
 
 #[derive(Resource)]
