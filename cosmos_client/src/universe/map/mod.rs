@@ -4,8 +4,8 @@ use bevy::{
     core::Name,
     core_pipeline::bloom::BloomSettings,
     prelude::{
-        in_state, App, Camera, Camera3dBundle, Commands, Component, Entity, IntoSystemConfigs, OnEnter, PerspectiveProjection, Projection,
-        Query, Transform, TransformBundle, VisibilityBundle, With,
+        in_state, App, Camera, Camera3dBundle, Commands, Component, Entity, EventReader, IntoSystemConfigs, OnEnter, PerspectiveProjection,
+        Projection, Query, Transform, TransformBundle, VisibilityBundle, With,
     },
     render::view::RenderLayers,
 };
@@ -14,7 +14,7 @@ use cosmos_core::{
     netty::{client::LocalPlayer, sync::events::client_event::NettyEventWriter, system_sets::NetworkingSystemsSet},
     physics::location::{Location, UniverseSystem},
     state::GameState,
-    universe::map::system::{RequestSystemMap, SystemMap},
+    universe::map::system::{RequestSystemMap, SystemMap, SystemMapResponseEvent},
 };
 
 use crate::{
@@ -118,10 +118,17 @@ fn toggle_map(
     nevw_galaxy_map.send(RequestSystemMap { system: player_system });
 }
 
+fn receive_map(mut nevr: EventReader<SystemMapResponseEvent>) {
+    for ev in nevr.read() {
+        println!("Got map response -- {ev:?}");
+    }
+}
+
 pub(super) fn register(app: &mut App) {
     app.add_systems(OnEnter(GameState::Playing), create_map_camera).add_systems(
         Update,
-        toggle_map
+        (toggle_map, receive_map)
+            .chain()
             .run_if(in_state(GameState::Playing))
             .in_set(NetworkingSystemsSet::Between),
     );

@@ -72,43 +72,17 @@ impl Identifiable for RegisteredNettyEvent {
     }
 }
 
-#[derive(Event)]
-pub(super) struct GotNetworkEvent {
-    pub component_id: u16,
-    pub raw_data: Vec<u8>,
-}
-
 impl SyncedEventImpl for App {
     fn add_netty_event<T: NettyEvent>(&mut self) {
-        self.add_event::<T>();
-
         #[cfg(feature = "client")]
-        {
-            if T::event_receiver() == EventReceiver::Client || T::event_receiver() == EventReceiver::Both {
-                client_event::client_receive_event::<T>(self);
-            }
-            if T::event_receiver() == EventReceiver::Server || T::event_receiver() == EventReceiver::Both {
-                client_event::client_send_event::<T>(self);
-            }
-        }
+        client_event::register_event::<T>(self);
 
         #[cfg(feature = "server")]
-        {
-            server_event::register_event_type::<T>(self);
-
-            if T::event_receiver() == EventReceiver::Server || T::event_receiver() == EventReceiver::Both {
-                server_event::server_receive_event::<T>(self);
-            }
-            if T::event_receiver() == EventReceiver::Client || T::event_receiver() == EventReceiver::Both {
-                server_event::server_send_event::<T>(self);
-            }
-        }
+        server_event::register_event::<T>(self);
     }
 }
 
 pub(super) fn register(app: &mut App) {
     create_registry::<RegisteredNettyEvent>(app, "cosmos:netty_event");
     sync_registry::<RegisteredNettyEvent>(app);
-
-    app.add_event::<GotNetworkEvent>();
 }

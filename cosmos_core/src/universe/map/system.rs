@@ -7,19 +7,19 @@ use crate::{
     universe::star::Star,
 };
 
-#[derive(Clone, Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize, Debug)]
 pub enum FactionStatus {
     Ally,
     Neutral,
     Enemy,
 }
 
-#[derive(Clone, Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct ShipDestination {
     pub status: FactionStatus,
 }
 
-#[derive(Clone, Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct PlanetDestination {
     pub biosphere_id: u16,
     /// The exact location of the planet
@@ -28,31 +28,31 @@ pub struct PlanetDestination {
     pub location: Location,
 }
 
-#[derive(Clone, Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct StarDestination {
     pub star: Star,
 }
 
-#[derive(Clone, Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct PlayerDestination {
     pub status: FactionStatus,
 }
 
-#[derive(Clone, Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct AsteroidDestination {}
 
-#[derive(Clone, Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct StationDestination {
     pub status: FactionStatus,
     pub shop_count: u32,
 }
 
-#[derive(Clone, Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct UnknownDestination {
     pub status: Option<FactionStatus>,
 }
 
-#[derive(Clone, Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize, Debug)]
 pub enum Destination {
     Unknown(Box<UnknownDestination>),
     Star(Box<StarDestination>),
@@ -63,7 +63,7 @@ pub enum Destination {
     Player(Box<PlayerDestination>),
 }
 
-#[derive(Default, Serialize, Deserialize)]
+#[derive(Default, Serialize, Deserialize, Debug)]
 pub struct SystemMap {
     destinations: Vec<(Sector, Destination)>,
 }
@@ -99,6 +99,26 @@ impl NettyEvent for RequestSystemMap {
     }
 }
 
+#[derive(Serialize, Deserialize, Event, Debug)]
+/// Sent by the server to the client to indicate what their requested system map is
+pub struct SystemMapResponseEvent {
+    pub system: UniverseSystem,
+    pub map: SystemMap,
+}
+
+impl IdentifiableEvent for SystemMapResponseEvent {
+    fn unlocalized_name() -> &'static str {
+        "cosmos:system_map"
+    }
+}
+
+impl NettyEvent for SystemMapResponseEvent {
+    fn event_receiver() -> crate::netty::sync::events::netty_event::EventReceiver {
+        crate::netty::sync::events::netty_event::EventReceiver::Client
+    }
+}
+
 pub(super) fn register(app: &mut App) {
     app.add_netty_event::<RequestSystemMap>();
+    app.add_netty_event::<SystemMapResponseEvent>();
 }

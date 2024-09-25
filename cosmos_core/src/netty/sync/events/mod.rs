@@ -1,3 +1,43 @@
+//! Used to easily send events between the server and client using bevy patterns.
+//!
+//! Make sure to put your systems that interact with thins in the
+//! [`crate::netty::system_sets::NetworkingSystemsSet::Between`] set to avoid 1-frame delays.
+//!
+//! Usage:
+//! ```
+//! // `core` project
+//! #[derive(Debug, Event, Serialize, Deserialize)]
+//! struct ExampleEvent(String);
+//!
+//! impl IdentifiableEvent for ExampleEvent {
+//!     fn unlocalized_name() -> &'static str {
+//!         "cosmos:example_event" // Unique to this event
+//!     }
+//! }
+//! impl NettyEvent for ExampleEvent {
+//!     fn event_receiver() -> cosmos_core::netty::sync::events::netty_event::EventReceiver {
+//!         // If this is set to EventReceiver::Client, then the client/server code below would be swapped.
+//!         cosmos_core::netty::sync::events::netty_event::EventReceiver::Server
+//!     }
+//! }
+//!
+//! fn register(app: &mut App) {
+//!     app.add_netty_event::<ExampleEvent>();
+//! }
+//!
+//! // `client` project
+//! fn send_event_to_server(mut nevw_example: NettyEventWriter<ExampleEvent>) {
+//!     nevw_example.send(ExampleEvent("Hello from client!".to_owned()));
+//! }
+//!
+//! // `server` project
+//! fn receive_event(mut nevr_example: EventReader<NettyEventReceived<ExampleEvent>>) {
+//!     for ev in nevr_example.read() {
+//!         info!("Received: {} from client {}", ev.event.0, ev.client_id);
+//!     }
+//! }
+//! ```
+
 use bevy::prelude::App;
 
 #[cfg(feature = "client")]

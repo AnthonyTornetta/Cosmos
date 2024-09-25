@@ -5,22 +5,34 @@ use bevy::{
         system::SystemParam,
     },
     log::{error, warn},
-    prelude::{resource_exists, Event, EventReader, EventWriter, IntoSystemConfigs, Res, ResMut},
+    prelude::{resource_exists, Deref, Event, EventReader, EventWriter, IntoSystemConfigs, Res, ResMut},
 };
 use renet2::RenetClient;
 
-use crate::{netty::NettyChannelServer, registry::Registry};
+use crate::registry::Registry;
 use crate::{
     netty::{cosmos_encoder, system_sets::NetworkingSystemsSet, NettyChannelClient},
     registry::identifiable::Identifiable,
 };
 
-use super::netty_event::{GotNetworkEvent, NettyEvent, NettyEventMessage, RegisteredNettyEvent};
+use super::netty_event::{EventReceiver, NettyEvent, NettyEventMessage, RegisteredNettyEvent};
+
+#[derive(Event)]
+pub(super) struct GotNetworkEvent {
+    pub component_id: u16,
+    pub raw_data: Vec<u8>,
+}
 
 #[derive(Event, Default, Debug)]
 /// Send this event before the [`NetworkingSystemsSet::SyncComponents`] set to automatically have
 /// the inner event sent to the server.
 pub struct NettyEventToSend<T: NettyEvent>(pub T);
+
+#[derive(Deref, Event, Debug)]
+/// An event received from the server.
+///
+/// Read this via an [`EventReader<NettyEventReceived<T>>`].
+pub struct NettyEventReceived<T: NettyEvent>(pub T);
 
 /// Send your [`NettyEvent`] via this before [`NetworkingSystemsSet::SyncComponents`] to have it
 /// automatically sent to the server.
@@ -76,7 +88,6 @@ fn send_events<T: NettyEvent>(
 
         let serialized = bincode::serialize(&ev.0).unwrap();
 
-        println!("SENDING {ev:?}");
         client.send_message(
             NettyChannelClient::NettyEvent,
             cosmos_encoder::serialize(&NettyEventMessage::SendNettyEvent {
@@ -87,8 +98,8 @@ fn send_events<T: NettyEvent>(
     }
 }
 
-fn receive_events(mut server: ResMut<RenetClient>, mut evw_got_event: EventWriter<GotNetworkEvent>) {
-    while let Some(message) = server.receive_message(NettyChannelServer::NettyEvent) {
+fn receive_events(mut client: ResMut<RenetClient>, mut evw_got_event: EventWriter<GotNetworkEvent>) {
+    while let Some(message) = client.receive_message(NettyChannelClient::NettyEvent) {
         let msg: NettyEventMessage = cosmos_encoder::deserialize(&message).unwrap_or_else(|e| {
             panic!("Failed to parse component replication message from server!\nError: {e:?}");
         });
@@ -106,11 +117,12 @@ fn parse_event<T: NettyEvent>(
     mut evw_custom_event: EventWriter<T>,
     mut evr_need_parsed: EventReader<GotNetworkEvent>,
 ) {
-    let Some(registered_event) = events_registry.from_id(T::unlocalized_name()) else {
-        return;
-    };
-
     for ev in evr_need_parsed.read() {
+        let Some(registered_event) = events_registry.from_id(T::unlocalized_name()) else {
+            error!("Unregistered event: {}", T::unlocalized_name());
+            return;
+        };
+
         if ev.component_id != registered_event.id() {
             continue;
         }
@@ -138,7 +150,19 @@ pub(super) fn client_receive_event<T: NettyEvent>(app: &mut App) {
     app.add_systems(
         Update,
         parse_event::<T>.in_set(NetworkingSystemsSet::ReceiveMessages).after(receive_events),
-    );
+    )
+    .add_event::<T>();
+}
+
+pub(super) fn register_event<T: NettyEvent>(app: &mut App) {
+    app.add_event::<NettyEventReceived<T>>();
+
+    if T::event_receiver() == EventReceiver::Client || T::event_receiver() == EventReceiver::Both {
+        client_receive_event::<T>(app);
+    }
+    if T::event_receiver() == EventReceiver::Server || T::event_receiver() == EventReceiver::Both {
+        client_send_event::<T>(app);
+    }
 }
 
 pub(super) fn register(app: &mut App) {
@@ -147,5 +171,6 @@ pub(super) fn register(app: &mut App) {
         receive_events
             .run_if(resource_exists::<RenetClient>)
             .in_set(NetworkingSystemsSet::ReceiveMessages),
-    );
+    )
+    .add_event::<GotNetworkEvent>();
 }
