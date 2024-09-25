@@ -24,7 +24,6 @@ pub trait BlockStructureSystem<T> {
 }
 
 pub(super) fn register(app: &mut App) {
-    sync::register(app);
     dock_system::register(app);
     line_system::register(app);
     camera_system::register(app);

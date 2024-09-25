@@ -1,6 +1,6 @@
 //! Responsible for the default generation of biospheres.
 
-use crate::{init::init_world::ServerSeed, state::GameState, structure::planet::biosphere::biome::GenerateChunkFeaturesEvent};
+use crate::{init::init_world::ServerSeed, structure::planet::biosphere::biome::GenerateChunkFeaturesEvent};
 use bevy::{prelude::*, utils::hashbrown::HashSet};
 use bevy_easy_compute::prelude::*;
 use cosmos_core::{
@@ -9,6 +9,7 @@ use cosmos_core::{
     netty::system_sets::NetworkingSystemsSet,
     physics::location::Location,
     registry::{identifiable::Identifiable, Registry},
+    state::GameState,
     structure::{
         block_storage::BlockStorer,
         chunk::{Chunk, CHUNK_DIMENSIONS, CHUNK_DIMENSIONSF, CHUNK_DIMENSIONS_USIZE},

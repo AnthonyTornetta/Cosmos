@@ -4,10 +4,8 @@ use bevy::{
     state::state::OnEnter,
 };
 
-use cosmos_core::fluid::registry::Fluid;
 use cosmos_core::{block::Block, registry::Registry};
-
-use crate::state::GameState;
+use cosmos_core::{fluid::registry::Fluid, state::GameState};
 
 fn register_fluid_blocks(blocks: Res<Registry<Block>>, mut fluid_registry: ResMut<Registry<Fluid>>) {
     if blocks.contains("cosmos:water") {

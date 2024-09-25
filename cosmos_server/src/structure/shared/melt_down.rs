@@ -9,10 +9,9 @@ use cosmos_core::{
     block::Block,
     events::block_events::BlockChangedEvent,
     registry::{identifiable::Identifiable, Registry},
+    state::GameState,
     structure::shared::MeltingDown,
 };
-
-use crate::state::GameState;
 
 use super::MeltingDownSet;
 

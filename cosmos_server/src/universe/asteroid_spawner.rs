@@ -11,6 +11,7 @@ use cosmos_core::{
     entities::player::Player,
     netty::system_sets::NetworkingSystemsSet,
     physics::location::{Location, Sector, SystemUnit, SECTOR_DIMENSIONS},
+    state::GameState,
     structure::{
         asteroid::{asteroid_builder::TAsteroidBuilder, loading::AsteroidNeedsCreated, Asteroid, ASTEROID_LOAD_RADIUS},
         coordinates::ChunkCoordinate,
@@ -22,7 +23,7 @@ use cosmos_core::{
 use rand::Rng;
 
 use crate::{
-    init::init_world::ServerSeed, persistence::is_sector_generated, rng::get_rng_for_sector, settings::ServerSettings, state::GameState,
+    init::init_world::ServerSeed, persistence::is_sector_generated, rng::get_rng_for_sector, settings::ServerSettings,
     structure::asteroid::server_asteroid_builder::ServerAsteroidBuilder, universe::star::calculate_temperature_at,
 };
 

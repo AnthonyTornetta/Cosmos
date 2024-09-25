@@ -10,6 +10,7 @@ use cosmos_core::{
     events::block_events::BlockChangedEvent,
     physics::location::Location,
     registry::{identifiable::Identifiable, Registry},
+    state::GameState,
     structure::{
         chunk::CHUNK_DIMENSIONS,
         coordinates::{BlockCoordinate, ChunkCoordinate, CoordinateType, UnboundBlockCoordinate, UnboundCoordinateType},
@@ -20,7 +21,6 @@ use cosmos_core::{
 
 use crate::{
     init::init_world::{Noise, ServerSeed},
-    state::GameState,
     structure::planet::biosphere::biosphere_generation::BiosphereGenerationSet,
 };
 

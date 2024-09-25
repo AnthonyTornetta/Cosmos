@@ -4,6 +4,7 @@ use bevy::prelude::{in_state, App, Commands, Component, Entity, EventWriter, Int
 use cosmos_core::{
     block::{block_rotation::BlockRotation, Block},
     registry::Registry,
+    state::GameState,
     structure::{
         coordinates::BlockCoordinate,
         loading::{ChunksNeedLoaded, StructureLoadingSet},
@@ -11,8 +12,6 @@ use cosmos_core::{
         ChunkInitEvent, Structure, StructureTypeSet,
     },
 };
-
-use crate::state::GameState;
 
 use super::events::create_station_event_reader;
 

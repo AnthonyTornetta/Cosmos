@@ -19,15 +19,13 @@ use cosmos_core::{
     netty::{cosmos_encoder, server_reliable_messages::ServerReliableMessages, system_sets::NetworkingSystemsSet, NettyChannelServer},
     physics::location::Location,
     registry::Registry,
+    state::GameState,
     structure::{
         chunk::Chunk,
         coordinates::ChunkCoordinate,
         planet::{
             biosphere::{Biosphere, BiosphereMarker},
-            generation::{
-                biome::{Biome, BiosphereBiomesRegistry},
-                terrain_generation::GpuPermutationTable,
-            },
+            generation::terrain_generation::GpuPermutationTable,
             planet_atmosphere::PlanetAtmosphere,
             Planet,
         },
@@ -45,7 +43,6 @@ use crate::{
         SerializedData,
     },
     rng::get_rng_for_sector,
-    state::GameState,
     structure::planet::{
         biosphere::biosphere_generation::BiosphereGenerationSet, generation::planet_generator::check_needs_generated_system,
     },

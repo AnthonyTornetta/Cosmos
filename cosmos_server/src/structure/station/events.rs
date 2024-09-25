@@ -3,13 +3,12 @@
 use bevy::prelude::*;
 use cosmos_core::{
     physics::location::Location,
+    state::GameState,
     structure::{
         coordinates::ChunkCoordinate, full_structure::FullStructure, loading::StructureLoadingSet,
         station::station_builder::TStationBuilder, Structure,
     },
 };
-
-use crate::state::GameState;
 
 use super::{loading::StationNeedsCreated, server_station_builder::ServerStationBuilder};
 

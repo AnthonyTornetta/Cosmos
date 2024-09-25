@@ -5,11 +5,11 @@ use bevy::{
 };
 use renet2::{ClientId, RenetServer};
 
-use crate::registry::Registry;
 use crate::{
     netty::{cosmos_encoder, system_sets::NetworkingSystemsSet, NettyChannelClient},
     registry::identifiable::Identifiable,
 };
+use crate::{registry::Registry, state::GameState};
 
 use super::netty_event::{GotNetworkEvent, NettyEvent, NettyEventMessage, RegisteredNettyEvent};
 
@@ -115,8 +115,8 @@ fn register_event_type_impl<T: NettyEvent>(mut registry: ResMut<Registry<Registe
     });
 }
 
-pub(super) fn register_event_type<T: NettyEvent, S: States>(app: &mut App, loading_state: S) {
-    app.add_systems(OnEnter(loading_state), register_event_type_impl::<T>);
+pub(super) fn register_event_type<T: NettyEvent>(app: &mut App) {
+    app.add_systems(OnEnter(GameState::Loading), register_event_type_impl::<T>);
 }
 
 pub(super) fn register(app: &mut App) {

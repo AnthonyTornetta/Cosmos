@@ -10,15 +10,13 @@ use cosmos_core::{
         system_sets::NetworkingSystemsSet, NettyChannelServer,
     },
     physics::location::Location,
+    state::GameState,
     universe::star::Star,
 };
 
-use crate::{
-    persistence::{
-        saving::{NeedsSaved, SavingSystemSet, SAVING_SCHEDULE},
-        SerializedData,
-    },
-    state::GameState,
+use crate::persistence::{
+    saving::{NeedsSaved, SavingSystemSet, SAVING_SCHEDULE},
+    SerializedData,
 };
 
 fn on_request_star(mut event_reader: EventReader<RequestedEntityEvent>, query: Query<&Star>, mut server: ResMut<RenetServer>) {

@@ -7,13 +7,12 @@ use cosmos_core::{
     events::structure::change_pilot_event::ChangePilotEvent,
     netty::system_sets::NetworkingSystemsSet,
     registry::{identifiable::Identifiable, Registry},
+    state::GameState,
     structure::{
         ship::{pilot::Pilot, Ship},
         Structure,
     },
 };
-
-use crate::state::GameState;
 
 fn handle_block_event(
     mut interact_events: EventReader<BlockInteractEvent>,

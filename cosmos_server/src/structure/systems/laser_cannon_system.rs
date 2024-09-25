@@ -15,6 +15,7 @@ use cosmos_core::{
     physics::location::Location,
     projectiles::laser::Laser,
     registry::{identifiable::Identifiable, Registry},
+    state::GameState,
     structure::{
         systems::{
             energy_storage_system::EnergyStorageSystem,
@@ -25,8 +26,6 @@ use cosmos_core::{
         Structure,
     },
 };
-
-use crate::state::GameState;
 
 use super::{line_system::add_line_system, sync::register_structure_system, thruster_system};
 

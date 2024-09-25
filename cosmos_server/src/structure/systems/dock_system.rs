@@ -27,6 +27,7 @@ use cosmos_core::{
     events::block_events::BlockChangedEvent,
     physics::structure_physics::ChunkPhysicsPart,
     registry::{identifiable::Identifiable, Registry},
+    state::GameState,
     structure::{
         events::StructureLoadedEvent,
         full_structure::FullStructure,
@@ -39,8 +40,6 @@ use cosmos_core::{
     },
     utils::quat_math::QuatMath,
 };
-
-use crate::state::GameState;
 
 use super::{sync::register_structure_system, thruster_system::ThrusterSystemSet};
 

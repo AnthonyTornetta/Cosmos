@@ -16,13 +16,12 @@ use bevy_rapier3d::plugin::{RapierContextInitialization, RapierPhysicsPlugin};
 use bevy_renet2::{transport::NetcodeServerPlugin, RenetServerPlugin};
 use cosmos_core::{
     netty::sync::registry::RegistrySyncInit, physics::collision_handling::CosmosPhysicsFilter,
-    plugin::cosmos_core_plugin::CosmosCorePluginGroup,
+    plugin::cosmos_core_plugin::CosmosCorePluginGroup, state::GameState,
 };
 
 use iyes_perf_ui::PerfUiPlugin;
 use plugin::server_plugin::ServerPlugin;
 use settings::read_server_settings;
-use state::GameState;
 use thread_priority::{set_current_thread_priority, ThreadPriority};
 
 #[cfg(feature = "print-schedule")]
@@ -46,7 +45,6 @@ pub mod projectiles;
 pub mod rng;
 pub mod settings;
 pub mod shop;
-pub mod state;
 pub mod structure;
 pub mod universe;
 

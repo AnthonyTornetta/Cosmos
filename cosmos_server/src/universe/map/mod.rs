@@ -2,9 +2,7 @@ use bevy::{
     app::Update,
     prelude::{in_state, App, EventReader, IntoSystemConfigs},
 };
-use cosmos_core::{netty::system_sets::NetworkingSystemsSet, universe::map::system::RequestSystemMap};
-
-use crate::state::GameState;
+use cosmos_core::{netty::system_sets::NetworkingSystemsSet, state::GameState, universe::map::system::RequestSystemMap};
 
 fn send_map(mut evr_request_map: EventReader<RequestSystemMap>) {
     for ev in evr_request_map.read() {

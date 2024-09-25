@@ -14,9 +14,8 @@ use cosmos_core::{
         location::{add_previous_location, handle_child_syncing, CosmosBundleSet, Location, LocationPhysicsSet, SECTOR_DIMENSIONS},
         player_world::{PlayerWorld, WorldWithin},
     },
+    state::GameState,
 };
-
-use crate::state::GameState;
 
 const WORLD_SWITCH_DISTANCE: f32 = SECTOR_DIMENSIONS / 2.0;
 const WORLD_SWITCH_DISTANCE_SQRD: f32 = WORLD_SWITCH_DISTANCE * WORLD_SWITCH_DISTANCE;

@@ -4,6 +4,7 @@ use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use crate::netty::sync::registry::sync_registry;
 use crate::registry::create_registry;
 use crate::registry::identifiable::Identifiable;
+use crate::state::GameState;
 
 #[cfg(feature = "client")]
 use super::client_event;
@@ -94,7 +95,7 @@ impl SyncedEventImpl for App {
 
         #[cfg(feature = "server")]
         {
-            server_event::register_event_type(app, loading_state);
+            server_event::register_event_type::<T>(self);
 
             if T::event_receiver() == EventReceiver::Server || T::event_receiver() == EventReceiver::Both {
                 server_event::server_receive_event::<T>(self);

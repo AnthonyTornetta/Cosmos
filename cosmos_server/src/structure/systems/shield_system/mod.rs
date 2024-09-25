@@ -37,6 +37,7 @@ use cosmos_core::{
     physics::location::Location,
     projectiles::laser::LaserSystemSet,
     registry::{identifiable::Identifiable, Registry},
+    state::GameState,
     structure::{
         coordinates::BlockCoordinate,
         events::StructureLoadedEvent,
@@ -58,7 +59,6 @@ use crate::{
         saving::{NeedsSaved, SavingSystemSet, SAVING_SCHEDULE},
         SerializedData,
     },
-    state::GameState,
 };
 
 use super::sync::register_structure_system;

@@ -8,9 +8,10 @@ use cosmos_core::{
         system_sets::NetworkingSystemsSet,
         NettyChannelServer,
     },
+    state::GameState,
 };
 
-use crate::{state::GameState, structure::block_health::BlockHealthSet};
+use crate::structure::block_health::BlockHealthSet;
 
 fn handle_block_changed_event(mut event_reader: EventReader<BlockChangedEvent>, mut server: ResMut<RenetServer>) {
     let iter_len = event_reader.read().len();

@@ -8,13 +8,12 @@ use bevy::{
 };
 use cosmos_core::{
     registry::Registry,
+    state::GameState,
     structure::{
         coordinates::ChunkCoordinate,
         planet::generation::biome::{Biome, BiosphereBiomesRegistry},
     },
 };
-
-use crate::state::GameState;
 
 use super::BiosphereMarkerComponent;
 

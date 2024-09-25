@@ -9,12 +9,13 @@ use cosmos_core::{
     netty::system_sets::NetworkingSystemsSet,
     persistence::LoadingDistance,
     physics::location::{Location, Sector, SystemUnit, UniverseSystem, SYSTEM_SECTORS},
+    state::GameState,
     universe::star::{Star, MAX_TEMPERATURE, MIN_TEMPERATURE},
 };
 use rand::{Rng, SeedableRng};
 use rand_chacha::ChaCha8Rng;
 
-use crate::{init::init_world::ServerSeed, state::GameState};
+use crate::init::init_world::ServerSeed;
 
 // Calculates the distance from the origin of a spiral arm given an angle.
 fn spiral_function(theta: f32) -> f32 {

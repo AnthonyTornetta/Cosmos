@@ -13,6 +13,7 @@ use cosmos_core::{
     events::block_events::BlockChangedEvent,
     netty::system_sets::NetworkingSystemsSet,
     registry::Registry,
+    state::GameState,
     structure::{
         events::StructureLoadedEvent,
         ship::{
@@ -29,8 +30,6 @@ use cosmos_core::{
         Structure, StructureTypeSet,
     },
 };
-
-use crate::state::GameState;
 
 use super::sync::register_structure_system;
 

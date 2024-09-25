@@ -1,4 +1,3 @@
-use crate::state::GameState;
 use bevy::{
     app::{App, Update},
     ecs::{
@@ -27,6 +26,7 @@ use cosmos_core::{
         system_sets::NetworkingSystemsSet, NettyChannelServer,
     },
     registry::{identifiable::Identifiable, Registry},
+    state::GameState,
     structure::Structure,
 };
 

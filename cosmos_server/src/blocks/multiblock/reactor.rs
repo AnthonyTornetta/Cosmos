@@ -16,6 +16,7 @@ use cosmos_core::{
     entities::player::Player,
     netty::{cosmos_encoder, server_reliable_messages::ServerReliableMessages, system_sets::NetworkingSystemsSet, NettyChannelServer},
     registry::{identifiable::Identifiable, Registry},
+    state::GameState,
     structure::{
         coordinates::{BlockCoordinate, CoordinateType, UnboundBlockCoordinate},
         structure_block::StructureBlock,
@@ -24,7 +25,7 @@ use cosmos_core::{
     },
 };
 
-use crate::{ai::AiControlled, state::GameState};
+use crate::ai::AiControlled;
 
 /// Represents the maximum dimensions of the reactor, including the reactor casing
 const MAX_REACTOR_SIZE: CoordinateType = 11;

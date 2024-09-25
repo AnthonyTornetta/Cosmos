@@ -12,6 +12,7 @@ use bevy::{
 use cosmos_core::{
     entities::player::Player,
     physics::location::{CosmosBundleSet, Location, Sector, SystemUnit, SECTOR_DIMENSIONS},
+    state::GameState,
     structure::station::{station_builder::STATION_LOAD_DISTANCE, Station},
 };
 use rand::Rng;
@@ -24,7 +25,6 @@ use crate::{
         loading::{LoadingBlueprintSystemSet, NeedsBlueprintLoaded},
     },
     rng::get_rng_for_sector,
-    state::GameState,
     universe::planet_spawner::is_planet_in_sector,
 };
 

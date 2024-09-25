@@ -6,6 +6,7 @@ use cosmos_core::{
     block::{block_events::BlockEventsSet, Block},
     events::block_events::BlockChangedEvent,
     registry::Registry,
+    state::GameState,
     structure::{
         events::StructureLoadedEvent,
         systems::{
@@ -15,8 +16,6 @@ use cosmos_core::{
         Structure,
     },
 };
-
-use crate::state::GameState;
 
 use super::sync::register_structure_system;
 
