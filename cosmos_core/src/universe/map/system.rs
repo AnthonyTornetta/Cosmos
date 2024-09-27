@@ -63,7 +63,7 @@ pub enum Destination {
     Player(Box<PlayerDestination>),
 }
 
-#[derive(Default, Serialize, Deserialize, Debug)]
+#[derive(Default, Serialize, Deserialize, Debug, Clone)]
 pub struct SystemMap {
     destinations: Vec<(Sector, Destination)>,
 }

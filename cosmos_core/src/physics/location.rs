@@ -220,6 +220,15 @@ impl UniverseSystem {
     pub fn max_element(&self) -> SystemUnit {
         self.0.max(self.1).max(self.2)
     }
+
+    /// Returns the sector that would be in the negative-most coordinates of this system.
+    pub fn negative_most_sector(&self) -> Sector {
+        Sector::new(
+            self.x() * SYSTEM_SECTORS as SystemUnit,
+            self.y() * SYSTEM_SECTORS as SystemUnit,
+            self.z() * SYSTEM_SECTORS as SystemUnit,
+        )
+    }
 }
 
 impl Add<UniverseSystem> for UniverseSystem {
@@ -329,6 +338,31 @@ impl Location {
     #[inline]
     pub fn sector(&self) -> Sector {
         self.sector
+    }
+
+    /// Gets the sector coordinates relative to its system as a [`Sector`] coordinate
+    #[inline]
+    pub fn relative_sector(&self) -> Sector {
+        Sector::new(
+            self.sector.x() % SYSTEM_SECTORS as SystemUnit
+                + if self.sector.x().is_negative() {
+                    SYSTEM_SECTORS as SystemUnit
+                } else {
+                    0
+                },
+            self.sector.y() % SYSTEM_SECTORS as SystemUnit
+                + if self.sector.y().is_negative() {
+                    SYSTEM_SECTORS as SystemUnit
+                } else {
+                    0
+                },
+            self.sector.z() % SYSTEM_SECTORS as SystemUnit
+                + if self.sector.z().is_negative() {
+                    SYSTEM_SECTORS as SystemUnit
+                } else {
+                    0
+                },
+        )
     }
 
     /// Ensures `self.local` is within [`-SECTOR_DIMENSIONS/2.0`, `SECTOR_DIMENSIONS/2.0`]
