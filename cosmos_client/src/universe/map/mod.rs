@@ -1,19 +1,20 @@
 use bevy::{
     app::Update,
-    asset::Assets,
-    color::palettes::css,
+    asset::{Assets, Handle},
+    color::{palettes::css, Alpha},
     core::Name,
     core_pipeline::bloom::BloomSettings,
     input::mouse::{MouseScrollUnit, MouseWheel},
     math::{Dir3, Quat, Vec3},
     pbr::{PbrBundle, StandardMaterial},
     prelude::{
-        in_state, App, BuildChildren, Camera, Camera3dBundle, Changed, Commands, Component, Cuboid, Entity, EventReader, Has,
+        in_state, AlphaMode, App, BuildChildren, Camera, Camera3dBundle, Changed, Commands, Component, Cuboid, Entity, EventReader, Has,
         IntoSystemConfigs, Mesh, MouseButton, OnEnter, PerspectiveProjection, Projection, Query, Res, ResMut, Sphere, Transform,
-        TransformBundle, VisibilityBundle, With,
+        TransformBundle, VisibilityBundle, With, Without,
     },
     reflect::Reflect,
     render::view::RenderLayers,
+    time::Time,
 };
 use cosmos_core::{
     ecs::NeedsDespawned,
@@ -43,6 +44,7 @@ const CAMERA_LAYER: usize = 0b1000;
 #[derive(Component, Reflect)]
 struct MapCamera {
     relative_sector: Sector,
+    lerp_sector: Vec3,
     zoom: f32,
     yaw: f32,
     pitch: f32,
@@ -52,6 +54,7 @@ impl Default for MapCamera {
     fn default() -> Self {
         Self {
             relative_sector: Sector::default(),
+            lerp_sector: Vec3::ZERO,
             zoom: 2.0,
             yaw: 0.0,
             pitch: 0.0,
@@ -147,23 +150,36 @@ fn toggle_map(
     nevw_galaxy_map.send(RequestSystemMap { system: player_system });
 }
 
-const SECTOR_SCALE: f32 = 2.0;
+const SECTOR_SCALE: f32 = 1.0;
 
-fn position_camera(mut q_camera: Query<(&mut Transform, &MapCamera)>) {
-    for (mut trans, cam) in q_camera.iter_mut() {
-        // let s = map_cam.relative_sector;
-        //
-        // trans.translation = trans
-        //     .translation
-        //     .lerp(Vec3::new(s.x() as f32, s.y() as f32, s.z() as f32) * SECTOR_SCALE, 0.1);
+fn position_camera(
+    mut materials: ResMut<Assets<StandardMaterial>>,
+    mut q_selected_sector: Query<(&mut Transform, &Handle<StandardMaterial>), (With<SelectedSector>, Without<MapCamera>)>,
+    mut q_camera: Query<(&mut Transform, &mut MapCamera)>,
+    time: Res<Time>,
+) {
+    let Ok((mut trans, mut cam)) = q_camera.get_single_mut() else {
+        return;
+    };
 
-        let s = cam.relative_sector;
-        let vec_sec = Vec3::new(s.x() as f32, s.y() as f32, s.z() as f32) * SECTOR_SCALE;
+    let s = cam.relative_sector;
+    let vec_sec = Vec3::new(s.x() as f32, s.y() as f32, s.z() as f32) * SECTOR_SCALE;
+    cam.lerp_sector = cam.lerp_sector.lerp(vec_sec, 0.1);
 
-        trans.rotation = Quat::from_rotation_y(cam.yaw) * Quat::from_rotation_x(-cam.pitch);
-        trans.translation = vec_sec + trans.rotation * Vec3::new(0.0, 0.0, cam.zoom * SECTOR_SCALE);
-    }
+    trans.rotation = Quat::from_rotation_y(cam.yaw) * Quat::from_rotation_x(-cam.pitch);
+    trans.translation = cam.lerp_sector + trans.rotation * Vec3::new(0.0, 0.0, cam.zoom * SECTOR_SCALE);
+
+    let Ok((mut sector_trans, standard_material)) = q_selected_sector.get_single_mut() else {
+        return;
+    };
+
+    sector_trans.translation = cam.lerp_sector;
+    let standard_material = materials.get_mut(standard_material).expect("Material missing");
+    standard_material.base_color.set_alpha(time.elapsed_seconds().sin().abs() * 0.1);
 }
+
+#[derive(Component)]
+struct SelectedSector;
 
 fn render_galaxy_map(
     mut commands: Commands,
@@ -189,12 +205,34 @@ fn render_galaxy_map(
         };
 
         cam.relative_sector = player.relative_sector();
+        cam.lerp_sector = Vec3::new(
+            cam.relative_sector.x() as f32,
+            cam.relative_sector.y() as f32,
+            cam.relative_sector.z() as f32,
+        ) * SECTOR_SCALE;
         // let player_translation = Vec3::new(diff.x() as f32, diff.y() as f32, diff.z() as f32) * SECTOR_SCALE;
         // cam_trans.translation = player_translation + Vec3::new(1.0, 2.0, 2.0) * SECTOR_SCALE;
         // cam.relative_sector = diff + Sector::new(1, 2, 2);
         // cam_trans.look_at(player_translation, Vec3::Y);
 
         commands.entity(ent).with_children(|p| {
+            p.spawn((
+                Name::new("Selected Sector"),
+                SelectedSector,
+                RenderLayers::from_layers(&[CAMERA_LAYER]), // https://github.com/bevyengine/bevy/issues/12461
+                PbrBundle {
+                    mesh: meshes.add(Cuboid::new(SECTOR_SCALE, SECTOR_SCALE, SECTOR_SCALE)),
+                    material: materials.add(StandardMaterial {
+                        base_color: css::YELLOW.into(),
+                        unlit: true,
+                        alpha_mode: AlphaMode::Blend,
+                        ..Default::default()
+                    }),
+                    transform: Transform::from_translation(cam.lerp_sector),
+                    ..Default::default()
+                },
+            ));
+
             for (sector, destination) in map.destinations() {
                 let transform = Transform::from_xyz(
                     sector.x() as f32 * SECTOR_SCALE,
@@ -220,7 +258,6 @@ fn render_galaxy_map(
 
                 let material = match destination {
                     Destination::Star(star) => materials.add(StandardMaterial::from_color(star.star.color())),
-
                     Destination::Planet(planet) => materials.add(StandardMaterial::from_color(
                         biosphere_color
                             .from_id(biospheres.from_numeric_id(planet.biosphere_id).unlocalized_name())
@@ -246,45 +283,46 @@ fn render_galaxy_map(
     }
 }
 
-fn sector_direction(v: Dir3) -> Sector {
+fn sector_direction(v: Dir3, amount: SectorUnit) -> Sector {
     let x = v.x.abs();
     let y = v.y.abs();
     let z = v.z.abs();
 
     if x >= y && x >= z {
-        Sector::new(v.x.signum() as SectorUnit, 0, 0)
+        Sector::new(v.x.signum() as SectorUnit * amount, 0, 0)
     } else if y >= x && y >= z {
-        Sector::new(0, v.y.signum() as SectorUnit, 0)
+        Sector::new(0, v.y.signum() as SectorUnit * amount, 0)
     } else {
-        Sector::new(0, 0, v.z.signum() as SectorUnit)
+        Sector::new(0, 0, v.z.signum() as SectorUnit * amount)
     }
 }
 
 fn camera_movement(
     delta: Res<DeltaCursorPosition>,
     input_handler: InputChecker,
-    mut q_camera: Query<(&mut Transform, &mut MapCamera)>,
-
+    mut q_camera: Query<(&Transform, &mut MapCamera)>,
     mut evr_mouse_wheel: EventReader<MouseWheel>,
 ) {
-    for (mut trans, mut cam) in q_camera.iter_mut() {
+    for (trans, mut cam) in q_camera.iter_mut() {
+        let amount = if input_handler.check_pressed(CosmosInputs::Sprint) { 10 } else { 1 };
+
         if input_handler.check_just_pressed(CosmosInputs::MoveForward) {
-            cam.relative_sector = cam.relative_sector + sector_direction(trans.forward());
+            cam.relative_sector = cam.relative_sector + sector_direction(trans.forward(), amount);
         }
         if input_handler.check_just_pressed(CosmosInputs::MoveBackward) {
-            cam.relative_sector = cam.relative_sector + sector_direction(trans.back());
+            cam.relative_sector = cam.relative_sector + sector_direction(trans.back(), amount);
         }
         if input_handler.check_just_pressed(CosmosInputs::MoveLeft) {
-            cam.relative_sector = cam.relative_sector + sector_direction(trans.left());
+            cam.relative_sector = cam.relative_sector + sector_direction(trans.left(), amount);
         }
         if input_handler.check_just_pressed(CosmosInputs::MoveRight) {
-            cam.relative_sector = cam.relative_sector + sector_direction(trans.right());
+            cam.relative_sector = cam.relative_sector + sector_direction(trans.right(), amount);
         }
         if input_handler.check_just_pressed(CosmosInputs::MoveUp) {
-            cam.relative_sector = cam.relative_sector + sector_direction(trans.up());
+            cam.relative_sector = cam.relative_sector + sector_direction(trans.up(), amount);
         }
         if input_handler.check_just_pressed(CosmosInputs::MoveDown) {
-            cam.relative_sector = cam.relative_sector + sector_direction(trans.down());
+            cam.relative_sector = cam.relative_sector + sector_direction(trans.down(), amount);
         }
 
         if input_handler.mouse_inputs().pressed(MouseButton::Left) {
@@ -298,7 +336,7 @@ fn camera_movement(
                 MouseScrollUnit::Pixel => mw.y * 0.005,
             };
 
-            cam.zoom += dy;
+            cam.zoom -= dy;
         }
 
         cam.zoom = cam.zoom.clamp(0.05, 100.0);
@@ -315,7 +353,6 @@ fn handle_map_camera(mut q_map_camera: Query<&mut Camera, With<MapCamera>>, q_ex
 
 fn receive_map(mut nevr: EventReader<SystemMapResponseEvent>, mut q_galaxy_map: Query<&mut GalaxyMapDisplay>) {
     for ev in nevr.read() {
-        println!("Got map response -- {ev:?}");
         let Ok(mut gmap) = q_galaxy_map.get_single_mut() else {
             return;
         };
