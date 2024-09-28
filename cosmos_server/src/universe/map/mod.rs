@@ -8,15 +8,15 @@ use cosmos_core::{
         sync::events::server_event::{NettyEventReceived, NettyEventWriter},
         system_sets::NetworkingSystemsSet,
     },
-    physics::location::{Location, Sector},
-    prelude::Planet,
+    physics::location::Location,
+    prelude::{Asteroid, Planet, Ship, Station},
     registry::{identifiable::Identifiable, Registry},
     state::GameState,
     structure::planet::biosphere::{Biosphere, BiosphereMarker},
     universe::{
         map::system::{
-            Destination, FactionStatus, PlanetDestination, PlayerDestination, RequestSystemMap, StarDestination, SystemMap,
-            SystemMapResponseEvent,
+            AsteroidDestination, Destination, FactionStatus, PlanetDestination, PlayerDestination, RequestSystemMap, ShipDestination,
+            StarDestination, StationDestination, SystemMap, SystemMapResponseEvent,
         },
         star::Star,
     },
@@ -29,7 +29,10 @@ fn send_map(
     biospheres: Res<Registry<Biosphere>>,
     q_planets: Query<(&Location, &BiosphereMarker), With<Planet>>,
     q_star: Query<(&Location, &Star)>,
-    q_players: Query<(&Location), With<Player>>,
+    q_players: Query<&Location, With<Player>>,
+    q_stations: Query<&Location, With<Station>>,
+    q_asteroid: Query<&Location, With<Asteroid>>,
+    q_ships: Query<&Location, With<Ship>>,
 ) {
     for ev in evr_request_map.read() {
         println!("Got: {ev:?} -- sending response!");
@@ -61,6 +64,29 @@ fn send_map(
                     status: FactionStatus::Neutral,
                 })),
             );
+        }
+
+        for loc in q_stations.iter() {
+            system_map.add_destination(
+                loc.relative_sector(),
+                Destination::Station(Box::new(StationDestination {
+                    status: FactionStatus::Neutral,
+                    shop_count: 0,
+                })),
+            );
+        }
+
+        for loc in q_ships.iter() {
+            system_map.add_destination(
+                loc.relative_sector(),
+                Destination::Ship(Box::new(ShipDestination {
+                    status: FactionStatus::Neutral,
+                })),
+            );
+        }
+
+        for loc in q_asteroid.iter() {
+            system_map.add_destination(loc.relative_sector(), Destination::Asteroid(Box::new(AsteroidDestination {})));
         }
 
         nevw_system_map.send(

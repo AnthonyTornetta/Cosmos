@@ -8,9 +8,9 @@ use bevy::{
     math::{Dir3, Quat, Vec3},
     pbr::{PbrBundle, StandardMaterial},
     prelude::{
-        in_state, AlphaMode, App, BuildChildren, Camera, Camera3dBundle, Changed, Commands, Component, Cuboid, Entity, EventReader, Has,
-        IntoSystemConfigs, Mesh, MouseButton, OnEnter, PerspectiveProjection, Projection, Query, Res, ResMut, Sphere, Transform,
-        TransformBundle, VisibilityBundle, With, Without,
+        in_state, AlphaMode, App, BuildChildren, Camera, Camera3dBundle, Capsule3d, Changed, Commands, Component, Cuboid, Entity,
+        EventReader, Has, IntoSystemConfigs, Mesh, MouseButton, OnEnter, PerspectiveProjection, Projection, Query, Res, ResMut, Sphere,
+        Transform, TransformBundle, VisibilityBundle, With, Without,
     },
     reflect::Reflect,
     render::view::RenderLayers,
@@ -243,7 +243,12 @@ fn render_galaxy_map(
                 let mesh = match destination {
                     Destination::Star(_) => meshes.add(Sphere::new(0.75)),
                     Destination::Planet(_) => meshes.add(Cuboid::new(0.5, 0.5, 0.5)),
-                    _ => meshes.add(Cuboid::new(0.1, 0.1, 0.1)),
+                    Destination::Player(_) => meshes.add(Capsule3d::new(0.05, 0.1)),
+                    Destination::Asteroid(_) => meshes.add(Cuboid::new(0.3, 0.3, 0.3)),
+                    Destination::Unknown(_) => meshes.add(Sphere::new(0.1)),
+                    Destination::Ship(_) => meshes.add(Cuboid::new(0.3, 0.3, 0.3)),
+                    Destination::Station(_) => meshes.add(Cuboid::new(0.3, 0.3, 0.3)),
+                    // _ => meshes.add(Cuboid::new(0.1, 0.1, 0.1)),
                 };
 
                 let size = match destination {
@@ -264,7 +269,11 @@ fn render_galaxy_map(
                             .map(|x| x.color())
                             .unwrap_or(css::HOT_PINK.into()),
                     )),
-                    _ => materials.add(StandardMaterial::from_color(css::GREY)),
+                    Destination::Player(_) => materials.add(StandardMaterial::from_color(css::GREEN)),
+                    Destination::Asteroid(_) => materials.add(StandardMaterial::from_color(css::GREY)),
+                    Destination::Unknown(_) => materials.add(StandardMaterial::from_color(css::WHITE)),
+                    Destination::Ship(_) => materials.add(StandardMaterial::from_color(css::ORANGE)),
+                    Destination::Station(_) => materials.add(StandardMaterial::from_color(css::PURPLE)),
                 };
 
                 let mut ecmds = p.spawn((
