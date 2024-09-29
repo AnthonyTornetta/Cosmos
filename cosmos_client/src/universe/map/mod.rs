@@ -1,7 +1,9 @@
+use std::f32::consts::PI;
+
 use bevy::{
     app::Update,
-    asset::{Assets, Handle},
-    color::{palettes::css, Alpha},
+    asset::{AssetServer, Assets, Handle},
+    color::{palettes::css, Alpha, Color},
     core::Name,
     core_pipeline::bloom::BloomSettings,
     input::mouse::{MouseScrollUnit, MouseWheel},
@@ -9,13 +11,15 @@ use bevy::{
     pbr::{PbrBundle, StandardMaterial},
     prelude::{
         in_state, AlphaMode, App, BuildChildren, Camera, Camera3dBundle, Capsule3d, Changed, Commands, Component, Cuboid, Entity,
-        EventReader, Has, IntoSystemConfigs, Mesh, MouseButton, OnEnter, PerspectiveProjection, Projection, Query, Res, ResMut, Sphere,
+        EventReader, IntoSystemConfigs, Mesh, MouseButton, OnEnter, PerspectiveProjection, Projection, Query, Res, ResMut, Sphere,
         Transform, TransformBundle, VisibilityBundle, With, Without,
     },
     reflect::Reflect,
     render::view::RenderLayers,
+    text::{Text, TextStyle},
     time::Time,
 };
+use bevy_mod_billboard::{BillboardDepth, BillboardTextBundle};
 use cosmos_core::{
     ecs::NeedsDespawned,
     netty::{client::LocalPlayer, sync::events::client_event::NettyEventWriter, system_sets::NetworkingSystemsSet},
@@ -152,12 +156,7 @@ fn toggle_map(
 
 const SECTOR_SCALE: f32 = 1.0;
 
-fn position_camera(
-    mut materials: ResMut<Assets<StandardMaterial>>,
-    mut q_selected_sector: Query<(&mut Transform, &Handle<StandardMaterial>), (With<SelectedSector>, Without<MapCamera>)>,
-    mut q_camera: Query<(&mut Transform, &mut MapCamera)>,
-    time: Res<Time>,
-) {
+fn position_camera(mut q_camera: Query<(&mut Transform, &mut MapCamera)>) {
     let Ok((mut trans, mut cam)) = q_camera.get_single_mut() else {
         return;
     };
@@ -168,6 +167,18 @@ fn position_camera(
 
     trans.rotation = Quat::from_rotation_y(cam.yaw) * Quat::from_rotation_x(-cam.pitch);
     trans.translation = cam.lerp_sector + trans.rotation * Vec3::new(0.0, 0.0, cam.zoom * SECTOR_SCALE);
+}
+
+fn handle_selected_sector(
+    mut materials: ResMut<Assets<StandardMaterial>>,
+    mut q_selected_sector: Query<(&mut Transform, &Handle<StandardMaterial>), (With<SelectedSector>, Without<MapCamera>)>,
+    q_camera: Query<&MapCamera>,
+    time: Res<Time>,
+    mut q_sector_text: Query<&mut Text, With<SelectedSectorText>>,
+) {
+    let Ok(cam) = q_camera.get_single() else {
+        return;
+    };
 
     let Ok((mut sector_trans, standard_material)) = q_selected_sector.get_single_mut() else {
         return;
@@ -176,10 +187,24 @@ fn position_camera(
     sector_trans.translation = cam.lerp_sector;
     let standard_material = materials.get_mut(standard_material).expect("Material missing");
     standard_material.base_color.set_alpha(time.elapsed_seconds().sin().abs() * 0.1);
+
+    let Ok(mut text) = q_sector_text.get_single_mut() else {
+        return;
+    };
+
+    text.sections[0].value = format!(
+        "{}, {}, {}",
+        cam.relative_sector.x(),
+        cam.relative_sector.y(),
+        cam.relative_sector.z()
+    );
 }
 
 #[derive(Component)]
 struct SelectedSector;
+
+#[derive(Component)]
+struct SelectedSectorText;
 
 fn render_galaxy_map(
     mut commands: Commands,
@@ -190,6 +215,7 @@ fn render_galaxy_map(
     mut q_camera: Query<(&mut Transform, &mut MapCamera)>,
     biospheres: Res<Registry<Biosphere>>,
     biosphere_color: Res<Registry<BiosphereColor>>,
+    asset_server: Res<AssetServer>,
 ) {
     for (ent, galaxy_map_display) in q_changed_map.iter() {
         let GalaxyMapDisplay::Map { map, system } = galaxy_map_display else {
@@ -215,6 +241,13 @@ fn render_galaxy_map(
         // cam.relative_sector = diff + Sector::new(1, 2, 2);
         // cam_trans.look_at(player_translation, Vec3::Y);
 
+        let font = asset_server.load("fonts/PixeloidSans.ttf");
+        let text_style = TextStyle {
+            color: Color::WHITE,
+            font_size: 22.0,
+            font: font.clone(),
+        };
+
         commands.entity(ent).with_children(|p| {
             p.spawn((
                 Name::new("Selected Sector"),
@@ -231,7 +264,28 @@ fn render_galaxy_map(
                     transform: Transform::from_translation(cam.lerp_sector),
                     ..Default::default()
                 },
-            ));
+            ))
+            .with_children(|p| {
+                p.spawn((
+                    RenderLayers::from_layers(&[CAMERA_LAYER]), // https://github.com/bevyengine/bevy/issues/12461
+                    SelectedSectorText,
+                    Name::new("Selected text"),
+                    BillboardTextBundle {
+                        billboard_depth: BillboardDepth(false),
+                        transform: Transform::from_scale(Vec3::splat(0.008)),
+                        text: Text::from_section(
+                            format!(
+                                "{}, {}, {}",
+                                cam.relative_sector.x(),
+                                cam.relative_sector.y(),
+                                cam.relative_sector.z()
+                            ),
+                            text_style,
+                        ),
+                        ..Default::default()
+                    },
+                ));
+            });
 
             for (sector, destination) in map.destinations() {
                 let transform = Transform::from_xyz(
@@ -311,6 +365,7 @@ fn camera_movement(
     input_handler: InputChecker,
     mut q_camera: Query<(&Transform, &mut MapCamera)>,
     mut evr_mouse_wheel: EventReader<MouseWheel>,
+    q_local_player: Query<&Location, With<LocalPlayer>>,
 ) {
     for (trans, mut cam) in q_camera.iter_mut() {
         let amount = if input_handler.check_pressed(CosmosInputs::Sprint) { 10 } else { 1 };
@@ -334,9 +389,20 @@ fn camera_movement(
             cam.relative_sector = cam.relative_sector + sector_direction(trans.down(), amount);
         }
 
+        if input_handler.check_just_pressed(CosmosInputs::ResetMapPosition) {
+            let Ok(player_loc) = q_local_player.get_single() else {
+                continue;
+            };
+
+            cam.relative_sector = player_loc.relative_sector();
+        }
+
         if input_handler.mouse_inputs().pressed(MouseButton::Left) {
+            let pitch_pi_interval = ((cam.pitch + PI / 2.0) / (PI / 1.0)).floor() as i32;
+            let yaw_sign = if pitch_pi_interval % 2 == 0 { -1 } else { 1 };
+
             cam.pitch += -delta.y * 0.001;
-            cam.yaw += -delta.x * 0.001;
+            cam.yaw += yaw_sign as f32 * delta.x * 0.001;
         }
 
         for mw in evr_mouse_wheel.read() {
@@ -386,7 +452,9 @@ pub(super) fn register(app: &mut App) {
                     toggle_map,
                     receive_map,
                     render_galaxy_map,
-                    (camera_movement, position_camera).chain().run_if(map_active),
+                    (camera_movement, position_camera, handle_selected_sector)
+                        .chain()
+                        .run_if(map_active),
                 )
                     .chain()
                     .before(UiSystemSet::DoUi),

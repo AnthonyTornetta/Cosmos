@@ -119,6 +119,8 @@ pub enum CosmosInputs {
 
     /// Toggles the galaxy map
     ToggleMap,
+    /// Resets the map position to the player's coordinates
+    ResetMapPosition,
 }
 
 fn init_input(mut input_handler: ResMut<CosmosInputHandler>) {
@@ -184,6 +186,7 @@ fn init_input(mut input_handler: ResMut<CosmosInputHandler>) {
     input_handler.set_keycode(CosmosInputs::BulkDropFlag, KeyCode::ControlLeft);
 
     input_handler.set_keycode(CosmosInputs::ToggleMap, KeyCode::KeyM);
+    input_handler.set_keycode(CosmosInputs::ResetMapPosition, KeyCode::KeyR);
 }
 
 #[derive(Resource, Default, Debug)]

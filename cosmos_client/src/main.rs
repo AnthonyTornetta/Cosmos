@@ -37,6 +37,7 @@ use bevy::prelude::*;
 use bevy::window::WindowMode;
 use bevy::{core::TaskPoolThreadAssignmentPolicy, diagnostic::FrameTimeDiagnosticsPlugin};
 use bevy_hanabi::HanabiPlugin;
+use bevy_mod_billboard::plugin::BillboardPlugin;
 use bevy_mod_debugdump::schedule_graph;
 use bevy_obj::ObjPlugin;
 
@@ -149,6 +150,7 @@ fn main() {
             EntityCountDiagnosticsPlugin,
             FrameTimeDiagnosticsPlugin,
             PerfUiPlugin,
+            BillboardPlugin,
         ))
         // .add_plugins(RapierDebugRenderPlugin::default())
         .add_systems(OnEnter(GameState::Connecting), connect::establish_connection)
