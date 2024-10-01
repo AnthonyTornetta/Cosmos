@@ -1,14 +1,25 @@
 //! Responsible for the generation of the stars
 
-use std::f32::consts::{E, TAU};
+use std::{
+    collections::HashSet,
+    f32::consts::{E, TAU},
+    fs,
+};
 
-use bevy::prelude::{in_state, App, Commands, IntoSystemConfigs, Name, Query, Res, Update, Vec3, With};
+use bevy::{
+    prelude::{
+        in_state, App, Commands, Event, EventWriter, IntoSystemConfigs, IntoSystemSetConfigs, Name, Query, Res, ResMut, Resource,
+        SystemSet, Update, Vec3, With,
+    },
+    utils::HashMap,
+};
 use bevy_rapier3d::prelude::Velocity;
 use cosmos_core::{
     entities::player::Player,
     netty::system_sets::NetworkingSystemsSet,
     persistence::LoadingDistance,
     physics::location::{Location, Sector, SystemUnit, UniverseSystem, SYSTEM_SECTORS},
+    registry::{identifiable::Identifiable, Registry},
     state::GameState,
     universe::star::{Star, MAX_TEMPERATURE, MIN_TEMPERATURE},
 };
@@ -128,12 +139,138 @@ fn load_stars_near_players(
     }
 }
 
+#[derive(Debug, Clone)]
+pub struct SectorItem {
+    unlocalized_name: String,
+    id: u16,
+}
+
+impl Identifiable for SectorItem {
+    fn id(&self) -> u16 {
+        self.id
+    }
+
+    fn set_numeric_id(&mut self, id: u16) {
+        self.id = id;
+    }
+
+    fn unlocalized_name(&self) -> &str {
+        &self.unlocalized_name
+    }
+}
+
+#[derive(Debug, Default, Clone)]
+pub struct GeneratedSector {
+    items: Vec<u16>,
+}
+
+impl GeneratedSector {
+    pub fn items<'a>(&'a self, registry: &'a Registry<SectorItem>) -> impl Iterator<Item = &'a SectorItem> {
+        self.items.iter().map(|x| registry.from_numeric_id(*x))
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct GeneratedSystem {
+    sectors_with_content: HashMap<Sector, GeneratedSector>,
+}
+
+impl GeneratedSystem {
+    pub fn get_sector_content(&self, sector: Sector) -> Option<&GeneratedSector> {
+        self.sectors_with_content.get(&sector)
+    }
+
+    pub fn generate_in_sector(&mut self, sector: Sector, item: &SectorItem) {
+        self.sectors_with_content
+            .entry(sector)
+            .or_insert(GeneratedSector::default())
+            .items
+            .push(item.id());
+    }
+}
+
+#[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
+pub enum SystemGenerationSet {
+    SendEvents,
+    Star,
+    Planet,
+    Station,
+    Asteroid,
+}
+
+#[derive(Event, Debug)]
+pub struct GenerateSystemEvent {
+    pub system: UniverseSystem,
+}
+
+#[derive(Resource)]
+struct GeneratedSystemsCache(HashSet<UniverseSystem>);
+
+fn is_system_generated(cache: &mut GeneratedSystemsCache, system: UniverseSystem) -> bool {
+    if cache.0.contains(&system) {
+        return true;
+    }
+
+    let exists = fs::exists(format!("world/systems/{},{},{}", system.x(), system.y(), system.z())).unwrap_or(false);
+
+    if exists {
+        cache.0.insert(system);
+    }
+
+    exists
+}
+
+fn generate_system(
+    mut sector_cache: ResMut<GeneratedSystemsCache>,
+    mut evw_generate_system: EventWriter<GenerateSystemEvent>,
+    q_players: Query<&Location, With<Player>>,
+) {
+    let mut sectors_todo = HashSet::new();
+
+    for p_loc in q_players.iter() {
+        let system = p_loc.get_system_coordinates();
+
+        if !is_system_generated(&mut sector_cache, system) {
+            sectors_todo.insert(system);
+        }
+    }
+
+    if sectors_todo.is_empty() {
+        return;
+    }
+
+    for ev in &sectors_todo {
+        let _ = fs::create_dir("world/systems");
+        fs::write(format!("world/systems/{},{},{}", ev.x(), ev.y(), ev.z()), &[]);
+        sector_cache.0.insert(*ev);
+    }
+
+    evw_generate_system.send_batch(sectors_todo.into_iter().map(|system| GenerateSystemEvent { system }));
+}
+
+pub struct UniverseSystemContainer {}
+
 pub(super) fn register(app: &mut App) {
+    app.configure_sets(
+        Update,
+        (
+            SystemGenerationSet::SendEvents,
+            SystemGenerationSet::Star,
+            SystemGenerationSet::Planet,
+            SystemGenerationSet::Station,
+            SystemGenerationSet::Asteroid,
+        )
+            .in_set(NetworkingSystemsSet::Between)
+            .chain(),
+    );
+
     app.add_systems(
         Update,
         // planet_spawner::spawn_planet system requires stars to have been generated first
         load_stars_near_players
             .in_set(NetworkingSystemsSet::Between)
             .run_if(in_state(GameState::Playing)),
-    );
+    )
+    .add_systems(Update, generate_system.in_set(SystemGenerationSet::SendEvents))
+    .add_event::<GenerateSystemEvent>();
 }

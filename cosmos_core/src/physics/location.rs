@@ -158,7 +158,7 @@ impl Add<Self> for Sector {
 /// Datatype used to store system coordinates
 pub type SystemUnit = i64;
 
-#[derive(Default, Component, Debug, PartialEq, Serialize, Deserialize, Reflect, Clone, Copy)]
+#[derive(Default, Component, Debug, PartialEq, Serialize, Deserialize, Reflect, Clone, Copy, Hash, Eq)]
 /// A universe system represents a large area of sectors
 pub struct UniverseSystem(SystemUnit, SystemUnit, SystemUnit);
 
