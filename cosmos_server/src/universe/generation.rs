@@ -8,7 +8,7 @@ use std::{
 
 use bevy::{
     prelude::{
-        in_state, App, Commands, Event, EventWriter, IntoSystemConfigs, IntoSystemSetConfigs, Name, Query, Res, ResMut, Resource,
+        in_state, App, Commands, Entity, Event, EventWriter, IntoSystemConfigs, IntoSystemSetConfigs, Name, Query, Res, ResMut, Resource,
         SystemSet, Update, Vec3, With,
     },
     utils::HashMap,
@@ -18,10 +18,15 @@ use cosmos_core::{
     entities::player::Player,
     netty::system_sets::NetworkingSystemsSet,
     persistence::LoadingDistance,
-    physics::location::{Location, Sector, SystemUnit, UniverseSystem, SYSTEM_SECTORS},
+    physics::location::{Location, Sector, SystemCoordinate, SystemUnit, SYSTEM_SECTORS},
+    prelude::Planet,
     registry::{identifiable::Identifiable, Registry},
     state::GameState,
-    universe::star::{Star, MAX_TEMPERATURE, MIN_TEMPERATURE},
+    structure::planet::biosphere::Biosphere,
+    universe::{
+        map::system::{Destination, PlanetDestination},
+        star::{Star, MAX_TEMPERATURE, MIN_TEMPERATURE},
+    },
 };
 use rand::{Rng, SeedableRng};
 use rand_chacha::ChaCha8Rng;
@@ -58,7 +63,7 @@ fn distance_from_star_spiral(x: f32, y: f32) -> f32 {
 }
 
 /// This gets the star - if there is one - in the system.
-pub fn get_star_in_system(system: &UniverseSystem, seed: &ServerSeed) -> Option<Star> {
+pub fn get_star_in_system(system: &SystemCoordinate, seed: &ServerSeed) -> Option<Star> {
     if system.y() != 0 {
         return None;
     }
@@ -200,13 +205,28 @@ pub enum SystemGenerationSet {
 
 #[derive(Event, Debug)]
 pub struct GenerateSystemEvent {
-    pub system: UniverseSystem,
+    pub system: SystemCoordinate,
 }
 
 #[derive(Resource)]
-struct GeneratedSystemsCache(HashSet<UniverseSystem>);
+pub struct UniverseSystems {
+    systems: HashMap<SystemCoordinate, UniverseSystem>,
+}
 
-fn is_system_generated(cache: &mut GeneratedSystemsCache, system: UniverseSystem) -> bool {
+impl UniverseSystems {
+    pub fn system(&self, coordinate: SystemCoordinate) -> Option<&UniverseSystem> {
+        self.systems.get(&coordinate)
+    }
+
+    pub fn system_mut(&mut self, coordinate: SystemCoordinate) -> Option<&mut UniverseSystem> {
+        self.systems.get_mut(&coordinate)
+    }
+}
+
+#[derive(Resource)]
+struct GeneratedSystemsCache(HashSet<SystemCoordinate>);
+
+fn is_system_generated(cache: &mut GeneratedSystemsCache, system: SystemCoordinate) -> bool {
     if cache.0.contains(&system) {
         return true;
     }
@@ -248,7 +268,47 @@ fn generate_system(
     evw_generate_system.send_batch(sectors_todo.into_iter().map(|system| GenerateSystemEvent { system }));
 }
 
-pub struct UniverseSystemContainer {}
+pub struct SystemItemPlanet {
+    pub planet: Planet,
+    pub biosphere_id: u16,
+    pub size: u64,
+}
+
+pub enum SystemItem {
+    Star(Star),
+    Planet(SystemItemPlanet),
+    Shop,
+    Asteroid,
+}
+
+pub struct GeneratedItem {
+    pub location: Location,
+    pub item: SystemItem,
+}
+
+pub struct UniverseSystem {
+    coordinate: SystemCoordinate,
+    generated_items: Vec<GeneratedItem>,
+}
+
+impl UniverseSystem {
+    pub fn add_item(&mut self, location: Location, item: SystemItem) {
+        self.generated_items.push(GeneratedItem { location, item });
+    }
+
+    pub fn iter<'a>(&'a self) -> impl Iterator<Item = &'a GeneratedItem> {
+        self.generated_items.iter()
+    }
+
+    /// The sector is not relative to this system.
+    pub fn items_at(&self, sector: Sector) -> impl Iterator<Item = &'_ GeneratedItem> {
+        self.items_at_relative(sector - self.coordinate.negative_most_sector())
+    }
+
+    pub fn items_at_relative(&self, sector: Sector) -> impl Iterator<Item = &'_ GeneratedItem> {
+        self.generated_items.iter().filter(move |x| x.location.sector() == sector)
+    }
+}
 
 pub(super) fn register(app: &mut App) {
     app.configure_sets(

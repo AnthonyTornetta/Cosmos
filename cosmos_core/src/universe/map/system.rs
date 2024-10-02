@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     netty::sync::events::netty_event::{IdentifiableEvent, NettyEvent, SyncedEventImpl},
-    physics::location::{Location, Sector, UniverseSystem},
+    physics::location::{Location, Sector, SystemCoordinate},
     universe::star::Star,
 };
 
@@ -84,7 +84,7 @@ impl SystemMap {
 
 #[derive(Serialize, Deserialize, Event, Debug)]
 pub struct RequestSystemMap {
-    pub system: UniverseSystem,
+    pub system: SystemCoordinate,
 }
 
 impl IdentifiableEvent for RequestSystemMap {
@@ -102,7 +102,7 @@ impl NettyEvent for RequestSystemMap {
 #[derive(Serialize, Deserialize, Event, Debug)]
 /// Sent by the server to the client to indicate what their requested system map is
 pub struct SystemMapResponseEvent {
-    pub system: UniverseSystem,
+    pub system: SystemCoordinate,
     pub map: SystemMap,
 }
 

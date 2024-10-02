@@ -160,15 +160,15 @@ pub type SystemUnit = i64;
 
 #[derive(Default, Component, Debug, PartialEq, Serialize, Deserialize, Reflect, Clone, Copy, Hash, Eq)]
 /// A universe system represents a large area of sectors
-pub struct UniverseSystem(SystemUnit, SystemUnit, SystemUnit);
+pub struct SystemCoordinate(SystemUnit, SystemUnit, SystemUnit);
 
-impl Display for UniverseSystem {
+impl Display for SystemCoordinate {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_str(format!("{}, {}, {}", self.0, self.1, self.2).as_str())
     }
 }
 
-impl UniverseSystem {
+impl SystemCoordinate {
     #[inline]
     /// Creates a new UniverseSystem at the given system coordinates
     pub fn new(x: SystemUnit, y: SystemUnit, z: SystemUnit) -> Self {
@@ -231,11 +231,11 @@ impl UniverseSystem {
     }
 }
 
-impl Add<UniverseSystem> for UniverseSystem {
-    type Output = UniverseSystem;
+impl Add<SystemCoordinate> for SystemCoordinate {
+    type Output = SystemCoordinate;
 
-    fn add(self, rhs: UniverseSystem) -> Self::Output {
-        UniverseSystem(self.0 + rhs.0, self.1 + rhs.1, self.2 + rhs.2)
+    fn add(self, rhs: SystemCoordinate) -> Self::Output {
+        SystemCoordinate(self.0 + rhs.0, self.1 + rhs.1, self.2 + rhs.2)
     }
 }
 
@@ -326,8 +326,8 @@ impl Location {
     }
 
     /// Gets the system coordinates this location is in
-    pub fn get_system_coordinates(&self) -> UniverseSystem {
-        UniverseSystem(
+    pub fn get_system_coordinates(&self) -> SystemCoordinate {
+        SystemCoordinate(
             (self.sector.x() as f32 / SYSTEM_SECTORS as f32).floor() as SystemUnit,
             (self.sector.y() as f32 / SYSTEM_SECTORS as f32).floor() as SystemUnit,
             (self.sector.z() as f32 / SYSTEM_SECTORS as f32).floor() as SystemUnit,
