@@ -1,24 +1,29 @@
 //! Responsible for spawning planets near stars, but for now just spawns a planet at 0, 0, 0.
 
-use std::{f32::consts::TAU, time::Duration};
-
+use super::{
+    generation::{GenerateSystemEvent, SystemGenerationSet, SystemItem, SystemItemPlanet, UniverseSystems},
+    star::calculate_temperature_at,
+};
+use crate::{
+    init::init_world::ServerSeed,
+    rng::get_rng_for_sector,
+    structure::planet::{biosphere::BiosphereTemperatureRegistry, server_planet_builder::ServerPlanetBuilder},
+};
 use bevy::{
-    core::Name,
     log::warn,
     math::{Dir3, Quat},
     prelude::{
-        in_state, App, Commands, Component, Deref, DerefMut, DespawnRecursiveExt, Entity, EventReader, IntoSystemConfigs, Query, Res,
-        ResMut, Resource, Update, Vec3, With,
+        in_state, App, Commands, Component, Deref, DerefMut, EventReader, IntoSystemConfigs, Query, Res, ResMut, Resource, Update, Vec3,
+        With,
     },
-    tasks::{AsyncComputeTaskPool, Task},
-    time::common_conditions::on_timer,
+    tasks::Task,
     utils::HashSet,
 };
 use cosmos_core::{
     ecs::bundles::BundleStartingRotation,
     entities::player::Player,
     netty::system_sets::NetworkingSystemsSet,
-    physics::location::{Location, Sector, SectorUnit, SystemUnit},
+    physics::location::{Location, Sector, SectorUnit},
     registry::{identifiable::Identifiable, Registry},
     state::GameState,
     structure::{
@@ -27,23 +32,9 @@ use cosmos_core::{
         planet::{biosphere::Biosphere, planet_builder::TPlanetBuilder, Planet, PLANET_LOAD_RADIUS},
         Structure,
     },
-    universe::star::Star,
 };
-use futures_lite::future;
 use rand::Rng;
-
-use crate::{
-    init::init_world::ServerSeed,
-    persistence::is_sector_generated,
-    rng::get_rng_for_sector,
-    settings::ServerSettings,
-    structure::planet::{biosphere::BiosphereTemperatureRegistry, server_planet_builder::ServerPlanetBuilder},
-};
-
-use super::{
-    generation::{GenerateSystemEvent, SectorItem, SystemItem, SystemItemPlanet, UniverseSystems},
-    star::calculate_temperature_at,
-};
+use std::f32::consts::TAU;
 
 #[derive(Debug, Default, Resource, Deref, DerefMut, Clone)]
 struct CachedSectors(HashSet<Sector>);
@@ -117,7 +108,7 @@ fn spawn_planets(
     biosphere_registry: Res<Registry<Biosphere>>,
 ) {
     for ev in evr_generate_system.read() {
-        let Some(mut system) = systems.system_mut(ev.system) else {
+        let Some(system) = systems.system_mut(ev.system) else {
             continue;
         };
 
@@ -281,7 +272,7 @@ fn spawn_planets(
 pub(super) fn register(app: &mut App) {
     app.add_systems(
         Update,
-        (spawn_planets, monitor_planets_to_spawn)
+        (monitor_planets_to_spawn.in_set(SystemGenerationSet::Planet), spawn_planets)
             .chain()
             .in_set(NetworkingSystemsSet::Between)
             .run_if(in_state(GameState::Playing)),
