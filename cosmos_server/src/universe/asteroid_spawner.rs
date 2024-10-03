@@ -1,11 +1,11 @@
 //! Responsible for spawning planets near stars, but for now just spawns a planet at 0, 0, 0.
 
-use std::time::Duration;
+use std::f32::consts::PI;
 
 use bevy::{
     log::{error, warn},
+    math::Quat,
     prelude::{in_state, App, Commands, Deref, DerefMut, EventReader, IntoSystemConfigs, Query, Res, ResMut, Resource, Update, Vec3, With},
-    time::common_conditions::on_timer,
     utils::HashSet,
 };
 use cosmos_core::{
@@ -14,38 +14,32 @@ use cosmos_core::{
     physics::location::{Location, Sector, SectorUnit, SystemCoordinate, SystemUnit, SECTOR_DIMENSIONS, SYSTEM_SECTORS},
     state::GameState,
     structure::{
-        asteroid::{asteroid_builder::TAsteroidBuilder, loading::AsteroidNeedsCreated, Asteroid, ASTEROID_LOAD_RADIUS},
+        asteroid::{asteroid_builder::TAsteroidBuilder, loading::AsteroidNeedsCreated, ASTEROID_LOAD_RADIUS},
         coordinates::ChunkCoordinate,
         full_structure::FullStructure,
         Structure,
     },
-    universe::star::Star,
+    utils::quat_math::random_quat,
 };
 use rand::Rng;
 
 use crate::{
     init::init_world::ServerSeed,
-    persistence::is_sector_generated,
     rng::get_rng_for_sector,
     settings::ServerSettings,
     structure::asteroid::server_asteroid_builder::ServerAsteroidBuilder,
     universe::{generation::SystemItem, star::calculate_temperature_at},
 };
 
-use super::generation::{GenerateSystemEvent, GeneratedItem, SystemGenerationSet, SystemItemAsteroid, UniverseSystems};
+use super::generation::{GenerateSystemEvent, SystemGenerationSet, SystemItemAsteroid, UniverseSystems};
 
 #[derive(Default, Resource, Deref, DerefMut)]
 struct CachedSectors(HashSet<Sector>);
 
 fn spawn_asteroids(
     mut evr_create_system: EventReader<GenerateSystemEvent>,
-    // query: Query<&Location, With<Asteroid>>,
-    // players: Query<&Location, With<Player>>,
     server_seed: Res<ServerSeed>,
-    // mut cache: ResMut<CachedSectors>,
-    mut commands: Commands,
     mut systems: ResMut<UniverseSystems>,
-    // q_stars: Query<(&Location, &Star)>,
     settings: Res<ServerSettings>,
 ) {
     if !settings.spawn_asteroids {
@@ -53,7 +47,6 @@ fn spawn_asteroids(
     }
 
     for ev in evr_create_system.read() {
-        println!("read");
         let Some(system) = systems.system_mut(ev.system) else {
             warn!("Missing system @ {}", ev.system);
             continue;
@@ -75,51 +68,56 @@ fn spawn_asteroids(
         let star_sector = star_loc.sector();
         let mut rng = get_rng_for_sector(&server_seed, &star_sector);
 
-        let n_asteroid_sectors: usize = rng.gen_range(600..=1000);
+        // Favors lower numbers
+        let n_asteroid_rings: usize = (1.0 + 5.0 * (1.0 - (1.0 - rng.gen::<f32>()).sqrt())) as usize;
 
-        println!("n asteroid sectors: {n_asteroid_sectors}");
-        for _ in 0..n_asteroid_sectors {
-            let sector = Sector::new(
-                rng.gen_range(0..(SYSTEM_SECTORS as SectorUnit)),
-                rng.gen_range(0..(SYSTEM_SECTORS as SectorUnit)),
-                rng.gen_range(0..(SYSTEM_SECTORS as SectorUnit)),
-            ) + star_loc.get_system_coordinates().negative_most_sector();
+        for _ in 0..n_asteroid_rings {
+            let ring_diameter = rng.gen_range(10..=90);
+            let circum = ring_diameter as f32 * PI;
+            let n_iterations = (circum * rng.gen_range(1..=6) as f32) as SectorUnit;
+            let asteroid_axis = random_quat(&mut rng);
 
-            // Don't generate asteroids if something is already here
-            if system.items_at(sector).next().is_some() {
-                println!("SOMETHING IS HERE!");
-                continue;
-            }
+            for i in 0..n_iterations {
+                let angle = (i as f32 * PI * 2.0) / (n_iterations as f32);
+                let coordinate = asteroid_axis * Quat::from_axis_angle(Vec3::Y, angle) * (Vec3::NEG_Z * ring_diameter as f32 / 2.0);
 
-            let n_asteroids = (6.0 * (1.0 - (1.0 - rng.gen::<f32>()).sqrt())) as usize;
+                let sector = Sector::new(
+                    coordinate.x.round() as SectorUnit,
+                    coordinate.y.round() as SectorUnit,
+                    coordinate.z.round() as SectorUnit,
+                ) + star_loc.get_system_coordinates().negative_most_sector()
+                    + Sector::splat(SYSTEM_SECTORS as SectorUnit / 2);
 
-            let multiplier = SECTOR_DIMENSIONS;
-            let adder = -SECTOR_DIMENSIONS / 2.0;
-
-            println!("n asteroids: {n_asteroids}");
-            for _ in 0..n_asteroids {
-                let size = rng.gen_range(4..=8);
-
-                let loc = Location::new(
-                    Vec3::new(
-                        rng.gen::<f32>() * multiplier + adder,
-                        rng.gen::<f32>() * multiplier + adder,
-                        rng.gen::<f32>() * multiplier + adder,
-                    ),
-                    sector,
-                );
-
-                let Some(temperature) = calculate_temperature_at([(star_loc, star)].iter(), &loc) else {
-                    println!("!!NOPE!!");
+                // Don't generate asteroids if something is already here
+                if system.items_at(sector).next().is_some() {
                     continue;
-                };
+                }
 
-                println!("adding item");
-                system.add_item(loc, SystemItem::Asteroid(SystemItemAsteroid { size, temperature }));
+                let n_asteroids = (6.0 * (1.0 - (1.0 - rng.gen::<f32>()).sqrt())) as usize;
+
+                let multiplier = SECTOR_DIMENSIONS;
+                let adder = -SECTOR_DIMENSIONS / 2.0;
+
+                for _ in 0..n_asteroids {
+                    let size = rng.gen_range(4..=8);
+
+                    let loc = Location::new(
+                        Vec3::new(
+                            rng.gen::<f32>() * multiplier + adder,
+                            rng.gen::<f32>() * multiplier + adder,
+                            rng.gen::<f32>() * multiplier + adder,
+                        ),
+                        sector,
+                    );
+
+                    let Some(temperature) = calculate_temperature_at([(star_loc, star)].iter(), &loc) else {
+                        continue;
+                    };
+
+                    system.add_item(loc, SystemItem::Asteroid(SystemItemAsteroid { size, temperature }));
+                }
             }
         }
-
-        println!("{systems:?}");
     }
 }
 

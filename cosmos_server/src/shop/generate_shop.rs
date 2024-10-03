@@ -14,6 +14,7 @@ use cosmos_core::{
     physics::location::{CosmosBundleSet, Location, Sector, SystemUnit, SECTOR_DIMENSIONS},
     state::GameState,
     structure::station::{station_builder::STATION_LOAD_DISTANCE, Station},
+    utils::quat_math::random_quat,
 };
 use rand::Rng;
 use rand_chacha::ChaCha8Rng;
@@ -119,20 +120,6 @@ fn spawn_shop(
             });
         }
     }
-}
-
-/// https://stackoverflow.com/questions/31600717/how-to-generate-a-random-quaternion-quickly
-fn random_quat(rng: &mut ChaCha8Rng) -> Quat {
-    let u = rng.gen::<f32>();
-    let v = rng.gen::<f32>();
-    let w = rng.gen::<f32>();
-
-    Quat::from_xyzw(
-        (1.0 - u).sqrt() * (2.0 * PI * v).sin(),
-        (1.0 - u).sqrt() * (2.0 * PI * v).cos(),
-        u.sqrt() * (2.0 * PI * w).sin(),
-        u.sqrt() * (2.0 * PI * w).cos(),
-    )
 }
 
 pub(super) fn register(app: &mut App) {

@@ -9,7 +9,7 @@ use cosmos_core::{
     entities::player::Player,
     netty::{cosmos_encoder, system_sets::NetworkingSystemsSet},
     physics::location::{Location, Sector, SystemCoordinate},
-    prelude::{Asteroid, Planet},
+    prelude::Planet,
     registry::{identifiable::Identifiable, Registry},
     universe::star::Star,
 };

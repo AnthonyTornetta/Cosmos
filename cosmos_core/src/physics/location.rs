@@ -101,6 +101,12 @@ impl Sector {
     }
 
     #[inline]
+    /// Creates a new Sector with all coordinates at the given value
+    pub const fn splat(all: SectorUnit) -> Self {
+        Self(all, all, all)
+    }
+
+    #[inline]
     /// sector x
     pub fn x(&self) -> SectorUnit {
         self.0

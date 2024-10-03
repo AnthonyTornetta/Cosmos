@@ -1979,6 +1979,7 @@ dependencies = [
  "lz4_flex",
  "noise",
  "rand",
+ "rand_chacha",
  "rayon",
  "renet2",
  "serde",

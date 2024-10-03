@@ -324,7 +324,7 @@ fn render_galaxy_map(
                             .unwrap_or(css::HOT_PINK.into()),
                     )),
                     Destination::Player(_) => materials.add(StandardMaterial::from_color(css::GREEN)),
-                    Destination::Asteroid(_) => materials.add(StandardMaterial::from_color(css::GREY)),
+                    Destination::Asteroid(_) => materials.add(StandardMaterial::from_color(css::LIGHT_YELLOW)),
                     Destination::Unknown(_) => materials.add(StandardMaterial::from_color(css::WHITE)),
                     Destination::Ship(_) => materials.add(StandardMaterial::from_color(css::ORANGE)),
                     Destination::Station(_) => materials.add(StandardMaterial::from_color(css::PURPLE)),
