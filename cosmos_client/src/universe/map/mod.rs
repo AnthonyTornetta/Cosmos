@@ -306,7 +306,7 @@ fn render_galaxy_map(
                 );
 
                 let mesh = match destination {
-                    Destination::Star(_) => meshes.add(Sphere::new(0.75)),
+                    Destination::Star(_) => meshes.add(Sphere::new(20.75)),
                     Destination::Planet(_) => meshes.add(Cuboid::new(0.5, 0.5, 0.5)),
                     Destination::Player(_) => meshes.add(Capsule3d::new(0.05, 0.1)),
                     Destination::Asteroid(_) => meshes.add(Cuboid::new(0.3, 0.3, 0.3)),

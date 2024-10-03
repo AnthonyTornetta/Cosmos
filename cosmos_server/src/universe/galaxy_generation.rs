@@ -75,15 +75,15 @@ fn distance_from_star_spiral(x: f32, y: f32) -> f32 {
     (spiral_function(theta - spiral_offset) - r).abs() * (r / 4.0)
 }
 
-const GALAXY_THICKNESS: u32 = 5;
+const GALAXY_THICKNESS: u32 = 2;
 
-const CORE_X_DIST: u32 = 33;
-const CORE_Y_DIST: u32 = 33;
+const CORE_X_DIST: u32 = 5;
+const CORE_Y_DIST: u32 = 5;
 
-const ARM_X_DIST: u32 = 100;
-const ARM_Y_DIST: u32 = 50;
-const ARM_X_MEAN: u32 = 200;
-const ARM_Y_MEAN: u32 = 100;
+const ARM_X_DIST: u32 = 10;
+const ARM_Y_DIST: u32 = 5;
+const ARM_X_MEAN: u32 = 20;
+const ARM_Y_MEAN: u32 = 10;
 
 const SPIRAL: u32 = 3;
 const ARMS: u32 = 2;
@@ -100,7 +100,7 @@ fn spiral(x: f32, y: f32, z: f32, offset: f32) -> Vec3 {
 fn guassian_random(rng: &mut ChaCha8Rng, mean: f32, stdev: f32) -> f32 {
     let u = 1.0 - rng.gen::<f32>();
     let v = rng.gen::<f32>();
-    let z = (-2.0 * u.log(10.0)).sqrt() * (2.0 * PI * v).sqrt();
+    let z = (-2.0 * u.ln()).sqrt() * (2.0 * PI * v).cos();
 
     z * stdev + mean
 }
@@ -117,8 +117,8 @@ fn generate_stars(rng: &mut ChaCha8Rng, n_stars: u32) -> HashSet<SystemCoordinat
 
         stars.insert(SystemCoordinate::new(
             pos.x.round() as SystemUnit,
-            pos.y.round() as SystemUnit,
             pos.z.round() as SystemUnit,
+            pos.y.round() as SystemUnit,
         ));
     }
 
@@ -133,8 +133,8 @@ fn generate_stars(rng: &mut ChaCha8Rng, n_stars: u32) -> HashSet<SystemCoordinat
 
             stars.insert(SystemCoordinate::new(
                 pos.x.round() as SystemUnit,
-                pos.y.round() as SystemUnit,
                 pos.z.round() as SystemUnit,
+                pos.y.round() as SystemUnit,
             ));
         }
     }
@@ -182,7 +182,9 @@ fn generate_galaxy(seed: &ServerSeed) -> Galaxy {
 
     let mut rng = get_rng_for_sector(seed, &Sector::ZERO);
 
-    let stars = generate_stars(&mut rng, 10_000);
+    let stars = generate_stars(&mut rng, 1_000);
+
+    println!("{stars:?}");
 
     for system in stars {
         let rand = 1.0 - (1.0 - rng.gen::<f32>()).sqrt();
