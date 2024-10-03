@@ -22,41 +22,61 @@ use cosmos_core::{
     },
 };
 
+use crate::universe::generation::SystemItem;
+
+use super::generation::UniverseSystems;
+
 fn send_map(
     mut evr_request_map: EventReader<NettyEventReceived<RequestSystemMap>>,
     mut nevw_system_map: NettyEventWriter<SystemMapResponseEvent>,
 
-    biospheres: Res<Registry<Biosphere>>,
-    q_planets: Query<(&Location, &BiosphereMarker), With<Planet>>,
-    q_star: Query<(&Location, &Star)>,
     q_players: Query<&Location, With<Player>>,
     q_stations: Query<&Location, With<Station>>,
-    q_asteroid: Query<&Location, With<Asteroid>>,
     q_ships: Query<&Location, With<Ship>>,
+
+    systems: Res<UniverseSystems>,
 ) {
     for ev in evr_request_map.read() {
-        println!("Got: {ev:?} -- sending response!");
-
         let mut system_map = SystemMap::default();
 
-        for (loc, biosphere_marker) in q_planets.iter() {
-            let biosphere = biospheres
-                .from_id(biosphere_marker.biosphere_name())
-                .expect("Failed to get biosphere from unlocalized id!");
+        let Some(system) = systems.system(ev.system) else {
+            continue;
+        };
 
-            system_map.add_destination(
-                loc.relative_sector(),
-                Destination::Planet(Box::new(PlanetDestination {
-                    location: *loc,
-                    biosphere_id: biosphere.id(),
-                })),
-            );
+        for item in system.iter() {
+            let sector = item.location.relative_sector();
+            match &item.item {
+                SystemItem::Asteroid(_) => system_map.add_destination(sector, Destination::Asteroid(Box::new(AsteroidDestination {}))),
+                SystemItem::Planet(planet) => system_map.add_destination(
+                    sector,
+                    Destination::Planet(Box::new(PlanetDestination {
+                        location: item.location,
+                        biosphere_id: planet.biosphere_id,
+                    })),
+                ),
+                SystemItem::Star(star) => system_map.add_destination(sector, Destination::Star(Box::new(StarDestination { star: *star }))),
+                _ => {}
+            }
         }
-
-        for (loc, star) in q_star.iter() {
-            system_map.add_destination(loc.relative_sector(), Destination::Star(Box::new(StarDestination { star: *star })));
-        }
-
+        //
+        // for (loc, biosphere_marker) in q_planets.iter() {
+        //     let biosphere = biospheres
+        //         .from_id(biosphere_marker.biosphere_name())
+        //         .expect("Failed to get biosphere from unlocalized id!");
+        //
+        //     system_map.add_destination(
+        //         loc.relative_sector(),
+        //         Destination::Planet(Box::new(PlanetDestination {
+        //             location: *loc,
+        //             biosphere_id: biosphere.id(),
+        //         })),
+        //     );
+        // }
+        //
+        // for (loc, star) in q_star.iter() {
+        //     system_map.add_destination(loc.relative_sector(), Destination::Star(Box::new(StarDestination { star: *star })));
+        // }
+        //
         for loc in q_players.iter() {
             system_map.add_destination(
                 loc.relative_sector(),
@@ -85,10 +105,10 @@ fn send_map(
             );
         }
 
-        for loc in q_asteroid.iter() {
-            system_map.add_destination(loc.relative_sector(), Destination::Asteroid(Box::new(AsteroidDestination {})));
-        }
-
+        // for loc in q_asteroid.iter() {
+        //     system_map.add_destination(loc.relative_sector(), Destination::Asteroid(Box::new(AsteroidDestination {})));
+        // }
+        //
         nevw_system_map.send(
             SystemMapResponseEvent {
                 map: system_map,
