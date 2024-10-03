@@ -170,7 +170,7 @@ impl Display for SystemCoordinate {
 
 impl SystemCoordinate {
     #[inline]
-    /// Creates a new UniverseSystem at the given system coordinates
+    /// Creates a new [`SystemCoordinate`] at the given system coordinates
     pub fn new(x: SystemUnit, y: SystemUnit, z: SystemUnit) -> Self {
         Self(x, y, z)
     }

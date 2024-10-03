@@ -51,7 +51,6 @@ struct PlanetToSpawn {
 }
 
 fn monitor_planets_to_spawn(
-    q_planets: Query<&Location, With<Planet>>,
     q_players: Query<&Location, With<Player>>,
     mut commands: Commands,
     server_seed: Res<ServerSeed>,

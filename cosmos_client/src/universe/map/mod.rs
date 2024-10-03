@@ -23,7 +23,7 @@ use bevy_mod_billboard::{BillboardDepth, BillboardTextBundle};
 use cosmos_core::{
     ecs::NeedsDespawned,
     netty::{client::LocalPlayer, sync::events::client_event::NettyEventWriter, system_sets::NetworkingSystemsSet},
-    physics::location::{Location, Sector, SectorUnit, UniverseSystem},
+    physics::location::{Location, Sector, SectorUnit, SystemCoordinate},
     registry::{identifiable::Identifiable, Registry},
     state::GameState,
     structure::planet::biosphere::Biosphere,
@@ -39,8 +39,8 @@ use crate::{
 
 #[derive(Component, Debug)]
 enum GalaxyMapDisplay {
-    Loading(UniverseSystem),
-    Map { map: SystemMap, system: UniverseSystem },
+    Loading(SystemCoordinate),
+    Map { map: SystemMap, system: SystemCoordinate },
 }
 
 const CAMERA_LAYER: usize = 0b1000;

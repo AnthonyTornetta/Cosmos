@@ -80,7 +80,7 @@ pub struct GenerateSystemEvent {
     pub system: SystemCoordinate,
 }
 
-#[derive(Resource)]
+#[derive(Resource, Debug, Default)]
 pub struct UniverseSystems {
     systems: HashMap<SystemCoordinate, UniverseSystem>,
 }
@@ -281,5 +281,6 @@ pub(super) fn register(app: &mut App) {
         )
             .in_set(SystemGenerationSet::SendEvents),
     )
+    .init_resource::<UniverseSystems>()
     .add_event::<GenerateSystemEvent>();
 }

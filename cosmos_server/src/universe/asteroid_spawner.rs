@@ -3,7 +3,7 @@
 use std::time::Duration;
 
 use bevy::{
-    log::error,
+    log::{error, warn},
     prelude::{in_state, App, Commands, Deref, DerefMut, EventReader, IntoSystemConfigs, Query, Res, ResMut, Resource, Update, Vec3, With},
     time::common_conditions::on_timer,
     utils::HashSet,
@@ -32,7 +32,7 @@ use crate::{
     universe::{generation::SystemItem, star::calculate_temperature_at},
 };
 
-use super::generation::{GenerateSystemEvent, GeneratedItem, SystemItemAsteroid, UniverseSystems};
+use super::generation::{GenerateSystemEvent, GeneratedItem, SystemGenerationSet, SystemItemAsteroid, UniverseSystems};
 
 #[derive(Default, Resource, Deref, DerefMut)]
 struct CachedSectors(HashSet<Sector>);
@@ -53,7 +53,9 @@ fn spawn_asteroids(
     }
 
     for ev in evr_create_system.read() {
+        println!("read");
         let Some(system) = systems.system_mut(ev.system) else {
+            warn!("Missing system @ {}", ev.system);
             continue;
         };
 
@@ -66,14 +68,16 @@ fn spawn_asteroids(
             .next();
 
         let Some((star_loc, star)) = star else {
+            warn!("Missing star in system {}", ev.system);
             continue;
         };
 
         let star_sector = star_loc.sector();
         let mut rng = get_rng_for_sector(&server_seed, &star_sector);
 
-        let n_asteroid_sectors: usize = rng.gen_range(0..20);
+        let n_asteroid_sectors: usize = rng.gen_range(600..=1000);
 
+        println!("n asteroid sectors: {n_asteroid_sectors}");
         for _ in 0..n_asteroid_sectors {
             let sector = Sector::new(
                 rng.gen_range(0..(SYSTEM_SECTORS as SectorUnit)),
@@ -83,6 +87,7 @@ fn spawn_asteroids(
 
             // Don't generate asteroids if something is already here
             if system.items_at(sector).next().is_some() {
+                println!("SOMETHING IS HERE!");
                 continue;
             }
 
@@ -91,6 +96,7 @@ fn spawn_asteroids(
             let multiplier = SECTOR_DIMENSIONS;
             let adder = -SECTOR_DIMENSIONS / 2.0;
 
+            println!("n asteroids: {n_asteroids}");
             for _ in 0..n_asteroids {
                 let size = rng.gen_range(4..=8);
 
@@ -104,16 +110,20 @@ fn spawn_asteroids(
                 );
 
                 let Some(temperature) = calculate_temperature_at([(star_loc, star)].iter(), &loc) else {
+                    println!("!!NOPE!!");
                     continue;
                 };
 
+                println!("adding item");
                 system.add_item(loc, SystemItem::Asteroid(SystemItemAsteroid { size, temperature }));
             }
         }
+
+        println!("{systems:?}");
     }
 }
 
-fn generate_asteroids(mut commands: Commands, mut systems: ResMut<UniverseSystems>) {
+fn generate_asteroids(mut commands: Commands, q_players: Query<&Location, With<Player>>, mut systems: ResMut<UniverseSystems>) {
     let mut sectors_to_mark = HashSet::new();
 
     for (_, universe_system) in systems.iter() {
@@ -122,6 +132,13 @@ fn generate_asteroids(mut commands: Commands, mut systems: ResMut<UniverseSystem
             _ => None,
         }) {
             if universe_system.is_sector_generated_for(asteroid_loc.sector(), "cosmos:asteroid") {
+                continue;
+            }
+
+            if !q_players
+                .iter()
+                .any(|loc| (loc.sector() - asteroid_loc.sector()).abs().max_element() <= ASTEROID_LOAD_RADIUS as SystemUnit)
+            {
                 continue;
             }
 
@@ -238,9 +255,9 @@ fn generate_asteroids(mut commands: Commands, mut systems: ResMut<UniverseSystem
 pub(super) fn register(app: &mut App) {
     app.add_systems(
         Update,
-        spawn_asteroids
+        (spawn_asteroids.in_set(SystemGenerationSet::Asteroid), generate_asteroids)
+            .chain()
             .in_set(NetworkingSystemsSet::Between)
-            .run_if(on_timer(Duration::from_secs(1)))
             .run_if(in_state(GameState::Playing)),
     )
     .insert_resource(CachedSectors::default());
