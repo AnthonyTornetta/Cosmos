@@ -9,22 +9,40 @@ use cosmos_core::{
         system_sets::NetworkingSystemsSet,
     },
     physics::location::Location,
-    prelude::{Asteroid, Planet, Ship, Station},
-    registry::{identifiable::Identifiable, Registry},
+    prelude::{Ship, Station},
     state::GameState,
-    structure::planet::biosphere::{Biosphere, BiosphereMarker},
-    universe::{
-        map::system::{
-            AsteroidDestination, Destination, FactionStatus, PlanetDestination, PlayerDestination, RequestSystemMap, ShipDestination,
-            StarDestination, StationDestination, SystemMap, SystemMapResponseEvent,
-        },
-        star::Star,
+    universe::map::system::{
+        AsteroidDestination, Destination, FactionStatus, GalaxyMap, GalaxyMapResponseEvent, PlanetDestination, PlayerDestination,
+        RequestGalaxyMap, RequestSystemMap, ShipDestination, StarDestination, StationDestination, SystemMap, SystemMapResponseEvent,
     },
 };
 
 use crate::universe::generation::SystemItem;
 
-use super::generation::UniverseSystems;
+use super::{galaxy_generation::Galaxy, generation::UniverseSystems};
+
+fn send_galaxy_map(
+    mut evr_request_map: EventReader<NettyEventReceived<RequestGalaxyMap>>,
+    mut nevw_galaxy_map: NettyEventWriter<GalaxyMapResponseEvent>,
+    q_galaxy: Query<&Galaxy>,
+) {
+    for ev in evr_request_map.read() {
+        let Ok(galaxy) = q_galaxy.get_single() else {
+            continue;
+        };
+
+        let mut g_map = GalaxyMap::default();
+
+        for (_, star) in galaxy.iter_stars() {
+            g_map.add_destination(
+                star.location.sector(),
+                Destination::Star(Box::new(StarDestination { star: star.star })),
+            );
+        }
+
+        nevw_galaxy_map.send(GalaxyMapResponseEvent { map: g_map }, ev.client_id);
+    }
+}
 
 fn send_map(
     mut evr_request_map: EventReader<NettyEventReceived<RequestSystemMap>>,
@@ -58,25 +76,7 @@ fn send_map(
                 _ => {}
             }
         }
-        //
-        // for (loc, biosphere_marker) in q_planets.iter() {
-        //     let biosphere = biospheres
-        //         .from_id(biosphere_marker.biosphere_name())
-        //         .expect("Failed to get biosphere from unlocalized id!");
-        //
-        //     system_map.add_destination(
-        //         loc.relative_sector(),
-        //         Destination::Planet(Box::new(PlanetDestination {
-        //             location: *loc,
-        //             biosphere_id: biosphere.id(),
-        //         })),
-        //     );
-        // }
-        //
-        // for (loc, star) in q_star.iter() {
-        //     system_map.add_destination(loc.relative_sector(), Destination::Star(Box::new(StarDestination { star: *star })));
-        // }
-        //
+
         for loc in q_players.iter() {
             system_map.add_destination(
                 loc.relative_sector(),
@@ -105,10 +105,6 @@ fn send_map(
             );
         }
 
-        // for loc in q_asteroid.iter() {
-        //     system_map.add_destination(loc.relative_sector(), Destination::Asteroid(Box::new(AsteroidDestination {})));
-        // }
-        //
         nevw_system_map.send(
             SystemMapResponseEvent {
                 map: system_map,
@@ -122,6 +118,8 @@ fn send_map(
 pub(super) fn register(app: &mut App) {
     app.add_systems(
         Update,
-        send_map.in_set(NetworkingSystemsSet::Between).run_if(in_state(GameState::Playing)),
+        (send_galaxy_map, send_map)
+            .in_set(NetworkingSystemsSet::Between)
+            .run_if(in_state(GameState::Playing)),
     );
 }

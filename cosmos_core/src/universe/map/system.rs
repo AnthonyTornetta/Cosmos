@@ -82,6 +82,25 @@ impl SystemMap {
     }
 }
 
+#[derive(Default, Serialize, Deserialize, Debug, Clone)]
+pub struct GalaxyMap {
+    destinations: Vec<(Sector, Destination)>,
+}
+
+impl GalaxyMap {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn add_destination(&mut self, sector: Sector, destination: Destination) {
+        self.destinations.push((sector, destination));
+    }
+
+    pub fn destinations(&self) -> impl Iterator<Item = &'_ (Sector, Destination)> + '_ {
+        self.destinations.iter()
+    }
+}
+
 #[derive(Serialize, Deserialize, Event, Debug)]
 pub struct RequestSystemMap {
     pub system: SystemCoordinate,
@@ -94,6 +113,21 @@ impl IdentifiableEvent for RequestSystemMap {
 }
 
 impl NettyEvent for RequestSystemMap {
+    fn event_receiver() -> crate::netty::sync::events::netty_event::EventReceiver {
+        crate::netty::sync::events::netty_event::EventReceiver::Server
+    }
+}
+
+#[derive(Serialize, Deserialize, Event, Debug)]
+pub struct RequestGalaxyMap;
+
+impl IdentifiableEvent for RequestGalaxyMap {
+    fn unlocalized_name() -> &'static str {
+        "cosmos:request_galaxy_map"
+    }
+}
+
+impl NettyEvent for RequestGalaxyMap {
     fn event_receiver() -> crate::netty::sync::events::netty_event::EventReceiver {
         crate::netty::sync::events::netty_event::EventReceiver::Server
     }
@@ -118,7 +152,27 @@ impl NettyEvent for SystemMapResponseEvent {
     }
 }
 
+#[derive(Serialize, Deserialize, Event, Debug)]
+pub struct GalaxyMapResponseEvent {
+    pub map: GalaxyMap,
+}
+
+impl IdentifiableEvent for GalaxyMapResponseEvent {
+    fn unlocalized_name() -> &'static str {
+        "cosmos:galaxy_map"
+    }
+}
+
+impl NettyEvent for GalaxyMapResponseEvent {
+    fn event_receiver() -> crate::netty::sync::events::netty_event::EventReceiver {
+        crate::netty::sync::events::netty_event::EventReceiver::Client
+    }
+}
+
 pub(super) fn register(app: &mut App) {
     app.add_netty_event::<RequestSystemMap>();
     app.add_netty_event::<SystemMapResponseEvent>();
+
+    app.add_netty_event::<RequestGalaxyMap>();
+    app.add_netty_event::<GalaxyMapResponseEvent>();
 }

@@ -142,7 +142,7 @@ fn spawn_planets(
         let star_sector = star_loc.sector();
         let mut rng = get_rng_for_sector(&server_seed, &star_sector);
 
-        let n_planets: usize = rng.gen_range(0..20);
+        let n_planets: usize = rng.gen_range(0..30);
 
         for _ in 0..n_planets {
             let sector = Sector::new(

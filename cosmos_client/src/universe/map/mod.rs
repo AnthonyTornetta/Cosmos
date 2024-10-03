@@ -27,7 +27,9 @@ use cosmos_core::{
     registry::{identifiable::Identifiable, Registry},
     state::GameState,
     structure::planet::biosphere::Biosphere,
-    universe::map::system::{Destination, RequestSystemMap, SystemMap, SystemMapResponseEvent},
+    universe::map::system::{
+        Destination, GalaxyMap, GalaxyMapResponseEvent, RequestGalaxyMap, RequestSystemMap, SystemMap, SystemMapResponseEvent,
+    },
 };
 
 use crate::{
@@ -39,8 +41,10 @@ use crate::{
 
 #[derive(Component, Debug)]
 enum GalaxyMapDisplay {
-    Loading(SystemCoordinate),
-    Map { map: SystemMap, system: SystemCoordinate },
+    Loading,
+    WaitingGalaxy(SystemMap),
+    WaitingSystem(GalaxyMap),
+    Map { galaxy_map: GalaxyMap, system_map: SystemMap },
 }
 
 const CAMERA_LAYER: usize = 0b1000;
@@ -118,7 +122,8 @@ fn toggle_map(
     q_player: Query<&Location, With<LocalPlayer>>,
     mut commands: Commands,
     mut q_map_camera: Query<&mut Transform, With<MapCamera>>,
-    mut nevw_galaxy_map: NettyEventWriter<RequestSystemMap>,
+    mut nevw_system_map: NettyEventWriter<RequestSystemMap>,
+    mut nevw_galaxy_map: NettyEventWriter<RequestGalaxyMap>,
 ) {
     if !input_handler.check_just_pressed(CosmosInputs::ToggleMap) {
         return;
@@ -142,7 +147,7 @@ fn toggle_map(
     map_camera.translation = Vec3::ZERO;
 
     commands.spawn((
-        GalaxyMapDisplay::Loading(player_system),
+        GalaxyMapDisplay::Loading,
         OpenMenu::new(0),
         RenderLayers::from_layers(&[CAMERA_LAYER]),
         Name::new("System map display"),
@@ -150,8 +155,9 @@ fn toggle_map(
         VisibilityBundle::default(),
         ShowCursor,
     ));
-    println!("Sending map!!");
-    nevw_galaxy_map.send(RequestSystemMap { system: player_system });
+
+    nevw_system_map.send(RequestSystemMap { system: player_system });
+    nevw_galaxy_map.send(RequestGalaxyMap);
 }
 
 const SECTOR_SCALE: f32 = 1.0;
@@ -218,7 +224,7 @@ fn render_galaxy_map(
     asset_server: Res<AssetServer>,
 ) {
     for (ent, galaxy_map_display) in q_changed_map.iter() {
-        let GalaxyMapDisplay::Map { map, system } = galaxy_map_display else {
+        let GalaxyMapDisplay::Map { galaxy_map, system_map } = galaxy_map_display else {
             continue;
         };
 
@@ -287,7 +293,12 @@ fn render_galaxy_map(
                 ));
             });
 
-            for (sector, destination) in map.destinations() {
+            for (sector, destination) in system_map
+                .destinations()
+                // stars are already covered by the galaxy map
+                .filter(|(_, x)| !matches!(x, Destination::Star(_)))
+                .chain(galaxy_map.destinations())
+            {
                 let transform = Transform::from_xyz(
                     sector.x() as f32 * SECTOR_SCALE,
                     sector.y() as f32 * SECTOR_SCALE,
@@ -317,20 +328,26 @@ fn render_galaxy_map(
 
                 let material = match destination {
                     Destination::Star(star) => materials.add(StandardMaterial::from_color(star.star.color())),
-                    Destination::Planet(planet) => materials.add(StandardMaterial::from_color(
-                        biosphere_color
+                    Destination::Planet(planet) => materials.add(StandardMaterial {
+                        base_color: biosphere_color
                             .from_id(biospheres.from_numeric_id(planet.biosphere_id).unlocalized_name())
                             .map(|x| x.color())
                             .unwrap_or(css::HOT_PINK.into()),
-                    )),
+                        unlit: true,
+                        ..Default::default()
+                    }),
                     Destination::Player(_) => materials.add(StandardMaterial::from_color(css::GREEN)),
-                    Destination::Asteroid(_) => materials.add(StandardMaterial::from_color(css::LIGHT_YELLOW)),
-                    Destination::Unknown(_) => materials.add(StandardMaterial::from_color(css::WHITE)),
+                    Destination::Asteroid(_) => materials.add(StandardMaterial::from_color(css::GREY)),
+                    Destination::Unknown(_) => materials.add(StandardMaterial {
+                        base_color: css::WHITE.into(),
+                        unlit: true,
+                        ..Default::default()
+                    }),
                     Destination::Ship(_) => materials.add(StandardMaterial::from_color(css::ORANGE)),
                     Destination::Station(_) => materials.add(StandardMaterial::from_color(css::PURPLE)),
                 };
 
-                let mut ecmds = p.spawn((
+                p.spawn((
                     RenderLayers::from_layers(&[CAMERA_LAYER]), // https://github.com/bevyengine/bevy/issues/12461
                     PbrBundle {
                         transform,
@@ -339,8 +356,6 @@ fn render_galaxy_map(
                         ..Default::default()
                     },
                 ));
-
-                // p.spawn((TransformBundle::from_transform(transform), VisibilityBundle::default()));
             }
         });
     }
@@ -414,7 +429,7 @@ fn camera_movement(
             cam.zoom -= dy;
         }
 
-        cam.zoom = cam.zoom.clamp(0.05, 100.0);
+        cam.zoom = cam.zoom.clamp(0.05, 10000.0);
     }
 }
 
@@ -426,16 +441,53 @@ fn handle_map_camera(mut q_map_camera: Query<&mut Camera, With<MapCamera>>, q_ex
     cam.is_active = !q_exists.is_empty();
 }
 
-fn receive_map(mut nevr: EventReader<SystemMapResponseEvent>, mut q_galaxy_map: Query<&mut GalaxyMapDisplay>) {
-    for ev in nevr.read() {
+fn receive_map(
+    mut nevr_galaxy_map: EventReader<GalaxyMapResponseEvent>,
+    mut nevr_system_map: EventReader<SystemMapResponseEvent>,
+    mut q_galaxy_map: Query<&mut GalaxyMapDisplay>,
+) {
+    for ev in nevr_galaxy_map.read() {
         let Ok(mut gmap) = q_galaxy_map.get_single_mut() else {
             return;
         };
 
-        *gmap = GalaxyMapDisplay::Map {
-            map: ev.map.clone(),
-            system: ev.system,
+        match gmap.as_ref() {
+            GalaxyMapDisplay::WaitingGalaxy(system_map) => {
+                *gmap = GalaxyMapDisplay::Map {
+                    system_map: system_map.clone(),
+                    galaxy_map: ev.map.clone(),
+                }
+            }
+            GalaxyMapDisplay::Map { galaxy_map: _, system_map } => {
+                *gmap = GalaxyMapDisplay::Map {
+                    system_map: system_map.clone(),
+                    galaxy_map: ev.map.clone(),
+                }
+            }
+            _ => *gmap = GalaxyMapDisplay::WaitingSystem(ev.map.clone()),
+        }
+    }
+
+    for ev in nevr_system_map.read() {
+        let Ok(mut gmap) = q_galaxy_map.get_single_mut() else {
+            return;
         };
+
+        match gmap.as_ref() {
+            GalaxyMapDisplay::WaitingSystem(galaxy_map) => {
+                *gmap = GalaxyMapDisplay::Map {
+                    system_map: ev.map.clone(),
+                    galaxy_map: galaxy_map.clone(),
+                }
+            }
+            GalaxyMapDisplay::Map { galaxy_map, system_map: _ } => {
+                *gmap = GalaxyMapDisplay::Map {
+                    system_map: ev.map.clone(),
+                    galaxy_map: galaxy_map.clone(),
+                }
+            }
+            _ => *gmap = GalaxyMapDisplay::WaitingGalaxy(ev.map.clone()),
+        }
     }
 }
 
