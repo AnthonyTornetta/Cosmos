@@ -25,7 +25,7 @@ use crate::{
         loading::{LoadingBlueprintSystemSet, NeedsBlueprintLoaded},
     },
     rng::get_rng_for_sector,
-    universe::planet_spawner::is_planet_in_sector,
+    // universe::planet_spawner::is_planet_in_sector,
 };
 
 const SHOP_FREQUENCY: u32 = 2;
@@ -86,10 +86,10 @@ fn spawn_shop(
     for sector in sectors {
         cache.insert(sector);
 
-        if is_sector_generated(sector) || is_planet_in_sector(&sector, &server_seed) {
-            // This sector has already been loaded, don't regenerate stuff
-            continue;
-        }
+        // if is_sector_generated(sector) || is_planet_in_sector(&sector, &server_seed) {
+        // This sector has already been loaded, don't regenerate stuff
+        continue;
+        // }
 
         let mut rng = get_rng_for_sector(&server_seed, &sector);
 

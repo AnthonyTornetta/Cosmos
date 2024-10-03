@@ -229,6 +229,14 @@ impl SystemCoordinate {
             self.z() * SYSTEM_SECTORS as SystemUnit,
         )
     }
+
+    pub fn from_sector(sector: Sector) -> Self {
+        Self::new(
+            (sector.x() as f32 / SYSTEM_SECTORS as f32).floor() as SystemUnit,
+            (sector.y() as f32 / SYSTEM_SECTORS as f32).floor() as SystemUnit,
+            (sector.z() as f32 / SYSTEM_SECTORS as f32).floor() as SystemUnit,
+        )
+    }
 }
 
 impl Add<SystemCoordinate> for SystemCoordinate {
