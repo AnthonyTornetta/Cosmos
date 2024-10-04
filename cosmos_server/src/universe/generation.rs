@@ -238,21 +238,28 @@ impl UniverseSystem {
         self.coordinate
     }
 
+    /// This location should NOT be relative to this system. Make this a normal absolute location
+    ///
+    /// Adds a generated item to this. This does NOT mark the sector as generated. Call
+    /// [`Self::mark_sector_generated_for`] to do that.
     pub fn add_item(&mut self, location: Location, item: SystemItem) {
         self.generated_items.push(GeneratedItem { location, item });
     }
 
+    /// Iterates over everything that is so far generated within this system. Note that just
+    /// because it's generated, does not mean it is currently in the world OR has actually been
+    /// saved to disk. It simply means that if the player gets close enough, this would be
+    /// loaded/generated to the game.
     pub fn iter<'a>(&'a self) -> impl Iterator<Item = &'a GeneratedItem> {
         self.generated_items.iter()
     }
 
-    /// The sector is not relative to this system.
     pub fn items_at(&self, sector: Sector) -> impl Iterator<Item = &'_ GeneratedItem> {
-        self.items_at_relative(sector - self.coordinate.negative_most_sector())
+        self.generated_items.iter().filter(move |x| x.location.sector() == sector)
     }
 
     pub fn items_at_relative(&self, sector: Sector) -> impl Iterator<Item = &'_ GeneratedItem> {
-        self.generated_items.iter().filter(move |x| x.location.sector() == sector)
+        self.items_at(sector + self.coordinate.negative_most_sector())
     }
 
     pub fn mark_sector_generated_for(&mut self, sector: Sector, marker_id: impl Into<String>) {

@@ -48,7 +48,7 @@ fn create_waypoint(
                 max_distance: INFINITY,
                 offset: Vec3::ZERO,
             },
-            Location::new(Vec3::ZERO, map_cam.relative_sector),
+            Location::new(Vec3::ZERO, map_cam.sector),
             Waypoint,
         ));
     }

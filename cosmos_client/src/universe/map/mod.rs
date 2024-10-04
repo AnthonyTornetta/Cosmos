@@ -54,7 +54,7 @@ const CAMERA_LAYER: usize = 0b1000;
 
 #[derive(Component, Reflect)]
 struct MapCamera {
-    relative_sector: Sector,
+    sector: Sector,
     lerp_sector: Vec3,
     zoom: f32,
     yaw: f32,
@@ -64,7 +64,7 @@ struct MapCamera {
 impl Default for MapCamera {
     fn default() -> Self {
         Self {
-            relative_sector: Sector::default(),
+            sector: Sector::default(),
             lerp_sector: Vec3::ZERO,
             zoom: 2.0,
             yaw: 0.0,
@@ -170,7 +170,7 @@ fn position_camera(mut q_camera: Query<(&mut Transform, &mut MapCamera)>) {
         return;
     };
 
-    let s = cam.relative_sector;
+    let s = cam.sector;
     let vec_sec = Vec3::new(s.x() as f32, s.y() as f32, s.z() as f32) * SECTOR_SCALE;
     cam.lerp_sector = cam.lerp_sector.lerp(vec_sec, 0.1);
 
@@ -201,12 +201,7 @@ fn handle_selected_sector(
         return;
     };
 
-    text.sections[0].value = format!(
-        "{}, {}, {}",
-        cam.relative_sector.x(),
-        cam.relative_sector.y(),
-        cam.relative_sector.z()
-    );
+    text.sections[0].value = format!("{}, {}, {}", cam.sector.x(), cam.sector.y(), cam.sector.z());
 }
 
 #[derive(Component)]
@@ -240,12 +235,8 @@ fn render_galaxy_map(
             return;
         };
 
-        cam.relative_sector = player.relative_sector();
-        cam.lerp_sector = Vec3::new(
-            cam.relative_sector.x() as f32,
-            cam.relative_sector.y() as f32,
-            cam.relative_sector.z() as f32,
-        ) * SECTOR_SCALE;
+        cam.sector = player.sector();
+        cam.lerp_sector = Vec3::new(cam.sector.x() as f32, cam.sector.y() as f32, cam.sector.z() as f32) * SECTOR_SCALE;
         // let player_translation = Vec3::new(diff.x() as f32, diff.y() as f32, diff.z() as f32) * SECTOR_SCALE;
         // cam_trans.translation = player_translation + Vec3::new(1.0, 2.0, 2.0) * SECTOR_SCALE;
         // cam.relative_sector = diff + Sector::new(1, 2, 2);
@@ -283,26 +274,20 @@ fn render_galaxy_map(
                     BillboardTextBundle {
                         billboard_depth: BillboardDepth(false),
                         transform: Transform::from_scale(Vec3::splat(0.008)),
-                        text: Text::from_section(
-                            format!(
-                                "{}, {}, {}",
-                                cam.relative_sector.x(),
-                                cam.relative_sector.y(),
-                                cam.relative_sector.z()
-                            ),
-                            text_style,
-                        ),
+                        text: Text::from_section(format!("{}, {}, {}", cam.sector.x(), cam.sector.y(), cam.sector.z()), text_style),
                         ..Default::default()
                     },
                 ));
             });
 
-            for (sector, destination) in system_map
+            for (sector, destination, sector_offset) in system_map
                 .destinations()
                 // stars are already covered by the galaxy map
                 .filter(|(_, x)| !matches!(x, Destination::Star(_)))
-                .chain(galaxy_map.destinations())
+                .map(|(sec, des)| (sec, des, system_map.system.negative_most_sector()))
+                .chain(galaxy_map.destinations().map(|(sec, des)| (sec, des, Sector::ZERO)))
             {
+                let sector = *sector + sector_offset;
                 let transform = Transform::from_xyz(
                     sector.x() as f32 * SECTOR_SCALE,
                     sector.y() as f32 * SECTOR_SCALE,
@@ -390,22 +375,22 @@ fn camera_movement(
         let amount = if input_handler.check_pressed(CosmosInputs::Sprint) { 10 } else { 1 };
 
         if input_handler.check_just_pressed(CosmosInputs::MoveForward) {
-            cam.relative_sector = cam.relative_sector + sector_direction(trans.forward(), amount);
+            cam.sector = cam.sector + sector_direction(trans.forward(), amount);
         }
         if input_handler.check_just_pressed(CosmosInputs::MoveBackward) {
-            cam.relative_sector = cam.relative_sector + sector_direction(trans.back(), amount);
+            cam.sector = cam.sector + sector_direction(trans.back(), amount);
         }
         if input_handler.check_just_pressed(CosmosInputs::MoveLeft) {
-            cam.relative_sector = cam.relative_sector + sector_direction(trans.left(), amount);
+            cam.sector = cam.sector + sector_direction(trans.left(), amount);
         }
         if input_handler.check_just_pressed(CosmosInputs::MoveRight) {
-            cam.relative_sector = cam.relative_sector + sector_direction(trans.right(), amount);
+            cam.sector = cam.sector + sector_direction(trans.right(), amount);
         }
         if input_handler.check_just_pressed(CosmosInputs::MoveUp) {
-            cam.relative_sector = cam.relative_sector + sector_direction(trans.up(), amount);
+            cam.sector = cam.sector + sector_direction(trans.up(), amount);
         }
         if input_handler.check_just_pressed(CosmosInputs::MoveDown) {
-            cam.relative_sector = cam.relative_sector + sector_direction(trans.down(), amount);
+            cam.sector = cam.sector + sector_direction(trans.down(), amount);
         }
 
         if input_handler.check_just_pressed(CosmosInputs::ResetMapPosition) {
@@ -413,7 +398,7 @@ fn camera_movement(
                 continue;
             };
 
-            cam.relative_sector = player_loc.relative_sector();
+            cam.sector = player_loc.sector();
         }
 
         if input_handler.mouse_inputs().pressed(MouseButton::Left) {

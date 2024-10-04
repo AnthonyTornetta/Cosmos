@@ -4,7 +4,7 @@ use std::marker::PhantomData;
 
 use bevy::{
     color::palettes::css,
-    log::{error, info, warn},
+    log::{error, info},
     prelude::{
         in_state, Added, App, Commands, Component, Entity, Event, EventReader, EventWriter, IntoSystemConfigs, IntoSystemSetConfigs, Query,
         Res, ResMut, Resource, Startup, SystemSet, Update, With, Without,
@@ -32,17 +32,14 @@ use cosmos_core::{
         Structure,
     },
 };
-use rand::Rng;
 
 use crate::{
-    init::init_world::ServerSeed,
     netty::server_events::PlayerConnectedEvent,
     persistence::{
         loading::{LoadingSystemSet, NeedsLoaded},
         saving::{NeedsSaved, SavingSystemSet, SAVING_SCHEDULE},
         SerializedData,
     },
-    rng::get_rng_for_sector,
     structure::planet::{
         biosphere::biosphere_generation::BiosphereGenerationSet, generation::planet_generator::check_needs_generated_system,
     },

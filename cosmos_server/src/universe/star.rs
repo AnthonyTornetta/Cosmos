@@ -1,13 +1,9 @@
 //! Contains server-side logic for stars
 
-use std::{
-    f32::consts::{E, TAU},
-    slice::Iter,
-};
+use std::slice::Iter;
 
 use bevy::{
     core::Name,
-    math::Vec3,
     prelude::{in_state, App, Commands, EventReader, IntoSystemConfigs, Query, Res, ResMut, Update, With},
 };
 use bevy_rapier3d::prelude::Velocity;
@@ -18,19 +14,14 @@ use cosmos_core::{
         system_sets::NetworkingSystemsSet, NettyChannelServer,
     },
     persistence::LoadingDistance,
-    physics::location::{Location, Sector, SystemCoordinate, SystemUnit, SYSTEM_SECTORS},
+    physics::location::{Location, SYSTEM_SECTORS},
     state::GameState,
-    universe::star::{Star, MAX_TEMPERATURE, MIN_TEMPERATURE},
+    universe::star::Star,
 };
-use rand::{Rng, SeedableRng};
-use rand_chacha::ChaCha8Rng;
 
-use crate::{
-    init::init_world::ServerSeed,
-    persistence::{
-        saving::{NeedsSaved, SavingSystemSet, SAVING_SCHEDULE},
-        SerializedData,
-    },
+use crate::persistence::{
+    saving::{NeedsSaved, SavingSystemSet, SAVING_SCHEDULE},
+    SerializedData,
 };
 
 use super::{
@@ -55,9 +46,6 @@ fn load_stars_in_universe(systems: Res<UniverseSystems>, mut commands: Commands,
             // Star already in world
             continue;
         }
-
-        /// 0.5 is the center of system
-        const STAR_POS_OFFSET: f32 = 0.5;
 
         commands.spawn((
             star,

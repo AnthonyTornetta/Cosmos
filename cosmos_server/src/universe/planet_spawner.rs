@@ -13,11 +13,7 @@ use crate::{
 use bevy::{
     log::warn,
     math::{Dir3, Quat},
-    prelude::{
-        in_state, App, Commands, Component, Deref, DerefMut, EventReader, IntoSystemConfigs, Query, Res, ResMut, Resource, Update, Vec3,
-        With,
-    },
-    tasks::Task,
+    prelude::{in_state, App, Commands, Deref, DerefMut, EventReader, IntoSystemConfigs, Query, Res, ResMut, Resource, Update, Vec3, With},
     utils::HashSet,
 };
 use cosmos_core::{
@@ -40,16 +36,6 @@ use std::f32::consts::TAU;
 #[derive(Debug, Default, Resource, Deref, DerefMut, Clone)]
 struct CachedSectors(HashSet<Sector>);
 
-#[derive(Component, Debug)]
-struct PlanetSpawnerAsyncTask(Task<(CachedSectors, Vec<PlanetToSpawn>)>);
-
-#[derive(Debug)]
-struct PlanetToSpawn {
-    temperature: f32,
-    location: Location,
-    size: CoordinateType,
-}
-
 fn monitor_planets_to_spawn(
     q_players: Query<&Location, With<Player>>,
     mut commands: Commands,
@@ -69,8 +55,12 @@ fn monitor_planets_to_spawn(
                 SystemItem::Planet(p) => Some((x.location, p)),
                 _ => None,
             })
-            .filter(|x| !system.is_sector_generated_for_relative(x.0.sector(), "cosmos:planet"))
+            .filter(|x| !system.is_sector_generated_for(x.0.sector(), "cosmos:planet"))
         {
+            if generated_planets.contains(&planet_loc.sector()) {
+                continue;
+            }
+
             let sector_diff = (planet_loc.sector() - p_loc.sector()).abs();
             if !(sector_diff.x() <= PLANET_LOAD_RADIUS as SectorUnit
                 && sector_diff.y() <= PLANET_LOAD_RADIUS as SectorUnit

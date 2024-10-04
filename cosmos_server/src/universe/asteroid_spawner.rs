@@ -129,7 +129,9 @@ fn generate_asteroids(mut commands: Commands, q_players: Query<&Location, With<P
             SystemItem::Asteroid(a) => Some((x.location, a)),
             _ => None,
         }) {
-            if universe_system.is_sector_generated_for(asteroid_loc.sector(), "cosmos:asteroid") {
+            if universe_system.is_sector_generated_for(asteroid_loc.sector(), "cosmos:asteroid")
+                || sectors_to_mark.contains(&asteroid_loc.sector())
+            {
                 continue;
             }
 

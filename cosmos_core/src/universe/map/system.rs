@@ -63,14 +63,18 @@ pub enum Destination {
     Player(Box<PlayerDestination>),
 }
 
-#[derive(Default, Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct SystemMap {
+    pub system: SystemCoordinate,
     destinations: Vec<(Sector, Destination)>,
 }
 
 impl SystemMap {
-    pub fn new() -> Self {
-        Self::default()
+    pub fn new(system: SystemCoordinate) -> Self {
+        Self {
+            system,
+            destinations: Default::default(),
+        }
     }
 
     pub fn add_destination(&mut self, relative_sector: Sector, destination: Destination) {

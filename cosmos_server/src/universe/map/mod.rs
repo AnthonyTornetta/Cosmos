@@ -55,7 +55,7 @@ fn send_map(
     systems: Res<UniverseSystems>,
 ) {
     for ev in evr_request_map.read() {
-        let mut system_map = SystemMap::default();
+        let mut system_map = SystemMap::new(ev.system);
 
         let Some(system) = systems.system(ev.system) else {
             continue;
