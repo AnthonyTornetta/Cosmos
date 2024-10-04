@@ -229,7 +229,12 @@ fn add_biosphere(
             })
             .next()
         else {
-            error!("Missing planet entry in UniverseSystems @ {}", location.sector());
+            error!(
+                "Missing planet entry in UniverseSystems @ absolute sector coord {} | (system: {} should == {})\n{system:?}",
+                location.sector(),
+                location.get_system_coordinates(),
+                system.coordinate()
+            );
             continue;
         };
 

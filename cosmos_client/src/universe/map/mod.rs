@@ -306,7 +306,7 @@ fn render_galaxy_map(
                 );
 
                 let mesh = match destination {
-                    Destination::Star(_) => meshes.add(Sphere::new(20.75)),
+                    Destination::Star(_) => meshes.add(Sphere::new(1.0)),
                     Destination::Planet(_) => meshes.add(Cuboid::new(0.5, 0.5, 0.5)),
                     Destination::Player(_) => meshes.add(Capsule3d::new(0.05, 0.1)),
                     Destination::Asteroid(_) => meshes.add(Cuboid::new(0.3, 0.3, 0.3)),
@@ -426,10 +426,15 @@ fn camera_movement(
                 MouseScrollUnit::Pixel => mw.y * 0.005,
             };
 
-            cam.zoom -= dy;
+            let amount = if input_handler.check_pressed(CosmosInputs::Sprint) {
+                10.0
+            } else {
+                1.0
+            };
+            cam.zoom -= dy * amount;
         }
 
-        cam.zoom = cam.zoom.clamp(0.05, 10000.0);
+        cam.zoom = cam.zoom.clamp(0.05, 5000.0);
     }
 }
 

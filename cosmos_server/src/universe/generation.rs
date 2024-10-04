@@ -225,6 +225,10 @@ pub struct UniverseSystem {
 // }
 
 impl UniverseSystem {
+    pub fn coordinate(&self) -> SystemCoordinate {
+        self.coordinate
+    }
+
     pub fn add_item(&mut self, location: Location, item: SystemItem) {
         self.generated_items.push(GeneratedItem { location, item });
     }
