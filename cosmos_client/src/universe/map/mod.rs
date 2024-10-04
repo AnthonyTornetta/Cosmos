@@ -23,7 +23,7 @@ use bevy_mod_billboard::{BillboardDepth, BillboardTextBundle};
 use cosmos_core::{
     ecs::NeedsDespawned,
     netty::{client::LocalPlayer, sync::events::client_event::NettyEventWriter, system_sets::NetworkingSystemsSet},
-    physics::location::{Location, Sector, SectorUnit, SystemCoordinate},
+    physics::location::{Location, Sector, SectorUnit},
     registry::{identifiable::Identifiable, Registry},
     state::GameState,
     structure::planet::biosphere::Biosphere,
@@ -489,6 +489,18 @@ fn map_active(q_map: Query<(), With<GalaxyMapDisplay>>) -> bool {
     !q_map.is_empty()
 }
 
+fn teleport_at(mut q_player: Query<&mut Location, With<LocalPlayer>>, inputs: InputChecker, q_camera: Query<&MapCamera>) {
+    if inputs.check_just_pressed(CosmosInputs::TeleportSelected) {
+        let Ok(mut loc) = q_player.get_single_mut() else {
+            return;
+        };
+        let Ok(cam) = q_camera.get_single() else {
+            return;
+        };
+        loc.sector = cam.sector;
+    }
+}
+
 pub(super) fn register(app: &mut App) {
     waypoint::register(app);
 
@@ -500,7 +512,7 @@ pub(super) fn register(app: &mut App) {
                     toggle_map,
                     receive_map,
                     render_galaxy_map,
-                    (camera_movement, position_camera, handle_selected_sector)
+                    (camera_movement, position_camera, handle_selected_sector, teleport_at)
                         .chain()
                         .run_if(map_active),
                 )

@@ -2,7 +2,7 @@ use std::f32::INFINITY;
 
 use bevy::{
     app::Update,
-    color::{palettes::css, Srgba},
+    color::palettes::css,
     core::Name,
     math::Vec3,
     prelude::{App, Commands, Component, Entity, IntoSystemConfigs, Query, With},

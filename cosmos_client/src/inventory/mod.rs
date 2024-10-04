@@ -59,6 +59,7 @@ fn toggle_inventory(
     mut commands: Commands,
     player_inventory: Query<Entity, With<LocalPlayer>>,
     open_inventories: Query<Entity, With<NeedsDisplayed>>,
+    open_menus: Query<(), With<OpenMenu>>,
     inputs: InputChecker,
 ) {
     if inputs.check_just_pressed(CosmosInputs::ToggleInventory) {
@@ -67,7 +68,9 @@ fn toggle_inventory(
                 commands.entity(ent).remove::<NeedsDisplayed>();
             });
         } else if let Ok(player_inventory_ent) = player_inventory.get_single() {
-            commands.entity(player_inventory_ent).insert(NeedsDisplayed(InventorySide::Left));
+            if open_menus.is_empty() {
+                commands.entity(player_inventory_ent).insert(NeedsDisplayed(InventorySide::Left));
+            }
         }
     } else if inputs.check_just_pressed(CosmosInputs::Interact) && !open_inventories.is_empty() {
         open_inventories.iter().for_each(|ent| {
