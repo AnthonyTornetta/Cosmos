@@ -31,6 +31,7 @@ use cosmos_core::{
         Destination, GalaxyMap, GalaxyMapResponseEvent, RequestGalaxyMap, RequestSystemMap, SystemMap, SystemMapResponseEvent,
     },
 };
+use waypoint::Waypoint;
 
 use crate::{
     input::inputs::{CosmosInputs, InputChecker, InputHandler},
@@ -38,6 +39,8 @@ use crate::{
     ui::{components::show_cursor::ShowCursor, OpenMenu, UiSystemSet},
     window::setup::DeltaCursorPosition,
 };
+
+pub mod waypoint;
 
 #[derive(Component, Debug)]
 enum GalaxyMapDisplay {
@@ -222,6 +225,7 @@ fn render_galaxy_map(
     biospheres: Res<Registry<Biosphere>>,
     biosphere_color: Res<Registry<BiosphereColor>>,
     asset_server: Res<AssetServer>,
+    q_waypoint: Query<&Location, With<Waypoint>>,
 ) {
     for (ent, galaxy_map_display) in q_changed_map.iter() {
         let GalaxyMapDisplay::Map { galaxy_map, system_map } = galaxy_map_display else {
@@ -501,6 +505,8 @@ fn map_active(q_map: Query<(), With<GalaxyMapDisplay>>) -> bool {
 }
 
 pub(super) fn register(app: &mut App) {
+    waypoint::register(app);
+
     app.add_systems(OnEnter(GameState::Playing), create_map_camera)
         .add_systems(
             Update,

@@ -23,7 +23,7 @@ use crate::{
 use super::super::components::show_cursor::no_open_menus;
 
 #[derive(Clone, Copy, Component, Debug)]
-struct IndicatorSettings {
+pub struct IndicatorSettings {
     pub color: Color,
     pub offset: Vec3,
     pub max_distance: f32,

@@ -121,6 +121,8 @@ pub enum CosmosInputs {
     ToggleMap,
     /// Resets the map position to the player's coordinates
     ResetMapPosition,
+    /// Creates a waypoint
+    ToggleWaypoint,
 }
 
 fn init_input(mut input_handler: ResMut<CosmosInputHandler>) {
@@ -187,6 +189,7 @@ fn init_input(mut input_handler: ResMut<CosmosInputHandler>) {
 
     input_handler.set_keycode(CosmosInputs::ToggleMap, KeyCode::KeyM);
     input_handler.set_keycode(CosmosInputs::ResetMapPosition, KeyCode::KeyR);
+    input_handler.set_keycode(CosmosInputs::ToggleWaypoint, KeyCode::Enter);
 }
 
 #[derive(Resource, Default, Debug)]
