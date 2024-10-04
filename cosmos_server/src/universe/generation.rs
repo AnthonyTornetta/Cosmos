@@ -137,6 +137,15 @@ fn save_universe_systems(systems: Res<UniverseSystems>) {
     }
 }
 
+fn unload_universe_systems_without_players(q_players: Query<&Location, With<Player>>, mut universe_systems: ResMut<UniverseSystems>) {
+    let systems = q_players
+        .iter()
+        .map(|x| SystemCoordinate::from_sector(x.sector()))
+        .collect::<HashSet<SystemCoordinate>>();
+
+    universe_systems.systems.retain(|k, _| systems.contains(k));
+}
+
 fn load_universe_systems_near_players(
     // mut sector_cache: ResMut<GeneratedSystemsCache>,
     mut universe_systems: ResMut<UniverseSystems>,
@@ -280,7 +289,7 @@ pub(super) fn register(app: &mut App) {
     app.add_systems(
         Update,
         (
-            load_universe_systems_near_players,
+            (load_universe_systems_near_players, unload_universe_systems_without_players).chain(),
             save_universe_systems.run_if(on_timer(Duration::from_secs(10))),
         )
             .in_set(SystemGenerationSet::SendEvents),

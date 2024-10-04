@@ -123,7 +123,10 @@ fn generate_galaxy(seed: &ServerSeed) -> Galaxy {
 
     let mut rng = get_rng_for_sector(seed, &Sector::ZERO);
 
-    let stars = generate_stars(&mut rng, 1_000);
+    let mut stars = generate_stars(&mut rng, 1_000);
+
+    // always ensure there's a star at the origin system
+    stars.insert(SystemCoordinate::new(0, 0, 0));
 
     for system in stars {
         let rand = 1.0 - (1.0 - rng.gen::<f32>()).sqrt();
