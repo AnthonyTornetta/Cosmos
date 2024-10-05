@@ -100,9 +100,15 @@ fn send_events<T: NettyEvent>(
 
 fn receive_events(mut client: ResMut<RenetClient>, mut evw_got_event: EventWriter<GotNetworkEvent>) {
     while let Some(message) = client.receive_message(NettyChannelClient::NettyEvent) {
-        let msg: NettyEventMessage = cosmos_encoder::deserialize(&message).unwrap_or_else(|e| {
-            panic!("Failed to parse netty event message from server!\nBytes: {message:?}\nError: {e:?}");
-        });
+        let Some(msg) = cosmos_encoder::deserialize::<NettyEventMessage>(&message)
+            .map(Some)
+            .unwrap_or_else(|e| {
+                error!("Failed to parse netty event message from server!\nBytes: {message:?}\nError: {e:?}");
+                None
+            })
+        else {
+            continue;
+        };
 
         match msg {
             NettyEventMessage::SendNettyEvent { component_id, raw_data } => {
