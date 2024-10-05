@@ -11,6 +11,7 @@ use cosmos_core::{
     physics::location::{Location, Sector, SystemCoordinate},
     prelude::Planet,
     registry::{identifiable::Identifiable, Registry},
+    shop::Shop,
     universe::star::Star,
 };
 use serde::{Deserialize, Serialize};

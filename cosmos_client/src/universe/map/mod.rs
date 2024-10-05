@@ -333,7 +333,11 @@ fn render_galaxy_map(
                         ..Default::default()
                     }),
                     Destination::Ship(_) => materials.add(StandardMaterial::from_color(css::ORANGE)),
-                    Destination::Station(_) => materials.add(StandardMaterial::from_color(css::PURPLE)),
+                    Destination::Station(_) => materials.add(StandardMaterial {
+                        base_color: css::PURPLE.into(),
+                        unlit: true,
+                        ..Default::default()
+                    }),
                 };
 
                 p.spawn((

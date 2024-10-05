@@ -73,7 +73,13 @@ fn send_map(
                     })),
                 ),
                 SystemItem::Star(star) => system_map.add_destination(sector, Destination::Star(Box::new(StarDestination { star: *star }))),
-                _ => {}
+                SystemItem::Shop => system_map.add_destination(
+                    sector,
+                    Destination::Station(Box::new(StationDestination {
+                        status: FactionStatus::Neutral,
+                        shop_count: 1,
+                    })),
+                ),
             }
         }
 
