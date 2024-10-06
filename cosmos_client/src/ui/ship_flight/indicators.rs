@@ -23,9 +23,15 @@ use crate::{
 use super::super::components::show_cursor::no_open_menus;
 
 #[derive(Clone, Copy, Component, Debug)]
+/// Represents something that should have an indicator displayed when the player is piloting a ship
 pub struct IndicatorSettings {
+    /// The color of the waypoint
     pub color: Color,
+    /// The offset of this waypoint from the entity's location
     pub offset: Vec3,
+    /// The maximum distance until this waypoint shouldn't be displayed
+    ///
+    /// To always display it, you can use [`f32::INFINITY`]
     pub max_distance: f32,
 }
 

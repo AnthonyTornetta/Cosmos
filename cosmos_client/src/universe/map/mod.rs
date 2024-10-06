@@ -1,3 +1,5 @@
+//! Client map display logic
+
 use std::f32::consts::PI;
 
 use bevy::{
@@ -31,7 +33,6 @@ use cosmos_core::{
         Destination, GalaxyMap, GalaxyMapResponseEvent, RequestGalaxyMap, RequestSystemMap, SystemMap, SystemMapResponseEvent,
     },
 };
-use waypoint::Waypoint;
 
 use crate::{
     input::inputs::{CosmosInputs, InputChecker, InputHandler},
@@ -120,7 +121,7 @@ fn create_map_camera(mut commands: Commands) {
 }
 
 fn toggle_map(
-    q_galaxy_map_display: Query<(Entity, &GalaxyMapDisplay)>,
+    q_galaxy_map_display: Query<Entity, With<GalaxyMapDisplay>>,
     input_handler: InputChecker,
     q_player: Query<&Location, With<LocalPlayer>>,
     mut commands: Commands,
@@ -136,7 +137,7 @@ fn toggle_map(
         return;
     };
 
-    if let Ok((galaxy_map_entity, galaxy_map_display)) = q_galaxy_map_display.get_single() {
+    if let Ok(galaxy_map_entity) = q_galaxy_map_display.get_single() {
         commands.entity(galaxy_map_entity).insert(NeedsDespawned);
         return;
     }
@@ -216,11 +217,10 @@ fn render_galaxy_map(
     mut materials: ResMut<Assets<StandardMaterial>>,
     q_changed_map: Query<(Entity, &GalaxyMapDisplay), Changed<GalaxyMapDisplay>>,
     q_player_loc: Query<&Location, With<LocalPlayer>>,
-    mut q_camera: Query<(&mut Transform, &mut MapCamera)>,
+    mut q_camera: Query<&mut MapCamera>,
     biospheres: Res<Registry<Biosphere>>,
     biosphere_color: Res<Registry<BiosphereColor>>,
     asset_server: Res<AssetServer>,
-    q_waypoint: Query<&Location, With<Waypoint>>,
 ) {
     for (ent, galaxy_map_display) in q_changed_map.iter() {
         let GalaxyMapDisplay::Map { galaxy_map, system_map } = galaxy_map_display else {
@@ -231,7 +231,7 @@ fn render_galaxy_map(
             return;
         };
 
-        let Ok((mut cam_trans, mut cam)) = q_camera.get_single_mut() else {
+        let Ok(mut cam) = q_camera.get_single_mut() else {
             return;
         };
 
@@ -302,18 +302,17 @@ fn render_galaxy_map(
                     Destination::Unknown(_) => meshes.add(Sphere::new(0.1)),
                     Destination::Ship(_) => meshes.add(Cuboid::new(0.3, 0.3, 0.3)),
                     Destination::Station(_) => meshes.add(Cuboid::new(0.3, 0.3, 0.3)),
-                    // _ => meshes.add(Cuboid::new(0.1, 0.1, 0.1)),
                 };
 
-                let size = match destination {
-                    Destination::Star(_) => 1.0,
-                    Destination::Planet(_) => 0.6,
-                    Destination::Asteroid(_) => 0.5,
-                    Destination::Station(_) => 0.4,
-                    Destination::Ship(_) => 0.3,
-                    Destination::Unknown(_) => 0.2,
-                    Destination::Player(_) => 0.1,
-                };
+                // let size = match destination {
+                //     Destination::Star(_) => 1.0,
+                //     Destination::Planet(_) => 0.6,
+                //     Destination::Asteroid(_) => 0.5,
+                //     Destination::Station(_) => 0.4,
+                //     Destination::Ship(_) => 0.3,
+                //     Destination::Unknown(_) => 0.2,
+                //     Destination::Player(_) => 0.1,
+                // };
 
                 let material = match destination {
                     Destination::Star(star) => materials.add(StandardMaterial::from_color(star.star.color())),
