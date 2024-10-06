@@ -30,7 +30,7 @@ use super::{
 };
 
 fn load_stars_in_universe(systems: Res<UniverseSystems>, mut commands: Commands, q_stars: Query<&Location, With<Star>>) {
-    for (_, system) in systems.loaded() {
+    for (_, system) in systems.iter() {
         let Some((star_location, star)) = system
             .iter()
             .flat_map(|x| match x.item {

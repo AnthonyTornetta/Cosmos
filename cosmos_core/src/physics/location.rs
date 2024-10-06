@@ -236,6 +236,9 @@ impl SystemCoordinate {
         )
     }
 
+    /// Returns the [`SystemCoordinate`] that this [`Sector`] would be in
+    ///
+    /// TODO: Consider if this should be turned into an `impl From` block.
     pub fn from_sector(sector: Sector) -> Self {
         Self::new(
             (sector.x() as f32 / SYSTEM_SECTORS as f32).floor() as SystemUnit,

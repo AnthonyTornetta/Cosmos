@@ -7,7 +7,7 @@ use bevy::{
 use cosmos_core::{
     block::{block_events::BlockEventsSet, data::BlockData, Block},
     events::block_events::{BlockChangedEvent, BlockDataSystemParams},
-    fluid::data::{BlockFluidData, FluidItemData, FluidTankBlock},
+    fluid::data::{BlockFluidData, FluidItemData},
     netty::system_sets::NetworkingSystemsSet,
     registry::{identifiable::Identifiable, Registry},
     structure::Structure,

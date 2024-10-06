@@ -42,6 +42,7 @@ pub enum RegistrySyncInit<T: States + Clone + Copy> {
     },
 }
 
+#[allow(unused)] // LSP thinks all features are always enabled, causing this to cause problems
 pub(super) fn register<T: States + Clone + Copy + FreelyMutableState>(app: &mut App, registry_sync_init: RegistrySyncInit<T>) {
     #[cfg(feature = "server")]
     {

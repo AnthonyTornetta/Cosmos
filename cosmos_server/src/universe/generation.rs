@@ -10,119 +10,65 @@ use cosmos_core::{
     netty::{cosmos_encoder, system_sets::NetworkingSystemsSet},
     physics::location::{Location, Sector, SystemCoordinate},
     prelude::Planet,
-    registry::{identifiable::Identifiable, Registry},
-    shop::Shop,
     universe::star::Star,
 };
 use serde::{Deserialize, Serialize};
 use std::{collections::HashSet, fs, time::Duration};
 
-#[derive(Debug, Clone)]
-pub struct SectorItem {
-    unlocalized_name: String,
-    id: u16,
-}
-
-impl Identifiable for SectorItem {
-    fn id(&self) -> u16 {
-        self.id
-    }
-
-    fn set_numeric_id(&mut self, id: u16) {
-        self.id = id;
-    }
-
-    fn unlocalized_name(&self) -> &str {
-        &self.unlocalized_name
-    }
-}
-
-#[derive(Debug, Default, Clone)]
-pub struct GeneratedSector {
-    items: Vec<u16>,
-}
-
-impl GeneratedSector {
-    pub fn items<'a>(&'a self, registry: &'a Registry<SectorItem>) -> impl Iterator<Item = &'a SectorItem> {
-        self.items.iter().map(|x| registry.from_numeric_id(*x))
-    }
-}
-
-#[derive(Debug, Clone)]
-pub struct GeneratedSystem {
-    sectors_with_content: HashMap<Sector, GeneratedSector>,
-}
-
-impl GeneratedSystem {
-    pub fn get_sector_content(&self, sector: Sector) -> Option<&GeneratedSector> {
-        self.sectors_with_content.get(&sector)
-    }
-
-    pub fn generate_in_sector(&mut self, sector: Sector, item: &SectorItem) {
-        self.sectors_with_content
-            .entry(sector)
-            .or_insert(GeneratedSector::default())
-            .items
-            .push(item.id());
-    }
-}
-
 #[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
+/// The ordering that a system should be generated in a galaxy
 pub enum SystemGenerationSet {
+    /// The events to generate a system are sent
     SendEvents,
+    /// Add stars to the system
     Star,
+    /// Add planets to the system
     Planet,
+    /// Add stations to the system
     Station,
+    /// Add asteroids to the system
     Asteroid,
 }
 
 #[derive(Event, Debug)]
+/// Sent whenever a [`UniverseSystem`] needs to be generated.
+///
+/// Generate it via accessing the [`UniverseSystems`] resource. Make sure to order your system
+/// within the [`SystemGenerationSet`] in the proper set.
 pub struct GenerateSystemEvent {
+    /// The system's coordinate - used to access the system via the resource [`UniverseSystems`]
     pub system: SystemCoordinate,
 }
 
 #[derive(Resource, Debug, Default)]
+/// Represents every system in the universe
 pub struct UniverseSystems {
     systems: HashMap<SystemCoordinate, UniverseSystem>,
 }
 
 impl UniverseSystems {
+    /// Iterates over every loaded [`UniverseSystem`]
     pub fn iter(&self) -> impl Iterator<Item = (&'_ SystemCoordinate, &'_ UniverseSystem)> {
         self.systems.iter()
     }
 
+    /// Returns the system at these coordinates if it is currently loaded
     pub fn system(&self, coordinate: SystemCoordinate) -> Option<&UniverseSystem> {
         self.systems.get(&coordinate)
     }
 
+    /// Returns the system at these coordinates if it is currently loaded
     pub fn system_mut(&mut self, coordinate: SystemCoordinate) -> Option<&mut UniverseSystem> {
         self.systems.get_mut(&coordinate)
     }
-
-    pub fn loaded(&self) -> impl Iterator<Item = (&'_ SystemCoordinate, &'_ UniverseSystem)> {
-        self.systems.iter()
-    }
 }
 
-// #[derive(Resource)]
-// struct GeneratedSystemsCache(HashSet<SystemCoordinate>);
-
-fn get_universe_system(system: SystemCoordinate) -> Option<UniverseSystem> {
-    // if cache.0.contains(&system) {
-    // return true;
-    // }
-
+fn load_saved_universe_system(system: SystemCoordinate) -> Option<UniverseSystem> {
     let Ok(universe_system) = fs::read(format!("world/systems/{},{},{}.usys", system.x(), system.y(), system.z())) else {
         return None;
     };
 
     Some(cosmos_encoder::deserialize(&universe_system).expect("Error parsing world system!"))
-
-    // if exists {
-    // cache.0.insert(system);
-    // }
-
-    // exists
 }
 
 fn save_universe_systems(systems: Res<UniverseSystems>) {
@@ -148,7 +94,6 @@ fn unload_universe_systems_without_players(q_players: Query<&Location, With<Play
 }
 
 fn load_universe_systems_near_players(
-    // mut sector_cache: ResMut<GeneratedSystemsCache>,
     mut universe_systems: ResMut<UniverseSystems>,
     mut evw_generate_system: EventWriter<GenerateSystemEvent>,
     q_players: Query<&Location, With<Player>>,
@@ -162,7 +107,7 @@ fn load_universe_systems_near_players(
             continue;
         }
 
-        if let Some(universe_system) = get_universe_system(system) {
+        if let Some(universe_system) = load_saved_universe_system(system) {
             universe_systems.systems.insert(universe_system.coordinate, universe_system);
         } else {
             sectors_todo.insert(system);
@@ -188,53 +133,64 @@ fn load_universe_systems_near_players(
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+/// Represents a [`Planet`] within this [`UniverseSystem`]
 pub struct SystemItemPlanet {
+    /// The planet
     pub planet: Planet,
+    /// Used with the [`cosmos_core::registry::Registry<Biosphere>`] to get this planet's biosphere
     pub biosphere_id: u16,
+    /// The chunk dimensions of the [`cosmos_core::structure::dynamic_structure::DynamicStructure`]
     pub size: u64,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+/// Represents an [`cosmos_core::structure::asteroid::Asteroid`] within this [`UniverseSystem`]
 pub struct SystemItemAsteroid {
+    /// The chunk dimensions of the [`cosmos_core::structure::full_structure::FullStructure`]
     pub size: u64,
+    /// The temperature of this asteroid
     pub temperature: f32,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+/// Represents everything that can be generated in a system when it is loaded
 pub enum SystemItem {
+    /// A [`Star`] within the [`UniverseSystem`]
     Star(Star),
+    /// A [`Planet`] within the [`UniverseSystem`]
     Planet(SystemItemPlanet),
+    /// A [`cosmos_core::structure::station::Station`] within the [`UniverseSystem`] that functions
+    /// as a shop
     Shop,
+    /// An [`cosmos_core::structure::asteroid::Asteroid`] within the [`UniverseSystem`]
     Asteroid(SystemItemAsteroid),
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+/// Represents something that is "generated" within this system.
+///
+/// "Generated" does not mean it has had itself be generated, rather that the system has identified
+/// that something of this type will be at this location. The actual creation of it typically
+/// happens when the player gets close enough to load it.
+///
+/// TODO: Find more clear name for this
 pub struct GeneratedItem {
+    /// The exact location this will be at
     pub location: Location,
+    /// The item that will be at this location
     pub item: SystemItem,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+/// Represents everything that exists within a System - a 100x100x100 ([`cosmos_core::physics::location::SYSTEM_SECTORS`]^3) region of [`Sector`]s
 pub struct UniverseSystem {
     coordinate: SystemCoordinate,
     generated_items: Vec<GeneratedItem>,
     generated_flags: HashMap<Sector, HashSet<String>>,
 }
-//
-// #[derive(Hash, PartialEq, Eq, Clone, Serialize, Deserialize)]
-// pub struct GeneratedFlag(String);
-//
-// impl GeneratedFlag {
-//     pub fn new(unlocalized_name: impl Into<String>) -> Self {
-//         Self(unlocalized_name.into())
-//     }
-//
-//     pub fn unlocalized_name(&self) -> &str {
-//         &self.0
-//     }
-// }
 
 impl UniverseSystem {
+    /// Returns the [`SystemCoordinate`] of this system.
     pub fn coordinate(&self) -> SystemCoordinate {
         self.coordinate
     }
@@ -255,26 +211,45 @@ impl UniverseSystem {
         self.generated_items.iter()
     }
 
+    /// Returns all [`GeneratedItem`]s within this sector
     pub fn items_at(&self, sector: Sector) -> impl Iterator<Item = &'_ GeneratedItem> {
         self.generated_items.iter().filter(move |x| x.location.sector() == sector)
     }
 
+    /// Returns all [`GeneratedItem`]s within this sector that is relative to this sector's
+    /// negative most sector.
+    ///
+    /// `(0, 0, 0)` is left bottom back, `(SYSTEM_SECTORS)^3` is right top front
     pub fn items_at_relative(&self, sector: Sector) -> impl Iterator<Item = &'_ GeneratedItem> {
         self.items_at(sector + self.coordinate.negative_most_sector())
     }
 
+    /// Marks this sector as being generated for this specific marker id. This is useful, so that
+    /// you can say, for example, asteroids (`"cosmos:asteroid"`) were generated here, then also
+    /// have another thing (such as a shop (`"cosmos:shop`)) try to generate here without it already being marked as
+    /// generated for that.
+    ///
+    /// The marker ID should be treated similar to an unlocalized name, and use the `modid:name`
+    /// format.
     pub fn mark_sector_generated_for(&mut self, sector: Sector, marker_id: impl Into<String>) {
         self.mark_sector_generated_for_relative(sector - self.coordinate.negative_most_sector(), marker_id)
     }
 
+    /// See [`Self::mark_sector_generated_for`]
+    ///
+    /// The sector provided should be relative to this System's [`SystemCoordinate`]
     pub fn mark_sector_generated_for_relative(&mut self, sector: Sector, marker_id: impl Into<String>) {
         self.generated_flags.entry(sector).or_default().insert(marker_id.into());
     }
 
+    /// If this marker has been marked (via [`Self::mark_sector_generated_for`]) in this sector,
+    /// this returns true.
     pub fn is_sector_generated_for(&self, sector: Sector, marker_id: &str) -> bool {
         self.is_sector_generated_for_relative(sector - self.coordinate.negative_most_sector(), marker_id)
     }
 
+    /// If this marker has been marked (via [`Self::mark_sector_generated_for_relative`]) in this sector,
+    /// this returns true.
     pub fn is_sector_generated_for_relative(&self, sector: Sector, marker_id: &str) -> bool {
         self.generated_flags.get(&sector).map(|x| x.contains(marker_id)).unwrap_or(false)
     }

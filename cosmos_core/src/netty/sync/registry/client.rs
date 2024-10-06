@@ -102,6 +102,7 @@ fn registry_listen_netty(
     }
 }
 
+#[allow(unused)] // LSP assumes this function is never used, even though it's just feature flagged
 pub(super) fn register<T: States + FreelyMutableState + Clone + Copy>(
     app: &mut App,
     connecting_state: T,

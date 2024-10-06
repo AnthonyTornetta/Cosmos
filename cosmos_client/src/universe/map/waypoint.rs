@@ -1,3 +1,5 @@
+//! Map-waypoint logic
+
 use std::f32::INFINITY;
 
 use bevy::{
@@ -17,6 +19,9 @@ use crate::{
 use super::{GalaxyMapDisplay, MapCamera};
 
 #[derive(Component)]
+/// A point that the client has marked on their map.
+///
+/// The entity this is on should have a [`Location`], which is where the waypoint is.
 pub struct Waypoint;
 
 fn create_waypoint(

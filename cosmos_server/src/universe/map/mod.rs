@@ -1,3 +1,5 @@
+//! Controls the generation and sending of map data to clients
+
 use bevy::{
     app::Update,
     prelude::{in_state, App, EventReader, IntoSystemConfigs, Query, Res, With},

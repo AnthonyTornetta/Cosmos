@@ -1,3 +1,5 @@
+//! Contains state logic shared by both the client & server
+
 use bevy::{prelude::States, reflect::Reflect};
 
 #[derive(Debug, Clone, Eq, PartialEq, Hash, Copy, Reflect, Default, States)]

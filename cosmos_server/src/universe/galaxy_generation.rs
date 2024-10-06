@@ -1,3 +1,7 @@
+//! Responsible for the generation of the overall Galaxy.
+//!
+//! Sets up things such as stars
+
 use crate::{init::init_world::ServerSeed, rng::get_rng_for_sector};
 use bevy::{
     core::Name,
