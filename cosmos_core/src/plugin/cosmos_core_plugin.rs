@@ -1,7 +1,7 @@
 //! This should contain everything needed for a cosmos application to run
 
 use crate::netty::sync::registry::RegistrySyncInit;
-use crate::{block, debug, economy, ecs, fluid, inventory, logic, netty, persistence, projectiles, shop, universe};
+use crate::{block, debug, economy, ecs, fluid, inventory, logic, netty, persistence, projectiles, shop, universe, utils};
 use crate::{blockitems, structure};
 use crate::{events, loader};
 use crate::{item, physics};
@@ -114,6 +114,7 @@ impl<T: States + Clone + Copy + FreelyMutableState> Plugin for CosmosCorePlugin<
         logic::register(app, self.playing_state);
         fluid::register(app);
         debug::register(app);
+        utils::register(app);
     }
 }
 

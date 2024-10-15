@@ -64,10 +64,11 @@ See [the issues page](https://github.com/AnthonyTornetta/Cosmos/issues) for the 
 ## Release 0.0.7a (In Progress)
 - [ ] Wires
   - [ ] Electrical
-- [ ] Galaxy map
-  - [ ] Able to view stars
-  - [ ] Zoom in to view planets
-  - [ ] Set waypoint
+- [ ] Music
+- [x] Galaxy map
+  - [x] Able to view stars
+  - [x] Zoom in to view planets
+  - [x] Set waypoint
 - [x] Rotating Planet
 - [ ] Biosphere Improvements
   - [ ] Ice biosphere glaciers

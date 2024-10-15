@@ -13,13 +13,14 @@ use bevy::{
     pbr::{PbrBundle, StandardMaterial},
     prelude::{
         in_state, AlphaMode, App, BuildChildren, Camera, Camera3dBundle, Capsule3d, Changed, Commands, Component, Cuboid, Entity,
-        EventReader, IntoSystemConfigs, Mesh, MouseButton, OnEnter, PerspectiveProjection, Projection, Query, Res, ResMut, Sphere,
-        Transform, TransformBundle, VisibilityBundle, With, Without,
+        EventReader, IntoSystemConfigs, Mesh, MouseButton, NodeBundle, OnEnter, PerspectiveProjection, Projection, Query, Res, ResMut,
+        Sphere, TextBundle, Transform, TransformBundle, Visibility, VisibilityBundle, With, Without,
     },
     reflect::Reflect,
     render::view::RenderLayers,
     text::{Text, TextStyle},
     time::Time,
+    ui::{AlignSelf, FlexDirection, JustifyContent, PositionType, Style, TargetCamera, UiRect, Val},
 };
 use bevy_mod_billboard::{BillboardDepth, BillboardTextBundle};
 use cosmos_core::{
@@ -32,7 +33,9 @@ use cosmos_core::{
     universe::map::system::{
         Destination, GalaxyMap, GalaxyMapResponseEvent, RequestGalaxyMap, RequestSystemMap, SystemMap, SystemMapResponseEvent,
     },
+    utils::ecs::DespawnWith,
 };
+use waypoint::Waypoint;
 
 use crate::{
     input::inputs::{CosmosInputs, InputChecker, InputHandler},
@@ -120,12 +123,19 @@ fn create_map_camera(mut commands: Commands) {
     */
 }
 
+#[derive(Component)]
+struct MapSelectedSectorText;
+
+#[derive(Component)]
+struct WaypointText;
+
 fn toggle_map(
+    asset_server: Res<AssetServer>,
     q_galaxy_map_display: Query<Entity, With<GalaxyMapDisplay>>,
     input_handler: InputChecker,
     q_player: Query<&Location, With<LocalPlayer>>,
     mut commands: Commands,
-    mut q_map_camera: Query<&mut Transform, With<MapCamera>>,
+    mut q_map_camera: Query<(Entity, &mut Transform), With<MapCamera>>,
     mut nevw_system_map: NettyEventWriter<RequestSystemMap>,
     mut nevw_galaxy_map: NettyEventWriter<RequestGalaxyMap>,
 ) {
@@ -133,7 +143,7 @@ fn toggle_map(
         return;
     }
 
-    let Ok(mut map_camera) = q_map_camera.get_single_mut() else {
+    let Ok((map_cam_ent, mut map_camera)) = q_map_camera.get_single_mut() else {
         return;
     };
 
@@ -150,18 +160,160 @@ fn toggle_map(
 
     map_camera.translation = Vec3::ZERO;
 
-    commands.spawn((
-        GalaxyMapDisplay::Loading,
-        OpenMenu::new(0),
-        RenderLayers::from_layers(&[CAMERA_LAYER]),
-        Name::new("System map display"),
-        TransformBundle::default(),
-        VisibilityBundle::default(),
-        ShowCursor,
-    ));
+    let map_display = commands
+        .spawn((
+            GalaxyMapDisplay::Loading,
+            OpenMenu::new(0),
+            RenderLayers::from_layers(&[CAMERA_LAYER]),
+            Name::new("System map display"),
+            TransformBundle::default(),
+            VisibilityBundle::default(),
+            ShowCursor,
+        ))
+        .id();
 
+    let font = asset_server.load("fonts/PixeloidSans.ttf");
+    let big_text = TextStyle {
+        color: Color::WHITE,
+        font_size: 48.0,
+        font: font.clone(),
+    };
+
+    let small_text = TextStyle {
+        color: Color::WHITE,
+        font_size: 24.0,
+        font: font.clone(),
+    };
+
+    commands
+        .spawn((
+            TargetCamera(map_cam_ent),
+            DespawnWith(map_display),
+            Name::new("Galaxy map UI root"),
+            NodeBundle {
+                style: Style {
+                    position_type: PositionType::Absolute,
+                    width: Val::Percent(100.0),
+                    height: Val::Percent(100.0),
+                    flex_direction: FlexDirection::Column,
+                    justify_content: JustifyContent::SpaceBetween,
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+        ))
+        .with_children(|p| {
+            p.spawn((
+                TargetCamera(map_cam_ent),
+                DespawnWith(map_display),
+                Name::new("Galaxy map text UI"),
+                NodeBundle {
+                    style: Style {
+                        justify_content: JustifyContent::Center,
+                        margin: UiRect::top(Val::Px(10.0)),
+                        row_gap: Val::Px(12.0),
+                        flex_direction: FlexDirection::Column,
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+            ))
+            .with_children(|p| {
+                p.spawn((
+                    Name::new("Sector text"),
+                    MapSelectedSectorText,
+                    TextBundle {
+                        style: Style {
+                            align_self: AlignSelf::Center,
+                            ..Default::default()
+                        },
+                        text: Text::from_section("", big_text.clone()),
+                        ..Default::default()
+                    },
+                ));
+                p.spawn((
+                    Name::new("Waypoint text"),
+                    WaypointText,
+                    TextBundle {
+                        style: Style {
+                            align_self: AlignSelf::Center,
+                            ..Default::default()
+                        },
+                        text: Text::from_section("", small_text.clone()),
+                        ..Default::default()
+                    },
+                ));
+            });
+
+            p.spawn((
+                Name::new("Controls text"),
+                NodeBundle {
+                    style: Style {
+                        width: Val::Percent(100.0),
+                        flex_direction: FlexDirection::Column,
+                        margin: UiRect::all(Val::Px(30.0)),
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+            ))
+            .with_children(|p| {
+                p.spawn((TextBundle {
+                    style: Style {
+                        width: Val::Percent(100.0),
+                        ..Default::default()
+                    },
+                    text: Text::from_section("WASD to Move", small_text.clone()),
+                    ..Default::default()
+                },));
+
+                p.spawn((TextBundle {
+                    style: Style {
+                        width: Val::Percent(100.0),
+                        ..Default::default()
+                    },
+                    text: Text::from_section("Scroll to Zoom", small_text.clone()),
+                    ..Default::default()
+                },));
+
+                p.spawn((TextBundle {
+                    style: Style {
+                        width: Val::Percent(100.0),
+                        ..Default::default()
+                    },
+                    text: Text::from_section("Enter to Set/Unset Waypoint", small_text.clone()),
+                    ..Default::default()
+                },));
+            });
+        });
     nevw_system_map.send(RequestSystemMap { system: player_system });
     nevw_galaxy_map.send(RequestGalaxyMap);
+}
+
+fn update_waypoint_text(q_waypoint: Query<&Location, With<Waypoint>>, mut q_text: Query<&mut Text, With<WaypointText>>) {
+    let Ok(mut text) = q_text.get_single_mut() else {
+        return;
+    };
+
+    let waypoint_loc = q_waypoint.get_single();
+
+    let waypoint_text = waypoint_loc
+        .map(|x| format!("{}, {}, {}", x.sector.x(), x.sector.y(), x.sector.z()))
+        .unwrap_or("<enter to set>".to_owned());
+
+    text.sections[0].value = format!("Waypoint: {}", waypoint_text);
+}
+
+fn update_sector_text(q_cam: Query<&MapCamera, Changed<MapCamera>>, mut q_text: Query<&mut Text, With<MapSelectedSectorText>>) {
+    let Ok(cam) = q_cam.get_single() else {
+        return;
+    };
+
+    let Ok(mut text) = q_text.get_single_mut() else {
+        return;
+    };
+
+    text.sections[0].value = format!("{}, {}, {}", cam.sector.x(), cam.sector.y(), cam.sector.z());
 }
 
 const SECTOR_SCALE: f32 = 1.0;
@@ -179,6 +331,36 @@ fn position_camera(mut q_camera: Query<(&mut Transform, &mut MapCamera)>) {
     trans.translation = cam.lerp_sector + trans.rotation * Vec3::new(0.0, 0.0, cam.zoom * SECTOR_SCALE);
 }
 
+fn handle_waypoint_sector(
+    mut materials: ResMut<Assets<StandardMaterial>>,
+    mut q_selected_sector: Query<(&mut Visibility, &mut Transform, &Handle<StandardMaterial>), With<WaypointSector>>,
+    q_waypoint: Query<&Location, With<Waypoint>>,
+    time: Res<Time>,
+    mut q_sector_text: Query<&mut Text, With<WaypointSectorText>>,
+) {
+    let Ok((mut text_vis, mut sector_trans, standard_material)) = q_selected_sector.get_single_mut() else {
+        return;
+    };
+
+    let Ok(waypoint_loc) = q_waypoint.get_single() else {
+        *text_vis = Visibility::Hidden;
+        return;
+    };
+
+    *text_vis = Visibility::Inherited;
+
+    let ws = waypoint_loc.sector();
+    sector_trans.translation = Vec3::new(ws.x() as f32, ws.y() as f32, ws.z() as f32) * SECTOR_SCALE;
+
+    let standard_material = materials.get_mut(standard_material).expect("Material missing");
+    standard_material.base_color.set_alpha(time.elapsed_seconds().sin().abs() * 0.1);
+
+    let Ok(mut text) = q_sector_text.get_single_mut() else {
+        return;
+    };
+
+    text.sections[0].value = format!("{}, {}, {}", ws.x(), ws.y(), ws.z());
+}
 fn handle_selected_sector(
     mut materials: ResMut<Assets<StandardMaterial>>,
     mut q_selected_sector: Query<(&mut Transform, &Handle<StandardMaterial>), (With<SelectedSector>, Without<MapCamera>)>,
@@ -209,7 +391,13 @@ fn handle_selected_sector(
 struct SelectedSector;
 
 #[derive(Component)]
+struct WaypointSector;
+
+#[derive(Component)]
 struct SelectedSectorText;
+
+#[derive(Component)]
+struct WaypointSectorText;
 
 fn render_galaxy_map(
     mut commands: Commands,
@@ -274,7 +462,43 @@ fn render_galaxy_map(
                     BillboardTextBundle {
                         billboard_depth: BillboardDepth(false),
                         transform: Transform::from_scale(Vec3::splat(0.008)),
-                        text: Text::from_section(format!("{}, {}, {}", cam.sector.x(), cam.sector.y(), cam.sector.z()), text_style),
+                        text: Text::from_section(
+                            format!("{}, {}, {}", cam.sector.x(), cam.sector.y(), cam.sector.z()),
+                            text_style.clone(),
+                        ),
+                        ..Default::default()
+                    },
+                ));
+            });
+
+            p.spawn((
+                Name::new("Waypoint Sector"),
+                WaypointSector,
+                RenderLayers::from_layers(&[CAMERA_LAYER]), // https://github.com/bevyengine/bevy/issues/12461
+                PbrBundle {
+                    mesh: meshes.add(Cuboid::new(SECTOR_SCALE, SECTOR_SCALE, SECTOR_SCALE)),
+                    material: materials.add(StandardMaterial {
+                        base_color: css::WHITE.into(),
+                        unlit: true,
+                        alpha_mode: AlphaMode::Blend,
+                        ..Default::default()
+                    }),
+                    visibility: Visibility::Hidden,
+                    ..Default::default()
+                },
+            ))
+            .with_children(|p| {
+                p.spawn((
+                    RenderLayers::from_layers(&[CAMERA_LAYER]), // https://github.com/bevyengine/bevy/issues/12461
+                    WaypointSectorText,
+                    Name::new("Waypoint text"),
+                    BillboardTextBundle {
+                        billboard_depth: BillboardDepth(false),
+                        transform: Transform::from_scale(Vec3::splat(0.008)),
+                        text: Text::from_section(
+                            format!("{}, {}, {}", cam.sector.x(), cam.sector.y(), cam.sector.z()),
+                            text_style.clone(),
+                        ),
                         ..Default::default()
                     },
                 ));
@@ -515,7 +739,15 @@ pub(super) fn register(app: &mut App) {
                     toggle_map,
                     receive_map,
                     render_galaxy_map,
-                    (camera_movement, position_camera, handle_selected_sector, teleport_at)
+                    (
+                        camera_movement,
+                        position_camera,
+                        handle_selected_sector,
+                        handle_waypoint_sector,
+                        teleport_at,
+                        update_sector_text,
+                        update_waypoint_text,
+                    )
                         .chain()
                         .run_if(map_active),
                 )
