@@ -234,7 +234,7 @@ pub type InputChecker<'a> = (
     Res<'a, ButtonInput<MouseButton>>,
 );
 
-impl<'a> InputHandler for InputChecker<'a> {
+impl InputHandler for InputChecker<'_> {
     fn check_just_pressed(&self, input_code: CosmosInputs) -> bool {
         self.0.check_just_pressed(input_code, &self.1, &self.2)
     }

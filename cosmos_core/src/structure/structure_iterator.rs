@@ -134,7 +134,7 @@ impl<'a> BlockIterator<'a> {
     }
 }
 
-impl<'a> Iterator for BlockIterator<'a> {
+impl Iterator for BlockIterator<'_> {
     type Item = StructureBlock;
 
     fn next(&mut self) -> Option<Self::Item> {

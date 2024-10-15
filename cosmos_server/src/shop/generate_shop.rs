@@ -91,7 +91,7 @@ fn spawn_shop(
             }
 
             let sector_diff = (station_loc.sector() - player_loc.sector()).abs();
-            if !(sector_diff.max_element() <= STATION_LOAD_DISTANCE as SectorUnit) {
+            if sector_diff.max_element() > STATION_LOAD_DISTANCE as SectorUnit {
                 continue;
             }
 

@@ -41,7 +41,7 @@ pub struct NettyEventWriter<'w, T: NettyEvent> {
     ev_writer: EventWriter<'w, NettyEventToSend<T>>,
 }
 
-impl<'w, E: NettyEvent> NettyEventWriter<'w, E> {
+impl<E: NettyEvent> NettyEventWriter<'_, E> {
     /// Sends an `event`, which can later be read by [`EventReader`]s.
     /// This method returns the [ID](`EventId`) of the sent `event`.
     ///

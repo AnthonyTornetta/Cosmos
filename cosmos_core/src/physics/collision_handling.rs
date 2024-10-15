@@ -124,7 +124,7 @@ pub struct CosmosPhysicsFilter<'w, 's> {
     q_parent: Query<'w, 's, &'static Parent>,
 }
 
-impl<'w, 's> CosmosPhysicsFilter<'w, 's> {
+impl CosmosPhysicsFilter<'_, '_> {
     fn check_pair_filter(&self, context: PairFilterContextView) -> bool {
         if let Ok(collision_blacklist) = self.q_collision_blacklist.get(context.collider1()) {
             if !collision_blacklist.check_should_collide(context.collider2(), &self.q_parent) {

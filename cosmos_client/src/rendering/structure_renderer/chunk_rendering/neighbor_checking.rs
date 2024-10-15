@@ -59,7 +59,7 @@ pub struct ChunkRenderingChecker<'a> {
     pub pos_z: Option<&'a Chunk>,
 }
 
-impl<'a> ChunkRendererBackend<Chunk> for ChunkRenderingChecker<'a> {
+impl ChunkRendererBackend<Chunk> for ChunkRenderingChecker<'_> {
     #[inline(always)]
     fn get_texture_index(&self, index: &BlockTextureIndex, neighbors: BlockNeighbors, face: BlockFace) -> Option<TextureIndex> {
         index.atlas_index_from_face(face, neighbors)

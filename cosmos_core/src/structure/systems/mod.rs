@@ -180,7 +180,7 @@ pub struct SystemsIterator<'a> {
     id_mapping: &'a HashMap<StructureSystemId, Entity>,
 }
 
-impl<'a> Iterator for SystemsIterator<'a> {
+impl Iterator for SystemsIterator<'_> {
     type Item = Entity;
 
     fn next(&mut self) -> Option<Self::Item> {
