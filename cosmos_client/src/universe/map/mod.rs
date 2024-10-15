@@ -281,6 +281,15 @@ fn toggle_map(
                         width: Val::Percent(100.0),
                         ..Default::default()
                     },
+                    text: Text::from_section("R to Reset to Your Sector", small_text.clone()),
+                    ..Default::default()
+                },));
+
+                p.spawn((TextBundle {
+                    style: Style {
+                        width: Val::Percent(100.0),
+                        ..Default::default()
+                    },
                     text: Text::from_section("Enter to Set/Unset Waypoint", small_text.clone()),
                     ..Default::default()
                 },));
