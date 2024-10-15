@@ -58,7 +58,6 @@ impl LoadingDistance {
     }
 
     #[inline]
-
     /// Gets the distance where something should be unloaded in blocks
     pub fn unload_block_distance(&self) -> f32 {
         self.unload_distance as f32 * SECTOR_DIMENSIONS

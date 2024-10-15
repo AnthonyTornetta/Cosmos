@@ -50,7 +50,6 @@ pub const SYSTEM_DIMENSIONS: f32 = SYSTEM_SECTORS as f32 * SECTOR_DIMENSIONS;
 ///
 /// There are a couple bad things that happen because of this. If you do any logic that
 /// changes a player's parent, make sure to put that logic **before** these systems.
-
 pub enum LocationPhysicsSet {
     /// Syncs locations & transforms
     DoPhysics,

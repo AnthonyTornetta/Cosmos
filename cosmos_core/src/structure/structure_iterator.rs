@@ -271,8 +271,6 @@ fn advance_body(body: &mut EmptyBody<BlockCoordinate>) -> bool {
     false
 }
 
-/// Chunk Iterator
-
 /// Iterates over the chunks of a structure
 ///
 /// * `include_empty` - If enabled, the value iterated over may be None OR Some(chunk). Otherwise, the value iterated over may ONLY BE Some(chunk).

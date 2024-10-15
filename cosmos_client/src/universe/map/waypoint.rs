@@ -1,7 +1,5 @@
 //! Map-waypoint logic
 
-use std::f32::INFINITY;
-
 use bevy::{
     app::Update,
     color::palettes::css,
@@ -50,7 +48,7 @@ fn create_waypoint(
             Name::new("Waypoint"),
             IndicatorSettings {
                 color: css::WHITE.into(),
-                max_distance: INFINITY,
+                max_distance: f32::INFINITY,
                 offset: Vec3::ZERO,
             },
             Location::new(Vec3::ZERO, map_cam.sector),

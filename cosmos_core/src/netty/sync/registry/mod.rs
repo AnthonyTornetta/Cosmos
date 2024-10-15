@@ -14,7 +14,7 @@ pub mod server;
 /// Ensures that a registry is sent from the server to the client when the client connects.
 ///
 /// This should be called in the core project to ensure both the server & client are in sync.
-pub fn sync_registry<'a, T: Identifiable + Serialize + DeserializeOwned + std::fmt::Debug>(app: &mut App) {
+pub fn sync_registry<T: Identifiable + Serialize + DeserializeOwned + std::fmt::Debug>(app: &mut App) {
     #[cfg(feature = "server")]
     server::sync_registry::<T>(app);
     #[cfg(feature = "client")]
