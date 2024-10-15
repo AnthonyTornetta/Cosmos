@@ -79,11 +79,6 @@ pub enum ItemStackSystemSet {
 }
 
 impl ItemStack {
-    /// Creates an ItemStack of that item with an initial quantity of 0.
-    // pub fn new(item: &Item, data_entity: Option<Entity>) -> Self {
-    //     Self::with_quantity(item, 0, data_entity)
-    // }
-
     /// Creates an ItemStack of that item with the given initial quantity
     ///
     /// If you call this method, make sure you do so in or before [`ItemStackSystemSet::CreateDataEntity`]
