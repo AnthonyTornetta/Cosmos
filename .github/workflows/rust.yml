@@ -28,7 +28,7 @@ jobs:
     - name: Update System
       run: sudo apt update -y && sudo apt upgrade -y
     - name: Install Bevy Dependencies
-      run: sudo apt-get install -y g++ pkg-config libx11-dev libasound2-dev libudev-dev
+      run: sudo apt-get install -y g++ pkg-config libx11-dev libasound2-dev libudev-dev libwayland-dev
     - name: rust-clippy-check
       uses: actions-rs/clippy-check@v1.0.7
       with:
