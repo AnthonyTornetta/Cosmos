@@ -4,8 +4,7 @@ use bevy::{
     app::App,
     prelude::{NextState, Visibility},
 };
-
-use crate::state::game_state::GameState;
+use cosmos_core::state::GameState;
 
 pub(super) fn register(app: &mut App) {
     // Because bevy doesn't take into account state in ambiguity detection, this is falsely flagged all the time.

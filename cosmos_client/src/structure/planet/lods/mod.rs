@@ -23,6 +23,7 @@ use cosmos_core::{
     netty::system_sets::NetworkingSystemsSet,
     physics::location::Location,
     registry::Registry,
+    state::GameState,
     structure::{
         block_storage::BlockStorer,
         chunk::{CHUNK_DIMENSIONS, CHUNK_DIMENSIONS_USIZE},
@@ -46,8 +47,6 @@ use cosmos_core::{
 };
 use cosmos_core::{netty::client::LocalPlayer, structure::planet::biosphere::BiosphereMarker};
 use rayon::iter::{ParallelBridge, ParallelIterator};
-
-use crate::state::game_state::GameState;
 
 #[derive(Debug, Default)]
 enum LodRequest {

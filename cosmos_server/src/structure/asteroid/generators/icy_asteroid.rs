@@ -3,6 +3,7 @@ use cosmos_core::{
     block::{block_rotation::BlockRotation, Block},
     physics::location::Location,
     registry::ReadOnlyRegistry,
+    state::GameState,
     structure::{
         block_storage::BlockStorer,
         chunk::Chunk,
@@ -15,7 +16,6 @@ use noise::NoiseFn;
 
 use crate::{
     init::init_world::ReadOnlyNoise,
-    state::GameState,
     structure::{
         asteroid::generator::{AsteroidGenerationSet, GenerateAsteroidEvent, GeneratingAsteroids},
         planet::biosphere::TemperatureRange,

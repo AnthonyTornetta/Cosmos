@@ -12,16 +12,17 @@ use bevy::{
     tasks::Task,
     transform::components::Transform,
 };
-use cosmos_core::structure::{
-    asteroid::loading::AsteroidNeedsCreated,
-    chunk::Chunk,
-    loading::{ChunksNeedLoaded, StructureLoadingSet},
-    structure_iterator::ChunkIteratorResult,
-    ChunkInitEvent, Structure, StructureTypeSet,
+use cosmos_core::{
+    state::GameState,
+    structure::{
+        asteroid::loading::AsteroidNeedsCreated,
+        chunk::Chunk,
+        loading::{ChunksNeedLoaded, StructureLoadingSet},
+        structure_iterator::ChunkIteratorResult,
+        ChunkInitEvent, Structure, StructureTypeSet,
+    },
 };
 use futures_lite::future;
-
-use crate::state::GameState;
 
 use super::generators::AsteroidGeneratorMarker;
 

@@ -6,10 +6,9 @@ use cosmos_core::{
     events::block_events::BlockChangedEvent,
     netty::system_sets::NetworkingSystemsSet,
     registry::{identifiable::Identifiable, Registry},
+    state::GameState,
     structure::{coordinates::BlockCoordinate, Structure},
 };
-
-use crate::state::GameState;
 
 fn monitor_grass_updated(
     mut structure_query: Query<&mut Structure>,

@@ -4,6 +4,7 @@ use cosmos_core::{
     netty::system_sets::NetworkingSystemsSet,
     projectiles::laser::{Laser, LaserCollideEvent, LaserSystemSet},
     registry::Registry,
+    state::GameState,
     structure::{
         block_health::events::{BlockDestroyedEvent, BlockTakeDamageEvent},
         Structure,
@@ -15,7 +16,6 @@ use crate::{
         saving::{NeedsSaved, SavingSystemSet, SAVING_SCHEDULE},
         SerializedData,
     },
-    state::GameState,
     structure::{block_health::BlockHealthSet, systems::shield_system::ShieldSet},
 };
 

@@ -5,23 +5,16 @@ use bevy::{
     prelude::{in_state, App, Condition, IntoSystemSetConfigs},
 };
 use cosmos_core::{
-    netty::{
-        sync::{ComponentSyncingSet, SyncedComponentId},
-        system_sets::NetworkingSystemsSet,
-    },
+    netty::{sync::ComponentSyncingSet, system_sets::NetworkingSystemsSet},
     physics::location::CosmosBundleSet,
+    state::GameState,
 };
-
-use crate::{registry::sync_registry, state::game_state::GameState};
 
 pub mod connect;
 pub mod gameplay;
 pub mod lobby;
 
 pub(super) fn register(app: &mut App) {
-    // TODO: Move this to core project.
-    sync_registry::<SyncedComponentId>(app);
-
     app.configure_sets(
         Update,
         (

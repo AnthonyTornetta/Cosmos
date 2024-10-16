@@ -25,6 +25,7 @@ use cosmos_core::{
     },
     physics::location::LocationPhysicsSet,
     registry::{identifiable::Identifiable, Registry},
+    state::GameState,
     structure::{
         loading::StructureLoadingSet,
         systems::{
@@ -35,11 +36,7 @@ use cosmos_core::{
 };
 use serde::{de::DeserializeOwned, Serialize};
 
-use crate::{
-    registry::sync_registry,
-    state::game_state::GameState,
-    structure::planet::align_player::{self, PlayerAlignment},
-};
+use crate::structure::planet::align_player::{self, PlayerAlignment};
 
 #[derive(Event, Debug, Clone)]
 struct StructureSystemNeedsUpdated {
@@ -237,8 +234,6 @@ pub fn sync_system<T: StructureSystemImpl + Serialize + DeserializeOwned>(app: &
 }
 
 pub(super) fn register(app: &mut App) {
-    sync_registry::<StructureSystemType>(app);
-
     app.add_systems(
         Update,
         replication_listen_netty

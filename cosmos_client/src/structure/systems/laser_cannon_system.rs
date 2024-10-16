@@ -5,13 +5,13 @@ use bevy_kira_audio::prelude::*;
 use cosmos_core::{
     netty::system_sets::NetworkingSystemsSet,
     physics::location::{Location, LocationPhysicsSet},
+    state::GameState,
     structure::systems::laser_cannon_system::LaserCannonSystem,
 };
 
 use crate::{
     asset::asset_loader::load_assets,
     audio::{AudioEmission, CosmosAudioEmitter, DespawnOnNoEmissions},
-    state::game_state::GameState,
 };
 
 use super::sync::sync_system;

@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::Velocity;
-use bevy_renet2::renet2::{transport::NetcodeClientTransport, RenetClient};
+use bevy_renet2::renet2::RenetClient;
 use cosmos_core::{
     netty::{
         client::LocalPlayer,
@@ -12,10 +12,10 @@ use cosmos_core::{
         NettyChannelClient,
     },
     physics::location::Location,
+    state::GameState,
 };
 
-use crate::input::inputs::{CosmosInputs, InputHandler};
-use crate::{input::inputs::InputChecker, rendering::MainCamera, state::game_state::GameState};
+use crate::rendering::MainCamera;
 
 fn send_position(
     mut client: ResMut<RenetClient>,
@@ -54,24 +54,11 @@ fn send_position(
     }
 }
 
-// Just for testing
-fn send_disconnect(input_handler: InputChecker, transport: Option<ResMut<NetcodeClientTransport>>, client: Res<RenetClient>) {
-    if input_handler.check_just_pressed(CosmosInputs::Disconnect) {
-        if let Some(mut transport) = transport {
-            if client.is_connected() {
-                info!("SENDING DC MESSAGE!");
-                transport.disconnect();
-            }
-        }
-    }
-}
-
 pub(super) fn register(app: &mut App) {
     app.add_systems(
         Update,
-        (send_position, send_disconnect)
+        send_position
             .in_set(NetworkingSystemsSet::SyncComponents)
-            .chain()
             .run_if(in_state(GameState::Playing)),
     );
 }

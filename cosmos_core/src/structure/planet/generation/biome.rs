@@ -6,6 +6,7 @@ use bevy::{app::App, math::Vec3};
 use serde::{Deserialize, Serialize};
 
 use crate::{
+    netty::sync::registry::sync_registry,
     registry::{create_registry, identifiable::Identifiable, Registry},
     utils::array_utils::flatten,
 };
@@ -223,5 +224,7 @@ impl BiosphereBiomesRegistry {
 
 pub(super) fn register(app: &mut App) {
     create_registry::<Biome>(app, "cosmos:biome");
+    sync_registry::<Biome>(app);
     create_registry::<BiosphereBiomesRegistry>(app, "cosmos:biosphere_biomes");
+    sync_registry::<BiosphereBiomesRegistry>(app);
 }

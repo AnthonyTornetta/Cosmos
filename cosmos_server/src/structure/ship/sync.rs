@@ -11,10 +11,9 @@ use cosmos_core::{
         NettyChannelServer,
     },
     physics::location::Location,
+    state::GameState,
     structure::{ship::Ship, Structure},
 };
-
-use crate::state::GameState;
 
 fn on_request_ship(
     mut event_reader: EventReader<RequestedEntityEvent>,

@@ -1,7 +1,5 @@
 use bevy::prelude::{App, Commands, OnEnter, OnExit, Res, ResMut};
-use cosmos_core::{block::Block, item::Item, registry::Registry};
-
-use crate::state::game_state::GameState;
+use cosmos_core::{block::Block, item::Item, registry::Registry, state::GameState};
 
 use super::Lang;
 

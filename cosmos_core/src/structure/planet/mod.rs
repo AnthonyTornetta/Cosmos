@@ -208,7 +208,7 @@ pub struct ChunkFacesIter<'a> {
     position: usize,
 }
 
-impl<'a> Iterator for ChunkFacesIter<'a> {
+impl Iterator for ChunkFacesIter<'_> {
     type Item = BlockFace;
     fn next(&mut self) -> Option<Self::Item> {
         self.position += 1;

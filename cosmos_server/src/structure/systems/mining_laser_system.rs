@@ -12,6 +12,7 @@ use cosmos_core::{
     },
     ecs::NeedsDespawned,
     registry::Registry,
+    state::GameState,
     structure::{
         coordinates::BlockCoordinate,
         shared::{DespawnWithStructure, MeltingDown},
@@ -27,8 +28,6 @@ use cosmos_core::{
         Structure,
     },
 };
-
-use crate::state::GameState;
 
 use super::{line_system::add_line_system, sync::register_structure_system};
 

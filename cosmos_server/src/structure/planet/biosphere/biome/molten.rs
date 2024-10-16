@@ -8,10 +8,9 @@ use bevy::{
 use cosmos_core::{
     block::Block,
     registry::Registry,
+    state::GameState,
     structure::planet::generation::{biome::Biome, block_layers::BlockLayers},
 };
-
-use crate::state::GameState;
 
 use super::RegisterBiomesSet;
 

@@ -6,6 +6,7 @@ use bevy::prelude::*;
 use bevy_kira_audio::prelude::*;
 use cosmos_core::{
     netty::system_sets::NetworkingSystemsSet,
+    state::GameState,
     structure::{
         ship::ship_movement::{ShipMovement, ShipMovementSet},
         systems::thruster_system::ThrusterSystem,
@@ -15,7 +16,6 @@ use cosmos_core::{
 use crate::{
     asset::asset_loader::load_assets,
     audio::{AudioEmission, AudioSet, BufferedStopAudio, CosmosAudioEmitter},
-    state::game_state::GameState,
 };
 
 use super::sync::sync_system;

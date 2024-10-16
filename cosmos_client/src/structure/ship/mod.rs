@@ -15,13 +15,12 @@ use cosmos_core::{
         NettyChannelClient,
     },
     physics::location::{CosmosBundleSet, Location, LocationPhysicsSet},
+    state::GameState,
     structure::{
         chunk::CHUNK_DIMENSIONSF, loading::StructureLoadingSet, planet::Planet, shared::build_mode::BuildMode, ship::pilot::Pilot,
         Structure,
     },
 };
-
-use crate::state::game_state::GameState;
 
 pub mod client_ship_builder;
 pub mod create_ship;

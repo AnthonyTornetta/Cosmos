@@ -10,10 +10,9 @@ use bevy::{
 };
 use cosmos_core::{
     registry::{identifiable::Identifiable, Registry},
+    state::GameState,
     structure::planet::biosphere::Biosphere,
 };
-
-use crate::state::GameState;
 
 #[derive(Debug, Resource, Default)]
 /// Contains every shader loaded with its path and contents to send to clients

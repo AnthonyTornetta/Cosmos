@@ -9,13 +9,13 @@ use bevy_kira_audio::{Audio, AudioControl, AudioInstance, AudioSource};
 use cosmos_core::{
     block::block_events::BlockEventsSet,
     netty::system_sets::NetworkingSystemsSet,
+    state::GameState,
     structure::{block_health::events::BlockTakeDamageEvent, shared::DespawnWithStructure, Structure},
 };
 
 use crate::{
     asset::asset_loader::load_assets,
     audio::{AudioEmission, CosmosAudioEmitter, DespawnOnNoEmissions},
-    state::game_state::GameState,
 };
 
 fn play_block_damage_sound(

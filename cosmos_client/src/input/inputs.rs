@@ -77,9 +77,6 @@ pub enum CosmosInputs {
     /// Change the selected inventory item
     HotbarSlot9,
 
-    /// For testing - disconnects you from the server
-    Disconnect,
-
     /// Opens + closes your inventory
     ToggleInventory,
     /// "Shift-Clicking" an item in minecraft
@@ -116,6 +113,15 @@ pub enum CosmosInputs {
     DropItem,
     /// Indicates it should drop the whole stack
     BulkDropFlag,
+
+    /// Toggles the galaxy map
+    ToggleMap,
+    /// Resets the map position to the player's coordinates
+    ResetMapPosition,
+    /// Creates a waypoint
+    ToggleWaypoint,
+    /// For debug only - teleports player to the selected spot on the map
+    TeleportSelected,
 }
 
 fn init_input(mut input_handler: ResMut<CosmosInputHandler>) {
@@ -153,8 +159,6 @@ fn init_input(mut input_handler: ResMut<CosmosInputHandler>) {
     input_handler.set_keycode(CosmosInputs::HotbarSlot8, KeyCode::Digit8);
     input_handler.set_keycode(CosmosInputs::HotbarSlot9, KeyCode::Digit9);
 
-    input_handler.set_keycode(CosmosInputs::Disconnect, KeyCode::KeyP);
-
     input_handler.set_mouse_button(CosmosInputs::UseSelectedSystem, MouseButton::Left);
 
     input_handler.set_keycode(CosmosInputs::LeaveShip, KeyCode::KeyL);
@@ -179,6 +183,11 @@ fn init_input(mut input_handler: ResMut<CosmosInputHandler>) {
 
     input_handler.set_keycode(CosmosInputs::DropItem, KeyCode::KeyG);
     input_handler.set_keycode(CosmosInputs::BulkDropFlag, KeyCode::ControlLeft);
+
+    input_handler.set_keycode(CosmosInputs::ToggleMap, KeyCode::KeyM);
+    input_handler.set_keycode(CosmosInputs::ResetMapPosition, KeyCode::KeyR);
+    input_handler.set_keycode(CosmosInputs::ToggleWaypoint, KeyCode::Enter);
+    input_handler.set_keycode(CosmosInputs::TeleportSelected, KeyCode::KeyT);
 }
 
 #[derive(Resource, Default, Debug)]
@@ -225,7 +234,7 @@ pub type InputChecker<'a> = (
     Res<'a, ButtonInput<MouseButton>>,
 );
 
-impl<'a> InputHandler for InputChecker<'a> {
+impl InputHandler for InputChecker<'_> {
     fn check_just_pressed(&self, input_code: CosmosInputs) -> bool {
         self.0.check_just_pressed(input_code, &self.1, &self.2)
     }

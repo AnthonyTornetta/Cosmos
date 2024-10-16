@@ -12,12 +12,12 @@ use cosmos_core::{
         client::LocalPlayer, client_unreliable_messages::ClientUnreliableMessages, cosmos_encoder, system_sets::NetworkingSystemsSet,
         NettyChannelClient,
     },
+    state::GameState,
     structure::{ship::pilot::Pilot, systems::ShipActiveSystem},
 };
 
 use crate::{
     input::inputs::{CosmosInputs, InputChecker, InputHandler},
-    state::game_state::GameState,
     ui::components::show_cursor::no_open_menus,
 };
 

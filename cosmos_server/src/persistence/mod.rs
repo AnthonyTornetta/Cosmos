@@ -261,7 +261,6 @@ impl SerializedData {
     /// Then sends that data into the `save` method, with the given data id.
     ///
     /// Will only serialize & save if `should_save()` returns true.
-
     pub fn serialize_data(&mut self, data_id: impl Into<String>, data: &impl Serialize) {
         if self.should_save() {
             self.save_data.serialize_data(data_id, data);

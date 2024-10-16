@@ -8,14 +8,16 @@ use crate::{
         },
     },
     rendering::MeshInformation,
-    state::game_state::GameState,
 };
 use bevy::{
     prelude::*,
     render::mesh::{MeshVertexAttribute, VertexAttributeValues},
     utils::HashMap,
 };
-use cosmos_core::registry::{identifiable::Identifiable, Registry};
+use cosmos_core::{
+    registry::{identifiable::Identifiable, Registry},
+    state::GameState,
+};
 use serde::{Deserialize, Serialize};
 
 #[derive(Resource)]

@@ -17,14 +17,12 @@ use cosmos_core::{
         many_to_one::{self, ManyToOneRegistry, ReadOnlyManyToOneRegistry},
         Registry,
     },
+    state::GameState,
 };
 
-use crate::{
-    asset::{
-        asset_loading::{BlockRenderingInfo, ItemMeshingLoadingSet, ModelData},
-        materials::{block_materials::ATTRIBUTE_TEXTURE_INDEX, lod_materials::ATTRIBUTE_PACKED_DATA},
-    },
-    state::game_state::GameState,
+use crate::asset::{
+    asset_loading::{BlockRenderingInfo, ItemMeshingLoadingSet, ModelData},
+    materials::{block_materials::ATTRIBUTE_TEXTURE_INDEX, lod_materials::ATTRIBUTE_PACKED_DATA},
 };
 
 mod custom_blocks;

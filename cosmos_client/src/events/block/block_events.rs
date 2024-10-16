@@ -11,10 +11,11 @@ use cosmos_core::{
         client_reliable_messages::ClientReliableMessages, cosmos_encoder, sync::mapping::NetworkMapping, system_sets::NetworkingSystemsSet,
         NettyChannelClient,
     },
+    state::GameState,
     structure::structure_block::StructureBlock,
 };
 
-use crate::{interactions::block_interactions::process_player_interaction, state::game_state::GameState};
+use crate::interactions::block_interactions::process_player_interaction;
 
 #[derive(Debug, Event)]
 /// Sent when this client tries to breaks a block

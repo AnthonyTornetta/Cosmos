@@ -4,7 +4,7 @@ use std::marker::PhantomData;
 
 use bevy::{
     color::palettes::css,
-    log::{info, warn},
+    log::{error, info},
     prelude::{
         in_state, Added, App, Commands, Component, Entity, Event, EventReader, EventWriter, IntoSystemConfigs, IntoSystemSetConfigs, Query,
         Res, ResMut, Resource, Startup, SystemSet, Update, With, Without,
@@ -18,38 +18,32 @@ use biome::RegisterBiomesSet;
 use cosmos_core::{
     netty::{cosmos_encoder, server_reliable_messages::ServerReliableMessages, system_sets::NetworkingSystemsSet, NettyChannelServer},
     physics::location::Location,
-    registry::Registry,
+    registry::{identifiable::Identifiable, Registry},
+    state::GameState,
     structure::{
         chunk::Chunk,
         coordinates::ChunkCoordinate,
         planet::{
             biosphere::{Biosphere, BiosphereMarker},
-            generation::{
-                biome::{Biome, BiosphereBiomesRegistry},
-                terrain_generation::GpuPermutationTable,
-            },
+            generation::terrain_generation::GpuPermutationTable,
             planet_atmosphere::PlanetAtmosphere,
             Planet,
         },
         Structure,
     },
 };
-use rand::Rng;
 
 use crate::{
-    init::init_world::ServerSeed,
     netty::server_events::PlayerConnectedEvent,
     persistence::{
         loading::{LoadingSystemSet, NeedsLoaded},
         saving::{NeedsSaved, SavingSystemSet, SAVING_SCHEDULE},
         SerializedData,
     },
-    registry::sync_registry,
-    rng::get_rng_for_sector,
-    state::GameState,
     structure::planet::{
         biosphere::biosphere_generation::BiosphereGenerationSet, generation::planet_generator::check_needs_generated_system,
     },
+    universe::generation::{SystemItem, UniverseSystems},
 };
 
 use self::{biome::create_biosphere_biomes_registry, shader_assembler::CachedShaders};
@@ -213,33 +207,42 @@ pub fn register_biosphere<T: BiosphereMarkerComponent + Default + Clone, E: Send
 }
 
 fn add_biosphere(
-    query: Query<(Entity, &Planet, &Location), (Added<Structure>, Without<BiosphereMarker>)>,
+    query: Query<(Entity, &Location), (Added<Structure>, Without<BiosphereMarker>, With<Planet>)>,
     mut event_writer: EventWriter<NeedsBiosphereEvent>,
-    registry: Res<BiosphereTemperatureRegistry>,
-    server_seed: Res<ServerSeed>,
+    biosphere_registry: Res<Registry<Biosphere>>,
+    system: Res<UniverseSystems>,
     mut commands: Commands,
 ) {
-    for (entity, planet, location) in query.iter() {
-        let biospheres = registry.get_biospheres_for(planet.temperature());
-        let sector = location.sector();
+    for (entity, location) in query.iter() {
+        let Some(system) = system.system(location.get_system_coordinates()) else {
+            continue;
+        };
 
-        if !biospheres.is_empty() {
-            let mut rng = get_rng_for_sector(&server_seed, &sector);
-
-            let biosphere = biospheres[rng.gen_range(0..biospheres.len())];
-
-            commands.entity(entity).insert(BiosphereMarker::new(biosphere));
-
-            event_writer.send(NeedsBiosphereEvent {
-                biosphere_id: biosphere.to_owned(),
-                entity,
-            });
-        } else {
-            warn!(
-                "No biosphere for temperature {} @ sector {sector} - this planet will not be generated!",
-                planet.temperature()
+        let Some(planet_here) = system
+            .items_at(location.sector())
+            .flat_map(|x| match &x.item {
+                SystemItem::Planet(p) => Some(p),
+                _ => None,
+            })
+            .next()
+        else {
+            error!(
+                "Missing planet entry in UniverseSystems @ absolute sector coord {} | (system: {} should == {})\n{system:?}",
+                location.sector(),
+                location.get_system_coordinates(),
+                system.coordinate()
             );
-        }
+            continue;
+        };
+
+        let biosphere = biosphere_registry.from_numeric_id(planet_here.biosphere_id);
+
+        commands.entity(entity).insert(BiosphereMarker::new(biosphere.unlocalized_name()));
+
+        event_writer.send(NeedsBiosphereEvent {
+            biosphere_id: biosphere.unlocalized_name().to_owned(),
+            entity,
+        });
     }
 }
 
@@ -316,10 +319,6 @@ fn assign_planet_atmosphere(mut commands: Commands, q_needs_atmosphere: Query<En
 }
 
 pub(super) fn register(app: &mut App) {
-    sync_registry::<Biosphere>(app);
-    sync_registry::<Biome>(app);
-    sync_registry::<BiosphereBiomesRegistry>(app);
-
     app.add_systems(Update, assign_planet_atmosphere);
 
     app.configure_sets(Startup, BiosphereRegistrationSet::RegisterBiospheres);

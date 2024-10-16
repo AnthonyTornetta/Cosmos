@@ -19,11 +19,10 @@ use cosmos_core::{
     netty::system_sets::NetworkingSystemsSet,
     persistence::{LoadingDistance, LOAD_DISTANCE},
     physics::location::{Location, Sector, SectorUnit, SECTOR_DIMENSIONS},
+    state::GameState,
 };
 use futures_lite::future;
 use walkdir::WalkDir;
-
-use crate::state::GameState;
 
 use super::{loading::NeedsLoaded, saving::NeedsSaved, EntityId, SaveFileIdentifier, SectorsCache};
 

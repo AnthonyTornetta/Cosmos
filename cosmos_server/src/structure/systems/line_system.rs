@@ -12,6 +12,7 @@ use cosmos_core::{
     block::{block_direction::BlockDirection, block_events::BlockEventsSet, block_face::BlockFace, block_rotation::BlockRotation, Block},
     events::block_events::BlockChangedEvent,
     registry::Registry,
+    state::GameState,
     structure::{
         coordinates::{BlockCoordinate, CoordinateType, UnboundBlockCoordinate, UnboundCoordinateType},
         events::StructureLoadedEvent,
@@ -23,8 +24,6 @@ use cosmos_core::{
         Structure,
     },
 };
-
-use crate::state::GameState;
 
 use super::BlockStructureSystem;
 

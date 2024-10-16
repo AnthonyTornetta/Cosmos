@@ -45,9 +45,9 @@ impl Identifiable for BiosphereColor {
 }
 
 fn register_biospheres(mut reigstry: ResMut<Registry<BiosphereColor>>) {
-    reigstry.register(BiosphereColor::new("cosmos:biosphere_grass", css::GREEN.into()));
-    reigstry.register(BiosphereColor::new("cosmos:biosphere_molten", css::ORANGE_RED.into()));
-    reigstry.register(BiosphereColor::new("cosmos:biosphere_ice", css::AQUA.into()));
+    reigstry.register(BiosphereColor::new("cosmos:grass", css::GREEN.into()));
+    reigstry.register(BiosphereColor::new("cosmos:molten", css::ORANGE_RED.into()));
+    reigstry.register(BiosphereColor::new("cosmos:ice", css::AQUA.into()));
 }
 
 pub(super) fn register(app: &mut App) {

@@ -9,6 +9,7 @@ use bevy_kira_audio::{Audio, AudioControl, AudioInstance, AudioSource};
 use cosmos_core::{
     block::block_events::BlockEventsSet,
     netty::system_sets::NetworkingSystemsSet,
+    state::GameState,
     structure::{shared::DespawnWithStructure, Structure},
 };
 
@@ -16,7 +17,6 @@ use crate::{
     asset::asset_loader::load_assets,
     audio::{AudioEmission, CosmosAudioEmitter, DespawnOnNoEmissions},
     events::block::block_events::{RequestBlockBreakEvent, RequestBlockPlaceEvent},
-    state::game_state::GameState,
 };
 
 fn play_block_break_sound(

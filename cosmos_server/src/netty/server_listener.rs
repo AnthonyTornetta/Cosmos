@@ -18,6 +18,7 @@ use cosmos_core::netty::system_sets::NetworkingSystemsSet;
 use cosmos_core::netty::{cosmos_encoder, NettyChannelClient, NettyChannelServer};
 use cosmos_core::physics::location::Location;
 use cosmos_core::registry::Registry;
+use cosmos_core::state::GameState;
 use cosmos_core::structure::loading::ChunksNeedLoaded;
 use cosmos_core::structure::shared::build_mode::{BuildMode, ExitBuildModeEvent};
 use cosmos_core::structure::systems::StructureSystems;
@@ -32,7 +33,6 @@ use cosmos_core::{
 };
 
 use crate::entities::player::PlayerLooking;
-use crate::state::GameState;
 use crate::structure::planet::chunk::ChunkNeedsSent;
 use crate::structure::planet::generation::planet_generator::RequestChunkEvent;
 use crate::structure::ship::events::{CreateShipEvent, ShipSetMovementEvent};

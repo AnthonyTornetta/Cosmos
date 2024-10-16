@@ -13,10 +13,9 @@ use cosmos_core::{
     inventory::netty::{InventoryIdentifier, ServerInventoryMessages},
     netty::{cosmos_encoder, system_sets::NetworkingSystemsSet, NettyChannelServer},
     registry::{identifiable::Identifiable, Registry},
+    state::GameState,
     structure::Structure,
 };
-
-use crate::state::GameState;
 
 fn handle_block_event(
     mut interact_events: EventReader<BlockInteractEvent>,

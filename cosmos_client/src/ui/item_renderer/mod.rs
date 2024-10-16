@@ -12,12 +12,12 @@ use cosmos_core::{
     ecs::NeedsDespawned,
     item::Item,
     registry::{identifiable::Identifiable, Registry},
+    state::GameState,
 };
 
 use crate::{
     asset::materials::{AddMaterialEvent, MaterialType, MaterialsSystemSet, RemoveAllMaterialsEvent},
     item::item_mesh::ItemMeshMaterial,
-    state::game_state::GameState,
 };
 
 use super::{UiMiddleRoot, UiSystemSet, UiTopRoot};

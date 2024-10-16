@@ -34,10 +34,9 @@ use cosmos_core::{
     item::Item,
     netty::system_sets::NetworkingSystemsSet,
     registry::{identifiable::Identifiable, Registry},
+    state::GameState,
     structure::Structure,
 };
-
-use crate::state::GameState;
 
 const FLUID_PER_BLOCK: u32 = 1000;
 

@@ -7,13 +7,12 @@ use cosmos_core::{
     entities::player::Player,
     netty::{cosmos_encoder, server_reliable_messages::ServerReliableMessages, system_sets::NetworkingSystemsSet, NettyChannelServer},
     registry::{identifiable::Identifiable, Registry},
+    state::GameState,
     structure::{
         shared::build_mode::{BuildMode, BuildModeSet, EnterBuildModeEvent, ExitBuildModeEvent},
         Structure,
     },
 };
-
-use crate::state::GameState;
 
 fn interact_with_block(
     mut event_reader: EventReader<BlockInteractEvent>,

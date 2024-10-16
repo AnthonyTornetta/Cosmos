@@ -33,7 +33,6 @@ impl SaveData {
     /// Then sends that data into the `save` method, with the given data id.
     ///
     /// Will only serialize & save if `should_save()` returns true.
-
     pub fn serialize_data(&mut self, data_id: impl Into<String>, data: &impl Serialize) {
         self.save(data_id, cosmos_encoder::serialize(data));
     }
@@ -80,7 +79,6 @@ impl SerializedBlockData {
     /// Then sends that data into the `save` method, with the given data id.
     ///
     /// Will only serialize & save if `should_save()` returns true.
-
     pub fn serialize_data(&mut self, block: ChunkBlockCoordinate, data_id: impl Into<String>, data: &impl Serialize) {
         self.save_data.entry(block).or_default().serialize_data(data_id, data);
     }

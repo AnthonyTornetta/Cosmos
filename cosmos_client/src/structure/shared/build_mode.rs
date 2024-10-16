@@ -15,6 +15,7 @@ use bevy_renet2::renet2::RenetClient;
 use cosmos_core::{
     block::block_events::BlockEventsSet,
     netty::{client::LocalPlayer, client_reliable_messages::ClientReliableMessages, cosmos_encoder, NettyChannelClient},
+    state::GameState,
     structure::{
         chunk::CHUNK_DIMENSIONSF,
         coordinates::BlockCoordinate,
@@ -32,7 +33,6 @@ use crate::{
     input::inputs::{CosmosInputs, InputChecker, InputHandler},
     interactions::block_interactions::LookingAt,
     rendering::MainCamera,
-    state::game_state::GameState,
     structure::planet::align_player::{self, PlayerAlignment},
     ui::components::show_cursor::no_open_menus,
 };

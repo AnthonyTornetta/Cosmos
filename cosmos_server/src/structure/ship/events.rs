@@ -16,6 +16,7 @@ use cosmos_core::{
         system_sets::NetworkingSystemsSet, NettyChannelServer,
     },
     physics::location::Location,
+    state::GameState,
     structure::{
         coordinates::ChunkCoordinate,
         full_structure::FullStructure,
@@ -25,7 +26,7 @@ use cosmos_core::{
     },
 };
 
-use crate::{ai::AiControlled, state::GameState};
+use crate::ai::AiControlled;
 
 use super::{loading::ShipNeedsCreated, server_ship_builder::ServerShipBuilder};
 

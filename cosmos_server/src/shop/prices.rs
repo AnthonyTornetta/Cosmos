@@ -8,11 +8,9 @@ use bevy::{
     prelude::{Commands, Resource},
     state::state::OnEnter,
 };
-use cosmos_core::{item::Item, registry::Registry};
+use cosmos_core::{item::Item, registry::Registry, state::GameState};
 use cosmos_core::{registry::identifiable::Identifiable, shop::ShopEntry};
 use serde::{Deserialize, Serialize};
-
-use crate::state::GameState;
 
 #[derive(Clone, Serialize, Deserialize)]
 enum PrettyShopEntry {

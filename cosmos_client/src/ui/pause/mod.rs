@@ -5,12 +5,11 @@ use bevy::{
     color::palettes::css,
     prelude::*,
 };
-use cosmos_core::ecs::NeedsDespawned;
+use cosmos_core::{ecs::NeedsDespawned, state::GameState};
 use renet2::RenetClient;
 
 use crate::{
     input::inputs::{CosmosInputs, InputChecker, InputHandler},
-    state::game_state::GameState,
     window::setup::CursorFlagsSet,
 };
 

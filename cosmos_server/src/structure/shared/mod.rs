@@ -9,10 +9,9 @@ use cosmos_core::{
     ecs::NeedsDespawned,
     events::{block_events::BlockChangedEvent, structure::change_pilot_event::ChangePilotEvent},
     registry::Registry,
+    state::GameState,
     structure::{loading::StructureLoadingSet, shared::MeltingDown, ship::pilot::Pilot, Structure},
 };
-
-use crate::state::GameState;
 
 pub mod build_mode;
 pub mod melt_down;

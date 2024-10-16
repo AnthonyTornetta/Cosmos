@@ -14,6 +14,7 @@ use cosmos_core::{
         NoSendEntity,
     },
     physics::location::Location,
+    state::GameState,
     structure::{
         chunk::{netty::SerializedBlockData, ChunkUnloadEvent},
         coordinates::{ChunkCoordinate, UnboundChunkCoordinate, UnboundCoordinateType},
@@ -28,7 +29,6 @@ use crate::{
         saving::{NeedsSaved, SavingSystemSet, SAVING_SCHEDULE},
         EntityId, SaveFileIdentifier,
     },
-    state::GameState,
     structure::{
         persistence::BlockDataNeedsSaved,
         planet::{

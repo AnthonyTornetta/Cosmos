@@ -16,7 +16,10 @@ use bevy::{
 };
 use serde::{Deserialize, Serialize};
 
-use crate::registry::{create_registry, identifiable::Identifiable, Registry};
+use crate::{
+    netty::sync::registry::sync_registry,
+    registry::{create_registry, identifiable::Identifiable, Registry},
+};
 
 use super::{loading::StructureLoadingSet, shared::MeltingDown, ship::Ship, Structure};
 
@@ -177,7 +180,7 @@ pub struct SystemsIterator<'a> {
     id_mapping: &'a HashMap<StructureSystemId, Entity>,
 }
 
-impl<'a> Iterator for SystemsIterator<'a> {
+impl Iterator for SystemsIterator<'_> {
     type Item = Entity;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -500,6 +503,7 @@ impl Identifiable for StructureSystemType {
 
 pub(super) fn register(app: &mut App) {
     create_registry::<StructureSystemType>(app, "cosmos:structure_system_types");
+    sync_registry::<StructureSystemType>(app);
 
     app.configure_sets(
         Update,

@@ -134,7 +134,7 @@ impl<'a> BlockIterator<'a> {
     }
 }
 
-impl<'a> Iterator for BlockIterator<'a> {
+impl Iterator for BlockIterator<'_> {
     type Item = StructureBlock;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -270,8 +270,6 @@ fn advance_body(body: &mut EmptyBody<BlockCoordinate>) -> bool {
 
     false
 }
-
-/// Chunk Iterator
 
 /// Iterates over the chunks of a structure
 ///

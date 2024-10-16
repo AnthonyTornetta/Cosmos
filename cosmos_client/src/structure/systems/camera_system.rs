@@ -15,6 +15,7 @@ use bevy::{
 };
 use cosmos_core::{
     netty::{client::LocalPlayer, system_sets::NetworkingSystemsSet},
+    state::GameState,
     structure::{
         ship::{pilot::Pilot, Ship},
         systems::{camera_system::CameraSystem, StructureSystem, StructureSystems},
@@ -25,7 +26,6 @@ use cosmos_core::{
 use crate::{
     input::inputs::{CosmosInputs, InputChecker, InputHandler},
     rendering::{CameraPlayerOffset, MainCamera},
-    state::game_state::GameState,
 };
 
 use super::sync::sync_system;

@@ -4,10 +4,10 @@ use bevy::{
     app::{App, AppExit},
     prelude::*,
 };
+use cosmos_core::state::GameState;
 
 use crate::{
     netty::connect::HostConfig,
-    state::game_state::GameState,
     ui::{
         components::{
             button::{register_button, Button, ButtonBundle, ButtonEvent, ButtonStyles},

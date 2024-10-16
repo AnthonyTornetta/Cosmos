@@ -7,6 +7,7 @@ use bevy::{
 use cosmos_core::{
     block::{block_rotation::BlockRotation, Block},
     registry::Registry,
+    state::GameState,
     structure::{
         loading::{ChunksNeedLoaded, StructureLoadingSet},
         ship::Ship,
@@ -14,8 +15,6 @@ use cosmos_core::{
         ChunkInitEvent, Structure, StructureTypeSet,
     },
 };
-
-use crate::state::GameState;
 
 use super::events::create_ship_event_reader;
 

@@ -7,11 +7,10 @@ use cosmos_core::{
     netty::{client::LocalPlayer, system_sets::NetworkingSystemsSet},
     physics::location::Location,
     prelude::{Planet, Structure},
+    state::GameState,
     structure::planet::planet_atmosphere::PlanetAtmosphere,
     universe::star::Star,
 };
-
-use crate::state::game_state::GameState;
 
 #[derive(Component)]
 struct PlanetSkybox;

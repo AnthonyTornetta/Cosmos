@@ -12,9 +12,7 @@ use bevy::{
     time::Time,
     ui::{JustifyContent, PositionType, Style, Val},
 };
-use cosmos_core::netty::system_sets::NetworkingSystemsSet;
-
-use crate::state::game_state::GameState;
+use cosmos_core::{netty::system_sets::NetworkingSystemsSet, state::GameState};
 
 const HUD_DISPLAY_DURATION: Duration = Duration::from_secs(7);
 const FADE_DURATION: Duration = Duration::from_secs(3);

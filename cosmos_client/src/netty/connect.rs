@@ -15,13 +15,11 @@ use bevy_renet2::renet2::{
 use cosmos_core::{
     entities::player::Player,
     netty::{client::LocalPlayer, connection_config, sync::mapping::NetworkMapping, PROTOCOL_ID},
+    state::GameState,
 };
 use renet2::transport::NativeSocket;
 
-use crate::{
-    netty::lobby::{ClientLobby, MostRecentTick},
-    state::game_state::GameState,
-};
+use crate::netty::lobby::{ClientLobby, MostRecentTick};
 
 fn new_netcode_transport(mut host: &str, port: u16) -> NetcodeClientTransport {
     if host == "localhost" {

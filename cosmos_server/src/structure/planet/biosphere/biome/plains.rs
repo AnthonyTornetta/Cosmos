@@ -6,10 +6,15 @@ use bevy::{
     prelude::{App, EventWriter, OnExit, Res, ResMut},
 };
 use cosmos_core::{
-    block::{block_face::BlockFace, block_rotation::BlockRotation, block_rotation::BlockSubRotation, Block},
+    block::{
+        block_face::BlockFace,
+        block_rotation::{BlockRotation, BlockSubRotation},
+        Block,
+    },
     events::block_events::BlockChangedEvent,
     physics::location::Location,
     registry::{identifiable::Identifiable, Registry},
+    state::GameState,
     structure::{
         chunk::CHUNK_DIMENSIONS,
         coordinates::{BlockCoordinate, ChunkCoordinate, CoordinateType, UnboundBlockCoordinate, UnboundCoordinateType},
@@ -21,7 +26,6 @@ use noise::NoiseFn;
 
 use crate::{
     init::init_world::{Noise, ServerSeed},
-    state::GameState,
     structure::planet::biosphere::{biosphere_generation::BiosphereGenerationSet, generation_tools::fill},
 };
 

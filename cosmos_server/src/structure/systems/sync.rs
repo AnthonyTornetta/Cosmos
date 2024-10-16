@@ -18,10 +18,9 @@ use cosmos_core::{
         NoSendEntity,
     },
     registry::{identifiable::Identifiable, Registry},
+    state::GameState,
     structure::systems::{sync::SyncableSystem, StructureSystem, StructureSystemType, StructureSystems, StructureSystemsSet, SystemActive},
 };
-
-use crate::{registry::sync_registry, state::GameState};
 
 fn sync_system<T: SyncableSystem>(
     mut server: ResMut<RenetServer>,
@@ -124,8 +123,4 @@ pub fn register_structure_system<T: SyncableSystem>(app: &mut App, activatable: 
             registry.register(StructureSystemType::new(T::unlocalized_name(), activatable, item.id()));
         },
     );
-}
-
-pub(super) fn register(app: &mut App) {
-    sync_registry::<StructureSystemType>(app);
 }

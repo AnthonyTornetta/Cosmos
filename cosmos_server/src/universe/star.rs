@@ -2,24 +2,60 @@
 
 use std::slice::Iter;
 
-use bevy::prelude::{in_state, App, EventReader, IntoSystemConfigs, Query, ResMut, Update, With};
+use bevy::{
+    core::Name,
+    prelude::{in_state, App, Commands, EventReader, IntoSystemConfigs, Query, Res, ResMut, Update, With},
+};
+use bevy_rapier3d::prelude::Velocity;
 use bevy_renet2::renet2::RenetServer;
 use cosmos_core::{
     netty::{
         cosmos_encoder, server_reliable_messages::ServerReliableMessages, sync::server_entity_syncing::RequestedEntityEvent,
         system_sets::NetworkingSystemsSet, NettyChannelServer,
     },
-    physics::location::Location,
+    persistence::LoadingDistance,
+    physics::location::{Location, SYSTEM_SECTORS},
+    state::GameState,
     universe::star::Star,
 };
 
-use crate::{
-    persistence::{
-        saving::{NeedsSaved, SavingSystemSet, SAVING_SCHEDULE},
-        SerializedData,
-    },
-    state::GameState,
+use crate::persistence::{
+    saving::{NeedsSaved, SavingSystemSet, SAVING_SCHEDULE},
+    SerializedData,
 };
+
+use super::{
+    galaxy_generation::Galaxy,
+    generation::{GenerateSystemEvent, SystemGenerationSet, SystemItem, UniverseSystems},
+};
+
+fn load_stars_in_universe(systems: Res<UniverseSystems>, mut commands: Commands, q_stars: Query<&Location, With<Star>>) {
+    for (_, system) in systems.iter() {
+        let Some((star_location, star)) = system
+            .iter()
+            .flat_map(|x| match x.item {
+                SystemItem::Star(s) => Some((x.location, s)),
+                _ => None,
+            })
+            .next()
+        else {
+            continue;
+        };
+
+        if q_stars.iter().any(|x| x.sector() == star_location.sector()) {
+            // Star already in world
+            continue;
+        }
+
+        commands.spawn((
+            star,
+            star_location,
+            Name::new("Star"),
+            Velocity::zero(),
+            LoadingDistance::new(SYSTEM_SECTORS / 2 + 1, SYSTEM_SECTORS / 2 + 1),
+        ));
+    }
+}
 
 fn on_request_star(mut event_reader: EventReader<RequestedEntityEvent>, query: Query<&Star>, mut server: ResMut<RenetServer>) {
     for ev in event_reader.read() {
@@ -64,8 +100,39 @@ pub fn calculate_temperature_at(stars: Iter<'_, (Location, Star)>, location: &Lo
     })
 }
 
+fn generate_stars(
+    mut evr_generate_system: EventReader<GenerateSystemEvent>,
+    mut universe_systems: ResMut<UniverseSystems>,
+    q_galaxy: Query<&Galaxy>,
+) {
+    for ev in evr_generate_system.read() {
+        let system = ev.system;
+
+        let Ok(galaxy) = q_galaxy.get_single() else {
+            continue;
+        };
+
+        let Some(star) = galaxy.star_in_system(system) else {
+            continue;
+        };
+
+        let Some(universe_system) = universe_systems.system_mut(system) else {
+            continue;
+        };
+
+        universe_system.add_item(star.location, SystemItem::Star(star.star));
+    }
+}
+
 pub(super) fn register(app: &mut App) {
     app.add_systems(
+        Update,
+        (generate_stars.in_set(SystemGenerationSet::Star), load_stars_in_universe)
+            .chain()
+            .in_set(NetworkingSystemsSet::Between)
+            .run_if(in_state(GameState::Playing)),
+    )
+    .add_systems(
         Update,
         on_request_star
             .in_set(NetworkingSystemsSet::SyncComponents)

@@ -24,6 +24,7 @@ use cosmos_core::{
     },
     projectiles::missile::Missile,
     registry::{identifiable::Identifiable, Registry},
+    state::GameState,
     structure::{
         systems::{
             energy_storage_system::EnergyStorageSystem,
@@ -39,7 +40,7 @@ use cosmos_core::{
     },
 };
 
-use crate::{projectiles::missile::MissileTargetting, state::GameState};
+use crate::projectiles::missile::MissileTargetting;
 
 use super::{line_system::add_line_system, sync::register_structure_system};
 

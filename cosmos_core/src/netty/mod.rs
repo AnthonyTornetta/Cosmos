@@ -17,10 +17,14 @@ pub mod sync;
 pub mod system_sets;
 pub mod world_tick;
 
-use bevy::prelude::{App, Component};
+use bevy::{
+    prelude::{App, Component, States},
+    state::state::FreelyMutableState,
+};
 use bevy_renet2::renet2::{ChannelConfig, ConnectionConfig, SendType};
 use local_ip_address::local_ip;
 use std::time::Duration;
+use sync::registry::RegistrySyncInit;
 
 /// Used to tell the server to not send this entity to the player
 ///
@@ -52,6 +56,8 @@ pub enum NettyChannelServer {
     Shop,
     /// Generalized component syncing
     ComponentReplication,
+    /// Automatic syncing of events
+    NettyEvent,
 }
 
 /// Network channels that clients send to the server
@@ -68,6 +74,8 @@ pub enum NettyChannelClient {
     Shop,
     /// Generalized component syncing
     ComponentReplication,
+    /// Automatic syncing of events
+    NettyEvent,
 }
 
 impl From<NettyChannelClient> for u8 {
@@ -78,6 +86,7 @@ impl From<NettyChannelClient> for u8 {
             NettyChannelClient::Inventory => 2,
             NettyChannelClient::Shop => 3,
             NettyChannelClient::ComponentReplication => 4,
+            NettyChannelClient::NettyEvent => 5,
         }
     }
 }
@@ -122,6 +131,13 @@ impl NettyChannelClient {
                     resend_time: Duration::from_millis(200),
                 },
             },
+            ChannelConfig {
+                channel_id: Self::NettyEvent.into(),
+                max_memory_usage_bytes: 5 * MB,
+                send_type: SendType::ReliableOrdered {
+                    resend_time: Duration::from_millis(200),
+                },
+            },
         ]
     }
 }
@@ -139,6 +155,7 @@ impl From<NettyChannelServer> for u8 {
             NettyChannelServer::Registry => 7,
             NettyChannelServer::Shop => 8,
             NettyChannelServer::ComponentReplication => 9,
+            NettyChannelServer::NettyEvent => 10,
         }
     }
 }
@@ -213,6 +230,13 @@ impl NettyChannelServer {
                     resend_time: Duration::from_millis(200),
                 },
             },
+            ChannelConfig {
+                channel_id: Self::NettyEvent.into(),
+                max_memory_usage_bytes: 5 * MB,
+                send_type: SendType::ReliableOrdered {
+                    resend_time: Duration::from_millis(200),
+                },
+            },
         ]
     }
 }
@@ -236,8 +260,8 @@ pub fn get_local_ipaddress() -> String {
     local_ip().map(|x| x.to_string()).unwrap_or("127.0.0.1".to_owned())
 }
 
-pub(super) fn register(app: &mut App) {
-    sync::register(app);
+pub(super) fn register<T: States + Clone + Copy + FreelyMutableState>(app: &mut App, registry_syncing: RegistrySyncInit<T>) {
+    sync::register(app, registry_syncing);
     world_tick::register(app);
     system_sets::register(app);
 }

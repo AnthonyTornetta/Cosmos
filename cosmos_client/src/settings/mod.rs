@@ -11,10 +11,13 @@ use bevy::{
     },
     utils::HashMap,
 };
-use cosmos_core::registry::{create_registry, identifiable::Identifiable, Registry};
+use cosmos_core::{
+    registry::{create_registry, identifiable::Identifiable, Registry},
+    state::GameState,
+};
 use serde::{Deserialize, Serialize};
 
-use crate::{lang::Lang, rendering::MainCamera, state::game_state::GameState};
+use crate::{lang::Lang, rendering::MainCamera};
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Copy, Serialize, Deserialize, PartialOrd, Ord)]
 /// Category this setting belongs to (for display purposes only)

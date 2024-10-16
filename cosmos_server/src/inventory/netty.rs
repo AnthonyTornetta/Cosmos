@@ -21,10 +21,11 @@ use cosmos_core::{
     netty::{cosmos_encoder, server::ServerLobby, NettyChannelClient, NettyChannelServer},
     persistence::LoadingDistance,
     physics::location::Location,
+    state::GameState,
     structure::Structure,
 };
 
-use crate::{entities::player::PlayerLooking, state::GameState};
+use crate::entities::player::PlayerLooking;
 
 fn sync_held_items(
     query: Query<(&Player, &HeldItemStack), Changed<HeldItemStack>>,

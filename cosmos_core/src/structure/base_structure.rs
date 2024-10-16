@@ -967,7 +967,7 @@ pub struct RaycastIter<'a> {
     include_air: bool,
 }
 
-impl<'a> Iterator for RaycastIter<'a> {
+impl Iterator for RaycastIter<'_> {
     type Item = BlockCoordinate;
 
     fn next(&mut self) -> Option<Self::Item> {

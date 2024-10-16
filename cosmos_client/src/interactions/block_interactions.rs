@@ -21,6 +21,7 @@ use cosmos_core::{
     netty::{client::LocalPlayer, system_sets::NetworkingSystemsSet},
     physics::structure_physics::ChunkPhysicsPart,
     registry::Registry,
+    state::GameState,
     structure::{
         coordinates::UnboundBlockCoordinate, planet::Planet, shields::SHIELD_COLLISION_GROUP, ship::pilot::Pilot,
         structure_block::StructureBlock, Structure,
@@ -31,7 +32,6 @@ use crate::{
     events::block::block_events::*,
     input::inputs::{CosmosInputs, InputChecker, InputHandler},
     rendering::MainCamera,
-    state::game_state::GameState,
     ui::{components::show_cursor::no_open_menus, hotbar::Hotbar},
 };
 

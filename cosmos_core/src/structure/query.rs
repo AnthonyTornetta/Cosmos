@@ -54,7 +54,7 @@ impl<'q, 'w, 's, Q: QueryData> MutBlockData<'q, 'w, 's, Q> {
     }
 }
 
-impl<'q, 'w, 's, Q: QueryData> Deref for MutBlockData<'q, 'w, 's, Q> {
+impl<'q, Q: QueryData> Deref for MutBlockData<'q, '_, '_, Q> {
     type Target = QueryItem<'q, Q>;
 
     fn deref(&self) -> &Self::Target {
@@ -62,7 +62,7 @@ impl<'q, 'w, 's, Q: QueryData> Deref for MutBlockData<'q, 'w, 's, Q> {
     }
 }
 
-impl<'q, 'w, 's, Q: QueryData> DerefMut for MutBlockData<'q, 'w, 's, Q> {
+impl<Q: QueryData> DerefMut for MutBlockData<'_, '_, '_, Q> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         self.changed = true;
 
@@ -70,7 +70,7 @@ impl<'q, 'w, 's, Q: QueryData> DerefMut for MutBlockData<'q, 'w, 's, Q> {
     }
 }
 
-impl<'q, 'w, 's, Q: QueryData> Drop for MutBlockData<'q, 'w, 's, Q> {
+impl<Q: QueryData> Drop for MutBlockData<'_, '_, '_, Q> {
     fn drop(&mut self) {
         if !self.changed {
             return;

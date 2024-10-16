@@ -2,22 +2,15 @@
 
 use std::fs;
 
-use crate::{
-    ecs::{add_multi_statebound_resource, add_statebound_resource, init_resource},
-    netty::connect::WaitingOnServer,
-    registry::sync_registry,
-    state::game_state::GameState,
-};
+use crate::netty::connect::WaitingOnServer;
 use bevy::prelude::*;
 use bevy_easy_compute::prelude::*;
 use cosmos_core::{
+    ecs::{add_multi_statebound_resource, add_statebound_resource, init_resource},
     netty::system_sets::NetworkingSystemsSet,
-    structure::planet::{
-        biosphere::Biosphere,
-        generation::{
-            biome::{Biome, BiosphereBiomesRegistry},
-            terrain_generation::{add_terrain_compute_worker, BiosphereShaderWorker, ChunkData, GpuPermutationTable},
-        },
+    state::GameState,
+    structure::planet::generation::terrain_generation::{
+        add_terrain_compute_worker, BiosphereShaderWorker, ChunkData, GpuPermutationTable,
     },
 };
 
@@ -116,10 +109,6 @@ fn send_permutation_table_to_worker(
 }
 
 pub(super) fn register(app: &mut App) {
-    sync_registry::<Biosphere>(app);
-    sync_registry::<Biome>(app);
-    sync_registry::<BiosphereBiomesRegistry>(app);
-
     app.configure_sets(
         Update,
         (
@@ -146,6 +135,6 @@ pub(super) fn register(app: &mut App) {
     )
     .add_event::<SetTerrainGenData>();
 
-    add_multi_statebound_resource::<SetPermutationTable>(app, GameState::LoadingData, GameState::Playing);
-    add_statebound_resource::<ChunkData>(app, GameState::Playing);
+    add_multi_statebound_resource::<SetPermutationTable, GameState>(app, GameState::LoadingData, GameState::Playing);
+    add_statebound_resource::<ChunkData, GameState>(app, GameState::Playing);
 }

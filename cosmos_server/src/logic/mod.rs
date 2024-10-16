@@ -5,8 +5,7 @@ use bevy::{
     prelude::{IntoSystemSetConfigs, SystemSet},
     state::state::OnEnter,
 };
-
-use crate::state::GameState;
+use cosmos_core::state::GameState;
 
 #[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
 /// Logic blocks should be registered here and can be ambiguous with this set

@@ -6,9 +6,10 @@ use bevy::{
     asset::{Asset, LoadState},
     prelude::{in_state, App, AssetServer, Commands, EventWriter, Handle, IntoSystemConfigs, OnEnter, Res, ResMut, Resource, Update},
 };
-use cosmos_core::loader::{AddLoadingEvent, DoneLoadingEvent, LoadingManager};
-
-use crate::state::game_state::GameState;
+use cosmos_core::{
+    loader::{AddLoadingEvent, DoneLoadingEvent, LoadingManager},
+    state::GameState,
+};
 
 #[derive(Resource, Default)]
 struct LoadingAssetHandle<T: Asset, K: Send + Sync + 'static> {

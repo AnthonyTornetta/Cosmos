@@ -9,10 +9,11 @@ use cosmos_core::{
     block::Block,
     events::block_events::BlockChangedEvent,
     registry::{identifiable::Identifiable, Registry},
+    state::GameState,
     structure::shared::MeltingDown,
 };
 
-use crate::state::GameState;
+use crate::persistence::make_persistent::{make_persistent, PersistentComponent};
 
 use super::MeltingDownSet;
 
@@ -26,7 +27,11 @@ fn monitor_block_events(mut commands: Commands, blocks: Res<Registry<Block>>, mu
     }
 }
 
+impl PersistentComponent for MeltingDown {}
+
 pub(super) fn register(app: &mut App) {
+    make_persistent::<MeltingDown>(app);
+
     app.add_systems(
         Update,
         monitor_block_events

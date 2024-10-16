@@ -47,6 +47,7 @@ bytemuck = "1.16.1"
 bevy_obj = "0.14"
 bevy_hanabi = "0.12.1"
 iyes_perf_ui = "0.3.0"
+bevy_mod_billboard = "0.7.0"
 
 # For any non workspace package
 [profile.dev.package."*"]

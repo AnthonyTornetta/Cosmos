@@ -50,7 +50,6 @@ pub const SYSTEM_DIMENSIONS: f32 = SYSTEM_SECTORS as f32 * SECTOR_DIMENSIONS;
 ///
 /// There are a couple bad things that happen because of this. If you do any logic that
 /// changes a player's parent, make sure to put that logic **before** these systems.
-
 pub enum LocationPhysicsSet {
     /// Syncs locations & transforms
     DoPhysics,
@@ -98,6 +97,12 @@ impl Sector {
     /// Creates a new Sector at the given coordinates
     pub const fn new(x: SectorUnit, y: SectorUnit, z: SectorUnit) -> Self {
         Self(x, y, z)
+    }
+
+    #[inline]
+    /// Creates a new Sector with all coordinates at the given value
+    pub const fn splat(all: SectorUnit) -> Self {
+        Self(all, all, all)
     }
 
     #[inline]
@@ -158,19 +163,19 @@ impl Add<Self> for Sector {
 /// Datatype used to store system coordinates
 pub type SystemUnit = i64;
 
-#[derive(Default, Component, Debug, PartialEq, Serialize, Deserialize, Reflect, Clone, Copy)]
+#[derive(Default, Component, Debug, PartialEq, Serialize, Deserialize, Reflect, Clone, Copy, Hash, Eq)]
 /// A universe system represents a large area of sectors
-pub struct UniverseSystem(SystemUnit, SystemUnit, SystemUnit);
+pub struct SystemCoordinate(SystemUnit, SystemUnit, SystemUnit);
 
-impl Display for UniverseSystem {
+impl Display for SystemCoordinate {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_str(format!("{}, {}, {}", self.0, self.1, self.2).as_str())
     }
 }
 
-impl UniverseSystem {
+impl SystemCoordinate {
     #[inline]
-    /// Creates a new UniverseSystem at the given system coordinates
+    /// Creates a new [`SystemCoordinate`] at the given system coordinates
     pub fn new(x: SystemUnit, y: SystemUnit, z: SystemUnit) -> Self {
         Self(x, y, z)
     }
@@ -220,13 +225,33 @@ impl UniverseSystem {
     pub fn max_element(&self) -> SystemUnit {
         self.0.max(self.1).max(self.2)
     }
+
+    /// Returns the sector that would be in the negative-most coordinates of this system.
+    pub fn negative_most_sector(&self) -> Sector {
+        Sector::new(
+            self.x() * SYSTEM_SECTORS as SystemUnit,
+            self.y() * SYSTEM_SECTORS as SystemUnit,
+            self.z() * SYSTEM_SECTORS as SystemUnit,
+        )
+    }
+
+    /// Returns the [`SystemCoordinate`] that this [`Sector`] would be in
+    ///
+    /// TODO: Consider if this should be turned into an `impl From` block.
+    pub fn from_sector(sector: Sector) -> Self {
+        Self::new(
+            (sector.x() as f32 / SYSTEM_SECTORS as f32).floor() as SystemUnit,
+            (sector.y() as f32 / SYSTEM_SECTORS as f32).floor() as SystemUnit,
+            (sector.z() as f32 / SYSTEM_SECTORS as f32).floor() as SystemUnit,
+        )
+    }
 }
 
-impl Add<UniverseSystem> for UniverseSystem {
-    type Output = UniverseSystem;
+impl Add<SystemCoordinate> for SystemCoordinate {
+    type Output = SystemCoordinate;
 
-    fn add(self, rhs: UniverseSystem) -> Self::Output {
-        UniverseSystem(self.0 + rhs.0, self.1 + rhs.1, self.2 + rhs.2)
+    fn add(self, rhs: SystemCoordinate) -> Self::Output {
+        SystemCoordinate(self.0 + rhs.0, self.1 + rhs.1, self.2 + rhs.2)
     }
 }
 
@@ -317,8 +342,8 @@ impl Location {
     }
 
     /// Gets the system coordinates this location is in
-    pub fn get_system_coordinates(&self) -> UniverseSystem {
-        UniverseSystem(
+    pub fn get_system_coordinates(&self) -> SystemCoordinate {
+        SystemCoordinate(
             (self.sector.x() as f32 / SYSTEM_SECTORS as f32).floor() as SystemUnit,
             (self.sector.y() as f32 / SYSTEM_SECTORS as f32).floor() as SystemUnit,
             (self.sector.z() as f32 / SYSTEM_SECTORS as f32).floor() as SystemUnit,
@@ -329,6 +354,31 @@ impl Location {
     #[inline]
     pub fn sector(&self) -> Sector {
         self.sector
+    }
+
+    /// Gets the sector coordinates relative to its system as a [`Sector`] coordinate
+    #[inline]
+    pub fn relative_sector(&self) -> Sector {
+        Sector::new(
+            self.sector.x() % SYSTEM_SECTORS as SystemUnit
+                + if self.sector.x().is_negative() {
+                    SYSTEM_SECTORS as SystemUnit
+                } else {
+                    0
+                },
+            self.sector.y() % SYSTEM_SECTORS as SystemUnit
+                + if self.sector.y().is_negative() {
+                    SYSTEM_SECTORS as SystemUnit
+                } else {
+                    0
+                },
+            self.sector.z() % SYSTEM_SECTORS as SystemUnit
+                + if self.sector.z().is_negative() {
+                    SYSTEM_SECTORS as SystemUnit
+                } else {
+                    0
+                },
+        )
     }
 
     /// Ensures `self.local` is within [`-SECTOR_DIMENSIONS/2.0`, `SECTOR_DIMENSIONS/2.0`]

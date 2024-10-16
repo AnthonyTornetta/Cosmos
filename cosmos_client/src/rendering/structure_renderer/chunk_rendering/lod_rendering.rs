@@ -26,7 +26,7 @@ pub struct LodChunkRenderingChecker<'a> {
     pub lod_root_scale: CoordinateType,
 }
 
-impl<'a> LodChunkRenderingChecker<'a> {
+impl LodChunkRenderingChecker<'_> {
     fn inner_check_should_render(
         &self,
         chunk: &LodChunk,
@@ -126,7 +126,7 @@ fn check_block_should_render(
         || (other_block_id != this_block_id && blocks.from_numeric_id(other_block_id).is_see_through())
 }
 
-impl<'a> ChunkRendererBackend<LodChunk> for LodChunkRenderingChecker<'a> {
+impl ChunkRendererBackend<LodChunk> for LodChunkRenderingChecker<'_> {
     #[inline(always)]
     fn get_texture_index(&self, index: &BlockTextureIndex, neighbors: BlockNeighbors, face: BlockFace) -> Option<TextureIndex> {
         if self.scale > 8 {

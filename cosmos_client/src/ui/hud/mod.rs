@@ -17,9 +17,7 @@ use bevy::{
         AlignContent, JustifyContent, PositionType, Style, TargetCamera, UiRect, Val,
     },
 };
-use cosmos_core::{economy::Credits, netty::client::LocalPlayer};
-
-use crate::state::game_state::GameState;
+use cosmos_core::{economy::Credits, netty::client::LocalPlayer, state::GameState};
 
 use super::{
     reactivity::{BindValue, BindValues, ReactableFields},

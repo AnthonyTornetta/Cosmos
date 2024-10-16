@@ -21,13 +21,13 @@ use bevy::{
 use cosmos_core::{
     entities::player::Player,
     physics::location::{Location, Sector, SectorUnit, SECTOR_DIMENSIONS},
+    state::GameState,
     utils::random::random_range,
 };
 
 use crate::{
     persistence::loading::{LoadingBlueprintSystemSet, NeedsBlueprintLoaded},
     settings::ServerSettings,
-    state::GameState,
 };
 
 #[derive(Component)]

@@ -1,5 +1,4 @@
 use crate::asset::materials::MaterialsSystemSet;
-use crate::state::game_state::GameState;
 use crate::structure::planet::unload_chunks_far_from_players;
 use bevy::ecs::schedule::{IntoSystemSetConfigs, SystemSet};
 use bevy::prelude::{in_state, App, Res, ResMut, Resource, Update};
@@ -9,6 +8,7 @@ use cosmos_core::block::Block;
 use cosmos_core::netty::system_sets::NetworkingSystemsSet;
 use cosmos_core::registry::identifiable::Identifiable;
 use cosmos_core::registry::Registry;
+use cosmos_core::state::GameState;
 
 use super::{BlockMeshRegistry, MeshBuilder, MeshInformation};
 

@@ -13,14 +13,13 @@ use cosmos_core::{
         NettyChannelServer,
     },
     registry::Registry,
+    state::GameState,
     structure::{
         block_health::events::{BlockDestroyedEvent, BlockTakeDamageEvent},
         loading::StructureLoadingSet,
         Structure,
     },
 };
-
-use crate::state::GameState;
 
 use super::{planet::biosphere::biosphere_generation::BiosphereGenerationSet, shared::MeltingDownSet};
 

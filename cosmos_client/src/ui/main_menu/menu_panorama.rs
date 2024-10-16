@@ -6,8 +6,7 @@ use bevy::{
     prelude::*,
     render::render_resource::{TextureViewDescriptor, TextureViewDimension},
 };
-
-use crate::state::game_state::GameState;
+use cosmos_core::state::GameState;
 
 use super::MainMenuCamera;
 

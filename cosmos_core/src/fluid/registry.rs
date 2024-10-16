@@ -3,7 +3,10 @@
 use bevy::app::App;
 use serde::{Deserialize, Serialize};
 
-use crate::registry::{create_registry, identifiable::Identifiable};
+use crate::{
+    netty::sync::registry::sync_registry,
+    registry::{create_registry, identifiable::Identifiable},
+};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 /// A fluid
@@ -56,4 +59,5 @@ impl Identifiable for Fluid {
 
 pub(super) fn register(app: &mut App) {
     create_registry::<Fluid>(app, "cosmos:fluids");
+    sync_registry::<Fluid>(app);
 }

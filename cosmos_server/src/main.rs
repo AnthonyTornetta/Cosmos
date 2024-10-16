@@ -14,12 +14,14 @@ use bevy::{
 use bevy_mod_debugdump::schedule_graph;
 use bevy_rapier3d::plugin::{RapierContextInitialization, RapierPhysicsPlugin};
 use bevy_renet2::{transport::NetcodeServerPlugin, RenetServerPlugin};
-use cosmos_core::{physics::collision_handling::CosmosPhysicsFilter, plugin::cosmos_core_plugin::CosmosCorePluginGroup};
+use cosmos_core::{
+    netty::sync::registry::RegistrySyncInit, physics::collision_handling::CosmosPhysicsFilter,
+    plugin::cosmos_core_plugin::CosmosCorePluginGroup, state::GameState,
+};
 
 use iyes_perf_ui::PerfUiPlugin;
 use plugin::server_plugin::ServerPlugin;
 use settings::read_server_settings;
-use state::GameState;
 use thread_priority::{set_current_thread_priority, ThreadPriority};
 
 #[cfg(feature = "print-schedule")]
@@ -40,11 +42,9 @@ pub mod persistence;
 pub mod physics;
 pub mod plugin;
 pub mod projectiles;
-pub mod registry;
 pub mod rng;
 pub mod settings;
 pub mod shop;
-pub mod state;
 pub mod structure;
 pub mod universe;
 
@@ -94,6 +94,9 @@ fn main() {
             GameState::PostLoading,
             GameState::Playing,
             GameState::Playing,
+            RegistrySyncInit::Server {
+                playing_state: GameState::Playing,
+            },
         ))
         .add_plugins(
             RapierPhysicsPlugin::<CosmosPhysicsFilter>::default()

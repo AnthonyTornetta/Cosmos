@@ -3,8 +3,7 @@ use bevy::{
     prelude::{in_state, Commands, Condition, IntoSystemConfigs, NextState, Res, ResMut},
 };
 use bevy_renet2::renet2::{DisconnectReason, RenetClient};
-
-use crate::state::game_state::GameState;
+use cosmos_core::state::GameState;
 
 use super::MainMenuSubState;
 

@@ -2,12 +2,11 @@ use bevy::{
     app::App,
     prelude::{Camera3dBundle, Commands, OnEnter},
 };
+use cosmos_core::state::GameState;
 use iyes_perf_ui::{
     entries::{PerfUiFramerateEntries, PerfUiSystemEntries},
     prelude::*,
 };
-
-use crate::state::GameState;
 
 fn create_debug(mut commands: Commands) {
     commands.spawn((
