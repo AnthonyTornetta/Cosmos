@@ -11,6 +11,8 @@ use cosmos_core::physics::{
     player_world::{PlayerWorld, WorldWithin},
 };
 
+mod collider_disabling;
+
 /// Everything in the client is in the same world
 fn add_world_within(
     query: Query<Entity, (With<Location>, Without<WorldWithin>)>,
@@ -34,5 +36,7 @@ fn remove_gravity(mut commands: Commands, rapier_access: Query<Entity, With<Rapi
 }
 
 pub(super) fn register(app: &mut App) {
+    collider_disabling::register(app);
+
     app.add_systems(Update, add_world_within).add_systems(Startup, remove_gravity);
 }
