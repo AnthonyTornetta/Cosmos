@@ -13,7 +13,7 @@ use cosmos_core::{
 
 const N_SECTORS: f32 = 1.0;
 
-const REASON: &'static str = "cosmos:far_away";
+const REASON: &str = "cosmos:far_away";
 
 fn disable_colliders(
     mut commands: Commands,
@@ -37,10 +37,8 @@ fn disable_colliders(
                 disabled_rb.add_reason(REASON);
                 commands.entity(ent).insert(disabled_rb);
             }
-        } else {
-            if let Some(mut disabled_rb) = disabled_rb {
-                disabled_rb.remove_reason(REASON);
-            }
+        } else if let Some(mut disabled_rb) = disabled_rb {
+            disabled_rb.remove_reason(REASON);
         }
     }
 }

@@ -20,7 +20,7 @@ use super::{disable_rigid_body::DisableRigidBody, location::Location};
 /// At some point this may have to be based on the size of the entity. For now though, this is fine.
 const FREEZE_RADIUS: UnboundCoordinateType = 1;
 
-const REASON: &'static str = "cosmos:stop_near_unloaded_chunks";
+const REASON: &str = "cosmos:stop_near_unloaded_chunks";
 
 fn stop_near_unloaded_chunks(
     mut query: Query<(Entity, &Location, Option<&mut DisableRigidBody>), (Without<Asteroid>, Without<Planet>, Without<NeedsDespawned>)>,
