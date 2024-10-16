@@ -9,7 +9,11 @@ use cosmos_core::{
         block_events::{BlockBreakEvent, BlockEventsSet},
         blocks::fluid::FLUID_COLLISION_GROUP,
         Block,
-    }, ecs::NeedsDespawned, registry::Registry, state::GameState, structure::{
+    },
+    ecs::NeedsDespawned,
+    registry::Registry,
+    state::GameState,
+    structure::{
         coordinates::BlockCoordinate,
         shared::{DespawnWithStructure, MeltingDown},
         shields::SHIELD_COLLISION_GROUP,
@@ -22,7 +26,7 @@ use cosmos_core::{
             StructureSystem, StructureSystems, StructureSystemsSet, SystemActive,
         },
         Structure,
-    }
+    },
 };
 
 use super::{line_system::add_line_system, sync::register_structure_system};
