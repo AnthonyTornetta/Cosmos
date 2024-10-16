@@ -17,6 +17,8 @@ use cosmos_core::{
     state::GameState,
 };
 
+mod collider_disabling;
+
 const WORLD_SWITCH_DISTANCE: f32 = SECTOR_DIMENSIONS / 2.0;
 const WORLD_SWITCH_DISTANCE_SQRD: f32 = WORLD_SWITCH_DISTANCE * WORLD_SWITCH_DISTANCE;
 
@@ -419,6 +421,8 @@ fn player_changed_parent(
 }
 
 pub(super) fn register(app: &mut App) {
+    collider_disabling::register(app);
+
     app.configure_sets(Update, LocationPhysicsSet::DoPhysics)
         .add_systems(
             Update,

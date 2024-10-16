@@ -1,7 +1,7 @@
 //! Freezes entities that are near unloaded chunks so they don't fly into unloaded areas.
 
 use bevy::prelude::{App, Commands, Entity, GlobalTransform, PostUpdate, Query, With, Without};
-use bevy_rapier3d::prelude::{Collider, RigidBodyDisabled};
+use bevy_rapier3d::prelude::Collider;
 
 use crate::{
     ecs::NeedsDespawned,
@@ -15,18 +15,20 @@ use crate::{
     },
 };
 
-use super::location::Location;
+use super::{disable_rigid_body::DisableRigidBody, location::Location};
 
 /// At some point this may have to be based on the size of the entity. For now though, this is fine.
 const FREEZE_RADIUS: UnboundCoordinateType = 1;
 
+const REASON: &'static str = "cosmos:stop_near_unloaded_chunks";
+
 fn stop_near_unloaded_chunks(
-    query: Query<(Entity, &Location), (Without<Asteroid>, Without<Planet>, Without<NeedsDespawned>)>,
+    mut query: Query<(Entity, &Location, Option<&mut DisableRigidBody>), (Without<Asteroid>, Without<Planet>, Without<NeedsDespawned>)>,
     structures: Query<(Entity, &Structure, &Location, &GlobalTransform)>,
     has_collider: Query<(), With<Collider>>,
     mut commands: Commands,
 ) {
-    for (ent, loc) in query.iter() {
+    for (ent, loc, mut disable_rb) in query.iter_mut() {
         let mut is_fixed = false;
         for (structure_ent, structure, structure_loc, g_trans) in structures.iter() {
             if structure_ent == ent {
@@ -72,14 +74,22 @@ fn stop_near_unloaded_chunks(
                 });
 
             if near_unloaded_chunk {
-                commands.entity(ent).insert(RigidBodyDisabled);
+                if let Some(disable_rb) = disable_rb.as_mut() {
+                    disable_rb.add_reason(REASON);
+                } else {
+                    let mut disable_rb = DisableRigidBody::default();
+                    disable_rb.add_reason(REASON);
+                    commands.entity(ent).insert(disable_rb);
+                }
                 is_fixed = true;
                 break;
             }
         }
 
         if !is_fixed {
-            commands.entity(ent).remove::<RigidBodyDisabled>();
+            if let Some(disable_rb) = disable_rb.as_mut() {
+                disable_rb.remove_reason(REASON);
+            }
         }
     }
 }

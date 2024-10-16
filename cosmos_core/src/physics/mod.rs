@@ -3,6 +3,7 @@
 use bevy::prelude::{App, States};
 pub mod block_colliders;
 pub mod collision_handling;
+pub mod disable_rigid_body;
 pub mod gravity_system;
 pub mod location;
 pub mod player_world;
@@ -17,4 +18,5 @@ pub(super) fn register<T: States + Copy>(app: &mut App, post_loading_state: T) {
     collision_handling::register(app);
     stop_near_unloaded_chunks::register(app);
     block_colliders::register(app, post_loading_state);
+    disable_rigid_body::register(app);
 }
