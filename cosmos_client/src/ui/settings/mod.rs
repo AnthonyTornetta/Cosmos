@@ -126,6 +126,7 @@ fn create_settings_screen(
                 let category_display_name = match category {
                     SettingCategory::Graphics => "Graphics",
                     SettingCategory::Mouse => "Mouse",
+                    SettingCategory::Audio => "Audio",
                 };
 
                 p.spawn(TextBundle {

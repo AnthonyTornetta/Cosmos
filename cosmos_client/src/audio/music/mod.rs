@@ -3,7 +3,10 @@
 use bevy::prelude::*;
 use bevy_inspector_egui::prelude::*;
 use bevy_kira_audio::prelude::*;
+use cosmos_core::registry::Registry;
 use dynamic_music::MusicAtmosphere;
+
+use crate::settings::{Setting, SettingsRegistry, SettingsSet};
 
 pub mod dynamic_music;
 
@@ -18,14 +21,14 @@ pub struct VolumeSetting(#[inspector(min = 0.0, max = 1.0)] f64);
 impl VolumeSetting {
     /// Returns the volume as a decimal percent [0.0, 1.0]
     pub fn percent(&self) -> f64 {
-        self.0
+        self.0.powf(2.0) * 0.2 // 1.0 is way too loud
     }
 }
 
 impl Default for VolumeSetting {
-    /// Initializes the volume to 0.2 (20%).
+    /// Initializes the volume to 1.0 (100%).
     fn default() -> Self {
-        Self(0.2) // 1.0 is way too loud - in the future introduce a global volume
+        Self(1.0)
     }
 }
 
@@ -50,7 +53,7 @@ fn adjust_volume(
         return;
     };
 
-    instance.set_volume(volume.0, AudioTween::default());
+    instance.set_volume(volume.percent(), AudioTween::default());
 }
 
 #[derive(Event)]
@@ -58,6 +61,10 @@ fn adjust_volume(
 pub struct PlayMusicEvent {
     /// The atmosphere of the song that should be played
     pub atmosphere: MusicAtmosphere,
+}
+
+fn load_volume(settings: Res<Registry<Setting>>, mut music_volume: ResMut<VolumeSetting>) {
+    music_volume.0 = settings.i32_or("cosmos:music_volume", 100) as f64 / 100.0;
 }
 
 pub(super) fn register(app: &mut App) {
@@ -77,4 +84,6 @@ pub(super) fn register(app: &mut App) {
         .init_resource::<VolumeSetting>()
         .register_type::<VolumeSetting>()
         .add_event::<PlayMusicEvent>();
+
+    app.add_systems(Update, (load_volume).in_set(SettingsSet::LoadSettings));
 }
