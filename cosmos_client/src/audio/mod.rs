@@ -26,6 +26,8 @@ use bevy::{
 };
 use bevy_kira_audio::{prelude::*, AudioSystemSet};
 
+pub mod music;
+
 /// Contains information for a specific audio emission.
 ///
 /// Do make sure the [`instance`] is unique to this [`AudioEmission`], as this directly modifies that instance to get the 3d effect.
@@ -279,6 +281,8 @@ pub enum AudioSet {
 }
 
 pub(super) fn register(app: &mut App) {
+    music::register(app);
+
     app.configure_sets(Update, (AudioSet::CreateSounds, AudioSet::ProcessSounds).chain());
 
     app.add_systems(PreUpdate, cleanup_stopped_spacial_instances.in_set(AudioSystemSet::InstanceCleanup))
