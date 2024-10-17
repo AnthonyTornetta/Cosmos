@@ -5,8 +5,11 @@ use std::{fs, time::Duration};
 use bevy::{
     app::Update,
     asset::{AssetServer, Handle},
-    log::{error, warn},
-    prelude::{not, on_event, resource_exists, App, Commands, EventReader, EventWriter, IntoSystemConfigs, OnEnter, Res, ResMut, Resource},
+    log::{error, info, warn},
+    prelude::{
+        in_state, not, on_event, resource_exists, App, Commands, EventReader, EventWriter, IntoSystemConfigs, OnEnter, Res, ResMut,
+        Resource,
+    },
     time::Time,
 };
 use bevy_kira_audio::{Audio, AudioControl, AudioEasing, AudioSource, AudioTween};
@@ -84,15 +87,20 @@ fn load_default_songs(asset_server: Res<AssetServer>, mut music_controller: ResM
                     continue;
                 };
 
-                let Ok(music_def) = serde_json::from_str::<MusicDefinition>(&info_file) else {
-                    error!("Invalid music definition file for {:?}", def_path);
-                    continue;
+                let music_def = match serde_json::from_str::<MusicDefinition>(&info_file) {
+                    Ok(music_def) => music_def,
+                    Err(e) => {
+                        error!("Invalid music definition file for {:?}\n{e:?}", def_path);
+                        continue;
+                    }
                 };
 
                 let song = BackgroundSong {
                     atmosphere: music_def.atmosphere,
                     handle: asset_server.load(format!("cosmos/sounds/music/{}", path.file_name().expect("How?").to_str().unwrap())),
                 };
+
+                info!("Adding song {song:?}");
 
                 music_controller.add_song(song);
             }
@@ -155,7 +163,7 @@ pub(super) fn register(app: &mut App) {
         Update,
         (trigger_music_playing, start_playing.run_if(on_event::<PlayMusicEvent>()))
             .chain()
-            .run_if(not(resource_exists::<PlayingBackgroundSong>))
-            .run_if(resource_exists::<MusicController>),
+            .run_if(in_state(GameState::Playing))
+            .run_if(not(resource_exists::<PlayingBackgroundSong>)),
     );
 }
