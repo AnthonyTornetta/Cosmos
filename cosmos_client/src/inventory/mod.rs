@@ -23,6 +23,7 @@ use crate::{
     ui::{
         components::{
             scollable_container::ScrollBundle,
+            show_cursor::no_open_menus,
             window::{GuiWindow, UiWindowSystemSet, WindowBundle},
         },
         item_renderer::{ItemRenderLayer, RenderItem},
@@ -964,7 +965,7 @@ pub(super) fn register(app: &mut App) {
     .add_systems(
         Update,
         (
-            drop_item,
+            drop_item.run_if(no_open_menus),
             (toggle_inventory, close_button_system)
                 .chain()
                 .in_set(InventorySet::ToggleInventory),

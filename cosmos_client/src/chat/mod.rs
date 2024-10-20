@@ -168,7 +168,6 @@ fn setup_chat_box(mut commands: Commands, default_font: Res<DefaultFont>) {
                             }
                             .into(),
                             scrollbar_background_color: Color::NONE,
-                            ..Default::default()
                         },
                         ..Default::default()
                     },
