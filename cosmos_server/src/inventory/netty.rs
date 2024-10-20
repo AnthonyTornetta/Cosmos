@@ -5,14 +5,14 @@ use bevy::{
     log::warn,
     math::{Quat, Vec3},
     prelude::{
-        in_state, App, Changed, Commands, Entity, GlobalTransform, IntoSystemConfigs, Query, RemovedComponents, Res, ResMut, Update, With,
+        in_state, App, Changed, Commands, Entity, GlobalTransform, IntoSystemConfigs, Query, RemovedComponents, Res, ResMut, Update,
     },
 };
 use bevy_rapier3d::prelude::Velocity;
 use bevy_renet2::renet2::RenetServer;
 use cosmos_core::{
     ecs::bundles::BundleStartingRotation,
-    entities::player::{creative::Creative, Player},
+    entities::player::Player,
     inventory::{
         netty::{ClientInventoryMessages, InventoryIdentifier, ServerInventoryMessages},
         HeldItemStack, Inventory,
