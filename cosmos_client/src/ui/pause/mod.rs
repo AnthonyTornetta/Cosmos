@@ -274,15 +274,24 @@ fn resume(mut commands: Commands, q_pause_menu: Query<Entity, With<PauseMenu>>) 
     commands.remove_resource::<Paused>();
 }
 
+#[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
+/// When the `Escape` key is pressed to open the pause menu, this set will be called
+pub enum CloseMenusSet {
+    /// This set is when close any menus open will be closed when `Escape` is pressed.
+    CloseMenus,
+}
+
 pub(super) fn register(app: &mut App) {
     register_button::<ResumeButtonEvent>(app);
     register_button::<DisconnectButtonEvent>(app);
     register_button::<SettingsButtonEvent>(app);
 
+    app.configure_sets(Update, CloseMenusSet::CloseMenus);
+
     app.add_systems(
         Update,
         (
-            toggle_pause_menu,
+            toggle_pause_menu.in_set(CloseMenusSet::CloseMenus),
             settings_clicked.run_if(on_event::<SettingsButtonEvent>()).after(UiSystemSet::DoUi),
         )
             .chain()

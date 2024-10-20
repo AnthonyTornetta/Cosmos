@@ -1,18 +1,22 @@
+//! Client-side chat logic
+
 use bevy::{
     a11y::Focus,
     app::Update,
-    color::{Color, Srgba},
+    color::{Alpha, Color, Srgba},
     core::Name,
     log::error,
     prelude::{
-        App, BuildChildren, Commands, Component, Entity, EventReader, IntoSystemConfigs, NodeBundle, OnEnter, Query, Res, ResMut,
-        TextBundle, Visibility, With,
+        App, BuildChildren, Changed, Children, Commands, Component, Entity, EventReader, IntoSystemConfigs, NodeBundle, OnEnter, Query,
+        Res, ResMut, TextBundle, Visibility, With, Without,
     },
     text::{BreakLineOn, Text, TextStyle},
-    ui::{BackgroundColor, FlexDirection, Style, Val},
+    time::Time,
+    ui::{BackgroundColor, FlexDirection, Overflow, OverflowAxis, Style, Val},
 };
 use cosmos_core::{
     chat::{ClientSendChatMessageEvent, ServerSendChatMessageEvent},
+    ecs::NeedsDespawned,
     netty::{
         sync::events::client_event::{NettyEventReceived, NettyEventWriter},
         system_sets::NetworkingSystemsSet,
@@ -29,6 +33,7 @@ use crate::{
             text_input::{InputValue, TextInput, TextInputBundle},
         },
         font::DefaultFont,
+        pause::CloseMenusSet,
         CloseMethod, OpenMenu,
     },
 };
@@ -47,6 +52,81 @@ struct SendingChatMessageBox;
 
 #[derive(Component)]
 struct ChatMessage(f32);
+
+#[derive(Component)]
+struct ChatDisplayReceivedMessagesContainer;
+
+#[derive(Component)]
+struct ChatDisplay;
+
+fn toggle_chat_display_visibility(
+    mut q_chat_display: Query<&mut Visibility, (Without<ChatContainer>, With<ChatDisplay>)>,
+    q_chat_box: Query<&Visibility, (Changed<Visibility>, With<ChatContainer>)>,
+) {
+    let Ok(changed_vis) = q_chat_box.get_single() else {
+        return;
+    };
+
+    let Ok(mut vis) = q_chat_display.get_single_mut() else {
+        return;
+    };
+
+    match *changed_vis {
+        Visibility::Hidden => *vis = Visibility::Inherited,
+        _ => *vis = Visibility::Hidden,
+    };
+}
+
+fn setup_chat_display(mut commands: Commands) {
+    commands
+        .spawn((
+            ChatDisplay,
+            Name::new("Chat Display"),
+            NodeBundle {
+                style: Style {
+                    top: Val::Percent(20.0),
+                    width: Val::Percent(45.0),
+                    height: Val::Percent(60.0),
+                    overflow: Overflow {
+                        x: OverflowAxis::Hidden,
+                        y: OverflowAxis::Hidden,
+                    },
+                    flex_direction: FlexDirection::ColumnReverse,
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+        ))
+        .with_children(|p| {
+            p.spawn((
+                ChatDisplayReceivedMessagesContainer,
+                NodeBundle {
+                    style: Style {
+                        flex_direction: FlexDirection::Column,
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+            ));
+        });
+}
+
+const CHAT_MSG_ALIVE_SEC: f32 = 10.0;
+
+fn fade_chat_messages(q_time: Res<Time>, mut q_chat_msg: Query<(Entity, &mut Text, &mut ChatMessage)>, mut commands: Commands) {
+    let delta = q_time.delta_seconds();
+    for (ent, mut text, mut chat_msg) in q_chat_msg.iter_mut() {
+        chat_msg.0 -= delta;
+
+        if chat_msg.0 <= 0.0 {
+            commands.entity(ent).insert(NeedsDespawned);
+        } else {
+            for sec in &mut text.sections {
+                sec.style.color.set_alpha(chat_msg.0 / CHAT_MSG_ALIVE_SEC);
+            }
+        }
+    }
+}
 
 fn setup_chat_box(mut commands: Commands, default_font: Res<DefaultFont>) {
     commands
@@ -157,6 +237,7 @@ fn display_messages(
     default_font: Res<DefaultFont>,
     mut nevr_chat_msg: EventReader<NettyEventReceived<ServerSendChatMessageEvent>>,
     q_chat_box: Query<Entity, With<ReceivedMessagesContainer>>,
+    q_display_box: Query<Entity, With<ChatDisplayReceivedMessagesContainer>>,
     mut commands: Commands,
 ) {
     for ev in nevr_chat_msg.read() {
@@ -168,8 +249,13 @@ fn display_messages(
             font_size: 24.0,
         };
 
-        let Ok(parent_ent) = q_chat_box.get_single() else {
+        let Ok(chat_box) = q_chat_box.get_single() else {
             error!("No chat box?");
+            return;
+        };
+
+        let Ok(display_box) = q_display_box.get_single() else {
+            error!("No display box?");
             return;
         };
 
@@ -180,11 +266,22 @@ fn display_messages(
             .spawn((
                 Name::new("Received chat message"),
                 TextBundle {
+                    text: text.clone(),
+                    ..Default::default()
+                },
+            ))
+            .set_parent(chat_box);
+
+        commands
+            .spawn((
+                Name::new("Display received chat message"),
+                ChatMessage(CHAT_MSG_ALIVE_SEC),
+                TextBundle {
                     text,
                     ..Default::default()
                 },
             ))
-            .set_parent(parent_ent);
+            .set_parent(display_box);
     }
 }
 
@@ -261,13 +358,34 @@ fn toggle_chat_box(
     }
 }
 
+/// The maximum number of chat messages that can be stored in the chat box history.
+const MAX_MESSAGES: usize = 100;
+
+fn remove_very_old_messages(mut commands: Commands, q_children: Query<&Children, With<ReceivedMessagesContainer>>) {
+    let Ok(children) = q_children.get_single() else {
+        return;
+    };
+
+    for ent in children.iter().take(children.len().max(MAX_MESSAGES) - MAX_MESSAGES) {
+        commands.entity(*ent).insert(NeedsDespawned);
+    }
+}
+
 pub(super) fn register(app: &mut App) {
-    app.add_systems(OnEnter(GameState::Playing), setup_chat_box);
+    app.add_systems(OnEnter(GameState::Playing), (setup_chat_display, setup_chat_box));
 
     app.add_systems(
         Update,
-        (display_messages, send_chat_msg, toggle_chat_box)
+        (
+            display_messages,
+            send_chat_msg,
+            toggle_chat_box,
+            fade_chat_messages,
+            remove_very_old_messages,
+            toggle_chat_display_visibility,
+        )
             .chain()
+            .after(CloseMenusSet::CloseMenus)
             .in_set(NetworkingSystemsSet::Between),
     );
 }

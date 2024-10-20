@@ -1,3 +1,5 @@
+//! Server-side chat logic
+
 use bevy::{
     app::Update,
     log::info,

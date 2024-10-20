@@ -5,7 +5,7 @@ use bevy::{
         system::SystemParam,
     },
     log::{error, warn},
-    prelude::{resource_exists, Deref, Event, EventReader, EventWriter, IntoSystemConfigs, Res, ResMut},
+    prelude::{resource_exists, Event, EventReader, EventWriter, IntoSystemConfigs, Res, ResMut},
 };
 use renet2::RenetClient;
 

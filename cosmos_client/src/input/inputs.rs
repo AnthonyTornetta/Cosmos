@@ -123,7 +123,9 @@ pub enum CosmosInputs {
     /// For debug only - teleports player to the selected spot on the map
     TeleportSelected,
 
+    /// Toggles the send-chat window
     ToggleChat,
+    /// Sends the chat message the user has typed - does not close the chat window
     SendChatMessage,
 }
 
