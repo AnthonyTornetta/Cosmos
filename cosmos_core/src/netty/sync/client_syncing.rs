@@ -48,8 +48,6 @@ fn client_deserialize_component<T: SyncableComponent>(
     mapping: Res<NetworkMapping>,
     q_t: Query<&T>,
 ) {
-    // println!("{components_registry:?}");
-
     for ev in ev_reader.read() {
         let synced_id = components_registry
             .try_from_numeric_id(ev.component_id)

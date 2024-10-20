@@ -33,7 +33,7 @@ use super::Disabled;
 #[derive(Component, Default, Debug)]
 /// Put content you want to scroll through as a child of this
 pub struct ScrollBox {
-    /// The amount that is scrolled by
+    /// The amount that is scrolled by (in pixels)
     pub scroll_amount: f32,
     /// The styles of this scroll box
     pub styles: ScrollerStyles,
@@ -101,6 +101,7 @@ fn on_add_scrollbar(mut commands: Commands, mut q_added_button: Query<(Entity, &
                         position_type: PositionType::Absolute,
                         flex_direction: FlexDirection::Column,
                         width: Val::Percent(100.0),
+                        min_height: Val::Percent(100.0),
                         ..Default::default()
                     },
                     ..Default::default()

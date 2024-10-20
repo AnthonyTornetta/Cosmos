@@ -22,7 +22,7 @@ impl Player {
     }
 
     /// Gets the player's name
-    pub fn name(&self) -> &String {
+    pub fn name(&self) -> &str {
         &self.name
     }
 

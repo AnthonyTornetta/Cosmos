@@ -138,6 +138,7 @@ fn toggle_map(
     mut q_map_camera: Query<(Entity, &mut Transform), With<MapCamera>>,
     mut nevw_system_map: NettyEventWriter<RequestSystemMap>,
     mut nevw_galaxy_map: NettyEventWriter<RequestGalaxyMap>,
+    q_open_menus: Query<(), With<OpenMenu>>,
 ) {
     if !input_handler.check_just_pressed(CosmosInputs::ToggleMap) {
         return;
@@ -149,6 +150,11 @@ fn toggle_map(
 
     if let Ok(galaxy_map_entity) = q_galaxy_map_display.get_single() {
         commands.entity(galaxy_map_entity).insert(NeedsDespawned);
+        return;
+    }
+
+    if !q_open_menus.is_empty() {
+        // Don't open the map while there are other menus open
         return;
     }
 

@@ -82,7 +82,7 @@ pub(super) fn handle_server_events(
                         entity,
                         id: player.id(),
                         body,
-                        name: player.name().clone(),
+                        name: player.name().to_owned(),
                         render_distance: Some(*render_distance),
                     });
 

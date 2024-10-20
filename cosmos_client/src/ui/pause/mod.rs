@@ -19,7 +19,7 @@ use super::{
         show_cursor::ShowCursor,
     },
     settings::{NeedsSettingsAdded, SettingsCancelButtonEvent, SettingsDoneButtonEvent, SettingsMenuSet},
-    OpenMenu, UiSystemSet, UiTopRoot,
+    CloseMethod, OpenMenu, UiSystemSet, UiTopRoot,
 };
 
 #[derive(Resource)]
@@ -31,7 +31,7 @@ struct PauseMenu;
 
 fn toggle_pause_menu(
     mut commands: Commands,
-    q_open_menus: Query<(Entity, &OpenMenu)>,
+    mut q_open_menus: Query<(Entity, &OpenMenu, &mut Visibility)>,
     q_pause_menu: Query<Entity, With<PauseMenu>>,
     input_handler: InputChecker,
     q_ui_root: Query<Entity, With<UiTopRoot>>,
@@ -41,8 +41,13 @@ fn toggle_pause_menu(
         return;
     }
 
-    if !q_open_menus.is_empty() {
-        if close_topmost_menus(&q_open_menus, &mut commands) {
+    if !q_open_menus
+        .iter()
+        .map(|x| x.2 != Visibility::Hidden || x.1.close_method() != CloseMethod::Visibility)
+        .next()
+        .is_some()
+    {
+        if close_topmost_menus(&mut q_open_menus, &mut commands) {
             if let Ok(ent) = q_pause_menu.get_single() {
                 commands.entity(ent).insert(Visibility::Visible);
             }
@@ -177,15 +182,27 @@ impl ButtonEvent for DisconnectButtonEvent {
     }
 }
 
-fn close_topmost_menus(q_open_menus: &Query<(Entity, &OpenMenu)>, commands: &mut Commands) -> bool {
-    let mut open = q_open_menus.iter().collect::<Vec<(Entity, &OpenMenu)>>();
+fn close_topmost_menus(q_open_menus: &mut Query<(Entity, &OpenMenu, &mut Visibility)>, commands: &mut Commands) -> bool {
+    let mut open = q_open_menus
+        .iter_mut()
+        .filter(|(_, open_menu, visibility)| open_menu.close_method() != CloseMethod::Visibility || **visibility != Visibility::Hidden)
+        .collect::<Vec<(Entity, &OpenMenu, Mut<Visibility>)>>();
+
     open.sort_by(|a, b| b.1.level().cmp(&a.1.level()));
     let topmost = open[0].1.level();
-    for (ent, open_menu) in open.iter() {
+    for (ent, open_menu, mut visibility) in open {
         if open_menu.level() != topmost {
             return false;
         }
-        commands.entity(*ent).insert(NeedsDespawned);
+
+        match open_menu.close_method() {
+            CloseMethod::Despawn => {
+                commands.entity(ent).insert(NeedsDespawned);
+            }
+            CloseMethod::Visibility => {
+                *visibility = Visibility::Hidden;
+            }
+        }
     }
 
     true
