@@ -41,12 +41,7 @@ fn toggle_pause_menu(
         return;
     }
 
-    if !q_open_menus
-        .iter()
-        .map(|x| x.2 != Visibility::Hidden || x.1.close_method() != CloseMethod::Visibility)
-        .next()
-        .is_some()
-    {
+    if !q_open_menus.is_empty() {
         if close_topmost_menus(&mut q_open_menus, &mut commands) {
             if let Ok(ent) = q_pause_menu.get_single() {
                 commands.entity(ent).insert(Visibility::Visible);
@@ -200,6 +195,12 @@ fn close_topmost_menus(q_open_menus: &mut Query<(Entity, &OpenMenu, &mut Visibil
                 commands.entity(ent).insert(NeedsDespawned);
             }
             CloseMethod::Visibility => {
+                commands
+                    .entity(ent)
+                    .remove::<OpenMenu>()
+                    // Typically ShowCursor is used in conjunction w/ OpenMenu. Maybe these should
+                    // be combined at some point?
+                    .remove::<ShowCursor>();
                 *visibility = Visibility::Hidden;
             }
         }

@@ -3,13 +3,13 @@ use bevy::{
     app::Update,
     color::{Color, Srgba},
     core::Name,
-    log::{error, info},
+    log::error,
     prelude::{
         App, BuildChildren, Commands, Component, Entity, EventReader, IntoSystemConfigs, NodeBundle, OnEnter, Query, Res, ResMut,
         TextBundle, Visibility, With,
     },
     text::{BreakLineOn, Text, TextStyle},
-    ui::{AlignItems, BackgroundColor, FlexDirection, Style, Val},
+    ui::{BackgroundColor, FlexDirection, Style, Val},
 };
 use cosmos_core::{
     chat::{ClientSendChatMessageEvent, ServerSendChatMessageEvent},
@@ -42,11 +42,16 @@ struct ReceivedMessagesContainer;
 #[derive(Component)]
 struct ChatScrollContainer;
 
+#[derive(Component)]
+struct SendingChatMessageBox;
+
+#[derive(Component)]
+struct ChatMessage(f32);
+
 fn setup_chat_box(mut commands: Commands, default_font: Res<DefaultFont>) {
     commands
         .spawn((
             ChatContainer,
-            OpenMenu::with_close_method(0, CloseMethod::Visibility),
             Name::new("Chat Container"),
             NodeBundle {
                 style: Style {
@@ -148,12 +153,6 @@ fn setup_chat_box(mut commands: Commands, default_font: Res<DefaultFont>) {
         });
 }
 
-#[derive(Component)]
-struct SendingChatMessageBox;
-
-#[derive(Component)]
-struct ChatMessage(f32);
-
 fn display_messages(
     default_font: Res<DefaultFont>,
     mut nevr_chat_msg: EventReader<NettyEventReceived<ServerSendChatMessageEvent>>,
@@ -227,19 +226,27 @@ fn toggle_chat_box(
     inputs: InputChecker,
     mut commands: Commands,
     mut focus: ResMut<Focus>,
+    q_open_menus: Query<(), With<OpenMenu>>,
 ) {
     if inputs.check_just_pressed(CosmosInputs::ToggleChat) {
         let Ok((chat_box_ent, mut cb)) = q_chat_box.get_single_mut() else {
             return;
         };
 
-        let Ok((input_ent, mut input_value)) = q_input_value.get_single_mut() else {
-            return;
-        };
-        input_value.set_value("");
-
         *cb = if *cb == Visibility::Hidden {
-            commands.entity(chat_box_ent).insert(ShowCursor);
+            if !q_open_menus.is_empty() {
+                return;
+            }
+
+            let Ok((input_ent, mut input_value)) = q_input_value.get_single_mut() else {
+                return;
+            };
+            input_value.set_value("");
+
+            commands
+                .entity(chat_box_ent)
+                .insert(ShowCursor)
+                .insert(OpenMenu::with_close_method(0, CloseMethod::Visibility));
             focus.0 = Some(input_ent);
             if let Ok(mut scrollbox) = q_scroll_box.get_single_mut() {
                 // Start them at the bottom of the chat messages
@@ -247,7 +254,7 @@ fn toggle_chat_box(
             }
             Visibility::Inherited
         } else {
-            commands.entity(chat_box_ent).remove::<ShowCursor>();
+            commands.entity(chat_box_ent).remove::<ShowCursor>().remove::<OpenMenu>();
             focus.0 = None;
             Visibility::Hidden
         };

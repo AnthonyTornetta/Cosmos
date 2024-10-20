@@ -185,7 +185,7 @@ fn on_interact_slider(
         ),
         Without<Disabled>,
     >,
-    mut q_container: Query<(&mut Style, &Node)>,
+    q_container: Query<&Node>,
     input: Res<ButtonInput<KeyCode>>,
     scale: Res<UiScale>,
     mouse_btns: Res<ButtonInput<MouseButton>>,
@@ -198,7 +198,7 @@ fn on_interact_slider(
                 continue;
             }
 
-            let Ok((mut style, contents_node)) = q_container.get_mut(contents_container.0) else {
+            let Ok(contents_node) = q_container.get(contents_container.0) else {
                 error!("This should never happen - contents has no style/node.");
                 continue;
             };
@@ -236,7 +236,7 @@ fn on_interact_slider(
                 continue;
             }
 
-            let Ok((mut style, contents_node)) = q_container.get_mut(contents_container.0) else {
+            let Ok(contents_node) = q_container.get(contents_container.0) else {
                 error!("This should never happen - contents has no style/node.");
                 continue;
             };

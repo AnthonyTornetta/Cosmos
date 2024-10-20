@@ -245,7 +245,14 @@ fn send_key_inputs(
         }
 
         if !inputs.pressed(KeyCode::ControlLeft) && !inputs.pressed(KeyCode::ControlRight) {
-            if let Key::Character(smol_str) = &pressed.logical_key {
+            let smol_str = match &pressed.logical_key {
+                Key::Character(smol_str) => Some(String::from(smol_str.clone())),
+                Key::Space => Some(" ".to_owned()),
+                Key::Tab => Some("\t".to_owned()),
+                _ => None,
+            };
+
+            if let Some(smol_str) = smol_str {
                 let mut new_value = text.0.clone();
                 let new_cursor_pos;
 
@@ -253,7 +260,7 @@ fn send_key_inputs(
                     let replace_string = smol_str;
                     new_cursor_pos = range.start + replace_string.len();
 
-                    text.0.replace_range(range, replace_string);
+                    text.0.replace_range(range, &replace_string);
                 } else if focused_input_field.cursor_pos == text.len() {
                     new_value.push_str(smol_str.as_str());
 
