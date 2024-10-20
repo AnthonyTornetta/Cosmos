@@ -3,6 +3,7 @@
 //! This compresses items before their usage & decompresses them before deserializing to save a ton
 //! of space + bits sent over the network.
 
+use bevy::log::error;
 use serde::{de::DeserializeOwned, Serialize};
 
 /// Serializes the data to be sent - compresses it if needed
@@ -18,5 +19,11 @@ pub fn deserialize<T: DeserializeOwned>(raw: &[u8]) -> Result<T, Box<bincode::Er
         return Err(Box::new(bincode::ErrorKind::Custom("Unable to decompress".into())));
     };
 
-    bincode::deserialize::<T>(&decompressed)
+    let res = bincode::deserialize::<T>(&decompressed);
+
+    if res.is_err() {
+        error!("Error deserializing - decompressed form: {:?}", decompressed);
+    }
+
+    res
 }

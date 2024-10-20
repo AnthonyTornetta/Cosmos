@@ -9,7 +9,7 @@ use bevy::{
 };
 use renet2::RenetClient;
 
-use crate::registry::Registry;
+use crate::{netty::NettyChannelServer, registry::Registry};
 use crate::{
     netty::{cosmos_encoder, system_sets::NetworkingSystemsSet, NettyChannelClient},
     registry::identifiable::Identifiable,
@@ -98,7 +98,7 @@ fn send_events<T: NettyEvent>(
 }
 
 fn receive_events(mut client: ResMut<RenetClient>, mut evw_got_event: EventWriter<GotNetworkEvent>) {
-    while let Some(message) = client.receive_message(NettyChannelClient::NettyEvent) {
+    while let Some(message) = client.receive_message(NettyChannelServer::NettyEvent) {
         let Some(msg) = cosmos_encoder::deserialize::<NettyEventMessage>(&message)
             .map(Some)
             .unwrap_or_else(|e| {
