@@ -484,7 +484,7 @@ fn get_entity_identifier_info(
             maybe_data_ent.map(|x| (x, x))
         }),
         ComponentEntityIdentifier::BlockData {
-            identifier,
+            mut identifier,
             server_data_entity,
         } => network_mapping
             .client_from_server(&server_data_entity)
@@ -500,7 +500,7 @@ fn get_entity_identifier_info(
                     );
 
                     return network_mapping
-                        .client_from_server(&identifier.structure_entity)
+                        .client_from_server(&identifier.block.structure())
                         .and_then(|structure_entity| {
                             let mut structure = q_structure.get_mut(structure_entity).ok()?;
                             let data_entity = structure.get_or_create_block_data_for_block_id(
@@ -509,12 +509,13 @@ fn get_entity_identifier_info(
                                 commands,
                             )?;
 
+                            identifier.block.set_structure(structure_entity);
+
                             network_mapping.add_mapping(data_entity, server_data_entity);
 
                             evw_block_data_changed.send(BlockDataChangedEvent {
                                 block: identifier.block,
                                 block_data_entity: Some(data_entity),
-                                structure_entity,
                             });
 
                             Some((data_entity, data_entity))
@@ -524,14 +525,13 @@ fn get_entity_identifier_info(
                 evw_block_data_changed.send(BlockDataChangedEvent {
                     block: identifier.block,
                     block_data_entity: Some(x),
-                    structure_entity: bd.identifier.structure_entity,
                 });
 
                 Some((x, x))
             })
             .unwrap_or_else(|| {
                 network_mapping
-                    .client_from_server(&identifier.structure_entity)
+                    .client_from_server(&identifier.block.structure())
                     .and_then(|structure_entity| {
                         // We could either be
 
@@ -559,10 +559,11 @@ fn get_entity_identifier_info(
 
                         network_mapping.add_mapping(data_entity, server_data_entity);
 
+                        identifier.block.set_structure(structure_entity);
+
                         evw_block_data_changed.send(BlockDataChangedEvent {
                             block: identifier.block,
                             block_data_entity: Some(data_entity),
-                            structure_entity,
                         });
 
                         Some((data_entity, data_entity))

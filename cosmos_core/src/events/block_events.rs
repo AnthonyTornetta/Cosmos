@@ -42,8 +42,6 @@ pub struct BlockDataChangedEvent {
     pub block_data_entity: Option<Entity>,
     /// The block this is referring to
     pub block: StructureBlock,
-    /// The structure's entity
-    pub structure_entity: Entity,
 }
 
 #[derive(SystemParam)]

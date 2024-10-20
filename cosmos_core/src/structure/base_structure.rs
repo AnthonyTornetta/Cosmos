@@ -492,7 +492,7 @@ impl BaseStructure {
 
             if let Some(structure_entity) = self.get_entity() {
                 if let Some((take_damage_event_writer, destroyed_event_writer)) = event_writers {
-                    let block = StructureBlock::new(coords);
+                    let block = StructureBlock::new(coords, structure_entity);
 
                     take_damage_event_writer.send(BlockTakeDamageEvent {
                         structure_entity,
@@ -854,8 +854,7 @@ impl BaseStructure {
             if let Some(structure_entity) = self.get_entity() {
                 evw_block_data_changed.send(BlockDataChangedEvent {
                     block_data_entity: self.block_data(coords),
-                    block: StructureBlock::new(coords),
-                    structure_entity,
+                    block: StructureBlock::new(coords, structure_entity),
                 });
             }
         }
