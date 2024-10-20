@@ -52,7 +52,7 @@ fn fill_inventory_from_kit(
         return;
     };
 
-    let kit = serde_json::from_str::<Vec<KitEntry>>(&kit).map(|x| Some(x)).unwrap_or_else(|e| {
+    let kit = serde_json::from_str::<Vec<KitEntry>>(&kit).map(Some).unwrap_or_else(|e| {
         error!("{e}");
         None
     });
