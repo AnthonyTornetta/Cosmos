@@ -3,7 +3,7 @@
 use bevy::{log::info, prelude::Plugin};
 
 use crate::{
-    ai, blocks, commands, debug, fluid,
+    ai, blocks, chat, commands, debug, fluid,
     init::{self, init_server},
     inventory, items, logic, netty, persistence, physics, projectiles, shop, structure, universe, utility_runs,
 };
@@ -38,6 +38,7 @@ impl Plugin for ServerPlugin {
         fluid::register(app);
         logic::register(app);
         debug::register(app);
+        chat::register(app);
 
         info!("Done setting up server!");
     }

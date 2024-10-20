@@ -29,6 +29,7 @@ use bevy::log::LogPlugin;
 
 pub mod ai;
 pub mod blocks;
+pub mod chat;
 pub mod commands;
 mod debug;
 pub mod entities;
