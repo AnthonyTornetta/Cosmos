@@ -1,5 +1,7 @@
 //! Handles client connecting and disconnecting
 
+use std::fs;
+
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::*;
 use bevy_renet2::renet2::transport::NetcodeServerTransport;
@@ -24,11 +26,56 @@ use cosmos_core::registry::identifiable::Identifiable;
 use cosmos_core::registry::Registry;
 use cosmos_core::{entities::player::Player, netty::netty_rigidbody::NettyRigidBody};
 use renet2_visualizer::RenetServerVisualizer;
+use serde::{Deserialize, Serialize};
 
 use crate::entities::player::PlayerLooking;
 use crate::netty::network_helpers::ClientTicks;
 use crate::physics::assign_player_world;
 use crate::settings::ServerSettings;
+
+#[derive(Debug, Serialize, Deserialize)]
+struct KitEntry {
+    slot: u32,
+    item: String,
+    quantity: u16,
+}
+
+fn fill_inventory_from_kit(
+    kit_name: &str,
+    inventory: &mut Inventory,
+    items: &Registry<Item>,
+    commands: &mut Commands,
+    needs_data: &ItemShouldHaveData,
+) {
+    let Ok(kit) = fs::read_to_string(format!("assets/cosmos/kits/{kit_name}.json")) else {
+        error!("Missing kit - {kit_name}");
+        return;
+    };
+
+    let kit = serde_json::from_str::<Vec<KitEntry>>(&kit).map(|x| Some(x)).unwrap_or_else(|e| {
+        error!("{e}");
+        None
+    });
+
+    let Some(kit) = kit else {
+        error!("Invalid kit file - {kit_name}");
+        return;
+    };
+
+    for entry in kit {
+        let Some(item) = items.from_id(&entry.item) else {
+            error!("Missing item {} in kit {kit_name}", entry.item);
+            continue;
+        };
+
+        if entry.slot as usize >= inventory.len() {
+            error!("Slot {} in kit {kit_name} out of inventory bounds!", entry.slot);
+            continue;
+        }
+
+        inventory.insert_item_at(entry.slot as usize, item, entry.quantity, commands, needs_data);
+    }
+}
 
 fn generate_player_inventory(
     inventory_entity: Entity,
@@ -44,6 +91,7 @@ fn generate_player_inventory(
             inventory.insert_item(item, item.max_stack_size(), commands, has_data);
         }
     } else {
+        fill_inventory_from_kit("starter", &mut inventory, items, commands, has_data);
     }
 
     inventory
