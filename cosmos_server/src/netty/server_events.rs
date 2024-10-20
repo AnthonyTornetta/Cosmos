@@ -6,6 +6,7 @@ use bevy_renet2::renet2::transport::NetcodeServerTransport;
 use bevy_renet2::renet2::{ClientId, RenetServer, ServerEvent};
 use cosmos_core::economy::Credits;
 use cosmos_core::ecs::NeedsDespawned;
+use cosmos_core::entities::player::creative::Creative;
 use cosmos_core::entities::player::render_distance::RenderDistance;
 use cosmos_core::inventory::itemstack::ItemShouldHaveData;
 use cosmos_core::inventory::Inventory;
@@ -27,17 +28,22 @@ use renet2_visualizer::RenetServerVisualizer;
 use crate::entities::player::PlayerLooking;
 use crate::netty::network_helpers::ClientTicks;
 use crate::physics::assign_player_world;
+use crate::settings::ServerSettings;
 
 fn generate_player_inventory(
     inventory_entity: Entity,
     items: &Registry<Item>,
     commands: &mut Commands,
     has_data: &ItemShouldHaveData,
+    creative: bool,
 ) -> Inventory {
     let mut inventory = Inventory::new("Inventory", 9 * 16, Some(0..9), inventory_entity);
 
-    for item in items.iter().rev().filter(|item| item.unlocalized_name() != "cosmos:air") {
-        inventory.insert_item(item, item.max_stack_size(), commands, has_data);
+    if creative {
+        for item in items.iter().rev().filter(|item| item.unlocalized_name() != "cosmos:air") {
+            inventory.insert_item(item, item.max_stack_size(), commands, has_data);
+        }
+    } else {
     }
 
     inventory
@@ -67,6 +73,7 @@ pub(super) fn handle_server_events(
     mut evw_player_join: EventWriter<PlayerConnectedEvent>,
     mut evw_sync_registries: EventWriter<SyncRegistriesEvent>,
     needs_data: Res<ItemShouldHaveData>,
+    server_settings: Res<ServerSettings>,
 ) {
     for event in server_events.read() {
         match event {
@@ -105,13 +112,15 @@ pub(super) fn handle_server_events(
                 let starting_pos = Vec3::new(0.0, 1900.0, 0.0);
                 let location = Location::new(starting_pos, Sector::new(25, 25, 25));
                 let velocity = Velocity::default();
-                let inventory = generate_player_inventory(player_entity, &items, &mut commands, &needs_data);
+                let inventory = generate_player_inventory(player_entity, &items, &mut commands, &needs_data, server_settings.creative);
 
                 let netty_body = NettyRigidBody::new(Some(velocity), Quat::IDENTITY, NettyRigidBodyLocation::Absolute(location));
 
-                let credits = Credits::new(1_000_000);
+                let credits = Credits::new(25_000);
 
-                commands.entity(player_entity).insert((
+                let mut ecmds = commands.entity(player_entity);
+
+                ecmds.insert((
                     location,
                     LockedAxes::ROTATION_LOCKED,
                     RigidBody::Dynamic,
@@ -130,6 +139,10 @@ pub(super) fn handle_server_events(
                     Name::new(format!("Player ({name})")),
                     credits,
                 ));
+
+                if server_settings.creative {
+                    ecmds.insert(Creative);
+                }
 
                 lobby.add_player(client_id, player_entity);
 

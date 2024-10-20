@@ -10,6 +10,7 @@ use crate::{
         bundles::BundleStartingRotation,
         mut_events::{MutEvent, MutEventsCommand},
     },
+    entities::player::creative::Creative,
     events::block_events::BlockChangedEvent,
     inventory::{
         itemstack::{ItemShouldHaveData, ItemStackSystemSet},
@@ -398,7 +399,7 @@ fn handle_block_place_events(
     mut query: Query<&mut Structure>,
     mut event_reader: EventReader<MutEvent<BlockPlaceEvent>>,
     mut event_writer: EventWriter<BlockChangedEvent>,
-    mut player_query: Query<(&mut Inventory, Option<&BuildMode>, Option<&Parent>)>,
+    mut player_query: Query<(&mut Inventory, Option<&BuildMode>, Option<&Parent>, Option<&Creative>)>,
     items: Res<Registry<Item>>,
     blocks: Res<Registry<Block>>,
     block_items: Res<BlockItems>,
@@ -411,7 +412,7 @@ fn handle_block_place_events(
             continue;
         };
 
-        let Ok((mut inv, build_mode, parent)) = player_query.get_mut(place_event_data.placer) else {
+        let Ok((mut inv, build_mode, parent, creative)) = player_query.get_mut(place_event_data.placer) else {
             continue;
         };
 
@@ -458,7 +459,7 @@ fn handle_block_place_events(
                 break;
             }
 
-            if inv.decrease_quantity_at(place_event_data.inventory_slot, 1, &mut commands) == 0 {
+            if creative.is_some() || inv.decrease_quantity_at(place_event_data.inventory_slot, 1, &mut commands) == 0 {
                 structure.set_block_at(coords, block, block_up, &blocks, Some(&mut event_writer));
             } else {
                 break;

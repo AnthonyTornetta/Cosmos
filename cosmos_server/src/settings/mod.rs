@@ -22,6 +22,10 @@ pub struct Args {
     /// If this is true, no planets will spawn
     #[arg(long, default_value_t = false)]
     no_planets: bool,
+
+    /// If all players should be in creative mode
+    #[arg(long, default_value_t = false)]
+    creative: bool,
 }
 
 #[derive(Resource)]
@@ -35,6 +39,8 @@ pub struct ServerSettings {
     pub spawn_asteroids: bool,
     /// If planets should spawn
     pub spawn_planets: bool,
+    /// If all players should be in creative mode
+    pub creative: bool,
 }
 
 /// Reads the server settings passed in from the command line
@@ -46,5 +52,6 @@ pub(super) fn read_server_settings() -> ServerSettings {
         peaceful: args.peaceful,
         spawn_planets: !args.no_planets,
         spawn_asteroids: !args.no_asteroids,
+        creative: args.creative,
     }
 }

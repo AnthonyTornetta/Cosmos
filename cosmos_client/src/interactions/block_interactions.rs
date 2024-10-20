@@ -16,6 +16,7 @@ use cosmos_core::{
         Block,
     },
     blockitems::BlockItems,
+    entities::player::creative::Creative,
     inventory::Inventory,
     item::Item,
     netty::{client::LocalPlayer, system_sets::NetworkingSystemsSet},
@@ -67,7 +68,7 @@ fn add_looking_at_component(q_added_player: Query<Entity, Added<LocalPlayer>>, m
 pub(crate) fn process_player_interaction(
     input_handler: InputChecker,
     camera: Query<&GlobalTransform, With<MainCamera>>,
-    mut player_body: Query<(Entity, &mut Inventory, &mut LookingAt), (With<LocalPlayer>, Without<Pilot>)>,
+    mut q_player: Query<(Entity, &mut Inventory, &mut LookingAt, Option<&Creative>), (With<LocalPlayer>, Without<Pilot>)>,
     rapier_context_access: DefaultRapierContextAccess,
     q_chunk_physics_part: Query<&ChunkPhysicsPart>,
     q_structure: Query<(&Structure, &GlobalTransform, Option<&Planet>)>,
@@ -83,7 +84,7 @@ pub(crate) fn process_player_interaction(
     let rapier_context = rapier_context_access.single();
 
     // this fails if the player is a pilot
-    let Ok((player_entity, mut inventory, mut looking_at)) = player_body.get_single_mut() else {
+    let Ok((player_entity, mut inventory, mut looking_at, creative)) = q_player.get_single_mut() else {
         return;
     };
 
@@ -168,7 +169,9 @@ pub(crate) fn process_player_interaction(
                 return Some(0); // the return doesn't matter, it's just used for early returns
             }
 
-            inventory.decrease_quantity_at(inventory_slot, 1, &mut commands);
+            if creative.is_none() {
+                inventory.decrease_quantity_at(inventory_slot, 1, &mut commands);
+            }
 
             let block_rotation = if block.is_fully_rotatable() || block.should_face_front() {
                 let delta = UnboundBlockCoordinate::from(place_at_coords) - UnboundBlockCoordinate::from(looking_at_block.block.coords());
