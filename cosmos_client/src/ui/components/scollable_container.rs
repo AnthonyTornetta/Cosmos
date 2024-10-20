@@ -20,6 +20,7 @@ use bevy::{
         ButtonInput,
     },
     log::error,
+    prelude::Changed,
     reflect::Reflect,
     transform::components::GlobalTransform,
     ui::{node_bundles::NodeBundle, FlexDirection, Interaction, Node, Overflow, PositionType, Style, UiScale, Val},
@@ -30,11 +31,11 @@ use crate::ui::UiSystemSet;
 
 use super::Disabled;
 
-#[derive(Component, Default, Debug)]
+#[derive(Component, Default, Debug, Reflect)]
 /// Put content you want to scroll through as a child of this
 pub struct ScrollBox {
     /// The amount that is scrolled by (in pixels)
-    pub scroll_amount: f32,
+    pub scroll_amount: Val,
     /// The styles of this scroll box
     pub styles: ScrollerStyles,
 }
@@ -161,6 +162,16 @@ fn on_add_scrollbar(mut commands: Commands, mut q_added_button: Query<(Entity, &
     }
 }
 
+fn compute_scroll_px(scroll_amount: Val, items_height: f32, container_height: f32) -> f32 {
+    let max_scroll = (items_height - container_height).max(0.0);
+    match scroll_amount {
+        Val::Px(px) => px,
+        Val::Percent(perc) => max_scroll * perc / 100.0,
+        Val::Auto => 0.0,
+        _ => panic!("Not supported by scroll bar (yet)"),
+    }
+}
+
 fn on_interact_slider(
     mut mouse_wheel_events: EventReader<MouseWheel>,
     mut q_scroll_containers: Query<
@@ -208,9 +219,10 @@ fn on_interact_slider(
                 MouseScrollUnit::Pixel => mouse_wheel_event.y,
             } * scroll_speed_multiplier;
 
-            scrollbar.scroll_amount -= dy;
-            scrollbar.scroll_amount = scrollbar.scroll_amount.clamp(0.0, max_scroll);
-            style.top = Val::Px(-scrollbar.scroll_amount);
+            let as_px = compute_scroll_px(scrollbar.scroll_amount, items_height, container_height);
+
+            let new_amount = (as_px - dy).clamp(0.0, max_scroll);
+            scrollbar.scroll_amount = Val::Px(new_amount);
         }
     }
 
@@ -251,9 +263,27 @@ fn on_interact_slider(
 
             let mouse_percent = ((cursor_pos.y - min) / (max - min)).clamp(0.0, 1.0);
 
-            scrollbar.scroll_amount = mouse_percent * max_scroll;
-            style.top = Val::Px(-scrollbar.scroll_amount);
+            let amount = mouse_percent * max_scroll;
+            scrollbar.scroll_amount = Val::Px(amount);
         }
+    }
+}
+
+fn on_change_scrollbar(
+    q_scroll_containers: Query<(&ScrollBox, &Node, &ContentsContainer), Changed<ScrollBox>>,
+    mut q_container: Query<(&mut Style, &Node)>,
+) {
+    for (scrollbar, node, contents_container) in q_scroll_containers.iter() {
+        let Ok((mut style, contents_node)) = q_container.get_mut(contents_container.0) else {
+            error!("This should never happen - contents has no style/node.");
+            continue;
+        };
+
+        let items_height = contents_node.size().y;
+        let container_height = node.size().y;
+
+        let as_px = compute_scroll_px(scrollbar.scroll_amount, items_height, container_height);
+        style.top = Val::Px(-as_px);
     }
 }
 
@@ -281,7 +311,9 @@ fn handle_scrollbar(
         let scrollbar_height_px = scroll_height * container_height;
 
         if scroll_height != 1.0 {
-            style.top = Val::Px(scrollbar.scroll_amount / (items_height - container_height) * (container_height - scrollbar_height_px));
+            let as_px = compute_scroll_px(scrollbar.scroll_amount, items_height, container_height);
+
+            style.top = Val::Px(as_px / (items_height - container_height) * (container_height - scrollbar_height_px));
         } else {
             style.top = Val::Px(0.0);
         }
@@ -317,7 +349,10 @@ pub(super) fn register(app: &mut App) {
         (
             on_add_scrollbar.in_set(ScrollBoxUiSystemSet::AddScrollBoxBundle),
             on_interact_slider.in_set(ScrollBoxUiSystemSet::ScrollBoxInteraction),
-            handle_scrollbar.in_set(ScrollBoxUiSystemSet::UpdateScrollBoxDisplay),
+            (handle_scrollbar, on_change_scrollbar)
+                .chain()
+                .in_set(ScrollBoxUiSystemSet::UpdateScrollBoxDisplay),
         ),
-    );
+    )
+    .register_type::<ScrollBox>();
 }

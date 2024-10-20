@@ -39,6 +39,9 @@ struct ChatContainer;
 #[derive(Component)]
 struct ReceivedMessagesContainer;
 
+#[derive(Component)]
+struct ChatScrollContainer;
+
 fn setup_chat_box(mut commands: Commands, default_font: Res<DefaultFont>) {
     commands
         .spawn((
@@ -60,6 +63,7 @@ fn setup_chat_box(mut commands: Commands, default_font: Res<DefaultFont>) {
         .with_children(|p| {
             p.spawn((
                 Name::new("Received Messages"),
+                ChatScrollContainer,
                 ScrollBundle {
                     node_bundle: NodeBundle {
                         style: Style {
@@ -71,7 +75,13 @@ fn setup_chat_box(mut commands: Commands, default_font: Res<DefaultFont>) {
                     },
                     slider: ScrollBox {
                         styles: ScrollerStyles {
-                            scrollbar_color: Color::WHITE,
+                            scrollbar_color: Srgba {
+                                red: 1.0,
+                                green: 1.0,
+                                blue: 1.0,
+                                alpha: 0.4,
+                            }
+                            .into(),
                             scrollbar_background_color: Color::NONE,
                             ..Default::default()
                         },
@@ -213,6 +223,7 @@ fn send_chat_msg(
 fn toggle_chat_box(
     mut q_input_value: Query<(Entity, &mut InputValue), With<SendingChatMessageBox>>,
     mut q_chat_box: Query<(Entity, &mut Visibility), With<ChatContainer>>,
+    mut q_scroll_box: Query<&mut ScrollBox, With<ChatScrollContainer>>,
     inputs: InputChecker,
     mut commands: Commands,
     mut focus: ResMut<Focus>,
@@ -230,6 +241,10 @@ fn toggle_chat_box(
         *cb = if *cb == Visibility::Hidden {
             commands.entity(chat_box_ent).insert(ShowCursor);
             focus.0 = Some(input_ent);
+            if let Ok(mut scrollbox) = q_scroll_box.get_single_mut() {
+                // Start them at the bottom of the chat messages
+                scrollbox.scroll_amount = Val::Percent(100.0);
+            }
             Visibility::Inherited
         } else {
             commands.entity(chat_box_ent).remove::<ShowCursor>();
