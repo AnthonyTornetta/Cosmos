@@ -26,6 +26,7 @@ pub(super) struct LogicGroup {
     /// If this wire is removed, an adjacent wire's coordinates are used. If there are no adjacent wires, it becomes [`None`].
     recent_wire_coords: Option<BlockCoordinate>,
     /// All output [`Port`]s in this group. They update first in each frame, pushing any change in their output values to the consumers.
+    /// The integer value is the output port's current logic value.
     pub producers: HashMap<Port, i32>,
     /// All input [`Port`]s in this group. They update second in each frame, using their new input values to recalculate their block's logic formula.
     pub consumers: HashSet<Port>,
@@ -84,6 +85,10 @@ impl LogicGroup {
                     .map(|input_port| QueueLogicInputEvent::new(StructureBlock::new(input_port.coords), entity)),
             );
         }
+    }
+
+    pub(crate) fn has_one_port(&self) -> bool {
+        (self.consumers.len() + self.producers.len()) == 1
     }
 }
 
@@ -360,36 +365,22 @@ impl LogicGraph {
         direction: BlockDirection,
         port_type: PortType,
         structure: &Structure,
-        blocks: &Registry<Block>,
-        logic_blocks: &Registry<LogicBlock>,
         evw_queue_logic_input: &mut EventWriter<QueueLogicInputEvent>,
     ) {
-        // If the neighbor coordinates don't exist, no port is removed.
-        let Ok(neighbor_coords) = coords.step(direction) else {
-            return;
-        };
-
         let port = Port::new(coords, direction);
         let &group_id = match port_type {
             PortType::Input => &mut self.input_port_group_id,
             PortType::Output => &mut self.output_port_group_id,
         }
         .get(&port)
-        .expect("Port to be removed should exist.");
+        .unwrap_or_else(|| panic!("Port {port:?} to be removed should have a logic group."));
 
         // Check if this port is the last block of its group, and delete the group if so.
         if self
-            .dfs_for_group(
-                neighbor_coords,
-                direction.inverse(),
-                None,
-                false,
-                structure,
-                &mut Port::all_for(coords),
-                blocks,
-                logic_blocks,
-            )
-            .is_none()
+            .groups
+            .get(&group_id)
+            .expect("Logic group with port should exist.")
+            .has_one_port()
         {
             self.remove_group(group_id);
         } else {

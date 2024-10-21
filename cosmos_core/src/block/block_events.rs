@@ -482,6 +482,8 @@ pub enum BlockEventsSet {
     /// Please note that at this point, the only event sent may be the [`BlockPlaceEvent`] - not the resulting [`BlockChangedEvent`].
     /// The [`BlockChangedEvent`] is only sent once the block is inserted into the structure (which happens during this set).
     ProcessEventsPrePlacement,
+    /// The structure updates blocks based on the [`BlockPlaceEvent`] and send [`BlockChangedEvent`].
+    ChangeBlocks,
     /// If your event processing relies on the block being placed, run it in this set. The data still is not guarenteed to be present.
     ProcessEvents,
     /// For systems that need information set in the [`BlockEventsSet::ProcessEvents`] stage. Block data should be present.
@@ -498,6 +500,7 @@ pub(super) fn register(app: &mut App) {
             BlockEventsSet::PreProcessEvents,
             BlockEventsSet::SendBlockUpdateEvents,
             BlockEventsSet::ProcessEventsPrePlacement,
+            BlockEventsSet::ChangeBlocks,
             BlockEventsSet::ProcessEvents,
             BlockEventsSet::PostProcessEvents,
             BlockEventsSet::SendEventsForNextFrame,
@@ -514,6 +517,6 @@ pub(super) fn register(app: &mut App) {
             (handle_block_break_events, handle_block_place_events)
                 .chain()
                 .in_set(ItemStackSystemSet::CreateDataEntity)
-                .in_set(BlockEventsSet::ProcessEventsPrePlacement),
+                .in_set(BlockEventsSet::ChangeBlocks),
         );
 }
