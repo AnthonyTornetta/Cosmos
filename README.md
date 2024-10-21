@@ -63,7 +63,7 @@ See [the issues page](https://github.com/AnthonyTornetta/Cosmos/issues) for the 
 
 ## Release 0.0.7a (In Progress)
 - [ ] Music
-- [ ] Creative Mode
+- [x] Creative Mode
 - [x] Chat
 - [x] Galaxy map
   - [x] Able to view stars
