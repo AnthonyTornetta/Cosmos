@@ -45,13 +45,13 @@ fn and_gate_input_event_listener(
 ) {
     let bs_params = Rc::new(RefCell::new(bs_params));
     for ev in evr_logic_input.read() {
-        let Ok(structure) = q_structure.get(ev.entity) else {
+        let Ok(structure) = q_structure.get(ev.block.structure()) else {
             continue;
         };
         if structure.block_at(ev.block.coords(), &blocks).unlocalized_name() != "cosmos:and_gate" {
             continue;
         }
-        let Ok(logic_driver) = q_logic_driver.get_mut(ev.entity) else {
+        let Ok(logic_driver) = q_logic_driver.get_mut(ev.block.structure()) else {
             continue;
         };
         let Some(mut logic_data) = structure.query_block_data_mut(ev.block.coords(), &mut q_logic_data, bs_params.clone()) else {

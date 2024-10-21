@@ -371,8 +371,8 @@ fn logic_block_placed_event_listener(
 
         // If was logic block, remove from the logic graph.
         if let Some(logic_block) = logic_blocks.from_id(blocks.from_numeric_id(ev.old_block).unlocalized_name()) {
-            if let Ok(structure) = q_structure.get_mut(ev.structure_entity) {
-                if let Ok(mut logic) = q_logic.get_mut(ev.structure_entity) {
+            if let Ok(structure) = q_structure.get_mut(ev.block.structure()) {
+                if let Ok(mut logic) = q_logic.get_mut(ev.block.structure()) {
                     logic.remove_logic_block(
                         logic_block,
                         ev.old_block_rotation,
@@ -391,8 +391,8 @@ fn logic_block_placed_event_listener(
 
         // If is now logic block, add to the logic graph.
         if let Some(logic_block) = logic_blocks.from_id(blocks.from_numeric_id(ev.new_block).unlocalized_name()) {
-            if let Ok(mut structure) = q_structure.get_mut(ev.structure_entity) {
-                if let Ok(mut logic) = q_logic.get_mut(ev.structure_entity) {
+            if let Ok(mut structure) = q_structure.get_mut(ev.block.structure()) {
+                if let Ok(mut logic) = q_logic.get_mut(ev.block.structure()) {
                     let coords = ev.block.coords();
                     logic.add_logic_block(
                         logic_block,

@@ -64,7 +64,6 @@ use self::dynamic_structure::DynamicStructure;
 use self::events::ChunkSetEvent;
 use self::full_structure::FullStructure;
 use self::loading::StructureLoadingSet;
-use self::structure_block::StructureBlock;
 use self::structure_iterator::{BlockIterator, ChunkIterator};
 
 #[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
@@ -737,7 +736,7 @@ fn remove_empty_chunks(
     mut commands: Commands,
 ) {
     for bce in block_change_event.read() {
-        let Ok(mut structure) = structure_query.get_mut(bce.structure_entity) else {
+        let Ok(mut structure) = structure_query.get_mut(bce.block.structure()) else {
             continue;
         };
 
@@ -800,7 +799,7 @@ fn add_chunks_system(
     let mut chunk_set_events = HashSet::new();
 
     for ev in block_reader.read() {
-        s_chunks.insert((ev.structure_entity, ev.block.chunk_coords()));
+        s_chunks.insert((ev.block.structure(), ev.block.chunk_coords()));
     }
 
     for ev in chunk_init_reader.read() {
