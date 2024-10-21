@@ -152,8 +152,7 @@ impl FullStructure {
         event_writer.send(BlockChangedEvent {
             new_block: block.id(),
             old_block,
-            structure_entity: self_entity,
-            block: StructureBlock::new(coords),
+            block: StructureBlock::new(coords, self_entity),
             old_block_rotation,
             new_block_rotation: block_rotation,
         });
@@ -240,10 +239,9 @@ impl FullStructure {
         );
 
         let mut any_blocks = false;
-        for b in self_as_structure.all_blocks_iter(false) {
+        for c in self_as_structure.all_blocks_iter(false) {
             any_blocks = true;
 
-            let c = b.coords();
             if c.x < min.x {
                 min.x = c.x;
             }

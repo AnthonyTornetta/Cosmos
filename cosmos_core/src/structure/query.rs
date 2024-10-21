@@ -22,7 +22,6 @@ pub struct MutBlockData<'q, 'w, 's, Q: QueryData> {
     bs_params: Rc<RefCell<BlockDataSystemParams<'w, 's>>>,
     changed: bool,
     block: StructureBlock,
-    structure_entity: Entity,
     data_entity: Entity,
 }
 
@@ -35,7 +34,6 @@ impl<'q, 'w, 's, Q: QueryData> MutBlockData<'q, 'w, 's, Q> {
         data: QueryItem<'q, Q>,
         bs_params: Rc<RefCell<BlockDataSystemParams<'w, 's>>>,
         block: StructureBlock,
-        structure_entity: Entity,
         data_entity: Entity,
     ) -> Self {
         Self {
@@ -44,7 +42,6 @@ impl<'q, 'w, 's, Q: QueryData> MutBlockData<'q, 'w, 's, Q> {
             bs_params,
             block,
             data_entity,
-            structure_entity,
         }
     }
 
@@ -79,7 +76,6 @@ impl<Q: QueryData> Drop for MutBlockData<'_, '_, '_, Q> {
         self.bs_params.borrow_mut().ev_writer.send(BlockDataChangedEvent {
             block: self.block,
             block_data_entity: Some(self.data_entity),
-            structure_entity: self.structure_entity,
         });
     }
 }

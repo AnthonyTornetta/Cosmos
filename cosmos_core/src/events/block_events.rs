@@ -19,8 +19,6 @@ pub struct BlockChangedEvent {
     ///
     /// The actual block may or may not have been updated yet
     pub block: StructureBlock,
-    /// The structure entity
-    pub structure_entity: Entity,
     /// The block that was there before
     pub old_block: u16,
     /// The block that is there now/will be there
@@ -42,8 +40,6 @@ pub struct BlockDataChangedEvent {
     pub block_data_entity: Option<Entity>,
     /// The block this is referring to
     pub block: StructureBlock,
-    /// The structure's entity
-    pub structure_entity: Entity,
 }
 
 #[derive(SystemParam)]

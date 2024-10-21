@@ -241,7 +241,7 @@ impl LogicDriver {
                             new_group
                                 .consumers
                                 .iter()
-                                .map(|input_port| QueueLogicInputEvent::new(StructureBlock::new(input_port.coords), entity)),
+                                .map(|input_port| QueueLogicInputEvent::new(StructureBlock::new(input_port.coords, entity))),
                         );
                     }
                 }

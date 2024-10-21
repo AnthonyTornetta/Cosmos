@@ -32,8 +32,7 @@ fn shop_listen_netty(
                 ev_writer_open_shop_ui.send(
                     OpenShopUiEvent {
                         shop: shop_data,
-                        structure_block: StructureBlock::new(shop_block),
-                        structure_entity,
+                        structure_block: StructureBlock::new(shop_block, structure_entity),
                     }
                     .into(),
                 );

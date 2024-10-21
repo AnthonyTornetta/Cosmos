@@ -8,7 +8,10 @@ use cosmos_core::{
         block_rotation::BlockRotation,
     },
     netty::{
-        client_reliable_messages::ClientReliableMessages, cosmos_encoder, sync::mapping::NetworkMapping, system_sets::NetworkingSystemsSet,
+        client_reliable_messages::ClientReliableMessages,
+        cosmos_encoder,
+        sync::mapping::{Mappable, NetworkMapping},
+        system_sets::NetworkingSystemsSet,
         NettyChannelClient,
     },
     state::GameState,
@@ -20,8 +23,6 @@ use crate::interactions::block_interactions::process_player_interaction;
 #[derive(Debug, Event)]
 /// Sent when this client tries to breaks a block
 pub struct RequestBlockBreakEvent {
-    /// The structure this block was on
-    pub structure_entity: Entity,
     /// block coords
     pub block: StructureBlock,
 }
@@ -29,8 +30,6 @@ pub struct RequestBlockBreakEvent {
 #[derive(Debug, Event)]
 /// Sent when this client tries to places a block
 pub struct RequestBlockPlaceEvent {
-    /// The structure this block is on
-    pub structure_entity: Entity,
     /// block coords
     pub block: StructureBlock,
     /// Which inventory slot it came from to make sure the inventory isn't out of sync
@@ -47,12 +46,13 @@ fn handle_block_break(
     network_mapping: Res<NetworkMapping>,
 ) {
     for ev in event_reader.read() {
+        let Ok(sb) = ev.block.map(&network_mapping) else {
+            continue;
+        };
+
         client.send_message(
             NettyChannelClient::Reliable,
-            cosmos_encoder::serialize(&ClientReliableMessages::BreakBlock {
-                structure_entity: network_mapping.server_from_client(&ev.structure_entity).unwrap(),
-                block: ev.block,
-            }),
+            cosmos_encoder::serialize(&ClientReliableMessages::BreakBlock { block: sb }),
         );
     }
 }
@@ -63,11 +63,14 @@ fn handle_block_place(
     network_mapping: Res<NetworkMapping>,
 ) {
     for ev in event_reader.read() {
+        let Ok(sb) = ev.block.map(&network_mapping) else {
+            continue;
+        };
+
         client.send_message(
             NettyChannelClient::Reliable,
             cosmos_encoder::serialize(&ClientReliableMessages::PlaceBlock {
-                structure_entity: network_mapping.server_from_client(&ev.structure_entity).unwrap(),
-                block: ev.block,
+                block: sb,
                 block_id: ev.block_id,
                 block_rotation: ev.block_rotation,
                 inventory_slot: ev.inventory_slot as u32,

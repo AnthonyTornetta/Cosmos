@@ -299,8 +299,7 @@ impl Chunk {
 
             system_params.ev_writer.send(BlockDataChangedEvent {
                 block_data_entity: Some(data_ent),
-                block: StructureBlock::new(self.chunk_coordinates().first_structure_block() + coords),
-                structure_entity,
+                block: StructureBlock::new(self.chunk_coordinates().first_structure_block() + coords, structure_entity),
             });
 
             data_ent
@@ -314,9 +313,8 @@ impl Chunk {
                     BlockData {
                         data_count: 1,
                         identifier: BlockDataIdentifier {
-                            block: StructureBlock::new(self.chunk_coordinates().first_structure_block() + coords),
+                            block: StructureBlock::new(self.chunk_coordinates().first_structure_block() + coords, structure_entity),
                             block_id: id,
-                            structure_entity,
                         },
                     },
                 ))
@@ -327,8 +325,7 @@ impl Chunk {
 
             system_params.ev_writer.send(BlockDataChangedEvent {
                 block_data_entity: Some(data_ent),
-                block: StructureBlock::new(self.chunk_coordinates().first_structure_block() + coords),
-                structure_entity,
+                block: StructureBlock::new(self.chunk_coordinates().first_structure_block() + coords, structure_entity),
             });
 
             data_ent
@@ -363,8 +360,7 @@ impl Chunk {
             .spawn((BlockData {
                 data_count: 0,
                 identifier: BlockDataIdentifier {
-                    block: StructureBlock::new(self.chunk_coordinates().first_structure_block() + coords),
-                    structure_entity,
+                    block: StructureBlock::new(self.chunk_coordinates().first_structure_block() + coords, structure_entity),
                     block_id,
                 },
             },))
@@ -417,9 +413,8 @@ impl Chunk {
             let mut ecmds = system_params.commands.spawn(BlockData {
                 data_count: 1,
                 identifier: BlockDataIdentifier {
-                    block: StructureBlock::new(self.chunk_coordinates().first_structure_block() + coords),
+                    block: StructureBlock::new(self.chunk_coordinates().first_structure_block() + coords, structure_entity),
                     block_id: id,
-                    structure_entity,
                 },
             });
 
@@ -438,8 +433,7 @@ impl Chunk {
 
         system_params.ev_writer.send(BlockDataChangedEvent {
             block_data_entity: Some(data_ent),
-            block: StructureBlock::new(self.chunk_coordinates().first_structure_block() + coords),
-            structure_entity,
+            block: StructureBlock::new(self.chunk_coordinates().first_structure_block() + coords, structure_entity),
         });
 
         data_ent
@@ -481,8 +475,7 @@ impl Chunk {
                 let mut_block_data = MutBlockData::new(
                     result,
                     block_system_params.clone(),
-                    StructureBlock::new(self.chunk_coordinates().first_structure_block() + coords),
-                    structure_entity,
+                    StructureBlock::new(self.chunk_coordinates().first_structure_block() + coords, structure_entity),
                     data_ent,
                 );
 
@@ -519,8 +512,7 @@ impl Chunk {
 
             system_params.ev_writer.send(BlockDataChangedEvent {
                 block_data_entity: None,
-                block: StructureBlock::new(self.chunk_coordinates().first_structure_block() + coords),
-                structure_entity,
+                block: StructureBlock::new(self.chunk_coordinates().first_structure_block() + coords, structure_entity),
             });
 
             None
@@ -529,8 +521,7 @@ impl Chunk {
 
             system_params.ev_writer.send(BlockDataChangedEvent {
                 block_data_entity: Some(ent),
-                block: StructureBlock::new(self.chunk_coordinates().first_structure_block() + coords),
-                structure_entity,
+                block: StructureBlock::new(self.chunk_coordinates().first_structure_block() + coords, structure_entity),
             });
 
             Some(ent)

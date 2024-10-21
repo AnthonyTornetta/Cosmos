@@ -678,7 +678,7 @@ fn listen_for_structure_event(
     for ev in event.read() {
         to_do.insert(ChunkNeedsPhysicsEvent {
             chunk: (ev.block.chunk_coords()),
-            structure_entity: ev.structure_entity,
+            structure_entity: ev.block.structure(),
         });
     }
 

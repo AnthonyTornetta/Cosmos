@@ -149,8 +149,7 @@ impl DynamicStructure {
                     event_writer.send(BlockChangedEvent {
                         new_block: block.id(),
                         old_block,
-                        structure_entity: self_entity,
-                        block: StructureBlock::new(coords),
+                        block: StructureBlock::new(coords, self_entity),
                         old_block_rotation,
                         new_block_rotation: block_rotation,
                     });

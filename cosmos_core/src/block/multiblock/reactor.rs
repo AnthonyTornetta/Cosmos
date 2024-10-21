@@ -21,7 +21,6 @@ use crate::{
     structure::{
         coordinates::BlockCoordinate,
         loading::StructureLoadingSet,
-        structure_block::StructureBlock,
         systems::{energy_storage_system::EnergyStorageSystem, StructureSystems, StructureSystemsSet},
         Structure,
     },
@@ -39,14 +38,14 @@ pub struct ReactorBounds {
 #[derive(Clone, Copy, Debug, Reflect, Serialize, Deserialize, PartialEq)]
 /// Represents a constructed reactor
 pub struct Reactor {
-    controller: StructureBlock,
+    controller: BlockCoordinate,
     power_per_second: f32,
     bounds: ReactorBounds,
 }
 
 impl Reactor {
     /// Creates a new constructed reactor
-    pub fn new(controller: StructureBlock, power_per_second: f32, bounds: ReactorBounds) -> Self {
+    pub fn new(controller: BlockCoordinate, power_per_second: f32, bounds: ReactorBounds) -> Self {
         Self {
             bounds,
             controller,
@@ -66,7 +65,7 @@ impl Reactor {
     }
 
     /// Returns the block where the controller for this reactor is
-    pub fn controller_block(&self) -> StructureBlock {
+    pub fn controller_block(&self) -> BlockCoordinate {
         self.controller
     }
 }
@@ -159,20 +158,22 @@ fn on_modify_reactor(
     reactor_cells: Res<Registry<ReactorPowerGenerationBlock>>,
 ) {
     for ev in block_change_event.read() {
-        let Ok(mut reactors) = reactors_query.get_mut(ev.structure_entity) else {
+        let Ok(mut reactors) = reactors_query.get_mut(ev.block.structure()) else {
             continue;
         };
 
         reactors.retain_mut(|reactor| {
             let (neg, pos) = (reactor.bounds.negative_coords, reactor.bounds.positive_coords);
 
-            let within_x = neg.x <= ev.block.x && pos.x >= ev.block.x;
-            let within_y = neg.y <= ev.block.y && pos.y >= ev.block.y;
-            let within_z = neg.z <= ev.block.z && pos.z >= ev.block.z;
+            let block = ev.block.coords();
 
-            if (neg.x == ev.block.x || pos.x == ev.block.x) && (within_y && within_z)
-                || (neg.y == ev.block.y || pos.y == ev.block.y) && (within_x && within_z)
-                || (neg.z == ev.block.z || pos.z == ev.block.z) && (within_x && within_y)
+            let within_x = neg.x <= block.x && pos.x >= block.x;
+            let within_y = neg.y <= block.y && pos.y >= block.y;
+            let within_z = neg.z <= block.z && pos.z >= block.z;
+
+            if (neg.x == block.x || pos.x == block.x) && (within_y && within_z)
+                || (neg.y == block.y || pos.y == block.y) && (within_x && within_z)
+                || (neg.z == block.z || pos.z == block.z) && (within_x && within_y)
             {
                 // They changed the casing of the reactor - kill it
                 false

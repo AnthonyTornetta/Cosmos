@@ -875,11 +875,13 @@ fn get_entity_identifier_entity_for_despawning(
             }
         }),
         ComponentEntityIdentifier::BlockData {
-            identifier,
+            mut identifier,
             server_data_entity,
         } => network_mapping
-            .client_from_server(&identifier.structure_entity)
+            .client_from_server(&identifier.block.structure())
             .and_then(|structure_entity| {
+                identifier.block.set_structure(structure_entity);
+
                 let mut structure = q_structure.get_mut(structure_entity).ok()?;
 
                 let bd = structure.block_data(identifier.block.coords());
@@ -898,7 +900,6 @@ fn get_entity_identifier_entity_for_despawning(
 
                     block_data_changed.send(BlockDataChangedEvent {
                         block: identifier.block,
-                        structure_entity,
                         block_data_entity: None,
                     });
                 }

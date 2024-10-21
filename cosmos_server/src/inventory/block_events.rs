@@ -80,7 +80,7 @@ fn monitor_block_breaks(
     mut evr_block_break: EventReader<BlockBreakEvent>,
     mut commands: Commands,
 ) {
-    for (block, structure_entity) in evr_block_break.read().map(|x| (x.block, x.structure_entity)) {
+    for (block, structure_entity) in evr_block_break.read().map(|x| (x.block, x.block.structure())) {
         process_event(structure_entity, block, &q_inventory, &q_structure, &mut commands);
     }
 }

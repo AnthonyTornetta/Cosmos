@@ -6,7 +6,6 @@ use super::{
     block_storage::BlockStorer,
     chunk::{Chunk, CHUNK_DIMENSIONS},
     coordinates::{BlockCoordinate, ChunkBlockCoordinate, ChunkCoordinate, Coordinate, UnboundBlockCoordinate, UnboundChunkCoordinate},
-    structure_block::StructureBlock,
     Structure,
 };
 
@@ -135,7 +134,7 @@ impl<'a> BlockIterator<'a> {
 }
 
 impl Iterator for BlockIterator<'_> {
-    type Item = StructureBlock;
+    type Item = BlockCoordinate;
 
     fn next(&mut self) -> Option<Self::Item> {
         match &mut self.state {
@@ -161,7 +160,7 @@ impl Iterator for BlockIterator<'_> {
                     }
                 }
 
-                Some(StructureBlock::new(position))
+                Some(position)
             }
             BlockItrState::ExcludeEmpty(body) => {
                 let first_block_coordinate = body.cur_chunk.chunk_coordinates().first_structure_block();
@@ -205,11 +204,11 @@ impl Iterator for BlockIterator<'_> {
                     }
                 }
 
-                let to_return = Some(StructureBlock::new(BlockCoordinate::new(
+                let to_return = Some(BlockCoordinate::new(
                     body.body.at.x + body.cur_chunk.structure_x() * CHUNK_DIMENSIONS,
                     body.body.at.y + body.cur_chunk.structure_y() * CHUNK_DIMENSIONS,
                     body.body.at.z + body.cur_chunk.structure_z() * CHUNK_DIMENSIONS,
-                )));
+                ));
 
                 if advance_body(body) {
                     self.state = BlockItrState::Invalid;

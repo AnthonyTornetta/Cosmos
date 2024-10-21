@@ -58,18 +58,16 @@ use super::{PurchasedEvent, SoldEvent};
 #[derive(Event)]
 pub(super) struct OpenShopUiEvent {
     pub shop: Shop,
-    pub structure_entity: Entity,
     pub structure_block: StructureBlock,
 }
 
 #[derive(Component, Debug)]
 struct ShopUi {
     shop: Shop,
-    structure_block: StructureBlock,
     /// # ⚠️ WARNING ⚠️
     ///
     /// This refers to the server's entity NOT the client's
-    structure_entity: Entity,
+    structure_block: StructureBlock,
     selected_item: Option<SelectedItem>,
 }
 
@@ -234,7 +232,6 @@ fn open_shop_ui(mut commands: Commands, mut ev_reader: EventReader<MutEvent<Open
                 shop,
                 selected_item: None,
                 structure_block: ev.structure_block,
-                structure_entity: ev.structure_entity,
             },
         ));
     }
@@ -1109,7 +1106,7 @@ fn enable_buy_button(
                 continue;
             };
 
-            if shop_ui.structure_entity == ev.structure_entity && shop_ui.structure_block.coords() == ev.shop_block {
+            if shop_ui.structure_block.structure() == ev.structure_entity && shop_ui.structure_block.coords() == ev.shop_block {
                 match &ev.details {
                     Ok(shop) => {
                         shop_ui.shop = shop.clone();
@@ -1138,7 +1135,7 @@ fn enable_sell_button(
                 continue;
             };
 
-            if shop_ui.structure_entity == ev.structure_entity && shop_ui.structure_block.coords() == ev.shop_block {
+            if shop_ui.structure_block.structure() == ev.structure_entity && shop_ui.structure_block.coords() == ev.shop_block {
                 match &ev.details {
                     Ok(shop) => {
                         shop_ui.shop = shop.clone();
@@ -1189,7 +1186,7 @@ fn on_buy(
                     NettyChannelClient::Shop,
                     cosmos_encoder::serialize(&ClientShopMessages::Sell {
                         shop_block: shop_ui.structure_block.coords(),
-                        structure_entity: shop_ui.structure_entity,
+                        structure_entity: shop_ui.structure_block.structure(),
                         item_id,
                         quantity: amount_selected.0 as u32,
                     }),
@@ -1204,7 +1201,7 @@ fn on_buy(
                     NettyChannelClient::Shop,
                     cosmos_encoder::serialize(&ClientShopMessages::Buy {
                         shop_block: shop_ui.structure_block.coords(),
-                        structure_entity: shop_ui.structure_entity,
+                        structure_entity: shop_ui.structure_block.structure(),
                         item_id,
                         quantity: amount_selected.0 as u32,
                     }),

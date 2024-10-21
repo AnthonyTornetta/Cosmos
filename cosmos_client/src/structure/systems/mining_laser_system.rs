@@ -187,7 +187,7 @@ fn apply_mining_effects(
 
                 let beam_direction = line.direction.to_vec3();
 
-                let laser_start = structure.block_relative_position(line.start.coords());
+                let laser_start = structure.block_relative_position(line.start);
                 let beam_ent = p
                     .spawn((
                         PbrBundle {

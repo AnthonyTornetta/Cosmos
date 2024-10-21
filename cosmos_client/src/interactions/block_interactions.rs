@@ -41,8 +41,6 @@ use crate::{
 ///
 /// This could be a solid or a non-solid (fluid) block.
 pub struct LookedAtBlock {
-    /// The structure's entity
-    pub structure_entity: Entity,
     /// The block on the structure
     pub block: StructureBlock,
     /// The information about the ray that intersected this block
@@ -137,10 +135,7 @@ pub(crate) fn process_player_interaction(
 
     if input_handler.check_just_pressed(CosmosInputs::BreakBlock) {
         if let Some(x) = &looking_at.looking_at_block {
-            break_writer.send(RequestBlockBreakEvent {
-                structure_entity: structure.get_entity().unwrap(),
-                block: x.block,
-            });
+            break_writer.send(RequestBlockBreakEvent { block: x.block });
         }
     }
 
@@ -230,8 +225,7 @@ pub(crate) fn process_player_interaction(
             };
 
             place_writer.send(RequestBlockPlaceEvent {
-                structure_entity: structure.get_entity().unwrap(),
-                block: StructureBlock::new(place_at_coords),
+                block: StructureBlock::new(place_at_coords, structure.get_entity().unwrap()),
                 inventory_slot,
                 block_id,
                 block_rotation,
@@ -289,9 +283,8 @@ fn send_ray<'a>(
 
     Some((
         LookedAtBlock {
-            block: StructureBlock::new(coords),
+            block: StructureBlock::new(coords, structure_entity),
             intersection,
-            structure_entity,
         },
         structure,
         structure_g_transform,

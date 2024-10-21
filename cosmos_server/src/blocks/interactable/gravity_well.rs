@@ -76,7 +76,7 @@ fn grav_well_handle_block_event(
     }
 
     for ev in block_break_events.read() {
-        let Ok(structure) = q_structure.get(ev.structure_entity) else {
+        let Ok(structure) = q_structure.get(ev.block.structure()) else {
             continue;
         };
 

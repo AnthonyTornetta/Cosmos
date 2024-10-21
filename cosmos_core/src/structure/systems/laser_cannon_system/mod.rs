@@ -71,8 +71,7 @@ impl LineSystemCooldown {
     /// Removes any no-longer used cooldowns.
     pub fn remove_unused_cooldowns<T: LineProperty, S: LinePropertyCalculator<T>>(&mut self, line_system: &LineSystem<T, S>) {
         // This could be made more efficient, but oh well.
-        self.lines
-            .retain(|&k, _| line_system.lines.iter().map(|x| x.start).any(|x| x.coords() == k));
+        self.lines.retain(|&k, _| line_system.lines.iter().map(|x| x.start).any(|x| x == k));
     }
 }
 

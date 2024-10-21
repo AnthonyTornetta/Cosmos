@@ -33,7 +33,7 @@ fn camera_block_update_system(
     q_systems: Query<&StructureSystems>,
 ) {
     for ev in event.read() {
-        let Ok(systems) = q_systems.get(ev.structure_entity) else {
+        let Ok(systems) = q_systems.get(ev.block.structure()) else {
             continue;
         };
 
@@ -64,8 +64,8 @@ fn camera_structure_loaded_event_processor(
             let mut system = CameraSystem::default();
 
             for block in structure.all_blocks_iter(false) {
-                if camera_blocks.is_camera(block.block(structure, &blocks)) {
-                    system.block_added(block.coords());
+                if camera_blocks.is_camera(structure.block_at(block, &blocks)) {
+                    system.block_added(block);
                 }
             }
 

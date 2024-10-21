@@ -30,13 +30,13 @@ fn logic_on_output_event_listener(
 ) {
     // Internal logic signal should later be set to 1 (or some other value) with a GUI.
     for ev in evr_logic_output.read() {
-        let Ok(structure) = q_structure.get_mut(ev.entity) else {
+        let Ok(structure) = q_structure.get_mut(ev.block.structure()) else {
             continue;
         };
         if structure.block_at(ev.block.coords(), &blocks).unlocalized_name() != "cosmos:logic_on" {
             continue;
         }
-        let Ok(mut logic_driver) = q_logic_driver.get_mut(ev.entity) else {
+        let Ok(mut logic_driver) = q_logic_driver.get_mut(ev.block.structure()) else {
             continue;
         };
 
@@ -47,7 +47,7 @@ fn logic_on_output_event_listener(
 
         for face in logic_block.output_faces() {
             let port = Port::new(ev.block.coords(), structure.block_rotation(ev.block.coords()).direction_of(face));
-            logic_driver.update_producer(port, 1, &mut evw_queue_logic_input, ev.entity);
+            logic_driver.update_producer(port, 1, &mut evw_queue_logic_input, ev.block.structure());
         }
     }
 }

@@ -13,24 +13,19 @@ use super::{block_events::BlockEventsSet, block_face::ALL_BLOCK_FACES};
 #[derive(Debug, Clone, Copy, Event, PartialEq, Eq)]
 /// This event is sent whenever an adjacent block is changed
 pub struct BlockUpdate {
-    structure_entity: Entity,
     block: StructureBlock,
     cancelled: bool,
 }
 
 impl BlockUpdate {
     /// Creates a new block update
-    pub fn new(structure_entity: Entity, block: StructureBlock) -> Self {
-        Self {
-            block,
-            structure_entity,
-            cancelled: false,
-        }
+    pub fn new(block: StructureBlock) -> Self {
+        Self { block, cancelled: false }
     }
 
     /// The structure that was updated
     pub fn structure_entity(&self) -> Entity {
-        self.structure_entity
+        self.block.structure()
     }
 
     /// The block that was changed
@@ -63,7 +58,7 @@ pub fn send_block_updates(
     let block_updates = block_chage_event
         .read()
         .filter_map(|ev| {
-            let Ok(structure) = structure_query.get(ev.structure_entity) else {
+            let Ok(structure) = structure_query.get(ev.block.structure()) else {
                 return None;
             };
 
@@ -77,8 +72,7 @@ pub fn send_block_updates(
                 }
 
                 Some(MutEvent::from(BlockUpdate {
-                    structure_entity: ev.structure_entity,
-                    block: StructureBlock(coord),
+                    block: StructureBlock::new(coord, ev.block.structure()),
                     cancelled: false,
                 }))
             }))

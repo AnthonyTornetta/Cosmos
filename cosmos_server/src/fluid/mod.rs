@@ -32,7 +32,7 @@ fn on_place_tank(
     blocks: Res<Registry<Block>>,
 ) {
     for ev in evr_changed_block.read() {
-        let Ok(mut structure) = q_structure.get_mut(ev.structure_entity) else {
+        let Ok(mut structure) = q_structure.get_mut(ev.block.structure()) else {
             continue;
         };
         let coords = ev.block.coords();
