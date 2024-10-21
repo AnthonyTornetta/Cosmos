@@ -1042,7 +1042,7 @@ checksum = "7ed72afbb6249a6803a3ed7bd2f68ff080d9392f550475e050b34c1e1c1e3e8f"
 [[package]]
 name = "bevy_rapier3d"
 version = "0.27.0"
-source = "git+https://github.com/AnthonyTornetta/bevy_rapier?branch=context-component#f3ef621a80c9019dbbac3eaf5f74e5c41548154f"
+source = "git+https://github.com/AnthonyTornetta/bevy_rapier?branch=context-component#fa34814da4b3131c16828587f7f2519520185173"
 dependencies = [
  "bevy",
  "bitflags 2.6.0",

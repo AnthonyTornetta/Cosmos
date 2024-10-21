@@ -269,7 +269,7 @@ fn toggle_map(
                         width: Val::Percent(100.0),
                         ..Default::default()
                     },
-                    text: Text::from_section("WASD to Move", small_text.clone()),
+                    text: Text::from_section("WASDEQ to Move", small_text.clone()),
                     ..Default::default()
                 },));
 
