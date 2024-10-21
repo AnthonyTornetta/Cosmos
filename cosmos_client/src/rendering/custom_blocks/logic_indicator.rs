@@ -91,7 +91,7 @@ fn on_render_logic_indicator(
         let mut material_meshes: HashMap<(MaterialType, u16, u32), CosmosMeshBuilder> = HashMap::default();
 
         for block in structure.block_iter_for_chunk(ev.chunk_coordinate, true) {
-            if structure.block_id_at(block.coords()) != logic_indicator_id {
+            if structure.block_id_at(block) != logic_indicator_id {
                 continue;
             }
 
@@ -108,11 +108,11 @@ fn on_render_logic_indicator(
 
             let mut one_mesh_only = false;
 
-            let block_rotation = structure.block_rotation(block.coords());
+            let block_rotation = structure.block_rotation(block);
 
             let rotation = block_rotation.as_quat();
 
-            let Some(&logic_data) = structure.query_block_data(block.coords(), &q_logic_data) else {
+            let Some(&logic_data) = structure.query_block_data(block, &q_logic_data) else {
                 continue;
             };
 
@@ -126,7 +126,7 @@ fn on_render_logic_indicator(
             // let mesh_builder = material_meshes.entry((material_type, mat_id)).or_default();
 
             let faces = ALL_BLOCK_FACES.iter().copied().filter(|face| {
-                if let Ok(new_coord) = BlockCoordinate::try_from(block.coords() + face.direction().to_coordinates()) {
+                if let Ok(new_coord) = BlockCoordinate::try_from(block + face.direction().to_coordinates()) {
                     return structure.block_at(new_coord, &blocks).is_see_through();
                 }
                 true
@@ -174,7 +174,7 @@ fn on_render_logic_indicator(
 
                 // Scale the rotated positions, not the pre-rotated positions since our side checks are absolute
 
-                let structure_coords = block.coords();
+                let structure_coords = block;
 
                 let additional_info = material_definition.add_material_data(logic_indicator_id, &mesh_info);
 

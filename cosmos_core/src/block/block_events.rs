@@ -145,7 +145,7 @@ fn handle_block_break_events(
 
                 for (_, mut inventory) in q_inventory_block_data
                     .iter_mut()
-                    .filter(|(block_data, _)| block_data.identifier.structure_entity == ev.breaker)
+                    .filter(|(block_data, _)| block_data.identifier.block.structure() == ev.breaker)
                 {
                     if inventory.insert_item(item, 1, &mut commands, &has_data).0 == 0 {
                         break;

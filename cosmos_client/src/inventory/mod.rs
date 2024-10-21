@@ -35,11 +35,14 @@ pub mod netty;
 
 fn get_server_inventory_identifier(entity: Entity, mapping: &NetworkMapping, q_block_data: &Query<&BlockData>) -> InventoryIdentifier {
     if let Ok(block_data) = q_block_data.get(entity) {
+        let structure_ent = mapping
+            .server_from_client(&block_data.identifier.block.structure())
+            .expect("Unable to map inventory to server inventory");
+
+        let mut block = block_data.identifier.block;
+        block.set_structure(structure_ent);
         InventoryIdentifier::BlockData(BlockDataIdentifier {
-            block: block_data.identifier.block,
-            structure_entity: mapping
-                .server_from_client(&block_data.identifier.structure_entity)
-                .expect("Unable to map inventory to server inventory"),
+            block,
             block_id: block_data.identifier.block_id,
         })
     } else {

@@ -101,11 +101,11 @@ fn on_render_tanks(
         let mut material_meshes: HashMap<(u16, u32), CosmosMeshBuilder> = HashMap::default();
 
         for block in structure.block_iter_for_chunk(ev.chunk_coordinate, true) {
-            if structure.block_id_at(block.coords()) != tank_id {
+            if structure.block_id_at(block) != tank_id {
                 continue;
             }
 
-            let Some(&BlockFluidData::Fluid(data)) = structure.query_block_data(block.coords(), &q_stored_fluid) else {
+            let Some(&BlockFluidData::Fluid(data)) = structure.query_block_data(block, &q_stored_fluid) else {
                 continue;
             };
 
@@ -131,12 +131,12 @@ fn on_render_tanks(
 
             let mut one_mesh_only = false;
 
-            let block_rotation = structure.block_rotation(block.coords());
+            let block_rotation = structure.block_rotation(block);
 
             let rotation = block_rotation.as_quat();
 
             let faces = ALL_BLOCK_FACES.iter().copied().filter(|face| {
-                if let Ok(new_coord) = BlockCoordinate::try_from(block.coords() + face.direction().to_coordinates()) {
+                if let Ok(new_coord) = BlockCoordinate::try_from(block + face.direction().to_coordinates()) {
                     if structure.block_id_at(new_coord) == tank_id {
                         return match structure.query_block_data(new_coord, &q_stored_fluid) {
                             Some(BlockFluidData::Fluid(sf)) => sf.fluid_stored == 0,
@@ -207,7 +207,7 @@ fn on_render_tanks(
 
                 // Scale the rotated positions, not the pre-rotated positions since our side checks are absolute
 
-                let structure_coords = block.coords();
+                let structure_coords = block;
 
                 const GAP: f32 = 0.01;
                 let mut scale_x = 1.0;

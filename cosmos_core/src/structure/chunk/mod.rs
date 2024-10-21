@@ -315,7 +315,6 @@ impl Chunk {
                         identifier: BlockDataIdentifier {
                             block: StructureBlock::new(self.chunk_coordinates().first_structure_block() + coords, structure_entity),
                             block_id: id,
-                            structure_entity,
                         },
                     },
                 ))
@@ -362,7 +361,6 @@ impl Chunk {
                 data_count: 0,
                 identifier: BlockDataIdentifier {
                     block: StructureBlock::new(self.chunk_coordinates().first_structure_block() + coords, structure_entity),
-                    structure_entity,
                     block_id,
                 },
             },))
@@ -417,7 +415,6 @@ impl Chunk {
                 identifier: BlockDataIdentifier {
                     block: StructureBlock::new(self.chunk_coordinates().first_structure_block() + coords, structure_entity),
                     block_id: id,
-                    structure_entity,
                 },
             });
 

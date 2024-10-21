@@ -3,7 +3,10 @@
 //! The resources in this file are **exclusively** used on the client-side. They are only
 //! in the core project for specific client-only use cases.
 
-use crate::netty::netty_rigidbody::{NettyRigidBody, NettyRigidBodyLocation};
+use crate::{
+    netty::netty_rigidbody::{NettyRigidBody, NettyRigidBodyLocation},
+    prelude::StructureBlock,
+};
 use bevy::{
     ecs::component::Component,
     prelude::{Entity, Resource},
@@ -97,6 +100,16 @@ impl Mappable for NettyRigidBody {
                 })
             }
             NettyRigidBodyLocation::Absolute(_) => Ok(self),
+        }
+    }
+}
+
+impl Mappable for StructureBlock {
+    fn map(self, network_mapping: &NetworkMapping) -> Result<Self, MappingError<Self>> {
+        if let Some(e) = network_mapping.server_from_client(&self.structure()) {
+            Ok(Self::new(self.coords(), e))
+        } else {
+            Err(MappingError::MissingRecord(self))
         }
     }
 }

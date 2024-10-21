@@ -35,8 +35,6 @@ pub struct BlockDataIdentifier {
     pub block: StructureBlock,
     /// The block id that this data is for
     pub block_id: u16,
-    /// The structure this block is a part of
-    pub structure_entity: Entity,
 }
 
 impl BlockData {

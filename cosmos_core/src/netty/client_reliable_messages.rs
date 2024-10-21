@@ -35,15 +35,11 @@ pub enum ClientReliableMessages {
     },
     /// The client broke a block
     BreakBlock {
-        /// The structure they broke it on
-        structure_entity: Entity,
         /// The block they broke
         block: StructureBlock,
     },
     /// The client placed a block
     PlaceBlock {
-        /// The structure they placed it on
-        structure_entity: Entity,
         /// The block they placed
         block: StructureBlock,
         /// This is passed along with `inventory_slot` to verify that the client + server are still in sync

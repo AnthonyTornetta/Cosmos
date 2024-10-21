@@ -20,11 +20,11 @@ fn monitor_block_updates_system(
     let mut chunks_todo = HashMap::<Entity, HashSet<ChunkCoordinate>>::default();
 
     for ev in evr_changed_data.read() {
-        let Ok(structure) = q_structure.get(ev.structure_entity) else {
+        let Ok(structure) = q_structure.get(ev.block.structure()) else {
             continue;
         };
 
-        let chunks = chunks_todo.entry(ev.structure_entity).or_default();
+        let chunks = chunks_todo.entry(ev.block.structure()).or_default();
 
         let cc = ev.block.chunk_coords();
 
@@ -58,11 +58,11 @@ fn monitor_block_updates_system(
     }
 
     for ev in evr_block_changed.read() {
-        let Ok(structure) = q_structure.get(ev.structure_entity) else {
+        let Ok(structure) = q_structure.get(ev.block.structure()) else {
             continue;
         };
 
-        let chunks = chunks_todo.entry(ev.structure_entity).or_default();
+        let chunks = chunks_todo.entry(ev.block.structure()).or_default();
 
         let cc = ev.block.chunk_coords();
 

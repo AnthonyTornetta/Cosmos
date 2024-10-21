@@ -27,7 +27,7 @@ fn play_block_break_sound(
     mut commands: Commands,
 ) {
     for ev in event_reader.read() {
-        let Ok(structure) = structure_query.get(ev.structure_entity) else {
+        let Ok(structure) = structure_query.get(ev.block.structure()) else {
             continue;
         };
 
@@ -41,7 +41,7 @@ fn play_block_break_sound(
             ..Default::default()
         }]);
 
-        commands.entity(ev.structure_entity).with_children(|p| {
+        commands.entity(ev.block.structure()).with_children(|p| {
             p.spawn((
                 Name::new("Block break sound"),
                 DespawnWithStructure,
@@ -61,7 +61,7 @@ fn play_block_place_sound(
     mut commands: Commands,
 ) {
     for ev in event_reader.read() {
-        let Ok(structure) = structure_query.get(ev.structure_entity) else {
+        let Ok(structure) = structure_query.get(ev.block.structure()) else {
             continue;
         };
 
@@ -75,7 +75,7 @@ fn play_block_place_sound(
             ..Default::default()
         }]);
 
-        commands.entity(ev.structure_entity).with_children(|p| {
+        commands.entity(ev.block.structure()).with_children(|p| {
             p.spawn((
                 Name::new("Block break sound"),
                 DespawnWithStructure,

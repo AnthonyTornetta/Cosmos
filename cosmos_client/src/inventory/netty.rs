@@ -65,10 +65,10 @@ fn sync(
                         }
                     }
                     InventoryIdentifier::BlockData(block_data) => {
-                        let Some(client_entity) = network_mapping.client_from_server(&block_data.structure_entity) else {
+                        let Some(client_entity) = network_mapping.client_from_server(&block_data.block.structure()) else {
                             warn!(
                                 "Error: unrecognized entity {:?} received from server when trying to sync up inventories!",
-                                block_data.structure_entity
+                                block_data.block.structure()
                             );
                             continue;
                         };

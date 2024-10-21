@@ -123,7 +123,7 @@ fn update_looking_at_text(
     };
 
     if let Some(looking_at) = looking_at.looking_at_any {
-        let Ok(structure) = q_structure.get(looking_at.structure_entity) else {
+        let Ok(structure) = q_structure.get(looking_at.block.structure()) else {
             return;
         };
 

@@ -147,7 +147,7 @@ fn place_symmetries(
             NettyChannelClient::Reliable,
             cosmos_encoder::serialize(&ClientReliableMessages::SetSymmetry {
                 axis: BuildAxis::X,
-                coordinate: looking_at_block.map(|block| block.x),
+                coordinate: looking_at_block.map(|block| block.x()),
             }),
         )
     }
@@ -157,7 +157,7 @@ fn place_symmetries(
             NettyChannelClient::Reliable,
             cosmos_encoder::serialize(&ClientReliableMessages::SetSymmetry {
                 axis: BuildAxis::Y,
-                coordinate: looking_at_block.map(|block| block.y),
+                coordinate: looking_at_block.map(|block| block.y()),
             }),
         )
     }
@@ -167,7 +167,7 @@ fn place_symmetries(
             NettyChannelClient::Reliable,
             cosmos_encoder::serialize(&ClientReliableMessages::SetSymmetry {
                 axis: BuildAxis::Z,
-                coordinate: looking_at_block.map(|block| block.z),
+                coordinate: looking_at_block.map(|block| block.z()),
             }),
         )
     }
