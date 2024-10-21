@@ -30,8 +30,6 @@ use crate::{
 ///
 /// This should be populated by reading the block data on disk or creating a new inventory.
 struct PopulateBlockInventoryEvent {
-    /// The structure's entity
-    pub structure_entity: Entity,
     /// The block
     pub block: StructureBlock,
 }
@@ -61,7 +59,7 @@ fn on_add_storage(
             continue;
         }
 
-        let Ok(mut structure) = q_structure.get_mut(ev.structure_entity) else {
+        let Ok(mut structure) = q_structure.get_mut(ev.block.structure()) else {
             continue;
         };
 
@@ -72,10 +70,7 @@ fn on_add_storage(
         }
 
         if blocks.from_numeric_id(ev.new_block) == block {
-            ev_writer.send(PopulateBlockInventoryEvent {
-                block: ev.block,
-                structure_entity: ev.structure_entity,
-            });
+            ev_writer.send(PopulateBlockInventoryEvent { block: ev.block });
         }
     }
 }
@@ -91,8 +86,10 @@ fn on_load_blueprint_storage(
         };
 
         for block in structure.all_blocks_iter(false) {
-            if block.block_id(structure) == storage_block.id() {
-                ev_writer.send(PopulateBlockInventoryEvent { block, structure_entity });
+            if structure.block_id_at(block) == storage_block.id() {
+                ev_writer.send(PopulateBlockInventoryEvent {
+                    block: StructureBlock::new(block, structure_entity),
+                });
             }
         }
     }
@@ -108,7 +105,7 @@ fn populate_inventory(
     for ev in ev_reader.read() {
         let coords = ev.block.coords();
 
-        let Ok(mut structure) = q_structure.get_mut(ev.structure_entity) else {
+        let Ok(mut structure) = q_structure.get_mut(ev.block.structure()) else {
             continue;
         };
 

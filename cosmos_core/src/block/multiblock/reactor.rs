@@ -21,7 +21,6 @@ use crate::{
     structure::{
         coordinates::BlockCoordinate,
         loading::StructureLoadingSet,
-        structure_block::StructureBlock,
         systems::{energy_storage_system::EnergyStorageSystem, StructureSystems, StructureSystemsSet},
         Structure,
     },
@@ -39,14 +38,14 @@ pub struct ReactorBounds {
 #[derive(Clone, Copy, Debug, Reflect, Serialize, Deserialize, PartialEq)]
 /// Represents a constructed reactor
 pub struct Reactor {
-    controller: StructureBlock,
+    controller: BlockCoordinate,
     power_per_second: f32,
     bounds: ReactorBounds,
 }
 
 impl Reactor {
     /// Creates a new constructed reactor
-    pub fn new(controller: StructureBlock, power_per_second: f32, bounds: ReactorBounds) -> Self {
+    pub fn new(controller: BlockCoordinate, power_per_second: f32, bounds: ReactorBounds) -> Self {
         Self {
             bounds,
             controller,
@@ -66,7 +65,7 @@ impl Reactor {
     }
 
     /// Returns the block where the controller for this reactor is
-    pub fn controller_block(&self) -> StructureBlock {
+    pub fn controller_block(&self) -> BlockCoordinate {
         self.controller
     }
 }

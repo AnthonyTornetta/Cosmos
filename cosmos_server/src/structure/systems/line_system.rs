@@ -36,7 +36,7 @@ fn block_update_system<T: LineProperty, S: LinePropertyCalculator<T>>(
     systems_query: Query<&StructureSystems>,
 ) {
     for ev in event.read() {
-        if let Ok(systems) = systems_query.get(ev.structure_entity) {
+        if let Ok(systems) = systems_query.get(ev.block.structure()) {
             if let Ok(mut system) = systems.query_mut(&mut system_query) {
                 let old_block = blocks.from_numeric_id(ev.old_block);
                 let new_block = blocks.from_numeric_id(ev.new_block);
@@ -82,15 +82,15 @@ fn structure_loaded_event<T: LineProperty, S: LinePropertyCalculator<T>>(
 
             let mut color_found = false;
 
-            for structure_block in structure.all_blocks_iter(false) {
-                let block = structure_block.block(structure, &blocks);
-                let block_rotation = structure.block_rotation(structure_block.coords());
+            for coords in structure.all_blocks_iter(false) {
+                let block = structure.block_at(coords, &blocks);
+                let block_rotation = structure.block_rotation(coords);
                 if let Some(prop) = line_blocks.get(block) {
-                    system.add_block(&structure_block, block_rotation, prop);
+                    system.add_block(&coords, block_rotation, prop);
                 }
                 if let Some(color_property) = color_blocks.from_block(block) {
                     color_found = true;
-                    system.colors.push((structure_block.coords(), color_property.properties));
+                    system.colors.push((coords.coords(), color_property.properties));
                 }
             }
 
@@ -158,7 +158,7 @@ fn add_colors(mut colors: ResMut<Registry<LineColorBlock>>, blocks: Res<Registry
 }
 
 impl<T: LineProperty, S: LinePropertyCalculator<T>> BlockStructureSystem<T> for LineSystem<T, S> {
-    fn add_block(&mut self, block: &StructureBlock, block_rotation: BlockRotation, prop: &T) {
+    fn add_block(&mut self, block: BlockCoordinate, block_rotation: BlockRotation, prop: &T) {
         let block_direction = block_rotation.direction_of(BlockFace::Front);
 
         let mut found_line = None;
@@ -172,9 +172,9 @@ impl<T: LineProperty, S: LinePropertyCalculator<T>> BlockStructureSystem<T> for 
         for (i, line) in self.lines.iter_mut().filter(|x| x.direction == block_direction).enumerate() {
             let delta = block_direction.to_coordinates();
 
-            let start: UnboundBlockCoordinate = line.start.coords().into();
+            let start: UnboundBlockCoordinate = line.start.into();
 
-            let block: UnboundBlockCoordinate = block.coords().into();
+            let block: UnboundBlockCoordinate = block.into();
 
             // Block is before start
             if start.x - delta.x == block.x && start.y - delta.y == block.y && start.z - delta.z == block.z {
@@ -363,7 +363,7 @@ impl<T: LineProperty, S: LinePropertyCalculator<T>> BlockStructureSystem<T> for 
     }
 }
 
-fn is_in_line_with(testing_block: &StructureBlock, direction: BlockDirection, line_coord: &BlockCoordinate) -> bool {
+fn is_in_line_with(testing_block: BlockCoordinate, direction: BlockDirection, line_coord: BlockCoordinate) -> bool {
     match direction {
         BlockDirection::PosX => line_coord.x >= testing_block.x && line_coord.y == testing_block.y && line_coord.z == testing_block.z,
         BlockDirection::NegX => line_coord.x <= testing_block.x && line_coord.y == testing_block.y && line_coord.z == testing_block.z,
@@ -376,13 +376,13 @@ fn is_in_line_with(testing_block: &StructureBlock, direction: BlockDirection, li
 
 fn calculate_color_for_line<T: LineProperty, S: LinePropertyCalculator<T>>(
     line_system: &LineSystem<T, S>,
-    block: &StructureBlock,
+    block: BlockCoordinate,
     direction: BlockDirection,
 ) -> Option<Color> {
     let colors = line_system
         .colors
         .iter()
-        .filter(|x| is_in_line_with(block, direction, &x.0))
+        .filter(|x| is_in_line_with(block, direction, x.0))
         .map(|x| x.1)
         .collect::<Vec<LineColorProperty>>();
 
@@ -423,10 +423,10 @@ fn recalculate_colors<T: LineProperty, S: LinePropertyCalculator<T>>(
 
     for line in lines.iter_mut().filter(|line| {
         changed_coordinate
-            .map(|changed_coordinate| is_in_line_with(&line.start, line.direction, &changed_coordinate))
+            .map(|changed_coordinate| is_in_line_with(line.start, line.direction, changed_coordinate))
             .unwrap_or(false)
     }) {
-        line.color = calculate_color_for_line(line_system, &line.start, line.direction);
+        line.color = calculate_color_for_line(line_system, line.start, line.direction);
     }
 
     line_system.lines = lines;

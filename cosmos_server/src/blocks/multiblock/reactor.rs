@@ -19,7 +19,6 @@ use cosmos_core::{
     state::GameState,
     structure::{
         coordinates::{BlockCoordinate, CoordinateType, UnboundBlockCoordinate},
-        structure_block::StructureBlock,
         systems::StructureSystemsSet,
         Structure,
     },
@@ -340,12 +339,12 @@ fn create_reactor(
     blocks: &Registry<Block>,
     reactor_blocks: &Registry<ReactorPowerGenerationBlock>,
     bounds: ReactorBounds,
-    controller: StructureBlock,
+    controller: BlockCoordinate,
 ) -> Reactor {
     let mut power_per_second = 0.0;
 
     for block in structure.block_iter(bounds.negative_coords.into(), bounds.positive_coords.into(), true) {
-        let block = block.block(structure, blocks);
+        let block = structure.block_at(block, blocks);
 
         if let Some(reactor_block) = reactor_blocks.for_block(block) {
             power_per_second += reactor_block.power_per_second();
@@ -367,11 +366,11 @@ fn on_piloted_by_ai(
 
         let blockz = structure
             .all_blocks_iter(false)
-            .filter(|x| structure.block_id_at(x.coords()) == reactor_block.id())
-            .collect::<Vec<StructureBlock>>();
+            .filter(|x| structure.block_id_at(*x) == reactor_block.id())
+            .collect::<Vec<BlockCoordinate>>();
 
         for block_here in blockz {
-            if let Some(bounds) = check_is_valid_multiblock(structure, block_here.coords(), &blocks) {
+            if let Some(bounds) = check_is_valid_multiblock(structure, block_here, &blocks) {
                 match check_valid(bounds, structure, &blocks) {
                     ReactorValidity::Valid => {
                         let reactor = create_reactor(structure, &blocks, &reactor_blocks, bounds, block_here);
@@ -407,7 +406,10 @@ fn on_interact_reactor(
         let block = structure.block_at(s_block.structure_block.coords(), &blocks);
 
         if block.unlocalized_name() == "cosmos:reactor_controller" {
-            if reactors.iter().any(|reactor| reactor.controller_block() == s_block.structure_block) {
+            if reactors
+                .iter()
+                .any(|reactor| reactor.controller_block() == s_block.structure_block.coords())
+            {
                 continue;
             }
 
@@ -438,7 +440,7 @@ fn on_interact_reactor(
                         );
                     }
                     ReactorValidity::Valid => {
-                        let reactor = create_reactor(&structure, &blocks, &reactor_blocks, bounds, s_block.structure_block);
+                        let reactor = create_reactor(&structure, &blocks, &reactor_blocks, bounds, s_block.structure_block.coords());
 
                         reactors.add_reactor(reactor);
                     }

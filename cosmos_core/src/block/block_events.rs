@@ -36,8 +36,6 @@ use super::{
 /// This is sent whenever a player breaks a block
 #[derive(Debug, Event)]
 pub struct BlockBreakEvent {
-    /// The entity that was targeted
-    pub structure_entity: Entity,
     /// The player breaking the block
     pub breaker: Entity,
     /// The block broken with
@@ -83,8 +81,6 @@ pub enum BlockPlaceEvent {
 /// This is sent whenever a player places a block
 #[derive(Debug, Event, Clone, Copy)]
 pub struct BlockPlaceEventData {
-    /// The structure the block was placed on
-    pub structure_entity: Entity,
     /// Where the block is placed
     pub structure_block: StructureBlock,
     /// The placed block's id
@@ -115,7 +111,7 @@ fn handle_block_break_events(
         // structures in the game
 
         if q_structure.contains(ev.breaker) {
-            let Ok((mut structure, _, _, _)) = q_structure.get_mut(ev.structure_entity) else {
+            let Ok((mut structure, _, _, _)) = q_structure.get_mut(ev.block.structure()) else {
                 continue;
             };
 
@@ -157,7 +153,7 @@ fn handle_block_break_events(
 
             structure.remove_block_at(coord, &blocks, Some(&mut event_writer));
         } else if let Ok((mut inventory, build_mode, parent)) = inventory_query.get_mut(ev.breaker) {
-            if let Ok((mut structure, s_loc, g_trans, velocity)) = q_structure.get_mut(ev.structure_entity) {
+            if let Ok((mut structure, s_loc, g_trans, velocity)) = q_structure.get_mut(ev.block.structure()) {
                 let mut structure_blocks = vec![(ev.block.coords(), BlockRotation::default())];
 
                 if let (Some(build_mode), Some(parent)) = (build_mode, parent) {
@@ -165,7 +161,7 @@ fn handle_block_break_events(
                         structure_blocks,
                         build_mode,
                         parent,
-                        ev.structure_entity,
+                        ev.block.structure(),
                         &mut inventory,
                         &structure,
                     );
@@ -416,7 +412,7 @@ fn handle_block_place_events(
             continue;
         };
 
-        let Ok(mut structure) = query.get_mut(place_event_data.structure_entity) else {
+        let Ok(mut structure) = query.get_mut(place_event_data.structure_block.structure()) else {
             continue;
         };
         let mut structure_blocks = vec![(place_event_data.structure_block.coords(), place_event_data.block_up)];
@@ -426,7 +422,7 @@ fn handle_block_place_events(
                 structure_blocks,
                 build_mode,
                 parent,
-                place_event_data.structure_entity,
+                place_event_data.structure_block.structure(),
                 &mut inv,
                 &structure,
             );

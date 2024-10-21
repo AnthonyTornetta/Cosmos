@@ -17,10 +17,10 @@ fn handle_block_changed_event(mut event_reader: EventReader<BlockChangedEvent>, 
     let iter_len = event_reader.read().len();
     let mut map = HashMap::new();
     for ev in event_reader.read() {
-        if !map.contains_key(&ev.structure_entity) {
-            map.insert(ev.structure_entity, Vec::with_capacity(iter_len));
+        if !map.contains_key(&ev.block.structure()) {
+            map.insert(ev.block.structure(), Vec::with_capacity(iter_len));
         }
-        map.get_mut(&ev.structure_entity).expect("Set above").push(BlockChanged {
+        map.get_mut(&ev.block.structure()).expect("Set above").push(BlockChanged {
             coordinates: ev.block,
             block_id: ev.new_block,
             block_rotation: ev.new_block_rotation,

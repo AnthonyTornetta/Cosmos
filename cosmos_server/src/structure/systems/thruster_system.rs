@@ -66,7 +66,7 @@ fn block_update_system(
     systems_query: Query<&StructureSystems>,
 ) {
     for ev in event.read() {
-        if let Ok(systems) = systems_query.get(ev.structure_entity) {
+        if let Ok(systems) = systems_query.get(ev.block.structure()) {
             if let Ok(mut system) = systems.query_mut(&mut system_query) {
                 if let Some(prop) = energy_storage_blocks.get(blocks.from_numeric_id(ev.old_block)) {
                     system.block_removed(prop);
@@ -177,7 +177,7 @@ fn structure_loaded_event(
             let mut system = ThrusterSystem::default();
 
             for block in structure.all_blocks_iter(false) {
-                if let Some(prop) = thruster_blocks.get(block.block(structure, &blocks)) {
+                if let Some(prop) = thruster_blocks.get(structure.block_at(block, &blocks)) {
                     system.block_added(prop);
                 }
             }

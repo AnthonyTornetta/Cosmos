@@ -158,17 +158,15 @@ fn server_listen_messages(
                         chunk_coords: chunk,
                     });
                 }
-                ClientReliableMessages::BreakBlock { structure_entity, block } => {
+                ClientReliableMessages::BreakBlock { block } => {
                     if let Some(player_entity) = lobby.player_from_id(client_id) {
                         break_block_event.send(BlockBreakEvent {
-                            structure_entity,
                             breaker: player_entity,
                             block,
                         });
                     }
                 }
                 ClientReliableMessages::PlaceBlock {
-                    structure_entity,
                     block,
                     block_id,
                     block_rotation: block_up,
@@ -177,7 +175,6 @@ fn server_listen_messages(
                     if let Some(player_entity) = lobby.player_from_id(client_id) {
                         place_block_event.send(
                             BlockPlaceEvent::Event(BlockPlaceEventData {
-                                structure_entity,
                                 structure_block: block,
                                 block_id,
                                 block_up,

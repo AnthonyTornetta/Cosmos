@@ -217,7 +217,7 @@ fn on_add_tank(
 
     for ev in ev_reader.read() {
         if ev.new_block == tank {
-            let Ok(mut structure) = q_structure.get_mut(ev.structure_entity) else {
+            let Ok(mut structure) = q_structure.get_mut(ev.block.structure()) else {
                 continue;
             };
 
@@ -249,7 +249,7 @@ fn listen_for_changed_fluid_data(
         .read()
         .map(|x| CombinedBlockEvent {
             block: x.block.coords(),
-            structure_entity: x.structure_entity,
+            structure_entity: x.block.structure(),
         })
         .chain(evr_block_changed_event.read().map(|x| {
             let x = *x.read();

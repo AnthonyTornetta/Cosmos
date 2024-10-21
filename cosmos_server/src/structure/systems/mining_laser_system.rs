@@ -77,9 +77,8 @@ fn check_should_break(
 
             if mining_block.time_mined >= block.mining_resistance() {
                 ev_writer.send(BlockBreakEvent {
-                    block: StructureBlock::new(*coordinate),
+                    block: StructureBlock::new(*coordinate, structure_entity),
                     breaker: mining_block.last_toucher,
-                    structure_entity,
                 });
                 commands.entity(entity).insert(NeedsDespawned);
                 return false;
@@ -294,7 +293,7 @@ fn on_activate_system(
                         let beam_direction = line.direction.to_vec3();
 
                         let beam_begin = line.end();
-                        let rel_pos = structure.block_relative_position(beam_begin.coords());
+                        let rel_pos = structure.block_relative_position(beam_begin);
 
                         let mining_beam = commands
                             .spawn((

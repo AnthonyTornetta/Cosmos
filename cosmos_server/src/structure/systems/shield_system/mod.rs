@@ -107,7 +107,7 @@ fn block_update_system(
     systems_query: Query<&StructureSystems>,
 ) {
     for ev in event.read() {
-        if let Ok(systems) = systems_query.get(ev.structure_entity) {
+        if let Ok(systems) = systems_query.get(ev.block.structure()) {
             if let Ok(mut system) = systems.query_mut(&mut system_query) {
                 if shield_projector_blocks.0.get(&ev.old_block).is_some() {
                     system.projector_removed(ev.block.coords());
@@ -142,12 +142,12 @@ fn structure_loaded_event(
             let mut system = ShieldSystem::default();
 
             for block in structure.all_blocks_iter(false) {
-                if let Some(&prop) = shield_projector_blocks.0.get(&structure.block_id_at(block.coords())) {
-                    system.projector_added(prop, block.coords());
+                if let Some(&prop) = shield_projector_blocks.0.get(&structure.block_id_at(block)) {
+                    system.projector_added(prop, block);
                 }
 
-                if let Some(&prop) = shield_generator_blocks.0.get(&structure.block_id_at(block.coords())) {
-                    system.generator_added(prop, block.coords());
+                if let Some(&prop) = shield_generator_blocks.0.get(&structure.block_id_at(block)) {
+                    system.generator_added(prop, block);
                 }
             }
 
