@@ -55,7 +55,7 @@ fn dock_block_update_system(
     q_systems: Query<&StructureSystems>,
 ) {
     for ev in event.read() {
-        let Ok(systems) = q_systems.get(ev.structure_entity) else {
+        let Ok(systems) = q_systems.get(ev.block.structure()) else {
             continue;
         };
 
@@ -85,8 +85,8 @@ fn dock_structure_loaded_event_processor(
             let mut system = DockSystem::default();
 
             for block in structure.all_blocks_iter(false) {
-                if block.block(structure, &blocks).unlocalized_name() == "cosmos:ship_dock" {
-                    system.block_added(block.coords());
+                if structure.block_at(block, &blocks).unlocalized_name() == "cosmos:ship_dock" {
+                    system.block_added(block);
                 }
             }
 
@@ -339,8 +339,8 @@ fn monitor_removed_dock_blocks(
         }
 
         for (docked_entity, docked) in q_docked.iter() {
-            if docked.to == ev.structure_entity && docked.to_block == ev.block.coords()
-                || ev.structure_entity == docked_entity && docked.this_block == ev.block.coords()
+            if docked.to == ev.block.structure() && docked.to_block == ev.block.coords()
+                || ev.block.structure() == docked_entity && docked.this_block == ev.block.coords()
             {
                 let vel = q_velocity.get(docked.to).copied().unwrap_or_default();
                 commands.entity(docked_entity).remove::<Docked>().insert(vel);

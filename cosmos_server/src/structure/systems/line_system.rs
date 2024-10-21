@@ -16,7 +16,6 @@ use cosmos_core::{
     structure::{
         coordinates::{BlockCoordinate, CoordinateType, UnboundBlockCoordinate, UnboundCoordinateType},
         events::StructureLoadedEvent,
-        structure_block::StructureBlock,
         systems::{
             line_system::{Line, LineBlocks, LineColorBlock, LineColorProperty, LineProperty, LinePropertyCalculator, LineSystem},
             StructureSystemType, StructureSystems, StructureSystemsSet,
@@ -42,11 +41,11 @@ fn block_update_system<T: LineProperty, S: LinePropertyCalculator<T>>(
                 let new_block = blocks.from_numeric_id(ev.new_block);
 
                 if laser_cannon_blocks.get(old_block).is_some() {
-                    system.remove_block(&ev.block);
+                    system.remove_block(ev.block.coords());
                 }
 
                 if let Some(property) = laser_cannon_blocks.get(new_block) {
-                    system.add_block(&ev.block, ev.new_block_rotation, property);
+                    system.add_block(ev.block.coords(), ev.new_block_rotation, property);
                 }
 
                 let mut recalc = false;
@@ -86,11 +85,11 @@ fn structure_loaded_event<T: LineProperty, S: LinePropertyCalculator<T>>(
                 let block = structure.block_at(coords, &blocks);
                 let block_rotation = structure.block_rotation(coords);
                 if let Some(prop) = line_blocks.get(block) {
-                    system.add_block(&coords, block_rotation, prop);
+                    system.add_block(coords, block_rotation, prop);
                 }
                 if let Some(color_property) = color_blocks.from_block(block) {
                     color_found = true;
-                    system.colors.push((coords.coords(), color_property.properties));
+                    system.colors.push((coords, color_property.properties));
                 }
             }
 
@@ -247,7 +246,7 @@ impl<T: LineProperty, S: LinePropertyCalculator<T>> BlockStructureSystem<T> for 
         let property = S::calculate_property(&properties);
 
         self.lines.push(Line {
-            start: *block,
+            start: block,
             direction: block_direction,
             len: 1,
             properties,
@@ -258,11 +257,11 @@ impl<T: LineProperty, S: LinePropertyCalculator<T>> BlockStructureSystem<T> for 
         });
     }
 
-    fn remove_block(&mut self, sb: &StructureBlock) {
+    fn remove_block(&mut self, sb: BlockCoordinate) {
         for (i, line) in self.lines.iter_mut().enumerate() {
-            line.mark_block_inactive(sb.coords());
+            line.mark_block_inactive(sb);
 
-            if line.start == *sb {
+            if line.start == sb {
                 let (dx, dy, dz) = line.direction.to_i32_tuple();
                 line.start.x = (line.start.x as i32 + dx) as CoordinateType;
                 line.start.y = (line.start.y as i32 + dy) as CoordinateType;
@@ -273,14 +272,14 @@ impl<T: LineProperty, S: LinePropertyCalculator<T>> BlockStructureSystem<T> for 
                     self.lines.swap_remove(i);
                 }
                 return;
-            } else if line.end() == *sb {
+            } else if line.end() == sb {
                 line.len -= 1;
 
                 if line.len == 0 {
                     self.lines.swap_remove(i);
                 }
                 return;
-            } else if line.within(sb) {
+            } else if line.within(&sb) {
                 let l1_len = match line.direction {
                     BlockDirection::PosX => sb.x - line.start.x,
                     BlockDirection::NegX => line.start.x - sb.x,
@@ -333,11 +332,11 @@ impl<T: LineProperty, S: LinePropertyCalculator<T>> BlockStructureSystem<T> for 
 
                 let l2_property = S::calculate_property(&l2_props);
                 let mut l2 = Line {
-                    start: StructureBlock::new(BlockCoordinate::new(
+                    start: BlockCoordinate::new(
                         (line.start.x as i32 + dx * dist) as CoordinateType,
                         (line.start.y as i32 + dy * dist) as CoordinateType,
                         (line.start.z as i32 + dz * dist) as CoordinateType,
-                    )),
+                    ),
                     direction: line.direction,
                     len: l2_len,
                     properties: l2_props,

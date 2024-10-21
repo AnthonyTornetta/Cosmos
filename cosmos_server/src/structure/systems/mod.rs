@@ -1,7 +1,7 @@
 //! Contains projectile systems needed on the server
 
 use bevy::prelude::App;
-use cosmos_core::{block::block_rotation::BlockRotation, structure::structure_block::StructureBlock};
+use cosmos_core::{block::block_rotation::BlockRotation, prelude::BlockCoordinate};
 
 mod camera_system;
 mod dock_system;
@@ -18,9 +18,9 @@ mod thruster_system;
 /// A system that is created by the addition and removal of blocks
 pub trait BlockStructureSystem<T> {
     /// Called whenever a block is added that is relevant to this system
-    fn add_block(&mut self, sb: &StructureBlock, block_rotation: BlockRotation, property: &T);
+    fn add_block(&mut self, sb: BlockCoordinate, block_rotation: BlockRotation, property: &T);
     /// Called whenever a block is removed that is relevant to this system
-    fn remove_block(&mut self, sb: &StructureBlock);
+    fn remove_block(&mut self, sb: BlockCoordinate);
 }
 
 pub(super) fn register(app: &mut App) {

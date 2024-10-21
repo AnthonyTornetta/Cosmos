@@ -82,7 +82,7 @@ fn update_system(
         cooldown.remove_unused_cooldowns(cannon_system);
 
         for line in cannon_system.lines.iter() {
-            let cooldown = cooldown.lines.entry(line.start.coords()).or_insert(default_cooldown);
+            let cooldown = cooldown.lines.entry(line.start).or_insert(default_cooldown);
 
             if sec - cooldown.last_use_time < cooldown.cooldown_time.as_secs_f32() {
                 continue;
@@ -96,7 +96,7 @@ fn update_system(
             any_fired = true;
             energy_storage_system.decrease_energy(line.property.energy_per_shot);
 
-            let location = structure.block_world_location(line.start.coords(), global_transform, location);
+            let location = structure.block_world_location(line.start, global_transform, location);
 
             let relative_direction = line.direction.to_vec3();
             let laser_velocity = global_transform.affine().matrix3.mul_vec3(relative_direction) * LASER_BASE_VELOCITY;
@@ -147,19 +147,19 @@ fn laser_cannon_input_event_listener(
     mut q_laser_cannon_system: Query<&mut LaserCannonSystem>,
 ) {
     for ev in evr_logic_input.read() {
-        let Ok((structure, systems)) = q_structure.get(ev.entity) else {
+        let Ok((structure, systems)) = q_structure.get(ev.block.structure()) else {
             continue;
         };
         if structure.block_at(ev.block.coords(), &blocks).unlocalized_name() != "cosmos:laser_cannon" {
             continue;
         }
-        let Ok(logic_driver) = q_logic_driver.get_mut(ev.entity) else {
+        let Ok(logic_driver) = q_logic_driver.get_mut(ev.block.structure()) else {
             continue;
         };
         let Ok(mut laser_cannon_system) = systems.query_mut(&mut q_laser_cannon_system) else {
             continue;
         };
-        let Some(line) = laser_cannon_system.mut_line_containing(ev.block) else {
+        let Some(line) = laser_cannon_system.mut_line_containing(ev.block.coords()) else {
             continue;
         };
 
