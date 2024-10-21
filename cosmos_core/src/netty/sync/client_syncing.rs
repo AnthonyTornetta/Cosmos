@@ -489,7 +489,7 @@ fn get_entity_identifier_info(
         } => network_mapping
             .client_from_server(&server_data_entity)
             .map(|x| {
-                let Ok(bd) = q_block_data.get(x) else {
+                if !q_block_data.contains(x) {
                     error!("Component got for block data but had no block data component - requesting entity. (Client: {x:?})");
 
                     client.send_message(
