@@ -358,17 +358,6 @@ fn logic_block_placed_event_listener(
     mut evw_queue_logic_input: EventWriter<QueueLogicInputEvent>,
 ) {
     for ev in evr_block_changed.read() {
-        // println!("{ev:?}");
-
-        /*
-        BlockChangedEvent { block: StructureBlock(BlockCoordinate { x: 160, y: 160, z: 159 }), structure_entity: Entity { index: 624, generation: 6 }, old_block: 72, new_block: 0, old_block_rotation: BlockRotation { face_pointing_pos_y: Top, sub_rotation: None }, new_block_rotation: BlockRotation { face_pointing_pos_y: Top, sub_rotation: None } }
-        BlockChangedEvent { block: StructureBlock(BlockCoordinate { x: 160, y: 160, z: 160 }), structure_entity: Entity { index: 624, generation: 6 }, old_block: 7, new_block: 0, old_block_rotation: BlockRotation { face_pointing_pos_y: Top, sub_rotation: None }, new_block_rotation: BlockRotation { face_pointing_pos_y: Top, sub_rotation: None } }
-        BlockChangedEvent { block: StructureBlock(BlockCoordinate { x: 320, y: 320, z: 323 }), structure_entity: Entity { index: 597, generation: 2 }, old_block: 72, new_block: 0, old_block_rotation: BlockRotation { face_pointing_pos_y: Top, sub_rotation: Flip }, new_block_rotation: BlockRotation { face_pointing_pos_y: Top, sub_rotation: None } }
-        BlockChangedEvent { block: StructureBlock(BlockCoordinate { x: 320, y: 320, z: 324 }), structure_entity: Entity { index: 597, generation: 2 }, old_block: 72, new_block: 0, old_block_rotation: BlockRotation { face_pointing_pos_y: Top, sub_rotation: Flip }, new_block_rotation: BlockRotation { face_pointing_pos_y: Top, sub_rotation: None } }
-        thread 'Compute Task Pool (1)' panicked at cosmos_core/src/logic/logic_graph.rs:117:39:
-        Logic group to be removed should exist.
-        */
-
         // If was logic block, remove from the logic graph.
         if let Some(logic_block) = logic_blocks.from_id(blocks.from_numeric_id(ev.old_block).unlocalized_name()) {
             if let Ok(structure) = q_structure.get_mut(ev.block.structure()) {
