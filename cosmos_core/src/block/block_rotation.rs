@@ -33,17 +33,18 @@ impl BlockRotation {
 
     /// Returns this rotation's representation as a quaternion.
     pub fn as_quat(&self) -> Quat {
-        self.sub_rotation
-            .as_quat()
-            .mul_quat(match self.face_pointing_pos_y {
-                BlockFace::Top => Quat::IDENTITY,
-                BlockFace::Bottom => Quat::from_axis_angle(Vec3::X, PI),
-                BlockFace::Back => Quat::from_axis_angle(Vec3::X, PI / 2.0),
-                BlockFace::Front => Quat::from_axis_angle(Vec3::X, -PI / 2.0),
-                BlockFace::Left => Quat::from_axis_angle(Vec3::Z, PI / 2.0),
-                BlockFace::Right => Quat::from_axis_angle(Vec3::Z, -PI / 2.0),
-            })
-            .normalize()
+        let quat = match self.face_pointing_pos_y {
+            BlockFace::Top => Quat::IDENTITY,
+            BlockFace::Bottom => Quat::from_axis_angle(Vec3::X, PI),
+            BlockFace::Back => Quat::from_axis_angle(Vec3::X, -PI / 2.0),
+            BlockFace::Front => Quat::from_axis_angle(Vec3::X, PI / 2.0),
+            BlockFace::Left => Quat::from_axis_angle(Vec3::Z, PI / 2.0),
+            BlockFace::Right => Quat::from_axis_angle(Vec3::Z, -PI / 2.0),
+        };
+
+        let sub_rotation_quat = self.sub_rotation.as_quat(Vec3::Y);
+
+        (sub_rotation_quat * quat).normalize()
     }
 
     #[inline(always)]
@@ -102,16 +103,16 @@ impl BlockRotation {
         match top_face_pointing {
             D::PosX => match front_face_pointing {
                 // The inner match arms are ordered by the resulting sub-rotation to make them easier to visualize.
-                D::NegZ => Self::new(BF::Left, BlockSubRotation::None),
+                D::NegZ => Self::new(BF::Right, BlockSubRotation::None),
                 D::NegY => Self::new(BF::Back, BlockSubRotation::CW),
-                D::PosZ => Self::new(BF::Right, BlockSubRotation::Flip),
+                D::PosZ => Self::new(BF::Right, BlockSubRotation::CCW),
                 D::PosY => Self::new(BF::Front, BlockSubRotation::CCW),
                 _ => panic!("Invalid combination of top and front face directions."),
             },
             D::NegX => match front_face_pointing {
-                D::NegZ => Self::new(BF::Right, BlockSubRotation::None),
+                D::NegZ => Self::new(BF::Right, BlockSubRotation::CW),
                 D::PosY => Self::new(BF::Front, BlockSubRotation::CW),
-                D::PosZ => Self::new(BF::Left, BlockSubRotation::Flip),
+                D::PosZ => Self::new(BF::Left, BlockSubRotation::CW),
                 D::NegY => Self::new(BF::Back, BlockSubRotation::CCW),
                 _ => panic!("Invalid combination of top and front face directions."),
             },
@@ -131,16 +132,16 @@ impl BlockRotation {
             },
             D::PosZ => match front_face_pointing {
                 D::PosY => Self::new(BF::Front, BlockSubRotation::None),
-                D::PosX => Self::new(BF::Left, BlockSubRotation::CW),
+                D::PosX => Self::new(BF::Left, BlockSubRotation::None),
                 D::NegY => Self::new(BF::Back, BlockSubRotation::Flip),
-                D::NegX => Self::new(BF::Right, BlockSubRotation::CCW),
+                D::NegX => Self::new(BF::Right, BlockSubRotation::None),
                 _ => panic!("Invalid combination of top and front face directions."),
             },
             D::NegZ => match front_face_pointing {
                 D::NegY => Self::new(BF::Back, BlockSubRotation::None),
-                D::PosX => Self::new(BF::Right, BlockSubRotation::CW),
+                D::PosX => Self::new(BF::Right, BlockSubRotation::Flip),
                 D::PosY => Self::new(BF::Front, BlockSubRotation::Flip),
-                D::NegX => Self::new(BF::Left, BlockSubRotation::CCW),
+                D::NegX => Self::new(BF::Left, BlockSubRotation::Flip),
                 _ => panic!("Invalid combination of top and front face directions."),
             },
         }
@@ -270,12 +271,12 @@ impl BlockSubRotation {
     }
 
     /// Returns the quaternion associated with this sub rotation. All sub-rotations rotate around the Y axis.
-    pub fn as_quat(&self) -> Quat {
+    pub fn as_quat(&self, local_y_axis: Vec3) -> Quat {
         match self {
             Self::None => Quat::IDENTITY,
-            Self::CCW => Quat::from_axis_angle(Vec3::Y, PI / 2.0),
-            Self::CW => Quat::from_axis_angle(Vec3::Y, -PI / 2.0),
-            Self::Flip => Quat::from_axis_angle(Vec3::Y, PI),
+            Self::CCW => Quat::from_axis_angle(local_y_axis, PI / 2.0),
+            Self::CW => Quat::from_axis_angle(local_y_axis, -PI / 2.0),
+            Self::Flip => Quat::from_axis_angle(local_y_axis, PI),
         }
     }
 }

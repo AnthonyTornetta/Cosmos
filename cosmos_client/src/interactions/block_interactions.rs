@@ -212,6 +212,8 @@ pub(crate) fn process_player_interaction(
                         }
                     };
 
+                    println!("{point} -> {front_facing:?} ||| {perpendicular_direction:?}");
+
                     BlockRotation::from_face_directions(perpendicular_direction, front_facing)
                 }
             } else {
