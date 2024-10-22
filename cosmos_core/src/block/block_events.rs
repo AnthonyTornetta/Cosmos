@@ -312,15 +312,8 @@ fn calculate_build_mode_blocks(
                     let new_block_rotation = match block_rotation {
                         BlockRotation {
                             face_pointing_pos_y: BlockFace::Top | BlockFace::Bottom,
-                            sub_rotation: BlockSubRotation::Flip | BlockSubRotation::None,
+                            sub_rotation: _,
                         } => block_rotation.inverse(),
-                        BlockRotation {
-                            face_pointing_pos_y: BlockFace::Top | BlockFace::Bottom,
-                            sub_rotation: BlockSubRotation::CCW | BlockSubRotation::CW,
-                        } => BlockRotation {
-                            face_pointing_pos_y: block_rotation.face_pointing_pos_y.inverse(),
-                            sub_rotation: block_rotation.sub_rotation,
-                        },
                         BlockRotation {
                             face_pointing_pos_y: BlockFace::Right | BlockFace::Left,
                             sub_rotation: BlockSubRotation::CCW | BlockSubRotation::CW,
@@ -330,9 +323,9 @@ fn calculate_build_mode_blocks(
                         },
                         BlockRotation {
                             face_pointing_pos_y: BlockFace::Back | BlockFace::Front,
-                            sub_rotation: BlockSubRotation::Flip | BlockSubRotation::None,
+                            sub_rotation: _,
                         } => BlockRotation {
-                            face_pointing_pos_y: block_rotation.face_pointing_pos_y,
+                            face_pointing_pos_y: block_rotation.face_pointing_pos_y.inverse(),
                             sub_rotation: block_rotation.sub_rotation.inverse(),
                         },
                         _ => block_rotation,
@@ -362,14 +355,21 @@ fn calculate_build_mode_blocks(
                         BlockRotation {
                             face_pointing_pos_y: BlockFace::Back | BlockFace::Front,
                             sub_rotation: BlockSubRotation::None | BlockSubRotation::Flip,
-                        } => block_rotation.inverse(),
+                        } => BlockRotation {
+                            face_pointing_pos_y: block_rotation.face_pointing_pos_y,
+                            sub_rotation: block_rotation.sub_rotation.inverse(),
+                        },
                         BlockRotation {
-                            face_pointing_pos_y: BlockFace::Back | BlockFace::Front,
-                            sub_rotation: BlockSubRotation::CCW | BlockSubRotation::CW,
+                            face_pointing_pos_y: BlockFace::Left | BlockFace::Right,
+                            sub_rotation: BlockSubRotation::CW | BlockSubRotation::CCW,
                         } => BlockRotation {
                             face_pointing_pos_y: block_rotation.face_pointing_pos_y.inverse(),
                             sub_rotation: block_rotation.sub_rotation,
                         },
+                        BlockRotation {
+                            face_pointing_pos_y: BlockFace::Left | BlockFace::Right,
+                            sub_rotation: _,
+                        } => block_rotation.inverse(),
                         BlockRotation {
                             face_pointing_pos_y: _,
                             sub_rotation: BlockSubRotation::None | BlockSubRotation::Flip,
