@@ -186,6 +186,8 @@ impl LogicDriver {
                 rotation.direction_of(input_face),
                 PortType::Input,
                 structure,
+                blocks,
+                logic_blocks,
                 evw_queue_logic_input,
             )
         }
@@ -197,6 +199,8 @@ impl LogicDriver {
                 rotation.direction_of(output_face),
                 PortType::Output,
                 structure,
+                blocks,
+                logic_blocks,
                 evw_queue_logic_input,
             )
         }

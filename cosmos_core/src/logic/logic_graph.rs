@@ -86,10 +86,6 @@ impl LogicGroup {
             );
         }
     }
-
-    pub(crate) fn has_one_port(&self) -> bool {
-        (self.consumers.len() + self.producers.len()) == 1
-    }
 }
 
 #[derive(Debug, Default, Reflect)]
@@ -365,22 +361,36 @@ impl LogicGraph {
         direction: BlockDirection,
         port_type: PortType,
         structure: &Structure,
+        blocks: &Registry<Block>,
+        logic_blocks: &Registry<LogicBlock>,
         evw_queue_logic_input: &mut EventWriter<QueueLogicInputEvent>,
     ) {
+        // If the neighbor coordinates don't exist, no port is removed.
+        let Ok(neighbor_coords) = coords.step(direction) else {
+            return;
+        };
+
         let port = Port::new(coords, direction);
         let &group_id = match port_type {
             PortType::Input => &mut self.input_port_group_id,
             PortType::Output => &mut self.output_port_group_id,
         }
         .get(&port)
-        .unwrap_or_else(|| panic!("Port {port:?} to be removed should have a logic group."));
+        .expect("Port to be removed should exist.");
 
         // Check if this port is the last block of its group, and delete the group if so.
         if self
-            .groups
-            .get(&group_id)
-            .expect("Logic group with port should exist.")
-            .has_one_port()
+            .dfs_for_group(
+                neighbor_coords,
+                direction.inverse(),
+                None,
+                false,
+                structure,
+                &mut Port::all_for(coords),
+                blocks,
+                logic_blocks,
+            )
+            .is_none()
         {
             self.remove_group(group_id);
         } else {
