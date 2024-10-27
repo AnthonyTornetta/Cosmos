@@ -9,7 +9,7 @@ use bevy::prelude::App;
 use bevy::prelude::Entity;
 use bevy::prelude::Event;
 
-#[derive(Debug, Event)]
+#[derive(Debug, Event, Clone)]
 /// Sent when a block is changed (destroyed or placed)
 ///
 /// This is NOT SENT when a block's data is modified.
