@@ -31,18 +31,23 @@ impl BlockRotation {
         }
     }
 
-    /// Returns this rotation's representation as a quaternion.
-    pub fn as_quat(&self) -> Quat {
-        let quat = match self.face_pointing_pos_y {
+    /// Returns the [`Self::face_pointing_pos_y`] face as a quaternion that will be used to
+    /// complete this rotation.
+    pub fn face_pointing_pos_y_quat(&self) -> Quat {
+        match self.face_pointing_pos_y {
             BlockFace::Top => Quat::IDENTITY,
             BlockFace::Bottom => Quat::from_axis_angle(Vec3::X, PI),
             BlockFace::Back => Quat::from_axis_angle(Vec3::X, -PI / 2.0),
             BlockFace::Front => Quat::from_axis_angle(Vec3::X, PI / 2.0),
             BlockFace::Left => Quat::from_axis_angle(Vec3::Z, PI / 2.0),
             BlockFace::Right => Quat::from_axis_angle(Vec3::Z, -PI / 2.0),
-        };
+        }
+    }
 
-        let sub_rotation_quat = self.sub_rotation.as_quat(Vec3::Y);
+    /// Returns this rotation's representation as a quaternion.
+    pub fn as_quat(&self) -> Quat {
+        let quat = self.face_pointing_pos_y_quat();
+        let sub_rotation_quat = self.sub_rotation.as_quat();
 
         (sub_rotation_quat * quat).normalize()
     }
@@ -271,12 +276,12 @@ impl BlockSubRotation {
     }
 
     /// Returns the quaternion associated with this sub rotation. All sub-rotations rotate around the Y axis.
-    pub fn as_quat(&self, local_y_axis: Vec3) -> Quat {
+    pub fn as_quat(&self) -> Quat {
         match self {
             Self::None => Quat::IDENTITY,
-            Self::CCW => Quat::from_axis_angle(local_y_axis, PI / 2.0),
-            Self::CW => Quat::from_axis_angle(local_y_axis, -PI / 2.0),
-            Self::Flip => Quat::from_axis_angle(local_y_axis, PI),
+            Self::CCW => Quat::from_axis_angle(Vec3::Y, PI / 2.0),
+            Self::CW => Quat::from_axis_angle(Vec3::Y, -PI / 2.0),
+            Self::Flip => Quat::from_axis_angle(Vec3::Y, PI),
         }
     }
 }

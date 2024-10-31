@@ -156,6 +156,9 @@ fn handle_block_break_events(
             if let Ok((mut structure, s_loc, g_trans, velocity)) = q_structure.get_mut(ev.block.structure()) {
                 let mut structure_blocks = vec![(ev.block.coords(), BlockRotation::default())];
 
+                let coord = ev.block.coords();
+                let block = structure.block_at(coord, &blocks);
+
                 if let (Some(build_mode), Some(parent)) = (build_mode, parent) {
                     structure_blocks = calculate_build_mode_blocks(
                         structure_blocks,
@@ -164,6 +167,7 @@ fn handle_block_break_events(
                         ev.block.structure(),
                         &mut inventory,
                         &structure,
+                        block,
                     );
                 }
 
@@ -246,6 +250,7 @@ fn calculate_build_mode_blocks(
     structure_entity: Entity,
     inventory: &mut Mut<'_, Inventory>,
     structure: &Structure,
+    block: &Block,
 ) -> Vec<(BlockCoordinate, BlockRotation)> {
     if parent.get() != structure_entity {
         // Tried to place a block on a structure they're not in build mode on
@@ -385,11 +390,17 @@ fn calculate_build_mode_blocks(
             }
         }
 
-        structure_blocks = new_coords;
-    }
+        // TODO: Sub rotations aren't properly handled by connected textures.
+        // Nothing that has connected textures and uses sub rotations exists yet, so for now just
+        // disable them on build block placements. This will have to get fixed eventually.
+        let connected = !block.connect_to_groups.is_empty();
+        if connected {
+            for (_, rot) in &mut new_coords {
+                rot.sub_rotation = Default::default();
+            }
+        }
 
-    for c in structure_blocks.iter_mut() {
-        c.1.sub_rotation = BlockSubRotation::None;
+        structure_blocks = new_coords;
     }
 
     structure_blocks
@@ -421,6 +432,18 @@ fn handle_block_place_events(
         };
         let mut structure_blocks = vec![(place_event_data.structure_block.coords(), place_event_data.block_up)];
 
+        let Some(is) = inv.itemstack_at(place_event_data.inventory_slot) else {
+            break;
+        };
+
+        let item = items.from_numeric_id(is.item_id());
+
+        let Some(block_id) = block_items.block_from_item(item) else {
+            break;
+        };
+
+        let block = blocks.from_numeric_id(block_id);
+
         if let (Some(build_mode), Some(parent)) = (build_mode, parent) {
             structure_blocks = calculate_build_mode_blocks(
                 structure_blocks,
@@ -429,6 +452,7 @@ fn handle_block_place_events(
                 place_event_data.structure_block.structure(),
                 &mut inv,
                 &structure,
+                block,
             );
         }
 
@@ -437,23 +461,11 @@ fn handle_block_place_events(
                 continue;
             }
 
-            let Some(is) = inv.itemstack_at(place_event_data.inventory_slot) else {
-                break;
-            };
-
-            let item = items.from_numeric_id(is.item_id());
-
-            let Some(block_id) = block_items.block_from_item(item) else {
-                break;
-            };
-
             if block_id != place_event_data.block_id {
                 *ev.write() = BlockPlaceEvent::Cancelled;
                 // May have run out of the item or it was swapped with something else (not really possible currently, but more checks never hurt anyone)
                 break;
             }
-
-            let block = blocks.from_numeric_id(block_id);
 
             if block.unlocalized_name() == "cosmos:ship_core" || block.unlocalized_name() == "cosmos:station_core" {
                 break;

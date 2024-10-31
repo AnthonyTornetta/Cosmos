@@ -7,7 +7,6 @@ use bevy::log::warn;
 use bevy::prelude::{App, Deref, DerefMut, Entity, Rect, Resource, Vec3};
 use bevy::tasks::Task;
 use bevy::utils::hashbrown::HashMap;
-use cosmos_core::block::block_face::BlockFace;
 use cosmos_core::block::{block_direction::BlockDirection, Block};
 use cosmos_core::registry::identifiable::Identifiable;
 use cosmos_core::registry::many_to_one::ManyToOneRegistry;
@@ -163,6 +162,7 @@ impl<M: MeshBuilder + Default> ChunkRenderer<M> {
 
                     let mut neighbors = BlockNeighbors::empty();
 
+                    // These starting values are unused, but required to be set by the compiler.
                     let mut pos_x = BlockDirection::PosX;
                     let mut neg_x = BlockDirection::NegX;
                     let mut pos_y = BlockDirection::PosY;
@@ -170,7 +170,6 @@ impl<M: MeshBuilder + Default> ChunkRenderer<M> {
                     let mut pos_z = BlockDirection::PosZ;
                     let mut neg_z = BlockDirection::NegZ;
 
-                    let rot_q = block_rotation.as_quat();
                     #[inline]
                     fn account_for_rotation_in_neighbor_check(dir_vec: Vec3, pos_dir: &mut BlockDirection, neg_dir: &mut BlockDirection) {
                         use BlockDirection::*;
@@ -198,9 +197,10 @@ impl<M: MeshBuilder + Default> ChunkRenderer<M> {
                         }
                     }
 
-                    let x = rot_q * Vec3::X;
-                    let y = rot_q * Vec3::Y;
-                    let z = rot_q * Vec3::Z;
+                    // TODO: This fails for sub-rotations :(
+                    let x = rotation * Vec3::X;
+                    let y = rotation * Vec3::Y;
+                    let z = rotation * Vec3::Z;
 
                     account_for_rotation_in_neighbor_check(x, &mut pos_x, &mut neg_x);
                     account_for_rotation_in_neighbor_check(y, &mut pos_y, &mut neg_y);
