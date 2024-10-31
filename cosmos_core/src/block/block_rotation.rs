@@ -61,7 +61,7 @@ impl BlockRotation {
     /// For example, if this rotation makes [`BlockFace::Front`] point [`Direction::NegX`]
     /// and you provide [`BlockFace::Front`], you will be given [`Direction::NegX`].
     pub fn direction_of(&self, face: BlockFace) -> BlockDirection {
-        let unrotated_vec3 = face.direction().to_vec3();
+        let unrotated_vec3 = face.direction().as_vec3();
         let rotated_vec3 = self.as_quat().mul_vec3(unrotated_vec3);
         BlockDirection::from_vec3(rotated_vec3)
     }

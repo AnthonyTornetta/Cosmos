@@ -80,7 +80,7 @@ impl BlockDirection {
     }
 
     /// Returns the direction each face represents as a Vec3.
-    pub const fn to_vec3(&self) -> Vec3 {
+    pub const fn as_vec3(&self) -> Vec3 {
         match *self {
             Self::PosX => Vec3::X,
             Self::NegX => Vec3::NEG_X,
@@ -118,7 +118,7 @@ impl BlockDirection {
 
     /// Returns the integer tuple this direction represents.
     pub const fn to_i32_tuple(&self) -> (i32, i32, i32) {
-        let vec = self.to_vec3();
+        let vec = self.as_vec3();
         (vec.x as i32, vec.y as i32, vec.z as i32)
     }
 
@@ -130,13 +130,13 @@ impl BlockDirection {
 
     /// Returns the direction each face represents as an UnboundBlockCoordinate
     pub const fn to_coordinates(&self) -> UnboundBlockCoordinate {
-        let vec = self.to_vec3();
+        let vec = self.as_vec3();
         UnboundBlockCoordinate::new(vec.x as i64, vec.y as i64, vec.z as i64)
     }
 
     /// Returns the direction each face represents as an UnboundChunkBlockCoordinate
     pub const fn to_chunk_block_coordinates(&self) -> UnboundChunkBlockCoordinate {
-        let vec = self.to_vec3();
+        let vec = self.as_vec3();
         UnboundChunkBlockCoordinate::new(vec.x as i64, vec.y as i64, vec.z as i64)
     }
 

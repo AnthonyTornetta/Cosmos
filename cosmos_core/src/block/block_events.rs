@@ -388,6 +388,10 @@ fn calculate_build_mode_blocks(
         structure_blocks = new_coords;
     }
 
+    for c in structure_blocks.iter_mut() {
+        c.1.sub_rotation = BlockSubRotation::None;
+    }
+
     structure_blocks
 }
 

@@ -81,7 +81,7 @@ fn color_planet_skybox(
         let planet_face_direction = planet_rot
             * Planet::planet_face_relative(planet_rot.inverse() * Vec3::from(*player_loc - *closest_planet_loc))
                 .direction()
-                .to_vec3();
+                .as_vec3();
 
         let dot = star_direction.dot(planet_face_direction);
         const BEGIN_FADE: f32 = 0.2;

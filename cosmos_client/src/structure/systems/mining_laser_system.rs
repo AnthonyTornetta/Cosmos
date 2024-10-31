@@ -185,7 +185,7 @@ fn apply_mining_effects(
 
                 let material = materials_cache.0.get(&hashed).expect("Added above");
 
-                let beam_direction = line.direction.to_vec3();
+                let beam_direction = line.direction.as_vec3();
 
                 let laser_start = structure.block_relative_position(line.start);
                 let beam_ent = p
@@ -279,7 +279,7 @@ fn create_mining_laser_mesh(mut commands: Commands, mut meshes: ResMut<Assets<Me
 
 fn rotate_mining_lasers(time: Res<Time>, mut q_transforms: Query<(&mut Transform, &MiningLaser)>) {
     for (mut trans, mining_laser) in q_transforms.iter_mut() {
-        trans.rotation = Quat::from_axis_angle(mining_laser.laser_direction.to_vec3(), time.delta_seconds()).mul_quat(trans.rotation);
+        trans.rotation = Quat::from_axis_angle(mining_laser.laser_direction.as_vec3(), time.delta_seconds()).mul_quat(trans.rotation);
     }
 }
 

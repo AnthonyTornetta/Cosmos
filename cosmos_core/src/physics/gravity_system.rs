@@ -39,7 +39,7 @@ fn gravity_system(
                 if ratio >= 0.9 {
                     let face = Planet::planet_face_relative(rotation.inverse() * relative_position);
 
-                    let grav_dir = -(*rotation * face.direction().to_vec3());
+                    let grav_dir = -(*rotation * face.direction().as_vec3());
 
                     force += (prop.get().mass * force_per_kilogram * ratio) * grav_dir;
                 } else if ratio >= 0.1 {
