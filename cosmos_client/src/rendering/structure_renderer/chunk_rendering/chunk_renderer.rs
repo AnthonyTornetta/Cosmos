@@ -162,61 +162,105 @@ impl<M: MeshBuilder + Default> ChunkRenderer<M> {
 
                     let mut neighbors = BlockNeighbors::empty();
 
+                    // These starting values are unused, but required to be set by the compiler.
+                    let mut pos_x = BlockDirection::PosX;
+                    let mut neg_x = BlockDirection::NegX;
+                    let mut pos_y = BlockDirection::PosY;
+                    let mut neg_y = BlockDirection::NegY;
+                    let mut pos_z = BlockDirection::PosZ;
+                    let mut neg_z = BlockDirection::NegZ;
+
+                    #[inline]
+                    fn account_for_rotation_in_neighbor_check(dir_vec: Vec3, pos_dir: &mut BlockDirection, neg_dir: &mut BlockDirection) {
+                        use BlockDirection::*;
+
+                        if dir_vec.x > 0.99 {
+                            *pos_dir = PosX;
+                            *neg_dir = NegX;
+                        } else if dir_vec.x < -0.99 {
+                            *pos_dir = NegX;
+                            *neg_dir = PosX;
+                        } else if dir_vec.y > 0.99 {
+                            *pos_dir = PosY;
+                            *neg_dir = NegY;
+                        } else if dir_vec.y < -0.99 {
+                            *pos_dir = NegY;
+                            *neg_dir = PosY;
+                        } else if dir_vec.z > 0.99 {
+                            *pos_dir = PosZ;
+                            *neg_dir = NegZ;
+                        } else if dir_vec.z < -0.99 {
+                            *pos_dir = NegZ;
+                            *neg_dir = PosZ;
+                        } else {
+                            unreachable!("Bad");
+                        }
+                    }
+
+                    // TODO: This fails for sub-rotations :(
+                    let x = rotation * Vec3::X;
+                    let y = rotation * Vec3::Y;
+                    let z = rotation * Vec3::Z;
+
+                    account_for_rotation_in_neighbor_check(x, &mut pos_x, &mut neg_x);
+                    account_for_rotation_in_neighbor_check(y, &mut pos_y, &mut neg_y);
+                    account_for_rotation_in_neighbor_check(z, &mut pos_z, &mut neg_z);
+
                     match direction {
                         BlockDirection::PosZ | BlockDirection::NegZ => {
-                            if block_connections[BlockDirection::PosX.index()] {
+                            if block_connections[pos_x.index()] {
                                 neighbors |= BlockNeighbors::Right;
                             }
-                            if block_connections[BlockDirection::NegX.index()] {
+                            if block_connections[neg_x.index()] {
                                 neighbors |= BlockNeighbors::Left;
                             }
-                            if block_connections[BlockDirection::PosY.index()] {
+                            if block_connections[pos_y.index()] {
                                 neighbors |= BlockNeighbors::Top;
                             }
-                            if block_connections[BlockDirection::NegY.index()] {
+                            if block_connections[neg_y.index()] {
                                 neighbors |= BlockNeighbors::Bottom;
                             }
                         }
                         BlockDirection::PosY | BlockDirection::NegY => {
-                            if block_connections[BlockDirection::PosX.index()] {
+                            if block_connections[pos_x.index()] {
                                 neighbors |= BlockNeighbors::Right;
                             }
-                            if block_connections[BlockDirection::NegX.index()] {
+                            if block_connections[neg_x.index()] {
                                 neighbors |= BlockNeighbors::Left;
                             }
-                            if block_connections[BlockDirection::PosZ.index()] {
+                            if block_connections[pos_z.index()] {
                                 neighbors |= BlockNeighbors::Top;
                             }
-                            if block_connections[BlockDirection::NegZ.index()] {
+                            if block_connections[neg_z.index()] {
                                 neighbors |= BlockNeighbors::Bottom;
                             }
                         }
                         // idk why right and left have to separate, and I don't want to know why
                         BlockDirection::PosX => {
-                            if block_connections[BlockDirection::PosZ.index()] {
+                            if block_connections[pos_z.index()] {
                                 neighbors |= BlockNeighbors::Right;
                             }
-                            if block_connections[BlockDirection::NegZ.index()] {
+                            if block_connections[neg_z.index()] {
                                 neighbors |= BlockNeighbors::Left;
                             }
-                            if block_connections[BlockDirection::PosY.index()] {
+                            if block_connections[pos_y.index()] {
                                 neighbors |= BlockNeighbors::Top;
                             }
-                            if block_connections[BlockDirection::NegY.index()] {
+                            if block_connections[neg_y.index()] {
                                 neighbors |= BlockNeighbors::Bottom;
                             }
                         }
                         BlockDirection::NegX => {
-                            if block_connections[BlockDirection::NegZ.index()] {
+                            if block_connections[neg_z.index()] {
                                 neighbors |= BlockNeighbors::Right;
                             }
-                            if block_connections[BlockDirection::PosZ.index()] {
+                            if block_connections[pos_z.index()] {
                                 neighbors |= BlockNeighbors::Left;
                             }
-                            if block_connections[BlockDirection::PosY.index()] {
+                            if block_connections[pos_y.index()] {
                                 neighbors |= BlockNeighbors::Top;
                             }
-                            if block_connections[BlockDirection::NegY.index()] {
+                            if block_connections[neg_y.index()] {
                                 neighbors |= BlockNeighbors::Bottom;
                             }
                         }

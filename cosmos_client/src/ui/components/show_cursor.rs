@@ -11,7 +11,7 @@ use bevy::{
 };
 
 use crate::{
-    ui::{OpenMenu, UiSystemSet},
+    ui::UiSystemSet,
     window::setup::{CursorFlags, CursorFlagsSet},
 };
 
@@ -40,7 +40,7 @@ fn show_cursor(mut cursor_flags: ResMut<CursorFlags>, q_show_cursor: Query<(), W
 /// ```rs
 /// app.add_systems(Update, process_movement.run_if(no_open_menus));
 /// ```
-pub fn no_open_menus(q_show_cursor: Query<(), With<OpenMenu>>) -> bool {
+pub fn no_open_menus(q_show_cursor: Query<(), With<ShowCursor>>) -> bool {
     q_show_cursor.is_empty()
 }
 
