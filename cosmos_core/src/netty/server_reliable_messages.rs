@@ -11,11 +11,10 @@ use bevy_renet2::renet2::ClientId;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    block::block_rotation::BlockRotation,
     entities::player::render_distance::RenderDistance,
     physics::location::Location,
     structure::{
-        chunk::netty::SerializedChunkBlockData,
+        chunk::{netty::SerializedChunkBlockData, BlockInfo},
         coordinates::{ChunkBlockCoordinate, ChunkCoordinate, CoordinateType},
         loading::ChunksNeedLoaded,
         planet::{generation::terrain_generation::GpuPermutationTable, Planet},
@@ -34,8 +33,8 @@ pub struct BlockChanged {
     pub coordinates: StructureBlock,
     /// The block it was changed to.
     pub block_id: u16,
-    /// The block's rotation
-    pub block_rotation: BlockRotation,
+    /// The block's tiny (u8) data
+    pub block_info: BlockInfo,
 }
 
 #[derive(Debug, Serialize, Deserialize, Component)]

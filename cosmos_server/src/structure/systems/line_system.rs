@@ -45,7 +45,7 @@ fn block_update_system<T: LineProperty, S: LinePropertyCalculator<T>>(
                 }
 
                 if let Some(property) = laser_cannon_blocks.get(new_block) {
-                    system.add_block(ev.block.coords(), ev.new_block_rotation, property);
+                    system.add_block(ev.block.coords(), ev.new_block_rotation(), property);
                 }
 
                 let mut recalc = false;

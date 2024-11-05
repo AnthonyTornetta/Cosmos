@@ -340,6 +340,23 @@ impl Structure {
         }
     }
 
+    /// Sets the block at the given block coordinates.
+    ///
+    /// * `event_writer` If this is `None`, no event will be generated. A valid usecase for this being `None` is when you are initially loading/generating everything and you don't want a billion events being generated.
+    pub fn set_block_and_info_at(
+        &mut self,
+        coords: BlockCoordinate,
+        block: &Block,
+        block_info: BlockInfo,
+        blocks: &Registry<Block>,
+        event_writer: Option<&mut EventWriter<BlockChangedEvent>>,
+    ) {
+        match self {
+            Self::Full(fs) => fs.set_block_and_info_at(coords, block, block_info, blocks, event_writer),
+            Self::Dynamic(ds) => ds.set_block_and_info_at(coords, block, block_info, blocks, event_writer),
+        }
+    }
+
     /// Gets the chunk's relative position to this structure's transform.
     pub fn chunk_relative_position(&self, coords: ChunkCoordinate) -> Vec3 {
         match self {
@@ -692,8 +709,8 @@ impl Structure {
         evw_block_data_changed: &mut EventWriter<BlockDataChangedEvent>,
     ) {
         match self {
-            Self::Full(fs) => fs.set_block_info_at(coords, block_info, evw_block_data_changed),
-            Self::Dynamic(ds) => ds.set_block_info_at(coords, block_info, evw_block_data_changed),
+            Self::Full(fs) => fs.set_block_info_at(coords, block_info, Some(evw_block_data_changed)),
+            Self::Dynamic(ds) => ds.set_block_info_at(coords, block_info, Some(evw_block_data_changed)),
         }
     }
 

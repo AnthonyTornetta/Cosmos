@@ -1,6 +1,7 @@
 //! Events that are related to blocks
 
 use crate::block::block_rotation::BlockRotation;
+use crate::structure::chunk::BlockInfo;
 use crate::structure::structure_block::StructureBlock;
 use bevy::ecs::event::EventWriter;
 use bevy::ecs::system::Commands;
@@ -24,9 +25,19 @@ pub struct BlockChangedEvent {
     /// The block that is there now/will be there
     pub new_block: u16,
     /// Old block's rotation
-    pub old_block_rotation: BlockRotation,
+    pub old_block_info: BlockInfo,
     /// New block's rotation
-    pub new_block_rotation: BlockRotation,
+    pub new_block_info: BlockInfo,
+}
+
+impl BlockChangedEvent {
+    pub fn old_block_rotation(&self) -> BlockRotation {
+        self.old_block_info.get_rotation()
+    }
+
+    pub fn new_block_rotation(&self) -> BlockRotation {
+        self.new_block_info.get_rotation()
+    }
 }
 
 #[derive(Event, Debug, Clone)]

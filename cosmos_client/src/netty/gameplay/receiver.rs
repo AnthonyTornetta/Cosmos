@@ -677,10 +677,10 @@ pub(crate) fn client_sync_players(
                 if let Some(client_ent) = network_mapping.client_from_server(&structure_entity) {
                     if let Ok(mut structure) = q_structure.get_mut(client_ent) {
                         for block_changed in blocks_changed_packet.0 {
-                            structure.set_block_at(
+                            structure.set_block_and_info_at(
                                 block_changed.coordinates.coords(),
                                 blocks.from_numeric_id(block_changed.block_id),
-                                block_changed.block_rotation,
+                                block_changed.block_info,
                                 &blocks,
                                 Some(&mut block_change_event_writer),
                             );
