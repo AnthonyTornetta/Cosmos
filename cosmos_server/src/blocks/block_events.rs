@@ -1,7 +1,7 @@
 use bevy::{prelude::*, utils::HashMap};
 use bevy_renet2::renet2::RenetServer;
 use cosmos_core::{
-    events::block_events::BlockChangedEvent,
+    events::block_events::{BlockChangedEvent, BlockDataChangedEvent},
     netty::{
         cosmos_encoder,
         server_reliable_messages::{BlockChanged, BlocksChangedPacket, ServerReliableMessages},
@@ -13,10 +13,14 @@ use cosmos_core::{
 
 use crate::structure::block_health::BlockHealthSet;
 
-fn handle_block_changed_event(mut event_reader: EventReader<BlockChangedEvent>, mut server: ResMut<RenetServer>) {
-    let iter_len = event_reader.read().len();
+fn handle_block_changed_event(
+    mut evr_block_changed_event: EventReader<BlockChangedEvent>,
+    mut evr_block_data_changed: EventReader<BlockDataChangedEvent>,
+    mut server: ResMut<RenetServer>,
+) {
+    let iter_len = evr_block_changed_event.read().len();
     let mut map = HashMap::new();
-    for ev in event_reader.read() {
+    for ev in evr_block_changed_event.read() {
         if !map.contains_key(&ev.block.structure()) {
             map.insert(ev.block.structure(), Vec::with_capacity(iter_len));
         }
