@@ -473,7 +473,12 @@ fn add_cosmos_blocks(
             .add_property(BlockProperty::Full)
             .create(),
     );
-    blocks.register(BlockBuilder::new("cosmos:door_open", 4.0, 100.0, 10.0).create());
+    blocks.register(
+        BlockBuilder::new("cosmos:door_open", 4.0, 100.0, 10.0)
+            .add_connection_group("cosmos:door_open")
+            .connect_to_group("cosmos:door_open")
+            .create(),
+    );
 
     loading.finish_loading(id, &mut end_writer);
 }

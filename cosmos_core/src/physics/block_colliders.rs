@@ -103,7 +103,10 @@ fn register_custom_colliders(blocks: Res<Registry<Block>>, mut registry: ResMut<
     registry.register(BlockCollider::new(BlockColliderType::Empty, "cosmos:air"));
 
     if blocks.contains("cosmos:door_open") {
-        registry.register(BlockCollider::new(BlockColliderType::Empty, "cosmos:door_open"));
+        registry.register(BlockCollider::new(
+            BlockColliderType::Full(BlockColliderMode::SensorCollider),
+            "cosmos:door_open",
+        ));
     }
 
     const EPSILON: f32 = 0.001;
