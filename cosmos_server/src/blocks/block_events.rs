@@ -20,7 +20,7 @@ fn handle_block_changed_event(
     mut server: ResMut<RenetServer>,
     q_structure: Query<&Structure>,
 ) {
-    let mut events_iter = evr_block_changed_event.read();
+    let events_iter = evr_block_changed_event.read();
     let iter_len = events_iter.len();
     let mut map = HashMap::new();
 
@@ -49,6 +49,7 @@ fn handle_block_changed_event(
     }
 
     for (entity, v) in map {
+        println!("{v:?}");
         server.broadcast_message(
             NettyChannelServer::Reliable,
             cosmos_encoder::serialize(&ServerReliableMessages::BlockChange {

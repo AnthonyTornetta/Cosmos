@@ -10,14 +10,14 @@ const DOOR_BIT: u8 = 1 << 7;
 
 impl DoorData for BlockInfo {
     fn is_open(&self) -> bool {
-        self.0 & DOOR_BIT != 0
+        self.0 & DOOR_BIT == 0
     }
 
     fn set_open(&mut self) {
-        self.0 |= DOOR_BIT;
+        self.0 &= !DOOR_BIT;
     }
 
     fn set_closed(&mut self) {
-        self.0 ^= DOOR_BIT;
+        self.0 |= DOOR_BIT;
     }
 }

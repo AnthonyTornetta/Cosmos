@@ -33,7 +33,7 @@ fn handle_block_event(
             continue;
         };
 
-        let Ok(structure) = s_query.get(s_block.structure_entity) else {
+        let Ok(structure) = s_query.get(s_block.structure()) else {
             continue;
         };
 
@@ -41,17 +41,14 @@ fn handle_block_event(
             continue;
         };
 
-        let block_id = s_block.structure_block.block_id(structure);
+        let block_id = s_block.block_id(structure);
 
         if block_id == block.id() {
             server.send_message(
                 player.id(),
                 NettyChannelServer::Inventory,
                 cosmos_encoder::serialize(&ServerInventoryMessages::OpenInventory {
-                    owner: InventoryIdentifier::BlockData(BlockDataIdentifier {
-                        block: s_block.structure_block,
-                        block_id,
-                    }),
+                    owner: InventoryIdentifier::BlockData(BlockDataIdentifier { block: s_block, block_id }),
                 }),
             );
         }

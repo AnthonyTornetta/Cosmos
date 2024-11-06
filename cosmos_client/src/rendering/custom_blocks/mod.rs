@@ -5,6 +5,7 @@ use bevy::{
 };
 use cosmos_core::state::GameState;
 
+mod door;
 mod logic_indicator;
 mod tank;
 
@@ -15,6 +16,7 @@ pub enum RenderingModesSet {
 
 pub(super) fn register(app: &mut App) {
     tank::register(app);
+    door::register(app);
     logic_indicator::register(app);
 
     app.configure_sets(

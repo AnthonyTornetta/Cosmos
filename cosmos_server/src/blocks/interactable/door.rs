@@ -26,17 +26,19 @@ fn grav_well_handle_block_event(
             continue;
         };
 
-        let Ok(structure) = q_structure.get(s_block.structure_entity) else {
+        let Ok(structure) = q_structure.get(s_block.structure()) else {
+            warn!("{s_block:?}");
             continue;
         };
 
-        let block = structure.block_at(s_block.structure_block.coords(), &blocks);
+        let block = structure.block_at(s_block.coords(), &blocks);
 
         if block.unlocalized_name() != "cosmos:door" {
             return;
         }
 
-        ev_writer.send(ToggleDoorEvent(s_block.structure_block));
+        println!("Toggle door event!");
+        ev_writer.send(ToggleDoorEvent(s_block));
     }
 }
 
@@ -47,18 +49,23 @@ fn toggle_doors(
 ) {
     for ev in evr_door_toggle.read() {
         let Ok(mut structure) = q_structure.get_mut(ev.0.structure()) else {
+            warn!("Not structure?");
             continue;
         };
 
         let open = structure.block_info_at(ev.0.coords()).is_open();
+        println!("Toggle door event recv.");
 
         // TODO: Iterate over every door adjacent
         let mut block_info = structure.block_info_at(ev.0.coords());
         if open {
+            println!("Setting closed");
             block_info.set_closed();
         } else {
+            println!("Setting opened");
             block_info.set_open();
         }
+        println!("New info: {block_info:?}");
         structure.set_block_info_at(ev.0.coords(), block_info, &mut evw_block_data_changed);
     }
 }
@@ -73,5 +80,6 @@ pub(super) fn register(app: &mut App) {
             .chain()
             .in_set(NetworkingSystemsSet::Between)
             .run_if(in_state(GameState::Playing)),
-    );
+    )
+    .add_event::<ToggleDoorEvent>();
 }
