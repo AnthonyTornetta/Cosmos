@@ -6,7 +6,6 @@ use crate::{logic::LogicBlock, registry::Registry};
 
 pub mod and_gate;
 pub mod colored_logic_wires;
-pub mod door;
 pub mod gravity_well;
 mod laser_cannon;
 pub mod logic_bus;

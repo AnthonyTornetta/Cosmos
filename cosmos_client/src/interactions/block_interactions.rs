@@ -110,8 +110,6 @@ pub(crate) fn process_player_interaction(
 
     looking_at.looking_at_any = Some(hit_block);
 
-    let any_structure = structure;
-
     if structure.block_at(hit_block.block.coords(), &blocks).is_fluid() {
         if let Some((hit_block, s, sgt, ip)) = send_ray(
             rapier_context,

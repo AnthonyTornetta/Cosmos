@@ -468,7 +468,12 @@ fn add_cosmos_blocks(
 
     blocks.register(logic_bus_builder.create());
 
-    blocks.register(BlockBuilder::new("cosmos:door", 4.0, 100.0, 10.0).create());
+    blocks.register(
+        BlockBuilder::new("cosmos:door", 4.0, 100.0, 10.0)
+            .add_property(BlockProperty::Full)
+            .create(),
+    );
+    blocks.register(BlockBuilder::new("cosmos:door_open", 4.0, 100.0, 10.0).create());
 
     loading.finish_loading(id, &mut end_writer);
 }

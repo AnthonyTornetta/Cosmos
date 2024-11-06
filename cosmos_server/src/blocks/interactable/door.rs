@@ -3,10 +3,9 @@ use cosmos_core::{
     block::{
         block_direction::ALL_BLOCK_DIRECTIONS,
         block_events::{BlockEventsSet, BlockInteractEvent},
-        specific_blocks::door::DoorData,
         Block,
     },
-    events::block_events::BlockDataChangedEvent,
+    events::block_events::BlockChangedEvent,
     netty::system_sets::NetworkingSystemsSet,
     prelude::{BlockCoordinate, Structure, StructureBlock},
     registry::{identifiable::Identifiable, Registry},
@@ -16,7 +15,7 @@ use cosmos_core::{
 #[derive(Debug, Event)]
 struct ToggleDoorEvent(StructureBlock);
 
-fn grav_well_handle_block_event(
+fn handle_door_block_event(
     mut interact_events: EventReader<BlockInteractEvent>,
     q_structure: Query<&Structure>,
     blocks: Res<Registry<Block>>,
@@ -33,8 +32,8 @@ fn grav_well_handle_block_event(
         };
 
         let block = structure.block_at(s_block.coords(), &blocks);
-
-        if block.unlocalized_name() != "cosmos:door" {
+        let un = block.unlocalized_name();
+        if un != "cosmos:door" && un != "cosmos:door_open" {
             return;
         }
 
@@ -45,7 +44,7 @@ fn grav_well_handle_block_event(
 fn toggle_doors(
     mut q_structure: Query<&mut Structure>,
     mut evr_door_toggle: EventReader<ToggleDoorEvent>,
-    mut evw_block_data_changed: EventWriter<BlockDataChangedEvent>,
+    mut evw_block_changed: EventWriter<BlockChangedEvent>,
     blocks: Res<Registry<Block>>,
 ) {
     for ev in evr_door_toggle.read() {
@@ -57,9 +56,15 @@ fn toggle_doors(
         let Some(door) = blocks.from_id("cosmos:door") else {
             return;
         };
-        let door_id = door.id();
+        let Some(door_open) = blocks.from_id("cosmos:door_open") else {
+            return;
+        };
 
-        let open = structure.block_info_at(ev.0.coords()).is_open();
+        let door_id = door.id();
+        let door_open_id = door_open.id();
+
+        let open = structure.block_id_at(ev.0.coords()) == door_open_id;
+        let block = if open { door } else { door_open };
 
         let mut todo = HashSet::new();
         todo.insert(ev.0.coords());
@@ -73,19 +78,14 @@ fn toggle_doors(
             }
 
             for coord in todo {
-                if structure.block_id_at(coord) != door_id {
+                let block_id_here = structure.block_id_at(coord);
+                if block_id_here != door_id && block_id_here != door_open_id {
                     continue;
                 }
 
-                let mut block_info = structure.block_info_at(coord);
+                let block_info = structure.block_info_at(coord);
 
-                if open {
-                    block_info.set_closed();
-                } else {
-                    block_info.set_open();
-                }
-
-                structure.set_block_info_at(coord, block_info, &mut evw_block_data_changed);
+                structure.set_block_and_info_at(coord, block, block_info, &blocks, Some(&mut evw_block_changed));
 
                 done.insert(coord);
 
@@ -107,7 +107,7 @@ pub(super) fn register(app: &mut App) {
     app.add_systems(
         Update,
         (
-            grav_well_handle_block_event.in_set(BlockEventsSet::ProcessEvents),
+            handle_door_block_event.in_set(BlockEventsSet::ProcessEvents),
             toggle_doors.in_set(BlockEventsSet::SendEventsForNextFrame),
         )
             .chain()
