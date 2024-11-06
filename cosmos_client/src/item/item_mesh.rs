@@ -90,7 +90,6 @@ fn generate_item_model(
     item_textures: &Registry<ItemTextureIndex>,
     material_definitions_registry: &Registry<MaterialDefinition>,
 ) -> Option<(Mesh, u16, u32)> {
-    println!("{item_textures:?}");
     let index = item_textures
         .from_id(item.unlocalized_name())
         .unwrap_or_else(|| item_textures.from_id("missing").expect("Missing texture should exist."));

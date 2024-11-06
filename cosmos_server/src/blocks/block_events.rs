@@ -49,7 +49,6 @@ fn handle_block_changed_event(
     }
 
     for (entity, v) in map {
-        println!("{v:?}");
         server.broadcast_message(
             NettyChannelServer::Reliable,
             cosmos_encoder::serialize(&ServerReliableMessages::BlockChange {

@@ -1,13 +1,14 @@
-use bevy::prelude::*;
+use bevy::{prelude::*, utils::hashbrown::HashSet};
 use cosmos_core::{
     block::{
+        block_direction::ALL_BLOCK_DIRECTIONS,
         block_events::{BlockEventsSet, BlockInteractEvent},
         specific_blocks::door::DoorData,
         Block,
     },
     events::block_events::BlockDataChangedEvent,
     netty::system_sets::NetworkingSystemsSet,
-    prelude::{Structure, StructureBlock},
+    prelude::{BlockCoordinate, Structure, StructureBlock},
     registry::{identifiable::Identifiable, Registry},
     state::GameState,
 };
@@ -37,7 +38,6 @@ fn grav_well_handle_block_event(
             return;
         }
 
-        println!("Toggle door event!");
         ev_writer.send(ToggleDoorEvent(s_block));
     }
 }
@@ -46,6 +46,7 @@ fn toggle_doors(
     mut q_structure: Query<&mut Structure>,
     mut evr_door_toggle: EventReader<ToggleDoorEvent>,
     mut evw_block_data_changed: EventWriter<BlockDataChangedEvent>,
+    blocks: Res<Registry<Block>>,
 ) {
     for ev in evr_door_toggle.read() {
         let Ok(mut structure) = q_structure.get_mut(ev.0.structure()) else {
@@ -53,20 +54,52 @@ fn toggle_doors(
             continue;
         };
 
-        let open = structure.block_info_at(ev.0.coords()).is_open();
-        println!("Toggle door event recv.");
+        let Some(door) = blocks.from_id("cosmos:door") else {
+            return;
+        };
+        let door_id = door.id();
 
-        // TODO: Iterate over every door adjacent
-        let mut block_info = structure.block_info_at(ev.0.coords());
-        if open {
-            println!("Setting closed");
-            block_info.set_closed();
-        } else {
-            println!("Setting opened");
-            block_info.set_open();
+        let open = structure.block_info_at(ev.0.coords()).is_open();
+
+        let mut todo = HashSet::new();
+        todo.insert(ev.0.coords());
+
+        let mut done = HashSet::new();
+        while !todo.is_empty() {
+            let mut new_todo = HashSet::new();
+
+            for c in &todo {
+                done.insert(*c);
+            }
+
+            for coord in todo {
+                if structure.block_id_at(coord) != door_id {
+                    continue;
+                }
+
+                let mut block_info = structure.block_info_at(coord);
+
+                if open {
+                    block_info.set_closed();
+                } else {
+                    block_info.set_open();
+                }
+
+                structure.set_block_info_at(coord, block_info, &mut evw_block_data_changed);
+
+                done.insert(coord);
+
+                for dir in ALL_BLOCK_DIRECTIONS {
+                    if let Ok(coord) = BlockCoordinate::try_from(dir.to_coordinates() + coord) {
+                        if !done.contains(&coord) {
+                            new_todo.insert(coord);
+                        }
+                    }
+                }
+            }
+
+            todo = new_todo;
         }
-        println!("New info: {block_info:?}");
-        structure.set_block_info_at(ev.0.coords(), block_info, &mut evw_block_data_changed);
     }
 }
 
