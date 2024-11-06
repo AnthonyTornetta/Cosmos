@@ -94,7 +94,6 @@ fn on_render_door(
 
             // Only render if open
             if !structure.block_info_at(block_coord).is_open() {
-                println!("Is closed.");
                 continue;
             }
 

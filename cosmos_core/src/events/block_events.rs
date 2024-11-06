@@ -31,10 +31,12 @@ pub struct BlockChangedEvent {
 }
 
 impl BlockChangedEvent {
+    /// Computes what the old rotation was from the old [`BlockInfo`]
     pub fn old_block_rotation(&self) -> BlockRotation {
         self.old_block_info.get_rotation()
     }
 
+    /// Computes what the new rotation was from the new [`BlockInfo`]
     pub fn new_block_rotation(&self) -> BlockRotation {
         self.new_block_info.get_rotation()
     }

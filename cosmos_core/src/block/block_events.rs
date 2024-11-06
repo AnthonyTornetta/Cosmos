@@ -2,7 +2,6 @@
 
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::Velocity;
-use serde::{Deserialize, Serialize};
 
 use crate::{
     blockitems::BlockItems,

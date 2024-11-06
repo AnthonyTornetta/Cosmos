@@ -103,8 +103,26 @@ impl FullStructure {
         blocks: &Registry<Block>,
         event_writer: Option<&mut EventWriter<BlockChangedEvent>>,
     ) {
-        self.set_block_at(coords, block, block_info.get_rotation(), blocks, event_writer);
+        let old_block = self.block_id_at(coords);
+        let old_block_info = self.block_info_at(coords);
+
+        self.set_block_at(coords, block, block_info.get_rotation(), blocks, None);
         self.set_block_info_at(coords, block_info, None);
+
+        if let Some(event_writer) = event_writer {
+            if old_block_info != block_info || old_block != block.id() {
+                let Some(self_entity) = self.base_structure.self_entity else {
+                    return;
+                };
+                event_writer.send(BlockChangedEvent {
+                    new_block: block.id(),
+                    old_block,
+                    block: StructureBlock::new(coords, self_entity),
+                    old_block_info,
+                    new_block_info: self.block_info_at(coords),
+                });
+            }
+        }
     }
 
     /// Sets the block at the given block coordinates.
