@@ -19,6 +19,8 @@ cosmos:water=Water
 cosmos:sand=Sand
 cosmos:cactus=Cactus
 cosmos:build_block=Build Block
+cosmos:door=Door
+cosmos:door_open=Door
 
 cosmos:ship_hull_grey=Grey Ship Hull
 cosmos:ship_hull_black=Black Ship Hull

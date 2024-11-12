@@ -102,6 +102,13 @@ impl BlockCollider {
 fn register_custom_colliders(blocks: Res<Registry<Block>>, mut registry: ResMut<Registry<BlockCollider>>) {
     registry.register(BlockCollider::new(BlockColliderType::Empty, "cosmos:air"));
 
+    if blocks.contains("cosmos:door_open") {
+        registry.register(BlockCollider::new(
+            BlockColliderType::Full(BlockColliderMode::SensorCollider),
+            "cosmos:door_open",
+        ));
+    }
+
     const EPSILON: f32 = 0.001;
 
     if blocks.contains("cosmos:short_grass") {

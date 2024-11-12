@@ -9,7 +9,7 @@ use bevy_rapier3d::{
 use cosmos_core::{
     block::{
         block_direction::BlockDirection,
-        block_events::{BlockEventsSet, BlockInteractEvent, StructureBlockPair},
+        block_events::{BlockEventsSet, BlockInteractEvent},
         block_face::BlockFace,
         block_rotation::{BlockRotation, BlockSubRotation},
         blocks::fluid::FLUID_COLLISION_GROUP,
@@ -109,8 +109,6 @@ pub(crate) fn process_player_interaction(
     }
 
     looking_at.looking_at_any = Some(hit_block);
-
-    let any_structure = structure;
 
     if structure.block_at(hit_block.block.coords(), &blocks).is_fluid() {
         if let Some((hit_block, s, sgt, ip)) = send_ray(
@@ -238,15 +236,9 @@ pub(crate) fn process_player_interaction(
     if input_handler.check_just_pressed(CosmosInputs::Interact) {
         if let Some(looking_at_any) = &looking_at.looking_at_any {
             interact_writer.send(BlockInteractEvent {
-                block_including_fluids: StructureBlockPair {
-                    structure_block: looking_at_any.block,
-                    structure_entity: any_structure.get_entity().unwrap(),
-                },
+                block_including_fluids: looking_at_any.block,
                 interactor: player_entity,
-                block: looking_at.looking_at_block.map(|looked_at| StructureBlockPair {
-                    structure_block: looked_at.block,
-                    structure_entity: structure.get_entity().unwrap(),
-                }),
+                block: looking_at.looking_at_block.map(|looked_at| looked_at.block),
                 alternate: input_handler.check_pressed(CosmosInputs::AlternateInteraction),
             });
         }

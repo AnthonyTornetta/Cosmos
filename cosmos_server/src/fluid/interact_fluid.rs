@@ -54,11 +54,11 @@ fn on_interact_with_fluid(
     for ev in ev_reader.read() {
         let s_block = ev.block_including_fluids;
 
-        let Ok(structure) = q_structure.get(s_block.structure_entity) else {
+        let Ok(structure) = q_structure.get(s_block.structure()) else {
             continue;
         };
 
-        let block = structure.block_at(s_block.structure_block.coords(), &blocks);
+        let block = structure.block_at(s_block.coords(), &blocks);
 
         let Some(fluid) = fluid_registry.from_id(block.unlocalized_name()) else {
             continue;
@@ -145,11 +145,11 @@ fn on_interact_with_tank(
             continue;
         };
 
-        let Ok(mut structure) = q_structure.get_mut(s_block.structure_entity) else {
+        let Ok(mut structure) = q_structure.get_mut(s_block.structure()) else {
             continue;
         };
 
-        let coords = s_block.structure_block.coords();
+        let coords = s_block.coords();
 
         let block = structure.block_at(coords, &blocks);
 

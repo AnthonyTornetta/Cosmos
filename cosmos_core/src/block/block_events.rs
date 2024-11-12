@@ -2,7 +2,6 @@
 
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::Velocity;
-use serde::{Deserialize, Serialize};
 
 use crate::{
     blockitems::BlockItems,
@@ -42,22 +41,13 @@ pub struct BlockBreakEvent {
     pub block: StructureBlock,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone, Copy)]
-/// this is stupid.
-pub struct StructureBlockPair {
-    /// The block interacted with
-    pub structure_block: StructureBlock,
-    /// The structure it is on
-    pub structure_entity: Entity,
-}
-
 /// This is sent whenever a player interacts with a block
 #[derive(Debug, Event)]
 pub struct BlockInteractEvent {
     /// The block that was interacted with by the player
-    pub block: Option<StructureBlockPair>,
+    pub block: Option<StructureBlock>,
     /// Includes blocks normally ignored by most interaction checks
-    pub block_including_fluids: StructureBlockPair,
+    pub block_including_fluids: StructureBlock,
     /// The player that interacted with the block
     pub interactor: Entity,
     /// If this is true, the player was crouching while interacting with this block

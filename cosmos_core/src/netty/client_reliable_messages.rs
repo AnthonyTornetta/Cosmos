@@ -5,7 +5,7 @@ use bevy::prelude::{Component, Entity};
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    block::{block_events::StructureBlockPair, block_rotation::BlockRotation},
+    block::block_rotation::BlockRotation,
     entities::player::render_distance::RenderDistance,
     structure::{
         coordinates::{ChunkCoordinate, CoordinateType},
@@ -52,9 +52,9 @@ pub enum ClientReliableMessages {
     /// The player interacts with a block
     InteractWithBlock {
         /// The block that was interacted with by the player
-        block: Option<StructureBlockPair>,
+        block: Option<StructureBlock>,
         /// Includes blocks normally ignored by most interaction checks
-        block_including_fluids: StructureBlockPair,
+        block_including_fluids: StructureBlock,
         /// Sent if the alternate interaction should be used
         alternate: bool,
     },
