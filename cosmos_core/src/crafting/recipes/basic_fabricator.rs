@@ -11,14 +11,14 @@ use super::RecipeItem;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FabricatorItemInput {
-    quantity: u16,
-    item: RecipeItem,
+    pub quantity: u16,
+    pub item: RecipeItem,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FabricatorItemOutput {
-    quantity: u16,
-    item: u16,
+    pub quantity: u16,
+    pub item: u16,
 }
 
 impl FabricatorItemInput {
@@ -35,8 +35,8 @@ impl FabricatorItemOutput {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BasicFabricatorRecipe {
-    inputs: Vec<FabricatorItemInput>,
-    output: FabricatorItemOutput,
+    pub inputs: Vec<FabricatorItemInput>,
+    pub output: FabricatorItemOutput,
 }
 
 impl BasicFabricatorRecipe {
@@ -51,6 +51,10 @@ pub struct BasicFabricatorRecipes(Vec<BasicFabricatorRecipe>);
 impl BasicFabricatorRecipes {
     pub fn add_recipe(&mut self, recipe: BasicFabricatorRecipe) {
         self.0.push(recipe);
+    }
+
+    pub fn iter(&self) -> impl Iterator<Item = &'_ BasicFabricatorRecipe> {
+        self.0.iter()
     }
 }
 

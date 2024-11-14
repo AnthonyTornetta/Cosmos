@@ -21,7 +21,7 @@ use cosmos_core::{
 };
 use walkdir::WalkDir;
 
-use crate::netty::server_events::PlayerConnectedEvent;
+use crate::netty::{server_events::PlayerConnectedEvent, sync::registry::ClientFinishedReceivingRegistriesEvent};
 
 use super::RawRecipeItem;
 
@@ -86,11 +86,11 @@ fn sync_recipes_on_change(recipes: Res<BasicFabricatorRecipes>, mut nevw_sync_re
 
 fn sync_recipes_on_join(
     recipes: Res<BasicFabricatorRecipes>,
-    mut evr_player_join: EventReader<PlayerConnectedEvent>,
+    mut evr_loaded_registries: EventReader<ClientFinishedReceivingRegistriesEvent>,
     mut nevw_sync_recipes: NettyEventWriter<SyncBasicFabricatorRecipesEvent>,
 ) {
-    for ev in evr_player_join.read() {
-        nevw_sync_recipes.send(SyncBasicFabricatorRecipesEvent(recipes.clone()), ev.client_id);
+    for ev in evr_loaded_registries.read() {
+        nevw_sync_recipes.send(SyncBasicFabricatorRecipesEvent(recipes.clone()), ev.0);
     }
 }
 
