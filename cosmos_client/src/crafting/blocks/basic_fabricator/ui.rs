@@ -316,6 +316,31 @@ fn on_select_item(
             })
             .set_parent(parent.get());
 
+        commands
+            .spawn((
+                bevy::prelude::ButtonBundle {
+                    style: Style {
+                        width: Val::Percent(100.0),
+                        height: Val::Px(100.0),
+                        ..Default::default()
+                    },
+                    background_color: css::AQUA.into(),
+
+                    ..Default::default()
+                },
+                Name::new("Craft button"),
+            ))
+            .with_children(|p| {
+                p.spawn((
+                    Name::new("Fabricate Button"),
+                    TextBundle {
+                        text: Text::from_section("FABRICATE", text_style_enough),
+                        ..Default::default()
+                    },
+                ));
+            })
+            .set_parent(parent.get());
+
         println!("{recipe:?}");
     }
 }
