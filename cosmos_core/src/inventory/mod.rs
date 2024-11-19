@@ -822,6 +822,16 @@ impl Inventory {
     pub fn iter_mut(&mut self) -> std::slice::IterMut<Option<ItemStack>> {
         self.items.iter_mut()
     }
+
+    /// Returns the total quantity of this item within the inventory. This does NOT respect
+    /// any item data that may make it unique
+    pub fn total_quantity_of_item(&self, item_id: u16) -> u64 {
+        self.iter()
+            .flatten()
+            .filter(|x| x.item_id() == item_id)
+            .map(|x| x.quantity() as u64)
+            .sum::<u64>()
+    }
 }
 
 pub(super) fn register<T: States>(app: &mut App, playing_state: T) {

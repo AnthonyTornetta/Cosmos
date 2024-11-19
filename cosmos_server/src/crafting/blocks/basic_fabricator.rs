@@ -1,8 +1,7 @@
 use bevy::{
     app::Update,
-    prelude::{in_state, App, Event, EventReader, IntoSystemConfigs, Query, Res},
+    prelude::{in_state, App, EventReader, IntoSystemConfigs, Query, Res},
 };
-use serde::{Deserialize, Serialize};
 
 use cosmos_core::{
     block::{
@@ -12,13 +11,10 @@ use cosmos_core::{
     crafting::blocks::basic_fabricator::OpenBasicFabricatorEvent,
     entities::player::Player,
     netty::{
-        sync::events::{
-            netty_event::{IdentifiableEvent, NettyEvent, SyncedEventImpl},
-            server_event::NettyEventWriter,
-        },
+        sync::events::{netty_event::SyncedEventImpl, server_event::NettyEventWriter},
         system_sets::NetworkingSystemsSet,
     },
-    prelude::{Structure, StructureBlock},
+    prelude::Structure,
     registry::{identifiable::Identifiable, Registry},
     state::GameState,
 };

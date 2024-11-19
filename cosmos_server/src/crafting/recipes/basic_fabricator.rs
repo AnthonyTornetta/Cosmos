@@ -1,9 +1,7 @@
-use std::ffi::OsStr;
-
 use bevy::{
     app::Update,
     log::warn,
-    prelude::{in_state, resource_exists_and_changed, App, Commands, EventReader, IntoSystemConfigs, OnEnter, Res, ResMut},
+    prelude::{in_state, resource_exists_and_changed, App, Commands, EventReader, IntoSystemConfigs, OnEnter, Res},
 };
 use serde::{Deserialize, Serialize};
 
@@ -19,9 +17,8 @@ use cosmos_core::{
     registry::{identifiable::Identifiable, Registry},
     state::GameState,
 };
-use walkdir::WalkDir;
 
-use crate::netty::{server_events::PlayerConnectedEvent, sync::registry::ClientFinishedReceivingRegistriesEvent};
+use crate::netty::sync::registry::ClientFinishedReceivingRegistriesEvent;
 
 use super::RawRecipeItem;
 
