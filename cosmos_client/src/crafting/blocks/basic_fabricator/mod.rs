@@ -1,14 +1,24 @@
 use bevy::{
     app::Update,
     core::Name,
-    prelude::{App, Commands, Component, Entity, EventReader, IntoSystemConfigs, IntoSystemSetConfigs, Query, SystemSet, With},
+    log::error,
+    prelude::{
+        in_state, App, Commands, Component, Entity, EventReader, IntoSystemConfigs, IntoSystemSetConfigs, Query, Res, SystemSet, With,
+    },
     reflect::Reflect,
 };
 use cosmos_core::{
     crafting::blocks::basic_fabricator::OpenBasicFabricatorEvent,
     ecs::NeedsDespawned,
-    netty::{sync::events::client_event::NettyEventReceived, system_sets::NetworkingSystemsSet},
+    netty::{
+        sync::{
+            events::client_event::NettyEventReceived,
+            mapping::{Mappable, NetworkMapping},
+        },
+        system_sets::NetworkingSystemsSet,
+    },
     prelude::StructureBlock,
+    state::GameState,
 };
 
 mod ui;
@@ -20,6 +30,7 @@ fn open_menu(
     q_open_menu: Query<Entity, With<OpenBasicFabricatorMenu>>,
     mut commands: Commands,
     mut nevr: EventReader<NettyEventReceived<OpenBasicFabricatorEvent>>,
+    network_mapping: Res<NetworkMapping>,
 ) {
     let Some(ev) = nevr.read().last() else {
         return;
@@ -29,7 +40,12 @@ fn open_menu(
         commands.entity(ent).insert(NeedsDespawned);
     }
 
-    commands.spawn((OpenBasicFabricatorMenu(ev.0), Name::new("Open Basic Fabricator Menu")));
+    let Ok(s_block) = ev.0.map(&network_mapping) else {
+        error!("Bad network mapping - {:?}", ev.0);
+        return;
+    };
+
+    commands.spawn((OpenBasicFabricatorMenu(s_block), Name::new("Open Basic Fabricator Menu")));
 }
 
 #[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
@@ -45,7 +61,10 @@ pub(super) fn register(app: &mut App) {
 
     app.add_systems(
         Update,
-        open_menu.in_set(NetworkingSystemsSet::Between).in_set(FabricatorMenuSet::OpenMenu),
+        open_menu
+            .in_set(NetworkingSystemsSet::Between)
+            .in_set(FabricatorMenuSet::OpenMenu)
+            .run_if(in_state(GameState::Playing)),
     )
     .register_type::<OpenBasicFabricatorMenu>();
 }

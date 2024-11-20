@@ -2,6 +2,7 @@ use bevy::{
     app::Update,
     color::{palettes::css, Color, Srgba},
     core::Name,
+    log::error,
     prelude::{
         in_state, resource_exists, Added, App, BuildChildren, Changed, Commands, Component, DespawnRecursiveExt, Entity, Event,
         EventReader, IntoSystemConfigs, NodeBundle, Parent, Query, Res, TextBundle, With,
@@ -17,6 +18,7 @@ use cosmos_core::{
     inventory::Inventory,
     item::Item,
     netty::{client::LocalPlayer, system_sets::NetworkingSystemsSet},
+    prelude::Structure,
     registry::{identifiable::Identifiable, Registry},
     state::GameState,
 };
@@ -51,13 +53,27 @@ struct Recipe(BasicFabricatorRecipe);
 
 fn populate_menu(
     mut commands: Commands,
-    q_added_menu: Query<Entity, Added<OpenBasicFabricatorMenu>>,
+    q_added_menu: Query<(Entity, &OpenBasicFabricatorMenu), Added<OpenBasicFabricatorMenu>>,
     font: Res<DefaultFont>,
     crafting_recipes: Res<BasicFabricatorRecipes>,
     items: Res<Registry<Item>>,
     lang: Res<Lang<Item>>,
+    q_structure: Query<&Structure>,
+    q_inventory: Query<&Inventory>,
 ) {
-    for ent in q_added_menu.iter() {
+    for (ent, fab_menu) in q_added_menu.iter() {
+        let Ok(structure) = q_structure.get(fab_menu.0.structure()) else {
+            error!("No structure for basic_fabricator!");
+            continue;
+        };
+
+        let Some(inventory) = structure.query_block_data(fab_menu.0.coords(), &q_inventory) else {
+            error!("No inventory in basic_fabricator!");
+            continue;
+        };
+
+        println!("{inventory:?}");
+
         let mut ecmds = commands.entity(ent);
 
         let text_style = TextStyle {

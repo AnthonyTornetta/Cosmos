@@ -62,23 +62,25 @@ struct RenderedInventory {
 fn toggle_inventory(
     mut commands: Commands,
     player_inventory: Query<Entity, With<LocalPlayer>>,
-    open_inventories: Query<Entity, With<NeedsDisplayed>>,
+    open_inventories: Query<Entity, With<InventoryNeedsDisplayed>>,
     open_menus: Query<(), With<OpenMenu>>,
     inputs: InputChecker,
 ) {
     if inputs.check_just_pressed(CosmosInputs::ToggleInventory) {
         if !open_inventories.is_empty() {
             open_inventories.iter().for_each(|ent| {
-                commands.entity(ent).remove::<NeedsDisplayed>();
+                commands.entity(ent).remove::<InventoryNeedsDisplayed>();
             });
         } else if let Ok(player_inventory_ent) = player_inventory.get_single() {
             if open_menus.is_empty() {
-                commands.entity(player_inventory_ent).insert(NeedsDisplayed(InventorySide::Left));
+                commands
+                    .entity(player_inventory_ent)
+                    .insert(InventoryNeedsDisplayed(InventorySide::Left));
             }
         }
     } else if inputs.check_just_pressed(CosmosInputs::Interact) && !open_inventories.is_empty() {
         open_inventories.iter().for_each(|ent| {
-            commands.entity(ent).remove::<NeedsDisplayed>();
+            commands.entity(ent).remove::<InventoryNeedsDisplayed>();
         });
     }
 }
@@ -86,13 +88,13 @@ fn toggle_inventory(
 fn close_button_system(
     mut commands: Commands,
     q_close_inventory: Query<&RenderedInventory, With<NeedsDespawned>>,
-    open_inventories: Query<Entity, With<NeedsDisplayed>>,
+    open_inventories: Query<Entity, With<InventoryNeedsDisplayed>>,
 ) {
     for rendered_inventory in q_close_inventory.iter() {
         // TODO: fix inventory closing to only close the one open
         if let Some(mut _ecmds) = commands.get_entity(rendered_inventory.inventory_holder) {
             open_inventories.iter().for_each(|ent| {
-                commands.entity(ent).remove::<NeedsDisplayed>();
+                commands.entity(ent).remove::<InventoryNeedsDisplayed>();
             });
         }
     }
@@ -100,7 +102,7 @@ fn close_button_system(
 
 #[derive(Default, Component)]
 /// Add this to an inventory you want displayed, and remove this component when you want to hide the inventory
-pub struct NeedsDisplayed(InventorySide);
+pub struct InventoryNeedsDisplayed(InventorySide);
 
 #[derive(Default, Clone, Copy, Debug, PartialEq, Eq)]
 /// The side of the screen the inventory will be rendered
@@ -134,12 +136,15 @@ struct InventoryRenderedItem;
 fn toggle_inventory_rendering(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
-    added_inventories: Query<(Entity, &Inventory, &NeedsDisplayed, Option<&OpenInventoryEntity>), Added<NeedsDisplayed>>,
-    mut without_needs_displayed_inventories: Query<(Entity, &mut Inventory, Option<&OpenInventoryEntity>), Without<NeedsDisplayed>>,
+    added_inventories: Query<(Entity, &Inventory, &InventoryNeedsDisplayed, Option<&OpenInventoryEntity>), Added<InventoryNeedsDisplayed>>,
+    mut without_needs_displayed_inventories: Query<
+        (Entity, &mut Inventory, Option<&OpenInventoryEntity>),
+        Without<InventoryNeedsDisplayed>,
+    >,
     mut holding_item: Query<(Entity, &DisplayedItemFromInventory, &mut HeldItemStack), With<FollowCursor>>,
     mut client: ResMut<RenetClient>,
     mapping: Res<NetworkMapping>,
-    mut removed_components: RemovedComponents<NeedsDisplayed>,
+    mut removed_components: RemovedComponents<InventoryNeedsDisplayed>,
     q_block_data: Query<&BlockData>,
     q_middle_root: Query<Entity, With<UiMiddleRoot>>,
     q_bottom_root: Query<Entity, With<UiRoot>>,
@@ -674,7 +679,7 @@ fn handle_interactions(
     mapping: Res<NetworkMapping>,
     q_block_data: Query<&BlockData>,
     asset_server: Res<AssetServer>,
-    open_inventories: Query<Entity, With<NeedsDisplayed>>,
+    open_inventories: Query<Entity, With<InventoryNeedsDisplayed>>,
 ) {
     let lmb = input_handler.mouse_inputs().just_pressed(MouseButton::Left);
     let rmb = input_handler.mouse_inputs().just_pressed(MouseButton::Right);
