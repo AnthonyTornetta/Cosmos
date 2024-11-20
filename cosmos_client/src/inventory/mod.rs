@@ -75,7 +75,7 @@ fn toggle_inventory(
             if open_menus.is_empty() {
                 commands
                     .entity(player_inventory_ent)
-                    .insert(InventoryNeedsDisplayed(InventorySide::Left));
+                    .insert(InventoryNeedsDisplayed::Normal(InventorySide::Left));
             }
         }
     } else if inputs.check_just_pressed(CosmosInputs::Interact) && !open_inventories.is_empty() {
@@ -100,9 +100,29 @@ fn close_button_system(
     }
 }
 
-#[derive(Default, Component)]
+#[derive(Debug, Clone)]
+pub struct CustomInventoryRender {
+    slots: Vec<(usize, Entity)>,
+}
+
+impl CustomInventoryRender {
+    pub fn new(slots: Vec<(usize, Entity)>) -> Self {
+        Self { slots }
+    }
+}
+
+#[derive(Component, Debug, Clone)]
 /// Add this to an inventory you want displayed, and remove this component when you want to hide the inventory
-pub struct InventoryNeedsDisplayed(InventorySide);
+pub enum InventoryNeedsDisplayed {
+    Normal(InventorySide),
+    Custom(CustomInventoryRender),
+}
+
+impl Default for InventoryNeedsDisplayed {
+    fn default() -> Self {
+        Self::Normal(Default::default())
+    }
+}
 
 #[derive(Default, Clone, Copy, Debug, PartialEq, Eq)]
 /// The side of the screen the inventory will be rendered
@@ -219,6 +239,9 @@ fn toggle_inventory_rendering(
         if open_inventory_entity.is_some() {
             continue;
         }
+        let InventoryNeedsDisplayed::Normal(needs_displayed_side) = needs_displayed else {
+            continue;
+        };
 
         let font = asset_server.load("fonts/PixeloidSans.ttf");
 
@@ -233,7 +256,7 @@ fn toggle_inventory_rendering(
         let slot_size = 64.0;
         let scrollbar_width = 15.0;
 
-        let (left, right) = if needs_displayed.0 == InventorySide::Right {
+        let (left, right) = if *needs_displayed_side == InventorySide::Right {
             (Val::Auto, Val::Px(100.0))
         } else {
             (Val::Px(100.0), Val::Auto)
