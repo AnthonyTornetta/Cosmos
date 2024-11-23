@@ -239,9 +239,6 @@ fn toggle_inventory_rendering(
         if open_inventory_entity.is_some() {
             continue;
         }
-        let InventoryNeedsDisplayed::Normal(needs_displayed_side) = needs_displayed else {
-            continue;
-        };
 
         let font = asset_server.load("fonts/PixeloidSans.ttf");
 
@@ -249,6 +246,21 @@ fn toggle_inventory_rendering(
             color: Color::WHITE,
             font_size: 22.0,
             font: font.clone(),
+        };
+
+        let needs_displayed_side = match needs_displayed {
+            InventoryNeedsDisplayed::Custom(slots) => {
+                for &(slot_number, slot) in slots.slots.iter() {
+                    commands.entity(slot).with_children(|p| {
+                        let slot = inventory.itemstack_at(slot_number);
+
+                        create_inventory_slot(inventory_holder, slot_number, p, slot, text_style.clone(), ItemRenderLayer::Middle);
+                    });
+                }
+
+                continue;
+            }
+            InventoryNeedsDisplayed::Normal(needs_displayed_side) => needs_displayed_side,
         };
 
         let inventory_border_size = 2.0;

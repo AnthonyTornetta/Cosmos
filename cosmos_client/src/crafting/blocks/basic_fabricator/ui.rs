@@ -8,7 +8,7 @@ use bevy::{
         EventReader, IntoSystemConfigs, NodeBundle, Parent, Query, Res, TextBundle, With,
     },
     text::{Text, TextStyle},
-    ui::{FlexDirection, JustifyContent, Style, UiRect, Val},
+    ui::{FlexDirection, JustifyContent, Style, TargetCamera, UiRect, Val},
 };
 use cosmos_core::{
     crafting::recipes::{
@@ -24,16 +24,18 @@ use cosmos_core::{
 };
 
 use crate::{
+    inventory::{CustomInventoryRender, InventoryNeedsDisplayed, InventorySide},
     lang::Lang,
+    rendering::MainCamera,
     ui::{
         components::{
-            button::{register_button, Button, ButtonBundle, ButtonEvent},
+            button::{register_button, Button, ButtonBundle, ButtonEvent, ButtonStyles},
             scollable_container::ScrollBundle,
             window::{GuiWindow, WindowBundle},
         },
         font::DefaultFont,
         item_renderer::RenderItem,
-        UiSystemSet,
+        OpenMenu, UiSystemSet,
     },
 };
 
@@ -41,10 +43,17 @@ use super::{FabricatorMenuSet, OpenBasicFabricatorMenu};
 
 #[derive(Event, Debug)]
 struct SelectItemEvent(Entity);
-
 impl ButtonEvent for SelectItemEvent {
     fn create_event(btn_entity: Entity) -> Self {
         Self(btn_entity)
+    }
+}
+
+#[derive(Event, Debug)]
+struct CreateClickedEvent;
+impl ButtonEvent for CreateClickedEvent {
+    fn create_event(btn_entity: Entity) -> Self {
+        Self
     }
 }
 
@@ -54,14 +63,20 @@ struct Recipe(BasicFabricatorRecipe);
 fn populate_menu(
     mut commands: Commands,
     q_added_menu: Query<(Entity, &OpenBasicFabricatorMenu), Added<OpenBasicFabricatorMenu>>,
+    q_player: Query<Entity, With<LocalPlayer>>,
     font: Res<DefaultFont>,
     crafting_recipes: Res<BasicFabricatorRecipes>,
     items: Res<Registry<Item>>,
     lang: Res<Lang<Item>>,
     q_structure: Query<&Structure>,
     q_inventory: Query<&Inventory>,
+    q_cam: Query<Entity, With<MainCamera>>,
 ) {
     for (ent, fab_menu) in q_added_menu.iter() {
+        let Ok(cam) = q_cam.get_single() else {
+            return;
+        };
+
         let Ok(structure) = q_structure.get(fab_menu.0.structure()) else {
             error!("No structure for basic_fabricator!");
             continue;
@@ -71,8 +86,13 @@ fn populate_menu(
             error!("No inventory in basic_fabricator!");
             continue;
         };
+        let Ok(player_ent) = q_player.get_single() else {
+            return;
+        };
 
-        println!("{inventory:?}");
+        commands
+            .entity(player_ent)
+            .insert(InventoryNeedsDisplayed::Normal(InventorySide::Left));
 
         let mut ecmds = commands.entity(ent);
 
@@ -82,12 +102,16 @@ fn populate_menu(
             color: Color::WHITE,
         };
 
-        ecmds.insert(
-            (WindowBundle {
+        let item_slot_size = 64.0;
+
+        ecmds.insert((
+            TargetCamera(cam),
+            OpenMenu::new(0),
+            WindowBundle {
                 node_bundle: NodeBundle {
                     background_color: Srgba::hex("2D2D2D").unwrap().into(),
                     style: Style {
-                        width: Val::Px(400.0),
+                        width: Val::Px(item_slot_size * 6.0),
                         height: Val::Px(800.0),
                         margin: UiRect {
                             // Centers it vertically
@@ -110,8 +134,10 @@ fn populate_menu(
                     ..Default::default()
                 },
                 ..Default::default()
-            }),
-        );
+            },
+        ));
+
+        let mut slot_ents = vec![];
 
         ecmds.with_children(|p| {
             p.spawn(
@@ -220,18 +246,71 @@ fn populate_menu(
                 }
             });
 
-            p.spawn((
-                SelectedRecipeDisplay,
-                NodeBundle {
+            p.spawn(
+                (NodeBundle {
                     style: Style {
-                        height: Val::Px(200.0),
+                        flex_direction: FlexDirection::Column,
                         width: Val::Percent(100.0),
+                        height: Val::Px(item_slot_size * 2.0),
                         ..Default::default()
                     },
                     ..Default::default()
-                },
-            ));
+                }),
+            )
+            .with_children(|p| {
+                p.spawn((
+                    SelectedRecipeDisplay,
+                    NodeBundle {
+                        style: Style {
+                            width: Val::Px(item_slot_size * 6.0),
+                            height: Val::Px(item_slot_size),
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    },
+                ))
+                .with_children(|p| {
+                    for (slot, _) in inventory.iter().enumerate() {
+                        let ent = p
+                            .spawn((
+                                Name::new("Rendered Item"),
+                                NodeBundle {
+                                    style: Style {
+                                        width: Val::Px(64.0),
+                                        height: Val::Px(64.0),
+                                        ..Default::default()
+                                    },
+                                    ..Default::default()
+                                },
+                            ))
+                            .id();
+                        slot_ents.push((slot, ent));
+                    }
+                });
+
+                p.spawn((
+                    Name::new("Fabricate Button"),
+                    ButtonBundle {
+                        button: Button::<CreateClickedEvent> {
+                            text: Some(("Fabricate".into(), text_style)),
+                            button_styles: Some(ButtonStyles { ..Default::default() }),
+                            ..Default::default()
+                        },
+                        node_bundle: NodeBundle {
+                            style: Style {
+                                flex_grow: 1.0,
+                                ..Default::default()
+                            },
+                            ..Default::default()
+                        },
+                    },
+                ));
+            });
         });
+
+        commands
+            .entity(structure.block_data(fab_menu.0.coords()).expect("Must expect from above"))
+            .insert(InventoryNeedsDisplayed::Custom(CustomInventoryRender::new(slot_ents)));
     }
 }
 
@@ -395,14 +474,23 @@ fn update_inventory_counts(
     }
 }
 
+fn listen_create(mut evr_create: EventReader<CreateClickedEvent>) {
+    for ev in evr_create.read() {
+        println!("Create!");
+    }
+}
+
 pub(super) fn register(app: &mut App) {
     register_button::<SelectItemEvent>(app);
+    register_button::<CreateClickedEvent>(app);
 
     app.add_systems(
         Update,
         (
             populate_menu,
-            (on_select_item, update_inventory_counts).chain().in_set(UiSystemSet::DoUi),
+            (on_select_item, listen_create, update_inventory_counts)
+                .chain()
+                .in_set(UiSystemSet::DoUi),
         )
             .chain()
             .in_set(NetworkingSystemsSet::Between)

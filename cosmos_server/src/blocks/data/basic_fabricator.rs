@@ -111,7 +111,7 @@ fn populate_inventory(
 
         structure.insert_block_data_with_entity(
             coords,
-            |e| Inventory::new("Basic Fabricator", 9, None, e),
+            |e| Inventory::new("Basic Fabricator", 6, None, e),
             &mut params,
             &mut q_block_data,
             &q_has_inventory,
