@@ -21,6 +21,8 @@ cosmos:cactus=Cactus
 cosmos:build_block=Build Block
 cosmos:door=Door
 cosmos:door_open=Door
+cosmos:basic_fabricator=Basic Fabricator
+cosmos:iron_ore=Iron Ore
 
 cosmos:ship_hull_grey=Grey Ship Hull
 cosmos:ship_hull_black=Black Ship Hull

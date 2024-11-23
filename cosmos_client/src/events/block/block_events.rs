@@ -46,7 +46,7 @@ fn handle_block_break(
     network_mapping: Res<NetworkMapping>,
 ) {
     for ev in event_reader.read() {
-        let Ok(sb) = ev.block.map(&network_mapping) else {
+        let Ok(sb) = ev.block.map_to_server(&network_mapping) else {
             continue;
         };
 
@@ -63,7 +63,7 @@ fn handle_block_place(
     network_mapping: Res<NetworkMapping>,
 ) {
     for ev in event_reader.read() {
-        let Ok(sb) = ev.block.map(&network_mapping) else {
+        let Ok(sb) = ev.block.map_to_server(&network_mapping) else {
             continue;
         };
 
@@ -85,7 +85,7 @@ fn handle_block_interact(
     network_mapping: Res<NetworkMapping>,
 ) {
     for ev in event_reader.read() {
-        let Ok(server_structure_block) = ev.block_including_fluids.map(&network_mapping) else {
+        let Ok(server_structure_block) = ev.block_including_fluids.map_to_server(&network_mapping) else {
             continue;
         };
 
@@ -93,7 +93,7 @@ fn handle_block_interact(
             NettyChannelClient::Reliable,
             cosmos_encoder::serialize(&ClientReliableMessages::InteractWithBlock {
                 block_including_fluids: server_structure_block,
-                block: ev.block.and_then(|b| b.map(&network_mapping).ok()),
+                block: ev.block.and_then(|b| b.map_to_server(&network_mapping).ok()),
                 alternate: ev.alternate,
             }),
         );

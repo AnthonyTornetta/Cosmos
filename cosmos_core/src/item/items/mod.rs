@@ -19,6 +19,8 @@ fn add_cosmos_items(
     items.register(Item::new("cosmos:fluid_cell", DEFAULT_MAX_STACK_SIZE));
     items.register(Item::new("cosmos:fluid_cell_filled", 1));
 
+    items.register(Item::new("cosmos:iron_bar", DEFAULT_MAX_STACK_SIZE));
+
     loading.finish_loading(id, &mut end_writer);
 }
 

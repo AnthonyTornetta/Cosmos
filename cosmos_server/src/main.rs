@@ -31,6 +31,7 @@ pub mod ai;
 pub mod blocks;
 pub mod chat;
 pub mod commands;
+pub mod crafting;
 mod debug;
 pub mod entities;
 pub mod fluid;
