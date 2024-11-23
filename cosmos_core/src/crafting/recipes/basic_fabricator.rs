@@ -1,7 +1,11 @@
-use bevy::prelude::{App, Commands, Event, Res, Resource};
+use bevy::{
+    prelude::{App, Commands, Event, Res, Resource},
+    utils::{HashMap, HashSet},
+};
 use serde::{Deserialize, Serialize};
 
 use crate::{
+    inventory::itemstack::ItemStack,
     item::Item,
     netty::sync::events::netty_event::{IdentifiableEvent, NettyEvent, SyncedEventImpl},
     registry::{identifiable::Identifiable, Registry},
@@ -42,6 +46,28 @@ pub struct BasicFabricatorRecipe {
 impl BasicFabricatorRecipe {
     pub fn new(output: FabricatorItemOutput, inputs: Vec<FabricatorItemInput>) -> Self {
         Self { output, inputs }
+    }
+
+    pub fn max_can_create<'a>(&self, items: impl Iterator<Item = &'a ItemStack>) -> u32 {
+        let mut unique_item_counts = HashMap::new();
+        for item in items {
+            *unique_item_counts.entry(item.item_id()).or_insert(0) += item.quantity() as u32;
+        }
+
+        unique_item_counts
+            .into_iter()
+            .flat_map(|(item_id, quantity)| {
+                let Some(input) = self.inputs.iter().find(|x| match x.item {
+                    RecipeItem::Item(id) => id == item_id,
+                    RecipeItem::Category(_) => todo!(),
+                }) else {
+                    return None;
+                };
+
+                Some(quantity / input.quantity as u32)
+            })
+            .min()
+            .unwrap_or(0)
     }
 }
 

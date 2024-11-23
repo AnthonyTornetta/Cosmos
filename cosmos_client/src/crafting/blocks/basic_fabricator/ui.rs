@@ -4,17 +4,18 @@ use bevy::{
     core::Name,
     log::error,
     prelude::{
-        in_state, resource_exists, Added, App, BuildChildren, Changed, Commands, Component, DespawnRecursiveExt, Entity, Event,
+        in_state, resource_exists, Added, App, BuildChildren, Changed, Children, Commands, Component, DespawnRecursiveExt, Entity, Event,
         EventReader, IntoSystemConfigs, NodeBundle, Parent, Query, Res, TextBundle, With,
     },
     text::{Text, TextStyle},
-    ui::{FlexDirection, JustifyContent, Style, TargetCamera, UiRect, Val},
+    ui::{AlignItems, FlexDirection, JustifyContent, Style, TargetCamera, UiRect, Val},
 };
 use cosmos_core::{
     crafting::recipes::{
         basic_fabricator::{BasicFabricatorRecipe, BasicFabricatorRecipes},
         RecipeItem,
     },
+    ecs::NeedsDespawned,
     inventory::Inventory,
     item::Item,
     netty::{client::LocalPlayer, system_sets::NetworkingSystemsSet},
@@ -24,7 +25,7 @@ use cosmos_core::{
 };
 
 use crate::{
-    inventory::{CustomInventoryRender, InventoryNeedsDisplayed, InventorySide},
+    inventory::{CustomInventoryRender, InventoryNeedsDisplayed, InventorySide, TextNeedsTopRoot},
     lang::Lang,
     rendering::MainCamera,
     ui::{
@@ -52,12 +53,12 @@ impl ButtonEvent for SelectItemEvent {
 #[derive(Event, Debug)]
 struct CreateClickedEvent;
 impl ButtonEvent for CreateClickedEvent {
-    fn create_event(btn_entity: Entity) -> Self {
+    fn create_event(_: Entity) -> Self {
         Self
     }
 }
 
-#[derive(Component, Debug)]
+#[derive(Component, Debug, Clone)]
 struct Recipe(BasicFabricatorRecipe);
 
 fn populate_menu(
@@ -246,20 +247,35 @@ fn populate_menu(
                 }
             });
 
-            p.spawn(
-                (NodeBundle {
+            p.spawn((
+                Name::new("Footer"),
+                NodeBundle {
                     style: Style {
                         flex_direction: FlexDirection::Column,
                         width: Val::Percent(100.0),
-                        height: Val::Px(item_slot_size * 2.0),
+                        height: Val::Px(item_slot_size * 3.0),
                         ..Default::default()
                     },
                     ..Default::default()
-                }),
-            )
+                },
+            ))
             .with_children(|p| {
                 p.spawn((
                     SelectedRecipeDisplay,
+                    Name::new("Selected Recipe Display"),
+                    NodeBundle {
+                        style: Style {
+                            align_items: AlignItems::Center,
+                            width: Val::Px(item_slot_size * 6.0),
+                            height: Val::Px(item_slot_size),
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    },
+                ));
+
+                p.spawn((
+                    Name::new("Rendered Inventory"),
                     NodeBundle {
                         style: Style {
                             width: Val::Px(item_slot_size * 6.0),
@@ -325,8 +341,7 @@ struct InventoryCount {
 
 fn on_select_item(
     mut commands: Commands,
-    q_selected_recipe_display: Query<(Entity, &Parent), With<SelectedRecipeDisplay>>,
-    q_inventory: Query<&Inventory, With<LocalPlayer>>,
+    q_selected_recipe_display: Query<(Entity, Option<&Children>), With<SelectedRecipeDisplay>>,
     mut evr_select_item: EventReader<SelectItemEvent>,
     q_recipe: Query<&Recipe>,
     font: Res<DefaultFont>,
@@ -336,147 +351,103 @@ fn on_select_item(
             continue;
         };
 
-        let Ok((selected_recipe_display, parent)) = q_selected_recipe_display.get_single() else {
+        let Ok((selected_recipe_display, children)) = q_selected_recipe_display.get_single() else {
             return;
         };
 
-        commands.entity(selected_recipe_display).despawn_recursive();
+        if let Some(children) = children {
+            for &child in children.iter() {
+                commands.entity(child).despawn_recursive();
+            }
+        }
 
-        let text_style_enough = TextStyle {
+        let text_style = TextStyle {
             font: font.0.clone_weak(),
             font_size: 24.0,
             color: Color::WHITE,
         };
-        let text_style_not_enough = TextStyle {
-            font: font.0.clone_weak(),
-            font_size: 24.0,
-            color: css::RED.into(),
-        };
+        // let text_style_not_enough = TextStyle {
+        //     font: font.0.clone_weak(),
+        //     font_size: 24.0,
+        //     color: css::RED.into(),
+        // };
+        //
+        // let Ok(inventory) = q_inventory.get_single() else {
+        //     continue;
+        // };
 
-        let Ok(inventory) = q_inventory.get_single() else {
-            continue;
-        };
+        commands.entity(selected_recipe_display).insert(recipe.clone()).with_children(|p| {
+            for item in recipe.0.inputs.iter() {
+                let item_id = match item.item {
+                    RecipeItem::Item(i) => i,
+                    RecipeItem::Category(_) => todo!("Categories"),
+                };
 
-        commands
-            .spawn((
-                SelectedRecipeDisplay,
-                NodeBundle {
-                    style: Style {
-                        height: Val::Px(200.0),
-                        width: Val::Percent(100.0),
-                        ..Default::default()
-                    },
-                    ..Default::default()
-                },
-            ))
-            .with_children(|p| {
-                for item in recipe.0.inputs.iter() {
-                    let item_id = match item.item {
-                        RecipeItem::Item(i) => i,
-                        RecipeItem::Category(_) => todo!("Categories"),
-                    };
-
-                    p.spawn((
-                        NodeBundle {
-                            style: Style {
-                                width: Val::Px(64.0),
-                                height: Val::Px(64.0),
-                                ..Default::default()
-                            },
+                p.spawn((
+                    NodeBundle {
+                        style: Style {
+                            width: Val::Px(64.0),
+                            height: Val::Px(64.0),
+                            flex_direction: FlexDirection::Column,
+                            align_items: AlignItems::End,
+                            justify_content: JustifyContent::End,
                             ..Default::default()
                         },
-                        RenderItem { item_id },
-                    ));
-
-                    let inventory_count = inventory.total_quantity_of_item(item_id);
-
-                    let text_style = if inventory_count >= item.quantity as u64 {
-                        text_style_enough.clone()
-                    } else {
-                        text_style_not_enough.clone()
-                    };
-
+                        ..Default::default()
+                    },
+                    RenderItem { item_id },
+                ))
+                .with_children(|p| {
                     p.spawn((
                         Name::new("Item recipe qty"),
+                        TextNeedsTopRoot,
                         InventoryCount {
                             item_id,
                             recipe_amt: item.quantity,
                         },
                         TextBundle {
-                            text: Text::from_section(format!("{}/{}", inventory_count, item.quantity), text_style.clone()),
+                            text: Text::from_section(format!("{}", item.quantity), text_style.clone()),
                             ..Default::default()
                         },
                     ));
-                }
-            })
-            .set_parent(parent.get());
-
-        commands
-            .spawn((
-                bevy::prelude::ButtonBundle {
-                    style: Style {
-                        width: Val::Percent(100.0),
-                        height: Val::Px(100.0),
-                        ..Default::default()
-                    },
-                    background_color: css::AQUA.into(),
-
-                    ..Default::default()
-                },
-                Name::new("Craft button"),
-            ))
-            .with_children(|p| {
-                p.spawn((
-                    Name::new("Fabricate Button"),
-                    TextBundle {
-                        text: Text::from_section("FABRICATE", text_style_enough),
-                        ..Default::default()
-                    },
-                ));
-            })
-            .set_parent(parent.get());
+                });
+            }
+        });
 
         println!("{recipe:?}");
     }
 }
 
-fn update_inventory_counts(
-    font: Res<DefaultFont>,
-    mut q_inventory_counts: Query<(&mut Text, &InventoryCount)>,
-    q_changed_inventory: Query<&Inventory, (With<LocalPlayer>, Changed<Inventory>)>,
+fn listen_create(
+    q_structure: Query<&Structure>,
+    q_inventory: Query<&Inventory>,
+    q_open_fab_menu: Query<&OpenBasicFabricatorMenu>,
+    q_selected_recipe: Query<&Recipe, With<SelectedRecipeDisplay>>,
+    mut evr_create: EventReader<CreateClickedEvent>,
 ) {
-    let Ok(inventory) = q_changed_inventory.get_single() else {
-        return;
-    };
-
-    let text_style_enough = TextStyle {
-        font: font.0.clone_weak(),
-        font_size: 24.0,
-        color: Color::WHITE,
-    };
-    let text_style_not_enough = TextStyle {
-        font: font.0.clone_weak(),
-        font_size: 24.0,
-        color: css::RED.into(),
-    };
-
-    for (mut text, recipe_info) in q_inventory_counts.iter_mut() {
-        let inventory_count = inventory.total_quantity_of_item(recipe_info.item_id);
-
-        let text_style = if inventory_count >= recipe_info.recipe_amt as u64 {
-            text_style_enough.clone()
-        } else {
-            text_style_not_enough.clone()
+    for _ in evr_create.read() {
+        let Ok(fab_menu) = q_open_fab_menu.get_single() else {
+            return;
         };
 
-        text.sections[0].style = text_style;
-        text.sections[0].value = format!("{}/{}", inventory_count, recipe_info.recipe_amt);
-    }
-}
+        let Ok(structure) = q_structure.get(fab_menu.0.structure()) else {
+            continue;
+        };
+        let Some(block_inv) = structure.query_block_data(fab_menu.0.coords(), &q_inventory) else {
+            continue;
+        };
 
-fn listen_create(mut evr_create: EventReader<CreateClickedEvent>) {
-    for ev in evr_create.read() {
-        println!("Create!");
+        let Ok(recipe) = q_selected_recipe.get_single() else {
+            return;
+        };
+
+        let max_can_create = recipe.0.max_can_create(block_inv.iter().flatten());
+
+        if max_can_create == 0 {
+            continue;
+        }
+
+        println!("Create {max_can_create}!");
     }
 }
 
@@ -486,12 +457,7 @@ pub(super) fn register(app: &mut App) {
 
     app.add_systems(
         Update,
-        (
-            populate_menu,
-            (on_select_item, listen_create, update_inventory_counts)
-                .chain()
-                .in_set(UiSystemSet::DoUi),
-        )
+        (populate_menu, (on_select_item, listen_create).chain().in_set(UiSystemSet::DoUi))
             .chain()
             .in_set(NetworkingSystemsSet::Between)
             .in_set(FabricatorMenuSet::PopulateMenu)

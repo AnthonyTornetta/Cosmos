@@ -868,7 +868,7 @@ fn handle_interactions(
  */
 
 #[derive(Component)]
-struct TextNeedsTopRoot;
+pub struct TextNeedsTopRoot;
 
 fn create_item_stack_slot_data(
     item_stack: &ItemStack,
