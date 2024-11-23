@@ -976,12 +976,19 @@ enum InventorySet {
 fn make_render_middle_camera(
     q_mid_cam: Query<Entity, With<UiTopRoot>>,
     mut q_target_cam: Query<&mut TargetCamera, (Changed<TargetCamera>, With<TextNeedsTopRoot>)>,
+    q_needs_target_cam: Query<Entity, (Without<TargetCamera>, With<TextNeedsTopRoot>)>,
+    mut commands: Commands,
 ) {
     for mut target_camera in q_target_cam.iter_mut() {
         let middle_camera_entity = q_mid_cam.single();
         if target_camera.0 != middle_camera_entity {
             target_camera.0 = middle_camera_entity;
         }
+    }
+
+    for ent in q_needs_target_cam.iter() {
+        let middle_camera_entity = q_mid_cam.single();
+        commands.entity(ent).insert(TargetCamera(middle_camera_entity));
     }
 }
 
