@@ -74,6 +74,26 @@ fn load_recipes(items: Res<Registry<Item>>, mut commands: Commands) {
         warn!("Missing grey ship hull!");
     }
 
+    if let Some(laser_cannon) = items.from_id("cosmos:laser_cannon") {
+        if let Some(iron_bar) = items.from_id("cosmos:iron_bar") {
+            if let Some(crystal) = items.from_id("cosmos:test_crystal") {
+                recipes.add_recipe(BasicFabricatorRecipe::new(
+                    FabricatorItemOutput::new(laser_cannon, 1),
+                    vec![
+                        FabricatorItemInput::new(RecipeItem::Item(crystal.id()), 5),
+                        FabricatorItemInput::new(RecipeItem::Item(iron_bar.id()), 1),
+                    ],
+                ));
+            } else {
+                warn!("Missing crystal!");
+            }
+        } else {
+            warn!("Missing iron bar!");
+        }
+    } else {
+        warn!("Missing grey ship hull!");
+    }
+
     commands.insert_resource(recipes);
 }
 
