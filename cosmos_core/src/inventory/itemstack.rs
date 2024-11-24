@@ -393,6 +393,10 @@ impl ItemStack {
         }
     }
 
+    pub fn max_quantity_can_be_inserted(&self) -> u16 {
+        self.max_stack_size() - self.quantity
+    }
+
     #[inline]
     /// Returns true if the ItemStack is at or above the max stack size.
     pub fn is_full(&self) -> bool {

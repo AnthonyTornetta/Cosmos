@@ -26,6 +26,7 @@ impl NettyEvent for OpenBasicFabricatorEvent {
 pub struct CraftBasicFabricatorRecipeEvent {
     pub block: StructureBlock,
     pub recipe: BasicFabricatorRecipe,
+    pub quantity: u32,
 }
 
 impl IdentifiableEvent for CraftBasicFabricatorRecipeEvent {

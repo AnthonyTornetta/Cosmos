@@ -13,13 +13,13 @@ use crate::{
 
 use super::RecipeItem;
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct FabricatorItemInput {
     pub quantity: u16,
     pub item: RecipeItem,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct FabricatorItemOutput {
     pub quantity: u16,
     pub item: u16,
@@ -37,7 +37,7 @@ impl FabricatorItemOutput {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct BasicFabricatorRecipe {
     pub inputs: Vec<FabricatorItemInput>,
     pub output: FabricatorItemOutput,
@@ -68,6 +68,7 @@ impl BasicFabricatorRecipe {
             })
             .min()
             .unwrap_or(0)
+            * self.output.quantity as u32
     }
 }
 
@@ -75,6 +76,10 @@ impl BasicFabricatorRecipe {
 pub struct BasicFabricatorRecipes(Vec<BasicFabricatorRecipe>);
 
 impl BasicFabricatorRecipes {
+    pub fn contains(&self, recipe: &BasicFabricatorRecipe) -> bool {
+        self.iter().any(|x| x == recipe)
+    }
+
     pub fn add_recipe(&mut self, recipe: BasicFabricatorRecipe) {
         self.0.push(recipe);
     }

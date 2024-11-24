@@ -11,14 +11,24 @@ use bevy::{
     ui::{AlignItems, FlexDirection, JustifyContent, Style, TargetCamera, UiRect, Val},
 };
 use cosmos_core::{
-    crafting::recipes::{
-        basic_fabricator::{BasicFabricatorRecipe, BasicFabricatorRecipes},
-        RecipeItem,
+    crafting::{
+        blocks::basic_fabricator::CraftBasicFabricatorRecipeEvent,
+        recipes::{
+            basic_fabricator::{BasicFabricatorRecipe, BasicFabricatorRecipes},
+            RecipeItem,
+        },
     },
     ecs::NeedsDespawned,
     inventory::Inventory,
     item::Item,
-    netty::{client::LocalPlayer, system_sets::NetworkingSystemsSet},
+    netty::{
+        client::LocalPlayer,
+        sync::{
+            events::client_event::NettyEventWriter,
+            mapping::{Mappable, NetworkMapping},
+        },
+        system_sets::NetworkingSystemsSet,
+    },
     prelude::Structure,
     registry::{identifiable::Identifiable, Registry},
     state::GameState,
@@ -424,6 +434,8 @@ fn listen_create(
     q_open_fab_menu: Query<&OpenBasicFabricatorMenu>,
     q_selected_recipe: Query<&Recipe, With<SelectedRecipeDisplay>>,
     mut evr_create: EventReader<CreateClickedEvent>,
+    mut nevw_craft_event: NettyEventWriter<CraftBasicFabricatorRecipeEvent>,
+    network_mapping: Res<NetworkMapping>,
 ) {
     for _ in evr_create.read() {
         let Ok(fab_menu) = q_open_fab_menu.get_single() else {
@@ -448,6 +460,15 @@ fn listen_create(
         }
 
         println!("Create {max_can_create}!");
+
+        if let Ok(block) = fab_menu.0.map_to_server(&network_mapping) {
+            println!("Sending craft event!");
+            nevw_craft_event.send(CraftBasicFabricatorRecipeEvent {
+                block,
+                recipe: recipe.0.clone(),
+                quantity: max_can_create,
+            });
+        }
     }
 }
 

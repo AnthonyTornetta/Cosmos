@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 
 pub mod basic_fabricator;
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub enum RecipeItem {
     Item(u16),
     Category(u16),
