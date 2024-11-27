@@ -127,6 +127,9 @@ pub enum CosmosInputs {
     ToggleChat,
     /// Sends the chat message the user has typed - does not close the chat window
     SendChatMessage,
+
+    /// Instead of crafting 1, the maximum amount will be crafted
+    BulkCraft,
 }
 
 fn init_input(mut input_handler: ResMut<CosmosInputHandler>) {
@@ -196,6 +199,8 @@ fn init_input(mut input_handler: ResMut<CosmosInputHandler>) {
 
     input_handler.set_keycode(CosmosInputs::ToggleChat, KeyCode::Enter);
     input_handler.set_keycode(CosmosInputs::SendChatMessage, KeyCode::Enter);
+
+    input_handler.set_keycode(CosmosInputs::BulkCraft, KeyCode::ShiftLeft);
 }
 
 #[derive(Resource, Default, Debug)]

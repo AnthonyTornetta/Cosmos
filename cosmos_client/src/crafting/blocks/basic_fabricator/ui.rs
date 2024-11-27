@@ -2,13 +2,13 @@ use bevy::{
     app::Update,
     color::{palettes::css, Color, Srgba},
     core::Name,
-    log::error,
+    log::{error, info},
     prelude::{
         in_state, resource_exists, Added, App, BuildChildren, Changed, Children, Commands, Component, DespawnRecursiveExt, Entity, Event,
         EventReader, IntoSystemConfigs, NodeBundle, Parent, Query, Res, TextBundle, With,
     },
     text::{Text, TextStyle},
-    ui::{AlignItems, FlexDirection, JustifyContent, Style, TargetCamera, UiRect, Val},
+    ui::{AlignItems, BackgroundColor, FlexDirection, Interaction, JustifyContent, Style, TargetCamera, UiRect, Val},
 };
 use cosmos_core::{
     crafting::{
@@ -35,6 +35,7 @@ use cosmos_core::{
 };
 
 use crate::{
+    input::inputs::{CosmosInputHandler, CosmosInputs, InputChecker, InputHandler},
     inventory::{CustomInventoryRender, InventoryNeedsDisplayed, InventorySide, TextNeedsTopRoot},
     lang::Lang,
     rendering::MainCamera,
@@ -70,6 +71,9 @@ impl ButtonEvent for CreateClickedEvent {
 
 #[derive(Component, Debug, Clone)]
 struct Recipe(BasicFabricatorRecipe);
+
+#[derive(Component, Debug)]
+struct SelectedRecipe;
 
 fn populate_menu(
     mut commands: Commands,
@@ -234,22 +238,39 @@ fn populate_menu(
                             )
                             .with_children(|p| {
                                 for item in recipe.inputs.iter() {
+                                    let item_id = match item.item {
+                                        RecipeItem::Item(i) => i,
+                                        RecipeItem::Category(_) => todo!("Categories"),
+                                    };
+
                                     p.spawn((
                                         NodeBundle {
                                             style: Style {
                                                 width: Val::Px(64.0),
                                                 height: Val::Px(64.0),
+                                                flex_direction: FlexDirection::Column,
+                                                align_items: AlignItems::End,
+                                                justify_content: JustifyContent::End,
                                                 ..Default::default()
                                             },
                                             ..Default::default()
                                         },
-                                        RenderItem {
-                                            item_id: match item.item {
-                                                RecipeItem::Item(i) => i,
-                                                RecipeItem::Category(_) => todo!("Categories"),
+                                        RenderItem { item_id },
+                                    ))
+                                    .with_children(|p| {
+                                        p.spawn((
+                                            Name::new("Item recipe qty"),
+                                            TextNeedsTopRoot,
+                                            InventoryCount {
+                                                item_id,
+                                                recipe_amt: item.quantity,
                                             },
-                                        },
-                                    ));
+                                            TextBundle {
+                                                text: Text::from_section(format!("{}", item.quantity), text_style.clone()),
+                                                ..Default::default()
+                                            },
+                                        ));
+                                    });
                                 }
                             });
                         });
@@ -263,27 +284,13 @@ fn populate_menu(
                     style: Style {
                         flex_direction: FlexDirection::Column,
                         width: Val::Percent(100.0),
-                        height: Val::Px(item_slot_size * 3.0),
+                        height: Val::Px(item_slot_size * 2.0),
                         ..Default::default()
                     },
                     ..Default::default()
                 },
             ))
             .with_children(|p| {
-                p.spawn((
-                    SelectedRecipeDisplay,
-                    Name::new("Selected Recipe Display"),
-                    NodeBundle {
-                        style: Style {
-                            align_items: AlignItems::Center,
-                            width: Val::Px(item_slot_size * 6.0),
-                            height: Val::Px(item_slot_size),
-                            ..Default::default()
-                        },
-                        ..Default::default()
-                    },
-                ));
-
                 p.spawn((
                     Name::new("Rendered Inventory"),
                     NodeBundle {
@@ -340,9 +347,6 @@ fn populate_menu(
     }
 }
 
-#[derive(Debug, Component)]
-struct SelectedRecipeDisplay;
-
 #[derive(Component, Debug)]
 struct InventoryCount {
     recipe_amt: u16,
@@ -351,78 +355,28 @@ struct InventoryCount {
 
 fn on_select_item(
     mut commands: Commands,
-    q_selected_recipe_display: Query<(Entity, Option<&Children>), With<SelectedRecipeDisplay>>,
     mut evr_select_item: EventReader<SelectItemEvent>,
     q_recipe: Query<&Recipe>,
-    font: Res<DefaultFont>,
+    q_selected_recipe: Query<Entity, With<SelectedRecipe>>,
+    mut q_bg_col: Query<&mut BackgroundColor>,
 ) {
     for ev in evr_select_item.read() {
         let Ok(recipe) = q_recipe.get(ev.0) else {
             continue;
         };
 
-        let Ok((selected_recipe_display, children)) = q_selected_recipe_display.get_single() else {
-            return;
-        };
-
-        if let Some(children) = children {
-            for &child in children.iter() {
-                commands.entity(child).despawn_recursive();
-            }
+        if let Ok(selected_recipe) = q_selected_recipe.get_single() {
+            commands.entity(selected_recipe).remove::<SelectedRecipe>();
+            q_bg_col.get_mut(selected_recipe).expect("Must be ui node").0 = Color::NONE;
         }
-
-        let text_style = TextStyle {
-            font: font.0.clone_weak(),
-            font_size: 24.0,
-            color: Color::WHITE,
-        };
-        // let text_style_not_enough = TextStyle {
-        //     font: font.0.clone_weak(),
-        //     font_size: 24.0,
-        //     color: css::RED.into(),
-        // };
-        //
-        // let Ok(inventory) = q_inventory.get_single() else {
-        //     continue;
-        // };
-
-        commands.entity(selected_recipe_display).insert(recipe.clone()).with_children(|p| {
-            for item in recipe.0.inputs.iter() {
-                let item_id = match item.item {
-                    RecipeItem::Item(i) => i,
-                    RecipeItem::Category(_) => todo!("Categories"),
-                };
-
-                p.spawn((
-                    NodeBundle {
-                        style: Style {
-                            width: Val::Px(64.0),
-                            height: Val::Px(64.0),
-                            flex_direction: FlexDirection::Column,
-                            align_items: AlignItems::End,
-                            justify_content: JustifyContent::End,
-                            ..Default::default()
-                        },
-                        ..Default::default()
-                    },
-                    RenderItem { item_id },
-                ))
-                .with_children(|p| {
-                    p.spawn((
-                        Name::new("Item recipe qty"),
-                        TextNeedsTopRoot,
-                        InventoryCount {
-                            item_id,
-                            recipe_amt: item.quantity,
-                        },
-                        TextBundle {
-                            text: Text::from_section(format!("{}", item.quantity), text_style.clone()),
-                            ..Default::default()
-                        },
-                    ));
-                });
-            }
-        });
+        commands.entity(ev.0).insert(SelectedRecipe);
+        q_bg_col.get_mut(ev.0).expect("Must be ui node").0 = Srgba {
+            red: 1.0,
+            green: 1.0,
+            blue: 1.0,
+            alpha: 0.1,
+        }
+        .into();
 
         println!("{recipe:?}");
     }
@@ -432,10 +386,11 @@ fn listen_create(
     q_structure: Query<&Structure>,
     q_inventory: Query<&Inventory>,
     q_open_fab_menu: Query<&OpenBasicFabricatorMenu>,
-    q_selected_recipe: Query<&Recipe, With<SelectedRecipeDisplay>>,
+    q_selected_recipe: Query<&Recipe, With<SelectedRecipe>>,
     mut evr_create: EventReader<CreateClickedEvent>,
     mut nevw_craft_event: NettyEventWriter<CraftBasicFabricatorRecipeEvent>,
     network_mapping: Res<NetworkMapping>,
+    input_handler: InputChecker,
 ) {
     for _ in evr_create.read() {
         let Ok(fab_menu) = q_open_fab_menu.get_single() else {
@@ -459,14 +414,19 @@ fn listen_create(
             continue;
         }
 
-        println!("Create {max_can_create}!");
-
         if let Ok(block) = fab_menu.0.map_to_server(&network_mapping) {
-            println!("Sending craft event!");
+            let quantity = if input_handler.check_pressed(CosmosInputs::BulkCraft) {
+                max_can_create
+            } else {
+                1
+            };
+
+            info!("Sending craft {quantity} event!");
+
             nevw_craft_event.send(CraftBasicFabricatorRecipeEvent {
                 block,
                 recipe: recipe.0.clone(),
-                quantity: max_can_create,
+                quantity,
             });
         }
     }
