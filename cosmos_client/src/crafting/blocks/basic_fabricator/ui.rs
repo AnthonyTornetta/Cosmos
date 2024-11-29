@@ -75,6 +75,9 @@ struct Recipe(BasicFabricatorRecipe);
 #[derive(Component, Debug)]
 struct SelectedRecipe;
 
+#[derive(Component)]
+struct FabricateButton;
+
 fn populate_menu(
     mut commands: Commands,
     q_added_menu: Query<(Entity, &OpenBasicFabricatorMenu), Added<OpenBasicFabricatorMenu>>,
@@ -323,6 +326,7 @@ fn populate_menu(
 
                 p.spawn((
                     Name::new("Fabricate Button"),
+                    FabricateButton,
                     ButtonBundle {
                         button: Button::<CreateClickedEvent> {
                             text: Some(("Fabricate".into(), text_style)),
@@ -431,6 +435,8 @@ fn listen_create(
         }
     }
 }
+
+fn color_fabricate_button(q_fab_button: Query<&mut ButtonStyles, With<FabricateButton>>) {}
 
 pub(super) fn register(app: &mut App) {
     register_button::<SelectItemEvent>(app);
