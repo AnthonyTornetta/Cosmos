@@ -436,7 +436,46 @@ fn listen_create(
     }
 }
 
-fn color_fabricate_button(q_fab_button: Query<&mut ButtonStyles, With<FabricateButton>>) {}
+fn color_fabricate_button(
+    q_open_fab_menu: Query<&OpenBasicFabricatorMenu>,
+    q_structure: Query<&Structure>,
+    q_selected_recipe: Query<&Recipe, With<SelectedRecipe>>,
+    q_inventory: Query<&Inventory>,
+    mut q_fab_button: Query<&mut Button<CreateClickedEvent>, With<FabricateButton>>,
+) {
+    let Ok(mut btn) = q_fab_button.get_single_mut() else {
+        return;
+    };
+
+    let Ok(fab_menu) = q_open_fab_menu.get_single() else {
+        return;
+    };
+
+    let Ok(structure) = q_structure.get(fab_menu.0.structure()) else {
+        return;
+    };
+
+    let Some(inventory) = structure.query_block_data(fab_menu.0.coords(), &q_inventory) else {
+        return;
+    };
+
+    let Ok(recipe) = q_selected_recipe.get_single() else {
+        return;
+    };
+
+    if recipe.0.max_can_create(inventory.iter().flatten()) == 0 {
+        btn.button_styles = Some(ButtonStyles::default());
+    } else {
+        btn.button_styles = Some(ButtonStyles {
+            background_color: css::GREEN.into(),
+            foreground_color: css::WHITE.into(),
+            hover_background_color: css::GREEN.into(),
+            hover_foreground_color: css::WHITE.into(),
+            press_background_color: css::GREEN.into(),
+            press_foreground_color: css::WHITE.into(),
+        });
+    }
+}
 
 pub(super) fn register(app: &mut App) {
     register_button::<SelectItemEvent>(app);
@@ -444,7 +483,12 @@ pub(super) fn register(app: &mut App) {
 
     app.add_systems(
         Update,
-        (populate_menu, (on_select_item, listen_create).chain().in_set(UiSystemSet::DoUi))
+        (
+            populate_menu,
+            (on_select_item, listen_create, color_fabricate_button)
+                .chain()
+                .in_set(UiSystemSet::DoUi),
+        )
             .chain()
             .in_set(NetworkingSystemsSet::Between)
             .in_set(FabricatorMenuSet::PopulateMenu)

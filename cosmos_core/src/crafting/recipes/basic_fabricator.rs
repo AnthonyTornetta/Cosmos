@@ -54,6 +54,14 @@ impl BasicFabricatorRecipe {
             *unique_item_counts.entry(item.item_id()).or_insert(0) += item.quantity() as u32;
         }
 
+        for input in &self.inputs {
+            let id = match input.item {
+                RecipeItem::Item(id) => id,
+                RecipeItem::Category(_) => todo!(),
+            };
+            unique_item_counts.entry(id).or_insert(0);
+        }
+
         unique_item_counts
             .into_iter()
             .flat_map(|(item_id, quantity)| {
