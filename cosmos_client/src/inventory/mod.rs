@@ -101,11 +101,18 @@ fn close_button_system(
 }
 
 #[derive(Debug, Clone)]
+/// Instructions on how to render this inventory.
 pub struct CustomInventoryRender {
     slots: Vec<(usize, Entity)>,
 }
 
 impl CustomInventoryRender {
+    /// The slots should be a Vec<(slot_index, slot_entity)>.
+    ///
+    /// Each `slot_index` should be based off the slots in the inventory you wish to render.
+    ///
+    /// Each `slot_entity` should be a UI node that will be filled in to be an interactable item
+    /// slot.
     pub fn new(slots: Vec<(usize, Entity)>) -> Self {
         Self { slots }
     }
@@ -114,7 +121,11 @@ impl CustomInventoryRender {
 #[derive(Component, Debug, Clone)]
 /// Add this to an inventory you want displayed, and remove this component when you want to hide the inventory
 pub enum InventoryNeedsDisplayed {
+    /// A standard inventory rendering with no custom rendering. This Will be rendered like a chest
+    /// or player's inventory.
     Normal(InventorySide),
+    /// You dictate where and which inventory slots should be rendered. See
+    /// [`CustomInventoryRender::new`]
     Custom(CustomInventoryRender),
 }
 

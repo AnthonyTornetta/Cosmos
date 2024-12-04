@@ -126,7 +126,6 @@ fn monitor_craft_event(
         for input in ev.recipe.inputs.iter() {
             let item = match input.item {
                 RecipeItem::Item(item_id) => item_id,
-                RecipeItem::Category(_) => todo!(),
             };
             let item = items.from_numeric_id(item);
             let (leftover, _) = fab_inv.take_and_remove_item(item, input.quantity as usize * input_multiplier as usize, &mut commands);

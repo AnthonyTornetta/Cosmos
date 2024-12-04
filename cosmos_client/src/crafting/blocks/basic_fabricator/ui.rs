@@ -4,8 +4,8 @@ use bevy::{
     core::Name,
     log::{error, info},
     prelude::{
-        in_state, resource_exists, Added, App, BuildChildren, Commands, Component, Entity, Event,
-        EventReader, IntoSystemConfigs, NodeBundle, Query, Res, TextBundle, With,
+        in_state, resource_exists, Added, App, BuildChildren, Commands, Component, Entity, Event, EventReader, IntoSystemConfigs,
+        NodeBundle, Query, Res, TextBundle, With,
     },
     text::{Text, TextStyle},
     ui::{AlignItems, BackgroundColor, FlexDirection, JustifyContent, Style, TargetCamera, UiRect, Val},
@@ -157,18 +157,16 @@ fn populate_menu(
         let mut slot_ents = vec![];
 
         ecmds.with_children(|p| {
-            p.spawn(
-                ScrollBundle {
-                    node_bundle: NodeBundle {
-                        style: Style {
-                            flex_grow: 1.0,
-                            ..Default::default()
-                        },
+            p.spawn(ScrollBundle {
+                node_bundle: NodeBundle {
+                    style: Style {
+                        flex_grow: 1.0,
                         ..Default::default()
                     },
                     ..Default::default()
                 },
-            )
+                ..Default::default()
+            })
             .with_children(|p| {
                 for recipe in crafting_recipes.iter() {
                     p.spawn((
@@ -228,21 +226,18 @@ fn populate_menu(
                                 ..Default::default()
                             });
 
-                            p.spawn(
-                                NodeBundle {
-                                    style: Style {
-                                        flex_direction: FlexDirection::Row,
-                                        width: Val::Percent(100.0),
-                                        ..Default::default()
-                                    },
+                            p.spawn(NodeBundle {
+                                style: Style {
+                                    flex_direction: FlexDirection::Row,
+                                    width: Val::Percent(100.0),
                                     ..Default::default()
                                 },
-                            )
+                                ..Default::default()
+                            })
                             .with_children(|p| {
                                 for item in recipe.inputs.iter() {
                                     let item_id = match item.item {
                                         RecipeItem::Item(i) => i,
-                                        RecipeItem::Category(_) => todo!("Categories"),
                                     };
 
                                     p.spawn((
@@ -263,10 +258,6 @@ fn populate_menu(
                                         p.spawn((
                                             Name::new("Item recipe qty"),
                                             TextNeedsTopRoot,
-                                            InventoryCount {
-                                                item_id,
-                                                recipe_amt: item.quantity,
-                                            },
                                             TextBundle {
                                                 text: Text::from_section(format!("{}", item.quantity), text_style.clone()),
                                                 ..Default::default()
@@ -348,12 +339,6 @@ fn populate_menu(
             .entity(structure.block_data(fab_menu.0.coords()).expect("Must expect from above"))
             .insert(InventoryNeedsDisplayed::Custom(CustomInventoryRender::new(slot_ents)));
     }
-}
-
-#[derive(Component, Debug)]
-struct InventoryCount {
-    recipe_amt: u16,
-    item_id: u16,
 }
 
 fn on_select_item(

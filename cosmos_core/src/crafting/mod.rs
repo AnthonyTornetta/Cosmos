@@ -1,3 +1,5 @@
+//! Shared logic for all forms of crafting
+
 use bevy::prelude::App;
 
 pub mod blocks;

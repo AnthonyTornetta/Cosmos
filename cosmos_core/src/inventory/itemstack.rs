@@ -393,6 +393,8 @@ impl ItemStack {
         }
     }
 
+    /// Returns the maximum amount of items that can be inserted into this itemstack without going
+    /// over the maximum stack size.
     pub fn max_quantity_can_be_inserted(&self) -> u16 {
         self.max_stack_size() - self.quantity
     }
