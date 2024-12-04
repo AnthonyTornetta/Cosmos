@@ -2,6 +2,7 @@
 
 #[cfg(feature = "client")]
 pub mod client;
+pub mod client_registry;
 pub mod client_reliable_messages;
 pub mod client_unreliable_messages;
 pub mod cosmos_encoder;
@@ -76,6 +77,8 @@ pub enum NettyChannelClient {
     ComponentReplication,
     /// Automatic syncing of events
     NettyEvent,
+    /// Automatic syncing of registries
+    Registry,
 }
 
 impl From<NettyChannelClient> for u8 {
@@ -87,6 +90,7 @@ impl From<NettyChannelClient> for u8 {
             NettyChannelClient::Shop => 3,
             NettyChannelClient::ComponentReplication => 4,
             NettyChannelClient::NettyEvent => 5,
+            NettyChannelClient::Registry => 6,
         }
     }
 }
@@ -134,6 +138,13 @@ impl NettyChannelClient {
             ChannelConfig {
                 channel_id: Self::NettyEvent.into(),
                 max_memory_usage_bytes: 5 * MB,
+                send_type: SendType::ReliableOrdered {
+                    resend_time: Duration::from_millis(200),
+                },
+            },
+            ChannelConfig {
+                channel_id: Self::Registry.into(),
+                max_memory_usage_bytes: MB,
                 send_type: SendType::ReliableOrdered {
                     resend_time: Duration::from_millis(200),
                 },

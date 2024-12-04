@@ -17,7 +17,7 @@ use cosmos_core::{
     structure::Structure,
 };
 
-use super::{HeldItemStack, InventorySide, NeedsDisplayed};
+use super::{HeldItemStack, InventoryNeedsDisplayed, InventorySide};
 
 fn sync(
     mut client: ResMut<RenetClient>,
@@ -58,7 +58,7 @@ fn sync(
                     InventoryIdentifier::Entity(owner) => {
                         if let Some(client_entity) = network_mapping.client_from_server(&owner) {
                             if let Some(mut ecmds) = commands.get_entity(client_entity) {
-                                ecmds.insert(NeedsDisplayed::default());
+                                ecmds.insert(InventoryNeedsDisplayed::default());
                             }
                         } else {
                             warn!("Error: unrecognized entity {owner:?} received from server when trying to sync up inventories!");
@@ -90,11 +90,13 @@ fn sync(
                             continue;
                         }
 
-                        commands.entity(data_entity).insert(NeedsDisplayed::default());
+                        commands.entity(data_entity).insert(InventoryNeedsDisplayed::default());
                     }
                 }
 
-                commands.entity(local_player.single()).insert(NeedsDisplayed(InventorySide::Left));
+                commands
+                    .entity(local_player.single())
+                    .insert(InventoryNeedsDisplayed::Normal(InventorySide::Left));
             }
         }
     }

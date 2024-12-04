@@ -395,6 +395,24 @@ impl Inventory {
         (qty, new_slot)
     }
 
+    /// Returns the maximum amount of this item that could be inserted into this inventory.
+    pub fn max_quantity_can_be_inserted(&mut self, item: &Item) -> u32 {
+        self.items
+            .iter()
+            .map(|x| {
+                if let Some(x) = x {
+                    if x.item_id() == item.id() && x.data_entity().is_none() {
+                        x.max_quantity_can_be_inserted() as u32
+                    } else {
+                        0
+                    }
+                } else {
+                    item.max_stack_size() as u32
+                }
+            })
+            .sum()
+    }
+
     /// Returns the overflow that could not fit in any slot. The second item in the tuple will be Some
     /// if some or all of the ItemStack got its own slot. If it did, then this will represent the
     /// new slot in use.
@@ -821,6 +839,16 @@ impl Inventory {
     /// Iterates over every slot in the inventory.
     pub fn iter_mut(&mut self) -> std::slice::IterMut<Option<ItemStack>> {
         self.items.iter_mut()
+    }
+
+    /// Returns the total quantity of this item within the inventory. This does NOT respect
+    /// any item data that may make it unique
+    pub fn total_quantity_of_item(&self, item_id: u16) -> u64 {
+        self.iter()
+            .flatten()
+            .filter(|x| x.item_id() == item_id)
+            .map(|x| x.quantity() as u64)
+            .sum::<u64>()
     }
 }
 
