@@ -1,3 +1,5 @@
+//! Server-related crafting logic
+
 use bevy::prelude::App;
 
 mod blocks;

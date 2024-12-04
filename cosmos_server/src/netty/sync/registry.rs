@@ -1,3 +1,5 @@
+//! Server registry syncing
+
 use bevy::{
     app::Update,
     log::warn,
@@ -10,6 +12,10 @@ use cosmos_core::{
 use renet2::{ClientId, RenetServer};
 
 #[derive(Debug, Event)]
+/// This event is sent when the client has received every registry from the server.
+///
+/// This will be sent in their initial connecting phase, and anything that relies on a registry
+/// must be sent after this is received.
 pub struct ClientFinishedReceivingRegistriesEvent(pub ClientId);
 
 fn listen_for_done_syncing(

@@ -72,20 +72,16 @@ impl BasicFabricatorRecipe {
         }
 
         for input in &self.inputs {
-            let id = match input.item {
-                RecipeItem::Item(id) => id,
-            };
+            let RecipeItem::Item(id) = input.item;
             unique_item_counts.entry(id).or_insert(0);
         }
 
         unique_item_counts
             .into_iter()
             .flat_map(|(item_id, quantity)| {
-                let Some(input) = self.inputs.iter().find(|x| match x.item {
+                let input = self.inputs.iter().find(|x| match x.item {
                     RecipeItem::Item(id) => id == item_id,
-                }) else {
-                    return None;
-                };
+                })?;
 
                 Some(quantity / input.quantity as u32)
             })

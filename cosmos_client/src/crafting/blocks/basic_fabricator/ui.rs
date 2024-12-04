@@ -148,7 +148,6 @@ fn populate_menu(
                         flex_direction: FlexDirection::Column,
                         ..Default::default()
                     },
-                    ..Default::default()
                 },
                 ..Default::default()
             },
@@ -236,9 +235,7 @@ fn populate_menu(
                             })
                             .with_children(|p| {
                                 for item in recipe.inputs.iter() {
-                                    let item_id = match item.item {
-                                        RecipeItem::Item(i) => i,
-                                    };
+                                    let RecipeItem::Item(item_id) = item.item;
 
                                     p.spawn((
                                         NodeBundle {

@@ -124,9 +124,7 @@ fn monitor_craft_event(
         let input_multiplier = qty_crafted / ev.recipe.output.quantity as u32;
 
         for input in ev.recipe.inputs.iter() {
-            let item = match input.item {
-                RecipeItem::Item(item_id) => item_id,
-            };
+            let RecipeItem::Item(item) = input.item;
             let item = items.from_numeric_id(item);
             let (leftover, _) = fab_inv.take_and_remove_item(item, input.quantity as usize * input_multiplier as usize, &mut commands);
             assert_eq!(leftover, 0, "Invalid crafting occurred! Input Leftover ({leftover}) != 0");
