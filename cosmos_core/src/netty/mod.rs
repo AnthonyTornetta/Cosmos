@@ -144,7 +144,7 @@ impl NettyChannelClient {
             },
             ChannelConfig {
                 channel_id: Self::Registry.into(),
-                max_memory_usage_bytes: 1 * MB,
+                max_memory_usage_bytes: MB,
                 send_type: SendType::ReliableOrdered {
                     resend_time: Duration::from_millis(200),
                 },

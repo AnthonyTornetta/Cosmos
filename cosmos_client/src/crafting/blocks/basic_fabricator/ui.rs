@@ -4,11 +4,11 @@ use bevy::{
     core::Name,
     log::{error, info},
     prelude::{
-        in_state, resource_exists, Added, App, BuildChildren, Changed, Children, Commands, Component, DespawnRecursiveExt, Entity, Event,
-        EventReader, IntoSystemConfigs, NodeBundle, Parent, Query, Res, TextBundle, With,
+        in_state, resource_exists, Added, App, BuildChildren, Commands, Component, Entity, Event,
+        EventReader, IntoSystemConfigs, NodeBundle, Query, Res, TextBundle, With,
     },
     text::{Text, TextStyle},
-    ui::{AlignItems, BackgroundColor, FlexDirection, Interaction, JustifyContent, Style, TargetCamera, UiRect, Val},
+    ui::{AlignItems, BackgroundColor, FlexDirection, JustifyContent, Style, TargetCamera, UiRect, Val},
 };
 use cosmos_core::{
     crafting::{
@@ -18,7 +18,6 @@ use cosmos_core::{
             RecipeItem,
         },
     },
-    ecs::NeedsDespawned,
     inventory::Inventory,
     item::Item,
     netty::{
@@ -35,7 +34,7 @@ use cosmos_core::{
 };
 
 use crate::{
-    input::inputs::{CosmosInputHandler, CosmosInputs, InputChecker, InputHandler},
+    input::inputs::{CosmosInputs, InputChecker, InputHandler},
     inventory::{CustomInventoryRender, InventoryNeedsDisplayed, InventorySide, TextNeedsTopRoot},
     lang::Lang,
     rendering::MainCamera,
@@ -159,7 +158,7 @@ fn populate_menu(
 
         ecmds.with_children(|p| {
             p.spawn(
-                (ScrollBundle {
+                ScrollBundle {
                     node_bundle: NodeBundle {
                         style: Style {
                             flex_grow: 1.0,
@@ -168,7 +167,7 @@ fn populate_menu(
                         ..Default::default()
                     },
                     ..Default::default()
-                }),
+                },
             )
             .with_children(|p| {
                 for recipe in crafting_recipes.iter() {
@@ -230,14 +229,14 @@ fn populate_menu(
                             });
 
                             p.spawn(
-                                (NodeBundle {
+                                NodeBundle {
                                     style: Style {
                                         flex_direction: FlexDirection::Row,
                                         width: Val::Percent(100.0),
                                         ..Default::default()
                                     },
                                     ..Default::default()
-                                }),
+                                },
                             )
                             .with_children(|p| {
                                 for item in recipe.inputs.iter() {

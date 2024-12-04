@@ -118,7 +118,7 @@ fn monitor_craft_event(
             0
         };
 
-        let qty_crafted = ev.quantity - leftover as u32;
+        let qty_crafted = ev.quantity - leftover;
         // Enures always a whole amount is crafted
         let qty_crafted = (qty_crafted / ev.recipe.output.quantity as u32) * ev.recipe.output.quantity as u32;
         let input_multiplier = qty_crafted / ev.recipe.output.quantity as u32;
@@ -129,7 +129,7 @@ fn monitor_craft_event(
                 RecipeItem::Category(_) => todo!(),
             };
             let item = items.from_numeric_id(item);
-            let (leftover, _) = fab_inv.take_and_remove_item(&item, input.quantity as usize * input_multiplier as usize, &mut commands);
+            let (leftover, _) = fab_inv.take_and_remove_item(item, input.quantity as usize * input_multiplier as usize, &mut commands);
             assert_eq!(leftover, 0, "Invalid crafting occurred! Input Leftover ({leftover}) != 0");
         }
 

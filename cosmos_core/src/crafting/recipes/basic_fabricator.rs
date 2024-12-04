@@ -1,6 +1,6 @@
 use bevy::{
-    prelude::{App, Commands, Event, Res, Resource},
-    utils::{HashMap, HashSet},
+    prelude::{App, Event, Resource},
+    utils::HashMap,
 };
 use serde::{Deserialize, Serialize};
 
@@ -8,7 +8,7 @@ use crate::{
     inventory::itemstack::ItemStack,
     item::Item,
     netty::sync::events::netty_event::{IdentifiableEvent, NettyEvent, SyncedEventImpl},
-    registry::{identifiable::Identifiable, Registry},
+    registry::identifiable::Identifiable,
 };
 
 use super::RecipeItem;
