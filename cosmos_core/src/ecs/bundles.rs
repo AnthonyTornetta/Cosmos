@@ -23,9 +23,9 @@ impl From<Quat> for BundleStartingRotation {
 #[derive(Bundle, Clone, Debug, Reflect, Default)]
 pub struct CosmosMaterialMeshBundle<M: Material> {
     /// The bevy mesh
-    pub mesh: Handle<Mesh>,
+    pub mesh: Mesh3d,
     /// The material type provided
-    pub material: Handle<M>,
+    pub material: MeshMaterial3d<M>,
     /// User indication of whether an entity is visible
     pub visibility: Visibility,
     /// The location of this entity

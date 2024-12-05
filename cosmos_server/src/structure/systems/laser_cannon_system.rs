@@ -70,7 +70,7 @@ fn update_system(
             continue;
         };
 
-        let sec = time.elapsed_seconds();
+        let sec = time.elapsed_secs();
 
         let mut any_fired = false;
 

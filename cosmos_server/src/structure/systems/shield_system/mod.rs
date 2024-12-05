@@ -14,7 +14,9 @@ use bevy::{
     hierarchy::{BuildChildren, Parent},
     log::warn,
     math::Vec3,
-    prelude::{in_state, App, Commands, EventReader, IntoSystemConfigs, IntoSystemSetConfigs, OnEnter, Query, Res, ResMut, Update},
+    prelude::{
+        in_state, App, ChildBuild, Commands, EventReader, IntoSystemConfigs, IntoSystemSetConfigs, OnEnter, Query, Res, ResMut, Update,
+    },
     reflect::Reflect,
     time::Time,
     transform::{
@@ -274,12 +276,12 @@ fn power_shields(
         if shield.strength < shield.max_strength {
             if shield.strength == 0.0 {
                 let Some(mut shield_downtime) = shield_downtime else {
-                    commands.entity(ent).insert(ShieldDowntime(time.delta_seconds()));
+                    commands.entity(ent).insert(ShieldDowntime(time.delta_secs()));
                     continue;
                 };
 
                 if shield_downtime.0 < MAX_SHIELD_DOWNTIME.as_secs_f32() {
-                    shield_downtime.0 += time.delta_seconds();
+                    shield_downtime.0 += time.delta_secs();
                     continue;
                 }
             }
@@ -287,7 +289,7 @@ fn power_shields(
             let strength_missing = shield.max_strength - shield.strength;
 
             let optimal_power_usage = strength_missing / shield.power_efficiency;
-            let power_usage = optimal_power_usage.min(shield.power_per_second * time.delta_seconds());
+            let power_usage = optimal_power_usage.min(shield.power_per_second * time.delta_secs());
 
             let Ok(systems) = q_systems.get(parent.get()) else {
                 warn!("Shield's parent isn't a structure?");

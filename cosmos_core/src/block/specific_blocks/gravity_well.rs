@@ -40,7 +40,7 @@ fn do_gravity_well(
         };
 
         ext_impulse.impulse +=
-            Quat::from_affine3(&g_trans.affine()).mul_vec3(under_gravity_well.g_constant * read_mass_props.mass * time.delta_seconds());
+            Quat::from_affine3(&g_trans.affine()).mul_vec3(under_gravity_well.g_constant * read_mass_props.mass * time.delta_secs());
     }
 }
 

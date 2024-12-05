@@ -63,7 +63,7 @@ struct NextPirateSpawn(f64);
 
 fn add_spawn_times(q_players: Query<Entity, (With<Player>, Without<NextPirateSpawn>)>, time: Res<Time>, mut commands: Commands) {
     for ent in q_players.iter() {
-        commands.entity(ent).insert(NextPirateSpawn(time.delta_seconds_f64()));
+        commands.entity(ent).insert(NextPirateSpawn(time.delta_secs_f64()));
     }
 }
 
@@ -104,7 +104,7 @@ fn spawn_pirates(
     }
 
     for (sector, (next_pirate_spawn, player_ents)) in player_groups {
-        if time.elapsed_seconds_f64() < next_pirate_spawn.0 {
+        if time.elapsed_secs_f64() < next_pirate_spawn.0 {
             continue;
         }
 
@@ -156,7 +156,7 @@ fn spawn_pirates(
         }
 
         let min_secs = min_pirate_spawn_time.0.as_secs_f64();
-        let next_spawn_time = rand::random::<f64>() * min_secs * 3.0 + min_secs + time.elapsed_seconds_f64();
+        let next_spawn_time = rand::random::<f64>() * min_secs * 3.0 + min_secs + time.elapsed_secs_f64();
 
         for player_ent in player_ents {
             commands.entity(player_ent).insert(NextPirateSpawn(next_spawn_time));
