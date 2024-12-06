@@ -7,7 +7,6 @@ use bevy::{
         in_state, resource_exists, Added, App, BuildChildren, Commands, Component, Entity, Event, EventReader, IntoSystemConfigs,
         NodeBundle, Query, Res, TextBundle, With,
     },
-    text::{Text, TextStyle},
     ui::{AlignItems, BackgroundColor, FlexDirection, JustifyContent, Style, TargetCamera, UiRect, Val},
 };
 use cosmos_core::{
@@ -125,9 +124,9 @@ fn populate_menu(
             TargetCamera(cam),
             OpenMenu::new(0),
             WindowBundle {
-                node_bundle: NodeBundle {
-                    background_color: Srgba::hex("2D2D2D").unwrap().into(),
-                    style: Style {
+                                    BackgroundColor(Srgba::hex("2D2D2D").unwrap().into()),
+
+                Node {
                         width: Val::Px(item_slot_size * 6.0),
                         height: Val::Px(800.0),
                         margin: UiRect {
@@ -139,8 +138,6 @@ fn populate_menu(
                             right: Val::Px(100.0),
                         },
                         ..Default::default()
-                    },
-                    ..Default::default()
                 },
                 window: GuiWindow {
                     title: "Basic Fabricator".into(),
