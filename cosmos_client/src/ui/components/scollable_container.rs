@@ -5,7 +5,6 @@ use bevy::{
     color::{Color, Srgba},
     core::Name,
     ecs::{
-        bundle::Bundle,
         component::Component,
         entity::Entity,
         event::EventReader,
@@ -20,10 +19,11 @@ use bevy::{
         ButtonInput,
     },
     log::error,
-    prelude::Changed,
+    math::{Rect, Vec2},
+    prelude::{Changed, ChildBuild},
     reflect::Reflect,
     transform::components::GlobalTransform,
-    ui::{node_bundles::NodeBundle, FlexDirection, Interaction, Node, Overflow, PositionType, Style, UiScale, Val},
+    ui::{BackgroundColor, ComputedNode, FlexDirection, Interaction, Node, Overflow, PositionType, UiScale, Val},
     window::{PrimaryWindow, Window},
 };
 
@@ -32,6 +32,7 @@ use crate::ui::UiSystemSet;
 use super::Disabled;
 
 #[derive(Component, Default, Debug, Reflect)]
+#[require(Node)]
 /// Put content you want to scroll through as a child of this
 pub struct ScrollBox {
     /// The amount that is scrolled by (in pixels)
@@ -70,15 +71,6 @@ impl Default for ScrollerStyles {
     }
 }
 
-#[derive(Debug, Bundle, Default)]
-/// Put stuff you want to scroll through as a child of this bundle
-pub struct ScrollBundle {
-    /// The node bundle that will be used with the Scrollbar
-    pub node_bundle: NodeBundle,
-    /// The slider component
-    pub slider: ScrollBox,
-}
-
 #[derive(Component)]
 struct ContentsContainer(Entity);
 
@@ -88,23 +80,20 @@ struct ScrollbarContainerEntity(Entity);
 #[derive(Component)]
 struct ScrollbarEntity(Entity);
 
-fn on_add_scrollbar(mut commands: Commands, mut q_added_button: Query<(Entity, &ScrollBox, &mut Style, &Children), Added<ScrollBox>>) {
+fn on_add_scrollbar(mut commands: Commands, mut q_added_button: Query<(Entity, &ScrollBox, &mut Node, &Children), Added<ScrollBox>>) {
     for (ent, scrollbox, mut style, children) in q_added_button.iter_mut() {
         style.overflow = Overflow::clip_y();
 
         let container_entity = commands
             .spawn((
                 Name::new("Scrollbar Content Container"),
-                NodeBundle {
-                    style: Style {
-                        // Take the size of the parent node.
-                        flex_grow: 1.0,
-                        position_type: PositionType::Absolute,
-                        flex_direction: FlexDirection::Column,
-                        width: Val::Percent(100.0),
-                        min_height: Val::Percent(100.0),
-                        ..Default::default()
-                    },
+                Node {
+                    // Take the size of the parent node.
+                    flex_grow: 1.0,
+                    position_type: PositionType::Absolute,
+                    flex_direction: FlexDirection::Column,
+                    width: Val::Percent(100.0),
+                    min_height: Val::Percent(100.0),
                     ..Default::default()
                 },
             ))
@@ -114,38 +103,33 @@ fn on_add_scrollbar(mut commands: Commands, mut q_added_button: Query<(Entity, &
             .spawn((
                 Name::new("Scrollbar Container"),
                 Interaction::None,
-                NodeBundle {
-                    style: Style {
-                        // Take the size of the parent node.
-                        position_type: PositionType::Absolute,
-                        right: Val::Px(0.0), // aligns it to right
-                        width: Val::Px(15.0),
-                        height: Val::Percent(100.0),
-                        flex_direction: FlexDirection::Column,
-                        ..Default::default()
-                    },
-                    background_color: scrollbox.styles.scrollbar_background_color.into(),
+                Node {
+                    // Take the size of the parent node.
+                    position_type: PositionType::Absolute,
+                    right: Val::Px(0.0), // aligns it to right
+                    width: Val::Px(15.0),
+                    height: Val::Percent(100.0),
+                    flex_direction: FlexDirection::Column,
                     ..Default::default()
                 },
+                BackgroundColor(scrollbox.styles.scrollbar_background_color),
             ))
             .with_children(|p| {
                 p.spawn((
                     Name::new("Scrollbar"),
                     ScrollbarContainerEntity(ent),
                     Interaction::None,
-                    NodeBundle {
-                        style: Style {
-                            // Take the size of the parent node.
-                            position_type: PositionType::Relative,
-                            top: Val::Percent(0.0),
-                            width: Val::Px(15.0),
-                            height: Val::Px(0.0),
-                            flex_direction: FlexDirection::Column,
-                            ..Default::default()
-                        },
-                        background_color: scrollbox.styles.scrollbar_color.into(),
+                    Node {
+                        // Take the size of the parent node.
+                        position_type: PositionType::Relative,
+                        top: Val::Percent(0.0),
+                        width: Val::Px(15.0),
+                        height: Val::Px(0.0),
+                        flex_direction: FlexDirection::Column,
+
                         ..Default::default()
                     },
+                    BackgroundColor(scrollbox.styles.scrollbar_color.into()),
                 ));
             })
             .id();
@@ -178,16 +162,15 @@ fn on_interact_slider(
         (
             &mut ScrollBox,
             &Interaction,
-            &Node,
+            &ComputedNode,
             &ContentsContainer,
             &ScrollbarEntity,
             &GlobalTransform,
         ),
         Without<Disabled>,
     >,
-    q_container: Query<&Node>,
+    q_container: Query<&ComputedNode>,
     input: Res<ButtonInput<KeyCode>>,
-    scale: Res<UiScale>,
     mouse_btns: Res<ButtonInput<MouseButton>>,
     q_windows: Query<&Window, With<PrimaryWindow>>,
     q_interaction: Query<&Interaction>,
@@ -256,7 +239,8 @@ fn on_interact_slider(
 
             let max_scroll = (items_height - container_height).max(0.0);
 
-            let phys_rect = node.physical_rect(g_trans, 1.0, scale.0);
+            let t = g_trans.translation();
+            let phys_rect = Rect::from_center_size(Vec2::new(t.x, t.y), node.size());
 
             let min = phys_rect.min.y + scrollbar_height_px / 2.0;
             let max = phys_rect.max.y - scrollbar_height_px / 2.0;
@@ -270,8 +254,8 @@ fn on_interact_slider(
 }
 
 fn on_change_scrollbar(
-    q_scroll_containers: Query<(&ScrollBox, &Node, &ContentsContainer), Changed<ScrollBox>>,
-    mut q_container: Query<(&mut Style, &Node)>,
+    q_scroll_containers: Query<(&ScrollBox, &ComputedNode, &ContentsContainer), Changed<ScrollBox>>,
+    mut q_container: Query<(&mut Node, &ComputedNode)>,
 ) {
     for (scrollbar, node, contents_container) in q_scroll_containers.iter() {
         let Ok((mut style, contents_node)) = q_container.get_mut(contents_container.0) else {
@@ -288,9 +272,9 @@ fn on_change_scrollbar(
 }
 
 fn handle_scrollbar(
-    mut query_list: Query<(&ScrollbarContainerEntity, &mut Style)>,
-    q_scroll_container: Query<(&Node, &ScrollBox, &ContentsContainer)>,
-    q_node: Query<&Node>,
+    mut query_list: Query<(&ScrollbarContainerEntity, &mut Node)>,
+    q_scroll_container: Query<(&ComputedNode, &ScrollBox, &ContentsContainer)>,
+    q_node: Query<&ComputedNode>,
 ) {
     for (scrollbar_entity, mut style) in query_list.iter_mut() {
         let Ok((node, scrollbar, contents_container)) = q_scroll_container.get(scrollbar_entity.0) else {

@@ -241,7 +241,7 @@ pub(crate) fn client_sync_players(
     let client_id = transport.client_id();
 
     requested_entities.entities.retain_mut(|x| {
-        x.seconds_since_request += time.delta_seconds();
+        x.seconds_since_request += time.delta_secs();
         if x.seconds_since_request < 10.0 {
             true
         } else {

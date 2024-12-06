@@ -7,12 +7,11 @@ use bevy::{
     core::Name,
     log::error,
     prelude::{
-        App, BuildChildren, Changed, Children, Commands, Component, Entity, EventReader, IntoSystemConfigs, NodeBundle, OnEnter, Query,
-        Res, ResMut, TextBundle, Visibility, With, Without,
+        App, BuildChildren, Changed, ChildBuild, Children, Commands, Component, Entity, EventReader, IntoSystemConfigs, NodeBundle,
+        OnEnter, Query, Res, ResMut, Text, TextBundle, TextUiWriter, Visibility, With, Without,
     },
-    text::{BreakLineOn, Text, TextStyle},
     time::Time,
-    ui::{BackgroundColor, FlexDirection, Overflow, OverflowAxis, Style, Val},
+    ui::{BackgroundColor, FlexDirection, Node, Overflow, OverflowAxis, Val},
 };
 use cosmos_core::{
     chat::{ClientSendChatMessageEvent, ServerSendChatMessageEvent},
@@ -82,29 +81,23 @@ fn setup_chat_display(mut commands: Commands) {
         .spawn((
             ChatDisplay,
             Name::new("Chat Display"),
-            NodeBundle {
-                style: Style {
-                    top: Val::Percent(20.0),
-                    width: Val::Percent(45.0),
-                    height: Val::Percent(60.0),
-                    overflow: Overflow {
-                        x: OverflowAxis::Hidden,
-                        y: OverflowAxis::Hidden,
-                    },
-                    flex_direction: FlexDirection::ColumnReverse,
-                    ..Default::default()
+            Node {
+                top: Val::Percent(20.0),
+                width: Val::Percent(45.0),
+                height: Val::Percent(60.0),
+                overflow: Overflow {
+                    x: OverflowAxis::Hidden,
+                    y: OverflowAxis::Hidden,
                 },
+                flex_direction: FlexDirection::ColumnReverse,
                 ..Default::default()
             },
         ))
         .with_children(|p| {
             p.spawn((
                 ChatDisplayReceivedMessagesContainer,
-                NodeBundle {
-                    style: Style {
-                        flex_direction: FlexDirection::Column,
-                        ..Default::default()
-                    },
+                Node {
+                    flex_direction: FlexDirection::Column,
                     ..Default::default()
                 },
             ));
@@ -113,17 +106,20 @@ fn setup_chat_display(mut commands: Commands) {
 
 const CHAT_MSG_ALIVE_SEC: f32 = 10.0;
 
-fn fade_chat_messages(q_time: Res<Time>, mut q_chat_msg: Query<(Entity, &mut Text, &mut ChatMessage)>, mut commands: Commands) {
-    let delta = q_time.delta_seconds();
+fn fade_chat_messages(
+    q_time: Res<Time>,
+    mut writer: TextUiWriter,
+    mut q_chat_msg: Query<(Entity, &mut Text, &mut ChatMessage)>,
+    mut commands: Commands,
+) {
+    let delta = q_time.delta_secs();
     for (ent, mut text, mut chat_msg) in q_chat_msg.iter_mut() {
         chat_msg.0 -= delta;
 
         if chat_msg.0 <= 0.0 {
             commands.entity(ent).insert(NeedsDespawned);
         } else {
-            for sec in &mut text.sections {
-                sec.style.color.set_alpha(chat_msg.0 / CHAT_MSG_ALIVE_SEC);
-            }
+            writer.for_each_color(ent, |mut c| c.set_alpha(chat_msg.0 / CHAT_MSG_ALIVE_SEC))
         }
     }
 }
@@ -133,17 +129,14 @@ fn setup_chat_box(mut commands: Commands, default_font: Res<DefaultFont>) {
         .spawn((
             ChatContainer,
             Name::new("Chat Container"),
-            NodeBundle {
-                style: Style {
-                    top: Val::Percent(20.0),
-                    width: Val::Percent(45.0),
-                    height: Val::Percent(60.0),
-                    flex_direction: FlexDirection::Column,
-                    ..Default::default()
-                },
-                visibility: Visibility::Hidden,
+            Node {
+                top: Val::Percent(20.0),
+                width: Val::Percent(45.0),
+                height: Val::Percent(60.0),
+                flex_direction: FlexDirection::Column,
                 ..Default::default()
             },
+            Visibility::Hidden,
         ))
         .with_children(|p| {
             p.spawn((

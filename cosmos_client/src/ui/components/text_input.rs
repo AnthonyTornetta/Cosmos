@@ -25,16 +25,13 @@ use bevy::{
         ButtonInput, ButtonState,
     },
     log::{info, warn},
-    prelude::Deref,
-    text::{Text, TextSection, TextStyle},
+    prelude::{ChildBuild, Deref, Text},
+    text::{TextColor, TextFont, TextSpan},
     time::Time,
-    ui::{
-        node_bundles::{NodeBundle, TextBundle},
-        AlignSelf, FocusPolicy, Interaction, Style,
-    },
+    ui::{AlignSelf, FocusPolicy, Interaction, Node},
 };
 
-use crate::ui::UiSystemSet;
+use crate::ui::{font::DefaultFont, UiSystemSet};
 
 #[derive(Resource, Default)]
 struct CursorFlashTime(f32);
@@ -97,6 +94,7 @@ pub enum InputType {
 }
 
 #[derive(Component, Debug)]
+#[require(InputValue, Node)]
 /// A text box the user can type in
 pub struct TextInput {
     /// Handles input validation to ensure the data stored in [`InputValue`] is correct.
@@ -105,8 +103,6 @@ pub struct TextInput {
     pub cursor_pos: usize,
     /// Where the highlighting should begin (an index). This can be before or after the cursor.
     pub highlight_begin: Option<usize>,
-    /// The style of the text
-    pub style: TextStyle,
 }
 
 impl TextInput {
@@ -126,24 +122,8 @@ impl Default for TextInput {
             cursor_pos: 0,
             highlight_begin: None,
             input_type: InputType::Text { max_length: None },
-            style: TextStyle {
-                color: css::WHITE.into(),
-                font_size: 12.0,
-                font: Default::default(), // font assigned later
-            },
         }
     }
-}
-
-#[derive(Bundle, Debug, Default)]
-/// An easy way of creating the [`TextInput`] UI element.
-pub struct TextInputBundle {
-    /// The node bundle that will be used with the TextInput
-    pub node_bundle: NodeBundle,
-    /// The [`TextInput`] used to capture user input
-    pub text_input: TextInput,
-    /// The component you can read to get what the user types
-    pub value: InputValue,
 }
 
 fn monitor_clicked(
@@ -174,22 +154,14 @@ struct TextEnt(Entity);
 fn added_text_input_bundle(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
-    mut q_added: Query<(Entity, &InputValue, &mut TextInput), Added<TextInput>>,
+    mut q_added: Query<(Entity, &InputValue, &mut TextInput, &TextFont, &TextColor), Added<TextInput>>,
     focused: Res<Focus>,
+    default_font: Res<DefaultFont>,
 ) {
-    for (entity, input_value, mut text_input) in q_added.iter_mut() {
+    for (entity, input_value, mut text_input, t_font, t_col) in q_added.iter_mut() {
         commands.entity(entity).insert(Interaction::None).insert(FocusPolicy::Block);
 
-        if let Handle::Weak(id) = text_input.style.font {
-            if id == AssetId::default() {
-                // Font hasn't been assigned yet if it's the default handle, so assign the default now.
-                text_input.style.font = asset_server.load("fonts/PixeloidSans.ttf");
-            }
-        }
-
         let mut text_ent = None;
-
-        let mut cursor_style = text_input.style.clone();
 
         if focused.0 != Some(entity) {
             cursor_style.color = Color::NONE;
@@ -199,20 +171,19 @@ fn added_text_input_bundle(
             text_ent = Some(
                 p.spawn((
                     Name::new("Text input text display"),
-                    TextBundle {
-                        text: Text::from_sections([
-                            TextSection::new(input_value.0.clone(), text_input.style.clone()),
-                            TextSection::new("|", cursor_style),
-                            TextSection::new("", text_input.style.clone()),
-                        ])
-                        .with_no_wrap(),
-                        style: Style {
-                            align_self: AlignSelf::Center,
-                            ..Default::default()
-                        },
+                    Text::new(input_value.0.clone()), //.with_no_wrap(),
+                    t_font.clone(),
+                    t_col.clone(),
+                    Node {
+                        align_self: AlignSelf::Center,
                         ..Default::default()
                     },
+                    ..Default::default(),
                 ))
+                .with_children(|p| {
+                    p.spawn((TextSpan::new("|"), t_font.clone(), t_col.clone()));
+                    p.spawn((TextSpan::new(""), t_font.clone(), t_col.clone()));
+                })
                 .id(),
             );
         });
@@ -357,7 +328,7 @@ fn flash_cursor(
         text.sections[1].style.color = Color::NONE;
     }
 
-    cursor_flash_time.0 += time.delta_seconds();
+    cursor_flash_time.0 += time.delta_secs();
 }
 
 fn value_changed(

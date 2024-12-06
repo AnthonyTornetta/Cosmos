@@ -12,7 +12,7 @@ use cosmos_core::{
 
 use crate::{interactions::block_interactions::LookingAt, lang::Lang};
 
-use super::UiRoot;
+use super::{font::DefaultFont, UiRoot};
 
 #[derive(Component, Debug, Default)]
 struct FPSCounter {
@@ -29,89 +29,86 @@ struct CoordsCounter;
 #[derive(Component)]
 struct ActualCoordsCounter;
 
-fn add_text(mut commands: Commands, q_target_camera: Query<Entity, With<UiRoot>>, asset_server: Res<AssetServer>) {
-    let text_style = TextStyle {
-        color: Color::WHITE,
-        font_size: 32.0,
-        font: asset_server.load("fonts/PixeloidSans.ttf"),
-    };
-
+fn add_text(
+    mut commands: Commands,
+    default_font: Res<DefaultFont>,
+    q_target_camera: Query<Entity, With<UiRoot>>,
+    asset_server: Res<AssetServer>,
+) {
     let text_gap = 35.0;
 
     let target_cam = TargetCamera(q_target_camera.single());
 
+    let font = TextFont {
+        font: default_font.0.clone(),
+        font_size: 32.0,
+        ..Default::default()
+    };
+
     commands.spawn((
         target_cam.clone(),
-        TextBundle {
-            style: Style {
-                bottom: Val::Px(5.0),
-                left: Val::Px(5.0),
-                position_type: PositionType::Absolute,
-                ..default()
-            },
-            text: Text::from_section("(x, y, z) (x, y, z)", text_style.clone()),
-            ..default()
+        Node {
+            bottom: Val::Px(5.0),
+            left: Val::Px(5.0),
+            position_type: PositionType::Absolute,
+            ..Default::default()
         },
+        Text::new("(x, y, z) (x, y, z)"),
+        font.clone(),
         CoordsCounter,
     ));
 
     commands.spawn((
         target_cam.clone(),
-        TextBundle {
-            style: Style {
-                bottom: Val::Px(5.0 + text_gap),
-                left: Val::Px(5.0),
-                position_type: PositionType::Absolute,
+        Node {
+            bottom: Val::Px(5.0 + text_gap),
+            left: Val::Px(5.0),
+            position_type: PositionType::Absolute,
 
-                ..default()
-            },
-            text: Text::from_section("(x, y, z)", text_style.clone()),
             ..default()
         },
+        Text::new("(x, y, z)"),
+        font.clone(),
         ActualCoordsCounter,
     ));
 
     commands.spawn((
         target_cam.clone(),
-        TextBundle {
-            style: Style {
-                bottom: Val::Px(5.0 + text_gap * 2.0),
-                left: Val::Px(5.0),
-                position_type: PositionType::Absolute,
+        Node {
+            bottom: Val::Px(5.0 + text_gap * 2.0),
+            left: Val::Px(5.0),
+            position_type: PositionType::Absolute,
 
-                ..default()
-            },
-            text: Text::from_section("FPS: ", text_style.clone()),
             ..default()
         },
+        Text::new("FPS: "),
+        font.clone(),
         FPSCounter::default(),
     ));
 
-    commands.spawn((
-        target_cam,
-        TextBundle {
-            style: Style {
+    commands
+        .spawn((
+            target_cam,
+            Node {
                 bottom: Val::Px(5.0 + text_gap * 3.0),
                 left: Val::Px(5.0),
                 position_type: PositionType::Absolute,
 
                 ..default()
             },
-            text: Text::from_sections(vec![
-                TextSection::new("Looking At: ", text_style.clone()),
-                TextSection::new("Nothing", text_style.clone()),
-            ]),
-            ..default()
-        },
-        LookingAtText,
-    ));
+            Text::new("Looking At: "),
+            font.clone(),
+        ))
+        .with_children(|p| {
+            p.spawn((LookingAtText, TextSpan::new("Nothing")));
+        });
 }
 
 fn update_looking_at_text(
     q_looking_at: Query<&LookingAt>,
     q_structure: Query<&Structure>,
     blocks: Res<Registry<Block>>,
-    mut q_looking_at_text: Query<&mut Text, With<LookingAtText>>,
+    mut q_looking_at_text: Query<&mut TextSpan, With<LookingAtText>>,
     lang: Res<Lang<Block>>,
 ) {
     let Ok(mut text) = q_looking_at_text.get_single_mut() else {
@@ -130,14 +127,14 @@ fn update_looking_at_text(
         let block = structure.block_at(looking_at.block.coords(), &blocks);
         let block_rotation = structure.block_rotation(looking_at.block.coords());
 
-        text.sections[1].value = format!(
+        text.as_mut().0 = format!(
             "{}: {:?}, {:?}",
             lang.get_name(block).unwrap_or(block.unlocalized_name()),
             block_rotation.face_pointing_pos_y,
             block_rotation.sub_rotation
         );
     } else {
-        text.sections[1].value = "Nothing".into();
+        text.as_mut().0 = "Nothing".into();
     }
 }
 
@@ -148,23 +145,23 @@ fn update_coords(
 ) {
     if let Ok(loc) = query.get_single() {
         for mut txt_coords in txt_coords.iter_mut() {
-            txt_coords.sections[0].value = format!("({}), ({:.1}, {:.1}, {:.1})", loc.sector(), loc.local.x, loc.local.y, loc.local.z);
+            txt_coords.as_mut().0 = format!("({}), ({:.1}, {:.1}, {:.1})", loc.sector(), loc.local.x, loc.local.y, loc.local.z);
         }
 
         for mut txt_coords_actual in txt_coords_actual.iter_mut() {
             let absolute_coords = loc.absolute_coords();
-            txt_coords_actual.sections[0].value = format!("({:.1}, {:.1}, {:.1})", absolute_coords.x, absolute_coords.y, absolute_coords.z);
+            txt_coords_actual.as_mut().0 = format!("({:.1}, {:.1}, {:.1})", absolute_coords.x, absolute_coords.y, absolute_coords.z);
         }
     }
 }
 
 fn update_fps(mut query: Query<(&mut Text, &mut FPSCounter)>, time: Res<Time>) {
     for (mut text, mut fps) in query.iter_mut() {
-        fps.delta_time += time.delta_seconds();
+        fps.delta_time += time.delta_secs();
 
         fps.count += 1;
         if fps.delta_time >= 1.0 {
-            text.sections[0].value = format!("FPS: {}", fps.count);
+            text.as_mut().0 = format!("FPS: {}", fps.count);
             fps.count = 0;
             fps.delta_time = 0.0;
         }

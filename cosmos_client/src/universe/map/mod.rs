@@ -368,7 +368,7 @@ fn handle_waypoint_sector(
     sector_trans.translation = Vec3::new(ws.x() as f32, ws.y() as f32, ws.z() as f32) * SECTOR_SCALE;
 
     let standard_material = materials.get_mut(standard_material).expect("Material missing");
-    standard_material.base_color.set_alpha(time.elapsed_seconds().sin().abs() * 0.1);
+    standard_material.base_color.set_alpha(time.elapsed_secs().sin().abs() * 0.1);
 
     let Ok(mut text) = q_sector_text.get_single_mut() else {
         return;
@@ -393,7 +393,7 @@ fn handle_selected_sector(
 
     sector_trans.translation = cam.lerp_sector;
     let standard_material = materials.get_mut(standard_material).expect("Material missing");
-    standard_material.base_color.set_alpha(time.elapsed_seconds().sin().abs() * 0.1);
+    standard_material.base_color.set_alpha(time.elapsed_secs().sin().abs() * 0.1);
 
     let Ok(mut text) = q_sector_text.get_single_mut() else {
         return;

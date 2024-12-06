@@ -30,7 +30,7 @@ fn track_time_alive(
     mut q_time_alive: Query<(Entity, &mut ExplosionTimeAlive, Option<&MaxTimeExplosionAlive>)>,
 ) {
     for (ent, mut time_alive, max_time) in &mut q_time_alive {
-        time_alive.0 += time.delta_seconds();
+        time_alive.0 += time.delta_secs();
 
         if let Some(max_time) = max_time {
             if time_alive.0 >= max_time.0.as_secs_f32() {

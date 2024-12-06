@@ -100,7 +100,7 @@ fn create_main_menu_root_node(q_bg_node: Query<Entity, With<BackgroundColorNode>
 
 fn spin_camera(mut q_main_menu_camera: Query<&mut Transform, With<MainMenuCamera>>, time: Res<Time>) {
     for mut trans in q_main_menu_camera.iter_mut() {
-        trans.rotation *= Quat::from_axis_angle(Vec3::Y, time.delta_seconds() / 30.0);
+        trans.rotation *= Quat::from_axis_angle(Vec3::Y, time.delta_secs() / 30.0);
     }
 }
 
@@ -124,7 +124,7 @@ fn fade_in_background(
         .into();
     }
 
-    main_menu_time.0 += time.delta_seconds();
+    main_menu_time.0 += time.delta_secs();
 }
 
 fn create_main_menu_camera(mut commands: Commands) {

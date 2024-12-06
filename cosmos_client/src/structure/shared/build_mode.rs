@@ -95,7 +95,7 @@ fn control_build_mode(
     right = right.normalize_or_zero() * max_speed;
     let movement_up = up * max_speed;
 
-    let time = time.delta_seconds();
+    let time = time.delta_secs();
 
     if input_handler.check_pressed(CosmosInputs::MoveForward) {
         transform.translation += forward * time;

@@ -111,7 +111,7 @@ pub(crate) fn process_player_movement(
     right = right.normalize_or_zero() * 100.0;
     let movement_up = up.normalize_or_zero() * 2.0;
 
-    let time = time.delta_seconds();
+    let time = time.delta_secs();
 
     let mut new_linvel = player_inv_rot * velocity.linvel;
 

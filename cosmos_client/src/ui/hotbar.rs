@@ -247,7 +247,7 @@ fn tick_text_alpha_down(mut query: Query<&mut Text, With<ItemNameDisplay>>, time
             red: col.red,
             green: col.green,
             blue: col.blue,
-            alpha: (col.alpha - time.delta_seconds() / ITEM_NAME_FADE_DURATION_SEC).max(0.0),
+            alpha: (col.alpha - time.delta_secs() / ITEM_NAME_FADE_DURATION_SEC).max(0.0),
         }
         .into();
     }

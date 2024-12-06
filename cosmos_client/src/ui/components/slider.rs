@@ -1,4 +1,4 @@
-//! A UI component that is used to select a number between a range of values using a slider.
+//! A UI comonent that is used to select a number between a range of values using a slider.
 //!
 //! Similar to the HTML `input type="range"`.use std::ops::Range;
 
@@ -7,7 +7,6 @@ use bevy::{
     color::{palettes::css, Color},
     core::Name,
     ecs::{
-        bundle::Bundle,
         change_detection::DetectChanges,
         component::Component,
         entity::Entity,
@@ -18,9 +17,11 @@ use bevy::{
     },
     hierarchy::BuildChildren,
     log::info,
+    math::{Rect, Vec2},
+    prelude::ChildBuild,
     reflect::Reflect,
     transform::components::GlobalTransform,
-    ui::{node_bundles::NodeBundle, BackgroundColor, Interaction, Node, PositionType, Style, UiRect, UiScale, Val},
+    ui::{BackgroundColor, ComputedNode, Interaction, Node, PositionType, UiRect, UiScale, Val},
     window::{PrimaryWindow, Window},
 };
 
@@ -29,6 +30,7 @@ use crate::ui::UiSystemSet;
 use super::Disabled;
 
 #[derive(Component, Debug, Reflect)]
+#[require(Node, SliderValue)]
 /// A UI component that is used to select a number between a range of values using a slider.
 ///
 /// Similar to the HTML `input type="range"`.
@@ -100,19 +102,6 @@ impl Default for Slider {
     }
 }
 
-#[derive(Debug, Bundle, Default)]
-/// A UI component that is used to select a number between a range of values using a slider.
-///
-/// Similar to the HTML `input type="range"`.
-pub struct SliderBundle {
-    /// The node bundle that will be used with the TextInput
-    pub node_bundle: NodeBundle,
-    /// The slider component
-    pub slider: Slider,
-    /// The value the slider is set to
-    pub slider_value: SliderValue,
-}
-
 #[derive(Component)]
 struct SliderProgressEntites {
     empty_bar_entity: Entity,
@@ -133,7 +122,7 @@ const BASE_SQUARE_SIZE: f32 = 10.0;
 const X_MARGIN: f32 = BASE_SQUARE_SIZE;
 const Y_MARGIN: f32 = BASE_SQUARE_SIZE / 2.0;
 
-fn on_add_slider(mut commands: Commands, mut q_added_slider: Query<(Entity, &mut Style, &Slider, &SliderValue), Added<Slider>>) {
+fn on_add_slider(mut commands: Commands, mut q_added_slider: Query<(Entity, &mut Node, &Slider, &SliderValue), Added<Slider>>) {
     for (ent, mut style, slider, slider_value) in q_added_slider.iter_mut() {
         style.height = Val::Px(slider.height + BASE_SQUARE_SIZE);
 
@@ -145,9 +134,9 @@ fn on_add_slider(mut commands: Commands, mut q_added_slider: Query<(Entity, &mut
 
         commands.entity(ent).insert(Interaction::default()).with_children(|p| {
             empty_bar_entity = Some(
-                p.spawn(NodeBundle {
-                    background_color: slider.background_color.into(),
-                    style: Style {
+                p.spawn((
+                    BackgroundColor(slider.background_color),
+                    Node {
                         width: Val::Percent(100.0),
                         height: Val::Px(slider.height),
                         margin: UiRect {
@@ -158,8 +147,7 @@ fn on_add_slider(mut commands: Commands, mut q_added_slider: Query<(Entity, &mut
                         },
                         ..Default::default()
                     },
-                    ..Default::default()
-                })
+                ))
                 .with_children(|p| {
                     let percent_selected = slider_percent(slider, slider_value);
 
@@ -168,13 +156,10 @@ fn on_add_slider(mut commands: Commands, mut q_added_slider: Query<(Entity, &mut
                     bar_entity = Some(
                         p.spawn((
                             Name::new("Slider bar"),
-                            NodeBundle {
-                                background_color: slider.foreground_color.into(),
-                                style: Style {
-                                    width: Val::Percent(percent_selected),
-                                    height: Val::Percent(100.0),
-                                    ..Default::default()
-                                },
+                            BackgroundColor(slider.foreground_color),
+                            Node {
+                                width: Val::Percent(percent_selected),
+                                height: Val::Percent(100.0),
                                 ..Default::default()
                             },
                         ))
@@ -184,16 +169,13 @@ fn on_add_slider(mut commands: Commands, mut q_added_slider: Query<(Entity, &mut
                     square_entity = Some(
                         p.spawn((
                             Name::new("Slider square"),
-                            NodeBundle {
-                                background_color: slider.square_color.into(),
-                                style: Style {
-                                    position_type: PositionType::Absolute,
-                                    width: Val::Px(square_size),
-                                    height: Val::Px(square_size),
-                                    left: Val::Px(-BASE_SQUARE_SIZE),
-                                    top: Val::Px(-BASE_SQUARE_SIZE / 2.0),
-                                    ..Default::default()
-                                },
+                            BackgroundColor(slider.square_color),
+                            Node {
+                                position_type: PositionType::Absolute,
+                                width: Val::Px(square_size),
+                                height: Val::Px(square_size),
+                                left: Val::Px(-BASE_SQUARE_SIZE),
+                                top: Val::Px(-BASE_SQUARE_SIZE / 2.0),
                                 ..Default::default()
                             },
                         ))
@@ -219,7 +201,7 @@ fn on_interact_slider(
             Ref<Interaction>,
             &Slider,
             &mut SliderValue,
-            &Node,
+            &ComputedNode,
             &GlobalTransform,
             &SliderProgressEntites,
         ),
@@ -238,7 +220,10 @@ fn on_interact_slider(
                 continue;
             };
 
-            let mut slider_bounds = node.physical_rect(g_trans, 1.0, ui_scale.0);
+            let t = g_trans.translation();
+            let mut slider_bounds = Rect::from_center_size(Vec2::new(t.x, t.y), node.size());
+
+            // let mut slider_bounds = Rect::node.physical_rect(g_trans, 1.0, ui_scale.0);
             slider_bounds.min.x += X_MARGIN;
             slider_bounds.max.x -= X_MARGIN;
 
@@ -276,10 +261,10 @@ fn on_interact_slider(
 }
 
 fn on_change_value(
-    mut q_style: Query<&mut Style>,
+    mut q_style: Query<&mut Node>,
     ui_scale: Res<UiScale>,
     // Changed<SliderValue> fails here when SliderValue isn't the default value when the slider is just created.
-    q_slider_value: Query<(&SliderProgressEntites, &SliderValue, &Slider, &Node, &GlobalTransform)>,
+    q_slider_value: Query<(&SliderProgressEntites, &SliderValue, &Slider, &ComputedNode, &GlobalTransform)>,
 ) {
     for (slider_progress_entity, slider_value, slider, node, g_trans) in q_slider_value.iter() {
         let Ok(mut style) = q_style.get_mut(slider_progress_entity.bar_entity) else {
@@ -292,7 +277,8 @@ fn on_change_value(
             continue;
         };
 
-        let slider_bounds = node.physical_rect(g_trans, 1.0, ui_scale.0);
+        let t = g_trans.translation();
+        let mut slider_bounds = Rect::from_center_size(Vec2::new(t.x, t.y), node.size());
         let slider_actual_width = slider_bounds.size().x - X_MARGIN * 2.0;
 
         style.left = Val::Px(slider_actual_width * slider_percent(slider, slider_value) - BASE_SQUARE_SIZE);

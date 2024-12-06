@@ -130,7 +130,7 @@ fn display_hud_messages(
     time: Res<Time>,
 ) {
     if let Ok((parent, mut shown_hud_message, mut text)) = shown_hud_message.get_single_mut() {
-        let time_now = time.elapsed_seconds();
+        let time_now = time.elapsed_secs();
 
         if let Some(current_hud_message) = hud_messages.1.as_mut() {
             if current_hud_message.time_needs_reset {
@@ -154,7 +154,7 @@ fn display_hud_messages(
         }
     } else if let Some(hud_message) = hud_messages.0.pop_front() {
         let shown_hud_message = ShownHudMessage {
-            time_created: time.elapsed_seconds(),
+            time_created: time.elapsed_secs(),
         };
 
         hud_messages.1 = Some(CurrentDisplayedHudCache {

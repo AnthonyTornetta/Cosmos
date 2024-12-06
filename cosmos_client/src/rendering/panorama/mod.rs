@@ -81,7 +81,7 @@ fn restore_ui_after_panorama(
     mut fin: ResMut<FinishedPan>,
     time: Res<Time>,
 ) {
-    fin.0 += time.delta_seconds();
+    fin.0 += time.delta_secs();
 
     if fin.0 < 0.2 {
         return;

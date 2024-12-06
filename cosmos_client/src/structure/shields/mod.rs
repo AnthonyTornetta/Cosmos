@@ -80,7 +80,7 @@ fn update_shield_times(
             ripple.y = hit_point.y;
             ripple.z = hit_point.z;
 
-            *hit_time += time.delta_seconds();
+            *hit_time += time.delta_secs();
 
             if *hit_time > MAX_ANIMATION_DURATION.as_secs_f32() {
                 *hit = None;
