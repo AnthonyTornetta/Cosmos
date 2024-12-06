@@ -2,29 +2,7 @@
 
 use std::marker::PhantomData;
 
-use bevy::{
-    app::{App, Update},
-    color::{palettes::css, Color, Srgba},
-    core::Name,
-    ecs::{
-        bundle::Bundle,
-        change_detection::DetectChanges,
-        component::Component,
-        entity::Entity,
-        event::{Event, EventWriter},
-        query::{Added, Changed, Without},
-        schedule::{IntoSystemConfigs, IntoSystemSetConfigs, SystemSet},
-        system::{Commands, Query},
-        world::Ref,
-    },
-    hierarchy::{BuildChildren, Children},
-    log::error,
-    text::{Text, TextSection, TextStyle},
-    ui::{
-        node_bundles::{NodeBundle, TextBundle},
-        AlignItems, BackgroundColor, Interaction, JustifyContent, Style, UiImage,
-    },
-};
+use bevy::prelude::*;
 use cosmos_core::ecs::NeedsDespawned;
 
 use crate::ui::UiSystemSet;
@@ -38,6 +16,7 @@ pub trait ButtonEvent: Sized + Event + std::fmt::Debug {
 }
 
 #[derive(Component, Debug)]
+#[require(Node)]
 /// A UI element that will send out events (of type `T`) when it is pressed.
 ///
 /// This does NOT use the default bevy `Button` component.
@@ -50,9 +29,9 @@ pub struct Button<T: ButtonEvent> {
     /// states a button can be in. Leave `None` if you don't want this.
     pub button_styles: Option<ButtonStyles>,
     /// Text to display in the button. The text will be center aligned.
-    pub text: Option<(String, TextStyle)>,
+    pub text: Option<(String, TextFont, TextColor)>,
     /// Image to display in the button. The image will take up the entire button.
-    pub image: Option<UiImage>,
+    pub image: Option<ImageNode>,
 }
 
 #[derive(Debug, Clone)]
@@ -100,30 +79,10 @@ impl<T: ButtonEvent> Default for Button<T> {
     }
 }
 
-#[derive(Debug, Bundle)]
-/// A UI element that will send out events (of type `T`) when it is pressed.
-///
-/// This does NOT use the default bevy `Button` component.
-pub struct ButtonBundle<T: ButtonEvent> {
-    /// The node bundle that will be used with the TextInput
-    pub node_bundle: NodeBundle,
-    /// The button UI element
-    pub button: Button<T>,
-}
-
-impl<T: ButtonEvent> Default for ButtonBundle<T> {
-    fn default() -> Self {
-        Self {
-            button: Default::default(),
-            node_bundle: Default::default(),
-        }
-    }
-}
-
 #[derive(Component)]
 struct ButtonText(Entity);
 
-fn on_add_button<T: ButtonEvent>(mut commands: Commands, mut q_added_button: Query<(Entity, &Button<T>, &mut Style), Added<Button<T>>>) {
+fn on_add_button<T: ButtonEvent>(mut commands: Commands, mut q_added_button: Query<(Entity, &Button<T>, &mut Node), Added<Button<T>>>) {
     for (ent, button, mut style) in q_added_button.iter_mut() {
         commands.entity(ent).insert(Interaction::default());
 
@@ -197,7 +156,7 @@ fn on_change_button<T: ButtonEvent>(
         (
             Entity,
             Ref<Button<T>>,
-            Option<&UiImage>,
+            Option<&ImageNode>,
             Option<&ButtonText>,
             &Interaction,
             &mut BackgroundColor,
@@ -206,7 +165,7 @@ fn on_change_button<T: ButtonEvent>(
     >,
 ) {
     for (ent, btn, image, button_text, &interaction, mut bg_color) in q_changed_button.iter_mut().filter(|x| !x.1.is_added()) {
-        fn calc_text_color<T: ButtonEvent>(btn: &Button<T>, interaction: Interaction, text_style: &mut TextStyle) {
+        fn calc_text_color<T: ButtonEvent>(btn: &Button<T>, interaction: Interaction, text_style: &mut TextColor) {
             if let Some(btn_styles) = &btn.button_styles {
                 text_style.color = match interaction {
                     Interaction::None => btn_styles.foreground_color,
@@ -229,7 +188,7 @@ fn on_change_button<T: ButtonEvent>(
             if let Some(image) = btn.image.clone() {
                 commands.entity(ent).insert(image);
             } else {
-                commands.entity(ent).remove::<UiImage>();
+                commands.entity(ent).remove::<ImageNode>();
             }
         }
 

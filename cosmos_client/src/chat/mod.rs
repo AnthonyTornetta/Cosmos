@@ -7,9 +7,10 @@ use bevy::{
     core::Name,
     log::error,
     prelude::{
-        App, BuildChildren, Changed, ChildBuild, Children, Commands, Component, Entity, EventReader, IntoSystemConfigs, NodeBundle,
-        OnEnter, Query, Res, ResMut, Text, TextBundle, TextUiWriter, Visibility, With, Without,
+        App, BuildChildren, Changed, ChildBuild, Children, Commands, Component, Entity, EventReader, IntoSystemConfigs, OnEnter, Query,
+        Res, ResMut, Text, TextUiWriter, Visibility, With, Without,
     },
+    text::{LineBreak, TextFont, TextLayout},
     time::Time,
     ui::{BackgroundColor, FlexDirection, Node, Overflow, OverflowAxis, Val},
 };
@@ -27,9 +28,9 @@ use crate::{
     input::inputs::{CosmosInputs, InputChecker, InputHandler},
     ui::{
         components::{
-            scollable_container::{ScrollBox, ScrollBundle, ScrollerStyles},
+            scollable_container::{ScrollBox, ScrollerStyles},
             show_cursor::ShowCursor,
-            text_input::{InputValue, TextInput, TextInputBundle},
+            text_input::{InputValue, TextInput},
         },
         font::DefaultFont,
         pause::CloseMenusSet,
@@ -142,38 +143,30 @@ fn setup_chat_box(mut commands: Commands, default_font: Res<DefaultFont>) {
             p.spawn((
                 Name::new("Received Messages"),
                 ChatScrollContainer,
-                ScrollBundle {
-                    node_bundle: NodeBundle {
-                        style: Style {
-                            flex_grow: 1.0,
-                            flex_direction: FlexDirection::Column,
-                            ..Default::default()
-                        },
-                        ..Default::default()
+                Node {
+                    flex_grow: 1.0,
+                    flex_direction: FlexDirection::Column,
+                    ..Default::default()
+                },
+                ScrollBox {
+                    styles: ScrollerStyles {
+                        scrollbar_color: Srgba {
+                            red: 1.0,
+                            green: 1.0,
+                            blue: 1.0,
+                            alpha: 0.4,
+                        }
+                        .into(),
+                        scrollbar_background_color: Color::NONE,
                     },
-                    slider: ScrollBox {
-                        styles: ScrollerStyles {
-                            scrollbar_color: Srgba {
-                                red: 1.0,
-                                green: 1.0,
-                                blue: 1.0,
-                                alpha: 0.4,
-                            }
-                            .into(),
-                            scrollbar_background_color: Color::NONE,
-                        },
-                        ..Default::default()
-                    },
+                    ..Default::default()
                 },
             ))
             .with_children(|p| {
                 p.spawn((
                     Name::new("Padding"),
-                    NodeBundle {
-                        style: Style {
-                            flex_grow: 1.0,
-                            ..Default::default()
-                        },
+                    Node {
+                        flex_grow: 1.0,
                         ..Default::default()
                     },
                 ));
@@ -181,11 +174,8 @@ fn setup_chat_box(mut commands: Commands, default_font: Res<DefaultFont>) {
             .with_children(|p| {
                 p.spawn((
                     ReceivedMessagesContainer,
-                    NodeBundle {
-                        style: Style {
-                            flex_direction: FlexDirection::Column,
-                            ..Default::default()
-                        },
+                    Node {
+                        flex_direction: FlexDirection::Column,
                         ..Default::default()
                     },
                 ));
@@ -194,33 +184,25 @@ fn setup_chat_box(mut commands: Commands, default_font: Res<DefaultFont>) {
             p.spawn((
                 Name::new("Sending Messages"),
                 SendingChatMessageBox,
-                TextInputBundle {
-                    text_input: TextInput {
-                        style: TextStyle {
-                            font_size: 24.0,
-                            font: default_font.0.clone_weak(),
-                            ..Default::default()
-                        },
-                        ..Default::default()
-                    },
-                    node_bundle: NodeBundle {
-                        background_color: BackgroundColor(
-                            Srgba {
-                                red: 0.0,
-                                green: 0.0,
-                                blue: 0.0,
-                                alpha: 0.7,
-                            }
-                            .into(),
-                        ),
-                        style: Style {
-                            width: Val::Percent(100.0),
-                            ..Default::default()
-                        },
-                        ..Default::default()
-                    },
+                TextFont {
+                    font_size: 24.0,
+                    font: default_font.0.clone(),
                     ..Default::default()
                 },
+                BackgroundColor(
+                    Srgba {
+                        red: 0.0,
+                        green: 0.0,
+                        blue: 0.0,
+                        alpha: 0.7,
+                    }
+                    .into(),
+                ),
+                Node {
+                    width: Val::Percent(100.0),
+                    ..Default::default()
+                },
+                TextInput { ..Default::default() },
             ));
         });
 }
@@ -235,10 +217,10 @@ fn display_messages(
     for ev in nevr_chat_msg.read() {
         let msg = &ev.message;
 
-        let text_style = TextStyle {
+        let text_style = TextFont {
             font: default_font.0.clone_weak(),
-            color: Color::WHITE,
             font_size: 24.0,
+            ..Default::default()
         };
 
         let Ok(chat_box) = q_chat_box.get_single() else {
@@ -251,16 +233,18 @@ fn display_messages(
             return;
         };
 
-        let mut text = Text::from_section(msg, text_style);
-        text.linebreak_behavior = BreakLineOn::AnyCharacter;
+        let text = Text::new(msg);
+        let text_layout = TextLayout {
+            linebreak: LineBreak::AnyCharacter,
+            ..Default::default()
+        };
 
         commands
             .spawn((
                 Name::new("Received chat message"),
-                TextBundle {
-                    text: text.clone(),
-                    ..Default::default()
-                },
+                text.clone(),
+                text_style.clone(),
+                text_layout.clone(),
             ))
             .set_parent(chat_box);
 
@@ -268,10 +252,9 @@ fn display_messages(
             .spawn((
                 Name::new("Display received chat message"),
                 ChatMessage(CHAT_MSG_ALIVE_SEC),
-                TextBundle {
-                    text,
-                    ..Default::default()
-                },
+                text,
+                text_style.clone(),
+                text_layout.clone(),
             ))
             .set_parent(display_box);
     }
