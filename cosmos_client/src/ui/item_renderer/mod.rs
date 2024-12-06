@@ -29,42 +29,38 @@ pub(crate) fn create_ui_cameras(mut commands: Commands) {
     commands.spawn((
         Name::new("UI Top Camera"),
         UiTopRoot,
-        Camera3dBundle {
-            projection: Projection::Orthographic(OrthographicProjection {
-                scaling_mode: ScalingMode::WindowSize(40.0),
-                ..Default::default()
-            }),
-            camera_3d: Camera3d::default(),
-            camera: Camera {
-                order: 2,
-                clear_color: ClearColorConfig::Custom(Color::NONE),
-                hdr: true, // Transparent stuff fails to render properly if this is off - this may be a bevy bug?
-                ..Default::default()
-            },
-            transform: Transform::from_xyz(0.0, 0.0, 1.0).looking_at(Vec3::ZERO, Vec3::Y),
+        Camera3d { ..Default::default() },
+        Projection::Orthographic(OrthographicProjection {
+            scaling_mode: ScalingMode::WindowSize, // 40.0
+            scale: 1.0 / 40.0,
+            ..OrthographicProjection::default_3d()
+        }),
+        Camera {
+            order: 2,
+            clear_color: ClearColorConfig::Custom(Color::NONE),
+            hdr: true, // Transparent stuff fails to render properly if this is off - this may be a bevy bug?
             ..Default::default()
         },
+        Transform::from_xyz(0.0, 0.0, 1.0).looking_at(Vec3::ZERO, Vec3::Y),
         RenderLayers::from_layers(&[INVENTORY_SLOT_LAYER]),
     ));
 
     commands.spawn((
         Name::new("UI Middle Camera"),
         UiMiddleRoot,
-        Camera3dBundle {
-            projection: Projection::Orthographic(OrthographicProjection {
-                scaling_mode: ScalingMode::WindowSize(40.0),
-                ..Default::default()
-            }),
-            camera_3d: Camera3d::default(),
-            camera: Camera {
-                order: 1,
-                clear_color: ClearColorConfig::Custom(Color::NONE),
-                hdr: true, // Transparent stuff fails to render properly if this is off - this may be a bevy bug?
-                ..Default::default()
-            },
-            transform: Transform::from_xyz(0.0, 0.0, 1.0).looking_at(Vec3::ZERO, Vec3::Y),
+        Camera3d { ..Default::default() },
+        Projection::Orthographic(OrthographicProjection {
+            scaling_mode: ScalingMode::WindowSize, // 40.0
+            scale: 1.0 / 40.0,
+            ..OrthographicProjection::default_3d()
+        }),
+        Camera {
+            order: 1,
+            clear_color: ClearColorConfig::Custom(Color::NONE),
+            hdr: true, // Transparent stuff fails to render properly if this is off - this may be a bevy bug?
             ..Default::default()
         },
+        Transform::from_xyz(0.0, 0.0, 1.0).looking_at(Vec3::ZERO, Vec3::Y),
         RenderLayers::from_layers(&[MIDDLE_INVENTORY_SLOT_LAYER]),
     ));
 }
@@ -200,9 +196,7 @@ fn render_items(
             // hide it till we position it properly
             transform.translation.x = -1000000.0;
 
-            commands
-                .spawn((TransformBundle::from_transform(transform), VisibilityBundle::default()))
-                .id()
+            commands.spawn((transform, Visibility::default())).id()
         };
 
         let render_layer = match render_layer {
@@ -250,7 +244,7 @@ fn generate_item_model(
             ui_element_entity: entity,
             item_id: changed_render_item.item_id,
         },
-        item_mat_material.mesh_handle().clone_weak(),
+        Mesh3d(item_mat_material.mesh_handle().clone_weak()),
         RenderLayers::from_layers(&[render_layer]),
         Name::new(format!("Rendered Inventory Item ({})", changed_render_item.item_id)),
     ));
