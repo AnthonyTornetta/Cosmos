@@ -8,9 +8,8 @@ use crate::{
     settings::{Setting, SettingCategory, SettingConstraint, SettingData},
     ui::{
         components::{
-            button::{Button, ButtonBundle, ButtonEvent, ButtonStyles},
-            scollable_container::ScrollBundle,
-            text_input::{InputType, InputValue, TextInput, TextInputBundle},
+            button::{Button, ButtonEvent, ButtonStyles},
+            text_input::{InputType, InputValue, TextInput},
         },
         reactivity::{BindValue, BindValues, ReactableFields, ReactableValue},
     },
@@ -19,7 +18,7 @@ use crate::{
 use super::{
     components::{
         button::register_button,
-        slider::{Slider, SliderBundle, SliderValue},
+        slider::{Slider, SliderValue},
     },
     reactivity::add_reactable_type,
     UiSystemSet,
@@ -54,7 +53,7 @@ fn create_settings_screen(
     q_ui_root: Query<Entity, (Without<SettingsMenu>, With<NeedsSettingsAdded>)>,
     settings: Res<Registry<Setting>>,
     lang: Res<Lang<Setting>>,
-    mut q_style: Query<&mut Style, With<NeedsSettingsAdded>>,
+    mut q_style: Query<&mut Node, With<NeedsSettingsAdded>>,
 ) {
     let Ok(main_menu_root) = q_ui_root.get_single() else {
         return;
