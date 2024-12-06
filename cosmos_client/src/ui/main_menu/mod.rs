@@ -1,6 +1,6 @@
 //! The menu that first appears when you load into the game.
 
-use bevy::{app::App, core_pipeline::bloom::BloomSettings, hierarchy::DespawnRecursiveExt, prelude::*, render::camera::Camera};
+use bevy::{app::App, core_pipeline::bloom::Bloom, hierarchy::DespawnRecursiveExt, prelude::*, render::camera::Camera};
 use bevy_kira_audio::prelude::AudioReceiver;
 use bevy_rapier3d::plugin::DefaultRapierContext;
 use cosmos_core::state::GameState;
@@ -61,15 +61,12 @@ fn create_main_menu_background_node(mut commands: Commands, q_main_menu_camera: 
         BackgroundColorNode,
         TargetCamera(cam_ent),
         DespawnOnSwitchState,
-        NodeBundle {
-            style: Style {
-                width: Val::Percent(100.0),
-                height: Val::Percent(100.0),
-                align_content: AlignContent::Center,
-                justify_content: JustifyContent::Center,
-                flex_direction: FlexDirection::Column,
-                ..Default::default()
-            },
+        Node {
+            width: Val::Percent(100.0),
+            height: Val::Percent(100.0),
+            align_content: AlignContent::Center,
+            justify_content: JustifyContent::Center,
+            flex_direction: FlexDirection::Column,
             ..Default::default()
         },
     ));
@@ -83,15 +80,12 @@ fn create_main_menu_root_node(q_bg_node: Query<Entity, With<BackgroundColorNode>
     commands.entity(ent).with_children(|p| {
         p.spawn((
             MainMenuRootUiNode,
-            NodeBundle {
-                style: Style {
-                    width: Val::Percent(100.0),
-                    height: Val::Percent(100.0),
-                    align_content: AlignContent::Center,
-                    justify_content: JustifyContent::Center,
-                    flex_direction: FlexDirection::Column,
-                    ..Default::default()
-                },
+            Node {
+                width: Val::Percent(100.0),
+                height: Val::Percent(100.0),
+                align_content: AlignContent::Center,
+                justify_content: JustifyContent::Center,
+                flex_direction: FlexDirection::Column,
                 ..Default::default()
             },
         ));
@@ -131,19 +125,16 @@ fn create_main_menu_camera(mut commands: Commands) {
     commands.spawn((
         DespawnOnSwitchState,
         MainMenuCamera,
-        Camera3dBundle {
-            camera: Camera {
-                hdr: true,
-                ..Default::default()
-            },
-            transform: Transform::default(),
-            projection: Projection::from(PerspectiveProjection {
-                fov: (90.0 / 180.0) * std::f32::consts::PI,
-                ..default()
-            }),
-            ..default()
+        Camera {
+            hdr: true,
+            ..Default::default()
         },
-        BloomSettings { ..Default::default() },
+        Transform::default(),
+        Projection::from(PerspectiveProjection {
+            fov: (90.0 / 180.0) * std::f32::consts::PI,
+            ..default()
+        }),
+        Bloom { ..Default::default() },
         Name::new("Main Menu Camera"),
         UiRoot,
         AudioReceiver,
