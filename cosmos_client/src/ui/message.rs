@@ -2,16 +2,7 @@
 
 use std::{collections::VecDeque, time::Duration};
 
-use bevy::{
-    color::Alpha,
-    prelude::{
-        in_state, App, AssetServer, BuildChildren, Color, Commands, Component, DespawnRecursiveExt, IntoSystemConfigs, Name, NodeBundle,
-        Parent, Query, Res, ResMut, Resource, TextBundle, Update,
-    },
-    text::{JustifyText, Text, TextSection, TextStyle},
-    time::Time,
-    ui::{JustifyContent, PositionType, Style, Val},
-};
+use bevy::{color::Alpha, prelude::*};
 use cosmos_core::{netty::system_sets::NetworkingSystemsSet, state::GameState};
 
 const HUD_DISPLAY_DURATION: Duration = Duration::from_secs(7);
@@ -145,12 +136,14 @@ fn display_hud_messages(
             commands.entity(parent.get()).despawn_recursive();
             hud_messages.1 = None;
         } else {
-            for section in text.sections.iter_mut() {
-                section
-                    .style
-                    .color
-                    .set_alpha((time_remaining / FADE_DURATION.as_secs_f32()).min(1.0));
-            }
+            // TODO: This
+
+            // for section in text.sections.iter_mut() {
+            //     section
+            //         .style
+            //         .color
+            //         .set_alpha((time_remaining / FADE_DURATION.as_secs_f32()).min(1.0));
+            // }
         }
     } else if let Some(hud_message) = hud_messages.0.pop_front() {
         let shown_hud_message = ShownHudMessage {
@@ -165,44 +158,42 @@ fn display_hud_messages(
         commands
             .spawn((
                 Name::new("HUD Message"),
-                NodeBundle {
-                    style: Style {
-                        width: Val::Percent(100.0),
-                        height: Val::Percent(100.0),
-                        justify_content: JustifyContent::Center,
-                        ..Default::default()
-                    },
+                Node {
+                    width: Val::Percent(100.0),
+                    height: Val::Percent(100.0),
+                    justify_content: JustifyContent::Center,
                     ..Default::default()
                 },
             ))
             .with_children(|p| {
-                p.spawn((
-                    shown_hud_message,
-                    TextBundle {
-                        style: Style {
-                            position_type: PositionType::Absolute,
-                            bottom: Val::Px(125.0),
-                            ..Default::default()
-                        },
-                        text: Text {
-                            sections: hud_message
-                                .text
-                                .into_iter()
-                                .map(|x| TextSection {
-                                    value: x.text,
-                                    style: TextStyle {
-                                        color: x.color,
-                                        font: asset_server.load("fonts/PixeloidSans.ttf"),
-                                        font_size: 24.0,
-                                    },
-                                })
-                                .collect(),
-                            justify: JustifyText::Center,
-                            ..Default::default()
-                        },
-                        ..Default::default()
-                    },
-                ));
+                // TODO: This
+
+                // p.spawn((
+                //     shown_hud_message,
+                //
+                //         Node {
+                //             position_type: PositionType::Absolute,
+                //             bottom: Val::Px(125.0),
+                //             ..Default::default()
+                //         },
+                //         Text {
+                //             sections: hud_message
+                //                 .text
+                //                 .into_iter()
+                //                 .map(|x| TextSection {
+                //                     value: x.text,
+                //                     style: TextStyle {
+                //                         color: x.color,
+                //                         font: asset_server.load("fonts/PixeloidSans.ttf"),
+                //                         font_size: 24.0,
+                //                     },
+                //                 })
+                //                 .collect(),
+                //             justify: JustifyText::Center,
+                //             ..Default::default()
+                //         },
+                //         ..Default::default()
+                // ));
             });
     }
 }

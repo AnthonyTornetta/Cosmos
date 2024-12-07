@@ -6,9 +6,8 @@ use bevy::{
         component::Component,
         schedule::{IntoSystemSetConfigs, SystemSet},
     },
-    prelude::App,
-    text::Text,
-    ui::{BackgroundColor, Style, UiImage},
+    prelude::{App, ImageNode, Text},
+    ui::{BackgroundColor, Node},
 };
 
 pub mod components;
@@ -134,6 +133,6 @@ pub(super) fn register(app: &mut App) {
     // These probably don't matter
     app.allow_ambiguous_component::<Text>();
     app.allow_ambiguous_component::<BackgroundColor>();
-    app.allow_ambiguous_component::<Style>();
-    app.allow_ambiguous_component::<UiImage>();
+    app.allow_ambiguous_component::<Node>();
+    app.allow_ambiguous_component::<ImageNode>();
 }
