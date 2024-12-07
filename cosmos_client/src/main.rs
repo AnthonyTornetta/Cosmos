@@ -39,7 +39,7 @@ use bevy::prelude::*;
 use bevy::window::WindowMode;
 use bevy::{core::TaskPoolThreadAssignmentPolicy, diagnostic::FrameTimeDiagnosticsPlugin};
 use bevy_hanabi::HanabiPlugin;
-use bevy_mod_billboard::plugin::BillboardPlugin;
+// use bevy_mod_billboard::plugin::BillboardPlugin;
 use bevy_mod_debugdump::schedule_graph;
 use bevy_obj::ObjPlugin;
 
@@ -50,7 +50,7 @@ use clap::{arg, Parser};
 use cosmos_core::netty::sync::registry::RegistrySyncInit;
 use cosmos_core::state::GameState;
 use cosmos_core::{physics::collision_handling::CosmosPhysicsFilter, plugin::cosmos_core_plugin::CosmosCorePluginGroup};
-use iyes_perf_ui::PerfUiPlugin;
+// use iyes_perf_ui::PerfUiPlugin;
 use netty::connect::{self};
 use thread_priority::{set_current_thread_priority, ThreadPriority};
 
@@ -98,7 +98,7 @@ fn main() {
         .set(WindowPlugin {
             primary_window: Some(Window {
                 mode: if args.fullscreen {
-                    WindowMode::BorderlessFullscreen
+                    WindowMode::BorderlessFullscreen(MonitorSelection::Current)
                 } else {
                     WindowMode::Windowed
                 },
@@ -146,13 +146,13 @@ fn main() {
             RenetClientPlugin,
             NetcodeClientPlugin,
             ObjPlugin,
-            HanabiPlugin,
+            // HanabiPlugin, // TODO: this
             // Used for diagnostics
             SystemInformationDiagnosticsPlugin,
             EntityCountDiagnosticsPlugin,
             FrameTimeDiagnosticsPlugin,
-            PerfUiPlugin,
-            BillboardPlugin,
+            // PerfUiPlugin,
+            // BillboardPlugin,
         ))
         // .add_plugins(RapierDebugRenderPlugin::default())
         .add_systems(OnEnter(GameState::Connecting), connect::establish_connection)
