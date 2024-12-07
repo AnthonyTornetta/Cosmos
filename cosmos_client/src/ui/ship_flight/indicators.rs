@@ -18,6 +18,7 @@ use crate::{
     asset::asset_loader::load_assets,
     input::inputs::{CosmosInputs, InputChecker, InputHandler},
     rendering::MainCamera,
+    ui::font::DefaultFont,
 };
 
 use super::super::components::show_cursor::no_open_menus;
@@ -77,17 +78,18 @@ fn create_indicator(
     images: &mut Assets<Image>,
     color: Color,
     indicator_images: &mut IndicatorImages,
-    asset_server: &AssetServer,
+    default_font: &DefaultFont,
 ) {
-    let text_style = TextStyle {
-        color,
+    let text_color = TextColor(color);
+    let text_font = TextFont {
+        font: default_font.0.clone(),
         font_size: 16.0,
-        font: asset_server.load("fonts/PixeloidSans.ttf"),
+        ..Default::default()
     };
-
+    let text_style = (text_font, text_color);
     let text_ent = commands
-        .spawn(TextBundle {
-            style: Style {
+        .spawn((
+            Node {
                 align_self: AlignSelf::Center,
                 margin: UiRect {
                     // Horizontally centers the text - textalign center doesn't work for some reason (shrug)
@@ -97,10 +99,10 @@ fn create_indicator(
                 },
                 ..default()
             },
-            visibility: Visibility::Hidden,
-            text: Text::from_section("", text_style),
-            ..default()
-        })
+            Visibility::Hidden,
+            Text::new(""),
+            text_style.clone(),
+        ))
         .id();
 
     let indicator_entity = commands
@@ -108,11 +110,8 @@ fn create_indicator(
             Name::new("Indicator Waypoint"),
             IndicatorTextEntity(text_ent),
             Indicating(entity),
-            NodeBundle {
-                style: Style {
-                    position_type: PositionType::Absolute,
-                    ..Default::default()
-                },
+            Node {
+                position_type: PositionType::Absolute,
                 ..Default::default()
             },
         ))
@@ -151,9 +150,9 @@ fn create_indicator(
 
             let (w, h) = (img.width() as f32, img.height() as f32);
 
-            p.spawn(ImageBundle {
-                image: UiImage::new(handle),
-                style: Style {
+            p.spawn((
+                ImageNode::new(handle),
+                Node {
                     width: Val::Px(w),
                     height: Val::Px(h),
                     margin: UiRect {
@@ -163,8 +162,7 @@ fn create_indicator(
                     },
                     ..Default::default()
                 },
-                ..Default::default()
-            })
+            ))
             .add_child(text_ent);
         })
         .id();
@@ -186,7 +184,7 @@ fn add_indicators(
     indicator_image: Res<IndicatorImage>,
     mut images: ResMut<Assets<Image>>,
     mut indicator_images: ResMut<IndicatorImages>,
-    asset_server: Res<AssetServer>,
+    default_font: Res<DefaultFont>,
     q_text_entity_with_focus: Query<&IndicatorTextEntity, With<FocusedWaypointEntity>>,
 ) {
     let despawn_indicator = |(entity, indicator): (Entity, &HasIndicator)| {
@@ -222,7 +220,7 @@ fn add_indicators(
                 if let Some(has_indicator) = has_indicator {
                     if let Ok(text_entity) = q_text_entity_with_focus.get(has_indicator.0) {
                         if let Ok(mut text) = text_query.get_mut(text_entity.0) {
-                            text.sections[0].value = get_distance_text(distance_sqrd.sqrt());
+                            text.0 = get_distance_text(distance_sqrd.sqrt());
                         }
                     }
                 } else {
@@ -233,7 +231,7 @@ fn add_indicators(
                         &mut images,
                         indicator_settings.color,
                         &mut indicator_images,
-                        &asset_server,
+                        &default_font,
                     );
                 }
             } else if let Some(has_indicator) = has_indicator {
@@ -292,7 +290,7 @@ fn added(
 
 fn position_diamonds(
     cam_query: Query<(&Camera, &GlobalTransform), With<MainCamera>>,
-    mut indicators: Query<(Entity, &mut Style, &Indicating)>,
+    mut indicators: Query<(Entity, &mut Node, &Indicating)>,
     global_trans_query: Query<&GlobalTransform>,
     indicator_settings_query: Query<&IndicatorSettings>,
     mut commands: Commands,
@@ -447,7 +445,7 @@ pub(super) fn register(app: &mut App) {
         vec!["cosmos/images/ui/diamond.png"],
         |mut commands, mut handles| {
             let (handle, state) = handles.remove(0);
-            if state != LoadState::Loaded {
+            if !matches!(state, LoadState::Loaded) {
                 warn!("Failed to load diamond.png for ship UI!");
                 return;
             }

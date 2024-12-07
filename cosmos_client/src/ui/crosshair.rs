@@ -8,26 +8,22 @@ use crate::window::setup::CursorFlagsSet;
 fn add_crosshair(mut commands: Commands, asset_server: Res<AssetServer>) {
     commands
         .spawn((
-            NodeBundle {
-                style: Style {
-                    position_type: PositionType::Absolute,
-                    display: Display::Flex,
-                    justify_content: JustifyContent::Center,
-                    align_items: AlignItems::Center,
-                    width: Val::Percent(100.0),
-                    height: Val::Percent(100.0),
-                    ..default()
-                },
-                // color: Color::NONE.into(),
+            Node {
+                position_type: PositionType::Absolute,
+                display: Display::Flex,
+                justify_content: JustifyContent::Center,
+                align_items: AlignItems::Center,
+                width: Val::Percent(100.0),
+                height: Val::Percent(100.0),
                 ..default()
             },
             Name::new("Crosshair"),
         ))
         .with_children(|parent| {
             parent
-                .spawn(ImageBundle {
-                    image: asset_server.load("cosmos/images/ui/crosshair.png").into(),
-                    style: Style {
+                .spawn((
+                    ImageNode::new(asset_server.load("cosmos/images/ui/crosshair.png").into()),
+                    Node {
                         width: Val::Px(8.0),
                         height: Val::Px(8.0),
                         left: Val::Px(0.0),
@@ -36,10 +32,7 @@ fn add_crosshair(mut commands: Commands, asset_server: Res<AssetServer>) {
                         bottom: Val::Px(0.0),
                         ..default()
                     },
-
-                    // color: Color::NONE.into(),
-                    ..default()
-                })
+                ))
                 .insert(Crosshair);
         });
 }
@@ -48,7 +41,7 @@ fn add_crosshair(mut commands: Commands, asset_server: Res<AssetServer>) {
 /// This is used for the UI element for the crosshair as an identifier
 pub struct Crosshair;
 
-fn update_cursor_pos(pos: Res<CrosshairOffset>, mut query: Query<&mut Style, With<Crosshair>>) {
+fn update_cursor_pos(pos: Res<CrosshairOffset>, mut query: Query<&mut Node, With<Crosshair>>) {
     if let Ok(mut crosshair) = query.get_single_mut() {
         crosshair.left = Val::Px(pos.x);
         // bottom doesn't seem to work, so -pos.y is used.

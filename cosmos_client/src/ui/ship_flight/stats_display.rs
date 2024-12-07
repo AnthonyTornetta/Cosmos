@@ -12,11 +12,9 @@ use bevy::{
         system::{Commands, Query, Res},
     },
     hierarchy::BuildChildren,
-    text::{Text, TextStyle},
-    ui::{
-        node_bundles::{NodeBundle, TextBundle},
-        FlexDirection, PositionType, Style, UiRect, Val,
-    },
+    prelude::{ChildBuild, Text},
+    text::{TextColor, TextFont},
+    ui::{FlexDirection, Node, PositionType, UiRect, Val},
 };
 use bevy_rapier3d::dynamics::Velocity;
 use cosmos_core::{
@@ -53,51 +51,41 @@ fn create_nodes(
 
         let font = asset_server.load("fonts/PixeloidSans.ttf");
 
-        let text_style_energy = TextStyle {
-            color: css::YELLOW.into(),
-            font_size: 32.0,
-            font: font.clone(),
-        };
-        let text_style_speed = TextStyle {
-            color: css::AQUAMARINE.into(),
-            font_size: 32.0,
-            font: font.clone(),
-        };
+        let text_style_energy = (
+            TextColor(css::YELLOW.into()),
+            TextFont {
+                font_size: 32.0,
+                font: font.clone(),
+                ..Default::default()
+            },
+        );
+
+        let text_style_speed = (
+            TextColor(css::AQUAMARINE.into()),
+            TextFont {
+                font_size: 32.0,
+                font: font.clone(),
+                ..Default::default()
+            },
+        );
 
         commands
             .spawn((
                 Name::new("Ship stats ui"),
                 // TargetCamera(ui_root),
                 StatsNodes,
-                NodeBundle {
-                    style: Style {
-                        padding: UiRect::all(Val::Px(10.0)),
-                        width: Val::Percent(100.0),
-                        height: Val::Percent(100.0),
-                        flex_direction: FlexDirection::Column,
-                        position_type: PositionType::Absolute,
-                        ..Default::default()
-                    },
+                Node {
+                    padding: UiRect::all(Val::Px(10.0)),
+                    width: Val::Percent(100.0),
+                    height: Val::Percent(100.0),
+                    flex_direction: FlexDirection::Column,
+                    position_type: PositionType::Absolute,
                     ..Default::default()
                 },
             ))
             .with_children(|p| {
-                p.spawn((
-                    Name::new("Energy Text"),
-                    EnergyText,
-                    TextBundle {
-                        text: Text::from_section("", text_style_energy),
-                        ..Default::default()
-                    },
-                ));
-                p.spawn((
-                    Name::new("Speed Text"),
-                    SpeedText,
-                    TextBundle {
-                        text: Text::from_section("", text_style_speed),
-                        ..Default::default()
-                    },
-                ));
+                p.spawn((Name::new("Energy Text"), EnergyText, Text::new(""), text_style_energy));
+                p.spawn((Name::new("Speed Text"), SpeedText, Text::new(""), text_style_speed));
             });
     }
 }
@@ -119,7 +107,7 @@ fn update_nodes(
     };
 
     if let Ok(mut text) = q_speed_text.get_single_mut() {
-        text.sections[0].value = format!("Speed: {:.1}m/s", piloting_vel.linvel.length());
+        text.0 = format!("Speed: {:.1}m/s", piloting_vel.linvel.length());
     }
 
     if let Ok(mut text) = q_energy_text.get_single_mut() {
@@ -130,7 +118,7 @@ fn update_nodes(
                 0.0
             };
 
-            text.sections[0].value = format!("Energy {}%", (percent * 100.0).round());
+            text.0 = format!("Energy {}%", (percent * 100.0).round());
         }
     }
 }
