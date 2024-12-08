@@ -151,7 +151,7 @@ fn apply_mining_effects(
                     }],
                 },
                 DespawnOnNoEmissions,
-                TransformBundle::from_transform(Transform::from_xyz(0.5, 0.5, 1.0)),
+                Transform::from_xyz(0.5, 0.5, 1.0),
             ));
         });
 
@@ -190,12 +190,9 @@ fn apply_mining_effects(
                 let laser_start = structure.block_relative_position(line.start);
                 let beam_ent = p
                     .spawn((
-                        PbrBundle {
-                            transform: Transform::from_translation(laser_start).looking_to(beam_direction, Vec3::Y),
-                            material: material.clone_weak(),
-                            mesh: mesh.0.clone_weak(),
-                            ..Default::default()
-                        },
+                        Transform::from_translation(laser_start).looking_to(beam_direction, Vec3::Y),
+                        MeshMaterial3d(material.clone_weak()),
+                        Mesh3d(mesh.0.clone_weak()),
                         NotShadowCaster,
                         NotShadowReceiver,
                         MiningLaser {
@@ -304,7 +301,11 @@ pub(super) fn register(app: &mut App) {
         ],
         |mut commands, handles| {
             commands.insert_resource(LaserCannonFireHandles(
-                handles.into_iter().filter(|x| x.1 == LoadState::Loaded).map(|x| x.0).collect(),
+                handles
+                    .into_iter()
+                    .filter(|x| matches!(x.1, LoadState::Loaded))
+                    .map(|x| x.0)
+                    .collect(),
             ));
         },
     );
