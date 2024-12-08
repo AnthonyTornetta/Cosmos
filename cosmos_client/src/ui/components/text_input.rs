@@ -6,7 +6,6 @@ use arboard::Clipboard;
 use bevy::{
     a11y::Focus,
     app::{App, Update},
-    asset::AssetServer,
     color::Color,
     core::Name,
     ecs::{
@@ -25,7 +24,7 @@ use bevy::{
     },
     log::{info, warn},
     prelude::{ChildBuild, Deref, Text, TextUiWriter},
-    text::{JustifyText, LineBreak, TextColor, TextFont, TextLayout, TextSpan},
+    text::{LineBreak, TextColor, TextFont, TextLayout, TextSpan},
     time::Time,
     ui::{AlignSelf, FocusPolicy, Interaction, Node},
 };
@@ -154,7 +153,6 @@ fn added_text_input_bundle(
     mut commands: Commands,
     mut q_added: Query<(Entity, &InputValue, &mut TextInput, &TextFont, &TextColor), Added<TextInput>>,
     focused: Res<Focus>,
-    default_font: Res<DefaultFont>,
 ) {
     for (entity, input_value, mut text_input, t_font, t_col) in q_added.iter_mut() {
         commands.entity(entity).insert(Interaction::None).insert(FocusPolicy::Block);
