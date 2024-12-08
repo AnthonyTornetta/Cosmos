@@ -100,7 +100,7 @@ fn add_text(
             font.clone(),
         ))
         .with_children(|p| {
-            p.spawn((LookingAtText, TextSpan::new("Nothing")));
+            p.spawn((LookingAtText, TextSpan::new("Nothing"), font.clone()));
         });
 }
 

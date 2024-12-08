@@ -460,9 +460,9 @@ impl Location {
         let local_z = BigDecimal::from_f32(self.local.z).unwrap_or_else(|| panic!("Died on {}", self.local.z));
 
         Vector3::new(
-            BigDecimal::from_i64(self.sector.x()).unwrap() * &sector_dims + local_x,
-            BigDecimal::from_i64(self.sector.y()).unwrap() * &sector_dims + local_y,
-            BigDecimal::from_i64(self.sector.z()).unwrap() * &sector_dims + local_z,
+            BigDecimal::from_i64(self.sector.x()).unwrap_or_else(|| panic!("Died on {}", self.sector.x())) * &sector_dims + local_x,
+            BigDecimal::from_i64(self.sector.y()).unwrap_or_else(|| panic!("Died on {}", self.sector.y())) * &sector_dims + local_y,
+            BigDecimal::from_i64(self.sector.z()).unwrap_or_else(|| panic!("Died on {}", self.sector.z())) * &sector_dims + local_z,
         )
     }
 

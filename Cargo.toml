@@ -23,7 +23,8 @@ noise = "0.9.0"
 bevy_renet2 = { git = "https://github.com/UkoeHB/renet2", branch = "main", version = "0.0.7" }
 rand = "0.8.5"
 rand_chacha = "0.3.1"
-bigdecimal = "0.4.6"
+# bigdecimal 0.4.6 has a formatting regression that causes a crash
+bigdecimal = "0.4.5"
 rayon = "1.10"
 futures-lite = "2.5"
 local-ip-address = "0.6.3"

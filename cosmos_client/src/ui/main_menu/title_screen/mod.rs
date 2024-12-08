@@ -85,6 +85,7 @@ fn create_main_menu(
         p.spawn((
             Text::new("COSMOS"),
             text_style_large,
+            text_blue,
             Node {
                 margin: UiRect::bottom(Val::Px(200.0)),
                 align_self: AlignSelf::Center,
