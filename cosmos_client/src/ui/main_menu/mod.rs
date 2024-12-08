@@ -1,6 +1,9 @@
 //! The menu that first appears when you load into the game.
 
-use bevy::{app::App, core_pipeline::bloom::Bloom, hierarchy::DespawnRecursiveExt, prelude::*, render::camera::Camera};
+use bevy::{
+    app::App, core_pipeline::bloom::Bloom, hierarchy::DespawnRecursiveExt, picking::pointer::PointerPress, prelude::*,
+    render::camera::Camera, window::Monitor,
+};
 use bevy_kira_audio::prelude::AudioReceiver;
 use bevy_rapier3d::plugin::DefaultRapierContext;
 use cosmos_core::state::GameState;
@@ -147,10 +150,14 @@ fn create_main_menu_resource(
     q_entity: Query<
         Entity,
         (
+            // Maybe we make this opt-in in the future?
             Without<SurviveMainMenu>,
             Without<Window>,
             Without<DefaultRapierContext>,
             Without<Parent>,
+            Without<Observer>,
+            Without<Monitor>,
+            Without<Pointer<PointerPress>>,
         ),
     >,
     mut commands: Commands,
