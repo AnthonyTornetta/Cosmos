@@ -299,7 +299,6 @@ fn show_text_cursor(mut writer: TextUiWriter, focused: Res<Focus>, mut q_text_in
 fn flash_cursor(
     mut cursor_flash_time: ResMut<CursorFlashTime>,
     focused: Res<Focus>,
-    mut q_text: Query<&mut Text>,
     q_text_inputs: Query<(&TextEnt, &TextInput)>,
     time: Res<Time>,
     mut writer: TextUiWriter,
@@ -311,10 +310,6 @@ fn flash_cursor(
     };
 
     let Ok((text, text_input)) = q_text_inputs.get(focused_ent) else {
-        return;
-    };
-
-    let Ok(mut text_elem) = q_text.get_mut(text.0) else {
         return;
     };
 
@@ -336,15 +331,10 @@ fn flash_cursor(
 fn value_changed(
     focused: Res<Focus>,
     mut q_values_changed: Query<(Entity, &InputValue, &mut TextInput, &TextEnt), Or<(Changed<InputValue>, Changed<TextInput>)>>,
-    mut q_text: Query<&mut Text>,
     mut cursor_flash_time: ResMut<CursorFlashTime>,
     mut writer: TextUiWriter,
 ) {
     for (entity, input_val, mut text_input, text) in q_values_changed.iter_mut() {
-        let Ok(mut text_elem) = q_text.get_mut(text.0) else {
-            continue;
-        };
-
         if focused.0.map(|x| x == entity).unwrap_or(false) {
             cursor_flash_time.0 = 0.0;
         }

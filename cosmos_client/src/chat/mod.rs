@@ -110,11 +110,11 @@ const CHAT_MSG_ALIVE_SEC: f32 = 10.0;
 fn fade_chat_messages(
     q_time: Res<Time>,
     mut writer: TextUiWriter,
-    mut q_chat_msg: Query<(Entity, &mut Text, &mut ChatMessage)>,
+    mut q_chat_msg: Query<(Entity, &mut ChatMessage)>,
     mut commands: Commands,
 ) {
     let delta = q_time.delta_secs();
-    for (ent, mut text, mut chat_msg) in q_chat_msg.iter_mut() {
+    for (ent, mut chat_msg) in q_chat_msg.iter_mut() {
         chat_msg.0 -= delta;
 
         if chat_msg.0 <= 0.0 {

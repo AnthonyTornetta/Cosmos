@@ -52,12 +52,12 @@ fn configure_ambiguity_detection(sub_app: &mut SubApp) {
 // }
 
 pub(super) fn register(app: &mut App) {
-    let sub_app = app.main_mut();
-    configure_ambiguity_detection(sub_app);
-    let sub_app = app.sub_app_mut(RenderApp);
-    configure_ambiguity_detection(sub_app);
-    let sub_app = app.sub_app_mut(RenderExtractApp);
-    configure_ambiguity_detection(sub_app);
+    // let sub_app = app.main_mut();
+    // configure_ambiguity_detection(sub_app);
+    // let sub_app = app.sub_app_mut(RenderApp);
+    // configure_ambiguity_detection(sub_app);
+    // let sub_app = app.sub_app_mut(RenderExtractApp);
+    // configure_ambiguity_detection(sub_app);
 
     app.allow_ambiguous_resource::<RenetClient>();
     app.allow_ambiguous_resource::<RenetServer>();

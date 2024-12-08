@@ -136,6 +136,7 @@ fn create_main_menu_camera(mut commands: Commands) {
         }),
         Bloom { ..Default::default() },
         Name::new("Main Menu Camera"),
+        Camera3d::default(),
         UiRoot,
         AudioReceiver,
         ShowCursor,
