@@ -1,9 +1,6 @@
-use bevy::{
-    prelude::{
-        resource_exists, App, BuildChildren, Commands, EventReader, Handle, IntoSystemConfigs, Name, Query, Res, Resource, Transform,
-        Update,
-    },
-    transform::bundles::TransformBundle,
+use bevy::prelude::{
+    resource_exists, App, BuildChildren, ChildBuild, Commands, EventReader, Handle, IntoSystemConfigs, Name, Query, Res, Resource,
+    Transform, Update,
 };
 use bevy_kira_audio::{Audio, AudioControl, AudioInstance, AudioSource};
 use cosmos_core::{
@@ -46,7 +43,7 @@ fn play_block_damage_sound(
                 Name::new("Block take damage sound"),
                 DespawnWithStructure,
                 DespawnOnNoEmissions,
-                TransformBundle::from_transform(Transform::from_translation(sound_location)),
+                Transform::from_translation(sound_location),
                 sound_emission,
             ));
         });
