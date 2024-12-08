@@ -22,9 +22,8 @@ use crate::{
     input::inputs::{CosmosInputs, InputChecker, InputHandler},
     ui::{
         components::{
-            scollable_container::ScrollBundle,
             show_cursor::no_open_menus,
-            window::{GuiWindow, UiWindowSystemSet, WindowBundle},
+            window::{GuiWindow, UiWindowSystemSet},
         },
         item_renderer::{ItemRenderLayer, RenderItem},
         OpenMenu, UiMiddleRoot, UiRoot, UiSystemSet, UiTopRoot,
@@ -253,10 +252,10 @@ fn toggle_inventory_rendering(
 
         let font = asset_server.load("fonts/PixeloidSans.ttf");
 
-        let text_style = TextStyle {
-            color: Color::WHITE,
+        let text_style = TextFont {
             font_size: 22.0,
             font: font.clone(),
+            ..Default::default()
         };
 
         let needs_displayed_side = match needs_displayed {
@@ -313,35 +312,23 @@ fn toggle_inventory_rendering(
                         left: 0.0,
                         top: title_bar_height,
                     },
-                    ScrollBundle {
-                        node_bundle: NodeBundle {
-                            style: Style {
-                                width,
-                                position_type: PositionType::Absolute,
-                                right,
-                                border: UiRect::horizontal(Val::Px(inventory_border_size)),
-                                min_height: Val::Px(non_hotbar_height),
-                                ..default()
-                            },
-                            border_color,
-                            background_color: BackgroundColor(Srgba::hex("3D3D3D").unwrap().into()),
-                            ..default()
-                        },
-                        ..Default::default()
+                    border_color,
+                    BackgroundColor(Srgba::hex("3D3D3D").unwrap().into()),
+                    Node {
+                        width,
+                        position_type: PositionType::Absolute,
+                        right,
+                        border: UiRect::horizontal(Val::Px(inventory_border_size)),
+                        min_height: Val::Px(non_hotbar_height),
+                        ..default()
                     },
                 ))
                 .with_children(|p| {
-                    p.spawn(NodeBundle {
-                        style: Style {
-                            display: Display::Grid,
-                            flex_grow: 1.0,
-                            grid_column: GridPlacement::end(n_slots_per_row as i16),
-                            grid_template_columns: vec![RepeatedGridTrack::px(
-                                GridTrackRepetition::Count(n_slots_per_row as u16),
-                                slot_size,
-                            )],
-                            ..default()
-                        },
+                    p.spawn(Node {
+                        display: Display::Grid,
+                        flex_grow: 1.0,
+                        grid_column: GridPlacement::end(n_slots_per_row as i16),
+                        grid_template_columns: vec![RepeatedGridTrack::px(GridTrackRepetition::Count(n_slots_per_row as u16), slot_size)],
                         ..Default::default()
                     })
                     .with_children(|slots| {
@@ -374,28 +361,22 @@ fn toggle_inventory_rendering(
                             left: 0.0,
                             top: non_hotbar_height + title_bar_height,
                         },
-                        NodeBundle {
-                            style: Style {
-                                display: Display::Flex,
-                                height: Val::Px(5.0 + slot_size + 2.0),
-                                border: UiRect::new(
-                                    Val::Px(inventory_border_size),
-                                    Val::Px(inventory_border_size),
-                                    Val::Px(5.0),
-                                    Val::Px(inventory_border_size),
-                                ),
-                                position_type: PositionType::Absolute,
-                                right,
-                                width,
-                                ..default()
-                            },
-                            border_color,
+                        border_color,
+                        Node {
+                            display: Display::Flex,
+                            height: Val::Px(5.0 + slot_size + 2.0),
+                            border: UiRect::new(
+                                Val::Px(inventory_border_size),
+                                Val::Px(inventory_border_size),
+                                Val::Px(5.0),
+                                Val::Px(inventory_border_size),
+                            ),
+                            position_type: PositionType::Absolute,
+                            right,
+                            width,
                             ..default()
                         },
-                        UiImage {
-                            texture: asset_server.load("cosmos/images/ui/inventory-footer.png"),
-                            ..Default::default()
-                        },
+                        ImageNode::new(asset_server.load("cosmos/images/ui/inventory-footer.png")),
                     ))
                     .with_children(|slots| {
                         for slot_number in priority_slots {
@@ -423,28 +404,22 @@ fn toggle_inventory_rendering(
                     RenderedInventory { inventory_holder },
                     OpenMenu::new(0),
                     InventoryTitleBar(current_ents),
-                    WindowBundle {
-                        window: GuiWindow {
-                            title: inventory.name().into(),
-                            body_styles: Style {
-                                flex_direction: FlexDirection::Column,
-                                ..Default::default()
-                            },
+                    BorderColor(Color::BLACK),
+                    GuiWindow {
+                        title: inventory.name().into(),
+                        body_styles: Node {
+                            flex_direction: FlexDirection::Column,
+                            ..Default::default()
                         },
-                        node_bundle: NodeBundle {
-                            style: Style {
-                                position_type: PositionType::Absolute,
-                                right,
-                                left,
-                                top: Val::Px(100.0),
-                                width,
-                                border: UiRect::all(Val::Px(inventory_border_size)),
-                                ..default()
-                            },
-                            border_color: BorderColor(Color::BLACK),
-                            ..default()
-                        },
-                        ..Default::default()
+                    },
+                    Node {
+                        position_type: PositionType::Absolute,
+                        right,
+                        left,
+                        top: Val::Px(100.0),
+                        width,
+                        border: UiRect::all(Val::Px(inventory_border_size)),
+                        ..default()
                     },
                 ))
                 .id(),
@@ -492,8 +467,8 @@ fn drop_item(
 }
 
 fn reposition_window_children(
-    mut q_style: Query<(&StyleOffsets, &mut Style), Without<InventoryTitleBar>>,
-    q_changed_window_pos: Query<(&Style, &InventoryTitleBar), Changed<Style>>,
+    mut q_style: Query<(&StyleOffsets, &mut Node), Without<InventoryTitleBar>>,
+    q_changed_window_pos: Query<(&Node, &InventoryTitleBar), Changed<Node>>,
 ) {
     for (style, title_bar) in q_changed_window_pos.iter() {
         let Val::Px(top) = style.top else {
@@ -588,10 +563,10 @@ fn rerender_inventory_slot(
         // This is rarely hit, so putting this load in here is best
         let font = asset_server.load("fonts/PixeloidSans.ttf");
 
-        let text_style = TextStyle {
-            color: Color::WHITE,
+        let text_style = TextFont {
             font_size: 22.0,
             font: font.clone(),
+            ..Default::default()
         };
 
         if as_child {
@@ -614,23 +589,19 @@ fn create_inventory_slot(
     slot_number: usize,
     slots: &mut ChildBuilder,
     item_stack: Option<&ItemStack>,
-    text_style: TextStyle,
+    text_style: TextFont,
     render_layer: ItemRenderLayer,
 ) {
     let mut ecmds = slots.spawn((
         Name::new("Inventory Item"),
         InventoryItemMarker,
-        NodeBundle {
-            style: Style {
-                border: UiRect::all(Val::Px(2.0)),
-                width: Val::Px(INVENTORY_SLOTS_DIMS),
-                height: Val::Px(INVENTORY_SLOTS_DIMS),
-                ..default()
-            },
-
-            border_color: BorderColor(Srgba::hex("222222").unwrap().into()),
+        Node {
+            border: UiRect::all(Val::Px(2.0)),
+            width: Val::Px(INVENTORY_SLOTS_DIMS),
+            height: Val::Px(INVENTORY_SLOTS_DIMS),
             ..default()
         },
+        BorderColor(Srgba::hex("222222").unwrap().into()),
         Interaction::None,
         DisplayedItemFromInventory {
             inventory_holder,
@@ -683,10 +654,10 @@ fn pickup_item_into_cursor(
 
     let font = asset_server.load("fonts/PixeloidSans.ttf");
 
-    let text_style = TextStyle {
-        color: Color::WHITE,
+    let text_style = TextFont {
         font_size: 22.0,
         font: font.clone(),
+        ..Default::default()
     };
 
     let mut ecmds = commands.spawn(FollowCursor);
@@ -884,22 +855,19 @@ pub struct TextNeedsTopRoot;
 fn create_item_stack_slot_data(
     item_stack: &ItemStack,
     ecmds: &mut EntityCommands,
-    text_style: TextStyle,
+    text_style: TextFont,
     quantity: u16,
     render_layer: ItemRenderLayer,
 ) {
     ecmds
         .insert((
             Name::new("Render Item"),
-            NodeBundle {
-                style: Style {
-                    width: Val::Px(64.0),
-                    height: Val::Px(64.0),
-                    display: Display::Flex,
-                    justify_content: JustifyContent::FlexEnd,
-                    align_items: AlignItems::FlexEnd,
-                    ..Default::default()
-                },
+            Node {
+                width: Val::Px(64.0),
+                height: Val::Px(64.0),
+                display: Display::Flex,
+                justify_content: JustifyContent::FlexEnd,
+                align_items: AlignItems::FlexEnd,
                 ..Default::default()
             },
             render_layer,
@@ -910,24 +878,21 @@ fn create_item_stack_slot_data(
         ))
         .with_children(|p| {
             p.spawn((
-                TextBundle {
-                    style: Style {
-                        margin: UiRect::new(Val::Px(0.0), Val::Px(5.0), Val::Px(0.0), Val::Px(5.0)),
-                        ..default()
-                    },
-                    text: Text::from_section(format!("{quantity}"), text_style),
+                Node {
+                    margin: UiRect::new(Val::Px(0.0), Val::Px(5.0), Val::Px(0.0), Val::Px(5.0)),
                     ..default()
                 },
+                Text::new(format!("{quantity}")),
+                text_style,
                 TextNeedsTopRoot,
             ));
         });
 }
 
 fn hide_hidden(
-    q_non_hotbar_slots: Query<(&Node, &GlobalTransform), With<NonHotbarSlots>>,
+    q_non_hotbar_slots: Query<(&ComputedNode, &GlobalTransform), With<NonHotbarSlots>>,
     q_parent: Query<&Parent>,
-    mut q_render_item: Query<(&Node, &mut Visibility, &Parent, &GlobalTransform), With<RenderItem>>,
-    ui_scale: Res<UiScale>,
+    mut q_render_item: Query<(&ComputedNode, &mut Visibility, &Parent, &GlobalTransform), With<RenderItem>>,
 ) {
     for (node, mut vis, parent, g_trans) in q_render_item.iter_mut() {
         // this is evil.
@@ -949,13 +914,15 @@ fn hide_hidden(
 
         let maybe_non_hotbar = four.get();
 
-        let this_logical_rect = node.physical_rect(g_trans, 1.0, ui_scale.0);
+        let t = g_trans.translation();
+        let this_logical_rect = Rect::from_center_size(Vec2::new(t.x, t.y), node.size());
 
         let Ok((non_hotbar_node, g_trans)) = q_non_hotbar_slots.get(maybe_non_hotbar) else {
             continue;
         };
 
-        let dims = non_hotbar_node.physical_rect(g_trans, 1.0, ui_scale.0);
+        let t = g_trans.translation();
+        let dims = Rect::from_center_size(Vec2::new(t.x, t.y), non_hotbar_node.size());
 
         if !(dims.contains(this_logical_rect.min) || dims.contains(this_logical_rect.max)) {
             *vis = Visibility::Hidden;
@@ -963,7 +930,7 @@ fn hide_hidden(
     }
 }
 
-fn follow_cursor(mut query: Query<&mut Style, With<FollowCursor>>, primary_window_query: Query<&Window, With<PrimaryWindow>>) {
+fn follow_cursor(mut query: Query<&mut Node, With<FollowCursor>>, primary_window_query: Query<&Window, With<PrimaryWindow>>) {
     let Some(Some(cursor_pos)) = primary_window_query.get_single().ok().map(|x| x.cursor_position()) else {
         return; // cursor is outside of window or the window was closed
     };

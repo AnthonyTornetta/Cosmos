@@ -4,10 +4,11 @@ use bevy::{
     core::Name,
     log::{error, info},
     prelude::{
-        in_state, resource_exists, Added, App, BuildChildren, Commands, Component, Entity, Event, EventReader, IntoSystemConfigs,
-        NodeBundle, Query, Res, TextBundle, With,
+        in_state, resource_exists, Added, App, BuildChildren, ChildBuild, Commands, Component, Entity, Event, EventReader,
+        IntoSystemConfigs, Query, Res, Text, With,
     },
-    ui::{AlignItems, BackgroundColor, FlexDirection, JustifyContent, Style, TargetCamera, UiRect, Val},
+    text::TextFont,
+    ui::{AlignItems, BackgroundColor, FlexDirection, JustifyContent, Node, TargetCamera, UiRect, Val},
 };
 use cosmos_core::{
     crafting::{
@@ -39,9 +40,8 @@ use crate::{
     rendering::MainCamera,
     ui::{
         components::{
-            button::{register_button, Button, ButtonBundle, ButtonEvent, ButtonStyles},
-            scollable_container::ScrollBundle,
-            window::{GuiWindow, WindowBundle},
+            button::{register_button, Button, ButtonEvent, ButtonStyles},
+            window::GuiWindow,
         },
         font::DefaultFont,
         item_renderer::RenderItem,
@@ -112,10 +112,10 @@ fn populate_menu(
 
         let mut ecmds = commands.entity(ent);
 
-        let text_style = TextStyle {
+        let text_style = TextFont {
             font: font.0.clone_weak(),
             font_size: 24.0,
-            color: Color::WHITE,
+            ..Default::default()
         };
 
         let item_slot_size = 64.0;
@@ -123,120 +123,95 @@ fn populate_menu(
         ecmds.insert((
             TargetCamera(cam),
             OpenMenu::new(0),
-            WindowBundle {
-                                    BackgroundColor(Srgba::hex("2D2D2D").unwrap().into()),
-
-                Node {
-                        width: Val::Px(item_slot_size * 6.0),
-                        height: Val::Px(800.0),
-                        margin: UiRect {
-                            // Centers it vertically
-                            top: Val::Auto,
-                            bottom: Val::Auto,
-                            // Aligns it 100px from the right
-                            left: Val::Auto,
-                            right: Val::Px(100.0),
-                        },
-                        ..Default::default()
-                },
-                window: GuiWindow {
-                    title: "Basic Fabricator".into(),
-                    body_styles: Style {
-                        flex_direction: FlexDirection::Column,
-                        ..Default::default()
-                    },
+            BackgroundColor(Srgba::hex("2D2D2D").unwrap().into()),
+            Node {
+                width: Val::Px(item_slot_size * 6.0),
+                height: Val::Px(800.0),
+                margin: UiRect {
+                    // Centers it vertically
+                    top: Val::Auto,
+                    bottom: Val::Auto,
+                    // Aligns it 100px from the right
+                    left: Val::Auto,
+                    right: Val::Px(100.0),
                 },
                 ..Default::default()
+            },
+            GuiWindow {
+                title: "Basic Fabricator".into(),
+                body_styles: Node {
+                    flex_direction: FlexDirection::Column,
+                    ..Default::default()
+                },
             },
         ));
 
         let mut slot_ents = vec![];
 
         ecmds.with_children(|p| {
-            p.spawn(ScrollBundle {
-                node_bundle: NodeBundle {
-                    style: Style {
-                        flex_grow: 1.0,
-                        ..Default::default()
-                    },
-                    ..Default::default()
-                },
+            p.spawn((Node {
+                flex_grow: 1.0,
                 ..Default::default()
-            })
-            .with_children(|p| {
-                for recipe in crafting_recipes.iter() {
-                    p.spawn((
-                        ButtonBundle {
-                            node_bundle: NodeBundle {
-                                style: Style {
-                                    height: Val::Px(100.0),
-                                    width: Val::Percent(100.0),
-                                    justify_content: JustifyContent::SpaceBetween,
-                                    ..Default::default()
-                                },
+            },))
+                .with_children(|p| {
+                    for recipe in crafting_recipes.iter() {
+                        p.spawn((
+                            Node {
+                                height: Val::Px(100.0),
+                                width: Val::Percent(100.0),
+                                justify_content: JustifyContent::SpaceBetween,
                                 ..Default::default()
                             },
-                            button: Button::<SelectItemEvent>::default(),
-                        },
-                        Recipe(recipe.clone()),
-                    ))
-                    .with_children(|p| {
-                        p.spawn((
-                            NodeBundle {
-                                style: Style {
+                            Button::<SelectItemEvent>::default(),
+                            Recipe(recipe.clone()),
+                        ))
+                        .with_children(|p| {
+                            p.spawn((
+                                Node {
                                     width: Val::Px(64.0),
                                     height: Val::Px(64.0),
                                     margin: UiRect::all(Val::Auto),
                                     ..Default::default()
                                 },
-                                ..Default::default()
-                            },
-                            RenderItem {
-                                item_id: recipe.output.item,
-                            },
-                        ));
+                                RenderItem {
+                                    item_id: recipe.output.item,
+                                },
+                            ));
 
-                        let item = items.from_numeric_id(recipe.output.item);
-                        let name = lang.get_name_from_id(item.unlocalized_name()).unwrap_or(item.unlocalized_name());
+                            let item = items.from_numeric_id(recipe.output.item);
+                            let name = lang.get_name_from_id(item.unlocalized_name()).unwrap_or(item.unlocalized_name());
 
-                        p.spawn((
-                            Name::new("Item name + inputs display"),
-                            NodeBundle {
-                                style: Style {
+                            p.spawn((
+                                Name::new("Item name + inputs display"),
+                                Node {
                                     width: Val::Percent(80.0),
                                     flex_direction: FlexDirection::Column,
                                     justify_content: JustifyContent::SpaceEvenly,
                                     ..Default::default()
                                 },
-                                ..Default::default()
-                            },
-                        ))
-                        .with_children(|p| {
-                            p.spawn(TextBundle {
-                                style: Style {
-                                    width: Val::Percent(100.0),
-                                    // margin: UiRect::vertical(Val::Auto),
-                                    ..Default::default()
-                                },
-                                text: Text::from_section(format!("{}x {}", recipe.output.quantity, name), text_style.clone()),
-                                ..Default::default()
-                            });
+                            ))
+                            .with_children(|p| {
+                                p.spawn((
+                                    Node {
+                                        width: Val::Percent(100.0),
+                                        // margin: UiRect::vertical(Val::Auto),
+                                        ..Default::default()
+                                    },
+                                    Text::new(format!("{}x {}", recipe.output.quantity, name)),
+                                    text_style.clone(),
+                                ));
 
-                            p.spawn(NodeBundle {
-                                style: Style {
+                                p.spawn(Node {
                                     flex_direction: FlexDirection::Row,
                                     width: Val::Percent(100.0),
                                     ..Default::default()
-                                },
-                                ..Default::default()
-                            })
-                            .with_children(|p| {
-                                for item in recipe.inputs.iter() {
-                                    let RecipeItem::Item(item_id) = item.item;
+                                })
+                                .with_children(|p| {
+                                    for item in recipe.inputs.iter() {
+                                        let RecipeItem::Item(item_id) = item.item;
 
-                                    p.spawn((
-                                        NodeBundle {
-                                            style: Style {
+                                        p.spawn((
+                                            Node {
                                                 width: Val::Px(64.0),
                                                 height: Val::Px(64.0),
                                                 flex_direction: FlexDirection::Column,
@@ -244,48 +219,38 @@ fn populate_menu(
                                                 justify_content: JustifyContent::End,
                                                 ..Default::default()
                                             },
-                                            ..Default::default()
-                                        },
-                                        RenderItem { item_id },
-                                    ))
-                                    .with_children(|p| {
-                                        p.spawn((
-                                            Name::new("Item recipe qty"),
-                                            TextNeedsTopRoot,
-                                            TextBundle {
-                                                text: Text::from_section(format!("{}", item.quantity), text_style.clone()),
-                                                ..Default::default()
-                                            },
-                                        ));
-                                    });
-                                }
+                                            RenderItem { item_id },
+                                        ))
+                                        .with_children(|p| {
+                                            p.spawn((
+                                                Name::new("Item recipe qty"),
+                                                TextNeedsTopRoot,
+                                                Text::new(format!("{}", item.quantity)),
+                                                text_style.clone(),
+                                            ));
+                                        });
+                                    }
+                                });
                             });
                         });
-                    });
-                }
-            });
+                    }
+                });
 
             p.spawn((
                 Name::new("Footer"),
-                NodeBundle {
-                    style: Style {
-                        flex_direction: FlexDirection::Column,
-                        width: Val::Percent(100.0),
-                        height: Val::Px(item_slot_size * 2.0),
-                        ..Default::default()
-                    },
+                Node {
+                    flex_direction: FlexDirection::Column,
+                    width: Val::Percent(100.0),
+                    height: Val::Px(item_slot_size * 2.0),
                     ..Default::default()
                 },
             ))
             .with_children(|p| {
                 p.spawn((
                     Name::new("Rendered Inventory"),
-                    NodeBundle {
-                        style: Style {
-                            width: Val::Px(item_slot_size * 6.0),
-                            height: Val::Px(item_slot_size),
-                            ..Default::default()
-                        },
+                    Node {
+                        width: Val::Px(item_slot_size * 6.0),
+                        height: Val::Px(item_slot_size),
                         ..Default::default()
                     },
                 ))
@@ -294,12 +259,9 @@ fn populate_menu(
                         let ent = p
                             .spawn((
                                 Name::new("Rendered Item"),
-                                NodeBundle {
-                                    style: Style {
-                                        width: Val::Px(64.0),
-                                        height: Val::Px(64.0),
-                                        ..Default::default()
-                                    },
+                                Node {
+                                    width: Val::Px(64.0),
+                                    height: Val::Px(64.0),
                                     ..Default::default()
                                 },
                             ))
@@ -311,19 +273,14 @@ fn populate_menu(
                 p.spawn((
                     Name::new("Fabricate Button"),
                     FabricateButton,
-                    ButtonBundle {
-                        button: Button::<CreateClickedEvent> {
-                            text: Some(("Fabricate".into(), text_style)),
-                            button_styles: Some(ButtonStyles { ..Default::default() }),
-                            ..Default::default()
-                        },
-                        node_bundle: NodeBundle {
-                            style: Style {
-                                flex_grow: 1.0,
-                                ..Default::default()
-                            },
-                            ..Default::default()
-                        },
+                    Button::<CreateClickedEvent> {
+                        text: Some(("Fabricate".into(), text_style, Default::default())),
+                        button_styles: Some(ButtonStyles { ..Default::default() }),
+                        ..Default::default()
+                    },
+                    Node {
+                        flex_grow: 1.0,
+                        ..Default::default()
                     },
                 ));
             });
