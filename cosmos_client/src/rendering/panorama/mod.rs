@@ -4,11 +4,13 @@ use bevy::{
     app::{App, Update},
     math::{Quat, Vec3},
     prelude::{not, resource_exists, Commands, Component, Entity, IntoSystemConfigs, Or, Query, Res, ResMut, Resource, With},
-    render::view::{screenshot::ScreenshotManager, Visibility},
+    render::view::{
+        screenshot::{save_to_disk, Screenshot},
+        Visibility,
+    },
     time::{common_conditions::on_timer, Time},
     transform::components::Transform,
     ui::Node,
-    window::PrimaryWindow,
 };
 use cosmos_core::ecs::NeedsDespawned;
 
@@ -49,18 +51,10 @@ fn take_panorama(
     }
 }
 
-fn taking_panorama(
-    mut screenshot_manager: ResMut<ScreenshotManager>,
-    mut pan_angle: ResMut<PanAngle>,
-    mut commands: Commands,
-    q_primary_window: Query<Entity, With<PrimaryWindow>>,
-    mut q_camera: Query<&mut Transform, With<MainCamera>>,
-) {
+fn taking_panorama(mut pan_angle: ResMut<PanAngle>, mut commands: Commands, mut q_camera: Query<&mut Transform, With<MainCamera>>) {
     let path = format!("./pan-screenshots/{}.png", pan_angle.0);
 
-    screenshot_manager
-        .save_screenshot_to_disk(q_primary_window.single(), path)
-        .expect("Failed to save panorama screenshot!");
+    commands.spawn(Screenshot::primary_window()).observe(save_to_disk(path));
 
     pan_angle.0 += 1;
     q_camera.single_mut().rotation = Quat::from_axis_angle(Vec3::Y, pan_angle.0 as f32 / (N_SCREENSHOTS - 2) as f32 * PI * 2.0);

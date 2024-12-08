@@ -63,13 +63,13 @@ fn lasers_netty(
                     strength,
                     no_hit,
                     CosmosPbrBundle {
-                        mesh: laser_mesh.0.clone_weak(),
-                        material: materials.add(StandardMaterial {
+                        mesh: Mesh3d(laser_mesh.0.clone_weak()),
+                        material: MeshMaterial3d(materials.add(StandardMaterial {
                             base_color: color.unwrap_or(Color::WHITE),
                             // emissive: color,
                             unlit: true,
                             ..Default::default()
-                        }),
+                        })),
                         ..Default::default()
                     },
                     &time,
