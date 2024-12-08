@@ -4,7 +4,7 @@
 
 use std::sync::{Arc, Mutex};
 
-use bevy::{color::palettes::css, core_pipeline::bloom::BloomSettings, prelude::*, window::PrimaryWindow};
+use bevy::{color::palettes::css, core_pipeline::bloom::Bloom, prelude::*, window::PrimaryWindow};
 use bevy_kira_audio::prelude::AudioReceiver;
 use bevy_rapier3d::prelude::*;
 use bevy_renet2::renet2::{transport::NetcodeClientTransport, RenetClient};
@@ -106,7 +106,7 @@ fn update_crosshair(
         if docked.is_some() {
             crosshair_offset.x = 0.0;
             crosshair_offset.y = 0.0;
-        } else if let Some(mut pos_on_screen) = camera.world_to_viewport(
+        } else if let Ok(mut pos_on_screen) = camera.world_to_viewport(
             cam_global_trans,
             last_rotation.0.mul_vec3(Vec3::from(cam_trans.forward())) + cam_global_trans.translation(),
         ) {
@@ -460,19 +460,17 @@ pub(crate) fn client_sync_players(
                         ))
                         .with_children(|parent| {
                             parent.spawn((
-                                Camera3dBundle {
-                                    camera: Camera {
-                                        hdr: true,
-                                        ..Default::default()
-                                    },
-                                    transform: Transform::from_translation(camera_offset),
-                                    projection: Projection::from(PerspectiveProjection {
-                                        fov: (desired_fov.0 / 180.0) * std::f32::consts::PI,
-                                        ..default()
-                                    }),
-                                    ..default()
+                                Camera {
+                                    hdr: true,
+                                    ..Default::default()
                                 },
-                                BloomSettings { ..Default::default() },
+                                Transform::from_translation(camera_offset),
+                                Projection::from(PerspectiveProjection {
+                                    fov: (desired_fov.0 / 180.0) * std::f32::consts::PI,
+                                    ..default()
+                                }),
+                                Camera3d::default(),
+                                Bloom { ..Default::default() },
                                 CameraHelper::default(),
                                 Name::new("Main Camera"),
                                 MainCamera,
@@ -961,10 +959,9 @@ fn fix_location(
                 if let Some(mut transform) = transform {
                     transform.translation = translation;
                 } else {
-                    commands.entity(entity).insert((
-                        WorldWithin(pw),
-                        TransformBundle::from_transform(Transform::from_translation(translation)),
-                    ));
+                    commands
+                        .entity(entity)
+                        .insert((WorldWithin(pw), Transform::from_translation(translation)));
                 }
                 location.last_transform_loc = Some(translation);
             }
@@ -1063,7 +1060,7 @@ pub(super) fn register(app: &mut App) {
                     .in_set(NetworkingSystemsSet::ReceiveMessages)
                     .before(CosmosBundleSet::HandleCosmosBundles),
             )
-                .run_if(in_state(GameState::Playing).or_else(in_state(GameState::LoadingWorld)))
+                .run_if(in_state(GameState::Playing).or(in_state(GameState::LoadingWorld)))
                 .chain(),
         )
         .add_systems(

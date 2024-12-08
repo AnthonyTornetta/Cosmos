@@ -89,7 +89,7 @@ pub(super) fn register(app: &mut App) {
             Update,
             (
                 start_playing
-                    .run_if(on_event::<PlayMusicEvent>())
+                    .run_if(on_event::<PlayMusicEvent>)
                     .run_if(not(resource_exists::<BackgroundSong>)),
                 monitor_background_song.run_if(resource_exists::<BackgroundSong>),
                 adjust_volume
