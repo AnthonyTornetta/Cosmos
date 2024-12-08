@@ -4,12 +4,12 @@ use crate::block::lighting::{BlockLightProperties, BlockLighting};
 use crate::rendering::structure_renderer::{BlockRenderingModes, StructureRenderingSet};
 use crate::rendering::{CosmosMeshBuilder, ReadOnlyBlockMeshRegistry};
 use bevy::prelude::{
-    App, Assets, BuildChildren, Commands, DespawnRecursiveExt, Entity, EventWriter, GlobalTransform, Handle, IntoSystemConfigs, Mesh,
-    PointLight, PointLightBundle, Query, Res, ResMut, Transform, Update, Vec3, VisibilityBundle, With,
+    App, Assets, BuildChildren, Commands, DespawnRecursiveExt, Entity, EventWriter, GlobalTransform, IntoSystemConfigs, Mesh, Mesh3d,
+    PointLight, Query, Res, ResMut, Transform, Update, Vec3, Visibility, With,
 };
+use bevy::render::mesh::MeshAabb;
 use bevy::render::primitives::Aabb;
 use bevy::tasks::AsyncComputeTaskPool;
-use bevy::transform::bundles::TransformBundle;
 use bevy::utils::HashMap;
 use cosmos_core::block::Block;
 use cosmos_core::netty::client::LocalPlayer;
@@ -30,7 +30,7 @@ fn poll_rendering_chunks(
     mut commands: Commands,
     mut rendering_chunks: ResMut<RenderingChunks>,
     mut meshes: ResMut<Assets<Mesh>>,
-    q_mesh: Query<&Handle<Mesh>>,
+    q_mesh: Query<&Mesh3d>,
     q_lights: Query<&LightsHolder>,
     q_chunk_meshes: Query<&ChunkMeshes>,
     q_chunk_entity: Query<&ChunkEntity>,
@@ -98,7 +98,7 @@ fn poll_rendering_chunks(
 
         // The first mesh a chunk has will be on the chunk entity instead of child entities,
         // so clear that out first.
-        commands.entity(entity).remove::<Handle<Mesh>>();
+        commands.entity(entity).remove::<Mesh3d>();
         evw_remove_all_materials.send(RemoveAllMaterialsEvent { entity });
 
         let mut chunk_meshes_component = ChunkMeshes::default();
@@ -112,9 +112,9 @@ fn poll_rendering_chunks(
 
             let ent = commands
                 .spawn((
-                    mesh,
-                    TransformBundle::default(),
-                    VisibilityBundle::default(),
+                    Mesh3d(mesh),
+                    Transform::default(),
+                    Visibility::default(),
                     // Remove this once https://github.com/bevyengine/bevy/issues/4294 is done (when bevy ~0.10~ ~0.11~ ~0.12~ 0.13 is released)
                     Aabb::from_min_max(Vec3::new(-s, -s, -s), Vec3::new(s, s, s)),
                 ))
@@ -142,7 +142,7 @@ fn poll_rendering_chunks(
             let mesh = meshes.add(mesh_material.mesh);
 
             commands.entity(entity).insert((
-                mesh,
+                Mesh3d(mesh),
                 // mesh_material.material_id,
                 // Remove this once https://github.com/bevyengine/bevy/issues/4294 is done (when bevy ~0.10~ ~0.11~ ~0.12~ 0.13 is released)
                 aabb.unwrap_or_default(),
@@ -213,8 +213,8 @@ fn create_lighting_data(
 
             if !found {
                 let light_entity = commands
-                    .spawn(PointLightBundle {
-                        point_light: PointLight {
+                    .spawn((
+                        PointLight {
                             color: properties.color,
                             intensity: properties.intensity,
                             range: properties.range,
@@ -223,13 +223,12 @@ fn create_lighting_data(
                             shadows_enabled: false, // !properties.shadows_disabled,
                             ..Default::default()
                         },
-                        transform: Transform::from_xyz(
+                        Transform::from_xyz(
                             block_light_coord.x as f32 - (CHUNK_DIMENSIONS as f32 / 2.0 - 0.5),
                             block_light_coord.y as f32 - (CHUNK_DIMENSIONS as f32 / 2.0 - 0.5),
                             block_light_coord.z as f32 - (CHUNK_DIMENSIONS as f32 / 2.0 - 0.5),
                         ),
-                        ..Default::default()
-                    })
+                    ))
                     .id();
 
                 new_lights.lights.push(LightEntry {

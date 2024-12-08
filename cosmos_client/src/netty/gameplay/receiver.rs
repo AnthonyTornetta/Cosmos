@@ -414,7 +414,7 @@ pub(crate) fn client_sync_players(
                     CosmosPbrBundle {
                         location: loc,
                         rotation: body.rotation.into(),
-                        mesh: meshes.add(Capsule3d::default()),
+                        mesh: Mesh3d(meshes.add(Capsule3d::default())),
                         ..default()
                     },
                     Collider::capsule_y(0.65, 0.25),

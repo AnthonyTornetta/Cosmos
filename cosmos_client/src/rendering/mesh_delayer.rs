@@ -2,7 +2,7 @@
 
 use std::{collections::VecDeque, mem::swap};
 
-use bevy::prelude::{App, Assets, Commands, Entity, Mesh, ResMut, Resource, Update};
+use bevy::prelude::{App, Assets, Commands, Entity, Mesh, Mesh3d, ResMut, Resource, Update};
 
 #[derive(Debug)]
 struct DelayedMesh {
@@ -52,7 +52,7 @@ fn add_meshes(mut meshes: ResMut<Assets<Mesh>>, mut commands: Commands, mut mesh
         };
 
         // The entity was verified to exist above
-        commands.entity(delayed_mesh.entity).insert(meshes.add(delayed_mesh.mesh));
+        commands.entity(delayed_mesh.entity).insert(Mesh3d(meshes.add(delayed_mesh.mesh)));
     }
 }
 

@@ -385,7 +385,7 @@ fn compute_meshes_and_kill_dead_entities(
 
         // The entity was verified to exist above
         if let Some(mut ecmds) = commands.get_entity(entity) {
-            ecmds.insert(meshes.add(delayed_mesh));
+            ecmds.insert(Mesh3d(meshes.add(delayed_mesh)));
         }
 
         kill_all(to_kill, &mut commands);
@@ -428,8 +428,8 @@ fn poll_rendering_lods(
 
                     let ent = commands
                         .spawn((
-                            TransformBundle::from_transform(Transform::from_translation(offset)),
-                            VisibilityBundle::default(),
+                            Transform::from_translation(offset),
+                            Visibility::default(),
                             // Aabb::from_min_max(Vec3::new(-s, -s, -s), Vec3::new(s, s, s)),
                             RenderedLod { scale },
                             DespawnWithStructure,
