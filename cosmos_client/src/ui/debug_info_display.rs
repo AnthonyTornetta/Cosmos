@@ -29,12 +29,7 @@ struct CoordsCounter;
 #[derive(Component)]
 struct ActualCoordsCounter;
 
-fn add_text(
-    mut commands: Commands,
-    default_font: Res<DefaultFont>,
-    q_target_camera: Query<Entity, With<UiRoot>>,
-    asset_server: Res<AssetServer>,
-) {
+fn add_text(mut commands: Commands, default_font: Res<DefaultFont>, q_target_camera: Query<Entity, With<UiRoot>>) {
     let text_gap = 35.0;
 
     let target_cam = TargetCamera(q_target_camera.single());

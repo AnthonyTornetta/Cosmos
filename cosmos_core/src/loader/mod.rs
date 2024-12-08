@@ -136,7 +136,7 @@ pub(super) fn register<T: States + Clone + Copy + FreelyMutableState>(
             Update,
             monitor_loading::<T>
                 .in_set(MonitorLoadingSet::MonitorLoading)
-                .run_if(in_state(pre_loading_state).or_else(in_state(loading_state).or_else(in_state(post_loading_state)))),
+                .run_if(in_state(pre_loading_state).or(in_state(loading_state).or(in_state(post_loading_state)))),
         )
         .insert_resource(LoadingStatus::new(pre_loading_state, loading_state, post_loading_state, done_state))
         .insert_resource(LoadingManager::default())

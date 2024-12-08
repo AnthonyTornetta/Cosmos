@@ -12,7 +12,6 @@ use bevy::{
     math::{bounding::Aabb3d, Quat, Vec3},
     prelude::{in_state, App, Commands, EventReader, IntoSystemConfigs, Query, Res, Update},
     reflect::Reflect,
-    render::primitives::Aabb,
     transform::components::GlobalTransform,
 };
 

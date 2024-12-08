@@ -304,7 +304,7 @@ fn on_activate_system(
                                     system_entity,
                                 },
                                 DespawnWithStructure,
-                                TransformBundle::from_transform(Transform::from_translation(rel_pos).looking_to(beam_direction, Vec3::Y)),
+                                Transform::from_translation(rel_pos).looking_to(beam_direction, Vec3::Y),
                                 *physics_world,
                             ))
                             .id();

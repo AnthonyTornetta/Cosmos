@@ -12,7 +12,7 @@ use bevy::{
         entity::Entity,
         query::{Added, With, Without},
         schedule::{IntoSystemConfigs, IntoSystemSetConfigs, SystemSet},
-        system::{Commands, Query, Res},
+        system::{Commands, Query},
         world::Ref,
     },
     hierarchy::BuildChildren,
@@ -21,7 +21,7 @@ use bevy::{
     prelude::ChildBuild,
     reflect::Reflect,
     transform::components::GlobalTransform,
-    ui::{BackgroundColor, ComputedNode, Interaction, Node, PositionType, UiRect, UiScale, Val},
+    ui::{BackgroundColor, ComputedNode, Interaction, Node, PositionType, UiRect, Val},
     window::{PrimaryWindow, Window},
 };
 
@@ -195,7 +195,6 @@ fn on_add_slider(mut commands: Commands, mut q_added_slider: Query<(Entity, &mut
 }
 
 fn on_interact_slider(
-    ui_scale: Res<UiScale>,
     mut q_sliders: Query<
         (
             Ref<Interaction>,
@@ -262,7 +261,6 @@ fn on_interact_slider(
 
 fn on_change_value(
     mut q_style: Query<&mut Node>,
-    ui_scale: Res<UiScale>,
     // Changed<SliderValue> fails here when SliderValue isn't the default value when the slider is just created.
     q_slider_value: Query<(&SliderProgressEntites, &SliderValue, &Slider, &ComputedNode, &GlobalTransform)>,
 ) {
@@ -278,7 +276,7 @@ fn on_change_value(
         };
 
         let t = g_trans.translation();
-        let mut slider_bounds = Rect::from_center_size(Vec2::new(t.x, t.y), node.size());
+        let slider_bounds = Rect::from_center_size(Vec2::new(t.x, t.y), node.size());
         let slider_actual_width = slider_bounds.size().x - X_MARGIN * 2.0;
 
         style.left = Val::Px(slider_actual_width * slider_percent(slider, slider_value) - BASE_SQUARE_SIZE);

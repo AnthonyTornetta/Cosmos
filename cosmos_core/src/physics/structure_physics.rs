@@ -19,7 +19,6 @@ use bevy::prelude::{
     Res, Transform,
 };
 use bevy::reflect::Reflect;
-use bevy::transform::bundles::TransformBundle;
 use bevy::utils::HashSet;
 use bevy_rapier3d::geometry::{CollisionGroups, Group};
 use bevy_rapier3d::math::Vect;
@@ -583,7 +582,7 @@ fn listen_for_new_physics_event(
                             chunk_entity,
                             structure_entity,
                         },
-                        TransformBundle::from_transform(*chunk_trans),
+                        *chunk_trans,
                         collider,
                         ColliderMassProperties::Mass(mass),
                     ));

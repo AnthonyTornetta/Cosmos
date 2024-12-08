@@ -2,7 +2,7 @@
 
 use std::{collections::VecDeque, time::Duration};
 
-use bevy::{color::Alpha, prelude::*};
+use bevy::prelude::*;
 use cosmos_core::{netty::system_sets::NetworkingSystemsSet, state::GameState};
 
 const HUD_DISPLAY_DURATION: Duration = Duration::from_secs(7);

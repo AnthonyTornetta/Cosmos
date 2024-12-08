@@ -24,7 +24,6 @@ use bevy::{
         Added, App, Children, Commands, Component, Deref, DerefMut, Entity, Parent, Quat, Query, Transform, Update, Vec3, With, Without,
     },
     reflect::Reflect,
-    transform::bundles::TransformBundle,
 };
 use bevy_rapier3d::{na::Vector3, plugin::RapierContextEntityLink};
 use bigdecimal::{BigDecimal, FromPrimitive};
@@ -601,7 +600,7 @@ fn on_add_location_without_transform(
             commands
                 .entity(needs_transform_entity)
                 .remove::<BundleStartingRotation>()
-                .insert((TransformBundle::from_transform(transform), best_physics_world));
+                .insert((transform, best_physics_world));
         } else {
             warn!("Location bundle added before there was a player world!");
             let transform = Transform::from_translation(my_loc.absolute_coords_f32()).with_rotation(rotation);
@@ -611,7 +610,7 @@ fn on_add_location_without_transform(
             commands
                 .entity(needs_transform_entity)
                 .remove::<BundleStartingRotation>()
-                .insert(TransformBundle::from_transform(transform));
+                .insert(transform);
         }
     }
 }

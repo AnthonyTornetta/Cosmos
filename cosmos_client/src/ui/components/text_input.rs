@@ -6,11 +6,10 @@ use arboard::Clipboard;
 use bevy::{
     a11y::Focus,
     app::{App, Update},
-    asset::{AssetId, AssetServer, Handle},
-    color::{palettes::css, Color},
+    asset::AssetServer,
+    color::Color,
     core::Name,
     ecs::{
-        bundle::Bundle,
         component::Component,
         entity::Entity,
         event::EventReader,
@@ -26,7 +25,7 @@ use bevy::{
     },
     log::{info, warn},
     prelude::{ChildBuild, Deref, Text, TextUiWriter},
-    text::{TextColor, TextFont, TextSpan},
+    text::{JustifyText, LineBreak, TextColor, TextFont, TextLayout, TextSpan},
     time::Time,
     ui::{AlignSelf, FocusPolicy, Interaction, Node},
 };
@@ -153,7 +152,6 @@ struct TextEnt(Entity);
 
 fn added_text_input_bundle(
     mut commands: Commands,
-    asset_server: Res<AssetServer>,
     mut q_added: Query<(Entity, &InputValue, &mut TextInput, &TextFont, &TextColor), Added<TextInput>>,
     focused: Res<Focus>,
     default_font: Res<DefaultFont>,
@@ -172,7 +170,11 @@ fn added_text_input_bundle(
             text_ent = Some(
                 p.spawn((
                     Name::new("Text input text display"),
-                    Text::new(input_value.0.clone()), //.with_no_wrap(),
+                    Text::new(input_value.0.clone()),
+                    TextLayout {
+                        linebreak: LineBreak::NoWrap,
+                        ..Default::default()
+                    },
                     t_font.clone(),
                     t_col.clone(),
                     Node {

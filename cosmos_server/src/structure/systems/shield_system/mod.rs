@@ -19,10 +19,7 @@ use bevy::{
     },
     reflect::Reflect,
     time::Time,
-    transform::{
-        bundles::TransformBundle,
-        components::{GlobalTransform, Transform},
-    },
+    transform::components::{GlobalTransform, Transform},
     utils::hashbrown::HashMap,
 };
 
@@ -238,7 +235,7 @@ fn recalculate_shields_if_needed(
                 let shield_ent = p
                     .spawn((
                         Name::new("Shield"),
-                        TransformBundle::from_transform(Transform::from_translation(shield_pos)),
+                        Transform::from_translation(shield_pos),
                         *loc + shield_loc,
                         LoadingDistance::new(1, 2),
                         Shield {

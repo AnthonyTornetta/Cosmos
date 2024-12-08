@@ -23,7 +23,7 @@ use bevy::{
     prelude::{Changed, ChildBuild},
     reflect::Reflect,
     transform::components::GlobalTransform,
-    ui::{BackgroundColor, ComputedNode, FlexDirection, Interaction, Node, Overflow, PositionType, UiScale, Val},
+    ui::{BackgroundColor, ComputedNode, FlexDirection, Interaction, Node, Overflow, PositionType, Val},
     window::{PrimaryWindow, Window},
 };
 

@@ -50,12 +50,7 @@ impl ReactableValue for ErrorMessage {
     }
 }
 
-fn create_main_menu(
-    mut commands: Commands,
-    default_font: Res<DefaultFont>,
-    asset_server: Res<AssetServer>,
-    q_ui_root: Query<Entity, With<MainMenuRootUiNode>>,
-) {
+fn create_main_menu(mut commands: Commands, default_font: Res<DefaultFont>, q_ui_root: Query<Entity, With<MainMenuRootUiNode>>) {
     let cool_blue = Srgba::hex("00FFFF").unwrap().into();
 
     let text_style = TextFont {
