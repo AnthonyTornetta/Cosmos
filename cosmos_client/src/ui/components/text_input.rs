@@ -92,7 +92,7 @@ pub enum InputType {
 }
 
 #[derive(Component, Debug)]
-#[require(InputValue, Node)]
+#[require(InputValue, Node, TextFont, TextColor)]
 /// A text box the user can type in
 pub struct TextInput {
     /// Handles input validation to ensure the data stored in [`InputValue`] is correct.

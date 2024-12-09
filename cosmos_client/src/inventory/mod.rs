@@ -22,6 +22,7 @@ use crate::{
     input::inputs::{CosmosInputs, InputChecker, InputHandler},
     ui::{
         components::{
+            scollable_container::ScrollBox,
             show_cursor::no_open_menus,
             window::{GuiWindow, UiWindowSystemSet},
         },
@@ -314,6 +315,7 @@ fn toggle_inventory_rendering(
                     },
                     border_color,
                     BackgroundColor(Srgba::hex("3D3D3D").unwrap().into()),
+                    ScrollBox::default(),
                     Node {
                         width,
                         position_type: PositionType::Absolute,

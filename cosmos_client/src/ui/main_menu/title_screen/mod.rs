@@ -82,7 +82,7 @@ fn create_main_menu(mut commands: Commands, default_font: Res<DefaultFont>, q_ui
             text_style_large,
             text_blue,
             Node {
-                margin: UiRect::bottom(Val::Px(200.0)),
+                margin: UiRect::bottom(Val::Px(50.0)),
                 align_self: AlignSelf::Center,
                 ..Default::default()
             },
@@ -124,7 +124,7 @@ fn create_main_menu(mut commands: Commands, default_font: Res<DefaultFont>, q_ui
             Node {
                 border: UiRect::all(Val::Px(2.0)),
                 width: Val::Px(500.0),
-                height: Val::Px(45.0),
+                min_height: Val::Px(45.0),
                 align_self: AlignSelf::Center,
                 margin: UiRect::top(Val::Px(20.0)),
                 padding: UiRect {

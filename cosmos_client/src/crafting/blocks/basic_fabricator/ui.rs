@@ -151,6 +151,7 @@ fn populate_menu(
         ecmds.with_children(|p| {
             p.spawn((Node {
                 flex_grow: 1.0,
+                flex_direction: FlexDirection::Column,
                 ..Default::default()
             },))
                 .with_children(|p| {
