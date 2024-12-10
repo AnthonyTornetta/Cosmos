@@ -46,7 +46,7 @@ derive_more = "1.0"
 clap = "4.5"
 bytemuck = "1.20"
 bevy_obj = "0.15"
-bevy_hanabi = "0.13.1"
+bevy_hanabi = "0.14"
 # iyes_perf_ui = "0.3.0"
 # bevy_mod_billboard = "0.7.0"
 

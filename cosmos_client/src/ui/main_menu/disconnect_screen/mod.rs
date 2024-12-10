@@ -11,7 +11,6 @@ use super::{in_main_menu_state, title_screen::TitleScreenSet, MainMenuRootUiNode
 
 fn create_disconnect_screen(
     mut commands: Commands,
-    asset_server: Res<AssetServer>,
     q_ui_root: Query<Entity, With<MainMenuRootUiNode>>,
     client: Option<Res<RenetClient>>,
     default_font: Res<DefaultFont>,

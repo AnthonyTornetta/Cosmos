@@ -35,7 +35,6 @@ fn toggle_pause_menu(
     q_pause_menu: Query<Entity, With<PauseMenu>>,
     input_handler: InputChecker,
     q_ui_root: Query<Entity, With<UiTopRoot>>,
-    asset_server: Res<AssetServer>,
     default_font: Res<DefaultFont>,
 ) {
     if !input_handler.check_just_pressed(CosmosInputs::Pause) {

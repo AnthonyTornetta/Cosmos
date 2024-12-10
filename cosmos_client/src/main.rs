@@ -146,7 +146,7 @@ fn main() {
             RenetClientPlugin,
             NetcodeClientPlugin,
             ObjPlugin,
-            // HanabiPlugin, // TODO: this
+            HanabiPlugin,
             // Used for diagnostics
             SystemInformationDiagnosticsPlugin,
             EntityCountDiagnosticsPlugin,

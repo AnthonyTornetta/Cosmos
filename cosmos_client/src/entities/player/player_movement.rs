@@ -34,10 +34,8 @@ fn append_grounded_check(mut commands: Commands, q_player: Query<Entity, Added<L
     commands.entity(player_ent).with_children(|p| {
         p.spawn((
             GroundedChecker,
-            SpatialBundle {
-                transform: Transform::from_xyz(0.0, -0.80, 0.0),
-                ..Default::default()
-            },
+            Visibility::default(),
+            Transform::from_xyz(0.0, -0.80, 0.0),
             Name::new("Ground checker"),
             Collider::cuboid(0.1, 0.1, 0.1),
             Sensor,

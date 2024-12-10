@@ -11,11 +11,11 @@ use bevy::{
 fn on_need_update_value<T: ReactableValue>(
     q_react_value: Query<&T>,
     mut ev_reader: EventReader<NeedsValueFetched>,
-    mut q_changed_value: Query<(Entity, &BindValues<T>), With<Text>>,
+    q_changed_value: Query<(Entity, &BindValues<T>), With<Text>>,
     mut writer: TextUiWriter,
 ) {
     for ev in ev_reader.read() {
-        let Ok((mut text_input_entity, bind_values)) = q_changed_value.get_mut(ev.0) else {
+        let Ok((text_input_entity, bind_values)) = q_changed_value.get(ev.0) else {
             continue;
         };
 

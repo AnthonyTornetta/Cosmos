@@ -29,7 +29,7 @@ use bevy::{
     ui::{AlignSelf, FocusPolicy, Interaction, Node},
 };
 
-use crate::ui::{font::DefaultFont, UiSystemSet};
+use crate::ui::UiSystemSet;
 
 #[derive(Resource, Default)]
 struct CursorFlashTime(f32);
@@ -151,10 +151,10 @@ struct TextEnt(Entity);
 
 fn added_text_input_bundle(
     mut commands: Commands,
-    mut q_added: Query<(Entity, &InputValue, &mut TextInput, &TextFont, &TextColor), Added<TextInput>>,
+    q_added: Query<(Entity, &InputValue, &TextFont, &TextColor), Added<TextInput>>,
     focused: Res<Focus>,
 ) {
-    for (entity, input_value, mut text_input, t_font, t_col) in q_added.iter_mut() {
+    for (entity, input_value, t_font, t_col) in q_added.iter() {
         commands.entity(entity).insert(Interaction::None).insert(FocusPolicy::Block);
 
         let mut text_ent = None;
@@ -285,8 +285,8 @@ fn send_key_inputs(
     }
 }
 
-fn show_text_cursor(mut writer: TextUiWriter, focused: Res<Focus>, mut q_text_inputs: Query<(Entity, &TextEnt, &TextInput)>) {
-    for (ent, text, text_input) in q_text_inputs.iter_mut() {
+fn show_text_cursor(mut writer: TextUiWriter, focused: Res<Focus>, q_text_inputs: Query<(Entity, &TextEnt)>) {
+    for (ent, text) in q_text_inputs.iter() {
         if focused.0.map(|x| x == ent).unwrap_or(false) {
             let col = writer.color(text.0, 0).0.clone();
             writer.color(text.0, 1).0 = col;
@@ -299,7 +299,7 @@ fn show_text_cursor(mut writer: TextUiWriter, focused: Res<Focus>, mut q_text_in
 fn flash_cursor(
     mut cursor_flash_time: ResMut<CursorFlashTime>,
     focused: Res<Focus>,
-    q_text_inputs: Query<(&TextEnt, &TextInput)>,
+    q_text_inputs: Query<&TextEnt>,
     time: Res<Time>,
     mut writer: TextUiWriter,
 ) {
@@ -309,7 +309,7 @@ fn flash_cursor(
         return;
     };
 
-    let Ok((text, text_input)) = q_text_inputs.get(focused_ent) else {
+    let Ok(text) = q_text_inputs.get(focused_ent) else {
         return;
     };
 
