@@ -26,7 +26,7 @@ pub(super) fn register(app: &mut App) {
     app.add_systems(
         Update,
         switch_to_title
-            .run_if(in_state(GameState::Playing).or_else(in_state(GameState::Connecting)))
+            .run_if(in_state(GameState::Playing).or(in_state(GameState::Connecting)))
             .run_if(is_client_disconnected),
     );
 }

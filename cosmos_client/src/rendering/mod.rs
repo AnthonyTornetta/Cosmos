@@ -874,7 +874,7 @@ fn register_block_meshes(
 }
 
 fn get_mesh_information(model_name: &String) -> Option<MeshInformation> {
-    if model_name.to_ascii_lowercase() == "none" {
+    if model_name.eq_ignore_ascii_case("none") {
         return None;
     }
 

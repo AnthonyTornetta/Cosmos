@@ -3,10 +3,10 @@
 use bevy::{
     color::LinearRgba,
     math::primitives::Cuboid,
-    pbr::{NotShadowCaster, NotShadowReceiver},
+    pbr::{MeshMaterial3d, NotShadowCaster, NotShadowReceiver},
     prelude::{
-        in_state, App, AssetServer, Assets, BuildChildren, Changed, Commands, Component, DespawnRecursiveExt, Entity, EventReader,
-        IntoSystemConfigs, MaterialMeshBundle, Mesh, Name, Parent, Query, Res, ResMut, Transform, Update, Vec3, With, Without,
+        in_state, App, AssetServer, Assets, BuildChildren, Changed, ChildBuild, Commands, Component, DespawnRecursiveExt, Entity,
+        EventReader, IntoSystemConfigs, Mesh, Mesh3d, Name, Parent, Query, Res, ResMut, Transform, Update, Vec3, With, Without,
     },
     time::Time,
 };
@@ -95,7 +95,7 @@ fn control_build_mode(
     right = right.normalize_or_zero() * max_speed;
     let movement_up = up * max_speed;
 
-    let time = time.delta_seconds();
+    let time = time.delta_secs();
 
     if input_handler.check_pressed(CosmosInputs::MoveForward) {
         transform.translation += forward * time;
@@ -147,7 +147,7 @@ fn place_symmetries(
             NettyChannelClient::Reliable,
             cosmos_encoder::serialize(&ClientReliableMessages::SetSymmetry {
                 axis: BuildAxis::X,
-                coordinate: looking_at_block.map(|block| block.x),
+                coordinate: looking_at_block.map(|block| block.x()),
             }),
         )
     }
@@ -157,7 +157,7 @@ fn place_symmetries(
             NettyChannelClient::Reliable,
             cosmos_encoder::serialize(&ClientReliableMessages::SetSymmetry {
                 axis: BuildAxis::Y,
-                coordinate: looking_at_block.map(|block| block.y),
+                coordinate: looking_at_block.map(|block| block.y()),
             }),
         )
     }
@@ -167,7 +167,7 @@ fn place_symmetries(
             NettyChannelClient::Reliable,
             cosmos_encoder::serialize(&ClientReliableMessages::SetSymmetry {
                 axis: BuildAxis::Z,
-                coordinate: looking_at_block.map(|block| block.z),
+                coordinate: looking_at_block.map(|block| block.z()),
             }),
         )
     }
@@ -250,25 +250,22 @@ fn change_visuals(
                         NotShadowCaster,
                         NotShadowReceiver,
                         Name::new("X Axis - build mode"),
-                        MaterialMeshBundle {
-                            mesh: meshes.add(Cuboid::new(0.001, size as f32, size as f32)),
-                            material: materials.add(UnlitRepeatedMaterial {
-                                repeats: Repeats {
-                                    horizontal: size as u32 / 4,
-                                    vertical: size as u32 / 4,
-                                    ..Default::default()
-                                },
-                                texture: texture_handle.clone(),
-                                color: LinearRgba {
-                                    red: 1.0,
-                                    green: 0.0,
-                                    blue: 0.0,
-                                    alpha: 1.0,
-                                },
-                            }),
-                            transform: Transform::from_xyz(coords.x, 0.5, 0.5),
-                            ..Default::default()
-                        },
+                        Mesh3d(meshes.add(Cuboid::new(0.001, size as f32, size as f32))),
+                        MeshMaterial3d(materials.add(UnlitRepeatedMaterial {
+                            repeats: Repeats {
+                                horizontal: size as u32 / 4,
+                                vertical: size as u32 / 4,
+                                ..Default::default()
+                            },
+                            texture: texture_handle.clone(),
+                            color: LinearRgba {
+                                red: 1.0,
+                                green: 0.0,
+                                blue: 0.0,
+                                alpha: 1.0,
+                            },
+                        })),
+                        Transform::from_xyz(coords.x, 0.5, 0.5),
                     ))
                     .id(),
             );
@@ -286,25 +283,22 @@ fn change_visuals(
                         NotShadowCaster,
                         NotShadowReceiver,
                         Name::new("Y Axis - build mode"),
-                        MaterialMeshBundle {
-                            mesh: meshes.add(Cuboid::new(size as f32, 0.001, size as f32)),
-                            material: materials.add(UnlitRepeatedMaterial {
-                                repeats: Repeats {
-                                    horizontal: size as u32 / 4,
-                                    vertical: size as u32 / 4,
-                                    ..Default::default()
-                                },
-                                texture: texture_handle.clone(),
-                                color: LinearRgba {
-                                    red: 0.0,
-                                    green: 1.0,
-                                    blue: 0.0,
-                                    alpha: 1.0,
-                                },
-                            }),
-                            transform: Transform::from_xyz(0.5, coords.y, 0.5),
-                            ..Default::default()
-                        },
+                        Mesh3d(meshes.add(Cuboid::new(size as f32, 0.001, size as f32))),
+                        MeshMaterial3d(materials.add(UnlitRepeatedMaterial {
+                            repeats: Repeats {
+                                horizontal: size as u32 / 4,
+                                vertical: size as u32 / 4,
+                                ..Default::default()
+                            },
+                            texture: texture_handle.clone(),
+                            color: LinearRgba {
+                                red: 0.0,
+                                green: 1.0,
+                                blue: 0.0,
+                                alpha: 1.0,
+                            },
+                        })),
+                        Transform::from_xyz(0.5, coords.y, 0.5),
                     ))
                     .id(),
             );
@@ -322,25 +316,22 @@ fn change_visuals(
                         NotShadowCaster,
                         NotShadowReceiver,
                         Name::new("Z Axis - build mode"),
-                        MaterialMeshBundle {
-                            mesh: meshes.add(Cuboid::new(size as f32, size as f32, 0.001)),
-                            material: materials.add(UnlitRepeatedMaterial {
-                                repeats: Repeats {
-                                    horizontal: size as u32 / 4,
-                                    vertical: size as u32 / 4,
-                                    ..Default::default()
-                                },
-                                texture: texture_handle.clone(),
-                                color: LinearRgba {
-                                    red: 0.0,
-                                    green: 0.0,
-                                    blue: 1.0,
-                                    alpha: 1.0,
-                                },
-                            }),
-                            transform: Transform::from_xyz(0.5, 0.5, coords.z),
-                            ..Default::default()
-                        },
+                        Mesh3d(meshes.add(Cuboid::new(size as f32, size as f32, 0.001))),
+                        MeshMaterial3d(materials.add(UnlitRepeatedMaterial {
+                            repeats: Repeats {
+                                horizontal: size as u32 / 4,
+                                vertical: size as u32 / 4,
+                                ..Default::default()
+                            },
+                            texture: texture_handle.clone(),
+                            color: LinearRgba {
+                                red: 0.0,
+                                green: 0.0,
+                                blue: 1.0,
+                                alpha: 1.0,
+                            },
+                        })),
+                        Transform::from_xyz(0.5, 0.5, coords.z),
                     ))
                     .id(),
             );

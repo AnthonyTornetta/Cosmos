@@ -13,14 +13,11 @@ use bevy::{
     },
     hierarchy::{BuildChildren, DespawnRecursiveExt},
     log::{error, info},
+    prelude::{ChildBuild, Text},
     reflect::Reflect,
     state::condition::in_state,
-    text::{Text, TextSection, TextStyle},
-    ui::{
-        node_bundles::{NodeBundle, TextBundle},
-        widget::Label,
-        BackgroundColor, FlexDirection, JustifyContent, Style, UiRect, Val,
-    },
+    text::{TextFont, TextSpan},
+    ui::{widget::Label, BackgroundColor, BorderColor, FlexDirection, JustifyContent, Node, UiRect, Val},
 };
 use bevy_renet2::renet2::RenetClient;
 use cosmos_core::{
@@ -41,13 +38,14 @@ use crate::{
     lang::Lang,
     ui::{
         components::{
-            button::{register_button, Button, ButtonBundle, ButtonEvent, ButtonStyles},
-            scollable_container::{ScrollBox, ScrollBundle},
-            slider::{Slider, SliderBundle},
-            text_input::{InputType, TextInput, TextInputBundle},
-            window::{GuiWindow, WindowBundle},
+            button::{register_button, Button, ButtonEvent, ButtonStyles},
+            scollable_container::ScrollBox,
+            slider::Slider,
+            text_input::{InputType, TextInput},
+            window::GuiWindow,
             Disabled,
         },
+        font::DefaultFont,
         reactivity::{add_reactable_type, BindValue, BindValues, ReactableFields, ReactableValue},
         OpenMenu, UiSystemSet,
     },
@@ -58,18 +56,16 @@ use super::{PurchasedEvent, SoldEvent};
 #[derive(Event)]
 pub(super) struct OpenShopUiEvent {
     pub shop: Shop,
-    pub structure_entity: Entity,
     pub structure_block: StructureBlock,
 }
 
 #[derive(Component, Debug)]
 struct ShopUi {
     shop: Shop,
-    structure_block: StructureBlock,
     /// # ⚠️ WARNING ⚠️
     ///
     /// This refers to the server's entity NOT the client's
-    structure_entity: Entity,
+    structure_block: StructureBlock,
     selected_item: Option<SelectedItem>,
 }
 
@@ -234,7 +230,6 @@ fn open_shop_ui(mut commands: Commands, mut ev_reader: EventReader<MutEvent<Open
                 shop,
                 selected_item: None,
                 structure_block: ev.structure_block,
-                structure_entity: ev.structure_entity,
             },
         ));
     }
@@ -257,16 +252,16 @@ fn render_shop_ui(
 
     let name = &shop_ui.shop.name;
 
-    let text_style = TextStyle {
-        color: css::WHITE.into(),
+    let text_style = TextFont {
         font_size: 32.0,
         font: asset_server.load("fonts/PixeloidSans.ttf"),
+        ..Default::default()
     };
 
-    let text_style_small = TextStyle {
-        color: css::WHITE.into(),
+    let text_style_small = TextFont {
         font_size: 24.0,
         font: asset_server.load("fonts/PixeloidSans.ttf"),
+        ..Default::default()
     };
 
     let ui_variables_entity = ui_ent;
@@ -292,118 +287,93 @@ fn render_shop_ui(
         ))
         .insert((
             Name::new("Shop UI"),
-            WindowBundle {
-                node_bundle: NodeBundle {
-                    background_color: Srgba::hex("2D2D2D").unwrap().into(),
-                    style: Style {
-                        width: Val::Px(1000.0),
-                        height: Val::Px(800.0),
-                        margin: UiRect {
-                            // Centers it vertically
-                            top: Val::Auto,
-                            bottom: Val::Auto,
-                            left: Val::Auto,
-                            right: Val::Auto,
-                        },
-                        ..Default::default()
-                    },
-                    ..Default::default()
-                },
-                window: GuiWindow {
-                    title: name.into(),
-                    body_styles: Style {
-                        flex_direction: FlexDirection::Column,
-                        ..Default::default()
-                    },
+            BackgroundColor(Srgba::hex("2D2D2D").unwrap().into()),
+            Node {
+                width: Val::Px(1000.0),
+                height: Val::Px(800.0),
+                margin: UiRect {
+                    // Centers it vertically
+                    top: Val::Auto,
+                    bottom: Val::Auto,
+                    left: Val::Auto,
+                    right: Val::Auto,
                 },
                 ..Default::default()
             },
-        ))
-        .with_children(|p| {
-            p.spawn(NodeBundle {
-                style: Style {
-                    height: Val::Px(50.0),
+            GuiWindow {
+                title: name.into(),
+                body_styles: Node {
+                    flex_direction: FlexDirection::Column,
                     ..Default::default()
                 },
+            },
+        ))
+        .with_children(|p| {
+            p.spawn(Node {
+                height: Val::Px(50.0),
                 ..Default::default()
             })
             .with_children(|p| {
                 p.spawn((
                     ShopUiEntity(ui_ent),
-                    ButtonBundle::<ClickSellTabEvent> {
-                        node_bundle: NodeBundle {
-                            style: Style {
-                                flex_grow: 1.0,
-                                ..Default::default()
-                            },
+                    Node {
+                        flex_grow: 1.0,
+                        ..Default::default()
+                    },
+                    Button::<ClickSellTabEvent> {
+                        button_styles: Some(ButtonStyles {
+                            background_color: Srgba::hex("880000").unwrap().into(),
+                            hover_background_color: Srgba::hex("880000").unwrap().into(),
+                            press_background_color: Srgba::hex("880000").unwrap().into(),
                             ..Default::default()
-                        },
-                        button: Button {
-                            button_styles: Some(ButtonStyles {
-                                background_color: Srgba::hex("880000").unwrap().into(),
-                                hover_background_color: Srgba::hex("880000").unwrap().into(),
-                                press_background_color: Srgba::hex("880000").unwrap().into(),
-                                ..Default::default()
-                            }),
-                            text: Some(("Sell".into(), text_style.clone())),
-                            ..Default::default()
-                        },
+                        }),
+                        text: Some(("Sell".into(), text_style.clone(), Default::default())),
+                        ..Default::default()
                     },
                 ));
 
                 p.spawn((
                     ShopUiEntity(ui_ent),
-                    ButtonBundle::<ClickBuyTabEvent> {
-                        node_bundle: NodeBundle {
-                            style: Style {
-                                flex_grow: 1.0,
-                                ..Default::default()
-                            },
+                    Node {
+                        flex_grow: 1.0,
+                        ..Default::default()
+                    },
+                    Button::<ClickBuyTabEvent> {
+                        button_styles: Some(ButtonStyles {
+                            background_color: css::DARK_GREEN.into(),
+                            hover_background_color: css::DARK_GREEN.into(),
+                            press_background_color: css::DARK_GREEN.into(),
                             ..Default::default()
-                        },
-                        button: Button {
-                            button_styles: Some(ButtonStyles {
-                                background_color: css::DARK_GREEN.into(),
-                                hover_background_color: css::DARK_GREEN.into(),
-                                press_background_color: css::DARK_GREEN.into(),
-                                ..Default::default()
-                            }),
-                            text: Some(("Buy".into(), text_style.clone())),
-                            ..Default::default()
-                        },
+                        }),
+                        text: Some(("Buy".into(), text_style.clone(), Default::default())),
+                        ..Default::default()
                     },
                 ));
             });
 
             p.spawn((
                 Name::new("Body"),
-                NodeBundle {
-                    border_color: Srgba::hex("1C1C1C").unwrap().into(),
-                    style: Style {
-                        border: UiRect {
-                            bottom: Val::Px(4.0),
-                            top: Val::Px(4.0),
-                            ..Default::default()
-                        },
-                        flex_grow: 1.0,
+                BorderColor(Srgba::hex("1C1C1C").unwrap().into()),
+                Node {
+                    border: UiRect {
+                        bottom: Val::Px(4.0),
+                        top: Val::Px(4.0),
                         ..Default::default()
                     },
+                    flex_grow: 1.0,
                     ..Default::default()
                 },
             ))
             .with_children(|body| {
                 body.spawn((
                     Name::new("Main Stuff"),
-                    NodeBundle {
-                        style: Style {
-                            flex_grow: 1.0,
-                            padding: UiRect {
-                                left: Val::Px(40.0),
-                                right: Val::Px(40.0),
-                                top: Val::Px(20.0),
-                                bottom: Val::Px(20.0),
-                            },
-                            ..Default::default()
+                    Node {
+                        flex_grow: 1.0,
+                        padding: UiRect {
+                            left: Val::Px(40.0),
+                            right: Val::Px(40.0),
+                            top: Val::Px(20.0),
+                            bottom: Val::Px(20.0),
                         },
                         ..Default::default()
                     },
@@ -411,12 +381,9 @@ fn render_shop_ui(
                 .with_children(|body| {
                     body.spawn((
                         Name::new("Description section"),
-                        NodeBundle {
-                            style: Style {
-                                flex_direction: FlexDirection::Column,
-                                flex_grow: 1.0,
-                                ..Default::default()
-                            },
+                        Node {
+                            flex_direction: FlexDirection::Column,
+                            flex_grow: 1.0,
                             ..Default::default()
                         },
                     ))
@@ -427,14 +394,12 @@ fn render_shop_ui(
                                 ui_variables_entity,
                                 ReactableFields::Text { section: 0 },
                             )]),
-                            TextBundle {
-                                text: Text::from_section("Select an item...", text_style.clone()),
-                                style: Style {
-                                    margin: UiRect {
-                                        bottom: Val::Px(10.0),
-                                        top: Val::Px(10.0),
-                                        ..Default::default()
-                                    },
+                            Text::new("Select an item..."),
+                            text_style.clone(),
+                            Node {
+                                margin: UiRect {
+                                    bottom: Val::Px(10.0),
+                                    top: Val::Px(10.0),
                                     ..Default::default()
                                 },
                                 ..Default::default()
@@ -447,23 +412,22 @@ fn render_shop_ui(
                                 ui_variables_entity,
                                 ReactableFields::Text { section: 0 },
                             )]),
-                            TextBundle {
-                                text: Text::from_section("", text_style_small.clone()),
-                                style: Style {
-                                    margin: UiRect {
-                                        bottom: Val::Px(30.0),
-                                        top: Val::Px(10.0),
-                                        ..Default::default()
-                                    },
+                            Text::new(""),
+                            text_style_small.clone(),
+                            Node {
+                                margin: UiRect {
+                                    bottom: Val::Px(30.0),
+                                    top: Val::Px(10.0),
                                     ..Default::default()
                                 },
                                 ..Default::default()
                             },
                         ));
 
-                        p.spawn(TextBundle {
-                            text: Text::from_section("Stats", text_style.clone()),
-                            style: Style {
+                        p.spawn((
+                            Text::new("Stats"),
+                            text_style.clone(),
+                            Node {
                                 margin: UiRect {
                                     bottom: Val::Px(10.0),
                                     top: Val::Px(10.0),
@@ -471,12 +435,12 @@ fn render_shop_ui(
                                 },
                                 ..Default::default()
                             },
-                            ..Default::default()
-                        });
+                        ));
 
-                        p.spawn(TextBundle {
-                            text: Text::from_section("", text_style_small.clone()),
-                            style: Style {
+                        p.spawn((
+                            Text::new(""),
+                            text_style_small.clone(),
+                            Node {
                                 margin: UiRect {
                                     left: Val::Px(20.0),
                                     bottom: Val::Px(10.0),
@@ -485,27 +449,23 @@ fn render_shop_ui(
                                 },
                                 ..Default::default()
                             },
-                            ..Default::default()
-                        });
+                        ));
                     });
 
-                    body.spawn((Name::new("Item picture"), NodeBundle { ..Default::default() }));
+                    body.spawn((Name::new("Item picture"), Node { ..Default::default() }));
                 });
 
                 body.spawn((
                     Name::new("Shop Categories"),
-                    NodeBundle {
-                        border_color: Srgba::hex("1C1C1C").unwrap().into(),
-                        style: Style {
-                            flex_direction: FlexDirection::Column,
-                            width: Val::Px(400.0),
-                            border: UiRect {
-                                left: Val::Px(4.0),
-                                ..Default::default()
-                            },
-                            padding: UiRect::all(Val::Px(10.0)),
+                    BackgroundColor(Srgba::hex("1C1C1C").unwrap().into()),
+                    Node {
+                        flex_direction: FlexDirection::Column,
+                        width: Val::Px(400.0),
+                        border: UiRect {
+                            left: Val::Px(4.0),
                             ..Default::default()
                         },
+                        padding: UiRect::all(Val::Px(10.0)),
                         ..Default::default()
                     },
                 ))
@@ -513,14 +473,12 @@ fn render_shop_ui(
                     body.spawn((
                         Name::new("Stock Header Text"),
                         Label,
-                        TextBundle {
-                            text: Text::from_section("Stock", text_style.clone()),
-                            style: Style {
-                                margin: UiRect {
-                                    bottom: Val::Px(10.0),
-                                    top: Val::Px(10.0),
-                                    ..Default::default()
-                                },
+                        Text::new("Stock"),
+                        text_style.clone(),
+                        Node {
+                            margin: UiRect {
+                                bottom: Val::Px(10.0),
+                                top: Val::Px(10.0),
                                 ..Default::default()
                             },
                             ..Default::default()
@@ -530,24 +488,18 @@ fn render_shop_ui(
                     body.spawn((
                         Name::new("Search Text Box"),
                         BindValues::<SearchItemQuery>::new(vec![BindValue::new(ui_variables_entity, ReactableFields::Value)]),
-                        TextInputBundle {
-                            text_input: TextInput {
-                                style: text_style.clone(),
-                                input_type: InputType::Text { max_length: Some(20) },
-                                ..Default::default()
-                            },
-                            node_bundle: NodeBundle {
-                                border_color: Srgba::hex("111111").unwrap().into(),
-                                background_color: Srgba::hex("555555").unwrap().into(),
-                                style: Style {
-                                    border: UiRect::all(Val::Px(2.0)),
-                                    padding: UiRect {
-                                        top: Val::Px(4.0),
-                                        bottom: Val::Px(4.0),
-                                        ..Default::default()
-                                    },
-                                    ..Default::default()
-                                },
+                        BorderColor(Srgba::hex("111111").unwrap().into()),
+                        BackgroundColor(Srgba::hex("555555").unwrap().into()),
+                        TextInput {
+                            input_type: InputType::Text { max_length: Some(20) },
+                            ..Default::default()
+                        },
+                        text_style.clone(),
+                        Node {
+                            border: UiRect::all(Val::Px(2.0)),
+                            padding: UiRect {
+                                top: Val::Px(4.0),
+                                bottom: Val::Px(4.0),
                                 ..Default::default()
                             },
                             ..Default::default()
@@ -556,28 +508,20 @@ fn render_shop_ui(
 
                     body.spawn((
                         Name::new("Items List"),
-                        ScrollBundle {
-                            node_bundle: NodeBundle {
-                                style: Style {
-                                    flex_grow: 1.0,
-                                    margin: UiRect::top(Val::Px(10.0)),
-                                    ..Default::default()
-                                },
-                                ..Default::default()
-                            },
-                            slider: ScrollBox { ..Default::default() },
+                        Node {
+                            flex_grow: 1.0,
+                            margin: UiRect::top(Val::Px(10.0)),
+                            ..Default::default()
                         },
+                        ScrollBox { ..Default::default() },
                     ))
                     .with_children(|p| {
                         shop_entities.contents_entity = p
                             .spawn((
                                 Name::new("Contents"),
-                                NodeBundle {
-                                    style: Style {
-                                        padding: UiRect::all(Val::Px(10.0)),
-                                        flex_direction: FlexDirection::Column,
-                                        ..Default::default()
-                                    },
+                                Node {
+                                    padding: UiRect::all(Val::Px(10.0)),
+                                    flex_direction: FlexDirection::Column,
                                     ..Default::default()
                                 },
                             ))
@@ -588,50 +532,41 @@ fn render_shop_ui(
 
             p.spawn((
                 Name::new("Footer"),
-                NodeBundle {
-                    style: Style {
-                        padding: UiRect::top(Val::Px(10.0)),
-                        // height: Val::Px(170.0),
-                        ..Default::default()
-                    },
+                Node {
+                    padding: UiRect::top(Val::Px(10.0)),
+                    // height: Val::Px(170.0),
                     ..Default::default()
                 },
             ))
             .with_children(|p| {
-                p.spawn(NodeBundle {
-                    style: Style {
-                        // WIERDNESS:
-                        width: Val::Percent(0.0),
-                        flex_grow: 4.0,
-                        /*
-                           Explanation:
+                p.spawn(Node {
+                    // WIERDNESS:
+                    width: Val::Percent(0.0),
+                    flex_grow: 4.0,
+                    /*
+                       Explanation:
 
-                           Idk why it works like this, but if I make width auto and flex_grow: 2.0 (which are what they are supposed to be),
-                           when the text changes its length the container width changes, which it shouldnt.
+                       Idk why it works like this, but if I make width auto and flex_grow: 2.0 (which are what they are supposed to be),
+                       when the text changes its length the container width changes, which it shouldnt.
 
-                           However, by randomly guessing i found that a width of 0 and flex_grow of 4.0 (???) makes it look like
-                           flex_grow 2.0 and its width isn't effected by the size of the text. Idk why.
-                        */
-                        // END WEIRDNESS
-                        flex_direction: FlexDirection::Column,
-                        padding: UiRect {
-                            bottom: Val::Px(10.0),
-                            top: Val::Px(0.0),
-                            left: Val::Px(20.0),
-                            right: Val::Px(20.0),
-                        },
-                        ..Default::default()
+                       However, by randomly guessing i found that a width of 0 and flex_grow of 4.0 (???) makes it look like
+                       flex_grow 2.0 and its width isn't effected by the size of the text. Idk why.
+                    */
+                    // END WEIRDNESS
+                    flex_direction: FlexDirection::Column,
+                    padding: UiRect {
+                        bottom: Val::Px(10.0),
+                        top: Val::Px(0.0),
+                        left: Val::Px(20.0),
+                        right: Val::Px(20.0),
                     },
                     ..Default::default()
                 })
                 .with_children(|p| {
-                    p.spawn(NodeBundle {
-                        style: Style {
-                            padding: UiRect {
-                                left: Val::Px(20.0),
-                                bottom: Val::Px(10.0),
-                                ..Default::default()
-                            },
+                    p.spawn(Node {
+                        padding: UiRect {
+                            left: Val::Px(20.0),
+                            bottom: Val::Px(10.0),
                             ..Default::default()
                         },
                         ..Default::default()
@@ -640,38 +575,33 @@ fn render_shop_ui(
                         p.spawn((
                             Name::new("Credits amount"),
                             BindValues::<Credits>::new(vec![BindValue::new(player_entity, ReactableFields::Text { section: 1 })]),
-                            TextBundle {
-                                text: Text::from_sections([
-                                    TextSection::new("$", text_style.clone()),
-                                    TextSection::new(format!("{}", credits.amount()), text_style.clone()),
-                                ]),
-                                ..Default::default()
-                            },
+                            Text::new("$"),
+                            text_style.clone(),
                         ));
+                    })
+                    .with_children(|p| {
+                        p.spawn((TextSpan::new(format!("{}", credits.amount())), text_style.clone()));
                     });
 
                     p.spawn((
                         BindValues::<ShopModeSign>::new(vec![BindValue::new(ui_variables_entity, ReactableFields::Text { section: 0 })]),
                         BindValues::<PricePerUnit>::new(vec![BindValue::new(ui_variables_entity, ReactableFields::Text { section: 1 })]),
                         BindValues::<AmountSelected>::new(vec![BindValue::new(ui_variables_entity, ReactableFields::Text { section: 3 })]),
-                        TextBundle {
-                            text: Text::from_sections([
-                                TextSection::new("", text_style.clone()),
-                                TextSection::new("", text_style.clone()),
-                                TextSection::new(" x ", text_style.clone()),
-                                TextSection::new("", text_style.clone()),
-                            ]),
-                            style: Style {
-                                bottom: Val::Px(10.0),
-                                ..Default::default()
-                            },
+                        Text::new(""),
+                        Node {
+                            bottom: Val::Px(10.0),
                             ..Default::default()
                         },
-                    ));
+                    ))
+                    .with_children(|p| {
+                        p.spawn((TextSpan::new(""), text_style.clone()));
+                        p.spawn((TextSpan::new(" x "), text_style.clone()));
+                        p.spawn((TextSpan::new(""), text_style.clone()));
+                    });
 
-                    p.spawn(NodeBundle {
-                        border_color: Srgba::hex("555555").unwrap().into(),
-                        style: Style {
+                    p.spawn((
+                        BorderColor(Srgba::hex("555555").unwrap().into()),
+                        Node {
                             border: UiRect {
                                 top: Val::Px(5.0),
                                 ..Default::default()
@@ -683,98 +613,72 @@ fn render_shop_ui(
                             },
                             ..Default::default()
                         },
-                        ..Default::default()
-                    })
+                    ))
                     .with_children(|p| {
                         p.spawn((
                             BindValues::<NetCredits>::new(vec![BindValue::new(ui_variables_entity, ReactableFields::Text { section: 1 })]),
-                            TextBundle {
-                                text: Text::from_sections([
-                                    TextSection::new("$", text_style.clone()),
-                                    TextSection::new("", text_style.clone()),
-                                ]),
-                                ..Default::default()
-                            },
-                        ));
+                            Text::new("$"),
+                            text_style.clone(),
+                        ))
+                        .with_children(|p| {
+                            p.spawn((TextSpan::new(""), text_style.clone()));
+                        });
                     });
                 });
 
-                p.spawn(NodeBundle {
-                    style: Style {
-                        flex_grow: 3.0,
-                        flex_direction: FlexDirection::Column,
-                        ..Default::default()
-                    },
+                p.spawn(Node {
+                    flex_grow: 3.0,
+                    flex_direction: FlexDirection::Column,
                     ..Default::default()
                 })
                 .with_children(|p| {
-                    p.spawn(NodeBundle {
-                        style: Style { ..Default::default() },
-                        ..Default::default()
-                    })
-                    .with_children(|p| {
+                    p.spawn(Node { ..Default::default() }).with_children(|p| {
                         p.spawn((
                             Name::new("Amount Input"),
                             BindValues::<AmountSelected>::new(vec![BindValue::new(ui_variables_entity, ReactableFields::Value)]),
                             BindValues::<SelectedItemMaxQuantity>::new(vec![BindValue::new(ui_variables_entity, ReactableFields::Max)]),
-                            TextInputBundle {
-                                node_bundle: NodeBundle {
-                                    style: Style {
-                                        width: Val::Px(250.0),
-                                        padding: UiRect::all(Val::Px(10.0)),
-                                        ..Default::default()
-                                    },
-                                    border_color: Srgba::hex("111111").unwrap().into(),
-                                    background_color: Srgba::hex("555555").unwrap().into(),
-                                    ..Default::default()
-                                },
-                                text_input: TextInput {
-                                    input_type: InputType::Integer { min: 0, max: 1000 },
-                                    style: text_style.clone(),
-                                    ..Default::default()
-                                },
+                            BorderColor(Srgba::hex("111111").unwrap().into()),
+                            BackgroundColor(Srgba::hex("555555").unwrap().into()),
+                            Node {
+                                width: Val::Px(250.0),
+                                padding: UiRect::all(Val::Px(10.0)),
+
                                 ..Default::default()
                             },
+                            TextInput {
+                                input_type: InputType::Integer { min: 0, max: 1000 },
+                                ..Default::default()
+                            },
+                            text_style.clone(),
                         ));
 
-                        p.spawn(NodeBundle {
-                            style: Style {
-                                flex_grow: 1.0,
-                                margin: UiRect {
-                                    right: Val::Px(10.0),
-                                    left: Val::Px(20.0),
-                                    ..Default::default()
-                                },
-                                flex_direction: FlexDirection::Column,
-                                justify_content: JustifyContent::SpaceBetween,
+                        p.spawn(Node {
+                            flex_grow: 1.0,
+                            margin: UiRect {
+                                right: Val::Px(10.0),
+                                left: Val::Px(20.0),
                                 ..Default::default()
                             },
+                            flex_direction: FlexDirection::Column,
+                            justify_content: JustifyContent::SpaceBetween,
                             ..Default::default()
                         })
                         .with_children(|p| {
-                            p.spawn(NodeBundle {
-                                style: Style {
-                                    flex_grow: 1.0,
-                                    justify_content: JustifyContent::SpaceBetween,
-                                    ..Default::default()
-                                },
+                            p.spawn(Node {
+                                flex_grow: 1.0,
+                                justify_content: JustifyContent::SpaceBetween,
                                 ..Default::default()
                             })
                             .with_children(|p| {
-                                p.spawn(TextBundle {
-                                    text: Text::from_section("0", text_style_small.clone()),
-                                    ..Default::default()
-                                });
+                                p.spawn((Text::new("0"), text_style_small.clone()));
 
                                 p.spawn((
                                     BindValues::<SelectedItemMaxQuantity>::new(vec![BindValue::new(
                                         ui_variables_entity,
                                         ReactableFields::Text { section: 0 },
                                     )]),
-                                    TextBundle {
-                                        text: Text::from_section("", text_style_small.clone()),
-                                        ..Default::default()
-                                    },
+                                    Text::new(""),
+                                    text_style_small.clone(),
                                 ));
                             });
 
@@ -783,19 +687,12 @@ fn render_shop_ui(
                                 ShopUiEntity(ui_ent),
                                 BindValues::<AmountSelected>::new(vec![BindValue::new(ui_variables_entity, ReactableFields::Value)]),
                                 BindValues::<SelectedItemMaxQuantity>::new(vec![BindValue::new(ui_variables_entity, ReactableFields::Max)]),
-                                SliderBundle {
-                                    node_bundle: NodeBundle {
-                                        style: Style { ..Default::default() },
-                                        ..Default::default()
-                                    },
-                                    slider: Slider {
-                                        min: 0,
-                                        max: 1,
-                                        background_color: Srgba::hex("999999").unwrap().into(),
-                                        foreground_color: css::AQUAMARINE.into(),
-                                        square_color: Srgba::hex("555555").unwrap().into(),
-                                        ..Default::default()
-                                    },
+                                Slider {
+                                    min: 0,
+                                    max: 1,
+                                    background_color: Srgba::hex("999999").unwrap().into(),
+                                    foreground_color: css::AQUAMARINE.into(),
+                                    square_color: Srgba::hex("555555").unwrap().into(),
                                     ..Default::default()
                                 },
                             ));
@@ -805,25 +702,20 @@ fn render_shop_ui(
                     shop_entities.buy_sell_button = p
                         .spawn((
                             BuyOrSellButton { shop_entity: ui_ent },
-                            ButtonBundle::<BuyOrSellBtnEvent> {
-                                node_bundle: NodeBundle {
-                                    style: Style {
-                                        margin: UiRect::top(Val::Px(10.0)),
-                                        height: Val::Px(80.0),
-                                        ..Default::default()
-                                    },
+                            Node {
+                                margin: UiRect::top(Val::Px(10.0)),
+                                height: Val::Px(80.0),
+                                ..Default::default()
+                            },
+                            Button::<BuyOrSellBtnEvent> {
+                                text: Some(("BUY".into(), text_style.clone(), Default::default())),
+                                button_styles: Some(ButtonStyles {
+                                    background_color: Srgba::hex("008000").unwrap().into(),
+                                    hover_background_color: css::DARK_GREEN.into(),
+                                    press_background_color: css::DARK_GREEN.into(),
                                     ..Default::default()
-                                },
-                                button: Button {
-                                    text: Some(("BUY".into(), text_style.clone())),
-                                    button_styles: Some(ButtonStyles {
-                                        background_color: Srgba::hex("008000").unwrap().into(),
-                                        hover_background_color: css::DARK_GREEN.into(),
-                                        press_background_color: css::DARK_GREEN.into(),
-                                        ..Default::default()
-                                    }),
-                                    ..Default::default()
-                                },
+                                }),
+                                ..Default::default()
                             },
                         ))
                         .id();
@@ -999,17 +891,15 @@ fn update_total(
 fn update_search(
     q_search: Query<(Entity, &ShopEntities, &ShopUi, &ShopMode, &SearchItemQuery), Or<(Changed<SearchItemQuery>, Changed<ShopMode>)>>,
     mut commands: Commands,
-
-    asset_server: Res<AssetServer>,
-
+    default_font: Res<DefaultFont>,
     items: Res<Registry<Item>>,
     lang: Res<Lang<Item>>,
 ) {
     for (ui_ent, shop_ents, shop_ui, shop_mode, search_item_query) in &q_search {
-        let text_style_small = TextStyle {
-            color: css::WHITE.into(),
+        let text_style_small = TextFont {
             font_size: 24.0,
-            font: asset_server.load("fonts/PixeloidSans.ttf"),
+            font: default_font.0.clone(),
+            ..Default::default()
         };
 
         commands.entity(shop_ents.contents_entity).despawn_descendants().with_children(|p| {
@@ -1060,36 +950,27 @@ fn update_search(
                     Name::new(display_name.to_owned()),
                     *shop_entry,
                     ShopUiEntity(ui_ent),
-                    ButtonBundle::<ClickItemEvent> {
-                        button: Button { ..Default::default() },
-                        node_bundle: NodeBundle {
-                            style: Style {
-                                flex_direction: FlexDirection::Row,
-                                margin: UiRect::vertical(Val::Px(2.0)),
-                                ..Default::default()
-                            },
-                            ..Default::default()
-                        },
+                    Button::<ClickItemEvent> { ..Default::default() },
+                    Node {
+                        flex_direction: FlexDirection::Row,
+                        margin: UiRect::vertical(Val::Px(2.0)),
+                        ..Default::default()
                     },
                 ))
                 .with_children(|p| {
                     p.spawn((
                         Name::new("Item Name"),
-                        TextBundle {
-                            text: Text::from_section(display_name, text_style_small.clone()),
-                            style: Style {
-                                flex_grow: 1.0,
-                                ..Default::default()
-                            },
+                        Text::new(display_name),
+                        text_style_small.clone(),
+                        Node {
+                            flex_grow: 1.0,
                             ..Default::default()
                         },
                     ));
                     p.spawn((
                         Name::new("Quantity"),
-                        TextBundle {
-                            text: Text::from_section(format!("({amount_display})"), text_style_small.clone()),
-                            ..Default::default()
-                        },
+                        Text::new(format!("({amount_display})")),
+                        text_style_small.clone(),
                     ));
                 });
             }
@@ -1109,7 +990,7 @@ fn enable_buy_button(
                 continue;
             };
 
-            if shop_ui.structure_entity == ev.structure_entity && shop_ui.structure_block.coords() == ev.shop_block {
+            if shop_ui.structure_block.structure() == ev.structure_entity && shop_ui.structure_block.coords() == ev.shop_block {
                 match &ev.details {
                     Ok(shop) => {
                         shop_ui.shop = shop.clone();
@@ -1138,7 +1019,7 @@ fn enable_sell_button(
                 continue;
             };
 
-            if shop_ui.structure_entity == ev.structure_entity && shop_ui.structure_block.coords() == ev.shop_block {
+            if shop_ui.structure_block.structure() == ev.structure_entity && shop_ui.structure_block.coords() == ev.shop_block {
                 match &ev.details {
                     Ok(shop) => {
                         shop_ui.shop = shop.clone();
@@ -1189,7 +1070,7 @@ fn on_buy(
                     NettyChannelClient::Shop,
                     cosmos_encoder::serialize(&ClientShopMessages::Sell {
                         shop_block: shop_ui.structure_block.coords(),
-                        structure_entity: shop_ui.structure_entity,
+                        structure_entity: shop_ui.structure_block.structure(),
                         item_id,
                         quantity: amount_selected.0 as u32,
                     }),
@@ -1204,7 +1085,7 @@ fn on_buy(
                     NettyChannelClient::Shop,
                     cosmos_encoder::serialize(&ClientShopMessages::Buy {
                         shop_block: shop_ui.structure_block.coords(),
-                        structure_entity: shop_ui.structure_entity,
+                        structure_entity: shop_ui.structure_block.structure(),
                         item_id,
                         quantity: amount_selected.0 as u32,
                     }),

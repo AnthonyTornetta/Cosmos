@@ -9,10 +9,9 @@ use bevy::{
         removal_detection::RemovedComponents,
         world::Ref,
     },
-    math::{Quat, Vec3},
+    math::{bounding::Aabb3d, Quat, Vec3},
     prelude::{in_state, App, Commands, EventReader, IntoSystemConfigs, Query, Res, Update},
     reflect::Reflect,
-    render::primitives::Aabb,
     transform::components::GlobalTransform,
 };
 
@@ -55,7 +54,7 @@ fn dock_block_update_system(
     q_systems: Query<&StructureSystems>,
 ) {
     for ev in event.read() {
-        let Ok(systems) = q_systems.get(ev.structure_entity) else {
+        let Ok(systems) = q_systems.get(ev.block.structure()) else {
             continue;
         };
 
@@ -85,8 +84,8 @@ fn dock_structure_loaded_event_processor(
             let mut system = DockSystem::default();
 
             for block in structure.all_blocks_iter(false) {
-                if block.block(structure, &blocks).unlocalized_name() == "cosmos:ship_dock" {
-                    system.block_added(block.coords());
+                if structure.block_at(block, &blocks).unlocalized_name() == "cosmos:ship_dock" {
+                    system.block_added(block);
                 }
             }
 
@@ -142,7 +141,7 @@ fn on_active(
             let rel_pos = structure.block_relative_position(docking_block);
             let block_rotation = structure.block_rotation(docking_block);
             let docking_look_direction = block_rotation.direction_of(BlockFace::Front);
-            let front_direction = docking_look_direction.to_vec3();
+            let front_direction = docking_look_direction.as_vec3();
 
             let abs_block_pos = g_trans.transform_point(rel_pos);
 
@@ -196,7 +195,7 @@ fn on_active(
 
             let hit_block_direction = hit_structure.block_rotation(hit_coords).direction_of(BlockFace::Front);
             let hit_rotation = Quat::from_affine3(&hit_g_trans.affine());
-            let front_direction = hit_rotation.mul_vec3(hit_block_direction.to_vec3());
+            let front_direction = hit_rotation.mul_vec3(hit_block_direction.as_vec3());
 
             let dotted = ray_dir.dot(front_direction);
 
@@ -211,7 +210,7 @@ fn on_active(
 
             let rel_pos = hit_structure.block_relative_position(hit_coords)
                 - relative_docked_ship_rotation
-                    .mul_vec3(structure.block_relative_position(docking_block) + docking_look_direction.to_vec3());
+                    .mul_vec3(structure.block_relative_position(docking_block) + docking_look_direction.as_vec3());
 
             let delta_position = rel_pos - (g_trans.translation() - hit_g_trans.translation());
 
@@ -247,7 +246,10 @@ fn on_active(
             &mut q_structure,
         );
 
-        let aabb = Aabb::from_min_max(min + Vec3::splat(0.1), max - Vec3::splat(0.1));
+        let aabb = Aabb3d {
+            min: (min + Vec3::splat(0.1)).into(),
+            max: (max - Vec3::splat(0.1)).into(),
+        };
 
         let mut hit_something_bad = false;
 
@@ -339,8 +341,8 @@ fn monitor_removed_dock_blocks(
         }
 
         for (docked_entity, docked) in q_docked.iter() {
-            if docked.to == ev.structure_entity && docked.to_block == ev.block.coords()
-                || ev.structure_entity == docked_entity && docked.this_block == ev.block.coords()
+            if docked.to == ev.block.structure() && docked.to_block == ev.block.coords()
+                || ev.block.structure() == docked_entity && docked.this_block == ev.block.coords()
             {
                 let vel = q_velocity.get(docked.to).copied().unwrap_or_default();
                 commands.entity(docked_entity).remove::<Docked>().insert(vel);

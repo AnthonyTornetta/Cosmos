@@ -275,8 +275,6 @@ impl PartialEq for LogicWireColor {
 pub struct LogicInputEvent {
     /// The block coordinates.
     pub block: StructureBlock,
-    /// The entity containing the structure and logic graph this block is in.
-    pub entity: Entity,
 }
 
 #[derive(Event, Debug)]
@@ -285,8 +283,8 @@ pub struct QueueLogicInputEvent(LogicInputEvent);
 
 impl QueueLogicInputEvent {
     /// Convenience constructor to avoid having to construct the inner type.
-    pub fn new(block: StructureBlock, entity: Entity) -> Self {
-        Self(LogicInputEvent { block, entity })
+    pub fn new(block: StructureBlock) -> Self {
+        Self(LogicInputEvent { block })
     }
 }
 
@@ -296,8 +294,6 @@ impl QueueLogicInputEvent {
 pub struct LogicOutputEvent {
     /// The block coordinates.
     pub block: StructureBlock,
-    /// The entity containing the structure and logic graph this block is in.
-    pub entity: Entity,
 }
 
 #[derive(Event, Debug)]
@@ -306,8 +302,8 @@ pub struct QueueLogicOutputEvent(LogicOutputEvent);
 
 impl QueueLogicOutputEvent {
     /// Convenience constructor to avoid having to construct the inner type.
-    pub fn new(block: StructureBlock, entity: Entity) -> Self {
-        Self(LogicOutputEvent { block, entity })
+    pub fn new(block: StructureBlock) -> Self {
+        Self(LogicOutputEvent { block })
     }
 }
 
@@ -338,16 +334,13 @@ fn listen_for_changed_logic_data(
         evr_block_data_changed
             .read()
             .filter(|ev| {
-                let Ok(structure) = q_structure.get(ev.structure_entity) else {
+                let Ok(structure) = q_structure.get(ev.block.structure()) else {
                     return false;
                 };
                 let id = structure.block_id_at(ev.block.coords());
                 logic_blocks.from_id(blocks.from_numeric_id(id).unlocalized_name()).is_some()
             })
-            .map(|ev| LogicOutputEvent {
-                block: ev.block,
-                entity: ev.structure_entity,
-            }),
+            .map(|ev| LogicOutputEvent { block: ev.block }),
     );
 }
 
@@ -365,24 +358,13 @@ fn logic_block_placed_event_listener(
     mut evw_queue_logic_input: EventWriter<QueueLogicInputEvent>,
 ) {
     for ev in evr_block_changed.read() {
-        // println!("{ev:?}");
-
-        /*
-        BlockChangedEvent { block: StructureBlock(BlockCoordinate { x: 160, y: 160, z: 159 }), structure_entity: Entity { index: 624, generation: 6 }, old_block: 72, new_block: 0, old_block_rotation: BlockRotation { face_pointing_pos_y: Top, sub_rotation: None }, new_block_rotation: BlockRotation { face_pointing_pos_y: Top, sub_rotation: None } }
-        BlockChangedEvent { block: StructureBlock(BlockCoordinate { x: 160, y: 160, z: 160 }), structure_entity: Entity { index: 624, generation: 6 }, old_block: 7, new_block: 0, old_block_rotation: BlockRotation { face_pointing_pos_y: Top, sub_rotation: None }, new_block_rotation: BlockRotation { face_pointing_pos_y: Top, sub_rotation: None } }
-        BlockChangedEvent { block: StructureBlock(BlockCoordinate { x: 320, y: 320, z: 323 }), structure_entity: Entity { index: 597, generation: 2 }, old_block: 72, new_block: 0, old_block_rotation: BlockRotation { face_pointing_pos_y: Top, sub_rotation: Flip }, new_block_rotation: BlockRotation { face_pointing_pos_y: Top, sub_rotation: None } }
-        BlockChangedEvent { block: StructureBlock(BlockCoordinate { x: 320, y: 320, z: 324 }), structure_entity: Entity { index: 597, generation: 2 }, old_block: 72, new_block: 0, old_block_rotation: BlockRotation { face_pointing_pos_y: Top, sub_rotation: Flip }, new_block_rotation: BlockRotation { face_pointing_pos_y: Top, sub_rotation: None } }
-        thread 'Compute Task Pool (1)' panicked at cosmos_core/src/logic/logic_graph.rs:117:39:
-        Logic group to be removed should exist.
-        */
-
         // If was logic block, remove from the logic graph.
         if let Some(logic_block) = logic_blocks.from_id(blocks.from_numeric_id(ev.old_block).unlocalized_name()) {
-            if let Ok(structure) = q_structure.get_mut(ev.structure_entity) {
-                if let Ok(mut logic) = q_logic.get_mut(ev.structure_entity) {
+            if let Ok(structure) = q_structure.get_mut(ev.block.structure()) {
+                if let Ok(mut logic) = q_logic.get_mut(ev.block.structure()) {
                     logic.remove_logic_block(
                         logic_block,
-                        ev.old_block_rotation,
+                        ev.old_block_rotation(),
                         ev.block.coords(),
                         &structure,
                         structure.get_entity().expect("Structure should have entity."),
@@ -398,12 +380,12 @@ fn logic_block_placed_event_listener(
 
         // If is now logic block, add to the logic graph.
         if let Some(logic_block) = logic_blocks.from_id(blocks.from_numeric_id(ev.new_block).unlocalized_name()) {
-            if let Ok(mut structure) = q_structure.get_mut(ev.structure_entity) {
-                if let Ok(mut logic) = q_logic.get_mut(ev.structure_entity) {
+            if let Ok(mut structure) = q_structure.get_mut(ev.block.structure()) {
+                if let Ok(mut logic) = q_logic.get_mut(ev.block.structure()) {
                     let coords = ev.block.coords();
                     logic.add_logic_block(
                         logic_block,
-                        ev.new_block_rotation,
+                        ev.new_block_rotation(),
                         coords,
                         &structure,
                         structure.get_entity().expect("Structure should have entity"),
@@ -467,13 +449,13 @@ pub fn default_logic_block_output(
     q_logic_data: Query<&BlockLogicData>,
 ) {
     for ev in evr_logic_output.read() {
-        let Ok(structure) = q_structure.get_mut(ev.entity) else {
+        let Ok(structure) = q_structure.get_mut(ev.block.structure()) else {
             continue;
         };
         if structure.block_at(ev.block.coords(), blocks).unlocalized_name() != block_name {
             continue;
         }
-        let Ok(mut logic_driver) = q_logic_driver.get_mut(ev.entity) else {
+        let Ok(mut logic_driver) = q_logic_driver.get_mut(ev.block.structure()) else {
             continue;
         };
         let Some(&BlockLogicData(signal)) = structure.query_block_data(ev.block.coords(), &q_logic_data) else {
@@ -486,7 +468,7 @@ pub fn default_logic_block_output(
 
         for face in logic_block.output_faces() {
             let port = Port::new(ev.block.coords(), structure.block_rotation(ev.block.coords()).direction_of(face));
-            logic_driver.update_producer(port, signal, &mut evw_queue_logic_input, ev.entity);
+            logic_driver.update_producer(port, signal, &mut evw_queue_logic_input, ev.block.structure());
         }
     }
 }

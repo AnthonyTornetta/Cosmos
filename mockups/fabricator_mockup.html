@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        border: none;
+        font-family: Verdana, Geneva, Tahoma, sans-serif;
+        box-sizing: border-box;
+      }
+
+      html {
+        background-color: black;
+        min-height: 100%;
+        display: flex;
+      }
+
+      body {
+        flex: 1;
+        display: flex;
+      }
+
+      .shop {
+        position: relative;
+        margin: auto;
+
+        height: 800px;
+        width: 1000px;
+        background-color: #2d2d2d;
+        display: flex;
+        flex-direction: column;
+      }
+
+      .top-bar {
+        width: 100%;
+        color: white;
+        padding: 10px;
+        display: flex;
+        justify-content: space-between;
+      }
+
+      main {
+        flex: 1;
+        display: flex;
+      }
+
+      .main-stuff {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+      }
+
+      .categories {
+        width: 400px;
+        padding: 10px;
+        border-left: thick solid #1c1c1c;
+        height: 100%;
+        display: flex;
+      }
+
+      p,
+      h2,
+      h3 {
+        color: white;
+        margin: 10px 0;
+        line-height: 1.5em;
+      }
+
+      ul {
+        margin-left: 20px;
+      }
+
+      li {
+        list-style-type: none;
+        line-height: 1.5em;
+      }
+
+      .top {
+        flex: 1;
+        padding: 20px 40px;
+      }
+
+      .money {
+        font-size: 1.5em;
+        color: white;
+        display: inline-block;
+        display: flex;
+        margin: 0 10px;
+      }
+
+      .scrollbar {
+        width: 15px;
+        background-color: #888;
+        height: 100%;
+      }
+
+      .scroll-pos {
+        height: 20%;
+        background-color: #555;
+      }
+
+      .items li {
+        color: white;
+      }
+
+      .left {
+        display: flex;
+        flex-direction: column;
+        flex: 1;
+      }
+
+      .tab-btn {
+        height: 100%;
+        font-size: 2em;
+        flex: 1;
+        background-color: green;
+        color: white;
+        width: 50%;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        cursor: pointer;
+      }
+    </style>
+  </head>
+
+  <body>
+    <div class="shop">
+      <div class="top-bar">
+        <h1>Fabricator</h1>
+        <h1>X</h1>
+      </div>
+      <main>
+        <p></p>
+      </main>
+    </div>
+  </body>
+</html>

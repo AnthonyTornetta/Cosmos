@@ -2,17 +2,10 @@
 
 use std::{collections::VecDeque, time::Duration};
 
-use bevy::{
-    color::Alpha,
-    prelude::{
-        in_state, App, AssetServer, BuildChildren, Color, Commands, Component, DespawnRecursiveExt, IntoSystemConfigs, Name, NodeBundle,
-        Parent, Query, Res, ResMut, Resource, TextBundle, Update,
-    },
-    text::{JustifyText, Text, TextSection, TextStyle},
-    time::Time,
-    ui::{JustifyContent, PositionType, Style, Val},
-};
+use bevy::prelude::*;
 use cosmos_core::{netty::system_sets::NetworkingSystemsSet, state::GameState};
+
+use super::font::DefaultFont;
 
 const HUD_DISPLAY_DURATION: Duration = Duration::from_secs(7);
 const FADE_DURATION: Duration = Duration::from_secs(3);
@@ -123,14 +116,15 @@ struct ShownHudMessage {
 }
 
 fn display_hud_messages(
+    default_font: Res<DefaultFont>,
     mut commands: Commands,
-    mut shown_hud_message: Query<(&Parent, &mut ShownHudMessage, &mut Text)>,
+    mut shown_hud_message: Query<(Entity, &Parent, &mut ShownHudMessage)>,
     mut hud_messages: ResMut<HudMessages>,
-    asset_server: Res<AssetServer>,
+    mut writer: TextUiWriter,
     time: Res<Time>,
 ) {
-    if let Ok((parent, mut shown_hud_message, mut text)) = shown_hud_message.get_single_mut() {
-        let time_now = time.elapsed_seconds();
+    if let Ok((entity, parent, mut shown_hud_message)) = shown_hud_message.get_single_mut() {
+        let time_now = time.elapsed_secs();
 
         if let Some(current_hud_message) = hud_messages.1.as_mut() {
             if current_hud_message.time_needs_reset {
@@ -145,16 +139,11 @@ fn display_hud_messages(
             commands.entity(parent.get()).despawn_recursive();
             hud_messages.1 = None;
         } else {
-            for section in text.sections.iter_mut() {
-                section
-                    .style
-                    .color
-                    .set_alpha((time_remaining / FADE_DURATION.as_secs_f32()).min(1.0));
-            }
+            writer.for_each_color(entity, |mut c| c.set_alpha((time_remaining / FADE_DURATION.as_secs_f32()).min(1.0)));
         }
     } else if let Some(hud_message) = hud_messages.0.pop_front() {
         let shown_hud_message = ShownHudMessage {
-            time_created: time.elapsed_seconds(),
+            time_created: time.elapsed_secs(),
         };
 
         hud_messages.1 = Some(CurrentDisplayedHudCache {
@@ -165,44 +154,43 @@ fn display_hud_messages(
         commands
             .spawn((
                 Name::new("HUD Message"),
-                NodeBundle {
-                    style: Style {
-                        width: Val::Percent(100.0),
-                        height: Val::Percent(100.0),
-                        justify_content: JustifyContent::Center,
-                        ..Default::default()
-                    },
+                Node {
+                    width: Val::Percent(100.0),
+                    height: Val::Percent(100.0),
+                    justify_content: JustifyContent::Center,
                     ..Default::default()
                 },
             ))
             .with_children(|p| {
-                p.spawn((
-                    shown_hud_message,
-                    TextBundle {
-                        style: Style {
+                // TODO: This
+                let mut messages = hud_message.text.into_iter();
+                if let Some(first) = messages.next() {
+                    let font = TextFont {
+                        font_size: 24.0,
+                        font: default_font.0.clone(),
+                        ..Default::default()
+                    };
+                    p.spawn((
+                        shown_hud_message,
+                        Node {
                             position_type: PositionType::Absolute,
                             bottom: Val::Px(125.0),
                             ..Default::default()
                         },
-                        text: Text {
-                            sections: hud_message
-                                .text
-                                .into_iter()
-                                .map(|x| TextSection {
-                                    value: x.text,
-                                    style: TextStyle {
-                                        color: x.color,
-                                        font: asset_server.load("fonts/PixeloidSans.ttf"),
-                                        font_size: 24.0,
-                                    },
-                                })
-                                .collect(),
+                        font.clone(),
+                        Text::new(first.text),
+                        TextColor(first.color),
+                        TextLayout {
                             justify: JustifyText::Center,
                             ..Default::default()
                         },
-                        ..Default::default()
-                    },
-                ));
+                    ))
+                    .with_children(|p| {
+                        for next_message in messages {
+                            p.spawn((font.clone(), TextSpan::new(next_message.text), TextColor(next_message.color)));
+                        }
+                    });
+                }
             });
     }
 }

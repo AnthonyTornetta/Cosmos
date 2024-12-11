@@ -1,0 +1,43 @@
+{
+    "texture": {
+        "All": {
+            "Connected": [
+                "cosmos:door_open_0",
+                "cosmos:door_open_1",
+                "cosmos:door_open_2",
+                "cosmos:door_open_3",
+                "cosmos:door_open_4",
+                "cosmos:door_open_5",
+                "cosmos:door_open_6",
+                "cosmos:door_open_7",
+                "cosmos:door_open_8",
+                "cosmos:door_open_9",
+                "cosmos:door_open_10",
+                "cosmos:door_open_11",
+                "cosmos:door_open_12",
+                "cosmos:door_open_13",
+                "cosmos:door_open_14",
+                "cosmos:door_open_15"
+            ]
+        }
+    },
+    "model": {
+        "Sides": {
+            "name": "cosmos:door_open",
+            "top": "cosmos:base_top",
+            "bottom": "cosmos:base_bottom",
+            "left": "cosmos:base_left",
+            "right": "cosmos:base_right",
+            "front": "cosmos:base_front",
+            "back": "cosmos:base_back",
+            "connected": {
+                "top": "none",
+                "bottom": "none",
+                "left": "none",
+                "right": "none",
+                "front": "none",
+                "back": "none"
+            }
+        }
+    }
+}

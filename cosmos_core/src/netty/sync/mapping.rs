@@ -3,7 +3,10 @@
 //! The resources in this file are **exclusively** used on the client-side. They are only
 //! in the core project for specific client-only use cases.
 
-use crate::netty::netty_rigidbody::{NettyRigidBody, NettyRigidBodyLocation};
+use crate::{
+    netty::netty_rigidbody::{NettyRigidBody, NettyRigidBodyLocation},
+    prelude::StructureBlock,
+};
 use bevy::{
     ecs::component::Component,
     prelude::{Entity, Resource},
@@ -17,7 +20,7 @@ use bevy::{
 #[derive(Component, Reflect, PartialEq, Eq)]
 pub struct ServerEntity(pub Entity);
 
-#[derive(Default, Resource)]
+#[derive(Default, Resource, Debug)]
 /// Used to map server entities to client entities and client entities to server entities.
 pub struct NetworkMapping {
     server_to_client: HashMap<Entity, Entity>,
@@ -80,6 +83,13 @@ pub trait Mappable {
     fn map(self, network_mapping: &NetworkMapping) -> Result<Self, MappingError<Self>>
     where
         Self: Sized;
+
+    /// Converts all instances of server entities into their respective client entities based off the mapping.
+    ///
+    /// Returns Err if it is unable to find the proper mapping
+    fn map_to_server(self, network_mapping: &NetworkMapping) -> Result<Self, MappingError<Self>>
+    where
+        Self: Sized;
 }
 
 impl Mappable for NettyRigidBody {
@@ -97,6 +107,47 @@ impl Mappable for NettyRigidBody {
                 })
             }
             NettyRigidBodyLocation::Absolute(_) => Ok(self),
+        }
+    }
+
+    fn map_to_server(self, network_mapping: &NetworkMapping) -> Result<Self, MappingError<Self>>
+    where
+        Self: Sized,
+    {
+        match self.location {
+            NettyRigidBodyLocation::Relative(rel_pos, parent_ent) => {
+                let Some(client_ent) = network_mapping.server_from_client(&parent_ent) else {
+                    return Err(MappingError::MissingRecord(self));
+                };
+
+                Ok(NettyRigidBody {
+                    body_vel: self.body_vel,
+                    location: NettyRigidBodyLocation::Relative(rel_pos, client_ent),
+                    rotation: self.rotation,
+                })
+            }
+            NettyRigidBodyLocation::Absolute(_) => Ok(self),
+        }
+    }
+}
+
+impl Mappable for StructureBlock {
+    fn map(self, network_mapping: &NetworkMapping) -> Result<Self, MappingError<Self>> {
+        if let Some(e) = network_mapping.client_from_server(&self.structure()) {
+            Ok(Self::new(self.coords(), e))
+        } else {
+            Err(MappingError::MissingRecord(self))
+        }
+    }
+
+    fn map_to_server(self, network_mapping: &NetworkMapping) -> Result<Self, MappingError<Self>>
+    where
+        Self: Sized,
+    {
+        if let Some(e) = network_mapping.server_from_client(&self.structure()) {
+            Ok(Self::new(self.coords(), e))
+        } else {
+            Err(MappingError::MissingRecord(self))
         }
     }
 }

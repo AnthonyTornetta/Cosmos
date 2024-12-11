@@ -66,7 +66,7 @@ fn block_update_system(
     systems_query: Query<&StructureSystems>,
 ) {
     for ev in event.read() {
-        if let Ok(systems) = systems_query.get(ev.structure_entity) {
+        if let Ok(systems) = systems_query.get(ev.block.structure()) {
             if let Ok(mut system) = systems.query_mut(&mut system_query) {
                 if let Some(prop) = energy_storage_blocks.get(blocks.from_numeric_id(ev.old_block)) {
                     system.block_removed(prop);
@@ -107,7 +107,7 @@ pub(super) fn update_ship_force_and_velocity(
 
                 const MAX_ANGLE_PER_SECOND: f32 = 100.0;
 
-                let max = MAX_ANGLE_PER_SECOND * time.delta_seconds();
+                let max = MAX_ANGLE_PER_SECOND * time.delta_secs();
 
                 velocity.angvel = torque.clamp_length(0.0, max);
 
@@ -126,7 +126,7 @@ pub(super) fn update_ship_force_and_velocity(
 
                 movement_vector = movement_vector.normalize();
 
-                let delta = time.delta_seconds();
+                let delta = time.delta_secs();
 
                 let mut energy_used = thruster_system.energy_consumption() * delta;
 
@@ -150,7 +150,7 @@ pub(super) fn update_ship_force_and_velocity(
 
             if movement.braking {
                 let mut brake_vec = -velocity.linvel * readmass.get().mass;
-                let delta = time.delta_seconds() * MAX_BRAKE_DELTA_PER_THRUST * thruster_system.thrust_total();
+                let delta = time.delta_secs() * MAX_BRAKE_DELTA_PER_THRUST * thruster_system.thrust_total();
 
                 if brake_vec.length_squared() >= delta * delta {
                     brake_vec = brake_vec.normalize() * delta;
@@ -177,7 +177,7 @@ fn structure_loaded_event(
             let mut system = ThrusterSystem::default();
 
             for block in structure.all_blocks_iter(false) {
-                if let Some(prop) = thruster_blocks.get(block.block(structure, &blocks)) {
+                if let Some(prop) = thruster_blocks.get(structure.block_at(block, &blocks)) {
                     system.block_added(prop);
                 }
             }

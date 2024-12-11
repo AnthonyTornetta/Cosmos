@@ -3,19 +3,20 @@
 use bevy::prelude::*;
 use bevy_rapier3d::{
     geometry::{CollisionGroups, Group, RayIntersection},
-    plugin::DefaultRapierContextAccess,
+    plugin::ReadDefaultRapierContext,
     prelude::{QueryFilter, RapierContext},
 };
 use cosmos_core::{
     block::{
         block_direction::BlockDirection,
-        block_events::{BlockEventsSet, BlockInteractEvent, StructureBlockPair},
+        block_events::{BlockEventsSet, BlockInteractEvent},
         block_face::BlockFace,
         block_rotation::{BlockRotation, BlockSubRotation},
         blocks::fluid::FLUID_COLLISION_GROUP,
         Block,
     },
     blockitems::BlockItems,
+    entities::player::creative::Creative,
     inventory::Inventory,
     item::Item,
     netty::{client::LocalPlayer, system_sets::NetworkingSystemsSet},
@@ -40,8 +41,6 @@ use crate::{
 ///
 /// This could be a solid or a non-solid (fluid) block.
 pub struct LookedAtBlock {
-    /// The structure's entity
-    pub structure_entity: Entity,
     /// The block on the structure
     pub block: StructureBlock,
     /// The information about the ray that intersected this block
@@ -67,8 +66,8 @@ fn add_looking_at_component(q_added_player: Query<Entity, Added<LocalPlayer>>, m
 pub(crate) fn process_player_interaction(
     input_handler: InputChecker,
     camera: Query<&GlobalTransform, With<MainCamera>>,
-    mut player_body: Query<(Entity, &mut Inventory, &mut LookingAt), (With<LocalPlayer>, Without<Pilot>)>,
-    rapier_context_access: DefaultRapierContextAccess,
+    mut q_player: Query<(Entity, &mut Inventory, &mut LookingAt, Option<&Creative>), (With<LocalPlayer>, Without<Pilot>)>,
+    rapier_context_access: ReadDefaultRapierContext,
     q_chunk_physics_part: Query<&ChunkPhysicsPart>,
     q_structure: Query<(&Structure, &GlobalTransform, Option<&Planet>)>,
     mut break_writer: EventWriter<RequestBlockBreakEvent>,
@@ -83,7 +82,7 @@ pub(crate) fn process_player_interaction(
     let rapier_context = rapier_context_access.single();
 
     // this fails if the player is a pilot
-    let Ok((player_entity, mut inventory, mut looking_at)) = player_body.get_single_mut() else {
+    let Ok((player_entity, mut inventory, mut looking_at, creative)) = q_player.get_single_mut() else {
         return;
     };
 
@@ -111,8 +110,6 @@ pub(crate) fn process_player_interaction(
 
     looking_at.looking_at_any = Some(hit_block);
 
-    let any_structure = structure;
-
     if structure.block_at(hit_block.block.coords(), &blocks).is_fluid() {
         if let Some((hit_block, s, sgt, ip)) = send_ray(
             rapier_context,
@@ -136,10 +133,7 @@ pub(crate) fn process_player_interaction(
 
     if input_handler.check_just_pressed(CosmosInputs::BreakBlock) {
         if let Some(x) = &looking_at.looking_at_block {
-            break_writer.send(RequestBlockBreakEvent {
-                structure_entity: structure.get_entity().unwrap(),
-                block: x.block,
-            });
+            break_writer.send(RequestBlockBreakEvent { block: x.block });
         }
     }
 
@@ -168,7 +162,9 @@ pub(crate) fn process_player_interaction(
                 return Some(0); // the return doesn't matter, it's just used for early returns
             }
 
-            inventory.decrease_quantity_at(inventory_slot, 1, &mut commands);
+            if creative.is_none() {
+                inventory.decrease_quantity_at(inventory_slot, 1, &mut commands);
+            }
 
             let block_rotation = if block.is_fully_rotatable() || block.should_face_front() {
                 let delta = UnboundBlockCoordinate::from(place_at_coords) - UnboundBlockCoordinate::from(looking_at_block.block.coords());
@@ -227,8 +223,7 @@ pub(crate) fn process_player_interaction(
             };
 
             place_writer.send(RequestBlockPlaceEvent {
-                structure_entity: structure.get_entity().unwrap(),
-                block: StructureBlock::new(place_at_coords),
+                block: StructureBlock::new(place_at_coords, structure.get_entity().unwrap()),
                 inventory_slot,
                 block_id,
                 block_rotation,
@@ -241,15 +236,9 @@ pub(crate) fn process_player_interaction(
     if input_handler.check_just_pressed(CosmosInputs::Interact) {
         if let Some(looking_at_any) = &looking_at.looking_at_any {
             interact_writer.send(BlockInteractEvent {
-                block_including_fluids: StructureBlockPair {
-                    structure_block: looking_at_any.block,
-                    structure_entity: any_structure.get_entity().unwrap(),
-                },
+                block_including_fluids: looking_at_any.block,
                 interactor: player_entity,
-                block: looking_at.looking_at_block.map(|looked_at| StructureBlockPair {
-                    structure_block: looked_at.block,
-                    structure_entity: structure.get_entity().unwrap(),
-                }),
+                block: looking_at.looking_at_block.map(|looked_at| looked_at.block),
                 alternate: input_handler.check_pressed(CosmosInputs::AlternateInteraction),
             });
         }
@@ -286,9 +275,8 @@ fn send_ray<'a>(
 
     Some((
         LookedAtBlock {
-            block: StructureBlock::new(coords),
+            block: StructureBlock::new(coords, structure_entity),
             intersection,
-            structure_entity,
         },
         structure,
         structure_g_transform,

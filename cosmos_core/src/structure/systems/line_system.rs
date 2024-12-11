@@ -8,10 +8,7 @@ use serde::{Deserialize, Serialize};
 use crate::{
     block::{block_direction::BlockDirection, Block},
     registry::{create_registry, identifiable::Identifiable, Registry},
-    structure::{
-        coordinates::{BlockCoordinate, CoordinateType},
-        StructureBlock,
-    },
+    structure::coordinates::{BlockCoordinate, CoordinateType},
 };
 
 use super::StructureSystemImpl;
@@ -122,7 +119,7 @@ impl Registry<LineColorBlock> {
 /// All blocks in this line are facing the same direction.
 pub struct Line<T: LineProperty> {
     /// The block at the start
-    pub start: StructureBlock,
+    pub start: BlockCoordinate,
     /// The direction this line is facing
     pub direction: BlockDirection,
     /// How many blocks this line has
@@ -145,15 +142,15 @@ pub struct Line<T: LineProperty> {
 impl<T: LineProperty> Line<T> {
     #[inline]
     /// Returns the ending structure block
-    pub fn end(&self) -> StructureBlock {
+    pub fn end(&self) -> BlockCoordinate {
         let (dx, dy, dz) = self.direction.to_i32_tuple();
         let delta = self.len as i32 - 1;
 
-        StructureBlock::new(BlockCoordinate::new(
+        BlockCoordinate::new(
             (self.start.x as i32 + delta * dx) as CoordinateType,
             (self.start.y as i32 + delta * dy) as CoordinateType,
             (self.start.z as i32 + delta * dz) as CoordinateType,
-        ))
+        )
     }
 
     /// Checks if this line is *individually* active.
@@ -226,11 +223,11 @@ pub struct LineSystem<T: LineProperty, S: LinePropertyCalculator<T>> {
 
 impl<T: LineProperty, S: LinePropertyCalculator<T>> LineSystem<T, S> {
     /// Returns the line that contains this block (if any)
-    pub fn mut_line_containing(&mut self, block: StructureBlock) -> Option<&mut Line<T>> {
+    pub fn mut_line_containing(&mut self, block: BlockCoordinate) -> Option<&mut Line<T>> {
         self.lines.iter_mut().find(|x| x.within(&block))
     }
     /// Returns the line that contains this block (if any)
-    pub fn line_containing(&mut self, block: StructureBlock) -> Option<&Line<T>> {
+    pub fn line_containing(&mut self, block: BlockCoordinate) -> Option<&Line<T>> {
         self.lines.iter().find(|x| x.within(&block))
     }
 }

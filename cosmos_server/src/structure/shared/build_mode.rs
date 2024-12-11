@@ -25,17 +25,17 @@ fn interact_with_block(
             continue;
         };
 
-        let Ok(structure) = structure_query.get(s_block.structure_entity) else {
+        let Ok(structure) = structure_query.get(s_block.structure()) else {
             continue;
         };
 
-        if s_block.structure_block.block(structure, &blocks).unlocalized_name() != "cosmos:build_block" {
+        if s_block.block(structure, &blocks).unlocalized_name() != "cosmos:build_block" {
             continue;
         }
 
         enter_writer.send(EnterBuildModeEvent {
             player_entity: ev.interactor,
-            structure_entity: s_block.structure_entity,
+            structure_entity: s_block.structure(),
         });
     }
 }

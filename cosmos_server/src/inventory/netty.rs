@@ -62,8 +62,8 @@ fn get_inventory_mut<'a>(
     match identifier {
         InventoryIdentifier::Entity(entity) => q_inventory.get_mut(entity).ok(),
         InventoryIdentifier::BlockData(block_data) => {
-            let Ok(structure) = q_structure.get(block_data.structure_entity) else {
-                warn!("Missing structure entity for {:?}", block_data.structure_entity);
+            let Ok(structure) = q_structure.get(block_data.block.structure()) else {
+                warn!("Missing structure entity for {:?}", block_data.block.structure());
                 return None;
             };
 
@@ -71,7 +71,7 @@ fn get_inventory_mut<'a>(
                 warn!(
                     "Missing block data for {} in entity {:?}",
                     block_data.block.coords(),
-                    block_data.structure_entity
+                    block_data.block.structure()
                 );
                 return None;
             };
@@ -91,7 +91,7 @@ fn get_many_inventories_mut<'a, const N: usize>(
         .map(|x| match x {
             InventoryIdentifier::Entity(entity) => Some(entity),
             InventoryIdentifier::BlockData(block_data) => {
-                let structure = q_structure.get(block_data.structure_entity).ok()?;
+                let structure = q_structure.get(block_data.block.structure()).ok()?;
 
                 structure.block_data(block_data.block.coords())
             }

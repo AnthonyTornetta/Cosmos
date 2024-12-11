@@ -301,9 +301,7 @@ fn recursively_fix_locations(
 
         parent_rotation *= my_trans.rotation;
     } else {
-        commands
-            .entity(entity)
-            .insert((TransformBundle::from_transform(Transform::from_translation(translation)),));
+        commands.entity(entity).insert((Transform::from_translation(translation),));
     }
 
     let Ok(children) = q_children.get(entity) else {

@@ -10,9 +10,8 @@ use std::sync::{Arc, Mutex};
 
 use bevy::app::Update;
 use bevy::ecs::query::{QueryData, QueryFilter, ROQueryItem, With};
-use bevy::prelude::{App, Event, IntoSystemConfigs, IntoSystemSetConfigs, Name, PreUpdate, SystemSet, VisibilityBundle};
+use bevy::prelude::{App, Event, IntoSystemConfigs, IntoSystemSetConfigs, Name, PreUpdate, SystemSet, Visibility};
 use bevy::reflect::Reflect;
-use bevy::transform::bundles::TransformBundle;
 use bevy::utils::{HashMap, HashSet};
 use bevy_rapier3d::plugin::RapierContextEntityLink;
 use chunk::BlockInfo;
@@ -64,7 +63,6 @@ use self::dynamic_structure::DynamicStructure;
 use self::events::ChunkSetEvent;
 use self::full_structure::FullStructure;
 use self::loading::StructureLoadingSet;
-use self::structure_block::StructureBlock;
 use self::structure_iterator::{BlockIterator, ChunkIterator};
 
 #[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
@@ -338,6 +336,23 @@ impl Structure {
         match self {
             Self::Full(fs) => fs.set_block_at(coords, block, block_rotation, blocks, event_writer),
             Self::Dynamic(ds) => ds.set_block_at(coords, block, block_rotation, blocks, event_writer),
+        }
+    }
+
+    /// Sets the block at the given block coordinates.
+    ///
+    /// * `event_writer` If this is `None`, no event will be generated. A valid usecase for this being `None` is when you are initially loading/generating everything and you don't want a billion events being generated.
+    pub fn set_block_and_info_at(
+        &mut self,
+        coords: BlockCoordinate,
+        block: &Block,
+        block_info: BlockInfo,
+        blocks: &Registry<Block>,
+        event_writer: Option<&mut EventWriter<BlockChangedEvent>>,
+    ) {
+        match self {
+            Self::Full(fs) => fs.set_block_and_info_at(coords, block, block_info, blocks, event_writer),
+            Self::Dynamic(ds) => ds.set_block_and_info_at(coords, block, block_info, blocks, event_writer),
         }
     }
 
@@ -693,8 +708,8 @@ impl Structure {
         evw_block_data_changed: &mut EventWriter<BlockDataChangedEvent>,
     ) {
         match self {
-            Self::Full(fs) => fs.set_block_info_at(coords, block_info, evw_block_data_changed),
-            Self::Dynamic(ds) => ds.set_block_info_at(coords, block_info, evw_block_data_changed),
+            Self::Full(fs) => fs.set_block_info_at(coords, block_info, Some(evw_block_data_changed)),
+            Self::Dynamic(ds) => ds.set_block_info_at(coords, block_info, Some(evw_block_data_changed)),
         }
     }
 
@@ -737,7 +752,7 @@ fn remove_empty_chunks(
     mut commands: Commands,
 ) {
     for bce in block_change_event.read() {
-        let Ok(mut structure) = structure_query.get_mut(bce.structure_entity) else {
+        let Ok(mut structure) = structure_query.get_mut(bce.block.structure()) else {
             continue;
         };
 
@@ -762,8 +777,8 @@ fn spawn_chunk_entity(
     chunk_set_events: &mut HashSet<ChunkSetEvent>,
 ) {
     let mut entity_cmds = commands.spawn((
-        VisibilityBundle::default(),
-        TransformBundle::from_transform(Transform::from_translation(structure.chunk_relative_position(chunk_coordinate))),
+        Visibility::default(),
+        Transform::from_translation(structure.chunk_relative_position(chunk_coordinate)),
         Name::new("Chunk Entity"),
         NoSendEntity,
         ChunkEntity {
@@ -800,7 +815,7 @@ fn add_chunks_system(
     let mut chunk_set_events = HashSet::new();
 
     for ev in block_reader.read() {
-        s_chunks.insert((ev.structure_entity, ev.block.chunk_coords()));
+        s_chunks.insert((ev.block.structure(), ev.block.chunk_coords()));
     }
 
     for ev in chunk_init_reader.read() {

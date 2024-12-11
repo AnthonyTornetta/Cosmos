@@ -2,7 +2,8 @@ use bevy::{app::App, prelude::*};
 use bevy_renet2::renet2::{DisconnectReason, RenetClient};
 
 use crate::ui::{
-    components::button::{register_button, Button, ButtonBundle, ButtonEvent, ButtonStyles},
+    components::button::{register_button, Button, ButtonEvent, ButtonStyles},
+    font::DefaultFont,
     settings::SettingsMenuSet,
 };
 
@@ -10,37 +11,38 @@ use super::{in_main_menu_state, title_screen::TitleScreenSet, MainMenuRootUiNode
 
 fn create_disconnect_screen(
     mut commands: Commands,
-    asset_server: Res<AssetServer>,
     q_ui_root: Query<Entity, With<MainMenuRootUiNode>>,
     client: Option<Res<RenetClient>>,
+    default_font: Res<DefaultFont>,
 ) {
     let cool_blue: Color = Srgba::hex("00FFFF").unwrap().into();
 
-    let text_style = TextStyle {
-        color: Color::WHITE,
+    let text_style = TextFont {
         font_size: 32.0,
-        font: asset_server.load("fonts/PixeloidSans.ttf"),
+        font: default_font.0.clone(),
+        ..Default::default()
     };
-    let text_style_small = TextStyle {
-        color: Color::WHITE,
+    let text_style_small = TextFont {
         font_size: 24.0,
-        font: asset_server.load("fonts/PixeloidSans.ttf"),
+        font: default_font.0.clone(),
+        ..Default::default()
     };
+
     let Ok(main_menu_root) = q_ui_root.get_single() else {
         warn!("No main menu UI root.");
         return;
     };
 
     commands.entity(main_menu_root).with_children(|p| {
-        p.spawn(TextBundle {
-            text: Text::from_section("Disconnected", text_style.clone()),
-            style: Style {
+        p.spawn((
+            Text::new("Disconnected"),
+            text_style.clone(),
+            Node {
                 margin: UiRect::bottom(Val::Px(20.0)),
                 align_self: AlignSelf::Center,
                 ..Default::default()
             },
-            ..Default::default()
-        });
+        ));
 
         let dc_reason = client.and_then(|x| x.disconnect_reason());
 
@@ -62,40 +64,37 @@ fn create_disconnect_screen(
             Some(DisconnectReason::Transport) => "Unable to Establish Connection".into(),
         };
 
-        p.spawn(TextBundle {
-            text: Text::from_section(reason_text, text_style_small),
-            style: Style {
+        p.spawn((
+            Text::new(reason_text),
+            text_style_small,
+            Node {
                 margin: UiRect::bottom(Val::Px(50.0)),
                 align_self: AlignSelf::Center,
                 ..Default::default()
             },
-            ..Default::default()
-        });
+        ));
 
-        p.spawn(ButtonBundle::<OkButtonEvent> {
-            node_bundle: NodeBundle {
-                border_color: cool_blue.into(),
-                style: Style {
-                    border: UiRect::all(Val::Px(2.0)),
-                    width: Val::Px(500.0),
-                    height: Val::Px(70.0),
-                    align_self: AlignSelf::Center,
-                    margin: UiRect::top(Val::Px(20.0)),
-                    ..Default::default()
-                },
+        p.spawn((
+            BorderColor(cool_blue),
+            Node {
+                border: UiRect::all(Val::Px(2.0)),
+                width: Val::Px(500.0),
+                height: Val::Px(70.0),
+                align_self: AlignSelf::Center,
+                margin: UiRect::top(Val::Px(20.0)),
                 ..Default::default()
             },
-            button: Button {
+            Button::<OkButtonEvent> {
                 button_styles: Some(ButtonStyles {
                     background_color: Srgba::hex("333333").unwrap().into(),
                     hover_background_color: Srgba::hex("232323").unwrap().into(),
                     press_background_color: Srgba::hex("111111").unwrap().into(),
                     ..Default::default()
                 }),
-                text: Some(("OK".into(), text_style.clone())),
+                text: Some(("OK".into(), text_style.clone(), Default::default())),
                 ..Default::default()
             },
-        });
+        ));
     });
 }
 
@@ -135,7 +134,7 @@ pub(super) fn register(app: &mut App) {
                 .run_if(resource_exists_and_changed::<MainMenuSubState>)
                 .in_set(MainMenuSystemSet::InitializeMenu),
             ok_clicked
-                .run_if(on_event::<OkButtonEvent>())
+                .run_if(on_event::<OkButtonEvent>)
                 .run_if(in_main_menu_state(MainMenuSubState::Disconnect))
                 .in_set(MainMenuSystemSet::UpdateMenu),
         )

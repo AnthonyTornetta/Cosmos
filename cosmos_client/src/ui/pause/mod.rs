@@ -2,7 +2,6 @@
 
 use bevy::{
     app::{App, Update},
-    color::palettes::css,
     prelude::*,
 };
 use cosmos_core::{ecs::NeedsDespawned, state::GameState};
@@ -15,11 +14,12 @@ use crate::{
 
 use super::{
     components::{
-        button::{register_button, Button, ButtonBundle, ButtonEvent, ButtonStyles},
+        button::{register_button, Button, ButtonEvent, ButtonStyles},
         show_cursor::ShowCursor,
     },
+    font::DefaultFont,
     settings::{NeedsSettingsAdded, SettingsCancelButtonEvent, SettingsDoneButtonEvent, SettingsMenuSet},
-    OpenMenu, UiSystemSet, UiTopRoot,
+    CloseMethod, OpenMenu, UiSystemSet, UiTopRoot,
 };
 
 #[derive(Resource)]
@@ -31,18 +31,18 @@ struct PauseMenu;
 
 fn toggle_pause_menu(
     mut commands: Commands,
-    q_open_menus: Query<(Entity, &OpenMenu)>,
+    mut q_open_menus: Query<(Entity, &OpenMenu, &mut Visibility)>,
     q_pause_menu: Query<Entity, With<PauseMenu>>,
     input_handler: InputChecker,
     q_ui_root: Query<Entity, With<UiTopRoot>>,
-    asset_server: Res<AssetServer>,
+    default_font: Res<DefaultFont>,
 ) {
     if !input_handler.check_just_pressed(CosmosInputs::Pause) {
         return;
     }
 
     if !q_open_menus.is_empty() {
-        if close_topmost_menus(&q_open_menus, &mut commands) {
+        if close_topmost_menus(&mut q_open_menus, &mut commands) {
             if let Ok(ent) = q_pause_menu.get_single() {
                 commands.entity(ent).insert(Visibility::Visible);
             }
@@ -58,10 +58,10 @@ fn toggle_pause_menu(
 
     let ui_root = q_ui_root.single();
 
-    let text_style = TextStyle {
-        color: css::WHITE.into(),
+    let text_style = TextFont {
         font_size: 32.0,
-        font: asset_server.load("fonts/PixeloidSans.ttf"),
+        font: default_font.0.clone(),
+        ..Default::default()
     };
 
     let cool_blue = Srgba::hex("00FFFF").unwrap();
@@ -72,7 +72,7 @@ fn toggle_pause_menu(
         press_background_color: Srgba::hex("111111").unwrap().into(),
         ..Default::default()
     });
-    let style = Style {
+    let style = Node {
         border: UiRect::all(Val::Px(2.0)),
         width: Val::Px(500.0),
         height: Val::Px(70.0),
@@ -85,68 +85,58 @@ fn toggle_pause_menu(
         .spawn((
             TargetCamera(ui_root),
             Name::new("Pause Menu"),
-            NodeBundle {
-                style: Style {
-                    flex_direction: FlexDirection::Column,
-                    width: Val::Percent(100.0),
-                    height: Val::Percent(100.0),
-                    justify_content: JustifyContent::Center,
-                    align_content: AlignContent::Center,
-                    row_gap: Val::Px(20.0),
-                    ..Default::default()
-                },
-                background_color: Srgba {
+            Node {
+                flex_direction: FlexDirection::Column,
+                width: Val::Percent(100.0),
+                height: Val::Percent(100.0),
+                justify_content: JustifyContent::Center,
+                align_content: AlignContent::Center,
+                row_gap: Val::Px(20.0),
+                ..Default::default()
+            },
+            GlobalZIndex(100),
+            BackgroundColor(
+                Srgba {
                     red: 0.0,
                     green: 0.0,
                     blue: 0.0,
                     alpha: 0.3,
                 }
                 .into(),
-                z_index: ZIndex::Global(100),
-                ..Default::default()
-            },
+            ),
             PauseMenu,
             ShowCursor,
         ))
         .with_children(|p| {
-            p.spawn(ButtonBundle::<ResumeButtonEvent> {
-                node_bundle: NodeBundle {
-                    border_color: cool_blue.into(),
-                    style: style.clone(),
-                    ..Default::default()
-                },
-                button: Button {
+            p.spawn((
+                BorderColor(cool_blue.into()),
+                style.clone(),
+                Button::<ResumeButtonEvent> {
                     button_styles: button_styles.clone(),
-                    text: Some(("RESUME".into(), text_style.clone())),
+                    text: Some(("RESUME".into(), text_style.clone(), Default::default())),
                     ..Default::default()
                 },
-            });
+            ));
 
-            p.spawn(ButtonBundle::<SettingsButtonEvent> {
-                node_bundle: NodeBundle {
-                    border_color: cool_blue.into(),
-                    style: style.clone(),
-                    ..Default::default()
-                },
-                button: Button::<SettingsButtonEvent> {
+            p.spawn((
+                BorderColor(cool_blue.into()),
+                style.clone(),
+                Button::<SettingsButtonEvent> {
                     button_styles: button_styles.clone(),
-                    text: Some(("SETTINGS".into(), text_style.clone())),
+                    text: Some(("SETTINGS".into(), text_style.clone(), Default::default())),
                     ..Default::default()
                 },
-            });
+            ));
 
-            p.spawn(ButtonBundle::<DisconnectButtonEvent> {
-                node_bundle: NodeBundle {
-                    border_color: cool_blue.into(),
-                    style,
-                    ..Default::default()
-                },
-                button: Button::<DisconnectButtonEvent> {
+            p.spawn((
+                BorderColor(cool_blue.into()),
+                style.clone(),
+                Button::<DisconnectButtonEvent> {
                     button_styles: button_styles.clone(),
-                    text: Some(("DISCONNECT".into(), text_style.clone())),
+                    text: Some(("DISCONNECT".into(), text_style.clone(), Default::default())),
                     ..Default::default()
                 },
-            });
+            ));
         });
 }
 
@@ -177,15 +167,33 @@ impl ButtonEvent for DisconnectButtonEvent {
     }
 }
 
-fn close_topmost_menus(q_open_menus: &Query<(Entity, &OpenMenu)>, commands: &mut Commands) -> bool {
-    let mut open = q_open_menus.iter().collect::<Vec<(Entity, &OpenMenu)>>();
+fn close_topmost_menus(q_open_menus: &mut Query<(Entity, &OpenMenu, &mut Visibility)>, commands: &mut Commands) -> bool {
+    let mut open = q_open_menus
+        .iter_mut()
+        .filter(|(_, open_menu, visibility)| open_menu.close_method() != CloseMethod::Visibility || **visibility != Visibility::Hidden)
+        .collect::<Vec<(Entity, &OpenMenu, Mut<Visibility>)>>();
+
     open.sort_by(|a, b| b.1.level().cmp(&a.1.level()));
     let topmost = open[0].1.level();
-    for (ent, open_menu) in open.iter() {
+    for (ent, open_menu, mut visibility) in open {
         if open_menu.level() != topmost {
             return false;
         }
-        commands.entity(*ent).insert(NeedsDespawned);
+
+        match open_menu.close_method() {
+            CloseMethod::Despawn => {
+                commands.entity(ent).insert(NeedsDespawned);
+            }
+            CloseMethod::Visibility => {
+                commands
+                    .entity(ent)
+                    .remove::<OpenMenu>()
+                    // Typically ShowCursor is used in conjunction w/ OpenMenu. Maybe these should
+                    // be combined at some point?
+                    .remove::<ShowCursor>();
+                *visibility = Visibility::Hidden;
+            }
+        }
     }
 
     true
@@ -208,20 +216,19 @@ fn settings_clicked(
     commands.spawn((
         TargetCamera(ui_root),
         Name::new("Pause Menu Settings"),
-        NodeBundle {
-            style: Style {
-                width: Val::Percent(100.0),
-                height: Val::Percent(100.0),
-                ..Default::default()
-            },
-            background_color: Srgba {
+        BackgroundColor(
+            Srgba {
                 red: 0.0,
                 green: 0.0,
                 blue: 0.0,
                 alpha: 0.3,
             }
             .into(),
-            z_index: ZIndex::Global(101),
+        ),
+        GlobalZIndex(101),
+        Node {
+            width: Val::Percent(100.0),
+            height: Val::Percent(100.0),
             ..Default::default()
         },
         OpenMenu::new(1),
@@ -256,16 +263,25 @@ fn resume(mut commands: Commands, q_pause_menu: Query<Entity, With<PauseMenu>>) 
     commands.remove_resource::<Paused>();
 }
 
+#[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
+/// When the `Escape` key is pressed to open the pause menu, this set will be called
+pub enum CloseMenusSet {
+    /// This set is when close any menus open will be closed when `Escape` is pressed.
+    CloseMenus,
+}
+
 pub(super) fn register(app: &mut App) {
     register_button::<ResumeButtonEvent>(app);
     register_button::<DisconnectButtonEvent>(app);
     register_button::<SettingsButtonEvent>(app);
 
+    app.configure_sets(Update, CloseMenusSet::CloseMenus);
+
     app.add_systems(
         Update,
         (
-            toggle_pause_menu,
-            settings_clicked.run_if(on_event::<SettingsButtonEvent>()).after(UiSystemSet::DoUi),
+            toggle_pause_menu.in_set(CloseMenusSet::CloseMenus),
+            settings_clicked.run_if(on_event::<SettingsButtonEvent>).after(UiSystemSet::DoUi),
         )
             .chain()
             .run_if(in_state(GameState::Playing))
@@ -275,11 +291,11 @@ pub(super) fn register(app: &mut App) {
         Update,
         (
             settings_done
-                .run_if(on_event::<SettingsDoneButtonEvent>().or_else(on_event::<SettingsCancelButtonEvent>()))
+                .run_if(on_event::<SettingsDoneButtonEvent>.or(on_event::<SettingsCancelButtonEvent>))
                 .after(SettingsMenuSet::SettingsMenuInteractions),
-            resume.run_if(on_event::<ResumeButtonEvent>()).after(UiSystemSet::DoUi),
+            resume.run_if(on_event::<ResumeButtonEvent>).after(UiSystemSet::DoUi),
             disconnect_clicked
-                .run_if(on_event::<DisconnectButtonEvent>())
+                .run_if(on_event::<DisconnectButtonEvent>)
                 .after(UiSystemSet::DoUi),
         ),
     );

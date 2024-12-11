@@ -4,11 +4,14 @@ use bevy::prelude::*;
 use bevy_renet2::renet2::RenetClient;
 use cosmos_core::{
     block::{
-        block_events::{BlockEventsSet, BlockInteractEvent, StructureBlockPair},
+        block_events::{BlockEventsSet, BlockInteractEvent},
         block_rotation::BlockRotation,
     },
     netty::{
-        client_reliable_messages::ClientReliableMessages, cosmos_encoder, sync::mapping::NetworkMapping, system_sets::NetworkingSystemsSet,
+        client_reliable_messages::ClientReliableMessages,
+        cosmos_encoder,
+        sync::mapping::{Mappable, NetworkMapping},
+        system_sets::NetworkingSystemsSet,
         NettyChannelClient,
     },
     state::GameState,
@@ -20,8 +23,6 @@ use crate::interactions::block_interactions::process_player_interaction;
 #[derive(Debug, Event)]
 /// Sent when this client tries to breaks a block
 pub struct RequestBlockBreakEvent {
-    /// The structure this block was on
-    pub structure_entity: Entity,
     /// block coords
     pub block: StructureBlock,
 }
@@ -29,8 +30,6 @@ pub struct RequestBlockBreakEvent {
 #[derive(Debug, Event)]
 /// Sent when this client tries to places a block
 pub struct RequestBlockPlaceEvent {
-    /// The structure this block is on
-    pub structure_entity: Entity,
     /// block coords
     pub block: StructureBlock,
     /// Which inventory slot it came from to make sure the inventory isn't out of sync
@@ -47,12 +46,13 @@ fn handle_block_break(
     network_mapping: Res<NetworkMapping>,
 ) {
     for ev in event_reader.read() {
+        let Ok(sb) = ev.block.map_to_server(&network_mapping) else {
+            continue;
+        };
+
         client.send_message(
             NettyChannelClient::Reliable,
-            cosmos_encoder::serialize(&ClientReliableMessages::BreakBlock {
-                structure_entity: network_mapping.server_from_client(&ev.structure_entity).unwrap(),
-                block: ev.block,
-            }),
+            cosmos_encoder::serialize(&ClientReliableMessages::BreakBlock { block: sb }),
         );
     }
 }
@@ -63,11 +63,14 @@ fn handle_block_place(
     network_mapping: Res<NetworkMapping>,
 ) {
     for ev in event_reader.read() {
+        let Ok(sb) = ev.block.map_to_server(&network_mapping) else {
+            continue;
+        };
+
         client.send_message(
             NettyChannelClient::Reliable,
             cosmos_encoder::serialize(&ClientReliableMessages::PlaceBlock {
-                structure_entity: network_mapping.server_from_client(&ev.structure_entity).unwrap(),
-                block: ev.block,
+                block: sb,
                 block_id: ev.block_id,
                 block_rotation: ev.block_rotation,
                 inventory_slot: ev.inventory_slot as u32,
@@ -82,25 +85,15 @@ fn handle_block_interact(
     network_mapping: Res<NetworkMapping>,
 ) {
     for ev in event_reader.read() {
-        let Some(any_ent) = network_mapping.server_from_client(&ev.block_including_fluids.structure_entity) else {
+        let Ok(server_structure_block) = ev.block_including_fluids.map_to_server(&network_mapping) else {
             continue;
         };
 
         client.send_message(
             NettyChannelClient::Reliable,
             cosmos_encoder::serialize(&ClientReliableMessages::InteractWithBlock {
-                block_including_fluids: StructureBlockPair {
-                    structure_block: ev.block_including_fluids.structure_block,
-                    structure_entity: any_ent,
-                },
-                block: ev.block.and_then(|b| {
-                    network_mapping
-                        .server_from_client(&b.structure_entity)
-                        .map(|ent| StructureBlockPair {
-                            structure_block: b.structure_block,
-                            structure_entity: ent,
-                        })
-                }),
+                block_including_fluids: server_structure_block,
+                block: ev.block.and_then(|b| b.map_to_server(&network_mapping).ok()),
                 alternate: ev.alternate,
             }),
         );

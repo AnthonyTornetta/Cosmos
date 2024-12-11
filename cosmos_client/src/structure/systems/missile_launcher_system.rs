@@ -72,7 +72,7 @@ fn apply_shooting_sound(
             },
             DespawnOnNoEmissions,
             location,
-            TransformBundle::from_transform(Transform::from_translation(translation)),
+            Transform::from_translation(translation),
         ));
     }
 }
@@ -144,8 +144,8 @@ fn render_lockon_status(
     q_missile_focus: Query<&MissileLauncherFocus>,
     q_ui_root: Query<Entity, With<UiRoot>>,
     q_missile_focus_ui: Query<(Entity, &MissileFocusUi)>,
-    mut q_style: Query<(&mut Style, &mut UiImage)>,
-    mut q_column_style: Query<&mut Style, Without<UiImage>>,
+    mut q_style: Query<(&mut Node, &mut ImageNode)>,
+    mut q_column_style: Query<&mut Node, Without<ImageNode>>,
 ) {
     let focus_ui = q_missile_focus_ui.get_single();
 
@@ -221,15 +221,12 @@ fn render_lockon_status(
 
         let mut ecmds = commands.spawn((
             TargetCamera(ui_root),
-            NodeBundle {
-                style: Style {
-                    position_type: PositionType::Absolute,
-                    justify_content: JustifyContent::Center,
-                    align_items: AlignItems::Center,
-                    width: Val::Percent(100.0),
-                    height: Val::Percent(100.0),
-                    ..Default::default()
-                },
+            Node {
+                position_type: PositionType::Absolute,
+                justify_content: JustifyContent::Center,
+                align_items: AlignItems::Center,
+                width: Val::Percent(100.0),
+                height: Val::Percent(100.0),
                 ..Default::default()
             },
             Name::new("Missile focus UI"),
@@ -239,12 +236,9 @@ fn render_lockon_status(
             missile_focus_ui.left_column = p
                 .spawn((
                     Name::new("Left column"),
-                    NodeBundle {
-                        style: Style {
-                            flex_direction: FlexDirection::Column,
-                            margin: UiRect::right(Val::Px(gap)),
-                            ..Default::default()
-                        },
+                    Node {
+                        flex_direction: FlexDirection::Column,
+                        margin: UiRect::right(Val::Px(gap)),
                         ..Default::default()
                     },
                 ))
@@ -252,19 +246,16 @@ fn render_lockon_status(
                     missile_focus_ui.top_left = p
                         .spawn((
                             Name::new("Top left"),
-                            ImageBundle {
-                                image: UiImage {
-                                    texture: lockon_graphic.0.clone_weak(),
-                                    flip_x: false,
-                                    flip_y: false,
-                                    ..Default::default()
-                                },
-                                style: Style {
-                                    width: Val::Px(64.0),
-                                    height: Val::Px(64.0),
-                                    top: Val::Px(-gap),
-                                    ..Default::default()
-                                },
+                            ImageNode {
+                                image: lockon_graphic.0.clone_weak(),
+                                flip_x: false,
+                                flip_y: false,
+                                ..Default::default()
+                            },
+                            Node {
+                                width: Val::Px(64.0),
+                                height: Val::Px(64.0),
+                                top: Val::Px(-gap),
                                 ..Default::default()
                             },
                         ))
@@ -273,19 +264,16 @@ fn render_lockon_status(
                     missile_focus_ui.bottom_left = p
                         .spawn((
                             Name::new("Bottom left"),
-                            ImageBundle {
-                                image: UiImage {
-                                    texture: lockon_graphic.0.clone_weak(),
-                                    flip_x: false,
-                                    flip_y: true,
-                                    ..Default::default()
-                                },
-                                style: Style {
-                                    width: Val::Px(64.0),
-                                    height: Val::Px(64.0),
-                                    top: Val::Px(gap),
-                                    ..Default::default()
-                                },
+                            ImageNode {
+                                image: lockon_graphic.0.clone_weak(),
+                                flip_x: false,
+                                flip_y: true,
+                                ..Default::default()
+                            },
+                            Node {
+                                width: Val::Px(64.0),
+                                height: Val::Px(64.0),
+                                top: Val::Px(gap),
                                 ..Default::default()
                             },
                         ))
@@ -296,12 +284,9 @@ fn render_lockon_status(
             missile_focus_ui.right_column = p
                 .spawn((
                     Name::new("Right Column"),
-                    NodeBundle {
-                        style: Style {
-                            flex_direction: FlexDirection::Column,
-                            margin: UiRect::left(Val::Px(gap)),
-                            ..Default::default()
-                        },
+                    Node {
+                        flex_direction: FlexDirection::Column,
+                        margin: UiRect::left(Val::Px(gap)),
                         ..Default::default()
                     },
                 ))
@@ -309,19 +294,16 @@ fn render_lockon_status(
                     missile_focus_ui.top_right = p
                         .spawn((
                             Name::new("Top right"),
-                            ImageBundle {
-                                image: UiImage {
-                                    texture: lockon_graphic.0.clone_weak(),
-                                    flip_x: true,
-                                    flip_y: false,
-                                    ..Default::default()
-                                },
-                                style: Style {
-                                    width: Val::Px(64.0),
-                                    height: Val::Px(64.0),
-                                    top: Val::Px(-gap),
-                                    ..Default::default()
-                                },
+                            ImageNode {
+                                image: lockon_graphic.0.clone_weak(),
+                                flip_x: true,
+                                flip_y: false,
+                                ..Default::default()
+                            },
+                            Node {
+                                width: Val::Px(64.0),
+                                height: Val::Px(64.0),
+                                top: Val::Px(-gap),
                                 ..Default::default()
                             },
                         ))
@@ -330,19 +312,16 @@ fn render_lockon_status(
                     missile_focus_ui.bottom_right = p
                         .spawn((
                             Name::new("Bottom right"),
-                            ImageBundle {
-                                image: UiImage {
-                                    texture: lockon_graphic.0.clone_weak(),
-                                    flip_x: true,
-                                    flip_y: true,
-                                    ..Default::default()
-                                },
-                                style: Style {
-                                    width: Val::Px(64.0),
-                                    height: Val::Px(64.0),
-                                    top: Val::Px(gap),
-                                    ..Default::default()
-                                },
+                            ImageNode {
+                                image: lockon_graphic.0.clone_weak(),
+                                flip_x: true,
+                                flip_y: true,
+                                ..Default::default()
+                            },
+                            Node {
+                                width: Val::Px(64.0),
+                                height: Val::Px(64.0),
+                                top: Val::Px(gap),
                                 ..Default::default()
                             },
                         ))
@@ -355,7 +334,7 @@ fn render_lockon_status(
     }
 }
 
-fn update_corner_styles(q_style: &mut Query<(&mut Style, &mut UiImage)>, entity: Entity, gap: f32, color: Color) {
+fn update_corner_styles(q_style: &mut Query<(&mut Node, &mut ImageNode)>, entity: Entity, gap: f32, color: Color) {
     let Ok((mut style, mut img)) = q_style.get_mut(entity) else {
         return;
     };
@@ -373,7 +352,11 @@ pub(super) fn register(app: &mut App) {
         vec!["cosmos/sounds/sfx/missile-launch-1.ogg", "cosmos/sounds/sfx/missile-launch-2.ogg"],
         |mut commands, handles| {
             commands.insert_resource(MissileLauncherFireHandles(
-                handles.into_iter().filter(|x| x.1 == LoadState::Loaded).map(|x| x.0).collect(),
+                handles
+                    .into_iter()
+                    .filter(|x| matches!(x.1, LoadState::Loaded))
+                    .map(|x| x.0)
+                    .collect(),
             ));
         },
     );

@@ -55,7 +55,7 @@ fn apply_shooting_sound(
             },
             DespawnOnNoEmissions,
             location,
-            TransformBundle::from_transform(Transform::from_translation(translation)),
+            Transform::from_translation(translation),
         ));
     }
 }
@@ -75,7 +75,11 @@ pub(super) fn register(app: &mut App) {
         ],
         |mut commands, handles| {
             commands.insert_resource(LaserCannonFireHandles(
-                handles.into_iter().filter(|x| x.1 == LoadState::Loaded).map(|x| x.0).collect(),
+                handles
+                    .into_iter()
+                    .filter(|x| matches!(x.1, LoadState::Loaded))
+                    .map(|x| x.0)
+                    .collect(),
             ));
         },
     );

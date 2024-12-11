@@ -157,7 +157,7 @@ fn handle_pirate_movement(
         if let Some(brake_check_start) = pirate_ai.brake_check {
             pirate_ship_movement.movement = Vec3::ZERO;
             pirate_ship_movement.braking = true;
-            if time.elapsed_seconds() - brake_check_start > 1.0 {
+            if time.elapsed_secs() - brake_check_start > 1.0 {
                 pirate_ai.brake_check = None;
             }
         } else {
@@ -167,7 +167,7 @@ fn handle_pirate_movement(
                 pirate_ship_movement.movement = Vec3::Z;
             } else {
                 if pirate_vel.linvel.length() > 50.0 && rand::random::<f32>() < 0.003 {
-                    pirate_ai.brake_check = Some(time.elapsed_seconds());
+                    pirate_ai.brake_check = Some(time.elapsed_secs());
                 }
                 pirate_ship_movement.movement = -Vec3::Z;
             }

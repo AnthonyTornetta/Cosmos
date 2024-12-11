@@ -139,7 +139,7 @@ fn missile_lockon(
                 if *focusing_server_entity != best_target {
                     missile_launmcher_focus.change_focus(best_target, MISSILE_FOCUS_TIME);
                 } else {
-                    *focused_duration += Duration::from_secs_f32(time.delta_seconds());
+                    *focused_duration += Duration::from_secs_f32(time.delta_secs());
                 }
             }
             MissileLauncherFocus::NotFocusing => {
@@ -198,7 +198,7 @@ fn update_missile_system(
             continue;
         };
 
-        let sec = time.elapsed_seconds();
+        let sec = time.elapsed_secs();
 
         let mut any_fired = false;
 
@@ -210,7 +210,7 @@ fn update_missile_system(
         cooldown.remove_unused_cooldowns(missile_launcher_system);
 
         for line in missile_launcher_system.lines.iter() {
-            let cooldown = cooldown.lines.entry(line.start.coords()).or_insert(default_cooldown);
+            let cooldown = cooldown.lines.entry(line.start).or_insert(default_cooldown);
 
             if sec - cooldown.last_use_time <= cooldown.cooldown_time.as_secs_f32() {
                 continue;
@@ -224,9 +224,9 @@ fn update_missile_system(
             any_fired = true;
             energy_storage_system.decrease_energy(line.property.energy_per_shot);
 
-            let location = structure.block_world_location(line.start.coords(), global_transform, location);
+            let location = structure.block_world_location(line.start, global_transform, location);
 
-            let relative_direction = line.direction.to_vec3();
+            let relative_direction = line.direction.as_vec3();
 
             let missile_vel = MISSILE_BASE_VELOCITY + (line.len as f32 * MISSILE_SPEED_DIVIDER + 1.0).ln() * MISSILE_SPEED_MULTIPLIER;
 
@@ -290,19 +290,19 @@ fn missile_launcher_input_event_listener(
     mut q_missile_launcher_system: Query<&mut MissileLauncherSystem>,
 ) {
     for ev in evr_logic_input.read() {
-        let Ok((structure, systems)) = q_structure.get(ev.entity) else {
+        let Ok((structure, systems)) = q_structure.get(ev.block.structure()) else {
             continue;
         };
         if structure.block_at(ev.block.coords(), &blocks).unlocalized_name() != "cosmos:missile_launcher" {
             continue;
         }
-        let Ok(logic_driver) = q_logic_driver.get_mut(ev.entity) else {
+        let Ok(logic_driver) = q_logic_driver.get_mut(ev.block.structure()) else {
             continue;
         };
         let Ok(mut missile_launcher_system) = systems.query_mut(&mut q_missile_launcher_system) else {
             continue;
         };
-        let Some(line) = missile_launcher_system.mut_line_containing(ev.block) else {
+        let Some(line) = missile_launcher_system.mut_line_containing(ev.block.coords()) else {
             continue;
         };
 

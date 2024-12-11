@@ -55,6 +55,8 @@ impl LogicDriver {
             return;
         };
 
+        // DFS on the structure may lead to concurrency issues if many blocks are changed in one tick.
+        // See [`LogicGraph::remove_port`] and how it removed dfs.
         let maybe_group = self.logic_graph.dfs_for_group(
             neighbor_coords,
             direction.inverse(),
@@ -132,6 +134,8 @@ impl LogicDriver {
             for wire_face in logic_block.wire_faces_connecting_to(WireType::Color(wire_color_id)) {
                 let direction = structure.block_rotation(coords).direction_of(wire_face);
                 if let Ok(neighbor_coords) = coords.step(direction) {
+                    // DFS on the structure may lead to concurrency issues if many blocks are changed in one tick.
+                    // See [`LogicGraph::remove_port`] and how it removed dfs.
                     if let Some(group_id) = self.logic_graph.dfs_for_group(
                         neighbor_coords,
                         direction.inverse(),
@@ -182,8 +186,6 @@ impl LogicDriver {
                 rotation.direction_of(input_face),
                 PortType::Input,
                 structure,
-                blocks,
-                logic_blocks,
                 evw_queue_logic_input,
             )
         }
@@ -195,8 +197,6 @@ impl LogicDriver {
                 rotation.direction_of(output_face),
                 PortType::Output,
                 structure,
-                blocks,
-                logic_blocks,
                 evw_queue_logic_input,
             )
         }
@@ -241,7 +241,7 @@ impl LogicDriver {
                             new_group
                                 .consumers
                                 .iter()
-                                .map(|input_port| QueueLogicInputEvent::new(StructureBlock::new(input_port.coords), entity)),
+                                .map(|input_port| QueueLogicInputEvent::new(StructureBlock::new(input_port.coords, entity))),
                         );
                     }
                 }

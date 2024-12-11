@@ -122,6 +122,14 @@ pub enum CosmosInputs {
     ToggleWaypoint,
     /// For debug only - teleports player to the selected spot on the map
     TeleportSelected,
+
+    /// Toggles the send-chat window
+    ToggleChat,
+    /// Sends the chat message the user has typed - does not close the chat window
+    SendChatMessage,
+
+    /// Instead of crafting 1, the maximum amount will be crafted
+    BulkCraft,
 }
 
 fn init_input(mut input_handler: ResMut<CosmosInputHandler>) {
@@ -188,6 +196,11 @@ fn init_input(mut input_handler: ResMut<CosmosInputHandler>) {
     input_handler.set_keycode(CosmosInputs::ResetMapPosition, KeyCode::KeyR);
     input_handler.set_keycode(CosmosInputs::ToggleWaypoint, KeyCode::Enter);
     input_handler.set_keycode(CosmosInputs::TeleportSelected, KeyCode::KeyT);
+
+    input_handler.set_keycode(CosmosInputs::ToggleChat, KeyCode::Enter);
+    input_handler.set_keycode(CosmosInputs::SendChatMessage, KeyCode::Enter);
+
+    input_handler.set_keycode(CosmosInputs::BulkCraft, KeyCode::ShiftLeft);
 }
 
 #[derive(Resource, Default, Debug)]

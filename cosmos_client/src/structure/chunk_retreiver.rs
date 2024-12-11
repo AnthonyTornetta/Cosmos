@@ -52,6 +52,6 @@ pub(super) fn register(app: &mut App) {
         Update,
         populate_structures
             .in_set(NetworkingSystemsSet::SyncComponents)
-            .run_if(in_state(GameState::LoadingWorld).or_else(in_state(GameState::Playing))),
+            .run_if(in_state(GameState::LoadingWorld).or(in_state(GameState::Playing))),
     );
 }

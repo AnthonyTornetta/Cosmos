@@ -4,25 +4,25 @@ use std::f32::consts::PI;
 
 use bevy::{
     app::Update,
-    asset::{AssetServer, Assets, Handle},
-    color::{palettes::css, Alpha, Color},
+    asset::{AssetServer, Assets},
+    color::{palettes::css, Alpha},
     core::Name,
-    core_pipeline::bloom::BloomSettings,
+    core_pipeline::bloom::Bloom,
     input::mouse::{MouseScrollUnit, MouseWheel},
     math::{Dir3, Quat, Vec3},
-    pbr::{PbrBundle, StandardMaterial},
+    pbr::{MeshMaterial3d, StandardMaterial},
     prelude::{
-        in_state, AlphaMode, App, BuildChildren, Camera, Camera3dBundle, Capsule3d, Changed, Commands, Component, Cuboid, Entity,
-        EventReader, IntoSystemConfigs, Mesh, MouseButton, NodeBundle, OnEnter, PerspectiveProjection, Projection, Query, Res, ResMut,
-        Sphere, TextBundle, Transform, TransformBundle, Visibility, VisibilityBundle, With, Without,
+        in_state, AlphaMode, App, BuildChildren, Camera, Camera3d, Capsule3d, Changed, ChildBuild, Commands, Component, Cuboid, Entity,
+        EventReader, IntoSystemConfigs, Mesh, Mesh3d, MouseButton, OnEnter, PerspectiveProjection, Projection, Query, Res, ResMut, Sphere,
+        Text, Transform, Visibility, With, Without,
     },
     reflect::Reflect,
     render::view::RenderLayers,
-    text::{Text, TextStyle},
+    text::TextFont,
     time::Time,
-    ui::{AlignSelf, FlexDirection, JustifyContent, PositionType, Style, TargetCamera, UiRect, Val},
+    ui::{AlignSelf, FlexDirection, JustifyContent, Node, PositionType, TargetCamera, UiRect, Val},
 };
-use bevy_mod_billboard::{BillboardDepth, BillboardTextBundle};
+// use bevy_mod_billboard::{BillboardDepth, BillboardTextBundle};
 use cosmos_core::{
     ecs::NeedsDespawned,
     netty::{client::LocalPlayer, sync::events::client_event::NettyEventWriter, system_sets::NetworkingSystemsSet},
@@ -79,23 +79,21 @@ impl Default for MapCamera {
 
 fn create_map_camera(mut commands: Commands) {
     commands.spawn((
-        Camera3dBundle {
-            camera: Camera {
-                hdr: true,
-                msaa_writeback: false, // override all other cameras
-                order: 20,
-                is_active: false,
-                clear_color: bevy::prelude::ClearColorConfig::Custom(css::BLACK.into()),
-                ..Default::default()
-            },
-            transform: Transform::default(),
-            projection: Projection::from(PerspectiveProjection {
-                fov: (90.0 / 180.0) * std::f32::consts::PI,
-                ..Default::default()
-            }),
+        Camera {
+            hdr: true,
+            msaa_writeback: false, // override all other cameras
+            order: 20,
+            is_active: false,
+            clear_color: bevy::prelude::ClearColorConfig::Custom(css::BLACK.into()),
             ..Default::default()
         },
-        BloomSettings { ..Default::default() },
+        Transform::default(),
+        Projection::from(PerspectiveProjection {
+            fov: (90.0 / 180.0) * std::f32::consts::PI,
+            ..Default::default()
+        }),
+        Camera3d::default(),
+        Bloom { ..Default::default() },
         Name::new("Map Camera"),
         RenderLayers::from_layers(&[CAMERA_LAYER]),
         MapCamera::default(),
@@ -138,6 +136,7 @@ fn toggle_map(
     mut q_map_camera: Query<(Entity, &mut Transform), With<MapCamera>>,
     mut nevw_system_map: NettyEventWriter<RequestSystemMap>,
     mut nevw_galaxy_map: NettyEventWriter<RequestGalaxyMap>,
+    q_open_menus: Query<(), With<OpenMenu>>,
 ) {
     if !input_handler.check_just_pressed(CosmosInputs::ToggleMap) {
         return;
@@ -149,6 +148,11 @@ fn toggle_map(
 
     if let Ok(galaxy_map_entity) = q_galaxy_map_display.get_single() {
         commands.entity(galaxy_map_entity).insert(NeedsDespawned);
+        return;
+    }
+
+    if !q_open_menus.is_empty() {
+        // Don't open the map while there are other menus open
         return;
     }
 
@@ -166,23 +170,23 @@ fn toggle_map(
             OpenMenu::new(0),
             RenderLayers::from_layers(&[CAMERA_LAYER]),
             Name::new("System map display"),
-            TransformBundle::default(),
-            VisibilityBundle::default(),
+            Transform::default(),
+            Visibility::default(),
             ShowCursor,
         ))
         .id();
 
     let font = asset_server.load("fonts/PixeloidSans.ttf");
-    let big_text = TextStyle {
-        color: Color::WHITE,
+    let big_text = TextFont {
         font_size: 48.0,
         font: font.clone(),
+        ..Default::default()
     };
 
-    let small_text = TextStyle {
-        color: Color::WHITE,
+    let small_text = TextFont {
         font_size: 24.0,
         font: font.clone(),
+        ..Default::default()
     };
 
     commands
@@ -190,15 +194,12 @@ fn toggle_map(
             TargetCamera(map_cam_ent),
             DespawnWith(map_display),
             Name::new("Galaxy map UI root"),
-            NodeBundle {
-                style: Style {
-                    position_type: PositionType::Absolute,
-                    width: Val::Percent(100.0),
-                    height: Val::Percent(100.0),
-                    flex_direction: FlexDirection::Column,
-                    justify_content: JustifyContent::SpaceBetween,
-                    ..Default::default()
-                },
+            Node {
+                position_type: PositionType::Absolute,
+                width: Val::Percent(100.0),
+                height: Val::Percent(100.0),
+                flex_direction: FlexDirection::Column,
+                justify_content: JustifyContent::SpaceBetween,
                 ..Default::default()
             },
         ))
@@ -207,14 +208,11 @@ fn toggle_map(
                 TargetCamera(map_cam_ent),
                 DespawnWith(map_display),
                 Name::new("Galaxy map text UI"),
-                NodeBundle {
-                    style: Style {
-                        justify_content: JustifyContent::Center,
-                        margin: UiRect::top(Val::Px(10.0)),
-                        row_gap: Val::Px(12.0),
-                        flex_direction: FlexDirection::Column,
-                        ..Default::default()
-                    },
+                Node {
+                    justify_content: JustifyContent::Center,
+                    margin: UiRect::top(Val::Px(10.0)),
+                    row_gap: Val::Px(12.0),
+                    flex_direction: FlexDirection::Column,
                     ..Default::default()
                 },
             ))
@@ -222,77 +220,70 @@ fn toggle_map(
                 p.spawn((
                     Name::new("Sector text"),
                     MapSelectedSectorText,
-                    TextBundle {
-                        style: Style {
-                            align_self: AlignSelf::Center,
-                            ..Default::default()
-                        },
-                        text: Text::from_section("", big_text.clone()),
+                    Node {
+                        align_self: AlignSelf::Center,
                         ..Default::default()
                     },
+                    Text::new(""),
+                    big_text.clone(),
                 ));
                 p.spawn((
                     Name::new("Waypoint text"),
                     WaypointText,
-                    TextBundle {
-                        style: Style {
-                            align_self: AlignSelf::Center,
-                            ..Default::default()
-                        },
-                        text: Text::from_section("", small_text.clone()),
+                    Node {
+                        align_self: AlignSelf::Center,
                         ..Default::default()
                     },
+                    Text::new(""),
+                    small_text.clone(),
                 ));
             });
 
             p.spawn((
                 Name::new("Controls text"),
-                NodeBundle {
-                    style: Style {
-                        width: Val::Percent(100.0),
-                        flex_direction: FlexDirection::Column,
-                        margin: UiRect::all(Val::Px(30.0)),
-                        ..Default::default()
-                    },
+                Node {
+                    width: Val::Percent(100.0),
+                    flex_direction: FlexDirection::Column,
+                    margin: UiRect::all(Val::Px(30.0)),
                     ..Default::default()
                 },
             ))
             .with_children(|p| {
-                p.spawn((TextBundle {
-                    style: Style {
+                p.spawn((
+                    Node {
                         width: Val::Percent(100.0),
                         ..Default::default()
                     },
-                    text: Text::from_section("WASD to Move", small_text.clone()),
-                    ..Default::default()
-                },));
+                    Text::new("WASDEQ to Move"),
+                    small_text.clone(),
+                ));
 
-                p.spawn((TextBundle {
-                    style: Style {
+                p.spawn((
+                    Node {
                         width: Val::Percent(100.0),
                         ..Default::default()
                     },
-                    text: Text::from_section("Scroll to Zoom", small_text.clone()),
-                    ..Default::default()
-                },));
+                    Text::new("Scroll to Zoom"),
+                    small_text.clone(),
+                ));
 
-                p.spawn((TextBundle {
-                    style: Style {
+                p.spawn((
+                    Node {
                         width: Val::Percent(100.0),
                         ..Default::default()
                     },
-                    text: Text::from_section("R to Reset to Your Sector", small_text.clone()),
-                    ..Default::default()
-                },));
+                    Text::new("R to Reset to Your Sector"),
+                    small_text.clone(),
+                ));
 
-                p.spawn((TextBundle {
-                    style: Style {
+                p.spawn((
+                    Node {
                         width: Val::Percent(100.0),
                         ..Default::default()
                     },
-                    text: Text::from_section("Enter to Set/Unset Waypoint", small_text.clone()),
-                    ..Default::default()
-                },));
+                    Text::new("Enter to Set/Unset Waypoint"),
+                    small_text.clone(),
+                ));
             });
         });
     nevw_system_map.send(RequestSystemMap { system: player_system });
@@ -310,7 +301,7 @@ fn update_waypoint_text(q_waypoint: Query<&Location, With<Waypoint>>, mut q_text
         .map(|x| format!("{}, {}, {}", x.sector.x(), x.sector.y(), x.sector.z()))
         .unwrap_or("<enter to set>".to_owned());
 
-    text.sections[0].value = format!("Waypoint: {}", waypoint_text);
+    text.as_mut().0 = format!("Waypoint: {}", waypoint_text);
 }
 
 fn update_sector_text(q_cam: Query<&MapCamera, Changed<MapCamera>>, mut q_text: Query<&mut Text, With<MapSelectedSectorText>>) {
@@ -322,7 +313,7 @@ fn update_sector_text(q_cam: Query<&MapCamera, Changed<MapCamera>>, mut q_text: 
         return;
     };
 
-    text.sections[0].value = format!("{}, {}, {}", cam.sector.x(), cam.sector.y(), cam.sector.z());
+    text.as_mut().0 = format!("{}, {}, {}", cam.sector.x(), cam.sector.y(), cam.sector.z());
 }
 
 const SECTOR_SCALE: f32 = 1.0;
@@ -342,7 +333,7 @@ fn position_camera(mut q_camera: Query<(&mut Transform, &mut MapCamera)>) {
 
 fn handle_waypoint_sector(
     mut materials: ResMut<Assets<StandardMaterial>>,
-    mut q_selected_sector: Query<(&mut Visibility, &mut Transform, &Handle<StandardMaterial>), With<WaypointSector>>,
+    mut q_selected_sector: Query<(&mut Visibility, &mut Transform, &MeshMaterial3d<StandardMaterial>), With<WaypointSector>>,
     q_waypoint: Query<&Location, With<Waypoint>>,
     time: Res<Time>,
     mut q_sector_text: Query<&mut Text, With<WaypointSectorText>>,
@@ -362,17 +353,17 @@ fn handle_waypoint_sector(
     sector_trans.translation = Vec3::new(ws.x() as f32, ws.y() as f32, ws.z() as f32) * SECTOR_SCALE;
 
     let standard_material = materials.get_mut(standard_material).expect("Material missing");
-    standard_material.base_color.set_alpha(time.elapsed_seconds().sin().abs() * 0.1);
+    standard_material.base_color.set_alpha(time.elapsed_secs().sin().abs() * 0.1);
 
     let Ok(mut text) = q_sector_text.get_single_mut() else {
         return;
     };
 
-    text.sections[0].value = format!("{}, {}, {}", ws.x(), ws.y(), ws.z());
+    text.as_mut().0 = format!("{}, {}, {}", ws.x(), ws.y(), ws.z());
 }
 fn handle_selected_sector(
     mut materials: ResMut<Assets<StandardMaterial>>,
-    mut q_selected_sector: Query<(&mut Transform, &Handle<StandardMaterial>), (With<SelectedSector>, Without<MapCamera>)>,
+    mut q_selected_sector: Query<(&mut Transform, &MeshMaterial3d<StandardMaterial>), (With<SelectedSector>, Without<MapCamera>)>,
     q_camera: Query<&MapCamera>,
     time: Res<Time>,
     mut q_sector_text: Query<&mut Text, With<SelectedSectorText>>,
@@ -387,13 +378,13 @@ fn handle_selected_sector(
 
     sector_trans.translation = cam.lerp_sector;
     let standard_material = materials.get_mut(standard_material).expect("Material missing");
-    standard_material.base_color.set_alpha(time.elapsed_seconds().sin().abs() * 0.1);
+    standard_material.base_color.set_alpha(time.elapsed_secs().sin().abs() * 0.1);
 
     let Ok(mut text) = q_sector_text.get_single_mut() else {
         return;
     };
 
-    text.sections[0].value = format!("{}, {}, {}", cam.sector.x(), cam.sector.y(), cam.sector.z());
+    text.as_mut().0 = format!("{}, {}, {}", cam.sector.x(), cam.sector.y(), cam.sector.z());
 }
 
 #[derive(Component)]
@@ -440,10 +431,10 @@ fn render_galaxy_map(
         // cam_trans.look_at(player_translation, Vec3::Y);
 
         let font = asset_server.load("fonts/PixeloidSans.ttf");
-        let text_style = TextStyle {
-            color: Color::WHITE,
+        let _text_style = TextFont {
             font_size: 22.0,
             font: font.clone(),
+            ..Default::default()
         };
 
         commands.entity(ent).with_children(|p| {
@@ -451,32 +442,29 @@ fn render_galaxy_map(
                 Name::new("Selected Sector"),
                 SelectedSector,
                 RenderLayers::from_layers(&[CAMERA_LAYER]), // https://github.com/bevyengine/bevy/issues/12461
-                PbrBundle {
-                    mesh: meshes.add(Cuboid::new(SECTOR_SCALE, SECTOR_SCALE, SECTOR_SCALE)),
-                    material: materials.add(StandardMaterial {
-                        base_color: css::YELLOW.into(),
-                        unlit: true,
-                        alpha_mode: AlphaMode::Blend,
-                        ..Default::default()
-                    }),
-                    transform: Transform::from_translation(cam.lerp_sector),
+                Mesh3d(meshes.add(Cuboid::new(SECTOR_SCALE, SECTOR_SCALE, SECTOR_SCALE))),
+                MeshMaterial3d(materials.add(StandardMaterial {
+                    base_color: css::YELLOW.into(),
+                    unlit: true,
+                    alpha_mode: AlphaMode::Blend,
                     ..Default::default()
-                },
+                })),
+                Transform::from_translation(cam.lerp_sector),
             ))
             .with_children(|p| {
                 p.spawn((
                     RenderLayers::from_layers(&[CAMERA_LAYER]), // https://github.com/bevyengine/bevy/issues/12461
                     SelectedSectorText,
                     Name::new("Selected text"),
-                    BillboardTextBundle {
-                        billboard_depth: BillboardDepth(false),
-                        transform: Transform::from_scale(Vec3::splat(0.008)),
-                        text: Text::from_section(
-                            format!("{}, {}, {}", cam.sector.x(), cam.sector.y(), cam.sector.z()),
-                            text_style.clone(),
-                        ),
-                        ..Default::default()
-                    },
+                    // BillboardTextBundle {
+                    //     billboard_depth: BillboardDepth(false),
+                    //     transform: Transform::from_scale(Vec3::splat(0.008)),
+                    //     text: Text::from_section(
+                    //         format!("{}, {}, {}", cam.sector.x(), cam.sector.y(), cam.sector.z()),
+                    //         text_style.clone(),
+                    //     ),
+                    //     ..Default::default()
+                    // },
                 ));
             });
 
@@ -484,32 +472,29 @@ fn render_galaxy_map(
                 Name::new("Waypoint Sector"),
                 WaypointSector,
                 RenderLayers::from_layers(&[CAMERA_LAYER]), // https://github.com/bevyengine/bevy/issues/12461
-                PbrBundle {
-                    mesh: meshes.add(Cuboid::new(SECTOR_SCALE, SECTOR_SCALE, SECTOR_SCALE)),
-                    material: materials.add(StandardMaterial {
-                        base_color: css::WHITE.into(),
-                        unlit: true,
-                        alpha_mode: AlphaMode::Blend,
-                        ..Default::default()
-                    }),
-                    visibility: Visibility::Hidden,
+                Mesh3d(meshes.add(Cuboid::new(SECTOR_SCALE, SECTOR_SCALE, SECTOR_SCALE))),
+                MeshMaterial3d(materials.add(StandardMaterial {
+                    base_color: css::WHITE.into(),
+                    unlit: true,
+                    alpha_mode: AlphaMode::Blend,
                     ..Default::default()
-                },
+                })),
+                Visibility::Hidden,
             ))
             .with_children(|p| {
                 p.spawn((
                     RenderLayers::from_layers(&[CAMERA_LAYER]), // https://github.com/bevyengine/bevy/issues/12461
                     WaypointSectorText,
                     Name::new("Waypoint text"),
-                    BillboardTextBundle {
-                        billboard_depth: BillboardDepth(false),
-                        transform: Transform::from_scale(Vec3::splat(0.008)),
-                        text: Text::from_section(
-                            format!("{}, {}, {}", cam.sector.x(), cam.sector.y(), cam.sector.z()),
-                            text_style.clone(),
-                        ),
-                        ..Default::default()
-                    },
+                    // BillboardTextBundle {
+                    //     billboard_depth: BillboardDepth(false),
+                    //     transform: Transform::from_scale(Vec3::splat(0.008)),
+                    //     text: Text::from_section(
+                    //         format!("{}, {}, {}", cam.sector.x(), cam.sector.y(), cam.sector.z()),
+                    //         text_style.clone(),
+                    //     ),
+                    //     ..Default::default()
+                    // },
                 ));
             });
 
@@ -574,12 +559,9 @@ fn render_galaxy_map(
 
                 p.spawn((
                     RenderLayers::from_layers(&[CAMERA_LAYER]), // https://github.com/bevyengine/bevy/issues/12461
-                    PbrBundle {
-                        transform,
-                        mesh,
-                        material,
-                        ..Default::default()
-                    },
+                    transform,
+                    Mesh3d(mesh),
+                    MeshMaterial3d(material),
                 ));
             }
         });

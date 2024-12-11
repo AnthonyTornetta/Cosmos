@@ -8,9 +8,8 @@ use crate::{
     settings::{Setting, SettingCategory, SettingConstraint, SettingData},
     ui::{
         components::{
-            button::{Button, ButtonBundle, ButtonEvent, ButtonStyles},
-            scollable_container::ScrollBundle,
-            text_input::{InputType, InputValue, TextInput, TextInputBundle},
+            button::{Button, ButtonEvent, ButtonStyles},
+            text_input::{InputType, InputValue, TextInput},
         },
         reactivity::{BindValue, BindValues, ReactableFields, ReactableValue},
     },
@@ -19,8 +18,10 @@ use crate::{
 use super::{
     components::{
         button::register_button,
-        slider::{Slider, SliderBundle, SliderValue},
+        scollable_container::ScrollBox,
+        slider::{Slider, SliderValue},
     },
+    font::DefaultFont,
     reactivity::add_reactable_type,
     UiSystemSet,
 };
@@ -50,11 +51,11 @@ struct SettingsMenu;
 
 fn create_settings_screen(
     mut commands: Commands,
-    asset_server: Res<AssetServer>,
     q_ui_root: Query<Entity, (Without<SettingsMenu>, With<NeedsSettingsAdded>)>,
     settings: Res<Registry<Setting>>,
     lang: Res<Lang<Setting>>,
-    mut q_style: Query<&mut Style, With<NeedsSettingsAdded>>,
+    mut q_style: Query<&mut Node, With<NeedsSettingsAdded>>,
+    default_font: Res<DefaultFont>,
 ) {
     let Ok(main_menu_root) = q_ui_root.get_single() else {
         return;
@@ -62,20 +63,22 @@ fn create_settings_screen(
 
     let cool_blue = Srgba::hex("00FFFF").unwrap().into();
 
-    let text_style_large = TextStyle {
-        color: cool_blue,
+    let blue_text = TextColor(cool_blue);
+    let text_style_large = TextFont {
         font_size: 64.0,
-        font: asset_server.load("fonts/PixeloidSans.ttf"),
+        font: default_font.0.clone(),
+        ..Default::default()
     };
-    let text_style = TextStyle {
-        color: Color::WHITE,
+
+    let text_style = TextFont {
         font_size: 32.0,
-        font: asset_server.load("fonts/PixeloidSans.ttf"),
+        font: default_font.0.clone(),
+        ..Default::default()
     };
-    let text_style_small = TextStyle {
-        color: Color::WHITE,
+    let text_style_small = TextFont {
         font_size: 24.0,
-        font: asset_server.load("fonts/PixeloidSans.ttf"),
+        font: default_font.0.clone(),
+        ..Default::default()
     };
 
     q_style
@@ -84,27 +87,25 @@ fn create_settings_screen(
         .flex_direction = FlexDirection::Column;
 
     commands.entity(main_menu_root).insert(SettingsMenu).with_children(|p| {
-        p.spawn(TextBundle {
-            text: Text::from_section("SETTINGS", text_style_large.clone()),
-            style: Style {
+        p.spawn((
+            Text::new("SETTINGS"),
+            text_style_large,
+            blue_text,
+            Node {
                 margin: UiRect::new(Val::Px(0.0), Val::Px(0.0), Val::Px(100.0), Val::Px(70.0)),
                 align_self: AlignSelf::Center,
                 ..Default::default()
             },
-            ..Default::default()
-        });
+        ));
 
-        p.spawn(ScrollBundle {
-            node_bundle: NodeBundle {
-                style: Style {
-                    flex_grow: 1.0,
-                    margin: UiRect::new(Val::Percent(10.0), Val::Percent(10.0), Val::Px(0.0), Val::Px(0.0)),
-                    ..Default::default()
-                },
+        p.spawn((
+            Node {
+                flex_grow: 1.0,
+                margin: UiRect::new(Val::Percent(10.0), Val::Percent(10.0), Val::Px(0.0), Val::Px(0.0)),
                 ..Default::default()
             },
-            ..Default::default()
-        })
+            ScrollBox::default(),
+        ))
         .with_children(|p| {
             let mut categorized_settings: HashMap<SettingCategory, Vec<(&Setting, &str)>> = HashMap::default();
             for setting in settings.iter() {
@@ -129,27 +130,24 @@ fn create_settings_screen(
                     SettingCategory::Audio => "Audio",
                 };
 
-                p.spawn(TextBundle {
-                    text: Text::from_section(category_display_name, text_style.clone()),
-                    style: Style {
+                p.spawn((
+                    Text::new(category_display_name),
+                    text_style.clone(),
+                    Node {
                         margin: UiRect::bottom(Val::Px(20.0)),
                         align_self: AlignSelf::Center,
                         ..Default::default()
                     },
-                    ..Default::default()
-                });
+                ));
 
                 settings.sort_by(|(_, x), (_, y)| x.to_lowercase().cmp(&y.to_lowercase()));
 
                 for (setting, display_name) in settings {
-                    p.spawn(NodeBundle {
-                        style: Style {
-                            width: Val::Percent(100.0),
-                            justify_content: JustifyContent::Center,
-                            column_gap: Val::Px(20.0),
-                            margin: UiRect::bottom(Val::Px(20.0)),
-                            ..Default::default()
-                        },
+                    p.spawn(Node {
+                        width: Val::Percent(100.0),
+                        justify_content: JustifyContent::Center,
+                        column_gap: Val::Px(20.0),
+                        margin: UiRect::bottom(Val::Px(20.0)),
                         ..Default::default()
                     })
                     .with_children(|p| {
@@ -164,13 +162,11 @@ fn create_settings_screen(
                                     setting_id: setting.id(),
                                     value: input_value.clone(),
                                 },
-                                TextBundle {
-                                    text: Text::from_section(display_name, text_style.clone()),
-                                    style: Style {
-                                        width: Val::Px(500.0),
-                                        align_self: AlignSelf::Center,
-                                        ..Default::default()
-                                    },
+                                Text::new(display_name),
+                                text_style.clone(),
+                                Node {
+                                    width: Val::Px(500.0),
+                                    align_self: AlignSelf::Center,
                                     ..Default::default()
                                 },
                             ))
@@ -180,36 +176,31 @@ fn create_settings_screen(
                             None => {
                                 p.spawn((
                                     BindValues::single(BindValue::<WrittenSetting>::new(data_ent, ReactableFields::Value)),
-                                    TextInputBundle {
-                                        text_input: TextInput {
-                                            style: text_style_small.clone(),
-                                            input_type: match &setting.data {
-                                                SettingData::I32(_) => InputType::Integer {
-                                                    min: i32::MIN as i64,
-                                                    max: i32::MAX as i64,
-                                                },
-                                                SettingData::String(_) => InputType::Text { max_length: None },
+                                    text_style_small.clone(),
+                                    TextInput {
+                                        input_type: match &setting.data {
+                                            SettingData::I32(_) => InputType::Integer {
+                                                min: i32::MIN as i64,
+                                                max: i32::MAX as i64,
                                             },
+                                            SettingData::String(_) => InputType::Text { max_length: None },
+                                        },
+                                        ..Default::default()
+                                    },
+                                    InputValue::new(input_value),
+                                    BorderColor(Srgba::hex("555555").unwrap().into()),
+                                    BackgroundColor(Srgba::hex("111111").unwrap().into()),
+                                    Node {
+                                        border: UiRect::all(Val::Px(2.0)),
+                                        width: Val::Px(150.0),
+                                        height: Val::Px(45.0),
+                                        align_self: AlignSelf::Center,
+                                        padding: UiRect {
+                                            top: Val::Px(4.0),
+                                            bottom: Val::Px(4.0),
                                             ..Default::default()
                                         },
-                                        value: InputValue::new(input_value),
-                                        node_bundle: NodeBundle {
-                                            border_color: Srgba::hex("555555").unwrap().into(),
-                                            background_color: Srgba::hex("111111").unwrap().into(),
-                                            style: Style {
-                                                border: UiRect::all(Val::Px(2.0)),
-                                                width: Val::Px(150.0),
-                                                height: Val::Px(45.0),
-                                                align_self: AlignSelf::Center,
-                                                padding: UiRect {
-                                                    top: Val::Px(4.0),
-                                                    bottom: Val::Px(4.0),
-                                                    ..Default::default()
-                                                },
-                                                ..Default::default()
-                                            },
-                                            ..Default::default()
-                                        },
+                                        ..Default::default()
                                     },
                                 ));
                             }
@@ -218,33 +209,25 @@ fn create_settings_screen(
                                     panic!("Cannot have f32 constraint for non-f32 value!");
                                 };
 
-                                p.spawn(NodeBundle {
-                                    style: Style {
-                                        width: Val::Px(300.0),
-                                        justify_content: JustifyContent::SpaceBetween,
-                                        ..Default::default()
-                                    },
+                                p.spawn(Node {
+                                    width: Val::Px(300.0),
+                                    justify_content: JustifyContent::SpaceBetween,
                                     ..Default::default()
                                 })
                                 .with_children(|p| {
                                     p.spawn((
                                         BindValues::single(BindValue::<WrittenSetting>::new(data_ent, ReactableFields::Value)),
-                                        SliderBundle {
-                                            slider_value: SliderValue::new(value as i64),
-                                            slider: Slider {
-                                                min: min as i64,
-                                                max: max as i64,
-                                                background_color: Srgba::hex("111111").unwrap().into(),
-                                                foreground_color: Srgba::hex("555555").unwrap().into(),
-                                                ..Default::default()
-                                            },
-                                            node_bundle: NodeBundle {
-                                                style: Style {
-                                                    width: Val::Px(200.0),
-                                                    ..Default::default()
-                                                },
-                                                ..Default::default()
-                                            },
+                                        SliderValue::new(value as i64),
+                                        Slider {
+                                            min: min as i64,
+                                            max: max as i64,
+                                            background_color: Srgba::hex("111111").unwrap().into(),
+                                            foreground_color: Srgba::hex("555555").unwrap().into(),
+                                            ..Default::default()
+                                        },
+                                        Node {
+                                            width: Val::Px(200.0),
+                                            ..Default::default()
                                         },
                                     ));
 
@@ -253,10 +236,8 @@ fn create_settings_screen(
                                             data_ent,
                                             ReactableFields::Text { section: 0 },
                                         )),
-                                        TextBundle {
-                                            text: Text::from_section(format!("{value}"), text_style_small.clone()),
-                                            ..Default::default()
-                                        },
+                                        Text::new(format!("{value}")),
+                                        text_style_small.clone(),
                                     ));
                                 });
                             }
@@ -266,66 +247,57 @@ fn create_settings_screen(
             }
         });
 
-        p.spawn(NodeBundle {
-            style: Style {
-                width: Val::Percent(100.0),
-                justify_content: JustifyContent::Center,
-                margin: UiRect::new(Val::Px(0.0), Val::Px(0.0), Val::Px(70.0), Val::Px(30.0)),
-                column_gap: Val::Px(50.0),
-                ..Default::default()
-            },
+        p.spawn(Node {
+            width: Val::Percent(100.0),
+            justify_content: JustifyContent::Center,
+            margin: UiRect::new(Val::Px(0.0), Val::Px(0.0), Val::Px(70.0), Val::Px(30.0)),
+            column_gap: Val::Px(50.0),
             ..Default::default()
         })
         .with_children(|p| {
-            p.spawn(ButtonBundle::<SettingsCancelButtonEvent> {
-                node_bundle: NodeBundle {
-                    border_color: cool_blue.into(),
-                    style: Style {
-                        border: UiRect::all(Val::Px(2.0)),
-                        width: Val::Px(500.0),
-                        height: Val::Px(70.0),
-                        align_self: AlignSelf::Center,
-                        margin: UiRect::top(Val::Px(20.0)),
-                        ..Default::default()
-                    },
+            p.spawn((
+                BorderColor(cool_blue),
+                Node {
+                    border: UiRect::all(Val::Px(2.0)),
+                    width: Val::Px(500.0),
+                    height: Val::Px(70.0),
+                    align_self: AlignSelf::Center,
+                    margin: UiRect::top(Val::Px(20.0)),
                     ..Default::default()
                 },
-                button: Button {
+                Button::<SettingsCancelButtonEvent> {
                     button_styles: Some(ButtonStyles {
                         background_color: Srgba::hex("333333").unwrap().into(),
                         hover_background_color: Srgba::hex("232323").unwrap().into(),
                         press_background_color: Srgba::hex("111111").unwrap().into(),
                         ..Default::default()
                     }),
-                    text: Some(("Cancel".into(), text_style.clone())),
+                    text: Some(("Cancel".into(), text_style.clone(), Default::default())),
                     ..Default::default()
                 },
-            });
+            ));
 
-            p.spawn(ButtonBundle::<SettingsDoneButtonEvent> {
-                node_bundle: NodeBundle {
-                    border_color: cool_blue.into(),
-                    style: Style {
-                        border: UiRect::all(Val::Px(2.0)),
-                        width: Val::Px(500.0),
-                        height: Val::Px(70.0),
-                        align_self: AlignSelf::Center,
-                        margin: UiRect::top(Val::Px(20.0)),
-                        ..Default::default()
-                    },
+            p.spawn((
+                BorderColor(cool_blue),
+                Node {
+                    border: UiRect::all(Val::Px(2.0)),
+                    width: Val::Px(500.0),
+                    height: Val::Px(70.0),
+                    align_self: AlignSelf::Center,
+                    margin: UiRect::top(Val::Px(20.0)),
                     ..Default::default()
                 },
-                button: Button {
+                Button::<SettingsDoneButtonEvent> {
                     button_styles: Some(ButtonStyles {
                         background_color: Srgba::hex("333333").unwrap().into(),
                         hover_background_color: Srgba::hex("232323").unwrap().into(),
                         press_background_color: Srgba::hex("111111").unwrap().into(),
                         ..Default::default()
                     }),
-                    text: Some(("Done".into(), text_style.clone())),
+                    text: Some(("Done".into(), text_style.clone(), Default::default())),
                     ..Default::default()
                 },
-            });
+            ));
         });
     });
 }
@@ -394,7 +366,7 @@ pub(super) fn register(app: &mut App) {
                 .in_set(UiSystemSet::DoUi)
                 .before(SettingsMenuSet::SettingsMenuInteractions),
             done_clicked
-                .run_if(on_event::<SettingsDoneButtonEvent>())
+                .run_if(on_event::<SettingsDoneButtonEvent>)
                 .in_set(SettingsMenuSet::SettingsMenuInteractions),
         ),
     )

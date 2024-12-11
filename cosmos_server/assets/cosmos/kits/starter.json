@@ -1,0 +1,32 @@
+[
+  {
+    "slot": 0,
+    "item": "cosmos:ship_core",
+    "quantity": 1
+  },
+  {
+    "slot": 1,
+    "item": "cosmos:thruster",
+    "quantity": 5
+  },
+  {
+    "slot": 2,
+    "item": "cosmos:reactor",
+    "quantity": 6
+  },
+  {
+    "slot": 3,
+    "item": "cosmos:plasma_drill",
+    "quantity": 12
+  },
+  {
+    "slot": 4,
+    "item": "cosmos:ship_hull_grey",
+    "quantity": 30
+  },
+  {
+    "slot": 5,
+    "item": "cosmos:laser_cannon",
+    "quantity": 6
+  }
+]

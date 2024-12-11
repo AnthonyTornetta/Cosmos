@@ -4,7 +4,7 @@
 
 use std::sync::{Arc, Mutex};
 
-use bevy::{color::palettes::css, core_pipeline::bloom::BloomSettings, prelude::*, window::PrimaryWindow};
+use bevy::{color::palettes::css, core_pipeline::bloom::Bloom, prelude::*, window::PrimaryWindow};
 use bevy_kira_audio::prelude::AudioReceiver;
 use bevy_rapier3d::prelude::*;
 use bevy_renet2::renet2::{transport::NetcodeClientTransport, RenetClient};
@@ -106,7 +106,7 @@ fn update_crosshair(
         if docked.is_some() {
             crosshair_offset.x = 0.0;
             crosshair_offset.y = 0.0;
-        } else if let Some(mut pos_on_screen) = camera.world_to_viewport(
+        } else if let Ok(mut pos_on_screen) = camera.world_to_viewport(
             cam_global_trans,
             last_rotation.0.mul_vec3(Vec3::from(cam_trans.forward())) + cam_global_trans.translation(),
         ) {
@@ -241,7 +241,7 @@ pub(crate) fn client_sync_players(
     let client_id = transport.client_id();
 
     requested_entities.entities.retain_mut(|x| {
-        x.seconds_since_request += time.delta_seconds();
+        x.seconds_since_request += time.delta_secs();
         if x.seconds_since_request < 10.0 {
             true
         } else {
@@ -414,7 +414,7 @@ pub(crate) fn client_sync_players(
                     CosmosPbrBundle {
                         location: loc,
                         rotation: body.rotation.into(),
-                        mesh: meshes.add(Capsule3d::default()),
+                        mesh: Mesh3d(meshes.add(Capsule3d::default())),
                         ..default()
                     },
                     Collider::capsule_y(0.65, 0.25),
@@ -460,19 +460,17 @@ pub(crate) fn client_sync_players(
                         ))
                         .with_children(|parent| {
                             parent.spawn((
-                                Camera3dBundle {
-                                    camera: Camera {
-                                        hdr: true,
-                                        ..Default::default()
-                                    },
-                                    transform: Transform::from_translation(camera_offset),
-                                    projection: Projection::from(PerspectiveProjection {
-                                        fov: (desired_fov.0 / 180.0) * std::f32::consts::PI,
-                                        ..default()
-                                    }),
-                                    ..default()
+                                Camera {
+                                    hdr: true,
+                                    ..Default::default()
                                 },
-                                BloomSettings { ..Default::default() },
+                                Transform::from_translation(camera_offset),
+                                Projection::from(PerspectiveProjection {
+                                    fov: (desired_fov.0 / 180.0) * std::f32::consts::PI,
+                                    ..default()
+                                }),
+                                Camera3d::default(),
+                                Bloom { ..Default::default() },
                                 CameraHelper::default(),
                                 Name::new("Main Camera"),
                                 MainCamera,
@@ -677,10 +675,10 @@ pub(crate) fn client_sync_players(
                 if let Some(client_ent) = network_mapping.client_from_server(&structure_entity) {
                     if let Ok(mut structure) = q_structure.get_mut(client_ent) {
                         for block_changed in blocks_changed_packet.0 {
-                            structure.set_block_at(
+                            structure.set_block_and_info_at(
                                 block_changed.coordinates.coords(),
                                 blocks.from_numeric_id(block_changed.block_id),
-                                block_changed.block_rotation,
+                                block_changed.block_info,
                                 &blocks,
                                 Some(&mut block_change_event_writer),
                             );
@@ -875,11 +873,13 @@ fn get_entity_identifier_entity_for_despawning(
             }
         }),
         ComponentEntityIdentifier::BlockData {
-            identifier,
+            mut identifier,
             server_data_entity,
         } => network_mapping
-            .client_from_server(&identifier.structure_entity)
+            .client_from_server(&identifier.block.structure())
             .and_then(|structure_entity| {
+                identifier.block.set_structure(structure_entity);
+
                 let mut structure = q_structure.get_mut(structure_entity).ok()?;
 
                 let bd = structure.block_data(identifier.block.coords());
@@ -898,7 +898,6 @@ fn get_entity_identifier_entity_for_despawning(
 
                     block_data_changed.send(BlockDataChangedEvent {
                         block: identifier.block,
-                        structure_entity,
                         block_data_entity: None,
                     });
                 }
@@ -960,10 +959,9 @@ fn fix_location(
                 if let Some(mut transform) = transform {
                     transform.translation = translation;
                 } else {
-                    commands.entity(entity).insert((
-                        WorldWithin(pw),
-                        TransformBundle::from_transform(Transform::from_translation(translation)),
-                    ));
+                    commands
+                        .entity(entity)
+                        .insert((WorldWithin(pw), Transform::from_translation(translation)));
                 }
                 location.last_transform_loc = Some(translation);
             }
@@ -1062,7 +1060,7 @@ pub(super) fn register(app: &mut App) {
                     .in_set(NetworkingSystemsSet::ReceiveMessages)
                     .before(CosmosBundleSet::HandleCosmosBundles),
             )
-                .run_if(in_state(GameState::Playing).or_else(in_state(GameState::LoadingWorld)))
+                .run_if(in_state(GameState::Playing).or(in_state(GameState::LoadingWorld)))
                 .chain(),
         )
         .add_systems(

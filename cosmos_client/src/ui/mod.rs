@@ -6,14 +6,14 @@ use bevy::{
         component::Component,
         schedule::{IntoSystemSetConfigs, SystemSet},
     },
-    prelude::App,
-    text::Text,
-    ui::{BackgroundColor, Style, UiImage},
+    prelude::{App, ImageNode, Text},
+    ui::{BackgroundColor, Node},
 };
 
 pub mod components;
 pub mod crosshair;
 pub mod debug_info_display;
+pub mod font;
 pub mod hotbar;
 mod hud;
 pub mod item_renderer;
@@ -57,6 +57,17 @@ pub struct UiTopRoot;
 /// When you make a menu that can be closed via the `Escape`/pause menu key, add this component to it.
 pub struct OpenMenu {
     level: u32,
+    close_method: CloseMethod,
+}
+
+#[derive(Default, Debug, PartialEq, Eq, Hash, Clone, Copy)]
+/// How a menu should be closed
+pub enum CloseMethod {
+    #[default]
+    /// The menu should be despawned via [`NeedsDespawned`].
+    Despawn,
+    /// The menu should be set to [`Visibility::Hidden`]
+    Visibility,
 }
 
 impl OpenMenu {
@@ -68,7 +79,22 @@ impl OpenMenu {
     /// Typically, if you are constructing a heirarchy of windows, you should start your base window
     /// at 0 and count up from there.
     pub fn new(level: u32) -> Self {
-        Self { level }
+        Self {
+            level,
+            close_method: Default::default(),
+        }
+    }
+
+    /// Creates an open menu with this "level" of being above every other menu.
+    /// The close_method determines the logic used to close this menu. See [`CloseMethod`].
+    ///
+    /// This doesn't effect rendering order, rather effects which menu the "Escape" button will target first.
+    /// Menus of the same level will all be closed together. Each escape press will remove the highest-level group of menus.
+    ///
+    /// Typically, if you are constructing a heirarchy of windows, you should start your base window
+    /// at 0 and count up from there.   
+    pub fn with_close_method(level: u32, close_method: CloseMethod) -> Self {
+        Self { level, close_method }
     }
 
     /// Sets the level for this menu
@@ -79,6 +105,11 @@ impl OpenMenu {
     /// Gets the level for this menu
     pub fn level(&self) -> u32 {
         self.level
+    }
+
+    /// Gets the method that should be used to close this menu
+    pub fn close_method(&self) -> CloseMethod {
+        self.close_method
     }
 }
 
@@ -93,6 +124,7 @@ pub(super) fn register(app: &mut App) {
     reactivity::register(app);
     main_menu::register(app);
     hud::register(app);
+    font::register(app);
     pause::register(app);
     settings::register(app);
 
@@ -101,6 +133,6 @@ pub(super) fn register(app: &mut App) {
     // These probably don't matter
     app.allow_ambiguous_component::<Text>();
     app.allow_ambiguous_component::<BackgroundColor>();
-    app.allow_ambiguous_component::<Style>();
-    app.allow_ambiguous_component::<UiImage>();
+    app.allow_ambiguous_component::<Node>();
+    app.allow_ambiguous_component::<ImageNode>();
 }

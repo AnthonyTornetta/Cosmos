@@ -20,6 +20,7 @@ use crate::{
 
 use super::{
     components::show_cursor::no_open_menus,
+    font::DefaultFont,
     item_renderer::{create_ui_cameras, RenderItem},
     UiMiddleRoot,
 };
@@ -239,15 +240,15 @@ fn listen_button_presses(
     }
 }
 
-fn tick_text_alpha_down(mut query: Query<&mut Text, With<ItemNameDisplay>>, time: Res<Time>) {
+fn tick_text_alpha_down(mut query: Query<&mut TextColor, With<ItemNameDisplay>>, time: Res<Time>) {
     if let Ok(mut text) = query.get_single_mut() {
-        let col: Srgba = text.sections[0].style.color.into();
+        let col: Srgba = text.as_ref().0.into();
 
-        text.sections[0].style.color = Srgba {
+        text.as_mut().0 = Srgba {
             red: col.red,
             green: col.green,
             blue: col.blue,
-            alpha: (col.alpha - time.delta_seconds() / ITEM_NAME_FADE_DURATION_SEC).max(0.0),
+            alpha: (col.alpha - time.delta_secs() / ITEM_NAME_FADE_DURATION_SEC).max(0.0),
         }
         .into();
     }
@@ -258,7 +259,7 @@ fn listen_for_change_events(
     query_inventory: Query<&HotbarContents, (Changed<HotbarContents>, With<LocalPlayerHotbar>)>,
     inventory_unchanged: Query<&HotbarContents, With<LocalPlayerHotbar>>,
     asset_server: Res<AssetServer>,
-    mut text_query: Query<&mut Text>,
+    mut text_query: Query<(&mut Text, &mut TextColor)>,
     item_name_query: Query<Entity, With<ItemNameDisplay>>,
     mut commands: Commands,
     names: Res<Lang<Item>>,
@@ -271,26 +272,26 @@ fn listen_for_change_events(
     if hb.selected_slot != hb.prev_slot {
         commands
             .entity(hb.slots[hb.prev_slot].0)
-            .insert(UiImage::new(asset_server.load(image_path(false))));
+            .insert(ImageNode::new(asset_server.load(image_path(false))));
 
         commands
             .entity(hb.slots[hb.selected_slot].0)
-            .insert(UiImage::new(asset_server.load(image_path(true))));
+            .insert(ImageNode::new(asset_server.load(image_path(true))));
 
         hb.prev_slot = hb.selected_slot;
 
         if let Ok(inv) = inventory_unchanged.get_single() {
             if let Ok(ent) = item_name_query.get_single() {
-                if let Ok(mut name_text) = text_query.get_mut(ent) {
+                if let Ok((mut name_text, mut name_color)) = text_query.get_mut(ent) {
                     if let Some(is) = inv.itemstack_at(hb.selected_slot()) {
                         names
                             .get_name_from_numeric_id(is.item_id())
                             .unwrap_or(items.from_numeric_id(is.item_id()).unlocalized_name())
-                            .clone_into(&mut name_text.sections[0].value);
+                            .clone_into(&mut name_text.as_mut().0);
 
-                        name_text.sections[0].style.color = Color::WHITE;
+                        name_color.as_mut().0 = Color::WHITE;
                     } else {
-                        "".clone_into(&mut name_text.sections[0].value);
+                        "".clone_into(&mut name_text.as_mut().0);
                     }
                 }
             }
@@ -301,61 +302,60 @@ fn listen_for_change_events(
         for hb_slot in 0..hb.max_slots {
             let is = hotbar_contents.itemstack_at(hb_slot);
 
-            if let Ok(mut text) = text_query.get_mut(hb.slots[hb_slot].1) {
+            if let Ok((mut text, _)) = text_query.get_mut(hb.slots[hb_slot].1) {
                 if let Some(is) = is {
                     if is.quantity() != 1 {
-                        text.sections[0].value = format!("{}", is.quantity());
+                        text.as_mut().0 = format!("{}", is.quantity());
                     } else {
-                        text.sections[0].value = "".into();
+                        text.as_mut().0 = "".into();
                     }
                 } else {
-                    text.sections[0].value = "".into();
+                    text.as_mut().0 = "".into();
                 }
             }
         }
     }
 }
 
-fn add_item_text(mut commands: Commands, q_target_camera: Query<Entity, With<UiMiddleRoot>>, asset_server: Res<AssetServer>) {
+fn add_item_text(mut commands: Commands, q_target_camera: Query<Entity, With<UiMiddleRoot>>, default_font: Res<DefaultFont>) {
     let target_cam = q_target_camera.single();
+
+    let text_font = TextFont {
+        font_size: 24.0,
+        font: default_font.0.clone(),
+        ..Default::default()
+    };
 
     commands
         .spawn((
             Name::new("Item hotbar text"),
             TargetCamera(target_cam),
-            NodeBundle {
-                style: Style {
-                    position_type: PositionType::Absolute,
-                    display: Display::Flex,
-                    justify_content: JustifyContent::Center,
-                    align_items: AlignItems::FlexEnd,
-                    width: Val::Percent(100.0),
-                    height: Val::Percent(100.0),
-                    ..default()
-                },
+            Node {
+                position_type: PositionType::Absolute,
+                display: Display::Flex,
+                justify_content: JustifyContent::Center,
+                align_items: AlignItems::FlexEnd,
+                width: Val::Percent(100.0),
+                height: Val::Percent(100.0),
                 ..default()
             },
         ))
         .with_children(|parent| {
             parent
-                .spawn(TextBundle {
-                    style: Style {
+                .spawn((
+                    Node {
                         bottom: Val::Px(75.0),
                         position_type: PositionType::Absolute,
 
                         ..default()
                     },
-                    text: Text::from_section(
-                        "",
-                        TextStyle {
-                            color: Color::WHITE,
-                            font_size: 24.0,
-                            font: asset_server.load("fonts/PixeloidSans.ttf"),
-                        },
-                    )
-                    .with_justify(JustifyText::Center),
-                    ..default()
-                })
+                    Text::new(""),
+                    text_font,
+                    TextLayout {
+                        justify: JustifyText::Center,
+                        ..Default::default()
+                    },
+                ))
                 .insert(ItemNameDisplay);
         });
 }
@@ -398,22 +398,24 @@ fn populate_hotbar(
     }
 }
 
-fn add_hotbar(mut commands: Commands, q_target_camera: Query<Entity, With<UiMiddleRoot>>, asset_server: Res<AssetServer>) {
+fn add_hotbar(
+    mut commands: Commands,
+    q_target_camera: Query<Entity, With<UiMiddleRoot>>,
+    default_font: Res<DefaultFont>,
+    asset_server: Res<AssetServer>,
+) {
     let target_cam = q_target_camera.single();
 
     commands
         .spawn((
             TargetCamera(target_cam),
-            NodeBundle {
-                style: Style {
-                    position_type: PositionType::Absolute,
-                    display: Display::Flex,
-                    justify_content: JustifyContent::Center,
-                    align_items: AlignItems::FlexEnd,
-                    width: Val::Percent(100.0),
-                    height: Val::Percent(100.0),
-                    ..default()
-                },
+            Node {
+                position_type: PositionType::Absolute,
+                display: Display::Flex,
+                justify_content: JustifyContent::Center,
+                align_items: AlignItems::FlexEnd,
+                width: Val::Percent(100.0),
+                height: Val::Percent(100.0),
                 ..default()
             },
             Name::new("Hotbar Container"),
@@ -422,13 +424,10 @@ fn add_hotbar(mut commands: Commands, q_target_camera: Query<Entity, With<UiMidd
             let mut hotbar = Hotbar::default();
 
             let mut slots = parent.spawn((
-                NodeBundle {
-                    style: Style {
-                        flex_direction: FlexDirection::Row,
-                        flex_grow: 1.0,
-                        justify_content: JustifyContent::Center,
-                        ..default()
-                    },
+                Node {
+                    flex_direction: FlexDirection::Row,
+                    flex_grow: 1.0,
+                    justify_content: JustifyContent::Center,
                     ..default()
                 },
                 LocalPlayerHotbar,
@@ -439,39 +438,38 @@ fn add_hotbar(mut commands: Commands, q_target_camera: Query<Entity, With<UiMidd
                 for slot_num in 0..hotbar.max_slots {
                     let path = image_path(hotbar.selected_slot == slot_num);
 
-                    let mut slot = parent.spawn(ImageBundle {
-                        image: asset_server.load(path).into(),
-                        style: Style {
+                    let mut slot = parent.spawn((
+                        ImageNode::new(asset_server.load(path)),
+                        Node {
                             width: Val::Px(64.0),
                             height: Val::Px(64.0),
                             ..default()
                         },
-                        ..default()
-                    });
+                    ));
 
                     let mut text_entity = None;
 
                     slot.with_children(|slot| {
                         text_entity = Some(
-                            slot.spawn(TextBundle {
-                                style: Style {
+                            slot.spawn((
+                                Node {
                                     bottom: Val::Px(5.0),
                                     right: Val::Px(5.0),
                                     position_type: PositionType::Absolute,
 
                                     ..default()
                                 },
-                                text: Text::from_section(
-                                    "",
-                                    TextStyle {
-                                        color: Color::WHITE,
-                                        font_size: 24.0,
-                                        font: asset_server.load("fonts/PixeloidSans.ttf"),
-                                    },
-                                )
-                                .with_justify(JustifyText::Right),
-                                ..default()
-                            })
+                                Text::new(""),
+                                TextFont {
+                                    font_size: 24.0,
+                                    font: default_font.0.clone(),
+                                    ..Default::default()
+                                },
+                                TextLayout {
+                                    justify: JustifyText::Right,
+                                    ..Default::default()
+                                },
+                            ))
                             .id(),
                         );
                     });

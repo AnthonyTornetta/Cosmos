@@ -2,7 +2,6 @@
 
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::Velocity;
-use serde::{Deserialize, Serialize};
 
 use crate::{
     blockitems::BlockItems,
@@ -10,6 +9,7 @@ use crate::{
         bundles::BundleStartingRotation,
         mut_events::{MutEvent, MutEventsCommand},
     },
+    entities::player::creative::Creative,
     events::block_events::BlockChangedEvent,
     inventory::{
         itemstack::{ItemShouldHaveData, ItemStackSystemSet},
@@ -35,30 +35,19 @@ use super::{
 /// This is sent whenever a player breaks a block
 #[derive(Debug, Event)]
 pub struct BlockBreakEvent {
-    /// The entity that was targeted
-    pub structure_entity: Entity,
     /// The player breaking the block
     pub breaker: Entity,
     /// The block broken with
     pub block: StructureBlock,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone, Copy)]
-/// this is stupid.
-pub struct StructureBlockPair {
-    /// The block interacted with
-    pub structure_block: StructureBlock,
-    /// The structure it is on
-    pub structure_entity: Entity,
-}
-
 /// This is sent whenever a player interacts with a block
 #[derive(Debug, Event)]
 pub struct BlockInteractEvent {
     /// The block that was interacted with by the player
-    pub block: Option<StructureBlockPair>,
+    pub block: Option<StructureBlock>,
     /// Includes blocks normally ignored by most interaction checks
-    pub block_including_fluids: StructureBlockPair,
+    pub block_including_fluids: StructureBlock,
     /// The player that interacted with the block
     pub interactor: Entity,
     /// If this is true, the player was crouching while interacting with this block
@@ -82,8 +71,6 @@ pub enum BlockPlaceEvent {
 /// This is sent whenever a player places a block
 #[derive(Debug, Event, Clone, Copy)]
 pub struct BlockPlaceEventData {
-    /// The structure the block was placed on
-    pub structure_entity: Entity,
     /// Where the block is placed
     pub structure_block: StructureBlock,
     /// The placed block's id
@@ -114,7 +101,7 @@ fn handle_block_break_events(
         // structures in the game
 
         if q_structure.contains(ev.breaker) {
-            let Ok((mut structure, _, _, _)) = q_structure.get_mut(ev.structure_entity) else {
+            let Ok((mut structure, _, _, _)) = q_structure.get_mut(ev.block.structure()) else {
                 continue;
             };
 
@@ -144,7 +131,7 @@ fn handle_block_break_events(
 
                 for (_, mut inventory) in q_inventory_block_data
                     .iter_mut()
-                    .filter(|(block_data, _)| block_data.identifier.structure_entity == ev.breaker)
+                    .filter(|(block_data, _)| block_data.identifier.block.structure() == ev.breaker)
                 {
                     if inventory.insert_item(item, 1, &mut commands, &has_data).0 == 0 {
                         break;
@@ -156,17 +143,21 @@ fn handle_block_break_events(
 
             structure.remove_block_at(coord, &blocks, Some(&mut event_writer));
         } else if let Ok((mut inventory, build_mode, parent)) = inventory_query.get_mut(ev.breaker) {
-            if let Ok((mut structure, s_loc, g_trans, velocity)) = q_structure.get_mut(ev.structure_entity) {
+            if let Ok((mut structure, s_loc, g_trans, velocity)) = q_structure.get_mut(ev.block.structure()) {
                 let mut structure_blocks = vec![(ev.block.coords(), BlockRotation::default())];
+
+                let coord = ev.block.coords();
+                let block = structure.block_at(coord, &blocks);
 
                 if let (Some(build_mode), Some(parent)) = (build_mode, parent) {
                     structure_blocks = calculate_build_mode_blocks(
                         structure_blocks,
                         build_mode,
                         parent,
-                        ev.structure_entity,
+                        ev.block.structure(),
                         &mut inventory,
                         &structure,
+                        block,
                     );
                 }
 
@@ -249,6 +240,7 @@ fn calculate_build_mode_blocks(
     structure_entity: Entity,
     inventory: &mut Mut<'_, Inventory>,
     structure: &Structure,
+    block: &Block,
 ) -> Vec<(BlockCoordinate, BlockRotation)> {
     if parent.get() != structure_entity {
         // Tried to place a block on a structure they're not in build mode on
@@ -315,15 +307,8 @@ fn calculate_build_mode_blocks(
                     let new_block_rotation = match block_rotation {
                         BlockRotation {
                             face_pointing_pos_y: BlockFace::Top | BlockFace::Bottom,
-                            sub_rotation: BlockSubRotation::Flip | BlockSubRotation::None,
+                            sub_rotation: _,
                         } => block_rotation.inverse(),
-                        BlockRotation {
-                            face_pointing_pos_y: BlockFace::Top | BlockFace::Bottom,
-                            sub_rotation: BlockSubRotation::CCW | BlockSubRotation::CW,
-                        } => BlockRotation {
-                            face_pointing_pos_y: block_rotation.face_pointing_pos_y.inverse(),
-                            sub_rotation: block_rotation.sub_rotation,
-                        },
                         BlockRotation {
                             face_pointing_pos_y: BlockFace::Right | BlockFace::Left,
                             sub_rotation: BlockSubRotation::CCW | BlockSubRotation::CW,
@@ -333,9 +318,9 @@ fn calculate_build_mode_blocks(
                         },
                         BlockRotation {
                             face_pointing_pos_y: BlockFace::Back | BlockFace::Front,
-                            sub_rotation: BlockSubRotation::Flip | BlockSubRotation::None,
+                            sub_rotation: _,
                         } => BlockRotation {
-                            face_pointing_pos_y: block_rotation.face_pointing_pos_y,
+                            face_pointing_pos_y: block_rotation.face_pointing_pos_y.inverse(),
                             sub_rotation: block_rotation.sub_rotation.inverse(),
                         },
                         _ => block_rotation,
@@ -365,14 +350,21 @@ fn calculate_build_mode_blocks(
                         BlockRotation {
                             face_pointing_pos_y: BlockFace::Back | BlockFace::Front,
                             sub_rotation: BlockSubRotation::None | BlockSubRotation::Flip,
-                        } => block_rotation.inverse(),
+                        } => BlockRotation {
+                            face_pointing_pos_y: block_rotation.face_pointing_pos_y,
+                            sub_rotation: block_rotation.sub_rotation.inverse(),
+                        },
                         BlockRotation {
-                            face_pointing_pos_y: BlockFace::Back | BlockFace::Front,
-                            sub_rotation: BlockSubRotation::CCW | BlockSubRotation::CW,
+                            face_pointing_pos_y: BlockFace::Left | BlockFace::Right,
+                            sub_rotation: BlockSubRotation::CW | BlockSubRotation::CCW,
                         } => BlockRotation {
                             face_pointing_pos_y: block_rotation.face_pointing_pos_y.inverse(),
                             sub_rotation: block_rotation.sub_rotation,
                         },
+                        BlockRotation {
+                            face_pointing_pos_y: BlockFace::Left | BlockFace::Right,
+                            sub_rotation: _,
+                        } => block_rotation.inverse(),
                         BlockRotation {
                             face_pointing_pos_y: _,
                             sub_rotation: BlockSubRotation::None | BlockSubRotation::Flip,
@@ -388,6 +380,16 @@ fn calculate_build_mode_blocks(
             }
         }
 
+        // TODO: Sub rotations aren't properly handled by connected textures.
+        // Nothing that has connected textures and uses sub rotations exists yet, so for now just
+        // disable them on build block placements. This will have to get fixed eventually.
+        let connected = !block.connect_to_groups.is_empty();
+        if connected {
+            for (_, rot) in &mut new_coords {
+                rot.sub_rotation = Default::default();
+            }
+        }
+
         structure_blocks = new_coords;
     }
 
@@ -398,7 +400,7 @@ fn handle_block_place_events(
     mut query: Query<&mut Structure>,
     mut event_reader: EventReader<MutEvent<BlockPlaceEvent>>,
     mut event_writer: EventWriter<BlockChangedEvent>,
-    mut player_query: Query<(&mut Inventory, Option<&BuildMode>, Option<&Parent>)>,
+    mut player_query: Query<(&mut Inventory, Option<&BuildMode>, Option<&Parent>, Option<&Creative>)>,
     items: Res<Registry<Item>>,
     blocks: Res<Registry<Block>>,
     block_items: Res<BlockItems>,
@@ -411,23 +413,36 @@ fn handle_block_place_events(
             continue;
         };
 
-        let Ok((mut inv, build_mode, parent)) = player_query.get_mut(place_event_data.placer) else {
+        let Ok((mut inv, build_mode, parent, creative)) = player_query.get_mut(place_event_data.placer) else {
             continue;
         };
 
-        let Ok(mut structure) = query.get_mut(place_event_data.structure_entity) else {
+        let Ok(mut structure) = query.get_mut(place_event_data.structure_block.structure()) else {
             continue;
         };
         let mut structure_blocks = vec![(place_event_data.structure_block.coords(), place_event_data.block_up)];
+
+        let Some(is) = inv.itemstack_at(place_event_data.inventory_slot) else {
+            break;
+        };
+
+        let item = items.from_numeric_id(is.item_id());
+
+        let Some(block_id) = block_items.block_from_item(item) else {
+            break;
+        };
+
+        let block = blocks.from_numeric_id(block_id);
 
         if let (Some(build_mode), Some(parent)) = (build_mode, parent) {
             structure_blocks = calculate_build_mode_blocks(
                 structure_blocks,
                 build_mode,
                 parent,
-                place_event_data.structure_entity,
+                place_event_data.structure_block.structure(),
                 &mut inv,
                 &structure,
+                block,
             );
         }
 
@@ -436,29 +451,17 @@ fn handle_block_place_events(
                 continue;
             }
 
-            let Some(is) = inv.itemstack_at(place_event_data.inventory_slot) else {
-                break;
-            };
-
-            let item = items.from_numeric_id(is.item_id());
-
-            let Some(block_id) = block_items.block_from_item(item) else {
-                break;
-            };
-
             if block_id != place_event_data.block_id {
                 *ev.write() = BlockPlaceEvent::Cancelled;
                 // May have run out of the item or it was swapped with something else (not really possible currently, but more checks never hurt anyone)
                 break;
             }
 
-            let block = blocks.from_numeric_id(block_id);
-
             if block.unlocalized_name() == "cosmos:ship_core" || block.unlocalized_name() == "cosmos:station_core" {
                 break;
             }
 
-            if inv.decrease_quantity_at(place_event_data.inventory_slot, 1, &mut commands) == 0 {
+            if creative.is_some() || inv.decrease_quantity_at(place_event_data.inventory_slot, 1, &mut commands) == 0 {
                 structure.set_block_at(coords, block, block_up, &blocks, Some(&mut event_writer));
             } else {
                 break;
@@ -481,6 +484,8 @@ pub enum BlockEventsSet {
     /// Please note that at this point, the only event sent may be the [`BlockPlaceEvent`] - not the resulting [`BlockChangedEvent`].
     /// The [`BlockChangedEvent`] is only sent once the block is inserted into the structure (which happens during this set).
     ProcessEventsPrePlacement,
+    /// The structure updates blocks based on the [`BlockPlaceEvent`] and send [`BlockChangedEvent`].
+    ChangeBlocks,
     /// If your event processing relies on the block being placed, run it in this set. The data still is not guarenteed to be present.
     ProcessEvents,
     /// For systems that need information set in the [`BlockEventsSet::ProcessEvents`] stage. Block data should be present.
@@ -497,6 +502,7 @@ pub(super) fn register(app: &mut App) {
             BlockEventsSet::PreProcessEvents,
             BlockEventsSet::SendBlockUpdateEvents,
             BlockEventsSet::ProcessEventsPrePlacement,
+            BlockEventsSet::ChangeBlocks,
             BlockEventsSet::ProcessEvents,
             BlockEventsSet::PostProcessEvents,
             BlockEventsSet::SendEventsForNextFrame,
@@ -513,6 +519,6 @@ pub(super) fn register(app: &mut App) {
             (handle_block_break_events, handle_block_place_events)
                 .chain()
                 .in_set(ItemStackSystemSet::CreateDataEntity)
-                .in_set(BlockEventsSet::ProcessEventsPrePlacement),
+                .in_set(BlockEventsSet::ChangeBlocks),
         );
 }

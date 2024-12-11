@@ -1,7 +1,7 @@
 //! Handles client-side registry syncing logic
 
 use crate::{
-    netty::{cosmos_encoder, server_registry::RegistrySyncing, system_sets::NetworkingSystemsSet, NettyChannelServer},
+    netty::{cosmos_encoder, server_registry::RegistrySyncing, system_sets::NetworkingSystemsSet, NettyChannelClient, NettyChannelServer},
     registry::{identifiable::Identifiable, Registry},
 };
 use bevy::{
@@ -118,12 +118,17 @@ pub(super) fn register<T: States + FreelyMutableState + Clone + Copy>(
 
     app.configure_sets(Update, TransitionStateSet::TransitionState);
 
-    let transition_state = move |mut state_changer: ResMut<NextState<T>>, loading_registries: Res<RegistriesLeftToSync>| {
-        if loading_registries.0.is_some_and(|x| x == 0) {
-            info!("Got all registries from server - loading world!");
-            state_changer.set(loading_world_state);
-        }
-    };
+    let transition_state =
+        move |mut client: ResMut<RenetClient>, mut state_changer: ResMut<NextState<T>>, loading_registries: Res<RegistriesLeftToSync>| {
+            if loading_registries.0.is_some_and(|x| x == 0) {
+                info!("Got all registries from server - loading world!");
+                state_changer.set(loading_world_state);
+                client.send_message(
+                    NettyChannelClient::Registry,
+                    cosmos_encoder::serialize(&crate::netty::client_registry::RegistrySyncing::FinishedReceivingRegistries),
+                )
+            }
+        };
 
     app.add_systems(
         Update,

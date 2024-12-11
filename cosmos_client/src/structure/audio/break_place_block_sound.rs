@@ -1,9 +1,6 @@
-use bevy::{
-    prelude::{
-        resource_exists, App, BuildChildren, Commands, EventReader, Handle, IntoSystemConfigs, Name, Query, Res, Resource, Transform,
-        Update,
-    },
-    transform::bundles::TransformBundle,
+use bevy::prelude::{
+    resource_exists, App, BuildChildren, ChildBuild, Commands, EventReader, Handle, IntoSystemConfigs, Name, Query, Res, Resource,
+    Transform, Update,
 };
 use bevy_kira_audio::{Audio, AudioControl, AudioInstance, AudioSource};
 use cosmos_core::{
@@ -27,7 +24,7 @@ fn play_block_break_sound(
     mut commands: Commands,
 ) {
     for ev in event_reader.read() {
-        let Ok(structure) = structure_query.get(ev.structure_entity) else {
+        let Ok(structure) = structure_query.get(ev.block.structure()) else {
             continue;
         };
 
@@ -41,12 +38,12 @@ fn play_block_break_sound(
             ..Default::default()
         }]);
 
-        commands.entity(ev.structure_entity).with_children(|p| {
+        commands.entity(ev.block.structure()).with_children(|p| {
             p.spawn((
                 Name::new("Block break sound"),
                 DespawnWithStructure,
                 DespawnOnNoEmissions,
-                TransformBundle::from_transform(Transform::from_translation(sound_location)),
+                Transform::from_translation(sound_location),
                 sound_emission,
             ));
         });
@@ -61,7 +58,7 @@ fn play_block_place_sound(
     mut commands: Commands,
 ) {
     for ev in event_reader.read() {
-        let Ok(structure) = structure_query.get(ev.structure_entity) else {
+        let Ok(structure) = structure_query.get(ev.block.structure()) else {
             continue;
         };
 
@@ -75,12 +72,12 @@ fn play_block_place_sound(
             ..Default::default()
         }]);
 
-        commands.entity(ev.structure_entity).with_children(|p| {
+        commands.entity(ev.block.structure()).with_children(|p| {
             p.spawn((
                 Name::new("Block break sound"),
                 DespawnWithStructure,
                 DespawnOnNoEmissions,
-                TransformBundle::from_transform(Transform::from_translation(sound_location)),
+                Transform::from_translation(sound_location),
                 sound_emission,
             ));
         });

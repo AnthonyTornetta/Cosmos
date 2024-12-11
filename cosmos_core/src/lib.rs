@@ -5,6 +5,8 @@
 
 pub mod block;
 pub mod blockitems;
+pub mod chat;
+pub mod crafting;
 pub mod debug;
 pub mod economy;
 pub mod ecs;

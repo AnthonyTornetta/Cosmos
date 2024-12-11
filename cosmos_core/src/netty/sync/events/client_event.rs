@@ -5,11 +5,11 @@ use bevy::{
         system::SystemParam,
     },
     log::{error, warn},
-    prelude::{resource_exists, Deref, Event, EventReader, EventWriter, IntoSystemConfigs, Res, ResMut},
+    prelude::{resource_exists, Event, EventReader, EventWriter, IntoSystemConfigs, Res, ResMut},
 };
 use renet2::RenetClient;
 
-use crate::registry::Registry;
+use crate::{netty::NettyChannelServer, registry::Registry};
 use crate::{
     netty::{cosmos_encoder, system_sets::NetworkingSystemsSet, NettyChannelClient},
     registry::identifiable::Identifiable,
@@ -28,11 +28,10 @@ pub(super) struct GotNetworkEvent {
 /// the inner event sent to the server.
 pub struct NettyEventToSend<T: NettyEvent>(pub T);
 
-#[derive(Deref, Event, Debug)]
 /// An event received from the server.
 ///
 /// Read this via an [`EventReader<NettyEventReceived<T>>`].
-pub struct NettyEventReceived<T: NettyEvent>(pub T);
+pub type NettyEventReceived<T> = T;
 
 /// Send your [`NettyEvent`] via this before [`NetworkingSystemsSet::SyncComponents`] to have it
 /// automatically sent to the server.
@@ -99,7 +98,7 @@ fn send_events<T: NettyEvent>(
 }
 
 fn receive_events(mut client: ResMut<RenetClient>, mut evw_got_event: EventWriter<GotNetworkEvent>) {
-    while let Some(message) = client.receive_message(NettyChannelClient::NettyEvent) {
+    while let Some(message) = client.receive_message(NettyChannelServer::NettyEvent) {
         let Some(msg) = cosmos_encoder::deserialize::<NettyEventMessage>(&message)
             .map(Some)
             .unwrap_or_else(|e| {
@@ -107,6 +106,7 @@ fn receive_events(mut client: ResMut<RenetClient>, mut evw_got_event: EventWrite
                 None
             })
         else {
+            error!("Error deserializing message into `NettyEventMessage`");
             continue;
         };
 
@@ -161,8 +161,6 @@ pub(super) fn client_receive_event<T: NettyEvent>(app: &mut App) {
 }
 
 pub(super) fn register_event<T: NettyEvent>(app: &mut App) {
-    app.add_event::<NettyEventReceived<T>>();
-
     if T::event_receiver() == EventReceiver::Client || T::event_receiver() == EventReceiver::Both {
         client_receive_event::<T>(app);
     }

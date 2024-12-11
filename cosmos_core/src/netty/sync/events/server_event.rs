@@ -10,7 +10,7 @@ use bevy::{
 use renet2::{ClientId, RenetServer};
 
 use crate::{
-    netty::{cosmos_encoder, system_sets::NetworkingSystemsSet, NettyChannelClient},
+    netty::{cosmos_encoder, system_sets::NetworkingSystemsSet, NettyChannelClient, NettyChannelServer},
     registry::identifiable::Identifiable,
 };
 use crate::{registry::Registry, state::GameState};
@@ -162,7 +162,7 @@ fn send_events<T: NettyEvent>(
         if let Some(client_id) = ev.client_id {
             server.send_message(
                 client_id,
-                NettyChannelClient::NettyEvent,
+                NettyChannelServer::NettyEvent,
                 cosmos_encoder::serialize(&NettyEventMessage::SendNettyEvent {
                     component_id: registered_event.id(),
                     raw_data: serialized,
@@ -170,7 +170,7 @@ fn send_events<T: NettyEvent>(
             );
         } else {
             server.broadcast_message(
-                NettyChannelClient::NettyEvent,
+                NettyChannelServer::NettyEvent,
                 cosmos_encoder::serialize(&NettyEventMessage::SendNettyEvent {
                     component_id: registered_event.id(),
                     raw_data: serialized,

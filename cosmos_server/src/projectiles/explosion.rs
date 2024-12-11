@@ -140,7 +140,6 @@ fn respond_to_explosion(
                     local_coords + UnboundBlockCoordinate::splat(max_block_radius),
                     true, // Include air false is broken for some reason
                 )
-                .map(|x| x.coords())
                 .filter(|&coords| structure.has_block_at(coords)) // Remove this once `include_air` works.
                 .flat_map(|this_block| {
                     calculate_block_explosion_power(

@@ -1,6 +1,7 @@
 //! Events that are related to blocks
 
 use crate::block::block_rotation::BlockRotation;
+use crate::structure::chunk::BlockInfo;
 use crate::structure::structure_block::StructureBlock;
 use bevy::ecs::event::EventWriter;
 use bevy::ecs::system::Commands;
@@ -19,16 +20,26 @@ pub struct BlockChangedEvent {
     ///
     /// The actual block may or may not have been updated yet
     pub block: StructureBlock,
-    /// The structure entity
-    pub structure_entity: Entity,
     /// The block that was there before
     pub old_block: u16,
     /// The block that is there now/will be there
     pub new_block: u16,
     /// Old block's rotation
-    pub old_block_rotation: BlockRotation,
+    pub old_block_info: BlockInfo,
     /// New block's rotation
-    pub new_block_rotation: BlockRotation,
+    pub new_block_info: BlockInfo,
+}
+
+impl BlockChangedEvent {
+    /// Computes what the old rotation was from the old [`BlockInfo`]
+    pub fn old_block_rotation(&self) -> BlockRotation {
+        self.old_block_info.get_rotation()
+    }
+
+    /// Computes what the new rotation was from the new [`BlockInfo`]
+    pub fn new_block_rotation(&self) -> BlockRotation {
+        self.new_block_info.get_rotation()
+    }
 }
 
 #[derive(Event, Debug, Clone)]
@@ -42,8 +53,6 @@ pub struct BlockDataChangedEvent {
     pub block_data_entity: Option<Entity>,
     /// The block this is referring to
     pub block: StructureBlock,
-    /// The structure's entity
-    pub structure_entity: Entity,
 }
 
 #[derive(SystemParam)]

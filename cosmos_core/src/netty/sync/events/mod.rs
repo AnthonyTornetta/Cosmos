@@ -1,6 +1,6 @@
 //! Used to easily send events between the server and client using bevy patterns.
 //!
-//! Make sure to put your systems that interact with thins in the
+//! Make sure to put your systems that interact with this in the
 //! [`crate::netty::system_sets::NetworkingSystemsSet::Between`] set to avoid 1-frame delays.
 //!
 //! Usage:

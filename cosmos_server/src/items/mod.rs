@@ -47,7 +47,7 @@ fn advance_time_since_spawn(
     }
 
     for (ent, mut time_since_spawn) in q_physical_items.iter_mut() {
-        time_since_spawn.0 += time.delta_seconds();
+        time_since_spawn.0 += time.delta_secs();
 
         if time_since_spawn.0 > PHYSICAL_ITEM_LIFETIME.as_secs_f32() {
             commands.entity(ent).insert(NeedsDespawned);

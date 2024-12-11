@@ -143,11 +143,11 @@ fn trigger_music_playing(mut next_song_time: ResMut<NextSongTime>, mut event_wri
     const MIN_DELAY_SEC: f32 = 5.0 * 60.0; // 5min
     const MAX_DELAY_SEC: f32 = 20.0 * 60.0; // 20min
 
-    if next_song_time.0 > time.elapsed_seconds() {
+    if next_song_time.0 > time.elapsed_secs() {
         return;
     }
 
-    next_song_time.0 = time.elapsed_seconds() + random_range(MIN_DELAY_SEC, MAX_DELAY_SEC);
+    next_song_time.0 = time.elapsed_secs() + random_range(MIN_DELAY_SEC, MAX_DELAY_SEC);
 
     event_writer.send(PlayMusicEvent {
         atmosphere: MusicAtmosphere::Calm,
@@ -161,7 +161,7 @@ pub(super) fn register(app: &mut App) {
 
     app.add_systems(
         Update,
-        (trigger_music_playing, start_playing.run_if(on_event::<PlayMusicEvent>()))
+        (trigger_music_playing, start_playing.run_if(on_event::<PlayMusicEvent>))
             .chain()
             .run_if(in_state(GameState::Playing))
             .run_if(not(resource_exists::<PlayingBackgroundSong>)),

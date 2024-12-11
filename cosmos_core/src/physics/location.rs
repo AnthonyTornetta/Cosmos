@@ -24,7 +24,6 @@ use bevy::{
         Added, App, Children, Commands, Component, Deref, DerefMut, Entity, Parent, Quat, Query, Transform, Update, Vec3, With, Without,
     },
     reflect::Reflect,
-    transform::bundles::TransformBundle,
 };
 use bevy_rapier3d::{na::Vector3, plugin::RapierContextEntityLink};
 use bigdecimal::{BigDecimal, FromPrimitive};
@@ -460,9 +459,9 @@ impl Location {
         let local_z = BigDecimal::from_f32(self.local.z).unwrap_or_else(|| panic!("Died on {}", self.local.z));
 
         Vector3::new(
-            BigDecimal::from_i64(self.sector.x()).unwrap() * &sector_dims + local_x,
-            BigDecimal::from_i64(self.sector.y()).unwrap() * &sector_dims + local_y,
-            BigDecimal::from_i64(self.sector.z()).unwrap() * &sector_dims + local_z,
+            BigDecimal::from_i64(self.sector.x()).unwrap_or_else(|| panic!("Died on {}", self.sector.x())) * &sector_dims + local_x,
+            BigDecimal::from_i64(self.sector.y()).unwrap_or_else(|| panic!("Died on {}", self.sector.y())) * &sector_dims + local_y,
+            BigDecimal::from_i64(self.sector.z()).unwrap_or_else(|| panic!("Died on {}", self.sector.z())) * &sector_dims + local_z,
         )
     }
 
@@ -572,7 +571,10 @@ pub fn handle_child_syncing(
 }
 
 fn on_add_location_without_transform(
-    mut query: Query<(Entity, &mut Location, Option<&BundleStartingRotation>), (Added<Location>, Without<Transform>, Without<PlayerWorld>)>,
+    mut query: Query<
+        (Entity, &mut Location, Option<&BundleStartingRotation>),
+        (Added<Location>, /* Without<Transform>, */ Without<PlayerWorld>),
+    >,
     q_worlds: Query<(&Location, &RapierContextEntityLink), With<PlayerWorld>>,
     mut commands: Commands,
 ) {
@@ -601,7 +603,7 @@ fn on_add_location_without_transform(
             commands
                 .entity(needs_transform_entity)
                 .remove::<BundleStartingRotation>()
-                .insert((TransformBundle::from_transform(transform), best_physics_world));
+                .insert((transform, best_physics_world));
         } else {
             warn!("Location bundle added before there was a player world!");
             let transform = Transform::from_translation(my_loc.absolute_coords_f32()).with_rotation(rotation);
@@ -611,7 +613,7 @@ fn on_add_location_without_transform(
             commands
                 .entity(needs_transform_entity)
                 .remove::<BundleStartingRotation>()
-                .insert(TransformBundle::from_transform(transform));
+                .insert(transform);
         }
     }
 }

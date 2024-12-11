@@ -44,7 +44,7 @@ fn grav_well_handle_block_event(
             continue;
         };
 
-        let Ok(structure) = q_structure.get(s_block.structure_entity) else {
+        let Ok(structure) = q_structure.get(s_block.structure()) else {
             continue;
         };
 
@@ -53,11 +53,11 @@ fn grav_well_handle_block_event(
             continue;
         }
 
-        let block = structure.block_at(s_block.structure_block.coords(), &blocks);
+        let block = structure.block_at(s_block.coords(), &blocks);
 
         if block.unlocalized_name() == "cosmos:gravity_well" {
             if let Ok(grav_well) = q_grav_well.get(ev.interactor) {
-                if grav_well.block == s_block.structure_block.coords() && grav_well.structure_entity == s_block.structure_entity {
+                if grav_well.block == s_block.coords() && grav_well.structure_entity == s_block.structure() {
                     commands.entity(ev.interactor).remove::<GravityWell>();
 
                     continue;
@@ -67,16 +67,16 @@ fn grav_well_handle_block_event(
             commands
                 .entity(ev.interactor)
                 .insert(GravityWell {
-                    block: s_block.structure_block.coords(),
+                    block: s_block.coords(),
                     g_constant: Vec3::new(0.0, -9.8, 0.0),
-                    structure_entity: s_block.structure_entity,
+                    structure_entity: s_block.structure(),
                 })
-                .set_parent(s_block.structure_entity);
+                .set_parent(s_block.structure());
         }
     }
 
     for ev in block_break_events.read() {
-        let Ok(structure) = q_structure.get(ev.structure_entity) else {
+        let Ok(structure) = q_structure.get(ev.block.structure()) else {
             continue;
         };
 

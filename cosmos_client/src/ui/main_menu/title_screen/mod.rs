@@ -10,9 +10,10 @@ use crate::{
     netty::connect::HostConfig,
     ui::{
         components::{
-            button::{register_button, Button, ButtonBundle, ButtonEvent, ButtonStyles},
-            text_input::{InputType, TextInput, TextInputBundle},
+            button::{register_button, Button, ButtonEvent, ButtonStyles},
+            text_input::{InputType, TextInput},
         },
+        font::DefaultFont,
         reactivity::{add_reactable_type, BindValue, BindValues, ReactableFields, ReactableValue},
         settings::SettingsMenuSet,
     },
@@ -49,23 +50,25 @@ impl ReactableValue for ErrorMessage {
     }
 }
 
-fn create_main_menu(mut commands: Commands, asset_server: Res<AssetServer>, q_ui_root: Query<Entity, With<MainMenuRootUiNode>>) {
+fn create_main_menu(mut commands: Commands, default_font: Res<DefaultFont>, q_ui_root: Query<Entity, With<MainMenuRootUiNode>>) {
     let cool_blue = Srgba::hex("00FFFF").unwrap().into();
 
-    let text_style = TextStyle {
-        color: Color::WHITE,
+    let text_style = TextFont {
         font_size: 32.0,
-        font: asset_server.load("fonts/PixeloidSans.ttf"),
+        font: default_font.0.clone(),
+        ..Default::default()
     };
-    let text_style_small = TextStyle {
-        color: Color::WHITE,
+    let text_style_small = TextFont {
         font_size: 24.0,
-        font: asset_server.load("fonts/PixeloidSans.ttf"),
+        font: default_font.0.clone(),
+        ..Default::default()
     };
-    let text_style_large = TextStyle {
-        color: cool_blue,
+
+    let text_blue = TextColor(cool_blue);
+    let text_style_large = TextFont {
         font_size: 256.0,
-        font: asset_server.load("fonts/PixeloidSans.ttf"),
+        font: default_font.0.clone(),
+        ..Default::default()
     };
 
     let Ok(main_menu_root) = q_ui_root.get_single() else {
@@ -74,121 +77,108 @@ fn create_main_menu(mut commands: Commands, asset_server: Res<AssetServer>, q_ui
     };
 
     commands.entity(main_menu_root).with_children(|p| {
-        p.spawn(TextBundle {
-            text: Text::from_section("COSMOS", text_style_large),
-            style: Style {
-                margin: UiRect::bottom(Val::Px(200.0)),
+        p.spawn((
+            Text::new("COSMOS"),
+            text_style_large,
+            text_blue,
+            Node {
+                margin: UiRect::bottom(Val::Px(50.0)),
                 align_self: AlignSelf::Center,
                 ..Default::default()
             },
-            ..Default::default()
-        });
+        ));
 
-        p.spawn(ButtonBundle::<ConnectButtonEvent> {
-            node_bundle: NodeBundle {
-                border_color: cool_blue.into(),
-                style: Style {
-                    border: UiRect::all(Val::Px(2.0)),
-                    width: Val::Px(500.0),
-                    height: Val::Px(70.0),
-                    align_self: AlignSelf::Center,
-                    ..Default::default()
-                },
+        p.spawn((
+            BorderColor(cool_blue),
+            Node {
+                border: UiRect::all(Val::Px(2.0)),
+                width: Val::Px(500.0),
+                height: Val::Px(70.0),
+                align_self: AlignSelf::Center,
                 ..Default::default()
             },
-            button: Button {
+            Button::<ConnectButtonEvent> {
                 button_styles: Some(ButtonStyles {
                     background_color: Srgba::hex("333333").unwrap().into(),
                     hover_background_color: Srgba::hex("232323").unwrap().into(),
                     press_background_color: Srgba::hex("111111").unwrap().into(),
                     ..Default::default()
                 }),
-                text: Some(("Connect".into(), text_style.clone())),
+                text: Some(("Connect".into(), text_style.clone(), Default::default())),
                 ..Default::default()
             },
-        });
+        ));
 
         let vars_entity = p.spawn((ConnectionString("localhost".into()), ErrorMessage::default())).id();
 
         p.spawn((
             BindValues::single(BindValue::<ConnectionString>::new(vars_entity, ReactableFields::Value)),
-            TextInputBundle {
-                text_input: TextInput {
-                    style: text_style_small.clone(),
-                    input_type: InputType::Text { max_length: None },
+            text_style_small.clone(),
+            TextInput {
+                input_type: InputType::Text { max_length: None },
+                ..Default::default()
+            },
+            InputValue::new("localhost"),
+            BorderColor(Srgba::hex("555555").unwrap().into()),
+            BackgroundColor(Srgba::hex("111111").unwrap().into()),
+            Node {
+                border: UiRect::all(Val::Px(2.0)),
+                width: Val::Px(500.0),
+                min_height: Val::Px(45.0),
+                align_self: AlignSelf::Center,
+                margin: UiRect::top(Val::Px(20.0)),
+                padding: UiRect {
+                    top: Val::Px(4.0),
+                    bottom: Val::Px(4.0),
                     ..Default::default()
                 },
-                value: InputValue::new("localhost"),
-                node_bundle: NodeBundle {
-                    border_color: Srgba::hex("555555").unwrap().into(),
-                    background_color: Srgba::hex("111111").unwrap().into(),
-                    style: Style {
-                        border: UiRect::all(Val::Px(2.0)),
-                        width: Val::Px(500.0),
-                        height: Val::Px(45.0),
-                        align_self: AlignSelf::Center,
-                        margin: UiRect::top(Val::Px(20.0)),
-                        padding: UiRect {
-                            top: Val::Px(4.0),
-                            bottom: Val::Px(4.0),
-                            ..Default::default()
-                        },
-                        ..Default::default()
-                    },
-                    ..Default::default()
-                },
+                ..Default::default()
             },
         ));
 
-        p.spawn(ButtonBundle::<SettingsButtonEvent> {
-            node_bundle: NodeBundle {
-                border_color: cool_blue.into(),
-                style: Style {
-                    border: UiRect::all(Val::Px(2.0)),
-                    width: Val::Px(500.0),
-                    height: Val::Px(70.0),
-                    align_self: AlignSelf::Center,
-                    margin: UiRect::top(Val::Px(20.0)),
-                    ..Default::default()
-                },
+        p.spawn((
+            BorderColor(cool_blue),
+            Node {
+                border: UiRect::all(Val::Px(2.0)),
+                width: Val::Px(500.0),
+                height: Val::Px(70.0),
+                align_self: AlignSelf::Center,
+                margin: UiRect::top(Val::Px(20.0)),
                 ..Default::default()
             },
-            button: Button {
+            Button::<SettingsButtonEvent> {
                 button_styles: Some(ButtonStyles {
                     background_color: Srgba::hex("333333").unwrap().into(),
                     hover_background_color: Srgba::hex("232323").unwrap().into(),
                     press_background_color: Srgba::hex("111111").unwrap().into(),
                     ..Default::default()
                 }),
-                text: Some(("Settings".into(), text_style.clone())),
+                text: Some(("Settings".into(), text_style.clone(), Default::default())),
                 ..Default::default()
             },
-        });
+        ));
 
-        p.spawn(ButtonBundle::<QuitButtonEvent> {
-            node_bundle: NodeBundle {
-                border_color: cool_blue.into(),
-                style: Style {
-                    border: UiRect::all(Val::Px(2.0)),
-                    width: Val::Px(500.0),
-                    height: Val::Px(70.0),
-                    align_self: AlignSelf::Center,
-                    margin: UiRect::top(Val::Px(20.0)),
-                    ..Default::default()
-                },
+        p.spawn((
+            BorderColor(cool_blue),
+            Node {
+                border: UiRect::all(Val::Px(2.0)),
+                width: Val::Px(500.0),
+                height: Val::Px(70.0),
+                align_self: AlignSelf::Center,
+                margin: UiRect::top(Val::Px(20.0)),
                 ..Default::default()
             },
-            button: Button {
+            Button::<QuitButtonEvent> {
                 button_styles: Some(ButtonStyles {
                     background_color: Srgba::hex("333333").unwrap().into(),
                     hover_background_color: Srgba::hex("232323").unwrap().into(),
                     press_background_color: Srgba::hex("111111").unwrap().into(),
                     ..Default::default()
                 }),
-                text: Some(("Quit".into(), text_style.clone())),
+                text: Some(("Quit".into(), text_style.clone(), Default::default())),
                 ..Default::default()
             },
-        });
+        ));
     });
 }
 
@@ -308,16 +298,16 @@ pub(super) fn register(app: &mut App) {
                 .run_if(resource_exists_and_changed::<MainMenuSubState>)
                 .in_set(MainMenuSystemSet::InitializeMenu),
             goto_settings
-                .run_if(on_event::<SettingsButtonEvent>())
+                .run_if(on_event::<SettingsButtonEvent>)
                 .run_if(in_main_menu_state(MainMenuSubState::TitleScreen))
                 .in_set(MainMenuSystemSet::UpdateMenu),
             trigger_connection
                 .run_if(in_state(GameState::MainMenu))
-                .run_if(on_event::<ConnectButtonEvent>())
+                .run_if(on_event::<ConnectButtonEvent>)
                 .run_if(in_main_menu_state(MainMenuSubState::TitleScreen))
                 .in_set(MainMenuSystemSet::UpdateMenu),
             quit_game
-                .run_if(on_event::<QuitButtonEvent>())
+                .run_if(on_event::<QuitButtonEvent>)
                 .run_if(in_main_menu_state(MainMenuSubState::TitleScreen))
                 .in_set(MainMenuSystemSet::UpdateMenu),
         )

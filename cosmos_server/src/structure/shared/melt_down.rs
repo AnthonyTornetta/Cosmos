@@ -22,7 +22,7 @@ fn monitor_block_events(mut commands: Commands, blocks: Res<Registry<Block>>, mu
         let block = blocks.from_numeric_id(ev.old_block);
 
         if block.unlocalized_name() == "cosmos:ship_core" || block.unlocalized_name() == "cosmos:station_core" {
-            commands.entity(ev.structure_entity).insert(MeltingDown::default());
+            commands.entity(ev.block.structure()).insert(MeltingDown::default());
         }
     }
 }
