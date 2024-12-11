@@ -77,7 +77,7 @@ fn load_default_songs(asset_server: Res<AssetServer>, mut music_controller: ResM
                 let Some(extension) = path.extension() else {
                     continue;
                 };
-                if extension.to_ascii_lowercase() != "ogg" {
+                if !extension.eq_ignore_ascii_case("ogg") {
                     continue;
                 }
 
@@ -138,11 +138,10 @@ fn start_playing(
 
 #[derive(Resource, Debug)]
 struct NextSongTime(f32);
+const MIN_DELAY_SEC: f32 = 5.0 * 60.0; // 5min
+const MAX_DELAY_SEC: f32 = 20.0 * 60.0; // 20min
 
 fn trigger_music_playing(mut next_song_time: ResMut<NextSongTime>, mut event_writer: EventWriter<PlayMusicEvent>, time: Res<Time>) {
-    const MIN_DELAY_SEC: f32 = 5.0 * 60.0; // 5min
-    const MAX_DELAY_SEC: f32 = 20.0 * 60.0; // 20min
-
     if next_song_time.0 > time.elapsed_secs() {
         return;
     }
@@ -155,7 +154,8 @@ fn trigger_music_playing(mut next_song_time: ResMut<NextSongTime>, mut event_wri
 }
 
 pub(super) fn register(app: &mut App) {
-    app.init_resource::<MusicController>().insert_resource(NextSongTime(0.0));
+    let initial_delay = random_range(MIN_DELAY_SEC, MAX_DELAY_SEC);
+    app.init_resource::<MusicController>().insert_resource(NextSongTime(initial_delay));
 
     app.add_systems(OnEnter(GameState::Loading), load_default_songs);
 
