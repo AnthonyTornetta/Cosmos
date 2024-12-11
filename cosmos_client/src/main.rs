@@ -20,7 +20,6 @@ pub mod inventory;
 pub mod item;
 pub mod lang;
 pub mod loading;
-pub mod music;
 pub mod netty;
 pub mod physics;
 pub mod plugin;
@@ -178,7 +177,6 @@ fn main() {
     rendering::register(&mut app);
     universe::register(&mut app);
     skybox::register(&mut app);
-    music::register(&mut app);
     settings::register(&mut app);
     physics::register(&mut app);
     ecs::register(&mut app);
