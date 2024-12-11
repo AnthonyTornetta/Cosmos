@@ -2,7 +2,7 @@
 
 use bevy::{
     app::Update,
-    log::warn,
+    log::{info, warn},
     prelude::{in_state, App, Event, EventWriter, IntoSystemConfigs, ResMut},
 };
 use cosmos_core::{
@@ -23,11 +23,13 @@ fn listen_for_done_syncing(
     mut evw_finished_receiving_registries: EventWriter<ClientFinishedReceivingRegistriesEvent>,
 ) {
     for client_id in server.clients_id().into_iter() {
-        while let Some(message) = server.receive_message(client_id, NettyChannelClient::ComponentReplication) {
+        while let Some(message) = server.receive_message(client_id, NettyChannelClient::Registry) {
             let Ok(msg) = cosmos_encoder::deserialize::<RegistrySyncing>(&message) else {
                 warn!("Bad deserialization");
                 continue;
             };
+
+            info!("Got registry message from client {client_id}");
 
             match msg {
                 RegistrySyncing::FinishedReceivingRegistries => {

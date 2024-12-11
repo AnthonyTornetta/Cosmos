@@ -121,7 +121,7 @@ fn main() {
         //     time_scale: 1.0,
         //     substeps: 2,
         // })
-        // .insert_resource(ClearColor(Color::BLACK))
+        .insert_resource(ClearColor(Color::BLACK))
         // This must be registered here, before it is used anywhere
         .add_plugins(default_plugins)
         .init_state::<GameState>()

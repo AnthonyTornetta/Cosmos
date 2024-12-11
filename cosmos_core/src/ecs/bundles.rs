@@ -20,6 +20,9 @@ impl From<Quat> for BundleStartingRotation {
 }
 
 /// A component bundle for entities with a [`Mesh`] and a [`Material`].
+///
+/// A [`Transform`] component will be added, then immediately set values based on the [`Location`]
+/// and [`BundleStartingRotation`].
 #[derive(Bundle, Clone, Debug, Reflect, Default)]
 pub struct CosmosMaterialMeshBundle<M: Material> {
     /// The bevy mesh

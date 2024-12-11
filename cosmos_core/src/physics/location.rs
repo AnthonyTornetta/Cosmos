@@ -571,7 +571,10 @@ pub fn handle_child_syncing(
 }
 
 fn on_add_location_without_transform(
-    mut query: Query<(Entity, &mut Location, Option<&BundleStartingRotation>), (Added<Location>, Without<Transform>, Without<PlayerWorld>)>,
+    mut query: Query<
+        (Entity, &mut Location, Option<&BundleStartingRotation>),
+        (Added<Location>, /* Without<Transform>, */ Without<PlayerWorld>),
+    >,
     q_worlds: Query<(&Location, &RapierContextEntityLink), With<PlayerWorld>>,
     mut commands: Commands,
 ) {
