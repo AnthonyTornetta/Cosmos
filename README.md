@@ -61,9 +61,22 @@ If you want to view the ordering of the systems, run (on linux) `cargo run --fea
 
 See [the issues page](https://github.com/AnthonyTornetta/Cosmos/issues) for the list of current features/bugs in development.
 
-## Release 0.0.7a (In Progress)
+## Release 0.0.8a
 
-- [ ] Music
+- [ ] Screenshots
+- [ ] More pirate ships
+- [ ] More asteroid types
+- [ ] Fuel for reactor
+- [ ] Performance fixes
+- [ ] Fix server instability
+- [ ] Reduce amount of packets server sends per second
+- [ ] Rebalance shop prices
+- [ ] Add recipes
+- [ ] Add more randomly generated structures (e.g. stations)
+
+## Release 0.0.7a
+
+- [x] Music
 - [x] Creative Mode
 - [x] Chat
 - [x] Galaxy map
@@ -358,46 +371,35 @@ See [the issues page](https://github.com/AnthonyTornetta/Cosmos/issues) for the 
 - [x] Add Crosshair
 - [x] Support re-sizable window
 
-## Release 0.0.8a
+## Everything that will likely be done in the future
 
-- [ ] More pirate ships
-- [ ] More asteroid types
-- [ ] Fuel for reactor
-- [ ] Performance fixes
-- [ ] Fix server instability
-- [ ] Reduce amount of packets server sends per second
-- [ ] Rebalance shop prices
-- [ ] Add more randomly generated structures (e.g. stations)
-
-## Everything that will still have to be done after 0.0.7a
-
-- [ ] Shops
-  - [ ] Peace zone?
-  - [ ] Prices based on supply + rarity
-    - [ ] Keep supply relatively equal between nearby shops
-  - [ ] Each shop has its own supply of money that it cannot go below
-- [ ] Biosphere Improvements
-  - [ ] Ice biosphere glaciers
-  - [ ] Better Water block
-  - [ ] Better Lava block
-  - [ ] Structures
-    - [ ] Rocks spawning
-    - [ ] Undergrowth
-    - [ ] 1 More tree type
-  - [ ] Groundwork for biomes
-    - [ ] Planes
-    - [ ] Redwood forest
-    - [ ] 1 Additional forest
-    - [ ] Ocean
-- [ ] Wires
-  - [ ] Electrical
+- Shops
+  - Peace zone?
+  - Prices based on supply + rarity
+    - Keep supply relatively equal between nearby shops
+  - Each shop has its own supply of money that it cannot go below
+- Biosphere Improvements
+  - Ice biosphere glaciers
+  - Structures
+    - Rocks spawning
+    - Undergrowth
+    - 1 More tree type
+  - Groundwork for biomes
+    - Planes
+    - Redwood forest
+    - 1 Additional forest
+    - Ocean
+- Wires
+  - Electrical
 
 ## NPCs
 
 ### Factions
 
 NPC controlled OR player controlled
+
 NPC controlled factions store reputation of other factions + players
+
 Factions have different attributes
 
 - One may steal your ship blueprints
