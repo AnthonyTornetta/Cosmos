@@ -12,10 +12,10 @@ use bevy::{
     hierarchy::{BuildChildren, DespawnRecursiveExt},
     log::warn,
     math::{Rect, Vec3},
+    prelude::{Mesh3d, Transform, Visibility},
     reflect::Reflect,
-    render::{mesh::Mesh, view::VisibilityBundle},
+    render::mesh::Mesh,
     state::state::OnEnter,
-    transform::bundles::TransformBundle,
     utils::HashMap,
 };
 use cosmos_core::{
@@ -215,9 +215,9 @@ fn on_render_logic_indicator(
 
             let entity = commands
                 .spawn((
-                    TransformBundle::default(),
-                    VisibilityBundle::default(),
-                    meshes.add(mesh),
+                    Transform::default(),
+                    Visibility::default(),
+                    Mesh3d(meshes.add(mesh)),
                     Name::new("Rendered Logic Indicators"),
                 ))
                 .set_parent(ev.mesh_entity_parent)

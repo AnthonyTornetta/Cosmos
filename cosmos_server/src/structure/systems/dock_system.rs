@@ -9,10 +9,9 @@ use bevy::{
         removal_detection::RemovedComponents,
         world::Ref,
     },
-    math::{Quat, Vec3},
+    math::{bounding::Aabb3d, Quat, Vec3},
     prelude::{in_state, App, Commands, EventReader, IntoSystemConfigs, Query, Res, Update},
     reflect::Reflect,
-    render::primitives::Aabb,
     transform::components::GlobalTransform,
 };
 
@@ -247,7 +246,10 @@ fn on_active(
             &mut q_structure,
         );
 
-        let aabb = Aabb::from_min_max(min + Vec3::splat(0.1), max - Vec3::splat(0.1));
+        let aabb = Aabb3d {
+            min: (min + Vec3::splat(0.1)).into(),
+            max: (max - Vec3::splat(0.1)).into(),
+        };
 
         let mut hit_something_bad = false;
 

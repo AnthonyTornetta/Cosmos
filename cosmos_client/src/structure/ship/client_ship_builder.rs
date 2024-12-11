@@ -3,10 +3,9 @@
 use bevy::{
     ecs::system::EntityCommands,
     prelude::{
-        resource_exists, Added, App, BuildChildren, Commands, Entity, Handle, IntoSystemConfigs, Name, Query, Res, Resource, Transform,
-        Update,
+        resource_exists, Added, App, BuildChildren, ChildBuild, Commands, Entity, Handle, IntoSystemConfigs, Name, Query, Res, Resource,
+        Transform, Update,
     },
-    transform::bundles::TransformBundle,
 };
 use bevy_kira_audio::{Audio, AudioControl, AudioInstance, AudioSource};
 use bevy_rapier3d::prelude::Velocity;
@@ -69,7 +68,7 @@ fn client_on_add_ship(
             p.spawn((
                 Name::new("Engine idle sound"),
                 DespawnWithStructure,
-                TransformBundle::from_transform(Transform::from_xyz(0.5, 0.5, 0.5)),
+                Transform::from_xyz(0.5, 0.5, 0.5),
                 idle_emitter,
             ));
         });

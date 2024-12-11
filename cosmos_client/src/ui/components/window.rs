@@ -6,7 +6,6 @@ use bevy::{
     color::palettes::css,
     core::Name,
     ecs::{
-        bundle::Bundle,
         component::Component,
         entity::Entity,
         event::{Event, EventReader},
@@ -15,12 +14,11 @@ use bevy::{
         system::{Commands, Query, Res},
     },
     hierarchy::{BuildChildren, Children},
-    text::{JustifyText, Text, TextStyle},
+    math::{Rect, Vec2},
+    prelude::{ChildBuild, ImageNode, Text},
+    text::{JustifyText, TextFont, TextLayout},
     transform::components::GlobalTransform,
-    ui::{
-        node_bundles::{NodeBundle, TextBundle},
-        AlignItems, Display, FlexDirection, Interaction, JustifyContent, Node, PositionType, Style, UiImage, UiRect, Val,
-    },
+    ui::{AlignItems, BackgroundColor, ComputedNode, Display, FlexDirection, Interaction, JustifyContent, Node, PositionType, UiRect, Val},
     utils::default,
     window::{PrimaryWindow, Window},
 };
@@ -29,35 +27,23 @@ use cosmos_core::ecs::NeedsDespawned;
 use crate::{ui::UiSystemSet, window::setup::DeltaCursorPosition};
 
 use super::{
-    button::{register_button, Button, ButtonBundle, ButtonEvent},
+    button::{register_button, Button, ButtonEvent},
     show_cursor::ShowCursor,
 };
 
 #[derive(Debug, Component, Default)]
+#[require(Node, ShowCursor)]
 /// A wrapper around ui components that will make them movable and have a title bar with a close button.
 pub struct GuiWindow {
     /// The title that should be displayed
     pub title: String,
     /// Styles that effect the wrapper around the children of the window node
-    pub body_styles: Style,
+    pub body_styles: Node,
 }
 
 impl GuiWindow {
     /// The height of a window's title bar
     pub const TITLE_BAR_HEIGHT_PX: f32 = 60.0;
-}
-
-#[derive(Bundle, Debug, Default)]
-/// A wrapper around ui components that will make them movable and have a title bar with a close button.
-pub struct WindowBundle {
-    /// A wrapper around ui components that will make them movable and have a title bar with a close button.
-    pub window: GuiWindow,
-    /// NodeBundle for further customization. This will be the NodeBundle of the entire window.
-    ///
-    /// To only style the body of the window, change the body_styles in the GuiWindow object.
-    pub node_bundle: NodeBundle,
-    /// Makes the cursor show itself
-    pub show_cursor: ShowCursor,
 }
 
 #[derive(Event, Debug)]
@@ -81,7 +67,7 @@ struct TitleBar {
 
 fn add_window(
     mut commands: Commands,
-    mut q_added_window: Query<(Entity, &GuiWindow, Option<&Children>, &mut Style), Added<GuiWindow>>,
+    mut q_added_window: Query<(Entity, &GuiWindow, Option<&Children>, &mut Node), Added<GuiWindow>>,
     asset_server: Res<AssetServer>,
 ) {
     for (ent, window, children, mut style) in &mut q_added_window {
@@ -100,72 +86,56 @@ fn add_window(
                     Name::new("Title Bar"),
                     TitleBar { window_entity: ent },
                     Interaction::None,
-                    NodeBundle {
-                        style: Style {
-                            display: Display::Flex,
-                            flex_direction: FlexDirection::Row,
-                            justify_content: JustifyContent::SpaceBetween,
-                            align_items: AlignItems::Center,
-                            width: Val::Percent(100.0),
-                            height: Val::Px(60.0),
-                            padding: UiRect::new(Val::Px(20.0), Val::Px(20.0), Val::Px(0.0), Val::Px(0.0)),
+                    Node {
+                        display: Display::Flex,
+                        flex_direction: FlexDirection::Row,
+                        justify_content: JustifyContent::SpaceBetween,
+                        align_items: AlignItems::Center,
+                        width: Val::Percent(100.0),
+                        height: Val::Px(60.0),
+                        padding: UiRect::new(Val::Px(20.0), Val::Px(20.0), Val::Px(0.0), Val::Px(0.0)),
 
-                            ..default()
-                        },
-                        background_color: css::WHITE.into(),
                         ..default()
                     },
-                    UiImage {
-                        texture: asset_server.load("cosmos/images/ui/inventory-header.png"),
-                        ..Default::default()
-                    },
+                    BackgroundColor(css::WHITE.into()),
+                    ImageNode::new(asset_server.load("cosmos/images/ui/inventory-header.png")),
                 ))
                 .with_children(|parent| {
                     parent.spawn((
                         Name::new("Title Text"),
-                        TextBundle {
-                            style: Style { ..default() },
-                            text: Text::from_section(
-                                &window.title,
-                                TextStyle {
-                                    color: css::WHITE.into(),
-                                    font_size: 24.0,
-                                    font: font.clone(),
-                                },
-                            )
-                            .with_justify(JustifyText::Center),
-                            ..default()
+                        Text::new(&window.title),
+                        TextFont {
+                            font_size: 24.0,
+                            font: font.clone(),
+                            ..Default::default()
+                        },
+                        TextLayout {
+                            justify: JustifyText::Center,
+                            ..Default::default()
                         },
                     ));
 
                     parent.spawn((
                         Name::new("Window Close Button"),
                         close_button,
-                        ButtonBundle {
-                            node_bundle: NodeBundle {
-                                background_color: css::WHITE.into(),
-                                style: Style {
-                                    width: Val::Px(50.0),
-                                    height: Val::Px(50.0),
+                        BackgroundColor(css::WHITE.into()),
+                        Node {
+                            width: Val::Px(50.0),
+                            height: Val::Px(50.0),
+                            ..Default::default()
+                        },
+                        Button::<CloseUiEvent> {
+                            image: Some(ImageNode::new(asset_server.load("cosmos/images/ui/inventory-close-button.png"))),
+                            text: Some((
+                                "X".into(),
+                                TextFont {
+                                    font_size: 24.0,
+                                    font: font.clone(),
                                     ..Default::default()
                                 },
-                                ..Default::default()
-                            },
-                            button: Button::<CloseUiEvent> {
-                                image: Some(UiImage {
-                                    texture: asset_server.load("cosmos/images/ui/inventory-close-button.png"),
-                                    ..Default::default()
-                                }),
-                                text: Some((
-                                    "X".into(),
-                                    TextStyle {
-                                        color: css::WHITE.into(),
-                                        font_size: 24.0,
-                                        font: font.clone(),
-                                    },
-                                )),
-                                ..Default::default()
-                            },
+                                Default::default(),
+                            )),
+                            ..Default::default()
                         },
                     ));
                 });
@@ -174,12 +144,9 @@ fn add_window(
                 parent
                     .spawn((
                         Name::new("Window Body"),
-                        NodeBundle {
-                            style: Style {
-                                flex_grow: 1.0,
-                                ..window.body_styles.clone()
-                            },
-                            ..Default::default()
+                        Node {
+                            flex_grow: 1.0,
+                            ..window.body_styles.clone()
                         },
                     ))
                     .id(),
@@ -198,7 +165,7 @@ fn add_window(
 fn move_window(
     q_window: Query<&Window, With<PrimaryWindow>>,
     cursor_delta_position: Res<DeltaCursorPosition>,
-    mut q_style: Query<(&Node, &GlobalTransform, &mut Style)>,
+    mut q_style: Query<(&ComputedNode, &GlobalTransform, &mut Node)>,
     q_title_bar: Query<(&Interaction, &TitleBar)>,
 ) {
     for (interaction, title_bar) in &q_title_bar {
@@ -211,7 +178,9 @@ fn move_window(
                 continue;
             };
 
-            let bounds = node.logical_rect(g_trans);
+            let t = g_trans.translation();
+            let bounds = Rect::from_center_size(Vec2::new(t.x, t.y), node.size());
+            // let bounds = node.logical_rect(g_trans);
 
             let left = match style.left {
                 Val::Px(px) => px,

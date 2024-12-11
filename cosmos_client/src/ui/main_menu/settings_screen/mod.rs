@@ -49,12 +49,12 @@ pub(super) fn register(app: &mut App) {
                 .in_set(MainMenuSystemSet::InitializeMenu)
                 .before(SettingsMenuSet::SettingsMenuInteractions),
             cancel_clicked
-                .run_if(on_event::<SettingsCancelButtonEvent>())
+                .run_if(on_event::<SettingsCancelButtonEvent>)
                 .run_if(in_main_menu_state(MainMenuSubState::Settings))
                 .in_set(MainMenuSystemSet::UpdateMenu)
                 .after(SettingsMenuSet::SettingsMenuInteractions),
             done_clicked
-                .run_if(on_event::<SettingsDoneButtonEvent>())
+                .run_if(on_event::<SettingsDoneButtonEvent>)
                 .run_if(in_main_menu_state(MainMenuSubState::Settings))
                 .in_set(MainMenuSystemSet::UpdateMenu)
                 .after(SettingsSet::ChangeSettings)

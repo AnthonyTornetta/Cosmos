@@ -4,10 +4,10 @@ use std::f32::consts::PI;
 
 use bevy::{
     math::primitives::Sphere,
-    pbr::NotShadowCaster,
+    pbr::{MeshMaterial3d, NotShadowCaster},
     prelude::{
-        Added, App, Assets, Commands, DirectionalLight, DirectionalLightBundle, Entity, EulerRot, Mesh, Name, OnEnter, PbrBundle, Quat,
-        Query, ResMut, StandardMaterial, Transform, Update, Vec3, With, Without,
+        Added, App, Assets, Commands, DirectionalLight, Entity, EulerRot, Mesh, Mesh3d, Name, OnEnter, Quat, Query, ResMut,
+        StandardMaterial, Transform, Update, Vec3, With, Without,
     },
 };
 use cosmos_core::{physics::location::SECTOR_DIMENSIONS, state::GameState, universe::star::Star};
@@ -39,17 +39,14 @@ fn create_added_star(
     for (entity, star) in added.iter() {
         commands.entity(entity).insert((
             Name::new("Star"),
-            PbrBundle {
-                mesh: meshes.add(Sphere {
-                    radius: SECTOR_DIMENSIONS * 2.0,
-                }),
-                material: materials.add(StandardMaterial {
-                    base_color: star.color(),
-                    unlit: true,
-                    ..Default::default()
-                }),
+            Mesh3d(meshes.add(Sphere {
+                radius: SECTOR_DIMENSIONS * 2.0,
+            })),
+            MeshMaterial3d(materials.add(StandardMaterial {
+                base_color: star.color(),
+                unlit: true,
                 ..Default::default()
-            },
+            })),
             NotShadowCaster,
         ));
     }
@@ -59,17 +56,14 @@ fn create_added_star(
 fn create_star_light_source(mut commands: Commands) {
     commands.spawn((
         Name::new("Star Light Emitter"),
-        DirectionalLightBundle {
-            directional_light: DirectionalLight {
-                illuminance: 30000.0,
-                shadows_enabled: true,
-                ..Default::default()
-            },
-            transform: Transform {
-                translation: Vec3::ZERO,
-                rotation: Quat::from_euler(EulerRot::XYZ, -PI / 4.0, 0.1, 0.1),
-                ..Default::default()
-            },
+        DirectionalLight {
+            illuminance: 30000.0,
+            shadows_enabled: true,
+            ..Default::default()
+        },
+        Transform {
+            translation: Vec3::ZERO,
+            rotation: Quat::from_euler(EulerRot::XYZ, -PI / 4.0, 0.1, 0.1),
             ..Default::default()
         },
     ));

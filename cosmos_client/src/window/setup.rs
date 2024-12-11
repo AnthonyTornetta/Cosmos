@@ -6,7 +6,7 @@ use bevy::{
     window::{CursorGrabMode, PrimaryWindow, WindowFocused},
 };
 use cosmos_core::state::GameState;
-use iyes_perf_ui::entries::PerfUiBundle;
+// use iyes_perf_ui::entries::PerfUiBundle;
 
 #[derive(Resource, Copy, Clone)]
 /// Resource containing the various flags about the cursor, like if it's hidden or not
@@ -58,8 +58,8 @@ fn setup_window(mut primary_query: Query<&mut Window, With<PrimaryWindow>>) {
     let mut window = primary_query.get_single_mut().expect("Missing primary window.");
 
     window.title = "Cosmos".into();
-    window.cursor.visible = false;
-    window.cursor.grab_mode = CursorGrabMode::Locked;
+    window.cursor_options.visible = false;
+    window.cursor_options.grab_mode = CursorGrabMode::Locked;
 }
 
 fn update_mouse_deltas(mut delta: ResMut<DeltaCursorPosition>, mut ev_mouse_motion: EventReader<MouseMotion>) {
@@ -85,19 +85,19 @@ fn window_focus_changed(
         if ev.focused {
             apply_cursor_flags(&mut window, *cursor_flags);
         } else {
-            window.cursor.grab_mode = CursorGrabMode::None;
-            window.cursor.visible = true;
+            window.cursor_options.grab_mode = CursorGrabMode::None;
+            window.cursor_options.visible = true;
         }
     }
 }
 
 fn apply_cursor_flags(window: &mut Window, cursor_flags: CursorFlags) {
-    window.cursor.grab_mode = if cursor_flags.locked {
+    window.cursor_options.grab_mode = if cursor_flags.locked {
         CursorGrabMode::Locked
     } else {
         CursorGrabMode::None
     };
-    window.cursor.visible = cursor_flags.visible;
+    window.cursor_options.visible = cursor_flags.visible;
 }
 
 fn apply_cursor_flags_on_change(cursor_flags: Res<CursorFlags>, mut primary_query: Query<&mut Window, With<PrimaryWindow>>) {
@@ -117,8 +117,8 @@ pub enum CursorFlagsSet {
     ApplyCursorFlagsUpdates,
 }
 
-fn create_debug(mut commands: Commands) {
-    commands.spawn(PerfUiBundle::default());
+fn create_debug(_commands: Commands) {
+    // commands.spawn(PerfUiBundle::default());
 }
 
 pub(super) fn register(app: &mut App) {

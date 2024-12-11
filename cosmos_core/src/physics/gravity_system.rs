@@ -49,7 +49,7 @@ fn gravity_system(
                 }
             }
 
-            force *= time.delta_seconds();
+            force *= time.delta_secs();
 
             if let Some(mut external_force) = external_force {
                 external_force.impulse += force;

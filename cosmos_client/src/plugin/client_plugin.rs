@@ -19,7 +19,7 @@ impl PluginGroup for ClientPluginGroup {
         PluginGroupBuilder::start::<Self>()
             .add(WinitPlugin::<WakeUp>::default())
             .add(TextPlugin)
-            .add(UiPlugin)
+            .add(UiPlugin::default())
             .add(PbrPlugin::default())
             .add(CorePipelinePlugin)
             // NOTE: Load this after renderer initialization so that it knows about the supported

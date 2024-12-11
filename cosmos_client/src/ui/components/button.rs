@@ -2,29 +2,9 @@
 
 use std::marker::PhantomData;
 
-use bevy::{
-    app::{App, Update},
-    color::{palettes::css, Color, Srgba},
-    core::Name,
-    ecs::{
-        bundle::Bundle,
-        change_detection::DetectChanges,
-        component::Component,
-        entity::Entity,
-        event::{Event, EventWriter},
-        query::{Added, Changed, Without},
-        schedule::{IntoSystemConfigs, IntoSystemSetConfigs, SystemSet},
-        system::{Commands, Query},
-        world::Ref,
-    },
-    hierarchy::{BuildChildren, Children},
-    log::error,
-    text::{Text, TextSection, TextStyle},
-    ui::{
-        node_bundles::{NodeBundle, TextBundle},
-        AlignItems, BackgroundColor, Interaction, JustifyContent, Style, UiImage,
-    },
-};
+use bevy::color::palettes::css;
+use bevy::prelude::*;
+
 use cosmos_core::ecs::NeedsDespawned;
 
 use crate::ui::UiSystemSet;
@@ -38,6 +18,7 @@ pub trait ButtonEvent: Sized + Event + std::fmt::Debug {
 }
 
 #[derive(Component, Debug)]
+#[require(Node)]
 /// A UI element that will send out events (of type `T`) when it is pressed.
 ///
 /// This does NOT use the default bevy `Button` component.
@@ -50,9 +31,9 @@ pub struct Button<T: ButtonEvent> {
     /// states a button can be in. Leave `None` if you don't want this.
     pub button_styles: Option<ButtonStyles>,
     /// Text to display in the button. The text will be center aligned.
-    pub text: Option<(String, TextStyle)>,
+    pub text: Option<(String, TextFont, TextColor)>,
     /// Image to display in the button. The image will take up the entire button.
-    pub image: Option<UiImage>,
+    pub image: Option<ImageNode>,
 }
 
 #[derive(Debug, Clone)]
@@ -100,30 +81,10 @@ impl<T: ButtonEvent> Default for Button<T> {
     }
 }
 
-#[derive(Debug, Bundle)]
-/// A UI element that will send out events (of type `T`) when it is pressed.
-///
-/// This does NOT use the default bevy `Button` component.
-pub struct ButtonBundle<T: ButtonEvent> {
-    /// The node bundle that will be used with the TextInput
-    pub node_bundle: NodeBundle,
-    /// The button UI element
-    pub button: Button<T>,
-}
-
-impl<T: ButtonEvent> Default for ButtonBundle<T> {
-    fn default() -> Self {
-        Self {
-            button: Default::default(),
-            node_bundle: Default::default(),
-        }
-    }
-}
-
 #[derive(Component)]
 struct ButtonText(Entity);
 
-fn on_add_button<T: ButtonEvent>(mut commands: Commands, mut q_added_button: Query<(Entity, &Button<T>, &mut Style), Added<Button<T>>>) {
+fn on_add_button<T: ButtonEvent>(mut commands: Commands, mut q_added_button: Query<(Entity, &Button<T>, &mut Node), Added<Button<T>>>) {
     for (ent, button, mut style) in q_added_button.iter_mut() {
         commands.entity(ent).insert(Interaction::default());
 
@@ -135,15 +96,9 @@ fn on_add_button<T: ButtonEvent>(mut commands: Commands, mut q_added_button: Que
             commands.entity(ent).insert(ui_node);
         }
 
-        if let Some((text, text_style)) = button.text.clone() {
+        if let Some((text, text_style, text_color)) = button.text.clone() {
             let text_ent = commands
-                .spawn((
-                    Name::new("Button Text"),
-                    TextBundle {
-                        text: Text::from_section(text, text_style),
-                        ..Default::default()
-                    },
-                ))
+                .spawn((Name::new("Button Text"), Text::new(text), text_style, text_color))
                 .id();
 
             commands.entity(ent).insert(ButtonText(text_ent)).add_child(text_ent);
@@ -157,7 +112,8 @@ fn on_interact_button<T: ButtonEvent>(
         (Entity, &Interaction, &mut Button<T>, &mut BackgroundColor, &Children),
         (Changed<Interaction>, Without<Disabled>),
     >,
-    mut q_text: Query<&mut Text>,
+    mut writer: TextUiWriter,
+    q_has_text: Query<(), With<Text>>,
 ) {
     for (btn_entity, interaction, mut button, mut bg_color, children) in q_added_button.iter_mut() {
         if let Some(btn_styles) = &button.button_styles {
@@ -167,16 +123,14 @@ fn on_interact_button<T: ButtonEvent>(
                 Interaction::Pressed => btn_styles.press_background_color,
             };
 
-            if let Some(&text_child) = children.iter().find(|&x| q_text.contains(*x)) {
-                let mut text = q_text.get_mut(text_child).expect("Checked above");
-
+            if let Some(&text_child) = children.iter().find(|&x| q_has_text.contains(*x)) {
                 let color = match *interaction {
                     Interaction::None => btn_styles.foreground_color,
                     Interaction::Hovered => btn_styles.hover_foreground_color,
                     Interaction::Pressed => btn_styles.press_foreground_color,
                 };
 
-                text.sections.iter_mut().for_each(|x| x.style.color = color);
+                writer.for_each_color(text_child, |mut c| c.0 = color);
             }
         }
 
@@ -192,23 +146,23 @@ fn on_interact_button<T: ButtonEvent>(
 
 fn on_change_button<T: ButtonEvent>(
     mut commands: Commands,
-    mut q_text: Query<&mut Text>,
     mut q_changed_button: Query<
         (
             Entity,
             Ref<Button<T>>,
-            Option<&UiImage>,
+            Option<&ImageNode>,
             Option<&ButtonText>,
             &Interaction,
             &mut BackgroundColor,
         ),
         Changed<Button<T>>,
     >,
+    mut writer: TextUiWriter,
 ) {
     for (ent, btn, image, button_text, &interaction, mut bg_color) in q_changed_button.iter_mut().filter(|x| !x.1.is_added()) {
-        fn calc_text_color<T: ButtonEvent>(btn: &Button<T>, interaction: Interaction, text_style: &mut TextStyle) {
+        fn calc_text_color<T: ButtonEvent>(btn: &Button<T>, interaction: Interaction, text_style: &mut TextColor) {
             if let Some(btn_styles) = &btn.button_styles {
-                text_style.color = match interaction {
+                text_style.0 = match interaction {
                     Interaction::None => btn_styles.foreground_color,
                     Interaction::Hovered => btn_styles.hover_foreground_color,
                     Interaction::Pressed => btn_styles.press_foreground_color,
@@ -219,7 +173,7 @@ fn on_change_button<T: ButtonEvent>(
         if !image
             .map(|x| {
                 if let Some(y) = &btn.image {
-                    x.flip_x == y.flip_x && x.flip_y == y.flip_y && x.texture == y.texture
+                    x.flip_x == y.flip_x && x.flip_y == y.flip_y && x.image == y.image
                 } else {
                     false
                 }
@@ -229,47 +183,40 @@ fn on_change_button<T: ButtonEvent>(
             if let Some(image) = btn.image.clone() {
                 commands.entity(ent).insert(image);
             } else {
-                commands.entity(ent).remove::<UiImage>();
+                commands.entity(ent).remove::<ImageNode>();
             }
         }
 
         if let Some(button_text) = button_text {
-            if let Some((new_text_value, text_style)) = &btn.text {
-                let Ok(mut text) = q_text.get_mut(button_text.0) else {
-                    error!("Text entity has no text");
-                    continue;
-                };
+            if let Some((new_text_value, text_font, text_color)) = &btn.text {
+                if let Some((_, _, cur_text_value, cur_font_style, cur_text_color)) = writer.get(button_text.0, 0) {
+                    let same_text_style = text_color.0 == cur_text_color.as_ref().0
+                        && text_font.font == cur_font_style.font
+                        && text_font.font_size == cur_font_style.font_size
+                        && text_font.font_smoothing == cur_font_style.font_smoothing;
 
-                if let Some(text_section) = text.sections.first() {
-                    let same_text_style = text_section.style.color == text_style.color
-                        && text_section.style.font_size == text_style.font_size
-                        && text_section.style.font == text_style.font;
-
-                    if !same_text_style || &text_section.value != new_text_value {
-                        let mut text_style = text_style.clone();
-                        calc_text_color(&btn, interaction, &mut text_style);
-                        text.sections = vec![TextSection::new(new_text_value.clone(), text_style)];
+                    if !same_text_style || new_text_value != cur_text_value.as_ref() {
+                        writer.color(button_text.0, 0).as_mut().0 = text_color.0;
+                        *writer.font(button_text.0, 0).as_mut() = text_font.clone();
+                        *writer.text(button_text.0, 0).as_mut() = new_text_value.clone();
                     }
                 } else {
-                    let mut text_style = text_style.clone();
-                    calc_text_color(&btn, interaction, &mut text_style);
-                    text.sections = vec![TextSection::new(new_text_value.clone(), text_style.clone())];
+                    error!("It happened!!!");
+                    // let mut col = text_color.clone();
+                    // let font = text_font.clone();
+                    // calc_text_color(&btn, interaction, &mut col);
+                    //
+                    // writer.text.sections = vec![TextSection::new(new_text_value.clone(), text_style.clone())];
                 }
             } else {
                 commands.entity(button_text.0).insert(NeedsDespawned);
                 commands.entity(ent).remove::<ButtonText>();
             }
-        } else if let Some((text, mut text_style)) = btn.text.clone() {
-            calc_text_color(&btn, interaction, &mut text_style);
+        } else if let Some((text, text_style, mut text_color)) = btn.text.clone() {
+            calc_text_color(&btn, interaction, &mut text_color);
 
             let text_ent = commands
-                .spawn((
-                    Name::new("Button Text"),
-                    TextBundle {
-                        text: Text::from_section(text, text_style),
-                        ..Default::default()
-                    },
-                ))
+                .spawn((Name::new("Button Text"), Text::new(text), text_style, text_color))
                 .id();
 
             commands.entity(ent).insert(ButtonText(text_ent)).add_child(text_ent);

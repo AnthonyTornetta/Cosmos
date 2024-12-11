@@ -1,6 +1,6 @@
 [package]
 name = "cosmos_server"
-version = "0.0.6"
+version = "0.0.7"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
@@ -38,10 +38,11 @@ default = [
     "bevy/default_font",
     "bevy/webgl2",
     "bevy/sysinfo_plugin",
+    "bevy/bevy_window",
 ]
 
 [dependencies]
-cosmos_core = { version = "0.0.6", path = "../cosmos_core", features = [
+cosmos_core = { version = "0.0.7", path = "../cosmos_core", features = [
     "server",
 ] }
 
@@ -77,4 +78,4 @@ derive_more = { workspace = true }
 
 bevy_easy_compute = { workspace = true }
 bytemuck = { workspace = true }
-iyes_perf_ui = { workspace = true }
+# iyes_perf_ui = { workspace = true }

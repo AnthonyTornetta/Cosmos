@@ -10,9 +10,8 @@ use std::sync::{Arc, Mutex};
 
 use bevy::app::Update;
 use bevy::ecs::query::{QueryData, QueryFilter, ROQueryItem, With};
-use bevy::prelude::{App, Event, IntoSystemConfigs, IntoSystemSetConfigs, Name, PreUpdate, SystemSet, VisibilityBundle};
+use bevy::prelude::{App, Event, IntoSystemConfigs, IntoSystemSetConfigs, Name, PreUpdate, SystemSet, Visibility};
 use bevy::reflect::Reflect;
-use bevy::transform::bundles::TransformBundle;
 use bevy::utils::{HashMap, HashSet};
 use bevy_rapier3d::plugin::RapierContextEntityLink;
 use chunk::BlockInfo;
@@ -778,8 +777,8 @@ fn spawn_chunk_entity(
     chunk_set_events: &mut HashSet<ChunkSetEvent>,
 ) {
     let mut entity_cmds = commands.spawn((
-        VisibilityBundle::default(),
-        TransformBundle::from_transform(Transform::from_translation(structure.chunk_relative_position(chunk_coordinate))),
+        Visibility::default(),
+        Transform::from_translation(structure.chunk_relative_position(chunk_coordinate)),
         Name::new("Chunk Entity"),
         NoSendEntity,
         ChunkEntity {

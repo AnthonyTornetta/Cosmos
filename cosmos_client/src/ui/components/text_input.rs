@@ -6,11 +6,9 @@ use arboard::Clipboard;
 use bevy::{
     a11y::Focus,
     app::{App, Update},
-    asset::{AssetId, AssetServer, Handle},
-    color::{palettes::css, Color},
+    color::Color,
     core::Name,
     ecs::{
-        bundle::Bundle,
         component::Component,
         entity::Entity,
         event::EventReader,
@@ -25,13 +23,10 @@ use bevy::{
         ButtonInput, ButtonState,
     },
     log::{info, warn},
-    prelude::Deref,
-    text::{Text, TextSection, TextStyle},
+    prelude::{ChildBuild, Deref, Text, TextUiWriter},
+    text::{LineBreak, TextColor, TextFont, TextLayout, TextSpan},
     time::Time,
-    ui::{
-        node_bundles::{NodeBundle, TextBundle},
-        AlignSelf, FocusPolicy, Interaction, Style,
-    },
+    ui::{AlignSelf, FocusPolicy, Interaction, Node},
 };
 
 use crate::ui::UiSystemSet;
@@ -97,6 +92,7 @@ pub enum InputType {
 }
 
 #[derive(Component, Debug)]
+#[require(InputValue, Node, TextFont, TextColor)]
 /// A text box the user can type in
 pub struct TextInput {
     /// Handles input validation to ensure the data stored in [`InputValue`] is correct.
@@ -105,8 +101,6 @@ pub struct TextInput {
     pub cursor_pos: usize,
     /// Where the highlighting should begin (an index). This can be before or after the cursor.
     pub highlight_begin: Option<usize>,
-    /// The style of the text
-    pub style: TextStyle,
 }
 
 impl TextInput {
@@ -126,24 +120,8 @@ impl Default for TextInput {
             cursor_pos: 0,
             highlight_begin: None,
             input_type: InputType::Text { max_length: None },
-            style: TextStyle {
-                color: css::WHITE.into(),
-                font_size: 12.0,
-                font: Default::default(), // font assigned later
-            },
         }
     }
-}
-
-#[derive(Bundle, Debug, Default)]
-/// An easy way of creating the [`TextInput`] UI element.
-pub struct TextInputBundle {
-    /// The node bundle that will be used with the TextInput
-    pub node_bundle: NodeBundle,
-    /// The [`TextInput`] used to capture user input
-    pub text_input: TextInput,
-    /// The component you can read to get what the user types
-    pub value: InputValue,
 }
 
 fn monitor_clicked(
@@ -173,46 +151,39 @@ struct TextEnt(Entity);
 
 fn added_text_input_bundle(
     mut commands: Commands,
-    asset_server: Res<AssetServer>,
-    mut q_added: Query<(Entity, &InputValue, &mut TextInput), Added<TextInput>>,
+    q_added: Query<(Entity, &InputValue, &TextFont, &TextColor), Added<TextInput>>,
     focused: Res<Focus>,
 ) {
-    for (entity, input_value, mut text_input) in q_added.iter_mut() {
+    for (entity, input_value, t_font, t_col) in q_added.iter() {
         commands.entity(entity).insert(Interaction::None).insert(FocusPolicy::Block);
-
-        if let Handle::Weak(id) = text_input.style.font {
-            if id == AssetId::default() {
-                // Font hasn't been assigned yet if it's the default handle, so assign the default now.
-                text_input.style.font = asset_server.load("fonts/PixeloidSans.ttf");
-            }
-        }
 
         let mut text_ent = None;
 
-        let mut cursor_style = text_input.style.clone();
-
+        let mut cursor_style = *t_col;
         if focused.0 != Some(entity) {
-            cursor_style.color = Color::NONE;
+            cursor_style.0 = Color::NONE;
         }
 
         commands.entity(entity).with_children(|p| {
             text_ent = Some(
                 p.spawn((
                     Name::new("Text input text display"),
-                    TextBundle {
-                        text: Text::from_sections([
-                            TextSection::new(input_value.0.clone(), text_input.style.clone()),
-                            TextSection::new("|", cursor_style),
-                            TextSection::new("", text_input.style.clone()),
-                        ])
-                        .with_no_wrap(),
-                        style: Style {
-                            align_self: AlignSelf::Center,
-                            ..Default::default()
-                        },
+                    Text::new(input_value.0.clone()),
+                    TextLayout {
+                        linebreak: LineBreak::NoWrap,
+                        ..Default::default()
+                    },
+                    t_font.clone(),
+                    *t_col,
+                    Node {
+                        align_self: AlignSelf::Center,
                         ..Default::default()
                     },
                 ))
+                .with_children(|p| {
+                    p.spawn((TextSpan::new("|"), t_font.clone(), cursor_style));
+                    p.spawn((TextSpan::new(""), t_font.clone(), *t_col));
+                })
                 .id(),
             );
         });
@@ -314,16 +285,13 @@ fn send_key_inputs(
     }
 }
 
-fn show_text_cursor(focused: Res<Focus>, mut q_text_inputs: Query<(Entity, &TextEnt, &TextInput)>, mut q_text: Query<&mut Text>) {
-    for (ent, text, text_input) in q_text_inputs.iter_mut() {
-        let Ok(mut text) = q_text.get_mut(text.0) else {
-            continue;
-        };
-
+fn show_text_cursor(mut writer: TextUiWriter, focused: Res<Focus>, q_text_inputs: Query<(Entity, &TextEnt)>) {
+    for (ent, text) in q_text_inputs.iter() {
         if focused.0.map(|x| x == ent).unwrap_or(false) {
-            text.sections[1].style.color = text_input.style.color;
+            let col = writer.color(text.0, 0).0;
+            writer.color(text.0, 1).0 = col;
         } else {
-            text.sections[1].style.color = Color::NONE;
+            writer.color(text.0, 1).0 = Color::NONE;
         }
     }
 }
@@ -331,9 +299,9 @@ fn show_text_cursor(focused: Res<Focus>, mut q_text_inputs: Query<(Entity, &Text
 fn flash_cursor(
     mut cursor_flash_time: ResMut<CursorFlashTime>,
     focused: Res<Focus>,
-    mut q_text: Query<&mut Text>,
-    q_text_inputs: Query<(&TextEnt, &TextInput)>,
+    q_text_inputs: Query<&TextEnt>,
     time: Res<Time>,
+    mut writer: TextUiWriter,
 ) {
     const CURSOR_FLASH_SPEED: f32 = 1.0; // # flashes per second
 
@@ -341,36 +309,32 @@ fn flash_cursor(
         return;
     };
 
-    let Ok((text, text_input)) = q_text_inputs.get(focused_ent) else {
+    let Ok(text) = q_text_inputs.get(focused_ent) else {
         return;
     };
 
-    let Ok(mut text) = q_text.get_mut(text.0) else {
-        return;
-    };
+    let col = writer.color(text.0, 0).0;
 
+    let empty = writer.text(text.0, 1).is_empty();
+    let mut c = writer.color(text.0, 1);
     if (cursor_flash_time.0 * CURSOR_FLASH_SPEED * 2.0) as i64 % 2 == 0 {
-        if text.sections[1].style.color != text_input.style.color {
-            text.sections[1].style.color = text_input.style.color;
+        if c.as_ref().0 != col {
+            c.as_mut().0 = col;
         }
-    } else if !text.sections[1].value.is_empty() && text.sections[1].style.color != Color::NONE {
-        text.sections[1].style.color = Color::NONE;
+    } else if !empty && c.as_ref().0 != Color::NONE {
+        c.as_mut().0 = Color::NONE;
     }
 
-    cursor_flash_time.0 += time.delta_seconds();
+    cursor_flash_time.0 += time.delta_secs();
 }
 
 fn value_changed(
     focused: Res<Focus>,
     mut q_values_changed: Query<(Entity, &InputValue, &mut TextInput, &TextEnt), Or<(Changed<InputValue>, Changed<TextInput>)>>,
-    mut q_text: Query<&mut Text>,
     mut cursor_flash_time: ResMut<CursorFlashTime>,
+    mut writer: TextUiWriter,
 ) {
     for (entity, input_val, mut text_input, text) in q_values_changed.iter_mut() {
-        let Ok(mut text) = q_text.get_mut(text.0) else {
-            continue;
-        };
-
         if focused.0.map(|x| x == entity).unwrap_or(false) {
             cursor_flash_time.0 = 0.0;
         }
@@ -380,11 +344,11 @@ fn value_changed(
             text_input.cursor_pos = input_val.len();
         }
 
-        input_val[0..text_input.cursor_pos].clone_into(&mut text.sections[0].value);
+        input_val[0..text_input.cursor_pos].clone_into(writer.text(text.0, 0).as_mut());
         if text_input.cursor_pos < input_val.len() {
-            input_val[text_input.cursor_pos..input_val.len()].clone_into(&mut text.sections[2].value);
+            input_val[text_input.cursor_pos..input_val.len()].clone_into(writer.text(text.0, 2).as_mut());
         } else {
-            text.sections[2].value = "".into();
+            *writer.text(text.0, 2).as_mut() = "".into();
         }
     }
 }

@@ -10,18 +10,16 @@ use bevy::{
     app::{App, PostUpdate, PreUpdate, Update},
     asset::{AssetId, Assets, Handle},
     ecs::{
-        bundle::Bundle,
         component::Component,
         entity::Entity,
         query::{Changed, With},
         removal_detection::RemovedComponents,
-        schedule::IntoSystemConfigs,
-        schedule::IntoSystemSetConfigs,
+        schedule::{IntoSystemConfigs, IntoSystemSetConfigs},
         system::{Commands, Query, ResMut, Resource},
     },
     hierarchy::DespawnRecursiveExt,
-    prelude::{Deref, DerefMut, SystemSet},
-    transform::{bundles::TransformBundle, components::GlobalTransform},
+    prelude::{Deref, DerefMut, SystemSet, Transform},
+    transform::components::GlobalTransform,
     utils::hashbrown::HashMap,
 };
 use bevy_kira_audio::{prelude::*, AudioSystemSet};
@@ -57,6 +55,7 @@ impl Default for AudioEmission {
 }
 
 #[derive(Default, Component)]
+#[require(Transform)]
 /// Contains a bunch of audio instances to output
 ///
 /// This must be put onto an entity with a transform to do anything
@@ -113,15 +112,6 @@ impl CosmosAudioEmitter {
             None
         }
     }
-}
-
-#[derive(Default, Bundle)]
-/// A bundle containing a [`CosmosAudioEmitter`] and a [`TransformBundle`]
-pub struct AudioEmitterBundle {
-    /// The thing responsible for emitting the audio
-    pub emitter: CosmosAudioEmitter,
-    /// The transform this source is at
-    pub transform: TransformBundle,
 }
 
 fn run_spacial_audio(

@@ -30,25 +30,25 @@ fn respond_to_add_materials_event(
 
         match mat.unlocalized_name() {
             "cosmos:lod" => {
-                commands.entity(ev.entity).insert(match ev.material_type {
+                commands.entity(ev.entity).insert(MeshMaterial3d(match ev.material_type {
                     MaterialType::Normal => default_material.0[idx].clone_weak(),
                     MaterialType::Illuminated => unlit_material.0[idx].clone_weak(),
                     MaterialType::FarAway => default_material.0[idx].clone_weak(),
-                });
+                }));
             }
             "cosmos:lod_illuminated" => {
-                commands.entity(ev.entity).insert(match ev.material_type {
+                commands.entity(ev.entity).insert(MeshMaterial3d(match ev.material_type {
                     MaterialType::Normal => unlit_material.0[idx].clone_weak(),
                     MaterialType::Illuminated => unlit_material.0[idx].clone_weak(),
                     MaterialType::FarAway => unlit_material.0[idx].clone_weak(),
-                });
+                }));
             }
             "cosmos:lod_transparent" => {
-                commands.entity(ev.entity).insert(match ev.material_type {
+                commands.entity(ev.entity).insert(MeshMaterial3d(match ev.material_type {
                     MaterialType::Normal => transparent_material.0[idx].clone_weak(),
                     MaterialType::Illuminated => unlit_transparent_material.0[idx].clone_weak(),
                     MaterialType::FarAway => default_material.0[idx].clone_weak(),
-                });
+                }));
             }
             _ => {}
         }
@@ -57,7 +57,7 @@ fn respond_to_add_materials_event(
 
 fn respond_to_remove_materails_event(mut event_reader: EventReader<RemoveAllMaterialsEvent>, mut commands: Commands) {
     for ev in event_reader.read() {
-        commands.entity(ev.entity).remove::<Handle<LodArrayTextureMaterial>>();
+        commands.entity(ev.entity).remove::<MeshMaterial3d<LodArrayTextureMaterial>>();
     }
 }
 

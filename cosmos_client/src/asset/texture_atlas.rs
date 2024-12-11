@@ -1,12 +1,12 @@
 //! Similar to bevy's default texture atlas, but the order they are inserted matters and assumes every texture is the same size and a square.
 
 use bevy::{
+    image::TextureFormatPixelInfo,
     prelude::{Assets, Handle, Image},
     reflect::Reflect,
     render::{
         render_asset::RenderAssetUsages,
         render_resource::{Extent3d, TextureDimension, TextureFormat},
-        texture::TextureFormatPixelInfo,
     },
     utils::HashMap,
 };

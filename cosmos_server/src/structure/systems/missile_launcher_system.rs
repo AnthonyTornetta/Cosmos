@@ -139,7 +139,7 @@ fn missile_lockon(
                 if *focusing_server_entity != best_target {
                     missile_launmcher_focus.change_focus(best_target, MISSILE_FOCUS_TIME);
                 } else {
-                    *focused_duration += Duration::from_secs_f32(time.delta_seconds());
+                    *focused_duration += Duration::from_secs_f32(time.delta_secs());
                 }
             }
             MissileLauncherFocus::NotFocusing => {
@@ -198,7 +198,7 @@ fn update_missile_system(
             continue;
         };
 
-        let sec = time.elapsed_seconds();
+        let sec = time.elapsed_secs();
 
         let mut any_fired = false;
 

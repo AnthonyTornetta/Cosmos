@@ -1,6 +1,6 @@
 use bevy::{
     app::Update,
-    log::warn,
+    log::{info, warn},
     prelude::{in_state, resource_exists_and_changed, App, Commands, EventReader, IntoSystemConfigs, OnEnter, Res},
 };
 use serde::{Deserialize, Serialize};
@@ -35,6 +35,8 @@ pub struct RawBasicFabricatorRecipe {
 }
 
 fn load_recipes(items: Res<Registry<Item>>, mut commands: Commands) {
+    info!("Loading basic fabricator recipes!");
+
     // for entry in WalkDir::new("assets/cosmos/recipes/basic_fabricator").max_depth(0) {
     //     let Ok(entry) = entry else {
     //         continue;
@@ -95,6 +97,8 @@ fn load_recipes(items: Res<Registry<Item>>, mut commands: Commands) {
     }
 
     commands.insert_resource(recipes);
+
+    info!("Load basic fabricator recipes!");
 }
 
 fn sync_recipes_on_change(recipes: Res<BasicFabricatorRecipes>, mut nevw_sync_recipes: NettyEventWriter<SyncBasicFabricatorRecipesEvent>) {

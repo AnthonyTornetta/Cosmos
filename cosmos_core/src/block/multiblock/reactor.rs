@@ -212,7 +212,7 @@ fn generate_power(
         };
 
         for reactor in reactors.iter() {
-            system.increase_energy(reactor.power_per_second * time.delta_seconds());
+            system.increase_energy(reactor.power_per_second * time.delta_secs());
         }
     }
 }

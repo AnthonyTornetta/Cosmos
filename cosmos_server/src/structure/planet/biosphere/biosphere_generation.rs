@@ -71,7 +71,7 @@ fn read_gpu_data(
 
     info!(
         "GPU DONE - took {}ms",
-        (1000.0 * (time.elapsed_seconds() - sent_to_gpu_time.0)).floor()
+        (1000.0 * (time.elapsed_secs() - sent_to_gpu_time.0)).floor()
     );
 
     let v: Vec<TerrainData> = worker.try_read_vec("values").expect("Failed to read chunk generation values!");
@@ -268,7 +268,7 @@ fn send_chunks_to_gpu(
 
         worker.execute();
 
-        sent_to_gpu_time.0 = time.elapsed_seconds();
+        sent_to_gpu_time.0 = time.elapsed_secs();
     }
 }
 

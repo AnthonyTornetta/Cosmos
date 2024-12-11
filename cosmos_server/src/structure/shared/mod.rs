@@ -43,7 +43,7 @@ fn on_melting_down(
             }
         }
 
-        melting_down.0 += time.delta_seconds();
+        melting_down.0 += time.delta_secs();
     }
 }
 

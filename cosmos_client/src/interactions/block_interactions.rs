@@ -3,7 +3,7 @@
 use bevy::prelude::*;
 use bevy_rapier3d::{
     geometry::{CollisionGroups, Group, RayIntersection},
-    plugin::DefaultRapierContextAccess,
+    plugin::ReadDefaultRapierContext,
     prelude::{QueryFilter, RapierContext},
 };
 use cosmos_core::{
@@ -67,7 +67,7 @@ pub(crate) fn process_player_interaction(
     input_handler: InputChecker,
     camera: Query<&GlobalTransform, With<MainCamera>>,
     mut q_player: Query<(Entity, &mut Inventory, &mut LookingAt, Option<&Creative>), (With<LocalPlayer>, Without<Pilot>)>,
-    rapier_context_access: DefaultRapierContextAccess,
+    rapier_context_access: ReadDefaultRapierContext,
     q_chunk_physics_part: Query<&ChunkPhysicsPart>,
     q_structure: Query<(&Structure, &GlobalTransform, Option<&Planet>)>,
     mut break_writer: EventWriter<RequestBlockBreakEvent>,

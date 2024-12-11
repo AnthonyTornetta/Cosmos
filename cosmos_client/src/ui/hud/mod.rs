@@ -1,7 +1,6 @@
 use bevy::{
     app::App,
     asset::AssetServer,
-    color::palettes::css,
     core::Name,
     ecs::{
         entity::Entity,
@@ -10,12 +9,10 @@ use bevy::{
     },
     hierarchy::BuildChildren,
     log::error,
+    prelude::{ChildBuild, Text},
     state::state::OnEnter,
-    text::{Text, TextSection, TextStyle},
-    ui::{
-        node_bundles::{NodeBundle, TextBundle},
-        AlignContent, JustifyContent, PositionType, Style, TargetCamera, UiRect, Val,
-    },
+    text::{TextFont, TextSpan},
+    ui::{AlignContent, JustifyContent, Node, PositionType, TargetCamera, UiRect, Val},
 };
 use cosmos_core::{economy::Credits, netty::client::LocalPlayer, state::GameState};
 
@@ -37,10 +34,10 @@ fn create_credits_node(
 
     let font = asset_server.load("fonts/PixeloidSans.ttf");
 
-    let text_style = TextStyle {
-        color: css::WHITE.into(),
+    let text_style = TextFont {
         font_size: 24.0,
         font: font.clone(),
+        ..Default::default()
     };
 
     let ui_root = q_ui_root.single();
@@ -49,16 +46,13 @@ fn create_credits_node(
         .spawn((
             TargetCamera(ui_root),
             Name::new("Credits display"),
-            NodeBundle {
-                style: Style {
-                    width: Val::Percent(100.0),
-                    height: Val::Percent(100.0),
-                    justify_content: JustifyContent::End,
-                    align_content: AlignContent::Start,
-                    padding: UiRect::all(Val::Px(10.0)),
-                    position_type: PositionType::Absolute,
-                    ..Default::default()
-                },
+            Node {
+                width: Val::Percent(100.0),
+                height: Val::Percent(100.0),
+                justify_content: JustifyContent::End,
+                align_content: AlignContent::Start,
+                padding: UiRect::all(Val::Px(10.0)),
+                position_type: PositionType::Absolute,
                 ..Default::default()
             },
         ))
@@ -66,14 +60,12 @@ fn create_credits_node(
             p.spawn((
                 Name::new("Credits Text"),
                 BindValues::<Credits>::new(vec![BindValue::new(local_player, ReactableFields::Text { section: 1 })]),
-                TextBundle {
-                    text: Text::from_sections([
-                        TextSection::new("$", text_style.clone()),
-                        TextSection::new(format!("{}", credits.amount()), text_style.clone()),
-                    ]),
-                    ..Default::default()
-                },
-            ));
+                text_style.clone(),
+                Text::new("$"),
+            ))
+            .with_children(|p| {
+                p.spawn((TextSpan::new(format!("{}", credits.amount())), text_style.clone()));
+            });
         });
 }
 
