@@ -431,7 +431,7 @@ fn render_galaxy_map(
         // cam_trans.look_at(player_translation, Vec3::Y);
 
         let font = asset_server.load("fonts/PixeloidSans.ttf");
-        let text_style = TextFont {
+        let _text_style = TextFont {
             font_size: 22.0,
             font: font.clone(),
             ..Default::default()

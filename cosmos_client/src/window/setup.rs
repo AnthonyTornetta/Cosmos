@@ -117,7 +117,7 @@ pub enum CursorFlagsSet {
     ApplyCursorFlagsUpdates,
 }
 
-fn create_debug(commands: Commands) {
+fn create_debug(_commands: Commands) {
     // commands.spawn(PerfUiBundle::default());
 }
 
