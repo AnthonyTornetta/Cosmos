@@ -240,12 +240,7 @@ fn display_messages(
         };
 
         commands
-            .spawn((
-                Name::new("Received chat message"),
-                text.clone(),
-                text_style.clone(),
-                text_layout,
-            ))
+            .spawn((Name::new("Received chat message"), text.clone(), text_style.clone(), text_layout))
             .set_parent(chat_box);
 
         commands
