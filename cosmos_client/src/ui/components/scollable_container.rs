@@ -129,7 +129,7 @@ fn on_add_scrollbar(mut commands: Commands, mut q_added_button: Query<(Entity, &
 
                         ..Default::default()
                     },
-                    BackgroundColor(scrollbox.styles.scrollbar_color.into()),
+                    BackgroundColor(scrollbox.styles.scrollbar_color),
                 ));
             })
             .id();

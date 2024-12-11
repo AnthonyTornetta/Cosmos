@@ -255,7 +255,7 @@ fn create_settings_screen(
         })
         .with_children(|p| {
             p.spawn((
-                BorderColor(cool_blue.into()),
+                BorderColor(cool_blue),
                 Node {
                     border: UiRect::all(Val::Px(2.0)),
                     width: Val::Px(500.0),
@@ -277,7 +277,7 @@ fn create_settings_screen(
             ));
 
             p.spawn((
-                BorderColor(cool_blue.into()),
+                BorderColor(cool_blue),
                 Node {
                     border: UiRect::all(Val::Px(2.0)),
                     width: Val::Px(500.0),

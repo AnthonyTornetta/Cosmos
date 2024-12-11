@@ -137,7 +137,7 @@ fn create_main_menu(mut commands: Commands, default_font: Res<DefaultFont>, q_ui
         ));
 
         p.spawn((
-            BorderColor(cool_blue.into()),
+            BorderColor(cool_blue),
             Node {
                 border: UiRect::all(Val::Px(2.0)),
                 width: Val::Px(500.0),
@@ -159,7 +159,7 @@ fn create_main_menu(mut commands: Commands, default_font: Res<DefaultFont>, q_ui
         ));
 
         p.spawn((
-            BorderColor(cool_blue.into()),
+            BorderColor(cool_blue),
             Node {
                 border: UiRect::all(Val::Px(2.0)),
                 width: Val::Px(500.0),

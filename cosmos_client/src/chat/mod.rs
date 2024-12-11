@@ -244,7 +244,7 @@ fn display_messages(
                 Name::new("Received chat message"),
                 text.clone(),
                 text_style.clone(),
-                text_layout.clone(),
+                text_layout,
             ))
             .set_parent(chat_box);
 
@@ -254,7 +254,7 @@ fn display_messages(
                 ChatMessage(CHAT_MSG_ALIVE_SEC),
                 text,
                 text_style.clone(),
-                text_layout.clone(),
+                text_layout,
             ))
             .set_parent(display_box);
     }

@@ -22,7 +22,7 @@ fn add_crosshair(mut commands: Commands, asset_server: Res<AssetServer>) {
         .with_children(|parent| {
             parent
                 .spawn((
-                    ImageNode::new(asset_server.load("cosmos/images/ui/crosshair.png").into()),
+                    ImageNode::new(asset_server.load("cosmos/images/ui/crosshair.png")),
                     Node {
                         width: Val::Px(8.0),
                         height: Val::Px(8.0),

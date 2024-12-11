@@ -439,7 +439,7 @@ fn add_hotbar(
                     let path = image_path(hotbar.selected_slot == slot_num);
 
                     let mut slot = parent.spawn((
-                        ImageNode::new(asset_server.load(path).into()),
+                        ImageNode::new(asset_server.load(path)),
                         Node {
                             width: Val::Px(64.0),
                             height: Val::Px(64.0),

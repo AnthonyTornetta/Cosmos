@@ -159,7 +159,7 @@ fn added_text_input_bundle(
 
         let mut text_ent = None;
 
-        let mut cursor_style = t_col.clone();
+        let mut cursor_style = *t_col;
         if focused.0 != Some(entity) {
             cursor_style.0 = Color::NONE;
         }
@@ -174,7 +174,7 @@ fn added_text_input_bundle(
                         ..Default::default()
                     },
                     t_font.clone(),
-                    t_col.clone(),
+                    *t_col,
                     Node {
                         align_self: AlignSelf::Center,
                         ..Default::default()
@@ -182,7 +182,7 @@ fn added_text_input_bundle(
                 ))
                 .with_children(|p| {
                     p.spawn((TextSpan::new("|"), t_font.clone(), cursor_style));
-                    p.spawn((TextSpan::new(""), t_font.clone(), t_col.clone()));
+                    p.spawn((TextSpan::new(""), t_font.clone(), *t_col));
                 })
                 .id(),
             );
@@ -288,7 +288,7 @@ fn send_key_inputs(
 fn show_text_cursor(mut writer: TextUiWriter, focused: Res<Focus>, q_text_inputs: Query<(Entity, &TextEnt)>) {
     for (ent, text) in q_text_inputs.iter() {
         if focused.0.map(|x| x == ent).unwrap_or(false) {
-            let col = writer.color(text.0, 0).0.clone();
+            let col = writer.color(text.0, 0).0;
             writer.color(text.0, 1).0 = col;
         } else {
             writer.color(text.0, 1).0 = Color::NONE;
@@ -313,7 +313,7 @@ fn flash_cursor(
         return;
     };
 
-    let col = writer.color(text.0, 0).0.clone();
+    let col = writer.color(text.0, 0).0;
 
     let empty = writer.text(text.0, 1).is_empty();
     let mut c = writer.color(text.0, 1);
