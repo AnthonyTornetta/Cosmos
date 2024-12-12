@@ -30,6 +30,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::entities::player::PlayerLooking;
 use crate::netty::network_helpers::ClientTicks;
+use crate::persistence::saving::NeedsSaved;
 use crate::physics::assign_player_world;
 use crate::settings::ServerSettings;
 
@@ -223,7 +224,7 @@ pub(super) fn handle_server_events(
                 client_ticks.ticks.remove(client_id);
 
                 if let Some(player_entity) = lobby.remove_player(*client_id) {
-                    commands.entity(player_entity).insert(NeedsDespawned);
+                    commands.entity(player_entity).insert((NeedsSaved, NeedsDespawned));
                 }
 
                 let message = cosmos_encoder::serialize(&ServerReliableMessages::PlayerRemove { id: *client_id });
