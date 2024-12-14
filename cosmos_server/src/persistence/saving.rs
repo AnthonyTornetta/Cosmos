@@ -12,7 +12,7 @@ use bevy::{
     ecs::schedule::{IntoSystemSetConfigs, SystemSet},
     hierarchy::Parent,
     log::{error, warn},
-    prelude::{App, Commands, Component, Entity, First, IntoSystemConfigs, Query, ResMut, Transform, With, Without},
+    prelude::{App, Commands, Component, Entity, First, IntoSystemConfigs, Or, Query, ResMut, Transform, With, Without},
     reflect::Reflect,
 };
 use bevy_rapier3d::prelude::Velocity;
@@ -68,9 +68,20 @@ pub struct NeedsBlueprinted {
     pub subdir_name: String,
 }
 
-fn check_needs_saved(query: Query<Entity, (With<NeedsSaved>, Without<SerializedData>)>, mut commands: Commands) {
-    for ent in query.iter() {
+fn check_needs_saved(
+    q_parent: Query<&Parent, Or<(Without<SerializedData>, Without<NeedsSaved>)>>,
+    q_needs_serialized_data: Query<(Entity, Option<&Parent>), (With<NeedsSaved>, Without<SerializedData>)>,
+    mut commands: Commands,
+) {
+    for (ent, mut parent) in q_needs_serialized_data.iter() {
         commands.entity(ent).insert(SerializedData::default());
+
+        // If something that needs saved has parents, we must propagate it up to work properly.
+        while let Some(p) = parent {
+            let ent = p.get();
+            commands.entity(ent).insert((SerializedData::default(), NeedsSaved));
+            parent = q_parent.get(ent).ok();
+        }
     }
 }
 
