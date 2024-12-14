@@ -245,6 +245,7 @@ impl LogicDriver {
                     wire_color_id,
                     logic_block.connection_on(wire_face) == Some(LogicConnection::Wire(WireType::Bus)),
                     structure,
+                    events_by_coords,
                     &mut visited,
                     blocks,
                     logic_blocks,

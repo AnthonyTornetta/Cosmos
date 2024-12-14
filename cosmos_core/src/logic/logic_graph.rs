@@ -590,6 +590,7 @@ impl LogicGraph {
                             wire_color_id,
                             wire_type == WireType::Bus,
                             structure,
+                            events_by_coords,
                             visited,
                             blocks,
                             logic_blocks,
