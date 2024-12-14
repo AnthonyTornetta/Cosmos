@@ -21,7 +21,7 @@ use renet2::transport::NativeSocket;
 
 use crate::netty::lobby::{ClientLobby, MostRecentTick};
 
-fn new_netcode_transport(mut host: &str, port: u16) -> NetcodeClientTransport {
+fn new_netcode_transport(player_name: &str, mut host: &str, port: u16) -> NetcodeClientTransport {
     if host == "localhost" {
         host = "127.0.0.1"; // to_socket_addrs turns localhost into an ipv6 IP, which fails to connect to the server listening on an ipv4 address.
     }
@@ -39,12 +39,14 @@ fn new_netcode_transport(mut host: &str, port: u16) -> NetcodeClientTransport {
     let current_time = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();
     let client_id = current_time.as_millis() as u64;
 
-    let name = "CoolPlayer";
-
     let mut token = [0; 256];
 
     // Bincode because this is stored un a u8, with a fixed length of 256
-    let serialized_name = bincode::serialize(&name).expect("Unable to serialize name");
+    let serialized_name = bincode::serialize(&player_name).expect("Unable to serialize name");
+    if serialized_name.len() > 256 {
+        panic!("name too long. TODO: Handle this gracefully");
+    }
+
     for (i, byte) in serialized_name.iter().enumerate() {
         token[i] = *byte;
     }
@@ -71,6 +73,8 @@ pub struct HostConfig {
     pub host_name: String,
     /// The server's port
     pub port: u16,
+    /// The player's name
+    pub name: String,
 }
 
 /// Establishes a connection with the server.
@@ -81,7 +85,11 @@ pub fn establish_connection(mut commands: Commands, host_config: Res<HostConfig>
     commands.insert_resource(ClientLobby::default());
     commands.insert_resource(MostRecentTick(None));
     commands.insert_resource(RenetClient::new(connection_config()));
-    commands.insert_resource(new_netcode_transport(host_config.host_name.as_str(), host_config.port));
+    commands.insert_resource(new_netcode_transport(
+        &host_config.name,
+        host_config.host_name.as_str(),
+        host_config.port,
+    ));
     commands.init_resource::<NetworkMapping>();
 }
 
