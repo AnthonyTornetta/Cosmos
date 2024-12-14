@@ -70,7 +70,7 @@ fn generate_player_file_id(player_name: &str) -> String {
     format!("{hash}.json")
 }
 
-const PLAYER_LINK_PATH: &'static str = "world/players";
+const PLAYER_LINK_PATH: &str = "world/players";
 
 /// Creates a file that points the player's name to their respective data file.
 fn save_player_link(
@@ -81,7 +81,7 @@ fn save_player_link(
 ) {
     for (entity, e_id, player, loc) in q_player_needs_saved.iter() {
         info!("Saving player {player:?} @ {loc}");
-        let _ = fs::create_dir_all(&PLAYER_LINK_PATH);
+        let _ = fs::create_dir_all(PLAYER_LINK_PATH);
 
         let sfi = calculate_sfi(entity, &q_parent, &q_entity_id, &q_serialized_data).expect("Missing save file identifier for player!");
 
