@@ -9,12 +9,13 @@ use bevy::{
 use bevy_rapier3d::prelude::Velocity;
 use bevy_renet2::renet2::RenetServer;
 use cosmos_core::{
+    entities::player::Player,
     netty::{
         cosmos_encoder, server_reliable_messages::ServerReliableMessages, sync::server_entity_syncing::RequestedEntityEvent,
         system_sets::NetworkingSystemsSet, NettyChannelServer,
     },
     persistence::LoadingDistance,
-    physics::location::{Location, SYSTEM_SECTORS},
+    physics::location::{Location, SystemCoordinate, SYSTEM_SECTORS},
     state::GameState,
     universe::star::Star,
 };
@@ -29,7 +30,12 @@ use super::{
     generation::{GenerateSystemEvent, SystemGenerationSet, SystemItem, UniverseSystems},
 };
 
-fn load_stars_in_universe(systems: Res<UniverseSystems>, mut commands: Commands, q_stars: Query<&Location, With<Star>>) {
+fn load_stars_in_universe(
+    systems: Res<UniverseSystems>,
+    mut commands: Commands,
+    q_players: Query<&Location, With<Player>>,
+    q_stars: Query<&Location, With<Star>>,
+) {
     for (_, system) in systems.iter() {
         let Some((star_location, star)) = system
             .iter()
@@ -44,6 +50,14 @@ fn load_stars_in_universe(systems: Res<UniverseSystems>, mut commands: Commands,
 
         if q_stars.iter().any(|x| x.sector() == star_location.sector()) {
             // Star already in world
+            continue;
+        }
+
+        if !q_players.iter().any(|l| {
+            l.is_within_reasonable_range(&star_location)
+                && ((l.sector - star_location.sector).abs().max_element() as u32) < (SYSTEM_SECTORS / 2 + 1)
+        }) {
+            // No player near enough to star to spawn
             continue;
         }
 

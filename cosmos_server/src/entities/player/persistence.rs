@@ -31,6 +31,7 @@ use renet2::{ClientId, RenetServer};
 use serde::{Deserialize, Serialize};
 
 use crate::{
+    entities::player::spawn_player::find_new_player_location,
     netty::server_events::PlayerConnectedEvent,
     persistence::{
         loading::{LoadingSystemSet, NeedsLoaded, LOADING_SCHEDULE},
@@ -39,6 +40,7 @@ use crate::{
     },
     physics::assign_player_world,
     settings::ServerSettings,
+    universe::generation::UniverseSystems,
 };
 
 use super::PlayerLooking;
@@ -207,13 +209,16 @@ fn create_new_player(
     needs_data: Res<ItemShouldHaveData>,
     server_settings: Res<ServerSettings>,
     q_player_needs_loaded: Query<(Entity, &LoadPlayer)>,
+    universe_systems: Res<UniverseSystems>,
 ) {
     for (player_entity, load_player) in q_player_needs_loaded.iter() {
         info!("Creating new player for {}", load_player.name);
 
         let player = Player::new(load_player.name.clone(), load_player.client_id);
-        let starting_pos = Vec3::new(0.0, 1900.0, 0.0);
-        let location = Location::new(starting_pos, Sector::new(25, 25, 25));
+        // let starting_pos = Vec3::new(0.0, 1900.0, 0.0);
+
+        let location = find_new_player_location(&universe_systems);
+        // let location = Location::new(starting_pos, Sector::new(25, 25, 25));
         let velocity = Velocity::default();
         let inventory = generate_player_inventory(player_entity, &items, &mut commands, &needs_data, server_settings.creative);
 

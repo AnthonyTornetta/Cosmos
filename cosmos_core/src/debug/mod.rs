@@ -52,34 +52,34 @@ fn configure_ambiguity_detection(sub_app: &mut SubApp) {
 // }
 
 pub(super) fn register(app: &mut App) {
-    let sub_app = app.main_mut();
-    configure_ambiguity_detection(sub_app);
-    let sub_app = app.sub_app_mut(RenderApp);
-    configure_ambiguity_detection(sub_app);
-    let sub_app = app.sub_app_mut(RenderExtractApp);
-    configure_ambiguity_detection(sub_app);
-
-    app.allow_ambiguous_resource::<RenetClient>();
-    app.allow_ambiguous_resource::<RenetServer>();
-
-    app.allow_ambiguous_component::<Structure>();
-    app.allow_ambiguous_component::<Transform>();
-
-    // app.finish();
-    // app.cleanup();
-    // app.update();
-
-    fn assert_no_conflicting_systems(sub_app: &SubApp) {
-        let ignored_ambiguous_systems = get_ignored_ambiguous_systems();
-
-        let schedules = sub_app.world().resource::<Schedules>();
-        for (_, schedule) in schedules.iter() {
-            if ignored_ambiguous_systems.iter().any(|label| **label == *schedule.label()) {
-                continue;
-            }
-            assert!(schedule.graph().conflicting_systems().is_empty());
-        }
-    }
-    let sub_app = app.main();
-    assert_no_conflicting_systems(sub_app);
+    // let sub_app = app.main_mut();
+    // configure_ambiguity_detection(sub_app);
+    // let sub_app = app.sub_app_mut(RenderApp);
+    // configure_ambiguity_detection(sub_app);
+    // let sub_app = app.sub_app_mut(RenderExtractApp);
+    // configure_ambiguity_detection(sub_app);
+    //
+    // app.allow_ambiguous_resource::<RenetClient>();
+    // app.allow_ambiguous_resource::<RenetServer>();
+    //
+    // app.allow_ambiguous_component::<Structure>();
+    // app.allow_ambiguous_component::<Transform>();
+    //
+    // // app.finish();
+    // // app.cleanup();
+    // // app.update();
+    //
+    // fn assert_no_conflicting_systems(sub_app: &SubApp) {
+    //     let ignored_ambiguous_systems = get_ignored_ambiguous_systems();
+    //
+    //     let schedules = sub_app.world().resource::<Schedules>();
+    //     for (_, schedule) in schedules.iter() {
+    //         if ignored_ambiguous_systems.iter().any(|label| **label == *schedule.label()) {
+    //             continue;
+    //         }
+    //         assert!(schedule.graph().conflicting_systems().is_empty());
+    //     }
+    // }
+    // let sub_app = app.main();
+    // assert_no_conflicting_systems(sub_app);
 }

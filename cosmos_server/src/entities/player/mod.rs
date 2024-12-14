@@ -9,6 +9,7 @@ use crate::persistence::make_persistent::{make_persistent, PersistentComponent};
 
 mod kits;
 pub mod persistence;
+mod spawn_player;
 
 #[derive(Component, Debug, Serialize, Deserialize)]
 /// The server doesn't have a camera, so this is used to track where the player is looking
