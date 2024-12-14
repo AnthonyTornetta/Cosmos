@@ -152,8 +152,6 @@ fn send_events<T: NettyEvent>(
     netty_event_registry: Res<Registry<RegisteredNettyEvent>>,
 ) {
     for ev in evr.read() {
-        println!("{netty_event_registry:?}");
-
         let Some(registered_event) = netty_event_registry.from_id(T::unlocalized_name()) else {
             error!("Event {} not regstered!\n{:?}", T::unlocalized_name(), netty_event_registry);
             continue;

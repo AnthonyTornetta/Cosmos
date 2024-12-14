@@ -70,7 +70,7 @@ fn update_system(
             continue;
         };
 
-        let sec = time.elapsed_seconds();
+        let sec = time.elapsed_secs();
 
         let mut any_fired = false;
 
@@ -98,7 +98,7 @@ fn update_system(
 
             let location = structure.block_world_location(line.start, global_transform, location);
 
-            let relative_direction = line.direction.to_vec3();
+            let relative_direction = line.direction.as_vec3();
             let laser_velocity = global_transform.affine().matrix3.mul_vec3(relative_direction) * LASER_BASE_VELOCITY;
 
             let strength = (5.0 * line.len as f32).powf(1.2);

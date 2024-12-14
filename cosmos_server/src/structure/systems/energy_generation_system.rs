@@ -62,7 +62,7 @@ fn update_energy(
     for (gen, system) in e_gen_query.iter() {
         if let Ok(systems) = sys_query.get(system.structure_entity()) {
             if let Ok(mut storage) = systems.query_mut(&mut e_storage_query) {
-                storage.increase_energy(gen.energy_generation_rate() * time.delta_seconds());
+                storage.increase_energy(gen.energy_generation_rate() * time.delta_secs());
             }
         }
     }

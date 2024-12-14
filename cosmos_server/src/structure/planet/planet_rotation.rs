@@ -65,7 +65,7 @@ fn rotate_planets(
         let delta_rot = if planet_rotation.duration_per_revolution != Duration::ZERO {
             Quat::from_axis_angle(
                 *planet_rotation.axis,
-                TAU * time.delta_seconds() / planet_rotation.duration_per_revolution.as_secs_f32(),
+                TAU * time.delta_secs() / planet_rotation.duration_per_revolution.as_secs_f32(),
             )
         } else {
             Quat::IDENTITY

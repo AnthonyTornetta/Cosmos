@@ -31,19 +31,25 @@ impl BlockRotation {
         }
     }
 
+    /// Returns the [`Self::face_pointing_pos_y`] face as a quaternion that will be used to
+    /// complete this rotation.
+    pub fn face_pointing_pos_y_quat(&self) -> Quat {
+        match self.face_pointing_pos_y {
+            BlockFace::Top => Quat::IDENTITY,
+            BlockFace::Bottom => Quat::from_axis_angle(Vec3::X, PI),
+            BlockFace::Back => Quat::from_axis_angle(Vec3::X, -PI / 2.0),
+            BlockFace::Front => Quat::from_axis_angle(Vec3::X, PI / 2.0),
+            BlockFace::Left => Quat::from_axis_angle(Vec3::Z, PI / 2.0),
+            BlockFace::Right => Quat::from_axis_angle(Vec3::Z, -PI / 2.0),
+        }
+    }
+
     /// Returns this rotation's representation as a quaternion.
     pub fn as_quat(&self) -> Quat {
-        self.sub_rotation
-            .as_quat()
-            .mul_quat(match self.face_pointing_pos_y {
-                BlockFace::Top => Quat::IDENTITY,
-                BlockFace::Bottom => Quat::from_axis_angle(Vec3::X, PI),
-                BlockFace::Back => Quat::from_axis_angle(Vec3::X, PI / 2.0),
-                BlockFace::Front => Quat::from_axis_angle(Vec3::X, -PI / 2.0),
-                BlockFace::Left => Quat::from_axis_angle(Vec3::Z, PI / 2.0),
-                BlockFace::Right => Quat::from_axis_angle(Vec3::Z, -PI / 2.0),
-            })
-            .normalize()
+        let quat = self.face_pointing_pos_y_quat();
+        let sub_rotation_quat = self.sub_rotation.as_quat();
+
+        (sub_rotation_quat * quat).normalize()
     }
 
     #[inline(always)]
@@ -60,7 +66,7 @@ impl BlockRotation {
     /// For example, if this rotation makes [`BlockFace::Front`] point [`Direction::NegX`]
     /// and you provide [`BlockFace::Front`], you will be given [`Direction::NegX`].
     pub fn direction_of(&self, face: BlockFace) -> BlockDirection {
-        let unrotated_vec3 = face.direction().to_vec3();
+        let unrotated_vec3 = face.direction().as_vec3();
         let rotated_vec3 = self.as_quat().mul_vec3(unrotated_vec3);
         BlockDirection::from_vec3(rotated_vec3)
     }
@@ -102,16 +108,16 @@ impl BlockRotation {
         match top_face_pointing {
             D::PosX => match front_face_pointing {
                 // The inner match arms are ordered by the resulting sub-rotation to make them easier to visualize.
-                D::NegZ => Self::new(BF::Left, BlockSubRotation::None),
+                D::NegZ => Self::new(BF::Right, BlockSubRotation::None),
                 D::NegY => Self::new(BF::Back, BlockSubRotation::CW),
-                D::PosZ => Self::new(BF::Right, BlockSubRotation::Flip),
+                D::PosZ => Self::new(BF::Right, BlockSubRotation::CCW),
                 D::PosY => Self::new(BF::Front, BlockSubRotation::CCW),
                 _ => panic!("Invalid combination of top and front face directions."),
             },
             D::NegX => match front_face_pointing {
-                D::NegZ => Self::new(BF::Right, BlockSubRotation::None),
+                D::NegZ => Self::new(BF::Right, BlockSubRotation::CW),
                 D::PosY => Self::new(BF::Front, BlockSubRotation::CW),
-                D::PosZ => Self::new(BF::Left, BlockSubRotation::Flip),
+                D::PosZ => Self::new(BF::Left, BlockSubRotation::CW),
                 D::NegY => Self::new(BF::Back, BlockSubRotation::CCW),
                 _ => panic!("Invalid combination of top and front face directions."),
             },
@@ -131,16 +137,16 @@ impl BlockRotation {
             },
             D::PosZ => match front_face_pointing {
                 D::PosY => Self::new(BF::Front, BlockSubRotation::None),
-                D::PosX => Self::new(BF::Left, BlockSubRotation::CW),
+                D::PosX => Self::new(BF::Left, BlockSubRotation::None),
                 D::NegY => Self::new(BF::Back, BlockSubRotation::Flip),
-                D::NegX => Self::new(BF::Right, BlockSubRotation::CCW),
+                D::NegX => Self::new(BF::Right, BlockSubRotation::None),
                 _ => panic!("Invalid combination of top and front face directions."),
             },
             D::NegZ => match front_face_pointing {
                 D::NegY => Self::new(BF::Back, BlockSubRotation::None),
-                D::PosX => Self::new(BF::Right, BlockSubRotation::CW),
+                D::PosX => Self::new(BF::Right, BlockSubRotation::Flip),
                 D::PosY => Self::new(BF::Front, BlockSubRotation::Flip),
-                D::NegX => Self::new(BF::Left, BlockSubRotation::CCW),
+                D::NegX => Self::new(BF::Left, BlockSubRotation::Flip),
                 _ => panic!("Invalid combination of top and front face directions."),
             },
         }

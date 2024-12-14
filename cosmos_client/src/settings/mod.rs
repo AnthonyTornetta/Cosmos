@@ -26,6 +26,8 @@ pub enum SettingCategory {
     Graphics,
     /// Mouse
     Mouse,
+    /// Audio
+    Audio,
 }
 
 #[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
@@ -198,6 +200,13 @@ fn register_settings(mut registry: ResMut<Registry<Setting>>) {
         SettingData::I32(90),
         SettingCategory::Graphics,
         Some(SettingConstraint::I32 { min: 30, max: 120 }),
+    ));
+
+    registry.register(Setting::new(
+        "cosmos:music_volume",
+        SettingData::I32(100),
+        SettingCategory::Audio,
+        Some(SettingConstraint::I32 { min: 0, max: 100 }),
     ));
 }
 

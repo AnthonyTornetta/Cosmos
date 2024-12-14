@@ -33,3 +33,6 @@ docs/book/
 
 # Generated via `cargo run --features print-schedule | dot -Tsvg > ./debug.svg`
 debug.svg
+
+# Local to this player
+name.env

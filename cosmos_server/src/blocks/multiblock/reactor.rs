@@ -399,21 +399,18 @@ fn on_interact_reactor(
             continue;
         };
 
-        let Ok((structure, mut reactors)) = structure_query.get_mut(s_block.structure_entity) else {
+        let Ok((structure, mut reactors)) = structure_query.get_mut(s_block.structure()) else {
             continue;
         };
 
-        let block = structure.block_at(s_block.structure_block.coords(), &blocks);
+        let block = structure.block_at(s_block.coords(), &blocks);
 
         if block.unlocalized_name() == "cosmos:reactor_controller" {
-            if reactors
-                .iter()
-                .any(|reactor| reactor.controller_block() == s_block.structure_block.coords())
-            {
+            if reactors.iter().any(|reactor| reactor.controller_block() == s_block.coords()) {
                 continue;
             }
 
-            if let Some(bounds) = check_is_valid_multiblock(&structure, s_block.structure_block.coords(), &blocks) {
+            if let Some(bounds) = check_is_valid_multiblock(&structure, s_block.coords(), &blocks) {
                 match check_valid(bounds, &structure, &blocks) {
                     ReactorValidity::MissingCasing(_) => {
                         let Ok(player) = player_query.get(ev.interactor) else {
@@ -440,7 +437,7 @@ fn on_interact_reactor(
                         );
                     }
                     ReactorValidity::Valid => {
-                        let reactor = create_reactor(&structure, &blocks, &reactor_blocks, bounds, s_block.structure_block.coords());
+                        let reactor = create_reactor(&structure, &blocks, &reactor_blocks, bounds, s_block.coords());
 
                         reactors.add_reactor(reactor);
                     }

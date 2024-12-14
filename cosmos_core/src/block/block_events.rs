@@ -2,7 +2,6 @@
 
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::Velocity;
-use serde::{Deserialize, Serialize};
 
 use crate::{
     blockitems::BlockItems,
@@ -42,22 +41,13 @@ pub struct BlockBreakEvent {
     pub block: StructureBlock,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone, Copy)]
-/// this is stupid.
-pub struct StructureBlockPair {
-    /// The block interacted with
-    pub structure_block: StructureBlock,
-    /// The structure it is on
-    pub structure_entity: Entity,
-}
-
 /// This is sent whenever a player interacts with a block
 #[derive(Debug, Event)]
 pub struct BlockInteractEvent {
     /// The block that was interacted with by the player
-    pub block: Option<StructureBlockPair>,
+    pub block: Option<StructureBlock>,
     /// Includes blocks normally ignored by most interaction checks
-    pub block_including_fluids: StructureBlockPair,
+    pub block_including_fluids: StructureBlock,
     /// The player that interacted with the block
     pub interactor: Entity,
     /// If this is true, the player was crouching while interacting with this block
@@ -156,6 +146,9 @@ fn handle_block_break_events(
             if let Ok((mut structure, s_loc, g_trans, velocity)) = q_structure.get_mut(ev.block.structure()) {
                 let mut structure_blocks = vec![(ev.block.coords(), BlockRotation::default())];
 
+                let coord = ev.block.coords();
+                let block = structure.block_at(coord, &blocks);
+
                 if let (Some(build_mode), Some(parent)) = (build_mode, parent) {
                     structure_blocks = calculate_build_mode_blocks(
                         structure_blocks,
@@ -164,6 +157,7 @@ fn handle_block_break_events(
                         ev.block.structure(),
                         &mut inventory,
                         &structure,
+                        block,
                     );
                 }
 
@@ -246,6 +240,7 @@ fn calculate_build_mode_blocks(
     structure_entity: Entity,
     inventory: &mut Mut<'_, Inventory>,
     structure: &Structure,
+    block: &Block,
 ) -> Vec<(BlockCoordinate, BlockRotation)> {
     if parent.get() != structure_entity {
         // Tried to place a block on a structure they're not in build mode on
@@ -312,15 +307,8 @@ fn calculate_build_mode_blocks(
                     let new_block_rotation = match block_rotation {
                         BlockRotation {
                             face_pointing_pos_y: BlockFace::Top | BlockFace::Bottom,
-                            sub_rotation: BlockSubRotation::Flip | BlockSubRotation::None,
+                            sub_rotation: _,
                         } => block_rotation.inverse(),
-                        BlockRotation {
-                            face_pointing_pos_y: BlockFace::Top | BlockFace::Bottom,
-                            sub_rotation: BlockSubRotation::CCW | BlockSubRotation::CW,
-                        } => BlockRotation {
-                            face_pointing_pos_y: block_rotation.face_pointing_pos_y.inverse(),
-                            sub_rotation: block_rotation.sub_rotation,
-                        },
                         BlockRotation {
                             face_pointing_pos_y: BlockFace::Right | BlockFace::Left,
                             sub_rotation: BlockSubRotation::CCW | BlockSubRotation::CW,
@@ -330,9 +318,9 @@ fn calculate_build_mode_blocks(
                         },
                         BlockRotation {
                             face_pointing_pos_y: BlockFace::Back | BlockFace::Front,
-                            sub_rotation: BlockSubRotation::Flip | BlockSubRotation::None,
+                            sub_rotation: _,
                         } => BlockRotation {
-                            face_pointing_pos_y: block_rotation.face_pointing_pos_y,
+                            face_pointing_pos_y: block_rotation.face_pointing_pos_y.inverse(),
                             sub_rotation: block_rotation.sub_rotation.inverse(),
                         },
                         _ => block_rotation,
@@ -362,14 +350,21 @@ fn calculate_build_mode_blocks(
                         BlockRotation {
                             face_pointing_pos_y: BlockFace::Back | BlockFace::Front,
                             sub_rotation: BlockSubRotation::None | BlockSubRotation::Flip,
-                        } => block_rotation.inverse(),
+                        } => BlockRotation {
+                            face_pointing_pos_y: block_rotation.face_pointing_pos_y,
+                            sub_rotation: block_rotation.sub_rotation.inverse(),
+                        },
                         BlockRotation {
-                            face_pointing_pos_y: BlockFace::Back | BlockFace::Front,
-                            sub_rotation: BlockSubRotation::CCW | BlockSubRotation::CW,
+                            face_pointing_pos_y: BlockFace::Left | BlockFace::Right,
+                            sub_rotation: BlockSubRotation::CW | BlockSubRotation::CCW,
                         } => BlockRotation {
                             face_pointing_pos_y: block_rotation.face_pointing_pos_y.inverse(),
                             sub_rotation: block_rotation.sub_rotation,
                         },
+                        BlockRotation {
+                            face_pointing_pos_y: BlockFace::Left | BlockFace::Right,
+                            sub_rotation: _,
+                        } => block_rotation.inverse(),
                         BlockRotation {
                             face_pointing_pos_y: _,
                             sub_rotation: BlockSubRotation::None | BlockSubRotation::Flip,
@@ -382,6 +377,16 @@ fn calculate_build_mode_blocks(
 
                     unique_push(&mut new_coords, (new_block_coords, new_block_rotation));
                 }
+            }
+        }
+
+        // TODO: Sub rotations aren't properly handled by connected textures.
+        // Nothing that has connected textures and uses sub rotations exists yet, so for now just
+        // disable them on build block placements. This will have to get fixed eventually.
+        let connected = !block.connect_to_groups.is_empty();
+        if connected {
+            for (_, rot) in &mut new_coords {
+                rot.sub_rotation = Default::default();
             }
         }
 
@@ -417,6 +422,18 @@ fn handle_block_place_events(
         };
         let mut structure_blocks = vec![(place_event_data.structure_block.coords(), place_event_data.block_up)];
 
+        let Some(is) = inv.itemstack_at(place_event_data.inventory_slot) else {
+            break;
+        };
+
+        let item = items.from_numeric_id(is.item_id());
+
+        let Some(block_id) = block_items.block_from_item(item) else {
+            break;
+        };
+
+        let block = blocks.from_numeric_id(block_id);
+
         if let (Some(build_mode), Some(parent)) = (build_mode, parent) {
             structure_blocks = calculate_build_mode_blocks(
                 structure_blocks,
@@ -425,6 +442,7 @@ fn handle_block_place_events(
                 place_event_data.structure_block.structure(),
                 &mut inv,
                 &structure,
+                block,
             );
         }
 
@@ -433,23 +451,11 @@ fn handle_block_place_events(
                 continue;
             }
 
-            let Some(is) = inv.itemstack_at(place_event_data.inventory_slot) else {
-                break;
-            };
-
-            let item = items.from_numeric_id(is.item_id());
-
-            let Some(block_id) = block_items.block_from_item(item) else {
-                break;
-            };
-
             if block_id != place_event_data.block_id {
                 *ev.write() = BlockPlaceEvent::Cancelled;
                 // May have run out of the item or it was swapped with something else (not really possible currently, but more checks never hurt anyone)
                 break;
             }
-
-            let block = blocks.from_numeric_id(block_id);
 
             if block.unlocalized_name() == "cosmos:ship_core" || block.unlocalized_name() == "cosmos:station_core" {
                 break;

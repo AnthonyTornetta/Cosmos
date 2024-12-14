@@ -265,10 +265,10 @@ fn check_assets_ready(
     for folder_handle in loading.iter().map(|h| &h.folder_handle) {
         for handle in folder_handle {
             let load_state = server.get_load_state(handle);
-            if load_state == Some(LoadState::Loaded) || matches!(load_state, Some(LoadState::Failed(_))) {
+            if matches!(load_state, Some(LoadState::Failed(_) | LoadState::Loaded)) {
                 match server.get_recursive_dependency_load_state(handle) {
                     Some(RecursiveDependencyLoadState::Loaded) => {}
-                    Some(RecursiveDependencyLoadState::Failed) => {
+                    Some(RecursiveDependencyLoadState::Failed(_)) => {
                         panic!("Failed to load asset!!");
                     }
                     _ => {

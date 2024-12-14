@@ -107,7 +107,7 @@ pub(super) fn update_ship_force_and_velocity(
 
                 const MAX_ANGLE_PER_SECOND: f32 = 100.0;
 
-                let max = MAX_ANGLE_PER_SECOND * time.delta_seconds();
+                let max = MAX_ANGLE_PER_SECOND * time.delta_secs();
 
                 velocity.angvel = torque.clamp_length(0.0, max);
 
@@ -126,7 +126,7 @@ pub(super) fn update_ship_force_and_velocity(
 
                 movement_vector = movement_vector.normalize();
 
-                let delta = time.delta_seconds();
+                let delta = time.delta_secs();
 
                 let mut energy_used = thruster_system.energy_consumption() * delta;
 
@@ -150,7 +150,7 @@ pub(super) fn update_ship_force_and_velocity(
 
             if movement.braking {
                 let mut brake_vec = -velocity.linvel * readmass.get().mass;
-                let delta = time.delta_seconds() * MAX_BRAKE_DELTA_PER_THRUST * thruster_system.thrust_total();
+                let delta = time.delta_secs() * MAX_BRAKE_DELTA_PER_THRUST * thruster_system.thrust_total();
 
                 if brake_vec.length_squared() >= delta * delta {
                     brake_vec = brake_vec.normalize() * delta;

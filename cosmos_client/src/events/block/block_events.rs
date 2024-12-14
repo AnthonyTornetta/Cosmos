@@ -4,7 +4,7 @@ use bevy::prelude::*;
 use bevy_renet2::renet2::RenetClient;
 use cosmos_core::{
     block::{
-        block_events::{BlockEventsSet, BlockInteractEvent, StructureBlockPair},
+        block_events::{BlockEventsSet, BlockInteractEvent},
         block_rotation::BlockRotation,
     },
     netty::{
@@ -46,7 +46,7 @@ fn handle_block_break(
     network_mapping: Res<NetworkMapping>,
 ) {
     for ev in event_reader.read() {
-        let Ok(sb) = ev.block.map(&network_mapping) else {
+        let Ok(sb) = ev.block.map_to_server(&network_mapping) else {
             continue;
         };
 
@@ -63,7 +63,7 @@ fn handle_block_place(
     network_mapping: Res<NetworkMapping>,
 ) {
     for ev in event_reader.read() {
-        let Ok(sb) = ev.block.map(&network_mapping) else {
+        let Ok(sb) = ev.block.map_to_server(&network_mapping) else {
             continue;
         };
 
@@ -85,25 +85,15 @@ fn handle_block_interact(
     network_mapping: Res<NetworkMapping>,
 ) {
     for ev in event_reader.read() {
-        let Some(any_ent) = network_mapping.server_from_client(&ev.block_including_fluids.structure_entity) else {
+        let Ok(server_structure_block) = ev.block_including_fluids.map_to_server(&network_mapping) else {
             continue;
         };
 
         client.send_message(
             NettyChannelClient::Reliable,
             cosmos_encoder::serialize(&ClientReliableMessages::InteractWithBlock {
-                block_including_fluids: StructureBlockPair {
-                    structure_block: ev.block_including_fluids.structure_block,
-                    structure_entity: any_ent,
-                },
-                block: ev.block.and_then(|b| {
-                    network_mapping
-                        .server_from_client(&b.structure_entity)
-                        .map(|ent| StructureBlockPair {
-                            structure_block: b.structure_block,
-                            structure_entity: ent,
-                        })
-                }),
+                block_including_fluids: server_structure_block,
+                block: ev.block.and_then(|b| b.map_to_server(&network_mapping).ok()),
                 alternate: ev.alternate,
             }),
         );

@@ -65,7 +65,7 @@ fn check_should_break(
     blocks: Res<Registry<Block>>,
     time: Res<Time>,
 ) {
-    let delta = time.delta_seconds();
+    let delta = time.delta_secs();
 
     for (structure_entity, structure, mut being_mined) in q_structure.iter_mut() {
         being_mined.0.retain(|coordinate, &mut entity| {
@@ -129,7 +129,7 @@ fn update_mining_beams(
 
     let mut mining_blocks: Vec<CachedBlockBeingMined> = vec![];
 
-    let delta_time = time.delta_seconds();
+    let delta_time = time.delta_secs();
 
     for (entity, beam, p_world, g_trans) in q_mining_beams.iter_mut() {
         if !q_is_system_active.contains(beam.system_entity) {
@@ -284,13 +284,13 @@ fn on_activate_system(
     for (system_entity, mining_system, system) in query.iter_mut() {
         if let Ok((ship_entity, systems, structure, physics_world)) = systems.get(system.structure_entity()) {
             if let Ok(mut energy_storage_system) = systems.query_mut(&mut es_query) {
-                let sec = time.delta_seconds();
+                let sec = time.delta_secs();
 
                 for line in mining_system.lines.iter() {
                     let energy = line.property.energy_per_second * sec;
 
                     if energy_storage_system.decrease_energy(energy) == 0.0 {
-                        let beam_direction = line.direction.to_vec3();
+                        let beam_direction = line.direction.as_vec3();
 
                         let beam_begin = line.end();
                         let rel_pos = structure.block_relative_position(beam_begin);
@@ -304,7 +304,7 @@ fn on_activate_system(
                                     system_entity,
                                 },
                                 DespawnWithStructure,
-                                TransformBundle::from_transform(Transform::from_translation(rel_pos).looking_to(beam_direction, Vec3::Y)),
+                                Transform::from_translation(rel_pos).looking_to(beam_direction, Vec3::Y),
                                 *physics_world,
                             ))
                             .id();

@@ -55,14 +55,28 @@ Every time you want to view the documentation, navigate to the `docs/` directory
 
 #### System ordering
 
-If you want to view the ordering of the systems, run (on linux) `cargo run --features print-schedule | dot -Tsvg > ./debug.svg` for either the cosmos_client or cosmos_server projects. If the `print-schedule` feature is enabled, these are setup to use bevy_mod_debugdump to create graphs of the `Update` schedule. If you need a different schedule, you'll have to change the `main.rs` file for either project to specify the correct schedule.  Note, you'll need [graphviz](https://graphviz.org/download/) for the dot cmomand to work.
+If you want to view the ordering of the systems, run (on linux) `cargo run --features print-schedule | dot -Tsvg > ./debug.svg` for either the cosmos_client or cosmos_server projects. If the `print-schedule` feature is enabled, these are setup to use bevy_mod_debugdump to create graphs of the `Update` schedule. If you need a different schedule, you'll have to change the `main.rs` file for either project to specify the correct schedule. Note, you'll need [graphviz](https://graphviz.org/download/) for the dot cmomand to work.
 
 # Cosmos Roadmap
 
 See [the issues page](https://github.com/AnthonyTornetta/Cosmos/issues) for the list of current features/bugs in development.
 
-## Release 0.0.7a (In Progress)
-- [ ] Music
+## Release 0.0.8a
+
+- [ ] Screenshots
+- [ ] More pirate ships
+- [ ] More asteroid types
+- [ ] Fuel for reactor
+- [ ] Performance fixes
+- [ ] Fix server instability
+- [ ] Reduce amount of packets server sends per second
+- [ ] Rebalance shop prices
+- [ ] Add recipes
+- [ ] Add more randomly generated structures (e.g. stations)
+
+## Release 0.0.7a
+
+- [x] Music
 - [x] Creative Mode
 - [x] Chat
 - [x] Galaxy map
@@ -75,8 +89,10 @@ See [the issues page](https://github.com/AnthonyTornetta/Cosmos/issues) for the 
   - [x] When storage is broken, drop items on ground
   - [x] If not enough inventory room when player is mining something, drop item
 - [x] Fix missing chunks on planets
+- [x] Bevy 0.15
 
 ## Release 0.0.6a
+
 - [x] Place rotated blocks
 - [x] Add main menu
   - [x] Customizable settings
@@ -123,6 +139,7 @@ See [the issues page](https://github.com/AnthonyTornetta/Cosmos/issues) for the 
 - [x] Update to bevy 0.14
 
 ## Release 0.0.5a
+
 - [x] Add a gravity well block
   - [x] Remove snapping to structures on collision
 - [x] Camera system
@@ -354,55 +371,46 @@ See [the issues page](https://github.com/AnthonyTornetta/Cosmos/issues) for the 
 - [x] Add Crosshair
 - [x] Support re-sizable window
 
-## Release 0.0.8a
-- [ ] More pirate ships
-- [ ] More asteroid types
-- [ ] Fuel for reactor
-- [ ] Performance fixes
-- [ ] Fix server instability
-- [ ] Reduce amount of packets server sends per second
-- [ ] Rebalance shop prices
-- [ ] Add more randomly generated structures (e.g. stations)
+## Everything that will likely be done in the future
 
-## Everything that will still have to be done after 0.0.7a
-- [ ] Shops
-  - [ ] Peace zone?
-  - [ ] Prices based on supply + rarity
-    - [ ] Keep supply relatively equal between nearby shops
-  - [ ] Each shop has its own supply of money that it cannot go below
-- [ ] Biosphere Improvements
-  - [ ] Ice biosphere glaciers
-  - [ ] Better Water block
-  - [ ] Better Lava block
-  - [ ] Structures
-    - [ ] Rocks spawning
-    - [ ] Undergrowth
-    - [ ] 1 More tree type
-  - [ ] Groundwork for biomes
-    - [ ] Planes
-    - [ ] Redwood forest
-    - [ ] 1 Additional forest
-    - [ ] Ocean
-- [ ] Wires
-  - [ ] Electrical
+- Shops
+  - Peace zone?
+  - Prices based on supply + rarity
+    - Keep supply relatively equal between nearby shops
+  - Each shop has its own supply of money that it cannot go below
+- Biosphere Improvements
+  - Ice biosphere glaciers
+  - Structures
+    - Rocks spawning
+    - Undergrowth
+    - 1 More tree type
+  - Groundwork for biomes
+    - Planes
+    - Redwood forest
+    - 1 Additional forest
+    - Ocean
+- Wires
+  - Electrical
 
 ## NPCs
 
 ### Factions
 
 NPC controlled OR player controlled
+
 NPC controlled factions store reputation of other factions + players
+
 Factions have different attributes
-  - One may steal your ship blueprints
-    - To balance this:
-      - scrap is collected when you mine melting down ships instead of the actual blocks
-        - Different scrap types
-      - Substitute expensive blocks for less expensive ones if needed
-      - If ship is below 50% success rate, don't produce it again
-  - Dynamic faction expansion
-Bounty board
-  - Take down X ship
-  - Selling the ship
+
+- One may steal your ship blueprints
+  - To balance this:
+    - scrap is collected when you mine melting down ships instead of the actual blocks
+      - Different scrap types
+    - Substitute expensive blocks for less expensive ones if needed
+    - If ship is below 50% success rate, don't produce it again
+- Dynamic faction expansion
+  Bounty board
+- Take down X ship
+- Selling the ship
 - Selling ship designs
 - Buying ship designs
-

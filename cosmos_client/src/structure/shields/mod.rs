@@ -4,7 +4,7 @@ use std::time::Duration;
 
 use bevy::{
     app::Update,
-    asset::{Assets, Handle},
+    asset::Assets,
     color::palettes::css,
     core::Name,
     ecs::{
@@ -15,12 +15,12 @@ use bevy::{
         system::{Commands, Query, Res, ResMut},
     },
     math::{Vec3, Vec4},
-    pbr::{NotShadowCaster, StandardMaterial},
-    prelude::App,
+    pbr::{MeshMaterial3d, NotShadowCaster, StandardMaterial},
+    prelude::{App, Mesh3d},
     render::{
         alpha::AlphaMode,
         mesh::{Mesh, MeshBuilder, SphereKind, SphereMeshBuilder},
-        view::{Visibility, VisibilityBundle},
+        view::Visibility,
     },
     time::Time,
 };
@@ -35,7 +35,7 @@ use crate::{
 struct OldRadius(f32);
 
 fn on_change_shield_update_rendering(
-    mut q_changed_shield: Query<(&Shield, &mut OldRadius, &mut Visibility, &mut Handle<Mesh>), Changed<Shield>>,
+    mut q_changed_shield: Query<(&Shield, &mut OldRadius, &mut Visibility, &mut Mesh3d), Changed<Shield>>,
     mut meshes: ResMut<Assets<Mesh>>,
 ) {
     for (shield, mut old_radius, mut visibility, mut mesh_handle) in q_changed_shield.iter_mut() {
@@ -48,7 +48,7 @@ fn on_change_shield_update_rendering(
         }
 
         if old_radius.0 != shield.radius {
-            *mesh_handle = meshes.add(SphereMeshBuilder::new(shield.radius, SphereKind::Uv { sectors: 256, stacks: 256 }).build());
+            *mesh_handle = Mesh3d(meshes.add(SphereMeshBuilder::new(shield.radius, SphereKind::Uv { sectors: 256, stacks: 256 }).build()));
             old_radius.0 = shield.radius;
         }
     }
@@ -59,7 +59,7 @@ const MAX_ANIMATION_DURATION: Duration = Duration::from_secs(2);
 fn update_shield_times(
     time: Res<Time>,
     mut materials: ResMut<Assets<ShieldMaterial>>,
-    mut q_shields: Query<(&mut ShieldRender, &Handle<ShieldMaterial>)>,
+    mut q_shields: Query<(&mut ShieldRender, &MeshMaterial3d<ShieldMaterial>)>,
 ) {
     for (mut shield_render, handle) in &mut q_shields {
         let Some(mat) = materials.get_mut(handle) else {
@@ -80,7 +80,7 @@ fn update_shield_times(
             ripple.y = hit_point.y;
             ripple.z = hit_point.z;
 
-            *hit_time += time.delta_seconds();
+            *hit_time += time.delta_secs();
 
             if *hit_time > MAX_ANIMATION_DURATION.as_secs_f32() {
                 *hit = None;
@@ -122,12 +122,9 @@ fn on_add_shield_create_rendering(
         commands.entity(shield_entity).insert((
             Name::new("Shield"),
             ShieldRender::default(),
-            VisibilityBundle {
-                visibility: Visibility::Hidden,
-                ..Default::default()
-            },
+            Visibility::Hidden,
             NotShadowCaster,
-            materials.add(ShieldMaterial {
+            MeshMaterial3d(materials.add(ShieldMaterial {
                 base: StandardMaterial {
                     // unlit: true,
                     alpha_mode: AlphaMode::Add,
@@ -137,9 +134,9 @@ fn on_add_shield_create_rendering(
                 extension: ShieldMaterialExtension {
                     ripples: [Vec4::new(0.0, 0.0, 0.0, -1.0); MAX_SHIELD_HIT_POINTS],
                 },
-            }),
+            })),
             OldRadius(shield.radius),
-            meshes.add(SphereMeshBuilder::new(shield.radius, SphereKind::Uv { sectors: 256, stacks: 256 }).build()),
+            Mesh3d(meshes.add(SphereMeshBuilder::new(shield.radius, SphereKind::Uv { sectors: 256, stacks: 256 }).build())),
         ));
     }
 }

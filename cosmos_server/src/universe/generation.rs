@@ -1,7 +1,10 @@
 //! Responsible for the generation of the stars
 
 use bevy::{
-    prelude::{App, Event, EventWriter, IntoSystemConfigs, IntoSystemSetConfigs, Query, Res, ResMut, Resource, SystemSet, Update, With},
+    log::info,
+    prelude::{
+        in_state, App, Event, EventWriter, IntoSystemConfigs, IntoSystemSetConfigs, Query, Res, ResMut, Resource, SystemSet, Update, With,
+    },
     time::common_conditions::on_timer,
     utils::HashMap,
 };
@@ -10,6 +13,7 @@ use cosmos_core::{
     netty::{cosmos_encoder, system_sets::NetworkingSystemsSet},
     physics::location::{Location, Sector, SystemCoordinate},
     prelude::Planet,
+    state::GameState,
     universe::star::Star,
 };
 use serde::{Deserialize, Serialize};
@@ -41,7 +45,11 @@ pub struct GenerateSystemEvent {
 }
 
 #[derive(Resource, Debug, Default)]
-/// Represents every system in the universe
+/// Represents every loaded system in the universe
+///
+/// Note that just because a system is loaded does NOT mean a player is there. For instance, the
+/// spawn [`UniverseSystem`] (0, 0, 0) is always loaded. In addition, unloaded systems will not be
+/// present in this list, and will need to be loaded by a player to be added.
 pub struct UniverseSystems {
     systems: HashMap<SystemCoordinate, UniverseSystem>,
 }
@@ -84,9 +92,12 @@ fn save_universe_systems(systems: Res<UniverseSystems>) {
     }
 }
 
+const SPAWN_SYSTEM_LOCATION: Location = Location::ZERO;
+
 fn unload_universe_systems_without_players(q_players: Query<&Location, With<Player>>, mut universe_systems: ResMut<UniverseSystems>) {
     let systems = q_players
         .iter()
+        .chain(&[SPAWN_SYSTEM_LOCATION])
         .map(|x| SystemCoordinate::from_sector(x.sector()))
         .collect::<HashSet<SystemCoordinate>>();
 
@@ -100,7 +111,7 @@ fn load_universe_systems_near_players(
 ) {
     let mut sectors_todo = HashSet::new();
 
-    for p_loc in q_players.iter() {
+    for p_loc in q_players.iter().chain(&[SPAWN_SYSTEM_LOCATION]) {
         let system = p_loc.get_system_coordinates();
 
         if universe_systems.system(system).is_some() {
@@ -129,6 +140,7 @@ fn load_universe_systems_near_players(
         );
     }
 
+    info!("Triggering system generation for {sectors_todo:?}");
     evw_generate_system.send_batch(sectors_todo.into_iter().map(|system| GenerateSystemEvent { system }));
 }
 
@@ -275,6 +287,7 @@ pub(super) fn register(app: &mut App) {
             (load_universe_systems_near_players, unload_universe_systems_without_players).chain(),
             save_universe_systems.run_if(on_timer(Duration::from_secs(10))),
         )
+            .run_if(in_state(GameState::Playing))
             .in_set(SystemGenerationSet::SendEvents),
     )
     .init_resource::<UniverseSystems>()

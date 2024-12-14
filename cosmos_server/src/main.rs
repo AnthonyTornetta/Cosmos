@@ -19,7 +19,7 @@ use cosmos_core::{
     plugin::cosmos_core_plugin::CosmosCorePluginGroup, state::GameState,
 };
 
-use iyes_perf_ui::PerfUiPlugin;
+// use iyes_perf_ui::PerfUiPlugin;
 use plugin::server_plugin::ServerPlugin;
 use settings::read_server_settings;
 use thread_priority::{set_current_thread_priority, ThreadPriority};
@@ -31,6 +31,7 @@ pub mod ai;
 pub mod blocks;
 pub mod chat;
 pub mod commands;
+pub mod crafting;
 mod debug;
 pub mod entities;
 pub mod fluid;
@@ -112,7 +113,7 @@ fn main() {
             SystemInformationDiagnosticsPlugin,
             EntityCountDiagnosticsPlugin,
             FrameTimeDiagnosticsPlugin,
-            PerfUiPlugin,
+            // PerfUiPlugin,
         ))
         .insert_resource(server_settings);
 

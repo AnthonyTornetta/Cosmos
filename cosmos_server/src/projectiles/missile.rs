@@ -56,7 +56,7 @@ fn look_towards_target(
 
         let cur_forward = missile_trans.forward();
 
-        let dir_lerped = cur_forward.lerp(direction, time.delta_seconds().min(1.0));
+        let dir_lerped = cur_forward.lerp(direction, time.delta_secs().min(1.0));
 
         missile_trans.look_to(dir_lerped, Vec3::Y);
     }
@@ -67,7 +67,7 @@ const MISSILE_IMPULSE_PER_SEC: f32 = 1.5;
 fn apply_missile_thrust(mut commands: Commands, time: Res<Time>, q_missiles: Query<(Entity, &GlobalTransform), With<Missile>>) {
     for (ent, g_trans) in &q_missiles {
         commands.entity(ent).insert(ExternalImpulse {
-            impulse: g_trans.forward() * MISSILE_IMPULSE_PER_SEC * time.delta_seconds(),
+            impulse: g_trans.forward() * MISSILE_IMPULSE_PER_SEC * time.delta_secs(),
             ..Default::default()
         });
     }
@@ -119,7 +119,7 @@ fn despawn_missiles(mut commands: Commands, mut query: Query<(Entity, &Velocity,
     for (ent, velocity, location, mut missile) in query.iter_mut() {
         missile.lifetime = missile
             .lifetime
-            .checked_sub(Duration::from_secs_f32(time.delta_seconds()))
+            .checked_sub(Duration::from_secs_f32(time.delta_secs()))
             .unwrap_or(Duration::ZERO);
 
         if missile.lifetime == Duration::ZERO {

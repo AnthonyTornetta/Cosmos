@@ -21,29 +21,26 @@ fn spawn_planet_skysphere(mut meshes: ResMut<Assets<Mesh>>, mut materials: ResMu
         Name::new("Planet skybox"),
         NotShadowCaster,
         NotShadowReceiver,
-        PbrBundle {
-            mesh: meshes.add(Sphere { radius: 5_000_000.0 }),
-            material: materials.add(StandardMaterial {
-                unlit: true,
-                base_color: css::SKY_BLUE.into(),
-                alpha_mode: AlphaMode::Blend,
-                ..Default::default()
-            }),
-            transform: Transform {
-                // By setting the scale to -1, the model will be inverted, which is good since we
-                // want to see it while being inside of it.
-                scale: Vec3::NEG_ONE,
-                ..Default::default()
-            },
-            visibility: Visibility::Hidden,
+        Mesh3d(meshes.add(Sphere { radius: 5_000_000.0 })),
+        MeshMaterial3d(materials.add(StandardMaterial {
+            unlit: true,
+            base_color: css::SKY_BLUE.into(),
+            alpha_mode: AlphaMode::Blend,
+            ..Default::default()
+        })),
+        Transform {
+            // By setting the scale to -1, the model will be inverted, which is good since we
+            // want to see it while being inside of it.
+            scale: Vec3::NEG_ONE,
             ..Default::default()
         },
+        Visibility::Hidden,
     ));
 }
 
 fn color_planet_skybox(
     q_star_loc: Query<&Location, With<Star>>,
-    mut q_planet_skybox: Query<(&mut Visibility, &Handle<StandardMaterial>), With<PlanetSkybox>>,
+    mut q_planet_skybox: Query<(&mut Visibility, &MeshMaterial3d<StandardMaterial>), With<PlanetSkybox>>,
     q_planets: Query<(&Location, &PlanetAtmosphere, &Structure, &GlobalTransform), With<Planet>>,
     q_player: Query<&Location, With<LocalPlayer>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
@@ -81,7 +78,7 @@ fn color_planet_skybox(
         let planet_face_direction = planet_rot
             * Planet::planet_face_relative(planet_rot.inverse() * Vec3::from(*player_loc - *closest_planet_loc))
                 .direction()
-                .to_vec3();
+                .as_vec3();
 
         let dot = star_direction.dot(planet_face_direction);
         const BEGIN_FADE: f32 = 0.2;

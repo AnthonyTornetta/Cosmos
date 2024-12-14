@@ -14,7 +14,7 @@ use cosmos_core::{
 
 use crate::{
     asset::asset_loader::load_assets,
-    audio::{AudioEmission, AudioEmitterBundle, CosmosAudioEmitter, DespawnOnNoEmissions},
+    audio::{AudioEmission, CosmosAudioEmitter, DespawnOnNoEmissions},
     structure::ship::PlayerParentChangingSet,
 };
 
@@ -30,7 +30,7 @@ fn track_time_alive(
     mut q_time_alive: Query<(Entity, &mut ExplosionTimeAlive, Option<&MaxTimeExplosionAlive>)>,
 ) {
     for (ent, mut time_alive, max_time) in &mut q_time_alive {
-        time_alive.0 += time.delta_seconds();
+        time_alive.0 += time.delta_secs();
 
         if let Some(max_time) = max_time {
             if time_alive.0 >= max_time.0.as_secs_f32() {
@@ -60,9 +60,9 @@ fn on_add_missile(
 ) {
     for ent in &q_added_missile {
         commands.entity(ent).insert((
-            VisibilityBundle::default(),
-            missile_rendering_info.0.clone_weak(),
-            missile_rendering_info.1.clone_weak(),
+            Visibility::default(),
+            Mesh3d(missile_rendering_info.0.clone_weak()),
+            MeshMaterial3d(missile_rendering_info.1.clone_weak()),
         ));
     }
 }
@@ -136,16 +136,14 @@ fn respond_to_explosion(
             Name::new("Explosion sound"),
             DespawnOnNoEmissions,
             *explosion_loc,
-            AudioEmitterBundle {
-                emitter: CosmosAudioEmitter::with_emissions(vec![AudioEmission {
-                    instance: playing_sound,
-                    handle: audio_handle,
-                    max_distance: 200.0,
-                    peak_volume: 1.0,
-                    ..Default::default()
-                }]),
-                transform: TransformBundle::from_transform(Transform::from_translation(transform.translation)),
-            },
+            CosmosAudioEmitter::with_emissions(vec![AudioEmission {
+                instance: playing_sound,
+                handle: audio_handle,
+                max_distance: 200.0,
+                peak_volume: 1.0,
+                ..Default::default()
+            }]),
+            Transform::from_translation(transform.translation),
         ));
     }
 }
@@ -154,7 +152,7 @@ fn respond_to_explosion(
 /// This fixes that issue.
 ///
 /// Note that this needs to be run *before* the explosion particle creation system, for some reason
-fn start_explosion_particle_system(mut q_spawner: Query<&mut EffectSpawner, (Added<ExplosionParticle>, With<ExplosionParticle>)>) {
+fn start_explosion_particle_system(mut q_spawner: Query<&mut EffectInitializers, (Added<ExplosionParticle>, With<ExplosionParticle>)>) {
     for mut effect_spawner in &mut q_spawner {
         effect_spawner.reset();
         effect_spawner.set_active(true);
@@ -181,9 +179,9 @@ fn create_particle_fx(color: Option<Color>, effects: &mut Assets<EffectAsset>) -
     }
 
     let mut size_gradient1 = Gradient::new();
-    size_gradient1.add_key(0.0, Vec2::splat(0.2));
-    size_gradient1.add_key(0.3, Vec2::splat(0.2));
-    size_gradient1.add_key(1.0, Vec2::splat(0.0));
+    size_gradient1.add_key(0.0, Vec3::splat(0.2));
+    size_gradient1.add_key(0.3, Vec3::splat(0.2));
+    size_gradient1.add_key(1.0, Vec3::splat(0.0));
 
     let writer = ExprWriter::new();
 
@@ -212,7 +210,7 @@ fn create_particle_fx(color: Option<Color>, effects: &mut Assets<EffectAsset>) -
         speed: (writer.rand(ScalarType::Float) * writer.lit(20.) + writer.lit(20.)).expr(),
     };
 
-    let effect = EffectAsset::new(vec![32768], Spawner::once(1250.0.into(), true), writer.finish())
+    let effect = EffectAsset::new(32768, Spawner::once(1250.0.into(), true), writer.finish())
         .with_name("explosion")
         .init(init_pos)
         .init(init_vel)

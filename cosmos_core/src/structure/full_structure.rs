@@ -19,7 +19,7 @@ use crate::{
 use super::{
     base_structure::BaseStructure,
     block_storage::BlockStorer,
-    chunk::Chunk,
+    chunk::{BlockInfo, Chunk},
     coordinates::{BlockCoordinate, ChunkBlockCoordinate, ChunkCoordinate, CoordinateType},
     structure_block::StructureBlock,
     ChunkState, Structure,
@@ -92,6 +92,40 @@ impl FullStructure {
     }
 
     /// Sets the block at the given block coordinates.
+    /// Also sets its block_info. This does NOT send a [`BlockDataChangedEvent`] event!
+    ///
+    /// * `event_writer` If this is `None`, no event will be generated. A valid usecase for this being `None` is when you are initially loading/generating everything and you don't want a billion events being generated.
+    pub fn set_block_and_info_at(
+        &mut self,
+        coords: BlockCoordinate,
+        block: &Block,
+        block_info: BlockInfo,
+        blocks: &Registry<Block>,
+        event_writer: Option<&mut EventWriter<BlockChangedEvent>>,
+    ) {
+        let old_block = self.block_id_at(coords);
+        let old_block_info = self.block_info_at(coords);
+
+        self.set_block_at(coords, block, block_info.get_rotation(), blocks, None);
+        self.set_block_info_at(coords, block_info, None);
+
+        if let Some(event_writer) = event_writer {
+            if old_block_info != block_info || old_block != block.id() {
+                let Some(self_entity) = self.base_structure.self_entity else {
+                    return;
+                };
+                event_writer.send(BlockChangedEvent {
+                    new_block: block.id(),
+                    old_block,
+                    block: StructureBlock::new(coords, self_entity),
+                    old_block_info,
+                    new_block_info: self.block_info_at(coords),
+                });
+            }
+        }
+    }
+
+    /// Sets the block at the given block coordinates.
     ///
     /// * `event_writer` If this is `None`, no event will be generated. A valid usecase for this being `None` is when you are initially loading/generating everything and you don't want a billion events being generated.
     pub fn set_block_at(
@@ -109,7 +143,7 @@ impl FullStructure {
             return;
         }
 
-        let old_block_rotation = self.block_rotation(coords);
+        let old_block_info = self.block_info_at(coords);
 
         let chunk_coords = ChunkCoordinate::for_block_coordinate(coords);
         let chunk_block_coords = ChunkBlockCoordinate::for_block_coordinate(coords);
@@ -153,8 +187,8 @@ impl FullStructure {
             new_block: block.id(),
             old_block,
             block: StructureBlock::new(coords, self_entity),
-            old_block_rotation,
-            new_block_rotation: block_rotation,
+            old_block_info,
+            new_block_info: self.block_info_at(coords),
         });
     }
 

@@ -12,7 +12,7 @@ use bevy::{
     ecs::schedule::{IntoSystemSetConfigs, SystemSet},
     hierarchy::Parent,
     log::{error, warn},
-    prelude::{App, Commands, Component, Entity, First, IntoSystemConfigs, Query, ResMut, Transform, With, Without},
+    prelude::{App, Commands, Component, Entity, First, IntoSystemConfigs, Or, Query, ResMut, Transform, With, Without},
     reflect::Reflect,
 };
 use bevy_rapier3d::prelude::Velocity;
@@ -36,6 +36,8 @@ pub enum SavingSystemSet {
     BeginSaving,
     /// Put all your saving logic in here
     DoSaving,
+    /// Creates any entity ids that need to be created for the saved entities.
+    CreateEntityIds,
     /// This writes the save data to the disk and removes the `SerializedData` and `NeedsSaved` components.
     DoneSaving,
 }
@@ -66,9 +68,20 @@ pub struct NeedsBlueprinted {
     pub subdir_name: String,
 }
 
-fn check_needs_saved(query: Query<Entity, (With<NeedsSaved>, Without<SerializedData>)>, mut commands: Commands) {
-    for ent in query.iter() {
+fn check_needs_saved(
+    q_parent: Query<&Parent, Or<(Without<SerializedData>, Without<NeedsSaved>)>>,
+    q_needs_serialized_data: Query<(Entity, Option<&Parent>), (With<NeedsSaved>, Without<SerializedData>)>,
+    mut commands: Commands,
+) {
+    for (ent, mut parent) in q_needs_serialized_data.iter() {
         commands.entity(ent).insert(SerializedData::default());
+
+        // If something that needs saved has parents, we must propagate it up to work properly.
+        while let Some(p) = parent {
+            let ent = p.get();
+            commands.entity(ent).insert((SerializedData::default(), NeedsSaved));
+            parent = q_parent.get(ent).ok();
+        }
     }
 }
 
@@ -230,7 +243,8 @@ fn done_saving(
     }
 }
 
-fn calculate_sfi(
+/// This is in a bad spot, and should be moved.
+pub(crate) fn calculate_sfi(
     entity: Entity,
     q_parent: &Query<&Parent>,
     q_entity_id: &Query<&EntityId>,
@@ -311,7 +325,12 @@ pub const SAVING_SCHEDULE: First = First;
 pub(super) fn register(app: &mut App) {
     app.configure_sets(
         SAVING_SCHEDULE,
-        (SavingSystemSet::BeginSaving, SavingSystemSet::DoSaving, SavingSystemSet::DoneSaving)
+        (
+            SavingSystemSet::BeginSaving,
+            SavingSystemSet::DoSaving,
+            SavingSystemSet::CreateEntityIds,
+            SavingSystemSet::DoneSaving,
+        )
             .chain()
             .before(despawn_needed),
     )
@@ -320,7 +339,8 @@ pub(super) fn register(app: &mut App) {
         (
             check_needs_saved.in_set(SavingSystemSet::BeginSaving),
             default_save.in_set(SavingSystemSet::DoSaving),
-            (create_entity_ids, done_saving).chain().in_set(SavingSystemSet::DoneSaving),
+            create_entity_ids.in_set(SavingSystemSet::CreateEntityIds),
+            done_saving.in_set(SavingSystemSet::DoneSaving),
         ),
     );
 

@@ -34,10 +34,8 @@ fn append_grounded_check(mut commands: Commands, q_player: Query<Entity, Added<L
     commands.entity(player_ent).with_children(|p| {
         p.spawn((
             GroundedChecker,
-            SpatialBundle {
-                transform: Transform::from_xyz(0.0, -0.80, 0.0),
-                ..Default::default()
-            },
+            Visibility::default(),
+            Transform::from_xyz(0.0, -0.80, 0.0),
             Name::new("Ground checker"),
             Collider::cuboid(0.1, 0.1, 0.1),
             Sensor,
@@ -111,7 +109,7 @@ pub(crate) fn process_player_movement(
     right = right.normalize_or_zero() * 100.0;
     let movement_up = up.normalize_or_zero() * 2.0;
 
-    let time = time.delta_seconds();
+    let time = time.delta_secs();
 
     let mut new_linvel = player_inv_rot * velocity.linvel;
 

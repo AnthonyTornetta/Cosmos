@@ -130,9 +130,7 @@ impl Laser {
                 linvel: laser_velocity + firer_velocity,
                 ..Default::default()
             },
-            FireTime {
-                time: time.elapsed_seconds(),
-            },
+            FireTime { time: time.elapsed_secs() },
             context_entity_link,
             NotShadowCaster,
             NotShadowReceiver,
@@ -279,7 +277,7 @@ fn send_laser_hit_events(
 
 fn despawn_lasers(mut commands: Commands, query: Query<(Entity, &FireTime), With<Laser>>, time: Res<Time>) {
     for (ent, fire_time) in query.iter() {
-        if time.elapsed_seconds() - fire_time.time > LASER_LIVE_TIME.as_secs_f32() {
+        if time.elapsed_secs() - fire_time.time > LASER_LIVE_TIME.as_secs_f32() {
             commands.entity(ent).insert(NeedsDespawned);
         }
     }

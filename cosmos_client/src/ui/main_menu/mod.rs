@@ -1,6 +1,9 @@
 //! The menu that first appears when you load into the game.
 
-use bevy::{app::App, core_pipeline::bloom::BloomSettings, hierarchy::DespawnRecursiveExt, prelude::*, render::camera::Camera};
+use bevy::{
+    app::App, core_pipeline::bloom::Bloom, hierarchy::DespawnRecursiveExt, picking::pointer::PointerPress, prelude::*,
+    render::camera::Camera, window::Monitor,
+};
 use bevy_kira_audio::prelude::AudioReceiver;
 use bevy_rapier3d::plugin::DefaultRapierContext;
 use cosmos_core::state::GameState;
@@ -61,15 +64,12 @@ fn create_main_menu_background_node(mut commands: Commands, q_main_menu_camera: 
         BackgroundColorNode,
         TargetCamera(cam_ent),
         DespawnOnSwitchState,
-        NodeBundle {
-            style: Style {
-                width: Val::Percent(100.0),
-                height: Val::Percent(100.0),
-                align_content: AlignContent::Center,
-                justify_content: JustifyContent::Center,
-                flex_direction: FlexDirection::Column,
-                ..Default::default()
-            },
+        Node {
+            width: Val::Percent(100.0),
+            height: Val::Percent(100.0),
+            align_content: AlignContent::Center,
+            justify_content: JustifyContent::Center,
+            flex_direction: FlexDirection::Column,
             ..Default::default()
         },
     ));
@@ -83,15 +83,12 @@ fn create_main_menu_root_node(q_bg_node: Query<Entity, With<BackgroundColorNode>
     commands.entity(ent).with_children(|p| {
         p.spawn((
             MainMenuRootUiNode,
-            NodeBundle {
-                style: Style {
-                    width: Val::Percent(100.0),
-                    height: Val::Percent(100.0),
-                    align_content: AlignContent::Center,
-                    justify_content: JustifyContent::Center,
-                    flex_direction: FlexDirection::Column,
-                    ..Default::default()
-                },
+            Node {
+                width: Val::Percent(100.0),
+                height: Val::Percent(100.0),
+                align_content: AlignContent::Center,
+                justify_content: JustifyContent::Center,
+                flex_direction: FlexDirection::Column,
                 ..Default::default()
             },
         ));
@@ -100,7 +97,7 @@ fn create_main_menu_root_node(q_bg_node: Query<Entity, With<BackgroundColorNode>
 
 fn spin_camera(mut q_main_menu_camera: Query<&mut Transform, With<MainMenuCamera>>, time: Res<Time>) {
     for mut trans in q_main_menu_camera.iter_mut() {
-        trans.rotation *= Quat::from_axis_angle(Vec3::Y, time.delta_seconds() / 30.0);
+        trans.rotation *= Quat::from_axis_angle(Vec3::Y, time.delta_secs() / 30.0);
     }
 }
 
@@ -124,27 +121,25 @@ fn fade_in_background(
         .into();
     }
 
-    main_menu_time.0 += time.delta_seconds();
+    main_menu_time.0 += time.delta_secs();
 }
 
 fn create_main_menu_camera(mut commands: Commands) {
     commands.spawn((
         DespawnOnSwitchState,
         MainMenuCamera,
-        Camera3dBundle {
-            camera: Camera {
-                hdr: true,
-                ..Default::default()
-            },
-            transform: Transform::default(),
-            projection: Projection::from(PerspectiveProjection {
-                fov: (90.0 / 180.0) * std::f32::consts::PI,
-                ..default()
-            }),
-            ..default()
+        Camera {
+            hdr: true,
+            ..Default::default()
         },
-        BloomSettings { ..Default::default() },
+        Transform::default(),
+        Projection::from(PerspectiveProjection {
+            fov: (90.0 / 180.0) * std::f32::consts::PI,
+            ..default()
+        }),
+        Bloom { ..Default::default() },
         Name::new("Main Menu Camera"),
+        Camera3d::default(),
         UiRoot,
         AudioReceiver,
         ShowCursor,
@@ -155,10 +150,14 @@ fn create_main_menu_resource(
     q_entity: Query<
         Entity,
         (
+            // Maybe we make this opt-in in the future?
             Without<SurviveMainMenu>,
             Without<Window>,
             Without<DefaultRapierContext>,
             Without<Parent>,
+            Without<Observer>,
+            Without<Monitor>,
+            Without<Pointer<PointerPress>>,
         ),
     >,
     mut commands: Commands,

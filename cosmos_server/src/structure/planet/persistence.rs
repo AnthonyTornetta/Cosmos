@@ -177,9 +177,7 @@ fn load_chunk(
 
         commands
             .entity(entity)
-            .insert(TransformBundle::from_transform(Transform::from_translation(
-                structure.chunk_relative_position(coords),
-            )));
+            .insert(Transform::from_translation(structure.chunk_relative_position(coords)));
 
         structure.set_chunk_entity(coords, entity);
 

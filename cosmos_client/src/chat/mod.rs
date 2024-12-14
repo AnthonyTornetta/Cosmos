@@ -7,12 +7,12 @@ use bevy::{
     core::Name,
     log::error,
     prelude::{
-        App, BuildChildren, Changed, Children, Commands, Component, Entity, EventReader, IntoSystemConfigs, NodeBundle, OnEnter, Query,
-        Res, ResMut, TextBundle, Visibility, With, Without,
+        App, BuildChildren, Changed, ChildBuild, Children, Commands, Component, Entity, EventReader, IntoSystemConfigs, OnEnter, Query,
+        Res, ResMut, Text, TextUiWriter, Visibility, With, Without,
     },
-    text::{BreakLineOn, Text, TextStyle},
+    text::{LineBreak, TextFont, TextLayout},
     time::Time,
-    ui::{BackgroundColor, FlexDirection, Overflow, OverflowAxis, Style, Val},
+    ui::{BackgroundColor, FlexDirection, Node, Overflow, OverflowAxis, Val},
 };
 use cosmos_core::{
     chat::{ClientSendChatMessageEvent, ServerSendChatMessageEvent},
@@ -28,9 +28,9 @@ use crate::{
     input::inputs::{CosmosInputs, InputChecker, InputHandler},
     ui::{
         components::{
-            scollable_container::{ScrollBox, ScrollBundle, ScrollerStyles},
+            scollable_container::{ScrollBox, ScrollerStyles},
             show_cursor::ShowCursor,
-            text_input::{InputValue, TextInput, TextInputBundle},
+            text_input::{InputValue, TextInput},
         },
         font::DefaultFont,
         pause::CloseMenusSet,
@@ -82,29 +82,23 @@ fn setup_chat_display(mut commands: Commands) {
         .spawn((
             ChatDisplay,
             Name::new("Chat Display"),
-            NodeBundle {
-                style: Style {
-                    top: Val::Percent(20.0),
-                    width: Val::Percent(45.0),
-                    height: Val::Percent(60.0),
-                    overflow: Overflow {
-                        x: OverflowAxis::Hidden,
-                        y: OverflowAxis::Hidden,
-                    },
-                    flex_direction: FlexDirection::ColumnReverse,
-                    ..Default::default()
+            Node {
+                top: Val::Percent(20.0),
+                width: Val::Percent(45.0),
+                height: Val::Percent(60.0),
+                overflow: Overflow {
+                    x: OverflowAxis::Hidden,
+                    y: OverflowAxis::Hidden,
                 },
+                flex_direction: FlexDirection::ColumnReverse,
                 ..Default::default()
             },
         ))
         .with_children(|p| {
             p.spawn((
                 ChatDisplayReceivedMessagesContainer,
-                NodeBundle {
-                    style: Style {
-                        flex_direction: FlexDirection::Column,
-                        ..Default::default()
-                    },
+                Node {
+                    flex_direction: FlexDirection::Column,
                     ..Default::default()
                 },
             ));
@@ -113,17 +107,20 @@ fn setup_chat_display(mut commands: Commands) {
 
 const CHAT_MSG_ALIVE_SEC: f32 = 10.0;
 
-fn fade_chat_messages(q_time: Res<Time>, mut q_chat_msg: Query<(Entity, &mut Text, &mut ChatMessage)>, mut commands: Commands) {
-    let delta = q_time.delta_seconds();
-    for (ent, mut text, mut chat_msg) in q_chat_msg.iter_mut() {
+fn fade_chat_messages(
+    q_time: Res<Time>,
+    mut writer: TextUiWriter,
+    mut q_chat_msg: Query<(Entity, &mut ChatMessage)>,
+    mut commands: Commands,
+) {
+    let delta = q_time.delta_secs();
+    for (ent, mut chat_msg) in q_chat_msg.iter_mut() {
         chat_msg.0 -= delta;
 
         if chat_msg.0 <= 0.0 {
             commands.entity(ent).insert(NeedsDespawned);
         } else {
-            for sec in &mut text.sections {
-                sec.style.color.set_alpha(chat_msg.0 / CHAT_MSG_ALIVE_SEC);
-            }
+            writer.for_each_color(ent, |mut c| c.set_alpha(chat_msg.0 / CHAT_MSG_ALIVE_SEC))
         }
     }
 }
@@ -133,54 +130,43 @@ fn setup_chat_box(mut commands: Commands, default_font: Res<DefaultFont>) {
         .spawn((
             ChatContainer,
             Name::new("Chat Container"),
-            NodeBundle {
-                style: Style {
-                    top: Val::Percent(20.0),
-                    width: Val::Percent(45.0),
-                    height: Val::Percent(60.0),
-                    flex_direction: FlexDirection::Column,
-                    ..Default::default()
-                },
-                visibility: Visibility::Hidden,
+            Node {
+                top: Val::Percent(20.0),
+                width: Val::Percent(45.0),
+                height: Val::Percent(60.0),
+                flex_direction: FlexDirection::Column,
                 ..Default::default()
             },
+            Visibility::Hidden,
         ))
         .with_children(|p| {
             p.spawn((
                 Name::new("Received Messages"),
                 ChatScrollContainer,
-                ScrollBundle {
-                    node_bundle: NodeBundle {
-                        style: Style {
-                            flex_grow: 1.0,
-                            flex_direction: FlexDirection::Column,
-                            ..Default::default()
-                        },
-                        ..Default::default()
+                Node {
+                    flex_grow: 1.0,
+                    flex_direction: FlexDirection::Column,
+                    ..Default::default()
+                },
+                ScrollBox {
+                    styles: ScrollerStyles {
+                        scrollbar_color: Srgba {
+                            red: 1.0,
+                            green: 1.0,
+                            blue: 1.0,
+                            alpha: 0.4,
+                        }
+                        .into(),
+                        scrollbar_background_color: Color::NONE,
                     },
-                    slider: ScrollBox {
-                        styles: ScrollerStyles {
-                            scrollbar_color: Srgba {
-                                red: 1.0,
-                                green: 1.0,
-                                blue: 1.0,
-                                alpha: 0.4,
-                            }
-                            .into(),
-                            scrollbar_background_color: Color::NONE,
-                        },
-                        ..Default::default()
-                    },
+                    ..Default::default()
                 },
             ))
             .with_children(|p| {
                 p.spawn((
                     Name::new("Padding"),
-                    NodeBundle {
-                        style: Style {
-                            flex_grow: 1.0,
-                            ..Default::default()
-                        },
+                    Node {
+                        flex_grow: 1.0,
                         ..Default::default()
                     },
                 ));
@@ -188,11 +174,8 @@ fn setup_chat_box(mut commands: Commands, default_font: Res<DefaultFont>) {
             .with_children(|p| {
                 p.spawn((
                     ReceivedMessagesContainer,
-                    NodeBundle {
-                        style: Style {
-                            flex_direction: FlexDirection::Column,
-                            ..Default::default()
-                        },
+                    Node {
+                        flex_direction: FlexDirection::Column,
                         ..Default::default()
                     },
                 ));
@@ -201,33 +184,25 @@ fn setup_chat_box(mut commands: Commands, default_font: Res<DefaultFont>) {
             p.spawn((
                 Name::new("Sending Messages"),
                 SendingChatMessageBox,
-                TextInputBundle {
-                    text_input: TextInput {
-                        style: TextStyle {
-                            font_size: 24.0,
-                            font: default_font.0.clone_weak(),
-                            ..Default::default()
-                        },
-                        ..Default::default()
-                    },
-                    node_bundle: NodeBundle {
-                        background_color: BackgroundColor(
-                            Srgba {
-                                red: 0.0,
-                                green: 0.0,
-                                blue: 0.0,
-                                alpha: 0.7,
-                            }
-                            .into(),
-                        ),
-                        style: Style {
-                            width: Val::Percent(100.0),
-                            ..Default::default()
-                        },
-                        ..Default::default()
-                    },
+                TextFont {
+                    font_size: 24.0,
+                    font: default_font.0.clone(),
                     ..Default::default()
                 },
+                BackgroundColor(
+                    Srgba {
+                        red: 0.0,
+                        green: 0.0,
+                        blue: 0.0,
+                        alpha: 0.7,
+                    }
+                    .into(),
+                ),
+                Node {
+                    width: Val::Percent(100.0),
+                    ..Default::default()
+                },
+                TextInput { ..Default::default() },
             ));
         });
 }
@@ -242,10 +217,10 @@ fn display_messages(
     for ev in nevr_chat_msg.read() {
         let msg = &ev.message;
 
-        let text_style = TextStyle {
+        let text_style = TextFont {
             font: default_font.0.clone_weak(),
-            color: Color::WHITE,
             font_size: 24.0,
+            ..Default::default()
         };
 
         let Ok(chat_box) = q_chat_box.get_single() else {
@@ -258,27 +233,23 @@ fn display_messages(
             return;
         };
 
-        let mut text = Text::from_section(msg, text_style);
-        text.linebreak_behavior = BreakLineOn::AnyCharacter;
+        let text = Text::new(msg);
+        let text_layout = TextLayout {
+            linebreak: LineBreak::AnyCharacter,
+            ..Default::default()
+        };
 
         commands
-            .spawn((
-                Name::new("Received chat message"),
-                TextBundle {
-                    text: text.clone(),
-                    ..Default::default()
-                },
-            ))
+            .spawn((Name::new("Received chat message"), text.clone(), text_style.clone(), text_layout))
             .set_parent(chat_box);
 
         commands
             .spawn((
                 Name::new("Display received chat message"),
                 ChatMessage(CHAT_MSG_ALIVE_SEC),
-                TextBundle {
-                    text,
-                    ..Default::default()
-                },
+                text,
+                text_style.clone(),
+                text_layout,
             ))
             .set_parent(display_box);
     }

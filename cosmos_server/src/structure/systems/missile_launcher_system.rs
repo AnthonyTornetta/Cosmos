@@ -139,7 +139,7 @@ fn missile_lockon(
                 if *focusing_server_entity != best_target {
                     missile_launmcher_focus.change_focus(best_target, MISSILE_FOCUS_TIME);
                 } else {
-                    *focused_duration += Duration::from_secs_f32(time.delta_seconds());
+                    *focused_duration += Duration::from_secs_f32(time.delta_secs());
                 }
             }
             MissileLauncherFocus::NotFocusing => {
@@ -198,7 +198,7 @@ fn update_missile_system(
             continue;
         };
 
-        let sec = time.elapsed_seconds();
+        let sec = time.elapsed_secs();
 
         let mut any_fired = false;
 
@@ -226,7 +226,7 @@ fn update_missile_system(
 
             let location = structure.block_world_location(line.start, global_transform, location);
 
-            let relative_direction = line.direction.to_vec3();
+            let relative_direction = line.direction.as_vec3();
 
             let missile_vel = MISSILE_BASE_VELOCITY + (line.len as f32 * MISSILE_SPEED_DIVIDER + 1.0).ln() * MISSILE_SPEED_MULTIPLIER;
 

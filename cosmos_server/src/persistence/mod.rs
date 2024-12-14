@@ -100,10 +100,13 @@ impl EntityId {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub(crate) enum SaveFileIdentifierType {
     /// This entity does not belong to any other entity
     Base(EntityId, Option<Sector>, Option<u32>),
+    /// Denotes that this entity is a "child" of the parent, but is not "owned" by the parent.
+    ///
+    /// (Parent SaveFileIdentifier, this entity id)
     SubEntity(Box<SaveFileIdentifier>, EntityId),
     /// Denotes that this entity belongs to another entity, and should be saved
     /// in that entity's folder. Once this entity is saved, the [`SaveFileIdentifierType`] component will be removed.
@@ -115,7 +118,7 @@ pub(crate) enum SaveFileIdentifierType {
     BelongsTo(Box<SaveFileIdentifier>, String),
 }
 
-#[derive(Debug, Component, Clone)]
+#[derive(Debug, Component, Clone, Serialize, Deserialize)]
 /// Used to track where the save file for a given entity is or should be.
 pub struct SaveFileIdentifier {
     identifier_type: SaveFileIdentifierType,
@@ -150,6 +153,15 @@ impl SaveFileIdentifier {
     pub fn as_child(this_identifier: impl Into<String>, belongs_to: SaveFileIdentifier) -> Self {
         Self {
             identifier_type: SaveFileIdentifierType::BelongsTo(Box::new(belongs_to), this_identifier.into()),
+        }
+    }
+
+    /// If this is a SubEntity, this will return the parent.
+    /// Otherwise, returns None.
+    pub fn get_parent(&self) -> Option<&SaveFileIdentifier> {
+        match &self.identifier_type {
+            SaveFileIdentifierType::SubEntity(parent, _) => Some(parent.as_ref()),
+            _ => None,
         }
     }
 

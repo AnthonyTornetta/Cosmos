@@ -468,6 +468,30 @@ fn add_cosmos_blocks(
 
     blocks.register(logic_bus_builder.create());
 
+    blocks.register(
+        BlockBuilder::new("cosmos:door", 4.0, 100.0, 10.0)
+            .add_property(BlockProperty::Full)
+            .create(),
+    );
+    blocks.register(
+        BlockBuilder::new("cosmos:door_open", 4.0, 100.0, 10.0)
+            .add_connection_group("cosmos:door_open")
+            .connect_to_group("cosmos:door_open")
+            .create(),
+    );
+
+    blocks.register(
+        BlockBuilder::new("cosmos:basic_fabricator", 2.0, 20.0, 5.0)
+            .add_property(BlockProperty::Full)
+            .create(),
+    );
+
+    blocks.register(
+        BlockBuilder::new("cosmos:iron_ore", 10.0, 50.0, 12.0)
+            .add_property(BlockProperty::Full)
+            .create(),
+    );
+
     loading.finish_loading(id, &mut end_writer);
 }
 
