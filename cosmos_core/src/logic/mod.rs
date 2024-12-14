@@ -357,24 +357,11 @@ fn logic_block_changed_event_listener(
     mut evw_queue_logic_output: EventWriter<QueueLogicOutputEvent>,
     mut evw_queue_logic_input: EventWriter<QueueLogicInputEvent>,
 ) {
-    // Excludes all events that do not involve a logic block.
-    let logic_events = evr_block_changed
-        .read()
-        .filter(|ev| {
-            logic_blocks
-                .from_id(blocks.from_numeric_id(ev.old_block).unlocalized_name())
-                .is_some()
-                || logic_blocks
-                    .from_id(blocks.from_numeric_id(ev.new_block).unlocalized_name())
-                    .is_some()
-        })
-        .collect::<Vec<&BlockChangedEvent>>();
-    for entity in logic_events.iter().map(|ev| ev.block.structure()).collect::<HashSet<Entity>>() {
-        let current_entity_events = logic_events.iter().filter(|ev| ev.block.structure() == entity);
-        let events_by_coords = current_entity_events
-            .clone()
-            .map(|&ev| (ev.block.coords(), ev))
-            .collect::<HashMap<BlockCoordinate, &BlockChangedEvent>>();
+    // We group the events by entity so we can track the block changes the previous events made.
+    let entities = evr_block_changed.read().map(|ev| ev.block.structure()).collect::<HashSet<Entity>>();
+    for entity in entities {
+        let current_entity_events = evr_block_changed.read().filter(|ev| ev.block.structure() == entity);
+        let mut events_by_coords: HashMap<BlockCoordinate, BlockChangedEvent> = HashMap::new();
         for ev in current_entity_events {
             // If was logic block, remove from the logic graph.
             if let Some(logic_block) = logic_blocks.from_id(blocks.from_numeric_id(ev.old_block).unlocalized_name()) {
@@ -386,7 +373,7 @@ fn logic_block_changed_event_listener(
                             ev.block.coords(),
                             &structure,
                             entity,
-                            // &events_by_coords,
+                            &events_by_coords,
                             &blocks,
                             &logic_blocks,
                             &logic_wire_colors,
@@ -408,7 +395,7 @@ fn logic_block_changed_event_listener(
                             coords,
                             &structure,
                             entity,
-                            // &events_by_coords,
+                            &events_by_coords,
                             &blocks,
                             &logic_blocks,
                             &logic_wire_colors,
@@ -420,6 +407,9 @@ fn logic_block_changed_event_listener(
                     }
                 }
             }
+
+            // Add the event we just processed to the HashMap so we can pretend the structure was updated in the coming iterations DFS.
+            events_by_coords.insert(ev.block.coords(), ev.clone());
         }
     }
 }

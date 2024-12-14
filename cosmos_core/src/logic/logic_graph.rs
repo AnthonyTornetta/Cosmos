@@ -8,6 +8,7 @@ use bevy::{
 
 use crate::{
     block::{block_direction::BlockDirection, Block},
+    events::block_events::BlockChangedEvent,
     registry::{identifiable::Identifiable, Registry},
     structure::{coordinates::BlockCoordinate, structure_block::StructureBlock, Structure},
 };
@@ -154,6 +155,23 @@ impl LogicGraph {
         }))
     }
 
+    /// `LogicGraph`'s `dfs_for_group` method needs to know which blocks are at each coordinate to properly search the graph.
+    ///
+    /// However, several `BlockChangedEvent`s can occur on the same tick.
+    /// We use `events_by_coords` to track all the events the logic graph has alredy processed this tick, and pretend the blocks have already been changed in the structure.
+    fn block_at<'a>(
+        &self,
+        coords: BlockCoordinate,
+        structure: &'a Structure,
+        events_by_coords: &HashMap<BlockCoordinate, BlockChangedEvent>,
+        blocks: &'a Registry<Block>,
+    ) -> &'a Block {
+        if let Some(ev) = events_by_coords.get(&coords) {
+            return blocks.from_numeric_id(ev.new_block);
+        }
+        structure.block_at(coords, blocks)
+    }
+
     pub fn dfs_for_group(
         &self,
         coords: BlockCoordinate,
@@ -161,11 +179,12 @@ impl LogicGraph {
         mut required_color_id: Option<u16>,
         from_bus: bool,
         structure: &Structure,
+        events_by_coords: &HashMap<BlockCoordinate, BlockChangedEvent>,
         visited: &mut HashSet<Port>,
         blocks: &Registry<Block>,
         logic_blocks: &Registry<LogicBlock>,
     ) -> Option<usize> {
-        let block = structure.block_at(coords, blocks);
+        let block = self.block_at(coords, structure, events_by_coords, blocks);
         let Some(logic_block) = logic_blocks.from_id(block.unlocalized_name()) else {
             // Not a logic block.
             return None;
@@ -228,6 +247,7 @@ impl LogicGraph {
                                     Some(wire_color_id),
                                     wire_type == WireType::Bus,
                                     structure,
+                                    events_by_coords,
                                     visited,
                                     blocks,
                                     logic_blocks,
@@ -251,6 +271,7 @@ impl LogicGraph {
         wire_color_id: u16,
         coords: BlockCoordinate,
         structure: &Structure,
+        events_by_coords: &HashMap<BlockCoordinate, BlockChangedEvent>,
         visited: &mut HashSet<Port>,
         blocks: &Registry<Block>,
         logic_blocks: &Registry<LogicBlock>,
@@ -266,6 +287,7 @@ impl LogicGraph {
                 Some(wire_color_id),
                 logic_block.connection_on(wire_face) == Some(LogicConnection::Wire(WireType::Bus)),
                 structure,
+                events_by_coords,
                 visited,
                 blocks,
                 logic_blocks,
@@ -282,6 +304,7 @@ impl LogicGraph {
         wire_color_id: u16,
         logic_block: &LogicBlock,
         structure: &Structure,
+        events_by_coords: &HashMap<BlockCoordinate, BlockChangedEvent>,
         blocks: &Registry<Block>,
         logic_blocks: &Registry<LogicBlock>,
     ) -> usize {
@@ -300,6 +323,7 @@ impl LogicGraph {
                     wire_color_id,
                     coords,
                     structure,
+                    events_by_coords,
                     &mut Port::all_for(coords),
                     blocks,
                     logic_blocks,
@@ -361,6 +385,7 @@ impl LogicGraph {
         direction: BlockDirection,
         port_type: PortType,
         structure: &Structure,
+        events_by_coords: &HashMap<BlockCoordinate, BlockChangedEvent>,
         blocks: &Registry<Block>,
         logic_blocks: &Registry<LogicBlock>,
         evw_queue_logic_input: &mut EventWriter<QueueLogicInputEvent>,
@@ -386,6 +411,7 @@ impl LogicGraph {
                 None,
                 false,
                 structure,
+                events_by_coords,
                 &mut Port::all_for(coords),
                 blocks,
                 logic_blocks,
@@ -490,6 +516,7 @@ impl LogicGraph {
         wire_color_id: u16,
         from_bus: bool,
         structure: &Structure,
+        events_by_coords: &HashMap<BlockCoordinate, BlockChangedEvent>,
         visited: &mut HashSet<Port>,
         blocks: &Registry<Block>,
         logic_blocks: &Registry<LogicBlock>,
@@ -500,7 +527,7 @@ impl LogicGraph {
             // Renaming on this portion already completed.
             return false;
         }
-        let block = structure.block_at(coords, blocks);
+        let block = self.block_at(coords, structure, events_by_coords, blocks);
         let Some(logic_block) = logic_blocks.from_id(block.unlocalized_name()) else {
             // Not a logic block.
             return false;
