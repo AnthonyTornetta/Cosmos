@@ -15,7 +15,7 @@ use cosmos_core::{
         system_sets::NetworkingSystemsSet, NettyChannelServer,
     },
     persistence::LoadingDistance,
-    physics::location::{Location, SystemCoordinate, SYSTEM_SECTORS},
+    physics::location::{Location, SYSTEM_SECTORS},
     state::GameState,
     universe::star::Star,
 };
