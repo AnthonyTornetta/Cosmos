@@ -17,7 +17,8 @@ use cosmos_core::{
         netty_rigidbody::{NettyRigidBody, NettyRigidBodyLocation},
         server::ServerLobby,
         server_reliable_messages::ServerReliableMessages,
-        sync::registry::server::SyncRegistriesEvent,
+        sync::{registry::server::SyncRegistriesEvent, ComponentSyncingSet},
+        system_sets::NetworkingSystemsSet,
         NettyChannelServer,
     },
     persistence::LoadingDistance,
@@ -279,6 +280,7 @@ fn finish_loading_player(
 
         let netty_body = NettyRigidBody::new(Some(*velocity), Quat::IDENTITY, NettyRigidBodyLocation::Absolute(*location));
 
+        info!("Sending player create message!");
         let msg = cosmos_encoder::serialize(&ServerReliableMessages::PlayerCreate {
             entity: player_entity,
             id: load_player.id(),
@@ -315,8 +317,14 @@ pub(super) fn register(app: &mut App) {
     app.add_systems(
         LOADING_SCHEDULE,
         (
-            (load_player, create_new_player).chain().before(LoadingSystemSet::BeginLoading),
-            finish_loading_player.after(LoadingSystemSet::DoneLoading),
+            (load_player, create_new_player)
+                .chain()
+                .before(LoadingSystemSet::BeginLoading)
+                .in_set(NetworkingSystemsSet::Between),
+            finish_loading_player
+                .in_set(NetworkingSystemsSet::SyncComponents)
+                .before(ComponentSyncingSet::PreComponentSyncing)
+                .after(LoadingSystemSet::DoneLoading),
         ),
     );
 }
