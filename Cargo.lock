@@ -1156,8 +1156,8 @@ checksum = "2af9e30b40fb3f0a80a658419f670f2de1e743efcaca1952c43cdcc923287944"
 
 [[package]]
 name = "bevy_rapier3d"
-version = "0.27.0"
-source = "git+https://github.com/AnthonyTornetta/bevy_rapier?branch=master#4f23bb022daa2ff582b3b19d77cce8fbacb7e765"
+version = "0.28.0"
+source = "git+https://github.com/AnthonyTornetta/bevy_rapier?branch=master#66d0ef9eee9e63b53ed109500d3b3b79b8eb86bc"
 dependencies = [
  "bevy",
  "bitflags 2.6.0",
@@ -5968,7 +5968,7 @@ version = "0.1.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cf221c93e13a30d793f7645a0e7762c55d169dbb0a49671918a2319d289b10bb"
 dependencies = [
- "windows-sys 0.59.0",
+ "windows-sys 0.48.0",
 ]
 
 [[package]]
