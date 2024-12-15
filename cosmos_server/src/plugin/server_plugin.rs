@@ -3,7 +3,7 @@
 use bevy::{log::info, prelude::Plugin};
 
 use crate::{
-    ai, blocks, chat, commands, crafting, debug, entities, fluid,
+    ai, blocks, chat, commands, crafting, debug, economy, entities, fluid,
     init::{self, init_server},
     inventory, items, logic, netty, persistence, physics, projectiles, shop, structure, universe, utility_runs,
 };
@@ -41,6 +41,7 @@ impl Plugin for ServerPlugin {
         chat::register(app);
         crafting::register(app);
         entities::register(app);
+        economy::register(app);
 
         info!("Done setting up server!");
     }
