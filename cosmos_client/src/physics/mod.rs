@@ -5,7 +5,7 @@ use bevy::{
     math::Vec3,
     prelude::{App, Commands, Entity, Query, Update, With, Without},
 };
-use bevy_rapier3d::plugin::{RapierConfiguration, RapierContext};
+use bevy_rapier3d::{plugin::RapierConfiguration, prelude::RapierContextSimulation};
 use cosmos_core::physics::{
     location::Location,
     player_world::{PlayerWorld, WorldWithin},
@@ -26,7 +26,7 @@ fn add_world_within(
     }
 }
 
-fn remove_gravity(mut commands: Commands, rapier_access: Query<Entity, With<RapierContext>>) {
+fn remove_gravity(mut commands: Commands, rapier_access: Query<Entity, With<RapierContextSimulation>>) {
     for e in rapier_access.iter() {
         let mut config = RapierConfiguration::new(1.0);
         config.gravity = Vec3::ZERO;

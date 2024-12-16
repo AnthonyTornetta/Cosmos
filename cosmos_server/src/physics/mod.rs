@@ -5,7 +5,7 @@
 use bevy::{prelude::*, utils::HashSet};
 use bevy_rapier3d::{
     plugin::{RapierConfiguration, RapierContextEntityLink},
-    prelude::RapierContext,
+    prelude::RapierContextSimulation,
 };
 use cosmos_core::{
     entities::player::Player,
@@ -25,7 +25,7 @@ const WORLD_SWITCH_DISTANCE_SQRD: f32 = WORLD_SWITCH_DISTANCE * WORLD_SWITCH_DIS
 fn create_physics_world(commands: &mut Commands) -> RapierContextEntityLink {
     let mut config = RapierConfiguration::new(1.0);
     config.gravity = Vec3::ZERO;
-    let rw = commands.spawn((RapierContext::default(), config)).id();
+    let rw = commands.spawn((RapierContextSimulation::default(), config)).id();
     RapierContextEntityLink(rw)
 }
 
@@ -177,7 +177,7 @@ fn remove_empty_worlds(
     q_rapier_entity_links: Query<&RapierContextEntityLink>,
     q_worlds: Query<(Entity, &RapierContextEntityLink), With<PlayerWorld>>,
     mut commands: Commands,
-    q_rapier_contexts: Query<Entity, With<RapierContext>>,
+    q_rapier_contexts: Query<Entity, With<RapierContextSimulation>>,
 ) {
     let mut worlds = HashSet::new();
 

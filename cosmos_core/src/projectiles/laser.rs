@@ -13,8 +13,8 @@ use bevy::{
     time::Time,
 };
 use bevy_rapier3d::{
-    plugin::RapierContextEntityLink,
-    prelude::{LockedAxes, QueryFilter, RapierContext, RigidBody, Velocity},
+    plugin::{RapierContextEntityLink, WriteRapierContext},
+    prelude::{LockedAxes, QueryFilter, RigidBody, Velocity},
 };
 
 use crate::{
@@ -191,7 +191,7 @@ fn send_laser_hit_events(
     chunk_parent_query: Query<&Parent, With<ChunkEntity>>,
     transform_query: Query<&GlobalTransform, Without<Laser>>,
     worlds: Query<(&Location, &RapierContextEntityLink, Entity), With<PlayerWorld>>,
-    q_rapier_context: Query<&RapierContext>,
+    q_rapier_context: WriteRapierContext,
 ) {
     for (world, location, laser_entity, no_collide_entity, mut laser, velocity, world_within) in query.iter_mut() {
         if laser.active {
@@ -223,7 +223,7 @@ fn send_laser_hit_events(
             // so rather use its actual delta position for direction of travel calculations
             let ray_direction = delta_position.normalize_or_zero();
 
-            if let Some((entity, toi)) = q_rapier_context.get(world.0).expect("Missing world!").cast_ray(
+            if let Some((entity, toi)) = q_rapier_context.get(*world).cast_ray(
                 ray_start, // sometimes lasers pass through things that are next to where they are spawned, thus we check starting a bit behind them
                 ray_direction,
                 ray_distance,
