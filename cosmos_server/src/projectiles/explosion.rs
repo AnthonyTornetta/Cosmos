@@ -14,7 +14,7 @@ use bevy::{
 use bevy_rapier3d::{
     geometry::Collider,
     pipeline::QueryFilter,
-    plugin::{RapierContextAccess, RapierContextEntityLink},
+    plugin::{RapierContextEntityLink, ReadRapierContext},
 };
 
 use cosmos_core::{
@@ -63,7 +63,7 @@ fn respond_to_explosion(
     q_excluded: Query<(), Or<(With<Explosion>, Without<Collider>)>>,
 
     mut q_structure: Query<(&GlobalTransform, &Location, &mut Structure)>,
-    context_access: RapierContextAccess,
+    context_access: ReadRapierContext,
 
     q_chunk: Query<&ChunkPhysicsPart>,
     blocks_registry: Res<Registry<Block>>,
@@ -88,7 +88,7 @@ fn respond_to_explosion(
 
         let mut hits = vec![];
 
-        let context = context_access.context(physics_world);
+        let context = context_access.get(*physics_world);
 
         context.intersections_with_shape(
             explosion_rapier_coordinates,

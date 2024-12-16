@@ -2,7 +2,7 @@
 
 use bevy::prelude::*;
 use bevy_rapier3d::{
-    plugin::{RapierContextAccess, RapierContextEntityLink},
+    plugin::{RapierContextEntityLink, ReadRapierContext},
     prelude::{ActiveEvents, Collider, Sensor, Velocity},
 };
 use cosmos_core::{
@@ -46,7 +46,7 @@ fn append_grounded_check(mut commands: Commands, q_player: Query<Entity, Added<L
 
 fn check_grounded(
     mut commands: Commands,
-    rapier_context: RapierContextAccess,
+    rapier_context: ReadRapierContext,
     q_player: Query<Entity, With<LocalPlayer>>,
     q_ground_checker: Query<(&RapierContextEntityLink, Entity), With<GroundedChecker>>,
 ) {
@@ -58,7 +58,7 @@ fn check_grounded(
         return;
     };
 
-    let context = rapier_context.context(rapier_link);
+    let context = rapier_context.get(*rapier_link);
 
     let touching_ground = context.intersection_pairs_with(collider_ent).any(|x| x.2);
     if touching_ground {

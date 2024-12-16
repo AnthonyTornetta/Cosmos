@@ -19,7 +19,7 @@ use bevy_rapier3d::{
     dynamics::{FixedJointBuilder, ImpulseJoint, Velocity},
     geometry::{CollisionGroups, Group},
     pipeline::QueryFilter,
-    plugin::{RapierContextAccess, RapierContextEntityLink},
+    plugin::{RapierContextEntityLink, ReadRapierContext},
 };
 use cosmos_core::{
     block::{block_events::BlockEventsSet, block_face::BlockFace, Block},
@@ -98,7 +98,7 @@ fn dock_structure_loaded_event_processor(
 struct JustUndocked;
 
 fn on_active(
-    context_access: RapierContextAccess,
+    context_access: ReadRapierContext,
     q_docked: Query<&Docked>,
     mut q_structure: Query<(&mut Structure, &GlobalTransform, &RapierContextEntityLink)>,
     q_active: Query<(Entity, &StructureSystem, &DockSystem, Ref<SystemActive>, Option<&JustUndocked>)>,
@@ -148,7 +148,7 @@ fn on_active(
             let my_rotation = Quat::from_affine3(&g_trans.affine());
             let ray_dir = my_rotation.mul_vec3(front_direction);
 
-            let context = context_access.context(pw);
+            let context = context_access.get(*pw);
 
             let Some((entity, intersection)) = context.cast_ray_and_get_normal(
                 abs_block_pos,
@@ -235,7 +235,7 @@ fn on_active(
             unreachable!("Guarenteed because only entities that are in this list are valid structures from above for loop.");
         };
 
-        let context = context_access.context(pw);
+        let context = context_access.get(*pw);
 
         let (min, max) = computed_total_aabb(
             entity,
