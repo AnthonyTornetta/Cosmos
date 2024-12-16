@@ -3,12 +3,12 @@
     {
       "quantity": 1,
       "item": {
-        "Item": "cosmos:iron_ingot"
+        "Item": "cosmos:iron_bar"
       }
     }
   ],
   "output": {
     "quantity": 1,
-    "item": "cosmos:grey_ship_hull"
+    "item": "cosmos:ship_hull_grey"
   }
 }

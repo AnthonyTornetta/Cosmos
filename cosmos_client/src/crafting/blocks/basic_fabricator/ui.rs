@@ -317,8 +317,6 @@ fn on_select_item(
             alpha: 0.1,
         }
         .into();
-
-        println!("{recipe:?}");
     }
 }
 

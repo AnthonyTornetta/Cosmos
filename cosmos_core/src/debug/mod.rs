@@ -1,5 +1,6 @@
 //! Useful debugging utilities used for both the client and the server
 
+#[allow(unused)]
 use bevy::{
     ecs::schedule::{LogLevel, ScheduleBuildSettings, ScheduleLabel},
     prelude::*,
@@ -31,11 +32,11 @@ fn configure_ambiguity_detection(sub_app: &mut SubApp) {
         if ignored_ambiguous_systems.iter().any(|label| **label == *schedule.label()) {
             continue;
         }
-        schedule.set_build_settings(ScheduleBuildSettings {
-            ambiguity_detection: LogLevel::Warn,
-            use_shortnames: false,
-            ..default()
-        });
+        // schedule.set_build_settings(ScheduleBuildSettings {
+        //     ambiguity_detection: LogLevel::Warn,
+        //     use_shortnames: false,
+        //     ..default()
+        // });
     }
 }
 

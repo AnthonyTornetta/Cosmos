@@ -9,7 +9,6 @@ use crate::universe::generation::{SystemItem, UniverseSystems};
 const DEFAULT_STARTING_SECTOR: Location = Location::new(Vec3::new(0.0, 2000.0, 0.0), Sector::new(25, 25, 25));
 
 pub(super) fn find_new_player_location(universe_systems: &UniverseSystems) -> Location {
-    println!("{universe_systems:?}");
     let Some(shop) = universe_systems
         .iter()
         .flat_map(|(_, x)| x.iter())
