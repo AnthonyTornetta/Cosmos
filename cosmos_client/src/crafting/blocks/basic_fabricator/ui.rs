@@ -296,15 +296,10 @@ fn populate_menu(
 fn on_select_item(
     mut commands: Commands,
     mut evr_select_item: EventReader<SelectItemEvent>,
-    q_recipe: Query<&Recipe>,
     q_selected_recipe: Query<Entity, With<SelectedRecipe>>,
     mut q_bg_col: Query<&mut BackgroundColor>,
 ) {
     for ev in evr_select_item.read() {
-        let Ok(recipe) = q_recipe.get(ev.0) else {
-            continue;
-        };
-
         if let Ok(selected_recipe) = q_selected_recipe.get_single() {
             commands.entity(selected_recipe).remove::<SelectedRecipe>();
             q_bg_col.get_mut(selected_recipe).expect("Must be ui node").0 = Color::NONE;
@@ -317,8 +312,6 @@ fn on_select_item(
             alpha: 0.1,
         }
         .into();
-
-        println!("{recipe:?}");
     }
 }
 

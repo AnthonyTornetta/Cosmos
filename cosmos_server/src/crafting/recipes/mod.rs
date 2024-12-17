@@ -6,7 +6,7 @@ mod basic_fabricator;
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub enum RawRecipeItem {
     Item(String),
-    Category(String),
+    // Category(String),
 }
 
 pub(super) fn register(app: &mut App) {
