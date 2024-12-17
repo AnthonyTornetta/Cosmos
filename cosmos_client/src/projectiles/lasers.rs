@@ -1,6 +1,6 @@
 //! Handles the creation of lasers
 
-use bevy::prelude::*;
+use bevy::{prelude::*, utils::HashMap};
 use bevy_rapier3d::{plugin::RapierContextEntityLink, prelude::RapierContextSimulation};
 use bevy_renet2::renet2::*;
 use cosmos_core::{
@@ -22,7 +22,11 @@ use crate::structure::{
 #[derive(Resource)]
 struct LaserMesh(Handle<Mesh>);
 
+#[derive(Resource, Default)]
+struct LaserMaterials(HashMap<u32, Handle<StandardMaterial>>);
+
 fn create_laser_mesh(mut meshes: ResMut<Assets<Mesh>>, mut commands: Commands) {
+    commands.init_resource::<LaserMaterials>();
     commands.insert_resource(LaserMesh(meshes.add(Mesh::from(Cuboid::new(0.1, 0.1, 1.0)))));
 }
 
@@ -37,6 +41,7 @@ fn lasers_netty(
     mut ev_writer_missile_launcher_fired: EventWriter<MissileLauncherSystemFiredEvent>,
     mut q_shield_render: Query<&mut ShieldRender>,
     q_default_world: Query<Entity, With<RapierContextSimulation>>,
+    mut laser_materials: ResMut<LaserMaterials>,
 ) {
     while let Some(message) = client.receive_message(NettyChannelServer::StructureSystems) {
         let msg: ServerStructureSystemMessages = cosmos_encoder::deserialize(&message).unwrap();
@@ -62,6 +67,26 @@ fn lasers_netty(
                     .map(|e| e.map(|e| Causer(e)))
                     .flatten();
 
+                fn color_hash(color: Srgba) -> u32 {
+                    let (r, g, b, a) = (
+                        (color.red * 255.0) as u8,
+                        (color.green * 255.0) as u8,
+                        (color.blue * 255.0) as u8,
+                        (color.alpha * 255.0) as u8,
+                    );
+
+                    u32::from_be_bytes([r, g, b, a])
+                }
+                let color = color.unwrap_or(Color::WHITE);
+
+                let material = laser_materials.0.entry(color_hash(color.into())).or_insert_with(|| {
+                    materials.add(StandardMaterial {
+                        base_color: color,
+                        unlit: true,
+                        ..Default::default()
+                    })
+                });
+
                 Laser::spawn_custom_pbr(
                     location,
                     laser_velocity,
@@ -70,12 +95,7 @@ fn lasers_netty(
                     no_hit,
                     CosmosPbrBundle {
                         mesh: Mesh3d(laser_mesh.0.clone_weak()),
-                        material: MeshMaterial3d(materials.add(StandardMaterial {
-                            base_color: color.unwrap_or(Color::WHITE),
-                            // emissive: color,
-                            unlit: true,
-                            ..Default::default()
-                        })),
+                        material: MeshMaterial3d(material.clone_weak()),
                         ..Default::default()
                     },
                     &time,
