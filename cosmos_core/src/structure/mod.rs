@@ -485,10 +485,11 @@ impl Structure {
         blocks: &Registry<Block>,
         amount: f32,
         event_writers: Option<(&mut EventWriter<BlockTakeDamageEvent>, &mut EventWriter<BlockDestroyedEvent>)>,
+        causer: Option<Entity>,
     ) -> Option<f32> {
         match self {
-            Self::Full(fs) => fs.block_take_damage(coords, blocks, amount, event_writers),
-            Self::Dynamic(ds) => ds.block_take_damage(coords, blocks, amount, event_writers),
+            Self::Full(fs) => fs.block_take_damage(coords, blocks, amount, event_writers, causer),
+            Self::Dynamic(ds) => ds.block_take_damage(coords, blocks, amount, event_writers, causer),
         }
     }
 

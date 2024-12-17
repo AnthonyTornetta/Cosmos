@@ -816,6 +816,7 @@ pub(crate) fn client_sync_players(
                             structure_entity,
                             block: ev.block,
                             new_health: ev.new_health,
+                            causer: ev.causer.map(|x| network_mapping.client_from_server(&x)).flatten(),
                         })
                 }));
             }

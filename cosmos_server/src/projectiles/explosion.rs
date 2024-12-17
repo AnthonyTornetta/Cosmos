@@ -25,7 +25,10 @@ use cosmos_core::{
         player_world::{PlayerWorld, WorldWithin},
         structure_physics::ChunkPhysicsPart,
     },
-    projectiles::missile::{Explosion, ExplosionSystemSet},
+    projectiles::{
+        causer::Causer,
+        missile::{Explosion, ExplosionSystemSet},
+    },
     registry::Registry,
     structure::{
         block_health::events::{BlockDestroyedEvent, BlockTakeDamageEvent},
@@ -58,7 +61,17 @@ pub struct ExplosionHitEvent {
 
 fn respond_to_explosion(
     mut commands: Commands,
-    q_explosions: Query<(Entity, &Location, &WorldWithin, &RapierContextEntityLink, &Explosion), Added<Explosion>>,
+    q_explosions: Query<
+        (
+            Entity,
+            &Location,
+            &WorldWithin,
+            &RapierContextEntityLink,
+            &Explosion,
+            Option<&Causer>,
+        ),
+        Added<Explosion>,
+    >,
     q_player_world: Query<&Location, With<PlayerWorld>>,
     q_excluded: Query<(), Or<(With<Explosion>, Without<Collider>)>>,
 
@@ -73,7 +86,7 @@ fn respond_to_explosion(
 
     q_shield: Query<&Shield>,
 ) {
-    for (ent, &explosion_loc, world_within, physics_world, &explosion) in q_explosions.iter() {
+    for (ent, &explosion_loc, world_within, physics_world, &explosion, causer) in q_explosions.iter() {
         commands.entity(ent).insert((NeedsDespawned, DontNotifyClientOfDespawn));
 
         let Ok(player_world_loc) = q_player_world.get(world_within.0) else {
@@ -175,6 +188,7 @@ fn respond_to_explosion(
                         &blocks_registry,
                         explosion_power * HEALTH_PER_EXPLOSION_POWER,
                         Some((&mut evw_block_take_damage, &mut evw_block_destroyed)),
+                        causer.map(|x| x.0),
                     );
                 }
             }

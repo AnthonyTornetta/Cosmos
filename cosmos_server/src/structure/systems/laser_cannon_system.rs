@@ -13,7 +13,7 @@ use cosmos_core::{
         NettyChannelServer,
     },
     physics::location::Location,
-    projectiles::laser::Laser,
+    projectiles::{causer::Causer, laser::Laser},
     registry::{identifiable::Identifiable, Registry},
     state::GameState,
     structure::{
@@ -104,6 +104,8 @@ fn update_system(
             let strength = (5.0 * line.len as f32).powf(1.2);
             let no_hit = Some(system.structure_entity());
 
+            let causer = Some(Causer(system.structure_entity()));
+
             Laser::spawn(
                 location,
                 laser_velocity,
@@ -113,6 +115,7 @@ fn update_system(
                 &time,
                 *physics_world,
                 &mut commands,
+                causer,
             );
 
             let color = line.color;
@@ -126,6 +129,7 @@ fn update_system(
                     firer_velocity: ship_velocity.linvel,
                     strength,
                     no_hit,
+                    causer,
                 }),
             );
         }

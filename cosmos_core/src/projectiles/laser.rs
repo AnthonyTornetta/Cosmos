@@ -27,6 +27,8 @@ use crate::{
     structure::chunk::ChunkEntity,
 };
 
+use super::causer::Causer;
+
 /// How long a laser will stay alive for before despawning
 pub const LASER_LIVE_TIME: Duration = Duration::from_secs(5);
 
@@ -44,6 +46,7 @@ pub struct LaserCollideEvent {
     entity_hit: Entity,
     local_position_hit: Vec3,
     laser_strength: f32,
+    causer: Option<Causer>,
 }
 
 impl LaserCollideEvent {
@@ -62,6 +65,11 @@ impl LaserCollideEvent {
     /// The location this laser hit relative to the entity it hit's transform.
     pub fn local_position_hit(&self) -> Vec3 {
         self.local_position_hit
+    }
+
+    /// Returns the entity that caused this laser to be fired
+    pub fn causer(&self) -> Option<Causer> {
+        self.causer
     }
 }
 
@@ -106,6 +114,7 @@ impl Laser {
         time: &Time,
         context_entity_link: RapierContextEntityLink,
         commands: &mut Commands,
+        causer: Option<Causer>,
     ) -> Entity {
         pbr.rotation = Transform::from_xyz(0.0, 0.0, 0.0)
             .looking_at(laser_velocity, Vec3::Y)
@@ -137,6 +146,10 @@ impl Laser {
             NoSendEntity,
         ));
 
+        if let Some(causer) = causer {
+            ent_cmds.insert(causer);
+        }
+
         if let Some(ent) = no_collide_entity {
             ent_cmds.insert(NoCollide(ent));
         }
@@ -157,6 +170,7 @@ impl Laser {
         time: &Time,
         context_entity_link: RapierContextEntityLink,
         commands: &mut Commands,
+        causer: Option<Causer>,
     ) -> Entity {
         Self::spawn_custom_pbr(
             position,
@@ -168,6 +182,7 @@ impl Laser {
             time,
             context_entity_link,
             commands,
+            causer,
         )
     }
 }
@@ -182,6 +197,7 @@ fn send_laser_hit_events(
             &mut Laser,
             &Velocity,
             Option<&WorldWithin>,
+            Option<&Causer>,
         ),
         With<Laser>,
     >,
@@ -193,7 +209,7 @@ fn send_laser_hit_events(
     worlds: Query<(&Location, &RapierContextEntityLink, Entity), With<PlayerWorld>>,
     q_rapier_context: WriteRapierContext,
 ) {
-    for (world, location, laser_entity, no_collide_entity, mut laser, velocity, world_within) in query.iter_mut() {
+    for (world, location, laser_entity, no_collide_entity, mut laser, velocity, world_within, causer) in query.iter_mut() {
         if laser.active {
             let last_pos = laser.last_position;
             let delta_position = last_pos.relative_coords_to(location);
@@ -254,6 +270,7 @@ fn send_laser_hit_events(
                             entity_hit: entity,
                             local_position_hit: lph,
                             laser_strength: laser.strength,
+                            causer: causer.copied(),
                         });
                     }
                 } else if let Ok(transform) = transform_query.get(entity) {
@@ -265,6 +282,7 @@ fn send_laser_hit_events(
                         entity_hit: entity,
                         local_position_hit: lph,
                         laser_strength: laser.strength,
+                        causer: causer.copied(),
                     });
                 }
 

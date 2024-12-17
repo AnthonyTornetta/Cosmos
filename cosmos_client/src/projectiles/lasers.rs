@@ -10,7 +10,7 @@ use cosmos_core::{
         system_sets::NetworkingSystemsSet, NettyChannelServer,
     },
     physics::location::CosmosBundleSet,
-    projectiles::laser::Laser,
+    projectiles::{causer::Causer, laser::Laser},
     state::GameState,
 };
 
@@ -49,12 +49,18 @@ fn lasers_netty(
                 firer_velocity,
                 strength,
                 mut no_hit,
+                causer,
             } => {
                 if let Some(server_entity) = no_hit {
                     if let Some(client_entity) = network_mapping.client_from_server(&server_entity) {
                         no_hit = Some(client_entity);
                     }
                 }
+
+                let causer = causer
+                    .map(|c| network_mapping.client_from_server(&c.0))
+                    .map(|e| e.map(|e| Causer(e)))
+                    .flatten();
 
                 Laser::spawn_custom_pbr(
                     location,
@@ -75,6 +81,7 @@ fn lasers_netty(
                     &time,
                     RapierContextEntityLink(q_default_world.single()),
                     &mut commands,
+                    causer,
                 );
             }
             ServerStructureSystemMessages::LaserCannonSystemFired { ship_entity } => {

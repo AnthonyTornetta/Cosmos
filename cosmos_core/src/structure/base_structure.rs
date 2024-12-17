@@ -486,6 +486,7 @@ impl BaseStructure {
         blocks: &Registry<Block>,
         amount: f32,
         event_writers: Option<(&mut EventWriter<BlockTakeDamageEvent>, &mut EventWriter<BlockDestroyedEvent>)>,
+        causer: Option<Entity>,
     ) -> Option<f32> {
         if let Some(chunk) = self.mut_chunk_at_block_coordinates(coords) {
             let health_left = chunk.block_take_damage(ChunkBlockCoordinate::for_block_coordinate(coords), amount, blocks);
@@ -498,6 +499,7 @@ impl BaseStructure {
                         structure_entity,
                         block,
                         new_health: health_left,
+                        causer,
                     });
                     if health_left <= 0.0 {
                         destroyed_event_writer.send(BlockDestroyedEvent { structure_entity, block });
