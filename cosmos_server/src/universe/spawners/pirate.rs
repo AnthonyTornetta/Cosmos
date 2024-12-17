@@ -12,7 +12,6 @@ use bevy::{
         schedule::{IntoSystemConfigs, IntoSystemSetConfigs, SystemSet},
         system::{Commands, Query, Res, Resource},
     },
-    log::info,
     math::{Quat, Vec3},
     prelude::{Added, EventReader},
     reflect::Reflect,
@@ -47,7 +46,7 @@ const TIME_DIFFICULTY_CONSTANT: f32 = 80_000.0;
 /// TODO: Load this from config
 ///
 /// How much one player's strength will increase the pirate's difficulty.
-const PLAYER_STRENGTH_INCREASE_FACTOR: f32 = 8.0;
+const PLAYER_STRENGTH_INCREASE_FACTOR: f32 = 1.0;
 
 /// TODO: Load this from config
 ///
@@ -67,7 +66,7 @@ pub struct PirateNeedsSpawned {
 pub struct Pirate;
 
 /// The maximum difficulty of ship we can spawn. This is NOT the total difficulty.
-const MAX_DIFFICULTY: u64 = 4;
+const MAX_DIFFICULTY: u64 = 3;
 
 #[derive(Component, Reflect, Debug, Clone, Copy, Default, Serialize, Deserialize)]
 /// Represents how the enemies perceive your strength as a percentage between 0.0 and 100.0.
@@ -220,16 +219,16 @@ fn spawn_pirates(
 
             let mut total_difficulty_todo = difficulty_calculation.ceil() as u32;
 
-            let mut p_idx = 0;
+            let mut p_idx: u32 = 0;
             while total_difficulty_todo > 0 {
                 let offset = p_idx as f32 * SPACING;
                 p_idx += 1;
 
                 let loc_here = fleet_origin + Vec3::new(offset, 0.0, 0.0);
 
-                let difficulty = random_range(0.0, (total_difficulty_todo / p_idx).min(MAX_DIFFICULTY as u32) as f32).round() as u32;
+                let difficulty = random_range(0.0, (total_difficulty_todo / p_idx.pow(2)).min(MAX_DIFFICULTY as u32) as f32).round() as u32;
                 // Scale difficulty count w/ number already spawned, since more = way harder
-                total_difficulty_todo -= total_difficulty_todo.min((difficulty + 1) * p_idx);
+                total_difficulty_todo -= total_difficulty_todo.min((difficulty + 1) * p_idx.pow(2));
 
                 commands.spawn((
                     Name::new("Loading Pirate Ship"),
