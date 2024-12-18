@@ -423,7 +423,7 @@ impl<'a> Iterator for ChunkIterator<'a> {
 mod test {
     use crate::{
         block::{block_builder::BlockBuilder, Block},
-        prelude::{BaseStructure, FullStructure},
+        prelude::FullStructure,
         registry::{identifiable::Identifiable, Registry},
         utils::random::random_range,
     };
