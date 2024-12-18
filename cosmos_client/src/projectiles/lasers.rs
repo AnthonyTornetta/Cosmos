@@ -1,6 +1,6 @@
 //! Handles the creation of lasers
 
-use bevy::prelude::*;
+use bevy::{prelude::*, utils::HashMap};
 use bevy_rapier3d::{plugin::RapierContextEntityLink, prelude::RapierContextSimulation};
 use bevy_renet2::renet2::*;
 use cosmos_core::{
@@ -10,7 +10,7 @@ use cosmos_core::{
         system_sets::NetworkingSystemsSet, NettyChannelServer,
     },
     physics::location::CosmosBundleSet,
-    projectiles::laser::Laser,
+    projectiles::{causer::Causer, laser::Laser},
     state::GameState,
 };
 
@@ -22,7 +22,11 @@ use crate::structure::{
 #[derive(Resource)]
 struct LaserMesh(Handle<Mesh>);
 
+#[derive(Resource, Default)]
+struct LaserMaterials(HashMap<u32, Handle<StandardMaterial>>);
+
 fn create_laser_mesh(mut meshes: ResMut<Assets<Mesh>>, mut commands: Commands) {
+    commands.init_resource::<LaserMaterials>();
     commands.insert_resource(LaserMesh(meshes.add(Mesh::from(Cuboid::new(0.1, 0.1, 1.0)))));
 }
 
@@ -37,6 +41,7 @@ fn lasers_netty(
     mut ev_writer_missile_launcher_fired: EventWriter<MissileLauncherSystemFiredEvent>,
     mut q_shield_render: Query<&mut ShieldRender>,
     q_default_world: Query<Entity, With<RapierContextSimulation>>,
+    mut laser_materials: ResMut<LaserMaterials>,
 ) {
     while let Some(message) = client.receive_message(NettyChannelServer::StructureSystems) {
         let msg: ServerStructureSystemMessages = cosmos_encoder::deserialize(&message).unwrap();
@@ -49,12 +54,35 @@ fn lasers_netty(
                 firer_velocity,
                 strength,
                 mut no_hit,
+                causer,
             } => {
                 if let Some(server_entity) = no_hit {
                     if let Some(client_entity) = network_mapping.client_from_server(&server_entity) {
                         no_hit = Some(client_entity);
                     }
                 }
+
+                let causer = causer.map(|c| network_mapping.client_from_server(&c.0)).and_then(|e| e.map(Causer));
+
+                fn color_hash(color: Srgba) -> u32 {
+                    let (r, g, b, a) = (
+                        (color.red * 255.0) as u8,
+                        (color.green * 255.0) as u8,
+                        (color.blue * 255.0) as u8,
+                        (color.alpha * 255.0) as u8,
+                    );
+
+                    u32::from_be_bytes([r, g, b, a])
+                }
+                let color = color.unwrap_or(Color::WHITE);
+
+                let material = laser_materials.0.entry(color_hash(color.into())).or_insert_with(|| {
+                    materials.add(StandardMaterial {
+                        base_color: color,
+                        unlit: true,
+                        ..Default::default()
+                    })
+                });
 
                 Laser::spawn_custom_pbr(
                     location,
@@ -64,17 +92,13 @@ fn lasers_netty(
                     no_hit,
                     CosmosPbrBundle {
                         mesh: Mesh3d(laser_mesh.0.clone_weak()),
-                        material: MeshMaterial3d(materials.add(StandardMaterial {
-                            base_color: color.unwrap_or(Color::WHITE),
-                            // emissive: color,
-                            unlit: true,
-                            ..Default::default()
-                        })),
+                        material: MeshMaterial3d(material.clone_weak()),
                         ..Default::default()
                     },
                     &time,
                     RapierContextEntityLink(q_default_world.single()),
                     &mut commands,
+                    causer,
                 );
             }
             ServerStructureSystemMessages::LaserCannonSystemFired { ship_entity } => {

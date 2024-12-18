@@ -146,7 +146,7 @@ fn notify_client_of_successful_entity_request(
 }
 
 fn notify_despawned_entities(
-    removed_components: Query<Entity, (With<NeedsDespawned>, Without<DontNotifyClientOfDespawn>)>,
+    removed_components: Query<Entity, (With<NeedsDespawned>, (Without<DontNotifyClientOfDespawn>, Without<NoSendEntity>))>,
     q_identifier: Query<(Option<&StructureSystem>, Option<&ItemStackData>, Option<&BlockData>)>,
     mut server: ResMut<RenetServer>,
 ) {

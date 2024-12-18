@@ -3,7 +3,7 @@
 use bevy::prelude::{Color, Component, Entity, Vec3};
 use serde::{Deserialize, Serialize};
 
-use crate::physics::location::Location;
+use crate::{physics::location::Location, projectiles::causer::Causer};
 
 #[derive(Debug, Serialize, Deserialize, Component)]
 /// All the laser cannon system messages
@@ -22,6 +22,8 @@ pub enum ServerStructureSystemMessages {
         strength: f32,
         /// Which entity this laser shouldn't hit (None if it should hit all)
         no_hit: Option<Entity>,
+        /// Who fired this laser
+        causer: Option<Causer>,
     },
     /// Sent whenever a laser cannon system is fired
     LaserCannonSystemFired {
