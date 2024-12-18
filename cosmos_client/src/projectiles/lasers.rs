@@ -62,9 +62,7 @@ fn lasers_netty(
                     }
                 }
 
-                let causer = causer
-                    .map(|c| network_mapping.client_from_server(&c.0))
-                    .and_then(|e| e.map(Causer));
+                let causer = causer.map(|c| network_mapping.client_from_server(&c.0)).and_then(|e| e.map(Causer));
 
                 fn color_hash(color: Srgba) -> u32 {
                     let (r, g, b, a) = (
