@@ -1,7 +1,5 @@
 //! Systems for spawning a completely new player
 
-use std::i64;
-
 use bevy::prelude::*;
 
 use cosmos_core::physics::location::{Location, Sector};
