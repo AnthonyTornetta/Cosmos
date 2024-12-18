@@ -321,7 +321,7 @@ impl BaseStructure {
     }
 
     /// Gets the block at these block coordinates
-    pub fn block_at<'a>(&'a self, coords: BlockCoordinate, blocks: &'a Registry<Block>) -> &'a Block {
+    pub fn block_at<'a>(&self, coords: BlockCoordinate, blocks: &'a Registry<Block>) -> &'a Block {
         let id = self.block_id_at(coords);
         blocks.from_numeric_id(id)
     }

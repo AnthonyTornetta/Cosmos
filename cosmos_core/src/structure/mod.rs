@@ -290,7 +290,7 @@ impl Structure {
     }
 
     /// Gets the block at these block coordinates
-    pub fn block_at<'a>(&'a self, coords: BlockCoordinate, blocks: &'a Registry<Block>) -> &'a Block {
+    pub fn block_at<'a>(&self, coords: BlockCoordinate, blocks: &'a Registry<Block>) -> &'a Block {
         match self {
             Self::Full(fs) => fs.block_at(coords, blocks),
             Self::Dynamic(ds) => ds.block_at(coords, blocks),
