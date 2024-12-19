@@ -6,7 +6,7 @@ use bevy::{
 };
 
 /// A pilot component is bi-directional, if a player has the component then the entity it points to also has this component which points to the player.
-#[derive(Component, Reflect)]
+#[derive(Component, Reflect, Clone, Copy, Debug)]
 pub struct Pilot {
     /// This will either be the ship the player is piloting, or the pilot of the ship
     ///
