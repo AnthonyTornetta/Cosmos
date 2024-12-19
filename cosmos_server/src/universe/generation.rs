@@ -28,10 +28,10 @@ pub enum SystemGenerationSet {
     Star,
     /// Add planets to the system
     Planet,
-    /// Add stations to the system
-    Station,
     /// Add asteroids to the system
     Asteroid,
+    /// Add stations to the system
+    Station,
 }
 
 #[derive(Event, Debug)]
@@ -274,8 +274,8 @@ pub(super) fn register(app: &mut App) {
             SystemGenerationSet::SendEvents,
             SystemGenerationSet::Star,
             SystemGenerationSet::Planet,
-            SystemGenerationSet::Station,
             SystemGenerationSet::Asteroid,
+            SystemGenerationSet::Station,
         )
             .in_set(NetworkingSystemsSet::Between)
             .chain(),

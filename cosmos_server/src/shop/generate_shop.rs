@@ -14,7 +14,7 @@ use cosmos_core::{
     structure::station::station_builder::STATION_LOAD_DISTANCE,
     utils::quat_math::random_quat,
 };
-use rand::Rng;
+use rand::{seq::IteratorRandom, Rng};
 
 use crate::{
     init::init_world::ServerSeed,
@@ -37,10 +37,39 @@ fn generate_shops(
 
         let n_shops = rng.gen_range(20..=50);
 
+        let asteroid_shops_percent = rng.gen::<f32>() * 0.5 + 0.25; // At least 25% to a max of 75%
+
+        let asteroid_shops = (asteroid_shops_percent * n_shops as f32) as i32;
+        let non_asteroid_shops = n_shops - asteroid_shops;
+
         let multiplier = SECTOR_DIMENSIONS;
         let adder = -SECTOR_DIMENSIONS / 2.0;
 
-        for _ in 0..n_shops {
+        let mut placed_shops = HashSet::default();
+
+        for _ in 0..asteroid_shops {
+            let Some(generated_item) = system
+                .iter()
+                .filter(|x| !placed_shops.contains(&x.location.sector()) && matches!(x.item, SystemItem::Asteroid(_)))
+                .choose_stable(&mut rng)
+            else {
+                continue;
+            };
+
+            placed_shops.insert(generated_item.location.sector());
+            let loc = Location::new(
+                Vec3::new(
+                    rng.gen::<f32>() * multiplier + adder,
+                    rng.gen::<f32>() * multiplier + adder,
+                    rng.gen::<f32>() * multiplier + adder,
+                ),
+                generated_item.location.sector(),
+            );
+
+            system.add_item(loc, SystemItem::Shop);
+        }
+
+        for _ in 0..non_asteroid_shops {
             let sector = Sector::new(
                 rng.gen_range(0..SYSTEM_SECTORS as SectorUnit),
                 rng.gen_range(0..SYSTEM_SECTORS as SectorUnit),
