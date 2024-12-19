@@ -120,9 +120,15 @@ fn on_needs_pirate_spawned(mut commands: Commands, q_needs_pirate_spawned: Query
 /// Goes on the player and ensures they don't deal with too many pirates
 struct NextPirateSpawn(f64);
 
-fn add_spawn_times(q_players: Query<Entity, (With<Player>, Without<NextPirateSpawn>)>, time: Res<Time>, mut commands: Commands) {
+fn add_spawn_times(
+    q_players: Query<Entity, (With<Player>, Without<NextPirateSpawn>)>,
+    time: Res<Time>,
+    min_pirate_spawn_time: Res<MinPirateSpawnTime>,
+    mut commands: Commands,
+) {
     for ent in q_players.iter() {
-        commands.entity(ent).insert(NextPirateSpawn(time.delta_secs_f64()));
+        let next_spawn_time = calculate_next_spawn_time(&time, &min_pirate_spawn_time);
+        commands.entity(ent).insert(NextPirateSpawn(next_spawn_time));
     }
 }
 
@@ -240,8 +246,7 @@ fn spawn_pirates(
             }
         }
 
-        let min_secs = min_pirate_spawn_time.0.as_secs_f64();
-        let next_spawn_time = rand::random::<f64>() * min_secs * 3.0 + min_secs + time.elapsed_secs_f64();
+        let next_spawn_time = calculate_next_spawn_time(&time, &min_pirate_spawn_time);
 
         for player_ent in player_ents {
             commands.entity(player_ent).insert(NextPirateSpawn(next_spawn_time));
@@ -335,6 +340,11 @@ fn on_melt_down(mut q_players: Query<&mut PlayerStrength>, q_melting_down: Query
             player_strength.0 = player_strength.0.clamp(0.0, 100.0);
         }
     }
+}
+
+fn calculate_next_spawn_time(time: &Time, min_pirate_spawn_time: &MinPirateSpawnTime) -> f64 {
+    let min_secs = min_pirate_spawn_time.0.as_secs_f64();
+    rand::random::<f64>() * min_secs * 3.0 + min_secs + time.elapsed_secs_f64()
 }
 
 pub(super) fn register(app: &mut App) {

@@ -23,6 +23,7 @@ use crate::{
         coordinates::{BlockCoordinate, CoordinateType, UnboundCoordinateType},
         loading::StructureLoadingSet,
         shared::build_mode::{BuildAxis, BuildMode},
+        ship::pilot::Pilot,
         structure_block::StructureBlock,
         Structure,
     },
@@ -83,6 +84,7 @@ pub struct BlockPlaceEventData {
     pub placer: Entity,
 }
 
+/// This system is horribly smelly, and should be refactored soon.
 fn handle_block_break_events(
     mut q_structure: Query<(&mut Structure, &Location, &GlobalTransform, &Velocity)>,
     mut event_reader: EventReader<BlockBreakEvent>,
@@ -94,6 +96,7 @@ fn handle_block_break_events(
     mut q_inventory_block_data: Query<(&BlockData, &mut Inventory)>,
     mut commands: Commands,
     has_data: Res<ItemShouldHaveData>,
+    q_pilot: Query<&Pilot>,
 ) {
     for ev in event_reader.read() {
         // This is a temporary fix for mining lasers - eventually these items will have specified destinations,
@@ -129,12 +132,23 @@ fn handle_block_break_events(
             if let Some(item_id) = item_id {
                 let item = items.from_numeric_id(item_id);
 
+                let mut inserted = false;
                 for (_, mut inventory) in q_inventory_block_data
                     .iter_mut()
                     .filter(|(block_data, _)| block_data.identifier.block.structure() == ev.breaker)
                 {
                     if inventory.insert_item(item, 1, &mut commands, &has_data).0 == 0 {
+                        inserted = true;
                         break;
+                    }
+                }
+
+                // As a last resort, stick the item in the pilot's inventory
+                if !inserted {
+                    if let Ok(pilot) = q_pilot.get(ev.breaker) {
+                        if let Ok((mut inventory, _, _)) = inventory_query.get_mut(pilot.entity) {
+                            inventory.insert_item(item, 1, &mut commands, &has_data);
+                        }
                     }
                 }
             } else {
