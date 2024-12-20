@@ -19,6 +19,8 @@ use cosmos_core::{
     structure::chunk::netty::SaveData,
 };
 
+pub mod autosave;
+pub mod backup;
 pub mod loading;
 pub mod make_persistent;
 pub mod player_loading;
@@ -313,6 +315,8 @@ pub(super) fn register(app: &mut App) {
     saving::register(app);
     loading::register(app);
     player_loading::register(app);
+    autosave::register(app);
+    backup::register(app);
 
     app.register_type::<EntityId>().register_type::<SerializedData>();
 }
