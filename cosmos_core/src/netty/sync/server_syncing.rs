@@ -4,12 +4,14 @@ use super::{
     SyncableComponent, SyncedComponentId,
 };
 use crate::block::data::BlockData;
+use crate::entities::player::Player;
 use crate::inventory::itemstack::ItemStackData;
 use crate::netty::server::ServerLobby;
 use crate::netty::sync::{GotComponentToRemoveEvent, GotComponentToSyncEvent};
 use crate::netty::system_sets::NetworkingSystemsSet;
 use crate::netty::{cosmos_encoder, NettyChannelClient, NettyChannelServer, NoSendEntity};
-use crate::physics::location::CosmosBundleSet;
+use crate::persistence::LoadingDistance;
+use crate::physics::location::{CosmosBundleSet, Location};
 use crate::registry::{identifiable::Identifiable, Registry};
 use crate::structure::ship::pilot::Pilot;
 use crate::structure::systems::{StructureSystem, StructureSystems};
@@ -20,6 +22,7 @@ use bevy::ecs::schedule::common_conditions::resource_exists;
 use bevy::ecs::schedule::{IntoSystemConfigs, IntoSystemSetConfigs};
 use bevy::ecs::system::Commands;
 use bevy::log::warn;
+use bevy::prelude::Parent;
 use bevy::{
     app::{App, Startup, Update},
     ecs::{
@@ -160,12 +163,30 @@ fn server_deserialize_component<T: SyncableComponent>(
     }
 }
 
+fn recursive_should_load(
+    p_loc: &Location,
+    entity: Entity,
+    q_parent: &Query<(Option<&Location>, Option<&LoadingDistance>, Option<&Parent>)>,
+) -> bool {
+    let (loc, loading_distance, parent) = q_parent.get(entity).expect("Impossible to fail");
+
+    if let (Some(loc), Some(loading_distance)) = (loc, loading_distance) {
+        loading_distance.should_load(p_loc, loc)
+    } else if let Some(parent) = parent {
+        recursive_should_load(p_loc, parent.get(), q_parent)
+    } else {
+        false
+    }
+}
+
 fn server_send_component<T: SyncableComponent>(
     id_registry: Res<Registry<SyncedComponentId>>,
+    q_parent: Query<(Option<&Location>, Option<&LoadingDistance>, Option<&Parent>)>,
     q_changed_component: Query<
         (Entity, &T, Option<&StructureSystem>, Option<&ItemStackData>, Option<&BlockData>),
         (Without<NoSendEntity>, Changed<T>),
     >,
+    q_players: Query<(&Location, &Player)>,
     mut server: ResMut<RenetServer>,
 ) {
     if q_changed_component.is_empty() {
@@ -177,39 +198,60 @@ fn server_send_component<T: SyncableComponent>(
         return;
     };
 
-    q_changed_component
-        .iter()
-        .for_each(|(entity, component, structure_system, is_data, block_data)| {
-            let entity_identifier = if let Some(structure_system) = structure_system {
-                ComponentEntityIdentifier::StructureSystem {
-                    structure_entity: structure_system.structure_entity(),
-                    id: structure_system.id(),
-                }
-            } else if let Some(is_data) = is_data {
-                ComponentEntityIdentifier::ItemData {
-                    inventory_entity: is_data.inventory_pointer.0,
-                    item_slot: is_data.inventory_pointer.1,
-                    server_data_entity: entity,
-                }
-            } else if let Some(block_data) = block_data {
-                ComponentEntityIdentifier::BlockData {
-                    identifier: block_data.identifier,
-                    server_data_entity: entity,
-                }
-            } else {
-                ComponentEntityIdentifier::Entity(entity)
-            };
+    q_players.iter().for_each(|(p_loc, player)| {
+        q_changed_component
+            .iter()
+            .map(|(entity, component, structure_system, is_data, block_data)| {
+                let entity_identifier = if let Some(structure_system) = structure_system {
+                    ComponentEntityIdentifier::StructureSystem {
+                        structure_entity: structure_system.structure_entity(),
+                        id: structure_system.id(),
+                    }
+                } else if let Some(is_data) = is_data {
+                    ComponentEntityIdentifier::ItemData {
+                        inventory_entity: is_data.inventory_pointer.0,
+                        item_slot: is_data.inventory_pointer.1,
+                        server_data_entity: entity,
+                    }
+                } else if let Some(block_data) = block_data {
+                    ComponentEntityIdentifier::BlockData {
+                        identifier: block_data.identifier,
+                        server_data_entity: entity,
+                    }
+                } else {
+                    ComponentEntityIdentifier::Entity(entity)
+                };
 
-            server.broadcast_message(
-                NettyChannelServer::ComponentReplication,
-                cosmos_encoder::serialize(&ComponentReplicationMessage::ComponentReplication {
-                    component_id: id.id(),
-                    entity_identifier,
-                    // Avoid double compression using bincode instead of cosmos_encoder.
-                    raw_data: bincode::serialize(component).expect("Failed to serialize component."),
-                }),
-            );
-        });
+                (component, entity_identifier)
+            })
+            .filter(|(_, entity_identifier)| {
+                match entity_identifier {
+                    ComponentEntityIdentifier::Entity(entity) => recursive_should_load(p_loc, *entity, &q_parent),
+                    ComponentEntityIdentifier::StructureSystem { structure_entity, .. } => {
+                        recursive_should_load(p_loc, *structure_entity, &q_parent)
+                    }
+                    // TODO: This is probably wrong for dynamic structures like planets
+                    ComponentEntityIdentifier::BlockData { identifier, .. } => {
+                        recursive_should_load(p_loc, identifier.block.structure(), &q_parent)
+                    }
+                    ComponentEntityIdentifier::ItemData { inventory_entity, .. } => {
+                        recursive_should_load(p_loc, *inventory_entity, &q_parent)
+                    }
+                }
+            })
+            .for_each(|(component, entity_identifier)| {
+                server.send_message(
+                    player.id(),
+                    NettyChannelServer::ComponentReplication,
+                    cosmos_encoder::serialize(&ComponentReplicationMessage::ComponentReplication {
+                        component_id: id.id(),
+                        entity_identifier,
+                        // Avoid double compression using bincode instead of cosmos_encoder.
+                        raw_data: bincode::serialize(component).expect("Failed to serialize component."),
+                    }),
+                );
+            });
+    });
 }
 
 fn server_sync_removed_components<T: SyncableComponent>(

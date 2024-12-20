@@ -6,7 +6,7 @@ use bevy::{
 };
 use serde::{Deserialize, Serialize};
 
-use crate::physics::location::SECTOR_DIMENSIONS;
+use crate::physics::location::{Location, SECTOR_DIMENSIONS};
 
 /// The default loading distance for structures
 pub const LOAD_DISTANCE: f32 = SECTOR_DIMENSIONS * 8.0;
@@ -62,6 +62,12 @@ impl LoadingDistance {
     pub fn unload_block_distance(&self) -> f32 {
         self.unload_distance as f32 * SECTOR_DIMENSIONS
     }
+
+    /// Returns true if this load distance is valid for these two locations
+    pub fn should_load(&self, loc_a: &Location, loc_b: &Location) -> bool {
+        loc_a.is_within_reasonable_range(loc_b) && loc_a.relative_coords_to(loc_b).abs().max_element() < self.load_block_distance()
+    }
+    // TODO: Make function for should unload
 }
 
 #[derive(Component, Debug, Reflect, Default, Clone, Copy)]
