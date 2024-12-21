@@ -2,7 +2,7 @@ use bevy::{prelude::*, utils::HashMap};
 use bevy_rapier3d::{
     geometry::{CollisionGroups, Group},
     pipeline::QueryFilter,
-    plugin::{RapierContextAccess, RapierContextEntityLink},
+    plugin::{RapierContextEntityLink, ReadRapierContext},
 };
 use cosmos_core::{
     block::{
@@ -115,7 +115,7 @@ fn update_mining_beams(
     mut q_mining_block: Query<&mut MiningBlock>,
     mut q_being_mined: Query<&mut BeingMined>,
     q_is_system_active: Query<(), With<SystemActive>>,
-    rapier_context_access: RapierContextAccess,
+    rapier_context_access: ReadRapierContext,
     q_parent: Query<&Parent>,
     time: Res<Time>,
 ) {
@@ -159,7 +159,7 @@ fn update_mining_beams(
         let ray_start = g_trans.translation();
         let ray_dir = g_trans.forward();
 
-        let rapier_context = rapier_context_access.context(p_world);
+        let rapier_context = rapier_context_access.get(*p_world);
 
         let Some((hit_entity, toi)) = rapier_context.cast_ray(
             ray_start,

@@ -418,3 +418,64 @@ impl<'a> Iterator for ChunkIterator<'a> {
         }
     }
 }
+
+#[cfg(test)]
+mod test {
+    use crate::{
+        block::{block_builder::BlockBuilder, Block},
+        prelude::FullStructure,
+        registry::{identifiable::Identifiable, Registry},
+        utils::random::random_range,
+    };
+
+    use super::*;
+    #[test]
+    fn test_iterator() {
+        const SIZE: ChunkCoordinate = ChunkCoordinate::new(2, 2, 2);
+
+        let mut s = Structure::Full(FullStructure::new(SIZE));
+
+        let mut blocks = Registry::<Block>::new("cosmos:blocks");
+        blocks.register(BlockBuilder::new("air", 0.0, 0.0, 0.0).create());
+        blocks.register(BlockBuilder::new("asdf", 1.0, 1.0, 1.0).create());
+
+        for z in 0..s.block_dimensions().z {
+            for y in 0..s.block_dimensions().y {
+                for x in 0..s.block_dimensions().x {
+                    let id = random_range(0.0, blocks.iter().len() as f32 - 1.0).round() as u16;
+
+                    s.set_block_at(
+                        BlockCoordinate::new(x, y, z),
+                        blocks.from_numeric_id(id),
+                        Default::default(),
+                        &blocks,
+                        None,
+                    );
+                }
+            }
+        }
+
+        let mut duplicate = Structure::Full(FullStructure::new(SIZE));
+
+        for c in s.all_blocks_iter(false) {
+            duplicate.set_block_at(c, s.block_at(c, &blocks), Default::default(), &blocks, None);
+        }
+
+        for z in 0..s.block_dimensions().z {
+            for y in 0..s.block_dimensions().y {
+                for x in 0..s.block_dimensions().x {
+                    let coords = BlockCoordinate::new(x, y, z);
+                    let a = s.block_at(coords, &blocks);
+                    let b = duplicate.block_at(coords, &blocks);
+                    assert_eq!(
+                        a,
+                        b,
+                        "Block @ {coords} failed - {} != {}",
+                        a.unlocalized_name(),
+                        b.unlocalized_name()
+                    );
+                }
+            }
+        }
+    }
+}

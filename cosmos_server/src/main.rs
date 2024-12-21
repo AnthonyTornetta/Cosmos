@@ -33,6 +33,7 @@ pub mod chat;
 pub mod commands;
 pub mod crafting;
 mod debug;
+mod economy;
 pub mod entities;
 pub mod fluid;
 pub mod init;

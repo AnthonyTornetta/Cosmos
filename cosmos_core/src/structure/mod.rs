@@ -290,7 +290,7 @@ impl Structure {
     }
 
     /// Gets the block at these block coordinates
-    pub fn block_at<'a>(&'a self, coords: BlockCoordinate, blocks: &'a Registry<Block>) -> &'a Block {
+    pub fn block_at<'a>(&self, coords: BlockCoordinate, blocks: &'a Registry<Block>) -> &'a Block {
         match self {
             Self::Full(fs) => fs.block_at(coords, blocks),
             Self::Dynamic(ds) => ds.block_at(coords, blocks),
@@ -485,10 +485,11 @@ impl Structure {
         blocks: &Registry<Block>,
         amount: f32,
         event_writers: Option<(&mut EventWriter<BlockTakeDamageEvent>, &mut EventWriter<BlockDestroyedEvent>)>,
+        causer: Option<Entity>,
     ) -> Option<f32> {
         match self {
-            Self::Full(fs) => fs.block_take_damage(coords, blocks, amount, event_writers),
-            Self::Dynamic(ds) => ds.block_take_damage(coords, blocks, amount, event_writers),
+            Self::Full(fs) => fs.block_take_damage(coords, blocks, amount, event_writers, causer),
+            Self::Dynamic(ds) => ds.block_take_damage(coords, blocks, amount, event_writers, causer),
         }
     }
 

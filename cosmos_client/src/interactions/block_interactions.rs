@@ -3,7 +3,7 @@
 use bevy::prelude::*;
 use bevy_rapier3d::{
     geometry::{CollisionGroups, Group, RayIntersection},
-    plugin::ReadDefaultRapierContext,
+    plugin::ReadRapierContext,
     prelude::{QueryFilter, RapierContext},
 };
 use cosmos_core::{
@@ -67,7 +67,7 @@ pub(crate) fn process_player_interaction(
     input_handler: InputChecker,
     camera: Query<&GlobalTransform, With<MainCamera>>,
     mut q_player: Query<(Entity, &mut Inventory, &mut LookingAt, Option<&Creative>), (With<LocalPlayer>, Without<Pilot>)>,
-    rapier_context_access: ReadDefaultRapierContext,
+    rapier_context_access: ReadRapierContext,
     q_chunk_physics_part: Query<&ChunkPhysicsPart>,
     q_structure: Query<(&Structure, &GlobalTransform, Option<&Planet>)>,
     mut break_writer: EventWriter<RequestBlockBreakEvent>,
@@ -94,7 +94,7 @@ pub(crate) fn process_player_interaction(
     };
 
     let Some((hit_block, mut structure, mut structure_g_transform, mut is_planet)) = send_ray(
-        rapier_context,
+        &rapier_context,
         cam_trans,
         player_entity,
         &q_chunk_physics_part,
@@ -112,7 +112,7 @@ pub(crate) fn process_player_interaction(
 
     if structure.block_at(hit_block.block.coords(), &blocks).is_fluid() {
         if let Some((hit_block, s, sgt, ip)) = send_ray(
-            rapier_context,
+            &rapier_context,
             cam_trans,
             player_entity,
             &q_chunk_physics_part,

@@ -119,8 +119,9 @@ impl BlockStorer for Chunk {
     fn set_block_at(&mut self, coords: ChunkBlockCoordinate, b: &Block, block_rotation: BlockRotation) {
         let new_id = b.id();
         let old_id = self.block_at(coords);
+        let old_rot = self.block_rotation(coords);
 
-        if new_id == old_id {
+        if new_id == old_id && block_rotation == old_rot {
             return;
         }
 

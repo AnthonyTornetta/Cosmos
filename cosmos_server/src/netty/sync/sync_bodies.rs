@@ -40,9 +40,7 @@ fn send_bodies(
     for (player, _, loc) in players.iter() {
         let players_bodies: Vec<(Entity, NettyRigidBody)> = bodies
             .iter()
-            .filter(|(_, _, location, loading_distance)| {
-                location.relative_coords_to(loc).abs().max_element() < loading_distance.load_block_distance()
-            })
+            .filter(|(_, _, location, loading_distance)| loading_distance.should_load(loc, location))
             .map(|(ent, net_rb, _, _)| (*ent, *net_rb))
             .collect();
 
@@ -146,7 +144,7 @@ fn notify_client_of_successful_entity_request(
 }
 
 fn notify_despawned_entities(
-    removed_components: Query<Entity, (With<NeedsDespawned>, Without<DontNotifyClientOfDespawn>)>,
+    removed_components: Query<Entity, (With<NeedsDespawned>, (Without<DontNotifyClientOfDespawn>, Without<NoSendEntity>))>,
     q_identifier: Query<(Option<&StructureSystem>, Option<&ItemStackData>, Option<&BlockData>)>,
     mut server: ResMut<RenetServer>,
 ) {

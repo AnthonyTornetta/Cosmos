@@ -43,6 +43,7 @@ fn monitor_block_health_changed(mut server: ResMut<RenetServer>, mut event_reade
             block: ev.block,
             new_health: ev.new_health,
             structure_entity: ev.structure_entity,
+            causer: ev.causer,
         })
         .collect::<Vec<BlockHealthUpdate>>();
 

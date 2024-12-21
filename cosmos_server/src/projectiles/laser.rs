@@ -2,7 +2,10 @@ use bevy::prelude::*;
 use cosmos_core::{
     block::Block,
     netty::system_sets::NetworkingSystemsSet,
-    projectiles::laser::{Laser, LaserCollideEvent, LaserSystemSet},
+    projectiles::{
+        causer::Causer,
+        laser::{Laser, LaserCollideEvent, LaserSystemSet},
+    },
     registry::Registry,
     state::GameState,
     structure::{
@@ -27,6 +30,7 @@ fn on_laser_hit_structure(
     block_take_damage_event_writer: &mut EventWriter<BlockTakeDamageEvent>,
     block_destroy_event_writer: &mut EventWriter<BlockDestroyedEvent>,
     strength: f32,
+    causer: Option<&Causer>,
 ) {
     if let Ok(coords) = structure.relative_coords_to_local_coords_checked(local_position_hit.x, local_position_hit.y, local_position_hit.z)
     {
@@ -35,6 +39,7 @@ fn on_laser_hit_structure(
             blocks,
             strength,
             Some((block_take_damage_event_writer, block_destroy_event_writer)),
+            causer.map(|x| x.0),
         );
     } else {
         warn!("Bad laser hit spot that isn't actually on structure ;(");
@@ -62,6 +67,7 @@ fn respond_laser_hit_event(
                     &mut block_take_damage_event_writer,
                     &mut block_destroy_event_writer,
                     ev.laser_strength(),
+                    ev.causer().as_ref(),
                 );
             }
         }

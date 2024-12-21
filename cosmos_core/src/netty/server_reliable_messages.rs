@@ -50,6 +50,8 @@ pub struct BlockHealthUpdate {
     pub block: StructureBlock,
     /// The block's new health
     pub new_health: f32,
+    /// The entity that caused this change
+    pub causer: Option<Entity>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Component)]

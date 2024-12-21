@@ -10,7 +10,7 @@ use bevy_kira_audio::prelude::*;
 use bevy_rapier3d::{
     geometry::{CollisionGroups, Group},
     pipeline::QueryFilter,
-    plugin::{RapierContextAccess, RapierContextEntityLink},
+    plugin::{RapierContextEntityLink, ReadRapierContext},
 };
 use cosmos_core::{
     block::block_direction::BlockDirection,
@@ -217,7 +217,7 @@ fn resize_mining_lasers(
     q_parent: Query<&Parent>,
     mut q_lasers: Query<(&GlobalTransform, &mut Transform, &RapierContextEntityLink, &MiningLaser, &Parent)>,
     q_global_trans: Query<&GlobalTransform>,
-    rapier_context_access: RapierContextAccess,
+    rapier_context_access: ReadRapierContext,
 ) {
     for (g_trans, mut trans, phys_world, mining_laser, parent) in q_lasers.iter_mut() {
         let parent_structure_ent = parent.get();
@@ -233,7 +233,7 @@ fn resize_mining_lasers(
 
         laser_start = parent_g_trans.translation() + parent_rot.mul_vec3(laser_start);
 
-        let toi = match rapier_context_access.context(phys_world).cast_ray(
+        let toi = match rapier_context_access.get(*phys_world).cast_ray(
             laser_start,
             g_trans.forward().into(),
             mining_laser.max_length,

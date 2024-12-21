@@ -1,5 +1,5 @@
 use bevy::{
-    app::App,
+    app::{App, Update},
     asset::AssetServer,
     core::Name,
     ecs::{
@@ -8,8 +8,7 @@ use bevy::{
         system::{Commands, Query, Res},
     },
     hierarchy::BuildChildren,
-    log::error,
-    prelude::{ChildBuild, Text},
+    prelude::{in_state, Added, ChildBuild, IntoSystemConfigs, Text},
     state::state::OnEnter,
     text::{TextFont, TextSpan},
     ui::{AlignContent, JustifyContent, Node, PositionType, TargetCamera, UiRect, Val},
@@ -25,10 +24,9 @@ fn create_credits_node(
     mut commands: Commands,
     q_ui_root: Query<Entity, With<UiRoot>>,
     asset_server: Res<AssetServer>,
-    local_player: Query<(Entity, &Credits), With<LocalPlayer>>,
+    local_player: Query<(Entity, &Credits), (Added<Credits>, With<LocalPlayer>)>,
 ) {
     let Ok((local_player, credits)) = local_player.get_single() else {
-        error!("Cannot display credits - local player entity missing!");
         return;
     };
 
@@ -70,5 +68,6 @@ fn create_credits_node(
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_systems(OnEnter(GameState::Playing), create_credits_node);
+    app.add_systems(OnEnter(GameState::Playing), create_credits_node)
+        .add_systems(Update, create_credits_node.run_if(in_state(GameState::Playing)));
 }

@@ -2,8 +2,8 @@
 
 use super::mapping::{NetworkMapping, ServerEntity};
 use super::{
-    ClientAuthority, ComponentEntityIdentifier, ComponentReplicationMessage, ComponentSyncingSet, GotComponentToRemoveEvent, SyncType,
-    SyncableComponent, SyncedComponentId,
+    ClientAuthority, ComponentEntityIdentifier, ComponentReplicationMessage, ComponentSyncingSet, GotComponentToRemoveEvent,
+    ReplicatedComponentData, SyncType, SyncableComponent, SyncedComponentId,
 };
 use crate::block::data::BlockData;
 use crate::ecs::NeedsDespawned;
@@ -127,14 +127,14 @@ fn client_send_components<T: SyncableComponent>(
         return;
     };
 
-    q_changed_component
+    let data_to_sync = q_changed_component
         .iter()
-        .for_each(|(entity, component, structure_system, is_data)| {
+        .flat_map(|(entity, component, structure_system, is_data)| {
             let entity_identifier = compute_entity_identifier(structure_system, &mapping, is_data, entity);
 
             let Some((entity_identifier, authority_entity)) = entity_identifier else {
                 warn!("Invalid entity found - {entity_identifier:?} - no match on server entities!");
-                return;
+                return None;
             };
 
             // The server checks this anyway, but save the client+server some bandwidth
@@ -142,26 +142,22 @@ fn client_send_components<T: SyncableComponent>(
                 ClientAuthority::Anything => {}
                 ClientAuthority::Piloting => {
                     let Ok(piloting) = q_local_piloting.get_single() else {
-                        return;
+                        return None;
                     };
 
                     if piloting.entity != authority_entity {
-                        return;
+                        return None;
                     }
                 }
                 ClientAuthority::Themselves => {
                     if !q_local_player.contains(entity) {
-                        return;
+                        return None;
                     }
                 }
             }
 
             let raw_data = if T::needs_entity_conversion() {
-                let mapped = component.clone().convert_entities_client_to_server(&mapping);
-
-                let Some(mapped) = mapped else {
-                    return;
-                };
+                let mapped = component.clone().convert_entities_client_to_server(&mapping)?;
 
                 bincode::serialize(&mapped)
             } else {
@@ -169,16 +165,22 @@ fn client_send_components<T: SyncableComponent>(
             }
             .expect("Failed to serialize component.");
 
-            client.send_message(
-                NettyChannelClient::ComponentReplication,
-                cosmos_encoder::serialize(&ComponentReplicationMessage::ComponentReplication {
-                    component_id: id.id(),
-                    entity_identifier,
-                    // Avoid double compression using bincode instead of cosmos_encoder.
-                    raw_data,
-                }),
-            )
-        });
+            Some(ReplicatedComponentData {
+                raw_data,
+                entity_identifier,
+            })
+        })
+        .collect::<Vec<ReplicatedComponentData>>();
+
+    if !data_to_sync.is_empty() {
+        client.send_message(
+            NettyChannelClient::ComponentReplication,
+            cosmos_encoder::serialize(&ComponentReplicationMessage::ComponentReplication {
+                component_id: id.id(),
+                replicated: data_to_sync,
+            }),
+        );
+    }
 }
 
 fn client_send_removed_components<T: SyncableComponent>(
@@ -283,7 +285,7 @@ fn compute_entity_identifier(
 }
 
 #[derive(Resource, Default)]
-struct WaitingData(Vec<ComponentReplicationMessage>);
+struct WaitingData(Vec<(u16, ReplicatedComponentData)>);
 
 #[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
 /// Receives auto-synced components from the server
@@ -305,12 +307,9 @@ fn client_receive_components(
     mut q_structure: Query<&mut Structure>,
     q_block_data: Query<&BlockData>,
 ) {
-    let mut v = Vec::with_capacity(waiting_data.0.len());
-    std::mem::swap(&mut v, &mut waiting_data.0);
-    for msg in v {
-        if let Some(msg) = handle_incoming_component_data(
+    waiting_data.0.retain(|(component_id, c)| {
+        repl_comp_data(
             &mut client,
-            msg.clone(),
             &q_block_data,
             &mut network_mapping,
             &q_structure_systems,
@@ -318,39 +317,79 @@ fn client_receive_components(
             &mut commands,
             &mut q_structure,
             &mut ev_writer_sync,
-            &mut ev_writer_remove,
             &mut evw_block_data_changed,
-        ) {
-            waiting_data.0.push(msg);
-        }
-    }
+            *component_id,
+            c.clone(),
+        )
+        .is_some()
+    });
 
     while let Some(message) = client.receive_message(NettyChannelServer::ComponentReplication) {
         let msg: ComponentReplicationMessage = cosmos_encoder::deserialize(&message).unwrap_or_else(|e| {
             panic!("Failed to parse component replication message from server! Bytes:\n{message:?}\nError: {e:?}");
         });
 
-        if let Some(msg) = handle_incoming_component_data(
-            &mut client,
-            msg,
-            &q_block_data,
-            &mut network_mapping,
-            &q_structure_systems,
-            &mut q_inventory,
-            &mut commands,
-            &mut q_structure,
-            &mut ev_writer_sync,
-            &mut ev_writer_remove,
-            &mut evw_block_data_changed,
-        ) {
-            waiting_data.0.push(msg);
+        match msg {
+            ComponentReplicationMessage::ComponentReplication { replicated, component_id } => {
+                waiting_data.0.extend(
+                    replicated
+                        .into_iter()
+                        .flat_map(|c| {
+                            repl_comp_data(
+                                &mut client,
+                                &q_block_data,
+                                &mut network_mapping,
+                                &q_structure_systems,
+                                &mut q_inventory,
+                                &mut commands,
+                                &mut q_structure,
+                                &mut ev_writer_sync,
+                                &mut evw_block_data_changed,
+                                component_id,
+                                c,
+                            )
+                        })
+                        .map(|repl| (component_id, repl)),
+                );
+            }
+            ComponentReplicationMessage::RemovedComponent {
+                component_id,
+                entity_identifier,
+            } => {
+                let (entity, authority_entity) = match get_entity_identifier_info(
+                    &mut client,
+                    entity_identifier,
+                    &q_block_data,
+                    &mut network_mapping,
+                    &q_structure_systems,
+                    &mut q_inventory,
+                    &mut q_structure,
+                    &mut evw_block_data_changed,
+                    &mut commands,
+                ) {
+                    Some(value) => value,
+                    None => {
+                        continue;
+                    }
+                };
+
+                ev_writer_remove.send(GotComponentToRemoveEvent {
+                    // `client_id` only matters on the server-side, but I don't feel like fighting with
+                    // my LSP to have this variable only show up in the server project. Thus, I fill it with
+                    // dummy data.
+                    client_id: ClientId::from_raw(0),
+                    component_id,
+                    entity,
+                    // This also only matters on server-side, but once again I don't care
+                    authority_entity,
+                });
+            }
         }
     }
 }
 
-fn handle_incoming_component_data(
+fn repl_comp_data(
     client: &mut RenetClient,
-    msg: ComponentReplicationMessage,
     q_block_data: &Query<&BlockData>,
     network_mapping: &mut ResMut<NetworkMapping>,
     q_structure_systems: &Query<&StructureSystems, ()>,
@@ -358,90 +397,49 @@ fn handle_incoming_component_data(
     commands: &mut Commands,
     q_structure: &mut Query<&mut Structure>,
     ev_writer_sync: &mut EventWriter<GotComponentToSyncEvent>,
-    ev_writer_remove: &mut EventWriter<GotComponentToRemoveEvent>,
     evw_block_data_changed: &mut EventWriter<BlockDataChangedEvent>,
-) -> Option<ComponentReplicationMessage> {
-    match msg {
-        ComponentReplicationMessage::ComponentReplication {
-            component_id,
-            entity_identifier,
-            raw_data,
-        } => {
-            let (entity, authority_entity) = match get_entity_identifier_info(
-                client,
-                entity_identifier,
-                q_block_data,
-                network_mapping,
-                q_structure_systems,
-                q_inventory,
-                q_structure,
-                evw_block_data_changed,
-                commands,
-            ) {
-                Some(value) => value,
-                None => {
-                    return Some(ComponentReplicationMessage::ComponentReplication {
-                        component_id,
-                        entity_identifier,
-                        raw_data,
-                    })
-                }
-            };
+    component_id: u16,
+    c: ReplicatedComponentData,
+) -> Option<ReplicatedComponentData> {
+    let ReplicatedComponentData {
+        entity_identifier,
+        raw_data,
+    } = c;
 
-            let ev = GotComponentToSyncEvent {
-                // `client_id` only matters on the server-side, but I don't feel like fighting with
-                // my LSP to have this variable only show up in the server project. Thus, I fill it with
-                // dummy data.
-                client_id: ClientId::from_raw(0),
-                component_id,
-                entity,
-                // This also only matters on server-side, but once again I don't care
-                authority_entity,
+    let (entity, authority_entity) = match get_entity_identifier_info(
+        client,
+        entity_identifier,
+        q_block_data,
+        network_mapping,
+        q_structure_systems,
+        q_inventory,
+        q_structure,
+        evw_block_data_changed,
+        commands,
+    ) {
+        Some(value) => value,
+        None => {
+            return Some(ReplicatedComponentData {
+                entity_identifier,
                 raw_data,
-            };
-
-            ev_writer_sync.send(ev);
-
-            None
-        }
-        ComponentReplicationMessage::RemovedComponent {
-            component_id,
-            entity_identifier,
-        } => {
-            let (entity, authority_entity) = match get_entity_identifier_info(
-                client,
-                entity_identifier,
-                q_block_data,
-                network_mapping,
-                q_structure_systems,
-                q_inventory,
-                q_structure,
-                evw_block_data_changed,
-                commands,
-            ) {
-                Some(value) => value,
-                None => {
-                    return Some(ComponentReplicationMessage::RemovedComponent {
-                        component_id,
-                        entity_identifier,
-                    })
-                }
-            };
-
-            ev_writer_remove.send(GotComponentToRemoveEvent {
-                // `client_id` only matters on the server-side, but I don't feel like fighting with
-                // my LSP to have this variable only show up in the server project. Thus, I fill it with
-                // dummy data.
-                client_id: ClientId::from_raw(0),
-                component_id,
-                entity,
-                // This also only matters on server-side, but once again I don't care
-                authority_entity,
             });
-
-            None
         }
-    }
+    };
+
+    let ev = GotComponentToSyncEvent {
+        // `client_id` only matters on the server-side, but I don't feel like fighting with
+        // my LSP to have this variable only show up in the server project. Thus, I fill it with
+        // dummy data.
+        client_id: ClientId::from_raw(0),
+        component_id,
+        entity,
+        // This also only matters on server-side, but once again I don't care
+        authority_entity,
+        raw_data,
+    };
+
+    ev_writer_sync.send(ev);
+    None
 }
 
 fn get_entity_identifier_info(
