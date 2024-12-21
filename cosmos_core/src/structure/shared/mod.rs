@@ -9,6 +9,7 @@ use serde::{Deserialize, Serialize};
 use crate::{
     ecs::NeedsDespawned,
     netty::sync::{IdentifiableComponent, SyncableComponent},
+    physics::structure_physics::ChunkPhysicsPart,
     structure::{chunk::ChunkEntity, systems::StructureSystem},
 };
 
@@ -42,7 +43,15 @@ pub struct DespawnWithStructure;
 /// any of the things docked to it (like the player walking on it)
 fn save_the_kids(
     query: Query<&Children, (With<NeedsDespawned>, With<Structure>)>,
-    is_this_structure: Query<(), Or<(With<ChunkEntity>, With<StructureSystem>, With<DespawnWithStructure>)>>,
+    is_this_structure: Query<
+        (),
+        Or<(
+            With<ChunkEntity>,
+            With<ChunkPhysicsPart>,
+            With<StructureSystem>,
+            With<DespawnWithStructure>,
+        )>,
+    >,
     mut commands: Commands,
 ) {
     for children in query.iter() {
