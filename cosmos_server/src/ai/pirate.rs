@@ -215,14 +215,16 @@ fn add_pirate_ai(mut commands: Commands, q_needs_ai: Query<Entity, (With<Pirate>
 
 fn on_melt_down(
     q_is_pirate: Query<(), With<PiratePilot>>,
-    q_melting_down: Query<(Entity, &Pilot), (With<MeltingDown>, With<PirateAi>, With<AiControlled>)>,
+    q_melting_down: Query<(Entity, Option<&Pilot>), (With<MeltingDown>, With<PirateAi>, With<AiControlled>)>,
     mut commands: Commands,
 ) {
     for (ent, pilot) in &q_melting_down {
         commands.entity(ent).remove::<(PirateAi, AiControlled, Pirate, Pilot)>();
 
-        if q_is_pirate.contains(pilot.entity) {
-            commands.entity(pilot.entity).insert(NeedsDespawned);
+        if let Some(pilot) = pilot {
+            if q_is_pirate.contains(pilot.entity) {
+                commands.entity(pilot.entity).insert(NeedsDespawned);
+            }
         }
     }
 }
