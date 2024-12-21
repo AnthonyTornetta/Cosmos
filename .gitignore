@@ -19,6 +19,7 @@ cosmos_server/blueprints/
 cosmos_server/world/*
 # This directory is for run-time generated assets
 cosmos_server/assets/temp/
+cosmos_server/backups/*
 
 trace-*.json
 
@@ -36,3 +37,4 @@ debug.svg
 
 # Local to this player
 name.env
+
