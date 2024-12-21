@@ -77,19 +77,26 @@ See [the issues page](https://github.com/AnthonyTornetta/Cosmos/issues) for the 
 ## Release 0.0.7a
 
 - [x] Music
-- [x] Creative Mode
 - [x] Chat
 - [x] Galaxy map
   - [x] Able to view stars
   - [x] Zoom in to view planets
   - [x] Set waypoint
-- [x] Rotating Planet
+  - [x] Better galaxy generation
+- [x] Spawn player near shop & asteroids
+- [x] Add basic fabricator
+- [x] Creative mode
+- [x] Create survival mode
+  - [x] Save player data
+- [x] Create world backups system
+- [x] LOD performance improvements
+- [x] Rotating planet
   - [x] On-planet skybox
 - [x] Dropped item entity
   - [x] When storage is broken, drop items on ground
   - [x] If not enough inventory room when player is mining something, drop item
 - [x] Fix missing chunks on planets
-- [x] Bevy 0.15
+- [x] Update to Bevy 0.15
 
 ## Release 0.0.6a
 
