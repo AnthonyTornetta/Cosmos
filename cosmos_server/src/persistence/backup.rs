@@ -18,7 +18,10 @@ use super::saving::SavingSystemSet;
 /// Send this event to trigger a world backup
 pub struct CreateWorldBackup;
 
+const MAX_BACKUPS: usize = 25;
+
 const DATE_FORMAT: &str = "%Y_%m_%d_%H_%M_%S";
+const BACKUP_ENDING: &str = "_world_backup.zip";
 
 fn backup_world(mut evr_create_backup: EventReader<CreateWorldBackup>) {
     if evr_create_backup.is_empty() {
@@ -32,13 +35,18 @@ fn backup_world(mut evr_create_backup: EventReader<CreateWorldBackup>) {
 
     let formatted = format!("{}", date_time.format(DATE_FORMAT));
     let _ = std::fs::create_dir("./backups");
-    if let Err(e) = zip_directory(Path::new("./world"), Path::new(&format!("./backups/{formatted}_world_backup.zip"))) {
+    if let Err(e) = zip_directory(Path::new("./world"), Path::new(&format!("./backups/{formatted}{BACKUP_ENDING}"))) {
         error!("Error backing up world!!!\n{e:?}");
     }
 }
 
 fn cleanup_backups() {
+    info!("Initiating backup prune!");
+
+    let now = Utc::now();
+
     let mut backups = vec![];
+
     for backup in WalkDir::new("backups").max_depth(1) {
         let Ok(backup) = backup else {
             continue;
@@ -53,53 +61,65 @@ fn cleanup_backups() {
             continue;
         };
 
+        if !file_name.ends_with(BACKUP_ENDING) {
+            continue;
+        }
+
         let Ok(date_time_parsed) =
-            NaiveDateTime::parse_from_str(&file_name[0..file_name.len() - ".zip".len()], DATE_FORMAT).map(|x| x.and_utc())
+            NaiveDateTime::parse_from_str(&file_name[0..file_name.len() - BACKUP_ENDING.len()], DATE_FORMAT).map(|x| x.and_utc())
         else {
             continue;
         };
 
-        info!("{date_time_parsed:?}");
-
+        if now.signed_duration_since(date_time_parsed).num_milliseconds() < 0 {
+            // Don't delete backups marked as being taken in the future, the system clock is
+            // probably wrong in that case.
+            continue;
+        }
         backups.push((date_time_parsed, path.to_string_lossy().to_string()));
     }
 
     backups.sort_by_key(|x| x.0);
-    backups.reverse();
 
-    let now = Utc::now();
+    let n_backups = backups.len();
 
-    // Keep one backup every 5 minutes for the last hour
-    prune_by_interval(&mut backups, now, Duration::minutes(5), Duration::hours(1));
+    if n_backups > MAX_BACKUPS {
+        backups.reverse();
 
-    // Keep one backup every hour for the last 24 hours
-    prune_by_interval(&mut backups, now, Duration::hours(1), Duration::hours(24));
+        prune_by_interval(&mut backups, now, Duration::minutes(5), Duration::hours(1));
+        prune_by_interval(&mut backups, now, Duration::hours(1), Duration::hours(24));
+        prune_by_interval(&mut backups, now, Duration::days(1), Duration::days(7));
+        prune_by_interval(&mut backups, now, Duration::weeks(1), Duration::weeks(4));
 
-    // Keep one backup per day for the last 7 days
-    prune_by_interval(&mut backups, now, Duration::days(1), Duration::days(7));
+        if backups.is_empty() {
+            info!("No backups to prune.");
+        }
 
-    // Keep one backup per week for the last 4 weeks
-    prune_by_interval(&mut backups, now, Duration::weeks(1), Duration::weeks(4));
-
-    // Remove all other backups
-    for (_, path) in backups {
-        info!("Pruning old backup {path}");
-        std::fs::remove_file(&path).unwrap_or_else(|e| panic!("failed to remove file @ {path}!\n{e:?}"));
+        // If any backups remain in this list, they don't meet our time-span criteria.
+        // Also never remove backups if that would put us under the max allowed backups.
+        for (_, path) in backups.into_iter().take(n_backups - MAX_BACKUPS) {
+            info!("Pruning old backup {path}");
+            std::fs::remove_file(&path).unwrap_or_else(|e| panic!("failed to remove file @ {path}!\n{e:?}"));
+        }
     }
 }
 
+/// Keep one backup ever `interval` timespan for the last `max_age`.
 fn prune_by_interval(backups: &mut Vec<(DateTime<Utc>, String)>, now: DateTime<Utc>, interval: Duration, max_age: Duration) {
-    let mut next_cutoff = now - interval;
-    let max_cutoff = now - max_age;
+    let mut range_end = now;
+    let range_start = now - max_age;
 
-    backups.retain(|(timestamp, _)| {
-        if *timestamp > max_cutoff && *timestamp <= next_cutoff {
-            next_cutoff -= interval;
-            false
-        } else {
-            true
+    while range_end > range_start {
+        let range_begin = range_end - interval;
+        // Find the most recent backup within the range
+        if let Some(pos) = backups
+            .iter()
+            .position(|(timestamp, _)| *timestamp <= range_end && *timestamp > range_begin)
+        {
+            backups.remove(pos);
         }
-    });
+        range_end = range_begin;
+    }
 }
 
 /// Zips the contents of a directory into a zip file.
@@ -141,6 +161,6 @@ pub fn zip_directory(src_dir: &Path, dest_file: &Path) -> io::Result<()> {
 
 pub(super) fn register(app: &mut App) {
     app.add_systems(First, backup_world.before(SavingSystemSet::BeginSaving))
-        .add_systems(Update, cleanup_backups.run_if(on_timer(std::time::Duration::from_mins(5))))
+        .add_systems(Update, cleanup_backups.run_if(on_timer(std::time::Duration::from_secs(10))))
         .add_event::<CreateWorldBackup>();
 }
