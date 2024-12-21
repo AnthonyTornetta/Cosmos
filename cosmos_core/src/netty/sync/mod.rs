@@ -19,11 +19,23 @@ use crate::{
 };
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
+/// Data that represents a component and what entity it belongs to
+///
+/// Make sure to use bincode to serialize and deserialize the [`Self::raw_data`] field.
+pub struct ReplicatedComponentData {
+    /// How this entity should be identified.
+    ///
+    /// This is kinda ugly, and we should try not to continue packing more stuff into this.
+    pub entity_identifier: ComponentEntityIdentifier,
+    /// This is encoded via bincode, not cosmos_encoder.
+    pub raw_data: Vec<u8>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
 enum ComponentReplicationMessage {
     ComponentReplication {
         component_id: u16,
-        entity_identifier: ComponentEntityIdentifier,
-        raw_data: Vec<u8>,
+        replicated: Vec<ReplicatedComponentData>,
     },
     /// *Server Authoritative Note:* Removed components will NOT be synced if the entity is despawned.
     RemovedComponent {

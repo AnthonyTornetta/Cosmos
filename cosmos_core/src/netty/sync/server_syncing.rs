@@ -1,15 +1,17 @@
 use super::server_entity_syncing::RequestedEntityEvent;
 use super::{
-    ClientAuthority, ComponentEntityIdentifier, ComponentReplicationMessage, ComponentSyncingSet, RegisterComponentSet, SyncType,
-    SyncableComponent, SyncedComponentId,
+    ClientAuthority, ComponentEntityIdentifier, ComponentReplicationMessage, ComponentSyncingSet, RegisterComponentSet,
+    ReplicatedComponentData, SyncType, SyncableComponent, SyncedComponentId,
 };
 use crate::block::data::BlockData;
+use crate::entities::player::Player;
 use crate::inventory::itemstack::ItemStackData;
 use crate::netty::server::ServerLobby;
 use crate::netty::sync::{GotComponentToRemoveEvent, GotComponentToSyncEvent};
 use crate::netty::system_sets::NetworkingSystemsSet;
 use crate::netty::{cosmos_encoder, NettyChannelClient, NettyChannelServer, NoSendEntity};
-use crate::physics::location::CosmosBundleSet;
+use crate::persistence::LoadingDistance;
+use crate::physics::location::{CosmosBundleSet, Location};
 use crate::registry::{identifiable::Identifiable, Registry};
 use crate::structure::ship::pilot::Pilot;
 use crate::structure::systems::{StructureSystem, StructureSystems};
@@ -20,6 +22,8 @@ use bevy::ecs::schedule::common_conditions::resource_exists;
 use bevy::ecs::schedule::{IntoSystemConfigs, IntoSystemSetConfigs};
 use bevy::ecs::system::Commands;
 use bevy::log::warn;
+use bevy::prelude::{Parent, With};
+use bevy::utils::HashMap;
 use bevy::{
     app::{App, Startup, Update},
     ecs::{
@@ -31,6 +35,7 @@ use bevy::{
     log::error,
 };
 use bevy_renet2::renet2::RenetServer;
+use renet2::ClientId;
 
 fn server_remove_component<T: SyncableComponent>(
     components_registry: Res<Registry<SyncedComponentId>>,
@@ -160,12 +165,44 @@ fn server_deserialize_component<T: SyncableComponent>(
     }
 }
 
+fn recursive_should_load(
+    p_loc: &Location,
+    entity: Entity,
+    q_parent: &Query<(Option<&Location>, Option<&LoadingDistance>, Option<&Parent>)>,
+) -> bool {
+    let (loc, loading_distance, parent) = q_parent.get(entity).expect("Impossible to fail");
+
+    if let (Some(loc), Some(loading_distance)) = (loc, loading_distance) {
+        loading_distance.should_load(p_loc, loc)
+    } else if let Some(parent) = parent {
+        recursive_should_load(p_loc, parent.get(), q_parent)
+    } else {
+        false
+    }
+}
+
+fn should_be_sent_to(
+    p_loc: &Location,
+    q_parent: &Query<(Option<&Location>, Option<&LoadingDistance>, Option<&Parent>)>,
+    entity_identifier: &ComponentEntityIdentifier,
+) -> bool {
+    match entity_identifier {
+        ComponentEntityIdentifier::Entity(entity) => recursive_should_load(p_loc, *entity, q_parent),
+        ComponentEntityIdentifier::StructureSystem { structure_entity, .. } => recursive_should_load(p_loc, *structure_entity, q_parent),
+        // TODO: This is probably wrong for dynamic structures like planets
+        ComponentEntityIdentifier::BlockData { identifier, .. } => recursive_should_load(p_loc, identifier.block.structure(), q_parent),
+        ComponentEntityIdentifier::ItemData { inventory_entity, .. } => recursive_should_load(p_loc, *inventory_entity, q_parent),
+    }
+}
+
 fn server_send_component<T: SyncableComponent>(
     id_registry: Res<Registry<SyncedComponentId>>,
+    q_parent: Query<(Option<&Location>, Option<&LoadingDistance>, Option<&Parent>)>,
     q_changed_component: Query<
         (Entity, &T, Option<&StructureSystem>, Option<&ItemStackData>, Option<&BlockData>),
         (Without<NoSendEntity>, Changed<T>),
     >,
+    q_players: Query<(&Location, &Player)>,
     mut server: ResMut<RenetServer>,
 ) {
     if q_changed_component.is_empty() {
@@ -177,39 +214,48 @@ fn server_send_component<T: SyncableComponent>(
         return;
     };
 
-    q_changed_component
-        .iter()
-        .for_each(|(entity, component, structure_system, is_data, block_data)| {
-            let entity_identifier = if let Some(structure_system) = structure_system {
-                ComponentEntityIdentifier::StructureSystem {
-                    structure_entity: structure_system.structure_entity(),
-                    id: structure_system.id(),
-                }
-            } else if let Some(is_data) = is_data {
-                ComponentEntityIdentifier::ItemData {
-                    inventory_entity: is_data.inventory_pointer.0,
-                    item_slot: is_data.inventory_pointer.1,
-                    server_data_entity: entity,
-                }
-            } else if let Some(block_data) = block_data {
-                ComponentEntityIdentifier::BlockData {
-                    identifier: block_data.identifier,
-                    server_data_entity: entity,
-                }
-            } else {
-                ComponentEntityIdentifier::Entity(entity)
-            };
+    q_players.iter().for_each(|(p_loc, player)| {
+        let replicated_data = q_changed_component
+            .iter()
+            .map(|(entity, component, structure_system, is_data, block_data)| {
+                let entity_identifier = if let Some(structure_system) = structure_system {
+                    ComponentEntityIdentifier::StructureSystem {
+                        structure_entity: structure_system.structure_entity(),
+                        id: structure_system.id(),
+                    }
+                } else if let Some(is_data) = is_data {
+                    ComponentEntityIdentifier::ItemData {
+                        inventory_entity: is_data.inventory_pointer.0,
+                        item_slot: is_data.inventory_pointer.1,
+                        server_data_entity: entity,
+                    }
+                } else if let Some(block_data) = block_data {
+                    ComponentEntityIdentifier::BlockData {
+                        identifier: block_data.identifier,
+                        server_data_entity: entity,
+                    }
+                } else {
+                    ComponentEntityIdentifier::Entity(entity)
+                };
 
-            server.broadcast_message(
-                NettyChannelServer::ComponentReplication,
-                cosmos_encoder::serialize(&ComponentReplicationMessage::ComponentReplication {
-                    component_id: id.id(),
-                    entity_identifier,
-                    // Avoid double compression using bincode instead of cosmos_encoder.
-                    raw_data: bincode::serialize(component).expect("Failed to serialize component."),
-                }),
-            );
-        });
+                (component, entity_identifier)
+            })
+            .filter(|(_, entity_identifier)| should_be_sent_to(p_loc, &q_parent, entity_identifier))
+            .map(|(component, identifier)| ReplicatedComponentData {
+                entity_identifier: identifier,
+                raw_data: bincode::serialize(component).expect("Failed to serialize component!"),
+            })
+            .collect::<Vec<ReplicatedComponentData>>();
+
+        server.send_message(
+            player.id(),
+            NettyChannelServer::ComponentReplication,
+            cosmos_encoder::serialize(&ComponentReplicationMessage::ComponentReplication {
+                component_id: id.id(),
+                replicated: replicated_data,
+            }),
+        );
+    });
 }
 
 fn server_sync_removed_components<T: SyncableComponent>(
@@ -265,19 +311,25 @@ fn server_sync_removed_components<T: SyncableComponent>(
 
 fn on_request_component<T: SyncableComponent>(
     q_t: Query<(&T, Option<&StructureSystem>, Option<&ItemStackData>, Option<&BlockData>)>,
-    // q_rb: Query<(&Location, &GlobalTransform, &Velocity)>,
+    q_parent: Query<(Option<&Location>, Option<&LoadingDistance>, Option<&Parent>)>,
     mut ev_reader: EventReader<RequestedEntityEvent>,
     id_registry: Res<Registry<SyncedComponentId>>,
     mut server: ResMut<RenetServer>,
+    q_players: Query<&Location, With<Player>>,
+    lobby: Res<ServerLobby>,
 ) {
+    let mut comps_to_send: HashMap<ClientId, Vec<ReplicatedComponentData>> = HashMap::new();
+
     for ev in ev_reader.read() {
-        let Ok((component, structure_system, is_data, block_data)) = q_t.get(ev.entity) else {
+        let Some(player_ent) = lobby.player_from_id(ev.client_id) else {
+            continue;
+        };
+        let Ok(p_loc) = q_players.get(player_ent) else {
             continue;
         };
 
-        let Some(id) = id_registry.from_id(T::get_component_unlocalized_name()) else {
-            error!("Invalid component unlocalized name - {}", T::get_component_unlocalized_name());
-            return;
+        let Ok((component, structure_system, is_data, block_data)) = q_t.get(ev.entity) else {
+            continue;
         };
 
         let entity_identifier = if let Some(structure_system) = structure_system {
@@ -300,14 +352,28 @@ fn on_request_component<T: SyncableComponent>(
             ComponentEntityIdentifier::Entity(ev.entity)
         };
 
+        if !should_be_sent_to(p_loc, &q_parent, &entity_identifier) {
+            continue;
+        }
+
+        comps_to_send.entry(ev.client_id).or_default().push(ReplicatedComponentData {
+            raw_data: bincode::serialize(component).expect("Failed to serialize component."),
+            entity_identifier,
+        });
+    }
+
+    for (client_id, replicated_component) in comps_to_send {
+        let Some(id) = id_registry.from_id(T::get_component_unlocalized_name()) else {
+            error!("Invalid component unlocalized name - {}", T::get_component_unlocalized_name());
+            return;
+        };
+
         server.send_message(
-            ev.client_id,
+            client_id,
             NettyChannelServer::ComponentReplication,
             cosmos_encoder::serialize(&ComponentReplicationMessage::ComponentReplication {
                 component_id: id.id(),
-                entity_identifier,
-                // Avoid double compression using bincode instead of cosmos_encoder.
-                raw_data: bincode::serialize(component).expect("Failed to serialize component."),
+                replicated: replicated_component,
             }),
         );
     }
@@ -327,52 +393,54 @@ fn server_receive_components(
             };
 
             match msg {
-                ComponentReplicationMessage::ComponentReplication {
-                    component_id,
-                    entity_identifier,
-                    raw_data,
-                } => {
-                    let (entity, authority_entity) = match entity_identifier {
-                        ComponentEntityIdentifier::Entity(entity) => (entity, entity),
-                        ComponentEntityIdentifier::StructureSystem { structure_entity, id } => {
-                            let Ok(structure_systems) = q_structure_systems.get(structure_entity) else {
-                                warn!("Bad structure entity {structure_entity:?}");
-                                continue;
-                            };
-
-                            let Some(system_entity) = structure_systems.get_system_entity(id) else {
-                                warn!("Bad structure system id {id:?}");
-                                continue;
-                            };
-
-                            (system_entity, structure_entity)
-                        }
-                        ComponentEntityIdentifier::ItemData {
-                            inventory_entity: _,
-                            item_slot: _,
-                            server_data_entity: _,
-                        } => {
-                            warn!("Client-authoritiative syncing of itemdata not yet implemented");
-
-                            continue;
-                        }
-                        ComponentEntityIdentifier::BlockData {
-                            identifier: _,
-                            server_data_entity: _,
-                        } => {
-                            warn!("Client-authoritiative syncing of blockdata not yet implemented");
-
-                            continue;
-                        }
-                    };
-
-                    ev_writer_sync.send(GotComponentToSyncEvent {
-                        client_id,
-                        component_id,
-                        entity,
-                        authority_entity,
+                ComponentReplicationMessage::ComponentReplication { component_id, replicated } => {
+                    for ReplicatedComponentData {
+                        entity_identifier,
                         raw_data,
-                    });
+                    } in replicated
+                    {
+                        let (entity, authority_entity) = match entity_identifier {
+                            ComponentEntityIdentifier::Entity(entity) => (entity, entity),
+                            ComponentEntityIdentifier::StructureSystem { structure_entity, id } => {
+                                let Ok(structure_systems) = q_structure_systems.get(structure_entity) else {
+                                    warn!("Bad structure entity {structure_entity:?}");
+                                    continue;
+                                };
+
+                                let Some(system_entity) = structure_systems.get_system_entity(id) else {
+                                    warn!("Bad structure system id {id:?}");
+                                    continue;
+                                };
+
+                                (system_entity, structure_entity)
+                            }
+                            ComponentEntityIdentifier::ItemData {
+                                inventory_entity: _,
+                                item_slot: _,
+                                server_data_entity: _,
+                            } => {
+                                warn!("Client-authoritiative syncing of itemdata not yet implemented");
+
+                                continue;
+                            }
+                            ComponentEntityIdentifier::BlockData {
+                                identifier: _,
+                                server_data_entity: _,
+                            } => {
+                                warn!("Client-authoritiative syncing of blockdata not yet implemented");
+
+                                continue;
+                            }
+                        };
+
+                        ev_writer_sync.send(GotComponentToSyncEvent {
+                            client_id,
+                            component_id,
+                            entity,
+                            authority_entity,
+                            raw_data,
+                        });
+                    }
                 }
                 ComponentReplicationMessage::RemovedComponent {
                     component_id,
