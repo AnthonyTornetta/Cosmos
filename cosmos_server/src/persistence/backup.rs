@@ -18,8 +18,6 @@ use super::saving::SavingSystemSet;
 /// Send this event to trigger a world backup
 pub struct CreateWorldBackup;
 
-const MAX_BACKUPS: usize = 25;
-
 const DATE_FORMAT: &str = "%Y_%m_%d_%H_%M_%S";
 const BACKUP_ENDING: &str = "_world_backup.zip";
 
@@ -41,7 +39,7 @@ fn backup_world(mut evr_create_backup: EventReader<CreateWorldBackup>) {
 }
 
 fn cleanup_backups() {
-    info!("Initiating backup prune!");
+    info!("Initiating backup prune.");
 
     let now = Utc::now();
 
@@ -81,26 +79,21 @@ fn cleanup_backups() {
 
     backups.sort_by_key(|x| x.0);
 
-    let n_backups = backups.len();
+    backups.reverse();
 
-    if n_backups > MAX_BACKUPS {
-        backups.reverse();
+    prune_by_interval(&mut backups, now, Duration::minutes(10), Duration::hours(1));
+    prune_by_interval(&mut backups, now, Duration::hours(1), Duration::hours(24));
+    prune_by_interval(&mut backups, now, Duration::days(1), Duration::days(7));
+    prune_by_interval(&mut backups, now, Duration::weeks(1), Duration::weeks(4));
 
-        prune_by_interval(&mut backups, now, Duration::minutes(5), Duration::hours(1));
-        prune_by_interval(&mut backups, now, Duration::hours(1), Duration::hours(24));
-        prune_by_interval(&mut backups, now, Duration::days(1), Duration::days(7));
-        prune_by_interval(&mut backups, now, Duration::weeks(1), Duration::weeks(4));
+    if backups.is_empty() {
+        info!("No backups to prune.");
+    }
 
-        if backups.is_empty() {
-            info!("No backups to prune.");
-        }
-
-        // If any backups remain in this list, they don't meet our time-span criteria.
-        // Also never remove backups if that would put us under the max allowed backups.
-        for (_, path) in backups.into_iter().take(n_backups - MAX_BACKUPS) {
-            info!("Pruning old backup {path}");
-            std::fs::remove_file(&path).unwrap_or_else(|e| panic!("failed to remove file @ {path}!\n{e:?}"));
-        }
+    // If any backups remain in this list, they don't meet our time-span criteria.
+    for (_, path) in backups.into_iter() {
+        info!("Pruning old backup {path}");
+        std::fs::remove_file(&path).unwrap_or_else(|e| panic!("failed to remove file @ {path}!\n{e:?}"));
     }
 }
 

@@ -10,7 +10,7 @@ use cosmos_core::{
 
 use super::{backup::CreateWorldBackup, saving::NeedsSaved};
 
-const AUTOSAVE_INTERVAL: Duration = Duration::from_mins(5);
+const AUTOSAVE_INTERVAL: Duration = Duration::from_mins(10);
 
 #[derive(Event, Default)]
 /// Send this event to save every savable entity in the game
