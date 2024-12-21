@@ -3,11 +3,12 @@
 use bevy::{
     prelude::{Component, Entity, EventWriter},
     reflect::Reflect,
-    utils::HashSet,
+    utils::{HashMap, HashSet},
 };
 
 use crate::{
     block::{block_direction::BlockDirection, block_face::ALL_BLOCK_FACES, block_rotation::BlockRotation, Block},
+    events::block_events::BlockChangedEvent,
     logic::LogicConnection,
     registry::Registry,
     structure::{coordinates::BlockCoordinate, structure_block::StructureBlock, Structure},
@@ -45,6 +46,7 @@ impl LogicDriver {
         port_type: PortType,
         structure: &Structure,
         entity: Entity,
+        events_by_coords: &HashMap<BlockCoordinate, BlockChangedEvent>,
         blocks: &Registry<Block>,
         logic_blocks: &Registry<LogicBlock>,
         evw_queue_logic_output: &mut EventWriter<QueueLogicOutputEvent>,
@@ -63,6 +65,7 @@ impl LogicDriver {
             None,
             false,
             structure,
+            events_by_coords,
             &mut Port::all_for(coords),
             blocks,
             logic_blocks,
@@ -89,6 +92,7 @@ impl LogicDriver {
         coords: BlockCoordinate,
         structure: &Structure,
         entity: Entity,
+        events_by_coords: &HashMap<BlockCoordinate, BlockChangedEvent>,
         blocks: &Registry<Block>,
         logic_blocks: &Registry<LogicBlock>,
         logic_wire_colors: &Registry<LogicWireColor>,
@@ -103,6 +107,7 @@ impl LogicDriver {
                 PortType::Input,
                 structure,
                 entity,
+                events_by_coords,
                 blocks,
                 logic_blocks,
                 evw_queue_logic_output,
@@ -118,6 +123,7 @@ impl LogicDriver {
                 PortType::Output,
                 structure,
                 entity,
+                events_by_coords,
                 blocks,
                 logic_blocks,
                 evw_queue_logic_output,
@@ -142,6 +148,7 @@ impl LogicDriver {
                         Some(wire_color_id),
                         logic_block.connection_on(wire_face) == Some(crate::logic::LogicConnection::Wire(WireType::Bus)),
                         structure,
+                        events_by_coords,
                         &mut Port::all_for(coords),
                         blocks,
                         logic_blocks,
@@ -173,6 +180,7 @@ impl LogicDriver {
         coords: BlockCoordinate,
         structure: &Structure,
         entity: Entity,
+        events_by_coords: &HashMap<BlockCoordinate, BlockChangedEvent>,
         blocks: &Registry<Block>,
         logic_blocks: &Registry<LogicBlock>,
         logic_wire_colors: &Registry<LogicWireColor>,
@@ -186,6 +194,9 @@ impl LogicDriver {
                 rotation.direction_of(input_face),
                 PortType::Input,
                 structure,
+                events_by_coords,
+                blocks,
+                logic_blocks,
                 evw_queue_logic_input,
             )
         }
@@ -197,6 +208,9 @@ impl LogicDriver {
                 rotation.direction_of(output_face),
                 PortType::Output,
                 structure,
+                events_by_coords,
+                blocks,
+                logic_blocks,
                 evw_queue_logic_input,
             )
         }
@@ -204,9 +218,15 @@ impl LogicDriver {
         // A block with no wire faces will have an empty wire face colors iterator.
         for wire_color_id in logic_block.wire_face_colors(logic_wire_colors) {
             // Old group ID either comes from being the stored wire coordinate for a group, or searching all your neighbors.
-            let old_group_id = self
-                .logic_graph
-                .get_wire_group(coords, wire_color_id, logic_block, structure, blocks, logic_blocks);
+            let old_group_id = self.logic_graph.get_wire_group(
+                coords,
+                wire_color_id,
+                logic_block,
+                structure,
+                events_by_coords,
+                blocks,
+                logic_blocks,
+            );
             let was_on = self.logic_graph.get_group(old_group_id).on();
 
             // Setting new group IDs.
@@ -225,6 +245,7 @@ impl LogicDriver {
                     wire_color_id,
                     logic_block.connection_on(wire_face) == Some(LogicConnection::Wire(WireType::Bus)),
                     structure,
+                    events_by_coords,
                     &mut visited,
                     blocks,
                     logic_blocks,

@@ -10,7 +10,7 @@ use bevy::{
     },
     reflect::Reflect,
     time::common_conditions::on_timer,
-    utils::HashSet,
+    utils::{HashMap, HashSet},
 };
 use logic_driver::LogicDriver;
 use logic_graph::{LogicGraph, LogicGroup};
@@ -344,7 +344,7 @@ fn listen_for_changed_logic_data(
     );
 }
 
-fn logic_block_placed_event_listener(
+fn logic_block_changed_event_listener(
     mut evr_block_changed: EventReader<BlockChangedEvent>,
     blocks: Res<Registry<Block>>,
     logic_blocks: Res<Registry<LogicBlock>>,
@@ -357,48 +357,59 @@ fn logic_block_placed_event_listener(
     mut evw_queue_logic_output: EventWriter<QueueLogicOutputEvent>,
     mut evw_queue_logic_input: EventWriter<QueueLogicInputEvent>,
 ) {
-    for ev in evr_block_changed.read() {
-        // If was logic block, remove from the logic graph.
-        if let Some(logic_block) = logic_blocks.from_id(blocks.from_numeric_id(ev.old_block).unlocalized_name()) {
-            if let Ok(structure) = q_structure.get_mut(ev.block.structure()) {
-                if let Ok(mut logic) = q_logic.get_mut(ev.block.structure()) {
-                    logic.remove_logic_block(
-                        logic_block,
-                        ev.old_block_rotation(),
-                        ev.block.coords(),
-                        &structure,
-                        structure.get_entity().expect("Structure should have entity."),
-                        &blocks,
-                        &logic_blocks,
-                        &logic_wire_colors,
-                        &mut evw_queue_logic_output,
-                        &mut evw_queue_logic_input,
-                    )
+    // We group the events by entity so we can track the block changes the previous events made.
+    let entities = evr_block_changed.read().map(|ev| ev.block.structure()).collect::<HashSet<Entity>>();
+    for entity in entities {
+        let current_entity_events = evr_block_changed.read().filter(|ev| ev.block.structure() == entity);
+        let mut events_by_coords: HashMap<BlockCoordinate, BlockChangedEvent> = HashMap::new();
+        for ev in current_entity_events {
+            // If was logic block, remove from the logic graph.
+            if let Some(logic_block) = logic_blocks.from_id(blocks.from_numeric_id(ev.old_block).unlocalized_name()) {
+                if let Ok(structure) = q_structure.get_mut(ev.block.structure()) {
+                    if let Ok(mut logic) = q_logic.get_mut(ev.block.structure()) {
+                        logic.remove_logic_block(
+                            logic_block,
+                            ev.old_block_rotation(),
+                            ev.block.coords(),
+                            &structure,
+                            entity,
+                            &events_by_coords,
+                            &blocks,
+                            &logic_blocks,
+                            &logic_wire_colors,
+                            &mut evw_queue_logic_output,
+                            &mut evw_queue_logic_input,
+                        )
+                    }
                 }
             }
-        }
 
-        // If is now logic block, add to the logic graph.
-        if let Some(logic_block) = logic_blocks.from_id(blocks.from_numeric_id(ev.new_block).unlocalized_name()) {
-            if let Ok(mut structure) = q_structure.get_mut(ev.block.structure()) {
-                if let Ok(mut logic) = q_logic.get_mut(ev.block.structure()) {
-                    let coords = ev.block.coords();
-                    logic.add_logic_block(
-                        logic_block,
-                        ev.new_block_rotation(),
-                        coords,
-                        &structure,
-                        structure.get_entity().expect("Structure should have entity"),
-                        &blocks,
-                        &logic_blocks,
-                        &logic_wire_colors,
-                        &mut evw_queue_logic_output,
-                        &mut evw_queue_logic_input,
-                    );
-                    // Add the logic block's internal data storage to the structure.
-                    structure.insert_block_data(coords, BlockLogicData(0), &mut bs_params, &mut q_block_data, &q_has_data);
+            // If is now logic block, add to the logic graph.
+            if let Some(logic_block) = logic_blocks.from_id(blocks.from_numeric_id(ev.new_block).unlocalized_name()) {
+                if let Ok(mut structure) = q_structure.get_mut(ev.block.structure()) {
+                    if let Ok(mut logic) = q_logic.get_mut(ev.block.structure()) {
+                        let coords = ev.block.coords();
+                        logic.add_logic_block(
+                            logic_block,
+                            ev.new_block_rotation(),
+                            coords,
+                            &structure,
+                            entity,
+                            &events_by_coords,
+                            &blocks,
+                            &logic_blocks,
+                            &logic_wire_colors,
+                            &mut evw_queue_logic_output,
+                            &mut evw_queue_logic_input,
+                        );
+                        // Add the logic block's internal data storage to the structure.
+                        structure.insert_block_data(coords, BlockLogicData(0), &mut bs_params, &mut q_block_data, &q_has_data);
+                    }
                 }
             }
+
+            // Add the event we just processed to the HashMap so we can pretend the structure was updated in the coming iterations DFS.
+            events_by_coords.insert(ev.block.coords(), ev.clone());
         }
     }
 }
@@ -540,7 +551,7 @@ pub(super) fn register<T: States>(app: &mut App, playing_state: T) {
         Update,
         (
             add_default_logic.in_set(StructureLoadingSet::AddStructureComponents),
-            logic_block_placed_event_listener.in_set(LogicSystemSet::EditLogicGraph),
+            logic_block_changed_event_listener.in_set(LogicSystemSet::EditLogicGraph),
             queue_logic_producers.in_set(LogicSystemSet::QueueProducers),
             queue_logic_consumers.in_set(LogicSystemSet::QueueConsumers),
             send_queued_logic_events.in_set(LogicSystemSet::SendQueues),
