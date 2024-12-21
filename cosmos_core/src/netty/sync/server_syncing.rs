@@ -187,11 +187,11 @@ fn should_be_sent_to(
     entity_identifier: &ComponentEntityIdentifier,
 ) -> bool {
     match entity_identifier {
-        ComponentEntityIdentifier::Entity(entity) => recursive_should_load(p_loc, *entity, &q_parent),
-        ComponentEntityIdentifier::StructureSystem { structure_entity, .. } => recursive_should_load(p_loc, *structure_entity, &q_parent),
+        ComponentEntityIdentifier::Entity(entity) => recursive_should_load(p_loc, *entity, q_parent),
+        ComponentEntityIdentifier::StructureSystem { structure_entity, .. } => recursive_should_load(p_loc, *structure_entity, q_parent),
         // TODO: This is probably wrong for dynamic structures like planets
-        ComponentEntityIdentifier::BlockData { identifier, .. } => recursive_should_load(p_loc, identifier.block.structure(), &q_parent),
-        ComponentEntityIdentifier::ItemData { inventory_entity, .. } => recursive_should_load(p_loc, *inventory_entity, &q_parent),
+        ComponentEntityIdentifier::BlockData { identifier, .. } => recursive_should_load(p_loc, identifier.block.structure(), q_parent),
+        ComponentEntityIdentifier::ItemData { inventory_entity, .. } => recursive_should_load(p_loc, *inventory_entity, q_parent),
     }
 }
 

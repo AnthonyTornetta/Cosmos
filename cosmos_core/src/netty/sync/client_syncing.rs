@@ -157,11 +157,7 @@ fn client_send_components<T: SyncableComponent>(
             }
 
             let raw_data = if T::needs_entity_conversion() {
-                let mapped = component.clone().convert_entities_client_to_server(&mapping);
-
-                let Some(mapped) = mapped else {
-                    return None;
-                };
+                let mapped = component.clone().convert_entities_client_to_server(&mapping)?;
 
                 bincode::serialize(&mapped)
             } else {
