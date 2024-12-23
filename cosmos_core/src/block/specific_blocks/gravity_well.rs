@@ -16,7 +16,10 @@ use bevy::{
 use bevy_rapier3d::dynamics::{ExternalImpulse, ReadMassProperties};
 use serde::{Deserialize, Serialize};
 
-use crate::{netty::system_sets::NetworkingSystemsSet, structure::coordinates::BlockCoordinate};
+use crate::{
+    netty::{sync::IdentifiableComponent, system_sets::NetworkingSystemsSet},
+    structure::coordinates::BlockCoordinate,
+};
 
 /// This component indicates the entity is under the affects of a gravity well.
 #[derive(Serialize, Deserialize, Component, Clone, Copy, Debug, Reflect)]
@@ -27,6 +30,12 @@ pub struct GravityWell {
     pub structure_entity: Entity,
     /// The block this gravity well is from
     pub block: BlockCoordinate,
+}
+
+impl IdentifiableComponent for GravityWell {
+    fn get_component_unlocalized_name() -> &'static str {
+        "cosmos:gravity_well"
+    }
 }
 
 fn do_gravity_well(

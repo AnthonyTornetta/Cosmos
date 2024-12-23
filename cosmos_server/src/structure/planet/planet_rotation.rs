@@ -22,7 +22,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     init::init_world::ServerSeed,
-    persistence::make_persistent::{make_persistent, PersistentComponent},
+    persistence::make_persistent::{make_persistent, DefaultPersistentComponent},
     rng::get_rng_for_sector,
 };
 
@@ -40,7 +40,7 @@ impl IdentifiableComponent for PlanetRotation {
     }
 }
 
-impl PersistentComponent for PlanetRotation {}
+impl DefaultPersistentComponent for PlanetRotation {}
 
 // WARNING: This is duplicated in the client's `rotate_around_planet.rs` file.
 fn within_rotation_range(planet: &Structure, planet_loc: &Location, your_loc: &Location) -> bool {

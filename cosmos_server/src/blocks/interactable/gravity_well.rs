@@ -25,9 +25,16 @@ use cosmos_core::{
         cosmos_encoder, server_replication::ReplicationMessage, sync::server_entity_syncing::RequestedEntityEvent,
         system_sets::NetworkingSystemsSet, NettyChannelServer,
     },
+    prelude::BlockCoordinate,
     registry::{identifiable::Identifiable, Registry},
     state::GameState,
     structure::Structure,
+};
+use serde::{Deserialize, Serialize};
+
+use crate::persistence::{
+    make_persistent::{make_persistent, EntityIdManager, PersistentComponent, SelfOrEntityIdType},
+    EntityId,
 };
 
 fn grav_well_handle_block_event(
@@ -152,7 +159,49 @@ fn on_request_under_grav(
     }
 }
 
+/// The serialized version of a gravity well.
+///
+/// Only public because the trait requires it to be public. Don't use this.
+#[derive(Serialize, Deserialize)]
+pub struct SerializedGravityWell {
+    /// g_constant * mass = force
+    g_constant: Vec3,
+    /// The structure this gravity well is for
+    structure_entity_id: EntityId,
+    /// The block this gravity well is from
+    block: BlockCoordinate,
+}
+
+impl PersistentComponent for GravityWell {
+    type EntityIdType = SerializedGravityWell;
+
+    fn convert_to_entity_type<'a>(&'a self, q_entity_ids: &Query<&EntityId>) -> Option<SelfOrEntityIdType<'a, SerializedGravityWell>> {
+        q_entity_ids
+            .get(self.structure_entity)
+            .map(|x| {
+                SelfOrEntityIdType::EntityIdType(Box::new(SerializedGravityWell {
+                    block: self.block,
+                    g_constant: self.g_constant,
+                    structure_entity_id: x.clone(),
+                }))
+            })
+            .ok()
+    }
+
+    fn convert_from_entity_id_type(e_id_type: Self::EntityIdType, entity_id_manager: &EntityIdManager) -> Option<Self> {
+        entity_id_manager
+            .entity_from_entity_id(&e_id_type.structure_entity_id)
+            .map(|e| Self {
+                structure_entity: e,
+                g_constant: e_id_type.g_constant,
+                block: e_id_type.block,
+            })
+    }
+}
+
 pub(super) fn register(app: &mut App) {
+    make_persistent::<GravityWell>(app);
+
     app.add_systems(
         Update,
         (

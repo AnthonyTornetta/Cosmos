@@ -18,7 +18,7 @@ use cosmos_core::{
 };
 use serde::{Deserialize, Serialize};
 
-use crate::persistence::make_persistent::{make_persistent, PersistentComponent};
+use crate::persistence::make_persistent::{make_persistent, DefaultPersistentComponent};
 
 #[derive(Default, Component, Debug, Reflect, Serialize, Deserialize, Clone, Copy, PartialEq)]
 /// The time (in seconds) since this physcal item was created.
@@ -30,9 +30,9 @@ impl IdentifiableComponent for TimeSinceSpawn {
     }
 }
 
-impl PersistentComponent for TimeSinceSpawn {}
+impl DefaultPersistentComponent for TimeSinceSpawn {}
 
-impl PersistentComponent for PhysicalItem {}
+impl DefaultPersistentComponent for PhysicalItem {}
 
 const PHYSICAL_ITEM_LIFETIME: Duration = Duration::from_mins(5);
 
