@@ -1,7 +1,5 @@
 //! Streamlines the serialization & deserialization of components
 
-use std::borrow::Cow;
-
 use bevy::{
     app::{App, Update},
     ecs::{
@@ -19,6 +17,7 @@ use cosmos_core::{
     events::block_events::BlockDataSystemParams,
     netty::sync::IdentifiableComponent,
     structure::{chunk::netty::SerializedBlockData, coordinates::ChunkBlockCoordinate, loading::StructureLoadingSet, Structure},
+    utils::ownership::MaybeOwned,
 };
 use serde::{de::DeserializeOwned, Serialize};
 
@@ -35,7 +34,7 @@ fn save_component<T: PersistentComponent>(
     q_entity_ids: Query<&EntityId>,
 ) {
     q_needs_saved.iter_mut().for_each(|(entity, mut serialized_data, component)| {
-        let Some(entity_id_type) = component.convert_to_save_type(&q_entity_ids) else {
+        let Some(save_type) = component.convert_to_save_type(&q_entity_ids) else {
             error!(
                 "Unable to convert to entity id type for {} on entity {entity:?}. This component will not be saved.",
                 T::get_component_unlocalized_name()
@@ -43,12 +42,7 @@ fn save_component<T: PersistentComponent>(
             return;
         };
 
-        let save_data = match &entity_id_type {
-            MaybeOwned::Borrowed(t) => *t,
-            MaybeOwned::Owned(t) => t.as_ref(),
-        };
-
-        serialized_data.serialize_data(T::get_component_unlocalized_name(), save_data);
+        serialized_data.serialize_data(T::get_component_unlocalized_name(), save_type.as_ref());
     });
 }
 
@@ -62,7 +56,7 @@ fn save_component_block_data<T: PersistentComponent>(
             .get_mut(parent.get())
             .expect("Block data's parent didn't have SerializedBlockData???");
 
-        let Some(entity_id_type) = component.convert_to_save_type(&q_entity_ids) else {
+        let Some(save_type) = component.convert_to_save_type(&q_entity_ids) else {
             error!(
                 "Unable to convert to entity id type for {} on entity {entity:?}. This component will not be saved.",
                 T::get_component_unlocalized_name()
@@ -70,15 +64,10 @@ fn save_component_block_data<T: PersistentComponent>(
             return;
         };
 
-        let save_data = match &entity_id_type {
-            MaybeOwned::Borrowed(t) => *t,
-            MaybeOwned::Owned(t) => t.as_ref(),
-        };
-
         serialized_block_data.serialize_data(
             ChunkBlockCoordinate::for_block_coordinate(block_data.identifier.block.coords()),
             T::get_component_unlocalized_name(),
-            save_data,
+            save_type.as_ref(),
         );
     });
 }
@@ -163,25 +152,6 @@ impl<'w, 's> EntityIdManager<'w, 's> {
     pub fn entity_from_entity_id(&self, e_id: &EntityId) -> Option<Entity> {
         // TODO: Make this a O(1) lookup
         self.q_entity_ids.iter().find(|(_, eid)| *eid == e_id).map(|x| x.0)
-    }
-}
-
-/// A [`Cow`] without the ability to clone the borrowed version.
-///
-/// Represents a piece of data (T) that is either owned or borrowed.
-pub enum MaybeOwned<'a, T> {
-    /// The data is owned by this
-    Owned(Box<T>),
-    /// The data is borrowed by this
-    Borrowed(&'a T),
-}
-
-impl<'a, T> AsRef<T> for MaybeOwned<'a, T> {
-    fn as_ref(&self) -> &T {
-        match self {
-            Self::Owned(owned) => owned.as_ref(),
-            Self::Borrowed(ref borrowed) => borrowed,
-        }
     }
 }
 

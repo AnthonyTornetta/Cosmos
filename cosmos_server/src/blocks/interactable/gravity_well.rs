@@ -29,11 +29,12 @@ use cosmos_core::{
     registry::{identifiable::Identifiable, Registry},
     state::GameState,
     structure::Structure,
+    utils::ownership::MaybeOwned,
 };
 use serde::{Deserialize, Serialize};
 
 use crate::persistence::{
-    make_persistent::{make_persistent, EntityIdManager, MaybeOwned, PersistentComponent},
+    make_persistent::{make_persistent, EntityIdManager, PersistentComponent},
     EntityId,
 };
 

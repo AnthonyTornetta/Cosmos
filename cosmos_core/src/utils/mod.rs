@@ -4,6 +4,7 @@ use bevy::prelude::App;
 
 pub mod array_utils;
 pub mod ecs;
+pub mod ownership;
 pub mod quat_math;
 pub mod random;
 pub mod smooth_clamp;
