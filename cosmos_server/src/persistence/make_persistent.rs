@@ -1,5 +1,7 @@
 //! Streamlines the serialization & deserialization of components
 
+use std::borrow::Cow;
+
 use bevy::{
     app::{App, Update},
     ecs::{
@@ -33,7 +35,7 @@ fn save_component<T: PersistentComponent>(
     q_entity_ids: Query<&EntityId>,
 ) {
     q_needs_saved.iter_mut().for_each(|(entity, mut serialized_data, component)| {
-        let Some(entity_id_type) = component.convert_to_entity_type(&q_entity_ids) else {
+        let Some(entity_id_type) = component.convert_to_save_type(&q_entity_ids) else {
             error!(
                 "Unable to convert to entity id type for {} on entity {entity:?}. This component will not be saved.",
                 T::get_component_unlocalized_name()
@@ -42,8 +44,8 @@ fn save_component<T: PersistentComponent>(
         };
 
         let save_data = match &entity_id_type {
-            SelfOrEntityIdType::SameType(t) => *t,
-            SelfOrEntityIdType::EntityIdType(t) => t.as_ref(),
+            MaybeOwned::Borrowed(t) => *t,
+            MaybeOwned::Owned(t) => t.as_ref(),
         };
 
         serialized_data.serialize_data(T::get_component_unlocalized_name(), save_data);
@@ -60,7 +62,7 @@ fn save_component_block_data<T: PersistentComponent>(
             .get_mut(parent.get())
             .expect("Block data's parent didn't have SerializedBlockData???");
 
-        let Some(entity_id_type) = component.convert_to_entity_type(&q_entity_ids) else {
+        let Some(entity_id_type) = component.convert_to_save_type(&q_entity_ids) else {
             error!(
                 "Unable to convert to entity id type for {} on entity {entity:?}. This component will not be saved.",
                 T::get_component_unlocalized_name()
@@ -69,8 +71,8 @@ fn save_component_block_data<T: PersistentComponent>(
         };
 
         let save_data = match &entity_id_type {
-            SelfOrEntityIdType::SameType(t) => *t,
-            SelfOrEntityIdType::EntityIdType(t) => t.as_ref(),
+            MaybeOwned::Borrowed(t) => *t,
+            MaybeOwned::Owned(t) => t.as_ref(),
         };
 
         serialized_block_data.serialize_data(
@@ -87,11 +89,11 @@ fn load_component<T: PersistentComponent>(
     entity_id_manager: EntityIdManager,
 ) {
     q_needs_loaded.iter().for_each(|(entity, serialized_data)| {
-        let Some(component_save_data) = serialized_data.deserialize_data::<T::EntityIdType>(T::get_component_unlocalized_name()) else {
+        let Some(component_save_data) = serialized_data.deserialize_data::<T::SaveType>(T::get_component_unlocalized_name()) else {
             return;
         };
 
-        let Some(mut component) = T::convert_from_entity_id_type(component_save_data, &entity_id_manager) else {
+        let Some(mut component) = T::convert_from_save_type(component_save_data, &entity_id_manager) else {
             error!(
                 "Error getting entities needed for component {} for entity {entity:?}",
                 T::get_component_unlocalized_name()
@@ -111,7 +113,6 @@ fn load_component_from_block_data<T: PersistentComponent>(
     mut ev_reader: EventReader<ChunkLoadBlockDataEvent>,
     mut commands: Commands,
     q_has_component: Query<(), With<T>>,
-    q_entity_ids: Query<&EntityId>,
     entity_id_manager: EntityIdManager,
 ) {
     for ev in ev_reader.read() {
@@ -122,11 +123,11 @@ fn load_component_from_block_data<T: PersistentComponent>(
 
         let first = ev.chunk.first_structure_block();
         for (data_coord, serialized) in ev.data.iter() {
-            let Some(component_save_data) = serialized.deserialize_data::<T::EntityIdType>(T::get_component_unlocalized_name()) else {
+            let Some(component_save_data) = serialized.deserialize_data::<T::SaveType>(T::get_component_unlocalized_name()) else {
                 return;
             };
 
-            let Some(mut data) = T::convert_from_entity_id_type(component_save_data, &entity_id_manager) else {
+            let Some(mut data) = T::convert_from_save_type(component_save_data, &entity_id_manager) else {
                 error!(
                     "Error getting entities needed for component {} for block data @ {data_coord} in structure {:?}",
                     T::get_component_unlocalized_name(),
@@ -151,20 +152,37 @@ fn load_component_from_block_data<T: PersistentComponent>(
 }
 
 #[derive(SystemParam)]
+/// Used to efficiently get entities via their [`EntityId`].
 pub struct EntityIdManager<'w, 's> {
     q_entity_ids: Query<'w, 's, (Entity, &'static EntityId)>,
 }
 
 impl<'w, 's> EntityIdManager<'w, 's> {
+    /// Gets an entity from the [`EntityId`] if one exists for that id. This will ONLY retrieve
+    /// entities that are loaded in the world.
     pub fn entity_from_entity_id(&self, e_id: &EntityId) -> Option<Entity> {
         // TODO: Make this a O(1) lookup
         self.q_entity_ids.iter().find(|(_, eid)| *eid == e_id).map(|x| x.0)
     }
 }
 
-pub enum SelfOrEntityIdType<'a, T> {
-    SameType(&'a T),
-    EntityIdType(Box<T>),
+/// A [`Cow`] without the ability to clone the borrowed version.
+///
+/// Represents a piece of data (T) that is either owned or borrowed.
+pub enum MaybeOwned<'a, T> {
+    /// The data is owned by this
+    Owned(Box<T>),
+    /// The data is borrowed by this
+    Borrowed(&'a T),
+}
+
+impl<'a, T> AsRef<T> for MaybeOwned<'a, T> {
+    fn as_ref(&self) -> &T {
+        match self {
+            Self::Owned(owned) => owned.as_ref(),
+            Self::Borrowed(ref borrowed) => borrowed,
+        }
+    }
 }
 
 /// This component will be saved & loaded when the entity it is a part of is saved/unloaded.
@@ -172,19 +190,33 @@ pub enum SelfOrEntityIdType<'a, T> {
 /// For most purposes, you should implement [`DefaultPersistentComponent`] instead of this
 /// directly. Implement this if you need to convert entities to entity id types.
 pub trait PersistentComponent: IdentifiableComponent + Sized {
-    type EntityIdType: Serialize + DeserializeOwned;
+    /// The type of data that this component will be serialized to.
+    ///
+    /// Normally, this is the same as self (which is what [`DefaultPersistentComponent`] uses), but
+    /// in some cases you may want to store different data to the disk than what is used at
+    /// runtime.
+    type SaveType: Serialize + DeserializeOwned;
 
     /// Initializes this component before adding it to this entity
     ///
     /// Mostly used to clear out any junk data that got saved
     fn initialize(&mut self, _self_entity: Entity, _commands: &mut Commands) {}
 
-    fn convert_to_entity_type<'a>(&'a self, q_entity_ids: &Query<&EntityId>) -> Option<SelfOrEntityIdType<'a, Self::EntityIdType>>;
-    fn convert_from_entity_id_type(e_id_type: Self::EntityIdType, entity_id_manager: &EntityIdManager) -> Option<Self>;
+    /// Converts this component to its savable datatype. Most times, returning self here is fine,
+    /// but in the case you need to serialize different data than what is present at runtime (for
+    /// instance storing [`EntityId`]s instead of raw [`Entity`]s) you can use this and its pair
+    /// [`PersistentComponent::convert_from_save_type`].
+    fn convert_to_save_type<'a>(&'a self, q_entity_ids: &Query<&EntityId>) -> Option<MaybeOwned<'a, Self::SaveType>>;
+
+    /// Converts this component's save type to its component datatype. Most times, returning self here is fine,
+    /// but in the case you need to serialize different data than what is present at runtime (for
+    /// instance storing [`EntityId`]s instead of raw [`Entity`]s) you can use this and its pair
+    /// [`PersistentComponent::convert_to_save_type`].
+    fn convert_from_save_type(e_id_type: Self::SaveType, entity_id_manager: &EntityIdManager) -> Option<Self>;
 }
 
 /// This component will be saved & loaded when the entity it is a part of is saved/unloaded.
-pub trait DefaultPersistentComponent: PersistentComponent<EntityIdType = Self> {
+pub trait DefaultPersistentComponent: PersistentComponent<SaveType = Self> {
     /// Initializes this component before adding it to this entity
     ///
     /// Mostly used to clear out any junk data that got saved
@@ -195,17 +227,17 @@ impl<T> PersistentComponent for T
 where
     T: DefaultPersistentComponent + Serialize + DeserializeOwned,
 {
-    type EntityIdType = Self;
+    type SaveType = Self;
 
     fn initialize(&mut self, self_entity: Entity, commands: &mut Commands) {
         DefaultPersistentComponent::initialize(self, self_entity, commands);
     }
 
-    fn convert_to_entity_type<'a>(&'a self, _: &Query<&EntityId>) -> Option<SelfOrEntityIdType<'a, Self::EntityIdType>> {
-        Some(SelfOrEntityIdType::SameType(self))
+    fn convert_to_save_type<'a>(&'a self, _: &Query<&EntityId>) -> Option<MaybeOwned<'a, Self::SaveType>> {
+        Some(MaybeOwned::Borrowed(self))
     }
 
-    fn convert_from_entity_id_type(e_id_type: Self::EntityIdType, _: &EntityIdManager) -> Option<Self> {
+    fn convert_from_save_type(e_id_type: Self::SaveType, _: &EntityIdManager) -> Option<Self> {
         Some(e_id_type)
     }
 }

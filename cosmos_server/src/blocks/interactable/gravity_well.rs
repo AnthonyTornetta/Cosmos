@@ -33,7 +33,7 @@ use cosmos_core::{
 use serde::{Deserialize, Serialize};
 
 use crate::persistence::{
-    make_persistent::{make_persistent, EntityIdManager, PersistentComponent, SelfOrEntityIdType},
+    make_persistent::{make_persistent, EntityIdManager, MaybeOwned, PersistentComponent},
     EntityId,
 };
 
@@ -173,13 +173,13 @@ pub struct SerializedGravityWell {
 }
 
 impl PersistentComponent for GravityWell {
-    type EntityIdType = SerializedGravityWell;
+    type SaveType = SerializedGravityWell;
 
-    fn convert_to_entity_type<'a>(&'a self, q_entity_ids: &Query<&EntityId>) -> Option<SelfOrEntityIdType<'a, SerializedGravityWell>> {
+    fn convert_to_save_type<'a>(&'a self, q_entity_ids: &Query<&EntityId>) -> Option<MaybeOwned<'a, SerializedGravityWell>> {
         q_entity_ids
             .get(self.structure_entity)
             .map(|x| {
-                SelfOrEntityIdType::EntityIdType(Box::new(SerializedGravityWell {
+                MaybeOwned::Owned(Box::new(SerializedGravityWell {
                     block: self.block,
                     g_constant: self.g_constant,
                     structure_entity_id: x.clone(),
@@ -188,7 +188,7 @@ impl PersistentComponent for GravityWell {
             .ok()
     }
 
-    fn convert_from_entity_id_type(e_id_type: Self::EntityIdType, entity_id_manager: &EntityIdManager) -> Option<Self> {
+    fn convert_from_save_type(e_id_type: Self::SaveType, entity_id_manager: &EntityIdManager) -> Option<Self> {
         entity_id_manager
             .entity_from_entity_id(&e_id_type.structure_entity_id)
             .map(|e| Self {
