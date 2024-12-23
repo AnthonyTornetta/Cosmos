@@ -164,6 +164,8 @@ fn lerp_towards(
                     let final_trans = parent_rot.inverse().mul_vec3(rel_trans);
 
                     transform.translation = final_trans;
+                } else {
+                    error!("Missing parent for netty rigidbody location with relative flag for entity {entity:?}!");
                 }
             }
         };
@@ -401,11 +403,13 @@ pub(crate) fn client_sync_players(
                 let mut loc = match body.location {
                     NettyRigidBodyLocation::Absolute(location) => location,
                     NettyRigidBodyLocation::Relative(rel_trans, entity) => {
-                        let parent_loc = query_body.get(entity).map(|x| x.0.copied()).unwrap_or(None).unwrap_or_default();
+                        let parent_loc = query_body.get(entity).map(|x| x.0.copied()).ok().flatten().unwrap_or_default();
 
                         parent_loc + rel_trans
                     }
                 };
+
+                error!("Player starting loc: {loc:?}");
 
                 // this will avoid any position mismatching
                 loc.last_transform_loc = Some(loc.local);
@@ -1038,9 +1042,18 @@ fn player_changed_parent(
         .mul_vec3((*player_loc - *parent_loc).absolute_coords_f32());
 }
 
+fn log_player_loc(q_ploc: Query<&Location, With<LocalPlayer>>) {
+    if let Ok(loc) = q_ploc.get_single() {
+        info!("PLOC: {loc:?}");
+    } else {
+        error!("NO PLOC!!!");
+    }
+}
+
 pub(super) fn register(app: &mut App) {
     app.insert_resource(RequestedEntities::default())
         .configure_sets(Update, LocationPhysicsSet::DoPhysics)
+        .add_systems(Update, log_player_loc)
         .add_systems(
             Update,
             (
