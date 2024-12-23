@@ -141,9 +141,11 @@ fn generate_stars(
 pub(super) fn register(app: &mut App) {
     app.add_systems(
         Update,
-        (generate_stars.in_set(SystemGenerationSet::Star), load_stars_in_universe)
+        (
+            generate_stars.in_set(SystemGenerationSet::Star),
+            load_stars_in_universe.in_set(NetworkingSystemsSet::Between),
+        )
             .chain()
-            .in_set(NetworkingSystemsSet::Between)
             .run_if(in_state(GameState::Playing)),
     )
     .add_systems(

@@ -188,9 +188,11 @@ fn spawn_planets(
 pub(super) fn register(app: &mut App) {
     app.add_systems(
         Update,
-        (spawn_planets.in_set(SystemGenerationSet::Planet), monitor_planets_to_spawn)
+        (
+            spawn_planets.in_set(SystemGenerationSet::Planet),
+            monitor_planets_to_spawn.in_set(NetworkingSystemsSet::Between),
+        )
             .chain()
-            .in_set(NetworkingSystemsSet::Between)
             .run_if(in_state(GameState::Playing)),
     )
     .insert_resource(CachedSectors::default());

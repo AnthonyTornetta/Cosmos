@@ -81,7 +81,7 @@ fn save_player_link(
     q_serialized_data: Query<(&SerializedData, &EntityId, Option<&LoadingDistance>)>,
 ) {
     for (entity, e_id, player, loc) in q_player_needs_saved.iter() {
-        info!("Saving player {player:?} @ {loc}");
+        info!("Saving player {player:?} ({entity:?}) @ {loc}");
         let _ = fs::create_dir_all(PLAYER_LINK_PATH);
 
         let sfi = calculate_sfi(entity, &q_parent, &q_entity_id, &q_serialized_data).expect("Missing save file identifier for player!");
