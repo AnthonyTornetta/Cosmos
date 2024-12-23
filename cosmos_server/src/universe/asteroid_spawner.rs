@@ -171,9 +171,11 @@ fn generate_asteroids(mut commands: Commands, q_players: Query<&Location, With<P
 pub(super) fn register(app: &mut App) {
     app.add_systems(
         Update,
-        (spawn_asteroids.in_set(SystemGenerationSet::Asteroid), generate_asteroids)
+        (
+            spawn_asteroids.in_set(SystemGenerationSet::Asteroid),
+            generate_asteroids.in_set(NetworkingSystemsSet::Between),
+        )
             .chain()
-            .in_set(NetworkingSystemsSet::Between)
             .run_if(in_state(GameState::Playing)),
     )
     .insert_resource(CachedSectors::default());

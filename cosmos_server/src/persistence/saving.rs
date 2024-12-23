@@ -11,13 +11,14 @@ use bevy::{
     core::Name,
     ecs::schedule::{IntoSystemSetConfigs, SystemSet},
     hierarchy::Parent,
-    log::{error, warn},
+    log::{error, info, warn},
     prelude::{App, Commands, Component, Entity, First, IntoSystemConfigs, Or, Query, ResMut, Transform, With, Without},
     reflect::Reflect,
 };
 use bevy_rapier3d::prelude::Velocity;
 use cosmos_core::{
     ecs::{despawn_needed, NeedsDespawned},
+    entities::player::Player,
     netty::cosmos_encoder,
     persistence::LoadingDistance,
     physics::location::Location,
@@ -158,6 +159,7 @@ fn done_saving(
             &EntityId,
             Option<&LoadingDistance>,
             Option<&SaveFileIdentifier>,
+            Option<&Player>,
         ),
         With<NeedsSaved>,
     >,
@@ -179,7 +181,7 @@ fn done_saving(
         }
     }
 
-    for (entity, name, sd, entity_id, loading_distance, mut save_file_identifier) in q_needs_saved.iter() {
+    for (entity, name, sd, entity_id, loading_distance, mut save_file_identifier, player) in q_needs_saved.iter() {
         commands.entity(entity).remove::<NeedsSaved>().remove::<SerializedData>();
 
         if !sd.should_save() {
@@ -233,6 +235,10 @@ fn done_saving(
 
         if let Err(e) = write_file(save_file_identifier, &serialized) {
             error!("Unable to save {entity:?}\n{e}");
+        }
+
+        if let Some(player) = player {
+            info!("Saving player data for {player:?} to disk.")
         }
 
         if matches!(&save_file_identifier.identifier_type, SaveFileIdentifierType::Base(_, _, _)) {
