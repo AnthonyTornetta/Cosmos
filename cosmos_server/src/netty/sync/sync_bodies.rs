@@ -1,7 +1,7 @@
 //! Handles the syncing of entity's rigidbodies + velocities
 
 use bevy::prelude::*;
-use bevy_rapier3d::prelude::Velocity;
+use bevy_rapier3d::{plugin::PhysicsSet, prelude::Velocity};
 use bevy_renet2::renet2::RenetServer;
 use cosmos_core::{
     block::data::BlockData,
@@ -18,7 +18,7 @@ use cosmos_core::{
         NettyChannelServer, NoSendEntity,
     },
     persistence::LoadingDistance,
-    physics::location::{add_previous_location, Location},
+    physics::location::{Location, LocationPhysicsSet},
     structure::systems::StructureSystem,
 };
 
@@ -189,7 +189,7 @@ pub(super) fn register(app: &mut App) {
         // in location + transform, but for now it's fine.
         (
             notify_client_of_successful_entity_request,
-            server_sync_bodies.after(add_previous_location),
+            server_sync_bodies.after(LocationPhysicsSet::DoPhysics),
         )
             .in_set(NetworkingSystemsSet::SyncComponents),
     )

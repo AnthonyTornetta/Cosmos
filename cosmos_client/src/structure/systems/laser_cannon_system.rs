@@ -35,9 +35,8 @@ fn apply_shooting_sound(
             continue;
         };
 
-        let mut location = *ship_location;
+        let location = *ship_location;
         let translation = ship_global_transform.translation();
-        location.last_transform_loc = Some(ship_global_transform.translation());
 
         let idx = rand::random::<usize>() % audio_handles.0.len();
 

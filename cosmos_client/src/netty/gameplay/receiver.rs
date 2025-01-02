@@ -37,8 +37,8 @@ use cosmos_core::{
     },
     persistence::LoadingDistance,
     physics::{
-        location::{add_previous_location, handle_child_syncing, CosmosBundleSet, Location, LocationPhysicsSet, SYSTEM_SECTORS},
-        player_world::{PlayerWorld, WorldWithin},
+        location::{CosmosBundleSet, Location, LocationPhysicsSet, SYSTEM_SECTORS},
+        player_world::PlayerWorld,
     },
     registry::Registry,
     state::GameState,
@@ -400,7 +400,7 @@ pub(crate) fn client_sync_players(
                     commands.spawn_empty()
                 };
 
-                let mut loc = match body.location {
+                let loc = match body.location {
                     NettyRigidBodyLocation::Absolute(location) => location,
                     NettyRigidBodyLocation::Relative(rel_trans, entity) => {
                         let parent_loc = query_body.get(entity).map(|x| x.0.copied()).ok().flatten().unwrap_or_default();
@@ -412,7 +412,7 @@ pub(crate) fn client_sync_players(
                 error!("Player starting loc: {loc:?}");
 
                 // this will avoid any position mismatching
-                loc.last_transform_loc = Some(loc.local);
+                // loc.last_transform_loc = Some(loc.local);
 
                 entity_cmds.insert((
                     CosmosPbrBundle {
@@ -737,19 +737,19 @@ pub(crate) fn client_sync_players(
 
                         ecmds.remove_parent();
 
-                        let Ok(Some(ship_trans)) = query_body.get(parent.get()).map(|x| x.1.cloned()) else {
-                            continue;
-                        };
-
-                        let ship_translation = ship_trans.translation;
-
-                        if let Ok((Some(mut loc), Some(mut trans))) = query_body.get_mut(player_entity).map(|x| (x.0, x.1)) {
-                            let cur_trans = trans.translation;
-
-                            trans.translation = cur_trans + ship_translation;
-
-                            loc.last_transform_loc = Some(trans.translation);
-                        }
+                        // let Ok(Some(ship_trans)) = query_body.get(parent.get()).map(|x| x.1.cloned()) else {
+                        //     continue;
+                        // };
+                        //
+                        // let ship_translation = ship_trans.translation;
+                        //
+                        // if let Ok((Some(mut loc), Some(mut trans))) = query_body.get_mut(player_entity).map(|x| (x.0, x.1)) {
+                        //     let cur_trans = trans.translation;
+                        //
+                        //     trans.translation = cur_trans + ship_translation;
+                        //
+                        //     // loc.last_transform_loc = Some(trans.translation);
+                        // }
                     }
                 }
             }
@@ -775,10 +775,10 @@ pub(crate) fn client_sync_players(
                     continue;
                 };
 
-                if let Ok((Some(mut loc), Some(mut trans), _, _, _)) = query_body.get_mut(player_entity) {
-                    trans.translation = (*loc - ship_loc).absolute_coords_f32();
-                    loc.last_transform_loc = Some(trans.translation);
-                }
+                // if let Ok((Some(mut loc), Some(mut trans), _, _, _)) = query_body.get_mut(player_entity) {
+                //     trans.translation = (*loc - ship_loc).absolute_coords_f32();
+                //     loc.last_transform_loc = Some(trans.translation);
+                // }
             }
             ServerReliableMessages::PlayerEnterBuildMode {
                 player_entity,
@@ -951,96 +951,26 @@ fn get_entity_identifier_entity_for_despawning(
     }
 }
 
-/// Handles any just-added locations that need to sync up to their transforms
-fn fix_location(
-    mut query: Query<(Entity, &mut Location, Option<&mut Transform>), (Added<Location>, Without<PlayerWorld>, Without<Parent>)>,
-    player_worlds: Query<(Entity, &Location), With<PlayerWorld>>,
-    mut commands: Commands,
-) {
-    for (entity, mut location, transform) in query.iter_mut() {
-        match player_worlds.get_single() {
-            Ok((pw, loc)) => {
-                let translation = loc.relative_coords_to(&location);
-                if let Some(mut transform) = transform {
-                    transform.translation = translation;
-                } else {
-                    commands
-                        .entity(entity)
-                        .insert((WorldWithin(pw), Transform::from_translation(translation)));
-                }
-                location.last_transform_loc = Some(translation);
-            }
-            _ => {
-                warn!("Something was added with a location before a player world was registered.")
-            }
-        }
-    }
-}
-
-fn sync_transforms_and_locations(
-    mut trans_query_no_parent: Query<(&mut Transform, &mut Location), (Without<PlayerWorld>, Without<Parent>)>,
-    trans_query_with_parent: Query<&Location, (Without<PlayerWorld>, With<Parent>)>,
-    parent_query: Query<&Parent>,
-    player_entity_query: Query<Entity, With<LocalPlayer>>,
-    mut world_query: Query<(&PlayerWorld, &mut Location)>,
-) {
-    for (transform, mut location) in trans_query_no_parent.iter_mut() {
-        if location.last_transform_loc.is_some() {
-            location.apply_updates(transform.translation);
-        }
-    }
-
-    if let Ok((world, mut world_location)) = world_query.get_single_mut() {
-        let mut player_entity = player_entity_query.get(world.player).expect("This player should exist.");
-
-        while let Ok(parent) = parent_query.get(player_entity) {
-            let parent_entity = parent.get();
-            if trans_query_no_parent.contains(parent_entity) {
-                player_entity = parent.get();
-            } else {
-                break;
-            }
-        }
-
-        let location = trans_query_no_parent
-            .get(player_entity)
-            .map(|x| x.1)
-            .or_else(|_| match trans_query_with_parent.get(player_entity) {
-                Ok(loc) => Ok(loc),
-                Err(x) => Err(x),
-            })
-            .expect("The above loop guarantees this is valid");
-
-        world_location.set_from(location);
-
-        // Update transforms of objects within this world.
-        for (mut transform, mut location) in trans_query_no_parent.iter_mut() {
-            let trans = world_location.relative_coords_to(&location);
-            transform.translation = trans;
-            location.last_transform_loc = Some(trans);
-        }
-    }
-}
-
-/// Fixes oddities that happen when changing parent of player
-fn player_changed_parent(
-    q_parent: Query<(&GlobalTransform, &Location)>,
-    mut q_local_player: Query<(&mut Transform, &Location, &Parent), (Changed<Parent>, With<LocalPlayer>)>,
-) {
-    let Ok((mut player_trans, player_loc, parent)) = q_local_player.get_single_mut() else {
-        return;
-    };
-
-    let Ok((parent_trans, parent_loc)) = q_parent.get(parent.get()) else {
-        return;
-    };
-
-    // Because the player's translation is always 0, 0, 0 we need to adjust it so the player is put into the
-    // right spot in its parent.
-    player_trans.translation = Quat::from_affine3(&parent_trans.affine())
-        .inverse()
-        .mul_vec3((*player_loc - *parent_loc).absolute_coords_f32());
-}
+//
+// /// Fixes oddities that happen when changing parent of player
+// fn player_changed_parent(
+//     q_parent: Query<(&GlobalTransform, &Location)>,
+//     mut q_local_player: Query<(&mut Transform, &Location, &Parent), (Changed<Parent>, With<LocalPlayer>)>,
+// ) {
+//     let Ok((mut player_trans, player_loc, parent)) = q_local_player.get_single_mut() else {
+//         return;
+//     };
+//
+//     let Ok((parent_trans, parent_loc)) = q_parent.get(parent.get()) else {
+//         return;
+//     };
+//
+//     // Because the player's translation is always 0, 0, 0 we need to adjust it so the player is put into the
+//     // right spot in its parent.
+//     player_trans.translation = Quat::from_affine3(&parent_trans.affine())
+//         .inverse()
+//         .mul_vec3((*player_loc - *parent_loc).absolute_coords_f32());
+// }
 
 fn log_player_loc(q_ploc: Query<&Location, With<LocalPlayer>>) {
     if let Ok(loc) = q_ploc.get_single() {
@@ -1068,7 +998,7 @@ pub(super) fn register(app: &mut App) {
         .add_systems(
             Update,
             (
-                fix_location,
+                // fix_location,
                 client_sync_players
                     .before(ClientReceiveComponents::ClientReceiveComponents)
                     .in_set(NetworkingSystemsSet::ReceiveMessages)
@@ -1076,24 +1006,24 @@ pub(super) fn register(app: &mut App) {
             )
                 .run_if(in_state(GameState::Playing).or(in_state(GameState::LoadingWorld)))
                 .chain(),
-        )
-        .add_systems(
-            Update,
-            (
-                // Also run first above
-                fix_location,
-                (
-                    lerp_towards,
-                    player_changed_parent,
-                    sync_transforms_and_locations,
-                    handle_child_syncing,
-                    add_previous_location,
-                )
-                    .after(CosmosBundleSet::HandleCosmosBundles)
-                    .chain(),
-            )
-                .in_set(LocationPhysicsSet::DoPhysics)
-                .chain()
-                .run_if(in_state(GameState::Playing)),
         );
+    // .add_systems(
+    //     Update,
+    //     (
+    //         // Also run first above
+    //         fix_location,
+    //         (
+    //             lerp_towards,
+    //             player_changed_parent,
+    //             sync_transforms_and_locations,
+    //             handle_child_syncing,
+    //             add_previous_location,
+    //         )
+    //             .after(CosmosBundleSet::HandleCosmosBundles)
+    //             .chain(),
+    //     )
+    //         .in_set(LocationPhysicsSet::DoPhysics)
+    //         .chain()
+    //         .run_if(in_state(GameState::Playing)),
+    // );
 }

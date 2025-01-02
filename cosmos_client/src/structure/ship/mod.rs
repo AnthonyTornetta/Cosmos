@@ -90,7 +90,7 @@ fn respond_to_collisions(
         // Otherwise just remove the parent if they hit a different structure
         commands.entity(player_entity).remove_parent();
 
-        player_loc.last_transform_loc = Some(player_trans.translation);
+        // player_loc.last_transform_loc = Some(player_trans.translation);
 
         renet_client.send_message(
             NettyChannelClient::Reliable,
@@ -114,7 +114,7 @@ fn remove_parent_when_too_far(
             if player_loc.distance_sqrd(structure_loc).sqrt() >= CHUNK_DIMENSIONSF * 10.0 {
                 commands.entity(player_entity).remove_parent();
 
-                player_loc.last_transform_loc = Some(player_trans.translation);
+                // player_loc.last_transform_loc = Some(player_trans.translation);
 
                 renet_client.send_message(
                     NettyChannelClient::Reliable,

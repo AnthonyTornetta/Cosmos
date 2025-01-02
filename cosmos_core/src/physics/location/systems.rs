@@ -21,9 +21,10 @@ use crate::{
         location::LastTransformTranslation,
         player_world::{PlayerWorld, WorldWithin},
     },
+    state::GameState,
 };
 
-use super::{Location, LocationPhysicsSet, Sector, SetPosition, SECTOR_DIMENSIONS};
+use super::{CosmosBundleSet, Location, LocationPhysicsSet, Sector, SetPosition, SECTOR_DIMENSIONS};
 
 #[derive(Component)]
 struct Anchor;
@@ -106,42 +107,42 @@ fn apply_set_position(
 //     }
 // }
 
-fn set_transform_based_on_location(
-    mut q_q: Query<
-        (
-            &mut Transform,
-            &GlobalTransform,
-            &mut Location,
-            &WorldWithin,
-            &mut LastTransformTranslation,
-            Option<&Parent>,
-        ),
-        Without<PlayerWorld>,
-    >,
-    q_g_trans: Query<&GlobalTransform>,
-    q_physics_world: Query<&Location, With<PlayerWorld>>,
-) {
-    for (mut trans, g_trans, mut loc, world_within, mut last_translation, parent) in q_q.iter_mut() {
-        let Ok(pw_loc) = q_physics_world.get(world_within.0) else {
-            continue;
-        };
-
-        let parent_g_trans = if let Some(parent) = parent {
-            q_g_trans.get(parent.get()).map(|x| *x).unwrap_or_default()
-        } else {
-            Default::default()
-        };
-
-        let absolute_coords_relative_to_world = (*loc - *pw_loc).absolute_coords_f32();
-
-        let local_coords = parent_g_trans.rotation().inverse() * (absolute_coords_relative_to_world - parent_g_trans.translation());
-        trans.translation = local_coords;
-
-        let delta = g_trans.translation() - last_translation.0;
-        *loc = *loc + delta;
-        last_translation.0 = g_trans.translation();
-    }
-}
+// fn set_transform_based_on_location(
+//     mut q_q: Query<
+//         (
+//             &mut Transform,
+//             &GlobalTransform,
+//             &mut Location,
+//             &WorldWithin,
+//             &mut LastTransformTranslation,
+//             Option<&Parent>,
+//         ),
+//         Without<PlayerWorld>,
+//     >,
+//     q_g_trans: Query<&GlobalTransform>,
+//     q_physics_world: Query<&Location, With<PlayerWorld>>,
+// ) {
+//     for (mut trans, g_trans, mut loc, world_within, mut last_translation, parent) in q_q.iter_mut() {
+//         let Ok(pw_loc) = q_physics_world.get(world_within.0) else {
+//             continue;
+//         };
+//
+//         let parent_g_trans = if let Some(parent) = parent {
+//             q_g_trans.get(parent.get()).map(|x| *x).unwrap_or_default()
+//         } else {
+//             Default::default()
+//         };
+//
+//         let absolute_coords_relative_to_world = (*loc - *pw_loc).absolute_coords_f32();
+//
+//         let local_coords = parent_g_trans.rotation().inverse() * (absolute_coords_relative_to_world - parent_g_trans.translation());
+//         trans.translation = local_coords;
+//
+//         let delta = g_trans.translation() - last_translation.0;
+//         *loc = *loc + delta;
+//         last_translation.0 = g_trans.translation();
+//     }
+// }
 
 fn ensure_worlds_have_anchors(
     mut trans_query_no_parent: Query<
@@ -407,9 +408,6 @@ fn remove_empty_worlds(
     }
 }
 
-#[derive(Resource, Default)]
-struct FixParentLocation(Vec<Entity>);
-
 /// Bevy's query mutability rules require this query to be in a separate system than fix_location
 // fn find_need_fixed(
 //     q_added_locations_no_parent: Query<Entity, (Added<Location>, Without<PlayerWorld>, Without<Parent>)>,
@@ -661,16 +659,20 @@ pub(super) fn register(app: &mut App) {
     app.add_systems(
         Update,
         (
-            propagate_transforms, // TODO: Not this
+            propagate_transforms, // TODO: Maybe not this?
             apply_set_position,
             ensure_worlds_have_anchors,
             move_players_between_worlds,
             move_non_players_between_worlds,
+            remove_empty_worlds,
             sync_transforms_and_locations,
+            // set_transform_based_on_location,
             propagate_transforms, // TODO: Maybe not this? Idk
         )
             .chain()
             .in_set(LocationPhysicsSet::DoPhysics)
-            .in_set(NetworkingSystemsSet::Between),
+            .in_set(CosmosBundleSet::HandleCosmosBundles)
+            .in_set(NetworkingSystemsSet::Between)
+            .run_if(in_state(GameState::Playing)),
     );
 }

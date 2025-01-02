@@ -13,26 +13,19 @@
 //! to update the location component rather than the Transform where possible.
 
 use std::{
-    default,
     fmt::Display,
     ops::{Add, AddAssign, Sub},
 };
 
+#[cfg(doc)]
+use bevy::prelude::Transform;
 use bevy::{
-    ecs::schedule::{IntoSystemConfigs, SystemSet},
-    log::warn,
-    prelude::{
-        Added, App, Children, Commands, Component, Deref, DerefMut, Entity, Parent, Quat, Query, Transform, Update, Vec3, With, Without,
-    },
+    prelude::{App, Component, Deref, DerefMut, SystemSet, Update, Vec3},
     reflect::Reflect,
 };
-use bevy_rapier3d::{na::Vector3, plugin::RapierContextEntityLink};
+use bevy_rapier3d::na::Vector3;
 use bigdecimal::{BigDecimal, FromPrimitive};
 use serde::{Deserialize, Serialize};
-
-use crate::ecs::bundles::BundleStartingRotation;
-
-use super::player_world::PlayerWorld;
 
 mod systems;
 
@@ -82,9 +75,14 @@ pub struct Location {
 struct LastTransformTranslation(Vec3);
 
 #[derive(Default, Component, Debug, PartialEq, Eq, Reflect, Clone, Copy)]
+/// Sets the position of this entity based on the specified source of truth
 pub enum SetPosition {
     #[default]
+    /// The source of truth is the [`Location`] component of this entity. The [`Transform`] will be
+    /// updated to match this [`Location`].
     Location,
+    /// The source of truth is the [`Transform`] component of this entity. The [`Location`] will be
+    /// updated to match this [`Transform`].
     Transform,
 }
 
@@ -438,16 +436,6 @@ impl Location {
         self.sector = other.sector;
     }
 
-    /// Applies updates from the new translation of the transform.
-    ///
-    /// This is done automatically, so don't worry about it unless you're doing something fancy.
-    pub fn apply_updates(&mut self, translation: Vec3, last_transform_loc: &mut LastTransformTranslation) {
-        self.local += translation - last_transform_loc.0;
-        self.fix_bounds();
-
-        last_transform_loc.0 = translation;
-    }
-
     /// Returns the coordinates of this location based off 0, 0, 0.
     ///
     /// Useful for very long-distance calculations/displaying
@@ -510,114 +498,6 @@ impl Location {
 /// Stores the location from the previous frame
 pub struct PreviousLocation(pub Location);
 
-/// Adds the previous location component. Put this before the sync bodies & transform
-pub fn add_previous_location(mut query: Query<(Entity, &Location, Option<&mut PreviousLocation>)>, mut commands: Commands) {
-    for (entity, loc, prev_loc) in query.iter_mut() {
-        if let Some(mut prev_loc) = prev_loc {
-            prev_loc.0 = *loc;
-        } else {
-            commands.entity(entity).insert(PreviousLocation(*loc));
-        }
-    }
-}
-
-fn recursively_sync_child(
-    parent_loc: Location,
-    parent_g_trans: Vec3,
-    parent_rot: Quat,
-    ent: Entity,
-    q_data: &mut Query<(&mut Location, &mut Transform, &PreviousLocation), With<Parent>>,
-    q_children: &Query<&Children>,
-) {
-    let Ok((mut my_loc, mut my_transform, my_prev_loc)) = q_data.get_mut(ent) else {
-        return;
-    };
-
-    // Calculates the change in location since the last time this ran
-    let delta_loc = (*my_loc - my_prev_loc.0).absolute_coords_f32();
-
-    // Applies that change to the transform
-    my_transform.translation += parent_rot.inverse().mul_vec3(delta_loc);
-
-    // Calculates how far away the entity was from its parent + its delta location.
-    let transform_delta_parent = parent_rot.mul_vec3(my_transform.translation);
-
-    // Updates the location to be based on the parent's location + your absolute coordinates to your parent.
-    my_loc.set_from(&(parent_loc + transform_delta_parent));
-    // my_loc.last_transform_loc = Some(transform_delta_parent + parent_g_trans);
-
-    let parent_loc = *my_loc;
-    let parent_g_trans = parent_g_trans + parent_rot.mul_vec3(my_transform.translation);
-    let parent_rot = parent_rot.mul_quat(my_transform.rotation);
-
-    if let Ok(children) = q_children.get(ent) {
-        for &child in children.iter() {
-            recursively_sync_child(parent_loc, parent_g_trans, parent_rot, child, q_data, q_children);
-        }
-    }
-}
-
-/// Handles children and their locations.
-pub fn handle_child_syncing(
-    q_top_level: Query<(&Location, &Transform, &Children), Without<Parent>>,
-    mut q_data: Query<(&mut Location, &mut Transform, &PreviousLocation), With<Parent>>,
-    q_children: Query<&Children>,
-) {
-    for (loc, trans, children) in q_top_level.iter() {
-        for &child in children.iter() {
-            recursively_sync_child(*loc, trans.translation, trans.rotation, child, &mut q_data, &q_children);
-        }
-    }
-}
-
-fn on_add_location_without_transform(
-    mut query: Query<
-        (Entity, &mut Location, Option<&BundleStartingRotation>),
-        (Added<Location>, /* Without<Transform>, */ Without<PlayerWorld>),
-    >,
-    q_worlds: Query<(&Location, &RapierContextEntityLink), With<PlayerWorld>>,
-    mut commands: Commands,
-) {
-    for (needs_transform_entity, mut my_loc, starting_rotation) in query.iter_mut() {
-        let mut best_dist = f32::MAX;
-        let mut best_physics_world = None;
-        let mut best_player_world_loc = None;
-
-        for (world_loc, phys_world) in q_worlds.iter() {
-            let dist = world_loc.distance_sqrd(&my_loc);
-
-            if dist < best_dist {
-                best_dist = dist;
-                best_physics_world = Some(*phys_world);
-                best_player_world_loc = Some(world_loc);
-            }
-        }
-
-        let rotation = starting_rotation.map(|x| x.0).unwrap_or(Quat::IDENTITY);
-
-        if let (Some(best_physics_world), Some(best_player_world_loc)) = (best_physics_world, best_player_world_loc) {
-            let transform = Transform::from_translation(best_player_world_loc.relative_coords_to(&my_loc)).with_rotation(rotation);
-
-            my_loc.last_transform_loc = Some(transform.translation);
-
-            commands
-                .entity(needs_transform_entity)
-                .remove::<BundleStartingRotation>()
-                .insert((transform, best_physics_world));
-        } else {
-            warn!("Location bundle added before there was a player world!");
-            let transform = Transform::from_translation(my_loc.absolute_coords_f32()).with_rotation(rotation);
-
-            my_loc.last_transform_loc = Some(transform.translation);
-
-            commands
-                .entity(needs_transform_entity)
-                .remove::<BundleStartingRotation>()
-                .insert(transform);
-        }
-    }
-}
-
 #[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
 /// Handles ordering of systems that rely on custom bundles.
 ///
@@ -632,13 +512,10 @@ pub enum CosmosBundleSet {
 pub(super) fn register(app: &mut App) {
     systems::register(app);
 
+    // TODO: Remove system set
     app.register_type::<Location>()
         .register_type::<PreviousLocation>()
-        .configure_sets(Update, CosmosBundleSet::HandleCosmosBundles)
-        .add_systems(
-            Update,
-            on_add_location_without_transform.in_set(CosmosBundleSet::HandleCosmosBundles),
-        );
+        .configure_sets(Update, CosmosBundleSet::HandleCosmosBundles);
 }
 
 #[cfg(test)]

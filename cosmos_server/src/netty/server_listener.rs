@@ -16,7 +16,7 @@ use cosmos_core::netty::server::ServerLobby;
 use cosmos_core::netty::sync::server_entity_syncing::RequestedEntityEvent;
 use cosmos_core::netty::system_sets::NetworkingSystemsSet;
 use cosmos_core::netty::{cosmos_encoder, NettyChannelClient, NettyChannelServer};
-use cosmos_core::physics::location::Location;
+use cosmos_core::physics::location::{Location, SetPosition};
 use cosmos_core::registry::Registry;
 use cosmos_core::state::GameState;
 use cosmos_core::structure::loading::ChunksNeedLoaded;
@@ -104,8 +104,8 @@ fn server_listen_messages(
                                 }
                             };
 
-                            location.set_from(&new_loc);
-                            location.last_transform_loc = Some(transform.translation);
+                            *location = new_loc;
+                            commands.entity(player_entity).insert(SetPosition::Location);
                             currently_looking.rotation = looking;
                             velocity.linvel = body.body_vel.map(|x| x.linvel).unwrap_or(Vec3::ZERO);
                             transform.rotation = body.rotation;
@@ -285,11 +285,11 @@ fn server_listen_messages(
                         if let Some(mut e) = commands.get_entity(player_entity) {
                             // This should be verified in the future to make sure the parent of the player is actually a ship
                             e.remove_parent();
-                            if let Ok((player_trans, mut player_loc)) =
-                                change_player_query.get_mut(player_entity).map(|(x, y, _, _)| (x, y))
-                            {
-                                player_loc.last_transform_loc = Some(player_trans.translation);
-                            }
+                            // if let Ok((player_trans, mut player_loc)) =
+                            //     change_player_query.get_mut(player_entity).map(|(x, y, _, _)| (x, y))
+                            // {
+                            //     player_loc.last_transform_loc = Some(player_trans.translation);
+                            // }
 
                             server.broadcast_message_except(
                                 client_id,
