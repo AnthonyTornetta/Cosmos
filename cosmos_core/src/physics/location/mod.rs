@@ -287,6 +287,16 @@ impl Add<Vec3> for Location {
     }
 }
 
+impl Add<Self> for Location {
+    type Output = Self;
+
+    fn add(self, rhs: Self) -> Self::Output {
+        let mut loc = Location::new(self.local + rhs.local, self.sector + rhs.sector);
+        loc.fix_bounds();
+        loc
+    }
+}
+
 impl Sub<Vec3> for Location {
     type Output = Location;
 

@@ -571,8 +571,10 @@ fn sync_transforms_and_locations(
 
         recursively_sync_transforms_and_locations(
             *pw_loc,
+            *pw_loc,
             Vec3::ZERO,
             Quat::IDENTITY,
+            Vec3::ZERO,
             entity,
             &mut commands,
             &mut q_data,
@@ -587,6 +589,7 @@ struct PreviousLocation(Location);
 
 fn recursively_sync_transforms_and_locations(
     parent_loc: Location,
+    parent_prev_loc: Location,
     parent_g_trans: Vec3,
     parent_g_rot: Quat,
     parent_delta_g_trans: Vec3,
@@ -605,7 +608,7 @@ fn recursively_sync_transforms_and_locations(
     };
 
     info!("DOING {}", name);
-    let (local_translation, local_rotation) = if let Some(mut my_transform) = my_transform {
+    let (local_translation, local_rotation, delta_g_trans) = if let Some(mut my_transform) = my_transform {
         let mut delta_g_trans = Vec3::ZERO;
 
         if set_trans.is_some() {
@@ -615,28 +618,35 @@ fn recursively_sync_transforms_and_locations(
         } else {
             let g_trans = parent_g_trans + (parent_g_rot * my_transform.translation);
 
+            let parent_delta_loc = parent_loc - parent_prev_loc;
+            *my_loc = *my_loc + parent_delta_loc;
+
             // Calculates the change in location since the last time this ran
             // let delta_loc = (*my_loc - my_prev_loc.map(|x| x.0).unwrap_or(*my_loc)).absolute_coords_f32();
             // info!("G TRANS: {}", g_trans);
             delta_g_trans = last_trans_trans.map(|x| g_trans - x.0).unwrap_or(Vec3::ZERO);
 
-            let my_global_location_trans = (*my_loc - *world_loc).absolute_coords_f32();
-            let my_local_location_trans = parent_g_rot.inverse() * (my_global_location_trans - parent_g_trans);
-            let my_delta_local_trans = delta_g_trans - parent_delta_g_trans;
+            // info!(
+            //     "PRE: {my_loc:?} | TRANS: {} | my_local_location_trans: {my_local_location_based_trans:?}",
+            //     my_transform.translation
+            // );
+
+            let my_delta_local_rotated_trans = delta_g_trans - parent_delta_g_trans;
+            // *my_loc = parent_loc + parent_g_rot * (my_transform.translation + delta_g_trans);
+            *my_loc = *my_loc + my_delta_local_rotated_trans;
+            let my_local_rotated_trans = (*my_loc - parent_loc).absolute_coords_f32();
+            let my_local_location_based_trans = parent_g_rot.inverse() * my_local_rotated_trans;
             // info!("Delta loc: {delta_loc:?}");
-            // info!("Delta G trans: {delta_g_trans:?}");
-            //
-            info!(
-                "PRE: {my_loc:?} | TRANS: {} | my_local_location_trans: {my_local_location_trans:?}",
-                my_transform.translation
-            );
+            info!("Delta G trans: {delta_g_trans:?} | MDLRT: {my_delta_local_rotated_trans} MLRT: {my_local_rotated_trans}");
+
+            my_transform.translation = my_local_location_based_trans;
 
             // Applies that change to the transform
-            my_transform.translation += parent_g_rot.inverse() * delta_loc;
+            // my_transform.translation += parent_g_rot.inverse() * delta_loc;
 
             // Updates the location to be based on the parent's location + your absolute coordinates to your parent.
-            *my_loc = parent_loc + parent_g_rot * (my_transform.translation + delta_g_trans);
-            info!("POST: {my_loc:?} | TRANS: {}", my_transform.translation);
+            // *my_loc = parent_loc + parent_g_rot * (my_transform.translation + delta_g_trans);
+            // info!("POST: {my_loc:?} | TRANS: {}", my_transform.translation);
         }
 
         (my_transform.translation, my_transform.rotation, delta_g_trans)
@@ -661,10 +671,22 @@ fn recursively_sync_transforms_and_locations(
     let my_loc = *my_loc;
     let my_g_trans = my_g_trans;
     let my_g_rot = parent_g_rot.mul_quat(local_rotation);
+    let my_prev_loc = my_prev_loc.map(|x| x.0).unwrap_or(my_loc);
 
     if let Ok(children) = q_children.get(ent) {
         for &child in children.iter() {
-            recursively_sync_transforms_and_locations(my_loc, my_g_trans, my_g_rot, child, commands, q_data, q_children, q_pw);
+            recursively_sync_transforms_and_locations(
+                my_loc,
+                my_prev_loc,
+                my_g_trans,
+                my_g_rot,
+                delta_g_trans,
+                child,
+                commands,
+                q_data,
+                q_children,
+                q_pw,
+            );
         }
     }
 }
