@@ -59,7 +59,8 @@ This takes place within the `Update` schedule, in the `DoPhysics` set.
 ```mermaid
 sequenceDiagram
     Between->>apply_set_position:
-    apply_set_position->>sync_transforms_and_locations:
+    apply_set_position->>handle_worlds
+    handle_worlds->>sync_transforms_and_locations:
     sync_transforms_and_locations->>handle_child_syncing:
     handle_child_syncing->>add_previous_location:
     add_previous_location->>Between:

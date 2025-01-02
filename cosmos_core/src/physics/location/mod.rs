@@ -13,6 +13,7 @@
 //! to update the location component rather than the Transform where possible.
 
 use std::{
+    default,
     fmt::Display,
     ops::{Add, AddAssign, Sub},
 };
@@ -32,6 +33,8 @@ use serde::{Deserialize, Serialize};
 use crate::ecs::bundles::BundleStartingRotation;
 
 use super::player_world::PlayerWorld;
+
+mod systems;
 
 /// This represents the diameter of a sector. So at a local
 /// of 0, 0, 0 you can travel `SECTOR_DIMENSIONS / 2.0` blocks in any direction and
@@ -73,12 +76,16 @@ pub struct Location {
     pub local: Vec3,
     /// The sector coordinates
     pub sector: Sector,
+}
 
-    #[serde(skip)]
-    /// Tracks the last transform location. Do not set this unless you know what you're doing.
-    ///
-    /// This is used to calculate changes in the Transform object & adjust the location accordingly.
-    pub last_transform_loc: Option<Vec3>,
+#[derive(Default, Component, Debug, PartialEq, Serialize, Deserialize, Reflect, Clone, Copy)]
+struct LastTransformTranslation(Vec3);
+
+#[derive(Default, Component, Debug, PartialEq, Eq, Reflect, Clone, Copy)]
+pub enum SetPosition {
+    #[default]
+    Location,
+    Transform,
 }
 
 /// Datatype used to store sector coordinates
@@ -333,11 +340,7 @@ impl Location {
 
     /// Creates a new location at these coordinates
     pub const fn new(local: Vec3, sector: Sector) -> Self {
-        Self {
-            local,
-            sector,
-            last_transform_loc: Some(local),
-        }
+        Self { local, sector }
     }
 
     /// Gets the system coordinates this location is in
@@ -438,14 +441,11 @@ impl Location {
     /// Applies updates from the new translation of the transform.
     ///
     /// This is done automatically, so don't worry about it unless you're doing something fancy.
-    pub fn apply_updates(&mut self, translation: Vec3) {
-        self.local += translation
-            - self
-                .last_transform_loc
-                .expect("last_transform_loc must be set for this to work properly.");
+    pub fn apply_updates(&mut self, translation: Vec3, last_transform_loc: &mut LastTransformTranslation) {
+        self.local += translation - last_transform_loc.0;
         self.fix_bounds();
 
-        self.last_transform_loc = Some(translation);
+        last_transform_loc.0 = translation;
     }
 
     /// Returns the coordinates of this location based off 0, 0, 0.
@@ -544,7 +544,7 @@ fn recursively_sync_child(
 
     // Updates the location to be based on the parent's location + your absolute coordinates to your parent.
     my_loc.set_from(&(parent_loc + transform_delta_parent));
-    my_loc.last_transform_loc = Some(transform_delta_parent + parent_g_trans);
+    // my_loc.last_transform_loc = Some(transform_delta_parent + parent_g_trans);
 
     let parent_loc = *my_loc;
     let parent_g_trans = parent_g_trans + parent_rot.mul_vec3(my_transform.translation);
@@ -630,6 +630,8 @@ pub enum CosmosBundleSet {
 }
 
 pub(super) fn register(app: &mut App) {
+    systems::register(app);
+
     app.register_type::<Location>()
         .register_type::<PreviousLocation>()
         .configure_sets(Update, CosmosBundleSet::HandleCosmosBundles)
