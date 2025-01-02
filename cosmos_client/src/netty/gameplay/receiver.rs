@@ -37,7 +37,7 @@ use cosmos_core::{
     },
     persistence::LoadingDistance,
     physics::{
-        location::{CosmosBundleSet, Location, LocationPhysicsSet, SYSTEM_SECTORS},
+        location::{CosmosBundleSet, Location, LocationPhysicsSet, SetPosition, SYSTEM_SECTORS},
         player_world::PlayerWorld,
     },
     registry::Registry,
