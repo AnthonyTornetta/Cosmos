@@ -10,19 +10,25 @@
 
 use std::time::Duration;
 
-use bevy::{prelude::*, time::common_conditions::on_timer, transform::systems::propagate_transforms, utils::HashSet};
+use bevy::{
+    prelude::*,
+    time::common_conditions::on_timer,
+    transform::systems::{propagate_transforms, sync_simple_transforms},
+    utils::HashSet,
+};
 use bevy_rapier3d::{
     plugin::{DefaultRapierContext, RapierConfiguration, RapierContextEntityLink},
-    prelude::RapierContextSimulation,
+    prelude::{Collider, RapierContextSimulation, RigidBody, Velocity},
 };
 
 use crate::{
     entities::player::Player,
-    netty::system_sets::NetworkingSystemsSet,
+    netty::{client::LocalPlayer, system_sets::NetworkingSystemsSet},
     physics::{
         location::LastTransformTranslation,
         player_world::{PlayerWorld, WorldWithin},
     },
+    prelude::Station,
     state::GameState,
 };
 
@@ -184,6 +190,7 @@ fn ensure_worlds_have_anchors(
 
     mut commands: Commands,
 ) {
+    info!("\n\n\n\n\n\n\nRAN THE PROBLEM\n\n\n\n\n\n\n\n");
     for (world_entity, mut world, mut world_location) in world_query.iter_mut() {
         if let Ok(mut player_entity) = entity_query.get(world.player) {
             while let Ok(parent) = parent_query.get(player_entity) {
@@ -743,6 +750,46 @@ fn recursively_sync_transforms_and_locations(
 //     }
 // }
 
+fn asdf(q_p: Query<(), (Added<Parent>, With<Anchor>)>) {
+    if !q_p.is_empty() {
+        info!("ADDED PARENT TO PLAYER!!!!!!!!!!!!!!!");
+    }
+}
+
+#[derive(Component)]
+struct LeCube;
+
+fn spawn_le_cube(mut meshes: ResMut<Assets<Mesh>>, q_palyer: Query<&Location, With<LocalPlayer>>, mut commands: Commands) {
+    let loc = q_palyer.single();
+    commands.spawn((
+        *loc,
+        SetPosition::Location,
+        Mesh3d(meshes.add(Cuboid::new(0.5, 0.5, 0.5))),
+        Velocity {
+            linvel: Vec3::new(1.0, 0.0, 0.0),
+            ..Default::default()
+        },
+        LeCube,
+        RigidBody::Dynamic,
+        Collider::cuboid(0.5, 0.5, 0.5),
+    ));
+}
+
+// fn swap_le_parent(
+//     mut commands: Commands,
+//     q_station: Query<Entity, With<Station>>,
+//     q_cube: Query<(Entity, Option<&Parent>), With<LeCube>) {
+//     let station = q_station.single();
+//     let (cube_e, c_parent)
+//     = q_cube.single();
+//
+//     if c_parent.is_none() {
+//         commands.entity(cube_e).set_parent(station);
+//     }else {
+//         commands.entity(cube_e).remove_parent();
+//     }
+// }
+
 pub(super) fn register(app: &mut App) {
     /*
     *Between->>apply_set_position:
@@ -756,9 +803,10 @@ pub(super) fn register(app: &mut App) {
     app.add_systems(
         Update,
         (
-            propagate_transforms, // TODO: Maybe not this?
+            (sync_simple_transforms, propagate_transforms).chain(), // TODO: Maybe not this?
+            asdf,
             apply_set_position,
-            ensure_worlds_have_anchors.run_if(on_timer(Duration::from_secs(1))),
+            ensure_worlds_have_anchors.run_if(on_timer(Duration::from_secs(20))),
             #[cfg(feature = "server")]
             (move_players_between_worlds, move_non_players_between_worlds, remove_empty_worlds).chain(),
             sync_transforms_and_locations,

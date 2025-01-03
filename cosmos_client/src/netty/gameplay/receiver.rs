@@ -972,18 +972,9 @@ fn get_entity_identifier_entity_for_despawning(
 //         .mul_vec3((*player_loc - *parent_loc).absolute_coords_f32());
 // }
 
-fn log_player_loc(q_ploc: Query<&Location, With<LocalPlayer>>) {
-    if let Ok(loc) = q_ploc.get_single() {
-        info!("PLOC: {loc:?}");
-    } else {
-        error!("NO PLOC!!!");
-    }
-}
-
 pub(super) fn register(app: &mut App) {
     app.insert_resource(RequestedEntities::default())
         .configure_sets(Update, LocationPhysicsSet::DoPhysics)
-        .add_systems(Update, log_player_loc)
         .add_systems(
             Update,
             (
