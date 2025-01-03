@@ -8,7 +8,9 @@
 //!
 //!
 
-use bevy::{prelude::*, transform::systems::propagate_transforms, utils::HashSet};
+use std::time::Duration;
+
+use bevy::{prelude::*, time::common_conditions::on_timer, transform::systems::propagate_transforms, utils::HashSet};
 use bevy_rapier3d::{
     plugin::{DefaultRapierContext, RapierConfiguration, RapierContextEntityLink},
     prelude::RapierContextSimulation,
@@ -617,27 +619,21 @@ fn recursively_sync_transforms_and_locations(
             info!("SETTING TRANS! - NOW {}", my_transform.translation);
         } else {
             let g_trans = parent_g_trans + (parent_g_rot * my_transform.translation);
+            info!("PARENT G TRANS: {parent_g_trans}");
 
             let parent_delta_loc = parent_loc - parent_prev_loc;
-            *my_loc = *my_loc + parent_delta_loc;
+            delta_g_trans = last_trans_trans.map(|x| g_trans - x.0).unwrap_or(Vec3::ZERO) - parent_delta_g_trans;
 
-            // Calculates the change in location since the last time this ran
-            // let delta_loc = (*my_loc - my_prev_loc.map(|x| x.0).unwrap_or(*my_loc)).absolute_coords_f32();
-            // info!("G TRANS: {}", g_trans);
-            delta_g_trans = last_trans_trans.map(|x| g_trans - x.0).unwrap_or(Vec3::ZERO);
-
-            // info!(
-            //     "PRE: {my_loc:?} | TRANS: {} | my_local_location_trans: {my_local_location_based_trans:?}",
-            //     my_transform.translation
-            // );
-
-            let my_delta_local_rotated_trans = delta_g_trans - parent_delta_g_trans;
-            // *my_loc = parent_loc + parent_g_rot * (my_transform.translation + delta_g_trans);
-            *my_loc = *my_loc + my_delta_local_rotated_trans;
+            *my_loc = *my_loc + delta_g_trans + parent_delta_loc;
             let my_local_rotated_trans = (*my_loc - parent_loc).absolute_coords_f32();
             let my_local_location_based_trans = parent_g_rot.inverse() * my_local_rotated_trans;
             // info!("Delta loc: {delta_loc:?}");
-            info!("Delta G trans: {delta_g_trans:?} | MDLRT: {my_delta_local_rotated_trans} MLRT: {my_local_rotated_trans}");
+            info!(
+                "Delta G trans: {delta_g_trans:?} | PG: {parent_g_trans} OT: {} \
+                | (GT{g_trans} - LT{last_trans_trans:?}) \
+                New Trans: {my_local_rotated_trans}",
+                my_transform.translation
+            );
 
             my_transform.translation = my_local_location_based_trans;
 
@@ -762,7 +758,7 @@ pub(super) fn register(app: &mut App) {
         (
             propagate_transforms, // TODO: Maybe not this?
             apply_set_position,
-            ensure_worlds_have_anchors,
+            ensure_worlds_have_anchors.run_if(on_timer(Duration::from_secs(1))),
             #[cfg(feature = "server")]
             (move_players_between_worlds, move_non_players_between_worlds, remove_empty_worlds).chain(),
             sync_transforms_and_locations,
