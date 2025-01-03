@@ -3,8 +3,8 @@
 use bevy::{
     ecs::event::EventReader,
     prelude::{
-        in_state, App, BuildChildren, Commands, Entity, IntoSystemConfigs, IntoSystemSetConfigs, Parent, Query, ResMut, SystemSet,
-        Transform, Update, With, Without,
+        in_state, App, BuildChildren, BuildChildrenTransformExt, Commands, Entity, IntoSystemConfigs, IntoSystemSetConfigs, Parent, Query,
+        ResMut, SystemSet, Transform, Update, With, Without,
     },
 };
 use bevy_rapier3d::pipeline::CollisionEvent;
@@ -88,7 +88,7 @@ fn respond_to_collisions(
         }
 
         // Otherwise just remove the parent if they hit a different structure
-        commands.entity(player_entity).remove_parent();
+        commands.entity(player_entity).remove_parent_in_place();
 
         // player_loc.last_transform_loc = Some(player_trans.translation);
 
@@ -112,7 +112,7 @@ fn remove_parent_when_too_far(
             }
 
             if player_loc.distance_sqrd(structure_loc).sqrt() >= CHUNK_DIMENSIONSF * 10.0 {
-                commands.entity(player_entity).remove_parent();
+                commands.entity(player_entity).remove_parent_in_place();
 
                 // player_loc.last_transform_loc = Some(player_trans.translation);
 

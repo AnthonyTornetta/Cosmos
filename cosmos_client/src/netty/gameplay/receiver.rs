@@ -305,10 +305,10 @@ pub(crate) fn client_sync_players(
 
                                         if let Ok(parent) = q_parent.get(entity) {
                                             if parent.get() != parent_ent {
-                                                commands.entity(entity).set_parent(parent_ent);
+                                                commands.entity(entity).set_parent_in_place(parent_ent);
                                             }
                                         } else {
-                                            commands.entity(entity).set_parent(parent_ent);
+                                            commands.entity(entity).set_parent_in_place(parent_ent);
                                         }
 
                                         parent_loc + rel_trans
@@ -342,7 +342,7 @@ pub(crate) fn client_sync_players(
                         ));
 
                         if let Some(parent_ent) = parent_ent {
-                            client_entity_ecmds.set_parent(parent_ent);
+                            client_entity_ecmds.set_parent_in_place(parent_ent);
                         }
 
                         let client_entity = client_entity_ecmds.id();
@@ -735,7 +735,7 @@ pub(crate) fn client_sync_players(
                             continue;
                         };
 
-                        ecmds.remove_parent();
+                        ecmds.remove_parent_in_place();
 
                         // let Ok(Some(ship_trans)) = query_body.get(parent.get()).map(|x| x.1.cloned()) else {
                         //     continue;
@@ -769,7 +769,7 @@ pub(crate) fn client_sync_players(
                     continue;
                 };
 
-                ecmds.set_parent(ship_entity);
+                ecmds.set_parent_in_place(ship_entity);
 
                 let Ok(Some(ship_loc)) = query_body.get(ship_entity).map(|x| x.0.cloned()) else {
                     continue;

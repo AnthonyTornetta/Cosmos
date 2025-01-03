@@ -11,7 +11,7 @@ use bevy::{
     hierarchy::{BuildChildren, Parent},
     log::info,
     math::Vec3,
-    prelude::{Res, With},
+    prelude::{BuildChildrenTransformExt, Res, With},
     state::condition::in_state,
 };
 use bevy_renet2::renet2::RenetServer;
@@ -79,7 +79,7 @@ fn grav_well_handle_block_event(
                     g_constant: Vec3::new(0.0, -9.8, 0.0),
                     structure_entity: s_block.structure(),
                 })
-                .set_parent(s_block.structure());
+                .set_parent_in_place(s_block.structure());
         }
     }
 

@@ -4,8 +4,8 @@
 
 use bevy::{
     prelude::{
-        App, BuildChildren, Changed, Commands, Component, Entity, Event, EventReader, EventWriter, IntoSystemConfigs, IntoSystemSetConfigs,
-        Parent, Query, SystemSet, Update, With, Without,
+        App, BuildChildren, BuildChildrenTransformExt, Changed, Commands, Component, Entity, Event, EventReader, EventWriter,
+        IntoSystemConfigs, IntoSystemSetConfigs, Parent, Query, SystemSet, Update, With, Without,
     },
     reflect::Reflect,
 };
@@ -96,7 +96,7 @@ fn enter_build_mode_listener(mut commands: Commands, mut event_reader: EventRead
             .insert(RigidBodyDisabled)
             .insert(RigidBody::Fixed)
             .insert(Sensor)
-            .set_parent(ev.structure_entity);
+            .set_parent_in_place(ev.structure_entity);
     }
 }
 

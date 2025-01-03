@@ -284,7 +284,7 @@ fn server_listen_messages(
                     if let Some(player_entity) = lobby.player_from_id(client_id) {
                         if let Some(mut e) = commands.get_entity(player_entity) {
                             // This should be verified in the future to make sure the parent of the player is actually a ship
-                            e.remove_parent();
+                            e.remove_parent_in_place();
                             // if let Ok((player_trans, mut player_loc)) =
                             //     change_player_query.get_mut(player_entity).map(|(x, y, _, _)| (x, y))
                             // {

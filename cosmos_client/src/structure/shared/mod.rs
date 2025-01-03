@@ -25,7 +25,7 @@ fn remove_self_from_structure(
 ) {
     if let Ok((entity, parent)) = has_parent.get_single() {
         if ship_is_parent.contains(parent.get()) && input_handler.check_just_pressed(CosmosInputs::LeaveShip) {
-            commands.entity(entity).remove_parent();
+            commands.entity(entity).remove_parent_in_place();
 
             renet_client.send_message(
                 NettyChannelClient::Reliable,
