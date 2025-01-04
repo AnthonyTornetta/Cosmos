@@ -8,8 +8,11 @@
 //!
 //!
 
+use std::time::Duration;
+
 use bevy::{
     prelude::*,
+    time::common_conditions::on_real_timer,
     transform::systems::{propagate_transforms, sync_simple_transforms},
     utils::HashSet,
 };
@@ -593,11 +596,16 @@ fn recursively_sync_transforms_and_locations(
             let g_trans = parent_g_trans + (parent_g_rot * my_transform.translation);
 
             let parent_delta_loc = parent_loc - parent_prev_loc;
-            delta_g_trans = last_trans_trans.map(|x| g_trans - x.0).unwrap_or(Vec3::ZERO) - parent_delta_g_trans;
+            delta_g_trans = last_trans_trans.map(|x| g_trans - x.0).unwrap_or(Vec3::ZERO);
 
-            *my_loc = *my_loc + delta_g_trans + parent_delta_loc;
+            let delta_local_trans = delta_g_trans - parent_delta_g_trans;
+
+            *my_loc = *my_loc + delta_local_trans + parent_delta_loc;
             let my_local_rotated_trans = (*my_loc - parent_loc).absolute_coords_f32();
             let my_local_location_based_trans = parent_g_rot.inverse() * my_local_rotated_trans;
+
+            info!("{}: {} -> {}", name, my_transform.translation, my_local_location_based_trans);
+            info!("Delta G trans: {delta_g_trans}; Parent delta g trans: {parent_delta_g_trans}; Local {delta_local_trans}");
 
             my_transform.translation = my_local_location_based_trans;
 
@@ -732,7 +740,7 @@ pub(super) fn register(app: &mut App) {
         (
             (sync_simple_transforms, propagate_transforms).chain(), // TODO: Maybe not this?
             apply_set_position,
-            ensure_worlds_have_anchors, //.run_if(on_timer(Duration::from_secs(1))),
+            ensure_worlds_have_anchors.run_if(on_real_timer(Duration::from_secs(20))),
             #[cfg(feature = "server")]
             (move_players_between_worlds, move_non_players_between_worlds, remove_empty_worlds).chain(),
             sync_transforms_and_locations,
