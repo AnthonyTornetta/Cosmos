@@ -35,7 +35,7 @@ use crate::{
 use super::{CosmosBundleSet, Location, LocationPhysicsSet, Sector, SetPosition, SECTOR_DIMENSIONS};
 
 #[derive(Component)]
-struct Anchor;
+pub struct Anchor;
 
 fn calc_global_trans(entity: Entity, q_trans: &Query<(&Transform, Option<&Parent>)>) -> Option<Transform> {
     let Ok((trans, parent)) = q_trans.get(entity) else {
@@ -152,38 +152,12 @@ fn apply_set_position(
 //     }
 // }
 
-fn do_the_kids(
-    parent_g_trans: Vec3,
-    parent_g_rot: Quat,
-    mut q_trans: Query<
-        (
-            Entity,
-            &mut Transform,
-            &Location,
-            &mut LastTransformTranslation,
-            &WorldWithin,
-            Option<&Children>,
-        ),
-        (Without<PlayerWorld>, With<Parent>),
-    >,
-) {
-}
-
 fn ensure_worlds_have_anchors(
-    mut trans_query_no_parent: Query<
-        (
-            Entity,
-            &mut Transform,
-            &Location,
-            &mut LastTransformTranslation,
-            &WorldWithin,
-            // Option<&Children>,
-        ),
-        (Without<PlayerWorld>, Without<Parent>),
-    >,
-    trans_query_with_parent: Query<(Entity, &mut Transform, &mut Location), (Without<PlayerWorld>, With<Parent>)>,
+    q_loc_no_parent: Query<&Location, (Without<PlayerWorld>, Without<Parent>)>,
+    mut q_everything: Query<(&mut LastTransformTranslation, &mut Transform, &WorldWithin, Option<&Parent>), With<Location>>,
+    trans_query_with_parent: Query<&Location, (Without<PlayerWorld>, With<Parent>)>,
     players_query: Query<(&WorldWithin, Entity), With<Anchor>>,
-    everything_query: Query<(&WorldWithin, Entity)>,
+    #[cfg(feature = "server")] everything_query: Query<(&WorldWithin, Entity)>,
     parent_query: Query<&Parent>,
     entity_query: Query<Entity>,
     mut world_query: Query<(Entity, &mut PlayerWorld, &mut Location)>,
@@ -195,24 +169,33 @@ fn ensure_worlds_have_anchors(
         if let Ok(mut player_entity) = entity_query.get(world.player) {
             while let Ok(parent) = parent_query.get(player_entity) {
                 let parent_entity = parent.get();
-                if trans_query_no_parent.contains(parent_entity) {
+                if q_loc_no_parent.contains(parent_entity) {
                     player_entity = parent.get();
                 } else {
                     break;
                 }
             }
 
-            let Ok(location) = trans_query_no_parent.get(player_entity).map(|(_, _, loc, _, _)| loc).or_else(|_| {
-                match trans_query_with_parent.get(player_entity) {
-                    Ok((_, _, loc)) => Ok(loc),
+            let Ok(location) = q_loc_no_parent
+                .get(player_entity)
+                .or_else(|_| match trans_query_with_parent.get(player_entity) {
+                    Ok(loc) => Ok(loc),
                     Err(x) => Err(x),
-                }
-            }) else {
+                })
+            else {
                 // The player was just added & doesn't have a transform yet - only a location.
                 continue;
             };
 
+            let delta = (*location - *world_location).absolute_coords_f32();
             *world_location = *location;
+
+            for (mut ltt, mut t, _, parent) in q_everything.iter_mut().filter(|(_, _, ww, _)| ww.0 == world_entity) {
+                ltt.0 -= delta;
+                if parent.is_none() {
+                    t.translation -= delta;
+                }
+            }
 
             // // Update transforms of objects within this world.
             // for (_, mut transform, location, mut last_transform_loc, world_within) in trans_query_no_parent.iter_mut() {
@@ -806,7 +789,7 @@ pub(super) fn register(app: &mut App) {
             (sync_simple_transforms, propagate_transforms).chain(), // TODO: Maybe not this?
             asdf,
             apply_set_position,
-            ensure_worlds_have_anchors.run_if(on_timer(Duration::from_secs(20))),
+            ensure_worlds_have_anchors.run_if(on_timer(Duration::from_secs(1))),
             #[cfg(feature = "server")]
             (move_players_between_worlds, move_non_players_between_worlds, remove_empty_worlds).chain(),
             sync_transforms_and_locations,

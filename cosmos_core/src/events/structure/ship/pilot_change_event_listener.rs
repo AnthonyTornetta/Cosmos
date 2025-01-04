@@ -55,6 +55,7 @@ fn event_listener(
                 PilotStartingDelta(delta, delta_rot),
                 RigidBody::Fixed,
                 Sensor,
+                Transform::from_xyz(0.5, -0.25, 0.5),
             ));
         } else if let Some(mut ecmds) = commands.get_entity(ev.structure_entity) {
             ecmds.remove::<Pilot>();
@@ -63,10 +64,10 @@ fn event_listener(
 }
 
 fn add_pilot(mut query: Query<&mut Transform, (Added<Pilot>, With<Player>)>) {
-    for mut trans in query.iter_mut() {
-        trans.translation = Vec3::new(0.5, -0.25, 0.5);
-        trans.rotation = Quat::IDENTITY;
-    }
+    // for mut trans in query.iter_mut() {
+    // trans.translation = Vec3::new(0.5, -0.25, 0.5);
+    // trans.rotation = Quat::IDENTITY;
+    // }
 }
 
 #[derive(Debug, Event)]

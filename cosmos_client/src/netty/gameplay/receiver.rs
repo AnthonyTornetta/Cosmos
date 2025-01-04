@@ -37,7 +37,7 @@ use cosmos_core::{
     },
     persistence::LoadingDistance,
     physics::{
-        location::{CosmosBundleSet, Location, LocationPhysicsSet, SetPosition, SYSTEM_SECTORS},
+        location::{systems::Anchor, CosmosBundleSet, Location, LocationPhysicsSet, SetPosition, SYSTEM_SECTORS},
         player_world::PlayerWorld,
     },
     registry::Registry,
@@ -458,6 +458,7 @@ pub(crate) fn client_sync_players(
                     entity_cmds
                         .insert((
                             LocalPlayer,
+                            Anchor,
                             HeldItemSlot::new(0).unwrap(),
                             RenderDistance::default(),
                             CameraPlayerOffset(camera_offset),
