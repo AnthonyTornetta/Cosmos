@@ -197,8 +197,9 @@ fn server_listen_messages(
                         alternate,
                     });
                 }
-                ClientReliableMessages::CreateShip { name: _name } => {
+                ClientReliableMessages::CreateShip { name } => {
                     let Some(client) = lobby.player_from_id(client_id) else {
+                        warn!("Invalid client id {client_id}");
                         continue;
                     };
 
@@ -221,10 +222,14 @@ fn server_listen_messages(
                     if let Ok((transform, location, looking, _)) = change_player_query.get(client) {
                         let ship_location = *location + transform.rotation.mul_vec3(looking.rotation.mul_vec3(Vec3::new(0.0, 0.0, -4.0)));
 
+                        info!("Creating ship {name}");
+
                         create_ship_event_writer.send(CreateShipEvent {
                             ship_location,
                             rotation: looking.rotation,
                         });
+                    } else {
+                        warn!("Invalid player entity - {client:?}");
                     }
                 }
                 ClientReliableMessages::CreateStation { name: _name } => {

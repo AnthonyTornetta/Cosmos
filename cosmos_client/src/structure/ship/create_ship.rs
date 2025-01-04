@@ -48,6 +48,7 @@ fn listener(
         };
 
         if inventory.can_take_item(ship_core, 1) {
+            info!("Sending create ship event!");
             event_writer.send(CreateShipEvent { name: "Cool name".into() });
         } else {
             info!("Does not have ship core");
@@ -57,6 +58,7 @@ fn listener(
 
 fn event_handler(mut event_reader: EventReader<CreateShipEvent>, mut client: ResMut<RenetClient>) {
     for ev in event_reader.read() {
+        info!("Got create ship event!");
         client.send_message(
             NettyChannelClient::Reliable,
             cosmos_encoder::serialize(&ClientReliableMessages::CreateShip { name: ev.name.clone() }),

@@ -23,7 +23,7 @@ use cosmos_core::{
     },
     persistence::LoadingDistance,
     physics::{
-        location::{Location, Sector},
+        location::{systems::Anchor, Location, Sector, SetPosition},
         player_world::WorldWithin,
     },
     registry::{identifiable::Identifiable, Registry},
@@ -267,6 +267,8 @@ fn finish_loading_player(
                 LoadingDistance::new(2, 9999),
                 ActiveEvents::COLLISION_EVENTS,
                 Name::new(format!("Player ({})", load_player.name())),
+                Anchor,
+                SetPosition::Location,
             ))
             // If we don't remove this, it won't automatically
             // generate a new one when we save the player next

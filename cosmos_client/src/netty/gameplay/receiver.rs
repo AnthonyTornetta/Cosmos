@@ -998,24 +998,26 @@ pub(super) fn register(app: &mut App) {
             )
                 .run_if(in_state(GameState::Playing).or(in_state(GameState::LoadingWorld)))
                 .chain(),
+        )
+        .add_systems(
+            Update,
+            //     (
+            //         // Also run first above
+            //         fix_location,
+            //         (
+            lerp_towards
+                //             player_changed_parent,
+                //             sync_transforms_and_locations,
+                //             handle_child_syncing,
+                //             add_previous_location,
+                //         )
+                //             .after(CosmosBundleSet::HandleCosmosBundles)
+                //             .chain(),
+                //     )
+                //         .in_set(LocationPhysicsSet::DoPhysics)
+                //         .chain()
+                .before(LocationPhysicsSet::DoPhysics)
+                .in_set(NetworkingSystemsSet::Between)
+                .run_if(in_state(GameState::Playing)),
         );
-    // .add_systems(
-    //     Update,
-    //     (
-    //         // Also run first above
-    //         fix_location,
-    //         (
-    //             lerp_towards,
-    //             player_changed_parent,
-    //             sync_transforms_and_locations,
-    //             handle_child_syncing,
-    //             add_previous_location,
-    //         )
-    //             .after(CosmosBundleSet::HandleCosmosBundles)
-    //             .chain(),
-    //     )
-    //         .in_set(LocationPhysicsSet::DoPhysics)
-    //         .chain()
-    //         .run_if(in_state(GameState::Playing)),
-    // );
 }

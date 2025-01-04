@@ -8,31 +8,25 @@
 //!
 //!
 
-use std::time::Duration;
-
 use bevy::{
     prelude::*,
-    time::common_conditions::on_timer,
     transform::systems::{propagate_transforms, sync_simple_transforms},
     utils::HashSet,
 };
 use bevy_rapier3d::{
-    plugin::{DefaultRapierContext, RapierConfiguration, RapierContextEntityLink},
-    prelude::{Collider, RapierContextSimulation, RigidBody, Velocity},
+    plugin::{RapierConfiguration, RapierContextEntityLink},
+    prelude::RapierContextSimulation,
 };
 
 use crate::{
-    entities::player::Player,
-    netty::{client::LocalPlayer, system_sets::NetworkingSystemsSet},
+    netty::system_sets::NetworkingSystemsSet,
     physics::{
         location::LastTransformTranslation,
         player_world::{PlayerWorld, WorldWithin},
     },
-    prelude::Station,
-    state::GameState,
 };
 
-use super::{CosmosBundleSet, Location, LocationPhysicsSet, Sector, SetPosition, SECTOR_DIMENSIONS};
+use super::{Location, LocationPhysicsSet, Sector, SetPosition, SECTOR_DIMENSIONS};
 
 #[derive(Component)]
 pub struct Anchor;
@@ -164,7 +158,6 @@ fn ensure_worlds_have_anchors(
 
     mut commands: Commands,
 ) {
-    info!("\n\n\n\n\n\n\nRAN THE PROBLEM\n\n\n\n\n\n\n\n");
     for (world_entity, mut world, mut world_location) in world_query.iter_mut() {
         if let Ok(mut player_entity) = entity_query.get(world.player) {
             while let Ok(parent) = parent_query.get(player_entity) {
@@ -537,7 +530,6 @@ type TransformLocationQuery<'w, 's> = Query<
     (
         &'static Name,
         &'static WorldWithin,
-        &'static GlobalTransform,
         &'static mut Location,
         Option<&'static mut Transform>,
         Option<&'static PreviousLocation>,
@@ -549,10 +541,9 @@ type TransformLocationQuery<'w, 's> = Query<
 
 /// This system syncs the locations up with their changes in transforms.
 fn sync_transforms_and_locations(
-    q_entities: Query<(Entity, &WorldWithin), (Without<PlayerWorld>, With<Transform>, With<Location>, Without<Parent>)>,
+    q_entities: Query<(Entity, &WorldWithin), (Without<PlayerWorld>, With<Location>, Without<Parent>)>,
     q_loc: Query<&Location, With<PlayerWorld>>,
     mut q_data: TransformLocationQuery,
-    q_pw: Query<&Location, With<PlayerWorld>>,
     q_children: Query<&Children>,
     mut commands: Commands,
 ) {
@@ -571,7 +562,6 @@ fn sync_transforms_and_locations(
             &mut commands,
             &mut q_data,
             &q_children,
-            &q_pw,
         );
     }
 }
@@ -589,27 +579,18 @@ fn recursively_sync_transforms_and_locations(
     commands: &mut Commands,
     q_data: &mut TransformLocationQuery,
     q_children: &Query<&Children>,
-    q_pw: &Query<&Location, With<PlayerWorld>>,
 ) {
-    let Ok((name, world_within, _, mut my_loc, my_transform, my_prev_loc, last_trans_trans, set_trans)) = q_data.get_mut(ent) else {
+    let Ok((name, world_within, mut my_loc, my_transform, my_prev_loc, last_trans_trans, set_trans)) = q_data.get_mut(ent) else {
         return;
     };
 
-    let Ok(world_loc) = q_pw.get(world_within.0) else {
-        return;
-    };
-
-    info!("DOING {}", name);
     let (local_translation, local_rotation, delta_g_trans) = if let Some(mut my_transform) = my_transform {
         let mut delta_g_trans = Vec3::ZERO;
 
         if set_trans.is_some() {
-            info!("SETTING TRANS! - Was {}", my_transform.translation);
             my_transform.translation = parent_g_rot.inverse() * ((*my_loc - parent_loc).absolute_coords_f32());
-            info!("SETTING TRANS! - NOW {}", my_transform.translation);
         } else {
             let g_trans = parent_g_trans + (parent_g_rot * my_transform.translation);
-            info!("PARENT G TRANS: {parent_g_trans}");
 
             let parent_delta_loc = parent_loc - parent_prev_loc;
             delta_g_trans = last_trans_trans.map(|x| g_trans - x.0).unwrap_or(Vec3::ZERO) - parent_delta_g_trans;
@@ -617,13 +598,6 @@ fn recursively_sync_transforms_and_locations(
             *my_loc = *my_loc + delta_g_trans + parent_delta_loc;
             let my_local_rotated_trans = (*my_loc - parent_loc).absolute_coords_f32();
             let my_local_location_based_trans = parent_g_rot.inverse() * my_local_rotated_trans;
-            // info!("Delta loc: {delta_loc:?}");
-            info!(
-                "Delta G trans: {delta_g_trans:?} | PG: {parent_g_trans} OT: {} \
-                | (GT{g_trans} - LT{last_trans_trans:?}) \
-                New Trans: {my_local_rotated_trans}",
-                my_transform.translation
-            );
 
             my_transform.translation = my_local_location_based_trans;
 
@@ -632,17 +606,13 @@ fn recursively_sync_transforms_and_locations(
 
             // Updates the location to be based on the parent's location + your absolute coordinates to your parent.
             // *my_loc = parent_loc + parent_g_rot * (my_transform.translation + delta_g_trans);
-            // info!("POST: {my_loc:?} | TRANS: {}", my_transform.translation);
         }
 
         (my_transform.translation, my_transform.rotation, delta_g_trans)
     } else {
-        info!("SETTING TRANS the odd way!!!!!!");
         let translation = parent_g_rot.inverse() * ((*my_loc - parent_loc).absolute_coords_f32());
 
         commands.entity(ent).insert(Transform::from_translation(translation));
-
-        info!("SETTING TRANS the odd way!!!!!! - is {}", translation);
 
         (translation, Quat::IDENTITY, Vec3::ZERO)
     };
@@ -671,7 +641,6 @@ fn recursively_sync_transforms_and_locations(
                 commands,
                 q_data,
                 q_children,
-                q_pw,
             );
         }
     }
@@ -733,31 +702,6 @@ fn recursively_sync_transforms_and_locations(
 //     }
 // }
 
-fn asdf(q_p: Query<(), (Added<Parent>, With<Anchor>)>) {
-    if !q_p.is_empty() {
-        info!("ADDED PARENT TO PLAYER!!!!!!!!!!!!!!!");
-    }
-}
-
-#[derive(Component)]
-struct LeCube;
-
-fn spawn_le_cube(mut meshes: ResMut<Assets<Mesh>>, q_palyer: Query<&Location, With<LocalPlayer>>, mut commands: Commands) {
-    let loc = q_palyer.single();
-    commands.spawn((
-        *loc,
-        SetPosition::Location,
-        Mesh3d(meshes.add(Cuboid::new(0.5, 0.5, 0.5))),
-        Velocity {
-            linvel: Vec3::new(1.0, 0.0, 0.0),
-            ..Default::default()
-        },
-        LeCube,
-        RigidBody::Dynamic,
-        Collider::cuboid(0.5, 0.5, 0.5),
-    ));
-}
-
 // fn swap_le_parent(
 //     mut commands: Commands,
 //     q_station: Query<Entity, With<Station>>,
@@ -787,9 +731,8 @@ pub(super) fn register(app: &mut App) {
         Update,
         (
             (sync_simple_transforms, propagate_transforms).chain(), // TODO: Maybe not this?
-            asdf,
             apply_set_position,
-            ensure_worlds_have_anchors.run_if(on_timer(Duration::from_secs(1))),
+            ensure_worlds_have_anchors, //.run_if(on_timer(Duration::from_secs(1))),
             #[cfg(feature = "server")]
             (move_players_between_worlds, move_non_players_between_worlds, remove_empty_worlds).chain(),
             sync_transforms_and_locations,
