@@ -1,18 +1,12 @@
 //! Handles client connecting and disconnecting
 
 use bevy::prelude::*;
-use bevy_rapier3d::prelude::*;
 use bevy_renet2::renet2::transport::NetcodeServerTransport;
 use bevy_renet2::renet2::{ClientId, RenetServer, ServerEvent};
 use cosmos_core::ecs::NeedsDespawned;
-use cosmos_core::entities::player::render_distance::RenderDistance;
-use cosmos_core::netty::netty_rigidbody::NettyRigidBodyLocation;
 use cosmos_core::netty::server::ServerLobby;
 use cosmos_core::netty::server_reliable_messages::ServerReliableMessages;
-use cosmos_core::netty::sync::server_entity_syncing::RequestedEntityEvent;
 use cosmos_core::netty::{cosmos_encoder, NettyChannelServer};
-use cosmos_core::physics::location::Location;
-use cosmos_core::{entities::player::Player, netty::netty_rigidbody::NettyRigidBody};
 use renet2_visualizer::RenetServerVisualizer;
 
 use crate::entities::player::persistence::LoadPlayer;
@@ -35,9 +29,7 @@ pub(super) fn handle_server_events(
     mut server_events: EventReader<ServerEvent>,
     mut lobby: ResMut<ServerLobby>,
     mut client_ticks: ResMut<ClientTicks>,
-    q_players: Query<(Entity, &Player, &Transform, &Location, &Velocity, &RenderDistance)>,
     mut visualizer: ResMut<RenetServerVisualizer<200>>,
-    mut requested_entity: EventWriter<RequestedEntityEvent>,
 ) {
     for event in server_events.read() {
         match event {
@@ -45,21 +37,6 @@ pub(super) fn handle_server_events(
                 let client_id = *client_id;
                 info!("Client {client_id} connected");
                 visualizer.add_client(client_id);
-
-                for (entity, player, transform, location, velocity, render_distance) in q_players.iter() {
-                    let body = NettyRigidBody::new(Some(*velocity), transform.rotation, NettyRigidBodyLocation::Absolute(*location));
-
-                    let msg = cosmos_encoder::serialize(&ServerReliableMessages::PlayerCreate {
-                        entity,
-                        id: player.id(),
-                        body,
-                        name: player.name().to_owned(),
-                        render_distance: Some(*render_distance),
-                    });
-
-                    server.send_message(client_id, NettyChannelServer::Reliable, msg);
-                    requested_entity.send(RequestedEntityEvent { client_id, entity });
-                }
 
                 let Some(user_data) = transport.user_data(client_id) else {
                     warn!("Unable to get user data!");

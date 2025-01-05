@@ -248,9 +248,9 @@ fn finish_loading_player(
     mut evw_player_join: EventWriter<PlayerConnectedEvent>,
     mut evw_sync_registries: EventWriter<SyncRegistriesEvent>,
     server_settings: Res<ServerSettings>,
-    q_player_finished_loading: Query<(Entity, &Player, &Location, &Velocity), Added<Player>>,
+    q_player_finished_loading: Query<(Entity, &Player, &Location, &Velocity, Option<&Parent>), Added<Player>>,
 ) {
-    for (player_entity, load_player, location, velocity) in q_player_finished_loading.iter() {
+    for (player_entity, load_player, location, velocity, maybe_parent) in q_player_finished_loading.iter() {
         info!("Completing player load for {}", load_player.name());
         let mut ecmds = commands.entity(player_entity);
 
@@ -285,6 +285,7 @@ fn finish_loading_player(
         info!("Sending player create message!");
         let msg = cosmos_encoder::serialize(&ServerReliableMessages::PlayerCreate {
             entity: player_entity,
+            parent: maybe_parent.map(|x| x.get()),
             id: load_player.id(),
             name: load_player.name().into(),
             body: netty_body,

@@ -37,7 +37,7 @@ use cosmos_core::{
     },
     persistence::LoadingDistance,
     physics::{
-        location::{systems::Anchor, CosmosBundleSet, Location, LocationPhysicsSet, SYSTEM_SECTORS},
+        location::{systems::Anchor, CosmosBundleSet, Location, LocationPhysicsSet, SetPosition, SYSTEM_SECTORS},
         player_world::PlayerWorld,
     },
     registry::Registry,
@@ -258,7 +258,6 @@ pub(crate) fn client_sync_players(
 
         match msg {
             ServerUnreliableMessages::BulkBodies { bodies, time_stamp } => {
-                info!("Got BB!");
                 for (server_entity, body) in bodies.iter() {
                     let Ok(body) = body.map(&network_mapping) else {
                         continue;
@@ -378,6 +377,7 @@ pub(crate) fn client_sync_players(
                 body,
                 id,
                 entity: server_entity,
+                parent: server_parent_entity,
                 name,
                 render_distance: _,
             } => {
@@ -415,6 +415,7 @@ pub(crate) fn client_sync_players(
                 // loc.last_transform_loc = Some(loc.local);
 
                 entity_cmds.insert((
+                    SetPosition::Location,
                     CosmosPbrBundle {
                         location: loc,
                         rotation: body.rotation.into(),
@@ -435,6 +436,12 @@ pub(crate) fn client_sync_players(
                     ActiveEvents::COLLISION_EVENTS,
                     ServerEntity(server_entity),
                 ));
+
+                if let Some(server_parent_entity) = server_parent_entity {
+                    if let Some(parent_ent) = network_mapping.client_from_server(&server_parent_entity) {
+                        entity_cmds.set_parent_in_place(parent_ent);
+                    }
+                }
 
                 let client_entity = entity_cmds.id();
 

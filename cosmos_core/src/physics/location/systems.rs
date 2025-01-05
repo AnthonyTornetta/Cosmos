@@ -83,19 +83,18 @@ fn loc_from_trans(
 struct SetTransformBasedOnLocationFlag;
 
 fn apply_set_position(
-    q_location_added: Query<(Entity, Option<&Parent>), (Without<SetPosition>, Added<Location>)>,
+    q_location_added: Query<Entity, (Without<SetPosition>, Added<Location>)>,
     q_set_position: Query<(Entity, &SetPosition)>,
     q_x: Query<(Entity, Option<&Location>, Option<&SetPosition>)>,
     q_trans: Query<(&Transform, Option<&Parent>)>,
     q_g_trans: Query<&GlobalTransform>,
     mut commands: Commands,
 ) {
-    const TOP_LEVEL_SET_POS: SetPosition = SetPosition::Location;
-    const CHILD_SET_POS: SetPosition = SetPosition::Transform;
+    const DEFAULT_SET_POS: SetPosition = SetPosition::Location;
 
     for (entity, set_pos) in q_location_added
         .iter()
-        .map(|(ent, parent)| (ent, if parent.is_some() { &CHILD_SET_POS } else { &TOP_LEVEL_SET_POS }))
+        .map(|ent| (ent, &DEFAULT_SET_POS))
         .chain(q_set_position.iter())
     {
         match set_pos {
