@@ -37,7 +37,7 @@ use cosmos_core::{
     },
     persistence::LoadingDistance,
     physics::{
-        location::{systems::Anchor, CosmosBundleSet, Location, LocationPhysicsSet, SetPosition, SYSTEM_SECTORS},
+        location::{systems::Anchor, CosmosBundleSet, Location, LocationPhysicsSet, SYSTEM_SECTORS},
         player_world::PlayerWorld,
     },
     registry::Registry,
@@ -209,10 +209,9 @@ pub(crate) fn client_sync_players(
         EventWriter<SetTerrainGenData>,
         EventWriter<BlockDataChangedEvent>,
     ),
-    (q_default_rapier_context, query_player, parent_query, q_structure_systems, mut q_inventory, mut q_structure): (
+    (q_default_rapier_context, query_player, q_structure_systems, mut q_inventory, mut q_structure): (
         Query<Entity, With<DefaultRapierContext>>,
         Query<&Player>,
-        Query<&Parent>,
         Query<&StructureSystems>,
         Query<&mut Inventory>,
         Query<&mut Structure>,
@@ -732,25 +731,7 @@ pub(crate) fn client_sync_players(
             ServerReliableMessages::PlayerLeaveShip { player_entity } => {
                 if let Some(player_entity) = network_mapping.client_from_server(&player_entity) {
                     if let Some(mut ecmds) = commands.get_entity(player_entity) {
-                        let Ok(parent) = parent_query.get(player_entity) else {
-                            continue;
-                        };
-
                         ecmds.remove_parent_in_place();
-
-                        // let Ok(Some(ship_trans)) = query_body.get(parent.get()).map(|x| x.1.cloned()) else {
-                        //     continue;
-                        // };
-                        //
-                        // let ship_translation = ship_trans.translation;
-                        //
-                        // if let Ok((Some(mut loc), Some(mut trans))) = query_body.get_mut(player_entity).map(|x| (x.0, x.1)) {
-                        //     let cur_trans = trans.translation;
-                        //
-                        //     trans.translation = cur_trans + ship_translation;
-                        //
-                        //     // loc.last_transform_loc = Some(trans.translation);
-                        // }
                     }
                 }
             }
@@ -771,15 +752,6 @@ pub(crate) fn client_sync_players(
                 };
 
                 ecmds.set_parent_in_place(ship_entity);
-
-                let Ok(Some(ship_loc)) = query_body.get(ship_entity).map(|x| x.0.cloned()) else {
-                    continue;
-                };
-
-                // if let Ok((Some(mut loc), Some(mut trans), _, _, _)) = query_body.get_mut(player_entity) {
-                //     trans.translation = (*loc - ship_loc).absolute_coords_f32();
-                //     loc.last_transform_loc = Some(trans.translation);
-                // }
             }
             ServerReliableMessages::PlayerEnterBuildMode {
                 player_entity,
@@ -975,7 +947,6 @@ fn get_entity_identifier_entity_for_despawning(
 
 pub(super) fn register(app: &mut App) {
     app.insert_resource(RequestedEntities::default())
-        .configure_sets(Update, LocationPhysicsSet::DoPhysics)
         .add_systems(
             Update,
             (
@@ -1001,21 +972,7 @@ pub(super) fn register(app: &mut App) {
         )
         .add_systems(
             Update,
-            //     (
-            //         // Also run first above
-            //         fix_location,
-            //         (
             lerp_towards
-                //             player_changed_parent,
-                //             sync_transforms_and_locations,
-                //             handle_child_syncing,
-                //             add_previous_location,
-                //         )
-                //             .after(CosmosBundleSet::HandleCosmosBundles)
-                //             .chain(),
-                //     )
-                //         .in_set(LocationPhysicsSet::DoPhysics)
-                //         .chain()
                 .before(LocationPhysicsSet::DoPhysics)
                 .in_set(NetworkingSystemsSet::Between)
                 .run_if(in_state(GameState::Playing)),

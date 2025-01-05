@@ -113,7 +113,7 @@ fn apply_set_position(
     }
 }
 
-fn ensure_worlds_have_anchors(
+fn reposition_worlds_around_anchors(
     q_loc_no_parent: Query<&Location, (Without<PlayerWorld>, Without<Parent>)>,
     mut q_everything: Query<(&mut LastTransformTranslation, &mut Transform, &WorldWithin, Option<&Parent>), With<Location>>,
     trans_query_with_parent: Query<&Location, (Without<PlayerWorld>, With<Parent>)>,
@@ -471,7 +471,7 @@ pub(super) fn register(app: &mut App) {
         (
             (sync_simple_transforms, propagate_transforms).chain(), // TODO: Maybe not this?
             apply_set_position,
-            ensure_worlds_have_anchors,
+            reposition_worlds_around_anchors,
             #[cfg(feature = "server")]
             (move_anchors_between_worlds, move_non_anchors_between_worlds, remove_empty_worlds).chain(),
             sync_transforms_and_locations,
@@ -482,4 +482,6 @@ pub(super) fn register(app: &mut App) {
             // .in_set(CosmosBundleSet::HandleCosmosBundles)
             .in_set(NetworkingSystemsSet::Between),
     );
+
+    app.add_systems(PostUpdate, sync_transforms_and_locations);
 }

@@ -208,26 +208,21 @@ fn remove_empty_worlds(
     }
 }
 
-#[derive(Resource, Default)]
-struct FixParentLocation(Vec<Entity>);
-
 pub(super) fn register(app: &mut App) {
     collider_disabling::register(app);
 
-    app.configure_sets(Update, LocationPhysicsSet::DoPhysics)
-        // .add_systems(
-        // Update,
-        // (), // .chain()
-        // .after(CosmosBundleSet::HandleCosmosBundles)
-        // .in_set(LocationPhysicsSet::DoPhysics)
-        // .run_if(in_state(GameState::Playing))
-        // .before(NetworkingSystemsSet::ReceiveMessages),
-        // )
-        // .add_systems(PostUpdate, fix_location)
-        // This must be last due to commands being delayed when adding PhysicsWorlds.
-        .add_systems(
-            Last,
-            (move_players_between_worlds, move_non_players_between_worlds, remove_empty_worlds).chain(),
-        )
-        .init_resource::<FixParentLocation>();
+    // .add_systems(
+    // Update,
+    // (), // .chain()
+    // .after(CosmosBundleSet::HandleCosmosBundles)
+    // .in_set(LocationPhysicsSet::DoPhysics)
+    // .run_if(in_state(GameState::Playing))
+    // .before(NetworkingSystemsSet::ReceiveMessages),
+    // )
+    // .add_systems(PostUpdate, fix_location)
+    // This must be last due to commands being delayed when adding PhysicsWorlds.
+    // .add_systems(
+    // Last,
+    // (move_players_between_worlds, move_non_players_between_worlds, remove_empty_worlds).chain(),
+    // )
 }

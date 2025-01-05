@@ -521,6 +521,7 @@ pub enum CosmosBundleSet {
 
 pub(super) fn register(app: &mut App) {
     systems::register(app);
+    app.configure_sets(Update, LocationPhysicsSet::DoPhysics);
 
     // TODO: Remove system set
     app.register_type::<Location>()

@@ -14,7 +14,7 @@ In addition, the values of a GlobalTransform wouldn't be nearly big enough to st
 ## :) Solution
 
 The Location structure stores your absolute position by breaking your position into two representations - sector coordinates
-and local coordinates. Sector coordinates represent how far away you are from `0, 0, 0` in multiples of 20,000. A sector coordinate
+and local coordinates. Sector coordinates represent how far away you are from `0, 0, 0` in multiples of 20,000\*. A sector coordinate
 of `(4, 0, -3)` is the same as `(80,000, 0, -60,000)`. The local coordinates are used to store an offset from the sector coordinate grid.
 For example, sector coordinates `(1, 0, 0)` with local coordinates `(5000, 1000, -4000)` would represent an absolute position of `(45000, 1000, -4000)`.
 
@@ -54,36 +54,38 @@ will be updated to match the `Transform` component. After the `Location` is set 
 
 ### Location + Transform Syncing
 
-This takes place within the `Update` schedule, in the `DoPhysics` set.
+This takes place within the `Update` schedule, in the `LocationPhysicsSet::DoPhysics` set.
+
+#### Server
 
 ```mermaid
 sequenceDiagram
-    Between->>apply_set_position:
-    apply_set_position->>handle_worlds
-    handle_worlds->>sync_transforms_and_locations:
-    sync_transforms_and_locations->>handle_child_syncing:
-    handle_child_syncing->>add_previous_location:
-    add_previous_location->>Between:
+    sync_simple_transforms->>propagate_transforms
+    propagate_transforms->>apply_set_position
+    apply_set_position->>reposition_worlds_around_anchors
+    reposition_worlds_around_anchors->>move_anchors_between_worlds
+    move_anchors_between_worlds->>move_non_anchors_between_worlds
+    move_non_anchors_between_worlds->>remove_empty_worlds
+    remove_empty_worlds->>sync_transforms_and_locations
+```
 
+#### Client
+
+```mermaid
 sequenceDiagram
-    Update->>fix_location: Properly sets up the location of any newly added entities
-    fix_location-->>Update: New entities now have proper locations
-    Update->>sync_transforms_and_locations: Applies transform changes to the location, and location changes to the transform
-    sync_transforms_and_locations-->>Update: Syncing for all top-level entities is done
-    Update->>handle_child_syncing: Syncs entities that have parents' locations and transforms by applying transform changes to the location & location changes to the transform
-    handle_child_syncing-->>Update: Entities with parents are now properly synced
-    Update->>add_previous_location: The new locations created from this are now set to be the previous location, so the above systems can properly track changes
-    add_previous_location-->Update: Everything is complete, and transforms + locations are now in-sync.
+    sync_simple_transforms->>propagate_transforms
+    propagate_transforms->>apply_set_position
+    apply_set_position->>reposition_worlds_around_anchors
+    reposition_worlds_around_anchors->>sync_transforms_and_locations
 ```
 
 ### Post Update Schedule
 
 ```mermaid
 sequenceDiagram
-    PostUpdate->>fix_location: Properly sets up the location of any newly added entities
-    fix_location-->>PostUpdate: Newly added entities now have proper transforms
+    sync_transforms_and_locations
 ```
 
-These diagrams are based off the systems added in `cosmos_server/src/physics/mod.rs` and `cosmos_client/src/physics/mod.rs`.
+These diagrams are based off the systems added in `cosmos_core/src/physics/location/systems.rs`.
 
-20,000 is the number at the time of this document's writing. For an always accurate number, you should refer to the `SECTOR_DIMENSIONS` constant in `cosmos_core/src/physics/location.rs`.
+\* 20,000 is the number at the time of this document's writing. For an always accurate number, you should refer to the `SECTOR_DIMENSIONS` constant in `cosmos_core/src/physics/location.rs`.
