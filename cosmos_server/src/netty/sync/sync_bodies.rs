@@ -1,7 +1,7 @@
 //! Handles the syncing of entity's rigidbodies + velocities
 
 use bevy::prelude::*;
-use bevy_rapier3d::{plugin::PhysicsSet, prelude::Velocity};
+use bevy_rapier3d::prelude::Velocity;
 use bevy_renet2::renet2::RenetServer;
 use cosmos_core::{
     block::data::BlockData,
@@ -185,8 +185,6 @@ fn notify_despawned_entities(
 pub(super) fn register(app: &mut App) {
     app.add_systems(
         Update,
-        // This really needs to run immediately after `add_previous_location` to make sure nothing causes any desync
-        // in location + transform, but for now it's fine.
         (
             notify_client_of_successful_entity_request,
             server_sync_bodies.after(LocationPhysicsSet::DoPhysics),

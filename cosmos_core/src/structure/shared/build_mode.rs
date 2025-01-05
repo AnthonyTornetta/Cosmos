@@ -4,8 +4,8 @@
 
 use bevy::{
     prelude::{
-        App, BuildChildren, BuildChildrenTransformExt, Changed, Commands, Component, Entity, Event, EventReader, EventWriter,
-        IntoSystemConfigs, IntoSystemSetConfigs, Parent, Query, SystemSet, Update, With, Without,
+        App, BuildChildrenTransformExt, Changed, Commands, Component, Entity, Event, EventReader, EventWriter, IntoSystemConfigs,
+        IntoSystemSetConfigs, Parent, Query, SystemSet, Update, With, Without,
     },
     reflect::Reflect,
 };

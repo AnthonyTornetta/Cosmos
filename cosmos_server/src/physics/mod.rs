@@ -9,12 +9,10 @@ use bevy_rapier3d::{
 };
 use cosmos_core::{
     entities::player::Player,
-    netty::system_sets::NetworkingSystemsSet,
     physics::{
-        location::{CosmosBundleSet, Location, LocationPhysicsSet, SECTOR_DIMENSIONS},
+        location::{Location, LocationPhysicsSet, SECTOR_DIMENSIONS},
         player_world::{PlayerWorld, WorldWithin},
     },
-    state::GameState,
 };
 
 mod collider_disabling;

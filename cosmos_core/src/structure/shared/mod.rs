@@ -1,7 +1,7 @@
 //! Shared systems between different structure types
 
 use bevy::{
-    prelude::{App, BuildChildren, BuildChildrenTransformExt, Children, Commands, Component, Or, PostUpdate, Query, With},
+    prelude::{App, BuildChildrenTransformExt, Children, Commands, Component, Or, PostUpdate, Query, With},
     reflect::Reflect,
 };
 use serde::{Deserialize, Serialize};

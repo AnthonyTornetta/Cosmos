@@ -9,7 +9,6 @@ use bevy::{
         schedule::{IntoSystemConfigs, IntoSystemSetConfigs},
         system::{Commands, Query, Res, ResMut, Resource},
     },
-    hierarchy::BuildChildren,
     log::{error, warn},
     prelude::{BuildChildrenTransformExt, Deref, DerefMut, SystemSet},
     state::condition::in_state,
