@@ -572,6 +572,13 @@ fn sync_transforms_and_locations(
 #[derive(Component)]
 struct PreviousLocation(Location);
 
+// 1. Bubble down location changes
+//   - Update only your transform
+//   - Carry down last transform translation effects
+// 2. Bubble down transform changes
+//   - Update only your transform
+//   - Carry down last transform translation effects
+
 fn recursively_sync_transforms_and_locations(
     parent_loc: Location,
     parent_prev_loc: Location,
@@ -587,11 +594,13 @@ fn recursively_sync_transforms_and_locations(
         return;
     };
 
+    let parent_g_rot = parent_g_rot.normalize();
+
     let (local_translation, local_rotation, delta_g_trans) = if let Some(mut my_transform) = my_transform {
         let mut delta_g_trans = Vec3::ZERO;
 
         if set_trans.is_some() {
-            my_transform.translation = parent_g_rot.inverse() * ((*my_loc - parent_loc).absolute_coords_f32());
+            my_transform.translation = parent_g_rot.inverse().normalize() * ((*my_loc - parent_loc).absolute_coords_f32());
         } else {
             let g_trans = parent_g_trans + (parent_g_rot * my_transform.translation);
 
@@ -600,20 +609,21 @@ fn recursively_sync_transforms_and_locations(
 
             let delta_local_trans = delta_g_trans - parent_delta_g_trans;
 
+            // WARNING: THIS COULD BLOW UP if the delta loc is huge in f32 coords. Idk how to do this better
+            // though.
+            let delta_loc = my_prev_loc.map(|x| (*my_loc - x.0).absolute_coords_f32()).unwrap_or(Vec3::ZERO);
             *my_loc = *my_loc + delta_local_trans + parent_delta_loc;
             let my_local_rotated_trans = (*my_loc - parent_loc).absolute_coords_f32();
-            let my_local_location_based_trans = parent_g_rot.inverse() * my_local_rotated_trans;
+            let my_local_location_based_trans = parent_g_rot.inverse().normalize() * my_local_rotated_trans;
 
+            info!("My last g trans: {:?}", last_trans_trans);
             info!("{}: {} -> {}", name, my_transform.translation, my_local_location_based_trans);
             info!("Delta G trans: {delta_g_trans}; Parent delta g trans: {parent_delta_g_trans}; Local {delta_local_trans}");
 
             my_transform.translation = my_local_location_based_trans;
 
-            // Applies that change to the transform
-            // my_transform.translation += parent_g_rot.inverse() * delta_loc;
-
-            // Updates the location to be based on the parent's location + your absolute coordinates to your parent.
-            // *my_loc = parent_loc + parent_g_rot * (my_transform.translation + delta_g_trans);
+            // Changes in location mess up the children.
+            delta_g_trans += delta_loc;
         }
 
         (my_transform.translation, my_transform.rotation, delta_g_trans)
@@ -636,6 +646,8 @@ fn recursively_sync_transforms_and_locations(
     let my_g_trans = my_g_trans;
     let my_g_rot = parent_g_rot.mul_quat(local_rotation);
     let my_prev_loc = my_prev_loc.map(|x| x.0).unwrap_or(my_loc);
+
+    info!("MY LOCAL TRANS: {}", local_translation);
 
     if let Ok(children) = q_children.get(ent) {
         for &child in children.iter() {
@@ -740,12 +752,11 @@ pub(super) fn register(app: &mut App) {
         (
             (sync_simple_transforms, propagate_transforms).chain(), // TODO: Maybe not this?
             apply_set_position,
-            ensure_worlds_have_anchors.run_if(on_real_timer(Duration::from_secs(20))),
+            ensure_worlds_have_anchors,
             #[cfg(feature = "server")]
             (move_players_between_worlds, move_non_players_between_worlds, remove_empty_worlds).chain(),
             sync_transforms_and_locations,
             // set_transform_based_on_location,
-            propagate_transforms, // TODO: Maybe not this? Idk
         )
             .chain()
             .in_set(LocationPhysicsSet::DoPhysics)
