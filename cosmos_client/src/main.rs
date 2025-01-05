@@ -155,8 +155,7 @@ fn main() {
         ))
         // .add_plugins(RapierDebugRenderPlugin::default())
         .add_systems(OnEnter(GameState::Connecting), connect::establish_connection)
-        .add_systems(Update, connect::wait_for_connection.run_if(in_state(GameState::Connecting)))
-        .add_systems(Update, connect::wait_for_done_loading.run_if(in_state(GameState::LoadingWorld)));
+        .add_systems(Update, connect::wait_for_connection.run_if(in_state(GameState::Connecting)));
 
     input::register(&mut app);
     window::register(&mut app);

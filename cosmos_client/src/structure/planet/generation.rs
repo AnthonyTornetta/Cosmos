@@ -2,7 +2,7 @@
 
 use std::fs;
 
-use crate::netty::connect::WaitingOnServer;
+use crate::netty::loading::WaitingOnServer;
 use bevy::prelude::*;
 use bevy_easy_compute::prelude::*;
 use cosmos_core::{

@@ -265,7 +265,7 @@ pub(super) fn register(app: &mut App) {
         Update,
         on_add_missile
             .in_set(ComponentSyncingSet::PostComponentSyncing)
-            .run_if(in_state(GameState::Playing)),
+            .run_if(in_state(GameState::Playing).or(in_state(GameState::LoadingWorld))),
     )
     .add_systems(OnEnter(GameState::Loading), create_missile_mesh)
     .add_systems(Update, track_time_alive)

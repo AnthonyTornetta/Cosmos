@@ -11,8 +11,12 @@
 use bevy::{
     prelude::*,
     transform::systems::{propagate_transforms, sync_simple_transforms},
-    utils::HashSet,
 };
+
+#[cfg(feature = "server")]
+use bevy::utils::HashSet;
+
+#[cfg(feature = "server")]
 use bevy_rapier3d::{
     plugin::{RapierConfiguration, RapierContextEntityLink},
     prelude::RapierContextSimulation,
@@ -26,7 +30,10 @@ use crate::{
     },
 };
 
-use super::{Location, LocationPhysicsSet, Sector, SetPosition, SECTOR_DIMENSIONS};
+#[cfg(feature = "server")]
+use super::SECTOR_DIMENSIONS;
+use super::{Location, LocationPhysicsSet, Sector, SetPosition};
+
 #[cfg(doc)]
 use crate::netty::client::LocalPlayer;
 
@@ -117,14 +124,14 @@ fn reposition_worlds_around_anchors(
     q_loc_no_parent: Query<&Location, (Without<PlayerWorld>, Without<Parent>)>,
     mut q_everything: Query<(&mut LastTransformTranslation, &mut Transform, &WorldWithin, Option<&Parent>), With<Location>>,
     trans_query_with_parent: Query<&Location, (Without<PlayerWorld>, With<Parent>)>,
-    q_anchors: Query<(&WorldWithin, Entity), With<Anchor>>,
+    #[cfg(feature = "server")] q_anchors: Query<(&WorldWithin, Entity), With<Anchor>>,
     #[cfg(feature = "server")] everything_query: Query<(&WorldWithin, Entity)>,
     parent_query: Query<&Parent>,
     entity_query: Query<Entity>,
     mut world_query: Query<(Entity, &mut PlayerWorld, &mut Location)>,
-
-    mut commands: Commands,
+    #[cfg(feature = "server")] mut commands: Commands,
 ) {
+    #[allow(unused_mut)] // the server needs `world` to be mut, the client doesn't.
     for (world_entity, mut world, mut world_location) in world_query.iter_mut() {
         if let Ok(mut player_entity) = entity_query.get(world.player) {
             while let Ok(parent) = parent_query.get(player_entity) {
@@ -187,9 +194,12 @@ fn reposition_worlds_around_anchors(
     }
 }
 
+#[cfg(feature = "server")]
 const WORLD_SWITCH_DISTANCE: f32 = SECTOR_DIMENSIONS / 2.0;
+#[cfg(feature = "server")]
 const WORLD_SWITCH_DISTANCE_SQRD: f32 = WORLD_SWITCH_DISTANCE * WORLD_SWITCH_DISTANCE;
 
+#[cfg(feature = "server")]
 fn create_physics_world(commands: &mut Commands) -> RapierContextEntityLink {
     let mut config = RapierConfiguration::new(1.0);
     config.gravity = Vec3::ZERO;

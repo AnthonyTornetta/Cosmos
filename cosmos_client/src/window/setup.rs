@@ -108,6 +108,20 @@ fn apply_cursor_flags_on_change(cursor_flags: Res<CursorFlags>, mut primary_quer
     apply_cursor_flags(&mut window, *cursor_flags);
 }
 
+fn show_cursor(mut primary_query: Query<&mut Window, With<PrimaryWindow>>) {
+    let Ok(mut window) = primary_query.get_single_mut() else {
+        return;
+    };
+
+    apply_cursor_flags(
+        &mut window,
+        CursorFlags {
+            locked: false,
+            visible: true,
+        },
+    );
+}
+
 #[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
 /// Handles when the cursor should be shown/hidden
 pub enum CursorFlagsSet {
@@ -132,12 +146,15 @@ pub(super) fn register(app: &mut App) {
     )
     .insert_resource(DeltaCursorPosition { x: 0.0, y: 0.0 })
     .add_systems(Startup, setup_window)
+    .add_systems(Update, show_cursor.run_if(not(in_state(GameState::Playing))))
     .add_systems(
         Update,
         (
             update_mouse_deltas,
             window_focus_changed,
-            apply_cursor_flags_on_change.in_set(CursorFlagsSet::UpdateCursorFlags),
+            apply_cursor_flags_on_change
+                .run_if(in_state(GameState::Playing))
+                .in_set(CursorFlagsSet::UpdateCursorFlags),
         )
             .chain(),
     )

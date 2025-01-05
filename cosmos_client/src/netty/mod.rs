@@ -12,9 +12,11 @@ use cosmos_core::{
 
 pub mod connect;
 pub mod gameplay;
+pub mod loading;
 pub mod lobby;
 
 pub(super) fn register(app: &mut App) {
+    loading::register(app);
     app.configure_sets(
         Update,
         (

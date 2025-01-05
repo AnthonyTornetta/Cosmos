@@ -1,6 +1,6 @@
 //! Represents how far the player can see entities
 
-use bevy::prelude::{in_state, App, Changed, IntoSystemConfigs, Query, ResMut, Update, With};
+use bevy::prelude::{in_state, App, Changed, Condition, IntoSystemConfigs, Query, ResMut, Update, With};
 use bevy_renet2::renet2::RenetClient;
 use cosmos_core::{
     entities::player::render_distance::RenderDistance,
@@ -20,5 +20,8 @@ fn send_render_distance(query: Query<&RenderDistance, (With<LocalPlayer>, Change
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_systems(Update, send_render_distance.run_if(in_state(GameState::Playing)));
+    app.add_systems(
+        Update,
+        send_render_distance.run_if(in_state(GameState::Playing).or(in_state(GameState::LoadingWorld))),
+    );
 }

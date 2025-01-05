@@ -258,6 +258,7 @@ pub(crate) fn client_sync_players(
 
         match msg {
             ServerUnreliableMessages::BulkBodies { bodies, time_stamp } => {
+                info!("Got BB!");
                 for (server_entity, body) in bodies.iter() {
                     let Ok(body) = body.map(&network_mapping) else {
                         continue;
@@ -975,6 +976,6 @@ pub(super) fn register(app: &mut App) {
             lerp_towards
                 .before(LocationPhysicsSet::DoPhysics)
                 .in_set(NetworkingSystemsSet::Between)
-                .run_if(in_state(GameState::Playing)),
+                .run_if(in_state(GameState::Playing).or(in_state(GameState::LoadingWorld))),
         );
 }

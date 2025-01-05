@@ -1,6 +1,9 @@
 //! Responsible for unloading far entities
 
-use bevy::prelude::{App, Commands, Entity, IntoSystemConfigs, Parent, Query, Update, With, Without};
+use bevy::{
+    log::info,
+    prelude::{App, Commands, Entity, IntoSystemConfigs, Parent, Query, Update, With, Without},
+};
 use cosmos_core::{
     ecs::NeedsDespawned,
     entities::player::Player,
@@ -19,6 +22,7 @@ fn unload_far_entities(
             let ul_distance = unload_distance.unload_distance() as SectorUnit;
 
             if (loc.sector() - my_loc.sector()).abs().max_element() > ul_distance {
+                info!("Unloading {ent:?} - it's too far.");
                 commands.entity(ent).insert(NeedsDespawned);
             }
         }
