@@ -128,8 +128,7 @@ pub(super) fn register(app: &mut App) {
         (
             respond_to_remove_materails_event.in_set(MaterialsSystemSet::ProcessRemoveMaterialsEvents),
             respond_to_add_materials_event.in_set(MaterialsSystemSet::ProcessAddMaterialsEvents),
-        )
-            .run_if(in_state(GameState::Playing)),
+        ),
     )
     .add_systems(
         Update,

@@ -323,6 +323,6 @@ pub(super) fn register(app: &mut App) {
                 remove_dead_mining_beams.in_set(LasersSystemSet::UpdateLasers),
             )
                 .chain()
-                .run_if(in_state(GameState::Playing)),
+                .run_if(in_state(GameState::Playing).or(in_state(GameState::LoadingWorld))),
         );
 }

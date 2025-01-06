@@ -437,13 +437,15 @@ pub(crate) fn client_sync_players(
                     ServerEntity(server_entity),
                 ));
 
+                let client_entity = entity_cmds.id();
+
                 if let Some(server_parent_entity) = server_parent_entity {
                     if let Some(parent_ent) = network_mapping.client_from_server(&server_parent_entity) {
                         entity_cmds.set_parent_in_place(parent_ent);
+                    } else {
+                        error!("No parent entity Server{server_parent_entity:?} exists for player {client_entity}!");
                     }
                 }
-
-                let client_entity = entity_cmds.id();
 
                 let player_info = PlayerInfo {
                     server_entity,

@@ -33,7 +33,11 @@ pub(super) fn register(app: &mut App) {
         Update,
         wait_for_done_loading
             .in_set(NetworkingSystemsSet::Between)
-            .run_if(on_timer(Duration::from_secs(30)))
+            // This is stupid. For some reason, if the client doesn't get a couple updates first,
+            // if the player spawns in as a child of another entity, the transform heirarchy isn't
+            // loaded and the player seemingly gets despawned. This should really get fixed instead
+            // of patched like this, but I don't have the time to look into this right now.
+            .run_if(on_timer(Duration::from_secs(1)))
             .run_if(in_state(GameState::LoadingWorld)),
     );
 }
