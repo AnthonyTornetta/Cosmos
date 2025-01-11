@@ -10,10 +10,7 @@ use bevy_rapier3d::prelude::*;
 use bevy_renet2::renet2::{transport::NetcodeClientTransport, RenetClient};
 use cosmos_core::{
     block::Block,
-    ecs::{
-        bundles::{BundleStartingRotation, CosmosPbrBundle},
-        NeedsDespawned,
-    },
+    ecs::{bundles::BundleStartingRotation, NeedsDespawned},
     entities::player::{render_distance::RenderDistance, Player},
     events::{
         block_events::{BlockChangedEvent, BlockDataChangedEvent},
@@ -189,8 +186,7 @@ fn lerp_towards(
 /// TODO: super split this up
 pub(crate) fn client_sync_players(
     mut commands: Commands,
-    (mut meshes, mut client, transport, mut lobby, mut network_mapping): (
-        ResMut<Assets<Mesh>>,
+    (mut client, transport, mut lobby, mut network_mapping): (
         ResMut<RenetClient>,
         Res<NetcodeClientTransport>,
         ResMut<ClientLobby>,
@@ -391,7 +387,7 @@ pub(crate) fn client_sync_players(
                     continue;
                 };
 
-                info!("Player {} ({}) connected!", name.as_str(), id);
+                info!("Player {} ({}) connected! {body:?}", name.as_str(), id);
 
                 // The player entity may have already been created if some of their components were already synced.
                 let mut entity_cmds = if let Some(player_entity) = network_mapping.client_from_server(&server_entity) {
@@ -409,31 +405,12 @@ pub(crate) fn client_sync_players(
                     }
                 };
 
-                error!("Player starting loc: {loc:?}");
-
-                // this will avoid any position mismatching
-                // loc.last_transform_loc = Some(loc.local);
-
                 entity_cmds.insert((
                     SetPosition::Location,
-                    CosmosPbrBundle {
-                        location: loc,
-                        rotation: body.rotation.into(),
-                        mesh: Mesh3d(meshes.add(Capsule3d::default())),
-                        ..default()
-                    },
-                    Collider::capsule_y(0.65, 0.25),
-                    LockedAxes::ROTATION_LOCKED,
-                    Name::new(format!("Player ({name})")),
-                    RigidBody::Dynamic,
-                    Friction {
-                        coefficient: 0.0,
-                        combine_rule: CoefficientCombineRule::Min,
-                    },
+                    Transform::from_rotation(body.rotation.into()),
+                    loc,
                     body.create_velocity(),
                     Player::new(name, id),
-                    ReadMassProperties::default(),
-                    ActiveEvents::COLLISION_EVENTS,
                     ServerEntity(server_entity),
                 ));
 
