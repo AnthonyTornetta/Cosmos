@@ -12,7 +12,7 @@ pub enum MaybeOwned<'a, T> {
     Borrowed(&'a T),
 }
 
-impl<'a, T> AsRef<T> for MaybeOwned<'a, T> {
+impl<T> AsRef<T> for MaybeOwned<'_, T> {
     fn as_ref(&self) -> &T {
         match self {
             Self::Owned(owned) => owned.as_ref(),
@@ -21,7 +21,7 @@ impl<'a, T> AsRef<T> for MaybeOwned<'a, T> {
     }
 }
 
-impl<'a, T> Deref for MaybeOwned<'a, T> {
+impl<T> Deref for MaybeOwned<'_, T> {
     type Target = T;
 
     fn deref(&self) -> &Self::Target {

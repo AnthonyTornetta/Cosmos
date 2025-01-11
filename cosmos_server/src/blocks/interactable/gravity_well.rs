@@ -8,7 +8,7 @@ use bevy::{
         schedule::IntoSystemConfigs,
         system::{Commands, Query, ResMut},
     },
-    hierarchy::{BuildChildren, Parent},
+    hierarchy::Parent,
     log::info,
     math::Vec3,
     prelude::{BuildChildrenTransformExt, Res, With},

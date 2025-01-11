@@ -75,7 +75,7 @@ fn loc_from_trans(
 
     match set_pos {
         None | Some(SetPosition::Location) => loc.copied(),
-        Some(SetPosition::Transform) => calc_global_trans(entity, &q_trans).map(|t| Location::new(t.translation, Sector::ZERO)),
+        Some(SetPosition::Transform) => calc_global_trans(entity, q_trans).map(|t| Location::new(t.translation, Sector::ZERO)),
     }
 }
 
@@ -144,10 +144,7 @@ fn reposition_worlds_around_anchors(
 
             let Ok(location) = q_loc_no_parent
                 .get(player_entity)
-                .or_else(|_| match trans_query_with_parent.get(player_entity) {
-                    Ok(loc) => Ok(loc),
-                    Err(x) => Err(x),
-                })
+                .or_else(|_| trans_query_with_parent.get(player_entity))
             else {
                 // The player was just added & doesn't have a transform yet - only a location.
                 continue;
@@ -453,7 +450,6 @@ fn recursively_sync_transforms_and_locations(
         .remove::<SetTransformBasedOnLocationFlag>();
 
     let my_loc = *my_loc;
-    let my_g_trans = my_g_trans;
     let my_g_rot = parent_g_rot.mul_quat(local_rotation);
     let my_prev_loc = my_prev_loc.map(|x| x.0).unwrap_or(my_loc);
 

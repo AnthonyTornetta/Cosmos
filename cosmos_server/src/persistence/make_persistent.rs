@@ -146,7 +146,7 @@ pub struct EntityIdManager<'w, 's> {
     q_entity_ids: Query<'w, 's, (Entity, &'static EntityId)>,
 }
 
-impl<'w, 's> EntityIdManager<'w, 's> {
+impl EntityIdManager<'_, '_> {
     /// Gets an entity from the [`EntityId`] if one exists for that id. This will ONLY retrieve
     /// entities that are loaded in the world.
     pub fn entity_from_entity_id(&self, e_id: &EntityId) -> Option<Entity> {

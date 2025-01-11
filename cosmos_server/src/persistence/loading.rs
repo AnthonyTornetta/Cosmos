@@ -12,7 +12,7 @@ use std::fs;
 use bevy::{
     ecs::schedule::{IntoSystemConfigs, IntoSystemSetConfigs, SystemSet},
     hierarchy::BuildChildren,
-    log::{error, info, warn},
+    log::{error, warn},
     prelude::{App, Commands, Component, Entity, Quat, Query, Update, With, Without},
     reflect::Reflect,
 };
