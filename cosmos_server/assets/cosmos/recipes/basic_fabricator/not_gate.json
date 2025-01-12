@@ -4,23 +4,17 @@
       "item": {
         "Item": "cosmos:copper_bar"
       },
-      "quantity": 10
+      "quantity": 1
     },
     {
       "item": {
         "Item": "cosmos:iron"
       },
-      "quantity": 20
-    },
-    {
-      "item": {
-        "Item": "cosmos:energite_crystal"
-      },
-      "quantity": 2
+      "quantity": 1
     }
   ],
   "output": {
     "quantity": 1,
-    "item": "cosmos:ship_core"
+    "item": "cosmos:not_gate"
   }
 }

@@ -1,0 +1,20 @@
+{
+  "inputs": [
+    {
+      "quantity": 1,
+      "item": {
+        "Item": "cosmos:iron_bar"
+      }
+    },
+    {
+      "quantity": 1,
+      "item": {
+        "Item": "cosmos:glass"
+      }
+    }
+  ],
+  "output": {
+    "quantity": 1,
+    "item": "cosmos:tank"
+  }
+}

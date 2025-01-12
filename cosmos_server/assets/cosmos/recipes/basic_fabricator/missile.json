@@ -1,0 +1,20 @@
+{
+  "inputs": [
+    {
+      "item": {
+        "Item": "cosmos:sulfur"
+      },
+      "quantity": 5
+    },
+    {
+      "item": {
+        "Item": "cosmos:iron"
+      },
+      "quantity": 2
+    }
+  ],
+  "output": {
+    "quantity": 1,
+    "item": "cosmos:missile"
+  }
+}

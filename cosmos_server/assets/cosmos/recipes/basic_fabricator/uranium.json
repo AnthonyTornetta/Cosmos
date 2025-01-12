@@ -1,0 +1,14 @@
+{
+  "inputs": [
+    {
+      "item": {
+        "Item": "cosmos:uranium_ore"
+      },
+      "quantity": 1
+    }
+  ],
+  "output": {
+    "quantity": 1,
+    "item": "cosmos:uranium"
+  }
+}

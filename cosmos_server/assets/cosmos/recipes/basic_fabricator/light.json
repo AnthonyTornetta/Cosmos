@@ -2,15 +2,9 @@
   "inputs": [
     {
       "item": {
-        "Item": "cosmos:iron_bar"
+        "Item": "cosmos:glass"
       },
-      "quantity": 2
-    },
-    {
-      "item": {
-        "Item": "cosmos:photonium_crystal"
-      },
-      "quantity": 4
+      "quantity": 1
     },
     {
       "item": {
@@ -21,6 +15,6 @@
   ],
   "output": {
     "quantity": 1,
-    "item": "cosmos:laser_cannon"
+    "item": "cosmos:light"
   }
 }

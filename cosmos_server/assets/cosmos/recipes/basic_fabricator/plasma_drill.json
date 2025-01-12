@@ -10,7 +10,7 @@
       "item": {
         "Item": "cosmos:photonium_crystal"
       },
-      "quantity": 4
+      "quantity": 1
     },
     {
       "item": {
@@ -21,6 +21,6 @@
   ],
   "output": {
     "quantity": 1,
-    "item": "cosmos:laser_cannon"
+    "item": "cosmos:plasma_drill"
   }
 }

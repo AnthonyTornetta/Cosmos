@@ -1,0 +1,14 @@
+{
+  "inputs": [
+    {
+      "item": {
+        "Item": "cosmos:uranium"
+      },
+      "quantity": 10
+    }
+  ],
+  "output": {
+    "quantity": 1,
+    "item": "cosmos:fuel_cell"
+  }
+}
