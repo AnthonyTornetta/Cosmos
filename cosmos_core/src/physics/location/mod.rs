@@ -80,10 +80,10 @@ pub enum SetPosition {
     #[default]
     /// The source of truth is the [`Location`] component of this entity. The [`Transform`] will be
     /// updated to match this [`Location`].
-    Location,
+    Transform,
     /// The source of truth is the [`Transform`] component of this entity. The [`Location`] will be
     /// updated to match this [`Transform`].
-    Transform,
+    Location,
 }
 
 /// Datatype used to store sector coordinates

@@ -33,7 +33,7 @@ use cosmos_core::{
         NettyChannelServer,
     },
     persistence::LoadingDistance,
-    physics::location::Location,
+    physics::location::{Location, SetPosition},
     projectiles::laser::LaserSystemSet,
     registry::{identifiable::Identifiable, Registry},
     state::GameState,
@@ -229,14 +229,13 @@ fn recalculate_shields_if_needed(
         commands.entity(structure_entity).with_children(|p| {
             for &(shield_coord, shield_details) in shield_details.iter().filter(|(c, _)| !done.contains(c)) {
                 let shield_pos = structure.block_relative_position(shield_coord);
-                // Locations don't account for parent rotation
-                let shield_loc = g_trans.affine().matrix3.mul_vec3(shield_pos);
+                warn!("Sheid pos: {shield_pos} | Shield coord: {shield_coord:?}");
 
                 let shield_ent = p
                     .spawn((
                         Name::new("Shield"),
                         Transform::from_translation(shield_pos),
-                        *loc + shield_loc,
+                        SetPosition::Location,
                         LoadingDistance::new(1, 2),
                         Shield {
                             max_strength: shield_details.max_strength,

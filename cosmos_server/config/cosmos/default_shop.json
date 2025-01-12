@@ -127,14 +127,14 @@
   },
   {
     "Selling": {
-      "item_id": "cosmos:reactor",
+      "item_id": "cosmos:passive_generator",
       "max_quantity_selling": 10000,
       "price_per": 300
     }
   },
   {
     "Buying": {
-      "item_id": "cosmos:reactor",
+      "item_id": "cosmos:passive_generator",
       "max_quantity_buying": null,
       "price_per": 270
     }

@@ -14,7 +14,7 @@ fn add_cosmos_items(
 ) {
     let id = loading.register_loader(&mut start_writer);
 
-    items.register(Item::new("cosmos:test_crystal", DEFAULT_MAX_STACK_SIZE));
+    items.register(Item::new("cosmos:photonium_crystal", DEFAULT_MAX_STACK_SIZE));
 
     items.register(Item::new("cosmos:fluid_cell", DEFAULT_MAX_STACK_SIZE));
     items.register(Item::new("cosmos:fluid_cell_filled", 1));

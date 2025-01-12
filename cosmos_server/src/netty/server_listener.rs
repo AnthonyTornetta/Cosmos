@@ -105,7 +105,7 @@ fn server_listen_messages(
                             };
 
                             *location = new_loc;
-                            commands.entity(player_entity).insert(SetPosition::Location);
+                            commands.entity(player_entity).insert(SetPosition::Transform);
                             currently_looking.rotation = looking;
                             velocity.linvel = body.body_vel.map(|x| x.linvel).unwrap_or(Vec3::ZERO);
                             transform.rotation = body.rotation;

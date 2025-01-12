@@ -406,7 +406,7 @@ pub(crate) fn client_sync_players(
                 };
 
                 entity_cmds.insert((
-                    SetPosition::Location,
+                    SetPosition::Transform,
                     Transform::from_rotation(body.rotation),
                     loc,
                     body.create_velocity(),

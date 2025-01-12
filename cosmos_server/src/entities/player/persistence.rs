@@ -268,7 +268,7 @@ fn finish_loading_player(
                 ActiveEvents::COLLISION_EVENTS,
                 Name::new(format!("Player ({})", load_player.name())),
                 Anchor,
-                SetPosition::Location,
+                SetPosition::Transform,
             ))
             // If we don't remove this, it won't automatically
             // generate a new one when we save the player next

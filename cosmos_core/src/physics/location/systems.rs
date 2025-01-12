@@ -32,7 +32,7 @@ use crate::{
 
 #[cfg(feature = "server")]
 use super::SECTOR_DIMENSIONS;
-use super::{Location, LocationPhysicsSet, Sector, SetPosition};
+use super::{Location, LocationPhysicsSet, SetPosition};
 
 #[cfg(doc)]
 use crate::netty::client::LocalPlayer;
@@ -53,29 +53,32 @@ use crate::netty::client::LocalPlayer;
 /// point for a [`PlayerWorld`].
 pub struct Anchor;
 
-fn calc_global_trans(entity: Entity, q_trans: &Query<(&Transform, Option<&Parent>)>) -> Option<Transform> {
-    let Ok((trans, parent)) = q_trans.get(entity) else {
-        error!("Inconsistent transform heirarchy!");
-        return None;
-    };
-
-    if let Some(parent) = parent {
-        calc_global_trans(parent.get(), q_trans).map(|t| t * *trans)
-    } else {
-        Some(*trans)
-    }
-}
-
 fn loc_from_trans(
     entity: Entity,
-    q_trans: &Query<(&Transform, Option<&Parent>)>,
+    q_trans: &Query<&Transform>,
     q_x: &Query<(Entity, Option<&Location>, Option<&SetPosition>)>,
+    q_g_trans: &Query<&GlobalTransform>,
+    q_parent: &Query<&Parent>,
 ) -> Option<Location> {
     let (entity, loc, set_pos) = q_x.get(entity).expect("Invalid entity given");
 
     match set_pos {
-        None | Some(SetPosition::Location) => loc.copied(),
-        Some(SetPosition::Transform) => calc_global_trans(entity, q_trans).map(|t| Location::new(t.translation, Sector::ZERO)),
+        None | Some(SetPosition::Transform) => loc.copied(),
+        Some(SetPosition::Location) => {
+            if let Ok(p) = q_parent.get(entity) {
+                let parent_g_trans = q_g_trans.get(p.get()).ok()?;
+                let my_trans = q_trans.get(entity).ok()?;
+
+                loc_from_trans(p.get(), q_trans, q_x, q_g_trans, q_parent)
+                    .map(|x| x + (parent_g_trans.rotation().inverse() * my_trans.translation))
+            } else {
+                warn!("Location set based solely on global transform - you probably didn't mean to do this.");
+                q_g_trans
+                    .get(entity)
+                    .ok()
+                    .map(|g_trans| Location::new(g_trans.translation(), Default::default()))
+            }
+        }
     }
 }
 
@@ -86,11 +89,12 @@ fn apply_set_position(
     q_location_added: Query<Entity, (Without<SetPosition>, Added<Location>)>,
     q_set_position: Query<(Entity, &SetPosition)>,
     q_x: Query<(Entity, Option<&Location>, Option<&SetPosition>)>,
-    q_trans: Query<(&Transform, Option<&Parent>)>,
+    q_trans: Query<&Transform>,
+    q_parent: Query<&Parent>,
     q_g_trans: Query<&GlobalTransform>,
     mut commands: Commands,
 ) {
-    const DEFAULT_SET_POS: SetPosition = SetPosition::Location;
+    const DEFAULT_SET_POS: SetPosition = SetPosition::Transform;
 
     for (entity, set_pos) in q_location_added
         .iter()
@@ -98,16 +102,17 @@ fn apply_set_position(
         .chain(q_set_position.iter())
     {
         match set_pos {
-            SetPosition::Location => {
+            SetPosition::Transform => {
                 let mut ecmds = commands.entity(entity);
                 if let Ok(g_trans) = q_g_trans.get(entity) {
                     ecmds.insert(LastTransformTranslation(g_trans.translation()));
                 }
                 ecmds.insert(SetTransformBasedOnLocationFlag).remove::<SetPosition>();
             }
-            SetPosition::Transform => {
-                if let Some(loc_from_trans) = loc_from_trans(entity, &q_trans, &q_x) {
+            SetPosition::Location => {
+                if let Some(loc_from_trans) = loc_from_trans(entity, &q_trans, &q_x, &q_g_trans, &q_parent) {
                     if let Ok(g_trans) = q_g_trans.get(entity) {
+                        info!("{loc_from_trans} | {}", g_trans.translation());
                         commands
                             .entity(entity)
                             .insert((loc_from_trans, LastTransformTranslation(g_trans.translation())))

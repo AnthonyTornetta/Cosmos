@@ -82,7 +82,7 @@ fn create_default_shop_entires(mut commands: Commands, items: Res<Registry<Item>
             price_per: 300,
         },
         PrettyShopEntry::Selling {
-            item_id: "cosmos:reactor".into(),
+            item_id: "cosmos:passive_generator".into(),
             max_quantity_selling: 10_000,
             price_per: 300,
         },
