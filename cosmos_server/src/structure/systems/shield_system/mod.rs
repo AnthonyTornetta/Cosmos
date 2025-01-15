@@ -19,7 +19,7 @@ use bevy::{
     },
     reflect::Reflect,
     time::Time,
-    transform::components::{GlobalTransform, Transform},
+    transform::components::Transform,
     utils::hashbrown::HashMap,
 };
 
@@ -33,7 +33,7 @@ use cosmos_core::{
         NettyChannelServer,
     },
     persistence::LoadingDistance,
-    physics::location::Location,
+    physics::location::SetPosition,
     projectiles::laser::LaserSystemSet,
     registry::{identifiable::Identifiable, Registry},
     state::GameState,
@@ -175,7 +175,7 @@ fn recalculate_shields_if_needed(
     q_placed_shields: Query<&PlacedShields>,
     mut q_shield: Query<&mut Shield>,
     mut q_shield_system: Query<(&mut ShieldSystem, &StructureSystem), Changed<ShieldSystem>>,
-    q_structure: Query<(&Location, &GlobalTransform, &Structure)>,
+    q_structure: Query<&Structure>,
 ) {
     for (mut shield_system, ss) in &mut q_shield_system {
         if !shield_system.needs_shields_recalculated() {
@@ -221,22 +221,21 @@ fn recalculate_shields_if_needed(
             }
         }
 
-        let Ok((loc, g_trans, structure)) = q_structure.get(structure_entity) else {
-            warn!("No loc/g-trans/structure");
+        let Ok(structure) = q_structure.get(structure_entity) else {
+            warn!("No structure - bad");
             continue;
         };
 
         commands.entity(structure_entity).with_children(|p| {
             for &(shield_coord, shield_details) in shield_details.iter().filter(|(c, _)| !done.contains(c)) {
                 let shield_pos = structure.block_relative_position(shield_coord);
-                // Locations don't account for parent rotation
-                let shield_loc = g_trans.affine().matrix3.mul_vec3(shield_pos);
+                warn!("Sheid pos: {shield_pos} | Shield coord: {shield_coord:?}");
 
                 let shield_ent = p
                     .spawn((
                         Name::new("Shield"),
                         Transform::from_translation(shield_pos),
-                        *loc + shield_loc,
+                        SetPosition::Location,
                         LoadingDistance::new(1, 2),
                         Shield {
                             max_strength: shield_details.max_strength,

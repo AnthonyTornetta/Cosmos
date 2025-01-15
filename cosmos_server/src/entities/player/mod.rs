@@ -5,7 +5,7 @@ use bevy::prelude::{Component, Quat};
 use cosmos_core::netty::sync::IdentifiableComponent;
 use serde::{Deserialize, Serialize};
 
-use crate::persistence::make_persistent::{make_persistent, PersistentComponent};
+use crate::persistence::make_persistent::{make_persistent, DefaultPersistentComponent};
 
 mod kits;
 pub mod persistence;
@@ -24,7 +24,7 @@ impl IdentifiableComponent for PlayerLooking {
     }
 }
 
-impl PersistentComponent for PlayerLooking {}
+impl DefaultPersistentComponent for PlayerLooking {}
 
 pub(super) fn register(app: &mut App) {
     make_persistent::<PlayerLooking>(app);

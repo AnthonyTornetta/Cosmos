@@ -13,7 +13,7 @@ use cosmos_core::{
     structure::shared::MeltingDown,
 };
 
-use crate::persistence::make_persistent::{make_persistent, PersistentComponent};
+use crate::persistence::make_persistent::{make_persistent, DefaultPersistentComponent};
 
 use super::MeltingDownSet;
 
@@ -27,7 +27,7 @@ fn monitor_block_events(mut commands: Commands, blocks: Res<Registry<Block>>, mu
     }
 }
 
-impl PersistentComponent for MeltingDown {}
+impl DefaultPersistentComponent for MeltingDown {}
 
 pub(super) fn register(app: &mut App) {
     make_persistent::<MeltingDown>(app);

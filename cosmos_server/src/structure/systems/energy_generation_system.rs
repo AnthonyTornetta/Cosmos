@@ -22,7 +22,7 @@ use cosmos_core::{
 use super::sync::register_structure_system;
 
 fn register_energy_blocks(blocks: Res<Registry<Block>>, mut generation: ResMut<EnergyGenerationBlocks>) {
-    if let Some(block) = blocks.from_id("cosmos:reactor") {
+    if let Some(block) = blocks.from_id("cosmos:passive_generator") {
         generation.insert(block, EnergyGenerationProperty { generation_rate: 100.0 });
     }
 
@@ -111,5 +111,5 @@ pub(super) fn register(app: &mut App) {
         )
         .register_type::<EnergyGenerationSystem>();
 
-    register_structure_system::<EnergyGenerationSystem>(app, false, "cosmos:reactor");
+    register_structure_system::<EnergyGenerationSystem>(app, false, "cosmos:passive_generator");
 }

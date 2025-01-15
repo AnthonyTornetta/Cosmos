@@ -1,0 +1,14 @@
+{
+  "inputs": [
+    {
+      "item": {
+        "Item": "cosmos:iron"
+      },
+      "quantity": 2
+    }
+  ],
+  "output": {
+    "quantity": 1,
+    "item": "cosmos:fluid_cell"
+  }
+}

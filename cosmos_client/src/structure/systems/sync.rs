@@ -6,13 +6,11 @@ use bevy::{
         entity::Entity,
         event::{Event, EventReader, EventWriter},
         query::With,
-        schedule::IntoSystemConfigs,
-        schedule::IntoSystemSetConfigs,
+        schedule::{IntoSystemConfigs, IntoSystemSetConfigs},
         system::{Commands, Query, Res, ResMut, Resource},
     },
-    hierarchy::BuildChildren,
     log::{error, warn},
-    prelude::{Deref, DerefMut, SystemSet},
+    prelude::{BuildChildrenTransformExt, Deref, DerefMut, SystemSet},
     state::condition::in_state,
     utils::HashMap,
 };
@@ -149,7 +147,7 @@ fn replication_listen_netty(
                                 aligned_to: None,
                             },
                         ))
-                        .set_parent(structure_entity);
+                        .set_parent_in_place(structure_entity);
                 } else {
                     ecmds.remove::<GravityWell>();
                 }

@@ -1,0 +1,20 @@
+{
+  "inputs": [
+    {
+      "item": {
+        "Item": "cosmos:lead_bar"
+      },
+      "quantity": 5
+    },
+    {
+      "item": {
+        "Item": "cosmos:glass"
+      },
+      "quantity": 1
+    }
+  ],
+  "output": {
+    "quantity": 1,
+    "item": "cosmos:reactor_window"
+  }
+}

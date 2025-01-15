@@ -63,6 +63,8 @@ pub enum ServerReliableMessages {
     PlayerCreate {
         /// The server entity for this player.
         entity: Entity,
+        /// The player's parent (if it has one)
+        parent: Option<Entity>,
         /// The player's name.
         name: String,
         /// The id for this player.

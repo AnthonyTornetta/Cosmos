@@ -14,12 +14,19 @@ fn add_cosmos_items(
 ) {
     let id = loading.register_loader(&mut start_writer);
 
-    items.register(Item::new("cosmos:test_crystal", DEFAULT_MAX_STACK_SIZE));
+    items.register(Item::new("cosmos:photonium_crystal", DEFAULT_MAX_STACK_SIZE));
 
     items.register(Item::new("cosmos:fluid_cell", DEFAULT_MAX_STACK_SIZE));
     items.register(Item::new("cosmos:fluid_cell_filled", 1));
 
     items.register(Item::new("cosmos:iron_bar", DEFAULT_MAX_STACK_SIZE));
+
+    items.register(Item::new("cosmos:copper_bar", DEFAULT_MAX_STACK_SIZE));
+    items.register(Item::new("cosmos:lead_bar", DEFAULT_MAX_STACK_SIZE));
+    items.register(Item::new("cosmos:uranium", DEFAULT_MAX_STACK_SIZE));
+    items.register(Item::new("cosmos:sulfur", DEFAULT_MAX_STACK_SIZE));
+    items.register(Item::new("cosmos:gravitron_crystal", DEFAULT_MAX_STACK_SIZE));
+    items.register(Item::new("cosmos:energite_crystal", DEFAULT_MAX_STACK_SIZE));
 
     loading.finish_loading(id, &mut end_writer);
 }

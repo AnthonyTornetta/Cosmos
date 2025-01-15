@@ -78,7 +78,8 @@ fn check_needs_loaded(
             continue;
         };
 
-        let serialized_data: SerializedData = cosmos_encoder::deserialize(&data).expect("Error deserializing data for {path}");
+        let serialized_data: SerializedData =
+            cosmos_encoder::deserialize(&data).unwrap_or_else(|_| panic!("Error deserializing data for {path}"));
 
         match &nl.identifier_type {
             SaveFileIdentifierType::Base(entity_id, _, _) => {

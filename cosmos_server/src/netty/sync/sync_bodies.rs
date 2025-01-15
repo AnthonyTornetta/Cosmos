@@ -18,7 +18,7 @@ use cosmos_core::{
         NettyChannelServer, NoSendEntity,
     },
     persistence::LoadingDistance,
-    physics::location::{add_previous_location, Location},
+    physics::location::{Location, LocationPhysicsSet},
     structure::systems::StructureSystem,
 };
 
@@ -51,7 +51,6 @@ fn send_bodies(
             };
 
             let message = cosmos_encoder::serialize(&sync_message);
-
             server.send_message(player.id(), NettyChannelServer::Unreliable, message.clone());
         }
     }
@@ -185,11 +184,9 @@ fn notify_despawned_entities(
 pub(super) fn register(app: &mut App) {
     app.add_systems(
         Update,
-        // This really needs to run immediately after `add_previous_location` to make sure nothing causes any desync
-        // in location + transform, but for now it's fine.
         (
             notify_client_of_successful_entity_request,
-            server_sync_bodies.after(add_previous_location),
+            server_sync_bodies.after(LocationPhysicsSet::DoPhysics),
         )
             .in_set(NetworkingSystemsSet::SyncComponents),
     )

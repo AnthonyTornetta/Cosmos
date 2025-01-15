@@ -3,8 +3,8 @@
 use bevy::{
     ecs::event::EventReader,
     prelude::{
-        in_state, App, BuildChildren, Commands, Entity, IntoSystemConfigs, IntoSystemSetConfigs, Parent, Query, ResMut, SystemSet,
-        Transform, Update, With, Without,
+        in_state, App, BuildChildrenTransformExt, Commands, Entity, IntoSystemConfigs, IntoSystemSetConfigs, Parent, Query, ResMut,
+        SystemSet, Update, With, Without,
     },
 };
 use bevy_rapier3d::pipeline::CollisionEvent;
@@ -32,7 +32,6 @@ fn respond_to_collisions(
     parent_query: Query<&Parent>,
     is_local_player: Query<(), (With<LocalPlayer>, Without<Pilot>)>,
     is_planet: Query<(), With<Planet>>,
-    mut trans_query: Query<(&mut Transform, &mut Location)>,
     mut commands: Commands,
     mut renet_client: ResMut<RenetClient>,
 ) {
@@ -79,18 +78,12 @@ fn respond_to_collisions(
 
         // Even though these will always be seperate from the trans + loc below, the borrow checker doesn't know that
 
-        let (player_trans, mut player_loc) = trans_query
-            .get_mut(player_entity)
-            .expect("The player should have a transform + location");
-
         if !parent_query.contains(player_entity) {
             continue;
         }
 
         // Otherwise just remove the parent if they hit a different structure
-        commands.entity(player_entity).remove_parent();
-
-        player_loc.last_transform_loc = Some(player_trans.translation);
+        commands.entity(player_entity).remove_parent_in_place();
 
         renet_client.send_message(
             NettyChannelClient::Reliable,
@@ -100,21 +93,19 @@ fn respond_to_collisions(
 }
 
 fn remove_parent_when_too_far(
-    mut query: Query<(Entity, &Parent, &mut Location, &Transform), (With<LocalPlayer>, Without<Structure>, Without<BuildMode>)>,
+    query: Query<(Entity, &Parent, &Location), (With<LocalPlayer>, Without<Structure>, Without<BuildMode>)>,
     q_structure: Query<(&Location, &Structure)>,
     mut commands: Commands,
     mut renet_client: ResMut<RenetClient>,
 ) {
-    if let Ok((player_entity, parent, mut player_loc, player_trans)) = query.get_single_mut() {
+    if let Ok((player_entity, parent, player_loc)) = query.get_single() {
         if let Ok((structure_loc, structure)) = q_structure.get(parent.get()) {
             if !matches!(structure, Structure::Full(_)) {
                 return;
             }
 
             if player_loc.distance_sqrd(structure_loc).sqrt() >= CHUNK_DIMENSIONSF * 10.0 {
-                commands.entity(player_entity).remove_parent();
-
-                player_loc.last_transform_loc = Some(player_trans.translation);
+                commands.entity(player_entity).remove_parent_in_place();
 
                 renet_client.send_message(
                     NettyChannelClient::Reliable,

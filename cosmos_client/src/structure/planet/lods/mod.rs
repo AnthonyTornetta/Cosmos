@@ -13,7 +13,8 @@ use bevy::{
     log::{info, warn},
     math::{Vec3, Vec4},
     prelude::{
-        in_state, App, Commands, Component, Entity, GlobalTransform, IntoSystemConfigs, Quat, Query, Res, ResMut, Resource, Update, With,
+        in_state, App, Commands, Component, Condition, Entity, GlobalTransform, IntoSystemConfigs, Quat, Query, Res, ResMut, Resource,
+        Update, With,
     },
 };
 use bevy_easy_compute::prelude::{AppComputeWorker, BevyEasyComputeSet};
@@ -807,7 +808,7 @@ pub(super) fn register(app: &mut App) {
             .before(BevyEasyComputeSet::ExtractPipelines)
             .in_set(NetworkingSystemsSet::Between)
             .chain()
-            .run_if(in_state(GameState::Playing)),
+            .run_if(in_state(GameState::Playing).or(in_state(GameState::LoadingWorld))),
     )
     .add_mut_event::<DoneGeneratingChunkEvent>()
     .init_resource::<NeedGeneratedLodChunks>()

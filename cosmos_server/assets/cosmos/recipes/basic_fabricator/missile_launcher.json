@@ -1,0 +1,20 @@
+{
+  "inputs": [
+    {
+      "quantity": 5,
+      "item": {
+        "Item": "cosmos:iron_bar"
+      }
+    },
+    {
+      "quantity": 3,
+      "item": {
+        "Item": "cosmos:copper_bar"
+      }
+    }
+  ],
+  "output": {
+    "quantity": 1,
+    "item": "cosmos:missile_launcher"
+  }
+}

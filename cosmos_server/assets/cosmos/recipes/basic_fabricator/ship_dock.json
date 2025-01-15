@@ -1,0 +1,26 @@
+{
+  "inputs": [
+    {
+      "quantity": 10,
+      "item": {
+        "Item": "cosmos:copper_bar"
+      }
+    },
+    {
+      "quantity": 4,
+      "item": {
+        "Item": "cosmos:iron"
+      }
+    },
+    {
+      "quantity": 1,
+      "item": {
+        "Item": "cosmos:gravitron_crystal"
+      }
+    }
+  ],
+  "output": {
+    "quantity": 1,
+    "item": "cosmos:ship_dock"
+  }
+}

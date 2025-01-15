@@ -343,6 +343,7 @@ pub(super) fn register(app: &mut App) {
             MaterialsSystemSet::ProcessAddMaterialsEvents,
         )
             .in_set(AssetsSet::AssetsReady)
+            .run_if(in_state(GameState::Playing).or(in_state(GameState::LoadingWorld)))
             .chain(),
     );
 

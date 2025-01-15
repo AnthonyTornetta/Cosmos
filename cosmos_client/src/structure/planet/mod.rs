@@ -3,7 +3,8 @@
 use bevy::{
     math::Quat,
     prelude::{
-        in_state, App, Commands, Entity, EventWriter, GlobalTransform, IntoSystemConfigs, Mut, Query, Res, ResMut, Update, Vec3, With,
+        in_state, App, Commands, Condition, Entity, EventWriter, GlobalTransform, IntoSystemConfigs, Mut, Query, Res, ResMut, Update, Vec3,
+        With,
     },
 };
 use bevy_renet2::renet2::RenetClient;
@@ -188,6 +189,6 @@ pub(super) fn register(app: &mut App) {
             .chain()
             .in_set(NetworkingSystemsSet::Between)
             .after(LocationPhysicsSet::DoPhysics)
-            .run_if(in_state(GameState::Playing)),
+            .run_if(in_state(GameState::Playing).or(in_state(GameState::LoadingWorld))),
     );
 }

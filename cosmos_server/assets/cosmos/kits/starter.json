@@ -11,7 +11,7 @@
   },
   {
     "slot": 2,
-    "item": "cosmos:reactor",
+    "item": "cosmos:passive_generator",
     "quantity": 6
   },
   {
@@ -28,5 +28,10 @@
     "slot": 5,
     "item": "cosmos:laser_cannon",
     "quantity": 6
+  },
+  {
+    "slot": 6,
+    "item": "cosmos:basic_fabricator",
+    "quantity": 1
   }
 ]

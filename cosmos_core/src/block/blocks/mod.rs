@@ -76,7 +76,7 @@ fn add_cosmos_blocks(
     );
 
     blocks.register(
-        BlockBuilder::new("cosmos:reactor", 2.0, 20.0, 5.0)
+        BlockBuilder::new("cosmos:passive_generator", 2.0, 20.0, 5.0)
             .add_property(BlockProperty::Full)
             .add_connection_group("cosmos:produces_power")
             .create(),
@@ -488,6 +488,42 @@ fn add_cosmos_blocks(
 
     blocks.register(
         BlockBuilder::new("cosmos:iron_ore", 10.0, 50.0, 12.0)
+            .add_property(BlockProperty::Full)
+            .create(),
+    );
+
+    blocks.register(
+        BlockBuilder::new("cosmos:copper_ore", 10.0, 50.0, 12.0)
+            .add_property(BlockProperty::Full)
+            .create(),
+    );
+
+    blocks.register(
+        BlockBuilder::new("cosmos:lead_ore", 10.0, 50.0, 12.0)
+            .add_property(BlockProperty::Full)
+            .create(),
+    );
+
+    blocks.register(
+        BlockBuilder::new("cosmos:uranium_ore", 10.0, 50.0, 12.0)
+            .add_property(BlockProperty::Full)
+            .create(),
+    );
+
+    blocks.register(
+        BlockBuilder::new("cosmos:sulfur_ore", 10.0, 50.0, 12.0)
+            .add_property(BlockProperty::Full)
+            .create(),
+    );
+
+    blocks.register(
+        BlockBuilder::new("cosmos:gravitron_crystal_ore", 10.0, 50.0, 12.0)
+            .add_property(BlockProperty::Full)
+            .create(),
+    );
+
+    blocks.register(
+        BlockBuilder::new("cosmos:energite_crystal_ore", 10.0, 50.0, 12.0)
             .add_property(BlockProperty::Full)
             .create(),
     );

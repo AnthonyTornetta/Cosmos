@@ -10,10 +10,7 @@ use bevy_rapier3d::prelude::*;
 use bevy_renet2::renet2::{transport::NetcodeClientTransport, RenetClient};
 use cosmos_core::{
     block::Block,
-    ecs::{
-        bundles::{BundleStartingRotation, CosmosPbrBundle},
-        NeedsDespawned,
-    },
+    ecs::{bundles::BundleStartingRotation, NeedsDespawned},
     entities::player::{render_distance::RenderDistance, Player},
     events::{
         block_events::{BlockChangedEvent, BlockDataChangedEvent},
@@ -37,8 +34,8 @@ use cosmos_core::{
     },
     persistence::LoadingDistance,
     physics::{
-        location::{add_previous_location, handle_child_syncing, CosmosBundleSet, Location, LocationPhysicsSet, SYSTEM_SECTORS},
-        player_world::{PlayerWorld, WorldWithin},
+        location::{systems::Anchor, CosmosBundleSet, Location, LocationPhysicsSet, SetPosition, SYSTEM_SECTORS},
+        player_world::PlayerWorld,
     },
     registry::Registry,
     state::GameState,
@@ -164,6 +161,8 @@ fn lerp_towards(
                     let final_trans = parent_rot.inverse().mul_vec3(rel_trans);
 
                     transform.translation = final_trans;
+                } else {
+                    error!("Missing parent for netty rigidbody location with relative flag for entity {entity:?}!");
                 }
             }
         };
@@ -187,8 +186,7 @@ fn lerp_towards(
 /// TODO: super split this up
 pub(crate) fn client_sync_players(
     mut commands: Commands,
-    (mut meshes, mut client, transport, mut lobby, mut network_mapping): (
-        ResMut<Assets<Mesh>>,
+    (mut client, transport, mut lobby, mut network_mapping): (
         ResMut<RenetClient>,
         Res<NetcodeClientTransport>,
         ResMut<ClientLobby>,
@@ -207,10 +205,9 @@ pub(crate) fn client_sync_players(
         EventWriter<SetTerrainGenData>,
         EventWriter<BlockDataChangedEvent>,
     ),
-    (q_default_rapier_context, query_player, parent_query, q_structure_systems, mut q_inventory, mut q_structure): (
+    (q_default_rapier_context, query_player, q_structure_systems, mut q_inventory, mut q_structure): (
         Query<Entity, With<DefaultRapierContext>>,
         Query<&Player>,
-        Query<&Parent>,
         Query<&StructureSystems>,
         Query<&mut Inventory>,
         Query<&mut Structure>,
@@ -303,10 +300,10 @@ pub(crate) fn client_sync_players(
 
                                         if let Ok(parent) = q_parent.get(entity) {
                                             if parent.get() != parent_ent {
-                                                commands.entity(entity).set_parent(parent_ent);
+                                                commands.entity(entity).set_parent_in_place(parent_ent);
                                             }
                                         } else {
-                                            commands.entity(entity).set_parent(parent_ent);
+                                            commands.entity(entity).set_parent_in_place(parent_ent);
                                         }
 
                                         parent_loc + rel_trans
@@ -340,7 +337,7 @@ pub(crate) fn client_sync_players(
                         ));
 
                         if let Some(parent_ent) = parent_ent {
-                            client_entity_ecmds.set_parent(parent_ent);
+                            client_entity_ecmds.set_parent_in_place(parent_ent);
                         }
 
                         let client_entity = client_entity_ecmds.id();
@@ -376,6 +373,7 @@ pub(crate) fn client_sync_players(
                 body,
                 id,
                 entity: server_entity,
+                parent: server_parent_entity,
                 name,
                 render_distance: _,
             } => {
@@ -389,7 +387,7 @@ pub(crate) fn client_sync_players(
                     continue;
                 };
 
-                info!("Player {} ({}) connected!", name.as_str(), id);
+                info!("Player {} ({}) connected! {body:?}", name.as_str(), id);
 
                 // The player entity may have already been created if some of their components were already synced.
                 let mut entity_cmds = if let Some(player_entity) = network_mapping.client_from_server(&server_entity) {
@@ -398,41 +396,33 @@ pub(crate) fn client_sync_players(
                     commands.spawn_empty()
                 };
 
-                let mut loc = match body.location {
+                let loc = match body.location {
                     NettyRigidBodyLocation::Absolute(location) => location,
                     NettyRigidBodyLocation::Relative(rel_trans, entity) => {
-                        let parent_loc = query_body.get(entity).map(|x| x.0.copied()).unwrap_or(None).unwrap_or_default();
+                        let parent_loc = query_body.get(entity).map(|x| x.0.copied()).ok().flatten().unwrap_or_default();
 
                         parent_loc + rel_trans
                     }
                 };
 
-                // this will avoid any position mismatching
-                loc.last_transform_loc = Some(loc.local);
-
                 entity_cmds.insert((
-                    CosmosPbrBundle {
-                        location: loc,
-                        rotation: body.rotation.into(),
-                        mesh: Mesh3d(meshes.add(Capsule3d::default())),
-                        ..default()
-                    },
-                    Collider::capsule_y(0.65, 0.25),
-                    LockedAxes::ROTATION_LOCKED,
-                    Name::new(format!("Player ({name})")),
-                    RigidBody::Dynamic,
-                    Friction {
-                        coefficient: 0.0,
-                        combine_rule: CoefficientCombineRule::Min,
-                    },
+                    SetPosition::Transform,
+                    Transform::from_rotation(body.rotation),
+                    loc,
                     body.create_velocity(),
                     Player::new(name, id),
-                    ReadMassProperties::default(),
-                    ActiveEvents::COLLISION_EVENTS,
                     ServerEntity(server_entity),
                 ));
 
                 let client_entity = entity_cmds.id();
+
+                if let Some(server_parent_entity) = server_parent_entity {
+                    if let Some(parent_ent) = network_mapping.client_from_server(&server_parent_entity) {
+                        entity_cmds.set_parent_in_place(parent_ent);
+                    } else {
+                        error!("No parent entity Server{server_parent_entity:?} exists for player {client_entity}!");
+                    }
+                }
 
                 let player_info = PlayerInfo {
                     server_entity,
@@ -454,6 +444,7 @@ pub(crate) fn client_sync_players(
                     entity_cmds
                         .insert((
                             LocalPlayer,
+                            Anchor,
                             HeldItemSlot::new(0).unwrap(),
                             RenderDistance::default(),
                             CameraPlayerOffset(camera_offset),
@@ -727,25 +718,7 @@ pub(crate) fn client_sync_players(
             ServerReliableMessages::PlayerLeaveShip { player_entity } => {
                 if let Some(player_entity) = network_mapping.client_from_server(&player_entity) {
                     if let Some(mut ecmds) = commands.get_entity(player_entity) {
-                        let Ok(parent) = parent_query.get(player_entity) else {
-                            continue;
-                        };
-
-                        ecmds.remove_parent();
-
-                        let Ok(Some(ship_trans)) = query_body.get(parent.get()).map(|x| x.1.cloned()) else {
-                            continue;
-                        };
-
-                        let ship_translation = ship_trans.translation;
-
-                        if let Ok((Some(mut loc), Some(mut trans))) = query_body.get_mut(player_entity).map(|x| (x.0, x.1)) {
-                            let cur_trans = trans.translation;
-
-                            trans.translation = cur_trans + ship_translation;
-
-                            loc.last_transform_loc = Some(trans.translation);
-                        }
+                        ecmds.remove_parent_in_place();
                     }
                 }
             }
@@ -765,16 +738,7 @@ pub(crate) fn client_sync_players(
                     continue;
                 };
 
-                ecmds.set_parent(ship_entity);
-
-                let Ok(Some(ship_loc)) = query_body.get(ship_entity).map(|x| x.0.cloned()) else {
-                    continue;
-                };
-
-                if let Ok((Some(mut loc), Some(mut trans), _, _, _)) = query_body.get_mut(player_entity) {
-                    trans.translation = (*loc - ship_loc).absolute_coords_f32();
-                    loc.last_transform_loc = Some(trans.translation);
-                }
+                ecmds.set_parent_in_place(ship_entity);
             }
             ServerReliableMessages::PlayerEnterBuildMode {
                 player_entity,
@@ -947,100 +911,29 @@ fn get_entity_identifier_entity_for_despawning(
     }
 }
 
-/// Handles any just-added locations that need to sync up to their transforms
-fn fix_location(
-    mut query: Query<(Entity, &mut Location, Option<&mut Transform>), (Added<Location>, Without<PlayerWorld>, Without<Parent>)>,
-    player_worlds: Query<(Entity, &Location), With<PlayerWorld>>,
-    mut commands: Commands,
-) {
-    for (entity, mut location, transform) in query.iter_mut() {
-        match player_worlds.get_single() {
-            Ok((pw, loc)) => {
-                let translation = loc.relative_coords_to(&location);
-                if let Some(mut transform) = transform {
-                    transform.translation = translation;
-                } else {
-                    commands
-                        .entity(entity)
-                        .insert((WorldWithin(pw), Transform::from_translation(translation)));
-                }
-                location.last_transform_loc = Some(translation);
-            }
-            _ => {
-                warn!("Something was added with a location before a player world was registered.")
-            }
-        }
-    }
-}
-
-fn sync_transforms_and_locations(
-    mut trans_query_no_parent: Query<(&mut Transform, &mut Location), (Without<PlayerWorld>, Without<Parent>)>,
-    trans_query_with_parent: Query<&Location, (Without<PlayerWorld>, With<Parent>)>,
-    parent_query: Query<&Parent>,
-    player_entity_query: Query<Entity, With<LocalPlayer>>,
-    mut world_query: Query<(&PlayerWorld, &mut Location)>,
-) {
-    for (transform, mut location) in trans_query_no_parent.iter_mut() {
-        if location.last_transform_loc.is_some() {
-            location.apply_updates(transform.translation);
-        }
-    }
-
-    if let Ok((world, mut world_location)) = world_query.get_single_mut() {
-        let mut player_entity = player_entity_query.get(world.player).expect("This player should exist.");
-
-        while let Ok(parent) = parent_query.get(player_entity) {
-            let parent_entity = parent.get();
-            if trans_query_no_parent.contains(parent_entity) {
-                player_entity = parent.get();
-            } else {
-                break;
-            }
-        }
-
-        let location = trans_query_no_parent
-            .get(player_entity)
-            .map(|x| x.1)
-            .or_else(|_| match trans_query_with_parent.get(player_entity) {
-                Ok(loc) => Ok(loc),
-                Err(x) => Err(x),
-            })
-            .expect("The above loop guarantees this is valid");
-
-        world_location.set_from(location);
-
-        // Update transforms of objects within this world.
-        for (mut transform, mut location) in trans_query_no_parent.iter_mut() {
-            let trans = world_location.relative_coords_to(&location);
-            transform.translation = trans;
-            location.last_transform_loc = Some(trans);
-        }
-    }
-}
-
-/// Fixes oddities that happen when changing parent of player
-fn player_changed_parent(
-    q_parent: Query<(&GlobalTransform, &Location)>,
-    mut q_local_player: Query<(&mut Transform, &Location, &Parent), (Changed<Parent>, With<LocalPlayer>)>,
-) {
-    let Ok((mut player_trans, player_loc, parent)) = q_local_player.get_single_mut() else {
-        return;
-    };
-
-    let Ok((parent_trans, parent_loc)) = q_parent.get(parent.get()) else {
-        return;
-    };
-
-    // Because the player's translation is always 0, 0, 0 we need to adjust it so the player is put into the
-    // right spot in its parent.
-    player_trans.translation = Quat::from_affine3(&parent_trans.affine())
-        .inverse()
-        .mul_vec3((*player_loc - *parent_loc).absolute_coords_f32());
-}
+//
+// /// Fixes oddities that happen when changing parent of player
+// fn player_changed_parent(
+//     q_parent: Query<(&GlobalTransform, &Location)>,
+//     mut q_local_player: Query<(&mut Transform, &Location, &Parent), (Changed<Parent>, With<LocalPlayer>)>,
+// ) {
+//     let Ok((mut player_trans, player_loc, parent)) = q_local_player.get_single_mut() else {
+//         return;
+//     };
+//
+//     let Ok((parent_trans, parent_loc)) = q_parent.get(parent.get()) else {
+//         return;
+//     };
+//
+//     // Because the player's translation is always 0, 0, 0 we need to adjust it so the player is put into the
+//     // right spot in its parent.
+//     player_trans.translation = Quat::from_affine3(&parent_trans.affine())
+//         .inverse()
+//         .mul_vec3((*player_loc - *parent_loc).absolute_coords_f32());
+// }
 
 pub(super) fn register(app: &mut App) {
     app.insert_resource(RequestedEntities::default())
-        .configure_sets(Update, LocationPhysicsSet::DoPhysics)
         .add_systems(
             Update,
             (
@@ -1055,7 +948,7 @@ pub(super) fn register(app: &mut App) {
         .add_systems(
             Update,
             (
-                fix_location,
+                // fix_location,
                 client_sync_players
                     .before(ClientReceiveComponents::ClientReceiveComponents)
                     .in_set(NetworkingSystemsSet::ReceiveMessages)
@@ -1066,21 +959,9 @@ pub(super) fn register(app: &mut App) {
         )
         .add_systems(
             Update,
-            (
-                // Also run first above
-                fix_location,
-                (
-                    lerp_towards,
-                    player_changed_parent,
-                    sync_transforms_and_locations,
-                    handle_child_syncing,
-                    add_previous_location,
-                )
-                    .after(CosmosBundleSet::HandleCosmosBundles)
-                    .chain(),
-            )
-                .in_set(LocationPhysicsSet::DoPhysics)
-                .chain()
-                .run_if(in_state(GameState::Playing)),
+            lerp_towards
+                .before(LocationPhysicsSet::DoPhysics)
+                .in_set(NetworkingSystemsSet::Between)
+                .run_if(in_state(GameState::Playing).or(in_state(GameState::LoadingWorld))),
         );
 }

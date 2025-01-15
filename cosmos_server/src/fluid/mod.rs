@@ -14,14 +14,14 @@ use cosmos_core::{
 };
 use interact_fluid::FluidInteractionSet;
 
-use crate::persistence::make_persistent::{make_persistent, PersistentComponent};
+use crate::persistence::make_persistent::{make_persistent, DefaultPersistentComponent};
 
 pub mod interact_fluid;
 mod register_blocks;
 mod tank;
 
-impl PersistentComponent for BlockFluidData {}
-impl PersistentComponent for FluidItemData {}
+impl DefaultPersistentComponent for BlockFluidData {}
+impl DefaultPersistentComponent for FluidItemData {}
 
 fn on_place_tank(
     mut evr_changed_block: EventReader<BlockChangedEvent>,

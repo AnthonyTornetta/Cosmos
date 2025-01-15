@@ -41,6 +41,7 @@ use crate::{
     ui::{
         components::{
             button::{register_button, Button, ButtonEvent, ButtonStyles},
+            scollable_container::ScrollBox,
             window::GuiWindow,
         },
         font::DefaultFont,
@@ -149,93 +150,96 @@ fn populate_menu(
         let mut slot_ents = vec![];
 
         ecmds.with_children(|p| {
-            p.spawn((Node {
-                flex_grow: 1.0,
-                flex_direction: FlexDirection::Column,
-                ..Default::default()
-            },))
-                .with_children(|p| {
-                    for recipe in crafting_recipes.iter() {
+            p.spawn((
+                ScrollBox::default(),
+                Node {
+                    flex_grow: 1.0,
+                    flex_direction: FlexDirection::Column,
+                    ..Default::default()
+                },
+            ))
+            .with_children(|p| {
+                for recipe in crafting_recipes.iter() {
+                    p.spawn((
+                        Node {
+                            height: Val::Px(100.0),
+                            width: Val::Percent(100.0),
+                            justify_content: JustifyContent::SpaceBetween,
+                            ..Default::default()
+                        },
+                        Button::<SelectItemEvent>::default(),
+                        Recipe(recipe.clone()),
+                    ))
+                    .with_children(|p| {
                         p.spawn((
                             Node {
-                                height: Val::Px(100.0),
-                                width: Val::Percent(100.0),
-                                justify_content: JustifyContent::SpaceBetween,
+                                width: Val::Px(64.0),
+                                height: Val::Px(64.0),
+                                margin: UiRect::all(Val::Auto),
                                 ..Default::default()
                             },
-                            Button::<SelectItemEvent>::default(),
-                            Recipe(recipe.clone()),
+                            RenderItem {
+                                item_id: recipe.output.item,
+                            },
+                        ));
+
+                        let item = items.from_numeric_id(recipe.output.item);
+                        let name = lang.get_name_from_id(item.unlocalized_name()).unwrap_or(item.unlocalized_name());
+
+                        p.spawn((
+                            Name::new("Item name + inputs display"),
+                            Node {
+                                width: Val::Percent(80.0),
+                                flex_direction: FlexDirection::Column,
+                                justify_content: JustifyContent::SpaceEvenly,
+                                ..Default::default()
+                            },
                         ))
                         .with_children(|p| {
                             p.spawn((
                                 Node {
-                                    width: Val::Px(64.0),
-                                    height: Val::Px(64.0),
-                                    margin: UiRect::all(Val::Auto),
+                                    width: Val::Percent(100.0),
+                                    // margin: UiRect::vertical(Val::Auto),
                                     ..Default::default()
                                 },
-                                RenderItem {
-                                    item_id: recipe.output.item,
-                                },
+                                Text::new(format!("{}x {}", recipe.output.quantity, name)),
+                                text_style.clone(),
                             ));
 
-                            let item = items.from_numeric_id(recipe.output.item);
-                            let name = lang.get_name_from_id(item.unlocalized_name()).unwrap_or(item.unlocalized_name());
-
-                            p.spawn((
-                                Name::new("Item name + inputs display"),
-                                Node {
-                                    width: Val::Percent(80.0),
-                                    flex_direction: FlexDirection::Column,
-                                    justify_content: JustifyContent::SpaceEvenly,
-                                    ..Default::default()
-                                },
-                            ))
+                            p.spawn(Node {
+                                flex_direction: FlexDirection::Row,
+                                width: Val::Percent(100.0),
+                                ..Default::default()
+                            })
                             .with_children(|p| {
-                                p.spawn((
-                                    Node {
-                                        width: Val::Percent(100.0),
-                                        // margin: UiRect::vertical(Val::Auto),
-                                        ..Default::default()
-                                    },
-                                    Text::new(format!("{}x {}", recipe.output.quantity, name)),
-                                    text_style.clone(),
-                                ));
+                                for item in recipe.inputs.iter() {
+                                    let RecipeItem::Item(item_id) = item.item;
 
-                                p.spawn(Node {
-                                    flex_direction: FlexDirection::Row,
-                                    width: Val::Percent(100.0),
-                                    ..Default::default()
-                                })
-                                .with_children(|p| {
-                                    for item in recipe.inputs.iter() {
-                                        let RecipeItem::Item(item_id) = item.item;
-
+                                    p.spawn((
+                                        Node {
+                                            width: Val::Px(64.0),
+                                            height: Val::Px(64.0),
+                                            flex_direction: FlexDirection::Column,
+                                            align_items: AlignItems::End,
+                                            justify_content: JustifyContent::End,
+                                            ..Default::default()
+                                        },
+                                        RenderItem { item_id },
+                                    ))
+                                    .with_children(|p| {
                                         p.spawn((
-                                            Node {
-                                                width: Val::Px(64.0),
-                                                height: Val::Px(64.0),
-                                                flex_direction: FlexDirection::Column,
-                                                align_items: AlignItems::End,
-                                                justify_content: JustifyContent::End,
-                                                ..Default::default()
-                                            },
-                                            RenderItem { item_id },
-                                        ))
-                                        .with_children(|p| {
-                                            p.spawn((
-                                                Name::new("Item recipe qty"),
-                                                TextNeedsTopRoot,
-                                                Text::new(format!("{}", item.quantity)),
-                                                text_style.clone(),
-                                            ));
-                                        });
-                                    }
-                                });
+                                            Name::new("Item recipe qty"),
+                                            TextNeedsTopRoot,
+                                            Text::new(format!("{}", item.quantity)),
+                                            text_style.clone(),
+                                        ));
+                                    });
+                                }
                             });
                         });
-                    }
-                });
+                    });
+                }
+            });
 
             p.spawn((
                 Name::new("Footer"),

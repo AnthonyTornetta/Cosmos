@@ -82,7 +82,7 @@ fn create_default_shop_entires(mut commands: Commands, items: Res<Registry<Item>
             price_per: 300,
         },
         PrettyShopEntry::Selling {
-            item_id: "cosmos:reactor".into(),
+            item_id: "cosmos:passive_generator".into(),
             max_quantity_selling: 10_000,
             price_per: 300,
         },
@@ -419,7 +419,7 @@ fn get_entries(entries: Vec<PrettyShopEntry>, items: &Registry<Item>) -> Vec<Sho
                 max_quantity_buying,
                 price_per,
             } => ShopEntry::Buying {
-                item_id: items.from_id(&item_id).expect("Missing {item_id}").id(),
+                item_id: items.from_id(&item_id).unwrap_or_else(|| panic!("Missing {item_id}")).id(),
                 max_quantity_buying,
                 price_per,
             },
@@ -428,7 +428,7 @@ fn get_entries(entries: Vec<PrettyShopEntry>, items: &Registry<Item>) -> Vec<Sho
                 max_quantity_selling,
                 price_per,
             } => ShopEntry::Selling {
-                item_id: items.from_id(&item_id).expect("Missing {item_id}").id(),
+                item_id: items.from_id(&item_id).unwrap_or_else(|| panic!("Missing {item_id}")).id(),
                 max_quantity_selling,
                 price_per,
             },

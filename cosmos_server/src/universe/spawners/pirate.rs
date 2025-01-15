@@ -33,7 +33,7 @@ use serde::{Deserialize, Serialize};
 use crate::{
     persistence::{
         loading::{LoadingBlueprintSystemSet, LoadingSystemSet, NeedsBlueprintLoaded},
-        make_persistent::{make_persistent, PersistentComponent},
+        make_persistent::{make_persistent, DefaultPersistentComponent},
     },
     settings::ServerSettings,
 };
@@ -83,7 +83,7 @@ impl IdentifiableComponent for PlayerStrength {
     }
 }
 
-impl PersistentComponent for PlayerStrength {}
+impl DefaultPersistentComponent for PlayerStrength {}
 
 #[derive(Component, Reflect, Debug, Clone, Copy, Default, Serialize, Deserialize)]
 /// Represents the total time a player has played on the server
@@ -99,7 +99,7 @@ impl IdentifiableComponent for TotalTimePlayed {
     }
 }
 
-impl PersistentComponent for TotalTimePlayed {}
+impl DefaultPersistentComponent for TotalTimePlayed {}
 
 fn on_needs_pirate_spawned(mut commands: Commands, q_needs_pirate_spawned: Query<(Entity, &PirateNeedsSpawned)>) {
     for (ent, pns) in q_needs_pirate_spawned.iter() {

@@ -1,7 +1,7 @@
 //! Shared systems between different structure types
 
 use bevy::{
-    prelude::{App, BuildChildren, Children, Commands, Component, Or, PostUpdate, Query, With},
+    prelude::{App, BuildChildrenTransformExt, Children, Commands, Component, Or, PostUpdate, Query, With},
     reflect::Reflect,
 };
 use serde::{Deserialize, Serialize};
@@ -56,7 +56,7 @@ fn save_the_kids(
 ) {
     for children in query.iter() {
         for child in children.iter().copied().filter(|x| !is_this_structure.contains(*x)) {
-            commands.entity(child).remove_parent();
+            commands.entity(child).remove_parent_in_place();
         }
     }
 }

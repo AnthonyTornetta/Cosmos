@@ -1,0 +1,32 @@
+{
+  "inputs": [
+    {
+      "item": {
+        "Item": "cosmos:copper_bar"
+      },
+      "quantity": 100
+    },
+    {
+      "item": {
+        "Item": "cosmos:iron"
+      },
+      "quantity": 100
+    },
+    {
+      "item": {
+        "Item": "cosmos:energite_crystal"
+      },
+      "quantity": 4
+    },
+    {
+      "item": {
+        "Item": "cosmos:gravitron_crystal"
+      },
+      "quantity": 4
+    }
+  ],
+  "output": {
+    "quantity": 1,
+    "item": "cosmos:station_core"
+  }
+}

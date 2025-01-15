@@ -5,8 +5,11 @@ pub mod render_distance;
 
 use bevy::prelude::{App, Component};
 use bevy_renet2::renet2::ClientId;
+use serde::{Deserialize, Serialize};
 
-#[derive(Component, Debug)]
+use crate::netty::sync::{sync_component, IdentifiableComponent, SyncableComponent};
+
+#[derive(Component, Debug, Serialize, Deserialize, PartialEq, Eq, Clone)]
 /// Represents a player
 pub struct Player {
     name: String,
@@ -32,6 +35,20 @@ impl Player {
     }
 }
 
+impl IdentifiableComponent for Player {
+    fn get_component_unlocalized_name() -> &'static str {
+        "cosmos:player"
+    }
+}
+
+impl SyncableComponent for Player {
+    fn get_sync_type() -> crate::netty::sync::SyncType {
+        crate::netty::sync::SyncType::ServerAuthoritative
+    }
+}
+
 pub(super) fn register(app: &mut App) {
+    sync_component::<Player>(app);
+
     creative::register(app);
 }

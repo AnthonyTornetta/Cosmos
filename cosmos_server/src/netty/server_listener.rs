@@ -16,7 +16,7 @@ use cosmos_core::netty::server::ServerLobby;
 use cosmos_core::netty::sync::server_entity_syncing::RequestedEntityEvent;
 use cosmos_core::netty::system_sets::NetworkingSystemsSet;
 use cosmos_core::netty::{cosmos_encoder, NettyChannelClient, NettyChannelServer};
-use cosmos_core::physics::location::Location;
+use cosmos_core::physics::location::{Location, SetPosition};
 use cosmos_core::registry::Registry;
 use cosmos_core::state::GameState;
 use cosmos_core::structure::loading::ChunksNeedLoaded;
@@ -104,8 +104,8 @@ fn server_listen_messages(
                                 }
                             };
 
-                            location.set_from(&new_loc);
-                            location.last_transform_loc = Some(transform.translation);
+                            *location = new_loc;
+                            commands.entity(player_entity).insert(SetPosition::Transform);
                             currently_looking.rotation = looking;
                             velocity.linvel = body.body_vel.map(|x| x.linvel).unwrap_or(Vec3::ZERO);
                             transform.rotation = body.rotation;
@@ -197,8 +197,9 @@ fn server_listen_messages(
                         alternate,
                     });
                 }
-                ClientReliableMessages::CreateShip { name: _name } => {
+                ClientReliableMessages::CreateShip { name } => {
                     let Some(client) = lobby.player_from_id(client_id) else {
+                        warn!("Invalid client id {client_id}");
                         continue;
                     };
 
@@ -221,10 +222,14 @@ fn server_listen_messages(
                     if let Ok((transform, location, looking, _)) = change_player_query.get(client) {
                         let ship_location = *location + transform.rotation.mul_vec3(looking.rotation.mul_vec3(Vec3::new(0.0, 0.0, -4.0)));
 
+                        info!("Creating ship {name}");
+
                         create_ship_event_writer.send(CreateShipEvent {
                             ship_location,
                             rotation: looking.rotation,
                         });
+                    } else {
+                        warn!("Invalid player entity - {client:?}");
                     }
                 }
                 ClientReliableMessages::CreateStation { name: _name } => {
@@ -284,12 +289,12 @@ fn server_listen_messages(
                     if let Some(player_entity) = lobby.player_from_id(client_id) {
                         if let Some(mut e) = commands.get_entity(player_entity) {
                             // This should be verified in the future to make sure the parent of the player is actually a ship
-                            e.remove_parent();
-                            if let Ok((player_trans, mut player_loc)) =
-                                change_player_query.get_mut(player_entity).map(|(x, y, _, _)| (x, y))
-                            {
-                                player_loc.last_transform_loc = Some(player_trans.translation);
-                            }
+                            e.remove_parent_in_place();
+                            // if let Ok((player_trans, mut player_loc)) =
+                            //     change_player_query.get_mut(player_entity).map(|(x, y, _, _)| (x, y))
+                            // {
+                            //     player_loc.last_transform_loc = Some(player_trans.translation);
+                            // }
 
                             server.broadcast_message_except(
                                 client_id,

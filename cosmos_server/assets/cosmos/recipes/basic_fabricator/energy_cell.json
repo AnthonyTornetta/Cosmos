@@ -1,0 +1,20 @@
+{
+  "inputs": [
+    {
+      "item": {
+        "Item": "cosmos:copper_bar"
+      },
+      "quantity": 6
+    },
+    {
+      "item": {
+        "Item": "cosmos:energite_crystal"
+      },
+      "quantity": 1
+    }
+  ],
+  "output": {
+    "quantity": 1,
+    "item": "cosmos:energy_cell"
+  }
+}

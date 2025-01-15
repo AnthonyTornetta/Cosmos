@@ -1,10 +1,9 @@
 use bevy::prelude::{
-    in_state, Added, App, BuildChildren, Commands, Component, Entity, Event, EventReader, EventWriter, IntoSystemConfigs,
-    IntoSystemSetConfigs, Quat, Query, RemovedComponents, States, SystemSet, Transform, Update, Vec3, With,
+    in_state, App, BuildChildren, Commands, Component, Entity, Event, EventReader, EventWriter, IntoSystemConfigs, IntoSystemSetConfigs,
+    Quat, Query, RemovedComponents, States, SystemSet, Transform, Update, Vec3,
 };
 use bevy_rapier3d::prelude::{RigidBody, Sensor};
 
-use crate::entities::player::Player;
 use crate::events::structure::change_pilot_event::ChangePilotEvent;
 use crate::physics::location::{Location, LocationPhysicsSet};
 use crate::structure::ship::pilot::Pilot;
@@ -55,17 +54,11 @@ fn event_listener(
                 PilotStartingDelta(delta, delta_rot),
                 RigidBody::Fixed,
                 Sensor,
+                Transform::from_xyz(0.5, -0.25, 0.5),
             ));
         } else if let Some(mut ecmds) = commands.get_entity(ev.structure_entity) {
             ecmds.remove::<Pilot>();
         }
-    }
-}
-
-fn add_pilot(mut query: Query<&mut Transform, (Added<Pilot>, With<Player>)>) {
-    for mut trans in query.iter_mut() {
-        trans.translation = Vec3::new(0.5, -0.25, 0.5);
-        trans.rotation = Quat::IDENTITY;
     }
 }
 
@@ -147,14 +140,7 @@ pub(super) fn register<T: States + Clone + Copy>(app: &mut App, playing_state: T
 
     app.add_systems(
         Update,
-        (
-            add_pilot,
-            pilot_removed,
-            remove_sensor,
-            bouncer,
-            verify_pilot_exists,
-            event_listener,
-        )
+        (pilot_removed, remove_sensor, bouncer, verify_pilot_exists, event_listener)
             .in_set(PilotEventSystemSet::ChangePilotListener)
             .in_set(StructureTypeSet::Ship)
             .chain()
