@@ -20,7 +20,6 @@ use std::{
 #[cfg(doc)]
 use bevy::prelude::Transform;
 use bevy::{
-    log::info,
     prelude::{App, Component, Deref, DerefMut, SystemSet, Update, Vec3},
     reflect::Reflect,
 };

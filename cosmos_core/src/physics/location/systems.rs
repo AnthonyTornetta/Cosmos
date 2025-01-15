@@ -436,7 +436,6 @@ fn recursively_sync_transforms_and_locations(
             let transform_delta_parent = parent_g_rot.mul_vec3(my_transform.translation);
             let new_loc = parent_loc + transform_delta_parent;
             if *my_loc != new_loc {
-                info!("{name}: {} -> {new_loc}", *my_loc);
                 *my_loc = new_loc;
             }
             // info!("{name}: {transform_delta_parent} / {}", *my_loc);
