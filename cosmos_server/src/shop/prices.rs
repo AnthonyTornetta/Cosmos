@@ -428,7 +428,7 @@ fn get_entries(entries: Vec<PrettyShopEntry>, items: &Registry<Item>) -> Vec<Sho
                 max_quantity_selling,
                 price_per,
             } => ShopEntry::Selling {
-                item_id: items.from_id(&item_id).expect("Missing {item_id}").id(),
+                item_id: items.from_id(&item_id).unwrap_or_else(|| panic!("Missing {item_id}")).id(),
                 max_quantity_selling,
                 price_per,
             },
