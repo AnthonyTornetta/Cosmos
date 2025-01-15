@@ -6,6 +6,7 @@ use bevy::{
         schedule::IntoSystemConfigs,
         system::{Commands, Query, Res, ResMut},
     },
+    log::info,
     state::{condition::in_state, state::OnEnter},
 };
 use cosmos_core::{
@@ -35,33 +36,39 @@ fn block_update_system<T: LineProperty, S: LinePropertyCalculator<T>>(
     systems_query: Query<&StructureSystems>,
 ) {
     for ev in event.read() {
-        if let Ok(systems) = systems_query.get(ev.block.structure()) {
-            if let Ok(mut system) = systems.query_mut(&mut system_query) {
-                let old_block = blocks.from_numeric_id(ev.old_block);
-                let new_block = blocks.from_numeric_id(ev.new_block);
+        let Ok(systems) = systems_query.get(ev.block.structure()) else {
+            continue;
+        };
 
-                if laser_cannon_blocks.get(old_block).is_some() {
-                    system.remove_block(ev.block.coords());
-                }
+        let Ok(mut system) = systems.query_mut(&mut system_query) else {
+            continue;
+        };
 
-                if let Some(property) = laser_cannon_blocks.get(new_block) {
-                    system.add_block(ev.block.coords(), ev.new_block_rotation(), property);
-                }
+        let old_block = blocks.from_numeric_id(ev.old_block);
+        let new_block = blocks.from_numeric_id(ev.new_block);
 
-                let mut recalc = false;
-                if color_blocks.from_block(old_block).is_some() {
-                    system.colors.retain(|x| x.0 != ev.block.coords());
-                    recalc = true;
-                }
+        if laser_cannon_blocks.get(old_block).is_some() {
+            info!("Removing block {old_block:?}");
+            system.remove_block(ev.block.coords());
+        }
 
-                if let Some(color_property) = color_blocks.from_block(new_block) {
-                    system.colors.push((ev.block.coords(), color_property.properties));
-                    recalc = true;
-                }
-                if recalc {
-                    recalculate_colors(&mut system, Some(ev.block.coords()));
-                }
-            }
+        if let Some(property) = laser_cannon_blocks.get(new_block) {
+            info!("Adding block {old_block:?}");
+            system.add_block(ev.block.coords(), ev.new_block_rotation(), property);
+        }
+
+        let mut recalc = false;
+        if color_blocks.from_block(old_block).is_some() {
+            system.colors.retain(|x| x.0 != ev.block.coords());
+            recalc = true;
+        }
+
+        if let Some(color_property) = color_blocks.from_block(new_block) {
+            system.colors.push((ev.block.coords(), color_property.properties));
+            recalc = true;
+        }
+        if recalc {
+            recalculate_colors(&mut system, Some(ev.block.coords()));
         }
     }
 }
@@ -263,6 +270,8 @@ impl<T: LineProperty, S: LinePropertyCalculator<T>> BlockStructureSystem<T> for 
 
             if line.start == sb {
                 let (dx, dy, dz) = line.direction.to_i32_tuple();
+                line.properties.remove(0);
+                line.property = S::calculate_property(&line.properties);
                 line.start.x = (line.start.x as i32 + dx) as CoordinateType;
                 line.start.y = (line.start.y as i32 + dy) as CoordinateType;
                 line.start.z = (line.start.z as i32 + dz) as CoordinateType;
@@ -273,8 +282,9 @@ impl<T: LineProperty, S: LinePropertyCalculator<T>> BlockStructureSystem<T> for 
                 }
                 return;
             } else if line.end() == sb {
+                line.properties.pop();
+                line.property = S::calculate_property(&line.properties);
                 line.len -= 1;
-
                 if line.len == 0 {
                     self.lines.swap_remove(i);
                 }
