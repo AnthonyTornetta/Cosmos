@@ -28,5 +28,10 @@
     "slot": 5,
     "item": "cosmos:laser_cannon",
     "quantity": 6
+  },
+  {
+    "slot": 6,
+    "item": "cosmos:basic_fabricator",
+    "quantity": 1
   }
 ]

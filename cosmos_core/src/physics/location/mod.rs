@@ -20,6 +20,7 @@ use std::{
 #[cfg(doc)]
 use bevy::prelude::Transform;
 use bevy::{
+    log::info,
     prelude::{App, Component, Deref, DerefMut, SystemSet, Update, Vec3},
     reflect::Reflect,
 };
@@ -395,19 +396,21 @@ impl Location {
     ///
     /// If not, the sector coordinates & `local` will be modified to maintain this
     pub fn fix_bounds(&mut self) {
-        let over_x = (self.local.x / (SECTOR_DIMENSIONS / 2.0)) as i64;
+        const SD2: f32 = SECTOR_DIMENSIONS / 2.0;
+
+        let over_x = ((self.local.x + SD2) / SECTOR_DIMENSIONS).floor() as i64;
         if over_x != 0 {
             self.local.x -= over_x as f32 * SECTOR_DIMENSIONS;
             self.sector.set_x(self.sector.x() + over_x);
         }
 
-        let over_y = (self.local.y / (SECTOR_DIMENSIONS / 2.0)) as i64;
+        let over_y = ((self.local.y + SD2) / SECTOR_DIMENSIONS).floor() as i64;
         if over_y != 0 {
             self.local.y -= over_y as f32 * SECTOR_DIMENSIONS;
             self.sector.set_y(self.sector.y() + over_y);
         }
 
-        let over_z = (self.local.z / (SECTOR_DIMENSIONS / 2.0)) as i64;
+        let over_z = ((self.local.z + SD2) / SECTOR_DIMENSIONS).floor() as i64;
         if over_z != 0 {
             self.local.z -= over_z as f32 * SECTOR_DIMENSIONS;
             self.sector.set_z(self.sector.z() + over_z);
@@ -603,5 +606,25 @@ mod tests {
         );
 
         assert_eq!(l1.relative_coords_to(&l2), result);
+    }
+
+    #[test]
+    fn test_loc_adding_zero() {
+        let l1 = Location::ZERO;
+        let l2 = Location::new(Vec3::new(-9999.0, -9999.0, -9999.0), Sector::new(-9, 100, 0));
+
+        let res = l1 + l2;
+
+        assert_eq!(l2, res);
+    }
+
+    #[test]
+    fn test_loc_adding() {
+        let l1 = Location::new(Vec3::new(-100.0, -100.0, -100.0), Sector::new(10, -10, 12));
+        let l2 = Location::new(Vec3::new(-9999.0, -9999.0, -9999.0), Sector::new(-9, 100, 0));
+
+        let res = l1 + l2;
+
+        assert_eq!(Location::new(Vec3::new(9901.0, 9901.0, 9901.0), Sector::new(0, 89, 11)), res);
     }
 }

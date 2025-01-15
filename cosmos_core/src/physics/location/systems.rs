@@ -8,8 +8,11 @@
 //!
 //!
 
+use std::time::Duration;
+
 use bevy::{
     prelude::*,
+    time::common_conditions::on_timer,
     transform::systems::{propagate_transforms, sync_simple_transforms},
 };
 
@@ -356,6 +359,7 @@ type TransformLocationQuery<'w, 's> = Query<
     'w,
     's,
     (
+        &'static Name,
         &'static mut Location,
         Option<&'static mut Transform>,
         Option<&'static PreviousLocation>,
@@ -406,7 +410,7 @@ fn recursively_sync_transforms_and_locations(
     q_data: &mut TransformLocationQuery,
     q_children: &Query<&Children>,
 ) {
-    let Ok((mut my_loc, my_transform, my_prev_loc, last_trans_trans, set_trans)) = q_data.get_mut(ent) else {
+    let Ok((name, mut my_loc, my_transform, my_prev_loc, last_trans_trans, set_trans)) = q_data.get_mut(ent) else {
         return;
     };
 
@@ -418,24 +422,59 @@ fn recursively_sync_transforms_and_locations(
         if set_trans.is_some() {
             my_transform.translation = parent_g_rot.inverse().normalize() * ((*my_loc - parent_loc).absolute_coords_f32());
         } else {
-            let g_trans = parent_g_trans + (parent_g_rot * my_transform.translation);
-
-            let parent_delta_loc = parent_loc - parent_prev_loc;
-            delta_g_trans = last_trans_trans.map(|x| g_trans - x.0).unwrap_or(Vec3::ZERO);
-
-            let delta_local_trans = delta_g_trans - parent_delta_g_trans;
-
+            // Calculates the change in location since the last time this ran
             // WARNING: THIS COULD BLOW UP if the delta loc is huge in f32 coords. Idk how to do this better
-            // though.
-            let delta_loc = my_prev_loc.map(|x| (*my_loc - x.0).absolute_coords_f32()).unwrap_or(Vec3::ZERO);
-            *my_loc = *my_loc + delta_local_trans + parent_delta_loc;
-            let my_local_rotated_trans = (*my_loc - parent_loc).absolute_coords_f32();
-            let my_local_location_based_trans = parent_g_rot.inverse().normalize() * my_local_rotated_trans;
+            let delta_loc = (*my_loc - my_prev_loc.map(|x| x.0).unwrap_or(*my_loc)).absolute_coords_f32();
 
-            my_transform.translation = my_local_location_based_trans;
+            // Applies that change to the transform
+            let delta = parent_g_rot.inverse().mul_vec3(delta_loc);
+            if delta != Vec3::ZERO {
+                my_transform.translation += delta;
+            }
+
+            // Calculates how far away the entity was from its parent + its delta location.
+            let transform_delta_parent = parent_g_rot.mul_vec3(my_transform.translation);
+            let new_loc = parent_loc + transform_delta_parent;
+            if *my_loc != new_loc {
+                info!("{name}: {} -> {new_loc}", *my_loc);
+                *my_loc = new_loc;
+            }
+            // info!("{name}: {transform_delta_parent} / {}", *my_loc);
+
+            // let g_trans = parent_g_trans + (parent_g_rot * my_transform.translation);
+            //
+            // let parent_delta_loc = parent_loc - parent_prev_loc;
+            // delta_g_trans = last_trans_trans.map(|x| g_trans - x.0).unwrap_or(Vec3::ZERO);
+            //
+            // let delta_local_trans = delta_g_trans - parent_delta_g_trans;
+            // if name.contains("Player") {
+            //     info!("PLAYER DELTA: {}", delta_local_trans);
+            //     info!(
+            //         "Player T: {:?}; G T: {:?}; PREV T: {:?}; PARENT_GT: {:?}",
+            //         my_transform.translation,
+            //         g_trans,
+            //         last_trans_trans.map(|x| x.0).unwrap_or(Vec3::ZERO),
+            //         parent_g_trans
+            //     );
+            // }
+            //
+            //             // // though.
+            // let delta_loc = my_prev_loc.map(|x| (*my_loc - x.0).absolute_coords_f32()).unwrap_or(Vec3::ZERO);
+            // let my_new_loc = *my_loc + delta_local_trans + parent_delta_loc;
+            // if *my_loc != my_new_loc {
+            //     *my_loc = my_new_loc;
+            // }
+            // let my_local_rotated_trans = (*my_loc - parent_loc).absolute_coords_f32();
+            // let my_local_location_based_trans = parent_g_rot.inverse().normalize() * my_local_rotated_trans;
+            //
+            // info!("{}, {}", name, my_local_location_based_trans - my_transform.translation);
+            // // Change detection limiting
+            // if my_transform.translation != my_local_location_based_trans {
+            //     my_transform.translation = my_local_location_based_trans;
+            // }
 
             // Changes in location mess up the children.
-            delta_g_trans += delta_loc;
+            // delta_g_trans += delta_loc;
         }
 
         (my_transform.translation, my_transform.rotation, delta_g_trans)
@@ -455,7 +494,7 @@ fn recursively_sync_transforms_and_locations(
         .remove::<SetTransformBasedOnLocationFlag>();
 
     let my_loc = *my_loc;
-    let my_g_rot = parent_g_rot.mul_quat(local_rotation);
+    let my_g_rot = parent_g_rot * local_rotation;
     let my_prev_loc = my_prev_loc.map(|x| x.0).unwrap_or(my_loc);
 
     if let Ok(children) = q_children.get(ent) {
@@ -481,7 +520,7 @@ pub(super) fn register(app: &mut App) {
         (
             (sync_simple_transforms, propagate_transforms).chain(), // TODO: Maybe not this?
             apply_set_position,
-            reposition_worlds_around_anchors,
+            reposition_worlds_around_anchors.run_if(on_timer(Duration::from_secs(5))),
             #[cfg(feature = "server")]
             (move_anchors_between_worlds, move_non_anchors_between_worlds, remove_empty_worlds).chain(),
             sync_transforms_and_locations,
@@ -493,5 +532,11 @@ pub(super) fn register(app: &mut App) {
             .in_set(NetworkingSystemsSet::Between),
     );
 
-    app.add_systems(PostUpdate, sync_transforms_and_locations);
+    // app.add_systems(PostUpdate, sync_transforms_and_locations);
+}
+
+#[cfg(test)]
+mod test {
+    #[test]
+    fn test_loc_updates() {}
 }

@@ -68,9 +68,7 @@ fn event_listener(
 ///
 /// TODO: Having to do this is mega lame, find a better solution to this problem please.
 fn keep_pilot_centered(mut q_pilot_transform: Query<&mut Transform, (With<Pilot>, With<Player>)>) {
-    for mut trans in q_pilot_transform.iter_mut() {
-        trans.translation = Vec3::new(0.5, -0.25, 0.5);
-    }
+    for mut trans in q_pilot_transform.iter_mut() {}
 }
 
 #[derive(Debug, Event)]

@@ -953,22 +953,48 @@ enum InventorySet {
     MoveWindows,
 }
 
-fn make_render_middle_camera(
-    q_mid_cam: Query<Entity, With<UiTopRoot>>,
-    mut q_target_cam: Query<&mut TargetCamera, (Changed<TargetCamera>, With<TextNeedsTopRoot>)>,
-    q_needs_target_cam: Query<Entity, (Without<TargetCamera>, With<TextNeedsTopRoot>)>,
-    mut commands: Commands,
+fn rec_make_render_middle_camera(
+    ent: Entity,
+    q_mid_cam: &Query<Entity, With<UiTopRoot>>,
+    q_children: &Query<&Children>,
+    q_target_cam: &mut Query<(Entity, &mut TargetCamera), (Changed<TargetCamera>, With<TextNeedsTopRoot>)>,
+    q_needs_target_cam: &Query<Entity, (Without<TargetCamera>, With<TextNeedsTopRoot>)>,
+    commands: &mut Commands,
 ) {
-    for mut target_camera in q_target_cam.iter_mut() {
-        let middle_camera_entity = q_mid_cam.single();
+    let middle_camera_entity = q_mid_cam.single();
+
+    if let Ok((_, mut target_camera)) = q_target_cam.get_mut(ent) {
         if target_camera.0 != middle_camera_entity {
             target_camera.0 = middle_camera_entity;
         }
+        if let Ok(children) = q_children.get(ent) {
+            for c in children.iter() {
+                rec_make_render_middle_camera(*c, q_mid_cam, q_children, q_target_cam, q_needs_target_cam, commands);
+            }
+        }
+    } else {
+        commands.entity(ent).insert(TargetCamera(middle_camera_entity));
+        if let Ok(children) = q_children.get(ent) {
+            for c in children.iter() {
+                rec_make_render_middle_camera(*c, q_mid_cam, q_children, q_target_cam, q_needs_target_cam, commands);
+            }
+        }
+    }
+}
+
+fn make_render_middle_camera(
+    q_mid_cam: Query<Entity, With<UiTopRoot>>,
+    q_children: Query<&Children>,
+    mut q_target_cam: Query<(Entity, &mut TargetCamera), (Changed<TargetCamera>, With<TextNeedsTopRoot>)>,
+    q_needs_target_cam: Query<Entity, (Without<TargetCamera>, With<TextNeedsTopRoot>)>,
+    mut commands: Commands,
+) {
+    for ent in q_target_cam.iter().map(|x| x.0).collect::<Vec<Entity>>() {
+        rec_make_render_middle_camera(ent, &q_mid_cam, &q_children, &mut q_target_cam, &q_needs_target_cam, &mut commands);
     }
 
     for ent in q_needs_target_cam.iter() {
-        let middle_camera_entity = q_mid_cam.single();
-        commands.entity(ent).insert(TargetCamera(middle_camera_entity));
+        rec_make_render_middle_camera(ent, &q_mid_cam, &q_children, &mut q_target_cam, &q_needs_target_cam, &mut commands);
     }
 }
 
