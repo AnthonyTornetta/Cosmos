@@ -943,7 +943,7 @@ impl MeshBuilder for LodMeshBuilder {
 
                 let packed_normal = BlockDirection::from_vec3((*normal).into()).index() as u32;
 
-                let packed_data: u32 = packed_normal << 29 | packed_uv << 27 | (0b00000111_11111111_11111111_11111111 & texture_index);
+                let packed_data: u32 = (packed_normal << 29) | (packed_uv << 27) | (0b00000111_11111111_11111111_11111111 & texture_index);
 
                 packed_data
             }));
