@@ -8,7 +8,7 @@ use bevy::{
         IntoSystemConfigs, Query, Res, Text, With,
     },
     text::TextFont,
-    ui::{AlignItems, BackgroundColor, DrawUiMaterial, DrawUiMaterialNode, FlexDirection, JustifyContent, Node, TargetCamera, UiRect, Val},
+    ui::{AlignItems, BackgroundColor, FlexDirection, JustifyContent, Node, TargetCamera, UiRect, Val},
 };
 use cosmos_core::{
     crafting::{

@@ -71,9 +71,6 @@ pub struct Location {
     pub sector: Sector,
 }
 
-#[derive(Default, Component, Debug, PartialEq, Serialize, Deserialize, Reflect, Clone, Copy)]
-struct LastTransformTranslation(Vec3);
-
 #[derive(Default, Component, Debug, PartialEq, Eq, Reflect, Clone, Copy)]
 /// Sets the position of this entity based on the specified source of truth
 pub enum SetPosition {

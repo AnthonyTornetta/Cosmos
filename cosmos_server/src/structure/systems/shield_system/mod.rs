@@ -19,7 +19,7 @@ use bevy::{
     },
     reflect::Reflect,
     time::Time,
-    transform::components::{GlobalTransform, Transform},
+    transform::components::Transform,
     utils::hashbrown::HashMap,
 };
 
@@ -33,7 +33,7 @@ use cosmos_core::{
         NettyChannelServer,
     },
     persistence::LoadingDistance,
-    physics::location::{Location, SetPosition},
+    physics::location::SetPosition,
     projectiles::laser::LaserSystemSet,
     registry::{identifiable::Identifiable, Registry},
     state::GameState,
@@ -175,7 +175,7 @@ fn recalculate_shields_if_needed(
     q_placed_shields: Query<&PlacedShields>,
     mut q_shield: Query<&mut Shield>,
     mut q_shield_system: Query<(&mut ShieldSystem, &StructureSystem), Changed<ShieldSystem>>,
-    q_structure: Query<(&Location, &GlobalTransform, &Structure)>,
+    q_structure: Query<&Structure>,
 ) {
     for (mut shield_system, ss) in &mut q_shield_system {
         if !shield_system.needs_shields_recalculated() {
@@ -221,8 +221,8 @@ fn recalculate_shields_if_needed(
             }
         }
 
-        let Ok((loc, g_trans, structure)) = q_structure.get(structure_entity) else {
-            warn!("No loc/g-trans/structure");
+        let Ok(structure) = q_structure.get(structure_entity) else {
+            warn!("No structure - bad");
             continue;
         };
 

@@ -1,10 +1,9 @@
 use bevy::prelude::{
     in_state, App, BuildChildren, Commands, Component, Entity, Event, EventReader, EventWriter, IntoSystemConfigs, IntoSystemSetConfigs,
-    Quat, Query, RemovedComponents, States, SystemSet, Transform, Update, Vec3, With,
+    Quat, Query, RemovedComponents, States, SystemSet, Transform, Update, Vec3,
 };
 use bevy_rapier3d::prelude::{RigidBody, Sensor};
 
-use crate::entities::player::Player;
 use crate::events::structure::change_pilot_event::ChangePilotEvent;
 use crate::physics::location::{Location, LocationPhysicsSet};
 use crate::structure::ship::pilot::Pilot;
@@ -61,14 +60,6 @@ fn event_listener(
             ecmds.remove::<Pilot>();
         }
     }
-}
-
-/// This is to combat floating point issues. The pilot will slowly drift from the center
-/// due to location syncing floating point errors.
-///
-/// TODO: Having to do this is mega lame, find a better solution to this problem please.
-fn keep_pilot_centered(mut q_pilot_transform: Query<&mut Transform, (With<Pilot>, With<Player>)>) {
-    for mut trans in q_pilot_transform.iter_mut() {}
 }
 
 #[derive(Debug, Event)]
@@ -149,14 +140,7 @@ pub(super) fn register<T: States + Clone + Copy>(app: &mut App, playing_state: T
 
     app.add_systems(
         Update,
-        (
-            keep_pilot_centered,
-            pilot_removed,
-            remove_sensor,
-            bouncer,
-            verify_pilot_exists,
-            event_listener,
-        )
+        (pilot_removed, remove_sensor, bouncer, verify_pilot_exists, event_listener)
             .in_set(PilotEventSystemSet::ChangePilotListener)
             .in_set(StructureTypeSet::Ship)
             .chain()
