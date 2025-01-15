@@ -1,8 +1,10 @@
 //! Represents all the mining lasers on a structure
 
+use bevy::prelude::*;
 use bevy::reflect::Reflect;
 use serde::{Deserialize, Serialize};
 
+use super::StructureSystemsSet;
 use super::{
     line_system::{LineProperty, LinePropertyCalculator, LineSystem},
     sync::SyncableSystem,
@@ -47,4 +49,19 @@ impl LinePropertyCalculator<MiningLaserProperty> for MiningLaserPropertyCalculat
     fn unlocalized_name() -> &'static str {
         "cosmos:mining_laser_system"
     }
+}
+
+fn name_mining_laser_system(mut commands: Commands, q_added: Query<Entity, Added<MiningLaserSystem>>) {
+    for e in q_added.iter() {
+        commands.entity(e).insert(Name::new("Plasma Drill System"));
+    }
+}
+
+pub(super) fn register(app: &mut App) {
+    app.register_type::<MiningLaserSystem>().add_systems(
+        Update,
+        name_mining_laser_system
+            .ambiguous_with_all() // doesn't matter if this is 1-frame delayed
+            .after(StructureSystemsSet::InitSystems),
+    );
 }

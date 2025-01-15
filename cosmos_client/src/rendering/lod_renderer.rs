@@ -664,7 +664,7 @@ pub(super) fn register(app: &mut App) {
         )
             .chain()
             .in_set(MaterialsSystemSet::RequestMaterialChanges)
-            .run_if(in_state(GameState::Playing).or(in_state(GameState::LoadingWorld))),
+            .run_if(in_state(GameState::Playing)),
     );
 
     add_statebound_resource::<RenderingLods, GameState>(app, GameState::Playing);
