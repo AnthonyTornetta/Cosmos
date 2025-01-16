@@ -132,8 +132,8 @@ impl<T> Default for PriorityQueue<T> {
 #[derive(Component)]
 /// The hotbar the player can see
 pub struct Hotbar {
-    /// Vec<(slot, slot text)>
-    slots: Vec<(Entity, Entity)>,
+    /// Vec<(slot, slot text, slot item)>
+    slots: Vec<(Entity, Entity, Entity)>,
     selected_slot: usize,
     prev_slot: usize,
     max_slots: usize,
@@ -368,24 +368,21 @@ fn populate_hotbar(
         return;
     };
 
-    for (item, &(slot_entity, _)) in hotbar_contents.iter().take(hotbar.slots.len()).zip(hotbar.slots.iter()) {
+    for (item, &(_, _, item_entity)) in hotbar_contents.iter().take(hotbar.slots.len()).zip(hotbar.slots.iter()) {
         let Some(item_stack) = item else {
-            commands.entity(slot_entity).remove::<RenderItem>();
+            commands.entity(item_entity).remove::<RenderItem>();
 
             continue;
         };
 
         if render_item_query
-            .get(slot_entity)
+            .get(item_entity)
             .map(|x| x.item_id != item_stack.item_id())
             .unwrap_or(true)
         {
-            commands.entity(slot_entity).insert((
-                RenderItem {
-                    item_id: item_stack.item_id(),
-                },
-                Name::new("Hotbar Item Slot"),
-            ));
+            commands.entity(item_entity).insert((RenderItem {
+                item_id: item_stack.item_id(),
+            },));
         }
     }
 }
@@ -423,6 +420,7 @@ fn add_hotbar(mut commands: Commands, default_font: Res<DefaultFont>, asset_serv
                     let path = image_path(hotbar.selected_slot == slot_num);
 
                     let mut slot = parent.spawn((
+                        Name::new(format!("Slot {slot_num}")),
                         ImageNode::new(asset_server.load(path)),
                         Node {
                             width: Val::Px(64.0),
@@ -432,35 +430,51 @@ fn add_hotbar(mut commands: Commands, default_font: Res<DefaultFont>, asset_serv
                     ));
 
                     let mut text_entity = None;
+                    let mut item_entity = None;
 
                     slot.with_children(|slot| {
-                        text_entity = Some(
+                        item_entity = Some(
                             slot.spawn((
                                 Node {
-                                    bottom: Val::Px(5.0),
-                                    right: Val::Px(5.0),
-                                    position_type: PositionType::Absolute,
-
-                                    ..default()
-                                },
-                                Text::new(""),
-                                TextFont {
-                                    font_size: 24.0,
-                                    font: default_font.0.clone(),
+                                    flex_grow: 1.0,
                                     ..Default::default()
                                 },
-                                TextLayout {
-                                    justify: JustifyText::Right,
-                                    ..Default::default()
-                                },
+                                Name::new("Hotbar Item Slot"),
                             ))
+                            .with_children(|slot| {
+                                text_entity = Some(
+                                    slot.spawn((
+                                        Name::new("Item Text"),
+                                        Node {
+                                            bottom: Val::Px(5.0),
+                                            right: Val::Px(5.0),
+                                            position_type: PositionType::Absolute,
+
+                                            ..default()
+                                        },
+                                        Text::new(""),
+                                        TextFont {
+                                            font_size: 24.0,
+                                            font: default_font.0.clone(),
+                                            ..Default::default()
+                                        },
+                                        TextLayout {
+                                            justify: JustifyText::Right,
+                                            ..Default::default()
+                                        },
+                                    ))
+                                    .id(),
+                                );
+                            })
                             .id(),
                         );
                     });
 
-                    hotbar
-                        .slots
-                        .push((slot.id(), text_entity.expect("This should have been set in the closure above")));
+                    hotbar.slots.push((
+                        slot.id(),
+                        text_entity.expect("This should have been set in the closure above"),
+                        item_entity.expect("Should have been set above"),
+                    ));
                 }
             });
 
