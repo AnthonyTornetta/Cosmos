@@ -26,8 +26,8 @@ use crate::{
             show_cursor::no_open_menus,
             window::{GuiWindow, UiWindowSystemSet},
         },
-        item_renderer::{ItemRenderLayer, RenderItem},
-        OpenMenu, UiMiddleRoot, UiRoot, UiSystemSet, UiTopRoot,
+        item_renderer::RenderItem,
+        OpenMenu, UiSystemSet,
     },
 };
 
@@ -177,8 +177,6 @@ fn toggle_inventory_rendering(
     mapping: Res<NetworkMapping>,
     mut removed_components: RemovedComponents<InventoryNeedsDisplayed>,
     q_block_data: Query<&BlockData>,
-    q_middle_root: Query<Entity, With<UiMiddleRoot>>,
-    q_bottom_root: Query<Entity, With<UiRoot>>,
 ) {
     for removed in removed_components.read() {
         let Ok((inventory_holder, mut local_inventory, open_inventory_entity)) = without_needs_displayed_inventories.get_mut(removed)
@@ -265,7 +263,7 @@ fn toggle_inventory_rendering(
                     commands.entity(slot).with_children(|p| {
                         let slot = inventory.itemstack_at(slot_number);
 
-                        create_inventory_slot(inventory_holder, slot_number, p, slot, text_style.clone(), ItemRenderLayer::Middle);
+                        create_inventory_slot(inventory_holder, slot_number, p, slot, text_style.clone());
                     });
                 }
 
@@ -285,9 +283,6 @@ fn toggle_inventory_rendering(
             (Val::Px(100.0), Val::Auto)
         };
 
-        let middle_root = q_middle_root.single();
-        let bottom_root = q_bottom_root.single();
-
         let width = Val::Px(n_slots_per_row as f32 * slot_size + inventory_border_size * 2.0 + scrollbar_width);
 
         let mut ents = vec![];
@@ -306,7 +301,6 @@ fn toggle_inventory_rendering(
         ents.push(
             commands
                 .spawn((
-                    TargetCamera(bottom_root),
                     NonHotbarSlots,
                     Name::new("Rendered Inventory Non-Hotbar Slots"),
                     StyleOffsets {
@@ -339,14 +333,7 @@ fn toggle_inventory_rendering(
                             .enumerate()
                             .filter(|(slot, _)| priority_slots.as_ref().map(|x| !x.contains(slot)).unwrap_or(true))
                         {
-                            create_inventory_slot(
-                                inventory_holder,
-                                slot_number,
-                                slots,
-                                slot.as_ref(),
-                                text_style.clone(),
-                                ItemRenderLayer::Middle,
-                            );
+                            create_inventory_slot(inventory_holder, slot_number, slots, slot.as_ref(), text_style.clone());
                         }
                     });
                 })
@@ -357,7 +344,6 @@ fn toggle_inventory_rendering(
             ents.push(
                 commands
                     .spawn((
-                        TargetCamera(middle_root),
                         Name::new("Rendered Inventory Hotbar Slots"),
                         StyleOffsets {
                             left: 0.0,
@@ -388,7 +374,6 @@ fn toggle_inventory_rendering(
                                 slots,
                                 inventory.itemstack_at(slot_number),
                                 text_style.clone(),
-                                ItemRenderLayer::Top,
                             );
                         }
                     })
@@ -401,7 +386,6 @@ fn toggle_inventory_rendering(
         ents.push(
             commands
                 .spawn((
-                    TargetCamera(middle_root),
                     Name::new("Rendered Inventory Title Bar"),
                     RenderedInventory { inventory_holder },
                     OpenMenu::new(0),
@@ -516,21 +500,11 @@ fn on_update_inventory(
             {
                 displayed_slot.item_stack = inventory.itemstack_at(displayed_slot.slot_number).cloned();
 
-                let render_layer = if inventory
-                    .priority_slots()
-                    .into_iter()
-                    .any(|x| x.contains(&displayed_slot.slot_number))
-                {
-                    ItemRenderLayer::Top
-                } else {
-                    ItemRenderLayer::Middle
-                };
-
                 let Some(mut ecmds) = commands.get_entity(display_entity) else {
                     continue;
                 };
 
-                rerender_inventory_slot(&mut ecmds, &displayed_slot, &asset_server, true, render_layer);
+                rerender_inventory_slot(&mut ecmds, &displayed_slot, &asset_server, true);
             }
         }
     }
@@ -541,7 +515,7 @@ fn on_update_inventory(
         displayed_item.item_stack = Some(held_item_stack.0.clone());
 
         if let Some(mut ecmds) = commands.get_entity(entity) {
-            rerender_inventory_slot(&mut ecmds, &displayed_item, &asset_server, false, ItemRenderLayer::Top);
+            rerender_inventory_slot(&mut ecmds, &displayed_item, &asset_server, false);
         }
     }
 }
@@ -551,7 +525,6 @@ fn rerender_inventory_slot(
     displayed_item: &DisplayedItemFromInventory,
     asset_server: &AssetServer,
     as_child: bool,
-    render_layer: ItemRenderLayer,
 ) {
     ecmds.despawn_descendants();
 
@@ -573,10 +546,10 @@ fn rerender_inventory_slot(
 
         if as_child {
             ecmds.with_children(|p| {
-                create_item_stack_slot_data(is, &mut p.spawn_empty(), text_style, quantity, render_layer);
+                create_item_stack_slot_data(is, &mut p.spawn_empty(), text_style, quantity);
             });
         } else {
-            create_item_stack_slot_data(is, ecmds, text_style, quantity, render_layer);
+            create_item_stack_slot_data(is, ecmds, text_style, quantity);
         }
     }
 }
@@ -592,7 +565,6 @@ fn create_inventory_slot(
     slots: &mut ChildBuilder,
     item_stack: Option<&ItemStack>,
     text_style: TextFont,
-    render_layer: ItemRenderLayer,
 ) {
     let mut ecmds = slots.spawn((
         Name::new("Inventory Item"),
@@ -615,7 +587,7 @@ fn create_inventory_slot(
     if let Some(item_stack) = item_stack {
         ecmds.with_children(|p| {
             let mut ecmds = p.spawn_empty();
-            create_item_stack_slot_data(item_stack, &mut ecmds, text_style, item_stack.quantity(), render_layer);
+            create_item_stack_slot_data(item_stack, &mut ecmds, text_style, item_stack.quantity());
         });
     }
 }
@@ -664,7 +636,7 @@ fn pickup_item_into_cursor(
 
     let mut ecmds = commands.spawn(FollowCursor);
 
-    create_item_stack_slot_data(&new_is, &mut ecmds, text_style, pickup_quantity, ItemRenderLayer::Top);
+    create_item_stack_slot_data(&new_is, &mut ecmds, text_style, pickup_quantity);
 
     ecmds.insert((displayed_item, HeldItemStack(new_is)));
 
@@ -854,13 +826,7 @@ fn handle_interactions(
 #[derive(Component)]
 pub struct TextNeedsTopRoot;
 
-fn create_item_stack_slot_data(
-    item_stack: &ItemStack,
-    ecmds: &mut EntityCommands,
-    text_style: TextFont,
-    quantity: u16,
-    render_layer: ItemRenderLayer,
-) {
+fn create_item_stack_slot_data(item_stack: &ItemStack, ecmds: &mut EntityCommands, text_style: TextFont, quantity: u16) {
     ecmds
         .insert((
             Name::new("Render Item"),
@@ -872,7 +838,6 @@ fn create_item_stack_slot_data(
                 align_items: AlignItems::FlexEnd,
                 ..Default::default()
             },
-            render_layer,
             InventoryRenderedItem,
             RenderItem {
                 item_id: item_stack.item_id(),
@@ -889,47 +854,6 @@ fn create_item_stack_slot_data(
                 TextNeedsTopRoot,
             ));
         });
-}
-
-fn hide_hidden(
-    q_non_hotbar_slots: Query<(&ComputedNode, &GlobalTransform), With<NonHotbarSlots>>,
-    q_parent: Query<&Parent>,
-    mut q_render_item: Query<(&ComputedNode, &mut Visibility, &Parent, &GlobalTransform), With<RenderItem>>,
-) {
-    for (node, mut vis, parent, g_trans) in q_render_item.iter_mut() {
-        // this is evil.
-
-        // The node should be hidden if parent -> parent -> parent -> parent is a non-hotbar slots rendering.
-
-        *vis = Visibility::Inherited;
-
-        let one = parent.get();
-        let Ok(two) = q_parent.get(one) else {
-            continue;
-        };
-        let Ok(three) = q_parent.get(two.get()) else {
-            continue;
-        };
-        let Ok(four) = q_parent.get(three.get()) else {
-            continue;
-        };
-
-        let maybe_non_hotbar = four.get();
-
-        let t = g_trans.translation();
-        let this_logical_rect = Rect::from_center_size(Vec2::new(t.x, t.y), node.size());
-
-        let Ok((non_hotbar_node, g_trans)) = q_non_hotbar_slots.get(maybe_non_hotbar) else {
-            continue;
-        };
-
-        let t = g_trans.translation();
-        let dims = Rect::from_center_size(Vec2::new(t.x, t.y), non_hotbar_node.size());
-
-        if !(dims.contains(this_logical_rect.min) || dims.contains(this_logical_rect.max)) {
-            *vis = Visibility::Hidden;
-        }
-    }
 }
 
 fn follow_cursor(mut query: Query<&mut Node, With<FollowCursor>>, primary_window_query: Query<&Window, With<PrimaryWindow>>) {
@@ -951,50 +875,6 @@ enum InventorySet {
     FollowCursor,
     ToggleInventoryRendering,
     MoveWindows,
-}
-
-fn rec_make_render_middle_camera(
-    ent: Entity,
-    q_mid_cam: &Query<Entity, With<UiTopRoot>>,
-    q_children: &Query<&Children>,
-    q_target_cam: &mut Query<(Entity, &mut TargetCamera), (Changed<TargetCamera>, With<TextNeedsTopRoot>)>,
-    commands: &mut Commands,
-) {
-    let middle_camera_entity = q_mid_cam.single();
-
-    if let Ok((_, mut target_camera)) = q_target_cam.get_mut(ent) {
-        if target_camera.0 != middle_camera_entity {
-            target_camera.0 = middle_camera_entity;
-        }
-        if let Ok(children) = q_children.get(ent) {
-            for c in children.iter() {
-                rec_make_render_middle_camera(*c, q_mid_cam, q_children, q_target_cam, commands);
-            }
-        }
-    } else {
-        commands.entity(ent).insert(TargetCamera(middle_camera_entity));
-        if let Ok(children) = q_children.get(ent) {
-            for c in children.iter() {
-                rec_make_render_middle_camera(*c, q_mid_cam, q_children, q_target_cam, commands);
-            }
-        }
-    }
-}
-
-fn make_render_middle_camera(
-    q_mid_cam: Query<Entity, With<UiTopRoot>>,
-    q_children: Query<&Children>,
-    mut q_target_cam: Query<(Entity, &mut TargetCamera), (Changed<TargetCamera>, With<TextNeedsTopRoot>)>,
-    q_needs_target_cam: Query<Entity, (Without<TargetCamera>, With<TextNeedsTopRoot>)>,
-    mut commands: Commands,
-) {
-    for ent in q_target_cam.iter().map(|x| x.0).collect::<Vec<Entity>>() {
-        rec_make_render_middle_camera(ent, &q_mid_cam, &q_children, &mut q_target_cam, &mut commands);
-    }
-
-    for ent in q_needs_target_cam.iter() {
-        rec_make_render_middle_camera(ent, &q_mid_cam, &q_children, &mut q_target_cam, &mut commands);
-    }
 }
 
 pub(super) fn register(app: &mut App) {
@@ -1027,9 +907,7 @@ pub(super) fn register(app: &mut App) {
             on_update_inventory.in_set(InventorySet::UpdateInventory),
             handle_interactions.in_set(InventorySet::HandleInteractions),
             follow_cursor.in_set(InventorySet::FollowCursor),
-            (toggle_inventory_rendering, make_render_middle_camera, hide_hidden)
-                .chain()
-                .in_set(InventorySet::ToggleInventoryRendering),
+            toggle_inventory_rendering.in_set(InventorySet::ToggleInventoryRendering),
             reposition_window_children.in_set(InventorySet::MoveWindows),
         )
             .in_set(NetworkingSystemsSet::Between)

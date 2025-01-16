@@ -3,7 +3,7 @@ use std::{f32::consts::PI, time::Duration};
 use bevy::{
     app::{App, Update},
     math::{Quat, Vec3},
-    prelude::{not, resource_exists, Commands, Component, Entity, IntoSystemConfigs, Or, Query, Res, ResMut, Resource, With},
+    prelude::{not, resource_exists, Commands, Component, Entity, IntoSystemConfigs, Query, Res, ResMut, Resource, With},
     render::view::{
         screenshot::{save_to_disk, Screenshot},
         Visibility,
@@ -16,7 +16,7 @@ use cosmos_core::ecs::NeedsDespawned;
 
 use crate::{
     input::inputs::{CosmosInputs, InputChecker, InputHandler},
-    ui::{components::show_cursor::ShowCursor, item_renderer::RenderedItem},
+    ui::components::show_cursor::ShowCursor,
 };
 
 use super::MainCamera;
@@ -36,7 +36,7 @@ fn take_panorama(
     inputs: InputChecker,
     mut commands: Commands,
     mut q_camera: Query<&mut Transform, With<MainCamera>>,
-    mut q_ui_elements: Query<(Entity, &mut Visibility), Or<(With<Node>, With<RenderedItem>)>>,
+    mut q_ui_elements: Query<(Entity, &mut Visibility), With<Node>>,
 ) {
     if inputs.check_just_pressed(CosmosInputs::PanoramaScreenshot) {
         commands.insert_resource(PanAngle(0));
@@ -71,7 +71,7 @@ fn taking_panorama(mut pan_angle: ResMut<PanAngle>, mut commands: Commands, mut 
 fn restore_ui_after_panorama(
     mut commands: Commands,
     q_pan_locked: Query<Entity, With<PanLocked>>,
-    mut q_ui_elements: Query<(Entity, &mut Visibility, &OldVis), Or<(With<Node>, With<RenderedItem>)>>,
+    mut q_ui_elements: Query<(Entity, &mut Visibility, &OldVis), With<Node>>,
     mut fin: ResMut<FinishedPan>,
     time: Res<Time>,
 ) {

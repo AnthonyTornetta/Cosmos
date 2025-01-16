@@ -1,4 +1,4 @@
-use std::{f32::consts::PI, path::Path, time::Duration};
+use std::f32::consts::PI;
 
 use bevy::{
     asset::RenderAssetUsages,
@@ -8,7 +8,6 @@ use bevy::{
         render_resource::{Extent3d, TextureDimension, TextureFormat, TextureUsages},
         view::RenderLayers,
     },
-    time::common_conditions::on_timer,
 };
 use cosmos_core::{
     blockitems::BlockItems,
@@ -19,10 +18,7 @@ use cosmos_core::{
 };
 
 use crate::{
-    asset::{
-        asset_loading::ItemRenderingInfo,
-        materials::{AddMaterialEvent, MaterialType},
-    },
+    asset::materials::{AddMaterialEvent, MaterialType},
     item::item_mesh::ItemMeshMaterial,
 };
 

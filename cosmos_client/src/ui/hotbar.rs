@@ -18,12 +18,7 @@ use crate::{
     structure::ship::ui::system_selection::SystemSelectionSet,
 };
 
-use super::{
-    components::show_cursor::no_open_menus,
-    font::DefaultFont,
-    item_renderer::{create_ui_cameras, RenderItem},
-    UiMiddleRoot,
-};
+use super::{components::show_cursor::no_open_menus, font::DefaultFont, item_renderer::RenderItem};
 
 const ITEM_NAME_FADE_DURATION_SEC: f32 = 5.0;
 
@@ -317,9 +312,7 @@ fn listen_for_change_events(
     }
 }
 
-fn add_item_text(mut commands: Commands, q_target_camera: Query<Entity, With<UiMiddleRoot>>, default_font: Res<DefaultFont>) {
-    let target_cam = q_target_camera.single();
-
+fn add_item_text(mut commands: Commands, default_font: Res<DefaultFont>) {
     let text_font = TextFont {
         font_size: 24.0,
         font: default_font.0.clone(),
@@ -329,7 +322,6 @@ fn add_item_text(mut commands: Commands, q_target_camera: Query<Entity, With<UiM
     commands
         .spawn((
             Name::new("Item hotbar text"),
-            TargetCamera(target_cam),
             Node {
                 position_type: PositionType::Absolute,
                 display: Display::Flex,
@@ -398,17 +390,9 @@ fn populate_hotbar(
     }
 }
 
-fn add_hotbar(
-    mut commands: Commands,
-    q_target_camera: Query<Entity, With<UiMiddleRoot>>,
-    default_font: Res<DefaultFont>,
-    asset_server: Res<AssetServer>,
-) {
-    let target_cam = q_target_camera.single();
-
+fn add_hotbar(mut commands: Commands, default_font: Res<DefaultFont>, asset_server: Res<AssetServer>) {
     commands
         .spawn((
-            TargetCamera(target_cam),
             Node {
                 position_type: PositionType::Absolute,
                 display: Display::Flex,
@@ -504,7 +488,7 @@ fn add_hotbar_contents_to_player(
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_systems(OnEnter(GameState::Playing), (add_hotbar, add_item_text).after(create_ui_cameras))
+    app.add_systems(OnEnter(GameState::Playing), (add_hotbar, add_item_text))
         .add_systems(
             Update,
             (

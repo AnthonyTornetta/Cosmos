@@ -10,7 +10,7 @@ use cosmos_core::state::GameState;
 
 use crate::ui::UiSystemSet;
 
-use super::{components::show_cursor::ShowCursor, UiRoot};
+use super::components::show_cursor::ShowCursor;
 
 mod disconnect_screen;
 mod menu_panorama;
@@ -140,7 +140,7 @@ fn create_main_menu_camera(mut commands: Commands) {
         Bloom { ..Default::default() },
         Name::new("Main Menu Camera"),
         Camera3d::default(),
-        UiRoot,
+        IsDefaultUiCamera,
         AudioReceiver,
         ShowCursor,
     ));

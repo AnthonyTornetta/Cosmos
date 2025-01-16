@@ -66,7 +66,6 @@ use crate::{
     ui::{
         crosshair::{CrosshairOffset, CrosshairOffsetSet},
         message::{HudMessage, HudMessages},
-        UiRoot,
     },
     window::setup::CursorFlagsSet,
 };
@@ -466,7 +465,6 @@ pub(crate) fn client_sync_players(
                                 Name::new("Main Camera"),
                                 MainCamera,
                                 IsDefaultUiCamera,
-                                UiRoot,
                                 AudioReceiver,
                             ));
                         });

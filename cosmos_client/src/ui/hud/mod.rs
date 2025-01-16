@@ -11,18 +11,14 @@ use bevy::{
     prelude::{in_state, Added, ChildBuild, IntoSystemConfigs, Text},
     state::state::OnEnter,
     text::{TextFont, TextSpan},
-    ui::{AlignContent, JustifyContent, Node, PositionType, TargetCamera, UiRect, Val},
+    ui::{AlignContent, JustifyContent, Node, PositionType, UiRect, Val},
 };
 use cosmos_core::{economy::Credits, netty::client::LocalPlayer, state::GameState};
 
-use super::{
-    reactivity::{BindValue, BindValues, ReactableFields},
-    UiRoot,
-};
+use super::reactivity::{BindValue, BindValues, ReactableFields};
 
 fn create_credits_node(
     mut commands: Commands,
-    q_ui_root: Query<Entity, With<UiRoot>>,
     asset_server: Res<AssetServer>,
     local_player: Query<(Entity, &Credits), (Added<Credits>, With<LocalPlayer>)>,
 ) {
@@ -38,11 +34,8 @@ fn create_credits_node(
         ..Default::default()
     };
 
-    let ui_root = q_ui_root.single();
-
     commands
         .spawn((
-            TargetCamera(ui_root),
             Name::new("Credits display"),
             Node {
                 width: Val::Percent(100.0),
