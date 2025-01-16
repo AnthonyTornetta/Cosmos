@@ -19,7 +19,7 @@ use super::{
     },
     font::DefaultFont,
     settings::{NeedsSettingsAdded, SettingsCancelButtonEvent, SettingsDoneButtonEvent, SettingsMenuSet},
-    CloseMethod, OpenMenu, UiSystemSet, UiTopRoot,
+    CloseMethod, OpenMenu, UiSystemSet,
 };
 
 #[derive(Resource)]
@@ -34,7 +34,6 @@ fn toggle_pause_menu(
     mut q_open_menus: Query<(Entity, &OpenMenu, &mut Visibility)>,
     q_pause_menu: Query<Entity, With<PauseMenu>>,
     input_handler: InputChecker,
-    q_ui_root: Query<Entity, With<UiTopRoot>>,
     default_font: Res<DefaultFont>,
 ) {
     if !input_handler.check_just_pressed(CosmosInputs::Pause) {
@@ -55,8 +54,6 @@ fn toggle_pause_menu(
         commands.remove_resource::<Paused>();
         return;
     }
-
-    let ui_root = q_ui_root.single();
 
     let text_style = TextFont {
         font_size: 32.0,
@@ -83,7 +80,6 @@ fn toggle_pause_menu(
 
     commands
         .spawn((
-            TargetCamera(ui_root),
             Name::new("Pause Menu"),
             Node {
                 flex_direction: FlexDirection::Column,
@@ -202,19 +198,12 @@ fn close_topmost_menus(q_open_menus: &mut Query<(Entity, &OpenMenu, &mut Visibil
 #[derive(Component)]
 struct PauseMenuSettingsMenu;
 
-fn settings_clicked(
-    mut commands: Commands,
-    q_target_camera: Query<Entity, With<UiTopRoot>>,
-    mut q_pause_menu: Query<&mut Visibility, With<PauseMenu>>,
-) {
+fn settings_clicked(mut commands: Commands, mut q_pause_menu: Query<&mut Visibility, With<PauseMenu>>) {
     if let Ok(mut vis) = q_pause_menu.get_single_mut() {
         *vis = Visibility::Hidden;
     }
 
-    let ui_root = q_target_camera.single();
-
     commands.spawn((
-        TargetCamera(ui_root),
         Name::new("Pause Menu Settings"),
         BackgroundColor(
             Srgba {
