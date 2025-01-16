@@ -1,25 +1,8 @@
 //! Renders items as 3d models at based off the RenderItem present in a UI element
 
-use std::f32::consts::PI;
-
-use bevy::{
-    prelude::*,
-    render::{camera::ScalingMode, view::RenderLayers},
-    window::PrimaryWindow,
-};
-use cosmos_core::{
-    blockitems::BlockItems,
-    ecs::NeedsDespawned,
-    item::Item,
-    registry::{identifiable::Identifiable, Registry},
-    state::GameState,
-};
+use bevy::prelude::*;
+use cosmos_core::{item::Item, registry::Registry};
 use photo_booth::RenderedItemAtlas;
-
-use crate::{
-    asset::materials::{AddMaterialEvent, MaterialType, MaterialsSystemSet, RemoveAllMaterialsEvent},
-    item::item_mesh::ItemMeshMaterial,
-};
 
 use super::UiSystemSet;
 
@@ -66,13 +49,8 @@ pub enum RenderItemSystemSet {
 pub(super) fn register(app: &mut App) {
     photo_booth::register(app);
 
-    app.configure_sets(
-        Update,
-        (RenderItemSystemSet::RenderItems.in_set(MaterialsSystemSet::RequestMaterialChanges))
-            .chain()
-            .in_set(UiSystemSet::DoUi),
-    )
-    .add_systems(Update, render_items.chain().in_set(RenderItemSystemSet::RenderItems));
+    app.configure_sets(Update, RenderItemSystemSet::RenderItems.in_set(UiSystemSet::DoUi))
+        .add_systems(Update, render_items.chain().in_set(RenderItemSystemSet::RenderItems));
 
     app.register_type::<RenderItem>();
 }

@@ -1,3 +1,5 @@
+//! Renders every item & block in the game for use in UI elements.
+
 use std::f32::consts::PI;
 
 use bevy::{
