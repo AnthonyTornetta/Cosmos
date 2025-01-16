@@ -27,12 +27,21 @@ const PHOTO_BOOTH_RENDER_LAYER: usize = 0b100000;
 const PX_PER_ITEM: usize = 100;
 
 #[derive(Resource, Debug)]
+/// Contains a rendered view of every item (and block in item-form) in the game. This is used for
+/// GUI rendering.
+///
+/// You probably don't need to use this directly, and should instead use [`super::RenderItem`] if
+/// possible.
 pub struct RenderedItemAtlas {
     width: usize,
     handle: Handle<Image>,
 }
 
 impl RenderedItemAtlas {
+    /// Returns the rect that contains this specific item's rendered model within the
+    /// [`Self::get_atlas_handle`].
+    ///
+    /// You probably don't need to call this directly, and should instead use [`super::RenderItem`]
     pub fn get_item_rect(&self, item: &Item) -> Rect {
         let (x, y) = expand_2d(item.id() as usize, self.width);
         let (x, y) = (x as f32, y as f32);
@@ -44,6 +53,9 @@ impl RenderedItemAtlas {
         }
     }
 
+    /// Returns the image handle for the entire item atlas.
+    ///
+    /// You probably don't need to call this directly, and should instead use [`super::RenderItem`]
     pub fn get_atlas_handle(&self) -> &Handle<Image> {
         &self.handle
     }
@@ -76,7 +88,7 @@ fn create_booth(
     items: Res<Registry<Item>>,
     item_meshes: Res<Registry<ItemMeshMaterial>>,
     block_items: Res<BlockItems>,
-    mut images: ResMut<Assets<Image>>,
+    images: ResMut<Assets<Image>>,
 ) {
     let n_items = items.iter().len();
 
@@ -115,6 +127,23 @@ fn create_booth(
         RenderLayers::from_layers(&[PHOTO_BOOTH_RENDER_LAYER]),
     ));
 
+    // Uncomment to debug the rendered items + blocks:
+    // commands
+    //     .spawn((
+    //         Name::new("rendered image"),
+    //         Node {
+    //             width: Val::Percent(100.0),
+    //             height: Val::Percent(100.0),
+    //             ..Default::default()
+    //         },
+    //     ))
+    //     .with_children(|p| {
+    //         p.spawn(ImageNode {
+    //             image: image_handle.clone(),
+    //             ..Default::default()
+    //         });
+    //     });
+
     commands.insert_resource(RenderedItemAtlas {
         width,
         handle: image_handle,
@@ -140,7 +169,9 @@ fn create_booth(
             .spawn((
                 RenderLayers::from_layers(&[PHOTO_BOOTH_RENDER_LAYER]),
                 Mesh3d(item_mat_material.mesh_handle().clone_weak()),
-                Transform::from_xyz(x as f32 * GAP, y as f32 * GAP, 0.0).with_rotation(rot),
+                // h - y - 1 because we want low IDs at the top, and big IDs at the bottom (and +y
+                // is up in this context)
+                Transform::from_xyz(x as f32 * GAP, (h - y as f32 - 1.0) * GAP, 0.0).with_rotation(rot),
             ))
             .id();
 
