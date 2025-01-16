@@ -241,23 +241,23 @@ fn add_cosmos_blocks(
     );
 
     let glass_colors = [
-        "white",
-        "blue",
-        "dark_blue",
-        "brown",
-        "green",
-        "dark_green",
-        "orange",
-        "dark_orange",
-        "pink",
-        "dark_pink",
-        "purple",
-        "dark_purple",
         "red",
-        "dark_red",
+        "orange",
         "yellow",
-        "dark_yellow",
+        "green",
         "mint",
+        "cyan",
+        "aqua",
+        "blue",
+        "purple",
+        "magenta",
+        "pink",
+        "brown",
+        "black",
+        "dark_grey",
+        "grey",
+        "light_grey",
+        "white",
     ];
 
     for color in glass_colors {

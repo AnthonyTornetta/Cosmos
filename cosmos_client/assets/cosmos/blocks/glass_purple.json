@@ -1,5 +1,46 @@
 {
-    "material": {
-        "name": "cosmos:transparent"
+  "material": {
+    "name": "cosmos:transparent"
+  },
+  "texture": {
+    "All": {
+      "Connected": [
+        "cosmos:glass_purple_0",
+        "cosmos:glass_purple_1",
+        "cosmos:glass_purple_2",
+        "cosmos:glass_purple_3",
+        "cosmos:glass_purple_4",
+        "cosmos:glass_purple_5",
+        "cosmos:glass_purple_6",
+        "cosmos:glass_purple_7",
+        "cosmos:glass_purple_8",
+        "cosmos:glass_purple_9",
+        "cosmos:glass_purple_10",
+        "cosmos:glass_purple_11",
+        "cosmos:glass_purple_12",
+        "cosmos:glass_purple_13",
+        "cosmos:glass_purple_14",
+        "cosmos:glass_purple_15"
+      ]
     }
+  },
+  "model": {
+    "Sides": {
+      "name": "cosmos:glass_purple",
+      "top": "cosmos:base_top",
+      "bottom": "cosmos:base_bottom",
+      "left": "cosmos:base_left",
+      "right": "cosmos:base_right",
+      "front": "cosmos:base_front",
+      "back": "cosmos:base_back",
+      "connected": {
+        "top": "none",
+        "bottom": "none",
+        "left": "none",
+        "right": "none",
+        "front": "none",
+        "back": "none"
+      }
+    }
+  }
 }
