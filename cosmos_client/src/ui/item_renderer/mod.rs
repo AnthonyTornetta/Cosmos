@@ -22,6 +22,8 @@ use crate::{
 
 use super::{UiMiddleRoot, UiSystemSet, UiTopRoot};
 
+pub mod photo_booth;
+
 const INVENTORY_SLOT_LAYER: usize = 0b01;
 const MIDDLE_INVENTORY_SLOT_LAYER: usize = 0b10;
 
@@ -319,6 +321,8 @@ pub enum RenderItemSystemSet {
 // }
 
 pub(super) fn register(app: &mut App) {
+    photo_booth::register(app);
+
     app.configure_sets(
         Update,
         (RenderItemSystemSet::RenderItems.in_set(MaterialsSystemSet::RequestMaterialChanges))
