@@ -150,18 +150,6 @@ pub enum InventorySide {
 struct OpenInventoryEntity(Entity);
 
 #[derive(Component)]
-struct InventoryTitleBar(Vec<Entity>);
-
-#[derive(Component)]
-struct StyleOffsets {
-    left: f32,
-    top: f32,
-}
-
-#[derive(Component)]
-struct NonHotbarSlots;
-
-#[derive(Component)]
 struct InventoryRenderedItem;
 
 fn toggle_inventory_rendering(
@@ -318,7 +306,6 @@ fn toggle_inventory_rendering(
             ))
             .with_children(|p| {
                 p.spawn((
-                    NonHotbarSlots,
                     Name::new("Rendered Inventory Non-Hotbar Slots"),
                     border_color,
                     BackgroundColor(Srgba::hex("3D3D3D").unwrap().into()),
@@ -418,33 +405,6 @@ fn drop_item(
             inventory_holder: InventoryIdentifier::Entity(server_player_ent),
         }),
     );
-}
-
-fn reposition_window_children(
-    mut q_style: Query<(&StyleOffsets, &mut Node), Without<InventoryTitleBar>>,
-    q_changed_window_pos: Query<(&Node, &InventoryTitleBar), Changed<Node>>,
-) {
-    for (style, title_bar) in q_changed_window_pos.iter() {
-        let Val::Px(top) = style.top else {
-            continue;
-        };
-
-        let left = style.left;
-        let right = style.right;
-
-        for ent in &title_bar.0 {
-            let Ok((style_offsets, mut style)) = q_style.get_mut(*ent) else {
-                continue;
-            };
-
-            style.top = Val::Px(style_offsets.top + top);
-            if let Val::Px(left) = left {
-                style.left = Val::Px(left + style_offsets.left);
-            } else if let Val::Px(right) = right {
-                style.right = Val::Px(right - style_offsets.left);
-            }
-        }
-    }
 }
 
 #[derive(Debug, Component, Reflect, Clone)]
@@ -787,13 +747,6 @@ fn handle_interactions(
     }
 }
 
-/**
- * End moving items around
- */
-
-#[derive(Component)]
-pub struct TextNeedsTopRoot;
-
 fn create_item_stack_slot_data(item_stack: &ItemStack, ecmds: &mut EntityCommands, text_style: TextFont, quantity: u16) {
     ecmds
         .insert((
@@ -819,7 +772,6 @@ fn create_item_stack_slot_data(item_stack: &ItemStack, ecmds: &mut EntityCommand
                 },
                 Text::new(format!("{quantity}")),
                 text_style,
-                TextNeedsTopRoot,
             ));
         });
 }
@@ -876,7 +828,6 @@ pub(super) fn register(app: &mut App) {
             handle_interactions.in_set(InventorySet::HandleInteractions),
             follow_cursor.in_set(InventorySet::FollowCursor),
             toggle_inventory_rendering.in_set(InventorySet::ToggleInventoryRendering),
-            reposition_window_children.in_set(InventorySet::MoveWindows),
         )
             .in_set(NetworkingSystemsSet::Between)
             .run_if(in_state(GameState::Playing)),
