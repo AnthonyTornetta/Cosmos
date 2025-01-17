@@ -22,7 +22,6 @@ use crate::{
     input::inputs::{CosmosInputs, InputChecker, InputHandler},
     ui::{
         components::{
-            scollable_container::ScrollBox,
             show_cursor::no_open_menus,
             window::{GuiWindow, UiWindowSystemSet},
         },
@@ -147,7 +146,7 @@ pub enum InventorySide {
 
 #[derive(Component)]
 /// Holds a reference to the opened inventory GUI
-struct OpenInventoryEntity(Vec<Entity>);
+struct OpenInventoryEntity(Entity);
 
 #[derive(Component)]
 struct InventoryTitleBar(Vec<Entity>);
@@ -189,10 +188,8 @@ fn toggle_inventory_rendering(
         };
 
         commands.entity(inventory_holder).remove::<OpenInventoryEntity>();
-        for &entity in &open_ent.0 {
-            if let Some(mut ecmds) = commands.get_entity(entity) {
-                ecmds.insert(NeedsDespawned);
-            }
+        if let Some(mut ecmds) = commands.get_entity(open_ent.0) {
+            ecmds.insert(NeedsDespawned);
         }
 
         if let Ok((entity, displayed_item, mut held_item_stack)) = holding_item.get_single_mut() {
@@ -285,8 +282,6 @@ fn toggle_inventory_rendering(
 
         let width = Val::Px(n_slots_per_row as f32 * slot_size + inventory_border_size * 2.0 + scrollbar_width);
 
-        let mut ents = vec![];
-
         let priority_slots = inventory.priority_slots();
         let title_bar_height = GuiWindow::TITLE_BAR_HEIGHT_PX;
 
@@ -298,120 +293,246 @@ fn toggle_inventory_rendering(
             * INVENTORY_SLOTS_DIMS)
             .min(MAX_INVENTORY_HEIGHT_PX);
 
-        ents.push(
-            commands
-                .spawn((
-                    NonHotbarSlots,
-                    Name::new("Rendered Inventory Non-Hotbar Slots"),
-                    StyleOffsets {
-                        left: 0.0,
-                        top: title_bar_height,
-                    },
-                    border_color,
-                    BackgroundColor(Srgba::hex("3D3D3D").unwrap().into()),
-                    ScrollBox::default(),
-                    Node {
-                        width,
-                        position_type: PositionType::Absolute,
-                        right,
-                        border: UiRect::horizontal(Val::Px(inventory_border_size)),
-                        min_height: Val::Px(non_hotbar_height),
-                        ..default()
-                    },
-                ))
-                .with_children(|p| {
-                    p.spawn(Node {
-                        display: Display::Grid,
-                        flex_grow: 1.0,
-                        grid_column: GridPlacement::end(n_slots_per_row as i16),
-                        grid_template_columns: vec![RepeatedGridTrack::px(GridTrackRepetition::Count(n_slots_per_row as u16), slot_size)],
+        let open_inventory = commands
+            .spawn((
+                Name::new("Rendered Inventory"),
+                RenderedInventory { inventory_holder },
+                GuiWindow {
+                    title: inventory.name().into(),
+                    body_styles: Node {
+                        flex_direction: FlexDirection::Column,
                         ..Default::default()
-                    })
-                    .with_children(|slots| {
-                        for (slot_number, slot) in inventory
-                            .iter()
-                            .enumerate()
-                            .filter(|(slot, _)| priority_slots.as_ref().map(|x| !x.contains(slot)).unwrap_or(true))
-                        {
-                            create_inventory_slot(inventory_holder, slot_number, slots, slot.as_ref(), text_style.clone());
-                        }
-                    });
-                })
-                .id(),
-        );
+                    },
+                },
+                Node {
+                    position_type: PositionType::Absolute,
+                    right,
+                    left,
+                    top: Val::Px(100.0),
+                    width: Val::Px(n_slots_per_row as f32 * slot_size + inventory_border_size * 2.0),
+                    border: UiRect::all(Val::Px(inventory_border_size)),
+                    ..default()
+                },
+                BorderColor(Color::BLACK.into()),
+            ))
+            .with_children(|parent| {
+                let priority_slots = inventory.priority_slots();
 
-        if let Some(priority_slots) = priority_slots {
-            ents.push(
-                commands
+                // .spawn((
+                //         NonHotbarSlots,
+                //         Name::new("Rendered Inventory Non-Hotbar Slots"),
+                //         StyleOffsets {
+                //             left: 0.0,
+                //             top: title_bar_height,
+                //         },
+                //         border_color,
+                //         BackgroundColor(Srgba::hex("3D3D3D").unwrap().into()),
+                //         ScrollBox::default(),
+                //         Node {
+                //             width,
+                //             position_type: PositionType::Absolute,
+                //             right,
+                //             border: UiRect::horizontal(Val::Px(inventory_border_size)),
+                //             min_height: Val::Px(non_hotbar_height),
+                //             ..default()
+                //         },
+                //     ))
+                //     .with_children(|p| {
+                //         p.spawn(Node {
+                //             display: Display::Grid,
+                //             flex_grow: 1.0,
+                //             grid_column: GridPlacement::end(n_slots_per_row as i16),
+                //             grid_template_columns: vec![RepeatedGridTrack::px(GridTrackRepetition::Count(n_slots_per_row as u16), slot_size)],
+                //             ..Default::default()
+                //         })
+                //         .with_children(|slots| {
+                //             for (slot_number, slot) in inventory
+                //                 .iter()
+                //                 .enumerate()
+                //                 .filter(|(slot, _)| priority_slots.as_ref().map(|x| !x.contains(slot)).unwrap_or(true))
+                //             {
+                //                 create_inventory_slot(inventory_holder, slot_number, slots, slot.as_ref(), text_style.clone());
+                //             }
+                //         });
+                //     });
+
+                parent
                     .spawn((
-                        Name::new("Rendered Inventory Hotbar Slots"),
-                        StyleOffsets {
-                            left: 0.0,
-                            top: non_hotbar_height + title_bar_height,
-                        },
-                        border_color,
+                        Name::new("Non-Hotbar Slots"),
                         Node {
-                            display: Display::Flex,
-                            height: Val::Px(5.0 + slot_size + 2.0),
-                            border: UiRect::new(
-                                Val::Px(inventory_border_size),
-                                Val::Px(inventory_border_size),
-                                Val::Px(5.0),
-                                Val::Px(inventory_border_size),
-                            ),
-                            position_type: PositionType::Absolute,
-                            right,
-                            width,
-                            ..default()
-                        },
-                        ImageNode::new(asset_server.load("cosmos/images/ui/inventory-footer.png")),
-                    ))
-                    .with_children(|slots| {
-                        for slot_number in priority_slots {
-                            create_inventory_slot(
-                                inventory_holder,
-                                slot_number,
-                                slots,
-                                inventory.itemstack_at(slot_number),
-                                text_style.clone(),
-                            );
-                        }
-                    })
-                    .id(),
-            );
-        }
-
-        let current_ents = ents.clone();
-
-        ents.push(
-            commands
-                .spawn((
-                    Name::new("Rendered Inventory Title Bar"),
-                    RenderedInventory { inventory_holder },
-                    OpenMenu::new(0),
-                    InventoryTitleBar(current_ents),
-                    BorderColor(Color::BLACK),
-                    GuiWindow {
-                        title: inventory.name().into(),
-                        body_styles: Node {
-                            flex_direction: FlexDirection::Column,
+                            flex_grow: 1.0,
+                            max_height: Val::Px(7.0 * slot_size),
                             ..Default::default()
                         },
-                    },
-                    Node {
-                        position_type: PositionType::Absolute,
-                        right,
-                        left,
-                        top: Val::Px(100.0),
-                        width,
-                        border: UiRect::all(Val::Px(inventory_border_size)),
-                        ..default()
-                    },
-                ))
-                .id(),
-        );
+                    ))
+                    .with_children(|p| {
+                        p.spawn((
+                            Node {
+                                display: Display::Grid,
+                                flex_grow: 1.0,
+                                grid_column: GridPlacement::end(n_slots_per_row as i16),
+                                grid_template_columns: vec![RepeatedGridTrack::px(
+                                    GridTrackRepetition::Count(n_slots_per_row as u16),
+                                    slot_size,
+                                )],
+                                ..default()
+                            },
+                            BackgroundColor(Srgba::hex("2D2D2D0A").unwrap().into()),
+                        ))
+                        .with_children(|slots| {
+                            for (slot_number, slot) in inventory
+                                .iter()
+                                .enumerate()
+                                .filter(|(slot, _)| priority_slots.as_ref().map(|x| !x.contains(slot)).unwrap_or(true))
+                            {
+                                create_inventory_slot(inventory_holder, slot_number, slots, slot.as_ref(), text_style.clone());
+                            }
+                        });
+                    });
 
-        commands.entity(inventory_holder).insert(OpenInventoryEntity(ents));
+                if let Some(priority_slots) = priority_slots {
+                    parent
+                        .spawn((
+                            Name::new("Hotbar Slots"),
+                            Node {
+                                display: Display::Flex,
+                                height: Val::Px(5.0 + slot_size),
+                                border: UiRect::new(Val::Px(0.0), Val::Px(0.0), Val::Px(5.0), Val::Px(0.0)),
+
+                                ..default()
+                            },
+                            BorderColor(Srgba::hex("222222").unwrap().into()),
+                            BackgroundColor(Color::WHITE.into()),
+                            ImageNode::new(asset_server.load("cosmos/images/ui/inventory-footer.png")),
+                        ))
+                        .with_children(|slots| {
+                            for slot_number in priority_slots {
+                                create_inventory_slot(
+                                    inventory_holder,
+                                    slot_number,
+                                    slots,
+                                    inventory.itemstack_at(slot_number),
+                                    text_style.clone(),
+                                );
+                            }
+                        });
+                }
+            })
+            .id();
+
+        commands.entity(inventory_holder).insert(OpenInventoryEntity(open_inventory));
+        // commands
+        //         .spawn((
+        //             Name::new("Rendered Inventory Title Bar"),
+        //             RenderedInventory { inventory_holder },
+        //             OpenMenu::new(0),
+        //             InventoryTitleBar(current_ents),
+        //             BorderColor(Color::BLACK),
+        //             GuiWindow {
+        //                 title: inventory.name().into(),
+        //                 body_styles: Node {
+        //                     flex_direction: FlexDirection::Column,
+        //                     ..Default::default()
+        //                 },
+        //             },
+        //             Node {
+        //                 position_type: PositionType::Absolute,
+        //                 right,
+        //                 left,
+        //                 top: Val::Px(100.0),
+        //                 width,
+        //                 border: UiRect::all(Val::Px(inventory_border_size)),
+        //                 ..default()
+        //             },
+        //         ))
+        //
+        // commands
+        //     .spawn((
+        //         NonHotbarSlots,
+        //         Name::new("Rendered Inventory Non-Hotbar Slots"),
+        //         StyleOffsets {
+        //             left: 0.0,
+        //             top: title_bar_height,
+        //         },
+        //         border_color,
+        //         BackgroundColor(Srgba::hex("3D3D3D").unwrap().into()),
+        //         ScrollBox::default(),
+        //         Node {
+        //             width,
+        //             position_type: PositionType::Absolute,
+        //             right,
+        //             border: UiRect::horizontal(Val::Px(inventory_border_size)),
+        //             min_height: Val::Px(non_hotbar_height),
+        //             ..default()
+        //         },
+        //     ))
+        //     .with_children(|p| {
+        //         p.spawn(Node {
+        //             display: Display::Grid,
+        //             flex_grow: 1.0,
+        //             grid_column: GridPlacement::end(n_slots_per_row as i16),
+        //             grid_template_columns: vec![RepeatedGridTrack::px(GridTrackRepetition::Count(n_slots_per_row as u16), slot_size)],
+        //             ..Default::default()
+        //         })
+        //         .with_children(|slots| {
+        //             for (slot_number, slot) in inventory
+        //                 .iter()
+        //                 .enumerate()
+        //                 .filter(|(slot, _)| priority_slots.as_ref().map(|x| !x.contains(slot)).unwrap_or(true))
+        //             {
+        //                 create_inventory_slot(inventory_holder, slot_number, slots, slot.as_ref(), text_style.clone());
+        //             }
+        //         });
+        //     });
+        //
+        // if let Some(priority_slots) = priority_slots {
+        //     ents.push(
+        //         commands
+        //             .spawn((
+        //                 Name::new("Rendered Inventory Hotbar Slots"),
+        //                 StyleOffsets {
+        //                     left: 0.0,
+        //                     top: non_hotbar_height + title_bar_height,
+        //                 },
+        //                 border_color,
+        //                 Node {
+        //                     display: Display::Flex,
+        //                     height: Val::Px(5.0 + slot_size + 2.0),
+        //                     border: UiRect::new(
+        //                         Val::Px(inventory_border_size),
+        //                         Val::Px(inventory_border_size),
+        //                         Val::Px(5.0),
+        //                         Val::Px(inventory_border_size),
+        //                     ),
+        //                     position_type: PositionType::Absolute,
+        //                     right,
+        //                     width,
+        //                     ..default()
+        //                 },
+        //                 ImageNode::new(asset_server.load("cosmos/images/ui/inventory-footer.png")),
+        //             ))
+        //             .with_children(|slots| {
+        //                 for slot_number in priority_slots {
+        //                     create_inventory_slot(
+        //                         inventory_holder,
+        //                         slot_number,
+        //                         slots,
+        //                         inventory.itemstack_at(slot_number),
+        //                         text_style.clone(),
+        //                     );
+        //                 }
+        //             })
+        //             .id(),
+        //     );
+        // }
+        //
+        // let current_ents = ents.clone();
+        //
+        // ents.push(
+        //                     .id(),
+        // );
+
+        // commands.entity(inventory_holder).insert(OpenInventoryEntity(ents));
     }
 }
 
