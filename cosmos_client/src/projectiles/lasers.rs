@@ -4,7 +4,6 @@ use bevy::{prelude::*, utils::HashMap};
 use bevy_rapier3d::{plugin::RapierContextEntityLink, prelude::RapierContextSimulation};
 use bevy_renet2::renet2::*;
 use cosmos_core::{
-    ecs::bundles::CosmosPbrBundle,
     netty::{
         cosmos_encoder, server_laser_cannon_system_messages::ServerStructureSystemMessages, sync::mapping::NetworkMapping,
         system_sets::NetworkingSystemsSet, NettyChannelServer,
@@ -84,22 +83,22 @@ fn lasers_netty(
                     })
                 });
 
-                Laser::spawn_custom_pbr(
+                Laser::spawn(
                     location,
                     laser_velocity,
                     firer_velocity,
                     strength,
                     no_hit,
-                    CosmosPbrBundle {
-                        mesh: Mesh3d(laser_mesh.0.clone_weak()),
-                        material: MeshMaterial3d(material.clone_weak()),
-                        ..Default::default()
-                    },
                     &time,
                     RapierContextEntityLink(q_default_world.single()),
                     &mut commands,
                     causer,
-                );
+                )
+                .insert((
+                    Visibility::default(),
+                    Mesh3d(laser_mesh.0.clone_weak()),
+                    MeshMaterial3d(material.clone_weak()),
+                ));
             }
             ServerStructureSystemMessages::LaserCannonSystemFired { ship_entity } => {
                 let Some(ship_entity) = network_mapping.client_from_server(&ship_entity) else {

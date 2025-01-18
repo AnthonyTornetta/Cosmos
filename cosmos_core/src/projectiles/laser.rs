@@ -7,8 +7,8 @@ use bevy::{
     log::warn,
     pbr::{NotShadowCaster, NotShadowReceiver},
     prelude::{
-        App, Commands, Component, Entity, Event, EventWriter, GlobalTransform, IntoSystemConfigs, Parent, Quat, Query, Res, SystemSet,
-        Transform, Update, Vec3, With, Without,
+        App, Commands, Component, Entity, EntityCommands, Event, EventWriter, GlobalTransform, IntoSystemConfigs, Parent, Quat, Query, Res,
+        SystemSet, Transform, Update, Vec3, With, Without,
     },
     time::Time,
 };
@@ -18,10 +18,10 @@ use bevy_rapier3d::{
 };
 
 use crate::{
-    ecs::{bundles::CosmosPbrBundle, NeedsDespawned},
+    ecs::NeedsDespawned,
     netty::{system_sets::NetworkingSystemsSet, NoSendEntity},
     physics::{
-        location::Location,
+        location::{Location, SetPosition},
         player_world::{PlayerWorld, WorldWithin},
     },
     structure::chunk::ChunkEntity,
@@ -103,28 +103,20 @@ impl Laser {
     ///
     /// * `laser_velocity` - The laser's velocity. Do not add the parent's velocity for this, use `firer_velocity` instead.
     /// * `firer_velocity` - The laser's parent's velocity.
-    /// * `pbr` - This takes a PBR that contains mesh data. The location & rotation fields will be overwritten
-    pub fn spawn_custom_pbr(
+    pub fn spawn<'a>(
         location: Location,
         laser_velocity: Vec3,
         firer_velocity: Vec3,
         strength: f32,
         no_collide_entity: Option<Entity>,
-        mut pbr: CosmosPbrBundle,
         time: &Time,
         context_entity_link: RapierContextEntityLink,
-        commands: &mut Commands,
+        commands: &'a mut Commands,
         causer: Option<Causer>,
-    ) -> Entity {
-        pbr.rotation = Transform::from_xyz(0.0, 0.0, 0.0)
-            .looking_at(laser_velocity, Vec3::Y)
-            .rotation
-            .into();
-        pbr.location = location;
+    ) -> EntityCommands<'a> {
+        let rot = Transform::from_xyz(0.0, 0.0, 0.0).looking_at(laser_velocity, Vec3::Y).rotation;
 
         let mut ent_cmds = commands.spawn_empty();
-
-        let laser_entity = ent_cmds.id();
 
         ent_cmds.insert((
             Laser {
@@ -132,7 +124,9 @@ impl Laser {
                 active: true,
                 last_position: location,
             },
-            pbr,
+            location,
+            Transform::from_rotation(rot),
+            SetPosition::Transform,
             RigidBody::Dynamic,
             LockedAxes::ROTATION_LOCKED,
             Velocity {
@@ -154,36 +148,7 @@ impl Laser {
             ent_cmds.insert(NoCollide(ent));
         }
 
-        laser_entity
-    }
-
-    /// Spawns a laser with the given position & velocity
-    ///
-    /// * `laser_velocity` - The laser's velocity. Do not add the parent's velocity for this, use `firer_velocity` instead.
-    /// * `firer_velocity` - The laser's parent's velocity.
-    pub fn spawn(
-        position: Location,
-        laser_velocity: Vec3,
-        firer_velocity: Vec3,
-        strength: f32,
-        no_collide_entity: Option<Entity>,
-        time: &Time,
-        context_entity_link: RapierContextEntityLink,
-        commands: &mut Commands,
-        causer: Option<Causer>,
-    ) -> Entity {
-        Self::spawn_custom_pbr(
-            position,
-            laser_velocity,
-            firer_velocity,
-            strength,
-            no_collide_entity,
-            CosmosPbrBundle { ..Default::default() },
-            time,
-            context_entity_link,
-            commands,
-            causer,
-        )
+        ent_cmds
     }
 }
 

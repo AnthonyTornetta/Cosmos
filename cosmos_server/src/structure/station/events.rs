@@ -31,7 +31,9 @@ pub(crate) fn create_station_event_reader(mut event_reader: EventReader<CreateSt
 
         builder.insert_station(&mut entity, ev.station_location, &mut structure);
 
-        entity.insert(structure).insert(StationNeedsCreated);
+        entity
+            .insert(structure)
+            .insert((StationNeedsCreated, Transform::from_rotation(ev.rotation)));
     }
 }
 

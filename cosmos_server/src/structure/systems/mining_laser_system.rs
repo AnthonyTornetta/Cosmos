@@ -11,6 +11,7 @@ use cosmos_core::{
         Block,
     },
     ecs::NeedsDespawned,
+    prelude::Station,
     registry::Registry,
     state::GameState,
     structure::{
@@ -334,14 +335,21 @@ fn register_laser_blocks(blocks: Res<Registry<Block>>, mut cannon: ResMut<LineBl
 
 fn dont_mine_alive_ships(
     mut commands: Commands,
-    q_ships: Query<Entity, (With<Ship>, Without<MeltingDown>, Without<CannotBeMinedByMiningLaser>)>,
-    q_melting_ships: Query<Entity, (With<Ship>, With<MeltingDown>, With<CannotBeMinedByMiningLaser>)>,
+    q_ships_and_stations: Query<
+        Entity,
+        (
+            Or<(With<Ship>, With<Station>)>,
+            Without<MeltingDown>,
+            Without<CannotBeMinedByMiningLaser>,
+        ),
+    >,
+    q_melting_ships_and_stations: Query<Entity, (Or<(With<Ship>, With<Station>)>, With<MeltingDown>, With<CannotBeMinedByMiningLaser>)>,
 ) {
-    for ent in q_ships.iter() {
+    for ent in q_ships_and_stations.iter() {
         commands.entity(ent).insert(CannotBeMinedByMiningLaser);
     }
 
-    for ent in q_melting_ships.iter() {
+    for ent in q_melting_ships_and_stations.iter() {
         commands.entity(ent).remove::<CannotBeMinedByMiningLaser>();
     }
 }

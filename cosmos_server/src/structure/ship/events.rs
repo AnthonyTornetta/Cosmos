@@ -4,7 +4,7 @@ use bevy::{
     ecs::system::Commands,
     log::info,
     math::Quat,
-    prelude::{in_state, App, Entity, Event, EventReader, IntoSystemConfigs, Query, ResMut, Update, Without},
+    prelude::{in_state, App, Entity, Event, EventReader, IntoSystemConfigs, Query, ResMut, Transform, Update, Without},
 };
 use bevy_rapier3d::dynamics::Velocity;
 use bevy_renet2::renet2::RenetServer;
@@ -92,7 +92,9 @@ pub(crate) fn create_ship_event_reader(mut event_reader: EventReader<CreateShipE
 
         builder.insert_ship(&mut entity, ev.ship_location, Velocity::zero(), &mut structure);
 
-        entity.insert(structure).insert(ShipNeedsCreated);
+        entity
+            .insert(structure)
+            .insert((ShipNeedsCreated, Transform::from_rotation(ev.rotation)));
     }
 }
 

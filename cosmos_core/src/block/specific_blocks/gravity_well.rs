@@ -1,5 +1,7 @@
 //! Handles shared logic for the gravity well
 
+use std::time::Duration;
+
 use bevy::{
     app::{App, Update},
     ecs::{
@@ -8,12 +10,15 @@ use bevy::{
         system::{Query, Res},
     },
     math::{Quat, Vec3},
-    prelude::IntoSystemConfigs,
+    prelude::{Commands, IntoSystemConfigs, With},
     reflect::Reflect,
-    time::Time,
+    time::{common_conditions::on_timer, Time},
     transform::components::GlobalTransform,
 };
-use bevy_rapier3d::dynamics::{ExternalImpulse, ReadMassProperties};
+use bevy_rapier3d::{
+    dynamics::{ExternalImpulse, ReadMassProperties},
+    prelude::AdditionalMassProperties,
+};
 use serde::{Deserialize, Serialize};
 
 use crate::{
@@ -53,7 +58,21 @@ fn do_gravity_well(
     }
 }
 
+// TODO: This is a hack because the physics engine is kinda buggy. Check back on this in the
+// future.
+fn update_mass_props(mut commands: Commands, q_ent: Query<Entity, With<ReadMassProperties>>) {
+    for e in q_ent.iter() {
+        // Recalculates the [`ReadMassProperties`], which can be unreliable
+        commands.entity(e).insert(AdditionalMassProperties::Mass(0.0));
+    }
+}
+
 pub(super) fn register(app: &mut App) {
-    app.add_systems(Update, do_gravity_well.in_set(NetworkingSystemsSet::Between))
-        .register_type::<GravityWell>();
+    app.add_systems(
+        Update,
+        (update_mass_props.run_if(on_timer(Duration::from_secs(5))), do_gravity_well)
+            .chain()
+            .in_set(NetworkingSystemsSet::Between),
+    )
+    .register_type::<GravityWell>();
 }

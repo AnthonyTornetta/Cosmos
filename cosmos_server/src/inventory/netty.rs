@@ -5,13 +5,13 @@ use bevy::{
     log::warn,
     math::{Quat, Vec3},
     prelude::{
-        in_state, App, Changed, Commands, Entity, GlobalTransform, IntoSystemConfigs, Query, RemovedComponents, Res, ResMut, Update,
+        in_state, App, Changed, Commands, Entity, GlobalTransform, IntoSystemConfigs, Query, RemovedComponents, Res, ResMut, Transform,
+        Update,
     },
 };
 use bevy_rapier3d::prelude::Velocity;
 use bevy_renet2::renet2::RenetServer;
 use cosmos_core::{
-    ecs::bundles::BundleStartingRotation,
     entities::player::Player,
     inventory::{
         netty::{ClientInventoryMessages, InventoryIdentifier, ServerInventoryMessages},
@@ -343,7 +343,7 @@ fn listen_for_inventory_messages(
                             PhysicalItem,
                             *location + linvel.normalize(),
                             LoadingDistance::new(1, 2),
-                            BundleStartingRotation(player_rot),
+                            Transform::from_rotation(player_rot),
                             Velocity {
                                 linvel,
                                 angvel: Vec3::ZERO,
@@ -390,7 +390,7 @@ fn listen_for_inventory_messages(
                             PhysicalItem,
                             *location + linvel.normalize(),
                             LoadingDistance::new(1, 2),
-                            BundleStartingRotation(player_rot),
+                            Transform::from_rotation(player_rot),
                             Velocity {
                                 linvel,
                                 angvel: Vec3::ZERO,

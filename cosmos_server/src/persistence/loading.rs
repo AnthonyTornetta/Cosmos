@@ -13,16 +13,13 @@ use bevy::{
     ecs::schedule::{IntoSystemConfigs, IntoSystemSetConfigs, SystemSet},
     hierarchy::BuildChildren,
     log::{error, warn},
-    prelude::{App, Commands, Component, Entity, Quat, Query, Update, With, Without},
+    prelude::{App, Commands, Component, Entity, Quat, Query, Transform, Update, With, Without},
     reflect::Reflect,
 };
 use bevy_rapier3d::prelude::Velocity;
 
 use cosmos_core::{
-    ecs::{bundles::BundleStartingRotation, NeedsDespawned},
-    netty::cosmos_encoder,
-    persistence::LoadingDistance,
-    physics::location::Location,
+    ecs::NeedsDespawned, netty::cosmos_encoder, persistence::LoadingDistance, physics::location::Location,
     structure::loading::StructureLoadingSet,
 };
 
@@ -181,7 +178,7 @@ fn default_load(query: Query<(Entity, &SerializedData), With<NeedsLoaded>>, mut 
             ecmds.insert(loading_distance);
         }
         if let Some(rotation) = sd.deserialize_data::<Quat>("cosmos:rotation") {
-            ecmds.insert(BundleStartingRotation(rotation));
+            ecmds.insert(Transform::from_rotation(rotation));
         }
     }
 }

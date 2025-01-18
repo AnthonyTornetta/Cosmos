@@ -15,7 +15,7 @@ use bevy_rapier3d::prelude::*;
 use bevy_renet2::renet2::{transport::NetcodeClientTransport, RenetClient};
 use cosmos_core::{
     block::Block,
-    ecs::{bundles::BundleStartingRotation, NeedsDespawned},
+    ecs::NeedsDespawned,
     entities::player::{render_distance::RenderDistance, Player},
     events::{
         block_events::{BlockChangedEvent, BlockDataChangedEvent},
@@ -316,7 +316,7 @@ pub(crate) fn client_sync_players(
 
                                 commands.entity(entity).insert((
                                     loc,
-                                    BundleStartingRotation(body.rotation),
+                                    Transform::from_rotation(body.rotation),
                                     body.create_velocity(),
                                     LerpTowards(body),
                                 ));
@@ -335,7 +335,7 @@ pub(crate) fn client_sync_players(
                         let mut client_entity_ecmds = commands.spawn((
                             ServerEntity(*server_entity),
                             loc,
-                            BundleStartingRotation(body.rotation),
+                            Transform::from_rotation(body.rotation),
                             body.create_velocity(),
                             LerpTowards(body),
                         ));

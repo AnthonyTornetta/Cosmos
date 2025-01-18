@@ -5,10 +5,7 @@ use bevy_rapier3d::prelude::Velocity;
 
 use crate::{
     blockitems::BlockItems,
-    ecs::{
-        bundles::BundleStartingRotation,
-        mut_events::{MutEvent, MutEventsCommand},
-    },
+    ecs::mut_events::{MutEvent, MutEventsCommand},
     entities::player::creative::Creative,
     events::block_events::BlockChangedEvent,
     inventory::{
@@ -17,7 +14,7 @@ use crate::{
     },
     item::{physical_item::PhysicalItem, Item},
     persistence::LoadingDistance,
-    physics::location::Location,
+    physics::location::{Location, SetPosition},
     registry::{identifiable::Identifiable, Registry},
     structure::{
         coordinates::{BlockCoordinate, CoordinateType, UnboundCoordinateType},
@@ -206,7 +203,8 @@ fn handle_block_break_events(
                                         PhysicalItem,
                                         item_spawn,
                                         LoadingDistance::new(1, 2),
-                                        BundleStartingRotation(structure_rot),
+                                        Transform::from_rotation(structure_rot),
+                                        SetPosition::Transform,
                                         Velocity {
                                             linvel: item_vel
                                                 + Vec3::new(
