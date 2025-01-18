@@ -207,7 +207,7 @@ fn server_listen_messages(
                     };
 
                     let Some(ship_core) = items.from_id("cosmos:ship_core") else {
-                        info!("Does not have ship corer registered");
+                        info!("Does not have ship core registered");
                         continue;
                     };
 
@@ -217,30 +217,51 @@ fn server_listen_messages(
                         continue;
                     }
 
-                    if let Ok((g_trans, transform, location, looking, _)) = q_player.get(client) {
-                        let ship_location = *location + transform.rotation.mul_vec3(looking.rotation.mul_vec3(Vec3::new(0.0, 0.0, -4.0)));
+                    if let Ok((g_trans, _, location, looking, _)) = q_player.get(client) {
+                        let rotation = g_trans.rotation() * looking.rotation;
+
+                        let ship_location = *location + rotation * Vec3::new(0.0, 0.0, -4.0);
 
                         info!("Creating ship {name}");
 
-                        create_ship_event_writer.send(CreateShipEvent {
-                            ship_location,
-                            rotation: g_trans.rotation() * looking.rotation,
-                        });
+                        create_ship_event_writer.send(CreateShipEvent { ship_location, rotation });
                     } else {
                         warn!("Invalid player entity - {client:?}");
                     }
                 }
-                ClientReliableMessages::CreateStation { name: _name } => {
-                    if let Some(client) = lobby.player_from_id(client_id) {
-                        if let Ok((g_trans, transform, location, looking, _)) = q_player.get(client) {
-                            let station_location =
-                                *location + transform.rotation.mul_vec3(looking.rotation.mul_vec3(Vec3::new(0.0, 0.0, -4.0)));
+                ClientReliableMessages::CreateStation { name } => {
+                    let Some(client) = lobby.player_from_id(client_id) else {
+                        warn!("Invalid client id {client_id}");
+                        continue;
+                    };
 
-                            create_station_event_writer.send(CreateStationEvent {
-                                station_location,
-                                rotation: g_trans.rotation() * looking.rotation,
-                            });
-                        }
+                    let Ok(mut inventory) = q_inventory.get_mut(client) else {
+                        info!("No inventory ;(");
+                        continue;
+                    };
+
+                    let Some(station_core) = items.from_id("cosmos:station_core") else {
+                        info!("Does not have station core registered");
+                        continue;
+                    };
+
+                    let (remaining_didnt_take, _) = inventory.take_and_remove_item(station_core, 1, &mut commands);
+                    if remaining_didnt_take != 0 {
+                        info!("Does not have station core");
+                        continue;
+                    }
+
+                    if let Ok((g_trans, _, location, looking, _)) = q_player.get(client) {
+                        let rotation = g_trans.rotation() * looking.rotation;
+
+                        let station_location = *location + rotation * Vec3::new(0.0, 0.0, -4.0);
+
+                        info!("Creating ship {name}");
+
+                        create_station_event_writer.send(CreateStationEvent {
+                            station_location,
+                            rotation,
+                        });
                     }
                 }
                 ClientReliableMessages::PilotQuery { ship_entity } => {
