@@ -4,7 +4,12 @@
 
 use std::sync::{Arc, Mutex};
 
-use bevy::{color::palettes::css, core_pipeline::bloom::Bloom, prelude::*, window::PrimaryWindow};
+use bevy::{
+    color::palettes::css,
+    core_pipeline::{bloom::Bloom, oit::OrderIndependentTransparencySettings},
+    prelude::*,
+    window::PrimaryWindow,
+};
 use bevy_kira_audio::prelude::AudioReceiver;
 use bevy_rapier3d::prelude::*;
 use bevy_renet2::renet2::{transport::NetcodeClientTransport, RenetClient};
@@ -452,6 +457,7 @@ pub(crate) fn client_sync_players(
                             parent.spawn((
                                 Camera {
                                     hdr: true,
+
                                     ..Default::default()
                                 },
                                 Transform::from_translation(camera_offset),
@@ -463,8 +469,10 @@ pub(crate) fn client_sync_players(
                                 Bloom { ..Default::default() },
                                 CameraHelper::default(),
                                 Name::new("Main Camera"),
+                                OrderIndependentTransparencySettings::default(),
                                 MainCamera,
                                 IsDefaultUiCamera,
+                                Msaa::Off,
                                 AudioReceiver,
                             ));
                         });

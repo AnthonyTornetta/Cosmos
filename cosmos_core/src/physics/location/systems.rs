@@ -1,10 +1,7 @@
 //! Handles the systems that sync up worlds, locations, and transforms
 
-use std::time::Duration;
-
 use bevy::{
     prelude::*,
-    time::common_conditions::on_timer,
     transform::systems::{propagate_transforms, sync_simple_transforms},
 };
 

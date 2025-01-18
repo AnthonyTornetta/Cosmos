@@ -18,6 +18,10 @@
 #import bevy_pbr::gtao_utils::gtao_multibounce
 #endif
 
+#ifdef OIT_ENABLED
+#import bevy_core_pipeline::oit::oit_draw
+#endif // OIT_ENABLED
+
 #import bevy_pbr::{
     pbr_functions::alpha_discard,
 }
@@ -233,6 +237,15 @@ fn fragment(
     // note this does not include fullscreen postprocessing effects like bloom.
     out.color = main_pass_post_lighting_processing(pbr_input, out.color);
 #endif
+
+#ifdef OIT_ENABLED
+    let alpha_mode = pbr_input.material.flags & pbr_types::STANDARD_MATERIAL_FLAGS_ALPHA_MODE_RESERVED_BITS;
+    if alpha_mode != pbr_types::STANDARD_MATERIAL_FLAGS_ALPHA_MODE_OPAQUE {
+        // The fragments will only be drawn during the oit resolve pass.
+        oit_draw(in.position, out.color);
+        discard;
+    }
+#endif // OIT_ENABLED
 
     return out;
 }

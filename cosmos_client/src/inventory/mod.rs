@@ -91,7 +91,6 @@ fn close_button_system(
     open_inventories: Query<Entity, With<InventoryNeedsDisplayed>>,
 ) {
     for rendered_inventory in q_close_inventory.iter() {
-        // TODO: fix inventory closing to only close the one open
         if let Some(mut _ecmds) = commands.get_entity(rendered_inventory.inventory_holder) {
             open_inventories.iter().for_each(|ent| {
                 commands.entity(ent).remove::<InventoryNeedsDisplayed>();
