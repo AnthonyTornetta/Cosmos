@@ -120,8 +120,7 @@ pub(crate) fn process_player_movement(
     // TODO This is stupid - please rework this later.
     let normalize_y = !under_gravity_well
         && player_alignment
-            .map(|x| x.aligned_to)
-            .flatten()
+            .and_then(|x| x.aligned_to)
             .map(|x| !q_exerts_gravity.contains(x))
             .unwrap_or(true);
 

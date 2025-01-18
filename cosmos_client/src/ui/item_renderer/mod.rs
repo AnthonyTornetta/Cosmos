@@ -95,7 +95,7 @@ fn render_tooltips(
                     GlobalZIndex(100),
                 ))
                 .with_children(|p| {
-                    p.spawn((Text::new(format!("{item_name}")), text_style.clone()));
+                    p.spawn((Text::new(item_name.to_string()), text_style.clone()));
                 })
                 .set_parent(ent)
                 .id();
