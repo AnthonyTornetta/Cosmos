@@ -1,10 +1,16 @@
 //! Renders items as 3d models at based off the RenderItem present in a UI element
 
-use bevy::prelude::*;
-use cosmos_core::{item::Item, registry::Registry};
+use bevy::{prelude::*, window::PrimaryWindow};
+use cosmos_core::{
+    ecs::NeedsDespawned,
+    item::Item,
+    registry::{identifiable::Identifiable, Registry},
+};
 use photo_booth::RenderedItemAtlas;
 
-use super::UiSystemSet;
+use crate::lang::Lang;
+
+use super::{font::DefaultFont, UiSystemSet};
 
 pub mod photo_booth;
 
@@ -13,6 +19,117 @@ pub mod photo_booth;
 pub struct RenderItem {
     /// The item's id
     pub item_id: u16,
+}
+
+#[derive(Component)]
+struct ItemTooltipPointer(Entity);
+
+#[derive(Component)]
+/// Put this component on any [`RenderItem`] that you don't want to have a tooltip on hover.
+pub struct NoHoverToolip;
+
+#[derive(Component)]
+struct ItemTooltip;
+
+fn render_tooltips(
+    mut commands: Commands,
+    q_changed_interaction: Query<
+        (Entity, &Interaction, &RenderItem, Option<&ItemTooltipPointer>),
+        (Without<NoHoverToolip>, Changed<Interaction>),
+    >,
+    q_any_item_tooltips: Query<&Interaction, With<ItemTooltipPointer>>,
+    font: Res<DefaultFont>,
+    items: Res<Registry<Item>>,
+    lang: Res<Lang<Item>>,
+) {
+    let mut spawned = false;
+    for (ent, interaction, render_item, hovered_tooltip) in q_changed_interaction.iter() {
+        if *interaction == Interaction::None {
+            if let Some(ht) = hovered_tooltip {
+                commands.entity(ht.0).insert(NeedsDespawned);
+                commands.entity(ent).remove::<ItemTooltipPointer>();
+            }
+        } else {
+            if spawned {
+                continue;
+            };
+
+            if hovered_tooltip.is_some() {
+                continue;
+            }
+
+            if q_any_item_tooltips.iter().any(|x| *x != Interaction::None) {
+                // We only want one at a time
+                continue;
+            }
+
+            spawned = true;
+
+            let text_style = TextFont {
+                font: font.0.clone_weak(),
+                font_size: 24.0,
+                ..Default::default()
+            };
+
+            let unlocalized_name = items.from_numeric_id(render_item.item_id).unlocalized_name();
+            let item_name = lang.get_name_from_id(unlocalized_name).unwrap_or(unlocalized_name);
+
+            let tt_ent = commands
+                .spawn((
+                    ItemTooltip,
+                    Node {
+                        position_type: PositionType::Absolute,
+                        padding: UiRect::all(Val::Px(4.0)),
+                        ..Default::default()
+                    },
+                    BackgroundColor(
+                        Srgba {
+                            red: 0.0,
+                            green: 0.0,
+                            blue: 0.0,
+                            alpha: 0.95,
+                        }
+                        .into(),
+                    ),
+                    Name::new("Item Tooltip"),
+                    GlobalZIndex(100),
+                ))
+                .with_children(|p| {
+                    p.spawn((Text::new(format!("{item_name}")), text_style.clone()));
+                })
+                .set_parent(ent)
+                .id();
+
+            commands.entity(ent).insert(ItemTooltipPointer(tt_ent));
+        }
+    }
+}
+
+fn reposition_tooltips(
+    q_windows: Query<&Window, With<PrimaryWindow>>,
+    mut q_tooltip: Query<(&mut Node, &Parent), With<ItemTooltip>>,
+    q_node: Query<(&GlobalTransform, &ComputedNode)>,
+) {
+    for (mut tt_node, parent) in q_tooltip.iter_mut() {
+        let Ok(window) = q_windows.get_single() else {
+            continue;
+        };
+
+        let Some(cursor_pos) = window.cursor_position() else {
+            continue;
+        };
+
+        let Ok((g_trans, parent_node)) = q_node.get(parent.get()) else {
+            continue;
+        };
+
+        let t = g_trans.translation();
+        let bounds = Rect::from_center_size(Vec2::new(t.x, t.y), parent_node.size());
+        let offset = cursor_pos - bounds.min;
+
+        tt_node.left = Val::Px(offset.x + 5.0);
+        tt_node.top = Val::Px(offset.y + 5.0);
+    }
 }
 
 fn render_items(
@@ -24,16 +141,19 @@ fn render_items(
 ) {
     for entity in removed_render_items.read() {
         if let Some(mut ecmds) = commands.get_entity(entity) {
-            ecmds.remove::<ImageNode>();
+            ecmds.remove::<(ImageNode, Interaction)>();
         }
     }
 
     for (changed_render_item_ent, render_item) in q_changed_render_items.iter() {
-        commands.entity(changed_render_item_ent).insert(ImageNode {
-            rect: Some(item_atlas.get_item_rect(items.from_numeric_id(render_item.item_id))),
-            image: item_atlas.get_atlas_handle().clone_weak(),
-            ..Default::default()
-        });
+        commands.entity(changed_render_item_ent).insert((
+            Interaction::default(),
+            ImageNode {
+                rect: Some(item_atlas.get_item_rect(items.from_numeric_id(render_item.item_id))),
+                image: item_atlas.get_atlas_handle().clone_weak(),
+                ..Default::default()
+            },
+        ));
     }
 }
 
@@ -50,7 +170,12 @@ pub(super) fn register(app: &mut App) {
     photo_booth::register(app);
 
     app.configure_sets(Update, RenderItemSystemSet::RenderItems.in_set(UiSystemSet::DoUi))
-        .add_systems(Update, render_items.chain().in_set(RenderItemSystemSet::RenderItems));
+        .add_systems(
+            Update,
+            (render_items, render_tooltips, reposition_tooltips)
+                .chain()
+                .in_set(RenderItemSystemSet::RenderItems),
+        );
 
     app.register_type::<RenderItem>();
 }
