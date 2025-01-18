@@ -35,24 +35,6 @@ pub enum UiSystemSet {
     FinishUi,
 }
 
-#[derive(Component)]
-/// Append most UI nodes to this.
-///
-/// Note that UI nodes appended to this will display behind 3d block models. Use `UiTopRoot` to display past those.
-pub struct UiRoot;
-
-#[derive(Component)]
-/// Append UI nodes you want to display in front of mid-level 3d-models to this.
-///
-/// If you're not dealing with 3d model weirdness, please prefer to use `UiRoot`.
-pub struct UiMiddleRoot;
-
-#[derive(Component)]
-/// Append UI nodes you want to display in front of all 3d-models to this.
-///
-/// If you're not dealing with 3d model weirdness, please prefer to use `UiRoot`.
-pub struct UiTopRoot;
-
 #[derive(Component, Debug, PartialEq, Eq, Hash)]
 /// When you make a menu that can be closed via the `Escape`/pause menu key, add this component to it.
 pub struct OpenMenu {

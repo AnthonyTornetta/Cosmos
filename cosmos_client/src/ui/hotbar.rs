@@ -18,12 +18,7 @@ use crate::{
     structure::ship::ui::system_selection::SystemSelectionSet,
 };
 
-use super::{
-    components::show_cursor::no_open_menus,
-    font::DefaultFont,
-    item_renderer::{create_ui_cameras, RenderItem},
-    UiMiddleRoot,
-};
+use super::{components::show_cursor::no_open_menus, font::DefaultFont, item_renderer::RenderItem};
 
 const ITEM_NAME_FADE_DURATION_SEC: f32 = 5.0;
 
@@ -137,8 +132,8 @@ impl<T> Default for PriorityQueue<T> {
 #[derive(Component)]
 /// The hotbar the player can see
 pub struct Hotbar {
-    /// Vec<(slot, slot text)>
-    slots: Vec<(Entity, Entity)>,
+    /// Vec<(slot, slot text, slot item)>
+    slots: Vec<(Entity, Entity, Entity)>,
     selected_slot: usize,
     prev_slot: usize,
     max_slots: usize,
@@ -317,9 +312,7 @@ fn listen_for_change_events(
     }
 }
 
-fn add_item_text(mut commands: Commands, q_target_camera: Query<Entity, With<UiMiddleRoot>>, default_font: Res<DefaultFont>) {
-    let target_cam = q_target_camera.single();
-
+fn add_item_text(mut commands: Commands, default_font: Res<DefaultFont>) {
     let text_font = TextFont {
         font_size: 24.0,
         font: default_font.0.clone(),
@@ -329,7 +322,6 @@ fn add_item_text(mut commands: Commands, q_target_camera: Query<Entity, With<UiM
     commands
         .spawn((
             Name::new("Item hotbar text"),
-            TargetCamera(target_cam),
             Node {
                 position_type: PositionType::Absolute,
                 display: Display::Flex,
@@ -376,39 +368,28 @@ fn populate_hotbar(
         return;
     };
 
-    for (item, &(slot_entity, _)) in hotbar_contents.iter().take(hotbar.slots.len()).zip(hotbar.slots.iter()) {
+    for (item, &(_, _, item_entity)) in hotbar_contents.iter().take(hotbar.slots.len()).zip(hotbar.slots.iter()) {
         let Some(item_stack) = item else {
-            commands.entity(slot_entity).remove::<RenderItem>();
+            commands.entity(item_entity).remove::<RenderItem>();
 
             continue;
         };
 
         if render_item_query
-            .get(slot_entity)
+            .get(item_entity)
             .map(|x| x.item_id != item_stack.item_id())
             .unwrap_or(true)
         {
-            commands.entity(slot_entity).insert((
-                RenderItem {
-                    item_id: item_stack.item_id(),
-                },
-                Name::new("Hotbar Item Slot"),
-            ));
+            commands.entity(item_entity).insert((RenderItem {
+                item_id: item_stack.item_id(),
+            },));
         }
     }
 }
 
-fn add_hotbar(
-    mut commands: Commands,
-    q_target_camera: Query<Entity, With<UiMiddleRoot>>,
-    default_font: Res<DefaultFont>,
-    asset_server: Res<AssetServer>,
-) {
-    let target_cam = q_target_camera.single();
-
+fn add_hotbar(mut commands: Commands, default_font: Res<DefaultFont>, asset_server: Res<AssetServer>) {
     commands
         .spawn((
-            TargetCamera(target_cam),
             Node {
                 position_type: PositionType::Absolute,
                 display: Display::Flex,
@@ -439,6 +420,7 @@ fn add_hotbar(
                     let path = image_path(hotbar.selected_slot == slot_num);
 
                     let mut slot = parent.spawn((
+                        Name::new(format!("Slot {slot_num}")),
                         ImageNode::new(asset_server.load(path)),
                         Node {
                             width: Val::Px(64.0),
@@ -448,35 +430,51 @@ fn add_hotbar(
                     ));
 
                     let mut text_entity = None;
+                    let mut item_entity = None;
 
                     slot.with_children(|slot| {
-                        text_entity = Some(
+                        item_entity = Some(
                             slot.spawn((
                                 Node {
-                                    bottom: Val::Px(5.0),
-                                    right: Val::Px(5.0),
-                                    position_type: PositionType::Absolute,
-
-                                    ..default()
-                                },
-                                Text::new(""),
-                                TextFont {
-                                    font_size: 24.0,
-                                    font: default_font.0.clone(),
+                                    flex_grow: 1.0,
                                     ..Default::default()
                                 },
-                                TextLayout {
-                                    justify: JustifyText::Right,
-                                    ..Default::default()
-                                },
+                                Name::new("Hotbar Item Slot"),
                             ))
+                            .with_children(|slot| {
+                                text_entity = Some(
+                                    slot.spawn((
+                                        Name::new("Item Text"),
+                                        Node {
+                                            bottom: Val::Px(5.0),
+                                            right: Val::Px(5.0),
+                                            position_type: PositionType::Absolute,
+
+                                            ..default()
+                                        },
+                                        Text::new(""),
+                                        TextFont {
+                                            font_size: 24.0,
+                                            font: default_font.0.clone(),
+                                            ..Default::default()
+                                        },
+                                        TextLayout {
+                                            justify: JustifyText::Right,
+                                            ..Default::default()
+                                        },
+                                    ))
+                                    .id(),
+                                );
+                            })
                             .id(),
                         );
                     });
 
-                    hotbar
-                        .slots
-                        .push((slot.id(), text_entity.expect("This should have been set in the closure above")));
+                    hotbar.slots.push((
+                        slot.id(),
+                        text_entity.expect("This should have been set in the closure above"),
+                        item_entity.expect("Should have been set above"),
+                    ));
                 }
             });
 
@@ -504,7 +502,7 @@ fn add_hotbar_contents_to_player(
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_systems(OnEnter(GameState::Playing), (add_hotbar, add_item_text).after(create_ui_cameras))
+    app.add_systems(OnEnter(GameState::Playing), (add_hotbar, add_item_text))
         .add_systems(
             Update,
             (

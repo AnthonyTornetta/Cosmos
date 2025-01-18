@@ -76,7 +76,7 @@ fn create_main_material(image_handle: Handle<Image>, unlit: bool) -> LodArrayTex
 fn create_transparent_material(image_handle: Handle<Image>, unlit: bool) -> LodArrayTextureMaterial {
     LodArrayTextureMaterial {
         base_color_texture: Some(image_handle),
-        alpha_mode: AlphaMode::Add,
+        alpha_mode: AlphaMode::Blend,
         unlit,
         metallic: 0.0,
         reflectance: 0.0,

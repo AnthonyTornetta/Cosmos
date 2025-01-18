@@ -12,7 +12,7 @@ use cosmos_core::{
 
 use crate::{interactions::block_interactions::LookingAt, lang::Lang};
 
-use super::{font::DefaultFont, UiRoot};
+use super::font::DefaultFont;
 
 #[derive(Component, Debug, Default)]
 struct FPSCounter {
@@ -29,10 +29,8 @@ struct CoordsCounter;
 #[derive(Component)]
 struct ActualCoordsCounter;
 
-fn add_text(mut commands: Commands, default_font: Res<DefaultFont>, q_target_camera: Query<Entity, With<UiRoot>>) {
+fn add_text(mut commands: Commands, default_font: Res<DefaultFont>) {
     let text_gap = 35.0;
-
-    let target_cam = TargetCamera(q_target_camera.single());
 
     let font = TextFont {
         font: default_font.0.clone(),
@@ -41,7 +39,6 @@ fn add_text(mut commands: Commands, default_font: Res<DefaultFont>, q_target_cam
     };
 
     commands.spawn((
-        target_cam.clone(),
         Node {
             bottom: Val::Px(5.0),
             left: Val::Px(5.0),
@@ -54,7 +51,6 @@ fn add_text(mut commands: Commands, default_font: Res<DefaultFont>, q_target_cam
     ));
 
     commands.spawn((
-        target_cam.clone(),
         Node {
             bottom: Val::Px(5.0 + text_gap),
             left: Val::Px(5.0),
@@ -68,7 +64,6 @@ fn add_text(mut commands: Commands, default_font: Res<DefaultFont>, q_target_cam
     ));
 
     commands.spawn((
-        target_cam.clone(),
         Node {
             bottom: Val::Px(5.0 + text_gap * 2.0),
             left: Val::Px(5.0),
@@ -83,7 +78,6 @@ fn add_text(mut commands: Commands, default_font: Res<DefaultFont>, q_target_cam
 
     commands
         .spawn((
-            target_cam,
             Node {
                 bottom: Val::Px(5.0 + text_gap * 3.0),
                 left: Val::Px(5.0),

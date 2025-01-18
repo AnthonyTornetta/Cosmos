@@ -1,10 +1,7 @@
 //! Handles the systems that sync up worlds, locations, and transforms
 
-use std::time::Duration;
-
 use bevy::{
     prelude::*,
-    time::common_conditions::on_timer,
     transform::systems::{propagate_transforms, sync_simple_transforms},
 };
 
@@ -436,7 +433,7 @@ pub(super) fn register(app: &mut App) {
         (
             (sync_simple_transforms, propagate_transforms).chain(), // TODO: Maybe not this?
             apply_set_position,
-            reposition_worlds_around_anchors.run_if(on_timer(Duration::from_secs(5))),
+            reposition_worlds_around_anchors,
             #[cfg(feature = "server")]
             (move_anchors_between_worlds, move_non_anchors_between_worlds, remove_empty_worlds).chain(),
             sync_transforms_and_locations,

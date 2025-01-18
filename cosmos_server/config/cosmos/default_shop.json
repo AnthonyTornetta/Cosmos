@@ -560,169 +560,8 @@
     }
   },
   {
-    "Selling": {
-      "item_id": "cosmos:glass_white",
-      "max_quantity_selling": 10000,
-      "price_per": 40
-    }
-  },
-  {
     "Buying": {
-      "item_id": "cosmos:glass_white",
-      "max_quantity_buying": null,
-      "price_per": 36
-    }
-  },
-  {
-    "Selling": {
-      "item_id": "cosmos:glass_blue",
-      "max_quantity_selling": 10000,
-      "price_per": 40
-    }
-  },
-  {
-    "Buying": {
-      "item_id": "cosmos:glass_blue",
-      "max_quantity_buying": null,
-      "price_per": 36
-    }
-  },
-  {
-    "Selling": {
-      "item_id": "cosmos:glass_dark_blue",
-      "max_quantity_selling": 10000,
-      "price_per": 40
-    }
-  },
-  {
-    "Buying": {
-      "item_id": "cosmos:glass_dark_blue",
-      "max_quantity_buying": null,
-      "price_per": 36
-    }
-  },
-  {
-    "Selling": {
-      "item_id": "cosmos:glass_brown",
-      "max_quantity_selling": 10000,
-      "price_per": 40
-    }
-  },
-  {
-    "Buying": {
-      "item_id": "cosmos:glass_brown",
-      "max_quantity_buying": null,
-      "price_per": 36
-    }
-  },
-  {
-    "Selling": {
-      "item_id": "cosmos:glass_green",
-      "max_quantity_selling": 10000,
-      "price_per": 40
-    }
-  },
-  {
-    "Buying": {
-      "item_id": "cosmos:glass_green",
-      "max_quantity_buying": null,
-      "price_per": 36
-    }
-  },
-  {
-    "Selling": {
-      "item_id": "cosmos:glass_dark_green",
-      "max_quantity_selling": 10000,
-      "price_per": 40
-    }
-  },
-  {
-    "Buying": {
-      "item_id": "cosmos:glass_dark_green",
-      "max_quantity_buying": null,
-      "price_per": 36
-    }
-  },
-  {
-    "Selling": {
-      "item_id": "cosmos:glass_orange",
-      "max_quantity_selling": 10000,
-      "price_per": 40
-    }
-  },
-  {
-    "Buying": {
-      "item_id": "cosmos:glass_orange",
-      "max_quantity_buying": null,
-      "price_per": 36
-    }
-  },
-  {
-    "Selling": {
-      "item_id": "cosmos:glass_dark_orange",
-      "max_quantity_selling": 10000,
-      "price_per": 40
-    }
-  },
-  {
-    "Buying": {
-      "item_id": "cosmos:glass_dark_orange",
-      "max_quantity_buying": null,
-      "price_per": 36
-    }
-  },
-  {
-    "Selling": {
-      "item_id": "cosmos:glass_pink",
-      "max_quantity_selling": 10000,
-      "price_per": 40
-    }
-  },
-  {
-    "Buying": {
-      "item_id": "cosmos:glass_pink",
-      "max_quantity_buying": null,
-      "price_per": 36
-    }
-  },
-  {
-    "Selling": {
-      "item_id": "cosmos:glass_dark_pink",
-      "max_quantity_selling": 10000,
-      "price_per": 40
-    }
-  },
-  {
-    "Buying": {
-      "item_id": "cosmos:glass_dark_pink",
-      "max_quantity_buying": null,
-      "price_per": 36
-    }
-  },
-  {
-    "Selling": {
-      "item_id": "cosmos:glass_purple",
-      "max_quantity_selling": 10000,
-      "price_per": 40
-    }
-  },
-  {
-    "Buying": {
-      "item_id": "cosmos:glass_purple",
-      "max_quantity_buying": null,
-      "price_per": 36
-    }
-  },
-  {
-    "Selling": {
-      "item_id": "cosmos:glass_dark_purple",
-      "max_quantity_selling": 10000,
-      "price_per": 40
-    }
-  },
-  {
-    "Buying": {
-      "item_id": "cosmos:glass_dark_purple",
+      "item_id": "cosmos:glass_red",
       "max_quantity_buying": null,
       "price_per": 36
     }
@@ -736,28 +575,14 @@
   },
   {
     "Buying": {
-      "item_id": "cosmos:glass_red",
+      "item_id": "cosmos:glass_orange",
       "max_quantity_buying": null,
       "price_per": 36
     }
   },
   {
     "Selling": {
-      "item_id": "cosmos:glass_dark_red",
-      "max_quantity_selling": 10000,
-      "price_per": 40
-    }
-  },
-  {
-    "Buying": {
-      "item_id": "cosmos:glass_dark_red",
-      "max_quantity_buying": null,
-      "price_per": 36
-    }
-  },
-  {
-    "Selling": {
-      "item_id": "cosmos:glass_yellow",
+      "item_id": "cosmos:glass_orange",
       "max_quantity_selling": 10000,
       "price_per": 40
     }
@@ -771,14 +596,28 @@
   },
   {
     "Selling": {
-      "item_id": "cosmos:glass_dark_yellow",
+      "item_id": "cosmos:glass_yellow",
       "max_quantity_selling": 10000,
       "price_per": 40
     }
   },
   {
     "Buying": {
-      "item_id": "cosmos:glass_dark_yellow",
+      "item_id": "cosmos:glass_green",
+      "max_quantity_buying": null,
+      "price_per": 36
+    }
+  },
+  {
+    "Selling": {
+      "item_id": "cosmos:glass_green",
+      "max_quantity_selling": 10000,
+      "price_per": 40
+    }
+  },
+  {
+    "Buying": {
+      "item_id": "cosmos:glass_mint",
       "max_quantity_buying": null,
       "price_per": 36
     }
@@ -792,9 +631,170 @@
   },
   {
     "Buying": {
-      "item_id": "cosmos:glass_mint",
+      "item_id": "cosmos:glass_cyan",
       "max_quantity_buying": null,
       "price_per": 36
+    }
+  },
+  {
+    "Selling": {
+      "item_id": "cosmos:glass_cyan",
+      "max_quantity_selling": 10000,
+      "price_per": 40
+    }
+  },
+  {
+    "Buying": {
+      "item_id": "cosmos:glass_aqua",
+      "max_quantity_buying": null,
+      "price_per": 36
+    }
+  },
+  {
+    "Selling": {
+      "item_id": "cosmos:glass_aqua",
+      "max_quantity_selling": 10000,
+      "price_per": 40
+    }
+  },
+  {
+    "Buying": {
+      "item_id": "cosmos:glass_blue",
+      "max_quantity_buying": null,
+      "price_per": 36
+    }
+  },
+  {
+    "Selling": {
+      "item_id": "cosmos:glass_blue",
+      "max_quantity_selling": 10000,
+      "price_per": 40
+    }
+  },
+  {
+    "Buying": {
+      "item_id": "cosmos:glass_purple",
+      "max_quantity_buying": null,
+      "price_per": 36
+    }
+  },
+  {
+    "Selling": {
+      "item_id": "cosmos:glass_purple",
+      "max_quantity_selling": 10000,
+      "price_per": 40
+    }
+  },
+  {
+    "Buying": {
+      "item_id": "cosmos:glass_magenta",
+      "max_quantity_buying": null,
+      "price_per": 36
+    }
+  },
+  {
+    "Selling": {
+      "item_id": "cosmos:glass_magenta",
+      "max_quantity_selling": 10000,
+      "price_per": 40
+    }
+  },
+  {
+    "Buying": {
+      "item_id": "cosmos:glass_pink",
+      "max_quantity_buying": null,
+      "price_per": 36
+    }
+  },
+  {
+    "Selling": {
+      "item_id": "cosmos:glass_pink",
+      "max_quantity_selling": 10000,
+      "price_per": 40
+    }
+  },
+  {
+    "Buying": {
+      "item_id": "cosmos:glass_brown",
+      "max_quantity_buying": null,
+      "price_per": 36
+    }
+  },
+  {
+    "Selling": {
+      "item_id": "cosmos:glass_brown",
+      "max_quantity_selling": 10000,
+      "price_per": 40
+    }
+  },
+  {
+    "Buying": {
+      "item_id": "cosmos:glass_black",
+      "max_quantity_buying": null,
+      "price_per": 36
+    }
+  },
+  {
+    "Selling": {
+      "item_id": "cosmos:glass_black",
+      "max_quantity_selling": 10000,
+      "price_per": 40
+    }
+  },
+  {
+    "Buying": {
+      "item_id": "cosmos:glass_dark_grey",
+      "max_quantity_buying": null,
+      "price_per": 36
+    }
+  },
+  {
+    "Selling": {
+      "item_id": "cosmos:glass_dark_grey",
+      "max_quantity_selling": 10000,
+      "price_per": 40
+    }
+  },
+  {
+    "Buying": {
+      "item_id": "cosmos:glass_grey",
+      "max_quantity_buying": null,
+      "price_per": 36
+    }
+  },
+  {
+    "Selling": {
+      "item_id": "cosmos:glass_grey",
+      "max_quantity_selling": 10000,
+      "price_per": 40
+    }
+  },
+  {
+    "Buying": {
+      "item_id": "cosmos:glass_light_grey",
+      "max_quantity_buying": null,
+      "price_per": 36
+    }
+  },
+  {
+    "Selling": {
+      "item_id": "cosmos:glass_light_grey",
+      "max_quantity_selling": 10000,
+      "price_per": 40
+    }
+  },
+  {
+    "Buying": {
+      "item_id": "cosmos:glass_white",
+      "max_quantity_buying": null,
+      "price_per": 36
+    }
+  },
+  {
+    "Selling": {
+      "item_id": "cosmos:glass_white",
+      "max_quantity_selling": 10000,
+      "price_per": 40
     }
   },
   {

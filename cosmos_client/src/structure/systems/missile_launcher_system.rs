@@ -19,10 +19,7 @@ use cosmos_core::{
 use crate::{
     asset::asset_loader::load_assets,
     audio::{AudioEmission, CosmosAudioEmitter, DespawnOnNoEmissions},
-    ui::{
-        ship_flight::indicators::{FocusedWaypointEntity, Indicating},
-        UiRoot,
-    },
+    ui::ship_flight::indicators::{FocusedWaypointEntity, Indicating},
 };
 
 use super::{
@@ -141,7 +138,6 @@ fn render_lockon_status(
     q_piloting: Query<(&HoveredSystem, &Pilot), With<LocalPlayer>>,
     q_systems: Query<&StructureSystems>,
     q_missile_focus: Query<&MissileLauncherFocus>,
-    q_ui_root: Query<Entity, With<UiRoot>>,
     q_missile_focus_ui: Query<(Entity, &MissileFocusUi)>,
     mut q_style: Query<(&mut Node, &mut ImageNode)>,
     mut q_column_style: Query<&mut Node, Without<ImageNode>>,
@@ -204,11 +200,6 @@ fn render_lockon_status(
             style.margin = UiRect::left(Val::Px(gap));
         }
     } else {
-        let Ok(ui_root) = q_ui_root.get_single() else {
-            warn!("No UI root");
-            return;
-        };
-
         let mut missile_focus_ui = MissileFocusUi {
             bottom_left: Entity::PLACEHOLDER,
             bottom_right: Entity::PLACEHOLDER,
@@ -219,7 +210,6 @@ fn render_lockon_status(
         };
 
         let mut ecmds = commands.spawn((
-            TargetCamera(ui_root),
             Node {
                 position_type: PositionType::Absolute,
                 justify_content: JustifyContent::Center,

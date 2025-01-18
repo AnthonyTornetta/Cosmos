@@ -91,7 +91,7 @@ fn create_main_material(image_handle: Handle<Image>, unlit: bool) -> AnimatedArr
 
 fn create_transparent_material(image_handle: Handle<Image>, unlit: bool) -> AnimatedArrayTextureMaterial {
     AnimatedArrayTextureMaterial {
-        alpha_mode: AlphaMode::Add,
+        alpha_mode: AlphaMode::Blend,
         unlit,
         metallic: 0.0,
         reflectance: 0.0,

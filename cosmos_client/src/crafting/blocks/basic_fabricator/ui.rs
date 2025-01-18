@@ -35,7 +35,7 @@ use cosmos_core::{
 
 use crate::{
     input::inputs::{CosmosInputs, InputChecker, InputHandler},
-    inventory::{CustomInventoryRender, InventoryNeedsDisplayed, InventorySide, TextNeedsTopRoot},
+    inventory::{CustomInventoryRender, InventoryNeedsDisplayed, InventorySide},
     lang::Lang,
     rendering::MainCamera,
     ui::{
@@ -229,7 +229,6 @@ fn populate_menu(
                                     .with_children(|p| {
                                         p.spawn((
                                             Name::new("Item recipe qty"),
-                                            TextNeedsTopRoot,
                                             Text::new(format!("{}", item.quantity)),
                                             text_style.clone(),
                                         ));

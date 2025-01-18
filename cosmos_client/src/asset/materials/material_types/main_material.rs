@@ -76,7 +76,7 @@ fn create_main_material(image_handle: Handle<Image>, unlit: bool) -> ArrayTextur
 fn create_transparent_material(image_handle: Handle<Image>, unlit: bool) -> ArrayTextureMaterial {
     ArrayTextureMaterial {
         base_color_texture: Some(image_handle),
-        alpha_mode: AlphaMode::Add,
+        alpha_mode: AlphaMode::Blend,
         unlit,
         metallic: 0.0,
         reflectance: 0.0,
