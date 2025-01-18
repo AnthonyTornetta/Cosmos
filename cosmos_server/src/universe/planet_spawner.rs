@@ -13,11 +13,13 @@ use crate::{
 use bevy::{
     log::warn,
     math::{Dir3, Quat},
-    prelude::{in_state, App, Commands, Deref, DerefMut, EventReader, IntoSystemConfigs, Query, Res, ResMut, Resource, Update, Vec3, With},
+    prelude::{
+        in_state, App, Commands, Deref, DerefMut, EventReader, IntoSystemConfigs, Query, Res, ResMut, Resource, Transform, Update, Vec3,
+        With,
+    },
     utils::HashSet,
 };
 use cosmos_core::{
-    ecs::bundles::BundleStartingRotation,
     entities::player::Player,
     netty::system_sets::NetworkingSystemsSet,
     physics::location::{Location, Sector, SectorUnit, SystemCoordinate, SYSTEM_SECTORS},
@@ -84,7 +86,7 @@ fn monitor_planets_to_spawn(
             let angle = rng.gen::<f32>() % TAU;
             let axis = Dir3::new(Vec3::new(rng.gen(), rng.gen(), rng.gen()).normalize_or_zero()).unwrap_or(Dir3::Y);
 
-            entity_cmd.insert((structure, BundleStartingRotation(Quat::from_axis_angle(*axis, angle))));
+            entity_cmd.insert((structure, Transform::from_rotation(Quat::from_axis_angle(*axis, angle))));
 
             generated_planets.insert(planet_loc.sector());
         }

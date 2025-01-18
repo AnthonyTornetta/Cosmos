@@ -1,12 +1,11 @@
 use bevy::{
     app::Update,
     math::{Quat, Vec3},
-    prelude::{App, Commands, Entity, EventReader, GlobalTransform, IntoSystemConfigs, Query},
+    prelude::{App, Commands, Entity, EventReader, GlobalTransform, IntoSystemConfigs, Query, Transform},
 };
 use bevy_rapier3d::prelude::Velocity;
 use cosmos_core::{
     block::block_events::{BlockBreakEvent, BlockEventsSet},
-    ecs::bundles::BundleStartingRotation,
     inventory::Inventory,
     item::physical_item::PhysicalItem,
     netty::system_sets::NetworkingSystemsSet,
@@ -44,7 +43,7 @@ fn process_event(
                 PhysicalItem,
                 item_spawn,
                 LoadingDistance::new(1, 2),
-                BundleStartingRotation(structure_rot),
+                Transform::from_rotation(structure_rot),
                 Velocity {
                     linvel: item_vel
                         + Vec3::new(

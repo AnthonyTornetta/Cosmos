@@ -3,7 +3,7 @@
 use bevy::ecs::system::EntityCommands;
 use bevy_rapier3d::prelude::Velocity;
 
-use crate::{ecs::bundles::CosmosPbrBundle, physics::location::Location, structure::Structure};
+use crate::{physics::location::Location, structure::Structure};
 
 /// Used to instantiate structures
 pub trait TStructureBuilder {
@@ -18,12 +18,6 @@ impl TStructureBuilder for StructureBuilder {
     fn insert_structure(&self, entity: &mut EntityCommands, location: Location, velocity: Velocity, structure: &mut Structure) {
         structure.set_entity(entity.id());
 
-        entity.insert((
-            velocity,
-            CosmosPbrBundle {
-                location,
-                ..Default::default()
-            },
-        ));
+        entity.insert((velocity, location));
     }
 }

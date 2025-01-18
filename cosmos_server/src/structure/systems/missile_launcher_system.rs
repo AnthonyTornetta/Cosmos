@@ -10,7 +10,6 @@ use bevy_rapier3d::{
 use bevy_renet2::renet2::RenetServer;
 use cosmos_core::{
     block::Block,
-    ecs::bundles::CosmosPbrBundle,
     entities::player::Player,
     logic::{logic_driver::LogicDriver, LogicInputEvent, LogicSystemSet},
     netty::{
@@ -20,7 +19,7 @@ use cosmos_core::{
     persistence::LoadingDistance,
     physics::{
         collision_handling::{CollisionBlacklist, CollisionBlacklistedEntity},
-        location::{CosmosBundleSet, Location},
+        location::{CosmosBundleSet, Location, SetPosition},
     },
     projectiles::missile::Missile,
     registry::{identifiable::Identifiable, Registry},
@@ -245,14 +244,9 @@ fn update_missile_system(
                     strength,
                     lifetime,
                 },
-                CosmosPbrBundle {
-                    rotation: Transform::from_xyz(0.0, 0.0, 0.0)
-                        .looking_at(missile_velocity, Vec3::Y)
-                        .rotation
-                        .into(),
-                    location,
-                    ..Default::default()
-                },
+                Transform::from_xyz(0.0, 0.0, 0.0).looking_at(missile_velocity, Vec3::Y),
+                location,
+                SetPosition::Transform,
                 Velocity {
                     linvel: missile_velocity + ship_velocity.linvel,
                     ..Default::default()

@@ -1,7 +1,6 @@
 //! Contains utilities that make interacting with the bevy ECS easier & less
 //! prone to problems.
 
-pub mod bundles;
 pub mod mut_events;
 
 use bevy::prelude::{App, Commands, Component, DespawnRecursiveExt, Entity, First, OnEnter, OnExit, Query, Resource, States, With};
