@@ -151,39 +151,44 @@ fn create_booth(
         handle: image_handle,
     });
 
-    for (i, item) in items.iter().enumerate() {
-        let Some(item_mat_material) = item_meshes.from_id(item.unlocalized_name()) else {
-            info!("{item_meshes:?}");
-            warn!("Missing rendering material for item {}", item.unlocalized_name());
-            return;
-        };
+    commands
+        .spawn((Transform::default(), Visibility::default(), Name::new("All Rendered Items")))
+        .with_children(|p| {
+            for (i, item) in items.iter().enumerate() {
+                let Some(item_mat_material) = item_meshes.from_id(item.unlocalized_name()) else {
+                    info!("{item_meshes:?}");
+                    warn!("Missing rendering material for item {}", item.unlocalized_name());
+                    return;
+                };
 
-        let (x, y) = expand_2d(i, width);
+                let (x, y) = expand_2d(i, width);
 
-        let rot = if block_items.block_from_item(item).is_some() {
-            // This makes blocks look cool
-            Quat::from_xyzw(0.07383737, 0.9098635, 0.18443844, 0.3642514)
-        } else {
-            Quat::from_axis_angle(Vec3::X, PI / 2.0)
-        };
+                let rot = if block_items.block_from_item(item).is_some() {
+                    // This makes blocks look cool
+                    Quat::from_xyzw(0.07383737, 0.9098635, 0.18443844, 0.3642514)
+                } else {
+                    Quat::from_axis_angle(Vec3::X, PI / 2.0)
+                };
 
-        let entity = commands
-            .spawn((
-                RenderLayers::from_layers(&[PHOTO_BOOTH_RENDER_LAYER]),
-                Mesh3d(item_mat_material.mesh_handle().clone_weak()),
-                // h - y - 1 because we want low IDs at the top, and big IDs at the bottom (and +y
-                // is up in this context)
-                Transform::from_xyz(x as f32 * GAP, (h - y as f32 - 1.0) * GAP, 0.0).with_rotation(rot),
-            ))
-            .id();
+                let entity = p
+                    .spawn((
+                        Name::new(format!("Rendered item {}", item.unlocalized_name())),
+                        RenderLayers::from_layers(&[PHOTO_BOOTH_RENDER_LAYER]),
+                        Mesh3d(item_mat_material.mesh_handle().clone_weak()),
+                        // h - y - 1 because we want low IDs at the top, and big IDs at the bottom (and +y
+                        // is up in this context)
+                        Transform::from_xyz(x as f32 * GAP, (h - y as f32 - 1.0) * GAP, 0.0).with_rotation(rot),
+                    ))
+                    .id();
 
-        event_writer.send(AddMaterialEvent {
-            entity,
-            add_material_id: item_mat_material.material_id(),
-            texture_dimensions_index: item_mat_material.texture_dimension_index(),
-            material_type: MaterialType::Illuminated,
+                event_writer.send(AddMaterialEvent {
+                    entity,
+                    add_material_id: item_mat_material.material_id(),
+                    texture_dimensions_index: item_mat_material.texture_dimension_index(),
+                    material_type: MaterialType::Illuminated,
+                });
+            }
         });
-    }
 }
 
 pub(super) fn register(app: &mut App) {

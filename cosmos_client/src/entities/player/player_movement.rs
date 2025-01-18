@@ -6,8 +6,10 @@ use bevy_rapier3d::{
     prelude::{ActiveEvents, Collider, Sensor, Velocity},
 };
 use cosmos_core::{
+    block::specific_blocks::gravity_well::GravityWell,
     netty::{client::LocalPlayer, system_sets::NetworkingSystemsSet},
     physics::location::LocationPhysicsSet,
+    prelude::Planet,
     projectiles::laser::LaserSystemSet,
     state::GameState,
     structure::{shared::build_mode::BuildMode, ship::pilot::Pilot},
@@ -72,11 +74,18 @@ pub(crate) fn process_player_movement(
     time: Res<Time>,
     input_handler: InputChecker,
     mut q_local_player: Query<
-        (&mut Velocity, &GlobalTransform, Option<&PlayerAlignment>, Option<&Grounded>),
+        (
+            &mut Velocity,
+            &GlobalTransform,
+            Option<&PlayerAlignment>,
+            Option<&Grounded>,
+            Has<GravityWell>,
+        ),
         (With<LocalPlayer>, Without<Pilot>, Without<BuildMode>),
     >,
     q_camera: Query<&Transform, With<MainCamera>>,
     q_show_cursor: Query<(), With<ShowCursor>>,
+    q_exerts_gravity: Query<(), With<Planet>>,
 ) {
     let any_open_menus = !q_show_cursor.is_empty();
 
@@ -85,7 +94,7 @@ pub(crate) fn process_player_movement(
     };
 
     // This will be err if the player is piloting a ship
-    let Ok((mut velocity, player_transform, player_alignment, grounded)) = q_local_player.get_single_mut() else {
+    let Ok((mut velocity, player_transform, player_alignment, grounded, under_gravity_well)) = q_local_player.get_single_mut() else {
         return;
     };
 
@@ -107,7 +116,16 @@ pub(crate) fn process_player_movement(
 
     forward = forward.normalize_or_zero() * 100.0;
     right = right.normalize_or_zero() * 100.0;
-    let movement_up = up.normalize_or_zero() * 2.0;
+
+    // TODO This is stupid - please rework this later.
+    let normalize_y = !under_gravity_well
+        && player_alignment
+            .map(|x| x.aligned_to)
+            .flatten()
+            .map(|x| !q_exerts_gravity.contains(x))
+            .unwrap_or(true);
+
+    let movement_up = up.normalize_or_zero() * if normalize_y { 100.0 } else { 0.0 };
 
     let time = time.delta_secs();
 
@@ -150,7 +168,7 @@ pub(crate) fn process_player_movement(
         }
     }
 
-    if player_alignment.is_some() {
+    if !normalize_y {
         let y = new_linvel.y;
 
         new_linvel.y = 0.0;
