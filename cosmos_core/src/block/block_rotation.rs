@@ -159,8 +159,8 @@ impl BlockRotation {
             BlockDirection::PosZ => Self::new(BlockFace::Top, BlockSubRotation::Flip),
             BlockDirection::NegX => Self::new(BlockFace::Top, BlockSubRotation::CCW),
             BlockDirection::PosX => Self::new(BlockFace::Top, BlockSubRotation::CW),
-            BlockDirection::NegY => Self::new(BlockFace::Front, BlockSubRotation::None),
-            BlockDirection::PosY => Self::new(BlockFace::Back, BlockSubRotation::None),
+            BlockDirection::NegY => Self::new(BlockFace::Back, BlockSubRotation::None),
+            BlockDirection::PosY => Self::new(BlockFace::Front, BlockSubRotation::None),
         }
     }
 
