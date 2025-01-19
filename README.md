@@ -61,18 +61,19 @@ If you want to view the ordering of the systems, run (on linux) `cargo run --fea
 
 See [the issues page](https://github.com/AnthonyTornetta/Cosmos/issues) for the list of current features/bugs in development.
 
-## Release 0.0.8a
+## Release 0.0.8a (In Progress)
 
 - [ ] Screenshots
 - [ ] More pirate ships
 - [ ] More asteroid types
+- [ ] More station types
 - [ ] Fuel for reactor
 - [ ] Performance fixes
 - [ ] Fix server instability
 - [ ] Reduce amount of packets server sends per second
 - [ ] Rebalance shop prices
-- [ ] Add recipes
-- [ ] Add more randomly generated structures (e.g. stations)
+- [ ] Add ability for player to die
+  - [ ] Respawn anchor
 
 ## Release 0.0.7a
 
@@ -97,6 +98,7 @@ See [the issues page](https://github.com/AnthonyTornetta/Cosmos/issues) for the 
   - [x] If not enough inventory room when player is mining something, drop item
 - [x] Fix missing chunks on planets
 - [x] Update to Bevy 0.15
+- [x] Add recipes
 
 ## Release 0.0.6a
 
