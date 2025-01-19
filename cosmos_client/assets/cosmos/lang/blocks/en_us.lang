@@ -110,3 +110,10 @@ cosmos:logic_wire_dark_red=Dark Red Logic Wire
 cosmos:logic_wire_yellow=Yellow Logic Wire
 cosmos:logic_wire_dark_yellow=Dark Yellow Logic Wire
 cosmos:logic_wire_mint=Mint Logic Wire
+
+cosmos:copper_ore=Copper Ore
+cosmos:lead_ore=Lead Ore
+cosmos:uranium_ore=Uranium Ore
+cosmos:sulfur_ore=Sulfur Ore
+cosmos:gravitron_crystal_ore=Gravitron Crystal Ore
+cosmos:energite_crystal_ore=Energite Crystal Ore
