@@ -1,0 +1,14 @@
+{
+  "inputs": [
+    {
+      "item": {
+        "Item": "cosmos:photonium_crystal_ore"
+      },
+      "quantity": 1
+    }
+  ],
+  "output": {
+    "quantity": 1,
+    "item": "cosmos:photonium_crystal"
+  }
+}

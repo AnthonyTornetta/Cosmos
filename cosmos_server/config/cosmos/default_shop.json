@@ -897,14 +897,14 @@
   },
   {
     "Selling": {
-      "item_id": "cosmos:test_ore",
+      "item_id": "cosmos:photonium_crystal_ore",
       "max_quantity_selling": 10000,
       "price_per": 200
     }
   },
   {
     "Buying": {
-      "item_id": "cosmos:test_ore",
+      "item_id": "cosmos:photonium_crystal_ore",
       "max_quantity_buying": null,
       "price_per": 180
     }

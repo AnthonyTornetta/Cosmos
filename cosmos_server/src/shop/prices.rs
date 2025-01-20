@@ -357,7 +357,7 @@ fn create_default_shop_entires(mut commands: Commands, items: Res<Registry<Item>
             price_per: 25_000,
         },
         PrettyShopEntry::Selling {
-            item_id: "cosmos:test_ore".into(),
+            item_id: "cosmos:photonium_crystal_ore".into(),
             max_quantity_selling: 10_000,
             price_per: 200,
         },
