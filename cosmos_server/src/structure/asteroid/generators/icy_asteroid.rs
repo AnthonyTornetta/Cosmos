@@ -60,7 +60,7 @@ fn start_generating_icy_asteroid(
 
             let blocks = blocks.registry();
             let stone = blocks.from_id("cosmos:stone").expect("Missing cosmos:stone");
-            let ore = blocks.from_id("cosmos:test_ore").expect("Missing text ore");
+            let ore = blocks.from_id("cosmos:photonium_crystal_ore").expect("Missing text ore");
 
             let mut chunks = HashMap::new();
 

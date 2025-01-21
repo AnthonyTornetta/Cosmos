@@ -5,10 +5,16 @@
         "Item": "cosmos:uranium"
       },
       "quantity": 10
+    },
+    {
+      "item": {
+        "Item": "cosmos:iron_bar"
+      },
+      "quantity": 2
     }
   ],
   "output": {
     "quantity": 1,
-    "item": "cosmos:fuel_cell"
+    "item": "cosmos:uranium_fuel_cell"
   }
 }

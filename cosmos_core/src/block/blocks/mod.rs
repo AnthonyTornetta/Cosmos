@@ -284,7 +284,7 @@ fn add_cosmos_blocks(
     );
 
     blocks.register(
-        BlockBuilder::new("cosmos:test_ore", 10.0, 50.0, 12.0)
+        BlockBuilder::new("cosmos:photonium_crystal_ore", 10.0, 50.0, 12.0)
             .add_property(BlockProperty::Full)
             .create(),
     );

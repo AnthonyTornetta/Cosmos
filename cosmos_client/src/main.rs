@@ -153,6 +153,8 @@ fn main() {
             // PerfUiPlugin,
             // BillboardPlugin,
         ))
+        // If you enable rapier debug, make sure to disable order independent transparency
+        // on camera.
         // .add_plugins(RapierDebugRenderPlugin::default())
         .add_systems(OnEnter(GameState::Connecting), connect::establish_connection)
         .add_systems(Update, connect::wait_for_connection.run_if(in_state(GameState::Connecting)));

@@ -2,7 +2,7 @@
   "inputs": [
     {
       "item": {
-        "Item": "cosmos:iron"
+        "Item": "cosmos:iron_bar"
       },
       "quantity": 2
     }

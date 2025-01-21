@@ -1,2 +1,12 @@
-cosmos:photonium_crystal=Test Crystal
+cosmos:photonium_crystal=Photonium Crystal
 cosmos:iron_bar=Iron Bar
+cosmos:missile=Missile
+cosmos:fluid_cell=Fluid Cell
+cosmos:fluid_cell_filled=Filled Fluid Cell
+cosmos:copper_bar=Copper Bar
+cosmos:lead_bar=Lead Bar
+cosmos:uranium=Uranium
+cosmos:sulfur=Sulfur
+cosmos:gravitron_crystal=Gravitron Crystal
+cosmos:energite_crystal=Energite Crystal
+cosmos:uranium_fuel_cell=Uranium Fuel Cell
