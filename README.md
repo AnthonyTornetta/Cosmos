@@ -99,6 +99,8 @@ See [the issues page](https://github.com/AnthonyTornetta/Cosmos/issues) for the 
 - [x] Fix missing chunks on planets
 - [x] Update to Bevy 0.15
 - [x] Add recipes
+  - [x] Add intermediate blocks + items
+- [x] Rework item rendering to be more consistent
 
 ## Release 0.0.6a
 
