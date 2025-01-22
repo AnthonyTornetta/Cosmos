@@ -78,29 +78,19 @@ fn on_add_shield(
 
         let mut ecmds = commands.entity(ent);
 
+        ecmds.insert((
+            DespawnWithStructure,
+            CollisionGroups::new(SHIELD_COLLISION_GROUP, SHIELD_COLLISION_GROUP),
+            ColliderMassProperties::Mass(0.0),
+            Sensor,
+        ));
+
         if shield.is_enabled() {
-            ecmds.insert((
-                DespawnWithStructure,
-                Collider::ball(shield.radius),
-                CollisionGroups::new(SHIELD_COLLISION_GROUP, SHIELD_COLLISION_GROUP),
-                *q_rapier_entity_link
-                    .get(parent.get())
-                    .expect("Missing rapier entity link on shield's parent"),
-                ColliderMassProperties::Mass(0.0),
-                Sensor,
-            ));
-        } else {
-            ecmds
-                .insert((
-                    DespawnWithStructure,
-                    CollisionGroups::new(SHIELD_COLLISION_GROUP, SHIELD_COLLISION_GROUP),
-                    *q_rapier_entity_link
-                        .get(parent.get())
-                        .expect("Missing rapier entity link on shield's parent"),
-                    ColliderMassProperties::Mass(0.0),
-                    Sensor,
-                ))
-                .remove::<Collider>();
+            ecmds.insert(Collider::ball(shield.radius));
+        }
+
+        if let Ok(&pw) = q_rapier_entity_link.get(parent.get()) {
+            ecmds.insert(pw);
         }
     }
 }
