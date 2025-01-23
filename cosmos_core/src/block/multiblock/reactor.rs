@@ -34,7 +34,8 @@ pub struct ReactorBounds {
     pub positive_coords: BlockCoordinate,
 }
 
-#[derive(Clone, Copy, Debug, Reflect, Serialize, Deserialize, PartialEq)]
+#[derive(Clone, Copy, Debug, Reflect, Serialize, Deserialize, PartialEq, Component)]
+#[require(ReactorFuelConsumption)]
 /// Represents a constructed reactor
 pub struct Reactor {
     pub controller: BlockCoordinate,
@@ -42,8 +43,47 @@ pub struct Reactor {
     pub bounds: ReactorBounds,
 }
 
-#[derive(Component)]
+impl IdentifiableComponent for Reactor {
+    fn get_component_unlocalized_name() -> &'static str {
+        "cosmos:reactor"
+    }
+}
+
+impl SyncableComponent for Reactor {
+    fn get_sync_type() -> crate::netty::sync::SyncType {
+        crate::netty::sync::SyncType::ServerAuthoritative
+    }
+}
+
+#[derive(Component, Serialize, Deserialize, Clone, Copy, PartialEq, Eq, Debug, Reflect)]
 pub struct ReactorActive;
+
+impl IdentifiableComponent for ReactorActive {
+    fn get_component_unlocalized_name() -> &'static str {
+        "cosmos:reactor_active"
+    }
+}
+
+impl SyncableComponent for ReactorActive {
+    fn get_sync_type() -> crate::netty::sync::SyncType {
+        crate::netty::sync::SyncType::ServerAuthoritative
+    }
+}
+
+#[derive(Component, Default, Clone, Serialize, Deserialize, PartialEq, Debug, Reflect)]
+pub struct ReactorFuelConsumption(pub f32);
+
+impl IdentifiableComponent for ReactorFuelConsumption {
+    fn get_component_unlocalized_name() -> &'static str {
+        "cosmos:reactor_fuel_consumption"
+    }
+}
+
+impl SyncableComponent for ReactorFuelConsumption {
+    fn get_sync_type() -> crate::netty::sync::SyncType {
+        crate::netty::sync::SyncType::ServerAuthoritative
+    }
+}
 
 impl Reactor {
     /// Creates a new constructed reactor
@@ -79,12 +119,12 @@ impl Reactor {
 
 #[derive(Debug, Component, Default, Reflect, DerefMut, Deref, Serialize, Deserialize, Clone, PartialEq)]
 /// Stores the entities of all the reactors in a structure and their controller blocks for quick access
-pub struct Reactors(Vec<Reactor>);
+pub struct Reactors(Vec<BlockCoordinate>);
 
 impl Reactors {
     /// Adds a reactor to the structure
-    pub fn add_reactor(&mut self, reactor: Reactor) {
-        self.0.push(reactor);
+    pub fn add_reactor_controller(&mut self, block: BlockCoordinate) {
+        self.0.push(block);
     }
 }
 
@@ -174,13 +214,37 @@ impl NettyEvent for OpenReactorEvent {
     }
 }
 
+#[derive(Event, Debug, Serialize, Deserialize)]
+pub struct ClientRequestActiveReactorEvent {
+    pub block: StructureBlock,
+    pub active: bool,
+}
+
+impl IdentifiableEvent for ClientRequestActiveReactorEvent {
+    fn unlocalized_name() -> &'static str {
+        "cosmos:activate_reactor"
+    }
+}
+
+impl NettyEvent for ClientRequestActiveReactorEvent {
+    fn event_receiver() -> crate::netty::sync::events::netty_event::EventReceiver {
+        crate::netty::sync::events::netty_event::EventReceiver::Server
+    }
+}
+
 pub(super) fn register<T: States>(app: &mut App, post_loading_state: T) {
     create_registry::<ReactorPowerGenerationBlock>(app, "cosmos:power_generation_blocks");
     sync_component::<Reactors>(app);
+    sync_component::<Reactor>(app);
+    sync_component::<ReactorActive>(app);
+    sync_component::<ReactorFuelConsumption>(app);
 
     app.add_netty_event::<OpenReactorEvent>();
+    app.add_netty_event::<ClientRequestActiveReactorEvent>();
 
     app.add_systems(OnEnter(post_loading_state), register_power_blocks)
         .register_type::<Reactor>()
-        .register_type::<Reactors>();
+        .register_type::<Reactors>()
+        .register_type::<ReactorFuelConsumption>()
+        .register_type::<ReactorActive>();
 }

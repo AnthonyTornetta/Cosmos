@@ -1,18 +1,35 @@
-use bevy::{color::palettes::css, prelude::*, text::FontStyle};
+use bevy::{color::palettes::css, prelude::*};
 use cosmos_core::{
-    block::multiblock::reactor::{OpenReactorEvent, ReactorActive, Reactors},
+    block::multiblock::reactor::{ClientRequestActiveReactorEvent, OpenReactorEvent, ReactorActive, Reactors},
     inventory::Inventory,
-    netty::{client::LocalPlayer, system_sets::NetworkingSystemsSet},
+    netty::{
+        client::LocalPlayer,
+        sync::{
+            events::client_event::NettyEventWriter,
+            mapping::{Mappable, NetworkMapping},
+        },
+        system_sets::NetworkingSystemsSet,
+    },
     prelude::{Structure, StructureBlock},
 };
 
 use crate::{
     inventory::{CustomInventoryRender, InventoryNeedsDisplayed, InventorySide},
-    ui::{components::window::GuiWindow, font::DefaultFont, OpenMenu},
+    ui::{
+        components::{
+            button::{register_button, Button, ButtonEvent},
+            window::GuiWindow,
+        },
+        font::DefaultFont,
+        OpenMenu, UiSystemSet,
+    },
 };
 
 #[derive(Component)]
 struct ActiveText(StructureBlock);
+
+#[derive(Component)]
+struct ReactorBlockReference(StructureBlock);
 
 fn create_ui(
     mut commands: Commands,
@@ -82,7 +99,7 @@ fn create_ui(
                     },
                 ))
                 .with_children(|p| {
-                    p.spawn((ActiveText(ev.0), font, Text::new(if active { "ACTIVE" } else { "IDLE" })));
+                    p.spawn((ActiveText(ev.0), font.clone(), Text::new(if active { "ACTIVE" } else { "IDLE" })));
 
                     fuel_slot_ent = Some(
                         p.spawn(
@@ -105,6 +122,14 @@ fn create_ui(
                         },
                         BackgroundColor(css::LIME.into()),
                     ));
+
+                    p.spawn((
+                        ReactorBlockReference(ev.0),
+                        crate::ui::components::button::Button::<ToggleReactorEvent> {
+                            text: Some(("ACTIVATE".into(), font.clone(), Default::default())),
+                            ..Default::default()
+                        },
+                    ));
                 });
             });
 
@@ -119,9 +144,50 @@ fn create_ui(
     }
 }
 
+fn on_click_toggle(
+    mut evr_btn_pressed: EventReader<ToggleReactorEvent>,
+    q_active: Query<(), With<ReactorActive>>,
+    q_structure: Query<&Structure>,
+    q_ref: Query<&ReactorBlockReference>,
+    mut nevw: NettyEventWriter<ClientRequestActiveReactorEvent>,
+    mapping: Res<NetworkMapping>,
+) {
+    for ev in evr_btn_pressed.read() {
+        let Ok(reference) = q_ref.get(ev.0) else {
+            continue;
+        };
+
+        let Ok(structure) = q_structure.get(reference.0.structure()) else {
+            continue;
+        };
+
+        let active = structure.query_block_data(reference.0.coords(), &q_active).is_none();
+
+        let Ok(mapped_sb) = reference.0.map_to_server(&mapping) else {
+            continue;
+        };
+
+        nevw.send(ClientRequestActiveReactorEvent { active, block: mapped_sb });
+    }
+}
+
+#[derive(Event, Debug)]
+struct ToggleReactorEvent(Entity);
+
+impl ButtonEvent for ToggleReactorEvent {
+    fn create_event(btn_entity: Entity) -> Self {
+        Self(btn_entity)
+    }
+}
+
 #[derive(Component)]
 struct ReactorFuelStatusBar;
 
 pub(super) fn register(app: &mut App) {
-    app.add_systems(Update, create_ui.in_set(NetworkingSystemsSet::Between));
+    register_button::<ToggleReactorEvent>(app);
+
+    app.add_systems(
+        Update,
+        (create_ui.before(UiSystemSet::PreDoUi), on_click_toggle.in_set(UiSystemSet::DoUi)).in_set(NetworkingSystemsSet::Between),
+    );
 }

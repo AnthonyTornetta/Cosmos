@@ -1,14 +1,23 @@
+use std::{cell::RefCell, ops::DerefMut, rc::Rc};
+
 use bevy::prelude::*;
 use cosmos_core::{
     block::{
         block_events::{BlockEventsSet, BlockInteractEvent},
-        multiblock::reactor::{OpenReactorEvent, ReactorPowerGenerationBlock, Reactors},
+        data::BlockData,
+        multiblock::reactor::{
+            ClientRequestActiveReactorEvent, OpenReactorEvent, Reactor, ReactorActive, ReactorFuelConsumption, ReactorPowerGenerationBlock,
+            Reactors,
+        },
         Block,
     },
     entities::player::Player,
-    events::block_events::BlockChangedEvent,
+    events::block_events::{BlockChangedEvent, BlockDataSystemParams},
     inventory::Inventory,
-    netty::{sync::events::server_event::NettyEventWriter, system_sets::NetworkingSystemsSet},
+    netty::{
+        sync::events::server_event::{NettyEventReceived, NettyEventWriter},
+        system_sets::NetworkingSystemsSet,
+    },
     prelude::{Structure, StructureLoadingSet, StructureSystems},
     registry::{identifiable::Identifiable, Registry},
     state::GameState,
@@ -56,12 +65,16 @@ fn handle_block_event(
 
 fn generate_power(
     reactors: Query<(&Reactors, Entity)>,
-    structure: Query<&StructureSystems>,
+    q_structure: Query<(&Structure, &StructureSystems)>,
     mut energy_storage_system_query: Query<&mut EnergyStorageSystem>,
+    mut q_reactor: Query<(&Reactor, &mut ReactorFuelConsumption), With<ReactorActive>>,
     time: Res<Time>,
+    bds_params: BlockDataSystemParams,
 ) {
+    let bds_params = Rc::new(RefCell::new(bds_params));
+
     for (reactors, structure_entity) in reactors.iter() {
-        let Ok(systems) = structure.get(structure_entity) else {
+        let Ok((structure, systems)) = q_structure.get(structure_entity) else {
             continue;
         };
 
@@ -69,8 +82,15 @@ fn generate_power(
             continue;
         };
 
-        for reactor in reactors.iter() {
+        for &c in reactors.iter() {
+            let Some(mut reactor) = structure.query_block_data_mut(c, &mut q_reactor, bds_params.clone()) else {
+                continue;
+            };
+
+            let (reactor, fuel_consumption) = reactor.deref_mut();
+
             system.increase_energy(reactor.power_per_second() * time.delta_secs());
+            fuel_consumption.0 += time.delta_secs();
         }
     }
 }
@@ -86,13 +106,31 @@ fn on_modify_reactor(
     mut block_change_event: EventReader<BlockChangedEvent>,
     blocks: Res<Registry<Block>>,
     reactor_cells: Res<Registry<ReactorPowerGenerationBlock>>,
+    mut q_reactor: Query<&mut Reactor>,
+    mut q_structure: Query<&mut Structure>,
+    bds_params: BlockDataSystemParams,
+    q_has_reactor: Query<(), With<Reactor>>,
+    mut q_block_data: Query<&mut BlockData>,
 ) {
+    let bds_params = Rc::new(RefCell::new(bds_params));
     for ev in block_change_event.read() {
         let Ok(mut reactors) = reactors_query.get_mut(ev.block.structure()) else {
             continue;
         };
 
-        reactors.retain_mut(|reactor| {
+        let Ok(mut structure) = q_structure.get_mut(ev.block.structure()) else {
+            continue;
+        };
+
+        // Stores stuff so borrow checker is happy
+        let mut to_remove = vec![];
+
+        reactors.retain(|&reactor_controller| {
+            let Some(mut reactor) = structure.query_block_data_mut(reactor_controller, &mut q_reactor, bds_params.clone()) else {
+                // This can happen if the controller is destroyed.
+                return false;
+            };
+
             let (neg, pos) = (reactor.bounds.negative_coords, reactor.bounds.positive_coords);
 
             let block = ev.block.coords();
@@ -106,6 +144,7 @@ fn on_modify_reactor(
                 || (neg.z == block.z || pos.z == block.z) && (within_x && within_y)
             {
                 // They changed the casing of the reactor - kill it
+                to_remove.push(reactor_controller);
                 false
             } else {
                 if within_x && within_y && within_z {
@@ -122,6 +161,36 @@ fn on_modify_reactor(
                 true
             }
         });
+
+        for controller_block in to_remove {
+            structure.remove_block_data::<Reactor>(controller_block, &mut *bds_params.borrow_mut(), &mut q_block_data, &q_has_reactor);
+        }
+    }
+}
+
+fn process_activate_reactor(
+    mut nevr: EventReader<NettyEventReceived<ClientRequestActiveReactorEvent>>,
+    mut q_structure: Query<&mut Structure>,
+    mut q_block_data: Query<&mut BlockData>,
+    mut bds_params: BlockDataSystemParams,
+    q_is_active: Query<(), With<ReactorActive>>,
+    q_reactor: Query<(), With<Reactor>>,
+) {
+    for ev in nevr.read() {
+        // TODO: Verify has access to reactor
+        let Ok(mut structure) = q_structure.get_mut(ev.block.structure()) else {
+            continue;
+        };
+
+        if structure.query_block_data(ev.block.coords(), &q_reactor).is_none() {
+            continue;
+        }
+
+        if ev.active {
+            structure.insert_block_data(ev.block.coords(), ReactorActive, &mut bds_params, &mut q_block_data, &q_is_active);
+        } else {
+            structure.remove_block_data::<ReactorActive>(ev.block.coords(), &mut bds_params, &mut q_block_data, &q_is_active);
+        }
     }
 }
 
@@ -141,6 +210,7 @@ pub(super) fn register(app: &mut App) {
         Update,
         (
             add_reactor_to_structure.in_set(StructureLoadingSet::AddStructureComponents),
+            process_activate_reactor.in_set(NetworkingSystemsSet::Between),
             (on_modify_reactor.in_set(BlockEventsSet::ProcessEvents), generate_power)
                 .in_set(StructureSystemsSet::UpdateSystemsBlocks)
                 .in_set(NetworkingSystemsSet::Between)
