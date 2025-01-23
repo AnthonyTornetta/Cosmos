@@ -255,16 +255,10 @@ impl From<&str> for ConnectionGroup {
     }
 }
 
-pub(super) fn register<T: States + Clone + Copy>(
-    app: &mut App,
-    pre_loading_state: T,
-    loading_state: T,
-    post_loading_state: T,
-    playing_state: T,
-) {
+pub(super) fn register<T: States + Clone + Copy>(app: &mut App, pre_loading_state: T, loading_state: T, post_loading_state: T) {
     blocks::register(app, pre_loading_state, loading_state, post_loading_state);
     block_events::register(app);
-    multiblock::register(app, post_loading_state, playing_state);
+    multiblock::register(app, post_loading_state);
     block_update::register(app);
     specific_blocks::register(app, post_loading_state);
     data::register(app);

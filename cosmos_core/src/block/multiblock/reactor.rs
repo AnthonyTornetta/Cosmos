@@ -2,8 +2,8 @@
 
 use bevy::{
     prelude::{
-        in_state, Added, App, Commands, Component, Deref, DerefMut, Entity, EventReader, IntoSystemConfigs, OnEnter, Query, Res, ResMut,
-        States, Update, Without,
+        in_state, Added, App, Commands, Component, Deref, DerefMut, Entity, Event, EventReader, IntoSystemConfigs, OnEnter, Query, Res,
+        ResMut, States, Update, Without,
     },
     reflect::Reflect,
     time::Time,
@@ -14,16 +14,15 @@ use crate::{
     block::{block_events::BlockEventsSet, Block},
     events::block_events::BlockChangedEvent,
     netty::{
-        sync::{sync_component, IdentifiableComponent, SyncableComponent},
+        sync::{
+            events::netty_event::{IdentifiableEvent, NettyEvent, SyncedEventImpl},
+            sync_component, IdentifiableComponent, SyncableComponent,
+        },
         system_sets::NetworkingSystemsSet,
     },
+    prelude::StructureBlock,
     registry::{create_registry, identifiable::Identifiable, Registry},
-    structure::{
-        coordinates::BlockCoordinate,
-        loading::StructureLoadingSet,
-        systems::{energy_storage_system::EnergyStorageSystem, StructureSystems, StructureSystemsSet},
-        Structure,
-    },
+    structure::{coordinates::BlockCoordinate, loading::StructureLoadingSet, systems::StructureSystemsSet},
 };
 
 #[derive(Debug, Clone, Copy, Reflect, Serialize, Deserialize, PartialEq, Eq)]
@@ -38,9 +37,9 @@ pub struct ReactorBounds {
 #[derive(Clone, Copy, Debug, Reflect, Serialize, Deserialize, PartialEq)]
 /// Represents a constructed reactor
 pub struct Reactor {
-    controller: BlockCoordinate,
-    power_per_second: f32,
-    bounds: ReactorBounds,
+    pub controller: BlockCoordinate,
+    pub power_per_second: f32,
+    pub bounds: ReactorBounds,
 }
 
 impl Reactor {
@@ -62,6 +61,11 @@ impl Reactor {
     /// Increases the power-per-second generated in this reactor
     pub fn increase_power_per_second(&mut self, amount: f32) {
         self.power_per_second += amount;
+    }
+
+    /// Returns the power this reactor will generate per second
+    pub fn power_per_second(&self) -> f32 {
+        self.power_per_second
     }
 
     /// Returns the block where the controller for this reactor is
@@ -145,96 +149,28 @@ impl Registry<ReactorPowerGenerationBlock> {
     }
 }
 
-fn add_reactor_to_structure(mut commands: Commands, query: Query<Entity, (Added<Structure>, Without<Reactors>)>) {
-    for ent in query.iter() {
-        commands.entity(ent).insert(Reactors::default());
+#[derive(Event, Debug, Serialize, Deserialize)]
+pub struct OpenReactorEvent(pub StructureBlock);
+
+impl IdentifiableEvent for OpenReactorEvent {
+    fn unlocalized_name() -> &'static str {
+        "cosmos:open_reactor"
     }
 }
 
-fn on_modify_reactor(
-    mut reactors_query: Query<&mut Reactors>,
-    mut block_change_event: EventReader<BlockChangedEvent>,
-    blocks: Res<Registry<Block>>,
-    reactor_cells: Res<Registry<ReactorPowerGenerationBlock>>,
-) {
-    for ev in block_change_event.read() {
-        let Ok(mut reactors) = reactors_query.get_mut(ev.block.structure()) else {
-            continue;
-        };
-
-        reactors.retain_mut(|reactor| {
-            let (neg, pos) = (reactor.bounds.negative_coords, reactor.bounds.positive_coords);
-
-            let block = ev.block.coords();
-
-            let within_x = neg.x <= block.x && pos.x >= block.x;
-            let within_y = neg.y <= block.y && pos.y >= block.y;
-            let within_z = neg.z <= block.z && pos.z >= block.z;
-
-            if (neg.x == block.x || pos.x == block.x) && (within_y && within_z)
-                || (neg.y == block.y || pos.y == block.y) && (within_x && within_z)
-                || (neg.z == block.z || pos.z == block.z) && (within_x && within_y)
-            {
-                // They changed the casing of the reactor - kill it
-                false
-            } else {
-                if within_x && within_y && within_z {
-                    // The innards of the reactor were changed, add/remove any needed power per second
-                    if let Some(reactor_cell) = reactor_cells.for_block(blocks.from_numeric_id(ev.old_block)) {
-                        reactor.decrease_power_per_second(reactor_cell.power_per_second());
-                    }
-
-                    if let Some(reactor_cell) = reactor_cells.for_block(blocks.from_numeric_id(ev.new_block)) {
-                        reactor.increase_power_per_second(reactor_cell.power_per_second());
-                    }
-                }
-
-                true
-            }
-        });
+impl NettyEvent for OpenReactorEvent {
+    fn event_receiver() -> crate::netty::sync::events::netty_event::EventReceiver {
+        crate::netty::sync::events::netty_event::EventReceiver::Client
     }
 }
 
-// TODO: move this to server
-fn generate_power(
-    reactors: Query<(&Reactors, Entity)>,
-    structure: Query<&StructureSystems>,
-    mut energy_storage_system_query: Query<&mut EnergyStorageSystem>,
-    time: Res<Time>,
-) {
-    for (reactors, structure_entity) in reactors.iter() {
-        let Ok(systems) = structure.get(structure_entity) else {
-            continue;
-        };
-
-        let Ok(mut system) = systems.query_mut(&mut energy_storage_system_query) else {
-            continue;
-        };
-
-        for reactor in reactors.iter() {
-            system.increase_energy(reactor.power_per_second * time.delta_secs());
-        }
-    }
-}
-
-pub(super) fn register<T: States>(app: &mut App, post_loading_state: T, playing_state: T) {
+pub(super) fn register<T: States>(app: &mut App, post_loading_state: T) {
     create_registry::<ReactorPowerGenerationBlock>(app, "cosmos:power_generation_blocks");
     sync_component::<Reactors>(app);
 
+    app.add_netty_event::<OpenReactorEvent>();
+
     app.add_systems(OnEnter(post_loading_state), register_power_blocks)
-        .add_systems(
-            Update,
-            (
-                add_reactor_to_structure.in_set(StructureLoadingSet::AddStructureComponents),
-                (on_modify_reactor.in_set(BlockEventsSet::ProcessEvents), generate_power)
-                    .in_set(StructureSystemsSet::UpdateSystemsBlocks)
-                    .in_set(NetworkingSystemsSet::Between)
-                    .chain(),
-            )
-                .chain()
-                .in_set(NetworkingSystemsSet::Between)
-                .run_if(in_state(playing_state)),
-        )
         .register_type::<Reactor>()
         .register_type::<Reactors>();
 }
