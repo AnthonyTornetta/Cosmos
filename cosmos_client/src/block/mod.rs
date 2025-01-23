@@ -3,7 +3,7 @@
 use bevy::prelude::App;
 
 pub mod lighting;
-pub mod multiblocks;
+mod multiblocks;
 
 pub(super) fn register(app: &mut App) {
     multiblocks::register(app);

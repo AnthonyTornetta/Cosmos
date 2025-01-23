@@ -259,7 +259,7 @@ pub(crate) fn client_sync_players(
         match msg {
             ServerUnreliableMessages::BulkBodies { bodies, time_stamp } => {
                 for (server_entity, body) in bodies.iter() {
-                    let Ok(body) = body.map(&network_mapping) else {
+                    let Ok(body) = body.map_to_client(&network_mapping) else {
                         continue;
                     };
 
@@ -387,7 +387,7 @@ pub(crate) fn client_sync_players(
                     continue;
                 }
 
-                let Ok(body) = body.map(&network_mapping) else {
+                let Ok(body) = body.map_to_client(&network_mapping) else {
                     continue;
                 };
 
@@ -547,7 +547,7 @@ pub(crate) fn client_sync_players(
                     continue;
                 };
 
-                let Ok(body) = body.map(&network_mapping) else {
+                let Ok(body) = body.map_to_client(&network_mapping) else {
                     continue;
                 };
 
@@ -584,7 +584,7 @@ pub(crate) fn client_sync_players(
                     continue;
                 };
 
-                let Ok(body) = body.map(&network_mapping) else {
+                let Ok(body) = body.map_to_client(&network_mapping) else {
                     continue;
                 };
 

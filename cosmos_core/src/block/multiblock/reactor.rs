@@ -42,6 +42,9 @@ pub struct Reactor {
     pub bounds: ReactorBounds,
 }
 
+#[derive(Component)]
+pub struct ReactorActive;
+
 impl Reactor {
     /// Creates a new constructed reactor
     pub fn new(controller: BlockCoordinate, power_per_second: f32, bounds: ReactorBounds) -> Self {
@@ -155,6 +158,13 @@ pub struct OpenReactorEvent(pub StructureBlock);
 impl IdentifiableEvent for OpenReactorEvent {
     fn unlocalized_name() -> &'static str {
         "cosmos:open_reactor"
+    }
+
+    #[cfg(feature = "client")]
+    fn convert_to_client_entity(self, netty: &crate::netty::sync::mapping::NetworkMapping) -> Option<Self> {
+        use crate::netty::sync::mapping::Mappable;
+
+        self.0.map_to_client(&netty).ok().map(|x| Self(x))
     }
 }
 

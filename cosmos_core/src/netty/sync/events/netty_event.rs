@@ -11,13 +11,19 @@ use super::client_event;
 use super::server_event;
 
 /// Used to uniquely identify a netty event
-pub trait IdentifiableEvent {
+pub trait IdentifiableEvent: Sized {
     /// Should be unique from all other netty events.
     ///
     /// Good practice is `modid:event_name`.
     ///
     /// For example: `cosmos:ping`
     fn unlocalized_name() -> &'static str;
+
+    #[cfg(feature = "client")]
+    /// Converts this component's server entity to the client's entity.
+    fn convert_to_client_entity(self, _netty: &crate::netty::sync::mapping::NetworkMapping) -> Option<Self> {
+        Some(self)
+    }
 }
 
 #[derive(Clone, Copy, PartialEq, Eq)]

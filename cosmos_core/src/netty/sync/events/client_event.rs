@@ -9,10 +9,13 @@ use bevy::{
 };
 use renet2::RenetClient;
 
-use crate::{netty::NettyChannelServer, registry::Registry};
 use crate::{
     netty::{cosmos_encoder, system_sets::NetworkingSystemsSet, NettyChannelClient},
     registry::identifiable::Identifiable,
+};
+use crate::{
+    netty::{sync::mapping::NetworkMapping, NettyChannelServer},
+    registry::Registry,
 };
 
 use super::netty_event::{EventReceiver, NettyEvent, NettyEventMessage, RegisteredNettyEvent};
@@ -122,6 +125,7 @@ fn parse_event<T: NettyEvent>(
     events_registry: Res<Registry<RegisteredNettyEvent>>,
     mut evw_custom_event: EventWriter<T>,
     mut evr_need_parsed: EventReader<GotNetworkEvent>,
+    netty_mapping: Res<NetworkMapping>,
 ) {
     for ev in evr_need_parsed.read() {
         let Some(registered_event) = events_registry.from_id(T::unlocalized_name()) else {
@@ -135,6 +139,11 @@ fn parse_event<T: NettyEvent>(
 
         let Ok(event) = bincode::deserialize::<T>(&ev.raw_data) else {
             error!("Got invalid event from server!");
+            continue;
+        };
+
+        let Some(event) = event.convert_to_client_entity(&netty_mapping) else {
+            error!("Unable to convert event to client entity event!");
             continue;
         };
 
