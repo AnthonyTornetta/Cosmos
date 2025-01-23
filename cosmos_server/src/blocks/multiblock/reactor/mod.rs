@@ -26,6 +26,8 @@ use cosmos_core::{
 
 use crate::ai::AiControlled;
 
+mod impls;
+
 /// Represents the maximum dimensions of the reactor, including the reactor casing
 const MAX_REACTOR_SIZE: CoordinateType = 11;
 
@@ -355,25 +357,25 @@ fn create_reactor(
 }
 
 fn on_piloted_by_ai(
-    blocks: Res<Registry<Block>>,
+    blocks_registry: Res<Registry<Block>>,
     reactor_blocks: Res<Registry<ReactorPowerGenerationBlock>>,
     mut q_structure: Query<(&Structure, &mut Reactors), (With<AiControlled>, Or<(Added<AiControlled>, Added<Reactors>)>)>,
 ) {
     for (structure, mut reactors) in q_structure.iter_mut() {
-        let reactor_block = blocks
+        let reactor_block = blocks_registry
             .from_id("cosmos:reactor_controller")
             .expect("Missing reactor controller block!");
 
-        let blockz = structure
+        let blocks = structure
             .all_blocks_iter(false)
             .filter(|x| structure.block_id_at(*x) == reactor_block.id())
             .collect::<Vec<BlockCoordinate>>();
 
-        for block_here in blockz {
-            if let Some(bounds) = check_is_valid_multiblock(structure, block_here, &blocks) {
-                match check_valid(bounds, structure, &blocks) {
+        for block_here in blocks {
+            if let Some(bounds) = check_is_valid_multiblock(structure, block_here, &blocks_registry) {
+                match check_valid(bounds, structure, &blocks_registry) {
                     ReactorValidity::Valid => {
-                        let reactor = create_reactor(structure, &blocks, &reactor_blocks, bounds, block_here);
+                        let reactor = create_reactor(structure, &blocks_registry, &reactor_blocks, bounds, block_here);
 
                         reactors.add_reactor(reactor);
                     }
@@ -459,6 +461,8 @@ fn on_interact_reactor(
 }
 
 pub(super) fn register(app: &mut App) {
+    impls::register(app);
+
     app.add_systems(
         Update,
         (
