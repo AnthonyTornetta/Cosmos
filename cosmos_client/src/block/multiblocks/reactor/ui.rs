@@ -1,6 +1,8 @@
 use bevy::{color::palettes::css, prelude::*};
 use cosmos_core::{
-    block::multiblock::reactor::{ClientRequestActiveReactorEvent, OpenReactorEvent, ReactorActive, Reactors},
+    block::multiblock::reactor::{
+        ClientRequestActiveReactorEvent, OpenReactorEvent, Reactor, ReactorActive, ReactorFuel, ReactorFuelConsumption,
+    },
     inventory::Inventory,
     netty::{
         client::LocalPlayer,
@@ -11,13 +13,14 @@ use cosmos_core::{
         system_sets::NetworkingSystemsSet,
     },
     prelude::{Structure, StructureBlock},
+    registry::Registry,
 };
 
 use crate::{
     inventory::{CustomInventoryRender, InventoryNeedsDisplayed, InventorySide},
     ui::{
         components::{
-            button::{register_button, Button, ButtonEvent},
+            button::{register_button, ButtonEvent, ButtonStyles},
             window::GuiWindow,
         },
         font::DefaultFont,
@@ -30,6 +33,9 @@ struct ActiveText(StructureBlock);
 
 #[derive(Component)]
 struct ReactorBlockReference(StructureBlock);
+
+#[derive(Component)]
+pub struct ReactorPowerGenStats;
 
 fn create_ui(
     mut commands: Commands,
@@ -82,7 +88,7 @@ fn create_ui(
                     left: Val::Auto,
                     top: Val::Px(100.0),
                     width: Val::Px(300.0),
-                    height: Val::Px(400.0),
+                    height: Val::Px(500.0),
                     position_type: PositionType::Absolute,
                     border: UiRect::all(Val::Px(2.0)),
                     ..Default::default()
@@ -100,7 +106,15 @@ fn create_ui(
                     },
                 ))
                 .with_children(|p| {
-                    p.spawn((ActiveText(ev.0), font.clone(), Text::new(if active { "ACTIVE" } else { "IDLE" })));
+                    p.spawn((
+                        ActiveText(ev.0),
+                        font.clone(),
+                        Node {
+                            margin: UiRect::bottom(Val::Px(50.0)),
+                            ..Default::default()
+                        },
+                        Text::new(if active { "ACTIVE" } else { "IDLE" }),
+                    ));
 
                     fuel_slot_ent = Some(
                         p.spawn((
@@ -115,15 +129,26 @@ fn create_ui(
                     );
 
                     p.spawn((
-                        ReactorFuelStatusBar,
                         Node {
                             width: Val::Percent(90.0),
                             height: Val::Px(10.0),
                             margin: UiRect::vertical(Val::Px(50.0)),
                             ..Default::default()
                         },
-                        BackgroundColor(css::LIME.into()),
-                    ));
+                        BackgroundColor(css::GRAY.into()),
+                    ))
+                    .with_children(|p| {
+                        p.spawn((
+                            ReactorFuelStatusBar,
+                            ReactorBlockReference(ev.0),
+                            Node {
+                                width: Val::Percent(0.0),
+                                height: Val::Percent(100.0),
+                                ..Default::default()
+                            },
+                            BackgroundColor(css::LIME.into()),
+                        ));
+                    });
 
                     p.spawn((
                         ReactorBlockReference(ev.0),
@@ -133,8 +158,27 @@ fn create_ui(
                                 font.clone(),
                                 Default::default(),
                             )),
+                            button_styles: Some(ButtonStyles {
+                                background_color: css::GREY.into(),
+                                ..Default::default()
+                            }),
                             ..Default::default()
                         },
+                        Node {
+                            padding: UiRect::new(Val::Px(8.0), Val::Px(4.0), Val::Px(8.0), Val::Px(4.0)),
+                            ..Default::default()
+                        },
+                    ));
+
+                    p.spawn((
+                        ReactorPowerGenStats,
+                        ReactorBlockReference(ev.0),
+                        Node {
+                            margin: UiRect::top(Val::Px(40.0)),
+                            ..Default::default()
+                        },
+                        Text::new(""),
+                        font.clone(),
                     ));
                 });
             });
@@ -218,6 +262,54 @@ fn maintain_active_text(
     }
 }
 
+fn update_status_bar(
+    mut q_status_bar: Query<(&mut Node, &ReactorBlockReference), With<ReactorFuelStatusBar>>,
+    q_structure: Query<&Structure>,
+    q_fuel_consumption: Query<&ReactorFuelConsumption>,
+    fuels: Res<Registry<ReactorFuel>>,
+) {
+    for (mut node, reactor_ref) in q_status_bar.iter_mut() {
+        let Ok(structure) = q_structure.get(reactor_ref.0.structure()) else {
+            continue;
+        };
+
+        let Some(fuel_cons) = structure.query_block_data(reactor_ref.0.coords(), &q_fuel_consumption) else {
+            node.width = Val::Px(0.0);
+            continue;
+        };
+
+        let fuel = fuels.from_numeric_id(fuel_cons.fuel_id);
+        node.width = Val::Percent(100.0 - (fuel_cons.secs_spent / fuel.lasts_for.as_secs_f32()).min(1.0) * 100.0);
+    }
+}
+
+fn update_generation_stats(
+    mut q_status_bar: Query<(&mut Text, &ReactorBlockReference), With<ReactorPowerGenStats>>,
+    q_structure: Query<&Structure>,
+    q_fuel_consumption: Query<(&Reactor, &ReactorFuelConsumption), With<ReactorActive>>,
+    fuels: Res<Registry<ReactorFuel>>,
+) {
+    for (mut txt, reactor_ref) in q_status_bar.iter_mut() {
+        let Ok(structure) = q_structure.get(reactor_ref.0.structure()) else {
+            continue;
+        };
+
+        let Some((reactor, fuel_cons)) = structure.query_block_data(reactor_ref.0.coords(), &q_fuel_consumption) else {
+            let text = "Generating 0 kW";
+            if txt.0 != text {
+                txt.0 = text.into();
+            }
+            continue;
+        };
+
+        let fuel = fuels.from_numeric_id(fuel_cons.fuel_id);
+        let text = format!("Generating {} kW", fuel.multiplier * reactor.power_per_second());
+        if txt.0 != text {
+            txt.0 = text;
+        }
+    }
+}
+
 pub(super) fn register(app: &mut App) {
     register_button::<ToggleReactorEvent>(app);
 
@@ -227,6 +319,8 @@ pub(super) fn register(app: &mut App) {
             create_ui.before(UiSystemSet::PreDoUi),
             on_click_toggle.in_set(UiSystemSet::DoUi),
             maintain_active_text,
+            update_status_bar,
+            update_generation_stats,
         )
             .in_set(NetworkingSystemsSet::Between),
     );
