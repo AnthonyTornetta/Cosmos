@@ -265,6 +265,7 @@ impl Identifiable for ReactorFuel {
 
 pub(super) fn register<T: States>(app: &mut App, post_loading_state: T) {
     create_registry::<ReactorPowerGenerationBlock>(app, "cosmos:power_generation_blocks");
+    create_registry::<ReactorFuel>(app, "cosmos:reactor_fuel");
     sync_component::<Reactors>(app);
     sync_component::<Reactor>(app);
     sync_component::<ReactorActive>(app);
