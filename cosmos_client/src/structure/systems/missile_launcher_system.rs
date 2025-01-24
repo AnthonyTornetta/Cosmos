@@ -335,10 +335,10 @@ fn update_corner_styles(q_style: &mut Query<(&mut Node, &mut ImageNode)>, entity
 pub(super) fn register(app: &mut App) {
     sync_system::<MissileLauncherSystem>(app);
 
-    load_assets::<bevy_kira_audio::prelude::AudioSource, MissileLauncherFireHandles>(
+    load_assets::<bevy_kira_audio::prelude::AudioSource, MissileLauncherFireHandles, 2>(
         app,
         GameState::PreLoading,
-        vec!["cosmos/sounds/sfx/missile-launch-1.ogg", "cosmos/sounds/sfx/missile-launch-2.ogg"],
+        ["cosmos/sounds/sfx/missile-launch-1.ogg", "cosmos/sounds/sfx/missile-launch-2.ogg"],
         |mut commands, handles| {
             commands.insert_resource(MissileLauncherFireHandles(
                 handles
@@ -350,12 +350,12 @@ pub(super) fn register(app: &mut App) {
         },
     );
 
-    load_assets::<Image, MissileLauncherLockonGraphic>(
+    load_assets::<Image, MissileLauncherLockonGraphic, 1>(
         app,
         GameState::PreLoading,
-        vec!["cosmos/images/ui/missile-lockon.png"],
-        |mut commands, mut handles| {
-            commands.insert_resource(MissileLauncherLockonGraphic(handles.remove(0).0));
+        ["cosmos/images/ui/missile-lockon.png"],
+        |mut commands, [image]| {
+            commands.insert_resource(MissileLauncherLockonGraphic(image.0));
         },
     );
 

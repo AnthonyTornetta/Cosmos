@@ -87,7 +87,7 @@ fn create_ui(
                     right: Val::Px(200.0),
                     left: Val::Auto,
                     top: Val::Px(100.0),
-                    width: Val::Px(300.0),
+                    width: Val::Px(350.0),
                     height: Val::Px(500.0),
                     position_type: PositionType::Absolute,
                     border: UiRect::all(Val::Px(2.0)),
