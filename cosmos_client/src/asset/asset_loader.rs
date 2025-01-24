@@ -27,6 +27,7 @@ struct DoneLoadingAssetHandle<T: Asset + 'static, K: Send + Sync + 'static, cons
 /// Loads assets based on the path in the given game state. Will call the done callback once everything is finished loading.
 ///
 /// Failed handles will also be sent to the done callback, but their LoadState will indicate if they succeeded or not
+/// The order of the loaded asset arguments will match the order of the passed in requested assets.
 ///
 /// Usage: [`load_assets<AssetType, AnyMarkerType>`]
 ///

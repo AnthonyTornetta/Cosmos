@@ -89,11 +89,10 @@ struct BlockBreakSound(Handle<AudioSource>);
 #[derive(Resource)]
 struct BlockPlaceSound(Handle<AudioSource>);
 
-struct LoadingPlaceAudio;
-struct LoadingBreakAudio;
+struct LoadingAudio;
 
 pub(super) fn register(app: &mut App) {
-    load_assets::<AudioSource, LoadingBreakAudio, 2>(
+    load_assets::<AudioSource, LoadingAudio, 2>(
         app,
         GameState::Loading,
         ["cosmos/sounds/sfx/break.ogg", "cosmos/sounds/sfx/place.ogg"],
