@@ -51,6 +51,11 @@ pub fn load_assets<T: Asset, K: Send + Sync + 'static, const N: usize>(
             loading_id: id,
             _phantom: Default::default(),
         });
+
+        commands.insert_resource(DoneLoadingAssetHandle::<T, K, N> {
+            _phantom: Default::default(),
+            loaded_handles: [const { None }; N],
+        });
     };
 
     let check_assets_done_loading = move |loading_assets: Option<ResMut<LoadingAssetHandle<T, K, N>>>,
@@ -66,12 +71,14 @@ pub fn load_assets<T: Asset, K: Send + Sync + 'static, const N: usize>(
                 .loading_handles
                 .iter_mut()
                 .enumerate()
-                .flat_map(|(i, x)| x.as_mut().map(|x| (i, x)))
+                .filter(|(_, x)| x.is_some())
                 .for_each(|(idx, handle)| {
-                    let load_state = asset_server.get_load_state(handle.id()).expect("Id has to exist here");
+                    let h = handle.as_mut().expect("Verified in filter.");
+
+                    let load_state = asset_server.get_load_state(h.id()).expect("Id has to exist here");
 
                     if matches!(load_state, LoadState::Failed(_) | LoadState::Loaded) {
-                        done_loading.loaded_handles[idx] = Some((std::mem::take(handle), load_state));
+                        done_loading.loaded_handles[idx] = Some((std::mem::take(handle).expect("Verified in filter"), load_state));
                     }
                 });
 
@@ -93,14 +100,5 @@ pub fn load_assets<T: Asset, K: Send + Sync + 'static, const N: usize>(
     };
 
     app.add_systems(OnEnter(state), prepare_assets)
-        .add_systems(Update, check_assets_done_loading.run_if(in_state(state)))
-        .insert_resource(LoadingAssetHandle::<T, K, N> {
-            _phantom: Default::default(),
-            loading_handles: [const { None }; N],
-            loading_id: Default::default(),
-        })
-        .insert_resource(DoneLoadingAssetHandle::<T, K, N> {
-            _phantom: Default::default(),
-            loaded_handles: [const { None }; N],
-        });
+        .add_systems(Update, check_assets_done_loading.run_if(in_state(state)));
 }
