@@ -6,14 +6,15 @@ use cosmos_core::{
         block_events::{BlockEventsSet, BlockInteractEvent},
         data::BlockData,
         multiblock::reactor::{
-            ClientRequestActiveReactorEvent, OpenReactorEvent, Reactor, ReactorActive, ReactorFuelConsumption, ReactorPowerGenerationBlock,
-            Reactors,
+            ClientRequestActiveReactorEvent, OpenReactorEvent, Reactor, ReactorActive, ReactorFuel, ReactorFuelConsumption,
+            ReactorPowerGenerationBlock, Reactors,
         },
         Block,
     },
     entities::player::Player,
     events::block_events::{BlockChangedEvent, BlockDataSystemParams},
     inventory::Inventory,
+    item::Item,
     netty::{
         sync::events::server_event::{NettyEventReceived, NettyEventWriter},
         system_sets::NetworkingSystemsSet,
@@ -30,6 +31,9 @@ use crate::{
 };
 
 impl DefaultPersistentComponent for Reactors {}
+impl DefaultPersistentComponent for Reactor {}
+impl DefaultPersistentComponent for ReactorFuelConsumption {}
+impl DefaultPersistentComponent for ReactorActive {}
 
 fn handle_block_event(
     mut interact_events: EventReader<BlockInteractEvent>,
@@ -65,16 +69,21 @@ fn handle_block_event(
 
 fn generate_power(
     reactors: Query<(&Reactors, Entity)>,
-    q_structure: Query<(&Structure, &StructureSystems)>,
+    mut q_structure: Query<(&mut Structure, &StructureSystems)>,
     mut energy_storage_system_query: Query<&mut EnergyStorageSystem>,
-    mut q_reactor: Query<(&Reactor, &mut ReactorFuelConsumption), With<ReactorActive>>,
+    mut q_reactor: Query<(&Reactor, Option<&mut ReactorFuelConsumption>, &mut Inventory), With<ReactorActive>>,
     time: Res<Time>,
     bds_params: BlockDataSystemParams,
+    fuels: Res<Registry<ReactorFuel>>,
+    items: Res<Registry<Item>>,
+    q_has_fuel_cons: Query<(), With<ReactorFuelConsumption>>,
+    mut q_block_data: Query<&mut BlockData>,
+    mut commands: Commands,
 ) {
     let bds_params = Rc::new(RefCell::new(bds_params));
 
     for (reactors, structure_entity) in reactors.iter() {
-        let Ok((structure, systems)) = q_structure.get(structure_entity) else {
+        let Ok((mut structure, systems)) = q_structure.get_mut(structure_entity) else {
             continue;
         };
 
@@ -87,10 +96,62 @@ fn generate_power(
                 continue;
             };
 
-            let (reactor, fuel_consumption) = reactor.deref_mut();
+            let (reactor, fuel_consumption, inventory) = reactor.deref_mut();
 
-            system.increase_energy(reactor.power_per_second() * time.delta_secs());
-            fuel_consumption.0 += time.delta_secs();
+            let mut delta = time.delta_secs();
+            if let Some(fuel_consumption) = fuel_consumption {
+                fuel_consumption.secs_spent += delta;
+                let fuel = fuels.from_numeric_id(fuel_consumption.fuel_id);
+
+                let over = fuel_consumption.secs_spent - fuel.lasts_for.as_secs_f32();
+
+                if over >= 0.0 {
+                    let is = inventory.itemstack_at(0);
+
+                    let mut handled = false;
+
+                    if let Some(is) = is {
+                        let item = items.from_numeric_id(is.item_id());
+                        if let Some(fuel) = fuels.from_id(item.unlocalized_name()) {
+                            inventory.take_and_remove_item(item, 1, &mut commands);
+                            fuel_consumption.secs_spent = over;
+                            fuel_consumption.fuel_id = fuel.id();
+                            handled = true;
+                        } else {
+                        }
+                    } else {
+                    }
+
+                    if !handled {
+                        delta -= over;
+                        structure.remove_block_data(c, &mut *bds_params.borrow_mut(), &mut q_block_data, &q_has_fuel_cons);
+                    }
+                }
+            } else {
+                let is = inventory.itemstack_at(0);
+                if let Some(is) = is {
+                    let item = items.from_numeric_id(is.item_id());
+                    if let Some(fuel) = fuels.from_id(item.unlocalized_name()) {
+                        inventory.take_and_remove_item(item, 1, &mut commands);
+                        structure.insert_block_data(
+                            c,
+                            ReactorFuelConsumption {
+                                fuel_id: fuel.id(),
+                                secs_spent: delta,
+                            },
+                            &mut *bds_params.borrow_mut(),
+                            &mut q_block_data,
+                            &q_has_fuel_cons,
+                        );
+                    } else {
+                        continue;
+                    }
+                } else {
+                    continue;
+                }
+            }
+
+            // system.increase_energy(reactor.power_per_second() * delta);
         }
     }
 }
@@ -197,6 +258,9 @@ fn process_activate_reactor(
 pub(super) fn register(app: &mut App) {
     add_default_block_data_for_block(app, |e, _| Inventory::new("Reactor", 1, None, e), "cosmos:reactor_controller");
     make_persistent::<Reactors>(app);
+    make_persistent::<Reactor>(app);
+    make_persistent::<ReactorFuelConsumption>(app);
+    make_persistent::<ReactorActive>(app);
 
     app.add_systems(
         Update,

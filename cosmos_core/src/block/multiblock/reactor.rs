@@ -1,5 +1,7 @@
 //! Represents the logic behind the reactor multiblock system
 
+use std::time::Duration;
+
 use bevy::{
     prelude::{
         in_state, Added, App, Commands, Component, Deref, DerefMut, Entity, Event, EventReader, IntoSystemConfigs, OnEnter, Query, Res,
@@ -13,9 +15,11 @@ use serde::{Deserialize, Serialize};
 use crate::{
     block::{block_events::BlockEventsSet, Block},
     events::block_events::BlockChangedEvent,
+    item::Item,
     netty::{
         sync::{
             events::netty_event::{IdentifiableEvent, NettyEvent, SyncedEventImpl},
+            registry::sync_registry,
             sync_component, IdentifiableComponent, SyncableComponent,
         },
         system_sets::NetworkingSystemsSet,
@@ -35,7 +39,6 @@ pub struct ReactorBounds {
 }
 
 #[derive(Clone, Copy, Debug, Reflect, Serialize, Deserialize, PartialEq, Component)]
-#[require(ReactorFuelConsumption)]
 /// Represents a constructed reactor
 pub struct Reactor {
     pub controller: BlockCoordinate,
@@ -71,7 +74,10 @@ impl SyncableComponent for ReactorActive {
 }
 
 #[derive(Component, Default, Clone, Serialize, Deserialize, PartialEq, Debug, Reflect)]
-pub struct ReactorFuelConsumption(pub f32);
+pub struct ReactorFuelConsumption {
+    pub secs_spent: f32,
+    pub fuel_id: u16,
+}
 
 impl IdentifiableComponent for ReactorFuelConsumption {
     fn get_component_unlocalized_name() -> &'static str {
@@ -232,6 +238,43 @@ impl NettyEvent for ClientRequestActiveReactorEvent {
     }
 }
 
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct ReactorFuel {
+    id: u16,
+    unlocalized_name: String,
+    pub multiplier: f32,
+    pub lasts_for: Duration,
+}
+
+impl ReactorFuel {
+    pub fn new(item: &Item, multiplier: f32, lasts_for: Duration) -> Self {
+        Self {
+            id: 0,
+            unlocalized_name: item.unlocalized_name().into(),
+            multiplier,
+            lasts_for,
+        }
+    }
+}
+
+impl Identifiable for ReactorFuel {
+    fn id(&self) -> u16 {
+        self.id
+    }
+    fn set_numeric_id(&mut self, id: u16) {
+        self.id = id;
+    }
+    fn unlocalized_name(&self) -> &str {
+        &self.unlocalized_name
+    }
+}
+
+fn register_reactor_fuel(mut reg: ResMut<Registry<ReactorFuel>>, items: Res<Registry<Item>>) {
+    if let Some(uranium_fuel_cell) = items.from_id("cosmos:uranium_fuel_cell") {
+        reg.register(ReactorFuel::new(uranium_fuel_cell, 1.0, Duration::from_mins(5)));
+    }
+}
+
 pub(super) fn register<T: States>(app: &mut App, post_loading_state: T) {
     create_registry::<ReactorPowerGenerationBlock>(app, "cosmos:power_generation_blocks");
     sync_component::<Reactors>(app);
@@ -239,10 +282,12 @@ pub(super) fn register<T: States>(app: &mut App, post_loading_state: T) {
     sync_component::<ReactorActive>(app);
     sync_component::<ReactorFuelConsumption>(app);
 
+    sync_registry::<ReactorFuel>(app);
+
     app.add_netty_event::<OpenReactorEvent>();
     app.add_netty_event::<ClientRequestActiveReactorEvent>();
 
-    app.add_systems(OnEnter(post_loading_state), register_power_blocks)
+    app.add_systems(OnEnter(post_loading_state), (register_power_blocks, register_reactor_fuel))
         .register_type::<Reactor>()
         .register_type::<Reactors>()
         .register_type::<ReactorFuelConsumption>()

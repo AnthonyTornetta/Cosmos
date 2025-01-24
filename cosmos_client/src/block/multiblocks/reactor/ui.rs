@@ -95,6 +95,7 @@ fn create_ui(
                         flex_grow: 1.0,
                         align_items: AlignItems::Center,
                         justify_content: JustifyContent::Center,
+                        flex_direction: FlexDirection::Column,
                         ..Default::default()
                     },
                 ))
@@ -102,13 +103,14 @@ fn create_ui(
                     p.spawn((ActiveText(ev.0), font.clone(), Text::new(if active { "ACTIVE" } else { "IDLE" })));
 
                     fuel_slot_ent = Some(
-                        p.spawn(
-                            (Node {
+                        p.spawn((
+                            Node {
                                 width: Val::Px(64.0),
                                 height: Val::Px(64.0),
                                 ..Default::default()
-                            }),
-                        )
+                            },
+                            Name::new("Fuel Slot"),
+                        ))
                         .id(),
                     );
 
@@ -126,7 +128,11 @@ fn create_ui(
                     p.spawn((
                         ReactorBlockReference(ev.0),
                         crate::ui::components::button::Button::<ToggleReactorEvent> {
-                            text: Some(("ACTIVATE".into(), font.clone(), Default::default())),
+                            text: Some((
+                                if active { "DEACTIVATE" } else { "ACTIVATE" }.into(),
+                                font.clone(),
+                                Default::default(),
+                            )),
                             ..Default::default()
                         },
                     ));
@@ -183,11 +189,45 @@ impl ButtonEvent for ToggleReactorEvent {
 #[derive(Component)]
 struct ReactorFuelStatusBar;
 
+fn maintain_active_text(
+    q_active: Query<(), With<ReactorActive>>,
+    q_structure: Query<&Structure>,
+    mut q_active_text: Query<(&mut Text, &ActiveText)>,
+    mut q_btn: Query<&mut crate::ui::components::button::Button<ToggleReactorEvent>>,
+) {
+    for (mut txt, active_text) in q_active_text.iter_mut() {
+        let Ok(s) = q_structure.get(active_text.0.structure()) else {
+            continue;
+        };
+
+        if s.query_block_data(active_text.0.coords(), &q_active).is_some() {
+            if txt.0 != "ACTIVE" {
+                txt.0 = "ACTIVE".into();
+                if let Ok(mut btn) = q_btn.get_single_mut() {
+                    btn.text.as_mut().expect("No text?").0 = "DEACTIVATE".into();
+                }
+            }
+        } else {
+            if txt.0 != "IDLE" {
+                txt.0 = "IDLE".into();
+                if let Ok(mut btn) = q_btn.get_single_mut() {
+                    btn.text.as_mut().expect("No text?").0 = "ACTIVATE".into();
+                }
+            }
+        }
+    }
+}
+
 pub(super) fn register(app: &mut App) {
     register_button::<ToggleReactorEvent>(app);
 
     app.add_systems(
         Update,
-        (create_ui.before(UiSystemSet::PreDoUi), on_click_toggle.in_set(UiSystemSet::DoUi)).in_set(NetworkingSystemsSet::Between),
+        (
+            create_ui.before(UiSystemSet::PreDoUi),
+            on_click_toggle.in_set(UiSystemSet::DoUi),
+            maintain_active_text,
+        )
+            .in_set(NetworkingSystemsSet::Between),
     );
 }
