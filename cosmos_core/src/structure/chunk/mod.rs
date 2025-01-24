@@ -441,7 +441,7 @@ impl Chunk {
     }
 
     /// Queries this block's data. Returns `None` if the requested query failed or if no block data exists for this block.
-    pub fn query_block_data<'a, Q, F>(&'a self, coords: ChunkBlockCoordinate, query: &'a Query<Q, F>) -> Option<ROQueryItem<'a, Q>>
+    pub fn query_block_data<'a, Q, F>(&self, coords: ChunkBlockCoordinate, query: &'a Query<Q, F>) -> Option<ROQueryItem<'a, Q>>
     where
         F: QueryFilter,
         Q: QueryData,
@@ -453,7 +453,7 @@ impl Chunk {
 
     /// Queries this block's data mutibly. Returns `None` if the requested query failed or if no block data exists for this block.
     pub fn query_block_data_mut<'q, 'w, 's, Q, F>(
-        &'q self,
+        &self,
         coords: ChunkBlockCoordinate,
         query: &'q mut Query<Q, F>,
         block_system_params: Rc<RefCell<BlockDataSystemParams<'w, 's>>>,

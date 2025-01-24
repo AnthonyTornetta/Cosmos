@@ -185,12 +185,6 @@ impl ReactorPowerGenerationBlock {
     }
 }
 
-fn register_power_blocks(blocks: Res<Registry<Block>>, mut registry: ResMut<Registry<ReactorPowerGenerationBlock>>) {
-    if let Some(reactor_block) = blocks.from_id("cosmos:reactor_cell") {
-        registry.register(ReactorPowerGenerationBlock::new(reactor_block, 1000.0));
-    }
-}
-
 impl Registry<ReactorPowerGenerationBlock> {
     /// Gets the reactor power generation entry for this block
     pub fn for_block(&self, block: &Block) -> Option<&ReactorPowerGenerationBlock> {
@@ -269,12 +263,6 @@ impl Identifiable for ReactorFuel {
     }
 }
 
-fn register_reactor_fuel(mut reg: ResMut<Registry<ReactorFuel>>, items: Res<Registry<Item>>) {
-    if let Some(uranium_fuel_cell) = items.from_id("cosmos:uranium_fuel_cell") {
-        reg.register(ReactorFuel::new(uranium_fuel_cell, 1.0, Duration::from_mins(5)));
-    }
-}
-
 pub(super) fn register<T: States>(app: &mut App, post_loading_state: T) {
     create_registry::<ReactorPowerGenerationBlock>(app, "cosmos:power_generation_blocks");
     sync_component::<Reactors>(app);
@@ -287,8 +275,7 @@ pub(super) fn register<T: States>(app: &mut App, post_loading_state: T) {
     app.add_netty_event::<OpenReactorEvent>();
     app.add_netty_event::<ClientRequestActiveReactorEvent>();
 
-    app.add_systems(OnEnter(post_loading_state), (register_power_blocks, register_reactor_fuel))
-        .register_type::<Reactor>()
+    app.register_type::<Reactor>()
         .register_type::<Reactors>()
         .register_type::<ReactorFuelConsumption>()
         .register_type::<ReactorActive>();

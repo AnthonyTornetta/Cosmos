@@ -627,7 +627,7 @@ impl Structure {
 
     /// Queries this block's data mutibly. Returns `None` if the requested query failed or if no block data exists for this block.
     pub fn query_block_data_mut<'q, 'w, 's, Q, F>(
-        &'q self,
+        &self,
         coords: BlockCoordinate,
         query: &'q mut Query<Q, F>,
         block_system_params: Rc<RefCell<BlockDataSystemParams<'w, 's>>>,

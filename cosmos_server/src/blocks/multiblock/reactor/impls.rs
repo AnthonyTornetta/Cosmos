@@ -1,4 +1,4 @@
-use std::{cell::RefCell, ops::DerefMut, rc::Rc};
+use std::{cell::RefCell, ops::DerefMut, rc::Rc, time::Duration};
 
 use bevy::prelude::*;
 use cosmos_core::{
@@ -106,54 +106,53 @@ fn generate_power(
                 let over = fuel_consumption.secs_spent - fuel.lasts_for.as_secs_f32();
 
                 if over >= 0.0 {
-                    let is = inventory.itemstack_at(0);
-
-                    let mut handled = false;
-
-                    if let Some(is) = is {
-                        let item = items.from_numeric_id(is.item_id());
-                        if let Some(fuel) = fuels.from_id(item.unlocalized_name()) {
-                            inventory.take_and_remove_item(item, 1, &mut commands);
-                            fuel_consumption.secs_spent = over;
-                            fuel_consumption.fuel_id = fuel.id();
-                            handled = true;
-                        } else {
-                        }
+                    if let Some(fuel) = get_fuel_if_available(&fuels, &items, inventory, &mut commands) {
+                        fuel_consumption.secs_spent = over;
+                        fuel_consumption.fuel_id = fuel.id();
                     } else {
-                    }
-
-                    if !handled {
                         delta -= over;
-                        structure.remove_block_data(c, &mut *bds_params.borrow_mut(), &mut q_block_data, &q_has_fuel_cons);
-                    }
-                }
-            } else {
-                let is = inventory.itemstack_at(0);
-                if let Some(is) = is {
-                    let item = items.from_numeric_id(is.item_id());
-                    if let Some(fuel) = fuels.from_id(item.unlocalized_name()) {
-                        inventory.take_and_remove_item(item, 1, &mut commands);
-                        structure.insert_block_data(
+                        structure.remove_block_data::<ReactorFuelConsumption>(
                             c,
-                            ReactorFuelConsumption {
-                                fuel_id: fuel.id(),
-                                secs_spent: delta,
-                            },
                             &mut *bds_params.borrow_mut(),
                             &mut q_block_data,
                             &q_has_fuel_cons,
                         );
-                    } else {
-                        continue;
                     }
-                } else {
-                    continue;
                 }
+            } else {
+                let Some(fuel) = get_fuel_if_available(&fuels, &items, inventory, &mut commands) else {
+                    continue;
+                };
+
+                structure.insert_block_data(
+                    c,
+                    ReactorFuelConsumption {
+                        fuel_id: fuel.id(),
+                        secs_spent: delta,
+                    },
+                    &mut *bds_params.borrow_mut(),
+                    &mut q_block_data,
+                    &q_has_fuel_cons,
+                );
             }
 
-            // system.increase_energy(reactor.power_per_second() * delta);
+            system.increase_energy(reactor.power_per_second() * delta);
         }
     }
+}
+
+fn get_fuel_if_available<'a>(
+    fuels: &'a Registry<ReactorFuel>,
+    items: &Registry<Item>,
+    inventory: &mut Mut<'_, Inventory>,
+    commands: &mut Commands,
+) -> Option<&'a ReactorFuel> {
+    let is = inventory.itemstack_at(0)?;
+    let item = items.from_numeric_id(is.item_id());
+    let fuel = fuels.from_id(item.unlocalized_name())?;
+    inventory.take_and_remove_item(item, 1, commands);
+
+    Some(fuel)
 }
 
 fn add_reactor_to_structure(mut commands: Commands, query: Query<Entity, (Added<Structure>, Without<Reactors>)>) {
@@ -255,12 +254,26 @@ fn process_activate_reactor(
     }
 }
 
+fn register_reactor_fuel(mut reg: ResMut<Registry<ReactorFuel>>, items: Res<Registry<Item>>) {
+    if let Some(uranium_fuel_cell) = items.from_id("cosmos:uranium_fuel_cell") {
+        reg.register(ReactorFuel::new(uranium_fuel_cell, 1.0, Duration::from_secs(5)));
+    }
+}
+
+fn register_power_blocks(blocks: Res<Registry<Block>>, mut registry: ResMut<Registry<ReactorPowerGenerationBlock>>) {
+    if let Some(reactor_block) = blocks.from_id("cosmos:reactor_cell") {
+        registry.register(ReactorPowerGenerationBlock::new(reactor_block, 1000.0));
+    }
+}
+
 pub(super) fn register(app: &mut App) {
     add_default_block_data_for_block(app, |e, _| Inventory::new("Reactor", 1, None, e), "cosmos:reactor_controller");
     make_persistent::<Reactors>(app);
     make_persistent::<Reactor>(app);
     make_persistent::<ReactorFuelConsumption>(app);
     make_persistent::<ReactorActive>(app);
+
+    app.add_systems(OnEnter(GameState::PostLoading), (register_power_blocks, register_reactor_fuel));
 
     app.add_systems(
         Update,
