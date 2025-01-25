@@ -662,10 +662,10 @@ impl Structure {
 
     /// Despawns any block data that is no longer used by any blocks. This should be called every frame
     /// for general cleanup and avoid systems executing on dead block-data.
-    pub(crate) fn despawn_dead_block_data(&mut self, bs_commands: &mut BlockDataSystemParams) {
+    pub(crate) fn despawn_dead_block_data(&mut self, q_block_data: &mut Query<&mut BlockData>, bs_commands: &mut BlockDataSystemParams) {
         match self {
-            Self::Full(fs) => fs.despawn_dead_block_data(bs_commands),
-            Self::Dynamic(ds) => ds.despawn_dead_block_data(bs_commands),
+            Self::Full(fs) => fs.despawn_dead_block_data(q_block_data, bs_commands),
+            Self::Dynamic(ds) => ds.despawn_dead_block_data(q_block_data, bs_commands),
         }
     }
 

@@ -47,13 +47,16 @@ fn create_ui(
 ) {
     for ev in evr_open_reactor.read() {
         let Ok(structure) = q_structure.get(ev.0.structure()) else {
+            error!("No structure!");
             continue;
         };
         let Some(bd_ent) = structure.block_data(ev.0.coords()) else {
+            error!("No block data ent!");
             continue;
         };
 
         let Ok(lp) = q_inventory.get_single() else {
+            error!("No block inventory data!");
             continue;
         };
 

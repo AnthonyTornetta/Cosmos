@@ -46,6 +46,7 @@ use cosmos_core::{
     state::GameState,
     structure::{
         block_health::events::BlockTakeDamageEvent,
+        block_storage::BlockStorer,
         chunk::Chunk,
         dynamic_structure::DynamicStructure,
         full_structure::FullStructure,
@@ -613,18 +614,29 @@ pub(crate) fn client_sync_players(
             } => {
                 if let Some(s_entity) = network_mapping.client_from_server(&server_structure_entity) {
                     if let Ok(mut structure) = q_structure.get_mut(s_entity) {
-                        let chunk: Chunk = cosmos_encoder::deserialize(&serialized_chunk).expect("Unable to deserialize chunk from server");
+                        let mut chunk: Chunk =
+                            cosmos_encoder::deserialize(&serialized_chunk).expect("Unable to deserialize chunk from server");
                         let chunk_coords = chunk.chunk_coordinates();
 
-                        structure.set_chunk(chunk);
+                        for ((block_id, coords), block_data_entity) in block_entities {
+                            if let Some(client_ent) = network_mapping.client_from_server(&block_data_entity) {
+                                let here_id = chunk.block_at(coords);
+                                if here_id == block_id {
+                                    chunk.set_block_data_entity(coords, Some(client_ent));
+                                } else {
+                                    error!("Blocks didn't match up for block data! This may cause a block to have missing data. Block data block id: {block_id}; block here id: {here_id}.");
+                                }
+                            } else {
+                                info!("New block data -- asking for {block_data_entity}.");
 
-                        for (_, block_data_entity) in block_entities {
-                            info!("New block data -- asking.");
-                            client.send_message(
-                                NettyChannelClient::Reliable,
-                                cosmos_encoder::serialize(&ClientReliableMessages::RequestEntityData { entity: block_data_entity }),
-                            );
+                                client.send_message(
+                                    NettyChannelClient::Reliable,
+                                    cosmos_encoder::serialize(&ClientReliableMessages::RequestEntityData { entity: block_data_entity }),
+                                );
+                            }
                         }
+
+                        structure.set_chunk(chunk);
 
                         set_chunk_event_writer.send(ChunkInitEvent {
                             coords: chunk_coords,

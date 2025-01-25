@@ -547,9 +547,9 @@ impl BaseStructure {
 
     /// Despawns any block data that is no longer used by any blocks. This should be called every frame
     /// for general cleanup and avoid systems executing on dead block-data.
-    pub fn despawn_dead_block_data(&mut self, bs_commands: &mut BlockDataSystemParams) {
+    pub fn despawn_dead_block_data(&mut self, q_block_data: &mut Query<&mut BlockData>, bs_commands: &mut BlockDataSystemParams) {
         for (_, chunk) in &mut self.chunks {
-            chunk.despawn_dead_block_data(bs_commands);
+            chunk.despawn_dead_block_data(q_block_data, bs_commands);
         }
     }
 
