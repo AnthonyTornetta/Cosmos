@@ -8,7 +8,7 @@ use std::rc::Rc;
 use bevy::ecs::query::{QueryData, QueryFilter, ROQueryItem, With};
 use bevy::ecs::system::{Commands, Query};
 use bevy::hierarchy::{BuildChildren, DespawnRecursiveExt};
-use bevy::log::{error, info, warn};
+use bevy::log::{error, warn};
 use bevy::prelude::{App, Component, Entity, Event, Vec3};
 use bevy::reflect::Reflect;
 use bevy::utils::HashMap;
@@ -132,7 +132,6 @@ impl BlockStorer for Chunk {
         }
 
         if let Some(bd_ent) = self.block_data.remove(&(old_id, coords)) {
-            info!("Removing existing block data {bd_ent:?}!");
             self.removed_block_data.push(bd_ent);
         }
 
@@ -148,7 +147,6 @@ impl BlockStorer for Chunk {
         }
 
         if let Some(bd_ent) = self.block_data.remove(&(old_id, coords)) {
-            info!("Removing existing block data {bd_ent:?}!");
             self.removed_block_data.push(bd_ent);
         }
 
@@ -256,7 +254,6 @@ impl Chunk {
     /// Gets the entity that contains this block's information if there is one
     pub fn block_data(&self, coords: ChunkBlockCoordinate) -> Option<Entity> {
         let id = self.block_at(coords);
-        info!("Current chunk block info @ {coords}: {:?}", self.block_data);
         self.block_data.get(&(id, coords)).copied()
     }
 
@@ -268,7 +265,6 @@ impl Chunk {
         if let Some(e) = entity {
             self.block_data.insert((id, coords), e);
         } else {
-            info!("Only one that makes sense.");
             self.block_data.remove(&(id, coords));
         }
     }
@@ -416,7 +412,6 @@ impl Chunk {
         ));
 
         self.block_data.insert((block_id, coords), data_ent);
-        info!("{:?}", self.block_data);
         Some(data_ent)
     }
 
@@ -578,7 +573,6 @@ impl Chunk {
             system_params.commands.entity(ent).insert(NeedsDespawned);
             let id = self.block_at(coords);
             self.block_data.remove(&(id, coords));
-            info!("REMOVING BDDDD!!!!!!! @ {coords}");
 
             system_params.ev_writer.send(BlockDataChangedEvent {
                 block_data_entity: None,
