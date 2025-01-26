@@ -11,7 +11,7 @@ use crate::{
     structure::planet::{biosphere::BiosphereTemperatureRegistry, server_planet_builder::ServerPlanetBuilder},
 };
 use bevy::{
-    log::warn,
+    log::{info, warn},
     math::{Dir3, Quat},
     prelude::{
         in_state, App, Commands, Deref, DerefMut, EventReader, IntoSystemConfigs, Query, Res, ResMut, Resource, Transform, Update, Vec3,
@@ -22,7 +22,7 @@ use bevy::{
 use cosmos_core::{
     entities::player::Player,
     netty::system_sets::NetworkingSystemsSet,
-    physics::location::{Location, Sector, SectorUnit, SystemCoordinate, SYSTEM_SECTORS},
+    physics::location::{Location, LocationPhysicsSet, Sector, SectorUnit, SystemCoordinate, SYSTEM_SECTORS},
     registry::{identifiable::Identifiable, Registry},
     state::GameState,
     structure::{
@@ -79,6 +79,7 @@ fn monitor_planets_to_spawn(
 
             let builder = ServerPlanetBuilder::default();
 
+            info!("Creating planet entity @ {loc}");
             builder.insert_planet(&mut entity_cmd, loc, &mut structure, planet.planet);
 
             let mut rng = get_rng_for_sector(&server_seed, &loc.sector);
@@ -195,6 +196,7 @@ pub(super) fn register(app: &mut App) {
             monitor_planets_to_spawn.in_set(NetworkingSystemsSet::Between),
         )
             .chain()
+            .before(LocationPhysicsSet::DoPhysics)
             .run_if(in_state(GameState::Playing)),
     )
     .insert_resource(CachedSectors::default());

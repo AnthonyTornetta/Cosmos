@@ -807,6 +807,7 @@ pub(super) fn register(app: &mut App) {
                 on_change_being_generated,
             )
                 .run_if(resource_exists::<AppComputeWorker<BiosphereShaderWorker>>)
+                .run_if(resource_exists::<ChunkData>)
                 .chain(),
         )
             .before(BevyEasyComputeSet::ExtractPipelines)

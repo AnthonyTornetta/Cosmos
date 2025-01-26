@@ -23,7 +23,7 @@ use cosmos_core::{
     },
     persistence::LoadingDistance,
     physics::{
-        location::{systems::Anchor, Location, Sector, SetPosition},
+        location::{systems::Anchor, Location, LocationPhysicsSet, Sector, SetPosition},
         player_world::WorldWithin,
     },
     registry::{identifiable::Identifiable, Registry},
@@ -323,11 +323,13 @@ pub(super) fn register(app: &mut App) {
             (load_player, create_new_player)
                 .chain()
                 .before(LoadingSystemSet::BeginLoading)
+                .before(LocationPhysicsSet::DoPhysics)
                 .in_set(NetworkingSystemsSet::Between),
             finish_loading_player
                 .in_set(NetworkingSystemsSet::SyncComponents)
                 .before(ComponentSyncingSet::PreComponentSyncing)
                 .after(LoadingSystemSet::DoneLoading),
-        ),
+        )
+            .chain(),
     );
 }
