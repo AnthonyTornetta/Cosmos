@@ -81,12 +81,12 @@ struct EngineIdleSound(Handle<AudioSource>);
 struct LoadingShipAudio;
 
 pub(super) fn register(app: &mut App) {
-    load_assets::<AudioSource, LoadingShipAudio>(
+    load_assets::<AudioSource, LoadingShipAudio, 1>(
         app,
         GameState::PreLoading,
-        vec!["cosmos/sounds/sfx/engine-idle.ogg"],
-        |mut commands, mut handles| {
-            commands.insert_resource(EngineIdleSound(handles.remove(0).0));
+        ["cosmos/sounds/sfx/engine-idle.ogg"],
+        |mut commands, [sound]| {
+            commands.insert_resource(EngineIdleSound(sound.0));
         },
     );
 

@@ -1,8 +1,7 @@
 use bevy::app::App;
 
-mod instances;
-pub mod utils;
+mod reactor;
 
 pub(super) fn register(app: &mut App) {
-    instances::register(app);
+    reactor::register(app);
 }

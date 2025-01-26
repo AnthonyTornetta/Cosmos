@@ -19,7 +19,7 @@ pub struct Causer(pub Entity);
 
 #[cfg(feature = "client")]
 impl Mappable for Causer {
-    fn map(
+    fn map_to_client(
         self,
         network_mapping: &crate::netty::sync::mapping::NetworkMapping,
     ) -> Result<Self, crate::netty::sync::mapping::MappingError<Self>>

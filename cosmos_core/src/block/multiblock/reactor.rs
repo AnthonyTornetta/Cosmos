@@ -1,29 +1,24 @@
 //! Represents the logic behind the reactor multiblock system
 
+use std::time::Duration;
+
 use bevy::{
-    prelude::{
-        in_state, Added, App, Commands, Component, Deref, DerefMut, Entity, EventReader, IntoSystemConfigs, OnEnter, Query, Res, ResMut,
-        States, Update, Without,
-    },
+    prelude::{App, Component, Deref, DerefMut, Event},
     reflect::Reflect,
-    time::Time,
 };
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    block::{block_events::BlockEventsSet, Block},
-    events::block_events::BlockChangedEvent,
-    netty::{
-        sync::{sync_component, IdentifiableComponent, SyncableComponent},
-        system_sets::NetworkingSystemsSet,
+    block::Block,
+    item::Item,
+    netty::sync::{
+        events::netty_event::{IdentifiableEvent, NettyEvent, SyncedEventImpl},
+        registry::sync_registry,
+        sync_component, IdentifiableComponent, SyncableComponent,
     },
+    prelude::StructureBlock,
     registry::{create_registry, identifiable::Identifiable, Registry},
-    structure::{
-        coordinates::BlockCoordinate,
-        loading::StructureLoadingSet,
-        systems::{energy_storage_system::EnergyStorageSystem, StructureSystems, StructureSystemsSet},
-        Structure,
-    },
+    structure::coordinates::BlockCoordinate,
 };
 
 #[derive(Debug, Clone, Copy, Reflect, Serialize, Deserialize, PartialEq, Eq)]
@@ -35,12 +30,67 @@ pub struct ReactorBounds {
     pub positive_coords: BlockCoordinate,
 }
 
-#[derive(Clone, Copy, Debug, Reflect, Serialize, Deserialize, PartialEq)]
+#[derive(Clone, Copy, Debug, Reflect, Serialize, Deserialize, PartialEq, Component)]
 /// Represents a constructed reactor
 pub struct Reactor {
-    controller: BlockCoordinate,
-    power_per_second: f32,
-    bounds: ReactorBounds,
+    /// Represents the reactor_controller block
+    pub controller: BlockCoordinate,
+    /// Represents the power per second this reactor will generate, given 100% efficient fuel.
+    /// Note that the fuel efficiency can effect the actual output of the reactor.
+    pub power_per_second: f32,
+    /// The size of this reactor
+    pub bounds: ReactorBounds,
+}
+
+impl IdentifiableComponent for Reactor {
+    fn get_component_unlocalized_name() -> &'static str {
+        "cosmos:reactor"
+    }
+}
+
+impl SyncableComponent for Reactor {
+    fn get_sync_type() -> crate::netty::sync::SyncType {
+        crate::netty::sync::SyncType::ServerAuthoritative
+    }
+}
+
+#[derive(Component, Serialize, Deserialize, Clone, Copy, PartialEq, Eq, Debug, Reflect)]
+/// If a reactor controller block has this component, the reactor is active.
+///
+/// A reactor may be active but have no fuel, in that case it will generate 0 power
+pub struct ReactorActive;
+
+impl IdentifiableComponent for ReactorActive {
+    fn get_component_unlocalized_name() -> &'static str {
+        "cosmos:reactor_active"
+    }
+}
+
+impl SyncableComponent for ReactorActive {
+    fn get_sync_type() -> crate::netty::sync::SyncType {
+        crate::netty::sync::SyncType::ServerAuthoritative
+    }
+}
+
+#[derive(Component, Default, Clone, Serialize, Deserialize, PartialEq, Debug, Reflect)]
+/// Stores how much of the current fuel has been consumed
+pub struct ReactorFuelConsumption {
+    /// How many seconds has this fuel been consumed for
+    pub secs_spent: f32,
+    /// The type of fuel being used
+    pub fuel_id: u16,
+}
+
+impl IdentifiableComponent for ReactorFuelConsumption {
+    fn get_component_unlocalized_name() -> &'static str {
+        "cosmos:reactor_fuel_consumption"
+    }
+}
+
+impl SyncableComponent for ReactorFuelConsumption {
+    fn get_sync_type() -> crate::netty::sync::SyncType {
+        crate::netty::sync::SyncType::ServerAuthoritative
+    }
 }
 
 impl Reactor {
@@ -64,6 +114,11 @@ impl Reactor {
         self.power_per_second += amount;
     }
 
+    /// Returns the power this reactor will generate per second
+    pub fn power_per_second(&self) -> f32 {
+        self.power_per_second
+    }
+
     /// Returns the block where the controller for this reactor is
     pub fn controller_block(&self) -> BlockCoordinate {
         self.controller
@@ -72,12 +127,12 @@ impl Reactor {
 
 #[derive(Debug, Component, Default, Reflect, DerefMut, Deref, Serialize, Deserialize, Clone, PartialEq)]
 /// Stores the entities of all the reactors in a structure and their controller blocks for quick access
-pub struct Reactors(Vec<Reactor>);
+pub struct Reactors(Vec<BlockCoordinate>);
 
 impl Reactors {
     /// Adds a reactor to the structure
-    pub fn add_reactor(&mut self, reactor: Reactor) {
-        self.0.push(reactor);
+    pub fn add_reactor_controller(&mut self, block: BlockCoordinate) {
+        self.0.push(block);
     }
 }
 
@@ -132,12 +187,6 @@ impl ReactorPowerGenerationBlock {
     }
 }
 
-fn register_power_blocks(blocks: Res<Registry<Block>>, mut registry: ResMut<Registry<ReactorPowerGenerationBlock>>) {
-    if let Some(reactor_block) = blocks.from_id("cosmos:reactor_cell") {
-        registry.register(ReactorPowerGenerationBlock::new(reactor_block, 1000.0));
-    }
-}
-
 impl Registry<ReactorPowerGenerationBlock> {
     /// Gets the reactor power generation entry for this block
     pub fn for_block(&self, block: &Block) -> Option<&ReactorPowerGenerationBlock> {
@@ -145,96 +194,104 @@ impl Registry<ReactorPowerGenerationBlock> {
     }
 }
 
-fn add_reactor_to_structure(mut commands: Commands, query: Query<Entity, (Added<Structure>, Without<Reactors>)>) {
-    for ent in query.iter() {
-        commands.entity(ent).insert(Reactors::default());
+#[derive(Event, Debug, Serialize, Deserialize)]
+/// Send this to the player to cause them to open a reactor
+pub struct OpenReactorEvent(pub StructureBlock);
+
+impl IdentifiableEvent for OpenReactorEvent {
+    fn unlocalized_name() -> &'static str {
+        "cosmos:open_reactor"
+    }
+
+    #[cfg(feature = "client")]
+    fn convert_to_client_entity(self, netty: &crate::netty::sync::mapping::NetworkMapping) -> Option<Self> {
+        use crate::netty::sync::mapping::Mappable;
+
+        self.0.map_to_client(netty).ok().map(Self)
     }
 }
 
-fn on_modify_reactor(
-    mut reactors_query: Query<&mut Reactors>,
-    mut block_change_event: EventReader<BlockChangedEvent>,
-    blocks: Res<Registry<Block>>,
-    reactor_cells: Res<Registry<ReactorPowerGenerationBlock>>,
-) {
-    for ev in block_change_event.read() {
-        let Ok(mut reactors) = reactors_query.get_mut(ev.block.structure()) else {
-            continue;
-        };
-
-        reactors.retain_mut(|reactor| {
-            let (neg, pos) = (reactor.bounds.negative_coords, reactor.bounds.positive_coords);
-
-            let block = ev.block.coords();
-
-            let within_x = neg.x <= block.x && pos.x >= block.x;
-            let within_y = neg.y <= block.y && pos.y >= block.y;
-            let within_z = neg.z <= block.z && pos.z >= block.z;
-
-            if (neg.x == block.x || pos.x == block.x) && (within_y && within_z)
-                || (neg.y == block.y || pos.y == block.y) && (within_x && within_z)
-                || (neg.z == block.z || pos.z == block.z) && (within_x && within_y)
-            {
-                // They changed the casing of the reactor - kill it
-                false
-            } else {
-                if within_x && within_y && within_z {
-                    // The innards of the reactor were changed, add/remove any needed power per second
-                    if let Some(reactor_cell) = reactor_cells.for_block(blocks.from_numeric_id(ev.old_block)) {
-                        reactor.decrease_power_per_second(reactor_cell.power_per_second());
-                    }
-
-                    if let Some(reactor_cell) = reactor_cells.for_block(blocks.from_numeric_id(ev.new_block)) {
-                        reactor.increase_power_per_second(reactor_cell.power_per_second());
-                    }
-                }
-
-                true
-            }
-        });
+impl NettyEvent for OpenReactorEvent {
+    fn event_receiver() -> crate::netty::sync::events::netty_event::EventReceiver {
+        crate::netty::sync::events::netty_event::EventReceiver::Client
     }
 }
 
-// TODO: move this to server
-fn generate_power(
-    reactors: Query<(&Reactors, Entity)>,
-    structure: Query<&StructureSystems>,
-    mut energy_storage_system_query: Query<&mut EnergyStorageSystem>,
-    time: Res<Time>,
-) {
-    for (reactors, structure_entity) in reactors.iter() {
-        let Ok(systems) = structure.get(structure_entity) else {
-            continue;
-        };
+#[derive(Event, Debug, Serialize, Deserialize)]
+/// The client requests to set the state of the reactor
+pub struct ClientRequestChangeReactorStatus {
+    /// The reactor they're controller toggling
+    pub block: StructureBlock,
+    /// If they want to activate/deactivate it
+    pub active: bool,
+}
 
-        let Ok(mut system) = systems.query_mut(&mut energy_storage_system_query) else {
-            continue;
-        };
+impl IdentifiableEvent for ClientRequestChangeReactorStatus {
+    fn unlocalized_name() -> &'static str {
+        "cosmos:change_reactor_status"
+    }
+}
 
-        for reactor in reactors.iter() {
-            system.increase_energy(reactor.power_per_second * time.delta_secs());
+impl NettyEvent for ClientRequestChangeReactorStatus {
+    fn event_receiver() -> crate::netty::sync::events::netty_event::EventReceiver {
+        crate::netty::sync::events::netty_event::EventReceiver::Server
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+/// A fuel that can be consumed by the reactor
+pub struct ReactorFuel {
+    id: u16,
+    unlocalized_name: String,
+    /// How "efficient" this fuel is when generating power. The calculate is `reactor base power
+    /// output * multiplier`.
+    pub multiplier: f32,
+    /// How long this fuel will last for before being used
+    pub lasts_for: Duration,
+}
+
+impl ReactorFuel {
+    /// Creates a new fuel based on this item.
+    ///
+    /// If you create and register a fuel of the same item type, the later entry will override the
+    /// earlier entry.
+    pub fn new(item: &Item, multiplier: f32, lasts_for: Duration) -> Self {
+        Self {
+            id: 0,
+            unlocalized_name: item.unlocalized_name().into(),
+            multiplier,
+            lasts_for,
         }
     }
 }
 
-pub(super) fn register<T: States>(app: &mut App, post_loading_state: T, playing_state: T) {
-    create_registry::<ReactorPowerGenerationBlock>(app, "cosmos:power_generation_blocks");
-    sync_component::<Reactors>(app);
+impl Identifiable for ReactorFuel {
+    fn id(&self) -> u16 {
+        self.id
+    }
+    fn set_numeric_id(&mut self, id: u16) {
+        self.id = id;
+    }
+    fn unlocalized_name(&self) -> &str {
+        &self.unlocalized_name
+    }
+}
 
-    app.add_systems(OnEnter(post_loading_state), register_power_blocks)
-        .add_systems(
-            Update,
-            (
-                add_reactor_to_structure.in_set(StructureLoadingSet::AddStructureComponents),
-                (on_modify_reactor.in_set(BlockEventsSet::ProcessEvents), generate_power)
-                    .in_set(StructureSystemsSet::UpdateSystemsBlocks)
-                    .in_set(NetworkingSystemsSet::Between)
-                    .chain(),
-            )
-                .chain()
-                .in_set(NetworkingSystemsSet::Between)
-                .run_if(in_state(playing_state)),
-        )
-        .register_type::<Reactor>()
-        .register_type::<Reactors>();
+pub(super) fn register(app: &mut App) {
+    create_registry::<ReactorPowerGenerationBlock>(app, "cosmos:power_generation_blocks");
+    create_registry::<ReactorFuel>(app, "cosmos:reactor_fuel");
+    sync_component::<Reactors>(app);
+    sync_component::<Reactor>(app);
+    sync_component::<ReactorActive>(app);
+    sync_component::<ReactorFuelConsumption>(app);
+
+    sync_registry::<ReactorFuel>(app);
+
+    app.add_netty_event::<OpenReactorEvent>();
+    app.add_netty_event::<ClientRequestChangeReactorStatus>();
+
+    app.register_type::<Reactor>()
+        .register_type::<Reactors>()
+        .register_type::<ReactorFuelConsumption>()
+        .register_type::<ReactorActive>();
 }

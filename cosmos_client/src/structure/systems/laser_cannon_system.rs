@@ -64,10 +64,10 @@ struct LaserCannonLoadingFlag;
 pub(super) fn register(app: &mut App) {
     sync_system::<LaserCannonSystem>(app);
 
-    load_assets::<bevy_kira_audio::prelude::AudioSource, LaserCannonLoadingFlag>(
+    load_assets::<bevy_kira_audio::prelude::AudioSource, LaserCannonLoadingFlag, 3>(
         app,
         GameState::PreLoading,
-        vec![
+        [
             "cosmos/sounds/sfx/laser-fire-1.ogg",
             "cosmos/sounds/sfx/laser-fire-2.ogg",
             "cosmos/sounds/sfx/laser-fire-3.ogg",

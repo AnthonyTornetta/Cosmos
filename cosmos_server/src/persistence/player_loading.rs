@@ -18,7 +18,7 @@ use cosmos_core::{
     entities::player::Player,
     netty::system_sets::NetworkingSystemsSet,
     persistence::{LoadingDistance, LOAD_DISTANCE},
-    physics::location::{Location, Sector, SectorUnit, SECTOR_DIMENSIONS},
+    physics::location::{systems::Anchor, Location, LocationPhysicsSet, Sector, SectorUnit, SECTOR_DIMENSIONS},
     state::GameState,
 };
 use futures_lite::future;
@@ -27,8 +27,8 @@ use walkdir::WalkDir;
 use super::{loading::NeedsLoaded, saving::NeedsSaved, EntityId, SaveFileIdentifier, SectorsCache};
 
 fn unload_far(
-    query: Query<&Location, With<Player>>,
-    others: Query<(&Location, Entity, &LoadingDistance), (Without<Player>, Without<NeedsDespawned>)>,
+    query: Query<&Location, (Without<NeedsDespawned>, With<Anchor>)>,
+    others: Query<(&Location, Entity, &LoadingDistance), (Without<Anchor>, Without<NeedsDespawned>)>,
     mut commands: Commands,
 ) {
     for (loc, ent, ul_distance) in others.iter() {
@@ -232,7 +232,8 @@ pub(super) fn register(app: &mut App) {
         (
             unload_far
                 .in_set(NetworkingSystemsSet::Between)
-                .run_if(on_timer(Duration::from_millis(1000))),
+                .after(LocationPhysicsSet::DoPhysics),
+            // .run_if(on_timer(Duration::from_millis(1000))),
             load_near
                 .in_set(NetworkingSystemsSet::Between)
                 .run_if(on_timer(Duration::from_millis(1000))),

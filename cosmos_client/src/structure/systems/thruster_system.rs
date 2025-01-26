@@ -81,12 +81,12 @@ struct ThrusterSoundLoading;
 pub(super) fn register(app: &mut App) {
     sync_system::<ThrusterSystem>(app);
 
-    load_assets::<bevy_kira_audio::prelude::AudioSource, ThrusterSoundLoading>(
+    load_assets::<bevy_kira_audio::prelude::AudioSource, ThrusterSoundLoading, 1>(
         app,
         GameState::PreLoading,
-        vec!["cosmos/sounds/sfx/thruster-running.ogg"],
-        |mut commands, mut handles| {
-            commands.insert_resource(ThrusterAudioHandle(handles.remove(0).0));
+        ["cosmos/sounds/sfx/thruster-running.ogg"],
+        |mut commands, [sound]| {
+            commands.insert_resource(ThrusterAudioHandle(sound.0));
         },
     );
 

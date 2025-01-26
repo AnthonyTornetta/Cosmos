@@ -547,9 +547,9 @@ impl BaseStructure {
 
     /// Despawns any block data that is no longer used by any blocks. This should be called every frame
     /// for general cleanup and avoid systems executing on dead block-data.
-    pub fn despawn_dead_block_data(&mut self, bs_commands: &mut BlockDataSystemParams) {
+    pub fn despawn_dead_block_data(&mut self, q_block_data: &mut Query<&mut BlockData>, bs_commands: &mut BlockDataSystemParams) {
         for (_, chunk) in &mut self.chunks {
-            chunk.despawn_dead_block_data(bs_commands);
+            chunk.despawn_dead_block_data(q_block_data, bs_commands);
         }
     }
 
@@ -652,7 +652,7 @@ impl BaseStructure {
     }
 
     /// Queries this block's data. Returns `None` if the requested query failed or if no block data exists for this block.
-    pub fn query_block_data<'a, Q, F>(&'a self, coords: BlockCoordinate, query: &'a Query<Q, F>) -> Option<ROQueryItem<'a, Q>>
+    pub fn query_block_data<'a, Q, F>(&self, coords: BlockCoordinate, query: &'a Query<Q, F>) -> Option<ROQueryItem<'a, Q>>
     where
         F: QueryFilter,
         Q: QueryData,
@@ -664,7 +664,7 @@ impl BaseStructure {
 
     /// Queries this block's data mutibly. Returns `None` if the requested query failed or if no block data exists for this block.
     pub fn query_block_data_mut<'q, 'w, 's, Q, F>(
-        &'q self,
+        &self,
         coords: BlockCoordinate,
         query: &'q mut Query<Q, F>,
         block_system_params: Rc<RefCell<BlockDataSystemParams<'w, 's>>>,

@@ -42,7 +42,7 @@ fn receive_asteroids(
                     continue;
                 };
 
-                let Ok(body) = body.map(&network_mapping) else {
+                let Ok(body) = body.map_to_client(&network_mapping) else {
                     continue;
                 };
 

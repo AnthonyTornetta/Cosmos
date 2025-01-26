@@ -231,10 +231,10 @@ fn create_particle_fx(color: Option<Color>, effects: &mut Assets<EffectAsset>) -
 struct ExplosionAudio(Vec<Handle<AudioSource>>);
 
 pub(super) fn register(app: &mut App) {
-    load_assets::<AudioSource, ExplosionAudio>(
+    load_assets::<AudioSource, ExplosionAudio, 4>(
         app,
         GameState::Loading,
-        vec![
+        [
             "cosmos/sounds/sfx/explosion-1.ogg",
             "cosmos/sounds/sfx/explosion-2.ogg",
             "cosmos/sounds/sfx/explosion-3.ogg",

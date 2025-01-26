@@ -5,14 +5,18 @@ use bevy::{
         system::SystemParam,
     },
     log::{error, warn},
-    prelude::{resource_exists, Event, EventReader, EventWriter, IntoSystemConfigs, Res, ResMut},
+    prelude::{in_state, resource_exists, Condition, Event, EventReader, EventWriter, IntoSystemConfigs, Res, ResMut},
 };
 use renet2::RenetClient;
 
-use crate::{netty::NettyChannelServer, registry::Registry};
 use crate::{
     netty::{cosmos_encoder, system_sets::NetworkingSystemsSet, NettyChannelClient},
     registry::identifiable::Identifiable,
+    state::GameState,
+};
+use crate::{
+    netty::{sync::mapping::NetworkMapping, NettyChannelServer},
+    registry::Registry,
 };
 
 use super::netty_event::{EventReceiver, NettyEvent, NettyEventMessage, RegisteredNettyEvent};
@@ -122,6 +126,7 @@ fn parse_event<T: NettyEvent>(
     events_registry: Res<Registry<RegisteredNettyEvent>>,
     mut evw_custom_event: EventWriter<T>,
     mut evr_need_parsed: EventReader<GotNetworkEvent>,
+    netty_mapping: Res<NetworkMapping>,
 ) {
     for ev in evr_need_parsed.read() {
         let Some(registered_event) = events_registry.from_id(T::unlocalized_name()) else {
@@ -135,6 +140,11 @@ fn parse_event<T: NettyEvent>(
 
         let Ok(event) = bincode::deserialize::<T>(&ev.raw_data) else {
             error!("Got invalid event from server!");
+            continue;
+        };
+
+        let Some(event) = event.convert_to_client_entity(&netty_mapping) else {
+            error!("Unable to convert event to client entity event!");
             continue;
         };
 
@@ -155,7 +165,10 @@ pub(super) fn client_send_event<T: NettyEvent>(app: &mut App) {
 pub(super) fn client_receive_event<T: NettyEvent>(app: &mut App) {
     app.add_systems(
         Update,
-        parse_event::<T>.in_set(NetworkingSystemsSet::ReceiveMessages).after(receive_events),
+        parse_event::<T>
+            .in_set(NetworkingSystemsSet::ReceiveMessages)
+            .after(receive_events)
+            .run_if(in_state(GameState::Playing).or(in_state(GameState::LoadingWorld))),
     )
     .add_event::<T>();
 }

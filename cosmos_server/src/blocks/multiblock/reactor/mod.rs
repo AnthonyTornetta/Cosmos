@@ -1,19 +1,25 @@
 //! Handles the logic behind the creation of a reactor multiblock
 
+use std::{cell::RefCell, rc::Rc};
+
 use bevy::{
     ecs::query::{Added, Or, With},
     log::warn,
-    prelude::{in_state, App, EventReader, IntoSystemConfigs, Query, Res, ResMut, Update},
+    prelude::{in_state, App, Commands, EventReader, IntoSystemConfigs, Query, Res, ResMut, Update},
 };
 use bevy_renet2::renet2::RenetServer;
 use cosmos_core::{
     block::{
         block_events::{BlockEventsSet, BlockInteractEvent},
         block_face::BlockFace,
-        multiblock::reactor::{Reactor, ReactorBounds, ReactorPowerGenerationBlock, Reactors},
+        data::BlockData,
+        multiblock::reactor::{Reactor, ReactorActive, ReactorBounds, ReactorPowerGenerationBlock, Reactors},
         Block,
     },
     entities::player::Player,
+    events::block_events::BlockDataSystemParams,
+    inventory::{itemstack::ItemShouldHaveData, Inventory},
+    item::{Item, DEFAULT_MAX_STACK_SIZE},
     netty::{cosmos_encoder, server_reliable_messages::ServerReliableMessages, system_sets::NetworkingSystemsSet, NettyChannelServer},
     registry::{identifiable::Identifiable, Registry},
     state::GameState,
@@ -25,6 +31,8 @@ use cosmos_core::{
 };
 
 use crate::ai::AiControlled;
+
+mod impls;
 
 /// Represents the maximum dimensions of the reactor, including the reactor casing
 const MAX_REACTOR_SIZE: CoordinateType = 11;
@@ -355,27 +363,51 @@ fn create_reactor(
 }
 
 fn on_piloted_by_ai(
-    blocks: Res<Registry<Block>>,
+    blocks_registry: Res<Registry<Block>>,
     reactor_blocks: Res<Registry<ReactorPowerGenerationBlock>>,
-    mut q_structure: Query<(&Structure, &mut Reactors), (With<AiControlled>, Or<(Added<AiControlled>, Added<Reactors>)>)>,
+    mut q_structure: Query<(&mut Structure, &mut Reactors), (With<AiControlled>, Or<(Added<AiControlled>, Added<Reactors>)>)>,
+    bds_params: BlockDataSystemParams,
+    mut q_block_data: Query<&mut BlockData>,
+    q_has_data: Query<(), With<Reactor>>,
+    q_has_active: Query<(), With<ReactorActive>>,
+    mut q_inventory: Query<&mut Inventory>,
+    items: Res<Registry<Item>>,
+    mut commands: Commands,
+    needs_data: Res<ItemShouldHaveData>,
 ) {
-    for (structure, mut reactors) in q_structure.iter_mut() {
-        let reactor_block = blocks
+    let bds_params = Rc::new(RefCell::new(bds_params));
+
+    for (mut structure, mut reactors) in q_structure.iter_mut() {
+        let reactor_block = blocks_registry
             .from_id("cosmos:reactor_controller")
             .expect("Missing reactor controller block!");
 
-        let blockz = structure
+        let blocks = structure
             .all_blocks_iter(false)
             .filter(|x| structure.block_id_at(*x) == reactor_block.id())
             .collect::<Vec<BlockCoordinate>>();
 
-        for block_here in blockz {
-            if let Some(bounds) = check_is_valid_multiblock(structure, block_here, &blocks) {
-                match check_valid(bounds, structure, &blocks) {
-                    ReactorValidity::Valid => {
-                        let reactor = create_reactor(structure, &blocks, &reactor_blocks, bounds, block_here);
+        let reactor_fuel_cell = items.from_id("cosmos:uranium_fuel_cell").expect("Missing uranium fuel cell");
 
-                        reactors.add_reactor(reactor);
+        for block_here in blocks {
+            if let Some(bounds) = check_is_valid_multiblock(&structure, block_here, &blocks_registry) {
+                match check_valid(bounds, &structure, &blocks_registry) {
+                    ReactorValidity::Valid => {
+                        let reactor = create_reactor(&structure, &blocks_registry, &reactor_blocks, bounds, block_here);
+
+                        structure.insert_block_data(block_here, reactor, &mut bds_params.borrow_mut(), &mut q_block_data, &q_has_data);
+                        structure.insert_block_data(
+                            block_here,
+                            ReactorActive,
+                            &mut bds_params.borrow_mut(),
+                            &mut q_block_data,
+                            &q_has_active,
+                        );
+                        if let Some(mut inv) = structure.query_block_data_mut(block_here, &mut q_inventory, bds_params.clone()) {
+                            inv.insert_item_at(0, reactor_fuel_cell, DEFAULT_MAX_STACK_SIZE, &mut commands, &needs_data);
+                        }
+
+                        reactors.add_reactor_controller(block_here);
                     }
                     _ => {
                         warn!("Invalid reactor on AI-Controlled structure");
@@ -393,20 +425,23 @@ fn on_interact_reactor(
     mut interaction: EventReader<BlockInteractEvent>,
     mut server: ResMut<RenetServer>,
     player_query: Query<&Player>,
+    mut bds_params: BlockDataSystemParams,
+    mut q_block_data: Query<&mut BlockData>,
+    q_has_data: Query<(), With<Reactor>>,
 ) {
     for ev in interaction.read() {
         let Some(s_block) = ev.block else {
             continue;
         };
 
-        let Ok((structure, mut reactors)) = structure_query.get_mut(s_block.structure()) else {
+        let Ok((mut structure, mut reactors)) = structure_query.get_mut(s_block.structure()) else {
             continue;
         };
 
         let block = structure.block_at(s_block.coords(), &blocks);
 
         if block.unlocalized_name() == "cosmos:reactor_controller" {
-            if reactors.iter().any(|reactor| reactor.controller_block() == s_block.coords()) {
+            if reactors.iter().any(|reactor_block| *reactor_block == s_block.coords()) {
                 continue;
             }
 
@@ -439,7 +474,9 @@ fn on_interact_reactor(
                     ReactorValidity::Valid => {
                         let reactor = create_reactor(&structure, &blocks, &reactor_blocks, bounds, s_block.coords());
 
-                        reactors.add_reactor(reactor);
+                        structure.insert_block_data(s_block.coords(), reactor, &mut bds_params, &mut q_block_data, &q_has_data);
+
+                        reactors.add_reactor_controller(s_block.coords());
                     }
                 };
             } else {
@@ -459,6 +496,8 @@ fn on_interact_reactor(
 }
 
 pub(super) fn register(app: &mut App) {
+    impls::register(app);
+
     app.add_systems(
         Update,
         (

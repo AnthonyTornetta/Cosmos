@@ -1,6 +1,6 @@
 //! Common multiblock functionality
 
-use bevy::prelude::{App, States};
+use bevy::prelude::App;
 
 pub mod reactor;
 
@@ -9,6 +9,6 @@ pub mod reactor;
 //     Multiblock { size: BlockCoordinate, blocks: Vec<u16> },
 // }
 
-pub(super) fn register<T: States>(app: &mut App, post_loading_state: T, playing_state: T) {
-    reactor::register(app, post_loading_state, playing_state);
+pub(super) fn register(app: &mut App) {
+    reactor::register(app);
 }

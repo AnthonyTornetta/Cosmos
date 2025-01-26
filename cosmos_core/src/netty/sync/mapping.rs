@@ -80,11 +80,11 @@ pub trait Mappable {
     /// Converts all instances of server entities into their respective client entities based off the mapping.
     ///
     /// Returns Err if it is unable to find the proper mapping
-    fn map(self, network_mapping: &NetworkMapping) -> Result<Self, MappingError<Self>>
+    fn map_to_client(self, network_mapping: &NetworkMapping) -> Result<Self, MappingError<Self>>
     where
         Self: Sized;
 
-    /// Converts all instances of server entities into their respective client entities based off the mapping.
+    /// Converts all instances of server entities into their respective server entities based off the mapping.
     ///
     /// Returns Err if it is unable to find the proper mapping
     fn map_to_server(self, network_mapping: &NetworkMapping) -> Result<Self, MappingError<Self>>
@@ -93,7 +93,7 @@ pub trait Mappable {
 }
 
 impl Mappable for NettyRigidBody {
-    fn map(self, network_mapping: &NetworkMapping) -> Result<Self, MappingError<Self>> {
+    fn map_to_client(self, network_mapping: &NetworkMapping) -> Result<Self, MappingError<Self>> {
         match self.location {
             NettyRigidBodyLocation::Relative(rel_pos, parent_ent) => {
                 let Some(client_ent) = network_mapping.client_from_server(&parent_ent) else {
@@ -132,7 +132,7 @@ impl Mappable for NettyRigidBody {
 }
 
 impl Mappable for StructureBlock {
-    fn map(self, network_mapping: &NetworkMapping) -> Result<Self, MappingError<Self>> {
+    fn map_to_client(self, network_mapping: &NetworkMapping) -> Result<Self, MappingError<Self>> {
         if let Some(e) = network_mapping.client_from_server(&self.structure()) {
             Ok(Self::new(self.coords(), e))
         } else {

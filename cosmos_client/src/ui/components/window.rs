@@ -2,7 +2,7 @@
 
 use bevy::{
     app::{App, Update},
-    asset::AssetServer,
+    asset::Handle,
     color::palettes::css,
     core::Name,
     ecs::{
@@ -14,17 +14,22 @@ use bevy::{
         system::{Commands, Query, Res},
     },
     hierarchy::{BuildChildren, Children},
+    image::Image,
     math::{Rect, Vec2},
-    prelude::{ChildBuild, ImageNode, Text},
+    prelude::{resource_exists, ChildBuild, ImageNode, Resource, Text},
     text::{JustifyText, TextFont, TextLayout},
     transform::components::GlobalTransform,
     ui::{AlignItems, BackgroundColor, ComputedNode, Display, FlexDirection, Interaction, JustifyContent, Node, PositionType, UiRect, Val},
     utils::default,
     window::{PrimaryWindow, Window},
 };
-use cosmos_core::ecs::NeedsDespawned;
+use cosmos_core::{ecs::NeedsDespawned, state::GameState};
 
-use crate::{ui::UiSystemSet, window::setup::DeltaCursorPosition};
+use crate::{
+    asset::asset_loader::load_assets,
+    ui::{font::DefaultFont, UiSystemSet},
+    window::setup::DeltaCursorPosition,
+};
 
 use super::{
     button::{register_button, Button, ButtonEvent},
@@ -65,15 +70,22 @@ struct TitleBar {
     window_entity: Entity,
 }
 
+#[derive(Resource, Debug)]
+struct WindowAssets {
+    title_bar_image: Handle<Image>,
+    close_btn_image: Handle<Image>,
+}
+
 fn add_window(
     mut commands: Commands,
     mut q_added_window: Query<(Entity, &GuiWindow, Option<&Children>, &mut Node), Added<GuiWindow>>,
-    asset_server: Res<AssetServer>,
+    font: Res<DefaultFont>,
+    window_assets: Res<WindowAssets>,
 ) {
     for (ent, window, children, mut style) in &mut q_added_window {
         style.flex_direction = FlexDirection::Column;
 
-        let font = asset_server.load("fonts/PixeloidSans.ttf");
+        let font = &font.0;
 
         let mut window_body = None;
 
@@ -98,7 +110,7 @@ fn add_window(
                         ..default()
                     },
                     BackgroundColor(css::WHITE.into()),
-                    ImageNode::new(asset_server.load("cosmos/images/ui/inventory-header.png")),
+                    ImageNode::new(window_assets.title_bar_image.clone_weak()),
                 ))
                 .with_children(|parent| {
                     parent.spawn((
@@ -125,7 +137,7 @@ fn add_window(
                             ..Default::default()
                         },
                         Button::<CloseUiEvent> {
-                            image: Some(ImageNode::new(asset_server.load("cosmos/images/ui/inventory-close-button.png"))),
+                            image: Some(ImageNode::new(window_assets.close_btn_image.clone_weak())),
                             text: Some((
                                 "X".into(),
                                 TextFont {
@@ -224,6 +236,21 @@ pub enum UiWindowSystemSet {
 }
 
 pub(super) fn register(app: &mut App) {
+    load_assets::<Image, WindowAssets, 2>(
+        app,
+        GameState::Loading,
+        [
+            "cosmos/images/ui/inventory-close-button.png",
+            "cosmos/images/ui/inventory-header.png",
+        ],
+        |mut commands, [close_btn_img, header_img]| {
+            commands.insert_resource(WindowAssets {
+                title_bar_image: header_img.0,
+                close_btn_image: close_btn_img.0,
+            })
+        },
+    );
+
     register_button::<CloseUiEvent>(app);
 
     app.configure_sets(
@@ -234,7 +261,9 @@ pub(super) fn register(app: &mut App) {
     app.add_systems(
         Update,
         (
-            add_window.in_set(UiWindowSystemSet::CreateWindow),
+            add_window
+                .in_set(UiWindowSystemSet::CreateWindow)
+                .run_if(resource_exists::<WindowAssets>),
             (move_window, close_event_listener).in_set(UiWindowSystemSet::SendWindowEvents),
         ),
     );

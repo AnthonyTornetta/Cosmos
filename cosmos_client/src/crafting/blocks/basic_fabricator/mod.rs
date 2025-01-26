@@ -40,7 +40,7 @@ fn open_menu(
         commands.entity(ent).insert(NeedsDespawned);
     }
 
-    let Ok(s_block) = ev.0.map(&network_mapping) else {
+    let Ok(s_block) = ev.0.map_to_client(&network_mapping) else {
         error!("Bad network mapping - {:?}", ev.0);
         return;
     };

@@ -19,6 +19,7 @@ use query::MutBlockData;
 
 pub mod asteroid;
 pub mod base_structure;
+mod bevy_systems;
 pub mod block_health;
 pub mod block_storage;
 pub mod chunk;
@@ -626,7 +627,7 @@ impl Structure {
 
     /// Queries this block's data mutibly. Returns `None` if the requested query failed or if no block data exists for this block.
     pub fn query_block_data_mut<'q, 'w, 's, Q, F>(
-        &'q self,
+        &self,
         coords: BlockCoordinate,
         query: &'q mut Query<Q, F>,
         block_system_params: Rc<RefCell<BlockDataSystemParams<'w, 's>>>,
@@ -661,10 +662,10 @@ impl Structure {
 
     /// Despawns any block data that is no longer used by any blocks. This should be called every frame
     /// for general cleanup and avoid systems executing on dead block-data.
-    pub fn despawn_dead_block_data(&mut self, bs_commands: &mut BlockDataSystemParams) {
+    pub(crate) fn despawn_dead_block_data(&mut self, q_block_data: &mut Query<&mut BlockData>, bs_commands: &mut BlockDataSystemParams) {
         match self {
-            Self::Full(fs) => fs.despawn_dead_block_data(bs_commands),
-            Self::Dynamic(ds) => ds.despawn_dead_block_data(bs_commands),
+            Self::Full(fs) => fs.despawn_dead_block_data(q_block_data, bs_commands),
+            Self::Dynamic(ds) => ds.despawn_dead_block_data(q_block_data, bs_commands),
         }
     }
 
@@ -960,6 +961,7 @@ pub(super) fn register(app: &mut App) {
     shields::register(app);
     block_health::register(app);
     structure_block::register(app);
+    bevy_systems::register(app);
 
     use StructureTypeSet as S;
 

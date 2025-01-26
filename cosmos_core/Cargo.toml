@@ -1,6 +1,6 @@
 [package]
 name = "cosmos_core"
-version = "0.0.7"
+version = "0.0.8"
 edition = "2021"
 
 [features]

@@ -96,7 +96,10 @@ fn server_listen_messages(
                             let new_loc = match body.location {
                                 NettyRigidBodyLocation::Absolute(location) => location,
                                 NettyRigidBodyLocation::Relative(rel_trans, entity) => {
-                                    let parent_loc = player_parent_location.get(entity).copied().unwrap_or(Location::default());
+                                    let Ok(parent_loc) = player_parent_location.get(entity).copied() else {
+                                        // Probably out of date info, just ignore
+                                        continue;
+                                    };
 
                                     parent_loc + rel_trans
                                 }

@@ -93,13 +93,7 @@ impl<T: States + Clone + Copy + FreelyMutableState> Plugin for CosmosCorePlugin<
             self.done_loading_state,
         );
 
-        block::register(
-            app,
-            self.pre_loading_state,
-            self.loading_state,
-            self.post_loading_state,
-            self.playing_state,
-        );
+        block::register(app, self.pre_loading_state, self.loading_state, self.post_loading_state);
         item::register(app, self.loading_state);
         blockitems::register(app, self.loading_state);
         physics::register(app, self.post_loading_state);

@@ -56,16 +56,9 @@ struct BlockDamageSound(Handle<AudioSource>);
 struct LoadingBlockAudio;
 
 pub(super) fn register(app: &mut App) {
-    load_assets::<AudioSource, LoadingBlockAudio>(
-        app,
-        GameState::Loading,
-        vec!["cosmos/sounds/sfx/thud.ogg"],
-        |mut commands, mut sounds| {
-            let sound = sounds.remove(0);
-
-            commands.insert_resource(BlockDamageSound(sound.0));
-        },
-    );
+    load_assets::<AudioSource, LoadingBlockAudio, 1>(app, GameState::Loading, ["cosmos/sounds/sfx/thud.ogg"], |mut commands, [sound]| {
+        commands.insert_resource(BlockDamageSound(sound.0));
+    });
 
     app.add_systems(
         Update,

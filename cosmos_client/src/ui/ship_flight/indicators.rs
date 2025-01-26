@@ -439,12 +439,11 @@ pub enum WaypointSet {
 }
 
 pub(super) fn register(app: &mut App) {
-    load_assets::<Image, IndicatorImage>(
+    load_assets::<Image, IndicatorImage, 1>(
         app,
         GameState::PreLoading,
-        vec!["cosmos/images/ui/diamond.png"],
-        |mut commands, mut handles| {
-            let (handle, state) = handles.remove(0);
+        ["cosmos/images/ui/diamond.png"],
+        |mut commands, [(handle, state)]| {
             if !matches!(state, LoadState::Loaded) {
                 warn!("Failed to load diamond.png for ship UI!");
                 return;
