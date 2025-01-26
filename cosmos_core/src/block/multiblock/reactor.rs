@@ -3,9 +3,7 @@
 use std::time::Duration;
 
 use bevy::{
-    prelude::{
-        App, Component, Deref, DerefMut, Event, States,
-    },
+    prelude::{App, Component, Deref, DerefMut, Event},
     reflect::Reflect,
 };
 use serde::{Deserialize, Serialize};
@@ -14,10 +12,10 @@ use crate::{
     block::Block,
     item::Item,
     netty::sync::{
-            events::netty_event::{IdentifiableEvent, NettyEvent, SyncedEventImpl},
-            registry::sync_registry,
-            sync_component, IdentifiableComponent, SyncableComponent,
-        },
+        events::netty_event::{IdentifiableEvent, NettyEvent, SyncedEventImpl},
+        registry::sync_registry,
+        sync_component, IdentifiableComponent, SyncableComponent,
+    },
     prelude::StructureBlock,
     registry::{create_registry, identifiable::Identifiable, Registry},
     structure::coordinates::BlockCoordinate,
@@ -35,8 +33,12 @@ pub struct ReactorBounds {
 #[derive(Clone, Copy, Debug, Reflect, Serialize, Deserialize, PartialEq, Component)]
 /// Represents a constructed reactor
 pub struct Reactor {
+    /// Represents the reactor_controller block
     pub controller: BlockCoordinate,
+    /// Represents the power per second this reactor will generate, given 100% efficient fuel.
+    /// Note that the fuel efficiency can effect the actual output of the reactor.
     pub power_per_second: f32,
+    /// The size of this reactor
     pub bounds: ReactorBounds,
 }
 
@@ -53,6 +55,9 @@ impl SyncableComponent for Reactor {
 }
 
 #[derive(Component, Serialize, Deserialize, Clone, Copy, PartialEq, Eq, Debug, Reflect)]
+/// If a reactor controller block has this component, the reactor is active.
+///
+/// A reactor may be active but have no fuel, in that case it will generate 0 power
 pub struct ReactorActive;
 
 impl IdentifiableComponent for ReactorActive {
@@ -68,8 +73,11 @@ impl SyncableComponent for ReactorActive {
 }
 
 #[derive(Component, Default, Clone, Serialize, Deserialize, PartialEq, Debug, Reflect)]
+/// Stores how much of the current fuel has been consumed
 pub struct ReactorFuelConsumption {
+    /// How many seconds has this fuel been consumed for
     pub secs_spent: f32,
+    /// The type of fuel being used
     pub fuel_id: u16,
 }
 
@@ -209,32 +217,43 @@ impl NettyEvent for OpenReactorEvent {
 }
 
 #[derive(Event, Debug, Serialize, Deserialize)]
-pub struct ClientRequestActiveReactorEvent {
+/// The client requests to set the state of the reactor
+pub struct ClientRequestChangeReactorStatus {
+    /// The reactor they're controller toggling
     pub block: StructureBlock,
+    /// If they want to activate/deactivate it
     pub active: bool,
 }
 
-impl IdentifiableEvent for ClientRequestActiveReactorEvent {
+impl IdentifiableEvent for ClientRequestChangeReactorStatus {
     fn unlocalized_name() -> &'static str {
-        "cosmos:activate_reactor"
+        "cosmos:change_reactor_status"
     }
 }
 
-impl NettyEvent for ClientRequestActiveReactorEvent {
+impl NettyEvent for ClientRequestChangeReactorStatus {
     fn event_receiver() -> crate::netty::sync::events::netty_event::EventReceiver {
         crate::netty::sync::events::netty_event::EventReceiver::Server
     }
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+/// A fuel that can be consumed by the reactor
 pub struct ReactorFuel {
     id: u16,
     unlocalized_name: String,
+    /// How "efficient" this fuel is when generating power. The calculate is `reactor base power
+    /// output * multiplier`.
     pub multiplier: f32,
+    /// How long this fuel will last for before being used
     pub lasts_for: Duration,
 }
 
 impl ReactorFuel {
+    /// Creates a new fuel based on this item.
+    ///
+    /// If you create and register a fuel of the same item type, the later entry will override the
+    /// earlier entry.
     pub fn new(item: &Item, multiplier: f32, lasts_for: Duration) -> Self {
         Self {
             id: 0,
@@ -257,7 +276,7 @@ impl Identifiable for ReactorFuel {
     }
 }
 
-pub(super) fn register<T: States>(app: &mut App, post_loading_state: T) {
+pub(super) fn register(app: &mut App) {
     create_registry::<ReactorPowerGenerationBlock>(app, "cosmos:power_generation_blocks");
     create_registry::<ReactorFuel>(app, "cosmos:reactor_fuel");
     sync_component::<Reactors>(app);
@@ -268,7 +287,7 @@ pub(super) fn register<T: States>(app: &mut App, post_loading_state: T) {
     sync_registry::<ReactorFuel>(app);
 
     app.add_netty_event::<OpenReactorEvent>();
-    app.add_netty_event::<ClientRequestActiveReactorEvent>();
+    app.add_netty_event::<ClientRequestChangeReactorStatus>();
 
     app.register_type::<Reactor>()
         .register_type::<Reactors>()

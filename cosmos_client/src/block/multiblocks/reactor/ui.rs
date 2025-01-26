@@ -1,7 +1,7 @@
 use bevy::{color::palettes::css, prelude::*};
 use cosmos_core::{
     block::multiblock::reactor::{
-        ClientRequestActiveReactorEvent, OpenReactorEvent, Reactor, ReactorActive, ReactorFuel, ReactorFuelConsumption,
+        ClientRequestChangeReactorStatus, OpenReactorEvent, Reactor, ReactorActive, ReactorFuel, ReactorFuelConsumption,
     },
     inventory::Inventory,
     netty::{
@@ -84,7 +84,6 @@ fn create_ui(
                         flex_direction: FlexDirection::Column,
                         ..Default::default()
                     },
-                    ..Default::default()
                 },
                 Node {
                     right: Val::Px(200.0),
@@ -202,7 +201,7 @@ fn on_click_toggle(
     q_active: Query<(), With<ReactorActive>>,
     q_structure: Query<&Structure>,
     q_ref: Query<&ReactorBlockReference>,
-    mut nevw: NettyEventWriter<ClientRequestActiveReactorEvent>,
+    mut nevw: NettyEventWriter<ClientRequestChangeReactorStatus>,
     mapping: Res<NetworkMapping>,
 ) {
     for ev in evr_btn_pressed.read() {
@@ -220,7 +219,7 @@ fn on_click_toggle(
             continue;
         };
 
-        nevw.send(ClientRequestActiveReactorEvent { active, block: mapped_sb });
+        nevw.send(ClientRequestChangeReactorStatus { active, block: mapped_sb });
     }
 }
 

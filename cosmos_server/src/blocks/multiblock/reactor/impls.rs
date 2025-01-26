@@ -6,7 +6,7 @@ use cosmos_core::{
         block_events::{BlockEventsSet, BlockInteractEvent},
         data::BlockData,
         multiblock::reactor::{
-            ClientRequestActiveReactorEvent, OpenReactorEvent, Reactor, ReactorActive, ReactorFuel, ReactorFuelConsumption,
+            ClientRequestChangeReactorStatus, OpenReactorEvent, Reactor, ReactorActive, ReactorFuel, ReactorFuelConsumption,
             ReactorPowerGenerationBlock, Reactors,
         },
         Block,
@@ -229,7 +229,7 @@ fn on_modify_reactor(
 }
 
 fn process_activate_reactor(
-    mut nevr: EventReader<NettyEventReceived<ClientRequestActiveReactorEvent>>,
+    mut nevr: EventReader<NettyEventReceived<ClientRequestChangeReactorStatus>>,
     mut q_structure: Query<&mut Structure>,
     mut q_block_data: Query<&mut BlockData>,
     mut bds_params: BlockDataSystemParams,
