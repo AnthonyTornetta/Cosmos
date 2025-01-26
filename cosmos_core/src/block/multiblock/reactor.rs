@@ -195,6 +195,7 @@ impl Registry<ReactorPowerGenerationBlock> {
 }
 
 #[derive(Event, Debug, Serialize, Deserialize)]
+/// Send this to the player to cause them to open a reactor
 pub struct OpenReactorEvent(pub StructureBlock);
 
 impl IdentifiableEvent for OpenReactorEvent {
