@@ -798,12 +798,16 @@ pub(super) fn register(app: &mut App) {
         Update,
         (
             on_add_planet,
-            generate_player_lods,
-            flag_for_generation,
-            read_gpu_data.run_if(resource_exists::<ChunkGenerationTimer>),
-            send_chunks_to_gpu,
-            generate_chunks_from_gpu_data,
-            on_change_being_generated,
+            (
+                generate_player_lods,
+                flag_for_generation,
+                read_gpu_data.run_if(resource_exists::<ChunkGenerationTimer>),
+                send_chunks_to_gpu,
+                generate_chunks_from_gpu_data,
+                on_change_being_generated,
+            )
+                .run_if(resource_exists::<AppComputeWorker<BiosphereShaderWorker>>)
+                .chain(),
         )
             .before(BevyEasyComputeSet::ExtractPipelines)
             .in_set(NetworkingSystemsSet::Between)

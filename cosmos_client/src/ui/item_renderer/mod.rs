@@ -5,6 +5,7 @@ use cosmos_core::{
     ecs::NeedsDespawned,
     item::Item,
     registry::{identifiable::Identifiable, Registry},
+    state::GameState,
 };
 use photo_booth::RenderedItemAtlas;
 
@@ -174,7 +175,8 @@ pub(super) fn register(app: &mut App) {
             Update,
             (render_items, render_tooltips, reposition_tooltips)
                 .chain()
-                .in_set(RenderItemSystemSet::RenderItems),
+                .in_set(RenderItemSystemSet::RenderItems)
+                .run_if(in_state(GameState::Playing).or(in_state(GameState::LoadingWorld))),
         );
 
     app.register_type::<RenderItem>();

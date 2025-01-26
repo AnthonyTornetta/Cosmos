@@ -5,13 +5,14 @@ use bevy::{
         system::SystemParam,
     },
     log::{error, warn},
-    prelude::{resource_exists, Event, EventReader, EventWriter, IntoSystemConfigs, Res, ResMut},
+    prelude::{in_state, resource_exists, Condition, Event, EventReader, EventWriter, IntoSystemConfigs, Res, ResMut},
 };
 use renet2::RenetClient;
 
 use crate::{
     netty::{cosmos_encoder, system_sets::NetworkingSystemsSet, NettyChannelClient},
     registry::identifiable::Identifiable,
+    state::GameState,
 };
 use crate::{
     netty::{sync::mapping::NetworkMapping, NettyChannelServer},
@@ -164,7 +165,10 @@ pub(super) fn client_send_event<T: NettyEvent>(app: &mut App) {
 pub(super) fn client_receive_event<T: NettyEvent>(app: &mut App) {
     app.add_systems(
         Update,
-        parse_event::<T>.in_set(NetworkingSystemsSet::ReceiveMessages).after(receive_events),
+        parse_event::<T>
+            .in_set(NetworkingSystemsSet::ReceiveMessages)
+            .after(receive_events)
+            .run_if(in_state(GameState::Playing).or(in_state(GameState::LoadingWorld))),
     )
     .add_event::<T>();
 }

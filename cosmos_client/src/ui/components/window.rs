@@ -16,7 +16,7 @@ use bevy::{
     hierarchy::{BuildChildren, Children},
     image::Image,
     math::{Rect, Vec2},
-    prelude::{ChildBuild, ImageNode, Resource, Text},
+    prelude::{resource_exists, ChildBuild, ImageNode, Resource, Text},
     text::{JustifyText, TextFont, TextLayout},
     transform::components::GlobalTransform,
     ui::{AlignItems, BackgroundColor, ComputedNode, Display, FlexDirection, Interaction, JustifyContent, Node, PositionType, UiRect, Val},
@@ -261,7 +261,9 @@ pub(super) fn register(app: &mut App) {
     app.add_systems(
         Update,
         (
-            add_window.in_set(UiWindowSystemSet::CreateWindow),
+            add_window
+                .in_set(UiWindowSystemSet::CreateWindow)
+                .run_if(resource_exists::<WindowAssets>),
             (move_window, close_event_listener).in_set(UiWindowSystemSet::SendWindowEvents),
         ),
     );

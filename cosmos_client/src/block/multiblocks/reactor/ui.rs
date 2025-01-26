@@ -14,6 +14,7 @@ use cosmos_core::{
     },
     prelude::{Structure, StructureBlock},
     registry::Registry,
+    state::GameState,
 };
 
 use crate::{
@@ -322,6 +323,7 @@ pub(super) fn register(app: &mut App) {
             update_status_bar,
             update_generation_stats,
         )
-            .in_set(NetworkingSystemsSet::Between),
+            .in_set(NetworkingSystemsSet::Between)
+            .run_if(in_state(GameState::Playing)),
     );
 }
