@@ -395,11 +395,11 @@ fn on_piloted_by_ai(
                     ReactorValidity::Valid => {
                         let reactor = create_reactor(&structure, &blocks_registry, &reactor_blocks, bounds, block_here);
 
-                        structure.insert_block_data(block_here, reactor, &mut *bds_params.borrow_mut(), &mut q_block_data, &q_has_data);
+                        structure.insert_block_data(block_here, reactor, &mut bds_params.borrow_mut(), &mut q_block_data, &q_has_data);
                         structure.insert_block_data(
                             block_here,
                             ReactorActive,
-                            &mut *bds_params.borrow_mut(),
+                            &mut bds_params.borrow_mut(),
                             &mut q_block_data,
                             &q_has_active,
                         );

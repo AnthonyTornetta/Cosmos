@@ -254,12 +254,10 @@ fn maintain_active_text(
                     btn.text.as_mut().expect("No text?").0 = "DEACTIVATE".into();
                 }
             }
-        } else {
-            if txt.0 != "IDLE" {
-                txt.0 = "IDLE".into();
-                if let Ok(mut btn) = q_btn.get_single_mut() {
-                    btn.text.as_mut().expect("No text?").0 = "ACTIVATE".into();
-                }
+        } else if txt.0 != "IDLE" {
+            txt.0 = "IDLE".into();
+            if let Ok(mut btn) = q_btn.get_single_mut() {
+                btn.text.as_mut().expect("No text?").0 = "ACTIVATE".into();
             }
         }
     }

@@ -113,7 +113,7 @@ fn generate_power(
                         delta -= over;
                         structure.remove_block_data::<ReactorFuelConsumption>(
                             c,
-                            &mut *bds_params.borrow_mut(),
+                            &mut bds_params.borrow_mut(),
                             &mut q_block_data,
                             &q_has_fuel_cons,
                         );
@@ -130,7 +130,7 @@ fn generate_power(
                         fuel_id: fuel.id(),
                         secs_spent: delta,
                     },
-                    &mut *bds_params.borrow_mut(),
+                    &mut bds_params.borrow_mut(),
                     &mut q_block_data,
                     &q_has_fuel_cons,
                 );
@@ -223,7 +223,7 @@ fn on_modify_reactor(
         });
 
         for controller_block in to_remove {
-            structure.remove_block_data::<Reactor>(controller_block, &mut *bds_params.borrow_mut(), &mut q_block_data, &q_has_reactor);
+            structure.remove_block_data::<Reactor>(controller_block, &mut bds_params.borrow_mut(), &mut q_block_data, &q_has_reactor);
         }
     }
 }

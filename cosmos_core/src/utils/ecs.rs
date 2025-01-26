@@ -54,7 +54,7 @@ impl<'a, T: Component> From<&'a mut T> for MutOrMutRef<'a, T> {
     }
 }
 
-impl<'a, T: Component> Deref for MutOrMutRef<'a, T> {
+impl<T: Component> Deref for MutOrMutRef<'_, T> {
     type Target = T;
 
     fn deref(&self) -> &Self::Target {
@@ -64,7 +64,7 @@ impl<'a, T: Component> Deref for MutOrMutRef<'a, T> {
         }
     }
 }
-impl<'a, T: Component> DerefMut for MutOrMutRef<'a, T> {
+impl<T: Component> DerefMut for MutOrMutRef<'_, T> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         match self {
             Self::Mut(ref mut a) => a.as_mut(),

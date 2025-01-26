@@ -439,7 +439,7 @@ impl Chunk {
         let data_ent = if let Some(data_ent) = self.block_data(coords) {
             let data = create_data_closure(data_ent);
 
-            let Some(mut bd) = q_block_data.get_mut(data_ent).ok().map(|x| MutOrMutRef::from(x)).or_else(|| {
+            let Some(mut bd) = q_block_data.get_mut(data_ent).ok().map(MutOrMutRef::from).or_else(|| {
                 self.block_data_components
                     .iter_mut()
                     .find(|x| x.0 == coords)
@@ -556,7 +556,7 @@ impl Chunk {
     ) -> Option<Entity> {
         let ent = self.block_data(coords)?;
 
-        let Some(mut bd) = q_block_data.get_mut(ent).ok().map(|x| MutOrMutRef::from(x)).or_else(|| {
+        let Some(mut bd) = q_block_data.get_mut(ent).ok().map(MutOrMutRef::from).or_else(|| {
             self.block_data_components
                 .iter_mut()
                 .find(|x| x.0 == coords)

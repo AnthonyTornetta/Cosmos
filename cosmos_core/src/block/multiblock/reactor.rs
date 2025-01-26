@@ -4,29 +4,23 @@ use std::time::Duration;
 
 use bevy::{
     prelude::{
-        in_state, Added, App, Commands, Component, Deref, DerefMut, Entity, Event, EventReader, IntoSystemConfigs, OnEnter, Query, Res,
-        ResMut, States, Update, Without,
+        App, Component, Deref, DerefMut, Event, States,
     },
     reflect::Reflect,
-    time::Time,
 };
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    block::{block_events::BlockEventsSet, Block},
-    events::block_events::BlockChangedEvent,
+    block::Block,
     item::Item,
-    netty::{
-        sync::{
+    netty::sync::{
             events::netty_event::{IdentifiableEvent, NettyEvent, SyncedEventImpl},
             registry::sync_registry,
             sync_component, IdentifiableComponent, SyncableComponent,
         },
-        system_sets::NetworkingSystemsSet,
-    },
     prelude::StructureBlock,
     registry::{create_registry, identifiable::Identifiable, Registry},
-    structure::{coordinates::BlockCoordinate, loading::StructureLoadingSet, systems::StructureSystemsSet},
+    structure::coordinates::BlockCoordinate,
 };
 
 #[derive(Debug, Clone, Copy, Reflect, Serialize, Deserialize, PartialEq, Eq)]
@@ -204,7 +198,7 @@ impl IdentifiableEvent for OpenReactorEvent {
     fn convert_to_client_entity(self, netty: &crate::netty::sync::mapping::NetworkMapping) -> Option<Self> {
         use crate::netty::sync::mapping::Mappable;
 
-        self.0.map_to_client(&netty).ok().map(|x| Self(x))
+        self.0.map_to_client(netty).ok().map(Self)
     }
 }
 
