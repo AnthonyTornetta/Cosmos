@@ -8,7 +8,7 @@ use std::{
 
 use bevy::{
     log::warn,
-    prelude::{App, Commands, Component, DespawnRecursiveExt, Entity, IntoSystemConfigs, Name, Query, ResMut, Update, With, Without},
+    prelude::{App, Commands, Component, DespawnRecursiveExt, Entity, IntoSystemConfigs, Name, Or, Query, ResMut, Update, With, Without},
     state::condition::in_state,
     tasks::{AsyncComputeTaskPool, Task},
     time::common_conditions::on_timer,
@@ -27,8 +27,8 @@ use walkdir::WalkDir;
 use super::{loading::NeedsLoaded, saving::NeedsSaved, EntityId, SaveFileIdentifier, SectorsCache};
 
 fn unload_far(
-    query: Query<&Location, (Without<NeedsDespawned>, With<Anchor>)>,
-    others: Query<(&Location, Entity, &LoadingDistance), (Without<Anchor>, Without<NeedsDespawned>)>,
+    query: Query<&Location, (Without<NeedsDespawned>, Or<(With<Player>, With<Anchor>)>)>,
+    others: Query<(&Location, Entity, &LoadingDistance), (Without<Anchor>, Without<Anchor>, Without<NeedsDespawned>)>,
     mut commands: Commands,
 ) {
     for (loc, ent, ul_distance) in others.iter() {
