@@ -18,7 +18,11 @@ use crate::{
     structure::ship::ui::system_selection::SystemSelectionSet,
 };
 
-use super::{components::show_cursor::no_open_menus, font::DefaultFont, item_renderer::RenderItem};
+use super::{
+    components::show_cursor::no_open_menus,
+    font::DefaultFont,
+    item_renderer::{NoHoverTooltip, RenderItem},
+};
 
 const ITEM_NAME_FADE_DURATION_SEC: f32 = 5.0;
 
@@ -380,9 +384,12 @@ fn populate_hotbar(
             .map(|x| x.item_id != item_stack.item_id())
             .unwrap_or(true)
         {
-            commands.entity(item_entity).insert((RenderItem {
-                item_id: item_stack.item_id(),
-            },));
+            commands.entity(item_entity).insert((
+                NoHoverTooltip,
+                RenderItem {
+                    item_id: item_stack.item_id(),
+                },
+            ));
         }
     }
 }

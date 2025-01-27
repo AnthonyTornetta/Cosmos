@@ -67,11 +67,11 @@ See [the issues page](https://github.com/AnthonyTornetta/Cosmos/issues) for the 
 - [ ] More pirate ships
 - [ ] More asteroid types
 - [ ] More station types
-- [ ] Fuel for reactor
+- [x] Fuel for reactor
 - [ ] Performance fixes
 - [ ] Fix server instability
 - [ ] Reduce amount of packets server sends per second
-- [ ] Rebalance shop prices
+- [x] Rebalance shop prices
 - [ ] Add ability for player to die
   - [ ] Respawn anchor
 
