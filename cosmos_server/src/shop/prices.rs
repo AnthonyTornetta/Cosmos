@@ -9,7 +9,6 @@ use bevy::{
     state::state::OnEnter,
 };
 use cosmos_core::{
-    block::blocks::COLORS,
     crafting::recipes::{basic_fabricator::BasicFabricatorRecipes, RecipeItem},
     item::Item,
     registry::Registry,
@@ -40,16 +39,6 @@ enum PrettyShopEntry {
     },
 }
 
-macro_rules! p {
-    ($name: literal, $price: literal) => {
-        PrettyShopEntry::Selling {
-            item_id: format!("cosmos:{}", $name),
-            max_quantity_selling: 10_000,
-            price_per: $price,
-        }
-    };
-}
-
 fn compute_price(base: &[(u16, u32)], item: u16, items: &Registry<Item>, fab_recipes: &BasicFabricatorRecipes) -> Option<u32> {
     if let Some((_, price)) = base.iter().find(|x| x.0 == item) {
         return Some(*price);
@@ -69,8 +58,6 @@ fn compute_price(base: &[(u16, u32)], item: u16, items: &Registry<Item>, fab_rec
 }
 
 fn create_default_shop_entires(mut commands: Commands, items: Res<Registry<Item>>, fab_recipes: Res<BasicFabricatorRecipes>) {
-    use PrettyShopEntry::Selling as S;
-
     let price = |id: &str, price: u32| -> Option<(u16, u32)> { items.from_id(&format!("cosmos:{}", id)).map(|x| (x.id(), price)) };
 
     let base_prices = [
