@@ -19,7 +19,7 @@ pub const AIR_BLOCK_ID: u16 = 0;
 
 /// When creating a block with color variations, it should be these specific colors. The id should
 /// be `block_name_{color}`.
-pub const COLORS: [&'static str; 17] = [
+pub const COLORS: [&str; 17] = [
     "red",
     "orange",
     "yellow",

@@ -39,7 +39,7 @@ enum PrettyShopEntry {
     },
 }
 
-fn compute_price(base: &[(u16, u32)], item: u16, items: &Registry<Item>, fab_recipes: &BasicFabricatorRecipes) -> Option<u32> {
+fn compute_price(base: &[(u16, u32)], item: u16, fab_recipes: &BasicFabricatorRecipes) -> Option<u32> {
     if let Some((_, price)) = base.iter().find(|x| x.0 == item) {
         return Some(*price);
     }
@@ -47,7 +47,7 @@ fn compute_price(base: &[(u16, u32)], item: u16, items: &Registry<Item>, fab_rec
     let recipe = fab_recipes.iter().find(|r| r.output.item == item)?;
 
     let result = recipe.inputs.iter().map(|i| match i.item {
-        RecipeItem::Item(id) => compute_price(base, id, items, fab_recipes).map(|x| x * i.quantity as u32),
+        RecipeItem::Item(id) => compute_price(base, id, fab_recipes).map(|x| x * i.quantity as u32),
     });
 
     if result.clone().any(|x| x.is_none()) {
@@ -139,7 +139,7 @@ fn create_default_shop_entires(mut commands: Commands, items: Res<Registry<Item>
     // ];
     let entries = items
         .iter()
-        .flat_map(|item| compute_price(&base_prices, item.id(), &items, &fab_recipes).map(|p| (item.id(), p)))
+        .flat_map(|item| compute_price(&base_prices, item.id(), &fab_recipes).map(|p| (item.id(), p)))
         .map(|(item, price)| {
             let item = items.from_numeric_id(item);
             PrettyShopEntry::Selling {
