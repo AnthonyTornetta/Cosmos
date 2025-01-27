@@ -256,7 +256,7 @@ fn process_activate_reactor(
 
 fn register_reactor_fuel(mut reg: ResMut<Registry<ReactorFuel>>, items: Res<Registry<Item>>) {
     if let Some(uranium_fuel_cell) = items.from_id("cosmos:uranium_fuel_cell") {
-        reg.register(ReactorFuel::new(uranium_fuel_cell, 1.0, Duration::from_secs(5)));
+        reg.register(ReactorFuel::new(uranium_fuel_cell, 1.0, Duration::from_mins(5)));
     }
 }
 

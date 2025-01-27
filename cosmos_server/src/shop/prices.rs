@@ -8,7 +8,13 @@ use bevy::{
     prelude::{Commands, Resource},
     state::state::OnEnter,
 };
-use cosmos_core::{item::Item, registry::Registry, state::GameState};
+use cosmos_core::{
+    block::blocks::COLORS,
+    crafting::recipes::{basic_fabricator::BasicFabricatorRecipes, RecipeItem},
+    item::Item,
+    registry::Registry,
+    state::GameState,
+};
 use cosmos_core::{registry::identifiable::Identifiable, shop::ShopEntry};
 use serde::{Deserialize, Serialize};
 
@@ -34,339 +40,124 @@ enum PrettyShopEntry {
     },
 }
 
-fn create_default_shop_entires(mut commands: Commands, items: Res<Registry<Item>>) {
-    let entries = vec![
-        PrettyShopEntry::Selling {
-            item_id: "cosmos:grass".into(),
-            max_quantity_selling: 10_000,
-            price_per: 30,
-        },
-        PrettyShopEntry::Selling {
-            item_id: "cosmos:stone".into(),
-            max_quantity_selling: 10_000,
-            price_per: 10,
-        },
-        PrettyShopEntry::Selling {
-            item_id: "cosmos:dirt".into(),
-            max_quantity_selling: 10_000,
-            price_per: 10,
-        },
-        PrettyShopEntry::Selling {
-            item_id: "cosmos:laser_cannon".into(),
-            max_quantity_selling: 10_000,
-            price_per: 300,
-        },
-        PrettyShopEntry::Selling {
-            item_id: "cosmos:cherry_leaf".into(),
-            max_quantity_selling: 10_000,
-            price_per: 20,
-        },
-        PrettyShopEntry::Selling {
-            item_id: "cosmos:redwood_log".into(),
-            max_quantity_selling: 10_000,
-            price_per: 30,
-        },
-        PrettyShopEntry::Selling {
-            item_id: "cosmos:redwood_leaf".into(),
-            max_quantity_selling: 10_000,
-            price_per: 20,
-        },
-        PrettyShopEntry::Selling {
-            item_id: "cosmos:ship_core".into(),
-            max_quantity_selling: 10_000,
-            price_per: 1000,
-        },
-        PrettyShopEntry::Selling {
-            item_id: "cosmos:energy_cell".into(),
-            max_quantity_selling: 10_000,
-            price_per: 300,
-        },
-        PrettyShopEntry::Selling {
-            item_id: "cosmos:passive_generator".into(),
-            max_quantity_selling: 10_000,
-            price_per: 300,
-        },
-        PrettyShopEntry::Selling {
-            item_id: "cosmos:thruster".into(),
-            max_quantity_selling: 10_000,
-            price_per: 200,
-        },
-        PrettyShopEntry::Selling {
-            item_id: "cosmos:light".into(),
-            max_quantity_selling: 10_000,
-            price_per: 50,
-        },
-        PrettyShopEntry::Selling {
-            item_id: "cosmos:glass".into(),
-            max_quantity_selling: 10_000,
-            price_per: 40,
-        },
-        PrettyShopEntry::Selling {
-            item_id: "cosmos:molten_stone".into(),
-            max_quantity_selling: 10_000,
-            price_per: 10,
-        },
-        PrettyShopEntry::Selling {
-            item_id: "cosmos:lava".into(),
-            max_quantity_selling: 10_000,
-            price_per: 10,
-        },
-        PrettyShopEntry::Selling {
-            item_id: "cosmos:ice".into(),
-            max_quantity_selling: 10_000,
-            price_per: 30,
-        },
-        PrettyShopEntry::Selling {
-            item_id: "cosmos:water".into(),
-            max_quantity_selling: 10_000,
-            price_per: 30,
-        },
-        PrettyShopEntry::Selling {
-            item_id: "cosmos:sand".into(),
-            max_quantity_selling: 10_000,
-            price_per: 30,
-        },
-        PrettyShopEntry::Selling {
-            item_id: "cosmos:cactus".into(),
-            max_quantity_selling: 10_000,
-            price_per: 50,
-        },
-        PrettyShopEntry::Selling {
-            item_id: "cosmos:build_block".into(),
-            max_quantity_selling: 10_000,
-            price_per: 40,
-        },
-        PrettyShopEntry::Selling {
-            item_id: "cosmos:ship_hull_grey".into(),
-            max_quantity_selling: 10_000,
-            price_per: 40,
-        },
-        PrettyShopEntry::Selling {
-            item_id: "cosmos:ship_hull_black".into(),
-            max_quantity_selling: 10_000,
-            price_per: 40,
-        },
-        PrettyShopEntry::Selling {
-            item_id: "cosmos:ship_hull_dark_grey".into(),
-            max_quantity_selling: 10_000,
-            price_per: 40,
-        },
-        PrettyShopEntry::Selling {
-            item_id: "cosmos:ship_hull_white".into(),
-            max_quantity_selling: 10_000,
-            price_per: 40,
-        },
-        PrettyShopEntry::Selling {
-            item_id: "cosmos:ship_hull_blue".into(),
-            max_quantity_selling: 10_000,
-            price_per: 40,
-        },
-        PrettyShopEntry::Selling {
-            item_id: "cosmos:ship_hull_dark_blue".into(),
-            max_quantity_selling: 10_000,
-            price_per: 40,
-        },
-        PrettyShopEntry::Selling {
-            item_id: "cosmos:ship_hull_brown".into(),
-            max_quantity_selling: 10_000,
-            price_per: 40,
-        },
-        PrettyShopEntry::Selling {
-            item_id: "cosmos:ship_hull_green".into(),
-            max_quantity_selling: 10_000,
-            price_per: 40,
-        },
-        PrettyShopEntry::Selling {
-            item_id: "cosmos:ship_hull_dark_green".into(),
-            max_quantity_selling: 10_000,
-            price_per: 40,
-        },
-        PrettyShopEntry::Selling {
-            item_id: "cosmos:ship_hull_orange".into(),
-            max_quantity_selling: 10_000,
-            price_per: 40,
-        },
-        PrettyShopEntry::Selling {
-            item_id: "cosmos:ship_hull_dark_orange".into(),
-            max_quantity_selling: 10_000,
-            price_per: 40,
-        },
-        PrettyShopEntry::Selling {
-            item_id: "cosmos:ship_hull_pink".into(),
-            max_quantity_selling: 10_000,
-            price_per: 40,
-        },
-        PrettyShopEntry::Selling {
-            item_id: "cosmos:ship_hull_dark_pink".into(),
-            max_quantity_selling: 10_000,
-            price_per: 40,
-        },
-        PrettyShopEntry::Selling {
-            item_id: "cosmos:ship_hull_purple".into(),
-            max_quantity_selling: 10_000,
-            price_per: 40,
-        },
-        PrettyShopEntry::Selling {
-            item_id: "cosmos:ship_hull_dark_purple".into(),
-            max_quantity_selling: 10_000,
-            price_per: 40,
-        },
-        PrettyShopEntry::Selling {
-            item_id: "cosmos:ship_hull_red".into(),
-            max_quantity_selling: 10_000,
-            price_per: 40,
-        },
-        PrettyShopEntry::Selling {
-            item_id: "cosmos:ship_hull_dark_red".into(),
-            max_quantity_selling: 10_000,
-            price_per: 40,
-        },
-        PrettyShopEntry::Selling {
-            item_id: "cosmos:ship_hull_yellow".into(),
-            max_quantity_selling: 10_000,
-            price_per: 40,
-        },
-        PrettyShopEntry::Selling {
-            item_id: "cosmos:ship_hull_dark_yellow".into(),
-            max_quantity_selling: 10_000,
-            price_per: 40,
-        },
-        PrettyShopEntry::Selling {
-            item_id: "cosmos:ship_hull_mint".into(),
-            max_quantity_selling: 10_000,
-            price_per: 40,
-        },
-        PrettyShopEntry::Selling {
-            item_id: "cosmos:glass_white".into(),
-            max_quantity_selling: 10_000,
-            price_per: 40,
-        },
-        PrettyShopEntry::Selling {
-            item_id: "cosmos:glass_blue".into(),
-            max_quantity_selling: 10_000,
-            price_per: 40,
-        },
-        PrettyShopEntry::Selling {
-            item_id: "cosmos:glass_dark_blue".into(),
-            max_quantity_selling: 10_000,
-            price_per: 40,
-        },
-        PrettyShopEntry::Selling {
-            item_id: "cosmos:glass_brown".into(),
-            max_quantity_selling: 10_000,
-            price_per: 40,
-        },
-        PrettyShopEntry::Selling {
-            item_id: "cosmos:glass_green".into(),
-            max_quantity_selling: 10_000,
-            price_per: 40,
-        },
-        PrettyShopEntry::Selling {
-            item_id: "cosmos:glass_dark_green".into(),
-            max_quantity_selling: 10_000,
-            price_per: 40,
-        },
-        PrettyShopEntry::Selling {
-            item_id: "cosmos:glass_orange".into(),
-            max_quantity_selling: 10_000,
-            price_per: 40,
-        },
-        PrettyShopEntry::Selling {
-            item_id: "cosmos:glass_dark_orange".into(),
-            max_quantity_selling: 10_000,
-            price_per: 40,
-        },
-        PrettyShopEntry::Selling {
-            item_id: "cosmos:glass_pink".into(),
-            max_quantity_selling: 10_000,
-            price_per: 40,
-        },
-        PrettyShopEntry::Selling {
-            item_id: "cosmos:glass_dark_pink".into(),
-            max_quantity_selling: 10_000,
-            price_per: 40,
-        },
-        PrettyShopEntry::Selling {
-            item_id: "cosmos:glass_purple".into(),
-            max_quantity_selling: 10_000,
-            price_per: 40,
-        },
-        PrettyShopEntry::Selling {
-            item_id: "cosmos:glass_dark_purple".into(),
-            max_quantity_selling: 10_000,
-            price_per: 40,
-        },
-        PrettyShopEntry::Selling {
-            item_id: "cosmos:glass_red".into(),
-            max_quantity_selling: 10_000,
-            price_per: 40,
-        },
-        PrettyShopEntry::Selling {
-            item_id: "cosmos:glass_dark_red".into(),
-            max_quantity_selling: 10_000,
-            price_per: 40,
-        },
-        PrettyShopEntry::Selling {
-            item_id: "cosmos:glass_yellow".into(),
-            max_quantity_selling: 10_000,
-            price_per: 40,
-        },
-        PrettyShopEntry::Selling {
-            item_id: "cosmos:glass_dark_yellow".into(),
-            max_quantity_selling: 10_000,
-            price_per: 40,
-        },
-        PrettyShopEntry::Selling {
-            item_id: "cosmos:glass_mint".into(),
-            max_quantity_selling: 10_000,
-            price_per: 40,
-        },
-        PrettyShopEntry::Selling {
-            item_id: "cosmos:reactor_controller".into(),
-            max_quantity_selling: 10_000,
-            price_per: 1000,
-        },
-        PrettyShopEntry::Selling {
-            item_id: "cosmos:reactor_casing".into(),
-            max_quantity_selling: 10_000,
-            price_per: 100,
-        },
-        PrettyShopEntry::Selling {
-            item_id: "cosmos:reactor_window".into(),
-            max_quantity_selling: 10_000,
-            price_per: 100,
-        },
-        PrettyShopEntry::Selling {
-            item_id: "cosmos:reactor_cell".into(),
-            max_quantity_selling: 10_000,
-            price_per: 200,
-        },
-        PrettyShopEntry::Selling {
-            item_id: "cosmos:fan".into(),
-            max_quantity_selling: 10_000,
-            price_per: 10,
-        },
-        PrettyShopEntry::Selling {
-            item_id: "cosmos:storage".into(),
-            max_quantity_selling: 10_000,
-            price_per: 100,
-        },
-        PrettyShopEntry::Selling {
-            item_id: "cosmos:station_core".into(),
-            max_quantity_selling: 10_000,
-            price_per: 25_000,
-        },
-        PrettyShopEntry::Selling {
-            item_id: "cosmos:photonium_crystal_ore".into(),
-            max_quantity_selling: 10_000,
-            price_per: 200,
-        },
-        PrettyShopEntry::Selling {
-            item_id: "cosmos:plasma_drill".into(),
-            max_quantity_selling: 10_000,
-            price_per: 200,
-        },
+macro_rules! p {
+    ($name: literal, $price: literal) => {
+        PrettyShopEntry::Selling {
+            item_id: format!("cosmos:{}", $name),
+            max_quantity_selling: 10_000,
+            price_per: $price,
+        }
+    };
+}
+
+fn compute_price(base: &[(u16, u32)], item: u16, items: &Registry<Item>, fab_recipes: &BasicFabricatorRecipes) -> Option<u32> {
+    if let Some((_, price)) = base.iter().find(|x| x.0 == item) {
+        return Some(*price);
+    }
+
+    let recipe = fab_recipes.iter().find(|r| r.output.item == item)?;
+
+    let result = recipe.inputs.iter().map(|i| match i.item {
+        RecipeItem::Item(id) => compute_price(base, id, items, fab_recipes),
+    });
+
+    if result.clone().any(|x| x.is_none()) {
+        return None;
+    }
+
+    Some(result.flatten().sum())
+}
+
+fn create_default_shop_entires(mut commands: Commands, items: Res<Registry<Item>>, fab_recipes: Res<BasicFabricatorRecipes>) {
+    use PrettyShopEntry::Selling as S;
+
+    let price = |id: &str, price: u32| -> Option<(u16, u32)> { items.from_id(&format!("cosmos:{}", id)).map(|x| (x.id(), price)) };
+
+    let base_prices = [
+        price("iron_bar", 10),
+        price("copper_bar", 10),
+        price("lead_bar", 100),
+        price("uranium", 100),
+        price("sulfur", 20),
+        price("gravitron_crystal", 700),
+        price("energite_crystal", 600),
+        price("photonium_crystal", 200),
+        price("grass", 20),
+        price("dirt", 10),
+        price("cherry_leaf", 50),
+        price("cherry_log", 100),
+        price("redwood_log", 40),
+        price("redwood_leaf", 30),
+        price("molten_rock", 20),
+        price("sand", 10),
+        price("cactus", 20),
     ];
+
+    /*
+        *        COLORS.map(|c| PrettyShopEntry::Selling {
+                item_id: format!("cosmos:glass_{c}"),
+                max_quantity_selling: 10_000,
+                price_per: $price,
+            }).flatten(),
+    */
+    // let entries = fab_recipes.iter().map(|recipe| {
+    //     recipe.inputs.iter().map(|x| match x.item {RecipeItem::Item(id) => {
+    //         items.from_id()
+    //     }})
+    // })
+    // let mut entries = vec![
+    //     p!("iron_bar", 10),
+    //     p!("copper_bar", 5),
+    //     p!("lead_bar", 100),
+    //     p!("uranium", 300),
+    //     p!("sulfur", 40),
+    //     p!("gravitron_crystal", 1000),
+    //     p!("energite_crystal", 600),
+    //     p!("photonium_crystal", 300),
+    //     p!("uranium_fuel_cell", 3200),
+    //     p!("missile", 100),
+    //     p!("camera", 50),
+    //     p!("gravity_well", 1200),
+    //     p!("ramp", 10),
+    //     p!("ship_hull_grey", 10),
+    //     p!("grass", 20),
+    //     p!("stone", 10),
+    //     p!("dirt", 10),
+    //     p!("cherry_leaf", 50),
+    //     p!("cherry_log", 100),
+    //     p!("redwood_log", 100),
+    //     p!("redwood_leaf", 10),
+    //     p!("ship_core", 2000),
+    //     p!("energy_cell", 1000),
+    //     p!("passive_generator", 1000),
+    //     p!("laser_cannon", 1500),
+    //     p!("thruster", 400),
+    //     p!("light", 100),
+    //     p!("glass", 20),
+    //     p!("ice", 20),
+    //     p!("molten_rock", 10),
+    //     p!("sand", 10),
+    //     p!("cactus", 30),
+    //     p!("build_block", 1200),
+    //     p!("reactor_controller", 3000),
+    //     p!("reactor_casing", 600),
+    //     p!("reactor_window", 600),
+    //     p!("reactor_power_cell", 1500),
+    //     p!("storage", 50),
+    //     p!("station_core", 8000),
+    //     p!("plasma_drill", 500),
+    // ];
+    let mut entries = vec![];
+    entries.append(
+        &mut COLORS
+            .map(|c| PrettyShopEntry::Selling {
+                item_id: format!("cosmos:glass_{c}"),
+                max_quantity_selling: 10_000,
+                price_per: 20,
+            })
+            .into_iter()
+            .collect::<Vec<_>>(),
+    );
 
     let new_entries = entries
         .into_iter()
