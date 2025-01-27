@@ -47,7 +47,7 @@ fn compute_price(base: &[(u16, u32)], item: u16, items: &Registry<Item>, fab_rec
     let recipe = fab_recipes.iter().find(|r| r.output.item == item)?;
 
     let result = recipe.inputs.iter().map(|i| match i.item {
-        RecipeItem::Item(id) => compute_price(base, id, items, fab_recipes),
+        RecipeItem::Item(id) => compute_price(base, id, items, fab_recipes).map(|x| x * i.quantity as u32),
     });
 
     if result.clone().any(|x| x.is_none()) {

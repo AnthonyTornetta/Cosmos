@@ -24,6 +24,7 @@ use bevy::{
     },
     log::{info, warn},
     prelude::{ChildBuild, Deref, Text, TextUiWriter},
+    reflect::Reflect,
     text::{LineBreak, TextColor, TextFont, TextLayout, TextSpan},
     time::Time,
     ui::{AlignSelf, FocusPolicy, Interaction, Node},
@@ -34,7 +35,7 @@ use crate::ui::UiSystemSet;
 #[derive(Resource, Default)]
 struct CursorFlashTime(f32);
 
-#[derive(Deref, Component, Debug, Default)]
+#[derive(Deref, Component, Debug, Default, Reflect)]
 /// Holds the value input by the user in this text field.
 ///
 /// This is guarenteed at all times to only contain values that meet the criteria
@@ -65,7 +66,7 @@ impl InputValue {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Reflect)]
 /// Used to validate user input for a given TextInput field.
 pub enum InputType {
     /// Input can by anything, with an optional maximum length.
@@ -87,11 +88,11 @@ pub enum InputType {
         /// Maximum value
         max: f64,
     },
-    /// Input only valid if the given callback returns true for that input
-    Custom(fn(&str) -> bool),
+    // /// Input only valid if the given callback returns true for that input
+    // Custom(fn(&str) -> bool),
 }
 
-#[derive(Component, Debug)]
+#[derive(Component, Debug, Reflect)]
 #[require(InputValue, Node, TextFont, TextColor)]
 /// A text box the user can type in
 pub struct TextInput {
@@ -525,7 +526,7 @@ fn verify_input(text_input: &TextInput, test_value: &str) -> bool {
         InputType::Text { max_length } => max_length.map(|max_len| test_value.len() <= max_len).unwrap_or(true),
         InputType::Integer { min, max } => test_value == "-" || test_value.parse::<i64>().map(|x| x >= min && x <= max).unwrap_or(false),
         InputType::Decimal { min, max } => test_value == "-" || test_value.parse::<f64>().map(|x| x >= min && x <= max).unwrap_or(false),
-        InputType::Custom(check) => check(test_value),
+        // InputType::Custom(check) => check(test_value),
     }
 }
 
@@ -574,5 +575,7 @@ pub(super) fn register(app: &mut App) {
             value_changed.in_set(TextInputUiSystemSet::ValueChanged),
         ),
     )
+    .register_type::<TextInput>()
+    .register_type::<InputValue>()
     .init_resource::<CursorFlashTime>();
 }

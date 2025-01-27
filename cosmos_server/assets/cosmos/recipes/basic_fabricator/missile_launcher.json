@@ -1,13 +1,13 @@
 {
   "inputs": [
     {
-      "quantity": 5,
+      "quantity": 15,
       "item": {
         "Item": "cosmos:iron_bar"
       }
     },
     {
-      "quantity": 3,
+      "quantity": 10,
       "item": {
         "Item": "cosmos:copper_bar"
       }
