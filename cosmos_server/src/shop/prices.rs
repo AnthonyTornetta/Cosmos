@@ -91,7 +91,10 @@ fn create_default_shop_entires(mut commands: Commands, items: Res<Registry<Item>
         price("molten_rock", 20),
         price("sand", 10),
         price("cactus", 20),
-    ];
+    ]
+    .into_iter()
+    .flatten()
+    .collect::<Vec<_>>();
 
     /*
         *        COLORS.map(|c| PrettyShopEntry::Selling {
@@ -147,17 +150,28 @@ fn create_default_shop_entires(mut commands: Commands, items: Res<Registry<Item>
     //     p!("station_core", 8000),
     //     p!("plasma_drill", 500),
     // ];
-    let mut entries = vec![];
-    entries.append(
-        &mut COLORS
-            .map(|c| PrettyShopEntry::Selling {
-                item_id: format!("cosmos:glass_{c}"),
+    let entries = items
+        .iter()
+        .flat_map(|item| compute_price(&base_prices, item.id(), &items, &fab_recipes).map(|p| (item.id(), p)))
+        .map(|(item, price)| {
+            let item = items.from_numeric_id(item);
+            PrettyShopEntry::Selling {
+                item_id: item.unlocalized_name().into(),
                 max_quantity_selling: 10_000,
-                price_per: 20,
-            })
-            .into_iter()
-            .collect::<Vec<_>>(),
-    );
+                price_per: price,
+            }
+        })
+        .collect::<Vec<_>>();
+    // entries.append(
+    //     &mut COLORS
+    //         .map(|c| PrettyShopEntry::Selling {
+    //             item_id: format!("cosmos:glass_{c}"),
+    //             max_quantity_selling: 10_000,
+    //             price_per: 20,
+    //         })
+    //         .into_iter()
+    //         .collect::<Vec<_>>(),
+    // );
 
     let new_entries = entries
         .into_iter()
