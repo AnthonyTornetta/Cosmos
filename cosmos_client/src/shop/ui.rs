@@ -929,30 +929,30 @@ fn update_search(
             let search = search_item_query.0.to_lowercase();
 
             for shop_entry in shop_ui.shop.contents.iter() {
-                let (item_id, max_quantity_selling) = match *shop_mode {
+                let (item_id, price_per) = match *shop_mode {
                     ShopMode::Buy => {
                         let ShopEntry::Selling {
                             item_id,
-                            max_quantity_selling,
-                            price_per: _,
+                            max_quantity_selling: _,
+                            price_per,
                         } = shop_entry
                         else {
                             continue;
                         };
 
-                        (*item_id, Some(*max_quantity_selling))
+                        (*item_id, *price_per)
                     }
                     ShopMode::Sell => {
                         let ShopEntry::Buying {
                             item_id,
-                            max_quantity_buying,
-                            price_per: _,
+                            max_quantity_buying: _,
+                            price_per,
                         } = shop_entry
                         else {
                             continue;
                         };
 
-                        (*item_id, *max_quantity_buying)
+                        (*item_id, *price_per)
                     }
                 };
 
@@ -963,11 +963,7 @@ fn update_search(
                     continue;
                 }
 
-                let amount_display = if let Some(max_quantity_selling) = max_quantity_selling {
-                    format!("{max_quantity_selling}")
-                } else {
-                    "Unlimited".into()
-                };
+                let amount_display = format!("${price_per}");
 
                 p.spawn((
                     Name::new(display_name.to_owned()),
@@ -991,7 +987,7 @@ fn update_search(
                         },
                     ));
                     p.spawn((
-                        Name::new("Quantity"),
+                        Name::new("Price"),
                         Text::new(format!("({amount_display})")),
                         text_style_small.clone(),
                     ));
