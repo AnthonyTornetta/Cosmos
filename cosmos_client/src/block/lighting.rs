@@ -1,13 +1,16 @@
 //! Handles all the blocks with lighting in the game
 
 use bevy::{
-    color::Srgba,
+    color::{palettes::css, Srgba},
     log::warn,
     prelude::{App, Color, OnExit, Res, ResMut},
     reflect::Reflect,
 };
 use cosmos_core::{
-    block::Block,
+    block::{
+        blocks::{COLORS, COLOR_VALUES},
+        Block,
+    },
     registry::{self, identifiable::Identifiable, Registry},
     state::GameState,
 };
@@ -65,17 +68,23 @@ fn register_light(lighting: BlockLightProperties, registry: &mut Registry<BlockL
 }
 
 fn register_all_lights(blocks: Res<Registry<Block>>, mut registry: ResMut<Registry<BlockLighting>>) {
-    register_light(
-        BlockLightProperties {
-            color: Color::WHITE,
-            intensity: 600_000.0,
-            range: 12.0,
-            ..Default::default()
-        },
-        &mut registry,
-        &blocks,
-        "cosmos:light",
-    );
+    for (&color_name, &color_value) in COLORS.iter().zip(COLOR_VALUES.iter()) {
+        register_light(
+            BlockLightProperties {
+                color: if color_name == "black" {
+                    css::DARK_GRAY.into()
+                } else {
+                    color_value.into()
+                },
+                intensity: 600_000.0,
+                range: 12.0,
+                ..Default::default()
+            },
+            &mut registry,
+            &blocks,
+            &format!("cosmos:light_{color_name}"),
+        );
+    }
 
     register_light(
         BlockLightProperties {
