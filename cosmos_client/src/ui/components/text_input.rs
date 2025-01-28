@@ -511,12 +511,6 @@ fn handle_keyboard_shortcuts(
     if let Some(highlighted) = text_input.highlight_begin {
         if highlighted == text_input.cursor_pos {
             text_input.highlight_begin = None;
-        } else {
-            let start = highlighted.min(text_input.cursor_pos);
-            let end = highlighted.max(text_input.cursor_pos);
-
-            let slice = &value[start..end];
-            // info!("Highlighted: {slice}");
         }
     }
 }

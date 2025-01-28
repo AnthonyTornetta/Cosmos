@@ -253,11 +253,32 @@ fn on_interact_slider(
     }
 }
 
-fn on_change_scrollbar(
-    mut q_scroll_containers: Query<(&mut ScrollBox, &ComputedNode, &ContentsContainer), Changed<ScrollBox>>,
-    mut q_container: Query<(&mut Node, &ComputedNode)>,
+fn cap_scroll_to_parent_height(
+    mut q_scroll_containers: Query<(&mut ScrollBox, &ComputedNode, &ContentsContainer)>,
+    q_container: Query<&ComputedNode>,
 ) {
     for (mut scrollbar, node, contents_container) in q_scroll_containers.iter_mut() {
+        let Ok(contents_node) = q_container.get(contents_container.0) else {
+            error!("This should never happen - contents has no style/node.");
+            continue;
+        };
+
+        let items_height = contents_node.size().y;
+        let container_height = node.size().y;
+
+        let as_px = compute_scroll_px(scrollbar.scroll_amount, items_height, container_height);
+        let max_scroll = (items_height - container_height).max(0.0);
+        if as_px > max_scroll {
+            scrollbar.scroll_amount = Val::Px(max_scroll);
+        }
+    }
+}
+
+fn on_change_scrollbar(
+    q_scroll_containers: Query<(&ScrollBox, &ComputedNode, &ContentsContainer), Changed<ScrollBox>>,
+    mut q_container: Query<(&mut Node, &ComputedNode)>,
+) {
+    for (scrollbar, node, contents_container) in q_scroll_containers.iter() {
         let Ok((mut style, contents_node)) = q_container.get_mut(contents_container.0) else {
             error!("This should never happen - contents has no style/node.");
             continue;
@@ -266,12 +287,7 @@ fn on_change_scrollbar(
         let items_height = contents_node.size().y;
         let container_height = node.size().y;
 
-        let mut as_px = compute_scroll_px(scrollbar.scroll_amount, items_height, container_height);
-        let max_scroll = (items_height - container_height).max(0.0);
-        if as_px.abs() > max_scroll {
-            scrollbar.scroll_amount = Val::Px(max_scroll);
-            as_px = -max_scroll;
-        }
+        let as_px = compute_scroll_px(scrollbar.scroll_amount, items_height, container_height);
 
         style.top = Val::Px(-as_px);
     }
@@ -339,7 +355,7 @@ pub(super) fn register(app: &mut App) {
         (
             on_add_scrollbar.in_set(ScrollBoxUiSystemSet::AddScrollBoxBundle),
             on_interact_slider.in_set(ScrollBoxUiSystemSet::ScrollBoxInteraction),
-            (handle_scrollbar, on_change_scrollbar)
+            (handle_scrollbar, cap_scroll_to_parent_height, on_change_scrollbar)
                 .chain()
                 .in_set(ScrollBoxUiSystemSet::UpdateScrollBoxDisplay),
         ),
