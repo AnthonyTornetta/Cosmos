@@ -23,7 +23,7 @@ use bevy::{
     prelude::{Changed, ChildBuild},
     reflect::Reflect,
     transform::components::GlobalTransform,
-    ui::{BackgroundColor, ComputedNode, FlexDirection, Interaction, Node, Overflow, PositionType, Val},
+    ui::{BackgroundColor, ComputedNode, FlexDirection, Interaction, Node, Overflow, PositionType, UiRect, Val},
     window::{PrimaryWindow, Window},
 };
 
@@ -93,6 +93,7 @@ fn on_add_scrollbar(mut commands: Commands, mut q_added_button: Query<(Entity, &
                     position_type: PositionType::Absolute,
                     flex_direction: FlexDirection::Column,
                     width: Val::Percent(100.0),
+                    padding: UiRect::right(Val::Px(20.0)),
                     min_height: Val::Percent(100.0),
                     ..Default::default()
                 },

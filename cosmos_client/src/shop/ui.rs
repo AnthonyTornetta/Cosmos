@@ -469,12 +469,12 @@ fn render_shop_ui(
                     BackgroundColor(Srgba::hex("1C1C1C").unwrap().into()),
                     Node {
                         flex_direction: FlexDirection::Column,
-                        width: Val::Px(400.0),
+                        width: Val::Px(500.0),
                         border: UiRect {
                             left: Val::Px(4.0),
                             ..Default::default()
                         },
-                        padding: UiRect::all(Val::Px(10.0)),
+                        padding: UiRect::new(Val::Px(10.0), Val::Px(0.0), Val::Px(10.0), Val::Px(10.0)),
                         ..Default::default()
                     },
                 ))
