@@ -1,30 +1,170 @@
 [
   {
     "Selling": {
-      "item_id": "cosmos:grass",
+      "item_id": "cosmos:photonium_crystal",
       "max_quantity_selling": 10000,
-      "price_per": 30
+      "price_per": 200
     }
   },
   {
     "Buying": {
-      "item_id": "cosmos:grass",
+      "item_id": "cosmos:photonium_crystal",
       "max_quantity_buying": null,
-      "price_per": 27
+      "price_per": 180
     }
   },
   {
     "Selling": {
-      "item_id": "cosmos:stone",
+      "item_id": "cosmos:fluid_cell",
+      "max_quantity_selling": 10000,
+      "price_per": 20
+    }
+  },
+  {
+    "Buying": {
+      "item_id": "cosmos:fluid_cell",
+      "max_quantity_buying": null,
+      "price_per": 18
+    }
+  },
+  {
+    "Selling": {
+      "item_id": "cosmos:iron_bar",
       "max_quantity_selling": 10000,
       "price_per": 10
     }
   },
   {
     "Buying": {
-      "item_id": "cosmos:stone",
+      "item_id": "cosmos:iron_bar",
       "max_quantity_buying": null,
       "price_per": 9
+    }
+  },
+  {
+    "Selling": {
+      "item_id": "cosmos:copper_bar",
+      "max_quantity_selling": 10000,
+      "price_per": 10
+    }
+  },
+  {
+    "Buying": {
+      "item_id": "cosmos:copper_bar",
+      "max_quantity_buying": null,
+      "price_per": 9
+    }
+  },
+  {
+    "Selling": {
+      "item_id": "cosmos:lead_bar",
+      "max_quantity_selling": 10000,
+      "price_per": 100
+    }
+  },
+  {
+    "Buying": {
+      "item_id": "cosmos:lead_bar",
+      "max_quantity_buying": null,
+      "price_per": 90
+    }
+  },
+  {
+    "Selling": {
+      "item_id": "cosmos:uranium",
+      "max_quantity_selling": 10000,
+      "price_per": 100
+    }
+  },
+  {
+    "Buying": {
+      "item_id": "cosmos:uranium",
+      "max_quantity_buying": null,
+      "price_per": 90
+    }
+  },
+  {
+    "Selling": {
+      "item_id": "cosmos:sulfur",
+      "max_quantity_selling": 10000,
+      "price_per": 20
+    }
+  },
+  {
+    "Buying": {
+      "item_id": "cosmos:sulfur",
+      "max_quantity_buying": null,
+      "price_per": 18
+    }
+  },
+  {
+    "Selling": {
+      "item_id": "cosmos:gravitron_crystal",
+      "max_quantity_selling": 10000,
+      "price_per": 700
+    }
+  },
+  {
+    "Buying": {
+      "item_id": "cosmos:gravitron_crystal",
+      "max_quantity_buying": null,
+      "price_per": 630
+    }
+  },
+  {
+    "Selling": {
+      "item_id": "cosmos:energite_crystal",
+      "max_quantity_selling": 10000,
+      "price_per": 600
+    }
+  },
+  {
+    "Buying": {
+      "item_id": "cosmos:energite_crystal",
+      "max_quantity_buying": null,
+      "price_per": 540
+    }
+  },
+  {
+    "Selling": {
+      "item_id": "cosmos:uranium_fuel_cell",
+      "max_quantity_selling": 10000,
+      "price_per": 1020
+    }
+  },
+  {
+    "Buying": {
+      "item_id": "cosmos:uranium_fuel_cell",
+      "max_quantity_buying": null,
+      "price_per": 918
+    }
+  },
+  {
+    "Selling": {
+      "item_id": "cosmos:missile",
+      "max_quantity_selling": 10000,
+      "price_per": 120
+    }
+  },
+  {
+    "Buying": {
+      "item_id": "cosmos:missile",
+      "max_quantity_buying": null,
+      "price_per": 108
+    }
+  },
+  {
+    "Selling": {
+      "item_id": "cosmos:grass",
+      "max_quantity_selling": 10000,
+      "price_per": 20
+    }
+  },
+  {
+    "Buying": {
+      "item_id": "cosmos:grass",
+      "max_quantity_buying": null,
+      "price_per": 18
     }
   },
   {
@@ -43,814 +183,254 @@
   },
   {
     "Selling": {
-      "item_id": "cosmos:laser_cannon",
-      "max_quantity_selling": 10000,
-      "price_per": 300
-    }
-  },
-  {
-    "Buying": {
-      "item_id": "cosmos:laser_cannon",
-      "max_quantity_buying": null,
-      "price_per": 270
-    }
-  },
-  {
-    "Selling": {
       "item_id": "cosmos:cherry_leaf",
-      "max_quantity_selling": 10000,
-      "price_per": 20
-    }
-  },
-  {
-    "Buying": {
-      "item_id": "cosmos:cherry_leaf",
-      "max_quantity_buying": null,
-      "price_per": 18
-    }
-  },
-  {
-    "Selling": {
-      "item_id": "cosmos:redwood_log",
-      "max_quantity_selling": 10000,
-      "price_per": 30
-    }
-  },
-  {
-    "Buying": {
-      "item_id": "cosmos:redwood_log",
-      "max_quantity_buying": null,
-      "price_per": 27
-    }
-  },
-  {
-    "Selling": {
-      "item_id": "cosmos:redwood_leaf",
-      "max_quantity_selling": 10000,
-      "price_per": 20
-    }
-  },
-  {
-    "Buying": {
-      "item_id": "cosmos:redwood_leaf",
-      "max_quantity_buying": null,
-      "price_per": 18
-    }
-  },
-  {
-    "Selling": {
-      "item_id": "cosmos:ship_core",
-      "max_quantity_selling": 10000,
-      "price_per": 1000
-    }
-  },
-  {
-    "Buying": {
-      "item_id": "cosmos:ship_core",
-      "max_quantity_buying": null,
-      "price_per": 900
-    }
-  },
-  {
-    "Selling": {
-      "item_id": "cosmos:energy_cell",
-      "max_quantity_selling": 10000,
-      "price_per": 300
-    }
-  },
-  {
-    "Buying": {
-      "item_id": "cosmos:energy_cell",
-      "max_quantity_buying": null,
-      "price_per": 270
-    }
-  },
-  {
-    "Selling": {
-      "item_id": "cosmos:passive_generator",
-      "max_quantity_selling": 10000,
-      "price_per": 300
-    }
-  },
-  {
-    "Buying": {
-      "item_id": "cosmos:passive_generator",
-      "max_quantity_buying": null,
-      "price_per": 270
-    }
-  },
-  {
-    "Selling": {
-      "item_id": "cosmos:thruster",
-      "max_quantity_selling": 10000,
-      "price_per": 200
-    }
-  },
-  {
-    "Buying": {
-      "item_id": "cosmos:thruster",
-      "max_quantity_buying": null,
-      "price_per": 180
-    }
-  },
-  {
-    "Selling": {
-      "item_id": "cosmos:light",
       "max_quantity_selling": 10000,
       "price_per": 50
     }
   },
   {
     "Buying": {
+      "item_id": "cosmos:cherry_leaf",
+      "max_quantity_buying": null,
+      "price_per": 45
+    }
+  },
+  {
+    "Selling": {
+      "item_id": "cosmos:redwood_log",
+      "max_quantity_selling": 10000,
+      "price_per": 40
+    }
+  },
+  {
+    "Buying": {
+      "item_id": "cosmos:redwood_log",
+      "max_quantity_buying": null,
+      "price_per": 36
+    }
+  },
+  {
+    "Selling": {
+      "item_id": "cosmos:redwood_leaf",
+      "max_quantity_selling": 10000,
+      "price_per": 30
+    }
+  },
+  {
+    "Buying": {
+      "item_id": "cosmos:redwood_leaf",
+      "max_quantity_buying": null,
+      "price_per": 27
+    }
+  },
+  {
+    "Selling": {
+      "item_id": "cosmos:ship_core",
+      "max_quantity_selling": 10000,
+      "price_per": 1500
+    }
+  },
+  {
+    "Buying": {
+      "item_id": "cosmos:ship_core",
+      "max_quantity_buying": null,
+      "price_per": 1350
+    }
+  },
+  {
+    "Selling": {
+      "item_id": "cosmos:energy_cell",
+      "max_quantity_selling": 10000,
+      "price_per": 660
+    }
+  },
+  {
+    "Buying": {
+      "item_id": "cosmos:energy_cell",
+      "max_quantity_buying": null,
+      "price_per": 594
+    }
+  },
+  {
+    "Selling": {
+      "item_id": "cosmos:passive_generator",
+      "max_quantity_selling": 10000,
+      "price_per": 660
+    }
+  },
+  {
+    "Buying": {
+      "item_id": "cosmos:passive_generator",
+      "max_quantity_buying": null,
+      "price_per": 594
+    }
+  },
+  {
+    "Selling": {
+      "item_id": "cosmos:laser_cannon",
+      "max_quantity_selling": 10000,
+      "price_per": 830
+    }
+  },
+  {
+    "Buying": {
+      "item_id": "cosmos:laser_cannon",
+      "max_quantity_buying": null,
+      "price_per": 747
+    }
+  },
+  {
+    "Selling": {
+      "item_id": "cosmos:ship_hull_grey",
+      "max_quantity_selling": 10000,
+      "price_per": 10
+    }
+  },
+  {
+    "Buying": {
+      "item_id": "cosmos:ship_hull_grey",
+      "max_quantity_buying": null,
+      "price_per": 9
+    }
+  },
+  {
+    "Selling": {
+      "item_id": "cosmos:thruster",
+      "max_quantity_selling": 10000,
+      "price_per": 210
+    }
+  },
+  {
+    "Buying": {
+      "item_id": "cosmos:thruster",
+      "max_quantity_buying": null,
+      "price_per": 189
+    }
+  },
+  {
+    "Selling": {
+      "item_id": "cosmos:light",
+      "max_quantity_selling": 10000,
+      "price_per": 30
+    }
+  },
+  {
+    "Buying": {
       "item_id": "cosmos:light",
       "max_quantity_buying": null,
-      "price_per": 45
+      "price_per": 27
     }
   },
   {
     "Selling": {
       "item_id": "cosmos:glass",
       "max_quantity_selling": 10000,
-      "price_per": 40
+      "price_per": 20
     }
   },
   {
     "Buying": {
       "item_id": "cosmos:glass",
       "max_quantity_buying": null,
-      "price_per": 36
-    }
-  },
-  {
-    "Selling": {
-      "item_id": "cosmos:molten_stone",
-      "max_quantity_selling": 10000,
-      "price_per": 10
-    }
-  },
-  {
-    "Buying": {
-      "item_id": "cosmos:molten_stone",
-      "max_quantity_buying": null,
-      "price_per": 9
-    }
-  },
-  {
-    "Selling": {
-      "item_id": "cosmos:lava",
-      "max_quantity_selling": 10000,
-      "price_per": 10
-    }
-  },
-  {
-    "Buying": {
-      "item_id": "cosmos:lava",
-      "max_quantity_buying": null,
-      "price_per": 9
-    }
-  },
-  {
-    "Selling": {
-      "item_id": "cosmos:ice",
-      "max_quantity_selling": 10000,
-      "price_per": 30
-    }
-  },
-  {
-    "Buying": {
-      "item_id": "cosmos:ice",
-      "max_quantity_buying": null,
-      "price_per": 27
-    }
-  },
-  {
-    "Selling": {
-      "item_id": "cosmos:water",
-      "max_quantity_selling": 10000,
-      "price_per": 30
-    }
-  },
-  {
-    "Buying": {
-      "item_id": "cosmos:water",
-      "max_quantity_buying": null,
-      "price_per": 27
+      "price_per": 18
     }
   },
   {
     "Selling": {
       "item_id": "cosmos:sand",
       "max_quantity_selling": 10000,
-      "price_per": 30
+      "price_per": 10
     }
   },
   {
     "Buying": {
       "item_id": "cosmos:sand",
       "max_quantity_buying": null,
-      "price_per": 27
+      "price_per": 9
     }
   },
   {
     "Selling": {
       "item_id": "cosmos:cactus",
       "max_quantity_selling": 10000,
-      "price_per": 50
+      "price_per": 20
     }
   },
   {
     "Buying": {
       "item_id": "cosmos:cactus",
       "max_quantity_buying": null,
-      "price_per": 45
+      "price_per": 18
     }
   },
   {
     "Selling": {
       "item_id": "cosmos:build_block",
       "max_quantity_selling": 10000,
-      "price_per": 40
+      "price_per": 1480
     }
   },
   {
     "Buying": {
       "item_id": "cosmos:build_block",
       "max_quantity_buying": null,
-      "price_per": 36
-    }
-  },
-  {
-    "Selling": {
-      "item_id": "cosmos:ship_hull_grey",
-      "max_quantity_selling": 10000,
-      "price_per": 40
-    }
-  },
-  {
-    "Buying": {
-      "item_id": "cosmos:ship_hull_grey",
-      "max_quantity_buying": null,
-      "price_per": 36
-    }
-  },
-  {
-    "Selling": {
-      "item_id": "cosmos:ship_hull_black",
-      "max_quantity_selling": 10000,
-      "price_per": 40
-    }
-  },
-  {
-    "Buying": {
-      "item_id": "cosmos:ship_hull_black",
-      "max_quantity_buying": null,
-      "price_per": 36
-    }
-  },
-  {
-    "Selling": {
-      "item_id": "cosmos:ship_hull_dark_grey",
-      "max_quantity_selling": 10000,
-      "price_per": 40
-    }
-  },
-  {
-    "Buying": {
-      "item_id": "cosmos:ship_hull_dark_grey",
-      "max_quantity_buying": null,
-      "price_per": 36
-    }
-  },
-  {
-    "Selling": {
-      "item_id": "cosmos:ship_hull_white",
-      "max_quantity_selling": 10000,
-      "price_per": 40
-    }
-  },
-  {
-    "Buying": {
-      "item_id": "cosmos:ship_hull_white",
-      "max_quantity_buying": null,
-      "price_per": 36
-    }
-  },
-  {
-    "Selling": {
-      "item_id": "cosmos:ship_hull_blue",
-      "max_quantity_selling": 10000,
-      "price_per": 40
-    }
-  },
-  {
-    "Buying": {
-      "item_id": "cosmos:ship_hull_blue",
-      "max_quantity_buying": null,
-      "price_per": 36
-    }
-  },
-  {
-    "Selling": {
-      "item_id": "cosmos:ship_hull_dark_blue",
-      "max_quantity_selling": 10000,
-      "price_per": 40
-    }
-  },
-  {
-    "Buying": {
-      "item_id": "cosmos:ship_hull_dark_blue",
-      "max_quantity_buying": null,
-      "price_per": 36
-    }
-  },
-  {
-    "Selling": {
-      "item_id": "cosmos:ship_hull_brown",
-      "max_quantity_selling": 10000,
-      "price_per": 40
-    }
-  },
-  {
-    "Buying": {
-      "item_id": "cosmos:ship_hull_brown",
-      "max_quantity_buying": null,
-      "price_per": 36
-    }
-  },
-  {
-    "Selling": {
-      "item_id": "cosmos:ship_hull_green",
-      "max_quantity_selling": 10000,
-      "price_per": 40
-    }
-  },
-  {
-    "Buying": {
-      "item_id": "cosmos:ship_hull_green",
-      "max_quantity_buying": null,
-      "price_per": 36
-    }
-  },
-  {
-    "Selling": {
-      "item_id": "cosmos:ship_hull_dark_green",
-      "max_quantity_selling": 10000,
-      "price_per": 40
-    }
-  },
-  {
-    "Buying": {
-      "item_id": "cosmos:ship_hull_dark_green",
-      "max_quantity_buying": null,
-      "price_per": 36
-    }
-  },
-  {
-    "Selling": {
-      "item_id": "cosmos:ship_hull_orange",
-      "max_quantity_selling": 10000,
-      "price_per": 40
-    }
-  },
-  {
-    "Buying": {
-      "item_id": "cosmos:ship_hull_orange",
-      "max_quantity_buying": null,
-      "price_per": 36
-    }
-  },
-  {
-    "Selling": {
-      "item_id": "cosmos:ship_hull_dark_orange",
-      "max_quantity_selling": 10000,
-      "price_per": 40
-    }
-  },
-  {
-    "Buying": {
-      "item_id": "cosmos:ship_hull_dark_orange",
-      "max_quantity_buying": null,
-      "price_per": 36
-    }
-  },
-  {
-    "Selling": {
-      "item_id": "cosmos:ship_hull_pink",
-      "max_quantity_selling": 10000,
-      "price_per": 40
-    }
-  },
-  {
-    "Buying": {
-      "item_id": "cosmos:ship_hull_pink",
-      "max_quantity_buying": null,
-      "price_per": 36
-    }
-  },
-  {
-    "Selling": {
-      "item_id": "cosmos:ship_hull_dark_pink",
-      "max_quantity_selling": 10000,
-      "price_per": 40
-    }
-  },
-  {
-    "Buying": {
-      "item_id": "cosmos:ship_hull_dark_pink",
-      "max_quantity_buying": null,
-      "price_per": 36
-    }
-  },
-  {
-    "Selling": {
-      "item_id": "cosmos:ship_hull_purple",
-      "max_quantity_selling": 10000,
-      "price_per": 40
-    }
-  },
-  {
-    "Buying": {
-      "item_id": "cosmos:ship_hull_purple",
-      "max_quantity_buying": null,
-      "price_per": 36
-    }
-  },
-  {
-    "Selling": {
-      "item_id": "cosmos:ship_hull_dark_purple",
-      "max_quantity_selling": 10000,
-      "price_per": 40
-    }
-  },
-  {
-    "Buying": {
-      "item_id": "cosmos:ship_hull_dark_purple",
-      "max_quantity_buying": null,
-      "price_per": 36
-    }
-  },
-  {
-    "Selling": {
-      "item_id": "cosmos:ship_hull_red",
-      "max_quantity_selling": 10000,
-      "price_per": 40
-    }
-  },
-  {
-    "Buying": {
-      "item_id": "cosmos:ship_hull_red",
-      "max_quantity_buying": null,
-      "price_per": 36
-    }
-  },
-  {
-    "Selling": {
-      "item_id": "cosmos:ship_hull_dark_red",
-      "max_quantity_selling": 10000,
-      "price_per": 40
-    }
-  },
-  {
-    "Buying": {
-      "item_id": "cosmos:ship_hull_dark_red",
-      "max_quantity_buying": null,
-      "price_per": 36
-    }
-  },
-  {
-    "Selling": {
-      "item_id": "cosmos:ship_hull_yellow",
-      "max_quantity_selling": 10000,
-      "price_per": 40
-    }
-  },
-  {
-    "Buying": {
-      "item_id": "cosmos:ship_hull_yellow",
-      "max_quantity_buying": null,
-      "price_per": 36
-    }
-  },
-  {
-    "Selling": {
-      "item_id": "cosmos:ship_hull_dark_yellow",
-      "max_quantity_selling": 10000,
-      "price_per": 40
-    }
-  },
-  {
-    "Buying": {
-      "item_id": "cosmos:ship_hull_dark_yellow",
-      "max_quantity_buying": null,
-      "price_per": 36
-    }
-  },
-  {
-    "Selling": {
-      "item_id": "cosmos:ship_hull_mint",
-      "max_quantity_selling": 10000,
-      "price_per": 40
-    }
-  },
-  {
-    "Buying": {
-      "item_id": "cosmos:ship_hull_mint",
-      "max_quantity_buying": null,
-      "price_per": 36
-    }
-  },
-  {
-    "Buying": {
-      "item_id": "cosmos:glass_red",
-      "max_quantity_buying": null,
-      "price_per": 36
-    }
-  },
-  {
-    "Selling": {
-      "item_id": "cosmos:glass_red",
-      "max_quantity_selling": 10000,
-      "price_per": 40
-    }
-  },
-  {
-    "Buying": {
-      "item_id": "cosmos:glass_orange",
-      "max_quantity_buying": null,
-      "price_per": 36
-    }
-  },
-  {
-    "Selling": {
-      "item_id": "cosmos:glass_orange",
-      "max_quantity_selling": 10000,
-      "price_per": 40
-    }
-  },
-  {
-    "Buying": {
-      "item_id": "cosmos:glass_yellow",
-      "max_quantity_buying": null,
-      "price_per": 36
-    }
-  },
-  {
-    "Selling": {
-      "item_id": "cosmos:glass_yellow",
-      "max_quantity_selling": 10000,
-      "price_per": 40
-    }
-  },
-  {
-    "Buying": {
-      "item_id": "cosmos:glass_green",
-      "max_quantity_buying": null,
-      "price_per": 36
-    }
-  },
-  {
-    "Selling": {
-      "item_id": "cosmos:glass_green",
-      "max_quantity_selling": 10000,
-      "price_per": 40
-    }
-  },
-  {
-    "Buying": {
-      "item_id": "cosmos:glass_mint",
-      "max_quantity_buying": null,
-      "price_per": 36
-    }
-  },
-  {
-    "Selling": {
-      "item_id": "cosmos:glass_mint",
-      "max_quantity_selling": 10000,
-      "price_per": 40
-    }
-  },
-  {
-    "Buying": {
-      "item_id": "cosmos:glass_cyan",
-      "max_quantity_buying": null,
-      "price_per": 36
-    }
-  },
-  {
-    "Selling": {
-      "item_id": "cosmos:glass_cyan",
-      "max_quantity_selling": 10000,
-      "price_per": 40
-    }
-  },
-  {
-    "Buying": {
-      "item_id": "cosmos:glass_aqua",
-      "max_quantity_buying": null,
-      "price_per": 36
-    }
-  },
-  {
-    "Selling": {
-      "item_id": "cosmos:glass_aqua",
-      "max_quantity_selling": 10000,
-      "price_per": 40
-    }
-  },
-  {
-    "Buying": {
-      "item_id": "cosmos:glass_blue",
-      "max_quantity_buying": null,
-      "price_per": 36
-    }
-  },
-  {
-    "Selling": {
-      "item_id": "cosmos:glass_blue",
-      "max_quantity_selling": 10000,
-      "price_per": 40
-    }
-  },
-  {
-    "Buying": {
-      "item_id": "cosmos:glass_purple",
-      "max_quantity_buying": null,
-      "price_per": 36
-    }
-  },
-  {
-    "Selling": {
-      "item_id": "cosmos:glass_purple",
-      "max_quantity_selling": 10000,
-      "price_per": 40
-    }
-  },
-  {
-    "Buying": {
-      "item_id": "cosmos:glass_magenta",
-      "max_quantity_buying": null,
-      "price_per": 36
-    }
-  },
-  {
-    "Selling": {
-      "item_id": "cosmos:glass_magenta",
-      "max_quantity_selling": 10000,
-      "price_per": 40
-    }
-  },
-  {
-    "Buying": {
-      "item_id": "cosmos:glass_pink",
-      "max_quantity_buying": null,
-      "price_per": 36
-    }
-  },
-  {
-    "Selling": {
-      "item_id": "cosmos:glass_pink",
-      "max_quantity_selling": 10000,
-      "price_per": 40
-    }
-  },
-  {
-    "Buying": {
-      "item_id": "cosmos:glass_brown",
-      "max_quantity_buying": null,
-      "price_per": 36
-    }
-  },
-  {
-    "Selling": {
-      "item_id": "cosmos:glass_brown",
-      "max_quantity_selling": 10000,
-      "price_per": 40
-    }
-  },
-  {
-    "Buying": {
-      "item_id": "cosmos:glass_black",
-      "max_quantity_buying": null,
-      "price_per": 36
-    }
-  },
-  {
-    "Selling": {
-      "item_id": "cosmos:glass_black",
-      "max_quantity_selling": 10000,
-      "price_per": 40
-    }
-  },
-  {
-    "Buying": {
-      "item_id": "cosmos:glass_dark_grey",
-      "max_quantity_buying": null,
-      "price_per": 36
-    }
-  },
-  {
-    "Selling": {
-      "item_id": "cosmos:glass_dark_grey",
-      "max_quantity_selling": 10000,
-      "price_per": 40
-    }
-  },
-  {
-    "Buying": {
-      "item_id": "cosmos:glass_grey",
-      "max_quantity_buying": null,
-      "price_per": 36
-    }
-  },
-  {
-    "Selling": {
-      "item_id": "cosmos:glass_grey",
-      "max_quantity_selling": 10000,
-      "price_per": 40
-    }
-  },
-  {
-    "Buying": {
-      "item_id": "cosmos:glass_light_grey",
-      "max_quantity_buying": null,
-      "price_per": 36
-    }
-  },
-  {
-    "Selling": {
-      "item_id": "cosmos:glass_light_grey",
-      "max_quantity_selling": 10000,
-      "price_per": 40
-    }
-  },
-  {
-    "Buying": {
-      "item_id": "cosmos:glass_white",
-      "max_quantity_buying": null,
-      "price_per": 36
-    }
-  },
-  {
-    "Selling": {
-      "item_id": "cosmos:glass_white",
-      "max_quantity_selling": 10000,
-      "price_per": 40
+      "price_per": 1332
     }
   },
   {
     "Selling": {
       "item_id": "cosmos:reactor_controller",
       "max_quantity_selling": 10000,
-      "price_per": 1000
+      "price_per": 5200
     }
   },
   {
     "Buying": {
       "item_id": "cosmos:reactor_controller",
       "max_quantity_buying": null,
-      "price_per": 900
+      "price_per": 4680
     }
   },
   {
     "Selling": {
       "item_id": "cosmos:reactor_casing",
       "max_quantity_selling": 10000,
-      "price_per": 100
+      "price_per": 500
     }
   },
   {
     "Buying": {
       "item_id": "cosmos:reactor_casing",
       "max_quantity_buying": null,
-      "price_per": 90
+      "price_per": 450
     }
   },
   {
     "Selling": {
       "item_id": "cosmos:reactor_window",
       "max_quantity_selling": 10000,
-      "price_per": 100
+      "price_per": 520
     }
   },
   {
     "Buying": {
       "item_id": "cosmos:reactor_window",
       "max_quantity_buying": null,
-      "price_per": 90
+      "price_per": 468
     }
   },
   {
     "Selling": {
       "item_id": "cosmos:reactor_cell",
       "max_quantity_selling": 10000,
-      "price_per": 200
+      "price_per": 1250
     }
   },
   {
     "Buying": {
       "item_id": "cosmos:reactor_cell",
       "max_quantity_buying": null,
-      "price_per": 180
+      "price_per": 1125
     }
   },
   {
@@ -871,140 +451,294 @@
     "Selling": {
       "item_id": "cosmos:storage",
       "max_quantity_selling": 10000,
-      "price_per": 100
+      "price_per": 20
     }
   },
   {
     "Buying": {
       "item_id": "cosmos:storage",
       "max_quantity_buying": null,
-      "price_per": 90
+      "price_per": 18
     }
   },
   {
     "Selling": {
       "item_id": "cosmos:station_core",
       "max_quantity_selling": 10000,
-      "price_per": 25000
+      "price_per": 7200
     }
   },
   {
     "Buying": {
       "item_id": "cosmos:station_core",
       "max_quantity_buying": null,
-      "price_per": 22500
-    }
-  },
-  {
-    "Selling": {
-      "item_id": "cosmos:photonium_crystal_ore",
-      "max_quantity_selling": 10000,
-      "price_per": 200
-    }
-  },
-  {
-    "Buying": {
-      "item_id": "cosmos:photonium_crystal_ore",
-      "max_quantity_buying": null,
-      "price_per": 180
+      "price_per": 6480
     }
   },
   {
     "Selling": {
       "item_id": "cosmos:plasma_drill",
       "max_quantity_selling": 10000,
-      "price_per": 200
+      "price_per": 230
     }
   },
   {
     "Buying": {
       "item_id": "cosmos:plasma_drill",
       "max_quantity_buying": null,
-      "price_per": 180
+      "price_per": 207
     }
   },
   {
     "Selling": {
       "item_id": "cosmos:camera",
       "max_quantity_selling": 10000,
-      "price_per": 200
+      "price_per": 50
     }
   },
   {
     "Buying": {
       "item_id": "cosmos:camera",
       "max_quantity_buying": null,
-      "price_per": 180
+      "price_per": 45
     }
   },
   {
     "Selling": {
       "item_id": "cosmos:gravity_well",
       "max_quantity_selling": 10000,
-      "price_per": 200
+      "price_per": 720
     }
   },
   {
     "Buying": {
       "item_id": "cosmos:gravity_well",
       "max_quantity_buying": null,
-      "price_per": 180
+      "price_per": 648
     }
   },
   {
     "Selling": {
       "item_id": "cosmos:ramp",
+      "max_quantity_selling": 10000,
+      "price_per": 10
+    }
+  },
+  {
+    "Buying": {
+      "item_id": "cosmos:ramp",
+      "max_quantity_buying": null,
+      "price_per": 9
+    }
+  },
+  {
+    "Selling": {
+      "item_id": "cosmos:missile_launcher",
+      "max_quantity_selling": 10000,
+      "price_per": 250
+    }
+  },
+  {
+    "Buying": {
+      "item_id": "cosmos:missile_launcher",
+      "max_quantity_buying": null,
+      "price_per": 225
+    }
+  },
+  {
+    "Selling": {
+      "item_id": "cosmos:shield_projector",
+      "max_quantity_selling": 10000,
+      "price_per": 1300
+    }
+  },
+  {
+    "Buying": {
+      "item_id": "cosmos:shield_projector",
+      "max_quantity_buying": null,
+      "price_per": 1170
+    }
+  },
+  {
+    "Selling": {
+      "item_id": "cosmos:shield_generator",
+      "max_quantity_selling": 10000,
+      "price_per": 3700
+    }
+  },
+  {
+    "Buying": {
+      "item_id": "cosmos:shield_generator",
+      "max_quantity_buying": null,
+      "price_per": 3330
+    }
+  },
+  {
+    "Selling": {
+      "item_id": "cosmos:logic_on",
+      "max_quantity_selling": 10000,
+      "price_per": 620
+    }
+  },
+  {
+    "Buying": {
+      "item_id": "cosmos:logic_on",
+      "max_quantity_buying": null,
+      "price_per": 558
+    }
+  },
+  {
+    "Selling": {
+      "item_id": "cosmos:power_cable",
+      "max_quantity_selling": 10000,
+      "price_per": 10
+    }
+  },
+  {
+    "Buying": {
+      "item_id": "cosmos:power_cable",
+      "max_quantity_buying": null,
+      "price_per": 9
+    }
+  },
+  {
+    "Selling": {
+      "item_id": "cosmos:ship_dock",
+      "max_quantity_selling": 10000,
+      "price_per": 840
+    }
+  },
+  {
+    "Buying": {
+      "item_id": "cosmos:ship_dock",
+      "max_quantity_buying": null,
+      "price_per": 756
+    }
+  },
+  {
+    "Selling": {
+      "item_id": "cosmos:tank",
+      "max_quantity_selling": 10000,
+      "price_per": 30
+    }
+  },
+  {
+    "Buying": {
+      "item_id": "cosmos:tank",
+      "max_quantity_buying": null,
+      "price_per": 27
+    }
+  },
+  {
+    "Selling": {
+      "item_id": "cosmos:logic_indicator",
       "max_quantity_selling": 10000,
       "price_per": 40
     }
   },
   {
     "Buying": {
-      "item_id": "cosmos:ramp",
+      "item_id": "cosmos:logic_indicator",
       "max_quantity_buying": null,
       "price_per": 36
     }
   },
   {
     "Selling": {
-      "item_id": "cosmos:missile_launcher",
+      "item_id": "cosmos:and_gate",
       "max_quantity_selling": 10000,
-      "price_per": 600
+      "price_per": 20
     }
   },
   {
     "Buying": {
-      "item_id": "cosmos:missile_launcher",
+      "item_id": "cosmos:and_gate",
       "max_quantity_buying": null,
-      "price_per": 540
+      "price_per": 18
     }
   },
   {
     "Selling": {
-      "item_id": "cosmos:shield_projector",
+      "item_id": "cosmos:or_gate",
       "max_quantity_selling": 10000,
-      "price_per": 600
+      "price_per": 20
     }
   },
   {
     "Buying": {
-      "item_id": "cosmos:shield_projector",
+      "item_id": "cosmos:or_gate",
       "max_quantity_buying": null,
-      "price_per": 540
+      "price_per": 18
     }
   },
   {
     "Selling": {
-      "item_id": "cosmos:shield_generator",
+      "item_id": "cosmos:not_gate",
       "max_quantity_selling": 10000,
-      "price_per": 600
+      "price_per": 20
     }
   },
   {
     "Buying": {
-      "item_id": "cosmos:shield_generator",
+      "item_id": "cosmos:not_gate",
       "max_quantity_buying": null,
-      "price_per": 540
+      "price_per": 18
+    }
+  },
+  {
+    "Selling": {
+      "item_id": "cosmos:xor_gate",
+      "max_quantity_selling": 10000,
+      "price_per": 20
+    }
+  },
+  {
+    "Buying": {
+      "item_id": "cosmos:xor_gate",
+      "max_quantity_buying": null,
+      "price_per": 18
+    }
+  },
+  {
+    "Selling": {
+      "item_id": "cosmos:logic_bus",
+      "max_quantity_selling": 10000,
+      "price_per": 20
+    }
+  },
+  {
+    "Buying": {
+      "item_id": "cosmos:logic_bus",
+      "max_quantity_buying": null,
+      "price_per": 18
+    }
+  },
+  {
+    "Selling": {
+      "item_id": "cosmos:door",
+      "max_quantity_selling": 10000,
+      "price_per": 30
+    }
+  },
+  {
+    "Buying": {
+      "item_id": "cosmos:door",
+      "max_quantity_buying": null,
+      "price_per": 27
+    }
+  },
+  {
+    "Selling": {
+      "item_id": "cosmos:basic_fabricator",
+      "max_quantity_selling": 10000,
+      "price_per": 40
+    }
+  },
+  {
+    "Buying": {
+      "item_id": "cosmos:basic_fabricator",
+      "max_quantity_buying": null,
+      "price_per": 36
     }
   }
 ]

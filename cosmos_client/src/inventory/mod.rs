@@ -26,7 +26,7 @@ use crate::{
             show_cursor::no_open_menus,
             window::{GuiWindow, UiWindowSystemSet},
         },
-        item_renderer::{NoHoverToolip, RenderItem},
+        item_renderer::{NoHoverTooltip, RenderItem},
         OpenMenu, UiSystemSet,
     },
 };
@@ -561,7 +561,7 @@ fn pickup_item_into_cursor(
         ..Default::default()
     };
 
-    let mut ecmds = commands.spawn((FollowCursor, NoHoverToolip));
+    let mut ecmds = commands.spawn((FollowCursor, NoHoverTooltip));
 
     create_item_stack_slot_data(&new_is, &mut ecmds, text_style, pickup_quantity);
 

@@ -1,6 +1,5 @@
 use bevy::{
     app::{App, Update},
-    asset::AssetServer,
     color::{palettes::css, Color, Srgba},
     core::Name,
     ecs::{
@@ -26,6 +25,7 @@ use cosmos_core::{
         mut_events::{MutEvent, MutEventsCommand},
         NeedsDespawned,
     },
+    inventory::Inventory,
     item::Item,
     netty::{client::LocalPlayer, cosmos_encoder, system_sets::NetworkingSystemsSet, NettyChannelClient},
     registry::{identifiable::Identifiable, Registry},
@@ -46,6 +46,7 @@ use crate::{
             Disabled,
         },
         font::DefaultFont,
+        item_renderer::RenderItem,
         reactivity::{add_reactable_type, BindValue, BindValues, ReactableFields, ReactableValue},
         OpenMenu, UiSystemSet,
     },
@@ -238,8 +239,8 @@ fn open_shop_ui(mut commands: Commands, mut ev_reader: EventReader<MutEvent<Open
 fn render_shop_ui(
     mut commands: Commands,
     q_shop_ui: Query<(&ShopUi, Entity), Added<ShopUi>>,
-    asset_server: Res<AssetServer>,
     player_credits: Query<(Entity, &Credits), With<LocalPlayer>>,
+    default_font: Res<DefaultFont>,
 ) {
     let Ok((shop_ui, ui_ent)) = q_shop_ui.get_single() else {
         return;
@@ -254,13 +255,13 @@ fn render_shop_ui(
 
     let text_style = TextFont {
         font_size: 32.0,
-        font: asset_server.load("fonts/PixeloidSans.ttf"),
+        font: default_font.clone_weak(),
         ..Default::default()
     };
 
     let text_style_small = TextFont {
         font_size: 24.0,
-        font: asset_server.load("fonts/PixeloidSans.ttf"),
+        font: default_font.clone_weak(),
         ..Default::default()
     };
 
@@ -407,6 +408,16 @@ fn render_shop_ui(
                         ));
 
                         p.spawn((
+                            Name::new("Item picture"),
+                            ShopRenderedItem,
+                            Node {
+                                width: Val::Px(128.0),
+                                height: Val::Px(128.0),
+                                ..Default::default()
+                            },
+                        ));
+
+                        p.spawn((
                             Name::new("Description"),
                             BindValues::<SelectedItemDescription>::new(vec![BindValue::new(
                                 ui_variables_entity,
@@ -451,8 +462,6 @@ fn render_shop_ui(
                             },
                         ));
                     });
-
-                    body.spawn((Name::new("Item picture"), Node { ..Default::default() }));
                 });
 
                 body.spawn((
@@ -460,12 +469,12 @@ fn render_shop_ui(
                     BackgroundColor(Srgba::hex("1C1C1C").unwrap().into()),
                     Node {
                         flex_direction: FlexDirection::Column,
-                        width: Val::Px(400.0),
+                        width: Val::Px(500.0),
                         border: UiRect {
                             left: Val::Px(4.0),
                             ..Default::default()
                         },
-                        padding: UiRect::all(Val::Px(10.0)),
+                        padding: UiRect::new(Val::Px(10.0), Val::Px(0.0), Val::Px(10.0), Val::Px(10.0)),
                         ..Default::default()
                     },
                 ))
@@ -577,10 +586,10 @@ fn render_shop_ui(
                             BindValues::<Credits>::new(vec![BindValue::new(player_entity, ReactableFields::Text { section: 1 })]),
                             Text::new("$"),
                             text_style.clone(),
-                        ));
-                    })
-                    .with_children(|p| {
-                        p.spawn((TextSpan::new(format!("{}", credits.amount())), text_style.clone()));
+                        ))
+                        .with_children(|p| {
+                            p.spawn((TextSpan::new(format!("{}", credits.amount())), text_style.clone()));
+                        });
                     });
 
                     p.spawn((
@@ -592,6 +601,7 @@ fn render_shop_ui(
                             bottom: Val::Px(10.0),
                             ..Default::default()
                         },
+                        text_style.clone(),
                     ))
                     .with_children(|p| {
                         p.spawn((TextSpan::new(""), text_style.clone()));
@@ -772,11 +782,15 @@ impl ButtonEvent for ClickItemEvent {
 #[derive(Component)]
 struct PrevClickedEntity(Entity);
 
+#[derive(Component)]
+struct ShopRenderedItem;
+
 fn click_item_event(
     mut ev_reader: EventReader<ClickItemEvent>,
     q_shop_entry: Query<(&ShopEntry, &ShopUiEntity)>,
     mut q_shop: Query<(&mut ShopUi, Option<&PrevClickedEntity>)>,
     mut q_background_color: Query<&mut BackgroundColor>,
+    q_rendered_item: Query<Entity, With<ShopRenderedItem>>,
     mut commands: Commands,
 ) {
     for ev in ev_reader.read() {
@@ -804,13 +818,32 @@ fn click_item_event(
         if shop_ui.selected_item.as_ref().map(|x| x.entry != *entry).unwrap_or(true) {
             shop_ui.selected_item = Some(SelectedItem { entry: *entry });
         }
+
+        if let Ok(rendered_item) = q_rendered_item.get_single() {
+            let item_id = match entry {
+                ShopEntry::Buying {
+                    item_id,
+                    max_quantity_buying: _,
+                    price_per: _,
+                } => *item_id,
+                ShopEntry::Selling {
+                    item_id,
+                    max_quantity_selling: _,
+                    price_per: _,
+                } => *item_id,
+            };
+            commands.entity(rendered_item).insert(RenderItem { item_id });
+        }
     }
 }
 
 fn on_change_selected_item(
     items: Res<Registry<Item>>,
     langs: Res<Lang<Item>>,
-    q_shop_changed: Query<(&ShopUi, &ShopEntities), Changed<ShopUi>>,
+    q_changed_credits: Query<(), (With<LocalPlayer>, Or<(Changed<Credits>, Changed<Inventory>)>)>,
+    q_changed_shop_ui: Query<(), Changed<ShopUi>>,
+    q_shop: Query<(&ShopUi, &ShopEntities)>,
+    q_player: Query<(&Credits, &Inventory), With<LocalPlayer>>,
     mut vars: Query<(
         &mut AmountSelected,
         &mut SelectedItemName,
@@ -819,8 +852,16 @@ fn on_change_selected_item(
         &mut PricePerUnit,
     )>,
 ) {
-    for (shop_ui, shop_entities) in &q_shop_changed {
+    if q_changed_credits.is_empty() && q_changed_shop_ui.is_empty() {
+        return;
+    }
+
+    for (shop_ui, shop_entities) in &q_shop {
         let Some(selected_item) = &shop_ui.selected_item else {
+            continue;
+        };
+
+        let Ok((credits, inventory)) = q_player.get_single() else {
             continue;
         };
 
@@ -841,7 +882,14 @@ fn on_change_selected_item(
                 max_quantity_buying,
                 price_per,
             } => {
-                selected_item_max_quantity.0 = max_quantity_buying.unwrap_or(10000);
+                let items_of_this_type = inventory
+                    .iter()
+                    .flatten()
+                    .filter(|x| x.item_id() == item_id)
+                    .map(|x| x.quantity() as u32)
+                    .sum::<u32>();
+
+                selected_item_max_quantity.0 = max_quantity_buying.unwrap_or(10000).min(items_of_this_type);
                 shop_price_per.0 = price_per;
 
                 item_id
@@ -851,7 +899,11 @@ fn on_change_selected_item(
                 max_quantity_selling,
                 price_per,
             } => {
-                selected_item_max_quantity.0 = max_quantity_selling;
+                selected_item_max_quantity.0 = max_quantity_selling.min(if price_per != 0 {
+                    credits.amount() as u32 / price_per
+                } else {
+                    10000
+                });
                 shop_price_per.0 = price_per;
 
                 item_id
@@ -906,30 +958,30 @@ fn update_search(
             let search = search_item_query.0.to_lowercase();
 
             for shop_entry in shop_ui.shop.contents.iter() {
-                let (item_id, max_quantity_selling) = match *shop_mode {
+                let (item_id, price_per) = match *shop_mode {
                     ShopMode::Buy => {
                         let ShopEntry::Selling {
                             item_id,
-                            max_quantity_selling,
-                            price_per: _,
+                            max_quantity_selling: _,
+                            price_per,
                         } = shop_entry
                         else {
                             continue;
                         };
 
-                        (*item_id, Some(*max_quantity_selling))
+                        (*item_id, *price_per)
                     }
                     ShopMode::Sell => {
                         let ShopEntry::Buying {
                             item_id,
-                            max_quantity_buying,
-                            price_per: _,
+                            max_quantity_buying: _,
+                            price_per,
                         } = shop_entry
                         else {
                             continue;
                         };
 
-                        (*item_id, *max_quantity_buying)
+                        (*item_id, *price_per)
                     }
                 };
 
@@ -940,11 +992,7 @@ fn update_search(
                     continue;
                 }
 
-                let amount_display = if let Some(max_quantity_selling) = max_quantity_selling {
-                    format!("{max_quantity_selling}")
-                } else {
-                    "Unlimited".into()
-                };
+                let amount_display = format!("${price_per}");
 
                 p.spawn((
                     Name::new(display_name.to_owned()),
@@ -968,7 +1016,7 @@ fn update_search(
                         },
                     ));
                     p.spawn((
-                        Name::new("Quantity"),
+                        Name::new("Price"),
                         Text::new(format!("({amount_display})")),
                         text_style_small.clone(),
                     ));

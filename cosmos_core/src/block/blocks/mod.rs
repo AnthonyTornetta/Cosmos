@@ -17,6 +17,28 @@ pub mod fluid;
 /// Air's ID - this block will always exist
 pub const AIR_BLOCK_ID: u16 = 0;
 
+/// When creating a block with color variations, it should be these specific colors. The id should
+/// be `block_name_{color}`.
+pub const COLORS: [&str; 17] = [
+    "red",
+    "orange",
+    "yellow",
+    "green",
+    "mint",
+    "cyan",
+    "aqua",
+    "blue",
+    "purple",
+    "magenta",
+    "pink",
+    "brown",
+    "black",
+    "dark_grey",
+    "grey",
+    "light_grey",
+    "white",
+];
+
 fn add_cosmos_blocks(
     mut blocks: ResMut<Registry<Block>>,
     mut loading: ResMut<LoadingManager>,

@@ -27,7 +27,7 @@ struct ItemTooltipPointer(Entity);
 
 #[derive(Component)]
 /// Put this component on any [`RenderItem`] that you don't want to have a tooltip on hover.
-pub struct NoHoverToolip;
+pub struct NoHoverTooltip;
 
 #[derive(Component)]
 struct ItemTooltip;
@@ -36,7 +36,7 @@ fn render_tooltips(
     mut commands: Commands,
     q_changed_interaction: Query<
         (Entity, &Interaction, &RenderItem, Option<&ItemTooltipPointer>),
-        (Without<NoHoverToolip>, Changed<Interaction>),
+        (Without<NoHoverTooltip>, Changed<Interaction>),
     >,
     q_any_item_tooltips: Query<&Interaction, With<ItemTooltipPointer>>,
     font: Res<DefaultFont>,

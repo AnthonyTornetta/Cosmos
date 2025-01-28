@@ -3,11 +3,11 @@
 use bevy::{
     app::Startup,
     asset::{AssetServer, Handle},
-    prelude::{App, Commands, Res, Resource},
+    prelude::{App, Commands, Deref, Res, Resource},
     text::Font,
 };
 
-#[derive(Resource)]
+#[derive(Resource, Deref)]
 /// The default font used for most things
 pub struct DefaultFont(pub Handle<Font>);
 

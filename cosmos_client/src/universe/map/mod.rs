@@ -557,12 +557,16 @@ fn render_galaxy_map(
                     }),
                 };
 
-                p.spawn((
+                let mut ecmds = p.spawn((
                     RenderLayers::from_layers(&[CAMERA_LAYER]), // https://github.com/bevyengine/bevy/issues/12461
                     transform,
                     Mesh3d(mesh),
                     MeshMaterial3d(material),
                 ));
+
+                if matches!(destination, Destination::Star(_)) {
+                    ecmds.insert(ScaleWithZoom);
+                }
             }
         });
     }
@@ -719,6 +723,18 @@ fn teleport_at(mut q_player: Query<&mut Location, With<LocalPlayer>>, inputs: In
     }
 }
 
+#[derive(Component)]
+struct ScaleWithZoom;
+fn scale_with_zoom(mut q_scale_with_zoom: Query<&mut Transform, With<ScaleWithZoom>>, q_camera: Query<&MapCamera>) {
+    let Ok(cam) = q_camera.get_single() else {
+        return;
+    };
+
+    for mut t in q_scale_with_zoom.iter_mut() {
+        t.scale = Vec3::splat((cam.zoom / 500.0).max(1.0));
+    }
+}
+
 pub(super) fn register(app: &mut App) {
     waypoint::register(app);
 
@@ -738,6 +754,7 @@ pub(super) fn register(app: &mut App) {
                         teleport_at,
                         update_sector_text,
                         update_waypoint_text,
+                        scale_with_zoom,
                     )
                         .chain()
                         .run_if(map_active),
