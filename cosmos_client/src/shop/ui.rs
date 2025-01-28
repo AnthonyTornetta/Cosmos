@@ -46,6 +46,7 @@ use crate::{
             Disabled,
         },
         font::DefaultFont,
+        item_renderer::RenderItem,
         reactivity::{add_reactable_type, BindValue, BindValues, ReactableFields, ReactableValue},
         OpenMenu, UiSystemSet,
     },
@@ -407,6 +408,16 @@ fn render_shop_ui(
                         ));
 
                         p.spawn((
+                            Name::new("Item picture"),
+                            ShopRenderedItem,
+                            Node {
+                                width: Val::Px(128.0),
+                                height: Val::Px(128.0),
+                                ..Default::default()
+                            },
+                        ));
+
+                        p.spawn((
                             Name::new("Description"),
                             BindValues::<SelectedItemDescription>::new(vec![BindValue::new(
                                 ui_variables_entity,
@@ -451,8 +462,6 @@ fn render_shop_ui(
                             },
                         ));
                     });
-
-                    body.spawn((Name::new("Item picture"), Node { ..Default::default() }));
                 });
 
                 body.spawn((
@@ -773,11 +782,15 @@ impl ButtonEvent for ClickItemEvent {
 #[derive(Component)]
 struct PrevClickedEntity(Entity);
 
+#[derive(Component)]
+struct ShopRenderedItem;
+
 fn click_item_event(
     mut ev_reader: EventReader<ClickItemEvent>,
     q_shop_entry: Query<(&ShopEntry, &ShopUiEntity)>,
     mut q_shop: Query<(&mut ShopUi, Option<&PrevClickedEntity>)>,
     mut q_background_color: Query<&mut BackgroundColor>,
+    q_rendered_item: Query<Entity, With<ShopRenderedItem>>,
     mut commands: Commands,
 ) {
     for ev in ev_reader.read() {
@@ -804,6 +817,22 @@ fn click_item_event(
 
         if shop_ui.selected_item.as_ref().map(|x| x.entry != *entry).unwrap_or(true) {
             shop_ui.selected_item = Some(SelectedItem { entry: *entry });
+        }
+
+        if let Ok(rendered_item) = q_rendered_item.get_single() {
+            let item_id = match entry {
+                ShopEntry::Buying {
+                    item_id,
+                    max_quantity_buying: _,
+                    price_per: _,
+                } => *item_id,
+                ShopEntry::Selling {
+                    item_id,
+                    max_quantity_selling: _,
+                    price_per: _,
+                } => *item_id,
+            };
+            commands.entity(rendered_item).insert(RenderItem { item_id });
         }
     }
 }

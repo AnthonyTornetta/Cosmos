@@ -254,10 +254,10 @@ fn on_interact_slider(
 }
 
 fn on_change_scrollbar(
-    q_scroll_containers: Query<(&ScrollBox, &ComputedNode, &ContentsContainer), Changed<ScrollBox>>,
+    mut q_scroll_containers: Query<(&mut ScrollBox, &ComputedNode, &ContentsContainer), Changed<ScrollBox>>,
     mut q_container: Query<(&mut Node, &ComputedNode)>,
 ) {
-    for (scrollbar, node, contents_container) in q_scroll_containers.iter() {
+    for (mut scrollbar, node, contents_container) in q_scroll_containers.iter_mut() {
         let Ok((mut style, contents_node)) = q_container.get_mut(contents_container.0) else {
             error!("This should never happen - contents has no style/node.");
             continue;
@@ -266,7 +266,13 @@ fn on_change_scrollbar(
         let items_height = contents_node.size().y;
         let container_height = node.size().y;
 
-        let as_px = compute_scroll_px(scrollbar.scroll_amount, items_height, container_height);
+        let mut as_px = compute_scroll_px(scrollbar.scroll_amount, items_height, container_height);
+        let max_scroll = (items_height - container_height).max(0.0);
+        if as_px.abs() > max_scroll {
+            scrollbar.scroll_amount = Val::Px(max_scroll);
+            as_px = -max_scroll;
+        }
+
         style.top = Val::Px(-as_px);
     }
 }

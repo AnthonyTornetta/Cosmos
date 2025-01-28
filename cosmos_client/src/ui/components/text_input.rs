@@ -22,7 +22,7 @@ use bevy::{
         mouse::MouseButton,
         ButtonInput, ButtonState,
     },
-    log::{info, warn},
+    log::warn,
     prelude::{ChildBuild, Deref, Text, TextUiWriter},
     reflect::Reflect,
     text::{LineBreak, TextColor, TextFont, TextLayout, TextSpan},
@@ -516,7 +516,7 @@ fn handle_keyboard_shortcuts(
             let end = highlighted.max(text_input.cursor_pos);
 
             let slice = &value[start..end];
-            info!("Highlighted: {slice}");
+            // info!("Highlighted: {slice}");
         }
     }
 }
