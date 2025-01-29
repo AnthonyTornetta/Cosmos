@@ -33,7 +33,7 @@ use cosmos_core::{
 
 use super::sync::register_structure_system;
 
-const MAX_SHIP_SPEED: f32 = 99999999999999999999999999999.0;
+const MAX_SHIP_SPEED: f32 = 200.0;
 const MAX_BRAKE_DELTA_PER_THRUST: f32 = 300.0;
 
 fn register_thruster_blocks(blocks: Res<Registry<Block>>, mut storage: ResMut<ThrusterBlocks>) {
