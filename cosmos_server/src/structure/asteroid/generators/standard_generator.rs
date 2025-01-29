@@ -13,9 +13,11 @@ use cosmos_core::{
     utils::timer::UtilsTimer,
 };
 use noise::NoiseFn;
+use rand::Rng;
 
 use crate::{
-    init::init_world::ReadOnlyNoise,
+    init::init_world::{ReadOnlyNoise, ServerSeed},
+    rng::get_rng_for_sector,
     structure::{
         asteroid::generator::{AsteroidGenerationSet, GenerateAsteroidEvent, GeneratingAsteroids},
         planet::biosphere::TemperatureRange,
@@ -47,6 +49,7 @@ pub fn register_standard_asteroid_generation<T: AsteroidGeneratorComponent>(
               mut ev_reader: EventReader<GenerateAsteroidEvent>,
               noise: Res<ReadOnlyNoise>,
               blocks: Res<ReadOnlyRegistry<Block>>,
+              server_seed: Res<ServerSeed>,
               mut generating_asteroids: ResMut<GeneratingAsteroids>| {
             for ent in ev_reader.read() {
                 let Ok((structure_entity, structure, loc)) = q_molten_asteroids.get(ent.0) else {
@@ -64,7 +67,8 @@ pub fn register_standard_asteroid_generation<T: AsteroidGeneratorComponent>(
                 let blocks = blocks.clone();
 
                 let ore_ids = ore_ids.clone();
-                let offsets = ore_ids.iter().map(|_| rand::random::<f64>() * 10000.0).collect::<Vec<_>>();
+                let mut s_rng = get_rng_for_sector(&server_seed, &loc.sector());
+                let offsets = ore_ids.iter().map(|_| s_rng.gen::<f64>() * 10000.0).collect::<Vec<_>>();
 
                 let task = thread_pool.spawn(async move {
                     let noise = noise.inner();
@@ -123,7 +127,7 @@ pub fn register_standard_asteroid_generation<T: AsteroidGeneratorComponent>(
                                                 ]) * rarity as f64,
                                             )
                                         })
-                                        .max_by_key(|x| x.1 as i32);
+                                        .max_by(|a, b| a.1.partial_cmp(&b.1).unwrap());
 
                                     let block = if let Some((ore_block, max_noise)) = max_noise {
                                         if max_noise < 0.1 {

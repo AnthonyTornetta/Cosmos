@@ -37,11 +37,18 @@ pub(super) fn register(app: &mut App) {
         app,
         "cosmos:molten",
         TemperatureRange::new(600.0, 10000000000.0),
-        vec![AsteroidOreEntry {
-            ore: "cosmos:energite_crystal_ore",
-            size: 1.0,
-            rarity: 1.0,
-        }],
+        vec![
+            AsteroidOreEntry {
+                ore: "cosmos:lava",
+                size: 1.0,
+                rarity: 1.0,
+            },
+            AsteroidOreEntry {
+                ore: "cosmos:energite_crystal_ore",
+                size: 1.0,
+                rarity: 0.5,
+            },
+        ],
         "cosmos:molten_stone",
     );
 }
