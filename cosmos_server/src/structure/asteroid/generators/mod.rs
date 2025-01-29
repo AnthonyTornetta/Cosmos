@@ -19,7 +19,9 @@ use crate::{
     structure::planet::biosphere::TemperatureRange,
 };
 
+mod copper_rich_asteroid;
 mod icy_asteroid;
+mod iron_rich_asteroid;
 mod molten_asteroid;
 mod standard_generator;
 
@@ -150,6 +152,8 @@ fn add_asteroid_generator(
 
 pub(super) fn register(app: &mut App) {
     icy_asteroid::register(app);
+    iron_rich_asteroid::register(app);
+    copper_rich_asteroid::register(app);
     molten_asteroid::register(app);
 
     app.add_systems(Update, add_asteroid_generator.in_set(NetworkingSystemsSet::Between))
