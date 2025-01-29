@@ -21,6 +21,7 @@ use crate::{
 
 mod icy_asteroid;
 mod molten_asteroid;
+mod standard_generator;
 
 /// Just an empty component for marking your biosphere
 pub trait AsteroidGeneratorComponent: Default + Clone + Copy + Component {}
