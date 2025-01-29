@@ -24,11 +24,20 @@ use crate::{
 
 use super::{register_asteroid_generator, AsteroidGeneratorComponent};
 
+#[derive(Debug, Clone)]
+pub struct AsteroidOreEntry {
+    pub ore: &'static str,
+    /// 1.0 = default ore patch size
+    pub size: f32,
+    /// 1.0 = common
+    pub rarity: f32,
+}
+
 pub fn register_standard_asteroid_generation<T: AsteroidGeneratorComponent>(
     app: &mut App,
     id: &'static str,
     temperature_range: TemperatureRange,
-    ore_ids: Vec<&'static str>,
+    ore_ids: Vec<AsteroidOreEntry>,
     rock_id: &'static str,
 ) {
     register_asteroid_generator::<T>(app, id, temperature_range);
@@ -68,7 +77,13 @@ pub fn register_standard_asteroid_generation<T: AsteroidGeneratorComponent>(
                     let stone = blocks.from_id(&rock_id).unwrap_or_else(|| panic!("Missing block {rock_id}"));
                     let ore_blocks = ore_ids
                         .iter()
-                        .map(|x| blocks.from_id(*x).unwrap_or_else(|| panic!("Missing block {x}")))
+                        .map(|x| {
+                            (
+                                blocks.from_id(x.ore).unwrap_or_else(|| panic!("Missing block {}", x.ore)),
+                                x.rarity,
+                                1.0 / x.size,
+                            )
+                        })
                         .collect::<Vec<_>>();
 
                     let mut chunks = HashMap::new();
@@ -97,16 +112,20 @@ pub fn register_standard_asteroid_generation<T: AsteroidGeneratorComponent>(
 
                                     let max_noise = ore_blocks
                                         .iter()
-                                        .zip(offsets.iter().map(|&offset| {
-                                            noise.get([
-                                                x_pos as f64 * 0.1 + local_x + offset,
-                                                y_pos as f64 * 0.1 + local_y + offset,
-                                                z_pos as f64 * 0.1 + local_z + offset,
-                                            ])
-                                        }))
+                                        .zip(offsets.iter())
+                                        .map(|(&(block, rarity, size), &offset)| {
+                                            (
+                                                block,
+                                                noise.get([
+                                                    x_pos as f64 * size as f64 * 0.1 + local_x + offset,
+                                                    y_pos as f64 * size as f64 * 0.1 + local_y + offset,
+                                                    z_pos as f64 * size as f64 * 0.1 + local_z + offset,
+                                                ]) * rarity as f64,
+                                            )
+                                        })
                                         .max_by_key(|x| x.1 as i32);
 
-                                    let block = if let Some((&ore_block, max_noise)) = max_noise {
+                                    let block = if let Some((ore_block, max_noise)) = max_noise {
                                         if max_noise < 0.1 {
                                             stone
                                         } else {
