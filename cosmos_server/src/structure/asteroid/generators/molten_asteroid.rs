@@ -1,26 +1,6 @@
-use bevy::{prelude::*, tasks::AsyncComputeTaskPool, utils::HashMap};
-use cosmos_core::{
-    block::{block_rotation::BlockRotation, Block},
-    physics::location::Location,
-    registry::ReadOnlyRegistry,
-    state::GameState,
-    structure::{
-        block_storage::BlockStorer,
-        chunk::Chunk,
-        coordinates::{BlockCoordinate, ChunkBlockCoordinate, ChunkCoordinate},
-        Structure,
-    },
-    utils::timer::UtilsTimer,
-};
-use noise::NoiseFn;
+use bevy::prelude::*;
 
-use crate::{
-    init::init_world::ReadOnlyNoise,
-    structure::{
-        asteroid::generator::{AsteroidGenerationSet, GenerateAsteroidEvent, GeneratingAsteroids},
-        planet::biosphere::TemperatureRange,
-    },
-};
+use crate::structure::planet::biosphere::TemperatureRange;
 
 use super::{
     standard_generator::{self, AsteroidOreEntry},
@@ -45,7 +25,7 @@ pub(super) fn register(app: &mut App) {
             },
             AsteroidOreEntry {
                 ore: "cosmos:energite_crystal_ore",
-                size: 1.0,
+                size: 0.1,
                 rarity: 0.5,
             },
         ],

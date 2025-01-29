@@ -78,7 +78,7 @@ pub fn register_standard_asteroid_generation<T: AsteroidGeneratorComponent>(
                     let timer = UtilsTimer::start();
 
                     let blocks = blocks.registry();
-                    let stone = blocks.from_id(&rock_id).unwrap_or_else(|| panic!("Missing block {rock_id}"));
+                    let stone = blocks.from_id(rock_id).unwrap_or_else(|| panic!("Missing block {rock_id}"));
                     let ore_blocks = ore_ids
                         .iter()
                         .map(|x| {
@@ -149,7 +149,7 @@ pub fn register_standard_asteroid_generation<T: AsteroidGeneratorComponent>(
                         }
                     }
 
-                    timer.log_duration(&format!("Molten Asteroid {bx}x{by}x{bz} generation time: {bx}:"));
+                    timer.log_duration(&format!("Asteroid {bx}x{by}x{bz} generation time: {bx}:"));
 
                     chunks.into_iter().map(|(_, c)| c).collect::<Vec<Chunk>>()
                 });
