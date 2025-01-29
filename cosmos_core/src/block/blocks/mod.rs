@@ -137,7 +137,7 @@ fn add_cosmos_blocks(
     );
 
     blocks.register(
-        BlockBuilder::new("cosmos:ship_hull_grey", 4.0, 100.0, 10.0)
+        BlockBuilder::new("cosmos:ship_hull_dark_grey", 4.0, 100.0, 10.0)
             .add_property(BlockProperty::Full)
             .create(),
     );
@@ -217,33 +217,65 @@ fn add_cosmos_blocks(
             .create(),
     );
 
-    // Grey registered above to keep id consistency (move down here in future)
-    let ship_hull_colors = [
+    // These are the same as COLORS above, but the order matters for stupid reasons. When order no
+    // longer matters, please use COLORS instead.
+    for &color in [
         "black",
-        "dark_grey",
+        "grey",
         "white",
         "blue",
-        "dark_blue",
+        "cyan",
         "brown",
         "green",
-        "dark_green",
+        "light_grey",
         "orange",
-        "dark_orange",
-        "pink",
-        "dark_pink",
-        "purple",
-        "dark_purple",
-        "red",
-        "dark_red",
-        "yellow",
-        "dark_yellow",
         "mint",
-    ];
-
-    for color in ship_hull_colors {
+        "pink",
+        "magenta",
+        "red",
+        "purple",
+        "aqua",
+        "yellow",
+    ]
+    .iter()
+    {
         blocks.register(
             BlockBuilder::new(format!("cosmos:ship_hull_{color}"), 4.0, 100.0, 10.0)
                 .add_property(BlockProperty::Full)
+                .create(),
+        );
+    }
+
+    // Grey registered above to keep id consistency (move down here in future)
+    // let ship_hull_colors = [
+    //     "black",
+    //     "dark_grey",
+    //     "white",
+    //     "blue",
+    //     "dark_blue",
+    //     "brown",
+    //     "green",
+    //     "dark_green",
+    //     "orange",
+    //     "dark_orange",
+    //     "pink",
+    //     "dark_pink",
+    //     "purple",
+    //     "dark_purple",
+    //     "red",
+    //     "dark_red",
+    //     "yellow",
+    //     "dark_yellow",
+    //     "mint",
+    // ];
+
+    // Take 3 because of the skip 3 below. This will eventually not be so stupid, but for now
+    // everything will get messed up if I change the order of these being registered.
+    for color in COLORS.iter().take(3) {
+        blocks.register(
+            BlockBuilder::new(format!("cosmos:light_{color}"), 0.1, 20.0, 5.0)
+                .add_property(BlockProperty::Full)
+                .add_connection_group("cosmos:uses_logic")
                 .create(),
         );
     }
@@ -348,13 +380,6 @@ fn add_cosmos_blocks(
             .add_property(BlockProperty::FullyRotatable)
             .create(),
     );
-
-    // blocks.register(
-    //     BlockBuilder::new("cosmos:debug", 2.0, 20.0, 5.0)
-    //         .add_property(BlockProperty::FullyRotatable)
-    //         .add_property(BlockProperty::Full)
-    //         .create(),
-    // );
 
     blocks.register(
         BlockBuilder::new("cosmos:missile_launcher", 2.0, 20.0, 5.0)
@@ -553,7 +578,9 @@ fn add_cosmos_blocks(
             .create(),
     );
 
-    for color in COLORS.iter().filter(|x| **x != "white") {
+    // Skip 3 because of the take 3 above. This will eventually not be so stupid, but for now
+    // everything will get messed up if I change the order of these being registered.
+    for color in COLORS.iter().skip(3).filter(|x| **x != "white") {
         blocks.register(
             BlockBuilder::new(format!("cosmos:light_{color}"), 0.1, 20.0, 5.0)
                 .add_property(BlockProperty::Full)

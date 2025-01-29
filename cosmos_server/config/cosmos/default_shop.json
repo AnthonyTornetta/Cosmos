@@ -281,14 +281,14 @@
   },
   {
     "Selling": {
-      "item_id": "cosmos:ship_hull_grey",
+      "item_id": "cosmos:ship_hull_dark_grey",
       "max_quantity_selling": 10000,
       "price_per": 10
     }
   },
   {
     "Buying": {
-      "item_id": "cosmos:ship_hull_grey",
+      "item_id": "cosmos:ship_hull_dark_grey",
       "max_quantity_buying": null,
       "price_per": 9
     }
