@@ -42,6 +42,7 @@ pub const COLORS: [&str; 17] = [
 
 /// The values linked to [`COLORS`]. The orders match each other.
 #[rustfmt::skip]
+#[expect(clippy::eq_op)]
 pub const COLOR_VALUES: [Srgba; 17] = [
     Srgba {red: 255.0 / 255.0, green: 0.0 / 255.0, blue: 0.0 / 255.0, alpha: 1.0 },
     Srgba {red: 255.0 / 255.0, green: 165.0 / 255.0, blue: 0.0 / 255.0, alpha: 1.0 },
