@@ -1,24 +1,24 @@
 {
-    "texture": {
-        "Sides": {
-            "left": {
-                "Single": "cosmos:ship_hull_grey"
-            },
-            "right": {
-                "Single": "cosmos:ship_hull_grey"
-            },
-            "back": {
-                "Single": "cosmos:ship_hull_grey"
-            },
-            "top": {
-                "Single": "cosmos:ship_hull_grey"
-            },
-            "bottom": {
-                "Single": "cosmos:ship_hull_grey"
-            },
-            "front": {
-                "Single": "cosmos:camera_front"
-            }
-        }
+  "texture": {
+    "Sides": {
+      "left": {
+        "Single": "cosmos:ship_hull_dark_grey"
+      },
+      "right": {
+        "Single": "cosmos:ship_hull_dark_grey"
+      },
+      "back": {
+        "Single": "cosmos:ship_hull_dark_grey"
+      },
+      "top": {
+        "Single": "cosmos:ship_hull_dark_grey"
+      },
+      "bottom": {
+        "Single": "cosmos:ship_hull_dark_grey"
+      },
+      "front": {
+        "Single": "cosmos:camera_front"
+      }
     }
+  }
 }

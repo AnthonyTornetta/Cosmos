@@ -75,7 +75,7 @@ fn create_default_shop_entires(mut commands: Commands, items: Res<Registry<Item>
         price("cherry_log", 100),
         price("redwood_log", 40),
         price("redwood_leaf", 30),
-        price("molten_rock", 20),
+        price("molten_stone", 20),
         price("sand", 10),
         price("cactus", 20),
     ]

@@ -65,7 +65,7 @@ See [the issues page](https://github.com/AnthonyTornetta/Cosmos/issues) for the 
 
 - [ ] Screenshots
 - [ ] More pirate ships
-- [ ] More asteroid types
+- [x] More asteroid types
 - [ ] More station types
 - [x] Fuel for reactor
 - [ ] Performance fixes

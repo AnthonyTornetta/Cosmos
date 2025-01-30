@@ -23,7 +23,7 @@ use crate::{
 
 use super::super::components::show_cursor::no_open_menus;
 
-#[derive(Clone, Copy, Component, Debug)]
+#[derive(Clone, Copy, Component, Debug, Reflect)]
 /// Represents something that should have an indicator displayed when the player is piloting a ship
 pub struct IndicatorSettings {
     /// The color of the waypoint
@@ -36,11 +36,11 @@ pub struct IndicatorSettings {
     pub max_distance: f32,
 }
 
-#[derive(Component, Debug)]
+#[derive(Component, Debug, Reflect)]
 /// Represents the entity that is the indicator for this entity
 struct HasIndicator(Entity);
 
-#[derive(Component, Debug)]
+#[derive(Component, Debug, Reflect)]
 /// Indicates which entity this waypoint is a waypoint for.
 pub struct Indicating(pub Entity);
 
@@ -293,7 +293,6 @@ fn position_diamonds(
     mut indicators: Query<(Entity, &mut Node, &Indicating)>,
     global_trans_query: Query<&GlobalTransform>,
     indicator_settings_query: Query<&IndicatorSettings>,
-    mut commands: Commands,
     mut closest_waypoint: ResMut<ClosestWaypoint>,
 ) {
     let Ok((cam, cam_trans)) = cam_query.get_single() else {
@@ -306,12 +305,10 @@ fn position_diamonds(
 
     for (entity, mut style, indicating) in indicators.iter_mut() {
         let Ok(indicating_global_trans) = global_trans_query.get(indicating.0) else {
-            commands.entity(entity).despawn_recursive();
             continue;
         };
 
         let Ok(settings) = indicator_settings_query.get(indicating.0) else {
-            commands.entity(entity).despawn_recursive();
             continue;
         };
 
@@ -467,5 +464,8 @@ pub(super) fn register(app: &mut App) {
                 .in_set(NetworkingSystemsSet::Between)
                 .chain()
                 .run_if(in_state(GameState::Playing)),
-        );
+        )
+        .register_type::<IndicatorSettings>()
+        .register_type::<Indicating>()
+        .register_type::<HasIndicator>();
 }
