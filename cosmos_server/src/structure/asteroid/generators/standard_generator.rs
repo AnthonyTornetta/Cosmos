@@ -1,3 +1,5 @@
+//! Shared asteroid generation logic
+
 use bevy::{prelude::*, tasks::AsyncComputeTaskPool, utils::HashMap};
 use cosmos_core::{
     block::{block_rotation::BlockRotation, Block},
@@ -44,12 +46,18 @@ pub struct AsteroidBlockEntry {
     pub rarity: f32,
 }
 
+/// Instructs the game to generate an asteroid of this type.
+///
+/// - `id` Ensure this is unique. Use the typical `modid:value` scheme.
+/// - `temperature_range` Indicates the temperatures this asteroid will generate within.
+/// - `block_entries` The blocks that will be randomly generated within this asteroid
+/// - `base_block` The block chosen if no block is randomly chosen from `block_entries`.
 pub fn register_standard_asteroid_generation<T: AsteroidGeneratorComponent>(
     app: &mut App,
     id: &'static str,
     temperature_range: TemperatureRange,
-    ore_ids: Vec<AsteroidBlockEntry>,
-    rock_id: &'static str,
+    block_entries: Vec<AsteroidBlockEntry>,
+    base_block: &'static str,
 ) {
     register_asteroid_generator::<T>(app, id, temperature_range);
 
@@ -75,9 +83,9 @@ pub fn register_standard_asteroid_generation<T: AsteroidGeneratorComponent>(
 
                 let blocks = blocks.clone();
 
-                let ore_ids = ore_ids.clone();
+                let block_entries = block_entries.clone();
                 let mut s_rng = get_rng_for_sector(&server_seed, &loc.sector());
-                let offsets = ore_ids.iter().map(|_| s_rng.gen::<f64>() * 10000.0).collect::<Vec<_>>();
+                let offsets = block_entries.iter().map(|_| s_rng.gen::<f64>() * 10000.0).collect::<Vec<_>>();
 
                 let task = thread_pool.spawn(async move {
                     let noise = noise.inner();
@@ -87,8 +95,8 @@ pub fn register_standard_asteroid_generation<T: AsteroidGeneratorComponent>(
                     let timer = UtilsTimer::start();
 
                     let blocks = blocks.registry();
-                    let stone = blocks.from_id(rock_id).unwrap_or_else(|| panic!("Missing block {rock_id}"));
-                    let ore_blocks = ore_ids
+                    let stone = blocks.from_id(base_block).unwrap_or_else(|| panic!("Missing block {base_block}"));
+                    let ore_blocks = block_entries
                         .iter()
                         .map(|x| {
                             (
