@@ -27,11 +27,20 @@ use crate::{
 use super::{register_asteroid_generator, AsteroidGeneratorComponent};
 
 #[derive(Debug, Clone)]
-pub struct AsteroidOreEntry {
+/// A block that may generate on the asteroid
+pub struct AsteroidBlockEntry {
+    /// The unlocalized name for the block you want to generate
     pub ore: &'static str,
     /// 1.0 = default ore patch size
+    ///
+    /// How much ore will be generated next to each other
     pub size: f32,
     /// 1.0 = common
+    /// 0.3 = rare
+    ///
+    /// Note that the more things you have generating, the less likely any given block is going to
+    /// be chosen.
+    /// Anything lower than 0.3 may not even show up on a given asteroid.
     pub rarity: f32,
 }
 
@@ -39,7 +48,7 @@ pub fn register_standard_asteroid_generation<T: AsteroidGeneratorComponent>(
     app: &mut App,
     id: &'static str,
     temperature_range: TemperatureRange,
-    ore_ids: Vec<AsteroidOreEntry>,
+    ore_ids: Vec<AsteroidBlockEntry>,
     rock_id: &'static str,
 ) {
     register_asteroid_generator::<T>(app, id, temperature_range);

@@ -23,7 +23,7 @@ mod copper_rich_asteroid;
 mod icy_asteroid;
 mod iron_rich_asteroid;
 mod molten_asteroid;
-mod standard_generator;
+pub mod standard_generator;
 
 /// Just an empty component for marking your biosphere
 pub trait AsteroidGeneratorComponent: Default + Clone + Copy + Component {}
