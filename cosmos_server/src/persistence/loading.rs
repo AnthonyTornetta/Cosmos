@@ -168,16 +168,16 @@ fn default_load(query: Query<(Entity, &SerializedData), With<NeedsLoaded>>, mut 
     for (ent, sd) in query.iter() {
         let mut ecmds = commands.entity(ent);
 
-        if let Some(location) = sd.deserialize_data::<Location>("cosmos:location") {
+        if let Ok(location) = sd.deserialize_data::<Location>("cosmos:location") {
             ecmds.insert(location);
         }
-        if let Some(velocity) = sd.deserialize_data::<Velocity>("cosmos:velocity") {
+        if let Ok(velocity) = sd.deserialize_data::<Velocity>("cosmos:velocity") {
             ecmds.insert(velocity);
         }
-        if let Some(loading_distance) = sd.deserialize_data::<LoadingDistance>("cosmos:loading_distance") {
+        if let Ok(loading_distance) = sd.deserialize_data::<LoadingDistance>("cosmos:loading_distance") {
             ecmds.insert(loading_distance);
         }
-        if let Some(rotation) = sd.deserialize_data::<Quat>("cosmos:rotation") {
+        if let Ok(rotation) = sd.deserialize_data::<Quat>("cosmos:rotation") {
             ecmds.insert(Transform::from_rotation(rotation));
         }
     }

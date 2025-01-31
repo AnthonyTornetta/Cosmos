@@ -16,7 +16,7 @@ use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
 use cosmos_core::{
     physics::location::{Location, Sector},
-    structure::chunk::netty::SaveData,
+    structure::chunk::netty::{DeserializationError, SaveData},
 };
 
 pub mod autosave;
@@ -288,7 +288,7 @@ impl SerializedData {
 
     /// Deserializes the data as the given type (via `cosmos_encoder::deserialize`) at the given id. Will panic if the
     /// data is not properly serialized.
-    pub fn deserialize_data<T: DeserializeOwned>(&self, data_id: &str) -> Option<T> {
+    pub fn deserialize_data<T: DeserializeOwned>(&self, data_id: &str) -> Result<T, DeserializationError> {
         self.save_data.deserialize_data(data_id)
     }
 
