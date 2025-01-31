@@ -4,7 +4,7 @@
       "item": {
         "Item": "cosmos:iron_bar"
       },
-      "quantity": 2
+      "quantity": 4
     },
     {
       "item": {
@@ -16,11 +16,11 @@
       "item": {
         "Item": "cosmos:copper_bar"
       },
-      "quantity": 1
+      "quantity": 2
     }
   ],
   "output": {
-    "quantity": 1,
+    "quantity": 4,
     "item": "cosmos:plasma_drill"
   }
 }

@@ -32,7 +32,7 @@ use super::{register_asteroid_generator, AsteroidGeneratorComponent};
 /// A block that may generate on the asteroid
 pub struct AsteroidBlockEntry {
     /// The unlocalized name for the block you want to generate
-    pub ore: &'static str,
+    pub block_id: &'static str,
     /// 1.0 = default ore patch size
     ///
     /// How much ore will be generated next to each other
@@ -100,7 +100,7 @@ pub fn register_standard_asteroid_generation<T: AsteroidGeneratorComponent>(
                         .iter()
                         .map(|x| {
                             (
-                                blocks.from_id(x.ore).unwrap_or_else(|| panic!("Missing block {}", x.ore)),
+                                blocks.from_id(x.block_id).unwrap_or_else(|| panic!("Missing block {}", x.block_id)),
                                 x.rarity,
                                 1.0 / x.size,
                             )

@@ -19,47 +19,47 @@ pub(super) fn register(app: &mut App) {
         TemperatureRange::new(0.0, 600.0),
         vec![
             AsteroidBlockEntry {
-                ore: "cosmos:lead_ore",
+                block_id: "cosmos:lead_ore",
                 size: 0.1,
                 rarity: 0.3,
             },
             AsteroidBlockEntry {
-                ore: "cosmos:iron_ore",
+                block_id: "cosmos:iron_ore",
                 size: 1.0,
                 rarity: 0.3,
             },
             AsteroidBlockEntry {
-                ore: "cosmos:copper_ore",
+                block_id: "cosmos:copper_ore",
                 size: 1.0,
                 rarity: 0.3,
             },
             AsteroidBlockEntry {
-                ore: "cosmos:uranium_ore",
+                block_id: "cosmos:uranium_ore",
                 size: 0.2,
                 rarity: 0.1,
             },
             AsteroidBlockEntry {
-                ore: "cosmos:sulfur_ore",
+                block_id: "cosmos:sulfur_ore",
                 size: 0.2,
                 rarity: 0.2,
             },
             AsteroidBlockEntry {
-                ore: "cosmos:ice",
+                block_id: "cosmos:ice",
                 size: 1.0,
                 rarity: 1.0,
             },
             AsteroidBlockEntry {
-                ore: "cosmos:photonium_crystal_ore",
+                block_id: "cosmos:photonium_crystal_ore",
                 size: 0.1,
                 rarity: 0.3,
             },
             AsteroidBlockEntry {
-                ore: "cosmos:energite_crystal_ore",
+                block_id: "cosmos:energite_crystal_ore",
                 size: 0.1,
                 rarity: 0.3,
             },
             AsteroidBlockEntry {
-                ore: "cosmos:gravitron_crystal_ore",
+                block_id: "cosmos:gravitron_crystal_ore",
                 size: 0.1,
                 rarity: 0.2,
             },

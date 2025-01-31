@@ -354,7 +354,7 @@ fn listen_create(
             let quantity = if input_handler.check_pressed(CosmosInputs::BulkCraft) {
                 max_can_create
             } else {
-                1
+                recipe.0.output.quantity as u32
             };
 
             info!("Sending craft {quantity} event!");

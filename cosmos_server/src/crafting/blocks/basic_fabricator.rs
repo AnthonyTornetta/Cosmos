@@ -123,6 +123,11 @@ fn monitor_craft_event(
         let qty_crafted = (qty_crafted / ev.recipe.output.quantity as u32) * ev.recipe.output.quantity as u32;
         let input_multiplier = qty_crafted / ev.recipe.output.quantity as u32;
 
+        if qty_crafted == 0 {
+            warn!("Player {player_ent:?} requested to craft 0 of item. Recipe: {:?}", ev.recipe);
+            continue;
+        }
+
         for input in ev.recipe.inputs.iter() {
             let RecipeItem::Item(item) = input.item;
             let item = items.from_numeric_id(item);

@@ -1,0 +1,14 @@
+{
+  "inputs": [
+    {
+      "quantity": 1,
+      "item": {
+        "Item": "cosmos:copper_ore"
+      }
+    }
+  ],
+  "output": {
+    "quantity": 1,
+    "item": "cosmos:copper_bar"
+  }
+}
