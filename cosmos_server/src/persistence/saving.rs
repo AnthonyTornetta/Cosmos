@@ -238,7 +238,7 @@ fn done_saving(
         }
 
         if let Some(player) = player {
-            info!("Saving player data for {player:?} to disk.")
+            info!("Saving player data for {player:?} to disk.");
         }
 
         if matches!(&save_file_identifier.identifier_type, SaveFileIdentifierType::Base(_, _, _)) {

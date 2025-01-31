@@ -79,6 +79,10 @@ fn load_component<T: PersistentComponent>(
 ) {
     q_needs_loaded.iter().for_each(|(entity, serialized_data)| {
         let Some(component_save_data) = serialized_data.deserialize_data::<T::SaveType>(T::get_component_unlocalized_name()) else {
+            error!(
+                "Error deserializing component {} on entity {entity:?}.",
+                T::get_component_unlocalized_name()
+            );
             return;
         };
 
