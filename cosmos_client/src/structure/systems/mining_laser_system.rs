@@ -15,6 +15,7 @@ use bevy_rapier3d::{
 use cosmos_core::{
     block::block_direction::BlockDirection,
     ecs::NeedsDespawned,
+    physics::location::LocationPhysicsSet,
     state::GameState,
     structure::{
         shared::DespawnWithStructure,
@@ -310,7 +311,12 @@ pub(super) fn register(app: &mut App) {
         },
     );
 
-    app.configure_sets(Update, (LasersSystemSet::CreateLasers, LasersSystemSet::UpdateLasers).chain());
+    app.configure_sets(
+        Update,
+        (LasersSystemSet::CreateLasers, LasersSystemSet::UpdateLasers)
+            .after(LocationPhysicsSet::DoPhysics)
+            .chain(),
+    );
 
     app.add_event::<LaserCannonSystemFiredEvent>()
         .init_resource::<MiningLaserMaterialCache>()

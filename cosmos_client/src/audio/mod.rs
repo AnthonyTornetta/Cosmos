@@ -19,6 +19,7 @@ use bevy::{
     },
     hierarchy::DespawnRecursiveExt,
     prelude::{Deref, DerefMut, SystemSet, Transform},
+    reflect::Reflect,
     transform::components::GlobalTransform,
     utils::hashbrown::HashMap,
 };
@@ -26,6 +27,7 @@ use bevy_kira_audio::{prelude::*, AudioSystemSet};
 
 pub mod music;
 
+#[derive(Reflect)]
 /// Contains information for a specific audio emission.
 ///
 /// Do make sure the [`instance`] is unique to this [`AudioEmission`], as this directly modifies that instance to get the 3d effect.
@@ -39,6 +41,7 @@ pub struct AudioEmission {
     /// The max volume this sound will play at - defaults to 1.0
     pub peak_volume: f64,
     /// Tween used when the sound is removed from the audio emitter - Default will immediately cut it off
+    #[reflect(ignore)]
     pub stop_tween: AudioTween,
     /// A weak-cloned handle that is being played. This is to prevent too many of the same audio source blowing people's ears out
     pub handle: Handle<AudioSource>,
@@ -56,7 +59,7 @@ impl Default for AudioEmission {
     }
 }
 
-#[derive(Default, Component)]
+#[derive(Default, Component, Reflect)]
 #[require(Transform)]
 /// Contains a bunch of audio instances to output
 ///
@@ -283,6 +286,7 @@ pub(super) fn register(app: &mut App) {
                 .chain(),
         )
         .add_systems(PostUpdate, (stop_audio_sources, run_spacial_audio).chain())
+        .register_type::<CosmosAudioEmitter>()
         .init_resource::<AttachedAudioSources>()
         .init_resource::<BufferedStopAudio>();
 }

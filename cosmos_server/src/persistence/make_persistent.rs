@@ -85,16 +85,20 @@ fn load_component<T: PersistentComponent>(
     q_name: Query<&Name>,
 ) {
     q_needs_loaded.iter().for_each(|(entity, serialized_data)| {
-        let Ok(component_save_data) = serialized_data.deserialize_data::<T::SaveType>(T::get_component_unlocalized_name()) else {
-            let id = q_name
-                .get(entity)
-                .map(|x| format!("{} ({entity:?})", x))
-                .unwrap_or_else(|_| format!("{entity:?}"));
-            error!(
-                "Error deserializing component {} on entity {id}.",
-                T::get_component_unlocalized_name()
-            );
-            return;
+        let component_save_data = match serialized_data.deserialize_data::<T::SaveType>(T::get_component_unlocalized_name()) {
+            Ok(data) => data,
+            Err(DeserializationError::NoEntry) => return,
+            Err(DeserializationError::ErrorParsing(e)) => {
+                let id = q_name
+                    .get(entity)
+                    .map(|x| format!("{} ({entity:?})", x))
+                    .unwrap_or_else(|_| format!("{entity:?}"));
+                error!(
+                    "Error deserializing component {} on entity {id}\n{e:?}.",
+                    T::get_component_unlocalized_name()
+                );
+                return;
+            }
         };
 
         let Some(mut component) = T::convert_from_save_type(component_save_data, &entity_id_manager) else {
