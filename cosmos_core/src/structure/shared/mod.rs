@@ -50,6 +50,8 @@ fn save_the_kids(
             With<ChunkPhysicsPart>,
             With<StructureSystem>,
             With<DespawnWithStructure>,
+            // If they're already despawning, they should stay w/ the structure
+            With<NeedsDespawned>,
         )>,
     >,
     mut commands: Commands,

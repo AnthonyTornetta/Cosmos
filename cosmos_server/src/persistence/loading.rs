@@ -23,7 +23,7 @@ use cosmos_core::{
     structure::loading::StructureLoadingSet,
 };
 
-use super::{EntityId, SaveFileIdentifier, SaveFileIdentifierType, SerializedData};
+use super::{EntityId, PreviousSaveFileIdentifier, SaveFileIdentifier, SaveFileIdentifierType, SerializedData};
 
 #[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
 /// Put anything related to loading entities in from serialized data into this set
@@ -67,8 +67,8 @@ fn check_needs_loaded(
     q_sfis: Query<(Entity, &SaveFileIdentifier), (Without<SerializedData>, With<NeedsLoaded>)>,
     mut commands: Commands,
 ) {
-    for (ent, nl) in q_sfis.iter() {
-        let path = nl.get_save_file_path();
+    for (ent, save_file_identifier) in q_sfis.iter() {
+        let path = save_file_identifier.get_save_file_path();
         let Ok(data) = fs::read(&path) else {
             warn!("Error reading file at '{path}'. Is it there?");
             commands.entity(ent).insert(NeedsDespawned);
@@ -78,7 +78,7 @@ fn check_needs_loaded(
         let serialized_data: SerializedData =
             cosmos_encoder::deserialize(&data).unwrap_or_else(|_| panic!("Error deserializing data for {path}"));
 
-        match &nl.identifier_type {
+        match &save_file_identifier.identifier_type {
             SaveFileIdentifierType::Base(entity_id, _, _) => {
                 commands.entity(ent).insert(entity_id.clone());
             }
@@ -128,7 +128,10 @@ fn check_needs_loaded(
             SaveFileIdentifierType::BelongsTo(_, _) => {}
         }
 
-        commands.entity(ent).insert(serialized_data);
+        commands
+            .entity(ent)
+            .insert((serialized_data, PreviousSaveFileIdentifier(save_file_identifier.clone())))
+            .remove::<SaveFileIdentifier>();
     }
 }
 

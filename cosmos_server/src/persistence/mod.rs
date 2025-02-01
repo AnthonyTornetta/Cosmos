@@ -120,6 +120,12 @@ pub(crate) enum SaveFileIdentifierType {
     BelongsTo(Box<SaveFileIdentifier>, String),
 }
 
+#[derive(Component)]
+/// Stores the previous save file identifier from when this was last loaded/saved.
+///
+/// This is used to clean up old versions of this entity from disk as new ones are saved.
+struct PreviousSaveFileIdentifier(pub SaveFileIdentifier);
+
 #[derive(Debug, Component, Clone, Serialize, Deserialize)]
 /// Used to track where the save file for a given entity is or should be.
 pub struct SaveFileIdentifier {

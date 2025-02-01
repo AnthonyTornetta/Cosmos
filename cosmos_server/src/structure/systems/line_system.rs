@@ -6,7 +6,6 @@ use bevy::{
         schedule::IntoSystemConfigs,
         system::{Commands, Query, Res, ResMut},
     },
-    log::info,
     state::{condition::in_state, state::OnEnter},
 };
 use cosmos_core::{

@@ -254,25 +254,24 @@ fn finish_loading_player(
         info!("Completing player load for {}", load_player.name());
         let mut ecmds = commands.entity(player_entity);
 
-        ecmds
-            .insert((
-                LockedAxes::ROTATION_LOCKED,
-                RigidBody::Dynamic,
-                Collider::capsule_y(0.65, 0.25),
-                Friction {
-                    coefficient: 0.0,
-                    combine_rule: CoefficientCombineRule::Min,
-                },
-                ReadMassProperties::default(),
-                LoadingDistance::new(2, 9999),
-                ActiveEvents::COLLISION_EVENTS,
-                Name::new(format!("Player ({})", load_player.name())),
-                Anchor,
-                SetPosition::Transform,
-            ))
-            // If we don't remove this, it won't automatically
-            // generate a new one when we save the player next
-            .remove::<SaveFileIdentifier>();
+        ecmds.insert((
+            LockedAxes::ROTATION_LOCKED,
+            RigidBody::Dynamic,
+            Collider::capsule_y(0.65, 0.25),
+            Friction {
+                coefficient: 0.0,
+                combine_rule: CoefficientCombineRule::Min,
+            },
+            ReadMassProperties::default(),
+            LoadingDistance::new(2, 9999),
+            ActiveEvents::COLLISION_EVENTS,
+            Name::new(format!("Player ({})", load_player.name())),
+            Anchor,
+            SetPosition::Transform,
+        ));
+        // If we don't remove this, it won't automatically
+        // generate a new one when we save the player next
+        // .remove::<SaveFileIdentifier>();
 
         if server_settings.creative {
             ecmds.insert(Creative);

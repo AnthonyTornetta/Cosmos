@@ -22,7 +22,7 @@ use cosmos_core::{
     state::GameState,
 };
 use futures_lite::future;
-use walkdir::WalkDir;
+use walkdir::{DirEntry, WalkDir};
 
 use super::{loading::NeedsLoaded, saving::NeedsSaved, EntityId, SaveFileIdentifier, SectorsCache};
 
@@ -179,18 +179,20 @@ fn load_near(
         for sfi in to_load {
             // TODO: Not sure why this exists... for now I'm keeping it, but remove this in the future.
 
-            // let child_dir = sfi.get_children_directory();
-            //
-            // for file in WalkDir::new(&child_dir)
-            //     .max_depth(1)
-            //     .into_iter()
-            //     .flatten()
-            //     .filter(|x| x.file_type().is_file())
-            // {
-            //     load_all(sfi.clone(), file, &mut new_to_load);
-            // }
-            //
-            new_to_load.push(sfi);
+            let child_dir = sfi.get_children_directory();
+
+            for file in WalkDir::new(&child_dir)
+                .max_depth(1)
+                .into_iter()
+                .flatten()
+                .filter(|x| x.file_type().is_file())
+            {
+                load_all(sfi.clone(), file, &mut new_to_load, &loaded_entities);
+            }
+
+            if !loaded_entities.iter().any(|x| Some(x) == sfi.entity_id()) {
+                new_to_load.push(sfi);
+            }
         }
 
         new_to_load
@@ -199,32 +201,32 @@ fn load_near(
     commands.spawn((Name::new("Loading near players async task"), LoadingTask(task)));
 }
 
-// TODO: Goes with note above, not sure why this is here.
-//
-// fn load_all(base: SaveFileIdentifier, file: DirEntry, to_load: &mut Vec<SaveFileIdentifier>) {
-//     let path = file.path();
-//
-//     if path.extension() == Some(OsStr::new("cent")) {
-//         let entity_information = path.file_stem().expect("Failed to get file stem").to_str().expect("to_str failed");
-//
-//         let entity_id = EntityId::new(entity_information.to_owned());
-//
-//         let sfi = SaveFileIdentifier::sub_entity(base, entity_id);
-//
-//         let child_dir = sfi.get_children_directory();
-//
-//         for file in WalkDir::new(child_dir)
-//             .max_depth(1)
-//             .into_iter()
-//             .flatten()
-//             .filter(|x| x.file_type().is_file())
-//         {
-//             load_all(sfi.clone(), file, to_load);
-//         }
-//
-//         to_load.push(sfi);
-//     }
-// }
+fn load_all(base: SaveFileIdentifier, file: DirEntry, to_load: &mut Vec<SaveFileIdentifier>, loaded_entities: &[EntityId]) {
+    let path = file.path();
+
+    if path.extension() == Some(OsStr::new("cent")) {
+        let entity_information = path.file_stem().expect("Failed to get file stem").to_str().expect("to_str failed");
+
+        let entity_id = EntityId::new(entity_information.to_owned());
+
+        let sfi = SaveFileIdentifier::sub_entity(base, entity_id);
+
+        let child_dir = sfi.get_children_directory();
+
+        for file in WalkDir::new(child_dir)
+            .max_depth(1)
+            .into_iter()
+            .flatten()
+            .filter(|x| x.file_type().is_file())
+        {
+            load_all(sfi.clone(), file, to_load, loaded_entities);
+        }
+
+        if !loaded_entities.iter().any(|x| Some(x) == sfi.entity_id()) {
+            to_load.push(sfi);
+        }
+    }
+}
 
 pub(super) fn register(app: &mut App) {
     app.insert_resource(SectorsCache::default()).add_systems(
