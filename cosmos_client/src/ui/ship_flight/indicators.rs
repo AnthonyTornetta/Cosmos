@@ -305,12 +305,12 @@ fn position_diamonds(
     let mut closest = None;
 
     for (entity, mut style, indicating) in indicators.iter_mut() {
-        let Ok(indicating_global_trans) = global_trans_query.get(indicating.0) else {
+        let Ok(settings) = indicator_settings_query.get(indicating.0) else {
+            commands.entity(entity).despawn_recursive();
             continue;
         };
 
-        let Ok(settings) = indicator_settings_query.get(indicating.0) else {
-            commands.entity(entity).despawn_recursive();
+        let Ok(indicating_global_trans) = global_trans_query.get(indicating.0) else {
             continue;
         };
 
