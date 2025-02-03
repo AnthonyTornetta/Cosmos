@@ -41,7 +41,7 @@ use crate::{
         saving::{SavingSystemSet, SAVING_SCHEDULE},
         SerializedData,
     },
-    structure::systems::laser_cannon_system::LASER_BASE_VELOCITY,
+    structure::systems::{laser_cannon_system::LASER_BASE_VELOCITY, thruster_system::MaxShipSpeedModifier},
     universe::spawners::pirate::Pirate,
 };
 
@@ -163,7 +163,7 @@ fn handle_pirate_movement(
         } else {
             pirate_ship_movement.braking = false;
 
-            if dist > 500.0 {
+            if dist > 200.0 {
                 pirate_ship_movement.movement = Vec3::Z;
             } else {
                 if pirate_vel.linvel.length() > 50.0 && rand::random::<f32>() < 0.003 {
@@ -208,7 +208,7 @@ fn add_pirate_ai(mut commands: Commands, q_needs_ai: Query<Entity, (With<Pirate>
 
         commands
             .entity(ent)
-            .insert((AiControlled, ai, /*SpeedNeedsMeasured,*/ Pilot { entity: pilot_ent }))
+            .insert((AiControlled, ai, MaxShipSpeedModifier(0.8), Pilot { entity: pilot_ent }))
             .add_child(pilot_ent);
     }
 }

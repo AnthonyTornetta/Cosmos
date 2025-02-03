@@ -13,7 +13,7 @@ mod mining_laser_system;
 pub mod missile_launcher_system;
 pub mod shield_system;
 pub(crate) mod sync;
-mod thruster_system;
+pub mod thruster_system;
 
 /// A system that is created by the addition and removal of blocks
 pub trait BlockStructureSystem<T> {
