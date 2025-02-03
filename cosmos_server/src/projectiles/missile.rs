@@ -6,7 +6,7 @@ use bevy::{
     ecs::{component::Component, event::EventReader, schedule::IntoSystemConfigs},
     hierarchy::Parent,
     math::Vec3,
-    prelude::{App, Commands, Entity, Query, Res, Update, With, Without},
+    prelude::{App, Commands, Entity, Query, Res, Update, With},
     time::Time,
     transform::components::{GlobalTransform, Transform},
 };
@@ -38,18 +38,16 @@ pub struct MissileTargetting {
 }
 
 fn look_and_move_towards_target(
-    mut q_targetting_missiles: Query<(&Location, &mut Transform, &mut Velocity, &MissileTargetting, &ReadMassProperties)>,
-    q_targets: Query<(&Location, &Velocity), Without<MissileTargetting>>,
+    mut q_targetting_missiles: Query<(&Location, &mut Transform, &Velocity, &MissileTargetting, &ReadMassProperties)>,
+    q_targets: Query<(&Location, &Velocity)>,
     time: Res<Time>,
 ) {
-    for (missile_loc, mut missile_trans, mut missile_vel, missile_targetting, mass) in &mut q_targetting_missiles {
+    for (missile_loc, mut missile_trans, missile_vel, missile_targetting, mass) in &mut q_targetting_missiles {
         let Ok((target_loc, target_vel)) = q_targets.get(missile_targetting.targetting) else {
             continue;
         };
 
         let target_loc = *target_loc + missile_targetting.targetting_fudge;
-
-        // let (target_loc - missile_loc + target_vel * t) = vt + 1/2at^2
 
         if mass.mass == 0.0 {
             // Wait for physics engine to update mass properties
@@ -57,16 +55,7 @@ fn look_and_move_towards_target(
         }
 
         let missile_accel = MISSILE_IMPULSE_PER_SEC / mass.mass;
-        // let missile_secs_to_reach_target = (distance.length() / missile_vel.linvel.length()).max(0.0);
-        //
         let d = (target_loc - *missile_loc).absolute_coords_f32().length();
-        // let missile_secs_to_reach_target = ((2.0 * missile_accel * d + target_vel.linvel.length_squared()
-        //     - 2.0 * target_vel.linvel.length() * missile_vel.linvel.length()
-        //     + missile_vel.linvel.length_squared())
-        // .sqrt()
-        //     - target_vel.linvel.length()
-        //     + missile_vel.linvel.length())
-        //     / missile_accel;
 
         let a = missile_accel;
         let v = missile_vel.linvel.length();
@@ -76,38 +65,19 @@ fn look_and_move_towards_target(
 
         let relative_velocity = target_vel.linvel - missile_vel.linvel;
 
-        // Predict missile's future position with acceleration
-        // let future_missile_pos =
-        //     *missile_loc + (missile_vel.linvel * missile_secs_to_reach_target + 0.5 * missile_accel * missile_secs_to_reach_target.powi(2));
-        //
-        // let future_target_pos = target_loc + (target_vel.linvel * missile_secs_to_reach_target);
-        //
-        // let desired_direction = (future_target_pos - future_missile_pos).absolute_coords_f32().normalize_or_zero();
-        //
-        // let cur_forward = missile_trans.forward();
-        // let dir_lerped = cur_forward.lerp(desired_direction, time.delta_secs().min(1.0));
-        //
-        // missile_trans.look_to(dir_lerped, Vec3::Y);
-
-        let amount_moved = missile_vel.linvel * missile_secs_to_reach_target + 0.5 * a * missile_secs_to_reach_target.powf(2.0);
-
         let direction = ((target_loc - *missile_loc) + (relative_velocity * missile_secs_to_reach_target))
             .absolute_coords_f32()
             .normalize_or_zero();
-
-        // let direction = (distance + (relative_velocity * missile_secs_to_reach_target + 0.5 * missile_secs_to_reach_target.powf(2.0) * a))
-        //     .normalize_or_zero();
 
         let cur_forward = missile_trans.forward();
 
         let dir_lerped = cur_forward.lerp(direction, time.delta_secs().min(1.0));
 
         missile_trans.look_to(dir_lerped, Vec3::Y);
-        // missile_vel.linvel = dir_lerped.normalize() * Vec3::new(10.0, 10.0, 10.0);
     }
 }
 
-const MISSILE_IMPULSE_PER_SEC: f32 = 10.5;
+const MISSILE_IMPULSE_PER_SEC: f32 = 4.5;
 
 fn apply_missile_thrust(mut commands: Commands, time: Res<Time>, q_missiles: Query<(Entity, &GlobalTransform), With<Missile>>) {
     for (ent, g_trans) in &q_missiles {
