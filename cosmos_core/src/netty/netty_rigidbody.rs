@@ -11,7 +11,8 @@ use crate::physics::location::Location;
 pub enum NettyRigidBodyLocation {
     /// Absolute is just the entity's location, relative to nothing
     Absolute(Location),
-    /// The Vec3 passed in is relative to the entity provided, but is not relative to the entity provided's location.
+    /// The Vec3 passed in is relative to the entity provided (this transform translation, relative
+    /// to the parent's entity)
     ///
     /// To calculate this, just subtract your location from the entity you're relative to's location
     Relative(Vec3, Entity),
