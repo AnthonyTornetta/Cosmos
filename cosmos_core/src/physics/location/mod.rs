@@ -20,7 +20,7 @@ use std::{
 #[cfg(doc)]
 use bevy::prelude::Transform;
 use bevy::{
-    prelude::{App, Component, Deref, DerefMut, SystemSet, Update, Vec3},
+    prelude::{App, Component, Deref, DerefMut, IntoSystemSetConfigs, SystemSet, Update, Vec3},
     reflect::Reflect,
 };
 use bevy_rapier3d::na::Vector3;
@@ -392,6 +392,13 @@ impl Location {
     ///
     /// If not, the sector coordinates & `local` will be modified to maintain this
     pub fn fix_bounds(&mut self) {
+        #[cfg(debug_assertions)]
+        {
+            if !self.local.x.is_finite() || !self.local.y.is_finite() || !self.local.z.is_finite() {
+                panic!("Detected infinite local coordinate on location - {self}");
+            }
+        }
+
         const SD2: f32 = SECTOR_DIMENSIONS / 2.0;
 
         let over_x = ((self.local.x + SD2) / SECTOR_DIMENSIONS).floor() as i64;
@@ -525,7 +532,7 @@ pub(super) fn register(app: &mut App) {
     // TODO: Remove system set
     app.register_type::<Location>()
         .register_type::<PreviousLocation>()
-        .configure_sets(Update, CosmosBundleSet::HandleCosmosBundles);
+        .configure_sets(Update, CosmosBundleSet::HandleCosmosBundles.before(LocationPhysicsSet::DoPhysics));
 }
 
 #[cfg(test)]
