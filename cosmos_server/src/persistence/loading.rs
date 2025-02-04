@@ -184,7 +184,7 @@ fn default_load(query: Query<(Entity, &SerializedData), With<NeedsLoaded>>, mut 
             ecmds.insert(loading_distance);
         }
         if let Ok(rotation) = sd.deserialize_data::<Quat>("cosmos:rotation") {
-            ecmds.insert(Transform::from_rotation(rotation));
+            ecmds.insert((Transform::from_rotation(rotation), SetPosition::Transform));
         }
     }
 }

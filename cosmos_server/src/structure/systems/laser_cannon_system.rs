@@ -6,7 +6,7 @@ use bevy::prelude::*;
 use bevy_rapier3d::{plugin::RapierContextEntityLink, prelude::Velocity};
 use bevy_renet2::renet2::RenetServer;
 use cosmos_core::{
-    block::{block_events::BlockEventsSet, Block},
+    block::Block,
     logic::{logic_driver::LogicDriver, LogicInputEvent, LogicSystemSet},
     netty::{
         cosmos_encoder, server_laser_cannon_system_messages::ServerStructureSystemMessages, system_sets::NetworkingSystemsSet,
