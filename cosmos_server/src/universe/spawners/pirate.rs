@@ -200,15 +200,19 @@ fn spawn_pirates(
                 break;
             }
 
-            let origin = Location::new(
-                Vec3::new(random_coord(), random_coord(), random_coord()),
-                sector
-                    + Sector::new(
-                        random_range(-1.0, 1.0).round() as SectorUnit,
-                        random_range(-1.0, 1.0).round() as SectorUnit,
-                        random_range(-1.0, 1.0).round() as SectorUnit,
-                    ),
-            );
+            let spawn_sector = sector
+                + Sector::new(
+                    random_range(-1.0, 1.0).round() as SectorUnit,
+                    random_range(-1.0, 1.0).round() as SectorUnit,
+                    random_range(-1.0, 1.0).round() as SectorUnit,
+                );
+
+            // Don't spawn directly on top of players
+            if spawn_sector == sector {
+                continue;
+            }
+
+            let origin = Location::new(Vec3::new(random_coord(), random_coord(), random_coord()), spawn_sector);
 
             if q_players
                 .iter()

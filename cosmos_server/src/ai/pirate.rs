@@ -135,6 +135,7 @@ fn handle_pirate_movement(
         let dist = target_loc.distance_sqrd(pirate_loc).sqrt();
 
         if dist > PIRATE_MAX_CHASE_DISTANCE {
+            pirate_ship_movement.movement = Vec3::Z;
             continue;
         }
 

@@ -5,7 +5,7 @@ use std::time::Duration;
 use bevy::prelude::*;
 use bevy_rapier3d::{
     geometry::{CollisionGroups, Group},
-    prelude::{MassProperties, ReadMassProperties, Velocity},
+    prelude::{ReadMassProperties, Velocity},
 };
 use bevy_renet2::renet2::RenetServer;
 use cosmos_core::{

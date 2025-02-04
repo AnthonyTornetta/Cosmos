@@ -66,7 +66,9 @@ fn generate_shops(
                 generated_item.location.sector(),
             );
 
-            system.add_item(loc, SystemItem::Shop);
+            let mut rng = get_rng_for_sector(&server_seed, &loc.sector());
+
+            system.add_item(loc, random_quat(&mut rng), SystemItem::Shop);
         }
 
         for _ in 0..non_asteroid_shops {
@@ -89,17 +91,14 @@ fn generate_shops(
                 sector,
             );
 
-            system.add_item(loc, SystemItem::Shop);
+            let mut rng = get_rng_for_sector(&server_seed, &loc.sector());
+
+            system.add_item(loc, random_quat(&mut rng), SystemItem::Shop);
         }
     }
 }
 
-fn spawn_shop(
-    q_players: Query<&Location, With<Player>>,
-    server_seed: Res<ServerSeed>,
-    mut commands: Commands,
-    mut systems: ResMut<UniverseSystems>,
-) {
+fn spawn_shop(q_players: Query<&Location, With<Player>>, mut commands: Commands, mut systems: ResMut<UniverseSystems>) {
     let mut generated_shops = HashSet::new();
 
     for player_loc in q_players.iter() {
@@ -107,13 +106,13 @@ fn spawn_shop(
             continue;
         };
 
-        for station_loc in system
+        for (station_rot, station_loc) in system
             .iter()
             .flat_map(|x| match &x.item {
-                SystemItem::Shop => Some(x.location),
+                SystemItem::Shop => Some((x.rotation, x.location)),
                 _ => None,
             })
-            .filter(|x| !system.is_sector_generated_for(x.sector(), "cosmos:shop"))
+            .filter(|(_, x)| !system.is_sector_generated_for(x.sector(), "cosmos:shop"))
         {
             if generated_shops.contains(&station_loc.sector()) {
                 continue;
@@ -124,11 +123,9 @@ fn spawn_shop(
                 continue;
             }
 
-            let mut rng = get_rng_for_sector(&server_seed, &station_loc.sector());
-
             commands.spawn(NeedsBlueprintLoaded {
                 path: "default_blueprints/shop/default.bp".into(),
-                rotation: random_quat(&mut rng),
+                rotation: station_rot,
                 spawn_at: station_loc,
             });
 

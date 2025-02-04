@@ -186,6 +186,16 @@ fn default_load(query: Query<(Entity, &SerializedData), With<NeedsLoaded>>, mut 
     }
 }
 
+fn load_blueprint_rotation(mut commands: Commands, mut q_needs_blueprint: Query<(Entity, Option<&mut Transform>, &NeedsBlueprintLoaded)>) {
+    for (ent, mut trans, needs_bp) in q_needs_blueprint.iter_mut() {
+        if let Some(t) = trans.as_mut() {
+            t.rotation = needs_bp.rotation;
+        } else {
+            commands.entity(ent).insert(Transform::from_rotation(needs_bp.rotation));
+        }
+    }
+}
+
 /// The schedule loading takes place in - this may change in the future
 pub const LOADING_SCHEDULE: Update = Update;
 
@@ -223,7 +233,9 @@ pub(super) fn register(app: &mut App) {
         (
             // Logic
             check_blueprint_needs_loaded.in_set(LoadingBlueprintSystemSet::BeginLoadingBlueprints),
-            done_loading_blueprint.in_set(LoadingBlueprintSystemSet::DoneLoadingBlueprints),
+            (load_blueprint_rotation, done_loading_blueprint)
+                .chain()
+                .in_set(LoadingBlueprintSystemSet::DoneLoadingBlueprints),
         ),
     );
 }
