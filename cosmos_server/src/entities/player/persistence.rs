@@ -8,6 +8,7 @@ use std::{
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::*;
 use cosmos_core::{
+    chat::ServerSendChatMessageEvent,
     economy::Credits,
     entities::player::{creative::Creative, Player},
     inventory::{itemstack::ItemShouldHaveData, Inventory},
@@ -17,7 +18,7 @@ use cosmos_core::{
         netty_rigidbody::{NettyRigidBody, NettyRigidBodyLocation},
         server::ServerLobby,
         server_reliable_messages::ServerReliableMessages,
-        sync::{registry::server::SyncRegistriesEvent, ComponentSyncingSet},
+        sync::{events::server_event::NettyEventWriter, registry::server::SyncRegistriesEvent, ComponentSyncingSet},
         system_sets::NetworkingSystemsSet,
         NettyChannelServer,
     },
@@ -248,6 +249,7 @@ fn finish_loading_player(
     mut evw_sync_registries: EventWriter<SyncRegistriesEvent>,
     server_settings: Res<ServerSettings>,
     q_player_finished_loading: Query<(Entity, &Player, &Location, &Velocity, Option<&Parent>, Option<&Transform>), Added<Player>>,
+    mut nevw_send_chat_msg: NettyEventWriter<ServerSendChatMessageEvent>,
 ) {
     for (player_entity, load_player, location, velocity, maybe_parent, trans) in q_player_finished_loading.iter() {
         info!("Completing player load for {}", load_player.name());
@@ -304,10 +306,16 @@ fn finish_loading_player(
 
         server.broadcast_message(NettyChannelServer::Reliable, msg);
 
+        nevw_send_chat_msg.broadcast(ServerSendChatMessageEvent {
+            sender: None,
+            message: format!("{} joined the game.", load_player.name()),
+        });
+
         evw_player_join.send(PlayerConnectedEvent {
             player_entity,
             client_id: load_player.id(),
         });
+
         evw_sync_registries.send(SyncRegistriesEvent { player_entity });
     }
 }

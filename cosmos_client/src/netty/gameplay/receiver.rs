@@ -39,7 +39,7 @@ use cosmos_core::{
     },
     persistence::LoadingDistance,
     physics::{
-        location::{systems::Anchor, CosmosBundleSet, Location, LocationPhysicsSet, SetPosition, SYSTEM_SECTORS},
+        location::{systems::Anchor, Location, LocationPhysicsSet, SetPosition, SYSTEM_SECTORS},
         player_world::PlayerWorld,
     },
     registry::Registry,
@@ -393,7 +393,7 @@ pub(crate) fn client_sync_players(
                     continue;
                 };
 
-                info!("Player {} ({}) connected! {body:?}", name.as_str(), id);
+                info!("Player {} ({}) connected!", name.as_str(), id);
 
                 // The player entity may have already been created if some of their components were already synced.
                 let mut entity_cmds = if let Some(player_entity) = network_mapping.client_from_server(&server_entity) {
