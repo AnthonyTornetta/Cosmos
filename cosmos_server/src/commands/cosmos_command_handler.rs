@@ -12,7 +12,9 @@ use bevy::{
     prelude::{App, Commands, Entity, EventReader, Name, Quat, Query, Res, ResMut, Startup, Vec3, With},
 };
 use cosmos_core::{
+    chat::ServerSendChatMessageEvent,
     ecs::NeedsDespawned,
+    netty::sync::events::server_event::NettyEventWriter,
     persistence::Blueprintable,
     physics::location::{Location, Sector, SectorUnit},
 };
@@ -69,6 +71,12 @@ fn register_commands(mut commands: ResMut<CosmosCommands>) {
         usage: "despawn [entity_id]".into(),
         description: "Despawns the given entity.".into(),
     });
+
+    commands.add_command_info(CosmosCommandInfo {
+        name: "say".into(),
+        usage: "say [...message]".into(),
+        description: "Sends the given text to all connected players".into(),
+    });
 }
 
 fn display_help(command_name: Option<&str>, commands: &CosmosCommands) {
@@ -99,7 +107,7 @@ fn cosmos_command_listener(
     mut commands: Commands,
     mut command_events: EventReader<CosmosCommandSent>,
     cosmos_commands: Res<CosmosCommands>,
-
+    mut nevw_send_chat_msg: NettyEventWriter<ServerSendChatMessageEvent>,
     all_blueprintable_entities: Query<(Entity, &Name, &Location), With<Blueprintable>>,
 ) {
     for ev in command_events.read() {
@@ -110,6 +118,11 @@ fn cosmos_command_listener(
                 } else {
                     display_help(Some(&ev.args[0]), &cosmos_commands);
                 }
+            }
+            "say" => {
+                let message = ev.args.join(" ");
+
+                nevw_send_chat_msg.broadcast(ServerSendChatMessageEvent { sender: None, message });
             }
             "ping" => {
                 println!("Pong");
