@@ -51,7 +51,7 @@ impl SaveData {
             return Err(DeserializationError::NoEntry);
         };
 
-        cosmos_encoder::deserialize(data).map_err(|e| DeserializationError::ErrorParsing(e))
+        cosmos_encoder::deserialize(data).map_err(DeserializationError::ErrorParsing)
     }
 }
 
