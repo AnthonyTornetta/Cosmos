@@ -8,7 +8,7 @@ use crate::universe::generation::{SystemItem, UniverseSystems};
 
 const DEFAULT_STARTING_SECTOR: Location = Location::new(Vec3::new(0.0, 2000.0, 0.0), Sector::new(25, 25, 25));
 
-pub(super) fn find_new_player_location(universe_systems: &UniverseSystems) -> Location {
+pub(super) fn find_new_player_location(universe_systems: &UniverseSystems) -> (Location, Quat) {
     let Some((shop, _)) = universe_systems
         .iter()
         .flat_map(|(_, x)| x.iter())
@@ -27,10 +27,10 @@ pub(super) fn find_new_player_location(universe_systems: &UniverseSystems) -> Lo
         .min_by_key(|x| x.1.unwrap_or(i64::MAX))
     else {
         warn!("No shops found in universe! Starting player at fallback sector.");
-        return DEFAULT_STARTING_SECTOR;
+        return (DEFAULT_STARTING_SECTOR, Quat::IDENTITY);
     };
 
     let offset = Vec3::new(rand::random::<f32>() * 10.0 - 5.0, 3.0, rand::random::<f32>() * 10.0 - 5.0);
 
-    shop.location + offset
+    (shop.location + shop.rotation * offset, shop.rotation)
 }

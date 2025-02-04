@@ -19,7 +19,10 @@ use bevy::{
 use bevy_rapier3d::prelude::Velocity;
 
 use cosmos_core::{
-    ecs::NeedsDespawned, netty::cosmos_encoder, persistence::LoadingDistance, physics::location::Location,
+    ecs::NeedsDespawned,
+    netty::cosmos_encoder,
+    persistence::LoadingDistance,
+    physics::location::{Location, LocationPhysicsSet, SetPosition},
     structure::loading::StructureLoadingSet,
 };
 
@@ -191,7 +194,9 @@ fn load_blueprint_rotation(mut commands: Commands, mut q_needs_blueprint: Query<
         if let Some(t) = trans.as_mut() {
             t.rotation = needs_bp.rotation;
         } else {
-            commands.entity(ent).insert(Transform::from_rotation(needs_bp.rotation));
+            commands
+                .entity(ent)
+                .insert((Transform::from_rotation(needs_bp.rotation), SetPosition::Transform));
         }
     }
 }
@@ -207,6 +212,7 @@ pub(super) fn register(app: &mut App) {
             LoadingSystemSet::DoLoading.before(StructureLoadingSet::LoadStructure),
             LoadingSystemSet::DoneLoading.after(StructureLoadingSet::StructureLoaded),
         )
+            .before(LocationPhysicsSet::DoPhysics)
             .chain(),
     )
     .add_systems(
@@ -232,8 +238,8 @@ pub(super) fn register(app: &mut App) {
         LOADING_SCHEDULE,
         (
             // Logic
-            check_blueprint_needs_loaded.in_set(LoadingBlueprintSystemSet::BeginLoadingBlueprints),
-            (load_blueprint_rotation, done_loading_blueprint)
+            (check_blueprint_needs_loaded, load_blueprint_rotation).in_set(LoadingBlueprintSystemSet::BeginLoadingBlueprints),
+            done_loading_blueprint
                 .chain()
                 .in_set(LoadingBlueprintSystemSet::DoneLoadingBlueprints),
         ),

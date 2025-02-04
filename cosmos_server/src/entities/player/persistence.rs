@@ -216,10 +216,8 @@ fn create_new_player(
         info!("Creating new player for {}", load_player.name);
 
         let player = Player::new(load_player.name.clone(), load_player.client_id);
-        // let starting_pos = Vec3::new(0.0, 1900.0, 0.0);
 
-        let location = find_new_player_location(&universe_systems);
-        // let location = Location::new(starting_pos, Sector::new(25, 25, 25));
+        let (location, rot) = find_new_player_location(&universe_systems);
         let velocity = Velocity::default();
         let inventory = generate_player_inventory(player_entity, &items, &mut commands, &needs_data, server_settings.creative);
 
@@ -233,6 +231,7 @@ fn create_new_player(
                 player,
                 inventory,
                 credits,
+                Transform::from_rotation(rot),
                 PlayerLooking { rotation: Quat::IDENTITY },
             ))
             .remove::<LoadPlayer>();
@@ -248,9 +247,9 @@ fn finish_loading_player(
     mut evw_player_join: EventWriter<PlayerConnectedEvent>,
     mut evw_sync_registries: EventWriter<SyncRegistriesEvent>,
     server_settings: Res<ServerSettings>,
-    q_player_finished_loading: Query<(Entity, &Player, &Location, &Velocity, Option<&Parent>), Added<Player>>,
+    q_player_finished_loading: Query<(Entity, &Player, &Location, &Velocity, Option<&Parent>, Option<&Transform>), Added<Player>>,
 ) {
-    for (player_entity, load_player, location, velocity, maybe_parent) in q_player_finished_loading.iter() {
+    for (player_entity, load_player, location, velocity, maybe_parent, trans) in q_player_finished_loading.iter() {
         info!("Completing player load for {}", load_player.name());
         let mut ecmds = commands.entity(player_entity);
 
@@ -279,7 +278,11 @@ fn finish_loading_player(
 
         lobby.add_player(load_player.id(), player_entity);
 
-        let netty_body = NettyRigidBody::new(Some(*velocity), Quat::IDENTITY, NettyRigidBodyLocation::Absolute(*location));
+        let netty_body = NettyRigidBody::new(
+            Some(*velocity),
+            trans.map(|x| x.rotation).unwrap_or(Quat::IDENTITY),
+            NettyRigidBodyLocation::Absolute(*location),
+        );
 
         info!("Sending player create message!");
         let msg = cosmos_encoder::serialize(&ServerReliableMessages::PlayerCreate {
