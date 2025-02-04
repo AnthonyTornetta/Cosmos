@@ -971,10 +971,10 @@ pub(super) fn register(app: &mut App) {
                 client_sync_players
                     .before(ClientReceiveComponents::ClientReceiveComponents)
                     .in_set(NetworkingSystemsSet::ReceiveMessages)
-                    .before(CosmosBundleSet::HandleCosmosBundles),
+                    .before(LocationPhysicsSet::DoPhysics)
             )
-                .run_if(in_state(GameState::Playing).or(in_state(GameState::LoadingWorld)))
-                .chain(),
+            .run_if(in_state(GameState::Playing).or(in_state(GameState::LoadingWorld)))
+            .chain(),
         )
         .add_systems(
             Update,

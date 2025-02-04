@@ -8,7 +8,7 @@ use std::{
 
 use bevy::{
     log::warn,
-    prelude::{App, Commands, Component, DespawnRecursiveExt, Entity, IntoSystemConfigs, Name, Or, Query, ResMut, Update, With, Without},
+    prelude::{not, resource_exists, App, Commands, Entity, IntoSystemConfigs, Name, Or, Query, ResMut, Resource, Update, With, Without},
     state::condition::in_state,
     tasks::{AsyncComputeTaskPool, Task},
     time::common_conditions::on_timer,
@@ -47,22 +47,18 @@ fn unload_far(
 const SEARCH_RANGE: SectorUnit = 25;
 const DEFAULT_LOAD_DISTANCE: u32 = (LOAD_DISTANCE / SECTOR_DIMENSIONS) as u32;
 
-#[derive(Component, Debug)]
+#[derive(Resource, Debug)]
 struct LoadingTask(Task<Vec<SaveFileIdentifier>>);
 
 fn monitor_loading_task(
     // Because entities can be added while the scan task is in progress,
     // we need to re-check all the loaded entities before actually spawning them.
     loaded_entities: Query<&EntityId>,
-    mut query: Query<(Entity, &mut LoadingTask)>,
+    mut task: ResMut<LoadingTask>,
     mut commands: Commands,
 ) {
-    let Ok((entity, mut task)) = query.get_single_mut() else {
-        return;
-    };
-
     if let Some(save_file_ids) = future::block_on(future::poll_once(&mut task.0)) {
-        commands.entity(entity).despawn_recursive();
+        commands.remove_resource::<LoadingTask>();
 
         for sfi in save_file_ids {
             if !loaded_entities.iter().any(|x| {
@@ -84,14 +80,7 @@ fn load_near(
     // This is modified below, despite it being cloned. Use ResMut to make purpose clear
     sectors_cache: ResMut<SectorsCache>,
     mut commands: Commands,
-
-    already_exists: Query<(), With<LoadingTask>>,
 ) {
-    if !already_exists.is_empty() {
-        // If one is already loading, no need to spawn another task.
-        return;
-    }
-
     if q_player_locations.is_empty() {
         // Don't bother if there are no players
         return;
@@ -198,7 +187,7 @@ fn load_near(
         new_to_load
     });
 
-    commands.spawn((Name::new("Loading near players async task"), LoadingTask(task)));
+    commands.insert_resource(LoadingTask(task));
 }
 
 fn load_all(base: SaveFileIdentifier, file: DirEntry, to_load: &mut Vec<SaveFileIdentifier>, loaded_entities: &[EntityId]) {
@@ -237,9 +226,10 @@ pub(super) fn register(app: &mut App) {
                 .after(LocationPhysicsSet::DoPhysics),
             // .run_if(on_timer(Duration::from_millis(1000))),
             load_near
+                .run_if(not(resource_exists::<LoadingTask>))
                 .in_set(NetworkingSystemsSet::Between)
                 .run_if(on_timer(Duration::from_millis(1000))),
-            monitor_loading_task,
+            monitor_loading_task.run_if(resource_exists::<LoadingTask>),
         )
             .run_if(in_state(GameState::Playing)),
     );

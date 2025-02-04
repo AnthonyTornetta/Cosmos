@@ -12,7 +12,7 @@ use cosmos_core::{
     state::GameState,
 };
 
-const N_SECTORS: f32 = 1.0;
+const N_SECTORS: f32 = 2.0;
 const REASON: &str = "cosmos:far_away";
 
 fn disable_colliders(
