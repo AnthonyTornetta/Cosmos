@@ -93,6 +93,8 @@ fn apply_set_position(
         match set_pos {
             SetPosition::Transform => {
                 let mut ecmds = commands.entity(entity);
+                info!("!!! Removing set pos on {entity:?}!");
+                ecmds.log_components();
                 ecmds.insert(SetTransformBasedOnLocationFlag).remove::<SetPosition>();
             }
             SetPosition::Location => {
@@ -381,6 +383,7 @@ fn recursively_sync_transforms_and_locations(
 
     let (local_translation, local_rotation) = if let Some(mut my_transform) = my_transform {
         if set_trans.is_some() {
+            info!("Setting trans ! {} | {}", *my_loc, parent_loc);
             my_transform.translation = parent_g_rot.inverse().normalize() * ((*my_loc - parent_loc).absolute_coords_f32());
         } else {
             // Calculates the change in location since the last time this ran
@@ -427,6 +430,20 @@ fn recursively_sync_transforms_and_locations(
     }
 }
 
+#[cfg(feature = "client")]
+fn assign_everything_client_world(
+    mut commands: Commands,
+    q_player_world: Query<Entity, With<PlayerWorld>>,
+    q_loc_no_world: Query<Entity, (With<Location>, Without<WorldWithin>, Without<PlayerWorld>)>,
+) {
+    for ent in q_loc_no_world.iter() {
+        let Ok(pw) = q_player_world.get_single() else {
+            continue;
+        };
+        commands.entity(ent).insert(WorldWithin(pw));
+    }
+}
+
 pub(super) fn register(app: &mut App) {
     app.add_systems(
         Update,
@@ -436,6 +453,8 @@ pub(super) fn register(app: &mut App) {
             reposition_worlds_around_anchors,
             #[cfg(feature = "server")]
             (move_anchors_between_worlds, move_non_anchors_between_worlds, remove_empty_worlds).chain(),
+            #[cfg(feature = "client")]
+            assign_everything_client_world,
             sync_transforms_and_locations,
         )
             .chain()

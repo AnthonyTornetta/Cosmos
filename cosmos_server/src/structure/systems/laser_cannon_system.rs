@@ -12,7 +12,7 @@ use cosmos_core::{
         cosmos_encoder, server_laser_cannon_system_messages::ServerStructureSystemMessages, system_sets::NetworkingSystemsSet,
         NettyChannelServer,
     },
-    physics::location::Location,
+    physics::location::{Location, LocationPhysicsSet},
     projectiles::{causer::Causer, laser::Laser},
     registry::{identifiable::Identifiable, Registry},
     state::GameState,
@@ -187,9 +187,10 @@ pub(super) fn register(app: &mut App) {
         Update,
         update_system
             .ambiguous_with(thruster_system::update_ship_force_and_velocity)
-            .after(BlockEventsSet::ProcessEvents)
+            // .after(BlockEventsSet::ProcessEvents)
             .in_set(StructureSystemsSet::UpdateSystemsBlocks)
             .in_set(NetworkingSystemsSet::Between)
+            .before(LocationPhysicsSet::DoPhysics)
             .run_if(in_state(GameState::Playing)),
     )
     .add_systems(OnEnter(GameState::PostLoading), register_laser_blocks)
