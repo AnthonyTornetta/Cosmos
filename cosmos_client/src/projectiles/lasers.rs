@@ -8,7 +8,7 @@ use cosmos_core::{
         cosmos_encoder, server_laser_cannon_system_messages::ServerStructureSystemMessages, sync::mapping::NetworkMapping,
         system_sets::NetworkingSystemsSet, NettyChannelServer,
     },
-    physics::location::{LocationPhysicsSet, SetPosition},
+    physics::location::LocationPhysicsSet,
     projectiles::{causer::Causer, laser::Laser},
     state::GameState,
 };
@@ -42,7 +42,6 @@ fn lasers_netty(
     q_default_world: Query<Entity, With<RapierContextSimulation>>,
     mut laser_materials: ResMut<LaserMaterials>,
 ) {
-    info!("RAN!");
     while let Some(message) = client.receive_message(NettyChannelServer::StructureSystems) {
         let msg: ServerStructureSystemMessages = cosmos_encoder::deserialize(&message).unwrap();
 

@@ -93,16 +93,11 @@ fn apply_set_position(
         match set_pos {
             SetPosition::Transform => {
                 let mut ecmds = commands.entity(entity);
-                info!("!!! Removing set pos on {entity:?}!");
-                ecmds.log_components();
                 ecmds.insert(SetTransformBasedOnLocationFlag).remove::<SetPosition>();
             }
             SetPosition::Location => {
                 if let Some(loc_from_trans) = loc_from_trans(entity, &q_trans, &q_x, &q_g_trans, &q_parent) {
-                    if let Ok(g_trans) = q_g_trans.get(entity) {
-                        info!("{loc_from_trans} | {}", g_trans.translation());
-                        commands.entity(entity).insert(loc_from_trans).remove::<SetPosition>();
-                    }
+                    commands.entity(entity).insert(loc_from_trans).remove::<SetPosition>();
                 }
             }
         }
@@ -383,7 +378,6 @@ fn recursively_sync_transforms_and_locations(
 
     let (local_translation, local_rotation) = if let Some(mut my_transform) = my_transform {
         if set_trans.is_some() {
-            info!("Setting trans ! {} | {}", *my_loc, parent_loc);
             my_transform.translation = parent_g_rot.inverse().normalize() * ((*my_loc - parent_loc).absolute_coords_f32());
         } else {
             // Calculates the change in location since the last time this ran
