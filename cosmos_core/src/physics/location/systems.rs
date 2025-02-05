@@ -1,6 +1,7 @@
 //! Handles the systems that sync up worlds, locations, and transforms
 
 use bevy::{
+    ecs::component::StorageType,
     prelude::*,
     transform::systems::{propagate_transforms, sync_simple_transforms},
 };
@@ -25,6 +26,11 @@ use super::{Location, LocationPhysicsSet, SetPosition};
 
 #[cfg(doc)]
 use crate::netty::client::LocalPlayer;
+
+#[derive(Component)]
+/// Put this on an entity if you need it to immediately have its tranform & location synced and
+/// world assigned to it.
+pub struct SyncTransformAndLocationImmediately;
 
 #[derive(Component)]
 /// Anything that has this component will be treated as an anchor for the [`PlayerWorld`]s.
@@ -436,6 +442,10 @@ fn assign_everything_client_world(
         };
         commands.entity(ent).insert(WorldWithin(pw));
     }
+}
+
+impl Component for Location {
+    const STORAGE_TYPE: StorageType = StorageType::Table;
 }
 
 pub(super) fn register(app: &mut App) {

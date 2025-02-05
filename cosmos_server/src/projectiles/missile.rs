@@ -5,6 +5,7 @@ use std::time::Duration;
 use bevy::{
     ecs::{component::Component, event::EventReader, schedule::IntoSystemConfigs},
     hierarchy::Parent,
+    log::info,
     math::Vec3,
     prelude::{App, Commands, Entity, Query, Res, Update, With},
     time::Time,
@@ -13,6 +14,7 @@ use bevy::{
 use bevy_rapier3d::{
     dynamics::{ExternalImpulse, Velocity},
     pipeline::CollisionEvent,
+    plugin::{RapierContextEntityLink, ReadRapierContext},
     prelude::{ReadMassProperties, RigidBody},
 };
 
@@ -22,7 +24,7 @@ use cosmos_core::{
     persistence::LoadingDistance,
     physics::{
         collision_handling::CollisionBlacklist,
-        location::{CosmosBundleSet, Location},
+        location::{CosmosBundleSet, Location, LocationPhysicsSet},
     },
     projectiles::missile::{Explosion, ExplosionSystemSet, Missile},
     structure::StructureTypeSet,
@@ -90,9 +92,18 @@ fn apply_missile_thrust(mut commands: Commands, time: Res<Time>, q_missiles: Que
 
 fn respond_to_collisions(
     mut ev_reader: EventReader<CollisionEvent>,
-    q_missile: Query<(&Location, &Velocity, &Missile, &CollisionBlacklist)>,
+    q_missile: Query<(
+        &Location,
+        &Velocity,
+        &Missile,
+        &CollisionBlacklist,
+        &GlobalTransform,
+        &RapierContextEntityLink,
+    )>,
+    q_g_trans: Query<(&Location, &GlobalTransform)>,
     q_parent: Query<&Parent>,
     mut commands: Commands,
+    context_access: ReadRapierContext,
 ) {
     for ev in ev_reader.read() {
         let &CollisionEvent::Started(e1, e2, _) = ev else {
@@ -107,7 +118,7 @@ fn respond_to_collisions(
             None
         };
 
-        let Some(((location, velocity, missile, collision_blacklist), missile_entity, hit_entity)) = entities else {
+        let Some(((location, velocity, missile, collision_blacklist, g_trans, link), missile_entity, hit_entity)) = entities else {
             continue;
         };
 
@@ -117,6 +128,7 @@ fn respond_to_collisions(
 
         commands.entity(missile_entity).insert(NeedsDespawned);
 
+        info!("Spawning explosion @ {}", *location,);
         commands.spawn((
             *location,
             *velocity,
@@ -159,7 +171,7 @@ pub(super) fn register(app: &mut App) {
         Update,
         (respond_to_collisions.before(NetworkingSystemsSet::SyncComponents), despawn_missiles)
             .before(ExplosionSystemSet::PreProcessExplosions)
-            .before(CosmosBundleSet::HandleCosmosBundles)
+            .after(LocationPhysicsSet::DoPhysics)
             .chain(),
     );
 
