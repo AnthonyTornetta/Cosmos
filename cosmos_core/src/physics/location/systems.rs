@@ -552,6 +552,8 @@ impl Component for Location {
     const STORAGE_TYPE: StorageType = StorageType::Table;
 
     fn register_component_hooks(hooks: &mut bevy::ecs::component::ComponentHooks) {
+        // A lot of times you want to add something to the world after the [`LocationPhysicsSet::DoPhysics`] set,
+        // so this will allow you to do that without messing up any positioning logic.
         hooks.on_add(|mut world, entity, _component_id| {
             if !world.contains_resource::<DoPhysicsDone>() {
                 // Don't do all this if it's going to happen later this frame.

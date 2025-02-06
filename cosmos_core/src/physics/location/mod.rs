@@ -50,6 +50,7 @@ pub enum LocationPhysicsSet {
     DoPhysics,
 }
 
+// Component impl in systems.rs
 #[derive(Default, Debug, PartialEq, Serialize, Deserialize, Reflect, Clone, Copy)]
 /// Used to represent a point in a near-infinite space
 ///
