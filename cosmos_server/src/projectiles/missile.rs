@@ -5,6 +5,7 @@ use std::time::Duration;
 use bevy::{
     ecs::{component::Component, event::EventReader, schedule::IntoSystemConfigs},
     hierarchy::Parent,
+    log::info,
     math::Vec3,
     prelude::{App, Commands, Entity, Query, Res, Update, With},
     time::Time,
@@ -22,7 +23,7 @@ use cosmos_core::{
     persistence::LoadingDistance,
     physics::{
         collision_handling::CollisionBlacklist,
-        location::{CosmosBundleSet, Location},
+        location::{CosmosBundleSet, Location, LocationPhysicsSet},
     },
     projectiles::missile::{Explosion, ExplosionSystemSet, Missile},
     structure::StructureTypeSet,
@@ -117,6 +118,7 @@ fn respond_to_collisions(
 
         commands.entity(missile_entity).insert(NeedsDespawned);
 
+        info!("Spawning explosion @ {}", *location,);
         commands.spawn((
             *location,
             *velocity,
@@ -159,7 +161,7 @@ pub(super) fn register(app: &mut App) {
         Update,
         (respond_to_collisions.before(NetworkingSystemsSet::SyncComponents), despawn_missiles)
             .before(ExplosionSystemSet::PreProcessExplosions)
-            .before(CosmosBundleSet::HandleCosmosBundles)
+            .after(LocationPhysicsSet::DoPhysics)
             .chain(),
     );
 

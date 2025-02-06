@@ -117,9 +117,9 @@ pub(super) fn register(app: &mut App) {
         app.configure_sets(
             Update,
             (
-                ExplosionSystemSet::PreProcessExplosions
-                    .before(LocationPhysicsSet::DoPhysics)
-                    .before(CosmosBundleSet::HandleCosmosBundles),
+                ExplosionSystemSet::PreProcessExplosions,
+                // .before(LocationPhysicsSet::DoPhysics)
+                // .before(CosmosBundleSet::HandleCosmosBundles),
                 ExplosionSystemSet::ProcessExplosions
                     .after(LocationPhysicsSet::DoPhysics)
                     .after(CosmosBundleSet::HandleCosmosBundles),

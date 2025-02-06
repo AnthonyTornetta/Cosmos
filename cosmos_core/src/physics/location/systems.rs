@@ -1,6 +1,7 @@
 //! Handles the systems that sync up worlds, locations, and transforms
 
 use bevy::{
+    ecs::component::StorageType,
     prelude::*,
     transform::systems::{propagate_transforms, sync_simple_transforms},
 };
@@ -73,6 +74,33 @@ fn loc_from_trans(
 
 #[derive(Component)]
 struct SetTransformBasedOnLocationFlag;
+
+fn apply_set_position_single(
+    ent: In<Entity>,
+    q_set_position: Query<&SetPosition>,
+    q_x: Query<(Entity, Option<&Location>, Option<&SetPosition>)>,
+    q_trans: Query<&Transform>,
+    q_parent: Query<&Parent>,
+    q_g_trans: Query<&GlobalTransform>,
+    mut commands: Commands,
+) {
+    const DEFAULT_SET_POS: SetPosition = SetPosition::Transform;
+
+    let entity = ent.0;
+
+    let set_pos = q_set_position.get(entity).unwrap_or(&DEFAULT_SET_POS);
+    match set_pos {
+        SetPosition::Transform => {
+            let mut ecmds = commands.entity(entity);
+            ecmds.insert(SetTransformBasedOnLocationFlag).remove::<SetPosition>();
+        }
+        SetPosition::Location => {
+            if let Some(loc_from_trans) = loc_from_trans(entity, &q_trans, &q_x, &q_g_trans, &q_parent) {
+                commands.entity(entity).insert(loc_from_trans).remove::<SetPosition>();
+            }
+        }
+    }
+}
 
 fn apply_set_position(
     q_location_added: Query<Entity, (Without<SetPosition>, Added<Location>)>,
@@ -246,6 +274,51 @@ fn move_anchors_between_worlds(
 }
 
 #[cfg(feature = "server")]
+fn move_non_anchors_between_worlds_single(
+    ent: In<Entity>,
+    mut needs_world: Query<(&Location, Option<&mut WorldWithin>, Option<&mut RapierContextEntityLink>), (Without<Anchor>, Without<Parent>)>,
+    anchors_with_worlds: Query<(&WorldWithin, &Location, &RapierContextEntityLink), With<Anchor>>,
+    mut commands: Commands,
+) {
+    let entity = ent.0;
+
+    let Ok((location, maybe_within, maybe_body_world)) = needs_world.get_mut(entity) else {
+        return;
+    };
+
+    let mut best_ww = None;
+    let mut best_dist = None;
+    let mut best_world_id = None;
+
+    for (ww, player_loc, body_world) in anchors_with_worlds.iter() {
+        let dist = player_loc.distance_sqrd(location);
+
+        if best_ww.is_none() || dist < best_dist.unwrap() {
+            best_ww = Some(*ww);
+            best_dist = Some(dist);
+            best_world_id = Some(*body_world);
+        }
+    }
+
+    if let Some(ww) = best_ww {
+        let world_link = best_world_id.expect("This should have a value if ww is some");
+
+        if let Some(mut world_within) = maybe_within {
+            let mut body_world = maybe_body_world.expect("Something should have a `RapierContextEntityLink` if it has a WorldWithin.");
+
+            if *body_world != world_link {
+                *body_world = world_link;
+            }
+            if world_within.0 != ww.0 {
+                world_within.0 = ww.0;
+            }
+        } else {
+            commands.entity(entity).insert(ww).insert(world_link);
+        }
+    }
+}
+
+#[cfg(feature = "server")]
 fn move_non_anchors_between_worlds(
     mut needs_world: Query<
         (Entity, &Location, Option<&mut WorldWithin>, Option<&mut RapierContextEntityLink>),
@@ -342,6 +415,26 @@ type TransformLocationQuery<'w, 's> = Query<
 >;
 
 /// This system syncs the locations up with their changes in transforms.
+fn sync_transforms_and_locations_single(
+    ent: In<Entity>,
+    // for now this only supports stuff w/out parents. That's fine for now
+    q_entities: Query<&WorldWithin, (Without<PlayerWorld>, With<Location>, Without<Parent>)>,
+    q_loc: Query<&Location, With<PlayerWorld>>,
+    mut q_data: TransformLocationQuery,
+    q_children: Query<&Children>,
+    mut commands: Commands,
+) {
+    let entity = ent.0;
+    if let Ok(world_within) = q_entities.get(entity) {
+        let Ok(pw_loc) = q_loc.get(world_within.0) else {
+            return;
+        };
+
+        recursively_sync_transforms_and_locations(*pw_loc, Vec3::ZERO, Quat::IDENTITY, entity, &mut commands, &mut q_data, &q_children);
+    }
+}
+
+/// This system syncs the locations up with their changes in transforms.
 fn sync_transforms_and_locations(
     q_entities: Query<(Entity, &WorldWithin), (Without<PlayerWorld>, With<Location>, Without<Parent>)>,
     q_loc: Query<&Location, With<PlayerWorld>>,
@@ -425,6 +518,23 @@ fn recursively_sync_transforms_and_locations(
 }
 
 #[cfg(feature = "client")]
+fn assign_everything_client_world_single(
+    ent: In<Entity>,
+    mut commands: Commands,
+    q_player_world: Query<Entity, With<PlayerWorld>>,
+    q_loc_no_world: Query<(), (With<Location>, Without<WorldWithin>, Without<PlayerWorld>)>,
+) {
+    let entity = ent.0;
+
+    if q_loc_no_world.contains(entity) {
+        let Ok(pw) = q_player_world.get_single() else {
+            return;
+        };
+        commands.entity(entity).insert(WorldWithin(pw));
+    }
+}
+
+#[cfg(feature = "client")]
 fn assign_everything_client_world(
     mut commands: Commands,
     q_player_world: Query<Entity, With<PlayerWorld>>,
@@ -438,7 +548,47 @@ fn assign_everything_client_world(
     }
 }
 
+impl Component for Location {
+    const STORAGE_TYPE: StorageType = StorageType::Table;
+
+    fn register_component_hooks(hooks: &mut bevy::ecs::component::ComponentHooks) {
+        // A lot of times you want to add something to the world after the [`LocationPhysicsSet::DoPhysics`] set,
+        // so this will allow you to do that without messing up any positioning logic.
+        hooks.on_add(|mut world, entity, _component_id| {
+            if !world.contains_resource::<DoPhysicsDone>() {
+                // Don't do all this if it's going to happen later this frame.
+                // This prevents a lot of unneeded work from happening
+                return;
+            }
+            let [ent] = world.entity(&[entity]);
+            if ent.contains::<Anchor>() {
+                return;
+            }
+
+            let mut cmds = world.commands();
+            cmds.run_system_cached_with(apply_set_position_single, entity);
+            #[cfg(feature = "server")]
+            cmds.run_system_cached_with(move_non_anchors_between_worlds_single, entity);
+            #[cfg(feature = "client")]
+            cmds.run_system_cached_with(assign_everything_client_world_single, entity);
+            cmds.run_system_cached_with(sync_transforms_and_locations_single, entity);
+        });
+    }
+}
+
+#[derive(Resource)]
+struct DoPhysicsDone;
+
+fn remove_do_physics_done(mut commands: Commands) {
+    commands.remove_resource::<DoPhysicsDone>();
+}
+
+fn do_physics_done(mut commands: Commands) {
+    commands.insert_resource(DoPhysicsDone);
+}
+
 pub(super) fn register(app: &mut App) {
+    app.add_systems(PostUpdate, remove_do_physics_done);
     app.add_systems(
         Update,
         (
@@ -450,6 +600,7 @@ pub(super) fn register(app: &mut App) {
             #[cfg(feature = "client")]
             assign_everything_client_world,
             sync_transforms_and_locations,
+            do_physics_done,
         )
             .chain()
             .in_set(LocationPhysicsSet::DoPhysics)

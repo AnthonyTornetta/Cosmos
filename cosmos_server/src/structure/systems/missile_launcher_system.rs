@@ -19,7 +19,7 @@ use cosmos_core::{
     persistence::LoadingDistance,
     physics::{
         collision_handling::{CollisionBlacklist, CollisionBlacklistedEntity},
-        location::{CosmosBundleSet, Location, SetPosition},
+        location::{Location, LocationPhysicsSet, SetPosition},
     },
     projectiles::missile::Missile,
     registry::{identifiable::Identifiable, Registry},
@@ -321,7 +321,7 @@ pub(super) fn register(app: &mut App) {
         Update,
         update_missile_system
             .run_if(in_state(GameState::Playing))
-            .before(CosmosBundleSet::HandleCosmosBundles)
+            .after(LocationPhysicsSet::DoPhysics)
             .before(NetworkingSystemsSet::SyncComponents),
     )
     .add_systems(OnEnter(GameState::PostLoading), register_missile_launcher_blocks)

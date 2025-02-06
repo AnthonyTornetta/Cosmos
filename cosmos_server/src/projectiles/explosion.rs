@@ -6,6 +6,7 @@ use bevy::{
         query::{Added, Or, Without},
         schedule::IntoSystemConfigs,
     },
+    log::info,
     math::{Quat, Vec3},
     prelude::{App, Commands, Entity, Query, Res, Update, With},
     transform::components::{GlobalTransform, Transform},
@@ -21,7 +22,7 @@ use cosmos_core::{
     block::{block_events::BlockEventsSet, Block},
     ecs::NeedsDespawned,
     physics::{
-        location::Location,
+        location::{Location, LocationPhysicsSet},
         player_world::{PlayerWorld, WorldWithin},
         structure_physics::ChunkPhysicsPart,
     },
@@ -83,15 +84,32 @@ fn respond_to_explosion(
     mut evw_block_take_damage: EventWriter<BlockTakeDamageEvent>,
     mut evw_block_destroyed: EventWriter<BlockDestroyedEvent>,
     mut ev_writer_explosion_hit: EventWriter<ExplosionHitEvent>,
-
+    // blocks: Res<Registry<Block>>,
+    // mut evw_bc: EventWriter<BlockChangedEvent>,
     q_shield: Query<&Shield>,
 ) {
     for (ent, &explosion_loc, world_within, physics_world, &explosion, causer) in q_explosions.iter() {
+        info!("Found explosion @ {explosion_loc}!");
         commands.entity(ent).insert((NeedsDespawned, DontNotifyClientOfDespawn));
 
         let Ok(player_world_loc) = q_player_world.get(world_within.0) else {
             continue;
         };
+
+        // for (loc, trans, mut s) in q_structures.iter_mut() {
+        //     info!("EXPLOSION: {}; STRUCTURE: {}", explosion_loc, loc);
+        //     let rel = trans.rotation.inverse() * (explosion_loc - *loc).absolute_coords_f32();
+        //     let Ok(c) = BlockCoordinate::try_from(s.relative_coords_to_local_coords(rel.x, rel.y, rel.z)) else {
+        //         continue;
+        //     };
+        //     s.set_block_at(
+        //         c,
+        //         blocks.from_id("cosmos:stone").unwrap(),
+        //         Default::default(),
+        //         &blocks,
+        //         Some(&mut evw_bc),
+        //     );
+        // }
 
         let max_radius = explosion.power.sqrt();
 
@@ -252,6 +270,7 @@ pub(super) fn register(app: &mut App) {
             .in_set(BlockEventsSet::SendEventsForNextFrame)
             .ambiguous_with(BlockEventsSet::SendEventsForNextFrame) // Order of blocks being updated doesn't matter
             .after(ShieldSet::RechargeShields)
+            .after(LocationPhysicsSet::DoPhysics)
             .before(ShieldSet::OnShieldHit)
             .in_set(BlockHealthSet::SendHealthChanges),
     );

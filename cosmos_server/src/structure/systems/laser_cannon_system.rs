@@ -190,7 +190,7 @@ pub(super) fn register(app: &mut App) {
             // .after(BlockEventsSet::ProcessEvents)
             .in_set(StructureSystemsSet::UpdateSystemsBlocks)
             .in_set(NetworkingSystemsSet::Between)
-            .before(LocationPhysicsSet::DoPhysics)
+            .after(LocationPhysicsSet::DoPhysics)
             .run_if(in_state(GameState::Playing)),
     )
     .add_systems(OnEnter(GameState::PostLoading), register_laser_blocks)
