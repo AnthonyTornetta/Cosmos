@@ -9,6 +9,7 @@ use bevy::{
 #[cfg(feature = "server")]
 use bevy::utils::HashSet;
 
+use bevy_rapier3d::plugin::PhysicsSet;
 #[cfg(feature = "server")]
 use bevy_rapier3d::{
     plugin::{RapierConfiguration, RapierContextEntityLink},
@@ -588,7 +589,6 @@ fn do_physics_done(mut commands: Commands) {
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_systems(PostUpdate, remove_do_physics_done);
     app.add_systems(
         Update,
         (
@@ -606,13 +606,9 @@ pub(super) fn register(app: &mut App) {
             .in_set(LocationPhysicsSet::DoPhysics)
             // .in_set(CosmosBundleSet::HandleCosmosBundles)
             .in_set(NetworkingSystemsSet::Between),
-    );
+    )
+    .add_systems(PostUpdate, remove_do_physics_done);
 
-    // app.add_systems(PostUpdate, sync_transforms_and_locations);
-}
-
-#[cfg(test)]
-mod test {
-    #[test]
-    fn test_loc_updates() {}
+    // Need to do this or wacky physics stuff happens. Idk why
+    app.add_systems(PostUpdate, sync_transforms_and_locations.before(PhysicsSet::SyncBackend));
 }
