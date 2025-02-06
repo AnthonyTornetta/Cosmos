@@ -344,11 +344,11 @@ fn on_load_shield(
     let mut hm = HashMap::new();
 
     for (ent, sd, parent) in q_needs_saved.iter() {
-        if let Some(shield) = sd.deserialize_data::<Shield>("cosmos:shield") {
+        if let Ok(shield) = sd.deserialize_data::<Shield>("cosmos:shield") {
             hm.entry(parent.get()).or_insert(Vec::new()).push((ent, shield.block_coord));
             commands.entity(ent).insert((shield, Name::new("Shield")));
 
-            if let Some(downtime) = sd.deserialize_data::<ShieldDowntime>("cosmos:shield_downtime") {
+            if let Ok(downtime) = sd.deserialize_data::<ShieldDowntime>("cosmos:shield_downtime") {
                 commands.entity(ent).insert(downtime);
             }
         }

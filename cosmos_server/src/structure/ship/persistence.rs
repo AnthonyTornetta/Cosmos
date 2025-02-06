@@ -78,7 +78,7 @@ fn load_structure(
 
     structure_loaded_event_writer.send(StructureLoadedEvent { structure_entity: entity });
 
-    if let Some(block_data) = s_data.deserialize_data::<AllBlockData>("cosmos:block_data") {
+    if let Ok(block_data) = s_data.deserialize_data::<AllBlockData>("cosmos:block_data") {
         for (chunk_coord, data) in block_data.0 {
             chunk_load_block_data_event_writer.send(ChunkLoadBlockDataEvent {
                 data,
@@ -98,7 +98,7 @@ fn on_load_ship_blueprint(
 ) {
     for (entity, s_data, needs_blueprinted) in query.iter() {
         if s_data.deserialize_data::<bool>("cosmos:is_ship").unwrap_or(false) {
-            if let Some(structure) = s_data.deserialize_data::<Structure>("cosmos:structure") {
+            if let Ok(structure) = s_data.deserialize_data::<Structure>("cosmos:structure") {
                 info!("Loading ship blueprint!");
                 load_structure(
                     entity,
@@ -124,7 +124,7 @@ fn on_load_ship(
 ) {
     for (entity, s_data) in query.iter() {
         if s_data.deserialize_data::<bool>("cosmos:is_ship").unwrap_or(false) {
-            if let Some(structure) = s_data.deserialize_data::<Structure>("cosmos:structure") {
+            if let Ok(structure) = s_data.deserialize_data::<Structure>("cosmos:structure") {
                 let loc = s_data
                     .deserialize_data("cosmos:location")
                     .expect("Every ship should have a location when saved!");

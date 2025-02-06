@@ -12,6 +12,7 @@ use bevy::{
         schedule::{IntoSystemConfigs, IntoSystemSetConfigs, SystemSet},
         system::{Commands, Query, Res, Resource},
     },
+    log::info,
     math::{Quat, Vec3},
     prelude::{Added, EventReader},
     reflect::Reflect,
@@ -26,7 +27,7 @@ use cosmos_core::{
     physics::location::{Location, Sector, SectorUnit, SECTOR_DIMENSIONS},
     state::GameState,
     structure::{block_health::events::BlockTakeDamageEvent, shared::MeltingDown, ship::pilot::Pilot},
-    utils::random::random_range,
+    utils::{quat_math::QuatMath, random::random_range},
 };
 use serde::{Deserialize, Serialize};
 
@@ -59,6 +60,7 @@ const DIFFICULTY_INCREASE: f32 = 5.0;
 pub struct PirateNeedsSpawned {
     location: Location,
     difficulty: u32,
+    heading_towards: Location,
 }
 
 #[derive(Component)]
@@ -105,11 +107,13 @@ fn on_needs_pirate_spawned(mut commands: Commands, q_needs_pirate_spawned: Query
     for (ent, pns) in q_needs_pirate_spawned.iter() {
         let difficulty = pns.difficulty;
 
+        let rotation = (pns.heading_towards - pns.location).absolute_coords_f32().normalize_or_zero();
+
         commands.entity(ent).remove::<PirateNeedsSpawned>().insert((
             Pirate,
             NeedsBlueprintLoaded {
                 path: format!("default_blueprints/pirate/default_{difficulty}.bp"),
-                rotation: Quat::IDENTITY,
+                rotation: Quat::looking_to(rotation, Vec3::Y),
                 spawn_at: pns.location,
             },
         ));
@@ -196,15 +200,19 @@ fn spawn_pirates(
                 break;
             }
 
-            let origin = Location::new(
-                Vec3::new(random_coord(), random_coord(), random_coord()),
-                sector
-                    + Sector::new(
-                        random_range(-1.0, 1.0).round() as SectorUnit,
-                        random_range(-1.0, 1.0).round() as SectorUnit,
-                        random_range(-1.0, 1.0).round() as SectorUnit,
-                    ),
-            );
+            let spawn_sector = sector
+                + Sector::new(
+                    random_range(-1.0, 1.0).round() as SectorUnit,
+                    random_range(-1.0, 1.0).round() as SectorUnit,
+                    random_range(-1.0, 1.0).round() as SectorUnit,
+                );
+
+            // Don't spawn directly on top of players
+            if spawn_sector == sector {
+                continue;
+            }
+
+            let origin = Location::new(Vec3::new(random_coord(), random_coord(), random_coord()), spawn_sector);
 
             if q_players
                 .iter()
@@ -241,6 +249,7 @@ fn spawn_pirates(
                     PirateNeedsSpawned {
                         location: loc_here,
                         difficulty,
+                        heading_towards: Location::new(Vec3::ZERO, sector),
                     },
                 ));
             }
@@ -329,6 +338,8 @@ fn add_hitters(mut commands: Commands, q_needs_hitter: Query<Entity, (With<Pirat
 fn on_melt_down(mut q_players: Query<&mut PlayerStrength>, q_melting_down: Query<&Hitters, Added<MeltingDown>>) {
     for hitters in q_melting_down.iter() {
         let dmg_total = hitters.0.iter().map(|(_, hits)| *hits).sum::<u64>();
+
+        info!("HITTERS {hitters:?}");
 
         for (&hitter_ent, &hits) in hitters.0.iter() {
             let percent = hits as f32 / dmg_total as f32;

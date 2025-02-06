@@ -350,16 +350,18 @@ fn create_reactor(
     controller: BlockCoordinate,
 ) -> Reactor {
     let mut power_per_second = 0.0;
+    let mut fuel_consumption_percent = 0.0;
 
     for block in structure.block_iter(bounds.negative_coords.into(), bounds.positive_coords.into(), true) {
         let block = structure.block_at(block, blocks);
 
         if let Some(reactor_block) = reactor_blocks.for_block(block) {
             power_per_second += reactor_block.power_per_second();
+            fuel_consumption_percent += 1.0;
         }
     }
 
-    Reactor::new(controller, power_per_second, bounds)
+    Reactor::new(controller, power_per_second, fuel_consumption_percent, bounds)
 }
 
 fn on_piloted_by_ai(

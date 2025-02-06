@@ -39,7 +39,7 @@ use cosmos_core::{
     },
     persistence::LoadingDistance,
     physics::{
-        location::{systems::Anchor, CosmosBundleSet, Location, LocationPhysicsSet, SetPosition, SYSTEM_SECTORS},
+        location::{systems::Anchor, Location, LocationPhysicsSet, SetPosition, SYSTEM_SECTORS},
         player_world::PlayerWorld,
     },
     registry::Registry,
@@ -143,7 +143,6 @@ pub(crate) struct LerpTowards(NettyRigidBody);
 
 fn lerp_towards(
     mut location_query: Query<&mut Location>,
-    global_transform_query: Query<&GlobalTransform>,
     mut query: Query<(Entity, &LerpTowards, &mut Transform, &mut Velocity), With<Location>>,
 ) {
     for (entity, lerp_towards, mut transform, mut velocity) in query.iter_mut() {
@@ -160,14 +159,11 @@ fn lerp_towards(
                     location.set_from(&lerpped_loc);
                 }
             }
-            NettyRigidBodyLocation::Relative(rel_trans, entity) => {
-                if let Ok(g_trans) = global_transform_query.get(entity) {
-                    let parent_rot = Quat::from_affine3(&g_trans.affine());
-                    let final_trans = parent_rot.inverse().mul_vec3(rel_trans);
-
-                    transform.translation = final_trans;
+            NettyRigidBodyLocation::Relative(rel_trans, _) => {
+                if transform.translation.distance_squared(rel_trans) > 100.0 {
+                    transform.translation = rel_trans;
                 } else {
-                    error!("Missing parent for netty rigidbody location with relative flag for entity {entity:?}!");
+                    transform.translation = transform.translation.lerp(rel_trans, 0.1);
                 }
             }
         };
@@ -217,16 +213,19 @@ pub(crate) fn client_sync_players(
         Query<&mut Inventory>,
         Query<&mut Structure>,
     ),
-    mut query_body: Query<
-        (
-            Option<&mut Location>,
-            Option<&mut Transform>,
-            Option<&Velocity>,
-            Option<&mut NetworkTick>,
-            Option<&mut LerpTowards>,
-        ),
-        Without<LocalPlayer>,
-    >,
+    (mut query_body, q_g_trans): (
+        Query<
+            (
+                Option<&mut Location>,
+                Option<&mut Transform>,
+                Option<&Velocity>,
+                Option<&mut NetworkTick>,
+                Option<&mut LerpTowards>,
+            ),
+            Without<LocalPlayer>,
+        >,
+        Query<&GlobalTransform>,
+    ),
     desired_fov: Res<DesiredFov>,
     q_needs_loaded: Query<(), With<NeedsLoadedFromServer>>,
     q_parent: Query<&Parent>,
@@ -303,6 +302,8 @@ pub(crate) fn client_sync_players(
                                         let parent_loc =
                                             query_body.get(parent_ent).map(|x| x.0.copied()).unwrap_or(None).unwrap_or_default();
 
+                                        let parent_rot = q_g_trans.get(parent_ent).map(|x| x.rotation()).unwrap_or_default();
+
                                         if let Ok(parent) = q_parent.get(entity) {
                                             if parent.get() != parent_ent {
                                                 commands.entity(entity).set_parent_in_place(parent_ent);
@@ -311,7 +312,7 @@ pub(crate) fn client_sync_players(
                                             commands.entity(entity).set_parent_in_place(parent_ent);
                                         }
 
-                                        parent_loc + rel_trans
+                                        parent_loc + parent_rot * rel_trans
                                     }
                                 };
 
@@ -392,7 +393,7 @@ pub(crate) fn client_sync_players(
                     continue;
                 };
 
-                info!("Player {} ({}) connected! {body:?}", name.as_str(), id);
+                info!("Player {} ({}) connected!", name.as_str(), id);
 
                 // The player entity may have already been created if some of their components were already synced.
                 let mut entity_cmds = if let Some(player_entity) = network_mapping.client_from_server(&server_entity) {
@@ -970,10 +971,10 @@ pub(super) fn register(app: &mut App) {
                 client_sync_players
                     .before(ClientReceiveComponents::ClientReceiveComponents)
                     .in_set(NetworkingSystemsSet::ReceiveMessages)
-                    .before(CosmosBundleSet::HandleCosmosBundles),
+                    .before(LocationPhysicsSet::DoPhysics)
             )
-                .run_if(in_state(GameState::Playing).or(in_state(GameState::LoadingWorld)))
-                .chain(),
+            .run_if(in_state(GameState::Playing).or(in_state(GameState::LoadingWorld)))
+            .chain(),
         )
         .add_systems(
             Update,

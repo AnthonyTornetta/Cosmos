@@ -16,7 +16,7 @@ use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
 use cosmos_core::{
     physics::location::{Location, Sector},
-    structure::chunk::netty::SaveData,
+    structure::chunk::netty::{DeserializationError, SaveData},
 };
 
 pub mod autosave;
@@ -119,6 +119,12 @@ pub(crate) enum SaveFileIdentifierType {
     /// This will be saved to `world/x_y_z/belongsToEntityId/thisEntityId.cent`
     BelongsTo(Box<SaveFileIdentifier>, String),
 }
+
+#[derive(Component)]
+/// Stores the previous save file identifier from when this was last loaded/saved.
+///
+/// This is used to clean up old versions of this entity from disk as new ones are saved.
+struct PreviousSaveFileIdentifier(pub SaveFileIdentifier);
 
 #[derive(Debug, Component, Clone, Serialize, Deserialize)]
 /// Used to track where the save file for a given entity is or should be.
@@ -288,7 +294,7 @@ impl SerializedData {
 
     /// Deserializes the data as the given type (via `cosmos_encoder::deserialize`) at the given id. Will panic if the
     /// data is not properly serialized.
-    pub fn deserialize_data<T: DeserializeOwned>(&self, data_id: &str) -> Option<T> {
+    pub fn deserialize_data<T: DeserializeOwned>(&self, data_id: &str) -> Result<T, DeserializationError> {
         self.save_data.deserialize_data(data_id)
     }
 

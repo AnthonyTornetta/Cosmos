@@ -38,12 +38,7 @@ use std::f32::consts::TAU;
 #[derive(Debug, Default, Resource, Deref, DerefMut, Clone)]
 struct CachedSectors(HashSet<Sector>);
 
-fn monitor_planets_to_spawn(
-    q_players: Query<&Location, With<Player>>,
-    mut commands: Commands,
-    server_seed: Res<ServerSeed>,
-    mut systems: ResMut<UniverseSystems>,
-) {
+fn monitor_planets_to_spawn(q_players: Query<&Location, With<Player>>, mut commands: Commands, mut systems: ResMut<UniverseSystems>) {
     let mut generated_planets = HashSet::new();
 
     for p_loc in q_players.iter() {
@@ -51,13 +46,13 @@ fn monitor_planets_to_spawn(
             continue;
         };
 
-        for (planet_loc, planet) in system
+        for (planet_rot, planet_loc, planet) in system
             .iter()
             .flat_map(|x| match &x.item {
-                SystemItem::Planet(p) => Some((x.location, p)),
+                SystemItem::Planet(p) => Some((x.rotation, x.location, p)),
                 _ => None,
             })
-            .filter(|x| !system.is_sector_generated_for(x.0.sector(), "cosmos:planet"))
+            .filter(|x| !system.is_sector_generated_for(x.1.sector(), "cosmos:planet"))
         {
             if generated_planets.contains(&planet_loc.sector()) {
                 continue;
@@ -82,12 +77,7 @@ fn monitor_planets_to_spawn(
             info!("Creating planet entity @ {loc}");
             builder.insert_planet(&mut entity_cmd, loc, &mut structure, planet.planet);
 
-            let mut rng = get_rng_for_sector(&server_seed, &loc.sector);
-
-            let angle = rng.gen::<f32>() % TAU;
-            let axis = Dir3::new(Vec3::new(rng.gen(), rng.gen(), rng.gen()).normalize_or_zero()).unwrap_or(Dir3::Y);
-
-            entity_cmd.insert((structure, Transform::from_rotation(Quat::from_axis_angle(*axis, angle))));
+            entity_cmd.insert((structure, Transform::from_rotation(planet_rot)));
 
             generated_planets.insert(planet_loc.sector());
         }
@@ -175,8 +165,12 @@ fn spawn_planets(
                     .unwrap_or_else(|| panic!("Missing biosphere {biosphere_name}"))
                     .id();
 
+                let angle = rng.gen::<f32>() % TAU;
+                let axis = Dir3::new(Vec3::new(rng.gen(), rng.gen(), rng.gen()).normalize_or_zero()).unwrap_or(Dir3::Y);
+
                 system.add_item(
                     location,
+                    Quat::from_axis_angle(*axis, angle),
                     SystemItem::Planet(SystemItemPlanet {
                         size,
                         planet: Planet::new(temperature),

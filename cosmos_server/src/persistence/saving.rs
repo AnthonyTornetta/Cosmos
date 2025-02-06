@@ -28,7 +28,7 @@ use std::{
     io::{self, ErrorKind},
 };
 
-use super::{EntityId, SaveFileIdentifier, SaveFileIdentifierType, SectorsCache, SerializedData};
+use super::{EntityId, PreviousSaveFileIdentifier, SaveFileIdentifier, SaveFileIdentifierType, SectorsCache, SerializedData};
 
 #[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
 /// This system set is for when entities are being saved normally - NOT FOR A BLUEPRINT (use [`BlueprintingSystemSet`] for that.)
@@ -159,6 +159,7 @@ fn done_saving(
             &EntityId,
             Option<&LoadingDistance>,
             Option<&SaveFileIdentifier>,
+            Option<&PreviousSaveFileIdentifier>,
             Option<&Player>,
         ),
         With<NeedsSaved>,
@@ -166,22 +167,22 @@ fn done_saving(
     q_parent: Query<&Parent>,
     q_entity_id: Query<&EntityId>,
     q_serialized_data: Query<(&SerializedData, &EntityId, Option<&LoadingDistance>)>,
-    dead_saves_query: Query<&SaveFileIdentifier, (With<NeedsDespawned>, Without<NeedsSaved>)>,
+    dead_saves_query: Query<&PreviousSaveFileIdentifier, (With<NeedsDespawned>, Without<NeedsSaved>)>,
     mut sectors_cache: ResMut<SectorsCache>,
     mut commands: Commands,
 ) {
     for dead_save in dead_saves_query.iter() {
-        let path = dead_save.get_save_file_path();
+        let path = dead_save.0.get_save_file_path();
         if fs::exists(&path).unwrap_or(false) {
             fs::remove_file(path).expect("Error deleting old save file!");
 
-            if let SaveFileIdentifierType::Base(entity_id, Some(sector), load_distance) = &dead_save.identifier_type {
+            if let SaveFileIdentifierType::Base(entity_id, Some(sector), load_distance) = &dead_save.0.identifier_type {
                 sectors_cache.remove(entity_id, *sector, *load_distance);
             }
         }
     }
 
-    for (entity, name, sd, entity_id, loading_distance, mut save_file_identifier, player) in q_needs_saved.iter() {
+    for (entity, name, sd, entity_id, loading_distance, mut save_file_identifier, previous_sfi, player) in q_needs_saved.iter() {
         commands.entity(entity).remove::<NeedsSaved>().remove::<SerializedData>();
 
         if !sd.should_save() {
@@ -196,9 +197,9 @@ fn done_saving(
         ) && loading_distance.is_none()
         {
             if let Some(name) = name {
-                warn!("Missing load distance for {name} {entity:?} w/ base savefileidentifier type!");
+                error!("Missing load distance for {name} {entity:?} w/ base savefileidentifier type!");
             } else {
-                warn!("Missing load distance for {entity:?} w/ base savefileidentifier type!");
+                error!("Missing load distance for {entity:?} w/ base savefileidentifier type!");
             }
 
             commands.entity(entity).log_components();
@@ -208,10 +209,9 @@ fn done_saving(
         let sfi: Option<SaveFileIdentifier>;
         if save_file_identifier.is_none() {
             sfi = calculate_sfi(entity, &q_parent, &q_entity_id, &q_serialized_data);
-            if let Some(sfi) = sfi.clone() {
-                commands.entity(entity).insert(sfi);
-            }
             save_file_identifier = sfi.as_ref();
+        } else {
+            info!("Save file component already on entity ({entity:?})- {save_file_identifier:?}");
         }
 
         let Some(save_file_identifier) = save_file_identifier else {
@@ -220,25 +220,33 @@ fn done_saving(
             continue;
         };
 
-        let path = save_file_identifier.get_save_file_path();
-        if fs::exists(&path).unwrap_or(false) {
-            if fs::remove_file(&path).is_err() {
-                warn!("Error deleting old save file at {path}!");
-            }
+        if let Some(previous_sfi) = previous_sfi {
+            let path = previous_sfi.0.get_save_file_path();
+            if fs::exists(&path).unwrap_or(false) {
+                if fs::remove_file(&path).is_err() {
+                    warn!("Error deleting old save file at {path}!");
+                }
 
-            if let SaveFileIdentifierType::Base(entity_id, Some(sector), load_distance) = &save_file_identifier.identifier_type {
-                sectors_cache.remove(entity_id, *sector, *load_distance);
+                if let SaveFileIdentifierType::Base(entity_id, Some(sector), load_distance) = &previous_sfi.0.identifier_type {
+                    sectors_cache.remove(entity_id, *sector, *load_distance);
+                }
             }
         }
 
+        commands
+            .entity(entity)
+            .insert(PreviousSaveFileIdentifier(save_file_identifier.clone()));
+
         let serialized: Vec<u8> = cosmos_encoder::serialize(&sd);
+
+        info!("WRITING TO DISK - {save_file_identifier:?}");
 
         if let Err(e) = write_file(save_file_identifier, &serialized) {
             error!("Unable to save {entity:?}\n{e}");
         }
 
         if let Some(player) = player {
-            info!("Saving player data for {player:?} to disk.")
+            info!("Saving player data for {player:?} to disk.");
         }
 
         if matches!(&save_file_identifier.identifier_type, SaveFileIdentifierType::Base(_, _, _)) {

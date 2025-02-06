@@ -114,7 +114,11 @@ fn spawn_asteroids(
                         continue;
                     };
 
-                    system.add_item(loc, SystemItem::Asteroid(SystemItemAsteroid { size, temperature }));
+                    system.add_item(
+                        loc,
+                        random_quat(&mut rng),
+                        SystemItem::Asteroid(SystemItemAsteroid { size, temperature }),
+                    );
                 }
             }
         }

@@ -2,6 +2,7 @@
 
 use bevy::{
     app::{App, Update},
+    core::Name,
     ecs::{
         entity::Entity,
         event::EventReader,
@@ -16,7 +17,12 @@ use cosmos_core::{
     block::data::{persistence::ChunkLoadBlockDataEvent, BlockData},
     events::block_events::BlockDataSystemParams,
     netty::sync::IdentifiableComponent,
-    structure::{chunk::netty::SerializedBlockData, coordinates::ChunkBlockCoordinate, loading::StructureLoadingSet, Structure},
+    structure::{
+        chunk::netty::{DeserializationError, SerializedBlockData},
+        coordinates::ChunkBlockCoordinate,
+        loading::StructureLoadingSet,
+        Structure,
+    },
     utils::ownership::MaybeOwned,
 };
 use serde::{de::DeserializeOwned, Serialize};
@@ -76,10 +82,23 @@ fn load_component<T: PersistentComponent>(
     mut commands: Commands,
     q_needs_loaded: Query<(Entity, &SerializedData), With<NeedsLoaded>>,
     entity_id_manager: EntityIdManager,
+    q_name: Query<&Name>,
 ) {
     q_needs_loaded.iter().for_each(|(entity, serialized_data)| {
-        let Some(component_save_data) = serialized_data.deserialize_data::<T::SaveType>(T::get_component_unlocalized_name()) else {
-            return;
+        let component_save_data = match serialized_data.deserialize_data::<T::SaveType>(T::get_component_unlocalized_name()) {
+            Ok(data) => data,
+            Err(DeserializationError::NoEntry) => return,
+            Err(DeserializationError::ErrorParsing(e)) => {
+                let id = q_name
+                    .get(entity)
+                    .map(|x| format!("{} ({entity:?})", x))
+                    .unwrap_or_else(|_| format!("{entity:?}"));
+                error!(
+                    "Error deserializing component {} on entity {id}\n{e:?}.",
+                    T::get_component_unlocalized_name()
+                );
+                return;
+            }
         };
 
         let Some(mut component) = T::convert_from_save_type(component_save_data, &entity_id_manager) else {
@@ -112,8 +131,16 @@ fn load_component_from_block_data<T: PersistentComponent>(
 
         let first = ev.chunk.first_structure_block();
         for (data_coord, serialized) in ev.data.iter() {
-            let Some(component_save_data) = serialized.deserialize_data::<T::SaveType>(T::get_component_unlocalized_name()) else {
-                return;
+            let component_save_data = match serialized.deserialize_data::<T::SaveType>(T::get_component_unlocalized_name()) {
+                Ok(data) => data,
+                Err(DeserializationError::NoEntry) => continue,
+                Err(DeserializationError::ErrorParsing(e)) => {
+                    error!(
+                        "Error deserializing block data component {} - {e:?}.",
+                        T::get_component_unlocalized_name()
+                    );
+                    continue;
+                }
             };
 
             let Some(mut data) = T::convert_from_save_type(component_save_data, &entity_id_manager) else {

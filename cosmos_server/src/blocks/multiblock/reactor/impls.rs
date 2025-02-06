@@ -98,7 +98,7 @@ fn generate_power(
 
             let (reactor, fuel_consumption, inventory) = reactor.deref_mut();
 
-            let mut delta = time.delta_secs();
+            let mut delta = time.delta_secs() * reactor.fuel_consumption_multiplier;
             if let Some(fuel_consumption) = fuel_consumption {
                 fuel_consumption.secs_spent += delta;
                 let fuel = fuels.from_numeric_id(fuel_consumption.fuel_id);
@@ -211,10 +211,12 @@ fn on_modify_reactor(
                     // The innards of the reactor were changed, add/remove any needed power per second
                     if let Some(reactor_cell) = reactor_cells.for_block(blocks.from_numeric_id(ev.old_block)) {
                         reactor.decrease_power_per_second(reactor_cell.power_per_second());
+                        reactor.fuel_consumption_multiplier -= 1.0;
                     }
 
                     if let Some(reactor_cell) = reactor_cells.for_block(blocks.from_numeric_id(ev.new_block)) {
                         reactor.increase_power_per_second(reactor_cell.power_per_second());
+                        reactor.fuel_consumption_multiplier += 1.0;
                     }
                 }
 
@@ -256,13 +258,13 @@ fn process_activate_reactor(
 
 fn register_reactor_fuel(mut reg: ResMut<Registry<ReactorFuel>>, items: Res<Registry<Item>>) {
     if let Some(uranium_fuel_cell) = items.from_id("cosmos:uranium_fuel_cell") {
-        reg.register(ReactorFuel::new(uranium_fuel_cell, 1.0, Duration::from_mins(5)));
+        reg.register(ReactorFuel::new(uranium_fuel_cell, 1.0, Duration::from_mins(20)));
     }
 }
 
 fn register_power_blocks(blocks: Res<Registry<Block>>, mut registry: ResMut<Registry<ReactorPowerGenerationBlock>>) {
     if let Some(reactor_block) = blocks.from_id("cosmos:reactor_cell") {
-        registry.register(ReactorPowerGenerationBlock::new(reactor_block, 1000.0));
+        registry.register(ReactorPowerGenerationBlock::new(reactor_block, 5000.0));
     }
 }
 

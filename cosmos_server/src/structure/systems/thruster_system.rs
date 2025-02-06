@@ -1,10 +1,13 @@
+//! The thrusters that move a ship
+
 use std::ops::Mul;
 
 use bevy::{
     prelude::{
-        in_state, App, Commands, EventReader, IntoSystemConfigs, OnEnter, Quat, Query, Res, ResMut, SystemSet, Transform, Update, Vec3,
-        With,
+        in_state, App, Commands, Component, EventReader, IntoSystemConfigs, OnEnter, Quat, Query, Res, ResMut, SystemSet, Transform,
+        Update, Vec3, With,
     },
+    reflect::Reflect,
     time::Time,
 };
 use bevy_rapier3d::prelude::{ExternalImpulse, ReadMassProperties, Velocity};
@@ -33,7 +36,7 @@ use cosmos_core::{
 
 use super::sync::register_structure_system;
 
-const MAX_SHIP_SPEED: f32 = 200.0;
+const MAX_SHIP_SPEED: f32 = 350.0;
 const MAX_BRAKE_DELTA_PER_THRUST: f32 = 300.0;
 
 fn register_thruster_blocks(blocks: Res<Registry<Block>>, mut storage: ResMut<ThrusterBlocks>) {
@@ -80,6 +83,10 @@ fn block_update_system(
     }
 }
 
+#[derive(Debug, Component, Reflect)]
+/// A multiplier that changes the maximum speed of a ship. 1.0 is the default.
+pub struct MaxShipSpeedModifier(pub f32);
+
 pub(super) fn update_ship_force_and_velocity(
     thrusters_query: Query<(&ThrusterSystem, &StructureSystem)>,
     mut query: Query<
@@ -91,6 +98,7 @@ pub(super) fn update_ship_force_and_velocity(
             &mut ExternalImpulse,
             &ReadMassProperties,
             Option<&Docked>,
+            Option<&MaxShipSpeedModifier>,
         ),
         (With<Ship>, With<Pilot>),
     >,
@@ -98,7 +106,7 @@ pub(super) fn update_ship_force_and_velocity(
     time: Res<Time>,
 ) {
     for (thruster_system, system) in thrusters_query.iter() {
-        if let Ok((movement, systems, transform, mut velocity, mut external_impulse, readmass, docked)) =
+        if let Ok((movement, systems, transform, mut velocity, mut external_impulse, readmass, docked, max_ship_speed_modifier)) =
             query.get_mut(system.structure_entity())
         {
             // Rotation
@@ -111,7 +119,8 @@ pub(super) fn update_ship_force_and_velocity(
 
                 velocity.angvel = torque.clamp_length(0.0, max);
 
-                velocity.linvel = velocity.linvel.clamp_length(0.0, MAX_SHIP_SPEED);
+                let max_speed = MAX_SHIP_SPEED * max_ship_speed_modifier.map(|x| x.0).unwrap_or(1.0);
+                velocity.linvel = velocity.linvel.clamp_length(0.0, max_speed);
             }
 
             // Position
@@ -188,7 +197,9 @@ fn structure_loaded_event(
 }
 
 #[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
+/// Thrusters will run logic in these systems
 pub enum ThrusterSystemSet {
+    /// Thrust is applied as an external impulse to the ship, and power is consumed.
     ApplyThrusters,
 }
 
@@ -216,7 +227,8 @@ pub(super) fn register(app: &mut App) {
                 .in_set(NetworkingSystemsSet::Between)
                 .run_if(in_state(GameState::Playing)),
         )
-        .register_type::<ThrusterSystem>();
+        .register_type::<ThrusterSystem>()
+        .register_type::<MaxShipSpeedModifier>();
 
     register_structure_system::<ThrusterSystem>(app, false, "cosmos:thruster");
 }

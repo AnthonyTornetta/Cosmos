@@ -1,0 +1,14 @@
+{
+  "inputs": [
+    {
+      "quantity": 1,
+      "item": {
+        "Item": "cosmos:sulfur_ore"
+      }
+    }
+  ],
+  "output": {
+    "quantity": 1,
+    "item": "cosmos:sulfur"
+  }
+}

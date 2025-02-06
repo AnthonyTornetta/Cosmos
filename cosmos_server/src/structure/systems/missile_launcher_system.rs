@@ -5,7 +5,7 @@ use std::time::Duration;
 use bevy::prelude::*;
 use bevy_rapier3d::{
     geometry::{CollisionGroups, Group},
-    prelude::Velocity,
+    prelude::{ReadMassProperties, Velocity},
 };
 use bevy_renet2::renet2::RenetServer;
 use cosmos_core::{
@@ -257,12 +257,13 @@ fn update_missile_system(
                     entity: system.structure_entity(),
                     search_parents: true,
                 }),
+                ReadMassProperties::default(),
             ));
 
             if let Some(targetting) = focus.locked_on_to() {
                 missile_cmds.insert(MissileTargetting {
                     targetting,
-                    targetting_fudge: Vec3::ZERO,
+                    targetting_fudge: Vec3::new(rand::random(), rand::random(), rand::random()) * 4.0,
                 });
             }
         }

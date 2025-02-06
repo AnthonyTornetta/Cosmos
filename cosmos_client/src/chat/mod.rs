@@ -7,8 +7,8 @@ use bevy::{
     core::Name,
     log::error,
     prelude::{
-        App, BuildChildren, Changed, ChildBuild, Children, Commands, Component, Entity, EventReader, IntoSystemConfigs, OnEnter, Query,
-        Res, ResMut, Text, TextUiWriter, Visibility, With, Without,
+        in_state, App, BuildChildren, Changed, ChildBuild, Children, Commands, Component, Entity, EventReader, IntoSystemConfigs, OnEnter,
+        Query, Res, ResMut, Text, TextUiWriter, Visibility, With, Without,
     },
     text::{LineBreak, TextFont, TextLayout},
     time::Time,
@@ -355,6 +355,7 @@ pub(super) fn register(app: &mut App) {
             toggle_chat_display_visibility,
         )
             .chain()
+            .run_if(in_state(GameState::Playing))
             .after(CloseMenusSet::CloseMenus)
             .in_set(NetworkingSystemsSet::Between),
     );

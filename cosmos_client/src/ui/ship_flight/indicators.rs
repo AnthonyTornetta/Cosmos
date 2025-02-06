@@ -293,6 +293,7 @@ fn position_diamonds(
     mut indicators: Query<(Entity, &mut Node, &Indicating)>,
     global_trans_query: Query<&GlobalTransform>,
     indicator_settings_query: Query<&IndicatorSettings>,
+    mut commands: Commands,
     mut closest_waypoint: ResMut<ClosestWaypoint>,
 ) {
     let Ok((cam, cam_trans)) = cam_query.get_single() else {
@@ -304,11 +305,12 @@ fn position_diamonds(
     let mut closest = None;
 
     for (entity, mut style, indicating) in indicators.iter_mut() {
-        let Ok(indicating_global_trans) = global_trans_query.get(indicating.0) else {
+        let Ok(settings) = indicator_settings_query.get(indicating.0) else {
+            commands.entity(entity).despawn_recursive();
             continue;
         };
 
-        let Ok(settings) = indicator_settings_query.get(indicating.0) else {
+        let Ok(indicating_global_trans) = global_trans_query.get(indicating.0) else {
             continue;
         };
 

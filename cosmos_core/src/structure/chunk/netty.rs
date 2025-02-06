@@ -6,6 +6,7 @@ use bevy::{
     reflect::Reflect,
     utils::HashMap,
 };
+use derive_more::derive::{Display, Error};
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
 use crate::{
@@ -42,12 +43,25 @@ impl SaveData {
         self.0.get(data_id)
     }
 
-    /// Deserializes the data as the given type (via `cosmos_encoder::deserialize`) at the given id. Will panic if the
+    /// Deserializes the data as the given type (via `cosmos_encoder::deserialize`) at the given id. If there is no id of this type,
+    /// will return [`DeserializationError::NoEntry`]. Will return [`DeserializationError::ErrorParsing`] if the
     /// data is not properly serialized.
-    pub fn deserialize_data<T: DeserializeOwned>(&self, data_id: &str) -> Option<T> {
-        self.read_data(data_id)
-            .map(|d| cosmos_encoder::deserialize(d).expect("Error deserializing data!"))
+    pub fn deserialize_data<T: DeserializeOwned>(&self, data_id: &str) -> Result<T, DeserializationError> {
+        let Some(data) = self.read_data(data_id) else {
+            return Err(DeserializationError::NoEntry);
+        };
+
+        cosmos_encoder::deserialize(data).map_err(DeserializationError::ErrorParsing)
     }
+}
+
+#[derive(Error, Display, Debug)]
+/// Unable to deserialize the given data
+pub enum DeserializationError {
+    /// Something went wrong deserializing the binary. This meant something bad happened.
+    ErrorParsing(Box<bincode::ErrorKind>),
+    /// There is no entry for this serialized id.
+    NoEntry,
 }
 
 #[derive(Component, Debug, Serialize, Deserialize)]
@@ -94,11 +108,11 @@ impl SerializedBlockData {
 
     /// Deserializes the data as the given type (via `cosmos_encoder::deserialize`) at the given id. Will panic if the
     /// data is not properly serialized.
-    pub fn deserialize_data<T: DeserializeOwned>(&self, block: ChunkBlockCoordinate, data_id: &str) -> Option<T> {
+    pub fn deserialize_data<T: DeserializeOwned>(&self, block: ChunkBlockCoordinate, data_id: &str) -> Result<T, DeserializationError> {
         if let Some(save_data) = self.save_data.get(&block) {
             save_data.deserialize_data(data_id)
         } else {
-            None
+            Err(DeserializationError::NoEntry)
         }
     }
 

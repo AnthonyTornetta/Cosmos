@@ -4,6 +4,7 @@ use std::slice::Iter;
 
 use bevy::{
     core::Name,
+    math::Quat,
     prelude::{in_state, App, Commands, EventReader, IntoSystemConfigs, Query, Res, ResMut, Update, With},
 };
 use bevy_rapier3d::prelude::Velocity;
@@ -134,7 +135,7 @@ fn generate_stars(
             continue;
         };
 
-        universe_system.add_item(star.location, SystemItem::Star(star.star));
+        universe_system.add_item(star.location, Quat::IDENTITY, SystemItem::Star(star.star));
     }
 }
 

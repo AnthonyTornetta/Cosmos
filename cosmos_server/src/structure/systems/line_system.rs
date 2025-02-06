@@ -6,7 +6,6 @@ use bevy::{
         schedule::IntoSystemConfigs,
         system::{Commands, Query, Res, ResMut},
     },
-    log::info,
     state::{condition::in_state, state::OnEnter},
 };
 use cosmos_core::{
@@ -48,12 +47,10 @@ fn block_update_system<T: LineProperty, S: LinePropertyCalculator<T>>(
         let new_block = blocks.from_numeric_id(ev.new_block);
 
         if laser_cannon_blocks.get(old_block).is_some() {
-            info!("Removing block {old_block:?}");
             system.remove_block(ev.block.coords());
         }
 
         if let Some(property) = laser_cannon_blocks.get(new_block) {
-            info!("Adding block {old_block:?}");
             system.add_block(ev.block.coords(), ev.new_block_rotation(), property);
         }
 

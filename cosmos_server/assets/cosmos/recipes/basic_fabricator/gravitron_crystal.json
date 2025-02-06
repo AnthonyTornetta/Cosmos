@@ -1,0 +1,14 @@
+{
+  "inputs": [
+    {
+      "quantity": 1,
+      "item": {
+        "Item": "cosmos:gravitron_crystal_ore"
+      }
+    }
+  ],
+  "output": {
+    "quantity": 1,
+    "item": "cosmos:gravitron_crystal"
+  }
+}

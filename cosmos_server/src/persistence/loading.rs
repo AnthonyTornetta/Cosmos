@@ -19,11 +19,14 @@ use bevy::{
 use bevy_rapier3d::prelude::Velocity;
 
 use cosmos_core::{
-    ecs::NeedsDespawned, netty::cosmos_encoder, persistence::LoadingDistance, physics::location::Location,
+    ecs::NeedsDespawned,
+    netty::cosmos_encoder,
+    persistence::LoadingDistance,
+    physics::location::{Location, LocationPhysicsSet, SetPosition},
     structure::loading::StructureLoadingSet,
 };
 
-use super::{EntityId, SaveFileIdentifier, SaveFileIdentifierType, SerializedData};
+use super::{EntityId, PreviousSaveFileIdentifier, SaveFileIdentifier, SaveFileIdentifierType, SerializedData};
 
 #[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
 /// Put anything related to loading entities in from serialized data into this set
@@ -67,8 +70,8 @@ fn check_needs_loaded(
     q_sfis: Query<(Entity, &SaveFileIdentifier), (Without<SerializedData>, With<NeedsLoaded>)>,
     mut commands: Commands,
 ) {
-    for (ent, nl) in q_sfis.iter() {
-        let path = nl.get_save_file_path();
+    for (ent, save_file_identifier) in q_sfis.iter() {
+        let path = save_file_identifier.get_save_file_path();
         let Ok(data) = fs::read(&path) else {
             warn!("Error reading file at '{path}'. Is it there?");
             commands.entity(ent).insert(NeedsDespawned);
@@ -78,7 +81,7 @@ fn check_needs_loaded(
         let serialized_data: SerializedData =
             cosmos_encoder::deserialize(&data).unwrap_or_else(|_| panic!("Error deserializing data for {path}"));
 
-        match &nl.identifier_type {
+        match &save_file_identifier.identifier_type {
             SaveFileIdentifierType::Base(entity_id, _, _) => {
                 commands.entity(ent).insert(entity_id.clone());
             }
@@ -128,7 +131,10 @@ fn check_needs_loaded(
             SaveFileIdentifierType::BelongsTo(_, _) => {}
         }
 
-        commands.entity(ent).insert(serialized_data);
+        commands
+            .entity(ent)
+            .insert((serialized_data, PreviousSaveFileIdentifier(save_file_identifier.clone())))
+            .remove::<SaveFileIdentifier>();
     }
 }
 
@@ -168,17 +174,29 @@ fn default_load(query: Query<(Entity, &SerializedData), With<NeedsLoaded>>, mut 
     for (ent, sd) in query.iter() {
         let mut ecmds = commands.entity(ent);
 
-        if let Some(location) = sd.deserialize_data::<Location>("cosmos:location") {
+        if let Ok(location) = sd.deserialize_data::<Location>("cosmos:location") {
             ecmds.insert(location);
         }
-        if let Some(velocity) = sd.deserialize_data::<Velocity>("cosmos:velocity") {
+        if let Ok(velocity) = sd.deserialize_data::<Velocity>("cosmos:velocity") {
             ecmds.insert(velocity);
         }
-        if let Some(loading_distance) = sd.deserialize_data::<LoadingDistance>("cosmos:loading_distance") {
+        if let Ok(loading_distance) = sd.deserialize_data::<LoadingDistance>("cosmos:loading_distance") {
             ecmds.insert(loading_distance);
         }
-        if let Some(rotation) = sd.deserialize_data::<Quat>("cosmos:rotation") {
-            ecmds.insert(Transform::from_rotation(rotation));
+        if let Ok(rotation) = sd.deserialize_data::<Quat>("cosmos:rotation") {
+            ecmds.insert((Transform::from_rotation(rotation), SetPosition::Transform));
+        }
+    }
+}
+
+fn load_blueprint_rotation(mut commands: Commands, mut q_needs_blueprint: Query<(Entity, Option<&mut Transform>, &NeedsBlueprintLoaded)>) {
+    for (ent, mut trans, needs_bp) in q_needs_blueprint.iter_mut() {
+        if let Some(t) = trans.as_mut() {
+            t.rotation = needs_bp.rotation;
+        } else {
+            commands
+                .entity(ent)
+                .insert((Transform::from_rotation(needs_bp.rotation), SetPosition::Transform));
         }
     }
 }
@@ -194,6 +212,7 @@ pub(super) fn register(app: &mut App) {
             LoadingSystemSet::DoLoading.before(StructureLoadingSet::LoadStructure),
             LoadingSystemSet::DoneLoading.after(StructureLoadingSet::StructureLoaded),
         )
+            .before(LocationPhysicsSet::DoPhysics)
             .chain(),
     )
     .add_systems(
@@ -219,8 +238,10 @@ pub(super) fn register(app: &mut App) {
         LOADING_SCHEDULE,
         (
             // Logic
-            check_blueprint_needs_loaded.in_set(LoadingBlueprintSystemSet::BeginLoadingBlueprints),
-            done_loading_blueprint.in_set(LoadingBlueprintSystemSet::DoneLoadingBlueprints),
+            (check_blueprint_needs_loaded, load_blueprint_rotation).in_set(LoadingBlueprintSystemSet::BeginLoadingBlueprints),
+            done_loading_blueprint
+                .chain()
+                .in_set(LoadingBlueprintSystemSet::DoneLoadingBlueprints),
         ),
     );
 }

@@ -2,6 +2,7 @@
 
 use bevy::{
     log::info,
+    math::Quat,
     prelude::{
         in_state, App, Event, EventWriter, IntoSystemConfigs, IntoSystemSetConfigs, Query, Res, ResMut, Resource, SystemSet, Update, With,
     },
@@ -189,6 +190,8 @@ pub enum SystemItem {
 pub struct GeneratedItem {
     /// The exact location this will be at
     pub location: Location,
+    /// The rotation this item will have
+    pub rotation: Quat,
     /// The item that will be at this location
     pub item: SystemItem,
 }
@@ -211,8 +214,8 @@ impl UniverseSystem {
     ///
     /// Adds a generated item to this. This does NOT mark the sector as generated. Call
     /// [`Self::mark_sector_generated_for`] to do that.
-    pub fn add_item(&mut self, location: Location, item: SystemItem) {
-        self.generated_items.push(GeneratedItem { location, item });
+    pub fn add_item(&mut self, location: Location, rotation: Quat, item: SystemItem) {
+        self.generated_items.push(GeneratedItem { location, rotation, item });
     }
 
     /// Iterates over everything that is so far generated within this system. Note that just

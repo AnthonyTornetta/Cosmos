@@ -11,6 +11,7 @@ use cosmos_core::{
         Block,
     },
     ecs::NeedsDespawned,
+    netty::NoSendEntity,
     prelude::Station,
     registry::Registry,
     state::GameState,
@@ -299,6 +300,7 @@ fn on_activate_system(
                         let mining_beam = commands
                             .spawn((
                                 Name::new("Mining beam"),
+                                NoSendEntity,
                                 MiningBeam {
                                     property: line.property,
                                     structure_entity: ship_entity,
@@ -326,7 +328,7 @@ fn register_laser_blocks(blocks: Res<Registry<Block>>, mut cannon: ResMut<LineBl
         cannon.insert(
             block,
             MiningLaserProperty {
-                energy_per_second: 100.0,
+                energy_per_second: 50.0,
                 break_force: 1.0,
             },
         )

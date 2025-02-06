@@ -1,6 +1,5 @@
 use bevy::{
     app::Update,
-    log::info,
     prelude::{App, Commands, EventReader, IntoSystemConfigs},
 };
 use cosmos_core::{
@@ -11,7 +10,6 @@ use cosmos_core::{
 fn sync_recipes(mut commands: Commands, mut nevr: EventReader<NettyEventReceived<SyncBasicFabricatorRecipesEvent>>) {
     for ev in nevr.read() {
         let recipes = ev.0.clone();
-        info!("Received basic fabricator recipes from server {recipes:?}");
         commands.insert_resource(recipes);
     }
 }

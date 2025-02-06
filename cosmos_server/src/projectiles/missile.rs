@@ -13,7 +13,7 @@ use bevy::{
 use bevy_rapier3d::{
     dynamics::{ExternalImpulse, Velocity},
     pipeline::CollisionEvent,
-    prelude::RigidBody,
+    prelude::{ReadMassProperties, RigidBody},
 };
 
 use cosmos_core::{
@@ -37,22 +37,37 @@ pub struct MissileTargetting {
     pub targetting: Entity,
 }
 
-fn look_towards_target(
-    mut q_targetting_missiles: Query<(&Location, &mut Transform, &Velocity, &MissileTargetting)>,
+fn look_and_move_towards_target(
+    mut q_targetting_missiles: Query<(&Location, &mut Transform, &Velocity, &MissileTargetting, &ReadMassProperties)>,
     q_targets: Query<(&Location, &Velocity)>,
     time: Res<Time>,
 ) {
-    for (missile_loc, mut missile_trans, missile_vel, missile_targetting) in &mut q_targetting_missiles {
+    for (missile_loc, mut missile_trans, missile_vel, missile_targetting, mass) in &mut q_targetting_missiles {
         let Ok((target_loc, target_vel)) = q_targets.get(missile_targetting.targetting) else {
             continue;
         };
 
         let target_loc = *target_loc + missile_targetting.targetting_fudge;
 
-        let distance = (target_loc - *missile_loc).absolute_coords_f32();
-        let missile_secs_to_reach_target = (distance.length() / missile_vel.linvel.length()).max(0.0);
+        if mass.mass == 0.0 {
+            // Wait for physics engine to update mass properties
+            continue;
+        }
 
-        let direction = (distance + (target_vel.linvel - missile_vel.linvel) * missile_secs_to_reach_target).normalize_or_zero();
+        let missile_accel = MISSILE_IMPULSE_PER_SEC / mass.mass;
+        let d = (target_loc - *missile_loc).absolute_coords_f32().length();
+
+        let a = missile_accel;
+        let v = missile_vel.linvel.length();
+        let t_vel = target_vel.linvel.length();
+
+        let missile_secs_to_reach_target = (-(v - t_vel) + ((v - t_vel).powf(2.0) + 2.0 * a * d).sqrt()) / a;
+
+        let relative_velocity = target_vel.linvel - missile_vel.linvel;
+
+        let direction = ((target_loc - *missile_loc) + (relative_velocity * missile_secs_to_reach_target))
+            .absolute_coords_f32()
+            .normalize_or_zero();
 
         let cur_forward = missile_trans.forward();
 
@@ -62,7 +77,7 @@ fn look_towards_target(
     }
 }
 
-const MISSILE_IMPULSE_PER_SEC: f32 = 1.5;
+const MISSILE_IMPULSE_PER_SEC: f32 = 4.5;
 
 fn apply_missile_thrust(mut commands: Commands, time: Res<Time>, q_missiles: Query<(Entity, &GlobalTransform), With<Missile>>) {
     for (ent, g_trans) in &q_missiles {
@@ -150,7 +165,10 @@ pub(super) fn register(app: &mut App) {
 
     app.add_systems(
         Update,
-        (look_towards_target.ambiguous_with(StructureTypeSet::Ship), apply_missile_thrust)
+        (
+            look_and_move_towards_target.ambiguous_with(StructureTypeSet::Ship),
+            apply_missile_thrust,
+        )
             .after(CosmosBundleSet::HandleCosmosBundles)
             .in_set(NetworkingSystemsSet::Between)
             .chain(),

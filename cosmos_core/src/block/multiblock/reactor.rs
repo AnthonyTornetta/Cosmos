@@ -40,6 +40,8 @@ pub struct Reactor {
     pub power_per_second: f32,
     /// The size of this reactor
     pub bounds: ReactorBounds,
+    /// How much of the fuel's base consumption is used when power is generated.
+    pub fuel_consumption_multiplier: f32,
 }
 
 impl IdentifiableComponent for Reactor {
@@ -95,11 +97,12 @@ impl SyncableComponent for ReactorFuelConsumption {
 
 impl Reactor {
     /// Creates a new constructed reactor
-    pub fn new(controller: BlockCoordinate, power_per_second: f32, bounds: ReactorBounds) -> Self {
+    pub fn new(controller: BlockCoordinate, power_per_second: f32, fuel_consumption_percentage: f32, bounds: ReactorBounds) -> Self {
         Self {
             bounds,
             controller,
             power_per_second,
+            fuel_consumption_multiplier: fuel_consumption_percentage,
         }
     }
 
