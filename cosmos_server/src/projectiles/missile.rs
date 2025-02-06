@@ -14,7 +14,6 @@ use bevy::{
 use bevy_rapier3d::{
     dynamics::{ExternalImpulse, Velocity},
     pipeline::CollisionEvent,
-    plugin::{RapierContextEntityLink, ReadRapierContext},
     prelude::{ReadMassProperties, RigidBody},
 };
 
@@ -92,18 +91,9 @@ fn apply_missile_thrust(mut commands: Commands, time: Res<Time>, q_missiles: Que
 
 fn respond_to_collisions(
     mut ev_reader: EventReader<CollisionEvent>,
-    q_missile: Query<(
-        &Location,
-        &Velocity,
-        &Missile,
-        &CollisionBlacklist,
-        &GlobalTransform,
-        &RapierContextEntityLink,
-    )>,
-    q_g_trans: Query<(&Location, &GlobalTransform)>,
+    q_missile: Query<(&Location, &Velocity, &Missile, &CollisionBlacklist)>,
     q_parent: Query<&Parent>,
     mut commands: Commands,
-    context_access: ReadRapierContext,
 ) {
     for ev in ev_reader.read() {
         let &CollisionEvent::Started(e1, e2, _) = ev else {
@@ -118,7 +108,7 @@ fn respond_to_collisions(
             None
         };
 
-        let Some(((location, velocity, missile, collision_blacklist, g_trans, link), missile_entity, hit_entity)) = entities else {
+        let Some(((location, velocity, missile, collision_blacklist), missile_entity, hit_entity)) = entities else {
             continue;
         };
 
