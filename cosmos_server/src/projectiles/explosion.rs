@@ -21,13 +21,11 @@ use bevy_rapier3d::{
 use cosmos_core::{
     block::{block_events::BlockEventsSet, Block},
     ecs::NeedsDespawned,
-    events::block_events::BlockChangedEvent,
     physics::{
         location::{Location, LocationPhysicsSet},
         player_world::{PlayerWorld, WorldWithin},
         structure_physics::ChunkPhysicsPart,
     },
-    prelude::Ship,
     projectiles::{
         causer::Causer,
         missile::{Explosion, ExplosionSystemSet},
@@ -37,7 +35,6 @@ use cosmos_core::{
         block_health::events::{BlockDestroyedEvent, BlockTakeDamageEvent},
         coordinates::{BlockCoordinate, UnboundBlockCoordinate, UnboundCoordinateType},
         shields::Shield,
-        ship::pilot::Pilot,
         Structure,
     },
 };
@@ -69,8 +66,8 @@ fn respond_to_explosion(
         (
             Entity,
             &Location,
-            // &WorldWithin,
-            // &RapierContextEntityLink,
+            &WorldWithin,
+            &RapierContextEntityLink,
             &Explosion,
             Option<&Causer>,
         ),
@@ -79,7 +76,7 @@ fn respond_to_explosion(
     q_player_world: Query<&Location, With<PlayerWorld>>,
     q_excluded: Query<(), Or<(With<Explosion>, Without<Collider>)>>,
 
-    mut q_structure: Query<(&GlobalTransform, &Location, &mut Structure), Without<Ship>>,
+    mut q_structure: Query<(&GlobalTransform, &Location, &mut Structure)>,
     context_access: ReadRapierContext,
 
     q_chunk: Query<&ChunkPhysicsPart>,
@@ -87,36 +84,32 @@ fn respond_to_explosion(
     mut evw_block_take_damage: EventWriter<BlockTakeDamageEvent>,
     mut evw_block_destroyed: EventWriter<BlockDestroyedEvent>,
     mut ev_writer_explosion_hit: EventWriter<ExplosionHitEvent>,
-    mut q_structures: Query<(&Location, &Transform, &mut Structure), (Without<Pilot>, With<Ship>)>,
-    blocks: Res<Registry<Block>>,
-    mut evw_bc: EventWriter<BlockChangedEvent>,
-
+    // blocks: Res<Registry<Block>>,
+    // mut evw_bc: EventWriter<BlockChangedEvent>,
     q_shield: Query<&Shield>,
 ) {
-    for (ent, &explosion_loc, /*world_within, physics_world,*/ &explosion, causer) in q_explosions.iter() {
+    for (ent, &explosion_loc, world_within, physics_world, &explosion, causer) in q_explosions.iter() {
         info!("Found explosion @ {explosion_loc}!");
         commands.entity(ent).insert((NeedsDespawned, DontNotifyClientOfDespawn));
 
-        // let Ok(player_world_loc) = q_player_world.get(world_within.0) else {
-        //     continue;
-        // };
-        //
-        let player_world_loc = q_player_world.single();
+        let Ok(player_world_loc) = q_player_world.get(world_within.0) else {
+            continue;
+        };
 
-        for (loc, trans, mut s) in q_structures.iter_mut() {
-            info!("EXPLOSION: {}; STRUCTURE: {}", explosion_loc, loc);
-            let rel = trans.rotation.inverse() * (explosion_loc - *loc).absolute_coords_f32();
-            let Ok(c) = BlockCoordinate::try_from(s.relative_coords_to_local_coords(rel.x, rel.y, rel.z)) else {
-                continue;
-            };
-            s.set_block_at(
-                c,
-                blocks.from_id("cosmos:stone").unwrap(),
-                Default::default(),
-                &blocks,
-                Some(&mut evw_bc),
-            );
-        }
+        // for (loc, trans, mut s) in q_structures.iter_mut() {
+        //     info!("EXPLOSION: {}; STRUCTURE: {}", explosion_loc, loc);
+        //     let rel = trans.rotation.inverse() * (explosion_loc - *loc).absolute_coords_f32();
+        //     let Ok(c) = BlockCoordinate::try_from(s.relative_coords_to_local_coords(rel.x, rel.y, rel.z)) else {
+        //         continue;
+        //     };
+        //     s.set_block_at(
+        //         c,
+        //         blocks.from_id("cosmos:stone").unwrap(),
+        //         Default::default(),
+        //         &blocks,
+        //         Some(&mut evw_bc),
+        //     );
+        // }
 
         let max_radius = explosion.power.sqrt();
 
@@ -124,100 +117,100 @@ fn respond_to_explosion(
         // propagate down
         let explosion_rapier_coordinates = (explosion_loc - *player_world_loc).absolute_coords_f32();
 
-        // let mut hits = vec![];
+        let mut hits = vec![];
 
-        // let context = context_access.get(*physics_world);
-        //
-        // context.intersections_with_shape(
-        //     explosion_rapier_coordinates,
-        //     Quat::IDENTITY,
-        //     &Collider::ball(max_radius),
-        //     QueryFilter::default().exclude_collider(ent).predicate(&|x| !q_excluded.contains(x)),
-        //     |hit_entity| {
-        //         hits.push(hit_entity);
-        //
-        //         true
-        //     },
-        // );
-        //
-        // let mut ents = HashSet::new();
-        // for ent in hits {
-        //     if let Ok(chunk_ent) = q_chunk.get(ent) {
-        //         ents.insert(chunk_ent.structure_entity);
-        //     } else {
-        //         ents.insert(ent);
-        //     }
-        // }
-        //
-        // let max_block_radius = max_radius.ceil() as UnboundCoordinateType;
-        // let max_radius_sqrd = max_radius * max_radius;
-        //
-        // for &hit in ents.iter() {
-        //     let Ok((structure_g_trans, structure_loc, mut structure)) = q_structure.get_mut(hit) else {
-        //         ev_writer_explosion_hit.send(ExplosionHitEvent {
-        //             explosion,
-        //             explosion_location: explosion_loc,
-        //             hit_entity: hit,
-        //         });
-        //
-        //         continue;
-        //     };
-        //     let explosion_relative_position =
-        //         structure_g_trans.affine().inverse().matrix3 * (explosion_loc - *structure_loc).absolute_coords_f32();
-        //
-        //     let local_coords = structure.relative_coords_to_local_coords(
-        //         explosion_relative_position.x,
-        //         explosion_relative_position.y,
-        //         explosion_relative_position.z,
-        //     );
-        //
-        //     // Intermediate Vec to please the borrow checker
-        //     let hit_blocks = structure
-        //         .block_iter(
-        //             local_coords - UnboundBlockCoordinate::splat(max_block_radius),
-        //             local_coords + UnboundBlockCoordinate::splat(max_block_radius),
-        //             true, // Include air false is broken for some reason
-        //         )
-        //         .filter(|&coords| structure.has_block_at(coords)) // Remove this once `include_air` works.
-        //         .flat_map(|this_block| {
-        //             calculate_block_explosion_power(
-        //                 &structure,
-        //                 this_block,
-        //                 explosion_relative_position,
-        //                 &explosion,
-        //                 &blocks_registry,
-        //                 max_radius_sqrd,
-        //             )
-        //         })
-        //         .collect::<Vec<(BlockCoordinate, f32)>>();
-        //
-        //     for (block, explosion_power) in hit_blocks {
-        //         let block_coord = structure_g_trans
-        //             .mul_transform(Transform::from_translation(structure.block_relative_position(block)))
-        //             .translation();
-        //
-        //         // Ensure no shield is hit before breaking block
-        //         // This ray will only find shields
-        //         if context
-        //             .cast_ray(
-        //                 block_coord,
-        //                 explosion_rapier_coordinates - block_coord,
-        //                 1.0,
-        //                 true,
-        //                 QueryFilter::default().predicate(&|e| q_shield.get(e).map(|s| s.is_enabled()).unwrap_or(false)),
-        //             )
-        //             .is_none()
-        //         {
-        //             structure.block_take_damage(
-        //                 block,
-        //                 &blocks_registry,
-        //                 explosion_power * HEALTH_PER_EXPLOSION_POWER,
-        //                 Some((&mut evw_block_take_damage, &mut evw_block_destroyed)),
-        //                 causer.map(|x| x.0),
-        //             );
-        //         }
-        //     }
-        // }
+        let context = context_access.get(*physics_world);
+
+        context.intersections_with_shape(
+            explosion_rapier_coordinates,
+            Quat::IDENTITY,
+            &Collider::ball(max_radius),
+            QueryFilter::default().exclude_collider(ent).predicate(&|x| !q_excluded.contains(x)),
+            |hit_entity| {
+                hits.push(hit_entity);
+
+                true
+            },
+        );
+
+        let mut ents = HashSet::new();
+        for ent in hits {
+            if let Ok(chunk_ent) = q_chunk.get(ent) {
+                ents.insert(chunk_ent.structure_entity);
+            } else {
+                ents.insert(ent);
+            }
+        }
+
+        let max_block_radius = max_radius.ceil() as UnboundCoordinateType;
+        let max_radius_sqrd = max_radius * max_radius;
+
+        for &hit in ents.iter() {
+            let Ok((structure_g_trans, structure_loc, mut structure)) = q_structure.get_mut(hit) else {
+                ev_writer_explosion_hit.send(ExplosionHitEvent {
+                    explosion,
+                    explosion_location: explosion_loc,
+                    hit_entity: hit,
+                });
+
+                continue;
+            };
+            let explosion_relative_position =
+                structure_g_trans.affine().inverse().matrix3 * (explosion_loc - *structure_loc).absolute_coords_f32();
+
+            let local_coords = structure.relative_coords_to_local_coords(
+                explosion_relative_position.x,
+                explosion_relative_position.y,
+                explosion_relative_position.z,
+            );
+
+            // Intermediate Vec to please the borrow checker
+            let hit_blocks = structure
+                .block_iter(
+                    local_coords - UnboundBlockCoordinate::splat(max_block_radius),
+                    local_coords + UnboundBlockCoordinate::splat(max_block_radius),
+                    true, // Include air false is broken for some reason
+                )
+                .filter(|&coords| structure.has_block_at(coords)) // Remove this once `include_air` works.
+                .flat_map(|this_block| {
+                    calculate_block_explosion_power(
+                        &structure,
+                        this_block,
+                        explosion_relative_position,
+                        &explosion,
+                        &blocks_registry,
+                        max_radius_sqrd,
+                    )
+                })
+                .collect::<Vec<(BlockCoordinate, f32)>>();
+
+            for (block, explosion_power) in hit_blocks {
+                let block_coord = structure_g_trans
+                    .mul_transform(Transform::from_translation(structure.block_relative_position(block)))
+                    .translation();
+
+                // Ensure no shield is hit before breaking block
+                // This ray will only find shields
+                if context
+                    .cast_ray(
+                        block_coord,
+                        explosion_rapier_coordinates - block_coord,
+                        1.0,
+                        true,
+                        QueryFilter::default().predicate(&|e| q_shield.get(e).map(|s| s.is_enabled()).unwrap_or(false)),
+                    )
+                    .is_none()
+                {
+                    structure.block_take_damage(
+                        block,
+                        &blocks_registry,
+                        explosion_power * HEALTH_PER_EXPLOSION_POWER,
+                        Some((&mut evw_block_take_damage, &mut evw_block_destroyed)),
+                        causer.map(|x| x.0),
+                    );
+                }
+            }
+        }
     }
 }
 

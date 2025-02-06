@@ -367,7 +367,7 @@ impl BaseStructure {
 
     /// Gets a blocks's location in the world
     pub fn block_world_location(&self, coords: BlockCoordinate, body_position: &GlobalTransform, this_location: &Location) -> Location {
-        *this_location + body_position.affine().matrix3.mul_vec3(self.block_relative_position(coords))
+        *this_location + body_position.rotation() * self.block_relative_position(coords)
     }
 
     /// Sets the chunk, overwriting what may have been there before.
