@@ -1,0 +1,10 @@
+{
+  "block": "copper_ore",
+  "drops": [
+    {
+      "item": "cosmos:copper_bar",
+      "weight": 1.0,
+      "quantity": 1
+    }
+  ]
+}
