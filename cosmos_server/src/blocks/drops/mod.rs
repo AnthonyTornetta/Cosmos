@@ -13,6 +13,7 @@ use rand::{rngs::ThreadRng, Rng};
 mod specific;
 
 #[derive(Debug, Clone, Copy)]
+/// Represents a potential block drop
 pub struct BlockDrop {
     weight: f32,
     item_drop_id: u16,
@@ -20,9 +21,12 @@ pub struct BlockDrop {
 }
 
 #[derive(Debug, Default, Clone)]
-enum BlockDropList {
+/// The list of blocks this block could drop
+pub enum BlockDropList {
     #[default]
+    /// The block drops the item associated with this block. This will be the case for most blocks
     Default,
+    /// This block will drop custom items, as defined in the custom drops vec.
     CustomDrops(Vec<BlockDrop>),
 }
 
@@ -35,7 +39,8 @@ impl BlockDropList {
     //
     //     }
     // }
-    //
+
+    /// Adds an item that can be dropped for this block.
     pub fn add_drop(&mut self, drop: BlockDrop) {
         match self {
             Self::CustomDrops(drops) => {
@@ -57,16 +62,21 @@ impl BlockDropList {
 }
 
 #[derive(Resource, Default)]
+/// The drops for every block in the game when broken
 pub struct BlockDrops {
     block_drops: Vec<BlockDropList>,
 }
 
+/// A generated drop for this block
 pub struct GeneratedDrop<'a> {
+    /// The item to drop
     pub item: &'a Item,
+    /// The amount of that item to drop
     pub quantity: u16,
 }
 
 impl BlockDrops {
+    /// Adds a potential drop to this block
     pub fn add_drop(&mut self, block: &Block, item: &Item, weight: f32, quantity: u16) {
         let idx = block.id() as usize;
         if self.block_drops.len() <= idx {
@@ -80,6 +90,7 @@ impl BlockDrops {
         });
     }
 
+    /// Generates a random drop for this block, given the available drops
     pub fn generate_drop_for<'a>(
         &'a self,
         block: &Block,
@@ -87,7 +98,7 @@ impl BlockDrops {
         block_items: &BlockItems,
         rng: &mut ThreadRng,
     ) -> Option<GeneratedDrop<'a>> {
-        let drop_list = self.drop_for(block);
+        let drop_list = self.all_drops_for(block);
         match drop_list {
             BlockDropList::Default => block_items.item_from_block(block).map(|x| GeneratedDrop {
                 item: items.from_numeric_id(x),
@@ -115,7 +126,8 @@ impl BlockDrops {
         }
     }
 
-    pub fn drop_for(&self, block: &Block) -> &BlockDropList {
+    /// Returns all possible drops for this specific block
+    pub fn all_drops_for(&self, block: &Block) -> &BlockDropList {
         const DEFAULT_BLOCK_DROP: BlockDropList = BlockDropList::Default;
 
         self.block_drops.get(block.id() as usize).unwrap_or(&DEFAULT_BLOCK_DROP)
