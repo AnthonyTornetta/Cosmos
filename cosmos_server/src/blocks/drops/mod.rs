@@ -31,15 +31,6 @@ pub enum BlockDropList {
 }
 
 impl BlockDropList {
-    // pub fn all_drops(&self, block_items: &BlockItems) -> impl Iterator<Item = &'_ BlockDrop> {
-    //     match self {
-    //         Self::CustomDrops(drops) =>
-    //                 drops.iter(),
-    //         Self::Default
-    //
-    //     }
-    // }
-
     /// Adds an item that can be dropped for this block.
     pub fn add_drop(&mut self, drop: BlockDrop) {
         match self {
