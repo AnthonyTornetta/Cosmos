@@ -1,34 +1,10 @@
 //! Contains the various types of block events
 
 use bevy::prelude::*;
-use bevy_rapier3d::prelude::Velocity;
 
-use crate::{
-    blockitems::BlockItems,
-    ecs::mut_events::{MutEvent, MutEventsCommand},
-    entities::player::creative::Creative,
-    events::block_events::BlockChangedEvent,
-    inventory::{
-        itemstack::{ItemShouldHaveData, ItemStackSystemSet},
-        Inventory,
-    },
-    item::{physical_item::PhysicalItem, Item},
-    persistence::LoadingDistance,
-    physics::location::{Location, SetPosition},
-    registry::{identifiable::Identifiable, Registry},
-    structure::{
-        coordinates::{BlockCoordinate, CoordinateType, UnboundCoordinateType},
-        loading::StructureLoadingSet,
-        shared::build_mode::{BuildAxis, BuildMode},
-        ship::pilot::Pilot,
-        structure_block::StructureBlock,
-        Structure,
-    },
-};
+use crate::structure::{loading::StructureLoadingSet, structure_block::StructureBlock};
 
-use super::{
-    block_face::BlockFace, block_rotation::BlockRotation, block_rotation::BlockSubRotation, blocks::AIR_BLOCK_ID, data::BlockData, Block,
-};
+use super::block_rotation::BlockRotation;
 
 /// This is sent whenever a player breaks a block
 #[derive(Debug, Event)]
