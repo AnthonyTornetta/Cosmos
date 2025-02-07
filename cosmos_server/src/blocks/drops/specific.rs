@@ -36,13 +36,19 @@ fn load_drop_jsons(blocks: Res<Registry<Block>>, items: Res<Registry<Item>>, mut
         let recipe = serde_json::from_slice::<RawDrops>(&drop_json).unwrap_or_else(|e| panic!("Invalid recipe json {path:?}\n{e:?}"));
 
         let Some(block) = blocks.from_id(&recipe.block) else {
-            error!("Error loading recipe {path:?} - unable to find block {}", recipe.block);
+            error!(
+                "Error loading recipe {path:?} - unable to find block {} - did you forget the 'modid:'?",
+                recipe.block
+            );
             continue;
         };
 
         for entry in recipe.drops {
             let Some(item) = items.from_id(&entry.item) else {
-                error!("Error loading recipe {path:?} - unable to find block {}", recipe.block);
+                error!(
+                    "Error loading recipe {path:?} - unable to find item {} - did you forget the 'modid:'?",
+                    entry.item
+                );
                 continue 'dir_loop;
             };
 

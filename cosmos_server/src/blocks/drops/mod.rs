@@ -1,5 +1,14 @@
+//! Custom block drops
+
 use bevy::prelude::*;
-use cosmos_core::{block::Block, item::Item, registry::identifiable::Identifiable, state::GameState};
+use cosmos_core::{
+    block::Block,
+    blockitems::BlockItems,
+    item::Item,
+    registry::{identifiable::Identifiable, Registry},
+    state::GameState,
+};
+use rand::{rngs::ThreadRng, Rng};
 
 mod specific;
 
@@ -52,10 +61,15 @@ pub struct BlockDrops {
     block_drops: Vec<BlockDropList>,
 }
 
+pub struct GeneratedDrop<'a> {
+    pub item: &'a Item,
+    pub quantity: u16,
+}
+
 impl BlockDrops {
     pub fn add_drop(&mut self, block: &Block, item: &Item, weight: f32, quantity: u16) {
         let idx = block.id() as usize;
-        if self.block_drops.len() >= idx {
+        if self.block_drops.len() <= idx {
             self.block_drops.resize_with(idx + 1, BlockDropList::default);
         }
 
@@ -66,10 +80,45 @@ impl BlockDrops {
         });
     }
 
-    pub fn drop_for(&self, block_id: u16) -> &BlockDropList {
+    pub fn generate_drop_for<'a>(
+        &'a self,
+        block: &Block,
+        items: &'a Registry<Item>,
+        block_items: &BlockItems,
+        rng: &mut ThreadRng,
+    ) -> Option<GeneratedDrop<'a>> {
+        let drop_list = self.drop_for(block);
+        match drop_list {
+            BlockDropList::Default => block_items.item_from_block(block).map(|x| GeneratedDrop {
+                item: items.from_numeric_id(x),
+                quantity: 1,
+            }),
+            BlockDropList::CustomDrops(drops) => {
+                let summed_weight = drops.iter().map(|x| x.weight).sum::<f32>();
+
+                let generated_weight = rng.gen::<f32>() * summed_weight;
+
+                let mut total_weight = 0.0;
+                for drop in drops.iter() {
+                    total_weight += drop.weight;
+
+                    if generated_weight <= total_weight {
+                        return Some(GeneratedDrop {
+                            quantity: drop.quantity,
+                            item: items.from_numeric_id(drop.item_drop_id),
+                        });
+                    }
+                }
+
+                None
+            }
+        }
+    }
+
+    pub fn drop_for(&self, block: &Block) -> &BlockDropList {
         const DEFAULT_BLOCK_DROP: BlockDropList = BlockDropList::Default;
 
-        self.block_drops.get(block_id as usize).unwrap_or(&DEFAULT_BLOCK_DROP)
+        self.block_drops.get(block.id() as usize).unwrap_or(&DEFAULT_BLOCK_DROP)
     }
 }
 

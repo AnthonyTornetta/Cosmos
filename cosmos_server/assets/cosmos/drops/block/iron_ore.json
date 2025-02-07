@@ -1,5 +1,5 @@
 {
-  "block": "iron_ore",
+  "block": "cosmos:iron_ore",
   "drops": [
     {
       "item": "cosmos:iron_bar",

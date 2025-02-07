@@ -40,6 +40,8 @@ use cosmos_core::{
     },
 };
 
+use super::drops::BlockDrops;
+
 fn handle_block_changed_event(
     mut evr_block_changed_event: EventReader<BlockChangedEvent>,
     mut evr_block_data_changed: EventReader<BlockDataChangedEvent>,
@@ -98,6 +100,7 @@ fn handle_block_break_events(
     mut commands: Commands,
     has_data: Res<ItemShouldHaveData>,
     q_pilot: Query<&Pilot>,
+    drops: Res<BlockDrops>,
 ) {
     for ev in event_reader.read() {
         // This is a temporary fix for mining lasers - eventually these items will have specified destinations,
@@ -128,27 +131,34 @@ fn handle_block_break_events(
                 }
             }
 
-            let item_id = block_items.item_from_block(block);
+            let drop = drops.generate_drop_for(block, &items, &block_items, &mut rand::thread_rng());
 
-            if let Some(item_id) = item_id {
-                let item = items.from_numeric_id(item_id);
+            if let Some(drop) = drop {
+                let item = drop.item;
+                let quantity = drop.quantity;
 
                 let mut inserted = false;
+                let mut leftover = quantity;
+
                 for (_, mut inventory) in q_inventory_block_data
                     .iter_mut()
                     .filter(|(block_data, _)| block_data.identifier.block.structure() == ev.breaker)
                 {
-                    if inventory.insert_item(item, 1, &mut commands, &has_data).0 == 0 {
+                    leftover = inventory.insert_item(item, quantity, &mut commands, &has_data).0;
+                    if leftover == 0 {
                         inserted = true;
                         break;
                     }
                 }
 
                 // As a last resort, stick the item in the pilot's inventory
+                //
+                // If there is no more room after that, just delete the item. I don't want to spawn
+                // thousands of item entities that would mega lag the server + clients near it.
                 if !inserted {
                     if let Ok(pilot) = q_pilot.get(ev.breaker) {
                         if let Ok((mut inventory, _, _)) = inventory_query.get_mut(pilot.entity) {
-                            inventory.insert_item(item, 1, &mut commands, &has_data);
+                            inventory.insert_item(item, leftover, &mut commands, &has_data);
                         }
                     }
                 }
@@ -192,20 +202,23 @@ fn handle_block_break_events(
                     }
 
                     if block.id() != AIR_BLOCK_ID {
-                        if let Some(item_id) = block_items.item_from_block(block) {
-                            let item = items.from_numeric_id(item_id);
+                        let drop = drops.generate_drop_for(block, &items, &block_items, &mut rand::thread_rng());
 
-                            let (left_over, _) = inventory.insert_item(item, 1, &mut commands, &has_data);
+                        if let Some(drop) = drop {
+                            let item = drop.item;
+                            let quantity = drop.quantity;
+
+                            let (left_over, _) = inventory.insert_item(item, quantity, &mut commands, &has_data);
 
                             if left_over != 0 {
                                 let structure_rot = Quat::from_affine3(&g_trans.affine());
-                                let item_spawn = *s_loc + structure_rot * structure.block_relative_position(coord);
+                                let item_spawn_loc = *s_loc + structure_rot * structure.block_relative_position(coord);
                                 let item_vel = velocity.linvel;
 
                                 let dropped_item_entity = commands
                                     .spawn((
                                         PhysicalItem,
-                                        item_spawn,
+                                        item_spawn_loc,
                                         LoadingDistance::new(1, 2),
                                         Transform::from_rotation(structure_rot),
                                         SetPosition::Transform,
