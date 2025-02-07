@@ -79,7 +79,8 @@ pub struct Block {
     /// This is (for now) how long it takes 1 mining beam to mine this block in seconds
     mining_resistance: f32,
 
-    connect_to_groups: Vec<ConnectionGroup>,
+    /// TODO: make this not pub
+    pub connect_to_groups: Vec<ConnectionGroup>,
     connection_groups: Vec<ConnectionGroup>,
 }
 

@@ -4,6 +4,7 @@ use bevy::prelude::App;
 
 mod block_events;
 mod data;
+pub mod drops;
 pub mod interactable;
 pub mod multiblock;
 mod updates;
@@ -14,4 +15,5 @@ pub(super) fn register(app: &mut App) {
     multiblock::register(app);
     updates::register(app);
     data::register(app);
+    drops::register(app);
 }

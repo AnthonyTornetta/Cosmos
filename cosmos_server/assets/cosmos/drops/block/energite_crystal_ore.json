@@ -1,0 +1,10 @@
+{
+  "block": "cosmos:energite_crystal_ore",
+  "drops": [
+    {
+      "item": "cosmos:energite_crystal",
+      "weight": 1.0,
+      "quantity": 1
+    }
+  ]
+}

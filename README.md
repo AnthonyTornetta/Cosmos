@@ -67,7 +67,10 @@ See [the issues page](https://github.com/AnthonyTornetta/Cosmos/issues) for the 
 - [ ] More pirate ships
 - [x] More asteroid types
 - [ ] More station types
+- [x] Balance and improve weapons
 - [x] Fuel for reactor
+- [x] Ores
+  - [x] Customizable block drops
 - [ ] Performance fixes
 - [ ] Fix server instability
 - [ ] Reduce amount of packets server sends per second

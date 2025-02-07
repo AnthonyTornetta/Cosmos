@@ -1,0 +1,10 @@
+{
+  "block": "cosmos:photonium_crystal_ore",
+  "drops": [
+    {
+      "item": "cosmos:photonium_crystal",
+      "weight": 1.0,
+      "quantity": 1
+    }
+  ]
+}
