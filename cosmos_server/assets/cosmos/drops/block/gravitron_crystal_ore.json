@@ -1,0 +1,10 @@
+{
+  "block": "cosmos:gravitron_crystal_ore",
+  "drops": [
+    {
+      "item": "cosmos:gravitron_crystal",
+      "weight": 1.0,
+      "quantity": 1
+    }
+  ]
+}

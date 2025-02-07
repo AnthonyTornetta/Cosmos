@@ -1,0 +1,10 @@
+{
+  "block": "cosmos:lead_ore",
+  "drops": [
+    {
+      "item": "cosmos:lead_bar",
+      "weight": 1.0,
+      "quantity": 1
+    }
+  ]
+}

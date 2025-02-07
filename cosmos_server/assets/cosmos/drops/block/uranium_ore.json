@@ -1,0 +1,10 @@
+{
+  "block": "cosmos:uranium_ore",
+  "drops": [
+    {
+      "item": "cosmos:uranium",
+      "weight": 1.0,
+      "quantity": 1
+    }
+  ]
+}

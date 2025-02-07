@@ -1,0 +1,10 @@
+{
+  "block": "cosmos:sulfur_ore",
+  "drops": [
+    {
+      "item": "cosmos:sulfur",
+      "weight": 1.0,
+      "quantity": 1
+    }
+  ]
+}
