@@ -70,9 +70,9 @@ impl HudMessage {
     }
 
     /// Creates this from a colored string
-    pub fn with_colored_string(text: String, color: Color) -> Self {
+    pub fn with_colored_string(text: impl Into<String>, color: Color) -> Self {
         Self {
-            text: vec![RichText { text, color }],
+            text: vec![RichText { text: text.into(), color }],
         }
     }
 }

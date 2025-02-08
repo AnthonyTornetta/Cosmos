@@ -786,7 +786,7 @@ impl Inventory {
         (quantity, taken)
     }
 
-    /// Similar to [`take_item`], but will also remove items from the world if all items were taken.
+    /// Similar to [`Self::take_item`], but will also remove items from the world if all items were taken.
     pub fn take_and_remove_item(&mut self, item: &Item, quantity: usize, commands: &mut Commands) -> (usize, Vec<ItemStack>) {
         let (remaining, taken) = self.take_item(item, quantity);
 

@@ -1,6 +1,6 @@
 //! Client-side laser cannon system logic
 
-use bevy::{asset::LoadState, prelude::*};
+use bevy::{asset::LoadState, color::palettes::css, prelude::*};
 use bevy_kira_audio::prelude::*;
 use cosmos_core::{
     ecs::NeedsDespawned,
@@ -10,7 +10,7 @@ use cosmos_core::{
     structure::{
         ship::pilot::Pilot,
         systems::{
-            missile_launcher_system::{MissileLauncherFocus, MissileLauncherPreferredFocus, MissileLauncherSystem},
+            missile_launcher_system::{MissileLauncherFocus, MissileLauncherPreferredFocus, MissileLauncherSystem, MissileSystemFailure},
             StructureSystems,
         },
     },
@@ -19,7 +19,10 @@ use cosmos_core::{
 use crate::{
     asset::asset_loader::load_assets,
     audio::{AudioEmission, CosmosAudioEmitter, DespawnOnNoEmissions},
-    ui::ship_flight::indicators::{FocusedWaypointEntity, Indicating},
+    ui::{
+        message::{HudMessage, HudMessages},
+        ship_flight::indicators::{FocusedWaypointEntity, Indicating},
+    },
 };
 
 use super::{
@@ -332,6 +335,16 @@ fn update_corner_styles(q_style: &mut Query<(&mut Node, &mut ImageNode)>, entity
     img.color = color;
 }
 
+fn listen_for_errors_firing(mut evr_missile_launcher_failer: EventReader<MissileSystemFailure>, mut hud_messages: ResMut<HudMessages>) {
+    for ev in evr_missile_launcher_failer.read() {
+        match ev {
+            MissileSystemFailure::NoAmmo => {
+                hud_messages.display_message(HudMessage::with_colored_string("No missiles to fire!", css::RED.into()));
+            }
+        }
+    }
+}
+
 pub(super) fn register(app: &mut App) {
     sync_system::<MissileLauncherSystem>(app);
 
@@ -361,7 +374,12 @@ pub(super) fn register(app: &mut App) {
 
     app.add_event::<MissileLauncherSystemFiredEvent>().add_systems(
         Update,
-        (focus_looking_at, apply_shooting_sound, render_lockon_status)
+        (
+            focus_looking_at,
+            apply_shooting_sound,
+            render_lockon_status,
+            listen_for_errors_firing,
+        )
             .chain()
             .after(SystemUsageSet::ChangeSystemBeingUsed)
             .in_set(NetworkingSystemsSet::Between)
