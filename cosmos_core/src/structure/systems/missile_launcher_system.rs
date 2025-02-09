@@ -11,13 +11,16 @@ use bevy::{
         query::Added,
         system::{Commands, Query},
     },
-    prelude::IntoSystemConfigs,
+    prelude::{Event, IntoSystemConfigs},
     reflect::Reflect,
 };
 use serde::{Deserialize, Serialize};
 
 use crate::netty::{
-    sync::{sync_component, ClientAuthority, IdentifiableComponent, SyncableComponent},
+    sync::{
+        events::netty_event::{IdentifiableEvent, NettyEvent, SyncedEventImpl},
+        sync_component, ClientAuthority, IdentifiableComponent, SyncableComponent,
+    },
     system_sets::NetworkingSystemsSet,
 };
 
@@ -173,6 +176,25 @@ fn name_missile_launcher_system(mut commands: Commands, q_added: Query<Entity, A
     }
 }
 
+#[derive(Event, Serialize, Deserialize, Debug)]
+/// Anything that can go wrong when firing a missile launcher system
+pub enum MissileSystemFailure {
+    /// The system has no more ammo (missile items) to pull from
+    NoAmmo,
+}
+
+impl IdentifiableEvent for MissileSystemFailure {
+    fn unlocalized_name() -> &'static str {
+        "cosmos:missile_system_failure"
+    }
+}
+
+impl NettyEvent for MissileSystemFailure {
+    fn event_receiver() -> crate::netty::sync::events::netty_event::EventReceiver {
+        crate::netty::sync::events::netty_event::EventReceiver::Client
+    }
+}
+
 pub(super) fn register(app: &mut App) {
     sync_component::<MissileLauncherPreferredFocus>(app);
     sync_component::<MissileLauncherFocus>(app);
@@ -190,5 +212,6 @@ pub(super) fn register(app: &mut App) {
         name_missile_launcher_system
             .ambiguous_with_all() // doesn't matter if this is 1-frame delayed
             .after(StructureSystemsSet::InitSystems),
-    );
+    )
+    .add_netty_event::<MissileSystemFailure>();
 }

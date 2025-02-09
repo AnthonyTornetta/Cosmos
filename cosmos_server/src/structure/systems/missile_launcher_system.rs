@@ -9,12 +9,14 @@ use bevy_rapier3d::{
 };
 use bevy_renet2::renet2::RenetServer;
 use cosmos_core::{
-    block::Block,
+    block::{data::BlockData, Block},
     entities::player::Player,
+    inventory::Inventory,
+    item::Item,
     logic::{logic_driver::LogicDriver, LogicInputEvent, LogicSystemSet},
     netty::{
-        cosmos_encoder, server_laser_cannon_system_messages::ServerStructureSystemMessages, system_sets::NetworkingSystemsSet,
-        NettyChannelServer,
+        cosmos_encoder, server_laser_cannon_system_messages::ServerStructureSystemMessages, sync::events::server_event::NettyEventWriter,
+        system_sets::NetworkingSystemsSet, NettyChannelServer,
     },
     persistence::LoadingDistance,
     physics::{
@@ -25,13 +27,14 @@ use cosmos_core::{
     registry::{identifiable::Identifiable, Registry},
     state::GameState,
     structure::{
+        ship::pilot::Pilot,
         systems::{
             energy_storage_system::EnergyStorageSystem,
             laser_cannon_system::{LineSystemCooldown, SystemCooldown},
             line_system::LineBlocks,
             missile_launcher_system::{
                 MissileLauncherCalculator, MissileLauncherFocus, MissileLauncherPreferredFocus, MissileLauncherProperty,
-                MissileLauncherSystem,
+                MissileLauncherSystem, MissileSystemFailure,
             },
             StructureSystem, StructureSystems, StructureSystemsSet, SystemActive,
         },
@@ -183,13 +186,26 @@ fn update_missile_system(
         Has<SystemActive>,
     )>,
     mut es_query: Query<&mut EnergyStorageSystem>,
-    systems: Query<(Entity, &StructureSystems, &Structure, &Location, &GlobalTransform, &Velocity)>,
+    q_systems: Query<(
+        Entity,
+        &StructureSystems,
+        &Structure,
+        &Location,
+        &GlobalTransform,
+        &Velocity,
+        Option<&Pilot>,
+    )>,
+    q_player: Query<&Player>,
     time: Res<Time>,
     mut commands: Commands,
     mut server: ResMut<RenetServer>,
+    mut q_inventory: Query<(&mut Inventory, &BlockData)>,
+    items: Res<Registry<Item>>,
+    mut nevw_system_failure: NettyEventWriter<MissileSystemFailure>,
 ) {
     for (missile_launcher_system, focus, system, mut cooldown, system_active) in query.iter_mut() {
-        let Ok((ship_entity, systems, structure, location, global_transform, ship_velocity)) = systems.get(system.structure_entity())
+        let Ok((ship_entity, systems, structure, location, global_transform, ship_velocity, pilot)) =
+            q_systems.get(system.structure_entity())
         else {
             continue;
         };
@@ -208,6 +224,11 @@ fn update_missile_system(
 
         cooldown.remove_unused_cooldowns(missile_launcher_system);
 
+        let Some(missile_item) = items.from_id("cosmos:missile") else {
+            error!("No cosmos:missile item!");
+            continue;
+        };
+
         for line in missile_launcher_system.lines.iter() {
             let cooldown = cooldown.lines.entry(line.start).or_insert(default_cooldown);
 
@@ -217,6 +238,20 @@ fn update_missile_system(
 
             if !((system_active || line.active()) && energy_storage_system.get_energy() >= line.property.energy_per_shot) {
                 continue;
+            }
+
+            if !q_inventory
+                .iter_mut()
+                .filter(|(_, bd)| bd.identifier.block.structure() == system.structure_entity())
+                .map(|x| x.0)
+                .any(|mut inv| inv.take_and_remove_item(missile_item, 1, &mut commands).0 == 0)
+            {
+                if let Some(pilot) = pilot {
+                    if let Ok(player) = q_player.get(pilot.entity) {
+                        nevw_system_failure.send(MissileSystemFailure::NoAmmo, player.id());
+                    }
+                }
+                break;
             }
 
             cooldown.last_use_time = sec;
