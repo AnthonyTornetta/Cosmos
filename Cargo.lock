@@ -1183,7 +1183,7 @@ checksum = "aa65df6a190b7dfc84d79f09cf02d47ae046fa86a613e202c31559e06d8d3710"
 [[package]]
 name = "bevy_rapier3d"
 version = "0.28.0"
-source = "git+https://github.com/AnthonyTornetta/bevy_rapier?branch=master#b2036904bac0e7c9845cfc78bdd5b9d071062a6e"
+source = "git+https://github.com/AnthonyTornetta/bevy_rapier?branch=master#d32f140db71d920bbb51eb9af9e47ac003dbe7e5"
 dependencies = [
  "bevy",
  "bitflags 2.6.0",
@@ -4314,9 +4314,9 @@ dependencies = [
 
 [[package]]
 name = "parry3d"
-version = "0.17.4"
+version = "0.18.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bfe2c6103af4dbaa10469f2929aab8f11c33bd4647ae525174c23a3ecabf7207"
+checksum = "ecb572cea5c76b06bc744aaefdbb9e6ea9e5695f50f79c0227bddecd6ec925a4"
 dependencies = [
  "approx",
  "arrayvec",
@@ -4524,6 +4524,19 @@ name = "profiling"
 version = "1.0.15"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "43d84d1d7a6ac92673717f9f6d1518374ef257669c24ebc5ac25d5033828be58"
+dependencies = [
+ "profiling-procmacros",
+]
+
+[[package]]
+name = "profiling-procmacros"
+version = "1.0.16"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a65f2e60fbf1063868558d69c6beacf412dc755f9fc020f514b7955fc914fe30"
+dependencies = [
+ "quote",
+ "syn 2.0.90",
+]
 
 [[package]]
 name = "quick-xml"
@@ -4621,9 +4634,9 @@ checksum = "f60fcc7d6849342eff22c4350c8b9a989ee8ceabc4b481253e8946b9fe83d684"
 
 [[package]]
 name = "rapier3d"
-version = "0.22.0"
+version = "0.23.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "87360935d1a54802efe0ddf908489436bb49c84865c36c930131843c7b1dc97d"
+checksum = "57a93155032849cf4ae33481c60c8d1fd2a8ded14553e10539aaf1d401b65ecc"
 dependencies = [
  "approx",
  "arrayvec",
@@ -4637,6 +4650,7 @@ dependencies = [
  "num-traits",
  "ordered-float",
  "parry3d",
+ "profiling",
  "rustc-hash 2.0.0",
  "serde",
  "simba",
