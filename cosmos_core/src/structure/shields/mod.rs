@@ -8,12 +8,12 @@ use bevy::{
         query::Changed,
         system::{Commands, Query},
     },
-    prelude::Parent,
+    prelude::{IntoSystemConfigs, Parent},
     reflect::Reflect,
 };
 use bevy_rapier3d::{
     geometry::{Collider, ColliderMassProperties, Group, Sensor},
-    plugin::RapierContextEntityLink,
+    plugin::{PhysicsSet, RapierContextEntityLink},
     prelude::CollisionGroups,
 };
 use serde::{Deserialize, Serialize};
@@ -98,7 +98,7 @@ fn on_add_shield(
 pub(super) fn register(app: &mut App) {
     sync_component::<Shield>(app);
 
-    app.add_systems(PostUpdate, on_add_shield);
+    app.add_systems(PostUpdate, on_add_shield.before(PhysicsSet::SyncBackend));
 
     app.register_type::<Shield>();
 }

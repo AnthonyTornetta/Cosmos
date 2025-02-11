@@ -9,7 +9,6 @@ use bevy::{
 #[cfg(feature = "server")]
 use bevy::utils::HashSet;
 
-use bevy_rapier3d::plugin::PhysicsSet;
 #[cfg(feature = "server")]
 use bevy_rapier3d::{
     plugin::{RapierConfiguration, RapierContextEntityLink},
@@ -608,7 +607,4 @@ pub(super) fn register(app: &mut App) {
             .in_set(NetworkingSystemsSet::Between),
     )
     .add_systems(PostUpdate, remove_do_physics_done);
-
-    // Need to do this or wacky physics stuff happens. Idk why
-    app.add_systems(PostUpdate, sync_transforms_and_locations.before(PhysicsSet::SyncBackend));
 }
