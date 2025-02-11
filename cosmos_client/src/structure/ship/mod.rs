@@ -3,8 +3,8 @@
 use bevy::{
     ecs::event::EventReader,
     prelude::{
-        in_state, App, BuildChildrenTransformExt, Commands, Entity, IntoSystemConfigs, IntoSystemSetConfigs, Parent, Query, ResMut,
-        SystemSet, Update, With, Without,
+        in_state, App, BuildChildrenTransformExt, Commands, Entity, IntoSystemConfigs, Parent, Query, ResMut, SystemSet, Transform, Update,
+        With, Without,
     },
 };
 use bevy_rapier3d::pipeline::CollisionEvent;
@@ -14,7 +14,7 @@ use cosmos_core::{
         client::LocalPlayer, client_reliable_messages::ClientReliableMessages, cosmos_encoder, system_sets::NetworkingSystemsSet,
         NettyChannelClient,
     },
-    physics::location::{CosmosBundleSet, Location, LocationPhysicsSet},
+    physics::location::LocationPhysicsSet,
     state::GameState,
     structure::{
         chunk::CHUNK_DIMENSIONSF, loading::StructureLoadingSet, planet::Planet, shared::build_mode::BuildMode, ship::pilot::Pilot,
@@ -93,18 +93,18 @@ fn respond_to_collisions(
 }
 
 fn remove_parent_when_too_far(
-    query: Query<(Entity, &Parent, &Location), (With<LocalPlayer>, Without<Structure>, Without<BuildMode>)>,
-    q_structure: Query<(&Location, &Structure)>,
+    query: Query<(Entity, &Parent, &Transform), (With<LocalPlayer>, Without<Structure>, Without<BuildMode>)>,
+    q_structure: Query<&Structure>,
     mut commands: Commands,
     mut renet_client: ResMut<RenetClient>,
 ) {
     if let Ok((player_entity, parent, player_loc)) = query.get_single() {
-        if let Ok((structure_loc, structure)) = q_structure.get(parent.get()) {
+        if let Ok(structure) = q_structure.get(parent.get()) {
             if !matches!(structure, Structure::Full(_)) {
                 return;
             }
 
-            if player_loc.distance_sqrd(structure_loc).sqrt() >= CHUNK_DIMENSIONSF * 10.0 {
+            if player_loc.translation.length() >= CHUNK_DIMENSIONSF * 10.0 {
                 commands.entity(player_entity).remove_parent_in_place();
 
                 renet_client.send_message(
@@ -129,14 +129,16 @@ pub(super) fn register(app: &mut App) {
     create_ship::register(app);
     ui::register(app);
 
-    app.configure_sets(Update, PlayerParentChangingSet::ChangeParent.before(LocationPhysicsSet::DoPhysics));
+    app.configure_sets(Update, PlayerParentChangingSet::ChangeParent);
 
     app.add_systems(
         Update,
-        (respond_to_collisions, remove_parent_when_too_far)
+        (
+            respond_to_collisions.before(LocationPhysicsSet::DoPhysics),
+            remove_parent_when_too_far.after(LocationPhysicsSet::DoPhysics),
+        )
             .chain()
             .in_set(NetworkingSystemsSet::Between)
-            .after(CosmosBundleSet::HandleCosmosBundles)
             .after(StructureLoadingSet::StructureLoaded)
             .in_set(PlayerParentChangingSet::ChangeParent)
             .run_if(in_state(GameState::Playing)),
