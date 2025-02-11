@@ -3,9 +3,10 @@
 //! Note that build mode is currently only intended for ships, but is not yet manually limited to only ships.
 
 use bevy::{
+    math::Quat,
     prelude::{
-        App, BuildChildrenTransformExt, Changed, Commands, Component, Entity, Event, EventReader, EventWriter, IntoSystemConfigs,
-        IntoSystemSetConfigs, Parent, Query, SystemSet, Update, With, Without,
+        Added, App, BuildChildrenTransformExt, Changed, Commands, Component, Entity, Event, EventReader, EventWriter, IntoSystemConfigs,
+        IntoSystemSetConfigs, Parent, Query, SystemSet, Transform, Update, With, Without,
     },
     reflect::Reflect,
 };
@@ -151,6 +152,12 @@ pub enum BuildModeSet {
     ExitBuildMode,
 }
 
+fn adjust_transform_build_mode(mut q_transform: Query<&mut Transform, Added<BuildMode>>) {
+    for mut trans in q_transform.iter_mut() {
+        trans.rotation = Quat::IDENTITY;
+    }
+}
+
 pub(super) fn register(app: &mut App) {
     app.configure_sets(
         Update,
@@ -166,7 +173,7 @@ pub(super) fn register(app: &mut App) {
     app.add_systems(
         Update,
         (
-            enter_build_mode_listener.in_set(BuildModeSet::EnterBuildMode),
+            (enter_build_mode_listener, adjust_transform_build_mode).in_set(BuildModeSet::EnterBuildMode),
             exit_build_mode_when_parent_dies.in_set(BuildModeSet::SendExitBuildModeEvent),
             exit_build_mode_listener.in_set(BuildModeSet::ExitBuildMode),
         )
