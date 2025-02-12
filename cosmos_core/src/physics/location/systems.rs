@@ -221,7 +221,8 @@ fn create_physics_world(commands: &mut Commands) -> RapierContextEntityLink {
 
 #[cfg(feature = "server")]
 fn move_anchors_between_worlds(
-    q_anchors: Query<(Entity, &Location), (With<WorldWithin>, With<Anchor>)>,
+    mut q_anchors: Query<(Entity, &Location, &mut Transform), (With<WorldWithin>, With<Anchor>)>,
+    q_anchors_no_trans: Query<(Entity, &Location), (With<WorldWithin>, With<Anchor>)>,
     mut q_world_within: Query<(&mut WorldWithin, &mut RapierContextEntityLink)>,
     mut commands: Commands,
 ) {
@@ -232,10 +233,10 @@ fn move_anchors_between_worlds(
     while changed {
         changed = false;
 
-        for (entity, location) in q_anchors.iter() {
+        for (entity, location, mut trans) in q_anchors.iter_mut() {
             let mut needs_new_world = false;
 
-            for (other_entity, other_location) in q_anchors.iter() {
+            for (other_entity, other_location) in q_anchors_no_trans.iter() {
                 if other_entity == entity || getting_new_world.contains(&other_entity) {
                     continue;
                 }
@@ -250,6 +251,15 @@ fn move_anchors_between_worlds(
                     if world_currently_in.0 != other_world_entity {
                         world_currently_in.0 = other_world_entity;
                         *body_world = other_body_world;
+
+                        // Repositions their transform to be in the correct place for this new
+                        // world
+                        trans.translation += (*location - *other_location).absolute_coords_f32();
+
+                        info!(
+                            "Merging anchor ({entity:?}) into another anchor's ({other_entity:?}) world! Resulting transform: {}",
+                            trans.translation
+                        );
 
                         needs_new_world = false;
                         changed = true;
