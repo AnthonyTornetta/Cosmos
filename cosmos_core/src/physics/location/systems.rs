@@ -96,7 +96,10 @@ fn apply_set_position_single(
         }
         SetPosition::Location => {
             if let Some(loc_from_trans) = loc_from_trans(entity, &q_trans, &q_x, &q_g_trans, &q_parent) {
-                commands.entity(entity).insert(loc_from_trans).remove::<SetPosition>();
+                commands
+                    .entity(entity)
+                    .insert((loc_from_trans, PreviousLocation(loc_from_trans)))
+                    .remove::<SetPosition>();
             }
         }
     }
@@ -125,7 +128,10 @@ fn apply_set_position(
             }
             SetPosition::Location => {
                 if let Some(loc_from_trans) = loc_from_trans(entity, &q_trans, &q_x, &q_g_trans, &q_parent) {
-                    commands.entity(entity).insert(loc_from_trans).remove::<SetPosition>();
+                    commands
+                        .entity(entity)
+                        .insert((loc_from_trans, PreviousLocation(loc_from_trans)))
+                        .remove::<SetPosition>();
                 }
             }
         }
@@ -484,7 +490,7 @@ fn recursively_sync_transforms_and_locations(
             }
 
             // Calculates how far away the entity was from its parent + its delta location.
-            let transform_delta_parent = parent_g_rot.mul_vec3(my_transform.translation);
+            let transform_delta_parent = parent_g_rot * my_transform.translation;
             let new_loc = parent_loc + transform_delta_parent;
             if *my_loc != new_loc {
                 *my_loc = new_loc;
