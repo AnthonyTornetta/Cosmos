@@ -12,6 +12,7 @@ use cosmos_core::{
     },
     ecs::NeedsDespawned,
     netty::NoSendEntity,
+    physics::location::LocationPhysicsSet,
     prelude::Station,
     registry::Registry,
     state::GameState,
@@ -371,6 +372,7 @@ pub(super) fn register(app: &mut App) {
             .chain()
             .in_set(StructureSystemsSet::UpdateSystemsBlocks)
             .before(BlockEventsSet::PreProcessEvents)
+            .after(LocationPhysicsSet::DoPhysics)
             .run_if(in_state(GameState::Playing)),
     )
     .add_systems(OnEnter(GameState::PostLoading), register_laser_blocks);
