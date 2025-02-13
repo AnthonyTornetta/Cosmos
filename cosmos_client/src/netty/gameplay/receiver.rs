@@ -51,7 +51,6 @@ use cosmos_core::{
         dynamic_structure::DynamicStructure,
         full_structure::FullStructure,
         planet::{biosphere::BiosphereMarker, planet_builder::TPlanetBuilder},
-        shared::build_mode::{EnterBuildModeEvent, ExitBuildModeEvent},
         ship::{pilot::Pilot, ship_builder::TShipBuilder, Ship},
         station::station_builder::TStationBuilder,
         systems::{dock_system::Docked, StructureSystems},
@@ -233,11 +232,8 @@ pub(crate) fn client_sync_players(
     mut pilot_change_event_writer: EventWriter<ChangePilotEvent>,
     mut requested_entities: ResMut<RequestedEntities>,
     time: Res<Time>,
-    local_player: Query<Entity, With<LocalPlayer>>,
 
     mut hud_messages: ResMut<HudMessages>,
-
-    (mut build_mode_enter, mut build_mode_exit): (EventWriter<EnterBuildModeEvent>, EventWriter<ExitBuildModeEvent>),
 ) {
     let client_id = transport.client_id();
 
@@ -758,31 +754,6 @@ pub(crate) fn client_sync_players(
                 };
 
                 ecmds.set_parent_in_place(ship_entity);
-            }
-            ServerReliableMessages::PlayerEnterBuildMode {
-                player_entity,
-                structure_entity,
-                block,
-            } => {
-                if let Some(player_entity) = network_mapping.client_from_server(&player_entity) {
-                    if let Some(structure_entity) = network_mapping.client_from_server(&structure_entity) {
-                        build_mode_enter.send(EnterBuildModeEvent {
-                            player_entity,
-                            structure_entity,
-                            block,
-                        });
-                    }
-                }
-            }
-            ServerReliableMessages::PlayerExitBuildMode { player_entity } => {
-                if let Some(player_entity) = network_mapping.client_from_server(&player_entity) {
-                    build_mode_exit.send(ExitBuildModeEvent { player_entity });
-                }
-            }
-            ServerReliableMessages::UpdateBuildMode { build_mode } => {
-                if let Ok(player_entity) = local_player.get_single() {
-                    commands.entity(player_entity).insert(build_mode);
-                }
             }
             ServerReliableMessages::InvalidReactor { reason } => {
                 hud_messages.display_message(HudMessage::with_colored_string(

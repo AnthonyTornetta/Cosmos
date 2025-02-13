@@ -82,8 +82,6 @@ pub enum CosmosInputs {
     /// "Shift-Clicking" an item in minecraft
     AutoMoveItem,
 
-    /// Toggles the player between being in build mode and not on a ship
-    ToggleBuildMode,
     /// A toggle to clear the symmetry - when combined with a symmetry key the symmetry will be cleared
     ClearSymmetry,
     /// Creates an X symmetry
@@ -174,7 +172,6 @@ fn init_input(mut input_handler: ResMut<CosmosInputHandler>) {
     input_handler.set_keycode(CosmosInputs::ToggleInventory, KeyCode::KeyT);
     input_handler.set_keycode(CosmosInputs::AutoMoveItem, KeyCode::ShiftLeft);
 
-    input_handler.set_keycode(CosmosInputs::ToggleBuildMode, KeyCode::KeyB);
     input_handler.set_keycode(CosmosInputs::ClearSymmetry, KeyCode::ShiftLeft);
     input_handler.set_keycode(CosmosInputs::SymmetryX, KeyCode::KeyX);
     input_handler.set_keycode(CosmosInputs::SymmetryY, KeyCode::KeyY);

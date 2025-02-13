@@ -24,8 +24,8 @@ use cosmos_core::{
     registry::Registry,
     state::GameState,
     structure::{
-        coordinates::UnboundBlockCoordinate, planet::Planet, shared::build_mode::BuildMode, shields::SHIELD_COLLISION_GROUP,
-        ship::pilot::Pilot, structure_block::StructureBlock, Structure,
+        coordinates::UnboundBlockCoordinate, planet::Planet, shields::SHIELD_COLLISION_GROUP, ship::pilot::Pilot,
+        structure_block::StructureBlock, Structure,
     },
 };
 
@@ -66,10 +66,7 @@ fn add_looking_at_component(q_added_player: Query<Entity, Added<LocalPlayer>>, m
 pub(crate) fn process_player_interaction(
     input_handler: InputChecker,
     camera: Query<&GlobalTransform, With<MainCamera>>,
-    mut q_player: Query<
-        (Entity, &mut Inventory, &mut LookingAt, Option<&Creative>, Option<&BuildMode>),
-        (With<LocalPlayer>, Without<Pilot>),
-    >,
+    mut q_player: Query<(Entity, &mut Inventory, &mut LookingAt, Option<&Creative>), (With<LocalPlayer>, Without<Pilot>)>,
     rapier_context_access: ReadRapierContext,
     q_chunk_physics_part: Query<&ChunkPhysicsPart>,
     q_structure: Query<(&Structure, &GlobalTransform, Option<&Planet>)>,
@@ -85,7 +82,7 @@ pub(crate) fn process_player_interaction(
     let rapier_context = rapier_context_access.single();
 
     // this fails if the player is a pilot
-    let Ok((player_entity, mut inventory, mut looking_at, creative, build_mode)) = q_player.get_single_mut() else {
+    let Ok((player_entity, mut inventory, mut looking_at, creative)) = q_player.get_single_mut() else {
         return;
     };
 
