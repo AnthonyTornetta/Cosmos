@@ -36,10 +36,12 @@ fn interact_with_block(
         enter_writer.send(EnterBuildModeEvent {
             player_entity: ev.interactor,
             structure_entity: s_block.structure(),
+            block: s_block,
         });
     }
 }
 
+/// TODO: not this.
 fn sync_enter_build_mode(mut server: ResMut<RenetServer>, mut event_reader: EventReader<EnterBuildModeEvent>) {
     for ev in event_reader.read() {
         server.broadcast_message(
@@ -47,6 +49,7 @@ fn sync_enter_build_mode(mut server: ResMut<RenetServer>, mut event_reader: Even
             cosmos_encoder::serialize(&ServerReliableMessages::PlayerEnterBuildMode {
                 player_entity: ev.player_entity,
                 structure_entity: ev.structure_entity,
+                block: ev.block,
             }),
         );
     }

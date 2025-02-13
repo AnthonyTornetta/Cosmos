@@ -16,16 +16,20 @@ use bevy_rapier3d::{
 };
 use serde::{Deserialize, Serialize};
 
-use crate::{block::block_events::BlockEventsSet, netty::system_sets::NetworkingSystemsSet, structure::coordinates::CoordinateType};
+use crate::{
+    block::block_events::BlockEventsSet, netty::system_sets::NetworkingSystemsSet, prelude::StructureBlock,
+    structure::coordinates::CoordinateType,
+};
 
 type BuildModeSymmetries = (Option<CoordinateType>, Option<CoordinateType>, Option<CoordinateType>);
 
-#[derive(Component, Debug, Default, Reflect, Serialize, Deserialize, Clone, Copy)]
+#[derive(Component, Debug, Reflect, Serialize, Deserialize, Clone, Copy)]
 /// Denotes that a player is in build mode
 ///
 /// The player's parent will be the structure they are building
 pub struct BuildMode {
     symmetries: BuildModeSymmetries,
+    block: StructureBlock,
 }
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
@@ -77,6 +81,8 @@ pub struct EnterBuildModeEvent {
     ///
     /// Multiple players can be building on the same structure
     pub structure_entity: Entity,
+    /// The block containing the build mode block
+    pub block: StructureBlock,
 }
 
 #[derive(Event)]
@@ -93,7 +99,10 @@ fn enter_build_mode_listener(mut commands: Commands, mut event_reader: EventRead
         };
 
         ecmds
-            .insert(BuildMode::default())
+            .insert(BuildMode {
+                block: ev.block,
+                symmetries: Default::default(),
+            })
             .insert(RigidBodyDisabled)
             .insert(RigidBody::Fixed)
             .insert(Sensor)

@@ -762,12 +762,14 @@ pub(crate) fn client_sync_players(
             ServerReliableMessages::PlayerEnterBuildMode {
                 player_entity,
                 structure_entity,
+                block,
             } => {
                 if let Some(player_entity) = network_mapping.client_from_server(&player_entity) {
                     if let Some(structure_entity) = network_mapping.client_from_server(&structure_entity) {
                         build_mode_enter.send(EnterBuildModeEvent {
                             player_entity,
                             structure_entity,
+                            block,
                         });
                     }
                 }

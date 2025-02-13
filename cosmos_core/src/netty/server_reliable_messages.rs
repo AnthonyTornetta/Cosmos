@@ -187,6 +187,8 @@ pub enum ServerReliableMessages {
         player_entity: Entity,
         /// The structure entity they're building on the server
         structure_entity: Entity,
+        /// The block that is putting the player into build mode
+        block: StructureBlock,
     },
     /// Sent whenever a player exits build mode
     PlayerExitBuildMode {
