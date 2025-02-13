@@ -21,6 +21,7 @@ use cosmos_core::{
 };
 
 use crate::{
+    blocks::{block_events::NoAutoInsertMinedItems, data::utils::add_default_block_data_for_block},
     fluid::interact_fluid::FluidInteractionSet,
     persistence::loading::{LoadingBlueprintSystemSet, NeedsBlueprintLoaded, LOADING_SCHEDULE},
 };
@@ -63,11 +64,11 @@ fn on_add_basic_fabricator(
             continue;
         };
 
-        if blocks.from_numeric_id(ev.old_block) == block {
-            let coords = ev.block.coords();
-
-            structure.remove_block_data::<Inventory>(coords, &mut params, &mut q_block_data, &q_has_data);
-        }
+        // if blocks.from_numeric_id(ev.old_block) == block {
+        //     let coords = ev.block.coords();
+        //
+        //     structure.remove_block_data::<Inventory>(coords, &mut params, &mut q_block_data, &q_has_data);
+        // }
 
         if blocks.from_numeric_id(ev.new_block) == block {
             ev_writer.send(PopulateBasicFabricatorInventoryEvent { block: ev.block });
@@ -120,6 +121,13 @@ fn populate_inventory(
 }
 
 pub(super) fn register(app: &mut App) {
+    add_default_block_data_for_block(
+        app,
+        |e, _| Inventory::new("Basic Fabricator", 6, None, e),
+        "cosmos:basic_fabricator",
+    );
+    add_default_block_data_for_block(app, |_, _| NoAutoInsertMinedItems, "cosmos:basic_fabricator");
+
     app.add_systems(
         Update,
         (

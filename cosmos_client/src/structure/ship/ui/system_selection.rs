@@ -130,6 +130,26 @@ fn sync_ship_systems(
     }
 }
 
+fn on_self_become_pilot(
+    q_changed_hotbar: Query<(&HotbarPriorityQueue, &Hotbar), With<LocalPlayerHotbar>>,
+    mut q_hovered_system: Query<&mut HoveredSystem, (Added<Pilot>, With<LocalPlayer>)>,
+) {
+    let Ok((queue, hotbar)) = q_changed_hotbar.get_single() else {
+        return;
+    };
+
+    let Ok(mut selected_system) = q_hovered_system.get_single_mut() else {
+        return;
+    };
+
+    if queue.active() != Some(SHIP_PRIORITY_IDENTIFIER) {
+        return;
+    }
+
+    let selected = hotbar.selected_slot();
+    selected_system.hovered_system_index = selected;
+}
+
 fn on_change_hotbar(
     q_changed_hotbar: Query<
         (&HotbarPriorityQueue, &Hotbar),
@@ -168,7 +188,9 @@ pub(super) fn register(app: &mut App) {
         (
             add_priority_when_flying,
             sync_ship_systems.in_set(ItemStackSystemSet::CreateDataEntity),
-            on_change_hotbar.before(SystemUsageSet::ChangeSystemBeingUsed),
+            (on_self_become_pilot, on_change_hotbar)
+                .chain()
+                .before(SystemUsageSet::ChangeSystemBeingUsed),
         )
             .in_set(SystemSelectionSet::ApplyUserChanges)
             .in_set(NetworkingSystemsSet::Between)
