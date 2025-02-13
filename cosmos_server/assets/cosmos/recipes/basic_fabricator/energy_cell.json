@@ -4,13 +4,13 @@
       "item": {
         "Item": "cosmos:copper_bar"
       },
-      "quantity": 6
+      "quantity": 32
     },
     {
       "item": {
         "Item": "cosmos:energite_crystal"
       },
-      "quantity": 1
+      "quantity": 8
     }
   ],
   "output": {

@@ -9,6 +9,7 @@ use cosmos_core::{
     structure::{
         asteroid::Asteroid,
         planet::Planet,
+        shared::MeltingDown,
         ship::{pilot::Pilot, Ship},
         station::Station,
     },
@@ -246,6 +247,7 @@ fn add_indicators(
 fn added(
     ship_query: Query<Entity, Added<Ship>>,
     station_query: Query<Entity, Added<Station>>,
+    q_melting_down: Query<Entity, Added<MeltingDown>>,
     asteroid_query: Query<Entity, Added<Asteroid>>,
     planet_query: Query<Entity, Added<Planet>>,
     player_query: Query<Entity, (Added<Player>, Without<LocalPlayer>)>,
@@ -284,6 +286,13 @@ fn added(
             color: Srgba::hex("FFFFFF7F").unwrap().into(),
             max_distance: 5_000.0,
             offset: Vec3::ZERO,
+        });
+    });
+    q_melting_down.iter().for_each(|ent| {
+        commands.entity(ent).insert(IndicatorSettings {
+            color: Srgba::hex("7777777F").unwrap().into(),
+            max_distance: 20_000.0,
+            offset: Vec3::new(0.5, 0.5, 0.5), // Accounts for the core being at 0.5, 0.5, 0.5 instead of the origin
         });
     });
 }

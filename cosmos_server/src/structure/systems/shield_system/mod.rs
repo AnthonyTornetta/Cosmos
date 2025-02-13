@@ -84,7 +84,7 @@ fn register_energy_blocks(
     mut proj_storage: ResMut<ShieldProjectorBlocks>,
 ) {
     if let Some(block) = blocks.from_id("cosmos:shield_projector") {
-        proj_storage.0.insert(block.id(), ShieldProjectorProperty { shield_strength: 1.0 });
+        proj_storage.0.insert(block.id(), ShieldProjectorProperty { shield_strength: 4.0 });
     }
 
     if let Some(block) = blocks.from_id("cosmos:shield_generator") {
