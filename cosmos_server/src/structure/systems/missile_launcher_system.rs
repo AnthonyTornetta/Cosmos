@@ -23,7 +23,7 @@ use cosmos_core::{
         collision_handling::{CollisionBlacklist, CollisionBlacklistedEntity},
         location::{Location, LocationPhysicsSet, SetPosition},
     },
-    projectiles::missile::Missile,
+    projectiles::{causer::Causer, missile::Missile},
     registry::{identifiable::Identifiable, Registry},
     state::GameState,
     structure::{
@@ -279,6 +279,7 @@ fn update_missile_system(
                     strength,
                     lifetime,
                 },
+                Causer(ship_entity),
                 Transform::from_xyz(0.0, 0.0, 0.0).looking_at(missile_velocity, Vec3::Y),
                 location,
                 SetPosition::Transform,

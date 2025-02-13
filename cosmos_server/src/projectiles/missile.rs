@@ -5,7 +5,6 @@ use std::time::Duration;
 use bevy::{
     ecs::{component::Component, event::EventReader, schedule::IntoSystemConfigs},
     hierarchy::Parent,
-    log::info,
     math::Vec3,
     prelude::{App, Commands, Entity, Query, Res, Update, With},
     time::Time,
@@ -25,7 +24,10 @@ use cosmos_core::{
         collision_handling::CollisionBlacklist,
         location::{CosmosBundleSet, Location, LocationPhysicsSet},
     },
-    projectiles::missile::{Explosion, ExplosionSystemSet, Missile},
+    projectiles::{
+        causer::Causer,
+        missile::{Explosion, ExplosionSystemSet, Missile},
+    },
     structure::StructureTypeSet,
 };
 
@@ -91,7 +93,7 @@ fn apply_missile_thrust(mut commands: Commands, time: Res<Time>, q_missiles: Que
 
 fn respond_to_collisions(
     mut ev_reader: EventReader<CollisionEvent>,
-    q_missile: Query<(&Location, &Velocity, &Missile, &CollisionBlacklist)>,
+    q_missile: Query<(&Location, &Velocity, &Missile, Option<&Causer>, &CollisionBlacklist)>,
     q_parent: Query<&Parent>,
     mut commands: Commands,
 ) {
@@ -108,7 +110,7 @@ fn respond_to_collisions(
             None
         };
 
-        let Some(((location, velocity, missile, collision_blacklist), missile_entity, hit_entity)) = entities else {
+        let Some(((location, velocity, missile, causer, collision_blacklist), missile_entity, hit_entity)) = entities else {
             continue;
         };
 
@@ -118,8 +120,7 @@ fn respond_to_collisions(
 
         commands.entity(missile_entity).insert(NeedsDespawned);
 
-        info!("Spawning explosion @ {}", *location,);
-        commands.spawn((
+        let mut ecmds = commands.spawn((
             *location,
             *velocity,
             RigidBody::Dynamic,
@@ -129,11 +130,18 @@ fn respond_to_collisions(
                 color: missile.color,
             },
         ));
+        if let Some(causer) = causer {
+            ecmds.insert(*causer);
+        }
     }
 }
 
-fn despawn_missiles(mut commands: Commands, mut query: Query<(Entity, &Velocity, &Location, &mut Missile)>, time: Res<Time>) {
-    for (ent, velocity, location, mut missile) in query.iter_mut() {
+fn despawn_missiles(
+    mut commands: Commands,
+    mut query: Query<(Entity, &Velocity, &Location, &mut Missile, Option<&Causer>)>,
+    time: Res<Time>,
+) {
+    for (ent, velocity, location, mut missile, causer) in query.iter_mut() {
         missile.lifetime = missile
             .lifetime
             .checked_sub(Duration::from_secs_f32(time.delta_secs()))
@@ -142,7 +150,7 @@ fn despawn_missiles(mut commands: Commands, mut query: Query<(Entity, &Velocity,
         if missile.lifetime == Duration::ZERO {
             commands.entity(ent).insert(NeedsDespawned);
 
-            commands.spawn((
+            let mut ecmds = commands.spawn((
                 *location,
                 *velocity,
                 RigidBody::Dynamic,
@@ -152,6 +160,9 @@ fn despawn_missiles(mut commands: Commands, mut query: Query<(Entity, &Velocity,
                     color: missile.color,
                 },
             ));
+            if let Some(causer) = causer {
+                ecmds.insert(*causer);
+            }
         }
     }
 }
