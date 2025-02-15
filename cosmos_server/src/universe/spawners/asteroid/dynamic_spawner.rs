@@ -275,6 +275,87 @@ pub(super) fn register(app: &mut App) {
 
     register_small_asteroid_generation(
         app,
+        "cosmos:gravitron",
+        vec![
+            SmallAsteroidBlockEntry {
+                block_id: "cosmos:gravitron_crystal_ore",
+                rarity: 1.0,
+            },
+            SmallAsteroidBlockEntry {
+                block_id: "cosmos:iron_ore",
+                rarity: 0.2,
+            },
+            SmallAsteroidBlockEntry {
+                block_id: "cosmos:copper_ore",
+                rarity: 0.2,
+            },
+            SmallAsteroidBlockEntry {
+                block_id: "cosmos:energite_crystal_ore",
+                rarity: 0.4,
+            },
+            SmallAsteroidBlockEntry {
+                block_id: "cosmos:stone",
+                rarity: 1.0,
+            },
+        ],
+    );
+
+    register_small_asteroid_generation(
+        app,
+        "cosmos:photonium",
+        vec![
+            SmallAsteroidBlockEntry {
+                block_id: "cosmos:photonium_crystal_ore",
+                rarity: 1.0,
+            },
+            SmallAsteroidBlockEntry {
+                block_id: "cosmos:iron_ore",
+                rarity: 0.2,
+            },
+            SmallAsteroidBlockEntry {
+                block_id: "cosmos:copper_ore",
+                rarity: 0.2,
+            },
+            SmallAsteroidBlockEntry {
+                block_id: "cosmos:gravitron_crystal_ore",
+                rarity: 0.4,
+            },
+            SmallAsteroidBlockEntry {
+                block_id: "cosmos:stone",
+                rarity: 1.0,
+            },
+        ],
+    );
+
+    register_small_asteroid_generation(
+        app,
+        "cosmos:energite",
+        vec![
+            SmallAsteroidBlockEntry {
+                block_id: "cosmos:energite_crystal_ore",
+                rarity: 1.0,
+            },
+            SmallAsteroidBlockEntry {
+                block_id: "cosmos:iron_ore",
+                rarity: 0.2,
+            },
+            SmallAsteroidBlockEntry {
+                block_id: "cosmos:copper_ore",
+                rarity: 0.2,
+            },
+            SmallAsteroidBlockEntry {
+                block_id: "cosmos:photonium_crystal_ore",
+                rarity: 0.4,
+            },
+            SmallAsteroidBlockEntry {
+                block_id: "cosmos:stone",
+                rarity: 1.0,
+            },
+        ],
+    );
+
+    register_small_asteroid_generation(
+        app,
         "cosmos:lead",
         vec![
             SmallAsteroidBlockEntry {
