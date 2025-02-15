@@ -1,31 +1,25 @@
-//! Responsible for spawning asteroids that don't move, based on what was generated in the galaxy
-
-use std::f32::consts::PI;
+//! Responsible for spawning asteroids that move, based on the random timing of them spawning
 
 use bevy::{
-    app::Startup,
-    log::{error, warn},
-    math::Quat,
+    log::error,
     prelude::{
-        in_state, App, Commands, Component, Deref, DerefMut, Entity, EventReader, EventWriter, IntoSystemConfigs, Query, Res, ResMut,
-        Resource, Update, Vec3, With, Without,
+        in_state, App, Commands, Component, Entity, EventWriter, IntoSystemConfigs, Query, Res, Resource, Update, Vec3, With, Without,
     },
     reflect::Reflect,
     time::Time,
-    utils::{hashbrown::HashMap, HashSet},
+    utils::hashbrown::HashMap,
 };
 use bevy_rapier3d::prelude::Velocity;
 use cosmos_core::{
-    block::{block_rotation::BlockRotation, Block},
+    block::Block,
     entities::player::Player,
-    events::block_events::BlockChangedEvent,
     netty::{sync::IdentifiableComponent, system_sets::NetworkingSystemsSet},
-    physics::location::{Location, Sector, SectorUnit, SystemCoordinate, SystemUnit, SECTOR_DIMENSIONS, SYSTEM_SECTORS},
-    prelude::{BlockCoordinate, ChunkBlockCoordinate},
+    physics::location::Location,
+    prelude::BlockCoordinate,
     registry::Registry,
     state::GameState,
     structure::{
-        asteroid::{asteroid_builder::TAsteroidBuilder, loading::AsteroidNeedsCreated, MovingAsteroid, ASTEROID_LOAD_RADIUS},
+        asteroid::{asteroid_builder::TAsteroidBuilder, MovingAsteroid},
         coordinates::ChunkCoordinate,
         full_structure::FullStructure,
         loading::ChunksNeedLoaded,
@@ -35,21 +29,13 @@ use cosmos_core::{
     utils::{quat_math::random_quat, random::random_range, timer::UtilsTimer},
 };
 use noise::NoiseFn;
-use rand::{seq::IteratorRandom, Rng};
+use rand::seq::IteratorRandom;
 use serde::{Deserialize, Serialize};
 
 use crate::{
     init::init_world::Noise,
     persistence::make_persistent::{make_persistent, DefaultPersistentComponent},
-    settings::ServerSettings,
-    structure::asteroid::{
-        generator::AsteroidGenerationSet, generators::standard_generator::AsteroidBlockEntry,
-        server_asteroid_builder::ServerAsteroidBuilder,
-    },
-    universe::{
-        generation::{GenerateSystemEvent, SystemGenerationSet, SystemItem, SystemItemAsteroid, UniverseSystems},
-        star::calculate_temperature_at,
-    },
+    structure::asteroid::{generator::AsteroidGenerationSet, server_asteroid_builder::ServerAsteroidBuilder},
 };
 
 #[derive(Component, Serialize, Deserialize, Reflect)]
@@ -98,11 +84,13 @@ fn spawn_tiny_asteroids(
 
         let n_asteroids = random_range(1.0, 3.0).round() as usize;
 
-        let random_dir = random_quat(&mut rand::thread_rng());
-        let variation_dir = random_quat(&mut rand::thread_rng());
+        let mut rng = rand::thread_rng();
 
-        const MIN_DISTANCE: f32 = 10_000.0;
-        const MAX_DISTANCE: f32 = 15_000.0;
+        let random_dir = random_quat(&mut rng);
+        let variation_dir = random_quat(&mut rng);
+
+        const MIN_DISTANCE: f32 = 20_000.0;
+        const MAX_DISTANCE: f32 = 25_000.0;
         let delta = random_dir * Vec3::new(0.0, 0.0, random_range(MIN_DISTANCE, MAX_DISTANCE));
 
         let mut spawn_loc = *loc + delta;
@@ -117,9 +105,15 @@ fn spawn_tiny_asteroids(
             // temperature is meaningless for now
             builder.insert_asteroid(&mut entity_cmd, spawn_loc, &mut structure, 100.0);
 
+            const ANGVEL_MAX: f32 = 0.05;
+
             let velocity = Velocity {
                 linvel: random_dir.inverse() * Vec3::new(0.0, 0.0, random_range(10.0, 300.0)),
-                angvel: Vec3::new(random_range(-0.6, 0.6), random_range(-0.6, 0.6), random_range(-0.6, 0.6)),
+                angvel: Vec3::new(
+                    random_range(-ANGVEL_MAX, ANGVEL_MAX),
+                    random_range(-ANGVEL_MAX, ANGVEL_MAX),
+                    random_range(-ANGVEL_MAX, ANGVEL_MAX),
+                ),
             };
 
             let (random_type, _) = asteroids.0.iter().choose(&mut rand::thread_rng()).expect("No tiny asteroids :(");

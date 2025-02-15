@@ -75,7 +75,6 @@ impl AsteroidTemperatureRegistry {
 /// Use this to register a biosphere
 ///
 /// T: The biosphere's marker component type
-/// E: The biosphere's generate chunk event type
 pub fn register_asteroid_generator<T: AsteroidGeneratorComponent>(
     app: &mut App,
     asteroid_generator_id: &'static str,
