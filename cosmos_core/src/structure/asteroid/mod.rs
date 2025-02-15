@@ -1,6 +1,10 @@
 //! A small structure that is non-controllable
 
+use bevy::prelude::*;
 use bevy::{prelude::Component, reflect::Reflect};
+use serde::{Deserialize, Serialize};
+
+use crate::netty::sync::{sync_component, IdentifiableComponent, SyncableComponent};
 
 pub mod asteroid_builder;
 pub mod asteroid_netty;
@@ -17,6 +21,20 @@ pub struct Asteroid {
     temperature: f32,
 }
 
+#[derive(Component, Debug, Serialize, Deserialize, Clone, Copy, PartialEq, Eq)]
+pub struct MovingAsteroid;
+impl IdentifiableComponent for MovingAsteroid {
+    fn get_component_unlocalized_name() -> &'static str {
+        "cosmos:moving_asteroid"
+    }
+}
+
+impl SyncableComponent for MovingAsteroid {
+    fn get_sync_type() -> crate::netty::sync::SyncType {
+        crate::netty::sync::SyncType::ServerAuthoritative
+    }
+}
+
 impl Asteroid {
     /// Creates a new asteroid with this temperature
     pub fn new(temperature: f32) -> Self {
@@ -27,4 +45,10 @@ impl Asteroid {
     pub fn temperature(&self) -> f32 {
         self.temperature
     }
+}
+
+pub(super) fn register(app: &mut App) {
+    sync_component::<MovingAsteroid>(app);
+
+    asteroid_builder::register(app);
 }

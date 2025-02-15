@@ -5,7 +5,7 @@ use bevy::{
     prelude::Vec3,
 };
 use bevy_rapier3d::na::{Quaternion, UnitVector3, Vector3};
-use rand::Rng;
+use rand::{rngs::ThreadRng, Rng};
 use rand_chacha::ChaCha8Rng;
 
 /// https://stackoverflow.com/questions/1171849/finding-quaternion-representing-the-rotation-from-one-vector-to-another
@@ -52,9 +52,25 @@ impl QuatMath for Quat {
         Quat::from_mat3(&Mat3::from_cols(right, up, back))
     }
 }
+//
+// /// https://stackoverflow.com/questions/31600717/how-to-generate-a-random-quaternion-quickly
+// pub fn random_quat(rng: &mut ChaCha8Rng) -> Quat {
+//     use std::f32::consts::PI;
+//
+//     let u = rng.gen::<f32>();
+//     let v = rng.gen::<f32>();
+//     let w = rng.gen::<f32>();
+//
+//     Quat::from_xyzw(
+//         (1.0 - u).sqrt() * (2.0 * PI * v).sin(),
+//         (1.0 - u).sqrt() * (2.0 * PI * v).cos(),
+//         u.sqrt() * (2.0 * PI * w).sin(),
+//         u.sqrt() * (2.0 * PI * w).cos(),
+//     )
+// }
 
 /// https://stackoverflow.com/questions/31600717/how-to-generate-a-random-quaternion-quickly
-pub fn random_quat(rng: &mut ChaCha8Rng) -> Quat {
+pub fn random_quat<T: Rng>(rng: &mut T) -> Quat {
     use std::f32::consts::PI;
 
     let u = rng.gen::<f32>();
