@@ -67,7 +67,7 @@ impl HudMessage {
     /// Creates this from a string - same as `HudMessage::from(String)`
     pub fn with_string(text: impl Into<String>) -> Self {
         Self {
-            text: vec![String::from(text.into()).into()],
+            text: vec![text.into().into()],
         }
     }
 
