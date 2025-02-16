@@ -107,8 +107,16 @@ fn spawn_tiny_asteroids(
 
             const ANGVEL_MAX: f32 = 0.05;
 
+            const FUDGE_AMOUNT: f32 = 0.05;
+
             let velocity = Velocity {
-                linvel: random_dir.inverse() * Vec3::new(0.0, 0.0, random_range(10.0, 300.0)),
+                linvel: -(delta.normalize()
+                    + Vec3::new(
+                        random_range(-FUDGE_AMOUNT, FUDGE_AMOUNT),
+                        random_range(-FUDGE_AMOUNT, FUDGE_AMOUNT),
+                        random_range(-FUDGE_AMOUNT, FUDGE_AMOUNT),
+                    ))
+                    * random_range(10.0, 300.0),
                 angvel: Vec3::new(
                     random_range(-ANGVEL_MAX, ANGVEL_MAX),
                     random_range(-ANGVEL_MAX, ANGVEL_MAX),

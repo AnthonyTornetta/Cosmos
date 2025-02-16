@@ -22,6 +22,7 @@ pub struct Asteroid {
 }
 
 #[derive(Component, Debug, Serialize, Deserialize, Clone, Copy, PartialEq, Eq)]
+/// Denotes an asteroid that moves, isntead of being stationary
 pub struct MovingAsteroid;
 impl IdentifiableComponent for MovingAsteroid {
     fn get_component_unlocalized_name() -> &'static str {
