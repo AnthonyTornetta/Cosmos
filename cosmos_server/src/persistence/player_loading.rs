@@ -7,7 +7,7 @@ use std::{
 };
 
 use bevy::{
-    log::warn,
+    log::{info, warn},
     prelude::{not, resource_exists, App, Commands, Entity, IntoSystemConfigs, Name, Or, Query, ResMut, Resource, Update, With, Without},
     state::condition::in_state,
     tasks::{AsyncComputeTaskPool, Task},
@@ -18,7 +18,10 @@ use cosmos_core::{
     entities::player::Player,
     netty::system_sets::NetworkingSystemsSet,
     persistence::{LoadingDistance, LOAD_DISTANCE},
-    physics::location::{systems::Anchor, Location, LocationPhysicsSet, Sector, SectorUnit, SECTOR_DIMENSIONS},
+    physics::{
+        location::{systems::Anchor, Location, LocationPhysicsSet, Sector, SectorUnit, SECTOR_DIMENSIONS},
+        player_world::PlayerWorld,
+    },
     state::GameState,
 };
 use futures_lite::future;
@@ -27,17 +30,26 @@ use walkdir::{DirEntry, WalkDir};
 use super::{loading::NeedsLoaded, saving::NeedsSaved, EntityId, SaveFileIdentifier, SectorsCache};
 
 fn unload_far(
-    query: Query<&Location, (Without<NeedsDespawned>, Or<(With<Player>, With<Anchor>)>)>,
-    others: Query<(&Location, Entity, &LoadingDistance), (Without<Anchor>, Without<Anchor>, Without<NeedsDespawned>)>,
+    query: Query<&Location, (Without<NeedsDespawned>, Or<(With<Player>, With<Anchor>, Without<PlayerWorld>)>)>,
+    others: Query<
+        (Option<&Name>, &Location, Entity, &LoadingDistance),
+        (Without<Anchor>, Without<Anchor>, Without<NeedsDespawned>, Without<PlayerWorld>),
+    >,
     mut commands: Commands,
 ) {
-    for (loc, ent, ul_distance) in others.iter() {
+    for (name, loc, ent, ul_distance) in others.iter() {
         let ul_distance = ul_distance.unload_block_distance();
 
         if let Some(min_dist) = query.iter().map(|l| l.relative_coords_to(loc).abs().max_element()).reduce(f32::min) {
             if min_dist <= ul_distance {
                 continue;
             }
+        }
+
+        if let Some(name) = name {
+            info!("Unloading {name} ({ent:?}) at {loc} - too far away from any anchor.");
+        } else {
+            info!("Unloading {ent:?} at {loc} - too far away from any anchor.");
         }
 
         commands.entity(ent).insert((NeedsSaved, NeedsDespawned));

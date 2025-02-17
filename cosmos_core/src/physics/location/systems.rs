@@ -62,11 +62,12 @@ fn loc_from_trans(
                 loc_from_trans(p.get(), q_trans, q_x, q_g_trans, q_parent)
                     .map(|x| x + (parent_g_trans.rotation().inverse() * my_trans.translation))
             } else {
-                warn!("Location set based solely on global transform - you probably didn't mean to do this.");
-                q_g_trans
-                    .get(entity)
-                    .ok()
-                    .map(|g_trans| Location::new(g_trans.translation(), Default::default()))
+                error!("Location set based solely on global transform - you probably didn't mean to do this.");
+                return None;
+                // q_g_trans
+                //     .get(entity)
+                //     .ok()
+                //     .map(|g_trans| Location::new(g_trans.translation(), Default::default()))
             }
         }
     }
@@ -186,6 +187,7 @@ fn reposition_worlds_around_anchors(
                 // find player
                 for (world_within, entity) in q_anchors.iter() {
                     if world_within.0 == world_entity {
+                        info!("Reassigning world from {:?} to player {entity:?}", world.player);
                         world.player = entity;
                         found = true;
                         break;
@@ -200,6 +202,7 @@ fn reposition_worlds_around_anchors(
                         }
                     }
                     commands.entity(world_entity).despawn_recursive();
+                    info!("Despawning world {:?}", world.player);
                 }
             }
         }
@@ -266,6 +269,7 @@ fn move_anchors_between_worlds(
                     }
                     break;
                 } else if world_currently_in.0 == other_world_entity {
+                    info!("Anchor {entity:?} requires new world created for them!");
                     needs_new_world = true;
                 }
             }
@@ -275,7 +279,7 @@ fn move_anchors_between_worlds(
 
                 let link = create_physics_world(&mut commands);
 
-                info!("Creating new physics world!");
+                info!("Creating new physics world - rapier context link: {link:?}!");
                 let world_entity = commands
                     .spawn((Name::new("Player World"), PlayerWorld { player: entity }, *location, link))
                     .id();
@@ -338,7 +342,7 @@ fn move_non_anchors_between_worlds_single(
 fn move_non_anchors_between_worlds(
     mut needs_world: Query<
         (Entity, &Location, Option<&mut WorldWithin>, Option<&mut RapierContextEntityLink>),
-        (Without<Anchor>, Without<Parent>),
+        (Without<Anchor>, Without<Parent>, Without<PlayerWorld>),
     >,
     anchors_with_worlds: Query<(&WorldWithin, &Location, &RapierContextEntityLink), With<Anchor>>,
     mut commands: Commands,
@@ -570,25 +574,25 @@ impl Component for Location {
     fn register_component_hooks(hooks: &mut bevy::ecs::component::ComponentHooks) {
         // A lot of times you want to add something to the world after the [`LocationPhysicsSet::DoPhysics`] set,
         // so this will allow you to do that without messing up any positioning logic.
-        hooks.on_add(|mut world, entity, _component_id| {
-            if !world.contains_resource::<DoPhysicsDone>() {
-                // Don't do all this if it's going to happen later this frame.
-                // This prevents a lot of unneeded work from happening
-                return;
-            }
-            let [ent] = world.entity(&[entity]);
-            if ent.contains::<Anchor>() {
-                return;
-            }
-
-            let mut cmds = world.commands();
-            cmds.run_system_cached_with(apply_set_position_single, entity);
-            #[cfg(feature = "server")]
-            cmds.run_system_cached_with(move_non_anchors_between_worlds_single, entity);
-            #[cfg(feature = "client")]
-            cmds.run_system_cached_with(assign_everything_client_world_single, entity);
-            cmds.run_system_cached_with(sync_transforms_and_locations_single, entity);
-        });
+        // hooks.on_add(|mut world, entity, _component_id| {
+        //     if !world.contains_resource::<DoPhysicsDone>() {
+        //         // Don't do all this if it's going to happen later this frame.
+        //         // This prevents a lot of unneeded work from happening
+        //         return;
+        //     }
+        //     let [ent] = world.entity(&[entity]);
+        //     if ent.contains::<Anchor>() {
+        //         return;
+        //     }
+        //
+        //     let mut cmds = world.commands();
+        //     cmds.run_system_cached_with(apply_set_position_single, entity);
+        //     #[cfg(feature = "server")]
+        //     cmds.run_system_cached_with(move_non_anchors_between_worlds_single, entity);
+        //     #[cfg(feature = "client")]
+        //     cmds.run_system_cached_with(assign_everything_client_world_single, entity);
+        //     cmds.run_system_cached_with(sync_transforms_and_locations_single, entity);
+        // });
     }
 }
 

@@ -286,7 +286,7 @@ fn finish_loading_player(
             NettyRigidBodyLocation::Absolute(*location),
         );
 
-        info!("Sending player create message!");
+        info!("Sending player create message for {} @ {}!", load_player.name(), *location);
         let msg = cosmos_encoder::serialize(&ServerReliableMessages::PlayerCreate {
             entity: player_entity,
             parent: maybe_parent.map(|x| x.get()),
