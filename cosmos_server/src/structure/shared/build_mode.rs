@@ -33,12 +33,12 @@ fn interact_with_block(
             continue;
         }
 
-        if let Ok(build_mode) = q_build_mode.get(ev.interactor) {
-            if build_mode.block == s_block {
-                exit_build_mode_writer.send(ExitBuildModeEvent {
-                    player_entity: ev.interactor,
-                });
-            }
+        if let Ok(_build_mode) = q_build_mode.get(ev.interactor) {
+            // if build_mode.block == s_block {
+            exit_build_mode_writer.send(ExitBuildModeEvent {
+                player_entity: ev.interactor,
+            });
+            // }
         } else {
             enter_build_mode_writer.send(EnterBuildModeEvent {
                 player_entity: ev.interactor,
