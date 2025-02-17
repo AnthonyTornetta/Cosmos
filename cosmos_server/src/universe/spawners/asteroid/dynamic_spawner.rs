@@ -50,8 +50,8 @@ impl IdentifiableComponent for NextDynamicAsteroidSpawnTime {
 impl DefaultPersistentComponent for NextDynamicAsteroidSpawnTime {}
 
 impl NextDynamicAsteroidSpawnTime {
-    const MIN_SPAWN_TIME: f32 = 5_000.0;
-    const MAX_SPAWN_TIME: f32 = 15_000.0;
+    const MIN_SPAWN_TIME: f32 = 300.0;
+    const MAX_SPAWN_TIME: f32 = 700.0;
     fn generate_next_spawn_time(&mut self) {
         self.0 += random_range(Self::MIN_SPAWN_TIME, Self::MAX_SPAWN_TIME);
     }
