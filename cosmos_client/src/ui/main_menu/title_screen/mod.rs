@@ -133,7 +133,7 @@ fn create_main_menu(mut commands: Commands, default_font: Res<DefaultFont>, q_ui
             let animal = fs::read_to_string("assets/animals.txt").expect("Missing animals :O");
             let animal = animal.split_whitespace().choose(&mut rand::thread_rng()).expect("No animals ;(");
 
-            format!("{adjective} {animal}")
+            format!("{adjective}{animal}")
         });
 
         let vars_entity = p
