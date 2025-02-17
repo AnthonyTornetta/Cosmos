@@ -171,7 +171,10 @@ fn reposition_worlds_around_anchors(
             };
 
             let delta = (*location - *world_location).absolute_coords_f32();
-            *world_location = *location;
+            if *world_location != *location {
+                info!("Changing world loc from {} to {location}", *world_location);
+                *world_location = *location;
+            }
 
             for (mut t, _) in q_trans_no_parent.iter_mut().filter(|(_, ww)| ww.0 == world_entity) {
                 t.translation -= delta;
@@ -341,13 +344,20 @@ fn move_non_anchors_between_worlds_single(
 #[cfg(feature = "server")]
 fn move_non_anchors_between_worlds(
     mut needs_world: Query<
-        (Entity, &Location, Option<&mut WorldWithin>, Option<&mut RapierContextEntityLink>),
+        (
+            Entity,
+            &Location,
+            Option<&mut Transform>,
+            Option<&mut WorldWithin>,
+            Option<&mut RapierContextEntityLink>,
+        ),
         (Without<Anchor>, Without<Parent>, Without<PlayerWorld>),
     >,
+    q_player_world: Query<&Location, With<PlayerWorld>>,
     anchors_with_worlds: Query<(&WorldWithin, &Location, &RapierContextEntityLink), With<Anchor>>,
     mut commands: Commands,
 ) {
-    for (entity, location, maybe_within, maybe_body_world) in needs_world.iter_mut() {
+    for (entity, location, trans, maybe_within, maybe_body_world) in needs_world.iter_mut() {
         let mut best_ww = None;
         let mut best_dist = None;
         let mut best_world_id = None;
@@ -367,6 +377,15 @@ fn move_non_anchors_between_worlds(
 
             if let Some(mut world_within) = maybe_within {
                 let mut body_world = maybe_body_world.expect("Something should have a `RapierContextEntityLink` if it has a WorldWithin.");
+
+                if let Some(mut trans) = trans {
+                    let old_loc = q_player_world.get(world_within.0).expect("Invalid old world within pointer");
+
+                    let new_loc = q_player_world.get(ww.0).expect("Invalid new world within pointer");
+
+                    let delta = *new_loc - *old_loc;
+                    trans.translation -= delta.absolute_coords_f32();
+                }
 
                 if *body_world != world_link {
                     *body_world = world_link;
@@ -574,25 +593,25 @@ impl Component for Location {
     fn register_component_hooks(hooks: &mut bevy::ecs::component::ComponentHooks) {
         // A lot of times you want to add something to the world after the [`LocationPhysicsSet::DoPhysics`] set,
         // so this will allow you to do that without messing up any positioning logic.
-        // hooks.on_add(|mut world, entity, _component_id| {
-        //     if !world.contains_resource::<DoPhysicsDone>() {
-        //         // Don't do all this if it's going to happen later this frame.
-        //         // This prevents a lot of unneeded work from happening
-        //         return;
-        //     }
-        //     let [ent] = world.entity(&[entity]);
-        //     if ent.contains::<Anchor>() {
-        //         return;
-        //     }
-        //
-        //     let mut cmds = world.commands();
-        //     cmds.run_system_cached_with(apply_set_position_single, entity);
-        //     #[cfg(feature = "server")]
-        //     cmds.run_system_cached_with(move_non_anchors_between_worlds_single, entity);
-        //     #[cfg(feature = "client")]
-        //     cmds.run_system_cached_with(assign_everything_client_world_single, entity);
-        //     cmds.run_system_cached_with(sync_transforms_and_locations_single, entity);
-        // });
+        hooks.on_add(|mut world, entity, _component_id| {
+            if !world.contains_resource::<DoPhysicsDone>() {
+                // Don't do all this if it's going to happen later this frame.
+                // This prevents a lot of unneeded work from happening
+                return;
+            }
+            let [ent] = world.entity(&[entity]);
+            if ent.contains::<Anchor>() {
+                return;
+            }
+
+            let mut cmds = world.commands();
+            cmds.run_system_cached_with(apply_set_position_single, entity);
+            #[cfg(feature = "server")]
+            cmds.run_system_cached_with(move_non_anchors_between_worlds_single, entity);
+            #[cfg(feature = "client")]
+            cmds.run_system_cached_with(assign_everything_client_world_single, entity);
+            cmds.run_system_cached_with(sync_transforms_and_locations_single, entity);
+        });
     }
 }
 
