@@ -342,7 +342,7 @@ fn cosmos_command_listener(
                 }
             }
             "items" => {
-                let search_term = ev.args.get(0).map(|x| x.as_str()).unwrap_or("");
+                let search_term = ev.args.first().map(|x| x.as_str()).unwrap_or("");
                 let result = items
                     .iter()
                     .filter(|x| x.unlocalized_name().contains(search_term))
