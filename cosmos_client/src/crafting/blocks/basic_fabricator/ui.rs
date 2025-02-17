@@ -171,7 +171,7 @@ fn populate_menu(
                     a_name.to_lowercase().cmp(&b_name.to_lowercase())
                 });
 
-                for recipe in crafting_recipes.iter() {
+                for recipe in recipes.iter() {
                     p.spawn((
                         Node {
                             height: Val::Px(100.0),
