@@ -216,7 +216,10 @@ impl<T: LineProperty, S: LinePropertyCalculator<T>> BlockStructureSystem<T> for 
 
         if let Some(l1_i) = found_line {
             if let Some(l2_i) = link_to {
-                let [l1, l2] = self.lines.get_many_mut([l1_i, l2_i]).expect("From and to should never be the same");
+                let [l1, l2] = self
+                    .lines
+                    .get_disjoint_mut([l1_i, l2_i])
+                    .expect("From and to should never be the same");
 
                 // Must use the one before the other in the line so the properties line up.
                 if match l1.direction {
