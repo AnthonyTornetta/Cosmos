@@ -10,7 +10,7 @@
     "Buying": {
       "item_id": "cosmos:photonium_crystal",
       "max_quantity_buying": null,
-      "price_per": 180
+      "price_per": 80
     }
   },
   {
@@ -24,7 +24,7 @@
     "Buying": {
       "item_id": "cosmos:fluid_cell",
       "max_quantity_buying": null,
-      "price_per": 18
+      "price_per": 8
     }
   },
   {
@@ -38,7 +38,7 @@
     "Buying": {
       "item_id": "cosmos:iron_bar",
       "max_quantity_buying": null,
-      "price_per": 9
+      "price_per": 4
     }
   },
   {
@@ -52,7 +52,7 @@
     "Buying": {
       "item_id": "cosmos:copper_bar",
       "max_quantity_buying": null,
-      "price_per": 9
+      "price_per": 4
     }
   },
   {
@@ -66,7 +66,7 @@
     "Buying": {
       "item_id": "cosmos:lead_bar",
       "max_quantity_buying": null,
-      "price_per": 90
+      "price_per": 40
     }
   },
   {
@@ -80,7 +80,7 @@
     "Buying": {
       "item_id": "cosmos:uranium",
       "max_quantity_buying": null,
-      "price_per": 90
+      "price_per": 40
     }
   },
   {
@@ -94,7 +94,7 @@
     "Buying": {
       "item_id": "cosmos:sulfur",
       "max_quantity_buying": null,
-      "price_per": 18
+      "price_per": 8
     }
   },
   {
@@ -108,7 +108,7 @@
     "Buying": {
       "item_id": "cosmos:gravitron_crystal",
       "max_quantity_buying": null,
-      "price_per": 630
+      "price_per": 280
     }
   },
   {
@@ -122,7 +122,7 @@
     "Buying": {
       "item_id": "cosmos:energite_crystal",
       "max_quantity_buying": null,
-      "price_per": 540
+      "price_per": 240
     }
   },
   {
@@ -136,7 +136,7 @@
     "Buying": {
       "item_id": "cosmos:uranium_fuel_cell",
       "max_quantity_buying": null,
-      "price_per": 918
+      "price_per": 408
     }
   },
   {
@@ -150,35 +150,49 @@
     "Buying": {
       "item_id": "cosmos:missile",
       "max_quantity_buying": null,
-      "price_per": 108
+      "price_per": 48
+    }
+  },
+  {
+    "Selling": {
+      "item_id": "cosmos:stone",
+      "max_quantity_selling": 10000,
+      "price_per": 1
+    }
+  },
+  {
+    "Buying": {
+      "item_id": "cosmos:stone",
+      "max_quantity_buying": null,
+      "price_per": 0
     }
   },
   {
     "Selling": {
       "item_id": "cosmos:grass",
       "max_quantity_selling": 10000,
-      "price_per": 20
+      "price_per": 4
     }
   },
   {
     "Buying": {
       "item_id": "cosmos:grass",
       "max_quantity_buying": null,
-      "price_per": 18
+      "price_per": 1
     }
   },
   {
     "Selling": {
       "item_id": "cosmos:dirt",
       "max_quantity_selling": 10000,
-      "price_per": 10
+      "price_per": 3
     }
   },
   {
     "Buying": {
       "item_id": "cosmos:dirt",
       "max_quantity_buying": null,
-      "price_per": 9
+      "price_per": 1
     }
   },
   {
@@ -192,35 +206,35 @@
     "Buying": {
       "item_id": "cosmos:cherry_leaf",
       "max_quantity_buying": null,
-      "price_per": 45
+      "price_per": 20
     }
   },
   {
     "Selling": {
       "item_id": "cosmos:redwood_log",
-      "max_quantity_selling": 10000,
-      "price_per": 40
-    }
-  },
-  {
-    "Buying": {
-      "item_id": "cosmos:redwood_log",
-      "max_quantity_buying": null,
-      "price_per": 36
-    }
-  },
-  {
-    "Selling": {
-      "item_id": "cosmos:redwood_leaf",
       "max_quantity_selling": 10000,
       "price_per": 30
     }
   },
   {
     "Buying": {
+      "item_id": "cosmos:redwood_log",
+      "max_quantity_buying": null,
+      "price_per": 12
+    }
+  },
+  {
+    "Selling": {
+      "item_id": "cosmos:redwood_leaf",
+      "max_quantity_selling": 10000,
+      "price_per": 20
+    }
+  },
+  {
+    "Buying": {
       "item_id": "cosmos:redwood_leaf",
       "max_quantity_buying": null,
-      "price_per": 27
+      "price_per": 8
     }
   },
   {
@@ -234,21 +248,21 @@
     "Buying": {
       "item_id": "cosmos:ship_core",
       "max_quantity_buying": null,
-      "price_per": 1350
+      "price_per": 600
     }
   },
   {
     "Selling": {
       "item_id": "cosmos:energy_cell",
       "max_quantity_selling": 10000,
-      "price_per": 660
+      "price_per": 5120
     }
   },
   {
     "Buying": {
       "item_id": "cosmos:energy_cell",
       "max_quantity_buying": null,
-      "price_per": 594
+      "price_per": 2048
     }
   },
   {
@@ -262,7 +276,7 @@
     "Buying": {
       "item_id": "cosmos:passive_generator",
       "max_quantity_buying": null,
-      "price_per": 594
+      "price_per": 264
     }
   },
   {
@@ -276,7 +290,7 @@
     "Buying": {
       "item_id": "cosmos:laser_cannon",
       "max_quantity_buying": null,
-      "price_per": 747
+      "price_per": 332
     }
   },
   {
@@ -290,7 +304,7 @@
     "Buying": {
       "item_id": "cosmos:ship_hull_dark_grey",
       "max_quantity_buying": null,
-      "price_per": 9
+      "price_per": 4
     }
   },
   {
@@ -304,53 +318,53 @@
     "Buying": {
       "item_id": "cosmos:thruster",
       "max_quantity_buying": null,
-      "price_per": 189
+      "price_per": 84
     }
   },
   {
     "Selling": {
       "item_id": "cosmos:light_white",
       "max_quantity_selling": 10000,
-      "price_per": 30
+      "price_per": 23
     }
   },
   {
     "Buying": {
       "item_id": "cosmos:light_white",
-      "max_quantity_buying": null,
-      "price_per": 27
-    }
-  },
-  {
-    "Selling": {
-      "item_id": "cosmos:glass",
-      "max_quantity_selling": 10000,
-      "price_per": 20
-    }
-  },
-  {
-    "Buying": {
-      "item_id": "cosmos:glass",
-      "max_quantity_buying": null,
-      "price_per": 18
-    }
-  },
-  {
-    "Selling": {
-      "item_id": "cosmos:sand",
-      "max_quantity_selling": 10000,
-      "price_per": 10
-    }
-  },
-  {
-    "Buying": {
-      "item_id": "cosmos:sand",
       "max_quantity_buying": null,
       "price_per": 9
     }
   },
   {
     "Selling": {
+      "item_id": "cosmos:glass",
+      "max_quantity_selling": 10000,
+      "price_per": 13
+    }
+  },
+  {
+    "Buying": {
+      "item_id": "cosmos:glass",
+      "max_quantity_buying": null,
+      "price_per": 5
+    }
+  },
+  {
+    "Selling": {
+      "item_id": "cosmos:sand",
+      "max_quantity_selling": 10000,
+      "price_per": 3
+    }
+  },
+  {
+    "Buying": {
+      "item_id": "cosmos:sand",
+      "max_quantity_buying": null,
+      "price_per": 1
+    }
+  },
+  {
+    "Selling": {
       "item_id": "cosmos:cactus",
       "max_quantity_selling": 10000,
       "price_per": 20
@@ -360,7 +374,7 @@
     "Buying": {
       "item_id": "cosmos:cactus",
       "max_quantity_buying": null,
-      "price_per": 18
+      "price_per": 8
     }
   },
   {
@@ -374,7 +388,7 @@
     "Buying": {
       "item_id": "cosmos:build_block",
       "max_quantity_buying": null,
-      "price_per": 1332
+      "price_per": 592
     }
   },
   {
@@ -388,7 +402,7 @@
     "Buying": {
       "item_id": "cosmos:reactor_controller",
       "max_quantity_buying": null,
-      "price_per": 4680
+      "price_per": 2080
     }
   },
   {
@@ -402,21 +416,21 @@
     "Buying": {
       "item_id": "cosmos:reactor_casing",
       "max_quantity_buying": null,
-      "price_per": 450
+      "price_per": 200
     }
   },
   {
     "Selling": {
       "item_id": "cosmos:reactor_window",
       "max_quantity_selling": 10000,
-      "price_per": 520
+      "price_per": 513
     }
   },
   {
     "Buying": {
       "item_id": "cosmos:reactor_window",
       "max_quantity_buying": null,
-      "price_per": 468
+      "price_per": 205
     }
   },
   {
@@ -430,7 +444,7 @@
     "Buying": {
       "item_id": "cosmos:reactor_cell",
       "max_quantity_buying": null,
-      "price_per": 1125
+      "price_per": 500
     }
   },
   {
@@ -444,7 +458,7 @@
     "Buying": {
       "item_id": "cosmos:fan",
       "max_quantity_buying": null,
-      "price_per": 9
+      "price_per": 4
     }
   },
   {
@@ -458,7 +472,7 @@
     "Buying": {
       "item_id": "cosmos:storage",
       "max_quantity_buying": null,
-      "price_per": 18
+      "price_per": 8
     }
   },
   {
@@ -472,35 +486,35 @@
     "Buying": {
       "item_id": "cosmos:station_core",
       "max_quantity_buying": null,
-      "price_per": 6480
+      "price_per": 2880
     }
   },
   {
     "Selling": {
       "item_id": "cosmos:plasma_drill",
       "max_quantity_selling": 10000,
-      "price_per": 230
+      "price_per": 260
     }
   },
   {
     "Buying": {
       "item_id": "cosmos:plasma_drill",
       "max_quantity_buying": null,
-      "price_per": 207
+      "price_per": 104
     }
   },
   {
     "Selling": {
       "item_id": "cosmos:camera",
       "max_quantity_selling": 10000,
-      "price_per": 50
+      "price_per": 43
     }
   },
   {
     "Buying": {
       "item_id": "cosmos:camera",
       "max_quantity_buying": null,
-      "price_per": 45
+      "price_per": 17
     }
   },
   {
@@ -514,7 +528,7 @@
     "Buying": {
       "item_id": "cosmos:gravity_well",
       "max_quantity_buying": null,
-      "price_per": 648
+      "price_per": 288
     }
   },
   {
@@ -528,7 +542,7 @@
     "Buying": {
       "item_id": "cosmos:ramp",
       "max_quantity_buying": null,
-      "price_per": 9
+      "price_per": 4
     }
   },
   {
@@ -542,21 +556,21 @@
     "Buying": {
       "item_id": "cosmos:missile_launcher",
       "max_quantity_buying": null,
-      "price_per": 225
+      "price_per": 100
     }
   },
   {
     "Selling": {
       "item_id": "cosmos:shield_projector",
       "max_quantity_selling": 10000,
-      "price_per": 1300
+      "price_per": 4500
     }
   },
   {
     "Buying": {
       "item_id": "cosmos:shield_projector",
       "max_quantity_buying": null,
-      "price_per": 1170
+      "price_per": 1800
     }
   },
   {
@@ -570,7 +584,7 @@
     "Buying": {
       "item_id": "cosmos:shield_generator",
       "max_quantity_buying": null,
-      "price_per": 3330
+      "price_per": 1480
     }
   },
   {
@@ -584,7 +598,7 @@
     "Buying": {
       "item_id": "cosmos:logic_on",
       "max_quantity_buying": null,
-      "price_per": 558
+      "price_per": 248
     }
   },
   {
@@ -598,7 +612,7 @@
     "Buying": {
       "item_id": "cosmos:power_cable",
       "max_quantity_buying": null,
-      "price_per": 9
+      "price_per": 4
     }
   },
   {
@@ -612,35 +626,35 @@
     "Buying": {
       "item_id": "cosmos:ship_dock",
       "max_quantity_buying": null,
-      "price_per": 756
+      "price_per": 336
     }
   },
   {
     "Selling": {
       "item_id": "cosmos:tank",
       "max_quantity_selling": 10000,
-      "price_per": 30
+      "price_per": 23
     }
   },
   {
     "Buying": {
       "item_id": "cosmos:tank",
       "max_quantity_buying": null,
-      "price_per": 27
+      "price_per": 9
     }
   },
   {
     "Selling": {
       "item_id": "cosmos:logic_indicator",
       "max_quantity_selling": 10000,
-      "price_per": 40
+      "price_per": 33
     }
   },
   {
     "Buying": {
       "item_id": "cosmos:logic_indicator",
       "max_quantity_buying": null,
-      "price_per": 36
+      "price_per": 13
     }
   },
   {
@@ -654,7 +668,7 @@
     "Buying": {
       "item_id": "cosmos:and_gate",
       "max_quantity_buying": null,
-      "price_per": 18
+      "price_per": 8
     }
   },
   {
@@ -668,7 +682,7 @@
     "Buying": {
       "item_id": "cosmos:or_gate",
       "max_quantity_buying": null,
-      "price_per": 18
+      "price_per": 8
     }
   },
   {
@@ -682,7 +696,7 @@
     "Buying": {
       "item_id": "cosmos:not_gate",
       "max_quantity_buying": null,
-      "price_per": 18
+      "price_per": 8
     }
   },
   {
@@ -696,7 +710,7 @@
     "Buying": {
       "item_id": "cosmos:xor_gate",
       "max_quantity_buying": null,
-      "price_per": 18
+      "price_per": 8
     }
   },
   {
@@ -710,7 +724,7 @@
     "Buying": {
       "item_id": "cosmos:logic_bus",
       "max_quantity_buying": null,
-      "price_per": 18
+      "price_per": 8
     }
   },
   {
@@ -724,7 +738,7 @@
     "Buying": {
       "item_id": "cosmos:door",
       "max_quantity_buying": null,
-      "price_per": 27
+      "price_per": 12
     }
   },
   {
@@ -738,7 +752,7 @@
     "Buying": {
       "item_id": "cosmos:basic_fabricator",
       "max_quantity_buying": null,
-      "price_per": 36
+      "price_per": 16
     }
   }
 ]

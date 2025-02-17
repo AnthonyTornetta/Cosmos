@@ -182,7 +182,7 @@ fn create_default_shop_entires(mut commands: Commands, items: Res<Registry<Item>
                 PrettyShopEntry::Buying {
                     item_id,
                     max_quantity_buying: None,
-                    price_per: (price_per as f32 * 0.9) as u32,
+                    price_per: (price_per as f32 * 0.4) as u32,
                 },
             ]
         })
