@@ -18,7 +18,10 @@ use cosmos_core::{
 };
 use renet2::transport::NativeSocket;
 
-use crate::netty::lobby::{ClientLobby, MostRecentTick};
+use crate::{
+    netty::lobby::{ClientLobby, MostRecentTick},
+    ui::main_menu::MainMenuSubState,
+};
 
 fn new_netcode_transport(player_name: &str, mut host: &str, port: u16) -> NetcodeClientTransport {
     if host == "localhost" {
@@ -98,4 +101,15 @@ pub fn wait_for_connection(mut state_changer: ResMut<NextState<GameState>>, clie
         info!("Loading server data...");
         state_changer.set(GameState::LoadingData);
     }
+}
+
+fn ensure_connected(client: Res<RenetClient>, mut commands: Commands, mut state_changer: ResMut<NextState<GameState>>) {
+    if client.is_disconnected() {
+        commands.insert_resource(MainMenuSubState::Disconnect);
+        state_changer.set(GameState::MainMenu);
+    }
+}
+
+pub(super) fn register(app: &mut App) {
+    app.add_systems(Update, ensure_connected.run_if(in_state(GameState::LoadingData)));
 }
