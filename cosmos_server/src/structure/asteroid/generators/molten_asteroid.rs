@@ -20,8 +20,8 @@ pub(super) fn register(app: &mut App) {
         vec![
             AsteroidBlockEntry {
                 block_id: "cosmos:lead_ore",
-                size: 0.1,
-                rarity: 0.4,
+                size: 0.3,
+                rarity: 0.6,
             },
             AsteroidBlockEntry {
                 block_id: "cosmos:iron_ore",
@@ -31,17 +31,17 @@ pub(super) fn register(app: &mut App) {
             AsteroidBlockEntry {
                 block_id: "cosmos:copper_ore",
                 size: 1.0,
-                rarity: 0.5,
+                rarity: 0.7,
             },
             AsteroidBlockEntry {
                 block_id: "cosmos:uranium_ore",
                 size: 0.2,
-                rarity: 0.3,
+                rarity: 0.5,
             },
             AsteroidBlockEntry {
                 block_id: "cosmos:sulfur_ore",
-                size: 0.2,
-                rarity: 0.4,
+                size: 0.3,
+                rarity: 0.8,
             },
             AsteroidBlockEntry {
                 block_id: "cosmos:lava",
@@ -50,18 +50,18 @@ pub(super) fn register(app: &mut App) {
             },
             AsteroidBlockEntry {
                 block_id: "cosmos:energite_crystal_ore",
-                size: 0.1,
-                rarity: 0.3,
+                size: 0.2,
+                rarity: 0.4,
             },
             AsteroidBlockEntry {
                 block_id: "cosmos:photonium_crystal_ore",
-                size: 0.1,
-                rarity: 0.3,
+                size: 0.2,
+                rarity: 0.4,
             },
             AsteroidBlockEntry {
                 block_id: "cosmos:gravitron_crystal_ore",
-                size: 0.1,
-                rarity: 0.3,
+                size: 0.2,
+                rarity: 0.4,
             },
         ],
         "cosmos:molten_stone",
