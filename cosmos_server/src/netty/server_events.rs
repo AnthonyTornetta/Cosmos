@@ -40,18 +40,18 @@ pub(super) fn handle_server_events(
                 info!("Client {client_id} connected");
 
                 let Some(user_data) = transport.user_data(client_id) else {
-                    warn!("Unable to get user data!");
+                    warn!("Unable to get user data - rejecting connection!");
                     server.disconnect(client_id);
                     continue;
                 };
                 let Ok(name) = bincode::deserialize::<String>(user_data.as_slice()) else {
-                    warn!("Unable to deserialize name!");
+                    warn!("Unable to deserialize name - rejecting connection!");
                     server.disconnect(client_id);
                     continue;
                 };
 
                 if q_players.iter().any(|x| x.name() == name) {
-                    warn!("Duplicate name!");
+                    warn!("Duplicate name - rejecting connection!");
                     server.disconnect(client_id);
                     continue;
                 }
