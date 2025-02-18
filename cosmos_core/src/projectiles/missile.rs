@@ -16,7 +16,7 @@ use bevy::{
 };
 use bevy_rapier3d::{
     geometry::{ActiveEvents, ActiveHooks, Collider},
-    prelude::RigidBody,
+    prelude::{CollisionGroups, Group, RigidBody, SolverGroups},
 };
 use serde::{Deserialize, Serialize};
 
@@ -24,6 +24,7 @@ use serde::{Deserialize, Serialize};
 use crate::netty::system_sets::NetworkingSystemsSet;
 
 use crate::{
+    block::blocks::fluid::FLUID_COLLISION_GROUP,
     netty::sync::{sync_component, ComponentSyncingSet, IdentifiableComponent, SyncableComponent},
     physics::location::{CosmosBundleSet, LocationPhysicsSet},
 };
@@ -54,6 +55,8 @@ impl SyncableComponent for Missile {
     }
 }
 
+pub const MISSILE_COLLISION_GROUP: Group = Group::GROUP_5;
+
 fn on_add_missile(q_added_missile: Query<Entity, Added<Missile>>, mut commands: Commands) {
     for missile_ent in q_added_missile.iter() {
         commands.entity(missile_ent).insert((
@@ -64,6 +67,8 @@ fn on_add_missile(q_added_missile: Query<Entity, Added<Missile>>, mut commands: 
             ActiveEvents::COLLISION_EVENTS,
             ActiveHooks::FILTER_CONTACT_PAIRS,
             NotShadowReceiver,
+            CollisionGroups::new(MISSILE_COLLISION_GROUP, !(FLUID_COLLISION_GROUP | MISSILE_COLLISION_GROUP)),
+            SolverGroups::new(MISSILE_COLLISION_GROUP, !(FLUID_COLLISION_GROUP | MISSILE_COLLISION_GROUP)),
         ));
     }
 }
