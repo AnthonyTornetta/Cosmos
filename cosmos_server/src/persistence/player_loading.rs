@@ -30,10 +30,10 @@ use walkdir::{DirEntry, WalkDir};
 use super::{loading::NeedsLoaded, saving::NeedsSaved, EntityId, SaveFileIdentifier, SectorsCache};
 
 fn unload_far(
-    query: Query<&Location, (Without<NeedsDespawned>, Or<(With<Player>, With<Anchor>, Without<PlayerWorld>)>)>,
+    query: Query<&Location, ((Without<NeedsDespawned>, Without<PlayerWorld>), Or<(With<Player>, With<Anchor>)>)>,
     others: Query<
         (Option<&Name>, &Location, Entity, &LoadingDistance),
-        (Without<Anchor>, Without<Anchor>, Without<NeedsDespawned>, Without<PlayerWorld>),
+        (Without<Anchor>, Without<Player>, Without<NeedsDespawned>, Without<PlayerWorld>),
     >,
     mut commands: Commands,
 ) {
@@ -78,8 +78,13 @@ fn monitor_loading_task(
                     .entity_id()
                     .expect("A non-base SaveFileIdentifier was attempted to be loaded in load_near")
             }) {
-                let name = format!("Needs Loaded Entity - {:?}", sfi.entity_id());
-                commands.spawn((sfi, NeedsLoaded, Name::new(name)));
+                let entity_id = sfi.entity_id().expect("Missing entity id").clone();
+
+                let name = format!("Needs Loaded Entity - {}", entity_id);
+
+                info!("Loading {entity_id}");
+
+                commands.spawn((sfi, entity_id, NeedsLoaded, Name::new(name)));
             }
         }
     }
@@ -87,7 +92,7 @@ fn monitor_loading_task(
 
 /// Performance hot spot
 fn load_near(
-    q_player_locations: Query<&Location, With<Player>>,
+    q_player_locations: Query<&Location, With<Anchor>>,
     loaded_entities: Query<&EntityId>,
     // This is modified below, despite it being cloned. Use ResMut to make purpose clear
     sectors_cache: ResMut<SectorsCache>,

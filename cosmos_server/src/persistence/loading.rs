@@ -71,6 +71,12 @@ fn check_needs_loaded(
     mut commands: Commands,
 ) {
     for (ent, save_file_identifier) in q_sfis.iter() {
+        // TODO: for debug only
+        // if q_sfis.iter().take(i).any(|(e, sfi)| *e != ent && *sfi == save_file_identifier) {
+        //     error!("Duplicate save file trying to be loaded - {ent:?} - {save_file_identifier:?}. Despawning duplucate.");
+        //     commands.entity(ent).despawn_recursive();
+        // }
+
         let path = save_file_identifier.get_save_file_path();
         let Ok(data) = fs::read(&path) else {
             warn!("Error reading file at '{path}'. Is it there?");

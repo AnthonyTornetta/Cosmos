@@ -172,7 +172,6 @@ fn reposition_worlds_around_anchors(
 
             let delta = (*location - *world_location).absolute_coords_f32();
             if *world_location != *location {
-                info!("Changing world loc from {} to {location}", *world_location);
                 *world_location = *location;
             }
 

@@ -102,7 +102,7 @@ impl EntityId {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub(crate) enum SaveFileIdentifierType {
     /// This entity does not belong to any other entity
     Base(EntityId, Option<Sector>, Option<u32>),
@@ -126,7 +126,7 @@ pub(crate) enum SaveFileIdentifierType {
 /// This is used to clean up old versions of this entity from disk as new ones are saved.
 struct PreviousSaveFileIdentifier(pub SaveFileIdentifier);
 
-#[derive(Debug, Component, Clone, Serialize, Deserialize)]
+#[derive(Debug, Component, Clone, Serialize, Deserialize, PartialEq, Eq)]
 /// Used to track where the save file for a given entity is or should be.
 pub struct SaveFileIdentifier {
     identifier_type: SaveFileIdentifierType,

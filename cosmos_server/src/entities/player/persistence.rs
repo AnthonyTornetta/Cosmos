@@ -123,7 +123,9 @@ fn load_player(
         let mut cur_sfi = &player_identifier.sfi;
         while let Some(sfi) = cur_sfi.get_parent() {
             cur_sfi = sfi;
-            commands.spawn((NeedsLoaded, sfi.clone(), sfi.entity_id().expect("Missing Entity Id!").clone()));
+            let entity_id = sfi.entity_id().expect("Missing Entity Id!").clone();
+            info!("Loading player parent ({entity_id})");
+            commands.spawn((NeedsLoaded, sfi.clone(), entity_id));
         }
 
         let player_entity = commands

@@ -55,6 +55,7 @@ impl SyncableComponent for Missile {
     }
 }
 
+/// The collision group missiles will be a part of
 pub const MISSILE_COLLISION_GROUP: Group = Group::GROUP_5;
 
 fn on_add_missile(q_added_missile: Query<Entity, Added<Missile>>, mut commands: Commands) {
