@@ -121,6 +121,10 @@ fn listen_sell_events(
         quantity,
     } in ev_reader.read()
     {
+        if quantity == 0 {
+            continue;
+        }
+
         let Some(player_ent) = lobby.player_from_id(client_id) else {
             error!("Bad player id: {client_id}");
             continue;
@@ -191,6 +195,10 @@ fn listen_buy_events(
         quantity,
     } in ev_reader.read()
     {
+        if quantity == 0 {
+            continue;
+        }
+
         let Some(player_ent) = lobby.player_from_id(client_id) else {
             error!("Bad player id: {client_id}");
             continue;

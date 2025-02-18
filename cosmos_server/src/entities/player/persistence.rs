@@ -222,7 +222,7 @@ fn create_new_player(
         let velocity = Velocity::default();
         let inventory = generate_player_inventory(player_entity, &items, &mut commands, &needs_data, server_settings.creative);
 
-        let credits = Credits::new(25_000);
+        let credits = Credits::new(5_000);
 
         commands
             .entity(player_entity)

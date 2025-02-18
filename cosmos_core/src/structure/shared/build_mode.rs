@@ -155,13 +155,14 @@ fn on_add_build_mode(mut commands: Commands, q_added_build_mode: Query<(Entity, 
 
 fn on_remove_build_mode(mut commands: Commands, mut removed_components: RemovedComponents<BuildMode>) {
     for ent in removed_components.read() {
-        commands
-            .entity(ent)
-            .remove::<BuildMode>()
-            .remove::<RigidBodyDisabled>()
-            .remove::<Sensor>()
-            .insert(RigidBody::Dynamic)
-            .remove::<InBuildModeFlag>();
+        if let Some(mut ecmds) = commands.get_entity(ent) {
+            ecmds
+                .remove::<BuildMode>()
+                .remove::<RigidBodyDisabled>()
+                .remove::<Sensor>()
+                .insert(RigidBody::Dynamic)
+                .remove::<InBuildModeFlag>();
+        }
     }
 }
 
