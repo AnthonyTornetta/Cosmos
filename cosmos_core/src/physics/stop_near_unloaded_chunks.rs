@@ -52,36 +52,41 @@ fn stop_near_unloaded_chunks(
                 continue;
             }
 
-            let relative_coords = g_trans.to_scale_rotation_translation().1.inverse().mul_vec3(abs_coords);
+            let near_unloaded_chunk = match structure {
+                Structure::Full(f) => !f.is_loaded(),
+                Structure::Dynamic(_) => {
+                    let relative_coords = g_trans.to_scale_rotation_translation().1.inverse().mul_vec3(abs_coords);
 
-            let ub_coords = structure.relative_coords_to_local_coords(relative_coords.x, relative_coords.y, relative_coords.z);
+                    let ub_coords = structure.relative_coords_to_local_coords(relative_coords.x, relative_coords.y, relative_coords.z);
 
-            let ub_chunk_coords = UnboundChunkCoordinate::for_unbound_block_coordinate(ub_coords);
+                    let ub_chunk_coords = UnboundChunkCoordinate::for_unbound_block_coordinate(ub_coords);
 
-            let near_unloaded_chunk = structure
-                .chunk_iter(
-                    UnboundChunkCoordinate::new(
-                        ub_chunk_coords.x - FREEZE_RADIUS,
-                        ub_chunk_coords.y - FREEZE_RADIUS,
-                        ub_chunk_coords.z - FREEZE_RADIUS,
-                    ),
-                    UnboundChunkCoordinate::new(
-                        ub_chunk_coords.x + FREEZE_RADIUS,
-                        ub_chunk_coords.y + FREEZE_RADIUS,
-                        ub_chunk_coords.z + FREEZE_RADIUS,
-                    ),
-                    true,
-                )
-                .any(|x| match x {
-                    ChunkIteratorResult::EmptyChunk { position } => structure.get_chunk_state(position) != ChunkState::Loaded,
-                    ChunkIteratorResult::FilledChunk { position, chunk: _ } => {
-                        if let Some(chunk_entity) = structure.chunk_entity(position) {
-                            !has_collider.contains(chunk_entity)
-                        } else {
-                            true
-                        }
-                    }
-                });
+                    structure
+                        .chunk_iter(
+                            UnboundChunkCoordinate::new(
+                                ub_chunk_coords.x - FREEZE_RADIUS,
+                                ub_chunk_coords.y - FREEZE_RADIUS,
+                                ub_chunk_coords.z - FREEZE_RADIUS,
+                            ),
+                            UnboundChunkCoordinate::new(
+                                ub_chunk_coords.x + FREEZE_RADIUS,
+                                ub_chunk_coords.y + FREEZE_RADIUS,
+                                ub_chunk_coords.z + FREEZE_RADIUS,
+                            ),
+                            true,
+                        )
+                        .any(|x| match x {
+                            ChunkIteratorResult::EmptyChunk { position } => structure.get_chunk_state(position) != ChunkState::Loaded,
+                            ChunkIteratorResult::FilledChunk { position, chunk: _ } => {
+                                if let Some(chunk_entity) = structure.chunk_entity(position) {
+                                    !has_collider.contains(chunk_entity)
+                                } else {
+                                    true
+                                }
+                            }
+                        })
+                }
+            };
 
             if near_unloaded_chunk {
                 if let Some(disable_rb) = disable_rb.as_mut() {
