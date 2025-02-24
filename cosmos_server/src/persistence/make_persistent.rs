@@ -11,7 +11,7 @@ use bevy::{
         system::{Commands, Query, SystemParam},
     },
     hierarchy::Parent,
-    log::{error, warn},
+    log::{error, info, warn},
 };
 use cosmos_core::{
     block::data::{persistence::ChunkLoadBlockDataEvent, BlockData},
@@ -110,6 +110,7 @@ fn load_component<T: PersistentComponent>(
         };
 
         component.initialize(entity, &mut commands);
+        info!("Inserting component {} onto {entity:?}", T::get_component_unlocalized_name());
         commands.entity(entity).insert(component);
     });
 }
@@ -244,7 +245,7 @@ where
 /// When this entity is loaded again, the component will also be loaded.
 pub fn make_persistent<T: PersistentComponent>(app: &mut App) {
     app.add_systems(SAVING_SCHEDULE, save_component::<T>.in_set(SavingSystemSet::DoSaving))
-        .add_systems(LOADING_SCHEDULE, load_component::<T>.in_set(LoadingSystemSet::DoLoading))
+        .add_systems(LOADING_SCHEDULE, load_component::<T>.in_set(LoadingSystemSet::LoadBasicComponents))
         // Block Data
         .add_systems(
             Update,

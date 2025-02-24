@@ -69,7 +69,7 @@ fn generate_planet(entity: Entity, s_data: &SerializedData, planet_save_data: Pl
     entity_cmd.insert(structure);
 }
 
-fn on_load_structure(query: Query<(Entity, &SerializedData), With<NeedsLoaded>>, mut commands: Commands) {
+fn on_load_planet_structure(query: Query<(Entity, &SerializedData), With<NeedsLoaded>>, mut commands: Commands) {
     for (entity, s_data) in query.iter() {
         if s_data.deserialize_data::<bool>("cosmos:is_planet").unwrap_or(false) {
             if let Ok(planet_save_data) = s_data.deserialize_data::<PlanetSaveData>("cosmos:planet") {
@@ -211,7 +211,7 @@ pub(super) fn register(app: &mut App) {
                 load_chunk
                     .in_set(StructureLoadingSet::LoadChunkBlocks)
                     .ambiguous_with(BiosphereGenerationSet::GenerateChunkFeatures),
-                on_load_structure.in_set(LoadingSystemSet::DoLoading),
+                on_load_planet_structure.in_set(LoadingSystemSet::DoLoading),
             )
                 .in_set(StructureTypeSet::Planet),
         );

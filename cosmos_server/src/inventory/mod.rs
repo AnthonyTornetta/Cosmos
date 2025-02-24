@@ -18,5 +18,6 @@ pub(super) fn register(app: &mut App) {
     netty::register(app);
     block_events::register(app);
 
+    // !!!!!! THIS IS WRONG !!!!!!!!!!
     make_persistent::<Inventory>(app);
 }
