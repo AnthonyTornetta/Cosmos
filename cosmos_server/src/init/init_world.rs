@@ -71,7 +71,7 @@ pub(super) fn register(app: &mut App) {
     } else {
         let seed = ServerSeed(rand::random());
 
-        fs::create_dir("./world/").expect("Error creating world directory!");
+        let _ = fs::create_dir("./world/");
         fs::write("./world/seed.dat", cosmos_encoder::serialize(&seed)).expect("Error writing file './world/seed.dat'");
 
         seed
