@@ -27,7 +27,6 @@ use cosmos_core::{
         location::{systems::Anchor, Location, LocationPhysicsSet, Sector, SetPosition},
         player_world::WorldWithin,
     },
-    prelude::Station,
     registry::{identifiable::Identifiable, Registry},
 };
 use renet2::{ClientId, RenetServer};
@@ -120,23 +119,13 @@ fn load_player(
         let player_identifier = serde_json::from_slice::<PlayerIdentifier>(&data)
             .unwrap_or_else(|e| panic!("Invalid json data for player {player_file_name}\n{e:?}"));
 
-        // let mut prev_entity = None;
-        // let mut first_entity = None;
-
         // Ensure the player's parents are also being loaded
         let mut cur_sfi = &player_identifier.sfi;
         while let Some(sfi) = cur_sfi.get_parent() {
             cur_sfi = sfi;
             let entity_id = sfi.entity_id().expect("Missing Entity Id!").clone();
             info!("Loading player parent ({entity_id}) ({sfi:?})");
-            let mut ecmds = commands.spawn((NeedsLoaded, sfi.clone(), entity_id));
-            // if let Some(e) = prev_entity {
-            //     ecmds.add_child(e);
-            // }
-            // prev_entity = Some(ecmds.id());
-            // if first_entity.is_none() {
-            //     first_entity = Some(ecmds.id());
-            // }
+            commands.spawn((NeedsLoaded, sfi.clone(), entity_id));
         }
 
         let entity_id = player_identifier.sfi.entity_id().expect("Missing player entity id ;(").clone();
@@ -151,10 +140,6 @@ fn load_player(
                 entity_id,
             ))
             .remove::<LoadPlayer>();
-
-        // if let Some(first_entity) = first_entity {
-        //     player_entity.set_parent(first_entity);
-        // }
 
         let player_entity = player_entity.id();
 
@@ -342,45 +327,7 @@ fn finish_loading_player(
     }
 }
 
-// fn p(q_p: Query<Has<Children>, With<Player>>) {
-//     info!("(first)!");
-//     for p in q_p.iter() {
-//         info!("b4: {p:?}");
-//     }
-// }
-// pub fn pp_pre_pre(world: &mut World) {
-//     info!("(pre pre)");
-//     for p in world.query_filtered::<Has<Children>, With<Player>>().iter(world) {
-//         info!("PRE pre: {p:?}");
-//     }
-// }
-//
-// pub fn pp_pre(q_p: Query<Has<Children>, With<Player>>) {
-//     info!("(pre)");
-//     for p in q_p.iter() {
-//         info!("PRE: {p:?}");
-//     }
-// }
-// fn pp(q_p: Query<Has<Children>, With<Player>>) {
-//     info!("(last)!");
-//     for p in q_p.iter() {
-//         info!("{p:?}");
-//     }
-// }
-
 pub(super) fn register(app: &mut App) {
-    // app.add_systems(Update, p.in_set(LoadingSystemSet::BeginLoading));
-    // app.add_systems(
-    //     Update,
-    //     (
-    //         pp_pre_pre.in_set(LoadingSystemSet::LoadBasicComponents),
-    //         pp_pre
-    //             .after(LoadingSystemSet::LoadBasicComponents)
-    //             .before(LoadingSystemSet::DoLoading),
-    //     )
-    //         .before(super::super::super::structure::station::persistence::on_load_structure),
-    // );
-    // app.add_systems(Update, pp.in_set(LoadingSystemSet::DoneLoading));
     app.add_systems(
         SAVING_SCHEDULE,
         save_player_link
