@@ -11,7 +11,7 @@ use bevy::{
         system::{Commands, Query, SystemParam},
     },
     hierarchy::Parent,
-    log::{error, info, warn},
+    log::{error, warn},
 };
 use cosmos_core::{
     block::data::{persistence::ChunkLoadBlockDataEvent, BlockData},
@@ -130,7 +130,6 @@ fn load_component<T: PersistentComponent>(
         };
 
         component.initialize(entity, &mut commands);
-        info!("Inserting component {} onto {entity:?}", T::get_component_unlocalized_name());
         commands.entity(entity).insert(component);
     });
 }
@@ -176,7 +175,6 @@ fn deserialize_and_load_component<T: PersistentComponent>(
         return;
     };
     component.initialize(entity, commands);
-    info!("Inserting component {} onto {entity:?}", T::get_component_unlocalized_name());
     commands.entity(entity).insert(component);
 }
 

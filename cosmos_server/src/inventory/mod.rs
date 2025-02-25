@@ -4,7 +4,7 @@ use std::ops::Range;
 
 use bevy::{
     core::Name,
-    log::{error, info, warn},
+    log::{error, warn},
     prelude::{
         App, Children, Commands, Component, Deref, DerefMut, Entity, EventReader, IntoSystemConfigs, IntoSystemSetConfigs, Or, Parent,
         Query, Res, SystemSet, With,
@@ -45,9 +45,19 @@ impl DefaultPersistentComponent for Inventory {
 }
 
 #[derive(Component, Debug)]
+/// This item stack data needs to be saved.
+///
+/// This should only be placed on [`ItemStack`] entities that contain a [`SerializedItemStackData`]
+/// component for the serialized data to be inserted into. Systems that use this should be in the
+/// [`InventorySavingSet::SerializeItemStack`] set.
 pub struct ItemStackDataNeedsSaved;
 
 #[derive(Component, Debug)]
+/// This item stack data needs to be loaded from serialized data.
+///
+/// This should only be placed on [`ItemStack`] entities that contain a [`SerializedItemStackData`]
+/// component for the serialized data to be read from. Systems that use this should be in the
+/// [`InventoryLoadingSet::LoadItemStackData`] set.
 pub struct ItemStackDataNeedsLoaded;
 
 #[derive(Component, Debug, Serialize, Deserialize, Deref, DerefMut, Default)]
@@ -55,16 +65,25 @@ pub struct ItemStackDataNeedsLoaded;
 pub struct SerializedItemStackData(SaveData);
 
 #[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
+/// [`Inventory`]s and [`ItemStack`]s have their data saved here
 pub enum InventorySavingSet {
+    /// Adds necessary components to [`ItemStack`] entities to initiate their saving.
     TriggerItemStackSerialization,
+    /// [`ItemStack`]s have their components serialized and put into the
+    /// [`SerializedItemStackData`] component.
     SerializeItemStack,
+    /// The [`Inventory`] is serialized and paired with the previously-serialized [`ItemStack`] data.
     SerializeInventory,
 }
 
 #[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
+/// [`Inventory`]s and [`ItemStack`]s have their data loaded here
 pub enum InventoryLoadingSet {
+    /// The [`Inventory`] is deserialized and [`ItemStackData`] entities are created as needed.
     LoadInventoryData,
+    /// [`ItemStack`]s with the [`ItemStackDataNeedsLoaded`] component have their data loaded.
     LoadItemStackData,
+    /// Markers ([`ItemStackDataNeedsLoaded`]) to load [`ItemStack`] data are removed.
     RemoveLoadingMarkers,
 }
 
@@ -75,7 +94,6 @@ fn on_save_inventory(
 ) {
     for children in q_needs_saved.iter() {
         for &child in children.iter().filter(|x| q_item_data.contains(**x)) {
-            info!("Inserting needs saved!");
             commands
                 .entity(child)
                 .insert((ItemStackDataNeedsSaved, SerializedItemStackData::default()));
@@ -235,10 +253,6 @@ fn deserialize_inventory(
 
         let inventory = create_deserialized_inventory(&mut commands, &is_should_have_data, &items, entity, component_save_data);
 
-        info!(
-            "Inserting component {} onto {entity:?}",
-            Inventory::get_component_unlocalized_name()
-        );
         commands.entity(entity).insert(inventory);
     }
 }
