@@ -238,12 +238,11 @@ pub(super) fn register(app: &mut App) {
     app.configure_sets(
         LOADING_SCHEDULE,
         (
-            LoadingBlueprintSystemSet::BeginLoadingBlueprints,
-            LoadingBlueprintSystemSet::DoLoadingBlueprints,
-            LoadingBlueprintSystemSet::DoneLoadingBlueprints,
+            LoadingBlueprintSystemSet::BeginLoadingBlueprints.in_set(LoadingSystemSet::BeginLoading),
+            LoadingBlueprintSystemSet::DoLoadingBlueprints.in_set(LoadingSystemSet::DoLoading),
+            LoadingBlueprintSystemSet::DoneLoadingBlueprints.in_set(LoadingSystemSet::DoneLoading),
         )
-            .chain()
-            .before(LoadingSystemSet::BeginLoading),
+            .chain(),
     )
     .add_systems(
         LOADING_SCHEDULE,

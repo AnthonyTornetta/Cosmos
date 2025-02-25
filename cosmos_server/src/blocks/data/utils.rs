@@ -144,7 +144,12 @@ fn init_block_data<T: Component>(
         .filter(|(bc, _)| structure.query_block_data(*bc, q_has_component).is_none())
         .collect::<Vec<(BlockCoordinate, &DataConstructor<T>)>>()
     {
-        structure.insert_block_data_with_entity(block, |e| initializer(e, commands), params, q_block_data, q_has_component);
+        if structure
+            .insert_block_data_with_entity(block, |e| initializer(e, commands), params, q_block_data, q_has_component)
+            .is_none()
+        {
+            error!("Unable to set block entity data when loading blueprint (this is bad)!");
+        }
     }
 }
 
