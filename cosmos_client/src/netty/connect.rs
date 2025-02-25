@@ -16,7 +16,7 @@ use cosmos_core::{
     netty::{connection_config, sync::mapping::NetworkMapping, PROTOCOL_ID},
     state::GameState,
 };
-use renet2::transport::NativeSocket;
+use renet2::{transport::NativeSocket, DisconnectReason};
 
 use crate::{
     netty::lobby::{ClientLobby, MostRecentTick},
@@ -93,6 +93,7 @@ pub fn establish_connection(mut commands: Commands, host_config: Res<HostConfig>
         host_config.port,
     ));
     commands.init_resource::<NetworkMapping>();
+    commands.remove_resource::<ClientDisconnectReason>();
 }
 
 /// Waits for a connection to be made, then changes the game state to `GameState::LoadingWorld`.
@@ -110,11 +111,24 @@ fn ensure_connected(client: Res<RenetClient>, mut commands: Commands, mut state_
     }
 }
 
-fn remove_network_mapping(mut commands: Commands) {
+#[derive(Resource, Debug)]
+/// If the renet client provides a reason for the latest disconnect, this will contain it.
+pub struct ClientDisconnectReason(pub DisconnectReason);
+
+fn remove_networking_resources(mut commands: Commands, client: Option<Res<RenetClient>>) {
+    if let Some(client) = client {
+        if let Some(dc_reason) = client.disconnect_reason() {
+            commands.insert_resource(ClientDisconnectReason(dc_reason));
+        }
+    }
     commands.remove_resource::<NetworkMapping>();
+    commands.remove_resource::<RenetClient>();
+    commands.remove_resource::<NetcodeClientTransport>();
+    commands.remove_resource::<MostRecentTick>();
+    commands.remove_resource::<ClientLobby>();
 }
 
 pub(super) fn register(app: &mut App) {
     app.add_systems(Update, ensure_connected.run_if(in_state(GameState::LoadingData)))
-        .add_systems(Update, remove_network_mapping.run_if(in_state(GameState::MainMenu)));
+        .add_systems(Update, remove_networking_resources.run_if(in_state(GameState::MainMenu)));
 }

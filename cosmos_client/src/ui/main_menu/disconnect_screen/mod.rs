@@ -1,10 +1,13 @@
 use bevy::{app::App, prelude::*};
-use bevy_renet2::renet2::{DisconnectReason, RenetClient};
+use bevy_renet2::renet2::DisconnectReason;
 
-use crate::ui::{
-    components::button::{register_button, Button, ButtonEvent, ButtonStyles},
-    font::DefaultFont,
-    settings::SettingsMenuSet,
+use crate::{
+    netty::connect::ClientDisconnectReason,
+    ui::{
+        components::button::{register_button, Button, ButtonEvent, ButtonStyles},
+        font::DefaultFont,
+        settings::SettingsMenuSet,
+    },
 };
 
 use super::{in_main_menu_state, title_screen::TitleScreenSet, MainMenuRootUiNode, MainMenuSubState, MainMenuSystemSet};
@@ -12,7 +15,7 @@ use super::{in_main_menu_state, title_screen::TitleScreenSet, MainMenuRootUiNode
 fn create_disconnect_screen(
     mut commands: Commands,
     q_ui_root: Query<Entity, With<MainMenuRootUiNode>>,
-    client: Option<Res<RenetClient>>,
+    dc_reason: Option<Res<ClientDisconnectReason>>,
     default_font: Res<DefaultFont>,
 ) {
     let cool_blue: Color = Srgba::hex("00FFFF").unwrap().into();
@@ -44,7 +47,7 @@ fn create_disconnect_screen(
             },
         ));
 
-        let dc_reason = client.and_then(|x| x.disconnect_reason());
+        let dc_reason = dc_reason.as_ref().map(|x| &x.0);
 
         info!("Disconnected: {dc_reason:?}");
 
