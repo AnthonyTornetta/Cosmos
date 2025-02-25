@@ -65,6 +65,9 @@ use super::sync::register_structure_system;
 mod explosion;
 mod laser;
 
+/// Max strength * this = amount the shield has to hit before becoming un-disabled.
+const SHIELD_DISABLED_RATIO: f32 = 0.5;
+
 /*
 Shield plan:
 Projectors + generators more effective when placed next to other projectors
@@ -244,6 +247,7 @@ fn recalculate_shields_if_needed(
                             strength: 0.0,
                             power_efficiency: shield_details.generation_efficiency,
                             power_per_second: shield_details.generation_power_per_sec,
+                            disabled: false,
                         },
                     ))
                     .id();
@@ -259,7 +263,7 @@ fn recalculate_shields_if_needed(
 #[derive(Component, Serialize, Deserialize, Debug, Reflect)]
 struct ShieldDowntime(f32);
 
-const MAX_SHIELD_DOWNTIME: Duration = Duration::from_secs(10);
+const MAX_SHIELD_DOWNTIME: Duration = Duration::from_secs(30);
 
 fn power_shields(
     mut commands: Commands,
@@ -271,6 +275,9 @@ fn power_shields(
     for (ent, mut shield, parent, shield_downtime) in &mut q_shields {
         if shield.strength < shield.max_strength {
             if shield.strength == 0.0 {
+                if !shield.disabled {
+                    shield.disabled = true;
+                }
                 let Some(mut shield_downtime) = shield_downtime else {
                     commands.entity(ent).insert(ShieldDowntime(time.delta_secs()));
                     continue;
@@ -304,6 +311,8 @@ fn power_shields(
 
             if old_strength == 0.0 && shield.strength != 0.0 {
                 commands.entity(ent).remove::<ShieldDowntime>();
+            } else if shield.strength >= shield.max_strength * SHIELD_DISABLED_RATIO && shield.disabled {
+                shield.disabled = false;
             }
         }
     }

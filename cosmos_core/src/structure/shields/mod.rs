@@ -37,12 +37,16 @@ pub struct Shield {
     pub power_per_second: f32,
     /// How efficient the power usage is
     pub power_efficiency: f32,
+    /// If this shield should be projecting or not.
+    ///
+    /// A shield can be disabled even if its strength is not 0.
+    pub disabled: bool,
 }
 
 impl Shield {
     /// Returns true if this shield is currently active
     pub fn is_enabled(&self) -> bool {
-        self.strength > f32::EPSILON
+        self.strength > f32::EPSILON && !self.disabled
     }
 
     /// Reduces the shield's strength based on the amount provided.
