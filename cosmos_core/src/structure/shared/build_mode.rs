@@ -217,7 +217,7 @@ pub enum BuildModeSet {
     ExitBuildMode,
 }
 
-fn adjust_transform_build_mode(mut q_transform: Query<&mut Transform, Added<BuildMode>>) {
+fn adjust_transform_build_mode(mut q_transform: Query<&mut Transform, With<BuildMode>>) {
     for mut trans in q_transform.iter_mut() {
         trans.rotation = Quat::IDENTITY;
     }
@@ -240,7 +240,7 @@ pub(super) fn register(app: &mut App) {
     app.add_systems(
         Update,
         (
-            (enter_build_mode_listener, adjust_transform_build_mode, on_add_build_mode)
+            (enter_build_mode_listener, on_add_build_mode, adjust_transform_build_mode)
                 .chain()
                 .in_set(BuildModeSet::EnterBuildMode),
             exit_build_mode_when_parent_dies.in_set(BuildModeSet::SendExitBuildModeEvent),
