@@ -110,6 +110,11 @@ fn ensure_connected(client: Res<RenetClient>, mut commands: Commands, mut state_
     }
 }
 
+fn remove_network_mapping(mut commands: Commands) {
+    commands.remove_resource::<NetworkMapping>();
+}
+
 pub(super) fn register(app: &mut App) {
-    app.add_systems(Update, ensure_connected.run_if(in_state(GameState::LoadingData)));
+    app.add_systems(Update, ensure_connected.run_if(in_state(GameState::LoadingData)))
+        .add_systems(Update, remove_network_mapping.run_if(in_state(GameState::MainMenu)));
 }
