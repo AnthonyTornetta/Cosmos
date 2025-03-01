@@ -63,7 +63,7 @@ fn loc_from_trans(
                     .map(|x| x + (parent_g_trans.rotation().inverse() * my_trans.translation))
             } else {
                 error!("Location set based solely on global transform - you probably didn't mean to do this.");
-                return None;
+                None
                 // q_g_trans
                 //     .get(entity)
                 //     .ok()

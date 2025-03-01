@@ -167,7 +167,7 @@ fn deserialize_and_load_component<T: PersistentComponent>(
             return;
         }
     };
-    let Some(mut component) = T::convert_from_save_type(component_save_data, &entity_id_manager) else {
+    let Some(mut component) = T::convert_from_save_type(component_save_data, entity_id_manager) else {
         error!(
             "Error getting entities needed for component {} for entity {entity:?}",
             T::get_component_unlocalized_name()
