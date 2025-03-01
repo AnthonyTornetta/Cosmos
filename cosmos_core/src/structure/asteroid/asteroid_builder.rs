@@ -1,15 +1,16 @@
 //! Used to build an asteroid
 
+use bevy::prelude::*;
 use bevy::{ecs::system::EntityCommands, prelude::Name};
 use bevy_rapier3d::prelude::{RigidBody, Velocity};
 
+use super::*;
+use crate::prelude::StructureLoadingSet;
 use crate::{
     persistence::LoadingDistance,
     physics::location::Location,
     structure::{structure_builder::TStructureBuilder, Structure},
 };
-
-use super::*;
 
 /// Implement this to add a custom way to build asteroids
 pub trait TAsteroidBuilder {
@@ -37,8 +38,21 @@ impl<T: TStructureBuilder> TAsteroidBuilder for AsteroidBuilder<T> {
         entity.insert((
             Asteroid::new(temperature),
             Name::new("Asteroid"),
-            RigidBody::Fixed,
             LoadingDistance::new(ASTEROID_LOAD_RADIUS, ASTEROID_UNLOAD_RADIUS),
         ));
     }
+}
+
+fn add_rigidbody_to_asteroid(mut commands: Commands, q_asteroid_added: Query<(Entity, Has<MovingAsteroid>), Added<Asteroid>>) {
+    for (ent, moving) in q_asteroid_added.iter() {
+        if moving {
+            commands.entity(ent).insert(RigidBody::Dynamic);
+        } else {
+            commands.entity(ent).insert(RigidBody::Fixed);
+        }
+    }
+}
+
+pub(super) fn register(app: &mut App) {
+    app.add_systems(Update, add_rigidbody_to_asteroid.in_set(StructureLoadingSet::StructureLoaded));
 }

@@ -11,7 +11,7 @@ use cosmos_core::{
         system_sets::NetworkingSystemsSet,
         NettyChannelClient,
     },
-    physics::location::Location,
+    physics::location::{Location, LocationPhysicsSet},
     state::GameState,
 };
 
@@ -19,12 +19,11 @@ use crate::rendering::MainCamera;
 
 fn send_position(
     mut client: ResMut<RenetClient>,
-    loc_query: Query<&Location>,
-    query: Query<(&Velocity, &Transform, &Location, Option<&Parent>), With<LocalPlayer>>,
+    q_player: Query<(&Velocity, &Transform, &Location, Option<&Parent>), With<LocalPlayer>>,
     camera_query: Query<&Transform, With<MainCamera>>,
     netty_mapping: Res<NetworkMapping>,
 ) {
-    if let Ok((velocity, transform, location, parent)) = query.get_single() {
+    if let Ok((velocity, transform, location, parent)) = q_player.get_single() {
         let looking = if let Ok(trans) = camera_query.get_single() {
             Quat::from_affine3(&trans.compute_affine())
         } else {
@@ -33,9 +32,7 @@ fn send_position(
 
         let netty_loc = if let Some(parent) = parent.map(|p| p.get()) {
             if let Some(server_ent) = netty_mapping.server_from_client(&parent) {
-                let parent_loc = loc_query.get(parent).copied().unwrap_or(Location::default());
-
-                NettyRigidBodyLocation::Relative((*location - parent_loc).absolute_coords_f32(), server_ent)
+                NettyRigidBodyLocation::Relative(transform.translation, server_ent)
             } else {
                 NettyRigidBodyLocation::Absolute(*location)
             }
@@ -59,6 +56,7 @@ pub(super) fn register(app: &mut App) {
         Update,
         send_position
             .in_set(NetworkingSystemsSet::SyncComponents)
+            .after(LocationPhysicsSet::DoPhysics)
             .run_if(in_state(GameState::Playing)),
     );
 }

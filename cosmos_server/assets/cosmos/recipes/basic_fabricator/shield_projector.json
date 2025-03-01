@@ -2,9 +2,15 @@
   "inputs": [
     {
       "item": {
-        "Item": "cosmos:photonium_crystal"
+        "Item": "cosmos:gravitron_crystal"
       },
       "quantity": 6
+    },
+    {
+      "item": {
+        "Item": "cosmos:photonium_crystal"
+      },
+      "quantity": 1
     },
     {
       "item": {

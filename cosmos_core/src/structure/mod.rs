@@ -952,6 +952,7 @@ pub(super) fn register(app: &mut App) {
 
     ship::register(app);
     station::register(app);
+    asteroid::register(app);
     chunk::register(app);
     planet::register(app);
     events::register(app);

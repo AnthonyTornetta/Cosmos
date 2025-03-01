@@ -203,6 +203,13 @@ fn register_settings(mut registry: ResMut<Registry<Setting>>) {
     ));
 
     registry.register(Setting::new(
+        "cosmos:master_volume",
+        SettingData::I32(100),
+        SettingCategory::Audio,
+        Some(SettingConstraint::I32 { min: 0, max: 100 }),
+    ));
+
+    registry.register(Setting::new(
         "cosmos:music_volume",
         SettingData::I32(100),
         SettingCategory::Audio,

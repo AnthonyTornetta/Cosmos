@@ -12,7 +12,7 @@ use bevy::{
         schedule::{IntoSystemConfigs, IntoSystemSetConfigs, SystemSet},
         system::{Commands, Query, Res, Resource},
     },
-    log::info,
+    log::warn,
     math::{Quat, Vec3},
     prelude::{Added, EventReader},
     reflect::Reflect,
@@ -339,11 +339,10 @@ fn on_melt_down(mut q_players: Query<&mut PlayerStrength>, q_melting_down: Query
     for hitters in q_melting_down.iter() {
         let dmg_total = hitters.0.iter().map(|(_, hits)| *hits).sum::<u64>();
 
-        info!("HITTERS {hitters:?}");
-
         for (&hitter_ent, &hits) in hitters.0.iter() {
             let percent = hits as f32 / dmg_total as f32;
             let Ok(mut player_strength) = q_players.get_mut(hitter_ent) else {
+                warn!("No player strength!");
                 continue;
             };
 

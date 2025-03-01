@@ -1,4 +1,4 @@
-//! Responsible for spawning planets near stars, but for now just spawns a planet at 0, 0, 0.
+//! Responsible for spawning asteroids that don't move, based on what was generated in the galaxy
 
 use std::f32::consts::PI;
 
@@ -28,10 +28,11 @@ use crate::{
     rng::get_rng_for_sector,
     settings::ServerSettings,
     structure::asteroid::server_asteroid_builder::ServerAsteroidBuilder,
-    universe::{generation::SystemItem, star::calculate_temperature_at},
+    universe::{
+        generation::{GenerateSystemEvent, SystemGenerationSet, SystemItem, SystemItemAsteroid, UniverseSystems},
+        star::calculate_temperature_at,
+    },
 };
-
-use super::generation::{GenerateSystemEvent, SystemGenerationSet, SystemItemAsteroid, UniverseSystems};
 
 #[derive(Default, Resource, Deref, DerefMut)]
 struct CachedSectors(HashSet<Sector>);

@@ -123,18 +123,25 @@ fn load_player(
         let mut cur_sfi = &player_identifier.sfi;
         while let Some(sfi) = cur_sfi.get_parent() {
             cur_sfi = sfi;
-            commands.spawn((NeedsLoaded, sfi.clone(), sfi.entity_id().expect("Missing Entity Id!").clone()));
+            let entity_id = sfi.entity_id().expect("Missing Entity Id!").clone();
+            info!("Loading player parent ({entity_id}) ({sfi:?})");
+            commands.spawn((NeedsLoaded, sfi.clone(), entity_id));
         }
 
-        let player_entity = commands
-            .entity(ent)
+        let entity_id = player_identifier.sfi.entity_id().expect("Missing player entity id ;(").clone();
+
+        let mut player_entity = commands.entity(ent);
+
+        player_entity
             .insert((
                 NeedsLoaded,
                 player_identifier.sfi,
                 Player::new(load_player.name.clone(), load_player.client_id),
+                entity_id,
             ))
-            .remove::<LoadPlayer>()
-            .id();
+            .remove::<LoadPlayer>();
+
+        let player_entity = player_entity.id();
 
         assign_player_world(&player_worlds, player_entity, &player_identifier.location, &mut commands);
     }
@@ -222,7 +229,7 @@ fn create_new_player(
         let velocity = Velocity::default();
         let inventory = generate_player_inventory(player_entity, &items, &mut commands, &needs_data, server_settings.creative);
 
-        let credits = Credits::new(25_000);
+        let credits = Credits::new(5_000);
 
         commands
             .entity(player_entity)
@@ -286,7 +293,7 @@ fn finish_loading_player(
             NettyRigidBodyLocation::Absolute(*location),
         );
 
-        info!("Sending player create message!");
+        info!("Sending player create message for {} @ {}!", load_player.name(), *location);
         let msg = cosmos_encoder::serialize(&ServerReliableMessages::PlayerCreate {
             entity: player_entity,
             parent: maybe_parent.map(|x| x.get()),

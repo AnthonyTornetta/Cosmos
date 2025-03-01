@@ -1,15 +1,21 @@
 //! Make blocks have default data easily.
 
+use std::marker::PhantomData;
+
 use bevy::{prelude::*, utils::HashMap};
 use cosmos_core::{
     block::{block_events::BlockEventsSet, data::BlockData, Block},
     events::block_events::{BlockChangedEvent, BlockDataSystemParams},
-    prelude::{BlockCoordinate, Structure},
+    netty::system_sets::NetworkingSystemsSet,
+    prelude::{BlockCoordinate, Structure, StructureLoadingSet},
     registry::{identifiable::Identifiable, Registry},
     state::GameState,
 };
 
-use crate::{fluid::interact_fluid::FluidInteractionSet, persistence::loading::NeedsBlueprintLoaded};
+use crate::{
+    fluid::interact_fluid::FluidInteractionSet,
+    persistence::loading::{LoadingBlueprintSystemSet, NeedsBlueprintLoaded},
+};
 
 type DataConstructor<T> = fn(Entity, &mut Commands) -> T;
 
@@ -30,42 +36,72 @@ impl<T: Component> Default for BlockDataInitializers<T> {
 ///
 /// Sends out the `PopulateBlockInventoryEvent` event when needed.
 fn on_add_block<T: Component>(
-    mut q_structure: Query<&mut Structure>,
-    mut evr_block_changed: EventReader<BlockChangedEvent>,
-    mut q_block_data: Query<&mut BlockData>,
-    mut params: BlockDataSystemParams,
-    q_has_component: Query<(), With<T>>,
     initializers: Res<BlockDataInitializers<T>>,
-    mut commands: Commands,
+    mut evr_block_changed: EventReader<BlockChangedEvent>,
+    mut evw_bd: EventWriter<InsertBlockDataEvent<T>>,
 ) {
     if evr_block_changed.is_empty() {
-        return;
+        return Default::default();
     }
+
+    let mut blocks: HashMap<Entity, Vec<BlockCoordinate>> = HashMap::default();
 
     for ev in evr_block_changed.read() {
         if ev.new_block == ev.old_block {
             continue;
         }
 
-        let Ok(mut structure) = q_structure.get_mut(ev.block.structure()) else {
-            continue;
-        };
-
-        let Some(initializer) = initializers.block_ids.get(&ev.new_block) else {
-            continue;
-        };
-
-        if structure.query_block_data(ev.block.coords(), &q_has_component).is_some() {
+        if !initializers.block_ids.contains_key(&ev.new_block) {
             continue;
         }
 
-        structure.insert_block_data_with_entity(
-            ev.block.coords(),
-            |e| initializer(e, &mut commands),
-            &mut params,
-            &mut q_block_data,
-            &q_has_component,
-        );
+        blocks.entry(ev.block.structure()).or_default().push(ev.block.coords());
+    }
+
+    evw_bd.send(InsertBlockDataEvent(blocks, Default::default()));
+}
+
+#[derive(Event)]
+struct InsertBlockDataEvent<T: Component>(HashMap<Entity, Vec<BlockCoordinate>>, PhantomData<T>);
+
+fn insert_block_data<T: Component>(
+    mut evr_todo: EventReader<InsertBlockDataEvent<T>>,
+    mut q_structure: Query<&mut Structure>,
+    mut q_block_data: Query<&mut BlockData>,
+    mut params: BlockDataSystemParams,
+    q_has_component: Query<(), With<T>>,
+    initializers: Res<BlockDataInitializers<T>>,
+    mut commands: Commands,
+) {
+    for InsertBlockDataEvent(input, _) in evr_todo.read() {
+        for (&entity, coords) in input.iter() {
+            let Ok(mut structure) = q_structure.get_mut(entity) else {
+                continue;
+            };
+
+            for &c in coords {
+                let Some(initializer) = initializers.block_ids.get(&structure.block_id_at(c)) else {
+                    continue;
+                };
+
+                if structure.query_block_data(c, &q_has_component).is_some() {
+                    continue;
+                }
+
+                if structure
+                    .insert_block_data_with_entity(
+                        c,
+                        |e| initializer(e, &mut commands),
+                        &mut params,
+                        &mut q_block_data,
+                        &q_has_component,
+                    )
+                    .is_none()
+                {
+                    warn!("Error inserting default block data - chunk not loaded!!");
+                }
+            }
+        }
     }
 }
 
@@ -108,20 +144,32 @@ fn init_block_data<T: Component>(
         .filter(|(bc, _)| structure.query_block_data(*bc, q_has_component).is_none())
         .collect::<Vec<(BlockCoordinate, &DataConstructor<T>)>>()
     {
-        structure.insert_block_data_with_entity(block, |e| initializer(e, commands), params, q_block_data, q_has_component);
+        if structure
+            .insert_block_data_with_entity(block, |e| initializer(e, commands), params, q_block_data, q_has_component)
+            .is_none()
+        {
+            error!("Unable to set block entity data when loading blueprint (this is bad)!");
+        }
     }
 }
 
 pub fn add_default_block_data_for_block<T: Component>(app: &mut App, ctor: DataConstructor<T>, block_id: &'static str) {
     if !app.world().contains_resource::<BlockDataInitializers<T>>() {
         app.init_resource::<BlockDataInitializers<T>>();
+        app.add_event::<InsertBlockDataEvent<T>>();
+
         app.add_systems(
             Update,
             (
-                on_load_blueprint_storage::<T>
-                    .in_set(BlockEventsSet::ProcessEvents)
-                    .ambiguous_with(FluidInteractionSet::InteractWithFluidBlocks),
-                on_add_block::<T>.in_set(BlockEventsSet::SendEventsForNextFrame),
+                on_load_blueprint_storage::<T>.in_set(LoadingBlueprintSystemSet::DoneLoadingBlueprints),
+                (
+                    insert_block_data::<T>.in_set(StructureLoadingSet::InitializeChunkBlockData),
+                    on_add_block::<T>
+                        .in_set(BlockEventsSet::ProcessEvents)
+                        .ambiguous_with(FluidInteractionSet::InteractWithFluidBlocks),
+                )
+                    .chain()
+                    .in_set(NetworkingSystemsSet::Between),
             ),
         );
     }

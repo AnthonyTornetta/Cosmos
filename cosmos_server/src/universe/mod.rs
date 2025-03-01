@@ -2,7 +2,6 @@
 
 use bevy::prelude::App;
 
-pub mod asteroid_spawner;
 pub mod galaxy_generation;
 pub mod generation;
 pub mod map;
@@ -16,6 +15,5 @@ pub(super) fn register(app: &mut App) {
     star::register(app);
     generation::register(app);
     planet_spawner::register(app);
-    asteroid_spawner::register(app);
     spawners::register(app);
 }

@@ -159,7 +159,19 @@ fn populate_menu(
                 },
             ))
             .with_children(|p| {
-                for recipe in crafting_recipes.iter() {
+                let mut recipes = crafting_recipes.iter().collect::<Vec<_>>();
+                recipes.sort_by(|a, b| {
+                    let a_name = lang
+                        .get_name_from_numeric_id(a.output.item)
+                        .unwrap_or(items.from_numeric_id(a.output.item).unlocalized_name());
+                    let b_name = lang
+                        .get_name_from_numeric_id(b.output.item)
+                        .unwrap_or(items.from_numeric_id(b.output.item).unlocalized_name());
+
+                    a_name.to_lowercase().cmp(&b_name.to_lowercase())
+                });
+
+                for &recipe in recipes.iter() {
                     p.spawn((
                         Node {
                             height: Val::Px(100.0),

@@ -9,7 +9,9 @@ use cosmos_core::{state::GameState, utils::random::random_range};
 use rand::seq::IteratorRandom;
 use serde::{Deserialize, Serialize};
 
-use super::{PlayMusicEvent, PlayingBackgroundSong, VolumeSetting};
+use crate::audio::volume::MasterVolume;
+
+use super::{MusicVolume, PlayMusicEvent, PlayingBackgroundSong};
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug, Serialize, Deserialize, Reflect)]
 /// Describes the "Atmosphere"/mood the music should be played in.
@@ -108,7 +110,8 @@ fn start_playing(
     mut commands: Commands,
     mut evr_play_music: EventReader<PlayMusicEvent>,
     audio: Res<Audio>,
-    volume: Res<VolumeSetting>,
+    volume: Res<MusicVolume>,
+    master_volume: Res<MasterVolume>,
     jukebox: Res<MusicController>,
 ) {
     let Some(ev) = evr_play_music.read().next() else {
@@ -122,7 +125,7 @@ fn start_playing(
 
     let handle = audio
         .play(song.handle.clone())
-        .with_volume(volume.percent())
+        .with_volume(volume.percent() * master_volume.multiplier())
         .fade_in(AudioTween::new(Duration::from_secs(2), AudioEasing::InOutPowi(2)))
         .handle();
 

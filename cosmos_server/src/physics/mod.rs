@@ -55,7 +55,7 @@ pub fn assign_player_world(
     } else {
         let link = create_physics_world(commands);
 
-        info!("Creating new physics world!");
+        info!("Creating new physics world for {player_entity:?}!");
 
         let world_entity = commands
             .spawn((Name::new("Player World"), PlayerWorld { player: player_entity }, *location, link))

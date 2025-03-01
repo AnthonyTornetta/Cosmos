@@ -6,7 +6,7 @@ use bevy::{
     math::Quat,
     prelude::{
         Added, App, BuildChildrenTransformExt, Changed, Commands, Component, Entity, Event, EventReader, EventWriter, IntoSystemConfigs,
-        IntoSystemSetConfigs, Parent, Query, SystemSet, Transform, Update, With, Without,
+        IntoSystemSetConfigs, Parent, Query, RemovedComponents, SystemSet, Transform, Update, With, Without,
     },
     reflect::Reflect,
 };
@@ -16,16 +16,58 @@ use bevy_rapier3d::{
 };
 use serde::{Deserialize, Serialize};
 
-use crate::{block::block_events::BlockEventsSet, netty::system_sets::NetworkingSystemsSet, structure::coordinates::CoordinateType};
+use crate::{
+    block::block_events::BlockEventsSet,
+    netty::{
+        sync::{sync_component, IdentifiableComponent, SyncableComponent},
+        system_sets::NetworkingSystemsSet,
+    },
+    prelude::StructureBlock,
+    structure::coordinates::CoordinateType,
+};
 
 type BuildModeSymmetries = (Option<CoordinateType>, Option<CoordinateType>, Option<CoordinateType>);
 
-#[derive(Component, Debug, Default, Reflect, Serialize, Deserialize, Clone, Copy)]
+#[derive(Component, Debug, Reflect, Serialize, Deserialize, Clone, Copy, PartialEq, Eq)]
 /// Denotes that a player is in build mode
 ///
 /// The player's parent will be the structure they are building
 pub struct BuildMode {
-    symmetries: BuildModeSymmetries,
+    /// The symmetries the player has set for this block
+    pub symmetries: BuildModeSymmetries,
+    /// The block that put this player into build mode
+    pub block: StructureBlock,
+    /// The structure the player is building on
+    pub structure_entity: Entity,
+}
+impl IdentifiableComponent for BuildMode {
+    fn get_component_unlocalized_name() -> &'static str {
+        "cosmos:build_mode"
+    }
+}
+impl SyncableComponent for BuildMode {
+    fn get_sync_type() -> crate::netty::sync::SyncType {
+        crate::netty::sync::SyncType::ServerAuthoritative
+    }
+
+    #[cfg(feature = "client")]
+    fn convert_entities_server_to_client(self, mapping: &crate::netty::sync::mapping::NetworkMapping) -> Option<Self> {
+        use crate::netty::sync::mapping::Mappable;
+
+        let s_block = self.block.map_to_client(mapping).ok()?;
+        let structure_entity = mapping.client_from_server(&self.structure_entity)?;
+
+        Some(Self {
+            symmetries: self.symmetries,
+            block: s_block,
+            structure_entity,
+        })
+    }
+
+    #[cfg(feature = "client")]
+    fn needs_entity_conversion() -> bool {
+        true
+    }
 }
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
@@ -77,6 +119,8 @@ pub struct EnterBuildModeEvent {
     ///
     /// Multiple players can be building on the same structure
     pub structure_entity: Entity,
+    /// The block containing the build mode block
+    pub block: StructureBlock,
 }
 
 #[derive(Event)]
@@ -92,12 +136,33 @@ fn enter_build_mode_listener(mut commands: Commands, mut event_reader: EventRead
             continue;
         };
 
-        ecmds
-            .insert(BuildMode::default())
-            .insert(RigidBodyDisabled)
-            .insert(RigidBody::Fixed)
-            .insert(Sensor)
-            .set_parent_in_place(ev.structure_entity);
+        ecmds.insert(BuildMode {
+            block: ev.block,
+            symmetries: Default::default(),
+            structure_entity: ev.block.structure(),
+        });
+    }
+}
+
+fn on_add_build_mode(mut commands: Commands, q_added_build_mode: Query<(Entity, &BuildMode), Added<BuildMode>>) {
+    for (ent, bm) in q_added_build_mode.iter() {
+        commands
+            .entity(ent)
+            .insert((RigidBodyDisabled, RigidBody::Fixed, Sensor))
+            .set_parent_in_place(bm.structure_entity);
+    }
+}
+
+fn on_remove_build_mode(mut commands: Commands, mut removed_components: RemovedComponents<BuildMode>) {
+    for ent in removed_components.read() {
+        if let Some(mut ecmds) = commands.get_entity(ent) {
+            ecmds
+                .remove::<BuildMode>()
+                .remove::<RigidBodyDisabled>()
+                .remove::<Sensor>()
+                .insert(RigidBody::Dynamic)
+                .remove::<InBuildModeFlag>();
+        }
     }
 }
 
@@ -152,13 +217,15 @@ pub enum BuildModeSet {
     ExitBuildMode,
 }
 
-fn adjust_transform_build_mode(mut q_transform: Query<&mut Transform, Added<BuildMode>>) {
+fn adjust_transform_build_mode(mut q_transform: Query<&mut Transform, With<BuildMode>>) {
     for mut trans in q_transform.iter_mut() {
         trans.rotation = Quat::IDENTITY;
     }
 }
 
 pub(super) fn register(app: &mut App) {
+    sync_component::<BuildMode>(app);
+
     app.configure_sets(
         Update,
         (
@@ -173,9 +240,13 @@ pub(super) fn register(app: &mut App) {
     app.add_systems(
         Update,
         (
-            (enter_build_mode_listener, adjust_transform_build_mode).in_set(BuildModeSet::EnterBuildMode),
+            (enter_build_mode_listener, on_add_build_mode, adjust_transform_build_mode)
+                .chain()
+                .in_set(BuildModeSet::EnterBuildMode),
             exit_build_mode_when_parent_dies.in_set(BuildModeSet::SendExitBuildModeEvent),
-            exit_build_mode_listener.in_set(BuildModeSet::ExitBuildMode),
+            (exit_build_mode_listener, on_remove_build_mode)
+                .chain()
+                .in_set(BuildModeSet::ExitBuildMode),
         )
             .chain()
             .in_set(NetworkingSystemsSet::Between)

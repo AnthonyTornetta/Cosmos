@@ -4,6 +4,7 @@ use bevy::prelude::*;
 use bevy_renet2::renet2::transport::NetcodeServerTransport;
 use bevy_renet2::renet2::{ClientId, RenetServer, ServerEvent};
 use cosmos_core::ecs::NeedsDespawned;
+use cosmos_core::entities::player::Player;
 use cosmos_core::netty::server::ServerLobby;
 use cosmos_core::netty::server_reliable_messages::ServerReliableMessages;
 use cosmos_core::netty::{cosmos_encoder, NettyChannelServer};
@@ -30,23 +31,32 @@ pub(super) fn handle_server_events(
     mut lobby: ResMut<ServerLobby>,
     mut client_ticks: ResMut<ClientTicks>,
     mut visualizer: ResMut<RenetServerVisualizer<200>>,
+    q_players: Query<&Player>,
 ) {
     for event in server_events.read() {
         match event {
             ServerEvent::ClientConnected { client_id } => {
                 let client_id = *client_id;
                 info!("Client {client_id} connected");
-                visualizer.add_client(client_id);
 
                 let Some(user_data) = transport.user_data(client_id) else {
-                    warn!("Unable to get user data!");
+                    warn!("Unable to get user data - rejecting connection!");
+                    server.disconnect(client_id);
                     continue;
                 };
                 let Ok(name) = bincode::deserialize::<String>(user_data.as_slice()) else {
-                    warn!("Unable to deserialize name!");
+                    warn!("Unable to deserialize name - rejecting connection!");
+                    server.disconnect(client_id);
                     continue;
                 };
 
+                if q_players.iter().any(|x| x.name() == name) {
+                    warn!("Duplicate name - rejecting connection!");
+                    server.disconnect(client_id);
+                    continue;
+                }
+
+                visualizer.add_client(client_id);
                 commands.spawn(LoadPlayer { name, client_id });
             }
             ServerEvent::ClientDisconnected { client_id, reason } => {
@@ -55,7 +65,9 @@ pub(super) fn handle_server_events(
                 client_ticks.ticks.remove(client_id);
 
                 if let Some(player_entity) = lobby.remove_player(*client_id) {
-                    commands.entity(player_entity).insert((NeedsSaved, NeedsDespawned));
+                    if let Some(mut ecmds) = commands.get_entity(player_entity) {
+                        ecmds.insert((NeedsSaved, NeedsDespawned));
+                    }
                 }
 
                 let message = cosmos_encoder::serialize(&ServerReliableMessages::PlayerRemove { id: *client_id });

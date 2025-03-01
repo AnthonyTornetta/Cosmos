@@ -12,7 +12,7 @@ use std::fs;
 use bevy::{
     ecs::schedule::{IntoSystemConfigs, IntoSystemSetConfigs, SystemSet},
     hierarchy::BuildChildren,
-    log::{error, warn},
+    log::{error, info, warn},
     prelude::{App, Commands, Component, Entity, Quat, Query, Transform, Update, With, Without},
     reflect::Reflect,
 };
@@ -33,6 +33,8 @@ use super::{EntityId, PreviousSaveFileIdentifier, SaveFileIdentifier, SaveFileId
 pub enum LoadingSystemSet {
     /// Sets up the loading entities
     BeginLoading,
+    /// Loads components that were automatically made persistent
+    LoadBasicComponents,
     /// Put all your loading logic in here
     DoLoading,
     /// Removes all unneeded components
@@ -71,6 +73,12 @@ fn check_needs_loaded(
     mut commands: Commands,
 ) {
     for (ent, save_file_identifier) in q_sfis.iter() {
+        // TODO: for debug only
+        // if q_sfis.iter().take(i).any(|(e, sfi)| *e != ent && *sfi == save_file_identifier) {
+        //     error!("Duplicate save file trying to be loaded - {ent:?} - {save_file_identifier:?}. Despawning duplucate.");
+        //     commands.entity(ent).despawn_recursive();
+        // }
+
         let path = save_file_identifier.get_save_file_path();
         let Ok(data) = fs::read(&path) else {
             warn!("Error reading file at '{path}'. Is it there?");
@@ -112,6 +120,7 @@ fn check_needs_loaded(
                         }
                     }
 
+                    // Correct
                     if parent.is_none() {
                         if let Some((ent, _)) = q_entity_ids.iter().find(|(_, eid)| *eid == looking_for_entity) {
                             parent = Some(ent);
@@ -119,6 +128,7 @@ fn check_needs_loaded(
                     }
 
                     if let Some(parent) = parent {
+                        info!("Setting parent for {ent:?} to {parent:?} (this is correct)");
                         commands.entity(ent).set_parent(parent);
                     } else {
                         warn!("Unable to find parent with entity id {looking_for_entity:?} for entity {ent:?}");
@@ -209,6 +219,7 @@ pub(super) fn register(app: &mut App) {
         LOADING_SCHEDULE,
         (
             LoadingSystemSet::BeginLoading,
+            LoadingSystemSet::LoadBasicComponents,
             LoadingSystemSet::DoLoading.before(StructureLoadingSet::LoadStructure),
             LoadingSystemSet::DoneLoading.after(StructureLoadingSet::StructureLoaded),
         )
@@ -227,12 +238,11 @@ pub(super) fn register(app: &mut App) {
     app.configure_sets(
         LOADING_SCHEDULE,
         (
-            LoadingBlueprintSystemSet::BeginLoadingBlueprints,
-            LoadingBlueprintSystemSet::DoLoadingBlueprints,
-            LoadingBlueprintSystemSet::DoneLoadingBlueprints,
+            LoadingBlueprintSystemSet::BeginLoadingBlueprints.in_set(LoadingSystemSet::BeginLoading),
+            LoadingBlueprintSystemSet::DoLoadingBlueprints.in_set(LoadingSystemSet::DoLoading),
+            LoadingBlueprintSystemSet::DoneLoadingBlueprints.in_set(LoadingSystemSet::DoneLoading),
         )
-            .chain()
-            .before(LoadingSystemSet::BeginLoading),
+            .chain(),
     )
     .add_systems(
         LOADING_SCHEDULE,

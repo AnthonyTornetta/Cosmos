@@ -14,9 +14,13 @@ use bevy::{
 use cosmos_core::{
     chat::ServerSendChatMessageEvent,
     ecs::NeedsDespawned,
+    entities::player::Player,
+    inventory::{itemstack::ItemShouldHaveData, Inventory},
+    item::Item,
     netty::sync::events::server_event::NettyEventWriter,
     persistence::Blueprintable,
     physics::location::{Location, Sector, SectorUnit},
+    registry::{identifiable::Identifiable, Registry},
 };
 use thiserror::Error;
 
@@ -77,6 +81,18 @@ fn register_commands(mut commands: ResMut<CosmosCommands>) {
         usage: "say [...message]".into(),
         description: "Sends the given text to all connected players".into(),
     });
+
+    commands.add_command_info(CosmosCommandInfo {
+        name: "give".into(),
+        usage: "give [player] [item_id] (quantity)".into(),
+        description: "Gives the player that item with the specified quantity".into(),
+    });
+
+    commands.add_command_info(CosmosCommandInfo {
+        name: "items".into(),
+        usage: "items (search term)".into(),
+        description: "Displays all items that match this search term".into(),
+    });
 }
 
 fn display_help(command_name: Option<&str>, commands: &CosmosCommands) {
@@ -109,6 +125,9 @@ fn cosmos_command_listener(
     cosmos_commands: Res<CosmosCommands>,
     mut nevw_send_chat_msg: NettyEventWriter<ServerSendChatMessageEvent>,
     all_blueprintable_entities: Query<(Entity, &Name, &Location), With<Blueprintable>>,
+    mut q_inventory: Query<(&Player, &mut Inventory)>,
+    items: Res<Registry<Item>>,
+    needs_data: Res<ItemShouldHaveData>,
 ) {
     for ev in command_events.read() {
         match ev.name.as_str() {
@@ -275,6 +294,65 @@ fn cosmos_command_listener(
                             println!("\tNo blueprints of this type");
                         }
                     }
+                }
+            }
+            "give" => {
+                let mut args_iter = ev.args.iter();
+
+                let (Some(player_name), Some(item_id), quantity) = (args_iter.next(), args_iter.next(), args_iter.next()) else {
+                    display_help(Some("give"), &cosmos_commands);
+                    continue;
+                };
+
+                let Some((_, mut player_inventory)) = q_inventory.iter_mut().find(|(player, _)| player.name() == player_name) else {
+                    println!("Unable to find player {player_name}");
+                    continue;
+                };
+
+                let mut item_id = item_id.to_owned();
+
+                if !item_id.contains(":") {
+                    item_id = format!("cosmos:{item_id}");
+                }
+
+                let Some(item) = items.from_id(&item_id) else {
+                    println!("Unable to find item {item_id}.");
+                    continue;
+                };
+
+                let quantity = quantity.map(|x| x.parse::<u16>()).unwrap_or(Ok(1));
+
+                let quantity = match quantity {
+                    Ok(x) => x,
+                    Err(e) => {
+                        println!("Unable to parse quantity - {}", e);
+                        continue;
+                    }
+                };
+
+                let (leftover, _) = player_inventory.insert_item(item, quantity, &mut commands, &needs_data);
+
+                if leftover == 0 {
+                    println!("Gave {player_name} {quantity}x {item_id}");
+                } else {
+                    println!(
+                        "Gave {player_name} {}x {item_id}. Inventory could not fit {leftover} item(s).",
+                        quantity - leftover
+                    );
+                }
+            }
+            "items" => {
+                let search_term = ev.args.first().map(|x| x.as_str()).unwrap_or("");
+                let result = items
+                    .iter()
+                    .filter(|x| x.unlocalized_name().contains(search_term))
+                    .map(|x| x.unlocalized_name())
+                    .collect::<Vec<_>>();
+
+                if result.is_empty() {
+                    println!("No items found.");
+                } else {
+                    println!("Items:\n{}", result.join("\n"));
                 }
             }
             _ => {

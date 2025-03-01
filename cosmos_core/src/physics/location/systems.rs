@@ -62,11 +62,12 @@ fn loc_from_trans(
                 loc_from_trans(p.get(), q_trans, q_x, q_g_trans, q_parent)
                     .map(|x| x + (parent_g_trans.rotation().inverse() * my_trans.translation))
             } else {
-                warn!("Location set based solely on global transform - you probably didn't mean to do this.");
-                q_g_trans
-                    .get(entity)
-                    .ok()
-                    .map(|g_trans| Location::new(g_trans.translation(), Default::default()))
+                error!("Location set based solely on global transform - you probably didn't mean to do this.");
+                None
+                // q_g_trans
+                //     .get(entity)
+                //     .ok()
+                //     .map(|g_trans| Location::new(g_trans.translation(), Default::default()))
             }
         }
     }
@@ -96,7 +97,10 @@ fn apply_set_position_single(
         }
         SetPosition::Location => {
             if let Some(loc_from_trans) = loc_from_trans(entity, &q_trans, &q_x, &q_g_trans, &q_parent) {
-                commands.entity(entity).insert(loc_from_trans).remove::<SetPosition>();
+                commands
+                    .entity(entity)
+                    .insert((loc_from_trans, PreviousLocation(loc_from_trans)))
+                    .remove::<SetPosition>();
             }
         }
     }
@@ -125,7 +129,10 @@ fn apply_set_position(
             }
             SetPosition::Location => {
                 if let Some(loc_from_trans) = loc_from_trans(entity, &q_trans, &q_x, &q_g_trans, &q_parent) {
-                    commands.entity(entity).insert(loc_from_trans).remove::<SetPosition>();
+                    commands
+                        .entity(entity)
+                        .insert((loc_from_trans, PreviousLocation(loc_from_trans)))
+                        .remove::<SetPosition>();
                 }
             }
         }
@@ -164,7 +171,9 @@ fn reposition_worlds_around_anchors(
             };
 
             let delta = (*location - *world_location).absolute_coords_f32();
-            *world_location = *location;
+            if *world_location != *location {
+                *world_location = *location;
+            }
 
             for (mut t, _) in q_trans_no_parent.iter_mut().filter(|(_, ww)| ww.0 == world_entity) {
                 t.translation -= delta;
@@ -180,6 +189,7 @@ fn reposition_worlds_around_anchors(
                 // find player
                 for (world_within, entity) in q_anchors.iter() {
                     if world_within.0 == world_entity {
+                        info!("Reassigning world from {:?} to player {entity:?}", world.player);
                         world.player = entity;
                         found = true;
                         break;
@@ -194,6 +204,7 @@ fn reposition_worlds_around_anchors(
                         }
                     }
                     commands.entity(world_entity).despawn_recursive();
+                    info!("Despawning world {:?}", world.player);
                 }
             }
         }
@@ -215,7 +226,8 @@ fn create_physics_world(commands: &mut Commands) -> RapierContextEntityLink {
 
 #[cfg(feature = "server")]
 fn move_anchors_between_worlds(
-    q_anchors: Query<(Entity, &Location), (With<WorldWithin>, With<Anchor>)>,
+    mut q_anchors: Query<(Entity, &Location, &mut Transform), (With<WorldWithin>, With<Anchor>)>,
+    q_anchors_no_trans: Query<(Entity, &Location), (With<WorldWithin>, With<Anchor>)>,
     mut q_world_within: Query<(&mut WorldWithin, &mut RapierContextEntityLink)>,
     mut commands: Commands,
 ) {
@@ -226,10 +238,10 @@ fn move_anchors_between_worlds(
     while changed {
         changed = false;
 
-        for (entity, location) in q_anchors.iter() {
+        for (entity, location, mut trans) in q_anchors.iter_mut() {
             let mut needs_new_world = false;
 
-            for (other_entity, other_location) in q_anchors.iter() {
+            for (other_entity, other_location) in q_anchors_no_trans.iter() {
                 if other_entity == entity || getting_new_world.contains(&other_entity) {
                     continue;
                 }
@@ -245,11 +257,21 @@ fn move_anchors_between_worlds(
                         world_currently_in.0 = other_world_entity;
                         *body_world = other_body_world;
 
+                        // Repositions their transform to be in the correct place for this new
+                        // world
+                        trans.translation += (*location - *other_location).absolute_coords_f32();
+
+                        info!(
+                            "Merging anchor ({entity:?}) into another anchor's ({other_entity:?}) world! Resulting transform: {}",
+                            trans.translation
+                        );
+
                         needs_new_world = false;
                         changed = true;
                     }
                     break;
                 } else if world_currently_in.0 == other_world_entity {
+                    info!("Anchor {entity:?} requires new world created for them!");
                     needs_new_world = true;
                 }
             }
@@ -259,7 +281,7 @@ fn move_anchors_between_worlds(
 
                 let link = create_physics_world(&mut commands);
 
-                info!("Creating new physics world!");
+                info!("Creating new physics world - rapier context link: {link:?}!");
                 let world_entity = commands
                     .spawn((Name::new("Player World"), PlayerWorld { player: entity }, *location, link))
                     .id();
@@ -321,13 +343,20 @@ fn move_non_anchors_between_worlds_single(
 #[cfg(feature = "server")]
 fn move_non_anchors_between_worlds(
     mut needs_world: Query<
-        (Entity, &Location, Option<&mut WorldWithin>, Option<&mut RapierContextEntityLink>),
-        (Without<Anchor>, Without<Parent>),
+        (
+            Entity,
+            &Location,
+            Option<&mut Transform>,
+            Option<&mut WorldWithin>,
+            Option<&mut RapierContextEntityLink>,
+        ),
+        (Without<Anchor>, Without<Parent>, Without<PlayerWorld>),
     >,
+    q_player_world: Query<&Location, With<PlayerWorld>>,
     anchors_with_worlds: Query<(&WorldWithin, &Location, &RapierContextEntityLink), With<Anchor>>,
     mut commands: Commands,
 ) {
-    for (entity, location, maybe_within, maybe_body_world) in needs_world.iter_mut() {
+    for (entity, location, trans, maybe_within, maybe_body_world) in needs_world.iter_mut() {
         let mut best_ww = None;
         let mut best_dist = None;
         let mut best_world_id = None;
@@ -347,6 +376,15 @@ fn move_non_anchors_between_worlds(
 
             if let Some(mut world_within) = maybe_within {
                 let mut body_world = maybe_body_world.expect("Something should have a `RapierContextEntityLink` if it has a WorldWithin.");
+
+                if let Some(mut trans) = trans {
+                    let old_loc = q_player_world.get(world_within.0).expect("Invalid old world within pointer");
+
+                    let new_loc = q_player_world.get(ww.0).expect("Invalid new world within pointer");
+
+                    let delta = *new_loc - *old_loc;
+                    trans.translation -= delta.absolute_coords_f32();
+                }
 
                 if *body_world != world_link {
                     *body_world = world_link;
@@ -484,7 +522,7 @@ fn recursively_sync_transforms_and_locations(
             }
 
             // Calculates how far away the entity was from its parent + its delta location.
-            let transform_delta_parent = parent_g_rot.mul_vec3(my_transform.translation);
+            let transform_delta_parent = parent_g_rot * my_transform.translation;
             let new_loc = parent_loc + transform_delta_parent;
             if *my_loc != new_loc {
                 *my_loc = new_loc;

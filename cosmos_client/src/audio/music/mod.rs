@@ -8,6 +8,8 @@ use dynamic_music::MusicAtmosphere;
 
 use crate::settings::{Setting, SettingsRegistry, SettingsSet};
 
+use super::volume::MasterVolume;
+
 pub mod dynamic_music;
 
 #[derive(Resource)]
@@ -16,16 +18,16 @@ struct PlayingBackgroundSong(Handle<AudioInstance>);
 #[derive(Reflect, Resource, InspectorOptions)]
 #[reflect(Resource, InspectorOptions)]
 /// Eventually this will be present for every sound type in the game, but for now this only is for music
-pub struct VolumeSetting(#[inspector(min = 0.0, max = 1.0)] f64);
+pub struct MusicVolume(#[inspector(min = 0.0, max = 1.0)] f64);
 
-impl VolumeSetting {
+impl MusicVolume {
     /// Returns the volume as a decimal percent [0.0, 1.0]
     pub fn percent(&self) -> f64 {
         self.0.powf(2.0) * 0.2 // 1.0 is way too loud
     }
 }
 
-impl Default for VolumeSetting {
+impl Default for MusicVolume {
     /// Initializes the volume to 1.0 (100%).
     fn default() -> Self {
         Self(1.0)
@@ -46,14 +48,15 @@ fn monitor_background_song(
 
 fn adjust_volume(
     mut audio_instances: ResMut<Assets<AudioInstance>>,
-    volume: Res<VolumeSetting>,
+    volume: Res<MusicVolume>,
+    master_volume: Res<MasterVolume>,
     background_song: Res<PlayingBackgroundSong>,
 ) {
     let Some(instance) = audio_instances.get_mut(&background_song.0) else {
         return;
     };
 
-    instance.set_volume(volume.percent(), AudioTween::default());
+    instance.set_volume(volume.percent() * master_volume.multiplier(), AudioTween::default());
 }
 
 #[derive(Event)]
@@ -63,7 +66,7 @@ pub struct PlayMusicEvent {
     pub atmosphere: MusicAtmosphere,
 }
 
-fn load_volume(settings: Res<Registry<Setting>>, mut music_volume: ResMut<VolumeSetting>) {
+fn load_volume(settings: Res<Registry<Setting>>, mut music_volume: ResMut<MusicVolume>) {
     music_volume.0 = settings.i32_or("cosmos:music_volume", 100) as f64 / 100.0;
 }
 
@@ -76,13 +79,13 @@ pub(super) fn register(app: &mut App) {
             (
                 monitor_background_song.run_if(resource_exists::<PlayingBackgroundSong>),
                 adjust_volume
-                    .run_if(resource_changed::<VolumeSetting>)
+                    .run_if(resource_changed::<MusicVolume>.or(resource_changed::<MasterVolume>))
                     .run_if(resource_exists::<PlayingBackgroundSong>),
             )
                 .chain(),
         )
-        .init_resource::<VolumeSetting>()
-        .register_type::<VolumeSetting>()
+        .init_resource::<MusicVolume>()
+        .register_type::<MusicVolume>()
         .add_event::<PlayMusicEvent>();
 
     app.add_systems(Update, (load_volume).in_set(SettingsSet::LoadSettings));

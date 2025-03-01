@@ -93,20 +93,23 @@ fn server_listen_messages(
                 match command {
                     ClientUnreliableMessages::PlayerBody { body, looking } => {
                         if let Ok((_, mut transform, mut location, mut currently_looking, mut velocity)) = q_player.get_mut(player_entity) {
-                            let new_loc = match body.location {
-                                NettyRigidBodyLocation::Absolute(location) => location,
+                            match body.location {
+                                NettyRigidBodyLocation::Absolute(new_location) => {
+                                    commands.entity(player_entity).insert(SetPosition::Transform);
+
+                                    *location = new_location;
+                                }
                                 NettyRigidBodyLocation::Relative(rel_trans, entity) => {
-                                    let Ok(parent_loc) = player_parent_location.get(entity).copied() else {
+                                    if !player_parent_location.contains(entity) {
                                         // Probably out of date info, just ignore
                                         continue;
                                     };
+                                    commands.entity(player_entity).insert(SetPosition::Location);
 
-                                    parent_loc + rel_trans
+                                    transform.translation = rel_trans;
                                 }
                             };
 
-                            *location = new_loc;
-                            commands.entity(player_entity).insert(SetPosition::Transform);
                             currently_looking.rotation = looking;
                             velocity.linvel = body.body_vel.map(|x| x.linvel).unwrap_or(Vec3::ZERO);
                             transform.rotation = body.rotation;

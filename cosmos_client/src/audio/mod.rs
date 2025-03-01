@@ -18,14 +18,16 @@ use bevy::{
         system::{Commands, Query, ResMut, Resource},
     },
     hierarchy::DespawnRecursiveExt,
-    prelude::{Deref, DerefMut, SystemSet, Transform},
+    prelude::{Deref, DerefMut, Res, SystemSet, Transform},
     reflect::Reflect,
     transform::components::GlobalTransform,
     utils::hashbrown::HashMap,
 };
 use bevy_kira_audio::{prelude::*, AudioSystemSet};
+use volume::MasterVolume;
 
 pub mod music;
+pub mod volume;
 
 #[derive(Reflect)]
 /// Contains information for a specific audio emission.
@@ -123,6 +125,7 @@ fn run_spacial_audio(
     receiver: Query<&GlobalTransform, With<AudioReceiver>>,
     emitters: Query<(&GlobalTransform, &CosmosAudioEmitter)>,
     mut audio_instances: ResMut<Assets<AudioInstance>>,
+    master_volume: Res<MasterVolume>,
 ) {
     let Ok(receiver_transform) = receiver.get_single() else {
         return;
@@ -146,7 +149,8 @@ fn run_spacial_audio(
                 continue;
             };
 
-            let volume = emission.peak_volume * (1.0 - sound_path.length() / emission.max_distance).clamp(0., 1.).powi(2) as f64;
+            let volume = (emission.peak_volume * (1.0 - sound_path.length() / emission.max_distance).clamp(0., 1.).powi(2) as f64)
+                * master_volume.multiplier();
 
             instance.set_volume(volume, AudioTween::default());
             instance.set_panning(panning, AudioTween::default());
@@ -275,6 +279,7 @@ pub enum AudioSet {
 
 pub(super) fn register(app: &mut App) {
     music::register(app);
+    volume::register(app);
 
     app.configure_sets(Update, (AudioSet::CreateSounds, AudioSet::ProcessSounds).chain());
 

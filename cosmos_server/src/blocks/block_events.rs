@@ -1,4 +1,7 @@
-use crate::structure::block_health::BlockHealthSet;
+use crate::{
+    persistence::make_persistent::{make_persistent, DefaultPersistentComponent},
+    structure::block_health::BlockHealthSet,
+};
 use bevy::{prelude::*, utils::HashMap};
 use bevy_rapier3d::prelude::Velocity;
 use bevy_renet2::renet2::RenetServer;
@@ -15,6 +18,7 @@ use cosmos_core::{
     netty::{
         cosmos_encoder,
         server_reliable_messages::{BlockChanged, BlocksChangedPacket, ServerReliableMessages},
+        sync::IdentifiableComponent,
         system_sets::NetworkingSystemsSet,
         NettyChannelServer,
     },
@@ -39,6 +43,7 @@ use cosmos_core::{
         ship::pilot::Pilot,
     },
 };
+use serde::{Deserialize, Serialize};
 
 use super::drops::BlockDrops;
 
@@ -87,16 +92,25 @@ fn handle_block_changed_event(
     }
 }
 
+#[derive(Component, Serialize, Deserialize, Clone, Copy, Debug, Default)]
+pub struct NoAutoInsertMinedItems;
+impl IdentifiableComponent for NoAutoInsertMinedItems {
+    fn get_component_unlocalized_name() -> &'static str {
+        "cosmos:no_auto_insert_mined_items"
+    }
+}
+impl DefaultPersistentComponent for NoAutoInsertMinedItems {}
+
 /// This system is horribly smelly, and should be refactored soon.
 fn handle_block_break_events(
     mut q_structure: Query<(&mut Structure, &Location, &GlobalTransform, &Velocity)>,
     mut event_reader: EventReader<BlockBreakEvent>,
     blocks: Res<Registry<Block>>,
     items: Res<Registry<Item>>,
-    block_items: Res<BlockItems>, // TODO: Replace this with drop table
+    block_items: Res<BlockItems>,
     mut inventory_query: Query<(&mut Inventory, Option<&BuildMode>, Option<&Parent>), Without<BlockData>>,
     mut event_writer: EventWriter<BlockChangedEvent>,
-    mut q_inventory_block_data: Query<(&BlockData, &mut Inventory)>,
+    mut q_inventory_block_data: Query<(&BlockData, &mut Inventory), Without<NoAutoInsertMinedItems>>,
     mut commands: Commands,
     has_data: Res<ItemShouldHaveData>,
     q_pilot: Query<&Pilot>,
@@ -500,6 +514,8 @@ fn handle_block_place_events(
 }
 
 pub(super) fn register(app: &mut App) {
+    make_persistent::<NoAutoInsertMinedItems>(app);
+
     app.add_event::<BlockBreakEvent>()
         .add_mut_event::<BlockPlaceEvent>()
         .add_event::<BlockInteractEvent>()

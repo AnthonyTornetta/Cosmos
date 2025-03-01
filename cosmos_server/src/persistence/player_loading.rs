@@ -7,7 +7,7 @@ use std::{
 };
 
 use bevy::{
-    log::warn,
+    log::{info, warn},
     prelude::{not, resource_exists, App, Commands, Entity, IntoSystemConfigs, Name, Or, Query, ResMut, Resource, Update, With, Without},
     state::condition::in_state,
     tasks::{AsyncComputeTaskPool, Task},
@@ -18,7 +18,10 @@ use cosmos_core::{
     entities::player::Player,
     netty::system_sets::NetworkingSystemsSet,
     persistence::{LoadingDistance, LOAD_DISTANCE},
-    physics::location::{systems::Anchor, Location, LocationPhysicsSet, Sector, SectorUnit, SECTOR_DIMENSIONS},
+    physics::{
+        location::{systems::Anchor, Location, LocationPhysicsSet, Sector, SectorUnit, SECTOR_DIMENSIONS},
+        player_world::PlayerWorld,
+    },
     state::GameState,
 };
 use futures_lite::future;
@@ -27,17 +30,26 @@ use walkdir::{DirEntry, WalkDir};
 use super::{loading::NeedsLoaded, saving::NeedsSaved, EntityId, SaveFileIdentifier, SectorsCache};
 
 fn unload_far(
-    query: Query<&Location, (Without<NeedsDespawned>, Or<(With<Player>, With<Anchor>)>)>,
-    others: Query<(&Location, Entity, &LoadingDistance), (Without<Anchor>, Without<Anchor>, Without<NeedsDespawned>)>,
+    query: Query<&Location, ((Without<NeedsDespawned>, Without<PlayerWorld>), Or<(With<Player>, With<Anchor>)>)>,
+    others: Query<
+        (Option<&Name>, &Location, Entity, &LoadingDistance),
+        (Without<Anchor>, Without<Player>, Without<NeedsDespawned>, Without<PlayerWorld>),
+    >,
     mut commands: Commands,
 ) {
-    for (loc, ent, ul_distance) in others.iter() {
+    for (name, loc, ent, ul_distance) in others.iter() {
         let ul_distance = ul_distance.unload_block_distance();
 
         if let Some(min_dist) = query.iter().map(|l| l.relative_coords_to(loc).abs().max_element()).reduce(f32::min) {
             if min_dist <= ul_distance {
                 continue;
             }
+        }
+
+        if let Some(name) = name {
+            info!("Unloading {name} ({ent:?}) at {loc} - too far away from any anchor.");
+        } else {
+            info!("Unloading {ent:?} at {loc} - too far away from any anchor.");
         }
 
         commands.entity(ent).insert((NeedsSaved, NeedsDespawned));
@@ -66,8 +78,13 @@ fn monitor_loading_task(
                     .entity_id()
                     .expect("A non-base SaveFileIdentifier was attempted to be loaded in load_near")
             }) {
-                let name = format!("Needs Loaded Entity - {:?}", sfi.entity_id());
-                commands.spawn((sfi, NeedsLoaded, Name::new(name)));
+                let entity_id = sfi.entity_id().expect("Missing entity id").clone();
+
+                let name = format!("Needs Loaded Entity - {}", entity_id);
+
+                info!("Loading {entity_id}");
+
+                commands.spawn((sfi, entity_id, NeedsLoaded, Name::new(name)));
             }
         }
     }
@@ -75,7 +92,7 @@ fn monitor_loading_task(
 
 /// Performance hot spot
 fn load_near(
-    q_player_locations: Query<&Location, With<Player>>,
+    q_player_locations: Query<&Location, With<Anchor>>,
     loaded_entities: Query<&EntityId>,
     // This is modified below, despite it being cloned. Use ResMut to make purpose clear
     sectors_cache: ResMut<SectorsCache>,

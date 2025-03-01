@@ -27,7 +27,10 @@ use cosmos_core::{
 };
 use serde::{de::DeserializeOwned, Serialize};
 
-use crate::structure::persistence::{chunk::BlockDataSavingSet, BlockDataNeedsSaved};
+use crate::{
+    inventory::{InventoryLoadingSet, InventorySavingSet, ItemStackDataNeedsLoaded, ItemStackDataNeedsSaved, SerializedItemStackData},
+    structure::persistence::{chunk::BlockDataSavingSet, BlockDataNeedsSaved},
+};
 
 use super::{
     loading::{LoadingSystemSet, NeedsLoaded, LOADING_SCHEDULE},
@@ -78,6 +81,23 @@ fn save_component_block_data<T: PersistentComponent>(
     });
 }
 
+fn save_component_itemstack_data<T: PersistentComponent>(
+    mut q_itemstacks: Query<(Entity, &T, &mut SerializedItemStackData), With<ItemStackDataNeedsSaved>>,
+    q_entity_ids: Query<&EntityId>,
+) {
+    q_itemstacks.iter_mut().for_each(|(entity, component, mut sd)| {
+        let Some(save_type) = component.convert_to_save_type(&q_entity_ids) else {
+            error!(
+                "Unable to convert to entity id type for {} on entity {entity:?}. This component will not be saved.",
+                T::get_component_unlocalized_name()
+            );
+            return;
+        };
+
+        sd.serialize_data(T::get_component_unlocalized_name(), save_type.as_ref());
+    });
+}
+
 fn load_component<T: PersistentComponent>(
     mut commands: Commands,
     q_needs_loaded: Query<(Entity, &SerializedData), With<NeedsLoaded>>,
@@ -112,6 +132,50 @@ fn load_component<T: PersistentComponent>(
         component.initialize(entity, &mut commands);
         commands.entity(entity).insert(component);
     });
+}
+
+fn load_component_for_itemstack<T: PersistentComponent>(
+    mut commands: Commands,
+    q_needs_loaded: Query<(Entity, &SerializedItemStackData), With<ItemStackDataNeedsLoaded>>,
+    entity_id_manager: EntityIdManager,
+    q_name: Query<&Name>,
+) {
+    q_needs_loaded.iter().for_each(|(entity, serialized_data)| {
+        deserialize_and_load_component::<T>(&mut commands, &entity_id_manager, &q_name, entity, serialized_data);
+    });
+}
+
+fn deserialize_and_load_component<T: PersistentComponent>(
+    commands: &mut Commands,
+    entity_id_manager: &EntityIdManager,
+    q_name: &Query<&Name>,
+    entity: Entity,
+    serialized_data: &SerializedItemStackData,
+) {
+    let component_save_data = match serialized_data.deserialize_data::<T::SaveType>(T::get_component_unlocalized_name()) {
+        Ok(data) => data,
+        Err(DeserializationError::NoEntry) => return,
+        Err(DeserializationError::ErrorParsing(e)) => {
+            let id = q_name
+                .get(entity)
+                .map(|x| format!("{} ({entity:?})", x))
+                .unwrap_or_else(|_| format!("{entity:?}"));
+            error!(
+                "Error deserializing component {} on entity {id}\n{e:?}.",
+                T::get_component_unlocalized_name()
+            );
+            return;
+        }
+    };
+    let Some(mut component) = T::convert_from_save_type(component_save_data, entity_id_manager) else {
+        error!(
+            "Error getting entities needed for component {} for entity {entity:?}",
+            T::get_component_unlocalized_name()
+        );
+        return;
+    };
+    component.initialize(entity, commands);
+    commands.entity(entity).insert(component);
 }
 
 fn load_component_from_block_data<T: PersistentComponent>(
@@ -244,7 +308,7 @@ where
 /// When this entity is loaded again, the component will also be loaded.
 pub fn make_persistent<T: PersistentComponent>(app: &mut App) {
     app.add_systems(SAVING_SCHEDULE, save_component::<T>.in_set(SavingSystemSet::DoSaving))
-        .add_systems(LOADING_SCHEDULE, load_component::<T>.in_set(LoadingSystemSet::DoLoading))
+        .add_systems(LOADING_SCHEDULE, load_component::<T>.in_set(LoadingSystemSet::LoadBasicComponents))
         // Block Data
         .add_systems(
             Update,
@@ -255,5 +319,14 @@ pub fn make_persistent<T: PersistentComponent>(app: &mut App) {
         .add_systems(
             SAVING_SCHEDULE,
             save_component_block_data::<T>.in_set(BlockDataSavingSet::SaveBlockData),
+        )
+        // ItemStacks
+        .add_systems(
+            SAVING_SCHEDULE,
+            save_component_itemstack_data::<T>.in_set(InventorySavingSet::SerializeItemStack),
+        )
+        .add_systems(
+            LOADING_SCHEDULE,
+            load_component_for_itemstack::<T>.in_set(InventoryLoadingSet::LoadItemStackData),
         );
 }

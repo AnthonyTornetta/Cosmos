@@ -3,7 +3,7 @@ use cosmos_core::{
     block::data::persistence::ChunkLoadBlockDataEvent,
     physics::location::Location,
     structure::{
-        asteroid::{asteroid_builder::TAsteroidBuilder, Asteroid},
+        asteroid::{asteroid_builder::TAsteroidBuilder, Asteroid, MovingAsteroid},
         events::StructureLoadedEvent,
         structure_iterator::ChunkIteratorResult,
         ChunkInitEvent, Structure, StructureTypeSet,
@@ -13,6 +13,7 @@ use cosmos_core::{
 use crate::{
     persistence::{
         loading::{LoadingBlueprintSystemSet, LoadingSystemSet, NeedsBlueprintLoaded, NeedsLoaded, LOADING_SCHEDULE},
+        make_persistent::{make_persistent, DefaultPersistentComponent},
         saving::{BlueprintingSystemSet, NeedsBlueprinted, NeedsSaved, SavingSystemSet, SAVING_SCHEDULE},
         SerializedData,
     },
@@ -144,7 +145,11 @@ fn on_load_asteroid(
     }
 }
 
+impl DefaultPersistentComponent for MovingAsteroid {}
+
 pub(super) fn register(app: &mut App) {
+    make_persistent::<MovingAsteroid>(app);
+
     app.add_systems(
         SAVING_SCHEDULE,
         (

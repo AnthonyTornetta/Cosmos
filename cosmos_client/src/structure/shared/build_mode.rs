@@ -5,8 +5,8 @@ use bevy::{
     math::primitives::Cuboid,
     pbr::{MeshMaterial3d, NotShadowCaster, NotShadowReceiver},
     prelude::{
-        in_state, App, AssetServer, Assets, BuildChildren, Changed, ChildBuild, Commands, Component, DespawnRecursiveExt, Entity,
-        EventReader, IntoSystemConfigs, Mesh, Mesh3d, Name, Parent, Query, Res, ResMut, Transform, Update, Vec3, With, Without,
+        in_state, Added, App, AssetServer, Assets, BuildChildren, Changed, ChildBuild, Commands, Component, DespawnRecursiveExt, Entity,
+        IntoSystemConfigs, Mesh, Mesh3d, Name, Parent, Query, RemovedComponents, Res, ResMut, Transform, Update, Vec3, With, Without,
     },
     time::Time,
 };
@@ -20,7 +20,7 @@ use cosmos_core::{
         chunk::CHUNK_DIMENSIONSF,
         coordinates::BlockCoordinate,
         shared::{
-            build_mode::{BuildAxis, BuildMode, BuildModeSet, ExitBuildModeEvent},
+            build_mode::{BuildAxis, BuildMode, BuildModeSet},
             DespawnWithStructure,
         },
         Structure,
@@ -34,21 +34,11 @@ use crate::{
     interactions::block_interactions::LookingAt,
     rendering::MainCamera,
     structure::planet::align_player::{self, PlayerAlignment},
-    ui::components::show_cursor::no_open_menus,
+    ui::{
+        components::show_cursor::no_open_menus,
+        message::{HudMessage, HudMessages},
+    },
 };
-
-fn exit_build_mode(
-    input_handler: InputChecker,
-    local_player_in_build_mode: Query<(), (With<LocalPlayer>, With<BuildMode>)>,
-    mut client: ResMut<RenetClient>,
-) {
-    if local_player_in_build_mode.get_single().is_ok() && input_handler.check_just_pressed(CosmosInputs::ToggleBuildMode) {
-        client.send_message(
-            NettyChannelClient::Reliable,
-            cosmos_encoder::serialize(&ClientReliableMessages::ExitBuildMode),
-        );
-    }
-}
 
 #[derive(Component, Clone, Copy, Default)]
 struct SymmetryVisuals(Option<Entity>, Option<Entity>, Option<Entity>);
@@ -176,11 +166,16 @@ fn place_symmetries(
 fn clear_visuals(
     parent_query: Query<&Parent>,
     visuals_query: Query<&SymmetryVisuals>,
-    mut event_reader: EventReader<ExitBuildModeEvent>,
+    mut removed_build_mode: RemovedComponents<BuildMode>,
+    q_local_player: Query<(), With<LocalPlayer>>,
     mut commands: Commands,
 ) {
-    for ev in event_reader.read() {
-        let Ok(parent) = parent_query.get(ev.player_entity).map(|p| p.get()) else {
+    for entity in removed_build_mode.read() {
+        if !q_local_player.contains(entity) {
+            continue;
+        };
+
+        let Ok(parent) = parent_query.get(entity).map(|p| p.get()) else {
             continue;
         };
         let Some(mut ecmds) = commands.get_entity(parent) else {
@@ -341,13 +336,23 @@ fn change_visuals(
     commands.entity(structure_entity).insert(visuals);
 }
 
+fn on_enter_build_mode(q_add_build_mode: Query<(), (Added<BuildMode>, With<LocalPlayer>)>, mut hud_messages: ResMut<HudMessages>) {
+    if q_add_build_mode.is_empty() {
+        return;
+    }
+
+    hud_messages.display_message(HudMessage::with_string(
+        "Entered Build Mode. Interact with the build block to exit.",
+    ));
+}
+
 pub(super) fn register(app: &mut App) {
     app.add_systems(
         Update,
         (
             (
                 place_symmetries,
-                exit_build_mode,
+                on_enter_build_mode,
                 control_build_mode
                     .in_set(PlayerMovementSet::ProcessPlayerMovement)
                     .ambiguous_with(process_player_movement), // this system will run if process_player_movement doesn't
