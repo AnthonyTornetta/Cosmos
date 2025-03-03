@@ -1,16 +1,19 @@
+use std::cmp::Ordering;
+
 use bevy::{
     app::Update,
     color::{palettes::css, Color, Srgba},
     core::Name,
     log::{error, info},
     prelude::{
-        in_state, resource_exists, Added, App, BuildChildren, ChildBuild, Commands, Component, Entity, Event, EventReader,
-        IntoSystemConfigs, Query, Res, Text, With,
+        in_state, resource_exists, Added, App, BuildChildren, Changed, ChildBuild, ChildBuilder, Commands, Component, DespawnRecursiveExt,
+        Entity, Event, EventReader, IntoSystemConfigs, Query, Res, Text, With,
     },
     text::TextFont,
     ui::{AlignItems, BackgroundColor, FlexDirection, JustifyContent, Node, TargetCamera, UiRect, Val},
 };
 use cosmos_core::{
+    block::data::BlockData,
     crafting::{
         blocks::basic_fabricator::CraftBasicFabricatorRecipeEvent,
         recipes::{
@@ -18,7 +21,7 @@ use cosmos_core::{
             RecipeItem,
         },
     },
-    inventory::Inventory,
+    inventory::{itemstack::ItemStack, Inventory},
     item::Item,
     netty::{
         client::LocalPlayer,
@@ -28,7 +31,7 @@ use cosmos_core::{
         },
         system_sets::NetworkingSystemsSet,
     },
-    prelude::Structure,
+    prelude::{Structure, StructureBlock},
     registry::{identifiable::Identifiable, Registry},
     state::GameState,
 };
@@ -76,6 +79,9 @@ struct SelectedRecipe;
 
 #[derive(Component)]
 struct FabricateButton;
+
+#[derive(Component, Debug)]
+struct DisplayedFabRecipes(StructureBlock);
 
 fn populate_menu(
     mut commands: Commands,
@@ -149,6 +155,8 @@ fn populate_menu(
 
         let mut slot_ents = vec![];
 
+        let inv_items = inventory.iter().flatten().collect::<Vec<_>>();
+
         ecmds.with_children(|p| {
             p.spawn((
                 ScrollBox::default(),
@@ -159,97 +167,17 @@ fn populate_menu(
                 },
             ))
             .with_children(|p| {
-                let mut recipes = crafting_recipes.iter().collect::<Vec<_>>();
-                recipes.sort_by(|a, b| {
-                    let a_name = lang
-                        .get_name_from_numeric_id(a.output.item)
-                        .unwrap_or(items.from_numeric_id(a.output.item).unlocalized_name());
-                    let b_name = lang
-                        .get_name_from_numeric_id(b.output.item)
-                        .unwrap_or(items.from_numeric_id(b.output.item).unlocalized_name());
-
-                    a_name.to_lowercase().cmp(&b_name.to_lowercase())
+                p.spawn((
+                    Node {
+                        width: Val::Percent(100.0),
+                        flex_direction: FlexDirection::Column,
+                        ..Default::default()
+                    },
+                    DisplayedFabRecipes(fab_menu.0),
+                ))
+                .with_children(|p| {
+                    create_ui_recipes_list(&crafting_recipes, &items, &lang, &text_style, inv_items, p, None);
                 });
-
-                for &recipe in recipes.iter() {
-                    p.spawn((
-                        Node {
-                            height: Val::Px(100.0),
-                            width: Val::Percent(100.0),
-                            justify_content: JustifyContent::SpaceBetween,
-                            ..Default::default()
-                        },
-                        Button::<SelectItemEvent>::default(),
-                        Recipe(recipe.clone()),
-                    ))
-                    .with_children(|p| {
-                        p.spawn((
-                            Node {
-                                width: Val::Px(64.0),
-                                height: Val::Px(64.0),
-                                margin: UiRect::all(Val::Auto),
-                                ..Default::default()
-                            },
-                            RenderItem {
-                                item_id: recipe.output.item,
-                            },
-                        ));
-
-                        let item = items.from_numeric_id(recipe.output.item);
-                        let name = lang.get_name_from_id(item.unlocalized_name()).unwrap_or(item.unlocalized_name());
-
-                        p.spawn((
-                            Name::new("Item name + inputs display"),
-                            Node {
-                                width: Val::Percent(80.0),
-                                flex_direction: FlexDirection::Column,
-                                justify_content: JustifyContent::SpaceEvenly,
-                                ..Default::default()
-                            },
-                        ))
-                        .with_children(|p| {
-                            p.spawn((
-                                Node {
-                                    width: Val::Percent(100.0),
-                                    // margin: UiRect::vertical(Val::Auto),
-                                    ..Default::default()
-                                },
-                                Text::new(format!("{}x {}", recipe.output.quantity, name)),
-                                text_style.clone(),
-                            ));
-
-                            p.spawn(Node {
-                                flex_direction: FlexDirection::Row,
-                                width: Val::Percent(100.0),
-                                ..Default::default()
-                            })
-                            .with_children(|p| {
-                                for item in recipe.inputs.iter() {
-                                    let RecipeItem::Item(item_id) = item.item;
-
-                                    p.spawn((
-                                        Node {
-                                            width: Val::Px(64.0),
-                                            height: Val::Px(64.0),
-                                            flex_direction: FlexDirection::Column,
-                                            align_items: AlignItems::End,
-                                            justify_content: JustifyContent::End,
-                                            ..Default::default()
-                                        },
-                                        RenderItem { item_id },
-                                    ))
-                                    .with_children(|p| {
-                                        p.spawn((
-                                            Name::new("Item recipe qty"),
-                                            Text::new(format!("{}", item.quantity)),
-                                            text_style.clone(),
-                                        ));
-                                    });
-                                }
-                            });
-                        });
-                    });
-                }
             });
 
             p.spawn((
@@ -305,6 +233,161 @@ fn populate_menu(
         commands
             .entity(structure.block_data(fab_menu.0.coords()).expect("Must expect from above"))
             .insert(InventoryNeedsDisplayed::Custom(CustomInventoryRender::new(slot_ents)));
+    }
+}
+
+fn create_ui_recipes_list(
+    crafting_recipes: &BasicFabricatorRecipes,
+    items: &Registry<Item>,
+    lang: &Lang<Item>,
+    text_style: &TextFont,
+    inv_items: Vec<&ItemStack>,
+    p: &mut ChildBuilder,
+    selected: Option<&Recipe>,
+) {
+    let mut recipes = crafting_recipes.iter().collect::<Vec<_>>();
+    recipes.sort_by(|a, b| {
+        // Sort by craftable then by name.
+
+        let a_create = a.max_can_create(inv_items.iter().copied());
+        let b_create = b.max_can_create(inv_items.iter().copied());
+
+        if a_create == 0 && b_create != 0 {
+            Ordering::Greater
+        } else if a_create != 0 && b_create == 0 {
+            Ordering::Less
+        } else if a_create != 0 && b_create != 0 && a.inputs.len() != b.inputs.len() {
+            b.inputs.len().cmp(&a.inputs.len())
+        } else {
+            let a_name = lang
+                .get_name_from_numeric_id(a.output.item)
+                .unwrap_or(items.from_numeric_id(a.output.item).unlocalized_name());
+            let b_name = lang
+                .get_name_from_numeric_id(b.output.item)
+                .unwrap_or(items.from_numeric_id(b.output.item).unlocalized_name());
+
+            a_name.to_lowercase().cmp(&b_name.to_lowercase())
+        }
+    });
+
+    for &recipe in recipes.iter() {
+        let mut ecmds = p.spawn((
+            Node {
+                height: Val::Px(100.0),
+                width: Val::Percent(100.0),
+                justify_content: JustifyContent::SpaceBetween,
+                ..Default::default()
+            },
+            Button::<SelectItemEvent>::default(),
+            Recipe(recipe.clone()),
+        ));
+
+        ecmds.with_children(|p| {
+            p.spawn((
+                Node {
+                    width: Val::Px(64.0),
+                    height: Val::Px(64.0),
+                    margin: UiRect::all(Val::Auto),
+                    ..Default::default()
+                },
+                RenderItem {
+                    item_id: recipe.output.item,
+                },
+            ));
+
+            let item = items.from_numeric_id(recipe.output.item);
+            let name = lang.get_name_from_id(item.unlocalized_name()).unwrap_or(item.unlocalized_name());
+
+            p.spawn((
+                Name::new("Item name + inputs display"),
+                Node {
+                    width: Val::Percent(80.0),
+                    flex_direction: FlexDirection::Column,
+                    justify_content: JustifyContent::SpaceEvenly,
+                    ..Default::default()
+                },
+            ))
+            .with_children(|p| {
+                p.spawn((
+                    Node {
+                        width: Val::Percent(100.0),
+                        // margin: UiRect::vertical(Val::Auto),
+                        ..Default::default()
+                    },
+                    Text::new(format!("{}x {}", recipe.output.quantity, name)),
+                    text_style.clone(),
+                ));
+
+                p.spawn(Node {
+                    flex_direction: FlexDirection::Row,
+                    width: Val::Percent(100.0),
+                    ..Default::default()
+                })
+                .with_children(|p| {
+                    for item in recipe.inputs.iter() {
+                        let RecipeItem::Item(item_id) = item.item;
+
+                        p.spawn((
+                            Node {
+                                width: Val::Px(64.0),
+                                height: Val::Px(64.0),
+                                flex_direction: FlexDirection::Column,
+                                align_items: AlignItems::End,
+                                justify_content: JustifyContent::End,
+                                ..Default::default()
+                            },
+                            RenderItem { item_id },
+                        ))
+                        .with_children(|p| {
+                            p.spawn((
+                                Name::new("Item recipe qty"),
+                                Text::new(format!("{}", item.quantity)),
+                                text_style.clone(),
+                            ));
+                        });
+                    }
+                });
+            });
+        });
+
+        if let Some(s) = selected {
+            if recipe == &s.0 {
+                ecmds.insert(SelectedRecipe);
+            }
+        }
+    }
+}
+
+fn on_change_inventory(
+    q_changed_inventory: Query<(&Inventory, &BlockData), Changed<Inventory>>,
+    q_fab_recipes: Query<(Entity, &DisplayedFabRecipes)>,
+    q_selected_recipe: Query<&Recipe, With<SelectedRecipe>>,
+    crafting_recipes: Res<BasicFabricatorRecipes>,
+    items: Res<Registry<Item>>,
+    lang: Res<Lang<Item>>,
+    font: Res<DefaultFont>,
+    mut commands: Commands,
+) {
+    for (inv, bd) in q_changed_inventory.iter() {
+        for (ent, fab_recipes) in q_fab_recipes.iter() {
+            if fab_recipes.0 != bd.identifier.block {
+                continue;
+            }
+
+            let selected = q_selected_recipe.get_single().ok();
+
+            let text_style = TextFont {
+                font: font.0.clone_weak(),
+                font_size: 24.0,
+                ..Default::default()
+            };
+
+            let inv_items = inv.iter().flatten().collect::<Vec<_>>();
+
+            commands.entity(ent).despawn_descendants().with_children(|p| {
+                create_ui_recipes_list(&crafting_recipes, &items, &lang, &text_style, inv_items, p, selected);
+            });
+        }
     }
 }
 
@@ -428,7 +511,7 @@ pub(super) fn register(app: &mut App) {
     app.add_systems(
         Update,
         (
-            populate_menu,
+            (populate_menu, on_change_inventory).chain(),
             (on_select_item, listen_create, color_fabricate_button)
                 .chain()
                 .in_set(UiSystemSet::DoUi),

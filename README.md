@@ -77,6 +77,7 @@ See [the issues page](https://github.com/AnthonyTornetta/Cosmos/issues) for the 
 - [x] Rebalance shop prices
 - [ ] Add ability for player to die
   - [ ] Respawn anchor
+- [ ] Playtest and implement changes
 
 ## Release 0.0.7a
 
