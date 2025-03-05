@@ -13,7 +13,7 @@ use crate::netty::sync::{sync_component, IdentifiableComponent, SyncableComponen
 /// Represents a player
 pub struct Player {
     name: String,
-    id: ClientId,
+    client_id: ClientId,
 }
 
 impl Player {
@@ -21,7 +21,7 @@ impl Player {
     ///
     /// * `id` This should be a unique identifier for this player
     pub fn new(name: String, id: ClientId) -> Self {
-        Self { name, id }
+        Self { name, client_id: id }
     }
 
     /// Gets the player's name
@@ -30,8 +30,8 @@ impl Player {
     }
 
     /// Gets the unique id for this player
-    pub fn id(&self) -> ClientId {
-        self.id
+    pub fn client_id(&self) -> ClientId {
+        self.client_id
     }
 }
 

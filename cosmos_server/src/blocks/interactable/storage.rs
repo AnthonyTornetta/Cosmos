@@ -45,7 +45,7 @@ fn handle_block_event(
 
         if block_id == block.id() {
             server.send_message(
-                player.id(),
+                player.client_id(),
                 NettyChannelServer::Inventory,
                 cosmos_encoder::serialize(&ServerInventoryMessages::OpenInventory {
                     owner: InventoryIdentifier::BlockData(BlockDataIdentifier { block: s_block, block_id }),

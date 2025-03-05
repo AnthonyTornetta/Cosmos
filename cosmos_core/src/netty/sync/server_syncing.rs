@@ -248,7 +248,7 @@ fn server_send_component<T: SyncableComponent>(
             .collect::<Vec<ReplicatedComponentData>>();
 
         server.send_message(
-            player.id(),
+            player.client_id(),
             NettyChannelServer::ComponentReplication,
             cosmos_encoder::serialize(&ComponentReplicationMessage::ComponentReplication {
                 component_id: id.id(),

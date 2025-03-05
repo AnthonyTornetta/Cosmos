@@ -18,6 +18,7 @@ cosmos:plasma_drill=Used to mine asteroids, planets, or melting down structures.
 cosmos:laser_cannon=Fire compact lasers (highly compressed photon beams) at all that oppose you! Lasers are great at damaging shields, and are moderately effective against ship hull. The longer the line of cannons, the more damage each laser will do. Put colored glass in front to color your lasers!
 cosmos:missile_launcher=Fires [missiles](cosmos:missile) at your targets! These can lock onto moving targets, making long-range fights much easier. This requires [missiles](cosmos:missile) in a [storage](cosmos:storage) somewhere on the ship to fire. Missiles deal very little damage to shields, but substantial damage to blocks.
 cosmos:ship_dock=Allows one ship to dock (become attached) to another. The docking ship must line its dock block up with the ship it wishes to dock to's block.
+cosmos:missile=Ammunition for the [missile launcher](cosmos:missile_launcher).
 
 cosmos:storage=Used to store items.
 

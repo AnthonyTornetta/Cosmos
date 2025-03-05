@@ -51,7 +51,7 @@ fn send_bodies(
             };
 
             let message = cosmos_encoder::serialize(&sync_message);
-            server.send_message(player.id(), NettyChannelServer::Unreliable, message.clone());
+            server.send_message(player.client_id(), NettyChannelServer::Unreliable, message.clone());
         }
     }
 }

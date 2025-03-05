@@ -35,7 +35,7 @@ fn sync_held_items(
 ) {
     for (player, held_itemstack) in query.iter() {
         server.send_message(
-            player.id(),
+            player.client_id(),
             NettyChannelServer::Inventory,
             cosmos_encoder::serialize(&ServerInventoryMessages::HeldItemstack {
                 itemstack: Some(held_itemstack.clone()),
@@ -46,7 +46,7 @@ fn sync_held_items(
     for removed_held_item in removed_held_itemstacks.read() {
         if let Ok(player) = player_query.get(removed_held_item) {
             server.send_message(
-                player.id(),
+                player.client_id(),
                 NettyChannelServer::Inventory,
                 cosmos_encoder::serialize(&ServerInventoryMessages::HeldItemstack { itemstack: None }),
             );

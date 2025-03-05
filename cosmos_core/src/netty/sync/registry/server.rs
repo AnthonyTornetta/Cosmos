@@ -44,7 +44,7 @@ fn sync<'a, T: Identifiable + Serialize + Deserialize<'a>>(
         };
 
         server.send_message(
-            player.id(),
+            player.client_id(),
             NettyChannelServer::Registry,
             cosmos_encoder::serialize(&RegistrySyncing::Registry {
                 serialized: cosmos_encoder::serialize(registry.as_ref()),
@@ -73,7 +73,7 @@ fn send_number_of_registries(
         info!("Sending {n_registries:?}");
 
         server.send_message(
-            player.id(),
+            player.client_id(),
             NettyChannelServer::Registry,
             cosmos_encoder::serialize(&RegistrySyncing::RegistryCount(n_registries.0)),
         );

@@ -62,7 +62,7 @@ fn handle_block_event(
         let block_id = s_block.block_id(structure);
 
         if block_id == block.id() {
-            nevw.send(OpenReactorEvent(s_block), player.id());
+            nevw.send(OpenReactorEvent(s_block), player.client_id());
         }
     }
 }

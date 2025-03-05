@@ -56,7 +56,7 @@ fn on_interact_with_shop(
             let fake_shop_data = generate_fake_shop(&default_shop_entries);
 
             server.send_message(
-                player.id(),
+                player.client_id(),
                 NettyChannelServer::Shop,
                 cosmos_encoder::serialize(&ServerShopMessages::OpenShop {
                     shop_block: s_block.coords(),

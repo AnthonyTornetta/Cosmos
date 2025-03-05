@@ -53,7 +53,7 @@ fn monitor_basic_fabricator_interactions(
             continue;
         };
 
-        nevw_open_basic_fabricator.send(OpenBasicFabricatorEvent(block), player.id());
+        nevw_open_basic_fabricator.send(OpenBasicFabricatorEvent(block), player.client_id());
     }
 }
 
