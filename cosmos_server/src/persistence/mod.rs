@@ -26,19 +26,6 @@ pub mod make_persistent;
 pub mod player_loading;
 pub mod saving;
 
-#[derive(Component, Debug, Reflect, Serialize, Deserialize, PartialEq, Eq, Clone, Hash)]
-/// NOT ALL ENTITIES WILL HAVE THIS ON THEM!
-///
-/// Only entities that have been loaded or saved will have this. This is a unique identifier for
-/// this entity.
-pub struct EntityId(String);
-
-impl Display for EntityId {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_str(&self.0)
-    }
-}
-
 #[derive(Debug, Resource, Default, Clone)]
 /// This is a resource that caches the saved entities of different sectors that a player has been near.
 ///

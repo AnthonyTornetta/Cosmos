@@ -59,6 +59,8 @@ mod server_syncing;
 pub mod events;
 /// Syncing of registries from server -> client
 pub mod registry;
+/// Syncing of resources from server -> client
+pub mod resources;
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
 /// Internally used but public because I'm bad
