@@ -10,7 +10,10 @@ use bevy_rapier3d::prelude::*;
 use cosmos_core::{
     chat::ServerSendChatMessageEvent,
     economy::Credits,
-    entities::player::{creative::Creative, Player},
+    entities::{
+        player::{creative::Creative, Player},
+        EntityId,
+    },
     inventory::{itemstack::ItemShouldHaveData, Inventory},
     item::Item,
     netty::{
@@ -38,7 +41,7 @@ use crate::{
     persistence::{
         loading::{LoadingSystemSet, NeedsLoaded, LOADING_SCHEDULE},
         saving::{calculate_sfi, NeedsSaved, SavingSystemSet, SAVING_SCHEDULE},
-        EntityId, SaveFileIdentifier, SerializedData,
+        SaveFileIdentifier, SerializedData,
     },
     physics::assign_player_world,
     settings::ServerSettings,

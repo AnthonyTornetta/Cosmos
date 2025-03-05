@@ -15,6 +15,7 @@ use bevy::{
 };
 use cosmos_core::{
     block::data::{persistence::ChunkLoadBlockDataEvent, BlockData},
+    entities::EntityId,
     events::block_events::BlockDataSystemParams,
     netty::sync::IdentifiableComponent,
     structure::{
@@ -35,7 +36,7 @@ use crate::{
 use super::{
     loading::{LoadingSystemSet, NeedsLoaded, LOADING_SCHEDULE},
     saving::{NeedsSaved, SavingSystemSet, SAVING_SCHEDULE},
-    EntityId, SerializedData,
+    SerializedData,
 };
 
 fn save_component<T: PersistentComponent>(

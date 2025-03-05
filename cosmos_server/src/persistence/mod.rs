@@ -15,6 +15,7 @@ use rand::{distributions::Alphanumeric, Rng};
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
 use cosmos_core::{
+    entities::EntityId,
     physics::location::{Location, Sector},
     structure::chunk::netty::{DeserializationError, SaveData},
 };
@@ -61,31 +62,6 @@ impl SectorsCache {
             .lock()
             .expect("Failed to unlock")
             .insert((entity_id, load_distance));
-    }
-}
-
-impl EntityId {
-    /// Creates a new EntityID.
-    ///
-    /// * `id` This should be unique to only this entity. If this isn't unique, the entity may not be loaded/saved correctly
-    pub fn new(id: impl Into<String>) -> Self {
-        Self(id.into())
-    }
-
-    /// Creates a new EntityId
-    pub fn generate() -> Self {
-        Self::new(
-            rand::thread_rng()
-                .sample_iter(&Alphanumeric)
-                .take(64)
-                .map(char::from)
-                .collect::<String>(),
-        )
-    }
-
-    /// Returns the entity id as a string
-    pub fn as_str(&self) -> &str {
-        self.0.as_str()
     }
 }
 

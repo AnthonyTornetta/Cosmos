@@ -3,6 +3,7 @@
 use crate::{
     entities::player::Player,
     netty::{cosmos_encoder, system_sets::NetworkingSystemsSet, NettyChannelServer},
+    state::GameState,
 };
 use bevy::{
     app::{App, Startup, Update},
@@ -12,7 +13,7 @@ use bevy::{
         system::{Query, Res, ResMut, Resource},
     },
     log::{info, warn},
-    prelude::{Deref, Entity, Event, IntoSystemSetConfigs, States, SystemSet},
+    prelude::{resource_exists_and_changed, Deref, Entity, Event, IntoSystemSetConfigs, SystemSet},
     state::condition::in_state,
 };
 use bevy_renet2::renet2::RenetServer;
@@ -54,6 +55,16 @@ fn sync<T: SyncableResource>(
     }
 }
 
+fn sync_on_change<T: SyncableResource>(mut server: ResMut<RenetServer>, resource: Res<T>) {
+    server.broadcast_message(
+        NettyChannelServer::Resource,
+        cosmos_encoder::serialize(&ResourceSyncingMessage::Resource {
+            data: bincode::serialize(resource.as_ref()).expect("Failed to serialize :("),
+            unlocalized_name: T::unlocalized_name().into(),
+        }),
+    );
+}
+
 fn incr_resources_to_sync(mut n_resources: ResMut<NumResourcesToSync>) {
     n_resources.0 += 1;
 }
@@ -88,11 +99,15 @@ enum IncrementResourcesSet {
 /// Call this function on the server-side to signal that this resources should be synced with the client
 pub(super) fn sync_resource<T: SyncableResource>(app: &mut App) {
     app.add_systems(Startup, incr_resources_to_sync.in_set(IncrementResourcesSet::Increment))
-        .add_systems(Update, sync::<T>.after(send_number_of_resources));
+        .add_systems(
+            Update,
+            (sync::<T>, sync_on_change::<T>.run_if(resource_exists_and_changed::<T>))
+                .after(send_number_of_resources)
+                .chain(),
+        );
 }
 
-#[allow(unused)] // LSP assumes this function is never used, even though it's just feature flagged
-pub(super) fn register<T: States>(app: &mut App, playing_state: T) {
+pub(super) fn register(app: &mut App) {
     app.add_event::<SyncResourceEvent>();
     app.configure_sets(
         Startup,
@@ -102,7 +117,7 @@ pub(super) fn register<T: States>(app: &mut App, playing_state: T) {
     app.add_systems(
         Update,
         send_number_of_resources
-            .run_if(in_state(playing_state))
+            .run_if(in_state(GameState::Playing))
             .after(NetworkingSystemsSet::ProcessReceivedMessages),
     )
     .init_resource::<NumResourcesToSync>();

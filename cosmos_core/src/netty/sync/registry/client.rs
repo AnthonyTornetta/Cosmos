@@ -143,6 +143,7 @@ pub(super) fn register<T: States + FreelyMutableState + Clone + Copy>(
             transition_state.in_set(TransitionStateSet::TransitionState),
         )
             .run_if(resource_exists::<RegistriesLeftToSync>)
+            .run_if(resource_exists::<ResourcesLeftToSync>)
             .chain()
             .run_if(in_state(loading_data_state)),
     )

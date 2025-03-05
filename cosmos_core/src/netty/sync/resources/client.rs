@@ -1,16 +1,19 @@
 //! Handles client-side resource  syncing logic
 
-use crate::netty::{cosmos_encoder, system_sets::NetworkingSystemsSet, NettyChannelServer};
+use crate::{
+    netty::{cosmos_encoder, system_sets::NetworkingSystemsSet, NettyChannelServer},
+    state::GameState,
+};
 use bevy::{
     app::{App, Update},
     ecs::{
         event::{Event, EventReader, EventWriter},
-        schedule::{common_conditions::resource_exists, IntoSystemConfigs},
+        schedule::IntoSystemConfigs,
         system::{ResMut, Resource},
     },
     log::{error, info},
-    prelude::{Commands, IntoSystemSetConfigs, States, SystemSet},
-    state::{condition::in_state, state::FreelyMutableState},
+    prelude::{Commands, Condition, IntoSystemSetConfigs, SystemSet},
+    state::condition::in_state,
 };
 use bevy_renet2::renet2::RenetClient;
 
@@ -37,13 +40,15 @@ fn sync<T: SyncableResource>(
             continue;
         }
 
-        let new_amt = left_to_sync.0.unwrap_or(0) - 1;
+        if left_to_sync.0.unwrap_or(0) != 0 {
+            let new_amt = left_to_sync.0.expect("This should never happen") - 1;
 
-        left_to_sync.0 = Some(new_amt);
+            left_to_sync.0 = Some(new_amt);
 
-        info!("Got resource from server: {}! Need {} more.", ev.resource_name, new_amt);
+            info!("Got resource from server: {}! Need {} more.", ev.resource_name, new_amt);
+        }
 
-        let Ok(new_resource) = cosmos_encoder::deserialize::<T>(&ev.serialized_data) else {
+        let Ok(new_resource) = bincode::deserialize::<T>(&ev.serialized_data) else {
             error!("Got bad resource data from server - {}!", ev.resource_name);
             continue;
         };
@@ -96,17 +101,13 @@ fn resources_listen_netty(
     }
 }
 
-#[allow(unused)] // LSP assumes this function is never used, even though it's just feature flagged
-pub(super) fn register<T: States + FreelyMutableState + Clone + Copy>(
-    app: &mut App,
-    connecting_state: T,
-    loading_data_state: T,
-    loading_world_state: T,
-) {
+pub(super) fn register(app: &mut App) {
+    let condition = in_state(GameState::LoadingData).or(in_state(GameState::LoadingWorld).or(in_state(GameState::Playing)));
+
     app.configure_sets(
         Update,
         LoadingResourcesSet::LoadResourcesFromServer
-            .run_if(in_state(loading_data_state))
+            .run_if(condition.clone())
             .in_set(NetworkingSystemsSet::ReceiveMessages),
     );
 
@@ -115,11 +116,10 @@ pub(super) fn register<T: States + FreelyMutableState + Clone + Copy>(
     app.add_systems(
         Update,
         (resources_listen_netty.before(LoadingResourcesSet::LoadResourcesFromServer),)
-            .run_if(resource_exists::<ResourcesLeftToSync>)
             .chain()
-            .run_if(in_state(loading_data_state)),
+            .run_if(condition),
     )
     .add_event::<ReceivedResourceEvent>();
 
-    add_multi_statebound_resource::<ResourcesLeftToSync, T>(app, connecting_state, loading_data_state);
+    add_multi_statebound_resource::<ResourcesLeftToSync, GameState>(app, GameState::Connecting, GameState::LoadingData);
 }

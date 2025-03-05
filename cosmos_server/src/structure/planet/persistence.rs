@@ -6,6 +6,7 @@ use bevy::prelude::*;
 use bevy_rapier3d::plugin::RapierContextEntityLink;
 use cosmos_core::{
     block::data::persistence::ChunkLoadBlockDataEvent,
+    entities::EntityId,
     netty::{cosmos_encoder, NoSendEntity},
     physics::location::Location,
     structure::{
@@ -22,7 +23,7 @@ use serde::{Deserialize, Serialize};
 use crate::persistence::{
     loading::{LoadingSystemSet, NeedsLoaded},
     saving::{NeedsSaved, SavingSystemSet, SAVING_SCHEDULE},
-    EntityId, SaveFileIdentifier, SerializedData,
+    SaveFileIdentifier, SerializedData,
 };
 
 use super::{
