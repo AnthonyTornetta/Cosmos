@@ -448,9 +448,9 @@ dependencies = [
 
 [[package]]
 name = "bevy-inspector-egui"
-version = "0.28.0"
+version = "0.28.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "dd64580f4496ed987c6231c6a7d833068914331a9084bf5a3dd9dcbc66fd8a73"
+checksum = "36172627eb6fd8586600972bcbba2880ed6f59e4e243dcf2ed7ff68d987577ce"
 dependencies = [
  "bevy-inspector-egui-derive",
  "bevy_app",
@@ -786,7 +786,6 @@ dependencies = [
  "wasm-bindgen",
  "wasm-bindgen-futures",
  "web-sys",
- "webbrowser",
  "wgpu-types",
  "winit",
 ]
@@ -3221,15 +3220,6 @@ name = "hmac-sha256"
 version = "1.1.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3688e69b38018fec1557254f64c8dc2cc8ec502890182f395dbb0aa997aa5735"
-
-[[package]]
-name = "home"
-version = "0.5.9"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e3d1354bf6b7235cb4a0576c2619fd4ed18183f689b12b006a0ee7329eeff9a5"
-dependencies = [
- "windows-sys 0.52.0",
-]
 
 [[package]]
 name = "iana-time-zone"
@@ -6093,24 +6083,6 @@ checksum = "5a6580f308b1fad9207618087a65c04e7a10bc77e02c8e84e9b00dd4b12fa0bb"
 dependencies = [
  "js-sys",
  "wasm-bindgen",
-]
-
-[[package]]
-name = "webbrowser"
-version = "1.0.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "425ba64c1e13b1c6e8c5d2541c8fac10022ca584f33da781db01b5756aef1f4e"
-dependencies = [
- "block2",
- "core-foundation 0.9.4",
- "home",
- "jni",
- "log",
- "ndk-context",
- "objc2",
- "objc2-foundation",
- "url",
- "web-sys",
 ]
 
 [[package]]
