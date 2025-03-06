@@ -3,6 +3,7 @@
 use bevy::{asset::LoadState, prelude::*, utils::HashMap};
 use cosmos_core::{
     entities::player::Player,
+    faction::{Faction, FactionId, FactionRelation, Factions},
     netty::{client::LocalPlayer, system_sets::NetworkingSystemsSet},
     physics::location::Location,
     state::GameState,
@@ -245,24 +246,44 @@ fn add_indicators(
 }
 
 fn added(
-    ship_query: Query<Entity, Added<Ship>>,
-    station_query: Query<Entity, Added<Station>>,
+    q_local_faction: Query<&FactionId, With<LocalPlayer>>,
+    ship_query: Query<(Entity, Option<&FactionId>), Or<(Added<Ship>, Changed<FactionId>)>>,
+    station_query: Query<(Entity, Option<&FactionId>), Or<(Added<Station>, Changed<FactionId>)>>,
     q_melting_down: Query<Entity, Added<MeltingDown>>,
     asteroid_query: Query<Entity, Added<Asteroid>>,
     planet_query: Query<Entity, Added<Planet>>,
     player_query: Query<Entity, (Added<Player>, Without<LocalPlayer>)>,
+    factions: Res<Factions>,
     mut commands: Commands,
 ) {
-    ship_query.iter().for_each(|ent| {
+    ship_query.iter().for_each(|(ent, fac)| {
+        let player_faction = q_local_faction.get_single().ok().map(|x| factions.from_id(x)).flatten();
+        let relation = Faction::relation_with_option(fac.map(|x| factions.from_id(x)).flatten(), player_faction);
+
         commands.entity(ent).insert(IndicatorSettings {
-            color: Srgba::hex("FF57337F").unwrap().into(),
+            color: Srgba::hex(match relation {
+                FactionRelation::Ally => "58ff337F",
+                FactionRelation::Neutral => "339eff7F",
+                FactionRelation::Enemy => "ff57337F",
+            })
+            .unwrap()
+            .into(),
             max_distance: 20_000.0,
             offset: Vec3::new(0.5, 0.5, 0.5), // Accounts for the ship core being at 0.5, 0.5, 0.5 instead of the origin
         });
     });
-    station_query.iter().for_each(|ent| {
+    station_query.iter().for_each(|(ent, fac)| {
+        let player_faction = q_local_faction.get_single().ok().map(|x| factions.from_id(x)).flatten();
+        let relation = Faction::relation_with_option(fac.map(|x| factions.from_id(x)).flatten(), player_faction);
+
         commands.entity(ent).insert(IndicatorSettings {
-            color: Srgba::hex("5b4fff7F").unwrap().into(),
+            color: Srgba::hex(match relation {
+                FactionRelation::Ally => "00ffbe7F",
+                FactionRelation::Neutral => "5b4fff7F",
+                FactionRelation::Enemy => "ff00997F",
+            })
+            .unwrap()
+            .into(),
             max_distance: 20_000.0,
             offset: Vec3::new(0.5, 0.5, 0.5), // Accounts for the station core being at 0.5, 0.5, 0.5 instead of the origin
         });

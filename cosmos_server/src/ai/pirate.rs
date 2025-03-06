@@ -9,8 +9,9 @@ use bevy::{
         system::{Commands, Query, Res},
     },
     hierarchy::{BuildChildren, Parent},
+    log::{error, warn},
     math::{Quat, Vec3},
-    prelude::Has,
+    prelude::{in_state, Has},
     time::Time,
     transform::components::{GlobalTransform, Transform},
 };
@@ -19,9 +20,11 @@ use cosmos_core::{
     ecs::NeedsDespawned,
     entities::player::Player,
     events::structure::StructureEventListenerSet,
+    faction::{FactionId, Factions},
     netty::system_sets::NetworkingSystemsSet,
     physics::location::Location,
     projectiles::{laser::LASER_LIVE_TIME, missile::Missile},
+    state::GameState,
     structure::{
         shared::{DespawnWithStructure, MeltingDown},
         ship::{
@@ -252,6 +255,17 @@ fn on_load_pirate(mut commands: Commands, query: Query<(Entity, &SerializedData)
     }
 }
 
+fn apply_pirate_faction(factions: Res<Factions>, mut commands: Commands, q_pirate: Query<Entity, (Without<FactionId>, With<Pirate>)>) {
+    for ent in q_pirate.iter() {
+        let Some(pirate_faction) = factions.from_name("Pirate") else {
+            error!("No pirate faction found! Cannot assign pirate to faction.");
+            return;
+        };
+
+        commands.entity(ent).insert(*pirate_faction.id());
+    }
+}
+
 pub(super) fn register(app: &mut App) {
     app.configure_sets(
         Update,
@@ -265,9 +279,11 @@ pub(super) fn register(app: &mut App) {
         (
             on_melt_down,
             add_pirate_ai,
+            apply_pirate_faction,
             add_pirate_targets,
             handle_pirate_movement.before(ShipMovementSet::RemoveShipMovement),
         )
+            .run_if(in_state(GameState::Playing))
             .in_set(NetworkingSystemsSet::Between)
             .in_set(PirateSystemSet::PirateAiLogic)
             .chain(),

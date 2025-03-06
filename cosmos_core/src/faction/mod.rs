@@ -8,7 +8,10 @@ use crate::{
     entities::EntityId,
     netty::{
         cosmos_encoder,
-        sync::resources::{sync_resource, SyncableResource},
+        sync::{
+            resources::{sync_resource, SyncableResource},
+            sync_component, IdentifiableComponent, SyncableComponent,
+        },
         system_sets::NetworkingSystemsSet,
     },
     state::GameState,
@@ -52,6 +55,44 @@ impl Faction {
             settings,
         }
     }
+
+    pub fn id(&self) -> &FactionId {
+        &self.id
+    }
+
+    pub fn relation_with_option(a: Option<&Faction>, b: Option<&Faction>) -> FactionRelation {
+        if let Some(a) = a {
+            a.relation_with(b)
+        } else if let Some(b) = b {
+            b.relation_with(a)
+        } else {
+            FactionRelation::Neutral
+        }
+    }
+
+    pub fn relation_with(&self, other_faction: Option<&Faction>) -> FactionRelation {
+        if let Some(other_faction) = other_faction {
+            if self.id == other_faction.id {
+                FactionRelation::Ally
+            } else if let Some(rel) = self.relationships.get(&other_faction.id) {
+                *rel
+            } else if let Some(rel) = other_faction.relationships.get(&self.id) {
+                *rel
+            } else {
+                if self.settings.default_enemy || other_faction.settings.default_enemy {
+                    FactionRelation::Enemy
+                } else {
+                    FactionRelation::Neutral
+                }
+            }
+        } else {
+            if self.settings.default_enemy {
+                FactionRelation::Enemy
+            } else {
+                FactionRelation::Neutral
+            }
+        }
+    }
 }
 
 #[derive(Clone, Copy, Component, Debug, PartialEq, Eq, Hash, Serialize, Deserialize, Reflect, Default)]
@@ -64,12 +105,32 @@ impl FactionId {
     }
 }
 
+impl IdentifiableComponent for FactionId {
+    fn get_component_unlocalized_name() -> &'static str {
+        "cosmos:faction_id"
+    }
+}
+
+impl SyncableComponent for FactionId {
+    fn get_sync_type() -> crate::netty::sync::SyncType {
+        crate::netty::sync::SyncType::ServerAuthoritative
+    }
+}
+
 #[derive(Resource, Reflect, Clone, Serialize, Deserialize, Debug, Default)]
 pub struct Factions(HashMap<FactionId, Faction>);
 
 impl Factions {
     pub fn add_new_faction(&mut self, faction: Faction) {
         self.0.insert(faction.id, faction);
+    }
+
+    pub fn from_id(&self, id: &FactionId) -> Option<&Faction> {
+        self.0.get(id)
+    }
+
+    pub fn from_name(&self, name: &str) -> Option<&Faction> {
+        self.0.values().find(|x| x.name == name)
     }
 }
 
@@ -79,53 +140,12 @@ impl SyncableResource for Factions {
     }
 }
 
-fn load_factions(mut commands: Commands) {
-    let factions = if let Some(data) = fs::read("world/factions.bin").ok() {
-        // We want to panic if something is corrupted
-        let factions = cosmos_encoder::deserialize::<Factions>(&data).expect("Failed to deserialize faction data in world/factions.bin.");
-
-        factions
-    } else {
-        info!("Generating factions!");
-
-        let mut factions = Factions::default();
-
-        factions.add_new_faction(Faction::new(
-            "Pirate".into(),
-            vec![],
-            Default::default(),
-            FactionSettings { default_enemy: true },
-        ));
-
-        factions.add_new_faction(Faction::new(
-            "Merchant Federation".into(),
-            vec![],
-            Default::default(),
-            FactionSettings { default_enemy: false },
-        ));
-
-        factions
-    };
-
-    commands.insert_resource(factions);
-}
-
-fn save_factions_on_change(factions: Res<Factions>) {
-    fs::write("world/factions.bin", cosmos_encoder::serialize(factions.as_ref())).expect("Failed to save factions.");
-}
-
 pub(super) fn register(app: &mut App) {
     sync_resource::<Factions>(app);
-
-    app.add_systems(
-        Update,
-        save_factions_on_change
-            .in_set(NetworkingSystemsSet::Between)
-            .run_if(in_state(GameState::Playing)),
-    )
-    .add_systems(OnExit(GameState::PreLoading), load_factions);
+    sync_component::<FactionId>(app);
 
     app.register_type::<FactionRelation>()
         .register_type::<Faction>()
+        .register_type::<Uuid>()
         .register_type::<FactionId>();
 }

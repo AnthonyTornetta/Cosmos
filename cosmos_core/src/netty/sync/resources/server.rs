@@ -95,6 +95,7 @@ pub(super) fn sync_resource<T: SyncableResource>(app: &mut App) {
             Update,
             (sync::<T>, sync_on_change::<T>.run_if(resource_exists_and_changed::<T>))
                 .after(send_number_of_resources)
+                .run_if(in_state(GameState::Playing))
                 .chain(),
         );
 }
