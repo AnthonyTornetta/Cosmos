@@ -31,6 +31,26 @@ impl NettyEvent for OpenDyeMachine {
     }
 }
 
+#[derive(Event, Debug, Serialize, Deserialize)]
+/// Event that tells the client to open a Dye Machine block
+pub struct DyeBlock {
+    pub block: StructureBlock,
+    pub color: Srgba,
+}
+
+impl IdentifiableEvent for DyeBlock {
+    fn unlocalized_name() -> &'static str {
+        "cosmos:dye_block"
+    }
+}
+
+impl NettyEvent for DyeBlock {
+    fn event_receiver() -> crate::netty::sync::events::netty_event::EventReceiver {
+        crate::netty::sync::events::netty_event::EventReceiver::Server
+    }
+}
+
 pub(super) fn register(app: &mut App) {
     app.add_netty_event::<OpenDyeMachine>();
+    app.add_netty_event::<DyeBlock>();
 }
