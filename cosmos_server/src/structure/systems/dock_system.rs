@@ -42,7 +42,7 @@ use cosmos_core::{
 
 use super::{sync::register_structure_system, thruster_system::ThrusterSystemSet};
 
-const MAX_DOCK_CHECK: f32 = 1.3;
+const MAX_DOCK_CHECK: f32 = 2.0;
 
 #[derive(Component, Default, Debug, Reflect)]
 pub struct DockedEntities(Vec<Entity>);
