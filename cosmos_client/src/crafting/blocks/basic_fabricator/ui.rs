@@ -43,7 +43,7 @@ use crate::{
     rendering::MainCamera,
     ui::{
         components::{
-            button::{register_button, Button, ButtonEvent, ButtonStyles},
+            button::{register_button, CosmosButton, ButtonEvent, ButtonStyles},
             scollable_container::ScrollBox,
             window::GuiWindow,
         },
@@ -217,7 +217,7 @@ fn populate_menu(
                 p.spawn((
                     Name::new("Fabricate Button"),
                     FabricateButton,
-                    Button::<CreateClickedEvent> {
+                    CosmosButton::<CreateClickedEvent> {
                         text: Some(("Fabricate".into(), text_style, Default::default())),
                         button_styles: Some(ButtonStyles { ..Default::default() }),
                         ..Default::default()
@@ -278,7 +278,7 @@ fn create_ui_recipes_list(
                 justify_content: JustifyContent::SpaceBetween,
                 ..Default::default()
             },
-            Button::<SelectItemEvent>::default(),
+            CosmosButton::<SelectItemEvent>::default(),
             Recipe(recipe.clone()),
         ));
 
@@ -468,7 +468,7 @@ fn color_fabricate_button(
     q_structure: Query<&Structure>,
     q_selected_recipe: Query<&Recipe, With<SelectedRecipe>>,
     q_inventory: Query<&Inventory>,
-    mut q_fab_button: Query<&mut Button<CreateClickedEvent>, With<FabricateButton>>,
+    mut q_fab_button: Query<&mut CosmosButton<CreateClickedEvent>, With<FabricateButton>>,
 ) {
     let Ok(mut btn) = q_fab_button.get_single_mut() else {
         return;

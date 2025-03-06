@@ -4,7 +4,7 @@ use bevy_renet2::renet2::DisconnectReason;
 use crate::{
     netty::connect::ClientDisconnectReason,
     ui::{
-        components::button::{register_button, Button, ButtonEvent, ButtonStyles},
+        components::button::{register_button, CosmosButton, ButtonEvent, ButtonStyles},
         font::DefaultFont,
         settings::SettingsMenuSet,
     },
@@ -87,7 +87,7 @@ fn create_disconnect_screen(
                 margin: UiRect::top(Val::Px(20.0)),
                 ..Default::default()
             },
-            Button::<OkButtonEvent> {
+            CosmosButton::<OkButtonEvent> {
                 button_styles: Some(ButtonStyles {
                     background_color: Srgba::hex("333333").unwrap().into(),
                     hover_background_color: Srgba::hex("232323").unwrap().into(),

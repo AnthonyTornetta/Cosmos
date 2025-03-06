@@ -155,7 +155,7 @@ fn create_ui(
 
                     p.spawn((
                         ReactorBlockReference(ev.0),
-                        crate::ui::components::button::Button::<ToggleReactorEvent> {
+                        crate::ui::components::button::CosmosButton::<ToggleReactorEvent> {
                             text: Some((
                                 if active { "DEACTIVATE" } else { "ACTIVATE" }.into(),
                                 font.clone(),
@@ -240,7 +240,7 @@ fn maintain_active_text(
     q_active: Query<(), With<ReactorActive>>,
     q_structure: Query<&Structure>,
     mut q_active_text: Query<(&mut Text, &ActiveText)>,
-    mut q_btn: Query<&mut crate::ui::components::button::Button<ToggleReactorEvent>>,
+    mut q_btn: Query<&mut crate::ui::components::button::CosmosButton<ToggleReactorEvent>>,
 ) {
     for (mut txt, active_text) in q_active_text.iter_mut() {
         let Ok(s) = q_structure.get(active_text.0.structure()) else {

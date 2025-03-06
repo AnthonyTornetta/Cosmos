@@ -22,7 +22,7 @@ pub trait ButtonEvent: Sized + Event + std::fmt::Debug {
 /// A UI element that will send out events (of type `T`) when it is pressed.
 ///
 /// This does NOT use the default bevy `Button` component.
-pub struct Button<T: ButtonEvent> {
+pub struct CosmosButton<T: ButtonEvent> {
     /// boo
     pub _phantom: PhantomData<T>,
     /// Interaction state of the button.
@@ -69,7 +69,7 @@ impl Default for ButtonStyles {
     }
 }
 
-impl<T: ButtonEvent> Default for Button<T> {
+impl<T: ButtonEvent> Default for CosmosButton<T> {
     fn default() -> Self {
         Self {
             _phantom: Default::default(),
@@ -84,9 +84,16 @@ impl<T: ButtonEvent> Default for Button<T> {
 #[derive(Component)]
 struct ButtonText(Entity);
 
-fn on_add_button<T: ButtonEvent>(mut commands: Commands, mut q_added_button: Query<(Entity, &Button<T>, &mut Node), Added<Button<T>>>) {
+fn on_add_button<T: ButtonEvent>(
+    mut commands: Commands,
+    mut q_added_button: Query<(Entity, &CosmosButton<T>, &mut Node), Added<CosmosButton<T>>>,
+) {
     for (ent, button, mut style) in q_added_button.iter_mut() {
         commands.entity(ent).insert(Interaction::default());
+
+        if let Some(bg_col) = button.button_styles.as_ref().map(|x| x.background_color) {
+            commands.entity(ent).insert(BackgroundColor(bg_col.into()));
+        }
 
         // horizontally + vertically center child text
         style.justify_content = JustifyContent::Center;
@@ -109,7 +116,7 @@ fn on_add_button<T: ButtonEvent>(mut commands: Commands, mut q_added_button: Que
 fn on_interact_button<T: ButtonEvent>(
     mut ev_writer: EventWriter<T>,
     mut q_added_button: Query<
-        (Entity, &Interaction, &mut Button<T>, &mut BackgroundColor, &Children),
+        (Entity, &Interaction, &mut CosmosButton<T>, &mut BackgroundColor, Option<&Children>),
         (Changed<Interaction>, Without<Disabled>),
     >,
     mut writer: TextUiWriter,
@@ -123,14 +130,16 @@ fn on_interact_button<T: ButtonEvent>(
                 Interaction::Pressed => btn_styles.press_background_color,
             };
 
-            if let Some(&text_child) = children.iter().find(|&x| q_has_text.contains(*x)) {
-                let color = match *interaction {
-                    Interaction::None => btn_styles.foreground_color,
-                    Interaction::Hovered => btn_styles.hover_foreground_color,
-                    Interaction::Pressed => btn_styles.press_foreground_color,
-                };
+            if let Some(children) = children {
+                if let Some(&text_child) = children.iter().find(|&x| q_has_text.contains(*x)) {
+                    let color = match *interaction {
+                        Interaction::None => btn_styles.foreground_color,
+                        Interaction::Hovered => btn_styles.hover_foreground_color,
+                        Interaction::Pressed => btn_styles.press_foreground_color,
+                    };
 
-                writer.for_each_color(text_child, |mut c| c.0 = color);
+                    writer.for_each_color(text_child, |mut c| c.0 = color);
+                }
             }
         }
 
@@ -149,18 +158,18 @@ fn on_change_button<T: ButtonEvent>(
     mut q_changed_button: Query<
         (
             Entity,
-            Ref<Button<T>>,
+            Ref<CosmosButton<T>>,
             Option<&ImageNode>,
             Option<&ButtonText>,
             &Interaction,
             &mut BackgroundColor,
         ),
-        Changed<Button<T>>,
+        Changed<CosmosButton<T>>,
     >,
     mut writer: TextUiWriter,
 ) {
     for (ent, btn, image, button_text, &interaction, mut bg_color) in q_changed_button.iter_mut().filter(|x| !x.1.is_added()) {
-        fn calc_text_color<T: ButtonEvent>(btn: &Button<T>, interaction: Interaction, text_style: &mut TextColor) {
+        fn calc_text_color<T: ButtonEvent>(btn: &CosmosButton<T>, interaction: Interaction, text_style: &mut TextColor) {
             if let Some(btn_styles) = &btn.button_styles {
                 text_style.0 = match interaction {
                     Interaction::None => btn_styles.foreground_color,

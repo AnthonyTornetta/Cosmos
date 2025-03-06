@@ -11,7 +11,7 @@ use crate::{
     netty::connect::HostConfig,
     ui::{
         components::{
-            button::{register_button, Button, ButtonEvent, ButtonStyles},
+            button::{register_button, ButtonEvent, ButtonStyles, CosmosButton},
             text_input::{InputType, TextInput},
         },
         font::DefaultFont,
@@ -111,7 +111,7 @@ fn create_main_menu(mut commands: Commands, default_font: Res<DefaultFont>, q_ui
                 align_self: AlignSelf::Center,
                 ..Default::default()
             },
-            Button::<ConnectButtonEvent> {
+            CosmosButton::<ConnectButtonEvent> {
                 button_styles: Some(ButtonStyles {
                     background_color: Srgba::hex("333333").unwrap().into(),
                     hover_background_color: Srgba::hex("232323").unwrap().into(),
@@ -204,7 +204,7 @@ fn create_main_menu(mut commands: Commands, default_font: Res<DefaultFont>, q_ui
                 margin: UiRect::top(Val::Px(20.0)),
                 ..Default::default()
             },
-            Button::<SettingsButtonEvent> {
+            CosmosButton::<SettingsButtonEvent> {
                 button_styles: Some(ButtonStyles {
                     background_color: Srgba::hex("333333").unwrap().into(),
                     hover_background_color: Srgba::hex("232323").unwrap().into(),
@@ -226,7 +226,7 @@ fn create_main_menu(mut commands: Commands, default_font: Res<DefaultFont>, q_ui
                 margin: UiRect::top(Val::Px(20.0)),
                 ..Default::default()
             },
-            Button::<QuitButtonEvent> {
+            CosmosButton::<QuitButtonEvent> {
                 button_styles: Some(ButtonStyles {
                     background_color: Srgba::hex("333333").unwrap().into(),
                     hover_background_color: Srgba::hex("232323").unwrap().into(),
