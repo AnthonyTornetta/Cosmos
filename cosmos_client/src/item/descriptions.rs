@@ -1,3 +1,5 @@
+//! Descriptions for [`Item`]s.
+
 use std::fs;
 
 use bevy::{prelude::*, text::FontStyle, utils::HashMap};
@@ -8,22 +10,36 @@ use cosmos_core::{
 };
 
 #[derive(Debug)]
-pub struct ColoredText {
+/// Indicates text that should be rendered with a specific style applied
+pub struct StyledText {
+    /// The text
     pub text: String,
+    /// The color
     pub color: Color,
+    /// The style
     pub style: FontStyle,
 }
 
 #[derive(Debug)]
+/// A description for an item
 pub enum ItemDescriptionTextEntry {
-    Normal(ColoredText),
-    Link { text: ColoredText, to: u16 },
+    /// Normal, non-interactable text
+    Normal(StyledText),
+    /// Clicking this will bring you to another [`ItemDescriptionTextEntry`]
+    Link {
+        /// The text to render
+        text: StyledText,
+        /// Which entry this text should link to
+        to: u16,
+    },
 }
 
 #[derive(Debug)]
+/// A description for an [`Item`]
 pub struct ItemDescription(pub Vec<ItemDescriptionTextEntry>);
 
 #[derive(Debug, Default, Resource)]
+/// All [`Item`]s mapped to their [`ItemDescription`].
 pub struct ItemDescriptions(HashMap<u16, ItemDescription>);
 
 fn load_descriptions(mut descriptions: ResMut<ItemDescriptions>, items: Res<Registry<Item>>) {
@@ -49,7 +65,7 @@ fn load_descriptions(mut descriptions: ResMut<ItemDescriptions>, items: Res<Regi
         // TODO: Parse desc
         descriptions.0.insert(
             item.id(),
-            ItemDescription(vec![ItemDescriptionTextEntry::Normal(ColoredText {
+            ItemDescription(vec![ItemDescriptionTextEntry::Normal(StyledText {
                 text: desc,
                 color: Color::WHITE,
                 style: FontStyle::Normal,

@@ -9,7 +9,7 @@ use bevy::{
         system::{Commands, Query, Res},
     },
     hierarchy::{BuildChildren, Parent},
-    log::{error, warn},
+    log::error,
     math::{Quat, Vec3},
     prelude::{in_state, Has},
     time::Time,

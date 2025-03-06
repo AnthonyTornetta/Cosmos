@@ -1,3 +1,5 @@
+//! Server faction logic
+
 use bevy::prelude::*;
 use cosmos_core::{
     faction::{Faction, FactionId, FactionSettings, Factions},

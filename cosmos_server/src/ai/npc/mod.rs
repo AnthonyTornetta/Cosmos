@@ -1,3 +1,4 @@
 use bevy::prelude::*;
 
-pub(super) fn register(app: &mut App) {}
+pub(super) fn _register(_app: &mut App) {}
+
