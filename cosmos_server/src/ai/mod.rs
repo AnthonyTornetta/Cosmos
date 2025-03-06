@@ -17,6 +17,7 @@ use crate::persistence::{
     SerializedData,
 };
 
+mod npc;
 mod pirate;
 
 #[derive(Component)]

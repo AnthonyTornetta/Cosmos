@@ -454,7 +454,7 @@ fn on_interact_reactor(
                             continue;
                         };
                         server.send_message(
-                            player.id(),
+                            player.client_id(),
                             NettyChannelServer::Reliable,
                             cosmos_encoder::serialize(&ServerReliableMessages::InvalidReactor {
                                 reason: "The reactor is missing required casing.".into(),
@@ -466,7 +466,7 @@ fn on_interact_reactor(
                             continue;
                         };
                         server.send_message(
-                            player.id(),
+                            player.client_id(),
                             NettyChannelServer::Reliable,
                             cosmos_encoder::serialize(&ServerReliableMessages::InvalidReactor {
                                 reason: "The reactor can only have 1 controller.".into(),
@@ -486,7 +486,7 @@ fn on_interact_reactor(
                     continue;
                 };
                 server.send_message(
-                    player.id(),
+                    player.client_id(),
                     NettyChannelServer::Reliable,
                     cosmos_encoder::serialize(&ServerReliableMessages::InvalidReactor {
                         reason: "Invalid bounds for the reactor - maximum of 11x11x11.".into(),

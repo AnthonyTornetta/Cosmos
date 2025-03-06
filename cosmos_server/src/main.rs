@@ -34,6 +34,7 @@ pub mod crafting;
 mod debug;
 mod economy;
 pub mod entities;
+pub mod faction;
 pub mod fluid;
 pub mod init;
 pub mod inventory;

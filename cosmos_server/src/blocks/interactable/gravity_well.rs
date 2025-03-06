@@ -21,6 +21,7 @@ use cosmos_core::{
         specific_blocks::gravity_well::GravityWell,
         Block,
     },
+    entities::EntityId,
     netty::{
         cosmos_encoder, server_replication::ReplicationMessage, sync::server_entity_syncing::RequestedEntityEvent,
         system_sets::NetworkingSystemsSet, NettyChannelServer,
@@ -33,10 +34,7 @@ use cosmos_core::{
 };
 use serde::{Deserialize, Serialize};
 
-use crate::persistence::{
-    make_persistent::{make_persistent, EntityIdManager, PersistentComponent},
-    EntityId,
-};
+use crate::persistence::make_persistent::{make_persistent, EntityIdManager, PersistentComponent};
 
 fn grav_well_handle_block_event(
     mut interact_events: EventReader<BlockInteractEvent>,

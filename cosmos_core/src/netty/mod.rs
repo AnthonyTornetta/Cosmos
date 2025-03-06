@@ -59,6 +59,8 @@ pub enum NettyChannelServer {
     ComponentReplication,
     /// Automatic syncing of events
     NettyEvent,
+    /// Syncing of resource data
+    Resource,
 }
 
 /// Network channels that clients send to the server
@@ -79,6 +81,8 @@ pub enum NettyChannelClient {
     NettyEvent,
     /// Automatic syncing of registries
     Registry,
+    /// Automatic syncing of resources
+    Resource,
 }
 
 impl From<NettyChannelClient> for u8 {
@@ -91,6 +95,7 @@ impl From<NettyChannelClient> for u8 {
             NettyChannelClient::ComponentReplication => 4,
             NettyChannelClient::NettyEvent => 5,
             NettyChannelClient::Registry => 6,
+            NettyChannelClient::Resource => 7,
         }
     }
 }
@@ -149,6 +154,13 @@ impl NettyChannelClient {
                     resend_time: Duration::from_millis(200),
                 },
             },
+            ChannelConfig {
+                channel_id: Self::Resource.into(),
+                max_memory_usage_bytes: MB,
+                send_type: SendType::ReliableOrdered {
+                    resend_time: Duration::from_millis(200),
+                },
+            },
         ]
     }
 }
@@ -167,6 +179,7 @@ impl From<NettyChannelServer> for u8 {
             NettyChannelServer::Shop => 8,
             NettyChannelServer::ComponentReplication => 9,
             NettyChannelServer::NettyEvent => 10,
+            NettyChannelServer::Resource => 11,
         }
     }
 }
@@ -243,6 +256,13 @@ impl NettyChannelServer {
             },
             ChannelConfig {
                 channel_id: Self::NettyEvent.into(),
+                max_memory_usage_bytes: 5 * MB,
+                send_type: SendType::ReliableOrdered {
+                    resend_time: Duration::from_millis(200),
+                },
+            },
+            ChannelConfig {
+                channel_id: Self::Resource.into(),
                 max_memory_usage_bytes: 5 * MB,
                 send_type: SendType::ReliableOrdered {
                     resend_time: Duration::from_millis(200),

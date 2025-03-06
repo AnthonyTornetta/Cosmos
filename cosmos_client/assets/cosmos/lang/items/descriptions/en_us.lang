@@ -1,0 +1,85 @@
+cosmos:basic_fabricator=Used to craft every item in the game (for now).
+
+cosmos:ship_core=The heart of any ship. Used to create and control a ship. Once this block is destroyed, the ship will start to melt down and become inoperable.
+cosmos:station_core=The heart of any station. Used to create a space station. Once this block is destroyed, the station will start to melt down.
+
+cosmos:passive_generator=Passively generates {energy}kW passively. A small amount of energy generation at no cost.
+cosmos:energy_cell=Can store up to {storage}kJ of energy.
+cosmos:reactor_controller=Every reactor needs one controller to provide fuel and activate the reactor.
+cosmos:reactor_casing=Used to create a casing around the [power cells](cosmos:reactor_power_cell) of a reactor. Can be used interchangably with [reactor windows](cosmos:reactor_window).
+cosmos:reactor_window=Used to create a see-through casing around the [power cells](cosmos:reactor_power_cell) of a reactor. Can be used interchangably with [reactor casing](cosmos:reactor_casing).
+cosmos:reactor_power_cell=Each power cell provides an additional {energy}kJ of generation to your reactor's total power generation. More cells will also increase the [fuel](cosmos:uranium_fuel_cell) consumption.
+
+cosmos:build_block=An essential block for anyone that wants to build a ship or station. Allows the player to enter "Build Mode", which allows for the creation of axis of symmetry and quick movement through their ship or station while building. Use the "x/y/z" keys to create axis of symmetry, and shift + "x/y/z" to remove them.
+
+cosmos:gravity_well=Float no more! With the power of gravitron crystals, your ship or station can now exert its own opt-in gravity field! Simply interact with this block to join it, and interact again to leave it!
+
+cosmos:plasma_drill=Used to mine asteroids, planets, or melting down structures. Can harvest the blocks and insert them both into the pilot's inventory and any available [storage](cosmos:storage) units available on the ship.
+cosmos:laser_cannon=Fire compact lasers (highly compressed photon beams) at all that oppose you! Lasers are great at damaging shields, and are moderately effective against ship hull. The longer the line of cannons, the more damage each laser will do. Put colored glass in front to color your lasers!
+cosmos:missile_launcher=Fires [missiles](cosmos:missile) at your targets! These can lock onto moving targets, making long-range fights much easier. This requires [missiles](cosmos:missile) in a [storage](cosmos:storage) somewhere on the ship to fire. Missiles deal very little damage to shields, but substantial damage to blocks.
+cosmos:ship_dock=Allows one ship to dock (become attached) to another. The docking ship must line its dock block up with the ship it wishes to dock to's block.
+cosmos:missile=Ammunition for the [missile launcher](cosmos:missile_launcher).
+
+cosmos:storage=Used to store items.
+
+cosmos:shield_projector=Projects a shield in a sphere. More shield projectors touching each other creates a stronger shield. The bigger the shield projectors stretch, the bigger the circle projected will be. Use [shield generators](cosmos:shield_generator) to generate the shield.
+cosmos:shield_generator=Uses power to generate shielding used by [shield projectors](cosmos:shield_projector). Generation speed is based on the number of shield projectors adjacent to this block.
+
+cosmos:thruster=Gives your ship the ability to generate thrust and accelerate. More thrusters provides a greater ability to maneuver your ship around quickly.
+
+cosmos:light_red=A great way to light up any structure.
+cosmos:light_orange=A great way to light up any structure.
+cosmos:light_yellow=A great way to light up any structure.
+cosmos:light_green=A great way to light up any structure.
+cosmos:light_mint=A great way to light up any structure.
+cosmos:light_cyan=A great way to light up any structure.
+cosmos:light_aqua=A great way to light up any structure.
+cosmos:light_blue=A great way to light up any structure.
+cosmos:light_purple=A great way to light up any structure.
+cosmos:light_magenta=A great way to light up any structure.
+cosmos:light_pink=A great way to light up any structure.
+cosmos:light_brown=A great way to light up any structure.
+cosmos:light_black=A great way to light up any structure.
+cosmos:light_dark_grey=A great way to light up any structure.
+cosmos:light_grey=A great way to light up any structure.
+cosmos:light_light_grey=A great way to light up any structure.
+cosmos:light_white=A great way to light up any structure.
+
+cosmos:fan=Decorative block with a spinning fan blade.
+
+cosmos:glass_red=[Ship hull](cosmos:ship_hull_red), but see-through.
+cosmos:glass_orange=[Ship hull](cosmos:ship_hull_orange), but see-through.
+cosmos:glass_yellow=[Ship hull](cosmos:ship_hull_yellow), but see-through.
+cosmos:glass_green=[Ship hull](cosmos:ship_hull_green), but see-through.
+cosmos:glass_mint=[Ship hull](cosmos:ship_hull_mint), but see-through.
+cosmos:glass_cyan=[Ship hull](cosmos:ship_hull_cyan), but see-through.
+cosmos:glass_aqua=[Ship hull](cosmos:ship_hull_aqua), but see-through.
+cosmos:glass_blue=[Ship hull](cosmos:ship_hull_blue), but see-through.
+cosmos:glass_purple=[Ship hull](cosmos:ship_hull_purple), but see-through.
+cosmos:glass_magenta=[Ship hull](cosmos:ship_hull_magenta), but see-through.
+cosmos:glass_pink=[Ship hull](cosmos:ship_hull_pink), but see-through.
+cosmos:glass_brown=[Ship hull](cosmos:ship_hull_brown), but see-through.
+cosmos:glass_black=[Ship hull](cosmos:ship_hull_black), but see-through.
+cosmos:glass_dark_grey=[Ship hull](cosmos:ship_hull_dark_grey), but see-through.
+cosmos:glass_grey=[Ship hull](cosmos:ship_hull_grey), but see-through.
+cosmos:glass_light_grey=[Ship hull](cosmos:ship_hull_light_grey), but see-through.
+cosmos:glass_white=[Ship hull](cosmos:ship_hull_white), but see-through.
+
+cosmos:ship_hull_red=A sturdy piece of armor - lightweight yet durable. An essential part of any [ship](cosmos:ship_core) or [station](cosmos:station_core).
+cosmos:ship_hull_orange=A sturdy piece of armor - lightweight yet durable. An essential part of any [ship](cosmos:ship_core) or [station](cosmos:station_core).
+cosmos:ship_hull_yellow=A sturdy piece of armor - lightweight yet durable. An essential part of any [ship](cosmos:ship_core) or [station](cosmos:station_core).
+cosmos:ship_hull_green=A sturdy piece of armor - lightweight yet durable. An essential part of any [ship](cosmos:ship_core) or [station](cosmos:station_core).
+cosmos:ship_hull_mint=A sturdy piece of armor - lightweight yet durable. An essential part of any [ship](cosmos:ship_core) or [station](cosmos:station_core).
+cosmos:ship_hull_cyan=A sturdy piece of armor - lightweight yet durable. An essential part of any [ship](cosmos:ship_core) or [station](cosmos:station_core).
+cosmos:ship_hull_aqua=A sturdy piece of armor - lightweight yet durable. An essential part of any [ship](cosmos:ship_core) or [station](cosmos:station_core).
+cosmos:ship_hull_blue=A sturdy piece of armor - lightweight yet durable. An essential part of any [ship](cosmos:ship_core) or [station](cosmos:station_core).
+cosmos:ship_hull_purple=A sturdy piece of armor - lightweight yet durable. An essential part of any [ship](cosmos:ship_core) or [station](cosmos:station_core).
+cosmos:ship_hull_magenta=A sturdy piece of armor - lightweight yet durable. An essential part of any [ship](cosmos:ship_core) or [station](cosmos:station_core).
+cosmos:ship_hull_pink=A sturdy piece of armor - lightweight yet durable. An essential part of any [ship](cosmos:ship_core) or [station](cosmos:station_core).
+cosmos:ship_hull_brown=A sturdy piece of armor - lightweight yet durable. An essential part of any [ship](cosmos:ship_core) or [station](cosmos:station_core).
+cosmos:ship_hull_black=A sturdy piece of armor - lightweight yet durable. An essential part of any [ship](cosmos:ship_core) or [station](cosmos:station_core).
+cosmos:ship_hull_dark_grey=A sturdy piece of armor - lightweight yet durable. An essential part of any [ship](cosmos:ship_core) or [station](cosmos:station_core).
+cosmos:ship_hull_grey=A sturdy piece of armor - lightweight yet durable. An essential part of any [ship](cosmos:ship_core) or [station](cosmos:station_core).
+cosmos:ship_hull_light_grey=A sturdy piece of armor - lightweight yet durable. An essential part of any [ship](cosmos:ship_core) or [station](cosmos:station_core).
+cosmos:ship_hull_white=A sturdy piece of armor - lightweight yet durable. An essential part of any [ship](cosmos:ship_core) or [station](cosmos:station_core).
+

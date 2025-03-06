@@ -20,13 +20,14 @@ use bevy_rapier3d::prelude::Velocity;
 
 use cosmos_core::{
     ecs::NeedsDespawned,
+    entities::EntityId,
     netty::cosmos_encoder,
     persistence::LoadingDistance,
     physics::location::{Location, LocationPhysicsSet, SetPosition},
     structure::loading::StructureLoadingSet,
 };
 
-use super::{EntityId, PreviousSaveFileIdentifier, SaveFileIdentifier, SaveFileIdentifierType, SerializedData};
+use super::{PreviousSaveFileIdentifier, SaveFileIdentifier, SaveFileIdentifierType, SerializedData};
 
 #[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
 /// Put anything related to loading entities in from serialized data into this set

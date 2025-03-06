@@ -59,6 +59,8 @@ mod server_syncing;
 pub mod events;
 /// Syncing of registries from server -> client
 pub mod registry;
+/// Syncing of resources from server -> client
+pub mod resources;
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
 /// Internally used but public because I'm bad
@@ -264,6 +266,7 @@ pub(super) fn register<T: States + Clone + Copy + FreelyMutableState>(app: &mut 
     create_registry::<SyncedComponentId>(app, "cosmos:syncable_components");
     sync_registry::<SyncedComponentId>(app);
     registry::register(app, registry_syncing);
+    resources::register(app);
     events::register(app);
 
     app.add_event::<GotComponentToSyncEvent>().add_event::<GotComponentToRemoveEvent>();

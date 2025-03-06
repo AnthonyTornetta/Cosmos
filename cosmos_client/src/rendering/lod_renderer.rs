@@ -457,7 +457,7 @@ fn poll_rendering_lods(
                     unreachable!();
                 };
 
-                let is_clean = to_keep_locations.iter().any(|&x| x == transform.translation);
+                let is_clean = to_keep_locations.contains(&transform.translation);
                 if is_clean {
                     structure_meshes_component.push(mesh_entity);
                 } else {

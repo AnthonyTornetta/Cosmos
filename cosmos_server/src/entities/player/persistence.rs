@@ -10,7 +10,10 @@ use bevy_rapier3d::prelude::*;
 use cosmos_core::{
     chat::ServerSendChatMessageEvent,
     economy::Credits,
-    entities::player::{creative::Creative, Player},
+    entities::{
+        player::{creative::Creative, Player},
+        EntityId,
+    },
     inventory::{itemstack::ItemShouldHaveData, Inventory},
     item::Item,
     netty::{
@@ -38,7 +41,7 @@ use crate::{
     persistence::{
         loading::{LoadingSystemSet, NeedsLoaded, LOADING_SCHEDULE},
         saving::{calculate_sfi, NeedsSaved, SavingSystemSet, SAVING_SCHEDULE},
-        EntityId, SaveFileIdentifier, SerializedData,
+        SaveFileIdentifier, SerializedData,
     },
     physics::assign_player_world,
     settings::ServerSettings,
@@ -285,7 +288,7 @@ fn finish_loading_player(
             ecmds.insert(Creative);
         }
 
-        lobby.add_player(load_player.id(), player_entity);
+        lobby.add_player(load_player.client_id(), player_entity);
 
         let netty_body = NettyRigidBody::new(
             Some(*velocity),
@@ -297,14 +300,14 @@ fn finish_loading_player(
         let msg = cosmos_encoder::serialize(&ServerReliableMessages::PlayerCreate {
             entity: player_entity,
             parent: maybe_parent.map(|x| x.get()),
-            id: load_player.id(),
+            id: load_player.client_id(),
             name: load_player.name().into(),
             body: netty_body,
             render_distance: None,
         });
 
         server.send_message(
-            load_player.id(),
+            load_player.client_id(),
             NettyChannelServer::Reliable,
             cosmos_encoder::serialize(&ServerReliableMessages::MOTD {
                 motd: "Welcome to the server!".into(),
@@ -320,7 +323,7 @@ fn finish_loading_player(
 
         evw_player_join.send(PlayerConnectedEvent {
             player_entity,
-            client_id: load_player.id(),
+            client_id: load_player.client_id(),
         });
 
         evw_sync_registries.send(SyncRegistriesEvent { player_entity });

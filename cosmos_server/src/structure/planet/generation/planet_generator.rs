@@ -8,7 +8,7 @@ use bevy::{
 use bevy_renet2::renet2::{ClientId, RenetServer};
 use cosmos_core::{
     ecs::NeedsDespawned,
-    entities::player::Player,
+    entities::{player::Player, EntityId},
     netty::{
         cosmos_encoder, server_reliable_messages::ServerReliableMessages, system_sets::NetworkingSystemsSet, NettyChannelServer,
         NoSendEntity,
@@ -27,7 +27,7 @@ use cosmos_core::{
 use crate::{
     persistence::{
         saving::{NeedsSaved, SavingSystemSet, SAVING_SCHEDULE},
-        EntityId, SaveFileIdentifier,
+        SaveFileIdentifier,
     },
     structure::{
         persistence::BlockDataNeedsSaved,

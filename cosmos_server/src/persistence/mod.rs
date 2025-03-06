@@ -1,7 +1,6 @@
 //! Handles both the saving & loading of entities on the server
 
 use std::{
-    fmt::Display,
     fs,
     sync::{Arc, Mutex},
 };
@@ -11,10 +10,10 @@ use bevy::{
     reflect::Reflect,
     utils::{HashMap, HashSet},
 };
-use rand::{distributions::Alphanumeric, Rng};
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
 use cosmos_core::{
+    entities::EntityId,
     physics::location::{Location, Sector},
     structure::chunk::netty::{DeserializationError, SaveData},
 };
@@ -25,19 +24,6 @@ pub mod loading;
 pub mod make_persistent;
 pub mod player_loading;
 pub mod saving;
-
-#[derive(Component, Debug, Reflect, Serialize, Deserialize, PartialEq, Eq, Clone, Hash)]
-/// NOT ALL ENTITIES WILL HAVE THIS ON THEM!
-///
-/// Only entities that have been loaded or saved will have this. This is a unique identifier for
-/// this entity.
-pub struct EntityId(String);
-
-impl Display for EntityId {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_str(&self.0)
-    }
-}
 
 #[derive(Debug, Resource, Default, Clone)]
 /// This is a resource that caches the saved entities of different sectors that a player has been near.
@@ -74,31 +60,6 @@ impl SectorsCache {
             .lock()
             .expect("Failed to unlock")
             .insert((entity_id, load_distance));
-    }
-}
-
-impl EntityId {
-    /// Creates a new EntityID.
-    ///
-    /// * `id` This should be unique to only this entity. If this isn't unique, the entity may not be loaded/saved correctly
-    pub fn new(id: impl Into<String>) -> Self {
-        Self(id.into())
-    }
-
-    /// Creates a new EntityId
-    pub fn generate() -> Self {
-        Self::new(
-            rand::thread_rng()
-                .sample_iter(&Alphanumeric)
-                .take(64)
-                .map(char::from)
-                .collect::<String>(),
-        )
-    }
-
-    /// Returns the entity id as a string
-    pub fn as_str(&self) -> &str {
-        self.0.as_str()
     }
 }
 
@@ -181,10 +142,10 @@ impl SaveFileIdentifier {
     /// Gets the save file name without the .cent extension, but not the whole path
     fn get_save_file_name(&self) -> String {
         match &self.identifier_type {
-            SaveFileIdentifierType::Base(entity, _, load_distance) => load_distance
-                .map(|ld| format!("{ld}_{}", entity.as_str()))
-                .unwrap_or(entity.as_str().to_owned()),
-            SaveFileIdentifierType::SubEntity(_, entity_id) => entity_id.as_str().to_owned(),
+            SaveFileIdentifierType::Base(entity, _, load_distance) => {
+                load_distance.map(|ld| format!("{ld}_{entity}")).unwrap_or(entity.to_string())
+            }
+            SaveFileIdentifierType::SubEntity(_, entity_id) => entity_id.to_string(),
             SaveFileIdentifierType::BelongsTo(_, name) => name.to_owned(),
         }
     }
@@ -192,8 +153,8 @@ impl SaveFileIdentifier {
     /// Gets the save file name without the .cent extension, but not the whole path
     fn get_save_file_name_no_load_distance(&self) -> String {
         match &self.identifier_type {
-            SaveFileIdentifierType::Base(entity, _, _) => entity.as_str().to_owned(),
-            SaveFileIdentifierType::SubEntity(_, entity_id) => entity_id.as_str().to_owned(),
+            SaveFileIdentifierType::Base(entity, _, _) => entity.to_string(),
+            SaveFileIdentifierType::SubEntity(_, entity_id) => entity_id.to_string(),
             SaveFileIdentifierType::BelongsTo(_, name) => name.to_owned(),
         }
     }

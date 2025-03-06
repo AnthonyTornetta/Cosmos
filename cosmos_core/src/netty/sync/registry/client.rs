@@ -1,7 +1,10 @@
 //! Handles client-side registry syncing logic
 
 use crate::{
-    netty::{cosmos_encoder, server_registry::RegistrySyncing, system_sets::NetworkingSystemsSet, NettyChannelClient, NettyChannelServer},
+    netty::{
+        cosmos_encoder, server_registry::RegistrySyncing, sync::resources::client::ResourcesLeftToSync, system_sets::NetworkingSystemsSet,
+        NettyChannelClient, NettyChannelServer,
+    },
     registry::{identifiable::Identifiable, Registry},
 };
 use bevy::{
@@ -118,17 +121,20 @@ pub(super) fn register<T: States + FreelyMutableState + Clone + Copy>(
 
     app.configure_sets(Update, TransitionStateSet::TransitionState);
 
-    let transition_state =
-        move |mut client: ResMut<RenetClient>, mut state_changer: ResMut<NextState<T>>, loading_registries: Res<RegistriesLeftToSync>| {
-            if loading_registries.0.is_some_and(|x| x == 0) {
-                info!("Got all registries from server - loading world!");
-                state_changer.set(loading_world_state);
-                client.send_message(
-                    NettyChannelClient::Registry,
-                    cosmos_encoder::serialize(&crate::netty::client_registry::RegistrySyncing::FinishedReceivingRegistries),
-                )
-            }
-        };
+    let transition_state = move |mut client: ResMut<RenetClient>,
+                                 mut state_changer: ResMut<NextState<T>>,
+                                 loading_registries: Res<RegistriesLeftToSync>,
+                                 // TODO: This is very sphegetti, please have a better way of doing this.
+                                 loading_resources: Res<ResourcesLeftToSync>| {
+        if loading_registries.0.is_some_and(|x| x == 0) && loading_resources.as_ref().0.is_some_and(|x| x == 0) {
+            info!("Got all registries & resources from server - loading world!");
+            state_changer.set(loading_world_state);
+            client.send_message(
+                NettyChannelClient::Registry,
+                cosmos_encoder::serialize(&crate::netty::client_registry::RegistrySyncing::FinishedReceivingRegistries),
+            )
+        }
+    };
 
     app.add_systems(
         Update,
@@ -137,6 +143,7 @@ pub(super) fn register<T: States + FreelyMutableState + Clone + Copy>(
             transition_state.in_set(TransitionStateSet::TransitionState),
         )
             .run_if(resource_exists::<RegistriesLeftToSync>)
+            .run_if(resource_exists::<ResourcesLeftToSync>)
             .chain()
             .run_if(in_state(loading_data_state)),
     )

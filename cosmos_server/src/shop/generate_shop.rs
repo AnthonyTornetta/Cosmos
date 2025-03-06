@@ -3,12 +3,14 @@
 use std::time::Duration;
 
 use bevy::{
+    log::error,
     prelude::{in_state, App, Commands, EventReader, IntoSystemConfigs, Query, Res, ResMut, Update, Vec3, With},
     time::common_conditions::on_timer,
     utils::HashSet,
 };
 use cosmos_core::{
     entities::player::Player,
+    faction::Factions,
     physics::location::{Location, Sector, SectorUnit, SECTOR_DIMENSIONS, SYSTEM_SECTORS},
     state::GameState,
     structure::station::station_builder::STATION_LOAD_DISTANCE,
@@ -98,7 +100,12 @@ fn generate_shops(
     }
 }
 
-fn spawn_shop(q_players: Query<&Location, With<Player>>, mut commands: Commands, mut systems: ResMut<UniverseSystems>) {
+fn spawn_shop(
+    q_players: Query<&Location, With<Player>>,
+    mut commands: Commands,
+    mut systems: ResMut<UniverseSystems>,
+    factions: Res<Factions>,
+) {
     let mut generated_shops = HashSet::new();
 
     for player_loc in q_players.iter() {
@@ -123,11 +130,17 @@ fn spawn_shop(q_players: Query<&Location, With<Player>>, mut commands: Commands,
                 continue;
             }
 
-            commands.spawn(NeedsBlueprintLoaded {
+            let mut ecmds = commands.spawn(NeedsBlueprintLoaded {
                 path: "default_blueprints/shop/default.bp".into(),
                 rotation: station_rot,
                 spawn_at: station_loc,
             });
+
+            if let Some(fac) = factions.from_name("Merchant Federation") {
+                ecmds.insert(*fac.id());
+            } else {
+                error!("No merchant federation faction!");
+            }
 
             generated_shops.insert(station_loc.sector());
         }
