@@ -35,11 +35,6 @@ impl EntityId {
     pub fn generate() -> Self {
         Self::new(Uuid::new_v4())
     }
-
-    /// Returns the entity id as a string
-    pub fn to_string(&self) -> String {
-        String::from(self.0)
-    }
 }
 
 pub(super) fn register(app: &mut App) {

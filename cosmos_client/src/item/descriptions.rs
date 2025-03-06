@@ -51,7 +51,7 @@ fn load_descriptions(mut descriptions: ResMut<ItemDescriptions>, items: Res<Regi
     for x in lang_file
         .split("\n")
         .map(|x| x.trim())
-        .filter(|x| x.len() != 0 && !x.starts_with("#"))
+        .filter(|x| !x.is_empty() && !x.starts_with("#"))
     {
         let mut splt = x.split("=");
         let item_id = splt.next().unwrap();

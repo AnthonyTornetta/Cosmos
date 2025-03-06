@@ -47,7 +47,7 @@ impl Faction {
     /// Creates a new faction
     ///
     /// * `relationships` Non-specified factions will be assumed netural, unless the
-    /// [`FactionSettings`] specifies otherwise.
+    ///   [`FactionSettings`] specifies otherwise.
     pub fn new(
         name: String,
         players: Vec<EntityId>,
@@ -94,19 +94,15 @@ impl Faction {
                 *rel
             } else if let Some(rel) = other_faction.relationships.get(&self.id) {
                 *rel
-            } else {
-                if self.settings.default_enemy || other_faction.settings.default_enemy {
-                    FactionRelation::Enemy
-                } else {
-                    FactionRelation::Neutral
-                }
-            }
-        } else {
-            if self.settings.default_enemy {
+            } else if self.settings.default_enemy || other_faction.settings.default_enemy {
                 FactionRelation::Enemy
             } else {
                 FactionRelation::Neutral
             }
+        } else if self.settings.default_enemy {
+            FactionRelation::Enemy
+        } else {
+            FactionRelation::Neutral
         }
     }
 }

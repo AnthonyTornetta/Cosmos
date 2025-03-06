@@ -11,11 +11,11 @@ use std::fs;
 use crate::persistence::make_persistent::{make_persistent, DefaultPersistentComponent};
 
 fn load_factions(mut commands: Commands) {
-    let factions = if let Some(data) = fs::read("world/factions.bin").ok() {
+    let factions = if let Ok(data) = fs::read("world/factions.bin") {
         // We want to panic if something is corrupted
-        let factions = cosmos_encoder::deserialize::<Factions>(&data).expect("Failed to deserialize faction data in world/factions.bin.");
+        
 
-        factions
+        cosmos_encoder::deserialize::<Factions>(&data).expect("Failed to deserialize faction data in world/factions.bin.")
     } else {
         info!("Generating factions!");
 

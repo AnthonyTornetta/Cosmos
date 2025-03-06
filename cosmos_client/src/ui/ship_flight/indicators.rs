@@ -257,8 +257,8 @@ fn added(
     mut commands: Commands,
 ) {
     ship_query.iter().for_each(|(ent, fac)| {
-        let player_faction = q_local_faction.get_single().ok().map(|x| factions.from_id(x)).flatten();
-        let relation = Faction::relation_with_option(fac.map(|x| factions.from_id(x)).flatten(), player_faction);
+        let player_faction = q_local_faction.get_single().ok().and_then(|x| factions.from_id(x));
+        let relation = Faction::relation_with_option(fac.and_then(|x| factions.from_id(x)), player_faction);
 
         commands.entity(ent).insert(IndicatorSettings {
             color: Srgba::hex(match relation {
@@ -273,8 +273,8 @@ fn added(
         });
     });
     station_query.iter().for_each(|(ent, fac)| {
-        let player_faction = q_local_faction.get_single().ok().map(|x| factions.from_id(x)).flatten();
-        let relation = Faction::relation_with_option(fac.map(|x| factions.from_id(x)).flatten(), player_faction);
+        let player_faction = q_local_faction.get_single().ok().and_then(|x| factions.from_id(x));
+        let relation = Faction::relation_with_option(fac.and_then(|x| factions.from_id(x)), player_faction);
 
         commands.entity(ent).insert(IndicatorSettings {
             color: Srgba::hex(match relation {
