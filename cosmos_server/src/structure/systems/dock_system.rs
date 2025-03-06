@@ -235,6 +235,13 @@ fn on_active(
             unreachable!("Guarenteed because only entities that are in this list are valid structures from above for loop.");
         };
 
+        if let Ok(to_docked) = q_docked.get(docked.to) {
+            if to_docked.to == entity {
+                // The other ship is already docked to this - don't re-dock.
+                continue;
+            }
+        }
+
         let context = context_access.get(*pw);
 
         let (min, max) = computed_total_aabb(
