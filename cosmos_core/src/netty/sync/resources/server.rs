@@ -2,7 +2,7 @@
 
 use crate::{
     entities::player::Player,
-    netty::{cosmos_encoder, system_sets::NetworkingSystemsSet, NettyChannelServer},
+    netty::{cosmos_encoder, sync::registry::server::SyncRegistriesEvent, system_sets::NetworkingSystemsSet, NettyChannelServer},
     state::GameState,
 };
 use bevy::{
@@ -13,7 +13,7 @@ use bevy::{
         system::{Query, Res, ResMut, Resource},
     },
     log::{info, warn},
-    prelude::{resource_exists_and_changed, Deref, Entity, Event, IntoSystemSetConfigs, SystemSet},
+    prelude::{resource_exists_and_changed, Deref, IntoSystemSetConfigs, SystemSet},
     state::condition::in_state,
 };
 use bevy_renet2::renet2::RenetServer;
@@ -24,18 +24,10 @@ use super::{ResourceSyncingMessage, SyncableResource};
 /// Keeps track of the number of registries a client must be sent to be considered done loading registries.
 struct NumResourcesToSync(u64);
 
-#[derive(Event)]
-/// This event signifies that this player needs to have their registries mapped to the server's
-/// registries. This should be sent whenever the player initially joins.
-pub struct SyncResourceEvent {
-    /// The player's entity
-    pub player_entity: Entity,
-}
-
 fn sync<T: SyncableResource>(
     q_player: Query<&Player>,
     mut server: ResMut<RenetServer>,
-    mut ev_reader: EventReader<SyncResourceEvent>,
+    mut ev_reader: EventReader<SyncRegistriesEvent>,
     resource: Res<T>,
 ) {
     for ev in ev_reader.read() {
@@ -72,7 +64,7 @@ fn incr_resources_to_sync(mut n_resources: ResMut<NumResourcesToSync>) {
 fn send_number_of_resources(
     q_player: Query<&Player>,
     mut server: ResMut<RenetServer>,
-    mut ev_reader: EventReader<SyncResourceEvent>,
+    mut ev_reader: EventReader<SyncRegistriesEvent>,
     n_resources: Res<NumResourcesToSync>,
 ) {
     for ev in ev_reader.read() {
@@ -108,7 +100,6 @@ pub(super) fn sync_resource<T: SyncableResource>(app: &mut App) {
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_event::<SyncResourceEvent>();
     app.configure_sets(
         Startup,
         IncrementResourcesSet::Increment.ambiguous_with(IncrementResourcesSet::Increment),

@@ -33,19 +33,21 @@ pub(crate) struct ResourcesLeftToSync(pub Option<i64>);
 fn sync<T: SyncableResource>(
     mut commands: Commands,
     mut ev_reader: EventReader<ReceivedResourceEvent>,
-    mut left_to_sync: ResMut<ResourcesLeftToSync>,
+    mut left_to_sync: Option<ResMut<ResourcesLeftToSync>>,
 ) {
     for ev in ev_reader.read() {
         if ev.resource_name != T::unlocalized_name() {
             continue;
         }
 
-        if left_to_sync.0.unwrap_or(0) != 0 {
-            let new_amt = left_to_sync.0.expect("This should never happen") - 1;
+        if let Some(left_to_sync) = left_to_sync.as_mut() {
+            if left_to_sync.0.unwrap_or(0) != 0 {
+                let new_amt = left_to_sync.0.expect("This should never happen") - 1;
 
-            left_to_sync.0 = Some(new_amt);
+                left_to_sync.0 = Some(new_amt);
 
-            info!("Got resource from server: {}! Need {} more.", ev.resource_name, new_amt);
+                info!("Got resource from server: {}! Need {} more.", ev.resource_name, new_amt);
+            }
         }
 
         let Ok(new_resource) = bincode::deserialize::<T>(&ev.serialized_data) else {
@@ -81,7 +83,7 @@ pub(super) fn sync_resource<T: SyncableResource>(app: &mut App) {
 fn resources_listen_netty(
     mut client: ResMut<RenetClient>,
     mut ev_writer: EventWriter<ReceivedResourceEvent>,
-    mut resource_count: ResMut<ResourcesLeftToSync>,
+    mut resource_count: Option<ResMut<ResourcesLeftToSync>>,
 ) {
     while let Some(message) = client.receive_message(NettyChannelServer::Resource) {
         let msg: ResourceSyncingMessage = cosmos_encoder::deserialize(&message).expect("Unable to parse resource sync from server");
@@ -89,7 +91,11 @@ fn resources_listen_netty(
         match msg {
             ResourceSyncingMessage::ResourceCount(count) => {
                 info!("Need to load {count} resources from server.");
-                resource_count.0 = Some(count as i64 + resource_count.0.unwrap_or(0));
+                if let Some(resource_count) = resource_count.as_mut() {
+                    resource_count.0 = Some(count as i64 + resource_count.0.unwrap_or(0));
+                } else {
+                    error!("Received resource count after already fully connected!");
+                }
             }
             ResourceSyncingMessage::Resource { data, unlocalized_name } => {
                 ev_writer.send(ReceivedResourceEvent {

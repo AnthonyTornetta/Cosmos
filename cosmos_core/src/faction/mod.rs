@@ -25,7 +25,7 @@ pub struct Faction {
 /// Links this entity to the faction its apart of.
 pub struct FactionId(u64);
 
-#[derive(Resource, Reflect, Clone, Serialize, Deserialize, Debug)]
+#[derive(Resource, Reflect, Clone, Serialize, Deserialize, Debug, Default)]
 pub struct Factions(HashMap<u64, Faction>);
 
 impl SyncableResource for Factions {
