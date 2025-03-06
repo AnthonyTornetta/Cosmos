@@ -1,7 +1,6 @@
 //! Handles both the saving & loading of entities on the server
 
 use std::{
-    fmt::Display,
     fs,
     sync::{Arc, Mutex},
 };
@@ -11,7 +10,6 @@ use bevy::{
     reflect::Reflect,
     utils::{HashMap, HashSet},
 };
-use rand::{distributions::Alphanumeric, Rng};
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
 use cosmos_core::{
@@ -145,9 +143,9 @@ impl SaveFileIdentifier {
     fn get_save_file_name(&self) -> String {
         match &self.identifier_type {
             SaveFileIdentifierType::Base(entity, _, load_distance) => load_distance
-                .map(|ld| format!("{ld}_{}", entity.as_str()))
-                .unwrap_or(entity.as_str().to_owned()),
-            SaveFileIdentifierType::SubEntity(_, entity_id) => entity_id.as_str().to_owned(),
+                .map(|ld| format!("{ld}_{}", entity.to_string()))
+                .unwrap_or(entity.to_string()),
+            SaveFileIdentifierType::SubEntity(_, entity_id) => entity_id.to_string(),
             SaveFileIdentifierType::BelongsTo(_, name) => name.to_owned(),
         }
     }
@@ -155,8 +153,8 @@ impl SaveFileIdentifier {
     /// Gets the save file name without the .cent extension, but not the whole path
     fn get_save_file_name_no_load_distance(&self) -> String {
         match &self.identifier_type {
-            SaveFileIdentifierType::Base(entity, _, _) => entity.as_str().to_owned(),
-            SaveFileIdentifierType::SubEntity(_, entity_id) => entity_id.as_str().to_owned(),
+            SaveFileIdentifierType::Base(entity, _, _) => entity.to_string(),
+            SaveFileIdentifierType::SubEntity(_, entity_id) => entity_id.to_string(),
             SaveFileIdentifierType::BelongsTo(_, name) => name.to_owned(),
         }
     }

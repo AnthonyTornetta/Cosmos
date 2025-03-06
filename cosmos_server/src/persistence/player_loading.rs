@@ -25,6 +25,7 @@ use cosmos_core::{
     state::GameState,
 };
 use futures_lite::future;
+use uuid::Uuid;
 use walkdir::{DirEntry, WalkDir};
 
 use super::{loading::NeedsLoaded, saving::NeedsSaved, EntityId, SaveFileIdentifier, SectorsCache};
@@ -163,7 +164,7 @@ fn load_near(
                                             }
                                         }
 
-                                        let entity_id = EntityId::new(entity_id);
+                                        let entity_id = EntityId::new(Uuid::parse_str(entity_id).expect("Failed to parse entity id!"));
 
                                         sectors_cache.insert(sector, entity_id.clone(), load_distance);
 
@@ -213,7 +214,7 @@ fn load_all(base: SaveFileIdentifier, file: DirEntry, to_load: &mut Vec<SaveFile
     if path.extension() == Some(OsStr::new("cent")) {
         let entity_information = path.file_stem().expect("Failed to get file stem").to_str().expect("to_str failed");
 
-        let entity_id = EntityId::new(entity_information.to_owned());
+        let entity_id = EntityId::new(Uuid::parse_str(entity_information).expect("Failed to parse entity id!"));
 
         let sfi = SaveFileIdentifier::sub_entity(base, entity_id);
 

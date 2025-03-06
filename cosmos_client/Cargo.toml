@@ -80,5 +80,6 @@ clap = { workspace = true, features = ["derive"] }
 bevy_easy_compute = { workspace = true }
 bevy_obj = { workspace = true }
 bevy_hanabi = { workspace = true }
+uuid = { workspace = true }
 # iyes_perf_ui = { workspace = true }
 # bevy_mod_billboard = { workspace = true }
