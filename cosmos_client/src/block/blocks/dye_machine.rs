@@ -23,7 +23,6 @@ use crate::{
             button::{register_button, ButtonEvent, ButtonStyles, CosmosButton},
             window::GuiWindow,
         },
-        font::DefaultFont,
         OpenMenu, UiSystemSet,
     },
 };
@@ -32,7 +31,6 @@ use crate::{
 struct OpenDyeUi;
 
 fn open_dye_ui(
-    font: Res<DefaultFont>,
     q_local_player: Query<Entity, With<LocalPlayer>>,
     mut commands: Commands,
     mut evr_open_ui: EventReader<OpenDyeMachine>,

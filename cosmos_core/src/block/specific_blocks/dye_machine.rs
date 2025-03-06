@@ -34,7 +34,9 @@ impl NettyEvent for OpenDyeMachine {
 #[derive(Event, Debug, Serialize, Deserialize)]
 /// Event that tells the client to open a Dye Machine block
 pub struct DyeBlock {
+    /// The block that contains the dye machine
     pub block: StructureBlock,
+    /// The color you want the block to be (must be from [`crate::block::blocks::COLORS`])
     pub color: Srgba,
 }
 
