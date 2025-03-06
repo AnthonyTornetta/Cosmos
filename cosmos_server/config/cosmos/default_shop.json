@@ -754,5 +754,19 @@
       "max_quantity_buying": null,
       "price_per": 16
     }
+  },
+  {
+    "Selling": {
+      "item_id": "cosmos:dye_machine",
+      "max_quantity_selling": 10000,
+      "price_per": 40
+    }
+  },
+  {
+    "Buying": {
+      "item_id": "cosmos:dye_machine",
+      "max_quantity_buying": null,
+      "price_per": 16
+    }
   }
 ]
