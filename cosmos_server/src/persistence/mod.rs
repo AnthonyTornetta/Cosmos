@@ -142,9 +142,9 @@ impl SaveFileIdentifier {
     /// Gets the save file name without the .cent extension, but not the whole path
     fn get_save_file_name(&self) -> String {
         match &self.identifier_type {
-            SaveFileIdentifierType::Base(entity, _, load_distance) => load_distance
-                .map(|ld| format!("{ld}_{}", entity.to_string()))
-                .unwrap_or(entity.to_string()),
+            SaveFileIdentifierType::Base(entity, _, load_distance) => {
+                load_distance.map(|ld| format!("{ld}_{entity}")).unwrap_or(entity.to_string())
+            }
             SaveFileIdentifierType::SubEntity(_, entity_id) => entity_id.to_string(),
             SaveFileIdentifierType::BelongsTo(_, name) => name.to_owned(),
         }
