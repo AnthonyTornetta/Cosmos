@@ -38,7 +38,7 @@ use crate::{
     lang::Lang,
     ui::{
         components::{
-            button::{register_button, CosmosButton, ButtonEvent, ButtonStyles},
+            button::{register_button, ButtonEvent, ButtonStyles, CosmosButton},
             scollable_container::ScrollBox,
             slider::Slider,
             text_input::{InputType, TextInput},
