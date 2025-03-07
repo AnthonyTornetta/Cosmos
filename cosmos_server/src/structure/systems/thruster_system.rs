@@ -1,20 +1,15 @@
 //! The thrusters that move a ship
 
-use std::ops::Mul;
-
 use bevy::{
     log::info,
     prelude::{
-        in_state, App, Commands, Component, Entity, EventReader, IntoSystemConfigs, OnEnter, Quat, Query, Res, ResMut, SystemSet,
-        Transform, Update, Vec3, With,
+        in_state, App, Commands, Component, EventReader, IntoSystemConfigs, OnEnter, Query, Res, ResMut, SystemSet, Transform, Update,
+        Vec3, With,
     },
     reflect::Reflect,
     time::Time,
 };
-use bevy_rapier3d::{
-    plugin::{RapierContextEntityLink, ReadRapierContext},
-    prelude::{ExternalImpulse, ReadMassProperties, Velocity},
-};
+use bevy_rapier3d::prelude::{ExternalImpulse, ReadMassProperties, Velocity};
 use cosmos_core::{
     block::{block_events::BlockEventsSet, Block},
     events::block_events::BlockChangedEvent,
@@ -109,7 +104,6 @@ pub(super) fn update_ship_force_and_velocity(
         (With<Ship>, With<Pilot>),
     >,
     mut energy_query: Query<&mut EnergyStorageSystem>,
-    context: ReadRapierContext,
     time: Res<Time>,
 ) {
     for (thruster_system, system) in thrusters_query.iter() {
