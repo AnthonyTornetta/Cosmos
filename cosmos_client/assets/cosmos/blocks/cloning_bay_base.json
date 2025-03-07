@@ -1,0 +1,27 @@
+{
+  "material": {
+    "name": "cosmos:illuminated"
+  },
+  "texture": {
+    "Sides": {
+      "left": {
+        "Single": "cosmos:cloning_bay_base_sides"
+      },
+      "right": {
+        "Single": "cosmos:cloning_bay_base_sides"
+      },
+      "front": {
+        "Single": "cosmos:cloning_bay_base_sides"
+      },
+      "back": {
+        "Single": "cosmos:cloning_bay_base_sides"
+      },
+      "top": {
+        "Single": "cosmos:cloning_bay_base"
+      },
+      "bottom": {
+        "Single": "cosmos:cloning_bay_base_sides"
+      }
+    }
+  }
+}
