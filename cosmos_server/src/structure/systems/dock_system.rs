@@ -42,7 +42,7 @@ use cosmos_core::{
 
 use super::{sync::register_structure_system, thruster_system::ThrusterSystemSet};
 
-const MAX_DOCK_CHECK: f32 = 1.3;
+const MAX_DOCK_CHECK: f32 = 2.0;
 
 #[derive(Component, Default, Debug, Reflect)]
 pub struct DockedEntities(Vec<Entity>);
@@ -234,6 +234,13 @@ fn on_active(
         let Ok((_, g_trans, pw)) = q_structure.get_mut(entity) else {
             unreachable!("Guarenteed because only entities that are in this list are valid structures from above for loop.");
         };
+
+        if let Ok(to_docked) = q_docked.get(docked.to) {
+            if to_docked.to == entity {
+                // The other ship is already docked to this - don't re-dock.
+                continue;
+            }
+        }
 
         let context = context_access.get(*pw);
 

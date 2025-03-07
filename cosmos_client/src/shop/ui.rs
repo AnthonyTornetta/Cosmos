@@ -38,7 +38,7 @@ use crate::{
     lang::Lang,
     ui::{
         components::{
-            button::{register_button, Button, ButtonEvent, ButtonStyles},
+            button::{register_button, ButtonEvent, ButtonStyles, CosmosButton},
             scollable_container::ScrollBox,
             slider::Slider,
             text_input::{InputType, TextInput},
@@ -321,7 +321,7 @@ fn render_shop_ui(
                         flex_grow: 1.0,
                         ..Default::default()
                     },
-                    Button::<ClickSellTabEvent> {
+                    CosmosButton::<ClickSellTabEvent> {
                         button_styles: Some(ButtonStyles {
                             background_color: Srgba::hex("880000").unwrap().into(),
                             hover_background_color: Srgba::hex("880000").unwrap().into(),
@@ -339,7 +339,7 @@ fn render_shop_ui(
                         flex_grow: 1.0,
                         ..Default::default()
                     },
-                    Button::<ClickBuyTabEvent> {
+                    CosmosButton::<ClickBuyTabEvent> {
                         button_styles: Some(ButtonStyles {
                             background_color: css::DARK_GREEN.into(),
                             hover_background_color: css::DARK_GREEN.into(),
@@ -717,7 +717,7 @@ fn render_shop_ui(
                                 height: Val::Px(80.0),
                                 ..Default::default()
                             },
-                            Button::<BuyOrSellBtnEvent> {
+                            CosmosButton::<BuyOrSellBtnEvent> {
                                 text: Some(("BUY".into(), text_style.clone(), Default::default())),
                                 button_styles: Some(ButtonStyles {
                                     background_color: Srgba::hex("008000").unwrap().into(),
@@ -998,7 +998,7 @@ fn update_search(
                     Name::new(display_name.to_owned()),
                     *shop_entry,
                     ShopUiEntity(ui_ent),
-                    Button::<ClickItemEvent> { ..Default::default() },
+                    CosmosButton::<ClickItemEvent> { ..Default::default() },
                     Node {
                         flex_direction: FlexDirection::Row,
                         margin: UiRect::vertical(Val::Px(2.0)),
@@ -1029,7 +1029,7 @@ fn update_search(
 fn enable_buy_button(
     mut commands: Commands,
     mut q_shop_ui: Query<&mut ShopUi>,
-    q_buy_button: Query<(Entity, &BuyOrSellButton), With<Button<BuyOrSellBtnEvent>>>,
+    q_buy_button: Query<(Entity, &BuyOrSellButton), With<CosmosButton<BuyOrSellBtnEvent>>>,
     mut ev_reader: EventReader<PurchasedEvent>,
 ) {
     for ev in ev_reader.read() {
@@ -1058,7 +1058,7 @@ fn enable_buy_button(
 fn enable_sell_button(
     mut commands: Commands,
     mut q_shop_ui: Query<&mut ShopUi>,
-    q_buy_button: Query<(Entity, &BuyOrSellButton), With<Button<BuyOrSellBtnEvent>>>,
+    q_buy_button: Query<(Entity, &BuyOrSellButton), With<CosmosButton<BuyOrSellBtnEvent>>>,
     mut ev_reader: EventReader<SoldEvent>,
 ) {
     for ev in ev_reader.read() {
@@ -1209,7 +1209,7 @@ fn on_change_shop_mode(
         ),
         Changed<ShopMode>,
     >,
-    mut q_button: Query<&mut Button<BuyOrSellBtnEvent>>,
+    mut q_button: Query<&mut CosmosButton<BuyOrSellBtnEvent>>,
 ) {
     for (
         &shop_mode,

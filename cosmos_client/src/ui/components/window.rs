@@ -32,7 +32,7 @@ use crate::{
 };
 
 use super::{
-    button::{register_button, Button, ButtonEvent},
+    button::{register_button, ButtonEvent, CosmosButton},
     show_cursor::ShowCursor,
 };
 
@@ -136,7 +136,7 @@ fn add_window(
                             height: Val::Px(50.0),
                             ..Default::default()
                         },
-                        Button::<CloseUiEvent> {
+                        CosmosButton::<CloseUiEvent> {
                             image: Some(ImageNode::new(window_assets.close_btn_image.clone_weak())),
                             text: Some((
                                 "X".into(),

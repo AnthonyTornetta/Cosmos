@@ -14,7 +14,7 @@ use crate::{
 
 use super::{
     components::{
-        button::{register_button, Button, ButtonEvent, ButtonStyles},
+        button::{register_button, ButtonEvent, ButtonStyles, CosmosButton},
         show_cursor::ShowCursor,
     },
     font::DefaultFont,
@@ -107,7 +107,7 @@ fn toggle_pause_menu(
             p.spawn((
                 BorderColor(cool_blue.into()),
                 style.clone(),
-                Button::<ResumeButtonEvent> {
+                CosmosButton::<ResumeButtonEvent> {
                     button_styles: button_styles.clone(),
                     text: Some(("RESUME".into(), text_style.clone(), Default::default())),
                     ..Default::default()
@@ -117,7 +117,7 @@ fn toggle_pause_menu(
             p.spawn((
                 BorderColor(cool_blue.into()),
                 style.clone(),
-                Button::<SettingsButtonEvent> {
+                CosmosButton::<SettingsButtonEvent> {
                     button_styles: button_styles.clone(),
                     text: Some(("SETTINGS".into(), text_style.clone(), Default::default())),
                     ..Default::default()
@@ -127,7 +127,7 @@ fn toggle_pause_menu(
             p.spawn((
                 BorderColor(cool_blue.into()),
                 style.clone(),
-                Button::<DisconnectButtonEvent> {
+                CosmosButton::<DisconnectButtonEvent> {
                     button_styles: button_styles.clone(),
                     text: Some(("DISCONNECT".into(), text_style.clone(), Default::default())),
                     ..Default::default()

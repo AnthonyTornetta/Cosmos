@@ -8,7 +8,7 @@ use crate::{
     settings::{Setting, SettingCategory, SettingConstraint, SettingData},
     ui::{
         components::{
-            button::{Button, ButtonEvent, ButtonStyles},
+            button::{ButtonEvent, ButtonStyles, CosmosButton},
             text_input::{InputType, InputValue, TextInput},
         },
         reactivity::{BindValue, BindValues, ReactableFields, ReactableValue},
@@ -265,7 +265,7 @@ fn create_settings_screen(
                     margin: UiRect::top(Val::Px(20.0)),
                     ..Default::default()
                 },
-                Button::<SettingsCancelButtonEvent> {
+                CosmosButton::<SettingsCancelButtonEvent> {
                     button_styles: Some(ButtonStyles {
                         background_color: Srgba::hex("333333").unwrap().into(),
                         hover_background_color: Srgba::hex("232323").unwrap().into(),
@@ -287,7 +287,7 @@ fn create_settings_screen(
                     margin: UiRect::top(Val::Px(20.0)),
                     ..Default::default()
                 },
-                Button::<SettingsDoneButtonEvent> {
+                CosmosButton::<SettingsDoneButtonEvent> {
                     button_styles: Some(ButtonStyles {
                         background_color: Srgba::hex("333333").unwrap().into(),
                         hover_background_color: Srgba::hex("232323").unwrap().into(),

@@ -638,7 +638,7 @@ fn camera_movement(
             };
 
             let amount = if input_handler.check_pressed(CosmosInputs::Sprint) {
-                10.0
+                3.0
             } else {
                 1.0
             };

@@ -590,6 +590,12 @@ fn add_cosmos_blocks(
         );
     }
 
+    blocks.register(
+        BlockBuilder::new("cosmos:dye_machine", 2.0, 20.0, 5.0)
+            .add_property(BlockProperty::Full)
+            .create(),
+    );
+
     loading.finish_loading(id, &mut end_writer);
 }
 

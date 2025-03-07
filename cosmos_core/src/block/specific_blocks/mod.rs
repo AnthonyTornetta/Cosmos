@@ -6,6 +6,7 @@ use crate::{logic::LogicBlock, registry::Registry};
 
 pub mod and_gate;
 pub mod colored_logic_wires;
+pub mod dye_machine;
 pub mod gravity_well;
 mod laser_cannon;
 pub mod logic_bus;
@@ -28,6 +29,7 @@ pub(super) fn register<T: States + Clone + Copy>(app: &mut App, post_loading_sta
     colored_logic_wires::register(app, post_loading_state);
     laser_cannon::register(app, post_loading_state);
     missile_launcher::register(app, post_loading_state);
+    dye_machine::register(app);
 
     // TODO: Move this all to server, then add them to LogicSystemRegistrySet::RegisterLogicBlocks.
     app.allow_ambiguous_resource::<Registry<LogicBlock>>();
