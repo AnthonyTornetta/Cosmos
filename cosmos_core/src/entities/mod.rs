@@ -8,6 +8,7 @@ use bevy::prelude::*;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
+pub mod health;
 pub mod player;
 
 #[derive(Component, Debug, Reflect, Serialize, Deserialize, PartialEq, Eq, Clone, Hash)]
@@ -38,5 +39,6 @@ impl EntityId {
 }
 
 pub(super) fn register(app: &mut App) {
+    health::register(app);
     player::register(app);
 }

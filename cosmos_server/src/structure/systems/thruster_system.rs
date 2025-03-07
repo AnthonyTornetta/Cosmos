@@ -1,7 +1,6 @@
 //! The thrusters that move a ship
 
 use bevy::{
-    log::info,
     prelude::{
         in_state, App, Commands, Component, EventReader, IntoSystemConfigs, OnEnter, Query, Res, ResMut, SystemSet, Transform, Update,
         Vec3, With,
@@ -143,8 +142,6 @@ pub(super) fn update_ship_force_and_velocity(
                             * time.delta_secs()
                     })
                     .unwrap_or(Vec3::ZERO);
-
-                info!("Max: {max}");
 
                 velocity.angvel = transform.rotation * torque.min(max).max(-max);
 
