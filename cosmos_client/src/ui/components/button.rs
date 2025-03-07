@@ -92,7 +92,7 @@ fn on_add_button<T: ButtonEvent>(
         commands.entity(ent).insert(Interaction::default());
 
         if let Some(bg_col) = button.button_styles.as_ref().map(|x| x.background_color) {
-            commands.entity(ent).insert(BackgroundColor(bg_col.into()));
+            commands.entity(ent).insert(BackgroundColor(bg_col));
         }
 
         // horizontally + vertically center child text

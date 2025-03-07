@@ -158,7 +158,7 @@ fn click_color_btn(
             continue;
         };
 
-        if let Some(b) = btn_color.1.map_to_server(&netty_mapping).ok() {
+        if let Ok(b) = btn_color.1.map_to_server(&netty_mapping) {
             nevw_dye_block.send(DyeBlock {
                 block: b,
                 color: btn_color.0,

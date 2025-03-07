@@ -21,7 +21,7 @@ impl IdentifiableEvent for OpenDyeMachine {
     fn convert_to_client_entity(self, netty: &crate::netty::sync::mapping::NetworkMapping) -> Option<Self> {
         use crate::netty::sync::mapping::Mappable;
 
-        self.0.map_to_client(&netty).map(|x| Self(x)).ok()
+        self.0.map_to_client(netty).map(Self).ok()
     }
 }
 
