@@ -1,4 +1,6 @@
-use bevy::prelude::*;
+use std::time::Duration;
+
+use bevy::{prelude::*, time::common_conditions::on_timer};
 use cosmos_core::{
     entities::health::{Dead, Health, HealthSet, MaxHealth},
     netty::system_sets::NetworkingSystemsSet,
@@ -18,6 +20,12 @@ fn on_change_health(mut commands: Commands, q_health: Query<(Entity, &Health), C
     }
 }
 
+fn regenerate_health(mut q_health: Query<(&mut Health, &MaxHealth), Without<Dead>>) {
+    for (mut hp, max_hp) in q_health.iter_mut() {
+        hp.heal(1, max_hp);
+    }
+}
+
 pub(super) fn register(app: &mut App) {
     make_persistent::<Health>(app);
     make_persistent::<MaxHealth>(app);
@@ -25,7 +33,7 @@ pub(super) fn register(app: &mut App) {
 
     app.add_systems(
         Update,
-        on_change_health
+        (regenerate_health.run_if(on_timer(Duration::from_secs(10))), on_change_health)
             .in_set(HealthSet::ProcessHealthChange)
             .in_set(NetworkingSystemsSet::Between),
     );
