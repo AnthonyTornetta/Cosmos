@@ -99,8 +99,6 @@ fn lasers_netty(
                     Mesh3d(laser_mesh.0.clone_weak()),
                     MeshMaterial3d(material.clone_weak()),
                 ));
-
-                info!("Spawned laser @ {location}!");
             }
             ServerStructureSystemMessages::LaserCannonSystemFired { ship_entity } => {
                 let Some(ship_entity) = network_mapping.client_from_server(&ship_entity) else {

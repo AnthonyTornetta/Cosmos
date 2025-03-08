@@ -11,6 +11,7 @@ use cosmos_core::{
     chat::ServerSendChatMessageEvent,
     economy::Credits,
     entities::{
+        health::{Health, MaxHealth},
         player::{creative::Creative, Player},
         EntityId,
     },
@@ -234,6 +235,8 @@ fn create_new_player(
 
         let credits = Credits::new(5_000);
 
+        let starting_health = MaxHealth::new(20);
+
         commands
             .entity(player_entity)
             .insert((
@@ -242,6 +245,8 @@ fn create_new_player(
                 player,
                 inventory,
                 credits,
+                starting_health,
+                Health::from(starting_health),
                 Transform::from_rotation(rot),
                 PlayerLooking { rotation: Quat::IDENTITY },
             ))

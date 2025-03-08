@@ -1,6 +1,7 @@
 use bevy::prelude::*;
 use cosmos_core::{
     block::Block,
+    entities::health::Health,
     netty::system_sets::NetworkingSystemsSet,
     projectiles::{
         causer::Causer,
@@ -53,6 +54,7 @@ fn respond_laser_hit_event(
     blocks: Res<Registry<Block>>,
     mut block_take_damage_event_writer: EventWriter<BlockTakeDamageEvent>,
     mut block_destroy_event_writer: EventWriter<BlockDestroyedEvent>,
+    mut q_health: Query<&mut Health>,
 ) {
     for ev in reader.read() {
         let entity_hit = ev.entity_hit();
@@ -69,6 +71,10 @@ fn respond_laser_hit_event(
                     ev.laser_strength(),
                     ev.causer().as_ref(),
                 );
+            }
+        } else {
+            if let Ok(mut health) = q_health.get_mut(entity_hit) {
+                health.take_damage(ev.laser_strength() as u32 / 2);
             }
         }
     }
