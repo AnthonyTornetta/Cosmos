@@ -3,12 +3,16 @@ use bevy_rapier3d::prelude::Velocity;
 use cosmos_core::{
     entities::{
         health::{Dead, Health, HealthSet, MaxHealth},
-        player::respawn::RequestRespawnEvent,
+        player::respawn::{RequestRespawnEvent, RespawnEvent},
         EntityId,
     },
     inventory::{itemstack::ItemStack, HeldItemStack, Inventory},
     item::physical_item::PhysicalItem,
-    netty::{server::ServerLobby, sync::events::server_event::NettyEventReceived, system_sets::NetworkingSystemsSet},
+    netty::{
+        server::ServerLobby,
+        sync::events::server_event::{NettyEventReceived, NettyEventWriter},
+        system_sets::NetworkingSystemsSet,
+    },
     persistence::LoadingDistance,
     physics::location::{Location, LocationPhysicsSet, SetPosition},
     prelude::BlockCoordinate,
@@ -49,35 +53,33 @@ fn on_respawn(
     lobby: Res<ServerLobby>,
     mut commands: Commands,
     universe_systems: Res<UniverseSystems>,
-    mut q_player: Query<
-        (
-            Entity,
-            &mut Health,
-            &MaxHealth,
-            &mut Velocity,
-            &mut Location,
-            &mut Transform,
-            Option<&RespawnBlock>,
-        ),
-        With<Dead>,
-    >,
+    mut q_player: Query<(Entity, &mut Health, &MaxHealth, &mut Velocity, Option<&RespawnBlock>), With<Dead>>,
     mut nevr: EventReader<NettyEventReceived<RequestRespawnEvent>>,
+    mut nevw_respawn: NettyEventWriter<RespawnEvent>,
 ) {
     for ev in nevr.read() {
         let Some(player_ent) = lobby.player_from_id(ev.client_id) else {
             continue;
         };
 
-        let Ok((entity, mut health, max_health, mut velocity, mut location, mut transform, respawn_block)) = q_player.get_mut(player_ent)
-        else {
+        let Ok((entity, mut health, max_health, mut velocity, respawn_block)) = q_player.get_mut(player_ent) else {
             continue;
         };
 
         *health = (*max_health).into();
         *velocity = Velocity::default();
         let (loc, rot) = compute_respawn_location(&universe_systems);
-        *location = loc;
-        transform.rotation = rot;
+        // TODO: This should at some point be done on the server-side
+        // *location = loc;
+        // transform.rotation = rot;
+        //
+        nevw_respawn.send(
+            RespawnEvent {
+                rotation: rot,
+                location: loc,
+            },
+            ev.client_id,
+        );
 
         commands
             .entity(entity)
@@ -85,7 +87,7 @@ fn on_respawn(
             .remove::<BuildMode>()
             .remove::<Pilot>()
             .remove::<HeldItemStack>()
-            .remove_parent() // not in place, since we just set their
+            // .remove_parent() // not in place, since we just set their
             // absolute rotation
             .insert(SetPosition::Transform);
     }

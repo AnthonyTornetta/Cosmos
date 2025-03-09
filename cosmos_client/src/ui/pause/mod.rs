@@ -22,10 +22,6 @@ use super::{
     CloseMethod, OpenMenu, UiSystemSet,
 };
 
-#[derive(Resource)]
-/// If this resource is present, the game is paused
-pub struct Paused;
-
 #[derive(Component)]
 struct PauseMenu;
 
@@ -46,12 +42,6 @@ fn toggle_pause_menu(
                 commands.entity(ent).insert(Visibility::Visible);
             }
         }
-        return;
-    }
-
-    if let Ok(ent) = q_pause_menu.get_single() {
-        commands.entity(ent).insert(NeedsDespawned);
-        commands.remove_resource::<Paused>();
         return;
     }
 
@@ -101,6 +91,7 @@ fn toggle_pause_menu(
                 .into(),
             ),
             PauseMenu,
+            OpenMenu::new(0),
             ShowCursor,
         ))
         .with_children(|p| {
@@ -171,6 +162,8 @@ fn close_topmost_menus(q_open_menus: &mut Query<(Entity, &OpenMenu, &mut Visibil
 
     open.sort_by(|a, b| b.1.level().cmp(&a.1.level()));
     let topmost = open[0].1.level();
+
+    info!("Topmost: {}", topmost);
     for (ent, open_menu, mut visibility) in open {
         if open_menu.level() != topmost {
             return false;
@@ -227,17 +220,20 @@ fn settings_clicked(mut commands: Commands, mut q_pause_menu: Query<&mut Visibil
     ));
 }
 
-fn settings_done(
-    mut commands: Commands,
-    q_settings_menu: Query<Entity, With<PauseMenuSettingsMenu>>,
-    mut q_pause_visibility: Query<&mut Visibility, With<PauseMenu>>,
-) {
+fn settings_done(mut commands: Commands, q_settings_menu: Query<Entity, With<PauseMenuSettingsMenu>>) {
     for ent in q_settings_menu.iter() {
         commands.entity(ent).insert(NeedsDespawned);
     }
+}
 
-    for mut vis in q_pause_visibility.iter_mut() {
-        *vis = Visibility::default();
+fn show_pause_if_no_settings(
+    q_settings_menu: Query<(), (With<PauseMenuSettingsMenu>, Without<NeedsDespawned>)>,
+    mut q_pause_visibility: Query<&mut Visibility, With<PauseMenu>>,
+) {
+    if q_settings_menu.is_empty() {
+        for mut vis in q_pause_visibility.iter_mut() {
+            *vis = Visibility::default();
+        }
     }
 }
 
@@ -249,8 +245,6 @@ fn resume(mut commands: Commands, q_pause_menu: Query<Entity, With<PauseMenu>>) 
     if let Ok(pause_ent) = q_pause_menu.get_single() {
         commands.entity(pause_ent).insert(NeedsDespawned);
     }
-
-    commands.remove_resource::<Paused>();
 }
 
 #[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
@@ -283,10 +277,12 @@ pub(super) fn register(app: &mut App) {
             settings_done
                 .run_if(on_event::<SettingsDoneButtonEvent>.or(on_event::<SettingsCancelButtonEvent>))
                 .after(SettingsMenuSet::SettingsMenuInteractions),
+            show_pause_if_no_settings,
             resume.run_if(on_event::<ResumeButtonEvent>).after(UiSystemSet::DoUi),
             disconnect_clicked
                 .run_if(on_event::<DisconnectButtonEvent>)
                 .after(UiSystemSet::DoUi),
-        ),
+        )
+            .chain(),
     );
 }

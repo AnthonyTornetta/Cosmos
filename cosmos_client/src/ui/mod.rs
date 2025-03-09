@@ -7,6 +7,7 @@ use bevy::{
         schedule::{IntoSystemSetConfigs, SystemSet},
     },
     prelude::{App, ImageNode, Text},
+    reflect::Reflect,
     ui::{BackgroundColor, Node},
 };
 
@@ -35,14 +36,14 @@ pub enum UiSystemSet {
     FinishUi,
 }
 
-#[derive(Component, Debug, PartialEq, Eq, Hash)]
+#[derive(Component, Debug, PartialEq, Eq, Hash, Reflect)]
 /// When you make a menu that can be closed via the `Escape`/pause menu key, add this component to it.
 pub struct OpenMenu {
     level: u32,
     close_method: CloseMethod,
 }
 
-#[derive(Default, Debug, PartialEq, Eq, Hash, Clone, Copy)]
+#[derive(Default, Debug, PartialEq, Eq, Hash, Clone, Copy, Reflect)]
 /// How a menu should be closed
 pub enum CloseMethod {
     #[default]
@@ -112,7 +113,8 @@ pub(super) fn register(app: &mut App) {
     pause::register(app);
     settings::register(app);
 
-    app.configure_sets(Update, (UiSystemSet::PreDoUi, UiSystemSet::DoUi, UiSystemSet::FinishUi).chain());
+    app.configure_sets(Update, (UiSystemSet::PreDoUi, UiSystemSet::DoUi, UiSystemSet::FinishUi).chain())
+        .register_type::<OpenMenu>();
 
     // These probably don't matter
     app.allow_ambiguous_component::<Text>();
