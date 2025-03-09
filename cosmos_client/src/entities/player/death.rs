@@ -119,7 +119,6 @@ fn display_death_ui(
                 foreground_color: Color::WHITE,
                 press_foreground_color: Color::WHITE,
                 hover_foreground_color: Color::WHITE,
-                ..Default::default()
             });
 
             p.spawn((
@@ -138,7 +137,7 @@ fn display_death_ui(
             p.spawn((
                 btn_node.clone(),
                 CosmosButton::<RespawnBtnClicked> {
-                    text: Some(("Respawn".into(), btn_font.clone(), color.clone())),
+                    text: Some(("Respawn".into(), btn_font.clone(), color)),
                     button_styles: btn_styles.clone(),
                     ..Default::default()
                 },

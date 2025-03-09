@@ -38,18 +38,18 @@ pub struct RespawnBlock {
 }
 
 fn compute_respawn_location(universe_systems: &UniverseSystems) -> (Location, Quat) {
-    find_new_player_location(&universe_systems)
+    find_new_player_location(universe_systems)
 }
 
 fn on_die(mut commands: Commands, mut q_player: Query<(&Location, &mut Inventory, Option<&HeldItemStack>), Added<Dead>>) {
     for (location, mut inventory, held_is) in q_player.iter_mut() {
         if let Some(held_is) = held_is {
             let is = held_is.0.clone();
-            drop_itemstack(&mut commands, &location, is);
+            drop_itemstack(&mut commands, location, is);
         }
 
         inventory.retain_mut(|is| {
-            drop_itemstack(&mut commands, &location, is);
+            drop_itemstack(&mut commands, location, is);
             None
         });
     }

@@ -72,10 +72,8 @@ fn respond_laser_hit_event(
                     ev.causer().as_ref(),
                 );
             }
-        } else {
-            if let Ok(mut health) = q_health.get_mut(entity_hit) {
-                health.take_damage(ev.laser_strength() as u32 / 2);
-            }
+        } else if let Ok(mut health) = q_health.get_mut(entity_hit) {
+            health.take_damage(ev.laser_strength() as u32 / 2);
         }
     }
 }
