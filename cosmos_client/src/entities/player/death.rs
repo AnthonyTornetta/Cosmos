@@ -76,7 +76,7 @@ fn display_death_ui(
                     red: 0.0,
                     blue: 0.0,
                     green: 0.0,
-                    alpha: 0.2,
+                    alpha: 0.8,
                 }
                 .into(),
             ),
@@ -91,19 +91,19 @@ fn display_death_ui(
         ))
         .with_children(|p| {
             let btn_node = Node {
-                width: Val::Px(250.0),
+                width: Val::Px(350.0),
                 padding: UiRect {
-                    left: Val::Px(16.0),
-                    right: Val::Px(16.0),
-                    top: Val::Px(12.0),
-                    bottom: Val::Px(12.0),
+                    left: Val::Px(20.0),
+                    right: Val::Px(20.0),
+                    top: Val::Px(16.0),
+                    bottom: Val::Px(16.0),
                 },
-                margin: UiRect::all(Val::Px(25.0)),
+                margin: UiRect::all(Val::Px(15.0)),
                 ..Default::default()
             };
 
             let btn_font = TextFont {
-                font_size: 24.0,
+                font_size: 36.0,
                 font: font.0.clone_weak(),
                 ..Default::default()
             };
@@ -111,8 +111,8 @@ fn display_death_ui(
             let color = TextColor(Color::WHITE);
 
             let btn_styles = Some(ButtonStyles {
-                background_color: Srgba::hex("#333").unwrap().into(),
-                hover_background_color: Srgba::hex("#555").unwrap().into(),
+                background_color: Srgba::hex("#555").unwrap().into(),
+                hover_background_color: Srgba::hex("#777").unwrap().into(),
                 press_background_color: css::AQUA.into(),
                 foreground_color: Color::WHITE,
                 press_foreground_color: Color::WHITE,
