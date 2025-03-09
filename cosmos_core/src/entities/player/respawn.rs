@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::netty::sync::events::netty_event::{IdentifiableEvent, NettyEvent, SyncedEventImpl};
 
-#[derive(Event, Serialize, Deserialize, Debug)]
+#[derive(Event, Serialize, Deserialize, Debug, Default)]
 /// Client -> Server to request to be respawned after death
 ///
 /// This event will be ignored if the player is not dead

@@ -2,7 +2,7 @@
 
 use bevy::prelude::*;
 
-use cosmos_core::physics::location::{Location, Sector};
+use cosmos_core::physics::location::{Location, Sector, SystemCoordinate};
 
 use crate::universe::generation::{SystemItem, UniverseSystems};
 
@@ -10,8 +10,9 @@ const DEFAULT_STARTING_SECTOR: Location = Location::new(Vec3::new(0.0, 2000.0, 0
 
 pub(super) fn find_new_player_location(universe_systems: &UniverseSystems) -> (Location, Quat) {
     let Some((shop, _)) = universe_systems
+        .system(SystemCoordinate::default())
         .iter()
-        .flat_map(|(_, x)| x.iter())
+        .flat_map(|x| x.iter())
         .filter(|x| matches!(x.item, SystemItem::Shop))
         .map(|shop| {
             (

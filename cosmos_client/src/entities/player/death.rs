@@ -1,8 +1,8 @@
 use bevy::{color::palettes::css, prelude::*};
 use cosmos_core::{
     ecs::NeedsDespawned,
-    entities::health::Dead,
-    netty::{client::LocalPlayer, system_sets::NetworkingSystemsSet},
+    entities::{health::Dead, player::respawn::RequestRespawnEvent},
+    netty::{client::LocalPlayer, sync::events::client_event::NettyEventWriter, system_sets::NetworkingSystemsSet},
 };
 use renet2::RenetClient;
 
@@ -149,8 +149,23 @@ fn display_death_ui(
         });
 }
 
-fn respawn_clicked() {
-    info!("Respawn!");
+fn on_not_dead(
+    mut commands: Commands,
+    q_respawn_ui: Query<Entity, With<DeathUi>>,
+    mut removed_components: RemovedComponents<Dead>,
+    q_local_player: Query<(), With<LocalPlayer>>,
+) {
+    for c in removed_components.read() {
+        if q_local_player.contains(c) {
+            if let Ok(ent) = q_respawn_ui.get_single() {
+                commands.entity(ent).insert(NeedsDespawned);
+            }
+        }
+    }
+}
+
+fn respawn_clicked(mut nevw_respawn: NettyEventWriter<RequestRespawnEvent>) {
+    nevw_respawn.send_default();
 }
 
 fn title_screen_clicked(mut client: ResMut<RenetClient>) {
@@ -165,11 +180,13 @@ pub(super) fn register(app: &mut App) {
         Update,
         (
             display_death_ui.before(UiSystemSet::PreDoUi),
+            on_not_dead,
             title_screen_clicked
                 .after(UiSystemSet::FinishUi)
                 .run_if(on_event::<TitleScreenBtnClicked>),
             respawn_clicked.after(UiSystemSet::FinishUi).run_if(on_event::<RespawnBtnClicked>),
         )
+            .chain()
             .in_set(NetworkingSystemsSet::Between),
     );
 }
