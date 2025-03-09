@@ -29,7 +29,9 @@ impl NettyEvent for RequestRespawnEvent {
 #[derive(Event, Serialize, Deserialize, Debug, Default)]
 /// Server -> Client to tell the client to respawn themselves
 pub struct RespawnEvent {
+    /// The location the player should respawn to
     pub location: Location,
+    /// The player's new rotation
     pub rotation: Quat,
 }
 

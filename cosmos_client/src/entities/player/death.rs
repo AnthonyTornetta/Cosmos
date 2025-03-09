@@ -1,3 +1,5 @@
+//! Handles the client-side logic of dying + respawning
+
 use bevy::{color::palettes::css, prelude::*};
 use cosmos_core::{
     ecs::NeedsDespawned,

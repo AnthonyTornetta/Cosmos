@@ -1,3 +1,5 @@
+//! Handles server death + respawn logic
+
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::Velocity;
 use cosmos_core::{
@@ -26,6 +28,10 @@ use crate::universe::generation::UniverseSystems;
 use super::spawn_player::find_new_player_location;
 
 #[derive(Component, Reflect, Serialize, Deserialize)]
+/// A block the player has marked they want to respawn on.
+///
+/// This component does NOT imply the structure is still valid or that the block is still valid.
+/// Both should be checked before performing the respawn.
 pub struct RespawnBlock {
     block_coord: BlockCoordinate,
     structure_id: EntityId,
@@ -62,7 +68,7 @@ fn on_respawn(
             continue;
         };
 
-        let Ok((entity, mut health, max_health, mut velocity, respawn_block)) = q_player.get_mut(player_ent) else {
+        let Ok((entity, mut health, max_health, mut velocity, _respawn_block)) = q_player.get_mut(player_ent) else {
             continue;
         };
 
