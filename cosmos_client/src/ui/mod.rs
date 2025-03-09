@@ -50,6 +50,8 @@ pub enum CloseMethod {
     Despawn,
     /// The menu should be set to [`Visibility::Hidden`]
     Visibility,
+    /// This menu cannot be automatically closed (eg via escape)
+    Disabled,
 }
 
 impl OpenMenu {

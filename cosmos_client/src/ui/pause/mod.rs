@@ -14,7 +14,7 @@ use crate::{
 
 use super::{
     components::{
-        button::{register_button, CosmosButton, ButtonEvent, ButtonStyles},
+        button::{register_button, ButtonEvent, ButtonStyles, CosmosButton},
         show_cursor::ShowCursor,
     },
     font::DefaultFont,
@@ -177,6 +177,7 @@ fn close_topmost_menus(q_open_menus: &mut Query<(Entity, &OpenMenu, &mut Visibil
         }
 
         match open_menu.close_method() {
+            CloseMethod::Disabled => return false,
             CloseMethod::Despawn => {
                 commands.entity(ent).insert(NeedsDespawned);
             }
