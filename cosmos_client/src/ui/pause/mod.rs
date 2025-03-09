@@ -162,8 +162,6 @@ fn close_topmost_menus(q_open_menus: &mut Query<(Entity, &OpenMenu, &mut Visibil
 
     open.sort_by(|a, b| b.1.level().cmp(&a.1.level()));
     let topmost = open[0].1.level();
-
-    info!("Topmost: {}", topmost);
     for (ent, open_menu, mut visibility) in open {
         if open_menu.level() != topmost {
             return false;
