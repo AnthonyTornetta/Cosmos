@@ -1,11 +1,9 @@
 //! The thrusters that move a ship
 
-use std::ops::Mul;
-
 use bevy::{
     prelude::{
-        in_state, App, Commands, Component, EventReader, IntoSystemConfigs, OnEnter, Quat, Query, Res, ResMut, SystemSet, Transform,
-        Update, Vec3, With,
+        in_state, App, Commands, Component, EventReader, IntoSystemConfigs, OnEnter, Query, Res, ResMut, SystemSet, Transform, Update,
+        Vec3, With,
     },
     reflect::Reflect,
     time::Time,
@@ -15,6 +13,7 @@ use cosmos_core::{
     block::{block_events::BlockEventsSet, Block},
     events::block_events::BlockChangedEvent,
     netty::system_sets::NetworkingSystemsSet,
+    prelude::FullStructure,
     registry::Registry,
     state::GameState,
     structure::{
@@ -91,6 +90,7 @@ pub(super) fn update_ship_force_and_velocity(
     thrusters_query: Query<(&ThrusterSystem, &StructureSystem)>,
     mut query: Query<
         (
+            &mut Structure,
             &ShipMovement,
             &StructureSystems,
             &Transform,
@@ -106,18 +106,44 @@ pub(super) fn update_ship_force_and_velocity(
     time: Res<Time>,
 ) {
     for (thruster_system, system) in thrusters_query.iter() {
-        if let Ok((movement, systems, transform, mut velocity, mut external_impulse, readmass, docked, max_ship_speed_modifier)) =
-            query.get_mut(system.structure_entity())
+        if let Ok((
+            mut structure,
+            movement,
+            systems,
+            transform,
+            mut velocity,
+            mut external_impulse,
+            readmass,
+            docked,
+            max_ship_speed_modifier,
+        )) = query.get_mut(system.structure_entity())
         {
             // Rotation
             if docked.is_none() {
-                let torque = Quat::from_affine3(&transform.compute_affine()).mul(movement.torque * 5.0);
+                let torque = movement.torque * 5.0;
 
-                const MAX_ANGLE_PER_SECOND: f32 = 100.0;
+                const MAX_ANGLE_PER_SECOND: f32 = 500.0;
+                const INVERSE_SCALING: f32 = 0.4;
+                const THRUST_TORQUE_SCALING: f32 = 0.5;
 
-                let max = MAX_ANGLE_PER_SECOND * time.delta_secs();
+                let bounds = FullStructure::placed_block_bounds(&mut structure);
 
-                velocity.angvel = torque.clamp_length(0.0, max);
+                let max = bounds
+                    .map(|(min, max)| {
+                        // Need to add one because min and max equal each other if there is only 1
+                        // block.
+
+                        let d = Vec3::new((max.x - min.x) as f32, (max.y - min.y) as f32, (max.z - min.z) as f32);
+
+                        // When rotating in one axis, your torque is based off the other 2 axis
+                        (INVERSE_SCALING / (Vec3::ONE + Vec3::new(d.y + d.z, d.x + d.z, d.x + d.y) / 2.0))
+                            * MAX_ANGLE_PER_SECOND
+                            * (THRUST_TORQUE_SCALING * thruster_system.thrust_total().max(2.0).log2())
+                            * time.delta_secs()
+                    })
+                    .unwrap_or(Vec3::ZERO);
+
+                velocity.angvel = transform.rotation * torque.min(max).max(-max);
 
                 let max_speed = MAX_SHIP_SPEED * max_ship_speed_modifier.map(|x| x.0).unwrap_or(1.0);
                 velocity.linvel = velocity.linvel.clamp_length(0.0, max_speed);

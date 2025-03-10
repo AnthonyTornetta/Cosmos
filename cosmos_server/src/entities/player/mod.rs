@@ -9,6 +9,7 @@ use crate::persistence::make_persistent::{make_persistent, DefaultPersistentComp
 
 mod kits;
 pub mod persistence;
+pub mod respawn;
 mod spawn_player;
 
 #[derive(Component, Debug, Serialize, Deserialize)]
@@ -27,6 +28,7 @@ impl IdentifiableComponent for PlayerLooking {
 impl DefaultPersistentComponent for PlayerLooking {}
 
 pub(super) fn register(app: &mut App) {
+    respawn::register(app);
     make_persistent::<PlayerLooking>(app);
     persistence::register(app);
 }

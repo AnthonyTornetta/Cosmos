@@ -121,6 +121,42 @@ fn register_all_lights(blocks: Res<Registry<Block>>, mut registry: ResMut<Regist
         &blocks,
         "cosmos:station_core",
     );
+
+    register_light(
+        BlockLightProperties {
+            color: Srgba {
+                red: 81.0 / 255.0,
+                green: 143.0 / 255.0,
+                blue: 225.0 / 255.0,
+                alpha: 1.0,
+            }
+            .into(),
+            intensity: 20_000.0,
+            range: 6.0,
+            ..Default::default()
+        },
+        &mut registry,
+        &blocks,
+        "cosmos:cloning_bay_base",
+    );
+
+    register_light(
+        BlockLightProperties {
+            color: Srgba {
+                red: 81.0 / 255.0,
+                green: 225.0 / 255.0,
+                blue: 143.0 / 255.0,
+                alpha: 1.0,
+            }
+            .into(),
+            intensity: 20_000.0,
+            range: 6.0,
+            ..Default::default()
+        },
+        &mut registry,
+        &blocks,
+        "cosmos:cloning_bay_top",
+    );
 }
 
 pub(super) fn register(app: &mut App) {

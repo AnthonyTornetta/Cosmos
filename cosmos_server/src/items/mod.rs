@@ -10,7 +10,7 @@ use bevy::{
 };
 use cosmos_core::{
     ecs::NeedsDespawned,
-    entities::player::Player,
+    entities::{health::Dead, player::Player},
     inventory::Inventory,
     item::physical_item::PhysicalItem,
     netty::{sync::IdentifiableComponent, system_sets::NetworkingSystemsSet},
@@ -58,7 +58,7 @@ fn advance_time_since_spawn(
 fn pickup_near_item(
     mut commands: Commands,
     mut q_physical_items: Query<(Entity, &Location, &mut Inventory, &TimeSinceSpawn), With<PhysicalItem>>,
-    mut q_players: Query<(&Location, &mut Inventory), (Without<PhysicalItem>, With<Player>)>,
+    mut q_players: Query<(&Location, &mut Inventory), (Without<PhysicalItem>, With<Player>, Without<Dead>)>,
 ) {
     for (item_entity, item_loc, mut item_inv, time_since_spawn) in q_physical_items.iter_mut() {
         if time_since_spawn.0 < 2.0 {

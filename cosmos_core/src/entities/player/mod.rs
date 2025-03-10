@@ -2,6 +2,7 @@
 
 pub mod creative;
 pub mod render_distance;
+pub mod respawn;
 
 use bevy::prelude::{App, Component};
 use bevy_renet2::renet2::ClientId;
@@ -51,4 +52,5 @@ pub(super) fn register(app: &mut App) {
     sync_component::<Player>(app);
 
     creative::register(app);
+    respawn::register(app);
 }

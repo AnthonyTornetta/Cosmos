@@ -1,6 +1,6 @@
 //! Responsible for determining how structures are added to the game when they are needed
 
-use bevy::ecs::system::EntityCommands;
+use bevy::{ecs::system::EntityCommands, prelude::Visibility};
 use bevy_rapier3d::prelude::Velocity;
 
 use crate::{physics::location::Location, structure::Structure};
@@ -18,6 +18,6 @@ impl TStructureBuilder for StructureBuilder {
     fn insert_structure(&self, entity: &mut EntityCommands, location: Location, velocity: Velocity, structure: &mut Structure) {
         structure.set_entity(entity.id());
 
-        entity.insert((velocity, location));
+        entity.insert((velocity, location, Visibility::default()));
     }
 }

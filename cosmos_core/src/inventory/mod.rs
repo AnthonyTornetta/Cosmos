@@ -841,6 +841,19 @@ impl Inventory {
         self.items.iter_mut()
     }
 
+    /// Similar to [`Vec::retain`], but will not shrink the inventory. If the closure returns the
+    /// ItemStack, it will be put back into its slot. If it returns None, that itemstack will be
+    /// removed from this inventory. You have to then handle the itemstack's data manually.
+    pub fn retain_mut<C>(&mut self, mut c: C)
+    where
+        C: FnMut(ItemStack) -> Option<ItemStack>,
+    {
+        self.items = std::mem::take(&mut self.items)
+            .into_iter()
+            .map(|x| if let Some(x) = x { c(x) } else { None })
+            .collect::<Vec<_>>();
+    }
+
     /// Returns the total quantity of this item within the inventory. This does NOT respect
     /// any item data that may make it unique
     pub fn total_quantity_of_item(&self, item_id: u16) -> u64 {

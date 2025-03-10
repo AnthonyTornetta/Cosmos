@@ -216,7 +216,7 @@ fn send_laser_hit_events(
                         } else if let Ok(parent) = parent_query.get(entity) {
                             parent.get() != no_collide_entity.0
                         } else {
-                            false
+                            true
                         }
                     } else {
                         true

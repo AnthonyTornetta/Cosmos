@@ -4,6 +4,7 @@ use bevy::{color::palettes::css, prelude::*};
 use bevy_rapier3d::prelude::{ActiveEvents, CoefficientCombineRule, Collider, Friction, LockedAxes, ReadMassProperties, RigidBody};
 use cosmos_core::{entities::player::Player, netty::system_sets::NetworkingSystemsSet, persistence::LoadingDistance, state::GameState};
 
+pub mod death;
 pub mod player_movement;
 pub mod render_distance;
 
@@ -45,4 +46,5 @@ pub(super) fn register(app: &mut App) {
 
     render_distance::register(app);
     player_movement::register(app);
+    death::register(app);
 }
