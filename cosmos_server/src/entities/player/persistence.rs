@@ -41,7 +41,6 @@ use crate::{
         saving::{calculate_sfi, NeedsSaved, SavingSystemSet, SAVING_SCHEDULE},
         SaveFileIdentifier, SerializedData,
     },
-    physics::assign_player_world,
     settings::ServerSettings,
     universe::generation::UniverseSystems,
 };
@@ -102,11 +101,7 @@ fn save_player_link(
     }
 }
 
-fn load_player(
-    mut commands: Commands,
-    q_player_needs_loaded: Query<(Entity, &LoadPlayer)>,
-    player_worlds: Query<(&Location, &RapierContextEntityLink), (With<Player>, Without<Parent>)>,
-) {
+fn load_player(mut commands: Commands, q_player_needs_loaded: Query<(Entity, &LoadPlayer)>) {
     for (ent, load_player) in q_player_needs_loaded.iter() {
         let player_file_name = generate_player_file_id(&load_player.name);
 
@@ -141,10 +136,6 @@ fn load_player(
                 entity_id,
             ))
             .remove::<LoadPlayer>();
-
-        let player_entity = player_entity.id();
-
-        assign_player_world(&player_worlds, player_entity, &player_identifier.location, &mut commands);
     }
 }
 
@@ -214,7 +205,6 @@ fn generate_player_inventory(
 
 fn create_new_player(
     mut commands: Commands,
-    player_worlds: Query<(&Location, &RapierContextEntityLink), (With<Player>, Without<Parent>)>,
     items: Res<Registry<Item>>,
     needs_data: Res<ItemShouldHaveData>,
     server_settings: Res<ServerSettings>,
@@ -248,8 +238,6 @@ fn create_new_player(
                 PlayerLooking { rotation: Quat::IDENTITY },
             ))
             .remove::<LoadPlayer>();
-
-        assign_player_world(&player_worlds, player_entity, &location, &mut commands);
     }
 }
 

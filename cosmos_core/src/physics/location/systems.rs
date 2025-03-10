@@ -16,8 +16,6 @@ use bevy_rapier3d::{plugin::RapierConfiguration, prelude::RapierContextSimulatio
 
 use crate::{netty::system_sets::NetworkingSystemsSet, physics::player_world::PlayerWorld};
 
-#[cfg(feature = "server")]
-use super::SECTOR_DIMENSIONS;
 use super::{Location, LocationPhysicsSet, SetPosition};
 
 #[cfg(doc)]
