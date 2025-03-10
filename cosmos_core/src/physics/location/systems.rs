@@ -5,20 +5,15 @@ use bevy::{
     prelude::*,
     transform::systems::{propagate_transforms, sync_simple_transforms},
 };
+use bevy_rapier3d::plugin::RapierContextEntityLink;
 
 #[cfg(feature = "server")]
 use bevy::utils::HashSet;
 
 #[cfg(feature = "server")]
-use bevy_rapier3d::{
-    plugin::{RapierConfiguration, RapierContextEntityLink},
-    prelude::RapierContextSimulation,
-};
+use bevy_rapier3d::{plugin::RapierConfiguration, prelude::RapierContextSimulation};
 
-use crate::{
-    netty::system_sets::NetworkingSystemsSet,
-    physics::player_world::{PlayerWorld, WorldWithin},
-};
+use crate::{netty::system_sets::NetworkingSystemsSet, physics::player_world::PlayerWorld};
 
 #[cfg(feature = "server")]
 use super::SECTOR_DIMENSIONS;
@@ -141,10 +136,10 @@ fn apply_set_position(
 
 fn reposition_worlds_around_anchors(
     q_loc_no_parent: Query<&Location, (Without<PlayerWorld>, Without<Parent>)>,
-    mut q_trans_no_parent: Query<(&mut Transform, &WorldWithin), (Without<Parent>, With<Location>)>,
+    mut q_trans_no_parent: Query<(&mut Transform, &RapierContextEntityLink), (Without<Parent>, With<Location>)>,
     trans_query_with_parent: Query<&Location, (Without<PlayerWorld>, With<Parent>)>,
-    #[cfg(feature = "server")] q_anchors: Query<(&WorldWithin, Entity), With<Anchor>>,
-    #[cfg(feature = "server")] everything_query: Query<(&WorldWithin, Entity)>,
+    #[cfg(feature = "server")] q_anchors: Query<(&RapierContextEntityLink, Entity), With<Anchor>>,
+    #[cfg(feature = "server")] everything_query: Query<(&RapierContextEntityLink, Entity)>,
     parent_query: Query<&Parent>,
     entity_query: Query<Entity>,
     mut world_query: Query<(Entity, &mut PlayerWorld, &mut Location)>,
@@ -200,7 +195,7 @@ fn reposition_worlds_around_anchors(
                 if !found {
                     for (world_within, entity) in everything_query.iter() {
                         if world_within.0 == world_entity {
-                            commands.entity(entity).remove::<WorldWithin>();
+                            commands.entity(entity).remove::<RapierContextEntityLink>();
                         }
                     }
                     commands.entity(world_entity).despawn_recursive();
@@ -226,9 +221,9 @@ fn create_physics_world(commands: &mut Commands) -> RapierContextEntityLink {
 
 #[cfg(feature = "server")]
 fn move_anchors_between_worlds(
-    mut q_anchors: Query<(Entity, &Location, &mut Transform), (With<WorldWithin>, With<Anchor>)>,
-    q_anchors_no_trans: Query<(Entity, &Location), (With<WorldWithin>, With<Anchor>)>,
-    mut q_world_within: Query<(&mut WorldWithin, &mut RapierContextEntityLink)>,
+    mut q_anchors: Query<(Entity, &Location, &mut Transform), (With<RapierContextEntityLink>, With<Anchor>)>,
+    q_anchors_no_trans: Query<(Entity, &Location), (With<RapierContextEntityLink>, With<Anchor>)>,
+    mut q_world_within: Query<&mut RapierContextEntityLink>,
     mut commands: Commands,
 ) {
     let mut changed = true;
@@ -246,16 +241,15 @@ fn move_anchors_between_worlds(
                     continue;
                 }
 
-                let (other_world_entity, other_body_world) = q_world_within.get(other_entity).map(|(ent, world)| (ent.0, *world)).unwrap();
+                let other_world_entity = *q_world_within.get(other_entity).unwrap();
 
-                let (mut world_currently_in, mut body_world) = q_world_within.get_mut(entity).unwrap();
+                let mut world_currently_in = q_world_within.get_mut(entity).unwrap();
 
                 let distance = location.distance_sqrd(other_location);
 
                 if distance < WORLD_SWITCH_DISTANCE_SQRD {
-                    if world_currently_in.0 != other_world_entity {
-                        world_currently_in.0 = other_world_entity;
-                        *body_world = other_body_world;
+                    if *world_currently_in != other_world_entity {
+                        *world_currently_in = other_world_entity;
 
                         // Repositions their transform to be in the correct place for this new
                         // world
@@ -270,7 +264,7 @@ fn move_anchors_between_worlds(
                         changed = true;
                     }
                     break;
-                } else if world_currently_in.0 == other_world_entity {
+                } else if *world_currently_in == other_world_entity {
                     info!("Anchor {entity:?} requires new world created for them!");
                     needs_new_world = true;
                 }
@@ -282,14 +276,13 @@ fn move_anchors_between_worlds(
                 let link = create_physics_world(&mut commands);
 
                 info!("Creating new physics world - rapier context link: {link:?}!");
-                let world_entity = commands
-                    .spawn((Name::new("Player World"), PlayerWorld { player: entity }, *location, link))
-                    .id();
+                commands
+                    .entity(link.0)
+                    .insert((Name::new("Player World"), PlayerWorld { player: entity }, *location, link));
 
-                let (mut world_within, mut body_world) = q_world_within.get_mut(entity).unwrap();
+                let mut world_within = q_world_within.get_mut(entity).unwrap();
 
-                world_within.0 = world_entity;
-                *body_world = link;
+                world_within.0 = link.0;
             }
         }
     }
@@ -298,13 +291,13 @@ fn move_anchors_between_worlds(
 #[cfg(feature = "server")]
 fn move_non_anchors_between_worlds_single(
     ent: In<Entity>,
-    mut needs_world: Query<(&Location, Option<&mut WorldWithin>, Option<&mut RapierContextEntityLink>), (Without<Anchor>, Without<Parent>)>,
-    anchors_with_worlds: Query<(&WorldWithin, &Location, &RapierContextEntityLink), With<Anchor>>,
+    mut needs_world: Query<(&Location, Option<&mut RapierContextEntityLink>), (Without<Anchor>, Without<Parent>)>,
+    anchors_with_worlds: Query<(&RapierContextEntityLink, &Location, &RapierContextEntityLink), With<Anchor>>,
     mut commands: Commands,
 ) {
     let entity = ent.0;
 
-    let Ok((location, maybe_within, maybe_body_world)) = needs_world.get_mut(entity) else {
+    let Ok((location, maybe_body_world)) = needs_world.get_mut(entity) else {
         return;
     };
 
@@ -325,14 +318,9 @@ fn move_non_anchors_between_worlds_single(
     if let Some(ww) = best_ww {
         let world_link = best_world_id.expect("This should have a value if ww is some");
 
-        if let Some(mut world_within) = maybe_within {
-            let mut body_world = maybe_body_world.expect("Something should have a `RapierContextEntityLink` if it has a WorldWithin.");
-
+        if let Some(mut body_world) = maybe_body_world {
             if *body_world != world_link {
                 *body_world = world_link;
-            }
-            if world_within.0 != ww.0 {
-                world_within.0 = ww.0;
             }
         } else {
             commands.entity(entity).insert(ww).insert(world_link);
@@ -343,29 +331,23 @@ fn move_non_anchors_between_worlds_single(
 #[cfg(feature = "server")]
 fn move_non_anchors_between_worlds(
     mut needs_world: Query<
-        (
-            Entity,
-            &Location,
-            Option<&mut Transform>,
-            Option<&mut WorldWithin>,
-            Option<&mut RapierContextEntityLink>,
-        ),
+        (Entity, &Location, Option<&mut Transform>, Option<&mut RapierContextEntityLink>),
         (Without<Anchor>, Without<Parent>, Without<PlayerWorld>),
     >,
     q_player_world: Query<&Location, With<PlayerWorld>>,
-    anchors_with_worlds: Query<(&WorldWithin, &Location, &RapierContextEntityLink), With<Anchor>>,
+    anchors_with_worlds: Query<(&Location, &RapierContextEntityLink), With<Anchor>>,
     mut commands: Commands,
 ) {
-    for (entity, location, trans, maybe_within, maybe_body_world) in needs_world.iter_mut() {
+    for (entity, location, trans, maybe_body_world) in needs_world.iter_mut() {
         let mut best_ww = None;
         let mut best_dist = None;
         let mut best_world_id = None;
 
-        for (ww, player_loc, body_world) in anchors_with_worlds.iter() {
+        for (player_loc, body_world) in anchors_with_worlds.iter() {
             let dist = player_loc.distance_sqrd(location);
 
             if best_ww.is_none() || dist < best_dist.unwrap() {
-                best_ww = Some(*ww);
+                best_ww = Some(*body_world);
                 best_dist = Some(dist);
                 best_world_id = Some(*body_world);
             }
@@ -374,11 +356,9 @@ fn move_non_anchors_between_worlds(
         if let Some(ww) = best_ww {
             let world_link = best_world_id.expect("This should have a value if ww is some");
 
-            if let Some(mut world_within) = maybe_within {
-                let mut body_world = maybe_body_world.expect("Something should have a `RapierContextEntityLink` if it has a WorldWithin.");
-
+            if let Some(mut body_world) = maybe_body_world {
                 if let Some(mut trans) = trans {
-                    let old_loc = q_player_world.get(world_within.0).expect("Invalid old world within pointer");
+                    let old_loc = q_player_world.get(body_world.0).expect("Invalid old world within pointer");
 
                     let new_loc = q_player_world.get(ww.0).expect("Invalid new world within pointer");
 
@@ -388,9 +368,6 @@ fn move_non_anchors_between_worlds(
 
                 if *body_world != world_link {
                     *body_world = world_link;
-                }
-                if world_within.0 != ww.0 {
-                    world_within.0 = ww.0;
                 }
             } else {
                 commands.entity(entity).insert(ww).insert(world_link);
@@ -456,7 +433,7 @@ type TransformLocationQuery<'w, 's> = Query<
 fn sync_transforms_and_locations_single(
     ent: In<Entity>,
     // for now this only supports stuff w/out parents. That's fine for now
-    q_entities: Query<&WorldWithin, (Without<PlayerWorld>, With<Location>, Without<Parent>)>,
+    q_entities: Query<&RapierContextEntityLink, (Without<PlayerWorld>, With<Location>, Without<Parent>)>,
     q_loc: Query<&Location, With<PlayerWorld>>,
     mut q_data: TransformLocationQuery,
     q_children: Query<&Children>,
@@ -474,7 +451,7 @@ fn sync_transforms_and_locations_single(
 
 /// This system syncs the locations up with their changes in transforms.
 fn sync_transforms_and_locations(
-    q_entities: Query<(Entity, &WorldWithin), (Without<PlayerWorld>, With<Location>, Without<Parent>)>,
+    q_entities: Query<(Entity, &RapierContextEntityLink), (Without<PlayerWorld>, With<Location>, Without<Parent>)>,
     q_loc: Query<&Location, With<PlayerWorld>>,
     mut q_data: TransformLocationQuery,
     q_children: Query<&Children>,
@@ -560,7 +537,7 @@ fn assign_everything_client_world_single(
     ent: In<Entity>,
     mut commands: Commands,
     q_player_world: Query<Entity, With<PlayerWorld>>,
-    q_loc_no_world: Query<(), (With<Location>, Without<WorldWithin>, Without<PlayerWorld>)>,
+    q_loc_no_world: Query<(), (With<Location>, Without<RapierContextEntityLink>, Without<PlayerWorld>)>,
 ) {
     let entity = ent.0;
 
@@ -568,7 +545,7 @@ fn assign_everything_client_world_single(
         let Ok(pw) = q_player_world.get_single() else {
             return;
         };
-        commands.entity(entity).insert(WorldWithin(pw));
+        commands.entity(entity).insert(RapierContextEntityLink(pw));
     }
 }
 
@@ -576,13 +553,13 @@ fn assign_everything_client_world_single(
 fn assign_everything_client_world(
     mut commands: Commands,
     q_player_world: Query<Entity, With<PlayerWorld>>,
-    q_loc_no_world: Query<Entity, (With<Location>, Without<WorldWithin>, Without<PlayerWorld>)>,
+    q_loc_no_world: Query<Entity, (With<Location>, Without<RapierContextEntityLink>, Without<PlayerWorld>)>,
 ) {
     for ent in q_loc_no_world.iter() {
         let Ok(pw) = q_player_world.get_single() else {
             continue;
         };
-        commands.entity(ent).insert(WorldWithin(pw));
+        commands.entity(ent).insert(RapierContextEntityLink(pw));
     }
 }
 

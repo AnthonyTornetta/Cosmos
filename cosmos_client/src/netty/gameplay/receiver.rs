@@ -475,16 +475,15 @@ pub(crate) fn client_sync_players(
                             ));
                         });
 
-                    info!("Player world!");
-                    commands.spawn((
+                    let physics_world_ent = q_default_rapier_context
+                        .get_single()
+                        .expect("The client has no default rapier context!");
+
+                    commands.entity(physics_world_ent).insert((
                         PlayerWorld { player: client_entity },
                         Name::new("Player World"),
                         loc,
-                        RapierContextEntityLink(
-                            q_default_rapier_context
-                                .get_single()
-                                .expect("The client has no default rapier context!"),
-                        ),
+                        RapierContextEntityLink(physics_world_ent),
                     ));
                 }
             }

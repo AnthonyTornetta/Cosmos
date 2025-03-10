@@ -27,10 +27,7 @@ use cosmos_core::{
         NettyChannelServer,
     },
     persistence::LoadingDistance,
-    physics::{
-        location::{systems::Anchor, Location, LocationPhysicsSet, Sector, SetPosition},
-        player_world::WorldWithin,
-    },
+    physics::location::{systems::Anchor, Location, LocationPhysicsSet, Sector, SetPosition},
     registry::{identifiable::Identifiable, Registry},
 };
 use renet2::{ClientId, RenetServer};
@@ -108,7 +105,7 @@ fn save_player_link(
 fn load_player(
     mut commands: Commands,
     q_player_needs_loaded: Query<(Entity, &LoadPlayer)>,
-    player_worlds: Query<(&Location, &WorldWithin, &RapierContextEntityLink), (With<Player>, Without<Parent>)>,
+    player_worlds: Query<(&Location, &RapierContextEntityLink), (With<Player>, Without<Parent>)>,
 ) {
     for (ent, load_player) in q_player_needs_loaded.iter() {
         let player_file_name = generate_player_file_id(&load_player.name);
@@ -217,7 +214,7 @@ fn generate_player_inventory(
 
 fn create_new_player(
     mut commands: Commands,
-    player_worlds: Query<(&Location, &WorldWithin, &RapierContextEntityLink), (With<Player>, Without<Parent>)>,
+    player_worlds: Query<(&Location, &RapierContextEntityLink), (With<Player>, Without<Parent>)>,
     items: Res<Registry<Item>>,
     needs_data: Res<ItemShouldHaveData>,
     server_settings: Res<ServerSettings>,

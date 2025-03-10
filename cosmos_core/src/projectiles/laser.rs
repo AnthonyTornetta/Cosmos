@@ -22,7 +22,7 @@ use crate::{
     netty::{system_sets::NetworkingSystemsSet, NoSendEntity},
     physics::{
         location::{Location, SetPosition},
-        player_world::{PlayerWorld, WorldWithin},
+        player_world::PlayerWorld,
     },
     structure::chunk::ChunkEntity,
 };
@@ -161,7 +161,6 @@ fn send_laser_hit_events(
             Option<&NoCollide>,
             &mut Laser,
             &Velocity,
-            Option<&WorldWithin>,
             Option<&Causer>,
         ),
         With<Laser>,
@@ -171,25 +170,21 @@ fn send_laser_hit_events(
     parent_query: Query<&Parent>,
     chunk_parent_query: Query<&Parent, With<ChunkEntity>>,
     transform_query: Query<&GlobalTransform, Without<Laser>>,
-    worlds: Query<(&Location, &RapierContextEntityLink, Entity), With<PlayerWorld>>,
+    worlds: Query<&Location, With<PlayerWorld>>,
     q_rapier_context: WriteRapierContext,
 ) {
-    for (world, location, laser_entity, no_collide_entity, mut laser, velocity, world_within, causer) in query.iter_mut() {
+    for (world, location, laser_entity, no_collide_entity, mut laser, velocity, causer) in query.iter_mut() {
         if laser.active {
             let last_pos = laser.last_position;
             let delta_position = last_pos.relative_coords_to(location);
             laser.last_position = *location;
 
-            let coords: Option<Vec3> = world_within
-                .map(|world_within| {
-                    if let Ok((loc, _, _)) = worlds.get(world_within.0) {
-                        Some(loc.relative_coords_to(location))
-                    } else {
-                        warn!("Laser playerworld not found!");
-                        None
-                    }
-                })
-                .unwrap_or(None);
+            let coords: Option<Vec3> = if let Ok(loc) = worlds.get(world.0) {
+                Some(loc.relative_coords_to(location))
+            } else {
+                warn!("Laser playerworld not found!");
+                None
+            };
 
             let Some(coords) = coords else {
                 continue;
