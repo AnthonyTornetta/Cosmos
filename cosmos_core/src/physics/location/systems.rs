@@ -4,6 +4,7 @@ use bevy::{
     ecs::component::StorageType,
     prelude::*,
     transform::systems::{propagate_transforms, sync_simple_transforms},
+    utils::HashMap,
 };
 use bevy_rapier3d::plugin::RapierContextEntityLink;
 
@@ -207,9 +208,7 @@ fn reposition_worlds_around_anchors(
 }
 
 #[cfg(feature = "server")]
-const WORLD_SWITCH_DISTANCE: f32 = SECTOR_DIMENSIONS / 2.0;
-#[cfg(feature = "server")]
-const WORLD_SWITCH_DISTANCE_SQRD: f32 = WORLD_SWITCH_DISTANCE * WORLD_SWITCH_DISTANCE;
+const WORLD_SWITCH_DISTANCE: f32 = 10_000.0;
 
 #[cfg(feature = "server")]
 fn create_physics_world(commands: &mut Commands) -> RapierContextEntityLink {
@@ -220,71 +219,124 @@ fn create_physics_world(commands: &mut Commands) -> RapierContextEntityLink {
 }
 
 #[cfg(feature = "server")]
-fn move_anchors_between_worlds(
-    mut q_anchors: Query<(Entity, &Location, &mut Transform), (With<RapierContextEntityLink>, With<Anchor>)>,
-    q_anchors_no_trans: Query<(Entity, &Location), (With<RapierContextEntityLink>, With<Anchor>)>,
-    mut q_world_within: Query<&mut RapierContextEntityLink>,
-    mut commands: Commands,
-) {
-    let mut changed = true;
+#[derive(Clone, Debug)]
+struct Point3D(Location, Entity);
 
-    let mut getting_new_world = Vec::new();
+#[cfg(feature = "server")]
+fn find_groups(points: &[Point3D], threshold: f32) -> Vec<Vec<Point3D>> {
+    let mut adjacency_list: HashMap<usize, Vec<usize>> = HashMap::new();
 
-    while changed {
-        changed = false;
+    let threshold_sqrd = threshold * threshold;
 
-        for (entity, location, mut trans) in q_anchors.iter_mut() {
-            let mut needs_new_world = false;
+    // Build adjacency list
+    for (i, p1) in points.iter().enumerate() {
+        for (j, p2) in points.iter().enumerate().skip(i + 1) {
+            if p1.0.is_within_reasonable_range(&p2.0) && p1.0.distance_sqrd(&p2.0) <= threshold_sqrd {
+                adjacency_list.entry(i).or_insert_with(default).push(j);
+                adjacency_list.entry(j).or_insert_with(default).push(i);
+            }
+        }
+    }
 
-            for (other_entity, other_location) in q_anchors_no_trans.iter() {
-                if other_entity == entity || getting_new_world.contains(&other_entity) {
-                    continue;
-                }
+    let mut visited = HashSet::new();
+    let mut groups = Vec::new();
 
-                let other_world_entity = *q_world_within.get(other_entity).unwrap();
+    // DFS to find connected components
+    for i in 0..points.len() {
+        if visited.contains(&i) {
+            continue;
+        }
+        let mut stack = vec![i];
+        let mut group = Vec::new();
 
-                let mut world_currently_in = q_world_within.get_mut(entity).unwrap();
-
-                let distance = location.distance_sqrd(other_location);
-
-                if distance < WORLD_SWITCH_DISTANCE_SQRD {
-                    if *world_currently_in != other_world_entity {
-                        *world_currently_in = other_world_entity;
-
-                        // Repositions their transform to be in the correct place for this new
-                        // world
-                        trans.translation += (*location - *other_location).absolute_coords_f32();
-
-                        info!(
-                            "Merging anchor ({entity:?}) into another anchor's ({other_entity:?}) world! Resulting transform: {}",
-                            trans.translation
-                        );
-
-                        needs_new_world = false;
-                        changed = true;
+        while let Some(node) = stack.pop() {
+            if visited.insert(node) {
+                group.push(points[node].clone());
+                if let Some(neighbors) = adjacency_list.get(&node) {
+                    for &neighbor in neighbors {
+                        if !visited.contains(&neighbor) {
+                            stack.push(neighbor);
+                        }
                     }
-                    break;
-                } else if *world_currently_in == other_world_entity {
-                    info!("Anchor {entity:?} requires new world created for them!");
-                    needs_new_world = true;
                 }
             }
+        }
+        groups.push(group);
+    }
 
-            if needs_new_world {
-                getting_new_world.push(entity);
+    groups
+}
 
+#[cfg(feature = "server")]
+fn move_anchors_between_worlds(
+    q_anchors: Query<(Entity, &Location), With<Anchor>>,
+    mut q_trans: Query<&mut Transform>,
+    mut q_world_within: Query<&mut RapierContextEntityLink>,
+    q_worlds: Query<Entity, With<PlayerWorld>>,
+    mut commands: Commands,
+) {
+    use crate::ecs::NeedsDespawned;
+
+    let points = q_anchors.iter().map(|x| Point3D(*x.1, x.0)).collect::<Vec<_>>();
+    let groups = find_groups(&points, WORLD_SWITCH_DISTANCE);
+
+    let mut retained_worlds = vec![];
+
+    for group in groups {
+        let (world_id, world_loc) = group
+            .iter()
+            .flat_map(|x| {
+                q_world_within
+                    .get(x.1)
+                    .ok()
+                    .map(|r| if retained_worlds.contains(&r.0) { None } else { Some((*r, x.0)) })
+                    .flatten()
+            })
+            .next()
+            .unwrap_or_else(|| {
                 let link = create_physics_world(&mut commands);
 
                 info!("Creating new physics world - rapier context link: {link:?}!");
+
+                // Guarenteed to have at least one entity
+                let Point3D(location, entity) = group[0];
+
                 commands
                     .entity(link.0)
-                    .insert((Name::new("Player World"), PlayerWorld { player: entity }, *location, link));
+                    .insert((Name::new("Player World"), PlayerWorld { player: entity }, location, link));
 
-                let mut world_within = q_world_within.get_mut(entity).unwrap();
+                (link, location)
+            });
 
-                world_within.0 = link.0;
+        retained_worlds.push(world_id.0);
+
+        for Point3D(loc, entity) in group {
+            if let Ok(mut link) = q_world_within.get_mut(entity) {
+                if *link != world_id {
+                    *link = world_id;
+
+                    if let Ok(mut trans) = q_trans.get_mut(entity) {
+                        trans.translation += (loc - world_loc).absolute_coords_f32();
+
+                        info!(
+                            "Merging anchor ({entity:?}) into ({world_id:?}) world! Resulting transform: {}",
+                            trans.translation
+                        );
+                    }
+                }
+            } else {
+                info!("Merging anchor ({entity:?}) into ({world_id:?}) world! Will create transform later...");
+                commands.entity(entity).insert(world_id);
             }
         }
+    }
+
+    // Filter out any no-longer used worlds.
+    for world_ent in q_worlds.iter().filter(|x| !retained_worlds.contains(x)) {
+        info!("Despawning dead world {world_ent:?}");
+        // This world will still be used in the next system when reassignment happens,
+        // so keep it around until normal despawn time.
+        commands.entity(world_ent).insert(NeedsDespawned);
     }
 }
 

@@ -33,31 +33,31 @@ pub fn assign_player_world(
     location: &Location,
     commands: &mut Commands,
 ) {
-    let mut best_distance = None;
-    let mut best_world_id = None;
-
-    for (loc, body_world) in q_player_worlds.iter() {
-        let distance = location.distance_sqrd(loc);
-
-        if distance <= WORLD_SWITCH_DISTANCE && (best_distance.is_none() || distance < best_distance.unwrap()) {
-            best_distance = Some(distance);
-            best_world_id = Some(*body_world);
-        }
-    }
-
-    if let Some(world) = best_world_id {
-        commands.entity(player_entity).insert(world);
-    } else {
-        let link = create_physics_world(commands);
-
-        info!("Creating new physics world for {player_entity:?}!");
-
-        commands
-            .entity(link.0)
-            .insert((Name::new("Player World"), PlayerWorld { player: player_entity }, *location, link));
-
-        commands.entity(player_entity).insert(link);
-    }
+    // let mut best_distance = None;
+    // let mut best_world_id = None;
+    //
+    // for (loc, body_world) in q_player_worlds.iter() {
+    //     let distance = location.distance_sqrd(loc);
+    //
+    //     if distance <= WORLD_SWITCH_DISTANCE && (best_distance.is_none() || distance < best_distance.unwrap()) {
+    //         best_distance = Some(distance);
+    //         best_world_id = Some(*body_world);
+    //     }
+    // }
+    //
+    // if let Some(world) = best_world_id {
+    //     commands.entity(player_entity).insert(world);
+    // } else {
+    //     let link = create_physics_world(commands);
+    //
+    //     info!("Creating new physics world for {player_entity:?}!");
+    //
+    //     commands
+    //         .entity(link.0)
+    //         .insert((Name::new("Player World"), PlayerWorld { player: player_entity }, *location, link));
+    //
+    //     commands.entity(player_entity).insert(link);
+    // }
 }
 
 pub(super) fn register(app: &mut App) {
