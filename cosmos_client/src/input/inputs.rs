@@ -22,6 +22,9 @@ pub enum CosmosInputs {
     /// Player move faster
     Sprint,
 
+    /// Ship match speed of focused entity
+    MatchSpeed,
+
     // For use in ships
     /// Ship move down
     MoveDown,
@@ -137,6 +140,7 @@ fn init_input(mut input_handler: ResMut<CosmosInputHandler>) {
     input_handler.set_keycode(CosmosInputs::MoveBackward, KeyCode::KeyS);
     input_handler.set_keycode(CosmosInputs::MoveRight, KeyCode::KeyD);
     input_handler.set_keycode(CosmosInputs::SlowDown, KeyCode::ShiftLeft);
+    input_handler.set_keycode(CosmosInputs::MatchSpeed, KeyCode::ControlLeft);
     input_handler.set_keycode(CosmosInputs::Jump, KeyCode::Space);
     input_handler.set_keycode(CosmosInputs::MoveDown, KeyCode::KeyQ);
     input_handler.set_keycode(CosmosInputs::MoveUp, KeyCode::KeyE);

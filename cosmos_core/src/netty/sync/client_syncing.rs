@@ -157,7 +157,13 @@ fn client_send_components<T: SyncableComponent>(
             }
 
             let raw_data = if T::needs_entity_conversion() {
-                let mapped = component.clone().convert_entities_client_to_server(&mapping)?;
+                let Some(mapped) = component.clone().convert_entities_client_to_server(&mapping) else {
+                    error!(
+                        "Failed to map component {} on entity {entity:?} to server version!",
+                        T::get_component_unlocalized_name()
+                    );
+                    return None;
+                };
 
                 bincode::serialize(&mapped)
             } else {
@@ -629,7 +635,6 @@ pub(super) fn setup_client(app: &mut App) {
     .init_resource::<WaitingData>();
 }
 
-#[allow(unused)] // This function is used, but the LSP can't figure that out.
 pub(super) fn sync_component_client<T: SyncableComponent>(app: &mut App) {
     app.register_type::<ServerEntity>();
 

@@ -246,20 +246,16 @@ pub enum ComponentSyncingSet {
 /// Indicates that a component should be synced across the client and the server.
 ///
 /// Make sure to call this in either the core project or both the client & server projects.
-pub fn sync_component<T: SyncableComponent>(_app: &mut App) {
-    // LSP thinks `_app` is unused, even though it is, thus the underscore.
-
+pub fn sync_component<T: SyncableComponent>(app: &mut App) {
     #[cfg(not(feature = "client"))]
     #[cfg(not(feature = "server"))]
     compile_error!("You must enable one of the features. Either client or server.");
 
     #[cfg(feature = "client")]
-    #[cfg(not(feature = "server"))]
-    client_syncing::sync_component_client::<T>(_app);
+    client_syncing::sync_component_client::<T>(app);
 
     #[cfg(feature = "server")]
-    #[cfg(not(feature = "client"))]
-    server_syncing::sync_component_server::<T>(_app);
+    server_syncing::sync_component_server::<T>(app);
 }
 
 pub(super) fn register<T: States + Clone + Copy + FreelyMutableState>(app: &mut App, registry_syncing: RegistrySyncInit<T>) {

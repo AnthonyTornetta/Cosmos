@@ -95,6 +95,7 @@ fn process_ship_movement(
     movement.movement = movement.movement.normalize_or_zero();
 
     movement.braking = input_handler.check_pressed(CosmosInputs::SlowDown);
+    movement.match_speed = input_handler.check_pressed(CosmosInputs::MatchSpeed);
 
     if input_handler.check_just_pressed(CosmosInputs::StopPiloting) {
         client.send_message(

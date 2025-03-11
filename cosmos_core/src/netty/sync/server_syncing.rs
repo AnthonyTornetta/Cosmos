@@ -521,7 +521,6 @@ fn register_component<T: SyncableComponent>(mut registry: ResMut<Registry<Synced
     });
 }
 
-#[allow(unused)] // This function is used, but the LSP can't figure that out.
 pub(super) fn sync_component_server<T: SyncableComponent>(app: &mut App) {
     app.add_systems(
         Startup,
