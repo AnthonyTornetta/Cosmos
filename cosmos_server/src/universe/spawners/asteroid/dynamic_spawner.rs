@@ -116,7 +116,7 @@ fn spawn_tiny_asteroids(
                         random_range(-FUDGE_AMOUNT, FUDGE_AMOUNT),
                         random_range(-FUDGE_AMOUNT, FUDGE_AMOUNT),
                     ))
-                    * random_range(10.0, 300.0),
+                    * random_range(10.0, 100.0),
                 angvel: Vec3::new(
                     random_range(-ANGVEL_MAX, ANGVEL_MAX),
                     random_range(-ANGVEL_MAX, ANGVEL_MAX),
