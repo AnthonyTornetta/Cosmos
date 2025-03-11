@@ -4,12 +4,11 @@ use bevy::{
     ecs::component::StorageType,
     prelude::*,
     transform::systems::{propagate_transforms, sync_simple_transforms},
-    utils::HashMap,
 };
 use bevy_rapier3d::plugin::RapierContextEntityLink;
 
 #[cfg(feature = "server")]
-use bevy::utils::HashSet;
+use bevy::utils::{HashMap, HashSet};
 
 #[cfg(feature = "server")]
 use bevy_rapier3d::{plugin::RapierConfiguration, prelude::RapierContextSimulation};

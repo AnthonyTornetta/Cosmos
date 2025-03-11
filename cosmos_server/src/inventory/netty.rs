@@ -6,7 +6,7 @@ use bevy::{
     math::{Quat, Vec3},
     prelude::{
         in_state, App, Changed, Commands, Entity, GlobalTransform, IntoSystemConfigs, Query, RemovedComponents, Res, ResMut, Transform,
-        Update,
+        Update, Without,
     },
 };
 use bevy_rapier3d::prelude::Velocity;
@@ -22,7 +22,7 @@ use cosmos_core::{
     persistence::LoadingDistance,
     physics::location::Location,
     state::GameState,
-    structure::Structure,
+    structure::{ship::pilot::Pilot, Structure},
 };
 
 use crate::entities::player::PlayerLooking;
@@ -56,7 +56,7 @@ fn sync_held_items(
 
 fn get_inventory_mut<'a>(
     identifier: InventoryIdentifier,
-    q_inventory: &'a mut Query<&mut Inventory>,
+    q_inventory: &'a mut Query<&mut Inventory, Without<Pilot>>,
     q_structure: &'a Query<&Structure>,
 ) -> Option<Mut<'a, Inventory>> {
     match identifier {
@@ -83,7 +83,7 @@ fn get_inventory_mut<'a>(
 
 fn get_many_inventories_mut<'a, const N: usize>(
     identifiers: [InventoryIdentifier; N],
-    q_inventory: &'a mut Query<&mut Inventory>,
+    q_inventory: &'a mut Query<&mut Inventory, Without<Pilot>>,
     q_structure: &'a Query<&Structure>,
 ) -> Option<[Mut<'a, Inventory>; N]> {
     let ents = identifiers
@@ -105,7 +105,7 @@ fn get_many_inventories_mut<'a, const N: usize>(
 
 fn listen_for_inventory_messages(
     mut commands: Commands,
-    mut q_inventory: Query<&mut Inventory>,
+    mut q_inventory: Query<&mut Inventory, Without<Pilot>>,
     q_structure: Query<&Structure>,
     mut held_item_query: Query<&mut HeldItemStack>,
     mut server: ResMut<RenetServer>,

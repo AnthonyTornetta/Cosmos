@@ -93,13 +93,13 @@ fn handle_block_changed_event(
 }
 
 #[derive(Component, Serialize, Deserialize, Clone, Copy, Debug, Default)]
-pub struct NoAutoInsertMinedItems;
-impl IdentifiableComponent for NoAutoInsertMinedItems {
+pub struct AutoInsertMinedItems;
+impl IdentifiableComponent for AutoInsertMinedItems {
     fn get_component_unlocalized_name() -> &'static str {
         "cosmos:no_auto_insert_mined_items"
     }
 }
-impl DefaultPersistentComponent for NoAutoInsertMinedItems {}
+impl DefaultPersistentComponent for AutoInsertMinedItems {}
 
 /// This system is horribly smelly, and should be refactored soon.
 fn handle_block_break_events(
@@ -110,7 +110,7 @@ fn handle_block_break_events(
     block_items: Res<BlockItems>,
     mut inventory_query: Query<(&mut Inventory, Option<&BuildMode>, Option<&Parent>), Without<BlockData>>,
     mut event_writer: EventWriter<BlockChangedEvent>,
-    mut q_inventory_block_data: Query<(&BlockData, &mut Inventory), Without<NoAutoInsertMinedItems>>,
+    mut q_inventory_block_data: Query<(&BlockData, &mut Inventory), With<AutoInsertMinedItems>>,
     mut commands: Commands,
     has_data: Res<ItemShouldHaveData>,
     q_pilot: Query<&Pilot>,
@@ -514,7 +514,7 @@ fn handle_block_place_events(
 }
 
 pub(super) fn register(app: &mut App) {
-    make_persistent::<NoAutoInsertMinedItems>(app);
+    make_persistent::<AutoInsertMinedItems>(app);
 
     app.add_event::<BlockBreakEvent>()
         .add_mut_event::<BlockPlaceEvent>()

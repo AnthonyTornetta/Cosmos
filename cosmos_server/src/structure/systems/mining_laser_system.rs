@@ -260,6 +260,7 @@ fn update_mining_beams(
                         dirty: true,
                         last_toucher: beam_shooter_entity,
                     },
+                    NoSendEntity,
                 ))
                 .id();
 
