@@ -227,7 +227,7 @@ fn send_laser_hit_events(
                             .mul_vec3(pos - transform.translation());
 
                         event_writer.send(LaserCollideEvent {
-                            entity_hit: entity,
+                            entity_hit: parent.get(),
                             local_position_hit: lph,
                             laser_strength: laser.strength,
                             causer: causer.copied(),

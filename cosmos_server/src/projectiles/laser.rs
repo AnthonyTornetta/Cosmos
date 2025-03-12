@@ -49,7 +49,6 @@ fn on_laser_hit_structure(
 
 fn respond_laser_hit_event(
     mut reader: EventReader<LaserCollideEvent>,
-    parent_query: Query<&Parent>,
     mut structure_query: Query<&mut Structure>,
     blocks: Res<Registry<Block>>,
     mut block_take_damage_event_writer: EventWriter<BlockTakeDamageEvent>,
@@ -58,20 +57,18 @@ fn respond_laser_hit_event(
 ) {
     for ev in reader.read() {
         let entity_hit = ev.entity_hit();
-        if let Ok(parent) = parent_query.get(entity_hit) {
-            if let Ok(mut structure) = structure_query.get_mut(parent.get()) {
-                let local_position_hit = ev.local_position_hit();
+        if let Ok(mut structure) = structure_query.get_mut(entity_hit) {
+            let local_position_hit = ev.local_position_hit();
 
-                on_laser_hit_structure(
-                    &mut structure,
-                    local_position_hit,
-                    &blocks,
-                    &mut block_take_damage_event_writer,
-                    &mut block_destroy_event_writer,
-                    ev.laser_strength(),
-                    ev.causer().as_ref(),
-                );
-            }
+            on_laser_hit_structure(
+                &mut structure,
+                local_position_hit,
+                &blocks,
+                &mut block_take_damage_event_writer,
+                &mut block_destroy_event_writer,
+                ev.laser_strength(),
+                ev.causer().as_ref(),
+            );
         } else if let Ok(mut health) = q_health.get_mut(entity_hit) {
             health.take_damage(ev.laser_strength() as u32 / 2);
         }
