@@ -132,7 +132,7 @@ fn sync_ship_systems(
 
 fn on_self_become_pilot(
     q_changed_hotbar: Query<(&HotbarPriorityQueue, &Hotbar), With<LocalPlayerHotbar>>,
-    mut q_hovered_system: Query<&mut HoveredSystem, (Added<Pilot>, With<LocalPlayer>)>,
+    mut q_hovered_system: Query<&mut HoveredSystem, (Or<(Added<Pilot>, Added<HoveredSystem>)>, With<LocalPlayer>)>,
 ) {
     let Ok((queue, hotbar)) = q_changed_hotbar.get_single() else {
         return;
@@ -190,7 +190,8 @@ pub(super) fn register(app: &mut App) {
             sync_ship_systems.in_set(ItemStackSystemSet::CreateDataEntity),
             (on_self_become_pilot, on_change_hotbar)
                 .chain()
-                .before(SystemUsageSet::ChangeSystemBeingUsed),
+                .before(SystemUsageSet::ChangeSystemBeingUsed)
+                .after(SystemUsageSet::AddHoveredSlotComponent),
         )
             .in_set(SystemSelectionSet::ApplyUserChanges)
             .in_set(NetworkingSystemsSet::Between)

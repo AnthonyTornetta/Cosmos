@@ -82,7 +82,7 @@ fn spawn_tiny_asteroids(
 
         next_spawn_time.generate_next_spawn_time();
 
-        let n_asteroids = random_range(1.0, 3.0).round() as usize;
+        let n_asteroids = random_range(1.0, 2.0).round() as usize;
 
         let mut rng = rand::thread_rng();
 

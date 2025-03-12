@@ -2,7 +2,8 @@
 
 use bevy::{
     prelude::{
-        in_state, Added, App, Commands, Component, Entity, IntoSystemConfigs, Query, RemovedComponents, ResMut, SystemSet, Update, With,
+        in_state, Added, App, Commands, Component, Entity, IntoSystemConfigs, IntoSystemSetConfigs, Query, RemovedComponents, ResMut,
+        SystemSet, Update, With,
     },
     reflect::Reflect,
 };
@@ -70,19 +71,29 @@ fn check_removed_pilot(mut commands: Commands, mut removed: RemovedComponents<Pi
 #[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
 /// Used by the client to indicate which system they are currently activating
 pub enum SystemUsageSet {
+    /// The hovered slot component is added after becoming pilot
+    AddHoveredSlotComponent,
     /// Used by the client to indicate which system they are currently activating
     ChangeSystemBeingUsed,
 }
 
 pub(super) fn register(app: &mut App) {
-    app.configure_sets(Update, SystemUsageSet::ChangeSystemBeingUsed);
+    app.configure_sets(
+        Update,
+        (SystemUsageSet::AddHoveredSlotComponent, SystemUsageSet::ChangeSystemBeingUsed).chain(),
+    );
 
     app.add_systems(
         Update,
-        (check_system_in_use.run_if(no_open_menus), check_became_pilot, check_removed_pilot)
-            .in_set(NetworkingSystemsSet::Between)
-            .in_set(SystemUsageSet::ChangeSystemBeingUsed)
-            .chain()
+        (
+            (check_system_in_use.run_if(no_open_menus), check_removed_pilot)
+                .in_set(NetworkingSystemsSet::Between)
+                .in_set(SystemUsageSet::ChangeSystemBeingUsed)
+                .chain(),
+            check_became_pilot
+                .in_set(NetworkingSystemsSet::Between)
+                .before(SystemUsageSet::AddHoveredSlotComponent),
+        )
             .run_if(in_state(GameState::Playing)),
     )
     .register_type::<HoveredSystem>();
