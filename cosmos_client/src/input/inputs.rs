@@ -51,6 +51,9 @@ pub enum CosmosInputs {
     PlaceBlock,
     /// Interact with the block the player is looking at
     Interact,
+    /// Select the block you are looking at as the one currently held by you, if it exists in your
+    /// inventory.
+    PickBlock,
 
     // These two controls will eventually be removed
     /// Create a ship with a ship core in the player's inventory
@@ -151,6 +154,7 @@ fn init_input(mut input_handler: ResMut<CosmosInputHandler>) {
 
     input_handler.set_mouse_button(CosmosInputs::BreakBlock, MouseButton::Left);
     input_handler.set_mouse_button(CosmosInputs::PlaceBlock, MouseButton::Right);
+    input_handler.set_mouse_button(CosmosInputs::PickBlock, MouseButton::Middle);
     input_handler.set_keycode(CosmosInputs::Interact, KeyCode::KeyR);
     input_handler.set_keycode(CosmosInputs::StopPiloting, KeyCode::KeyR);
 
