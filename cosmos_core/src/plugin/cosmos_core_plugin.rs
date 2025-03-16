@@ -2,7 +2,7 @@
 
 use crate::netty::sync::registry::RegistrySyncInit;
 use crate::{
-    block, chat, crafting, debug, economy, ecs, entities, faction, fluid, inventory, logic, netty, persistence, projectiles, shop,
+    block, chat, coms, crafting, debug, economy, ecs, entities, faction, fluid, inventory, logic, netty, persistence, projectiles, shop,
     universe, utils,
 };
 use crate::{blockitems, structure};
@@ -115,6 +115,7 @@ impl<T: States + Clone + Copy + FreelyMutableState> Plugin for CosmosCorePlugin<
         chat::register(app);
         entities::register(app);
         crafting::register(app);
+        coms::register(app);
         faction::register(app);
     }
 }

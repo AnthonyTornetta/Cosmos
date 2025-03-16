@@ -286,8 +286,7 @@ fn move_anchors_between_worlds(
                 q_world_within
                     .get(x.1)
                     .ok()
-                    .map(|r| if retained_worlds.contains(&r.0) { None } else { Some((*r, x.0)) })
-                    .flatten()
+                    .and_then(|r| if retained_worlds.contains(&r.0) { None } else { Some((*r, x.0)) })
             })
             .next()
             .unwrap_or_else(|| {

@@ -6,6 +6,7 @@
 pub mod block;
 pub mod blockitems;
 pub mod chat;
+pub mod coms;
 pub mod crafting;
 pub mod debug;
 pub mod economy;

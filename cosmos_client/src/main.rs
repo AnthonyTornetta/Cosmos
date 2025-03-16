@@ -8,6 +8,7 @@ pub mod audio;
 pub mod block;
 pub mod camera;
 pub mod chat;
+pub mod coms;
 pub mod crafting;
 pub mod debug;
 pub mod economy;
@@ -187,6 +188,7 @@ fn main() {
     debug::register(&mut app);
     chat::register(&mut app);
     crafting::register(&mut app);
+    coms::register(&mut app);
 
     if cfg!(feature = "print-schedule") {
         println!(

@@ -45,6 +45,21 @@ pub trait NettyEvent: Serialize + DeserializeOwned + std::fmt::Debug + Identifia
     ///
     /// Either from `server -> client` or `client -> server`.
     fn event_receiver() -> EventReceiver;
+
+    #[cfg(feature = "client")]
+    fn needs_entity_conversion() -> bool {
+        false
+    }
+
+    #[cfg(feature = "client")]
+    fn convert_entities_client_to_server(self, _mapping: &crate::netty::sync::mapping::NetworkMapping) -> Option<Self> {
+        Some(self)
+    }
+
+    #[cfg(feature = "client")]
+    fn convert_entities_server_to_client(self, _mapping: &crate::netty::sync::mapping::NetworkMapping) -> Option<Self> {
+        Some(self)
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]

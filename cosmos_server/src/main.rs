@@ -30,6 +30,7 @@ pub mod ai;
 pub mod blocks;
 pub mod chat;
 pub mod commands;
+pub mod coms;
 pub mod crafting;
 mod debug;
 mod economy;
