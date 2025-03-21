@@ -78,6 +78,7 @@ fn send_events<T: NettyEvent>(
     mut client: ResMut<RenetClient>,
     mut evr: EventReader<NettyEventToSend<T>>,
     netty_event_registry: Res<Registry<RegisteredNettyEvent>>,
+    mapping: Res<NetworkMapping>,
 ) {
     for ev in evr.read() {
         let Some(registered_event) = netty_event_registry.from_id(T::unlocalized_name()) else {
@@ -89,7 +90,17 @@ fn send_events<T: NettyEvent>(
             continue;
         };
 
-        let serialized = bincode::serialize(&ev.0).unwrap();
+        let serialized = if T::needs_entity_conversion() {
+            let Some(x) = ev.0.clone().convert_entities_client_to_server(&mapping) else {
+                warn!("Unable to convert entity to server entity for {}!", T::unlocalized_name());
+                continue;
+            };
+
+            bincode::serialize(&x)
+        } else {
+            bincode::serialize(&ev.0)
+        }
+        .unwrap();
 
         client.send_message(
             NettyChannelClient::NettyEvent,
@@ -143,9 +154,14 @@ fn parse_event<T: NettyEvent>(
             continue;
         };
 
-        let Some(event) = event.convert_to_client_entity(&netty_mapping) else {
-            error!("Unable to convert event to client entity event!");
-            continue;
+        let event = if T::needs_entity_conversion() {
+            let Some(event) = event.convert_entities_server_to_client(&netty_mapping) else {
+                error!("Unable to convert event to client entity event!");
+                continue;
+            };
+            event
+        } else {
+            event
         };
 
         evw_custom_event.send(event);

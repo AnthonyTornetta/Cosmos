@@ -29,6 +29,7 @@ use bevy::ecs::schedule::IntoSystemConfigs;
 use bevy::ecs::system::{Commands, Resource};
 use bevy::log::warn;
 use bevy::prelude::SystemSet;
+use bevy::utils::hashbrown::HashSet;
 use bevy::{
     app::{App, Update},
     ecs::{
@@ -328,6 +329,28 @@ fn client_receive_components(
             c.clone(),
         )
         .is_some()
+    });
+
+    let mut done = HashSet::new();
+    waiting_data.0.retain(|(_, item)| {
+        let ComponentEntityIdentifier::Entity(e) = item.entity_identifier else {
+            return true;
+        };
+
+        if !done.insert(e) {
+            return false;
+        }
+
+        let ent = commands.spawn(Name::new("Loading auto synced component from server")).id();
+
+        network_mapping.add_mapping(ent, e);
+
+        client.send_message(
+            NettyChannelClient::Reliable,
+            cosmos_encoder::serialize(&ClientReliableMessages::RequestEntityData { entity: e }),
+        );
+
+        false
     });
 
     while let Some(message) = client.receive_message(NettyChannelServer::ComponentReplication) {

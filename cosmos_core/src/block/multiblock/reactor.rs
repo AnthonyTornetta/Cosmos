@@ -197,7 +197,7 @@ impl Registry<ReactorPowerGenerationBlock> {
     }
 }
 
-#[derive(Event, Debug, Serialize, Deserialize)]
+#[derive(Event, Debug, Serialize, Deserialize, Clone)]
 /// Send this to the player to cause them to open a reactor
 pub struct OpenReactorEvent(pub StructureBlock);
 
@@ -205,22 +205,27 @@ impl IdentifiableEvent for OpenReactorEvent {
     fn unlocalized_name() -> &'static str {
         "cosmos:open_reactor"
     }
-
-    #[cfg(feature = "client")]
-    fn convert_to_client_entity(self, netty: &crate::netty::sync::mapping::NetworkMapping) -> Option<Self> {
-        use crate::netty::sync::mapping::Mappable;
-
-        self.0.map_to_client(netty).ok().map(Self)
-    }
 }
 
 impl NettyEvent for OpenReactorEvent {
     fn event_receiver() -> crate::netty::sync::events::netty_event::EventReceiver {
         crate::netty::sync::events::netty_event::EventReceiver::Client
     }
+
+    #[cfg(feature = "client")]
+    fn needs_entity_conversion() -> bool {
+        true
+    }
+
+    #[cfg(feature = "client")]
+    fn convert_entities_server_to_client(self, netty: &crate::netty::sync::mapping::NetworkMapping) -> Option<Self> {
+        use crate::netty::sync::mapping::Mappable;
+
+        self.0.map_to_client(netty).ok().map(Self)
+    }
 }
 
-#[derive(Event, Debug, Serialize, Deserialize)]
+#[derive(Event, Debug, Serialize, Deserialize, Clone)]
 /// The client requests to set the state of the reactor
 pub struct ClientRequestChangeReactorStatus {
     /// The reactor they're controller toggling

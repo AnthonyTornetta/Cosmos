@@ -102,6 +102,8 @@ pub struct TextInput {
     pub cursor_pos: usize,
     /// Where the highlighting should begin (an index). This can be before or after the cursor.
     pub highlight_begin: Option<usize>,
+    /// The node that the text will be placed onto
+    pub text_node: Node,
 }
 
 impl TextInput {
@@ -121,6 +123,10 @@ impl Default for TextInput {
             cursor_pos: 0,
             highlight_begin: None,
             input_type: InputType::Text { max_length: None },
+            text_node: Node {
+                align_self: AlignSelf::Center,
+                ..Default::default()
+            },
         }
     }
 }
@@ -152,10 +158,10 @@ struct TextEnt(Entity);
 
 fn added_text_input_bundle(
     mut commands: Commands,
-    q_added: Query<(Entity, &InputValue, &TextFont, &TextColor), Added<TextInput>>,
+    q_added: Query<(Entity, Option<&TextLayout>, &InputValue, &TextFont, &TextColor, &TextInput), Added<TextInput>>,
     focused: Res<Focus>,
 ) {
-    for (entity, input_value, t_font, t_col) in q_added.iter() {
+    for (entity, text_layout, input_value, t_font, t_col, ti) in q_added.iter() {
         commands.entity(entity).insert(Interaction::None).insert(FocusPolicy::Block);
 
         let mut text_ent = None;
@@ -170,16 +176,13 @@ fn added_text_input_bundle(
                 p.spawn((
                     Name::new("Text input text display"),
                     Text::new(input_value.0.clone()),
-                    TextLayout {
+                    text_layout.copied().unwrap_or(TextLayout {
                         linebreak: LineBreak::NoWrap,
                         ..Default::default()
-                    },
+                    }),
                     t_font.clone(),
                     *t_col,
-                    Node {
-                        align_self: AlignSelf::Center,
-                        ..Default::default()
-                    },
+                    ti.text_node.clone(),
                 ))
                 .with_children(|p| {
                     p.spawn((TextSpan::new("|"), t_font.clone(), cursor_style));

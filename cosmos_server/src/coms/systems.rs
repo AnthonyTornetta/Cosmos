@@ -41,10 +41,11 @@ fn on_request_coms(
         let other_ship_ent = ev.event.0;
 
         let Ok(other_ship_loc) = q_ship_loc.get(other_ship_ent) else {
+            info!("Not a ship");
             continue;
         };
 
-        if other_ship_loc.is_within_reasonable_range(player_loc)
+        if !other_ship_loc.is_within_reasonable_range(player_loc)
             || other_ship_loc.distance_sqrd(player_loc) > MAX_HAIL_RANGE * MAX_HAIL_RANGE
         {
             info!("Too far!");
@@ -66,6 +67,7 @@ fn on_request_coms(
             return;
         }
 
+        info!("Requested coms!");
         commands.entity(other_ship_ent).insert(RequestedComs {
             from: this_ship_ent,
             time: 0.0,
@@ -88,20 +90,25 @@ fn on_request_coms(
 fn on_accept_coms(
     lobby: Res<ServerLobby>,
     q_pilot: Query<(&Location, &Pilot)>,
-    q_requested_coms: Query<(&Location, &RequestedComs)>,
+    q_requested_coms: Query<&RequestedComs>,
     mut commands: Commands,
     mut nevr_accept_coms: EventReader<NettyEventReceived<AcceptComsEvent>>,
 ) {
     for ev in nevr_accept_coms.read() {
         let Some((player_loc, pilot)) = lobby.player_from_id(ev.client_id).map(|x| q_pilot.get(x).ok()).flatten() else {
+            info!("Not a pilot player");
             continue;
         };
 
         let this_ship_ent = pilot.entity;
         let other_ship_ent = ev.event.0;
 
-        let Ok((other_ship_loc, req_coms)) = q_requested_coms.get(other_ship_ent) else {
-            warn!("Bad entity");
+        let Ok((other_ship_loc, _)) = q_pilot.get(other_ship_ent) else {
+            warn!("Bad entity ({other_ship_ent:?})");
+            continue;
+        };
+
+        let Ok(req_coms) = q_requested_coms.get(this_ship_ent) else {
             continue;
         };
 
@@ -110,12 +117,14 @@ fn on_accept_coms(
             continue;
         }
 
-        if other_ship_loc.is_within_reasonable_range(player_loc)
+        if !other_ship_loc.is_within_reasonable_range(player_loc)
             || other_ship_loc.distance_sqrd(player_loc) > MAX_HAIL_RANGE * MAX_HAIL_RANGE
         {
             info!("Accepted something that's too far.");
             return;
         }
+
+        info!("Inserting coms components!");
 
         commands.entity(this_ship_ent).remove::<RequestedComs>().with_children(|p| {
             p.spawn((ComsChannel {
@@ -137,7 +146,7 @@ fn tick_requested_coms(mut commands: Commands, time: Res<Time>, mut q_req_coms: 
     const MAX_SECS: f32 = 15.0;
 
     for (ent, mut req_com) in q_req_coms.iter_mut() {
-        req_com.time += time.elapsed_secs();
+        req_com.time += time.delta_secs();
 
         if req_com.time > MAX_SECS {
             commands.entity(ent).remove::<RequestedComs>();

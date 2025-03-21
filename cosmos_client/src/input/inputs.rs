@@ -134,6 +134,9 @@ pub enum CosmosInputs {
 
     /// Instead of crafting 1, the maximum amount will be crafted
     BulkCraft,
+
+    /// Hails the ship you are focused on
+    HailShip,
 }
 
 fn init_input(mut input_handler: ResMut<CosmosInputHandler>) {
@@ -206,6 +209,8 @@ fn init_input(mut input_handler: ResMut<CosmosInputHandler>) {
     input_handler.set_keycode(CosmosInputs::SendChatMessage, KeyCode::Enter);
 
     input_handler.set_keycode(CosmosInputs::BulkCraft, KeyCode::ShiftLeft);
+
+    input_handler.set_keycode(CosmosInputs::HailShip, KeyCode::KeyH);
 }
 
 #[derive(Resource, Default, Debug)]

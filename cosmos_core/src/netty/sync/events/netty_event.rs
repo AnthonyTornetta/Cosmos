@@ -18,12 +18,6 @@ pub trait IdentifiableEvent: Sized {
     ///
     /// For example: `cosmos:ping`
     fn unlocalized_name() -> &'static str;
-
-    #[cfg(feature = "client")]
-    /// Converts this component's server entity to the client's entity.
-    fn convert_to_client_entity(self, _netty: &crate::netty::sync::mapping::NetworkMapping) -> Option<Self> {
-        Some(self)
-    }
 }
 
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -40,7 +34,7 @@ pub enum EventReceiver {
 /// This allows an event to be automatically sent to the server/client from the other.
 ///
 /// TODO: Properly document how to use this
-pub trait NettyEvent: Serialize + DeserializeOwned + std::fmt::Debug + IdentifiableEvent + Event {
+pub trait NettyEvent: Serialize + DeserializeOwned + std::fmt::Debug + IdentifiableEvent + Event + Clone {
     /// Returns how this component should be synced
     ///
     /// Either from `server -> client` or `client -> server`.

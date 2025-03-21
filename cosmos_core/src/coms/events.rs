@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 use crate::netty::sync::events::netty_event::{IdentifiableEvent, NettyEvent, SyncedEventImpl};
 
 /// A ship requests a coms communication with another ship
-#[derive(Event, Serialize, Deserialize, Debug)]
+#[derive(Event, Serialize, Deserialize, Debug, Clone)]
 pub struct RequestComsEvent(pub Entity);
 
 impl IdentifiableEvent for RequestComsEvent {
@@ -34,7 +34,7 @@ impl NettyEvent for RequestComsEvent {
     }
 }
 
-#[derive(Event, Serialize, Deserialize, Debug)]
+#[derive(Event, Serialize, Deserialize, Debug, Clone)]
 pub struct AcceptComsEvent(pub Entity);
 
 impl IdentifiableEvent for AcceptComsEvent {
@@ -55,6 +55,7 @@ impl NettyEvent for AcceptComsEvent {
 
     #[cfg(feature = "client")]
     fn convert_entities_client_to_server(self, mapping: &crate::netty::sync::mapping::NetworkMapping) -> Option<Self> {
+        info!("{:?}", self.0);
         mapping.server_from_client(&self.0).map(Self)
     }
 
@@ -64,7 +65,7 @@ impl NettyEvent for AcceptComsEvent {
     }
 }
 
-#[derive(Event, Serialize, Deserialize, Debug)]
+#[derive(Event, Serialize, Deserialize, Debug, Clone)]
 pub struct SendComsMessage {
     pub message: String,
     pub to: Entity,
