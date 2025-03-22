@@ -19,7 +19,7 @@ use cosmos_core::{
 use renet2::{ClientId, RenetServer};
 
 fn on_request_parent(
-    q_t: Query<(&Parent, Option<&StructureSystem>, Option<&ItemStackData>, Option<&BlockData>)>,
+    q_t: Query<(&Parent, Option<&StructureSystem>, Option<&ItemStackData>, Option<&BlockData>), Without<NoSendEntity>>,
     q_parent: Query<(Option<&Location>, Option<&LoadingDistance>, Option<&Parent>)>,
     mut ev_reader: EventReader<RequestedEntityEvent>,
     mut server: ResMut<RenetServer>,

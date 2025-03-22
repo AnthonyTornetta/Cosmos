@@ -318,7 +318,7 @@ fn server_sync_removed_components<T: SyncableComponent>(
 }
 
 fn on_request_component<T: SyncableComponent>(
-    q_t: Query<(&T, Option<&StructureSystem>, Option<&ItemStackData>, Option<&BlockData>)>,
+    q_t: Query<(&T, Option<&StructureSystem>, Option<&ItemStackData>, Option<&BlockData>), Without<NoSendEntity>>,
     q_parent: Query<(Option<&Location>, Option<&LoadingDistance>, Option<&Parent>)>,
     mut ev_reader: EventReader<RequestedEntityEvent>,
     id_registry: Res<Registry<SyncedComponentId>>,

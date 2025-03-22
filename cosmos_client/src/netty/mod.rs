@@ -14,10 +14,12 @@ pub mod connect;
 pub mod gameplay;
 pub mod loading;
 pub mod lobby;
+mod sync;
 
 pub(super) fn register(app: &mut App) {
     loading::register(app);
     connect::register(app);
+    sync::register(app);
 
     app.configure_sets(
         Update,

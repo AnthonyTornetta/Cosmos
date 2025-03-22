@@ -209,26 +209,26 @@ pub trait SyncableComponent: Serialize + DeserializeOwned + Clone + std::fmt::De
 }
 
 #[derive(Event, Debug)]
-struct GotComponentToSyncEvent {
+pub struct GotComponentToSyncEvent {
     #[allow(dead_code)] // on client this is unused
-    client_id: ClientId,
-    component_id: ComponentId,
-    entity: Entity,
+    pub client_id: ClientId,
+    pub component_id: ComponentId,
+    pub entity: Entity,
     /// The entity authority should be checked against - not the entity being targetted.
     #[allow(dead_code)] // on client this is unused
-    authority_entity: Entity,
-    raw_data: Vec<u8>,
+    pub authority_entity: Entity,
+    pub raw_data: Vec<u8>,
 }
 
 #[derive(Event, Debug)]
-struct GotComponentToRemoveEvent {
+pub struct GotComponentToRemoveEvent {
     #[allow(dead_code)] // on client this is unused
-    client_id: ClientId,
-    component_id: ComponentId,
-    entity: Entity,
+    pub client_id: ClientId,
+    pub component_id: ComponentId,
+    pub entity: Entity,
     /// The entity authority should be checked against - not the entity being targetted.
     #[allow(dead_code)] // on client this is unused
-    authority_entity: Entity,
+    pub authority_entity: Entity,
 }
 
 #[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
