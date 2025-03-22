@@ -109,9 +109,9 @@ fn on_change_selected_coms(
 }
 
 fn on_change_coms(
-    q_changed_coms: Query<(Entity, &Parent, &ComsChannel), Changed<ComsChannel>>,
+    q_changed_coms: Query<(Entity, &Parent, &ComsChannel), Or<(Changed<ComsChannel>, Changed<Parent>)>>,
     q_pilot: Query<&Pilot>,
-    q_local_player: Query<Entity, With<LocalPlayer>>,
+    q_local_player: Query<(), With<LocalPlayer>>,
     q_coms_ui: Query<Entity, With<ComsUi>>,
     mut commands: Commands,
     coms_assets: Res<ComsAssets>,
@@ -119,38 +119,34 @@ fn on_change_coms(
     mut q_header: Query<(&mut SelectedComs, &mut Text)>,
     q_body: Query<Entity, With<MessageArea>>,
 ) {
-    let Some((coms_ent, parent, coms)) = q_changed_coms.iter().next() else {
-        return;
-    };
+    for (coms_ent, parent, coms) in q_changed_coms.iter() {
+        let Ok(pilot) = q_pilot.get(parent.get()) else {
+            continue;
+        };
 
-    let Ok(pilot) = q_pilot.get(parent.get()) else {
-        return;
-    };
-
-    let Ok(local_player) = q_local_player.get(pilot.entity) else {
-        return;
-    };
-
-    if pilot.entity != local_player {
-        return;
-    }
-
-    let messages = coms.messages.iter().map(|x| x.text.as_str()).collect::<Vec<_>>();
-    if !q_coms_ui.is_empty() {
-        let (mut coms, mut text) = q_header.get_single_mut().expect("Header missing");
-        if coms.0 != coms_ent {
-            return;
+        if !q_local_player.contains(pilot.entity) {
+            continue;
         }
 
-        commands
-            .entity(q_body.get_single().expect("Body missing"))
-            .despawn_descendants()
-            .with_children(|p| create_messages_ui(&font, p, &messages));
+        // Write code to assert that 1=1 using assert_eq
 
-        coms.0 = coms_ent;
-        text.0 = "[Ship Name]".into();
-    } else {
-        create_coms_ui(&mut commands, &coms_assets, &font, coms_ent, &messages);
+        let messages = coms.messages.iter().map(|x| x.text.as_str()).collect::<Vec<_>>();
+        if !q_coms_ui.is_empty() {
+            let (mut coms, mut text) = q_header.get_single_mut().expect("Header missing");
+            if coms.0 != coms_ent {
+                continue;
+            }
+
+            commands
+                .entity(q_body.get_single().expect("Body missing"))
+                .despawn_descendants()
+                .with_children(|p| create_messages_ui(&font, p, &messages));
+
+            coms.0 = coms_ent;
+            text.0 = "[Ship Name]".into();
+        } else {
+            create_coms_ui(&mut commands, &coms_assets, &font, coms_ent, &messages);
+        }
     }
 }
 
@@ -435,7 +431,7 @@ impl ButtonEvent for SendClicked {
 pub(super) fn register(app: &mut App) {
     app.add_systems(
         Update,
-        (on_change_coms, on_change_selected_coms)
+        (on_remove_coms, on_change_coms, on_change_selected_coms)
             .chain()
             .run_if(in_state(GameState::Playing))
             .in_set(NetworkingSystemsSet::Between),

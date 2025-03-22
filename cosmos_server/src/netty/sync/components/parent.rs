@@ -19,7 +19,7 @@ use cosmos_core::{
 use renet2::{ClientId, RenetServer};
 
 fn on_request_parent(
-    q_t: Query<(&Parent, Option<&StructureSystem>, Option<&ItemStackData>, Option<&BlockData>), Without<NoSendEntity>>,
+    q_component: Query<(&Parent, Option<&StructureSystem>, Option<&ItemStackData>, Option<&BlockData>), Without<NoSendEntity>>,
     q_parent: Query<(Option<&Location>, Option<&LoadingDistance>, Option<&Parent>)>,
     mut ev_reader: EventReader<RequestedEntityEvent>,
     mut server: ResMut<RenetServer>,
@@ -36,7 +36,7 @@ fn on_request_parent(
             continue;
         };
 
-        let Ok((component, structure_system, is_data, block_data)) = q_t.get(ev.entity) else {
+        let Ok((component, structure_system, is_data, block_data)) = q_component.get(ev.entity) else {
             continue;
         };
 

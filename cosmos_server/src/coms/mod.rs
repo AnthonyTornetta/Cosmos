@@ -1,10 +1,12 @@
+//! Server-side coms logic
+
 use bevy::prelude::*;
 
 mod systems;
 
 #[derive(Event)]
 /// This NPC is being hailed by a player
-pub struct RequestHailNpc {
+struct RequestHailNpc {
     player: Entity,
 }
 
