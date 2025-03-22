@@ -1,6 +1,6 @@
 use super::server_entity_syncing::RequestedEntityEvent;
 use super::{
-    ClientAuthority, ComponentEntityIdentifier, ComponentReplicationMessage, ComponentSyncingSet, RegisterComponentSet,
+    ClientAuthority, ComponentEntityIdentifier, ComponentId, ComponentReplicationMessage, ComponentSyncingSet, RegisterComponentSet,
     ReplicatedComponentData, SyncType, SyncableComponent, SyncedComponentId,
 };
 use crate::block::data::BlockData;
@@ -45,8 +45,12 @@ fn server_remove_component<T: SyncableComponent>(
     q_piloting: Query<&Pilot>,
 ) {
     for ev in ev_reader.read() {
-        let Some(synced_id) = components_registry.try_from_numeric_id(ev.component_id) else {
-            warn!("Missing component with id {}", ev.component_id);
+        let ComponentId::Custom(id) = ev.component_id else {
+            continue;
+        };
+
+        let Some(synced_id) = components_registry.try_from_numeric_id(id) else {
+            warn!("Missing component with id {}", id);
             continue;
         };
 
@@ -103,8 +107,12 @@ fn server_deserialize_component<T: SyncableComponent>(
     q_t: Query<&T>,
 ) {
     for ev in ev_reader.read() {
-        let Some(synced_id) = components_registry.try_from_numeric_id(ev.component_id) else {
-            warn!("Missing component with id {}", ev.component_id);
+        let ComponentId::Custom(id) = ev.component_id else {
+            continue;
+        };
+
+        let Some(synced_id) = components_registry.try_from_numeric_id(id) else {
+            warn!("Missing component with id {}", id);
             continue;
         };
 
@@ -181,7 +189,7 @@ fn recursive_should_load(
     }
 }
 
-fn should_be_sent_to(
+pub fn should_be_sent_to(
     p_loc: &Location,
     q_parent: &Query<(Option<&Location>, Option<&LoadingDistance>, Option<&Parent>)>,
     entity_identifier: &ComponentEntityIdentifier,
@@ -251,7 +259,7 @@ fn server_send_component<T: SyncableComponent>(
             player.client_id(),
             NettyChannelServer::ComponentReplication,
             cosmos_encoder::serialize(&ComponentReplicationMessage::ComponentReplication {
-                component_id: id.id(),
+                component_id: ComponentId::Custom(id.id()),
                 replicated: replicated_data,
             }),
         );
@@ -302,7 +310,7 @@ fn server_sync_removed_components<T: SyncableComponent>(
         server.broadcast_message(
             NettyChannelServer::ComponentReplication,
             cosmos_encoder::serialize(&ComponentReplicationMessage::RemovedComponent {
-                component_id: id.id(),
+                component_id: ComponentId::Custom(id.id()),
                 entity_identifier,
             }),
         );
@@ -372,7 +380,7 @@ fn on_request_component<T: SyncableComponent>(
             client_id,
             NettyChannelServer::ComponentReplication,
             cosmos_encoder::serialize(&ComponentReplicationMessage::ComponentReplication {
-                component_id: id.id(),
+                component_id: ComponentId::Custom(id.id()),
                 replicated: replicated_component,
             }),
         );

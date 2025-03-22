@@ -2,7 +2,7 @@
 
 use super::mapping::{NetworkMapping, ServerEntity};
 use super::{
-    ClientAuthority, ComponentEntityIdentifier, ComponentReplicationMessage, ComponentSyncingSet, GotComponentToRemoveEvent,
+    ClientAuthority, ComponentEntityIdentifier, ComponentId, ComponentReplicationMessage, ComponentSyncingSet, GotComponentToRemoveEvent,
     ReplicatedComponentData, SyncType, SyncableComponent, SyncedComponentId,
 };
 use crate::block::data::BlockData;
@@ -50,9 +50,13 @@ fn client_deserialize_component<T: SyncableComponent>(
     q_t: Query<&T>,
 ) {
     for ev in ev_reader.read() {
+        let ComponentId::Custom(id) = ev.component_id else {
+            continue;
+        };
+
         let synced_id = components_registry
-            .try_from_numeric_id(ev.component_id)
-            .unwrap_or_else(|| panic!("Missing component with id {}\n\n{components_registry:?}\n\n", ev.component_id));
+            .try_from_numeric_id(id)
+            .unwrap_or_else(|| panic!("Missing component with id {}\n\n{components_registry:?}\n\n", id));
 
         if T::get_component_unlocalized_name() != synced_id.unlocalized_name {
             continue;
@@ -90,9 +94,13 @@ fn client_remove_component<T: SyncableComponent>(
     mut commands: Commands,
 ) {
     for ev in ev_reader.read() {
+        let ComponentId::Custom(id) = ev.component_id else {
+            continue;
+        };
+
         let synced_id = components_registry
-            .try_from_numeric_id(ev.component_id)
-            .unwrap_or_else(|| panic!("Missing component with id {}", ev.component_id));
+            .try_from_numeric_id(id)
+            .unwrap_or_else(|| panic!("Missing component with id {}", id));
 
         if T::get_component_unlocalized_name() != synced_id.unlocalized_name {
             continue;
@@ -183,7 +191,7 @@ fn client_send_components<T: SyncableComponent>(
         client.send_message(
             NettyChannelClient::ComponentReplication,
             cosmos_encoder::serialize(&ComponentReplicationMessage::ComponentReplication {
-                component_id: id.id(),
+                component_id: ComponentId::Custom(id.id()),
                 replicated: data_to_sync,
             }),
         );
@@ -249,7 +257,7 @@ fn client_send_removed_components<T: SyncableComponent>(
         client.send_message(
             NettyChannelClient::ComponentReplication,
             cosmos_encoder::serialize(&ComponentReplicationMessage::RemovedComponent {
-                component_id: id.id(),
+                component_id: ComponentId::Custom(id.id()),
                 entity_identifier,
             }),
         )
@@ -292,7 +300,7 @@ fn compute_entity_identifier(
 }
 
 #[derive(Resource, Default)]
-struct WaitingData(Vec<(u16, ReplicatedComponentData)>);
+struct WaitingData(Vec<(ComponentId, ReplicatedComponentData)>);
 
 #[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
 /// Receives auto-synced components from the server
@@ -427,7 +435,7 @@ fn repl_comp_data(
     q_structure: &mut Query<&mut Structure>,
     ev_writer_sync: &mut EventWriter<GotComponentToSyncEvent>,
     evw_block_data_changed: &mut EventWriter<BlockDataChangedEvent>,
-    component_id: u16,
+    component_id: ComponentId,
     c: ReplicatedComponentData,
 ) -> Option<ReplicatedComponentData> {
     let ReplicatedComponentData {

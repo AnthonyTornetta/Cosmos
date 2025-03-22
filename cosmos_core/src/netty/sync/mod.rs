@@ -31,15 +31,21 @@ pub struct ReplicatedComponentData {
     pub raw_data: Vec<u8>,
 }
 
+#[derive(Debug, Serialize, Deserialize, Clone, Copy)]
+pub enum ComponentId {
+    Custom(u16),
+    Parent,
+}
+
 #[derive(Debug, Serialize, Deserialize, Clone)]
-enum ComponentReplicationMessage {
+pub enum ComponentReplicationMessage {
     ComponentReplication {
-        component_id: u16,
+        component_id: ComponentId,
         replicated: Vec<ReplicatedComponentData>,
     },
     /// *Server Authoritative Note:* Removed components will NOT be synced if the entity is despawned.
     RemovedComponent {
-        component_id: u16,
+        component_id: ComponentId,
         entity_identifier: ComponentEntityIdentifier,
     },
 }
@@ -53,8 +59,9 @@ pub mod server_entity_syncing;
 #[cfg(feature = "client")]
 pub mod client_syncing;
 #[cfg(feature = "server")]
-mod server_syncing;
+pub mod server_syncing;
 
+mod components;
 /// Events that are synced from server->client and client->server.
 pub mod events;
 /// Syncing of registries from server -> client
@@ -205,7 +212,7 @@ pub trait SyncableComponent: Serialize + DeserializeOwned + Clone + std::fmt::De
 struct GotComponentToSyncEvent {
     #[allow(dead_code)] // on client this is unused
     client_id: ClientId,
-    component_id: u16,
+    component_id: ComponentId,
     entity: Entity,
     /// The entity authority should be checked against - not the entity being targetted.
     #[allow(dead_code)] // on client this is unused
@@ -217,7 +224,7 @@ struct GotComponentToSyncEvent {
 struct GotComponentToRemoveEvent {
     #[allow(dead_code)] // on client this is unused
     client_id: ClientId,
-    component_id: u16,
+    component_id: ComponentId,
     entity: Entity,
     /// The entity authority should be checked against - not the entity being targetted.
     #[allow(dead_code)] // on client this is unused
