@@ -173,7 +173,7 @@ fn send_coms_message(
             .iter_mut()
             .find(|(parent, coms)| parent.get() == pilot.entity && coms.with == ev.to)
         else {
-            warn!("No coms entry!");
+            warn!("(1) No coms entry! to: {:?} | ship = {:?}", ev.to, pilot.entity);
             continue;
         };
 
@@ -185,7 +185,7 @@ fn send_coms_message(
             .iter_mut()
             .find(|(parent, coms)| parent.get() == ev.to && coms.with == pilot.entity)
         else {
-            warn!("No coms entry!");
+            warn!("(2) No coms entry! to: {:?} | ship = {:?}", ev.to, pilot.entity);
             continue;
         };
 

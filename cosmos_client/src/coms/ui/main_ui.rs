@@ -519,15 +519,16 @@ fn on_close_menu(
 fn send_text(
     mut nevw_send_coms_message: NettyEventWriter<SendComsMessage>,
     q_selected_coms: Query<&SelectedComs>,
-    q_text_value: Query<&InputValue, With<ComsMessage>>,
+    mut q_text_value: Query<&mut InputValue, With<ComsMessage>>,
     mut evr_send: EventReader<SendClicked>,
     inputs: InputChecker,
+    q_coms_channel: Query<&ComsChannel>,
 ) {
     if evr_send.read().next().is_none() & !inputs.check_just_pressed(CosmosInputs::SendComs) {
         return;
     }
 
-    let Ok(text) = q_text_value.get_single() else {
+    let Ok(mut text) = q_text_value.get_single_mut() else {
         return;
     };
 
@@ -541,11 +542,17 @@ fn send_text(
         return;
     }
 
+    let Ok(coms_channel) = q_coms_channel.get(selected.0) else {
+        return;
+    };
+
     info!("Sending message: {}", val);
     nevw_send_coms_message.send(SendComsMessage {
         message: val.to_owned(),
-        to: selected.0,
+        to: coms_channel.with,
     });
+
+    *text = Default::default();
 }
 
 pub(super) fn register(app: &mut App) {

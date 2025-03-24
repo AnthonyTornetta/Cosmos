@@ -223,6 +223,7 @@ fn init_input(mut input_handler: ResMut<CosmosInputHandler>) {
     input_handler.set_keycode(CosmosInputs::AcceptComsRequest, KeyCode::KeyY);
     input_handler.set_keycode(CosmosInputs::DeclineComsRequest, KeyCode::KeyN);
     input_handler.set_keycode(CosmosInputs::ToggleComs, KeyCode::Backquote);
+    input_handler.set_keycode(CosmosInputs::SendComs, KeyCode::Enter);
 }
 
 #[derive(Resource, Default, Debug)]

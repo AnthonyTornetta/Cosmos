@@ -55,7 +55,6 @@ impl NettyEvent for AcceptComsEvent {
 
     #[cfg(feature = "client")]
     fn convert_entities_client_to_server(self, mapping: &crate::netty::sync::mapping::NetworkMapping) -> Option<Self> {
-        info!("{:?}", self.0);
         mapping.server_from_client(&self.0).map(Self)
     }
 

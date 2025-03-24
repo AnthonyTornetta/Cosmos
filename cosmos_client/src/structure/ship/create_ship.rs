@@ -16,7 +16,7 @@ use cosmos_core::{
     },
     registry::Registry,
     state::GameState,
-    structure::shared::build_mode::BuildMode,
+    structure::{shared::build_mode::BuildMode, ship::pilot::Pilot},
 };
 
 use crate::{
@@ -31,7 +31,7 @@ pub struct CreateShipEvent {
 }
 
 fn listener(
-    q_inventory: Query<&Inventory, (With<LocalPlayer>, Without<BuildMode>)>,
+    q_inventory: Query<&Inventory, (With<LocalPlayer>, Without<BuildMode>, Without<Pilot>)>,
     items: Res<Registry<Item>>,
     input_handler: InputChecker,
     mut event_writer: EventWriter<CreateShipEvent>,
