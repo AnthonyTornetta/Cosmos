@@ -65,9 +65,21 @@ impl NettyEvent for AcceptComsEvent {
 }
 
 #[derive(Event, Serialize, Deserialize, Debug, Clone)]
+/// Used to communicate between ships. Send this when there is an open coms channel between two
+/// ships to add messages to that channel.
 pub struct SendComsMessage {
-    pub message: String,
+    pub message: SendComsMessageType,
     pub to: Entity,
+}
+
+#[derive(Event, Serialize, Deserialize, Debug, Clone)]
+pub enum SendComsMessageType {
+    /// Used for player-player communication.
+    Message(String),
+    /// Used for player-ai communication - indicates a `Yes` response.
+    Yes,
+    /// Used for player-ai communication - indicates a `No` response.
+    No,
 }
 
 impl IdentifiableEvent for SendComsMessage {

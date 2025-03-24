@@ -1,8 +1,8 @@
 use bevy::prelude::*;
 use cosmos_core::{
     coms::{
-        events::{AcceptComsEvent, RequestComsEvent, SendComsMessage},
-        ComsChannel, ComsMessage, RequestedComs,
+        events::{AcceptComsEvent, RequestComsEvent, SendComsMessage, SendComsMessageType},
+        AiComsType, ComsChannel, ComsChannelType, ComsMessage, RequestedComs,
     },
     ecs::NeedsDespawned,
     entities::player::Player,
@@ -67,19 +67,25 @@ fn on_request_coms(
             return;
         }
 
-        info!("Requested coms!");
-        commands.entity(other_ship_ent).insert(RequestedComs {
-            from: this_ship_ent,
-            time: 0.0,
-        });
-
         if let Ok((_, pilot)) = q_pilot.get(other_ship_ent) {
             if let Ok(player) = q_player.get(pilot.entity) {
                 info!("Requesting other player hail.");
                 nevw_req.send(RequestComsEvent(this_ship_ent), player.client_id());
+                commands.entity(other_ship_ent).insert(RequestedComs {
+                    coms_type: Some(ComsChannelType::Ai(AiComsType::YesNo)),
+                    from: this_ship_ent,
+                    time: 0.0,
+                });
             } else {
                 info!("Requesting NPC hail.");
-                evw_request_hail_npc.send(RequestHailNpc { player: this_ship_ent });
+                evw_request_hail_npc.send(RequestHailNpc {
+                    player_ship: this_ship_ent,
+                });
+                commands.entity(other_ship_ent).insert(RequestedComs {
+                    coms_type: None,
+                    from: this_ship_ent,
+                    time: 0.0,
+                });
             }
         } else {
             info!("TODO: Let everyone on ship know they are being hailed!");
@@ -126,18 +132,22 @@ fn on_accept_coms(
 
         info!("Inserting coms components!");
 
+        let channel_type = req_coms.coms_type.unwrap_or(ComsChannelType::Player);
+
         commands.entity(this_ship_ent).remove::<RequestedComs>().with_children(|p| {
-            p.spawn((ComsChannel {
+            p.spawn(ComsChannel {
                 with: other_ship_ent,
                 messages: vec![],
-            },));
+                channel_type,
+            });
         });
 
         commands.entity(other_ship_ent).with_children(|p| {
-            p.spawn((ComsChannel {
+            p.spawn(ComsChannel {
                 with: this_ship_ent,
                 messages: vec![],
-            },));
+                channel_type,
+            });
         });
     }
 }
@@ -177,9 +187,16 @@ fn send_coms_message(
             continue;
         };
 
-        coms.messages.push(ComsMessage {
-            text: ev.event.message.clone(),
-        });
+        let msg = ComsMessage {
+            sender: pilot.entity,
+            text: match &ev.event.message {
+                SendComsMessageType::Message(s) => s.into(),
+                SendComsMessageType::Yes => "Yes".into(),
+                SendComsMessageType::No => "No".into(),
+            },
+        };
+
+        coms.messages.push(msg.clone());
 
         let Some((_, mut coms)) = q_coms
             .iter_mut()
@@ -189,9 +206,7 @@ fn send_coms_message(
             continue;
         };
 
-        coms.messages.push(ComsMessage {
-            text: ev.event.message.clone(),
-        });
+        coms.messages.push(msg);
     }
 }
 

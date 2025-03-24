@@ -4,6 +4,7 @@ use crate::{
     ui::{
         components::{
             button::{register_button, ButtonEvent, CosmosButton},
+            scollable_container::ScrollBox,
             show_cursor::ShowCursor,
             text_input::{InputType, InputValue, TextInput},
         },
@@ -12,10 +13,10 @@ use crate::{
     },
 };
 use bevy::{a11y::Focus, color::palettes::css, prelude::*};
-use cosmos_core::netty::client::LocalPlayer;
-use cosmos_core::netty::system_sets::NetworkingSystemsSet;
-use cosmos_core::state::GameState;
 use cosmos_core::structure::ship::pilot::Pilot;
+use cosmos_core::{coms::events::SendComsMessageType, state::GameState};
+use cosmos_core::{coms::ComsChannelType, netty::system_sets::NetworkingSystemsSet};
+use cosmos_core::{coms::ComsMessage, netty::client::LocalPlayer};
 use cosmos_core::{
     coms::{events::SendComsMessage, ComsChannel},
     netty::sync::events::client_event::NettyEventWriter,
@@ -25,7 +26,7 @@ use cosmos_core::{
 struct ComsUi;
 
 #[derive(Component)]
-struct ComsMessage;
+struct UiComsMessage;
 
 #[derive(Component)]
 struct SelectedComs(Entity);
@@ -92,7 +93,8 @@ fn on_change_selected_coms(
         return;
     };
 
-    let Ok(pilot) = q_pilot.get(parent.get()) else {
+    let your_ship = parent.get();
+    let Ok(pilot) = q_pilot.get(your_ship) else {
         return;
     };
 
@@ -104,16 +106,24 @@ fn on_change_selected_coms(
         return;
     }
 
-    let messages = coms.messages.iter().map(|x| x.text.as_str()).collect::<Vec<_>>();
+    let messages = coms.messages.iter().collect::<Vec<_>>();
     if !q_coms_ui.is_empty() {
         commands
             .entity(q_body.get_single().expect("Body missing"))
             .despawn_descendants()
-            .with_children(|p| create_messages_ui(&font, p, &messages));
+            .with_children(|p| create_messages_ui(&font, p, &messages, your_ship));
 
         text.0 = "[Ship Name]".into();
     } else {
-        create_coms_ui(&mut commands, &coms_assets, &font, coms_ent, &messages);
+        create_coms_ui(
+            &mut commands,
+            &coms_assets,
+            &font,
+            coms_ent,
+            &coms.channel_type,
+            &messages,
+            your_ship,
+        );
     }
 }
 
@@ -133,13 +143,15 @@ fn on_change_coms(
             continue;
         };
 
-        if !q_local_player.contains(pilot.entity) {
+        let your_ship = pilot.entity;
+
+        if !q_local_player.contains(your_ship) {
             continue;
         }
 
         // Write code to assert that 1=1 using assert_eq
 
-        let messages = coms.messages.iter().map(|x| x.text.as_str()).collect::<Vec<_>>();
+        let messages = coms.messages.iter().collect::<Vec<_>>();
         if !q_coms_ui.is_empty() {
             let (mut coms, mut text) = q_header.get_single_mut().expect("Header missing");
             if coms.0 != coms_ent {
@@ -149,12 +161,20 @@ fn on_change_coms(
             commands
                 .entity(q_body.get_single().expect("Body missing"))
                 .despawn_descendants()
-                .with_children(|p| create_messages_ui(&font, p, &messages));
+                .with_children(|p| create_messages_ui(&font, p, &messages, your_ship));
 
             coms.0 = coms_ent;
             text.0 = "[Ship Name]".into();
         } else {
-            create_coms_ui(&mut commands, &coms_assets, &font, coms_ent, &messages);
+            create_coms_ui(
+                &mut commands,
+                &coms_assets,
+                &font,
+                coms_ent,
+                &coms.channel_type,
+                &messages,
+                your_ship,
+            );
         }
     }
 }
@@ -190,7 +210,15 @@ fn on_remove_coms(
     }
 }
 
-fn create_coms_ui(commands: &mut Commands, coms_assets: &ComsAssets, font: &DefaultFont, current_coms_ent: Entity, messages: &[&str]) {
+fn create_coms_ui(
+    commands: &mut Commands,
+    coms_assets: &ComsAssets,
+    font: &DefaultFont,
+    current_coms_ent: Entity,
+    coms_type: &ComsChannelType,
+    messages: &[&ComsMessage],
+    your_ship: Entity,
+) {
     let accent: Color = css::AQUA.into();
     let main_transparent: Color = Srgba::hex("#555555DE").unwrap().into();
 
@@ -322,16 +350,26 @@ fn create_coms_ui(commands: &mut Commands, coms_assets: &ComsAssets, font: &Defa
                 ))
                 .with_children(|p| {
                     p.spawn((
-                        Name::new("Messages"),
-                        MessageArea,
+                        Name::new("Messages ScrollBox"),
+                        ScrollBox { ..Default::default() },
                         Node {
                             flex_grow: 1.0,
-                            flex_direction: FlexDirection::Column,
                             ..Default::default()
                         },
                     ))
                     .with_children(|p| {
-                        create_messages_ui(&message_font.font, p, messages);
+                        p.spawn((
+                            Name::new("Messages"),
+                            MessageArea,
+                            Node {
+                                flex_grow: 1.0,
+                                flex_direction: FlexDirection::Column,
+                                ..Default::default()
+                            },
+                        ))
+                        .with_children(|p| {
+                            create_messages_ui(&message_font.font, p, messages, your_ship);
+                        });
                     });
 
                     p.spawn((
@@ -344,44 +382,69 @@ fn create_coms_ui(commands: &mut Commands, coms_assets: &ComsAssets, font: &Defa
                         BackgroundColor(Srgba::hex("#444").unwrap().into()),
                         SendMessageArea,
                     ))
-                    .with_children(|p| {
-                        p.spawn((
-                            Node {
-                                flex_grow: 1.0,
-                                margin: UiRect::all(Val::Px(10.0)),
-                                ..Default::default()
-                            },
-                            TextLayout {
-                                linebreak: LineBreak::WordOrCharacter,
-                                ..Default::default()
-                            },
-                            ComsMessage,
-                            message_font.clone(),
-                            TextInput {
-                                input_type: InputType::Text { max_length: Some(100) },
-                                text_node: Node::default(),
-                                ..Default::default()
-                            },
-                        ));
+                    .with_children(|p| match coms_type {
+                        ComsChannelType::Player => {
+                            p.spawn((
+                                Node {
+                                    flex_grow: 1.0,
+                                    margin: UiRect::all(Val::Px(10.0)),
+                                    ..Default::default()
+                                },
+                                TextLayout {
+                                    linebreak: LineBreak::WordOrCharacter,
+                                    ..Default::default()
+                                },
+                                UiComsMessage,
+                                message_font.clone(),
+                                TextInput {
+                                    input_type: InputType::Text { max_length: Some(100) },
+                                    text_node: Node::default(),
+                                    ..Default::default()
+                                },
+                            ));
 
-                        p.spawn((
-                            Node {
-                                height: Val::Px(50.0),
-                                width: Val::Percent(100.0),
-                                ..Default::default()
-                            },
-                            CosmosButton::<SendClicked> {
-                                text: Some(("SEND".into(), message_font.clone(), Default::default())),
-                                ..Default::default()
-                            },
-                        ));
+                            p.spawn((
+                                Node {
+                                    height: Val::Px(50.0),
+                                    width: Val::Percent(100.0),
+                                    ..Default::default()
+                                },
+                                CosmosButton::<SendClicked> {
+                                    text: Some(("SEND".into(), message_font.clone(), Default::default())),
+                                    ..Default::default()
+                                },
+                            ));
+                        }
+                        ComsChannelType::Ai(_) => {
+                            p.spawn((
+                                Node {
+                                    flex_grow: 1.0,
+                                    ..Default::default()
+                                },
+                                CosmosButton::<YesClicked> {
+                                    text: Some(("YES".into(), message_font.clone(), Default::default())),
+                                    ..Default::default()
+                                },
+                            ));
+
+                            p.spawn((
+                                Node {
+                                    flex_grow: 1.0,
+                                    ..Default::default()
+                                },
+                                CosmosButton::<NoClicked> {
+                                    text: Some(("NO".into(), message_font.clone(), Default::default())),
+                                    ..Default::default()
+                                },
+                            ));
+                        }
                     });
                 });
             });
         });
 }
 
-fn create_messages_ui(font: &Handle<Font>, messages_container: &mut ChildBuilder, messages: &[&str]) {
+fn create_messages_ui(font: &Handle<Font>, messages_container: &mut ChildBuilder, messages: &[&ComsMessage], your_ship: Entity) {
     let message_font = TextFont {
         font: font.clone_weak(),
         font_size: 20.0,
@@ -390,17 +453,81 @@ fn create_messages_ui(font: &Handle<Font>, messages_container: &mut ChildBuilder
 
     let accent = css::AQUA.into();
 
-    for msg in messages {
+    let you_bg = BackgroundColor(
+        Srgba {
+            red: 0.0,
+            green: 0.0,
+            blue: 0.0,
+            alpha: 0.3,
+        }
+        .into(),
+    );
+
+    let other_bg = BackgroundColor(Color::NONE);
+
+    if let Some(first) = messages.first() {
         messages_container.spawn((
             Name::new("Message"),
-            Text::new(*msg),
+            Text::new(&first.text),
             Node {
-                padding: UiRect::all(Val::Px(10.0)),
-                margin: UiRect::all(Val::Px(10.0)),
+                margin: UiRect::new(
+                    Val::Px(10.0),
+                    Val::Px(10.0),
+                    Val::Px(10.0),
+                    Val::Px(
+                        messages
+                            .get(1)
+                            .map(|x| if x.sender != first.sender { 10.0 } else { 0.0 })
+                            .unwrap_or(0.0),
+                    ),
+                ),
                 ..Default::default()
             },
             message_font.clone(),
             BorderColor(accent),
+            if first.sender == your_ship { you_bg } else { other_bg },
+        ));
+    }
+
+    if messages.len() < 2 {
+        // If 1 or 0 messages, the rest of the function is unnecessary and cause double-renders.
+        return;
+    }
+
+    for [above, msg, below] in messages.array_windows::<3>() {
+        let top = if above.sender == msg.sender { Val::Px(0.0) } else { Val::Px(10.0) };
+
+        let bottom = if below.sender == msg.sender { Val::Px(0.0) } else { Val::Px(10.0) };
+
+        messages_container.spawn((
+            Name::new("Message"),
+            Text::new(&msg.text),
+            Node {
+                margin: UiRect::new(Val::Px(10.0), Val::Px(10.0), top, bottom),
+                ..Default::default()
+            },
+            message_font.clone(),
+            BorderColor(accent),
+            if msg.sender == your_ship { you_bg } else { other_bg },
+        ));
+    }
+
+    if let Some([prev, last]) = messages.array_windows::<2>().last() {
+        messages_container.spawn((
+            Name::new("Message"),
+            Text::new(&last.text),
+            Node {
+                margin: UiRect::new(
+                    Val::Px(10.0),
+                    Val::Px(10.0),
+                    Val::Px(if prev.sender != last.sender { 10.0 } else { 0.0 }),
+                    Val::Px(10.0),
+                ),
+                ..Default::default()
+            },
+            message_font.clone(),
+            BorderColor(accent),
+            if last.sender == your_ship { you_bg } else { other_bg },
         ));
     }
 }
@@ -438,6 +565,24 @@ impl ButtonEvent for RightClicked {
 struct SendClicked;
 
 impl ButtonEvent for SendClicked {
+    fn create_event(_: Entity) -> Self {
+        Self
+    }
+}
+
+#[derive(Event, Debug)]
+struct NoClicked;
+
+impl ButtonEvent for NoClicked {
+    fn create_event(_: Entity) -> Self {
+        Self
+    }
+}
+
+#[derive(Event, Debug)]
+struct YesClicked;
+
+impl ButtonEvent for YesClicked {
     fn create_event(_: Entity) -> Self {
         Self
     }
@@ -494,7 +639,7 @@ fn minimize_ui(
     };
 
     node.right = Val::Px(-w + 50.0);
-    commands.entity(entity).remove::<ShowCursor>();
+    commands.entity(entity).remove::<ShowCursor>().remove::<OpenMenu>();
     focused.0 = None;
     if let Ok(mut tb) = q_toggle_button.get_single_mut() {
         tb.image = Some(ImageNode::new(coms_assets.open.clone_weak()));
@@ -519,7 +664,7 @@ fn on_close_menu(
 fn send_text(
     mut nevw_send_coms_message: NettyEventWriter<SendComsMessage>,
     q_selected_coms: Query<&SelectedComs>,
-    mut q_text_value: Query<&mut InputValue, With<ComsMessage>>,
+    mut q_text_value: Query<&mut InputValue, With<UiComsMessage>>,
     mut evr_send: EventReader<SendClicked>,
     inputs: InputChecker,
     q_coms_channel: Query<&ComsChannel>,
@@ -548,11 +693,61 @@ fn send_text(
 
     info!("Sending message: {}", val);
     nevw_send_coms_message.send(SendComsMessage {
-        message: val.to_owned(),
+        message: SendComsMessageType::Message(val.to_owned()),
         to: coms_channel.with,
     });
 
     *text = Default::default();
+}
+
+fn yes_clicked(
+    mut nevw_send_coms_message: NettyEventWriter<SendComsMessage>,
+    q_selected_coms: Query<&SelectedComs>,
+    mut evr_send: EventReader<YesClicked>,
+    q_coms_channel: Query<&ComsChannel>,
+) {
+    if evr_send.read().next().is_none() {
+        return;
+    }
+
+    let Ok(selected) = q_selected_coms.get_single() else {
+        return;
+    };
+
+    let Ok(coms_channel) = q_coms_channel.get(selected.0) else {
+        return;
+    };
+
+    info!("Sending yes");
+    nevw_send_coms_message.send(SendComsMessage {
+        message: SendComsMessageType::Yes,
+        to: coms_channel.with,
+    });
+}
+
+fn no_clicked(
+    mut nevw_send_coms_message: NettyEventWriter<SendComsMessage>,
+    q_selected_coms: Query<&SelectedComs>,
+    mut evr_send: EventReader<NoClicked>,
+    q_coms_channel: Query<&ComsChannel>,
+) {
+    if evr_send.read().next().is_none() {
+        return;
+    }
+
+    let Ok(selected) = q_selected_coms.get_single() else {
+        return;
+    };
+
+    let Ok(coms_channel) = q_coms_channel.get(selected.0) else {
+        return;
+    };
+
+    info!("Sending yes");
+    nevw_send_coms_message.send(SendComsMessage {
+        message: SendComsMessageType::No,
+        to: coms_channel.with,
+    });
 }
 
 pub(super) fn register(app: &mut App) {
@@ -565,6 +760,8 @@ pub(super) fn register(app: &mut App) {
             on_toggle,
             on_close_menu,
             send_text,
+            yes_clicked,
+            no_clicked,
         )
             .chain()
             .run_if(in_state(GameState::Playing))
@@ -574,6 +771,8 @@ pub(super) fn register(app: &mut App) {
     register_button::<LeftClicked>(app);
     register_button::<RightClicked>(app);
     register_button::<SendClicked>(app);
+    register_button::<YesClicked>(app);
+    register_button::<NoClicked>(app);
     register_button::<ToggleButton>(app);
 
     load_assets::<Image, ComsAssets, 2>(

@@ -2,6 +2,7 @@
 
 #![warn(missing_docs)]
 #![feature(iter_array_chunks)]
+#![feature(array_windows)]
 
 pub mod asset;
 pub mod audio;

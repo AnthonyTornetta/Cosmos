@@ -35,7 +35,7 @@ fn on_open_req_coms_ui(mut commands: Commands, mut evr_open_request_ui: EventRea
                 Name::new("Coms Request UI"),
                 Node {
                     height: Val::Px(100.0),
-                    width: Val::Px(300.0),
+                    width: Val::Px(400.0),
                     right: Val::Px(0.0),
                     top: Val::Percent(40.0),
                     justify_content: JustifyContent::Center,
