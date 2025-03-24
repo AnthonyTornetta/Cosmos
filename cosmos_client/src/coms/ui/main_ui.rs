@@ -1,14 +1,17 @@
 use crate::{
     asset::asset_loader::load_assets,
+    input::inputs::{CosmosInputs, InputChecker, InputHandler},
     ui::{
         components::{
             button::{register_button, ButtonEvent, CosmosButton},
+            show_cursor::ShowCursor,
             text_input::{InputType, TextInput},
         },
         font::DefaultFont,
+        CloseMenuEvent, CloseMethod, OpenMenu,
     },
 };
-use bevy::{color::palettes::css, prelude::*};
+use bevy::{a11y::Focus, color::palettes::css, prelude::*};
 use cosmos_core::coms::ComsChannel;
 use cosmos_core::netty::client::LocalPlayer;
 use cosmos_core::netty::system_sets::NetworkingSystemsSet;
@@ -201,6 +204,8 @@ fn create_coms_ui(commands: &mut Commands, coms_assets: &ComsAssets, font: &Defa
         .spawn((
             Name::new("Coms Ui"),
             ComsUi,
+            OpenMenu::with_close_method(0, CloseMethod::Custom),
+            ShowCursor,
             Node {
                 margin: UiRect::new(Val::Auto, Val::Px(0.0), Val::Auto, Val::Px(0.0)),
                 height: Val::Percent(85.0),
@@ -291,7 +296,10 @@ fn create_coms_ui(commands: &mut Commands, coms_assets: &ComsAssets, font: &Defa
                         bottom_left: Val::Px(5.0),
                         ..Default::default()
                     },
-                    ImageNode::new(coms_assets.close.clone_weak()),
+                    CosmosButton::<ToggleButton> {
+                        image: Some(ImageNode::new(coms_assets.close.clone_weak())),
+                        ..Default::default()
+                    },
                     BackgroundColor(accent),
                 ));
                 p.spawn((
@@ -428,10 +436,83 @@ impl ButtonEvent for SendClicked {
     }
 }
 
+#[derive(Event, Debug)]
+struct ToggleButton;
+
+impl ButtonEvent for ToggleButton {
+    fn create_event(_: Entity) -> Self {
+        Self
+    }
+}
+
+fn on_toggle(
+    mut commands: Commands,
+    inputs: InputChecker,
+    mut q_coms_ui: Query<(Entity, &mut Node, Has<ShowCursor>), With<ComsUi>>,
+    mut evr_toggle: EventReader<ToggleButton>,
+    coms_assets: Res<ComsAssets>,
+    mut q_toggle_button: Query<&mut CosmosButton<ToggleButton>>,
+    mut focused: ResMut<Focus>,
+) {
+    if evr_toggle.read().next().is_none() & !inputs.check_just_pressed(CosmosInputs::ToggleComs) {
+        return;
+    }
+
+    for (entity, mut node, has) in q_coms_ui.iter_mut() {
+        if has {
+            minimize_ui(&mut commands, &coms_assets, &mut q_toggle_button, entity, &mut node, &mut focused);
+        } else {
+            node.right = Val::Px(0.0);
+            commands
+                .entity(entity)
+                .insert((ShowCursor, OpenMenu::with_close_method(0, CloseMethod::Custom)));
+
+            if let Ok(mut tb) = q_toggle_button.get_single_mut() {
+                tb.image = Some(ImageNode::new(coms_assets.close.clone_weak()));
+            }
+        }
+    }
+}
+
+fn minimize_ui(
+    commands: &mut Commands,
+    coms_assets: &ComsAssets,
+    q_toggle_button: &mut Query<&mut CosmosButton<ToggleButton>>,
+    entity: Entity,
+    node: &mut Node,
+    focused: &mut Focus,
+) {
+    let Val::Px(w) = node.width else {
+        return;
+    };
+
+    node.right = Val::Px(-w + 50.0);
+    commands.entity(entity).remove::<ShowCursor>();
+    focused.0 = None;
+    if let Ok(mut tb) = q_toggle_button.get_single_mut() {
+        tb.image = Some(ImageNode::new(coms_assets.open.clone_weak()));
+    }
+}
+
+fn on_close_menu(
+    coms_assets: Res<ComsAssets>,
+    mut evr: EventReader<CloseMenuEvent>,
+    mut q_coms_ui: Query<&mut Node, With<ComsUi>>,
+    mut commands: Commands,
+    mut q_toggle_button: Query<&mut CosmosButton<ToggleButton>>,
+    mut focused: ResMut<Focus>,
+) {
+    for ev in evr.read() {
+        if let Ok(mut node) = q_coms_ui.get_mut(ev.0) {
+            minimize_ui(&mut commands, &coms_assets, &mut q_toggle_button, ev.0, &mut node, &mut focused);
+        }
+    }
+}
+
 pub(super) fn register(app: &mut App) {
     app.add_systems(
         Update,
-        (on_remove_coms, on_change_coms, on_change_selected_coms)
+        (on_remove_coms, on_change_coms, on_change_selected_coms, on_toggle, on_close_menu)
             .chain()
             .run_if(in_state(GameState::Playing))
             .in_set(NetworkingSystemsSet::Between),
@@ -440,6 +521,7 @@ pub(super) fn register(app: &mut App) {
     register_button::<LeftClicked>(app);
     register_button::<RightClicked>(app);
     register_button::<SendClicked>(app);
+    register_button::<ToggleButton>(app);
 
     load_assets::<Image, ComsAssets, 2>(
         app,

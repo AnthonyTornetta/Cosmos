@@ -221,13 +221,22 @@ pub struct GotComponentToSyncEvent {
 }
 
 #[derive(Event, Debug)]
+/// A component should be removed from the specified entity. On the server, the
+/// [`Self::authority_entity`] should be checked for authority first in addition to any other
+/// checks required.
 pub struct GotComponentToRemoveEvent {
-    #[allow(dead_code)] // on client this is unused
+    #[allow(dead_code)]
+    /// *Server*: The client ID that removed this component.
+    /// *Client*: On client this is unused
     pub client_id: ClientId,
+    /// The unique identifier for this component, for use with [`Registry<SyncedComponentId>`]
     pub component_id: ComponentId,
+    /// The entity that used to have this component
     pub entity: Entity,
     /// The entity authority should be checked against - not the entity being targetted.
-    #[allow(dead_code)] // on client this is unused
+    #[allow(dead_code)]
+    /// *Server*: The entity that should be checked for authority over this component.
+    /// *Client*: On client this is unused
     pub authority_entity: Entity,
 }
 

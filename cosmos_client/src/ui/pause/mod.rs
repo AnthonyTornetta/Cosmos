@@ -19,7 +19,7 @@ use super::{
     },
     font::DefaultFont,
     settings::{NeedsSettingsAdded, SettingsCancelButtonEvent, SettingsDoneButtonEvent, SettingsMenuSet},
-    CloseMethod, OpenMenu, UiSystemSet,
+    CloseMenuEvent, CloseMethod, OpenMenu, UiSystemSet,
 };
 
 #[derive(Component)]
@@ -31,13 +31,14 @@ fn toggle_pause_menu(
     q_pause_menu: Query<Entity, With<PauseMenu>>,
     input_handler: InputChecker,
     default_font: Res<DefaultFont>,
+    mut evw_close_custom_menus: EventWriter<CloseMenuEvent>,
 ) {
     if !input_handler.check_just_pressed(CosmosInputs::Pause) {
         return;
     }
 
     if !q_open_menus.is_empty() {
-        if close_topmost_menus(&mut q_open_menus, &mut commands) {
+        if close_topmost_menus(&mut q_open_menus, &mut commands, &mut evw_close_custom_menus) {
             if let Ok(ent) = q_pause_menu.get_single() {
                 commands.entity(ent).insert(Visibility::Visible);
             }
@@ -154,10 +155,16 @@ impl ButtonEvent for DisconnectButtonEvent {
     }
 }
 
-fn close_topmost_menus(q_open_menus: &mut Query<(Entity, &OpenMenu, &mut Visibility)>, commands: &mut Commands) -> bool {
+fn close_topmost_menus(
+    q_open_menus: &mut Query<(Entity, &OpenMenu, &mut Visibility)>,
+    commands: &mut Commands,
+    evw_close_custom_menus: &mut EventWriter<CloseMenuEvent>,
+) -> bool {
     let mut open = q_open_menus
         .iter_mut()
-        .filter(|(_, open_menu, visibility)| open_menu.close_method() != CloseMethod::Visibility || **visibility != Visibility::Hidden)
+        .filter(|(_, open_menu, visibility)| {
+            !matches!(open_menu.close_method(), CloseMethod::Visibility) || **visibility != Visibility::Hidden
+        })
         .collect::<Vec<(Entity, &OpenMenu, Mut<Visibility>)>>();
 
     open.sort_by(|a, b| b.1.level().cmp(&a.1.level()));
@@ -180,6 +187,9 @@ fn close_topmost_menus(q_open_menus: &mut Query<(Entity, &OpenMenu, &mut Visibil
                     // be combined at some point?
                     .remove::<ShowCursor>();
                 *visibility = Visibility::Hidden;
+            }
+            CloseMethod::Custom => {
+                evw_close_custom_menus.send(CloseMenuEvent(ent));
             }
         }
     }

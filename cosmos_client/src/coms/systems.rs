@@ -8,6 +8,8 @@ use cosmos_core::netty::system_sets::NetworkingSystemsSet;
 use cosmos_core::prelude::Ship;
 use cosmos_core::structure::ship::pilot::{Pilot, PilotFocused};
 
+use super::ui::coms_request::OpenRequestComsUi;
+
 fn initiate_coms_request(
     q_ship: Query<(), With<Ship>>,
     inputs: InputChecker,
@@ -52,6 +54,7 @@ fn read_coms_request(
     q_coms: Query<(&Parent, &ComsChannel)>,
     mut nevr_request_coms: EventReader<RequestComsEvent>,
     mut nevw_accept_coms: NettyEventWriter<AcceptComsEvent>,
+    mut evw_open_req_coms_ui: EventWriter<OpenRequestComsUi>,
 ) {
     for ev in nevr_request_coms.read() {
         let Ok(pilot) = q_local_pilot.get_single() else {
@@ -72,11 +75,7 @@ fn read_coms_request(
             return;
         }
 
-        info!("Sending ACC");
-
-        // TODO: For now just auto-accept coms
-        // in future, add a UI element to accept/decline them
-        nevw_accept_coms.send(AcceptComsEvent(requester));
+        evw_open_req_coms_ui.send(OpenRequestComsUi(requester));
     }
 }
 

@@ -27,7 +27,7 @@ use bevy::ecs::removal_detection::RemovedComponents;
 use bevy::ecs::schedule::common_conditions::resource_exists;
 use bevy::ecs::schedule::IntoSystemConfigs;
 use bevy::ecs::system::{Commands, Resource};
-use bevy::log::warn;
+use bevy::log::{trace, warn};
 use bevy::prelude::SystemSet;
 use bevy::utils::hashbrown::HashSet;
 use bevy::{
@@ -620,7 +620,7 @@ fn get_entity_identifier_info(
             (client_entity, client_entity)
         }
         ComponentEntityIdentifier::StructureSystem { structure_entity, id } => {
-            warn!(
+            trace!(
                     "Got structure system synced component, but no valid structure exists for it! ({structure_entity:?}, {id:?}). In the future, this should try again once we receive the correct structure from the server."
                 );
 
@@ -631,7 +631,7 @@ fn get_entity_identifier_info(
             item_slot,
             server_data_entity,
         } => {
-            warn!(
+            trace!(
                 "Got itemdata synced component, but no valid inventory OR itemstack exists for it! ({inventory_entity:?}, {item_slot} {server_data_entity:?})."
             );
 
@@ -641,7 +641,7 @@ fn get_entity_identifier_info(
             identifier,
             server_data_entity,
         } => {
-            warn!("Got blockdata synced component, but no valid block exists for it! ({identifier:?}, {server_data_entity:?}).");
+            trace!("Got blockdata synced component, but no valid block exists for it! ({identifier:?}, {server_data_entity:?}).");
 
             return None;
         }

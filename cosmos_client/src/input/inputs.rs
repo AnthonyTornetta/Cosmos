@@ -137,6 +137,12 @@ pub enum CosmosInputs {
 
     /// Hails the ship you are focused on
     HailShip,
+
+    /// Accepts an incoming hail
+    AcceptComsRequest,
+    /// Declines an incoming hail
+    DeclineComsRequest,
+    ToggleComs,
 }
 
 fn init_input(mut input_handler: ResMut<CosmosInputHandler>) {
@@ -211,6 +217,9 @@ fn init_input(mut input_handler: ResMut<CosmosInputHandler>) {
     input_handler.set_keycode(CosmosInputs::BulkCraft, KeyCode::ShiftLeft);
 
     input_handler.set_keycode(CosmosInputs::HailShip, KeyCode::KeyH);
+    input_handler.set_keycode(CosmosInputs::AcceptComsRequest, KeyCode::KeyY);
+    input_handler.set_keycode(CosmosInputs::DeclineComsRequest, KeyCode::KeyN);
+    input_handler.set_keycode(CosmosInputs::ToggleComs, KeyCode::Backquote);
 }
 
 #[derive(Resource, Default, Debug)]
