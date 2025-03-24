@@ -101,7 +101,7 @@ fn save_player_link(
     }
 }
 
-fn load_player(mut commands: Commands, q_player_needs_loaded: Query<(Entity, &LoadPlayer)>) {
+fn load_player(mut commands: Commands, q_player_needs_loaded: Query<(Entity, &LoadPlayer)>, q_entity_ids: Query<&EntityId>) {
     for (ent, load_player) in q_player_needs_loaded.iter() {
         let player_file_name = generate_player_file_id(&load_player.name);
 
@@ -120,6 +120,11 @@ fn load_player(mut commands: Commands, q_player_needs_loaded: Query<(Entity, &Lo
         while let Some(sfi) = cur_sfi.get_parent() {
             cur_sfi = sfi;
             let entity_id = sfi.entity_id().expect("Missing Entity Id!").clone();
+            // Don't load already existing entities
+            if q_entity_ids.iter().any(|x| x == &entity_id) {
+                continue;
+            }
+
             info!("Loading player parent ({entity_id}) ({sfi:?})");
             commands.spawn((NeedsLoaded, sfi.clone(), entity_id));
         }

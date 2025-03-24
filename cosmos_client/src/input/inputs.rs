@@ -142,7 +142,10 @@ pub enum CosmosInputs {
     AcceptComsRequest,
     /// Declines an incoming hail
     DeclineComsRequest,
+    /// Toggles the Coms menu if one is open
     ToggleComs,
+    /// Sends the Coms message the user has typed
+    SendComs,
 }
 
 fn init_input(mut input_handler: ResMut<CosmosInputHandler>) {

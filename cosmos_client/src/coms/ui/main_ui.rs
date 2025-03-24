@@ -5,21 +5,27 @@ use crate::{
         components::{
             button::{register_button, ButtonEvent, CosmosButton},
             show_cursor::ShowCursor,
-            text_input::{InputType, TextInput},
+            text_input::{InputType, InputValue, TextInput},
         },
         font::DefaultFont,
         CloseMenuEvent, CloseMethod, OpenMenu,
     },
 };
 use bevy::{a11y::Focus, color::palettes::css, prelude::*};
-use cosmos_core::coms::ComsChannel;
 use cosmos_core::netty::client::LocalPlayer;
 use cosmos_core::netty::system_sets::NetworkingSystemsSet;
 use cosmos_core::state::GameState;
 use cosmos_core::structure::ship::pilot::Pilot;
+use cosmos_core::{
+    coms::{events::SendComsMessage, ComsChannel},
+    netty::sync::events::client_event::NettyEventWriter,
+};
 
 #[derive(Component)]
 struct ComsUi;
+
+#[derive(Component)]
+struct ComsMessage;
 
 #[derive(Component)]
 struct SelectedComs(Entity);
@@ -349,6 +355,7 @@ fn create_coms_ui(commands: &mut Commands, coms_assets: &ComsAssets, font: &Defa
                                 linebreak: LineBreak::WordOrCharacter,
                                 ..Default::default()
                             },
+                            ComsMessage,
                             message_font.clone(),
                             TextInput {
                                 input_type: InputType::Text { max_length: Some(100) },
@@ -509,10 +516,49 @@ fn on_close_menu(
     }
 }
 
+fn send_text(
+    mut nevw_send_coms_message: NettyEventWriter<SendComsMessage>,
+    q_selected_coms: Query<&SelectedComs>,
+    q_text_value: Query<&InputValue, With<ComsMessage>>,
+    mut evr_send: EventReader<SendClicked>,
+    inputs: InputChecker,
+) {
+    if evr_send.read().next().is_none() & !inputs.check_just_pressed(CosmosInputs::SendComs) {
+        return;
+    }
+
+    let Ok(text) = q_text_value.get_single() else {
+        return;
+    };
+
+    let Ok(selected) = q_selected_coms.get_single() else {
+        return;
+    };
+
+    let val = text.value();
+
+    if val.is_empty() {
+        return;
+    }
+
+    info!("Sending message: {}", val);
+    nevw_send_coms_message.send(SendComsMessage {
+        message: val.to_owned(),
+        to: selected.0,
+    });
+}
+
 pub(super) fn register(app: &mut App) {
     app.add_systems(
         Update,
-        (on_remove_coms, on_change_coms, on_change_selected_coms, on_toggle, on_close_menu)
+        (
+            on_remove_coms,
+            on_change_coms,
+            on_change_selected_coms,
+            on_toggle,
+            on_close_menu,
+            send_text,
+        )
             .chain()
             .run_if(in_state(GameState::Playing))
             .in_set(NetworkingSystemsSet::Between),
