@@ -11,7 +11,7 @@ use uuid::Uuid;
 pub mod health;
 pub mod player;
 
-#[derive(Component, Debug, Reflect, Serialize, Deserialize, PartialEq, Eq, Clone, Hash)]
+#[derive(Component, Debug, Reflect, Serialize, Deserialize, PartialEq, Eq, Clone, Copy, Hash)]
 /// NOT ALL ENTITIES WILL HAVE THIS ON THEM!
 ///
 /// Only entities that have been loaded or saved will have this. This is a unique identifier for

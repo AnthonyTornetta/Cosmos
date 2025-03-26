@@ -17,8 +17,10 @@ use crate::persistence::{
     SerializedData,
 };
 
-mod npc;
+mod combat;
+mod hit_tracking;
 mod pirate;
+pub mod quest_npc;
 
 #[derive(Component)]
 /// This entity is controlled by NPCs
@@ -42,5 +44,7 @@ pub(super) fn register(app: &mut App) {
     app.add_systems(LOADING_SCHEDULE, on_load_ai_controlled.in_set(LoadingSystemSet::DoLoading));
     app.add_systems(SAVING_SCHEDULE, on_save_ai_controlled.in_set(SavingSystemSet::DoSaving));
 
+    combat::register(app);
     pirate::register(app);
+    quest_npc::register(app);
 }

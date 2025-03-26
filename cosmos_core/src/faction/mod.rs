@@ -40,6 +40,7 @@ pub struct Faction {
     name: String,
     players: Vec<EntityId>,
     relationships: HashMap<FactionId, FactionRelation>,
+    at_war_with: Vec<EntityId>,
     settings: FactionSettings,
 }
 
@@ -59,6 +60,7 @@ impl Faction {
             name,
             players,
             relationships,
+            at_war_with: vec![],
             settings,
         }
     }
@@ -81,6 +83,16 @@ impl Faction {
         } else {
             FactionRelation::Neutral
         }
+    }
+
+    /// Computes the relation between this faction and another optional faction. If the other
+    /// faction is [`None`], the relationship may be Neutral or Enemy, depending on this
+    /// [`Faction`]'s [`FactionSettings`].
+    pub fn relation_with_entity(&self, other_entity: &EntityId, other_faction: Option<&Faction>) -> FactionRelation {
+        self.at_war_with
+            .contains(other_entity)
+            .then(|| FactionRelation::Enemy)
+            .unwrap_or_else(|| self.relation_with(other_faction))
     }
 
     /// Computes the relation between this faction and another optional faction. If the other
@@ -153,6 +165,28 @@ impl Factions {
     /// Gets a faction that matches this name (case sensitive).
     pub fn from_name(&self, name: &str) -> Option<&Faction> {
         self.0.values().find(|x| x.name == name)
+    }
+
+    pub fn set_relation(&mut self, a: &FactionId, b: Option<&FactionId>, ent_id: Option<&EntityId>, relation: FactionRelation) {
+        if let Some(b) = b {
+            if let Some([a, b]) = self.0.get_many_mut([a, b]) {
+                a.relationships.insert(b.id, relation);
+                b.relationships.insert(a.id, relation);
+                return;
+            }
+        }
+
+        let Some(a) = self.0.get_mut(a) else {
+            return;
+        };
+
+        if let Some(eid) = ent_id {
+            if relation == FactionRelation::Enemy {
+                a.at_war_with.push(*eid);
+            } else {
+                a.at_war_with.retain(|x| x != eid);
+            }
+        }
     }
 }
 

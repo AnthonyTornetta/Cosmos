@@ -8,14 +8,10 @@ use bevy::{
         schedule::{IntoSystemConfigs, IntoSystemSetConfigs, SystemSet},
         system::{Commands, Query, Res},
     },
-    hierarchy::{BuildChildren, Parent},
+    hierarchy::BuildChildren,
     log::error,
-    math::{Quat, Vec3},
     prelude::{in_state, Has},
-    time::Time,
-    transform::components::{GlobalTransform, Transform},
 };
-use bevy_rapier3d::dynamics::Velocity;
 use cosmos_core::{
     ecs::NeedsDespawned,
     entities::player::Player,
@@ -23,20 +19,14 @@ use cosmos_core::{
     faction::{FactionId, Factions},
     netty::system_sets::NetworkingSystemsSet,
     physics::location::Location,
-    projectiles::{laser::LASER_LIVE_TIME, missile::Missile},
+    projectiles::missile::Missile,
     state::GameState,
     structure::{
         shared::{DespawnWithStructure, MeltingDown},
-        ship::{
-            pilot::Pilot,
-            ship_movement::{ShipMovement, ShipMovementSet},
-            Ship,
-        },
-        systems::{laser_cannon_system::LaserCannonSystem, StructureSystems, SystemActive},
+        ship::{pilot::Pilot, ship_movement::ShipMovementSet, Ship},
         StructureTypeSet,
     },
 };
-use serde::{Deserialize, Serialize};
 
 use crate::{
     persistence::{
@@ -44,68 +34,36 @@ use crate::{
         saving::{SavingSystemSet, SAVING_SCHEDULE},
         SerializedData,
     },
-    structure::systems::{laser_cannon_system::LASER_BASE_VELOCITY, thruster_system::MaxShipSpeedModifier},
+    structure::systems::thruster_system::MaxShipSpeedModifier,
     universe::spawners::pirate::Pirate,
 };
 
-use super::AiControlled;
+use super::{
+    combat::{CombatAi, CombatAiSystemSet, Targetting},
+    hit_tracking::DifficultyIncreaseOnKill,
+    AiControlled,
+};
 
 #[derive(Component)]
 pub struct PirateTarget;
 
-#[derive(Component, Default, Serialize, Deserialize)]
-struct PirateAi {
-    inaccuracy: f32,
-    brake_check: Option<f32>,
-}
-
-impl PirateAi {
-    fn randomize_inaccuracy(&mut self) {
-        const INACCURACY_MULTIPLIER: f32 = 2.0;
-        self.inaccuracy = (rand::random::<f32>() - 0.5) * INACCURACY_MULTIPLIER;
-    }
-}
-
 const PIRATE_MAX_CHASE_DISTANCE: f32 = 20_000.0;
 
 /// Attempt to maintain a distance of ~500 blocks from closest target
-fn handle_pirate_movement(
+fn handle_pirate_targetting(
     mut commands: Commands,
-    q_laser_cannon_system: Query<Entity, With<LaserCannonSystem>>,
     mut q_pirates: Query<
-        (
-            Entity,
-            &StructureSystems,
-            &Location,
-            &Velocity,
-            &mut ShipMovement,
-            &mut Transform,
-            &mut PirateAi,
-            &GlobalTransform,
-        ),
+        (Entity, &Location),
         (With<Pirate>, Without<Missile>, With<AiControlled>), // Without<Missile> fixes ambiguity issues
     >,
-    q_parent: Query<&Parent>,
-    q_velocity: Query<&Velocity>,
-    q_targets: Query<(Entity, &Location, &Velocity, Has<MeltingDown>), (Without<Pirate>, With<PirateTarget>)>,
-    time: Res<Time>,
+    q_targets: Query<(Entity, &Location, Has<MeltingDown>), (Without<Pirate>, With<PirateTarget>)>,
 ) {
-    for (
-        pirate_ent,
-        pirate_systems,
-        pirate_loc,
-        pirate_vel,
-        mut pirate_ship_movement,
-        mut pirate_transform,
-        mut pirate_ai,
-        pirate_g_transform,
-    ) in q_pirates.iter_mut()
-    {
-        let Some((target_ent, target_loc, target_vel, _)) = q_targets
+    for (pirate_ent, pirate_loc) in q_pirates.iter_mut() {
+        let Some((target_ent, _, _)) = q_targets
             .iter()
             .filter(|x| x.1.is_within_reasonable_range(pirate_loc))
             // add a large penalty for something that's melting down so they prioritize non-melting down things
-            .min_by_key(|(_, this_loc, _, melting_down)| {
+            .min_by_key(|(_, this_loc, melting_down)| {
                 // Makes it only target melting down targets if they're the only one nearby
                 let melting_down_punishment = if *melting_down { 100_000_000_000_000 } else { 0 };
 
@@ -115,75 +73,7 @@ fn handle_pirate_movement(
             continue;
         };
 
-        let mut target_linvel = target_vel.linvel;
-
-        let mut entity = target_ent;
-        while let Ok(parent) = q_parent.get(entity) {
-            entity = parent.get();
-            target_linvel += q_velocity.get(entity).map(|x| x.linvel).unwrap_or(Vec3::ZERO);
-        }
-
-        let mut pirate_linvel = pirate_vel.linvel;
-
-        let mut entity = pirate_ent;
-        while let Ok(parent) = q_parent.get(entity) {
-            entity = parent.get();
-            pirate_linvel += q_velocity.get(entity).map(|x| x.linvel).unwrap_or(Vec3::ZERO);
-        }
-
-        if rand::random::<f32>() < 0.01 {
-            pirate_ai.randomize_inaccuracy();
-        }
-
-        let dist = target_loc.distance_sqrd(pirate_loc).sqrt();
-
-        if dist > PIRATE_MAX_CHASE_DISTANCE {
-            pirate_ship_movement.movement = Vec3::Z;
-            continue;
-        }
-
-        let laser_vel = pirate_linvel
-            + Quat::from_affine3(&pirate_g_transform.affine()).mul_vec3(Vec3::new(0.0, 0.0, -LASER_BASE_VELOCITY))
-            - target_linvel;
-
-        let distance = (*target_loc - *pirate_loc).absolute_coords_f32();
-        let laser_secs_to_reach_target = (distance.length() / laser_vel.length()).max(0.0);
-
-        // Prevents a pirate from shooting the same spot repeatedly and missing and simulates inaccuracy in velocity predicting
-        let max_fudge = (pirate_linvel - target_linvel).length() / 4.0;
-        let velocity_fudging = pirate_ai.inaccuracy * max_fudge;
-
-        let direction = (distance + (target_linvel - pirate_linvel + velocity_fudging) * laser_secs_to_reach_target).normalize_or_zero();
-
-        // I don't feel like doing the angle math to make it use angular acceleration to look towards it.
-        pirate_transform.look_to(direction, Vec3::Y);
-
-        if let Some(brake_check_start) = pirate_ai.brake_check {
-            pirate_ship_movement.movement = Vec3::ZERO;
-            pirate_ship_movement.braking = true;
-            if time.elapsed_secs() - brake_check_start > 1.0 {
-                pirate_ai.brake_check = None;
-            }
-        } else {
-            pirate_ship_movement.braking = false;
-
-            if dist > 200.0 {
-                pirate_ship_movement.movement = Vec3::Z;
-            } else {
-                if pirate_vel.linvel.length() > 50.0 && rand::random::<f32>() < 0.003 {
-                    pirate_ai.brake_check = Some(time.elapsed_secs());
-                }
-                pirate_ship_movement.movement = -Vec3::Z;
-            }
-        }
-
-        if let Ok(laser_cannon_system) = pirate_systems.query(&q_laser_cannon_system) {
-            if laser_secs_to_reach_target >= LASER_LIVE_TIME.as_secs_f32() {
-                commands.entity(laser_cannon_system).remove::<SystemActive>();
-            } else {
-                commands.entity(laser_cannon_system).insert(SystemActive);
-            }
-        }
+        commands.entity(pirate_ent).insert(Targetting(target_ent));
     }
 }
 
@@ -196,7 +86,7 @@ fn add_pirate_targets(
     }
 }
 
-fn add_pirate_ai(mut commands: Commands, q_needs_ai: Query<Entity, (With<Pirate>, Without<PirateAi>)>) {
+fn add_pirate_ai(mut commands: Commands, q_needs_ai: Query<Entity, (With<Pirate>, Without<CombatAi>)>) {
     for ent in &q_needs_ai {
         let pilot_ent = commands
             .spawn((
@@ -207,7 +97,10 @@ fn add_pirate_ai(mut commands: Commands, q_needs_ai: Query<Entity, (With<Pirate>
             ))
             .id();
 
-        let mut ai = PirateAi::default();
+        let mut ai = CombatAi {
+            max_chase_distance: PIRATE_MAX_CHASE_DISTANCE,
+            ..Default::default()
+        };
         ai.randomize_inaccuracy();
 
         commands
@@ -219,11 +112,11 @@ fn add_pirate_ai(mut commands: Commands, q_needs_ai: Query<Entity, (With<Pirate>
 
 fn on_melt_down(
     q_is_pirate: Query<(), With<PiratePilot>>,
-    q_melting_down: Query<(Entity, Option<&Pilot>), (With<MeltingDown>, With<PirateAi>, With<AiControlled>)>,
+    q_melting_down: Query<(Entity, Option<&Pilot>), (With<MeltingDown>, With<CombatAi>, With<AiControlled>)>,
     mut commands: Commands,
 ) {
     for (ent, pilot) in &q_melting_down {
-        commands.entity(ent).remove::<(PirateAi, AiControlled, Pirate, Pilot)>();
+        commands.entity(ent).remove::<(CombatAi, AiControlled, Pirate, Pilot)>();
 
         if let Some(pilot) = pilot {
             if q_is_pirate.contains(pilot.entity) {
@@ -266,10 +159,23 @@ fn apply_pirate_faction(factions: Res<Factions>, mut commands: Commands, q_pirat
     }
 }
 
+/// TODO: Load this from config
+///
+/// How much killing a pirate will increase the difficulty.
+/// Aka, if you do 100% of the damage, your strength percentage will increase by this percent.
+const PIRATE_DIFFICULTY_INCREASE: f32 = 5.0;
+
+fn add_difficuly_increase(mut commands: Commands, q_merchant: Query<Entity, (With<Pirate>, Without<DifficultyIncreaseOnKill>)>) {
+    for ent in &q_merchant {
+        commands.entity(ent).insert(DifficultyIncreaseOnKill(PIRATE_DIFFICULTY_INCREASE));
+    }
+}
+
 pub(super) fn register(app: &mut App) {
     app.configure_sets(
         Update,
         PirateSystemSet::PirateAiLogic
+            .before(CombatAiSystemSet::CombatAiLogic)
             .in_set(StructureTypeSet::Ship)
             .after(LoadingSystemSet::DoneLoading)
             .after(StructureEventListenerSet::ChangePilotListener),
@@ -279,9 +185,10 @@ pub(super) fn register(app: &mut App) {
         (
             on_melt_down,
             add_pirate_ai,
+            add_difficuly_increase,
             apply_pirate_faction,
             add_pirate_targets,
-            handle_pirate_movement.before(ShipMovementSet::RemoveShipMovement),
+            handle_pirate_targetting.before(ShipMovementSet::RemoveShipMovement),
         )
             .run_if(in_state(GameState::Playing))
             .in_set(NetworkingSystemsSet::Between)
