@@ -25,8 +25,8 @@ pub struct Pilot {
 }
 
 #[derive(Component, Reflect, Clone, Copy, Debug, Serialize, Deserialize, PartialEq, Eq)]
-/// The entity the pilot of this ship has focused. This component is set directly by the client,
-/// and should not be trusted for validity!
+/// The entity the pilot of this ship has focused. This component is set directly by the client, if
+/// it is being piloted by them, and should not be trusted for validity!
 ///
 /// This component will be present on the ship.
 pub struct PilotFocused(pub Entity);

@@ -50,7 +50,7 @@ use crate::{
 
 use super::{
     combat::{AiTargetting, CombatAi, CombatAiSystemSet},
-    hit_tracking::DifficultyIncreaseOnKill,
+    hit_tracking::{DifficultyIncreaseOnKill, Hitters},
     AiControlled,
 };
 
@@ -115,7 +115,13 @@ fn handle_quest_npc_targetting(
 
 fn add_merchant_ai(
     mut commands: Commands,
-    q_needs_ai: Query<Entity, (With<MerchantFederation>, Or<(Without<SaidNoList>, Without<MerchantAiState>)>)>,
+    q_needs_ai: Query<
+        Entity,
+        (
+            With<MerchantFederation>,
+            Or<(Without<SaidNoList>, Without<Hitters>, Without<MerchantAiState>)>,
+        ),
+    >,
 ) {
     for ent in &q_needs_ai {
         let pilot_ent = commands
@@ -141,6 +147,7 @@ fn add_merchant_ai(
                 MaxShipSpeedModifier(0.8),
                 SaidNoList::default(),
                 MerchantAiState::default(),
+                Hitters::default(),
                 Pilot { entity: pilot_ent },
             ))
             .add_child(pilot_ent);
@@ -220,6 +227,7 @@ fn searching_merchant_ai(
 
         m_trans.look_to((target - *m_loc).absolute_coords_f32(), Vec3::Y);
         ship_movement.movement = Vec3::Z;
+        ship_movement.braking = false;
     }
 }
 
@@ -251,6 +259,7 @@ fn talking_merchant_ai(
             &mut ShipMovement,
             &SaidNoList,
             &Velocity,
+            &mut Transform,
         ),
         (With<MerchantFederation>, Without<AiTargetting>, With<Pilot>),
     >,
@@ -269,7 +278,7 @@ fn talking_merchant_ai(
     >,
     factions: Res<Factions>,
 ) {
-    for (entity, m_loc, m_fac, mut ai_state, mut ship_movement, said_no_list, velocity) in q_merchant.iter_mut() {
+    for (entity, m_loc, m_fac, mut ai_state, mut ship_movement, said_no_list, velocity, mut transform) in q_merchant.iter_mut() {
         if !matches!(*ai_state, MerchantAiState::Talking) {
             continue;
         }
@@ -296,7 +305,7 @@ fn talking_merchant_ai(
             (target, true)
         };
 
-        let Some((target_ent, _, target_loc, _, pilot, target_vel, target_requested_coms)) = target else {
+        let Some((target_ent, _, target_loc, _, _, target_vel, target_requested_coms)) = target else {
             continue;
         };
 
@@ -306,24 +315,42 @@ fn talking_merchant_ai(
             continue;
         }
 
-        ship_movement.match_speed = true;
-
         let diff = target_vel.linvel - velocity.linvel;
-        let dot = target_vel.linvel.dot(velocity.linvel);
+        let diff_len = diff.length();
 
-        if diff.length() > 10.0 {
-            ship_movement.movement = diff.normalize();
+        let should_brake = (target_vel.linvel - (velocity.linvel * 0.9)).length() < diff_len;
+        //
+        // let x_brake = target_vel.linvel.x < velocity.linvel.x || velocity.linvel.x < 0.0 && target_vel.linvel.x > velocity.linvel.x;
+        // let y_brake = target_vel.linvel.y < velocity.linvel.y || velocity.linvel.y < 0.0 && target_vel.linvel.y > velocity.linvel.y;
+        // let z_brake = target_vel.linvel.z < velocity.linvel.z || velocity.linvel.z < 0.0 && target_vel.linvel.z > velocity.linvel.z;
+        //
+        // let break_vec = Vec3::new(
+        //     if x_brake { 1.0 } else { -1.0 },
+        //     if y_brake { 1.0 } else { -1.0 },
+        //     if z_brake { 1.0 } else { -1.0 },
+        // );
+        //
+        // let total_brake_advantage = break_vec.x * diff.x.abs() + break_vec.y * diff.y.abs() + break_vec.z * diff.z.abs();
+        // info!("Brake Adv: {total_brake_advantage}");
+        //
+        // if (ship_movement.braking && total_brake_advantage >= 40.0) || (total_brake_advantage >= 60.0 && diff.length() > 30.0) {
+        //
+        if diff_len > 30.0 && should_brake {
+            ship_movement.braking = true;
+            ship_movement.movement = Vec3::ZERO;
+            ship_movement.match_speed = false;
+        } else if diff_len > 10.0 {
+            transform.rotation = transform
+                .rotation
+                .lerp(transform.looking_to(diff.normalize(), Vec3::Y).rotation, 0.3);
+            ship_movement.movement = Vec3::Z;
             ship_movement.match_speed = false;
             ship_movement.braking = false;
-        } else if dot >= 30.0 {
-            ship_movement.braking = true;
-            ship_movement.movement = diff.normalize();
-            ship_movement.match_speed = false;
         } else {
             ship_movement.match_speed = true;
             ship_movement.braking = false;
             ship_movement.movement = Vec3::ZERO;
-            commands.entity(pilot.entity).insert(PilotFocused(target_ent));
+            commands.entity(entity).insert(PilotFocused(target_ent));
         }
 
         if target_requested_coms || !needs_coms {

@@ -47,4 +47,5 @@ pub(super) fn register(app: &mut App) {
     combat::register(app);
     pirate::register(app);
     quest_npc::register(app);
+    hit_tracking::register(app);
 }

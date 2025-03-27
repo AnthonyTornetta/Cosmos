@@ -5,6 +5,7 @@ use bevy::prelude::{
 use bevy_rapier3d::prelude::{RigidBody, Sensor};
 
 use crate::events::structure::change_pilot_event::ChangePilotEvent;
+use crate::netty::system_sets::NetworkingSystemsSet;
 use crate::physics::location::{Location, LocationPhysicsSet};
 use crate::structure::ship::pilot::Pilot;
 use crate::structure::StructureTypeSet;
@@ -36,7 +37,11 @@ fn event_listener(
                 continue;
             };
 
-            let (pilot_loc, pilot_transform) = location_query.get(entity).expect("Every pilot should have a location & transform");
+            commands.entity(ev.structure_entity).insert(Pilot { entity }).add_child(entity);
+
+            let Ok((pilot_loc, pilot_transform)) = location_query.get(entity) else {
+                continue;
+            };
 
             let delta = structure_transform
                 .rotation
@@ -44,8 +49,6 @@ fn event_listener(
                 .mul_vec3(structure_loc.relative_coords_to(pilot_loc));
 
             let delta_rot = pilot_transform.rotation * structure_transform.rotation.inverse();
-
-            commands.entity(ev.structure_entity).insert(Pilot { entity }).add_child(entity);
 
             commands.entity(entity).insert((
                 Pilot {
@@ -143,6 +146,7 @@ pub(super) fn register<T: States + Clone + Copy>(app: &mut App, playing_state: T
         (pilot_removed, remove_sensor, bouncer, verify_pilot_exists, event_listener)
             .in_set(PilotEventSystemSet::ChangePilotListener)
             .in_set(StructureTypeSet::Ship)
+            .in_set(NetworkingSystemsSet::Between)
             .chain()
             .run_if(in_state(playing_state)),
     )

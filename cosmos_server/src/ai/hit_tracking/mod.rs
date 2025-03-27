@@ -15,7 +15,7 @@ use crate::entities::player::strength::{PlayerStrength, PlayerStrengthSystemSet}
 use super::AiControlled;
 
 #[derive(Component, Default, Reflect, Debug)]
-struct Hitters(HashMap<Entity, u64>);
+pub struct Hitters(HashMap<Entity, u64>);
 
 /// How much the difficulty will increase after killing this entity.
 /// This is evenly divided between the players that killed this, based on how many times each
