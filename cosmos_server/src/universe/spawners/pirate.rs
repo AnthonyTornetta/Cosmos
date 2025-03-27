@@ -12,26 +12,21 @@ use bevy::{
         schedule::{IntoSystemConfigs, IntoSystemSetConfigs, SystemSet},
         system::{Commands, Query, Res, Resource},
     },
-    log::warn,
     math::{Quat, Vec3},
-    prelude::{Added, EventReader},
     reflect::Reflect,
     state::condition::in_state,
     time::{common_conditions::on_timer, Time},
     utils::hashbrown::HashMap,
 };
 use cosmos_core::{
-    block::block_events::BlockEventsSet,
     entities::player::Player,
-    netty::system_sets::NetworkingSystemsSet,
     physics::location::{Location, Sector, SectorUnit, SECTOR_DIMENSIONS},
     state::GameState,
-    structure::{block_health::events::BlockTakeDamageEvent, shared::MeltingDown, ship::pilot::Pilot},
     utils::{quat_math::QuatMath, random::random_range},
 };
 
 use crate::{
-    entities::player::strength::{PlayerStrength, PlayerStrengthSystemSet, TotalTimePlayed},
+    entities::player::strength::{PlayerStrength, TotalTimePlayed},
     persistence::loading::{LoadingBlueprintSystemSet, NeedsBlueprintLoaded},
     settings::ServerSettings,
 };
@@ -45,12 +40,6 @@ const TIME_DIFFICULTY_CONSTANT: f32 = 80_000.0;
 ///
 /// How much one player's strength will increase the pirate's difficulty.
 const PLAYER_STRENGTH_INCREASE_FACTOR: f32 = 1.0;
-
-/// TODO: Load this from config
-///
-/// How much killing a pirate will increase the difficulty.
-/// Aka, if you do 100% of the damage, your strength percentage will increase by this percent.
-const DIFFICULTY_INCREASE: f32 = 5.0;
 
 #[derive(Component)]
 /// A pirate needs spawned for this entity, please add the components it needs to function
@@ -243,61 +232,6 @@ enum PirateSpawningSet {
     PirateSpawningLogic,
 }
 
-#[derive(Component, Default, Reflect, Debug)]
-struct Hitters(HashMap<Entity, u64>);
-
-fn process_hit_events(
-    mut q_pirate: Query<&mut Hitters, With<Pirate>>,
-    q_pilot: Query<&Pilot>,
-    mut evr_hit_block: EventReader<BlockTakeDamageEvent>,
-) {
-    for ev in evr_hit_block.read() {
-        let Some(causer) = ev.causer else {
-            continue;
-        };
-
-        let causer = q_pilot.get(causer).map(|x| x.entity).unwrap_or(causer);
-
-        let Ok(mut hitters) = q_pirate.get_mut(ev.structure_entity) else {
-            continue;
-        };
-
-        *hitters.as_mut().0.entry(causer).or_default() += 1;
-    }
-}
-
-fn tick_down_hitters(mut q_hitters: Query<&mut Hitters>) {
-    for mut hitter in q_hitters.iter_mut() {
-        hitter.as_mut().0.retain(|_, count| {
-            *count -= 1;
-            *count > 0
-        });
-    }
-}
-
-fn add_hitters(mut commands: Commands, q_needs_hitter: Query<Entity, (With<Pirate>, Without<Hitters>)>) {
-    for ent in q_needs_hitter.iter() {
-        commands.entity(ent).insert(Hitters::default());
-    }
-}
-
-fn on_melt_down(mut q_players: Query<&mut PlayerStrength>, q_melting_down: Query<&Hitters, Added<MeltingDown>>) {
-    for hitters in q_melting_down.iter() {
-        let dmg_total = hitters.0.iter().map(|(_, hits)| *hits).sum::<u64>();
-
-        for (&hitter_ent, &hits) in hitters.0.iter() {
-            let percent = hits as f32 / dmg_total as f32;
-            let Ok(mut player_strength) = q_players.get_mut(hitter_ent) else {
-                warn!("No player strength!");
-                continue;
-            };
-
-            player_strength.0 += percent * DIFFICULTY_INCREASE;
-            player_strength.0 = player_strength.0.clamp(0.0, 100.0);
-        }
-    }
-}
-
 fn calculate_next_spawn_time(time: &Time, min_pirate_spawn_time: &MinPirateSpawnTime) -> f64 {
     let min_secs = min_pirate_spawn_time.0.as_secs_f64();
     rand::random::<f64>() * min_secs * 3.0 + min_secs + time.elapsed_secs_f64()
@@ -314,19 +248,9 @@ pub(super) fn register(app: &mut App) {
     .add_systems(Startup, load_settings)
     .add_systems(
         Update,
-        (add_spawn_times, spawn_pirates, on_needs_pirate_spawned, add_hitters)
+        (add_spawn_times, spawn_pirates, on_needs_pirate_spawned)
             .in_set(PirateSpawningSet::PirateSpawningLogic)
             .chain(),
     )
-    .add_systems(
-        Update,
-        process_hit_events
-            .after(PlayerStrengthSystemSet::UpdatePlayerStrength)
-            .after(tick_down_hitters)
-            .in_set(BlockEventsSet::ProcessEvents),
-    )
-    .add_systems(Update, on_melt_down.after(process_hit_events).in_set(NetworkingSystemsSet::Between))
-    .add_systems(Update, tick_down_hitters.run_if(on_timer(Duration::from_secs(1))))
-    .register_type::<Hitters>()
     .register_type::<NextPirateSpawn>();
 }

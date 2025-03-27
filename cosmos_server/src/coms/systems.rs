@@ -2,7 +2,7 @@ use bevy::prelude::*;
 use cosmos_core::{
     coms::{
         events::{AcceptComsEvent, RequestComsEvent, SendComsMessage, SendComsMessageType},
-        AiComsType, ComsChannel, ComsChannelType, ComsMessage, RequestedComs,
+        ComsChannel, ComsChannelType, ComsMessage, RequestedComs,
     },
     ecs::NeedsDespawned,
     entities::player::Player,
@@ -16,14 +16,16 @@ use cosmos_core::{
     structure::ship::pilot::Pilot,
 };
 
-use super::RequestHailNpc;
+use super::{RequestHailFromNpc, RequestHailToNpc};
 
 const MAX_HAIL_RANGE: f32 = 20_000.0;
 
 fn on_request_coms(
+    q_loc: Query<&Location>,
     mut nevr: EventReader<NettyEventReceived<RequestComsEvent>>,
+    mut evr: EventReader<RequestHailFromNpc>,
     mut nevw_req: NettyEventWriter<RequestComsEvent>,
-    mut evw_request_hail_npc: EventWriter<RequestHailNpc>,
+    mut evw_request_hail_npc: EventWriter<RequestHailToNpc>,
     q_player: Query<&Player>,
     lobby: Res<ServerLobby>,
     q_pilot: Query<(&Location, &Pilot)>,
@@ -32,21 +34,26 @@ fn on_request_coms(
     q_requested_coms: Query<&RequestedComs>,
     mut commands: Commands,
 ) {
-    for ev in nevr.read() {
-        let Some((player_loc, pilot)) = lobby.player_from_id(ev.client_id).map(|x| q_pilot.get(x).ok()).flatten() else {
-            continue;
-        };
+    for (requester_loc, this_ship_ent, other_ship_ent, coms_type) in nevr
+        .read()
+        .flat_map(|ev| {
+            let (player_loc, pilot) = lobby.player_from_id(ev.client_id).map(|x| q_pilot.get(x).ok()).flatten()?;
 
-        let this_ship_ent = pilot.entity;
-        let other_ship_ent = ev.event.0;
+            Some((player_loc, pilot.entity, ev.event.0, ComsChannelType::Player))
+        })
+        .chain(evr.read().flat_map(|ev| {
+            let loc = q_loc.get(ev.npc_ship).ok()?;
 
+            Some((loc, ev.npc_ship, ev.player_ship, ComsChannelType::Ai(ev.ai_coms_type)))
+        }))
+    {
         let Ok(other_ship_loc) = q_ship_loc.get(other_ship_ent) else {
             info!("Not a ship");
             continue;
         };
 
-        if !other_ship_loc.is_within_reasonable_range(player_loc)
-            || other_ship_loc.distance_sqrd(player_loc) > MAX_HAIL_RANGE * MAX_HAIL_RANGE
+        if !other_ship_loc.is_within_reasonable_range(requester_loc)
+            || other_ship_loc.distance_sqrd(requester_loc) > MAX_HAIL_RANGE * MAX_HAIL_RANGE
         {
             info!("Too far!");
             return;
@@ -69,16 +76,16 @@ fn on_request_coms(
 
         if let Ok((_, pilot)) = q_pilot.get(other_ship_ent) {
             if let Ok(player) = q_player.get(pilot.entity) {
-                info!("Requesting other player hail.");
+                info!("Requesting player hail.");
                 nevw_req.send(RequestComsEvent(this_ship_ent), player.client_id());
                 commands.entity(other_ship_ent).insert(RequestedComs {
-                    coms_type: Some(ComsChannelType::Ai(AiComsType::YesNo)),
+                    coms_type: Some(coms_type),
                     from: this_ship_ent,
                     time: 0.0,
                 });
             } else {
                 info!("Requesting NPC hail.");
-                evw_request_hail_npc.send(RequestHailNpc {
+                evw_request_hail_npc.send(RequestHailToNpc {
                     player_ship: this_ship_ent,
                 });
                 commands.entity(other_ship_ent).insert(RequestedComs {

@@ -81,11 +81,11 @@ struct NextMerchantSpawn(f64);
 
 fn add_spawn_times(
     q_players: Query<Entity, (With<Player>, Without<NextMerchantSpawn>)>,
-    min_merchant_spawn_time: Res<MinMerchantSpawnTime>,
+    min_merchant_spawn_time: Res<FirstMerchantSpawnTime>,
     mut commands: Commands,
 ) {
     for ent in q_players.iter() {
-        let next_spawn_time = calculate_next_spawn_time(&min_merchant_spawn_time);
+        let next_spawn_time = calculate_next_spawn_time(min_merchant_spawn_time.0);
         commands.entity(ent).insert(NextMerchantSpawn(next_spawn_time));
     }
 }
@@ -211,7 +211,7 @@ fn spawn_merchant_ships(
             }
         }
 
-        let next_spawn_time = calculate_next_spawn_time(&min_merchant_spawn_time);
+        let next_spawn_time = calculate_next_spawn_time(min_merchant_spawn_time.0);
 
         for player_ent in player_ents {
             commands.entity(player_ent).insert(NextMerchantSpawn(next_spawn_time));
@@ -226,8 +226,12 @@ fn random_coord() -> f32 {
 #[derive(Resource, Reflect)]
 struct MinMerchantSpawnTime(Duration);
 
+#[derive(Resource, Reflect)]
+struct FirstMerchantSpawnTime(Duration);
+
 fn load_settings(mut commands: Commands) {
     commands.insert_resource(MinMerchantSpawnTime(Duration::from_mins(30)));
+    commands.insert_resource(FirstMerchantSpawnTime(Duration::from_mins(5)));
 }
 
 #[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
@@ -235,8 +239,8 @@ enum MerchantSpawningSet {
     MerchantSpawningLogic,
 }
 
-fn calculate_next_spawn_time(min_merchant_spawn_time: &MinMerchantSpawnTime) -> f64 {
-    let min_secs = min_merchant_spawn_time.0.as_secs_f64();
+fn calculate_next_spawn_time(min_merchant_spawn_time: Duration) -> f64 {
+    let min_secs = min_merchant_spawn_time.as_secs_f64();
     rand::random::<f64>() * min_secs * 3.0 + min_secs
 }
 
@@ -258,6 +262,7 @@ pub(super) fn register(app: &mut App) {
             .in_set(MerchantSpawningSet::MerchantSpawningLogic)
             .chain(),
     )
+    .register_type::<FirstMerchantSpawnTime>()
     .register_type::<NextMerchantSpawn>()
     .register_type::<PlayerStrength>()
     .register_type::<TotalTimePlayed>();

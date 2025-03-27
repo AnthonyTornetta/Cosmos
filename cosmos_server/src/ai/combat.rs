@@ -1,38 +1,28 @@
 use bevy::{
     app::{App, Update},
-    core::Name,
     ecs::{
         component::Component,
         entity::Entity,
-        query::{Or, With, Without},
+        query::{With, Without},
         schedule::{IntoSystemConfigs, IntoSystemSetConfigs, SystemSet},
         system::{Commands, Query, Res},
     },
-    hierarchy::{BuildChildren, Parent},
-    log::error,
+    hierarchy::Parent,
     math::{Quat, Vec3},
-    prelude::{in_state, Has},
+    prelude::in_state,
     reflect::Reflect,
     time::Time,
     transform::components::{GlobalTransform, Transform},
 };
 use bevy_rapier3d::dynamics::Velocity;
 use cosmos_core::{
-    ecs::NeedsDespawned,
-    entities::player::Player,
     events::structure::StructureEventListenerSet,
-    faction::{FactionId, Factions},
     netty::{sync::IdentifiableComponent, system_sets::NetworkingSystemsSet},
     physics::location::Location,
     projectiles::{laser::LASER_LIVE_TIME, missile::Missile},
     state::GameState,
     structure::{
-        shared::{DespawnWithStructure, MeltingDown},
-        ship::{
-            pilot::Pilot,
-            ship_movement::{ShipMovement, ShipMovementSet},
-            Ship,
-        },
+        ship::ship_movement::{ShipMovement, ShipMovementSet},
         systems::{
             laser_cannon_system::LaserCannonSystem,
             missile_launcher_system::{MissileLauncherFocus, MissileLauncherSystem},
@@ -54,7 +44,7 @@ use crate::{
 use super::AiControlled;
 
 #[derive(Component, Debug, Reflect)]
-pub struct Targetting(pub Entity);
+pub struct AiTargetting(pub Entity);
 
 #[derive(Component, Serialize, Deserialize, Debug, Reflect)]
 pub struct CombatAi {
@@ -102,7 +92,7 @@ fn handle_combat_ai(
             &mut ShipMovement,
             &mut Transform,
             &mut CombatAi,
-            &Targetting,
+            &AiTargetting,
             &GlobalTransform,
         ),
         (Without<Missile>, With<AiControlled>), // Without<Missile> fixes ambiguity issues
@@ -222,7 +212,7 @@ pub(super) fn register(app: &mut App) {
             .after(LoadingSystemSet::DoneLoading)
             .after(StructureEventListenerSet::ChangePilotListener),
     )
-    .register_type::<Targetting>()
+    .register_type::<AiTargetting>()
     .register_type::<CombatAi>()
     .add_systems(
         Update,

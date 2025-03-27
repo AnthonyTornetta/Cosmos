@@ -39,7 +39,7 @@ use crate::{
 };
 
 use super::{
-    combat::{CombatAi, CombatAiSystemSet, Targetting},
+    combat::{AiTargetting, CombatAi, CombatAiSystemSet},
     hit_tracking::DifficultyIncreaseOnKill,
     AiControlled,
 };
@@ -73,7 +73,7 @@ fn handle_pirate_targetting(
             continue;
         };
 
-        commands.entity(pirate_ent).insert(Targetting(target_ent));
+        commands.entity(pirate_ent).insert(AiTargetting(target_ent));
     }
 }
 
