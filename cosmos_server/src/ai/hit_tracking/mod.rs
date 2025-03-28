@@ -6,6 +6,7 @@ use cosmos_core::{
     entities::EntityId,
     faction::{FactionId, FactionRelation, Factions},
     netty::system_sets::NetworkingSystemsSet,
+    state::GameState,
     structure::{block_health::events::BlockTakeDamageEvent, shared::MeltingDown, ship::pilot::Pilot},
 };
 use serde::{Deserialize, Serialize};
@@ -73,8 +74,9 @@ fn add_faction_enemies(
             let hitter_fac_id = q_fac_id.get(ent).ok();
 
             let hitter_fac = hitter_fac_id.map(|x| factions.from_id(x)).flatten();
+            let relation = fac.relation_with_entity(&ent_id, hitter_fac);
 
-            if fac.relation_with_entity(&ent_id, hitter_fac) == FactionRelation::Neutral {
+            if relation == FactionRelation::Neutral {
                 factions.set_relation(faction_id, hitter_fac_id, Some(&ent_id), FactionRelation::Enemy);
             }
         }
@@ -123,10 +125,22 @@ pub(super) fn register(app: &mut App) {
             .chain()
             .after(PlayerStrengthSystemSet::UpdatePlayerStrength)
             .after(tick_down_hitters)
+            .run_if(in_state(GameState::Playing))
             .in_set(BlockEventsSet::ProcessEvents),
     )
-    .add_systems(Update, on_melt_down.after(process_hit_events).in_set(NetworkingSystemsSet::Between))
-    .add_systems(Update, tick_down_hitters.run_if(on_timer(Duration::from_secs(1))))
+    .add_systems(
+        Update,
+        on_melt_down
+            .run_if(in_state(GameState::Playing))
+            .after(process_hit_events)
+            .in_set(NetworkingSystemsSet::Between),
+    )
+    .add_systems(
+        Update,
+        tick_down_hitters
+            .run_if(in_state(GameState::Playing))
+            .run_if(on_timer(Duration::from_secs(1))),
+    )
     .register_type::<Hitters>()
     .register_type::<DifficultyIncreaseOnKill>();
 }

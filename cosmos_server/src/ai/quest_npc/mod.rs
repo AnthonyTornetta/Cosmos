@@ -22,7 +22,7 @@ use cosmos_core::{
     ecs::NeedsDespawned,
     entities::EntityId,
     events::structure::StructureEventListenerSet,
-    faction::{FactionId, FactionRelation, Factions},
+    faction::{Faction, FactionId, FactionRelation, Factions},
     netty::{sync::IdentifiableComponent, system_sets::NetworkingSystemsSet},
     physics::location::Location,
     prelude::Ship,
@@ -81,7 +81,7 @@ fn handle_quest_npc_targetting(
         (Entity, &Location, &FactionId, &mut MerchantAiState),
         (With<MerchantFederation>, With<CombatAi>, Without<Missile>, With<AiControlled>), // Without<Missile> fixes ambiguity issues
     >,
-    q_targets: Query<(Entity, &Location, Has<MeltingDown>, Option<&FactionId>)>,
+    q_targets: Query<(Entity, &EntityId, &Location, Has<MeltingDown>, Option<&FactionId>)>,
     factions: Res<Factions>,
 ) {
     for (merchant_ent, merchant_loc, my_faction_id, mut ai_state) in q_merchants.iter_mut() {
@@ -90,14 +90,17 @@ fn handle_quest_npc_targetting(
             continue;
         };
 
-        let Some((target_ent, _, _, _)) = q_targets
+        let Some((target_ent, _, _, _, _)) = q_targets
             .iter()
-            .filter(|x| x.1.is_within_reasonable_range(merchant_loc))
-            .filter(|(_, _, _, faction_id)| {
-                quest_npc_faction.relation_with(faction_id.map(|id| factions.from_id(id)).flatten()) == FactionRelation::Enemy
+            .filter(|x| {
+                x.2.is_within_reasonable_range(merchant_loc)
+                    && x.2.distance_sqrd(merchant_loc) < QUEST_NPC_MAX_CHASE_DISTANCE * QUEST_NPC_MAX_CHASE_DISTANCE
+            })
+            .filter(|(_, entity_id, _, _, faction_id)| {
+                quest_npc_faction.relation_with_entity(*entity_id, faction_id.and_then(|id| factions.from_id(id))) == FactionRelation::Enemy
             })
             // add a large penalty for something that's melting down so they prioritize non-melting down things
-            .min_by_key(|(_, this_loc, melting_down, _)| {
+            .min_by_key(|(_, _, this_loc, melting_down, _)| {
                 // Makes it only target melting down targets if they're the only one nearby
                 let melting_down_punishment = if *melting_down { 100_000_000_000_000 } else { 0 };
 
@@ -189,11 +192,25 @@ enum MerchantAiState {
 
 const TALK_DIST: f32 = 1000.0;
 
+fn any_war_targets(
+    m_loc: &Location,
+    m_fac: &Faction,
+    factions: &Factions,
+    q_war_targets: &Query<(&EntityId, &Location, Option<&FactionId>)>,
+) -> bool {
+    q_war_targets.iter().any(|x| {
+        x.1.is_within_reasonable_range(m_loc)
+            && x.1.distance_sqrd(m_loc) < QUEST_NPC_MAX_CHASE_DISTANCE * QUEST_NPC_MAX_CHASE_DISTANCE
+            && m_fac.relation_with_entity(x.0, x.2.and_then(|x| factions.from_id(x))) == FactionRelation::Enemy
+    })
+}
+
 fn searching_merchant_ai(
     mut q_merchant: Query<
         (&Location, &mut Transform, &FactionId, &mut MerchantAiState, &mut ShipMovement),
-        (With<MerchantFederation>, With<AiControlled>, Without<AiTargetting>),
+        (With<MerchantFederation>, With<AiControlled>),
     >,
+    q_war_targets: Query<(&EntityId, &Location, Option<&FactionId>)>,
     q_targets: Query<(&EntityId, &Location, Option<&FactionId>, &Pilot), (With<Ship>, Without<AiControlled>)>,
     factions: Res<Factions>,
 ) {
@@ -206,6 +223,11 @@ fn searching_merchant_ai(
             warn!("Merchant faction not found!");
             continue;
         };
+
+        if any_war_targets(m_loc, m_fac, &factions, &q_war_targets) {
+            *ai_state = MerchantAiState::Fighting;
+            continue;
+        }
 
         let target = q_targets
             .iter()
@@ -277,6 +299,7 @@ fn talking_merchant_ai(
         (With<Ship>, Without<AiControlled>),
     >,
     factions: Res<Factions>,
+    q_war_targets: Query<(&EntityId, &Location, Option<&FactionId>)>,
 ) {
     for (entity, m_loc, m_fac, mut ai_state, mut ship_movement, said_no_list, velocity, mut transform) in q_merchant.iter_mut() {
         if !matches!(*ai_state, MerchantAiState::Talking) {
@@ -287,6 +310,11 @@ fn talking_merchant_ai(
             warn!("Merchant faction not found!");
             continue;
         };
+
+        if any_war_targets(m_loc, m_fac, &factions, &q_war_targets) {
+            *ai_state = MerchantAiState::Fighting;
+            continue;
+        }
 
         let coms_with_this = q_coms.iter().filter(|c| c.0.with == entity).collect::<Vec<_>>();
 
@@ -319,22 +347,7 @@ fn talking_merchant_ai(
         let diff_len = diff.length();
 
         let should_brake = (target_vel.linvel - (velocity.linvel * 0.9)).length() < diff_len;
-        //
-        // let x_brake = target_vel.linvel.x < velocity.linvel.x || velocity.linvel.x < 0.0 && target_vel.linvel.x > velocity.linvel.x;
-        // let y_brake = target_vel.linvel.y < velocity.linvel.y || velocity.linvel.y < 0.0 && target_vel.linvel.y > velocity.linvel.y;
-        // let z_brake = target_vel.linvel.z < velocity.linvel.z || velocity.linvel.z < 0.0 && target_vel.linvel.z > velocity.linvel.z;
-        //
-        // let break_vec = Vec3::new(
-        //     if x_brake { 1.0 } else { -1.0 },
-        //     if y_brake { 1.0 } else { -1.0 },
-        //     if z_brake { 1.0 } else { -1.0 },
-        // );
-        //
-        // let total_brake_advantage = break_vec.x * diff.x.abs() + break_vec.y * diff.y.abs() + break_vec.z * diff.z.abs();
-        // info!("Brake Adv: {total_brake_advantage}");
-        //
-        // if (ship_movement.braking && total_brake_advantage >= 40.0) || (total_brake_advantage >= 60.0 && diff.length() > 30.0) {
-        //
+
         if diff_len > 30.0 && should_brake {
             ship_movement.braking = true;
             ship_movement.movement = Vec3::ZERO;
@@ -415,5 +428,6 @@ pub(super) fn register(app: &mut App) {
             .in_set(NetworkingSystemsSet::Between)
             .in_set(MerchantSystemSet::MerchantAiLogic)
             .chain(),
-    );
+    )
+    .register_type::<MerchantAiState>();
 }
