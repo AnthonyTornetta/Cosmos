@@ -40,7 +40,7 @@ use cosmos_core::{
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    coms::RequestHailFromNpc,
+    coms::{NpcSendComsMessage, RequestHailFromNpc},
     persistence::{
         loading::LoadingSystemSet,
         make_persistent::{make_persistent, DefaultPersistentComponent},
@@ -269,6 +269,77 @@ fn combat_merchant_ai(mut commands: Commands, q_merchant: Query<(Entity, &Mercha
 #[derive(Component, Default)]
 struct SaidNoList(Vec<Entity>);
 
+fn on_change_coms(
+    mut evw_send_coms: EventWriter<NpcSendComsMessage>,
+    q_create_coms: Query<(&Parent, &ComsChannel), Changed<ComsChannel>>,
+    factions: Res<Factions>,
+    q_faction: Query<&FactionId>,
+    q_entity_id: Query<&EntityId>,
+    q_pilot: Query<&Pilot>,
+    q_merchant: Query<(), With<MerchantFederation>>,
+) {
+    enum ComsState {
+        Intro,
+        Accepted,
+        OnQuest,
+        SaidNo,
+    }
+
+    for (parent, coms) in q_create_coms.iter() {
+        if !q_merchant.contains(parent.get()) {
+            continue;
+        }
+
+        if let Some(last) = coms.messages.last() {
+            if last.sender == parent.get() {
+                // Don't reply to ourselves
+                continue;
+            }
+        }
+
+        if let Ok(pilot) = q_pilot.get(coms.with) {
+            if let Some(faction) = q_faction.get(parent.get()).ok().and_then(|x| factions.from_id(x)) {
+                let with_fac = q_faction.get(pilot.entity).ok().and_then(|x| factions.from_id(x));
+                if let Ok(with_ent_id) = q_entity_id.get(pilot.entity) {
+                    if faction.relation_with_entity(with_ent_id, with_fac) == FactionRelation::Enemy {
+                        evw_send_coms.send(NpcSendComsMessage {
+                            message: "BEGONE SCALLYWAG!!!".to_owned(),
+                            from_ship: parent.get(),
+                            to_ship: coms.with,
+                        });
+                        continue;
+                    }
+                }
+            }
+        }
+
+        let mut itr = coms.messages.iter();
+
+        let (intro, response) = (itr.next(), itr.next().map(|x| x.text.as_str()));
+
+        let state = match (intro, response) {
+            (None, None) => ComsState::Intro,
+            (Some(_), Some("Yes")) => ComsState::Accepted,
+            (Some(_), Some("No")) => ComsState::SaidNo,
+            _ => ComsState::OnQuest,
+        };
+
+        let response = match state {
+            ComsState::SaidNo => "Whatever nerd",
+            ComsState::Accepted => "Peak, you have a quest now",
+            ComsState::OnQuest => "You're already on a quest",
+            ComsState::Intro => "Oh my glob! There are pirates!",
+        }
+        .to_owned();
+
+        evw_send_coms.send(NpcSendComsMessage {
+            message: response,
+            from_ship: parent.get(),
+            to_ship: coms.with,
+        });
+    }
+}
+
 fn talking_merchant_ai(
     mut evw_send_coms: EventWriter<RequestHailFromNpc>,
     mut commands: Commands,
@@ -423,6 +494,7 @@ pub(super) fn register(app: &mut App) {
             talking_merchant_ai,
             combat_merchant_ai,
             handle_quest_npc_targetting.before(ShipMovementSet::RemoveShipMovement),
+            on_change_coms,
         )
             .run_if(in_state(GameState::Playing))
             .in_set(NetworkingSystemsSet::Between)

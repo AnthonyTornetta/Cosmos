@@ -16,7 +16,7 @@ use cosmos_core::{
     structure::ship::pilot::Pilot,
 };
 
-use super::{RequestHailFromNpc, RequestHailToNpc};
+use super::{NpcSendComsMessage, RequestHailFromNpc, RequestHailToNpc};
 
 const MAX_HAIL_RANGE: f32 = 20_000.0;
 
@@ -175,28 +175,31 @@ fn send_coms_message(
     lobby: Res<ServerLobby>,
     q_pilot: Query<&Pilot>,
     mut nevr_com_msg: EventReader<NettyEventReceived<SendComsMessage>>,
+    mut evr_send_coms: EventReader<NpcSendComsMessage>,
     mut q_coms: Query<(&Parent, &mut ComsChannel)>,
 ) {
-    for ev in nevr_com_msg.read() {
-        let Some(player_ent) = lobby.player_from_id(ev.client_id) else {
-            continue;
-        };
+    for (from, message, to) in nevr_com_msg
+        .read()
+        .flat_map(|ev| {
+            let player_ent = lobby.player_from_id(ev.client_id)?;
+            let pilot = q_pilot.get(player_ent).ok()?;
 
-        let Ok(pilot) = q_pilot.get(player_ent) else {
-            continue;
-        };
-
-        let Some((_, mut coms)) = q_coms
-            .iter_mut()
-            .find(|(parent, coms)| parent.get() == pilot.entity && coms.with == ev.to)
-        else {
-            warn!("(1) No coms entry! to: {:?} | ship = {:?}", ev.to, pilot.entity);
+            Some((pilot.entity, ev.message.clone(), ev.to))
+        })
+        .chain(
+            evr_send_coms
+                .read()
+                .map(|ev| (ev.from_ship, SendComsMessageType::Message(ev.message.to_owned()), ev.to_ship)),
+        )
+    {
+        let Some((_, mut coms)) = q_coms.iter_mut().find(|(parent, coms)| parent.get() == from && coms.with == to) else {
+            warn!("(1) No coms entry! to: {:?} | ship = {:?}", to, from);
             continue;
         };
 
         let msg = ComsMessage {
-            sender: pilot.entity,
-            text: match &ev.event.message {
+            sender: from,
+            text: match &message {
                 SendComsMessageType::Message(s) => s.into(),
                 SendComsMessageType::Yes => "Yes".into(),
                 SendComsMessageType::No => "No".into(),
@@ -205,11 +208,8 @@ fn send_coms_message(
 
         coms.messages.push(msg.clone());
 
-        let Some((_, mut coms)) = q_coms
-            .iter_mut()
-            .find(|(parent, coms)| parent.get() == ev.to && coms.with == pilot.entity)
-        else {
-            warn!("(2) No coms entry! to: {:?} | ship = {:?}", ev.to, pilot.entity);
+        let Some((_, mut coms)) = q_coms.iter_mut().find(|(parent, coms)| parent.get() == to && coms.with == from) else {
+            warn!("(2) No coms entry! to: {:?} | ship = {:?}", to, from);
             continue;
         };
 
