@@ -44,9 +44,9 @@ const PLAYER_STRENGTH_INCREASE_FACTOR: f32 = 1.0;
 #[derive(Component)]
 /// A pirate needs spawned for this entity, please add the components it needs to function
 pub struct PirateNeedsSpawned {
-    location: Location,
-    difficulty: u32,
-    heading_towards: Location,
+    pub location: Location,
+    pub difficulty: u32,
+    pub heading_towards: Location,
 }
 
 #[derive(Component)]
@@ -228,7 +228,7 @@ fn load_settings(mut commands: Commands) {
 }
 
 #[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
-enum PirateSpawningSet {
+pub enum PirateSpawningSet {
     PirateSpawningLogic,
 }
 

@@ -1,5 +1,7 @@
 //! The merchant NPC's AI logic
 
+use std::num::NonZeroU32;
+
 use bevy::{
     app::{App, Update},
     core::Name,
@@ -27,6 +29,7 @@ use cosmos_core::{
     physics::location::Location,
     prelude::Ship,
     projectiles::missile::Missile,
+    quest::OngoingQuestDetails,
     state::GameState,
     structure::{
         shared::{DespawnWithStructure, MeltingDown},
@@ -45,6 +48,7 @@ use crate::{
         loading::LoadingSystemSet,
         make_persistent::{make_persistent, DefaultPersistentComponent},
     },
+    quest::AddQuestEvent,
     structure::systems::thruster_system::MaxShipSpeedModifier,
 };
 
@@ -277,6 +281,7 @@ fn on_change_coms(
     q_entity_id: Query<&EntityId>,
     q_pilot: Query<&Pilot>,
     q_merchant: Query<(), With<MerchantFederation>>,
+    mut evw_start_quest: EventWriter<AddQuestEvent>,
 ) {
     enum ComsState {
         Intro,
@@ -315,18 +320,31 @@ fn on_change_coms(
 
         let mut itr = coms.messages.iter();
 
-        let (intro, response) = (itr.next(), itr.next().map(|x| x.text.as_str()));
+        let (intro, response, next) = (itr.next(), itr.next().map(|x| x.text.as_str()), itr.next());
 
-        let state = match (intro, response) {
-            (None, None) => ComsState::Intro,
-            (Some(_), Some("Yes")) => ComsState::Accepted,
-            (Some(_), Some("No")) => ComsState::SaidNo,
+        let state = match (intro, response, next) {
+            (None, None, None) => ComsState::Intro,
+            (Some(_), Some("Yes"), None) => ComsState::Accepted,
+            (Some(_), Some("No"), _) => ComsState::SaidNo,
             _ => ComsState::OnQuest,
         };
 
         let response = match state {
             ComsState::SaidNo => "Whatever nerd",
-            ComsState::Accepted => "Peak, you have a quest now",
+            ComsState::Accepted => {
+                if let Ok(pilot) = q_pilot.get(coms.with) {
+                    evw_start_quest.send(AddQuestEvent {
+                        unlocalized_name: "cosmos:fight_pirate".into(),
+                        to: pilot.entity,
+                        details: OngoingQuestDetails {
+                            payout: Some(NonZeroU32::new(50_000).unwrap()),
+                            location: None,
+                        },
+                    });
+                }
+
+                "Peak, you have a quest now"
+            }
             ComsState::OnQuest => "You're already on a quest",
             ComsState::Intro => "Oh my glob! There are pirates!",
         }

@@ -5,12 +5,14 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     netty::sync::{registry::sync_registry, sync_component, IdentifiableComponent, SyncableComponent},
+    physics::location::Location,
     registry::{create_registry, identifiable::Identifiable},
 };
 
 #[derive(Default, Reflect, Debug, Serialize, Deserialize, Clone, PartialEq)]
 pub struct OngoingQuestDetails {
     pub payout: Option<NonZeroU32>,
+    pub location: Option<Location>,
 }
 
 #[derive(Reflect, Debug, Serialize, Deserialize, Clone, PartialEq)]
@@ -19,7 +21,7 @@ pub struct OngoingQuest {
     pub details: OngoingQuestDetails,
 }
 
-#[derive(Debug, Component, Reflect, Serialize, Deserialize, Clone, PartialEq)]
+#[derive(Debug, Component, Reflect, Serialize, Deserialize, Clone, PartialEq, Default)]
 pub struct OngoingQuests(Vec<OngoingQuest>);
 
 impl OngoingQuests {

@@ -26,6 +26,7 @@ pub mod netty;
 pub mod physics;
 pub mod plugin;
 pub mod projectiles;
+pub mod quest;
 pub mod rendering;
 pub mod settings;
 pub mod shop;
@@ -190,6 +191,7 @@ fn main() {
     chat::register(&mut app);
     crafting::register(&mut app);
     coms::register(&mut app);
+    quest::register(&mut app);
 
     if cfg!(feature = "print-schedule") {
         println!(

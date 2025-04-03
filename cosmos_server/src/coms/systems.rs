@@ -160,7 +160,7 @@ fn on_accept_coms(
 }
 
 fn tick_requested_coms(mut commands: Commands, time: Res<Time>, mut q_req_coms: Query<(Entity, &mut RequestedComs)>) {
-    const MAX_SECS: f32 = 15.0;
+    const MAX_SECS: f32 = 1000.0;
 
     for (ent, mut req_com) in q_req_coms.iter_mut() {
         req_com.time += time.delta_secs();
