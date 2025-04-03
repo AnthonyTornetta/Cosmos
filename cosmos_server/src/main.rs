@@ -46,6 +46,7 @@ pub mod persistence;
 pub mod physics;
 pub mod plugin;
 pub mod projectiles;
+pub mod quest;
 pub mod rng;
 pub mod settings;
 pub mod shop;

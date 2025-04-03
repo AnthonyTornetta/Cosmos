@@ -25,6 +25,7 @@ pub mod physics;
 pub mod plugin;
 pub mod prelude;
 pub mod projectiles;
+pub mod quest;
 pub mod registry;
 pub mod shop;
 pub mod state;
