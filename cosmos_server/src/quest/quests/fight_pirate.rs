@@ -17,7 +17,7 @@ use crate::{
 pub const FIGHT_PIRATE_QUEST_NAME: &str = "cosmos:fight_pirate";
 
 fn register_quest(mut quests: ResMut<Registry<Quest>>) {
-    quests.register(Quest::new("cosmos:fight_pirate".to_string(), "Fight a pirate".to_string()));
+    quests.register(Quest::new(FIGHT_PIRATE_QUEST_NAME.to_string(), "Fight a pirate".to_string()));
 }
 
 #[derive(Component, Debug, Serialize, Deserialize)]
@@ -45,9 +45,9 @@ fn on_add_quest(
         };
 
         let offset = Vec3::new(
-            random_range(2.0 * SECTOR_DIMENSIONS, 3.0 * SECTOR_DIMENSIONS) * (rand::random::<f32>() - 0.5).floor(),
-            random_range(2.0 * SECTOR_DIMENSIONS, 3.0 * SECTOR_DIMENSIONS) * (rand::random::<f32>() - 0.5).floor(),
-            random_range(2.0 * SECTOR_DIMENSIONS, 3.0 * SECTOR_DIMENSIONS) * (rand::random::<f32>() - 0.5).floor(),
+            random_range(2.0 * SECTOR_DIMENSIONS, 3.0 * SECTOR_DIMENSIONS) * (rand::random::<f32>() - 0.5).signum(),
+            random_range(2.0 * SECTOR_DIMENSIONS, 3.0 * SECTOR_DIMENSIONS) * (rand::random::<f32>() - 0.5).signum(),
+            random_range(2.0 * SECTOR_DIMENSIONS, 3.0 * SECTOR_DIMENSIONS) * (rand::random::<f32>() - 0.5).signum(),
         );
         let location = *loc + offset;
         let details = OngoingQuestDetails {
