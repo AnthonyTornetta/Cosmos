@@ -247,8 +247,8 @@ fn add_indicators(
 
 fn added(
     q_local_faction: Query<&FactionId, With<LocalPlayer>>,
-    ship_query: Query<(Entity, Option<&FactionId>), Or<(Added<Ship>, Changed<FactionId>)>>,
-    station_query: Query<(Entity, Option<&FactionId>), Or<(Added<Station>, Changed<FactionId>)>>,
+    ship_query: Query<(Entity, Option<&FactionId>), (With<Ship>, Or<(Added<Ship>, Changed<FactionId>)>)>,
+    station_query: Query<(Entity, Option<&FactionId>), (With<Station>, Or<(Added<Station>, Changed<FactionId>)>)>,
     q_melting_down: Query<Entity, Added<MeltingDown>>,
     asteroid_query: Query<Entity, Added<Asteroid>>,
     planet_query: Query<Entity, Added<Planet>>,
