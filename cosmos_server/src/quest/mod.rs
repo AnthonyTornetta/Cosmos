@@ -4,6 +4,8 @@ use cosmos_core::{
     quest::{OngoingQuestDetails, OngoingQuests},
 };
 
+use crate::persistence::make_persistent::{make_persistent, DefaultPersistentComponent};
+
 mod quests;
 
 #[derive(Event)]
@@ -19,8 +21,12 @@ fn add_ongoing_quests(mut commands: Commands, q_players_no_quests: Query<Entity,
     }
 }
 
+impl DefaultPersistentComponent for OngoingQuests {}
+
 pub(super) fn register(app: &mut App) {
     quests::register(app);
+
+    make_persistent::<OngoingQuests>(app);
 
     app.add_systems(Update, add_ongoing_quests);
 
