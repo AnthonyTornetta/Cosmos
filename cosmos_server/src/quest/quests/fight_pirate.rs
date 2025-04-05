@@ -69,7 +69,7 @@ fn on_add_quest(
 
         let quest_id = quests.start_quest(quest_entry, details);
 
-        let pirates = [2, 2, 3];
+        let pirates = [2, 3];
 
         for (i, &difficulty) in pirates.iter().enumerate() {
             commands.spawn((
