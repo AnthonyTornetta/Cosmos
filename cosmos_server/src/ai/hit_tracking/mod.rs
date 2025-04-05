@@ -18,6 +18,12 @@ use super::AiControlled;
 #[derive(Component, Default, Reflect, Debug)]
 pub struct Hitters(HashMap<Entity, u64>);
 
+impl Hitters {
+    pub fn get_number_of_hits(&self, ent: Entity) -> u64 {
+        self.0.get(&ent).copied().unwrap_or(0)
+    }
+}
+
 /// How much the difficulty will increase after killing this entity.
 /// This is evenly divided between the players that killed this, based on how many times each
 /// player hit it.

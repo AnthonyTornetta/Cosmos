@@ -12,10 +12,11 @@ use bevy::{
         schedule::{IntoSystemConfigs, IntoSystemSetConfigs, SystemSet},
         system::{Commands, Query, Res, Resource},
     },
+    log::info,
     math::{Quat, Vec3},
     reflect::Reflect,
     state::condition::in_state,
-    time::{common_conditions::on_timer, Time},
+    time::Time,
     utils::hashbrown::HashMap,
 };
 use cosmos_core::{
@@ -54,7 +55,7 @@ pub struct MerchantNeedsSpawned {
 }
 
 /// The maximum difficulty of ship we can spawn. This is NOT the total difficulty.
-const MAX_DIFFICULTY: u64 = 3;
+const MAX_DIFFICULTY: u64 = 0;
 
 fn on_needs_merchant_spawned(mut commands: Commands, q_needs_merchant_spawned: Query<(Entity, &MerchantNeedsSpawned)>) {
     for (ent, pns) in q_needs_merchant_spawned.iter() {
@@ -200,6 +201,8 @@ fn spawn_merchant_ships(
                 // Scale difficulty count w/ number already spawned, since more = way harder
                 total_difficulty_todo -= total_difficulty_todo.min((difficulty + 1) * p_idx.pow(2));
 
+                info!("Loading thing");
+
                 commands.spawn((
                     Name::new("Loading Merchant Ship"),
                     MerchantNeedsSpawned {
@@ -252,8 +255,7 @@ pub(super) fn register(app: &mut App) {
         Update,
         MerchantSpawningSet::MerchantSpawningLogic
             .before(LoadingBlueprintSystemSet::BeginLoadingBlueprints)
-            .run_if(in_state(GameState::Playing))
-            .run_if(on_timer(Duration::from_secs(10))),
+            .run_if(in_state(GameState::Playing)),
     )
     .add_systems(Startup, load_settings)
     .add_systems(

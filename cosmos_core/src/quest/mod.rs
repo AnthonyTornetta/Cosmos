@@ -2,6 +2,7 @@ use std::num::NonZeroU32;
 
 use bevy::prelude::*;
 use serde::{Deserialize, Serialize};
+use uuid::Uuid;
 
 use crate::{
     netty::sync::{registry::sync_registry, sync_component, IdentifiableComponent, SyncableComponent},
@@ -19,17 +20,41 @@ pub struct OngoingQuestDetails {
 pub struct OngoingQuest {
     pub quest_id: u16,
     pub details: OngoingQuestDetails,
+    ongoing_id: OngoingQuestId,
 }
+
+#[derive(Reflect, Debug, Serialize, Deserialize, Clone, PartialEq, Copy)]
+pub struct OngoingQuestId(Uuid);
 
 #[derive(Debug, Component, Reflect, Serialize, Deserialize, Clone, PartialEq, Default)]
 pub struct OngoingQuests(Vec<OngoingQuest>);
 
+impl OngoingQuest {
+    pub fn ongoing_id(&self) -> OngoingQuestId {
+        self.ongoing_id
+    }
+}
+
 impl OngoingQuests {
-    pub fn start_quest(&mut self, quest: &Quest, details: OngoingQuestDetails) {
+    pub fn start_quest(&mut self, quest: &Quest, details: OngoingQuestDetails) -> OngoingQuestId {
+        let id = OngoingQuestId(Uuid::new_v4());
         self.0.push(OngoingQuest {
             quest_id: quest.id(),
             details,
-        })
+            ongoing_id: id,
+        });
+
+        id
+    }
+
+    pub fn from_id(&self, id: &OngoingQuestId) -> Option<&OngoingQuest> {
+        self.0.iter().find(|x| x.ongoing_id == *id)
+    }
+
+    pub fn remove_ongoing_quest(&mut self, id: &OngoingQuestId) -> Option<OngoingQuest> {
+        let (idx, _) = self.0.iter().enumerate().find(|(_, x)| x.ongoing_id == *id)?;
+
+        Some(self.0.remove(idx))
     }
 }
 

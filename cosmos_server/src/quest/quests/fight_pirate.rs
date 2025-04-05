@@ -1,15 +1,19 @@
 use bevy::prelude::*;
 use cosmos_core::{
-    netty::system_sets::NetworkingSystemsSet,
+    economy::Credits,
+    netty::{sync::IdentifiableComponent, system_sets::NetworkingSystemsSet},
     physics::location::{Location, SECTOR_DIMENSIONS},
-    quest::{OngoingQuestDetails, OngoingQuests, Quest},
+    quest::{OngoingQuestDetails, OngoingQuestId, OngoingQuests, Quest},
     registry::Registry,
     state::GameState,
+    structure::shared::MeltingDown,
     utils::random::random_range,
 };
 use serde::{Deserialize, Serialize};
 
 use crate::{
+    ai::hit_tracking::Hitters,
+    persistence::make_persistent::{make_persistent, DefaultPersistentComponent},
     quest::AddQuestEvent,
     universe::spawners::pirate::{PirateNeedsSpawned, PirateSpawningSet},
 };
@@ -22,8 +26,16 @@ fn register_quest(mut quests: ResMut<Registry<Quest>>) {
 
 #[derive(Component, Debug, Serialize, Deserialize)]
 struct FightPirateQuestNPC {
-    quest_holder: Entity,
+    quest_id: OngoingQuestId,
 }
+
+impl IdentifiableComponent for FightPirateQuestNPC {
+    fn get_component_unlocalized_name() -> &'static str {
+        "cosmos:fight_pirate_quest_npc"
+    }
+}
+
+impl DefaultPersistentComponent for FightPirateQuestNPC {}
 
 fn on_add_quest(
     mut evr_add_quest: EventReader<AddQuestEvent>,
@@ -55,23 +67,60 @@ fn on_add_quest(
             ..ev.details.clone()
         };
 
-        quests.start_quest(quest_entry, details);
+        let quest_id = quests.start_quest(quest_entry, details);
 
-        commands.spawn((
-            FightPirateQuestNPC { quest_holder: ev.to },
-            PirateNeedsSpawned {
-                location,
-                difficulty: 2,
-                heading_towards: *loc,
-            },
-        ));
+        let pirates = [2, 2, 3];
+
+        for (i, &difficulty) in pirates.iter().enumerate() {
+            commands.spawn((
+                FightPirateQuestNPC { quest_id },
+                PirateNeedsSpawned {
+                    location: location + Vec3::new(0.0, i as f32 * 600.0, i as f32 * 700.0),
+                    difficulty,
+                    heading_towards: *loc,
+                },
+            ));
+        }
+    }
+}
+
+fn on_kill_pirates(
+    mut commands: Commands,
+    mut q_ongoing_quests: Query<(Entity, &mut OngoingQuests, &mut Credits)>,
+    q_melting_down: Query<(Entity, &FightPirateQuestNPC, &Hitters), With<MeltingDown>>,
+    q_not_melting_down: Query<&FightPirateQuestNPC, Without<MeltingDown>>,
+) {
+    for (entity, quest_npc, hitters) in q_melting_down.iter() {
+        commands.entity(entity).remove::<FightPirateQuestNPC>();
+
+        if q_not_melting_down.iter().any(|npc| quest_npc.quest_id == npc.quest_id) {
+            // Quest is not yet complete
+            continue;
+        }
+
+        for (ongoing_ent, mut ongoing, mut credits) in q_ongoing_quests.iter_mut() {
+            let Some(ongoing_quest) = ongoing.remove_ongoing_quest(&quest_npc.quest_id) else {
+                continue;
+            };
+
+            if hitters.get_number_of_hits(ongoing_ent) == 0 {
+                continue;
+            }
+
+            if let Some(money) = ongoing_quest.details.payout {
+                credits.increase(money.get() as u64);
+            }
+        }
     }
 }
 
 pub(super) fn register(app: &mut App) {
+    make_persistent::<FightPirateQuestNPC>(app);
+
     app.add_systems(OnEnter(GameState::Loading), register_quest).add_systems(
         Update,
-        on_add_quest
+        (on_add_quest, on_kill_pirates)
+            .chain()
             .before(PirateSpawningSet::PirateSpawningLogic)
             .in_set(NetworkingSystemsSet::Between),
     );

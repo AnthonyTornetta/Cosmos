@@ -18,7 +18,7 @@ use crate::persistence::{
 };
 
 mod combat;
-mod hit_tracking;
+pub mod hit_tracking;
 mod pirate;
 pub mod quest_npc;
 

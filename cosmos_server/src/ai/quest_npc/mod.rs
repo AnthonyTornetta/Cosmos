@@ -192,6 +192,7 @@ enum MerchantAiState {
     FindingTarget,
     Fighting,
     Talking,
+    Fleeing,
 }
 
 const TALK_DIST: f32 = 1000.0;
@@ -207,6 +208,49 @@ fn any_war_targets(
             && x.1.distance_sqrd(m_loc) < QUEST_NPC_MAX_CHASE_DISTANCE * QUEST_NPC_MAX_CHASE_DISTANCE
             && m_fac.relation_with_entity(x.0, x.2.and_then(|x| factions.from_id(x))) == FactionRelation::Enemy
     })
+}
+
+fn fleeing_merchant_ai(
+    mut q_merchant: Query<
+        (&Location, &mut Transform, &FactionId, &mut MerchantAiState, &mut ShipMovement),
+        (With<MerchantFederation>, With<AiControlled>),
+    >,
+    q_war_targets: Query<(&EntityId, &Location, Option<&FactionId>)>,
+    q_targets: Query<(&EntityId, &Location, Option<&FactionId>, &Pilot), (With<Ship>, Without<AiControlled>)>,
+    factions: Res<Factions>,
+) {
+    for (m_loc, mut m_trans, m_fac, mut ai_state, mut ship_movement) in q_merchant.iter_mut() {
+        if !matches!(*ai_state, MerchantAiState::Fleeing) {
+            continue;
+        }
+
+        let Some(m_fac) = factions.from_id(m_fac) else {
+            warn!("Merchant faction not found!");
+            continue;
+        };
+
+        if any_war_targets(m_loc, m_fac, &factions, &q_war_targets) {
+            *ai_state = MerchantAiState::Fighting;
+            continue;
+        }
+
+        let target = q_targets
+            .iter()
+            .filter(|(target_ent, _, target_fac, _)| {
+                m_fac.relation_with_entity(target_ent, target_fac.and_then(|x| factions.from_id(x))) != FactionRelation::Enemy
+            })
+            .min_by_key(|(_, t_loc, _, _)| t_loc.distance_sqrd(m_loc) as i32)
+            .map(|(_, t_loc, _, _)| *t_loc);
+
+        let Some(target) = target else {
+            continue;
+        };
+
+        // fly in the opposite direction of its closest target
+        m_trans.look_to(-(target - *m_loc).absolute_coords_f32(), Vec3::Y);
+        ship_movement.movement = Vec3::Z;
+        ship_movement.braking = false;
+    }
 }
 
 fn searching_merchant_ai(
@@ -280,7 +324,7 @@ fn on_change_coms(
     q_faction: Query<&FactionId>,
     q_entity_id: Query<&EntityId>,
     q_pilot: Query<&Pilot>,
-    q_merchant: Query<(), With<MerchantFederation>>,
+    mut q_merchant: Query<&mut MerchantAiState, With<MerchantFederation>>,
     mut evw_start_quest: EventWriter<AddQuestEvent>,
 ) {
     enum ComsState {
@@ -291,9 +335,9 @@ fn on_change_coms(
     }
 
     for (parent, coms) in q_create_coms.iter() {
-        if !q_merchant.contains(parent.get()) {
+        let Ok(mut merchant_ai_state) = q_merchant.get_mut(parent.get()) else {
             continue;
-        }
+        };
 
         if let Some(last) = coms.messages.last() {
             if last.sender == parent.get() {
@@ -330,25 +374,29 @@ fn on_change_coms(
         };
 
         let response = match state {
-            ComsState::SaidNo => "Whatever nerd",
+            ComsState::SaidNo => "I understand. I, too, value my life.",
             ComsState::Accepted => {
                 if let Ok(pilot) = q_pilot.get(coms.with) {
                     evw_start_quest.send(AddQuestEvent {
                         unlocalized_name: "cosmos:fight_pirate".into(),
                         to: pilot.entity,
                         details: OngoingQuestDetails {
-                            payout: Some(NonZeroU32::new(50_000).unwrap()),
+                            payout: Some(NonZeroU32::new(500_000).unwrap()),
                             location: None,
                         },
                     });
                 }
 
-                "Peak, you have a quest now"
+                "Thank you brave warrior! Show them no mercy!"
             }
             ComsState::OnQuest => "You're already on a quest",
-            ComsState::Intro => "Oh my glob! There are pirates!",
+            ComsState::Intro => "Please help us! A sector not far from here has been overtaken by pirates! Should you lend us your aid, you will be rewarded handsomely. Would you please lend us your aid by killing these dastardly foes?",
         }
         .to_owned();
+
+        if matches!(*merchant_ai_state, MerchantAiState::Talking) {
+            *merchant_ai_state = MerchantAiState::Fleeing;
+        }
 
         evw_send_coms.send(NpcSendComsMessage {
             message: response,
@@ -510,6 +558,7 @@ pub(super) fn register(app: &mut App) {
             apply_quest_npc_faction,
             searching_merchant_ai,
             talking_merchant_ai,
+            fleeing_merchant_ai,
             combat_merchant_ai,
             handle_quest_npc_targetting.before(ShipMovementSet::RemoveShipMovement),
             on_change_coms,
