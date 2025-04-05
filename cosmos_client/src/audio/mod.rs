@@ -227,9 +227,9 @@ fn cleanup_stopped_spacial_instances(
 
         handles.retain(|emission| {
             if let Some(instance) = instances.get(&emission.instance) {
-                instance.state() != PlaybackState::Stopped
+                !matches!(instance.state(), PlaybackState::Stopped)
             } else {
-                true
+                false
             }
         });
 
@@ -285,12 +285,20 @@ pub(super) fn register(app: &mut App) {
 
     app.add_systems(PreUpdate, cleanup_stopped_spacial_instances.in_set(AudioSystemSet::InstanceCleanup))
         .add_systems(
-            Update,
-            (monitor_attached_audio_sources, cleanup_despawning_audio_sources)
-                .in_set(AudioSet::ProcessSounds)
+            PostUpdate,
+            (
+                stop_audio_sources,
+                monitor_attached_audio_sources,
+                cleanup_despawning_audio_sources,
+                run_spacial_audio,
+            )
+                .before(AudioSystemSet::InstanceCleanup)
                 .chain(),
         )
-        .add_systems(PostUpdate, (stop_audio_sources, run_spacial_audio).chain())
+        .insert_resource(AudioSettings {
+            sound_capacity: 8192,
+            command_capacity: 4096,
+        })
         .register_type::<CosmosAudioEmitter>()
         .init_resource::<AttachedAudioSources>()
         .init_resource::<BufferedStopAudio>();
