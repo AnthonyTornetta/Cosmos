@@ -43,6 +43,11 @@ impl SyncableComponent for PilotFocused {
     }
 
     #[cfg(feature = "client")]
+    fn should_send_to_server(&self, mapping: &crate::netty::sync::mapping::NetworkMapping) -> bool {
+        mapping.server_from_client(&self.0).is_some()
+    }
+
+    #[cfg(feature = "client")]
     fn needs_entity_conversion() -> bool {
         true
     }

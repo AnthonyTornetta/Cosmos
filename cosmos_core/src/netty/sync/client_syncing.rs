@@ -139,6 +139,10 @@ fn client_send_components<T: SyncableComponent>(
     let data_to_sync = q_changed_component
         .iter()
         .flat_map(|(entity, component, structure_system, is_data)| {
+            if !component.should_send_to_server(&mapping) {
+                return None;
+            }
+
             let entity_identifier = compute_entity_identifier(structure_system, &mapping, is_data, entity);
 
             let Some((entity_identifier, authority_entity)) = entity_identifier else {

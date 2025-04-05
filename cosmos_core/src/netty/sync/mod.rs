@@ -182,6 +182,12 @@ pub trait SyncableComponent: Serialize + DeserializeOwned + Clone + std::fmt::De
         true
     }
 
+    /// If this returns true, this will be synced with the server.
+    #[cfg(feature = "client")]
+    fn should_send_to_server(&self, _mapping: &crate::netty::sync::mapping::NetworkMapping) -> bool {
+        true
+    }
+
     /// The [`SyncableComponent::convert_entities_client_to_server`] function requires cloning this struct,
     /// so to avoid clones on structs without any entities this method can be used.
     ///
