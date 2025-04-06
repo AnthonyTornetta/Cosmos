@@ -1,12 +1,14 @@
 //! Exposes [`ClientReceiveComponents::ClientReceiveComponents`] - this is to remove ambiguity
 
+use std::marker::PhantomData;
+
 use super::mapping::{NetworkMapping, ServerEntity};
 use super::{
     ClientAuthority, ComponentEntityIdentifier, ComponentId, ComponentReplicationMessage, ComponentSyncingSet, GotComponentToRemoveEvent,
     ReplicatedComponentData, SyncType, SyncableComponent, SyncedComponentId,
 };
 use crate::block::data::BlockData;
-use crate::ecs::NeedsDespawned;
+use crate::ecs::{add_multi_statebound_resource, NeedsDespawned};
 use crate::events::block_events::BlockDataChangedEvent;
 use crate::inventory::itemstack::ItemStackData;
 use crate::inventory::Inventory;
@@ -17,6 +19,7 @@ use crate::netty::system_sets::NetworkingSystemsSet;
 use crate::netty::{cosmos_encoder, NettyChannelClient};
 use crate::netty::{NettyChannelServer, NoSendEntity};
 use crate::registry::{identifiable::Identifiable, Registry};
+use crate::state::GameState;
 use crate::structure::ship::pilot::Pilot;
 use crate::structure::systems::{StructureSystem, StructureSystems};
 use crate::structure::Structure;
@@ -29,7 +32,9 @@ use bevy::ecs::schedule::IntoSystemConfigs;
 use bevy::ecs::system::{Commands, Resource};
 use bevy::log::{trace, warn};
 use bevy::prelude::SystemSet;
+use bevy::time::Time;
 use bevy::utils::hashbrown::HashSet;
+use bevy::utils::HashMap;
 use bevy::{
     app::{App, Update},
     ecs::{
@@ -42,12 +47,66 @@ use bevy::{
 };
 use bevy_renet2::renet2::{ClientId, RenetClient};
 
+#[derive(Resource)]
+struct StoredComponents<T: SyncableComponent>(HashMap<Entity, (Vec<u8>, f32)>, PhantomData<T>);
+
+impl<T: SyncableComponent> Default for StoredComponents<T> {
+    fn default() -> Self {
+        Self(Default::default(), Default::default())
+    }
+}
+
+fn client_add_stored_components<T: SyncableComponent>(
+    time: Res<Time>,
+    mut commands: Commands,
+    mut sc: ResMut<StoredComponents<T>>,
+    mapping: Res<NetworkMapping>,
+    q_t: Query<&T>,
+) {
+    let hm = &mut sc.as_mut().0;
+    let ents = hm.keys().copied().collect::<Vec<Entity>>();
+    for ent in ents {
+        if let Some(mut ecmds) = commands.get_entity(ent) {
+            let (c, _) = hm.remove(&ent).expect("Must exist");
+
+            let mut component = bincode::deserialize::<T>(&c).expect("Failed to deserialize component sent from server!");
+
+            let Some(mapped) = component.convert_entities_server_to_client(&mapping) else {
+                warn!("Couldn't convert entities for {}!", T::get_component_unlocalized_name());
+                continue;
+            };
+
+            component = mapped;
+
+            if matches!(T::get_sync_type(), SyncType::BothAuthoritative(_)) {
+                // Attempt to prevent an endless chain of change detection, causing the client+server to repeatedly sync the same component.
+                if q_t.get(ent).map(|x| *x == component).unwrap_or(false) {
+                    continue;
+                }
+            }
+
+            if component.validate() {
+                ecmds.try_insert(component);
+            }
+        } else {
+            let (_, t) = hm.get_mut(&ent).expect("Must exist");
+            *t += time.delta_secs();
+
+            if *t > 5.0 {
+                hm.remove(&ent);
+                warn!("No entity cmds for synced entity component - (entity {ent:?})");
+            }
+        }
+    }
+}
+
 fn client_deserialize_component<T: SyncableComponent>(
     components_registry: Res<Registry<SyncedComponentId>>,
     mut ev_reader: EventReader<GotComponentToSyncEvent>,
     mut commands: Commands,
     mapping: Res<NetworkMapping>,
     q_t: Query<&T>,
+    mut stored_components: ResMut<StoredComponents<T>>,
 ) {
     for ev in ev_reader.read() {
         let ComponentId::Custom(id) = ev.component_id else {
@@ -83,7 +142,8 @@ fn client_deserialize_component<T: SyncableComponent>(
                 ecmds.try_insert(component);
             }
         } else {
-            warn!("No entity cmds for synced entity component - (entity {:?})", ev.entity);
+            // Try again later
+            stored_components.0.insert(ev.entity, (ev.raw_data.clone(), 0.0));
         }
     }
 }
@@ -684,9 +744,15 @@ pub(super) fn sync_component_client<T: SyncableComponent>(app: &mut App) {
             );
         }
         SyncType::ServerAuthoritative => {
+            add_multi_statebound_resource::<StoredComponents<T>, GameState>(app, GameState::LoadingWorld, GameState::Playing);
+
             app.add_systems(
                 Update,
-                (client_deserialize_component::<T>, client_remove_component::<T>)
+                (
+                    client_add_stored_components::<T>,
+                    client_deserialize_component::<T>,
+                    client_remove_component::<T>,
+                )
                     .chain()
                     .run_if(resource_exists::<NetworkMapping>)
                     .run_if(resource_exists::<Registry<SyncedComponentId>>)
@@ -694,6 +760,8 @@ pub(super) fn sync_component_client<T: SyncableComponent>(app: &mut App) {
             );
         }
         SyncType::BothAuthoritative(_) => {
+            add_multi_statebound_resource::<StoredComponents<T>, GameState>(app, GameState::LoadingWorld, GameState::Playing);
+
             app.add_systems(
                 Update,
                 (client_send_components::<T>, client_send_removed_components::<T>)
@@ -703,7 +771,11 @@ pub(super) fn sync_component_client<T: SyncableComponent>(app: &mut App) {
             );
             app.add_systems(
                 Update,
-                (client_deserialize_component::<T>, client_remove_component::<T>)
+                (
+                    client_add_stored_components::<T>,
+                    client_deserialize_component::<T>,
+                    client_remove_component::<T>,
+                )
                     .chain()
                     .run_if(resource_exists::<NetworkMapping>)
                     .run_if(resource_exists::<Registry<SyncedComponentId>>)

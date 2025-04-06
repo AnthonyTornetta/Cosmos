@@ -32,20 +32,34 @@ pub struct ReplicatedComponentData {
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, Copy)]
+/// Used by the server and synced to the client, allowing the server to communicate the exact type
+/// of component is being synced.
 pub enum ComponentId {
+    /// The ID given to this component after registration in [`sync_component`].
     Custom(u16),
+    /// This is bevy's [`Parent`] component.
     Parent,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
+/// A message sent from either the client/server to the other (depending on syncing authority) to
+/// sync a component to the other
 pub enum ComponentReplicationMessage {
+    /// This component should be replicated
     ComponentReplication {
+        /// The type of component you are talking about.
         component_id: ComponentId,
+        /// A list of all replicated components and their data. The list is done to send multiple
+        /// at a time, which is much faster to do than sending each individually
         replicated: Vec<ReplicatedComponentData>,
     },
-    /// *Server Authoritative Note:* Removed components will NOT be synced if the entity is despawned.
+    /// This component should be removed
+    ///
+    /// Removed components will NOT be synced if the entity is despawned.
     RemovedComponent {
+        /// The type of component you are talking about.
         component_id: ComponentId,
+        /// The entity this component was a part of
         entity_identifier: ComponentEntityIdentifier,
     },
 }
@@ -61,7 +75,6 @@ pub mod client_syncing;
 #[cfg(feature = "server")]
 pub mod server_syncing;
 
-mod components;
 /// Events that are synced from server->client and client->server.
 pub mod events;
 /// Syncing of registries from server -> client
@@ -215,14 +228,22 @@ pub trait SyncableComponent: Serialize + DeserializeOwned + Clone + std::fmt::De
 }
 
 #[derive(Event, Debug)]
+/// When a component needs to be synced with this instance of the game, this event will be sent.
 pub struct GotComponentToSyncEvent {
-    #[allow(dead_code)] // on client this is unused
+    #[allow(dead_code)]
+    /// **Server**: The client that is trying to sync this component with you.
+    /// **Client**: This is unused and is meaningless.
     pub client_id: ClientId,
+    /// The ID of the component that is being synced
     pub component_id: ComponentId,
+    /// The entity that should get this component
     pub entity: Entity,
     /// The entity authority should be checked against - not the entity being targetted.
-    #[allow(dead_code)] // on client this is unused
+    #[allow(dead_code)]
+    /// **Server**: The entity that should be checked for authority before applying these changes.
+    /// **Client**: This is unused and is meaningless
     pub authority_entity: Entity,
+    /// The raw data of the component (decode using [`bincode::deserialize`])
     pub raw_data: Vec<u8>,
 }
 

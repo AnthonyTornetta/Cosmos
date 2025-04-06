@@ -19,7 +19,8 @@ fn handle_block_event(
     mut interact_events: EventReader<BlockInteractEvent>,
     mut change_pilot_event: EventWriter<ChangePilotEvent>,
     q_ship: Query<&Structure, With<Ship>>,
-    q_can_be_pilot: Query<(), (Without<Pilot>, Without<BuildMode>)>,
+    q_can_be_pilot: Query<(), Without<Pilot>>,
+    q_can_be_pilot_player: Query<(), Without<BuildMode>>,
     blocks: Res<Registry<Block>>,
 ) {
     for ev in interact_events.read() {
@@ -38,6 +39,10 @@ fn handle_block_event(
         let block_id = s_block.block_id(structure);
 
         if block_id != block.id() {
+            continue;
+        }
+
+        if !q_can_be_pilot_player.contains(ev.interactor) {
             continue;
         }
 

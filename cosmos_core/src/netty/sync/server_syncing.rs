@@ -1,3 +1,5 @@
+//! Server-side automatic component syncing logic
+
 use super::server_entity_syncing::RequestedEntityEvent;
 use super::{
     ClientAuthority, ComponentEntityIdentifier, ComponentId, ComponentReplicationMessage, ComponentSyncingSet, RegisterComponentSet,
@@ -189,6 +191,7 @@ fn recursive_should_load(
     }
 }
 
+/// Determines if information about this entity should be sent to a player at this location.
 pub fn should_be_sent_to(
     p_loc: &Location,
     q_parent: &Query<(Option<&Location>, Option<&LoadingDistance>, Option<&Parent>)>,

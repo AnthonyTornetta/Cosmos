@@ -460,6 +460,10 @@ fn handle_block_place_events(
             continue;
         };
 
+        // Even if nothing gets placed, the client will assume there was something placed.
+        // Thus, we still want to update the client about their inventory to make sure their inventory is up-to-date.
+        inv.set_changed();
+
         let Ok(mut structure) = query.get_mut(place_event_data.structure_block.structure()) else {
             continue;
         };
