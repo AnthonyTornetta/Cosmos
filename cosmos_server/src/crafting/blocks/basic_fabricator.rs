@@ -112,11 +112,7 @@ fn monitor_craft_event(
         let item = items.from_numeric_id(ev.recipe.output.item);
 
         let max_can_be_inserted = player_inv.max_quantity_can_be_inserted(item);
-        let leftover = if max_can_be_inserted < ev.quantity {
-            ev.quantity - max_can_be_inserted
-        } else {
-            0
-        };
+        let leftover = ev.quantity.saturating_sub(max_can_be_inserted);
 
         let qty_crafted = ev.quantity - leftover;
         // Enures always a whole amount is crafted
