@@ -4,7 +4,7 @@ use bevy_renet2::renet2::DisconnectReason;
 use crate::{
     netty::connect::ClientDisconnectReason,
     ui::{
-        components::button::{register_button, CosmosButton, ButtonEvent, ButtonStyles},
+        components::button::{register_button, ButtonEvent, ButtonStyles, CosmosButton},
         font::DefaultFont,
         settings::SettingsMenuSet,
     },

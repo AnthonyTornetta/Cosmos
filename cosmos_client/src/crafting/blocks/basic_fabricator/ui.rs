@@ -43,7 +43,7 @@ use crate::{
     rendering::MainCamera,
     ui::{
         components::{
-            button::{register_button, CosmosButton, ButtonEvent, ButtonStyles},
+            button::{register_button, ButtonEvent, ButtonStyles, CosmosButton},
             scollable_container::ScrollBox,
             window::GuiWindow,
         },
