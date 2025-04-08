@@ -1,3 +1,5 @@
+//! Client coms logic
+
 use bevy::prelude::*;
 
 mod systems;

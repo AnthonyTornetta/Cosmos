@@ -3,8 +3,6 @@ use cosmos_core::netty::sync::{
     mapping::NetworkMapping, ComponentId, ComponentSyncingSet, GotComponentToRemoveEvent, GotComponentToSyncEvent,
 };
 
-mod location;
-
 fn client_deserialize_parent(mut ev_reader: EventReader<GotComponentToSyncEvent>, mut commands: Commands, mapping: Res<NetworkMapping>) {
     for ev in ev_reader.read() {
         if !matches!(ev.component_id, ComponentId::Parent) {

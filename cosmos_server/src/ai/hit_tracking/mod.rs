@@ -1,3 +1,6 @@
+//! Keeps track of the entities that have hit other AI-Controlled ships, if the [`Hitters`]
+//! component is added.
+
 use std::time::Duration;
 
 use bevy::{prelude::*, time::common_conditions::on_timer, utils::HashMap};
@@ -16,9 +19,12 @@ use crate::entities::player::strength::{PlayerStrength, PlayerStrengthSystemSet}
 use super::AiControlled;
 
 #[derive(Component, Default, Reflect, Debug)]
+/// Keeps track of entities that have hit this ship
 pub struct Hitters(HashMap<Entity, u64>);
 
 impl Hitters {
+    /// Gets the number of times this entity has hit this ship. This does not account for relative
+    /// damage.
     pub fn get_number_of_hits(&self, ent: Entity) -> u64 {
         self.0.get(&ent).copied().unwrap_or(0)
     }

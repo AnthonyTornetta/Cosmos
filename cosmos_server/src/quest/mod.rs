@@ -1,3 +1,5 @@
+//! Server quest logic
+
 use bevy::prelude::*;
 use cosmos_core::{
     entities::player::Player,
@@ -9,9 +11,16 @@ use crate::persistence::make_persistent::{make_persistent, DefaultPersistentComp
 mod quests;
 
 #[derive(Event)]
+/// Is this needed?
+///
+/// Send this event to add a new quest
 pub struct AddQuestEvent {
+    /// The unlocalized name of the quest
     pub unlocalized_name: String,
+    /// The player entity that should get this quest
     pub to: Entity,
+    /// The details for this quest
+    /// TODO: this is stupid
     pub details: OngoingQuestDetails,
 }
 
