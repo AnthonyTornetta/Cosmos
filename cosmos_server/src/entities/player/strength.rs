@@ -1,3 +1,7 @@
+//! Player strength tracking
+//!
+//! Used to calculate difficulty of AI encounters.
+
 use std::time::Duration;
 
 use bevy::{prelude::*, time::common_conditions::on_timer};
@@ -31,6 +35,7 @@ impl DefaultPersistentComponent for PlayerStrength {}
 ///
 /// Used for difficulty calculations
 pub struct TotalTimePlayed {
+    /// The total time (in seconds) the player has played
     pub time_sec: u64,
 }
 
@@ -61,7 +66,9 @@ fn advance_total_time(mut q_total_time: Query<&mut TotalTimePlayed>) {
 }
 
 #[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
+/// Player strength calculations should be based around  this
 pub enum PlayerStrengthSystemSet {
+    /// The player strength and play time is updated
     UpdatePlayerStrength,
 }
 
