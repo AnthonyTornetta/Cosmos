@@ -89,10 +89,11 @@ impl Faction {
     /// faction is [`None`], the relationship may be Neutral or Enemy, depending on this
     /// [`Faction`]'s [`FactionSettings`].
     pub fn relation_with_entity(&self, other_entity: &EntityId, other_faction: Option<&Faction>) -> FactionRelation {
-        self.at_war_with
-            .contains(other_entity)
-            .then_some(FactionRelation::Enemy)
-            .unwrap_or_else(|| self.relation_with(other_faction))
+        if self.at_war_with.contains(other_entity) {
+            FactionRelation::Enemy
+        } else {
+            self.relation_with(other_faction)
+        }
     }
 
     /// Computes the relation between this faction and another optional faction. If the other
