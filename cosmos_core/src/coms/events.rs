@@ -1,3 +1,5 @@
+//! Events for Coms Communications
+
 use bevy::prelude::*;
 use serde::{Deserialize, Serialize};
 
@@ -35,6 +37,9 @@ impl NettyEvent for RequestComsEvent {
 }
 
 #[derive(Event, Serialize, Deserialize, Debug, Clone)]
+/// Sent when an entity (be it AI or Player) accepts a coms event.
+///
+/// The entity will represent the entity that accepted the pending coms request.
 pub struct AcceptComsEvent(pub Entity);
 
 impl IdentifiableEvent for AcceptComsEvent {
@@ -68,11 +73,14 @@ impl NettyEvent for AcceptComsEvent {
 /// Used to communicate between ships. Send this when there is an open coms channel between two
 /// ships to add messages to that channel.
 pub struct SendComsMessage {
+    /// The message
     pub message: SendComsMessageType,
+    /// The receiver of this message (ship)
     pub to: Entity,
 }
 
 #[derive(Event, Serialize, Deserialize, Debug, Clone)]
+/// The type of message being sent.
 pub enum SendComsMessageType {
     /// Used for player-player communication.
     Message(String),

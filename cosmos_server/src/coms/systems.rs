@@ -87,6 +87,7 @@ fn on_request_coms(
                 info!("Requesting NPC hail.");
                 evw_request_hail_npc.send(RequestHailToNpc {
                     player_ship: this_ship_ent,
+                    npc_ship: other_ship_ent,
                 });
                 commands.entity(other_ship_ent).insert(RequestedComs {
                     coms_type: None,
