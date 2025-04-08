@@ -170,10 +170,11 @@ impl Factions {
     /// Sets the relationship between a faction and another entity, with a potential faction.
     ///
     /// - *b*: If b is a faction id, attempts to set the relation with that faction. Otherwise
-    /// defaults to using `ent_id`
+    ///   defaults to using `ent_id`
     ///
     /// - *ent_id*: Fallback if `b` is None or not a valid faction id. If this is `None`, nothing
-    /// will happen. Otherwise, this faction's relation will be adjusted for this specific entity.
+    ///   will happen. Otherwise, this faction's relation will be adjusted for this specific entity.
+    ///   
     /// Factions cannot be allies with a non-factioned entity, so the closest [`FactionRelation`] will be
     /// chosen that matches the given `relation`
     pub fn set_relation(&mut self, a: &FactionId, b: Option<&FactionId>, ent_id: Option<&EntityId>, relation: FactionRelation) {
