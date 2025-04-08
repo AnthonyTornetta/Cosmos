@@ -37,7 +37,7 @@ fn on_request_coms(
     for (requester_loc, this_ship_ent, other_ship_ent, coms_type) in nevr
         .read()
         .flat_map(|ev| {
-            let (player_loc, pilot) = lobby.player_from_id(ev.client_id).map(|x| q_pilot.get(x).ok()).flatten()?;
+            let (player_loc, pilot) = lobby.player_from_id(ev.client_id).and_then(|x| q_pilot.get(x).ok())?;
 
             Some((player_loc, pilot.entity, ev.event.0, ComsChannelType::Player))
         })
@@ -109,7 +109,7 @@ fn on_accept_coms(
     mut nevr_accept_coms: EventReader<NettyEventReceived<AcceptComsEvent>>,
 ) {
     for ev in nevr_accept_coms.read() {
-        let Some((player_loc, pilot)) = lobby.player_from_id(ev.client_id).map(|x| q_pilot.get(x).ok()).flatten() else {
+        let Some((player_loc, pilot)) = lobby.player_from_id(ev.client_id).and_then(|x| q_pilot.get(x).ok()) else {
             info!("Not a pilot player");
             continue;
         };

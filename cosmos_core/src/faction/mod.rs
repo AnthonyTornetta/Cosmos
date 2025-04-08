@@ -91,7 +91,7 @@ impl Faction {
     pub fn relation_with_entity(&self, other_entity: &EntityId, other_faction: Option<&Faction>) -> FactionRelation {
         self.at_war_with
             .contains(other_entity)
-            .then(|| FactionRelation::Enemy)
+            .then_some(FactionRelation::Enemy)
             .unwrap_or_else(|| self.relation_with(other_faction))
     }
 

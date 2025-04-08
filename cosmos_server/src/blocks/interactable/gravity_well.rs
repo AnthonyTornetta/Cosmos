@@ -181,7 +181,7 @@ impl PersistentComponent for GravityWell {
                 MaybeOwned::Owned(Box::new(SerializedGravityWell {
                     block: self.block,
                     g_constant: self.g_constant,
-                    structure_entity_id: x.clone(),
+                    structure_entity_id: *x,
                 }))
             })
             .ok()

@@ -257,7 +257,7 @@ fn done_saving(
 
         if matches!(&save_file_identifier.identifier_type, SaveFileIdentifierType::Base(_, _, _)) {
             if let Some(loc) = sd.location {
-                sectors_cache.insert(loc.sector(), entity_id.clone(), loading_distance.map(|ld| ld.load_distance()));
+                sectors_cache.insert(loc.sector(), *entity_id, loading_distance.map(|ld| ld.load_distance()));
             }
         }
     }
@@ -278,7 +278,7 @@ pub(crate) fn calculate_sfi(
 
         return Some(SaveFileIdentifier::new(
             sd.location.map(|l| l.sector()),
-            entity_id.clone(),
+            *entity_id,
             loading_distance.map(|ld| ld.load_distance()),
         ));
     };
@@ -293,7 +293,7 @@ pub(crate) fn calculate_sfi(
         return None;
     };
 
-    Some(SaveFileIdentifier::sub_entity(parent_sfi, entity_id.clone()))
+    Some(SaveFileIdentifier::sub_entity(parent_sfi, *entity_id))
 }
 
 fn write_file(save_identifier: &SaveFileIdentifier, serialized: &[u8]) -> io::Result<()> {

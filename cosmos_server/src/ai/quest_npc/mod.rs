@@ -101,7 +101,7 @@ fn handle_quest_npc_targetting(
                     && x.2.distance_sqrd(merchant_loc) < QUEST_NPC_MAX_CHASE_DISTANCE * QUEST_NPC_MAX_CHASE_DISTANCE
             })
             .filter(|(_, entity_id, _, _, faction_id)| {
-                quest_npc_faction.relation_with_entity(*entity_id, faction_id.and_then(|id| factions.from_id(id))) == FactionRelation::Enemy
+                quest_npc_faction.relation_with_entity(entity_id, faction_id.and_then(|id| factions.from_id(id))) == FactionRelation::Enemy
             })
             // add a large penalty for something that's melting down so they prioritize non-melting down things
             .min_by_key(|(_, _, this_loc, melting_down, _)| {

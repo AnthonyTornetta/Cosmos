@@ -92,7 +92,7 @@ fn check_needs_loaded(
 
         match &save_file_identifier.identifier_type {
             SaveFileIdentifierType::Base(entity_id, _, _) => {
-                commands.entity(ent).insert(entity_id.clone());
+                commands.entity(ent).insert(*entity_id);
             }
             SaveFileIdentifierType::SubEntity(base, entity_id) => {
                 if let Some(looking_for_entity) = match &base.identifier_type {
@@ -136,7 +136,7 @@ fn check_needs_loaded(
                     }
                 }
 
-                commands.entity(ent).insert(entity_id.clone());
+                commands.entity(ent).insert(*entity_id);
             }
             // Not managed by this system, managed by whoever this belongs to
             SaveFileIdentifierType::BelongsTo(_, _) => {}

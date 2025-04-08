@@ -202,10 +202,8 @@ fn on_remove_coms(
 
         if let Some((coms_ent, _, _)) = all_coms.next() {
             selected_coms.0 = coms_ent;
-        } else {
-            if let Ok(coms_ui_ent) = q_coms_ui.get_single() {
-                commands.entity(coms_ui_ent).despawn_recursive();
-            }
+        } else if let Ok(coms_ui_ent) = q_coms_ui.get_single() {
+            commands.entity(coms_ui_ent).despawn_recursive();
         }
     }
 }

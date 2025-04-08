@@ -89,7 +89,7 @@ fn save_player_link(
 
         let player_identifier = PlayerIdentifier {
             sector: loc.sector(),
-            entity_id: e_id.clone(),
+            entity_id: *e_id,
             sfi,
             location: *loc,
         };
@@ -119,7 +119,7 @@ fn load_player(mut commands: Commands, q_player_needs_loaded: Query<(Entity, &Lo
         let mut cur_sfi = &player_identifier.sfi;
         while let Some(sfi) = cur_sfi.get_parent() {
             cur_sfi = sfi;
-            let entity_id = sfi.entity_id().expect("Missing Entity Id!").clone();
+            let entity_id = *sfi.entity_id().expect("Missing Entity Id!");
             // Don't load already existing entities
             if q_entity_ids.iter().any(|x| x == &entity_id) {
                 continue;
@@ -129,7 +129,7 @@ fn load_player(mut commands: Commands, q_player_needs_loaded: Query<(Entity, &Lo
             commands.spawn((NeedsLoaded, sfi.clone(), entity_id));
         }
 
-        let entity_id = player_identifier.sfi.entity_id().expect("Missing player entity id ;(").clone();
+        let entity_id = *player_identifier.sfi.entity_id().expect("Missing player entity id ;(");
 
         let mut player_entity = commands.entity(ent);
 

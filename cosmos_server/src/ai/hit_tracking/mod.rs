@@ -79,13 +79,13 @@ fn add_faction_enemies(
                 eid
             } else {
                 let eid = EntityId::generate();
-                commands.entity(ent).insert(eid.clone());
+                commands.entity(ent).insert(eid);
                 eid
             };
 
             let hitter_fac_id = q_fac_id.get(ent).ok();
 
-            let hitter_fac = hitter_fac_id.map(|x| factions.from_id(x)).flatten();
+            let hitter_fac = hitter_fac_id.and_then(|x| factions.from_id(x));
             let relation = fac.relation_with_entity(&ent_id, hitter_fac);
 
             if relation == FactionRelation::Neutral {

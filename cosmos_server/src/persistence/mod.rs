@@ -42,7 +42,7 @@ impl SectorsCache {
     /// and only removes it from the cache.
     pub fn remove(&mut self, entity_id: &EntityId, sector: Sector, load_distance: Option<u32>) {
         if let Some(set) = self.0.lock().expect("Failed to lock").get_mut(&sector) {
-            set.lock().expect("Failed to unlock").remove(&(entity_id.clone(), load_distance));
+            set.lock().expect("Failed to unlock").remove(&(*entity_id, load_distance));
         }
     }
 
