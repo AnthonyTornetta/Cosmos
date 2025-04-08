@@ -176,7 +176,7 @@ fn name_missile_launcher_system(mut commands: Commands, q_added: Query<Entity, A
     }
 }
 
-#[derive(Event, Serialize, Deserialize, Debug)]
+#[derive(Event, Serialize, Deserialize, Debug, Clone)]
 /// Anything that can go wrong when firing a missile launcher system
 pub enum MissileSystemFailure {
     /// The system has no more ammo (missile items) to pull from

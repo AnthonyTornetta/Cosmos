@@ -8,7 +8,7 @@ use crate::{
     physics::location::Location,
 };
 
-#[derive(Event, Serialize, Deserialize, Debug, Default)]
+#[derive(Event, Serialize, Deserialize, Debug, Default, Clone)]
 /// Client -> Server to request to be respawned after death
 ///
 /// This event will be ignored if the player is not dead
@@ -26,7 +26,7 @@ impl NettyEvent for RequestRespawnEvent {
     }
 }
 
-#[derive(Event, Serialize, Deserialize, Debug, Default)]
+#[derive(Event, Serialize, Deserialize, Debug, Default, Clone)]
 /// Server -> Client to tell the client to respawn themselves
 pub struct RespawnEvent {
     /// The location the player should respawn to

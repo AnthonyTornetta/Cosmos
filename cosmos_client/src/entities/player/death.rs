@@ -18,7 +18,7 @@ use crate::ui::{
         show_cursor::ShowCursor,
     },
     font::DefaultFont,
-    CloseMethod, OpenMenu, UiSystemSet,
+    CloseMenuEvent, CloseMethod, OpenMenu, UiSystemSet,
 };
 
 #[derive(Component)]
@@ -44,6 +44,7 @@ fn display_death_ui(
     mut q_open_menus: Query<(Entity, &OpenMenu, &mut Visibility)>,
     q_added_death: Query<(), (Added<Dead>, With<LocalPlayer>)>,
     font: Res<DefaultFont>,
+    mut evw_close_custom_menus: EventWriter<CloseMenuEvent>,
 ) {
     if q_added_death.is_empty() {
         return;
@@ -63,6 +64,9 @@ fn display_death_ui(
                     // be combined at some point?
                     .remove::<ShowCursor>();
                 *visibility = Visibility::Hidden;
+            }
+            CloseMethod::Custom => {
+                evw_close_custom_menus.send(CloseMenuEvent(ent));
             }
         }
     }

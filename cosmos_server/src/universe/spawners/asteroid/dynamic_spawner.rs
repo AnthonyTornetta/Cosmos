@@ -50,8 +50,8 @@ impl IdentifiableComponent for NextDynamicAsteroidSpawnTime {
 impl DefaultPersistentComponent for NextDynamicAsteroidSpawnTime {}
 
 impl NextDynamicAsteroidSpawnTime {
-    const MIN_SPAWN_TIME: f32 = 300.0;
-    const MAX_SPAWN_TIME: f32 = 700.0;
+    const MIN_SPAWN_TIME: f32 = 500.0;
+    const MAX_SPAWN_TIME: f32 = 1000.0;
     fn generate_next_spawn_time(&mut self) {
         self.0 += random_range(Self::MIN_SPAWN_TIME, Self::MAX_SPAWN_TIME);
     }
@@ -82,7 +82,7 @@ fn spawn_tiny_asteroids(
 
         next_spawn_time.generate_next_spawn_time();
 
-        let n_asteroids = random_range(1.0, 3.0).round() as usize;
+        let n_asteroids = random_range(1.0, 2.0).round() as usize;
 
         let mut rng = rand::thread_rng();
 
@@ -116,7 +116,7 @@ fn spawn_tiny_asteroids(
                         random_range(-FUDGE_AMOUNT, FUDGE_AMOUNT),
                         random_range(-FUDGE_AMOUNT, FUDGE_AMOUNT),
                     ))
-                    * random_range(10.0, 300.0),
+                    * random_range(10.0, 100.0),
                 angvel: Vec3::new(
                     random_range(-ANGVEL_MAX, ANGVEL_MAX),
                     random_range(-ANGVEL_MAX, ANGVEL_MAX),

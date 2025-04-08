@@ -79,7 +79,7 @@ fn monitor_loading_task(
                     .entity_id()
                     .expect("A non-base SaveFileIdentifier was attempted to be loaded in load_near")
             }) {
-                let entity_id = sfi.entity_id().expect("Missing entity id").clone();
+                let entity_id = *sfi.entity_id().expect("Missing entity id");
 
                 let name = format!("Needs Loaded Entity - {}", entity_id);
 
@@ -129,7 +129,7 @@ fn load_near(
                                 if max_delta <= load_distance.unwrap_or(DEFAULT_LOAD_DISTANCE)
                                     && !loaded_entities.iter().any(|x| x == entity_id)
                                 {
-                                    to_load.push(SaveFileIdentifier::new(Some(sector), entity_id.clone(), *load_distance));
+                                    to_load.push(SaveFileIdentifier::new(Some(sector), *entity_id, *load_distance));
                                 }
                             }
                         } else {
@@ -166,7 +166,7 @@ fn load_near(
 
                                         let entity_id = EntityId::new(Uuid::parse_str(entity_id).expect("Failed to parse entity id!"));
 
-                                        sectors_cache.insert(sector, entity_id.clone(), load_distance);
+                                        sectors_cache.insert(sector, entity_id, load_distance);
 
                                         if max_delta <= load_distance.unwrap_or(DEFAULT_LOAD_DISTANCE)
                                             && !loaded_entities.iter().any(|x| x == &entity_id)

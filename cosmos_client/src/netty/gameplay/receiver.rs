@@ -293,7 +293,13 @@ pub(crate) fn client_sync_players(
                                 }
                             } else {
                                 let loc = match body.location {
-                                    NettyRigidBodyLocation::Absolute(location) => location,
+                                    NettyRigidBodyLocation::Absolute(location) => {
+                                        if q_parent.contains(entity) {
+                                            commands.entity(entity).remove_parent_in_place();
+                                        }
+
+                                        location
+                                    }
                                     NettyRigidBodyLocation::Relative(rel_trans, parent_ent) => {
                                         let parent_loc =
                                             query_body.get(parent_ent).map(|x| x.0.copied()).unwrap_or(None).unwrap_or_default();
@@ -475,16 +481,15 @@ pub(crate) fn client_sync_players(
                             ));
                         });
 
-                    info!("Player world!");
-                    commands.spawn((
+                    let physics_world_ent = q_default_rapier_context
+                        .get_single()
+                        .expect("The client has no default rapier context!");
+
+                    commands.entity(physics_world_ent).insert((
                         PlayerWorld { player: client_entity },
                         Name::new("Player World"),
                         loc,
-                        RapierContextEntityLink(
-                            q_default_rapier_context
-                                .get_single()
-                                .expect("The client has no default rapier context!"),
-                        ),
+                        RapierContextEntityLink(physics_world_ent),
                     ));
                 }
             }
@@ -939,13 +944,10 @@ pub(super) fn register(app: &mut App) {
         )
         .add_systems(
             Update,
-            (
-                // fix_location,
-                client_sync_players
-                    .before(ClientReceiveComponents::ClientReceiveComponents)
-                    .in_set(NetworkingSystemsSet::ReceiveMessages)
-                    .before(LocationPhysicsSet::DoPhysics)
-            )
+            (client_sync_players
+                .before(ClientReceiveComponents::ClientReceiveComponents)
+                .in_set(NetworkingSystemsSet::ReceiveMessages)
+                .before(LocationPhysicsSet::DoPhysics))
             .run_if(in_state(GameState::Playing).or(in_state(GameState::LoadingWorld)))
             .chain(),
         )

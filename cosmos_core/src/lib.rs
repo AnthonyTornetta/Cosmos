@@ -6,6 +6,7 @@
 pub mod block;
 pub mod blockitems;
 pub mod chat;
+pub mod coms;
 pub mod crafting;
 pub mod debug;
 pub mod economy;
@@ -24,6 +25,7 @@ pub mod physics;
 pub mod plugin;
 pub mod prelude;
 pub mod projectiles;
+pub mod quest;
 pub mod registry;
 pub mod shop;
 pub mod state;

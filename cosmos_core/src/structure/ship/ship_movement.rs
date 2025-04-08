@@ -17,6 +17,9 @@ use super::pilot::Pilot;
 pub struct ShipMovement {
     /// If true, the ship should be braking.
     pub braking: bool,
+    /// If true, the ship should try to match the speed of whatever is focused, if something is
+    /// focused.
+    pub match_speed: bool,
     /// The direction of this movement - not the actual speed.
     pub movement: Vec3,
     /// The rotational torque - this does represent speed but will be maxed out.

@@ -24,6 +24,7 @@ use cosmos_core::{
 
 pub mod client_ship_builder;
 pub mod create_ship;
+mod pilot;
 pub mod ship_movement;
 pub mod ui;
 
@@ -127,6 +128,7 @@ pub(super) fn register(app: &mut App) {
     client_ship_builder::register(app);
     ship_movement::register(app);
     create_ship::register(app);
+    pilot::register(app);
     ui::register(app);
 
     app.configure_sets(Update, PlayerParentChangingSet::ChangeParent);

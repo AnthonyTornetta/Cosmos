@@ -4,7 +4,7 @@ use crate::netty::sync::events::netty_event::{IdentifiableEvent, NettyEvent, Syn
 use bevy::prelude::{App, Entity, Event};
 use serde::{Deserialize, Serialize};
 
-#[derive(Event, Debug, Serialize, Deserialize)]
+#[derive(Event, Debug, Serialize, Deserialize, Clone)]
 /// Sent from client to server to send a chat message to everyone
 pub enum ClientSendChatMessageEvent {
     /// This message should be sent to everyone
@@ -23,7 +23,7 @@ impl NettyEvent for ClientSendChatMessageEvent {
     }
 }
 
-#[derive(Event, Debug, Serialize, Deserialize)]
+#[derive(Event, Debug, Serialize, Deserialize, Clone)]
 /// Sent from server to clients that should display this chat message
 pub struct ServerSendChatMessageEvent {
     /// The entity that sent this message - none if no entity sent it

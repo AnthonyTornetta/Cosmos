@@ -8,7 +8,7 @@ use crate::{
     prelude::StructureBlock,
 };
 
-#[derive(Event, Debug, Serialize, Deserialize)]
+#[derive(Event, Debug, Serialize, Deserialize, Clone)]
 /// Event that tells the client to open a Dye Machine block
 pub struct OpenDyeMachine(pub StructureBlock);
 
@@ -16,22 +16,27 @@ impl IdentifiableEvent for OpenDyeMachine {
     fn unlocalized_name() -> &'static str {
         "cosmos:open_dye_machine"
     }
-
-    #[cfg(feature = "client")]
-    fn convert_to_client_entity(self, netty: &crate::netty::sync::mapping::NetworkMapping) -> Option<Self> {
-        use crate::netty::sync::mapping::Mappable;
-
-        self.0.map_to_client(netty).map(Self).ok()
-    }
 }
 
 impl NettyEvent for OpenDyeMachine {
     fn event_receiver() -> crate::netty::sync::events::netty_event::EventReceiver {
         crate::netty::sync::events::netty_event::EventReceiver::Client
     }
+
+    #[cfg(feature = "client")]
+    fn needs_entity_conversion() -> bool {
+        true
+    }
+
+    #[cfg(feature = "client")]
+    fn convert_entities_server_to_client(self, netty: &crate::netty::sync::mapping::NetworkMapping) -> Option<Self> {
+        use crate::netty::sync::mapping::Mappable;
+
+        self.0.map_to_client(netty).map(Self).ok()
+    }
 }
 
-#[derive(Event, Debug, Serialize, Deserialize)]
+#[derive(Event, Debug, Serialize, Deserialize, Clone)]
 /// Event that tells the client to open a Dye Machine block
 pub struct DyeBlock {
     /// The block that contains the dye machine

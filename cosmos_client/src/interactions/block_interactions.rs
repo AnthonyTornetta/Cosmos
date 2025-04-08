@@ -17,17 +17,21 @@ use cosmos_core::{
     },
     blockitems::BlockItems,
     entities::player::creative::Creative,
-    inventory::Inventory,
+    inventory::{
+        netty::{ClientInventoryMessages, InventoryIdentifier},
+        Inventory,
+    },
     item::Item,
-    netty::{client::LocalPlayer, system_sets::NetworkingSystemsSet},
+    netty::{client::LocalPlayer, cosmos_encoder, sync::mapping::NetworkMapping, system_sets::NetworkingSystemsSet, NettyChannelClient},
     physics::structure_physics::ChunkPhysicsPart,
-    registry::Registry,
+    registry::{identifiable::Identifiable, Registry},
     state::GameState,
     structure::{
         coordinates::UnboundBlockCoordinate, planet::Planet, shields::SHIELD_COLLISION_GROUP, ship::pilot::Pilot,
         structure_block::StructureBlock, Structure,
     },
 };
+use renet2::RenetClient;
 
 use crate::{
     events::block::block_events::*,
@@ -73,11 +77,13 @@ pub(crate) fn process_player_interaction(
     mut break_writer: EventWriter<RequestBlockBreakEvent>,
     mut place_writer: EventWriter<RequestBlockPlaceEvent>,
     mut interact_writer: EventWriter<BlockInteractEvent>,
-    hotbar: Query<&Hotbar>,
+    mut hotbar: Query<&mut Hotbar>,
     items: Res<Registry<Item>>,
     blocks: Res<Registry<Block>>,
     block_items: Res<BlockItems>,
     mut commands: Commands,
+    mut client: ResMut<RenetClient>,
+    mapping: Res<NetworkMapping>,
 ) {
     let rapier_context = rapier_context_access.single();
 
@@ -134,6 +140,41 @@ pub(crate) fn process_player_interaction(
     if input_handler.check_just_pressed(CosmosInputs::BreakBlock) {
         if let Some(x) = &looking_at.looking_at_block {
             break_writer.send(RequestBlockBreakEvent { block: x.block });
+        }
+    }
+
+    if input_handler.check_just_pressed(CosmosInputs::PickBlock) {
+        if let Some(x) = &looking_at.looking_at_block {
+            let block = structure.block_at(x.block.coords(), &blocks);
+
+            if let Some(block_item) = block_items.item_from_block(block).map(|x| items.from_numeric_id(x)) {
+                if let Some((slot, _)) = inventory
+                    .iter()
+                    .enumerate()
+                    .flat_map(|(idx, item)| item.as_ref().map(|i| (idx, i)))
+                    .find(|(_, is)| is.item_id() == block_item.id())
+                {
+                    if let Ok(mut hotbar) = hotbar.get_single_mut() {
+                        if slot < hotbar.n_slots() {
+                            hotbar.set_selected_slot(slot);
+                        } else {
+                            let held_slot = hotbar.selected_slot();
+
+                            if let Some(server_player_entity) = mapping.server_from_client(&player_entity) {
+                                client.send_message(
+                                    NettyChannelClient::Inventory,
+                                    cosmos_encoder::serialize(&ClientInventoryMessages::SwapSlots {
+                                        slot_a: slot as u32,
+                                        inventory_a: InventoryIdentifier::Entity(server_player_entity),
+                                        slot_b: held_slot as u32,
+                                        inventory_b: InventoryIdentifier::Entity(server_player_entity),
+                                    }),
+                                );
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
 

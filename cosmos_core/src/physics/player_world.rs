@@ -20,11 +20,6 @@ pub struct PlayerWorld {
     pub player: Entity,
 }
 
-/// Represents the world this entity is within - make sure to double check this is still valid when using it
-#[derive(Component, Reflect, Debug, Clone, Copy)]
-pub struct WorldWithin(pub Entity);
-
 pub(super) fn register(app: &mut App) {
     app.register_type::<PlayerWorld>();
-    app.register_type::<WorldWithin>();
 }

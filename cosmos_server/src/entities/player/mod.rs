@@ -11,6 +11,7 @@ mod kits;
 pub mod persistence;
 pub mod respawn;
 mod spawn_player;
+pub mod strength;
 
 #[derive(Component, Debug, Serialize, Deserialize)]
 /// The server doesn't have a camera, so this is used to track where the player is looking
@@ -31,4 +32,5 @@ pub(super) fn register(app: &mut App) {
     respawn::register(app);
     make_persistent::<PlayerLooking>(app);
     persistence::register(app);
+    strength::register(app);
 }

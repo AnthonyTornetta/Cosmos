@@ -31,15 +31,35 @@ pub struct ReplicatedComponentData {
     pub raw_data: Vec<u8>,
 }
 
+#[derive(Debug, Serialize, Deserialize, Clone, Copy)]
+/// Used by the server and synced to the client, allowing the server to communicate the exact type
+/// of component is being synced.
+pub enum ComponentId {
+    /// The ID given to this component after registration in [`sync_component`].
+    Custom(u16),
+    /// This is bevy's [`Parent`] component.
+    Parent,
+}
+
 #[derive(Debug, Serialize, Deserialize, Clone)]
-enum ComponentReplicationMessage {
+/// A message sent from either the client/server to the other (depending on syncing authority) to
+/// sync a component to the other
+pub enum ComponentReplicationMessage {
+    /// This component should be replicated
     ComponentReplication {
-        component_id: u16,
+        /// The type of component you are talking about.
+        component_id: ComponentId,
+        /// A list of all replicated components and their data. The list is done to send multiple
+        /// at a time, which is much faster to do than sending each individually
         replicated: Vec<ReplicatedComponentData>,
     },
-    /// *Server Authoritative Note:* Removed components will NOT be synced if the entity is despawned.
+    /// This component should be removed
+    ///
+    /// Removed components will NOT be synced if the entity is despawned.
     RemovedComponent {
-        component_id: u16,
+        /// The type of component you are talking about.
+        component_id: ComponentId,
+        /// The entity this component was a part of
         entity_identifier: ComponentEntityIdentifier,
     },
 }
@@ -53,7 +73,7 @@ pub mod server_entity_syncing;
 #[cfg(feature = "client")]
 pub mod client_syncing;
 #[cfg(feature = "server")]
-mod server_syncing;
+pub mod server_syncing;
 
 /// Events that are synced from server->client and client->server.
 pub mod events;
@@ -175,6 +195,12 @@ pub trait SyncableComponent: Serialize + DeserializeOwned + Clone + std::fmt::De
         true
     }
 
+    /// If this returns true, this will be synced with the server.
+    #[cfg(feature = "client")]
+    fn should_send_to_server(&self, _mapping: &crate::netty::sync::mapping::NetworkMapping) -> bool {
+        true
+    }
+
     /// The [`SyncableComponent::convert_entities_client_to_server`] function requires cloning this struct,
     /// so to avoid clones on structs without any entities this method can be used.
     ///
@@ -202,26 +228,43 @@ pub trait SyncableComponent: Serialize + DeserializeOwned + Clone + std::fmt::De
 }
 
 #[derive(Event, Debug)]
-struct GotComponentToSyncEvent {
-    #[allow(dead_code)] // on client this is unused
-    client_id: ClientId,
-    component_id: u16,
-    entity: Entity,
+/// When a component needs to be synced with this instance of the game, this event will be sent.
+pub struct GotComponentToSyncEvent {
+    #[allow(dead_code)]
+    /// **Server**: The client that is trying to sync this component with you.
+    /// **Client**: This is unused and is meaningless.
+    pub client_id: ClientId,
+    /// The ID of the component that is being synced
+    pub component_id: ComponentId,
+    /// The entity that should get this component
+    pub entity: Entity,
     /// The entity authority should be checked against - not the entity being targetted.
-    #[allow(dead_code)] // on client this is unused
-    authority_entity: Entity,
-    raw_data: Vec<u8>,
+    #[allow(dead_code)]
+    /// **Server**: The entity that should be checked for authority before applying these changes.
+    /// **Client**: This is unused and is meaningless
+    pub authority_entity: Entity,
+    /// The raw data of the component (decode using [`bincode::deserialize`])
+    pub raw_data: Vec<u8>,
 }
 
 #[derive(Event, Debug)]
-struct GotComponentToRemoveEvent {
-    #[allow(dead_code)] // on client this is unused
-    client_id: ClientId,
-    component_id: u16,
-    entity: Entity,
+/// A component should be removed from the specified entity. On the server, the
+/// [`Self::authority_entity`] should be checked for authority first in addition to any other
+/// checks required.
+pub struct GotComponentToRemoveEvent {
+    #[allow(dead_code)]
+    /// *Server*: The client ID that removed this component.
+    /// *Client*: On client this is unused
+    pub client_id: ClientId,
+    /// The unique identifier for this component, for use with [`Registry<SyncedComponentId>`]
+    pub component_id: ComponentId,
+    /// The entity that used to have this component
+    pub entity: Entity,
     /// The entity authority should be checked against - not the entity being targetted.
-    #[allow(dead_code)] // on client this is unused
-    authority_entity: Entity,
+    #[allow(dead_code)]
+    /// *Server*: The entity that should be checked for authority over this component.
+    /// *Client*: On client this is unused
+    pub authority_entity: Entity,
 }
 
 #[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
@@ -246,20 +289,16 @@ pub enum ComponentSyncingSet {
 /// Indicates that a component should be synced across the client and the server.
 ///
 /// Make sure to call this in either the core project or both the client & server projects.
-pub fn sync_component<T: SyncableComponent>(_app: &mut App) {
-    // LSP thinks `_app` is unused, even though it is, thus the underscore.
-
+pub fn sync_component<T: SyncableComponent>(app: &mut App) {
     #[cfg(not(feature = "client"))]
     #[cfg(not(feature = "server"))]
     compile_error!("You must enable one of the features. Either client or server.");
 
     #[cfg(feature = "client")]
-    #[cfg(not(feature = "server"))]
-    client_syncing::sync_component_client::<T>(_app);
+    client_syncing::sync_component_client::<T>(app);
 
     #[cfg(feature = "server")]
-    #[cfg(not(feature = "client"))]
-    server_syncing::sync_component_server::<T>(_app);
+    server_syncing::sync_component_server::<T>(app);
 }
 
 pub(super) fn register<T: States + Clone + Copy + FreelyMutableState>(app: &mut App, registry_syncing: RegistrySyncInit<T>) {

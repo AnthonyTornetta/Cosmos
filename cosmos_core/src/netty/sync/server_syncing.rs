@@ -1,6 +1,8 @@
+//! Server-side automatic component syncing logic
+
 use super::server_entity_syncing::RequestedEntityEvent;
 use super::{
-    ClientAuthority, ComponentEntityIdentifier, ComponentReplicationMessage, ComponentSyncingSet, RegisterComponentSet,
+    ClientAuthority, ComponentEntityIdentifier, ComponentId, ComponentReplicationMessage, ComponentSyncingSet, RegisterComponentSet,
     ReplicatedComponentData, SyncType, SyncableComponent, SyncedComponentId,
 };
 use crate::block::data::BlockData;
@@ -45,8 +47,12 @@ fn server_remove_component<T: SyncableComponent>(
     q_piloting: Query<&Pilot>,
 ) {
     for ev in ev_reader.read() {
-        let Some(synced_id) = components_registry.try_from_numeric_id(ev.component_id) else {
-            warn!("Missing component with id {}", ev.component_id);
+        let ComponentId::Custom(id) = ev.component_id else {
+            continue;
+        };
+
+        let Some(synced_id) = components_registry.try_from_numeric_id(id) else {
+            warn!("Missing component with id {}", id);
             continue;
         };
 
@@ -103,8 +109,12 @@ fn server_deserialize_component<T: SyncableComponent>(
     q_t: Query<&T>,
 ) {
     for ev in ev_reader.read() {
-        let Some(synced_id) = components_registry.try_from_numeric_id(ev.component_id) else {
-            warn!("Missing component with id {}", ev.component_id);
+        let ComponentId::Custom(id) = ev.component_id else {
+            continue;
+        };
+
+        let Some(synced_id) = components_registry.try_from_numeric_id(id) else {
+            warn!("Missing component with id {}", id);
             continue;
         };
 
@@ -181,7 +191,8 @@ fn recursive_should_load(
     }
 }
 
-fn should_be_sent_to(
+/// Determines if information about this entity should be sent to a player at this location.
+pub fn should_be_sent_to(
     p_loc: &Location,
     q_parent: &Query<(Option<&Location>, Option<&LoadingDistance>, Option<&Parent>)>,
     entity_identifier: &ComponentEntityIdentifier,
@@ -251,7 +262,7 @@ fn server_send_component<T: SyncableComponent>(
             player.client_id(),
             NettyChannelServer::ComponentReplication,
             cosmos_encoder::serialize(&ComponentReplicationMessage::ComponentReplication {
-                component_id: id.id(),
+                component_id: ComponentId::Custom(id.id()),
                 replicated: replicated_data,
             }),
         );
@@ -302,7 +313,7 @@ fn server_sync_removed_components<T: SyncableComponent>(
         server.broadcast_message(
             NettyChannelServer::ComponentReplication,
             cosmos_encoder::serialize(&ComponentReplicationMessage::RemovedComponent {
-                component_id: id.id(),
+                component_id: ComponentId::Custom(id.id()),
                 entity_identifier,
             }),
         );
@@ -310,7 +321,7 @@ fn server_sync_removed_components<T: SyncableComponent>(
 }
 
 fn on_request_component<T: SyncableComponent>(
-    q_t: Query<(&T, Option<&StructureSystem>, Option<&ItemStackData>, Option<&BlockData>)>,
+    q_t: Query<(&T, Option<&StructureSystem>, Option<&ItemStackData>, Option<&BlockData>), Without<NoSendEntity>>,
     q_parent: Query<(Option<&Location>, Option<&LoadingDistance>, Option<&Parent>)>,
     mut ev_reader: EventReader<RequestedEntityEvent>,
     id_registry: Res<Registry<SyncedComponentId>>,
@@ -372,7 +383,7 @@ fn on_request_component<T: SyncableComponent>(
             client_id,
             NettyChannelServer::ComponentReplication,
             cosmos_encoder::serialize(&ComponentReplicationMessage::ComponentReplication {
-                component_id: id.id(),
+                component_id: ComponentId::Custom(id.id()),
                 replicated: replicated_component,
             }),
         );
@@ -521,7 +532,6 @@ fn register_component<T: SyncableComponent>(mut registry: ResMut<Registry<Synced
     });
 }
 
-#[allow(unused)] // This function is used, but the LSP can't figure that out.
 pub(super) fn sync_component_server<T: SyncableComponent>(app: &mut App) {
     app.add_systems(
         Startup,

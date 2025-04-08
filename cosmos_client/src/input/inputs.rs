@@ -22,6 +22,9 @@ pub enum CosmosInputs {
     /// Player move faster
     Sprint,
 
+    /// Ship match speed of focused entity
+    MatchSpeed,
+
     // For use in ships
     /// Ship move down
     MoveDown,
@@ -48,6 +51,9 @@ pub enum CosmosInputs {
     PlaceBlock,
     /// Interact with the block the player is looking at
     Interact,
+    /// Select the block you are looking at as the one currently held by you, if it exists in your
+    /// inventory.
+    PickBlock,
 
     // These two controls will eventually be removed
     /// Create a ship with a ship core in the player's inventory
@@ -128,6 +134,18 @@ pub enum CosmosInputs {
 
     /// Instead of crafting 1, the maximum amount will be crafted
     BulkCraft,
+
+    /// Hails the ship you are focused on
+    HailShip,
+
+    /// Accepts an incoming hail
+    AcceptComsRequest,
+    /// Declines an incoming hail
+    DeclineComsRequest,
+    /// Toggles the Coms menu if one is open
+    ToggleComs,
+    /// Sends the Coms message the user has typed
+    SendComs,
 }
 
 fn init_input(mut input_handler: ResMut<CosmosInputHandler>) {
@@ -137,6 +155,7 @@ fn init_input(mut input_handler: ResMut<CosmosInputHandler>) {
     input_handler.set_keycode(CosmosInputs::MoveBackward, KeyCode::KeyS);
     input_handler.set_keycode(CosmosInputs::MoveRight, KeyCode::KeyD);
     input_handler.set_keycode(CosmosInputs::SlowDown, KeyCode::ShiftLeft);
+    input_handler.set_keycode(CosmosInputs::MatchSpeed, KeyCode::ControlLeft);
     input_handler.set_keycode(CosmosInputs::Jump, KeyCode::Space);
     input_handler.set_keycode(CosmosInputs::MoveDown, KeyCode::KeyQ);
     input_handler.set_keycode(CosmosInputs::MoveUp, KeyCode::KeyE);
@@ -147,6 +166,7 @@ fn init_input(mut input_handler: ResMut<CosmosInputHandler>) {
 
     input_handler.set_mouse_button(CosmosInputs::BreakBlock, MouseButton::Left);
     input_handler.set_mouse_button(CosmosInputs::PlaceBlock, MouseButton::Right);
+    input_handler.set_mouse_button(CosmosInputs::PickBlock, MouseButton::Middle);
     input_handler.set_keycode(CosmosInputs::Interact, KeyCode::KeyR);
     input_handler.set_keycode(CosmosInputs::StopPiloting, KeyCode::KeyR);
 
@@ -198,6 +218,12 @@ fn init_input(mut input_handler: ResMut<CosmosInputHandler>) {
     input_handler.set_keycode(CosmosInputs::SendChatMessage, KeyCode::Enter);
 
     input_handler.set_keycode(CosmosInputs::BulkCraft, KeyCode::ShiftLeft);
+
+    input_handler.set_keycode(CosmosInputs::HailShip, KeyCode::KeyH);
+    input_handler.set_keycode(CosmosInputs::AcceptComsRequest, KeyCode::KeyY);
+    input_handler.set_keycode(CosmosInputs::DeclineComsRequest, KeyCode::KeyN);
+    input_handler.set_keycode(CosmosInputs::ToggleComs, KeyCode::Backquote);
+    input_handler.set_keycode(CosmosInputs::SendComs, KeyCode::Enter);
 }
 
 #[derive(Resource, Default, Debug)]

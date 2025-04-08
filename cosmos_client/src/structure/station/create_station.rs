@@ -1,11 +1,11 @@
 //! Event & its processing for when a player wants to create a station
 
-use bevy::prelude::{in_state, App, Event, EventReader, EventWriter, IntoSystemConfigs, Query, ResMut, Update, With};
+use bevy::prelude::{in_state, App, Event, EventReader, EventWriter, IntoSystemConfigs, Or, Query, ResMut, Update, With};
 use bevy_renet2::renet2::RenetClient;
 use cosmos_core::{
     netty::{client::LocalPlayer, client_reliable_messages::ClientReliableMessages, cosmos_encoder, NettyChannelClient},
     state::GameState,
-    structure::shared::build_mode::BuildMode,
+    structure::{shared::build_mode::BuildMode, ship::pilot::Pilot},
 };
 
 use crate::{
@@ -20,11 +20,11 @@ pub struct CreateStationEvent {
 }
 
 fn listener(
-    in_build_mode: Query<(), (With<LocalPlayer>, With<BuildMode>)>,
+    q_invalid_player: Query<(), (With<LocalPlayer>, Or<(With<BuildMode>, With<Pilot>)>)>,
     input_handler: InputChecker,
     mut event_writer: EventWriter<CreateStationEvent>,
 ) {
-    if in_build_mode.get_single().is_ok() {
+    if q_invalid_player.get_single().is_ok() {
         // Don't create stations while in build mode
         return;
     }

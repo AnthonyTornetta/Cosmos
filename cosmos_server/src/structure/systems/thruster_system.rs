@@ -13,13 +13,14 @@ use cosmos_core::{
     block::{block_events::BlockEventsSet, Block},
     events::block_events::BlockChangedEvent,
     netty::system_sets::NetworkingSystemsSet,
+    physics::location::Location,
     prelude::FullStructure,
     registry::Registry,
     state::GameState,
     structure::{
         events::StructureLoadedEvent,
         ship::{
-            pilot::Pilot,
+            pilot::{Pilot, PilotFocused},
             ship_movement::{ShipMovement, ShipMovementSet},
             Ship,
         },
@@ -37,6 +38,7 @@ use super::sync::register_structure_system;
 
 const MAX_SHIP_SPEED: f32 = 350.0;
 const MAX_BRAKE_DELTA_PER_THRUST: f32 = 300.0;
+const MAX_MATCH_SPEED_PER_THRUST: f32 = 10.0;
 
 fn register_thruster_blocks(blocks: Res<Registry<Block>>, mut storage: ResMut<ThrusterBlocks>) {
     if let Some(block) = blocks.from_id("cosmos:thruster") {
@@ -90,36 +92,44 @@ pub(super) fn update_ship_force_and_velocity(
     thrusters_query: Query<(&ThrusterSystem, &StructureSystem)>,
     mut query: Query<
         (
+            &Location,
             &mut Structure,
             &ShipMovement,
             &StructureSystems,
             &Transform,
-            &mut Velocity,
             &mut ExternalImpulse,
             &ReadMassProperties,
             Option<&Docked>,
             Option<&MaxShipSpeedModifier>,
+            Option<&PilotFocused>,
         ),
-        (With<Ship>, With<Pilot>),
+        (With<Pilot>, With<Ship>),
     >,
+    q_loc: Query<&Location>,
+    mut q_vel: Query<&mut Velocity>,
     mut energy_query: Query<&mut EnergyStorageSystem>,
     time: Res<Time>,
 ) {
     for (thruster_system, system) in thrusters_query.iter() {
         if let Ok((
+            loc,
             mut structure,
             movement,
             systems,
             transform,
-            mut velocity,
             mut external_impulse,
             readmass,
             docked,
             max_ship_speed_modifier,
+            pilot_focused,
         )) = query.get_mut(system.structure_entity())
         {
             // Rotation
             if docked.is_none() {
+                let Ok(mut velocity) = q_vel.get_mut(system.structure_entity()) else {
+                    continue;
+                };
+
                 let torque = movement.torque * 5.0;
 
                 const MAX_ANGLE_PER_SECOND: f32 = 500.0;
@@ -183,7 +193,38 @@ pub(super) fn update_ship_force_and_velocity(
                 }
             };
 
+            if movement.match_speed {
+                if let Some(pilot_focused) = pilot_focused {
+                    if let Ok(focused_loc) = q_loc.get(pilot_focused.0) {
+                        let diff = *focused_loc - *loc;
+                        let diff = diff.absolute_coords_f32();
+                        const MAX_FOCUS_DISTANCE: f32 = 2_000.0;
+                        if diff.length_squared() <= MAX_FOCUS_DISTANCE * MAX_FOCUS_DISTANCE {
+                            let Ok(velocity) = q_vel.get(system.structure_entity()) else {
+                                continue;
+                            };
+
+                            let other_vel = q_vel.get(pilot_focused.0).copied().unwrap_or_default();
+
+                            let diff = other_vel.linvel - velocity.linvel;
+                            let mut match_vec = diff.normalize_or_zero() * readmass.get().mass;
+                            let delta = time.delta_secs() * MAX_MATCH_SPEED_PER_THRUST * thruster_system.thrust_total();
+
+                            if match_vec.length_squared() >= delta * delta {
+                                match_vec = match_vec.normalize() * delta;
+                            }
+
+                            movement_vector += match_vec;
+                        }
+                    }
+                }
+            }
+
             if movement.braking {
+                let Ok(velocity) = q_vel.get(system.structure_entity()) else {
+                    continue;
+                };
+
                 let mut brake_vec = -velocity.linvel * readmass.get().mass;
                 let delta = time.delta_secs() * MAX_BRAKE_DELTA_PER_THRUST * thruster_system.thrust_total();
 

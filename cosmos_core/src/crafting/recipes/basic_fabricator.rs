@@ -117,7 +117,7 @@ impl BasicFabricatorRecipes {
     }
 }
 
-#[derive(Event, Serialize, Deserialize, Debug)]
+#[derive(Event, Serialize, Deserialize, Debug, Clone)]
 /// Used to sync all recipes to the connecting clients. Sent when a client joins after they have
 /// loaded all the recipes.
 pub struct SyncBasicFabricatorRecipesEvent(pub BasicFabricatorRecipes);

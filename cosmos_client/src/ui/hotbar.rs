@@ -159,6 +159,17 @@ impl Hotbar {
         }
     }
 
+    /// The slots a hotbar covers are from 0..max_slots
+    pub fn n_slots(&self) -> usize {
+        self.max_slots
+    }
+
+    /// Sets the slot selected by the user to this value
+    pub fn set_selected_slot(&mut self, slot: usize) {
+        debug_assert!(slot < self.max_slots, "Hotbar slot too big! {slot} must be < {}", self.max_slots);
+        self.selected_slot = slot;
+    }
+
     /// This is the slot the player has currently selected - corresponds to the proper inventory slots
     pub fn selected_slot(&self) -> usize {
         self.selected_slot

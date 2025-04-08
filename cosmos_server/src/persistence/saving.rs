@@ -96,8 +96,8 @@ fn check_needs_blueprinted(query: Query<Entity, (With<NeedsBlueprinted>, Without
 ///
 /// This is NOT how the structures are saved in the world, but rather used to get structure
 /// files that can be loaded through commands.
-fn save_blueprint(data: &SerializedData, needs_blueprinted: &NeedsBlueprinted) -> std::io::Result<()> {
-    if let Err(e) = fs::create_dir("saves") {
+fn save_blueprint(data: &SerializedData, needs_blueprinted: &NeedsBlueprinted, log_name: &str) -> std::io::Result<()> {
+    if let Err(e) = fs::create_dir("blueprints") {
         match e.kind() {
             ErrorKind::AlreadyExists => {}
             _ => return Err(e),
@@ -119,13 +119,19 @@ fn save_blueprint(data: &SerializedData, needs_blueprinted: &NeedsBlueprinted) -
         cosmos_encoder::serialize(&data),
     )?;
 
+    info!("Finished blueprinting {log_name}");
+
     Ok(())
 }
 
 /// Put all systems that add data to blueprinted entities before this and after `begin_blueprinting`
-fn done_blueprinting(mut query: Query<(Entity, &mut SerializedData, &NeedsBlueprinted, Option<&NeedsSaved>)>, mut commands: Commands) {
-    for (entity, mut serialized_data, needs_blueprinted, needs_saved) in query.iter_mut() {
-        save_blueprint(&serialized_data, needs_blueprinted)
+fn done_blueprinting(
+    mut query: Query<(Entity, &mut SerializedData, &NeedsBlueprinted, Option<&NeedsSaved>, Option<&Name>)>,
+    mut commands: Commands,
+) {
+    for (entity, mut serialized_data, needs_blueprinted, needs_saved, name) in query.iter_mut() {
+        let bp_name = name.map(|n| format!("{n} ({entity:?})")).unwrap_or(format!("{entity:?}"));
+        save_blueprint(&serialized_data, needs_blueprinted, &bp_name)
             .unwrap_or_else(|e| warn!("Failed to save blueprint for {entity:?} \n\n{e}\n\n"));
 
         commands.entity(entity).remove::<NeedsBlueprinted>();
@@ -251,7 +257,7 @@ fn done_saving(
 
         if matches!(&save_file_identifier.identifier_type, SaveFileIdentifierType::Base(_, _, _)) {
             if let Some(loc) = sd.location {
-                sectors_cache.insert(loc.sector(), entity_id.clone(), loading_distance.map(|ld| ld.load_distance()));
+                sectors_cache.insert(loc.sector(), *entity_id, loading_distance.map(|ld| ld.load_distance()));
             }
         }
     }
@@ -272,7 +278,7 @@ pub(crate) fn calculate_sfi(
 
         return Some(SaveFileIdentifier::new(
             sd.location.map(|l| l.sector()),
-            entity_id.clone(),
+            *entity_id,
             loading_distance.map(|ld| ld.load_distance()),
         ));
     };
@@ -287,7 +293,7 @@ pub(crate) fn calculate_sfi(
         return None;
     };
 
-    Some(SaveFileIdentifier::sub_entity(parent_sfi, entity_id.clone()))
+    Some(SaveFileIdentifier::sub_entity(parent_sfi, *entity_id))
 }
 
 fn write_file(save_identifier: &SaveFileIdentifier, serialized: &[u8]) -> io::Result<()> {

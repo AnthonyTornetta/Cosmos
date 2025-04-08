@@ -6,7 +6,7 @@ use bevy::{
         component::Component,
         schedule::{IntoSystemSetConfigs, SystemSet},
     },
-    prelude::{App, ImageNode, Text},
+    prelude::{App, Entity, Event, ImageNode, Text},
     reflect::Reflect,
     ui::{BackgroundColor, Node},
 };
@@ -43,6 +43,10 @@ pub struct OpenMenu {
     close_method: CloseMethod,
 }
 
+#[derive(Event, Debug, PartialEq, Eq, Hash, Clone, Copy, Reflect)]
+/// An event that is fired when a menu is closed for [`CloseMethod::Custom`] menus.
+pub struct CloseMenuEvent(pub Entity);
+
 #[derive(Default, Debug, PartialEq, Eq, Hash, Clone, Copy, Reflect)]
 /// How a menu should be closed
 pub enum CloseMethod {
@@ -53,6 +57,10 @@ pub enum CloseMethod {
     Visibility,
     /// This menu cannot be automatically closed (eg via escape)
     Disabled,
+    /// You will handle closing this menu yourself
+    ///
+    /// You need to respond to the [`CloseMenuEvent`].
+    Custom,
 }
 
 impl OpenMenu {
@@ -93,8 +101,8 @@ impl OpenMenu {
     }
 
     /// Gets the method that should be used to close this menu
-    pub fn close_method(&self) -> CloseMethod {
-        self.close_method
+    pub fn close_method(&self) -> &CloseMethod {
+        &self.close_method
     }
 }
 
@@ -114,7 +122,8 @@ pub(super) fn register(app: &mut App) {
     settings::register(app);
 
     app.configure_sets(Update, (UiSystemSet::PreDoUi, UiSystemSet::DoUi, UiSystemSet::FinishUi).chain())
-        .register_type::<OpenMenu>();
+        .register_type::<OpenMenu>()
+        .add_event::<CloseMenuEvent>();
 
     // These probably don't matter
     app.allow_ambiguous_component::<Text>();

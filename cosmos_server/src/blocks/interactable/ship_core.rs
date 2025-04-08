@@ -1,4 +1,4 @@
-use bevy::prelude::{in_state, App, EventReader, EventWriter, IntoSystemConfigs, Query, Res, Update, With};
+use bevy::prelude::{in_state, App, EventReader, EventWriter, IntoSystemConfigs, Query, Res, Update, With, Without};
 use cosmos_core::{
     block::{
         block_events::{BlockEventsSet, BlockInteractEvent},
@@ -9,6 +9,7 @@ use cosmos_core::{
     registry::{identifiable::Identifiable, Registry},
     state::GameState,
     structure::{
+        shared::build_mode::BuildMode,
         ship::{pilot::Pilot, Ship},
         Structure,
     },
@@ -17,8 +18,9 @@ use cosmos_core::{
 fn handle_block_event(
     mut interact_events: EventReader<BlockInteractEvent>,
     mut change_pilot_event: EventWriter<ChangePilotEvent>,
-    s_query: Query<&Structure, With<Ship>>,
-    pilot_query: Query<&Pilot>,
+    q_ship: Query<&Structure, With<Ship>>,
+    q_can_be_pilot: Query<(), Without<Pilot>>,
+    q_can_be_pilot_player: Query<(), Without<BuildMode>>,
     blocks: Res<Registry<Block>>,
 ) {
     for ev in interact_events.read() {
@@ -26,7 +28,7 @@ fn handle_block_event(
             continue;
         };
 
-        let Ok(structure) = s_query.get(s_block.structure()) else {
+        let Ok(structure) = q_ship.get(s_block.structure()) else {
             continue;
         };
 
@@ -40,9 +42,12 @@ fn handle_block_event(
             continue;
         }
 
+        if !q_can_be_pilot_player.contains(ev.interactor) {
+            continue;
+        }
+
         // Only works on ships (maybe replace this with pilotable component instead of only checking ships)
-        // Cannot pilot a ship that already has a pilot
-        if !pilot_query.contains(s_block.structure()) {
+        if q_can_be_pilot.contains(s_block.structure()) {
             change_pilot_event.send(ChangePilotEvent {
                 structure_entity: s_block.structure(),
                 pilot_entity: Some(ev.interactor),

@@ -13,7 +13,6 @@ use crate::persistence::make_persistent::{make_persistent, DefaultPersistentComp
 fn load_factions(mut commands: Commands) {
     let factions = if let Ok(data) = fs::read("world/factions.bin") {
         // We want to panic if something is corrupted
-
         cosmos_encoder::deserialize::<Factions>(&data).expect("Failed to deserialize faction data in world/factions.bin.")
     } else {
         info!("Generating factions!");

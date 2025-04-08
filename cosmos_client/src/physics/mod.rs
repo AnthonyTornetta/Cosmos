@@ -5,23 +5,23 @@ use bevy::{
     math::Vec3,
     prelude::{App, Commands, Entity, Query, Update, With, Without},
 };
-use bevy_rapier3d::{plugin::RapierConfiguration, prelude::RapierContextSimulation};
-use cosmos_core::physics::{
-    location::Location,
-    player_world::{PlayerWorld, WorldWithin},
+use bevy_rapier3d::{
+    plugin::{RapierConfiguration, RapierContextEntityLink},
+    prelude::RapierContextSimulation,
 };
+use cosmos_core::physics::{location::Location, player_world::PlayerWorld};
 
 mod collider_disabling;
 
 /// Everything in the client is in the same world
 fn add_world_within(
-    query: Query<Entity, (With<Location>, Without<WorldWithin>)>,
+    query: Query<Entity, (With<Location>, Without<RapierContextEntityLink>)>,
     mut commands: Commands,
     player_world: Query<Entity, With<PlayerWorld>>,
 ) {
     if let Ok(pw) = player_world.get_single() {
         for entity in query.iter() {
-            commands.entity(entity).insert(WorldWithin(pw));
+            commands.entity(entity).insert(RapierContextEntityLink(pw));
         }
     }
 }

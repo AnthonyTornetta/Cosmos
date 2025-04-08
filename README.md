@@ -79,6 +79,7 @@ See [the issues page](https://github.com/AnthonyTornetta/Cosmos/issues) for the 
   - [ ] Respawn anchor
 - [x] Playtest and implement changes
 - [x] Flying asteroids
+- [x] Basic quest NPCs
 
 ## Release 0.0.7a
 

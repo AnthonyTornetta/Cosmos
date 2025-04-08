@@ -1,12 +1,14 @@
 //! Exposes [`ClientReceiveComponents::ClientReceiveComponents`] - this is to remove ambiguity
 
+use std::marker::PhantomData;
+
 use super::mapping::{NetworkMapping, ServerEntity};
 use super::{
-    ClientAuthority, ComponentEntityIdentifier, ComponentReplicationMessage, ComponentSyncingSet, GotComponentToRemoveEvent,
+    ClientAuthority, ComponentEntityIdentifier, ComponentId, ComponentReplicationMessage, ComponentSyncingSet, GotComponentToRemoveEvent,
     ReplicatedComponentData, SyncType, SyncableComponent, SyncedComponentId,
 };
 use crate::block::data::BlockData;
-use crate::ecs::NeedsDespawned;
+use crate::ecs::{add_multi_statebound_resource, NeedsDespawned};
 use crate::events::block_events::BlockDataChangedEvent;
 use crate::inventory::itemstack::ItemStackData;
 use crate::inventory::Inventory;
@@ -17,6 +19,7 @@ use crate::netty::system_sets::NetworkingSystemsSet;
 use crate::netty::{cosmos_encoder, NettyChannelClient};
 use crate::netty::{NettyChannelServer, NoSendEntity};
 use crate::registry::{identifiable::Identifiable, Registry};
+use crate::state::GameState;
 use crate::structure::ship::pilot::Pilot;
 use crate::structure::systems::{StructureSystem, StructureSystems};
 use crate::structure::Structure;
@@ -27,8 +30,11 @@ use bevy::ecs::removal_detection::RemovedComponents;
 use bevy::ecs::schedule::common_conditions::resource_exists;
 use bevy::ecs::schedule::IntoSystemConfigs;
 use bevy::ecs::system::{Commands, Resource};
-use bevy::log::warn;
+use bevy::log::{trace, warn};
 use bevy::prelude::SystemSet;
+use bevy::time::Time;
+use bevy::utils::hashbrown::HashSet;
+use bevy::utils::HashMap;
 use bevy::{
     app::{App, Update},
     ecs::{
@@ -41,17 +47,75 @@ use bevy::{
 };
 use bevy_renet2::renet2::{ClientId, RenetClient};
 
+#[derive(Resource)]
+struct StoredComponents<T: SyncableComponent>(HashMap<Entity, (Vec<u8>, f32)>, PhantomData<T>);
+
+impl<T: SyncableComponent> Default for StoredComponents<T> {
+    fn default() -> Self {
+        Self(Default::default(), Default::default())
+    }
+}
+
+fn client_add_stored_components<T: SyncableComponent>(
+    time: Res<Time>,
+    mut commands: Commands,
+    mut sc: ResMut<StoredComponents<T>>,
+    mapping: Res<NetworkMapping>,
+    q_t: Query<&T>,
+) {
+    let hm = &mut sc.as_mut().0;
+    let ents = hm.keys().copied().collect::<Vec<Entity>>();
+    for ent in ents {
+        if let Some(mut ecmds) = commands.get_entity(ent) {
+            let (c, _) = hm.remove(&ent).expect("Must exist");
+
+            let mut component = bincode::deserialize::<T>(&c).expect("Failed to deserialize component sent from server!");
+
+            let Some(mapped) = component.convert_entities_server_to_client(&mapping) else {
+                warn!("Couldn't convert entities for {}!", T::get_component_unlocalized_name());
+                continue;
+            };
+
+            component = mapped;
+
+            if matches!(T::get_sync_type(), SyncType::BothAuthoritative(_)) {
+                // Attempt to prevent an endless chain of change detection, causing the client+server to repeatedly sync the same component.
+                if q_t.get(ent).map(|x| *x == component).unwrap_or(false) {
+                    continue;
+                }
+            }
+
+            if component.validate() {
+                ecmds.try_insert(component);
+            }
+        } else {
+            let (_, t) = hm.get_mut(&ent).expect("Must exist");
+            *t += time.delta_secs();
+
+            if *t > 5.0 {
+                hm.remove(&ent);
+                warn!("No entity cmds for synced entity component - (entity {ent:?})");
+            }
+        }
+    }
+}
+
 fn client_deserialize_component<T: SyncableComponent>(
     components_registry: Res<Registry<SyncedComponentId>>,
     mut ev_reader: EventReader<GotComponentToSyncEvent>,
     mut commands: Commands,
     mapping: Res<NetworkMapping>,
     q_t: Query<&T>,
+    mut stored_components: ResMut<StoredComponents<T>>,
 ) {
     for ev in ev_reader.read() {
+        let ComponentId::Custom(id) = ev.component_id else {
+            continue;
+        };
+
         let synced_id = components_registry
-            .try_from_numeric_id(ev.component_id)
-            .unwrap_or_else(|| panic!("Missing component with id {}\n\n{components_registry:?}\n\n", ev.component_id));
+            .try_from_numeric_id(id)
+            .unwrap_or_else(|| panic!("Missing component with id {}\n\n{components_registry:?}\n\n", id));
 
         if T::get_component_unlocalized_name() != synced_id.unlocalized_name {
             continue;
@@ -78,7 +142,8 @@ fn client_deserialize_component<T: SyncableComponent>(
                 ecmds.try_insert(component);
             }
         } else {
-            warn!("No entity cmds for synced entity component - (entity {:?})", ev.entity);
+            // Try again later
+            stored_components.0.insert(ev.entity, (ev.raw_data.clone(), 0.0));
         }
     }
 }
@@ -89,9 +154,13 @@ fn client_remove_component<T: SyncableComponent>(
     mut commands: Commands,
 ) {
     for ev in ev_reader.read() {
+        let ComponentId::Custom(id) = ev.component_id else {
+            continue;
+        };
+
         let synced_id = components_registry
-            .try_from_numeric_id(ev.component_id)
-            .unwrap_or_else(|| panic!("Missing component with id {}", ev.component_id));
+            .try_from_numeric_id(id)
+            .unwrap_or_else(|| panic!("Missing component with id {}", id));
 
         if T::get_component_unlocalized_name() != synced_id.unlocalized_name {
             continue;
@@ -130,6 +199,10 @@ fn client_send_components<T: SyncableComponent>(
     let data_to_sync = q_changed_component
         .iter()
         .flat_map(|(entity, component, structure_system, is_data)| {
+            if !component.should_send_to_server(&mapping) {
+                return None;
+            }
+
             let entity_identifier = compute_entity_identifier(structure_system, &mapping, is_data, entity);
 
             let Some((entity_identifier, authority_entity)) = entity_identifier else {
@@ -157,7 +230,13 @@ fn client_send_components<T: SyncableComponent>(
             }
 
             let raw_data = if T::needs_entity_conversion() {
-                let mapped = component.clone().convert_entities_client_to_server(&mapping)?;
+                let Some(mapped) = component.clone().convert_entities_client_to_server(&mapping) else {
+                    error!(
+                        "Failed to map component {} on entity {entity:?} to server version!",
+                        T::get_component_unlocalized_name()
+                    );
+                    return None;
+                };
 
                 bincode::serialize(&mapped)
             } else {
@@ -176,7 +255,7 @@ fn client_send_components<T: SyncableComponent>(
         client.send_message(
             NettyChannelClient::ComponentReplication,
             cosmos_encoder::serialize(&ComponentReplicationMessage::ComponentReplication {
-                component_id: id.id(),
+                component_id: ComponentId::Custom(id.id()),
                 replicated: data_to_sync,
             }),
         );
@@ -242,7 +321,7 @@ fn client_send_removed_components<T: SyncableComponent>(
         client.send_message(
             NettyChannelClient::ComponentReplication,
             cosmos_encoder::serialize(&ComponentReplicationMessage::RemovedComponent {
-                component_id: id.id(),
+                component_id: ComponentId::Custom(id.id()),
                 entity_identifier,
             }),
         )
@@ -285,7 +364,7 @@ fn compute_entity_identifier(
 }
 
 #[derive(Resource, Default)]
-struct WaitingData(Vec<(u16, ReplicatedComponentData)>);
+struct WaitingData(Vec<(ComponentId, ReplicatedComponentData)>);
 
 #[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
 /// Receives auto-synced components from the server
@@ -322,6 +401,28 @@ fn client_receive_components(
             c.clone(),
         )
         .is_some()
+    });
+
+    let mut done = HashSet::new();
+    waiting_data.0.retain(|(_, item)| {
+        let ComponentEntityIdentifier::Entity(e) = item.entity_identifier else {
+            return true;
+        };
+
+        if !done.insert(e) {
+            return false;
+        }
+
+        let ent = commands.spawn(Name::new("Loading auto synced component from server")).id();
+
+        network_mapping.add_mapping(ent, e);
+
+        client.send_message(
+            NettyChannelClient::Reliable,
+            cosmos_encoder::serialize(&ClientReliableMessages::RequestEntityData { entity: e }),
+        );
+
+        false
     });
 
     while let Some(message) = client.receive_message(NettyChannelServer::ComponentReplication) {
@@ -398,7 +499,7 @@ fn repl_comp_data(
     q_structure: &mut Query<&mut Structure>,
     ev_writer_sync: &mut EventWriter<GotComponentToSyncEvent>,
     evw_block_data_changed: &mut EventWriter<BlockDataChangedEvent>,
-    component_id: u16,
+    component_id: ComponentId,
     c: ReplicatedComponentData,
 ) -> Option<ReplicatedComponentData> {
     let ReplicatedComponentData {
@@ -583,7 +684,7 @@ fn get_entity_identifier_info(
             (client_entity, client_entity)
         }
         ComponentEntityIdentifier::StructureSystem { structure_entity, id } => {
-            warn!(
+            trace!(
                     "Got structure system synced component, but no valid structure exists for it! ({structure_entity:?}, {id:?}). In the future, this should try again once we receive the correct structure from the server."
                 );
 
@@ -594,7 +695,7 @@ fn get_entity_identifier_info(
             item_slot,
             server_data_entity,
         } => {
-            warn!(
+            trace!(
                 "Got itemdata synced component, but no valid inventory OR itemstack exists for it! ({inventory_entity:?}, {item_slot} {server_data_entity:?})."
             );
 
@@ -604,7 +705,7 @@ fn get_entity_identifier_info(
             identifier,
             server_data_entity,
         } => {
-            warn!("Got blockdata synced component, but no valid block exists for it! ({identifier:?}, {server_data_entity:?}).");
+            trace!("Got blockdata synced component, but no valid block exists for it! ({identifier:?}, {server_data_entity:?}).");
 
             return None;
         }
@@ -629,7 +730,6 @@ pub(super) fn setup_client(app: &mut App) {
     .init_resource::<WaitingData>();
 }
 
-#[allow(unused)] // This function is used, but the LSP can't figure that out.
 pub(super) fn sync_component_client<T: SyncableComponent>(app: &mut App) {
     app.register_type::<ServerEntity>();
 
@@ -644,9 +744,15 @@ pub(super) fn sync_component_client<T: SyncableComponent>(app: &mut App) {
             );
         }
         SyncType::ServerAuthoritative => {
+            add_multi_statebound_resource::<StoredComponents<T>, GameState>(app, GameState::LoadingWorld, GameState::Playing);
+
             app.add_systems(
                 Update,
-                (client_deserialize_component::<T>, client_remove_component::<T>)
+                (
+                    client_add_stored_components::<T>,
+                    client_deserialize_component::<T>,
+                    client_remove_component::<T>,
+                )
                     .chain()
                     .run_if(resource_exists::<NetworkMapping>)
                     .run_if(resource_exists::<Registry<SyncedComponentId>>)
@@ -654,6 +760,8 @@ pub(super) fn sync_component_client<T: SyncableComponent>(app: &mut App) {
             );
         }
         SyncType::BothAuthoritative(_) => {
+            add_multi_statebound_resource::<StoredComponents<T>, GameState>(app, GameState::LoadingWorld, GameState::Playing);
+
             app.add_systems(
                 Update,
                 (client_send_components::<T>, client_send_removed_components::<T>)
@@ -663,7 +771,11 @@ pub(super) fn sync_component_client<T: SyncableComponent>(app: &mut App) {
             );
             app.add_systems(
                 Update,
-                (client_deserialize_component::<T>, client_remove_component::<T>)
+                (
+                    client_add_stored_components::<T>,
+                    client_deserialize_component::<T>,
+                    client_remove_component::<T>,
+                )
                     .chain()
                     .run_if(resource_exists::<NetworkMapping>)
                     .run_if(resource_exists::<Registry<SyncedComponentId>>)

@@ -41,8 +41,9 @@ fn apply_thruster_sound(
 ) {
     for (entity, ship_movement, thruster_sound_instance, audio_emitter) in query.iter_mut() {
         // A hacky way of determining if the thrusters are running
-        let thrusters_off =
-            ship_movement.movement.length_squared() + ship_movement.torque.length_squared() < 0.01 && !ship_movement.braking;
+        let thrusters_off = ship_movement.movement.length_squared() + ship_movement.torque.length_squared() < 0.01
+            && !ship_movement.braking
+            && !ship_movement.match_speed;
 
         if thrusters_off {
             if let Some(mut audio_emitter) = audio_emitter {

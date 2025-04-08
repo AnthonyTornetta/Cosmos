@@ -2,12 +2,14 @@
 
 #![warn(missing_docs)]
 #![feature(iter_array_chunks)]
+#![feature(array_windows)]
 
 pub mod asset;
 pub mod audio;
 pub mod block;
 pub mod camera;
 pub mod chat;
+pub mod coms;
 pub mod crafting;
 pub mod debug;
 pub mod economy;
@@ -24,6 +26,7 @@ pub mod netty;
 pub mod physics;
 pub mod plugin;
 pub mod projectiles;
+pub mod quest;
 pub mod rendering;
 pub mod settings;
 pub mod shop;
@@ -187,6 +190,8 @@ fn main() {
     debug::register(&mut app);
     chat::register(&mut app);
     crafting::register(&mut app);
+    coms::register(&mut app);
+    quest::register(&mut app);
 
     if cfg!(feature = "print-schedule") {
         println!(

@@ -112,7 +112,7 @@ fn populate_chunks(
         } else {
             SaveFileIdentifier::as_child(
                 format!("{cx}_{cy}_{cz}"),
-                SaveFileIdentifier::new(Some(loc.sector()), entity_id.clone(), None),
+                SaveFileIdentifier::new(Some(loc.sector()), *entity_id, None),
             )
         };
 

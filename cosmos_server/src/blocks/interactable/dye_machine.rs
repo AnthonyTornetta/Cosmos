@@ -97,11 +97,17 @@ fn dye_block(
         // Needs to be sorted by len because the "ends_with" check needs to be able to handle
         // "light_grey" vs "grey".
         sorted.sort_by_key(|x| -(x.len() as i32));
-        let Some(current_color) = sorted.iter().find(|&&c| ul.ends_with(c)) else {
-            continue;
-        };
 
-        ul = ul[0..ul.len() - current_color.len()].to_owned();
+        if ul != "cosmos:glass" {
+            let Some(current_color) = sorted.iter().find(|&&c| ul.ends_with(c)) else {
+                continue;
+            };
+
+            ul = ul[0..ul.len() - current_color.len()].to_owned();
+        } else {
+            ul = format!("{ul}_");
+        }
+
         ul = format!("{ul}{}", COLORS[color_idx]);
 
         let Some(new_item) = items.from_id(&ul) else {

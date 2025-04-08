@@ -151,7 +151,7 @@ impl GalaxyMap {
     }
 }
 
-#[derive(Serialize, Deserialize, Event, Debug)]
+#[derive(Serialize, Deserialize, Event, Debug, Clone)]
 /// Send this event to the server to request a [`SystemMap`] be generated for the client.
 ///
 /// The server should respond with a [`SystemMapResponseEvent`]
@@ -172,7 +172,7 @@ impl NettyEvent for RequestSystemMap {
     }
 }
 
-#[derive(Serialize, Deserialize, Event, Debug)]
+#[derive(Serialize, Deserialize, Event, Debug, Clone)]
 /// Send this event to the server to request a [`GalaxyMap`] be generated for the client.
 ///
 /// The server should respond with a [`GalaxyMapResponseEvent`]
@@ -190,7 +190,7 @@ impl NettyEvent for RequestGalaxyMap {
     }
 }
 
-#[derive(Serialize, Deserialize, Event, Debug)]
+#[derive(Serialize, Deserialize, Event, Debug, Clone)]
 /// Sent by the server to the client to indicate what their requested [`SystemMap`] is
 pub struct SystemMapResponseEvent {
     /// The system this map is for
@@ -211,7 +211,7 @@ impl NettyEvent for SystemMapResponseEvent {
     }
 }
 
-#[derive(Serialize, Deserialize, Event, Debug)]
+#[derive(Serialize, Deserialize, Event, Debug, Clone)]
 /// Sent by the server to the client to indicate what their request [`GalaxyMap`] is
 pub struct GalaxyMapResponseEvent {
     /// The map data

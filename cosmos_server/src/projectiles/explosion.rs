@@ -23,7 +23,7 @@ use cosmos_core::{
     ecs::NeedsDespawned,
     physics::{
         location::{Location, LocationPhysicsSet},
-        player_world::{PlayerWorld, WorldWithin},
+        player_world::PlayerWorld,
         structure_physics::ChunkPhysicsPart,
     },
     projectiles::{
@@ -62,17 +62,7 @@ pub struct ExplosionHitEvent {
 
 fn respond_to_explosion(
     mut commands: Commands,
-    q_explosions: Query<
-        (
-            Entity,
-            &Location,
-            &WorldWithin,
-            &RapierContextEntityLink,
-            &Explosion,
-            Option<&Causer>,
-        ),
-        Added<Explosion>,
-    >,
+    q_explosions: Query<(Entity, &Location, &RapierContextEntityLink, &Explosion, Option<&Causer>), Added<Explosion>>,
     q_player_world: Query<&Location, With<PlayerWorld>>,
     q_excluded: Query<(), Or<(With<Explosion>, Without<Collider>)>>,
 
@@ -88,11 +78,11 @@ fn respond_to_explosion(
     // mut evw_bc: EventWriter<BlockChangedEvent>,
     q_shield: Query<&Shield>,
 ) {
-    for (ent, &explosion_loc, world_within, physics_world, &explosion, causer) in q_explosions.iter() {
+    for (ent, &explosion_loc, physics_world, &explosion, causer) in q_explosions.iter() {
         info!("Found explosion @ {explosion_loc}!");
         commands.entity(ent).insert((NeedsDespawned, DontNotifyClientOfDespawn));
 
-        let Ok(player_world_loc) = q_player_world.get(world_within.0) else {
+        let Ok(player_world_loc) = q_player_world.get(physics_world.0) else {
             continue;
         };
 

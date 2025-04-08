@@ -348,7 +348,7 @@ fn unload_chunks_far_from_players(
             let entity_id = q_entity_id.get(planet_entity);
 
             let entity_id = if let Ok(x) = entity_id {
-                x.clone()
+                *x
             } else {
                 needs_id = true;
                 EntityId::generate()
@@ -365,7 +365,7 @@ fn unload_chunks_far_from_players(
                     let mut ecmds = commands.spawn((
                         SaveFileIdentifier::as_child(
                             format!("{cx}_{cy}_{cz}"),
-                            SaveFileIdentifier::new(Some(location.sector()), entity_id.clone(), None),
+                            SaveFileIdentifier::new(Some(location.sector()), entity_id, None),
                         ),
                         NeedsSaved,
                         NeedsDespawned,
