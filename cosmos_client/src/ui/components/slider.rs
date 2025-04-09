@@ -27,7 +27,7 @@ use bevy::{
 
 use crate::ui::UiSystemSet;
 
-use super::Disabled;
+use super::{show_cursor::any_open_menus, Disabled};
 
 #[derive(Component, Debug, Reflect)]
 #[require(Node, SliderValue)]
@@ -314,7 +314,9 @@ pub(super) fn register(app: &mut App) {
         Update,
         (
             on_add_slider.in_set(SliderUiSystemSet::AddSliderBundle),
-            on_interact_slider.in_set(SliderUiSystemSet::SliderInteraction),
+            on_interact_slider
+                .in_set(SliderUiSystemSet::SliderInteraction)
+                .run_if(any_open_menus),
             on_change_value.in_set(SliderUiSystemSet::UpdateSliderDisplay),
         ),
     )

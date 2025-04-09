@@ -32,6 +32,8 @@ use bevy::{
 
 use crate::ui::UiSystemSet;
 
+use super::show_cursor::any_open_menus;
+
 #[derive(Resource, Default)]
 struct CursorFlashTime(f32);
 
@@ -561,11 +563,11 @@ pub(super) fn register(app: &mut App) {
         (
             added_text_input_bundle.in_set(TextInputUiSystemSet::AddTextInputBundle),
             (
-                monitor_clicked,
+                monitor_clicked.run_if(any_open_menus),
                 show_text_cursor.run_if(resource_changed::<Focus>),
-                handle_keyboard_shortcuts,
+                handle_keyboard_shortcuts.run_if(any_open_menus),
                 flash_cursor,
-                send_key_inputs,
+                send_key_inputs.run_if(any_open_menus),
             )
                 .chain()
                 .in_set(TextInputUiSystemSet::SendKeyInputs),
