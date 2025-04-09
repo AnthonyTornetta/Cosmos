@@ -43,7 +43,7 @@ impl DisableRigidBody {
 
     /// Removes your reason for this being disabled.
     pub fn remove_reason(&mut self, reason: &'static str) {
-        if let Some((idx, _)) = self.reasons.iter().enumerate().find(|(_, x)| x == &&reason) {
+        if let Some((idx, _)) = self.reasons.iter().enumerate().find(|(_, x)| x == reason) {
             self.reasons.remove(idx);
         }
     }
