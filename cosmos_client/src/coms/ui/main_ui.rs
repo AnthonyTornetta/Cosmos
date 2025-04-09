@@ -12,7 +12,7 @@ use crate::{
         CloseMenuEvent, CloseMethod, OpenMenu,
     },
 };
-use bevy::{a11y::Focus, color::palettes::css, prelude::*};
+use bevy::{a11y::Focus, color::palettes::css, prelude::*, text::FontStyle};
 use cosmos_core::{coms::events::RequestCloseComsEvent, structure::ship::pilot::Pilot};
 use cosmos_core::{coms::events::SendComsMessageType, state::GameState};
 use cosmos_core::{coms::ComsChannelType, netty::system_sets::NetworkingSystemsSet};
@@ -181,14 +181,13 @@ fn on_change_coms(
 
 fn on_remove_coms(
     mut removed_components: RemovedComponents<ComsChannel>,
-    mut q_selected_coms: Query<&mut SelectedComs>,
-    q_coms_ui: Query<Entity, With<ComsUi>>,
-    q_coms: Query<(Entity, &Parent, &ComsChannel)>,
-    q_local_player: Query<Entity, With<LocalPlayer>>,
+    q_selected_coms: Query<&mut SelectedComs>,
     mut commands: Commands,
+    q_messages: Query<Entity, With<MessageArea>>,
+    font: Res<DefaultFont>,
 ) {
     for ent in removed_components.read() {
-        let Ok(mut selected_coms) = q_selected_coms.get_single_mut() else {
+        let Ok(selected_coms) = q_selected_coms.get_single() else {
             continue;
         };
 
@@ -196,15 +195,38 @@ fn on_remove_coms(
             continue;
         }
 
-        let lp = q_local_player.get_single().expect("Local player missing");
+        let Ok(msg_area_e) = q_messages.get_single() else {
+            continue;
+        };
 
-        let mut all_coms = q_coms.iter().filter(|(_, parent, _)| parent.get() == lp);
+        commands.entity(msg_area_e).with_children(|p| {
+            let message_font = TextFont {
+                font: font.0.clone_weak(),
+                font_size: 20.0,
+                ..Default::default()
+            };
 
-        if let Some((coms_ent, _, _)) = all_coms.next() {
-            selected_coms.0 = coms_ent;
-        } else if let Ok(coms_ui_ent) = q_coms_ui.get_single() {
-            commands.entity(coms_ui_ent).despawn_recursive();
-        }
+            p.spawn((
+                Name::new("Closed Message"),
+                Text::new("Coms Channel Closed"),
+                TextColor(css::AQUA.into()),
+                Node {
+                    margin: UiRect::new(Val::Px(10.0), Val::Px(10.0), Val::Px(10.0), Val::Px(10.0)),
+                    ..Default::default()
+                },
+                message_font.clone(),
+            ));
+        });
+
+        // let lp = q_local_player.get_single().expect("Local player missing");
+        //
+        // let mut all_coms = q_coms.iter().filter(|(_, parent, _)| parent.get() == lp);
+        //
+        // if let Some((coms_ent, _, _)) = all_coms.next() {
+        //     selected_coms.0 = coms_ent;
+        // } else if let Ok(coms_ui_ent) = q_coms_ui.get_single() {
+        //     commands.entity(coms_ui_ent).despawn_recursive();
+        // }
     }
 }
 
@@ -401,29 +423,37 @@ fn create_coms_ui(
                                 },
                             ));
 
-                            p.spawn((
-                                Node {
+                            p.spawn(
+                                (Node {
                                     height: Val::Px(50.0),
-                                    width: Val::Percent(50.0),
+                                    width: Val::Percent(100.0),
+                                    flex_direction: FlexDirection::Row,
                                     ..Default::default()
-                                },
-                                CosmosButton::<EndComsClicked> {
-                                    text: Some(("END COM".into(), message_font.clone(), Default::default())),
-                                    ..Default::default()
-                                },
-                            ));
+                                }),
+                            )
+                            .with_children(|p| {
+                                p.spawn((
+                                    Node {
+                                        flex_grow: 1.0,
+                                        ..Default::default()
+                                    },
+                                    CosmosButton::<EndComsClicked> {
+                                        text: Some(("END COM".into(), message_font.clone(), Default::default())),
+                                        ..Default::default()
+                                    },
+                                ));
 
-                            p.spawn((
-                                Node {
-                                    height: Val::Px(50.0),
-                                    width: Val::Percent(50.0),
-                                    ..Default::default()
-                                },
-                                CosmosButton::<SendClicked> {
-                                    text: Some(("SEND".into(), message_font.clone(), Default::default())),
-                                    ..Default::default()
-                                },
-                            ));
+                                p.spawn((
+                                    Node {
+                                        flex_grow: 1.0,
+                                        ..Default::default()
+                                    },
+                                    CosmosButton::<SendClicked> {
+                                        text: Some(("SEND".into(), message_font.clone(), Default::default())),
+                                        ..Default::default()
+                                    },
+                                ));
+                            });
                         }
                         ComsChannelType::Ai(_) => {
                             p.spawn((
@@ -777,6 +807,52 @@ fn end_selected_coms(mut evw_close_coms: NettyEventWriter<RequestCloseComsEvent>
     evw_close_coms.send(RequestCloseComsEvent(selected.0));
 }
 
+fn on_left_clicked(
+    mut q_selected_coms: Query<&mut SelectedComs>,
+    q_coms: Query<(Entity, &Parent, &ComsChannel)>,
+    q_local_player: Query<Entity, With<LocalPlayer>>,
+) {
+    let Ok(mut selected) = q_selected_coms.get_single_mut() else {
+        return;
+    };
+
+    let lp = q_local_player.get_single().expect("Local player missing");
+
+    let all_coms = q_coms.iter().filter(|(_, parent, _)| parent.get() == lp).collect::<Vec<_>>();
+    if let Some([prev, _]) = all_coms.array_windows::<2>().find(|[_, b]| b.0 == selected.0) {
+        selected.0 = prev.0;
+    } else {
+        if let Some(last) = all_coms.last() {
+            if selected.0 != last.0 {
+                selected.0 = last.0;
+            }
+        }
+    }
+}
+
+fn on_right_clicked(
+    mut q_selected_coms: Query<&mut SelectedComs>,
+    q_coms: Query<(Entity, &Parent, &ComsChannel)>,
+    q_local_player: Query<Entity, With<LocalPlayer>>,
+) {
+    let Ok(mut selected) = q_selected_coms.get_single_mut() else {
+        return;
+    };
+
+    let lp = q_local_player.get_single().expect("Local player missing");
+
+    let all_coms = q_coms.iter().filter(|(_, parent, _)| parent.get() == lp).collect::<Vec<_>>();
+    if let Some([_, next]) = all_coms.array_windows::<2>().find(|[a, _]| a.0 == selected.0) {
+        selected.0 = next.0;
+    } else {
+        if let Some(first) = all_coms.get(0) {
+            if selected.0 != first.0 {
+                selected.0 = first.0;
+            }
+        }
+    }
+}
+
 pub(super) fn register(app: &mut App) {
     app.add_systems(
         Update,
@@ -789,6 +865,8 @@ pub(super) fn register(app: &mut App) {
             send_text,
             yes_clicked,
             no_clicked,
+            on_left_clicked.run_if(on_event::<LeftClicked>),
+            on_right_clicked.run_if(on_event::<RightClicked>),
             end_selected_coms.run_if(on_event::<EndComsClicked>),
         )
             .chain()
