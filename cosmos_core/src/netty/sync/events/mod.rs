@@ -12,7 +12,7 @@
 //! # use crate::cosmos_core::netty::sync::events::server_event::NettyEventReceived;
 //! # use crate::cosmos_core::netty::sync::events::netty_event::SyncedEventImpl;
 //! // `core` project
-//! #[derive(Debug, Event, Serialize, Deserialize)]
+//! #[derive(Debug, Event, Serialize, Deserialize, Clone)]
 //! struct ExampleEvent(String);
 //!
 //! impl IdentifiableEvent for ExampleEvent {
