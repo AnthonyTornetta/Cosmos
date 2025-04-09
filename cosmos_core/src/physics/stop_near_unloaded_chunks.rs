@@ -1,16 +1,14 @@
 //! Freezes entities that are near unloaded chunks so they don't fly into unloaded areas.
 
-use bevy::prelude::{App, Commands, Entity, GlobalTransform, Parent, PostUpdate, Query, With, Without};
+use bevy::prelude::{App, Commands, Entity, GlobalTransform, Or, PostUpdate, Query, With};
 use bevy_rapier3d::prelude::Collider;
 
 use crate::{
-    ecs::NeedsDespawned,
+    entities::player::Player,
     physics::location::SECTOR_DIMENSIONS,
-    projectiles::laser::Laser,
+    prelude::Ship,
     structure::{
-        asteroid::Asteroid,
         coordinates::{UnboundChunkCoordinate, UnboundCoordinateType},
-        planet::Planet,
         structure_iterator::ChunkIteratorResult,
         ChunkState, Structure,
     },
@@ -24,16 +22,7 @@ const FREEZE_RADIUS: UnboundCoordinateType = 1;
 const REASON: &str = "cosmos:stop_near_unloaded_chunks";
 
 fn stop_near_unloaded_chunks(
-    mut query: Query<
-        (Entity, &Location, Option<&mut DisableRigidBody>),
-        (
-            Without<Asteroid>,
-            Without<Planet>,
-            Without<NeedsDespawned>,
-            Without<Laser>,
-            Without<Parent>,
-        ),
-    >,
+    mut query: Query<(Entity, &Location, Option<&mut DisableRigidBody>), Or<(With<Player>, With<Ship>)>>,
     structures: Query<(Entity, &Structure, &Location, &GlobalTransform)>,
     has_collider: Query<(), With<Collider>>,
     mut commands: Commands,

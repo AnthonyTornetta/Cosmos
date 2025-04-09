@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 use cosmos_core::{
     coms::{
-        events::{AcceptComsEvent, RequestComsEvent, SendComsMessage, SendComsMessageType},
+        events::{AcceptComsEvent, RequestCloseComsEvent, RequestComsEvent, SendComsMessage, SendComsMessageType},
         ComsChannel, ComsChannelType, ComsMessage, RequestedComs,
     },
     ecs::NeedsDespawned,
@@ -232,6 +232,52 @@ fn ensure_coms_still_active(mut commands: Commands, q_coms: Query<(Entity, &Coms
     }
 }
 
+fn on_req_close_coms(
+    lobby: Res<ServerLobby>,
+    q_pilot: Query<&Pilot>,
+    q_parent: Query<&Parent>,
+    mut nevr_close_coms: EventReader<NettyEventReceived<RequestCloseComsEvent>>,
+    q_coms: Query<(Entity, &ComsChannel)>,
+    mut commands: Commands,
+) {
+    for ev in nevr_close_coms.read() {
+        let Ok((coms_ent, coms)) = q_coms.get(ev.0) else {
+            warn!("Invalid coms ent - {:?}", ev.0);
+            continue;
+        };
+
+        let Some(player) = lobby.player_from_id(ev.client_id) else {
+            continue;
+        };
+        let Ok(pilot) = q_pilot.get(player) else {
+            continue;
+        };
+        let Ok(my_ship_ent) = q_parent.get(coms_ent) else {
+            warn!("Invalid coms heirarchy");
+            continue;
+        };
+
+        if my_ship_ent.get() != pilot.entity {
+            warn!("No authority to close this coms!");
+            continue;
+        }
+
+        let coms_parent = my_ship_ent.get();
+
+        let Some((other_coms_ent, _)) = q_coms
+            .iter()
+            .find(|(ent, x)| x.with == coms_parent && q_parent.get(*ent).expect("Invalid coms heirarchy").get() == coms.with)
+        else {
+            warn!("Unable to find coms.");
+            continue;
+        };
+
+        info!("Removing coms");
+        commands.entity(other_coms_ent).insert(NeedsDespawned);
+        commands.entity(coms_ent).insert(NeedsDespawned);
+    }
+}
+
 pub(super) fn register(app: &mut App) {
     app.add_systems(
         Update,
@@ -241,6 +287,7 @@ pub(super) fn register(app: &mut App) {
             tick_requested_coms,
             ensure_coms_still_active,
             send_coms_message,
+            on_req_close_coms,
         )
             .chain()
             .in_set(NetworkingSystemsSet::Between),

@@ -13,7 +13,7 @@ use crate::{
     },
 };
 use bevy::{a11y::Focus, color::palettes::css, prelude::*};
-use cosmos_core::structure::ship::pilot::Pilot;
+use cosmos_core::{coms::events::RequestCloseComsEvent, structure::ship::pilot::Pilot};
 use cosmos_core::{coms::events::SendComsMessageType, state::GameState};
 use cosmos_core::{coms::ComsChannelType, netty::system_sets::NetworkingSystemsSet};
 use cosmos_core::{coms::ComsMessage, netty::client::LocalPlayer};
@@ -404,7 +404,19 @@ fn create_coms_ui(
                             p.spawn((
                                 Node {
                                     height: Val::Px(50.0),
-                                    width: Val::Percent(100.0),
+                                    width: Val::Percent(50.0),
+                                    ..Default::default()
+                                },
+                                CosmosButton::<EndComsClicked> {
+                                    text: Some(("END COM".into(), message_font.clone(), Default::default())),
+                                    ..Default::default()
+                                },
+                            ));
+
+                            p.spawn((
+                                Node {
+                                    height: Val::Px(50.0),
+                                    width: Val::Percent(50.0),
                                     ..Default::default()
                                 },
                                 CosmosButton::<SendClicked> {
@@ -554,6 +566,15 @@ impl ButtonEvent for LeftClicked {
 struct RightClicked;
 
 impl ButtonEvent for RightClicked {
+    fn create_event(_: Entity) -> Self {
+        Self
+    }
+}
+
+#[derive(Event, Debug)]
+struct EndComsClicked;
+
+impl ButtonEvent for EndComsClicked {
     fn create_event(_: Entity) -> Self {
         Self
     }
@@ -748,6 +769,14 @@ fn no_clicked(
     });
 }
 
+fn end_selected_coms(mut evw_close_coms: NettyEventWriter<RequestCloseComsEvent>, mut q_selected_coms: Query<&mut SelectedComs>) {
+    let Ok(selected) = q_selected_coms.get_single_mut() else {
+        return;
+    };
+
+    evw_close_coms.send(RequestCloseComsEvent(selected.0));
+}
+
 pub(super) fn register(app: &mut App) {
     app.add_systems(
         Update,
@@ -760,6 +789,7 @@ pub(super) fn register(app: &mut App) {
             send_text,
             yes_clicked,
             no_clicked,
+            end_selected_coms.run_if(on_event::<EndComsClicked>),
         )
             .chain()
             .run_if(in_state(GameState::Playing))
@@ -772,6 +802,7 @@ pub(super) fn register(app: &mut App) {
     register_button::<YesClicked>(app);
     register_button::<NoClicked>(app);
     register_button::<ToggleButton>(app);
+    register_button::<EndComsClicked>(app);
 
     load_assets::<Image, ComsAssets, 2>(
         app,
