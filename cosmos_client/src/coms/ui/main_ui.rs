@@ -740,7 +740,7 @@ fn minimize_ui(
         return;
     };
 
-    let all_coms = get_all_coms(&q_coms, &q_pilot, &q_local_player);
+    let all_coms = get_all_coms(q_coms, q_pilot, q_local_player);
 
     let on_screen_amt = if all_coms.is_empty() { -50.0 } else { 50.0 };
 
@@ -810,7 +810,6 @@ fn send_text(
         return;
     };
 
-    info!("Sending message: {}", val);
     nevw_send_coms_message.send(SendComsMessage {
         message: SendComsMessageType::Message(val.to_owned()),
         to: coms_channel.with,
@@ -837,7 +836,6 @@ fn yes_clicked(
         return;
     };
 
-    info!("Sending yes");
     nevw_send_coms_message.send(SendComsMessage {
         message: SendComsMessageType::Yes,
         to: coms_channel.with,
@@ -862,7 +860,6 @@ fn no_clicked(
         return;
     };
 
-    info!("Sending yes");
     nevw_send_coms_message.send(SendComsMessage {
         message: SendComsMessageType::No,
         to: coms_channel.with,
@@ -891,15 +888,9 @@ fn on_left_clicked(
 
     if let Some([prev, _]) = all_coms.array_windows::<2>().find(|[_, b]| b.0 == selected.0) {
         selected.0 = prev.0;
-        info!("prev");
-    } else {
-        if let Some(last) = all_coms.last() {
-            if selected.0 != last.0 {
-                selected.0 = last.0;
-                info!("last");
-            }
-        } else {
-            info!("nothin");
+    } else if let Some(last) = all_coms.last() {
+        if selected.0 != last.0 {
+            selected.0 = last.0;
         }
     }
 }
@@ -918,11 +909,9 @@ fn on_right_clicked(
 
     if let Some([_, next]) = all_coms.array_windows::<2>().find(|[a, _]| a.0 == selected.0) {
         selected.0 = next.0;
-    } else {
-        if let Some(first) = all_coms.get(0) {
-            if selected.0 != first.0 {
-                selected.0 = first.0;
-            }
+    } else if let Some(first) = all_coms.first() {
+        if selected.0 != first.0 {
+            selected.0 = first.0;
         }
     }
 }
