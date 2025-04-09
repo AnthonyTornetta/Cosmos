@@ -12,7 +12,7 @@ use crate::{
         CloseMenuEvent, CloseMethod, OpenMenu,
     },
 };
-use bevy::{a11y::Focus, color::palettes::css, prelude::*, text::FontStyle};
+use bevy::{a11y::Focus, color::palettes::css, prelude::*};
 use cosmos_core::{coms::events::RequestCloseComsEvent, structure::ship::pilot::Pilot};
 use cosmos_core::{coms::events::SendComsMessageType, state::GameState};
 use cosmos_core::{coms::ComsChannelType, netty::system_sets::NetworkingSystemsSet};
@@ -217,16 +217,6 @@ fn on_remove_coms(
                 message_font.clone(),
             ));
         });
-
-        // let lp = q_local_player.get_single().expect("Local player missing");
-        //
-        // let mut all_coms = q_coms.iter().filter(|(_, parent, _)| parent.get() == lp);
-        //
-        // if let Some((coms_ent, _, _)) = all_coms.next() {
-        //     selected_coms.0 = coms_ent;
-        // } else if let Ok(coms_ui_ent) = q_coms_ui.get_single() {
-        //     commands.entity(coms_ui_ent).despawn_recursive();
-        // }
     }
 }
 
@@ -423,14 +413,12 @@ fn create_coms_ui(
                                 },
                             ));
 
-                            p.spawn(
-                                (Node {
-                                    height: Val::Px(50.0),
-                                    width: Val::Percent(100.0),
-                                    flex_direction: FlexDirection::Row,
-                                    ..Default::default()
-                                }),
-                            )
+                            p.spawn(Node {
+                                height: Val::Px(50.0),
+                                width: Val::Percent(100.0),
+                                flex_direction: FlexDirection::Row,
+                                ..Default::default()
+                            })
                             .with_children(|p| {
                                 p.spawn((
                                     Node {
@@ -646,23 +634,85 @@ impl ButtonEvent for ToggleButton {
     }
 }
 
+fn on_not_pilot(
+    mut commands: Commands,
+    mut q_coms_ui: Query<(Entity, &mut Node, Has<ShowCursor>), With<ComsUi>>,
+    coms_assets: Res<ComsAssets>,
+    mut q_toggle_button: Query<&mut CosmosButton<ToggleButton>>,
+    mut focused: ResMut<Focus>,
+    q_coms: Query<(Entity, &Parent, &ComsChannel)>,
+    q_local_player: Query<Entity, With<LocalPlayer>>,
+    q_pilot: Query<&Pilot>,
+    q_lp_not_pilot: Query<(), (With<LocalPlayer>, Without<Pilot>)>,
+) {
+    if q_lp_not_pilot.is_empty() {
+        return;
+    }
+    let Ok((entity, mut node, has)) = q_coms_ui.get_single_mut() else {
+        return;
+    };
+    if has {
+        minimize_ui(
+            &mut commands,
+            &coms_assets,
+            &mut q_toggle_button,
+            entity,
+            &mut node,
+            &mut focused,
+            &q_coms,
+            &q_local_player,
+            &q_pilot,
+        );
+    }
+}
+
 fn on_toggle(
     mut commands: Commands,
     inputs: InputChecker,
+    mut q_selected_coms: Query<&mut SelectedComs>,
     mut q_coms_ui: Query<(Entity, &mut Node, Has<ShowCursor>), With<ComsUi>>,
     mut evr_toggle: EventReader<ToggleButton>,
     coms_assets: Res<ComsAssets>,
     mut q_toggle_button: Query<&mut CosmosButton<ToggleButton>>,
     mut focused: ResMut<Focus>,
+    q_coms: Query<(Entity, &Parent, &ComsChannel)>,
+    q_local_player: Query<Entity, With<LocalPlayer>>,
+    q_pilot: Query<&Pilot>,
 ) {
-    if evr_toggle.read().next().is_none() & !inputs.check_just_pressed(CosmosInputs::ToggleComs) {
+    if evr_toggle.read().next().is_none() && !inputs.check_just_pressed(CosmosInputs::ToggleComs) {
+        return;
+    }
+
+    let Ok(lp) = q_local_player.get_single() else {
+        return;
+    };
+    if !q_pilot.contains(lp) {
         return;
     }
 
     for (entity, mut node, has) in q_coms_ui.iter_mut() {
         if has {
-            minimize_ui(&mut commands, &coms_assets, &mut q_toggle_button, entity, &mut node, &mut focused);
+            minimize_ui(
+                &mut commands,
+                &coms_assets,
+                &mut q_toggle_button,
+                entity,
+                &mut node,
+                &mut focused,
+                &q_coms,
+                &q_local_player,
+                &q_pilot,
+            );
         } else {
+            if let Ok(mut selected) = q_selected_coms.get_single_mut() {
+                if !q_coms.contains(selected.0) {
+                    let all_coms = get_all_coms(&q_coms, &q_pilot, &q_local_player);
+                    let Some(first) = all_coms.first() else {
+                        continue;
+                    };
+                    selected.0 = first.0;
+                }
+            }
             node.right = Val::Px(0.0);
             commands
                 .entity(entity)
@@ -682,12 +732,19 @@ fn minimize_ui(
     entity: Entity,
     node: &mut Node,
     focused: &mut Focus,
+    q_coms: &Query<(Entity, &Parent, &ComsChannel)>,
+    q_local_player: &Query<Entity, With<LocalPlayer>>,
+    q_pilot: &Query<&Pilot>,
 ) {
     let Val::Px(w) = node.width else {
         return;
     };
 
-    node.right = Val::Px(-w + 50.0);
+    let all_coms = get_all_coms(&q_coms, &q_pilot, &q_local_player);
+
+    let on_screen_amt = if all_coms.is_empty() { -50.0 } else { 50.0 };
+
+    node.right = Val::Px(-w + on_screen_amt);
     commands.entity(entity).remove::<ShowCursor>().remove::<OpenMenu>();
     focused.0 = None;
     if let Ok(mut tb) = q_toggle_button.get_single_mut() {
@@ -702,10 +759,23 @@ fn on_close_menu(
     mut commands: Commands,
     mut q_toggle_button: Query<&mut CosmosButton<ToggleButton>>,
     mut focused: ResMut<Focus>,
+    q_coms: Query<(Entity, &Parent, &ComsChannel)>,
+    q_local_player: Query<Entity, With<LocalPlayer>>,
+    q_pilot: Query<&Pilot>,
 ) {
     for ev in evr.read() {
         if let Ok(mut node) = q_coms_ui.get_mut(ev.0) {
-            minimize_ui(&mut commands, &coms_assets, &mut q_toggle_button, ev.0, &mut node, &mut focused);
+            minimize_ui(
+                &mut commands,
+                &coms_assets,
+                &mut q_toggle_button,
+                ev.0,
+                &mut node,
+                &mut focused,
+                &q_coms,
+                &q_local_player,
+                &q_pilot,
+            );
         }
     }
 }
@@ -811,21 +881,25 @@ fn on_left_clicked(
     mut q_selected_coms: Query<&mut SelectedComs>,
     q_coms: Query<(Entity, &Parent, &ComsChannel)>,
     q_local_player: Query<Entity, With<LocalPlayer>>,
+    q_pilot: Query<&Pilot>,
 ) {
     let Ok(mut selected) = q_selected_coms.get_single_mut() else {
         return;
     };
 
-    let lp = q_local_player.get_single().expect("Local player missing");
+    let all_coms = get_all_coms(&q_coms, &q_pilot, &q_local_player);
 
-    let all_coms = q_coms.iter().filter(|(_, parent, _)| parent.get() == lp).collect::<Vec<_>>();
     if let Some([prev, _]) = all_coms.array_windows::<2>().find(|[_, b]| b.0 == selected.0) {
         selected.0 = prev.0;
+        info!("prev");
     } else {
         if let Some(last) = all_coms.last() {
             if selected.0 != last.0 {
                 selected.0 = last.0;
+                info!("last");
             }
+        } else {
+            info!("nothin");
         }
     }
 }
@@ -833,15 +907,15 @@ fn on_left_clicked(
 fn on_right_clicked(
     mut q_selected_coms: Query<&mut SelectedComs>,
     q_coms: Query<(Entity, &Parent, &ComsChannel)>,
+    q_pilot: Query<&Pilot>,
     q_local_player: Query<Entity, With<LocalPlayer>>,
 ) {
     let Ok(mut selected) = q_selected_coms.get_single_mut() else {
         return;
     };
 
-    let lp = q_local_player.get_single().expect("Local player missing");
+    let all_coms = get_all_coms(&q_coms, &q_pilot, &q_local_player);
 
-    let all_coms = q_coms.iter().filter(|(_, parent, _)| parent.get() == lp).collect::<Vec<_>>();
     if let Some([_, next]) = all_coms.array_windows::<2>().find(|[a, _]| a.0 == selected.0) {
         selected.0 = next.0;
     } else {
@@ -853,6 +927,24 @@ fn on_right_clicked(
     }
 }
 
+fn get_all_coms<'a>(
+    q_coms: &'a Query<(Entity, &Parent, &ComsChannel)>,
+    q_pilot: &'a Query<&Pilot>,
+    q_local_player: &'a Query<Entity, With<LocalPlayer>>,
+) -> Vec<(Entity, &'a Parent, &'a ComsChannel)> {
+    let lp = q_local_player.get_single().expect("Local player missing");
+    let Ok(pilot) = q_pilot.get(lp) else {
+        return vec![];
+    };
+    let lp_piloting_ship = pilot.entity;
+
+    let all_coms = q_coms
+        .iter()
+        .filter(|(_, parent, _)| parent.get() == lp_piloting_ship)
+        .collect::<Vec<_>>();
+    all_coms
+}
+
 pub(super) fn register(app: &mut App) {
     app.add_systems(
         Update,
@@ -861,6 +953,7 @@ pub(super) fn register(app: &mut App) {
             on_change_coms,
             on_change_selected_coms,
             on_toggle,
+            on_not_pilot,
             on_close_menu,
             send_text,
             yes_clicked,

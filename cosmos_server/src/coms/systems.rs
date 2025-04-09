@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 use cosmos_core::{
     coms::{
-        events::{AcceptComsEvent, RequestCloseComsEvent, RequestComsEvent, SendComsMessage, SendComsMessageType},
+        events::{AcceptComsEvent, DeclineComsEvent, RequestCloseComsEvent, RequestComsEvent, SendComsMessage, SendComsMessageType},
         ComsChannel, ComsChannelType, ComsMessage, RequestedComs,
     },
     ecs::NeedsDespawned,
@@ -278,6 +278,25 @@ fn on_req_close_coms(
     }
 }
 
+fn on_decline_coms(
+    mut commands: Commands,
+    lobby: Res<ServerLobby>,
+    mut nevr_decline_coms: EventReader<NettyEventReceived<DeclineComsEvent>>,
+    q_piloting: Query<&Pilot>,
+) {
+    for ev in nevr_decline_coms.read() {
+        let Some(player) = lobby.player_from_id(ev.client_id) else {
+            continue;
+        };
+
+        let Ok(pilot) = q_piloting.get(player) else {
+            continue;
+        };
+
+        commands.entity(pilot.entity).remove::<RequestedComs>();
+    }
+}
+
 pub(super) fn register(app: &mut App) {
     app.add_systems(
         Update,
@@ -288,6 +307,7 @@ pub(super) fn register(app: &mut App) {
             ensure_coms_still_active,
             send_coms_message,
             on_req_close_coms,
+            on_decline_coms,
         )
             .chain()
             .in_set(NetworkingSystemsSet::Between),

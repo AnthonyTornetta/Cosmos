@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 use cosmos_core::{
-    coms::events::AcceptComsEvent,
+    coms::events::{AcceptComsEvent, DeclineComsEvent},
     netty::{sync::events::client_event::NettyEventWriter, system_sets::NetworkingSystemsSet},
 };
 
@@ -71,13 +71,20 @@ fn press_accept(
     nevw_accept_coms.send(AcceptComsEvent(rendered_req_coms_ui.0));
 }
 
-fn press_decline(mut commands: Commands, inputs: InputChecker, q_rendered_coms_req_ui: Query<Entity, With<RenderedComsRequestUi>>) {
+fn press_decline(
+    mut nevw_decline_coms: NettyEventWriter<DeclineComsEvent>,
+    mut commands: Commands,
+    inputs: InputChecker,
+    q_rendered_coms_req_ui: Query<Entity, With<RenderedComsRequestUi>>,
+) {
     if !inputs.check_just_pressed(CosmosInputs::DeclineComsRequest) {
         return;
     }
     let Ok(ent) = q_rendered_coms_req_ui.get_single() else {
         return;
     };
+
+    nevw_decline_coms.send_default();
 
     commands.entity(ent).despawn_recursive();
 }
