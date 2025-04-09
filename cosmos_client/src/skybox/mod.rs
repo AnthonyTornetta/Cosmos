@@ -56,9 +56,23 @@ fn on_enter_playing_state(cubemap: Res<Cubemap>, mut commands: Commands, query: 
     }
 }
 
+#[derive(Component)]
+/// Add this to any camera that also needs to display the skybox
+pub struct NeedsSkybox;
+
+fn add_skybox_to_needed(cubemap: Res<Cubemap>, mut commands: Commands, q_needs_skybox: Query<Entity, With<NeedsSkybox>>) {
+    for e in q_needs_skybox.iter() {
+        commands.entity(e).insert(Skybox {
+            rotation: Quat::IDENTITY,
+            image: cubemap.image_handle.clone(),
+            brightness: 1000.0,
+        });
+    }
+}
+
 pub(super) fn register(app: &mut App) {
     app //.add_plugin(MaterialPlugin::<CubemapMaterial>::default())
         .add_systems(Startup, setup)
-        .add_systems(Update, (asset_loaded).chain())
+        .add_systems(Update, (asset_loaded, add_skybox_to_needed).chain())
         .add_systems(OnEnter(GameState::Playing), on_enter_playing_state);
 }
