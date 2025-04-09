@@ -96,7 +96,7 @@ fn create_focused_ui(mut commands: Commands, handle: Res<FocusCamImage>) {
         });
 }
 
-pub struct FocusCamDistance(f32);
+// pub struct FocusCamDistance(f32);
 
 fn render_on_focus(
     mut q_cam: Query<(&mut Transform, &mut Camera), With<FocusedCam>>,
