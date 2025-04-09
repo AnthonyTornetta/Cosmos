@@ -9,6 +9,7 @@ use cosmos_core::ecs::NeedsDespawned;
 
 use crate::ui::UiSystemSet;
 
+use super::show_cursor::any_open_menus;
 use super::Disabled;
 
 /// An event that will be created and sent when a button is interacted with
@@ -260,7 +261,9 @@ pub fn register_button<T: ButtonEvent>(app: &mut App) {
         (
             on_add_button::<T>.in_set(ButtonUiSystemSet::AddButtonBundle),
             on_change_button::<T>.in_set(ButtonUiSystemSet::SendButtonEvents),
-            on_interact_button::<T>.in_set(ButtonUiSystemSet::SendButtonEvents),
+            on_interact_button::<T>
+                .in_set(ButtonUiSystemSet::SendButtonEvents)
+                .run_if(any_open_menus),
         )
             .chain(),
     )

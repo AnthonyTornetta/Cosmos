@@ -44,6 +44,16 @@ pub fn no_open_menus(q_show_cursor: Query<(), With<ShowCursor>>) -> bool {
     q_show_cursor.is_empty()
 }
 
+/// A system that returns true if there are no some open menus.
+///
+/// Ex:
+/// ```rs
+/// app.add_systems(Update, process_button_clicks.run_if(open_menus));
+/// ```
+pub fn any_open_menus(q_show_cursor: Query<(), With<ShowCursor>>) -> bool {
+    !q_show_cursor.is_empty()
+}
+
 pub(super) fn register(app: &mut App) {
     app.add_systems(
         Update,

@@ -112,8 +112,54 @@ impl NettyEvent for SendComsMessage {
     }
 }
 
+#[derive(Event, Serialize, Deserialize, Debug, Clone, Default)]
+/// Sent when a Player declines a coms event.
+pub struct DeclineComsEvent;
+
+impl IdentifiableEvent for DeclineComsEvent {
+    fn unlocalized_name() -> &'static str {
+        "cosmos:decline_coms"
+    }
+}
+
+impl NettyEvent for DeclineComsEvent {
+    fn event_receiver() -> crate::netty::sync::events::netty_event::EventReceiver {
+        crate::netty::sync::events::netty_event::EventReceiver::Server
+    }
+}
+
+#[derive(Event, Serialize, Deserialize, Debug, Clone)]
+/// Sent when a Player wants to close a coms channel.
+///
+/// The entity will represent the entity that this player wants to close the coms event of.
+pub struct RequestCloseComsEvent(pub Entity);
+
+impl IdentifiableEvent for RequestCloseComsEvent {
+    fn unlocalized_name() -> &'static str {
+        "cosmos:req_close_coms"
+    }
+}
+
+impl NettyEvent for RequestCloseComsEvent {
+    fn event_receiver() -> crate::netty::sync::events::netty_event::EventReceiver {
+        crate::netty::sync::events::netty_event::EventReceiver::Server
+    }
+
+    #[cfg(feature = "client")]
+    fn needs_entity_conversion() -> bool {
+        true
+    }
+
+    #[cfg(feature = "client")]
+    fn convert_entities_client_to_server(self, mapping: &crate::netty::sync::mapping::NetworkMapping) -> Option<Self> {
+        mapping.server_from_client(&self.0).map(Self)
+    }
+}
+
 pub(super) fn register(app: &mut App) {
     app.add_netty_event::<RequestComsEvent>()
         .add_netty_event::<AcceptComsEvent>()
+        .add_netty_event::<DeclineComsEvent>()
+        .add_netty_event::<RequestCloseComsEvent>()
         .add_netty_event::<SendComsMessage>();
 }

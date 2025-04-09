@@ -24,7 +24,7 @@ use crate::netty::system_sets::NetworkingSystemsSet;
 /// this rigidbody. If there are no reasons, the body will be enabled. If there are any current
 /// reasons, the body will be disabled.
 pub struct DisableRigidBody {
-    reasons: Vec<&'static str>,
+    reasons: Vec<String>,
 }
 
 impl DisableRigidBody {
@@ -38,7 +38,7 @@ impl DisableRigidBody {
         if self.contains_reason(reason) {
             return;
         }
-        self.reasons.push(reason);
+        self.reasons.push(reason.into());
     }
 
     /// Removes your reason for this being disabled.
@@ -50,7 +50,7 @@ impl DisableRigidBody {
 
     /// Checks if this contains the given reason
     pub fn contains_reason(&self, reason: &str) -> bool {
-        self.reasons.contains(&reason)
+        self.reasons.iter().any(|x| x.as_str() == reason)
     }
 }
 

@@ -33,7 +33,7 @@ use crate::{
 
 use super::{
     button::{register_button, ButtonEvent, CosmosButton},
-    show_cursor::ShowCursor,
+    show_cursor::{any_open_menus, ShowCursor},
 };
 
 #[derive(Debug, Component, Default)]
@@ -264,7 +264,7 @@ pub(super) fn register(app: &mut App) {
             add_window
                 .in_set(UiWindowSystemSet::CreateWindow)
                 .run_if(resource_exists::<WindowAssets>),
-            (move_window, close_event_listener).in_set(UiWindowSystemSet::SendWindowEvents),
+            (move_window.run_if(any_open_menus), close_event_listener).in_set(UiWindowSystemSet::SendWindowEvents),
         ),
     );
 }
