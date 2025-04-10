@@ -22,7 +22,7 @@ use cosmos_core::{
         netty_rigidbody::{NettyRigidBody, NettyRigidBodyLocation},
         server::ServerLobby,
         server_reliable_messages::ServerReliableMessages,
-        sync::{events::server_event::NettyEventWriter, registry::server::SyncRegistriesEvent, ComponentSyncingSet},
+        sync::{events::server_event::NettyEventWriter, registry::server::SyncRegistriesEvent, ComponentSyncingSet, IdentifiableComponent},
         system_sets::NetworkingSystemsSet,
         NettyChannelServer,
     },
@@ -38,6 +38,7 @@ use crate::{
     netty::server_events::PlayerConnectedEvent,
     persistence::{
         loading::{LoadingSystemSet, NeedsLoaded, LOADING_SCHEDULE},
+        make_persistent::{make_persistent, DefaultPersistentComponent},
         saving::{calculate_sfi, NeedsSaved, SavingSystemSet, SAVING_SCHEDULE},
         SaveFileIdentifier, SerializedData,
     },
@@ -74,14 +75,27 @@ fn generate_player_file_id(player_name: &str) -> String {
 
 const PLAYER_LINK_PATH: &str = "world/players";
 
+#[derive(Component, Serialize, Deserialize, Debug, Reflect)]
+struct PlayerSaveLink {
+    name: String,
+}
+
+impl IdentifiableComponent for PlayerSaveLink {
+    fn get_component_unlocalized_name() -> &'static str {
+        "cosmos:player_save_link"
+    }
+}
+
+impl DefaultPersistentComponent for PlayerSaveLink {}
+
 /// Creates a file that points the player's name to their respective data file.
 fn save_player_link(
     q_parent: Query<&Parent>,
     q_entity_id: Query<&EntityId>,
-    q_player_needs_saved: Query<(Entity, &EntityId, &Player, &Location), With<NeedsSaved>>,
+    q_player_link_needs_saved: Query<(Entity, &EntityId, &PlayerSaveLink, &Location), With<NeedsSaved>>,
     q_serialized_data: Query<(&SerializedData, &EntityId, Option<&LoadingDistance>)>,
 ) {
-    for (entity, e_id, player, loc) in q_player_needs_saved.iter() {
+    for (entity, e_id, player, loc) in q_player_link_needs_saved.iter() {
         info!("Saving player {player:?} ({entity:?}) @ {loc}");
         let _ = fs::create_dir_all(PLAYER_LINK_PATH);
 
@@ -96,13 +110,34 @@ fn save_player_link(
 
         let json_data = serde_json::to_string(&player_identifier).expect("Failed to create json");
 
-        let player_file_name = generate_player_file_id(player.name());
+        let player_file_name = generate_player_file_id(&player.name);
         fs::write(format!("{PLAYER_LINK_PATH}/{player_file_name}"), json_data).expect("Failed to save player!!!");
     }
 }
 
-fn load_player(mut commands: Commands, q_player_needs_loaded: Query<(Entity, &LoadPlayer)>, q_entity_ids: Query<&EntityId>) {
+fn load_player(
+    mut commands: Commands,
+    q_player_needs_loaded: Query<(Entity, &LoadPlayer)>,
+    q_entity_ids: Query<&EntityId>,
+    q_player_save_links: Query<(Entity, &PlayerSaveLink), Without<Player>>,
+) {
     for (ent, load_player) in q_player_needs_loaded.iter() {
+        if let Some((already_loaded_player_link, _)) = q_player_save_links.iter().find(|(_, link)| link.name == load_player.name) {
+            info!(
+                "Player entity already exists in game for {} - adding Player component.",
+                load_player.name
+            );
+
+            commands
+                .entity(already_loaded_player_link)
+                .insert(Player::new(load_player.name.clone(), load_player.client_id));
+
+            // We don't need this anymore, since this player already has their link loaded.
+            commands.entity(ent).despawn_recursive();
+
+            continue;
+        }
+
         let player_file_name = generate_player_file_id(&load_player.name);
 
         info!("Attempting to load player {}", load_player.name);
@@ -325,7 +360,22 @@ fn finish_loading_player(
     }
 }
 
+fn add_player_save_link(mut commands: Commands, q_player_needs_save_link: Query<(Entity, &Player), Without<PlayerSaveLink>>) {
+    for (e, player) in q_player_needs_save_link.iter() {
+        commands.entity(e).insert(PlayerSaveLink {
+            name: player.name().to_owned(),
+        });
+    }
+}
+
+fn name_player_save_links(mut commands: Commands, q_player_save_links: Query<(Entity, &PlayerSaveLink), Without<Player>>) {
+    for (e, link) in q_player_save_links.iter() {
+        commands.entity(e).insert(Name::new(format!("Player Save Link ({})", link.name)));
+    }
+}
+
 pub(super) fn register(app: &mut App) {
+    make_persistent::<PlayerSaveLink>(app);
     app.add_systems(
         SAVING_SCHEDULE,
         save_player_link
@@ -340,11 +390,13 @@ pub(super) fn register(app: &mut App) {
                 .before(LoadingSystemSet::BeginLoading)
                 .before(LocationPhysicsSet::DoPhysics)
                 .in_set(NetworkingSystemsSet::Between),
-            finish_loading_player
+            (finish_loading_player, add_player_save_link, name_player_save_links)
+                .chain()
                 .in_set(NetworkingSystemsSet::SyncComponents)
                 .before(ComponentSyncingSet::PreComponentSyncing)
                 .after(LoadingSystemSet::DoneLoading),
         )
             .chain(),
-    );
+    )
+    .register_type::<PlayerSaveLink>();
 }
