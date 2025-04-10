@@ -74,6 +74,7 @@ See [the issues page](https://github.com/AnthonyTornetta/Cosmos/issues) for the 
 - [ ] Performance fixes
 - [ ] Fix server instability
 - [ ] Reduce amount of packets server sends per second
+- [x] Ship focus camera
 - [x] Rebalance shop prices
 - [x] Add ability for player to die
   - [ ] Respawn anchor
