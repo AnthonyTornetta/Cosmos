@@ -39,6 +39,7 @@ use crate::{
     persistence::{
         loading::{LoadingSystemSet, NeedsLoaded, LOADING_SCHEDULE},
         make_persistent::{make_persistent, DefaultPersistentComponent},
+        player_loading::RecomputeNeedLoadedChildren,
         saving::{calculate_sfi, NeedsSaved, SavingSystemSet, SAVING_SCHEDULE},
         SaveFileIdentifier, SerializedData,
     },
@@ -90,6 +91,7 @@ impl DefaultPersistentComponent for PlayerSaveLink {}
 
 /// Creates a file that points the player's name to their respective data file.
 fn save_player_link(
+    mut commands: Commands,
     q_parent: Query<&Parent>,
     q_entity_id: Query<&EntityId>,
     q_player_link_needs_saved: Query<(Entity, &EntityId, &PlayerSaveLink, &Location), With<NeedsSaved>>,
@@ -98,6 +100,20 @@ fn save_player_link(
     for (entity, e_id, player, loc) in q_player_link_needs_saved.iter() {
         info!("Saving player {player:?} ({entity:?}) @ {loc}");
         let _ = fs::create_dir_all(PLAYER_LINK_PATH);
+
+        let mut parent = q_parent.get(entity).ok();
+        while let Some(p) = parent {
+            let next = q_parent.get(p.get()).ok();
+            if next.is_some() {
+                parent = next;
+            } else {
+                break;
+            }
+        }
+        if let Some(parent) = parent {
+            // We need to load the player save link immediately after this is saved.
+            commands.entity(parent.get()).insert(RecomputeNeedLoadedChildren);
+        }
 
         let sfi = calculate_sfi(entity, &q_parent, &q_entity_id, &q_serialized_data).expect("Missing save file identifier for player!");
 

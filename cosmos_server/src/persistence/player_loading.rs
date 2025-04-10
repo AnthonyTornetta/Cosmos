@@ -8,7 +8,9 @@ use std::{
 
 use bevy::{
     log::{info, warn},
-    prelude::{not, resource_exists, App, Commands, Entity, IntoSystemConfigs, Name, Or, Query, ResMut, Resource, Update, With, Without},
+    prelude::{
+        not, resource_exists, App, Commands, Component, Entity, IntoSystemConfigs, Name, Or, Query, ResMut, Resource, Update, With, Without,
+    },
     state::condition::in_state,
     tasks::{AsyncComputeTaskPool, Task},
     time::common_conditions::on_timer,
@@ -91,10 +93,16 @@ fn monitor_loading_task(
     }
 }
 
+#[derive(Component)]
+/// This component can be added to any entity, which will signify to the loading system that its
+/// children may not all be loaded.
+pub struct RecomputeNeedLoadedChildren;
+
 /// Performance hot spot
 fn load_near(
     q_player_locations: Query<&Location, With<Anchor>>,
     loaded_entities: Query<&EntityId>,
+    q_need_reloaded_children: Query<(&EntityId, Entity), With<RecomputeNeedLoadedChildren>>,
     // This is modified below, despite it being cloned. Use ResMut to make purpose clear
     sectors_cache: ResMut<SectorsCache>,
     mut commands: Commands,
@@ -112,7 +120,11 @@ fn load_near(
     let mut sectors_cache = sectors_cache.clone();
 
     // If this ever gets laggy, either of this clone could be the cause
-    let loaded_entities = loaded_entities.iter().cloned().collect::<Vec<EntityId>>();
+    let loaded_entities = loaded_entities.iter().copied().collect::<Vec<_>>();
+    let need_reloaded_children = q_need_reloaded_children.iter().map(|x| *x.0).collect::<Vec<_>>();
+    for (_, ent) in q_need_reloaded_children.iter() {
+        commands.entity(ent).remove::<RecomputeNeedLoadedChildren>();
+    }
 
     let task = thread_pool.spawn(async move {
         let mut to_load = vec![];
@@ -127,7 +139,7 @@ fn load_near(
                         if let Some(entities) = sectors_cache.get(&sector) {
                             for (entity_id, load_distance) in entities.lock().expect("Failed to lock").iter() {
                                 if max_delta <= load_distance.unwrap_or(DEFAULT_LOAD_DISTANCE)
-                                    && !loaded_entities.iter().any(|x| x == entity_id)
+                                    && (need_reloaded_children.contains(entity_id) || !loaded_entities.contains(entity_id))
                                 {
                                     to_load.push(SaveFileIdentifier::new(Some(sector), *entity_id, *load_distance));
                                 }
@@ -169,7 +181,7 @@ fn load_near(
                                         sectors_cache.insert(sector, entity_id, load_distance);
 
                                         if max_delta <= load_distance.unwrap_or(DEFAULT_LOAD_DISTANCE)
-                                            && !loaded_entities.iter().any(|x| x == &entity_id)
+                                            && (need_reloaded_children.contains(&entity_id) || !loaded_entities.contains(&entity_id))
                                         {
                                             to_load.push(SaveFileIdentifier::new(Some(sector), entity_id, load_distance));
                                         }
@@ -182,10 +194,9 @@ fn load_near(
             }
         }
 
+        // This will load any children of the ones we marked to load
         let mut new_to_load = Vec::with_capacity(to_load.len());
         for sfi in to_load {
-            // TODO: Not sure why this exists... for now I'm keeping it, but remove this in the future.
-
             let child_dir = sfi.get_children_directory();
 
             for file in WalkDir::new(&child_dir)
