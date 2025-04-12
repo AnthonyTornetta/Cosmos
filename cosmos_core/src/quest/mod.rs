@@ -49,6 +49,7 @@ impl OngoingQuest {
 }
 
 impl OngoingQuests {
+    /// Iterates over all ongoing quests
     pub fn iter(&self) -> impl Iterator<Item = &OngoingQuest> {
         self.0.iter()
     }
