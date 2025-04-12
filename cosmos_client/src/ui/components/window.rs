@@ -3,7 +3,7 @@
 use bevy::{
     app::{App, Update},
     asset::Handle,
-    color::palettes::css,
+    color::{palettes::css, Srgba},
     core::Name,
     ecs::{
         component::Component,
@@ -156,6 +156,7 @@ fn add_window(
                 parent
                     .spawn((
                         Name::new("Window Body"),
+                        BackgroundColor(Srgba::hex("3D3D3D").unwrap().into()),
                         Node {
                             flex_grow: 1.0,
                             ..window.body_styles.clone()

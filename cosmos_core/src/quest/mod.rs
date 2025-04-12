@@ -49,6 +49,10 @@ impl OngoingQuest {
 }
 
 impl OngoingQuests {
+    pub fn iter(&self) -> impl Iterator<Item = &OngoingQuest> {
+        self.0.iter()
+    }
+
     /// Starts a quest with the given details.
     pub fn start_quest(&mut self, quest: &Quest, details: OngoingQuestDetails) -> OngoingQuestId {
         let id = OngoingQuestId(Uuid::new_v4());
@@ -94,7 +98,8 @@ impl SyncableComponent for OngoingQuests {
 pub struct Quest {
     id: u16,
     unlocalized_name: String,
-    description: String,
+    /// TODO: Encode this in some sort of registry loaded from a lang file
+    pub description: String,
 }
 
 impl Quest {

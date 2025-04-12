@@ -2,4 +2,10 @@
 
 use bevy::prelude::*;
 
-pub(super) fn register(_app: &mut App) {}
+mod lang;
+mod ui;
+
+pub(super) fn register(app: &mut App) {
+    ui::register(app);
+    lang::register(app);
+}

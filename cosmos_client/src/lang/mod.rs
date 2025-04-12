@@ -5,10 +5,11 @@ mod load_langs;
 use std::{fs, marker::PhantomData};
 
 use bevy::{
+    log::warn,
     prelude::{App, Resource},
     utils::HashMap,
 };
-use cosmos_core::registry::identifiable::Identifiable;
+use cosmos_core::{block::Block, item::Item, registry::identifiable::Identifiable};
 
 #[derive(Resource)]
 /// Used to get the human-readable + localized text to display for identifiable types
@@ -66,7 +67,11 @@ impl<T: Identifiable + Send + Sync> Lang<T> {
                 self.id_map.insert(item.unlocalized_name().to_owned(), item.id());
                 true
             }
-            None => false,
+            None => {
+                warn!("Missing lang file entry for {}", item.unlocalized_name());
+                warn!("{:?}", self.lang_contents);
+                false
+            }
         }
     }
 
@@ -76,6 +81,14 @@ impl<T: Identifiable + Send + Sync> Lang<T> {
     /// Make sure `register(item)` was called first!
     pub fn get_name(&self, item: &T) -> Option<&str> {
         self.get_name_from_numeric_id(item.id())
+    }
+
+    #[inline]
+    /// Gets the text for this specific entry
+    ///
+    /// Make sure `register(item)` was called first!
+    pub fn get_name_or_unlocalized<'a>(&'a self, item: &'a T) -> &'a str {
+        self.get_name_from_numeric_id(item.id()).unwrap_or(item.unlocalized_name())
     }
 
     #[inline]
@@ -98,6 +111,13 @@ impl<T: Identifiable + Send + Sync> Lang<T> {
     }
 }
 
+/// Loads entries for this type from the given `read_from` lang file entries. The order
+/// dictates the priority given to each file.
+pub fn register_lang<T: Identifiable>(app: &mut App, read_from: Vec<&'static str>) {
+    load_langs::register::<T>(app, read_from);
+}
+
 pub(super) fn register(app: &mut App) {
-    load_langs::register(app);
+    register_lang::<Block>(app, vec!["blocks"]);
+    register_lang::<Item>(app, vec!["blocks", "items"]);
 }

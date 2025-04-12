@@ -12,7 +12,7 @@ use cosmos_core::{
         system_sets::NetworkingSystemsSet,
     },
     physics::location::Location,
-    prelude::Ship,
+    prelude::{DespawnWithStructure, Ship},
     structure::ship::pilot::Pilot,
 };
 
@@ -143,19 +143,25 @@ fn on_accept_coms(
         let channel_type = req_coms.coms_type.unwrap_or(ComsChannelType::Player);
 
         commands.entity(this_ship_ent).remove::<RequestedComs>().with_children(|p| {
-            p.spawn(ComsChannel {
-                with: other_ship_ent,
-                messages: vec![],
-                channel_type,
-            });
+            p.spawn((
+                DespawnWithStructure,
+                ComsChannel {
+                    with: other_ship_ent,
+                    messages: vec![],
+                    channel_type,
+                },
+            ));
         });
 
         commands.entity(other_ship_ent).with_children(|p| {
-            p.spawn(ComsChannel {
-                with: this_ship_ent,
-                messages: vec![],
-                channel_type,
-            });
+            p.spawn((
+                DespawnWithStructure,
+                ComsChannel {
+                    with: this_ship_ent,
+                    messages: vec![],
+                    channel_type,
+                },
+            ));
         });
     }
 }
