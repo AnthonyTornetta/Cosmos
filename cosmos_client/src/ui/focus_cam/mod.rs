@@ -5,7 +5,7 @@ use bevy::{
     prelude::*,
     render::render_resource::{Extent3d, TextureDimension, TextureFormat, TextureUsages},
 };
-use cosmos_core::{netty::client::LocalPlayer, state::GameState};
+use cosmos_core::{netty::client::LocalPlayer, prelude::Structure, state::GameState};
 
 use crate::skybox::NeedsSkybox;
 
@@ -102,7 +102,8 @@ fn render_on_focus(
     mut q_cam: Query<(&mut Transform, &mut Camera), With<FocusedCam>>,
     mut focused_ui: Query<&mut Visibility, With<FocusedUi>>,
     q_local_player_trans: Query<&GlobalTransform, With<LocalPlayer>>,
-    q_g_trans: Query<&GlobalTransform>,
+    // TODO: Replace this With<Structure> check w/ a FocusCamDistance component read
+    q_g_trans: Query<&GlobalTransform, With<Structure>>,
     q_focused: Query<&Indicating, With<FocusedWaypointEntity>>,
 ) {
     let Ok((mut cam_trans, mut cam)) = q_cam.get_single_mut() else {

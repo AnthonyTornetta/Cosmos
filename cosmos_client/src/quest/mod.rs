@@ -5,6 +5,7 @@ use cosmos_core::quest::OngoingQuestId;
 
 mod lang;
 mod ui;
+mod waypoint;
 
 #[derive(Component, Debug, Reflect, Clone, Copy)]
 /// The player will have this if they currently have this quest selected.
@@ -17,6 +18,7 @@ pub struct ActiveQuest(pub OngoingQuestId);
 pub(super) fn register(app: &mut App) {
     ui::register(app);
     lang::register(app);
+    waypoint::register(app);
 
     app.register_type::<ActiveQuest>();
 }
