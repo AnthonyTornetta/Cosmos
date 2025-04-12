@@ -68,7 +68,6 @@ fn open_quest_ui(
                     flex_direction: FlexDirection::Column,
                     ..Default::default()
                 },
-                ..Default::default()
             },
             Node {
                 margin: UiRect::all(Val::Auto),
@@ -185,9 +184,9 @@ fn quest_node(
             p.spawn((
                 Name::new("Quest Name"),
                 font.clone(),
-                Text::new(format!("{}", lang.get_name_or_unlocalized(quest))),
+                Text::new(lang.get_name_or_unlocalized(quest).to_string()),
             ));
-            p.spawn((Name::new("Quest Desc"), font.clone(), Text::new(format!("{}", quest.description))));
+            p.spawn((Name::new("Quest Desc"), font.clone(), Text::new(quest.description.to_string())));
         });
 
         p.spawn(Node {
