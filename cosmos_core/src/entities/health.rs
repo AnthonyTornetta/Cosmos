@@ -4,7 +4,10 @@ use bevy::prelude::*;
 use derive_more::derive::Display;
 use serde::{Deserialize, Serialize};
 
-use crate::netty::sync::{sync_component, IdentifiableComponent, SyncableComponent};
+use crate::{
+    netty::sync::{sync_component, IdentifiableComponent, SyncableComponent},
+    structure::ship::pilot::Pilot,
+};
 
 #[derive(Component, Serialize, Reflect, Deserialize, Clone, Copy, PartialEq, Eq, Debug, Display)]
 /// This entity is dead
@@ -112,6 +115,12 @@ impl From<MaxHealth> for u32 {
 pub enum HealthSet {
     /// Health changes are handled, such as triggering player death
     ProcessHealthChange,
+}
+
+fn on_die(mut commands: Commands, q_dead: Query<Entity, Added<Dead>>) {
+    for e in q_dead.iter() {
+        commands.entity(e).remove_parent_in_place().remove::<Pilot>();
+    }
 }
 
 pub(super) fn register(app: &mut App) {

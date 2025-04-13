@@ -20,7 +20,7 @@ use bevy::{
 };
 use bevy_rapier3d::prelude::Velocity;
 use cosmos_core::{
-    coms::{AiComsType, ComsChannel, RequestedComs},
+    coms::{events::NpcRequestCloseComsEvent, AiComsType, ComsChannel, RequestedComs},
     ecs::NeedsDespawned,
     entities::EntityId,
     events::structure::StructureEventListenerSet,
@@ -326,6 +326,7 @@ fn on_change_coms(
     q_pilot: Query<&Pilot>,
     mut q_merchant: Query<&mut MerchantAiState, With<MerchantFederation>>,
     mut evw_start_quest: EventWriter<AddQuestEvent>,
+    mut evw_end_coms: EventWriter<NpcRequestCloseComsEvent>,
 ) {
     enum ComsState {
         Intro,
@@ -373,8 +374,8 @@ fn on_change_coms(
             _ => ComsState::OnQuest,
         };
 
-        let response = match state {
-            ComsState::SaidNo => "I understand. I, too, value my life.",
+        let (response, end_coms)= match state {
+            ComsState::SaidNo => ("I understand. I, too, value my life.", true),
             ComsState::Accepted => {
                 if let Ok(pilot) = q_pilot.get(coms.with) {
                     evw_start_quest.send(AddQuestEvent {
@@ -387,19 +388,26 @@ fn on_change_coms(
                     });
                 }
 
-                "Thank you brave warrior! Show them no mercy!"
+                ("Thank you brave warrior! Show them no mercy!", true)
             }
-            ComsState::OnQuest => "You're already on a quest",
-            ComsState::Intro => "Please help us! A sector not far from here has been overtaken by pirates! Should you lend us your aid, you will be rewarded handsomely. Would you please lend us your aid by killing these dastardly foes?",
+            ComsState::OnQuest => ("You're already on a quest", true),
+            ComsState::Intro => ("Please help us! A sector not far from here has been overtaken by pirates! Should you lend us your aid, you will be rewarded handsomely. Would you please lend us your aid by killing these dastardly foes?", false),
+        };
+        let message = response.to_owned();
+
+        if end_coms {
+            evw_end_coms.send(NpcRequestCloseComsEvent {
+                npc_ship: parent.get(),
+                other_ship_ent: coms.with,
+            });
         }
-        .to_owned();
 
         if matches!(*merchant_ai_state, MerchantAiState::Talking) {
             *merchant_ai_state = MerchantAiState::Fleeing;
         }
 
         evw_send_coms.send(NpcSendComsMessage {
-            message: response,
+            message,
             from_ship: parent.get(),
             to_ship: coms.with,
         });

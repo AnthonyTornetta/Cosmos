@@ -131,8 +131,8 @@ impl NettyEvent for DeclineComsEvent {
 #[derive(Event, Serialize, Deserialize, Debug, Clone)]
 /// Sent when an NPC wants to close a coms channel.
 pub struct NpcRequestCloseComsEvent {
-    npc_ship: Entity,
-    other_ship_ent: Entity,
+    pub npc_ship: Entity,
+    pub other_ship_ent: Entity,
 }
 
 #[derive(Event, Serialize, Deserialize, Debug, Clone)]

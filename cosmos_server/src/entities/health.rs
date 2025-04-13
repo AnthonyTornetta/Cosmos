@@ -3,7 +3,7 @@ use std::time::Duration;
 use bevy::{prelude::*, time::common_conditions::on_timer};
 use cosmos_core::{
     entities::health::{Dead, Health, HealthSet, MaxHealth},
-    netty::system_sets::NetworkingSystemsSet, structure::ship::pilot::Pilot,
+    netty::system_sets::NetworkingSystemsSet,
 };
 
 use crate::persistence::make_persistent::{make_persistent, DefaultPersistentComponent};
@@ -15,7 +15,7 @@ impl DefaultPersistentComponent for Dead {}
 fn on_change_health(mut commands: Commands, q_health: Query<(Entity, &Health), Changed<Health>>) {
     for (ent, hp) in q_health.iter() {
         if !hp.is_alive() {
-            commands.entity(ent).insert(Dead).remove_parent_in_place().remove::<Pilot>;
+            commands.entity(ent).insert(Dead);
         }
     }
 }
