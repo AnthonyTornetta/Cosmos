@@ -13,6 +13,7 @@ use crate::{
     ui::{
         components::{
             button::{register_button, ButtonEvent, CosmosButton},
+            scollable_container::ScrollBox,
             show_cursor::{no_open_menus, ShowCursor},
             window::GuiWindow,
         },
@@ -89,16 +90,26 @@ fn open_quest_ui(
                 return;
             }
 
-            for quest in ongoing_quests {
-                quest_node(
-                    p,
-                    quest,
-                    &quests,
-                    &lang,
-                    font_small.clone(),
-                    Some(quest.ongoing_id()) == active_quest.map(|x| x.0),
-                );
-            }
+            p.spawn((
+                Node {
+                    flex_grow: 1.0,
+                    flex_direction: FlexDirection::Column,
+                    ..Default::default()
+                },
+                ScrollBox { ..Default::default() },
+            ))
+            .with_children(|p| {
+                for quest in ongoing_quests {
+                    quest_node(
+                        p,
+                        quest,
+                        &quests,
+                        &lang,
+                        font_small.clone(),
+                        Some(quest.ongoing_id()) == active_quest.map(|x| x.0),
+                    );
+                }
+            });
         });
 }
 
