@@ -34,7 +34,10 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     init::init_world::Noise,
-    persistence::make_persistent::{make_persistent, DefaultPersistentComponent},
+    persistence::{
+        make_persistent::{make_persistent, DefaultPersistentComponent},
+        saving::NeverSave,
+    },
     structure::asteroid::{generator::AsteroidGenerationSet, server_asteroid_builder::ServerAsteroidBuilder},
 };
 
@@ -125,7 +128,13 @@ fn spawn_tiny_asteroids(
             };
 
             let (random_type, _) = asteroids.0.iter().choose(&mut rand::thread_rng()).expect("No tiny asteroids :(");
-            entity_cmd.insert((structure, SmallAsteroidNeedsCreated { id: random_type }, MovingAsteroid, velocity));
+            entity_cmd.insert((
+                structure,
+                NeverSave,
+                SmallAsteroidNeedsCreated { id: random_type },
+                MovingAsteroid,
+                velocity,
+            ));
         }
     }
 }

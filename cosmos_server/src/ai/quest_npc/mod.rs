@@ -47,6 +47,7 @@ use crate::{
     persistence::{
         loading::LoadingSystemSet,
         make_persistent::{make_persistent, DefaultPersistentComponent},
+        saving::NeverSave,
     },
     quest::AddQuestEvent,
     structure::systems::thruster_system::MaxShipSpeedModifier,
@@ -546,6 +547,17 @@ fn apply_quest_npc_faction(
     }
 }
 
+// We typically dont want to save these, since they can start to really build up
+fn dont_save(mut commands: Commands, q_npc: Query<(Entity, &MerchantAiState), With<MerchantFederation>>) {
+    for (e, state) in q_npc.iter() {
+        if matches!(state, MerchantAiState::Talking | MerchantAiState::Fighting) {
+            commands.entity(e).remove::<NeverSave>();
+        } else {
+            commands.entity(e).insert(NeverSave);
+        }
+    }
+}
+
 pub(super) fn register(app: &mut App) {
     make_persistent::<MerchantFederation>(app);
 
@@ -570,6 +582,7 @@ pub(super) fn register(app: &mut App) {
             combat_merchant_ai,
             handle_quest_npc_targetting.before(ShipMovementSet::RemoveShipMovement),
             on_change_coms,
+            dont_save,
         )
             .run_if(in_state(GameState::Playing))
             .in_set(NetworkingSystemsSet::Between)
