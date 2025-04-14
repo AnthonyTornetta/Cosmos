@@ -9,7 +9,8 @@ use crate::{blockitems, structure};
 use crate::{events, loader};
 use crate::{item, physics};
 use bevy::app::PluginGroupBuilder;
-use bevy::prelude::{App, Plugin, PluginGroup, States};
+use bevy::input::common_conditions::input_toggle_active;
+use bevy::prelude::{App, KeyCode, Plugin, PluginGroup, States};
 use bevy::state::state::FreelyMutableState;
 use bevy_easy_compute::prelude::AppComputePlugin;
 use bevy_inspector_egui::quick::WorldInspectorPlugin;
@@ -140,7 +141,7 @@ impl<T: States + Clone + Copy + FreelyMutableState> PluginGroup for CosmosCorePl
             // .add(RenderPlugin::default())
             // .add(ImagePlugin::default_nearest())
             .add(AppComputePlugin)
-            .add(WorldInspectorPlugin::default())
+            .add(WorldInspectorPlugin::default().run_if(input_toggle_active(true, KeyCode::F2)))
             .add(CosmosCorePlugin::new(
                 self.pre_loading_state,
                 self.loading_state,

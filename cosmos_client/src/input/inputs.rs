@@ -149,6 +149,9 @@ pub enum CosmosInputs {
 
     /// Opens or closes the quests list ui
     ToggleQuestsUi,
+
+    /// Hides all HUD UI
+    HideUi,
 }
 
 fn init_input(mut input_handler: ResMut<CosmosInputHandler>) {
@@ -229,6 +232,7 @@ fn init_input(mut input_handler: ResMut<CosmosInputHandler>) {
     input_handler.set_keycode(CosmosInputs::SendComs, KeyCode::Enter);
 
     input_handler.set_keycode(CosmosInputs::ToggleQuestsUi, KeyCode::Tab);
+    input_handler.set_keycode(CosmosInputs::HideUi, KeyCode::F1);
 }
 
 #[derive(Resource, Default, Debug)]

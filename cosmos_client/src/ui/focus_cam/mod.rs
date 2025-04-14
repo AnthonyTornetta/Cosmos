@@ -9,7 +9,10 @@ use cosmos_core::{netty::client::LocalPlayer, prelude::Structure, state::GameSta
 
 use crate::skybox::NeedsSkybox;
 
-use super::ship_flight::indicators::{FocusedWaypointEntity, Indicating};
+use super::{
+    hide::HiddenReasons,
+    ship_flight::indicators::{FocusedWaypointEntity, Indicating},
+};
 
 #[derive(Component)]
 struct FocusedCam;
@@ -71,12 +74,18 @@ fn setup_camera(mut commands: Commands, images: ResMut<Assets<Image>>) {
 #[derive(Component)]
 struct FocusedUi;
 
+const VIS_REASON: &str = "cosmos:ship_not_focused";
+
 fn create_focused_ui(mut commands: Commands, handle: Res<FocusCamImage>) {
+    let mut hidden = HiddenReasons::default();
+    hidden.add_reason(VIS_REASON);
+
     commands
         .spawn((
             Name::new("Focused Camera Display"),
             BorderColor(css::AQUA.into()),
             FocusedUi,
+            hidden,
             Visibility::Hidden,
             Node {
                 right: Val::Px(0.0),
@@ -100,7 +109,7 @@ fn create_focused_ui(mut commands: Commands, handle: Res<FocusCamImage>) {
 
 fn render_on_focus(
     mut q_cam: Query<(&mut Transform, &mut Camera), With<FocusedCam>>,
-    mut focused_ui: Query<&mut Visibility, With<FocusedUi>>,
+    mut focused_ui: Query<&mut HiddenReasons, With<FocusedUi>>,
     q_local_player_trans: Query<&GlobalTransform, With<LocalPlayer>>,
     // TODO: Replace this With<Structure> check w/ a FocusCamDistance component read
     q_g_trans: Query<&GlobalTransform, With<Structure>>,
@@ -110,13 +119,13 @@ fn render_on_focus(
         return;
     };
 
-    let Ok(mut focused_vis) = focused_ui.get_single_mut() else {
+    let Ok(mut focused_reasons) = focused_ui.get_single_mut() else {
         return;
     };
 
     let Some(focused_g_trans) = q_focused.get_single().ok().and_then(|indicating| q_g_trans.get(indicating.0).ok()) else {
         cam.is_active = false;
-        *focused_vis = Visibility::Hidden;
+        focused_reasons.add_reason(VIS_REASON);
         return;
     };
 
@@ -125,7 +134,7 @@ fn render_on_focus(
     };
 
     cam.is_active = true;
-    *focused_vis = Visibility::Inherited;
+    focused_reasons.remove_reason(VIS_REASON);
 
     let player_delta = player_g_trans.translation() - focused_g_trans.translation();
 
