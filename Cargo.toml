@@ -6,48 +6,46 @@ members = ["cosmos_client", "cosmos_core", "cosmos_server"]
 resolver = "2"
 
 [workspace.dependencies]
-bevy = { version = "0.15.1", default-features = false }
-bevy_rapier3d = { git = "https://github.com/AnthonyTornetta/bevy_rapier", version = "0.28.0", branch = "master", features = [
+bevy = { version = "0.15.3", default-features = false }
+bevy_rapier3d = { git = "https://github.com/AnthonyTornetta/bevy_rapier", version = "0.29.0", branch = "master", features = [
     "simd-stable",
     "serde-serialize",
 ] }
 
 bevy_easy_compute = { git = "https://github.com/AnthonyTornetta/bevy_easy_compute", branch = "no-build-worker", version = "0.15" }
 
-renet2 = { git = "https://github.com/UkoeHB/renet2", branch = "main", version = "0.0.7" }
+renet2 = "1.0"
 serde = "1.0"
 serde_json = "1.0"
-bincode = "1.3"
+bincode = "2.0"
 noise = "0.9.0"
 # Check out https://crates.io/crates/tinyrand in future
-bevy_renet2 = { git = "https://github.com/UkoeHB/renet2", branch = "main", version = "0.0.7" }
-rand = "0.8.5"
-rand_chacha = "0.3.1"
+bevy_renet = "1.0"
+rand = "0.9"
+rand_chacha = "0.9"
 # bigdecimal 0.4.6 has a formatting regression that causes a crash
-bigdecimal = "0.4.5"
+bigdecimal = "0.4.8"
 rayon = "1.10"
-futures-lite = "2.5"
-local-ip-address = "0.6.3"
-image = { version = "0.25.5", default-features = false, features = ["png"] }
-bevy-inspector-egui = "0.28.0"
-crossterm = { version = "0.28.1", features = ["event-stream"] }
-renet2_visualizer = { git = "https://github.com/UkoeHB/renet2", branch = "main", version = "0.0.7" }
+futures-lite = "2.6"
+image = { version = "0.25", default-features = false, features = ["png"] }
+bevy-inspector-egui = "0.30.0"
+crossterm = { version = "0.29", features = ["event-stream"] }
+renet_visualizer = "1.0"
 walkdir = "2.5"
-toml = "0.8.19"
+toml = "0.8.20"
 lz4_flex = "0.11.3"
-thread-priority = "1.2"
-bevy_kira_audio = "0.21.0"
+bevy_kira_audio = "0.22.0"
 anyhow = "1.0"
 thiserror = "2.0"
-bitflags = "2.6"
-bevy_mod_debugdump = "0.12.0"
-arboard = "3.4"
-derive_more = "1.0"
+bitflags = "2.9"
+bevy_mod_debugdump = "0.12.1"
+arboard = "3.5"
+derive_more = "2.0.1"
 clap = "4.5"
-bytemuck = "1.20"
-bevy_obj = "0.15"
-bevy_hanabi = "0.14"
-uuid = "1.15.1"
+bytemuck = "1.22"
+bevy_obj = "0.15.1"
+bevy_hanabi = "0.15"
+uuid = "1.16.0"
 # iyes_perf_ui = "0.3.0"
 # bevy_mod_billboard = "0.7.0"
 

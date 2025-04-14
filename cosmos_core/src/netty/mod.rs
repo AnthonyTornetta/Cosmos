@@ -23,7 +23,6 @@ use bevy::{
     state::state::FreelyMutableState,
 };
 use bevy_renet2::renet2::{ChannelConfig, ConnectionConfig, SendType};
-use local_ip_address::local_ip;
 use std::time::Duration;
 use sync::registry::RegistrySyncInit;
 
@@ -284,11 +283,6 @@ pub fn connection_config() -> ConnectionConfig {
         client_channels_config: NettyChannelClient::channels_config(),
         server_channels_config: NettyChannelServer::channels_config(),
     }
-}
-
-/// Gets the local ip address, or returns `127.0.0.1` if it fails to find it.
-pub fn get_local_ipaddress() -> String {
-    local_ip().map(|x| x.to_string()).unwrap_or("127.0.0.1".to_owned())
 }
 
 pub(super) fn register<T: States + Clone + Copy + FreelyMutableState>(app: &mut App, registry_syncing: RegistrySyncInit<T>) {

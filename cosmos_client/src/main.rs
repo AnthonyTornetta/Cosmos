@@ -47,14 +47,13 @@ use bevy_obj::ObjPlugin;
 
 use bevy_rapier3d::plugin::{RapierContextInitialization, RapierPhysicsPlugin};
 // use bevy_rapier3d::render::RapierDebugRenderPlugin;
-use bevy_renet2::{transport::NetcodeClientPlugin, RenetClientPlugin};
-use clap::{arg, Parser};
+use bevy_renet2::{RenetClientPlugin, transport::NetcodeClientPlugin};
+use clap::{Parser, arg};
 use cosmos_core::netty::sync::registry::RegistrySyncInit;
 use cosmos_core::state::GameState;
 use cosmos_core::{physics::collision_handling::CosmosPhysicsFilter, plugin::cosmos_core_plugin::CosmosCorePluginGroup};
 // use iyes_perf_ui::PerfUiPlugin;
 use netty::connect::{self};
-use thread_priority::{set_current_thread_priority, ThreadPriority};
 
 #[cfg(feature = "print-schedule")]
 use bevy::log::LogPlugin;
@@ -72,12 +71,6 @@ struct Args {
 }
 
 fn main() {
-    if set_current_thread_priority(ThreadPriority::Max).is_err() {
-        warn!("Failed to set main thread priority to max - this can lead to lag.");
-    } else {
-        info!("Successfully set main thread priority to max!");
-    }
-
     let args = Args::parse();
 
     // let host_name = args.ip.unwrap_or_else(get_local_ipaddress);
