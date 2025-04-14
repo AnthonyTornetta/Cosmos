@@ -33,6 +33,7 @@ use crate::{
             text_input::{InputValue, TextInput},
         },
         font::DefaultFont,
+        hide::DontHideOnToggleUi,
         pause::CloseMenusSet,
         CloseMethod, OpenMenu,
     },
@@ -129,6 +130,7 @@ fn setup_chat_box(mut commands: Commands, default_font: Res<DefaultFont>) {
     commands
         .spawn((
             ChatContainer,
+            DontHideOnToggleUi,
             Name::new("Chat Container"),
             Node {
                 top: Val::Percent(20.0),
