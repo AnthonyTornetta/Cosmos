@@ -233,8 +233,8 @@ struct MinMerchantSpawnTime(Duration);
 struct FirstMerchantSpawnTime(Duration);
 
 fn load_settings(mut commands: Commands) {
-    commands.insert_resource(MinMerchantSpawnTime(Duration::from_mins(30)));
-    commands.insert_resource(FirstMerchantSpawnTime(Duration::from_mins(5)));
+    commands.insert_resource(MinMerchantSpawnTime(Duration::from_mins(40)));
+    commands.insert_resource(FirstMerchantSpawnTime(Duration::from_mins(20)));
 }
 
 #[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
@@ -244,7 +244,7 @@ enum MerchantSpawningSet {
 
 fn calculate_next_spawn_time(min_merchant_spawn_time: Duration) -> f64 {
     let min_secs = min_merchant_spawn_time.as_secs_f64();
-    rand::random::<f64>() * min_secs * 3.0 + min_secs
+    rand::random::<f64>() * min_secs * 0.5 + min_secs
 }
 
 pub(super) fn register(app: &mut App) {
