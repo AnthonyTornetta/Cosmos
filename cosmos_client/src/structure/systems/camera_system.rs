@@ -182,12 +182,7 @@ fn adjust_camera(
 ) {
     let cams = camera_system.camera_locations();
     let cam_block_coords = match *selected_camera {
-        SelectedCamera::Camera(idx) => {
-            let Some(cam) = cams.get(idx) else {
-                return;
-            };
-            *cam
-        }
+        SelectedCamera::Camera(idx) => cams.get(idx).copied().unwrap_or(Ship::ship_core_block_coords(structure)),
         SelectedCamera::ShipCore => Ship::ship_core_block_coords(structure),
     };
 
