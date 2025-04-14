@@ -358,11 +358,12 @@ fn logic_block_changed_event_listener(
     mut evw_queue_logic_input: EventWriter<QueueLogicInputEvent>,
 ) {
     // We group the events by entity so we can track the block changes the previous events made.
-    let entities = evr_block_changed.read().map(|ev| ev.block.structure()).collect::<HashSet<Entity>>();
+    let events = evr_block_changed.read().collect::<Vec<_>>();
+    let entities = events.iter().map(|ev| ev.block.structure()).collect::<HashSet<Entity>>();
     for entity in entities {
-        let current_entity_events = evr_block_changed.read().filter(|ev| ev.block.structure() == entity);
+        let current_entity_events = events.iter().filter(|ev| ev.block.structure() == entity);
         let mut events_by_coords: HashMap<BlockCoordinate, BlockChangedEvent> = HashMap::new();
-        for ev in current_entity_events {
+        for &ev in current_entity_events {
             // If was logic block, remove from the logic graph.
             if let Some(logic_block) = logic_blocks.from_id(blocks.from_numeric_id(ev.old_block).unlocalized_name()) {
                 if let Ok(structure) = q_structure.get_mut(ev.block.structure()) {
