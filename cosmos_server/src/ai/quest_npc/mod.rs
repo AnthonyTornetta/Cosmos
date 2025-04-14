@@ -20,7 +20,7 @@ use bevy::{
 };
 use bevy_rapier3d::prelude::Velocity;
 use cosmos_core::{
-    coms::{events::NpcRequestCloseComsEvent, AiComsType, ComsChannel, RequestedComs},
+    coms::{AiComsType, ComsChannel, RequestedComs},
     ecs::NeedsDespawned,
     entities::EntityId,
     events::structure::StructureEventListenerSet,
@@ -43,7 +43,7 @@ use cosmos_core::{
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    coms::{NpcSendComsMessage, RequestHailFromNpc},
+    coms::{NpcRequestCloseComsEvent, NpcSendComsMessage, RequestHailFromNpc},
     persistence::{
         loading::LoadingSystemSet,
         make_persistent::{make_persistent, DefaultPersistentComponent},
@@ -320,7 +320,7 @@ struct SaidNoList(Vec<Entity>);
 
 fn on_change_coms(
     mut evw_send_coms: EventWriter<NpcSendComsMessage>,
-    q_create_coms: Query<(&Parent, &ComsChannel), Changed<ComsChannel>>,
+    q_create_coms: Query<(Entity, &Parent, &ComsChannel), Changed<ComsChannel>>,
     factions: Res<Factions>,
     q_faction: Query<&FactionId>,
     q_entity_id: Query<&EntityId>,
@@ -336,7 +336,7 @@ fn on_change_coms(
         SaidNo,
     }
 
-    for (parent, coms) in q_create_coms.iter() {
+    for (coms_entity, parent, coms) in q_create_coms.iter() {
         let Ok(mut merchant_ai_state) = q_merchant.get_mut(parent.get()) else {
             continue;
         };
@@ -399,7 +399,7 @@ fn on_change_coms(
         if end_coms {
             evw_end_coms.send(NpcRequestCloseComsEvent {
                 npc_ship: parent.get(),
-                other_ship_ent: coms.with,
+                coms_entity,
             });
         }
 

@@ -5,7 +5,10 @@ use derive_more::derive::Display;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    netty::sync::{sync_component, IdentifiableComponent, SyncableComponent},
+    netty::{
+        sync::{sync_component, IdentifiableComponent, SyncableComponent},
+        system_sets::NetworkingSystemsSet,
+    },
     structure::ship::pilot::Pilot,
 };
 
@@ -128,7 +131,8 @@ pub(super) fn register(app: &mut App) {
     sync_component::<MaxHealth>(app);
     sync_component::<Dead>(app);
 
-    app.configure_sets(Update, HealthSet::ProcessHealthChange);
+    app.configure_sets(Update, HealthSet::ProcessHealthChange)
+        .add_systems(Update, on_die.in_set(NetworkingSystemsSet::Between));
 
     app.register_type::<Health>().register_type::<MaxHealth>();
 }

@@ -129,16 +129,9 @@ impl NettyEvent for DeclineComsEvent {
 }
 
 #[derive(Event, Serialize, Deserialize, Debug, Clone)]
-/// Sent when an NPC wants to close a coms channel.
-pub struct NpcRequestCloseComsEvent {
-    pub npc_ship: Entity,
-    pub other_ship_ent: Entity,
-}
-
-#[derive(Event, Serialize, Deserialize, Debug, Clone)]
 /// Sent when a Player wants to close a coms channel.
 ///
-/// The entity will represent the entity that this player wants to close the coms event of.
+/// The coms entity (owned by the player) you wish to close.
 pub struct RequestCloseComsEvent(pub Entity);
 
 impl IdentifiableEvent for RequestCloseComsEvent {
@@ -168,6 +161,5 @@ pub(super) fn register(app: &mut App) {
         .add_netty_event::<AcceptComsEvent>()
         .add_netty_event::<DeclineComsEvent>()
         .add_netty_event::<RequestCloseComsEvent>()
-        .add_netty_event::<SendComsMessage>()
-        .add_event::<NpcRequestCloseComsEvent>();
+        .add_netty_event::<SendComsMessage>();
 }

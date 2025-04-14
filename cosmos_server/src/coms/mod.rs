@@ -25,6 +25,15 @@ pub struct RequestHailFromNpc {
     pub ai_coms_type: AiComsType,
 }
 
+#[derive(Event, Debug, Clone)]
+/// Sent when an NPC wants to close a coms channel.
+pub struct NpcRequestCloseComsEvent {
+    /// The NPC ship closing the COMS
+    pub npc_ship: Entity,
+    /// The coms entity owned by this ship you wish to close
+    pub coms_entity: Entity,
+}
+
 /// Event used to send a communication message from one ship to another.
 ///
 /// Used to deliver text-based communication from an NPC to a player.
@@ -41,7 +50,8 @@ pub struct NpcSendComsMessage {
 pub(super) fn register(app: &mut App) {
     systems::register(app);
 
-    app.add_event::<RequestHailToNpc>();
-    app.add_event::<RequestHailFromNpc>();
-    app.add_event::<NpcSendComsMessage>();
+    app.add_event::<RequestHailToNpc>()
+        .add_event::<RequestHailFromNpc>()
+        .add_event::<NpcSendComsMessage>()
+        .add_event::<NpcRequestCloseComsEvent>();
 }

@@ -16,7 +16,7 @@ use cosmos_core::{
     structure::ship::pilot::Pilot,
 };
 
-use super::{NpcSendComsMessage, RequestHailFromNpc, RequestHailToNpc};
+use super::{NpcRequestCloseComsEvent, NpcSendComsMessage, RequestHailFromNpc, RequestHailToNpc};
 
 const MAX_HAIL_RANGE: f32 = 20_000.0;
 
@@ -243,27 +243,31 @@ fn on_req_close_coms(
     q_pilot: Query<&Pilot>,
     q_parent: Query<&Parent>,
     mut nevr_close_coms: EventReader<NettyEventReceived<RequestCloseComsEvent>>,
+    mut npc_close_coms: EventReader<NpcRequestCloseComsEvent>,
     q_coms: Query<(Entity, &ComsChannel)>,
     mut commands: Commands,
 ) {
-    for ev in nevr_close_coms.read() {
-        let Ok((coms_ent, coms)) = q_coms.get(ev.0) else {
-            warn!("Invalid coms ent - {:?}", ev.0);
+    for (this_ship, coms_ent) in nevr_close_coms
+        .read()
+        .flat_map(|ev| {
+            let player = lobby.player_from_id(ev.client_id)?;
+            let pilot = q_pilot.get(player).ok()?;
+
+            Some((pilot.entity, ev.0))
+        })
+        .chain(npc_close_coms.read().map(|ev| (ev.npc_ship, ev.coms_entity)))
+    {
+        let Ok((coms_ent, coms)) = q_coms.get(coms_ent) else {
+            warn!("Invalid coms ent - {:?}", coms_ent);
             continue;
         };
 
-        let Some(player) = lobby.player_from_id(ev.client_id) else {
-            continue;
-        };
-        let Ok(pilot) = q_pilot.get(player) else {
-            continue;
-        };
         let Ok(my_ship_ent) = q_parent.get(coms_ent) else {
             warn!("Invalid coms heirarchy");
             continue;
         };
 
-        if my_ship_ent.get() != pilot.entity {
+        if my_ship_ent.get() != this_ship {
             warn!("No authority to close this coms!");
             continue;
         }
