@@ -131,7 +131,7 @@ impl NettyEvent for DeclineComsEvent {
 #[derive(Event, Serialize, Deserialize, Debug, Clone)]
 /// Sent when a Player wants to close a coms channel.
 ///
-/// The entity will represent the entity that this player wants to close the coms event of.
+/// The coms entity (owned by the player) you wish to close.
 pub struct RequestCloseComsEvent(pub Entity);
 
 impl IdentifiableEvent for RequestCloseComsEvent {

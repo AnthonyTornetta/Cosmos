@@ -43,10 +43,11 @@ use cosmos_core::{
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    coms::{NpcSendComsMessage, RequestHailFromNpc},
+    coms::{NpcRequestCloseComsEvent, NpcSendComsMessage, RequestHailFromNpc},
     persistence::{
         loading::LoadingSystemSet,
         make_persistent::{make_persistent, DefaultPersistentComponent},
+        saving::NeverSave,
     },
     quest::AddQuestEvent,
     structure::systems::thruster_system::MaxShipSpeedModifier,
@@ -319,13 +320,14 @@ struct SaidNoList(Vec<Entity>);
 
 fn on_change_coms(
     mut evw_send_coms: EventWriter<NpcSendComsMessage>,
-    q_create_coms: Query<(&Parent, &ComsChannel), Changed<ComsChannel>>,
+    q_create_coms: Query<(Entity, &Parent, &ComsChannel), Changed<ComsChannel>>,
     factions: Res<Factions>,
     q_faction: Query<&FactionId>,
     q_entity_id: Query<&EntityId>,
     q_pilot: Query<&Pilot>,
     mut q_merchant: Query<&mut MerchantAiState, With<MerchantFederation>>,
     mut evw_start_quest: EventWriter<AddQuestEvent>,
+    mut evw_end_coms: EventWriter<NpcRequestCloseComsEvent>,
 ) {
     enum ComsState {
         Intro,
@@ -334,7 +336,7 @@ fn on_change_coms(
         SaidNo,
     }
 
-    for (parent, coms) in q_create_coms.iter() {
+    for (coms_entity, parent, coms) in q_create_coms.iter() {
         let Ok(mut merchant_ai_state) = q_merchant.get_mut(parent.get()) else {
             continue;
         };
@@ -373,8 +375,8 @@ fn on_change_coms(
             _ => ComsState::OnQuest,
         };
 
-        let response = match state {
-            ComsState::SaidNo => "I understand. I, too, value my life.",
+        let (response, end_coms)= match state {
+            ComsState::SaidNo => ("I understand. I, too, value my life.", true),
             ComsState::Accepted => {
                 if let Ok(pilot) = q_pilot.get(coms.with) {
                     evw_start_quest.send(AddQuestEvent {
@@ -387,19 +389,26 @@ fn on_change_coms(
                     });
                 }
 
-                "Thank you brave warrior! Show them no mercy!"
+                ("Thank you brave warrior! Show them no mercy!", true)
             }
-            ComsState::OnQuest => "You're already on a quest",
-            ComsState::Intro => "Please help us! A sector not far from here has been overtaken by pirates! Should you lend us your aid, you will be rewarded handsomely. Would you please lend us your aid by killing these dastardly foes?",
+            ComsState::OnQuest => ("You're already on a quest", true),
+            ComsState::Intro => ("Please help us! A sector not far from here has been overtaken by pirates! Should you lend us your aid, you will be rewarded handsomely. Would you please lend us your aid by killing these dastardly foes?", false),
+        };
+        let message = response.to_owned();
+
+        if end_coms {
+            evw_end_coms.send(NpcRequestCloseComsEvent {
+                npc_ship: parent.get(),
+                coms_entity,
+            });
         }
-        .to_owned();
 
         if matches!(*merchant_ai_state, MerchantAiState::Talking) {
             *merchant_ai_state = MerchantAiState::Fleeing;
         }
 
         evw_send_coms.send(NpcSendComsMessage {
-            message: response,
+            message,
             from_ship: parent.get(),
             to_ship: coms.with,
         });
@@ -538,6 +547,17 @@ fn apply_quest_npc_faction(
     }
 }
 
+// We typically dont want to save these, since they can start to really build up
+fn dont_save(mut commands: Commands, q_npc: Query<(Entity, &MerchantAiState), With<MerchantFederation>>) {
+    for (e, state) in q_npc.iter() {
+        if matches!(state, MerchantAiState::Talking | MerchantAiState::Fighting) {
+            commands.entity(e).remove::<NeverSave>();
+        } else {
+            commands.entity(e).insert(NeverSave);
+        }
+    }
+}
+
 pub(super) fn register(app: &mut App) {
     make_persistent::<MerchantFederation>(app);
 
@@ -562,6 +582,7 @@ pub(super) fn register(app: &mut App) {
             combat_merchant_ai,
             handle_quest_npc_targetting.before(ShipMovementSet::RemoveShipMovement),
             on_change_coms,
+            dont_save,
         )
             .run_if(in_state(GameState::Playing))
             .in_set(NetworkingSystemsSet::Between)

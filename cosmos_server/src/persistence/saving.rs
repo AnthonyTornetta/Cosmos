@@ -59,6 +59,10 @@ pub enum BlueprintingSystemSet {
 #[derive(Component, Debug, Default, Reflect)]
 pub struct NeedsSaved;
 
+/// Denotes that this entity should not be saved, even if marked to has the [`NeedsSaved`] component.
+#[derive(Component, Debug, Default, Reflect)]
+pub struct NeverSave;
+
 /// Denotes that this entity should be saved as a blueprint. Once this entity is saved,
 /// this component will be removed.
 #[derive(Component, Debug, Default, Reflect)]
@@ -71,7 +75,7 @@ pub struct NeedsBlueprinted {
 
 fn check_needs_saved(
     q_parent: Query<&Parent, Or<(Without<SerializedData>, Without<NeedsSaved>)>>,
-    q_needs_serialized_data: Query<(Entity, Option<&Parent>), (With<NeedsSaved>, Without<SerializedData>)>,
+    q_needs_serialized_data: Query<(Entity, Option<&Parent>), (With<NeedsSaved>, Without<NeverSave>, Without<SerializedData>)>,
     mut commands: Commands,
 ) {
     for (ent, mut parent) in q_needs_serialized_data.iter() {
@@ -168,7 +172,7 @@ fn done_saving(
             Option<&PreviousSaveFileIdentifier>,
             Option<&Player>,
         ),
-        With<NeedsSaved>,
+        (With<NeedsSaved>, Without<NeverSave>),
     >,
     q_parent: Query<&Parent>,
     q_entity_id: Query<&EntityId>,

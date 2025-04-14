@@ -1,29 +1,19 @@
-use bevy::prelude::{App, Commands, OnEnter, OnExit, Res, ResMut};
-use cosmos_core::{block::Block, item::Item, registry::Registry, state::GameState};
+use bevy::prelude::{App, OnExit, Res, ResMut};
+use cosmos_core::{
+    registry::{identifiable::Identifiable, Registry},
+    state::GameState,
+};
 
 use super::Lang;
 
-fn insert_langs(
-    mut item_langs: ResMut<Lang<Item>>,
-    mut block_langs: ResMut<Lang<Block>>,
-    blocks: Res<Registry<Block>>,
-    items: Res<Registry<Item>>,
-) {
-    for item in items.iter() {
-        item_langs.register(item);
-    }
-
-    for block in blocks.iter() {
-        block_langs.register(block);
+pub(super) fn insert_langs<T: Identifiable>(mut t_lang: ResMut<Lang<T>>, t_reg: Res<Registry<T>>) {
+    for t in t_reg.iter() {
+        t_lang.register(t);
     }
 }
 
-fn insert_resource(mut commands: Commands) {
-    commands.insert_resource(Lang::<Item>::new("en_us", vec!["items", "blocks"]));
-    commands.insert_resource(Lang::<Block>::new("en_us", vec!["blocks"]));
-}
+pub(super) fn register<T: Identifiable>(app: &mut App, read_from: Vec<&'static str>) {
+    app.insert_resource(Lang::<T>::new("en_us", read_from));
 
-pub(super) fn register(app: &mut App) {
-    app.add_systems(OnEnter(GameState::PreLoading), insert_resource)
-        .add_systems(OnExit(GameState::PostLoading), insert_langs);
+    app.add_systems(OnExit(GameState::LoadingData), insert_langs::<T>);
 }

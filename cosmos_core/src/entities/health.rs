@@ -4,7 +4,13 @@ use bevy::prelude::*;
 use derive_more::derive::Display;
 use serde::{Deserialize, Serialize};
 
-use crate::netty::sync::{sync_component, IdentifiableComponent, SyncableComponent};
+use crate::{
+    netty::{
+        sync::{sync_component, IdentifiableComponent, SyncableComponent},
+        system_sets::NetworkingSystemsSet,
+    },
+    structure::ship::pilot::Pilot,
+};
 
 #[derive(Component, Serialize, Reflect, Deserialize, Clone, Copy, PartialEq, Eq, Debug, Display)]
 /// This entity is dead
@@ -114,12 +120,19 @@ pub enum HealthSet {
     ProcessHealthChange,
 }
 
+fn on_die(mut commands: Commands, q_dead: Query<Entity, Added<Dead>>) {
+    for e in q_dead.iter() {
+        commands.entity(e).remove_parent_in_place().remove::<Pilot>();
+    }
+}
+
 pub(super) fn register(app: &mut App) {
     sync_component::<Health>(app);
     sync_component::<MaxHealth>(app);
     sync_component::<Dead>(app);
 
-    app.configure_sets(Update, HealthSet::ProcessHealthChange);
+    app.configure_sets(Update, HealthSet::ProcessHealthChange)
+        .add_systems(Update, on_die.in_set(NetworkingSystemsSet::Between));
 
     app.register_type::<Health>().register_type::<MaxHealth>();
 }

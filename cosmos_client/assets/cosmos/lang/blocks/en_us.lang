@@ -22,6 +22,7 @@ cosmos:door=Door
 cosmos:door_open=Door
 cosmos:basic_fabricator=Basic Fabricator
 cosmos:iron_ore=Iron Ore
+cosmos:short_grass=Short Grass
 
 cosmos:ship_hull_red=Red Ship Hull
 cosmos:ship_hull_orange=Orange Ship Hull

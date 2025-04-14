@@ -146,6 +146,9 @@ pub enum CosmosInputs {
     ToggleComs,
     /// Sends the Coms message the user has typed
     SendComs,
+
+    /// Opens or closes the quests list ui
+    ToggleQuestsUi,
 }
 
 fn init_input(mut input_handler: ResMut<CosmosInputHandler>) {
@@ -224,6 +227,8 @@ fn init_input(mut input_handler: ResMut<CosmosInputHandler>) {
     input_handler.set_keycode(CosmosInputs::DeclineComsRequest, KeyCode::KeyN);
     input_handler.set_keycode(CosmosInputs::ToggleComs, KeyCode::Backquote);
     input_handler.set_keycode(CosmosInputs::SendComs, KeyCode::Enter);
+
+    input_handler.set_keycode(CosmosInputs::ToggleQuestsUi, KeyCode::Tab);
 }
 
 #[derive(Resource, Default, Debug)]

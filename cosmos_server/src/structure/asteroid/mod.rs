@@ -2,6 +2,7 @@
 
 use bevy::prelude::App;
 
+mod dynamic;
 pub mod generator;
 pub mod generators;
 mod persistence;
@@ -13,4 +14,5 @@ pub(super) fn register(app: &mut App) {
     generator::register(app);
     persistence::register(app);
     generators::register(app);
+    dynamic::register(app);
 }
