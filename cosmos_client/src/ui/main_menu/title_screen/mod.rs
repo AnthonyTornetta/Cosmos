@@ -127,11 +127,11 @@ fn create_main_menu(mut commands: Commands, default_font: Res<DefaultFont>, q_ui
             let adjective = fs::read_to_string("assets/adjectives.txt").expect("Missing adjectives :O");
             let adjective = adjective
                 .split_whitespace()
-                .choose(&mut rand::thread_rng())
+                .choose(&mut rand::rng())
                 .expect("No adjectives ;(");
 
             let animal = fs::read_to_string("assets/animals.txt").expect("Missing animals :O");
-            let animal = animal.split_whitespace().choose(&mut rand::thread_rng()).expect("No animals ;(");
+            let animal = animal.split_whitespace().choose(&mut rand::rng()).expect("No animals ;(");
 
             format!("{adjective}{animal}")
         });

@@ -28,7 +28,7 @@ bigdecimal = "0.4.8"
 rayon = "1.10"
 futures-lite = "2.6"
 image = { version = "0.25", default-features = false, features = ["png"] }
-bevy-inspector-egui = "0.30.0"
+bevy-inspector-egui = "0.28.0"
 crossterm = { version = "0.29", features = ["event-stream"] }
 renet_visualizer = "1.0"
 walkdir = "2.5"

@@ -1,6 +1,7 @@
 use bevy::prelude::*;
-use cosmos_core::netty::sync::{
-    mapping::NetworkMapping, ComponentId, ComponentSyncingSet, GotComponentToRemoveEvent, GotComponentToSyncEvent,
+use cosmos_core::netty::{
+    cosmos_encoder,
+    sync::{ComponentId, ComponentSyncingSet, GotComponentToRemoveEvent, GotComponentToSyncEvent, mapping::NetworkMapping},
 };
 
 fn client_deserialize_parent(mut ev_reader: EventReader<GotComponentToSyncEvent>, mut commands: Commands, mapping: Res<NetworkMapping>) {
@@ -10,7 +11,8 @@ fn client_deserialize_parent(mut ev_reader: EventReader<GotComponentToSyncEvent>
         }
 
         if let Some(mut ecmds) = commands.get_entity(ev.entity) {
-            let new_parent = bincode::deserialize::<Entity>(&ev.raw_data).expect("Failed to deserialize component sent from server!");
+            let new_parent = cosmos_encoder::deserialize_uncompressed::<Entity>(&ev.raw_data)
+                .expect("Failed to deserialize component sent from server!");
 
             let Some(mapped_parent) = mapping.client_from_server(&new_parent) else {
                 warn!("Couldn't convert entities for parent {new_parent:?}!");

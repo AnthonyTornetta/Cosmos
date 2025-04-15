@@ -4,7 +4,7 @@ use bevy::{
     log::info,
     math::Quat,
     prelude::{
-        in_state, App, Event, EventWriter, IntoSystemConfigs, IntoSystemSetConfigs, Query, Res, ResMut, Resource, SystemSet, Update, With,
+        App, Event, EventWriter, IntoSystemConfigs, IntoSystemSetConfigs, Query, Res, ResMut, Resource, SystemSet, Update, With, in_state,
     },
     time::common_conditions::on_timer,
     utils::HashMap,
@@ -19,6 +19,8 @@ use cosmos_core::{
 };
 use serde::{Deserialize, Serialize};
 use std::{collections::HashSet, fs, time::Duration};
+
+use crate::persistence::{loading::LoadingBlueprintSystemSet, saving::BlueprintingSystemSet};
 
 #[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
 /// The ordering that a system should be generated in a galaxy
@@ -281,6 +283,7 @@ pub(super) fn register(app: &mut App) {
             SystemGenerationSet::Station,
         )
             .in_set(NetworkingSystemsSet::Between)
+            .before(LoadingBlueprintSystemSet::BeginLoadingBlueprints)
             .chain(),
     );
 

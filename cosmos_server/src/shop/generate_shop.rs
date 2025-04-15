@@ -3,20 +3,20 @@
 use std::time::Duration;
 
 use bevy::{
-    log::error,
-    prelude::{in_state, App, Commands, EventReader, IntoSystemConfigs, Query, Res, ResMut, Update, Vec3, With},
+    log::{error, info},
+    prelude::{App, Commands, EventReader, IntoSystemConfigs, Query, Res, ResMut, Update, Vec3, With, in_state},
     time::common_conditions::on_timer,
     utils::HashSet,
 };
 use cosmos_core::{
     entities::player::Player,
     faction::Factions,
-    physics::location::{Location, Sector, SectorUnit, SECTOR_DIMENSIONS, SYSTEM_SECTORS},
+    physics::location::{Location, SECTOR_DIMENSIONS, SYSTEM_SECTORS, Sector, SectorUnit},
     state::GameState,
     structure::station::station_builder::STATION_LOAD_DISTANCE,
     utils::quat_math::random_quat,
 };
-use rand::{seq::IteratorRandom, Rng};
+use rand::{Rng, seq::IteratorRandom};
 
 use crate::{
     init::init_world::ServerSeed,
@@ -141,6 +141,8 @@ fn spawn_shop(
             } else {
                 error!("No merchant federation faction!");
             }
+
+            info!("Generating shop @ {station_loc}");
 
             generated_shops.insert(station_loc.sector());
         }

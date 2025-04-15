@@ -50,7 +50,7 @@ impl MusicController {
         self.songs
             .iter()
             .filter(|x| x.atmosphere == atmosphere)
-            .choose(&mut rand::thread_rng())
+            .choose(&mut rand::rng())
     }
 }
 

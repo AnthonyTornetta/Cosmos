@@ -87,7 +87,7 @@ fn spawn_tiny_asteroids(
 
         let n_asteroids = random_range(1.0, 2.0).round() as usize;
 
-        let mut rng = rand::thread_rng();
+        let mut rng = rand::rng();
 
         let random_dir = random_quat(&mut rng);
         let variation_dir = random_quat(&mut rng);
@@ -127,7 +127,7 @@ fn spawn_tiny_asteroids(
                 ),
             };
 
-            let (random_type, _) = asteroids.0.iter().choose(&mut rand::thread_rng()).expect("No tiny asteroids :(");
+            let (random_type, _) = asteroids.0.iter().choose(&mut rand::rng()).expect("No tiny asteroids :(");
             entity_cmd.insert((
                 structure,
                 NeverSave,

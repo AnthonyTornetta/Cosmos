@@ -145,7 +145,7 @@ fn handle_block_break_events(
                 }
             }
 
-            let drop = drops.generate_drop_for(block, &items, &block_items, &mut rand::thread_rng());
+            let drop = drops.generate_drop_for(block, &items, &block_items, &mut rand::rng());
 
             if let Some(drop) = drop {
                 let item = drop.item;
@@ -216,7 +216,7 @@ fn handle_block_break_events(
                     }
 
                     if block.id() != AIR_BLOCK_ID {
-                        let drop = drops.generate_drop_for(block, &items, &block_items, &mut rand::thread_rng());
+                        let drop = drops.generate_drop_for(block, &items, &block_items, &mut rand::rng());
 
                         if let Some(drop) = drop {
                             let item = drop.item;

@@ -18,13 +18,13 @@ use cosmos_core::{
     physics::location::LocationPhysicsSet,
     state::GameState,
     structure::{
+        Structure,
         shared::DespawnWithStructure,
         shields::SHIELD_COLLISION_GROUP,
         systems::{
-            energy_storage_system::EnergyStorageSystem, mining_laser_system::MiningLaserSystem, StructureSystem, StructureSystems,
-            SystemActive,
+            StructureSystem, StructureSystems, SystemActive, energy_storage_system::EnergyStorageSystem,
+            mining_laser_system::MiningLaserSystem,
         },
-        Structure,
     },
 };
 
@@ -136,7 +136,7 @@ fn apply_mining_effects(
             continue;
         }
 
-        let idx = rand::random::<usize>() % audio_handles.0.len();
+        let idx = rand::random::<u64>() as usize % audio_handles.0.len();
 
         let handle = audio_handles.0[idx].clone_weak();
         let playing_sound: Handle<AudioInstance> = audio.play(handle.clone_weak()).handle();

@@ -8,15 +8,15 @@ use std::{
 };
 
 use bevy::prelude::*;
-use bevy_renet::renet::{
-    RenetClient,
+use bevy_renet::{
     netcode::{ClientAuthentication, NetcodeClientTransport},
+    renet::RenetClient,
 };
 use cosmos_core::{
     netty::{PROTOCOL_ID, connection_config, sync::mapping::NetworkMapping},
     state::GameState,
 };
-use renet::{DisconnectReason, netcode::NativeSocket};
+use renet::DisconnectReason;
 
 use crate::{
     netty::lobby::{ClientLobby, MostRecentTick},
@@ -36,7 +36,7 @@ fn new_netcode_transport(player_name: &str, mut host: &str, port: u16) -> Netcod
         .next()
         .unwrap();
 
-    let socket = NativeSocket::new(UdpSocket::bind("0.0.0.0:0").unwrap()).unwrap();
+    let socket = UdpSocket::bind("0.0.0.0:0").unwrap();
 
     let current_time = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();
     let client_id = current_time.as_millis() as u64;
@@ -54,7 +54,6 @@ fn new_netcode_transport(player_name: &str, mut host: &str, port: u16) -> Netcod
     }
 
     let auth = ClientAuthentication::Unsecure {
-        socket_id: 0, // for native sockets, use 0
         client_id,
         protocol_id: PROTOCOL_ID,
         server_addr,
@@ -63,7 +62,7 @@ fn new_netcode_transport(player_name: &str, mut host: &str, port: u16) -> Netcod
 
     info!("Connecting to {server_addr}");
 
-    NetcodeClientnetcode::new(current_time, auth, socket).unwrap()
+    NetcodeClientTransport::new(current_time, auth, socket).unwrap()
 }
 
 #[derive(Resource)]

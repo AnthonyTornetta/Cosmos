@@ -10,13 +10,13 @@ use bevy::{
 use cosmos_core::{
     block::Block,
     item::Item,
-    registry::{self, identifiable::Identifiable, many_to_one::ManyToOneRegistry, Registry},
+    registry::{self, Registry, identifiable::Identifiable, many_to_one::ManyToOneRegistry},
     state::GameState,
 };
 
 use crate::rendering::MeshInformation;
 
-use super::asset_loading::{load_block_rendering_information, AssetsSet, BlockRenderingInfo, ItemMeshingLoadingSet, ItemRenderingInfo};
+use super::asset_loading::{AssetsSet, BlockRenderingInfo, ItemMeshingLoadingSet, ItemRenderingInfo, load_block_rendering_information};
 
 pub mod animated_material;
 pub mod block_materials;
@@ -138,7 +138,7 @@ impl MaterialDefinition {
     pub fn add_material_data(&self, block_id: u16, mesh_info: &MeshInformation) -> Vec<(MeshVertexAttribute, VertexAttributeValues)> {
         self.generator
             .as_ref()
-            .map(|gen| gen.read().unwrap().generate_block_information(block_id, mesh_info))
+            .map(|g| g.read().unwrap().generate_block_information(block_id, mesh_info))
             .unwrap_or_default()
     }
 
@@ -148,7 +148,7 @@ impl MaterialDefinition {
     pub fn add_item_material_data(&self, item_id: u16, mesh_info: &MeshInformation) -> Vec<(MeshVertexAttribute, VertexAttributeValues)> {
         self.generator
             .as_ref()
-            .map(|gen| gen.read().unwrap().generate_item_information(item_id, mesh_info))
+            .map(|g| g.read().unwrap().generate_item_information(item_id, mesh_info))
             .unwrap_or_default()
     }
 

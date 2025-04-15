@@ -4,7 +4,7 @@ use bevy::{
     app::App, core_pipeline::bloom::Bloom, hierarchy::DespawnRecursiveExt, picking::pointer::PointerPress, prelude::*,
     render::camera::Camera, window::Monitor,
 };
-use bevy_kira_audio::prelude::AudioReceiver;
+use bevy_kira_audio::SpatialAudioReceiver;
 use bevy_rapier3d::plugin::DefaultRapierContext;
 use cosmos_core::state::GameState;
 
@@ -141,7 +141,7 @@ fn create_main_menu_camera(mut commands: Commands) {
         Name::new("Main Menu Camera"),
         Camera3d::default(),
         IsDefaultUiCamera,
-        AudioReceiver,
+        SpatialAudioReceiver,
         ShowCursor,
     ));
 }
