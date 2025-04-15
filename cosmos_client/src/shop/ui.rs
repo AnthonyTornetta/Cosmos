@@ -18,7 +18,7 @@ use bevy::{
     text::{TextFont, TextSpan},
     ui::{widget::Label, BackgroundColor, BorderColor, FlexDirection, JustifyContent, Node, UiRect, Val},
 };
-use bevy_renet2::renet2::RenetClient;
+use bevy_renet::renet::RenetClient;
 use cosmos_core::{
     economy::Credits,
     ecs::{

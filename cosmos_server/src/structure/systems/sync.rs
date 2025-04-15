@@ -10,7 +10,7 @@ use bevy::{
     },
     state::{condition::in_state, state::OnExit},
 };
-use bevy_renet2::renet2::RenetServer;
+use bevy_renet::renet::RenetServer;
 use cosmos_core::{
     item::Item,
     netty::{

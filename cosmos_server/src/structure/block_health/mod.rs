@@ -3,7 +3,7 @@
 use bevy::prelude::{
     in_state, App, EventReader, EventWriter, IntoSystemConfigs, IntoSystemSetConfigs, Query, Res, ResMut, SystemSet, Update,
 };
-use bevy_renet2::renet2::RenetServer;
+use bevy_renet::renet::RenetServer;
 use cosmos_core::{
     block::{block_events::BlockEventsSet, Block},
     events::block_events::BlockChangedEvent,

@@ -8,9 +8,10 @@ use bevy::{
     prelude::States,
     state::state::FreelyMutableState,
 };
-use bevy_renet2::renet2::ClientId;
-use registry::{sync_registry, RegistrySyncInit};
-use serde::{de::DeserializeOwned, Deserialize, Serialize};
+use bevy_renet::renet::ClientId;
+use bincode::{Decode, Encode};
+use registry::{RegistrySyncInit, sync_registry};
+use serde::{Deserialize, Serialize, de::DeserializeOwned};
 
 use crate::{
     block::data::BlockDataIdentifier,
@@ -184,7 +185,9 @@ pub trait IdentifiableComponent: Component {
 /// of the entity before it will sync it.  This is most commonly done via the [`super::server_unreliable_messages::ServerUnreliableMessages::BulkBodies`] networking request.
 /// Note that this requires the following components to sync the entity:
 /// `Location`, `Transform`, `Velocity`, and `LoadingDistance`. Additionally, the player must be within the `LoadingDistance`.
-pub trait SyncableComponent: Serialize + DeserializeOwned + Clone + std::fmt::Debug + PartialEq + IdentifiableComponent {
+pub trait SyncableComponent:
+    Serialize + DeserializeOwned + Clone + std::fmt::Debug + PartialEq + IdentifiableComponent + Encode + Decode<()>
+{
     /// Returns how this component should be synced
     ///
     /// Either from `server -> client` or `client -> server`.

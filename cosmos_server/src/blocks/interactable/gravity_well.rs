@@ -14,7 +14,7 @@ use bevy::{
     prelude::{BuildChildrenTransformExt, Res, With},
     state::condition::in_state,
 };
-use bevy_renet2::renet2::RenetServer;
+use bevy_renet::renet::RenetServer;
 use cosmos_core::{
     block::{
         block_events::{BlockBreakEvent, BlockInteractEvent},

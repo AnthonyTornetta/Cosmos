@@ -1,7 +1,7 @@
 //! Event & its processing for when a player wants to create a station
 
 use bevy::prelude::{in_state, App, Event, EventReader, EventWriter, IntoSystemConfigs, Or, Query, ResMut, Update, With};
-use bevy_renet2::renet2::RenetClient;
+use bevy_renet::renet::RenetClient;
 use cosmos_core::{
     netty::{client::LocalPlayer, client_reliable_messages::ClientReliableMessages, cosmos_encoder, NettyChannelClient},
     state::GameState,

@@ -137,7 +137,7 @@ fn add_asteroid_generator(
 
             let mut rng = get_rng_for_sector(&server_seed, &sector);
 
-            let asteroid_generator = generators[rng.gen_range(0..generators.len())];
+            let asteroid_generator = generators[rng.random_range(0..generators.len())];
 
             event_writer.send(AsteroidNeedsGeneratorEvent {
                 biosphere_id: asteroid_generator.to_owned(),

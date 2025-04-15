@@ -12,7 +12,7 @@ use bevy::{
 };
 use bevy_kira_audio::prelude::AudioReceiver;
 use bevy_rapier3d::prelude::*;
-use bevy_renet2::renet2::{transport::NetcodeClientTransport, RenetClient};
+use bevy_renet::renet::{transport::NetcodeClientTransport, RenetClient};
 use cosmos_core::{
     block::Block,
     ecs::NeedsDespawned,

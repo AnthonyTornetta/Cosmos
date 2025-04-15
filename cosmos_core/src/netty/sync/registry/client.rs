@@ -2,16 +2,16 @@
 
 use crate::{
     netty::{
-        cosmos_encoder, server_registry::RegistrySyncing, sync::resources::client::ResourcesLeftToSync, system_sets::NetworkingSystemsSet,
-        NettyChannelClient, NettyChannelServer,
+        NettyChannelClient, NettyChannelServer, cosmos_encoder, server_registry::RegistrySyncing,
+        sync::resources::client::ResourcesLeftToSync, system_sets::NetworkingSystemsSet,
     },
-    registry::{identifiable::Identifiable, Registry},
+    registry::{Registry, identifiable::Identifiable},
 };
 use bevy::{
     app::{App, Update},
     ecs::{
         event::{Event, EventReader, EventWriter},
-        schedule::{common_conditions::resource_exists, IntoSystemConfigs},
+        schedule::{IntoSystemConfigs, common_conditions::resource_exists},
         system::{Res, ResMut, Resource},
     },
     log::{error, info},
@@ -22,7 +22,7 @@ use bevy::{
         state::{FreelyMutableState, NextState},
     },
 };
-use bevy_renet2::renet2::RenetClient;
+use bevy_renet::renet::RenetClient;
 use serde::de::DeserializeOwned;
 
 use crate::ecs::add_multi_statebound_resource;

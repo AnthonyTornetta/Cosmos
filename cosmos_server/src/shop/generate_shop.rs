@@ -37,9 +37,9 @@ fn generate_shops(
 
         let mut rng = get_rng_for_sector(&server_seed, &ev.system.negative_most_sector());
 
-        let n_shops = rng.gen_range(20..=50);
+        let n_shops = rng.random_range(20..=50);
 
-        let asteroid_shops_percent = rng.gen::<f32>() * 0.5 + 0.25; // At least 25% to a max of 75%
+        let asteroid_shops_percent = rng.random::<f32>() * 0.5 + 0.25; // At least 25% to a max of 75%
 
         let asteroid_shops = (asteroid_shops_percent * n_shops as f32) as i32;
         let non_asteroid_shops = n_shops - asteroid_shops;
@@ -61,9 +61,9 @@ fn generate_shops(
             placed_shops.insert(generated_item.location.sector());
             let loc = Location::new(
                 Vec3::new(
-                    rng.gen::<f32>() * multiplier + adder,
-                    rng.gen::<f32>() * multiplier + adder,
-                    rng.gen::<f32>() * multiplier + adder,
+                    rng.random::<f32>() * multiplier + adder,
+                    rng.random::<f32>() * multiplier + adder,
+                    rng.random::<f32>() * multiplier + adder,
                 ),
                 generated_item.location.sector(),
             );
@@ -75,9 +75,9 @@ fn generate_shops(
 
         for _ in 0..non_asteroid_shops {
             let sector = Sector::new(
-                rng.gen_range(0..SYSTEM_SECTORS as SectorUnit),
-                rng.gen_range(0..SYSTEM_SECTORS as SectorUnit),
-                rng.gen_range(0..SYSTEM_SECTORS as SectorUnit),
+                rng.random_range(0..SYSTEM_SECTORS as SectorUnit),
+                rng.random_range(0..SYSTEM_SECTORS as SectorUnit),
+                rng.random_range(0..SYSTEM_SECTORS as SectorUnit),
             ) + ev.system.negative_most_sector();
 
             if system.items_at(sector).next().is_some() {
@@ -86,9 +86,9 @@ fn generate_shops(
 
             let loc = Location::new(
                 Vec3::new(
-                    rng.gen::<f32>() * multiplier + adder,
-                    rng.gen::<f32>() * multiplier + adder,
-                    rng.gen::<f32>() * multiplier + adder,
+                    rng.random::<f32>() * multiplier + adder,
+                    rng.random::<f32>() * multiplier + adder,
+                    rng.random::<f32>() * multiplier + adder,
                 ),
                 sector,
             );

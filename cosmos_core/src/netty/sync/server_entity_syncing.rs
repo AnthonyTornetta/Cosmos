@@ -4,7 +4,7 @@
 //! in the core project for specific server-only use cases.
 
 use bevy::ecs::{entity::Entity, event::Event};
-use bevy_renet2::renet2::ClientId;
+use bevy_renet::renet::ClientId;
 
 /// Entities requested are **NOT** guarenteed to exist!
 ///

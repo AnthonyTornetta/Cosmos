@@ -10,7 +10,7 @@ use bevy::{
     },
 };
 use bevy_rapier3d::prelude::Velocity;
-use bevy_renet2::renet2::RenetServer;
+use bevy_renet::renet::RenetServer;
 use cosmos_core::{
     entities::player::Player,
     inventory::{

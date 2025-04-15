@@ -5,17 +5,21 @@ use bevy::{
         system::SystemParam,
     },
     log::{error, warn},
-    prelude::{in_state, resource_exists, Condition, Event, EventReader, EventWriter, IntoSystemConfigs, Res, ResMut},
+    prelude::{Condition, Event, EventReader, EventWriter, IntoSystemConfigs, Res, ResMut, in_state, resource_exists},
 };
-use renet2::RenetClient;
+use renet::RenetClient;
 
 use crate::{
-    netty::{cosmos_encoder, system_sets::NetworkingSystemsSet, NettyChannelClient},
+    netty::{
+        NettyChannelClient,
+        cosmos_encoder::{self, serialize_uncompressed},
+        system_sets::NetworkingSystemsSet,
+    },
     registry::identifiable::Identifiable,
     state::GameState,
 };
 use crate::{
-    netty::{sync::mapping::NetworkMapping, NettyChannelServer},
+    netty::{NettyChannelServer, sync::mapping::NetworkMapping},
     registry::Registry,
 };
 
@@ -96,11 +100,10 @@ fn send_events<T: NettyEvent>(
                 continue;
             };
 
-            bincode::serialize(&x)
+            serialize_uncompressed(&x)
         } else {
-            bincode::serialize(&ev.0)
-        }
-        .unwrap();
+            serialize_uncompressed(&ev.0)
+        };
 
         client.send_message(
             NettyChannelClient::NettyEvent,
@@ -149,7 +152,7 @@ fn parse_event<T: NettyEvent>(
             continue;
         }
 
-        let Ok(event) = bincode::deserialize::<T>(&ev.raw_data) else {
+        let Ok(event) = cosmos_encoder::deserialize_uncompressed::<T>(&ev.raw_data) else {
             error!("Got invalid event from server!");
             continue;
         };

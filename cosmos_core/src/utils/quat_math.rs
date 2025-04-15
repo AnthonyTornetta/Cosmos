@@ -56,9 +56,9 @@ impl QuatMath for Quat {
 // pub fn random_quat(rng: &mut ChaCha8Rng) -> Quat {
 //     use std::f32::consts::PI;
 //
-//     let u = rng.gen::<f32>();
-//     let v = rng.gen::<f32>();
-//     let w = rng.gen::<f32>();
+//     let u = rng.random::<f32>();
+//     let v = rng.random::<f32>();
+//     let w = rng.random::<f32>();
 //
 //     Quat::from_xyzw(
 //         (1.0 - u).sqrt() * (2.0 * PI * v).sin(),
@@ -72,9 +72,9 @@ impl QuatMath for Quat {
 pub fn random_quat<T: Rng>(rng: &mut T) -> Quat {
     use std::f32::consts::PI;
 
-    let u = rng.gen::<f32>();
-    let v = rng.gen::<f32>();
-    let w = rng.gen::<f32>();
+    let u = rng.random::<f32>();
+    let v = rng.random::<f32>();
+    let w = rng.random::<f32>();
 
     Quat::from_xyzw(
         (1.0 - u).sqrt() * (2.0 * PI * v).sin(),

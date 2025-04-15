@@ -22,7 +22,7 @@ use bevy::{
     prelude::{App, Component, States},
     state::state::FreelyMutableState,
 };
-use bevy_renet2::renet2::{ChannelConfig, ConnectionConfig, SendType};
+use bevy_renet::renet::{ChannelConfig, ConnectionConfig, SendType};
 use std::time::Duration;
 use sync::registry::RegistrySyncInit;
 

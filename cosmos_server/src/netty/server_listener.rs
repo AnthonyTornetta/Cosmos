@@ -5,7 +5,7 @@
 use bevy::prelude::*;
 use bevy::utils::HashMap;
 use bevy_rapier3d::prelude::Velocity;
-use bevy_renet2::renet2::{ClientId, RenetServer};
+use bevy_renet::renet::{ClientId, RenetServer};
 use cosmos_core::block::block_events::{BlockBreakEvent, BlockInteractEvent, BlockPlaceEvent, BlockPlaceEventData};
 use cosmos_core::ecs::mut_events::MutEvent;
 use cosmos_core::inventory::itemstack::ItemStackSystemSet;

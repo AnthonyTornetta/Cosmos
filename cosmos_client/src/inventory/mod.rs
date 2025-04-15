@@ -1,7 +1,7 @@
 //! Renders the inventory slots and handles all the logic for moving items around
 
 use bevy::{ecs::system::EntityCommands, prelude::*, window::PrimaryWindow};
-use bevy_renet2::renet2::RenetClient;
+use bevy_renet::renet::RenetClient;
 use cosmos_core::{
     block::{
         block_events::BlockEventsSet,

@@ -13,7 +13,7 @@ use bevy::{
     state::state::OnEnter,
     tasks::Task,
 };
-use bevy_renet2::renet2::RenetServer;
+use bevy_renet::renet::RenetServer;
 use biome::RegisterBiomesSet;
 use cosmos_core::{
     netty::{cosmos_encoder, server_reliable_messages::ServerReliableMessages, system_sets::NetworkingSystemsSet, NettyChannelServer},

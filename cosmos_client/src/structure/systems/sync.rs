@@ -14,7 +14,7 @@ use bevy::{
     state::condition::in_state,
     utils::HashMap,
 };
-use bevy_renet2::renet2::RenetClient;
+use bevy_renet::renet::RenetClient;
 use cosmos_core::{
     block::specific_blocks::gravity_well::GravityWell,
     netty::{

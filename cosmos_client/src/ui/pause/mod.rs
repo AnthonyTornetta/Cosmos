@@ -5,7 +5,7 @@ use bevy::{
     prelude::*,
 };
 use cosmos_core::{ecs::NeedsDespawned, state::GameState};
-use renet2::RenetClient;
+use renet::RenetClient;
 
 use crate::{
     input::inputs::{CosmosInputs, InputChecker, InputHandler},

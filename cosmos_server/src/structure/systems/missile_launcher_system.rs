@@ -7,7 +7,7 @@ use bevy_rapier3d::{
     geometry::{CollisionGroups, Group},
     prelude::{ReadMassProperties, Velocity},
 };
-use bevy_renet2::renet2::RenetServer;
+use bevy_renet::renet::RenetServer;
 use cosmos_core::{
     block::{data::BlockData, Block},
     entities::player::Player,

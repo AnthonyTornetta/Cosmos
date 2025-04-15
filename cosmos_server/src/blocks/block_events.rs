@@ -4,7 +4,7 @@ use crate::{
 };
 use bevy::{prelude::*, utils::HashMap};
 use bevy_rapier3d::prelude::Velocity;
-use bevy_renet2::renet2::RenetServer;
+use bevy_renet::renet::RenetServer;
 use cosmos_core::{
     block::{
         block_events::*,

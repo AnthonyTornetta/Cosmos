@@ -31,7 +31,7 @@ use cosmos_core::{
         structure_block::StructureBlock, Structure,
     },
 };
-use renet2::RenetClient;
+use renet::RenetClient;
 
 use crate::{
     events::block::block_events::*,

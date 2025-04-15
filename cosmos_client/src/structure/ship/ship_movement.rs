@@ -4,7 +4,7 @@ use std::f32::consts::PI;
 
 use bevy::prelude::*;
 use bevy::window::PrimaryWindow;
-use bevy_renet2::renet2::RenetClient;
+use bevy_renet::renet::RenetClient;
 use cosmos_core::netty::client::LocalPlayer;
 use cosmos_core::netty::client_reliable_messages::ClientReliableMessages;
 use cosmos_core::netty::client_unreliable_messages::ClientUnreliableMessages;

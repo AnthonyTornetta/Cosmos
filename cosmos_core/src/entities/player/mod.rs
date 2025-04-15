@@ -5,7 +5,7 @@ pub mod render_distance;
 pub mod respawn;
 
 use bevy::prelude::{App, Component};
-use bevy_renet2::renet2::ClientId;
+use bevy_renet::renet::ClientId;
 use serde::{Deserialize, Serialize};
 
 use crate::netty::sync::{sync_component, IdentifiableComponent, SyncableComponent};

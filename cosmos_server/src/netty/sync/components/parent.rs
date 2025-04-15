@@ -16,7 +16,7 @@ use cosmos_core::{
     physics::location::Location,
     prelude::StructureSystem,
 };
-use renet2::{ClientId, RenetServer};
+use renet::{ClientId, RenetServer};
 
 fn on_request_parent(
     q_component: Query<(&Parent, Option<&StructureSystem>, Option<&ItemStackData>, Option<&BlockData>), Without<NoSendEntity>>,

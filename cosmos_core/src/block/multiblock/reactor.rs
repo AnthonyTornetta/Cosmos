@@ -6,18 +6,20 @@ use bevy::{
     prelude::{App, Component, Deref, DerefMut, Event},
     reflect::Reflect,
 };
+use bincode::{Decode, Encode};
 use serde::{Deserialize, Serialize};
 
 use crate::{
     block::Block,
     item::Item,
     netty::sync::{
+        IdentifiableComponent, SyncableComponent,
         events::netty_event::{IdentifiableEvent, NettyEvent, SyncedEventImpl},
         registry::sync_registry,
-        sync_component, IdentifiableComponent, SyncableComponent,
+        sync_component,
     },
     prelude::StructureBlock,
-    registry::{create_registry, identifiable::Identifiable, Registry},
+    registry::{Registry, create_registry, identifiable::Identifiable},
     structure::coordinates::BlockCoordinate,
 };
 
@@ -30,7 +32,7 @@ pub struct ReactorBounds {
     pub positive_coords: BlockCoordinate,
 }
 
-#[derive(Clone, Copy, Debug, Reflect, Serialize, Deserialize, PartialEq, Component)]
+#[derive(Clone, Copy, Debug, Reflect, Serialize, Deserialize, PartialEq, Component, Encode, Decode)]
 /// Represents a constructed reactor
 pub struct Reactor {
     /// Represents the reactor_controller block
@@ -56,7 +58,7 @@ impl SyncableComponent for Reactor {
     }
 }
 
-#[derive(Component, Serialize, Deserialize, Clone, Copy, PartialEq, Eq, Debug, Reflect)]
+#[derive(Component, Serialize, Deserialize, Clone, Copy, PartialEq, Eq, Debug, Reflect, Encode, Decode)]
 /// If a reactor controller block has this component, the reactor is active.
 ///
 /// A reactor may be active but have no fuel, in that case it will generate 0 power
@@ -74,7 +76,7 @@ impl SyncableComponent for ReactorActive {
     }
 }
 
-#[derive(Component, Default, Clone, Serialize, Deserialize, PartialEq, Debug, Reflect)]
+#[derive(Component, Default, Clone, Serialize, Deserialize, PartialEq, Debug, Reflect, Encode, Decode)]
 /// Stores how much of the current fuel has been consumed
 pub struct ReactorFuelConsumption {
     /// How many seconds has this fuel been consumed for
@@ -128,7 +130,7 @@ impl Reactor {
     }
 }
 
-#[derive(Debug, Component, Default, Reflect, DerefMut, Deref, Serialize, Deserialize, Clone, PartialEq)]
+#[derive(Debug, Component, Default, Reflect, DerefMut, Deref, Serialize, Deserialize, Clone, PartialEq, Encode, Decode)]
 /// Stores the entities of all the reactors in a structure and their controller blocks for quick access
 pub struct Reactors(Vec<BlockCoordinate>);
 
@@ -197,7 +199,7 @@ impl Registry<ReactorPowerGenerationBlock> {
     }
 }
 
-#[derive(Event, Debug, Serialize, Deserialize, Clone)]
+#[derive(Event, Debug, Serialize, Deserialize, Clone, Encode, Decode)]
 /// Send this to the player to cause them to open a reactor
 pub struct OpenReactorEvent(pub StructureBlock);
 
@@ -225,7 +227,7 @@ impl NettyEvent for OpenReactorEvent {
     }
 }
 
-#[derive(Event, Debug, Serialize, Deserialize, Clone)]
+#[derive(Event, Debug, Serialize, Deserialize, Clone, Encode, Decode)]
 /// The client requests to set the state of the reactor
 pub struct ClientRequestChangeReactorStatus {
     /// The reactor they're controller toggling

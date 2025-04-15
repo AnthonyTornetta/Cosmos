@@ -7,7 +7,7 @@ use bevy::{
     log::warn,
     prelude::{in_state, App, Commands, EventReader, IntoSystemConfigs, Query, Res, ResMut, Update},
 };
-use bevy_renet2::renet2::RenetServer;
+use bevy_renet::renet::RenetServer;
 use cosmos_core::{
     block::{
         block_events::{BlockEventsSet, BlockInteractEvent},

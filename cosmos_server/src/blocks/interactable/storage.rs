@@ -2,7 +2,7 @@ use bevy::{
     ecs::system::ResMut,
     prelude::{in_state, App, EventReader, IntoSystemConfigs, Query, Res, Update},
 };
-use bevy_renet2::renet2::RenetServer;
+use bevy_renet::renet::RenetServer;
 use cosmos_core::{
     block::{
         block_events::{BlockEventsSet, BlockInteractEvent},

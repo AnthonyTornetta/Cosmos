@@ -1,14 +1,14 @@
 //! Handles client connecting and disconnecting
 
 use bevy::prelude::*;
-use bevy_renet2::renet2::transport::NetcodeServerTransport;
-use bevy_renet2::renet2::{ClientId, RenetServer, ServerEvent};
+use bevy_renet::renet::transport::NetcodeServerTransport;
+use bevy_renet::renet::{ClientId, RenetServer, ServerEvent};
 use cosmos_core::ecs::NeedsDespawned;
 use cosmos_core::entities::player::Player;
 use cosmos_core::netty::server::ServerLobby;
 use cosmos_core::netty::server_reliable_messages::ServerReliableMessages;
 use cosmos_core::netty::{cosmos_encoder, NettyChannelServer};
-use renet2_visualizer::RenetServerVisualizer;
+use renet_visualizer::RenetServerVisualizer;
 
 use crate::entities::player::persistence::LoadPlayer;
 use crate::netty::network_helpers::ClientTicks;

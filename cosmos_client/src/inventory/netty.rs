@@ -5,7 +5,7 @@ use bevy::{
     log::warn,
     prelude::{in_state, App, Commands, Entity, IntoSystemConfigs, Query, Res, ResMut, Update},
 };
-use bevy_renet2::renet2::RenetClient;
+use bevy_renet::renet::RenetClient;
 use cosmos_core::{
     ecs::NeedsDespawned,
     inventory::{

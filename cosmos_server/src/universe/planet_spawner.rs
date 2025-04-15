@@ -125,13 +125,13 @@ fn spawn_planets(
         let star_sector = star_loc.sector();
         let mut rng = get_rng_for_sector(&server_seed, &star_sector);
 
-        let n_planets: usize = rng.gen_range(0..30);
+        let n_planets: usize = rng.random_range(0..30);
 
         for _ in 0..n_planets {
             let sector = Sector::new(
-                rng.gen_range(0..(SYSTEM_SECTORS as SectorUnit)),
-                rng.gen_range(0..(SYSTEM_SECTORS as SectorUnit)),
-                rng.gen_range(0..(SYSTEM_SECTORS as SectorUnit)),
+                rng.random_range(0..(SYSTEM_SECTORS as SectorUnit)),
+                rng.random_range(0..(SYSTEM_SECTORS as SectorUnit)),
+                rng.random_range(0..(SYSTEM_SECTORS as SectorUnit)),
             ) + star_loc.get_system_coordinates().negative_most_sector();
 
             let location = Location::new(Vec3::ZERO, sector);
@@ -147,7 +147,7 @@ fn spawn_planets(
                 let size = if is_origin {
                     64
                 } else {
-                    2_f32.powi(rng.gen_range(7..=9)) as CoordinateType
+                    2_f32.powi(rng.random_range(7..=9)) as CoordinateType
                 };
 
                 let biospheres = registry.get_biospheres_for(temperature);
@@ -159,14 +159,14 @@ fn spawn_planets(
                     );
                 }
 
-                let biosphere_name = biospheres[rng.gen_range(0..biospheres.len())];
+                let biosphere_name = biospheres[rng.random_range(0..biospheres.len())];
                 let biosphere_id = biosphere_registry
                     .from_id(biosphere_name)
                     .unwrap_or_else(|| panic!("Missing biosphere {biosphere_name}"))
                     .id();
 
-                let angle = rng.gen::<f32>() % TAU;
-                let axis = Dir3::new(Vec3::new(rng.gen(), rng.gen(), rng.gen()).normalize_or_zero()).unwrap_or(Dir3::Y);
+                let angle = rng.random::<f32>() % TAU;
+                let axis = Dir3::new(Vec3::new(rng.random(), rng.random(), rng.random()).normalize_or_zero()).unwrap_or(Dir3::Y);
 
                 system.add_item(
                     location,

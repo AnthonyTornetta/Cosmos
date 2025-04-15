@@ -2,7 +2,7 @@
 
 use bevy::{prelude::*, utils::HashMap};
 use bevy_rapier3d::{plugin::RapierContextEntityLink, prelude::RapierContextSimulation};
-use bevy_renet2::renet2::*;
+use bevy_renet::renet::*;
 use cosmos_core::{
     netty::{
         cosmos_encoder, server_laser_cannon_system_messages::ServerStructureSystemMessages, sync::mapping::NetworkMapping,

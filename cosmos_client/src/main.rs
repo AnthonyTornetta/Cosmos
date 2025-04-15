@@ -47,7 +47,7 @@ use bevy_obj::ObjPlugin;
 
 use bevy_rapier3d::plugin::{RapierContextInitialization, RapierPhysicsPlugin};
 // use bevy_rapier3d::render::RapierDebugRenderPlugin;
-use bevy_renet2::{RenetClientPlugin, transport::NetcodeClientPlugin};
+use bevy_renet::{RenetClientPlugin, transport::NetcodeClientPlugin};
 use clap::{Parser, arg};
 use cosmos_core::netty::sync::registry::RegistrySyncInit;
 use cosmos_core::state::GameState;

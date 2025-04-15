@@ -23,7 +23,7 @@ use bevy::{
     utils::hashbrown::HashMap,
 };
 
-use bevy_renet2::renet2::RenetServer;
+use bevy_renet::renet::RenetServer;
 use cosmos_core::{
     block::{block_events::BlockEventsSet, Block},
     ecs::NeedsDespawned,

@@ -10,7 +10,7 @@ use cosmos_core::{
     netty::{client::LocalPlayer, sync::events::client_event::NettyEventWriter, system_sets::NetworkingSystemsSet},
     physics::location::{Location, LocationPhysicsSet, SetPosition},
 };
-use renet2::RenetClient;
+use renet::RenetClient;
 
 use crate::ui::{
     components::{

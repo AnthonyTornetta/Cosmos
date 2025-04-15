@@ -4,7 +4,7 @@ use std::time::Duration;
 
 use bevy::prelude::*;
 use bevy_rapier3d::{plugin::RapierContextEntityLink, prelude::Velocity};
-use bevy_renet2::renet2::RenetServer;
+use bevy_renet::renet::RenetServer;
 use cosmos_core::{
     block::Block,
     logic::{logic_driver::LogicDriver, LogicInputEvent, LogicSystemSet},

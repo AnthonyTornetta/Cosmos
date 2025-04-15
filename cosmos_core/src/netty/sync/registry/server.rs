@@ -16,7 +16,7 @@ use bevy::{
     prelude::{Deref, Entity, Event, IntoSystemSetConfigs, States, SystemSet},
     state::condition::in_state,
 };
-use bevy_renet2::renet2::RenetServer;
+use bevy_renet::renet::RenetServer;
 use serde::{Deserialize, Serialize};
 
 #[derive(Resource, Deref, Debug, Default)]

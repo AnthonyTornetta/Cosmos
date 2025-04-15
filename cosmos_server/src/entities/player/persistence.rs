@@ -30,7 +30,7 @@ use cosmos_core::{
     physics::location::{systems::Anchor, Location, LocationPhysicsSet, Sector, SetPosition},
     registry::{identifiable::Identifiable, Registry},
 };
-use renet2::{ClientId, RenetServer};
+use renet::{ClientId, RenetServer};
 use serde::{Deserialize, Serialize};
 
 use crate::{

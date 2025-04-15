@@ -85,7 +85,7 @@ pub fn register_standard_asteroid_generation<T: AsteroidGeneratorComponent>(
 
                 let block_entries = block_entries.clone();
                 let mut s_rng = get_rng_for_sector(&server_seed, &loc.sector());
-                let offsets = block_entries.iter().map(|_| s_rng.gen::<f64>() * 10000.0).collect::<Vec<_>>();
+                let offsets = block_entries.iter().map(|_| s_rng.random::<f64>() * 10000.0).collect::<Vec<_>>();
 
                 let task = thread_pool.spawn(async move {
                     let noise = noise.inner();

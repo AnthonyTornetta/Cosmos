@@ -8,7 +8,7 @@ use bevy::{
     prelude::{in_state, App, Commands, EventReader, IntoSystemConfigs, Query, Res, ResMut, Update, With},
 };
 use bevy_rapier3d::prelude::Velocity;
-use bevy_renet2::renet2::RenetServer;
+use bevy_renet::renet::RenetServer;
 use cosmos_core::{
     entities::player::Player,
     netty::{

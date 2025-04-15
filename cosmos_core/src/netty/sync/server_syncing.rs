@@ -11,10 +11,10 @@ use crate::inventory::itemstack::ItemStackData;
 use crate::netty::server::ServerLobby;
 use crate::netty::sync::{GotComponentToRemoveEvent, GotComponentToSyncEvent};
 use crate::netty::system_sets::NetworkingSystemsSet;
-use crate::netty::{cosmos_encoder, NettyChannelClient, NettyChannelServer, NoSendEntity};
+use crate::netty::{NettyChannelClient, NettyChannelServer, NoSendEntity, cosmos_encoder};
 use crate::persistence::LoadingDistance;
 use crate::physics::location::{CosmosBundleSet, Location};
-use crate::registry::{identifiable::Identifiable, Registry};
+use crate::registry::{Registry, identifiable::Identifiable};
 use crate::structure::ship::pilot::Pilot;
 use crate::structure::systems::{StructureSystem, StructureSystems};
 use bevy::ecs::event::EventReader;
@@ -36,8 +36,8 @@ use bevy::{
     },
     log::error,
 };
-use bevy_renet2::renet2::RenetServer;
-use renet2::ClientId;
+use bevy_renet::renet::RenetServer;
+use renet::ClientId;
 
 fn server_remove_component<T: SyncableComponent>(
     components_registry: Res<Registry<SyncedComponentId>>,
@@ -157,7 +157,7 @@ fn server_deserialize_component<T: SyncableComponent>(
         }
 
         if let Some(mut ecmds) = commands.get_entity(ev.entity) {
-            let Ok(deserialized) = bincode::deserialize::<T>(&ev.raw_data) else {
+            let Ok(deserialized) = cosmos_encoder::deserialize_uncompressed::<T>(&ev.raw_data) else {
                 continue;
             };
 
@@ -254,7 +254,7 @@ fn server_send_component<T: SyncableComponent>(
             .filter(|(_, entity_identifier)| should_be_sent_to(p_loc, &q_parent, entity_identifier))
             .map(|(component, identifier)| ReplicatedComponentData {
                 entity_identifier: identifier,
-                raw_data: bincode::serialize(component).expect("Failed to serialize component!"),
+                raw_data: cosmos_encoder::serialize_uncompressed(component),
             })
             .collect::<Vec<ReplicatedComponentData>>();
 

@@ -5,12 +5,12 @@
 use std::{net::UdpSocket, time::SystemTime};
 
 use bevy::prelude::*;
-use bevy_renet2::renet2::{
+use bevy_renet::renet::{
     transport::{NetcodeServerTransport, ServerAuthentication},
     RenetServer,
 };
 use cosmos_core::netty::{connection_config, server::ServerLobby, PROTOCOL_ID};
-use renet2::transport::{NativeSocket, ServerSetupConfig};
+use renet::transport::{NativeSocket, ServerSetupConfig};
 
 use crate::netty::network_helpers::{ClientTicks, NetworkTick};
 
