@@ -7,7 +7,7 @@ use bevy::{
     utils::HashMap,
 };
 use derive_more::derive::{Display, Error};
-use serde::{de::DeserializeOwned, Deserialize, Serialize};
+use serde::{Deserialize, Serialize, de::DeserializeOwned};
 
 use crate::{
     netty::cosmos_encoder,
@@ -59,7 +59,7 @@ impl SaveData {
 /// Unable to deserialize the given data
 pub enum DeserializationError {
     /// Something went wrong deserializing the binary. This meant something bad happened.
-    ErrorParsing(Box<bincode::ErrorKind>),
+    ErrorParsing(Box<bincode::error::DecodeError>),
     /// There is no entry for this serialized id.
     NoEntry,
 }

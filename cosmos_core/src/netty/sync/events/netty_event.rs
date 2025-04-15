@@ -1,5 +1,5 @@
 use bevy::{app::App, prelude::Event};
-use bincode::{Decode, Encode};
+use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 
 use crate::netty::sync::registry::sync_registry;
@@ -35,7 +35,7 @@ pub enum EventReceiver {
 /// This allows an event to be automatically sent to the server/client from the other.
 ///
 /// TODO: Properly document how to use this
-pub trait NettyEvent: Encode + Decode<()> + std::fmt::Debug + IdentifiableEvent + Event + Clone {
+pub trait NettyEvent: std::fmt::Debug + IdentifiableEvent + Event + Clone + Serialize + DeserializeOwned {
     /// Returns how this component should be synced
     ///
     /// Either from `server -> client` or `client -> server`.
@@ -67,7 +67,7 @@ pub trait NettyEvent: Encode + Decode<()> + std::fmt::Debug + IdentifiableEvent 
     }
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone, Encode, Decode)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub(super) enum NettyEventMessage {
     SendNettyEvent { component_id: u16, raw_data: Vec<u8> },
 }

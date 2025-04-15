@@ -10,13 +10,13 @@ use std::{
 use bevy::prelude::*;
 use bevy_renet::renet::{
     RenetClient,
-    transport::{ClientAuthentication, NetcodeClientTransport},
+    netcode::{ClientAuthentication, NetcodeClientTransport},
 };
 use cosmos_core::{
     netty::{PROTOCOL_ID, connection_config, sync::mapping::NetworkMapping},
     state::GameState,
 };
-use renet::{DisconnectReason, transport::NativeSocket};
+use renet::{DisconnectReason, netcode::NativeSocket};
 
 use crate::{
     netty::lobby::{ClientLobby, MostRecentTick},
@@ -63,7 +63,7 @@ fn new_netcode_transport(player_name: &str, mut host: &str, port: u16) -> Netcod
 
     info!("Connecting to {server_addr}");
 
-    NetcodeClientTransport::new(current_time, auth, socket).unwrap()
+    NetcodeClientnetcode::new(current_time, auth, socket).unwrap()
 }
 
 #[derive(Resource)]

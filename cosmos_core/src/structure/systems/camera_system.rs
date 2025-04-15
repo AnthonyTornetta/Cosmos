@@ -9,7 +9,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{block::Block, registry::identifiable::Identifiable, structure::coordinates::BlockCoordinate};
 
-use super::{sync::SyncableSystem, StructureSystemImpl};
+use super::{StructureSystemImpl, sync::SyncableSystem};
 
 #[derive(Default, Resource)]
 /// All the energy storage blocks - register them here.
@@ -51,7 +51,7 @@ impl CameraSystem {
 
     /// Call this whenever a block is removed from the system
     pub fn block_removed(&mut self, location: BlockCoordinate) {
-        let Some((idx, _)) = self.cameras.iter().enumerate().find(|(_, &x)| x == location) else {
+        let Some((idx, _)) = self.cameras.iter().enumerate().find(|(_, x)| **x == location) else {
             return;
         };
 

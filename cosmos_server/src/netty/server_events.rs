@@ -1,7 +1,7 @@
 //! Handles client connecting and disconnecting
 
 use bevy::prelude::*;
-use bevy_renet::renet::transport::NetcodeServerTransport;
+use bevy_renet::renet::netcode::NetcodeServerTransport;
 use bevy_renet::renet::{ClientId, RenetServer, ServerEvent};
 use cosmos_core::ecs::NeedsDespawned;
 use cosmos_core::entities::player::Player;

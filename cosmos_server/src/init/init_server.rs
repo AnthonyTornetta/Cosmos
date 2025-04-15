@@ -6,11 +6,11 @@ use std::{net::UdpSocket, time::SystemTime};
 
 use bevy::prelude::*;
 use bevy_renet::renet::{
-    transport::{NetcodeServerTransport, ServerAuthentication},
+    netcode::{NetcodeServerTransport, ServerAuthentication},
     RenetServer,
 };
 use cosmos_core::netty::{connection_config, server::ServerLobby, PROTOCOL_ID};
-use renet::transport::{NativeSocket, ServerSetupConfig};
+use renet::netcode::{NativeSocket, ServerSetupConfig};
 
 use crate::netty::network_helpers::{ClientTicks, NetworkTick};
 
@@ -42,7 +42,7 @@ pub fn init(app: &mut App, port: u16) {
     //     authentication: ServerAuthentication::Unsecure,
     // };
 
-    let transport = NetcodeServerTransport::new(setup_config, socket).unwrap();
+    let transport = NetcodeServernetcode::new(setup_config, socket).unwrap();
     let server = RenetServer::new(connection_config());
 
     app.insert_resource(ServerLobby::default())

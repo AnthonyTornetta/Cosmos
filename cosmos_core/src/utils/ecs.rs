@@ -59,7 +59,7 @@ impl<T: Component> Deref for MutOrMutRef<'_, T> {
 
     fn deref(&self) -> &Self::Target {
         match self {
-            Self::Mut(ref a) => a.as_ref(),
+            Self::Mut(a) => a.as_ref(),
             Self::Ref(r) => r,
         }
     }
@@ -67,7 +67,7 @@ impl<T: Component> Deref for MutOrMutRef<'_, T> {
 impl<T: Component> DerefMut for MutOrMutRef<'_, T> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         match self {
-            Self::Mut(ref mut a) => a.as_mut(),
+            Self::Mut(a) => a.as_mut(),
             Self::Ref(r) => r,
         }
     }

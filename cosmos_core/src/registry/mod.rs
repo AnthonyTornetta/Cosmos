@@ -5,7 +5,6 @@ pub mod many_to_one;
 pub mod one_to_one;
 
 use bevy::prelude::{App, IntoSystemConfigs, Res, ResMut, Resource, Update, resource_exists_and_changed};
-use bincode::{Decode, Encode};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fmt;
@@ -39,7 +38,7 @@ impl fmt::Display for AddLinkError {
 impl std::error::Error for AddLinkError {}
 
 /// Represents a bunch of values that are identifiable by their unlocalized name + numeric ids.
-#[derive(Resource, Debug, Clone, Serialize, Deserialize, Encode, Decode)]
+#[derive(Resource, Debug, Clone, Serialize, Deserialize)]
 pub struct Registry<T: Identifiable> {
     contents: Vec<T>,
     unlocalized_name_to_id: HashMap<String, u16>,

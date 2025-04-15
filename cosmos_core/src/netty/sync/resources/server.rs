@@ -51,7 +51,7 @@ fn sync_on_change<T: SyncableResource>(mut server: ResMut<RenetServer>, resource
     server.broadcast_message(
         NettyChannelServer::Resource,
         cosmos_encoder::serialize(&ResourceSyncingMessage::Resource {
-            data: bincode::serialize(resource.as_ref()).expect("Failed to serialize :("),
+            data: cosmos_encoder::serialize_uncompressed(resource.as_ref()),
             unlocalized_name: T::unlocalized_name().into(),
         }),
     );

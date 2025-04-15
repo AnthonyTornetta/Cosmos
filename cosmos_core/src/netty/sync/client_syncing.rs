@@ -8,33 +8,33 @@ use super::{
     ReplicatedComponentData, SyncType, SyncableComponent, SyncedComponentId,
 };
 use crate::block::data::BlockData;
-use crate::ecs::{add_multi_statebound_resource, NeedsDespawned};
+use crate::ecs::{NeedsDespawned, add_multi_statebound_resource};
 use crate::events::block_events::BlockDataChangedEvent;
-use crate::inventory::itemstack::ItemStackData;
 use crate::inventory::Inventory;
+use crate::inventory::itemstack::ItemStackData;
 use crate::netty::client::{LocalPlayer, NeedsLoadedFromServer};
 use crate::netty::client_reliable_messages::ClientReliableMessages;
 use crate::netty::sync::GotComponentToSyncEvent;
 use crate::netty::system_sets::NetworkingSystemsSet;
-use crate::netty::{cosmos_encoder, NettyChannelClient};
+use crate::netty::{NettyChannelClient, cosmos_encoder};
 use crate::netty::{NettyChannelServer, NoSendEntity};
-use crate::registry::{identifiable::Identifiable, Registry};
+use crate::registry::{Registry, identifiable::Identifiable};
 use crate::state::GameState;
+use crate::structure::Structure;
 use crate::structure::ship::pilot::Pilot;
 use crate::structure::systems::{StructureSystem, StructureSystems};
-use crate::structure::Structure;
 use bevy::core::Name;
 use bevy::ecs::event::EventReader;
 use bevy::ecs::query::{With, Without};
 use bevy::ecs::removal_detection::RemovedComponents;
-use bevy::ecs::schedule::common_conditions::resource_exists;
 use bevy::ecs::schedule::IntoSystemConfigs;
+use bevy::ecs::schedule::common_conditions::resource_exists;
 use bevy::ecs::system::{Commands, Resource};
 use bevy::log::{trace, warn};
 use bevy::prelude::SystemSet;
 use bevy::time::Time;
-use bevy::utils::hashbrown::HashSet;
 use bevy::utils::HashMap;
+use bevy::utils::hashbrown::HashSet;
 use bevy::{
     app::{App, Update},
     ecs::{
@@ -45,7 +45,7 @@ use bevy::{
     },
     log::error,
 };
-use bevy_renet::renet::{ClientId, RenetClient};
+use bevy_renet::renet::RenetClient;
 
 #[derive(Resource)]
 struct StoredComponents<T: SyncableComponent>(HashMap<Entity, (Vec<u8>, f32)>, PhantomData<T>);
@@ -69,7 +69,8 @@ fn client_add_stored_components<T: SyncableComponent>(
         if let Some(mut ecmds) = commands.get_entity(ent) {
             let (c, _) = hm.remove(&ent).expect("Must exist");
 
-            let mut component = bincode::deserialize::<T>(&c).expect("Failed to deserialize component sent from server!");
+            let mut component =
+                cosmos_encoder::deserialize_uncompressed::<T>(&c).expect("Failed to deserialize component sent from server!");
 
             let Some(mapped) = component.convert_entities_server_to_client(&mapping) else {
                 warn!("Couldn't convert entities for {}!", T::get_component_unlocalized_name());
@@ -122,7 +123,8 @@ fn client_deserialize_component<T: SyncableComponent>(
         }
 
         if let Some(mut ecmds) = commands.get_entity(ev.entity) {
-            let mut component = bincode::deserialize::<T>(&ev.raw_data).expect("Failed to deserialize component sent from server!");
+            let mut component =
+                cosmos_encoder::deserialize_uncompressed::<T>(&ev.raw_data).expect("Failed to deserialize component sent from server!");
 
             let Some(mapped) = component.convert_entities_server_to_client(&mapping) else {
                 warn!("Couldn't convert entities for {}!", T::get_component_unlocalized_name());
@@ -238,11 +240,10 @@ fn client_send_components<T: SyncableComponent>(
                     return None;
                 };
 
-                bincode::serialize(&mapped)
+                cosmos_encoder::serialize_uncompressed(&mapped)
             } else {
-                bincode::serialize(component)
-            }
-            .expect("Failed to serialize component.");
+                cosmos_encoder::serialize_uncompressed(component)
+            };
 
             Some(ReplicatedComponentData {
                 raw_data,
@@ -478,7 +479,7 @@ fn client_receive_components(
                     // `client_id` only matters on the server-side, but I don't feel like fighting with
                     // my LSP to have this variable only show up in the server project. Thus, I fill it with
                     // dummy data.
-                    client_id: ClientId::from_raw(0),
+                    client_id: 0,
                     component_id,
                     entity,
                     // This also only matters on server-side, but once again I don't care
@@ -531,7 +532,7 @@ fn repl_comp_data(
         // `client_id` only matters on the server-side, but I don't feel like fighting with
         // my LSP to have this variable only show up in the server project. Thus, I fill it with
         // dummy data.
-        client_id: ClientId::from_raw(0),
+        client_id: 0,
         component_id,
         entity,
         // This also only matters on server-side, but once again I don't care
@@ -685,8 +686,8 @@ fn get_entity_identifier_info(
         }
         ComponentEntityIdentifier::StructureSystem { structure_entity, id } => {
             trace!(
-                    "Got structure system synced component, but no valid structure exists for it! ({structure_entity:?}, {id:?}). In the future, this should try again once we receive the correct structure from the server."
-                );
+                "Got structure system synced component, but no valid structure exists for it! ({structure_entity:?}, {id:?}). In the future, this should try again once we receive the correct structure from the server."
+            );
 
             return None;
         }

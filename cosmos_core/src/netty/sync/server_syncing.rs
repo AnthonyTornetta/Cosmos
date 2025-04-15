@@ -368,7 +368,7 @@ fn on_request_component<T: SyncableComponent>(
         }
 
         comps_to_send.entry(ev.client_id).or_default().push(ReplicatedComponentData {
-            raw_data: bincode::serialize(component).expect("Failed to serialize component."),
+            raw_data: cosmos_encoder::serialize_uncompressed(component),
             entity_identifier,
         });
     }

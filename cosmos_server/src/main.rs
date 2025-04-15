@@ -12,7 +12,7 @@ use bevy::{
 };
 use bevy_mod_debugdump::schedule_graph;
 use bevy_rapier3d::plugin::{RapierContextInitialization, RapierPhysicsPlugin};
-use bevy_renet::{RenetServerPlugin, transport::NetcodeServerPlugin};
+use bevy_renet::{RenetServerPlugin, netcode::NetcodeServerPlugin};
 use cosmos_core::{
     netty::sync::registry::RegistrySyncInit, physics::collision_handling::CosmosPhysicsFilter,
     plugin::cosmos_core_plugin::CosmosCorePluginGroup, state::GameState,
