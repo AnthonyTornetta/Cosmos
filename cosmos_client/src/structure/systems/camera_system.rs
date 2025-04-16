@@ -17,9 +17,9 @@ use cosmos_core::{
     netty::{client::LocalPlayer, system_sets::NetworkingSystemsSet},
     state::GameState,
     structure::{
-        ship::{pilot::Pilot, Ship},
-        systems::{camera_system::CameraSystem, StructureSystem, StructureSystems},
         Structure,
+        ship::{Ship, pilot::Pilot},
+        systems::{StructureSystem, StructureSystems, camera_system::CameraSystem},
     },
 };
 

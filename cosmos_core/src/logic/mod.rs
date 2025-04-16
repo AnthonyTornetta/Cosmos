@@ -5,8 +5,8 @@ use std::{collections::VecDeque, time::Duration};
 use bevy::{
     app::{App, Update},
     prelude::{
-        in_state, Commands, Component, Entity, Event, EventReader, EventWriter, IntoSystemConfigs, Query, Res, ResMut, Resource, States,
-        SystemSet, With, Without,
+        Commands, Component, Entity, Event, EventReader, EventWriter, IntoSystemConfigs, Query, Res, ResMut, Resource, States, SystemSet,
+        With, Without, in_state,
     },
     reflect::Reflect,
     time::common_conditions::on_timer,
@@ -18,16 +18,16 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     block::{
-        block_direction::{BlockDirection, ALL_BLOCK_DIRECTIONS},
+        Block,
+        block_direction::{ALL_BLOCK_DIRECTIONS, BlockDirection},
         block_events::BlockEventsSet,
         block_face::BlockFace,
         data::BlockData,
-        Block,
     },
     events::block_events::{BlockChangedEvent, BlockDataChangedEvent, BlockDataSystemParams},
     netty::system_sets::NetworkingSystemsSet,
-    registry::{create_registry, identifiable::Identifiable, Registry},
-    structure::{coordinates::BlockCoordinate, loading::StructureLoadingSet, structure_block::StructureBlock, Structure},
+    registry::{Registry, create_registry, identifiable::Identifiable},
+    structure::{Structure, coordinates::BlockCoordinate, loading::StructureLoadingSet, structure_block::StructureBlock},
 };
 
 use bevy::prelude::IntoSystemSetConfigs;

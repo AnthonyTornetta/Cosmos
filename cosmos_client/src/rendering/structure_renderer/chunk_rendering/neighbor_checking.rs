@@ -1,11 +1,11 @@
 use bevy::math::Vec3;
 use cosmos_core::{
-    block::{block_direction::BlockDirection, block_face::BlockFace, Block},
+    block::{Block, block_direction::BlockDirection, block_face::BlockFace},
     prelude::ChunkBlockCoordinate,
     registry::Registry,
     structure::{
         block_storage::BlockStorer,
-        chunk::{Chunk, CHUNK_DIMENSIONS},
+        chunk::{CHUNK_DIMENSIONS, Chunk},
     },
 };
 

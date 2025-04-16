@@ -165,7 +165,7 @@ impl ComputeWorker for BiosphereShaderWorker {
             Vec3::new(4.0, -4.0, -11.0),
         ];
 
-        let worker = AppComputeWorkerBuilder::new(world)
+        AppComputeWorkerBuilder::new(world)
             .one_shot()
             .add_empty_uniform(
                 "permutation_table",
@@ -180,9 +180,7 @@ impl ComputeWorker for BiosphereShaderWorker {
                 &["permutation_table", "params", "chunk_count", "values", "grad_table"],
             )
             .asynchronous(Some(Duration::from_millis(100)))
-            .build();
-
-        worker
+            .build()
     }
 }
 

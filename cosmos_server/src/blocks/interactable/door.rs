@@ -1,14 +1,14 @@
 use bevy::{prelude::*, utils::hashbrown::HashSet};
 use cosmos_core::{
     block::{
+        Block,
         block_direction::ALL_BLOCK_DIRECTIONS,
         block_events::{BlockEventsSet, BlockInteractEvent},
-        Block,
     },
     events::block_events::BlockChangedEvent,
     netty::system_sets::NetworkingSystemsSet,
     prelude::{BlockCoordinate, Structure, StructureBlock},
-    registry::{identifiable::Identifiable, Registry},
+    registry::{Registry, identifiable::Identifiable},
     state::GameState,
 };
 

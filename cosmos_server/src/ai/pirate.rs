@@ -10,7 +10,7 @@ use bevy::{
     },
     hierarchy::BuildChildren,
     log::error,
-    prelude::{in_state, Has},
+    prelude::{Has, in_state},
 };
 use cosmos_core::{
     ecs::NeedsDespawned,
@@ -22,26 +22,26 @@ use cosmos_core::{
     projectiles::missile::Missile,
     state::GameState,
     structure::{
-        shared::{DespawnWithStructure, MeltingDown},
-        ship::{pilot::Pilot, ship_movement::ShipMovementSet, Ship},
         StructureTypeSet,
+        shared::{DespawnWithStructure, MeltingDown},
+        ship::{Ship, pilot::Pilot, ship_movement::ShipMovementSet},
     },
 };
 
 use crate::{
     persistence::{
-        loading::{LoadingSystemSet, NeedsLoaded, LOADING_SCHEDULE},
-        saving::{SavingSystemSet, SAVING_SCHEDULE},
         SerializedData,
+        loading::{LOADING_SCHEDULE, LoadingSystemSet, NeedsLoaded},
+        saving::{SAVING_SCHEDULE, SavingSystemSet},
     },
     structure::systems::thruster_system::MaxShipSpeedModifier,
     universe::spawners::pirate::Pirate,
 };
 
 use super::{
+    AiControlled,
     combat::{AiTargetting, CombatAi, CombatAiSystemSet},
     hit_tracking::DifficultyIncreaseOnKill,
-    AiControlled,
 };
 
 #[derive(Component)]

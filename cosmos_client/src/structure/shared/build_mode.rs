@@ -5,31 +5,32 @@ use bevy::{
     math::primitives::Cuboid,
     pbr::{MeshMaterial3d, NotShadowCaster, NotShadowReceiver},
     prelude::{
-        in_state, Added, App, AssetServer, Assets, BuildChildren, Changed, ChildBuild, Commands, Component, DespawnRecursiveExt, Entity,
+        Added, App, AssetServer, Assets, BuildChildren, Changed, ChildBuild, Commands, Component, DespawnRecursiveExt, Entity,
         IntoSystemConfigs, Mesh, Mesh3d, Name, Parent, Query, RemovedComponents, Res, ResMut, Transform, Update, Vec3, With, Without,
+        in_state,
     },
     time::Time,
 };
 use bevy_rapier3d::prelude::Velocity;
-use bevy_renet2::renet2::RenetClient;
+use bevy_renet::renet::RenetClient;
 use cosmos_core::{
     block::block_events::BlockEventsSet,
-    netty::{client::LocalPlayer, client_reliable_messages::ClientReliableMessages, cosmos_encoder, NettyChannelClient},
+    netty::{NettyChannelClient, client::LocalPlayer, client_reliable_messages::ClientReliableMessages, cosmos_encoder},
     state::GameState,
     structure::{
+        Structure,
         chunk::CHUNK_DIMENSIONSF,
         coordinates::BlockCoordinate,
         shared::{
-            build_mode::{BuildAxis, BuildMode, BuildModeSet},
             DespawnWithStructure,
+            build_mode::{BuildAxis, BuildMode, BuildModeSet},
         },
-        Structure,
     },
 };
 
 use crate::{
     asset::repeating_material::{Repeats, UnlitRepeatedMaterial},
-    entities::player::player_movement::{process_player_movement, PlayerMovementSet},
+    entities::player::player_movement::{PlayerMovementSet, process_player_movement},
     input::inputs::{CosmosInputs, InputChecker, InputHandler},
     interactions::block_interactions::LookingAt,
     rendering::MainCamera,

@@ -1,14 +1,14 @@
 //! Handles client connecting and disconnecting
 
 use bevy::prelude::*;
-use bevy_renet2::renet2::transport::NetcodeServerTransport;
-use bevy_renet2::renet2::{ClientId, RenetServer, ServerEvent};
+use bevy_renet::netcode::NetcodeServerTransport;
+use bevy_renet::renet::{ClientId, RenetServer, ServerEvent};
 use cosmos_core::ecs::NeedsDespawned;
 use cosmos_core::entities::player::Player;
 use cosmos_core::netty::server::ServerLobby;
 use cosmos_core::netty::server_reliable_messages::ServerReliableMessages;
-use cosmos_core::netty::{cosmos_encoder, NettyChannelServer};
-use renet2_visualizer::RenetServerVisualizer;
+use cosmos_core::netty::{NettyChannelServer, cosmos_encoder};
+use renet_visualizer::RenetServerVisualizer;
 
 use crate::entities::player::persistence::LoadPlayer;
 use crate::netty::network_helpers::ClientTicks;
@@ -44,7 +44,7 @@ pub(super) fn handle_server_events(
                     server.disconnect(client_id);
                     continue;
                 };
-                let Ok(name) = bincode::deserialize::<String>(user_data.as_slice()) else {
+                let Ok(name) = cosmos_encoder::deserialize_uncompressed::<String>(user_data.as_slice()) else {
                     warn!("Unable to deserialize name - rejecting connection!");
                     server.disconnect(client_id);
                     continue;

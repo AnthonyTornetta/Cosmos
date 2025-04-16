@@ -15,7 +15,7 @@ use bevy::{
     hierarchy::BuildChildren,
     log::{error, warn},
     math::Vec3,
-    prelude::{in_state, Changed, EventWriter, Has, Or, Parent, Transform},
+    prelude::{Changed, EventWriter, Has, Or, Parent, Transform, in_state},
     reflect::Reflect,
 };
 use bevy_rapier3d::prelude::Velocity;
@@ -32,12 +32,12 @@ use cosmos_core::{
     quest::OngoingQuestDetails,
     state::GameState,
     structure::{
+        StructureTypeSet,
         shared::{DespawnWithStructure, MeltingDown},
         ship::{
             pilot::{Pilot, PilotFocused},
             ship_movement::{ShipMovement, ShipMovementSet},
         },
-        StructureTypeSet,
     },
 };
 use serde::{Deserialize, Serialize};
@@ -46,7 +46,7 @@ use crate::{
     coms::{NpcRequestCloseComsEvent, NpcSendComsMessage, RequestHailFromNpc},
     persistence::{
         loading::LoadingSystemSet,
-        make_persistent::{make_persistent, DefaultPersistentComponent},
+        make_persistent::{DefaultPersistentComponent, make_persistent},
         saving::NeverSave,
     },
     quest::AddQuestEvent,
@@ -54,9 +54,9 @@ use crate::{
 };
 
 use super::{
+    AiControlled,
     combat::{AiTargetting, CombatAi, CombatAiSystemSet},
     hit_tracking::{DifficultyIncreaseOnKill, Hitters},
-    AiControlled,
 };
 
 #[derive(Component, Serialize, Deserialize, Clone, Default, Debug, Copy)]
@@ -375,7 +375,7 @@ fn on_change_coms(
             _ => ComsState::OnQuest,
         };
 
-        let (response, end_coms)= match state {
+        let (response, end_coms) = match state {
             ComsState::SaidNo => ("I understand. I, too, value my life.", true),
             ComsState::Accepted => {
                 if let Ok(pilot) = q_pilot.get(coms.with) {
@@ -392,7 +392,10 @@ fn on_change_coms(
                 ("Thank you brave warrior! Show them no mercy!", true)
             }
             ComsState::OnQuest => ("You're already on a quest", true),
-            ComsState::Intro => ("Please help us! A sector not far from here has been overtaken by pirates! Should you lend us your aid, you will be rewarded handsomely. Would you please lend us your aid by killing these dastardly foes?", false),
+            ComsState::Intro => (
+                "Please help us! A sector not far from here has been overtaken by pirates! Should you lend us your aid, you will be rewarded handsomely. Would you please lend us your aid by killing these dastardly foes?",
+                false,
+            ),
         };
         let message = response.to_owned();
 

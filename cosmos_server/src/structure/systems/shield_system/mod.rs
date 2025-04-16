@@ -15,7 +15,7 @@ use bevy::{
     log::warn,
     math::Vec3,
     prelude::{
-        in_state, App, ChildBuild, Commands, EventReader, IntoSystemConfigs, IntoSystemSetConfigs, OnEnter, Query, Res, ResMut, Update,
+        App, ChildBuild, Commands, EventReader, IntoSystemConfigs, IntoSystemSetConfigs, OnEnter, Query, Res, ResMut, Update, in_state,
     },
     reflect::Reflect,
     time::Time,
@@ -23,30 +23,30 @@ use bevy::{
     utils::hashbrown::HashMap,
 };
 
-use bevy_renet2::renet2::RenetServer;
+use bevy_renet::renet::RenetServer;
 use cosmos_core::{
-    block::{block_events::BlockEventsSet, Block},
+    block::{Block, block_events::BlockEventsSet},
     ecs::NeedsDespawned,
     events::block_events::BlockChangedEvent,
     netty::{
-        cosmos_encoder, server_laser_cannon_system_messages::ServerStructureSystemMessages, system_sets::NetworkingSystemsSet,
-        NettyChannelServer,
+        NettyChannelServer, cosmos_encoder, server_laser_cannon_system_messages::ServerStructureSystemMessages,
+        system_sets::NetworkingSystemsSet,
     },
     persistence::LoadingDistance,
     physics::location::SetPosition,
     projectiles::laser::LaserSystemSet,
-    registry::{identifiable::Identifiable, Registry},
+    registry::{Registry, identifiable::Identifiable},
     state::GameState,
     structure::{
+        Structure,
         coordinates::BlockCoordinate,
         events::StructureLoadedEvent,
         shields::Shield,
         systems::{
+            StructureSystem, StructureSystemType, StructureSystems, StructureSystemsSet,
             energy_storage_system::EnergyStorageSystem,
             shield_system::{ShieldGeneratorBlocks, ShieldGeneratorProperty, ShieldProjectorBlocks, ShieldProjectorProperty, ShieldSystem},
-            StructureSystem, StructureSystemType, StructureSystems, StructureSystemsSet,
         },
-        Structure,
     },
 };
 use serde::{Deserialize, Serialize};
@@ -54,9 +54,9 @@ use serde::{Deserialize, Serialize};
 use crate::{
     ai::AiControlled,
     persistence::{
-        loading::{LoadingSystemSet, NeedsLoaded, LOADING_SCHEDULE},
-        saving::{NeedsSaved, SavingSystemSet, SAVING_SCHEDULE},
         SerializedData,
+        loading::{LOADING_SCHEDULE, LoadingSystemSet, NeedsLoaded},
+        saving::{NeedsSaved, SAVING_SCHEDULE, SavingSystemSet},
     },
 };
 

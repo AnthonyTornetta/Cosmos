@@ -12,12 +12,12 @@ use bevy::{
 use cosmos_core::{
     physics::location::Location,
     structure::{
+        Structure,
         loading::StructureLoadingSet,
         station::{
-            station_builder::{StationBuilder, TStationBuilder},
             Station,
+            station_builder::{StationBuilder, TStationBuilder},
         },
-        Structure,
     },
 };
 

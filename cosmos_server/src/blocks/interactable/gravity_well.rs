@@ -14,27 +14,27 @@ use bevy::{
     prelude::{BuildChildrenTransformExt, Res, With},
     state::condition::in_state,
 };
-use bevy_renet2::renet2::RenetServer;
+use bevy_renet::renet::RenetServer;
 use cosmos_core::{
     block::{
+        Block,
         block_events::{BlockBreakEvent, BlockInteractEvent},
         specific_blocks::gravity_well::GravityWell,
-        Block,
     },
     entities::EntityId,
     netty::{
-        cosmos_encoder, server_replication::ReplicationMessage, sync::server_entity_syncing::RequestedEntityEvent,
-        system_sets::NetworkingSystemsSet, NettyChannelServer,
+        NettyChannelServer, cosmos_encoder, server_replication::ReplicationMessage, sync::server_entity_syncing::RequestedEntityEvent,
+        system_sets::NetworkingSystemsSet,
     },
     prelude::BlockCoordinate,
-    registry::{identifiable::Identifiable, Registry},
+    registry::{Registry, identifiable::Identifiable},
     state::GameState,
     structure::Structure,
     utils::ownership::MaybeOwned,
 };
 use serde::{Deserialize, Serialize};
 
-use crate::persistence::make_persistent::{make_persistent, EntityIdManager, PersistentComponent};
+use crate::persistence::make_persistent::{EntityIdManager, PersistentComponent, make_persistent};
 
 fn grav_well_handle_block_event(
     mut interact_events: EventReader<BlockInteractEvent>,

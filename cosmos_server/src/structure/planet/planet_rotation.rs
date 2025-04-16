@@ -22,7 +22,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     init::init_world::ServerSeed,
-    persistence::make_persistent::{make_persistent, DefaultPersistentComponent},
+    persistence::make_persistent::{DefaultPersistentComponent, make_persistent},
     rng::get_rng_for_sector,
 };
 
@@ -93,8 +93,8 @@ fn add_planet_rotation(
         let mut rng = get_rng_for_sector(&server_seed, &location.sector);
 
         commands.entity(ent).insert(PlanetRotation {
-            duration_per_revolution: Duration::from_mins(rng.gen_range(40..=180)),
-            axis: Dir3::new(Vec3::new(rng.gen(), rng.gen(), rng.gen()).normalize_or_zero()).unwrap_or(Dir3::Y),
+            duration_per_revolution: Duration::from_mins(rng.random_range(40..=180)),
+            axis: Dir3::new(Vec3::new(rng.random(), rng.random(), rng.random()).normalize_or_zero()).unwrap_or(Dir3::Y),
         });
     }
 }

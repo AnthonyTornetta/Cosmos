@@ -3,7 +3,7 @@
 use bevy::{
     app::{App, Update},
     asset::Handle,
-    color::{palettes::css, Srgba},
+    color::{Srgba, palettes::css},
     core::Name,
     ecs::{
         component::Component,
@@ -16,7 +16,7 @@ use bevy::{
     hierarchy::{BuildChildren, Children},
     image::Image,
     math::{Rect, Vec2},
-    prelude::{resource_exists, ChildBuild, ImageNode, Resource, Text},
+    prelude::{ChildBuild, ImageNode, Resource, Text, resource_exists},
     text::{JustifyText, TextFont, TextLayout},
     transform::components::GlobalTransform,
     ui::{AlignItems, BackgroundColor, ComputedNode, Display, FlexDirection, Interaction, JustifyContent, Node, PositionType, UiRect, Val},
@@ -27,13 +27,13 @@ use cosmos_core::{ecs::NeedsDespawned, state::GameState};
 
 use crate::{
     asset::asset_loader::load_assets,
-    ui::{font::DefaultFont, UiSystemSet},
+    ui::{UiSystemSet, font::DefaultFont},
     window::setup::DeltaCursorPosition,
 };
 
 use super::{
-    button::{register_button, ButtonEvent, CosmosButton},
-    show_cursor::{any_open_menus, ShowCursor},
+    button::{ButtonEvent, CosmosButton, register_button},
+    show_cursor::{ShowCursor, any_open_menus},
 };
 
 #[derive(Debug, Component, Default)]

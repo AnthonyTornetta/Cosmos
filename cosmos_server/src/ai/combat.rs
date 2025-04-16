@@ -22,13 +22,13 @@ use cosmos_core::{
     projectiles::{laser::LASER_LIVE_TIME, missile::Missile},
     state::GameState,
     structure::{
+        StructureTypeSet,
         ship::ship_movement::{ShipMovement, ShipMovementSet},
         systems::{
+            StructureSystems, SystemActive,
             laser_cannon_system::LaserCannonSystem,
             missile_launcher_system::{MissileLauncherFocus, MissileLauncherSystem},
-            StructureSystems, SystemActive,
         },
-        StructureTypeSet,
     },
 };
 use serde::{Deserialize, Serialize};
@@ -36,7 +36,7 @@ use serde::{Deserialize, Serialize};
 use crate::{
     persistence::{
         loading::LoadingSystemSet,
-        make_persistent::{make_persistent, DefaultPersistentComponent},
+        make_persistent::{DefaultPersistentComponent, make_persistent},
     },
     structure::systems::laser_cannon_system::LASER_BASE_VELOCITY,
 };

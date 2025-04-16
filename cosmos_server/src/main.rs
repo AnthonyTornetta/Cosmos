@@ -12,7 +12,7 @@ use bevy::{
 };
 use bevy_mod_debugdump::schedule_graph;
 use bevy_rapier3d::plugin::{RapierContextInitialization, RapierPhysicsPlugin};
-use bevy_renet2::{transport::NetcodeServerPlugin, RenetServerPlugin};
+use bevy_renet::{RenetServerPlugin, netcode::NetcodeServerPlugin};
 use cosmos_core::{
     netty::sync::registry::RegistrySyncInit, physics::collision_handling::CosmosPhysicsFilter,
     plugin::cosmos_core_plugin::CosmosCorePluginGroup, state::GameState,
@@ -21,7 +21,6 @@ use cosmos_core::{
 // use iyes_perf_ui::PerfUiPlugin;
 use plugin::server_plugin::ServerPlugin;
 use settings::read_server_settings;
-use thread_priority::{set_current_thread_priority, ThreadPriority};
 
 #[cfg(feature = "print-schedule")]
 use bevy::log::LogPlugin;
@@ -56,12 +55,6 @@ pub mod universe;
 mod utility_runs;
 
 fn main() {
-    if set_current_thread_priority(ThreadPriority::Max).is_err() {
-        warn!("Failed to set main thread priority to max - this can lead to lag.");
-    } else {
-        info!("Successfully set main thread priority to max!");
-    }
-
     let server_settings = read_server_settings();
 
     let port = server_settings.port.unwrap_or(1337);

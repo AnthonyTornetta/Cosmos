@@ -9,7 +9,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{block::Block, registry::identifiable::Identifiable};
 
-use super::{sync::SyncableSystem, StructureSystemImpl};
+use super::{StructureSystemImpl, sync::SyncableSystem};
 
 #[derive(Default, Reflect, Clone, Copy)]
 /// Every block that can store energy should have this property
@@ -76,11 +76,7 @@ impl EnergyStorageSystem {
         let amount_left = self.energy - delta;
         self.energy = amount_left.max(0.0);
 
-        if amount_left < 0.0 {
-            -amount_left
-        } else {
-            0.0
-        }
+        if amount_left < 0.0 { -amount_left } else { 0.0 }
     }
 
     /// Gets the current stored energy of the system

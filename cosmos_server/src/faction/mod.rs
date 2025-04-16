@@ -8,7 +8,7 @@ use cosmos_core::{
 };
 use std::fs;
 
-use crate::persistence::make_persistent::{make_persistent, DefaultPersistentComponent};
+use crate::persistence::make_persistent::{DefaultPersistentComponent, make_persistent};
 
 fn load_factions(mut commands: Commands) {
     let factions = if let Ok(data) = fs::read("world/factions.bin") {

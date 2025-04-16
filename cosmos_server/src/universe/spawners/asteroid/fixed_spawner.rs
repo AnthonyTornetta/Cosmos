@@ -5,19 +5,19 @@ use std::f32::consts::PI;
 use bevy::{
     log::{error, warn},
     math::Quat,
-    prelude::{in_state, App, Commands, Deref, DerefMut, EventReader, IntoSystemConfigs, Query, Res, ResMut, Resource, Update, Vec3, With},
+    prelude::{App, Commands, Deref, DerefMut, EventReader, IntoSystemConfigs, Query, Res, ResMut, Resource, Update, Vec3, With, in_state},
     utils::HashSet,
 };
 use cosmos_core::{
     entities::player::Player,
     netty::system_sets::NetworkingSystemsSet,
-    physics::location::{Location, Sector, SectorUnit, SystemCoordinate, SystemUnit, SECTOR_DIMENSIONS, SYSTEM_SECTORS},
+    physics::location::{Location, SECTOR_DIMENSIONS, SYSTEM_SECTORS, Sector, SectorUnit, SystemCoordinate, SystemUnit},
     state::GameState,
     structure::{
-        asteroid::{asteroid_builder::TAsteroidBuilder, loading::AsteroidNeedsCreated, ASTEROID_LOAD_RADIUS},
+        Structure,
+        asteroid::{ASTEROID_LOAD_RADIUS, asteroid_builder::TAsteroidBuilder, loading::AsteroidNeedsCreated},
         coordinates::ChunkCoordinate,
         full_structure::FullStructure,
-        Structure,
     },
     utils::quat_math::random_quat,
 };
@@ -70,12 +70,12 @@ fn spawn_asteroids(
         let mut rng = get_rng_for_sector(&server_seed, &star_sector);
 
         // Favors lower numbers
-        let n_asteroid_rings: usize = (1.0 + 5.0 * (1.0 - (1.0 - rng.gen::<f32>()).sqrt())) as usize;
+        let n_asteroid_rings: usize = (1.0 + 5.0 * (1.0 - (1.0 - rng.random::<f32>()).sqrt())) as usize;
 
         for _ in 0..n_asteroid_rings {
-            let ring_diameter = rng.gen_range(10..=90);
+            let ring_diameter = rng.random_range(10..=90);
             let circum = ring_diameter as f32 * PI;
-            let n_iterations = (circum * rng.gen_range(1..=6) as f32) as SectorUnit;
+            let n_iterations = (circum * rng.random_range(1..=6) as f32) as SectorUnit;
             let asteroid_axis = random_quat(&mut rng);
 
             for i in 0..n_iterations {
@@ -94,19 +94,19 @@ fn spawn_asteroids(
                     continue;
                 }
 
-                let n_asteroids = (6.0 * (1.0 - (1.0 - rng.gen::<f32>()).sqrt())) as usize;
+                let n_asteroids = (6.0 * (1.0 - (1.0 - rng.random::<f32>()).sqrt())) as usize;
 
                 let multiplier = SECTOR_DIMENSIONS;
                 let adder = -SECTOR_DIMENSIONS / 2.0;
 
                 for _ in 0..n_asteroids {
-                    let size = rng.gen_range(4..=8);
+                    let size = rng.random_range(4..=8);
 
                     let loc = Location::new(
                         Vec3::new(
-                            rng.gen::<f32>() * multiplier + adder,
-                            rng.gen::<f32>() * multiplier + adder,
-                            rng.gen::<f32>() * multiplier + adder,
+                            rng.random::<f32>() * multiplier + adder,
+                            rng.random::<f32>() * multiplier + adder,
+                            rng.random::<f32>() * multiplier + adder,
                         ),
                         sector,
                     );

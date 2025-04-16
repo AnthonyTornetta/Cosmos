@@ -1,15 +1,15 @@
 //! Handles the loading of stations
 
-use bevy::prelude::{in_state, App, Commands, Component, Entity, EventWriter, IntoSystemConfigs, Query, Res, Update, With};
+use bevy::prelude::{App, Commands, Component, Entity, EventWriter, IntoSystemConfigs, Query, Res, Update, With, in_state};
 use cosmos_core::{
-    block::{block_rotation::BlockRotation, Block},
+    block::{Block, block_rotation::BlockRotation},
     registry::Registry,
     state::GameState,
     structure::{
+        ChunkInitEvent, Structure, StructureTypeSet,
         coordinates::BlockCoordinate,
         loading::{ChunksNeedLoaded, StructureLoadingSet},
         structure_iterator::ChunkIteratorResult,
-        ChunkInitEvent, Structure, StructureTypeSet,
     },
 };
 

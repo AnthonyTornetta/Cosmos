@@ -3,13 +3,13 @@
 use bevy::{
     app::Update,
     log::{info, warn},
-    prelude::{in_state, App, Event, EventWriter, IntoSystemConfigs, ResMut},
+    prelude::{App, Event, EventWriter, IntoSystemConfigs, ResMut, in_state},
 };
 use cosmos_core::{
-    netty::{client_registry::RegistrySyncing, cosmos_encoder, system_sets::NetworkingSystemsSet, NettyChannelClient},
+    netty::{NettyChannelClient, client_registry::RegistrySyncing, cosmos_encoder, system_sets::NetworkingSystemsSet},
     state::GameState,
 };
-use renet2::{ClientId, RenetServer};
+use renet::{ClientId, RenetServer};
 
 #[derive(Debug, Event)]
 /// This event is sent when the client has received every registry from the server.

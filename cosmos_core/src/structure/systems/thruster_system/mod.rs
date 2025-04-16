@@ -9,7 +9,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{block::Block, registry::identifiable::Identifiable};
 
-use super::{sync::SyncableSystem, StructureSystemImpl};
+use super::{StructureSystemImpl, sync::SyncableSystem};
 
 /// A block that is a thruster will have a thruster property
 pub struct ThrusterProperty {

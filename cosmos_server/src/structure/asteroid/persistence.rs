@@ -3,19 +3,19 @@ use cosmos_core::{
     block::data::persistence::ChunkLoadBlockDataEvent,
     physics::location::Location,
     structure::{
-        asteroid::{asteroid_builder::TAsteroidBuilder, Asteroid, MovingAsteroid},
+        ChunkInitEvent, Structure, StructureTypeSet,
+        asteroid::{Asteroid, MovingAsteroid, asteroid_builder::TAsteroidBuilder},
         events::StructureLoadedEvent,
         structure_iterator::ChunkIteratorResult,
-        ChunkInitEvent, Structure, StructureTypeSet,
     },
 };
 
 use crate::{
     persistence::{
-        loading::{LoadingBlueprintSystemSet, LoadingSystemSet, NeedsBlueprintLoaded, NeedsLoaded, LOADING_SCHEDULE},
-        make_persistent::{make_persistent, DefaultPersistentComponent},
-        saving::{BlueprintingSystemSet, NeedsBlueprinted, NeedsSaved, SavingSystemSet, SAVING_SCHEDULE},
         SerializedData,
+        loading::{LOADING_SCHEDULE, LoadingBlueprintSystemSet, LoadingSystemSet, NeedsBlueprintLoaded, NeedsLoaded},
+        make_persistent::{DefaultPersistentComponent, make_persistent},
+        saving::{BlueprintingSystemSet, NeedsBlueprinted, NeedsSaved, SAVING_SCHEDULE, SavingSystemSet},
     },
     structure::{
         asteroid::server_asteroid_builder::ServerAsteroidBuilder,

@@ -25,7 +25,7 @@ use crate::netty::system_sets::NetworkingSystemsSet;
 
 use crate::{
     block::blocks::fluid::FLUID_COLLISION_GROUP,
-    netty::sync::{sync_component, ComponentSyncingSet, IdentifiableComponent, SyncableComponent},
+    netty::sync::{ComponentSyncingSet, IdentifiableComponent, SyncableComponent, sync_component},
     physics::location::{CosmosBundleSet, LocationPhysicsSet},
 };
 

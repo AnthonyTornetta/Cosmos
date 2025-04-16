@@ -540,7 +540,7 @@ pub(super) fn register(app: &mut App) {
 mod tests {
     use bevy::prelude::Vec3;
 
-    use crate::physics::location::{Sector, SECTOR_DIMENSIONS};
+    use crate::physics::location::{SECTOR_DIMENSIONS, Sector};
 
     use super::Location;
 

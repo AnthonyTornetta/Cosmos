@@ -2,7 +2,7 @@
 
 use bevy::prelude::{App, Entity, Event};
 
-use super::{coordinates::ChunkCoordinate, structure_iterator::BlockIterator, Structure};
+use super::{Structure, coordinates::ChunkCoordinate, structure_iterator::BlockIterator};
 
 /// This will be created once all chunks have been populated
 #[derive(Debug, Event)]

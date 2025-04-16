@@ -22,7 +22,7 @@ pub enum ReplicationMessage {
         system_id: StructureSystemId,
         /// The type of the structure system being sent over
         system_type_id: StructureSystemTypeId,
-        /// The serialized data of this structure system (serialized via `cosmos_encoder::serialize`).
+        /// The serialized data of this structure system (serialized via [`cosmos_encoder::serialize`]).
         raw: Vec<u8>,
     },
     /// Sent whenever the activness of a structure system changes

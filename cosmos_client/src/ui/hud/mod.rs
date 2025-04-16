@@ -8,7 +8,7 @@ use bevy::{
         system::{Commands, Query, Res},
     },
     hierarchy::BuildChildren,
-    prelude::{in_state, Added, ChildBuild, IntoSystemConfigs, Text},
+    prelude::{Added, ChildBuild, IntoSystemConfigs, Text, in_state},
     state::state::OnEnter,
     text::{TextFont, TextSpan},
     ui::{AlignContent, JustifyContent, Node, PositionType, UiRect, Val},

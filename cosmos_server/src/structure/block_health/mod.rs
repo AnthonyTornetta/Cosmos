@@ -1,23 +1,22 @@
 //! This handles what to do when a block is destroyed
 
 use bevy::prelude::{
-    in_state, App, EventReader, EventWriter, IntoSystemConfigs, IntoSystemSetConfigs, Query, Res, ResMut, SystemSet, Update,
+    App, EventReader, EventWriter, IntoSystemConfigs, IntoSystemSetConfigs, Query, Res, ResMut, SystemSet, Update, in_state,
 };
-use bevy_renet2::renet2::RenetServer;
+use bevy_renet::renet::RenetServer;
 use cosmos_core::{
-    block::{block_events::BlockEventsSet, Block},
+    block::{Block, block_events::BlockEventsSet},
     events::block_events::BlockChangedEvent,
     netty::{
-        cosmos_encoder,
+        NettyChannelServer, cosmos_encoder,
         server_reliable_messages::{BlockHealthUpdate, ServerReliableMessages},
-        NettyChannelServer,
     },
     registry::Registry,
     state::GameState,
     structure::{
+        Structure,
         block_health::events::{BlockDestroyedEvent, BlockTakeDamageEvent},
         loading::StructureLoadingSet,
-        Structure,
     },
 };
 

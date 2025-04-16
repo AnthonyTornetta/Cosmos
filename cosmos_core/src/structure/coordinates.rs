@@ -11,7 +11,7 @@ use crate::block::block_direction::BlockDirection;
 
 use crate::utils::array_utils;
 
-use super::chunk::{CHUNK_DIMENSIONS, CHUNK_DIMENSIONSF, CHUNK_DIMENSIONS_UB};
+use super::chunk::{CHUNK_DIMENSIONS, CHUNK_DIMENSIONS_UB, CHUNK_DIMENSIONSF};
 
 /// Common functionality of structure-based coordinates
 pub trait Coordinate {

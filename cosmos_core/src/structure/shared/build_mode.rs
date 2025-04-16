@@ -19,7 +19,7 @@ use serde::{Deserialize, Serialize};
 use crate::{
     block::block_events::BlockEventsSet,
     netty::{
-        sync::{sync_component, IdentifiableComponent, SyncableComponent},
+        sync::{IdentifiableComponent, SyncableComponent, sync_component},
         system_sets::NetworkingSystemsSet,
     },
     prelude::StructureBlock,

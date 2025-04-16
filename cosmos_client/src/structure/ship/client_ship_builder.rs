@@ -3,8 +3,8 @@
 use bevy::{
     ecs::system::EntityCommands,
     prelude::{
-        resource_exists, Added, App, BuildChildren, ChildBuild, Commands, Entity, Handle, IntoSystemConfigs, Name, Query, Res, Resource,
-        Transform, Update,
+        Added, App, BuildChildren, ChildBuild, Commands, Entity, Handle, IntoSystemConfigs, Name, Query, Res, Resource, Transform, Update,
+        resource_exists,
     },
 };
 use bevy_kira_audio::{Audio, AudioControl, AudioInstance, AudioSource};
@@ -13,13 +13,13 @@ use cosmos_core::{
     physics::location::Location,
     state::GameState,
     structure::{
+        Structure,
         loading::StructureLoadingSet,
         shared::DespawnWithStructure,
         ship::{
-            ship_builder::{ShipBuilder, TShipBuilder},
             Ship,
+            ship_builder::{ShipBuilder, TShipBuilder},
         },
-        Structure,
     },
 };
 

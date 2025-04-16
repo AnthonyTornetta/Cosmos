@@ -9,7 +9,7 @@ use std::{
 use bevy::{
     log::{info, warn},
     prelude::{
-        not, resource_exists, App, Commands, Component, Entity, IntoSystemConfigs, Name, Or, Query, ResMut, Resource, Update, With, Without,
+        App, Commands, Component, Entity, IntoSystemConfigs, Name, Or, Query, ResMut, Resource, Update, With, Without, not, resource_exists,
     },
     state::condition::in_state,
     tasks::{AsyncComputeTaskPool, Task},
@@ -19,9 +19,9 @@ use cosmos_core::{
     ecs::NeedsDespawned,
     entities::player::Player,
     netty::system_sets::NetworkingSystemsSet,
-    persistence::{LoadingDistance, LOAD_DISTANCE},
+    persistence::{LOAD_DISTANCE, LoadingDistance},
     physics::{
-        location::{systems::Anchor, Location, LocationPhysicsSet, Sector, SectorUnit, SECTOR_DIMENSIONS},
+        location::{Location, LocationPhysicsSet, SECTOR_DIMENSIONS, Sector, SectorUnit, systems::Anchor},
         player_world::PlayerWorld,
     },
     state::GameState,
@@ -30,7 +30,7 @@ use futures_lite::future;
 use uuid::Uuid;
 use walkdir::{DirEntry, WalkDir};
 
-use super::{loading::NeedsLoaded, saving::NeedsSaved, EntityId, SaveFileIdentifier, SectorsCache};
+use super::{EntityId, SaveFileIdentifier, SectorsCache, loading::NeedsLoaded, saving::NeedsSaved};
 
 fn unload_far(
     query: Query<&Location, ((Without<NeedsDespawned>, Without<PlayerWorld>), Or<(With<Player>, With<Anchor>)>)>,

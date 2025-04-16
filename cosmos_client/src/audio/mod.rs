@@ -23,7 +23,7 @@ use bevy::{
     transform::components::GlobalTransform,
     utils::hashbrown::HashMap,
 };
-use bevy_kira_audio::{prelude::*, AudioSystemSet};
+use bevy_kira_audio::{AudioSystemSet, prelude::*};
 use volume::MasterVolume;
 
 pub mod music;
@@ -122,7 +122,7 @@ impl CosmosAudioEmitter {
 }
 
 fn run_spacial_audio(
-    receiver: Query<&GlobalTransform, With<AudioReceiver>>,
+    receiver: Query<&GlobalTransform, With<SpatialAudioReceiver>>,
     emitters: Query<(&GlobalTransform, &CosmosAudioEmitter)>,
     mut audio_instances: ResMut<Assets<AudioInstance>>,
     master_volume: Res<MasterVolume>,
@@ -261,10 +261,11 @@ fn stop_audio_sources(mut stop_later: ResMut<BufferedStopAudio>) {
     std::mem::swap(&mut old_stop_later, &mut stop_later);
 
     for (mut instance, tween) in old_stop_later.0 {
-        if instance.stop(tween.clone()).is_some() {
-            // something bad happened, this is generally caused by a command queue being full, so try it next frame
-            stop_later.push((instance, tween));
-        }
+        instance.stop(tween.clone());
+        // if instance.stop(tween.clone()).is_some() {
+        // something bad happened, this is generally caused by a command queue being full, so try it next frame
+        // stop_later.push((instance, tween));
+        // }
     }
 }
 

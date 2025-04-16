@@ -11,18 +11,18 @@ use bevy::{
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    block::{block_rotation::BlockRotation, blocks::AIR_BLOCK_ID, Block},
+    block::{Block, block_rotation::BlockRotation, blocks::AIR_BLOCK_ID},
     events::block_events::BlockChangedEvent,
-    registry::{identifiable::Identifiable, Registry},
+    registry::{Registry, identifiable::Identifiable},
 };
 
 use super::{
+    ChunkState, Structure,
     base_structure::BaseStructure,
     block_storage::BlockStorer,
     chunk::{BlockInfo, Chunk},
     coordinates::{BlockCoordinate, ChunkBlockCoordinate, ChunkCoordinate, CoordinateType},
     structure_block::StructureBlock,
-    ChunkState, Structure,
 };
 
 #[derive(Serialize, Deserialize, Reflect, Debug)]
@@ -297,10 +297,6 @@ impl FullStructure {
             }
         }
 
-        if any_blocks {
-            Some((min, max))
-        } else {
-            None
-        }
+        if any_blocks { Some((min, max)) } else { None }
     }
 }

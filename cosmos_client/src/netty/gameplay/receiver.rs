@@ -10,19 +10,20 @@ use bevy::{
     prelude::*,
     window::PrimaryWindow,
 };
-use bevy_kira_audio::prelude::AudioReceiver;
+use bevy_kira_audio::SpatialAudioReceiver;
 use bevy_rapier3d::prelude::*;
-use bevy_renet2::renet2::{transport::NetcodeClientTransport, RenetClient};
+use bevy_renet::{netcode::NetcodeClientTransport, renet::RenetClient};
 use cosmos_core::{
     block::Block,
     ecs::NeedsDespawned,
-    entities::player::{render_distance::RenderDistance, Player},
+    entities::player::{Player, render_distance::RenderDistance},
     events::{
         block_events::{BlockChangedEvent, BlockDataChangedEvent},
         structure::change_pilot_event::ChangePilotEvent,
     },
-    inventory::{held_item_slot::HeldItemSlot, Inventory},
+    inventory::{Inventory, held_item_slot::HeldItemSlot},
     netty::{
+        NettyChannelClient, NettyChannelServer,
         client::{LocalPlayer, NeedsLoadedFromServer},
         client_reliable_messages::ClientReliableMessages,
         cosmos_encoder,
@@ -30,31 +31,30 @@ use cosmos_core::{
         server_reliable_messages::ServerReliableMessages,
         server_unreliable_messages::ServerUnreliableMessages,
         sync::{
+            ComponentEntityIdentifier,
             client_syncing::ClientReceiveComponents,
             mapping::{Mappable, NetworkMapping, ServerEntity},
-            ComponentEntityIdentifier,
         },
         system_sets::NetworkingSystemsSet,
-        NettyChannelClient, NettyChannelServer,
     },
     persistence::LoadingDistance,
     physics::{
-        location::{systems::Anchor, Location, LocationPhysicsSet, SetPosition, SYSTEM_SECTORS},
+        location::{Location, LocationPhysicsSet, SYSTEM_SECTORS, SetPosition, systems::Anchor},
         player_world::PlayerWorld,
     },
     registry::Registry,
     state::GameState,
     structure::{
+        ChunkInitEvent, Structure,
         block_health::events::BlockTakeDamageEvent,
         block_storage::BlockStorer,
         chunk::Chunk,
         dynamic_structure::DynamicStructure,
         full_structure::FullStructure,
         planet::{biosphere::BiosphereMarker, planet_builder::TPlanetBuilder},
-        ship::{pilot::Pilot, ship_builder::TShipBuilder, Ship},
+        ship::{Ship, pilot::Pilot, ship_builder::TShipBuilder},
         station::station_builder::TStationBuilder,
-        systems::{dock_system::Docked, StructureSystems},
-        ChunkInitEvent, Structure,
+        systems::{StructureSystems, dock_system::Docked},
     },
 };
 
@@ -477,7 +477,7 @@ pub(crate) fn client_sync_players(
                                 MainCamera,
                                 IsDefaultUiCamera,
                                 Msaa::Off,
-                                AudioReceiver,
+                                SpatialAudioReceiver,
                             ));
                         });
 
@@ -626,7 +626,9 @@ pub(crate) fn client_sync_players(
                                 if here_id == block_id {
                                     chunk.set_block_data_entity(coords, Some(client_ent));
                                 } else {
-                                    error!("Blocks didn't match up for block data! This may cause a block to have missing data. Block data block id: {block_id}; block here id: {here_id}.");
+                                    error!(
+                                        "Blocks didn't match up for block data! This may cause a block to have missing data. Block data block id: {block_id}; block here id: {here_id}."
+                                    );
                                 }
                             } else {
                                 info!("New block data -- asking for {block_data_entity}.");
@@ -882,7 +884,7 @@ fn get_entity_identifier_entity_for_despawning(
         }
         ComponentEntityIdentifier::StructureSystem { structure_entity, id } => {
             warn!(
-                    "Got structure system to despawn, but no valid structure exists for it! ({structure_entity:?}, {id:?}). In the future, this should try again once we receive the correct structure from the server."
+                "Got structure system to despawn, but no valid structure exists for it! ({structure_entity:?}, {id:?}). In the future, this should try again once we receive the correct structure from the server."
             );
             None
         }

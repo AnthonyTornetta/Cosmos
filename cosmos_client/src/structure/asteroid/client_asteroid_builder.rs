@@ -7,11 +7,11 @@ use bevy::{
 use cosmos_core::{
     physics::location::Location,
     structure::{
-        asteroid::{
-            asteroid_builder::{AsteroidBuilder, TAsteroidBuilder},
-            Asteroid,
-        },
         Structure,
+        asteroid::{
+            Asteroid,
+            asteroid_builder::{AsteroidBuilder, TAsteroidBuilder},
+        },
     },
 };
 

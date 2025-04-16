@@ -4,7 +4,7 @@ use bevy::prelude::*;
 use bevy::{prelude::Component, reflect::Reflect};
 use serde::{Deserialize, Serialize};
 
-use crate::netty::sync::{sync_component, IdentifiableComponent, SyncableComponent};
+use crate::netty::sync::{IdentifiableComponent, SyncableComponent, sync_component};
 
 pub mod asteroid_builder;
 pub mod asteroid_netty;

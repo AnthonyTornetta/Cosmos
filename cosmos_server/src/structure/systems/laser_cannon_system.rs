@@ -4,26 +4,26 @@ use std::time::Duration;
 
 use bevy::prelude::*;
 use bevy_rapier3d::{plugin::RapierContextEntityLink, prelude::Velocity};
-use bevy_renet2::renet2::RenetServer;
+use bevy_renet::renet::RenetServer;
 use cosmos_core::{
     block::Block,
-    logic::{logic_driver::LogicDriver, LogicInputEvent, LogicSystemSet},
+    logic::{LogicInputEvent, LogicSystemSet, logic_driver::LogicDriver},
     netty::{
-        cosmos_encoder, server_laser_cannon_system_messages::ServerStructureSystemMessages, system_sets::NetworkingSystemsSet,
-        NettyChannelServer,
+        NettyChannelServer, cosmos_encoder, server_laser_cannon_system_messages::ServerStructureSystemMessages,
+        system_sets::NetworkingSystemsSet,
     },
     physics::location::{Location, LocationPhysicsSet},
     projectiles::{causer::Causer, laser::Laser},
-    registry::{identifiable::Identifiable, Registry},
+    registry::{Registry, identifiable::Identifiable},
     state::GameState,
     structure::{
+        Structure,
         systems::{
+            StructureSystem, StructureSystems, StructureSystemsSet, SystemActive,
             energy_storage_system::EnergyStorageSystem,
             laser_cannon_system::{LaserCannonCalculator, LaserCannonProperty, LaserCannonSystem, LineSystemCooldown, SystemCooldown},
             line_system::LineBlocks,
-            StructureSystem, StructureSystems, StructureSystemsSet, SystemActive,
         },
-        Structure,
     },
 };
 

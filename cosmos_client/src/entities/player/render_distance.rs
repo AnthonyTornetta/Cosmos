@@ -1,10 +1,10 @@
 //! Represents how far the player can see entities
 
-use bevy::prelude::{in_state, App, Changed, Condition, IntoSystemConfigs, Query, ResMut, Update, With};
-use bevy_renet2::renet2::RenetClient;
+use bevy::prelude::{App, Changed, Condition, IntoSystemConfigs, Query, ResMut, Update, With, in_state};
+use bevy_renet::renet::RenetClient;
 use cosmos_core::{
     entities::player::render_distance::RenderDistance,
-    netty::{client::LocalPlayer, client_reliable_messages::ClientReliableMessages, cosmos_encoder, NettyChannelClient},
+    netty::{NettyChannelClient, client::LocalPlayer, client_reliable_messages::ClientReliableMessages, cosmos_encoder},
     state::GameState,
 };
 

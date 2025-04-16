@@ -13,7 +13,7 @@ use bevy_rapier3d::geometry::Group;
 use crate::{
     block::Block,
     physics::block_colliders::*,
-    registry::{identifiable::Identifiable, Registry},
+    registry::{Registry, identifiable::Identifiable},
 };
 
 /// Collision group all fluid blocks will use for their colliders

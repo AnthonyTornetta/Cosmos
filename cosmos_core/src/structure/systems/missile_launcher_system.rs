@@ -18,16 +18,17 @@ use serde::{Deserialize, Serialize};
 
 use crate::netty::{
     sync::{
+        ClientAuthority, IdentifiableComponent, SyncableComponent,
         events::netty_event::{IdentifiableEvent, NettyEvent, SyncedEventImpl},
-        sync_component, ClientAuthority, IdentifiableComponent, SyncableComponent,
+        sync_component,
     },
     system_sets::NetworkingSystemsSet,
 };
 
 use super::{
+    StructureSystemsSet,
     line_system::{LineProperty, LinePropertyCalculator, LineSystem},
     sync::SyncableSystem,
-    StructureSystemsSet,
 };
 
 /// A ship system that stores information about the missile cannons

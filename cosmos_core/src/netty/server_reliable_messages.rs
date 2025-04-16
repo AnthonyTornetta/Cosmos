@@ -7,17 +7,17 @@ use bevy::{
     prelude::{Component, Entity},
     utils::HashMap,
 };
-use bevy_renet2::renet2::ClientId;
+use bevy_renet::renet::ClientId;
 use serde::{Deserialize, Serialize};
 
 use crate::{
     entities::player::render_distance::RenderDistance,
     physics::location::Location,
     structure::{
-        chunk::{netty::SerializedChunkBlockData, BlockInfo},
+        chunk::{BlockInfo, netty::SerializedChunkBlockData},
         coordinates::{ChunkBlockCoordinate, ChunkCoordinate, CoordinateType},
         loading::ChunksNeedLoaded,
-        planet::{generation::terrain_generation::GpuPermutationTable, Planet},
+        planet::{Planet, generation::terrain_generation::GpuPermutationTable},
         structure_block::StructureBlock,
     },
     universe::star::Star,

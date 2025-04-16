@@ -4,16 +4,16 @@ use bevy::prelude::*;
 use cosmos_core::{
     netty::system_sets::NetworkingSystemsSet,
     physics::location::Location,
-    structure::{asteroid::Asteroid, Structure},
+    structure::{Structure, asteroid::Asteroid},
 };
 use rand::Rng;
 
 use crate::{
     init::init_world::ServerSeed,
     persistence::{
-        loading::{LoadingSystemSet, NeedsLoaded},
-        saving::{NeedsSaved, SavingSystemSet, SAVING_SCHEDULE},
         SerializedData,
+        loading::{LoadingSystemSet, NeedsLoaded},
+        saving::{NeedsSaved, SAVING_SCHEDULE, SavingSystemSet},
     },
     rng::get_rng_for_sector,
     structure::planet::biosphere::TemperatureRange,
@@ -137,14 +137,17 @@ fn add_asteroid_generator(
 
             let mut rng = get_rng_for_sector(&server_seed, &sector);
 
-            let asteroid_generator = generators[rng.gen_range(0..generators.len())];
+            let asteroid_generator = generators[rng.random_range(0..generators.len())];
 
             event_writer.send(AsteroidNeedsGeneratorEvent {
                 biosphere_id: asteroid_generator.to_owned(),
                 entity,
             });
         } else {
-            warn!("Unable to find proper generator asteroid {entity:?} - this will cause the asteroid to never generate! Temperature: {}, Registry: {registry:?}", asteroid.temperature());
+            warn!(
+                "Unable to find proper generator asteroid {entity:?} - this will cause the asteroid to never generate! Temperature: {}, Registry: {registry:?}",
+                asteroid.temperature()
+            );
         }
     }
 }

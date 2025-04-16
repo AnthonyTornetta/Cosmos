@@ -1,6 +1,7 @@
 //! Prelude
 
 pub use super::{
+    ChunkState, Structure, StructureTypeSet,
     asteroid::Asteroid,
     base_structure::BaseStructure,
     chunk::ChunkUnloadEvent,
@@ -17,5 +18,4 @@ pub use super::{
     station::Station,
     structure_block::StructureBlock,
     systems::{StructureSystem, StructureSystems},
-    ChunkState, Structure, StructureTypeSet,
 };

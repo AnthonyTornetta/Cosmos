@@ -1,7 +1,7 @@
 //! Handles client-side resource  syncing logic
 
 use crate::{
-    netty::{cosmos_encoder, system_sets::NetworkingSystemsSet, NettyChannelServer},
+    netty::{NettyChannelServer, cosmos_encoder, system_sets::NetworkingSystemsSet},
     state::GameState,
 };
 use bevy::{
@@ -15,7 +15,7 @@ use bevy::{
     prelude::{Commands, Condition, IntoSystemSetConfigs, SystemSet},
     state::condition::in_state,
 };
-use bevy_renet2::renet2::RenetClient;
+use bevy_renet::renet::RenetClient;
 
 use crate::ecs::add_multi_statebound_resource;
 
@@ -50,7 +50,7 @@ fn sync<T: SyncableResource>(
             }
         }
 
-        let Ok(new_resource) = bincode::deserialize::<T>(&ev.serialized_data) else {
+        let Ok(new_resource) = cosmos_encoder::deserialize_uncompressed::<T>(&ev.serialized_data) else {
             error!("Got bad resource data from server - {}!", ev.resource_name);
             continue;
         };

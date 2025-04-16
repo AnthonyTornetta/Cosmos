@@ -9,11 +9,11 @@ use bevy::{
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    netty::sync::{sync_component, IdentifiableComponent, SyncableComponent},
+    netty::sync::{IdentifiableComponent, SyncableComponent, sync_component},
     structure::coordinates::BlockCoordinate,
 };
 
-use super::{sync::SyncableSystem, StructureSystemImpl};
+use super::{StructureSystemImpl, sync::SyncableSystem};
 
 #[derive(Component, Default, Reflect, Serialize, Deserialize, Debug)]
 /// Represents the energy storage of a structure
@@ -76,7 +76,7 @@ impl DockSystem {
 
     /// Call this whenever a block is removed from the system
     pub fn block_removed(&mut self, location: BlockCoordinate) {
-        let Some((idx, _)) = self.docking_blocks.iter().enumerate().find(|(_, &x)| x == location) else {
+        let Some((idx, _)) = self.docking_blocks.iter().enumerate().find(|(_, x)| **x == location) else {
             return;
         };
 

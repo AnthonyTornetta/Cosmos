@@ -2,7 +2,7 @@
 
 use bevy::{
     app::Update,
-    prelude::{in_state, App, Condition, IntoSystemSetConfigs},
+    prelude::{App, Condition, IntoSystemSetConfigs, in_state},
 };
 use cosmos_core::{
     netty::{sync::ComponentSyncingSet, system_sets::NetworkingSystemsSet},

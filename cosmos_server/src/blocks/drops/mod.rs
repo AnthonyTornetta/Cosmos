@@ -5,10 +5,10 @@ use cosmos_core::{
     block::Block,
     blockitems::BlockItems,
     item::Item,
-    registry::{identifiable::Identifiable, Registry},
+    registry::{Registry, identifiable::Identifiable},
     state::GameState,
 };
-use rand::{rngs::ThreadRng, Rng};
+use rand::{Rng, rngs::ThreadRng};
 
 mod specific;
 
@@ -98,7 +98,7 @@ impl BlockDrops {
             BlockDropList::CustomDrops(drops) => {
                 let summed_weight = drops.iter().map(|x| x.weight).sum::<f32>();
 
-                let generated_weight = rng.gen::<f32>() * summed_weight;
+                let generated_weight = rng.random::<f32>() * summed_weight;
 
                 let mut total_weight = 0.0;
                 for drop in drops.iter() {

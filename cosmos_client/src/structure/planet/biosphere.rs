@@ -4,7 +4,7 @@ use bevy::{
     color::palettes::css,
     prelude::{App, Color, ResMut, Startup},
 };
-use cosmos_core::registry::{self, identifiable::Identifiable, Registry};
+use cosmos_core::registry::{self, Registry, identifiable::Identifiable};
 
 #[derive(Debug, Clone)]
 /// Represents the overall color of a biosphere

@@ -9,8 +9,8 @@ use bevy::{
         removal_detection::RemovedComponents,
         world::Ref,
     },
-    math::{bounding::Aabb3d, Quat, Vec3},
-    prelude::{in_state, App, Commands, EventReader, IntoSystemConfigs, Query, Res, Update},
+    math::{Quat, Vec3, bounding::Aabb3d},
+    prelude::{App, Commands, EventReader, IntoSystemConfigs, Query, Res, Update, in_state},
     reflect::Reflect,
     transform::components::GlobalTransform,
 };
@@ -22,20 +22,20 @@ use bevy_rapier3d::{
     plugin::{RapierContextEntityLink, ReadRapierContext},
 };
 use cosmos_core::{
-    block::{block_events::BlockEventsSet, block_face::BlockFace, Block},
+    block::{Block, block_events::BlockEventsSet, block_face::BlockFace},
     events::block_events::BlockChangedEvent,
     physics::structure_physics::ChunkPhysicsPart,
-    registry::{identifiable::Identifiable, Registry},
+    registry::{Registry, identifiable::Identifiable},
     state::GameState,
     structure::{
+        Structure,
         events::StructureLoadedEvent,
         full_structure::FullStructure,
         shields::SHIELD_COLLISION_GROUP,
         systems::{
-            dock_system::{DockSystem, Docked},
             StructureSystem, StructureSystemType, StructureSystems, StructureSystemsSet, SystemActive,
+            dock_system::{DockSystem, Docked},
         },
-        Structure,
     },
     utils::quat_math::QuatMath,
 };

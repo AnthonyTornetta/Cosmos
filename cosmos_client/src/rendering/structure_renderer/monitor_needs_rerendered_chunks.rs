@@ -1,14 +1,14 @@
 use bevy::prelude::{App, Commands, Entity, EventReader, IntoSystemConfigs, Query, Update};
 use bevy::utils::hashbrown::HashMap;
 use cosmos_core::events::block_events::{BlockChangedEvent, BlockDataChangedEvent};
+use cosmos_core::structure::Structure;
 use cosmos_core::structure::chunk::CHUNK_DIMENSIONS;
 use cosmos_core::structure::coordinates::ChunkCoordinate;
 use cosmos_core::structure::events::ChunkSetEvent;
-use cosmos_core::structure::Structure;
 use std::collections::HashSet;
 
-use super::chunk_rendering::ChunkNeedsRendered;
 use super::StructureRenderingSet;
+use super::chunk_rendering::ChunkNeedsRendered;
 
 fn monitor_block_updates_system(
     mut evr_block_changed: EventReader<BlockChangedEvent>,

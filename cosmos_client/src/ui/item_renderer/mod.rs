@@ -4,14 +4,14 @@ use bevy::{prelude::*, window::PrimaryWindow};
 use cosmos_core::{
     ecs::NeedsDespawned,
     item::Item,
-    registry::{identifiable::Identifiable, Registry},
+    registry::{Registry, identifiable::Identifiable},
     state::GameState,
 };
 use photo_booth::RenderedItemAtlas;
 
 use crate::lang::Lang;
 
-use super::{font::DefaultFont, UiSystemSet};
+use super::{UiSystemSet, font::DefaultFont};
 
 pub mod photo_booth;
 

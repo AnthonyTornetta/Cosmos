@@ -9,10 +9,10 @@ use bevy_rapier3d::prelude::{ExternalImpulse, ReadMassProperties, RigidBody, Vel
 use crate::{
     persistence::{Blueprintable, LoadingDistance},
     physics::location::Location,
-    structure::{loading::StructureLoadingSet, structure_builder::TStructureBuilder, Structure},
+    structure::{Structure, loading::StructureLoadingSet, structure_builder::TStructureBuilder},
 };
 
-use super::{ship_movement::ShipMovement, Ship};
+use super::{Ship, ship_movement::ShipMovement};
 
 /// Implement this to add a custom way to build ships
 pub trait TShipBuilder {

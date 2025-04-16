@@ -2,14 +2,14 @@
 
 use bevy::{
     app::Update,
-    prelude::{in_state, App, Commands, Component, Entity, IntoSystemConfigs, Query, With, Without},
+    prelude::{App, Commands, Component, Entity, IntoSystemConfigs, Query, With, Without, in_state},
     reflect::Reflect,
 };
 use serde::{Deserialize, Serialize};
 
 use crate::{
     netty::{
-        sync::{sync_component, IdentifiableComponent, SyncableComponent},
+        sync::{IdentifiableComponent, SyncableComponent, sync_component},
         system_sets::NetworkingSystemsSet,
     },
     state::GameState,

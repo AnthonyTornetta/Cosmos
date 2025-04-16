@@ -18,22 +18,22 @@ use bevy::{
 };
 use cosmos_core::{
     block::{
-        block_direction::{BlockDirection, ALL_BLOCK_DIRECTIONS},
         Block,
+        block_direction::{ALL_BLOCK_DIRECTIONS, BlockDirection},
     },
-    ecs::{add_statebound_resource, NeedsDespawned},
+    ecs::{NeedsDespawned, add_statebound_resource},
     prelude::{BlockCoordinate, UnboundBlockCoordinate},
     registry::{
-        many_to_one::{ManyToOneRegistry, ReadOnlyManyToOneRegistry},
         ReadOnlyRegistry, Registry,
+        many_to_one::{ManyToOneRegistry, ReadOnlyManyToOneRegistry},
     },
     state::GameState,
     structure::{
+        ChunkState, Structure,
         chunk::{CHUNK_DIMENSIONS, CHUNK_DIMENSIONSF},
         coordinates::{ChunkCoordinate, CoordinateType, UnboundCoordinateType},
         lod::{Lod, LodComponent},
         shared::DespawnWithStructure,
-        ChunkState, Structure,
     },
 };
 use futures_lite::future;
@@ -45,11 +45,11 @@ use std::{
 };
 
 use super::{
-    structure_renderer::{
-        chunk_rendering::{chunk_renderer::ChunkRenderer, lod_rendering::LodChunkRenderingChecker, ChunkMesh},
-        BlockRenderingModes,
-    },
     BlockMeshRegistry, LodMeshBuilder, ReadOnlyBlockMeshRegistry,
+    structure_renderer::{
+        BlockRenderingModes,
+        chunk_rendering::{ChunkMesh, chunk_renderer::ChunkRenderer, lod_rendering::LodChunkRenderingChecker},
+    },
 };
 
 #[derive(Component, Debug, Reflect, Default, Deref, DerefMut)]
@@ -780,13 +780,28 @@ mod test {
 
         match lod {
             Lod::Children(c) => match c.as_ref() {
-                [Lod::Children(c), Lod::Single(_, false), Lod::Single(_, false), Lod::Single(_, true), Lod::Single(_, true), Lod::Single(_, false), Lod::Single(_, false), Lod::Single(_, false)] => {
-                    match c.as_ref() {
-                        [Lod::Single(_, false), Lod::Single(_, false), Lod::Single(_, false), Lod::Single(_, true), Lod::Single(_, true), Lod::Single(_, false), Lod::Single(_, true), Lod::Single(_, true)] =>
-                            {}
-                        _ => panic!("{c:?}"),
-                    }
-                }
+                [
+                    Lod::Children(c),
+                    Lod::Single(_, false),
+                    Lod::Single(_, false),
+                    Lod::Single(_, true),
+                    Lod::Single(_, true),
+                    Lod::Single(_, false),
+                    Lod::Single(_, false),
+                    Lod::Single(_, false),
+                ] => match c.as_ref() {
+                    [
+                        Lod::Single(_, false),
+                        Lod::Single(_, false),
+                        Lod::Single(_, false),
+                        Lod::Single(_, true),
+                        Lod::Single(_, true),
+                        Lod::Single(_, false),
+                        Lod::Single(_, true),
+                        Lod::Single(_, true),
+                    ] => {}
+                    _ => panic!("{c:?}"),
+                },
                 _ => panic!("{c:?}"),
             },
             _ => unreachable!(),
@@ -828,18 +843,40 @@ mod test {
 
         match lod {
             Lod::Children(c) => match c.as_ref() {
-                [Lod::Children(c), Lod::Single(_, false), Lod::Single(_, false), Lod::Single(_, false), Lod::Single(_, false), Lod::Single(_, false), Lod::Single(_, false), Lod::Single(_, false)] => {
-                    match c.as_ref() {
-                        [Lod::Children(c), Lod::Single(_, false), Lod::Single(_, false), Lod::Single(_, true), Lod::Single(_, true), Lod::Single(_, false), Lod::Single(_, false), Lod::Single(_, false)] => {
-                            match c.as_ref() {
-                                [Lod::Single(_, false), Lod::Single(_, false), Lod::Single(_, false), Lod::Single(_, true), Lod::Single(_, true), Lod::Single(_, false), Lod::Single(_, true), Lod::Single(_, true)] =>
-                                    {}
-                                _ => panic!("{c:?}"),
-                            }
-                        }
+                [
+                    Lod::Children(c),
+                    Lod::Single(_, false),
+                    Lod::Single(_, false),
+                    Lod::Single(_, false),
+                    Lod::Single(_, false),
+                    Lod::Single(_, false),
+                    Lod::Single(_, false),
+                    Lod::Single(_, false),
+                ] => match c.as_ref() {
+                    [
+                        Lod::Children(c),
+                        Lod::Single(_, false),
+                        Lod::Single(_, false),
+                        Lod::Single(_, true),
+                        Lod::Single(_, true),
+                        Lod::Single(_, false),
+                        Lod::Single(_, false),
+                        Lod::Single(_, false),
+                    ] => match c.as_ref() {
+                        [
+                            Lod::Single(_, false),
+                            Lod::Single(_, false),
+                            Lod::Single(_, false),
+                            Lod::Single(_, true),
+                            Lod::Single(_, true),
+                            Lod::Single(_, false),
+                            Lod::Single(_, true),
+                            Lod::Single(_, true),
+                        ] => {}
                         _ => panic!("{c:?}"),
-                    }
-                }
+                    },
+                    _ => panic!("{c:?}"),
+                },
                 _ => panic!("{c:?}"),
             },
             _ => unreachable!(),

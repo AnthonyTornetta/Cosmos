@@ -3,16 +3,16 @@
 use bevy::{
     ecs::{query::Without, system::Res},
     log::info,
-    prelude::{in_state, App, Event, EventReader, EventWriter, IntoSystemConfigs, Query, ResMut, Update, With},
+    prelude::{App, Event, EventReader, EventWriter, IntoSystemConfigs, Query, ResMut, Update, With, in_state},
 };
-use bevy_renet2::renet2::RenetClient;
+use bevy_renet::renet::RenetClient;
 use cosmos_core::{
     block::block_events::BlockEventsSet,
     inventory::Inventory,
     item::Item,
     netty::{
-        client::LocalPlayer, client_reliable_messages::ClientReliableMessages, cosmos_encoder, system_sets::NetworkingSystemsSet,
-        NettyChannelClient,
+        NettyChannelClient, client::LocalPlayer, client_reliable_messages::ClientReliableMessages, cosmos_encoder,
+        system_sets::NetworkingSystemsSet,
     },
     registry::Registry,
     state::GameState,

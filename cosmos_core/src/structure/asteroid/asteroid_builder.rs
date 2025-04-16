@@ -9,7 +9,7 @@ use crate::prelude::StructureLoadingSet;
 use crate::{
     persistence::LoadingDistance,
     physics::location::Location,
-    structure::{structure_builder::TStructureBuilder, Structure},
+    structure::{Structure, structure_builder::TStructureBuilder},
 };
 
 /// Implement this to add a custom way to build asteroids

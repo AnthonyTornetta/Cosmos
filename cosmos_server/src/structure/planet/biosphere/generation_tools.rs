@@ -3,15 +3,16 @@
 use bevy::prelude::EventWriter;
 use cosmos_core::{
     block::{
+        Block,
         block_face::BlockFace,
         block_rotation::{BlockRotation, BlockSubRotation},
-        Block,
     },
     events::block_events::BlockChangedEvent,
     registry::Registry,
     structure::{
+        Structure,
         coordinates::{BlockCoordinate, UnboundBlockCoordinate},
-        rotate, Structure,
+        rotate,
     },
 };
 

@@ -5,19 +5,18 @@
 use std::{net::UdpSocket, time::SystemTime};
 
 use bevy::prelude::*;
-use bevy_renet2::renet2::{
-    transport::{NetcodeServerTransport, ServerAuthentication},
-    RenetServer,
+use bevy_renet::{
+    netcode::{NetcodeServerTransport, ServerAuthentication, ServerConfig},
+    renet::RenetServer,
 };
-use cosmos_core::netty::{connection_config, server::ServerLobby, PROTOCOL_ID};
-use renet2::transport::{NativeSocket, ServerSetupConfig};
+use cosmos_core::netty::{PROTOCOL_ID, connection_config, server::ServerLobby};
 
 use crate::netty::network_helpers::{ClientTicks, NetworkTick};
 
 /// Sets up the server & makes it ready to be connected to
 pub fn init(app: &mut App, port: u16) {
     let public_addr = format!("0.0.0.0:{port}").parse().unwrap();
-    let socket = NativeSocket::new(UdpSocket::bind(public_addr).unwrap()).unwrap();
+    let socket = UdpSocket::bind(public_addr).unwrap();
 
     let current_time = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).unwrap();
 
@@ -26,11 +25,11 @@ pub fn init(app: &mut App, port: u16) {
     //     public_addresses: vec![public_addr],
     // };
 
-    let setup_config = ServerSetupConfig {
+    let setup_config = ServerConfig {
         current_time,
         max_clients: 64,
         protocol_id: PROTOCOL_ID,
-        socket_addresses: vec![vec![public_addr]],
+        public_addresses: vec![public_addr],
         authentication: ServerAuthentication::Unsecure,
     };
 

@@ -2,7 +2,7 @@ use bevy::{color::palettes::css, prelude::*};
 use cosmos_core::{ecs::NeedsDespawned, netty::client::LocalPlayer, quest::OngoingQuests};
 
 use crate::{
-    ui::{ship_flight::indicators::IndicatorSettings, UiSystemSet},
+    ui::{UiSystemSet, ship_flight::indicators::IndicatorSettings},
     universe::map::waypoint::Waypoint,
 };
 

@@ -120,15 +120,12 @@ fn respond_to_explosion(
             ExplosionTimeAlive(0.0),
             MaxTimeExplosionAlive(MAX_PARTICLE_LIFETIME),
             ExplosionParticle,
-            ParticleEffectBundle {
-                effect: ParticleEffect::new(particle_handle),
-                // Makes the particles appear 3d by looking them at the player
-                transform: Transform::from_translation(transform.translation).looking_at(local_g_trans.translation(), Vec3::Y),
-                ..Default::default()
-            },
+            ParticleEffect::new(particle_handle),
+            // Makes the particles appear 3d by looking them at the player
+            Transform::from_translation(transform.translation).looking_at(local_g_trans.translation(), Vec3::Y),
         ));
 
-        let audio_handle = audio_sources.0[rand::random::<usize>() % audio_sources.0.len()].clone_weak();
+        let audio_handle = audio_sources.0[rand::random::<u64>() as usize % audio_sources.0.len()].clone_weak();
 
         let playing_sound: Handle<AudioInstance> = audio.play(audio_handle.clone()).with_volume(0.0).handle();
 
@@ -148,16 +145,16 @@ fn respond_to_explosion(
     }
 }
 
-/// For some reason, hanabi's auto start doesnt work on the very first particle created, but every subsiquent one.
-/// This fixes that issue.
-///
-/// Note that this needs to be run *before* the explosion particle creation system, for some reason
-fn start_explosion_particle_system(mut q_spawner: Query<&mut EffectInitializers, (Added<ExplosionParticle>, With<ExplosionParticle>)>) {
-    for mut effect_spawner in &mut q_spawner {
-        effect_spawner.reset();
-        effect_spawner.set_active(true);
-    }
-}
+// /// For some reason, hanabi's auto start doesnt work on the very first particle created, but every subsiquent one.
+// /// This fixes that issue.
+// ///
+// /// Note that this needs to be run *before* the explosion particle creation system, for some reason
+// fn start_explosion_particle_system(mut q_spawner: Query<&mut EffectInitializers, (Added<ExplosionParticle>, With<ExplosionParticle>)>) {
+//     for mut effect_spawner in &mut q_spawner {
+//         effect_spawner.reset();
+//         effect_spawner.set_active(true);
+//     }
+// }
 
 const MAX_PARTICLE_LIFETIME: Duration = Duration::from_millis(1200);
 
@@ -210,7 +207,7 @@ fn create_particle_fx(color: Option<Color>, effects: &mut Assets<EffectAsset>) -
         speed: (writer.rand(ScalarType::Float) * writer.lit(20.) + writer.lit(20.)).expr(),
     };
 
-    let effect = EffectAsset::new(32768, Spawner::once(1250.0.into(), true), writer.finish())
+    let effect = EffectAsset::new(32768, SpawnerSettings::once(1250.0.into()), writer.finish())
         .with_name("explosion")
         .init(init_pos)
         .init(init_vel)
@@ -218,7 +215,10 @@ fn create_particle_fx(color: Option<Color>, effects: &mut Assets<EffectAsset>) -
         .init(init_lifetime)
         .update(update_drag)
         .with_simulation_space(SimulationSpace::Local)
-        .render(ColorOverLifetimeModifier { gradient: color_gradient1 })
+        .render(ColorOverLifetimeModifier {
+            gradient: color_gradient1,
+            ..Default::default()
+        })
         .render(SizeOverLifetimeModifier {
             gradient: size_gradient1,
             screen_space_size: false,
@@ -255,8 +255,9 @@ pub(super) fn register(app: &mut App) {
 
     app.add_systems(
         Update,
-        (start_explosion_particle_system, respond_to_explosion)
-            .chain()
+        // (start_explosion_particle_system, respond_to_explosion)
+        respond_to_explosion
+            // .chain()
             .in_set(ExplosionSystemSet::ProcessExplosions)
             .ambiguous_with(PlayerParentChangingSet::ChangeParent)
             .run_if(in_state(GameState::Playing)),

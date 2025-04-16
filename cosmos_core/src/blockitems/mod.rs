@@ -10,9 +10,9 @@ use bevy::{
 
 use crate::{
     block::Block,
-    item::{Item, DEFAULT_MAX_STACK_SIZE},
+    item::{DEFAULT_MAX_STACK_SIZE, Item},
     loader::{AddLoadingEvent, DoneLoadingEvent, LoadingManager},
-    registry::{identifiable::Identifiable, Registry},
+    registry::{Registry, identifiable::Identifiable},
 };
 
 #[derive(Resource, Default)]

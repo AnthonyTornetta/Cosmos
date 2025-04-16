@@ -12,9 +12,9 @@ use bevy::{
 };
 
 use crate::persistence::{
-    loading::{LoadingSystemSet, NeedsLoaded, LOADING_SCHEDULE},
-    saving::{SavingSystemSet, SAVING_SCHEDULE},
     SerializedData,
+    loading::{LOADING_SCHEDULE, LoadingSystemSet, NeedsLoaded},
+    saving::{SAVING_SCHEDULE, SavingSystemSet},
 };
 
 mod combat;

@@ -11,7 +11,7 @@ use bevy_rapier3d::prelude::Collider;
 
 use crate::{
     block::Block,
-    registry::{create_registry, identifiable::Identifiable, Registry},
+    registry::{Registry, create_registry, identifiable::Identifiable},
 };
 
 #[derive(Debug, Clone, Copy)]

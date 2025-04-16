@@ -12,12 +12,13 @@ use crate::{
     block::Block,
     item::Item,
     netty::sync::{
+        IdentifiableComponent, SyncableComponent,
         events::netty_event::{IdentifiableEvent, NettyEvent, SyncedEventImpl},
         registry::sync_registry,
-        sync_component, IdentifiableComponent, SyncableComponent,
+        sync_component,
     },
     prelude::StructureBlock,
-    registry::{create_registry, identifiable::Identifiable, Registry},
+    registry::{Registry, create_registry, identifiable::Identifiable},
     structure::coordinates::BlockCoordinate,
 };
 

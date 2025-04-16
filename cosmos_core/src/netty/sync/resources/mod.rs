@@ -1,5 +1,5 @@
 use bevy::prelude::{App, Resource};
-use serde::{de::DeserializeOwned, Deserialize, Serialize};
+use serde::{Deserialize, Serialize, de::DeserializeOwned};
 
 #[cfg(feature = "client")]
 pub(super) mod client;

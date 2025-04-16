@@ -19,7 +19,7 @@ use bevy_rapier3d::{
 };
 
 use cosmos_core::{
-    block::{block_events::BlockEventsSet, Block},
+    block::{Block, block_events::BlockEventsSet},
     ecs::NeedsDespawned,
     physics::{
         location::{Location, LocationPhysicsSet},
@@ -32,10 +32,10 @@ use cosmos_core::{
     },
     registry::Registry,
     structure::{
+        Structure,
         block_health::events::{BlockDestroyedEvent, BlockTakeDamageEvent},
         coordinates::{BlockCoordinate, UnboundBlockCoordinate, UnboundCoordinateType},
         shields::Shield,
-        Structure,
     },
 };
 

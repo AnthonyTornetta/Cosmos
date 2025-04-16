@@ -7,10 +7,10 @@ use bevy::{
 };
 
 use crate::{
-    block::{block_direction::BlockDirection, Block},
+    block::{Block, block_direction::BlockDirection},
     events::block_events::BlockChangedEvent,
-    registry::{identifiable::Identifiable, Registry},
-    structure::{coordinates::BlockCoordinate, structure_block::StructureBlock, Structure},
+    registry::{Registry, identifiable::Identifiable},
+    structure::{Structure, coordinates::BlockCoordinate, structure_block::StructureBlock},
 };
 
 use super::{LogicBlock, LogicConnection, Port, PortType, QueueLogicInputEvent, QueueLogicOutputEvent, WireType};

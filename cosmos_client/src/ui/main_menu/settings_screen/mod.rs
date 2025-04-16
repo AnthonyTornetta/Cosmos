@@ -9,8 +9,8 @@ use crate::{
 };
 
 use super::{
-    disconnect_screen::DisconnectMenuSet, in_main_menu_state, title_screen::TitleScreenSet, MainMenuRootUiNode, MainMenuSubState,
-    MainMenuSystemSet,
+    MainMenuRootUiNode, MainMenuSubState, MainMenuSystemSet, disconnect_screen::DisconnectMenuSet, in_main_menu_state,
+    title_screen::TitleScreenSet,
 };
 
 fn create_settings_screen(mut commands: Commands, q_ui_root: Query<Entity, With<MainMenuRootUiNode>>) {

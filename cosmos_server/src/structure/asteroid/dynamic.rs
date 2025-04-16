@@ -3,7 +3,7 @@ use std::time::Duration;
 use bevy::{prelude::*, time::common_conditions::on_timer};
 use cosmos_core::{
     netty::system_sets::NetworkingSystemsSet,
-    physics::location::{systems::Anchor, Location},
+    physics::location::{Location, systems::Anchor},
     structure::asteroid::MovingAsteroid,
 };
 

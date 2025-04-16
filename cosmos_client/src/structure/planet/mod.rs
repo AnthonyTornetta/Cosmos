@@ -3,24 +3,24 @@
 use bevy::{
     math::Quat,
     prelude::{
-        in_state, App, Commands, Condition, Entity, EventWriter, GlobalTransform, IntoSystemConfigs, Mut, Query, Res, ResMut, Update, Vec3,
-        With,
+        App, Commands, Condition, Entity, EventWriter, GlobalTransform, IntoSystemConfigs, Mut, Query, Res, ResMut, Update, Vec3, With,
+        in_state,
     },
 };
-use bevy_renet2::renet2::RenetClient;
+use bevy_renet::renet::RenetClient;
 use cosmos_core::{
     netty::{
-        client::LocalPlayer, client_reliable_messages::ClientReliableMessages, cosmos_encoder, sync::mapping::NetworkMapping,
-        system_sets::NetworkingSystemsSet, NettyChannelClient,
+        NettyChannelClient, client::LocalPlayer, client_reliable_messages::ClientReliableMessages, cosmos_encoder,
+        sync::mapping::NetworkMapping, system_sets::NetworkingSystemsSet,
     },
     physics::location::{Location, LocationPhysicsSet},
     state::GameState,
     structure::{
+        ChunkState, Structure,
         chunk::{Chunk, ChunkUnloadEvent},
         coordinates::{UnboundChunkCoordinate, UnboundCoordinateType},
         planet::Planet,
         structure_iterator::ChunkIteratorResult,
-        ChunkState, Structure,
     },
 };
 

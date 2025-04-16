@@ -1,7 +1,7 @@
 //! Handles the rendering of the settings UI
 
 use bevy::{prelude::*, utils::hashbrown::HashMap};
-use cosmos_core::registry::{identifiable::Identifiable, Registry};
+use cosmos_core::registry::{Registry, identifiable::Identifiable};
 
 use crate::{
     lang::Lang,
@@ -16,6 +16,7 @@ use crate::{
 };
 
 use super::{
+    UiSystemSet,
     components::{
         button::register_button,
         scollable_container::ScrollBox,
@@ -23,7 +24,6 @@ use super::{
     },
     font::DefaultFont,
     reactivity::add_reactable_type,
-    UiSystemSet,
 };
 
 #[derive(Component)]

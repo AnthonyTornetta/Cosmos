@@ -5,8 +5,8 @@
 use std::marker::PhantomData;
 
 use super::{
-    components::{slider::SliderUiSystemSet, text_input::TextInputUiSystemSet},
     UiSystemSet,
+    components::{slider::SliderUiSystemSet, text_input::TextInputUiSystemSet},
 };
 use bevy::{
     app::{App, Update},

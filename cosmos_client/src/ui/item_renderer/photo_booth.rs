@@ -14,7 +14,7 @@ use bevy::{
 use cosmos_core::{
     blockitems::BlockItems,
     item::Item,
-    registry::{identifiable::Identifiable, Registry},
+    registry::{Registry, identifiable::Identifiable},
     state::GameState,
     utils::array_utils::expand_2d,
 };

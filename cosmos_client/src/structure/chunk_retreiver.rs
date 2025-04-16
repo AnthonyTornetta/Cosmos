@@ -1,12 +1,12 @@
 //! Used to get structure data from the server
 
 use bevy::prelude::*;
-use bevy_renet2::renet2::RenetClient;
+use bevy_renet::renet::RenetClient;
 use cosmos_core::netty::client::LocalPlayer;
 use cosmos_core::netty::client_reliable_messages::ClientReliableMessages;
 use cosmos_core::netty::sync::mapping::NetworkMapping;
 use cosmos_core::netty::system_sets::NetworkingSystemsSet;
-use cosmos_core::netty::{cosmos_encoder, NettyChannelClient};
+use cosmos_core::netty::{NettyChannelClient, cosmos_encoder};
 use cosmos_core::physics::location::{Location, SECTOR_DIMENSIONS};
 use cosmos_core::state::GameState;
 use cosmos_core::structure::Structure;

@@ -11,7 +11,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::structure::coordinates::{BlockCoordinate, CoordinateType, UnboundBlockCoordinate};
 
-use super::{sync::SyncableSystem, StructureSystemImpl};
+use super::{StructureSystemImpl, sync::SyncableSystem};
 
 #[derive(Reflect, Clone, Copy, Debug, Serialize, Deserialize)]
 /// How much strength this shield projector will add to the shield

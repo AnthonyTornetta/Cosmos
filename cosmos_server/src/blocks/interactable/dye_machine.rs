@@ -3,20 +3,20 @@ use std::{cell::RefCell, rc::Rc};
 use bevy::prelude::*;
 use cosmos_core::{
     block::{
-        block_events::{BlockEventsSet, BlockInteractEvent},
-        blocks::{COLORS, COLOR_VALUES},
-        specific_blocks::dye_machine::{DyeBlock, OpenDyeMachine},
         Block,
+        block_events::{BlockEventsSet, BlockInteractEvent},
+        blocks::{COLOR_VALUES, COLORS},
+        specific_blocks::dye_machine::{DyeBlock, OpenDyeMachine},
     },
     entities::player::Player,
     events::block_events::BlockDataSystemParams,
-    inventory::{itemstack::ItemShouldHaveData, Inventory},
+    inventory::{Inventory, itemstack::ItemShouldHaveData},
     item::Item,
     netty::{
         sync::events::server_event::{NettyEventReceived, NettyEventWriter},
         system_sets::NetworkingSystemsSet,
     },
-    registry::{identifiable::Identifiable, Registry},
+    registry::{Registry, identifiable::Identifiable},
     state::GameState,
     structure::Structure,
 };

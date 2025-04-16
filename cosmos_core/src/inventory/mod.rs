@@ -20,7 +20,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     item::Item,
-    netty::sync::{sync_component, IdentifiableComponent, SyncableComponent},
+    netty::sync::{IdentifiableComponent, SyncableComponent, sync_component},
     registry::identifiable::Identifiable,
 };
 
@@ -634,11 +634,7 @@ impl Inventory {
         if is_1.is_none() && is_2.is_none() {
             true
         } else if let Some(is_1) = is_1 {
-            if let Some(is_2) = is_2 {
-                is_1.is_same_as(is_2)
-            } else {
-                false
-            }
+            if let Some(is_2) = is_2 { is_1.is_same_as(is_2) } else { false }
         } else {
             false
         }

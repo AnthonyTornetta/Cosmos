@@ -3,8 +3,8 @@ use bevy::prelude::*;
 use crate::structure::planet::biosphere::TemperatureRange;
 
 use super::{
-    standard_generator::{self, AsteroidBlockEntry},
     AsteroidGeneratorComponent,
+    standard_generator::{self, AsteroidBlockEntry},
 };
 
 #[derive(Clone, Copy, Component, Default)]

@@ -1,8 +1,8 @@
 //! The material used by most blocks
 
 use bevy::{
-    math::{vec2, Affine2, Affine3},
-    pbr::{deferred::DEFAULT_PBR_DEFERRED_LIGHTING_PASS_ID, MaterialPipeline, MaterialPipelineKey, OpaqueRendererMethod},
+    math::{Affine2, Affine3, vec2},
+    pbr::{MaterialPipeline, MaterialPipelineKey, OpaqueRendererMethod, deferred::DEFAULT_PBR_DEFERRED_LIGHTING_PASS_ID},
     prelude::{Asset, Reflect},
     render::{
         mesh::{MeshVertexAttribute, MeshVertexBufferLayoutRef},

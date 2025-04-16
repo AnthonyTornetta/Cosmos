@@ -7,7 +7,7 @@ use bevy::{
     reflect::Reflect,
     utils::HashMap,
 };
-use crossterm::event::{poll, read, KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
+use crossterm::event::{KeyCode, KeyEvent, KeyEventKind, KeyModifiers, poll, read};
 pub mod cosmos_command_handler;
 
 #[derive(Debug, Event)]

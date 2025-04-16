@@ -3,7 +3,7 @@
 use bevy::{
     log::error,
     prelude::{
-        in_state, App, Commands, Component, Entity, EventWriter, IntoSystemConfigs, Query, Res, Resource, Update, Vec3, With, Without,
+        App, Commands, Component, Entity, EventWriter, IntoSystemConfigs, Query, Res, Resource, Update, Vec3, With, Without, in_state,
     },
     reflect::Reflect,
     time::Time,
@@ -19,12 +19,12 @@ use cosmos_core::{
     registry::Registry,
     state::GameState,
     structure::{
-        asteroid::{asteroid_builder::TAsteroidBuilder, MovingAsteroid},
+        ChunkInitEvent, Structure,
+        asteroid::{MovingAsteroid, asteroid_builder::TAsteroidBuilder},
         coordinates::ChunkCoordinate,
         full_structure::FullStructure,
         loading::ChunksNeedLoaded,
         structure_iterator::ChunkIteratorResult,
-        ChunkInitEvent, Structure,
     },
     utils::{quat_math::random_quat, random::random_range, timer::UtilsTimer},
 };
@@ -35,7 +35,7 @@ use serde::{Deserialize, Serialize};
 use crate::{
     init::init_world::Noise,
     persistence::{
-        make_persistent::{make_persistent, DefaultPersistentComponent},
+        make_persistent::{DefaultPersistentComponent, make_persistent},
         saving::NeverSave,
     },
     structure::asteroid::{generator::AsteroidGenerationSet, server_asteroid_builder::ServerAsteroidBuilder},
@@ -87,7 +87,7 @@ fn spawn_tiny_asteroids(
 
         let n_asteroids = random_range(1.0, 2.0).round() as usize;
 
-        let mut rng = rand::thread_rng();
+        let mut rng = rand::rng();
 
         let random_dir = random_quat(&mut rng);
         let variation_dir = random_quat(&mut rng);
@@ -127,7 +127,7 @@ fn spawn_tiny_asteroids(
                 ),
             };
 
-            let (random_type, _) = asteroids.0.iter().choose(&mut rand::thread_rng()).expect("No tiny asteroids :(");
+            let (random_type, _) = asteroids.0.iter().choose(&mut rand::rng()).expect("No tiny asteroids :(");
             entity_cmd.insert((
                 structure,
                 NeverSave,

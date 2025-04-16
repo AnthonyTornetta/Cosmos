@@ -21,7 +21,7 @@ use bevy::{
 };
 use cosmos_core::{
     entities::player::Player,
-    physics::location::{Location, Sector, SectorUnit, SECTOR_DIMENSIONS},
+    physics::location::{Location, SECTOR_DIMENSIONS, Sector, SectorUnit},
     state::GameState,
     utils::{quat_math::QuatMath, random::random_range},
 };

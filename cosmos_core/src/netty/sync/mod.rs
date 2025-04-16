@@ -8,9 +8,9 @@ use bevy::{
     prelude::States,
     state::state::FreelyMutableState,
 };
-use bevy_renet2::renet2::ClientId;
-use registry::{sync_registry, RegistrySyncInit};
-use serde::{de::DeserializeOwned, Deserialize, Serialize};
+use bevy_renet::renet::ClientId;
+use registry::{RegistrySyncInit, sync_registry};
+use serde::{Deserialize, Serialize, de::DeserializeOwned};
 
 use crate::{
     block::data::BlockDataIdentifier,

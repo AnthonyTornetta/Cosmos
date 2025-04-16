@@ -1,8 +1,8 @@
 //! Some utility systems that make working with the bevy ECS a bit easier in a multiplayer environment.
 
-use bevy::prelude::{resource_exists, App, Children, Entity, First, IntoSystemConfigs, Query, ResMut, With};
+use bevy::prelude::{App, Children, Entity, First, IntoSystemConfigs, Query, ResMut, With, resource_exists};
 use cosmos_core::{
-    ecs::{despawn_needed, NeedsDespawned},
+    ecs::{NeedsDespawned, despawn_needed},
     netty::sync::mapping::NetworkMapping,
 };
 

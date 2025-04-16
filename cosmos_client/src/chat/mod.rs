@@ -7,8 +7,8 @@ use bevy::{
     core::Name,
     log::error,
     prelude::{
-        in_state, App, BuildChildren, Changed, ChildBuild, Children, Commands, Component, Entity, EventReader, IntoSystemConfigs, OnEnter,
-        Query, Res, ResMut, Text, TextUiWriter, Visibility, With, Without,
+        App, BuildChildren, Changed, ChildBuild, Children, Commands, Component, Entity, EventReader, IntoSystemConfigs, OnEnter, Query,
+        Res, ResMut, Text, TextUiWriter, Visibility, With, Without, in_state,
     },
     text::{LineBreak, TextFont, TextLayout},
     time::Time,
@@ -27,6 +27,7 @@ use cosmos_core::{
 use crate::{
     input::inputs::{CosmosInputs, InputChecker, InputHandler},
     ui::{
+        CloseMethod, OpenMenu,
         components::{
             scollable_container::{ScrollBox, ScrollerStyles},
             show_cursor::ShowCursor,
@@ -35,7 +36,6 @@ use crate::{
         font::DefaultFont,
         hide::DontHideOnToggleUi,
         pause::CloseMenusSet,
-        CloseMethod, OpenMenu,
     },
 };
 

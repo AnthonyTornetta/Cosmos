@@ -10,10 +10,10 @@ use crate::{
     persistence::LoadingDistance,
     physics::{gravity_system::GravityEmitter, location::Location},
     structure::{
+        Structure,
         loading::StructureLoadingSet,
         planet::{PLANET_LOAD_RADIUS, PLANET_UNLOAD_RADIUS},
         structure_builder::TStructureBuilder,
-        Structure,
     },
 };
 

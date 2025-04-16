@@ -2,8 +2,8 @@
 
 use crate::{
     entities::player::Player,
-    netty::{cosmos_encoder, server_registry::RegistrySyncing, system_sets::NetworkingSystemsSet, NettyChannelServer},
-    registry::{identifiable::Identifiable, Registry},
+    netty::{NettyChannelServer, cosmos_encoder, server_registry::RegistrySyncing, system_sets::NetworkingSystemsSet},
+    registry::{Registry, identifiable::Identifiable},
 };
 use bevy::{
     app::{App, Startup, Update},
@@ -16,7 +16,7 @@ use bevy::{
     prelude::{Deref, Entity, Event, IntoSystemSetConfigs, States, SystemSet},
     state::condition::in_state,
 };
-use bevy_renet2::renet2::RenetServer;
+use bevy_renet::renet::RenetServer;
 use serde::{Deserialize, Serialize};
 
 #[derive(Resource, Deref, Debug, Default)]

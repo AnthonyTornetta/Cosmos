@@ -15,11 +15,11 @@ use cosmos_core::block::Block;
 use cosmos_core::netty::client::LocalPlayer;
 use cosmos_core::physics::location::SECTOR_DIMENSIONS;
 use cosmos_core::prelude::ChunkBlockCoordinate;
-use cosmos_core::registry::many_to_one::ReadOnlyManyToOneRegistry;
 use cosmos_core::registry::ReadOnlyRegistry;
-use cosmos_core::structure::chunk::{ChunkEntity, CHUNK_DIMENSIONS};
-use cosmos_core::structure::coordinates::UnboundChunkCoordinate;
+use cosmos_core::registry::many_to_one::ReadOnlyManyToOneRegistry;
 use cosmos_core::structure::Structure;
+use cosmos_core::structure::chunk::{CHUNK_DIMENSIONS, ChunkEntity};
+use cosmos_core::structure::coordinates::UnboundChunkCoordinate;
 use futures_lite::future;
 
 use super::chunk_renderer::{ChunkNeedsCustomBlocksRendered, ChunkRenderer, RenderingChunk, RenderingChunks};

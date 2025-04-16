@@ -1,14 +1,14 @@
 use bevy::prelude::*;
-use bevy_renet2::renet2::RenetServer;
+use bevy_renet::renet::RenetServer;
 use cosmos_core::{
     netty::{
-        cosmos_encoder, server_reliable_messages::ServerReliableMessages, sync::server_entity_syncing::RequestedEntityEvent,
-        system_sets::NetworkingSystemsSet, NettyChannelServer,
+        NettyChannelServer, cosmos_encoder, server_reliable_messages::ServerReliableMessages,
+        sync::server_entity_syncing::RequestedEntityEvent, system_sets::NetworkingSystemsSet,
     },
     physics::location::Location,
     structure::{
-        planet::{biosphere::BiosphereMarker, Planet},
         Structure,
+        planet::{Planet, biosphere::BiosphereMarker},
     },
 };
 

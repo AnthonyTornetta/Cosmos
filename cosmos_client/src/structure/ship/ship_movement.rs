@@ -4,12 +4,12 @@ use std::f32::consts::PI;
 
 use bevy::prelude::*;
 use bevy::window::PrimaryWindow;
-use bevy_renet2::renet2::RenetClient;
+use bevy_renet::renet::RenetClient;
 use cosmos_core::netty::client::LocalPlayer;
 use cosmos_core::netty::client_reliable_messages::ClientReliableMessages;
 use cosmos_core::netty::client_unreliable_messages::ClientUnreliableMessages;
 use cosmos_core::netty::system_sets::NetworkingSystemsSet;
-use cosmos_core::netty::{cosmos_encoder, NettyChannelClient};
+use cosmos_core::netty::{NettyChannelClient, cosmos_encoder};
 use cosmos_core::state::GameState;
 use cosmos_core::structure::shared::build_mode::BuildMode;
 use cosmos_core::structure::ship::pilot::Pilot;
@@ -19,9 +19,9 @@ use cosmos_core::structure::systems::dock_system::Docked;
 use crate::input::inputs::{CosmosInputs, InputChecker, InputHandler};
 use crate::rendering::MainCamera;
 use crate::settings::MouseSensitivity;
+use crate::ui::UiSystemSet;
 use crate::ui::components::show_cursor::no_open_menus;
 use crate::ui::crosshair::CrosshairOffset;
-use crate::ui::UiSystemSet;
 use crate::window::setup::{CursorFlags, CursorFlagsSet, DeltaCursorPosition};
 
 fn process_ship_movement(

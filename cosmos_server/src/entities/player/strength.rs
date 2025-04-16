@@ -10,7 +10,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::persistence::{
     loading::LoadingSystemSet,
-    make_persistent::{make_persistent, DefaultPersistentComponent},
+    make_persistent::{DefaultPersistentComponent, make_persistent},
 };
 
 #[derive(Component, Reflect, Debug, Clone, Copy, Default, Serialize, Deserialize)]

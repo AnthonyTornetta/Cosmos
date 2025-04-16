@@ -1,14 +1,14 @@
 use bevy::prelude::{
-    in_state, App, BuildChildren, Commands, Component, Entity, Event, EventReader, EventWriter, IntoSystemConfigs, IntoSystemSetConfigs,
-    Quat, Query, RemovedComponents, States, SystemSet, Transform, Update, Vec3,
+    App, BuildChildren, Commands, Component, Entity, Event, EventReader, EventWriter, IntoSystemConfigs, IntoSystemSetConfigs, Quat, Query,
+    RemovedComponents, States, SystemSet, Transform, Update, Vec3, in_state,
 };
 use bevy_rapier3d::prelude::{RigidBody, Sensor};
 
 use crate::events::structure::change_pilot_event::ChangePilotEvent;
 use crate::netty::system_sets::NetworkingSystemsSet;
 use crate::physics::location::{Location, LocationPhysicsSet};
-use crate::structure::ship::pilot::Pilot;
 use crate::structure::StructureTypeSet;
+use crate::structure::ship::pilot::Pilot;
 
 #[derive(Component, Debug)]
 struct PilotStartingDelta(Vec3, Quat);

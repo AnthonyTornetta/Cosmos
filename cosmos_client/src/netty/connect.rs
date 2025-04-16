@@ -8,15 +8,15 @@ use std::{
 };
 
 use bevy::prelude::*;
-use bevy_renet2::renet2::{
-    transport::{ClientAuthentication, NetcodeClientTransport},
-    RenetClient,
+use bevy_renet::{
+    netcode::{ClientAuthentication, NetcodeClientTransport},
+    renet::RenetClient,
 };
 use cosmos_core::{
-    netty::{connection_config, sync::mapping::NetworkMapping, PROTOCOL_ID},
+    netty::{PROTOCOL_ID, connection_config, cosmos_encoder, sync::mapping::NetworkMapping},
     state::GameState,
 };
-use renet2::{transport::NativeSocket, DisconnectReason};
+use renet::DisconnectReason;
 
 use crate::{
     netty::lobby::{ClientLobby, MostRecentTick},
@@ -36,15 +36,15 @@ fn new_netcode_transport(player_name: &str, mut host: &str, port: u16) -> Netcod
         .next()
         .unwrap();
 
-    let socket = NativeSocket::new(UdpSocket::bind("0.0.0.0:0").unwrap()).unwrap();
+    let socket = UdpSocket::bind("0.0.0.0:0").unwrap();
 
     let current_time = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();
     let client_id = current_time.as_millis() as u64;
 
     let mut token = [0; 256];
 
-    // Bincode because this is stored un a u8, with a fixed length of 256
-    let serialized_name = bincode::serialize(&player_name).expect("Unable to serialize name");
+    // This is stored un a u8[256]
+    let serialized_name = cosmos_encoder::serialize_uncompressed(&player_name);
     if serialized_name.len() > 256 {
         panic!("name too long. TODO: Handle this gracefully");
     }
@@ -54,7 +54,6 @@ fn new_netcode_transport(player_name: &str, mut host: &str, port: u16) -> Netcod
     }
 
     let auth = ClientAuthentication::Unsecure {
-        socket_id: 0, // for native sockets, use 0
         client_id,
         protocol_id: PROTOCOL_ID,
         server_addr,

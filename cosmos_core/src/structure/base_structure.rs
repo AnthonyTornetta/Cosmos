@@ -16,15 +16,16 @@ use serde::{Deserialize, Serialize};
 
 use crate::{block::block_direction::ALL_BLOCK_DIRECTIONS, events::block_events::BlockDataChangedEvent};
 use crate::{
-    block::{block_rotation::BlockRotation, blocks::AIR_BLOCK_ID, data::BlockData, Block},
+    block::{Block, block_rotation::BlockRotation, blocks::AIR_BLOCK_ID, data::BlockData},
     physics::location::Location,
     registry::Registry,
 };
 
 use super::{
+    BlockDataSystemParams, Structure,
     block_health::events::{BlockDestroyedEvent, BlockTakeDamageEvent},
     block_storage::BlockStorer,
-    chunk::{BlockInfo, Chunk, CHUNK_DIMENSIONS},
+    chunk::{BlockInfo, CHUNK_DIMENSIONS, Chunk},
     coordinates::{
         BlockCoordinate, ChunkBlockCoordinate, ChunkCoordinate, Coordinate, CoordinateType, UnboundBlockCoordinate, UnboundChunkCoordinate,
         UnboundCoordinateType,
@@ -32,7 +33,6 @@ use super::{
     query::MutBlockData,
     structure_block::StructureBlock,
     structure_iterator::{BlockIterator, ChunkIterator},
-    BlockDataSystemParams, Structure,
 };
 
 #[derive(Reflect, Debug, Serialize, Deserialize)]
@@ -889,17 +889,9 @@ fn calculate_raycast_delta(at: Vec3, direction: Vec3) -> Vec3 {
     let desiered_x = if direction.x < 0.0 && at.x < 0.0 {
         x_dec - 1.0
     } else if direction.x < 0.0 && at.x >= 0.0 {
-        if x_dec < f32::EPSILON {
-            -1.0
-        } else {
-            -x_dec
-        }
+        if x_dec < f32::EPSILON { -1.0 } else { -x_dec }
     } else if direction.x >= 0.0 && at.x < 0.0 {
-        if x_dec < f32::EPSILON {
-            1.0
-        } else {
-            x_dec
-        }
+        if x_dec < f32::EPSILON { 1.0 } else { x_dec }
     } else {
         1.0 - x_dec
     };
@@ -910,17 +902,9 @@ fn calculate_raycast_delta(at: Vec3, direction: Vec3) -> Vec3 {
     let desiered_y = if direction.y < 0.0 && at.y < 0.0 {
         y_dec - 1.0
     } else if direction.y < 0.0 && at.y >= 0.0 {
-        if y_dec < f32::EPSILON {
-            -1.0
-        } else {
-            -y_dec
-        }
+        if y_dec < f32::EPSILON { -1.0 } else { -y_dec }
     } else if direction.y >= 0.0 && at.y < 0.0 {
-        if y_dec < f32::EPSILON {
-            1.0
-        } else {
-            y_dec
-        }
+        if y_dec < f32::EPSILON { 1.0 } else { y_dec }
     } else {
         1.0 - y_dec
     };
@@ -931,17 +915,9 @@ fn calculate_raycast_delta(at: Vec3, direction: Vec3) -> Vec3 {
     let desiered_z = if direction.z < 0.0 && at.z < 0.0 {
         z_dec - 1.0
     } else if direction.z < 0.0 && at.z >= 0.0 {
-        if z_dec < f32::EPSILON {
-            -1.0
-        } else {
-            -z_dec
-        }
+        if z_dec < f32::EPSILON { -1.0 } else { -z_dec }
     } else if direction.z >= 0.0 && at.z < 0.0 {
-        if z_dec < f32::EPSILON {
-            1.0
-        } else {
-            z_dec
-        }
+        if z_dec < f32::EPSILON { 1.0 } else { z_dec }
     } else {
         1.0 - z_dec
     };

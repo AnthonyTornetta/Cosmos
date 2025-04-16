@@ -6,8 +6,8 @@ use bevy::{
 };
 use cosmos_core::{
     shop::{
-        netty::{ShopPurchaseError, ShopSellError},
         Shop,
+        netty::{ShopPurchaseError, ShopSellError},
     },
     structure::coordinates::BlockCoordinate,
 };

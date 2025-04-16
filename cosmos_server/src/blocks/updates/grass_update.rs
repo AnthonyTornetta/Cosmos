@@ -1,13 +1,13 @@
-use bevy::prelude::{in_state, App, EventReader, EventWriter, IntoSystemConfigs, Query, Res, Update};
+use bevy::prelude::{App, EventReader, EventWriter, IntoSystemConfigs, Query, Res, Update, in_state};
 
 use cosmos_core::{
-    block::{block_events::BlockEventsSet, block_update::BlockUpdate, Block},
+    block::{Block, block_events::BlockEventsSet, block_update::BlockUpdate},
     ecs::mut_events::MutEvent,
     events::block_events::BlockChangedEvent,
     netty::system_sets::NetworkingSystemsSet,
-    registry::{identifiable::Identifiable, Registry},
+    registry::{Registry, identifiable::Identifiable},
     state::GameState,
-    structure::{coordinates::BlockCoordinate, Structure},
+    structure::{Structure, coordinates::BlockCoordinate},
 };
 
 fn monitor_grass_updated(

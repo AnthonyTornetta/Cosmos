@@ -12,9 +12,9 @@ use bevy::{
 };
 use cosmos_core::{
     netty::cosmos_encoder,
-    physics::location::{Location, Sector, SectorUnit, SystemCoordinate, SystemUnit, SYSTEM_SECTORS},
+    physics::location::{Location, SYSTEM_SECTORS, Sector, SectorUnit, SystemCoordinate, SystemUnit},
     state::GameState,
-    universe::star::{Star, MAX_TEMPERATURE, MIN_TEMPERATURE},
+    universe::star::{MAX_TEMPERATURE, MIN_TEMPERATURE, Star},
 };
 use rand::Rng;
 use rand_chacha::ChaCha8Rng;
@@ -78,8 +78,8 @@ fn spiral(x: f32, y: f32, z: f32, offset: f32) -> Vec3 {
 }
 
 fn guassian_random(rng: &mut ChaCha8Rng, mean: f32, stdev: f32) -> f32 {
-    let u = 1.0 - rng.gen::<f32>();
-    let v = rng.gen::<f32>();
+    let u = 1.0 - rng.random::<f32>();
+    let v = rng.random::<f32>();
     let z = (-2.0 * u.ln()).sqrt() * (TAU * v).cos();
 
     z * stdev + mean
@@ -133,7 +133,7 @@ fn generate_galaxy(seed: &ServerSeed) -> Galaxy {
     stars.insert(SystemCoordinate::new(0, 0, 0));
 
     for system in stars {
-        let rand = 1.0 - (1.0 - rng.gen::<f32>()).sqrt();
+        let rand = 1.0 - (1.0 - rng.random::<f32>()).sqrt();
         let temperature = (rand * (MAX_TEMPERATURE - MIN_TEMPERATURE)) + MIN_TEMPERATURE;
 
         let star = Star::new(temperature);

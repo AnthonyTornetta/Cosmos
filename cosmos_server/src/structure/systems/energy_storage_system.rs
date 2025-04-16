@@ -1,19 +1,19 @@
 //! Represents all the energy stored on a structure
 
-use bevy::prelude::{in_state, App, Commands, EventReader, IntoSystemConfigs, OnEnter, Query, Res, ResMut, Update};
+use bevy::prelude::{App, Commands, EventReader, IntoSystemConfigs, OnEnter, Query, Res, ResMut, Update, in_state};
 
 use cosmos_core::{
-    block::{block_events::BlockEventsSet, Block},
+    block::{Block, block_events::BlockEventsSet},
     events::block_events::BlockChangedEvent,
     registry::Registry,
     state::GameState,
     structure::{
+        Structure,
         events::StructureLoadedEvent,
         systems::{
-            energy_storage_system::{EnergyStorageBlocks, EnergyStorageProperty, EnergyStorageSystem},
             StructureSystemType, StructureSystems, StructureSystemsSet,
+            energy_storage_system::{EnergyStorageBlocks, EnergyStorageProperty, EnergyStorageSystem},
         },
-        Structure,
     },
 };
 

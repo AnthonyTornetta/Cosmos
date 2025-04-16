@@ -1,7 +1,7 @@
 [package]
 name = "cosmos_client"
 version = "0.0.8"
-edition = "2021"
+edition = "2024"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -46,11 +46,10 @@ cosmos_core = { version = "0.0.8", path = "../cosmos_core", features = [
 ] }
 
 bevy = { workspace = true }
-bevy_renet2 = { workspace = true, features = ["serde"] }
-renet2 = { workspace = true, features = ["bevy", "serde"] }
+bevy_renet = { workspace = true }
+renet = { workspace = true }
 serde = { workspace = true }
-bincode = { workspace = true }
-local-ip-address = { workspace = true }
+bincode = { workspace = true, features = [ "serde" ] }
 bevy_rapier3d = { workspace = true }
 bigdecimal = { workspace = true }
 futures-lite = { workspace = true }
@@ -70,12 +69,11 @@ bevy_kira_audio = { workspace = true }
 toml = { workspace = true }
 arboard = { workspace = true }
 
-thread-priority = { workspace = true }
 anyhow = { workspace = true }
 thiserror = { workspace = true }
 bitflags = { workspace = true }
 bevy_mod_debugdump = { workspace = true }
-derive_more = { workspace = true }
+derive_more = { workspace = true, features = ["full"] }
 clap = { workspace = true, features = ["derive"] }
 bevy_easy_compute = { workspace = true }
 bevy_obj = { workspace = true }

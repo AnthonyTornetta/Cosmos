@@ -4,9 +4,9 @@
 use bevy::{
     ecs::schedule::{LogLevel, ScheduleBuildSettings, ScheduleLabel},
     prelude::*,
-    render::{pipelined_rendering::RenderExtractApp, Render, RenderApp},
+    render::{Render, RenderApp, pipelined_rendering::RenderExtractApp},
 };
-use renet2::{RenetClient, RenetServer};
+use renet::{RenetClient, RenetServer};
 
 use crate::structure::Structure;
 

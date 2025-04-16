@@ -1,8 +1,8 @@
 use bevy::math::Vec3;
 use cosmos_core::{
-    block::{block_direction::BlockDirection, block_face::BlockFace, blocks::AIR_BLOCK_ID, Block},
+    block::{Block, block_direction::BlockDirection, block_face::BlockFace, blocks::AIR_BLOCK_ID},
     prelude::{BlockCoordinate, ChunkBlockCoordinate, UnboundBlockCoordinate},
-    registry::{identifiable::Identifiable, Registry},
+    registry::{Registry, identifiable::Identifiable},
     structure::{
         block_storage::BlockStorer,
         coordinates::{CoordinateType, UnboundCoordinateType},
@@ -163,7 +163,7 @@ impl ChunkRendererBackend<LodChunk> for LodChunkRenderingChecker<'_> {
 #[cfg(test)]
 mod test {
     use cosmos_core::{
-        block::{block_direction::ALL_BLOCK_DIRECTIONS, BlockProperty},
+        block::{BlockProperty, block_direction::ALL_BLOCK_DIRECTIONS},
         structure::chunk::CHUNK_DIMENSIONS,
     };
 

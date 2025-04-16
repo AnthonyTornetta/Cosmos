@@ -4,19 +4,18 @@ use cosmos_core::{
     entities::player::Player,
     inventory::itemstack::ItemStackData,
     netty::{
-        cosmos_encoder,
+        NettyChannelServer, NoSendEntity, cosmos_encoder,
         server::ServerLobby,
         sync::{
-            server_entity_syncing::RequestedEntityEvent, server_syncing::should_be_sent_to, ComponentEntityIdentifier, ComponentId,
-            ComponentReplicationMessage, ComponentSyncingSet, ReplicatedComponentData,
+            ComponentEntityIdentifier, ComponentId, ComponentReplicationMessage, ComponentSyncingSet, ReplicatedComponentData,
+            server_entity_syncing::RequestedEntityEvent, server_syncing::should_be_sent_to,
         },
-        NettyChannelServer, NoSendEntity,
     },
     persistence::LoadingDistance,
     physics::location::Location,
     prelude::StructureSystem,
 };
-use renet2::{ClientId, RenetServer};
+use renet::{ClientId, RenetServer};
 
 fn on_request_parent(
     q_component: Query<(&Parent, Option<&StructureSystem>, Option<&ItemStackData>, Option<&BlockData>), Without<NoSendEntity>>,
@@ -65,7 +64,7 @@ fn on_request_parent(
         }
 
         comps_to_send.entry(ev.client_id).or_default().push(ReplicatedComponentData {
-            raw_data: bincode::serialize(&component.get()).expect("Failed to serialize component."),
+            raw_data: cosmos_encoder::serialize_uncompressed(&component.get()),
             entity_identifier,
         });
     }
@@ -130,7 +129,7 @@ fn on_change_parent(
             .filter(|(_, entity_identifier)| should_be_sent_to(p_loc, &q_parent, entity_identifier))
             .map(|(component, identifier)| ReplicatedComponentData {
                 entity_identifier: identifier,
-                raw_data: bincode::serialize(&component.get()).expect("Failed to serialize component!"),
+                raw_data: cosmos_encoder::serialize_uncompressed(&component.get()),
             })
             .collect::<Vec<ReplicatedComponentData>>();
 

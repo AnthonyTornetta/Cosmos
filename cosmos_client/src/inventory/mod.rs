@@ -1,7 +1,7 @@
 //! Renders the inventory slots and handles all the logic for moving items around
 
 use bevy::{ecs::system::EntityCommands, prelude::*, window::PrimaryWindow};
-use bevy_renet2::renet2::RenetClient;
+use bevy_renet::renet::RenetClient;
 use cosmos_core::{
     block::{
         block_events::BlockEventsSet,
@@ -9,25 +9,25 @@ use cosmos_core::{
     },
     ecs::NeedsDespawned,
     inventory::{
+        HeldItemStack, Inventory,
         held_item_slot::HeldItemSlot,
         itemstack::ItemStack,
         netty::{ClientInventoryMessages, InventoryIdentifier},
-        HeldItemStack, Inventory,
     },
-    netty::{client::LocalPlayer, cosmos_encoder, sync::mapping::NetworkMapping, system_sets::NetworkingSystemsSet, NettyChannelClient},
+    netty::{NettyChannelClient, client::LocalPlayer, cosmos_encoder, sync::mapping::NetworkMapping, system_sets::NetworkingSystemsSet},
     state::GameState,
 };
 
 use crate::{
     input::inputs::{CosmosInputs, InputChecker, InputHandler},
     ui::{
+        OpenMenu, UiSystemSet,
         components::{
             scollable_container::ScrollBox,
             show_cursor::no_open_menus,
             window::{GuiWindow, UiWindowSystemSet},
         },
         item_renderer::{NoHoverTooltip, RenderItem},
-        OpenMenu, UiSystemSet,
     },
 };
 
@@ -216,7 +216,9 @@ fn toggle_inventory_rendering(
                 }
 
                 if leftover != 0 {
-                    warn!("Unable to put itemstack into inventory it was taken out of - and dropping hasn't been implemented yet. Deleting for now.");
+                    warn!(
+                        "Unable to put itemstack into inventory it was taken out of - and dropping hasn't been implemented yet. Deleting for now."
+                    );
                     // Only send information to server if there is a point to the insertion
                     client.send_message(
                         NettyChannelClient::Inventory,

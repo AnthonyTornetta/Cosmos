@@ -1,15 +1,15 @@
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::Velocity;
-use bevy_renet2::renet2::RenetClient;
+use bevy_renet::renet::RenetClient;
 use cosmos_core::{
     netty::{
+        NettyChannelClient,
         client::LocalPlayer,
         client_unreliable_messages::ClientUnreliableMessages,
         cosmos_encoder,
         netty_rigidbody::{NettyRigidBody, NettyRigidBodyLocation},
         sync::mapping::NetworkMapping,
         system_sets::NetworkingSystemsSet,
-        NettyChannelClient,
     },
     physics::location::{Location, LocationPhysicsSet},
     state::GameState,

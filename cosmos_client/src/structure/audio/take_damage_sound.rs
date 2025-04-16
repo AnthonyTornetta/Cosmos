@@ -1,13 +1,13 @@
 use bevy::prelude::{
-    resource_exists, App, BuildChildren, ChildBuild, Commands, EventReader, Handle, IntoSystemConfigs, Name, Query, Res, Resource,
-    Transform, Update,
+    App, BuildChildren, ChildBuild, Commands, EventReader, Handle, IntoSystemConfigs, Name, Query, Res, Resource, Transform, Update,
+    resource_exists,
 };
 use bevy_kira_audio::{Audio, AudioControl, AudioInstance, AudioSource};
 use cosmos_core::{
     block::block_events::BlockEventsSet,
     netty::system_sets::NetworkingSystemsSet,
     state::GameState,
-    structure::{block_health::events::BlockTakeDamageEvent, shared::DespawnWithStructure, Structure},
+    structure::{Structure, block_health::events::BlockTakeDamageEvent, shared::DespawnWithStructure},
 };
 
 use crate::{

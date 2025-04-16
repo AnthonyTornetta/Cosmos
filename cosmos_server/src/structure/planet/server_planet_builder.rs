@@ -4,8 +4,8 @@ use bevy::ecs::system::EntityCommands;
 use cosmos_core::{
     physics::location::Location,
     structure::{
-        planet::{planet_builder::PlanetBuilder, planet_builder::TPlanetBuilder, Planet},
         Structure,
+        planet::{Planet, planet_builder::PlanetBuilder, planet_builder::TPlanetBuilder},
     },
 };
 

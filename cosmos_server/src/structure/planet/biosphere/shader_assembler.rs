@@ -9,7 +9,7 @@ use bevy::{
     utils::hashbrown::HashSet,
 };
 use cosmos_core::{
-    registry::{identifiable::Identifiable, Registry},
+    registry::{Registry, identifiable::Identifiable},
     state::GameState,
     structure::planet::biosphere::Biosphere,
 };

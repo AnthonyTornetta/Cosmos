@@ -1,9 +1,9 @@
-use bevy::prelude::{resource_exists, App, EventReader, IntoSystemConfigs, Query, Res, Update};
+use bevy::prelude::{App, EventReader, IntoSystemConfigs, Query, Res, Update, resource_exists};
 use cosmos_core::{
-    block::{block_events::BlockEventsSet, Block},
+    block::{Block, block_events::BlockEventsSet},
     netty::system_sets::NetworkingSystemsSet,
     registry::Registry,
-    structure::{block_health::events::BlockTakeDamageEvent, Structure},
+    structure::{Structure, block_health::events::BlockTakeDamageEvent},
 };
 
 fn take_damage_reader(

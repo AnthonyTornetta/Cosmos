@@ -3,12 +3,12 @@ use std::{f32::consts::PI, time::Duration};
 use bevy::{
     app::{App, Update},
     math::{Quat, Vec3},
-    prelude::{not, resource_exists, Commands, Component, Entity, IntoSystemConfigs, Query, Res, ResMut, Resource, With},
+    prelude::{Commands, Component, Entity, IntoSystemConfigs, Query, Res, ResMut, Resource, With, not, resource_exists},
     render::view::{
-        screenshot::{save_to_disk, Screenshot},
         Visibility,
+        screenshot::{Screenshot, save_to_disk},
     },
-    time::{common_conditions::on_timer, Time},
+    time::{Time, common_conditions::on_timer},
     transform::components::Transform,
     ui::Node,
 };

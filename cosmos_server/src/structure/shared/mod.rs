@@ -1,16 +1,16 @@
 //! Shared systems between different structure types
 
 use bevy::{
-    prelude::{in_state, App, Commands, Entity, EventWriter, IntoSystemConfigs, IntoSystemSetConfigs, Query, Res, SystemSet, Update},
+    prelude::{App, Commands, Entity, EventWriter, IntoSystemConfigs, IntoSystemSetConfigs, Query, Res, SystemSet, Update, in_state},
     time::Time,
 };
 use cosmos_core::{
-    block::{block_events::BlockEventsSet, Block},
+    block::{Block, block_events::BlockEventsSet},
     ecs::NeedsDespawned,
     events::{block_events::BlockChangedEvent, structure::change_pilot_event::ChangePilotEvent},
     registry::Registry,
     state::GameState,
-    structure::{loading::StructureLoadingSet, shared::MeltingDown, ship::pilot::Pilot, Structure},
+    structure::{Structure, loading::StructureLoadingSet, shared::MeltingDown, ship::pilot::Pilot},
 };
 
 pub mod build_mode;

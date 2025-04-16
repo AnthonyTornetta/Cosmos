@@ -1,18 +1,18 @@
 //! All events that are related to blocks
 
 use bevy::prelude::*;
-use bevy_renet2::renet2::RenetClient;
+use bevy_renet::renet::RenetClient;
 use cosmos_core::{
     block::{
         block_events::{BlockEventsSet, BlockInteractEvent},
         block_rotation::BlockRotation,
     },
     netty::{
+        NettyChannelClient,
         client_reliable_messages::ClientReliableMessages,
         cosmos_encoder,
         sync::mapping::{Mappable, NetworkMapping},
         system_sets::NetworkingSystemsSet,
-        NettyChannelClient,
     },
     state::GameState,
     structure::structure_block::StructureBlock,

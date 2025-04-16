@@ -2,9 +2,9 @@ use crate::{
     asset::{
         asset_loading::{AllTexturesDoneLoadingEvent, AssetsDoneLoadingEvent, AssetsSet, CosmosTextureAtlas},
         materials::{
-            animated_material::{AnimatedArrayTextureMaterial, ATTRIBUTE_PACKED_ANIMATION_DATA},
             AddMaterialEvent, MaterialDefinition, MaterialMeshInformationGenerator, MaterialType, MaterialsSystemSet,
             RemoveAllMaterialsEvent,
+            animated_material::{ATTRIBUTE_PACKED_ANIMATION_DATA, AnimatedArrayTextureMaterial},
         },
     },
     rendering::MeshInformation,
@@ -15,7 +15,7 @@ use bevy::{
     utils::HashMap,
 };
 use cosmos_core::{
-    registry::{identifiable::Identifiable, Registry},
+    registry::{Registry, identifiable::Identifiable},
     state::GameState,
 };
 use serde::{Deserialize, Serialize};

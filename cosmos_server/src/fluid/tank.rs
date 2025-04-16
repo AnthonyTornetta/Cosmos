@@ -6,18 +6,18 @@ use bevy::{
     app::{App, Update},
     log::warn,
     prelude::{Entity, EventReader, IntoSystemConfigs, Query, Res, ResMut, Resource, With},
-    utils::{hashbrown::HashSet, HashMap},
+    utils::{HashMap, hashbrown::HashSet},
 };
 use cosmos_core::{
-    block::{block_events::BlockEventsSet, block_face::BlockFace, block_update::BlockUpdate, data::BlockData, Block},
+    block::{Block, block_events::BlockEventsSet, block_face::BlockFace, block_update::BlockUpdate, data::BlockData},
     ecs::mut_events::MutEvent,
     events::block_events::{BlockChangedEvent, BlockDataChangedEvent, BlockDataSystemParams},
     fluid::data::{BlockFluidData, FluidTankBlock, StoredFluidData},
     netty::system_sets::NetworkingSystemsSet,
-    registry::{identifiable::Identifiable, Registry},
+    registry::{Registry, identifiable::Identifiable},
     structure::{
-        coordinates::{BlockCoordinate, CoordinateType, UnboundCoordinateType},
         Structure,
+        coordinates::{BlockCoordinate, CoordinateType, UnboundCoordinateType},
     },
 };
 

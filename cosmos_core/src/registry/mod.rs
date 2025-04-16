@@ -4,9 +4,9 @@ pub mod identifiable;
 pub mod many_to_one;
 pub mod one_to_one;
 
-use bevy::prelude::{resource_exists_and_changed, App, IntoSystemConfigs, Res, ResMut, Resource, Update};
-use bevy::utils::HashMap;
+use bevy::prelude::{App, IntoSystemConfigs, Res, ResMut, Resource, Update, resource_exists_and_changed};
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use std::fmt;
 use std::slice::{Iter, IterMut};
 use std::sync::{Arc, RwLock, RwLockReadGuard};

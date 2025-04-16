@@ -11,11 +11,11 @@ use bevy::{
     },
 };
 use cosmos_core::{
-    block::{block_direction::BlockDirection, block_face::BlockFace, Block},
+    block::{Block, block_direction::BlockDirection, block_face::BlockFace},
     registry::{
+        Registry,
         identifiable::Identifiable,
         many_to_one::{self, ManyToOneRegistry, ReadOnlyManyToOneRegistry},
-        Registry,
     },
     state::GameState,
 };

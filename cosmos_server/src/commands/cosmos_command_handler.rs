@@ -15,12 +15,12 @@ use cosmos_core::{
     chat::ServerSendChatMessageEvent,
     ecs::NeedsDespawned,
     entities::player::Player,
-    inventory::{itemstack::ItemShouldHaveData, Inventory},
+    inventory::{Inventory, itemstack::ItemShouldHaveData},
     item::Item,
     netty::sync::events::server_event::NettyEventWriter,
     persistence::Blueprintable,
     physics::location::{Location, Sector, SectorUnit},
-    registry::{identifiable::Identifiable, Registry},
+    registry::{Registry, identifiable::Identifiable},
 };
 use thiserror::Error;
 

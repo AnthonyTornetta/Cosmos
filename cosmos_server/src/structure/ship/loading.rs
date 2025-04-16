@@ -2,17 +2,17 @@
 
 use bevy::{
     log::info,
-    prelude::{in_state, App, Commands, Component, Entity, EventWriter, IntoSystemConfigs, Query, Res, Update, With},
+    prelude::{App, Commands, Component, Entity, EventWriter, IntoSystemConfigs, Query, Res, Update, With, in_state},
 };
 use cosmos_core::{
-    block::{block_rotation::BlockRotation, Block},
+    block::{Block, block_rotation::BlockRotation},
     registry::Registry,
     state::GameState,
     structure::{
+        ChunkInitEvent, Structure, StructureTypeSet,
         loading::{ChunksNeedLoaded, StructureLoadingSet},
         ship::Ship,
         structure_iterator::ChunkIteratorResult,
-        ChunkInitEvent, Structure, StructureTypeSet,
     },
 };
 

@@ -3,7 +3,7 @@
 use bevy::{app::App, log::error};
 use cosmos_core::economy::Credits;
 
-use crate::ui::reactivity::{add_reactable_type, ReactableValue};
+use crate::ui::reactivity::{ReactableValue, add_reactable_type};
 
 impl ReactableValue for Credits {
     fn as_value(&self) -> String {

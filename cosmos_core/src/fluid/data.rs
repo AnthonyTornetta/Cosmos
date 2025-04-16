@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 use crate::{
     block::Block,
     item::Item,
-    netty::sync::{registry::sync_registry, sync_component, IdentifiableComponent, SyncableComponent},
+    netty::sync::{IdentifiableComponent, SyncableComponent, registry::sync_registry, sync_component},
     registry::{create_registry, identifiable::Identifiable},
 };
 

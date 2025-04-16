@@ -11,7 +11,7 @@ use cosmos_core::{
         asteroid::Asteroid,
         planet::Planet,
         shared::MeltingDown,
-        ship::{pilot::Pilot, Ship},
+        ship::{Ship, pilot::Pilot},
         station::Station,
     },
 };

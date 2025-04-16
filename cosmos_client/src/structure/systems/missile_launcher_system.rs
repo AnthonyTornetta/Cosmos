@@ -10,8 +10,8 @@ use cosmos_core::{
     structure::{
         ship::pilot::Pilot,
         systems::{
-            missile_launcher_system::{MissileLauncherFocus, MissileLauncherPreferredFocus, MissileLauncherSystem, MissileSystemFailure},
             StructureSystems,
+            missile_launcher_system::{MissileLauncherFocus, MissileLauncherPreferredFocus, MissileLauncherSystem, MissileSystemFailure},
         },
     },
 };
@@ -55,7 +55,7 @@ fn apply_shooting_sound(
         let location = *ship_location;
         let translation = ship_global_transform.translation();
 
-        let idx = rand::random::<usize>() % audio_handles.0.len();
+        let idx = rand::random::<u64>() as usize % audio_handles.0.len();
 
         let handle = audio_handles.0[idx].clone_weak();
 

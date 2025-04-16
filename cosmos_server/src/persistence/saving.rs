@@ -17,7 +17,7 @@ use bevy::{
 };
 use bevy_rapier3d::prelude::Velocity;
 use cosmos_core::{
-    ecs::{despawn_needed, NeedsDespawned},
+    ecs::{NeedsDespawned, despawn_needed},
     entities::player::Player,
     netty::cosmos_encoder,
     persistence::LoadingDistance,

@@ -1,8 +1,8 @@
 use bevy::{
     app::{App, Update},
-    prelude::{in_state, Commands, Condition, IntoSystemConfigs, NextState, Res, ResMut},
+    prelude::{Commands, Condition, IntoSystemConfigs, NextState, Res, ResMut, in_state},
 };
-use bevy_renet2::renet2::{DisconnectReason, RenetClient};
+use bevy_renet::renet::{DisconnectReason, RenetClient};
 use cosmos_core::state::GameState;
 
 use super::MainMenuSubState;

@@ -7,14 +7,14 @@ use bevy::{
 };
 
 use crate::{
-    block::{block_direction::BlockDirection, block_face::ALL_BLOCK_FACES, block_rotation::BlockRotation, Block},
+    block::{Block, block_direction::BlockDirection, block_face::ALL_BLOCK_FACES, block_rotation::BlockRotation},
     events::block_events::BlockChangedEvent,
     logic::LogicConnection,
     registry::Registry,
-    structure::{coordinates::BlockCoordinate, structure_block::StructureBlock, Structure},
+    structure::{Structure, coordinates::BlockCoordinate, structure_block::StructureBlock},
 };
 
-use super::{logic_graph::LogicGraph, LogicBlock, LogicWireColor, Port, PortType, QueueLogicInputEvent, QueueLogicOutputEvent, WireType};
+use super::{LogicBlock, LogicWireColor, Port, PortType, QueueLogicInputEvent, QueueLogicOutputEvent, WireType, logic_graph::LogicGraph};
 
 #[derive(Debug, Default, Reflect, Component)]
 /// The public interface for accessing and mutating an [`Entity`]'s [`LogicGraph`].

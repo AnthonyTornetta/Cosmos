@@ -7,13 +7,13 @@ use bevy::{
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    block::{block_rotation::BlockRotation, Block},
+    block::{Block, block_rotation::BlockRotation},
     registry::Registry,
 };
 
 use super::{
-    coordinates::{BlockCoordinate, ChunkCoordinate, CoordinateType},
     Structure,
+    coordinates::{BlockCoordinate, ChunkCoordinate, CoordinateType},
 };
 
 #[derive(Clone, Debug, Reflect, Copy, PartialEq, Eq, Serialize, Deserialize)]

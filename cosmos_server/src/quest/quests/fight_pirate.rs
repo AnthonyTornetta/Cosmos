@@ -13,7 +13,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     ai::hit_tracking::Hitters,
-    persistence::make_persistent::{make_persistent, DefaultPersistentComponent},
+    persistence::make_persistent::{DefaultPersistentComponent, make_persistent},
     quest::AddQuestEvent,
     universe::spawners::pirate::{PirateNeedsSpawned, PirateSpawningSet},
 };

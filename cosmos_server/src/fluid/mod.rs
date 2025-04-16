@@ -5,16 +5,16 @@ use bevy::{
     prelude::{EventReader, IntoSystemConfigs, Query, Res, With},
 };
 use cosmos_core::{
-    block::{block_events::BlockEventsSet, data::BlockData, Block},
+    block::{Block, block_events::BlockEventsSet, data::BlockData},
     events::block_events::{BlockChangedEvent, BlockDataSystemParams},
     fluid::data::{BlockFluidData, FluidItemData},
     netty::system_sets::NetworkingSystemsSet,
-    registry::{identifiable::Identifiable, Registry},
+    registry::{Registry, identifiable::Identifiable},
     structure::Structure,
 };
 use interact_fluid::FluidInteractionSet;
 
-use crate::persistence::make_persistent::{make_persistent, DefaultPersistentComponent};
+use crate::persistence::make_persistent::{DefaultPersistentComponent, make_persistent};
 
 pub mod interact_fluid;
 mod register_blocks;

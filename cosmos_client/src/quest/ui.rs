@@ -11,14 +11,14 @@ use crate::{
     input::inputs::{CosmosInputs, InputChecker, InputHandler},
     lang::Lang,
     ui::{
+        OpenMenu, UiSystemSet,
         components::{
-            button::{register_button, ButtonEvent, CosmosButton},
+            button::{ButtonEvent, CosmosButton, register_button},
             scollable_container::ScrollBox,
-            show_cursor::{no_open_menus, ShowCursor},
+            show_cursor::{ShowCursor, no_open_menus},
             window::GuiWindow,
         },
         font::DefaultFont,
-        OpenMenu, UiSystemSet,
     },
 };
 

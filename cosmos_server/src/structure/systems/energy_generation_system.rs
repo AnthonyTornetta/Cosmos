@@ -3,19 +3,19 @@
 use bevy::prelude::*;
 
 use cosmos_core::{
-    block::{block_events::BlockEventsSet, Block},
+    block::{Block, block_events::BlockEventsSet},
     events::block_events::BlockChangedEvent,
     netty::system_sets::NetworkingSystemsSet,
     registry::Registry,
     state::GameState,
     structure::{
+        Structure,
         events::StructureLoadedEvent,
         systems::{
+            StructureSystem, StructureSystemType, StructureSystems, StructureSystemsSet,
             energy_generation_system::{EnergyGenerationBlocks, EnergyGenerationProperty, EnergyGenerationSystem},
             energy_storage_system::EnergyStorageSystem,
-            StructureSystem, StructureSystemType, StructureSystems, StructureSystemsSet,
         },
-        Structure,
     },
 };
 
@@ -59,10 +59,10 @@ fn update_energy(
     mut e_storage_query: Query<&mut EnergyStorageSystem>,
     time: Res<Time>,
 ) {
-    for (gen, system) in e_gen_query.iter() {
+    for (g, system) in e_gen_query.iter() {
         if let Ok(systems) = sys_query.get(system.structure_entity()) {
             if let Ok(mut storage) = systems.query_mut(&mut e_storage_query) {
-                storage.increase_energy(gen.energy_generation_rate() * time.delta_secs());
+                storage.increase_energy(g.energy_generation_rate() * time.delta_secs());
             }
         }
     }

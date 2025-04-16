@@ -2,7 +2,7 @@
 
 use crate::{
     entities::player::Player,
-    netty::{cosmos_encoder, sync::registry::server::SyncRegistriesEvent, system_sets::NetworkingSystemsSet, NettyChannelServer},
+    netty::{NettyChannelServer, cosmos_encoder, sync::registry::server::SyncRegistriesEvent, system_sets::NetworkingSystemsSet},
     state::GameState,
 };
 use bevy::{
@@ -13,10 +13,10 @@ use bevy::{
         system::{Query, Res, ResMut, Resource},
     },
     log::{info, warn},
-    prelude::{resource_exists_and_changed, Deref, IntoSystemSetConfigs, SystemSet},
+    prelude::{Deref, IntoSystemSetConfigs, SystemSet, resource_exists_and_changed},
     state::condition::in_state,
 };
-use bevy_renet2::renet2::RenetServer;
+use bevy_renet::renet::RenetServer;
 
 use super::{ResourceSyncingMessage, SyncableResource};
 
@@ -40,7 +40,7 @@ fn sync<T: SyncableResource>(
             player.client_id(),
             NettyChannelServer::Resource,
             cosmos_encoder::serialize(&ResourceSyncingMessage::Resource {
-                data: bincode::serialize(resource.as_ref()).expect("Failed to serialize :("),
+                data: cosmos_encoder::serialize_uncompressed(resource.as_ref()),
                 unlocalized_name: T::unlocalized_name().into(),
             }),
         );
@@ -51,7 +51,7 @@ fn sync_on_change<T: SyncableResource>(mut server: ResMut<RenetServer>, resource
     server.broadcast_message(
         NettyChannelServer::Resource,
         cosmos_encoder::serialize(&ResourceSyncingMessage::Resource {
-            data: bincode::serialize(resource.as_ref()).expect("Failed to serialize :("),
+            data: cosmos_encoder::serialize_uncompressed(resource.as_ref()),
             unlocalized_name: T::unlocalized_name().into(),
         }),
     );

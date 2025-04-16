@@ -12,7 +12,7 @@ use bevy::{
     math::{Quat, Vec3},
     prelude::{Commands, IntoSystemConfigs, With},
     reflect::Reflect,
-    time::{common_conditions::on_timer, Time},
+    time::{Time, common_conditions::on_timer},
     transform::components::GlobalTransform,
 };
 use bevy_rapier3d::{

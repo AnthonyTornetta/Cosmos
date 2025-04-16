@@ -7,24 +7,24 @@ use std::ops::{Deref, DerefMut};
 use bevy::{
     prelude::{Commands, EventWriter, Vec3},
     reflect::Reflect,
-    utils::{hashbrown::HashSet, HashMap},
+    utils::{HashMap, hashbrown::HashSet},
 };
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    block::{block_rotation::BlockRotation, blocks::AIR_BLOCK_ID, Block},
+    block::{Block, block_rotation::BlockRotation, blocks::AIR_BLOCK_ID},
     ecs::NeedsDespawned,
     events::block_events::BlockChangedEvent,
-    registry::{identifiable::Identifiable, Registry},
+    registry::{Registry, identifiable::Identifiable},
 };
 
 use super::{
+    ChunkState,
     base_structure::BaseStructure,
     block_storage::BlockStorer,
-    chunk::{BlockInfo, Chunk, ChunkUnloadEvent, CHUNK_DIMENSIONS},
+    chunk::{BlockInfo, CHUNK_DIMENSIONS, Chunk, ChunkUnloadEvent},
     coordinates::{BlockCoordinate, ChunkBlockCoordinate, ChunkCoordinate, Coordinate, CoordinateType},
     structure_block::StructureBlock,
-    ChunkState,
 };
 
 #[derive(Serialize, Deserialize, Reflect, Debug)]

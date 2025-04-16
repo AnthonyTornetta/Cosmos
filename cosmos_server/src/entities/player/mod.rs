@@ -5,7 +5,7 @@ use bevy::prelude::{Component, Quat};
 use cosmos_core::netty::sync::IdentifiableComponent;
 use serde::{Deserialize, Serialize};
 
-use crate::persistence::make_persistent::{make_persistent, DefaultPersistentComponent};
+use crate::persistence::make_persistent::{DefaultPersistentComponent, make_persistent};
 
 mod kits;
 pub mod persistence;
