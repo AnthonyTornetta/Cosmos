@@ -3,15 +3,14 @@ use bevy_rapier3d::prelude::Velocity;
 use bevy_renet::renet::RenetServer;
 use cosmos_core::{
     netty::{
-        cosmos_encoder,
+        NettyChannelServer, cosmos_encoder,
         netty_rigidbody::{NettyRigidBody, NettyRigidBodyLocation},
         server_reliable_messages::ServerReliableMessages,
         sync::server_entity_syncing::RequestedEntityEvent,
         system_sets::NetworkingSystemsSet,
-        NettyChannelServer,
     },
     physics::location::Location,
-    structure::{station::Station, Structure},
+    structure::{Structure, station::Station},
 };
 
 use cosmos_core::structure::StructureTypeSet;

@@ -20,12 +20,12 @@ use cosmos_core::{
 use crate::{
     inventory::{CustomInventoryRender, InventoryNeedsDisplayed, InventorySide},
     ui::{
+        OpenMenu, UiSystemSet,
         components::{
-            button::{register_button, ButtonEvent, ButtonStyles},
+            button::{ButtonEvent, ButtonStyles, register_button},
             window::GuiWindow,
         },
         font::DefaultFont,
-        OpenMenu, UiSystemSet,
     },
 };
 

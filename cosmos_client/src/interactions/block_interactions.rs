@@ -8,27 +8,27 @@ use bevy_rapier3d::{
 };
 use cosmos_core::{
     block::{
+        Block,
         block_direction::BlockDirection,
         block_events::{BlockEventsSet, BlockInteractEvent},
         block_face::BlockFace,
         block_rotation::{BlockRotation, BlockSubRotation},
         blocks::fluid::FLUID_COLLISION_GROUP,
-        Block,
     },
     blockitems::BlockItems,
     entities::player::creative::Creative,
     inventory::{
-        netty::{ClientInventoryMessages, InventoryIdentifier},
         Inventory,
+        netty::{ClientInventoryMessages, InventoryIdentifier},
     },
     item::Item,
-    netty::{client::LocalPlayer, cosmos_encoder, sync::mapping::NetworkMapping, system_sets::NetworkingSystemsSet, NettyChannelClient},
+    netty::{NettyChannelClient, client::LocalPlayer, cosmos_encoder, sync::mapping::NetworkMapping, system_sets::NetworkingSystemsSet},
     physics::structure_physics::ChunkPhysicsPart,
-    registry::{identifiable::Identifiable, Registry},
+    registry::{Registry, identifiable::Identifiable},
     state::GameState,
     structure::{
-        coordinates::UnboundBlockCoordinate, planet::Planet, shields::SHIELD_COLLISION_GROUP, ship::pilot::Pilot,
-        structure_block::StructureBlock, Structure,
+        Structure, coordinates::UnboundBlockCoordinate, planet::Planet, shields::SHIELD_COLLISION_GROUP, ship::pilot::Pilot,
+        structure_block::StructureBlock,
     },
 };
 use renet::RenetClient;

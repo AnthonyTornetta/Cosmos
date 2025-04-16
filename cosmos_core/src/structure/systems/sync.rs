@@ -1,6 +1,6 @@
 //! Syncs systems from server -> client
 
-use serde::{de::DeserializeOwned, Serialize};
+use serde::{Serialize, de::DeserializeOwned};
 
 use super::StructureSystemImpl;
 

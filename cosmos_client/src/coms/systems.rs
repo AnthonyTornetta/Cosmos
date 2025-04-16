@@ -1,7 +1,7 @@
 use crate::input::inputs::{CosmosInputs, InputChecker, InputHandler};
 use bevy::prelude::*;
-use cosmos_core::coms::events::{AcceptComsEvent, RequestComsEvent};
 use cosmos_core::coms::ComsChannel;
+use cosmos_core::coms::events::{AcceptComsEvent, RequestComsEvent};
 use cosmos_core::netty::client::LocalPlayer;
 use cosmos_core::netty::sync::events::client_event::NettyEventWriter;
 use cosmos_core::netty::system_sets::NetworkingSystemsSet;

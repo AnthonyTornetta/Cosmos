@@ -4,7 +4,7 @@
 
 use bevy::{
     app::{App, Update},
-    color::{palettes::css, Color},
+    color::{Color, palettes::css},
     core::Name,
     ecs::{
         change_detection::DetectChanges,
@@ -27,7 +27,7 @@ use bevy::{
 
 use crate::ui::UiSystemSet;
 
-use super::{show_cursor::any_open_menus, Disabled};
+use super::{Disabled, show_cursor::any_open_menus};
 
 #[derive(Component, Debug, Reflect)]
 #[require(Node, SliderValue)]

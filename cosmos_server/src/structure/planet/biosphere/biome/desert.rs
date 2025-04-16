@@ -6,16 +6,17 @@ use bevy::{
     prelude::{App, EventWriter, OnExit, Res, ResMut},
 };
 use cosmos_core::{
-    block::{block_face::BlockFace, Block},
+    block::{Block, block_face::BlockFace},
     events::block_events::BlockChangedEvent,
     physics::location::Location,
-    registry::{identifiable::Identifiable, Registry},
+    registry::{Registry, identifiable::Identifiable},
     state::GameState,
     structure::{
+        Structure,
         chunk::CHUNK_DIMENSIONS,
         coordinates::{BlockCoordinate, ChunkCoordinate, CoordinateType, UnboundBlockCoordinate, UnboundCoordinateType},
-        planet::{generation::block_layers::BlockLayers, Planet},
-        rotate, Structure,
+        planet::{Planet, generation::block_layers::BlockLayers},
+        rotate,
     },
 };
 

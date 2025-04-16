@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 use crate::{
-    netty::sync::{registry::sync_registry, sync_component, IdentifiableComponent, SyncableComponent},
+    netty::sync::{IdentifiableComponent, SyncableComponent, registry::sync_registry, sync_component},
     physics::location::Location,
     registry::{create_registry, identifiable::Identifiable},
 };

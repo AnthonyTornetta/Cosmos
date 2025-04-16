@@ -3,16 +3,16 @@
 use bevy::{
     ecs::query::With,
     log::warn,
-    prelude::{in_state, App, Commands, Entity, IntoSystemConfigs, Query, Res, ResMut, Update},
+    prelude::{App, Commands, Entity, IntoSystemConfigs, Query, Res, ResMut, Update, in_state},
 };
 use bevy_renet::renet::RenetClient;
 use cosmos_core::{
     ecs::NeedsDespawned,
     inventory::{
-        netty::{InventoryIdentifier, ServerInventoryMessages},
         Inventory,
+        netty::{InventoryIdentifier, ServerInventoryMessages},
     },
-    netty::{client::LocalPlayer, cosmos_encoder, sync::mapping::NetworkMapping, system_sets::NetworkingSystemsSet, NettyChannelServer},
+    netty::{NettyChannelServer, client::LocalPlayer, cosmos_encoder, sync::mapping::NetworkMapping, system_sets::NetworkingSystemsSet},
     state::GameState,
     structure::Structure,
 };

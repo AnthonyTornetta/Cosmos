@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{block::Block, registry::identifiable::Identifiable};
 
-use super::{sync::SyncableSystem, StructureSystemImpl};
+use super::{StructureSystemImpl, sync::SyncableSystem};
 
 #[derive(Component, Default, Reflect, Serialize, Deserialize, Debug)]
 /// A quick and dirty system that will generate X amount of energy per second.

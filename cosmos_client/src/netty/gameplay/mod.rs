@@ -1,6 +1,6 @@
 //! Networking logic
 
-use bevy::prelude::{resource_exists, App, IntoSystemConfigs, RemovedComponents, ResMut, Update};
+use bevy::prelude::{App, IntoSystemConfigs, RemovedComponents, ResMut, Update, resource_exists};
 use cosmos_core::{
     netty::{sync::mapping::NetworkMapping, system_sets::NetworkingSystemsSet},
     physics::location::Location,

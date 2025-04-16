@@ -18,10 +18,10 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     netty::sync::registry::sync_registry,
-    registry::{create_registry, identifiable::Identifiable, Registry},
+    registry::{Registry, create_registry, identifiable::Identifiable},
 };
 
-use super::{loading::StructureLoadingSet, shared::MeltingDown, ship::Ship, Structure};
+use super::{Structure, loading::StructureLoadingSet, shared::MeltingDown, ship::Ship};
 
 pub mod camera_system;
 pub mod dock_system;

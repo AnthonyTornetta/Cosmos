@@ -5,19 +5,19 @@ use std::f32::consts::PI;
 use bevy::{
     log::{error, warn},
     math::Quat,
-    prelude::{in_state, App, Commands, Deref, DerefMut, EventReader, IntoSystemConfigs, Query, Res, ResMut, Resource, Update, Vec3, With},
+    prelude::{App, Commands, Deref, DerefMut, EventReader, IntoSystemConfigs, Query, Res, ResMut, Resource, Update, Vec3, With, in_state},
     utils::HashSet,
 };
 use cosmos_core::{
     entities::player::Player,
     netty::system_sets::NetworkingSystemsSet,
-    physics::location::{Location, Sector, SectorUnit, SystemCoordinate, SystemUnit, SECTOR_DIMENSIONS, SYSTEM_SECTORS},
+    physics::location::{Location, SECTOR_DIMENSIONS, SYSTEM_SECTORS, Sector, SectorUnit, SystemCoordinate, SystemUnit},
     state::GameState,
     structure::{
-        asteroid::{asteroid_builder::TAsteroidBuilder, loading::AsteroidNeedsCreated, ASTEROID_LOAD_RADIUS},
+        Structure,
+        asteroid::{ASTEROID_LOAD_RADIUS, asteroid_builder::TAsteroidBuilder, loading::AsteroidNeedsCreated},
         coordinates::ChunkCoordinate,
         full_structure::FullStructure,
-        Structure,
     },
     utils::quat_math::random_quat,
 };

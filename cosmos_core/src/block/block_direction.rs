@@ -4,7 +4,7 @@ use std::fmt::Display;
 
 use bevy::{
     log::error,
-    math::{vec3, Vec3},
+    math::{Vec3, vec3},
     reflect::Reflect,
 };
 use serde::{Deserialize, Serialize};

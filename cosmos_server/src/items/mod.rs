@@ -18,7 +18,7 @@ use cosmos_core::{
 };
 use serde::{Deserialize, Serialize};
 
-use crate::persistence::make_persistent::{make_persistent, DefaultPersistentComponent};
+use crate::persistence::make_persistent::{DefaultPersistentComponent, make_persistent};
 
 #[derive(Default, Component, Debug, Reflect, Serialize, Deserialize, Clone, Copy, PartialEq)]
 /// The time (in seconds) since this physcal item was created.

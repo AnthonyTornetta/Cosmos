@@ -8,12 +8,12 @@ use bevy::{
 use cosmos_core::{
     block::Block,
     events::block_events::BlockChangedEvent,
-    registry::{identifiable::Identifiable, Registry},
+    registry::{Registry, identifiable::Identifiable},
     state::GameState,
     structure::shared::MeltingDown,
 };
 
-use crate::persistence::make_persistent::{make_persistent, DefaultPersistentComponent};
+use crate::persistence::make_persistent::{DefaultPersistentComponent, make_persistent};
 
 use super::MeltingDownSet;
 

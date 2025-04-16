@@ -12,9 +12,9 @@ use bevy::{
 };
 use cosmos_core::{
     netty::cosmos_encoder,
-    physics::location::{Location, Sector, SectorUnit, SystemCoordinate, SystemUnit, SYSTEM_SECTORS},
+    physics::location::{Location, SYSTEM_SECTORS, Sector, SectorUnit, SystemCoordinate, SystemUnit},
     state::GameState,
-    universe::star::{Star, MAX_TEMPERATURE, MIN_TEMPERATURE},
+    universe::star::{MAX_TEMPERATURE, MIN_TEMPERATURE, Star},
 };
 use rand::Rng;
 use rand_chacha::ChaCha8Rng;

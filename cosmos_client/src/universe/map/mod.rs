@@ -5,16 +5,16 @@ use std::f32::consts::PI;
 use bevy::{
     app::Update,
     asset::{AssetServer, Assets},
-    color::{palettes::css, Alpha},
+    color::{Alpha, palettes::css},
     core::Name,
     core_pipeline::bloom::Bloom,
     input::mouse::{MouseScrollUnit, MouseWheel},
     math::{Dir3, Quat, Vec3},
     pbr::{MeshMaterial3d, StandardMaterial},
     prelude::{
-        in_state, AlphaMode, App, BuildChildren, Camera, Camera3d, Capsule3d, Changed, ChildBuild, Commands, Component, Cuboid, Entity,
-        EventReader, IntoSystemConfigs, Mesh, Mesh3d, MouseButton, OnEnter, PerspectiveProjection, Projection, Query, Res, ResMut, Sphere,
-        Text, Transform, Visibility, With, Without,
+        AlphaMode, App, BuildChildren, Camera, Camera3d, Capsule3d, Changed, ChildBuild, Commands, Component, Cuboid, Entity, EventReader,
+        IntoSystemConfigs, Mesh, Mesh3d, MouseButton, OnEnter, PerspectiveProjection, Projection, Query, Res, ResMut, Sphere, Text,
+        Transform, Visibility, With, Without, in_state,
     },
     reflect::Reflect,
     render::view::RenderLayers,
@@ -27,7 +27,7 @@ use cosmos_core::{
     ecs::NeedsDespawned,
     netty::{client::LocalPlayer, sync::events::client_event::NettyEventWriter, system_sets::NetworkingSystemsSet},
     physics::location::{Location, Sector, SectorUnit},
-    registry::{identifiable::Identifiable, Registry},
+    registry::{Registry, identifiable::Identifiable},
     state::GameState,
     structure::planet::biosphere::Biosphere,
     universe::map::system::{
@@ -40,7 +40,7 @@ use waypoint::Waypoint;
 use crate::{
     input::inputs::{CosmosInputs, InputChecker, InputHandler},
     structure::planet::biosphere::BiosphereColor,
-    ui::{components::show_cursor::ShowCursor, OpenMenu, UiSystemSet},
+    ui::{OpenMenu, UiSystemSet, components::show_cursor::ShowCursor},
     window::setup::DeltaCursorPosition,
 };
 

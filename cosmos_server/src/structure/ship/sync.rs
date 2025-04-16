@@ -3,16 +3,15 @@ use bevy_rapier3d::prelude::Velocity;
 use bevy_renet::renet::RenetServer;
 use cosmos_core::{
     netty::{
-        cosmos_encoder,
+        NettyChannelServer, cosmos_encoder,
         netty_rigidbody::{NettyRigidBody, NettyRigidBodyLocation},
         server_reliable_messages::ServerReliableMessages,
         sync::server_entity_syncing::RequestedEntityEvent,
         system_sets::NetworkingSystemsSet,
-        NettyChannelServer,
     },
     physics::location::Location,
     state::GameState,
-    structure::{ship::Ship, Structure},
+    structure::{Structure, ship::Ship},
 };
 
 fn on_request_ship(

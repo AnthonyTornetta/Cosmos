@@ -10,7 +10,7 @@ use cosmos_core::{
     netty::system_sets::NetworkingSystemsSet,
     state::GameState,
     structure::planet::generation::terrain_generation::{
-        add_terrain_compute_worker, BiosphereShaderWorker, ChunkData, GpuPermutationTable,
+        BiosphereShaderWorker, ChunkData, GpuPermutationTable, add_terrain_compute_worker,
     },
 };
 
@@ -103,7 +103,7 @@ fn send_permutation_table_to_worker(
     mut worker: ResMut<AppComputeWorker<BiosphereShaderWorker>>,
     permutation_table: Res<SetPermutationTable>,
 ) {
-    worker.write_slice("permutation_table", &permutation_table.0 .0);
+    worker.write_slice("permutation_table", &permutation_table.0.0);
 
     commands.remove_resource::<SetPermutationTable>();
 }

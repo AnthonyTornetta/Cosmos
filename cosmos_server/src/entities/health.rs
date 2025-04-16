@@ -6,7 +6,7 @@ use cosmos_core::{
     netty::system_sets::NetworkingSystemsSet,
 };
 
-use crate::persistence::make_persistent::{make_persistent, DefaultPersistentComponent};
+use crate::persistence::make_persistent::{DefaultPersistentComponent, make_persistent};
 
 impl DefaultPersistentComponent for Health {}
 impl DefaultPersistentComponent for MaxHealth {}

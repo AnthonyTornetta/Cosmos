@@ -1,6 +1,6 @@
 use bevy::{
     app::{App, Update},
-    color::{palettes::css, Color, Srgba},
+    color::{Color, Srgba, palettes::css},
     ecs::{
         event::EventReader,
         schedule::IntoSystemConfigs,
@@ -9,18 +9,18 @@ use bevy::{
     state::{condition::in_state, state::OnEnter},
 };
 use cosmos_core::{
-    block::{block_direction::BlockDirection, block_events::BlockEventsSet, block_face::BlockFace, block_rotation::BlockRotation, Block},
+    block::{Block, block_direction::BlockDirection, block_events::BlockEventsSet, block_face::BlockFace, block_rotation::BlockRotation},
     events::block_events::BlockChangedEvent,
     registry::Registry,
     state::GameState,
     structure::{
+        Structure,
         coordinates::{BlockCoordinate, CoordinateType, UnboundBlockCoordinate, UnboundCoordinateType},
         events::StructureLoadedEvent,
         systems::{
-            line_system::{Line, LineBlocks, LineColorBlock, LineColorProperty, LineProperty, LinePropertyCalculator, LineSystem},
             StructureSystemType, StructureSystems, StructureSystemsSet,
+            line_system::{Line, LineBlocks, LineColorBlock, LineColorProperty, LineProperty, LinePropertyCalculator, LineSystem},
         },
-        Structure,
     },
 };
 

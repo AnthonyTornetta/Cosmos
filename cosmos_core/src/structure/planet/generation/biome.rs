@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     netty::sync::registry::sync_registry,
-    registry::{create_registry, identifiable::Identifiable, Registry},
+    registry::{Registry, create_registry, identifiable::Identifiable},
     utils::array_utils::flatten,
 };
 

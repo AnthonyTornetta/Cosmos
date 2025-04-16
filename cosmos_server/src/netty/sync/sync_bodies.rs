@@ -5,17 +5,16 @@ use bevy_rapier3d::prelude::Velocity;
 use bevy_renet::renet::RenetServer;
 use cosmos_core::{
     block::data::BlockData,
-    ecs::{despawn_needed, NeedsDespawned},
-    entities::player::{render_distance::RenderDistance, Player},
+    ecs::{NeedsDespawned, despawn_needed},
+    entities::player::{Player, render_distance::RenderDistance},
     inventory::itemstack::ItemStackData,
     netty::{
-        cosmos_encoder,
+        NettyChannelServer, NoSendEntity, cosmos_encoder,
         netty_rigidbody::{NettyRigidBody, NettyRigidBodyLocation},
         server_reliable_messages::ServerReliableMessages,
         server_unreliable_messages::ServerUnreliableMessages,
-        sync::{server_entity_syncing::RequestedEntityEvent, ComponentEntityIdentifier},
+        sync::{ComponentEntityIdentifier, server_entity_syncing::RequestedEntityEvent},
         system_sets::NetworkingSystemsSet,
-        NettyChannelServer, NoSendEntity,
     },
     persistence::LoadingDistance,
     physics::location::{Location, LocationPhysicsSet},

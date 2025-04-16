@@ -23,7 +23,7 @@ use cosmos_core::{
     physics::location::LocationPhysicsSet,
     structure::{
         ship::pilot::Pilot,
-        systems::{energy_storage_system::EnergyStorageSystem, StructureSystems, StructureSystemsSet},
+        systems::{StructureSystems, StructureSystemsSet, energy_storage_system::EnergyStorageSystem},
     },
 };
 

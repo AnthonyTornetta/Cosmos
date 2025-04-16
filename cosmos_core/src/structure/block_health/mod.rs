@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 pub mod events;
 
 use super::{
-    chunk::{Chunk, CHUNK_DIMENSIONS},
+    chunk::{CHUNK_DIMENSIONS, Chunk},
     coordinates::{ChunkBlockCoordinate, Coordinate},
 };
 

@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     netty::{
-        sync::{sync_component, IdentifiableComponent, SyncableComponent},
+        sync::{IdentifiableComponent, SyncableComponent, sync_component},
         system_sets::NetworkingSystemsSet,
     },
     structure::ship::pilot::Pilot,

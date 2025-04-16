@@ -8,14 +8,14 @@ use bevy_rapier3d::prelude::Velocity;
 use bevy_renet::renet::{ClientId, RenetServer};
 use cosmos_core::block::block_events::{BlockBreakEvent, BlockInteractEvent, BlockPlaceEvent, BlockPlaceEventData};
 use cosmos_core::ecs::mut_events::MutEvent;
-use cosmos_core::inventory::itemstack::ItemStackSystemSet;
 use cosmos_core::inventory::Inventory;
+use cosmos_core::inventory::itemstack::ItemStackSystemSet;
 use cosmos_core::item::Item;
 use cosmos_core::netty::netty_rigidbody::NettyRigidBodyLocation;
 use cosmos_core::netty::server::ServerLobby;
 use cosmos_core::netty::sync::server_entity_syncing::RequestedEntityEvent;
 use cosmos_core::netty::system_sets::NetworkingSystemsSet;
-use cosmos_core::netty::{cosmos_encoder, NettyChannelClient, NettyChannelServer};
+use cosmos_core::netty::{NettyChannelClient, NettyChannelServer, cosmos_encoder};
 use cosmos_core::physics::location::{Location, SetPosition};
 use cosmos_core::registry::Registry;
 use cosmos_core::state::GameState;
@@ -29,7 +29,7 @@ use cosmos_core::{
         client_reliable_messages::ClientReliableMessages, client_unreliable_messages::ClientUnreliableMessages,
         server_reliable_messages::ServerReliableMessages,
     },
-    structure::{ship::pilot::Pilot, Structure},
+    structure::{Structure, ship::pilot::Pilot},
 };
 
 use crate::entities::player::PlayerLooking;

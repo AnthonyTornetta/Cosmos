@@ -6,12 +6,12 @@
 use std::marker::PhantomData;
 use std::sync::{Arc, RwLock, RwLockReadGuard};
 
-use bevy::prelude::{resource_exists_and_changed, App, IntoSystemConfigs, Res, ResMut, Resource, Update};
-use bevy::utils::hashbrown::hash_map::Values;
+use bevy::prelude::{App, IntoSystemConfigs, Res, ResMut, Resource, Update, resource_exists_and_changed};
 use bevy::utils::HashMap;
+use bevy::utils::hashbrown::hash_map::Values;
 
-use super::identifiable::Identifiable;
 use super::AddLinkError;
+use super::identifiable::Identifiable;
 
 /// Represents a many to one link
 #[derive(Resource, Default, Debug, Clone)]

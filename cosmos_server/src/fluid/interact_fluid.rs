@@ -17,9 +17,9 @@ use bevy::{
 };
 use cosmos_core::{
     block::{
+        Block,
         block_events::{BlockEventsSet, BlockInteractEvent},
         data::BlockData,
-        Block,
     },
     events::block_events::BlockDataSystemParams,
     fluid::{
@@ -27,13 +27,13 @@ use cosmos_core::{
         registry::Fluid,
     },
     inventory::{
+        Inventory,
         held_item_slot::HeldItemSlot,
         itemstack::{ItemShouldHaveData, ItemStackData, ItemStackNeedsDataCreated, ItemStackSystemSet},
-        Inventory,
     },
     item::Item,
     netty::system_sets::NetworkingSystemsSet,
-    registry::{identifiable::Identifiable, Registry},
+    registry::{Registry, identifiable::Identifiable},
     state::GameState,
     structure::Structure,
 };

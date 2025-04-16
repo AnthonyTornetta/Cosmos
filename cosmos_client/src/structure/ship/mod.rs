@@ -3,22 +3,22 @@
 use bevy::{
     ecs::event::EventReader,
     prelude::{
-        in_state, App, BuildChildrenTransformExt, Commands, Entity, IntoSystemConfigs, Parent, Query, ResMut, SystemSet, Transform, Update,
-        With, Without,
+        App, BuildChildrenTransformExt, Commands, Entity, IntoSystemConfigs, Parent, Query, ResMut, SystemSet, Transform, Update, With,
+        Without, in_state,
     },
 };
 use bevy_rapier3d::pipeline::CollisionEvent;
 use bevy_renet::renet::RenetClient;
 use cosmos_core::{
     netty::{
-        client::LocalPlayer, client_reliable_messages::ClientReliableMessages, cosmos_encoder, system_sets::NetworkingSystemsSet,
-        NettyChannelClient,
+        NettyChannelClient, client::LocalPlayer, client_reliable_messages::ClientReliableMessages, cosmos_encoder,
+        system_sets::NetworkingSystemsSet,
     },
     physics::location::LocationPhysicsSet,
     state::GameState,
     structure::{
-        chunk::CHUNK_DIMENSIONSF, loading::StructureLoadingSet, planet::Planet, shared::build_mode::BuildMode, ship::pilot::Pilot,
-        Structure,
+        Structure, chunk::CHUNK_DIMENSIONSF, loading::StructureLoadingSet, planet::Planet, shared::build_mode::BuildMode,
+        ship::pilot::Pilot,
     },
 };
 

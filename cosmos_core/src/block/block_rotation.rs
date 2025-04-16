@@ -8,7 +8,7 @@ use bevy::{
 };
 use serde::{Deserialize, Serialize};
 
-use super::{block_direction::BlockDirection, block_direction::ALL_BLOCK_DIRECTIONS, block_face::BlockFace, block_face::ALL_BLOCK_FACES};
+use super::{block_direction::ALL_BLOCK_DIRECTIONS, block_direction::BlockDirection, block_face::ALL_BLOCK_FACES, block_face::BlockFace};
 
 #[derive(Debug, PartialEq, Eq, Reflect, Default, Copy, Clone, Serialize, Deserialize, Hash)]
 /// Stores a block's rotation data.

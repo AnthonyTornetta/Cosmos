@@ -1,7 +1,7 @@
 use bevy::prelude::App;
 use cosmos_core::economy::Credits;
 
-use crate::persistence::make_persistent::{make_persistent, DefaultPersistentComponent};
+use crate::persistence::make_persistent::{DefaultPersistentComponent, make_persistent};
 
 impl DefaultPersistentComponent for Credits {}
 

@@ -4,8 +4,8 @@ use bevy::ecs::system::EntityCommands;
 use cosmos_core::{
     physics::location::Location,
     structure::{
-        asteroid::asteroid_builder::{AsteroidBuilder, TAsteroidBuilder},
         Structure,
+        asteroid::asteroid_builder::{AsteroidBuilder, TAsteroidBuilder},
     },
 };
 

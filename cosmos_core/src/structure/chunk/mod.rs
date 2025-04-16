@@ -15,11 +15,11 @@ use bevy::utils::HashMap;
 use serde::{Deserialize, Serialize};
 
 use crate::block::data::{BlockData, BlockDataIdentifier};
-use crate::block::{block_face::BlockFace, block_rotation::BlockRotation, block_rotation::BlockSubRotation, Block};
+use crate::block::{Block, block_face::BlockFace, block_rotation::BlockRotation, block_rotation::BlockSubRotation};
 use crate::ecs::NeedsDespawned;
 use crate::events::block_events::{BlockDataChangedEvent, BlockDataSystemParams};
-use crate::registry::identifiable::Identifiable;
 use crate::registry::Registry;
+use crate::registry::identifiable::Identifiable;
 use crate::utils::ecs::MutOrMutRef;
 
 use super::block_health::BlockHealth;

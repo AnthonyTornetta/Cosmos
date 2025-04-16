@@ -12,10 +12,10 @@ use crate::{
     block::{Block, BlockFace},
     events::block_events::BlockDataSystemParams,
     logic::{
-        default_logic_block_output, logic_driver::LogicDriver, BlockLogicData, LogicBlock, LogicConnection, LogicInputEvent,
-        LogicOutputEvent, LogicSystemSet, PortType, QueueLogicInputEvent,
+        BlockLogicData, LogicBlock, LogicConnection, LogicInputEvent, LogicOutputEvent, LogicSystemSet, PortType, QueueLogicInputEvent,
+        default_logic_block_output, logic_driver::LogicDriver,
     },
-    registry::{identifiable::Identifiable, Registry},
+    registry::{Registry, identifiable::Identifiable},
     structure::Structure,
 };
 

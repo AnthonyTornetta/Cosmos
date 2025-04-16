@@ -14,9 +14,9 @@ use bevy::{
     },
     hierarchy::{BuildChildren, Children},
     input::{
+        ButtonInput,
         keyboard::KeyCode,
         mouse::{MouseButton, MouseScrollUnit, MouseWheel},
-        ButtonInput,
     },
     log::error,
     math::{Rect, Vec2},

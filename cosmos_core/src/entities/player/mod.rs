@@ -8,7 +8,7 @@ use bevy::prelude::{App, Component};
 use bevy_renet::renet::ClientId;
 use serde::{Deserialize, Serialize};
 
-use crate::netty::sync::{sync_component, IdentifiableComponent, SyncableComponent};
+use crate::netty::sync::{IdentifiableComponent, SyncableComponent, sync_component};
 
 #[derive(Component, Debug, Serialize, Deserialize, PartialEq, Eq, Clone)]
 /// Represents a player

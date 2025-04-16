@@ -4,28 +4,28 @@ use crate::{init::init_world::ServerSeed, structure::planet::biosphere::biome::G
 use bevy::{prelude::*, utils::hashbrown::HashSet};
 use bevy_easy_compute::prelude::*;
 use cosmos_core::{
-    block::{block_events::BlockEventsSet, block_face::BlockFace, Block},
+    block::{Block, block_events::BlockEventsSet, block_face::BlockFace},
     ecs::mut_events::{EventWriterCustomSend, MutEvent, MutEventsCommand},
     netty::system_sets::NetworkingSystemsSet,
     physics::location::Location,
-    registry::{identifiable::Identifiable, Registry},
+    registry::{Registry, identifiable::Identifiable},
     state::GameState,
     structure::{
+        ChunkInitEvent, Structure, StructureTypeSet,
         block_storage::BlockStorer,
-        chunk::{Chunk, CHUNK_DIMENSIONS, CHUNK_DIMENSIONSF, CHUNK_DIMENSIONS_USIZE},
+        chunk::{CHUNK_DIMENSIONS, CHUNK_DIMENSIONS_USIZE, CHUNK_DIMENSIONSF, Chunk},
         coordinates::{ChunkBlockCoordinate, CoordinateType},
         loading::StructureLoadingSet,
         planet::{
+            Planet,
             generation::{
                 biome::{Biome, BiomeParameters, BiosphereBiomesRegistry},
                 terrain_generation::{
-                    add_terrain_compute_worker, BiosphereShaderWorker, ChunkData, ChunkDataSlice, GenerationParams, GpuPermutationTable,
-                    TerrainData, U32Vec4, N_CHUNKS,
+                    BiosphereShaderWorker, ChunkData, ChunkDataSlice, GenerationParams, GpuPermutationTable, N_CHUNKS, TerrainData,
+                    U32Vec4, add_terrain_compute_worker,
                 },
             },
-            Planet,
         },
-        ChunkInitEvent, Structure, StructureTypeSet,
     },
     utils::array_utils::{flatten, flatten_4d},
 };

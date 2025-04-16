@@ -3,13 +3,13 @@ use std::{cell::RefCell, ops::DerefMut, rc::Rc, time::Duration};
 use bevy::prelude::*;
 use cosmos_core::{
     block::{
+        Block,
         block_events::{BlockEventsSet, BlockInteractEvent},
         data::BlockData,
         multiblock::reactor::{
             ClientRequestChangeReactorStatus, OpenReactorEvent, Reactor, ReactorActive, ReactorFuel, ReactorFuelConsumption,
             ReactorPowerGenerationBlock, Reactors,
         },
-        Block,
     },
     entities::player::Player,
     events::block_events::{BlockChangedEvent, BlockDataSystemParams},
@@ -20,14 +20,14 @@ use cosmos_core::{
         system_sets::NetworkingSystemsSet,
     },
     prelude::{Structure, StructureLoadingSet, StructureSystems},
-    registry::{identifiable::Identifiable, Registry},
+    registry::{Registry, identifiable::Identifiable},
     state::GameState,
-    structure::systems::{energy_storage_system::EnergyStorageSystem, StructureSystemsSet},
+    structure::systems::{StructureSystemsSet, energy_storage_system::EnergyStorageSystem},
 };
 
 use crate::{
     blocks::data::utils::add_default_block_data_for_block,
-    persistence::make_persistent::{make_persistent, DefaultPersistentComponent},
+    persistence::make_persistent::{DefaultPersistentComponent, make_persistent},
 };
 
 impl DefaultPersistentComponent for Reactors {}

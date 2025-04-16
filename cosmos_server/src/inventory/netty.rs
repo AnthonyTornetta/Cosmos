@@ -5,8 +5,8 @@ use bevy::{
     log::warn,
     math::{Quat, Vec3},
     prelude::{
-        in_state, App, Changed, Commands, Entity, GlobalTransform, IntoSystemConfigs, Query, RemovedComponents, Res, ResMut, Transform,
-        Update, Without,
+        App, Changed, Commands, Entity, GlobalTransform, IntoSystemConfigs, Query, RemovedComponents, Res, ResMut, Transform, Update,
+        Without, in_state,
     },
 };
 use bevy_rapier3d::prelude::Velocity;
@@ -14,15 +14,15 @@ use bevy_renet::renet::RenetServer;
 use cosmos_core::{
     entities::player::Player,
     inventory::{
-        netty::{ClientInventoryMessages, InventoryIdentifier, ServerInventoryMessages},
         HeldItemStack, Inventory,
+        netty::{ClientInventoryMessages, InventoryIdentifier, ServerInventoryMessages},
     },
     item::physical_item::PhysicalItem,
-    netty::{cosmos_encoder, server::ServerLobby, NettyChannelClient, NettyChannelServer},
+    netty::{NettyChannelClient, NettyChannelServer, cosmos_encoder, server::ServerLobby},
     persistence::LoadingDistance,
     physics::location::Location,
     state::GameState,
-    structure::{ship::pilot::Pilot, Structure},
+    structure::{Structure, ship::pilot::Pilot},
 };
 
 use crate::entities::player::PlayerLooking;

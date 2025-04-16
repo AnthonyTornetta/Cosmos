@@ -2,8 +2,8 @@
 
 use crate::{
     entities::player::Player,
-    netty::{cosmos_encoder, server_registry::RegistrySyncing, system_sets::NetworkingSystemsSet, NettyChannelServer},
-    registry::{identifiable::Identifiable, Registry},
+    netty::{NettyChannelServer, cosmos_encoder, server_registry::RegistrySyncing, system_sets::NetworkingSystemsSet},
+    registry::{Registry, identifiable::Identifiable},
 };
 use bevy::{
     app::{App, Startup, Update},

@@ -1,17 +1,17 @@
 //! Handles all the blocks with lighting in the game
 
 use bevy::{
-    color::{palettes::css, Srgba},
+    color::{Srgba, palettes::css},
     log::warn,
     prelude::{App, Color, OnExit, Res, ResMut},
     reflect::Reflect,
 };
 use cosmos_core::{
     block::{
-        blocks::{COLORS, COLOR_VALUES},
         Block,
+        blocks::{COLOR_VALUES, COLORS},
     },
-    registry::{self, identifiable::Identifiable, Registry},
+    registry::{self, Registry, identifiable::Identifiable},
     state::GameState,
 };
 use serde::{Deserialize, Serialize};

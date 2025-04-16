@@ -8,18 +8,18 @@ use bevy::{
         schedule::{IntoSystemSetConfigs, SystemSet},
         system::{ResMut, Resource},
     },
-    prelude::{in_state, App, Commands, Entity, EventWriter, IntoSystemConfigs, Query, Update},
+    prelude::{App, Commands, Entity, EventWriter, IntoSystemConfigs, Query, Update, in_state},
     tasks::Task,
     transform::components::Transform,
 };
 use cosmos_core::{
     state::GameState,
     structure::{
+        ChunkInitEvent, Structure, StructureTypeSet,
         asteroid::loading::AsteroidNeedsCreated,
         chunk::Chunk,
         loading::{ChunksNeedLoaded, StructureLoadingSet},
         structure_iterator::ChunkIteratorResult,
-        ChunkInitEvent, Structure, StructureTypeSet,
     },
 };
 use futures_lite::future;

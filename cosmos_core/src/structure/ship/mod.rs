@@ -6,8 +6,8 @@ use bevy::prelude::App;
 use bevy::prelude::Component;
 use bevy::reflect::Reflect;
 
-use super::coordinates::BlockCoordinate;
 use super::Structure;
+use super::coordinates::BlockCoordinate;
 
 pub mod pilot;
 pub mod ship_builder;

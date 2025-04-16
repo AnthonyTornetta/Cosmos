@@ -7,23 +7,23 @@ use bevy_rapier3d::plugin::RapierContextEntityLink;
 use cosmos_core::{
     block::data::persistence::ChunkLoadBlockDataEvent,
     entities::EntityId,
-    netty::{cosmos_encoder, NoSendEntity},
+    netty::{NoSendEntity, cosmos_encoder},
     physics::location::Location,
     structure::{
-        chunk::{netty::SerializedChunkBlockData, Chunk, ChunkEntity},
+        ChunkInitEvent, Structure, StructureTypeSet,
+        chunk::{Chunk, ChunkEntity, netty::SerializedChunkBlockData},
         coordinates::{ChunkCoordinate, CoordinateType},
         dynamic_structure::DynamicStructure,
         loading::StructureLoadingSet,
-        planet::{planet_builder::TPlanetBuilder, Planet},
-        ChunkInitEvent, Structure, StructureTypeSet,
+        planet::{Planet, planet_builder::TPlanetBuilder},
     },
 };
 use serde::{Deserialize, Serialize};
 
 use crate::persistence::{
-    loading::{LoadingSystemSet, NeedsLoaded},
-    saving::{NeedsSaved, SavingSystemSet, SAVING_SCHEDULE},
     SaveFileIdentifier, SerializedData,
+    loading::{LoadingSystemSet, NeedsLoaded},
+    saving::{NeedsSaved, SAVING_SCHEDULE, SavingSystemSet},
 };
 
 use super::{

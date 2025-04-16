@@ -1,6 +1,6 @@
 use bevy::{
     app::{App, Update},
-    color::{palettes::css, Color, Srgba},
+    color::{Color, Srgba, palettes::css},
     core::Name,
     ecs::{
         component::Component,
@@ -16,20 +16,20 @@ use bevy::{
     reflect::Reflect,
     state::condition::in_state,
     text::{TextFont, TextSpan},
-    ui::{widget::Label, BackgroundColor, BorderColor, FlexDirection, JustifyContent, Node, UiRect, Val},
+    ui::{BackgroundColor, BorderColor, FlexDirection, JustifyContent, Node, UiRect, Val, widget::Label},
 };
 use bevy_renet::renet::RenetClient;
 use cosmos_core::{
     economy::Credits,
     ecs::{
-        mut_events::{MutEvent, MutEventsCommand},
         NeedsDespawned,
+        mut_events::{MutEvent, MutEventsCommand},
     },
     inventory::Inventory,
     item::Item,
-    netty::{client::LocalPlayer, cosmos_encoder, system_sets::NetworkingSystemsSet, NettyChannelClient},
-    registry::{identifiable::Identifiable, Registry},
-    shop::{netty::ClientShopMessages, Shop, ShopEntry},
+    netty::{NettyChannelClient, client::LocalPlayer, cosmos_encoder, system_sets::NetworkingSystemsSet},
+    registry::{Registry, identifiable::Identifiable},
+    shop::{Shop, ShopEntry, netty::ClientShopMessages},
     state::GameState,
     structure::structure_block::StructureBlock,
 };
@@ -37,18 +37,18 @@ use cosmos_core::{
 use crate::{
     lang::Lang,
     ui::{
+        OpenMenu, UiSystemSet,
         components::{
-            button::{register_button, ButtonEvent, ButtonStyles, CosmosButton},
+            Disabled,
+            button::{ButtonEvent, ButtonStyles, CosmosButton, register_button},
             scollable_container::ScrollBox,
             slider::Slider,
             text_input::{InputType, TextInput},
             window::GuiWindow,
-            Disabled,
         },
         font::DefaultFont,
         item_renderer::RenderItem,
-        reactivity::{add_reactable_type, BindValue, BindValues, ReactableFields, ReactableValue},
-        OpenMenu, UiSystemSet,
+        reactivity::{BindValue, BindValues, ReactableFields, ReactableValue, add_reactable_type},
     },
 };
 

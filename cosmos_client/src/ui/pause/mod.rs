@@ -13,13 +13,13 @@ use crate::{
 };
 
 use super::{
+    CloseMenuEvent, CloseMethod, OpenMenu, UiSystemSet,
     components::{
-        button::{register_button, ButtonEvent, ButtonStyles, CosmosButton},
+        button::{ButtonEvent, ButtonStyles, CosmosButton, register_button},
         show_cursor::ShowCursor,
     },
     font::DefaultFont,
     settings::{NeedsSettingsAdded, SettingsCancelButtonEvent, SettingsDoneButtonEvent, SettingsMenuSet},
-    CloseMenuEvent, CloseMethod, OpenMenu, UiSystemSet,
 };
 
 #[derive(Component)]

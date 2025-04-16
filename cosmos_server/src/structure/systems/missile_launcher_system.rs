@@ -9,14 +9,14 @@ use bevy_rapier3d::{
 };
 use bevy_renet::renet::RenetServer;
 use cosmos_core::{
-    block::{data::BlockData, Block},
+    block::{Block, data::BlockData},
     entities::player::Player,
     inventory::Inventory,
     item::Item,
-    logic::{logic_driver::LogicDriver, LogicInputEvent, LogicSystemSet},
+    logic::{LogicInputEvent, LogicSystemSet, logic_driver::LogicDriver},
     netty::{
-        cosmos_encoder, server_laser_cannon_system_messages::ServerStructureSystemMessages, sync::events::server_event::NettyEventWriter,
-        system_sets::NetworkingSystemsSet, NettyChannelServer,
+        NettyChannelServer, cosmos_encoder, server_laser_cannon_system_messages::ServerStructureSystemMessages,
+        sync::events::server_event::NettyEventWriter, system_sets::NetworkingSystemsSet,
     },
     persistence::LoadingDistance,
     physics::{
@@ -24,11 +24,13 @@ use cosmos_core::{
         location::{Location, LocationPhysicsSet, SetPosition},
     },
     projectiles::{causer::Causer, missile::Missile},
-    registry::{identifiable::Identifiable, Registry},
+    registry::{Registry, identifiable::Identifiable},
     state::GameState,
     structure::{
+        Structure,
         ship::pilot::Pilot,
         systems::{
+            StructureSystem, StructureSystems, StructureSystemsSet, SystemActive,
             energy_storage_system::EnergyStorageSystem,
             laser_cannon_system::{LineSystemCooldown, SystemCooldown},
             line_system::LineBlocks,
@@ -36,9 +38,7 @@ use cosmos_core::{
                 MissileLauncherCalculator, MissileLauncherFocus, MissileLauncherPreferredFocus, MissileLauncherProperty,
                 MissileLauncherSystem, MissileSystemFailure,
             },
-            StructureSystem, StructureSystems, StructureSystemsSet, SystemActive,
         },
-        Structure,
     },
 };
 

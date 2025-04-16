@@ -11,11 +11,11 @@ use bevy::{
 };
 use bitflags::bitflags;
 use cosmos_core::{
-    block::{block_face::BlockFace, Block},
+    block::{Block, block_face::BlockFace},
     blockitems::BlockItems,
     item::Item,
     loader::{AddLoadingEvent, DoneLoadingEvent, LoadingManager},
-    registry::{self, identifiable::Identifiable, Registry},
+    registry::{self, Registry, identifiable::Identifiable},
     state::GameState,
 };
 use serde::{Deserialize, Serialize};

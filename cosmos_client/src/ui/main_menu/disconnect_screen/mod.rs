@@ -4,13 +4,13 @@ use bevy_renet::renet::DisconnectReason;
 use crate::{
     netty::connect::ClientDisconnectReason,
     ui::{
-        components::button::{register_button, ButtonEvent, ButtonStyles, CosmosButton},
+        components::button::{ButtonEvent, ButtonStyles, CosmosButton, register_button},
         font::DefaultFont,
         settings::SettingsMenuSet,
     },
 };
 
-use super::{in_main_menu_state, title_screen::TitleScreenSet, MainMenuRootUiNode, MainMenuSubState, MainMenuSystemSet};
+use super::{MainMenuRootUiNode, MainMenuSubState, MainMenuSystemSet, in_main_menu_state, title_screen::TitleScreenSet};
 
 fn create_disconnect_screen(
     mut commands: Commands,

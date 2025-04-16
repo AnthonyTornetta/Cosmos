@@ -1,5 +1,5 @@
 use crate::{
-    persistence::make_persistent::{make_persistent, DefaultPersistentComponent},
+    persistence::make_persistent::{DefaultPersistentComponent, make_persistent},
     structure::block_health::BlockHealthSet,
 };
 use bevy::{prelude::*, utils::HashMap};
@@ -7,20 +7,19 @@ use bevy_rapier3d::prelude::Velocity;
 use bevy_renet::renet::RenetServer;
 use cosmos_core::{
     block::{
+        Block,
         block_events::*,
         block_face::BlockFace,
         block_rotation::{BlockRotation, BlockSubRotation},
         blocks::AIR_BLOCK_ID,
         data::BlockData,
-        Block,
     },
     events::block_events::{BlockChangedEvent, BlockDataChangedEvent},
     netty::{
-        cosmos_encoder,
+        NettyChannelServer, cosmos_encoder,
         server_reliable_messages::{BlockChanged, BlocksChangedPacket, ServerReliableMessages},
         sync::IdentifiableComponent,
         system_sets::NetworkingSystemsSet,
-        NettyChannelServer,
     },
     prelude::Structure,
     state::GameState,
@@ -30,13 +29,13 @@ use cosmos_core::{
     ecs::mut_events::{MutEvent, MutEventsCommand},
     entities::player::creative::Creative,
     inventory::{
-        itemstack::{ItemShouldHaveData, ItemStackSystemSet},
         Inventory,
+        itemstack::{ItemShouldHaveData, ItemStackSystemSet},
     },
-    item::{physical_item::PhysicalItem, Item},
+    item::{Item, physical_item::PhysicalItem},
     persistence::LoadingDistance,
     physics::location::{Location, SetPosition},
-    registry::{identifiable::Identifiable, Registry},
+    registry::{Registry, identifiable::Identifiable},
     structure::{
         coordinates::{BlockCoordinate, CoordinateType, UnboundCoordinateType},
         shared::build_mode::{BuildAxis, BuildMode},

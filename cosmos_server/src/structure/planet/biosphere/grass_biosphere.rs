@@ -15,7 +15,7 @@ use cosmos_core::{
 
 use crate::GameState;
 
-use super::{biome::RegisterBiomesSet, register_biosphere, BiosphereMarkerComponent, TGenerateChunkEvent, TemperatureRange};
+use super::{BiosphereMarkerComponent, TGenerateChunkEvent, TemperatureRange, biome::RegisterBiomesSet, register_biosphere};
 
 #[derive(Component, Debug, Default, Clone, Copy, TypePath)]
 /// Marks that this is for a grass biosphere

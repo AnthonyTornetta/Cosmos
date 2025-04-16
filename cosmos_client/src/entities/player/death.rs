@@ -13,12 +13,12 @@ use cosmos_core::{
 use renet::RenetClient;
 
 use crate::ui::{
+    CloseMenuEvent, CloseMethod, OpenMenu, UiSystemSet,
     components::{
-        button::{register_button, ButtonEvent, ButtonStyles, CosmosButton},
+        button::{ButtonEvent, ButtonStyles, CosmosButton, register_button},
         show_cursor::ShowCursor,
     },
     font::DefaultFont,
-    CloseMenuEvent, CloseMethod, OpenMenu, UiSystemSet,
 };
 
 #[derive(Component)]

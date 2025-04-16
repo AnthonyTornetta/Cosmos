@@ -1,17 +1,17 @@
-use bevy::prelude::{in_state, App, EventReader, EventWriter, IntoSystemConfigs, Query, Res, Update, With, Without};
+use bevy::prelude::{App, EventReader, EventWriter, IntoSystemConfigs, Query, Res, Update, With, Without, in_state};
 use cosmos_core::{
     block::{
-        block_events::{BlockEventsSet, BlockInteractEvent},
         Block,
+        block_events::{BlockEventsSet, BlockInteractEvent},
     },
     events::structure::change_pilot_event::ChangePilotEvent,
     netty::system_sets::NetworkingSystemsSet,
-    registry::{identifiable::Identifiable, Registry},
+    registry::{Registry, identifiable::Identifiable},
     state::GameState,
     structure::{
-        shared::build_mode::BuildMode,
-        ship::{pilot::Pilot, Ship},
         Structure,
+        shared::build_mode::BuildMode,
+        ship::{Ship, pilot::Pilot},
     },
 };
 

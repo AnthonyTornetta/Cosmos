@@ -19,7 +19,7 @@ use bevy_rapier3d::{
 
 use crate::{
     ecs::NeedsDespawned,
-    netty::{system_sets::NetworkingSystemsSet, NoSendEntity},
+    netty::{NoSendEntity, system_sets::NetworkingSystemsSet},
     physics::{
         location::{Location, SetPosition},
         player_world::PlayerWorld,

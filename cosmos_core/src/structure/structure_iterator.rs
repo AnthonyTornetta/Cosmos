@@ -3,10 +3,10 @@
 use bevy::utils::hashbrown::hash_map;
 
 use super::{
-    block_storage::BlockStorer,
-    chunk::{Chunk, CHUNK_DIMENSIONS},
-    coordinates::{BlockCoordinate, ChunkBlockCoordinate, ChunkCoordinate, Coordinate, UnboundBlockCoordinate, UnboundChunkCoordinate},
     Structure,
+    block_storage::BlockStorer,
+    chunk::{CHUNK_DIMENSIONS, Chunk},
+    coordinates::{BlockCoordinate, ChunkBlockCoordinate, ChunkCoordinate, Coordinate, UnboundBlockCoordinate, UnboundChunkCoordinate},
 };
 
 #[derive(Debug, Clone)]
@@ -422,9 +422,9 @@ impl<'a> Iterator for ChunkIterator<'a> {
 #[cfg(test)]
 mod test {
     use crate::{
-        block::{block_builder::BlockBuilder, Block},
+        block::{Block, block_builder::BlockBuilder},
         prelude::FullStructure,
-        registry::{identifiable::Identifiable, Registry},
+        registry::{Registry, identifiable::Identifiable},
         utils::random::random_range,
     };
 

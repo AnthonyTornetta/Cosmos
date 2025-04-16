@@ -1,7 +1,7 @@
-use bevy::prelude::{in_state, App, Entity, Event, EventReader, IntoSystemConfigs, ResMut, Update};
+use bevy::prelude::{App, Entity, Event, EventReader, IntoSystemConfigs, ResMut, Update, in_state};
 use bevy_renet::renet::RenetServer;
 use cosmos_core::{
-    netty::{cosmos_encoder, server_reliable_messages::ServerReliableMessages, NettyChannelServer},
+    netty::{NettyChannelServer, cosmos_encoder, server_reliable_messages::ServerReliableMessages},
     state::GameState,
 };
 

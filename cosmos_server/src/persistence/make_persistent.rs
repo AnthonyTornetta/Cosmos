@@ -14,29 +14,29 @@ use bevy::{
     log::{error, warn},
 };
 use cosmos_core::{
-    block::data::{persistence::ChunkLoadBlockDataEvent, BlockData},
+    block::data::{BlockData, persistence::ChunkLoadBlockDataEvent},
     entities::EntityId,
     events::block_events::BlockDataSystemParams,
     netty::sync::IdentifiableComponent,
     structure::{
+        Structure,
         chunk::netty::{DeserializationError, SerializedBlockData},
         coordinates::ChunkBlockCoordinate,
         loading::StructureLoadingSet,
-        Structure,
     },
     utils::ownership::MaybeOwned,
 };
-use serde::{de::DeserializeOwned, Serialize};
+use serde::{Serialize, de::DeserializeOwned};
 
 use crate::{
     inventory::{InventoryLoadingSet, InventorySavingSet, ItemStackDataNeedsLoaded, ItemStackDataNeedsSaved, SerializedItemStackData},
-    structure::persistence::{chunk::BlockDataSavingSet, BlockDataNeedsSaved},
+    structure::persistence::{BlockDataNeedsSaved, chunk::BlockDataSavingSet},
 };
 
 use super::{
-    loading::{LoadingSystemSet, NeedsLoaded, LOADING_SCHEDULE},
-    saving::{NeedsSaved, SavingSystemSet, SAVING_SCHEDULE},
     SerializedData,
+    loading::{LOADING_SCHEDULE, LoadingSystemSet, NeedsLoaded},
+    saving::{NeedsSaved, SAVING_SCHEDULE, SavingSystemSet},
 };
 
 fn save_component<T: PersistentComponent>(

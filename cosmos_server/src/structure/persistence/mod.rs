@@ -6,12 +6,12 @@ use bevy::{
     log::warn,
 };
 use cosmos_core::structure::{
+    Structure,
     chunk::netty::{SerializedBlockData, SerializedChunkBlockData},
     structure_iterator::ChunkIteratorResult,
-    Structure,
 };
 
-use crate::persistence::{saving::NeedsSaved, SerializedData};
+use crate::persistence::{SerializedData, saving::NeedsSaved};
 
 pub mod chunk;
 

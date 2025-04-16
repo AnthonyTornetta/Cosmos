@@ -27,7 +27,7 @@ use bevy::{
 use cosmos_core::{netty::system_sets::NetworkingSystemsSet, structure::shields::Shield};
 
 use crate::{
-    asset::materials::shield::{ShieldMaterial, ShieldMaterialExtension, MAX_SHIELD_HIT_POINTS},
+    asset::materials::shield::{MAX_SHIELD_HIT_POINTS, ShieldMaterial, ShieldMaterialExtension},
     ui::ship_flight::indicators::WaypointSet,
 };
 

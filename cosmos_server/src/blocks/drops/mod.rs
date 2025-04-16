@@ -5,10 +5,10 @@ use cosmos_core::{
     block::Block,
     blockitems::BlockItems,
     item::Item,
-    registry::{identifiable::Identifiable, Registry},
+    registry::{Registry, identifiable::Identifiable},
     state::GameState,
 };
-use rand::{rngs::ThreadRng, Rng};
+use rand::{Rng, rngs::ThreadRng};
 
 mod specific;
 

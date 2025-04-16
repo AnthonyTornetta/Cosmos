@@ -2,12 +2,12 @@ use std::cmp::Ordering;
 
 use bevy::{
     app::Update,
-    color::{palettes::css, Color, Srgba},
+    color::{Color, Srgba, palettes::css},
     core::Name,
     log::{error, info},
     prelude::{
-        in_state, resource_exists, Added, App, BuildChildren, Changed, ChildBuild, ChildBuilder, Commands, Component, DespawnRecursiveExt,
-        Entity, Event, EventReader, IntoSystemConfigs, Query, Res, Text, With,
+        Added, App, BuildChildren, Changed, ChildBuild, ChildBuilder, Commands, Component, DespawnRecursiveExt, Entity, Event, EventReader,
+        IntoSystemConfigs, Query, Res, Text, With, in_state, resource_exists,
     },
     text::TextFont,
     ui::{AlignItems, BackgroundColor, FlexDirection, JustifyContent, Node, TargetCamera, UiRect, Val},
@@ -17,11 +17,11 @@ use cosmos_core::{
     crafting::{
         blocks::basic_fabricator::CraftBasicFabricatorRecipeEvent,
         recipes::{
-            basic_fabricator::{BasicFabricatorRecipe, BasicFabricatorRecipes},
             RecipeItem,
+            basic_fabricator::{BasicFabricatorRecipe, BasicFabricatorRecipes},
         },
     },
-    inventory::{itemstack::ItemStack, Inventory},
+    inventory::{Inventory, itemstack::ItemStack},
     item::Item,
     netty::{
         client::LocalPlayer,
@@ -32,7 +32,7 @@ use cosmos_core::{
         system_sets::NetworkingSystemsSet,
     },
     prelude::{Structure, StructureBlock},
-    registry::{identifiable::Identifiable, Registry},
+    registry::{Registry, identifiable::Identifiable},
     state::GameState,
 };
 
@@ -42,14 +42,14 @@ use crate::{
     lang::Lang,
     rendering::MainCamera,
     ui::{
+        OpenMenu, UiSystemSet,
         components::{
-            button::{register_button, ButtonEvent, ButtonStyles, CosmosButton},
+            button::{ButtonEvent, ButtonStyles, CosmosButton, register_button},
             scollable_container::ScrollBox,
             window::GuiWindow,
         },
         font::DefaultFont,
         item_renderer::RenderItem,
-        OpenMenu, UiSystemSet,
     },
 };
 

@@ -5,8 +5,8 @@ use cosmos_core::{
     physics::location::Location,
     state::GameState,
     structure::{
-        coordinates::ChunkCoordinate, full_structure::FullStructure, loading::StructureLoadingSet,
-        station::station_builder::TStationBuilder, Structure,
+        Structure, coordinates::ChunkCoordinate, full_structure::FullStructure, loading::StructureLoadingSet,
+        station::station_builder::TStationBuilder,
     },
 };
 

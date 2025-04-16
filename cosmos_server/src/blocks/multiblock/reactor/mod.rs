@@ -5,28 +5,28 @@ use std::{cell::RefCell, rc::Rc};
 use bevy::{
     ecs::query::{Added, Or, With},
     log::warn,
-    prelude::{in_state, App, Commands, EventReader, IntoSystemConfigs, Query, Res, ResMut, Update},
+    prelude::{App, Commands, EventReader, IntoSystemConfigs, Query, Res, ResMut, Update, in_state},
 };
 use bevy_renet::renet::RenetServer;
 use cosmos_core::{
     block::{
+        Block,
         block_events::{BlockEventsSet, BlockInteractEvent},
         block_face::BlockFace,
         data::BlockData,
         multiblock::reactor::{Reactor, ReactorActive, ReactorBounds, ReactorPowerGenerationBlock, Reactors},
-        Block,
     },
     entities::player::Player,
     events::block_events::BlockDataSystemParams,
-    inventory::{itemstack::ItemShouldHaveData, Inventory},
-    item::{Item, DEFAULT_MAX_STACK_SIZE},
-    netty::{cosmos_encoder, server_reliable_messages::ServerReliableMessages, system_sets::NetworkingSystemsSet, NettyChannelServer},
-    registry::{identifiable::Identifiable, Registry},
+    inventory::{Inventory, itemstack::ItemShouldHaveData},
+    item::{DEFAULT_MAX_STACK_SIZE, Item},
+    netty::{NettyChannelServer, cosmos_encoder, server_reliable_messages::ServerReliableMessages, system_sets::NetworkingSystemsSet},
+    registry::{Registry, identifiable::Identifiable},
     state::GameState,
     structure::{
+        Structure,
         coordinates::{BlockCoordinate, CoordinateType, UnboundBlockCoordinate},
         systems::StructureSystemsSet,
-        Structure,
     },
 };
 

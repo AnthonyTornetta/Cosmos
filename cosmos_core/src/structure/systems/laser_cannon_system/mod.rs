@@ -8,9 +8,9 @@ use serde::{Deserialize, Serialize};
 use crate::prelude::BlockCoordinate;
 
 use super::{
+    StructureSystemsSet,
     line_system::{LineProperty, LinePropertyCalculator, LineSystem},
     sync::SyncableSystem,
-    StructureSystemsSet,
 };
 
 /// A ship system that stores information about the laser cannons

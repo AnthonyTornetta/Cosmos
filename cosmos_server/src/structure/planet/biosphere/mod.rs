@@ -6,8 +6,8 @@ use bevy::{
     color::palettes::css,
     log::{error, info},
     prelude::{
-        in_state, Added, App, Commands, Component, Entity, Event, EventReader, EventWriter, IntoSystemConfigs, IntoSystemSetConfigs, Query,
-        Res, ResMut, Resource, Startup, SystemSet, Update, With, Without,
+        Added, App, Commands, Component, Entity, Event, EventReader, EventWriter, IntoSystemConfigs, IntoSystemSetConfigs, Query, Res,
+        ResMut, Resource, Startup, SystemSet, Update, With, Without, in_state,
     },
     reflect::TypePath,
     state::state::OnEnter,
@@ -16,29 +16,29 @@ use bevy::{
 use bevy_renet::renet::RenetServer;
 use biome::RegisterBiomesSet;
 use cosmos_core::{
-    netty::{cosmos_encoder, server_reliable_messages::ServerReliableMessages, system_sets::NetworkingSystemsSet, NettyChannelServer},
+    netty::{NettyChannelServer, cosmos_encoder, server_reliable_messages::ServerReliableMessages, system_sets::NetworkingSystemsSet},
     physics::location::Location,
-    registry::{identifiable::Identifiable, Registry},
+    registry::{Registry, identifiable::Identifiable},
     state::GameState,
     structure::{
+        Structure,
         chunk::Chunk,
         coordinates::ChunkCoordinate,
         planet::{
+            Planet,
             biosphere::{Biosphere, BiosphereMarker},
             generation::terrain_generation::GpuPermutationTable,
             planet_atmosphere::PlanetAtmosphere,
-            Planet,
         },
-        Structure,
     },
 };
 
 use crate::{
     netty::server_events::PlayerConnectedEvent,
     persistence::{
-        loading::{LoadingSystemSet, NeedsLoaded},
-        saving::{NeedsSaved, SavingSystemSet, SAVING_SCHEDULE},
         SerializedData,
+        loading::{LoadingSystemSet, NeedsLoaded},
+        saving::{NeedsSaved, SAVING_SCHEDULE, SavingSystemSet},
     },
     structure::planet::{
         biosphere::biosphere_generation::BiosphereGenerationSet, generation::planet_generator::check_needs_generated_system,

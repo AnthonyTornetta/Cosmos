@@ -6,8 +6,8 @@ use bevy::{prelude::*, reflect::Reflect, utils::HashMap};
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    block::{block_direction::BlockDirection, Block},
-    registry::{create_registry, identifiable::Identifiable, Registry},
+    block::{Block, block_direction::BlockDirection},
+    registry::{Registry, create_registry, identifiable::Identifiable},
     structure::coordinates::{BlockCoordinate, CoordinateType},
 };
 

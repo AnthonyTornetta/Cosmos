@@ -14,22 +14,22 @@ use bevy::{
     log::{info, warn},
     math::{Dir3, Quat},
     prelude::{
-        in_state, App, Commands, Deref, DerefMut, EventReader, IntoSystemConfigs, Query, Res, ResMut, Resource, Transform, Update, Vec3,
-        With,
+        App, Commands, Deref, DerefMut, EventReader, IntoSystemConfigs, Query, Res, ResMut, Resource, Transform, Update, Vec3, With,
+        in_state,
     },
     utils::HashSet,
 };
 use cosmos_core::{
     entities::player::Player,
     netty::system_sets::NetworkingSystemsSet,
-    physics::location::{Location, LocationPhysicsSet, Sector, SectorUnit, SystemCoordinate, SYSTEM_SECTORS},
-    registry::{identifiable::Identifiable, Registry},
+    physics::location::{Location, LocationPhysicsSet, SYSTEM_SECTORS, Sector, SectorUnit, SystemCoordinate},
+    registry::{Registry, identifiable::Identifiable},
     state::GameState,
     structure::{
+        Structure,
         coordinates::CoordinateType,
         dynamic_structure::DynamicStructure,
-        planet::{biosphere::Biosphere, planet_builder::TPlanetBuilder, Planet, PLANET_LOAD_RADIUS},
-        Structure,
+        planet::{PLANET_LOAD_RADIUS, Planet, biosphere::Biosphere, planet_builder::TPlanetBuilder},
     },
 };
 use rand::Rng;

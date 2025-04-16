@@ -15,12 +15,12 @@ use bevy::{
     math::{Quat, Vec3},
     reflect::Reflect,
     state::condition::in_state,
-    time::{common_conditions::on_timer, Time},
+    time::{Time, common_conditions::on_timer},
     utils::hashbrown::HashMap,
 };
 use cosmos_core::{
     entities::player::Player,
-    physics::location::{Location, Sector, SectorUnit, SECTOR_DIMENSIONS},
+    physics::location::{Location, SECTOR_DIMENSIONS, Sector, SectorUnit},
     state::GameState,
     utils::{quat_math::QuatMath, random::random_range},
 };

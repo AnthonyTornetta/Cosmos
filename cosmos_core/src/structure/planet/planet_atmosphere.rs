@@ -7,7 +7,7 @@ use bevy::{
 };
 use serde::{Deserialize, Serialize};
 
-use crate::netty::sync::{sync_component, IdentifiableComponent, SyncableComponent};
+use crate::netty::sync::{IdentifiableComponent, SyncableComponent, sync_component};
 
 #[derive(PartialEq, Debug, Clone, Copy, Reflect, Component, Serialize, Deserialize)]
 /// Represents the details about a planet's atmosphere.

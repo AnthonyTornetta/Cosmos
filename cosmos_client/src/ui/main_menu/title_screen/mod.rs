@@ -11,18 +11,18 @@ use crate::{
     netty::connect::HostConfig,
     ui::{
         components::{
-            button::{register_button, ButtonEvent, ButtonStyles, CosmosButton},
+            button::{ButtonEvent, ButtonStyles, CosmosButton, register_button},
             text_input::{InputType, TextInput},
         },
         font::DefaultFont,
-        reactivity::{add_reactable_type, BindValue, BindValues, ReactableFields, ReactableValue},
+        reactivity::{BindValue, BindValues, ReactableFields, ReactableValue, add_reactable_type},
         settings::SettingsMenuSet,
     },
 };
 
 use super::{
-    super::components::text_input::InputValue, disconnect_screen::DisconnectMenuSet, in_main_menu_state, MainMenuRootUiNode,
-    MainMenuSubState, MainMenuSystemSet,
+    super::components::text_input::InputValue, MainMenuRootUiNode, MainMenuSubState, MainMenuSystemSet,
+    disconnect_screen::DisconnectMenuSet, in_main_menu_state,
 };
 
 #[derive(Debug, Clone, Component, PartialEq, Eq)]
@@ -125,10 +125,7 @@ fn create_main_menu(mut commands: Commands, default_font: Res<DefaultFont>, q_ui
 
         let name = fs::read_to_string("name.env").unwrap_or_else(|_| {
             let adjective = fs::read_to_string("assets/adjectives.txt").expect("Missing adjectives :O");
-            let adjective = adjective
-                .split_whitespace()
-                .choose(&mut rand::rng())
-                .expect("No adjectives ;(");
+            let adjective = adjective.split_whitespace().choose(&mut rand::rng()).expect("No adjectives ;(");
 
             let animal = fs::read_to_string("assets/animals.txt").expect("Missing animals :O");
             let animal = animal.split_whitespace().choose(&mut rand::rng()).expect("No animals ;(");

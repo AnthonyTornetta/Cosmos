@@ -18,7 +18,7 @@ use bevy_rapier3d::{
 };
 use serde::{Deserialize, Serialize};
 
-use crate::netty::sync::{sync_component, IdentifiableComponent, SyncableComponent};
+use crate::netty::sync::{IdentifiableComponent, SyncableComponent, sync_component};
 
 use super::{coordinates::BlockCoordinate, shared::DespawnWithStructure};
 

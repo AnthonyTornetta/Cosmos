@@ -11,11 +11,11 @@ use bevy::{
     },
 };
 use cosmos_core::{
-    block::data::{persistence::ChunkLoadBlockDataEvent, BlockData},
+    block::data::{BlockData, persistence::ChunkLoadBlockDataEvent},
     events::block_events::BlockDataSystemParams,
     inventory::{
-        itemstack::{ItemShouldHaveData, ItemStack, ItemStackData},
         Inventory,
+        itemstack::{ItemShouldHaveData, ItemStack, ItemStackData},
     },
     item::Item,
     netty::sync::IdentifiableComponent,
@@ -27,12 +27,12 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     persistence::{
-        loading::{NeedsLoaded, LOADING_SCHEDULE},
+        SerializedData,
+        loading::{LOADING_SCHEDULE, NeedsLoaded},
         make_persistent::DefaultPersistentComponent,
         saving::{NeedsSaved, SAVING_SCHEDULE},
-        SerializedData,
     },
-    structure::persistence::{chunk::BlockDataSavingSet, BlockDataNeedsSaved},
+    structure::persistence::{BlockDataNeedsSaved, chunk::BlockDataSavingSet},
 };
 
 mod block_events;

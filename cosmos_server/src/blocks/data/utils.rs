@@ -4,11 +4,11 @@ use std::marker::PhantomData;
 
 use bevy::{prelude::*, utils::HashMap};
 use cosmos_core::{
-    block::{block_events::BlockEventsSet, data::BlockData, Block},
+    block::{Block, block_events::BlockEventsSet, data::BlockData},
     events::block_events::{BlockChangedEvent, BlockDataSystemParams},
     netty::system_sets::NetworkingSystemsSet,
     prelude::{BlockCoordinate, Structure, StructureLoadingSet},
-    registry::{identifiable::Identifiable, Registry},
+    registry::{Registry, identifiable::Identifiable},
     state::GameState,
 };
 

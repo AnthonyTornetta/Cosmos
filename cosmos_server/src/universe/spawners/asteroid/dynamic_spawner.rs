@@ -3,7 +3,7 @@
 use bevy::{
     log::error,
     prelude::{
-        in_state, App, Commands, Component, Entity, EventWriter, IntoSystemConfigs, Query, Res, Resource, Update, Vec3, With, Without,
+        App, Commands, Component, Entity, EventWriter, IntoSystemConfigs, Query, Res, Resource, Update, Vec3, With, Without, in_state,
     },
     reflect::Reflect,
     time::Time,
@@ -19,12 +19,12 @@ use cosmos_core::{
     registry::Registry,
     state::GameState,
     structure::{
-        asteroid::{asteroid_builder::TAsteroidBuilder, MovingAsteroid},
+        ChunkInitEvent, Structure,
+        asteroid::{MovingAsteroid, asteroid_builder::TAsteroidBuilder},
         coordinates::ChunkCoordinate,
         full_structure::FullStructure,
         loading::ChunksNeedLoaded,
         structure_iterator::ChunkIteratorResult,
-        ChunkInitEvent, Structure,
     },
     utils::{quat_math::random_quat, random::random_range, timer::UtilsTimer},
 };
@@ -35,7 +35,7 @@ use serde::{Deserialize, Serialize};
 use crate::{
     init::init_world::Noise,
     persistence::{
-        make_persistent::{make_persistent, DefaultPersistentComponent},
+        make_persistent::{DefaultPersistentComponent, make_persistent},
         saving::NeverSave,
     },
     structure::asteroid::{generator::AsteroidGenerationSet, server_asteroid_builder::ServerAsteroidBuilder},

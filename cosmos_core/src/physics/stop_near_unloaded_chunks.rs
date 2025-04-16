@@ -8,9 +8,9 @@ use crate::{
     physics::location::SECTOR_DIMENSIONS,
     prelude::Ship,
     structure::{
+        ChunkState, Structure,
         coordinates::{UnboundChunkCoordinate, UnboundCoordinateType},
         structure_iterator::ChunkIteratorResult,
-        ChunkState, Structure,
     },
 };
 

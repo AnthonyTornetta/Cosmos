@@ -1,13 +1,13 @@
 use crate::asset::materials::MaterialsSystemSet;
 use crate::structure::planet::unload_chunks_far_from_players;
 use bevy::ecs::schedule::{IntoSystemSetConfigs, SystemSet};
-use bevy::prelude::{in_state, App, Condition, Res, ResMut, Resource, Update};
+use bevy::prelude::{App, Condition, Res, ResMut, Resource, Update, in_state};
 use bevy::state::state::OnExit;
-use cosmos_core::block::block_events::BlockEventsSet;
 use cosmos_core::block::Block;
+use cosmos_core::block::block_events::BlockEventsSet;
 use cosmos_core::netty::system_sets::NetworkingSystemsSet;
-use cosmos_core::registry::identifiable::Identifiable;
 use cosmos_core::registry::Registry;
+use cosmos_core::registry::identifiable::Identifiable;
 use cosmos_core::state::GameState;
 
 use super::{BlockMeshRegistry, MeshBuilder, MeshInformation};

@@ -1,7 +1,7 @@
 //! Settings for the server
 
 use bevy::ecs::system::Resource;
-use clap::{arg, Parser};
+use clap::{Parser, arg};
 
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]

@@ -7,7 +7,7 @@ use bevy::{prelude::Component, reflect::Reflect};
 use bevy_rapier3d::prelude::{Collider, ReadMassProperties, RigidBody};
 use serde::{Deserialize, Serialize};
 
-use crate::netty::sync::{sync_component, IdentifiableComponent, SyncableComponent};
+use crate::netty::sync::{IdentifiableComponent, SyncableComponent, sync_component};
 use crate::netty::system_sets::NetworkingSystemsSet;
 
 #[derive(Component, Reflect, Debug, Serialize, Deserialize, PartialEq, Eq, Clone)]

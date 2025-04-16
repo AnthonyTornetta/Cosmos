@@ -4,7 +4,7 @@ use crate::loader::{AddLoadingEvent, DoneLoadingEvent, LoadingManager};
 use crate::registry::{self, Registry};
 use bevy::prelude::*;
 
-use super::{Item, DEFAULT_MAX_STACK_SIZE};
+use super::{DEFAULT_MAX_STACK_SIZE, Item};
 
 fn add_cosmos_items(
     mut items: ResMut<Registry<Item>>,

@@ -3,7 +3,7 @@
 use bevy::{app::App, ecs::component::Component, reflect::Reflect};
 use serde::{Deserialize, Serialize};
 
-use crate::netty::sync::{sync_component, ClientAuthority, IdentifiableComponent, SyncableComponent};
+use crate::netty::sync::{ClientAuthority, IdentifiableComponent, SyncableComponent, sync_component};
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, Component, PartialEq, Eq, Reflect)]
 /// Represents the item slot that this player currently is holding
@@ -15,11 +15,7 @@ impl HeldItemSlot {
     /// Returns an instance of self if this is a valid hotbar slot (0-9).
     pub fn new(slot: u32) -> Option<Self> {
         let x = Self(slot);
-        if !x.validate() {
-            None
-        } else {
-            Some(x)
-        }
+        if !x.validate() { None } else { Some(x) }
     }
 
     /// Returns the slot this is referencing

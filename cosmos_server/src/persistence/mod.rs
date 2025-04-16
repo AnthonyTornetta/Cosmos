@@ -10,7 +10,7 @@ use bevy::{
     reflect::Reflect,
     utils::{HashMap, HashSet},
 };
-use serde::{de::DeserializeOwned, Deserialize, Serialize};
+use serde::{Deserialize, Serialize, de::DeserializeOwned};
 
 use cosmos_core::{
     entities::EntityId,

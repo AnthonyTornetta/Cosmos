@@ -6,9 +6,9 @@ use bevy_rapier3d::{
 };
 use cosmos_core::{
     block::{
+        Block,
         block_events::{BlockBreakEvent, BlockEventsSet},
         blocks::fluid::FLUID_COLLISION_GROUP,
-        Block,
     },
     ecs::NeedsDespawned,
     netty::NoSendEntity,
@@ -17,18 +17,18 @@ use cosmos_core::{
     registry::Registry,
     state::GameState,
     structure::{
+        Structure,
         coordinates::BlockCoordinate,
         shared::{DespawnWithStructure, MeltingDown},
         shields::SHIELD_COLLISION_GROUP,
         ship::Ship,
         structure_block::StructureBlock,
         systems::{
+            StructureSystem, StructureSystems, StructureSystemsSet, SystemActive,
             energy_storage_system::EnergyStorageSystem,
             line_system::LineBlocks,
             mining_laser_system::{MiningLaserProperty, MiningLaserPropertyCalculator, MiningLaserSystem},
-            StructureSystem, StructureSystems, StructureSystemsSet, SystemActive,
         },
-        Structure,
     },
 };
 

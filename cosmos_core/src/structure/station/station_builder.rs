@@ -9,7 +9,7 @@ use bevy_rapier3d::prelude::{ReadMassProperties, RigidBody, Velocity};
 use crate::{
     persistence::{Blueprintable, LoadingDistance},
     physics::location::{CosmosBundleSet, Location},
-    structure::{loading::StructureLoadingSet, structure_builder::TStructureBuilder, Structure},
+    structure::{Structure, loading::StructureLoadingSet, structure_builder::TStructureBuilder},
 };
 
 use super::Station;

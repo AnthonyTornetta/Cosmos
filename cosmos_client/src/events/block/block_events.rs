@@ -8,11 +8,11 @@ use cosmos_core::{
         block_rotation::BlockRotation,
     },
     netty::{
+        NettyChannelClient,
         client_reliable_messages::ClientReliableMessages,
         cosmos_encoder,
         sync::mapping::{Mappable, NetworkMapping},
         system_sets::NetworkingSystemsSet,
-        NettyChannelClient,
     },
     state::GameState,
     structure::structure_block::StructureBlock,

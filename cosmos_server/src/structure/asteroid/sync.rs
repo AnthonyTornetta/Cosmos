@@ -3,16 +3,15 @@ use bevy_rapier3d::prelude::Velocity;
 use bevy_renet::renet::RenetServer;
 use cosmos_core::{
     netty::{
-        cosmos_encoder,
+        NettyChannelServer, cosmos_encoder,
         netty_rigidbody::{NettyRigidBody, NettyRigidBodyLocation},
         sync::server_entity_syncing::RequestedEntityEvent,
         system_sets::NetworkingSystemsSet,
-        NettyChannelServer,
     },
     physics::location::Location,
     structure::{
-        asteroid::{asteroid_netty::AsteroidServerMessages, Asteroid},
         Structure,
+        asteroid::{Asteroid, asteroid_netty::AsteroidServerMessages},
     },
 };
 

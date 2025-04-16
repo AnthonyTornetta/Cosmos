@@ -9,7 +9,7 @@ use bevy::{
     state::state::OnEnter,
 };
 use cosmos_core::{
-    crafting::recipes::{basic_fabricator::BasicFabricatorRecipes, RecipeItem},
+    crafting::recipes::{RecipeItem, basic_fabricator::BasicFabricatorRecipes},
     item::Item,
     registry::Registry,
     state::GameState,

@@ -2,16 +2,16 @@
 
 use bevy::{
     prelude::{
-        in_state, Added, App, Commands, Component, Entity, IntoSystemConfigs, IntoSystemSetConfigs, Query, RemovedComponents, ResMut,
-        SystemSet, Update, With,
+        Added, App, Commands, Component, Entity, IntoSystemConfigs, IntoSystemSetConfigs, Query, RemovedComponents, ResMut, SystemSet,
+        Update, With, in_state,
     },
     reflect::Reflect,
 };
 use bevy_renet::renet::RenetClient;
 use cosmos_core::{
     netty::{
-        client::LocalPlayer, client_unreliable_messages::ClientUnreliableMessages, cosmos_encoder, system_sets::NetworkingSystemsSet,
-        NettyChannelClient,
+        NettyChannelClient, client::LocalPlayer, client_unreliable_messages::ClientUnreliableMessages, cosmos_encoder,
+        system_sets::NetworkingSystemsSet,
     },
     state::GameState,
     structure::{ship::pilot::Pilot, systems::ShipActiveSystem},

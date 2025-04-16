@@ -5,7 +5,7 @@ use std::fs;
 use bevy::{prelude::*, text::FontStyle, utils::HashMap};
 use cosmos_core::{
     item::Item,
-    registry::{identifiable::Identifiable, Registry},
+    registry::{Registry, identifiable::Identifiable},
     state::GameState,
 };
 

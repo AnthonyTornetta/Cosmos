@@ -1,6 +1,6 @@
 use bevy::{
     app::Update,
-    prelude::{in_state, App, Commands, Entity, IntoSystemConfigs, Parent, Query, With, Without},
+    prelude::{App, Commands, Entity, IntoSystemConfigs, Parent, Query, With, Without, in_state},
 };
 use cosmos_core::{
     entities::player::Player,

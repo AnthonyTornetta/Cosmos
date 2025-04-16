@@ -1,6 +1,6 @@
 use bevy::prelude::{App, OnExit, Res, ResMut};
 use cosmos_core::{
-    registry::{identifiable::Identifiable, Registry},
+    registry::{Registry, identifiable::Identifiable},
     state::GameState,
 };
 

@@ -12,10 +12,10 @@ use serde::{Deserialize, Serialize};
 use crate::{block::block_face::BlockFace, physics::location::SYSTEM_SECTORS};
 
 use super::{
+    Structure,
     chunk::CHUNK_DIMENSIONS,
     coordinates::{BlockCoordinate, CoordinateType},
     dynamic_structure::DynamicStructure,
-    Structure,
 };
 
 pub mod biosphere;

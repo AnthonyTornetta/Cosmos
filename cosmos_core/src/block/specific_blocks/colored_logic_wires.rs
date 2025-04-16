@@ -8,7 +8,7 @@ use bevy::{
 use crate::{
     block::Block,
     logic::{LogicBlock, LogicConnection, LogicWireColor, WireType},
-    registry::{identifiable::Identifiable, Registry},
+    registry::{Registry, identifiable::Identifiable},
 };
 
 fn register_logic_connections(

@@ -7,8 +7,9 @@ use uuid::Uuid;
 use crate::{
     entities::EntityId,
     netty::sync::{
-        resources::{sync_resource, SyncableResource},
-        sync_component, IdentifiableComponent, SyncableComponent,
+        IdentifiableComponent, SyncableComponent,
+        resources::{SyncableResource, sync_resource},
+        sync_component,
     },
 };
 

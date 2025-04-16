@@ -1,8 +1,8 @@
 use bevy::prelude::*;
 use cosmos_core::{
     coms::{
-        events::{AcceptComsEvent, DeclineComsEvent, RequestCloseComsEvent, RequestComsEvent, SendComsMessage, SendComsMessageType},
         ComsChannel, ComsChannelType, ComsMessage, RequestedComs,
+        events::{AcceptComsEvent, DeclineComsEvent, RequestCloseComsEvent, RequestComsEvent, SendComsMessage, SendComsMessageType},
     },
     ecs::NeedsDespawned,
     entities::player::Player,

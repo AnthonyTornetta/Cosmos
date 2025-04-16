@@ -1,14 +1,14 @@
 //! Handles server-side build mode logic
 
-use bevy::prelude::{in_state, App, EventReader, EventWriter, IntoSystemConfigs, Query, Res, Update};
+use bevy::prelude::{App, EventReader, EventWriter, IntoSystemConfigs, Query, Res, Update, in_state};
 use cosmos_core::{
-    block::{block_events::BlockInteractEvent, Block},
+    block::{Block, block_events::BlockInteractEvent},
     netty::system_sets::NetworkingSystemsSet,
-    registry::{identifiable::Identifiable, Registry},
+    registry::{Registry, identifiable::Identifiable},
     state::GameState,
     structure::{
-        shared::build_mode::{BuildMode, BuildModeSet, EnterBuildModeEvent, ExitBuildModeEvent},
         Structure,
+        shared::build_mode::{BuildMode, BuildModeSet, EnterBuildModeEvent, ExitBuildModeEvent},
     },
 };
 

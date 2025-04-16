@@ -3,21 +3,21 @@ use std::{cell::RefCell, rc::Rc};
 use bevy::{
     app::Update,
     log::{error, warn},
-    prelude::{in_state, App, Commands, EventReader, IntoSystemConfigs, Query, Res, With, Without},
+    prelude::{App, Commands, EventReader, IntoSystemConfigs, Query, Res, With, Without, in_state},
 };
 
 use cosmos_core::{
     block::{
-        block_events::{BlockEventsSet, BlockInteractEvent},
         Block,
+        block_events::{BlockEventsSet, BlockInteractEvent},
     },
     crafting::{
         blocks::basic_fabricator::{CraftBasicFabricatorRecipeEvent, OpenBasicFabricatorEvent},
-        recipes::{basic_fabricator::BasicFabricatorRecipes, RecipeItem},
+        recipes::{RecipeItem, basic_fabricator::BasicFabricatorRecipes},
     },
     entities::player::Player,
     events::block_events::BlockDataSystemParams,
-    inventory::{itemstack::ItemShouldHaveData, Inventory},
+    inventory::{Inventory, itemstack::ItemShouldHaveData},
     item::Item,
     netty::{
         server::ServerLobby,
@@ -28,7 +28,7 @@ use cosmos_core::{
         system_sets::NetworkingSystemsSet,
     },
     prelude::Structure,
-    registry::{identifiable::Identifiable, Registry},
+    registry::{Registry, identifiable::Identifiable},
     state::GameState,
 };
 

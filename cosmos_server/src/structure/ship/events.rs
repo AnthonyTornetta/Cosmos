@@ -4,7 +4,7 @@ use bevy::{
     ecs::system::Commands,
     log::info,
     math::Quat,
-    prelude::{in_state, App, Entity, Event, EventReader, IntoSystemConfigs, Query, ResMut, Transform, Update, Without},
+    prelude::{App, Entity, Event, EventReader, IntoSystemConfigs, Query, ResMut, Transform, Update, Without, in_state},
 };
 use bevy_rapier3d::dynamics::Velocity;
 use bevy_renet::renet::RenetServer;
@@ -12,17 +12,17 @@ use cosmos_core::{
     block::block_events::BlockEventsSet,
     events::structure::change_pilot_event::ChangePilotEvent,
     netty::{
-        cosmos_encoder, server_reliable_messages::ServerReliableMessages, server_unreliable_messages::ServerUnreliableMessages,
-        system_sets::NetworkingSystemsSet, NettyChannelServer,
+        NettyChannelServer, cosmos_encoder, server_reliable_messages::ServerReliableMessages,
+        server_unreliable_messages::ServerUnreliableMessages, system_sets::NetworkingSystemsSet,
     },
     physics::location::Location,
     state::GameState,
     structure::{
+        Structure, StructureTypeSet,
         coordinates::ChunkCoordinate,
         full_structure::FullStructure,
         loading::StructureLoadingSet,
         ship::{ship_builder::TShipBuilder, ship_movement::ShipMovement},
-        Structure, StructureTypeSet,
     },
 };
 

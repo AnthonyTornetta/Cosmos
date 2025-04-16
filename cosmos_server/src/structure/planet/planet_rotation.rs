@@ -22,7 +22,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     init::init_world::ServerSeed,
-    persistence::make_persistent::{make_persistent, DefaultPersistentComponent},
+    persistence::make_persistent::{DefaultPersistentComponent, make_persistent},
     rng::get_rng_for_sector,
 };
 

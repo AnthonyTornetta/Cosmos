@@ -5,7 +5,7 @@ use bevy::prelude::{App, Entity, Event, EventReader, EventWriter, IntoSystemConf
 use crate::{
     ecs::mut_events::{MutEvent, MutEventsCommand},
     events::block_events::BlockChangedEvent,
-    structure::{coordinates::BlockCoordinate, structure_block::StructureBlock, Structure},
+    structure::{Structure, coordinates::BlockCoordinate, structure_block::StructureBlock},
 };
 
 use super::{block_events::BlockEventsSet, block_face::ALL_BLOCK_FACES};

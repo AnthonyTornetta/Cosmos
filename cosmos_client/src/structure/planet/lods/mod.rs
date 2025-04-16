@@ -13,33 +13,33 @@ use bevy::{
     log::{info, warn},
     math::{Vec3, Vec4},
     prelude::{
-        in_state, App, Commands, Component, Condition, Entity, GlobalTransform, IntoSystemConfigs, Quat, Query, Res, ResMut, Resource,
-        Update, With,
+        App, Commands, Component, Condition, Entity, GlobalTransform, IntoSystemConfigs, Quat, Query, Res, ResMut, Resource, Update, With,
+        in_state,
     },
 };
 use bevy_easy_compute::prelude::{AppComputeWorker, BevyEasyComputeSet};
 use cosmos_core::{
-    block::{block_face::BlockFace, Block},
+    block::{Block, block_face::BlockFace},
     ecs::mut_events::{EventWriterCustomSend, MutEvent, MutEventsCommand},
     netty::system_sets::NetworkingSystemsSet,
     physics::location::Location,
     registry::Registry,
     state::GameState,
     structure::{
+        Structure,
         block_storage::BlockStorer,
         chunk::{CHUNK_DIMENSIONS, CHUNK_DIMENSIONS_USIZE},
         coordinates::{BlockCoordinate, ChunkBlockCoordinate, CoordinateType, UnboundChunkCoordinate, UnboundCoordinateType},
         lod::{Lod, LodComponent},
         lod_chunk::{LodBlockSubScale, LodChunk},
         planet::{
+            Planet,
             biosphere::Biosphere,
             generation::{
                 biome::{Biome, BiomeParameters, BiosphereBiomesRegistry},
-                terrain_generation::{BiosphereShaderWorker, ChunkData, ChunkDataSlice, GenerationParams, TerrainData, U32Vec4, N_CHUNKS},
+                terrain_generation::{BiosphereShaderWorker, ChunkData, ChunkDataSlice, GenerationParams, N_CHUNKS, TerrainData, U32Vec4},
             },
-            Planet,
         },
-        Structure,
     },
     utils::{
         array_utils::{flatten, flatten_4d},

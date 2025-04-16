@@ -4,11 +4,11 @@ use bevy::prelude::*;
 use bevy_rapier3d::prelude::Velocity;
 use cosmos_core::{
     entities::{
+        EntityId,
         health::{Dead, Health, HealthSet, MaxHealth},
         player::respawn::{RequestRespawnEvent, RespawnEvent},
-        EntityId,
     },
-    inventory::{itemstack::ItemStack, HeldItemStack, Inventory},
+    inventory::{HeldItemStack, Inventory, itemstack::ItemStack},
     item::physical_item::PhysicalItem,
     netty::{
         server::ServerLobby,

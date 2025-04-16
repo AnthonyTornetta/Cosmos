@@ -3,7 +3,7 @@ use bevy::{
     core::Name,
     log::error,
     prelude::{
-        in_state, App, Commands, Component, Entity, EventReader, IntoSystemConfigs, IntoSystemSetConfigs, Query, Res, SystemSet, With,
+        App, Commands, Component, Entity, EventReader, IntoSystemConfigs, IntoSystemSetConfigs, Query, Res, SystemSet, With, in_state,
     },
     reflect::Reflect,
 };

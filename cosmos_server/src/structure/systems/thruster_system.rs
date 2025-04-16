@@ -2,15 +2,15 @@
 
 use bevy::{
     prelude::{
-        in_state, App, Commands, Component, EventReader, IntoSystemConfigs, OnEnter, Query, Res, ResMut, SystemSet, Transform, Update,
-        Vec3, With,
+        App, Commands, Component, EventReader, IntoSystemConfigs, OnEnter, Query, Res, ResMut, SystemSet, Transform, Update, Vec3, With,
+        in_state,
     },
     reflect::Reflect,
     time::Time,
 };
 use bevy_rapier3d::prelude::{ExternalImpulse, ReadMassProperties, Velocity};
 use cosmos_core::{
-    block::{block_events::BlockEventsSet, Block},
+    block::{Block, block_events::BlockEventsSet},
     events::block_events::BlockChangedEvent,
     netty::system_sets::NetworkingSystemsSet,
     physics::location::Location,
@@ -18,19 +18,19 @@ use cosmos_core::{
     registry::Registry,
     state::GameState,
     structure::{
+        Structure, StructureTypeSet,
         events::StructureLoadedEvent,
         ship::{
+            Ship,
             pilot::{Pilot, PilotFocused},
             ship_movement::{ShipMovement, ShipMovementSet},
-            Ship,
         },
         systems::{
+            StructureSystem, StructureSystemType, StructureSystems, StructureSystemsSet,
             dock_system::Docked,
             energy_storage_system::EnergyStorageSystem,
             thruster_system::{ThrusterBlocks, ThrusterProperty, ThrusterSystem},
-            StructureSystem, StructureSystemType, StructureSystems, StructureSystemsSet,
         },
-        Structure, StructureTypeSet,
     },
 };
 

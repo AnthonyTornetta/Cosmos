@@ -3,7 +3,7 @@
 use bevy::prelude::{App, Component};
 use serde::{Deserialize, Serialize};
 
-use crate::netty::sync::{sync_component, IdentifiableComponent, SyncableComponent};
+use crate::netty::sync::{IdentifiableComponent, SyncableComponent, sync_component};
 
 #[derive(Component, Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
 /// Signifies a player is in creative mode

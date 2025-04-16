@@ -9,8 +9,8 @@ use cosmos_core::ecs::NeedsDespawned;
 
 use crate::ui::UiSystemSet;
 
-use super::show_cursor::any_open_menus;
 use super::Disabled;
+use super::show_cursor::any_open_menus;
 
 /// An event that will be created and sent when a button is interacted with
 pub trait ButtonEvent: Sized + Event + std::fmt::Debug {

@@ -3,20 +3,20 @@ use std::{ffi::OsStr, fs};
 use bevy::{
     app::Update,
     log::{error, info},
-    prelude::{in_state, resource_exists_and_changed, App, Commands, EventReader, IntoSystemConfigs, OnEnter, Res},
+    prelude::{App, Commands, EventReader, IntoSystemConfigs, OnEnter, Res, in_state, resource_exists_and_changed},
 };
 use serde::{Deserialize, Serialize};
 
 use cosmos_core::{
     crafting::recipes::{
+        RecipeItem,
         basic_fabricator::{
             BasicFabricatorRecipe, BasicFabricatorRecipes, FabricatorItemInput, FabricatorItemOutput, SyncBasicFabricatorRecipesEvent,
         },
-        RecipeItem,
     },
     item::Item,
     netty::{sync::events::server_event::NettyEventWriter, system_sets::NetworkingSystemsSet},
-    registry::{identifiable::Identifiable, Registry},
+    registry::{Registry, identifiable::Identifiable},
     state::GameState,
 };
 use walkdir::WalkDir;

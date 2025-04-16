@@ -2,7 +2,7 @@
 
 use bevy::{
     app::Update,
-    prelude::{in_state, App, EventReader, IntoSystemConfigs, Query, Res, With},
+    prelude::{App, EventReader, IntoSystemConfigs, Query, Res, With, in_state},
 };
 use cosmos_core::{
     entities::player::Player,

@@ -5,8 +5,8 @@ use bevy_rapier3d::{plugin::RapierContextEntityLink, prelude::RapierContextSimul
 use bevy_renet::renet::*;
 use cosmos_core::{
     netty::{
-        cosmos_encoder, server_laser_cannon_system_messages::ServerStructureSystemMessages, sync::mapping::NetworkMapping,
-        system_sets::NetworkingSystemsSet, NettyChannelServer,
+        NettyChannelServer, cosmos_encoder, server_laser_cannon_system_messages::ServerStructureSystemMessages,
+        sync::mapping::NetworkMapping, system_sets::NetworkingSystemsSet,
     },
     physics::location::LocationPhysicsSet,
     projectiles::{causer::Causer, laser::Laser},

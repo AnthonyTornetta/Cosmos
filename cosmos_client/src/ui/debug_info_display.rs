@@ -5,7 +5,7 @@ use cosmos_core::{
     block::Block,
     netty::client::LocalPlayer,
     physics::location::Location,
-    registry::{identifiable::Identifiable, Registry},
+    registry::{Registry, identifiable::Identifiable},
     state::GameState,
     structure::Structure,
 };

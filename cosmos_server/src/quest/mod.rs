@@ -6,7 +6,7 @@ use cosmos_core::{
     quest::{OngoingQuestDetails, OngoingQuests},
 };
 
-use crate::persistence::make_persistent::{make_persistent, DefaultPersistentComponent};
+use crate::persistence::make_persistent::{DefaultPersistentComponent, make_persistent};
 
 mod quests;
 

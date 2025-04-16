@@ -1,16 +1,16 @@
 //! Responsible for the collider generation of a structure.structure_physics.rs
 
-use crate::block::blocks::fluid::FLUID_COLLISION_GROUP;
 use crate::block::Block;
+use crate::block::blocks::fluid::FLUID_COLLISION_GROUP;
 use crate::events::block_events::BlockChangedEvent;
-use crate::registry::identifiable::Identifiable;
 use crate::registry::Registry;
+use crate::registry::identifiable::Identifiable;
+use crate::structure::Structure;
 use crate::structure::block_storage::BlockStorer;
-use crate::structure::chunk::{Chunk, ChunkUnloadEvent, CHUNK_DIMENSIONS};
+use crate::structure::chunk::{CHUNK_DIMENSIONS, Chunk, ChunkUnloadEvent};
 use crate::structure::coordinates::{ChunkBlockCoordinate, ChunkCoordinate, CoordinateType};
 use crate::structure::events::ChunkSetEvent;
 use crate::structure::loading::StructureLoadingSet;
-use crate::structure::Structure;
 use bevy::app::PreUpdate;
 use bevy::ecs::schedule::{IntoSystemSetConfigs, SystemSet};
 use bevy::math::{Quat, Vec3};

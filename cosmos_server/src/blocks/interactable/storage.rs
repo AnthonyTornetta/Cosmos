@@ -1,18 +1,18 @@
 use bevy::{
     ecs::system::ResMut,
-    prelude::{in_state, App, EventReader, IntoSystemConfigs, Query, Res, Update},
+    prelude::{App, EventReader, IntoSystemConfigs, Query, Res, Update, in_state},
 };
 use bevy_renet::renet::RenetServer;
 use cosmos_core::{
     block::{
+        Block,
         block_events::{BlockEventsSet, BlockInteractEvent},
         data::BlockDataIdentifier,
-        Block,
     },
     entities::player::Player,
     inventory::netty::{InventoryIdentifier, ServerInventoryMessages},
-    netty::{cosmos_encoder, system_sets::NetworkingSystemsSet, NettyChannelServer},
-    registry::{identifiable::Identifiable, Registry},
+    netty::{NettyChannelServer, cosmos_encoder, system_sets::NetworkingSystemsSet},
+    registry::{Registry, identifiable::Identifiable},
     state::GameState,
     structure::Structure,
 };

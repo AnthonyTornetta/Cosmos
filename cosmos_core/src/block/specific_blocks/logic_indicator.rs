@@ -10,8 +10,8 @@ use bevy::{
 use crate::{
     block::Block,
     events::block_events::BlockDataSystemParams,
-    logic::{logic_driver::LogicDriver, BlockLogicData, LogicBlock, LogicConnection, LogicInputEvent, LogicSystemSet, PortType},
-    registry::{identifiable::Identifiable, Registry},
+    logic::{BlockLogicData, LogicBlock, LogicConnection, LogicInputEvent, LogicSystemSet, PortType, logic_driver::LogicDriver},
+    registry::{Registry, identifiable::Identifiable},
     structure::Structure,
 };
 

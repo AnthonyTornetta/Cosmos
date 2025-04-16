@@ -6,13 +6,13 @@ use bevy::{
 use bevy_renet::renet::RenetClient;
 use cosmos_core::{
     ecs::mut_events::MutEvent,
-    netty::{cosmos_encoder, system_sets::NetworkingSystemsSet, NettyChannelServer},
+    netty::{NettyChannelServer, cosmos_encoder, system_sets::NetworkingSystemsSet},
     shop::netty::ServerShopMessages,
     state::GameState,
     structure::structure_block::StructureBlock,
 };
 
-use super::{ui::OpenShopUiEvent, PurchasedEvent, SoldEvent};
+use super::{PurchasedEvent, SoldEvent, ui::OpenShopUiEvent};
 
 fn shop_listen_netty(
     mut client: ResMut<RenetClient>,

@@ -10,12 +10,12 @@ use bevy::{
 };
 use cosmos_core::{
     block::{
-        block_face::{BlockFace, ALL_BLOCK_FACES},
         Block,
+        block_face::{ALL_BLOCK_FACES, BlockFace},
     },
     blockitems::BlockItems,
     item::Item,
-    registry::{create_registry, identifiable::Identifiable, many_to_one::ManyToOneRegistry, Registry},
+    registry::{Registry, create_registry, identifiable::Identifiable, many_to_one::ManyToOneRegistry},
     state::GameState,
     utils::array_utils::{expand_2d, flatten_2d},
 };

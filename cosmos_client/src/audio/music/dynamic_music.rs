@@ -47,10 +47,7 @@ impl MusicController {
 
     /// Selects a random song that matches this atmosphere
     pub fn random_song(&self, atmosphere: MusicAtmosphere) -> Option<&BackgroundSong> {
-        self.songs
-            .iter()
-            .filter(|x| x.atmosphere == atmosphere)
-            .choose(&mut rand::rng())
+        self.songs.iter().filter(|x| x.atmosphere == atmosphere).choose(&mut rand::rng())
     }
 }
 

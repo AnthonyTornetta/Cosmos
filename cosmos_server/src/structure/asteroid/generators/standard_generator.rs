@@ -2,15 +2,15 @@
 
 use bevy::{prelude::*, tasks::AsyncComputeTaskPool, utils::HashMap};
 use cosmos_core::{
-    block::{block_rotation::BlockRotation, Block},
+    block::{Block, block_rotation::BlockRotation},
     physics::location::Location,
     registry::ReadOnlyRegistry,
     state::GameState,
     structure::{
+        Structure,
         block_storage::BlockStorer,
         chunk::Chunk,
         coordinates::{BlockCoordinate, ChunkBlockCoordinate, ChunkCoordinate},
-        Structure,
     },
     utils::timer::UtilsTimer,
 };
@@ -26,7 +26,7 @@ use crate::{
     },
 };
 
-use super::{register_asteroid_generator, AsteroidGeneratorComponent};
+use super::{AsteroidGeneratorComponent, register_asteroid_generator};
 
 #[derive(Debug, Clone)]
 /// A block that may generate on the asteroid
@@ -147,11 +147,7 @@ pub fn register_standard_asteroid_generation<T: AsteroidGeneratorComponent>(
                                         .max_by(|a, b| a.1.partial_cmp(&b.1).unwrap());
 
                                     let block = if let Some((ore_block, max_noise)) = max_noise {
-                                        if max_noise < 0.1 {
-                                            stone
-                                        } else {
-                                            ore_block
-                                        }
+                                        if max_noise < 0.1 { stone } else { ore_block }
                                     } else {
                                         stone
                                     };

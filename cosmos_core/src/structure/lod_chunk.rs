@@ -6,7 +6,7 @@ use bevy::reflect::Reflect;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    block::{block_rotation::BlockRotation, Block},
+    block::{Block, block_rotation::BlockRotation},
     registry::Registry,
     utils::array_utils::flatten,
 };

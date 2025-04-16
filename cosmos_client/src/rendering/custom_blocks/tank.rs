@@ -19,18 +19,18 @@ use bevy::{
     utils::HashMap,
 };
 use cosmos_core::{
-    block::{block_direction::BlockDirection, block_face::ALL_BLOCK_FACES, Block},
+    block::{Block, block_direction::BlockDirection, block_face::ALL_BLOCK_FACES},
     ecs::NeedsDespawned,
     fluid::{
         data::{BlockFluidData, FluidTankBlock},
         registry::Fluid,
     },
-    registry::{identifiable::Identifiable, many_to_one::ManyToOneRegistry, Registry},
+    registry::{Registry, identifiable::Identifiable, many_to_one::ManyToOneRegistry},
     state::GameState,
     structure::{
+        Structure,
         chunk::CHUNK_DIMENSIONSF,
         coordinates::{BlockCoordinate, ChunkBlockCoordinate},
-        Structure,
     },
 };
 
@@ -40,10 +40,10 @@ use crate::{
         materials::{AddMaterialEvent, BlockMaterialMapping, MaterialDefinition, MaterialType},
     },
     rendering::{
-        structure_renderer::{
-            chunk_rendering::chunk_renderer::ChunkNeedsCustomBlocksRendered, BlockRenderingModes, RenderingMode, StructureRenderingSet,
-        },
         BlockMeshRegistry, CosmosMeshBuilder, MeshBuilder,
+        structure_renderer::{
+            BlockRenderingModes, RenderingMode, StructureRenderingSet, chunk_rendering::chunk_renderer::ChunkNeedsCustomBlocksRendered,
+        },
     },
 };
 

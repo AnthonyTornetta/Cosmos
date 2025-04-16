@@ -10,15 +10,15 @@ use cosmos_core::{
     registry::Registry,
     state::GameState,
     structure::{
-        block_health::events::{BlockDestroyedEvent, BlockTakeDamageEvent},
         Structure,
+        block_health::events::{BlockDestroyedEvent, BlockTakeDamageEvent},
     },
 };
 
 use crate::{
     persistence::{
-        saving::{NeedsSaved, SavingSystemSet, SAVING_SCHEDULE},
         SerializedData,
+        saving::{NeedsSaved, SAVING_SCHEDULE, SavingSystemSet},
     },
     structure::{block_health::BlockHealthSet, systems::shield_system::ShieldSet},
 };
