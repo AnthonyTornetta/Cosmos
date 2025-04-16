@@ -169,7 +169,7 @@ impl ItemStack {
         commands: &mut Commands,
         data: impl Bundle,
     ) -> Option<Entity> {
-        let data_entity = if has_data.map(|x| x.contains(item_id)).unwrap_or(true) {
+        if has_data.map(|x| x.contains(item_id)).unwrap_or(true) {
             Some(
                 commands
                     .spawn((
@@ -185,8 +185,7 @@ impl ItemStack {
             )
         } else {
             None
-        };
-        data_entity
+        }
     }
 
     /// Removes the [`ItemStack`] from the world. This essentially just removes the [`ItemStack`]'s
@@ -350,11 +349,7 @@ impl ItemStack {
     #[inline]
     /// Gets the max stack size
     pub fn max_stack_size(&self) -> u16 {
-        if self.data_entity().is_some() {
-            1
-        } else {
-            self.max_stack_size
-        }
+        if self.data_entity().is_some() { 1 } else { self.max_stack_size }
     }
 
     #[inline]
