@@ -31,7 +31,7 @@ pub fn deserialize_uncompressed<T: DeserializeOwned>(bytes: &[u8]) -> Result<T, 
 /// Deserializes the data - will decompress if needed
 pub fn deserialize<T: DeserializeOwned>(raw: &[u8]) -> Result<T, Box<bincode::error::DecodeError>> {
     let Ok(decompressed) = lz4_flex::decompress_size_prepended(raw) else {
-        return Err(Box::new(bincode::error::DecodeError::Other("Unable to decompress".into())));
+        return Err(Box::new(bincode::error::DecodeError::Other("Unable to decompress")));
     };
 
     let res = deserialize_uncompressed(&decompressed);

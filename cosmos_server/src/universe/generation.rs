@@ -20,7 +20,7 @@ use cosmos_core::{
 use serde::{Deserialize, Serialize};
 use std::{collections::HashSet, fs, time::Duration};
 
-use crate::persistence::{loading::LoadingBlueprintSystemSet, saving::BlueprintingSystemSet};
+use crate::persistence::loading::LoadingBlueprintSystemSet;
 
 #[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
 /// The ordering that a system should be generated in a galaxy
