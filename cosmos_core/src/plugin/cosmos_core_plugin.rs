@@ -124,7 +124,18 @@ impl<T: States + Clone + Copy + FreelyMutableState> Plugin for CosmosCorePlugin<
 
 impl<T: States + Clone + Copy + FreelyMutableState> PluginGroup for CosmosCorePluginGroup<T> {
     fn build(self) -> PluginGroupBuilder {
-        PluginGroupBuilder::start::<Self>()
+        let mut pg = PluginGroupBuilder::start::<Self>();
+
+        #[cfg(feature = "client")]
+        {
+            pg = pg.add(WorldInspectorPlugin::default().run_if(input_toggle_active(false, KeyCode::F2)));
+        }
+        #[cfg(feature = "server")]
+        {
+            pg = pg.add(WorldInspectorPlugin::default());
+        }
+
+        pg
             // .add(LogPlugin::default())
             // .add(TaskPoolPlugin::default())
             // .add(TypeRegistrationPlugin::default())
@@ -141,7 +152,6 @@ impl<T: States + Clone + Copy + FreelyMutableState> PluginGroup for CosmosCorePl
             // .add(RenderPlugin::default())
             // .add(ImagePlugin::default_nearest())
             .add(AppComputePlugin)
-            .add(WorldInspectorPlugin::default().run_if(input_toggle_active(true, KeyCode::F2)))
             .add(CosmosCorePlugin::new(
                 self.pre_loading_state,
                 self.loading_state,
