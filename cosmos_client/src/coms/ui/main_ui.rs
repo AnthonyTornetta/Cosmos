@@ -2,23 +2,23 @@ use crate::{
     asset::asset_loader::load_assets,
     input::inputs::{CosmosInputs, InputChecker, InputHandler},
     ui::{
+        CloseMenuEvent, CloseMethod, OpenMenu,
         components::{
-            button::{register_button, ButtonEvent, CosmosButton},
+            button::{ButtonEvent, CosmosButton, register_button},
             scollable_container::ScrollBox,
             show_cursor::ShowCursor,
             text_input::{InputType, InputValue, TextInput},
         },
         font::DefaultFont,
-        CloseMenuEvent, CloseMethod, OpenMenu,
     },
 };
 use bevy::{a11y::Focus, color::palettes::css, prelude::*};
-use cosmos_core::{coms::events::RequestCloseComsEvent, structure::ship::pilot::Pilot};
-use cosmos_core::{coms::events::SendComsMessageType, state::GameState};
 use cosmos_core::{coms::ComsChannelType, netty::system_sets::NetworkingSystemsSet};
 use cosmos_core::{coms::ComsMessage, netty::client::LocalPlayer};
+use cosmos_core::{coms::events::RequestCloseComsEvent, structure::ship::pilot::Pilot};
+use cosmos_core::{coms::events::SendComsMessageType, state::GameState};
 use cosmos_core::{
-    coms::{events::SendComsMessage, ComsChannel},
+    coms::{ComsChannel, events::SendComsMessage},
     netty::sync::events::client_event::NettyEventWriter,
 };
 
@@ -927,11 +927,10 @@ fn get_all_coms<'a>(
     };
     let lp_piloting_ship = pilot.entity;
 
-    let all_coms = q_coms
+    q_coms
         .iter()
         .filter(|(_, parent, _)| parent.get() == lp_piloting_ship)
         .collect::<Vec<_>>();
-    all_coms
 }
 
 pub(super) fn register(app: &mut App) {
