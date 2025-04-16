@@ -4,9 +4,10 @@
 //! of space + bits sent over the network.
 
 use bevy::log::error;
+use bincode::config::{Fixint, LittleEndian, NoLimit};
 use serde::{Serialize, de::DeserializeOwned};
 
-const CONFIG: bincode::config::Configuration = bincode::config::standard();
+const CONFIG: bincode::config::Configuration<LittleEndian, Fixint, NoLimit> = bincode::config::legacy();
 
 /// Serializes the data to be sent - compresses it if needed
 pub fn serialize<T: Serialize>(x: &T) -> Vec<u8> {
@@ -15,10 +16,12 @@ pub fn serialize<T: Serialize>(x: &T) -> Vec<u8> {
     lz4_flex::compress_prepend_size(data.as_slice())
 }
 
+/// Serializes data without apply any form of compression
 pub fn serialize_uncompressed<T: Serialize>(x: &T) -> Vec<u8> {
     bincode::serde::encode_to_vec(x, CONFIG).expect("Error serializing data")
 }
 
+/// Deserializes data assuming it has not been compressed
 pub fn deserialize_uncompressed<T: DeserializeOwned>(bytes: &[u8]) -> Result<T, Box<bincode::error::DecodeError>> {
     let (res, _) = bincode::serde::decode_from_slice(bytes, CONFIG)?;
 

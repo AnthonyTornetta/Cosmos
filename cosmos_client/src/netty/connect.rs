@@ -13,7 +13,7 @@ use bevy_renet::{
     renet::RenetClient,
 };
 use cosmos_core::{
-    netty::{PROTOCOL_ID, connection_config, sync::mapping::NetworkMapping},
+    netty::{PROTOCOL_ID, connection_config, cosmos_encoder, sync::mapping::NetworkMapping},
     state::GameState,
 };
 use renet::DisconnectReason;
@@ -43,8 +43,8 @@ fn new_netcode_transport(player_name: &str, mut host: &str, port: u16) -> Netcod
 
     let mut token = [0; 256];
 
-    // Bincode because this is stored un a u8, with a fixed length of 256
-    let serialized_name = bincode::encode_to_vec(&player_name, bincode::config::standard()).expect("Unable to serialize name");
+    // This is stored un a u8[256]
+    let serialized_name = cosmos_encoder::serialize_uncompressed(&player_name);
     if serialized_name.len() > 256 {
         panic!("name too long. TODO: Handle this gracefully");
     }
