@@ -930,7 +930,7 @@ fn get_all_coms<'a>(
     q_coms
         .iter()
         .filter(|(_, parent, _)| parent.get() == lp_piloting_ship)
-        .collect::<Vec<_>>();
+        .collect::<Vec<_>>()
 }
 
 pub(super) fn register(app: &mut App) {
