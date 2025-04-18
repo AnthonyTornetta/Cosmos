@@ -30,7 +30,7 @@ fn load_all_blueprints(mut commands: Commands, mut ran: Local<bool>) {
             info!("doing {bp:?}");
 
             let mut blueprint_name = bp.file_name().to_str().unwrap().to_owned();
-            blueprint_name = (&blueprint_name[0..(blueprint_name.len() - ".bp".len())]).to_owned();
+            blueprint_name = blueprint_name[0..(blueprint_name.len() - ".bp".len())].to_owned();
 
             commands.spawn((
                 NeedsBlueprintLoaded {
