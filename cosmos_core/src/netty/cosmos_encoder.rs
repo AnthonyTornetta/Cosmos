@@ -4,10 +4,11 @@
 //! of space + bits sent over the network.
 
 use bevy::log::error;
-use bincode::config::{Fixint, LittleEndian, NoLimit};
+// use bincode::config::{Fixint, LittleEndian, NoLimit};
 use serde::{Serialize, de::DeserializeOwned};
 
-const CONFIG: bincode::config::Configuration<LittleEndian, Fixint, NoLimit> = bincode::config::legacy();
+// const LEGACY_CONFIG: bincode::config::Configuration<LittleEndian, Fixint, NoLimit> = bincode::config::legacy();
+const CONFIG: bincode::config::Configuration = bincode::config::standard();
 
 /// Serializes the data to be sent - compresses it if needed
 pub fn serialize<T: Serialize>(x: &T) -> Vec<u8> {
