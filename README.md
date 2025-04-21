@@ -5,6 +5,10 @@ A multiplayer block-based space exploration game, written in rust using the [Bev
 If you're interested in playing the game, helping out, pitching ideas, or just hanging out, join our discord server!
 [![Join Cosmos's Discord server here!](https://dcbadge.vercel.app/api/server/VeuqvnxsZb)](https://discord.gg/VeuqvnxsZb)
 
+## Player Guide
+
+Check the ![guide](./guide.md) to see how to play!
+
 ## Screenshots
 
 Cosmos is a game where you can create your dream spaceship that you can pilot through space.
@@ -61,26 +65,32 @@ If you want to view the ordering of the systems, run (on linux) `cargo run --fea
 
 See [the issues page](https://github.com/AnthonyTornetta/Cosmos/issues) for the list of current features/bugs in development.
 
+## Release 0.0.9a
+
+- [ ] More pirate ships
+- [ ] More station types
+- [ ] Performance fixes
+- [ ] Rework systems to use FixedUpdate
+  - [ ] Physics
+- [ ] Reduce amount of packets server sends per second
+- [ ] Respawn anchor
+
 ## Release 0.0.8a (In Progress)
 
+- [x] Player Guide
 - [ ] Screenshots
-- [ ] More pirate ships
 - [x] More asteroid types
-- [ ] More station types
 - [x] Balance and improve weapons
 - [x] Fuel for reactor
 - [x] Ores
   - [x] Customizable block drops
-- [ ] Performance fixes
-- [ ] Fix server instability
-- [ ] Reduce amount of packets server sends per second
 - [x] Ship focus camera
 - [x] Rebalance shop prices
 - [x] Add ability for player to die
-  - [ ] Respawn anchor
 - [x] Playtest and implement changes
 - [x] Flying asteroids
 - [x] Basic quest NPCs
+  - [x] Coms System
 
 ## Release 0.0.7a
 

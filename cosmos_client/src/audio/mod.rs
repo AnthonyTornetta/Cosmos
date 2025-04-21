@@ -24,6 +24,7 @@ use bevy::{
     utils::hashbrown::HashMap,
 };
 use bevy_kira_audio::{AudioSystemSet, prelude::*};
+use bevy_rapier3d::plugin::RapierTransformPropagateSet;
 use volume::MasterVolume;
 
 pub mod music;
@@ -293,6 +294,7 @@ pub(super) fn register(app: &mut App) {
                 cleanup_despawning_audio_sources,
                 run_spacial_audio,
             )
+                .after(RapierTransformPropagateSet)
                 .before(AudioSystemSet::InstanceCleanup)
                 .chain(),
         )
