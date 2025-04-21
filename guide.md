@@ -11,7 +11,7 @@ If you have any questions, please ask in the [Discord server](https://discord.gg
 There is no single-player dedicated mode yet. You will need to launch the server, then use the client connect
 to `localhost`.
 
-#### To start the server:
+### Start the server
 
 ```sh
 cosmos/cosmos_server$ cargo run --release
@@ -19,11 +19,11 @@ cosmos/cosmos_server$ cargo run --release
 
 To run a creative server, add the `--creative` flag. Additional flags can be found with `--help`.
 
-#### To start the client:
+### Start the client
 
 ```sh
 cosmos/cosmos_client$ cargo run --release
 ```
 
 
-[[./guides/gameplay.md|Check out the basic gameplay guide to get started.]]
+[Check out the basic gameplay guide to get started.](./guides/gameplay.md)
