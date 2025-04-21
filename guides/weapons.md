@@ -2,7 +2,7 @@
 
 ## Lasers
 
-Laser cannons are excellent at taking out shields, with their rapid fire rate and fast travel speed. Lasers do more damage when put into a line of cannons.  Lasers can be colored by putting colored glass in front of where they are fired.
+Laser cannons are excellent at taking out shields, with their rapid fire rate and fast travel speed. Lasers do more damage when put into a line of cannons. Lasers can be colored by putting colored glass in front of where they are fired.
 
 The direction the laser cannon is facing will control the direction the laser will exit when fired.
 
@@ -10,7 +10,7 @@ Laser cannons do consume large amounts of energy when fired, so be sure to have 
 
 ## Missiles
 
-Missiles are excellent at doing large amounts of area-of-effect damage. 
+Missiles are excellent at doing large amounts of area-of-effect damage.
 
 Missile launchers will focus their target and missiles fired will automatically move towards the target if given time to focus. This allows them to be far more effective at hitting fast-moving targets than laser cannons.
 
