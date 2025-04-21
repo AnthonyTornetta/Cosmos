@@ -10,6 +10,8 @@ Laser cannons do consume large amounts of energy when fired, so be sure to have 
 
 ## Missiles
 
-Missiles are excellent at doing large amounts of area-of-effect damage. In addition, missile launchers will focus their target and automatically move towards the target if given time to focus. This allows them to be far more effective at hitting small targets than laser cannons.
+Missiles are excellent at doing large amounts of area-of-effect damage. 
 
-Missiles, however, do very little damage to shields. In addition, they require the Missile item as ammunition to fire to be present in one of the ship's storage units.
+Missile launchers will focus their target and missiles fired will automatically move towards the target if given time to focus. This allows them to be far more effective at hitting fast-moving targets than laser cannons.
+
+Missiles, however, do very little damage to shields and require the Missile item as ammunition to fire. The missile item must be present in one of the ship's storage units to be used.

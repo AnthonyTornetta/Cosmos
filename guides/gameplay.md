@@ -33,23 +33,23 @@ To find a full list of controls, please view [`cosmos_client/src/input/inputs.rs
 ## Ship Building
 Once you place a ship core (by pressing `X` with a ship core block in your inventory), you can place any blocks you want on it. 
 
-Once you place, blocks on a ship, that ship core cannot be destroyed (via mining) until every other block is removed from the ship. If the ship core is destroyed (for example in combat), the ship will become unusable and unpilotable and start decaying, eventually losing all of its blocks.
+A ship core is the heart of your ship, and can only be mined when it is the last block on a ship.  If the ship core is destroyed (for example in combat), the ship will become unusable and unpilotable and start decaying, eventually losing all of its blocks.
 
-For some useful building tips, see [this](building.md).
+For some useful building tips, see [Building](building.md).
 
 You will start with some useful blocks to build your first ship:
 ### Passive Energy Generator
 This generates a small amount of energy that can be used by other blocks on your ship. 
 
-Read more [here](energy.md#Passive%20Energy%20Generator).
+Read more about power [here](energy.md#Passive%20Energy%20Generator).
 ### Thruster
-Placing thrusters on your ship will allow it to move and rotate much faster.
+Placing thrusters on your ship will allow it to move and rotate much faster at the cost of more energy consumption.
 ### Laser Cannon
 Laser cannons will fire a laser in the direction they are facing when activated. These do more damage when built in a long line with each other.
 
 Lasers can be difficult to aim at fast-moving targets in space, but are excellent at knocking out shields. Read more about lasers [here](./weapons.md#Lasers).
 
-As you continue to gather resources, consider getting [missiles](./weapons.md#Missiles), which are easier to aim.
+As you continue to gather resources, consider creating [missile launchers](./weapons.md#Missiles), which are easier to aim.
 
 ### Plasma Drill
 These versatile drills can be used to extract blocks from asteroids and melting down structures (stations and ships with destroyed cores). Like laser cannons, these will mine faster when placed in a line with each other. If a storage block is placed on the ship, the drills will automatically insert mined blocks into those containers. If there is no space to insert items, and the pilot's inventory is full, the items will be voided.
