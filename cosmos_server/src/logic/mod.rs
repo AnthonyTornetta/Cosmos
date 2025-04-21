@@ -1,6 +1,6 @@
 //! The game's logic system: for wires, logic gates, etc.
 
-use crate::persistence::make_persistent::make_persistent;
+use crate::persistence::make_persistent::{DefaultPersistentComponent, make_persistent};
 use bevy::{
     prelude::*,
     time::common_conditions::on_timer,
@@ -528,8 +528,13 @@ fn register_logic_groups(mut logic_wire_colors: ResMut<Registry<LogicWireColor>>
     }
 }
 
+impl DefaultPersistentComponent for BlockLogicData {}
+
 pub(super) fn register(app: &mut App) {
+    specific_blocks::register(app);
+
     make_persistent::<LogicDriver>(app);
+    make_persistent::<BlockLogicData>(app);
 
     /// All logic signal production and consumption happens on ticks that occur with this many milliseconds between them.
     pub const LOGIC_TICKS_PER_SECOND: u64 = 20;

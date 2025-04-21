@@ -23,12 +23,15 @@ use crate::{
         data::BlockData,
     },
     events::block_events::{BlockChangedEvent, BlockDataChangedEvent, BlockDataSystemParams},
-    netty::{sync::sync_component, system_sets::NetworkingSystemsSet},
+    netty::{
+        sync::{IdentifiableComponent, SyncableComponent, sync_component},
+        system_sets::NetworkingSystemsSet,
+    },
     registry::{Registry, create_registry, identifiable::Identifiable},
     structure::{Structure, coordinates::BlockCoordinate, loading::StructureLoadingSet, structure_block::StructureBlock},
 };
 
-#[derive(Component, Clone, Copy, Reflect, PartialEq, Eq, Debug, Default)]
+#[derive(Component, Clone, Copy, Reflect, PartialEq, Eq, Debug, Default, Serialize, Deserialize)]
 /// The logic signal this block is holding.
 ///
 /// NOTE: Each block might interact with this data slightly differently.
@@ -43,6 +46,20 @@ impl BlockLogicData {
     }
 }
 
+impl IdentifiableComponent for BlockLogicData {
+    fn get_component_unlocalized_name() -> &'static str {
+        "cosmos:block_logic_data"
+    }
+}
+
+impl SyncableComponent for BlockLogicData {
+    fn get_sync_type() -> crate::netty::sync::SyncType {
+        crate::netty::sync::SyncType::ServerAuthoritative
+    }
+}
+
 pub(super) fn register(app: &mut App) {
+    sync_component::<BlockLogicData>(app);
+
     app.register_type::<BlockLogicData>();
 }
