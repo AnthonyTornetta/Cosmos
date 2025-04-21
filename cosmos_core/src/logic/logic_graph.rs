@@ -5,6 +5,7 @@ use bevy::{
     reflect::Reflect,
     utils::{HashMap, HashSet},
 };
+use serde::{Deserialize, Serialize};
 
 use crate::{
     block::{Block, block_direction::BlockDirection},
@@ -15,7 +16,7 @@ use crate::{
 
 use super::{LogicBlock, LogicConnection, Port, PortType, QueueLogicInputEvent, QueueLogicOutputEvent, WireType};
 
-#[derive(Debug, Default, Reflect, PartialEq, Eq, Clone)]
+#[derive(Debug, Default, Reflect, PartialEq, Eq, Clone, Serialize, Deserialize)]
 /// A single component of a [`LogicGraph`], connected by wires.
 /// If you can reach [`Port`] B from [`Port`] or Wire A, A and B should be in the same LogicGroup.
 /// Note: Coordinates are not enough to search through a [`LogicGroup`]. [`BlockFace`] directions matter as well.
@@ -89,7 +90,7 @@ impl LogicGroup {
     }
 }
 
-#[derive(Debug, Default, Reflect)]
+#[derive(Debug, Default, Reflect, Serialize, Deserialize, Clone, PartialEq)]
 /// Stores all Boolean logic relationships for a single structure.
 /// An entity's [`LogicGraph`] should never be accessed directly, except by the [`super::logic_driver::LogicDriver`].
 pub(super) struct LogicGraph {
