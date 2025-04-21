@@ -6,7 +6,6 @@
 
 use crate::block::block_builder::BlockBuilder;
 use crate::loader::{AddLoadingEvent, DoneLoadingEvent, LoadingManager};
-use crate::logic::LogicWireColor;
 use crate::registry::{self, Registry};
 use bevy::color::Srgba;
 use bevy::prelude::{App, EventWriter, OnEnter, ResMut, States};
@@ -66,7 +65,6 @@ pub const COLOR_VALUES: [Srgba; 17] = [
 fn add_cosmos_blocks(
     mut blocks: ResMut<Registry<Block>>,
     mut loading: ResMut<LoadingManager>,
-    mut logic_wire_colors: ResMut<Registry<LogicWireColor>>,
     mut end_writer: EventWriter<DoneLoadingEvent>,
     mut start_writer: EventWriter<AddLoadingEvent>,
 ) {
@@ -514,7 +512,6 @@ fn add_cosmos_blocks(
                 .create(),
         );
         logic_bus_builder = logic_bus_builder.connect_to_group(colored_wire_name.as_ref());
-        logic_wire_colors.register(LogicWireColor::new(colored_wire_name));
     }
 
     blocks.register(logic_bus_builder.create());

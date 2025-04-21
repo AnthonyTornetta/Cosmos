@@ -7,14 +7,15 @@ use bevy::{
 };
 use serde::{Deserialize, Serialize};
 
-use crate::{
+use cosmos_core::{
     block::{Block, block_direction::BlockDirection, block_face::ALL_BLOCK_FACES, block_rotation::BlockRotation},
     events::block_events::BlockChangedEvent,
-    logic::LogicConnection,
-    netty::sync::{IdentifiableComponent, SyncableComponent},
+    netty::sync::IdentifiableComponent,
     registry::Registry,
     structure::{Structure, coordinates::BlockCoordinate, structure_block::StructureBlock},
 };
+
+use crate::{logic::LogicConnection, persistence::make_persistent::DefaultPersistentComponent};
 
 use super::{LogicBlock, LogicWireColor, Port, PortType, QueueLogicInputEvent, QueueLogicOutputEvent, WireType, logic_graph::LogicGraph};
 
@@ -31,6 +32,8 @@ impl IdentifiableComponent for LogicDriver {
         "cosmos:logic_driver"
     }
 }
+
+impl DefaultPersistentComponent for LogicDriver {}
 
 impl LogicDriver {
     /// Returns an array of the Boolean value of the given block's input port groups.

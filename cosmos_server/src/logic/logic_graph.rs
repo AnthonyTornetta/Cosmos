@@ -7,7 +7,7 @@ use bevy::{
 };
 use serde::{Deserialize, Serialize};
 
-use crate::{
+use cosmos_core::{
     block::{Block, block_direction::BlockDirection},
     events::block_events::BlockChangedEvent,
     registry::{Registry, identifiable::Identifiable},

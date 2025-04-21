@@ -2,12 +2,12 @@
 
 use std::time::Duration;
 
+use crate::logic::{LogicInputEvent, LogicSystemSet, logic_driver::LogicDriver};
 use bevy::prelude::*;
 use bevy_rapier3d::{plugin::RapierContextEntityLink, prelude::Velocity};
 use bevy_renet::renet::RenetServer;
 use cosmos_core::{
     block::Block,
-    logic::{LogicInputEvent, LogicSystemSet, logic_driver::LogicDriver},
     netty::{
         NettyChannelServer, cosmos_encoder, server_laser_cannon_system_messages::ServerStructureSystemMessages,
         system_sets::NetworkingSystemsSet,

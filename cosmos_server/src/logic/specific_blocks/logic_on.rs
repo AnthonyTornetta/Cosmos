@@ -5,13 +5,14 @@ use bevy::{
     prelude::{EventReader, EventWriter, IntoSystemConfigs, OnEnter, Query, Res, ResMut, States},
 };
 
-use crate::{
+use cosmos_core::{
     block::Block,
-    logic::{
-        LogicBlock, LogicConnection, LogicOutputEvent, LogicSystemSet, Port, PortType, QueueLogicInputEvent, logic_driver::LogicDriver,
-    },
     registry::{Registry, identifiable::Identifiable},
     structure::Structure,
+};
+
+use crate::logic::{
+    LogicBlock, LogicConnection, LogicOutputEvent, LogicSystemSet, Port, PortType, QueueLogicInputEvent, logic_driver::LogicDriver,
 };
 
 fn register_logic_connections(blocks: Res<Registry<Block>>, mut registry: ResMut<Registry<LogicBlock>>) {

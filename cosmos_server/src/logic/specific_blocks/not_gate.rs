@@ -1,5 +1,5 @@
-//! Logic behavior for "And Gate", a block with left and right inputs and a front output.
-//! Outputs 0 if either input is zero or missing. Outputs 1 if both inputs are present and non-zero.
+//! Logic behavior for "Or Gate", a block with left and right inputs and a front output.
+//! Outputs 0 if both inputs are zero or missing. Outputs 1 if either input is present and non-zero.
 
 use std::{cell::RefCell, rc::Rc};
 
@@ -8,34 +8,35 @@ use bevy::{
     prelude::{EventReader, EventWriter, IntoSystemConfigs, OnEnter, Query, Res, ResMut, States},
 };
 
-use crate::{
-    block::{Block, BlockFace},
+use cosmos_core::{
+    block::{Block, block_face::BlockFace},
     events::block_events::BlockDataSystemParams,
-    logic::{
-        BlockLogicData, LogicBlock, LogicConnection, LogicInputEvent, LogicOutputEvent, LogicSystemSet, PortType, QueueLogicInputEvent,
-        default_logic_block_output, logic_driver::LogicDriver,
-    },
     registry::{Registry, identifiable::Identifiable},
     structure::Structure,
 };
 
+use crate::logic::{
+    BlockLogicData, LogicBlock, LogicConnection, LogicInputEvent, LogicOutputEvent, LogicSystemSet, PortType, QueueLogicInputEvent,
+    default_logic_block_output, logic_driver::LogicDriver,
+};
+
 fn register_logic_connections(blocks: Res<Registry<Block>>, mut registry: ResMut<Registry<LogicBlock>>) {
-    if let Some(and_gate) = blocks.from_id("cosmos:and_gate") {
+    if let Some(not_gate) = blocks.from_id("cosmos:not_gate") {
         registry.register(LogicBlock::new(
-            and_gate,
+            not_gate,
             [
-                Some(LogicConnection::Port(PortType::Input)),
-                Some(LogicConnection::Port(PortType::Input)),
+                None,
+                None,
                 None,
                 None,
                 Some(LogicConnection::Port(PortType::Output)),
-                None,
+                Some(LogicConnection::Port(PortType::Input)),
             ],
         ));
     }
 }
 
-fn and_gate_input_event_listener(
+fn not_gate_input_event_listener(
     mut evr_logic_input: EventReader<LogicInputEvent>,
     blocks: Res<Registry<Block>>,
     mut q_logic_driver: Query<&mut LogicDriver>,
@@ -48,7 +49,7 @@ fn and_gate_input_event_listener(
         let Ok(structure) = q_structure.get(ev.block.structure()) else {
             continue;
         };
-        if structure.block_at(ev.block.coords(), &blocks).unlocalized_name() != "cosmos:and_gate" {
+        if structure.block_at(ev.block.coords(), &blocks).unlocalized_name() != "cosmos:not_gate" {
             continue;
         }
         let Ok(logic_driver) = q_logic_driver.get_mut(ev.block.structure()) else {
@@ -60,9 +61,8 @@ fn and_gate_input_event_listener(
 
         let coords = ev.block.coords();
         let rotation = structure.block_rotation(ev.block.coords());
-        let left = logic_driver.read_input(coords, rotation.direction_of(BlockFace::Left)) != 0;
-        let right = logic_driver.read_input(coords, rotation.direction_of(BlockFace::Right)) != 0;
-        let new_state = BlockLogicData((left && right) as i32);
+        let input = logic_driver.read_input(coords, rotation.direction_of(BlockFace::Back)) != 0;
+        let new_state = BlockLogicData(!input as i32);
 
         if **logic_data != new_state {
             // Don't trigger unneccesary change detection.
@@ -71,7 +71,7 @@ fn and_gate_input_event_listener(
     }
 }
 
-fn and_gate_output_event_listener(
+fn not_gate_output_event_listener(
     evr_logic_output: EventReader<LogicOutputEvent>,
     evw_queue_logic_input: EventWriter<QueueLogicInputEvent>,
     logic_blocks: Res<Registry<LogicBlock>>,
@@ -81,7 +81,7 @@ fn and_gate_output_event_listener(
     q_logic_data: Query<&BlockLogicData>,
 ) {
     default_logic_block_output(
-        "cosmos:and_gate",
+        "cosmos:not_gate",
         evr_logic_output,
         evw_queue_logic_input,
         &logic_blocks,
@@ -96,13 +96,13 @@ pub(super) fn register<T: States>(app: &mut App, post_loading_state: T) {
     app.add_systems(OnEnter(post_loading_state), register_logic_connections)
         .add_systems(
             Update,
-            and_gate_input_event_listener
+            not_gate_input_event_listener
                 .in_set(LogicSystemSet::Consume)
                 .ambiguous_with(LogicSystemSet::Consume),
         )
         .add_systems(
             Update,
-            and_gate_output_event_listener
+            not_gate_output_event_listener
                 .in_set(LogicSystemSet::Produce)
                 .ambiguous_with(LogicSystemSet::Produce),
         );
