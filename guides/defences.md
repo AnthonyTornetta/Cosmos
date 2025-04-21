@@ -4,7 +4,7 @@
 
 Ship hull and glass are lighter than most hard blocks, while also absorbing more damage before breaking.  Make sure to cover any important parts of your ship with multiple layers of this highly-versatile block!
 
-Glass and ship hull come in colored variants, that can be created via the [[crafting#Dye Machine|Dye Machine]].
+Glass and ship hull come in colored variants, that can be created via the [Dye Machine](crafting.md#Dye%20Machine).
 
 ## Shields
 
