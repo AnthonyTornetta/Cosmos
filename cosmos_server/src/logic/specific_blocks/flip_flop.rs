@@ -4,7 +4,6 @@ use std::{cell::RefCell, rc::Rc};
 
 use bevy::{
     app::{App, Update},
-    log::info,
     prelude::{EventReader, EventWriter, IntoSystemConfigs, OnEnter, Query, Res, ResMut},
 };
 
@@ -73,9 +72,6 @@ fn flip_flop_input_event_listener(
         let mut data = structure.block_info_at(ev.block.coords());
         let og_data = data.clone();
 
-        info!("{:08b}", data.0);
-        info!("New state:  {}", new_state.0);
-
         if data.0 & LAST_STATE_BIT == 0 {
             // last state was off
 
@@ -87,17 +83,13 @@ fn flip_flop_input_event_listener(
                 } else {
                     **logic_data = new_state;
                 }
-                info!("Setting on");
             }
         } else {
             // last state was on
             if new_state.0 == 0 {
                 data.0 &= !LAST_STATE_BIT;
-                info!("Setting last off");
             }
         }
-
-        info!("New data: {:08b}", data.0);
 
         if og_data != data {
             structure.set_block_info_at(ev.block.coords(), data, &mut bs_params.borrow_mut().ev_writer);
