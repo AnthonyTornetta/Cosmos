@@ -336,10 +336,7 @@ impl BlockTextureIndex {
 
     /// Returns the atlas information for a simplified LOD texture
     pub fn atlas_index_for_lod(&self, neighbors: BlockNeighbors) -> Option<TextureIndex> {
-        match &self.lod_texture {
-            Some(texture_type) => Some(get_texture_index_from_type_and_data(texture_type, neighbors, BlockInfo::default())),
-            None => None,
-        }
+        self.lod_texture.as_ref().map(|texture_type| get_texture_index_from_type_and_data(texture_type, neighbors, BlockInfo::default()))
     }
 }
 
@@ -876,7 +873,7 @@ fn process_loading_texture_type(
                 .map(|texture_name| {
                     get_texture_index_for_name(atlas_registry, server, images, missing_texture_index, texture_name, folder_name)
                 })
-                .map(|x| TextureSelector::Normal(x))
+                .map(TextureSelector::Normal)
                 .collect::<Vec<TextureSelector>>()
                 .try_into()
                 .unwrap();
@@ -921,8 +918,8 @@ fn get_data_driven_texture_selector(
         .try_into()
         .unwrap();
 
-    let selector = TextureSelector::DataDriven(Box::new(DataDrivenTextureIndex { default, bit_textures }));
-    selector
+    
+    TextureSelector::DataDriven(Box::new(DataDrivenTextureIndex { default, bit_textures }))
 }
 
 fn get_texture_index_for_name(

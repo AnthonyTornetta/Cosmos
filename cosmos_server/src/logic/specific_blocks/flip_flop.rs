@@ -70,7 +70,7 @@ fn flip_flop_input_event_listener(
         let new_state = BlockLogicData(input);
 
         let mut data = structure.block_info_at(ev.block.coords());
-        let og_data = data.clone();
+        let og_data = data;
 
         if data.0 & LAST_STATE_BIT == 0 {
             // last state was off

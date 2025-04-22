@@ -416,9 +416,7 @@ fn queue_logic_producers(
 
                 logic_blocks.contains(s.block_at(ev.block.coords(), &blocks).unlocalized_name())
             })
-            .map(|x| QueueLogicOutputEvent {
-                0: LogicOutputEvent { block: x.block },
-            }),
+            .map(|x| QueueLogicOutputEvent(LogicOutputEvent { block: x.block })),
     ) {
         logic_output_event_queue.0.push_back(ev.0);
     }
