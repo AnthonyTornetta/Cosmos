@@ -3,7 +3,7 @@
 use bevy::prelude::App;
 
 mod block_events;
-mod data;
+pub mod data;
 pub mod drops;
 pub mod interactable;
 pub mod multiblock;

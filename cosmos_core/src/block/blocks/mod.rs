@@ -510,6 +510,7 @@ fn add_cosmos_blocks(
     blocks.register(
         BlockBuilder::new("cosmos:flip_flop", 5.0, 20.0, 5.0)
             .add_property(BlockProperty::Full)
+            .add_property(BlockProperty::FaceFront)
             .add_connection_group("cosmos:uses_logic")
             .create(),
     );

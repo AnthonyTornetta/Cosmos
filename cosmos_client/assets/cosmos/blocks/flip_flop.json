@@ -1,0 +1,19 @@
+{
+  "texture": {
+    "All": {
+      "DataDriven": {
+        "bit_textures": [
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          "cosmos:flip_flop_on"
+        ],
+        "default": "cosmos:flip_flop_off"
+      }
+    }
+  }
+}

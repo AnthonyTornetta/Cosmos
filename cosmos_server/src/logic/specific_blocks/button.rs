@@ -3,7 +3,6 @@
 
 use bevy::{
     app::{App, Update},
-    log::info,
     prelude::{Component, Entity, EventReader, EventWriter, IntoSystemConfigs, OnEnter, Query, Res, ResMut, With},
 };
 
