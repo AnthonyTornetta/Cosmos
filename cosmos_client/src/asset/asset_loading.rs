@@ -897,7 +897,7 @@ fn get_data_driven_texture_selector(
     images: &Assets<Image>,
     missing_texture_index: TextureIndex,
     folder_name: &str,
-    data_driven: &Box<LoadingDataDrivenTextureType>,
+    data_driven: &LoadingDataDrivenTextureType,
 ) -> TextureSelector {
     let default = get_texture_index_for_name(
         atlas_registry,
