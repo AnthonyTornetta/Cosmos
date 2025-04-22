@@ -336,7 +336,9 @@ impl BlockTextureIndex {
 
     /// Returns the atlas information for a simplified LOD texture
     pub fn atlas_index_for_lod(&self, neighbors: BlockNeighbors) -> Option<TextureIndex> {
-        self.lod_texture.as_ref().map(|texture_type| get_texture_index_from_type_and_data(texture_type, neighbors, BlockInfo::default()))
+        self.lod_texture
+            .as_ref()
+            .map(|texture_type| get_texture_index_from_type_and_data(texture_type, neighbors, BlockInfo::default()))
     }
 }
 
@@ -358,7 +360,7 @@ fn handle_select_texture(selector: &TextureSelector, data: BlockInfo) -> Texture
     }
 }
 
-fn handle_data_driven(data: BlockInfo, dd: &Box<DataDrivenTextureIndex>) -> TextureIndex {
+fn handle_data_driven(data: BlockInfo, dd: &DataDrivenTextureIndex) -> TextureIndex {
     for bit in (0..8).rev() {
         if data.0 & (1 << bit) != 0 {
             if let Some(idx) = dd.bit_textures[bit] {
@@ -597,7 +599,7 @@ pub enum LoadedTexture {
     /// Each side uses the same texture
     All(LoadedTextureType),
     /// Each side uses a different texture
-    Sides(Box<LoadedTextureSides>),
+    Sides(LoadedTextureSides),
 }
 
 /// Indicates if this texture is connected or is single
@@ -610,7 +612,7 @@ pub enum LoadedTextureType {
     /// Index order is based on the bitwise value of [`BlockNeighbors`].
     /// Check the docs for how you should set these textures.
     /// TODO: make docs. For now just check out how glass works.
-    Connected([TextureSelector; 16]),
+    Connected(Box<[TextureSelector; 16]>),
 }
 
 /// Indicates how the texture should be selected
@@ -739,14 +741,14 @@ pub fn load_block_rendering_information(
                 bottom,
                 front,
                 back,
-            } => LoadedTexture::Sides(Box::new(LoadedTextureSides {
+            } => LoadedTexture::Sides(LoadedTextureSides {
                 right: process_loading_texture_type(right, &atlas_registry, &server, &images, missing_texture_index, "blocks"),
                 left: process_loading_texture_type(left, &atlas_registry, &server, &images, missing_texture_index, "blocks"),
                 top: process_loading_texture_type(top, &atlas_registry, &server, &images, missing_texture_index, "blocks"),
                 bottom: process_loading_texture_type(bottom, &atlas_registry, &server, &images, missing_texture_index, "blocks"),
                 front: process_loading_texture_type(front, &atlas_registry, &server, &images, missing_texture_index, "blocks"),
                 back: process_loading_texture_type(back, &atlas_registry, &server, &images, missing_texture_index, "blocks"),
-            })),
+            }),
         };
 
         let lod_texture = block_info
@@ -878,7 +880,7 @@ fn process_loading_texture_type(
                 .try_into()
                 .unwrap();
 
-            LoadedTextureType::Connected(texture_indices)
+            LoadedTextureType::Connected(Box::new(texture_indices))
         }
         LoadingTextureType::DataDriven(data_driven) => {
             let selector =
@@ -918,7 +920,6 @@ fn get_data_driven_texture_selector(
         .try_into()
         .unwrap();
 
-    
     TextureSelector::DataDriven(Box::new(DataDrivenTextureIndex { default, bit_textures }))
 }
 
