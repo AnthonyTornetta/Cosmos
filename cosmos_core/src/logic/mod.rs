@@ -1,11 +1,6 @@
 //! The game's logic system: for wires, logic gates, etc.
 
-
-use bevy::{
-    app::App,
-    prelude::Component,
-    reflect::Reflect,
-};
+use bevy::{app::App, prelude::Component, reflect::Reflect};
 use serde::{Deserialize, Serialize};
 
 use crate::netty::sync::{IdentifiableComponent, SyncableComponent, sync_component};
