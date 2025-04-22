@@ -76,17 +76,24 @@ impl LogicGroup {
         evw_queue_logic_input: &mut EventWriter<QueueLogicInputEvent>,
         entity: Entity,
     ) {
-        let &old_signal = self.producers.get(&port).expect("Output port to be updated should exist.");
+        // let &old_signal = self.producers.get(&port).expect("Output port to be updated should exist.");
         self.producers.insert(port, signal);
 
-        if self.signal() != old_signal {
-            // Notify the input ports in this port's group if the group's total signal has changed.
-            evw_queue_logic_input.send_batch(
-                self.consumers
-                    .iter()
-                    .map(|input_port| QueueLogicInputEvent::new(StructureBlock::new(input_port.coords, entity))),
-            );
-        }
+        // TODO: If you see a morbillion logic updates coming in, this is an optimization that can
+        // be dealt with later.
+        //
+        // This change detection spam check is commented out because when logic graphs are loaded,
+        // all logic blocks are ticked to restart all block update events. You will need to have
+        // some other way of starting the update chain before uncommenting this.
+
+        // if self.signal() != old_signal {
+        // Notify the input ports in this port's group if the group's total signal has changed.
+        evw_queue_logic_input.send_batch(
+            self.consumers
+                .iter()
+                .map(|input_port| QueueLogicInputEvent::new(StructureBlock::new(input_port.coords, entity))),
+        );
+        // }
     }
 }
 

@@ -1,6 +1,9 @@
 //! The game's logic system: for wires, logic gates, etc.
 
-use crate::persistence::make_persistent::{DefaultPersistentComponent, make_persistent};
+use crate::persistence::{
+    loading::{LOADING_SCHEDULE, LoadingSystemSet},
+    make_persistent::{DefaultPersistentComponent, make_persistent},
+};
 use bevy::{
     prelude::*,
     time::common_conditions::on_timer,
@@ -530,6 +533,18 @@ fn register_logic_groups(mut logic_wire_colors: ResMut<Registry<LogicWireColor>>
 
 impl DefaultPersistentComponent for BlockLogicData {}
 
+fn perform_initial_block_logic_tick(
+    mut evw_block_data_changed: EventWriter<BlockDataChangedEvent>,
+    q_logic_data: Query<(Entity, &BlockData), Added<BlockLogicData>>,
+) {
+    for (ent, data) in q_logic_data.iter() {
+        evw_block_data_changed.send(BlockDataChangedEvent {
+            block: data.identifier.block,
+            block_data_entity: Some(ent),
+        });
+    }
+}
+
 pub(super) fn register(app: &mut App) {
     specific_blocks::register(app);
 
@@ -537,7 +552,7 @@ pub(super) fn register(app: &mut App) {
     make_persistent::<BlockLogicData>(app);
 
     /// All logic signal production and consumption happens on ticks that occur with this many milliseconds between them.
-    pub const LOGIC_TICKS_PER_SECOND: u64 = 20;
+    pub const LOGIC_TICKS_PER_SECOND: u64 = 10;
 
     create_registry::<LogicBlock>(app, "cosmos:logic_blocks");
     create_registry::<LogicWireColor>(app, "cosmos:logic_wire_colors");
@@ -590,6 +605,13 @@ pub(super) fn register(app: &mut App) {
 
     // TODO: Move this all to server, then add them to LogicSystemRegistrySet::RegisterLogicBlocks.
     app.allow_ambiguous_resource::<Registry<LogicBlock>>();
+
+    app.add_systems(
+        LOADING_SCHEDULE,
+        perform_initial_block_logic_tick
+            .before(LogicSystemSet::EditLogicGraph)
+            .in_set(LoadingSystemSet::DoneLoading),
+    );
 
     app.configure_sets(
         OnEnter(GameState::PostLoading),
