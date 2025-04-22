@@ -5,24 +5,35 @@ use bevy::{
     reflect::Reflect,
     utils::{HashMap, HashSet},
 };
+use serde::{Deserialize, Serialize};
 
-use crate::{
+use cosmos_core::{
     block::{Block, block_direction::BlockDirection, block_face::ALL_BLOCK_FACES, block_rotation::BlockRotation},
     events::block_events::BlockChangedEvent,
-    logic::LogicConnection,
+    netty::sync::IdentifiableComponent,
     registry::Registry,
     structure::{Structure, coordinates::BlockCoordinate, structure_block::StructureBlock},
 };
 
+use crate::{logic::LogicConnection, persistence::make_persistent::DefaultPersistentComponent};
+
 use super::{LogicBlock, LogicWireColor, Port, PortType, QueueLogicInputEvent, QueueLogicOutputEvent, WireType, logic_graph::LogicGraph};
 
-#[derive(Debug, Default, Reflect, Component)]
+#[derive(Debug, Default, Reflect, Component, Serialize, Deserialize, Clone, PartialEq)]
 /// The public interface for accessing and mutating an [`Entity`]'s [`LogicGraph`].
 ///
 /// Any functionality needed for specific logic blocks (for example, wires and logic gates) should use this struct and never directly access the [`LogicGraph`].
 pub struct LogicDriver {
     logic_graph: LogicGraph,
 }
+
+impl IdentifiableComponent for LogicDriver {
+    fn get_component_unlocalized_name() -> &'static str {
+        "cosmos:logic_driver"
+    }
+}
+
+impl DefaultPersistentComponent for LogicDriver {}
 
 impl LogicDriver {
     /// Returns an array of the Boolean value of the given block's input port groups.

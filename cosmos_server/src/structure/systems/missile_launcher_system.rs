@@ -2,6 +2,7 @@
 
 use std::time::Duration;
 
+use crate::logic::{LogicInputEvent, LogicSystemSet, logic_driver::LogicDriver};
 use bevy::prelude::*;
 use bevy_rapier3d::{
     geometry::{CollisionGroups, Group},
@@ -13,7 +14,6 @@ use cosmos_core::{
     entities::player::Player,
     inventory::Inventory,
     item::Item,
-    logic::{LogicInputEvent, LogicSystemSet, logic_driver::LogicDriver},
     netty::{
         NettyChannelServer, cosmos_encoder, server_laser_cannon_system_messages::ServerStructureSystemMessages,
         sync::events::server_event::NettyEventWriter, system_sets::NetworkingSystemsSet,

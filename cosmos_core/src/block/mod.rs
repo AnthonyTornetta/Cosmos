@@ -261,7 +261,7 @@ pub(super) fn register<T: States + Clone + Copy>(app: &mut App, pre_loading_stat
     block_events::register(app);
     multiblock::register(app);
     block_update::register(app);
-    specific_blocks::register(app, post_loading_state);
+    specific_blocks::register(app);
     data::register(app);
 
     app.register_type::<BlockFace>();

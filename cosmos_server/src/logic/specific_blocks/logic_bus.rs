@@ -5,11 +5,9 @@ use bevy::{
     prelude::{OnEnter, Res, ResMut, States},
 };
 
-use crate::{
-    block::Block,
-    logic::{LogicBlock, LogicConnection, WireType},
-    registry::Registry,
-};
+use cosmos_core::{block::Block, registry::Registry};
+
+use crate::logic::{LogicBlock, LogicConnection, WireType};
 
 fn register_logic_connections(blocks: Res<Registry<Block>>, mut registry: ResMut<Registry<LogicBlock>>) {
     if let Some(logic_bus) = blocks.from_id("cosmos:logic_bus") {

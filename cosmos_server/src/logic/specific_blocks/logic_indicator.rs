@@ -7,13 +7,15 @@ use bevy::{
     prelude::{EventReader, IntoSystemConfigs, OnEnter, Query, Res, ResMut, States},
 };
 
-use crate::{
+use cosmos_core::{
     block::Block,
     events::block_events::BlockDataSystemParams,
-    logic::{BlockLogicData, LogicBlock, LogicConnection, LogicInputEvent, LogicSystemSet, PortType, logic_driver::LogicDriver},
+    logic::BlockLogicData,
     registry::{Registry, identifiable::Identifiable},
     structure::Structure,
 };
+
+use crate::logic::{LogicBlock, LogicConnection, LogicInputEvent, LogicSystemSet, PortType, logic_driver::LogicDriver};
 
 fn register_logic_ports(blocks: Res<Registry<Block>>, mut registry: ResMut<Registry<LogicBlock>>) {
     if let Some(logic_indicator) = blocks.from_id("cosmos:logic_indicator") {

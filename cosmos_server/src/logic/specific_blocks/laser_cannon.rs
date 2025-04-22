@@ -3,11 +3,9 @@ use bevy::{
     prelude::{OnEnter, Res, ResMut, States},
 };
 
-use crate::{
-    block::Block,
-    logic::{LogicBlock, LogicConnection, PortType},
-    registry::Registry,
-};
+use cosmos_core::{block::Block, registry::Registry};
+
+use crate::logic::{LogicBlock, LogicConnection, PortType};
 
 fn register_logic_connections_for_laser_cannon(blocks: Res<Registry<Block>>, mut registry: ResMut<Registry<LogicBlock>>) {
     if let Some(block) = blocks.from_id("cosmos:laser_cannon") {

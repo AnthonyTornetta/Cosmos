@@ -5,11 +5,12 @@ use bevy::{
     prelude::{OnEnter, Res, ResMut, States},
 };
 
-use crate::{
+use cosmos_core::{
     block::Block,
-    logic::{LogicBlock, LogicConnection, LogicWireColor, WireType},
     registry::{Registry, identifiable::Identifiable},
 };
+
+use crate::logic::{LogicBlock, LogicConnection, LogicWireColor, WireType};
 
 fn register_logic_connections(
     blocks: Res<Registry<Block>>,
