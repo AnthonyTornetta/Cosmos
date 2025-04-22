@@ -496,18 +496,21 @@ fn add_cosmos_blocks(
     blocks.register(
         BlockBuilder::new("cosmos:switch", 5.0, 20.0, 5.0)
             .add_property(BlockProperty::Full)
+            .add_connection_group("cosmos:uses_logic")
             .create(),
     );
 
     blocks.register(
         BlockBuilder::new("cosmos:button", 5.0, 20.0, 5.0)
             .add_property(BlockProperty::Full)
+            .add_connection_group("cosmos:uses_logic")
             .create(),
     );
 
     blocks.register(
         BlockBuilder::new("cosmos:flip_flop", 5.0, 20.0, 5.0)
             .add_property(BlockProperty::Full)
+            .add_connection_group("cosmos:uses_logic")
             .create(),
     );
 

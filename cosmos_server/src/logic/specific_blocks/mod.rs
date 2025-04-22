@@ -10,6 +10,7 @@ mod logic_on;
 mod missile_launcher;
 mod not_gate;
 mod or_gate;
+mod switch;
 mod xor_gate;
 
 pub(super) fn register(app: &mut App) {
@@ -23,4 +24,5 @@ pub(super) fn register(app: &mut App) {
     colored_logic_wires::register(app, GameState::PostLoading);
     laser_cannon::register(app, GameState::PostLoading);
     missile_launcher::register(app, GameState::PostLoading);
+    switch::register(app);
 }

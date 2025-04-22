@@ -3,14 +3,14 @@
     "All": {
       "DataDriven": {
         "bit_textures": [
-          "cosmos:switch_on",
           null,
           null,
           null,
           null,
           null,
           null,
-          null
+          null,
+          "cosmos:switch_on"
         ],
         "default": "cosmos:switch_off"
       }
