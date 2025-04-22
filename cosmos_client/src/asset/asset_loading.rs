@@ -560,12 +560,20 @@ pub enum LoadingTextureType {
     /// Check the docs for how you should set these textures.
     /// TODO: make docs. For now just check out how glass works.
     Connected(Box<[String; 16]>),
+    /// This can be used to change the texture used based on the block's data bits.
+    ///
+    /// The left-most non-zero bit will be used.
     DataDriven(Box<LoadingDataDrivenTextureType>),
 }
 
+/// This can be used to change the texture used based on the block's data bits.
+///
+/// The left-most non-zero bit will be used.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct LoadingDataDrivenTextureType {
+    /// The left-most texture will be used if that bit is enabled
     bit_textures: [Option<String>; 8],
+    /// The default texture to use if none of the bit textures were met
     default: String,
 }
 
@@ -586,8 +594,8 @@ pub struct LoadedTextureSides {
     back: LoadedTextureType,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
 /// Indicates the texture that should be used for this block.
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum LoadedTexture {
     /// Each side uses the same texture
     All(LoadedTextureType),
@@ -595,8 +603,8 @@ pub enum LoadedTexture {
     Sides(Box<LoadedTextureSides>),
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
 /// Indicates if this texture is connected or is single
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum LoadedTextureType {
     /// This texture will not respond to nearby blocks
     Single(TextureSelector),
@@ -608,12 +616,20 @@ pub enum LoadedTextureType {
     Connected([TextureSelector; 16]),
 }
 
+/// Indicates how the texture should be selected
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum TextureSelector {
+    /// This texture should be used all the time.
+    ///
+    /// This is typically the case
     Normal(TextureIndex),
+    /// The chosen texture should be based on the block's data
     DataDriven(Box<DataDrivenTextureIndex>),
 }
 
+/// This can be used to change the texture used based on the block's data bits.
+///
+/// The left-most non-zero bit will be used.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DataDrivenTextureIndex {
     bit_textures: [Option<TextureIndex>; 8],
