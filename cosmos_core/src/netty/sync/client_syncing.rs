@@ -15,6 +15,7 @@ use crate::inventory::itemstack::ItemStackData;
 use crate::netty::client::{LocalPlayer, NeedsLoadedFromServer};
 use crate::netty::client_reliable_messages::ClientReliableMessages;
 use crate::netty::sync::GotComponentToSyncEvent;
+use crate::netty::sync::mapping::Mappable;
 use crate::netty::system_sets::NetworkingSystemsSet;
 use crate::netty::{NettyChannelClient, cosmos_encoder};
 use crate::netty::{NettyChannelServer, NoSendEntity};
@@ -30,7 +31,7 @@ use bevy::ecs::removal_detection::RemovedComponents;
 use bevy::ecs::schedule::IntoSystemConfigs;
 use bevy::ecs::schedule::common_conditions::resource_exists;
 use bevy::ecs::system::{Commands, Resource};
-use bevy::log::{trace, warn};
+use bevy::log::{info, trace, warn};
 use bevy::prelude::SystemSet;
 use bevy::time::Time;
 use bevy::utils::HashMap;
@@ -622,10 +623,12 @@ fn get_entity_identifier_info(
                         });
                 };
 
-                evw_block_data_changed.send(BlockDataChangedEvent {
-                    block: identifier.block,
-                    block_data_entity: Some(x),
-                });
+                if let Ok(block) = identifier.block.map_to_client(network_mapping) {
+                    evw_block_data_changed.send(BlockDataChangedEvent {
+                        block,
+                        block_data_entity: Some(x),
+                    });
+                }
 
                 Some((x, x))
             })

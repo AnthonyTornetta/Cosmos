@@ -1,7 +1,7 @@
 use crate::asset::materials::MaterialsSystemSet;
 use crate::structure::planet::unload_chunks_far_from_players;
 use bevy::ecs::schedule::{IntoSystemSetConfigs, SystemSet};
-use bevy::prelude::{App, Condition, Res, ResMut, Resource, Update, in_state};
+use bevy::prelude::{App, Component, Condition, Res, ResMut, Resource, Update, in_state};
 use bevy::state::state::OnExit;
 use cosmos_core::block::Block;
 use cosmos_core::block::block_events::BlockEventsSet;
@@ -62,6 +62,11 @@ pub enum StructureRenderingSet {
     BeginRendering,
     CustomRendering,
 }
+
+#[derive(Component, Debug, Default, Clone, Copy)]
+/// If this component is present on the blockdata of a block, then this block will be marked for
+/// re-rendering when its block-data changes.
+pub struct BlockDataRerenderOnChange;
 
 pub(super) fn register(app: &mut App) {
     app.configure_sets(

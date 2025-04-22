@@ -1,4 +1,5 @@
-use bevy::prelude::{App, Commands, Entity, EventReader, IntoSystemConfigs, Query, Update};
+use bevy::log::info;
+use bevy::prelude::{App, Commands, Entity, EventReader, IntoSystemConfigs, Query, Update, With};
 use bevy::utils::hashbrown::HashMap;
 use cosmos_core::events::block_events::{BlockChangedEvent, BlockDataChangedEvent};
 use cosmos_core::structure::Structure;
@@ -7,14 +8,15 @@ use cosmos_core::structure::coordinates::ChunkCoordinate;
 use cosmos_core::structure::events::ChunkSetEvent;
 use std::collections::HashSet;
 
-use super::StructureRenderingSet;
 use super::chunk_rendering::ChunkNeedsRendered;
+use super::{BlockDataRerenderOnChange, StructureRenderingSet};
 
 fn monitor_block_updates_system(
     mut evr_block_changed: EventReader<BlockChangedEvent>,
     mut evr_chunk_set_event: EventReader<ChunkSetEvent>,
     mut evr_changed_data: EventReader<BlockDataChangedEvent>,
     q_structure: Query<&Structure>,
+    q_block_data_rerender_flag: Query<(), With<BlockDataRerenderOnChange>>,
     mut commands: Commands,
 ) {
     let mut chunks_todo = HashMap::<Entity, HashSet<ChunkCoordinate>>::default();
@@ -23,6 +25,10 @@ fn monitor_block_updates_system(
         let Ok(structure) = q_structure.get(ev.block.structure()) else {
             continue;
         };
+
+        if structure.query_block_data(ev.block.coords(), &q_block_data_rerender_flag).is_none() {
+            continue;
+        }
 
         let chunks = chunks_todo.entry(ev.block.structure()).or_default();
 
