@@ -479,6 +479,9 @@ fn add_default_logic(q_needs_logic_driver: Query<Entity, (With<Structure>, Witho
 #[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
 /// Separates the logic update events into two sets to maintain the timing of logic circuits.
 pub enum LogicSystemSet {
+    /// If you have any systems that need to run before [`LogicSystemSet::QueueConsumers`] but
+    /// still need them to run on the same timer as logic, put it here.
+    PreLogicTick,
     /// [`LogicBlock`]s are added or removed before anyone produces or consumes, so they have a chance to do both in their first logic tick.
     EditLogicGraph,
     /// If something (like placing a logic block) tries to consume before a logic tick, this adds that event to a queue for later processing.
@@ -533,9 +536,12 @@ pub(super) fn register(app: &mut App) {
 
     app.add_systems(OnEnter(GameState::Loading), register_logic_groups);
 
+    let run_con = on_timer(Duration::from_millis(1000 / LOGIC_TICKS_PER_SECOND));
+
     app.configure_sets(
         Update,
         (
+            LogicSystemSet::PreLogicTick.run_if(run_con.clone()),
             LogicSystemSet::EditLogicGraph
                 .in_set(BlockEventsSet::ProcessEvents)
                 // This may be a bad idea?
@@ -549,7 +555,7 @@ pub(super) fn register(app: &mut App) {
                 LogicSystemSet::Produce,
             )
                 .chain()
-                .run_if(on_timer(Duration::from_millis(1000 / LOGIC_TICKS_PER_SECOND))),
+                .run_if(run_con),
         )
             .in_set(NetworkingSystemsSet::Between)
             .chain(),

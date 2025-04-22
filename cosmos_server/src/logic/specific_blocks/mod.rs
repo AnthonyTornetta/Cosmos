@@ -2,6 +2,7 @@ use bevy::prelude::*;
 use cosmos_core::state::GameState;
 
 mod and_gate;
+mod button;
 mod colored_logic_wires;
 mod laser_cannon;
 mod logic_bus;
@@ -25,4 +26,5 @@ pub(super) fn register(app: &mut App) {
     laser_cannon::register(app, GameState::PostLoading);
     missile_launcher::register(app, GameState::PostLoading);
     switch::register(app);
+    button::register(app);
 }
