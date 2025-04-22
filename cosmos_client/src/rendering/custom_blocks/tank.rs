@@ -175,11 +175,7 @@ fn on_render_tanks(
 
                 let neighbors = BlockNeighbors::empty();
 
-                let Some(image_index) = index.atlas_index_from_face(direction.block_face(), neighbors) else {
-                    warn!("Missing image index for face {direction} -- {index:?}");
-                    continue;
-                };
-
+                let image_index = index.atlas_index_from_face(direction.block_face(), neighbors, structure.block_info_at(block));
                 let y_scale = data.fluid_stored as f32 / tank_block_entry.max_capacity() as f32;
 
                 let uvs = Rect::new(

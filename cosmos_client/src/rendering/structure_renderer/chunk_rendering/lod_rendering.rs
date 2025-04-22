@@ -5,6 +5,7 @@ use cosmos_core::{
     registry::{Registry, identifiable::Identifiable},
     structure::{
         block_storage::BlockStorer,
+        chunk::BlockInfo,
         coordinates::{CoordinateType, UnboundCoordinateType},
         lod::Lod,
         lod_chunk::{LodBlockSubScale, LodChunk},
@@ -128,14 +129,13 @@ fn check_block_should_render(
 
 impl ChunkRendererBackend<LodChunk> for LodChunkRenderingChecker<'_> {
     #[inline(always)]
-    fn get_texture_index(&self, index: &BlockTextureIndex, neighbors: BlockNeighbors, face: BlockFace) -> Option<TextureIndex> {
+    fn get_texture_index(&self, index: &BlockTextureIndex, neighbors: BlockNeighbors, face: BlockFace, data: BlockInfo) -> TextureIndex {
         if self.scale > 8 {
             index
                 .atlas_index_for_lod(neighbors)
-                .map(Some)
-                .unwrap_or_else(|| index.atlas_index_from_face(face, neighbors))
+                .unwrap_or_else(|| index.atlas_index_from_face(face, neighbors, data))
         } else {
-            index.atlas_index_from_face(face, neighbors)
+            index.atlas_index_from_face(face, neighbors, data)
         }
     }
 

@@ -17,6 +17,7 @@ use cosmos_core::{
     loader::{AddLoadingEvent, DoneLoadingEvent, LoadingManager},
     registry::{self, Registry, identifiable::Identifiable},
     state::GameState,
+    structure::chunk::BlockInfo,
 };
 use serde::{Deserialize, Serialize};
 
@@ -319,16 +320,16 @@ bitflags! {
 impl BlockTextureIndex {
     #[inline]
     /// Returns the index for that block face, if one exists
-    pub fn atlas_index_from_face(&self, face: BlockFace, neighbors: BlockNeighbors) -> Option<TextureIndex> {
+    pub fn atlas_index_from_face(&self, face: BlockFace, neighbors: BlockNeighbors, block_data: BlockInfo) -> TextureIndex {
         match &self.texture {
-            LoadedTexture::All(texture_type) => get_texture_index_from_type(texture_type, neighbors),
+            LoadedTexture::All(texture_type) => get_texture_index_from_type_and_data(texture_type, neighbors, block_data),
             LoadedTexture::Sides(sides) => match face {
-                BlockFace::Right => get_texture_index_from_type(&sides.right, neighbors),
-                BlockFace::Left => get_texture_index_from_type(&sides.left, neighbors),
-                BlockFace::Top => get_texture_index_from_type(&sides.top, neighbors),
-                BlockFace::Bottom => get_texture_index_from_type(&sides.bottom, neighbors),
-                BlockFace::Front => get_texture_index_from_type(&sides.front, neighbors),
-                BlockFace::Back => get_texture_index_from_type(&sides.back, neighbors),
+                BlockFace::Right => get_texture_index_from_type_and_data(&sides.right, neighbors, block_data),
+                BlockFace::Left => get_texture_index_from_type_and_data(&sides.left, neighbors, block_data),
+                BlockFace::Top => get_texture_index_from_type_and_data(&sides.top, neighbors, block_data),
+                BlockFace::Bottom => get_texture_index_from_type_and_data(&sides.bottom, neighbors, block_data),
+                BlockFace::Front => get_texture_index_from_type_and_data(&sides.front, neighbors, block_data),
+                BlockFace::Back => get_texture_index_from_type_and_data(&sides.back, neighbors, block_data),
             },
         }
     }
@@ -336,18 +337,40 @@ impl BlockTextureIndex {
     /// Returns the atlas information for a simplified LOD texture
     pub fn atlas_index_for_lod(&self, neighbors: BlockNeighbors) -> Option<TextureIndex> {
         match &self.lod_texture {
-            Some(texture_type) => get_texture_index_from_type(texture_type, neighbors),
+            Some(texture_type) => Some(get_texture_index_from_type_and_data(texture_type, neighbors, BlockInfo::default())),
             None => None,
         }
     }
 }
 
 #[inline(always)]
-fn get_texture_index_from_type(texture_type: &LoadedTextureType, neighbors: BlockNeighbors) -> Option<TextureIndex> {
+fn get_texture_index_from_type_and_data(texture_type: &LoadedTextureType, neighbors: BlockNeighbors, data: BlockInfo) -> TextureIndex {
     match texture_type {
-        LoadedTextureType::Single(index) => Some(*index),
-        LoadedTextureType::Connected(connected) => Some(connected[neighbors.bits()]),
+        LoadedTextureType::Single(selector) => handle_select_texture(selector, data),
+        LoadedTextureType::Connected(connected) => {
+            let checking = &connected[neighbors.bits()];
+            handle_select_texture(checking, data)
+        }
     }
+}
+
+fn handle_select_texture(selector: &TextureSelector, data: BlockInfo) -> TextureIndex {
+    match selector {
+        TextureSelector::Normal(index) => *index,
+        TextureSelector::DataDriven(dd) => handle_data_driven(data, dd),
+    }
+}
+
+fn handle_data_driven(data: BlockInfo, dd: &Box<DataDrivenTextureIndex>) -> TextureIndex {
+    for bit in (0..8).rev() {
+        if data.0 & (1 << bit) != 0 {
+            if let Some(idx) = dd.bit_textures[bit] {
+                return idx;
+            }
+        }
+    }
+
+    dd.default
 }
 
 impl Identifiable for BlockTextureIndex {
@@ -369,9 +392,9 @@ impl Identifiable for BlockTextureIndex {
 
 impl ItemTextureIndex {
     #[inline]
-    /// Returns the index for that item
-    pub fn atlas_index(&self) -> TextureIndex {
-        self.texture
+    /// Returns the selector for that item
+    pub fn atlas_index(&self) -> &TextureIndex {
+        &self.texture
     }
 }
 
@@ -537,6 +560,13 @@ pub enum LoadingTextureType {
     /// Check the docs for how you should set these textures.
     /// TODO: make docs. For now just check out how glass works.
     Connected(Box<[String; 16]>),
+    DataDriven(Box<LoadingDataDrivenTextureType>),
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct LoadingDataDrivenTextureType {
+    bit_textures: [Option<String>; 8],
+    default: String,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -569,13 +599,25 @@ pub enum LoadedTexture {
 /// Indicates if this texture is connected or is single
 pub enum LoadedTextureType {
     /// This texture will not respond to nearby blocks
-    Single(TextureIndex),
+    Single(TextureSelector),
     /// This texture will change based on nearby blocks.
     ///
     /// Index order is based on the bitwise value of [`BlockNeighbors`].
     /// Check the docs for how you should set these textures.
     /// TODO: make docs. For now just check out how glass works.
-    Connected([TextureIndex; 16]),
+    Connected([TextureSelector; 16]),
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum TextureSelector {
+    Normal(TextureIndex),
+    DataDriven(Box<DataDrivenTextureIndex>),
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DataDrivenTextureIndex {
+    bit_textures: [Option<TextureIndex>; 8],
+    default: TextureIndex,
 }
 
 impl Identifiable for BlockRenderingInfo {
@@ -632,7 +674,7 @@ pub fn load_block_rendering_information(
         id: 0,
         unlocalized_name: "missing".to_owned(),
         lod_texture: None,
-        texture: LoadedTexture::All(LoadedTextureType::Single(missing_texture_index)),
+        texture: LoadedTexture::All(LoadedTextureType::Single(TextureSelector::Normal(missing_texture_index))),
     });
 
     for block in blocks.iter() {
@@ -783,10 +825,15 @@ fn load_item_rendering_information(
         // Item's don't support different block face textures.
         let LoadedTextureType::Single(texture) = map else { unreachable!() };
 
+        let item_texture_index = match texture {
+            TextureSelector::Normal(id) => id,
+            TextureSelector::DataDriven(dd) => dd.default,
+        };
+
         registry.register(ItemTextureIndex {
             id: 0,
             unlocalized_name: unlocalized_name.to_owned(),
-            texture,
+            texture: item_texture_index,
         });
 
         info_registry.register(item_info);
@@ -803,59 +850,96 @@ fn process_loading_texture_type(
 ) -> LoadedTextureType {
     match texture {
         LoadingTextureType::Single(texture_name) => {
-            let mut name_split = texture_name.split(':');
+            let index = get_texture_index_for_name(atlas_registry, server, images, missing_texture_index, texture_name, folder_name);
 
-            let mod_id = name_split.next().unwrap();
-            let name = name_split
-                .next()
-                .unwrap_or_else(|| panic!("Invalid texture - {texture_name}. Did you forget the 'cosmos:'?"));
-
-            let index = atlas_registry
-                .from_id("cosmos:main") // Eventually load this via the block_info file
-                .expect("No main atlas")
-                .get_texture_index(
-                    &server
-                        .get_handle(format!("{mod_id}/images/{folder_name}/{name}.png"))
-                        .unwrap_or_default(),
-                    images,
-                )
-                .unwrap_or_else(|| {
-                    warn!("Could not find texture with ID {mod_id}:{name}");
-
-                    missing_texture_index
-                });
-
-            LoadedTextureType::Single(index)
+            LoadedTextureType::Single(TextureSelector::Normal(index))
         }
         LoadingTextureType::Connected(textures) => {
             let texture_indices = textures
                 .iter()
                 .map(|texture_name| {
-                    let mut name_split = texture_name.split(':');
-
-                    let mod_id = name_split.next().unwrap();
-                    let name = name_split
-                        .next()
-                        .unwrap_or_else(|| panic!("Invalid texture - {texture_name}. Did you forget the 'cosmos:'?"));
-
-                    atlas_registry
-                        .from_id("cosmos:main") // Eventually load this via the block_info file
-                        .expect("No main atlas")
-                        .get_texture_index(
-                            &server
-                                .get_handle(format!("{mod_id}/images/{folder_name}/{name}.png"))
-                                .unwrap_or_default(),
-                            images,
-                        )
-                        .unwrap_or(missing_texture_index)
+                    get_texture_index_for_name(atlas_registry, server, images, missing_texture_index, texture_name, folder_name)
                 })
-                .collect::<Vec<TextureIndex>>()
+                .map(|x| TextureSelector::Normal(x))
+                .collect::<Vec<TextureSelector>>()
                 .try_into()
                 .unwrap();
 
             LoadedTextureType::Connected(texture_indices)
         }
+        LoadingTextureType::DataDriven(data_driven) => {
+            let selector =
+                get_data_driven_texture_selector(atlas_registry, server, images, missing_texture_index, folder_name, data_driven);
+
+            LoadedTextureType::Single(selector)
+        }
     }
+}
+
+fn get_data_driven_texture_selector(
+    atlas_registry: &Registry<CosmosTextureAtlas>,
+    server: &AssetServer,
+    images: &Assets<Image>,
+    missing_texture_index: TextureIndex,
+    folder_name: &str,
+    data_driven: &Box<LoadingDataDrivenTextureType>,
+) -> TextureSelector {
+    let default = get_texture_index_for_name(
+        atlas_registry,
+        server,
+        images,
+        missing_texture_index,
+        &data_driven.default,
+        folder_name,
+    );
+
+    let bit_textures = data_driven
+        .bit_textures
+        .iter()
+        .map(|dd_texture| {
+            dd_texture
+                .as_ref()
+                .map(|name| get_texture_index_for_name(atlas_registry, server, images, missing_texture_index, name, folder_name))
+        })
+        .collect::<Vec<Option<TextureIndex>>>()
+        .try_into()
+        .unwrap();
+
+    let selector = TextureSelector::DataDriven(Box::new(DataDrivenTextureIndex { default, bit_textures }));
+    selector
+}
+
+fn get_texture_index_for_name(
+    atlas_registry: &Registry<CosmosTextureAtlas>,
+    server: &AssetServer,
+    images: &Assets<Image>,
+    missing_texture_index: TextureIndex,
+    texture_name: &String,
+    folder_name: &str,
+) -> TextureIndex {
+    let mut name_split = texture_name.split(':');
+
+    let mod_id = name_split.next().unwrap();
+    let name = name_split
+        .next()
+        .unwrap_or_else(|| panic!("Invalid texture - {texture_name}. Did you forget the 'cosmos:'?"));
+
+    let index = atlas_registry
+        .from_id("cosmos:main") // Eventually load this via the block_info file
+        .expect("No main atlas")
+        .get_texture_index(
+            &server
+                .get_handle(format!("{mod_id}/images/{folder_name}/{name}.png"))
+                .unwrap_or_default(),
+            images,
+        )
+        .unwrap_or_else(|| {
+            warn!("Could not find texture with ID {mod_id}:{name}");
+
+            missing_texture_index
+        });
+
+    index
 }
 
 /// This is to resolve ambiguity issues. Because ambiguity detection can't detect

@@ -43,23 +43,23 @@ pub const COLORS: [&str; 17] = [
 #[rustfmt::skip]
 #[expect(clippy::eq_op)]
 pub const COLOR_VALUES: [Srgba; 17] = [
-    Srgba {red: 255.0 / 255.0, green: 0.0 / 255.0, blue: 0.0 / 255.0, alpha: 1.0 },
-    Srgba {red: 255.0 / 255.0, green: 165.0 / 255.0, blue: 0.0 / 255.0, alpha: 1.0 },
-    Srgba {red: 255.0 / 255.0, green: 255.0 / 255.0, blue: 0.0 / 255.0, alpha: 1.0 },
-    Srgba {red: 0.0 / 255.0, green: 255.0 / 255.0, blue: 0.0 / 255.0, alpha: 1.0 },
-    Srgba {red: 62.0 / 255.0, green: 180.0 / 255.0, blue: 137.0 / 255.0, alpha: 1.0 },
-    Srgba {red: 0.0 / 255.0, green: 183.0 / 255.0, blue: 235.0 / 255.0, alpha: 1.0 },
-    Srgba {red: 0.0 / 255.0, green: 255.0 / 255.0, blue: 255.0 / 255.0, alpha: 1.0 },
-    Srgba {red: 0.0 / 255.0, green: 0.0 / 255.0, blue: 255.0 / 255.0, alpha: 1.0 },
-    Srgba {red: 160.0 / 255.0, green: 32.0 / 255.0, blue: 240.0 / 255.0, alpha: 1.0 },
-    Srgba {red: 255.0 / 255.0, green: 0.0 / 255.0, blue: 255.0 / 255.0, alpha: 1.0 },
-    Srgba {red: 255.0 / 255.0, green: 192.0 / 255.0, blue: 203.0 / 255.0, alpha: 1.0 },
-    Srgba {red: 150.0 / 255.0, green: 75.0 / 255.0, blue: 0.0 / 255.0, alpha: 1.0 },
-    Srgba {red: 0.0 / 255.0, green: 0.0 / 255.0, blue: 0.0 / 255.0, alpha: 1.0 },
-    Srgba {red: 82.0 / 255.0, green: 82.0 / 255.0, blue: 82.0 / 255.0, alpha: 1.0 },
-    Srgba {red: 128.0 / 255.0, green: 128.0 / 255.0, blue: 128.0 / 255.0, alpha: 1.0 },
-    Srgba {red: 174.0 / 255.0, green: 174.0 / 255.0, blue: 174.0 / 255.0, alpha: 1.0 },
-    Srgba {red: 255.0 / 255.0, green: 255.0 / 255.0, blue: 255.0 / 255.0, alpha: 1.0 },
+    Srgba { red: 255.0 / 255.0, green: 0.0 / 255.0, blue: 0.0 / 255.0, alpha: 1.0 },
+    Srgba { red: 255.0 / 255.0, green: 165.0 / 255.0, blue: 0.0 / 255.0, alpha: 1.0 },
+    Srgba { red: 255.0 / 255.0, green: 255.0 / 255.0, blue: 0.0 / 255.0, alpha: 1.0 },
+    Srgba { red: 0.0 / 255.0, green: 255.0 / 255.0, blue: 0.0 / 255.0, alpha: 1.0 },
+    Srgba { red: 62.0 / 255.0, green: 180.0 / 255.0, blue: 137.0 / 255.0, alpha: 1.0 },
+    Srgba { red: 0.0 / 255.0, green: 183.0 / 255.0, blue: 235.0 / 255.0, alpha: 1.0 },
+    Srgba { red: 0.0 / 255.0, green: 255.0 / 255.0, blue: 255.0 / 255.0, alpha: 1.0 },
+    Srgba { red: 0.0 / 255.0, green: 0.0 / 255.0, blue: 255.0 / 255.0, alpha: 1.0 },
+    Srgba { red: 160.0 / 255.0, green: 32.0 / 255.0, blue: 240.0 / 255.0, alpha: 1.0 },
+    Srgba { red: 255.0 / 255.0, green: 0.0 / 255.0, blue: 255.0 / 255.0, alpha: 1.0 },
+    Srgba { red: 255.0 / 255.0, green: 192.0 / 255.0, blue: 203.0 / 255.0, alpha: 1.0 },
+    Srgba { red: 150.0 / 255.0, green: 75.0 / 255.0, blue: 0.0 / 255.0, alpha: 1.0 },
+    Srgba { red: 0.0 / 255.0, green: 0.0 / 255.0, blue: 0.0 / 255.0, alpha: 1.0 },
+    Srgba { red: 82.0 / 255.0, green: 82.0 / 255.0, blue: 82.0 / 255.0, alpha: 1.0 },
+    Srgba { red: 128.0 / 255.0, green: 128.0 / 255.0, blue: 128.0 / 255.0, alpha: 1.0 },
+    Srgba { red: 174.0 / 255.0, green: 174.0 / 255.0, blue: 174.0 / 255.0, alpha: 1.0 },
+    Srgba { red: 255.0 / 255.0, green: 255.0 / 255.0, blue: 255.0 / 255.0, alpha: 1.0 },
 ];
 
 fn add_cosmos_blocks(
@@ -474,34 +474,11 @@ fn add_cosmos_blocks(
             .create(),
     );
 
-    let logic_wire_colors_array = [
-        "grey",
-        "black",
-        "dark_grey",
-        "white",
-        "blue",
-        "dark_blue",
-        "brown",
-        "green",
-        "dark_green",
-        "orange",
-        "dark_orange",
-        "pink",
-        "dark_pink",
-        "purple",
-        "dark_purple",
-        "red",
-        "dark_red",
-        "yellow",
-        "dark_yellow",
-        "mint",
-    ];
-
     // Buses carry all color signals but cannot go into logic gates (as this would require some implicit reduction to a single signal).
     let mut logic_bus_builder = BlockBuilder::new("cosmos:logic_bus", 0.1, 20.0, 5.0)
         .add_connection_group("cosmos:logic_bus")
         .connect_to_group("cosmos:logic_bus");
-    for color in logic_wire_colors_array {
+    for color in COLORS {
         let colored_wire_name = format!("cosmos:logic_wire_{color}");
         blocks.register(
             BlockBuilder::new(colored_wire_name.clone(), 0.1, 20.0, 5.0)
@@ -515,6 +492,24 @@ fn add_cosmos_blocks(
     }
 
     blocks.register(logic_bus_builder.create());
+
+    blocks.register(
+        BlockBuilder::new("cosmos:switch", 5.0, 20.0, 5.0)
+            .add_property(BlockProperty::Full)
+            .create(),
+    );
+
+    blocks.register(
+        BlockBuilder::new("cosmos:button", 5.0, 20.0, 5.0)
+            .add_property(BlockProperty::Full)
+            .create(),
+    );
+
+    blocks.register(
+        BlockBuilder::new("cosmos:flip_flop", 5.0, 20.0, 5.0)
+            .add_property(BlockProperty::Full)
+            .create(),
+    );
 
     blocks.register(
         BlockBuilder::new("cosmos:door", 4.0, 100.0, 10.0)

@@ -15,6 +15,7 @@ use cosmos_core::{
         block_direction::{ALL_BLOCK_DIRECTIONS, BlockDirection},
         block_events::BlockEventsSet,
         block_face::BlockFace,
+        blocks::COLORS,
         data::BlockData,
     },
     events::block_events::{BlockChangedEvent, BlockDataChangedEvent, BlockDataSystemParams},
@@ -501,31 +502,8 @@ pub enum LogicSystemSet {
 }
 
 fn register_logic_groups(mut logic_wire_colors: ResMut<Registry<LogicWireColor>>) {
-    let logic_wire_colors_array = [
-        "grey",
-        "black",
-        "dark_grey",
-        "white",
-        "blue",
-        "dark_blue",
-        "brown",
-        "green",
-        "dark_green",
-        "orange",
-        "dark_orange",
-        "pink",
-        "dark_pink",
-        "purple",
-        "dark_purple",
-        "red",
-        "dark_red",
-        "yellow",
-        "dark_yellow",
-        "mint",
-    ];
-
     // Buses carry all color signals but cannot go into logic gates (as this would require some implicit reduction to a single signal).
-    for color in logic_wire_colors_array {
+    for color in COLORS {
         let colored_wire_name = format!("cosmos:logic_wire_{color}");
         logic_wire_colors.register(LogicWireColor::new(colored_wire_name));
     }

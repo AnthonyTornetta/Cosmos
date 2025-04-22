@@ -17,6 +17,7 @@ use cosmos_core::{
     item::Item,
     registry::{Registry, create_registry, identifiable::Identifiable, many_to_one::ManyToOneRegistry},
     state::GameState,
+    structure::chunk::BlockInfo,
     utils::array_utils::{expand_2d, flatten_2d},
 };
 
@@ -403,9 +404,7 @@ fn generate_block_item_model(
                 break;
             };
 
-            let Some(image_index) = index.atlas_index_from_face(face, BlockNeighbors::empty()) else {
-                continue;
-            };
+            let image_index = index.atlas_index_from_face(face, BlockNeighbors::empty(), BlockInfo::default());
 
             if let Some(td) = texture_dims {
                 if td != image_index.dimension_index {
@@ -427,7 +426,7 @@ fn generate_block_item_model(
         texture_dims.expect("Set above")
     } else {
         let mesh_info = block_mesh_info.info_for_whole_block()?;
-        let image_index = index.atlas_index_from_face(BlockFace::Front, BlockNeighbors::empty())?;
+        let image_index = index.atlas_index_from_face(BlockFace::Front, BlockNeighbors::empty(), BlockInfo::default());
 
         mesh_builder.add_mesh_information(
             mesh_info,
