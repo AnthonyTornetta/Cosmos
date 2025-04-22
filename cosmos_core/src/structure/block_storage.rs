@@ -148,7 +148,7 @@ impl BlockStorer for BlockStorage {
         self.debug_assert_is_within_blocks(coords);
 
         let index = Self::flatten(coords);
-
+        self.block_info[index] = Default::default();
         self.block_info[index].set_rotation(block_rotation);
 
         if self.blocks[index] != id {
