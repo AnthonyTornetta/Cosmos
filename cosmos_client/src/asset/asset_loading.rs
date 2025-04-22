@@ -938,7 +938,7 @@ fn get_texture_index_for_name(
         .next()
         .unwrap_or_else(|| panic!("Invalid texture - {texture_name}. Did you forget the 'cosmos:'?"));
 
-    let index = atlas_registry
+    atlas_registry
         .from_id("cosmos:main") // Eventually load this via the block_info file
         .expect("No main atlas")
         .get_texture_index(
@@ -951,9 +951,7 @@ fn get_texture_index_for_name(
             warn!("Could not find texture with ID {mod_id}:{name}");
 
             missing_texture_index
-        });
-
-    index
+        })
 }
 
 /// This is to resolve ambiguity issues. Because ambiguity detection can't detect
