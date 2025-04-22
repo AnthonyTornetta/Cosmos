@@ -1,35 +1,14 @@
 //! The game's logic system: for wires, logic gates, etc.
 
-use std::{collections::VecDeque, time::Duration};
 
 use bevy::{
-    app::{App, Update},
-    prelude::{
-        Commands, Component, Entity, Event, EventReader, EventWriter, IntoSystemConfigs, Query, Res, ResMut, Resource, States, SystemSet,
-        With, Without, in_state,
-    },
+    app::App,
+    prelude::Component,
     reflect::Reflect,
-    time::common_conditions::on_timer,
-    utils::{HashMap, HashSet},
 };
 use serde::{Deserialize, Serialize};
 
-use crate::{
-    block::{
-        Block,
-        block_direction::{ALL_BLOCK_DIRECTIONS, BlockDirection},
-        block_events::BlockEventsSet,
-        block_face::BlockFace,
-        data::BlockData,
-    },
-    events::block_events::{BlockChangedEvent, BlockDataChangedEvent, BlockDataSystemParams},
-    netty::{
-        sync::{IdentifiableComponent, SyncableComponent, sync_component},
-        system_sets::NetworkingSystemsSet,
-    },
-    registry::{Registry, create_registry, identifiable::Identifiable},
-    structure::{Structure, coordinates::BlockCoordinate, loading::StructureLoadingSet, structure_block::StructureBlock},
-};
+use crate::netty::sync::{IdentifiableComponent, SyncableComponent, sync_component};
 
 #[derive(Component, Clone, Copy, Reflect, PartialEq, Eq, Debug, Default, Serialize, Deserialize)]
 /// The logic signal this block is holding.

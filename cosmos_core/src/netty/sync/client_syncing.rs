@@ -31,7 +31,7 @@ use bevy::ecs::removal_detection::RemovedComponents;
 use bevy::ecs::schedule::IntoSystemConfigs;
 use bevy::ecs::schedule::common_conditions::resource_exists;
 use bevy::ecs::system::{Commands, Resource};
-use bevy::log::{info, trace, warn};
+use bevy::log::{trace, warn};
 use bevy::prelude::SystemSet;
 use bevy::time::Time;
 use bevy::utils::HashMap;

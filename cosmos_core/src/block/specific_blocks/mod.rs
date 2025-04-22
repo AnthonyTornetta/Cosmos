@@ -2,7 +2,6 @@
 
 use bevy::{app::App, prelude::States};
 
-use crate::registry::Registry;
 
 pub mod dye_machine;
 pub mod gravity_well;
