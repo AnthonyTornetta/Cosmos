@@ -10,7 +10,6 @@ use bevy::{
         system::{Commands, Query, Res, ResMut},
     },
     hierarchy::{BuildChildren, DespawnRecursiveExt},
-    log::warn,
     math::{Rect, Vec3},
     prelude::{Mesh3d, Transform, Visibility},
     reflect::Reflect,
@@ -157,10 +156,7 @@ fn on_render_logic_indicator(
 
                 let neighbors = BlockNeighbors::empty();
 
-                let Some(image_index) = index.atlas_index_from_face(direction.block_face(), neighbors) else {
-                    warn!("Missing image index for face {direction} -- {index:?}");
-                    continue;
-                };
+                let image_index = index.atlas_index_from_face(direction.block_face(), neighbors, structure.block_info_at(block));
 
                 let uvs = Rect::new(0.0, 0.0, 1.0, 1.0);
 

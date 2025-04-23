@@ -852,7 +852,13 @@ impl BaseStructure {
         evw_block_data_changed: Option<&mut EventWriter<BlockDataChangedEvent>>,
     ) {
         if let Some(chunk) = self.mut_chunk_at_block_coordinates(coords) {
-            chunk.set_block_info_at(ChunkBlockCoordinate::for_block_coordinate(coords), block_info);
+            let c = ChunkBlockCoordinate::for_block_coordinate(coords);
+            if chunk.block_info_at(c) == block_info {
+                // Prevents unneeded events from being sent
+                return;
+            }
+
+            chunk.set_block_info_at(c, block_info);
 
             if let Some(evw_block_data_changed) = evw_block_data_changed {
                 if let Some(structure_entity) = self.get_entity() {

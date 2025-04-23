@@ -5,7 +5,7 @@ use cosmos_core::{
     registry::Registry,
     structure::{
         block_storage::BlockStorer,
-        chunk::{CHUNK_DIMENSIONS, Chunk},
+        chunk::{BlockInfo, CHUNK_DIMENSIONS, Chunk},
     },
 };
 
@@ -26,7 +26,7 @@ pub trait ChunkRendererBackend<C: BlockStorer> {
         rendering_modes: &BlockRenderingModes,
     ) -> bool;
 
-    fn get_texture_index(&self, index: &BlockTextureIndex, neighbors: BlockNeighbors, face: BlockFace) -> Option<TextureIndex>;
+    fn get_texture_index(&self, index: &BlockTextureIndex, neighbors: BlockNeighbors, face: BlockFace, data: BlockInfo) -> TextureIndex;
 
     fn transform_position(&self, chunk: &C, coords: ChunkBlockCoordinate, direction: BlockDirection, position: Vec3) -> Vec3;
 }
@@ -61,8 +61,8 @@ pub struct ChunkRenderingChecker<'a> {
 
 impl ChunkRendererBackend<Chunk> for ChunkRenderingChecker<'_> {
     #[inline(always)]
-    fn get_texture_index(&self, index: &BlockTextureIndex, neighbors: BlockNeighbors, face: BlockFace) -> Option<TextureIndex> {
-        index.atlas_index_from_face(face, neighbors)
+    fn get_texture_index(&self, index: &BlockTextureIndex, neighbors: BlockNeighbors, face: BlockFace, data: BlockInfo) -> TextureIndex {
+        index.atlas_index_from_face(face, neighbors, data)
     }
 
     fn check_should_render(

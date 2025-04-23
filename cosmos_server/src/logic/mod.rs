@@ -15,6 +15,7 @@ use cosmos_core::{
         block_direction::{ALL_BLOCK_DIRECTIONS, BlockDirection},
         block_events::BlockEventsSet,
         block_face::BlockFace,
+        blocks::COLORS,
         data::BlockData,
     },
     events::block_events::{BlockChangedEvent, BlockDataChangedEvent, BlockDataSystemParams},
@@ -33,9 +34,8 @@ pub mod logic_driver;
 mod logic_graph;
 mod specific_blocks;
 
-/// The number of bits to shift to set or read the logic on/off value from the [`BlockInfo`] of a block.
-/// Equivalently, the bit index of the logic value.
-pub const LOGIC_BIT: usize = 7;
+/// The bits to set or read the logic on/off value from the [`BlockInfo`] of a block.
+pub const LOGIC_BIT: u8 = 1 << 7;
 
 #[derive(Debug, Copy, Clone, PartialEq)]
 /// Defines the types of logic ports, which read and write logic values.
@@ -294,7 +294,7 @@ pub struct LogicOutputEvent {
     pub block: StructureBlock,
 }
 
-#[derive(Event, Debug)]
+#[derive(Event, Debug, Clone)]
 /// Sent when a block's logic output changes for a reason outside a logic tick, like placing a new logic block.
 pub struct QueueLogicOutputEvent(pub LogicOutputEvent);
 
@@ -310,28 +310,6 @@ impl QueueLogicOutputEvent {
 pub enum LogicSystemRegistrySet {
     /// Logic blocks should be registered here and can be ambiguous with this set
     RegisterLogicBlocks,
-}
-
-/// Whenever a block's logic data is modified, this system sends a block output event for that block.
-fn listen_for_changed_logic_data(
-    blocks: Res<Registry<Block>>,
-    logic_blocks: Res<Registry<LogicBlock>>,
-    mut evr_block_data_changed: EventReader<BlockDataChangedEvent>,
-    mut evw_logic_output: EventWriter<LogicOutputEvent>,
-    q_structure: Query<&Structure>,
-) {
-    evw_logic_output.send_batch(
-        evr_block_data_changed
-            .read()
-            .filter(|ev| {
-                let Ok(structure) = q_structure.get(ev.block.structure()) else {
-                    return false;
-                };
-                let id = structure.block_id_at(ev.block.coords());
-                logic_blocks.from_id(blocks.from_numeric_id(id).unlocalized_name()).is_some()
-            })
-            .map(|ev| LogicOutputEvent { block: ev.block }),
-    );
 }
 
 fn logic_block_changed_event_listener(
@@ -423,9 +401,24 @@ fn queue_logic_consumers(
 fn queue_logic_producers(
     mut evr_queue_logic_output: EventReader<QueueLogicOutputEvent>,
     mut logic_output_event_queue: ResMut<LogicOutputEventQueue>,
+    mut evr_block_data_changed: EventReader<BlockDataChangedEvent>,
+    logic_blocks: Res<Registry<LogicBlock>>,
+    blocks: Res<Registry<Block>>,
+    q_structure: Query<&Structure>,
 ) {
-    for ev in evr_queue_logic_output.read() {
-        logic_output_event_queue.0.push_back(ev.0.clone());
+    for ev in evr_queue_logic_output.read().cloned().chain(
+        evr_block_data_changed
+            .read()
+            .filter(|ev| {
+                let Ok(s) = q_structure.get(ev.block.structure()) else {
+                    return false;
+                };
+
+                logic_blocks.contains(s.block_at(ev.block.coords(), &blocks).unlocalized_name())
+            })
+            .map(|x| QueueLogicOutputEvent(LogicOutputEvent { block: x.block })),
+    ) {
+        logic_output_event_queue.0.push_back(ev.0);
     }
 }
 
@@ -484,6 +477,9 @@ fn add_default_logic(q_needs_logic_driver: Query<Entity, (With<Structure>, Witho
 #[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
 /// Separates the logic update events into two sets to maintain the timing of logic circuits.
 pub enum LogicSystemSet {
+    /// If you have any systems that need to run before [`LogicSystemSet::QueueConsumers`] but
+    /// still need them to run on the same timer as logic, put it here.
+    PreLogicTick,
     /// [`LogicBlock`]s are added or removed before anyone produces or consumes, so they have a chance to do both in their first logic tick.
     EditLogicGraph,
     /// If something (like placing a logic block) tries to consume before a logic tick, this adds that event to a queue for later processing.
@@ -494,38 +490,15 @@ pub enum LogicSystemSet {
     SendQueues,
     /// All input [`Port`]s. These pull their values from their [`LogicGroup`]s first in each logic tick.
     Consume,
-    /// Changes to a block's internal logic data caused by consuming new inputs are detected and send producers here.
-    BlockLogicDataUpdate,
+    // Changes to a block's internal logic data caused by consuming new inputs are detected and send producers here.
+    // BlockLogicDataUpdate,
     /// All output [`Port`]s. These push their values to their [`LogicGroup`]s second in each logic tick.
     Produce,
 }
 
 fn register_logic_groups(mut logic_wire_colors: ResMut<Registry<LogicWireColor>>) {
-    let logic_wire_colors_array = [
-        "grey",
-        "black",
-        "dark_grey",
-        "white",
-        "blue",
-        "dark_blue",
-        "brown",
-        "green",
-        "dark_green",
-        "orange",
-        "dark_orange",
-        "pink",
-        "dark_pink",
-        "purple",
-        "dark_purple",
-        "red",
-        "dark_red",
-        "yellow",
-        "dark_yellow",
-        "mint",
-    ];
-
     // Buses carry all color signals but cannot go into logic gates (as this would require some implicit reduction to a single signal).
-    for color in logic_wire_colors_array {
+    for color in COLORS {
         let colored_wire_name = format!("cosmos:logic_wire_{color}");
         logic_wire_colors.register(LogicWireColor::new(colored_wire_name));
     }
@@ -561,9 +534,12 @@ pub(super) fn register(app: &mut App) {
 
     app.add_systems(OnEnter(GameState::Loading), register_logic_groups);
 
+    let run_con = on_timer(Duration::from_millis(1000 / LOGIC_TICKS_PER_SECOND));
+
     app.configure_sets(
         Update,
         (
+            LogicSystemSet::PreLogicTick.run_if(run_con.clone()),
             LogicSystemSet::EditLogicGraph
                 .in_set(BlockEventsSet::ProcessEvents)
                 // This may be a bad idea?
@@ -573,11 +549,11 @@ pub(super) fn register(app: &mut App) {
             (
                 LogicSystemSet::SendQueues,
                 LogicSystemSet::Consume,
-                LogicSystemSet::BlockLogicDataUpdate,
+                // LogicSystemSet::BlockLogicDataUpdate,
                 LogicSystemSet::Produce,
             )
                 .chain()
-                .run_if(on_timer(Duration::from_millis(1000 / LOGIC_TICKS_PER_SECOND))),
+                .run_if(run_con),
         )
             .in_set(NetworkingSystemsSet::Between)
             .chain(),
@@ -591,7 +567,7 @@ pub(super) fn register(app: &mut App) {
             queue_logic_producers.in_set(LogicSystemSet::QueueProducers),
             queue_logic_consumers.in_set(LogicSystemSet::QueueConsumers),
             send_queued_logic_events.in_set(LogicSystemSet::SendQueues),
-            listen_for_changed_logic_data.in_set(LogicSystemSet::BlockLogicDataUpdate),
+            // queue_logic_producers.chain().in_set(LogicSystemSet::BlockLogicDataUpdate),
         )
             .run_if(in_state(GameState::Playing)),
     )

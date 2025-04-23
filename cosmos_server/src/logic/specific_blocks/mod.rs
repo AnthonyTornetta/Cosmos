@@ -2,7 +2,9 @@ use bevy::prelude::*;
 use cosmos_core::state::GameState;
 
 mod and_gate;
+mod button;
 mod colored_logic_wires;
+mod flip_flop;
 mod laser_cannon;
 mod logic_bus;
 mod logic_indicator;
@@ -10,6 +12,7 @@ mod logic_on;
 mod missile_launcher;
 mod not_gate;
 mod or_gate;
+mod switch;
 mod xor_gate;
 
 pub(super) fn register(app: &mut App) {
@@ -23,4 +26,7 @@ pub(super) fn register(app: &mut App) {
     colored_logic_wires::register(app, GameState::PostLoading);
     laser_cannon::register(app, GameState::PostLoading);
     missile_launcher::register(app, GameState::PostLoading);
+    switch::register(app);
+    button::register(app);
+    flip_flop::register(app);
 }

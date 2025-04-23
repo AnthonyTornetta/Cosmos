@@ -3,7 +3,6 @@ use crate::asset::materials::{BlockMaterialMapping, MaterialDefinition};
 use crate::block::lighting::{BlockLightProperties, BlockLighting};
 use crate::rendering::structure_renderer::{BlockRenderingModes, RenderingMode};
 use bevy::ecs::event::Event;
-use bevy::log::warn;
 use bevy::prelude::{App, Deref, DerefMut, Entity, Rect, Resource, Vec3};
 use bevy::tasks::Task;
 use bevy::utils::hashbrown::HashMap;
@@ -266,10 +265,7 @@ impl<M: MeshBuilder + Default> ChunkRenderer<M> {
                         }
                     }
 
-                    let Some(image_index) = rendering_backend.get_texture_index(index, neighbors, face) else {
-                        warn!("Missing image index for face {direction} -- {index:?}");
-                        continue;
-                    };
+                    let image_index = rendering_backend.get_texture_index(index, neighbors, face, chunk.block_info_at(coords));
 
                     let uvs = Rect::new(0.0, 0.0, 1.0, 1.0);
 

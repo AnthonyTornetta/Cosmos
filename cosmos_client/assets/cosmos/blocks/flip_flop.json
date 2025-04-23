@@ -1,0 +1,84 @@
+{
+  "texture": {
+    "Sides": {
+      "left": {
+        "DataDriven": {
+          "bit_textures": [
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            "cosmos:flip_flop_on"
+          ],
+          "default": "cosmos:flip_flop_off"
+        }
+      },
+      "right": {
+        "DataDriven": {
+          "bit_textures": [
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            "cosmos:flip_flop_on"
+          ],
+          "default": "cosmos:flip_flop_off"
+        }
+      },
+      "top": {
+        "DataDriven": {
+          "bit_textures": [
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            "cosmos:flip_flop_on"
+          ],
+          "default": "cosmos:flip_flop_off"
+        }
+      },
+      "bottom": {
+        "DataDriven": {
+          "bit_textures": [
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            "cosmos:flip_flop_on"
+          ],
+          "default": "cosmos:flip_flop_off"
+        }
+      },
+      "back": {
+        "DataDriven": {
+          "bit_textures": [
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            "cosmos:flip_flop_on"
+          ],
+          "default": "cosmos:flip_flop_off"
+        }
+      },
+      "front": {
+        "Single": "cosmos:flip_flop_input"
+      }
+    }
+  }
+}

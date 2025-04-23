@@ -1,0 +1,19 @@
+{
+  "texture": {
+    "All": {
+      "DataDriven": {
+        "bit_textures": [
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          "cosmos:button_on"
+        ],
+        "default": "cosmos:button_off"
+      }
+    }
+  }
+}
