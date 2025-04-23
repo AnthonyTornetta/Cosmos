@@ -1,6 +1,6 @@
 use bevy::prelude::{
     App, BuildChildren, Commands, Component, Entity, Event, EventReader, EventWriter, IntoSystemConfigs, IntoSystemSetConfigs, Quat, Query,
-    RemovedComponents, States, SystemSet, Transform, Update, Vec3, in_state,
+    RemovedComponents, States, SystemSet, Transform, Update, Vec3, With, Without, in_state,
 };
 use bevy_rapier3d::prelude::{RigidBody, Sensor};
 
@@ -132,6 +132,13 @@ pub enum PilotEventSystemSet {
     ChangePilotListener,
 }
 
+// this is a stupid hack because of the sensor bouncing we do.
+fn pilot_needs_sensor(mut commands: Commands, q_pilot: Query<Entity, (With<Pilot>, Without<Sensor>)>) {
+    for ent in q_pilot.iter() {
+        commands.entity(ent).insert(Sensor);
+    }
+}
+
 pub(super) fn register<T: States + Clone + Copy>(app: &mut App, playing_state: T) {
     app.configure_sets(
         Update,
@@ -143,7 +150,14 @@ pub(super) fn register<T: States + Clone + Copy>(app: &mut App, playing_state: T
 
     app.add_systems(
         Update,
-        (pilot_removed, remove_sensor, bouncer, verify_pilot_exists, event_listener)
+        (
+            pilot_removed,
+            remove_sensor,
+            pilot_needs_sensor,
+            bouncer,
+            verify_pilot_exists,
+            event_listener,
+        )
             .in_set(PilotEventSystemSet::ChangePilotListener)
             .in_set(StructureTypeSet::Ship)
             .in_set(NetworkingSystemsSet::Between)
