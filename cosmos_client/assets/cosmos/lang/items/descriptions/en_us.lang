@@ -6,9 +6,9 @@ cosmos:station_core=The heart of any station. Used to create a space station. On
 cosmos:passive_generator=Passively generates {energy}kW passively. A small amount of energy generation at no cost.
 cosmos:energy_cell=Can store up to {storage}kJ of energy.
 cosmos:reactor_controller=Every reactor needs one controller to provide fuel and activate the reactor.
-cosmos:reactor_casing=Used to create a casing around the [power cells](cosmos:reactor_power_cell) of a reactor. Can be used interchangably with [reactor windows](cosmos:reactor_window).
-cosmos:reactor_window=Used to create a see-through casing around the [power cells](cosmos:reactor_power_cell) of a reactor. Can be used interchangably with [reactor casing](cosmos:reactor_casing).
-cosmos:reactor_power_cell=Each power cell provides an additional {energy}kJ of generation to your reactor's total power generation. More cells will also increase the [fuel](cosmos:uranium_fuel_cell) consumption.
+cosmos:reactor_casing=Used to create a casing around the [power cells](cosmos:uranium_fuel_cell) of a reactor. Can be used interchangably with [reactor windows](cosmos:reactor_window).
+cosmos:reactor_window=Used to create a see-through casing around the [power cells](cosmos:uranium_fuel_cell) of a reactor. Can be used interchangably with [reactor casing](cosmos:reactor_casing).
+cosmos:uranium_fuel_cell=Each power cell provides an additional {energy}kJ of generation to your reactor's total power generation. More cells will also increase the [fuel](cosmos:uranium_fuel_cell) consumption.
 
 cosmos:build_block=An essential block for anyone that wants to build a ship or station. Allows the player to enter "Build Mode", which allows for the creation of axis of symmetry and quick movement through their ship or station while building. Use the "x/y/z" keys to create axis of symmetry, and shift + "x/y/z" to remove them.
 
