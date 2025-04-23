@@ -105,26 +105,28 @@ cosmos:not_gate=Not Gate
 cosmos:xor_gate=Xor Gate
 
 cosmos:logic_bus=Logic Bus
-cosmos:logic_wire_grey=Grey Logic Wire
-cosmos:logic_wire_black=Black Logic Wire
-cosmos:logic_wire_dark_grey=Dark Grey Logic Wire
-cosmos:logic_wire_white=White Logic Wire
-cosmos:logic_wire_blue=Blue Logic Wire
-cosmos:logic_wire_dark_blue=Dark Blue Logic Wire
-cosmos:logic_wire_brown=Brown Logic Wire
-cosmos:logic_wire_green=Green Logic Wire
-cosmos:logic_wire_dark_green=Dark Green Logic Wire
-cosmos:logic_wire_orange=Orange Logic Wire
-cosmos:logic_wire_dark_orange=Dark Orange Logic Wire
-cosmos:logic_wire_pink=Pink Logic Wire
-cosmos:logic_wire_dark_pink=Dark Pink Logic Wire
-cosmos:logic_wire_purple=Purple Logic Wire
-cosmos:logic_wire_dark_purple=Dark Purple Logic Wire
+
 cosmos:logic_wire_red=Red Logic Wire
-cosmos:logic_wire_dark_red=Dark Red Logic Wire
+cosmos:logic_wire_orange=Orange Logic Wire
 cosmos:logic_wire_yellow=Yellow Logic Wire
-cosmos:logic_wire_dark_yellow=Dark Yellow Logic Wire
+cosmos:logic_wire_green=Green Logic Wire
 cosmos:logic_wire_mint=Mint Logic Wire
+cosmos:logic_wire_cyan=Cyan Logic Wire
+cosmos:logic_wire_aqua=Aqua Logic Wire
+cosmos:logic_wire_blue=Blue Logic Wire
+cosmos:logic_wire_purple=Purple Logic Wire
+cosmos:logic_wire_magenta=Magenta Logic Wire
+cosmos:logic_wire_pink=Pink Logic Wire
+cosmos:logic_wire_brown=Brown Logic Wire
+cosmos:logic_wire_black=Black Logic Wire
+cosmos:logic_wire_dark_grey=Dark Logic Wire
+cosmos:logic_wire_grey=Grey Logic Wire
+cosmos:logic_wire_light_grey=Light Logic Wire
+cosmos:logic_wire_white=White Logic Wire
+
+cosmos:flip_flop=Flip Flop
+cosmos:switch=Switch
+cosmos:button=Button
 
 cosmos:copper_ore=Copper Ore
 cosmos:lead_ore=Lead Ore

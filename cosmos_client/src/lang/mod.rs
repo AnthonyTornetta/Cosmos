@@ -69,7 +69,6 @@ impl<T: Identifiable + Send + Sync> Lang<T> {
             }
             None => {
                 warn!("Missing lang file entry for {}", item.unlocalized_name());
-                warn!("{:?}", self.lang_contents);
                 false
             }
         }

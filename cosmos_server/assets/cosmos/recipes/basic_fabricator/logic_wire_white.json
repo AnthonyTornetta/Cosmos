@@ -1,0 +1,14 @@
+{
+  "inputs": [
+    {
+      "quantity": 1,
+      "item": {
+        "Item": "cosmos:copper_bar"
+      }
+    }
+  ],
+  "output": {
+    "quantity": 4,
+    "item": "cosmos:logic_wire_white"
+  }
+}
