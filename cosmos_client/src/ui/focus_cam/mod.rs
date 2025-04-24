@@ -7,7 +7,10 @@ use bevy::{
 };
 use cosmos_core::{netty::client::LocalPlayer, prelude::Structure, state::GameState};
 
-use crate::skybox::NeedsSkybox;
+use crate::{
+    input::inputs::{CosmosInputs, InputChecker, InputHandler},
+    skybox::NeedsSkybox,
+};
 
 use super::{
     hide::HiddenReasons,
@@ -107,7 +110,10 @@ fn create_focused_ui(mut commands: Commands, handle: Res<FocusCamImage>) {
 
 // pub struct FocusCamDistance(f32);
 
+const TOGGLED_REASON: &str = "cosmos:toggled_off";
+
 fn render_on_focus(
+    hidden: Option<Res<FocusUiHidden>>,
     mut q_cam: Query<(&mut Transform, &mut Camera), With<FocusedCam>>,
     mut focused_ui: Query<&mut HiddenReasons, With<FocusedUi>>,
     q_local_player_trans: Query<&GlobalTransform, With<LocalPlayer>>,
@@ -136,13 +142,33 @@ fn render_on_focus(
     cam.is_active = true;
     focused_reasons.remove_reason(VIS_REASON);
 
+    if hidden.is_some() {
+        focused_reasons.add_reason(TOGGLED_REASON);
+    }
+
     let player_delta = player_g_trans.translation() - focused_g_trans.translation();
 
     cam_trans.translation = player_delta.normalize_or_zero() * 100.0 + focused_g_trans.translation();
     cam_trans.look_at(focused_g_trans.translation(), player_g_trans.up());
 }
 
+#[derive(Resource)]
+struct FocusUiHidden;
+
+fn toggle_view(mut commands: Commands, inputs: InputChecker, mut q_reasons: Query<&mut HiddenReasons, With<FocusedUi>>) {
+    if inputs.check_just_pressed(CosmosInputs::ToggleFocusCam) {
+        for mut r in q_reasons.iter_mut() {
+            if !r.remove_reason(TOGGLED_REASON) {
+                commands.insert_resource(FocusUiHidden);
+                r.add_reason(TOGGLED_REASON);
+            } else {
+                commands.remove_resource::<FocusUiHidden>();
+            }
+        }
+    }
+}
+
 pub(super) fn register(app: &mut App) {
     app.add_systems(OnEnter(GameState::Playing), (setup_camera, create_focused_ui).chain())
-        .add_systems(Update, render_on_focus);
+        .add_systems(Update, (render_on_focus, toggle_view));
 }
