@@ -152,6 +152,9 @@ pub enum CosmosInputs {
 
     /// Hides all HUD UI
     HideUi,
+
+    /// Shows/Hides the ship focus camera
+    ToggleFocusCam,
 }
 
 fn init_input(mut input_handler: ResMut<CosmosInputHandler>) {
@@ -233,6 +236,8 @@ fn init_input(mut input_handler: ResMut<CosmosInputHandler>) {
 
     input_handler.set_keycode(CosmosInputs::ToggleQuestsUi, KeyCode::Tab);
     input_handler.set_keycode(CosmosInputs::HideUi, KeyCode::F1);
+
+    input_handler.set_keycode(CosmosInputs::ToggleFocusCam, KeyCode::KeyH);
 }
 
 #[derive(Resource, Default, Debug)]

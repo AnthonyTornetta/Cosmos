@@ -43,9 +43,15 @@ impl HiddenReasons {
     }
 
     /// Removes a reason for this to be hidden
-    pub fn remove_reason(&mut self, reason: &'static str) {
+    ///
+    /// Returns true if this reason existed
+    pub fn remove_reason(&mut self, reason: &'static str) -> bool {
         if let Some((idx, _)) = self.0.iter().enumerate().find(|(_, r)| **r == reason) {
             self.0.remove(idx);
+
+            true
+        } else {
+            false
         }
     }
 }
