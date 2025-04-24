@@ -5,7 +5,11 @@ use bevy::{
     prelude::*,
     render::render_resource::{Extent3d, TextureDimension, TextureFormat, TextureUsages},
 };
-use cosmos_core::{netty::client::LocalPlayer, prelude::Structure, state::GameState};
+use cosmos_core::{
+    netty::client::LocalPlayer,
+    prelude::{Asteroid, Ship, Station},
+    state::GameState,
+};
 
 use crate::{
     input::inputs::{CosmosInputs, InputChecker, InputHandler},
@@ -114,22 +118,33 @@ const TOGGLED_REASON: &str = "cosmos:toggled_off";
 
 fn render_on_focus(
     hidden: Option<Res<FocusUiHidden>>,
-    mut q_cam: Query<(&mut Transform, &mut Camera), With<FocusedCam>>,
+    mut q_cam: Query<(Entity, &mut Transform, &mut Camera, Option<&Parent>), With<FocusedCam>>,
     mut focused_ui: Query<&mut HiddenReasons, With<FocusedUi>>,
     q_local_player_trans: Query<&GlobalTransform, With<LocalPlayer>>,
     // TODO: Replace this With<Structure> check w/ a FocusCamDistance component read
-    q_g_trans: Query<&GlobalTransform, With<Structure>>,
+    q_g_trans: Query<&GlobalTransform, Or<(With<Ship>, With<Asteroid>, With<Station>)>>,
     q_focused: Query<&Indicating, With<FocusedWaypointEntity>>,
+    mut commands: Commands,
 ) {
-    let Ok((mut cam_trans, mut cam)) = q_cam.get_single_mut() else {
+    let Ok((cam_entity, mut cam_trans, mut cam, parent)) = q_cam.get_single_mut() else {
         return;
     };
 
     let Ok(mut focused_reasons) = focused_ui.get_single_mut() else {
+        if parent.is_some() {
+            commands.entity(cam_entity).remove_parent();
+        }
         return;
     };
 
-    let Some(focused_g_trans) = q_focused.get_single().ok().and_then(|indicating| q_g_trans.get(indicating.0).ok()) else {
+    let Some((focused_g_trans, focused_ent)) = q_focused
+        .get_single()
+        .ok()
+        .and_then(|indicating| q_g_trans.get(indicating.0).ok().map(|x| (x, indicating.0)))
+    else {
+        if parent.is_some() {
+            commands.entity(cam_entity).remove_parent();
+        }
         cam.is_active = false;
         focused_reasons.add_reason(VIS_REASON);
         return;
@@ -146,10 +161,14 @@ fn render_on_focus(
         focused_reasons.add_reason(TOGGLED_REASON);
     }
 
-    let player_delta = player_g_trans.translation() - focused_g_trans.translation();
+    let local_player_delta = focused_g_trans.rotation().inverse() * (player_g_trans.translation() - focused_g_trans.translation());
 
-    cam_trans.translation = player_delta.normalize_or_zero() * 100.0 + focused_g_trans.translation();
-    cam_trans.look_at(focused_g_trans.translation(), player_g_trans.up());
+    if parent.map(|x| x.get()) != Some(focused_ent) {
+        commands.entity(cam_entity).set_parent(focused_ent);
+    }
+
+    cam_trans.translation = local_player_delta.normalize_or(Vec3::Z) * 100.0;
+    cam_trans.look_at(Vec3::ZERO, focused_g_trans.rotation().inverse() * player_g_trans.up());
 }
 
 #[derive(Resource)]
