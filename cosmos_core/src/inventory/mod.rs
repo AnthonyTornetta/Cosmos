@@ -59,7 +59,7 @@ pub enum InventorySlotError {
 impl std::fmt::Display for InventorySlotError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match *self {
-            Self::InvalidSlot(slot) => f.write_str(&format!("Invalid slot {}", slot)),
+            Self::InvalidSlot(slot) => f.write_str(&format!("Invalid slot {slot}")),
         }
     }
 }
