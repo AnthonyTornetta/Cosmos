@@ -316,19 +316,17 @@ fn move_anchors_between_worlds(
                 if *link != world_id {
                     *link = world_id;
 
-                    let mut ent = entity;
+                    // If this anchor has a parent, then when the parent is moved automatically
+                    // this will be automatically handled.
+                    if !q_parent.contains(entity) {
+                        if let Ok(mut trans) = q_trans.get_mut(entity) {
+                            trans.translation += (loc - world_loc).absolute_coords_f32();
 
-                    while let Ok(parent) = q_parent.get(ent) {
-                        ent = parent.get();
-                    }
-
-                    if let Ok(mut trans) = q_trans.get_mut(ent) {
-                        trans.translation += (loc - world_loc).absolute_coords_f32();
-
-                        info!(
-                            "Merging anchor ({entity:?}) into ({world_id:?}) world! Resulting transform: {}",
-                            trans.translation
-                        );
+                            info!(
+                                "Merging anchor ({entity:?}) into ({world_id:?}) world! Resulting transform: {}",
+                                trans.translation
+                            );
+                        }
                     }
                 }
             } else {
