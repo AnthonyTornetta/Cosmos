@@ -185,7 +185,7 @@ fn update_mining_beams(
 
             let rapier_context = rapier_context_access.get(**p_world);
 
-            let Some((hit_entity, toi)) = rapier_context.cast_ray(
+            let (hit_entity, toi) = rapier_context.cast_ray(
                 ray_start,
                 ray_dir.into(),
                 BEAM_MAX_RANGE,
@@ -203,9 +203,7 @@ fn update_mining_beams(
                     Group::ALL & !(SHIELD_COLLISION_GROUP | FLUID_COLLISION_GROUP),
                     Group::ALL & !(SHIELD_COLLISION_GROUP | FLUID_COLLISION_GROUP),
                 )),
-            ) else {
-                return None;
-            };
+            )?;
 
             if let Ok((structure, g_trans)) = q_structure.get(hit_entity) {
                 return Some((beam, structure, g_trans, ray_start, ray_dir, toi));

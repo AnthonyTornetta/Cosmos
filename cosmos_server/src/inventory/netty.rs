@@ -167,7 +167,7 @@ fn listen_for_inventory_messages(
 
                                 from_inventory
                                     .auto_move(from_slot, quantity, &mut commands)
-                                    .unwrap_or_else(|_| panic!("Got bad inventory slot from player! {}", from_slot));
+                                    .unwrap_or_else(|_| warn!("Got bad inventory slot from player! {from_slot}"));
                             } else {
                                 is.set_quantity(leftover);
                                 from_inventory.set_itemstack_at(from_slot, Some(is), &mut commands);
