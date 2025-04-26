@@ -6,7 +6,7 @@ use cosmos_core::{
     structure::{
         ChunkNeighbors,
         block_storage::BlockStorer,
-        chunk::{BlockInfo, CHUNK_DIMENSIONS, Chunk},
+        chunk::{BlockInfo, Chunk},
     },
 };
 

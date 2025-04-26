@@ -111,16 +111,25 @@ pub enum Structure {
 }
 
 #[derive(Clone, Copy, Debug)]
+/// Represents the neighbors of a given chunk
 pub struct ChunkNeighbors<'a> {
+    /// The neighbor in the -x direction
     pub neg_x: Option<&'a Chunk>,
+    /// The neighbor in the +x direction
     pub pos_x: Option<&'a Chunk>,
+    /// The neighbor in the -y direction
     pub neg_y: Option<&'a Chunk>,
+    /// The neighbor in the +y direction
     pub pos_y: Option<&'a Chunk>,
+    /// The neighbor in the -z direction
     pub neg_z: Option<&'a Chunk>,
+    /// The neighbor in the +z direction
     pub pos_z: Option<&'a Chunk>,
 }
 
 impl<'a> ChunkNeighbors<'a> {
+    /// Checks if one of the block neighbors should be used for this unbound coordinate, and
+    /// returns the proper neighbor + coordinate pair if the neighbor should be used.
     pub fn check_at(&self, unbound: UnboundChunkBlockCoordinate) -> Option<(&'a Chunk, ChunkBlockCoordinate)> {
         let delta = if unbound.x < 0 {
             BlockDirection::NegX
@@ -292,6 +301,7 @@ impl Structure {
         }
     }
 
+    /// Returns the neighbors for this chunk coordinate.
     pub fn chunk_neighbors(&self, coords: ChunkCoordinate) -> ChunkNeighbors<'_> {
         let unbound = UnboundChunkCoordinate::from(coords);
 
