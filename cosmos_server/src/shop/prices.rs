@@ -58,7 +58,7 @@ fn compute_price(base: &[(u16, u32)], item: u16, fab_recipes: &BasicFabricatorRe
 }
 
 fn create_default_shop_entires(mut commands: Commands, items: Res<Registry<Item>>, fab_recipes: Res<BasicFabricatorRecipes>) {
-    let price = |id: &str, price: u32| -> Option<(u16, u32)> { items.from_id(&format!("cosmos:{}", id)).map(|x| (x.id(), price)) };
+    let price = |id: &str, price: u32| -> Option<(u16, u32)> { items.from_id(&format!("cosmos:{id}")).map(|x| (x.id(), price)) };
 
     let base_prices = [
         price("iron_bar", 10),

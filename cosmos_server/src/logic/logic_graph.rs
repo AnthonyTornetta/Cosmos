@@ -139,12 +139,11 @@ impl LogicGraph {
             PortType::Input => &self.input_port_group_id,
         }
         .get(port)?;
-        Some(self.groups.get(group_id).unwrap_or_else(|| {
-            panic!(
-                "Logic {:?} port at {:?} with a group ID {:?} should have a logic group.",
-                port_type, port, group_id
-            )
-        }))
+        Some(
+            self.groups
+                .get(group_id)
+                .unwrap_or_else(|| panic!("Logic {port_type:?} port at {port:?} with a group ID {group_id:?} should have a logic group.")),
+        )
     }
 
     /// Convenience method to get the [`LogicGroup`] ID, then the mutable [`LogicGroup`] instance itself.
@@ -156,10 +155,7 @@ impl LogicGraph {
         }
         .get(port)?;
         Some(self.groups.get_mut(group_id).unwrap_or_else(|| {
-            panic!(
-                "Logic {:?} port at {:?} with a group ID {:?} should have a mutable logic group.",
-                port_type, port, group_id
-            )
+            panic!("Logic {port_type:?} port at {port:?} with a group ID {group_id:?} should have a mutable logic group.")
         }))
     }
 
@@ -336,12 +332,7 @@ impl LogicGraph {
                     blocks,
                     logic_blocks,
                 )
-                .unwrap_or_else(|| {
-                    panic!(
-                        "Logic block with wire connections (color {}) is not part of any logic group.",
-                        wire_color_id
-                    )
-                })
+                .unwrap_or_else(|| panic!("Logic block with wire connections (color {wire_color_id}) is not part of any logic group."))
             })
     }
 

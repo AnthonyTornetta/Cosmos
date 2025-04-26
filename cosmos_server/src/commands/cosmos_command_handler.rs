@@ -325,7 +325,7 @@ fn cosmos_command_listener(
                 let quantity = match quantity {
                     Ok(x) => x,
                     Err(e) => {
-                        println!("Unable to parse quantity - {}", e);
+                        println!("Unable to parse quantity - {e}");
                         continue;
                     }
                 };

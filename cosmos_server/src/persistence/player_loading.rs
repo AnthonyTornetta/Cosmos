@@ -83,7 +83,7 @@ fn monitor_loading_task(
             }) {
                 let entity_id = *sfi.entity_id().expect("Missing entity id");
 
-                let name = format!("Needs Loaded Entity - {}", entity_id);
+                let name = format!("Needs Loaded Entity - {entity_id}");
 
                 info!("Loading {entity_id}");
 

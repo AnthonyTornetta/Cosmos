@@ -241,7 +241,7 @@ fn deserialize_inventory(
             Err(DeserializationError::ErrorParsing(e)) => {
                 let id = q_name
                     .get(entity)
-                    .map(|x| format!("{} ({entity:?})", x))
+                    .map(|x| format!("{x} ({entity:?})"))
                     .unwrap_or_else(|_| format!("{entity:?}"));
                 error!(
                     "Error deserializing component {} on entity {id}\n{e:?}.",

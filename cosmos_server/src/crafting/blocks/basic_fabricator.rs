@@ -134,8 +134,7 @@ fn monitor_craft_event(
         let (leftover, _) = player_inv.insert_item(item, qty_crafted as u16, &mut commands, &needs_data);
         assert_eq!(
             leftover, 0,
-            "Invalid crafting occured! Unable to insert all products! ({} leftover)",
-            leftover
+            "Invalid crafting occured! Unable to insert all products! ({leftover} leftover)"
         );
     }
 }
