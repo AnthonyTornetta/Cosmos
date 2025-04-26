@@ -17,9 +17,9 @@ use cosmos_core::physics::location::SECTOR_DIMENSIONS;
 use cosmos_core::prelude::ChunkBlockCoordinate;
 use cosmos_core::registry::ReadOnlyRegistry;
 use cosmos_core::registry::many_to_one::ReadOnlyManyToOneRegistry;
-use cosmos_core::structure::Structure;
 use cosmos_core::structure::chunk::{CHUNK_DIMENSIONS, ChunkEntity};
 use cosmos_core::structure::coordinates::UnboundChunkCoordinate;
+use cosmos_core::structure::{ChunkNeighbors, Structure};
 use futures_lite::future;
 
 use super::chunk_renderer::{ChunkNeedsCustomBlocksRendered, ChunkRenderer, RenderingChunk, RenderingChunks};
@@ -315,12 +315,14 @@ fn monitor_needs_rendered_system(
             let mut renderer = ChunkRenderer::<CosmosMeshBuilder>::new();
 
             let chunk_checker = ChunkRenderingChecker {
-                neg_x: neg_x.as_ref(),
-                neg_y: neg_y.as_ref(),
-                neg_z: neg_z.as_ref(),
-                pos_x: pos_x.as_ref(),
-                pos_y: pos_y.as_ref(),
-                pos_z: pos_z.as_ref(),
+                neighbors: ChunkNeighbors {
+                    neg_x: neg_x.as_ref(),
+                    neg_y: neg_y.as_ref(),
+                    neg_z: neg_z.as_ref(),
+                    pos_x: pos_x.as_ref(),
+                    pos_y: pos_y.as_ref(),
+                    pos_z: pos_z.as_ref(),
+                },
             };
 
             let custom_blocks = renderer.render(

@@ -14,7 +14,9 @@ use bevy::prelude::{App, Event, IntoSystemConfigs, IntoSystemSetConfigs, Name, P
 use bevy::reflect::Reflect;
 use bevy::utils::{HashMap, HashSet};
 use bevy_rapier3d::plugin::RapierContextEntityLink;
-use chunk::BlockInfo;
+use chunk::{BlockInfo, CHUNK_DIMENSIONS};
+use coordinates::{CoordinateType, UnboundCoordinateType};
+use prelude::{ChunkBlockCoordinate, UnboundChunkBlockCoordinate};
 use query::MutBlockData;
 
 pub mod asteroid;
@@ -42,6 +44,7 @@ pub mod structure_builder;
 pub mod structure_iterator;
 pub mod systems;
 
+use crate::block::block_direction::BlockDirection;
 use crate::block::data::BlockData;
 use crate::block::data::persistence::ChunkLoadBlockDataEvent;
 use crate::block::{Block, block_face::BlockFace, block_rotation::BlockRotation};
@@ -105,6 +108,104 @@ pub enum Structure {
     Dynamic(DynamicStructure),
     /// This structure has all the chunks loaded at once, like ships and asteroids
     Full(FullStructure),
+}
+
+#[derive(Clone, Copy, Debug)]
+/// Represents the neighbors of a given chunk
+pub struct ChunkNeighbors<'a> {
+    /// The neighbor in the -x direction
+    pub neg_x: Option<&'a Chunk>,
+    /// The neighbor in the +x direction
+    pub pos_x: Option<&'a Chunk>,
+    /// The neighbor in the -y direction
+    pub neg_y: Option<&'a Chunk>,
+    /// The neighbor in the +y direction
+    pub pos_y: Option<&'a Chunk>,
+    /// The neighbor in the -z direction
+    pub neg_z: Option<&'a Chunk>,
+    /// The neighbor in the +z direction
+    pub pos_z: Option<&'a Chunk>,
+}
+
+impl<'a> ChunkNeighbors<'a> {
+    /// Checks if one of the block neighbors should be used for this unbound coordinate, and
+    /// returns the proper neighbor + coordinate pair if the neighbor should be used.
+    pub fn check_at(&self, unbound: UnboundChunkBlockCoordinate) -> Option<(&'a Chunk, ChunkBlockCoordinate)> {
+        let delta = if unbound.x < 0 {
+            BlockDirection::NegX
+        } else if unbound.x >= CHUNK_DIMENSIONS as UnboundCoordinateType {
+            BlockDirection::PosX
+        } else if unbound.y < 0 {
+            BlockDirection::NegY
+        } else if unbound.y >= CHUNK_DIMENSIONS as UnboundCoordinateType {
+            BlockDirection::PosY
+        } else if unbound.z < 0 {
+            BlockDirection::NegZ
+        } else if unbound.z >= CHUNK_DIMENSIONS as UnboundCoordinateType {
+            BlockDirection::PosZ
+        } else {
+            return None;
+        };
+
+        type CT = CoordinateType;
+
+        match delta {
+            BlockDirection::NegX => self
+                .neg_x
+                .map(|neg_x_chunk| {
+                    Some((
+                        neg_x_chunk,
+                        ChunkBlockCoordinate::new(CHUNK_DIMENSIONS - 1, unbound.y as CT, unbound.z as CT).expect("Invalid coordinate"),
+                    ))
+                })
+                .unwrap_or(None),
+            BlockDirection::PosX => self
+                .pos_x
+                .map(|pos_x_chunk| {
+                    Some((
+                        pos_x_chunk,
+                        ChunkBlockCoordinate::new(0, unbound.y as CT, unbound.z as CT).expect("Invalid coordinate"),
+                    ))
+                })
+                .unwrap_or(None),
+            BlockDirection::NegY => self
+                .neg_y
+                .map(|neg_y_chunk| {
+                    Some((
+                        neg_y_chunk,
+                        ChunkBlockCoordinate::new(unbound.x as CT, CHUNK_DIMENSIONS - 1, unbound.z as CT).expect("Invalid coordinate"),
+                    ))
+                })
+                .unwrap_or(None),
+            BlockDirection::PosY => self
+                .pos_y
+                .map(|pos_y_chunk| {
+                    Some((
+                        pos_y_chunk,
+                        ChunkBlockCoordinate::new(unbound.x as CT, 0, unbound.z as CT).expect("Invalid coordinate"),
+                    ))
+                })
+                .unwrap_or(None),
+            BlockDirection::NegZ => self
+                .neg_z
+                .map(|neg_z_chunk| {
+                    Some((
+                        neg_z_chunk,
+                        ChunkBlockCoordinate::new(unbound.x as CT, unbound.y as CT, CHUNK_DIMENSIONS - 1).expect("Invalid coordinate"),
+                    ))
+                })
+                .unwrap_or(None),
+            BlockDirection::PosZ => self
+                .pos_z
+                .map(|pos_z_chunk| {
+                    Some((
+                        pos_z_chunk,
+                        ChunkBlockCoordinate::new(unbound.x as CT, unbound.y as CT, 0).expect("Invalid coordinate"),
+                    ))
+                })
+                .unwrap_or(None),
+        }
+    }
 }
 
 impl Structure {
@@ -197,6 +298,27 @@ impl Structure {
         match self {
             Self::Full(fs) => fs.chunk_at_unbound(unbound_coords),
             Self::Dynamic(ds) => ds.chunk_at_unbound(unbound_coords),
+        }
+    }
+
+    /// Returns the neighbors for this chunk coordinate.
+    pub fn chunk_neighbors(&self, coords: ChunkCoordinate) -> ChunkNeighbors<'_> {
+        let unbound = UnboundChunkCoordinate::from(coords);
+
+        let pos_x = self.chunk_at_unbound(unbound.pos_x());
+        let neg_x = self.chunk_at_unbound(unbound.neg_x());
+        let pos_y = self.chunk_at_unbound(unbound.pos_y());
+        let neg_y = self.chunk_at_unbound(unbound.neg_y());
+        let pos_z = self.chunk_at_unbound(unbound.pos_z());
+        let neg_z = self.chunk_at_unbound(unbound.neg_z());
+
+        ChunkNeighbors {
+            pos_x,
+            neg_x,
+            pos_y,
+            neg_y,
+            pos_z,
+            neg_z,
         }
     }
 
