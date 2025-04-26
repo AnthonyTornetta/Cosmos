@@ -301,7 +301,7 @@ fn update_waypoint_text(q_waypoint: Query<&Location, With<Waypoint>>, mut q_text
         .map(|x| format!("{}, {}, {}", x.sector.x(), x.sector.y(), x.sector.z()))
         .unwrap_or("<enter to set>".to_owned());
 
-    text.as_mut().0 = format!("Waypoint: {}", waypoint_text);
+    text.as_mut().0 = format!("Waypoint: {waypoint_text}");
 }
 
 fn update_sector_text(q_cam: Query<&MapCamera, Changed<MapCamera>>, mut q_text: Query<&mut Text, With<MapSelectedSectorText>>) {

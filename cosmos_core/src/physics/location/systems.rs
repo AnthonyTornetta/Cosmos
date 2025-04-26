@@ -13,7 +13,7 @@ use bevy::utils::{HashMap, HashSet};
 #[cfg(feature = "server")]
 use bevy_rapier3d::{plugin::RapierConfiguration, prelude::RapierContextSimulation};
 
-use crate::{netty::system_sets::NetworkingSystemsSet, physics::player_world::PlayerWorld};
+use crate::{ecs::NeedsDespawned, netty::system_sets::NetworkingSystemsSet, physics::player_world::PlayerWorld};
 
 use super::{Location, LocationPhysicsSet, SetPosition};
 
@@ -137,7 +137,7 @@ fn reposition_worlds_around_anchors(
     mut q_trans_no_parent: Query<(&mut Transform, &RapierContextEntityLink), (Without<Parent>, With<Location>)>,
     trans_query_with_parent: Query<&Location, (Without<PlayerWorld>, With<Parent>)>,
     #[cfg(feature = "server")] q_anchors: Query<(&RapierContextEntityLink, Entity), With<Anchor>>,
-    #[cfg(feature = "server")] everything_query: Query<(&RapierContextEntityLink, Entity)>,
+    // #[cfg(feature = "server")] everything_query: Query<(&RapierContextEntityLink, Entity)>,
     parent_query: Query<&Parent>,
     entity_query: Query<Entity>,
     mut world_query: Query<(Entity, &mut PlayerWorld, &mut Location)>,
@@ -176,7 +176,6 @@ fn reposition_worlds_around_anchors(
             {
                 // The player has disconnected
                 // Either: Find a new player to have the world
-                // Or: Move everything over to the closest world by removing the WorldWithin component
 
                 let mut found = false;
                 // find player
@@ -191,13 +190,18 @@ fn reposition_worlds_around_anchors(
 
                 // No suitable player found, find another world to move everything to
                 if !found {
-                    for (world_within, entity) in everything_query.iter() {
-                        if world_within.0 == world_entity {
-                            commands.entity(entity).remove::<RapierContextEntityLink>();
-                        }
-                    }
-                    commands.entity(world_entity).despawn_recursive();
-                    info!("Despawning world {:?}", world.player);
+                    // for (world_within, entity) in everything_query.iter() {
+                    //     if world_within.0 == world_entity {
+                    //         commands.entity(entity).remove::<RapierContextEntityLink>();
+                    //     }
+                    // }
+                    // commands.entity(world_entity).despawn_recursive();
+
+                    // Entities will be moved to the proper world later in [`move_non_anchors_between_worlds`], but need the world to
+                    // stick around until after that happens.
+
+                    commands.entity(world_entity).insert(NeedsDespawned);
+                    info!("Despawning world {:?} ({world_entity:?})", world.player);
                 }
             }
         }
@@ -268,6 +272,7 @@ fn find_groups(points: &[Point3D], threshold: f32) -> Vec<Vec<Point3D>> {
 fn move_anchors_between_worlds(
     q_anchors: Query<(Entity, &Location), With<Anchor>>,
     mut q_trans: Query<&mut Transform>,
+    q_parent: Query<&Parent>,
     mut q_world_within: Query<&mut RapierContextEntityLink>,
     q_worlds: Query<Entity, With<PlayerWorld>>,
     mut commands: Commands,
@@ -311,13 +316,17 @@ fn move_anchors_between_worlds(
                 if *link != world_id {
                     *link = world_id;
 
-                    if let Ok(mut trans) = q_trans.get_mut(entity) {
-                        trans.translation += (loc - world_loc).absolute_coords_f32();
+                    // If this anchor has a parent, then when the parent is moved automatically
+                    // this will be automatically handled.
+                    if !q_parent.contains(entity) {
+                        if let Ok(mut trans) = q_trans.get_mut(entity) {
+                            trans.translation += (loc - world_loc).absolute_coords_f32();
 
-                        info!(
-                            "Merging anchor ({entity:?}) into ({world_id:?}) world! Resulting transform: {}",
-                            trans.translation
-                        );
+                            info!(
+                                "Merging anchor ({entity:?}) into ({world_id:?}) world! Resulting transform: {}",
+                                trans.translation
+                            );
+                        }
                     }
                 }
             } else {
@@ -378,7 +387,7 @@ fn move_non_anchors_between_worlds_single(
 
 #[cfg(feature = "server")]
 fn move_non_anchors_between_worlds(
-    mut needs_world: Query<
+    mut q_needs_moved: Query<
         (Entity, &Location, Option<&mut Transform>, Option<&mut RapierContextEntityLink>),
         (Without<Anchor>, Without<Parent>, Without<PlayerWorld>),
     >,
@@ -386,7 +395,7 @@ fn move_non_anchors_between_worlds(
     anchors_with_worlds: Query<(&Location, &RapierContextEntityLink), With<Anchor>>,
     mut commands: Commands,
 ) {
-    for (entity, location, trans, maybe_body_world) in needs_world.iter_mut() {
+    for (entity, location, trans, maybe_body_world) in q_needs_moved.iter_mut() {
         let mut best_ww = None;
         let mut best_dist = None;
         let mut best_world_id = None;
@@ -411,6 +420,14 @@ fn move_non_anchors_between_worlds(
                     let new_loc = q_player_world.get(ww.0).expect("Invalid new world within pointer");
 
                     let delta = *new_loc - *old_loc;
+
+                    if *body_world != world_link {
+                        info!(
+                            "Moving non anchor ({entity:?}) between world! Delta: {}",
+                            -delta.absolute_coords_f32()
+                        );
+                    }
+
                     trans.translation -= delta.absolute_coords_f32();
                 }
 
@@ -418,7 +435,7 @@ fn move_non_anchors_between_worlds(
                     *body_world = world_link;
                 }
             } else {
-                commands.entity(entity).insert(ww).insert(world_link);
+                commands.entity(entity).insert(world_link);
             }
         }
     }

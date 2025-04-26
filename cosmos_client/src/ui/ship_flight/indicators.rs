@@ -2,7 +2,6 @@
 
 use bevy::{asset::LoadState, prelude::*, utils::HashMap};
 use cosmos_core::{
-    entities::player::Player,
     faction::{Faction, FactionId, FactionRelation, Factions},
     netty::{client::LocalPlayer, system_sets::NetworkingSystemsSet},
     physics::location::Location,
@@ -252,7 +251,6 @@ fn added(
     q_melting_down: Query<Entity, Added<MeltingDown>>,
     asteroid_query: Query<Entity, Added<Asteroid>>,
     planet_query: Query<Entity, Added<Planet>>,
-    player_query: Query<Entity, (Added<Player>, Without<LocalPlayer>)>,
     factions: Res<Factions>,
     mut commands: Commands,
 ) {
@@ -299,13 +297,6 @@ fn added(
         commands.entity(ent).insert(IndicatorSettings {
             color: Srgba::hex("6159427F").unwrap().into(),
             max_distance: 20_000.0,
-            offset: Vec3::ZERO,
-        });
-    });
-    player_query.iter().for_each(|ent| {
-        commands.entity(ent).insert(IndicatorSettings {
-            color: Srgba::hex("FFFFFF7F").unwrap().into(),
-            max_distance: 5_000.0,
             offset: Vec3::ZERO,
         });
     });

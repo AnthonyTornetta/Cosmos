@@ -117,7 +117,7 @@ pub fn register_structure_system<T: SyncableSystem>(app: &mut App, activatable: 
         OnExit(GameState::PostLoading),
         move |items: Res<Registry<Item>>, mut registry: ResMut<Registry<StructureSystemType>>| {
             let Some(item) = items.from_id(&item_icon_unlocalized_name) else {
-                panic!("Could not find item with id {}", item_icon_unlocalized_name);
+                panic!("Could not find item with id {item_icon_unlocalized_name}");
             };
 
             registry.register(StructureSystemType::new(T::unlocalized_name(), activatable, item.id()));

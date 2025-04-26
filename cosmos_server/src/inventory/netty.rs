@@ -132,14 +132,14 @@ fn listen_for_inventory_messages(
                         if let Some(mut inventory) = get_inventory_mut(inventory_a, &mut q_inventory, &q_structure) {
                             inventory
                                 .self_swap_slots(slot_a as usize, slot_b as usize, &mut commands)
-                                .unwrap_or_else(|_| panic!("Got bad inventory slots from player! {}, {}", slot_a, slot_b));
+                                .unwrap_or_else(|_| panic!("Got bad inventory slots from player! {slot_a}, {slot_b}"));
                         }
                     } else if let Some([mut inventory_a, mut inventory_b]) =
                         get_many_inventories_mut([inventory_a, inventory_b], &mut q_inventory, &q_structure)
                     {
                         inventory_a
                             .swap_slots(slot_a as usize, &mut inventory_b, slot_b as usize, &mut commands)
-                            .unwrap_or_else(|_| panic!("Got bad inventory slots from player! {}, {}", slot_a, slot_b));
+                            .unwrap_or_else(|_| panic!("Got bad inventory slots from player! {slot_a}, {slot_b}"));
                     }
                 }
                 ClientInventoryMessages::AutoMove {
@@ -152,7 +152,7 @@ fn listen_for_inventory_messages(
                         if let Some(mut inventory) = get_inventory_mut(from_inventory, &mut q_inventory, &q_structure) {
                             inventory
                                 .auto_move(from_slot as usize, quantity, &mut commands)
-                                .unwrap_or_else(|_| panic!("Got bad inventory slot from player! {}", from_slot));
+                                .unwrap_or_else(|_| panic!("Got bad inventory slot from player! {from_slot}"));
                         }
                     } else if let Some([mut from_inventory, mut to_inventory]) =
                         get_many_inventories_mut([from_inventory, to_inventory], &mut q_inventory, &q_structure)
@@ -167,7 +167,7 @@ fn listen_for_inventory_messages(
 
                                 from_inventory
                                     .auto_move(from_slot, quantity, &mut commands)
-                                    .unwrap_or_else(|_| panic!("Got bad inventory slot from player! {}", from_slot));
+                                    .unwrap_or_else(|_| warn!("Got bad inventory slot from player! {from_slot}"));
                             } else {
                                 is.set_quantity(leftover);
                                 from_inventory.set_itemstack_at(from_slot, Some(is), &mut commands);
@@ -186,14 +186,14 @@ fn listen_for_inventory_messages(
                         if let Some(mut inventory) = get_inventory_mut(from_inventory, &mut q_inventory, &q_structure) {
                             inventory
                                 .self_move_itemstack(from_slot as usize, to_slot as usize, quantity, &mut commands)
-                                .unwrap_or_else(|_| panic!("Got bad inventory slots from player! {}, {}", from_slot, to_slot));
+                                .unwrap_or_else(|_| panic!("Got bad inventory slots from player! {from_slot}, {to_slot}"));
                         }
                     } else if let Some([mut inventory_a, mut inventory_b]) =
                         get_many_inventories_mut([from_inventory, to_inventory], &mut q_inventory, &q_structure)
                     {
                         inventory_a
                             .move_itemstack(from_slot as usize, &mut inventory_b, to_slot as usize, quantity, &mut commands)
-                            .unwrap_or_else(|_| panic!("Got bad inventory slots from player! {}, {}", from_slot, to_slot));
+                            .unwrap_or_else(|_| panic!("Got bad inventory slots from player! {from_slot}, {to_slot}"));
                     }
                 }
                 ClientInventoryMessages::PickupItemstack {

@@ -117,7 +117,7 @@ fn client_deserialize_component<T: SyncableComponent>(
 
         let synced_id = components_registry
             .try_from_numeric_id(id)
-            .unwrap_or_else(|| panic!("Missing component with id {}\n\n{components_registry:?}\n\n", id));
+            .unwrap_or_else(|| panic!("Missing component with id {id}\n\n{components_registry:?}\n\n"));
 
         if T::get_component_unlocalized_name() != synced_id.unlocalized_name {
             continue;
@@ -163,7 +163,7 @@ fn client_remove_component<T: SyncableComponent>(
 
         let synced_id = components_registry
             .try_from_numeric_id(id)
-            .unwrap_or_else(|| panic!("Missing component with id {}", id));
+            .unwrap_or_else(|| panic!("Missing component with id {id}"));
 
         if T::get_component_unlocalized_name() != synced_id.unlocalized_name {
             continue;

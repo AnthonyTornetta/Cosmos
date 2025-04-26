@@ -31,6 +31,7 @@ use cosmos_core::{
         },
     },
 };
+use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
 
 use super::{line_system::add_line_system, sync::register_structure_system};
 
@@ -134,101 +135,121 @@ fn update_mining_beams(
 
     let delta_time = time.delta_secs();
 
-    for (entity, beam, p_world, g_trans) in q_mining_beams.iter_mut() {
+    // group by structure
+
+    let mut structure_beams: HashMap<Entity, Vec<_>> = HashMap::new();
+
+    for (beam_ent, beam, p_world, g_trans) in q_mining_beams.iter_mut() {
         if !q_is_system_active.contains(beam.system_entity) {
-            commands.entity(entity).insert(NeedsDespawned);
-            continue;
+            commands.entity(beam_ent).insert(NeedsDespawned);
+            return;
         }
 
-        let Ok(systems) = q_systems.get(beam.structure_entity) else {
-            warn!("Structure missing `Systems` component {:?}", beam.structure_entity);
-            commands.entity(beam.structure_entity).log_components();
-            commands.entity(entity).insert(NeedsDespawned);
-            continue;
-        };
+        structure_beams
+            .entry(beam.structure_entity)
+            .or_default()
+            .push((beam_ent, beam, p_world, g_trans));
+    }
 
-        let Ok(mut energy_storage_system) = systems.query_mut(&mut q_energy_storage_system) else {
-            warn!("Structure missing `EnergyStorageSystem` system {:?}", beam.structure_entity);
-            commands.entity(beam.structure_entity).log_components();
+    let le_beams = structure_beams
+        .into_iter()
+        .flat_map(|(structure, mut beams)| {
+            let Ok(systems) = q_systems.get(structure) else {
+                warn!("Structure missing `Systems` component {:?}", structure);
+                return None;
+            };
 
-            continue;
-        };
+            let Ok(mut energy_storage_system) = systems.query_mut(&mut q_energy_storage_system) else {
+                warn!("Structure missing `EnergyStorageSystem` system {:?}", structure);
+                return None;
+            };
 
-        if energy_storage_system.decrease_energy(beam.property.energy_per_second * delta_time) != 0.0 {
-            commands.entity(entity).insert(NeedsDespawned);
-            continue;
-        }
-
-        let ray_start = g_trans.translation();
-        let ray_dir = g_trans.forward();
-
-        let rapier_context = rapier_context_access.get(*p_world);
-
-        let Some((hit_entity, toi)) = rapier_context.cast_ray(
-            ray_start,
-            ray_dir.into(),
-            BEAM_MAX_RANGE,
-            true,
-            QueryFilter::predicate(QueryFilter::default(), &|entity| {
-                if beam.structure_entity == entity {
-                    false
-                } else if let Ok(parent) = q_parent.get(entity) {
-                    parent.get() != beam.structure_entity
-                } else {
-                    false
+            beams.retain(|(beam_ent, beam, _, _)| {
+                if energy_storage_system.decrease_energy(beam.property.energy_per_second * delta_time) != 0.0 {
+                    commands.entity(*beam_ent).insert(NeedsDespawned);
+                    return false;
                 }
-            })
-            .groups(CollisionGroups::new(
-                Group::ALL & !(SHIELD_COLLISION_GROUP | FLUID_COLLISION_GROUP),
-                Group::ALL & !(SHIELD_COLLISION_GROUP | FLUID_COLLISION_GROUP),
-            )),
-        ) else {
-            continue;
-        };
+                true
+            });
 
-        let mut handle_structure = |beam_shooter_entity: Entity,
-                                    structure: &Structure,
-                                    // being_mined: &mut BeingMined,
-                                    structure_global_trans: &GlobalTransform| {
-            let global_point_hit = ray_start + (ray_dir * (toi + 0.01));
+            Some(beams)
+        })
+        .flatten()
+        .collect::<Vec<_>>();
 
-            let local_point_hit = Quat::from_affine3(&structure_global_trans.affine())
-                .inverse()
-                .mul_vec3(global_point_hit - structure_global_trans.translation());
+    let hits = le_beams
+        .par_iter()
+        .flat_map(|(_, beam, p_world, g_trans)| {
+            let ray_start = g_trans.translation();
+            let ray_dir = g_trans.forward();
 
-            if let Ok(block_coord) =
-                structure.relative_coords_to_local_coords_checked(local_point_hit.x, local_point_hit.y, local_point_hit.z)
-            {
-                let hit_structure_entity = structure.get_entity().expect("Missing structure entity");
+            let rapier_context = rapier_context_access.get(**p_world);
 
-                let break_delta = delta_time * beam.property.break_force;
+            let (hit_entity, toi) = rapier_context.cast_ray(
+                ray_start,
+                ray_dir.into(),
+                BEAM_MAX_RANGE,
+                true,
+                QueryFilter::predicate(QueryFilter::default(), &|entity| {
+                    if beam.structure_entity == entity {
+                        false
+                    } else if let Ok(parent) = q_parent.get(entity) {
+                        parent.get() != beam.structure_entity
+                    } else {
+                        false
+                    }
+                })
+                .groups(CollisionGroups::new(
+                    Group::ALL & !(SHIELD_COLLISION_GROUP | FLUID_COLLISION_GROUP),
+                    Group::ALL & !(SHIELD_COLLISION_GROUP | FLUID_COLLISION_GROUP),
+                )),
+            )?;
 
-                if let Some(block) = mining_blocks.iter_mut().find(|b| {
-                    b.hit_structure_entity == hit_structure_entity
-                        && b.beam_shooter_entity == beam_shooter_entity
-                        && b.hit_coordinate == block_coord
-                }) {
-                    block.break_increase += break_delta;
-                } else {
-                    mining_blocks.push(CachedBlockBeingMined {
-                        hit_structure_entity,
-                        beam_shooter_entity,
-                        hit_coordinate: block_coord,
-                        break_increase: break_delta,
-                    });
+            if let Ok((structure, g_trans)) = q_structure.get(hit_entity) {
+                return Some((beam, structure, g_trans, ray_start, ray_dir, toi));
+            } else if let Ok(parent) = q_parent.get(hit_entity) {
+                let entity = parent.get();
+                if let Ok((structure, g_trans)) = q_structure.get(entity) {
+                    return Some((beam, structure, g_trans, ray_start, ray_dir, toi));
                 }
+            }
+
+            None
+        })
+        .collect::<Vec<_>>();
+
+    for (beam, structure, g_trans, ray_start, ray_dir, toi) in hits {
+        let beam_shooter_entity = beam.structure_entity;
+        let structure_global_trans = g_trans;
+
+        let global_point_hit = ray_start + (ray_dir * (toi + 0.01));
+
+        let local_point_hit = Quat::from_affine3(&structure_global_trans.affine())
+            .inverse()
+            .mul_vec3(global_point_hit - structure_global_trans.translation());
+
+        if let Ok(block_coord) = structure.relative_coords_to_local_coords_checked(local_point_hit.x, local_point_hit.y, local_point_hit.z)
+        {
+            let hit_structure_entity = structure.get_entity().expect("Missing structure entity");
+
+            let break_delta = delta_time * beam.property.break_force;
+
+            if let Some(block) = mining_blocks.iter_mut().find(|b| {
+                b.hit_structure_entity == hit_structure_entity
+                    && b.beam_shooter_entity == beam_shooter_entity
+                    && b.hit_coordinate == block_coord
+            }) {
+                block.break_increase += break_delta;
             } else {
-                warn!("Mining laser hit out of bounds coordinates?");
+                mining_blocks.push(CachedBlockBeingMined {
+                    hit_structure_entity,
+                    beam_shooter_entity,
+                    hit_coordinate: block_coord,
+                    break_increase: break_delta,
+                });
             }
-        };
-
-        if let Ok((structure, g_trans)) = q_structure.get(hit_entity) {
-            handle_structure(beam.structure_entity, structure, g_trans);
-        } else if let Ok(parent) = q_parent.get(hit_entity) {
-            let entity = parent.get();
-            if let Ok((structure, g_trans)) = q_structure.get(entity) {
-                handle_structure(beam.structure_entity, structure, g_trans);
-            }
+        } else {
+            warn!("Mining laser hit out of bounds coordinates?");
         }
     }
 
@@ -260,6 +281,7 @@ fn update_mining_beams(
                         dirty: true,
                         last_toucher: beam_shooter_entity,
                     },
+                    DespawnWithStructure,
                     NoSendEntity,
                 ))
                 .id();

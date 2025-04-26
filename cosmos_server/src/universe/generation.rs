@@ -91,7 +91,7 @@ fn save_universe_systems(systems: Res<UniverseSystems>) {
             format!("world/systems/{},{},{}.usys", system_coord.x(), system_coord.y(), system_coord.z()),
             serialized,
         )
-        .unwrap_or_else(|_| panic!("Failed to save universe system at -- {}", system_coord));
+        .unwrap_or_else(|_| panic!("Failed to save universe system at -- {system_coord}"));
     }
 }
 
