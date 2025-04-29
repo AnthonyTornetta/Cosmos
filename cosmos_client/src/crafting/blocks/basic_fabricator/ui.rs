@@ -437,7 +437,7 @@ fn auto_insert_items(
     fab_block_id: u16,
     player_inv_ent: Entity,
 ) {
-    let Ok(fab_inv_block) = fab_inv_block.map_to_server(&mapping) else {
+    let Ok(fab_inv_block) = fab_inv_block.map_to_server(mapping) else {
         return;
     };
     let Some(player_inv_ent) = mapping.server_from_client(&player_inv_ent) else {
@@ -445,9 +445,7 @@ fn auto_insert_items(
     };
 
     for (needed_id, mut already_there) in recipe.inputs.iter().filter_map(|x| {
-        let id = match x.item {
-            RecipeItem::Item(i) => i,
-        };
+        let RecipeItem::Item(id) = x.item;
         let already_there = fab_inv
             .iter()
             .flatten()
