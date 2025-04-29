@@ -252,12 +252,30 @@ fn create_ui_recipes_list(
         let a_create = a.max_can_create(inv_items.iter().copied());
         let b_create = b.max_can_create(inv_items.iter().copied());
 
+        let amount_diff = a
+            .inputs
+            .iter()
+            .filter(|x| match x.item {
+                RecipeItem::Item(i) => inv_items.iter().any(|x| x.item_id() == i),
+            })
+            .count() as i32
+            - b.inputs
+                .iter()
+                .filter(|x| match x.item {
+                    RecipeItem::Item(i) => inv_items.iter().any(|x| x.item_id() == i),
+                })
+                .count() as i32;
+
         if a_create == 0 && b_create != 0 {
             Ordering::Greater
         } else if a_create != 0 && b_create == 0 {
             Ordering::Less
         } else if a_create != 0 && b_create != 0 && a.inputs.len() != b.inputs.len() {
             b.inputs.len().cmp(&a.inputs.len())
+        } else if amount_diff > 0 {
+            Ordering::Less
+        } else if amount_diff < 0 {
+            Ordering::Greater
         } else {
             let a_name = lang
                 .get_name_from_numeric_id(a.output.item)
