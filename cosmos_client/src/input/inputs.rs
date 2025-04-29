@@ -237,7 +237,7 @@ fn init_input(mut input_handler: ResMut<CosmosInputHandler>) {
     input_handler.set_keycode(CosmosInputs::ToggleQuestsUi, KeyCode::Tab);
     input_handler.set_keycode(CosmosInputs::HideUi, KeyCode::F1);
 
-    input_handler.set_keycode(CosmosInputs::ToggleFocusCam, KeyCode::KeyH);
+    input_handler.set_keycode(CosmosInputs::ToggleFocusCam, KeyCode::KeyG);
 }
 
 #[derive(Resource, Default, Debug)]
