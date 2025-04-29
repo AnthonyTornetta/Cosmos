@@ -13,7 +13,10 @@ use bevy::utils::{HashMap, HashSet};
 #[cfg(feature = "server")]
 use bevy_rapier3d::{plugin::RapierConfiguration, prelude::RapierContextSimulation};
 
-use crate::{ecs::NeedsDespawned, netty::system_sets::NetworkingSystemsSet, physics::player_world::PlayerWorld};
+#[cfg(feature = "server")]
+use crate::ecs::NeedsDespawned;
+
+use crate::{netty::system_sets::NetworkingSystemsSet, physics::player_world::PlayerWorld};
 
 use super::{Location, LocationPhysicsSet, SetPosition};
 
