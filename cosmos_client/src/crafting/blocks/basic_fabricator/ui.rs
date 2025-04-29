@@ -7,13 +7,13 @@ use bevy::{
     log::{error, info},
     prelude::{
         Added, App, BuildChildren, Changed, ChildBuild, ChildBuilder, Commands, Component, DespawnRecursiveExt, Entity, Event, EventReader,
-        IntoSystemConfigs, Query, Res, Text, With, in_state, resource_exists,
+        IntoSystemConfigs, Query, Res, ResMut, Text, With, in_state, resource_exists,
     },
     text::TextFont,
     ui::{AlignItems, BackgroundColor, FlexDirection, JustifyContent, Node, TargetCamera, UiRect, Val},
 };
 use cosmos_core::{
-    block::data::BlockData,
+    block::data::{BlockData, BlockDataIdentifier},
     crafting::{
         blocks::basic_fabricator::CraftBasicFabricatorRecipeEvent,
         recipes::{
@@ -21,10 +21,16 @@ use cosmos_core::{
             basic_fabricator::{BasicFabricatorRecipe, BasicFabricatorRecipes},
         },
     },
-    inventory::{Inventory, itemstack::ItemStack},
+    inventory::{
+        Inventory,
+        itemstack::ItemStack,
+        netty::{ClientInventoryMessages, InventoryIdentifier},
+    },
     item::Item,
     netty::{
+        NettyChannelClient,
         client::LocalPlayer,
+        cosmos_encoder,
         sync::{
             events::client_event::NettyEventWriter,
             mapping::{Mappable, NetworkMapping},
@@ -35,6 +41,7 @@ use cosmos_core::{
     registry::{Registry, identifiable::Identifiable},
     state::GameState,
 };
+use renet::RenetClient;
 
 use crate::{
     input::inputs::{CosmosInputs, InputChecker, InputHandler},
@@ -370,7 +377,18 @@ fn create_ui_recipes_list(
 
         if let Some(s) = selected {
             if recipe == &s.0 {
-                ecmds.insert(SelectedRecipe);
+                ecmds.insert((
+                    SelectedRecipe,
+                    BackgroundColor(
+                        Srgba {
+                            red: 1.0,
+                            green: 1.0,
+                            blue: 1.0,
+                            alpha: 0.1,
+                        }
+                        .into(),
+                    ),
+                ));
             }
         }
     }
@@ -409,14 +427,121 @@ fn on_change_inventory(
     }
 }
 
+fn auto_insert_items(
+    recipe: &BasicFabricatorRecipe,
+    player_inv: &Inventory,
+    fab_inv: &Inventory,
+    client: &mut RenetClient,
+    mapping: &NetworkMapping,
+    fab_inv_block: StructureBlock,
+    fab_block_id: u16,
+    player_inv_ent: Entity,
+) {
+    let Ok(fab_inv_block) = fab_inv_block.map_to_server(&mapping) else {
+        return;
+    };
+    let Some(player_inv_ent) = mapping.server_from_client(&player_inv_ent) else {
+        return;
+    };
+
+    for (needed_id, mut already_there) in recipe.inputs.iter().filter_map(|x| {
+        let id = match x.item {
+            RecipeItem::Item(i) => i,
+        };
+        let already_there = fab_inv
+            .iter()
+            .flatten()
+            .filter(|item| item.item_id() == id)
+            .map(|x| x.quantity())
+            .sum::<u16>();
+
+        if already_there < x.quantity {
+            Some((id, already_there))
+        } else {
+            None
+        }
+    }) {
+        for (slot, is) in player_inv
+            .iter()
+            .enumerate()
+            .flat_map(|(i, x)| x.as_ref().map(|x| (i, x)))
+            .filter(|(_, x)| x.item_id() == needed_id)
+        {
+            let max_amt = is.max_stack_size() - already_there;
+            let take_amt = is.quantity().min(max_amt);
+
+            already_there += take_amt;
+
+            if take_amt != 0 {
+                client.send_message(
+                    NettyChannelClient::Inventory,
+                    cosmos_encoder::serialize(&ClientInventoryMessages::AutoMove {
+                        from_slot: slot as u32,
+                        quantity: take_amt,
+                        from_inventory: InventoryIdentifier::Entity(player_inv_ent),
+                        to_inventory: InventoryIdentifier::BlockData(BlockDataIdentifier {
+                            block: fab_inv_block,
+                            block_id: fab_block_id,
+                        }),
+                    }),
+                );
+            }
+
+            if take_amt < is.quantity() {
+                break;
+            }
+        }
+    }
+}
+
 fn on_select_item(
     mut commands: Commands,
     mut evr_select_item: EventReader<SelectItemEvent>,
     q_selected_recipe: Query<Entity, With<SelectedRecipe>>,
+    q_recipe: Query<&Recipe>,
+    q_menu: Query<&DisplayedFabRecipes>,
     mut q_bg_col: Query<&mut BackgroundColor>,
+    q_player: Query<(Entity, &Inventory), With<LocalPlayer>>,
+    q_structure: Query<&Structure>,
+    q_inventory: Query<&Inventory>,
+    mut client: ResMut<RenetClient>,
+    mapping: Res<NetworkMapping>,
 ) {
     for ev in evr_select_item.read() {
         if let Ok(selected_recipe) = q_selected_recipe.get_single() {
+            if ev.0 == selected_recipe {
+                let Ok(recipe) = q_recipe.get(selected_recipe) else {
+                    continue;
+                };
+
+                let Ok((player_ent, player_inv)) = q_player.get_single() else {
+                    continue;
+                };
+
+                let Ok(menu) = q_menu.get_single() else {
+                    continue;
+                };
+
+                let Ok(structure) = q_structure.get(menu.0.structure()) else {
+                    continue;
+                };
+
+                let Some(inv) = structure.query_block_data(menu.0.coords(), &q_inventory) else {
+                    continue;
+                };
+
+                auto_insert_items(
+                    &recipe.0,
+                    player_inv,
+                    inv,
+                    &mut client,
+                    &mapping,
+                    menu.0,
+                    structure.block_id_at(menu.0.coords()),
+                    player_ent,
+                );
+                continue;
+            }
             commands.entity(selected_recipe).remove::<SelectedRecipe>();
             q_bg_col.get_mut(selected_recipe).expect("Must be ui node").0 = Color::NONE;
         }
