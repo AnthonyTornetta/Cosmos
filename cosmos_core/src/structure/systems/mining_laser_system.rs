@@ -18,7 +18,7 @@ impl SyncableSystem for MiningLaserSystem {}
 #[derive(Debug, Default, Reflect, Clone, Copy, PartialEq, Serialize, Deserialize)]
 /// Every block that is a mining laser should have this property
 pub struct MiningLaserProperty {
-    /// How much energy is consumed per shot
+    /// How much energy is consumed per second mining
     pub energy_per_second: f32,
     /// The breaking force this block has
     ///
@@ -36,14 +36,19 @@ pub struct MiningLaserPropertyCalculator;
 
 impl LinePropertyCalculator<MiningLaserProperty> for MiningLaserPropertyCalculator {
     fn calculate_property(properties: &[MiningLaserProperty]) -> MiningLaserProperty {
-        properties
+        let mut property = properties
             .iter()
             .copied()
             .reduce(|a, b: MiningLaserProperty| MiningLaserProperty {
                 break_force: a.break_force + b.break_force,
                 energy_per_second: a.energy_per_second + b.energy_per_second,
             })
-            .unwrap_or_default()
+            .unwrap_or_default();
+
+        // Makes it cheaper early on (<500 drills), but more expensive the more drills you have
+        property.energy_per_second = (property.energy_per_second / 20.0).powf(1.42);
+
+        property
     }
 
     fn unlocalized_name() -> &'static str {
