@@ -408,7 +408,10 @@ fn generate_block_item_model(
 
             if let Some(td) = texture_dims {
                 if td != image_index.dimension_index {
-                    panic!("Block contains textures with different dimensions on different faces!");
+                    panic!(
+                        "Block ({}) contains textures with different dimensions on different faces!",
+                        block.unlocalized_name()
+                    );
                 }
             } else {
                 texture_dims = Some(image_index.dimension_index)
