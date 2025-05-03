@@ -157,7 +157,7 @@ pub(super) fn register(app: &mut App) {
     app.add_systems(
         Update,
         (
-            generate_shops.in_set(SystemGenerationSet::Station),
+            generate_shops.in_set(SystemGenerationSet::Shop),
             spawn_shop.run_if(on_timer(Duration::from_secs(1))),
         )
             .chain()
