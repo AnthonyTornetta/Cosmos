@@ -82,6 +82,20 @@ fn send_map(
                         shop_count: 1,
                     })),
                 ),
+                SystemItem::PirateStation => system_map.add_destination(
+                    sector,
+                    Destination::Station(Box::new(StationDestination {
+                        status: FactionStatus::Enemy,
+                        shop_count: 0,
+                    })),
+                ),
+                SystemItem::PlayerStation => system_map.add_destination(
+                    sector,
+                    Destination::Station(Box::new(StationDestination {
+                        status: FactionStatus::Neutral,
+                        shop_count: 0,
+                    })),
+                ),
             }
         }
 

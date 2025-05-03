@@ -33,8 +33,10 @@ pub enum SystemGenerationSet {
     Planet,
     /// Add asteroids to the system
     Asteroid,
+    PopulationFactionLocations,
     /// Add stations to the system
     Shop,
+    PirateStation,
 }
 
 #[derive(Event, Debug)]
@@ -218,6 +220,12 @@ pub struct GeneratedItem {
     pub item: SystemItem,
 }
 
+impl GeneratedItem {
+    pub fn relative_sector(&self, system_coord: SystemCoordinate) -> Sector {
+        self.location.sector() - system_coord.negative_most_sector()
+    }
+}
+
 #[derive(Debug, Serialize, Deserialize, Default)]
 struct SectorDanger {
     danger: f32,
@@ -346,7 +354,9 @@ pub(super) fn register(app: &mut App) {
             SystemGenerationSet::Star,
             SystemGenerationSet::Planet,
             SystemGenerationSet::Asteroid,
+            SystemGenerationSet::PopulationFactionLocations,
             SystemGenerationSet::Shop,
+            SystemGenerationSet::PirateStation,
         )
             .in_set(NetworkingSystemsSet::Between)
             .before(LoadingBlueprintSystemSet::BeginLoadingBlueprints)
