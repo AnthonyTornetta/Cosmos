@@ -173,7 +173,6 @@ pub struct SystemItemAsteroid {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct SystemItemNpcFaction {
     pub build_type: String,
-    pub capitol: bool,
     pub faction: FactionId,
 }
 

@@ -14,7 +14,7 @@
 
 use std::{
     fmt::Display,
-    ops::{Add, AddAssign, Sub},
+    ops::{Add, AddAssign, Mul, Sub},
 };
 
 #[cfg(doc)]
@@ -152,6 +152,11 @@ impl Sector {
     pub fn max_element(&self) -> SectorUnit {
         self.0.max(self.1).max(self.2)
     }
+
+    /// Computes the minimum element
+    pub fn min_element(&self) -> SectorUnit {
+        self.0.min(self.1).min(self.2)
+    }
 }
 
 impl Add<Self> for Sector {
@@ -159,6 +164,14 @@ impl Add<Self> for Sector {
 
     fn add(self, rhs: Self) -> Self::Output {
         Self(self.0 + rhs.0, self.1 + rhs.1, self.2 + rhs.2)
+    }
+}
+
+impl Mul<i64> for Sector {
+    type Output = Self;
+
+    fn mul(self, rhs: i64) -> Self::Output {
+        Self(self.0 * rhs, self.1 * rhs, self.2 * rhs)
     }
 }
 
