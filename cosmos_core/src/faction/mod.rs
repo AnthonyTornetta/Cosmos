@@ -25,7 +25,7 @@ pub enum FactionRelation {
     Enemy,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, Reflect)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, Reflect, Default)]
 /// Extra configuration for a faction
 pub struct FactionSettings {
     /// If this is true, this faction will automatically be at war with any neutral faction.
@@ -68,8 +68,8 @@ impl Faction {
 
     /// Returns the [`FactionId`] of this faction
     #[inline(always)]
-    pub fn id(&self) -> &FactionId {
-        &self.id
+    pub fn id(&self) -> FactionId {
+        self.id
     }
 
     /// Computes the [`FactionRelation`] between two optional factions.
@@ -155,8 +155,15 @@ pub struct Factions(HashMap<FactionId, Faction>);
 
 impl Factions {
     /// Adds a new faction
-    pub fn add_new_faction(&mut self, faction: Faction) {
+    pub fn add_new_faction(&mut self, faction: Faction) -> bool {
+        if self.0.contains_key(&faction.id) {
+            return false;
+        }
+        if self.0.values().any(|x| x.name == faction.name) {
+            return false;
+        }
         self.0.insert(faction.id, faction);
+        true
     }
 
     /// Gets a faction from this id

@@ -11,6 +11,7 @@ use bevy::{
 };
 use cosmos_core::{
     entities::player::Player,
+    faction::FactionId,
     netty::{cosmos_encoder, system_sets::NetworkingSystemsSet},
     physics::location::{Location, SYSTEM_SECTORS, Sector, SystemCoordinate},
     prelude::Planet,
@@ -170,6 +171,13 @@ pub struct SystemItemAsteroid {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+pub struct SystemItemNpcFaction {
+    pub build_type: String,
+    pub capitol: bool,
+    pub faction: FactionId,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
 /// Represents everything that can be generated in a system when it is loaded
 pub enum SystemItem {
     /// A [`Star`] within the [`UniverseSystem`]
@@ -184,6 +192,7 @@ pub enum SystemItem {
     PirateStation,
     /// An [`cosmos_core::structure::asteroid::Asteroid`] within the [`UniverseSystem`]
     Asteroid(SystemItemAsteroid),
+    NpcStation(SystemItemNpcFaction),
     /// A [`cosmos_core::structure::station::Station`] within the [`UniverseSystem`] that functions
     /// is owned and controlled by a player
     PlayerStation,
@@ -199,6 +208,7 @@ impl SystemItem {
             Self::PirateStation => 20.0 * multiplier,
             Self::Asteroid(_) => 0.0,
             Self::PlayerStation => -500.0 * multiplier * multiplier,
+            Self::NpcStation(_) => -30.0 * multiplier,
         }
     }
 }

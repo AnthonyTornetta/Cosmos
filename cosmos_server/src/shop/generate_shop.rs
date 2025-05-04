@@ -137,7 +137,7 @@ fn spawn_shop(
             });
 
             if let Some(fac) = factions.from_name("Merchant Federation") {
-                ecmds.insert(*fac.id());
+                ecmds.insert(fac.id());
             } else {
                 error!("No merchant federation faction!");
             }

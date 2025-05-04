@@ -155,7 +155,7 @@ fn apply_pirate_faction(factions: Res<Factions>, mut commands: Commands, q_pirat
             return;
         };
 
-        commands.entity(ent).insert(*pirate_faction.id());
+        commands.entity(ent).insert(pirate_faction.id());
     }
 }
 
