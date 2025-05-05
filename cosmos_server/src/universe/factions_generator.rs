@@ -11,25 +11,25 @@ use rand::{
     Rng,
     seq::{IndexedRandom, IteratorRandom, SliceRandom},
 };
-use uuid::Uuid;
+// use uuid::Uuid;
 
 use crate::{init::init_world::ServerSeed, rng::get_rng_for_sector};
 
 use super::generation::{GenerateSystemEvent, SystemGenerationSet, SystemItem, SystemItemNpcFaction, UniverseSystems};
 
-#[derive(Debug, Clone, Copy)]
-struct NpcFactionId(Uuid);
-
-impl NpcFactionId {
-    pub fn new() -> Self {
-        Self(Uuid::new_v4())
-    }
-}
-
-struct NpcFactionDetails {
-    home_sector: Sector,
-    id: NpcFactionId,
-}
+// #[derive(Debug, Clone, Copy)]
+// struct NpcFactionId(Uuid);
+//
+// impl NpcFactionId {
+//     pub fn new() -> Self {
+//         Self(Uuid::new_v4())
+//     }
+// }
+//
+// struct NpcFactionDetails {
+//     home_sector: Sector,
+//     id: NpcFactionId,
+// }
 
 fn generate_factions(
     mut evr_generate_system: EventReader<GenerateSystemEvent>,

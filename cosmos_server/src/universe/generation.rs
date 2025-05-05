@@ -34,9 +34,11 @@ pub enum SystemGenerationSet {
     Planet,
     /// Add asteroids to the system
     Asteroid,
+    /// Adds faction locations to the system
     PopulationFactionLocations,
     /// Add stations to the system
     Shop,
+    /// Adds pirate stations to the system
     PirateStation,
 }
 
@@ -171,8 +173,14 @@ pub struct SystemItemAsteroid {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+/// Represents a [`cosmos_core::structure::station::Station`] within this [`UniverseSystem`] that
+/// is owned by an NPC faction.
 pub struct SystemItemNpcFaction {
+    /// The building (blueprint) type to be applied here
+    ///
+    /// Found in `server/default_blueprints/faction/stations`.
     pub build_type: String,
+    /// The faction id of this faction. Must point to a valid faction.
     pub faction: FactionId,
 }
 
@@ -191,9 +199,11 @@ pub enum SystemItem {
     PirateStation,
     /// An [`cosmos_core::structure::asteroid::Asteroid`] within the [`UniverseSystem`]
     Asteroid(SystemItemAsteroid),
+    /// A [`cosmos_core::structure::station::Station`] within the [`UniverseSystem`] that is owned
+    /// by an NPC faction
     NpcStation(SystemItemNpcFaction),
-    /// A [`cosmos_core::structure::station::Station`] within the [`UniverseSystem`] that functions
-    /// is owned and controlled by a player
+    /// A [`cosmos_core::structure::station::Station`] within the [`UniverseSystem`] that is owned
+    /// and controlled by a player
     PlayerStation,
 }
 
@@ -230,22 +240,25 @@ pub struct GeneratedItem {
 }
 
 impl GeneratedItem {
+    /// Returns the relative [`Sector`] (Each value bounded between [0, [`SYSTEM_SECTORS`]) of this item (relative to the [`SystemCoordinate`] passed in)
     pub fn relative_sector(&self, system_coord: SystemCoordinate) -> Sector {
         self.location.sector() - system_coord.negative_most_sector()
     }
 }
 
 #[derive(Debug, Serialize, Deserialize, Default)]
-struct SectorDanger {
+/// The danger level in this faction
+pub struct SectorDanger {
     danger: f32,
 }
 
 impl SectorDanger {
+    /// The maximum danger value a sector can be
     pub const MAX_DANGER: f32 = 100.0;
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-/// Represents everything that exists within a System - a 100x100x100 ([`cosmos_core::physics::location::SYSTEM_SECTORS`]^3) region of [`Sector`]s
+/// Represents everything that exists within a System - a 100x100x100 ([`SYSTEM_SECTORS`]^3) region of [`Sector`]s
 pub struct UniverseSystem {
     coordinate: SystemCoordinate,
     generated_items: HashMap<Sector, Vec<GeneratedItem>>,
@@ -258,6 +271,7 @@ impl UniverseSystem {
         self.coordinate
     }
 
+    /// Computes the danger levels for this sector
     pub fn sector_danger(&self, relative_sector: Sector) -> SectorDanger {
         const DANGER_DISTANCE: i64 = 4;
         const SS2: i64 = (SYSTEM_SECTORS / 2) as i64;
