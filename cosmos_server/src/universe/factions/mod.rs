@@ -2,25 +2,21 @@ use std::time::Duration;
 
 use bevy::{
     log::{error, info},
-    prelude::{App, Commands, EventReader, IntoSystemConfigs, Query, Res, ResMut, Update, Vec3, With, in_state},
+    prelude::{App, Commands, IntoSystemConfigs, Query, Res, ResMut, Update, With, in_state},
     time::common_conditions::on_timer,
     utils::HashSet,
 };
 use cosmos_core::{
     entities::player::Player,
     faction::Factions,
-    physics::location::{Location, SECTOR_DIMENSIONS, SYSTEM_SECTORS, Sector, SectorUnit},
+    physics::location::{Location, SectorUnit},
     state::GameState,
     structure::station::station_builder::STATION_LOAD_DISTANCE,
-    utils::quat_math::random_quat,
 };
-use rand::{Rng, seq::IteratorRandom};
 
 use crate::{
-    init::init_world::ServerSeed,
     persistence::loading::{LoadingBlueprintSystemSet, NeedsBlueprintLoaded},
-    rng::get_rng_for_sector,
-    universe::generation::{GenerateSystemEvent, SystemGenerationSet, SystemItem, UniverseSystems},
+    universe::generation::{SystemItem, UniverseSystems},
 };
 
 const FACTION_STATION_ID: &str = "cosmos:faction_station";

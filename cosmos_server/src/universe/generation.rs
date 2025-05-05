@@ -264,7 +264,7 @@ impl UniverseSystem {
         const EDGE_DANGER_SCALING: f32 = 8.0;
 
         let center_dist = (relative_sector - Sector::splat(SS2)).abs().max_element();
-        let max_dist = SS2 - DANGER_DISTANCE as i64 / 2;
+        let max_dist = SS2 - DANGER_DISTANCE / 2;
 
         let mut danger = (center_dist as f32).powf(EDGE_DANGER_SCALING) / (max_dist as f32).powf(EDGE_DANGER_SCALING).min(1.0)
             * SectorDanger::MAX_DANGER;
@@ -313,7 +313,7 @@ impl UniverseSystem {
 
     /// Returns all [`GeneratedItem`]s within this sector
     pub fn items_at(&self, sector: Sector) -> impl Iterator<Item = &'_ GeneratedItem> {
-        self.generated_items.get(&sector).map(|x| x.into_iter()).into_iter().flatten()
+        self.generated_items.get(&sector).map(|x| x.iter()).into_iter().flatten()
     }
 
     /// Returns all [`GeneratedItem`]s within this sector that is relative to this sector's

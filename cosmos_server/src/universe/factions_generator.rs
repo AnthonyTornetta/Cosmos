@@ -128,7 +128,7 @@ fn generate_factions(
 
             inner_circle.shuffle(&mut rng);
 
-            let buildings = vec!["default"];
+            let buildings = ["default"];
             let mut shop_done = false;
 
             for i in 0..faction_size {
