@@ -137,7 +137,7 @@ fn spawn_shop(
             });
 
             if let Some(fac) = factions.from_name("Merchant Federation") {
-                ecmds.insert(*fac.id());
+                ecmds.insert(fac.id());
             } else {
                 error!("No merchant federation faction!");
             }
@@ -157,7 +157,7 @@ pub(super) fn register(app: &mut App) {
     app.add_systems(
         Update,
         (
-            generate_shops.in_set(SystemGenerationSet::Station),
+            generate_shops.in_set(SystemGenerationSet::Shop),
             spawn_shop.run_if(on_timer(Duration::from_secs(1))),
         )
             .chain()

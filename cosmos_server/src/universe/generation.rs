@@ -11,8 +11,9 @@ use bevy::{
 };
 use cosmos_core::{
     entities::player::Player,
+    faction::FactionId,
     netty::{cosmos_encoder, system_sets::NetworkingSystemsSet},
-    physics::location::{Location, Sector, SystemCoordinate},
+    physics::location::{Location, SYSTEM_SECTORS, Sector, SystemCoordinate},
     prelude::Planet,
     state::GameState,
     universe::star::Star,
@@ -33,8 +34,12 @@ pub enum SystemGenerationSet {
     Planet,
     /// Add asteroids to the system
     Asteroid,
+    /// Adds faction locations to the system
+    PopulationFactionLocations,
     /// Add stations to the system
-    Station,
+    Shop,
+    /// Adds pirate stations to the system
+    PirateStation,
 }
 
 #[derive(Event, Debug)]
@@ -168,6 +173,18 @@ pub struct SystemItemAsteroid {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+/// Represents a [`cosmos_core::structure::station::Station`] within this [`UniverseSystem`] that
+/// is owned by an NPC faction.
+pub struct SystemItemNpcFaction {
+    /// The building (blueprint) type to be applied here
+    ///
+    /// Found in `server/default_blueprints/faction/stations`.
+    pub build_type: String,
+    /// The faction id of this faction. Must point to a valid faction.
+    pub faction: FactionId,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
 /// Represents everything that can be generated in a system when it is loaded
 pub enum SystemItem {
     /// A [`Star`] within the [`UniverseSystem`]
@@ -177,8 +194,32 @@ pub enum SystemItem {
     /// A [`cosmos_core::structure::station::Station`] within the [`UniverseSystem`] that functions
     /// as a shop
     Shop,
+    /// A [`cosmos_core::structure::station::Station`] within the [`UniverseSystem`] that functions
+    /// as a pirate station
+    PirateStation,
     /// An [`cosmos_core::structure::asteroid::Asteroid`] within the [`UniverseSystem`]
     Asteroid(SystemItemAsteroid),
+    /// A [`cosmos_core::structure::station::Station`] within the [`UniverseSystem`] that is owned
+    /// by an NPC faction
+    NpcStation(SystemItemNpcFaction),
+    /// A [`cosmos_core::structure::station::Station`] within the [`UniverseSystem`] that is owned
+    /// and controlled by a player
+    PlayerStation,
+}
+
+impl SystemItem {
+    /// Distance is a percentage of how far away this is from the maximum danger threshold
+    pub fn compute_danger_modifier(&self, multiplier: f32) -> f32 {
+        match self {
+            Self::Star(_) => -10.0 * multiplier,
+            Self::Planet(_) => -30.0 * multiplier,
+            Self::Shop => -30.0 * multiplier,
+            Self::PirateStation => 20.0 * multiplier,
+            Self::Asteroid(_) => 0.0,
+            Self::PlayerStation => -500.0 * multiplier * multiplier,
+            Self::NpcStation(_) => -30.0 * multiplier,
+        }
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -198,11 +239,29 @@ pub struct GeneratedItem {
     pub item: SystemItem,
 }
 
+impl GeneratedItem {
+    /// Returns the relative [`Sector`] (Each value bounded between [0, [`SYSTEM_SECTORS`]) of this item (relative to the [`SystemCoordinate`] passed in)
+    pub fn relative_sector(&self, system_coord: SystemCoordinate) -> Sector {
+        self.location.sector() - system_coord.negative_most_sector()
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize, Default)]
+/// The danger level in this faction
+pub struct SectorDanger {
+    danger: f32,
+}
+
+impl SectorDanger {
+    /// The maximum danger value a sector can be
+    pub const MAX_DANGER: f32 = 100.0;
+}
+
 #[derive(Debug, Serialize, Deserialize)]
-/// Represents everything that exists within a System - a 100x100x100 ([`cosmos_core::physics::location::SYSTEM_SECTORS`]^3) region of [`Sector`]s
+/// Represents everything that exists within a System - a 100x100x100 ([`SYSTEM_SECTORS`]^3) region of [`Sector`]s
 pub struct UniverseSystem {
     coordinate: SystemCoordinate,
-    generated_items: Vec<GeneratedItem>,
+    generated_items: HashMap<Sector, Vec<GeneratedItem>>,
     generated_flags: HashMap<Sector, HashSet<String>>,
 }
 
@@ -212,12 +271,50 @@ impl UniverseSystem {
         self.coordinate
     }
 
+    /// Computes the danger levels for this sector
+    pub fn sector_danger(&self, relative_sector: Sector) -> SectorDanger {
+        const DANGER_DISTANCE: i64 = 4;
+        const SS2: i64 = (SYSTEM_SECTORS / 2) as i64;
+        const EDGE_DANGER_SCALING: f32 = 8.0;
+
+        let center_dist = (relative_sector - Sector::splat(SS2)).abs().max_element();
+        let max_dist = SS2 - DANGER_DISTANCE / 2;
+
+        let mut danger = (center_dist as f32).powf(EDGE_DANGER_SCALING) / (max_dist as f32).powf(EDGE_DANGER_SCALING).min(1.0)
+            * SectorDanger::MAX_DANGER;
+
+        if center_dist >= max_dist {
+            return SectorDanger { danger };
+        }
+
+        for dz in -DANGER_DISTANCE..=DANGER_DISTANCE / 2 {
+            for dy in -DANGER_DISTANCE..=DANGER_DISTANCE / 2 {
+                for dx in -DANGER_DISTANCE..=DANGER_DISTANCE / 2 {
+                    let multiplier = 1.0 - (dz.abs().max(dy.abs().max(dx.abs())) as f32 / (DANGER_DISTANCE / 2) as f32);
+                    let danger_here = self
+                        .items_at(relative_sector + Sector::new(dx, dy, dz))
+                        .map(|x| x.item.compute_danger_modifier(multiplier))
+                        .sum::<f32>();
+
+                    danger += danger_here;
+                }
+            }
+        }
+
+        danger = danger.clamp(-SectorDanger::MAX_DANGER, SectorDanger::MAX_DANGER);
+
+        SectorDanger { danger }
+    }
+
     /// This location should NOT be relative to this system. Make this a normal absolute location
     ///
     /// Adds a generated item to this. This does NOT mark the sector as generated. Call
     /// [`Self::mark_sector_generated_for`] to do that.
     pub fn add_item(&mut self, location: Location, rotation: Quat, item: SystemItem) {
-        self.generated_items.push(GeneratedItem { location, rotation, item });
+        self.generated_items
+            .entry(location.sector)
+            .or_default()
+            .push(GeneratedItem { location, rotation, item });
     }
 
     /// Iterates over everything that is so far generated within this system. Note that just
@@ -225,12 +322,12 @@ impl UniverseSystem {
     /// saved to disk. It simply means that if the player gets close enough, this would be
     /// loaded/generated to the game.
     pub fn iter(&self) -> impl Iterator<Item = &'_ GeneratedItem> {
-        self.generated_items.iter()
+        self.generated_items.values().flatten()
     }
 
     /// Returns all [`GeneratedItem`]s within this sector
     pub fn items_at(&self, sector: Sector) -> impl Iterator<Item = &'_ GeneratedItem> {
-        self.generated_items.iter().filter(move |x| x.location.sector() == sector)
+        self.generated_items.get(&sector).map(|x| x.iter()).into_iter().flatten()
     }
 
     /// Returns all [`GeneratedItem`]s within this sector that is relative to this sector's
@@ -280,7 +377,9 @@ pub(super) fn register(app: &mut App) {
             SystemGenerationSet::Star,
             SystemGenerationSet::Planet,
             SystemGenerationSet::Asteroid,
-            SystemGenerationSet::Station,
+            SystemGenerationSet::PopulationFactionLocations,
+            SystemGenerationSet::Shop,
+            SystemGenerationSet::PirateStation,
         )
             .in_set(NetworkingSystemsSet::Between)
             .before(LoadingBlueprintSystemSet::BeginLoadingBlueprints)

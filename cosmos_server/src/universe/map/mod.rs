@@ -5,8 +5,10 @@ use bevy::{
     prelude::{App, EventReader, IntoSystemConfigs, Query, Res, With, in_state},
 };
 use cosmos_core::{
-    entities::player::Player,
+    entities::{EntityId, player::Player},
+    faction::{FactionId, FactionRelation, Factions},
     netty::{
+        server::ServerLobby,
         sync::events::server_event::{NettyEventReceived, NettyEventWriter},
         system_sets::NetworkingSystemsSet,
     },
@@ -14,8 +16,8 @@ use cosmos_core::{
     prelude::{Ship, Station},
     state::GameState,
     universe::map::system::{
-        AsteroidDestination, Destination, FactionStatus, GalaxyMap, GalaxyMapResponseEvent, PlanetDestination, PlayerDestination,
-        RequestGalaxyMap, RequestSystemMap, ShipDestination, StarDestination, StationDestination, SystemMap, SystemMapResponseEvent,
+        AsteroidDestination, Destination, GalaxyMap, GalaxyMapResponseEvent, PlanetDestination, PlayerDestination, RequestGalaxyMap,
+        RequestSystemMap, ShipDestination, StarDestination, StationDestination, SystemMap, SystemMapResponseEvent,
     },
 };
 
@@ -55,8 +57,16 @@ fn send_map(
     q_ships: Query<&Location, With<Ship>>,
 
     systems: Res<UniverseSystems>,
+
+    factions: Res<Factions>,
+    lobby: Res<ServerLobby>,
+    q_entity: Query<(&EntityId, Option<&FactionId>)>,
 ) {
     for ev in evr_request_map.read() {
+        let Some(player) = lobby.player_from_id(ev.client_id) else {
+            continue;
+        };
+
         let mut system_map = SystemMap::new(ev.system);
 
         let Some(system) = systems.system(ev.system) else {
@@ -78,8 +88,37 @@ fn send_map(
                 SystemItem::Shop => system_map.add_destination(
                     sector,
                     Destination::Station(Box::new(StationDestination {
-                        status: FactionStatus::Neutral,
+                        status: FactionRelation::Neutral,
                         shop_count: 1,
+                    })),
+                ),
+                SystemItem::PirateStation => system_map.add_destination(
+                    sector,
+                    Destination::Station(Box::new(StationDestination {
+                        status: FactionRelation::Enemy,
+                        shop_count: 0,
+                    })),
+                ),
+                SystemItem::PlayerStation => system_map.add_destination(
+                    sector,
+                    Destination::Station(Box::new(StationDestination {
+                        status: FactionRelation::Neutral,
+                        shop_count: 0,
+                    })),
+                ),
+                SystemItem::NpcStation(station) => system_map.add_destination(
+                    sector,
+                    Destination::Station(Box::new(StationDestination {
+                        status: factions
+                            .from_id(&station.faction)
+                            .map(|x| {
+                                let Ok((eid, fac)) = q_entity.get(player) else {
+                                    return Default::default();
+                                };
+                                x.relation_with_entity(eid, fac.and_then(|id| factions.from_id(id)))
+                            })
+                            .unwrap_or(FactionRelation::Neutral),
+                        shop_count: 0,
                     })),
                 ),
             }
@@ -89,7 +128,7 @@ fn send_map(
             system_map.add_destination(
                 loc.relative_sector(),
                 Destination::Player(Box::new(PlayerDestination {
-                    status: FactionStatus::Neutral,
+                    status: FactionRelation::Neutral,
                 })),
             );
         }
@@ -98,7 +137,7 @@ fn send_map(
             system_map.add_destination(
                 loc.relative_sector(),
                 Destination::Station(Box::new(StationDestination {
-                    status: FactionStatus::Neutral,
+                    status: FactionRelation::Neutral,
                     shop_count: 0,
                 })),
             );
@@ -108,7 +147,7 @@ fn send_map(
             system_map.add_destination(
                 loc.relative_sector(),
                 Destination::Ship(Box::new(ShipDestination {
-                    status: FactionStatus::Neutral,
+                    status: FactionRelation::Neutral,
                 })),
             );
         }

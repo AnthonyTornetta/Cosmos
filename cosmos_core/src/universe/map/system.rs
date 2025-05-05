@@ -6,27 +6,17 @@ use bevy::prelude::{App, Event};
 use serde::{Deserialize, Serialize};
 
 use crate::{
+    faction::FactionRelation,
     netty::sync::events::netty_event::{IdentifiableEvent, NettyEvent, SyncedEventImpl},
     physics::location::{Location, Sector, SystemCoordinate},
     universe::star::Star,
 };
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
-/// This status relative to the receiving player's faction
-pub enum FactionStatus {
-    /// This faction is allied with the receiving faction
-    Ally,
-    /// This faction is neutral with the receiving faction
-    Neutral,
-    /// This faction is enemies with the receiving faction
-    Enemy,
-}
-
-#[derive(Clone, Serialize, Deserialize, Debug)]
 /// A ship is here
 pub struct ShipDestination {
     /// The ship's relation to the map reader
-    pub status: FactionStatus,
+    pub status: FactionRelation,
 }
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
@@ -51,7 +41,7 @@ pub struct StarDestination {
 /// A player is here
 pub struct PlayerDestination {
     /// This player's faction status relative to the map reader
-    pub status: FactionStatus,
+    pub status: FactionRelation,
 }
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
@@ -62,7 +52,7 @@ pub struct AsteroidDestination;
 /// A station is here
 pub struct StationDestination {
     /// This station's status relative to the map reader
-    pub status: FactionStatus,
+    pub status: FactionRelation,
     /// How many shops are on this station
     pub shop_count: u32,
 }
@@ -71,7 +61,7 @@ pub struct StationDestination {
 /// Something unknown is here
 pub struct UnknownDestination {
     /// The unknown object's status relative to the map reader
-    pub status: Option<FactionStatus>,
+    pub status: Option<FactionRelation>,
 }
 
 #[derive(Clone, Serialize, Deserialize, Debug)]

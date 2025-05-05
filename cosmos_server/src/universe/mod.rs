@@ -2,6 +2,8 @@
 
 use bevy::prelude::App;
 
+mod factions;
+mod factions_generator;
 pub mod galaxy_generation;
 pub mod generation;
 pub mod map;
@@ -16,4 +18,6 @@ pub(super) fn register(app: &mut App) {
     generation::register(app);
     planet_spawner::register(app);
     spawners::register(app);
+    factions_generator::register(app);
+    factions::register(app);
 }

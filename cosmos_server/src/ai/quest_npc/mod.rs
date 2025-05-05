@@ -546,7 +546,7 @@ fn apply_quest_npc_faction(
             return;
         };
 
-        commands.entity(ent).insert(*quest_npc_faction.id());
+        commands.entity(ent).insert(quest_npc_faction.id());
     }
 }
 
