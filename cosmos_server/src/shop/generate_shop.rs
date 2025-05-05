@@ -22,7 +22,10 @@ use crate::{
     init::init_world::ServerSeed,
     persistence::loading::{LoadingBlueprintSystemSet, NeedsBlueprintLoaded},
     rng::get_rng_for_sector,
-    universe::generation::{GenerateSystemEvent, SystemGenerationSet, SystemItem, UniverseSystems},
+    universe::{
+        SystemItem, UniverseSystems,
+        generators::generation::{GenerateSystemEvent, SystemGenerationSet},
+    },
 };
 
 fn generate_shops(

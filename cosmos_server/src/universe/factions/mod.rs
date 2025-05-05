@@ -14,10 +14,9 @@ use cosmos_core::{
     structure::station::station_builder::STATION_LOAD_DISTANCE,
 };
 
-use crate::{
-    persistence::loading::{LoadingBlueprintSystemSet, NeedsBlueprintLoaded},
-    universe::generation::{SystemItem, UniverseSystems},
-};
+use crate::persistence::loading::{LoadingBlueprintSystemSet, NeedsBlueprintLoaded};
+
+use super::{SystemItem, UniverseSystems};
 
 const FACTION_STATION_ID: &str = "cosmos:faction_station";
 

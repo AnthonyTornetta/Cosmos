@@ -21,9 +21,7 @@ use cosmos_core::{
     },
 };
 
-use crate::universe::generation::SystemItem;
-
-use super::{galaxy_generation::Galaxy, generation::UniverseSystems};
+use super::{Galaxy, SystemItem, UniverseSystems};
 
 fn send_galaxy_map(
     mut evr_request_map: EventReader<NettyEventReceived<RequestGalaxyMap>>,

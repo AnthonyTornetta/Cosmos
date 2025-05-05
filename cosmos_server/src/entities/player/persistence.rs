@@ -43,7 +43,7 @@ use crate::{
         saving::{NeedsSaved, SAVING_SCHEDULE, SavingSystemSet, calculate_sfi},
     },
     settings::ServerSettings,
-    universe::generation::UniverseSystems,
+    universe::UniverseSystems,
 };
 
 use super::PlayerLooking;

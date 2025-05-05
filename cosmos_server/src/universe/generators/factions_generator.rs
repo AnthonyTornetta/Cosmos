@@ -13,9 +13,13 @@ use rand::{
 };
 // use uuid::Uuid;
 
-use crate::{init::init_world::ServerSeed, rng::get_rng_for_sector};
+use crate::{
+    init::init_world::ServerSeed,
+    rng::get_rng_for_sector,
+    universe::{SystemItem, SystemItemNpcFaction, UniverseSystems},
+};
 
-use super::generation::{GenerateSystemEvent, SystemGenerationSet, SystemItem, SystemItemNpcFaction, UniverseSystems};
+use super::generation::{GenerateSystemEvent, SystemGenerationSet};
 
 // #[derive(Debug, Clone, Copy)]
 // struct NpcFactionId(Uuid);

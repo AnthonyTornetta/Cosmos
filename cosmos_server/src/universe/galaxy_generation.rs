@@ -6,9 +6,8 @@ use crate::{init::init_world::ServerSeed, rng::get_rng_for_sector};
 use bevy::{
     core::Name,
     math::Vec3,
-    prelude::{App, Commands, Component, OnEnter, Res},
-    reflect::Reflect,
-    utils::{HashMap, HashSet},
+    prelude::{App, Commands, OnEnter, Res},
+    utils::HashSet,
 };
 use cosmos_core::{
     netty::cosmos_encoder,
@@ -18,40 +17,12 @@ use cosmos_core::{
 };
 use rand::Rng;
 use rand_chacha::ChaCha8Rng;
-use serde::{Deserialize, Serialize};
 use std::{
     f32::consts::{PI, TAU},
     fs,
 };
 
-#[derive(Deserialize, Serialize, Reflect)]
-/// Represents a star in a galaxy
-pub struct GalaxyStar {
-    /// The star itself
-    pub star: Star,
-    /// Where it is
-    pub location: Location,
-}
-
-#[derive(Component, Default, Deserialize, Serialize, Reflect)]
-/// Currently just a collection of stars in the galaxy. Could be more in the future
-pub struct Galaxy {
-    stars: HashMap<SystemCoordinate, GalaxyStar>,
-}
-
-impl Galaxy {
-    /// Gets the star that would be in this system.
-    ///
-    /// If no star is present, [`None`] is returned.
-    pub fn star_in_system(&self, system: SystemCoordinate) -> Option<&GalaxyStar> {
-        self.stars.get(&system)
-    }
-
-    /// Iterates over every star in the galaxy
-    pub fn iter_stars(&self) -> impl Iterator<Item = (&'_ SystemCoordinate, &'_ GalaxyStar)> {
-        self.stars.iter()
-    }
-}
+use super::{Galaxy, GalaxyStar};
 
 const GALAXY_THICKNESS: u32 = 2;
 

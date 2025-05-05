@@ -27,8 +27,8 @@ use crate::persistence::{
 };
 
 use super::{
-    galaxy_generation::Galaxy,
-    generation::{GenerateSystemEvent, SystemGenerationSet, SystemItem, UniverseSystems},
+    super::{Galaxy, SystemItem, UniverseSystems},
+    generation::{GenerateSystemEvent, SystemGenerationSet},
 };
 
 fn load_stars_in_universe(

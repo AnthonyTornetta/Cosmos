@@ -23,7 +23,7 @@ use cosmos_core::{
 };
 use serde::{Deserialize, Serialize};
 
-use crate::universe::generation::UniverseSystems;
+use crate::universe::UniverseSystems;
 
 use super::spawn_player::find_new_player_location;
 
