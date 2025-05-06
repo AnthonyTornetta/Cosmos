@@ -7,21 +7,20 @@ use bevy::{
     utils::HashSet,
 };
 use cosmos_core::{
-    entities::player::Player,
     faction::Factions,
-    physics::location::{Location, SectorUnit},
+    physics::location::{Location, SectorUnit, systems::Anchor},
     state::GameState,
     structure::station::station_builder::STATION_LOAD_DISTANCE,
 };
 
 use crate::persistence::loading::{LoadingBlueprintSystemSet, NeedsBlueprintLoaded};
 
-use super::{SystemItem, UniverseSystems};
+use super::super::{SystemItem, UniverseSystems};
 
 const FACTION_STATION_ID: &str = "cosmos:faction_station";
 
-fn spawn_faction_stations(
-    q_players: Query<&Location, With<Player>>,
+fn spawn_npc_stations(
+    q_players: Query<&Location, With<Anchor>>,
     mut commands: Commands,
     mut systems: ResMut<UniverseSystems>,
     factions: Res<Factions>,
@@ -69,8 +68,8 @@ fn spawn_faction_stations(
             generated_stations.insert(station_loc.sector());
         }
 
-        for &generated_shop in &generated_stations {
-            system.mark_sector_generated_for(generated_shop, FACTION_STATION_ID);
+        for &generated_station in &generated_stations {
+            system.mark_sector_generated_for(generated_station, FACTION_STATION_ID);
         }
     }
 }
@@ -78,7 +77,7 @@ fn spawn_faction_stations(
 pub(super) fn register(app: &mut App) {
     app.add_systems(
         Update,
-        spawn_faction_stations
+        spawn_npc_stations
             .run_if(on_timer(Duration::from_secs(1)))
             .before(LoadingBlueprintSystemSet::BeginLoadingBlueprints)
             .run_if(in_state(GameState::Playing)),

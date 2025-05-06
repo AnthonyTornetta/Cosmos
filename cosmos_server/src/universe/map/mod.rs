@@ -90,7 +90,7 @@ fn send_map(
                         shop_count: 1,
                     })),
                 ),
-                SystemItem::PirateStation => system_map.add_destination(
+                SystemItem::PirateStation(_) => system_map.add_destination(
                     sector,
                     Destination::Station(Box::new(StationDestination {
                         status: FactionRelation::Enemy,

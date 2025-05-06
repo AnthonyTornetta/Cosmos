@@ -26,7 +26,7 @@ pub enum SystemGenerationSet {
     /// Add asteroids to the system
     Asteroid,
     /// Adds faction locations to the system
-    PopulationFactionLocations,
+    FactionStations,
     /// Add stations to the system
     Shop,
     /// Adds pirate stations to the system
@@ -124,7 +124,7 @@ pub(super) fn register(app: &mut App) {
             SystemGenerationSet::Star,
             SystemGenerationSet::Planet,
             SystemGenerationSet::Asteroid,
-            SystemGenerationSet::PopulationFactionLocations,
+            SystemGenerationSet::FactionStations,
             SystemGenerationSet::Shop,
             SystemGenerationSet::PirateStation,
         )

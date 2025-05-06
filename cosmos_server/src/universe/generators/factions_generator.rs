@@ -161,7 +161,7 @@ pub(super) fn register(app: &mut App) {
     app.add_systems(
         Update,
         generate_factions
-            .in_set(SystemGenerationSet::PopulationFactionLocations)
+            .in_set(SystemGenerationSet::FactionStations)
             .run_if(in_state(GameState::Playing)),
     );
 }

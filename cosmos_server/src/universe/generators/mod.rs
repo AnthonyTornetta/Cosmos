@@ -8,6 +8,7 @@ use bevy::prelude::*;
 
 mod factions_generator;
 pub mod generation;
+mod pirate_station;
 pub mod planet_spawner;
 pub mod star;
 
@@ -15,5 +16,6 @@ pub(super) fn register(app: &mut App) {
     factions_generator::register(app);
     planet_spawner::register(app);
     star::register(app);
+    pirate_station::register(app);
     generation::register(app);
 }

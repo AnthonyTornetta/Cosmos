@@ -15,7 +15,6 @@ use cosmos_core::{
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 
-mod factions;
 pub mod galaxy_generation;
 pub mod generators;
 pub mod map;
@@ -110,6 +109,16 @@ pub struct SystemItemNpcFaction {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+/// Represents a [`cosmos_core::structure::station::Station`] within this [`UniverseSystem`] that
+/// is owned by the pirate faction.
+pub struct SystemItemPirateStation {
+    /// The building (blueprint) type to be applied here
+    ///
+    /// Found in `server/default_blueprints/pirate/stations`.
+    pub build_type: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
 /// Represents everything that can be generated in a system when it is loaded
 pub enum SystemItem {
     /// A [`Star`] within the [`UniverseSystem`]
@@ -121,7 +130,7 @@ pub enum SystemItem {
     Shop,
     /// A [`cosmos_core::structure::station::Station`] within the [`UniverseSystem`] that functions
     /// as a pirate station
-    PirateStation,
+    PirateStation(SystemItemPirateStation),
     /// An [`cosmos_core::structure::asteroid::Asteroid`] within the [`UniverseSystem`]
     Asteroid(SystemItemAsteroid),
     /// A [`cosmos_core::structure::station::Station`] within the [`UniverseSystem`] that is owned
@@ -139,7 +148,7 @@ impl SystemItem {
             Self::Star(_) => -10.0 * multiplier,
             Self::Planet(_) => -30.0 * multiplier,
             Self::Shop => -30.0 * multiplier,
-            Self::PirateStation => 20.0 * multiplier,
+            Self::PirateStation(_) => 100.0 * multiplier,
             Self::Asteroid(_) => 0.0,
             Self::PlayerStation => -500.0 * multiplier * multiplier,
             Self::NpcStation(_) => -30.0 * multiplier,
@@ -171,15 +180,27 @@ impl GeneratedItem {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize, Default)]
+#[derive(Debug, Serialize, Deserialize, Default, PartialOrd, PartialEq)]
 /// The danger level in this faction
 pub struct SectorDanger {
     danger: f32,
 }
 
 impl SectorDanger {
+    /// Creates a new danger value bounded between [`SectorDanger::MIN_DANGER`] and
+    /// [`SectorDanger::MAX_DANGER`]
+    pub const fn new(danger: f32) -> Self {
+        Self {
+            danger: danger.clamp(Self::MIN_DANGER, Self::MAX_DANGER),
+        }
+    }
+}
+
+impl SectorDanger {
     /// The maximum danger value a sector can be
     pub const MAX_DANGER: f32 = 100.0;
+    /// The minimum danger value (most peaceful)
+    pub const MIN_DANGER: f32 = -100.0;
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -297,7 +318,6 @@ impl UniverseSystem {
 pub(super) fn register(app: &mut App) {
     map::register(app);
     spawners::register(app);
-    factions::register(app);
     generators::register(app);
     galaxy_generation::register(app);
 }
