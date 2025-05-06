@@ -30,5 +30,6 @@ pub mod registry;
 pub mod shop;
 pub mod state;
 pub mod structure;
+pub mod time;
 pub mod universe;
 pub mod utils;

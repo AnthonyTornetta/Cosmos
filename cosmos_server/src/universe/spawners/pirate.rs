@@ -57,7 +57,9 @@ pub struct PirateNeedsSpawned {
 pub struct Pirate;
 
 /// The maximum difficulty of ship we can spawn. This is NOT the total difficulty.
-const MAX_DIFFICULTY: u64 = 3;
+///
+/// Difficulty range is [0, MAX_DIFFICULTY]
+pub const MAX_PIRATE_DIFFICULTY: u64 = 3;
 
 fn on_needs_pirate_spawned(mut commands: Commands, q_needs_pirate_spawned: Query<(Entity, &PirateNeedsSpawned)>) {
     for (ent, pns) in q_needs_pirate_spawned.iter() {
@@ -196,7 +198,8 @@ fn spawn_pirates(
 
                 let loc_here = fleet_origin + Vec3::new(offset, 0.0, 0.0);
 
-                let difficulty = random_range(0.0, (total_difficulty_todo / p_idx.pow(2)).min(MAX_DIFFICULTY as u32) as f32).round() as u32;
+                let difficulty =
+                    random_range(0.0, (total_difficulty_todo / p_idx.pow(2)).min(MAX_PIRATE_DIFFICULTY as u32) as f32).round() as u32;
                 // Scale difficulty count w/ number already spawned, since more = way harder
                 total_difficulty_todo -= total_difficulty_todo.min((difficulty + 1) * p_idx.pow(2));
 

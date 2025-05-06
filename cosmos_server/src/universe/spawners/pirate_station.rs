@@ -14,7 +14,10 @@ use cosmos_core::{
     structure::station::station_builder::STATION_LOAD_DISTANCE,
 };
 
-use crate::persistence::loading::{LoadingBlueprintSystemSet, NeedsBlueprintLoaded};
+use crate::{
+    ai::pirate::station::PirateStation,
+    persistence::loading::{LoadingBlueprintSystemSet, NeedsBlueprintLoaded},
+};
 
 use super::super::{SystemItem, UniverseSystems};
 
@@ -52,11 +55,14 @@ fn spawn_pirate_stations(
 
             let bp_name = &station.build_type;
 
-            let mut ecmds = commands.spawn(NeedsBlueprintLoaded {
-                path: format!("default_blueprints/pirate/stations/{bp_name}.bp"),
-                rotation: station_rot,
-                spawn_at: station_loc,
-            });
+            let mut ecmds = commands.spawn((
+                PirateStation,
+                NeedsBlueprintLoaded {
+                    path: format!("default_blueprints/pirate/stations/{bp_name}.bp"),
+                    rotation: station_rot,
+                    spawn_at: station_loc,
+                },
+            ));
 
             if let Some(fac) = factions.from_name("Pirate") {
                 ecmds.insert(fac.id());

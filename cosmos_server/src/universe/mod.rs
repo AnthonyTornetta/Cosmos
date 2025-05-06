@@ -194,6 +194,12 @@ impl SectorDanger {
             danger: danger.clamp(Self::MIN_DANGER, Self::MAX_DANGER),
         }
     }
+
+    /// Returns the danger as a f32 bounded between [-1.0, 1.0] (negative least danger, positive
+    /// most danger)
+    pub fn bounded(&self) -> f32 {
+        self.danger / 100.0
+    }
 }
 
 impl SectorDanger {

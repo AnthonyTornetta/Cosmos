@@ -1,3 +1,5 @@
+//! Controls pirate ships
+
 use bevy::{
     app::{App, Update},
     core::Name,
@@ -38,13 +40,14 @@ use crate::{
     universe::spawners::pirate::Pirate,
 };
 
-use super::{
+use super::super::{
     AiControlled,
     combat::{AiTargetting, CombatAi, CombatAiSystemSet},
     hit_tracking::DifficultyIncreaseOnKill,
 };
 
 #[derive(Component)]
+/// Something a pirate will target
 pub struct PirateTarget;
 
 const PIRATE_MAX_CHASE_DISTANCE: f32 = 20_000.0;
