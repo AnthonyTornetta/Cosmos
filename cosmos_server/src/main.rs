@@ -41,6 +41,7 @@ pub mod init;
 pub mod inventory;
 pub mod items;
 pub mod logic;
+pub mod loot;
 pub mod netty;
 pub mod persistence;
 pub mod physics;
