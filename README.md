@@ -89,6 +89,7 @@ See [the issues page](https://github.com/AnthonyTornetta/Cosmos/issues) for the 
 - [x] Add ability for player to die
 - [x] Playtest and implement changes
 - [x] Flying asteroids
+- [x] Pirate Stations
 - [x] Basic quest NPCs
   - [x] Coms System
 

@@ -10,7 +10,7 @@ use bevy::{
 use bevy_rapier3d::prelude::Collider;
 
 use crate::{
-    block::Block,
+    block::{Block, blocks::COLORS},
     registry::{Registry, create_registry, identifiable::Identifiable},
 };
 
@@ -212,47 +212,50 @@ fn register_custom_colliders(blocks: Res<Registry<Block>>, mut registry: ResMut<
         ));
     }
 
-    if blocks.contains("cosmos:ramp") {
-        registry.register(BlockCollider::new(
-            BlockColliderType::Custom(vec![
-                // top
-                CustomCollider {
-                    rotation: Quat::from_axis_angle(Vec3::X, PI / 4.0),
-                    collider: Collider::cuboid(0.5, EPSILON, 2.0f32.sqrt() / 2.0),
-                    mode: BlockColliderMode::NormalCollider,
-                    offset: Vec3::ZERO,
-                },
-                // left
-                CustomCollider {
-                    rotation: Quat::IDENTITY,
-                    collider: Collider::triangle(Vec3::new(-0.5, -0.5, 0.5), Vec3::new(-0.5, -0.5, -0.5), Vec3::new(-0.5, 0.5, -0.5)),
-                    mode: BlockColliderMode::NormalCollider,
-                    offset: Vec3::ZERO,
-                },
-                // right
-                CustomCollider {
-                    rotation: Quat::IDENTITY,
-                    collider: Collider::triangle(Vec3::new(0.5, -0.5, 0.5), Vec3::new(0.5, -0.5, -0.5), Vec3::new(0.5, 0.5, -0.5)),
-                    mode: BlockColliderMode::NormalCollider,
-                    offset: Vec3::ZERO,
-                },
-                // bottom
-                CustomCollider {
-                    rotation: Quat::IDENTITY,
-                    collider: Collider::cuboid(0.5, EPSILON, 0.5),
-                    mode: BlockColliderMode::NormalCollider,
-                    offset: Vec3::new(0.0, -0.5 + EPSILON, 0.0),
-                },
-                // front
-                CustomCollider {
-                    rotation: Quat::IDENTITY,
-                    collider: Collider::cuboid(0.5, 0.5, EPSILON),
-                    mode: BlockColliderMode::NormalCollider,
-                    offset: Vec3::new(0.0, 0.0, -0.5 + EPSILON),
-                },
-            ]),
-            "cosmos:ramp",
-        ));
+    for color in COLORS {
+        let unlocalized_name = &format!("cosmos:ramp_{color}");
+        if blocks.contains(&unlocalized_name) {
+            registry.register(BlockCollider::new(
+                BlockColliderType::Custom(vec![
+                    // top
+                    CustomCollider {
+                        rotation: Quat::from_axis_angle(Vec3::X, PI / 4.0),
+                        collider: Collider::cuboid(0.5, EPSILON, 2.0f32.sqrt() / 2.0),
+                        mode: BlockColliderMode::NormalCollider,
+                        offset: Vec3::ZERO,
+                    },
+                    // left
+                    CustomCollider {
+                        rotation: Quat::IDENTITY,
+                        collider: Collider::triangle(Vec3::new(-0.5, -0.5, 0.5), Vec3::new(-0.5, -0.5, -0.5), Vec3::new(-0.5, 0.5, -0.5)),
+                        mode: BlockColliderMode::NormalCollider,
+                        offset: Vec3::ZERO,
+                    },
+                    // right
+                    CustomCollider {
+                        rotation: Quat::IDENTITY,
+                        collider: Collider::triangle(Vec3::new(0.5, -0.5, 0.5), Vec3::new(0.5, -0.5, -0.5), Vec3::new(0.5, 0.5, -0.5)),
+                        mode: BlockColliderMode::NormalCollider,
+                        offset: Vec3::ZERO,
+                    },
+                    // bottom
+                    CustomCollider {
+                        rotation: Quat::IDENTITY,
+                        collider: Collider::cuboid(0.5, EPSILON, 0.5),
+                        mode: BlockColliderMode::NormalCollider,
+                        offset: Vec3::new(0.0, -0.5 + EPSILON, 0.0),
+                    },
+                    // front
+                    CustomCollider {
+                        rotation: Quat::IDENTITY,
+                        collider: Collider::cuboid(0.5, 0.5, EPSILON),
+                        mode: BlockColliderMode::NormalCollider,
+                        offset: Vec3::new(0.0, 0.0, -0.5 + EPSILON),
+                    },
+                ]),
+                unlocalized_name,
+            ));
+        }
     }
 
     if blocks.contains("cosmos:power_cable") {

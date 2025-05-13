@@ -90,7 +90,25 @@ cosmos:plasma_drill=Plasma Drill
 cosmos:shop=Shop
 cosmos:camera=Camera
 cosmos:gravity_well=Gravity Well
-cosmos:ramp=Ramp
+
+cosmos:ramp_red=Red Ramp
+cosmos:ramp_orange=Orange Ramp
+cosmos:ramp_yellow=Yellow Ramp
+cosmos:ramp_green=Green Ramp
+cosmos:ramp_mint=Mint Ramp
+cosmos:ramp_cyan=Cyan Ramp
+cosmos:ramp_aqua=Aqua Ramp
+cosmos:ramp_blue=Blue Ramp
+cosmos:ramp_purple=Purple Ramp
+cosmos:ramp_magenta=Magenta Ramp
+cosmos:ramp_pink=Pink Ramp
+cosmos:ramp_brown=Brown Ramp
+cosmos:ramp_black=Black Ramp
+cosmos:ramp_dark_grey=Dark Grey Ramp
+cosmos:ramp_grey=Grey Ramp
+cosmos:ramp_light_grey=Light Grey Ramp
+cosmos:ramp_white=White Ramp
+
 cosmos:missile_launcher=Missile Launcher
 cosmos:shield_projector=Shield Projector
 cosmos:shield_generator=Shield Generator
