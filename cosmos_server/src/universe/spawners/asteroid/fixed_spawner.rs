@@ -73,7 +73,7 @@ fn spawn_asteroids(
         let mut rng = get_rng_for_sector(&server_seed, &star_sector);
 
         // Favors lower numbers
-        let n_asteroid_rings: usize = (1.0 + 5.0 * (1.0 - (1.0 - rng.random::<f32>()).sqrt())) as usize;
+        let n_asteroid_rings: usize = (1.0 + 5.0 * (1.0 - (1.0 - rng.random::<f32>()).sqrt())) as usize + 1;
 
         for _ in 0..n_asteroid_rings {
             let ring_diameter = rng.random_range(10..=90);

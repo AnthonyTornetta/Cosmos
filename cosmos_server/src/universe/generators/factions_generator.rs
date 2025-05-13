@@ -53,10 +53,12 @@ fn generate_factions(
         let mut done_zones = vec![];
 
         for _ in 0..n_facs {
-            let mut faction_origin: Sector;
+            let mut faction_origin: Option<Sector> = None;
 
-            loop {
-                faction_origin = system
+            const N_TRIES: u32 = 9;
+
+            for _ in 0..N_TRIES {
+                let fo = system
                     .iter()
                     .filter(|maybe_asteroid| matches!(maybe_asteroid.item, SystemItem::Asteroid(_)))
                     .map(|asteroid| asteroid.relative_sector(ev.system))
@@ -70,14 +72,15 @@ fn generate_factions(
                     })
                     + ev.system.negative_most_sector();
 
-                if !done_zones
-                    .iter()
-                    .map(|&x| (x - faction_origin))
-                    .any(|x: Sector| x.abs().min_element() <= 5)
-                {
+                if !done_zones.iter().map(|&x| (x - fo)).any(|x: Sector| x.abs().min_element() <= 5) {
+                    faction_origin = Some(fo);
                     break;
                 }
             }
+
+            let Some(faction_origin) = faction_origin else {
+                continue;
+            };
 
             done_zones.push(faction_origin);
 
