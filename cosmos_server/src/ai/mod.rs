@@ -19,7 +19,7 @@ use crate::persistence::{
 
 mod combat;
 pub mod hit_tracking;
-mod pirate;
+pub mod pirate;
 pub mod quest_npc;
 
 #[derive(Component)]

@@ -4,7 +4,7 @@ use bevy::prelude::*;
 
 use cosmos_core::physics::location::{Location, Sector, SystemCoordinate};
 
-use crate::universe::generation::{SystemItem, UniverseSystems};
+use crate::universe::{SystemItem, UniverseSystems};
 
 const DEFAULT_STARTING_SECTOR: Location = Location::new(Vec3::new(0.0, 2000.0, 0.0), Sector::new(25, 25, 25));
 

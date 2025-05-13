@@ -21,9 +21,7 @@ use cosmos_core::{
     },
 };
 
-use crate::universe::generation::SystemItem;
-
-use super::{galaxy_generation::Galaxy, generation::UniverseSystems};
+use super::{Galaxy, SystemItem, UniverseSystems};
 
 fn send_galaxy_map(
     mut evr_request_map: EventReader<NettyEventReceived<RequestGalaxyMap>>,
@@ -92,7 +90,7 @@ fn send_map(
                         shop_count: 1,
                     })),
                 ),
-                SystemItem::PirateStation => system_map.add_destination(
+                SystemItem::PirateStation(_) => system_map.add_destination(
                     sector,
                     Destination::Station(Box::new(StationDestination {
                         status: FactionRelation::Enemy,

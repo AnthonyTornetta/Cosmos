@@ -25,6 +25,7 @@ use bevy::{
 // use bevy_mod_billboard::{BillboardDepth, BillboardTextBundle};
 use cosmos_core::{
     ecs::NeedsDespawned,
+    faction::FactionRelation,
     netty::{client::LocalPlayer, sync::events::client_event::NettyEventWriter, system_sets::NetworkingSystemsSet},
     physics::location::{Location, Sector, SectorUnit},
     registry::{Registry, identifiable::Identifiable},
@@ -516,9 +517,9 @@ fn render_galaxy_map(
                     Destination::Star(_) => meshes.add(Sphere::new(1.0)),
                     Destination::Planet(_) => meshes.add(Cuboid::new(0.5, 0.5, 0.5)),
                     Destination::Player(_) => meshes.add(Capsule3d::new(0.05, 0.1)),
-                    Destination::Asteroid(_) => meshes.add(Cuboid::new(0.3, 0.3, 0.3)),
+                    Destination::Asteroid(_) => meshes.add(Cuboid::new(0.25, 0.25, 0.25)),
                     Destination::Unknown(_) => meshes.add(Sphere::new(0.1)),
-                    Destination::Ship(_) => meshes.add(Cuboid::new(0.3, 0.3, 0.3)),
+                    Destination::Ship(_) => meshes.add(Cuboid::new(0.25, 0.25, 0.25)),
                     Destination::Station(_) => meshes.add(Cuboid::new(0.3, 0.3, 0.3)),
                 };
 
@@ -550,11 +551,27 @@ fn render_galaxy_map(
                         ..Default::default()
                     }),
                     Destination::Ship(_) => materials.add(StandardMaterial::from_color(css::ORANGE)),
-                    Destination::Station(_) => materials.add(StandardMaterial {
-                        base_color: css::PURPLE.into(),
-                        unlit: true,
-                        ..Default::default()
-                    }),
+                    Destination::Station(s) => {
+                        if s.shop_count > 0 && s.status != FactionRelation::Enemy {
+                            materials.add(StandardMaterial {
+                                base_color: css::PURPLE.into(),
+                                unlit: true,
+                                ..Default::default()
+                            })
+                        } else if s.status != FactionRelation::Enemy {
+                            materials.add(StandardMaterial {
+                                base_color: css::BLUE.into(),
+                                unlit: true,
+                                ..Default::default()
+                            })
+                        } else {
+                            materials.add(StandardMaterial {
+                                base_color: css::RED.into(),
+                                unlit: true,
+                                ..Default::default()
+                            })
+                        }
+                    }
                 };
 
                 let mut ecmds = p.spawn((

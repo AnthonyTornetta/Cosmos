@@ -1,0 +1,140 @@
+{
+  "n_items": [10, 30],
+  "loot": [
+    {
+      "item": "cosmos:iron_bar",
+      "quantity": [500, 900],
+      "weight": 10
+    },
+    {
+      "item": "cosmos:copper_bar",
+      "quantity": [500, 900],
+      "weight": 10
+    },
+    {
+      "item": "cosmos:lead_bar",
+      "quantity": [100, 300],
+      "weight": 5
+    },
+    {
+      "item": "cosmos:uranium",
+      "quantity": [100, 300],
+      "weight": 5
+    },
+    {
+      "item": "cosmos:photonium_crystal",
+      "quantity": [300, 400],
+      "weight": 10
+    },
+    {
+      "item": "cosmos:sulfur",
+      "quantity": [500, 700],
+      "weight": 6
+    },
+    {
+      "item": "cosmos:grass",
+      "quantity": [200, 500],
+      "weight": 4
+    },
+    {
+      "item": "cosmos:sand",
+      "quantity": [400, 700],
+      "weight": 4
+    },
+    {
+      "item": "cosmos:redwood_log",
+      "quantity": [200, 500],
+      "weight": 4
+    },
+    {
+      "item": "cosmos:redwood_leaf",
+      "quantity": [200, 500],
+      "weight": 4
+    },
+    {
+      "item": "cosmos:ship_hull_grey",
+      "quantity": [300, 700],
+      "weight": 20
+    },
+    {
+      "item": "cosmos:ship_hull_black",
+      "quantity": [300, 700],
+      "weight": 20
+    },
+    {
+      "item": "cosmos:light_blue",
+      "quantity": [100, 200],
+      "weight": 10
+    },
+    {
+      "item": "cosmos:gravitron_crystal",
+      "quantity": [200, 500],
+      "weight": 5
+    },
+    {
+      "item": "cosmos:energite_crystal",
+      "quantity": [200, 500],
+      "weight": 5
+    },
+    {
+      "item": "cosmos:stone",
+      "quantity": [600, 900],
+      "weight": 20
+    },
+    {
+      "item": "cosmos:molten_stone",
+      "quantity": [600, 900],
+      "weight": 20
+    },
+    {
+      "item": "cosmos:dirt",
+      "quantity": [600, 900],
+      "weight": 20
+    },
+    {
+      "item": "cosmos:laser_cannon",
+      "quantity": [100, 300],
+      "weight": 5
+    },
+    {
+      "item": "cosmos:missile_launcher",
+      "quantity": [20, 50],
+      "weight": 5
+    },
+    {
+      "item": "cosmos:plasma_drill",
+      "quantity": [300, 600],
+      "weight": 5
+    },
+    {
+      "item": "cosmos:thruster",
+      "quantity": [200, 500],
+      "weight": 5
+    },
+    {
+      "item": "cosmos:shield_projector",
+      "quantity": [10, 100],
+      "weight": 3
+    },
+    {
+      "item": "cosmos:shield_generator",
+      "quantity": [20, 150],
+      "weight": 3
+    },
+    {
+      "item": "cosmos:missile",
+      "quantity": [200, 500],
+      "weight": 5
+    },
+    {
+      "item": "cosmos:energy_cell",
+      "quantity": [20, 50],
+      "weight": 5
+    },
+    {
+      "item": "cosmos:reactor_cell",
+      "quantity": [20, 50],
+      "weight": 5
+    }
+  ]
+}

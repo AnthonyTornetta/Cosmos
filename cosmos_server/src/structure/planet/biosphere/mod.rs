@@ -43,7 +43,7 @@ use crate::{
     structure::planet::{
         biosphere::biosphere_generation::BiosphereGenerationSet, generation::planet_generator::check_needs_generated_system,
     },
-    universe::generation::{SystemItem, UniverseSystems},
+    universe::{SystemItem, UniverseSystems},
 };
 
 use self::{biome::create_biosphere_biomes_registry, shader_assembler::CachedShaders};

@@ -29,8 +29,11 @@ use crate::{
     settings::ServerSettings,
     structure::asteroid::server_asteroid_builder::ServerAsteroidBuilder,
     universe::{
-        generation::{GenerateSystemEvent, SystemGenerationSet, SystemItem, SystemItemAsteroid, UniverseSystems},
-        star::calculate_temperature_at,
+        SystemItem, SystemItemAsteroid, UniverseSystems,
+        generators::{
+            generation::{GenerateSystemEvent, SystemGenerationSet},
+            star::calculate_temperature_at,
+        },
     },
 };
 

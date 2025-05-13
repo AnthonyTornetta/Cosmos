@@ -3,6 +3,7 @@
 #![feature(duration_constructors)]
 #![feature(iter_array_chunks)]
 #![feature(iterator_try_collect)]
+#![feature(duration_constructors_lite)]
 #![warn(missing_docs)]
 
 use bevy::{
@@ -41,6 +42,7 @@ pub mod init;
 pub mod inventory;
 pub mod items;
 pub mod logic;
+pub mod loot;
 pub mod netty;
 pub mod persistence;
 pub mod physics;

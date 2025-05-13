@@ -1,7 +1,7 @@
 //! Responsible for spawning planets near stars, but for now just spawns a planet at 0, 0, 0.
 
 use super::{
-    generation::{GenerateSystemEvent, SystemGenerationSet, SystemItem, SystemItemPlanet, UniverseSystems},
+    generation::{GenerateSystemEvent, SystemGenerationSet},
     star::calculate_temperature_at,
 };
 use crate::{
@@ -9,6 +9,7 @@ use crate::{
     rng::get_rng_for_sector,
     settings::ServerSettings,
     structure::planet::{biosphere::BiosphereTemperatureRegistry, server_planet_builder::ServerPlanetBuilder},
+    universe::{SystemItem, SystemItemPlanet, UniverseSystems},
 };
 use bevy::{
     log::{info, warn},

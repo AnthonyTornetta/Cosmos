@@ -4,16 +4,19 @@
 
 use crate::{init::init_world::ServerSeed, rng::get_rng_for_sector};
 use bevy::{
+    app::Update,
     core::Name,
     math::Vec3,
-    prelude::{App, Commands, Component, OnEnter, Res},
-    reflect::Reflect,
-    utils::{HashMap, HashSet},
+    prelude::{App, Commands, IntoSystemConfigs, OnEnter, OnExit, Res, ResMut, any_with_component, in_state},
+    time::common_conditions::{on_real_timer, on_timer},
+    utils::HashSet,
 };
 use cosmos_core::{
+    entities::player::Player,
     netty::cosmos_encoder,
     physics::location::{Location, SYSTEM_SECTORS, Sector, SectorUnit, SystemCoordinate, SystemUnit},
     state::GameState,
+    time::UniverseTimestamp,
     universe::star::{MAX_TEMPERATURE, MIN_TEMPERATURE, Star},
 };
 use rand::Rng;
@@ -22,36 +25,10 @@ use serde::{Deserialize, Serialize};
 use std::{
     f32::consts::{PI, TAU},
     fs,
+    time::Duration,
 };
 
-#[derive(Deserialize, Serialize, Reflect)]
-/// Represents a star in a galaxy
-pub struct GalaxyStar {
-    /// The star itself
-    pub star: Star,
-    /// Where it is
-    pub location: Location,
-}
-
-#[derive(Component, Default, Deserialize, Serialize, Reflect)]
-/// Currently just a collection of stars in the galaxy. Could be more in the future
-pub struct Galaxy {
-    stars: HashMap<SystemCoordinate, GalaxyStar>,
-}
-
-impl Galaxy {
-    /// Gets the star that would be in this system.
-    ///
-    /// If no star is present, [`None`] is returned.
-    pub fn star_in_system(&self, system: SystemCoordinate) -> Option<&GalaxyStar> {
-        self.stars.get(&system)
-    }
-
-    /// Iterates over every star in the galaxy
-    pub fn iter_stars(&self) -> impl Iterator<Item = (&'_ SystemCoordinate, &'_ GalaxyStar)> {
-        self.stars.iter()
-    }
-}
+use super::{Galaxy, GalaxyStar};
 
 const GALAXY_THICKNESS: u32 = 2;
 
@@ -163,6 +140,30 @@ fn populate_galaxy(mut commands: Commands, seed: Res<ServerSeed>) {
     commands.spawn((Name::new("Galaxy"), galaxy));
 }
 
+#[derive(Serialize, Deserialize, Default)]
+struct GameInfo {
+    timestamp: UniverseTimestamp,
+}
+
+fn load_game_info() -> Option<GameInfo> {
+    let Ok(info) = fs::read("world/game_info.json") else {
+        return None;
+    };
+
+    Some(serde_json::de::from_slice(&info).expect("Unable to deserialize game info"))
+}
+
+fn save_game_info(game_info: &GameInfo) {
+    let encoded = serde_json::ser::to_string_pretty(&game_info).unwrap();
+    fs::write("world/game_info.json", encoded).expect("Error saving game info");
+}
+
+fn init_game_info(mut commands: Commands) {
+    let info = load_game_info().unwrap_or_default();
+
+    commands.insert_resource(info.timestamp);
+}
+
 fn load_galaxy() -> Option<Galaxy> {
     let Ok(galaxy_bytes) = fs::read("world/galaxy.bin") else {
         return None;
@@ -176,7 +177,28 @@ fn save_galaxy(galaxy: &Galaxy) {
     fs::write("world/galaxy.bin", encoded).expect("Error saving galaxy");
 }
 
+fn save_game_info_on_tick(timestamp: Res<UniverseTimestamp>) {
+    save_game_info(&GameInfo { timestamp: *timestamp });
+}
+
+// this shouldnt be here, but idc
+fn advance_timestamp(mut timestamp: ResMut<UniverseTimestamp>) {
+    timestamp.tick();
+}
+
 pub(super) fn register(app: &mut App) {
-    app.add_systems(OnEnter(GameState::Playing), populate_galaxy)
+    app.add_systems(OnExit(GameState::PostLoading), init_game_info)
+        .add_systems(OnEnter(GameState::Playing), populate_galaxy)
+        .add_systems(
+            Update,
+            (
+                save_game_info_on_tick
+                    .run_if(on_real_timer(Duration::from_secs(5)))
+                    .run_if(in_state(GameState::Playing)),
+                advance_timestamp
+                    .run_if(on_timer(Duration::from_secs(1)))
+                    .run_if(any_with_component::<Player>),
+            ),
+        )
         .register_type::<Galaxy>();
 }

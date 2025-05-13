@@ -43,7 +43,7 @@ use crate::{
         saving::{NeedsSaved, SAVING_SCHEDULE, SavingSystemSet, calculate_sfi},
     },
     settings::ServerSettings,
-    universe::generation::UniverseSystems,
+    universe::UniverseSystems,
 };
 
 use super::PlayerLooking;
@@ -245,7 +245,9 @@ fn generate_player_inventory(
     has_data: &ItemShouldHaveData,
     creative: bool,
 ) -> Inventory {
-    let mut inventory = Inventory::new("Inventory", 9 * 16, Some(0..9), inventory_entity);
+    let n_slots = 9 * if creative { 20 } else { 5 };
+
+    let mut inventory = Inventory::new("Inventory", n_slots, Some(0..9), inventory_entity);
 
     if creative {
         for item in items.iter().rev().filter(|item| item.unlocalized_name() != "cosmos:air") {

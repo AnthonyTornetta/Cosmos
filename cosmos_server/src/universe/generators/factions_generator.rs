@@ -13,9 +13,13 @@ use rand::{
 };
 // use uuid::Uuid;
 
-use crate::{init::init_world::ServerSeed, rng::get_rng_for_sector};
+use crate::{
+    init::init_world::ServerSeed,
+    rng::get_rng_for_sector,
+    universe::{SystemItem, SystemItemNpcFaction, UniverseSystems},
+};
 
-use super::generation::{GenerateSystemEvent, SystemGenerationSet, SystemItem, SystemItemNpcFaction, UniverseSystems};
+use super::generation::{GenerateSystemEvent, SystemGenerationSet};
 
 // #[derive(Debug, Clone, Copy)]
 // struct NpcFactionId(Uuid);
@@ -157,7 +161,7 @@ pub(super) fn register(app: &mut App) {
     app.add_systems(
         Update,
         generate_factions
-            .in_set(SystemGenerationSet::PopulationFactionLocations)
+            .in_set(SystemGenerationSet::FactionStations)
             .run_if(in_state(GameState::Playing)),
     );
 }
