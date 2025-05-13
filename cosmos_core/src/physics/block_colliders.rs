@@ -214,7 +214,7 @@ fn register_custom_colliders(blocks: Res<Registry<Block>>, mut registry: ResMut<
 
     for color in COLORS {
         let unlocalized_name = &format!("cosmos:ramp_{color}");
-        if blocks.contains(&unlocalized_name) {
+        if blocks.contains(unlocalized_name) {
             registry.register(BlockCollider::new(
                 BlockColliderType::Custom(vec![
                     // top
