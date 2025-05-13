@@ -6,49 +6,63 @@ use cosmos_core::{
     events::block_events::{BlockChangedEvent, BlockDataSystemParams},
     inventory::{Inventory, itemstack::ItemShouldHaveData},
     item::Item,
-    prelude::{Structure, StructureBlock},
+    prelude::{Structure, StructureBlock, StructureLoadingSet},
     registry::{Registry, identifiable::Identifiable},
 };
 
+use crate::persistence::loading::NeedsBlueprintLoaded;
+
 use super::{LootTable, NeedsLootGenerated};
 
-#[derive(Event)]
+#[derive(Event, Clone, Copy)]
 struct PopulateLootInventoriesEvent(StructureBlock, u16);
+
+#[derive(Event)]
+struct PopulateLootInventoriesEventCarryOver(PopulateLootInventoriesEvent);
 
 fn generate_needed_loot_tables(
     mut commands: Commands,
-    mut q_needs_gen: Query<(Entity, &mut Structure, &NeedsLootGenerated)>,
-    loot_tables: Res<Registry<LootTable>>,
+    mut q_needs_gen: Query<(Entity, &mut Structure, &NeedsLootGenerated), Without<NeedsBlueprintLoaded>>,
     blocks: Res<Registry<Block>>,
     mut evw_block_changed: EventWriter<BlockChangedEvent>,
-    mut evw_populate_inventories: EventWriter<PopulateLootInventoriesEvent>,
+    mut evw_populate_inventories: EventWriter<PopulateLootInventoriesEventCarryOver>,
 ) {
     for (ent, mut s, needs_gened) in q_needs_gen.iter_mut() {
         commands.entity(ent).remove::<NeedsLootGenerated>();
-
-        let Some(loot_table) = loot_tables.from_id(&needs_gened.loot_classification) else {
-            error!("Missing loot table entry `{}`", needs_gened.loot_classification);
-            continue;
-        };
 
         let Some(storage_block) = blocks.from_id("cosmos:storage") else {
             error!("Missing storage block");
             continue;
         };
 
-        let lt_id = loot_table.id();
+        let Some(loot_block) = blocks.from_id("cosmos:loot_block") else {
+            error!("No loot block!");
+            continue;
+        };
+
+        let loot_block_id = loot_block.id();
 
         let loot_blocks = s
             .all_blocks_iter(false)
-            .filter(|b| s.block_at(*b, &blocks).unlocalized_name() == "cosmos:loot_block")
+            .filter(|b| s.block_id_at(*b) == loot_block_id)
             .collect::<Vec<_>>();
 
         for block in loot_blocks {
             s.set_block_at(block, storage_block, Default::default(), &blocks, Some(&mut evw_block_changed));
 
-            evw_populate_inventories.send(PopulateLootInventoriesEvent(StructureBlock::new(block, ent), lt_id));
+            evw_populate_inventories.send(PopulateLootInventoriesEventCarryOver(PopulateLootInventoriesEvent(
+                StructureBlock::new(block, ent),
+                needs_gened.loot_classification,
+            )));
         }
     }
+}
+
+fn send_carryover_events(
+    mut evr_carry_over: EventReader<PopulateLootInventoriesEventCarryOver>,
+    mut evw_events: EventWriter<PopulateLootInventoriesEvent>,
+) {
+    evw_events.send_batch(evr_carry_over.read().map(|x| x.0));
 }
 
 fn populate_loot_table_inventories(
@@ -65,10 +79,12 @@ fn populate_loot_table_inventories(
 
     for ev in evr_populate_inventories.read() {
         let Ok(structure) = q_structure.get(ev.0.structure()) else {
+            error!("Invalid structure!");
             continue;
         };
 
         let Some(mut inv) = structure.query_block_data_mut(ev.0.coords(), &mut q_inventory, bs_params.clone()) else {
+            error!("Invalid inventory!");
             continue;
         };
 
@@ -98,8 +114,13 @@ pub(super) fn register(app: &mut App) {
         Update,
         (
             generate_needed_loot_tables.in_set(BlockEventsSet::SendEventsForThisFrame),
-            populate_loot_table_inventories.in_set(BlockEventsSet::SendEventsForNextFrame),
-        ),
+            populate_loot_table_inventories
+                .after(StructureLoadingSet::StructureLoaded)
+                .in_set(BlockEventsSet::SendEventsForNextFrame),
+            send_carryover_events,
+        )
+            .chain(),
     )
-    .add_event::<PopulateLootInventoriesEvent>();
+    .add_event::<PopulateLootInventoriesEvent>()
+    .add_event::<PopulateLootInventoriesEventCarryOver>();
 }

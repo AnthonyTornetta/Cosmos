@@ -10,12 +10,14 @@ use cosmos_core::{
     entities::player::Player,
     faction::Factions,
     physics::location::{Location, SectorUnit},
+    registry::Registry,
     state::GameState,
     structure::station::station_builder::STATION_LOAD_DISTANCE,
 };
 
 use crate::{
     ai::pirate::station::PirateStation,
+    loot::{LootTable, NeedsLootGenerated},
     persistence::loading::{LoadingBlueprintSystemSet, NeedsBlueprintLoaded},
 };
 
@@ -28,6 +30,7 @@ fn spawn_pirate_stations(
     mut commands: Commands,
     mut systems: ResMut<UniverseSystems>,
     factions: Res<Factions>,
+    loot: Res<Registry<LootTable>>,
 ) {
     let mut generated_stations = HashSet::new();
 
@@ -57,6 +60,7 @@ fn spawn_pirate_stations(
 
             let mut ecmds = commands.spawn((
                 PirateStation,
+                NeedsLootGenerated::from_loot_id("cosmos:pirate_station_0", &loot).expect("Missing pirate_station_0.json"),
                 NeedsBlueprintLoaded {
                     path: format!("default_blueprints/pirate/stations/{bp_name}.bp"),
                     rotation: station_rot,

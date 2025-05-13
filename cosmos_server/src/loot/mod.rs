@@ -3,7 +3,7 @@
 use bevy::prelude::*;
 use cosmos_core::{
     item::Item,
-    registry::{create_registry, identifiable::Identifiable},
+    registry::{Registry, create_registry, identifiable::Identifiable},
 };
 
 mod generate;
@@ -91,7 +91,19 @@ impl LootTableBuilder {
 #[derive(Component)]
 /// Put this on a structure to automatically fill containers with loot
 pub struct NeedsLootGenerated {
-    loot_classification: String,
+    loot_classification: u16,
+}
+
+impl NeedsLootGenerated {
+    pub fn from_loot_id(loot_id: &str, loot: &Registry<LootTable>) -> Option<Self> {
+        loot.from_id(loot_id).map(|x| Self::new(x.id()))
+    }
+
+    pub fn new(loot_id: u16) -> Self {
+        Self {
+            loot_classification: loot_id,
+        }
+    }
 }
 
 pub(super) fn register(app: &mut App) {
