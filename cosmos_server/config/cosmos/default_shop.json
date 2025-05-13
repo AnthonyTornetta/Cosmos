@@ -533,14 +533,14 @@
   },
   {
     "Selling": {
-      "item_id": "cosmos:ramp",
+      "item_id": "cosmos:ramp_dark_grey",
       "max_quantity_selling": 10000,
       "price_per": 10
     }
   },
   {
     "Buying": {
-      "item_id": "cosmos:ramp",
+      "item_id": "cosmos:ramp_dark_grey",
       "max_quantity_buying": null,
       "price_per": 4
     }
@@ -715,6 +715,20 @@
   },
   {
     "Selling": {
+      "item_id": "cosmos:logic_wire_white",
+      "max_quantity_selling": 10000,
+      "price_per": 10
+    }
+  },
+  {
+    "Buying": {
+      "item_id": "cosmos:logic_wire_white",
+      "max_quantity_buying": null,
+      "price_per": 4
+    }
+  },
+  {
+    "Selling": {
       "item_id": "cosmos:logic_bus",
       "max_quantity_selling": 10000,
       "price_per": 20
@@ -725,6 +739,48 @@
       "item_id": "cosmos:logic_bus",
       "max_quantity_buying": null,
       "price_per": 8
+    }
+  },
+  {
+    "Selling": {
+      "item_id": "cosmos:switch",
+      "max_quantity_selling": 10000,
+      "price_per": 80
+    }
+  },
+  {
+    "Buying": {
+      "item_id": "cosmos:switch",
+      "max_quantity_buying": null,
+      "price_per": 32
+    }
+  },
+  {
+    "Selling": {
+      "item_id": "cosmos:button",
+      "max_quantity_selling": 10000,
+      "price_per": 80
+    }
+  },
+  {
+    "Buying": {
+      "item_id": "cosmos:button",
+      "max_quantity_buying": null,
+      "price_per": 32
+    }
+  },
+  {
+    "Selling": {
+      "item_id": "cosmos:flip_flop",
+      "max_quantity_selling": 10000,
+      "price_per": 80
+    }
+  },
+  {
+    "Buying": {
+      "item_id": "cosmos:flip_flop",
+      "max_quantity_buying": null,
+      "price_per": 32
     }
   },
   {

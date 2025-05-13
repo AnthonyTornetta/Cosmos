@@ -375,7 +375,7 @@ fn add_cosmos_blocks(
 
     blocks.register(
         // ramp colliders are super small, so to compensate I give them a high density
-        BlockBuilder::new("cosmos:ramp", 40.0, 100.0, 10.0)
+        BlockBuilder::new("cosmos:ramp_dark_grey", 40.0, 100.0, 10.0)
             .add_property(BlockProperty::FullyRotatable)
             .create(),
     );
@@ -609,6 +609,15 @@ fn add_cosmos_blocks(
             .add_property(BlockProperty::Full)
             .create(),
     );
+
+    for color in COLORS.iter().filter(|x| **x != "dark_grey") {
+        blocks.register(
+            // ramp colliders are super small, so to compensate I give them a high density
+            BlockBuilder::new(format!("cosmos:ramp_{color}"), 40.0, 100.0, 10.0)
+                .add_property(BlockProperty::FullyRotatable)
+                .create(),
+        );
+    }
 
     loading.finish_loading(id, &mut end_writer);
 }
