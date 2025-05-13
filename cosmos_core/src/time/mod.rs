@@ -17,7 +17,7 @@ impl Sub<UniverseTimestamp> for UniverseTimestamp {
             return None;
         }
 
-        return Some(Duration::from_secs(self.0 - rhs.0));
+        Some(Duration::from_secs(self.0 - rhs.0))
     }
 }
 
