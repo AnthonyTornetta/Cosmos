@@ -533,6 +533,20 @@
   },
   {
     "Selling": {
+      "item_id": "cosmos:ramp_dark_grey",
+      "max_quantity_selling": 10000,
+      "price_per": 10
+    }
+  },
+  {
+    "Buying": {
+      "item_id": "cosmos:ramp_dark_grey",
+      "max_quantity_buying": null,
+      "price_per": 4
+    }
+  },
+  {
+    "Selling": {
       "item_id": "cosmos:missile_launcher",
       "max_quantity_selling": 10000,
       "price_per": 250
