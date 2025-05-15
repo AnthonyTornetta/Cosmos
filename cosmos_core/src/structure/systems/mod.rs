@@ -31,6 +31,7 @@ pub mod laser_cannon_system;
 pub mod line_system;
 pub mod mining_laser_system;
 pub mod missile_launcher_system;
+pub mod railgun_system;
 pub mod shield_system;
 pub mod sync;
 pub mod thruster_system;
@@ -535,4 +536,5 @@ pub(super) fn register(app: &mut App) {
     laser_cannon_system::register(app);
     mining_laser_system::register(app);
     dock_system::register(app);
+    railgun_system::register(app);
 }

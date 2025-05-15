@@ -29,6 +29,7 @@ use crate::{
     entities::player::strength::{PlayerStrength, TotalTimePlayed},
     persistence::loading::{LoadingBlueprintSystemSet, NeedsBlueprintLoaded},
     settings::ServerSettings,
+    universe::{SectorDanger, UniverseSystems},
 };
 
 /// TODO: Load this from config
@@ -96,10 +97,11 @@ fn add_spawn_times(
 
 fn spawn_pirates(
     mut commands: Commands,
-    q_players: Query<(Entity, &Location, &NextPirateSpawn, &TotalTimePlayed, &PlayerStrength), With<Player>>,
+    mut q_players: Query<(Entity, &Location, &mut NextPirateSpawn, &TotalTimePlayed, &PlayerStrength), With<Player>>,
     time: Res<Time>,
     min_pirate_spawn_time: Res<MinPirateSpawnTime>,
     server_settings: Res<ServerSettings>,
+    universe: Res<UniverseSystems>,
 ) {
     if server_settings.peaceful {
         return;
@@ -109,7 +111,20 @@ fn spawn_pirates(
 
     const MAX_DIST: f32 = SECTOR_DIMENSIONS * 2.0 + 20.0;
 
-    for (player_ent, player_loc, &player_last_pirate_spawn, total_time_played, player_strength) in q_players.iter() {
+    for (player_ent, player_loc, mut player_next_pirate_spawn, total_time_played, player_strength) in q_players.iter_mut() {
+        let danger = universe
+            .system(player_loc.get_system_coordinates())
+            .map(|x| x.sector_danger(player_loc.relative_sector()))
+            .unwrap_or_default();
+
+        if danger <= SectorDanger::MIDDLE {
+            // 1.0 means the pirate spawn time is pushed back forever until leaving, any lower will
+            // still push the time back, just not the full amount
+            const PIRATE_SPAWN_DELAY_AMOUNT: f64 = 0.75;
+            player_next_pirate_spawn.0 += time.delta_secs_f64() * PIRATE_SPAWN_DELAY_AMOUNT;
+            continue;
+        }
+
         if let Some(sec) = player_groups
             .keys()
             .find(|&sec| {
@@ -124,15 +139,15 @@ fn spawn_pirates(
             cur_total_time.time_sec += total_time_played.time_sec;
             cur_player_strength.0 += player_strength.0;
 
-            if player_last_pirate_spawn < *last_pirate_spawn {
-                *last_pirate_spawn = player_last_pirate_spawn;
+            if *player_next_pirate_spawn < *last_pirate_spawn {
+                *last_pirate_spawn = *player_next_pirate_spawn;
             }
 
             ents.push(player_ent);
         } else {
             player_groups.insert(
                 player_loc.sector,
-                (player_last_pirate_spawn, vec![player_ent], *total_time_played, *player_strength),
+                (*player_next_pirate_spawn, vec![player_ent], *total_time_played, *player_strength),
             );
         }
     }

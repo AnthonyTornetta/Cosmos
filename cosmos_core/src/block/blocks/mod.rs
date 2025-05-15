@@ -619,6 +619,43 @@ fn add_cosmos_blocks(
         );
     }
 
+    blocks.register(
+        BlockBuilder::new("cosmos:warp_drive", 2.0, 20.0, 5.0)
+            .add_property(BlockProperty::Full)
+            .create(),
+    );
+
+    blocks.register(
+        BlockBuilder::new("cosmos:warp_disruptor", 2.0, 20.0, 5.0)
+            .add_property(BlockProperty::Full)
+            .create(),
+    );
+
+    blocks.register(
+        BlockBuilder::new("cosmos:railgun_launcher", 2.0, 20.0, 5.0)
+            .add_property(BlockProperty::Full)
+            .add_property(BlockProperty::FaceFront)
+            .create(),
+    );
+
+    blocks.register(
+        BlockBuilder::new("cosmos:magnetic_rail", 2.0, 20.0, 5.0)
+            .add_property(BlockProperty::Full)
+            .create(),
+    );
+
+    blocks.register(
+        BlockBuilder::new("cosmos:railgun_capacitor", 2.0, 20.0, 5.0)
+            .add_property(BlockProperty::Full)
+            .create(),
+    );
+
+    blocks.register(
+        BlockBuilder::new("cosmos:cooling_mechanism", 2.0, 20.0, 5.0)
+            .add_property(BlockProperty::Full)
+            .create(),
+    );
+
     loading.finish_loading(id, &mut end_writer);
 }
 

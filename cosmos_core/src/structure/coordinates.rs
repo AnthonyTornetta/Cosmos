@@ -2,7 +2,7 @@
 
 extern crate proc_macro;
 
-use std::ops::{Add, Neg, Sub};
+use std::ops::{Add, Mul, Neg, Sub};
 
 use bevy::reflect::Reflect;
 use serde::{Deserialize, Serialize};
@@ -365,6 +365,22 @@ macro_rules! create_coordinate {
                     y: -self.y,
                     z: -self.z,
                 }
+            }
+        }
+
+        impl Mul<$unbounded> for UnboundCoordinateType {
+            type Output = $unbounded;
+
+            fn mul(self, rhs: $unbounded) -> $unbounded {
+                $unbounded::new(rhs.x * self, rhs.y * self, rhs.z * self)
+            }
+        }
+
+        impl Mul<UnboundCoordinateType> for $unbounded {
+            type Output = $unbounded;
+
+            fn mul(self, rhs: UnboundCoordinateType) -> $unbounded {
+                rhs * self
             }
         }
     };
