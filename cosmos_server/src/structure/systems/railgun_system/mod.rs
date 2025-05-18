@@ -29,7 +29,7 @@ use cosmos_core::{
     },
 };
 
-use super::sync::register_structure_system;
+use super::{shield_system::ShieldHitEvent, sync::register_structure_system};
 
 fn compute_railguns(structure: &Structure, blocks: &Registry<Block>, railgun_spots: impl Iterator<Item = BlockCoordinate>) -> Vec<Railgun> {
     let mut touched: HashSet<BlockCoordinate> = HashSet::default();
@@ -410,12 +410,13 @@ fn on_active(
     blocks: Res<Registry<Block>>,
     q_parent: Query<&Parent>,
     q_chunk_entity: Query<&ChunkEntity>,
-    mut q_shield: Query<(&mut Shield, &GlobalTransform, &Parent, &RapierContextEntityLink)>,
+    mut q_shield: Query<(Entity, &mut Shield, &GlobalTransform, &Parent, &RapierContextEntityLink)>,
     mut evw_take_damage: EventWriter<BlockTakeDamageEvent>,
     mut evw_block_destroyed: EventWriter<BlockDestroyedEvent>,
     q_players: Query<(&Player, &Location)>,
     q_locs: Query<&Location>,
     mut nevw_railgun_fired: NettyEventWriter<RailgunFiredEvent>,
+    mut evw_shield_hit_event: EventWriter<ShieldHitEvent>,
 ) {
     for (ss, railgun_system) in q_active.iter() {
         let mut fired = vec![];
@@ -494,6 +495,7 @@ fn on_active(
                                 block,
                                 structure_entity,
                                 relative_pos,
+                                *hit_g_trans * relative_pos,
                             )
                         })
                         .collect::<Vec<_>>(),
@@ -504,20 +506,25 @@ fn on_active(
 
             let mut shields = q_shield
                 .iter_mut()
-                .filter(|(s, _, parent, rapier_link)| *rapier_link == pw && parent.get() != ss.structure_entity() && s.is_enabled())
+                .filter(|(_, s, _, parent, rapier_link)| *rapier_link == pw && parent.get() != ss.structure_entity() && s.is_enabled())
                 .collect::<Vec<_>>();
 
             let mut strength = 10000.0;
 
             let mut length = RAILGUN_TRAVEL_DISTANCE;
 
-            for (_, block, structure_ent, point) in need_checked.iter() {
-                for (shield, _, _, _) in shields
+            for (_, block, structure_ent, relative_point, abs_hit) in need_checked.iter() {
+                for (shield_entity, shield, shield_g_trans, _, _) in shields
                     .iter_mut()
-                    .filter(|(s, g_trans, _, _)| (g_trans.translation() - *point).length_squared() <= s.radius * s.radius)
+                    .filter(|(_, s, g_trans, _, _)| (g_trans.translation() - *abs_hit).length_squared() <= s.radius * s.radius)
                 {
                     let remaining_strength = shield.strength() - strength;
                     shield.take_damage(strength);
+
+                    evw_shield_hit_event.send(ShieldHitEvent {
+                        shield_entity: *shield_entity,
+                        relative_position: shield_g_trans.rotation().inverse() * (abs_hit - shield_g_trans.translation()),
+                    });
 
                     strength = remaining_strength;
 
@@ -532,6 +539,9 @@ fn on_active(
 
                 let cur_hp = structure.get_block_health(*block, &blocks);
 
+                if strength <= 0.0 {
+                    break;
+                }
                 structure.block_take_damage(
                     *block,
                     &blocks,
@@ -543,7 +553,7 @@ fn on_active(
                 strength -= cur_hp;
 
                 if strength <= 0.0 {
-                    length = (*point - abs_block_pos).length();
+                    length = (*relative_point - abs_block_pos).length();
                     break;
                 }
             }

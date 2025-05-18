@@ -1,6 +1,7 @@
 //! The behavior of the logic system, on a structure by structure basis.
 
 use bevy::{
+    log::error,
     prelude::{Entity, EventWriter},
     reflect::Reflect,
     utils::{HashMap, HashSet},
@@ -395,12 +396,14 @@ impl LogicGraph {
         };
 
         let port = Port::new(coords, direction);
-        let &group_id = match port_type {
+        let Some(&group_id) = match port_type {
             PortType::Input => &mut self.input_port_group_id,
             PortType::Output => &mut self.output_port_group_id,
         }
-        .get(&port)
-        .expect("Port to be removed should exist.");
+        .get(&port) else {
+            error!("Port to be removed should exist.");
+            return;
+        };
 
         // Check if this port is the last block of its group, and delete the group if so.
         if self
