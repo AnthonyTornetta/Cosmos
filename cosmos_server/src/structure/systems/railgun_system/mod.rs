@@ -1,16 +1,28 @@
-use bevy::{prelude::*, utils::HashSet};
+use std::time::Duration;
 
+use bevy::{prelude::*, time::common_conditions::on_timer, utils::HashSet};
+
+use bevy_rapier3d::{
+    plugin::{RapierContextEntityLink, ReadRapierContext},
+    prelude::{CollisionGroups, Group, QueryFilter},
+};
 use cosmos_core::{
     block::{Block, block_direction::BlockDirection, block_events::BlockEventsSet, block_face::BlockFace, block_rotation::BlockRotation},
     events::block_events::BlockChangedEvent,
+    netty::system_sets::NetworkingSystemsSet,
+    physics::location::LocationPhysicsSet,
+    prelude::StructureSystem,
     registry::{Registry, identifiable::Identifiable},
     state::GameState,
     structure::{
         Structure,
+        block_health::events::{BlockDestroyedEvent, BlockTakeDamageEvent},
+        chunk::ChunkEntity,
         coordinates::{BlockCoordinate, CoordinateType, UnboundBlockCoordinate, UnboundCoordinateType},
         events::StructureLoadedEvent,
+        shields::Shield,
         systems::{
-            StructureSystemType, StructureSystems, StructureSystemsSet,
+            StructureSystemType, StructureSystems, StructureSystemsSet, SystemActive,
             line_system::{Line, LineBlocks, LineColorBlock, LineColorProperty, LineProperty, LinePropertyCalculator, LineSystem},
             railgun_system::{Railgun, RailgunSystem},
         },
@@ -46,12 +58,18 @@ fn compute_railguns(structure: &Structure, blocks: &Registry<Block>, railgun_spo
         let mut n: u32 = 0;
 
         let mut obstruction = false;
+        let mut touching = false;
 
         while rails.iter().copied().all(|(offset, block)| {
             let side_offset = dir.direction_of(offset).to_coordinates();
 
             BlockCoordinate::try_from(forward_offset * (n as UnboundCoordinateType) + railgun_origin + side_offset)
                 .map(|here| {
+                    if !touched.insert(here) {
+                        touching = true;
+                        return false;
+                    }
+
                     let valid = structure.block_at(here, blocks).unlocalized_name() == block;
 
                     if !valid && block == AIR {
@@ -73,6 +91,12 @@ fn compute_railguns(structure: &Structure, blocks: &Registry<Block>, railgun_spo
             energy_stored: 0,
             valid: false,
         };
+
+        if touching {
+            warn!("This railgun is touching another - invalid!");
+            railguns.push(railgun);
+            continue;
+        }
 
         if obstruction {
             warn!("There's an obstruction!");
@@ -100,12 +124,12 @@ fn block_update_system(
     q_structure: Query<&Structure>,
     systems_query: Query<&StructureSystems>,
 ) {
-    const RAILGUN_BLOCKS: [&str; 4] = [
-        "cosmos:railgun_launcher",
-        "cosmos:magnetic_rail",
-        "cosmos:railgun_capacitor",
-        "cosmos:cooling_mechanism",
-    ];
+    // const RAILGUN_BLOCKS: [&str; 4] = [
+    //     "cosmos:railgun_launcher",
+    //     "cosmos:magnetic_rail",
+    //     "cosmos:railgun_capacitor",
+    //     "cosmos:cooling_mechanism",
+    // ];
 
     for ev in evr_block_changed.read() {
         let Ok(systems) = systems_query.get(ev.block.structure()) else {
@@ -120,8 +144,8 @@ fn block_update_system(
             continue;
         };
 
-        let old_block = blocks.from_numeric_id(ev.old_block);
-        let new_block = blocks.from_numeric_id(ev.new_block);
+        // let old_block = blocks.from_numeric_id(ev.old_block);
+        // let new_block = blocks.from_numeric_id(ev.new_block);
 
         // if RAILGUN_BLOCKS.contains(&old_block.unlocalized_name()) || RAILGUN_BLOCKS.contains(&new_block.unlocalized_name()) {
         let railguns = compute_railguns(
@@ -132,29 +156,6 @@ fn block_update_system(
         info!("Railguns: {railguns:?}");
 
         system.railguns = railguns;
-        // }
-
-        // if laser_cannon_blocks.get(old_block).is_some() {
-        //     system.remove_block(ev.block.coords());
-        // }
-        //
-        // if let Some(property) = laser_cannon_blocks.get(new_block) {
-        //     system.add_block(ev.block.coords(), ev.new_block_rotation(), property);
-        // }
-        //
-        // let mut recalc = false;
-        // if color_blocks.from_block(old_block).is_some() {
-        //     system.colors.retain(|x| x.0 != ev.block.coords());
-        //     recalc = true;
-        // }
-        //
-        // if let Some(color_property) = color_blocks.from_block(new_block) {
-        //     system.colors.push((ev.block.coords(), color_property.properties));
-        //     recalc = true;
-        // }
-        // if recalc {
-        //     recalculate_colors(&mut system, Some(ev.block.coords()));
-        // }
     }
 }
 
@@ -169,9 +170,10 @@ fn structure_loaded_event(
         if let Ok((structure, mut systems)) = structure_query.get_mut(ev.structure_entity) {
             let mut system = RailgunSystem::default();
 
-            let mut color_found = false;
+            let railguns = compute_railguns(structure, &blocks, structure.all_blocks_iter(false));
+            info!("Railguns: {railguns:?}");
 
-            //structure.all_blocks_iter(false)
+            system.railguns = railguns;
 
             systems.add_system(&mut commands, system, &registry);
         }
@@ -401,8 +403,166 @@ fn structure_loaded_event(
 //     }
 // }
 
+const RAILGUN_TRAVEL_DISTANCE: f32 = 2000.0;
+
+fn on_active(
+    context_access: ReadRapierContext,
+    mut q_structure: Query<(&mut Structure, &GlobalTransform, &RapierContextEntityLink)>,
+    q_active: Query<(&StructureSystem, &RailgunSystem), With<SystemActive>>,
+    blocks: Res<Registry<Block>>,
+    mut commands: Commands,
+    q_parent: Query<&Parent>,
+    q_chunk_entity: Query<&ChunkEntity>,
+    mut q_shield: Query<(&mut Shield, &GlobalTransform, &Parent, &RapierContextEntityLink)>,
+    mut evw_take_damage: EventWriter<BlockTakeDamageEvent>,
+    mut evw_block_destroyed: EventWriter<BlockDestroyedEvent>,
+) {
+    for (ss, ds) in q_active.iter() {
+        for railgun in ds.railguns.iter().filter(|r| r.valid) {
+            let Ok((structure, g_trans, pw)) = q_structure.get(ss.structure_entity()) else {
+                continue;
+            };
+
+            let no_collide_entity = ss.structure_entity();
+
+            let railgun_block = railgun.origin;
+            let rel_pos = structure.block_relative_position(railgun_block);
+            let block_rotation = structure.block_rotation(railgun_block);
+            let docking_look_direction = block_rotation.direction_of(BlockFace::Front);
+            let front_direction = docking_look_direction.as_vec3();
+
+            let abs_block_pos = g_trans.transform_point(rel_pos);
+
+            let my_rotation = Quat::from_affine3(&g_trans.affine());
+            let ray_dir = my_rotation.mul_vec3(front_direction);
+
+            let context = context_access.get(*pw);
+
+            let mut need_checked = vec![];
+
+            let mut structures = vec![];
+
+            context.intersections_with_ray(
+                abs_block_pos,
+                ray_dir,
+                RAILGUN_TRAVEL_DISTANCE,
+                false,
+                QueryFilter::predicate(QueryFilter::default(), &|entity| {
+                    if no_collide_entity == entity {
+                        false
+                    } else if let Ok(parent) = q_parent.get(entity) {
+                        parent.get() != no_collide_entity
+                    } else {
+                        true
+                    }
+                }),
+                |hit_entity, intersection| {
+                    let hit_point = abs_block_pos + ray_dir * intersection.time_of_impact;
+
+                    info!("HIT ENTITY: {hit_entity:?}");
+
+                    let Ok(structure_entity) = q_chunk_entity.get(hit_entity).map(|x| x.structure_entity) else {
+                        return true;
+                    };
+
+                    if structures.iter().any(|(s_ent, _)| *s_ent == structure_entity) {
+                        return true;
+                    }
+
+                    structures.push((structure_entity, intersection));
+                    true
+                },
+            );
+
+            for (structure_entity, intersection) in structures {
+                let Ok((hit_structure, hit_g_trans, _)) = q_structure.get(structure_entity) else {
+                    continue;
+                };
+
+                // let moved_point = intersection.time_of_impact * ray_dir - intersection.normal * 0.01;
+
+                let point = hit_g_trans.compute_matrix().inverse().transform_point3(abs_block_pos);
+
+                let moved_dir = hit_g_trans.rotation().inverse() * ray_dir;
+
+                // let Ok(hit_coords) = hit_structure.relative_coords_to_local_coords_checked(point.x, point.y, point.z) else {
+                //     return true;
+                // };
+
+                // need_checked.push((intersection.time_of_impact, hit_coords, structure_entity, moved_point));
+                //
+                info!("Hit point relative: {point:?}; Dir relative: {moved_dir:?}");
+
+                need_checked.append(
+                    &mut hit_structure
+                        .raycast_iter(point, moved_dir, RAILGUN_TRAVEL_DISTANCE, false)
+                        .map(|block| {
+                            let relative_pos = hit_structure.block_relative_position(block);
+                            (
+                                (relative_pos - point).length() + intersection.time_of_impact,
+                                block,
+                                structure_entity,
+                                relative_pos,
+                            )
+                        })
+                        .collect::<Vec<_>>(),
+                );
+            }
+
+            need_checked.sort_unstable_by(|a, b| a.0.partial_cmp(&b.0).unwrap());
+
+            info!("{need_checked:?}");
+
+            let mut shields = q_shield
+                .iter_mut()
+                .filter(|(s, _, parent, rapier_link)| *rapier_link == pw && parent.get() != ss.structure_entity() && s.is_enabled())
+                .collect::<Vec<_>>();
+
+            let mut strength = 10000.0;
+
+            for (_, block, structure_ent, point) in need_checked.iter() {
+                for (shield, _, _, _) in shields
+                    .iter_mut()
+                    .filter(|(s, g_trans, _, _)| (g_trans.translation() - *point).length_squared() <= s.radius * s.radius)
+                {
+                    let remaining_strength = shield.strength() - strength;
+                    shield.take_damage(strength);
+
+                    strength = remaining_strength;
+
+                    if strength <= 0.0 {
+                        break;
+                    }
+                }
+
+                let Ok((mut structure, _, _)) = q_structure.get_mut(*structure_ent) else {
+                    continue;
+                };
+
+                let cur_hp = structure.get_block_health(*block, &blocks);
+
+                structure.block_take_damage(
+                    *block,
+                    &blocks,
+                    strength,
+                    Some((&mut evw_take_damage, &mut evw_block_destroyed)),
+                    Some(*structure_ent),
+                );
+
+                strength -= cur_hp;
+
+                if strength <= 0.0 {
+                    break;
+                }
+            }
+
+            info!("Leftover: {strength}");
+        }
+    }
+}
+
 pub(super) fn register(app: &mut App) {
-    register_structure_system::<RailgunSystem>(app, false, "cosmos:railgun_launcher");
+    register_structure_system::<RailgunSystem>(app, true, "cosmos:railgun_launcher");
 
     app.add_systems(
         Update,
@@ -413,6 +573,12 @@ pub(super) fn register(app: &mut App) {
             block_update_system
                 .in_set(BlockEventsSet::ProcessEvents)
                 .in_set(StructureSystemsSet::UpdateSystemsBlocks),
+            on_active
+                .in_set(StructureSystemsSet::UpdateSystemsBlocks)
+                .in_set(NetworkingSystemsSet::Between)
+                .after(LocationPhysicsSet::DoPhysics)
+                .run_if(in_state(GameState::Playing))
+                .run_if(on_timer(Duration::from_secs(4))),
         )
             .run_if(in_state(GameState::Playing)),
     );

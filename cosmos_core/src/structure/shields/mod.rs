@@ -49,6 +49,10 @@ impl Shield {
         self.strength > f32::EPSILON && !self.disabled
     }
 
+    pub fn strength(&self) -> f32 {
+        if self.disabled { 0.0 } else { self.strength }
+    }
+
     /// Reduces the shield's strength based on the amount provided.
     ///
     /// The shield's strength cannot go below 0.0.
