@@ -4,6 +4,7 @@ use bevy::{
     prelude::*,
 };
 use bevy_kira_audio::{Audio, AudioControl, AudioInstance};
+use bevy_rapier3d::prelude::{RigidBody, Velocity};
 use cosmos_core::{
     ecs::NeedsDespawned,
     netty::{client::LocalPlayer, system_sets::NetworkingSystemsSet},
@@ -41,7 +42,7 @@ const TTL: f32 = 1.5;
 
 fn on_fire_railgun(
     mut commands: Commands,
-    q_structure: Query<(&Location, &GlobalTransform, &Structure)>,
+    q_structure: Query<(&Location, &GlobalTransform, &Structure, &Velocity)>,
     mut nevr_railgun_fired: EventReader<RailgunFiredEvent>,
     railgun_mesh: Res<RailgunRendering>,
     mut materials: ResMut<Assets<StandardMaterial>>,
@@ -51,7 +52,7 @@ fn on_fire_railgun(
     q_local_player: Query<(&GlobalTransform, &Location), With<LocalPlayer>>,
 ) {
     for ev in nevr_railgun_fired.read() {
-        let Ok((s_loc, s_g_trans, structure)) = q_structure.get(ev.structure) else {
+        let Ok((s_loc, s_g_trans, structure, velocity)) = q_structure.get(ev.structure) else {
             warn!("Bad structure");
             continue;
         };
@@ -86,6 +87,11 @@ fn on_fire_railgun(
                 NotShadowCaster,
                 NotShadowReceiver,
                 Name::new("Railgun Visual"),
+                Velocity {
+                    linvel: velocity.linvel,
+                    ..Default::default()
+                },
+                RigidBody::KinematicVelocityBased,
                 MeshMaterial3d(materials.add(StandardMaterial {
                     base_color: Color::WHITE,
                     emissive: Color::WHITE.into(),
