@@ -4,13 +4,14 @@ use bevy::{prelude::*, time::common_conditions::on_timer, utils::HashSet};
 
 use bevy_rapier3d::{
     plugin::{RapierContextEntityLink, ReadRapierContext},
-    prelude::{CollisionGroups, Group, QueryFilter},
+    prelude::QueryFilter,
 };
 use cosmos_core::{
-    block::{Block, block_direction::BlockDirection, block_events::BlockEventsSet, block_face::BlockFace, block_rotation::BlockRotation},
+    block::{Block, block_events::BlockEventsSet, block_face::BlockFace},
+    entities::player::Player,
     events::block_events::BlockChangedEvent,
-    netty::system_sets::NetworkingSystemsSet,
-    physics::location::LocationPhysicsSet,
+    netty::{sync::events::server_event::NettyEventWriter, system_sets::NetworkingSystemsSet},
+    physics::location::{Location, LocationPhysicsSet, SECTOR_DIMENSIONS},
     prelude::StructureSystem,
     registry::{Registry, identifiable::Identifiable},
     state::GameState,
@@ -18,18 +19,17 @@ use cosmos_core::{
         Structure,
         block_health::events::{BlockDestroyedEvent, BlockTakeDamageEvent},
         chunk::ChunkEntity,
-        coordinates::{BlockCoordinate, CoordinateType, UnboundBlockCoordinate, UnboundCoordinateType},
+        coordinates::{BlockCoordinate, UnboundCoordinateType},
         events::StructureLoadedEvent,
         shields::Shield,
         systems::{
             StructureSystemType, StructureSystems, StructureSystemsSet, SystemActive,
-            line_system::{Line, LineBlocks, LineColorBlock, LineColorProperty, LineProperty, LinePropertyCalculator, LineSystem},
-            railgun_system::{Railgun, RailgunSystem},
+            railgun_system::{Railgun, RailgunFiredEvent, RailgunFiredInfo, RailgunSystem},
         },
     },
 };
 
-use super::{BlockStructureSystem, sync::register_structure_system};
+use super::sync::register_structure_system;
 
 fn compute_railguns(structure: &Structure, blocks: &Registry<Block>, railgun_spots: impl Iterator<Item = BlockCoordinate>) -> Vec<Railgun> {
     let mut touched: HashSet<BlockCoordinate> = HashSet::default();
@@ -153,7 +153,6 @@ fn block_update_system(
             &blocks,
             system.railguns.iter().map(|r| r.origin).chain([ev.block.coords()].into_iter()),
         );
-        info!("Railguns: {railguns:?}");
 
         system.railguns = railguns;
     }
@@ -171,7 +170,6 @@ fn structure_loaded_event(
             let mut system = RailgunSystem::default();
 
             let railguns = compute_railguns(structure, &blocks, structure.all_blocks_iter(false));
-            info!("Railguns: {railguns:?}");
 
             system.railguns = railguns;
 
@@ -410,15 +408,22 @@ fn on_active(
     mut q_structure: Query<(&mut Structure, &GlobalTransform, &RapierContextEntityLink)>,
     q_active: Query<(&StructureSystem, &RailgunSystem), With<SystemActive>>,
     blocks: Res<Registry<Block>>,
-    mut commands: Commands,
     q_parent: Query<&Parent>,
     q_chunk_entity: Query<&ChunkEntity>,
     mut q_shield: Query<(&mut Shield, &GlobalTransform, &Parent, &RapierContextEntityLink)>,
     mut evw_take_damage: EventWriter<BlockTakeDamageEvent>,
     mut evw_block_destroyed: EventWriter<BlockDestroyedEvent>,
+    q_players: Query<(&Player, &Location)>,
+    q_locs: Query<&Location>,
+    mut nevw_railgun_fired: NettyEventWriter<RailgunFiredEvent>,
 ) {
-    for (ss, ds) in q_active.iter() {
-        for railgun in ds.railguns.iter().filter(|r| r.valid) {
+    for (ss, railgun_system) in q_active.iter() {
+        let mut fired = vec![];
+
+        let Ok(structure_loc) = q_locs.get(ss.structure_entity()) else {
+            continue;
+        };
+        for railgun in railgun_system.railguns.iter().filter(|r| r.valid) {
             let Ok((structure, g_trans, pw)) = q_structure.get(ss.structure_entity()) else {
                 continue;
             };
@@ -456,50 +461,36 @@ fn on_active(
                         true
                     }
                 }),
-                |hit_entity, intersection| {
-                    let hit_point = abs_block_pos + ray_dir * intersection.time_of_impact;
-
-                    info!("HIT ENTITY: {hit_entity:?}");
-
+                |hit_entity, _| {
                     let Ok(structure_entity) = q_chunk_entity.get(hit_entity).map(|x| x.structure_entity) else {
                         return true;
                     };
 
-                    if structures.iter().any(|(s_ent, _)| *s_ent == structure_entity) {
+                    if structures.iter().any(|s_ent| *s_ent == structure_entity) {
                         return true;
                     }
 
-                    structures.push((structure_entity, intersection));
+                    structures.push(structure_entity);
                     true
                 },
             );
 
-            for (structure_entity, intersection) in structures {
+            for structure_entity in structures {
                 let Ok((hit_structure, hit_g_trans, _)) = q_structure.get(structure_entity) else {
                     continue;
                 };
 
-                // let moved_point = intersection.time_of_impact * ray_dir - intersection.normal * 0.01;
+                let relative_ray_point = hit_g_trans.compute_matrix().inverse().transform_point3(abs_block_pos);
 
-                let point = hit_g_trans.compute_matrix().inverse().transform_point3(abs_block_pos);
-
-                let moved_dir = hit_g_trans.rotation().inverse() * ray_dir;
-
-                // let Ok(hit_coords) = hit_structure.relative_coords_to_local_coords_checked(point.x, point.y, point.z) else {
-                //     return true;
-                // };
-
-                // need_checked.push((intersection.time_of_impact, hit_coords, structure_entity, moved_point));
-                //
-                info!("Hit point relative: {point:?}; Dir relative: {moved_dir:?}");
+                let relative_ray_dir = hit_g_trans.rotation().inverse() * ray_dir;
 
                 need_checked.append(
                     &mut hit_structure
-                        .raycast_iter(point, moved_dir, RAILGUN_TRAVEL_DISTANCE, false)
+                        .raycast_iter(relative_ray_point, relative_ray_dir, RAILGUN_TRAVEL_DISTANCE, false)
                         .map(|block| {
                             let relative_pos = hit_structure.block_relative_position(block);
                             (
-                                (relative_pos - point).length() + intersection.time_of_impact,
+                                (relative_pos - relative_ray_point).length_squared(),
                                 block,
                                 structure_entity,
                                 relative_pos,
@@ -511,14 +502,14 @@ fn on_active(
 
             need_checked.sort_unstable_by(|a, b| a.0.partial_cmp(&b.0).unwrap());
 
-            info!("{need_checked:?}");
-
             let mut shields = q_shield
                 .iter_mut()
                 .filter(|(s, _, parent, rapier_link)| *rapier_link == pw && parent.get() != ss.structure_entity() && s.is_enabled())
                 .collect::<Vec<_>>();
 
             let mut strength = 10000.0;
+
+            let mut length = RAILGUN_TRAVEL_DISTANCE;
 
             for (_, block, structure_ent, point) in need_checked.iter() {
                 for (shield, _, _, _) in shields
@@ -552,12 +543,28 @@ fn on_active(
                 strength -= cur_hp;
 
                 if strength <= 0.0 {
+                    length = (*point - abs_block_pos).length();
                     break;
                 }
             }
 
-            info!("Leftover: {strength}");
+            fired.push(RailgunFiredInfo {
+                origin: railgun.origin,
+                length,
+                direction: ray_dir,
+            });
         }
+
+        nevw_railgun_fired.send_to_many(
+            RailgunFiredEvent {
+                railguns: fired,
+                structure: ss.structure_entity(),
+            },
+            q_players
+                .iter()
+                .filter(|x| x.1.distance_sqrd(structure_loc) < SECTOR_DIMENSIONS * SECTOR_DIMENSIONS)
+                .map(|x| x.0.client_id()),
+        );
     }
 }
 
