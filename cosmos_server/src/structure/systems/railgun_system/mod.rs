@@ -1,6 +1,4 @@
-use std::time::Duration;
-
-use bevy::{prelude::*, time::common_conditions::on_timer, utils::HashSet};
+use bevy::{prelude::*, utils::HashSet};
 
 use bevy_rapier3d::{
     plugin::{RapierContextEntityLink, ReadRapierContext},
@@ -24,6 +22,7 @@ use cosmos_core::{
         shields::Shield,
         systems::{
             StructureSystemType, StructureSystems, StructureSystemsSet, SystemActive,
+            energy_storage_system::EnergyStorageSystem,
             railgun_system::{Railgun, RailgunFiredEvent, RailgunFiredInfo, RailgunSystem},
         },
     },
@@ -31,21 +30,30 @@ use cosmos_core::{
 
 use super::{shield_system::ShieldHitEvent, sync::register_structure_system};
 
-fn compute_railguns(structure: &Structure, blocks: &Registry<Block>, railgun_spots: impl Iterator<Item = BlockCoordinate>) -> Vec<Railgun> {
+fn compute_railguns(structure: &Structure, blocks: &Registry<Block>, railgun_spots: impl Iterator<Item = Railgun>) -> Vec<Railgun> {
     let mut touched: HashSet<BlockCoordinate> = HashSet::default();
 
     let mut railguns = vec![];
 
     for railgun_origin in railgun_spots {
-        if structure.block_at(railgun_origin, blocks).unlocalized_name() != "cosmos:railgun_launcher" {
+        if structure.block_at(railgun_origin.origin, blocks).unlocalized_name() != "cosmos:railgun_launcher" {
             continue;
         }
 
-        let dir = structure.block_rotation(railgun_origin);
+        const CAPACITANCE_PER_MAGNET: u32 = 20_000;
+        const CHARGE_PER_CHARGER: f32 = 2_000.0;
+        const COOLING_PER_COOLER: f32 = 100.0;
+        const HEAT_CAP_PER_MAGNET: u32 = 3_000;
+        const HEAT_PER_FIRE_PER_MAGNET: u32 = 1_000;
+
+        let dir = structure.block_rotation(railgun_origin.origin);
         let forward_offset = dir.direction_of(BlockFace::Front).to_coordinates();
 
         const MAGNET: &str = "cosmos:magnetic_rail";
         const AIR: &str = "cosmos:air";
+
+        const CAPACITOR: &str = "cosmos:railgun_capacitor";
+        const COOLING: &str = "cosmos:cooling_mechanism";
 
         let rails = [
             (BlockFace::Left, MAGNET),
@@ -55,15 +63,44 @@ fn compute_railguns(structure: &Structure, blocks: &Registry<Block>, railgun_spo
             (BlockFace::Front, AIR),
         ];
 
-        let mut n: u32 = 0;
+        // Railgun Daigram:
+        //
+        // `*` = Any Block
+        // `O` = Air
+        // `X` = Magnetic rail
+        // `C` = Capacitor OR Coolant
+        //
+        // ```
+        // ..C..
+        // .CXC.
+        // CXOXC
+        // .CXC.
+        // ..C..
+        // ```
+
+        let charge_or_cool_spots = [
+            (BlockFace::Left, BlockFace::Left),
+            (BlockFace::Left, BlockFace::Top),
+            (BlockFace::Left, BlockFace::Bottom),
+            (BlockFace::Right, BlockFace::Right),
+            (BlockFace::Right, BlockFace::Top),
+            (BlockFace::Right, BlockFace::Bottom),
+            (BlockFace::Top, BlockFace::Top),
+            (BlockFace::Bottom, BlockFace::Bottom),
+        ];
+
+        let mut railgun_length: u32 = 0;
 
         let mut obstruction = false;
         let mut touching = false;
 
+        let mut n_chargers = 0;
+        let mut n_coolers = 0;
+
         while rails.iter().copied().all(|(offset, block)| {
             let side_offset = dir.direction_of(offset).to_coordinates();
 
-            BlockCoordinate::try_from(forward_offset * (n as UnboundCoordinateType) + railgun_origin + side_offset)
+            BlockCoordinate::try_from(forward_offset * (railgun_length as UnboundCoordinateType) + railgun_origin.origin + side_offset)
                 .map(|here| {
                     if !touched.insert(here) {
                         touching = true;
@@ -80,16 +117,40 @@ fn compute_railguns(structure: &Structure, blocks: &Registry<Block>, railgun_spo
                 })
                 .unwrap_or(false)
         }) {
-            n += 1;
+            for (a, b) in charge_or_cool_spots.iter().copied() {
+                let offset = dir.direction_of(a).to_coordinates() + dir.direction_of(b).to_coordinates();
+                let Ok(bc) =
+                    BlockCoordinate::try_from(forward_offset * (railgun_length as UnboundCoordinateType) + railgun_origin.origin + offset)
+                else {
+                    continue;
+                };
+
+                let block = structure.block_at(bc, blocks);
+                if block.unlocalized_name() == COOLING {
+                    n_coolers += 1;
+                } else if block.unlocalized_name() == CAPACITOR {
+                    n_chargers += 1;
+                }
+            }
+
+            railgun_length += 1;
         }
 
+        let n_magnets = railgun_length * 4;
+
         let mut railgun = Railgun {
-            origin: railgun_origin,
-            length: n,
+            origin: railgun_origin.origin,
+            length: railgun_length,
             direction: dir.direction_of(BlockFace::Front),
-            capacitance: 0,
-            energy_stored: 0,
+            capacitance: n_magnets * CAPACITANCE_PER_MAGNET,
+            energy_stored: railgun_origin.energy_stored,
             valid: false,
+            cooldown: railgun_origin.cooldown,
+            charge_rate: n_chargers as f32 * CHARGE_PER_CHARGER,
+            heat: railgun_origin.heat,
+            max_heat: HEAT_CAP_PER_MAGNET * n_magnets,
+            cooling_rate: COOLING_PER_COOLER * n_coolers as f32,
+            heat_per_fire: HEAT_PER_FIRE_PER_MAGNET * n_magnets,
         };
 
         if touching {
@@ -104,7 +165,7 @@ fn compute_railguns(structure: &Structure, blocks: &Registry<Block>, railgun_spo
             continue;
         }
 
-        if n < 2 {
+        if railgun_length < 2 {
             railguns.push(railgun);
             warn!("Railgun too small!");
             continue;
@@ -151,7 +212,13 @@ fn block_update_system(
         let railguns = compute_railguns(
             structure,
             &blocks,
-            system.railguns.iter().map(|r| r.origin).chain([ev.block.coords()].into_iter()),
+            system.railguns.iter().cloned().chain(
+                [Railgun {
+                    origin: ev.block.coords(),
+                    ..Default::default()
+                }]
+                .into_iter(),
+            ),
         );
 
         system.railguns = railguns;
@@ -169,7 +236,21 @@ fn structure_loaded_event(
         if let Ok((structure, mut systems)) = structure_query.get_mut(ev.structure_entity) {
             let mut system = RailgunSystem::default();
 
-            let railguns = compute_railguns(structure, &blocks, structure.all_blocks_iter(false));
+            let Some(railgun_controller) = blocks.from_id("cosmos:railgun_launcher").map(|x| x.id()) else {
+                return;
+            };
+
+            let railguns = compute_railguns(
+                structure,
+                &blocks,
+                structure
+                    .all_blocks_iter(false)
+                    .filter(|x| structure.block_id_at(*x) == railgun_controller)
+                    .map(|x| Railgun {
+                        origin: x,
+                        ..Default::default()
+                    }),
+            );
 
             system.railguns = railguns;
 
@@ -406,7 +487,7 @@ const RAILGUN_TRAVEL_DISTANCE: f32 = 2000.0;
 fn on_active(
     context_access: ReadRapierContext,
     mut q_structure: Query<(&mut Structure, &GlobalTransform, &RapierContextEntityLink)>,
-    q_active: Query<(&StructureSystem, &RailgunSystem), With<SystemActive>>,
+    mut q_active: Query<(&StructureSystem, &mut RailgunSystem), With<SystemActive>>,
     blocks: Res<Registry<Block>>,
     q_parent: Query<&Parent>,
     q_chunk_entity: Query<&ChunkEntity>,
@@ -418,13 +499,13 @@ fn on_active(
     mut nevw_railgun_fired: NettyEventWriter<RailgunFiredEvent>,
     mut evw_shield_hit_event: EventWriter<ShieldHitEvent>,
 ) {
-    for (ss, railgun_system) in q_active.iter() {
+    for (ss, mut railgun_system) in q_active.iter_mut() {
         let mut fired = vec![];
 
         let Ok(structure_loc) = q_locs.get(ss.structure_entity()) else {
             continue;
         };
-        for railgun in railgun_system.railguns.iter().filter(|r| r.valid) {
+        for railgun in railgun_system.railguns.iter_mut().filter(|r| r.get_unready_reason().is_none()) {
             let Ok((structure, g_trans, pw)) = q_structure.get(ss.structure_entity()) else {
                 continue;
             };
@@ -558,6 +639,9 @@ fn on_active(
                 }
             }
 
+            railgun.energy_stored = 0;
+            railgun.heat += railgun.heat_per_fire as f32;
+
             fired.push(RailgunFiredInfo {
                 origin: railgun.origin,
                 length,
@@ -578,6 +662,41 @@ fn on_active(
     }
 }
 
+fn charge_and_cool_railguns(
+    mut q_railguns: Query<(&mut RailgunSystem, &StructureSystem)>,
+    q_structure_systems: Query<&StructureSystems>,
+    mut q_energy_system: Query<&mut EnergyStorageSystem>,
+    time: Res<Time>,
+) {
+    for (mut rgs, ss) in q_railguns.iter_mut() {
+        let Ok(ss) = q_structure_systems.get(ss.structure_entity()) else {
+            continue;
+        };
+
+        let Ok(mut ess) = ss.query_mut(&mut q_energy_system) else {
+            continue;
+        };
+
+        let delta = time.delta_secs();
+
+        for railgun in rgs.railguns.iter_mut() {
+            if !railgun.valid {
+                continue;
+            }
+
+            let charge_rate = (railgun.charge_rate * delta).min((railgun.capacitance - railgun.energy_stored) as f32);
+
+            let uncharged = ess.decrease_energy(charge_rate);
+            let amt_charged = charge_rate - uncharged;
+            railgun.energy_stored += amt_charged.floor() as u32;
+            railgun.energy_stored = railgun.energy_stored.min(railgun.capacitance);
+
+            railgun.heat -= railgun.cooling_rate * delta;
+            railgun.heat = railgun.heat.max(0.0);
+        }
+    }
+}
+
 pub(super) fn register(app: &mut App) {
     register_structure_system::<RailgunSystem>(app, true, "cosmos:railgun_launcher");
 
@@ -590,13 +709,14 @@ pub(super) fn register(app: &mut App) {
             block_update_system
                 .in_set(BlockEventsSet::ProcessEvents)
                 .in_set(StructureSystemsSet::UpdateSystemsBlocks),
-            on_active
+            (charge_and_cool_railguns, on_active)
+                .chain()
                 .in_set(StructureSystemsSet::UpdateSystemsBlocks)
                 .in_set(NetworkingSystemsSet::Between)
                 .after(LocationPhysicsSet::DoPhysics)
-                .run_if(in_state(GameState::Playing))
-                .run_if(on_timer(Duration::from_secs(4))),
+                .run_if(in_state(GameState::Playing)),
         )
+            .chain()
             .run_if(in_state(GameState::Playing)),
     );
 }

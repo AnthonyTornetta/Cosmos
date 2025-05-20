@@ -17,14 +17,44 @@ pub enum InvalidRailgunReason {
     TouchingAnother,
 }
 
-#[derive(Serialize, Deserialize, Debug, Reflect)]
+#[derive(Serialize, Deserialize, Debug, Reflect, Default, Clone)]
 pub struct Railgun {
     pub origin: BlockCoordinate,
     pub direction: BlockDirection,
     pub length: u32,
     pub capacitance: u32,
     pub energy_stored: u32,
+    /// Watts
+    pub charge_rate: f32,
     pub valid: bool,
+    pub cooldown: f32,
+    pub heat: f32,
+    pub max_heat: u32,
+    pub cooling_rate: f32,
+    pub heat_per_fire: u32,
+}
+
+pub enum RailgunFailureReason {
+    LowPower,
+    TooHot,
+    InvalidStructure,
+}
+
+impl Railgun {
+    /// Returns [`None`] if ready to fire, or some [`RailgunFailureReason`] if unable to fire.
+    pub fn get_unready_reason(&self) -> Option<RailgunFailureReason> {
+        if !self.valid {
+            return Some(RailgunFailureReason::InvalidStructure);
+        }
+        if self.capacitance > self.energy_stored {
+            return Some(RailgunFailureReason::LowPower);
+        }
+        if self.heat.round() as u32 + self.heat_per_fire > self.max_heat {
+            return Some(RailgunFailureReason::TooHot);
+        }
+
+        None
+    }
 }
 
 #[derive(Serialize, Deserialize, Debug, Component, Reflect, Default)]
