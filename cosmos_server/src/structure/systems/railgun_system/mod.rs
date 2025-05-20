@@ -129,8 +129,18 @@ fn compute_railguns(structure: &Structure, blocks: &Registry<Block>, railgun_spo
 
                 let block = structure.block_at(bc, blocks);
                 if block.unlocalized_name() == COOLING {
+                    if !touched.insert(bc) {
+                        touching = true;
+                        break;
+                    }
+
                     n_coolers += 1;
                 } else if block.unlocalized_name() == CAPACITOR {
+                    if !touched.insert(bc) {
+                        touching = true;
+                        break;
+                    }
+
                     n_chargers += 1;
                 }
             }
@@ -169,6 +179,18 @@ fn compute_railguns(structure: &Structure, blocks: &Registry<Block>, railgun_spo
 
         if railgun_length < RAILGUN_MIN_SIZE {
             railgun.invalid_reason = Some(InvalidRailgunReason::NoMagnets);
+            railguns.push(railgun);
+            continue;
+        }
+
+        if n_coolers == 0 {
+            railgun.invalid_reason = Some(InvalidRailgunReason::NoCooling);
+            railguns.push(railgun);
+            continue;
+        }
+
+        if n_chargers == 0 {
+            railgun.invalid_reason = Some(InvalidRailgunReason::NoCapacitors);
             railguns.push(railgun);
             continue;
         }

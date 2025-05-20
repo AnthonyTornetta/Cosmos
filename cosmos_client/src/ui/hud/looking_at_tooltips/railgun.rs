@@ -56,6 +56,8 @@ fn add_tooltip_text(
                 InvalidRailgunReason::NoMagnets => "Railgun needs more magnets",
                 InvalidRailgunReason::Obstruction => "Something is obstructing the barrel",
                 InvalidRailgunReason::TouchingAnother => "This railgun is sharing blocks with another railgun",
+                InvalidRailgunReason::NoCapacitors => "This railgun has no capacitors to charge",
+                InvalidRailgunReason::NoCooling => "This railgun has no cooling mechanism",
             };
             tooltip.add_or_modify_message(
                 HudMessage::with_colored_string(format!("✕ {reason_text}"), css::RED.into()),

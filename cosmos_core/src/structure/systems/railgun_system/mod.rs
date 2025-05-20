@@ -16,6 +16,8 @@ pub enum InvalidRailgunReason {
     NoMagnets,
     TouchingAnother,
     Obstruction,
+    NoCapacitors,
+    NoCooling,
 }
 
 #[derive(Serialize, Deserialize, Debug, Reflect, Default, Clone)]
