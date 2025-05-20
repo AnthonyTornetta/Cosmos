@@ -23,7 +23,7 @@ use cosmos_core::{
         systems::{
             StructureSystemType, StructureSystems, StructureSystemsSet, SystemActive,
             energy_storage_system::EnergyStorageSystem,
-            railgun_system::{Railgun, RailgunFiredEvent, RailgunFiredInfo, RailgunSystem},
+            railgun_system::{InvalidRailgunReason, Railgun, RailgunFiredEvent, RailgunFiredInfo, RailgunSystem},
         },
     },
 };
@@ -39,6 +39,8 @@ fn compute_railguns(structure: &Structure, blocks: &Registry<Block>, railgun_spo
         if structure.block_at(railgun_origin.origin, blocks).unlocalized_name() != "cosmos:railgun_launcher" {
             continue;
         }
+
+        const RAILGUN_MIN_SIZE: u32 = 8;
 
         const CAPACITANCE_PER_MAGNET: u32 = 20_000;
         const CHARGE_PER_CHARGER: f32 = 2_000.0;
@@ -144,34 +146,33 @@ fn compute_railguns(structure: &Structure, blocks: &Registry<Block>, railgun_spo
             direction: dir.direction_of(BlockFace::Front),
             capacitance: n_magnets * CAPACITANCE_PER_MAGNET,
             energy_stored: railgun_origin.energy_stored,
-            valid: false,
             cooldown: railgun_origin.cooldown,
             charge_rate: n_chargers as f32 * CHARGE_PER_CHARGER,
             heat: railgun_origin.heat,
             max_heat: HEAT_CAP_PER_MAGNET * n_magnets,
             cooling_rate: COOLING_PER_COOLER * n_coolers as f32,
             heat_per_fire: HEAT_PER_FIRE_PER_MAGNET * n_magnets,
+            invalid_reason: None,
         };
 
         if touching {
-            warn!("This railgun is touching another - invalid!");
+            railgun.invalid_reason = Some(InvalidRailgunReason::TouchingAnother);
             railguns.push(railgun);
             continue;
         }
 
         if obstruction {
-            warn!("There's an obstruction!");
+            railgun.invalid_reason = Some(InvalidRailgunReason::Obstruction);
             railguns.push(railgun);
             continue;
         }
 
-        if railgun_length < 2 {
+        if railgun_length < RAILGUN_MIN_SIZE {
+            railgun.invalid_reason = Some(InvalidRailgunReason::NoMagnets);
             railguns.push(railgun);
-            warn!("Railgun too small!");
             continue;
         }
 
-        railgun.valid = true;
         railguns.push(railgun);
     }
 
@@ -185,13 +186,6 @@ fn block_update_system(
     q_structure: Query<&Structure>,
     systems_query: Query<&StructureSystems>,
 ) {
-    // const RAILGUN_BLOCKS: [&str; 4] = [
-    //     "cosmos:railgun_launcher",
-    //     "cosmos:magnetic_rail",
-    //     "cosmos:railgun_capacitor",
-    //     "cosmos:cooling_mechanism",
-    // ];
-
     for ev in evr_block_changed.read() {
         let Ok(systems) = systems_query.get(ev.block.structure()) else {
             continue;
@@ -205,10 +199,6 @@ fn block_update_system(
             continue;
         };
 
-        // let old_block = blocks.from_numeric_id(ev.old_block);
-        // let new_block = blocks.from_numeric_id(ev.new_block);
-
-        // if RAILGUN_BLOCKS.contains(&old_block.unlocalized_name()) || RAILGUN_BLOCKS.contains(&new_block.unlocalized_name()) {
         let railguns = compute_railguns(
             structure,
             &blocks,
@@ -258,229 +248,6 @@ fn structure_loaded_event(
         }
     }
 }
-//
-// impl<T: LineProperty, S: LinePropertyCalculator<T>> BlockStructureSystem<T> for LineSystem<T, S> {
-//     fn add_block(&mut self, block: BlockCoordinate, block_rotation: BlockRotation, prop: &T) {
-//         let block_direction = block_rotation.direction_of(BlockFace::Front);
-//
-//         let mut found_line = None;
-//         // If a structure has two lines like this: (XXXXX XXXXXX) and an X is placed
-//         // in that space, then those two lines need to be linked toegether into one cannon.
-//         //
-//         // If this variable is ever Some index, then the found_line has to be linked with
-//         // the line at this index.
-//         let mut link_to = None;
-//
-//         for (i, line) in self.lines.iter_mut().filter(|x| x.direction == block_direction).enumerate() {
-//             let delta = block_direction.to_coordinates();
-//
-//             let start: UnboundBlockCoordinate = line.start.into();
-//
-//             let block: UnboundBlockCoordinate = block.into();
-//
-//             // Block is before start
-//             if start.x - delta.x == block.x && start.y - delta.y == block.y && start.z - delta.z == block.z {
-//                 if found_line.is_some() {
-//                     link_to = Some(i);
-//                     break;
-//                 } else {
-//                     // This should always be >= 0 because a block cannot placed at negative coordinates
-//                     line.start.x = (start.x - delta.x) as CoordinateType;
-//                     line.start.y = (start.y - delta.y) as CoordinateType;
-//                     line.start.z = (start.z - delta.z) as CoordinateType;
-//                     line.len += 1;
-//                     line.properties.insert(0, *prop);
-//                     line.property = S::calculate_property(&line.properties);
-//
-//                     found_line = Some(i);
-//                 }
-//             }
-//             // Block is after end
-//             else if start.x + delta.x * (line.len as UnboundCoordinateType) == block.x
-//                 && start.y + delta.y * (line.len as UnboundCoordinateType) == block.y
-//                 && start.z + delta.z * (line.len as UnboundCoordinateType) == block.z
-//             {
-//                 if found_line.is_some() {
-//                     link_to = Some(i);
-//                     break;
-//                 } else {
-//                     line.len += 1;
-//                     line.properties.push(*prop);
-//                     line.property = S::calculate_property(&line.properties);
-//
-//                     found_line = Some(i);
-//                 }
-//             }
-//         }
-//
-//         if let Some(l1_i) = found_line {
-//             if let Some(l2_i) = link_to {
-//                 let [l1, l2] = self
-//                     .lines
-//                     .get_disjoint_mut([l1_i, l2_i])
-//                     .expect("From and to should never be the same");
-//
-//                 // Must use the one before the other in the line so the properties line up.
-//                 if match l1.direction {
-//                     BlockDirection::PosX => l1.start.x > l2.start.x,
-//                     BlockDirection::NegX => l1.start.x < l2.start.x,
-//                     BlockDirection::PosY => l1.start.y > l2.start.y,
-//                     BlockDirection::NegY => l1.start.y < l2.start.y,
-//                     BlockDirection::PosZ => l1.start.z > l2.start.z,
-//                     BlockDirection::NegZ => l1.start.z < l2.start.z,
-//                 } {
-//                     std::mem::swap(l1, l2);
-//                 }
-//
-//                 l1.len += l2.len;
-//                 l1.power += l2.power;
-//                 l1.active_blocks.append(&mut l2.active_blocks);
-//
-//                 l1.properties.append(&mut l2.properties);
-//                 l1.property = S::calculate_property(&l1.properties);
-//
-//                 self.lines.swap_remove(l2_i);
-//             }
-//             return;
-//         }
-//
-//         // If gotten here, no suitable line was found
-//
-//         let color = calculate_color_for_line(self, block, block_direction);
-//
-//         let properties = vec![*prop];
-//         let property = S::calculate_property(&properties);
-//
-//         self.lines.push(Line {
-//             start: block,
-//             direction: block_direction,
-//             len: 1,
-//             properties,
-//             property,
-//             color,
-//             active_blocks: vec![],
-//             power: 0.0,
-//         });
-//     }
-//
-//     fn remove_block(&mut self, sb: BlockCoordinate) {
-//         for (i, line) in self.lines.iter_mut().enumerate() {
-//             line.mark_block_inactive(sb);
-//
-//             if line.start == sb {
-//                 let (dx, dy, dz) = line.direction.to_i32_tuple();
-//                 line.properties.remove(0);
-//                 line.property = S::calculate_property(&line.properties);
-//                 line.start.x = (line.start.x as i32 + dx) as CoordinateType;
-//                 line.start.y = (line.start.y as i32 + dy) as CoordinateType;
-//                 line.start.z = (line.start.z as i32 + dz) as CoordinateType;
-//                 line.len -= 1;
-//
-//                 if line.len == 0 {
-//                     self.lines.swap_remove(i);
-//                 }
-//                 return;
-//             } else if line.end() == sb {
-//                 line.properties.pop();
-//                 line.property = S::calculate_property(&line.properties);
-//                 line.len -= 1;
-//                 if line.len == 0 {
-//                     self.lines.swap_remove(i);
-//                 }
-//                 return;
-//             } else if line.within(&sb) {
-//                 let l1_len = match line.direction {
-//                     BlockDirection::PosX => sb.x - line.start.x,
-//                     BlockDirection::NegX => line.start.x - sb.x,
-//                     BlockDirection::PosY => sb.y - line.start.y,
-//                     BlockDirection::NegY => line.start.y - sb.y,
-//                     BlockDirection::PosZ => sb.z - line.start.z,
-//                     BlockDirection::NegZ => line.start.z - sb.z,
-//                 };
-//
-//                 let l2_len = line.len as CoordinateType - l1_len - 1;
-//
-//                 let mut l1_props = Vec::with_capacity(l1_len as usize);
-//                 let mut l2_props = Vec::with_capacity(l2_len as usize);
-//
-//                 let percent_power_l1 = l1_len as f32 / line.len as f32;
-//                 let percent_power_l2 = l2_len as f32 / line.len as f32;
-//
-//                 for prop in line.properties.iter().take(l1_len as usize) {
-//                     l1_props.push(*prop);
-//                 }
-//
-//                 for prop in line.properties.iter().skip(l1_len as usize + 1) {
-//                     l2_props.push(*prop);
-//                 }
-//
-//                 let l1_property = S::calculate_property(&l1_props);
-//
-//                 // we are within a line, so split it into two seperate ones
-//                 let mut l1 = Line {
-//                     start: line.start,
-//                     direction: line.direction,
-//                     len: l1_len,
-//                     properties: l1_props,
-//                     property: l1_property,
-//                     color: line.color,
-//                     power: percent_power_l1 * line.power,
-//                     active_blocks: vec![],
-//                 };
-//
-//                 l1.active_blocks = line
-//                     .active_blocks
-//                     .iter()
-//                     .filter(|x| l1.within(x))
-//                     .copied()
-//                     .collect::<Vec<BlockCoordinate>>();
-//
-//                 let (dx, dy, dz) = line.direction.to_i32_tuple();
-//
-//                 let dist = l1_len as i32 + 1;
-//
-//                 let l2_property = S::calculate_property(&l2_props);
-//                 let mut l2 = Line {
-//                     start: BlockCoordinate::new(
-//                         (line.start.x as i32 + dx * dist) as CoordinateType,
-//                         (line.start.y as i32 + dy * dist) as CoordinateType,
-//                         (line.start.z as i32 + dz * dist) as CoordinateType,
-//                     ),
-//                     direction: line.direction,
-//                     len: l2_len,
-//                     properties: l2_props,
-//                     property: l2_property,
-//                     color: line.color,
-//                     power: percent_power_l2 * line.power,
-//                     active_blocks: vec![], // this will probably have to be calculated later.
-//                 };
-//
-//                 l2.active_blocks = line
-//                     .active_blocks
-//                     .iter()
-//                     .filter(|x| l2.within(x))
-//                     .copied()
-//                     .collect::<Vec<BlockCoordinate>>();
-//
-//                 self.lines[i] = l1;
-//                 self.lines.push(l2);
-//
-//                 return;
-//             }
-//         }
-//     }
-// }
-//
-// fn is_in_line_with(testing_block: BlockCoordinate, direction: BlockDirection, line_coord: BlockCoordinate) -> bool {
-//     match direction {
-//         BlockDirection::PosX => line_coord.x >= testing_block.x && line_coord.y == testing_block.y && line_coord.z == testing_block.z,
-//         BlockDirection::NegX => line_coord.x <= testing_block.x && line_coord.y == testing_block.y && line_coord.z == testing_block.z,
-//         BlockDirection::PosY => line_coord.x == testing_block.x && line_coord.y >= testing_block.y && line_coord.z == testing_block.z,
-//         BlockDirection::NegY => line_coord.x == testing_block.x && line_coord.y <= testing_block.y && line_coord.z == testing_block.z,
-//         BlockDirection::PosZ => line_coord.x == testing_block.x && line_coord.y == testing_block.y && line_coord.z >= testing_block.z,
-//         BlockDirection::NegZ => line_coord.x == testing_block.x && line_coord.y == testing_block.y && line_coord.z <= testing_block.z,
-//     }
-// }
 
 const RAILGUN_TRAVEL_DISTANCE: f32 = 2000.0;
 
@@ -680,7 +447,7 @@ fn charge_and_cool_railguns(
         let delta = time.delta_secs();
 
         for railgun in rgs.railguns.iter_mut() {
-            if !railgun.valid {
+            if !railgun.is_valid_structure() {
                 continue;
             }
 

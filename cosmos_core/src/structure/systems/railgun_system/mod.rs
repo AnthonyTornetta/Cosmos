@@ -11,10 +11,11 @@ use crate::prelude::BlockCoordinate;
 use super::sync::SyncableSystem;
 use super::{StructureSystemImpl, StructureSystemsSet};
 
+#[derive(Serialize, Deserialize, Debug, Reflect, Clone, Copy)]
 pub enum InvalidRailgunReason {
-    NoPower,
     NoMagnets,
     TouchingAnother,
+    Obstruction,
 }
 
 #[derive(Serialize, Deserialize, Debug, Reflect, Default, Clone)]
@@ -26,7 +27,7 @@ pub struct Railgun {
     pub energy_stored: u32,
     /// Watts
     pub charge_rate: f32,
-    pub valid: bool,
+    pub invalid_reason: Option<InvalidRailgunReason>,
     pub cooldown: f32,
     pub heat: f32,
     pub max_heat: u32,
@@ -41,9 +42,13 @@ pub enum RailgunFailureReason {
 }
 
 impl Railgun {
+    pub fn is_valid_structure(&self) -> bool {
+        self.invalid_reason.is_none()
+    }
+
     /// Returns [`None`] if ready to fire, or some [`RailgunFailureReason`] if unable to fire.
     pub fn get_unready_reason(&self) -> Option<RailgunFailureReason> {
-        if !self.valid {
+        if self.invalid_reason.is_some() {
             return Some(RailgunFailureReason::InvalidStructure);
         }
         if self.capacitance > self.energy_stored {

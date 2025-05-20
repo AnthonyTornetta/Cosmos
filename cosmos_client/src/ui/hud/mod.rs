@@ -17,6 +17,9 @@ use cosmos_core::{economy::Credits, netty::client::LocalPlayer, state::GameState
 
 use super::reactivity::{BindValue, BindValues, ReactableFields};
 
+mod looking_at_tooltips;
+pub mod tooltip;
+
 fn create_credits_node(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
@@ -61,6 +64,9 @@ fn create_credits_node(
 }
 
 pub(super) fn register(app: &mut App) {
+    tooltip::register(app);
+    looking_at_tooltips::register(app);
+
     app.add_systems(OnEnter(GameState::Playing), create_credits_node)
         .add_systems(Update, create_credits_node.run_if(in_state(GameState::Playing)));
 }
