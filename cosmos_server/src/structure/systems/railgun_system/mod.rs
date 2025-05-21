@@ -279,7 +279,7 @@ const RAILGUN_TRAVEL_DISTANCE: f32 = 2000.0;
 fn on_active(
     context_access: ReadRapierContext,
     mut q_structure: Query<(&mut Structure, &GlobalTransform, &RapierContextEntityLink)>,
-    mut q_active: Query<(&StructureSystem, &mut RailgunSystem), With<SystemActive>>,
+    q_active: Query<(&StructureSystem, &RailgunSystem), With<SystemActive>>,
     blocks: Res<Registry<Block>>,
     q_parent: Query<&Parent>,
     q_chunk_entity: Query<&ChunkEntity>,
@@ -294,7 +294,7 @@ fn on_active(
     bs_params: BlockDataSystemParams,
 ) {
     let bs_params = Rc::new(RefCell::new(bs_params));
-    for (ss, mut railgun_system) in q_active.iter_mut() {
+    for (ss, railgun_system) in q_active.iter() {
         let mut fired = vec![];
 
         let Ok(structure_loc) = q_locs.get(ss.structure_entity()) else {
@@ -396,7 +396,7 @@ fn on_active(
                 .filter(|(_, s, _, parent, rapier_link)| *rapier_link == pw && parent.get() != ss.structure_entity() && s.is_enabled())
                 .collect::<Vec<_>>();
 
-            let mut strength = 10000.0;
+            let mut strength = (railgun_entry.length as f32).powf(1.2) * 1000.0;
 
             let mut length = RAILGUN_TRAVEL_DISTANCE;
 
