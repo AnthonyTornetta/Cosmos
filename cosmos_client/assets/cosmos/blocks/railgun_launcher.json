@@ -1,0 +1,24 @@
+{
+  "texture": {
+    "Sides": {
+      "left": {
+        "Single": "cosmos:railgun_base"
+      },
+      "right": {
+        "Single": "cosmos:railgun_base"
+      },
+      "front": {
+        "Single": "cosmos:railgun_launcher"
+      },
+      "back": {
+        "Single": "cosmos:railgun_base"
+      },
+      "top": {
+        "Single": "cosmos:railgun_base"
+      },
+      "bottom": {
+        "Single": "cosmos:railgun_base"
+      }
+    }
+  }
+}

@@ -157,3 +157,8 @@ cosmos:dye_machine=Dye Machine
 cosmos:cloning_bay_top=Cloning Bay Top
 cosmos:cloning_bay_base=Cloning Bay Base
 cosmos:loot_block=Loot Block
+
+cosmos:railgun_launcher=Railgun Launcher
+cosmos:railgun_capacitor=Railgun Capacitor
+cosmos:magnetic_rail=Railgun Magnetic Rail
+cosmos:cooling_mechanism=Railgun Cooling Mechanism
