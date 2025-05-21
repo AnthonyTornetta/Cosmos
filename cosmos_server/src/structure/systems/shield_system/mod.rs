@@ -77,7 +77,9 @@ Shield radius based on max dimensions of projectors
 #[derive(Event)]
 /// Sent when a shield is hit
 pub struct ShieldHitEvent {
+    /// The shield entity
     pub shield_entity: Entity,
+    /// The position relative to this shield's position hit
     pub relative_position: Vec3,
 }
 

@@ -49,6 +49,7 @@ impl Shield {
         self.strength > f32::EPSILON && !self.disabled
     }
 
+    /// Returns the strength value of this shield (or 0 if the shield is disabled)
     pub fn strength(&self) -> f32 {
         if self.disabled { 0.0 } else { self.strength }
     }

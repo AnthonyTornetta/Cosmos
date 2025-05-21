@@ -13,17 +13,27 @@ use super::sync::SyncableSystem;
 use super::{StructureSystemImpl, StructureSystemsSet};
 
 #[derive(Serialize, Deserialize, Debug, Reflect, Clone, Copy)]
+/// A railgun assembly can fail for all of these reasons
 pub enum InvalidRailgunReason {
+    /// The railgun either doesn't have enough magnets, or doesn't have enough
     NoMagnets,
+    /// This railgun is touching another railgun's blocks
     TouchingAnother,
+    /// The cannon of this railgun has a block inside
     Obstruction,
+    /// This railgun has no capacitors to charge it
     NoCapacitors,
+    /// This railgun has no cooling units to cool it down
     NoCooling,
 }
 
 #[derive(Component, Serialize, Deserialize, Debug, Reflect, Default, Clone)]
+/// The block data attached to a `cosmos:railgun_launcher` that stores information about the
+/// railgun.
 pub struct RailgunBlock {
+    /// The energy this block contains
     pub energy_stored: u32,
+    /// The heat this block contains
     pub heat: f32,
 }
 
@@ -51,33 +61,52 @@ impl RailgunBlock {
 }
 
 #[derive(Serialize, Deserialize, Debug, Reflect, Default, Clone)]
+/// Information about a railgun block and information about it
 pub struct RailgunSystemEntry {
+    /// The `cosmos:railgun_launcher` block
     pub origin: BlockCoordinate,
+    /// The direction this railgun should fire
     pub direction: BlockDirection,
+    /// How long this railgun is
     pub length: u32,
+    /// How much energy this railgun needs to store before firing
     pub capacitance: u32,
-    /// Watts
+    /// The Watts this railgun can charge at
     pub charge_rate: f32,
+    /// Why this railgun is an invalid structure (if it is invalid)
     pub invalid_reason: Option<InvalidRailgunReason>,
+    /// The maximum heat this railgun can store
     pub max_heat: u32,
+    /// The rate this railgun cools itself down per second
     pub cooling_rate: f32,
+    /// The heat this railgun gains after firing
     pub heat_per_fire: u32,
 }
 
+/// When a railgun is attempted to be fired, it can fail for these reasons
+#[derive(Serialize, Deserialize, Debug, Reflect, Clone, Copy)]
 pub enum RailgunFailureReason {
+    /// Not enough power to fire this railgun
     LowPower,
+    /// This railgun is hot to fire
     TooHot,
+    /// This railgun is not valid structurally
     InvalidStructure,
 }
 
 impl RailgunSystemEntry {
+    /// Returns true if this railgun is a valid railgun structure
     pub fn is_valid_structure(&self) -> bool {
         self.invalid_reason.is_none()
     }
 }
 
 #[derive(Serialize, Deserialize, Debug, Component, Reflect, Default)]
+/// All the railguns on a structure
 pub struct RailgunSystem {
+    /// All the railguns on a structure
+    ///
+    /// TODO: Make this private
     pub railguns: Vec<RailgunSystemEntry>,
 }
 
@@ -96,15 +125,22 @@ fn name_railgun_system(mut commands: Commands, q_added: Query<Entity, Added<Rail
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
+/// Information about a railgun that was fired
 pub struct RailgunFiredInfo {
+    /// The `cosmos:railgun_launcher` block of this railgun
     pub origin: BlockCoordinate,
+    /// The length of this railgun shot (how far it travels)
     pub length: f32,
+    /// The direction of the shot (not relative to anything)
     pub direction: Vec3,
 }
 
 #[derive(Event, Debug, Serialize, Deserialize, Clone)]
+/// A railgun was fired
 pub struct RailgunFiredEvent {
+    /// The structure that fired it
     pub structure: Entity,
+    /// All the railguns on this structure that fired
     pub railguns: Vec<RailgunFiredInfo>,
 }
 
