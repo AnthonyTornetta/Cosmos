@@ -354,7 +354,7 @@ fn on_active(
                         return true;
                     };
 
-                    if structures.iter().any(|s_ent| *s_ent == structure_entity) {
+                    if structures.contains(&structure_entity) {
                         return true;
                     }
 

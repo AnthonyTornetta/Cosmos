@@ -190,7 +190,7 @@ fn send_events<T: NettyEvent>(
                 );
             }
 
-            if let Some(client_id) = client_id.get(0) {
+            if let Some(client_id) = client_id.first() {
                 server.send_message(
                     *client_id,
                     NettyChannelServer::NettyEvent,
