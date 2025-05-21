@@ -5,6 +5,7 @@ use bevy::reflect::Reflect;
 use serde::{Deserialize, Serialize};
 
 use crate::block::block_direction::BlockDirection;
+use crate::netty::sync::IdentifiableComponent;
 use crate::netty::sync::events::netty_event::{IdentifiableEvent, NettyEvent, SyncedEventImpl};
 use crate::prelude::BlockCoordinate;
 
@@ -20,18 +21,44 @@ pub enum InvalidRailgunReason {
     NoCooling,
 }
 
+#[derive(Component, Serialize, Deserialize, Debug, Reflect, Default, Clone)]
+pub struct RailgunBlock {
+    pub energy_stored: u32,
+    pub heat: f32,
+}
+
+impl IdentifiableComponent for RailgunBlock {
+    fn get_component_unlocalized_name() -> &'static str {
+        "cosmos:railgun"
+    }
+}
+
+impl RailgunBlock {
+    /// Returns [`None`] if ready to fire, or some [`RailgunFailureReason`] if unable to fire.
+    pub fn get_unready_reason(&self, railgun_system_entry: &RailgunSystemEntry) -> Option<RailgunFailureReason> {
+        if railgun_system_entry.invalid_reason.is_some() {
+            return Some(RailgunFailureReason::InvalidStructure);
+        }
+        if railgun_system_entry.capacitance > self.energy_stored {
+            return Some(RailgunFailureReason::LowPower);
+        }
+        if self.heat.round() as u32 + railgun_system_entry.heat_per_fire > railgun_system_entry.max_heat {
+            return Some(RailgunFailureReason::TooHot);
+        }
+
+        None
+    }
+}
+
 #[derive(Serialize, Deserialize, Debug, Reflect, Default, Clone)]
-pub struct Railgun {
+pub struct RailgunSystemEntry {
     pub origin: BlockCoordinate,
     pub direction: BlockDirection,
     pub length: u32,
     pub capacitance: u32,
-    pub energy_stored: u32,
     /// Watts
     pub charge_rate: f32,
     pub invalid_reason: Option<InvalidRailgunReason>,
-    pub cooldown: f32,
-    pub heat: f32,
     pub max_heat: u32,
     pub cooling_rate: f32,
     pub heat_per_fire: u32,
@@ -43,30 +70,15 @@ pub enum RailgunFailureReason {
     InvalidStructure,
 }
 
-impl Railgun {
+impl RailgunSystemEntry {
     pub fn is_valid_structure(&self) -> bool {
         self.invalid_reason.is_none()
-    }
-
-    /// Returns [`None`] if ready to fire, or some [`RailgunFailureReason`] if unable to fire.
-    pub fn get_unready_reason(&self) -> Option<RailgunFailureReason> {
-        if self.invalid_reason.is_some() {
-            return Some(RailgunFailureReason::InvalidStructure);
-        }
-        if self.capacitance > self.energy_stored {
-            return Some(RailgunFailureReason::LowPower);
-        }
-        if self.heat.round() as u32 + self.heat_per_fire > self.max_heat {
-            return Some(RailgunFailureReason::TooHot);
-        }
-
-        None
     }
 }
 
 #[derive(Serialize, Deserialize, Debug, Component, Reflect, Default)]
 pub struct RailgunSystem {
-    pub railguns: Vec<Railgun>,
+    pub railguns: Vec<RailgunSystemEntry>,
 }
 
 impl StructureSystemImpl for RailgunSystem {
@@ -122,7 +134,7 @@ impl NettyEvent for RailgunFiredEvent {
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_netty_event::<RailgunFiredEvent>();
+    app.add_netty_event::<RailgunFiredEvent>().register_type::<RailgunBlock>();
 
     app.register_type::<RailgunSystem>().add_systems(
         Update,
