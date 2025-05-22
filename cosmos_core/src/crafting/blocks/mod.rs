@@ -2,10 +2,10 @@
 
 use bevy::prelude::App;
 
-pub mod advanced_weapons_fabricator;
+pub mod advanced_fabricator;
 pub mod basic_fabricator;
 
 pub(super) fn register(app: &mut App) {
     basic_fabricator::register(app);
-    advanced_weapons_fabricator::register(app);
+    advanced_fabricator::register(app);
 }

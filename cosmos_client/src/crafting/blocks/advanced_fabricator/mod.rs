@@ -8,7 +8,7 @@ use bevy::{
     reflect::Reflect,
 };
 use cosmos_core::{
-    crafting::blocks::advanced_weapons_fabricator::OpenAdvancedFabricatorEvent,
+    crafting::blocks::advanced_fabricator::OpenAdvancedFabricatorEvent,
     ecs::NeedsDespawned,
     netty::{
         sync::{

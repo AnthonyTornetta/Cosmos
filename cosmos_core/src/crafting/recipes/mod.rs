@@ -3,7 +3,7 @@
 use bevy::prelude::App;
 use serde::{Deserialize, Serialize};
 
-pub mod advanced_weapons_fabricator;
+pub mod advanced_fabricator;
 pub mod basic_fabricator;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -16,5 +16,5 @@ pub enum RecipeItem {
 
 pub(super) fn register(app: &mut App) {
     basic_fabricator::register(app);
-    advanced_weapons_fabricator::register(app);
+    advanced_fabricator::register(app);
 }

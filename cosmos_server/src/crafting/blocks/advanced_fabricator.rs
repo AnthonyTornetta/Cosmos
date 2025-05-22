@@ -12,8 +12,8 @@ use cosmos_core::{
         block_events::{BlockEventsSet, BlockInteractEvent},
     },
     crafting::{
-        blocks::advanced_weapons_fabricator::{CraftAdvancedFabricatorRecipeEvent, OpenAdvancedFabricatorEvent},
-        recipes::{RecipeItem, advanced_weapons_fabricator::AdvancedFabricatorRecipes},
+        blocks::advanced_fabricator::{CraftAdvancedFabricatorRecipeEvent, OpenAdvancedFabricatorEvent},
+        recipes::{RecipeItem, advanced_fabricator::AdvancedFabricatorRecipes},
     },
     entities::player::Player,
     events::block_events::BlockDataSystemParams,
@@ -34,7 +34,7 @@ use cosmos_core::{
 
 fn monitor_advanced_fabricator_interactions(
     mut evr_block_interact: EventReader<BlockInteractEvent>,
-    mut nevw_open_adv_weapons_fabricator: NettyEventWriter<OpenAdvancedFabricatorEvent>,
+    mut nevw_open_adv_fabricator: NettyEventWriter<OpenAdvancedFabricatorEvent>,
     q_player: Query<&Player>,
     q_structure: Query<&Structure>,
     blocks: Res<Registry<Block>>,
@@ -53,7 +53,7 @@ fn monitor_advanced_fabricator_interactions(
             continue;
         };
 
-        nevw_open_adv_weapons_fabricator.send(OpenAdvancedFabricatorEvent(block), player.client_id());
+        nevw_open_adv_fabricator.send(OpenAdvancedFabricatorEvent(block), player.client_id());
     }
 }
 

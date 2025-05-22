@@ -15,8 +15,8 @@ use bevy::{
 use cosmos_core::{
     block::data::{BlockData, BlockDataIdentifier},
     crafting::{
-        blocks::advanced_weapons_fabricator::CraftAdvancedFabricatorRecipeEvent,
-        recipes::{RecipeItem, advanced_weapons_fabricator::AdvancedFabricatorRecipes, basic_fabricator::BasicFabricatorRecipe},
+        blocks::advanced_fabricator::CraftAdvancedFabricatorRecipeEvent,
+        recipes::{RecipeItem, advanced_fabricator::AdvancedFabricatorRecipes, basic_fabricator::BasicFabricatorRecipe},
     },
     inventory::{
         Inventory,

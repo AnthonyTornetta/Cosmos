@@ -3,7 +3,7 @@ use bevy::{
     prelude::{App, Commands, EventReader, IntoSystemConfigs},
 };
 use cosmos_core::{
-    crafting::recipes::advanced_weapons_fabricator::SyncAdvancedFabricatorRecipesEvent,
+    crafting::recipes::advanced_fabricator::SyncAdvancedFabricatorRecipesEvent,
     netty::{sync::events::client_event::NettyEventReceived, system_sets::NetworkingSystemsSet},
 };
 

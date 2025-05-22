@@ -10,7 +10,7 @@ use serde::{Deserialize, Serialize};
 use cosmos_core::{
     crafting::recipes::{
         RecipeItem,
-        advanced_weapons_fabricator::{AdvancedFabricatorRecipes, SyncAdvancedFabricatorRecipesEvent},
+        advanced_fabricator::{AdvancedFabricatorRecipes, SyncAdvancedFabricatorRecipesEvent},
         basic_fabricator::{BasicFabricatorRecipe, FabricatorItemInput, FabricatorItemOutput},
     },
     item::Item,
