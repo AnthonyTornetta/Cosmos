@@ -267,7 +267,7 @@ fn update_missile_system(
             let missile_velocity = global_transform.affine().matrix3.mul_vec3(relative_direction) * missile_vel;
 
             // TODO: Make missile launcher take item and strength is determined by the item they hold
-            let strength = 10.0; //(5.0 * line.len as f32).powf(1.2);
+            let strength = 5.0 + (line.len as f32 - 1.0).powf(1.2) / 10.0;
 
             let lifetime = Duration::from_secs_f32(
                 MISSILE_LIFETIME.as_secs_f32() + (MISSILE_LIFETIME_FUDGE.as_secs_f32() * (rand::random::<f32>() - 0.5) * 2.0),

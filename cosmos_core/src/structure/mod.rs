@@ -601,7 +601,7 @@ impl Structure {
     /// - block_hardness: The hardness for that block
     /// - amount: The amount of damage to take - cannot be negative
     ///
-    /// Returns: true if that block was destroyed, false if not
+    /// Returns: the amount of health left over - 0.0 means the block was destroyed. None means the chunk wasn't loaded yet
     pub fn block_take_damage(
         &mut self,
         coords: BlockCoordinate,

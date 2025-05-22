@@ -8,6 +8,7 @@ pub mod laser_cannon_system;
 pub mod mining_laser_system;
 pub mod missile_launcher_system;
 pub mod player_interactions;
+mod railgun_system;
 mod shield_system;
 mod sync;
 pub mod thruster_system;
@@ -26,4 +27,5 @@ pub(super) fn register(app: &mut App) {
     energy_storage_system::register(app);
     missile_launcher_system::register(app);
     sync::register(app);
+    railgun_system::register(app);
 }

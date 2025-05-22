@@ -10,7 +10,7 @@ use super::font::DefaultFont;
 const HUD_DISPLAY_DURATION: Duration = Duration::from_secs(7);
 const FADE_DURATION: Duration = Duration::from_secs(3);
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Reflect)]
 /// A way of describing colored text used in the HUD message
 pub struct RichText {
     /// The color this text should be (default is white)
@@ -44,7 +44,7 @@ impl From<String> for RichText {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Reflect)]
 /// A message that can be displayed in the HUD
 pub struct HudMessage {
     text: Vec<RichText>,
@@ -76,6 +76,11 @@ impl HudMessage {
         Self {
             text: vec![RichText { text: text.into(), color }],
         }
+    }
+
+    /// Iterates over all the richtext present in this hud message
+    pub fn iter(&self) -> impl Iterator<Item = &'_ RichText> {
+        self.text.iter()
     }
 }
 

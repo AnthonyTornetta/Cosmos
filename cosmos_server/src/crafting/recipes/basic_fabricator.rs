@@ -26,19 +26,19 @@ use crate::netty::sync::registry::ClientFinishedReceivingRegistriesEvent;
 use super::RawRecipeItem;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct RawFabricatorInput {
+struct RawFabricatorInput {
     quantity: u16,
     item: RawRecipeItem,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct RawFabricatorOutput {
+struct RawFabricatorOutput {
     quantity: u16,
     item: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct RawBasicFabricatorRecipe {
+struct RawBasicFabricatorRecipe {
     inputs: Vec<RawFabricatorInput>,
     output: RawFabricatorOutput,
 }
@@ -92,8 +92,6 @@ fn load_recipes(items: Res<Registry<Item>>, mut commands: Commands) {
     }
 
     commands.insert_resource(recipes);
-
-    info!("Load basic fabricator recipes!");
 }
 
 fn sync_recipes_on_change(recipes: Res<BasicFabricatorRecipes>, mut nevw_sync_recipes: NettyEventWriter<SyncBasicFabricatorRecipesEvent>) {

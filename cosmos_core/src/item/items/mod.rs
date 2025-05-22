@@ -31,6 +31,8 @@ fn add_cosmos_items(
     items.register(Item::new("cosmos:uranium_fuel_cell", DEFAULT_MAX_STACK_SIZE));
     items.register(Item::new("cosmos:missile", DEFAULT_MAX_STACK_SIZE));
 
+    items.register(Item::new("cosmos:magnite", DEFAULT_MAX_STACK_SIZE));
+
     loading.finish_loading(id, &mut end_writer);
 }
 

@@ -157,3 +157,16 @@ cosmos:dye_machine=Dye Machine
 cosmos:cloning_bay_top=Cloning Bay Top
 cosmos:cloning_bay_base=Cloning Bay Base
 cosmos:loot_block=Loot Block
+
+cosmos:railgun_launcher=Railgun Launcher
+cosmos:railgun_capacitor=Railgun Capacitor
+cosmos:magnetic_rail=Railgun Magnetic Rail
+cosmos:cooling_mechanism=Railgun Cooling Mechanism
+
+cosmos:warp_drive=Warp Drive
+cosmos:warp_disruptor=Warp Disruptor
+cosmos:magnite_ore=Magnite Ore
+cosmos:advanced_fabricator=Advanced Fabricator
+cosmos:warp_drive=Warp Driv
+cosmos:warp_disruptor=Warp Disruptor
+cosmos:magnite_ore=Magnite Ore

@@ -77,8 +77,10 @@ Shield radius based on max dimensions of projectors
 #[derive(Event)]
 /// Sent when a shield is hit
 pub struct ShieldHitEvent {
-    shield_entity: Entity,
-    relative_position: Vec3,
+    /// The shield entity
+    pub shield_entity: Entity,
+    /// The position relative to this shield's position hit
+    pub relative_position: Vec3,
 }
 
 fn register_energy_blocks(

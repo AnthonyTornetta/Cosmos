@@ -187,6 +187,9 @@ pub struct SectorDanger {
 }
 
 impl SectorDanger {
+    /// The midpoint between minimum danger and maximum danger
+    pub const MIDDLE: Self = Self::new(0.0);
+
     /// Creates a new danger value bounded between [`SectorDanger::MIN_DANGER`] and
     /// [`SectorDanger::MAX_DANGER`]
     pub const fn new(danger: f32) -> Self {

@@ -17,6 +17,11 @@
       "weight": 5
     },
     {
+      "item": "cosmos:magnite",
+      "quantity": [30, 100],
+      "weight": 5
+    },
+    {
       "item": "cosmos:uranium",
       "quantity": [100, 300],
       "weight": 5

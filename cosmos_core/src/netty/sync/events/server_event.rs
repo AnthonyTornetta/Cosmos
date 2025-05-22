@@ -30,8 +30,8 @@ pub(super) struct GotNetworkEvent {
 pub struct NettyEventToSend<T: NettyEvent> {
     /// The event to send
     pub event: T,
-    /// The client to send this to or [`None`] to broadcast this to everyone.
-    pub client_id: Option<ClientId>,
+    /// The clients to send this to or [`None`] to broadcast this to everyone.
+    pub client_ids: Option<Vec<ClientId>>,
 }
 
 #[derive(Deref, Event, Debug)]
@@ -63,7 +63,20 @@ impl<E: NettyEvent> NettyEventWriter<'_, E> {
     pub fn send(&mut self, event: E, client_id: ClientId) -> EventId<NettyEventToSend<E>> {
         self.ev_writer.send(NettyEventToSend {
             event,
-            client_id: Some(client_id),
+            client_ids: Some(vec![client_id]),
+        })
+    }
+
+    /// Sends an `event`, which can later be read by [`EventReader`]s.
+    /// This method returns the [ID](`EventId`) of the sent `event`.
+    ///
+    /// See [`bevy::prelude::Events`] for details.
+    ///
+    /// If you wish to send this event to all clients, see [`Self::broadcast`].
+    pub fn send_to_many(&mut self, event: E, client_ids: impl Iterator<Item = ClientId>) -> EventId<NettyEventToSend<E>> {
+        self.ev_writer.send(NettyEventToSend {
+            event,
+            client_ids: Some(client_ids.collect::<Vec<_>>()),
         })
     }
 
@@ -72,7 +85,7 @@ impl<E: NettyEvent> NettyEventWriter<'_, E> {
     ///
     /// See [`bevy::prelude::Events`] for details.
     pub fn broadcast(&mut self, event: E) -> EventId<NettyEventToSend<E>> {
-        self.ev_writer.send(NettyEventToSend { event, client_id: None })
+        self.ev_writer.send(NettyEventToSend { event, client_ids: None })
     }
 
     /// Sends a list of `events` all at once, which can later be read by [`EventReader`]s.
@@ -80,22 +93,28 @@ impl<E: NettyEvent> NettyEventWriter<'_, E> {
     /// This method returns the [IDs](`EventId`) of the sent `events`.
     ///
     /// See [`bevy::prelude::Events`] for details.
-    pub fn send_batch(&mut self, events: impl IntoIterator<Item = E>, client_id: Option<ClientId>) -> SendBatchIds<NettyEventToSend<E>> {
-        self.ev_writer
-            .send_batch(events.into_iter().map(|event| NettyEventToSend { event, client_id }))
+    pub fn send_batch(
+        &mut self,
+        events: impl IntoIterator<Item = E>,
+        client_ids: Option<Vec<ClientId>>,
+    ) -> SendBatchIds<NettyEventToSend<E>> {
+        self.ev_writer.send_batch(events.into_iter().map(|event| NettyEventToSend {
+            event,
+            client_ids: client_ids.clone(),
+        }))
     }
 
     /// Sends the default value of the event. Useful when the event is an empty struct.
     /// This method returns the [ID](`EventId`) of the sent `event`.
     ///
     /// See [`bevy::prelude::Events`] for details.
-    pub fn send_default(&mut self, client_id: Option<ClientId>) -> EventId<NettyEventToSend<E>>
+    pub fn send_default(&mut self, client_ids: Option<Vec<ClientId>>) -> EventId<NettyEventToSend<E>>
     where
         E: Default,
     {
         self.ev_writer.send(NettyEventToSend {
             event: E::default(),
-            client_id,
+            client_ids,
         })
     }
 }
@@ -159,15 +178,28 @@ fn send_events<T: NettyEvent>(
 
         let serialized = cosmos_encoder::serialize_uncompressed(&ev.event);
 
-        if let Some(client_id) = ev.client_id {
-            server.send_message(
-                client_id,
-                NettyChannelServer::NettyEvent,
-                cosmos_encoder::serialize(&NettyEventMessage::SendNettyEvent {
-                    component_id: registered_event.id(),
-                    raw_data: serialized,
-                }),
-            );
+        if let Some(client_id) = &ev.client_ids {
+            for client_id in client_id.iter().skip(1) {
+                server.send_message(
+                    *client_id,
+                    NettyChannelServer::NettyEvent,
+                    cosmos_encoder::serialize(&NettyEventMessage::SendNettyEvent {
+                        component_id: registered_event.id(),
+                        raw_data: serialized.clone(),
+                    }),
+                );
+            }
+
+            if let Some(client_id) = client_id.first() {
+                server.send_message(
+                    *client_id,
+                    NettyChannelServer::NettyEvent,
+                    cosmos_encoder::serialize(&NettyEventMessage::SendNettyEvent {
+                        component_id: registered_event.id(),
+                        raw_data: serialized,
+                    }),
+                );
+            }
         } else {
             server.broadcast_message(
                 NettyChannelServer::NettyEvent,

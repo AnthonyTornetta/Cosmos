@@ -128,7 +128,7 @@ fn populate_menu(
 
         let text_style = TextFont {
             font: font.0.clone_weak(),
-            font_size: 24.0,
+            font_size: 16.0,
             ..Default::default()
         };
 
@@ -414,7 +414,7 @@ fn on_change_inventory(
 
             let text_style = TextFont {
                 font: font.0.clone_weak(),
-                font_size: 24.0,
+                font_size: 16.0,
                 ..Default::default()
             };
 

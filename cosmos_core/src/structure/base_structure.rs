@@ -739,7 +739,7 @@ impl BaseStructure {
         if start.x < min_coords.x && direction.x > 0.0 {
             let delta_travel = min_coords.x - start.x;
 
-            let direction_multiplier = direction.x / delta_travel;
+            let direction_multiplier = delta_travel / direction.x;
 
             let start_delta = direction_multiplier * direction;
 
@@ -748,9 +748,9 @@ impl BaseStructure {
             start += start_delta;
         }
         if start.x > max_coords.x && direction.x < 0.0 {
-            let delta_travel = min_coords.x - start.x;
+            let delta_travel = max_coords.x - start.x;
 
-            let direction_multiplier = direction.x / delta_travel;
+            let direction_multiplier = delta_travel / direction.x;
 
             let start_delta = direction_multiplier * direction;
 
@@ -762,7 +762,7 @@ impl BaseStructure {
         if start.y < min_coords.y && direction.y > 0.0 {
             let delta_travel = min_coords.y - start.y;
 
-            let direction_multiplier = direction.y / delta_travel;
+            let direction_multiplier = delta_travel / direction.y;
 
             let start_delta = direction_multiplier * direction;
 
@@ -771,9 +771,9 @@ impl BaseStructure {
             start += start_delta;
         }
         if start.y > max_coords.y && direction.y < 0.0 {
-            let delta_travel = min_coords.y - start.y;
+            let delta_travel = max_coords.y - start.y;
 
-            let direction_multiplier = direction.y / delta_travel;
+            let direction_multiplier = delta_travel / direction.y;
 
             let start_delta = direction_multiplier * direction;
 
@@ -785,7 +785,7 @@ impl BaseStructure {
         if start.z < min_coords.z && direction.z > 0.0 {
             let delta_travel = min_coords.z - start.z;
 
-            let direction_multiplier = direction.z / delta_travel;
+            let direction_multiplier = delta_travel / direction.z;
 
             let start_delta = direction_multiplier * direction;
 
@@ -794,9 +794,9 @@ impl BaseStructure {
             start += start_delta;
         }
         if start.z > max_coords.z && direction.z < 0.0 {
-            let delta_travel = min_coords.z - start.z;
+            let delta_travel = max_coords.z - start.z;
 
-            let direction_multiplier = direction.z / delta_travel;
+            let direction_multiplier = delta_travel / direction.z;
 
             let start_delta = direction_multiplier * direction;
 
@@ -806,6 +806,7 @@ impl BaseStructure {
         }
 
         let end_pos = start_relative_position + max_length * direction;
+
         if start.x < min_coords.x && end_pos.x < min_coords.x
             || start.y < min_coords.y && end_pos.y < min_coords.y
             || start.z < min_coords.z && end_pos.z < min_coords.z
