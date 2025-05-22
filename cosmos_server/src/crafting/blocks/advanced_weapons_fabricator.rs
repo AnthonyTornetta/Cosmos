@@ -12,8 +12,8 @@ use cosmos_core::{
         block_events::{BlockEventsSet, BlockInteractEvent},
     },
     crafting::{
-        blocks::advanced_weapons_fabricator::{CraftAdvancedWeaponsFabricatorRecipeEvent, OpenAdvancedWeaponsFabricatorEvent},
-        recipes::{RecipeItem, advanced_weapons_fabricator::AdvancedWeaponsFabricatorRecipes},
+        blocks::advanced_weapons_fabricator::{CraftAdvancedFabricatorRecipeEvent, OpenAdvancedFabricatorEvent},
+        recipes::{RecipeItem, advanced_weapons_fabricator::AdvancedFabricatorRecipes},
     },
     entities::player::Player,
     events::block_events::BlockDataSystemParams,
@@ -32,9 +32,9 @@ use cosmos_core::{
     state::GameState,
 };
 
-fn monitor_advanced_weapons_fabricator_interactions(
+fn monitor_advanced_fabricator_interactions(
     mut evr_block_interact: EventReader<BlockInteractEvent>,
-    mut nevw_open_adv_weapons_fabricator: NettyEventWriter<OpenAdvancedWeaponsFabricatorEvent>,
+    mut nevw_open_adv_weapons_fabricator: NettyEventWriter<OpenAdvancedFabricatorEvent>,
     q_player: Query<&Player>,
     q_structure: Query<&Structure>,
     blocks: Res<Registry<Block>>,
@@ -46,19 +46,19 @@ fn monitor_advanced_weapons_fabricator_interactions(
         let Ok(structure) = q_structure.get(block.structure()) else {
             continue;
         };
-        if structure.block_at(block.coords(), &blocks).unlocalized_name() != "cosmos:advanced_weapons_fabricator" {
+        if structure.block_at(block.coords(), &blocks).unlocalized_name() != "cosmos:advanced_fabricator" {
             continue;
         }
         let Ok(player) = q_player.get(ev.interactor) else {
             continue;
         };
 
-        nevw_open_adv_weapons_fabricator.send(OpenAdvancedWeaponsFabricatorEvent(block), player.client_id());
+        nevw_open_adv_weapons_fabricator.send(OpenAdvancedFabricatorEvent(block), player.client_id());
     }
 }
 
 fn monitor_craft_event(
-    mut nevr_craft_event: EventReader<NettyEventReceived<CraftAdvancedWeaponsFabricatorRecipeEvent>>,
+    mut nevr_craft_event: EventReader<NettyEventReceived<CraftAdvancedFabricatorRecipeEvent>>,
     q_structure: Query<&Structure>,
     // Separate queries to please borrow checker
     mut q_player_inventory: Query<&mut Inventory, With<Player>>,
@@ -66,7 +66,7 @@ fn monitor_craft_event(
     lobby: Res<ServerLobby>,
     blocks: Res<Registry<Block>>,
     bd_params: BlockDataSystemParams,
-    recipes: Res<AdvancedWeaponsFabricatorRecipes>,
+    recipes: Res<AdvancedFabricatorRecipes>,
     mut commands: Commands,
     needs_data: Res<ItemShouldHaveData>,
     items: Res<Registry<Item>>,
@@ -93,7 +93,7 @@ fn monitor_craft_event(
             continue;
         };
 
-        if structure.block_at(ev.block.coords(), &blocks).unlocalized_name() != "cosmos:advanced_weapons_fabricator" {
+        if structure.block_at(ev.block.coords(), &blocks).unlocalized_name() != "cosmos:advanced_fabricator" {
             warn!("Block here is not fabricator.");
             continue;
         }
@@ -142,10 +142,10 @@ fn monitor_craft_event(
 pub(super) fn register(app: &mut App) {
     app.add_systems(
         Update,
-        (monitor_advanced_weapons_fabricator_interactions, monitor_craft_event)
+        (monitor_advanced_fabricator_interactions, monitor_craft_event)
             .in_set(NetworkingSystemsSet::Between)
             .in_set(BlockEventsSet::ProcessEvents)
             .run_if(in_state(GameState::Playing)),
     )
-    .add_netty_event::<OpenAdvancedWeaponsFabricatorEvent>();
+    .add_netty_event::<OpenAdvancedFabricatorEvent>();
 }

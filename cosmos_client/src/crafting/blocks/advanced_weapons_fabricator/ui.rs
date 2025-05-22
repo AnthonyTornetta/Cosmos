@@ -15,8 +15,8 @@ use bevy::{
 use cosmos_core::{
     block::data::{BlockData, BlockDataIdentifier},
     crafting::{
-        blocks::advanced_weapons_fabricator::CraftAdvancedWeaponsFabricatorRecipeEvent,
-        recipes::{RecipeItem, advanced_weapons_fabricator::AdvancedWeaponsFabricatorRecipes, basic_fabricator::BasicFabricatorRecipe},
+        blocks::advanced_weapons_fabricator::CraftAdvancedFabricatorRecipeEvent,
+        recipes::{RecipeItem, advanced_weapons_fabricator::AdvancedFabricatorRecipes, basic_fabricator::BasicFabricatorRecipe},
     },
     inventory::{
         Inventory,
@@ -92,7 +92,7 @@ fn populate_menu(
     q_added_menu: Query<(Entity, &OpenAdvancedFabricatorMenu), Added<OpenAdvancedFabricatorMenu>>,
     q_player: Query<Entity, With<LocalPlayer>>,
     font: Res<DefaultFont>,
-    crafting_recipes: Res<AdvancedWeaponsFabricatorRecipes>,
+    crafting_recipes: Res<AdvancedFabricatorRecipes>,
     items: Res<Registry<Item>>,
     lang: Res<Lang<Item>>,
     q_structure: Query<&Structure>,
@@ -241,7 +241,7 @@ fn populate_menu(
 }
 
 fn create_ui_recipes_list(
-    crafting_recipes: &AdvancedWeaponsFabricatorRecipes,
+    crafting_recipes: &AdvancedFabricatorRecipes,
     items: &Registry<Item>,
     lang: &Lang<Item>,
     text_style: &TextFont,
@@ -395,7 +395,7 @@ fn on_change_inventory(
     q_changed_inventory: Query<(&Inventory, &BlockData), Changed<Inventory>>,
     q_fab_recipes: Query<(Entity, &DisplayedFabRecipes)>,
     q_selected_recipe: Query<&Recipe, With<SelectedRecipe>>,
-    crafting_recipes: Res<AdvancedWeaponsFabricatorRecipes>,
+    crafting_recipes: Res<AdvancedFabricatorRecipes>,
     items: Res<Registry<Item>>,
     lang: Res<Lang<Item>>,
     font: Res<DefaultFont>,
@@ -557,7 +557,7 @@ fn listen_create(
     q_open_fab_menu: Query<&OpenAdvancedFabricatorMenu>,
     q_selected_recipe: Query<&Recipe, With<SelectedRecipe>>,
     mut evr_create: EventReader<CreateClickedEvent>,
-    mut nevw_craft_event: NettyEventWriter<CraftAdvancedWeaponsFabricatorRecipeEvent>,
+    mut nevw_craft_event: NettyEventWriter<CraftAdvancedFabricatorRecipeEvent>,
     network_mapping: Res<NetworkMapping>,
     input_handler: InputChecker,
 ) {
@@ -592,7 +592,7 @@ fn listen_create(
 
             info!("Sending craft {quantity} event!");
 
-            nevw_craft_event.send(CraftAdvancedWeaponsFabricatorRecipeEvent {
+            nevw_craft_event.send(CraftAdvancedFabricatorRecipeEvent {
                 block,
                 recipe: recipe.0.clone(),
                 quantity,
@@ -658,6 +658,6 @@ pub(super) fn register(app: &mut App) {
             .in_set(NetworkingSystemsSet::Between)
             .in_set(FabricatorMenuSet::PopulateMenu)
             .run_if(in_state(GameState::Playing))
-            .run_if(resource_exists::<AdvancedWeaponsFabricatorRecipes>),
+            .run_if(resource_exists::<AdvancedFabricatorRecipes>),
     );
 }

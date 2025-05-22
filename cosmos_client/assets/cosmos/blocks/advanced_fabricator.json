@@ -1,0 +1,24 @@
+{
+  "texture": {
+    "Sides": {
+      "left": {
+        "Single": "cosmos:advanced_fabricator_sides"
+      },
+      "right": {
+        "Single": "cosmos:advanced_fabricator_sides"
+      },
+      "front": {
+        "Single": "cosmos:advanced_fabricator_sides"
+      },
+      "back": {
+        "Single": "cosmos:advanced_fabricator_sides"
+      },
+      "top": {
+        "Single": "cosmos:advanced_fabricator_top"
+      },
+      "bottom": {
+        "Single": "cosmos:advanced_fabricator_bottom"
+      }
+    }
+  }
+}

@@ -10,9 +10,9 @@ use crate::netty::sync::events::netty_event::{IdentifiableEvent, NettyEvent, Syn
 /// Contains all the Advanced Weapons Fabricator recipes.
 ///
 /// Recipes should be registered with this to be considered active.
-pub struct AdvancedWeaponsFabricatorRecipes(Vec<BasicFabricatorRecipe>);
+pub struct AdvancedFabricatorRecipes(Vec<BasicFabricatorRecipe>);
 
-impl AdvancedWeaponsFabricatorRecipes {
+impl AdvancedFabricatorRecipes {
     /// Returns true if this is a valid recipe contained in this registry
     pub fn contains(&self, recipe: &BasicFabricatorRecipe) -> bool {
         self.iter().any(|x| x == recipe)
@@ -35,20 +35,20 @@ impl AdvancedWeaponsFabricatorRecipes {
 #[derive(Event, Serialize, Deserialize, Debug, Clone)]
 /// Used to sync all recipes to the connecting clients. Sent when a client joins after they have
 /// loaded all the recipes.
-pub struct SyncAdvancedWeaponsFabricatorRecipesEvent(pub AdvancedWeaponsFabricatorRecipes);
+pub struct SyncAdvancedFabricatorRecipesEvent(pub AdvancedFabricatorRecipes);
 
-impl IdentifiableEvent for SyncAdvancedWeaponsFabricatorRecipesEvent {
+impl IdentifiableEvent for SyncAdvancedFabricatorRecipesEvent {
     fn unlocalized_name() -> &'static str {
-        "cosmos:sync_advanced_weapons_fabricator_recipes"
+        "cosmos:sync_advanced_fabricator_recipes"
     }
 }
 
-impl NettyEvent for SyncAdvancedWeaponsFabricatorRecipesEvent {
+impl NettyEvent for SyncAdvancedFabricatorRecipesEvent {
     fn event_receiver() -> crate::netty::sync::events::netty_event::EventReceiver {
         crate::netty::sync::events::netty_event::EventReceiver::Client
     }
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_netty_event::<SyncAdvancedWeaponsFabricatorRecipesEvent>();
+    app.add_netty_event::<SyncAdvancedFabricatorRecipesEvent>();
 }

@@ -663,7 +663,7 @@ fn add_cosmos_blocks(
     );
 
     blocks.register(
-        BlockBuilder::new("cosmos:advanced_weapons_fabricator", 2.0, 20.0, 5.0)
+        BlockBuilder::new("cosmos:advanced_fabricator", 2.0, 20.0, 5.0)
             .add_property(BlockProperty::Full)
             .create(),
     );

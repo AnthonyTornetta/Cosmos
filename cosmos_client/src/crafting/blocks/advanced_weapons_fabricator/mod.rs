@@ -8,7 +8,7 @@ use bevy::{
     reflect::Reflect,
 };
 use cosmos_core::{
-    crafting::blocks::advanced_weapons_fabricator::OpenAdvancedWeaponsFabricatorEvent,
+    crafting::blocks::advanced_weapons_fabricator::OpenAdvancedFabricatorEvent,
     ecs::NeedsDespawned,
     netty::{
         sync::{
@@ -29,7 +29,7 @@ struct OpenAdvancedFabricatorMenu(StructureBlock);
 fn open_menu(
     q_open_menu: Query<Entity, With<OpenAdvancedFabricatorMenu>>,
     mut commands: Commands,
-    mut nevr: EventReader<NettyEventReceived<OpenAdvancedWeaponsFabricatorEvent>>,
+    mut nevr: EventReader<NettyEventReceived<OpenAdvancedFabricatorEvent>>,
     network_mapping: Res<NetworkMapping>,
 ) {
     let Some(ev) = nevr.read().last() else {

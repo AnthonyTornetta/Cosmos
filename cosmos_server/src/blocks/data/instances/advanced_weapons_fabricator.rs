@@ -9,6 +9,6 @@ pub(super) fn register(app: &mut App) {
     add_default_block_data_for_block(
         app,
         |e, _| Inventory::new("Advanced Weapons Fabricator", 6, None, e),
-        "cosmos:advanced_weapons_fabricator",
+        "cosmos:advanced_fabricator",
     );
 }
