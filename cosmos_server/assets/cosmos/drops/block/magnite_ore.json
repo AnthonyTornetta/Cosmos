@@ -1,0 +1,10 @@
+{
+  "block": "cosmos:magnite_ore",
+  "drops": [
+    {
+      "item": "cosmos:magnite",
+      "weight": 1.0,
+      "quantity": 1
+    }
+  ]
+}
