@@ -10,29 +10,17 @@
       "item": {
         "Item": "cosmos:iron_bar"
       },
-      "quantity": 100
-    },
-    {
-      "item": {
-        "Item": "cosmos:energite_crystal"
-      },
-      "quantity": 20
-    },
-    {
-      "item": {
-        "Item": "cosmos:photonium_crystal"
-      },
-      "quantity": 100
+      "quantity": 10
     },
     {
       "item": {
         "Item": "cosmos:magnite"
       },
-      "quantity": 10
+      "quantity": 50
     }
   ],
   "output": {
     "quantity": 1,
-    "item": "cosmos:railgun_launcher"
+    "item": "cosmos:magnetic_rail"
   }
 }
