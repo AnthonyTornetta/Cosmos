@@ -1,0 +1,24 @@
+{
+  "texture": {
+    "Sides": {
+      "left": {
+        "Single": "cosmos:advanced_weapons_fabricator_side"
+      },
+      "right": {
+        "Single": "cosmos:advanced_weapons_fabricator_side"
+      },
+      "front": {
+        "Single": "cosmos:advanced_weapons_fabricator_side"
+      },
+      "back": {
+        "Single": "cosmos:advanced_weapons_fabricator_side"
+      },
+      "top": {
+        "Single": "cosmos:advanced_weapons_fabricator_top"
+      },
+      "bottom": {
+        "Single": "cosmos:advanced_weapons_fabricator_bottom"
+      }
+    }
+  }
+}
