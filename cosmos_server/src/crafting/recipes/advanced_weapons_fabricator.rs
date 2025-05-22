@@ -47,7 +47,7 @@ fn load_recipes(items: Res<Registry<Item>>, mut commands: Commands) {
 
     let mut recipes = AdvancedWeaponsFabricatorRecipes::default();
 
-    'recipe_lookup: for entry in WalkDir::new("assets/cosmos/recipes/advanced_weapons_fabricator").max_depth(1) {
+    'recipe_lookup: for entry in WalkDir::new("assets/cosmos/recipes/advanced_fabricator").max_depth(1) {
         let Ok(entry) = entry else {
             continue;
         };
