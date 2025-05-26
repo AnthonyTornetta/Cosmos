@@ -20,6 +20,8 @@ use serde::{Deserialize, Serialize};
 
 use crate::persistence::make_persistent::{DefaultPersistentComponent, make_persistent};
 
+mod categories;
+
 #[derive(Default, Component, Debug, Reflect, Serialize, Deserialize, Clone, Copy, PartialEq)]
 /// The time (in seconds) since this physcal item was created.
 struct TimeSinceSpawn(pub f32);
@@ -91,6 +93,8 @@ fn pickup_near_item(
 }
 
 pub(super) fn register(app: &mut App) {
+    categories::register(app);
+
     make_persistent::<TimeSinceSpawn>(app);
     make_persistent::<PhysicalItem>(app);
 

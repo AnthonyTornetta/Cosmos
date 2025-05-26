@@ -78,6 +78,7 @@ pub struct Block {
     ///
     /// This is (for now) how long it takes 1 mining beam to mine this block in seconds
     mining_resistance: f32,
+    category: Option<String>,
 
     /// TODO: make this not pub
     pub connect_to_groups: Vec<ConnectionGroup>,
@@ -113,6 +114,7 @@ impl Block {
         mining_resistance: f32,
         connect_to_groups: Vec<ConnectionGroup>,
         connection_groups: Vec<ConnectionGroup>,
+        category: Option<String>,
     ) -> Self {
         Self {
             property_flags: BlockProperty::create_id(properties),
@@ -123,7 +125,13 @@ impl Block {
             mining_resistance,
             connect_to_groups,
             connection_groups,
+            category,
         }
+    }
+
+    /// Returns the category this block (and its item equivalent) should be in
+    pub fn item_category(&self) -> Option<&String> {
+        self.category.as_ref()
     }
 
     /// Returns true if this block should connect to the other block

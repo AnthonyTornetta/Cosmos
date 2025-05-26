@@ -27,7 +27,7 @@ use cosmos_core::{
     },
     persistence::LoadingDistance,
     physics::location::{Location, LocationPhysicsSet, Sector, SetPosition, systems::Anchor},
-    registry::{Registry, identifiable::Identifiable},
+    registry::Registry,
 };
 use renet::{ClientId, RenetServer};
 use serde::{Deserialize, Serialize};
@@ -243,19 +243,12 @@ fn generate_player_inventory(
     items: &Registry<Item>,
     commands: &mut Commands,
     has_data: &ItemShouldHaveData,
-    creative: bool,
 ) -> Inventory {
-    let n_slots = 9 * if creative { 20 } else { 5 };
+    let n_slots = 9 * 5;
 
     let mut inventory = Inventory::new("Inventory", n_slots, Some(0..9), inventory_entity);
 
-    if creative {
-        for item in items.iter().rev().filter(|item| item.unlocalized_name() != "cosmos:air") {
-            inventory.insert_item(item, item.max_stack_size(), commands, has_data);
-        }
-    } else {
-        fill_inventory_from_kit("starter", &mut inventory, items, commands, has_data);
-    }
+    fill_inventory_from_kit("starter", &mut inventory, items, commands, has_data);
 
     inventory
 }
@@ -264,7 +257,6 @@ fn create_new_player(
     mut commands: Commands,
     items: Res<Registry<Item>>,
     needs_data: Res<ItemShouldHaveData>,
-    server_settings: Res<ServerSettings>,
     q_player_needs_loaded: Query<(Entity, &LoadPlayer)>,
     universe_systems: Res<UniverseSystems>,
 ) {
@@ -275,7 +267,7 @@ fn create_new_player(
 
         let (location, rot) = find_new_player_location(&universe_systems);
         let velocity = Velocity::default();
-        let inventory = generate_player_inventory(player_entity, &items, &mut commands, &needs_data, server_settings.creative);
+        let inventory = generate_player_inventory(player_entity, &items, &mut commands, &needs_data);
 
         let credits = Credits::new(5_000);
 

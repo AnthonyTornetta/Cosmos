@@ -1,5 +1,6 @@
 //! Items are something that represent something that can be stored in inventories.
 
+pub mod item_category;
 pub mod items;
 pub mod physical_item;
 
@@ -13,6 +14,7 @@ pub struct Item {
     unlocalized_name: String,
     numeric_id: u16,
     max_stack_size: u16,
+    category: Option<String>,
 }
 
 impl Identifiable for Item {
@@ -36,11 +38,12 @@ pub const DEFAULT_MAX_STACK_SIZE: u16 = 999;
 
 impl Item {
     /// Creates an item
-    pub fn new(unlocalized_name: impl Into<String>, max_stack_size: u16) -> Self {
+    pub fn new(unlocalized_name: impl Into<String>, max_stack_size: u16, category: Option<String>) -> Self {
         Self {
             unlocalized_name: unlocalized_name.into(),
             numeric_id: 0, // this will get set when this item is registered
             max_stack_size,
+            category,
         }
     }
 
@@ -48,9 +51,47 @@ impl Item {
     pub fn max_stack_size(&self) -> u16 {
         self.max_stack_size
     }
+
+    /// If this item has a category, this returns that category as `Some` category.
+    pub fn category(&self) -> Option<&String> {
+        self.category.as_ref()
+    }
+}
+
+pub struct ItemBuilder {
+    unlocalized_name: String,
+    max_stack_size: u16,
+    category: Option<String>,
+}
+
+impl ItemBuilder {
+    pub fn new(unlocalized_name: impl Into<String>) -> Self {
+        Self {
+            unlocalized_name: unlocalized_name.into(),
+            category: None,
+            max_stack_size: DEFAULT_MAX_STACK_SIZE,
+        }
+    }
+
+    pub fn with_category(mut self, category: impl Into<String>) -> Self {
+        self.category = Some(category.into());
+
+        self
+    }
+
+    pub fn with_stack_size(mut self, stack_size: u16) -> Self {
+        self.max_stack_size = stack_size;
+
+        self
+    }
+
+    pub fn create(self) -> Item {
+        Item::new(self.unlocalized_name, self.max_stack_size, self.category)
+    }
 }
 
 pub(super) fn register<T: States>(app: &mut App, loading_state: T) {
     items::register(app, loading_state);
     physical_item::register(app);
+    item_category::register(app);
 }
