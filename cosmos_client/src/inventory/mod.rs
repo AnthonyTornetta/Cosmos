@@ -181,6 +181,9 @@ impl ButtonEvent for ItemCategoryClickedEvent {
     }
 }
 
+#[derive(Component)]
+struct SelectedTab(Option<u16>);
+
 fn toggle_inventory_rendering(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
@@ -348,6 +351,9 @@ fn toggle_inventory_rendering(
             ))
             .with_children(|p| {
                 if is_creative {
+                    let mut sorted_categories = categories.iter().collect::<Vec<_>>();
+                    sorted_categories.sort_by_key(|x| x.unlocalized_name());
+
                     p.spawn((
                         Name::new("Creative Tabs"),
                         Node {
@@ -361,9 +367,6 @@ fn toggle_inventory_rendering(
                         BorderColor(css::BLACK.into()),
                     ))
                     .with_children(|p| {
-                        let mut sorted = categories.iter().collect::<Vec<_>>();
-                        sorted.sort_by_key(|x| x.unlocalized_name());
-
                         let storage_id = items.from_id("cosmos:storage").map(|x| x.id()).unwrap_or_default();
 
                         p.spawn((
@@ -379,7 +382,7 @@ fn toggle_inventory_rendering(
                             BackgroundColor(Srgba::hex("2D2D2D").unwrap().into()),
                         ));
 
-                        for cat in sorted {
+                        for cat in sorted_categories.iter() {
                             let category_symbol = items.from_id(cat.item_icon_id()).map(|x| x.id()).unwrap_or_default();
                             let name = cat.unlocalized_name();
 
@@ -398,6 +401,37 @@ fn toggle_inventory_rendering(
                             ));
                         }
                     });
+
+                    for cat in sorted_categories.iter() {
+                        p.spawn((
+                            Name::new(format!("Rendered Item Category ({})", cat.unlocalized_name())),
+                            border_color,
+                            BackgroundColor(Srgba::hex("3D3D3D").unwrap().into()),
+                            ScrollBox::default(),
+                            Node {
+                                border: UiRect::horizontal(Val::Px(inventory_border_size)),
+                                ..default()
+                            },
+                            SelectedTab(Some(cat.id())),
+                        ))
+                        .with_children(|p| {
+                            p.spawn(Node {
+                                display: Display::Grid,
+                                flex_grow: 1.0,
+                                grid_column: GridPlacement::end(n_slots_per_row as i16),
+                                grid_template_columns: vec![RepeatedGridTrack::px(
+                                    GridTrackRepetition::Count(n_slots_per_row as u16),
+                                    slot_size,
+                                )],
+                                ..Default::default()
+                            })
+                            .with_children(|slots| {
+                                for (item) in items.iter().filter(|x| x.category() == Some(cat.unlocalized_name())) {
+                                    create_inventory_slot(inventory_holder, slot_number, slots, slot.as_ref(), text_style.clone());
+                                }
+                            });
+                        });
+                    }
                 }
 
                 p.spawn((
@@ -410,6 +444,7 @@ fn toggle_inventory_rendering(
                         height: Val::Px(non_hotbar_height),
                         ..default()
                     },
+                    SelectedTab(None),
                 ))
                 .with_children(|p| {
                     p.spawn(Node {
@@ -505,8 +540,13 @@ fn drop_item(
 #[derive(Debug, Component, Reflect, Clone)]
 struct DisplayedItemFromInventory {
     inventory_holder: Entity,
-    slot_number: usize,
-    item_stack: Option<ItemStack>,
+    item_type: DisplayedItemType,
+}
+
+#[derive(Debug, Reflect, Clone)]
+enum DisplayedItemType {
+    Survival { slot_number: usize, item_stack: Option<ItemStack> },
+    Creative { item_id: u16 },
 }
 
 fn on_update_inventory(
@@ -518,10 +558,21 @@ fn on_update_inventory(
 ) {
     for (inventory_entity, inventory) in q_inventory.iter() {
         for (display_entity, mut displayed_slot) in current_slots.iter_mut() {
-            if displayed_slot.inventory_holder == inventory_entity
-                && displayed_slot.item_stack.as_ref() != inventory.itemstack_at(displayed_slot.slot_number)
-            {
-                displayed_slot.item_stack = inventory.itemstack_at(displayed_slot.slot_number).cloned();
+            let DisplayedItemType::Survival { slot_number, item_stack } = &displayed_slot.item_type else {
+                continue;
+            };
+
+            let slot_number = *slot_number;
+
+            if displayed_slot.inventory_holder == inventory_entity && item_stack.as_ref() != inventory.itemstack_at(slot_number) {
+                // Need to do this twice to not trigger change detection unless we 100% need to
+                let DisplayedItemType::Survival { slot_number, item_stack } = &mut displayed_slot.item_type else {
+                    unreachable!();
+                };
+
+                let slot_number = *slot_number;
+
+                *item_stack = inventory.itemstack_at(slot_number).cloned();
 
                 let Some(mut ecmds) = commands.get_entity(display_entity) else {
                     continue;
@@ -535,7 +586,11 @@ fn on_update_inventory(
     assert!(held_item_query.iter().count() <= 1, "BAD HELD ITEMS!");
 
     if let Ok((entity, held_item_stack, mut displayed_item)) = held_item_query.get_single_mut() {
-        displayed_item.item_stack = Some(held_item_stack.0.clone());
+        let DisplayedItemType::Survival { slot_number, item_stack } = &mut displayed_item.item_type else {
+            return;
+        };
+
+        *item_stack = Some(held_item_stack.0.clone());
 
         if let Some(mut ecmds) = commands.get_entity(entity) {
             rerender_inventory_slot(&mut ecmds, &displayed_item, &asset_server, false);
@@ -577,10 +632,33 @@ fn rerender_inventory_slot(
     }
 }
 
-#[derive(Component, Debug)]
-struct InventoryItemMarker;
-
 const INVENTORY_SLOTS_DIMS: f32 = 64.0;
+
+fn create_creative_slot(inventory_holder: Entity, slots: &mut ChildBuilder, item: &Item, text_style: TextFont) {
+    let mut ecmds = slots.spawn((
+        Name::new("Creative Inventory Item"),
+        Node {
+            border: UiRect::all(Val::Px(2.0)),
+            width: Val::Px(INVENTORY_SLOTS_DIMS),
+            height: Val::Px(INVENTORY_SLOTS_DIMS),
+            ..default()
+        },
+        BorderColor(Srgba::hex("222222").unwrap().into()),
+        Interaction::None,
+        DisplayedItemFromInventory {
+            inventory_holder,
+            slot_number,
+            item_stack: item_stack.cloned(),
+        },
+    ));
+
+    if let Some(item_stack) = item_stack {
+        ecmds.with_children(|p| {
+            let mut ecmds = p.spawn_empty();
+            create_item_stack_slot_data(item_stack, &mut ecmds, text_style, item_stack.quantity());
+        });
+    }
+}
 
 fn create_inventory_slot(
     inventory_holder: Entity,
@@ -591,7 +669,6 @@ fn create_inventory_slot(
 ) {
     let mut ecmds = slots.spawn((
         Name::new("Inventory Item"),
-        InventoryItemMarker,
         Node {
             border: UiRect::all(Val::Px(2.0)),
             width: Val::Px(INVENTORY_SLOTS_DIMS),
