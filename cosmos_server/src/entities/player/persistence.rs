@@ -244,7 +244,7 @@ fn generate_player_inventory(
     commands: &mut Commands,
     has_data: &ItemShouldHaveData,
 ) -> Inventory {
-    let n_slots = 9 * 5;
+    let n_slots = 9 * 7;
 
     let mut inventory = Inventory::new("Inventory", n_slots, Some(0..9), inventory_entity);
 

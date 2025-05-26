@@ -32,10 +32,23 @@ pub struct NoHoverTooltip;
 #[derive(Component)]
 struct ItemTooltip;
 
+#[derive(Component, Reflect, Debug)]
+pub struct CustomHoverTooltip(String);
+
+impl CustomHoverTooltip {
+    pub fn new(text: impl Into<String>) -> Self {
+        Self(text.into())
+    }
+}
+
 fn render_tooltips(
     mut commands: Commands,
     q_changed_interaction: Query<
         (Entity, &Interaction, &RenderItem, Option<&ItemTooltipPointer>),
+        (Without<NoHoverTooltip>, Changed<Interaction>, Without<CustomHoverTooltip>),
+    >,
+    q_changed_interaction_custom: Query<
+        (Entity, &Interaction, &CustomHoverTooltip, Option<&ItemTooltipPointer>),
         (Without<NoHoverTooltip>, Changed<Interaction>),
     >,
     q_any_item_tooltips: Query<&Interaction, With<ItemTooltipPointer>>,
@@ -44,7 +57,20 @@ fn render_tooltips(
     lang: Res<Lang<Item>>,
 ) {
     let mut spawned = false;
-    for (ent, interaction, render_item, hovered_tooltip) in q_changed_interaction.iter() {
+    for (ent, interaction, text, hovered_tooltip) in q_changed_interaction
+        .iter()
+        .map(|(ent, interaction, render_item, hovered_tooltip)| {
+            let unlocalized_name = items.from_numeric_id(render_item.item_id).unlocalized_name();
+            let item_name = lang.get_name_from_id(unlocalized_name).unwrap_or(unlocalized_name).to_owned();
+
+            (ent, interaction, item_name, hovered_tooltip)
+        })
+        .chain(
+            q_changed_interaction_custom
+                .iter()
+                .map(|(ent, interaction, custom, hovered_tooltip)| (ent, interaction, custom.0.clone(), hovered_tooltip)),
+        )
+    {
         if *interaction == Interaction::None {
             if let Some(ht) = hovered_tooltip {
                 commands.entity(ht.0).insert(NeedsDespawned);
@@ -72,9 +98,6 @@ fn render_tooltips(
                 ..Default::default()
             };
 
-            let unlocalized_name = items.from_numeric_id(render_item.item_id).unlocalized_name();
-            let item_name = lang.get_name_from_id(unlocalized_name).unwrap_or(unlocalized_name);
-
             let tt_ent = commands
                 .spawn((
                     ItemTooltip,
@@ -96,7 +119,7 @@ fn render_tooltips(
                     GlobalZIndex(100),
                 ))
                 .with_children(|p| {
-                    p.spawn((Text::new(item_name.to_string()), text_style.clone()));
+                    p.spawn((Text::new(text), text_style.clone()));
                 })
                 .set_parent(ent)
                 .id();
@@ -177,7 +200,8 @@ pub(super) fn register(app: &mut App) {
                 .chain()
                 .in_set(RenderItemSystemSet::RenderItems)
                 .run_if(in_state(GameState::Playing).or(in_state(GameState::LoadingWorld))),
-        );
+        )
+        .register_type::<CustomHoverTooltip>();
 
     app.register_type::<RenderItem>();
 }

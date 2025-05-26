@@ -1,6 +1,6 @@
 //! Renders the inventory slots and handles all the logic for moving items around
 
-use bevy::{ecs::system::EntityCommands, prelude::*, window::PrimaryWindow};
+use bevy::{color::palettes::css, ecs::system::EntityCommands, prelude::*, window::PrimaryWindow};
 use bevy_renet::renet::RenetClient;
 use cosmos_core::{
     block::{
@@ -8,13 +8,16 @@ use cosmos_core::{
         data::{BlockData, BlockDataIdentifier},
     },
     ecs::NeedsDespawned,
+    entities::player::creative::Creative,
     inventory::{
         HeldItemStack, Inventory,
         held_item_slot::HeldItemSlot,
         itemstack::ItemStack,
         netty::{ClientInventoryMessages, InventoryIdentifier},
     },
+    item::{Item, item_category::ItemCategory},
     netty::{NettyChannelClient, client::LocalPlayer, cosmos_encoder, sync::mapping::NetworkMapping, system_sets::NetworkingSystemsSet},
+    registry::{Registry, identifiable::Identifiable},
     state::GameState,
 };
 
@@ -23,11 +26,12 @@ use crate::{
     ui::{
         OpenMenu, UiSystemSet,
         components::{
+            button::{ButtonEvent, CosmosButton, register_button},
             scollable_container::ScrollBox,
             show_cursor::no_open_menus,
             window::{GuiWindow, UiWindowSystemSet},
         },
-        item_renderer::{NoHoverTooltip, RenderItem},
+        item_renderer::{CustomHoverTooltip, NoHoverTooltip, RenderItem},
     },
 };
 
@@ -151,10 +155,45 @@ struct OpenInventoryEntity(Entity);
 #[derive(Component)]
 struct InventoryRenderedItem;
 
+// fn create_creative_ui(mut commands: Commands, categories: Res<Registry<ItemCategory>>, items: Res<Registry<Item>>) {
+//     let mut all_items: HashMap<u16, Vec<&Item>> = HashMap::default();
+//     for item in items.iter() {
+//         let Some(cat) = item.category() else {
+//             continue;
+//         };
+//
+//         let Some(category) = categories.from_id(cat) else {
+//             error!("Invalid item category - {cat}");
+//             continue;
+//         };
+//         all_items.entry(category.id()).or_default().push(item);
+//     }
+// }
+
+#[derive(Debug, Event)]
+struct ItemCategoryClickedEvent(Entity);
+#[derive(Debug, Component)]
+struct ItemCategoryMarker(Option<u16>);
+
+impl ButtonEvent for ItemCategoryClickedEvent {
+    fn create_event(btn_entity: Entity) -> Self {
+        Self(btn_entity)
+    }
+}
+
 fn toggle_inventory_rendering(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
-    added_inventories: Query<(Entity, &Inventory, &InventoryNeedsDisplayed, Option<&OpenInventoryEntity>), Added<InventoryNeedsDisplayed>>,
+    added_inventories: Query<
+        (
+            Entity,
+            &Inventory,
+            &InventoryNeedsDisplayed,
+            Option<&OpenInventoryEntity>,
+            Has<Creative>,
+        ),
+        Added<InventoryNeedsDisplayed>,
+    >,
     mut without_needs_displayed_inventories: Query<
         (Entity, &mut Inventory, Option<&OpenInventoryEntity>),
         Without<InventoryNeedsDisplayed>,
@@ -164,6 +203,8 @@ fn toggle_inventory_rendering(
     mapping: Res<NetworkMapping>,
     mut removed_components: RemovedComponents<InventoryNeedsDisplayed>,
     q_block_data: Query<&BlockData>,
+    categories: Res<Registry<ItemCategory>>,
+    items: Res<Registry<Item>>,
 ) {
     for removed in removed_components.read() {
         let Ok((inventory_holder, mut local_inventory, open_inventory_entity)) = without_needs_displayed_inventories.get_mut(removed)
@@ -231,7 +272,7 @@ fn toggle_inventory_rendering(
         }
     }
 
-    for (inventory_holder, inventory, needs_displayed, open_inventory_entity) in added_inventories.iter() {
+    for (inventory_holder, inventory, needs_displayed, open_inventory_entity, is_creative) in added_inventories.iter() {
         if open_inventory_entity.is_some() {
             continue;
         }
@@ -284,7 +325,7 @@ fn toggle_inventory_rendering(
 
         let inv_ent = commands
             .spawn((
-                Name::new("Rendered Inventory Title Bar"),
+                Name::new("Rendered Inventory"),
                 RenderedInventory { inventory_holder },
                 OpenMenu::new(0),
                 BorderColor(Color::BLACK),
@@ -306,6 +347,59 @@ fn toggle_inventory_rendering(
                 },
             ))
             .with_children(|p| {
+                if is_creative {
+                    p.spawn((
+                        Name::new("Creative Tabs"),
+                        Node {
+                            position_type: PositionType::Absolute,
+                            left: Val::Px(-64.0),
+                            width: Val::Px(64.0),
+                            flex_direction: FlexDirection::Column,
+                            border: UiRect::new(Val::Px(2.0), Val::Px(0.0), Val::Px(2.0), Val::Px(2.0)),
+                            ..Default::default()
+                        },
+                        BorderColor(css::BLACK.into()),
+                    ))
+                    .with_children(|p| {
+                        let mut sorted = categories.iter().collect::<Vec<_>>();
+                        sorted.sort_by_key(|x| x.unlocalized_name());
+
+                        let storage_id = items.from_id("cosmos:storage").map(|x| x.id()).unwrap_or_default();
+
+                        p.spawn((
+                            RenderItem { item_id: storage_id },
+                            CustomHoverTooltip::new("Inventory"),
+                            Name::new("Main Inventory Button"),
+                            Node {
+                                width: Val::Px(64.0),
+                                height: Val::Px(64.0),
+                                // margin: UiRect::bottom(Val::Px(5.0)),
+                                ..Default::default()
+                            },
+                            BackgroundColor(Srgba::hex("2D2D2D").unwrap().into()),
+                        ));
+
+                        for cat in sorted {
+                            let category_symbol = items.from_id(cat.item_icon_id()).map(|x| x.id()).unwrap_or_default();
+                            let name = cat.unlocalized_name();
+
+                            p.spawn((
+                                RenderItem { item_id: category_symbol },
+                                Name::new(format!("Category {name} button")),
+                                CustomHoverTooltip::new(name),
+                                Node {
+                                    width: Val::Px(64.0),
+                                    height: Val::Px(64.0),
+                                    ..Default::default()
+                                },
+                                ItemCategoryMarker(Some(cat.id())),
+                                CosmosButton::<ItemCategoryClickedEvent> { ..Default::default() },
+                                BackgroundColor(Srgba::hex("2D2D2D").unwrap().into()),
+                            ));
+                        }
+                    });
+                }
+
                 p.spawn((
                     Name::new("Rendered Inventory Non-Hotbar Slots"),
                     border_color,
@@ -834,6 +928,8 @@ pub(super) fn register(app: &mut App) {
             .run_if(in_state(GameState::Playing)),
     )
     .register_type::<DisplayedItemFromInventory>();
+
+    register_button::<ItemCategoryClickedEvent>(app);
 
     netty::register(app);
 }

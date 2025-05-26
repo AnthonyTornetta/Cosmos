@@ -24,6 +24,10 @@ impl ItemCategory {
             id: 0,
         }
     }
+
+    pub fn item_icon_id(&self) -> &str {
+        &self.item_icon_id
+    }
 }
 
 impl Identifiable for ItemCategory {
