@@ -10,7 +10,7 @@ fn create_item_categories(mut reg: ResMut<Registry<ItemCategory>>) {
     reg.register(ItemCategory::new("cosmos:weapons", "cosmos:missile_launcher"));
     reg.register(ItemCategory::new("cosmos:utility", "cosmos:ship_core"));
     reg.register(ItemCategory::new("cosmos:logic", "cosmos:and_gate"));
-    reg.register(ItemCategory::new("cosmos:materials", "cosmos:iron_bar"));
+    reg.register(ItemCategory::new("cosmos:material", "cosmos:iron_bar"));
 }
 
 fn add_item_categories(mut categories: ResMut<Registry<ItemCategory>>, items: Res<Registry<Item>>) {

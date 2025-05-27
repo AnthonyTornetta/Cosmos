@@ -53,8 +53,8 @@ impl Item {
     }
 
     /// If this item has a category, this returns that category as `Some` category.
-    pub fn category(&self) -> Option<&String> {
-        self.category.as_ref()
+    pub fn category(&self) -> Option<&str> {
+        self.category.as_ref().map(|x| x.as_str())
     }
 }
 

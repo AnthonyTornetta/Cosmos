@@ -141,7 +141,7 @@ fn add_cosmos_blocks(
             .add_property(BlockProperty::FaceFront)
             .add_connection_group("cosmos:uses_logic")
             .add_connection_group("cosmos:consumes_power")
-            .with_category("cosmos:weapon")
+            .with_category("cosmos:weapons")
             .create(),
     );
 
@@ -262,7 +262,7 @@ fn add_cosmos_blocks(
         blocks.register(
             BlockBuilder::new(format!("cosmos:ship_hull_{color}"), 4.0, 100.0, 10.0)
                 .add_property(BlockProperty::Full)
-                .with_category("cosmos:ship_hull")
+                .with_category("cosmos:hull")
                 .create(),
         );
     }
@@ -274,7 +274,7 @@ fn add_cosmos_blocks(
             BlockBuilder::new(format!("cosmos:light_{color}"), 0.1, 20.0, 5.0)
                 .add_property(BlockProperty::Full)
                 .add_connection_group("cosmos:uses_logic")
-                .with_category("cosmos:ship_hull")
+                .with_category("cosmos:hull")
                 .create(),
         );
     }
@@ -400,7 +400,7 @@ fn add_cosmos_blocks(
             .add_property(BlockProperty::Full)
             .add_connection_group("cosmos:uses_logic")
             .add_connection_group("cosmos:consumes_power")
-            .with_category("cosmos:weapon")
+            .with_category("cosmos:weapons")
             .create(),
     );
 
@@ -681,28 +681,28 @@ fn add_cosmos_blocks(
         BlockBuilder::new("cosmos:railgun_launcher", 2.0, 20.0, 5.0)
             .add_property(BlockProperty::Full)
             .add_property(BlockProperty::FaceFront)
-            .with_category("cosmos:weapon")
+            .with_category("cosmos:weapons")
             .create(),
     );
 
     blocks.register(
         BlockBuilder::new("cosmos:magnetic_rail", 2.0, 20.0, 5.0)
             .add_property(BlockProperty::Full)
-            .with_category("cosmos:weapon")
+            .with_category("cosmos:weapons")
             .create(),
     );
 
     blocks.register(
         BlockBuilder::new("cosmos:railgun_capacitor", 2.0, 20.0, 5.0)
             .add_property(BlockProperty::Full)
-            .with_category("cosmos:weapon")
+            .with_category("cosmos:weapons")
             .create(),
     );
 
     blocks.register(
         BlockBuilder::new("cosmos:cooling_mechanism", 2.0, 20.0, 5.0)
             .add_property(BlockProperty::Full)
-            .with_category("cosmos:weapon")
+            .with_category("cosmos:weapons")
             .create(),
     );
 

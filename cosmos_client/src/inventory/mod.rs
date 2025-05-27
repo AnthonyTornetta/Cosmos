@@ -1,4 +1,6 @@
 //! Renders the inventory slots and handles all the logic for moving items around
+//!
+//! Sphagetti town
 
 use bevy::{color::palettes::css, ecs::system::EntityCommands, prelude::*, window::PrimaryWindow};
 use bevy_renet::renet::RenetClient;
@@ -183,6 +185,9 @@ impl ButtonEvent for ItemCategoryClickedEvent {
 
 #[derive(Component)]
 struct SelectedTab(Option<u16>);
+
+#[derive(Component)]
+struct VisibileHeight(Val);
 
 fn toggle_inventory_rendering(
     mut commands: Commands,
@@ -379,6 +384,8 @@ fn toggle_inventory_rendering(
                                 // margin: UiRect::bottom(Val::Px(5.0)),
                                 ..Default::default()
                             },
+                            ItemCategoryMarker(None),
+                            CosmosButton::<ItemCategoryClickedEvent> { ..Default::default() },
                             BackgroundColor(Srgba::hex("2D2D2D").unwrap().into()),
                         ));
 
@@ -408,16 +415,18 @@ fn toggle_inventory_rendering(
                             border_color,
                             BackgroundColor(Srgba::hex("3D3D3D").unwrap().into()),
                             ScrollBox::default(),
+                            VisibileHeight(Val::Px(non_hotbar_height)),
                             Node {
                                 border: UiRect::horizontal(Val::Px(inventory_border_size)),
+                                height: Val::Px(0.0),
                                 ..default()
                             },
                             SelectedTab(Some(cat.id())),
+                            Visibility::Hidden,
                         ))
                         .with_children(|p| {
                             p.spawn(Node {
                                 display: Display::Grid,
-                                flex_grow: 1.0,
                                 grid_column: GridPlacement::end(n_slots_per_row as i16),
                                 grid_template_columns: vec![RepeatedGridTrack::px(
                                     GridTrackRepetition::Count(n_slots_per_row as u16),
@@ -426,8 +435,13 @@ fn toggle_inventory_rendering(
                                 ..Default::default()
                             })
                             .with_children(|slots| {
-                                for (item) in items.iter().filter(|x| x.category() == Some(cat.unlocalized_name())) {
-                                    create_inventory_slot(inventory_holder, slot_number, slots, slot.as_ref(), text_style.clone());
+                                let mut sorted_items = items
+                                    .iter()
+                                    .filter(|x| x.category() == Some(cat.unlocalized_name()))
+                                    .collect::<Vec<_>>();
+                                sorted_items.sort_by_key(|x| x.unlocalized_name());
+                                for item in sorted_items {
+                                    create_creative_slot(slots, item, text_style.clone());
                                 }
                             });
                         });
@@ -439,12 +453,14 @@ fn toggle_inventory_rendering(
                     border_color,
                     BackgroundColor(Srgba::hex("3D3D3D").unwrap().into()),
                     ScrollBox::default(),
+                    VisibileHeight(Val::Px(non_hotbar_height)),
                     Node {
                         border: UiRect::horizontal(Val::Px(inventory_border_size)),
                         height: Val::Px(non_hotbar_height),
                         ..default()
                     },
                     SelectedTab(None),
+                    OpenTab,
                 ))
                 .with_children(|p| {
                     p.spawn(Node {
@@ -540,13 +556,8 @@ fn drop_item(
 #[derive(Debug, Component, Reflect, Clone)]
 struct DisplayedItemFromInventory {
     inventory_holder: Entity,
-    item_type: DisplayedItemType,
-}
-
-#[derive(Debug, Reflect, Clone)]
-enum DisplayedItemType {
-    Survival { slot_number: usize, item_stack: Option<ItemStack> },
-    Creative { item_id: u16 },
+    slot_number: usize,
+    item_stack: Option<ItemStack>,
 }
 
 fn on_update_inventory(
@@ -558,21 +569,10 @@ fn on_update_inventory(
 ) {
     for (inventory_entity, inventory) in q_inventory.iter() {
         for (display_entity, mut displayed_slot) in current_slots.iter_mut() {
-            let DisplayedItemType::Survival { slot_number, item_stack } = &displayed_slot.item_type else {
-                continue;
-            };
-
-            let slot_number = *slot_number;
-
-            if displayed_slot.inventory_holder == inventory_entity && item_stack.as_ref() != inventory.itemstack_at(slot_number) {
-                // Need to do this twice to not trigger change detection unless we 100% need to
-                let DisplayedItemType::Survival { slot_number, item_stack } = &mut displayed_slot.item_type else {
-                    unreachable!();
-                };
-
-                let slot_number = *slot_number;
-
-                *item_stack = inventory.itemstack_at(slot_number).cloned();
+            if displayed_slot.inventory_holder == inventory_entity
+                && displayed_slot.item_stack.as_ref() != inventory.itemstack_at(displayed_slot.slot_number)
+            {
+                displayed_slot.item_stack = inventory.itemstack_at(displayed_slot.slot_number).cloned();
 
                 let Some(mut ecmds) = commands.get_entity(display_entity) else {
                     continue;
@@ -586,11 +586,7 @@ fn on_update_inventory(
     assert!(held_item_query.iter().count() <= 1, "BAD HELD ITEMS!");
 
     if let Ok((entity, held_item_stack, mut displayed_item)) = held_item_query.get_single_mut() {
-        let DisplayedItemType::Survival { slot_number, item_stack } = &mut displayed_item.item_type else {
-            return;
-        };
-
-        *item_stack = Some(held_item_stack.0.clone());
+        displayed_item.item_stack = Some(held_item_stack.0.clone());
 
         if let Some(mut ecmds) = commands.get_entity(entity) {
             rerender_inventory_slot(&mut ecmds, &displayed_item, &asset_server, false);
@@ -634,7 +630,21 @@ fn rerender_inventory_slot(
 
 const INVENTORY_SLOTS_DIMS: f32 = 64.0;
 
-fn create_creative_slot(inventory_holder: Entity, slots: &mut ChildBuilder, item: &Item, text_style: TextFont) {
+#[derive(Debug, Component, Reflect, Clone)]
+struct CreativeItem {
+    item_id: u16,
+}
+
+#[derive(Event, Debug)]
+struct CreativeItemClickedEvent(Entity);
+
+impl ButtonEvent for CreativeItemClickedEvent {
+    fn create_event(btn_entity: Entity) -> Self {
+        Self(btn_entity)
+    }
+}
+
+fn create_creative_slot(slots: &mut ChildBuilder, item: &Item, text_style: TextFont) {
     let mut ecmds = slots.spawn((
         Name::new("Creative Inventory Item"),
         Node {
@@ -645,18 +655,47 @@ fn create_creative_slot(inventory_holder: Entity, slots: &mut ChildBuilder, item
         },
         BorderColor(Srgba::hex("222222").unwrap().into()),
         Interaction::None,
-        DisplayedItemFromInventory {
-            inventory_holder,
-            slot_number,
-            item_stack: item_stack.cloned(),
-        },
+        CosmosButton::<CreativeItemClickedEvent>::default(),
+        CreativeItem { item_id: item.id() },
     ));
 
-    if let Some(item_stack) = item_stack {
-        ecmds.with_children(|p| {
-            let mut ecmds = p.spawn_empty();
-            create_item_stack_slot_data(item_stack, &mut ecmds, text_style, item_stack.quantity());
-        });
+    ecmds.with_children(|p| {
+        let mut ecmds = p.spawn_empty();
+        create_item_slot_data(item, &mut ecmds, text_style, 1);
+    });
+}
+
+#[derive(Component)]
+struct OpenTab;
+
+fn on_click_creative_category(
+    mut evr_click_creative_tab: EventReader<ItemCategoryClickedEvent>,
+    q_item_category_marker: Query<&ItemCategoryMarker>,
+    mut q_unopen_tab: Query<(Entity, &mut Node, &mut Visibility, &VisibileHeight, &SelectedTab), Without<OpenTab>>,
+    mut q_open_tab: Query<(Entity, &mut Node, &mut Visibility, &SelectedTab), With<OpenTab>>,
+    mut commands: Commands,
+) {
+    for ev in evr_click_creative_tab.read() {
+        let Ok(item_category) = q_item_category_marker.get(ev.0) else {
+            continue;
+        };
+        if let Ok((entity, mut node, mut vis, i_category)) = q_open_tab.get_single_mut() {
+            if i_category.0 == item_category.0 {
+                continue;
+            }
+            node.height = Val::Px(0.0);
+            *vis = Visibility::Hidden;
+            commands.entity(entity).remove::<OpenTab>();
+        }
+
+        let Some((entity, mut node, mut vis, vis_height, _)) = q_unopen_tab.iter_mut().find(|x| x.4.0 == item_category.0) else {
+            error!("Bad state");
+            continue;
+        };
+
+        node.height = vis_height.0;
+        *vis = Visibility::default();
+        commands.entity(entity).insert(OpenTab);
     }
 }
 
@@ -919,7 +958,14 @@ fn handle_interactions(
     }
 }
 
-fn create_item_stack_slot_data(item_stack: &ItemStack, ecmds: &mut EntityCommands, text_style: TextFont, quantity: u16) {
+fn create_item_stack_slot_data(item: &ItemStack, ecmds: &mut EntityCommands, text_style: TextFont, quantity: u16) {
+    create_item_slot_data_raw(item.item_id(), ecmds, text_style, quantity);
+}
+fn create_item_slot_data(item: &Item, ecmds: &mut EntityCommands, text_style: TextFont, quantity: u16) {
+    create_item_slot_data_raw(item.id(), ecmds, text_style, quantity);
+}
+
+fn create_item_slot_data_raw(item_id: u16, ecmds: &mut EntityCommands, text_style: TextFont, quantity: u16) {
     ecmds
         .insert((
             Name::new("Render Item"),
@@ -932,9 +978,7 @@ fn create_item_stack_slot_data(item_stack: &ItemStack, ecmds: &mut EntityCommand
                 ..Default::default()
             },
             InventoryRenderedItem,
-            RenderItem {
-                item_id: item_stack.item_id(),
-            },
+            RenderItem { item_id },
         ))
         .with_children(|p| {
             p.spawn((
@@ -993,7 +1037,7 @@ pub(super) fn register(app: &mut App) {
         Update,
         (
             drop_item.run_if(no_open_menus),
-            (toggle_inventory, close_button_system)
+            (toggle_inventory, close_button_system, on_click_creative_category)
                 .chain()
                 .in_set(InventorySet::ToggleInventory),
             on_update_inventory.in_set(InventorySet::UpdateInventory),
@@ -1007,6 +1051,7 @@ pub(super) fn register(app: &mut App) {
     .register_type::<DisplayedItemFromInventory>();
 
     register_button::<ItemCategoryClickedEvent>(app);
+    register_button::<CreativeItemClickedEvent>(app);
 
     netty::register(app);
 }
