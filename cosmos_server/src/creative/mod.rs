@@ -3,7 +3,7 @@ use cosmos_core::{
     creative::{CreativeTrashHeldItem, GrabCreativeItemEvent},
     entities::player::creative::Creative,
     inventory::{
-        HeldItemStack,
+        HeldItemStack, Inventory,
         itemstack::{ItemShouldHaveData, ItemStack},
         netty::ServerInventoryMessages,
     },
@@ -19,10 +19,11 @@ use renet::RenetServer;
 fn on_trash_item_creative(
     q_creative: Query<(), With<Creative>>,
     lobby: Res<ServerLobby>,
-    mut q_holding: Query<&mut HeldItemStack>,
     mut nevr_grab_item: EventReader<NettyEventReceived<CreativeTrashHeldItem>>,
     mut commands: Commands,
     mut server: ResMut<RenetServer>,
+    q_children: Query<&Children>,
+    mut q_held_item: Query<&mut Inventory, With<HeldItemStack>>,
 ) {
     for ev in nevr_grab_item.read() {
         let Some(player) = lobby.player_from_id(ev.client_id) else {
@@ -33,8 +34,10 @@ fn on_trash_item_creative(
             continue;
         };
 
-        if let Ok(mut held_is) = q_holding.get_mut(player) {
-            held_is.0.remove(&mut commands);
+        if let Some(mut inv) = HeldItemStack::get_held_is_inventory(player, &q_children, &mut q_held_item) {
+            if let Some(mut is) = inv.remove_itemstack_at(0) {
+                is.remove(&mut commands);
+            }
         }
 
         server.send_message(
@@ -48,12 +51,13 @@ fn on_trash_item_creative(
 fn on_grab_creative_item(
     q_creative: Query<(), With<Creative>>,
     lobby: Res<ServerLobby>,
-    mut q_holding: Query<&mut HeldItemStack>,
     mut nevr_grab_item: EventReader<NettyEventReceived<GrabCreativeItemEvent>>,
     items: Res<Registry<Item>>,
     needs_data: Res<ItemShouldHaveData>,
     mut commands: Commands,
     mut server: ResMut<RenetServer>,
+    q_children: Query<&Children>,
+    mut q_held_item: Query<&mut Inventory, With<HeldItemStack>>,
 ) {
     for ev in nevr_grab_item.read() {
         let Some(player) = lobby.player_from_id(ev.client_id) else {
@@ -78,34 +82,15 @@ fn on_grab_creative_item(
         };
 
         info!("Success");
-        if let Ok(mut held_is) = q_holding.get_mut(player) {
-            info!("Removing current held is");
-            held_is.0.remove(&mut commands);
+        if let Some(mut inv) = HeldItemStack::get_held_is_inventory(player, &q_children, &mut q_held_item) {
+            inv.RENAME_THIS_remove_itemstack_at(0, &mut commands);
+
+            inv.insert_item_at(0, item, ev.quantity.min(item.max_stack_size()), &mut commands, &needs_data);
+
+            info!("Created IS {inv:?}");
+        } else {
+            error!("Missing held item inventory!");
         }
-
-        let is = ItemStack::with_quantity(
-            item,
-            ev.quantity.min(item.max_stack_size()),
-            // !! This will probably not work well for items with actual data.
-            // TODO: Think about this later
-            (player, u32::MAX),
-            &mut commands,
-            &needs_data,
-        );
-        info!("Created IS {is:?}");
-
-        let held_is = HeldItemStack(is).clone();
-
-        commands.entity(player).insert(held_is.clone());
-        info!("Sending message {held_is:?}");
-
-        server.send_message(
-            ev.client_id,
-            NettyChannelServer::Inventory,
-            cosmos_encoder::serialize(&ServerInventoryMessages::HeldItemstack {
-                itemstack: Some(held_is.clone()),
-            }),
-        );
     }
 }
 

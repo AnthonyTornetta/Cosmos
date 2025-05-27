@@ -2,11 +2,11 @@
 
 use bevy::{
     ecs::world::Mut,
-    log::warn,
+    log::{error, warn},
     math::{Quat, Vec3},
     prelude::{
-        App, Changed, Commands, Entity, GlobalTransform, IntoSystemConfigs, Query, RemovedComponents, Res, ResMut, Transform, Update,
-        Without, in_state,
+        in_state, App, Changed, Children, Commands, Entity, GlobalTransform, IntoSystemConfigs, Query, RemovedComponents, Res, ResMut,
+        Transform, Update, With, Without,
     },
 };
 use bevy_rapier3d::prelude::Velocity;
@@ -14,15 +14,15 @@ use bevy_renet::renet::RenetServer;
 use cosmos_core::{
     entities::player::Player,
     inventory::{
-        HeldItemStack, Inventory,
         netty::{ClientInventoryMessages, InventoryIdentifier, ServerInventoryMessages},
+        HeldItemStack, Inventory,
     },
     item::physical_item::PhysicalItem,
-    netty::{NettyChannelClient, NettyChannelServer, cosmos_encoder, server::ServerLobby},
+    netty::{cosmos_encoder, server::ServerLobby, NettyChannelClient, NettyChannelServer},
     persistence::LoadingDistance,
     physics::location::Location,
     state::GameState,
-    structure::{Structure, ship::pilot::Pilot},
+    structure::{ship::pilot::Pilot, Structure},
 };
 
 use crate::entities::player::PlayerLooking;
@@ -56,7 +56,7 @@ fn sync_held_items(
 
 fn get_inventory_mut<'a>(
     identifier: InventoryIdentifier,
-    q_inventory: &'a mut Query<&mut Inventory, Without<Pilot>>,
+    q_inventory: &'a mut Query<&mut Inventory, (Without<Pilot>, Without<HeldItemStack>)>,
     q_structure: &'a Query<&Structure>,
 ) -> Option<Mut<'a, Inventory>> {
     match identifier {
@@ -83,7 +83,7 @@ fn get_inventory_mut<'a>(
 
 fn get_many_inventories_mut<'a, const N: usize>(
     identifiers: [InventoryIdentifier; N],
-    q_inventory: &'a mut Query<&mut Inventory, Without<Pilot>>,
+    q_inventory: &'a mut Query<&mut Inventory, (Without<Pilot>, Without<HeldItemStack>)>,
     q_structure: &'a Query<&Structure>,
 ) -> Option<[Mut<'a, Inventory>; N]> {
     let ents = identifiers
@@ -105,11 +105,12 @@ fn get_many_inventories_mut<'a, const N: usize>(
 
 fn listen_for_inventory_messages(
     mut commands: Commands,
-    mut q_inventory: Query<&mut Inventory, Without<Pilot>>,
+    mut q_inventory: Query<&mut Inventory, (Without<Pilot>, Without<HeldItemStack>)>,
     q_structure: Query<&Structure>,
-    mut held_item_query: Query<&mut HeldItemStack>,
+    mut q_held_item: Query<&mut Inventory, With<HeldItemStack>>,
     mut server: ResMut<RenetServer>,
     q_player: Query<(&Location, &GlobalTransform, &PlayerLooking, &Velocity)>,
+    q_children: Query<&Children>,
     lobby: Res<ServerLobby>,
 ) {
     for client_id in server.clients_id().into_iter() {
@@ -203,15 +204,12 @@ fn listen_for_inventory_messages(
                 } => {
                     let slot = slot as usize;
 
+                    let Some(mut held_item_inv) = HeldItemStack::get_held_is_inventory(client_entity, &q_children, &mut q_held_item) else {
+                        continue;
+                    };
+
                     // Check if already holding - if so you can't pick up more stuff
-                    if let Ok(is) = held_item_query.get(client_entity) {
-                        server.send_message(
-                            client_id,
-                            NettyChannelServer::Inventory,
-                            cosmos_encoder::serialize(&ServerInventoryMessages::HeldItemstack {
-                                itemstack: Some(is.clone()),
-                            }),
-                        );
+                    if held_item_inv.itemstack_at(0).is_some() {
                         continue;
                     }
 
@@ -223,8 +221,10 @@ fn listen_for_inventory_messages(
 
                             let mut held_itemstack = is.clone();
                             held_itemstack.set_quantity(quantity);
+
+                            held_item_inv.set_itemstack_at(0, Some(held_itemstack), &mut commands);
                             // We have confirmed they're not holding anything, so safe to create new entry
-                            commands.entity(client_entity).insert(HeldItemStack(held_itemstack));
+                            // commands.entity(client_entity).insert(HeldItemStack(held_itemstack));
 
                             let leftover_quantity = is.quantity() - quantity;
                             is.set_quantity(leftover_quantity);
@@ -242,13 +242,10 @@ fn listen_for_inventory_messages(
                 } => {
                     let slot = slot as usize;
 
-                    let Ok(mut held_is) = held_item_query.get_mut(client_entity) else {
-                        // Perhaps the client needs updated
-                        server.send_message(
-                            client_id,
-                            NettyChannelServer::Inventory,
-                            cosmos_encoder::serialize(&ServerInventoryMessages::HeldItemstack { itemstack: None }),
-                        );
+                    let Some(mut held_item_inv) = HeldItemStack::get_held_is_inventory(client_entity, &q_children, &mut q_held_item) else {
+                        continue;
+                    };
+                    let Some(mut held_is) = held_item_inv.remove_itemstack_at(0) else {
                         continue;
                     };
 
@@ -266,21 +263,18 @@ fn listen_for_inventory_messages(
                         held_is.set_quantity(unused_quantity + leftover);
 
                         // The data entity would have been transferred to the ItemStack now in the inventory
-                        if held_is.is_empty() {
-                            commands.entity(client_entity).remove::<HeldItemStack>();
+                        if !held_is.is_empty() {
+                            held_item_inv.set_itemstack_at(0, Some(held_is), &mut commands);
                         }
                     }
                 }
                 ClientInventoryMessages::DepositAndSwapHeldItemstack { inventory_holder, slot } => {
                     let slot = slot as usize;
 
-                    let Ok(mut held_item_stack) = held_item_query.get_mut(client_entity) else {
-                        // Perhaps the client needs updated
-                        server.send_message(
-                            client_id,
-                            NettyChannelServer::Inventory,
-                            cosmos_encoder::serialize(&ServerInventoryMessages::HeldItemstack { itemstack: None }),
-                        );
+                    let Some(mut held_item_inv) = HeldItemStack::get_held_is_inventory(client_entity, &q_children, &mut q_held_item) else {
+                        continue;
+                    };
+                    let Some(mut held_is) = held_item_inv.remove_itemstack_at(0) else {
                         continue;
                     };
 
@@ -289,19 +283,15 @@ fn listen_for_inventory_messages(
                     if let Some(mut inventory) = get_inventory_mut(inventory_holder, &mut q_inventory, &q_structure) {
                         let itemstack_here = inventory.remove_itemstack_at(slot);
 
-                        let leftover = inventory.insert_itemstack_at(slot, &held_item_stack, &mut commands);
+                        let leftover = inventory.insert_itemstack_at(slot, &held_is, &mut commands);
 
                         assert_eq!(
                             leftover, 0,
                             "Leftover wasn't 0 somehow? This could only mean something has an invalid stack size"
                         );
 
-                        held_item_stack.set_quantity(0);
-
                         if let Some(is_here) = itemstack_here {
-                            held_item_stack.0 = is_here;
-                        } else {
-                            commands.entity(client_entity).remove::<HeldItemStack>();
+                            held_item_inv.set_itemstack_at(0, Some(is_here), &mut commands);
                         }
                     }
                 }
@@ -356,13 +346,10 @@ fn listen_for_inventory_messages(
                     commands.entity(dropped_item_entity).insert(physical_item_inventory);
                 }
                 ClientInventoryMessages::ThrowHeldItemstack { quantity } => {
-                    let Ok(mut held_item_stack) = held_item_query.get_mut(client_entity) else {
-                        // Perhaps the client needs updated
-                        server.send_message(
-                            client_id,
-                            NettyChannelServer::Inventory,
-                            cosmos_encoder::serialize(&ServerInventoryMessages::HeldItemstack { itemstack: None }),
-                        );
+                    let Some(mut held_item_inv) = HeldItemStack::get_held_is_inventory(client_entity, &q_children, &mut q_held_item) else {
+                        continue;
+                    };
+                    let Some(mut held_item_stack) = held_item_inv.remove_itemstack_at(0) else {
                         continue;
                     };
 
@@ -379,7 +366,7 @@ fn listen_for_inventory_messages(
                     // "Throws" item
                     held_item_stack.decrease_quantity(amount);
 
-                    let mut dropped_is = held_item_stack.0.clone();
+                    let mut dropped_is = held_item_stack.clone();
                     dropped_is.set_quantity(amount);
 
                     let player_rot = player_looking.rotation * Quat::from_affine3(&g_trans.affine());
@@ -402,23 +389,18 @@ fn listen_for_inventory_messages(
                     physical_item_inventory.set_itemstack_at(0, Some(dropped_is), &mut commands);
                     commands.entity(dropped_item_entity).insert(physical_item_inventory);
 
-                    if held_item_stack.is_empty() {
-                        // no longer remove since it's thrown, right?
-                        // held_item_stack.remove(&mut commands);
-                        commands.entity(client_entity).remove::<HeldItemStack>();
+                    if !held_item_stack.is_empty() {
+                        held_item_inv.set_itemstack_at(0, Some(held_item_stack), &mut commands);
                     }
                 }
                 ClientInventoryMessages::InsertHeldItem {
                     quantity,
                     inventory_holder,
                 } => {
-                    let Ok(mut held_item_stack) = held_item_query.get_mut(client_entity) else {
-                        // Perhaps the client needs updated
-                        server.send_message(
-                            client_id,
-                            NettyChannelServer::Inventory,
-                            cosmos_encoder::serialize(&ServerInventoryMessages::HeldItemstack { itemstack: None }),
-                        );
+                    let Some(mut held_item_inv) = HeldItemStack::get_held_is_inventory(client_entity, &q_children, &mut q_held_item) else {
+                        continue;
+                    };
+                    let Some(mut held_item_stack) = held_item_inv.remove_itemstack_at(0) else {
                         continue;
                     };
 
@@ -433,9 +415,8 @@ fn listen_for_inventory_messages(
 
                         held_item_stack.set_quantity(leftover + unused_leftover);
 
-                        // Data would have been transferred, so no need to remove.
-                        if held_item_stack.is_empty() {
-                            commands.entity(client_entity).remove::<HeldItemStack>();
+                        if !held_item_stack.is_empty() {
+                            held_item_inv.set_itemstack_at(0, Some(held_item_stack), &mut commands);
                         }
                     }
                 }

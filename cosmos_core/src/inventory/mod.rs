@@ -12,7 +12,8 @@ use bevy::{
         system::{Commands, Query},
     },
     hierarchy::{BuildChildren, DespawnRecursiveExt},
-    prelude::{App, Component, Deref, DerefMut},
+    log::error,
+    prelude::{App, Children, Component, Deref, DerefMut, Mut, With},
     reflect::Reflect,
     state::state::States,
 };
@@ -36,18 +37,58 @@ pub mod netty;
 //     NormalInventory, // These inventories are organizable by the player
 // }
 
-#[derive(Component, DerefMut, Deref, Debug, Serialize, Deserialize, Clone, Reflect)]
-/// This represents the itemstack the player is currently holding while moving items around in their inventory.
+#[derive(Component, Debug, Serialize, Deserialize, Clone, Reflect)]
+/// This represents the inventory that contains the itemstack the player is currently holding
 ///
-/// There should only ever be one HeldItemStack per player, and on the client only one or zero HeldItemStacks will ever exist at a time.
+/// There should only ever be one HeldItemStack child per player
 ///
-/// # THIS BEHAVES DIFFERENTLY ON THE CLIENT & SERVER
-/// ### Client
-/// On the client, this is attached to a GUI element holding the drawn item the player is moving w/ their cursor.
+/// ### Heiarchy:
 ///
-/// ### Server
-/// On the server, this is attached directly to the player.
-pub struct HeldItemStack(pub ItemStack);
+/// - Player
+///   - ([`HeldItemStack`], [`Inventory`])
+pub struct HeldItemStack;
+
+impl HeldItemStack {
+    pub fn get_held_is_inventory<'a>(
+        client_entity: Entity,
+        q_children: &Query<&Children>,
+        q_held_item: &'a mut Query<&mut Inventory, With<HeldItemStack>>,
+    ) -> Option<Mut<'a, Inventory>> {
+        let Ok(children) = q_children.get(client_entity) else {
+            return None;
+        };
+
+        for child in children.iter() {
+            // This is the only way to make the borrow checker happy
+            if q_held_item.contains(*child) {
+                return q_held_item.get_mut(*child).ok();
+            }
+        }
+
+        error!("No held item inventory as child of player {client_entity:?}!");
+        None
+    }
+
+    pub fn get_held_is_inventory_from_children<'a>(
+        children: &Children,
+        q_held_item: &'a mut Query<&mut Inventory, With<HeldItemStack>>,
+    ) -> Option<Mut<'a, Inventory>> {
+        for child in children.iter() {
+            // This is the only way to make the borrow checker happy
+            if q_held_item.contains(*child) {
+                return q_held_item.get_mut(*child).ok();
+            }
+        }
+
+        None
+    }
+}
+
+impl IdentifiableComponent for HeldItemStack {
+    fn get_component_unlocalized_name() -> &'static str {
+        "cosmos:held_itemstack"
+    }
+}
 
 /// Represents some sort of error that occurred
 #[derive(Debug)]
@@ -549,6 +590,16 @@ impl Inventory {
             self.set_items_at(slot, itemstack.clone(), commands);
 
             0
+        }
+    }
+
+    /// Removes an itemstack at that slot and replaces it with `None`. Returns the itemstack previously in that slot.
+    ///
+    /// Note that if the ItemStack has a data entity, it will still be the child of this Inventory's entity. It is up
+    /// to you to handle that data entity.
+    pub fn RENAME_THIS_remove_itemstack_at(&mut self, slot: usize, commands: &mut Commands) {
+        if let Some(mut is) = self.remove_itemstack_at(slot) {
+            is.remove(commands);
         }
     }
 
