@@ -21,7 +21,7 @@ impl NettyEvent for GrabCreativeItemEvent {
     }
 }
 
-#[derive(Event, Serialize, Deserialize, Clone, Debug)]
+#[derive(Event, Serialize, Deserialize, Clone, Debug, Default)]
 pub struct CreativeTrashHeldItem;
 
 impl IdentifiableEvent for CreativeTrashHeldItem {

@@ -57,23 +57,29 @@ fn on_grab_creative_item(
 ) {
     for ev in nevr_grab_item.read() {
         let Some(player) = lobby.player_from_id(ev.client_id) else {
+            info!("Not player");
             continue;
         };
 
         if !q_creative.contains(player) {
+            info!("Not creative");
             continue;
         };
 
         let Some(item) = items.try_from_numeric_id(ev.item_id) else {
+            info!("Bad item");
             continue;
         };
 
         if item.category().is_none() {
+            info!("Bad category");
             // You can only get items that have a category
             continue;
         };
 
+        info!("Success");
         if let Ok(mut held_is) = q_holding.get_mut(player) {
+            info!("Removing current held is");
             held_is.0.remove(&mut commands);
         }
 
@@ -86,10 +92,12 @@ fn on_grab_creative_item(
             &mut commands,
             &needs_data,
         );
+        info!("Created IS {is:?}");
 
         let held_is = HeldItemStack(is).clone();
 
         commands.entity(player).insert(held_is.clone());
+        info!("Sending message {held_is:?}");
 
         server.send_message(
             ev.client_id,

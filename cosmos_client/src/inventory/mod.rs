@@ -9,6 +9,7 @@ use cosmos_core::{
         block_events::BlockEventsSet,
         data::{BlockData, BlockDataIdentifier},
     },
+    creative::{CreativeTrashHeldItem, GrabCreativeItemEvent},
     ecs::NeedsDespawned,
     entities::player::creative::Creative,
     inventory::{
@@ -18,7 +19,13 @@ use cosmos_core::{
         netty::{ClientInventoryMessages, InventoryIdentifier},
     },
     item::{Item, item_category::ItemCategory},
-    netty::{NettyChannelClient, client::LocalPlayer, cosmos_encoder, sync::mapping::NetworkMapping, system_sets::NetworkingSystemsSet},
+    netty::{
+        NettyChannelClient,
+        client::LocalPlayer,
+        cosmos_encoder,
+        sync::{events::client_event::NettyEventWriter, mapping::NetworkMapping},
+        system_sets::NetworkingSystemsSet,
+    },
     registry::{Registry, identifiable::Identifiable},
     state::GameState,
 };
@@ -1013,6 +1020,42 @@ enum InventorySet {
     MoveWindows,
 }
 
+fn on_click_creative_item(
+    q_creative_item: Query<&CreativeItem>,
+    mut evr_clicked_creative_item: EventReader<CreativeItemClickedEvent>,
+    inputs: InputChecker,
+    items: Res<Registry<Item>>,
+    q_held_item: Query<&HeldItemStack>,
+    mut nevw_set_item: NettyEventWriter<GrabCreativeItemEvent>,
+    mut nevw_trash_item: NettyEventWriter<CreativeTrashHeldItem>,
+) {
+    for ev in evr_clicked_creative_item.read() {
+        info!("Got ev {ev:?}");
+        let Ok(item_id) = q_creative_item.get(ev.0).map(|x| x.item_id) else {
+            error!("Bad item - {ev:?}");
+            continue;
+        };
+
+        let mut quantity = if inputs.check_pressed(CosmosInputs::AutoMoveItem) {
+            items.from_numeric_id(item_id).max_stack_size()
+        } else {
+            1
+        };
+
+        if let Ok(held_is) = q_held_item.get_single() {
+            if held_is.item_id() != item_id {
+                info!("Trash!");
+                nevw_trash_item.send_default();
+                continue;
+            }
+            quantity += held_is.quantity();
+        }
+
+        info!("Get!");
+        nevw_set_item.send(GrabCreativeItemEvent { quantity, item_id });
+    }
+}
+
 pub(super) fn register(app: &mut App) {
     app.configure_sets(
         Update,
@@ -1037,7 +1080,12 @@ pub(super) fn register(app: &mut App) {
         Update,
         (
             drop_item.run_if(no_open_menus),
-            (toggle_inventory, close_button_system, on_click_creative_category)
+            (
+                toggle_inventory,
+                close_button_system,
+                on_click_creative_category,
+                on_click_creative_item,
+            )
                 .chain()
                 .in_set(InventorySet::ToggleInventory),
             on_update_inventory.in_set(InventorySet::UpdateInventory),
