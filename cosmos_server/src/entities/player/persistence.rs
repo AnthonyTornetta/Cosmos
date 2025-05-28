@@ -15,7 +15,7 @@ use cosmos_core::{
         health::{Health, MaxHealth},
         player::{Player, creative::Creative},
     },
-    inventory::{Inventory, itemstack::ItemShouldHaveData},
+    inventory::{HeldItemStack, Inventory, itemstack::ItemShouldHaveData},
     item::Item,
     netty::{
         NettyChannelServer, cosmos_encoder,
@@ -286,6 +286,11 @@ fn create_new_player(
                 Transform::from_rotation(rot),
                 PlayerLooking { rotation: Quat::IDENTITY },
             ))
+            .with_children(|p| {
+                let mut ecmds = p.spawn((Name::new("Held Item Inventory"), HeldItemStack));
+                let inventory = Inventory::new("Inventory", 1, None, ecmds.id());
+                ecmds.insert(inventory);
+            })
             .remove::<LoadPlayer>();
     }
 }
@@ -299,6 +304,8 @@ fn finish_loading_player(
     server_settings: Res<ServerSettings>,
     q_player_finished_loading: Query<(Entity, &Player, &Location, &Velocity, Option<&Parent>, Option<&Transform>), Added<Player>>,
     mut nevw_send_chat_msg: NettyEventWriter<ServerSendChatMessageEvent>,
+    q_held_item: Query<&Inventory, With<HeldItemStack>>,
+    q_children: Query<&Children>,
 ) {
     for (player_entity, load_player, location, velocity, maybe_parent, trans) in q_player_finished_loading.iter() {
         info!("Completing player load for {}", load_player.name());
@@ -319,6 +326,15 @@ fn finish_loading_player(
             Anchor,
             SetPosition::Transform,
         ));
+
+        if !HeldItemStack::get_held_is_inventory(ecmds.id(), &q_children, &q_held_item).is_none() {
+            error!("Missing held item inventory - inserting new one!");
+            ecmds.with_children(|p| {
+                let mut ecmds = p.spawn((Name::new("Held Item Inventory"), HeldItemStack));
+                let inventory = Inventory::new("Inventory", 1, None, ecmds.id());
+                ecmds.insert(inventory);
+            });
+        }
         // If we don't remove this, it won't automatically
         // generate a new one when we save the player next
         // .remove::<SaveFileIdentifier>();

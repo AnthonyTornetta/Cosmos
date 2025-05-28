@@ -5,8 +5,6 @@ use serde::{Deserialize, Serialize};
 
 use crate::block::data::BlockDataIdentifier;
 
-use super::HeldItemStack;
-
 #[derive(Debug, Serialize, Deserialize, Clone, Copy, PartialEq, Eq)]
 /// A way of identifying where the inventory is
 pub enum InventoryIdentifier {
@@ -19,11 +17,6 @@ pub enum InventoryIdentifier {
 #[derive(Debug, Serialize, Deserialize)]
 /// All the inventory messages
 pub enum ServerInventoryMessages {
-    /// Updates what is currently held by the player
-    HeldItemstack {
-        /// The currently held itemstack, if they are holding one
-        itemstack: Option<HeldItemStack>,
-    },
     /// Called whenever a player tries to open an inventory that isn't their own
     OpenInventory {
         /// The owner of the inventory
@@ -80,6 +73,7 @@ pub enum ClientInventoryMessages {
         /// Feel free to use `u16::MAX` to insert as many items as possible
         quantity: u16,
     },
+    DropOrDepositHeldItemstack,
     /// Deposits all the items in the itemstack into that slot, and makes the item that is currently in this slot the held item
     DepositAndSwapHeldItemstack {
         /// The entity that has this inventory you're interacting with

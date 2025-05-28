@@ -34,17 +34,11 @@ fn on_trash_item_creative(
             continue;
         };
 
-        if let Some(mut inv) = HeldItemStack::get_held_is_inventory(player, &q_children, &mut q_held_item) {
+        if let Some(mut inv) = HeldItemStack::get_held_is_inventory_mut(player, &q_children, &mut q_held_item) {
             if let Some(mut is) = inv.remove_itemstack_at(0) {
                 is.remove(&mut commands);
             }
         }
-
-        server.send_message(
-            ev.client_id,
-            NettyChannelServer::Inventory,
-            cosmos_encoder::serialize(&ServerInventoryMessages::HeldItemstack { itemstack: None }),
-        );
     }
 }
 
@@ -82,7 +76,7 @@ fn on_grab_creative_item(
         };
 
         info!("Success");
-        if let Some(mut inv) = HeldItemStack::get_held_is_inventory(player, &q_children, &mut q_held_item) {
+        if let Some(mut inv) = HeldItemStack::get_held_is_inventory_mut(player, &q_children, &mut q_held_item) {
             inv.RENAME_THIS_remove_itemstack_at(0, &mut commands);
 
             inv.insert_item_at(0, item, ev.quantity.min(item.max_stack_size()), &mut commands, &needs_data);

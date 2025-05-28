@@ -3,7 +3,7 @@
 use bevy::{
     ecs::query::With,
     log::warn,
-    prelude::{App, Commands, Entity, IntoSystemConfigs, Query, Res, ResMut, Update, in_state},
+    prelude::{App, Children, Commands, Entity, IntoSystemConfigs, Query, Res, ResMut, Update, in_state},
 };
 use bevy_renet::renet::RenetClient;
 use cosmos_core::{
@@ -23,7 +23,6 @@ fn sync(
     mut client: ResMut<RenetClient>,
     network_mapping: Res<NetworkMapping>,
     mut commands: Commands,
-    mut held_item_query: Query<(Entity, &mut HeldItemStack)>,
     structure_query: Query<&Structure>,
     local_player: Query<Entity, With<LocalPlayer>>,
     q_check_inventory: Query<(), With<Inventory>>,
@@ -32,27 +31,6 @@ fn sync(
         let msg: ServerInventoryMessages = cosmos_encoder::deserialize(&message).expect("Failed to deserialize server inventory message!");
 
         match msg {
-            ServerInventoryMessages::HeldItemstack { itemstack } => {
-                if let Ok((entity, mut holding_itemstack)) = held_item_query.get_single_mut() {
-                    if let Some(mut is) = itemstack {
-                        // Don't trigger change detection unless it actually changed
-                        if is.quantity() != holding_itemstack.quantity() || is.item_id() != holding_itemstack.item_id() {
-                            if let Some(de) = is.data_entity() {
-                                if let Some(de) = network_mapping.client_from_server(&de) {
-                                    is.set_data_entity(Some(de));
-                                } else {
-                                    warn!("Missing data entity for is!");
-                                    is.set_data_entity(None);
-                                }
-                            }
-
-                            *holding_itemstack = is;
-                        }
-                    } else {
-                        commands.entity(entity).insert(NeedsDespawned);
-                    }
-                }
-            }
             ServerInventoryMessages::OpenInventory { owner } => {
                 match owner {
                     InventoryIdentifier::Entity(owner) => {

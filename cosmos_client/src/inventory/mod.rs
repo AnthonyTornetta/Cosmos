@@ -40,7 +40,7 @@ use crate::{
             show_cursor::no_open_menus,
             window::{GuiWindow, UiWindowSystemSet},
         },
-        item_renderer::{CustomHoverTooltip, NoHoverTooltip, RenderItem},
+        item_renderer::{CustomHoverTooltip, RenderItem},
     },
 };
 
@@ -209,21 +209,17 @@ fn toggle_inventory_rendering(
         ),
         Added<InventoryNeedsDisplayed>,
     >,
-    mut without_needs_displayed_inventories: Query<
-        (Entity, &mut Inventory, Option<&OpenInventoryEntity>),
-        Without<InventoryNeedsDisplayed>,
-    >,
-    mut holding_item: Query<(Entity, &DisplayedItemFromInventory, &mut HeldItemStack), With<FollowCursor>>,
+    without_needs_displayed_inventories: Query<(Entity, Option<&OpenInventoryEntity>), Without<InventoryNeedsDisplayed>>,
+    q_children: Query<&Children>,
+    q_displayed_item: Query<Entity, With<FollowCursor>>,
     mut client: ResMut<RenetClient>,
-    mapping: Res<NetworkMapping>,
     mut removed_components: RemovedComponents<InventoryNeedsDisplayed>,
-    q_block_data: Query<&BlockData>,
     categories: Res<Registry<ItemCategory>>,
     items: Res<Registry<Item>>,
+    q_held_item: Query<&Inventory, With<HeldItemStack>>,
 ) {
     for removed in removed_components.read() {
-        let Ok((inventory_holder, mut local_inventory, open_inventory_entity)) = without_needs_displayed_inventories.get_mut(removed)
-        else {
+        let Ok((inventory_holder, open_inventory_entity)) = without_needs_displayed_inventories.get(removed) else {
             continue;
         };
 
@@ -236,53 +232,13 @@ fn toggle_inventory_rendering(
             ecmds.insert(NeedsDespawned);
         }
 
-        if let Ok((entity, displayed_item, mut held_item_stack)) = holding_item.get_single_mut() {
-            let server_inventory_holder = get_server_inventory_identifier(inventory_holder, &mapping, &q_block_data);
-
-            // Try to put it in its original spot first
-            let leftover = local_inventory.insert_itemstack_at(displayed_item.slot_number, &held_item_stack, &mut commands);
-
-            if leftover != held_item_stack.quantity() {
-                // Only send information to server if there is a point to the move
-                held_item_stack.set_quantity(leftover);
-
-                client.send_message(
-                    NettyChannelClient::Inventory,
-                    cosmos_encoder::serialize(&ClientInventoryMessages::DepositHeldItemstack {
-                        inventory_holder: server_inventory_holder,
-                        slot: displayed_item.slot_number as u32,
-                        quantity: u16::MAX,
-                    }),
-                );
-            }
-
-            if !held_item_stack.is_empty() {
-                // Put it wherever it can fit if it couldn't go back to its original spot
-                let (leftover, _) = local_inventory.insert_itemstack(&held_item_stack, &mut commands);
-
-                if leftover != held_item_stack.quantity() {
-                    // Only send information to server if there is a point to the insertion
-                    client.send_message(
-                        NettyChannelClient::Inventory,
-                        cosmos_encoder::serialize(&ClientInventoryMessages::InsertHeldItem {
-                            inventory_holder: server_inventory_holder,
-                            quantity: u16::MAX,
-                        }),
-                    );
-                }
-
-                if leftover != 0 {
-                    warn!(
-                        "Unable to put itemstack into inventory it was taken out of - and dropping hasn't been implemented yet. Deleting for now."
-                    );
-                    // Only send information to server if there is a point to the insertion
-                    client.send_message(
-                        NettyChannelClient::Inventory,
-                        cosmos_encoder::serialize(&ClientInventoryMessages::ThrowHeldItemstack { quantity: u16::MAX }),
-                    );
-                }
-            }
-
+        if HeldItemStack::get_held_is_inventory(inventory_holder, &q_children, &q_held_item).is_some() {
+            client.send_message(
+                NettyChannelClient::Inventory,
+                cosmos_encoder::serialize(&ClientInventoryMessages::DropOrDepositHeldItemstack),
+            );
+        }
+        if let Ok(entity) = q_displayed_item.get_single() {
             commands.entity(entity).insert(NeedsDespawned);
         }
     }
@@ -570,8 +526,7 @@ struct DisplayedItemFromInventory {
 fn on_update_inventory(
     mut commands: Commands,
     q_inventory: Query<(Entity, &Inventory), Changed<Inventory>>,
-    mut held_item_query: Query<(Entity, &HeldItemStack, &mut DisplayedItemFromInventory), Changed<HeldItemStack>>,
-    mut current_slots: Query<(Entity, &mut DisplayedItemFromInventory), Without<HeldItemStack>>,
+    mut current_slots: Query<(Entity, &mut DisplayedItemFromInventory)>,
     asset_server: Res<AssetServer>,
 ) {
     for (inventory_entity, inventory) in q_inventory.iter() {
@@ -587,16 +542,6 @@ fn on_update_inventory(
 
                 rerender_inventory_slot(&mut ecmds, &displayed_slot, &asset_server, true);
             }
-        }
-    }
-
-    assert!(held_item_query.iter().count() <= 1, "BAD HELD ITEMS!");
-
-    if let Ok((entity, held_item_stack, mut displayed_item)) = held_item_query.get_single_mut() {
-        displayed_item.item_stack = Some(held_item_stack.0.clone());
-
-        if let Some(mut ecmds) = commands.get_entity(entity) {
-            rerender_inventory_slot(&mut ecmds, &displayed_item, &asset_server, false);
         }
     }
 }
@@ -762,39 +707,7 @@ fn pickup_item_into_cursor(
     };
 
     let pickup_quantity = (quantity_multiplier * is.quantity() as f32).ceil() as u16;
-
-    let mut new_is = is.clone();
-    new_is.set_quantity(pickup_quantity);
-
-    let displayed_item = DisplayedItemFromInventory {
-        inventory_holder: displayed_item_clicked.inventory_holder,
-        item_stack: Some(new_is.clone()),
-        slot_number: displayed_item_clicked.slot_number,
-    };
-
-    let font = asset_server.load("fonts/PixeloidSans.ttf");
-
-    let text_style = TextFont {
-        font_size: 22.0,
-        font: font.clone(),
-        ..Default::default()
-    };
-
-    let mut ecmds = commands.spawn((FollowCursor, NoHoverTooltip));
-
-    create_item_stack_slot_data(&new_is, &mut ecmds, text_style, pickup_quantity);
-
-    ecmds.insert((displayed_item, HeldItemStack(new_is)));
-
     let slot_clicked = displayed_item_clicked.slot_number;
-    if let Some(is) = inventory.mut_itemstack_at(slot_clicked) {
-        let leftover_quantity = is.quantity() - (is.quantity() as f32 * quantity_multiplier).ceil() as u16;
-        is.set_quantity(leftover_quantity);
-
-        if is.is_empty() {
-            inventory.remove_itemstack_at(slot_clicked);
-        }
-    }
 
     client.send_message(
         NettyChannelClient::Inventory,
@@ -808,10 +721,11 @@ fn pickup_item_into_cursor(
 
 fn handle_interactions(
     mut commands: Commands,
-    mut following_cursor: Query<(Entity, &mut HeldItemStack)>,
+    mut q_held_item: Query<&mut Inventory, With<HeldItemStack>>,
+    q_children: Query<&Children, With<LocalPlayer>>,
     interactions: Query<(&DisplayedItemFromInventory, &Interaction), Without<FollowCursor>>,
     input_handler: InputChecker,
-    mut inventory_query: Query<&mut Inventory>,
+    mut inventory_query: Query<&mut Inventory, Without<HeldItemStack>>,
     mut client: ResMut<RenetClient>,
     mapping: Res<NetworkMapping>,
     q_block_data: Query<&BlockData>,
@@ -837,6 +751,10 @@ fn handle_interactions(
     let bulk_moving = input_handler.check_pressed(CosmosInputs::AutoMoveItem);
 
     let server_inventory_holder = get_server_inventory_identifier(displayed_item_clicked.inventory_holder, &mapping, &q_block_data);
+
+    let player_kids = q_children.get_single().expect("Player missing all children");
+    let held_item_inv =
+        HeldItemStack::get_held_is_inventory_from_children_mut(player_kids, &mut q_held_item).expect("Missing held item inventory");
 
     if bulk_moving {
         let slot_num = displayed_item_clicked.slot_number;
@@ -874,25 +792,12 @@ fn handle_interactions(
                 }),
             );
         }
-    } else if let Ok((following_entity, mut held_item_stack)) = following_cursor.get_single_mut() {
+    } else if let Some(held_item_stack) = held_item_inv.itemstack_at(0) {
         let clicked_slot = displayed_item_clicked.slot_number;
 
         if let Ok(mut inventory) = inventory_query.get_mut(displayed_item_clicked.inventory_holder) {
             if inventory.can_move_itemstack_to(&held_item_stack, clicked_slot) {
                 let move_quantity = if lmb { held_item_stack.quantity() } else { 1 };
-
-                let mut moving_itemstack = held_item_stack.clone();
-                moving_itemstack.set_quantity(move_quantity);
-
-                let over_quantity = held_item_stack.quantity() - move_quantity;
-
-                let leftover = inventory.insert_itemstack_at(clicked_slot, &moving_itemstack, &mut commands);
-
-                held_item_stack.set_quantity(over_quantity + leftover);
-
-                if held_item_stack.is_empty() {
-                    commands.entity(following_entity).insert(NeedsDespawned);
-                }
 
                 client.send_message(
                     NettyChannelClient::Inventory,
@@ -901,54 +806,69 @@ fn handle_interactions(
                         slot: clicked_slot as u32,
                         quantity: move_quantity,
                     }),
-                )
+                );
+
+                // let mut moving_itemstack = held_item_stack.clone();
+                // moving_itemstack.set_quantity(move_quantity);
+                //
+                // let over_quantity = held_item_stack.quantity() - move_quantity;
+                //
+                // let leftover = inventory.insert_itemstack_at(clicked_slot, &moving_itemstack, &mut commands);
+                //
+                // held_item_stack.set_quantity(over_quantity + leftover);
+                //
+                // if !held_item_stack.is_empty() {
+                //     held_item_inv.set_itemstack_at(0, Some(held_item_stack), &mut commands);
+                // }
             } else {
                 let is_here = inventory.remove_itemstack_at(clicked_slot);
 
-                if is_here.as_ref().map(|is| is.quantity() == 1).unwrap_or(true) || lmb {
-                    let quantity = if lmb { held_item_stack.quantity() } else { 1 };
-
-                    let mut moving_itemstack = held_item_stack.clone();
-                    moving_itemstack.set_quantity(quantity);
-
-                    let unused_itemstack = held_item_stack.quantity() - quantity;
-
-                    let leftover = inventory.insert_itemstack_at(clicked_slot, &moving_itemstack, &mut commands);
-
-                    assert_eq!(
-                        leftover, 0,
-                        "Leftover wasn't 0 somehow? This could only mean something has an invalid stack size"
-                    );
-
-                    held_item_stack.set_quantity(unused_itemstack);
-
-                    if unused_itemstack == 0 {
-                        if let Some(is_here) = is_here {
-                            held_item_stack.0 = is_here;
-                        } else {
-                            commands.entity(following_entity).insert(NeedsDespawned);
-                        }
-                    }
-
-                    let message = if lmb {
-                        // A swap assumes we're depositing everything, which will remove all items on the server-side.
-                        cosmos_encoder::serialize(&ClientInventoryMessages::DepositAndSwapHeldItemstack {
-                            inventory_holder: server_inventory_holder,
-                            slot: clicked_slot as u32,
-                        })
-                    } else {
-                        cosmos_encoder::serialize(&ClientInventoryMessages::DepositHeldItemstack {
-                            inventory_holder: server_inventory_holder,
-                            slot: clicked_slot as u32,
-                            quantity: 1,
-                        })
-                    };
-
-                    client.send_message(NettyChannelClient::Inventory, message);
+                let message = if lmb || is_here.as_ref().map(|is| is.quantity() == 1).unwrap_or(true) {
+                    // A swap assumes we're depositing everything, which will remove all items on the server-side.
+                    cosmos_encoder::serialize(&ClientInventoryMessages::DepositAndSwapHeldItemstack {
+                        inventory_holder: server_inventory_holder,
+                        slot: clicked_slot as u32,
+                    })
                 } else {
-                    inventory.set_itemstack_at(clicked_slot, is_here, &mut commands);
-                }
+                    cosmos_encoder::serialize(&ClientInventoryMessages::DepositHeldItemstack {
+                        inventory_holder: server_inventory_holder,
+                        slot: clicked_slot as u32,
+                        quantity: 1,
+                    })
+                };
+                // let quantity = if lmb { held_item_stack.quantity() } else { 1 };
+                //
+                // let mut moving_itemstack = held_item_stack.clone();
+                // moving_itemstack.set_quantity(quantity);
+                //
+                // let unused_itemstack = held_item_stack.quantity() - quantity;
+                //
+                // let leftover = inventory.insert_itemstack_at(clicked_slot, &moving_itemstack, &mut commands);
+                //
+                // assert_eq!(
+                //     leftover, 0,
+                //     "Leftover wasn't 0 somehow? This could only mean something has an invalid stack size"
+                // );
+                //
+                // held_item_stack.set_quantity(unused_itemstack);
+                //
+                // if unused_itemstack == 0 {
+                //     if let Some(is_here) = is_here {
+                //         held_item_stack.0 = is_here;
+                //     } else {
+                //         commands.entity(following_entity).insert(NeedsDespawned);
+                //     }
+                // }
+                //
+                // let message = if lmb {
+                //                         } else {
+                //                         };
+
+                client.send_message(NettyChannelClient::Inventory, message);
             }
+            //else {
+            //  inventory.set_itemstack_at(clicked_slot, is_here, &mut commands);
+            //}
         }
     } else if let Ok(mut inventory) = inventory_query.get_mut(displayed_item_clicked.inventory_holder) {
         let quantity_multiplier = if lmb { 1.0 } else { 0.5 };
@@ -1025,9 +945,10 @@ fn on_click_creative_item(
     mut evr_clicked_creative_item: EventReader<CreativeItemClickedEvent>,
     inputs: InputChecker,
     items: Res<Registry<Item>>,
-    q_held_item: Query<&HeldItemStack>,
     mut nevw_set_item: NettyEventWriter<GrabCreativeItemEvent>,
     mut nevw_trash_item: NettyEventWriter<CreativeTrashHeldItem>,
+    q_children: Query<&Children, With<LocalPlayer>>,
+    mut q_held_item: Query<&mut Inventory, With<HeldItemStack>>,
 ) {
     for ev in evr_clicked_creative_item.read() {
         info!("Got ev {ev:?}");
@@ -1042,13 +963,19 @@ fn on_click_creative_item(
             1
         };
 
-        if let Ok(held_is) = q_held_item.get_single() {
-            if held_is.item_id() != item_id {
-                info!("Trash!");
-                nevw_trash_item.send_default();
-                continue;
+        let Ok(lp_children) = q_children.get_single() else {
+            return;
+        };
+
+        if let Some(inv) = HeldItemStack::get_held_is_inventory_from_children_mut(lp_children, &mut q_held_item) {
+            if let Some(held_is) = inv.itemstack_at(0) {
+                if held_is.item_id() != item_id {
+                    info!("Trash!");
+                    nevw_trash_item.send_default();
+                    continue;
+                }
+                quantity += held_is.quantity();
             }
-            quantity += held_is.quantity();
         }
 
         info!("Get!");

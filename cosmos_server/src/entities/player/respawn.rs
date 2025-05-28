@@ -43,11 +43,11 @@ fn compute_respawn_location(universe_systems: &UniverseSystems) -> (Location, Qu
 
 fn on_die(
     mut commands: Commands,
-    mut q_player: Query<(&Location, &mut Inventory, &Children), Added<Dead>>,
+    mut q_player: Query<(&Location, &mut Inventory, &Children), (Added<Dead>, Without<HeldItemStack>)>,
     mut q_held_item: Query<&mut Inventory, With<HeldItemStack>>,
 ) {
     for (location, mut inventory, children) in q_player.iter_mut() {
-        if let Some(mut inv) = HeldItemStack::get_held_is_inventory_from_children(children, &mut q_held_item) {
+        if let Some(mut inv) = HeldItemStack::get_held_is_inventory_from_children_mut(children, &mut q_held_item) {
             if let Some(held_is) = inv.remove_itemstack_at(0) {
                 drop_itemstack(&mut commands, location, held_is);
             }

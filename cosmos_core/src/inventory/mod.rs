@@ -13,7 +13,7 @@ use bevy::{
     },
     hierarchy::{BuildChildren, DespawnRecursiveExt},
     log::error,
-    prelude::{App, Children, Component, Deref, DerefMut, Mut, With},
+    prelude::{App, Children, Component, Deref, DerefMut, Mut, Ref, With},
     reflect::Reflect,
     state::state::States,
 };
@@ -52,6 +52,40 @@ impl HeldItemStack {
     pub fn get_held_is_inventory<'a>(
         client_entity: Entity,
         q_children: &Query<&Children>,
+        q_held_item: &'a Query<&Inventory, With<HeldItemStack>>,
+    ) -> Option<&'a Inventory> {
+        let Ok(children) = q_children.get(client_entity) else {
+            return None;
+        };
+
+        for child in children.iter() {
+            // This is the only way to make the borrow checker happy
+            if q_held_item.contains(*child) {
+                return q_held_item.get(*child).ok();
+            }
+        }
+
+        error!("No held item inventory as child of player {client_entity:?}!");
+        None
+    }
+
+    pub fn get_held_is_inventory_from_children<'a>(
+        children: &Children,
+        q_held_item: &'a Query<&Inventory, With<HeldItemStack>>,
+    ) -> Option<&'a Inventory> {
+        for child in children.iter() {
+            // This is the only way to make the borrow checker happy
+            if q_held_item.contains(*child) {
+                return q_held_item.get(*child).ok();
+            }
+        }
+
+        None
+    }
+
+    pub fn get_held_is_inventory_mut<'a>(
+        client_entity: Entity,
+        q_children: &Query<&Children>,
         q_held_item: &'a mut Query<&mut Inventory, With<HeldItemStack>>,
     ) -> Option<Mut<'a, Inventory>> {
         let Ok(children) = q_children.get(client_entity) else {
@@ -69,7 +103,7 @@ impl HeldItemStack {
         None
     }
 
-    pub fn get_held_is_inventory_from_children<'a>(
+    pub fn get_held_is_inventory_from_children_mut<'a>(
         children: &Children,
         q_held_item: &'a mut Query<&mut Inventory, With<HeldItemStack>>,
     ) -> Option<Mut<'a, Inventory>> {
