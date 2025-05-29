@@ -56,13 +56,16 @@ fn on_request_parent(
                 server_data_entity: ev.entity,
             }
         } else {
+            info!("Requested parent for {:?}", ev.entity);
             ComponentEntityIdentifier::Entity(ev.entity)
         };
 
         if !should_be_sent_to(p_loc, &q_parent, &entity_identifier) {
+            info!("Should not send for {:?}", ev.entity);
             continue;
         }
 
+        info!("Sending {:?} - {component:?}", ev.entity);
         comps_to_send.entry(ev.client_id).or_default().push(ReplicatedComponentData {
             raw_data: cosmos_encoder::serialize_uncompressed(&component.get()),
             entity_identifier,
