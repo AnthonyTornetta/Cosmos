@@ -307,7 +307,8 @@ fn server_listen_messages(
                 }
                 ClientReliableMessages::RequestEntityData { entity } => {
                     if commands.get_entity(entity).is_some() {
-                        requested_entities_writer.send(RequestedEntityEvent { client_id, entity });
+                        info!("Requested entity: {entity:?}  (not) Ignoring request entity!");
+                        // requested_entities_writer.send(RequestedEntityEvent { client_id, entity });
                     }
                 }
                 ClientReliableMessages::LeaveShip => {

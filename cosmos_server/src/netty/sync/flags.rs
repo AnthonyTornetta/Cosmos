@@ -3,12 +3,16 @@ use cosmos_core::{
     entities::player::Player,
     netty::{
         NoSendEntity,
-        sync::{server_entity_syncing::RequestedEntityEvent, server_syncing::should_be_sent_to},
+        sync::{server_entity_syncing::RequestedEntityEvent, server_syncing::ReadyForSyncing},
+        system_sets::NetworkingSystemsSet,
     },
     persistence::LoadingDistance,
     physics::location::Location,
+    prelude::Structure,
 };
 use renet::ClientId;
+
+use crate::persistence::loading::{NeedsBlueprintLoaded, NeedsLoaded};
 
 #[derive(Component, Debug, Reflect, Clone, Default)]
 pub enum SyncReason {
@@ -41,14 +45,33 @@ fn should_sync(
             Option<&Location>,
             Option<&LoadingDistance>,
             Option<&Parent>,
+            Option<&Structure>,
         ),
-        (Without<NoSendEntity>, With<SyncTo>),
+        (
+            Without<NoSendEntity>,
+            With<SyncTo>,
+            Without<NeedsBlueprintLoaded>,
+            Without<NeedsLoaded>,
+        ),
     >,
     player_loc: &Location,
 ) -> MegaBool {
-    let Ok((_, sync_reason, location, loading_distance, parent)) = q_sync_to.get(this_ent) else {
+    let Ok((_, sync_reason, location, loading_distance, parent, structure)) = q_sync_to.get(this_ent) else {
         return MegaBool::MegaFalse;
     };
+
+    // TODO: This structure-specific check should be moved in the future, and an `unloaded` component
+    // should be created.
+    if structure
+        .map(|s| match s {
+            Structure::Full(f) => !f.is_loaded(),
+            Structure::Dynamic(_) => false,
+        })
+        .unwrap_or(false)
+    {
+        info!("Rejected because of structure unloaded!");
+        return MegaBool::MegaFalse;
+    }
 
     let sync_reason = sync_reason.cloned().unwrap_or_default();
 
@@ -82,16 +105,22 @@ fn update_sync_players(
             Option<&Location>,
             Option<&LoadingDistance>,
             Option<&Parent>,
+            Option<&Structure>,
         ),
-        (Without<NoSendEntity>, With<SyncTo>),
+        (
+            Without<NoSendEntity>,
+            With<SyncTo>,
+            Without<NeedsBlueprintLoaded>,
+            Without<NeedsLoaded>,
+        ),
     >,
     mut q_mut_sync_to: Query<&mut SyncTo>,
-    q_players: Query<(&Player, &Location)>,
+    q_players: Query<(&Player, &Location), With<ReadyForSyncing>>,
 ) {
-    for (ent, sync_reason, this_loc, loading_distance, parent) in q_sync_to.iter() {
+    for (ent, sync_reason, this_loc, loading_distance, parent, structure) in q_sync_to.iter() {
         let sync_reason = sync_reason.cloned().unwrap_or_default();
 
-        let mut to_send_to = vec![];
+        let mut to_send_to = HashSet::default();
 
         for (player, player_loc) in q_players.iter() {
             let should_sync = match sync_reason {
@@ -121,50 +150,66 @@ fn update_sync_players(
                 MegaBool::True => player.client_id(),
             };
 
-            to_send_to.push(id);
+            to_send_to.insert(id);
         }
 
         let mut sync_to = q_mut_sync_to.get_mut(ent).expect("Invalid state");
 
         sync_to.0 = to_send_to;
-        sync_to.0.sort();
     }
 }
 
-#[derive(Debug, Component, Reflect)]
+#[derive(Debug, Component, Reflect, Default)]
 struct PreviousSyncTo(SyncTo);
 
-fn send_to_sync_tos(
+fn generate_request_entity_events_for_new_sync_tos(
     mut evr_request_entity: EventWriter<RequestedEntityEvent>,
     mut q_sync_to: Query<(Entity, &SyncTo, &mut PreviousSyncTo)>,
+    mut commands: Commands,
 ) {
     for (ent, sync_to, mut prev) in q_sync_to.iter_mut() {
         let mut not_found = vec![];
 
-        // let mut prev_i = 0;
-        // for &item in sync_to.0.iter() {
-        //     while prev_i < prev.0.0.len() {
-        //         if item < prev.0.0[prev_i] {
-        //             not_found.push(item);
-        //         } else {
-        //             prev_i += 1;
-        //         }
-        //     }
-        //
-        //     if prev_i >= prev.0.0.len() {
-        //         not_found.push(item);
-        //         continue;
-        //     }
-        // }
-        //
-        // prev.0 = sync_to.clone();
+        for id in sync_to.0.iter() {
+            if !prev.0.0.contains(id) {
+                not_found.push(*id);
+            }
+        }
+
+        if not_found.is_empty() {
+            continue;
+        }
+
+        prev.0 = sync_to.clone();
+
+        for id in not_found {
+            info!("Send {ent:?} to player id {id}");
+            commands.entity(ent).log_components();
+            evr_request_entity.send(RequestedEntityEvent {
+                entity: ent,
+                client_id: id,
+            });
+        }
     }
 }
 
-fn on_add_sync_data(mut commands: Commands, q_added_sync_data: Query<Entity, (Without<SyncTo>, With<Location>, Without<NoSendEntity>)>) {
+fn on_needs_sync_data(mut commands: Commands, q_added_sync_data: Query<Entity, (Without<SyncTo>, With<Location>, Without<NoSendEntity>)>) {
     for ent in q_added_sync_data.iter() {
-        commands.entity(ent).insert(SyncTo::default());
+        commands.entity(ent).insert((SyncTo::default(), PreviousSyncTo::default()));
     }
 }
 
-pub(super) fn register(app: &mut App) {}
+pub(super) fn register(app: &mut App) {
+    app.add_systems(
+        Update,
+        (
+            on_needs_sync_data,
+            update_sync_players,
+            generate_request_entity_events_for_new_sync_tos,
+        )
+            .chain()
+            .after(NetworkingSystemsSet::Between)
+            .before(NetworkingSystemsSet::SyncComponents),
+    )
+    .register_type::<SyncTo>();
+}

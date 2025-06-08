@@ -23,8 +23,9 @@ use bevy::ecs::removal_detection::RemovedComponents;
 use bevy::ecs::schedule::common_conditions::resource_exists;
 use bevy::ecs::schedule::{IntoSystemConfigs, IntoSystemSetConfigs};
 use bevy::ecs::system::Commands;
-use bevy::log::warn;
-use bevy::prelude::{Parent, With};
+use bevy::log::{info, warn};
+use bevy::prelude::{Component, Parent, With};
+use bevy::reflect::Reflect;
 use bevy::utils::HashMap;
 use bevy::{
     app::{App, Startup, Update},
@@ -38,6 +39,12 @@ use bevy::{
 };
 use bevy_renet::renet::RenetServer;
 use renet::ClientId;
+
+#[derive(Component, Debug, Reflect)]
+/// This is a flag placed onto players that are ready to receive components from the server.
+///
+/// This mean the player has already triggered a [`ClientFinishedReceivingRegistriesEvent`].
+pub struct ReadyForSyncing;
 
 fn server_remove_component<T: SyncableComponent>(
     components_registry: Res<Registry<SyncedComponentId>>,
@@ -213,7 +220,7 @@ fn server_send_component<T: SyncableComponent>(
         (Entity, &T, Option<&StructureSystem>, Option<&ItemStackData>, Option<&BlockData>),
         (Without<NoSendEntity>, Changed<T>),
     >,
-    q_players: Query<(&Location, &Player)>,
+    q_players: Query<(&Location, &Player), With<ReadyForSyncing>>,
     mut server: ResMut<RenetServer>,
 ) {
     if q_changed_component.is_empty() {
@@ -252,9 +259,12 @@ fn server_send_component<T: SyncableComponent>(
                 (component, entity_identifier)
             })
             .filter(|(_, entity_identifier)| should_be_sent_to(p_loc, &q_parent, entity_identifier))
-            .map(|(component, identifier)| ReplicatedComponentData {
-                entity_identifier: identifier,
-                raw_data: cosmos_encoder::serialize_uncompressed(component),
+            .map(|(component, identifier)| {
+                info!("Syncing {component:?}");
+                ReplicatedComponentData {
+                    entity_identifier: identifier,
+                    raw_data: cosmos_encoder::serialize_uncompressed(component),
+                }
             })
             .collect::<Vec<ReplicatedComponentData>>();
 
@@ -326,7 +336,7 @@ fn on_request_component<T: SyncableComponent>(
     mut ev_reader: EventReader<RequestedEntityEvent>,
     id_registry: Res<Registry<SyncedComponentId>>,
     mut server: ResMut<RenetServer>,
-    q_players: Query<&Location, With<Player>>,
+    q_players: Query<&Location, (With<Player>, With<ReadyForSyncing>)>,
     lobby: Res<ServerLobby>,
 ) {
     let mut comps_to_send: HashMap<ClientId, Vec<ReplicatedComponentData>> = HashMap::new();

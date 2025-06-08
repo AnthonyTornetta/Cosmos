@@ -25,7 +25,7 @@ fn receive_asteroids(
     mut client: ResMut<RenetClient>,
     query_loc: Query<&Location>,
     mut commands: Commands,
-    network_mapping: ResMut<NetworkMapping>,
+    mut network_mapping: ResMut<NetworkMapping>,
 ) {
     while let Some(message) = client.receive_message(NettyChannelServer::Asteroid) {
         let msg: AsteroidServerMessages = cosmos_encoder::deserialize(&message).unwrap();
@@ -37,9 +37,7 @@ fn receive_asteroids(
                 dimensions,
                 temperature,
             } => {
-                let Some(entity) = network_mapping.client_from_server(&server_entity) else {
-                    continue;
-                };
+                let entity = network_mapping.client_from_server_or_create(&server_entity, &mut commands);
 
                 let Ok(body) = body.map_to_client(&network_mapping) else {
                     continue;

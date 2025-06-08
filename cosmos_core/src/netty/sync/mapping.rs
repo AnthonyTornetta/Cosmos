@@ -9,7 +9,7 @@ use crate::{
 };
 use bevy::{
     ecs::component::Component,
-    prelude::{Entity, Resource},
+    prelude::{Commands, Entity, Resource},
     reflect::Reflect,
     utils::HashMap,
 };
@@ -37,6 +37,17 @@ impl NetworkMapping {
     /// Checks if the server has a given entity
     pub fn contains_server_entity(&self, entity: Entity) -> bool {
         self.server_to_client.contains_key(&entity)
+    }
+
+    /// Gets the client entity based on the entity the server sent.
+    ///
+    /// Returns None if no such entity has been created on the client-side.
+    pub fn client_from_server_or_create(&mut self, server_entity: &Entity, commands: &mut Commands) -> Entity {
+        self.server_to_client.get(server_entity).copied().unwrap_or_else(|| {
+            let ent = commands.spawn_empty().id();
+            self.add_mapping(ent, *server_entity);
+            ent
+        })
     }
 
     /// Gets the client entity based on the entity the server sent.

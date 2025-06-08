@@ -33,6 +33,7 @@ fn on_request_station(
             //     }),
             // );
 
+            info!("Sending requested station!~");
             server.send_message(
                 ev.client_id,
                 NettyChannelServer::Reliable,

@@ -22,7 +22,7 @@ use cosmos_core::{
         netty_rigidbody::{NettyRigidBody, NettyRigidBodyLocation},
         server::ServerLobby,
         server_reliable_messages::ServerReliableMessages,
-        sync::{ComponentSyncingSet, IdentifiableComponent, events::server_event::NettyEventWriter, registry::server::SyncRegistriesEvent},
+        sync::{IdentifiableComponent, events::server_event::NettyEventWriter, registry::server::SyncRegistriesEvent},
         system_sets::NetworkingSystemsSet,
     },
     persistence::LoadingDistance,
@@ -417,8 +417,7 @@ pub(super) fn register(app: &mut App) {
                 .in_set(NetworkingSystemsSet::Between),
             (finish_loading_player, add_player_save_link, name_player_save_links)
                 .chain()
-                .in_set(NetworkingSystemsSet::SyncComponents)
-                .before(ComponentSyncingSet::PreComponentSyncing)
+                .in_set(NetworkingSystemsSet::Between)
                 .after(LoadingSystemSet::DoneLoading),
         )
             .chain(),
