@@ -42,6 +42,7 @@ use cosmos_core::{
         location::{Location, LocationPhysicsSet, SYSTEM_SECTORS, SetPosition, systems::Anchor},
         player_world::PlayerWorld,
     },
+    prelude::Station,
     registry::Registry,
     state::GameState,
     structure::{
@@ -51,9 +52,8 @@ use cosmos_core::{
         chunk::Chunk,
         dynamic_structure::DynamicStructure,
         full_structure::FullStructure,
-        planet::{biosphere::BiosphereMarker, planet_builder::TPlanetBuilder},
-        ship::{Ship, pilot::Pilot, ship_builder::TShipBuilder},
-        station::station_builder::TStationBuilder,
+        planet::biosphere::BiosphereMarker,
+        ship::{Ship, pilot::Pilot},
         systems::{StructureSystems, dock_system::Docked},
     },
 };
@@ -63,11 +63,7 @@ use crate::{
     netty::lobby::{ClientLobby, PlayerInfo},
     rendering::{CameraPlayerOffset, MainCamera},
     settings::DesiredFov,
-    structure::{
-        planet::{client_planet_builder::ClientPlanetBuilder, generation::SetTerrainGenData},
-        ship::{client_ship_builder::ClientShipBuilder, ship_movement::ClientCreateShipMovementSet},
-        station::client_station_builder::ClientStationBuilder,
-    },
+    structure::{planet::generation::SetTerrainGenData, ship::ship_movement::ClientCreateShipMovementSet},
     ui::{
         crosshair::{CrosshairOffset, CrosshairOffsetSet},
         message::{HudMessage, HudMessages},
@@ -456,10 +452,7 @@ pub(crate) fn client_sync_players(
                 let mut entity_cmds = commands.entity(entity);
                 let mut structure = Structure::Dynamic(DynamicStructure::new(dimensions));
 
-                let builder = ClientPlanetBuilder::default();
-                builder.insert_planet(&mut entity_cmds, location, &mut structure, planet);
-
-                entity_cmds.insert((structure, BiosphereMarker::new(biosphere)));
+                entity_cmds.insert((structure, planet, BiosphereMarker::new(biosphere)));
             }
             ServerReliableMessages::NumberOfChunks {
                 entity: server_entity,
@@ -494,12 +487,9 @@ pub(crate) fn client_sync_players(
                 };
 
                 let mut entity_cmds = commands.entity(entity);
-                let mut structure = Structure::Full(FullStructure::new(dimensions));
+                let structure = Structure::Full(FullStructure::new(dimensions));
 
-                let builder = ClientShipBuilder::default();
-                builder.insert_ship(&mut entity_cmds, location, body.create_velocity(), &mut structure);
-
-                entity_cmds.insert((structure /*chunks_needed*/,));
+                entity_cmds.insert((structure, Ship, body.create_velocity()));
 
                 client.send_message(
                     NettyChannelClient::Reliable,
@@ -531,10 +521,7 @@ pub(crate) fn client_sync_players(
                 let mut entity_cmds = commands.entity(entity);
                 let mut structure = Structure::Full(FullStructure::new(dimensions));
 
-                let builder = ClientStationBuilder::default();
-                builder.insert_station(&mut entity_cmds, location, &mut structure);
-
-                entity_cmds.insert((structure /*chunks_needed*/,));
+                entity_cmds.insert((structure, Station));
             }
             ServerReliableMessages::ChunkData {
                 structure_entity: server_structure_entity,

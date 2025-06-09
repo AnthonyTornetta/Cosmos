@@ -5,7 +5,6 @@ use bevy::prelude::App;
 pub mod asteroid;
 mod audio;
 pub mod chunk_retreiver;
-pub mod client_structure_builder;
 mod events;
 pub mod planet;
 pub mod shared;

@@ -6,7 +6,6 @@ mod change_pilot_event_listener;
 pub mod events;
 pub mod loading;
 mod persistence;
-pub mod server_ship_builder;
 mod sync;
 
 pub(super) fn register(app: &mut App) {

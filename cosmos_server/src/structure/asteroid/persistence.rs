@@ -4,7 +4,7 @@ use cosmos_core::{
     physics::location::Location,
     structure::{
         ChunkInitEvent, Structure, StructureTypeSet,
-        asteroid::{Asteroid, MovingAsteroid, asteroid_builder::TAsteroidBuilder},
+        asteroid::{Asteroid, MovingAsteroid},
         events::StructureLoadedEvent,
         structure_iterator::ChunkIteratorResult,
     },
@@ -17,10 +17,7 @@ use crate::{
         make_persistent::{DefaultPersistentComponent, make_persistent},
         saving::{BlueprintingSystemSet, NeedsBlueprinted, NeedsSaved, SAVING_SCHEDULE, SavingSystemSet},
     },
-    structure::{
-        asteroid::server_asteroid_builder::ServerAsteroidBuilder,
-        persistence::{chunk::AllBlockData, save_structure},
-    },
+    structure::persistence::{chunk::AllBlockData, save_structure},
 };
 
 fn on_blueprint_asteroid(mut query: Query<(&mut SerializedData, &Structure, &mut NeedsBlueprinted, &Asteroid)>, mut commands: Commands) {
@@ -43,7 +40,7 @@ fn load_structure(
     entity: Entity,
     commands: &mut Commands,
     loc: Location,
-    mut structure: Structure,
+    structure: Structure,
     s_data: &SerializedData,
     temperature: f32,
     chunk_load_block_data_event_writer: &mut EventWriter<ChunkLoadBlockDataEvent>,
@@ -51,10 +48,6 @@ fn load_structure(
     structure_loaded_event_writer: &mut EventWriter<StructureLoadedEvent>,
 ) {
     let mut entity_cmd = commands.entity(entity);
-
-    let builder = ServerAsteroidBuilder::default();
-
-    builder.insert_asteroid(&mut entity_cmd, loc, &mut structure, temperature);
 
     let entity = entity_cmd.id();
 
@@ -74,7 +67,7 @@ fn load_structure(
         }
     }
 
-    entity_cmd.insert(structure);
+    entity_cmd.insert((structure, Asteroid::new(temperature), loc));
 
     structure_loaded_event_writer.send(StructureLoadedEvent { structure_entity: entity });
 

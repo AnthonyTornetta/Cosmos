@@ -15,16 +15,12 @@ use cosmos_core::{
     entities::player::Player,
     netty::{sync::IdentifiableComponent, system_sets::NetworkingSystemsSet},
     physics::location::Location,
-    prelude::BlockCoordinate,
+    prelude::{Asteroid, BlockCoordinate},
     registry::Registry,
     state::GameState,
     structure::{
-        ChunkInitEvent, Structure,
-        asteroid::{MovingAsteroid, asteroid_builder::TAsteroidBuilder},
-        coordinates::ChunkCoordinate,
-        full_structure::FullStructure,
-        loading::ChunksNeedLoaded,
-        structure_iterator::ChunkIteratorResult,
+        ChunkInitEvent, Structure, asteroid::MovingAsteroid, coordinates::ChunkCoordinate, full_structure::FullStructure,
+        loading::ChunksNeedLoaded, structure_iterator::ChunkIteratorResult,
     },
     utils::{quat_math::random_quat, random::random_range, timer::UtilsTimer},
 };
@@ -38,7 +34,7 @@ use crate::{
         make_persistent::{DefaultPersistentComponent, make_persistent},
         saving::NeverSave,
     },
-    structure::asteroid::{generator::AsteroidGenerationSet, server_asteroid_builder::ServerAsteroidBuilder},
+    structure::asteroid::generator::AsteroidGenerationSet,
 };
 
 #[derive(Component, Serialize, Deserialize, Reflect)]
@@ -99,14 +95,12 @@ fn spawn_tiny_asteroids(
         let mut spawn_loc = *loc + delta;
 
         for _ in 0..n_asteroids {
-            let mut structure = Structure::Full(FullStructure::new(ChunkCoordinate::new(2, 2, 2)));
-            let builder = ServerAsteroidBuilder::default();
-            let mut entity_cmd = commands.spawn_empty();
+            let structure = Structure::Full(FullStructure::new(ChunkCoordinate::new(2, 2, 2)));
 
             spawn_loc = spawn_loc + variation_dir * Vec3::new(0.0, 0.0, random_range(400.0, 1000.0));
 
             // temperature is meaningless for now
-            builder.insert_asteroid(&mut entity_cmd, spawn_loc, &mut structure, 100.0);
+            let temperature = 100.0;
 
             const ANGVEL_MAX: f32 = 0.05;
 
@@ -128,7 +122,9 @@ fn spawn_tiny_asteroids(
             };
 
             let (random_type, _) = asteroids.0.iter().choose(&mut rand::rng()).expect("No tiny asteroids :(");
-            entity_cmd.insert((
+            commands.spawn((
+                Asteroid::new(temperature),
+                spawn_loc,
                 structure,
                 NeverSave,
                 SmallAsteroidNeedsCreated { id: random_type },

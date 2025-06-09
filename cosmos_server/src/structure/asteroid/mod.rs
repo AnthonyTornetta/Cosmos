@@ -6,7 +6,6 @@ mod dynamic;
 pub mod generator;
 pub mod generators;
 mod persistence;
-pub mod server_asteroid_builder;
 mod sync;
 
 pub(super) fn register(app: &mut App) {

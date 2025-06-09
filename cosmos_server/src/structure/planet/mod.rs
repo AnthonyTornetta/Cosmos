@@ -7,7 +7,6 @@ pub mod chunk;
 pub mod generation;
 pub mod persistence;
 mod planet_rotation;
-pub mod server_planet_builder;
 mod sync;
 
 pub(super) fn register(app: &mut App) {

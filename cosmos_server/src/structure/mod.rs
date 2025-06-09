@@ -6,7 +6,6 @@ pub mod asteroid;
 pub mod block_health;
 pub mod persistence;
 pub mod planet;
-pub mod server_structure_builder;
 pub mod shared;
 pub mod ship;
 pub mod station;

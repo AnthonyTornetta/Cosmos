@@ -22,7 +22,7 @@ use cosmos_core::{
     },
 };
 
-pub mod client_ship_builder;
+mod client_ship_builder;
 pub mod create_ship;
 mod pilot;
 pub mod ship_movement;

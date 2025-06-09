@@ -8,7 +8,7 @@ use crate::{
     init::init_world::ServerSeed,
     rng::get_rng_for_sector,
     settings::ServerSettings,
-    structure::planet::{biosphere::BiosphereTemperatureRegistry, server_planet_builder::ServerPlanetBuilder},
+    structure::planet::biosphere::BiosphereTemperatureRegistry,
     universe::{SystemItem, SystemItemPlanet, UniverseSystems},
 };
 use bevy::{
@@ -30,7 +30,7 @@ use cosmos_core::{
         Structure,
         coordinates::CoordinateType,
         dynamic_structure::DynamicStructure,
-        planet::{PLANET_LOAD_RADIUS, Planet, biosphere::Biosphere, planet_builder::TPlanetBuilder},
+        planet::{PLANET_LOAD_RADIUS, Planet, biosphere::Biosphere},
     },
 };
 use rand::Rng;
@@ -71,14 +71,11 @@ fn monitor_planets_to_spawn(q_players: Query<&Location, With<Player>>, mut comma
 
             let mut entity_cmd = commands.spawn_empty();
 
-            let mut structure = Structure::Dynamic(DynamicStructure::new(size));
-
-            let builder = ServerPlanetBuilder::default();
+            let structure = Structure::Dynamic(DynamicStructure::new(size));
 
             info!("Creating planet entity @ {loc}");
-            builder.insert_planet(&mut entity_cmd, loc, &mut structure, planet.planet);
 
-            entity_cmd.insert((structure, Transform::from_rotation(planet_rot)));
+            entity_cmd.insert((structure, planet.planet, loc, Transform::from_rotation(planet_rot)));
 
             generated_planets.insert(planet_loc.sector());
         }

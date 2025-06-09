@@ -15,7 +15,7 @@ use cosmos_core::{
         coordinates::{ChunkCoordinate, CoordinateType},
         dynamic_structure::DynamicStructure,
         loading::StructureLoadingSet,
-        planet::{Planet, planet_builder::TPlanetBuilder},
+        planet::Planet,
     },
 };
 use serde::{Deserialize, Serialize};
@@ -26,10 +26,7 @@ use crate::persistence::{
     saving::{NeedsSaved, SAVING_SCHEDULE, SavingSystemSet},
 };
 
-use super::{
-    biosphere::biosphere_generation::BiosphereGenerationSet, generation::planet_generator::ChunkNeedsGenerated,
-    server_planet_builder::ServerPlanetBuilder,
-};
+use super::{biosphere::biosphere_generation::BiosphereGenerationSet, generation::planet_generator::ChunkNeedsGenerated};
 
 #[derive(Debug, Serialize, Deserialize)]
 struct PlanetSaveData {
@@ -55,7 +52,7 @@ fn on_save_structure(mut query: Query<(&mut SerializedData, &Structure, &Planet)
 }
 
 fn generate_planet(entity: Entity, s_data: &SerializedData, planet_save_data: PlanetSaveData, commands: &mut Commands) {
-    let mut structure = Structure::Dynamic(DynamicStructure::new(planet_save_data.dimensions));
+    let structure = Structure::Dynamic(DynamicStructure::new(planet_save_data.dimensions));
 
     let mut entity_cmd = commands.entity(entity);
 
@@ -63,11 +60,7 @@ fn generate_planet(entity: Entity, s_data: &SerializedData, planet_save_data: Pl
         .deserialize_data("cosmos:location")
         .expect("Every planet should have a location when saved!");
 
-    let builder = ServerPlanetBuilder::default();
-
-    builder.insert_planet(&mut entity_cmd, location, &mut structure, Planet::new(planet_save_data.temperature));
-
-    entity_cmd.insert(structure);
+    entity_cmd.insert((structure, Planet::new(planet_save_data.temperature), location));
 }
 
 fn on_load_planet_structure(query: Query<(Entity, &SerializedData), With<NeedsLoaded>>, mut commands: Commands) {
