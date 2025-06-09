@@ -30,6 +30,12 @@ pub enum SyncReason {
 /// Contains the list of entities this component should be synced to
 pub struct SyncTo(HashSet<ClientId>);
 
+impl SyncTo {
+    pub fn should_sync_to(&self, client_id: ClientId) -> bool {
+        self.0.contains(&client_id)
+    }
+}
+
 enum MegaBool {
     True,
     False,
