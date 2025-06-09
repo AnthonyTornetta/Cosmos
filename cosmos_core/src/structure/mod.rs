@@ -40,7 +40,6 @@ pub mod shields;
 pub mod ship;
 pub mod station;
 pub mod structure_block;
-pub mod structure_builder;
 pub mod structure_iterator;
 pub mod systems;
 
@@ -101,13 +100,25 @@ pub enum ChunkState {
     Loaded,
 }
 
-#[derive(Serialize, Deserialize, Component, Reflect, Debug)]
+#[derive(Serialize, Deserialize, Reflect, Debug)]
 /// A structure represents many blocks, grouped into chunks.
 pub enum Structure {
     /// This structure does not have all its chunks loaded at once, such as planets
     Dynamic(DynamicStructure),
     /// This structure has all the chunks loaded at once, like ships and asteroids
     Full(FullStructure),
+}
+
+impl Component for Structure {
+    const STORAGE_TYPE: bevy::ecs::component::StorageType = bevy::ecs::component::StorageType::Table;
+
+    fn register_component_hooks(hooks: &mut bevy::ecs::component::ComponentHooks) {
+        hooks.on_add(|mut world, ent, c| {
+            let mut s = world.get_mut::<Structure>(ent).expect("This component has just been added");
+
+            s.set_entity(ent);
+        });
+    }
 }
 
 #[derive(Clone, Copy, Debug)]
