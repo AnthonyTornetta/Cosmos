@@ -40,7 +40,8 @@ use crate::{
             show_cursor::no_open_menus,
             window::{GuiWindow, UiWindowSystemSet},
         },
-        item_renderer::{CustomHoverTooltip, RenderItem},
+        font::DefaultFont,
+        item_renderer::{CustomHoverTooltip, NoHoverTooltip, RenderItem},
     },
 };
 
@@ -695,10 +696,7 @@ struct FollowCursor;
 
 fn pickup_item_into_cursor(
     displayed_item_clicked: &DisplayedItemFromInventory,
-    commands: &mut Commands,
     quantity_multiplier: f32,
-    inventory: &mut Inventory,
-    asset_server: &AssetServer,
     client: &mut RenetClient,
     server_inventory_holder: InventoryIdentifier,
 ) {
@@ -729,7 +727,6 @@ fn handle_interactions(
     mut client: ResMut<RenetClient>,
     mapping: Res<NetworkMapping>,
     q_block_data: Query<&BlockData>,
-    asset_server: Res<AssetServer>,
     open_inventories: Query<Entity, With<InventoryNeedsDisplayed>>,
 ) {
     let lmb = input_handler.mouse_inputs().just_pressed(MouseButton::Left);
@@ -870,18 +867,10 @@ fn handle_interactions(
             //  inventory.set_itemstack_at(clicked_slot, is_here, &mut commands);
             //}
         }
-    } else if let Ok(mut inventory) = inventory_query.get_mut(displayed_item_clicked.inventory_holder) {
+    } else if inventory_query.contains(displayed_item_clicked.inventory_holder) {
         let quantity_multiplier = if lmb { 1.0 } else { 0.5 };
 
-        pickup_item_into_cursor(
-            displayed_item_clicked,
-            &mut commands,
-            quantity_multiplier,
-            &mut inventory,
-            &asset_server,
-            &mut client,
-            server_inventory_holder,
-        );
+        pickup_item_into_cursor(displayed_item_clicked, quantity_multiplier, &mut client, server_inventory_holder);
     }
 }
 
@@ -908,14 +897,16 @@ fn create_item_slot_data_raw(item_id: u16, ecmds: &mut EntityCommands, text_styl
             RenderItem { item_id },
         ))
         .with_children(|p| {
-            p.spawn((
-                Node {
-                    margin: UiRect::new(Val::Px(0.0), Val::Px(5.0), Val::Px(0.0), Val::Px(5.0)),
-                    ..default()
-                },
-                Text::new(format!("{quantity}")),
-                text_style,
-            ));
+            if quantity != 1 {
+                p.spawn((
+                    Node {
+                        margin: UiRect::new(Val::Px(0.0), Val::Px(5.0), Val::Px(0.0), Val::Px(5.0)),
+                        ..default()
+                    },
+                    Text::new(format!("{quantity}")),
+                    text_style,
+                ));
+            }
         });
 }
 
@@ -978,9 +969,80 @@ fn on_click_creative_item(
             }
         }
 
-        info!("Get!");
         nevw_set_item.send(GrabCreativeItemEvent { quantity, item_id });
     }
+}
+
+fn draw_held_item(
+    q_changed_held_item: Query<&Parent, (Changed<Inventory>, With<HeldItemStack>)>,
+    q_opened_inventories: Query<(), With<RenderedInventory>>,
+    q_local_player: Query<(Entity, &Children), With<LocalPlayer>>,
+    q_held_item: Query<&Inventory, With<HeldItemStack>>,
+    mut commands: Commands,
+    q_follow_cursor: Query<Entity, With<FollowCursor>>,
+    default_font: Res<DefaultFont>,
+) {
+    if q_opened_inventories.is_empty() {
+        if let Ok(ent) = q_follow_cursor.get_single() {
+            commands.entity(ent).insert(NeedsDespawned);
+        }
+        return;
+    }
+
+    let Ok((local_ent, children)) = q_local_player.get_single() else {
+        return;
+    };
+
+    if !q_changed_held_item.iter().any(|p| p.get() == local_ent) && !q_follow_cursor.is_empty() {
+        return;
+    }
+
+    let Some(held_inv) = HeldItemStack::get_held_is_inventory_from_children(children, &q_held_item) else {
+        return;
+    };
+
+    let Some(is) = held_inv.itemstack_at(0) else {
+        if let Ok(ent) = q_follow_cursor.get_single() {
+            commands.entity(ent).insert(NeedsDespawned);
+        }
+        return;
+    };
+
+    let mut ecmds = if let Ok(ent) = q_follow_cursor.get_single() {
+        let mut ecmds = commands.entity(ent);
+        ecmds.despawn_descendants();
+        ecmds
+    } else {
+        commands.spawn((
+            Node {
+                width: Val::Px(64.0),
+                height: Val::Px(64.0),
+                position_type: PositionType::Absolute,
+                ..Default::default()
+            },
+            FollowCursor,
+            NoHoverTooltip,
+            Name::new("Held Item Render"),
+        ))
+    };
+
+    let text_style = TextFont {
+        font_size: 22.0,
+        font: default_font.0.clone_weak(),
+        ..Default::default()
+    };
+
+    create_item_stack_slot_data(is, &mut ecmds, text_style, is.quantity());
+
+    // if let Ok((ent, mut render_item)) = q_follow_cursor.get_single_mut() {
+    //     if render_item.item_id != is.item_id() {
+    //         render_item.item_id = is.item_id();
+    //     }
+    //     if render_item.quantity != is.quantity() {
+    //         render_item.quantity = is.quantity();
+    //     }
+    // } else {
+    // }
 }
 
 pub(super) fn register(app: &mut App) {
@@ -1012,6 +1074,7 @@ pub(super) fn register(app: &mut App) {
                 close_button_system,
                 on_click_creative_category,
                 on_click_creative_item,
+                draw_held_item,
             )
                 .chain()
                 .in_set(InventorySet::ToggleInventory),

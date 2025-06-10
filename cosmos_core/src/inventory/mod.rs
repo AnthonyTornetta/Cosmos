@@ -15,7 +15,7 @@ use bevy::{
     },
     hierarchy::{BuildChildren, DespawnRecursiveExt},
     log::error,
-    prelude::{Added, App, Children, Component, Deref, DerefMut, IntoSystemConfigs, Mut, Or, Ref, With, Without},
+    prelude::{Added, App, Children, Component, IntoSystemConfigs, Mut, Or, With, Without},
     reflect::Reflect,
     state::state::States,
 };
