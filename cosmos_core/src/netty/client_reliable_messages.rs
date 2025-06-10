@@ -80,15 +80,6 @@ pub enum ClientReliableMessages {
         /// The new render distance
         render_distance: RenderDistance,
     },
-    /// Requests information about an entity
-    ///
-    /// This will be processed by the `RequestedEntityEvent` present on the server.
-    ///
-    /// This does NOT guarentee the entity will be sent - only requests it
-    RequestEntityData {
-        /// The entity they want to know about
-        entity: Entity,
-    },
     /// Sent when a player no longer is a part of a ship
     LeaveShip,
     /// Sent whenever a client wants to exit build mode

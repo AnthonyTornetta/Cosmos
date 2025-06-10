@@ -232,11 +232,6 @@ pub(crate) fn client_sync_players(
                     if let Some(entity) = network_mapping.client_from_server(server_entity) {
                         if q_needs_loaded.contains(entity) {
                             commands.entity(entity).remove::<NeedsLoadedFromServer>();
-
-                            client.send_message(
-                                NettyChannelClient::Reliable,
-                                cosmos_encoder::serialize(&ClientReliableMessages::RequestEntityData { entity: *server_entity }),
-                            );
                         } else if let Ok((location, transform, velocity, net_tick, lerp_towards)) = query_body.get_mut(entity) {
                             if let Some(mut net_tick) = net_tick {
                                 if net_tick.0 >= time_stamp {
@@ -370,12 +365,6 @@ pub(crate) fn client_sync_players(
                 network_mapping.add_mapping(client_entity, server_entity);
 
                 let camera_offset = Vec3::new(0.0, 0.75, 0.0);
-
-                // Requests all components needed for the player
-                client.send_message(
-                    NettyChannelClient::Reliable,
-                    cosmos_encoder::serialize(&ClientReliableMessages::RequestEntityData { entity: server_entity }),
-                );
 
                 if client_id == id {
                     entity_cmds
@@ -515,13 +504,6 @@ pub(crate) fn client_sync_players(
                                         "Blocks didn't match up for block data! This may cause a block to have missing data. Block data block id: {block_id}; block here id: {here_id}."
                                     );
                                 }
-                            } else {
-                                info!("New block data -- asking for {block_data_entity}.");
-
-                                client.send_message(
-                                    NettyChannelClient::Reliable,
-                                    cosmos_encoder::serialize(&ClientReliableMessages::RequestEntityData { entity: block_data_entity }),
-                                );
                             }
                         }
 

@@ -11,7 +11,6 @@ pub mod camera;
 pub mod chat;
 pub mod coms;
 pub mod crafting;
-pub mod creative;
 pub mod debug;
 pub mod economy;
 pub mod ecs;
@@ -187,7 +186,6 @@ fn main() {
     crafting::register(&mut app);
     coms::register(&mut app);
     quest::register(&mut app);
-    creative::register(&mut app);
 
     if cfg!(feature = "print-schedule") {
         println!(
