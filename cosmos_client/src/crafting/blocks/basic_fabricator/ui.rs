@@ -157,6 +157,7 @@ fn populate_menu(
                     flex_direction: FlexDirection::Column,
                     ..Default::default()
                 },
+                ..Default::default()
             },
         ));
 

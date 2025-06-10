@@ -1,6 +1,8 @@
 //! A collection of generic UI elements that can be used
 
-use bevy::{app::App, ecs::component::Component};
+use bevy::{a11y::Focus, prelude::*};
+
+use super::UiSystemSet;
 
 pub mod button;
 pub mod scollable_container;
@@ -13,6 +15,23 @@ pub mod window;
 /// If this is on an item with user input, user input will be ignored
 pub struct Disabled;
 
+fn clear_focus(
+    mut focused: ResMut<Focus>,
+    q_interaction: Query<(Entity, &Interaction), Without<Disabled>>,
+    mouse_inputs: Res<ButtonInput<MouseButton>>,
+) {
+    if mouse_inputs.just_pressed(MouseButton::Left) {
+        if let Some((ent, _)) = q_interaction
+            .iter()
+            .find(|(_, interaction)| !matches!(interaction, Interaction::None))
+        {
+            focused.0 = Some(ent);
+        } else {
+            focused.0 = None;
+        }
+    }
+}
+
 pub(super) fn register(app: &mut App) {
     text_input::register(app);
     button::register(app);
@@ -20,4 +39,6 @@ pub(super) fn register(app: &mut App) {
     scollable_container::register(app);
     window::register(app);
     show_cursor::register(app);
+
+    app.add_systems(Update, clear_focus.in_set(UiSystemSet::PreDoUi));
 }

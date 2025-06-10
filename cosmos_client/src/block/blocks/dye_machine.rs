@@ -65,6 +65,7 @@ fn open_dye_ui(
                     flex_direction: FlexDirection::Column,
                     ..Default::default()
                 },
+                ..Default::default()
             },
             Node {
                 right: Val::Px(200.0),

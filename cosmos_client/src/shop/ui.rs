@@ -307,6 +307,7 @@ fn render_shop_ui(
                     flex_direction: FlexDirection::Column,
                     ..Default::default()
                 },
+                ..Default::default()
             },
         ))
         .with_children(|p| {

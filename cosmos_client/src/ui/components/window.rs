@@ -36,7 +36,7 @@ use super::{
     show_cursor::{ShowCursor, any_open_menus},
 };
 
-#[derive(Debug, Component, Default)]
+#[derive(Debug, Component)]
 #[require(Node, ShowCursor)]
 /// A wrapper around ui components that will make them movable and have a title bar with a close button.
 pub struct GuiWindow {
@@ -44,6 +44,18 @@ pub struct GuiWindow {
     pub title: String,
     /// Styles that effect the wrapper around the children of the window node
     pub body_styles: Node,
+    /// The window's bacground color
+    pub window_background: BackgroundColor,
+}
+
+impl Default for GuiWindow {
+    fn default() -> Self {
+        Self {
+            title: Default::default(),
+            body_styles: Default::default(),
+            window_background: BackgroundColor(Srgba::hex("3D3D3D").unwrap().into()),
+        }
+    }
 }
 
 impl GuiWindow {
@@ -80,6 +92,7 @@ fn add_window(
     mut commands: Commands,
     mut q_added_window: Query<(Entity, &GuiWindow, Option<&Children>, &mut Node), Added<GuiWindow>>,
     font: Res<DefaultFont>,
+    q_title_bar: Query<(), With<GuiWindowTitleBar>>,
     window_assets: Res<WindowAssets>,
 ) {
     for (ent, window, children, mut style) in &mut q_added_window {
@@ -91,72 +104,83 @@ fn add_window(
 
         let close_button = CloseButton { window_entity: ent };
 
+        let titlebar_children = children
+            .map(|x| x.iter().filter(|x| q_title_bar.contains(**x)).collect::<Vec<_>>())
+            .unwrap_or_default();
+
         commands.entity(ent).with_children(|parent| {
             // Title bar
-            parent
-                .spawn((
-                    Name::new("Title Bar"),
-                    TitleBar { window_entity: ent },
-                    Interaction::None,
-                    Node {
-                        display: Display::Flex,
-                        flex_direction: FlexDirection::Row,
-                        justify_content: JustifyContent::SpaceBetween,
-                        align_items: AlignItems::Center,
-                        width: Val::Percent(100.0),
-                        height: Val::Px(60.0),
-                        padding: UiRect::new(Val::Px(20.0), Val::Px(20.0), Val::Px(0.0), Val::Px(0.0)),
 
-                        ..default()
+            let mut title_bar = parent.spawn((
+                Name::new("Title Bar"),
+                TitleBar { window_entity: ent },
+                Interaction::None,
+                Node {
+                    display: Display::Flex,
+                    flex_direction: FlexDirection::Row,
+                    justify_content: JustifyContent::SpaceBetween,
+                    align_items: AlignItems::Center,
+                    width: Val::Percent(100.0),
+                    height: Val::Px(60.0),
+                    padding: UiRect::new(Val::Px(20.0), Val::Px(20.0), Val::Px(0.0), Val::Px(0.0)),
+
+                    ..default()
+                },
+                BackgroundColor(css::WHITE.into()),
+                ImageNode::new(window_assets.title_bar_image.clone_weak()),
+            ));
+
+            title_bar.with_children(|parent| {
+                parent.spawn((
+                    Name::new("Title Text"),
+                    Text::new(&window.title),
+                    TextFont {
+                        font_size: 24.0,
+                        font: font.clone(),
+                        ..Default::default()
                     },
-                    BackgroundColor(css::WHITE.into()),
-                    ImageNode::new(window_assets.title_bar_image.clone_weak()),
-                ))
-                .with_children(|parent| {
-                    parent.spawn((
-                        Name::new("Title Text"),
-                        Text::new(&window.title),
-                        TextFont {
-                            font_size: 24.0,
-                            font: font.clone(),
-                            ..Default::default()
-                        },
-                        TextLayout {
-                            justify: JustifyText::Center,
-                            ..Default::default()
-                        },
-                    ));
+                    TextLayout {
+                        justify: JustifyText::Center,
+                        ..Default::default()
+                    },
+                ));
+            });
 
-                    parent.spawn((
-                        Name::new("Window Close Button"),
-                        close_button,
-                        BackgroundColor(css::WHITE.into()),
-                        Node {
-                            width: Val::Px(50.0),
-                            height: Val::Px(50.0),
-                            ..Default::default()
-                        },
-                        CosmosButton::<CloseUiEvent> {
-                            image: Some(ImageNode::new(window_assets.close_btn_image.clone_weak())),
-                            text: Some((
-                                "X".into(),
-                                TextFont {
-                                    font_size: 24.0,
-                                    font: font.clone(),
-                                    ..Default::default()
-                                },
-                                Default::default(),
-                            )),
-                            ..Default::default()
-                        },
-                    ));
-                });
+            for child in titlebar_children {
+                title_bar.add_child(*child);
+            }
+
+            title_bar.with_children(|parent| {
+                parent.spawn((
+                    Name::new("Window Close Button"),
+                    close_button,
+                    BackgroundColor(css::WHITE.into()),
+                    Node {
+                        width: Val::Px(50.0),
+                        height: Val::Px(50.0),
+                        ..Default::default()
+                    },
+                    CosmosButton::<CloseUiEvent> {
+                        image: Some(ImageNode::new(window_assets.close_btn_image.clone_weak())),
+                        text: Some((
+                            "X".into(),
+                            TextFont {
+                                font_size: 24.0,
+                                font: font.clone(),
+                                ..Default::default()
+                            },
+                            Default::default(),
+                        )),
+                        ..Default::default()
+                    },
+                ));
+            });
 
             window_body = Some(
                 parent
                     .spawn((
                         Name::new("Window Body"),
-                        BackgroundColor(Srgba::hex("3D3D3D").unwrap().into()),
+                        window.window_background,
                         Node {
                             flex_grow: 1.0,
                             ..window.body_styles.clone()
@@ -169,11 +193,18 @@ fn add_window(
         if let Some(children) = children {
             let window_body = window_body.expect("Set above");
             for &child in children {
-                commands.entity(child).set_parent(window_body);
+                if !q_title_bar.contains(child) {
+                    commands.entity(child).set_parent(window_body);
+                }
             }
         }
     }
 }
+
+#[derive(Component, Debug)]
+/// If something is the child of a [`GuiWindow`] with this component, this will be moved to be a child of
+/// the title bar created by the [`GuiWindow`].
+pub struct GuiWindowTitleBar;
 
 fn move_window(
     q_window: Query<&Window, With<PrimaryWindow>>,

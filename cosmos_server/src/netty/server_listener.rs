@@ -8,6 +8,7 @@ use bevy_rapier3d::prelude::Velocity;
 use bevy_renet::renet::{ClientId, RenetServer};
 use cosmos_core::block::block_events::{BlockBreakEvent, BlockInteractEvent, BlockPlaceEvent, BlockPlaceEventData};
 use cosmos_core::ecs::mut_events::MutEvent;
+use cosmos_core::entities::player::creative::Creative;
 use cosmos_core::inventory::Inventory;
 use cosmos_core::inventory::itemstack::ItemStackSystemSet;
 use cosmos_core::item::Item;
@@ -70,6 +71,7 @@ fn server_listen_messages(
         EventWriter<RequestChunkEvent>,
     ),
     mut q_inventory: Query<&mut Inventory>,
+    q_creative: Query<(), With<Creative>>,
     items: Res<Registry<Item>>,
     (mut ship_movement_event_writer, mut pilot_change_event_writer): (EventWriter<ShipSetMovementEvent>, EventWriter<ChangePilotEvent>),
     pilot_query: Query<&Pilot>,
@@ -204,20 +206,22 @@ fn server_listen_messages(
                         continue;
                     };
 
-                    let Ok(mut inventory) = q_inventory.get_mut(client) else {
-                        info!("No inventory ;(");
-                        continue;
-                    };
+                    if !q_creative.contains(client) {
+                        let Ok(mut inventory) = q_inventory.get_mut(client) else {
+                            info!("No inventory ;(");
+                            continue;
+                        };
 
-                    let Some(ship_core) = items.from_id("cosmos:ship_core") else {
-                        info!("Does not have ship core registered");
-                        continue;
-                    };
+                        let Some(ship_core) = items.from_id("cosmos:ship_core") else {
+                            info!("Does not have ship core registered");
+                            continue;
+                        };
 
-                    let (remaining_didnt_take, _) = inventory.take_and_remove_item(ship_core, 1, &mut commands);
-                    if remaining_didnt_take != 0 {
-                        info!("Does not have ship core");
-                        continue;
+                        let (remaining_didnt_take, _) = inventory.take_and_remove_item(ship_core, 1, &mut commands);
+                        if remaining_didnt_take != 0 {
+                            info!("Does not have ship core");
+                            continue;
+                        }
                     }
 
                     if let Ok((g_trans, _, location, looking, _)) = q_player.get(client) {
@@ -238,20 +242,22 @@ fn server_listen_messages(
                         continue;
                     };
 
-                    let Ok(mut inventory) = q_inventory.get_mut(client) else {
-                        info!("No inventory ;(");
-                        continue;
-                    };
+                    if !q_creative.contains(client) {
+                        let Ok(mut inventory) = q_inventory.get_mut(client) else {
+                            info!("No inventory ;(");
+                            continue;
+                        };
 
-                    let Some(station_core) = items.from_id("cosmos:station_core") else {
-                        info!("Does not have station core registered");
-                        continue;
-                    };
+                        let Some(station_core) = items.from_id("cosmos:station_core") else {
+                            info!("Does not have station core registered");
+                            continue;
+                        };
 
-                    let (remaining_didnt_take, _) = inventory.take_and_remove_item(station_core, 1, &mut commands);
-                    if remaining_didnt_take != 0 {
-                        info!("Does not have station core");
-                        continue;
+                        let (remaining_didnt_take, _) = inventory.take_and_remove_item(station_core, 1, &mut commands);
+                        if remaining_didnt_take != 0 {
+                            info!("Does not have station core");
+                            continue;
+                        }
                     }
 
                     if let Ok((g_trans, _, location, looking, _)) = q_player.get(client) {

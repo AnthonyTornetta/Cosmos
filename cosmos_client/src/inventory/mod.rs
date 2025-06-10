@@ -2,7 +2,7 @@
 //!
 //! Sphagetti town
 
-use bevy::{color::palettes::css, ecs::system::EntityCommands, prelude::*, window::PrimaryWindow};
+use bevy::{a11y::Focus, color::palettes::css, ecs::system::EntityCommands, prelude::*, window::PrimaryWindow};
 use bevy_renet::renet::RenetClient;
 use cosmos_core::{
     block::{
@@ -32,13 +32,15 @@ use cosmos_core::{
 
 use crate::{
     input::inputs::{CosmosInputs, InputChecker, InputHandler},
+    lang::Lang,
     ui::{
         OpenMenu, UiSystemSet,
         components::{
             button::{ButtonEvent, CosmosButton, register_button},
             scollable_container::ScrollBox,
             show_cursor::no_open_menus,
-            window::{GuiWindow, UiWindowSystemSet},
+            text_input::{InputType, TextInput},
+            window::{GuiWindow, GuiWindowTitleBar, UiWindowSystemSet},
         },
         font::DefaultFont,
         item_renderer::{CustomHoverTooltip, NoHoverTooltip, RenderItem},
@@ -79,8 +81,10 @@ fn toggle_inventory(
     open_inventories: Query<Entity, With<InventoryNeedsDisplayed>>,
     open_menus: Query<(), With<OpenMenu>>,
     inputs: InputChecker,
+    focused: Res<Focus>,
+    q_input: Query<(), With<TextInput>>,
 ) {
-    if inputs.check_just_pressed(CosmosInputs::ToggleInventory) {
+    if inputs.check_just_pressed(CosmosInputs::ToggleInventory) && !focused.map(|x| q_input.contains(x)).unwrap_or(false) {
         if !open_inventories.is_empty() {
             open_inventories.iter().for_each(|ent| {
                 commands.entity(ent).remove::<InventoryNeedsDisplayed>();
@@ -182,8 +186,13 @@ struct InventoryRenderedItem;
 
 #[derive(Debug, Event)]
 struct ItemCategoryClickedEvent(Entity);
-#[derive(Debug, Component)]
-struct ItemCategoryMarker(Option<u16>);
+
+#[derive(Debug, Component, PartialEq, Eq)]
+enum ItemCategoryMarker {
+    Category(u16),
+    Inventory,
+    Search,
+}
 
 impl ButtonEvent for ItemCategoryClickedEvent {
     fn create_event(btn_entity: Entity) -> Self {
@@ -192,7 +201,7 @@ impl ButtonEvent for ItemCategoryClickedEvent {
 }
 
 #[derive(Component)]
-struct SelectedTab(Option<u16>);
+struct SelectedTab(ItemCategoryMarker);
 
 #[derive(Component)]
 struct VisibileHeight(Val);
@@ -216,6 +225,7 @@ fn toggle_inventory_rendering(
     mut client: ResMut<RenetClient>,
     mut removed_components: RemovedComponents<InventoryNeedsDisplayed>,
     categories: Res<Registry<ItemCategory>>,
+    category_names: Res<Lang<ItemCategory>>,
     items: Res<Registry<Item>>,
     q_held_item: Query<&Inventory, With<HeldItemStack>>,
 ) {
@@ -283,7 +293,7 @@ fn toggle_inventory_rendering(
             (Val::Px(100.0), Val::Auto)
         };
 
-        let width = Val::Px(n_slots_per_row as f32 * slot_size + inventory_border_size * 2.0 + scrollbar_width);
+        let width = n_slots_per_row as f32 * slot_size + inventory_border_size * 2.0 + scrollbar_width;
 
         let priority_slots = inventory.priority_slots();
 
@@ -307,13 +317,14 @@ fn toggle_inventory_rendering(
                         flex_direction: FlexDirection::Column,
                         ..Default::default()
                     },
+                    window_background: BackgroundColor(border_color.0.into()),
                 },
                 Node {
                     position_type: PositionType::Absolute,
                     right,
                     left,
                     top: Val::Px(100.0),
-                    width,
+                    width: Val::Px(width),
                     border: UiRect::all(Val::Px(inventory_border_size)),
                     ..default()
                 },
@@ -322,6 +333,59 @@ fn toggle_inventory_rendering(
                 if is_creative {
                     let mut sorted_categories = categories.iter().collect::<Vec<_>>();
                     sorted_categories.sort_by_key(|x| x.unlocalized_name());
+
+                    p.spawn((
+                        Name::new("Search Bar"),
+                        GuiWindowTitleBar,
+                        BackgroundColor(border_color.0.into()),
+                        BorderColor(css::GREY.into()),
+                        Node {
+                            flex_grow: 1.0,
+                            padding: UiRect::all(Val::Px(5.0)),
+                            border: UiRect::all(Val::Px(1.0)),
+                            margin: UiRect::horizontal(Val::Px(10.0)),
+                            ..Default::default()
+                        },
+                        TextInput {
+                            input_type: InputType::Text { max_length: Some(20) },
+                            ..Default::default()
+                        },
+                        TextFont {
+                            font: font.clone_weak(),
+                            font_size: 16.0,
+                            ..Default::default()
+                        },
+                    ));
+
+                    p.spawn((
+                        Name::new("Creative Tabs Right"),
+                        Node {
+                            position_type: PositionType::Absolute,
+                            left: Val::Px(width - inventory_border_size * 2.0),
+                            width: Val::Px(64.0),
+                            flex_direction: FlexDirection::Column,
+                            border: UiRect::new(Val::Px(0.0), Val::Px(2.0), Val::Px(2.0), Val::Px(2.0)),
+                            ..Default::default()
+                        },
+                        BorderColor(css::BLACK.into()),
+                    ))
+                    .with_children(|p| {
+                        let storage_id = items.from_id("cosmos:shop").map(|x| x.id()).unwrap_or_default();
+
+                        p.spawn((
+                            RenderItem { item_id: storage_id },
+                            CustomHoverTooltip::new("Search"),
+                            Name::new("Search Button"),
+                            Node {
+                                width: Val::Px(64.0),
+                                height: Val::Px(64.0),
+                                ..Default::default()
+                            },
+                            ItemCategoryMarker::Search,
+                            CosmosButton::<ItemCategoryClickedEvent> { ..Default::default() },
+                            BackgroundColor(Srgba::hex("2D2D2D").unwrap().into()),
+                        ));
+                    });
 
                     p.spawn((
                         Name::new("Creative Tabs"),
@@ -348,14 +412,14 @@ fn toggle_inventory_rendering(
                                 // margin: UiRect::bottom(Val::Px(5.0)),
                                 ..Default::default()
                             },
-                            ItemCategoryMarker(None),
+                            ItemCategoryMarker::Inventory,
                             CosmosButton::<ItemCategoryClickedEvent> { ..Default::default() },
                             BackgroundColor(Srgba::hex("2D2D2D").unwrap().into()),
                         ));
 
                         for cat in sorted_categories.iter() {
                             let category_symbol = items.from_id(cat.item_icon_id()).map(|x| x.id()).unwrap_or_default();
-                            let name = cat.unlocalized_name();
+                            let name = category_names.get_name_or_unlocalized(cat);
 
                             p.spawn((
                                 RenderItem { item_id: category_symbol },
@@ -366,11 +430,44 @@ fn toggle_inventory_rendering(
                                     height: Val::Px(64.0),
                                     ..Default::default()
                                 },
-                                ItemCategoryMarker(Some(cat.id())),
+                                ItemCategoryMarker::Category(cat.id()),
                                 CosmosButton::<ItemCategoryClickedEvent> { ..Default::default() },
                                 BackgroundColor(Srgba::hex("2D2D2D").unwrap().into()),
                             ));
                         }
+                    });
+
+                    p.spawn((
+                        Name::new("Rendered Item Category (Search)"),
+                        border_color,
+                        BackgroundColor(Srgba::hex("3D3D3D").unwrap().into()),
+                        ScrollBox::default(),
+                        VisibileHeight(Val::Px(non_hotbar_height)),
+                        Node {
+                            border: UiRect::horizontal(Val::Px(inventory_border_size)),
+                            height: Val::Px(0.0),
+                            ..default()
+                        },
+                        SelectedTab(ItemCategoryMarker::Search),
+                        Visibility::Hidden,
+                    ))
+                    .with_children(|p| {
+                        p.spawn(Node {
+                            display: Display::Grid,
+                            grid_column: GridPlacement::end(n_slots_per_row as i16),
+                            grid_template_columns: vec![RepeatedGridTrack::px(
+                                GridTrackRepetition::Count(n_slots_per_row as u16),
+                                slot_size,
+                            )],
+                            ..Default::default()
+                        })
+                        .with_children(|slots| {
+                            let mut sorted_items = items.iter().collect::<Vec<_>>();
+                            sorted_items.sort_by_key(|x| x.unlocalized_name());
+                            for item in sorted_items {
+                                create_creative_slot(slots, item, text_style.clone());
+                            }
+                        });
                     });
 
                     for cat in sorted_categories.iter() {
@@ -385,7 +482,7 @@ fn toggle_inventory_rendering(
                                 height: Val::Px(0.0),
                                 ..default()
                             },
-                            SelectedTab(Some(cat.id())),
+                            SelectedTab(ItemCategoryMarker::Category(cat.id())),
                             Visibility::Hidden,
                         ))
                         .with_children(|p| {
@@ -423,7 +520,7 @@ fn toggle_inventory_rendering(
                         height: Val::Px(non_hotbar_height),
                         ..default()
                     },
-                    SelectedTab(None),
+                    SelectedTab(ItemCategoryMarker::Inventory),
                     OpenTab,
                 ))
                 .with_children(|p| {
@@ -451,6 +548,8 @@ fn toggle_inventory_rendering(
                         border_color,
                         Node {
                             display: Display::Flex,
+                            // More compensating for the border
+                            margin: UiRect::left(Val::Px(inventory_border_size)),
                             border: UiRect::new(
                                 Val::Px(inventory_border_size),
                                 Val::Px(inventory_border_size),
@@ -633,7 +732,7 @@ fn on_click_creative_category(
             continue;
         };
         if let Ok((entity, mut node, mut vis, i_category)) = q_open_tab.get_single_mut() {
-            if i_category.0 == item_category.0 {
+            if i_category.0 == *item_category {
                 continue;
             }
             node.height = Val::Px(0.0);
@@ -641,7 +740,7 @@ fn on_click_creative_category(
             commands.entity(entity).remove::<OpenTab>();
         }
 
-        let Some((entity, mut node, mut vis, vis_height, _)) = q_unopen_tab.iter_mut().find(|x| x.4.0 == item_category.0) else {
+        let Some((entity, mut node, mut vis, vis_height, _)) = q_unopen_tab.iter_mut().find(|x| x.4.0 == *item_category) else {
             error!("Bad state");
             continue;
         };
@@ -942,7 +1041,6 @@ fn on_click_creative_item(
     mut q_held_item: Query<&mut Inventory, With<HeldItemStack>>,
 ) {
     for ev in evr_clicked_creative_item.read() {
-        info!("Got ev {ev:?}");
         let Ok(item_id) = q_creative_item.get(ev.0).map(|x| x.item_id) else {
             error!("Bad item - {ev:?}");
             continue;
@@ -961,7 +1059,6 @@ fn on_click_creative_item(
         if let Some(inv) = HeldItemStack::get_held_is_inventory_from_children_mut(lp_children, &mut q_held_item) {
             if let Some(held_is) = inv.itemstack_at(0) {
                 if held_is.item_id() != item_id {
-                    info!("Trash!");
                     nevw_trash_item.send_default();
                     continue;
                 }
