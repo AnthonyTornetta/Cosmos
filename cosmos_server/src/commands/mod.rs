@@ -1,19 +1,27 @@
 //! Responsible for the registration & creation elements of all server console commands
 
-use std::time::Duration;
+use bevy::prelude::{App, Entity, Event};
+use cosmos_core::registry::{create_registry, identifiable::Identifiable};
 
-use bevy::{
-    prelude::{App, Event, EventWriter, Events, ResMut, Resource, Update},
-    reflect::Reflect,
-    utils::HashMap,
-};
-use crossterm::event::{KeyCode, KeyEvent, KeyEventKind, KeyModifiers, poll, read};
 pub mod cosmos_command_handler;
+mod impls;
+pub mod prelude;
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+/// The entity or server that sent this command
+pub enum CommandSender {
+    /// The server sent this command
+    Server,
+    /// A player sent this command
+    Player(Entity),
+}
 
 #[derive(Debug, Event)]
 /// This event is sent when the server admin types a console command
 pub struct CosmosCommandSent {
-    /// The raw string the user typed
+    /// The sender of this command - None if the server sent it
+    pub sender: CommandSender,
+    /// The raw string the user typed (this includes the command name)
     pub text: String,
     /// The name of the command
     pub name: String,
@@ -25,31 +33,35 @@ impl CosmosCommandSent {
     /// Creates a new command event.
     ///
     /// * `text` The entire string of text the user typed
-    pub fn new(text: String) -> Self {
+    pub fn new(text: String, sender: CommandSender) -> Self {
         let split: Vec<&str> = text.split(' ').collect();
         let (name_arr, args_arr) = split.split_at(1);
 
-        let name = name_arr[0].to_lowercase();
+        let mut name = name_arr[0].to_lowercase();
+        if !name.contains(":") {
+            name = format!("cosmos:{name}");
+        }
         let args = args_arr
             .iter()
             .filter(|x| !x.is_empty())
             .map(|x| (*x).to_owned())
             .collect::<Vec<String>>();
 
-        Self { text, name, args }
+        Self { text, name, args, sender }
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 /// Information that describes how a command should be formatted by the user
-pub struct CosmosCommandInfo {
+pub struct ServerCommand {
+    id: u16,
     /// Name of the command.
     ///
-    /// Example: "despawn"
-    pub name: String,
+    /// Example: "cosmos:despawn"
+    pub unlocalized_name: String,
     /// How to use the command.
     ///
-    /// Example: "despawn \[entity_id\]"
+    /// Example: "\[entity_id\]"
     pub usage: String,
     /// What the command does.
     ///
@@ -57,85 +69,48 @@ pub struct CosmosCommandInfo {
     pub description: String,
 }
 
-#[derive(Resource, Debug, Default)]
-/// This resource contains all the registered commands
-///
-/// This should eventually be replaced by a `Registry<CosmosCommandInfo>`
-pub struct CosmosCommands {
-    commands: HashMap<String, CosmosCommandInfo>,
+impl Identifiable for ServerCommand {
+    fn id(&self) -> u16 {
+        self.id
+    }
+    fn set_numeric_id(&mut self, id: u16) {
+        self.id = id;
+    }
+    fn unlocalized_name(&self) -> &str {
+        &self.unlocalized_name
+    }
 }
 
-impl CosmosCommands {
-    /// Returns true if a command with that name exists
-    pub fn command_exists(&self, name: &str) -> bool {
-        self.commands.contains_key(name)
-    }
-
-    /// Gets the information for this command, if it exists
-    pub fn command_info(&self, name: &str) -> Option<&CosmosCommandInfo> {
-        self.commands.get(name)
-    }
-
-    /// Adds information for a command, based on the `command_info` argument's name
-    pub fn add_command_info(&mut self, command_info: CosmosCommandInfo) {
-        self.commands.insert(command_info.name.clone(), command_info);
-    }
-
-    /// Removes the command info for the given command
-    pub fn remove_command_info(&mut self, name: &str) {
-        self.commands.remove(name);
-    }
-
-    /// Gets all the commands
+impl ServerCommand {
+    /// Creates a new cosmos command with these identifiers
     ///
-    /// this is subject to removal in the future
-    pub fn commands(&self) -> &HashMap<String, CosmosCommandInfo> {
-        &self.commands
-    }
-}
-
-#[derive(Resource, Reflect, Debug, Default)]
-struct CurrentlyWriting(String);
-
-fn monitor_inputs(mut event_writer: EventWriter<CosmosCommandSent>, mut text: ResMut<CurrentlyWriting>) {
-    while let Ok(event_available) = poll(Duration::ZERO) {
-        if event_available {
-            let x = read();
-
-            if let Ok(crossterm::event::Event::Key(KeyEvent { code, modifiers, kind, .. })) = x {
-                if kind != KeyEventKind::Release {
-                    if let KeyCode::Char(mut c) = code {
-                        if modifiers.intersects(KeyModifiers::SHIFT) {
-                            c = c.to_uppercase().next().unwrap();
-                        }
-
-                        text.0.push(c);
-                    } else if KeyCode::Enter == code {
-                        text.0.push('\n');
-                    }
-                }
-            }
-        } else {
-            break;
+    /// * `unlocalized_name` Used to call the command (modid:command_name)
+    /// * `usage` Shows the usage - do not include the `unlocalized_name` in this
+    /// * `description` An overview of what the command does
+    pub fn new(unlocalized_name: impl Into<String>, usage: impl Into<String>, description: impl Into<String>) -> Self {
+        Self {
+            id: 0,
+            usage: usage.into(),
+            description: description.into(),
+            unlocalized_name: unlocalized_name.into(),
         }
     }
 
-    if !text.0.trim().is_empty() && text.0.ends_with('\n') {
-        let cmd = CosmosCommandSent::new(text.0[0..text.0.len() - 1].to_owned());
-        event_writer.send(cmd);
-
-        text.0.clear();
+    /// Returns how the command name should be displayed
+    pub fn display_name(&self) -> String {
+        if self.unlocalized_name().starts_with("cosmos:") {
+            self.unlocalized_name()["cosmos:".len()..].to_owned()
+        } else {
+            self.unlocalized_name().to_owned()
+        }
     }
 }
 
 pub(super) fn register(app: &mut App) {
-    app.insert_resource(CosmosCommands::default())
-        .insert_resource(CurrentlyWriting::default())
-        .add_systems(Update, monitor_inputs)
-        .add_event::<CosmosCommandSent>();
+    create_registry::<ServerCommand>(app, "cosmos:commands");
 
-    // This should all be rewritten, so make sure to remove this when that happens.
-    app.allow_ambiguous_resource::<Events<CosmosCommandSent>>();
+    app.add_event::<CosmosCommandSent>();
 
     cosmos_command_handler::register(app);
+    impls::register(app);
 }

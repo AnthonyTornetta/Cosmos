@@ -79,6 +79,7 @@ See [the issues page](https://github.com/AnthonyTornetta/Cosmos/issues) for the 
 
 - [x] Player Guide
 - [ ] Screenshots
+- [x] Better Creative Mode
 - [x] More asteroid types
 - [x] Balance and improve weapons
 - [x] Fuel for reactor
