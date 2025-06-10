@@ -199,7 +199,10 @@ fn generate_request_entity_events_for_new_sync_tos(
     }
 }
 
-fn on_needs_sync_data(mut commands: Commands, q_added_sync_data: Query<Entity, (Without<SyncTo>, With<Location>, Without<NoSendEntity>)>) {
+fn on_needs_sync_data(
+    mut commands: Commands,
+    q_added_sync_data: Query<Entity, (Without<SyncTo>, Or<(With<Location>, With<SyncReason>)>, Without<NoSendEntity>)>,
+) {
     for ent in q_added_sync_data.iter() {
         commands.entity(ent).insert((SyncTo::default(), PreviousSyncTo::default()));
     }
@@ -217,5 +220,6 @@ pub(super) fn register(app: &mut App) {
             .after(NetworkingSystemsSet::Between)
             .before(NetworkingSystemsSet::SyncComponents),
     )
-    .register_type::<SyncTo>();
+    .register_type::<SyncTo>()
+    .register_type::<SyncReason>();
 }

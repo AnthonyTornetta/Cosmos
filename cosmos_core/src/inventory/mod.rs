@@ -5,6 +5,8 @@
 use std::ops::Range;
 
 use bevy::{
+    app::Update,
+    core::Name,
     ecs::{
         bundle::Bundle,
         entity::Entity,
@@ -13,7 +15,7 @@ use bevy::{
     },
     hierarchy::{BuildChildren, DespawnRecursiveExt},
     log::error,
-    prelude::{App, Children, Component, Deref, DerefMut, Mut, Ref, With},
+    prelude::{Added, App, Children, Component, Deref, DerefMut, IntoSystemConfigs, Mut, Or, Ref, With, Without},
     reflect::Reflect,
     state::state::States,
 };
@@ -21,7 +23,10 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     item::Item,
-    netty::sync::{IdentifiableComponent, SyncableComponent, sync_component},
+    netty::{
+        sync::{IdentifiableComponent, SyncableComponent, sync_component},
+        system_sets::NetworkingSystemsSet,
+    },
     registry::identifiable::Identifiable,
 };
 
@@ -37,7 +42,7 @@ pub mod netty;
 //     NormalInventory, // These inventories are organizable by the player
 // }
 
-#[derive(Component, Debug, Serialize, Deserialize, Clone, Reflect)]
+#[derive(Component, Debug, Serialize, Deserialize, Clone, Reflect, PartialEq, Eq)]
 /// This represents the inventory that contains the itemstack the player is currently holding
 ///
 /// There should only ever be one HeldItemStack child per player
@@ -47,6 +52,21 @@ pub mod netty;
 /// - Player
 ///   - ([`HeldItemStack`], [`Inventory`])
 pub struct HeldItemStack;
+
+impl SyncableComponent for HeldItemStack {
+    fn get_sync_type() -> crate::netty::sync::SyncType {
+        crate::netty::sync::SyncType::ServerAuthoritative
+    }
+}
+
+fn name_held_itemstacks(
+    mut commands: Commands,
+    q_held_itemstack: Query<Entity, (With<HeldItemStack>, Or<(Without<Name>, Added<HeldItemStack>)>)>,
+) {
+    for ent in q_held_itemstack.iter() {
+        commands.entity(ent).insert(Name::new("Held Itemstack"));
+    }
+}
 
 impl HeldItemStack {
     pub fn get_held_is_inventory<'a>(
@@ -951,6 +971,9 @@ pub(super) fn register<T: States>(app: &mut App, playing_state: T) {
     held_item_slot::register(app);
 
     sync_component::<Inventory>(app);
+    sync_component::<HeldItemStack>(app);
+
+    app.add_systems(Update, name_held_itemstacks.in_set(NetworkingSystemsSet::Between));
 
     app.register_type::<Inventory>().register_type::<HeldItemStack>();
 }

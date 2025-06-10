@@ -34,7 +34,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     entities::player::spawn_player::find_new_player_location,
-    netty::server_events::PlayerConnectedEvent,
+    netty::{server_events::PlayerConnectedEvent, sync::flags::SyncReason},
     persistence::{
         SaveFileIdentifier, SerializedData,
         loading::{LOADING_SCHEDULE, LoadingSystemSet, NeedsLoaded},
@@ -287,7 +287,7 @@ fn create_new_player(
                 PlayerLooking { rotation: Quat::IDENTITY },
             ))
             .with_children(|p| {
-                let mut ecmds = p.spawn((Name::new("Held Item Inventory"), HeldItemStack));
+                let mut ecmds = p.spawn((Name::new("Held Item Inventory"), HeldItemStack, SyncReason::Data));
                 let inventory = Inventory::new("Inventory", 1, None, ecmds.id());
                 ecmds.insert(inventory);
             })
@@ -327,10 +327,10 @@ fn finish_loading_player(
             SetPosition::Transform,
         ));
 
-        if !HeldItemStack::get_held_is_inventory(ecmds.id(), &q_children, &q_held_item).is_none() {
+        if HeldItemStack::get_held_is_inventory(ecmds.id(), &q_children, &q_held_item).is_none() {
             error!("Missing held item inventory - inserting new one!");
             ecmds.with_children(|p| {
-                let mut ecmds = p.spawn((Name::new("Held Item Inventory"), HeldItemStack));
+                let mut ecmds = p.spawn((Name::new("Held Item Inventory"), HeldItemStack, SyncReason::Data));
                 let inventory = Inventory::new("Inventory", 1, None, ecmds.id());
                 ecmds.insert(inventory);
             });
