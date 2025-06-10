@@ -102,7 +102,7 @@ impl DefaultPersistentComponent for AutoInsertMinedItems {}
 
 /// This system is horribly smelly, and should be refactored soon.
 fn handle_block_break_events(
-    mut q_structure: Query<(&mut Structure, &Location, &GlobalTransform, &Velocity)>,
+    mut q_structure: Query<(&mut Structure, &Location, &GlobalTransform, Option<&Velocity>)>,
     mut event_reader: EventReader<BlockBreakEvent>,
     blocks: Res<Registry<Block>>,
     items: Res<Registry<Item>>,
@@ -117,7 +117,7 @@ fn handle_block_break_events(
 ) {
     for ev in event_reader.read() {
         // This is a temporary fix for mining lasers - eventually these items will have specified destinations,
-        // but for now just throw them where ever thire is space. This will get horribly laggy as there are more
+        // but for now just throw them where ever there is space. This will get horribly laggy as there are more
         // structures in the game
 
         if q_structure.contains(ev.breaker) {
@@ -226,7 +226,7 @@ fn handle_block_break_events(
                             if left_over != 0 {
                                 let structure_rot = Quat::from_affine3(&g_trans.affine());
                                 let item_spawn_loc = *s_loc + structure_rot * structure.block_relative_position(coord);
-                                let item_vel = velocity.linvel;
+                                let item_vel = velocity.copied().unwrap_or_default().linvel;
 
                                 let dropped_item_entity = commands
                                     .spawn((
