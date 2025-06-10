@@ -3,7 +3,7 @@
 use bevy::{
     ecs::query::With,
     log::warn,
-    prelude::{App, Children, Commands, Entity, IntoSystemConfigs, Query, Res, ResMut, Update, in_state},
+    prelude::{App, Commands, Entity, IntoSystemConfigs, Query, Res, ResMut, Update, in_state},
 };
 use bevy_renet::renet::RenetClient;
 use cosmos_core::{

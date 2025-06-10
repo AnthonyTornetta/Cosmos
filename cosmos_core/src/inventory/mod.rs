@@ -726,9 +726,10 @@ impl Inventory {
         Ok(())
     }
 
-    /// A quick way of comparing two different slots to see if they contain the same item
+    /// A quick way of comparing two different slots to see if they contain the same item or if
+    /// this slot is empty
     pub fn can_move_itemstack_to(&self, is: &ItemStack, slot: usize) -> bool {
-        self.itemstack_at(slot).map(|x| x.is_same_as(is)).unwrap_or(false)
+        self.itemstack_at(slot).map(|x| x.is_same_as(is)).unwrap_or(true)
     }
 
     /// A quick way of comparing two different slots to see if they contain the same item
