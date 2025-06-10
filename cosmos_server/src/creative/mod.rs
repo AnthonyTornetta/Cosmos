@@ -4,12 +4,11 @@ use cosmos_core::{
     entities::player::creative::Creative,
     inventory::{
         HeldItemStack, Inventory,
-        itemstack::{ItemShouldHaveData, ItemStack},
-        netty::ServerInventoryMessages,
+        itemstack::ItemShouldHaveData,
     },
     item::Item,
     netty::{
-        NettyChannelServer, cosmos_encoder, server::ServerLobby, sync::events::server_event::NettyEventReceived,
+        server::ServerLobby, sync::events::server_event::NettyEventReceived,
         system_sets::NetworkingSystemsSet,
     },
     registry::Registry,
@@ -21,7 +20,7 @@ fn on_trash_item_creative(
     lobby: Res<ServerLobby>,
     mut nevr_grab_item: EventReader<NettyEventReceived<CreativeTrashHeldItem>>,
     mut commands: Commands,
-    mut server: ResMut<RenetServer>,
+    server: ResMut<RenetServer>,
     q_children: Query<&Children>,
     mut q_held_item: Query<&mut Inventory, With<HeldItemStack>>,
 ) {
@@ -49,7 +48,7 @@ fn on_grab_creative_item(
     items: Res<Registry<Item>>,
     needs_data: Res<ItemShouldHaveData>,
     mut commands: Commands,
-    mut server: ResMut<RenetServer>,
+    server: ResMut<RenetServer>,
     q_children: Query<&Children>,
     mut q_held_item: Query<&mut Inventory, With<HeldItemStack>>,
 ) {

@@ -15,10 +15,10 @@ use cosmos_core::{
     entities::player::Player,
     inventory::{
         HeldItemStack, Inventory,
-        netty::{ClientInventoryMessages, InventoryIdentifier, ServerInventoryMessages},
+        netty::{ClientInventoryMessages, InventoryIdentifier},
     },
     item::physical_item::PhysicalItem,
-    netty::{NettyChannelClient, NettyChannelServer, cosmos_encoder, server::ServerLobby},
+    netty::{NettyChannelClient, cosmos_encoder, server::ServerLobby},
     persistence::LoadingDistance,
     physics::location::Location,
     state::GameState,
@@ -29,9 +29,9 @@ use crate::entities::player::PlayerLooking;
 
 fn sync_held_items(
     query: Query<(&Player, &HeldItemStack), Changed<HeldItemStack>>,
-    mut removed_held_itemstacks: RemovedComponents<HeldItemStack>,
+    removed_held_itemstacks: RemovedComponents<HeldItemStack>,
     player_query: Query<&Player>,
-    mut server: ResMut<RenetServer>,
+    server: ResMut<RenetServer>,
 ) {
     // for (player, held_itemstack) in query.iter() {
     //     server.send_message(
@@ -326,7 +326,7 @@ fn listen_for_inventory_messages(
                     else {
                         continue;
                     };
-                    let Some(mut held_is) = held_item_inv.remove_itemstack_at(0) else {
+                    let Some(held_is) = held_item_inv.remove_itemstack_at(0) else {
                         continue;
                     };
 

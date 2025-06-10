@@ -1,7 +1,3 @@
-use bevy::{prelude::*, utils::hashbrown::HashMap};
-use cosmos_core::{
-    item::{Item, item_category::ItemCategory},
-    registry::{Registry, identifiable::Identifiable},
-};
+use bevy::prelude::*;
 
 pub(super) fn register(app: &mut App) {}

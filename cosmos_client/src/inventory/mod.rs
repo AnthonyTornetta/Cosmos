@@ -793,7 +793,7 @@ fn handle_interactions(
         let clicked_slot = displayed_item_clicked.slot_number;
 
         if let Ok(mut inventory) = inventory_query.get_mut(displayed_item_clicked.inventory_holder) {
-            if inventory.can_move_itemstack_to(&held_item_stack, clicked_slot) {
+            if inventory.can_move_itemstack_to(held_item_stack, clicked_slot) {
                 let move_quantity = if lmb { held_item_stack.quantity() } else { 1 };
 
                 client.send_message(

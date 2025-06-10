@@ -1,15 +1,12 @@
 use bevy::prelude::*;
-use bevy_rapier3d::prelude::Velocity;
 use bevy_renet::renet::RenetServer;
 use cosmos_core::{
     netty::{
         NettyChannelServer, cosmos_encoder,
-        netty_rigidbody::{NettyRigidBody, NettyRigidBodyLocation},
         server_reliable_messages::ServerReliableMessages,
         sync::server_entity_syncing::RequestedEntityEvent,
         system_sets::NetworkingSystemsSet,
     },
-    physics::location::Location,
     state::GameState,
     structure::{Structure, ship::Ship},
 };

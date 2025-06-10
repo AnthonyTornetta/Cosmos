@@ -5,7 +5,6 @@ use cosmos_core::{
         NettyChannelServer, cosmos_encoder, server_reliable_messages::ServerReliableMessages,
         sync::server_entity_syncing::RequestedEntityEvent, system_sets::NetworkingSystemsSet,
     },
-    physics::location::Location,
     structure::{
         Structure,
         planet::{Planet, biosphere::BiosphereMarker},

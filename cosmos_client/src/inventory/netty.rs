@@ -7,7 +7,6 @@ use bevy::{
 };
 use bevy_renet::renet::RenetClient;
 use cosmos_core::{
-    ecs::NeedsDespawned,
     inventory::{
         Inventory,
         netty::{InventoryIdentifier, ServerInventoryMessages},
@@ -17,7 +16,7 @@ use cosmos_core::{
     structure::Structure,
 };
 
-use super::{HeldItemStack, InventoryNeedsDisplayed, InventorySide};
+use super::{InventoryNeedsDisplayed, InventorySide};
 
 fn sync(
     mut client: ResMut<RenetClient>,

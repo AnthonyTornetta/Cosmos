@@ -12,7 +12,6 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     entities::player::render_distance::RenderDistance,
-    physics::location::Location,
     structure::{
         chunk::{BlockInfo, netty::SerializedChunkBlockData},
         coordinates::{ChunkBlockCoordinate, ChunkCoordinate, CoordinateType},

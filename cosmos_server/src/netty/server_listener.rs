@@ -13,7 +13,6 @@ use cosmos_core::inventory::itemstack::ItemStackSystemSet;
 use cosmos_core::item::Item;
 use cosmos_core::netty::netty_rigidbody::NettyRigidBodyLocation;
 use cosmos_core::netty::server::ServerLobby;
-use cosmos_core::netty::sync::server_entity_syncing::RequestedEntityEvent;
 use cosmos_core::netty::system_sets::NetworkingSystemsSet;
 use cosmos_core::netty::{NettyChannelClient, NettyChannelServer, cosmos_encoder};
 use cosmos_core::physics::location::{Location, SetPosition};

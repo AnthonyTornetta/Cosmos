@@ -49,7 +49,7 @@ fn receive_asteroids(
 
                 let mut entity_cmds = commands.entity(entity);
 
-                let mut structure = Structure::Full(FullStructure::new(dimensions));
+                let structure = Structure::Full(FullStructure::new(dimensions));
 
                 entity_cmds.insert((structure, Asteroid::new(temperature)));
             }
