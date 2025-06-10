@@ -5,20 +5,18 @@ use bevy::{
     log::{error, warn},
     math::{Quat, Vec3},
     prelude::{
-        App, Changed, Children, Commands, Entity, GlobalTransform, IntoSystemConfigs, Query, RemovedComponents, Res, ResMut, Transform,
-        Update, With, Without, in_state,
+        App, Children, Commands, Entity, GlobalTransform, IntoSystemConfigs, Query, Res, ResMut, Transform, Update, With, Without, in_state,
     },
 };
 use bevy_rapier3d::prelude::Velocity;
 use bevy_renet::renet::RenetServer;
 use cosmos_core::{
-    entities::player::Player,
     inventory::{
         HeldItemStack, Inventory,
         netty::{ClientInventoryMessages, InventoryIdentifier},
     },
     item::physical_item::PhysicalItem,
-    netty::{NettyChannelClient, cosmos_encoder, server::ServerLobby},
+    netty::{NettyChannelClient, cosmos_encoder, server::ServerLobby, system_sets::NetworkingSystemsSet},
     persistence::LoadingDistance,
     physics::location::Location,
     state::GameState,
@@ -26,33 +24,6 @@ use cosmos_core::{
 };
 
 use crate::entities::player::PlayerLooking;
-
-fn sync_held_items(
-    query: Query<(&Player, &HeldItemStack), Changed<HeldItemStack>>,
-    removed_held_itemstacks: RemovedComponents<HeldItemStack>,
-    player_query: Query<&Player>,
-    server: ResMut<RenetServer>,
-) {
-    // for (player, held_itemstack) in query.iter() {
-    //     server.send_message(
-    //         player.client_id(),
-    //         NettyChannelServer::Inventory,
-    //         cosmos_encoder::serialize(&ServerInventoryMessages::HeldItemstack {
-    //             itemstack: Some(held_itemstack.clone()),
-    //         }),
-    //     );
-    // }
-    //
-    // for removed_held_item in removed_held_itemstacks.read() {
-    //     if let Ok(player) = player_query.get(removed_held_item) {
-    //         server.send_message(
-    //             player.client_id(),
-    //             NettyChannelServer::Inventory,
-    //             cosmos_encoder::serialize(&ServerInventoryMessages::HeldItemstack { itemstack: None }),
-    //         );
-    //     }
-    // }
-}
 
 fn get_inventory_mut<'a>(
     identifier: InventoryIdentifier,
@@ -482,8 +453,8 @@ fn listen_for_inventory_messages(
 pub(super) fn register(app: &mut App) {
     app.add_systems(
         Update,
-        (listen_for_inventory_messages, sync_held_items)
-            .chain()
+        listen_for_inventory_messages
+            .in_set(NetworkingSystemsSet::Between)
             .run_if(in_state(GameState::Playing)),
     );
 }

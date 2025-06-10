@@ -113,7 +113,7 @@ impl Component for Structure {
     const STORAGE_TYPE: bevy::ecs::component::StorageType = bevy::ecs::component::StorageType::Table;
 
     fn register_component_hooks(hooks: &mut bevy::ecs::component::ComponentHooks) {
-        hooks.on_add(|mut world, ent, c| {
+        hooks.on_add(|mut world, ent, _| {
             let mut s = world.get_mut::<Structure>(ent).expect("This component has just been added");
 
             s.set_entity(ent);

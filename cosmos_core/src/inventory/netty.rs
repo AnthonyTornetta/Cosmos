@@ -73,6 +73,8 @@ pub enum ClientInventoryMessages {
         /// Feel free to use `u16::MAX` to insert as many items as possible
         quantity: u16,
     },
+    /// Deposits the held itemstack into any available slot in this player's inventory, otherwise
+    /// drops it.
     DropOrDepositHeldItemstack,
     /// Deposits all the items in the itemstack into that slot, and makes the item that is currently in this slot the held item
     DepositAndSwapHeldItemstack {

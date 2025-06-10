@@ -1,3 +1,5 @@
+//! Item categories are ways of grouping items into categories viewable by the player
+
 use bevy::{prelude::*, utils::HashSet};
 use serde::{Deserialize, Serialize};
 
@@ -7,6 +9,9 @@ use crate::{
 };
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Eq, Debug)]
+/// A category that will contain many items
+///
+/// Gotten via [`crate::item::Item::category`]
 pub struct ItemCategory {
     unlocalized_name: String,
     item_icon_id: String,
@@ -16,6 +21,10 @@ pub struct ItemCategory {
 }
 
 impl ItemCategory {
+    /// Creates a new item category
+    ///
+    /// * `unlocalized_name` - The program name of this category
+    /// * `item_icon_id` - The unlocalized name of the item that represents this category
     pub fn new(unlocalized_name: impl Into<String>, item_icon_id: impl Into<String>) -> Self {
         Self {
             unlocalized_name: unlocalized_name.into(),
@@ -25,6 +34,7 @@ impl ItemCategory {
         }
     }
 
+    /// Returns the unlocalized name for the item that represents this category
     pub fn item_icon_id(&self) -> &str {
         &self.item_icon_id
     }

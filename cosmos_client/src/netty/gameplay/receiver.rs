@@ -653,9 +653,6 @@ pub(crate) fn client_sync_players(
                     css::ORANGE_RED.into(),
                 ));
             }
-            ServerReliableMessages::RequestedEntityReceived(entity) => {
-                // requested_entities.entities.retain(|x| x.server_entity != entity);
-            }
             ServerReliableMessages::BlockHealthChange { changes } => {
                 take_damage_event_writer.send_batch(changes.into_iter().filter_map(|ev| {
                     network_mapping

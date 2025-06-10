@@ -33,6 +33,9 @@ impl BlockBuilder {
         }
     }
 
+    /// Sets the category of the item that will represent this block.
+    ///
+    /// See [`crate::item::item_category::ItemCategory`]
     pub fn with_category(mut self, category: impl Into<String>) -> Self {
         self.category = Some(category.into());
         self

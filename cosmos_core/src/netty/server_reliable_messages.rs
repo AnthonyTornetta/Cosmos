@@ -178,8 +178,6 @@ pub enum ServerReliableMessages {
         /// The reason the reactor failed to be created
         reason: String,
     },
-    /// This signifies that the server is sending information for a requested entity
-    RequestedEntityReceived(Entity),
     /// Sent whenever a block's health is changed
     BlockHealthChange {
         /// All the health changes packed into a vec

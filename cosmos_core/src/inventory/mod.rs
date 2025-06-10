@@ -69,6 +69,7 @@ fn name_held_itemstacks(
 }
 
 impl HeldItemStack {
+    /// Returns the result from querying these children for the [`HeldItemStack`] [`Inventory`].
     pub fn get_held_is_inventory<'a>(
         client_entity: Entity,
         q_children: &Query<&Children>,
@@ -89,6 +90,7 @@ impl HeldItemStack {
         None
     }
 
+    /// Returns the result from querying these children for the [`HeldItemStack`] [`Inventory`].
     pub fn get_held_is_inventory_from_children<'a>(
         children: &Children,
         q_held_item: &'a Query<&Inventory, With<HeldItemStack>>,
@@ -103,6 +105,7 @@ impl HeldItemStack {
         None
     }
 
+    /// Returns the result from querying these children for the [`HeldItemStack`] [`Inventory`].
     pub fn get_held_is_inventory_mut<'a>(
         client_entity: Entity,
         q_children: &Query<&Children>,
@@ -123,6 +126,7 @@ impl HeldItemStack {
         None
     }
 
+    /// Returns the result from querying these children for the [`HeldItemStack`] [`Inventory`].
     pub fn get_held_is_inventory_from_children_mut<'a>(
         children: &Children,
         q_held_item: &'a mut Query<&mut Inventory, With<HeldItemStack>>,
@@ -651,7 +655,7 @@ impl Inventory {
     ///
     /// Note that if the ItemStack has a data entity, it will still be the child of this Inventory's entity. It is up
     /// to you to handle that data entity.
-    pub fn RENAME_THIS_remove_itemstack_at(&mut self, slot: usize, commands: &mut Commands) {
+    pub fn take_itemstack_at(&mut self, slot: usize, commands: &mut Commands) {
         if let Some(mut is) = self.remove_itemstack_at(slot) {
             is.remove(commands);
         }

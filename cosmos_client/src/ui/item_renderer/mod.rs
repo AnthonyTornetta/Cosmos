@@ -33,9 +33,11 @@ pub struct NoHoverTooltip;
 struct ItemTooltip;
 
 #[derive(Component, Reflect, Debug)]
+/// A [`RenderItem`] with this will display this text instead of the item's name.
 pub struct CustomHoverTooltip(String);
 
 impl CustomHoverTooltip {
+    /// Creates a new Hover Tooltip with this text
     pub fn new(text: impl Into<String>) -> Self {
         Self(text.into())
     }

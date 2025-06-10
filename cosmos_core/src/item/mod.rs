@@ -58,6 +58,7 @@ impl Item {
     }
 }
 
+/// Used to create items
 pub struct ItemBuilder {
     unlocalized_name: String,
     max_stack_size: u16,
@@ -65,6 +66,7 @@ pub struct ItemBuilder {
 }
 
 impl ItemBuilder {
+    /// Creates a new item builder that will produce an item with this unlocalized name
     pub fn new(unlocalized_name: impl Into<String>) -> Self {
         Self {
             unlocalized_name: unlocalized_name.into(),
@@ -73,18 +75,21 @@ impl ItemBuilder {
         }
     }
 
+    /// Sets the category of this item (see [`item_category::ItemCategory`])
     pub fn with_category(mut self, category: impl Into<String>) -> Self {
         self.category = Some(category.into());
 
         self
     }
 
+    /// Sets the max stack size of this item
     pub fn with_stack_size(mut self, stack_size: u16) -> Self {
         self.max_stack_size = stack_size;
 
         self
     }
 
+    /// Builds this item
     pub fn create(self) -> Item {
         Item::new(self.unlocalized_name, self.max_stack_size, self.category)
     }

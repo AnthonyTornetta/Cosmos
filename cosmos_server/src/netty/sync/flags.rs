@@ -1,3 +1,7 @@
+//! The flags an entity can have that dictate its syncing.
+//!
+//! Notably: [`SyncTo`] and [`SyncReason`]
+
 use bevy::{prelude::*, utils::HashSet};
 use cosmos_core::{
     entities::player::Player,
@@ -15,6 +19,11 @@ use renet::ClientId;
 use crate::persistence::loading::{NeedsBlueprintLoaded, NeedsLoaded};
 
 #[derive(Component, Debug, Reflect, Clone, Default)]
+/// The reasons this entity will be synced.
+///
+/// If an entity has a [`Location`] component, this will be assumed to be [`SyncReason::Location`],
+/// even if this component is not on this entity. Otherwise, this component can be manually added
+/// to an entity to have it be synced for other reasons.
 pub enum SyncReason {
     /// This will only be synced if this entity has a parent that should be synced
     ///
@@ -31,6 +40,7 @@ pub enum SyncReason {
 pub struct SyncTo(HashSet<ClientId>);
 
 impl SyncTo {
+    /// Returns if this should be synced to this client id.
     pub fn should_sync_to(&self, client_id: ClientId) -> bool {
         self.0.contains(&client_id)
     }
@@ -123,7 +133,7 @@ fn update_sync_players(
     mut q_mut_sync_to: Query<&mut SyncTo>,
     q_players: Query<(&Player, &Location), With<ReadyForSyncing>>,
 ) {
-    for (ent, sync_reason, this_loc, loading_distance, parent, structure) in q_sync_to.iter() {
+    for (ent, sync_reason, this_loc, loading_distance, parent, _) in q_sync_to.iter() {
         let sync_reason = sync_reason.cloned().unwrap_or_default();
 
         let mut to_send_to = HashSet::default();

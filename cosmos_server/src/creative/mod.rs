@@ -1,26 +1,20 @@
+//! Server creative logic
+
 use bevy::prelude::*;
 use cosmos_core::{
     creative::{CreativeTrashHeldItem, GrabCreativeItemEvent},
     entities::player::creative::Creative,
-    inventory::{
-        HeldItemStack, Inventory,
-        itemstack::ItemShouldHaveData,
-    },
+    inventory::{HeldItemStack, Inventory, itemstack::ItemShouldHaveData},
     item::Item,
-    netty::{
-        server::ServerLobby, sync::events::server_event::NettyEventReceived,
-        system_sets::NetworkingSystemsSet,
-    },
+    netty::{server::ServerLobby, sync::events::server_event::NettyEventReceived, system_sets::NetworkingSystemsSet},
     registry::Registry,
 };
-use renet::RenetServer;
 
 fn on_trash_item_creative(
     q_creative: Query<(), With<Creative>>,
     lobby: Res<ServerLobby>,
     mut nevr_grab_item: EventReader<NettyEventReceived<CreativeTrashHeldItem>>,
     mut commands: Commands,
-    server: ResMut<RenetServer>,
     q_children: Query<&Children>,
     mut q_held_item: Query<&mut Inventory, With<HeldItemStack>>,
 ) {
@@ -48,7 +42,6 @@ fn on_grab_creative_item(
     items: Res<Registry<Item>>,
     needs_data: Res<ItemShouldHaveData>,
     mut commands: Commands,
-    server: ResMut<RenetServer>,
     q_children: Query<&Children>,
     mut q_held_item: Query<&mut Inventory, With<HeldItemStack>>,
 ) {
@@ -76,11 +69,9 @@ fn on_grab_creative_item(
 
         info!("Success");
         if let Some(mut inv) = HeldItemStack::get_held_is_inventory_mut(player, &q_children, &mut q_held_item) {
-            inv.RENAME_THIS_remove_itemstack_at(0, &mut commands);
+            inv.take_itemstack_at(0, &mut commands);
 
             inv.insert_item_at(0, item, ev.quantity.min(item.max_stack_size()), &mut commands, &needs_data);
-
-            info!("Created IS {inv:?}");
         } else {
             error!("Missing held item inventory!");
         }

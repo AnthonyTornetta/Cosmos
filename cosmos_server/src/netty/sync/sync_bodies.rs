@@ -13,7 +13,7 @@ use cosmos_core::{
         netty_rigidbody::{NettyRigidBody, NettyRigidBodyLocation},
         server_reliable_messages::ServerReliableMessages,
         server_unreliable_messages::ServerUnreliableMessages,
-        sync::{ComponentEntityIdentifier, server_entity_syncing::RequestedEntityEvent, server_syncing::ReadyForSyncing},
+        sync::{ComponentEntityIdentifier, server_syncing::ReadyForSyncing},
         system_sets::NetworkingSystemsSet,
     },
     physics::location::{Location, LocationPhysicsSet},
@@ -97,46 +97,8 @@ fn server_sync_bodies(
         }
     }
 
-    // for (ent, velocity, transform, parent) in q_children_need_synced.iter() {
-    //     let mut info = None;
-
-    //     let mut cur_ent = parent.get();
-    //     while info.is_none() {
-    //         if let Ok((loc, load_dist)) = q_loading_distance.get(cur_ent) {
-    //             info = Some((*loc, *load_dist));
-    //         } else {
-    //             if let Ok(next_ent) = q_parent.get(cur_ent) {
-    //                 cur_ent = next_ent.get();
-    //             } else {
-    //                 break;
-    //             }
-    //         }
-    //     }
-
-    //     let Some((parent_loc, parent_loading_distance)) = info else {
-    //         continue;
-    //     };
-
-    // }
-
     if !bodies.is_empty() {
         send_bodies(&players, &bodies, &mut server, &tick);
-    }
-}
-
-fn notify_client_of_successful_entity_request(
-    mut server: ResMut<RenetServer>,
-    mut event_reader: EventReader<RequestedEntityEvent>,
-    mut commands: Commands,
-) {
-    for ev in event_reader.read() {
-        if commands.get_entity(ev.entity).is_some() {
-            server.send_message(
-                ev.client_id,
-                NettyChannelServer::Reliable,
-                cosmos_encoder::serialize(&ServerReliableMessages::RequestedEntityReceived(ev.entity)),
-            );
-        }
     }
 }
 
@@ -182,10 +144,8 @@ fn notify_despawned_entities(
 pub(super) fn register(app: &mut App) {
     app.add_systems(
         Update,
-        (
-            notify_client_of_successful_entity_request,
-            server_sync_bodies.after(LocationPhysicsSet::DoPhysics),
-        )
+        server_sync_bodies
+            .after(LocationPhysicsSet::DoPhysics)
             .in_set(NetworkingSystemsSet::SyncComponents),
     )
     .add_systems(First, notify_despawned_entities.before(despawn_needed));
