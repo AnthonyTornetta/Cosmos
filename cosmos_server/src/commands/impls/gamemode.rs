@@ -1,4 +1,4 @@
-use crate::commands::CommandSender;
+use crate::commands::{CommandSender, SendCommandMessageEvent};
 
 use super::super::prelude::*;
 use bevy::prelude::*;
@@ -57,24 +57,30 @@ pub(super) fn register(app: &mut App) {
     create_cosmos_command::<GamemodeCommand, _>(
         ServerCommand::new("cosmos:gamemode", "[gamemode] (player)", "Sets the player to this gamemode."),
         app,
-        |q_players: Query<(Entity, &Player)>, mut commands: Commands, mut evr_command: EventReader<CommandEvent<GamemodeCommand>>| {
+        |q_players: Query<(Entity, &Player)>,
+         mut commands: Commands,
+         mut evw_send_message: EventWriter<SendCommandMessageEvent>,
+         mut evr_command: EventReader<CommandEvent<GamemodeCommand>>| {
             for ev in evr_command.read() {
-                let Some(ent) = (match &ev.command.receiver {
-                    Receiver::Name(name) => q_players.iter().find(|x| x.1.name() == name).map(|x| x.0),
-                    Receiver::Entity(e) => Some(*e),
+                let Some((ent, player)) = (match &ev.command.receiver {
+                    Receiver::Name(name) => q_players.iter().find(|x| x.1.name() == name),
+                    Receiver::Entity(e) => q_players.get(*e).ok(),
                 }) else {
-                    error!("Unable to find player {:?}", ev.command.receiver);
+                    ev.sender
+                        .send(format!("Unable to find player {:?}", ev.command.receiver), &mut evw_send_message);
                     continue;
                 };
 
                 match ev.command.gamemode {
                     GameMode::Survival => {
                         commands.entity(ent).remove::<Creative>();
-                        info!("Swapped {ent:?} to survival.");
+                        ev.sender
+                            .send(format!("Swapped {} to survival.", player.name()), &mut evw_send_message);
                     }
                     GameMode::Creative => {
                         commands.entity(ent).insert(Creative);
-                        info!("Swapped {ent:?} to creative.");
+                        ev.sender
+                            .send(format!("Swapped {} to creative.", player.name()), &mut evw_send_message);
                     }
                 }
             }

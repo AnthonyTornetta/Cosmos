@@ -1,10 +1,14 @@
+//! Shared server-command logic
+
 use bevy::prelude::*;
 use serde::{Deserialize, Serialize};
 
 use crate::netty::sync::events::netty_event::{IdentifiableEvent, NettyEvent, SyncedEventImpl};
 
 #[derive(Event, Debug, Serialize, Deserialize, Clone)]
+/// The client sends this to the server to request executing a command
 pub struct ClientCommandEvent {
+    /// The raw text the client typed for this command (minus the '/' character).
     pub command_text: String,
 }
 

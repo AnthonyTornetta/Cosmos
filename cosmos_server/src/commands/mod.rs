@@ -1,7 +1,13 @@
 //! Responsible for the registration & creation elements of all server console commands
 
-use bevy::prelude::{App, Entity, Event};
-use cosmos_core::registry::{create_registry, identifiable::Identifiable};
+use bevy::prelude::{App, Component, Entity, Event, EventWriter, Query};
+use cosmos_core::{
+    netty::sync::IdentifiableComponent,
+    registry::{create_registry, identifiable::Identifiable},
+};
+use serde::{Deserialize, Serialize};
+
+use crate::persistence::make_persistent::{DefaultPersistentComponent, make_persistent};
 
 pub mod cosmos_command_handler;
 mod impls;
@@ -14,6 +20,53 @@ pub enum CommandSender {
     Server,
     /// A player sent this command
     Player(Entity),
+}
+
+#[derive(Component, Debug, Serialize, Deserialize)]
+/// If a player is an operator, they have all permissions
+pub struct Operator;
+
+impl IdentifiableComponent for Operator {
+    fn get_component_unlocalized_name() -> &'static str {
+        "cosmos:operator"
+    }
+}
+
+impl DefaultPersistentComponent for Operator {}
+
+#[derive(Event, Debug)]
+/// Sends output from a command to the player entity
+pub struct SendCommandMessageEvent {
+    to: Entity,
+    message: String,
+}
+
+impl CommandSender {
+    /// Checks if this sender is a server operator
+    pub fn is_operator(&self, q_operator: &Query<&Operator>) -> bool {
+        match self {
+            Self::Player(e) => q_operator.contains(*e),
+            Self::Server => true,
+        }
+    }
+
+    /// Sends a message to this command sender
+    ///
+    /// Player - logged in chat and logged in server console
+    /// Server - logged in server console
+    pub fn send(&self, message: impl Into<String>, evw_send_message: &mut EventWriter<SendCommandMessageEvent>) {
+        match self {
+            Self::Player(e) => {
+                evw_send_message.send(SendCommandMessageEvent {
+                    message: message.into(),
+                    to: *e,
+                });
+            }
+            Self::Server => {
+                println!("{}", message.into());
+            }
+        }
+    }
 }
 
 #[derive(Debug, Event)]
@@ -109,7 +162,9 @@ impl ServerCommand {
 pub(super) fn register(app: &mut App) {
     create_registry::<ServerCommand>(app, "cosmos:commands");
 
-    app.add_event::<CosmosCommandSent>();
+    make_persistent::<Operator>(app);
+
+    app.add_event::<CosmosCommandSent>().add_event::<SendCommandMessageEvent>();
 
     cosmos_command_handler::register(app);
     impls::register(app);

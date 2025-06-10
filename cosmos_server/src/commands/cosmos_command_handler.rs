@@ -5,12 +5,18 @@ use std::time::Duration;
 use bevy::{
     app::Update,
     ecs::schedule::IntoSystemConfigs,
-    log::{error, info},
-    prelude::{App, Event, EventReader, EventWriter, IntoSystemSetConfigs, OnEnter, Res, ResMut, Resource, SystemSet, on_event},
+    log::info,
+    prelude::{App, Event, EventReader, EventWriter, IntoSystemSetConfigs, OnEnter, Query, Res, ResMut, Resource, SystemSet, on_event},
 };
 use cosmos_core::{
+    chat::ServerSendChatMessageEvent,
     commands::ClientCommandEvent,
-    netty::{server::ServerLobby, sync::events::server_event::NettyEventReceived, system_sets::NetworkingSystemsSet},
+    entities::player::Player,
+    netty::{
+        server::ServerLobby,
+        sync::events::server_event::{NettyEventReceived, NettyEventWriter},
+        system_sets::NetworkingSystemsSet,
+    },
     registry::{Registry, identifiable::Identifiable},
     state::GameState,
 };
@@ -19,7 +25,7 @@ use thiserror::Error;
 
 use crate::persistence::loading::LoadingSystemSet;
 
-use super::{CommandSender, CosmosCommandSent, ServerCommand};
+use super::{CommandSender, CosmosCommandSent, Operator, SendCommandMessageEvent, ServerCommand};
 
 #[derive(Event, Debug)]
 /// An event that is sent when this command for `T` is sent
@@ -51,9 +57,18 @@ pub fn create_cosmos_command<T: CosmosCommandType, M>(command: ServerCommand, ap
 
     let monitor_commands = move |commands: Res<Registry<ServerCommand>>,
                                  mut evr_command_sent: EventReader<CosmosCommandSent>,
-                                 mut evw_command: EventWriter<CommandEvent<T>>| {
+                                 mut evw_command: EventWriter<CommandEvent<T>>,
+                                 q_operator: Query<&Operator>,
+                                 mut evw_send_message: EventWriter<SendCommandMessageEvent>| {
         for ev in evr_command_sent.read() {
             if ev.name == unlocalized_name {
+                if T::requires_operator() {
+                    if !ev.sender.is_operator(&q_operator) {
+                        ev.sender.send("This command requires operator permissions.", &mut evw_send_message);
+                        continue;
+                    }
+                }
+
                 match T::from_input(ev) {
                     Ok(command) => {
                         evw_command.send(CommandEvent {
@@ -65,8 +80,8 @@ pub fn create_cosmos_command<T: CosmosCommandType, M>(command: ServerCommand, ap
                         });
                     }
                     Err(e) => {
-                        error!("Command error: {e:?}");
-                        display_help(Some(&ev.name), &commands);
+                        ev.sender.send(format!("Command error: {e:?}"), &mut evw_send_message);
+                        display_help(&ev.sender, &mut evw_send_message, Some(&ev.name), &commands);
                     }
                 }
                 continue;
@@ -87,6 +102,11 @@ pub fn create_cosmos_command<T: CosmosCommandType, M>(command: ServerCommand, ap
 pub trait CosmosCommandType: Sized + Send + Sync + 'static {
     /// Parses the raw command input into your command or an [`ArgumentError`].
     fn from_input(input_event: &CosmosCommandSent) -> Result<Self, ArgumentError>;
+
+    /// Returns true if this command requires operator permissions to use
+    fn requires_operator() -> bool {
+        true
+    }
 }
 
 struct HelpCommand(Option<String>);
@@ -104,19 +124,26 @@ fn register_commands(app: &mut App) {
     create_cosmos_command::<HelpCommand, _>(
         ServerCommand::new("cosmos:help", "[command?]", "Gets information about every command."),
         app,
-        |mut evr_command: EventReader<CommandEvent<HelpCommand>>, commands: Res<Registry<ServerCommand>>| {
+        |mut evr_command: EventReader<CommandEvent<HelpCommand>>,
+         commands: Res<Registry<ServerCommand>>,
+         mut evw_send_message: EventWriter<SendCommandMessageEvent>| {
             for ev in evr_command.read() {
                 if let Some(cmd) = &ev.command.0 {
-                    display_help(Some(cmd.as_str()), &commands);
+                    display_help(&ev.sender, &mut evw_send_message, Some(cmd.as_str()), &commands);
                 } else {
-                    display_help(None, &commands);
+                    display_help(&ev.sender, &mut evw_send_message, None, &commands);
                 }
             }
         },
     );
 }
 
-fn display_help(command_name: Option<&str>, commands: &Registry<ServerCommand>) {
+fn display_help(
+    sender: &CommandSender,
+    evw_send_message: &mut EventWriter<SendCommandMessageEvent>,
+    command_name: Option<&str>,
+    commands: &Registry<ServerCommand>,
+) {
     if let Some(command_name) = command_name {
         let name = if !command_name.contains(":") {
             format!("cosmos:{command_name}")
@@ -124,16 +151,21 @@ fn display_help(command_name: Option<&str>, commands: &Registry<ServerCommand>) 
             command_name.into()
         };
         if let Some(info) = commands.from_id(&name) {
-            println!("=== {} ===", info.display_name());
-            println!("\t{} {}\n\t{}", info.display_name(), info.usage, info.description);
+            sender.send(format!("=== {} ===", info.display_name()), evw_send_message);
+            sender.send(
+                format!("\t{} {}\n\t{}", info.display_name(), info.usage, info.description),
+                evw_send_message,
+            );
 
             return;
         }
     }
 
-    println!("=== All Commands ===");
+    sender.send("=== All Commands ===", evw_send_message);
     for command in commands.iter() {
-        println!("{}\n\t{}\n\t{}", command.display_name(), command.usage, command.description);
+        sender.send(format!("{}", command.display_name()), evw_send_message);
+        sender.send(format!("\t{}", command.usage), evw_send_message);
+        sender.send(format!("\t{}", command.description), evw_send_message);
     }
 }
 
@@ -156,11 +188,16 @@ pub enum ArgumentError {
     },
 }
 
-fn warn_on_no_command_hit(commands: Res<Registry<ServerCommand>>, mut evr_command: EventReader<CosmosCommandSent>) {
+fn warn_on_no_command_hit(
+    commands: Res<Registry<ServerCommand>>,
+    mut evr_command: EventReader<CosmosCommandSent>,
+    mut evw_send_message: EventWriter<SendCommandMessageEvent>,
+) {
     for ev in evr_command.read() {
         if !commands.contains(&ev.name) {
-            info!("{} is not a recognized command.", ev.name);
-            display_help(None, &commands);
+            ev.sender
+                .send(format!("{} is not a recognized command.", ev.name), &mut evw_send_message);
+            display_help(&ev.sender, &mut evw_send_message, None, &commands);
         }
     }
 }
@@ -211,6 +248,7 @@ pub enum ProcessCommandsSet {
 fn command_receiver(
     mut event_writer: EventWriter<CosmosCommandSent>,
     mut nevr_command: EventReader<NettyEventReceived<ClientCommandEvent>>,
+    q_player: Query<&Player>,
     lobby: Res<ServerLobby>,
 ) {
     for client_command in nevr_command.read() {
@@ -218,10 +256,36 @@ fn command_receiver(
             continue;
         };
 
+        let Ok(p) = q_player.get(player) else {
+            continue;
+        };
+
+        info!("Player `{}` ran command: `{}`", p.name(), client_command.command_text);
         event_writer.send(CosmosCommandSent::new(
             client_command.command_text.clone(),
             CommandSender::Player(player),
         ));
+    }
+}
+
+fn send_messages(
+    mut evw_chat_event: NettyEventWriter<ServerSendChatMessageEvent>,
+    mut evr_send_message: EventReader<SendCommandMessageEvent>,
+    q_player: Query<&Player>,
+) {
+    for ev in evr_send_message.read() {
+        let Ok(player) = q_player.get(ev.to) else {
+            continue;
+        };
+
+        info!("({}) {}", player.name(), ev.message);
+        evw_chat_event.send(
+            ServerSendChatMessageEvent {
+                sender: None,
+                message: ev.message.clone(),
+            },
+            player.client_id(),
+        );
     }
 }
 
@@ -236,9 +300,14 @@ pub(super) fn register(app: &mut App) {
     register_commands(app);
     app.insert_resource(CurrentlyWriting::default()).add_systems(
         Update,
-        (command_receiver, monitor_inputs, warn_on_no_command_hit)
-            .chain()
-            .in_set(NetworkingSystemsSet::Between)
-            .in_set(ProcessCommandsSet::ParseCommands),
+        (
+            (command_receiver, monitor_inputs, warn_on_no_command_hit)
+                .chain()
+                .in_set(NetworkingSystemsSet::Between)
+                .in_set(ProcessCommandsSet::ParseCommands),
+            send_messages
+                .after(ProcessCommandsSet::HandleCommands)
+                .before(NetworkingSystemsSet::SyncComponents),
+        ),
     );
 }

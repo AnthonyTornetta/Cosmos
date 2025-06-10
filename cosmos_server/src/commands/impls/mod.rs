@@ -8,6 +8,7 @@ mod give;
 mod items;
 mod list;
 mod load;
+mod op;
 mod ping;
 mod say;
 
@@ -22,4 +23,5 @@ pub(super) fn register(app: &mut App) {
     blueprints::register(app);
     give::register(app);
     items::register(app);
+    op::register(app);
 }
