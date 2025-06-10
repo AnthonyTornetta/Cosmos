@@ -9,6 +9,8 @@ use bevy::{
     prelude::{App, Event, EventReader, EventWriter, IntoSystemSetConfigs, OnEnter, Res, ResMut, Resource, SystemSet, on_event},
 };
 use cosmos_core::{
+    commands::ClientCommandEvent,
+    netty::{server::ServerLobby, sync::events::server_event::NettyEventReceived, system_sets::NetworkingSystemsSet},
     registry::{Registry, identifiable::Identifiable},
     state::GameState,
 };
@@ -206,6 +208,23 @@ pub enum ProcessCommandsSet {
     HandleCommands,
 }
 
+fn command_receiver(
+    mut event_writer: EventWriter<CosmosCommandSent>,
+    mut nevr_command: EventReader<NettyEventReceived<ClientCommandEvent>>,
+    lobby: Res<ServerLobby>,
+) {
+    for client_command in nevr_command.read() {
+        let Some(player) = lobby.player_from_id(client_command.client_id) else {
+            continue;
+        };
+
+        event_writer.send(CosmosCommandSent::new(
+            client_command.command_text.clone(),
+            CommandSender::Player(player),
+        ));
+    }
+}
+
 pub(super) fn register(app: &mut App) {
     app.configure_sets(
         Update,
@@ -217,8 +236,9 @@ pub(super) fn register(app: &mut App) {
     register_commands(app);
     app.insert_resource(CurrentlyWriting::default()).add_systems(
         Update,
-        (monitor_inputs, warn_on_no_command_hit)
+        (command_receiver, monitor_inputs, warn_on_no_command_hit)
             .chain()
+            .in_set(NetworkingSystemsSet::Between)
             .in_set(ProcessCommandsSet::ParseCommands),
     );
 }

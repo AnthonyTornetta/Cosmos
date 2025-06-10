@@ -23,7 +23,7 @@ use bevy::ecs::removal_detection::RemovedComponents;
 use bevy::ecs::schedule::common_conditions::resource_exists;
 use bevy::ecs::schedule::{IntoSystemConfigs, IntoSystemSetConfigs};
 use bevy::ecs::system::Commands;
-use bevy::log::{info, warn};
+use bevy::log::warn;
 use bevy::prelude::{Component, Parent, With};
 use bevy::reflect::Reflect;
 use bevy::utils::HashMap;
@@ -259,12 +259,9 @@ fn server_send_component<T: SyncableComponent>(
                 (component, entity_identifier)
             })
             .filter(|(_, entity_identifier)| should_be_sent_to(p_loc, &q_parent, entity_identifier))
-            .map(|(component, identifier)| {
-                info!("Syncing {component:?}");
-                ReplicatedComponentData {
-                    entity_identifier: identifier,
-                    raw_data: cosmos_encoder::serialize_uncompressed(component),
-                }
+            .map(|(component, identifier)| ReplicatedComponentData {
+                entity_identifier: identifier,
+                raw_data: cosmos_encoder::serialize_uncompressed(component),
             })
             .collect::<Vec<ReplicatedComponentData>>();
 

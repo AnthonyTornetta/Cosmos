@@ -3,6 +3,7 @@ use bevy::prelude::*;
 mod blueprint;
 mod blueprints;
 mod despawn;
+mod gamemode;
 mod give;
 mod items;
 mod list;
@@ -17,6 +18,7 @@ pub(super) fn register(app: &mut App) {
     say::register(app);
     list::register(app);
     despawn::register(app);
+    gamemode::register(app);
     blueprints::register(app);
     give::register(app);
     items::register(app);
