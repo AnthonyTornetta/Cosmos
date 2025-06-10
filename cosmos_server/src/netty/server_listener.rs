@@ -59,7 +59,6 @@ fn server_listen_messages(
         mut exit_build_mode_writer,
         mut create_ship_event_writer,
         mut create_station_event_writer,
-        mut requested_entities_writer,
         mut request_chunk_event_writer,
     ): (
         Query<&mut StructureSystems>,
@@ -69,7 +68,6 @@ fn server_listen_messages(
         EventWriter<ExitBuildModeEvent>,
         EventWriter<CreateShipEvent>,
         EventWriter<CreateStationEvent>,
-        EventWriter<RequestedEntityEvent>,
         EventWriter<RequestChunkEvent>,
     ),
     mut q_inventory: Query<&mut Inventory>,

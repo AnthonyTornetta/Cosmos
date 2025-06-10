@@ -47,10 +47,21 @@ fn populate_structures(
     }
 }
 
+fn request_chunks(q_added_structure: Query<(Entity, &Structure), (Added<Structure>, Without<NeedsPopulated>)>, mut commands: Commands) {
+    for (ent, structure) in q_added_structure.iter() {
+        if !matches!(structure, Structure::Full(_)) {
+            continue;
+        }
+
+        commands.entity(ent).insert(NeedsPopulated);
+    }
+}
+
 pub(super) fn register(app: &mut App) {
     app.add_systems(
         Update,
-        populate_structures
+        (request_chunks, populate_structures)
+            .chain()
             .in_set(NetworkingSystemsSet::SyncComponents)
             .run_if(in_state(GameState::LoadingWorld).or(in_state(GameState::Playing))),
     );

@@ -16,11 +16,11 @@ use cosmos_core::{
 
 fn on_request_ship(
     mut event_reader: EventReader<RequestedEntityEvent>,
-    query: Query<(&Structure, &Transform, &Location, &Velocity), With<Ship>>,
+    query: Query<&Structure, With<Ship>>,
     mut server: ResMut<RenetServer>,
 ) {
     for ev in event_reader.read() {
-        if let Ok((structure, transform, location, velocity)) = query.get(ev.entity) {
+        if let Ok(structure) = query.get(ev.entity) {
             // server.send_message(
             //     ev.client_id,
             //     NettyChannelServer::Reliable,
@@ -37,7 +37,6 @@ fn on_request_ship(
                 NettyChannelServer::Reliable,
                 cosmos_encoder::serialize(&ServerReliableMessages::Ship {
                     entity: ev.entity,
-                    body: NettyRigidBody::new(Some(*velocity), transform.rotation, NettyRigidBodyLocation::Absolute(*location)),
                     dimensions: structure.chunk_dimensions(),
                 }),
             );

@@ -214,7 +214,6 @@ pub(crate) fn client_sync_players(
     q_parent: Query<&Parent>,
     blocks: Res<Registry<Block>>,
     mut pilot_change_event_writer: EventWriter<ChangePilotEvent>,
-    time: Res<Time>,
 
     mut hud_messages: ResMut<HudMessages>,
 ) {
@@ -445,12 +444,11 @@ pub(crate) fn client_sync_players(
                 dimensions,
                 planet,
                 biosphere,
-                location,
             } => {
                 let entity = network_mapping.client_from_server_or_create(&server_entity, &mut commands);
 
                 let mut entity_cmds = commands.entity(entity);
-                let mut structure = Structure::Dynamic(DynamicStructure::new(dimensions));
+                let structure = Structure::Dynamic(DynamicStructure::new(dimensions));
 
                 entity_cmds.insert((structure, planet, BiosphereMarker::new(biosphere)));
             }
@@ -468,28 +466,14 @@ pub(crate) fn client_sync_players(
             }
             ServerReliableMessages::Ship {
                 entity: server_entity,
-                body,
                 dimensions,
             } => {
                 let entity = network_mapping.client_from_server_or_create(&server_entity, &mut commands);
-                // TODO: This may cause problems if child stations exist
-                let Ok(body) = body.map_to_client(&network_mapping) else {
-                    continue;
-                };
-
-                let location = match body.location {
-                    NettyRigidBodyLocation::Absolute(location) => location,
-                    NettyRigidBodyLocation::Relative(rel_trans, entity) => {
-                        let parent_loc = query_body.get(entity).map(|x| x.0.copied()).unwrap_or(None).unwrap_or_default();
-
-                        parent_loc + rel_trans
-                    }
-                };
 
                 let mut entity_cmds = commands.entity(entity);
                 let structure = Structure::Full(FullStructure::new(dimensions));
 
-                entity_cmds.insert((structure, Ship, body.create_velocity()));
+                entity_cmds.insert((structure, Ship));
 
                 client.send_message(
                     NettyChannelClient::Reliable,
@@ -500,26 +484,12 @@ pub(crate) fn client_sync_players(
             }
             ServerReliableMessages::Station {
                 entity: server_entity,
-                body,
                 dimensions,
             } => {
                 let entity = network_mapping.client_from_server_or_create(&server_entity, &mut commands);
-                // TODO: This may cause problems if child stations exist
-                let Ok(body) = body.map_to_client(&network_mapping) else {
-                    continue;
-                };
-
-                let location = match body.location {
-                    NettyRigidBodyLocation::Absolute(location) => location,
-                    NettyRigidBodyLocation::Relative(rel_trans, entity) => {
-                        let parent_loc = query_body.get(entity).map(|x| x.0.copied()).unwrap_or(None).unwrap_or_default();
-
-                        parent_loc + rel_trans
-                    }
-                };
 
                 let mut entity_cmds = commands.entity(entity);
-                let mut structure = Structure::Full(FullStructure::new(dimensions));
+                let structure = Structure::Full(FullStructure::new(dimensions));
 
                 entity_cmds.insert((structure, Station));
             }

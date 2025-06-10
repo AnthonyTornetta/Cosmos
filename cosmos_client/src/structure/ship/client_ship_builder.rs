@@ -13,7 +13,6 @@ use cosmos_core::{
 use crate::{
     asset::asset_loader::load_assets,
     audio::{AudioEmission, CosmosAudioEmitter},
-    structure::chunk_retreiver::NeedsPopulated,
 };
 
 fn client_on_add_ship(
@@ -32,7 +31,7 @@ fn client_on_add_ship(
             ..Default::default()
         }]);
 
-        commands.entity(entity).insert(NeedsPopulated).with_children(|p| {
+        commands.entity(entity).with_children(|p| {
             p.spawn((
                 Name::new("Engine idle sound"),
                 DespawnWithStructure,

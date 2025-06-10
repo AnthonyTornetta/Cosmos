@@ -119,8 +119,6 @@ pub enum ServerReliableMessages {
         planet: Planet,
         /// The planet's biosphere.
         biosphere: String,
-        /// Planet's location
-        location: Location,
     },
     /// This is sent whenever `SendAllChunks` is requested - it is used to specify how much chunks you should expect before marking the structure as loaded
     NumberOfChunks {
@@ -134,8 +132,6 @@ pub enum ServerReliableMessages {
     Ship {
         /// The ship's server entity.
         entity: Entity,
-        /// The ship's rigidbody.
-        body: NettyRigidBody,
         /// The width to be passed into the structure's constructor.
         dimensions: ChunkCoordinate,
     },
@@ -144,8 +140,6 @@ pub enum ServerReliableMessages {
     Station {
         /// The station's server entity.
         entity: Entity,
-        /// The station's rigidbody.
-        body: NettyRigidBody,
         /// The width to be passed into the structure's constructor.
         dimensions: ChunkCoordinate,
     },
