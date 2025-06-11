@@ -84,7 +84,12 @@ fn toggle_inventory(
     focused: Res<Focus>,
     q_input: Query<(), With<TextInput>>,
 ) {
-    if inputs.check_just_pressed(CosmosInputs::ToggleInventory) && !focused.map(|x| q_input.contains(x)).unwrap_or(false) {
+    // Don't toggle the inventory while typing in the search bar (or any other text box)
+    if focused.map(|x| q_input.contains(x)).unwrap_or(false) {
+        return;
+    }
+
+    if inputs.check_just_pressed(CosmosInputs::ToggleInventory) {
         if !open_inventories.is_empty() {
             open_inventories.iter().for_each(|ent| {
                 commands.entity(ent).remove::<InventoryNeedsDisplayed>();
@@ -342,6 +347,7 @@ fn toggle_inventory_rendering(
                         Name::new("Search Bar"),
                         GuiWindowTitleBar,
                         InventorySearchBar,
+                        Visibility::Hidden,
                         BackgroundColor(border_color.0.into()),
                         BorderColor(css::GREY.into()),
                         Node {
@@ -732,8 +738,12 @@ struct OpenTab;
 fn on_click_creative_category(
     mut evr_click_creative_tab: EventReader<ItemCategoryClickedEvent>,
     q_item_category_marker: Query<&ItemCategoryMarker>,
-    mut q_unopen_tab: Query<(Entity, &mut Node, &mut Visibility, &VisibileHeight, &SelectedTab), Without<OpenTab>>,
-    mut q_open_tab: Query<(Entity, &mut Node, &mut Visibility, &SelectedTab), With<OpenTab>>,
+    mut q_unopen_tab: Query<
+        (Entity, &mut Node, &mut Visibility, &VisibileHeight, &SelectedTab),
+        (Without<InventorySearchBar>, Without<OpenTab>),
+    >,
+    mut q_open_tab: Query<(Entity, &mut Node, &mut Visibility, &SelectedTab), (Without<InventorySearchBar>, With<OpenTab>)>,
+    mut q_creative_search: Query<&mut Visibility, With<InventorySearchBar>>,
     mut commands: Commands,
 ) {
     for ev in evr_click_creative_tab.read() {
@@ -744,6 +754,10 @@ fn on_click_creative_category(
             if i_category.0 == *item_category {
                 continue;
             }
+
+            if let Ok(mut c_search) = q_creative_search.get_single_mut() {
+                *c_search = Visibility::Hidden;
+            }
             node.height = Val::Px(0.0);
             *vis = Visibility::Hidden;
             commands.entity(entity).remove::<OpenTab>();
@@ -753,6 +767,12 @@ fn on_click_creative_category(
             error!("Bad state");
             continue;
         };
+
+        if item_category == &ItemCategoryMarker::Search {
+            if let Ok(mut c_search) = q_creative_search.get_single_mut() {
+                *c_search = Visibility::Inherited;
+            }
+        }
 
         node.height = vis_height.0;
         *vis = Visibility::default();
