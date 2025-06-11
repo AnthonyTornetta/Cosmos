@@ -1,8 +1,11 @@
 //! Represents the cosmos input systems
 
-use bevy::{prelude::*, utils::HashMap};
+use std::fs;
 
-#[derive(Clone, Copy, Eq, PartialEq, Hash, Debug)]
+use bevy::{prelude::*, utils::HashMap};
+use serde::{Deserialize, Serialize};
+
+#[derive(Clone, Copy, Eq, PartialEq, Hash, Debug, Serialize, Deserialize)]
 /// This should be refactored into a registry, but for now, enjoy enum!
 ///
 /// Use this for input handling to allow things to be automatically changed
@@ -238,14 +241,59 @@ fn init_input(mut input_handler: ResMut<CosmosInputHandler>) {
     input_handler.set_keycode(CosmosInputs::HideUi, KeyCode::F1);
 
     input_handler.set_keycode(CosmosInputs::ToggleFocusCam, KeyCode::KeyG);
+
+    if let Ok(current_settings) = fs::read_to_string("settings/controls.toml") {
+        if let Ok(parsed_settings) = toml::from_str::<CosmosInputHandler>(&current_settings) {
+            for (k, control) in parsed_settings.input_mapping.iter() {
+                match control {
+                    None => {
+                        input_handler.remove_control(*k);
+                    }
+                    Some(ControlType::Key(key)) => {
+                        input_handler.set_keycode(*k, *key);
+                    }
+                    Some(ControlType::Mouse(mouse)) => {
+                        input_handler.set_mouse_button(*k, *mouse);
+                    }
+                }
+            }
+        }
+    }
+
+    let _ = fs::write(
+        "settings/controls.toml",
+        toml::to_string_pretty(input_handler.as_ref()).expect("Failed to serialize to toml :("),
+    );
 }
 
-#[derive(Resource, Default, Debug)]
+#[derive(Resource, Debug, Serialize, Deserialize, Clone, Copy)]
+enum ControlType {
+    Key(KeyCode),
+    Mouse(MouseButton),
+}
+
+impl ControlType {
+    fn as_key(&self) -> Option<KeyCode> {
+        match self {
+            Self::Key(k) => Some(*k),
+            Self::Mouse(_) => None,
+        }
+    }
+
+    fn as_mouse(&self) -> Option<MouseButton> {
+        match self {
+            Self::Key(_) => None,
+            Self::Mouse(btn) => Some(*btn),
+        }
+    }
+}
+
+#[derive(Resource, Default, Debug, Serialize, Deserialize)]
 /// Use this to check if inputs are selected
 ///
 /// You should generally prefer to use the `InputChecker` unless you're doing something super specific.
 pub struct CosmosInputHandler {
-    input_mapping: HashMap<CosmosInputs, (Option<KeyCode>, Option<MouseButton>)>,
+    input_mapping: HashMap<CosmosInputs, Option<ControlType>>,
 }
 
 /// A wrapper around [`CosmosInputHandler`] and all the resources it needs.
@@ -353,10 +401,9 @@ impl CosmosInputHandler {
         if self.input_mapping.contains_key(&input) {
             let mapping = self.input_mapping.get_mut(&input).unwrap();
 
-            mapping.0 = Some(keycode);
-            mapping.1 = None;
+            *mapping = Some(ControlType::Key(keycode));
         } else {
-            self.input_mapping.insert(input, (Some(keycode), None));
+            self.input_mapping.insert(input, Some(ControlType::Key(keycode)));
         }
     }
 
@@ -364,10 +411,9 @@ impl CosmosInputHandler {
         if self.input_mapping.contains_key(&input) {
             let mapping = self.input_mapping.get_mut(&input).unwrap();
 
-            mapping.0 = None;
-            mapping.1 = Some(button);
+            *mapping = Some(ControlType::Mouse(button));
         } else {
-            self.input_mapping.insert(input, (None, Some(button)));
+            self.input_mapping.insert(input, Some(ControlType::Mouse(button)));
         }
     }
 
@@ -376,7 +422,7 @@ impl CosmosInputHandler {
             return None;
         }
 
-        self.input_mapping[&input].0
+        self.input_mapping[&input].as_ref().and_then(|x| x.as_key())
     }
 
     fn mouse_button_for(&self, input: CosmosInputs) -> Option<MouseButton> {
@@ -384,10 +430,25 @@ impl CosmosInputHandler {
             return None;
         }
 
-        self.input_mapping[&input].1
+        self.input_mapping[&input].as_ref().and_then(|x| x.as_mouse())
+    }
+
+    fn remove_control(&mut self, input: CosmosInputs) {
+        self.input_mapping.remove(&input);
+    }
+}
+
+fn on_change_controls(input_handler: Res<CosmosInputHandler>) {
+    if let Err(e) = fs::write(
+        "settings/controls.toml",
+        toml::to_string_pretty(input_handler.as_ref()).expect("Failed to serialize to toml :("),
+    ) {
+        error!("Error saving controls - {e:?}");
     }
 }
 
 pub(super) fn register(app: &mut App) {
-    app.insert_resource(CosmosInputHandler::new()).add_systems(Startup, init_input);
+    app.insert_resource(CosmosInputHandler::new())
+        .add_systems(Startup, init_input)
+        .add_systems(Update, on_change_controls.run_if(resource_exists_and_changed::<CosmosInputHandler>));
 }
