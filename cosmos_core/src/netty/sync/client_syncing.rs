@@ -13,7 +13,6 @@ use crate::events::block_events::BlockDataChangedEvent;
 use crate::inventory::Inventory;
 use crate::inventory::itemstack::ItemStackData;
 use crate::netty::client::{LocalPlayer, NeedsLoadedFromServer};
-use crate::netty::client_reliable_messages::ClientReliableMessages;
 use crate::netty::sync::GotComponentToSyncEvent;
 use crate::netty::sync::mapping::Mappable;
 use crate::netty::system_sets::NetworkingSystemsSet;
@@ -390,7 +389,6 @@ fn client_receive_components(
 ) {
     waiting_data.0.retain(|(component_id, c)| {
         repl_comp_data(
-            &mut client,
             &q_block_data,
             &mut network_mapping,
             &q_structure_systems,
@@ -419,11 +417,6 @@ fn client_receive_components(
 
         network_mapping.add_mapping(ent, e);
 
-        client.send_message(
-            NettyChannelClient::Reliable,
-            cosmos_encoder::serialize(&ClientReliableMessages::RequestEntityData { entity: e }),
-        );
-
         false
     });
 
@@ -439,7 +432,6 @@ fn client_receive_components(
                         .into_iter()
                         .flat_map(|c| {
                             repl_comp_data(
-                                &mut client,
                                 &q_block_data,
                                 &mut network_mapping,
                                 &q_structure_systems,
@@ -460,7 +452,6 @@ fn client_receive_components(
                 entity_identifier,
             } => {
                 let (entity, authority_entity) = match get_entity_identifier_info(
-                    &mut client,
                     entity_identifier,
                     &q_block_data,
                     &mut network_mapping,
@@ -492,7 +483,6 @@ fn client_receive_components(
 }
 
 fn repl_comp_data(
-    client: &mut RenetClient,
     q_block_data: &Query<&BlockData>,
     network_mapping: &mut ResMut<NetworkMapping>,
     q_structure_systems: &Query<&StructureSystems, ()>,
@@ -510,7 +500,6 @@ fn repl_comp_data(
     } = c;
 
     let (entity, authority_entity) = match get_entity_identifier_info(
-        client,
         entity_identifier,
         q_block_data,
         network_mapping,
@@ -546,7 +535,6 @@ fn repl_comp_data(
 }
 
 fn get_entity_identifier_info(
-    client: &mut RenetClient,
     entity_identifier: ComponentEntityIdentifier,
     q_block_data: &Query<&BlockData>,
     network_mapping: &mut NetworkMapping,
@@ -592,13 +580,6 @@ fn get_entity_identifier_info(
             .map(|x| {
                 if !q_block_data.contains(x) {
                     error!("Component got for block data but had no block data component - requesting entity. (Client: {x:?})");
-
-                    client.send_message(
-                        NettyChannelClient::Reliable,
-                        cosmos_encoder::serialize(&ClientReliableMessages::RequestEntityData {
-                            entity: server_data_entity,
-                        }),
-                    );
 
                     return network_mapping
                         .client_from_server(&identifier.block.structure())

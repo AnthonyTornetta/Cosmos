@@ -42,6 +42,7 @@ use cosmos_core::{
         location::{Location, LocationPhysicsSet, SYSTEM_SECTORS, SetPosition, systems::Anchor},
         player_world::PlayerWorld,
     },
+    prelude::Station,
     registry::Registry,
     state::GameState,
     structure::{
@@ -51,9 +52,8 @@ use cosmos_core::{
         chunk::Chunk,
         dynamic_structure::DynamicStructure,
         full_structure::FullStructure,
-        planet::{biosphere::BiosphereMarker, planet_builder::TPlanetBuilder},
-        ship::{Ship, pilot::Pilot, ship_builder::TShipBuilder},
-        station::station_builder::TStationBuilder,
+        planet::biosphere::BiosphereMarker,
+        ship::{Ship, pilot::Pilot},
         systems::{StructureSystems, dock_system::Docked},
     },
 };
@@ -63,11 +63,7 @@ use crate::{
     netty::lobby::{ClientLobby, PlayerInfo},
     rendering::{CameraPlayerOffset, MainCamera},
     settings::DesiredFov,
-    structure::{
-        planet::{client_planet_builder::ClientPlanetBuilder, generation::SetTerrainGenData},
-        ship::{client_ship_builder::ClientShipBuilder, ship_movement::ClientCreateShipMovementSet},
-        station::client_station_builder::ClientStationBuilder,
-    },
+    structure::{planet::generation::SetTerrainGenData, ship::ship_movement::ClientCreateShipMovementSet},
     ui::{
         crosshair::{CrosshairOffset, CrosshairOffsetSet},
         message::{HudMessage, HudMessages},
@@ -119,18 +115,6 @@ fn update_crosshair(
 
         last_rotation.0 = transform.rotation;
     }
-}
-
-#[derive(Resource, Debug, Clone, Copy)]
-struct RequestedEntity {
-    server_entity: Entity,
-    client_entity: Entity,
-    seconds_since_request: f32,
-}
-
-#[derive(Resource, Debug, Default)]
-pub(crate) struct RequestedEntities {
-    entities: Vec<RequestedEntity>,
 }
 
 #[derive(Component, Debug, Clone, Copy, Eq, PartialEq, PartialOrd, Ord)]
@@ -230,24 +214,10 @@ pub(crate) fn client_sync_players(
     q_parent: Query<&Parent>,
     blocks: Res<Registry<Block>>,
     mut pilot_change_event_writer: EventWriter<ChangePilotEvent>,
-    mut requested_entities: ResMut<RequestedEntities>,
-    time: Res<Time>,
 
     mut hud_messages: ResMut<HudMessages>,
 ) {
     let client_id = transport.client_id();
-
-    requested_entities.entities.retain_mut(|x| {
-        x.seconds_since_request += time.delta_secs();
-        if x.seconds_since_request < 10.0 {
-            true
-        } else {
-            if let Some(ecmds) = commands.get_entity(x.client_entity) {
-                ecmds.despawn_recursive();
-            }
-            false
-        }
-    });
 
     while let Some(message) = client.receive_message(NettyChannelServer::Unreliable) {
         let msg: ServerUnreliableMessages = cosmos_encoder::deserialize(&message).unwrap();
@@ -262,17 +232,6 @@ pub(crate) fn client_sync_players(
                     if let Some(entity) = network_mapping.client_from_server(server_entity) {
                         if q_needs_loaded.contains(entity) {
                             commands.entity(entity).remove::<NeedsLoadedFromServer>();
-
-                            requested_entities.entities.push(RequestedEntity {
-                                server_entity: *server_entity,
-                                client_entity: entity,
-                                seconds_since_request: 0.0,
-                            });
-
-                            client.send_message(
-                                NettyChannelClient::Reliable,
-                                cosmos_encoder::serialize(&ClientReliableMessages::RequestEntityData { entity: *server_entity }),
-                            );
                         } else if let Ok((location, transform, velocity, net_tick, lerp_towards)) = query_body.get_mut(entity) {
                             if let Some(mut net_tick) = net_tick {
                                 if net_tick.0 >= time_stamp {
@@ -326,41 +285,6 @@ pub(crate) fn client_sync_players(
                                 ));
                             }
                         }
-                    } else if !requested_entities.entities.iter().any(|x| x.server_entity == *server_entity) {
-                        let (loc, parent_ent) = match body.location {
-                            NettyRigidBodyLocation::Absolute(location) => (location, None),
-                            NettyRigidBodyLocation::Relative(rel_trans, parent_ent) => {
-                                let parent_loc = query_body.get(parent_ent).map(|x| x.0.copied()).unwrap_or(None).unwrap_or_default();
-
-                                (parent_loc + rel_trans, Some(parent_ent))
-                            }
-                        };
-
-                        let mut client_entity_ecmds = commands.spawn((
-                            ServerEntity(*server_entity),
-                            loc,
-                            Transform::from_rotation(body.rotation),
-                            body.create_velocity(),
-                            LerpTowards(body),
-                        ));
-
-                        if let Some(parent_ent) = parent_ent {
-                            client_entity_ecmds.set_parent_in_place(parent_ent);
-                        }
-
-                        let client_entity = client_entity_ecmds.id();
-
-                        requested_entities.entities.push(RequestedEntity {
-                            server_entity: *server_entity,
-                            client_entity,
-                            seconds_since_request: 0.0,
-                        });
-                        network_mapping.add_mapping(client_entity, *server_entity);
-
-                        client.send_message(
-                            NettyChannelClient::Reliable,
-                            cosmos_encoder::serialize(&ClientReliableMessages::RequestEntityData { entity: *server_entity }),
-                        );
                     }
                 }
             }
@@ -442,12 +366,6 @@ pub(crate) fn client_sync_players(
 
                 let camera_offset = Vec3::new(0.0, 0.75, 0.0);
 
-                // Requests all components needed for the player
-                client.send_message(
-                    NettyChannelClient::Reliable,
-                    cosmos_encoder::serialize(&ClientReliableMessages::RequestEntityData { entity: server_entity }),
-                );
-
                 if client_id == id {
                     entity_cmds
                         .insert((
@@ -515,19 +433,13 @@ pub(crate) fn client_sync_players(
                 dimensions,
                 planet,
                 biosphere,
-                location,
             } => {
-                let Some(entity) = network_mapping.client_from_server(&server_entity) else {
-                    continue;
-                };
+                let entity = network_mapping.client_from_server_or_create(&server_entity, &mut commands);
 
                 let mut entity_cmds = commands.entity(entity);
-                let mut structure = Structure::Dynamic(DynamicStructure::new(dimensions));
+                let structure = Structure::Dynamic(DynamicStructure::new(dimensions));
 
-                let builder = ClientPlanetBuilder::default();
-                builder.insert_planet(&mut entity_cmds, location, &mut structure, planet);
-
-                entity_cmds.insert((structure, BiosphereMarker::new(biosphere)));
+                entity_cmds.insert((structure, planet, BiosphereMarker::new(biosphere)));
             }
             ServerReliableMessages::NumberOfChunks {
                 entity: server_entity,
@@ -543,33 +455,14 @@ pub(crate) fn client_sync_players(
             }
             ServerReliableMessages::Ship {
                 entity: server_entity,
-                body,
                 dimensions,
             } => {
-                let Some(entity) = network_mapping.client_from_server(&server_entity) else {
-                    continue;
-                };
-
-                let Ok(body) = body.map_to_client(&network_mapping) else {
-                    continue;
-                };
-
-                let location = match body.location {
-                    NettyRigidBodyLocation::Absolute(location) => location,
-                    NettyRigidBodyLocation::Relative(rel_trans, entity) => {
-                        let parent_loc = query_body.get(entity).map(|x| x.0.copied()).unwrap_or(None).unwrap_or_default();
-
-                        parent_loc + rel_trans
-                    }
-                };
+                let entity = network_mapping.client_from_server_or_create(&server_entity, &mut commands);
 
                 let mut entity_cmds = commands.entity(entity);
-                let mut structure = Structure::Full(FullStructure::new(dimensions));
+                let structure = Structure::Full(FullStructure::new(dimensions));
 
-                let builder = ClientShipBuilder::default();
-                builder.insert_ship(&mut entity_cmds, location, body.create_velocity(), &mut structure);
-
-                entity_cmds.insert((structure /*chunks_needed*/,));
+                entity_cmds.insert((structure, Ship));
 
                 client.send_message(
                     NettyChannelClient::Reliable,
@@ -580,33 +473,14 @@ pub(crate) fn client_sync_players(
             }
             ServerReliableMessages::Station {
                 entity: server_entity,
-                body,
                 dimensions,
             } => {
-                let Some(entity) = network_mapping.client_from_server(&server_entity) else {
-                    continue;
-                };
-
-                let Ok(body) = body.map_to_client(&network_mapping) else {
-                    continue;
-                };
-
-                let location = match body.location {
-                    NettyRigidBodyLocation::Absolute(location) => location,
-                    NettyRigidBodyLocation::Relative(rel_trans, entity) => {
-                        let parent_loc = query_body.get(entity).map(|x| x.0.copied()).unwrap_or(None).unwrap_or_default();
-
-                        parent_loc + rel_trans
-                    }
-                };
+                let entity = network_mapping.client_from_server_or_create(&server_entity, &mut commands);
 
                 let mut entity_cmds = commands.entity(entity);
-                let mut structure = Structure::Full(FullStructure::new(dimensions));
+                let structure = Structure::Full(FullStructure::new(dimensions));
 
-                let builder = ClientStationBuilder::default();
-                builder.insert_station(&mut entity_cmds, location, &mut structure);
-
-                entity_cmds.insert((structure /*chunks_needed*/,));
+                entity_cmds.insert((structure, Station));
             }
             ServerReliableMessages::ChunkData {
                 structure_entity: server_structure_entity,
@@ -630,13 +504,6 @@ pub(crate) fn client_sync_players(
                                         "Blocks didn't match up for block data! This may cause a block to have missing data. Block data block id: {block_id}; block here id: {here_id}."
                                     );
                                 }
-                            } else {
-                                info!("New block data -- asking for {block_data_entity}.");
-
-                                client.send_message(
-                                    NettyChannelClient::Reliable,
-                                    cosmos_encoder::serialize(&ClientReliableMessages::RequestEntityData { entity: block_data_entity }),
-                                );
                             }
                         }
 
@@ -767,9 +634,6 @@ pub(crate) fn client_sync_players(
                     format!("Invalid reactor setup: {reason}"),
                     css::ORANGE_RED.into(),
                 ));
-            }
-            ServerReliableMessages::RequestedEntityReceived(entity) => {
-                requested_entities.entities.retain(|x| x.server_entity != entity);
             }
             ServerReliableMessages::BlockHealthChange { changes } => {
                 take_damage_event_writer.send_batch(changes.into_iter().filter_map(|ev| {
@@ -932,32 +796,31 @@ fn get_entity_identifier_entity_for_despawning(
 // }
 
 pub(super) fn register(app: &mut App) {
-    app.insert_resource(RequestedEntities::default())
-        .add_systems(
-            Update,
-            (
-                insert_last_rotation,
-                update_crosshair.in_set(CrosshairOffsetSet::ApplyCrosshairChanges),
-            )
-                .after(ClientCreateShipMovementSet::ProcessShipMovement)
-                .in_set(NetworkingSystemsSet::Between)
-                .after(CursorFlagsSet::ApplyCursorFlagsUpdates)
-                .chain(),
+    app.add_systems(
+        Update,
+        (
+            insert_last_rotation,
+            update_crosshair.in_set(CrosshairOffsetSet::ApplyCrosshairChanges),
         )
-        .add_systems(
-            Update,
-            (client_sync_players
-                .before(ClientReceiveComponents::ClientReceiveComponents)
-                .in_set(NetworkingSystemsSet::ReceiveMessages)
-                .before(LocationPhysicsSet::DoPhysics))
-            .run_if(in_state(GameState::Playing).or(in_state(GameState::LoadingWorld)))
+            .after(ClientCreateShipMovementSet::ProcessShipMovement)
+            .in_set(NetworkingSystemsSet::Between)
+            .after(CursorFlagsSet::ApplyCursorFlagsUpdates)
             .chain(),
-        )
-        .add_systems(
-            Update,
-            lerp_towards
-                .before(LocationPhysicsSet::DoPhysics)
-                .in_set(NetworkingSystemsSet::Between)
-                .run_if(in_state(GameState::Playing).or(in_state(GameState::LoadingWorld))),
-        );
+    )
+    .add_systems(
+        Update,
+        (client_sync_players
+            .before(ClientReceiveComponents::ClientReceiveComponents)
+            .in_set(NetworkingSystemsSet::ReceiveMessages)
+            .before(LocationPhysicsSet::DoPhysics))
+        .run_if(in_state(GameState::Playing).or(in_state(GameState::LoadingWorld)))
+        .chain(),
+    )
+    .add_systems(
+        Update,
+        lerp_towards
+            .before(LocationPhysicsSet::DoPhysics)
+            .in_set(NetworkingSystemsSet::Between)
+            .run_if(in_state(GameState::Playing).or(in_state(GameState::LoadingWorld))),
+    );
 }

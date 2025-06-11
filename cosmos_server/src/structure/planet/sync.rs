@@ -5,7 +5,6 @@ use cosmos_core::{
         NettyChannelServer, cosmos_encoder, server_reliable_messages::ServerReliableMessages,
         sync::server_entity_syncing::RequestedEntityEvent, system_sets::NetworkingSystemsSet,
     },
-    physics::location::Location,
     structure::{
         Structure,
         planet::{Planet, biosphere::BiosphereMarker},
@@ -14,11 +13,11 @@ use cosmos_core::{
 
 fn on_request_planet(
     mut event_reader: EventReader<RequestedEntityEvent>,
-    query: Query<(&Structure, &Planet, &Location, &BiosphereMarker)>,
+    query: Query<(&Structure, &Planet, &BiosphereMarker)>,
     mut server: ResMut<RenetServer>,
 ) {
     for ev in event_reader.read() {
-        if let Ok((structure, planet, location, biosphere_marker)) = query.get(ev.entity) {
+        if let Ok((structure, planet, biosphere_marker)) = query.get(ev.entity) {
             let Structure::Dynamic(dynamic_planet) = structure else {
                 panic!("Planet must be dynamic!");
             };
@@ -31,7 +30,6 @@ fn on_request_planet(
                     dimensions: dynamic_planet.chunk_dimensions(),
                     planet: *planet,
                     biosphere: biosphere_marker.biosphere_name().to_owned(),
-                    location: *location,
                 }),
             );
         }

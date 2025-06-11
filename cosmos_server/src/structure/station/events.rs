@@ -3,14 +3,12 @@
 use bevy::prelude::*;
 use cosmos_core::{
     physics::location::Location,
+    prelude::Station,
     state::GameState,
-    structure::{
-        Structure, coordinates::ChunkCoordinate, full_structure::FullStructure, loading::StructureLoadingSet,
-        station::station_builder::TStationBuilder,
-    },
+    structure::{Structure, coordinates::ChunkCoordinate, full_structure::FullStructure, loading::StructureLoadingSet},
 };
 
-use super::{loading::StationNeedsCreated, server_station_builder::ServerStationBuilder};
+use super::loading::StationNeedsCreated;
 
 /// This event is done when a station is being created
 #[derive(Debug, Event)]
@@ -25,15 +23,15 @@ pub(crate) fn create_station_event_reader(mut event_reader: EventReader<CreateSt
     for ev in event_reader.read() {
         let mut entity = commands.spawn_empty();
 
-        let mut structure = Structure::Full(FullStructure::new(ChunkCoordinate::new(20, 20, 20)));
+        let structure = Structure::Full(FullStructure::new(ChunkCoordinate::new(20, 20, 20)));
 
-        let builder = ServerStationBuilder::default();
-
-        builder.insert_station(&mut entity, ev.station_location, &mut structure);
-
-        entity
-            .insert(structure)
-            .insert((StationNeedsCreated, Transform::from_rotation(ev.rotation)));
+        entity.insert((
+            StationNeedsCreated,
+            Station,
+            ev.station_location,
+            structure,
+            Transform::from_rotation(ev.rotation),
+        ));
     }
 }
 

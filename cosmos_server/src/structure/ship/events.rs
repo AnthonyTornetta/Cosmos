@@ -16,19 +16,17 @@ use cosmos_core::{
         server_unreliable_messages::ServerUnreliableMessages, system_sets::NetworkingSystemsSet,
     },
     physics::location::Location,
+    prelude::Ship,
     state::GameState,
     structure::{
-        Structure, StructureTypeSet,
-        coordinates::ChunkCoordinate,
-        full_structure::FullStructure,
-        loading::StructureLoadingSet,
-        ship::{ship_builder::TShipBuilder, ship_movement::ShipMovement},
+        Structure, StructureTypeSet, coordinates::ChunkCoordinate, full_structure::FullStructure, loading::StructureLoadingSet,
+        ship::ship_movement::ShipMovement,
     },
 };
 
 use crate::ai::AiControlled;
 
-use super::{loading::ShipNeedsCreated, server_ship_builder::ServerShipBuilder};
+use super::loading::ShipNeedsCreated;
 
 #[derive(Debug, Event)]
 /// This event is sent when the ship's movement is set
@@ -86,15 +84,16 @@ pub(crate) fn create_ship_event_reader(mut event_reader: EventReader<CreateShipE
 
         let mut entity = commands.spawn_empty();
 
-        let mut structure = Structure::Full(FullStructure::new(ChunkCoordinate::new(10, 10, 10)));
+        let structure = Structure::Full(FullStructure::new(ChunkCoordinate::new(10, 10, 10)));
 
-        let builder = ServerShipBuilder::default();
-
-        builder.insert_ship(&mut entity, ev.ship_location, Velocity::zero(), &mut structure);
-
-        entity
-            .insert(structure)
-            .insert((ShipNeedsCreated, Transform::from_rotation(ev.rotation)));
+        entity.insert((
+            structure,
+            ev.ship_location,
+            Velocity::default(),
+            Ship,
+            ShipNeedsCreated,
+            Transform::from_rotation(ev.rotation),
+        ));
     }
 }
 

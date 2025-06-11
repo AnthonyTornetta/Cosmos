@@ -16,6 +16,7 @@ use bevy::{
 };
 use cosmos_core::{
     chat::{ClientSendChatMessageEvent, ServerSendChatMessageEvent},
+    commands::ClientCommandEvent,
     ecs::NeedsDespawned,
     netty::{
         sync::events::client_event::{NettyEventReceived, NettyEventWriter},
@@ -263,7 +264,8 @@ fn send_chat_msg(
     inputs: InputChecker,
     mut q_value: Query<&mut InputValue, With<SendingChatMessageBox>>,
     q_chat_box: Query<&Visibility, With<ChatContainer>>,
-    mut nevw: NettyEventWriter<ClientSendChatMessageEvent>,
+    mut nevw_chat: NettyEventWriter<ClientSendChatMessageEvent>,
+    mut nevw_command: NettyEventWriter<ClientCommandEvent>,
 ) {
     if !inputs.check_just_pressed(CosmosInputs::SendChatMessage) {
         return;
@@ -282,7 +284,13 @@ fn send_chat_msg(
         return;
     }
 
-    nevw.send(ClientSendChatMessageEvent::Global(value.to_owned()));
+    if let Some(stripped) = value.strip_prefix("/") {
+        nevw_command.send(ClientCommandEvent {
+            command_text: stripped.to_owned(),
+        });
+    } else {
+        nevw_chat.send(ClientSendChatMessageEvent::Global(value.to_owned()));
+    }
 
     // Set val to "" in case toggle chat box and send message are bound to different keys
     val.set_value("");

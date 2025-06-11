@@ -12,7 +12,6 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     entities::player::render_distance::RenderDistance,
-    physics::location::Location,
     structure::{
         chunk::{BlockInfo, netty::SerializedChunkBlockData},
         coordinates::{ChunkBlockCoordinate, ChunkCoordinate, CoordinateType},
@@ -119,8 +118,6 @@ pub enum ServerReliableMessages {
         planet: Planet,
         /// The planet's biosphere.
         biosphere: String,
-        /// Planet's location
-        location: Location,
     },
     /// This is sent whenever `SendAllChunks` is requested - it is used to specify how much chunks you should expect before marking the structure as loaded
     NumberOfChunks {
@@ -134,8 +131,6 @@ pub enum ServerReliableMessages {
     Ship {
         /// The ship's server entity.
         entity: Entity,
-        /// The ship's rigidbody.
-        body: NettyRigidBody,
         /// The width to be passed into the structure's constructor.
         dimensions: ChunkCoordinate,
     },
@@ -144,8 +139,6 @@ pub enum ServerReliableMessages {
     Station {
         /// The station's server entity.
         entity: Entity,
-        /// The station's rigidbody.
-        body: NettyRigidBody,
         /// The width to be passed into the structure's constructor.
         dimensions: ChunkCoordinate,
     },
@@ -185,8 +178,6 @@ pub enum ServerReliableMessages {
         /// The reason the reactor failed to be created
         reason: String,
     },
-    /// This signifies that the server is sending information for a requested entity
-    RequestedEntityReceived(Entity),
     /// Sent whenever a block's health is changed
     BlockHealthChange {
         /// All the health changes packed into a vec

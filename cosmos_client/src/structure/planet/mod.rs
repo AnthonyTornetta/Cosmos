@@ -26,7 +26,6 @@ use cosmos_core::{
 
 pub mod align_player;
 pub mod biosphere;
-pub mod client_planet_builder;
 pub mod generation;
 mod lods;
 mod planet_skybox;

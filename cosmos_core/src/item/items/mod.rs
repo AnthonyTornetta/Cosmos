@@ -4,7 +4,7 @@ use crate::loader::{AddLoadingEvent, DoneLoadingEvent, LoadingManager};
 use crate::registry::{self, Registry};
 use bevy::prelude::*;
 
-use super::{DEFAULT_MAX_STACK_SIZE, Item};
+use super::{Item, ItemBuilder};
 
 fn add_cosmos_items(
     mut items: ResMut<Registry<Item>>,
@@ -14,24 +14,40 @@ fn add_cosmos_items(
 ) {
     let id = loading.register_loader(&mut start_writer);
 
-    items.register(Item::new("cosmos:photonium_crystal", DEFAULT_MAX_STACK_SIZE));
+    items.register(
+        ItemBuilder::new("cosmos:photonium_crystal")
+            .with_category("cosmos:material")
+            .create(),
+    );
 
-    items.register(Item::new("cosmos:fluid_cell", DEFAULT_MAX_STACK_SIZE));
-    items.register(Item::new("cosmos:fluid_cell_filled", 1));
+    items.register(ItemBuilder::new("cosmos:fluid_cell").create());
+    items.register(ItemBuilder::new("cosmos:fluid_cell_filled").with_stack_size(1).create());
 
-    items.register(Item::new("cosmos:iron_bar", DEFAULT_MAX_STACK_SIZE));
+    items.register(ItemBuilder::new("cosmos:iron_bar").with_category("cosmos:material").create());
 
-    items.register(Item::new("cosmos:copper_bar", DEFAULT_MAX_STACK_SIZE));
-    items.register(Item::new("cosmos:lead_bar", DEFAULT_MAX_STACK_SIZE));
-    items.register(Item::new("cosmos:uranium", DEFAULT_MAX_STACK_SIZE));
-    items.register(Item::new("cosmos:sulfur", DEFAULT_MAX_STACK_SIZE));
-    items.register(Item::new("cosmos:gravitron_crystal", DEFAULT_MAX_STACK_SIZE));
-    items.register(Item::new("cosmos:energite_crystal", DEFAULT_MAX_STACK_SIZE));
+    items.register(ItemBuilder::new("cosmos:copper_bar").with_category("cosmos:material").create());
+    items.register(ItemBuilder::new("cosmos:lead_bar").with_category("cosmos:material").create());
+    items.register(ItemBuilder::new("cosmos:uranium").with_category("cosmos:material").create());
+    items.register(ItemBuilder::new("cosmos:sulfur").with_category("cosmos:material").create());
+    items.register(
+        ItemBuilder::new("cosmos:gravitron_crystal")
+            .with_category("cosmos:material")
+            .create(),
+    );
+    items.register(
+        ItemBuilder::new("cosmos:energite_crystal")
+            .with_category("cosmos:material")
+            .create(),
+    );
 
-    items.register(Item::new("cosmos:uranium_fuel_cell", DEFAULT_MAX_STACK_SIZE));
-    items.register(Item::new("cosmos:missile", DEFAULT_MAX_STACK_SIZE));
+    items.register(
+        ItemBuilder::new("cosmos:uranium_fuel_cell")
+            .with_category("cosmos:material")
+            .create(),
+    );
+    items.register(ItemBuilder::new("cosmos:missile").with_category("cosmos:material").create());
 
-    items.register(Item::new("cosmos:magnite", DEFAULT_MAX_STACK_SIZE));
+    items.register(ItemBuilder::new("cosmos:magnite").with_category("cosmos:material").create());
 
     loading.finish_loading(id, &mut end_writer);
 }

@@ -1,368 +1,312 @@
 //! Handles all the server console commands
 
-use std::{
-    fs::{self},
-    path::Path,
-};
+use std::time::Duration;
 
 use bevy::{
     app::Update,
     ecs::schedule::IntoSystemConfigs,
-    log::warn,
-    prelude::{App, Commands, Entity, EventReader, Name, Quat, Query, Res, ResMut, Startup, Vec3, With},
+    log::info,
+    prelude::{App, Event, EventReader, EventWriter, IntoSystemSetConfigs, OnEnter, Query, Res, ResMut, Resource, SystemSet, on_event},
 };
 use cosmos_core::{
     chat::ServerSendChatMessageEvent,
-    ecs::NeedsDespawned,
+    commands::ClientCommandEvent,
     entities::player::Player,
-    inventory::{Inventory, itemstack::ItemShouldHaveData},
-    item::Item,
-    netty::sync::events::server_event::NettyEventWriter,
-    persistence::Blueprintable,
-    physics::location::{Location, Sector, SectorUnit},
+    netty::{
+        server::ServerLobby,
+        sync::events::server_event::{NettyEventReceived, NettyEventWriter},
+        system_sets::NetworkingSystemsSet,
+    },
     registry::{Registry, identifiable::Identifiable},
+    state::GameState,
 };
+use crossterm::event::{KeyCode, KeyEvent, KeyEventKind, KeyModifiers, poll, read};
 use thiserror::Error;
 
-use crate::persistence::{
-    loading::{LoadingSystemSet, NeedsBlueprintLoaded},
-    saving::NeedsBlueprinted,
-};
+use crate::persistence::loading::LoadingSystemSet;
 
-use super::{CosmosCommandInfo, CosmosCommandSent, CosmosCommands};
+use super::{CommandSender, CosmosCommandSent, Operator, SendCommandMessageEvent, ServerCommand};
 
-fn register_commands(mut commands: ResMut<CosmosCommands>) {
-    commands.add_command_info(CosmosCommandInfo {
-        name: "help".into(),
-        usage: "help [command?]".into(),
-        description: "Gets information about every command.".into(),
-    });
-
-    commands.add_command_info(CosmosCommandInfo {
-        name: "ping".into(),
-        usage: "ping".into(),
-        description: "Says 'Pong'.".into(),
-    });
-
-    commands.add_command_info(CosmosCommandInfo {
-        name: "blueprint".into(),
-        usage: "blueprint [entity_id] [file_name]".into(),
-        description: "blueprints the given structure to that file. Do not specify the file extension.".into(),
-    });
-
-    commands.add_command_info(CosmosCommandInfo {
-        name: "blueprints".into(),
-        usage: "blueprints {blueprint_type}".into(),
-        description: "Lists all the blueprints available. The type is optional, and if provided will only list blueprints for that type."
-            .into(),
-    });
-
-    commands.add_command_info(CosmosCommandInfo {
-        name: "load".into(),
-        usage: "load [blueprint_type] [blueprint_name] ([x], [y], [z]) ([x], [y], [z])".into(),
-        description: "Loads the given structure from the file for that name. You can specify sector coords and the local coords to specify the coordinates to spawn it."
-            .into(),
-    });
-
-    commands.add_command_info(CosmosCommandInfo {
-        name: "list".into(),
-        usage: "list".into(),
-        description: "Lists all the savable entity ids".into(),
-    });
-
-    commands.add_command_info(CosmosCommandInfo {
-        name: "despawn".into(),
-        usage: "despawn [entity_id]".into(),
-        description: "Despawns the given entity.".into(),
-    });
-
-    commands.add_command_info(CosmosCommandInfo {
-        name: "say".into(),
-        usage: "say [...message]".into(),
-        description: "Sends the given text to all connected players".into(),
-    });
-
-    commands.add_command_info(CosmosCommandInfo {
-        name: "give".into(),
-        usage: "give [player] [item_id] (quantity)".into(),
-        description: "Gives the player that item with the specified quantity".into(),
-    });
-
-    commands.add_command_info(CosmosCommandInfo {
-        name: "items".into(),
-        usage: "items (search term)".into(),
-        description: "Displays all items that match this search term".into(),
-    });
+#[derive(Event, Debug)]
+/// An event that is sent when this command for `T` is sent
+///
+/// Used with [`create_cosmos_command`]
+pub struct CommandEvent<T> {
+    /// The entity that sent this - None if this is called from the server console.
+    pub sender: CommandSender,
+    /// The raw string the user typed
+    pub text: String,
+    /// The name of the command (as the user typed - may be missing the `cosmos:` identifier)
+    pub name: String,
+    /// The args split around spaces
+    pub args: Vec<String>,
+    /// The command generated from the [`CosmosCommandType::from_input`]
+    pub command: T,
 }
 
-fn display_help(command_name: Option<&str>, commands: &CosmosCommands) {
+/// Used to easily create your own cosmos command.
+///
+/// The system passed will be called when a [`CommandEvent<T>`] for your `T` is generated. You will
+/// still need to read them via a normal [`EventReader<CommandEvent<T>>`] in your system.
+pub fn create_cosmos_command<T: CosmosCommandType, M>(command: ServerCommand, app: &mut App, on_get_command: impl IntoSystemConfigs<M>) {
+    let unlocalized_name = command.unlocalized_name().to_owned();
+
+    app.add_systems(OnEnter(GameState::Loading), move |mut reg: ResMut<Registry<ServerCommand>>| {
+        reg.register(command.clone());
+    });
+
+    let monitor_commands = move |commands: Res<Registry<ServerCommand>>,
+                                 mut evr_command_sent: EventReader<CosmosCommandSent>,
+                                 mut evw_command: EventWriter<CommandEvent<T>>,
+                                 q_operator: Query<&Operator>,
+                                 mut evw_send_message: EventWriter<SendCommandMessageEvent>| {
+        for ev in evr_command_sent.read() {
+            if ev.name == unlocalized_name {
+                if T::requires_operator()
+                    && !ev.sender.is_operator(&q_operator) {
+                        ev.sender.send("This command requires operator permissions.", &mut evw_send_message);
+                        continue;
+                    }
+
+                match T::from_input(ev) {
+                    Ok(command) => {
+                        evw_command.send(CommandEvent {
+                            name: ev.name.clone(),
+                            text: ev.text.clone(),
+                            args: ev.args.clone(),
+                            sender: ev.sender,
+                            command,
+                        });
+                    }
+                    Err(e) => {
+                        ev.sender.send(format!("Command error: {e:?}"), &mut evw_send_message);
+                        display_help(&ev.sender, &mut evw_send_message, Some(&ev.name), &commands);
+                    }
+                }
+                continue;
+            }
+        }
+    };
+
+    app.add_systems(
+        Update,
+        (monitor_commands, on_get_command.run_if(on_event::<CommandEvent<T>>))
+            .in_set(ProcessCommandsSet::HandleCommands)
+            .chain(),
+    )
+    .add_event::<CommandEvent<T>>();
+}
+
+/// A cosmos command event type
+pub trait CosmosCommandType: Sized + Send + Sync + 'static {
+    /// Parses the raw command input into your command or an [`ArgumentError`].
+    fn from_input(input_event: &CosmosCommandSent) -> Result<Self, ArgumentError>;
+
+    /// Returns true if this command requires operator permissions to use
+    fn requires_operator() -> bool {
+        true
+    }
+}
+
+struct HelpCommand(Option<String>);
+impl CosmosCommandType for HelpCommand {
+    fn from_input(input_event: &CosmosCommandSent) -> Result<Self, ArgumentError> {
+        if input_event.args.len() >= 2 {
+            return Err(ArgumentError::TooManyArguments);
+        }
+
+        Ok(Self(input_event.args.first().cloned()))
+    }
+}
+
+fn register_commands(app: &mut App) {
+    create_cosmos_command::<HelpCommand, _>(
+        ServerCommand::new("cosmos:help", "[command?]", "Gets information about every command."),
+        app,
+        |mut evr_command: EventReader<CommandEvent<HelpCommand>>,
+         commands: Res<Registry<ServerCommand>>,
+         mut evw_send_message: EventWriter<SendCommandMessageEvent>| {
+            for ev in evr_command.read() {
+                if let Some(cmd) = &ev.command.0 {
+                    display_help(&ev.sender, &mut evw_send_message, Some(cmd.as_str()), &commands);
+                } else {
+                    display_help(&ev.sender, &mut evw_send_message, None, &commands);
+                }
+            }
+        },
+    );
+}
+
+fn display_help(
+    sender: &CommandSender,
+    evw_send_message: &mut EventWriter<SendCommandMessageEvent>,
+    command_name: Option<&str>,
+    commands: &Registry<ServerCommand>,
+) {
     if let Some(command_name) = command_name {
-        if let Some(info) = commands.command_info(command_name) {
-            println!("=== {} ===", info.name);
-            println!("\t{}\n\t{}", info.usage, info.description);
+        let name = if !command_name.contains(":") {
+            format!("cosmos:{command_name}")
+        } else {
+            command_name.into()
+        };
+        if let Some(info) = commands.from_id(&name) {
+            sender.send(format!("=== {} ===", info.display_name()), evw_send_message);
+            sender.send(
+                format!("\t{} {}\n\t{}", info.display_name(), info.usage, info.description),
+                evw_send_message,
+            );
 
             return;
         }
     }
 
-    println!("=== All Commands ===");
-    for (_, info) in commands.commands() {
-        println!("{}\n\t{}\n\t{}", info.name, info.usage, info.description);
+    sender.send("=== All Commands ===", evw_send_message);
+    for command in commands.iter() {
+        sender.send(command.display_name().to_string(), evw_send_message);
+        sender.send(format!("\t{}", command.usage), evw_send_message);
+        sender.send(format!("\t{}", command.description), evw_send_message);
     }
 }
 
 #[derive(Debug, Error)]
-enum ArgumentError {
-    #[error("Too few arguments: {0}")]
-    TooFewArguments(String),
-    // #[error("Too many arguments: {0}")]
-    // TooManyArguments(String),
+/// Something was wrong with the arguments in the command
+pub enum ArgumentError {
+    /// Too few arguments
+    #[error("Too few arguments")]
+    TooFewArguments,
+    /// Too many arguments
+    #[error("Too many arguments")]
+    TooManyArguments,
+    /// One of the types was invalid
+    #[error("Invalid type at {arg_index} - wanted {type_name}")]
+    InvalidType {
+        /// The index in the arguments list that was wrong
+        arg_index: u32,
+        /// What the type should have been (ie `u16`, `Entity`).
+        type_name: String,
+    },
 }
 
-fn cosmos_command_listener(
-    mut commands: Commands,
-    mut command_events: EventReader<CosmosCommandSent>,
-    cosmos_commands: Res<CosmosCommands>,
-    mut nevw_send_chat_msg: NettyEventWriter<ServerSendChatMessageEvent>,
-    all_blueprintable_entities: Query<(Entity, &Name, &Location), With<Blueprintable>>,
-    mut q_inventory: Query<(&Player, &mut Inventory)>,
-    items: Res<Registry<Item>>,
-    needs_data: Res<ItemShouldHaveData>,
+fn warn_on_no_command_hit(
+    commands: Res<Registry<ServerCommand>>,
+    mut evr_command: EventReader<CosmosCommandSent>,
+    mut evw_send_message: EventWriter<SendCommandMessageEvent>,
 ) {
-    for ev in command_events.read() {
-        match ev.name.as_str() {
-            "help" => {
-                if ev.args.len() != 1 {
-                    display_help(None, &cosmos_commands);
-                } else {
-                    display_help(Some(&ev.args[0]), &cosmos_commands);
-                }
-            }
-            "say" => {
-                let message = ev.args.join(" ");
-
-                nevw_send_chat_msg.broadcast(ServerSendChatMessageEvent { sender: None, message });
-            }
-            "ping" => {
-                println!("Pong");
-            }
-            "list" => {
-                println!("All blueprintable entities: ");
-                println!("Name\tSector\t\tId");
-                for (entity, name, location) in all_blueprintable_entities.iter() {
-                    println!("{name}\t{}\t{} ", location.sector(), entity.to_bits());
-                }
-                println!("======================================")
-            }
-            "despawn" => {
-                if ev.args.len() != 1 {
-                    display_help(Some("despawn"), &cosmos_commands);
-                } else if let Ok(index) = ev.args[0].parse::<u64>() {
-                    if let Ok(entity) = Entity::try_from_bits(index) {
-                        if let Some(mut entity_commands) = commands.get_entity(entity) {
-                            entity_commands.insert(NeedsDespawned);
-                            println!("Despawned entity {index}");
-                        } else {
-                            println!("Entity not found");
-                        }
-                    } else {
-                        println!("Invalid entity id - {index}.");
-                    }
-                } else {
-                    println!("This must be the entity's ID (positive whole number)");
-                }
-            }
-            "load" => {
-                if ev.args.len() < 2 || ev.args.len() > 8 {
-                    display_help(Some("load"), &cosmos_commands);
-                } else {
-                    let path = format!("blueprints/{}/{}.bp", ev.args[0], ev.args[1]);
-
-                    fn parse_args(ev: &CosmosCommandSent) -> anyhow::Result<Location> {
-                        let mut spawn_at = Location::default();
-
-                        if ev.args.len() >= 5 {
-                            let x = ev.args[2].parse::<SectorUnit>()?;
-                            let y = ev.args[3].parse::<SectorUnit>()?;
-
-                            let z = ev.args[4].parse::<SectorUnit>()?;
-
-                            spawn_at.sector = Sector::new(x, y, z);
-
-                            if ev.args.len() == 8 {
-                                let x = ev.args[5].parse::<f32>()?;
-                                let y = ev.args[6].parse::<f32>()?;
-                                let z = ev.args[7].parse::<f32>()?;
-                                spawn_at.local = Vec3::new(x, y, z);
-                            } else if ev.args.len() != 5 {
-                                return Err(ArgumentError::TooFewArguments("Missing some local coordinate arguments".into()).into());
-                            }
-                        } else if ev.args.len() != 2 {
-                            return Err(ArgumentError::TooFewArguments("Missing some sector coordinate arguments".into()).into());
-                        }
-
-                        Ok(spawn_at)
-                    }
-
-                    let Ok(spawn_at) = parse_args(ev).map_err(|e| warn!("{e}")) else {
-                        continue;
-                    };
-
-                    commands.spawn((
-                        spawn_at,
-                        NeedsBlueprintLoaded {
-                            spawn_at,
-                            rotation: Quat::IDENTITY,
-                            path,
-                        },
-                    ));
-                }
-            }
-            "blueprint" => {
-                if ev.args.len() != 2 {
-                    display_help(Some("blueprint"), &cosmos_commands);
-                    continue;
-                }
-                let Ok(index) = ev.args[0].parse::<u64>() else {
-                    println!("The first argument must be the entity's index (positive number)");
-                    continue;
-                };
-
-                let Ok(entity) = Entity::try_from_bits(index) else {
-                    println!("Invalid entity index {index}");
-                    continue;
-                };
-
-                if !all_blueprintable_entities.contains(entity) {
-                    println!("This entity is not blueprintable!");
-                    continue;
-                };
-
-                println!("Blueprinting entity!");
-
-                commands.entity(entity).insert(NeedsBlueprinted {
-                    blueprint_name: ev.args[1].to_owned(),
-                    ..Default::default()
-                });
-            }
-            "blueprints" => {
-                let check_for = if ev.args.len() == 1 {
-                    Some(ev.args[0].as_str())
-                } else if ev.args.is_empty() {
-                    None
-                } else {
-                    display_help(Some("blueprints"), &cosmos_commands);
-                    continue;
-                };
-
-                let Ok(files) = fs::read_dir("./blueprints") else {
-                    println!("No blueprints yet!");
-                    continue;
-                };
-
-                for blueprint_type in files {
-                    let Ok(blueprint_type_dir) = blueprint_type else {
-                        continue;
-                    };
-
-                    let file_name = blueprint_type_dir.file_name();
-                    let blueprint_type = file_name.to_str().expect("Unable to read string");
-
-                    if check_for.map(|x| x == blueprint_type).unwrap_or(true) {
-                        println!("{blueprint_type}:");
-                        let Ok(blueprints) = fs::read_dir(format!("./blueprints/{blueprint_type}")) else {
-                            println!("Unable to list blueprints in this directory!");
-                            continue;
-                        };
-
-                        let mut printed = false;
-                        for blueprint in blueprints {
-                            let Ok(blueprint) = blueprint else {
-                                continue;
-                            };
-
-                            printed = true;
-
-                            let blueprint = blueprint.file_name();
-                            let file_name = Path::new(&blueprint).file_stem().expect("Unable to get file stem");
-                            let file_name = file_name.to_str().expect("Unable to read string");
-
-                            println!("\t{file_name}");
-                        }
-
-                        if !printed {
-                            println!("\tNo blueprints of this type");
-                        }
-                    }
-                }
-            }
-            "give" => {
-                let mut args_iter = ev.args.iter();
-
-                let (Some(player_name), Some(item_id), quantity) = (args_iter.next(), args_iter.next(), args_iter.next()) else {
-                    display_help(Some("give"), &cosmos_commands);
-                    continue;
-                };
-
-                let Some((_, mut player_inventory)) = q_inventory.iter_mut().find(|(player, _)| player.name() == player_name) else {
-                    println!("Unable to find player {player_name}");
-                    continue;
-                };
-
-                let mut item_id = item_id.to_owned();
-
-                if !item_id.contains(":") {
-                    item_id = format!("cosmos:{item_id}");
-                }
-
-                let Some(item) = items.from_id(&item_id) else {
-                    println!("Unable to find item {item_id}.");
-                    continue;
-                };
-
-                let quantity = quantity.map(|x| x.parse::<u16>()).unwrap_or(Ok(1));
-
-                let quantity = match quantity {
-                    Ok(x) => x,
-                    Err(e) => {
-                        println!("Unable to parse quantity - {e}");
-                        continue;
-                    }
-                };
-
-                let (leftover, _) = player_inventory.insert_item(item, quantity, &mut commands, &needs_data);
-
-                if leftover == 0 {
-                    println!("Gave {player_name} {quantity}x {item_id}");
-                } else {
-                    println!(
-                        "Gave {player_name} {}x {item_id}. Inventory could not fit {leftover} item(s).",
-                        quantity - leftover
-                    );
-                }
-            }
-            "items" => {
-                let search_term = ev.args.first().map(|x| x.as_str()).unwrap_or("");
-                let result = items
-                    .iter()
-                    .filter(|x| x.unlocalized_name().contains(search_term))
-                    .map(|x| x.unlocalized_name())
-                    .collect::<Vec<_>>();
-
-                if result.is_empty() {
-                    println!("No items found.");
-                } else {
-                    println!("Items:\n{}", result.join("\n"));
-                }
-            }
-            _ => {
-                display_help(Some(&ev.text), &cosmos_commands);
-            }
+    for ev in evr_command.read() {
+        if !commands.contains(&ev.name) {
+            ev.sender
+                .send(format!("{} is not a recognized command.", ev.name), &mut evw_send_message);
+            display_help(&ev.sender, &mut evw_send_message, None, &commands);
         }
     }
 }
 
+#[derive(Resource, Debug, Default)]
+struct CurrentlyWriting(String);
+
+fn monitor_inputs(mut event_writer: EventWriter<CosmosCommandSent>, mut text: ResMut<CurrentlyWriting>) {
+    while let Ok(event_available) = poll(Duration::ZERO) {
+        if event_available {
+            let x = read();
+
+            if let Ok(crossterm::event::Event::Key(KeyEvent { code, modifiers, kind, .. })) = x {
+                if kind != KeyEventKind::Release {
+                    if let KeyCode::Char(mut c) = code {
+                        if modifiers.intersects(KeyModifiers::SHIFT) {
+                            c = c.to_uppercase().next().unwrap();
+                        }
+
+                        text.0.push(c);
+                    } else if KeyCode::Enter == code {
+                        text.0.push('\n');
+                    }
+                }
+            }
+        } else {
+            break;
+        }
+    }
+
+    if !text.0.trim().is_empty() && text.0.ends_with('\n') {
+        let cmd = CosmosCommandSent::new(text.0[0..text.0.len() - 1].to_owned(), CommandSender::Server);
+        event_writer.send(cmd);
+
+        text.0.clear();
+    }
+}
+
+#[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
+/// The set in which commands are processed
+pub enum ProcessCommandsSet {
+    /// User input is parsed and events are sent
+    ParseCommands,
+    /// Commands should be handled and command events read from
+    HandleCommands,
+}
+
+fn command_receiver(
+    mut event_writer: EventWriter<CosmosCommandSent>,
+    mut nevr_command: EventReader<NettyEventReceived<ClientCommandEvent>>,
+    q_player: Query<&Player>,
+    lobby: Res<ServerLobby>,
+) {
+    for client_command in nevr_command.read() {
+        let Some(player) = lobby.player_from_id(client_command.client_id) else {
+            continue;
+        };
+
+        let Ok(p) = q_player.get(player) else {
+            continue;
+        };
+
+        info!("Player `{}` ran command: `{}`", p.name(), client_command.command_text);
+        event_writer.send(CosmosCommandSent::new(
+            client_command.command_text.clone(),
+            CommandSender::Player(player),
+        ));
+    }
+}
+
+fn send_messages(
+    mut evw_chat_event: NettyEventWriter<ServerSendChatMessageEvent>,
+    mut evr_send_message: EventReader<SendCommandMessageEvent>,
+    q_player: Query<&Player>,
+) {
+    for ev in evr_send_message.read() {
+        let Ok(player) = q_player.get(ev.to) else {
+            continue;
+        };
+
+        info!("({}) {}", player.name(), ev.message);
+        evw_chat_event.send(
+            ServerSendChatMessageEvent {
+                sender: None,
+                message: ev.message.clone(),
+            },
+            player.client_id(),
+        );
+    }
+}
+
 pub(super) fn register(app: &mut App) {
-    app.add_systems(Startup, register_commands)
-        .add_systems(Update, cosmos_command_listener.before(LoadingSystemSet::BeginLoading));
+    app.configure_sets(
+        Update,
+        (ProcessCommandsSet::ParseCommands, ProcessCommandsSet::HandleCommands)
+            .chain()
+            .before(LoadingSystemSet::BeginLoading),
+    );
+
+    register_commands(app);
+    app.insert_resource(CurrentlyWriting::default()).add_systems(
+        Update,
+        (
+            (command_receiver, monitor_inputs, warn_on_no_command_hit)
+                .chain()
+                .in_set(NetworkingSystemsSet::Between)
+                .in_set(ProcessCommandsSet::ParseCommands),
+            send_messages
+                .after(ProcessCommandsSet::HandleCommands)
+                .before(NetworkingSystemsSet::SyncComponents),
+        ),
+    );
 }

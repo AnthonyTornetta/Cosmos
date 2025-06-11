@@ -5,6 +5,8 @@
 use std::ops::Range;
 
 use bevy::{
+    app::Update,
+    core::Name,
     ecs::{
         bundle::Bundle,
         entity::Entity,
@@ -12,7 +14,8 @@ use bevy::{
         system::{Commands, Query},
     },
     hierarchy::{BuildChildren, DespawnRecursiveExt},
-    prelude::{App, Component, Deref, DerefMut},
+    log::error,
+    prelude::{Added, App, Children, Component, IntoSystemConfigs, Mut, Or, With, Without},
     reflect::Reflect,
     state::state::States,
 };
@@ -20,7 +23,10 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     item::Item,
-    netty::sync::{IdentifiableComponent, SyncableComponent, sync_component},
+    netty::{
+        sync::{IdentifiableComponent, SyncableComponent, sync_component},
+        system_sets::NetworkingSystemsSet,
+    },
     registry::identifiable::Identifiable,
 };
 
@@ -36,18 +42,111 @@ pub mod netty;
 //     NormalInventory, // These inventories are organizable by the player
 // }
 
-#[derive(Component, DerefMut, Deref, Debug, Serialize, Deserialize, Clone, Reflect)]
-/// This represents the itemstack the player is currently holding while moving items around in their inventory.
+#[derive(Component, Debug, Serialize, Deserialize, Clone, Reflect, PartialEq, Eq)]
+/// This represents the inventory that contains the itemstack the player is currently holding
 ///
-/// There should only ever be one HeldItemStack per player, and on the client only one or zero HeldItemStacks will ever exist at a time.
+/// There should only ever be one HeldItemStack child per player
 ///
-/// # THIS BEHAVES DIFFERENTLY ON THE CLIENT & SERVER
-/// ### Client
-/// On the client, this is attached to a GUI element holding the drawn item the player is moving w/ their cursor.
+/// ### Heiarchy:
 ///
-/// ### Server
-/// On the server, this is attached directly to the player.
-pub struct HeldItemStack(pub ItemStack);
+/// - Player
+///   - ([`HeldItemStack`], [`Inventory`])
+pub struct HeldItemStack;
+
+impl SyncableComponent for HeldItemStack {
+    fn get_sync_type() -> crate::netty::sync::SyncType {
+        crate::netty::sync::SyncType::ServerAuthoritative
+    }
+}
+
+fn name_held_itemstacks(
+    mut commands: Commands,
+    q_held_itemstack: Query<Entity, (With<HeldItemStack>, Or<(Without<Name>, Added<HeldItemStack>)>)>,
+) {
+    for ent in q_held_itemstack.iter() {
+        commands.entity(ent).insert(Name::new("Held Itemstack"));
+    }
+}
+
+impl HeldItemStack {
+    /// Returns the result from querying these children for the [`HeldItemStack`] [`Inventory`].
+    pub fn get_held_is_inventory<'a>(
+        client_entity: Entity,
+        q_children: &Query<&Children>,
+        q_held_item: &'a Query<&Inventory, With<HeldItemStack>>,
+    ) -> Option<&'a Inventory> {
+        let Ok(children) = q_children.get(client_entity) else {
+            return None;
+        };
+
+        for child in children.iter() {
+            // This is the only way to make the borrow checker happy
+            if q_held_item.contains(*child) {
+                return q_held_item.get(*child).ok();
+            }
+        }
+
+        error!("No held item inventory as child of player {client_entity:?}!");
+        None
+    }
+
+    /// Returns the result from querying these children for the [`HeldItemStack`] [`Inventory`].
+    pub fn get_held_is_inventory_from_children<'a>(
+        children: &Children,
+        q_held_item: &'a Query<&Inventory, With<HeldItemStack>>,
+    ) -> Option<&'a Inventory> {
+        for child in children.iter() {
+            // This is the only way to make the borrow checker happy
+            if q_held_item.contains(*child) {
+                return q_held_item.get(*child).ok();
+            }
+        }
+
+        None
+    }
+
+    /// Returns the result from querying these children for the [`HeldItemStack`] [`Inventory`].
+    pub fn get_held_is_inventory_mut<'a>(
+        client_entity: Entity,
+        q_children: &Query<&Children>,
+        q_held_item: &'a mut Query<&mut Inventory, With<HeldItemStack>>,
+    ) -> Option<Mut<'a, Inventory>> {
+        let Ok(children) = q_children.get(client_entity) else {
+            return None;
+        };
+
+        for child in children.iter() {
+            // This is the only way to make the borrow checker happy
+            if q_held_item.contains(*child) {
+                return q_held_item.get_mut(*child).ok();
+            }
+        }
+
+        error!("No held item inventory as child of player {client_entity:?}!");
+        None
+    }
+
+    /// Returns the result from querying these children for the [`HeldItemStack`] [`Inventory`].
+    pub fn get_held_is_inventory_from_children_mut<'a>(
+        children: &Children,
+        q_held_item: &'a mut Query<&mut Inventory, With<HeldItemStack>>,
+    ) -> Option<Mut<'a, Inventory>> {
+        for child in children.iter() {
+            // This is the only way to make the borrow checker happy
+            if q_held_item.contains(*child) {
+                return q_held_item.get_mut(*child).ok();
+            }
+        }
+
+        None
+    }
+}
+
+impl IdentifiableComponent for HeldItemStack {
+    fn get_component_unlocalized_name() -> &'static str {
+        "cosmos:held_itemstack"
+    }
+}
 
 /// Represents some sort of error that occurred
 #[derive(Debug)]
@@ -556,6 +655,16 @@ impl Inventory {
     ///
     /// Note that if the ItemStack has a data entity, it will still be the child of this Inventory's entity. It is up
     /// to you to handle that data entity.
+    pub fn take_itemstack_at(&mut self, slot: usize, commands: &mut Commands) {
+        if let Some(mut is) = self.remove_itemstack_at(slot) {
+            is.remove(commands);
+        }
+    }
+
+    /// Removes an itemstack at that slot and replaces it with `None`. Returns the itemstack previously in that slot.
+    ///
+    /// Note that if the ItemStack has a data entity, it will still be the child of this Inventory's entity. It is up
+    /// to you to handle that data entity.
     pub fn remove_itemstack_at(&mut self, slot: usize) -> Option<ItemStack> {
         self.items[slot].take()
     }
@@ -621,9 +730,10 @@ impl Inventory {
         Ok(())
     }
 
-    /// A quick way of comparing two different slots to see if they contain the same item
+    /// A quick way of comparing two different slots to see if they contain the same item or if
+    /// this slot is empty
     pub fn can_move_itemstack_to(&self, is: &ItemStack, slot: usize) -> bool {
-        self.itemstack_at(slot).map(|x| x.is_same_as(is)).unwrap_or(false)
+        self.itemstack_at(slot).map(|x| x.is_same_as(is)).unwrap_or(true)
     }
 
     /// A quick way of comparing two different slots to see if they contain the same item
@@ -866,6 +976,9 @@ pub(super) fn register<T: States>(app: &mut App, playing_state: T) {
     held_item_slot::register(app);
 
     sync_component::<Inventory>(app);
+    sync_component::<HeldItemStack>(app);
+
+    app.add_systems(Update, name_held_itemstacks.in_set(NetworkingSystemsSet::Between));
 
     app.register_type::<Inventory>().register_type::<HeldItemStack>();
 }

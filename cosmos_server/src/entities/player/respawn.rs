@@ -41,11 +41,16 @@ fn compute_respawn_location(universe_systems: &UniverseSystems) -> (Location, Qu
     find_new_player_location(universe_systems)
 }
 
-fn on_die(mut commands: Commands, mut q_player: Query<(&Location, &mut Inventory, Option<&HeldItemStack>), Added<Dead>>) {
-    for (location, mut inventory, held_is) in q_player.iter_mut() {
-        if let Some(held_is) = held_is {
-            let is = held_is.0.clone();
-            drop_itemstack(&mut commands, location, is);
+fn on_die(
+    mut commands: Commands,
+    mut q_player: Query<(&Location, &mut Inventory, &Children), (Added<Dead>, Without<HeldItemStack>)>,
+    mut q_held_item: Query<&mut Inventory, With<HeldItemStack>>,
+) {
+    for (location, mut inventory, children) in q_player.iter_mut() {
+        if let Some(mut inv) = HeldItemStack::get_held_is_inventory_from_children_mut(children, &mut q_held_item) {
+            if let Some(held_is) = inv.remove_itemstack_at(0) {
+                drop_itemstack(&mut commands, location, held_is);
+            }
         }
 
         inventory.retain_mut(|is| {
@@ -71,7 +76,6 @@ fn on_respawn(
         let Ok((entity, mut health, max_health, mut velocity, _respawn_block)) = q_player.get_mut(player_ent) else {
             continue;
         };
-
         *health = (*max_health).into();
         *velocity = Velocity::default();
         let (loc, rot) = compute_respawn_location(&universe_systems);

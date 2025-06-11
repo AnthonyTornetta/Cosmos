@@ -3,9 +3,7 @@ use cosmos_core::{
     block::data::persistence::ChunkLoadBlockDataEvent,
     physics::location::Location,
     structure::{
-        ChunkInitEvent, Structure, StructureTypeSet,
-        events::StructureLoadedEvent,
-        station::{Station, station_builder::TStationBuilder},
+        ChunkInitEvent, Structure, StructureTypeSet, events::StructureLoadedEvent, station::Station,
         structure_iterator::ChunkIteratorResult,
     },
 };
@@ -18,8 +16,6 @@ use crate::{
     },
     structure::persistence::{chunk::AllBlockData, save_structure},
 };
-
-use super::server_station_builder::ServerStationBuilder;
 
 fn on_blueprint_structure(
     mut query: Query<(&mut SerializedData, &Structure, &mut NeedsBlueprinted), With<Station>>,
@@ -44,17 +40,13 @@ fn load_structure(
     entity: Entity,
     commands: &mut Commands,
     loc: Location,
-    mut structure: Structure,
+    structure: Structure,
     s_data: &SerializedData,
     chunk_load_block_data_event_writer: &mut EventWriter<ChunkLoadBlockDataEvent>,
     chunk_set_event_writer: &mut EventWriter<ChunkInitEvent>,
     structure_loaded_event_writer: &mut EventWriter<StructureLoadedEvent>,
 ) {
     let mut entity_cmd = commands.entity(entity);
-
-    let builder = ServerStationBuilder::default();
-
-    builder.insert_station(&mut entity_cmd, loc, &mut structure);
 
     let entity = entity_cmd.id();
 
@@ -76,7 +68,7 @@ fn load_structure(
         }
     }
 
-    entity_cmd.insert(structure);
+    entity_cmd.insert((structure, Station, loc));
 
     structure_loaded_event_writer.send(StructureLoadedEvent { structure_entity: entity });
 

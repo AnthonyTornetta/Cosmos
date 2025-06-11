@@ -13,15 +13,16 @@ use cosmos_core::{
         netty_rigidbody::{NettyRigidBody, NettyRigidBodyLocation},
         server_reliable_messages::ServerReliableMessages,
         server_unreliable_messages::ServerUnreliableMessages,
-        sync::{ComponentEntityIdentifier, server_entity_syncing::RequestedEntityEvent},
+        sync::{ComponentEntityIdentifier, server_syncing::ReadyForSyncing},
         system_sets::NetworkingSystemsSet,
     },
-    persistence::LoadingDistance,
     physics::location::{Location, LocationPhysicsSet},
     structure::systems::StructureSystem,
 };
 
 use crate::netty::network_helpers::NetworkTick;
+
+use super::flags::SyncTo;
 
 #[derive(Component)]
 /// Does not send a despawn message to the client when this entity is despawned.
@@ -31,16 +32,16 @@ pub struct DontNotifyClientOfDespawn;
 
 /// Sends bodies to players only if it's within their render distance.
 fn send_bodies(
-    players: &Query<(&Player, &RenderDistance, &Location)>,
-    bodies: &[(Entity, NettyRigidBody, Location, LoadingDistance)],
+    players: &Query<(&Player, &RenderDistance), With<ReadyForSyncing>>,
+    bodies: &[(Entity, NettyRigidBody, &SyncTo)],
     server: &mut RenetServer,
     tick: &NetworkTick,
 ) {
-    for (player, _, loc) in players.iter() {
+    for (player, _) in players.iter() {
         let players_bodies: Vec<(Entity, NettyRigidBody)> = bodies
             .iter()
-            .filter(|(_, _, location, loading_distance)| loading_distance.should_load(loc, location))
-            .map(|(ent, net_rb, _, _)| (*ent, *net_rb))
+            .filter(|(_, _, sync_to)| sync_to.should_sync_to(player.client_id()))
+            .map(|(ent, net_rb, _)| (*ent, *net_rb))
             .collect();
 
         if !players_bodies.is_empty() {
@@ -58,8 +59,11 @@ fn send_bodies(
 fn server_sync_bodies(
     mut server: ResMut<RenetServer>,
     mut tick: ResMut<NetworkTick>,
-    entities: Query<(Entity, &Transform, &Location, Option<&Velocity>, &LoadingDistance, Option<&Parent>), Without<NoSendEntity>>,
-    players: Query<(&Player, &RenderDistance, &Location)>,
+    entities: Query<
+        (Entity, &Transform, &Location, Option<&Velocity>, &SyncTo, Option<&Parent>),
+        (Or<(Changed<Location>, Changed<Transform>, Changed<SyncTo>)>, Without<NoSendEntity>),
+    >,
+    players: Query<(&Player, &RenderDistance), With<ReadyForSyncing>>,
     // Often children will not have locations or loading distances, but still need to by synced
     // q_children_need_synced: Query<
     //     (Entity, Option<&Velocity>, &Transform, &Parent),
@@ -72,7 +76,7 @@ fn server_sync_bodies(
 
     let mut bodies = Vec::with_capacity(20);
 
-    for (entity, transform, location, velocity, unload_distance, parent) in entities.iter() {
+    for (entity, transform, location, velocity, sync_to, parent) in entities.iter() {
         bodies.push((
             entity,
             NettyRigidBody::new(
@@ -83,8 +87,7 @@ fn server_sync_bodies(
                     None => NettyRigidBodyLocation::Absolute(*location),
                 },
             ),
-            *location,
-            *unload_distance,
+            sync_to,
         ));
 
         // The packet size can only be so big, so limit syncing to 20 per packet
@@ -94,46 +97,8 @@ fn server_sync_bodies(
         }
     }
 
-    // for (ent, velocity, transform, parent) in q_children_need_synced.iter() {
-    //     let mut info = None;
-
-    //     let mut cur_ent = parent.get();
-    //     while info.is_none() {
-    //         if let Ok((loc, load_dist)) = q_loading_distance.get(cur_ent) {
-    //             info = Some((*loc, *load_dist));
-    //         } else {
-    //             if let Ok(next_ent) = q_parent.get(cur_ent) {
-    //                 cur_ent = next_ent.get();
-    //             } else {
-    //                 break;
-    //             }
-    //         }
-    //     }
-
-    //     let Some((parent_loc, parent_loading_distance)) = info else {
-    //         continue;
-    //     };
-
-    // }
-
     if !bodies.is_empty() {
         send_bodies(&players, &bodies, &mut server, &tick);
-    }
-}
-
-fn notify_client_of_successful_entity_request(
-    mut server: ResMut<RenetServer>,
-    mut event_reader: EventReader<RequestedEntityEvent>,
-    mut commands: Commands,
-) {
-    for ev in event_reader.read() {
-        if commands.get_entity(ev.entity).is_some() {
-            server.send_message(
-                ev.client_id,
-                NettyChannelServer::Reliable,
-                cosmos_encoder::serialize(&ServerReliableMessages::RequestedEntityReceived(ev.entity)),
-            );
-        }
     }
 }
 
@@ -179,10 +144,8 @@ fn notify_despawned_entities(
 pub(super) fn register(app: &mut App) {
     app.add_systems(
         Update,
-        (
-            notify_client_of_successful_entity_request,
-            server_sync_bodies.after(LocationPhysicsSet::DoPhysics),
-        )
+        server_sync_bodies
+            .after(LocationPhysicsSet::DoPhysics)
             .in_set(NetworkingSystemsSet::SyncComponents),
     )
     .add_systems(First, notify_despawned_entities.before(despawn_needed));

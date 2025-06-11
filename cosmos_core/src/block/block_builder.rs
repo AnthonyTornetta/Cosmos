@@ -13,6 +13,7 @@ pub struct BlockBuilder {
     mining_resistance: f32,
     connect_to_groups: Vec<ConnectionGroup>,
     connection_groups: Vec<ConnectionGroup>,
+    category: Option<String>,
 }
 
 impl BlockBuilder {
@@ -28,7 +29,16 @@ impl BlockBuilder {
             mining_resistance,
             connect_to_groups: vec![],
             connection_groups: vec![],
+            category: None,
         }
+    }
+
+    /// Sets the category of the item that will represent this block.
+    ///
+    /// See [`crate::item::item_category::ItemCategory`]
+    pub fn with_category(mut self, category: impl Into<String>) -> Self {
+        self.category = Some(category.into());
+        self
     }
 
     /// Adds a [`super::ConnectionGroup`] that this block will connect to. You can call this multiple times to connect
@@ -75,6 +85,7 @@ impl BlockBuilder {
             self.mining_resistance,
             self.connect_to_groups,
             self.connection_groups,
+            self.category,
         )
     }
 }

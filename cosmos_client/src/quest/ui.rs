@@ -69,6 +69,7 @@ fn open_quest_ui(
                     flex_direction: FlexDirection::Column,
                     ..Default::default()
                 },
+                ..Default::default()
             },
             Node {
                 margin: UiRect::all(Val::Auto),

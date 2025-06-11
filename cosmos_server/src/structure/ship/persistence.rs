@@ -4,10 +4,7 @@ use cosmos_core::{
     block::data::persistence::ChunkLoadBlockDataEvent,
     physics::location::Location,
     structure::{
-        ChunkInitEvent, Structure, StructureTypeSet,
-        events::StructureLoadedEvent,
-        ship::{Ship, ship_builder::TShipBuilder},
-        structure_iterator::ChunkIteratorResult,
+        ChunkInitEvent, Structure, StructureTypeSet, events::StructureLoadedEvent, ship::Ship, structure_iterator::ChunkIteratorResult,
     },
 };
 
@@ -19,8 +16,6 @@ use crate::{
     },
     structure::persistence::{chunk::AllBlockData, save_structure},
 };
-
-use super::server_ship_builder::ServerShipBuilder;
 
 fn on_blueprint_ship(mut query: Query<(&mut SerializedData, &Structure, &mut NeedsBlueprinted), With<Ship>>, mut commands: Commands) {
     for (mut s_data, structure, mut blueprint) in query.iter_mut() {
@@ -42,7 +37,7 @@ fn load_structure(
     entity: Entity,
     commands: &mut Commands,
     loc: Location,
-    mut structure: Structure,
+    structure: Structure,
     s_data: &SerializedData,
     chunk_load_block_data_event_writer: &mut EventWriter<ChunkLoadBlockDataEvent>,
     chunk_set_event_writer: &mut EventWriter<ChunkInitEvent>,
@@ -51,10 +46,6 @@ fn load_structure(
     let mut entity_cmd = commands.entity(entity);
 
     let vel = s_data.deserialize_data("cosmos:velocity").unwrap_or(Velocity::zero());
-
-    let builder = ServerShipBuilder::default();
-
-    builder.insert_ship(&mut entity_cmd, loc, vel, &mut structure);
 
     let entity = entity_cmd.id();
 
@@ -74,7 +65,7 @@ fn load_structure(
         }
     }
 
-    entity_cmd.insert(structure);
+    entity_cmd.insert((structure, loc, vel, Ship));
 
     structure_loaded_event_writer.send(StructureLoadedEvent { structure_entity: entity });
 

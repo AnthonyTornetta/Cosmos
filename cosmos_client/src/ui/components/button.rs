@@ -192,8 +192,6 @@ fn on_change_button<T: ButtonEvent>(
         {
             if let Some(image) = btn.image.clone() {
                 commands.entity(ent).insert(image);
-            } else {
-                commands.entity(ent).remove::<ImageNode>();
             }
         }
 

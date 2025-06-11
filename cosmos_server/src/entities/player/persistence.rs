@@ -15,26 +15,26 @@ use cosmos_core::{
         health::{Health, MaxHealth},
         player::{Player, creative::Creative},
     },
-    inventory::{Inventory, itemstack::ItemShouldHaveData},
+    inventory::{HeldItemStack, Inventory, itemstack::ItemShouldHaveData},
     item::Item,
     netty::{
         NettyChannelServer, cosmos_encoder,
         netty_rigidbody::{NettyRigidBody, NettyRigidBodyLocation},
         server::ServerLobby,
         server_reliable_messages::ServerReliableMessages,
-        sync::{ComponentSyncingSet, IdentifiableComponent, events::server_event::NettyEventWriter, registry::server::SyncRegistriesEvent},
+        sync::{IdentifiableComponent, events::server_event::NettyEventWriter, registry::server::SyncRegistriesEvent},
         system_sets::NetworkingSystemsSet,
     },
     persistence::LoadingDistance,
     physics::location::{Location, LocationPhysicsSet, Sector, SetPosition, systems::Anchor},
-    registry::{Registry, identifiable::Identifiable},
+    registry::Registry,
 };
 use renet::{ClientId, RenetServer};
 use serde::{Deserialize, Serialize};
 
 use crate::{
     entities::player::spawn_player::find_new_player_location,
-    netty::server_events::PlayerConnectedEvent,
+    netty::{server_events::PlayerConnectedEvent, sync::flags::SyncReason},
     persistence::{
         SaveFileIdentifier, SerializedData,
         loading::{LOADING_SCHEDULE, LoadingSystemSet, NeedsLoaded},
@@ -243,19 +243,12 @@ fn generate_player_inventory(
     items: &Registry<Item>,
     commands: &mut Commands,
     has_data: &ItemShouldHaveData,
-    creative: bool,
 ) -> Inventory {
-    let n_slots = 9 * if creative { 20 } else { 5 };
+    let n_slots = 9 * 7;
 
     let mut inventory = Inventory::new("Inventory", n_slots, Some(0..9), inventory_entity);
 
-    if creative {
-        for item in items.iter().rev().filter(|item| item.unlocalized_name() != "cosmos:air") {
-            inventory.insert_item(item, item.max_stack_size(), commands, has_data);
-        }
-    } else {
-        fill_inventory_from_kit("starter", &mut inventory, items, commands, has_data);
-    }
+    fill_inventory_from_kit("starter", &mut inventory, items, commands, has_data);
 
     inventory
 }
@@ -264,7 +257,6 @@ fn create_new_player(
     mut commands: Commands,
     items: Res<Registry<Item>>,
     needs_data: Res<ItemShouldHaveData>,
-    server_settings: Res<ServerSettings>,
     q_player_needs_loaded: Query<(Entity, &LoadPlayer)>,
     universe_systems: Res<UniverseSystems>,
 ) {
@@ -275,7 +267,7 @@ fn create_new_player(
 
         let (location, rot) = find_new_player_location(&universe_systems);
         let velocity = Velocity::default();
-        let inventory = generate_player_inventory(player_entity, &items, &mut commands, &needs_data, server_settings.creative);
+        let inventory = generate_player_inventory(player_entity, &items, &mut commands, &needs_data);
 
         let credits = Credits::new(5_000);
 
@@ -294,6 +286,11 @@ fn create_new_player(
                 Transform::from_rotation(rot),
                 PlayerLooking { rotation: Quat::IDENTITY },
             ))
+            .with_children(|p| {
+                let mut ecmds = p.spawn((Name::new("Held Item Inventory"), HeldItemStack, SyncReason::Data));
+                let inventory = Inventory::new("Inventory", 1, None, ecmds.id());
+                ecmds.insert(inventory);
+            })
             .remove::<LoadPlayer>();
     }
 }
@@ -307,6 +304,8 @@ fn finish_loading_player(
     server_settings: Res<ServerSettings>,
     q_player_finished_loading: Query<(Entity, &Player, &Location, &Velocity, Option<&Parent>, Option<&Transform>), Added<Player>>,
     mut nevw_send_chat_msg: NettyEventWriter<ServerSendChatMessageEvent>,
+    q_held_item: Query<&Inventory, With<HeldItemStack>>,
+    q_children: Query<&Children>,
 ) {
     for (player_entity, load_player, location, velocity, maybe_parent, trans) in q_player_finished_loading.iter() {
         info!("Completing player load for {}", load_player.name());
@@ -327,6 +326,15 @@ fn finish_loading_player(
             Anchor,
             SetPosition::Transform,
         ));
+
+        if HeldItemStack::get_held_is_inventory(ecmds.id(), &q_children, &q_held_item).is_none() {
+            error!("Missing held item inventory - inserting new one!");
+            ecmds.with_children(|p| {
+                let mut ecmds = p.spawn((Name::new("Held Item Inventory"), HeldItemStack, SyncReason::Data));
+                let inventory = Inventory::new("Inventory", 1, None, ecmds.id());
+                ecmds.insert(inventory);
+            });
+        }
         // If we don't remove this, it won't automatically
         // generate a new one when we save the player next
         // .remove::<SaveFileIdentifier>();
@@ -409,8 +417,7 @@ pub(super) fn register(app: &mut App) {
                 .in_set(NetworkingSystemsSet::Between),
             (finish_loading_player, add_player_save_link, name_player_save_links)
                 .chain()
-                .in_set(NetworkingSystemsSet::SyncComponents)
-                .before(ComponentSyncingSet::PreComponentSyncing)
+                .in_set(NetworkingSystemsSet::Between)
                 .after(LoadingSystemSet::DoneLoading),
         )
             .chain(),

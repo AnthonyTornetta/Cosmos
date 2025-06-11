@@ -12,10 +12,11 @@ use cosmos_core::{
     entities::player::Player,
     netty::system_sets::NetworkingSystemsSet,
     physics::location::{Location, SECTOR_DIMENSIONS, SYSTEM_SECTORS, Sector, SectorUnit, SystemCoordinate, SystemUnit},
+    prelude::Asteroid,
     state::GameState,
     structure::{
         Structure,
-        asteroid::{ASTEROID_LOAD_RADIUS, asteroid_builder::TAsteroidBuilder, loading::AsteroidNeedsCreated},
+        asteroid::{ASTEROID_LOAD_RADIUS, loading::AsteroidNeedsCreated},
         coordinates::ChunkCoordinate,
         full_structure::FullStructure,
     },
@@ -27,7 +28,6 @@ use crate::{
     init::init_world::ServerSeed,
     rng::get_rng_for_sector,
     settings::ServerSettings,
-    structure::asteroid::server_asteroid_builder::ServerAsteroidBuilder,
     universe::{
         SystemItem, SystemItemAsteroid, UniverseSystems,
         generators::{
@@ -152,17 +152,13 @@ fn generate_asteroids(mut commands: Commands, q_players: Query<&Location, With<P
 
             sectors_to_mark.insert(asteroid_loc.sector());
 
-            let mut structure = Structure::Full(FullStructure::new(ChunkCoordinate::new(
+            let structure = Structure::Full(FullStructure::new(ChunkCoordinate::new(
                 asteroid.size,
                 asteroid.size,
                 asteroid.size,
             )));
-            let builder = ServerAsteroidBuilder::default();
-            let mut entity_cmd = commands.spawn_empty();
 
-            builder.insert_asteroid(&mut entity_cmd, asteroid_loc, &mut structure, asteroid.temperature);
-
-            entity_cmd.insert((structure, AsteroidNeedsCreated));
+            commands.spawn((structure, asteroid_loc, Asteroid::new(asteroid.temperature), AsteroidNeedsCreated));
         }
     }
 

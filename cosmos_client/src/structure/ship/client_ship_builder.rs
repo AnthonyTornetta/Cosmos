@@ -1,52 +1,19 @@
 //! Responsible for building ships for the client.
 
-use bevy::{
-    ecs::system::EntityCommands,
-    prelude::{
-        Added, App, BuildChildren, ChildBuild, Commands, Entity, Handle, IntoSystemConfigs, Name, Query, Res, Resource, Transform, Update,
-        resource_exists,
-    },
+use bevy::prelude::{
+    Added, App, BuildChildren, ChildBuild, Commands, Entity, Handle, IntoSystemConfigs, Name, Query, Res, Resource, Transform, Update,
+    resource_exists,
 };
 use bevy_kira_audio::{Audio, AudioControl, AudioInstance, AudioSource};
-use bevy_rapier3d::prelude::Velocity;
 use cosmos_core::{
-    physics::location::Location,
     state::GameState,
-    structure::{
-        Structure,
-        loading::StructureLoadingSet,
-        shared::DespawnWithStructure,
-        ship::{
-            Ship,
-            ship_builder::{ShipBuilder, TShipBuilder},
-        },
-    },
+    structure::{loading::StructureLoadingSet, shared::DespawnWithStructure, ship::Ship},
 };
 
 use crate::{
     asset::asset_loader::load_assets,
     audio::{AudioEmission, CosmosAudioEmitter},
-    structure::{chunk_retreiver::NeedsPopulated, client_structure_builder::ClientStructureBuilder},
 };
-
-/// Responsible for building ships for the client.
-pub struct ClientShipBuilder {
-    ship_bulder: ShipBuilder<ClientStructureBuilder>,
-}
-
-impl Default for ClientShipBuilder {
-    fn default() -> Self {
-        Self {
-            ship_bulder: ShipBuilder::new(ClientStructureBuilder::default()),
-        }
-    }
-}
-
-impl TShipBuilder for ClientShipBuilder {
-    fn insert_ship(&self, entity: &mut EntityCommands, location: Location, velocity: Velocity, structure: &mut Structure) {
-        self.ship_bulder.insert_ship(entity, location, velocity, structure);
-    }
-}
 
 fn client_on_add_ship(
     query: Query<Entity, Added<Ship>>,
@@ -64,7 +31,7 @@ fn client_on_add_ship(
             ..Default::default()
         }]);
 
-        commands.entity(entity).insert(NeedsPopulated).with_children(|p| {
+        commands.entity(entity).with_children(|p| {
             p.spawn((
                 Name::new("Engine idle sound"),
                 DespawnWithStructure,

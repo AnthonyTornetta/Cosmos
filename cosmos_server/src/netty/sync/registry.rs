@@ -3,10 +3,13 @@
 use bevy::{
     app::Update,
     log::{info, warn},
-    prelude::{App, Event, EventWriter, IntoSystemConfigs, ResMut, in_state},
+    prelude::{App, Commands, Event, EventWriter, IntoSystemConfigs, Res, ResMut, in_state},
 };
 use cosmos_core::{
-    netty::{NettyChannelClient, client_registry::RegistrySyncing, cosmos_encoder, system_sets::NetworkingSystemsSet},
+    netty::{
+        NettyChannelClient, client_registry::RegistrySyncing, cosmos_encoder, server::ServerLobby, sync::server_syncing::ReadyForSyncing,
+        system_sets::NetworkingSystemsSet,
+    },
     state::GameState,
 };
 use renet::{ClientId, RenetServer};
@@ -21,15 +24,22 @@ pub struct ClientFinishedReceivingRegistriesEvent(pub ClientId);
 fn listen_for_done_syncing(
     mut server: ResMut<RenetServer>,
     mut evw_finished_receiving_registries: EventWriter<ClientFinishedReceivingRegistriesEvent>,
+    lobby: Res<ServerLobby>,
+    mut commands: Commands,
 ) {
     for client_id in server.clients_id().into_iter() {
         while let Some(message) = server.receive_message(client_id, NettyChannelClient::Registry) {
+            let Some(player_ent) = lobby.player_from_id(client_id) else {
+                continue;
+            };
             let Ok(msg) = cosmos_encoder::deserialize::<RegistrySyncing>(&message) else {
                 warn!("Bad deserialization");
                 continue;
             };
 
             info!("Got registry message from client {client_id}");
+
+            commands.entity(player_ent).insert(ReadyForSyncing);
 
             match msg {
                 RegistrySyncing::FinishedReceivingRegistries => {

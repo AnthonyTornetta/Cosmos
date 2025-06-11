@@ -81,7 +81,11 @@ fn create_links(
         if let Some(item) = items.from_id(cosmos_id) {
             block_items.create_link(item, block);
         } else {
-            items.register(Item::new(cosmos_id.to_owned(), DEFAULT_MAX_STACK_SIZE));
+            items.register(Item::new(
+                cosmos_id.to_owned(),
+                DEFAULT_MAX_STACK_SIZE,
+                block.item_category().cloned(),
+            ));
             block_items.create_link(items.from_id(cosmos_id).unwrap(), block);
         }
     }
