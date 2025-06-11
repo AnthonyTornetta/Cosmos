@@ -39,7 +39,7 @@ use crate::{
             button::{ButtonEvent, CosmosButton, register_button},
             scollable_container::ScrollBox,
             show_cursor::no_open_menus,
-            text_input::{InputType, TextInput},
+            text_input::{InputType, InputValue, TextInput},
             window::{GuiWindow, GuiWindowTitleBar, UiWindowSystemSet},
         },
         font::DefaultFont,
@@ -206,6 +206,12 @@ struct SelectedTab(ItemCategoryMarker);
 #[derive(Component)]
 struct VisibileHeight(Val);
 
+#[derive(Component)]
+struct InventorySearchBar;
+
+#[derive(Component)]
+struct SearchGrid;
+
 fn toggle_inventory_rendering(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
@@ -299,8 +305,6 @@ fn toggle_inventory_rendering(
 
         let border_color = BorderColor(Srgba::hex("222222").unwrap().into());
 
-        const MAX_INVENTORY_HEIGHT_PX: f32 = 500.0;
-
         let non_hotbar_height = (((inventory.len() as f32 - inventory.priority_slots().map(|x| x.len()).unwrap_or(0) as f32) / 9.0).ceil()
             * INVENTORY_SLOTS_DIMS)
             .min(MAX_INVENTORY_HEIGHT_PX);
@@ -337,6 +341,7 @@ fn toggle_inventory_rendering(
                     p.spawn((
                         Name::new("Search Bar"),
                         GuiWindowTitleBar,
+                        InventorySearchBar,
                         BackgroundColor(border_color.0.into()),
                         BorderColor(css::GREY.into()),
                         Node {
@@ -452,15 +457,18 @@ fn toggle_inventory_rendering(
                         Visibility::Hidden,
                     ))
                     .with_children(|p| {
-                        p.spawn(Node {
-                            display: Display::Grid,
-                            grid_column: GridPlacement::end(n_slots_per_row as i16),
-                            grid_template_columns: vec![RepeatedGridTrack::px(
-                                GridTrackRepetition::Count(n_slots_per_row as u16),
-                                slot_size,
-                            )],
-                            ..Default::default()
-                        })
+                        p.spawn((
+                            SearchGrid,
+                            Node {
+                                display: Display::Grid,
+                                grid_column: GridPlacement::end(n_slots_per_row as i16),
+                                grid_template_columns: vec![RepeatedGridTrack::px(
+                                    GridTrackRepetition::Count(n_slots_per_row as u16),
+                                    slot_size,
+                                )],
+                                ..Default::default()
+                            },
+                        ))
                         .with_children(|slots| {
                             let mut sorted_items = items.iter().collect::<Vec<_>>();
                             sorted_items.sort_by_key(|x| x.unlocalized_name());
@@ -681,6 +689,7 @@ fn rerender_inventory_slot(
 }
 
 const INVENTORY_SLOTS_DIMS: f32 = 64.0;
+const MAX_INVENTORY_HEIGHT_PX: f32 = 500.0;
 
 #[derive(Debug, Component, Reflect, Clone)]
 struct CreativeItem {
@@ -1142,6 +1151,41 @@ fn draw_held_item(
     // }
 }
 
+fn on_change_search(
+    q_changed_search: Query<&InputValue, (With<InventorySearchBar>, Changed<InputValue>)>,
+    q_rendered_category: Query<Entity, With<SearchGrid>>,
+    items: Res<Registry<Item>>,
+    font: Res<DefaultFont>,
+    lang: Res<Lang<Item>>,
+    mut commands: Commands,
+) {
+    let Ok(input_value) = q_changed_search.get_single() else {
+        return;
+    };
+
+    let text_style = TextFont {
+        font_size: 22.0,
+        font: font.clone(),
+        ..Default::default()
+    };
+
+    let Ok(search) = q_rendered_category.get_single() else {
+        return;
+    };
+
+    commands.entity(search).despawn_descendants().with_children(|p| {
+        let lower = input_value.value().to_lowercase();
+        let mut sorted_items = items
+            .iter()
+            .filter(|x| lang.get_name_or_unlocalized(*x).to_lowercase().contains(&lower))
+            .collect::<Vec<_>>();
+        sorted_items.sort_by_key(|x| x.unlocalized_name());
+        for item in sorted_items {
+            create_creative_slot(p, item, text_style.clone());
+        }
+    });
+}
+
 pub(super) fn register(app: &mut App) {
     app.configure_sets(
         Update,
@@ -1172,6 +1216,7 @@ pub(super) fn register(app: &mut App) {
                 on_click_creative_category,
                 on_click_creative_item,
                 draw_held_item,
+                on_change_search,
             )
                 .chain()
                 .in_set(InventorySet::ToggleInventory),
