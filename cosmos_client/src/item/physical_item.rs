@@ -3,7 +3,10 @@
 use bevy::{
     app::Update,
     math::Vec3,
-    prelude::{App, Changed, Commands, Entity, EventWriter, IntoSystemConfigs, Mesh3d, Query, Res, Transform, Visibility, With, in_state},
+    prelude::{
+        Added, App, Changed, Commands, Entity, EventWriter, IntoSystemConfigs, Mesh3d, Or, Query, Res, Transform, Visibility, With,
+        in_state,
+    },
 };
 use cosmos_core::{
     inventory::Inventory,
@@ -23,7 +26,13 @@ fn render_physical_item(
     mut evw_remove_material: EventWriter<RemoveAllMaterialsEvent>,
     items: Res<Registry<Item>>,
     item_rendering_info: Res<Registry<ItemMeshMaterial>>,
-    mut q_physical_item: Query<(Entity, &mut Transform, &Inventory), (Changed<Inventory>, With<PhysicalItem>)>,
+    mut q_physical_item: Query<
+        (Entity, &mut Transform, &Inventory),
+        (
+            Or<(Changed<Inventory>, Changed<PhysicalItem>, Added<Transform>)>,
+            With<PhysicalItem>,
+        ),
+    >,
 ) {
     for (ent, mut trans, inventory) in q_physical_item.iter_mut() {
         let mut ecmds = commands.entity(ent);
