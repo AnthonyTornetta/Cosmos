@@ -284,9 +284,9 @@ fn send_chat_msg(
         return;
     }
 
-    if value.starts_with("/") {
+    if let Some(stripped) = value.strip_prefix("/") {
         nevw_command.send(ClientCommandEvent {
-            command_text: value[1..].to_owned(),
+            command_text: stripped.to_owned(),
         });
     } else {
         nevw_chat.send(ClientSendChatMessageEvent::Global(value.to_owned()));
