@@ -62,12 +62,11 @@ pub fn create_cosmos_command<T: CosmosCommandType, M>(command: ServerCommand, ap
                                  mut evw_send_message: EventWriter<SendCommandMessageEvent>| {
         for ev in evr_command_sent.read() {
             if ev.name == unlocalized_name {
-                if T::requires_operator() {
-                    if !ev.sender.is_operator(&q_operator) {
+                if T::requires_operator()
+                    && !ev.sender.is_operator(&q_operator) {
                         ev.sender.send("This command requires operator permissions.", &mut evw_send_message);
                         continue;
                     }
-                }
 
                 match T::from_input(ev) {
                     Ok(command) => {
@@ -75,7 +74,7 @@ pub fn create_cosmos_command<T: CosmosCommandType, M>(command: ServerCommand, ap
                             name: ev.name.clone(),
                             text: ev.text.clone(),
                             args: ev.args.clone(),
-                            sender: ev.sender.clone(),
+                            sender: ev.sender,
                             command,
                         });
                     }
@@ -116,7 +115,7 @@ impl CosmosCommandType for HelpCommand {
             return Err(ArgumentError::TooManyArguments);
         }
 
-        return Ok(Self(input_event.args.get(0).cloned()));
+        Ok(Self(input_event.args.first().cloned()))
     }
 }
 
@@ -163,7 +162,7 @@ fn display_help(
 
     sender.send("=== All Commands ===", evw_send_message);
     for command in commands.iter() {
-        sender.send(format!("{}", command.display_name()), evw_send_message);
+        sender.send(command.display_name().to_string(), evw_send_message);
         sender.send(format!("\t{}", command.usage), evw_send_message);
         sender.send(format!("\t{}", command.description), evw_send_message);
     }

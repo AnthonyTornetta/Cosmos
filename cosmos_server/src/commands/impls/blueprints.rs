@@ -12,7 +12,7 @@ impl CosmosCommandType for BlueprintsCommand {
             return Err(ArgumentError::TooManyArguments);
         }
 
-        return Ok(BlueprintsCommand(ev.args.get(0).cloned()));
+        Ok(BlueprintsCommand(ev.args.first().cloned()))
     }
 }
 

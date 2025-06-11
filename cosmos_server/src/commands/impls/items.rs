@@ -13,7 +13,7 @@ impl CosmosCommandType for ItemsCommand {
             return Err(ArgumentError::TooManyArguments);
         }
 
-        Ok(ItemsCommand(ev.args.get(0).cloned()))
+        Ok(ItemsCommand(ev.args.first().cloned()))
     }
 }
 
@@ -23,7 +23,7 @@ pub(super) fn register(app: &mut App) {
         app,
         |mut evr_command: EventReader<CommandEvent<ItemsCommand>>, items: Res<Registry<Item>>| {
             for ev in evr_command.read() {
-                let search_term = ev.command.0.as_ref().map(|x| x.as_str()).unwrap_or("");
+                let search_term = ev.command.0.as_deref().unwrap_or("");
                 let result = items
                     .iter()
                     .filter(|x| x.unlocalized_name().contains(search_term))

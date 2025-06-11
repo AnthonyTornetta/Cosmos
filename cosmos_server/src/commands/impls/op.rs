@@ -29,7 +29,7 @@ impl CosmosCommandType for OpCommand {
             }
         };
 
-        return Ok(OpCommand { receiver });
+        Ok(OpCommand { receiver })
     }
 }
 

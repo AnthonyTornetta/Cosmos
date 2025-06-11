@@ -6,7 +6,7 @@ struct DespawnCommand(Entity);
 
 impl CosmosCommandType for DespawnCommand {
     fn from_input(ev: &CosmosCommandSent) -> Result<Self, ArgumentError> {
-        if ev.args.len() < 1 {
+        if ev.args.is_empty() {
             return Err(ArgumentError::TooFewArguments);
         }
         if ev.args.len() > 1 {
@@ -15,18 +15,18 @@ impl CosmosCommandType for DespawnCommand {
 
         if let Ok(index) = ev.args[0].parse::<u64>() {
             if let Ok(entity) = Entity::try_from_bits(index) {
-                return Ok(DespawnCommand(entity));
+                Ok(DespawnCommand(entity))
             } else {
-                return Err(ArgumentError::InvalidType {
+                Err(ArgumentError::InvalidType {
                     arg_index: 0,
                     type_name: "Entity".into(),
-                });
+                })
             }
         } else {
-            return Err(ArgumentError::InvalidType {
+            Err(ArgumentError::InvalidType {
                 arg_index: 0,
                 type_name: "Entity".into(),
-            });
+            })
         }
     }
 }

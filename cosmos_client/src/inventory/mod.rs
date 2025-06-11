@@ -326,7 +326,7 @@ fn toggle_inventory_rendering(
                         flex_direction: FlexDirection::Column,
                         ..Default::default()
                     },
-                    window_background: BackgroundColor(border_color.0.into()),
+                    window_background: BackgroundColor(border_color.0),
                 },
                 Node {
                     position_type: PositionType::Absolute,
@@ -348,7 +348,7 @@ fn toggle_inventory_rendering(
                         GuiWindowTitleBar,
                         InventorySearchBar,
                         Visibility::Hidden,
-                        BackgroundColor(border_color.0.into()),
+                        BackgroundColor(border_color.0),
                         BorderColor(css::GREY.into()),
                         Node {
                             flex_grow: 1.0,

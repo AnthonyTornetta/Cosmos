@@ -22,7 +22,7 @@ struct GamemodeCommand {
 
 impl CosmosCommandType for GamemodeCommand {
     fn from_input(ev: &CosmosCommandSent) -> Result<Self, ArgumentError> {
-        if ev.args.len() < 1 {
+        if ev.args.is_empty() {
             return Err(ArgumentError::TooFewArguments);
         }
         if ev.args.len() > 2 {
@@ -49,7 +49,7 @@ impl CosmosCommandType for GamemodeCommand {
             }
         };
 
-        return Ok(GamemodeCommand { receiver, gamemode });
+        Ok(GamemodeCommand { receiver, gamemode })
     }
 }
 
