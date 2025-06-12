@@ -128,6 +128,7 @@ fn add_tab_view(
                 .with_children(|p| {
                     for &(_, tab) in tabs.iter() {
                         p.spawn((
+                            Name::new(format!("Tab: {}", tab.header)),
                             tab.clone(),
                             CosmosButton::<ClickTabEvent> {
                                 text: Some((
@@ -143,6 +144,7 @@ fn add_tab_view(
                             },
                             Node {
                                 flex_grow: 1.0,
+                                height: Val::Percent(100.0),
                                 ..Default::default()
                             },
                         ));
@@ -152,7 +154,7 @@ fn add_tab_view(
             window_body = Some(
                 parent
                     .spawn((
-                        Name::new("Window Body"),
+                        Name::new("Tab Body"),
                         tabbed_view.view_background,
                         TabbedViewBody,
                         Node {

@@ -37,7 +37,7 @@ use super::{
 pub struct NeedsSettingsAdded;
 
 #[derive(Debug, Reflect, Clone, Component)]
-struct SettingValue {
+struct SettingControlValue {
     input: CosmosInputs,
     value: Option<ControlType>,
 }
@@ -79,13 +79,6 @@ fn create_settings_screen(
 
     let cool_blue = Srgba::hex("00FFFF").unwrap().into();
 
-    let blue_text = TextColor(cool_blue);
-    let text_style_large = TextFont {
-        font_size: 64.0,
-        font: default_font.0.clone(),
-        ..Default::default()
-    };
-
     let text_style = TextFont {
         font_size: 32.0,
         font: default_font.0.clone(),
@@ -105,6 +98,13 @@ fn create_settings_screen(
     commands.entity(main_menu_root).insert(SettingsMenu).with_children(|p| {
         p.spawn((
             Node {
+                width: Val::Px(1000.0),
+                margin: UiRect {
+                    left: Val::Auto,
+                    right: Val::Auto,
+                    top: Val::Px(50.0),
+                    ..Default::default()
+                },
                 flex_grow: 1.0,
                 ..Default::default()
             },
@@ -115,7 +115,7 @@ fn create_settings_screen(
         ))
         .with_children(|p| {
             create_general_tab(&settings, &lang, &text_style, &text_style_small, p);
-            create_controls_tab(&controls, &lang, &text_style, &text_style_small, p);
+            create_controls_tab(&controls, &text_style, &text_style_small, p);
         });
 
         p.spawn(Node {
@@ -329,21 +329,15 @@ fn create_general_tab(
 }
 
 #[derive(Event, Debug)]
-struct SettingsButtonClickedEvent(Entity);
+struct ControlButtonClickedEvent(Entity);
 
-impl ButtonEvent for SettingsButtonClickedEvent {
+impl ButtonEvent for ControlButtonClickedEvent {
     fn create_event(btn_entity: Entity) -> Self {
         Self(btn_entity)
     }
 }
 
-fn create_controls_tab(
-    controls: &CosmosInputHandler,
-    lang: &Lang<Setting>,
-    text_style: &TextFont,
-    text_style_small: &TextFont,
-    p: &mut ChildBuilder,
-) {
+fn create_controls_tab(controls: &CosmosInputHandler, text_style: &TextFont, text_style_small: &TextFont, p: &mut ChildBuilder) {
     p.spawn((
         Tab::new("Controls"),
         Node {
@@ -354,7 +348,10 @@ fn create_controls_tab(
         ScrollBox::default(),
     ))
     .with_children(|p| {
-        for (input, mapping) in controls.iter() {
+        let mut inputs = controls.iter().filter(|(x, _)| **x != CosmosInputs::Pause).collect::<Vec<_>>();
+        inputs.sort_by_key(|x| *x.0);
+
+        for (input, mapping) in inputs {
             p.spawn(Node {
                 width: Val::Percent(100.0),
                 justify_content: JustifyContent::Center,
@@ -367,22 +364,18 @@ fn create_controls_tab(
                     Text::new(format!("{input:?}")),
                     text_style.clone(),
                     Node {
-                        width: Val::Px(500.0),
+                        flex_grow: 1.0,
                         align_self: AlignSelf::Center,
                         ..Default::default()
                     },
                 ));
 
                 p.spawn((
-                    CosmosButton::<SettingsButtonClickedEvent> {
-                        text: Some((
-                            mapping.map(|x| format!("{x:?}")).unwrap_or_default(),
-                            text_style_small.clone(),
-                            Default::default(),
-                        )),
+                    CosmosButton::<ControlButtonClickedEvent> {
+                        text: Some(("".to_owned(), text_style_small.clone(), Default::default())),
                         ..Default::default()
                     },
-                    SettingValue {
+                    SettingControlValue {
                         input: input.clone(),
                         value: mapping.clone(),
                     },
@@ -390,7 +383,7 @@ fn create_controls_tab(
                     BackgroundColor(Srgba::hex("111111").unwrap().into()),
                     Node {
                         border: UiRect::all(Val::Px(2.0)),
-                        width: Val::Px(150.0),
+                        width: Val::Px(300.0),
                         height: Val::Px(45.0),
                         align_self: AlignSelf::Center,
                         padding: UiRect {
@@ -407,53 +400,88 @@ fn create_controls_tab(
 }
 
 fn click_settings_button(
-    mut evr_settings_btn_clicked: EventReader<SettingsButtonClickedEvent>,
+    mut evr_settings_btn_clicked: EventReader<ControlButtonClickedEvent>,
     mut commands: Commands,
     q_next_input: Query<(), With<ListeningNextInput>>,
-    mut q_setting_value: Query<&mut SettingValue>,
+    mut q_button: Query<&mut CosmosButton<ControlButtonClickedEvent>>,
 ) {
     let Some(ev) = evr_settings_btn_clicked.read().next() else {
         return;
     };
 
     if !q_next_input.is_empty() {
-        if q_next_input.contains(ev.0) {
-            commands.entity(ev.0).remove::<ListeningNextInput>();
-        }
         return;
     }
 
-    if let Ok(mut setting_val) = q_setting_value.get_mut(ev.0) {
-        setting_val.value = None;
+    if let Ok(mut btn) = q_button.get_mut(ev.0) {
+        let cur_val = btn.text.as_mut().unwrap();
+        cur_val.0 = format!("> {} <", cur_val.0);
     }
     commands.entity(ev.0).insert(ListeningNextInput);
 }
 
 fn listen_for_inputs(
-    mut q_listening: Query<(Entity, &mut SettingValue), With<ListeningNextInput>>,
+    mut q_listening: Query<(Entity, &mut SettingControlValue), With<ListeningNextInput>>,
     mut commands: Commands,
     inputs: InputChecker,
 ) {
+    if inputs.check_pressed(CosmosInputs::Pause) {
+        for (ent, mut settings_val) in q_listening.iter_mut() {
+            settings_val.value = None;
+            commands.entity(ent).remove::<ListeningNextInput>();
+        }
+        return;
+    }
     for (ent, mut settings_val) in q_listening.iter_mut() {
-        if let Some(key) = inputs.any_key_pressed() {
+        if let Some(key) = inputs.any_key_released() {
             settings_val.value = Some(ControlType::Key(key));
             commands.entity(ent).remove::<ListeningNextInput>();
-        } else if let Some(mouse) = inputs.any_mouse_pressed() {
+        } else if let Some(mouse) = inputs.any_mouse_released() {
             settings_val.value = Some(ControlType::Mouse(mouse));
             commands.entity(ent).remove::<ListeningNextInput>();
         }
     }
 }
 
+fn display_debug_name(input: &str) -> String {
+    let mut result = String::new();
+    for c in input.chars() {
+        if c.is_uppercase() {
+            if !result.is_empty() {
+                result.push(' ');
+            }
+        }
+        result.push(c);
+    }
+
+    // Reverse the words, because it reads better
+    result
+        .split(" ")
+        .collect::<Vec<_>>()
+        .into_iter()
+        .rev()
+        .collect::<Vec<_>>()
+        .join(" ")
+}
+
 fn on_change_setting_value(
-    mut q_changed_setting: Query<(&mut CosmosButton<SettingsButtonClickedEvent>, &SettingValue), Changed<SettingValue>>,
+    mut q_changed_setting: Query<(&mut CosmosButton<ControlButtonClickedEvent>, &SettingControlValue), Changed<SettingControlValue>>,
 ) {
     for (mut btn, value) in q_changed_setting.iter_mut() {
-        btn.text.as_mut().unwrap().0 = format!("{:?}", value.value);
+        btn.text.as_mut().unwrap().0 = match value.value {
+            None => "None".to_owned(),
+            Some(ControlType::Mouse(m)) => format!("{m:?} Mouse"),
+            Some(ControlType::Key(k)) => display_debug_name(&format!("{k:?}").replace("Key", "").replace("Digit", "")),
+        }
     }
 }
 
-fn done_clicked(mut settings: ResMut<Registry<Setting>>, q_written_settings: Query<&WrittenSetting>) {
+fn done_clicked(
+    mut settings: ResMut<Registry<Setting>>,
+    q_written_settings: Query<&WrittenSetting>,
+    q_setting: Query<&SettingControlValue>,
+    mut inputs: ResMut<CosmosInputHandler>,
+) {
     for written_setting in q_written_settings.iter() {
         let setting = settings.from_numeric_id_mut(written_setting.setting_id);
 
@@ -473,6 +501,20 @@ fn done_clicked(mut settings: ResMut<Registry<Setting>>, q_written_settings: Que
 
         info!("{setting:?}");
     }
+
+    for control in q_setting.iter() {
+        match control.value {
+            None => {
+                inputs.remove_control(control.input);
+            }
+            Some(ControlType::Mouse(m)) => {
+                inputs.set_mouse_button(control.input, m);
+            }
+            Some(ControlType::Key(k)) => {
+                inputs.set_keycode(control.input, k);
+            }
+        }
+    }
 }
 
 #[derive(Event, Debug)]
@@ -482,14 +524,6 @@ fn done_clicked(mut settings: ResMut<Registry<Setting>>, q_written_settings: Que
 pub struct SettingsCancelButtonEvent(pub Entity);
 
 impl ButtonEvent for SettingsCancelButtonEvent {
-    fn create_event(e: Entity) -> Self {
-        Self(e)
-    }
-}
-
-#[derive(Event, Debug)]
-struct OpenControlsButtonEvent(Entity);
-impl ButtonEvent for OpenControlsButtonEvent {
     fn create_event(e: Entity) -> Self {
         Self(e)
     }
@@ -515,7 +549,7 @@ pub(super) enum SettingsMenuSet {
 pub(super) fn register(app: &mut App) {
     register_button::<SettingsCancelButtonEvent>(app);
     register_button::<SettingsDoneButtonEvent>(app);
-    register_button::<OpenControlsButtonEvent>(app);
+    register_button::<ControlButtonClickedEvent>(app);
 
     add_reactable_type::<WrittenSetting>(app);
 
@@ -525,9 +559,13 @@ pub(super) fn register(app: &mut App) {
             create_settings_screen
                 .in_set(UiSystemSet::DoUi)
                 .before(SettingsMenuSet::SettingsMenuInteractions),
-            (listen_for_inputs, click_settings_button, on_change_setting_value, done_clicked)
+            (
+                listen_for_inputs,
+                click_settings_button,
+                on_change_setting_value,
+                done_clicked.run_if(on_event::<SettingsDoneButtonEvent>),
+            )
                 .chain()
-                .run_if(on_event::<SettingsDoneButtonEvent>)
                 .in_set(SettingsMenuSet::SettingsMenuInteractions),
             // controls_close
             //     .run_if(on_event::<ControlsCancelButtonEvent>.or(on_event::<ControlsDoneButtonEvent>))

@@ -5,7 +5,7 @@ use std::fs;
 use bevy::{prelude::*, utils::HashMap};
 use serde::{Deserialize, Serialize};
 
-#[derive(Clone, Copy, Eq, PartialEq, Hash, Debug, Serialize, Deserialize, Reflect)]
+#[derive(Clone, Copy, Eq, PartialEq, Hash, Debug, Serialize, Deserialize, Reflect, PartialOrd, Ord)]
 /// This should be refactored into a registry, but for now, enjoy enum!
 ///
 /// Use this for input handling to allow things to be automatically changed
@@ -14,39 +14,27 @@ pub enum CosmosInputs {
     MoveForward,
     /// Player/Ship move backward
     MoveBackward,
-    /// Player jump
-    Jump,
-    /// Player/Ship slow down
-    SlowDown,
     /// Player/Ship move left
     MoveLeft,
     /// Player/Ship move right
     MoveRight,
-    /// Player move faster
-    Sprint,
-
-    /// Ship match speed of focused entity
-    MatchSpeed,
-
     // For use in ships
     /// Ship move down
     MoveDown,
     /// Ship move up
     MoveUp,
+    /// Player jump
+    Jump,
+    /// Player/Ship slow down
+    SlowDown,
+    /// Player move faster
+    Sprint,
+    /// Ship match speed of focused entity
+    MatchSpeed,
     /// Ship roll left
     RollLeft,
     /// Ship roll right
     RollRight,
-    /// Leaves the ship the player is a child of
-    ///
-    /// This does not remove you as the pilot, but rather makes you no longer
-    /// move with the ship
-    LeaveShip,
-
-    /// Stop piloting whatever ship they're in
-    StopPiloting,
-    /// Use the ship's selected block system
-    UseSelectedSystem,
 
     /// Break the block the player is looking at
     BreakBlock,
@@ -64,27 +52,19 @@ pub enum CosmosInputs {
     /// Creates a space station with the station core in the player's inventory
     CreateStation,
 
+    /// Leaves the ship the player is a child of
+    ///
+    /// This does not remove you as the pilot, but rather makes you no longer
+    /// move with the ship
+    LeaveShip,
+
+    /// Stop piloting whatever ship they're in
+    StopPiloting,
+    /// Use the ship's selected block system
+    UseSelectedSystem,
+
     /// Unlocks the mouse from the window
     Pause,
-
-    /// Change the selected inventory item
-    HotbarSlot1,
-    /// Change the selected inventory item
-    HotbarSlot2,
-    /// Change the selected inventory item
-    HotbarSlot3,
-    /// Change the selected inventory item
-    HotbarSlot4,
-    /// Change the selected inventory item
-    HotbarSlot5,
-    /// Change the selected inventory item
-    HotbarSlot6,
-    /// Change the selected inventory item
-    HotbarSlot7,
-    /// Change the selected inventory item
-    HotbarSlot8,
-    /// Change the selected inventory item
-    HotbarSlot9,
 
     /// Opens + closes your inventory
     ToggleInventory,
@@ -110,6 +90,25 @@ pub enum CosmosInputs {
 
     /// When interacting with a block, if this key is pressed the "alternative" interaction mode should be used instead.
     AlternateInteraction,
+
+    /// Change the selected inventory item
+    HotbarSlot1,
+    /// Change the selected inventory item
+    HotbarSlot2,
+    /// Change the selected inventory item
+    HotbarSlot3,
+    /// Change the selected inventory item
+    HotbarSlot4,
+    /// Change the selected inventory item
+    HotbarSlot5,
+    /// Change the selected inventory item
+    HotbarSlot6,
+    /// Change the selected inventory item
+    HotbarSlot7,
+    /// Change the selected inventory item
+    HotbarSlot8,
+    /// Change the selected inventory item
+    HotbarSlot9,
 
     /// Take Panorama Screenshot
     ///
@@ -322,6 +321,8 @@ pub trait InputHandler {
 
     fn any_mouse_pressed(&self) -> Option<MouseButton>;
     fn any_key_pressed(&self) -> Option<KeyCode>;
+    fn any_mouse_released(&self) -> Option<MouseButton>;
+    fn any_key_released(&self) -> Option<KeyCode>;
 }
 
 /// A wrapper around [`CosmosInputHandler`] and all the resources it needs.
@@ -364,6 +365,14 @@ impl InputHandler for InputChecker<'_> {
 
     fn any_mouse_pressed(&self) -> Option<MouseButton> {
         self.2.get_just_pressed().next().copied()
+    }
+
+    fn any_key_released(&self) -> Option<KeyCode> {
+        self.1.get_just_released().next().copied()
+    }
+
+    fn any_mouse_released(&self) -> Option<MouseButton> {
+        self.2.get_just_released().next().copied()
     }
 }
 
@@ -410,7 +419,7 @@ impl CosmosInputHandler {
         keycode.is_some() && keys.pressed(keycode.unwrap()) || mouse_button.is_some() && mouse.pressed(mouse_button.unwrap())
     }
 
-    fn set_keycode(&mut self, input: CosmosInputs, keycode: KeyCode) {
+    pub fn set_keycode(&mut self, input: CosmosInputs, keycode: KeyCode) {
         if self.0.contains_key(&input) {
             let mapping = self.0.get_mut(&input).unwrap();
 
@@ -420,7 +429,7 @@ impl CosmosInputHandler {
         }
     }
 
-    fn set_mouse_button(&mut self, input: CosmosInputs, button: MouseButton) {
+    pub fn set_mouse_button(&mut self, input: CosmosInputs, button: MouseButton) {
         if self.0.contains_key(&input) {
             let mapping = self.0.get_mut(&input).unwrap();
 
@@ -446,7 +455,7 @@ impl CosmosInputHandler {
         self.0[&input].as_ref().and_then(|x| x.as_mouse())
     }
 
-    fn remove_control(&mut self, input: CosmosInputs) {
+    pub fn remove_control(&mut self, input: CosmosInputs) {
         self.0.remove(&input);
     }
 }
