@@ -491,8 +491,8 @@ impl BaseStructure {
         if let Some(chunk) = self.mut_chunk_at_block_coordinates(coords) {
             let health_left = chunk.block_take_damage(ChunkBlockCoordinate::for_block_coordinate(coords), amount, blocks);
 
-            if let Some(structure_entity) = self.get_entity() {
-                if let Some((take_damage_event_writer, destroyed_event_writer)) = event_writers {
+            if let Some(structure_entity) = self.get_entity()
+                && let Some((take_damage_event_writer, destroyed_event_writer)) = event_writers {
                     let block = StructureBlock::new(coords, structure_entity);
 
                     take_damage_event_writer.send(BlockTakeDamageEvent {
@@ -505,7 +505,6 @@ impl BaseStructure {
                         destroyed_event_writer.send(BlockDestroyedEvent { structure_entity, block });
                     }
                 }
-            }
 
             Some(health_left)
         } else {
@@ -861,14 +860,13 @@ impl BaseStructure {
 
             chunk.set_block_info_at(c, block_info);
 
-            if let Some(evw_block_data_changed) = evw_block_data_changed {
-                if let Some(structure_entity) = self.get_entity() {
+            if let Some(evw_block_data_changed) = evw_block_data_changed
+                && let Some(structure_entity) = self.get_entity() {
                     evw_block_data_changed.send(BlockDataChangedEvent {
                         block_data_entity: self.block_data(coords),
                         block: StructureBlock::new(coords, structure_entity),
                     });
                 }
-            }
         }
     }
 

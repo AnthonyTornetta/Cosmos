@@ -137,24 +137,22 @@ pub(crate) fn process_player_interaction(
         looking_at.looking_at_block = Some(hit_block);
     }
 
-    if input_handler.check_just_pressed(CosmosInputs::BreakBlock) {
-        if let Some(x) = &looking_at.looking_at_block {
+    if input_handler.check_just_pressed(CosmosInputs::BreakBlock)
+        && let Some(x) = &looking_at.looking_at_block {
             break_writer.send(RequestBlockBreakEvent { block: x.block });
         }
-    }
 
-    if input_handler.check_just_pressed(CosmosInputs::PickBlock) {
-        if let Some(x) = &looking_at.looking_at_block {
+    if input_handler.check_just_pressed(CosmosInputs::PickBlock)
+        && let Some(x) = &looking_at.looking_at_block {
             let block = structure.block_at(x.block.coords(), &blocks);
 
-            if let Some(block_item) = block_items.item_from_block(block).map(|x| items.from_numeric_id(x)) {
-                if let Some((slot, _)) = inventory
+            if let Some(block_item) = block_items.item_from_block(block).map(|x| items.from_numeric_id(x))
+                && let Some((slot, _)) = inventory
                     .iter()
                     .enumerate()
                     .flat_map(|(idx, item)| item.as_ref().map(|i| (idx, i)))
                     .find(|(_, is)| is.item_id() == block_item.id())
-                {
-                    if let Ok(mut hotbar) = hotbar.get_single_mut() {
+                    && let Ok(mut hotbar) = hotbar.get_single_mut() {
                         if slot < hotbar.n_slots() {
                             hotbar.set_selected_slot(slot);
                         } else {
@@ -173,10 +171,7 @@ pub(crate) fn process_player_interaction(
                             }
                         }
                     }
-                }
-            }
         }
-    }
 
     if input_handler.check_just_pressed(CosmosInputs::PlaceBlock) {
         (|| {
@@ -274,8 +269,8 @@ pub(crate) fn process_player_interaction(
         })();
     }
 
-    if input_handler.check_just_pressed(CosmosInputs::Interact) {
-        if let Some(looking_at_any) = &looking_at.looking_at_any {
+    if input_handler.check_just_pressed(CosmosInputs::Interact)
+        && let Some(looking_at_any) = &looking_at.looking_at_any {
             interact_writer.send(BlockInteractEvent {
                 block_including_fluids: looking_at_any.block,
                 interactor: player_entity,
@@ -283,7 +278,6 @@ pub(crate) fn process_player_interaction(
                 alternate: input_handler.check_pressed(CosmosInputs::AlternateInteraction),
             });
         }
-    }
 }
 
 fn send_ray<'a>(

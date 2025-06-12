@@ -27,11 +27,10 @@ fn on_trash_item_creative(
             continue;
         };
 
-        if let Some(mut inv) = HeldItemStack::get_held_is_inventory_mut(player, &q_children, &mut q_held_item) {
-            if let Some(mut is) = inv.remove_itemstack_at(0) {
+        if let Some(mut inv) = HeldItemStack::get_held_is_inventory_mut(player, &q_children, &mut q_held_item)
+            && let Some(mut is) = inv.remove_itemstack_at(0) {
                 is.remove(&mut commands);
             }
-        }
     }
 }
 

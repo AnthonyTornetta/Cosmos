@@ -131,8 +131,8 @@ fn on_interact_button<T: ButtonEvent>(
                 Interaction::Pressed => btn_styles.press_background_color,
             };
 
-            if let Some(children) = children {
-                if let Some(&text_child) = children.iter().find(|&x| q_has_text.contains(*x)) {
+            if let Some(children) = children
+                && let Some(&text_child) = children.iter().find(|&x| q_has_text.contains(*x)) {
                     let color = match *interaction {
                         Interaction::None => btn_styles.foreground_color,
                         Interaction::Hovered => btn_styles.hover_foreground_color,
@@ -141,7 +141,6 @@ fn on_interact_button<T: ButtonEvent>(
 
                     writer.for_each_color(text_child, |mut c| c.0 = color);
                 }
-            }
         }
 
         if *interaction == Interaction::Hovered && button.last_interaction == Interaction::Pressed {
@@ -189,11 +188,9 @@ fn on_change_button<T: ButtonEvent>(
                 }
             })
             .unwrap_or(btn.image.is_none())
-        {
-            if let Some(image) = btn.image.clone() {
+            && let Some(image) = btn.image.clone() {
                 commands.entity(ent).insert(image);
             }
-        }
 
         if let Some(button_text) = button_text {
             if let Some((new_text_value, text_font, text_color)) = &btn.text {

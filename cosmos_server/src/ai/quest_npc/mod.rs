@@ -179,11 +179,10 @@ fn on_melt_down(
     for (ent, pilot) in &q_melting_down {
         commands.entity(ent).remove::<(CombatAi, AiControlled, MerchantFederation, Pilot)>();
 
-        if let Some(pilot) = pilot {
-            if q_is_merchant.contains(pilot.entity) {
+        if let Some(pilot) = pilot
+            && q_is_merchant.contains(pilot.entity) {
                 commands.entity(pilot.entity).insert(NeedsDespawned);
             }
-        }
     }
 }
 
@@ -341,18 +340,17 @@ fn on_change_coms(
             continue;
         };
 
-        if let Some(last) = coms.messages.last() {
-            if last.sender == parent.get() {
+        if let Some(last) = coms.messages.last()
+            && last.sender == parent.get() {
                 // Don't reply to ourselves
                 continue;
             }
-        }
 
-        if let Ok(pilot) = q_pilot.get(coms.with) {
-            if let Some(faction) = q_faction.get(parent.get()).ok().and_then(|x| factions.from_id(x)) {
+        if let Ok(pilot) = q_pilot.get(coms.with)
+            && let Some(faction) = q_faction.get(parent.get()).ok().and_then(|x| factions.from_id(x)) {
                 let with_fac = q_faction.get(pilot.entity).ok().and_then(|x| factions.from_id(x));
-                if let Ok(with_ent_id) = q_entity_id.get(pilot.entity) {
-                    if faction.relation_with_entity(with_ent_id, with_fac) == FactionRelation::Enemy {
+                if let Ok(with_ent_id) = q_entity_id.get(pilot.entity)
+                    && faction.relation_with_entity(with_ent_id, with_fac) == FactionRelation::Enemy {
                         evw_send_coms.send(NpcSendComsMessage {
                             message: "BEGONE SCALLYWAG!!!".to_owned(),
                             from_ship: parent.get(),
@@ -360,9 +358,7 @@ fn on_change_coms(
                         });
                         continue;
                     }
-                }
             }
-        }
 
         let mut itr = coms.messages.iter();
 

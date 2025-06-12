@@ -37,8 +37,8 @@ fn block_update_system(
     systems_query: Query<&StructureSystems>,
 ) {
     for ev in event.read() {
-        if let Ok(systems) = systems_query.get(ev.block.structure()) {
-            if let Ok(mut system) = systems.query_mut(&mut system_query) {
+        if let Ok(systems) = systems_query.get(ev.block.structure())
+            && let Ok(mut system) = systems.query_mut(&mut system_query) {
                 if let Some(prop) = energy_storage_blocks.get(blocks.from_numeric_id(ev.old_block)) {
                     system.block_removed(prop);
                 }
@@ -47,7 +47,6 @@ fn block_update_system(
                     system.block_added(prop);
                 }
             }
-        }
     }
 }
 

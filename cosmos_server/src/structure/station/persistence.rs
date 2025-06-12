@@ -91,8 +91,8 @@ fn on_load_blueprint(
     mut structure_loaded_event_writer: EventWriter<StructureLoadedEvent>,
 ) {
     for (entity, s_data, needs_blueprinted) in query.iter() {
-        if s_data.deserialize_data::<bool>("cosmos:is_station").unwrap_or(false) {
-            if let Ok(structure) = s_data.deserialize_data::<Structure>("cosmos:structure") {
+        if s_data.deserialize_data::<bool>("cosmos:is_station").unwrap_or(false)
+            && let Ok(structure) = s_data.deserialize_data::<Structure>("cosmos:structure") {
                 load_structure(
                     entity,
                     &mut commands,
@@ -104,7 +104,6 @@ fn on_load_blueprint(
                     &mut structure_loaded_event_writer,
                 );
             }
-        }
     }
 }
 
@@ -116,8 +115,8 @@ fn on_load_structure(
     mut structure_loaded_event_writer: EventWriter<StructureLoadedEvent>,
 ) {
     for (entity, s_data) in query.iter() {
-        if s_data.deserialize_data::<bool>("cosmos:is_station").unwrap_or(false) {
-            if let Ok(structure) = s_data.deserialize_data::<Structure>("cosmos:structure") {
+        if s_data.deserialize_data::<bool>("cosmos:is_station").unwrap_or(false)
+            && let Ok(structure) = s_data.deserialize_data::<Structure>("cosmos:structure") {
                 let loc = s_data
                     .deserialize_data("cosmos:location")
                     .expect("Every station should have a location when saved!");
@@ -133,7 +132,6 @@ fn on_load_structure(
                     &mut structure_loaded_event_writer,
                 );
             }
-        }
     }
 }
 

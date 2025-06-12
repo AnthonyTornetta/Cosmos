@@ -102,12 +102,11 @@ impl HudMessages {
         let check_duplicate =
             |m: &HudMessage| m.text.len() == message.text.len() && m.text.iter().zip(message.text.iter()).all(|(x, y)| x.text == y.text);
 
-        if let Some(currently_displayed_hud_cache) = self.1.as_mut() {
-            if check_duplicate(&currently_displayed_hud_cache.cached_message) {
+        if let Some(currently_displayed_hud_cache) = self.1.as_mut()
+            && check_duplicate(&currently_displayed_hud_cache.cached_message) {
                 currently_displayed_hud_cache.time_needs_reset = true;
                 return;
             }
-        }
 
         if self.0.iter().any(check_duplicate) {
             return;
@@ -133,12 +132,11 @@ fn display_hud_messages(
     if let Ok((entity, parent, mut shown_hud_message)) = shown_hud_message.get_single_mut() {
         let time_now = time.elapsed_secs();
 
-        if let Some(current_hud_message) = hud_messages.1.as_mut() {
-            if current_hud_message.time_needs_reset {
+        if let Some(current_hud_message) = hud_messages.1.as_mut()
+            && current_hud_message.time_needs_reset {
                 shown_hud_message.time_created = time_now;
                 current_hud_message.time_needs_reset = false;
             }
-        }
 
         let time_remaining = HUD_DISPLAY_DURATION.as_secs_f32() - (time_now - shown_hud_message.time_created);
 

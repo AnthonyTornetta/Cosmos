@@ -1,8 +1,11 @@
 //! Represents the cosmos input systems
 
-use bevy::{prelude::*, utils::HashMap};
+use std::fs;
 
-#[derive(Clone, Copy, Eq, PartialEq, Hash, Debug)]
+use bevy::{prelude::*, utils::HashMap};
+use serde::{Deserialize, Serialize};
+
+#[derive(Clone, Copy, Eq, PartialEq, Hash, Debug, Serialize, Deserialize, Reflect, PartialOrd, Ord)]
 /// This should be refactored into a registry, but for now, enjoy enum!
 ///
 /// Use this for input handling to allow things to be automatically changed
@@ -11,39 +14,27 @@ pub enum CosmosInputs {
     MoveForward,
     /// Player/Ship move backward
     MoveBackward,
-    /// Player jump
-    Jump,
-    /// Player/Ship slow down
-    SlowDown,
     /// Player/Ship move left
     MoveLeft,
     /// Player/Ship move right
     MoveRight,
-    /// Player move faster
-    Sprint,
-
-    /// Ship match speed of focused entity
-    MatchSpeed,
-
     // For use in ships
     /// Ship move down
     MoveDown,
     /// Ship move up
     MoveUp,
+    /// Player jump
+    Jump,
+    /// Player/Ship slow down
+    SlowDown,
+    /// Player move faster
+    Sprint,
+    /// Ship match speed of focused entity
+    MatchSpeed,
     /// Ship roll left
     RollLeft,
     /// Ship roll right
     RollRight,
-    /// Leaves the ship the player is a child of
-    ///
-    /// This does not remove you as the pilot, but rather makes you no longer
-    /// move with the ship
-    LeaveShip,
-
-    /// Stop piloting whatever ship they're in
-    StopPiloting,
-    /// Use the ship's selected block system
-    UseSelectedSystem,
 
     /// Break the block the player is looking at
     BreakBlock,
@@ -61,27 +52,19 @@ pub enum CosmosInputs {
     /// Creates a space station with the station core in the player's inventory
     CreateStation,
 
+    /// Leaves the ship the player is a child of
+    ///
+    /// This does not remove you as the pilot, but rather makes you no longer
+    /// move with the ship
+    LeaveShip,
+
+    /// Stop piloting whatever ship they're in
+    StopPiloting,
+    /// Use the ship's selected block system
+    UseSelectedSystem,
+
     /// Unlocks the mouse from the window
     Pause,
-
-    /// Change the selected inventory item
-    HotbarSlot1,
-    /// Change the selected inventory item
-    HotbarSlot2,
-    /// Change the selected inventory item
-    HotbarSlot3,
-    /// Change the selected inventory item
-    HotbarSlot4,
-    /// Change the selected inventory item
-    HotbarSlot5,
-    /// Change the selected inventory item
-    HotbarSlot6,
-    /// Change the selected inventory item
-    HotbarSlot7,
-    /// Change the selected inventory item
-    HotbarSlot8,
-    /// Change the selected inventory item
-    HotbarSlot9,
 
     /// Opens + closes your inventory
     ToggleInventory,
@@ -107,6 +90,25 @@ pub enum CosmosInputs {
 
     /// When interacting with a block, if this key is pressed the "alternative" interaction mode should be used instead.
     AlternateInteraction,
+
+    /// Change the selected inventory item
+    HotbarSlot1,
+    /// Change the selected inventory item
+    HotbarSlot2,
+    /// Change the selected inventory item
+    HotbarSlot3,
+    /// Change the selected inventory item
+    HotbarSlot4,
+    /// Change the selected inventory item
+    HotbarSlot5,
+    /// Change the selected inventory item
+    HotbarSlot6,
+    /// Change the selected inventory item
+    HotbarSlot7,
+    /// Change the selected inventory item
+    HotbarSlot8,
+    /// Change the selected inventory item
+    HotbarSlot9,
 
     /// Take Panorama Screenshot
     ///
@@ -238,15 +240,88 @@ fn init_input(mut input_handler: ResMut<CosmosInputHandler>) {
     input_handler.set_keycode(CosmosInputs::HideUi, KeyCode::F1);
 
     input_handler.set_keycode(CosmosInputs::ToggleFocusCam, KeyCode::KeyG);
+
+    if let Ok(current_settings) = fs::read_to_string("settings/controls.toml")
+        && let Ok(parsed_settings) = toml::from_str::<CosmosInputHandler>(&current_settings) {
+            for (k, control) in parsed_settings.0.iter() {
+                match control {
+                    None => {
+                        input_handler.remove_control(*k);
+                    }
+                    Some(ControlType::Key(key)) => {
+                        input_handler.set_keycode(*k, *key);
+                    }
+                    Some(ControlType::Mouse(mouse)) => {
+                        input_handler.set_mouse_button(*k, *mouse);
+                    }
+                }
+            }
+        }
+
+    let _ = fs::write(
+        "settings/controls.toml",
+        toml::to_string_pretty(input_handler.as_ref()).expect("Failed to serialize to toml :("),
+    );
 }
 
-#[derive(Resource, Default, Debug)]
+#[derive(Resource, Debug, Serialize, Deserialize, Clone, Copy, Reflect)]
+/// The type of control this is (Mouse or Key)
+pub enum ControlType {
+    /// This control uses the keyboard
+    Key(KeyCode),
+    /// This control uses the mouse
+    Mouse(MouseButton),
+}
+
+fn display_debug_name(input: &str) -> String {
+    let mut result = String::new();
+    for c in input.chars() {
+        if c.is_uppercase() && !result.is_empty() {
+            result.push(' ');
+        }
+        result.push(c);
+    }
+
+    // Reverse the words, because it reads better
+    result
+        .split(" ")
+        .collect::<Vec<_>>()
+        .into_iter()
+        .rev()
+        .collect::<Vec<_>>()
+        .join(" ")
+}
+
+impl std::fmt::Display for ControlType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(&match self {
+            Self::Key(k) => display_debug_name(&format!("{k:?}").replace("Key", "").replace("Digit", "")),
+            Self::Mouse(m) => format!("{m:?} Mouse"),
+        })
+    }
+}
+
+impl ControlType {
+    fn as_key(&self) -> Option<KeyCode> {
+        match self {
+            Self::Key(k) => Some(*k),
+            Self::Mouse(_) => None,
+        }
+    }
+
+    fn as_mouse(&self) -> Option<MouseButton> {
+        match self {
+            Self::Key(_) => None,
+            Self::Mouse(btn) => Some(*btn),
+        }
+    }
+}
+
+#[derive(Resource, Default, Debug, Serialize, Deserialize)]
 /// Use this to check if inputs are selected
 ///
 /// You should generally prefer to use the `InputChecker` unless you're doing something super specific.
-pub struct CosmosInputHandler {
-    input_mapping: HashMap<CosmosInputs, (Option<KeyCode>, Option<MouseButton>)>,
-}
+pub struct CosmosInputHandler(HashMap<CosmosInputs, Option<ControlType>>);
 
 /// A wrapper around [`CosmosInputHandler`] and all the resources it needs.
 ///
@@ -273,6 +348,18 @@ pub trait InputHandler {
 
     /// Gets the raw mouse inputs structure (Res<ButtonInput<KeyCode>>)
     fn mouse_inputs(&self) -> &ButtonInput<MouseButton>;
+
+    /// Checks if any mouse has been pressed, and returns the first result if any have been
+    fn any_mouse_pressed(&self) -> Option<MouseButton>;
+    /// Checks if any key has been pressed, and returns the first result if any have been
+    fn any_key_pressed(&self) -> Option<KeyCode>;
+    /// Checks if any mouse has been released, and returns the first result if any have been
+    fn any_mouse_released(&self) -> Option<MouseButton>;
+    /// Checks if any key has been released, and returns the first result if any have been
+    fn any_key_released(&self) -> Option<KeyCode>;
+
+    /// Returns the control that corresponds to this input
+    fn get_control(&self, input: CosmosInputs) -> Option<ControlType>;
 }
 
 /// A wrapper around [`CosmosInputHandler`] and all the resources it needs.
@@ -308,12 +395,39 @@ impl InputHandler for InputChecker<'_> {
     fn mouse_inputs(&self) -> &ButtonInput<MouseButton> {
         &self.2
     }
+
+    fn any_key_pressed(&self) -> Option<KeyCode> {
+        self.1.get_just_pressed().next().copied()
+    }
+
+    fn any_mouse_pressed(&self) -> Option<MouseButton> {
+        self.2.get_just_pressed().next().copied()
+    }
+
+    fn any_key_released(&self) -> Option<KeyCode> {
+        self.1.get_just_released().next().copied()
+    }
+
+    fn any_mouse_released(&self) -> Option<MouseButton> {
+        self.2.get_just_released().next().copied()
+    }
+
+    fn get_control(&self, input: CosmosInputs) -> Option<ControlType> {
+        self.0.0.get(&input).copied().flatten()
+    }
 }
 
 impl CosmosInputHandler {
     /// Default
     pub fn new() -> Self {
         Self::default()
+    }
+
+    /// Iterates over every control and what its set to
+    ///
+    /// Order of iteration is effectively random
+    pub fn iter(&self) -> impl Iterator<Item = (&'_ CosmosInputs, &'_ Option<ControlType>)> {
+        self.0.iter()
     }
 
     /// Check if the given input was just released.
@@ -349,45 +463,61 @@ impl CosmosInputHandler {
         keycode.is_some() && keys.pressed(keycode.unwrap()) || mouse_button.is_some() && mouse.pressed(mouse_button.unwrap())
     }
 
-    fn set_keycode(&mut self, input: CosmosInputs, keycode: KeyCode) {
-        if self.input_mapping.contains_key(&input) {
-            let mapping = self.input_mapping.get_mut(&input).unwrap();
+    /// Sets the control to use this keycode
+    pub fn set_keycode(&mut self, input: CosmosInputs, keycode: KeyCode) {
+        if self.0.contains_key(&input) {
+            let mapping = self.0.get_mut(&input).unwrap();
 
-            mapping.0 = Some(keycode);
-            mapping.1 = None;
+            *mapping = Some(ControlType::Key(keycode));
         } else {
-            self.input_mapping.insert(input, (Some(keycode), None));
+            self.0.insert(input, Some(ControlType::Key(keycode)));
         }
     }
 
-    fn set_mouse_button(&mut self, input: CosmosInputs, button: MouseButton) {
-        if self.input_mapping.contains_key(&input) {
-            let mapping = self.input_mapping.get_mut(&input).unwrap();
+    /// Sets the control to use this mouse button
+    pub fn set_mouse_button(&mut self, input: CosmosInputs, button: MouseButton) {
+        if self.0.contains_key(&input) {
+            let mapping = self.0.get_mut(&input).unwrap();
 
-            mapping.0 = None;
-            mapping.1 = Some(button);
+            *mapping = Some(ControlType::Mouse(button));
         } else {
-            self.input_mapping.insert(input, (None, Some(button)));
+            self.0.insert(input, Some(ControlType::Mouse(button)));
         }
     }
 
     fn keycode_for(&self, input: CosmosInputs) -> Option<KeyCode> {
-        if !self.input_mapping.contains_key(&input) {
+        if !self.0.contains_key(&input) {
             return None;
         }
 
-        self.input_mapping[&input].0
+        self.0[&input].as_ref().and_then(|x| x.as_key())
     }
 
     fn mouse_button_for(&self, input: CosmosInputs) -> Option<MouseButton> {
-        if !self.input_mapping.contains_key(&input) {
+        if !self.0.contains_key(&input) {
             return None;
         }
 
-        self.input_mapping[&input].1
+        self.0[&input].as_ref().and_then(|x| x.as_mouse())
+    }
+
+    /// Removes all ways to use this control
+    pub fn remove_control(&mut self, input: CosmosInputs) {
+        self.0.remove(&input);
+    }
+}
+
+fn on_change_controls(input_handler: Res<CosmosInputHandler>) {
+    if let Err(e) = fs::write(
+        "settings/controls.toml",
+        toml::to_string_pretty(input_handler.as_ref()).expect("Failed to serialize to toml :("),
+    ) {
+        error!("Error saving controls - {e:?}");
     }
 }
 
 pub(super) fn register(app: &mut App) {
-    app.insert_resource(CosmosInputHandler::new()).add_systems(Startup, init_input);
+    app.insert_resource(CosmosInputHandler::new())
+        .add_systems(Startup, init_input)
+        .add_systems(Update, on_change_controls.run_if(resource_exists_and_changed::<CosmosInputHandler>));
 }

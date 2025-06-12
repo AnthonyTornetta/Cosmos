@@ -136,14 +136,13 @@ fn on_render_tanks(
             let rotation = block_rotation.as_quat();
 
             let faces = ALL_BLOCK_FACES.iter().copied().filter(|face| {
-                if let Ok(new_coord) = BlockCoordinate::try_from(block + face.direction().to_coordinates()) {
-                    if structure.block_id_at(new_coord) == tank_id {
+                if let Ok(new_coord) = BlockCoordinate::try_from(block + face.direction().to_coordinates())
+                    && structure.block_id_at(new_coord) == tank_id {
                         return match structure.query_block_data(new_coord, &q_stored_fluid) {
                             Some(BlockFluidData::Fluid(sf)) => sf.fluid_stored == 0,
                             _ => true,
                         };
                     }
-                }
 
                 true
             });

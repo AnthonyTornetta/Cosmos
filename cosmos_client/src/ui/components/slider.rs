@@ -238,8 +238,8 @@ fn on_interact_slider(
             };
         }
 
-        if interaction.is_changed() {
-            if let Some(slider_styles) = &slider.slider_styles {
+        if interaction.is_changed()
+            && let Some(slider_styles) = &slider.slider_styles {
                 if let Ok(mut bg_color) = q_bg_color.get_mut(progress_entities.empty_bar_entity) {
                     bg_color.0 = match *interaction {
                         Interaction::None => slider.background_color,
@@ -255,7 +255,6 @@ fn on_interact_slider(
                     };
                 }
             }
-        }
     }
 }
 

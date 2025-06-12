@@ -55,11 +55,10 @@ fn lasers_netty(
                 mut no_hit,
                 causer,
             } => {
-                if let Some(server_entity) = no_hit {
-                    if let Some(client_entity) = network_mapping.client_from_server(&server_entity) {
+                if let Some(server_entity) = no_hit
+                    && let Some(client_entity) = network_mapping.client_from_server(&server_entity) {
                         no_hit = Some(client_entity);
                     }
-                }
 
                 let causer = causer.map(|c| network_mapping.client_from_server(&c.0)).and_then(|e| e.map(Causer));
 

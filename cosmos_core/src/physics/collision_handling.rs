@@ -126,17 +126,15 @@ pub struct CosmosPhysicsFilter<'w, 's> {
 
 impl CosmosPhysicsFilter<'_, '_> {
     fn check_pair_filter(&self, context: PairFilterContextView) -> bool {
-        if let Ok(collision_blacklist) = self.q_collision_blacklist.get(context.collider1()) {
-            if !collision_blacklist.check_should_collide(context.collider2(), &self.q_parent) {
+        if let Ok(collision_blacklist) = self.q_collision_blacklist.get(context.collider1())
+            && !collision_blacklist.check_should_collide(context.collider2(), &self.q_parent) {
                 return false;
             }
-        }
 
-        if let Ok(collision_blacklist) = self.q_collision_blacklist.get(context.collider2()) {
-            if !collision_blacklist.check_should_collide(context.collider1(), &self.q_parent) {
+        if let Ok(collision_blacklist) = self.q_collision_blacklist.get(context.collider2())
+            && !collision_blacklist.check_should_collide(context.collider1(), &self.q_parent) {
                 return false;
             }
-        }
 
         true
     }

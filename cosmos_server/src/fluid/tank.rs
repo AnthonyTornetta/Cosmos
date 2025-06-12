@@ -78,29 +78,26 @@ fn balance_tanks(
             if !all_tanks_within.contains(&pos_x) && !checking.contains(&pos_x) {
                 to_check.insert(pos_x);
             }
-            if let Ok(neg_x) = coord.neg_x() {
-                if !all_tanks_within.contains(&neg_x) && !checking.contains(&neg_x) {
+            if let Ok(neg_x) = coord.neg_x()
+                && !all_tanks_within.contains(&neg_x) && !checking.contains(&neg_x) {
                     to_check.insert(neg_x);
                 }
-            }
             let pos_y = coord.pos_y();
             if !all_tanks_within.contains(&pos_y) && !checking.contains(&pos_y) {
                 to_check.insert(pos_y);
             }
-            if let Ok(neg_y) = coord.neg_y() {
-                if !all_tanks_within.contains(&neg_y) && !checking.contains(&neg_y) {
+            if let Ok(neg_y) = coord.neg_y()
+                && !all_tanks_within.contains(&neg_y) && !checking.contains(&neg_y) {
                     to_check.insert(neg_y);
                 }
-            }
             let pos_z = coord.pos_z();
             if !all_tanks_within.contains(&pos_z) && !checking.contains(&pos_z) {
                 to_check.insert(pos_z);
             }
-            if let Ok(neg_z) = coord.neg_z() {
-                if !all_tanks_within.contains(&neg_z) && !checking.contains(&neg_z) {
+            if let Ok(neg_z) = coord.neg_z()
+                && !all_tanks_within.contains(&neg_z) && !checking.contains(&neg_z) {
                     to_check.insert(neg_z);
                 }
-            }
 
             all_tanks_within.insert(coord);
         }

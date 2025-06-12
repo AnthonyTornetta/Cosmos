@@ -43,11 +43,10 @@ fn unload_far(
     for (name, loc, ent, ul_distance) in others.iter() {
         let ul_distance = ul_distance.unload_block_distance();
 
-        if let Some(min_dist) = query.iter().map(|l| l.relative_coords_to(loc).abs().max_element()).reduce(f32::min) {
-            if min_dist <= ul_distance {
+        if let Some(min_dist) = query.iter().map(|l| l.relative_coords_to(loc).abs().max_element()).reduce(f32::min)
+            && min_dist <= ul_distance {
                 continue;
             }
-        }
 
         if let Some(name) = name {
             info!("Unloading {name} ({ent:?}) at {loc} - too far away from any anchor.");

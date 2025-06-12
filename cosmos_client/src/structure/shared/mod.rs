@@ -23,8 +23,8 @@ fn remove_self_from_structure(
 
     mut renet_client: ResMut<RenetClient>,
 ) {
-    if let Ok((entity, parent)) = has_parent.get_single() {
-        if ship_is_parent.contains(parent.get()) && input_handler.check_just_pressed(CosmosInputs::LeaveShip) {
+    if let Ok((entity, parent)) = has_parent.get_single()
+        && ship_is_parent.contains(parent.get()) && input_handler.check_just_pressed(CosmosInputs::LeaveShip) {
             commands.entity(entity).remove_parent_in_place();
 
             renet_client.send_message(
@@ -32,7 +32,6 @@ fn remove_self_from_structure(
                 cosmos_encoder::serialize(&ClientReliableMessages::LeaveShip),
             );
         }
-    }
 }
 
 pub(super) fn register(app: &mut App) {

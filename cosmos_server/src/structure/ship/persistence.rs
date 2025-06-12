@@ -88,8 +88,8 @@ fn on_load_ship_blueprint(
     mut structure_loaded_event_writer: EventWriter<StructureLoadedEvent>,
 ) {
     for (entity, s_data, needs_blueprinted) in query.iter() {
-        if s_data.deserialize_data::<bool>("cosmos:is_ship").unwrap_or(false) {
-            if let Ok(structure) = s_data.deserialize_data::<Structure>("cosmos:structure") {
+        if s_data.deserialize_data::<bool>("cosmos:is_ship").unwrap_or(false)
+            && let Ok(structure) = s_data.deserialize_data::<Structure>("cosmos:structure") {
                 info!("Loading ship blueprint!");
                 load_structure(
                     entity,
@@ -102,7 +102,6 @@ fn on_load_ship_blueprint(
                     &mut structure_loaded_event_writer,
                 );
             }
-        }
     }
 }
 
@@ -114,8 +113,8 @@ fn on_load_ship(
     mut structure_loaded_event_writer: EventWriter<StructureLoadedEvent>,
 ) {
     for (entity, s_data) in query.iter() {
-        if s_data.deserialize_data::<bool>("cosmos:is_ship").unwrap_or(false) {
-            if let Ok(structure) = s_data.deserialize_data::<Structure>("cosmos:structure") {
+        if s_data.deserialize_data::<bool>("cosmos:is_ship").unwrap_or(false)
+            && let Ok(structure) = s_data.deserialize_data::<Structure>("cosmos:structure") {
                 let loc = s_data
                     .deserialize_data("cosmos:location")
                     .expect("Every ship should have a location when saved!");
@@ -131,7 +130,6 @@ fn on_load_ship(
                     &mut structure_loaded_event_writer,
                 );
             }
-        }
     }
 }
 

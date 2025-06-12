@@ -90,11 +90,10 @@ fn toggle_doors(
                 done.insert(coord);
 
                 for dir in ALL_BLOCK_DIRECTIONS {
-                    if let Ok(coord) = BlockCoordinate::try_from(dir.to_coordinates() + coord) {
-                        if !done.contains(&coord) {
+                    if let Ok(coord) = BlockCoordinate::try_from(dir.to_coordinates() + coord)
+                        && !done.contains(&coord) {
                             new_todo.insert(coord);
                         }
-                    }
                 }
             }
 

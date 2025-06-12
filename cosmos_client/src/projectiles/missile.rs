@@ -32,11 +32,10 @@ fn track_time_alive(
     for (ent, mut time_alive, max_time) in &mut q_time_alive {
         time_alive.0 += time.delta_secs();
 
-        if let Some(max_time) = max_time {
-            if time_alive.0 >= max_time.0.as_secs_f32() {
+        if let Some(max_time) = max_time
+            && time_alive.0 >= max_time.0.as_secs_f32() {
                 commands.entity(ent).insert(NeedsDespawned);
             }
-        }
     }
 }
 

@@ -187,13 +187,12 @@ impl Factions {
     /// Factions cannot be allies with a non-factioned entity, so the closest [`FactionRelation`] will be
     /// chosen that matches the given `relation`
     pub fn set_relation(&mut self, a: &FactionId, b: Option<&FactionId>, ent_id: Option<&EntityId>, relation: FactionRelation) {
-        if let Some(b) = b {
-            if let Some([a, b]) = self.0.get_many_mut([a, b]) {
+        if let Some(b) = b
+            && let Some([a, b]) = self.0.get_many_mut([a, b]) {
                 a.relationships.insert(b.id, relation);
                 b.relationships.insert(a.id, relation);
                 return;
             }
-        }
 
         let Some(a) = self.0.get_mut(a) else {
             return;

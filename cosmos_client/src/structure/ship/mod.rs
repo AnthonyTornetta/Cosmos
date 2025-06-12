@@ -99,8 +99,8 @@ fn remove_parent_when_too_far(
     mut commands: Commands,
     mut renet_client: ResMut<RenetClient>,
 ) {
-    if let Ok((player_entity, parent, player_loc)) = query.get_single() {
-        if let Ok(structure) = q_structure.get(parent.get()) {
+    if let Ok((player_entity, parent, player_loc)) = query.get_single()
+        && let Ok(structure) = q_structure.get(parent.get()) {
             if !matches!(structure, Structure::Full(_)) {
                 return;
             }
@@ -114,7 +114,6 @@ fn remove_parent_when_too_far(
                 );
             }
         }
-    }
 }
 
 #[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]

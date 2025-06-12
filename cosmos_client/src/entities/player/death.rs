@@ -165,11 +165,10 @@ fn on_not_dead(
     q_local_player: Query<(), With<LocalPlayer>>,
 ) {
     for c in removed_components.read() {
-        if q_local_player.contains(c) {
-            if let Ok(ent) = q_respawn_ui.get_single() {
+        if q_local_player.contains(c)
+            && let Ok(ent) = q_respawn_ui.get_single() {
                 commands.entity(ent).insert(NeedsDespawned);
             }
-        }
     }
 }
 

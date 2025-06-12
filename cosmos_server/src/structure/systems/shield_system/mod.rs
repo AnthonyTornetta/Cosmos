@@ -111,8 +111,8 @@ fn block_update_system(
     systems_query: Query<&StructureSystems>,
 ) {
     for ev in event.read() {
-        if let Ok(systems) = systems_query.get(ev.block.structure()) {
-            if let Ok(mut system) = systems.query_mut(&mut system_query) {
+        if let Ok(systems) = systems_query.get(ev.block.structure())
+            && let Ok(mut system) = systems.query_mut(&mut system_query) {
                 if shield_projector_blocks.0.get(&ev.old_block).is_some() {
                     system.projector_removed(ev.block.coords());
                 }
@@ -129,7 +129,6 @@ fn block_update_system(
                     system.generator_added(prop, ev.block.coords());
                 }
             }
-        }
     }
 }
 

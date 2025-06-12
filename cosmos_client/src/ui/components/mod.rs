@@ -8,6 +8,7 @@ pub mod button;
 pub mod scollable_container;
 pub mod show_cursor;
 pub mod slider;
+pub mod tabbed_view;
 pub mod text_input;
 pub mod window;
 
@@ -39,6 +40,7 @@ pub(super) fn register(app: &mut App) {
     scollable_container::register(app);
     window::register(app);
     show_cursor::register(app);
+    tabbed_view::register(app);
 
     app.add_systems(Update, clear_focus.in_set(UiSystemSet::PreDoUi));
 }

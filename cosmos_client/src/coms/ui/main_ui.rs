@@ -704,15 +704,14 @@ fn on_toggle(
                 &q_pilot,
             );
         } else {
-            if let Ok(mut selected) = q_selected_coms.get_single_mut() {
-                if !q_coms.contains(selected.0) {
+            if let Ok(mut selected) = q_selected_coms.get_single_mut()
+                && !q_coms.contains(selected.0) {
                     let all_coms = get_all_coms(&q_coms, &q_pilot, &q_local_player);
                     let Some(first) = all_coms.first() else {
                         continue;
                     };
                     selected.0 = first.0;
                 }
-            }
             node.right = Val::Px(0.0);
             commands
                 .entity(entity)
@@ -888,11 +887,10 @@ fn on_left_clicked(
 
     if let Some([prev, _]) = all_coms.array_windows::<2>().find(|[_, b]| b.0 == selected.0) {
         selected.0 = prev.0;
-    } else if let Some(last) = all_coms.last() {
-        if selected.0 != last.0 {
+    } else if let Some(last) = all_coms.last()
+        && selected.0 != last.0 {
             selected.0 = last.0;
         }
-    }
 }
 
 fn on_right_clicked(
@@ -909,11 +907,10 @@ fn on_right_clicked(
 
     if let Some([_, next]) = all_coms.array_windows::<2>().find(|[a, _]| a.0 == selected.0) {
         selected.0 = next.0;
-    } else if let Some(first) = all_coms.first() {
-        if selected.0 != first.0 {
+    } else if let Some(first) = all_coms.first()
+        && selected.0 != first.0 {
             selected.0 = first.0;
         }
-    }
 }
 
 fn get_all_coms<'a>(

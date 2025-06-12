@@ -94,13 +94,12 @@ fn assets_done_loading(
     mut loader: ResMut<LoadingManager>,
     mut end_writer: EventWriter<DoneLoadingEvent>,
 ) {
-    if !event_listener.is_empty() {
-        if let Some(loading_id) = loading_id.as_ref() {
+    if !event_listener.is_empty()
+        && let Some(loading_id) = loading_id.as_ref() {
             loader.finish_loading(loading_id.0, &mut end_writer);
 
             commands.remove_resource::<AssetsLoadingID>();
         }
-    }
 }
 
 #[derive(Clone, Debug, Reflect)]
@@ -197,8 +196,8 @@ fn check_assets_ready(
         if let AssetEvent::LoadedWithDependencies { id } = ev {
             let asset = server.get_id_handle::<LoadedFolder>(*id).unwrap();
 
-            if let Some(loaded_folder) = loaded_folders.get(&asset) {
-                if let Some(loading_texture_atlases) = loading.iter_mut().find(|x| x.folder_handle.contains(&asset)) {
+            if let Some(loaded_folder) = loaded_folders.get(&asset)
+                && let Some(loading_texture_atlases) = loading.iter_mut().find(|x| x.folder_handle.contains(&asset)) {
                     // all assets are now ready, construct texture atlas for better performance
 
                     // let mut texture_atlas_builder = SquareTextureAtlasBuilder::new(16);
@@ -259,7 +258,6 @@ fn check_assets_ready(
                         event_writer.send(AllTexturesDoneLoadingEvent);
                     }
                 }
-            }
         }
     }
 
@@ -362,11 +360,10 @@ fn handle_select_texture(selector: &TextureSelector, data: BlockInfo) -> Texture
 
 fn handle_data_driven(data: BlockInfo, dd: &DataDrivenTextureIndex) -> TextureIndex {
     for bit in (0..8).rev() {
-        if data.0 & (1 << bit) != 0 {
-            if let Some(idx) = dd.bit_textures[bit] {
+        if data.0 & (1 << bit) != 0
+            && let Some(idx) = dd.bit_textures[bit] {
                 return idx;
             }
-        }
     }
 
     dd.default

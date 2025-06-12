@@ -122,11 +122,10 @@ fn check_needs_loaded(
                     }
 
                     // Correct
-                    if parent.is_none() {
-                        if let Some((ent, _)) = q_entity_ids.iter().find(|(_, eid)| *eid == looking_for_entity) {
+                    if parent.is_none()
+                        && let Some((ent, _)) = q_entity_ids.iter().find(|(_, eid)| *eid == looking_for_entity) {
                             parent = Some(ent);
                         }
-                    }
 
                     if let Some(parent) = parent {
                         info!("Setting parent for {ent:?} to {parent:?} (this is correct)");

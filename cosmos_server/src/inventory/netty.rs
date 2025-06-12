@@ -192,8 +192,8 @@ fn listen_for_inventory_messages(
 
                     // TODO: Check if has access to inventory
 
-                    if let Some(mut inventory) = get_inventory_mut(inventory_holder, &mut q_inventory, &q_structure) {
-                        if let Some(is) = inventory.mut_itemstack_at(slot) {
+                    if let Some(mut inventory) = get_inventory_mut(inventory_holder, &mut q_inventory, &q_structure)
+                        && let Some(is) = inventory.mut_itemstack_at(slot) {
                             let quantity = quantity.min(is.quantity());
 
                             let mut held_itemstack = is.clone();
@@ -210,7 +210,6 @@ fn listen_for_inventory_messages(
                                 inventory.remove_itemstack_at(slot);
                             }
                         }
-                    }
                 }
                 ClientInventoryMessages::DepositHeldItemstack {
                     inventory_holder,

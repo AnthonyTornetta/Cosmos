@@ -255,7 +255,33 @@ fn toggle_map(
                         width: Val::Percent(100.0),
                         ..Default::default()
                     },
-                    Text::new("WASDEQ to Move"),
+                    Text::new(format!(
+                        "{}{}{}{}{}{} to Move",
+                        input_handler
+                            .get_control(CosmosInputs::MoveForward)
+                            .map(|x| x.to_string())
+                            .unwrap_or("[None]".into()),
+                        input_handler
+                            .get_control(CosmosInputs::MoveLeft)
+                            .map(|x| x.to_string())
+                            .unwrap_or("[None]".into()),
+                        input_handler
+                            .get_control(CosmosInputs::MoveBackward)
+                            .map(|x| x.to_string())
+                            .unwrap_or("[None]".into()),
+                        input_handler
+                            .get_control(CosmosInputs::MoveRight)
+                            .map(|x| x.to_string())
+                            .unwrap_or("[None]".into()),
+                        input_handler
+                            .get_control(CosmosInputs::MoveUp)
+                            .map(|x| x.to_string())
+                            .unwrap_or("[None]".into()),
+                        input_handler
+                            .get_control(CosmosInputs::MoveDown)
+                            .map(|x| x.to_string())
+                            .unwrap_or("[None]".into()),
+                    )),
                     small_text.clone(),
                 ));
 
@@ -273,7 +299,13 @@ fn toggle_map(
                         width: Val::Percent(100.0),
                         ..Default::default()
                     },
-                    Text::new("R to Reset to Your Sector"),
+                    Text::new(format!(
+                        "{} to Reset to Your Sector",
+                        input_handler
+                            .get_control(CosmosInputs::ResetMapPosition)
+                            .map(|x| x.to_string())
+                            .unwrap_or("[None]".into())
+                    )),
                     small_text.clone(),
                 ));
 
@@ -282,7 +314,13 @@ fn toggle_map(
                         width: Val::Percent(100.0),
                         ..Default::default()
                     },
-                    Text::new("Enter to Set/Unset Waypoint"),
+                    Text::new(format!(
+                        "{} to Set/Unset Waypoint",
+                        input_handler
+                            .get_control(CosmosInputs::ToggleWaypoint)
+                            .map(|x| x.to_string())
+                            .unwrap_or("[None]".into()),
+                    )),
                     small_text.clone(),
                 ));
             });
@@ -291,7 +329,11 @@ fn toggle_map(
     nevw_galaxy_map.send(RequestGalaxyMap);
 }
 
-fn update_waypoint_text(q_waypoint: Query<&Location, With<Waypoint>>, mut q_text: Query<&mut Text, With<WaypointText>>) {
+fn update_waypoint_text(
+    input_handler: InputChecker,
+    q_waypoint: Query<&Location, With<Waypoint>>,
+    mut q_text: Query<&mut Text, With<WaypointText>>,
+) {
     let Ok(mut text) = q_text.get_single_mut() else {
         return;
     };
@@ -300,7 +342,13 @@ fn update_waypoint_text(q_waypoint: Query<&Location, With<Waypoint>>, mut q_text
 
     let waypoint_text = waypoint_loc
         .map(|x| format!("{}, {}, {}", x.sector.x(), x.sector.y(), x.sector.z()))
-        .unwrap_or("<enter to set>".to_owned());
+        .unwrap_or(format!(
+            "<{} to set>",
+            input_handler
+                .get_control(CosmosInputs::MoveDown)
+                .map(|x| x.to_string())
+                .unwrap_or("[None]".into()),
+        ));
 
     text.as_mut().0 = format!("Waypoint: {waypoint_text}");
 }

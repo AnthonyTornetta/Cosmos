@@ -290,9 +290,9 @@ fn listen_for_change_events(
 
         hb.prev_slot = hb.selected_slot;
 
-        if let Ok(inv) = inventory_unchanged.get_single() {
-            if let Ok(ent) = item_name_query.get_single() {
-                if let Ok((mut name_text, mut name_color)) = text_query.get_mut(ent) {
+        if let Ok(inv) = inventory_unchanged.get_single()
+            && let Ok(ent) = item_name_query.get_single()
+                && let Ok((mut name_text, mut name_color)) = text_query.get_mut(ent) {
                     if let Some(is) = inv.itemstack_at(hb.selected_slot()) {
                         names
                             .get_name_from_numeric_id(is.item_id())
@@ -304,8 +304,6 @@ fn listen_for_change_events(
                         "".clone_into(&mut name_text.as_mut().0);
                     }
                 }
-            }
-        }
     }
 
     if let Ok(hotbar_contents) = query_inventory.get_single() {

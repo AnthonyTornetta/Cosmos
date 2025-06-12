@@ -893,13 +893,12 @@ fn remove_empty_chunks(
 
         let chunk_coords = bce.block.chunk_coords();
 
-        if structure.chunk_at(chunk_coords).is_none() {
-            if let Some(chunk_entity) = structure.chunk_entity(chunk_coords) {
+        if structure.chunk_at(chunk_coords).is_none()
+            && let Some(chunk_entity) = structure.chunk_entity(chunk_coords) {
                 commands.entity(chunk_entity).insert(NeedsDespawned);
 
                 structure.remove_chunk_entity(chunk_coords);
             }
-        }
     }
 }
 

@@ -268,8 +268,8 @@ impl StructureSystems {
             return;
         }
 
-        if let ShipActiveSystem::Active(active_system) = self.active_system {
-            if (active_system as usize) < self.activatable_systems.len() {
+        if let ShipActiveSystem::Active(active_system) = self.active_system
+            && (active_system as usize) < self.activatable_systems.len() {
                 let ent = self
                     .ids
                     .get(&self.activatable_systems[active_system as usize])
@@ -277,7 +277,6 @@ impl StructureSystems {
 
                 commands.entity(*ent).remove::<SystemActive>();
             }
-        }
 
         match active {
             ShipActiveSystem::Active(active_system) => {

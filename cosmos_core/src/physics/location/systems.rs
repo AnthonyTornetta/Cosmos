@@ -321,8 +321,8 @@ fn move_anchors_between_worlds(
 
                     // If this anchor has a parent, then when the parent is moved automatically
                     // this will be automatically handled.
-                    if !q_parent.contains(entity) {
-                        if let Ok(mut trans) = q_trans.get_mut(entity) {
+                    if !q_parent.contains(entity)
+                        && let Ok(mut trans) = q_trans.get_mut(entity) {
                             trans.translation += (loc - world_loc).absolute_coords_f32();
 
                             info!(
@@ -330,7 +330,6 @@ fn move_anchors_between_worlds(
                                 trans.translation
                             );
                         }
-                    }
                 }
             } else {
                 info!("Merging anchor ({entity:?}) into ({world_id:?}) world! Will create transform later...");

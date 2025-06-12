@@ -90,8 +90,8 @@ fn on_load_asteroid_blueprint(
     mut structure_loaded_event_writer: EventWriter<StructureLoadedEvent>,
 ) {
     for (entity, s_data, needs_blueprinted) in query.iter() {
-        if let Ok(temperature) = s_data.deserialize_data::<f32>("cosmos:asteroid") {
-            if let Ok(structure) = s_data.deserialize_data::<Structure>("cosmos:structure") {
+        if let Ok(temperature) = s_data.deserialize_data::<f32>("cosmos:asteroid")
+            && let Ok(structure) = s_data.deserialize_data::<Structure>("cosmos:structure") {
                 load_structure(
                     entity,
                     &mut commands,
@@ -104,7 +104,6 @@ fn on_load_asteroid_blueprint(
                     &mut structure_loaded_event_writer,
                 );
             }
-        }
     }
 }
 
@@ -116,8 +115,8 @@ fn on_load_asteroid(
     mut structure_loaded_event_writer: EventWriter<StructureLoadedEvent>,
 ) {
     for (entity, s_data) in query.iter() {
-        if let Ok(temperature) = s_data.deserialize_data::<f32>("cosmos:asteroid") {
-            if let Ok(structure) = s_data.deserialize_data::<Structure>("cosmos:structure") {
+        if let Ok(temperature) = s_data.deserialize_data::<f32>("cosmos:asteroid")
+            && let Ok(structure) = s_data.deserialize_data::<Structure>("cosmos:structure") {
                 let loc = s_data
                     .deserialize_data("cosmos:location")
                     .expect("Every asteroid should have a location when saved!");
@@ -134,7 +133,6 @@ fn on_load_asteroid(
                     &mut structure_loaded_event_writer,
                 );
             }
-        }
     }
 }
 

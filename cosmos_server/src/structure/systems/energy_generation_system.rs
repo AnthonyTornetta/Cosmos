@@ -39,8 +39,8 @@ fn block_update_system(
     systems_query: Query<&StructureSystems>,
 ) {
     for ev in event.read() {
-        if let Ok(systems) = systems_query.get(ev.block.structure()) {
-            if let Ok(mut system) = systems.query_mut(&mut system_query) {
+        if let Ok(systems) = systems_query.get(ev.block.structure())
+            && let Ok(mut system) = systems.query_mut(&mut system_query) {
                 if let Some(prop) = energy_generation_blocks.get(blocks.from_numeric_id(ev.old_block)) {
                     system.block_removed(prop);
                 }
@@ -49,7 +49,6 @@ fn block_update_system(
                     system.block_added(prop);
                 }
             }
-        }
     }
 }
 
@@ -60,11 +59,10 @@ fn update_energy(
     time: Res<Time>,
 ) {
     for (g, system) in e_gen_query.iter() {
-        if let Ok(systems) = sys_query.get(system.structure_entity()) {
-            if let Ok(mut storage) = systems.query_mut(&mut e_storage_query) {
+        if let Ok(systems) = sys_query.get(system.structure_entity())
+            && let Ok(mut storage) = systems.query_mut(&mut e_storage_query) {
                 storage.increase_energy(g.energy_generation_rate() * time.delta_secs());
             }
-        }
     }
 }
 
