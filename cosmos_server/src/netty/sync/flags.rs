@@ -4,6 +4,7 @@
 
 use bevy::{prelude::*, utils::HashSet};
 use cosmos_core::{
+    block::data::BlockData,
     entities::player::Player,
     netty::{
         NoSendEntity,
@@ -29,6 +30,13 @@ pub enum SyncReason {
     ///
     /// This should be used when this entity is data that describes its parent
     Data,
+    /// This should follow the default block data syncing rules
+    ///
+    /// This WILL be used as the default for entities with the [`BlockData`] component.
+    ///
+    /// 1. The player is within 1 sector
+    /// 2. The structure is being synced w/ the player
+    BlockData,
     /// This will only be synced if the location and the player are within a specific distance of
     /// each other
     #[default]
@@ -46,6 +54,7 @@ impl SyncTo {
     }
 }
 
+/// MegaFalse represents this failing for all players, not just one.
 enum MegaBool {
     True,
     False,
@@ -54,6 +63,7 @@ enum MegaBool {
 
 fn should_sync(
     this_ent: Entity,
+    q_parent: &Query<&Parent>,
     q_sync_to: &Query<
         (
             Entity,
@@ -62,6 +72,7 @@ fn should_sync(
             Option<&LoadingDistance>,
             Option<&Parent>,
             Option<&Structure>,
+            Has<BlockData>,
         ),
         (
             Without<NoSendEntity>,
@@ -72,7 +83,7 @@ fn should_sync(
     >,
     player_loc: &Location,
 ) -> MegaBool {
-    let Ok((_, sync_reason, location, loading_distance, parent, structure)) = q_sync_to.get(this_ent) else {
+    let Ok((_, sync_reason, location, loading_distance, parent, structure, block_data)) = q_sync_to.get(this_ent) else {
         return MegaBool::MegaFalse;
     };
 
@@ -89,7 +100,9 @@ fn should_sync(
         return MegaBool::MegaFalse;
     }
 
-    let sync_reason = sync_reason.cloned().unwrap_or_default();
+    let sync_reason = sync_reason
+        .cloned()
+        .unwrap_or(if block_data { SyncReason::BlockData } else { Default::default() });
 
     match sync_reason {
         SyncReason::Data => {
@@ -97,7 +110,32 @@ fn should_sync(
                 return MegaBool::MegaFalse;
             };
 
-            should_sync(parent.get(), q_sync_to, player_loc)
+            should_sync(parent.get(), q_parent, q_sync_to, player_loc)
+        }
+        SyncReason::BlockData => {
+            let Some(parent) = parent else {
+                return MegaBool::MegaFalse;
+            };
+
+            let Ok(parent) = q_parent.get(parent.get()) else {
+                return MegaBool::MegaFalse;
+            };
+
+            let Ok(Some(location)) = q_sync_to.get(parent.get()).map(|(_, _, location, _, _, _, _)| location) else {
+                return MegaBool::MegaFalse;
+            };
+
+            match should_sync(parent.get(), q_parent, q_sync_to, player_loc) {
+                MegaBool::MegaFalse => MegaBool::MegaFalse,
+                MegaBool::False => MegaBool::False,
+                MegaBool::True => {
+                    if LoadingDistance::new(1, 1).should_load(player_loc, location) {
+                        MegaBool::True
+                    } else {
+                        MegaBool::False
+                    }
+                }
+            }
         }
         SyncReason::Location => {
             let (Some(location), Some(loading_distance)) = (location, loading_distance) else {
@@ -122,6 +160,7 @@ fn update_sync_players(
             Option<&LoadingDistance>,
             Option<&Parent>,
             Option<&Structure>,
+            Has<BlockData>,
         ),
         (
             Without<NoSendEntity>,
@@ -130,11 +169,14 @@ fn update_sync_players(
             Without<NeedsLoaded>,
         ),
     >,
+    q_parent: Query<&Parent>,
     mut q_mut_sync_to: Query<&mut SyncTo>,
     q_players: Query<(&Player, &Location), With<ReadyForSyncing>>,
 ) {
-    for (ent, sync_reason, this_loc, loading_distance, parent, _) in q_sync_to.iter() {
-        let sync_reason = sync_reason.cloned().unwrap_or_default();
+    for (ent, sync_reason, this_loc, loading_distance, parent, _, block_data) in q_sync_to.iter() {
+        let sync_reason = sync_reason
+            .cloned()
+            .unwrap_or(if block_data { SyncReason::BlockData } else { Default::default() });
 
         let mut to_send_to = HashSet::default();
 
@@ -145,7 +187,32 @@ fn update_sync_players(
                         break;
                     };
 
-                    should_sync(parent.get(), &q_sync_to, player_loc)
+                    should_sync(parent.get(), &q_parent, &q_sync_to, player_loc)
+                }
+                SyncReason::BlockData => {
+                    let Some(parent) = parent else {
+                        break;
+                    };
+
+                    let Ok(parent) = q_parent.get(parent.get()) else {
+                        break;
+                    };
+
+                    let Ok(Some(location)) = q_sync_to.get(parent.get()).map(|(_, _, location, _, _, _, _)| location) else {
+                        break;
+                    };
+
+                    match should_sync(parent.get(), &q_parent, &q_sync_to, player_loc) {
+                        MegaBool::MegaFalse => break,
+                        MegaBool::False => MegaBool::False,
+                        MegaBool::True => {
+                            if LoadingDistance::new(1, 1).should_load(player_loc, location) {
+                                MegaBool::True
+                            } else {
+                                MegaBool::False
+                            }
+                        }
+                    }
                 }
                 SyncReason::Location => {
                     let (Some(location), Some(loading_distance)) = (this_loc, loading_distance) else {
@@ -211,7 +278,14 @@ fn generate_request_entity_events_for_new_sync_tos(
 
 fn on_needs_sync_data(
     mut commands: Commands,
-    q_added_sync_data: Query<Entity, (Without<SyncTo>, Or<(With<Location>, With<SyncReason>)>, Without<NoSendEntity>)>,
+    q_added_sync_data: Query<
+        Entity,
+        (
+            Without<SyncTo>,
+            Or<(With<Location>, With<BlockData>, With<SyncReason>)>,
+            Without<NoSendEntity>,
+        ),
+    >,
 ) {
     for ent in q_added_sync_data.iter() {
         commands.entity(ent).insert((SyncTo::default(), PreviousSyncTo::default()));
