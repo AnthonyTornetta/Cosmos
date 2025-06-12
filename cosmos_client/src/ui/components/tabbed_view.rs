@@ -2,8 +2,7 @@
 
 use bevy::{
     app::{App, Update},
-    asset::Handle,
-    color::{Srgba, palettes::css},
+    color::{Color, Srgba, palettes::css},
     core::Name,
     ecs::{
         component::Component,
@@ -14,34 +13,25 @@ use bevy::{
         system::{Commands, Query, Res},
     },
     hierarchy::{BuildChildren, Children},
-    image::Image,
     log::error,
-    math::{Rect, Vec2},
-    prelude::{Changed, ChildBuild, ImageNode, Parent, Resource, Text, Visibility, Without, resource_exists},
+    prelude::{Changed, ChildBuild, Parent, Without},
     reflect::Reflect,
-    text::{JustifyText, TextFont, TextLayout},
-    transform::components::GlobalTransform,
-    ui::{AlignItems, BackgroundColor, ComputedNode, Display, FlexDirection, Interaction, JustifyContent, Node, PositionType, UiRect, Val},
+    text::TextFont,
+    ui::{AlignItems, BackgroundColor, Display, FlexDirection, JustifyContent, Node, Val},
     utils::default,
-    window::{PrimaryWindow, Window},
-};
-use cosmos_core::{ecs::NeedsDespawned, state::GameState};
-
-use crate::{
-    asset::asset_loader::load_assets,
-    ui::{UiSystemSet, font::DefaultFont},
-    window::setup::DeltaCursorPosition,
 };
 
-use super::{
-    button::{ButtonEvent, CosmosButton, register_button},
-    show_cursor::{ShowCursor, any_open_menus},
-};
+use crate::ui::{UiSystemSet, font::DefaultFont};
+
+use super::button::{ButtonEvent, CosmosButton, register_button};
 
 #[derive(Debug, Component, Default)]
+/// The tab selected to be viewed - Should be put on the [`TabbedView`] entity.
 pub enum SelectedTab {
     #[default]
+    /// The first child (also the default displayed)
     Default,
+    /// A specific tab (the String is the [`Tab`]'s header)
     Tab(String),
 }
 
@@ -49,8 +39,11 @@ pub enum SelectedTab {
 #[require(Node, SelectedTab)]
 /// A wrapper around ui components that will make them movable and have a title bar with a close button.
 pub struct TabbedView {
+    /// The background color of the view
     pub view_background: BackgroundColor,
+    /// The background color of the tabs
     pub tabs_background: BackgroundColor,
+    /// The node the body of the tab views will use
     pub body_styles: Node,
 }
 
@@ -76,11 +69,13 @@ impl ButtonEvent for ClickTabEvent {
 }
 
 #[derive(Component, Reflect, Debug, Clone)]
+/// This child of a [`TabbedView`] will only be shown if the tab with this name is selected
 pub struct Tab {
     header: String,
 }
 
 impl Tab {
+    /// This child of a [`TabbedView`] will only be shown if the tab with this name is selected
     pub fn new(header: impl Into<String>) -> Self {
         Self { header: header.into() }
     }
@@ -88,15 +83,17 @@ impl Tab {
 
 #[derive(Component)]
 struct TabbedViewBody;
+#[derive(Component)]
+struct TabBar;
 
 fn add_tab_view(
     mut commands: Commands,
-    mut q_added_tabbed_view: Query<(Entity, &TabbedView, &Children, &mut Node), Added<TabbedView>>,
+    mut q_added_tabbed_view: Query<(Entity, &TabbedView, &SelectedTab, &Children, &mut Node), Added<TabbedView>>,
     font: Res<DefaultFont>,
     q_tab: Query<&Tab>,
     mut q_node: Query<&mut Node, (Without<TabbedView>, With<Tab>)>,
 ) {
-    for (ent, tabbed_view, children, mut style) in &mut q_added_tabbed_view {
+    for (ent, tabbed_view, selected_tab, children, mut style) in &mut q_added_tabbed_view {
         style.flex_direction = FlexDirection::Column;
 
         let font = &font.0;
@@ -113,6 +110,7 @@ fn add_tab_view(
             parent
                 .spawn((
                     Name::new("Tabs Bar"),
+                    TabBar,
                     Node {
                         display: Display::Flex,
                         flex_direction: FlexDirection::Row,
@@ -126,8 +124,8 @@ fn add_tab_view(
                     tabbed_view.tabs_background,
                 ))
                 .with_children(|p| {
-                    for &(_, tab) in tabs.iter() {
-                        p.spawn((
+                    for (idx, &(_, tab)) in tabs.iter().enumerate() {
+                        let mut ecmds = p.spawn((
                             Name::new(format!("Tab: {}", tab.header)),
                             tab.clone(),
                             CosmosButton::<ClickTabEvent> {
@@ -148,6 +146,14 @@ fn add_tab_view(
                                 ..Default::default()
                             },
                         ));
+
+                        let selected = match selected_tab {
+                            SelectedTab::Default => idx == 0,
+                            SelectedTab::Tab(t) => &tab.header == t,
+                        };
+                        if selected {
+                            ecmds.insert(BackgroundColor(css::GREY.into()));
+                        }
                     }
                 });
 
@@ -166,10 +172,21 @@ fn add_tab_view(
             );
         });
 
-        for &(tab_ent, _) in tabs.iter() {
+        for (idx, &(tab_ent, tab)) in tabs.iter().enumerate() {
             let window_body = window_body.expect("Set above");
             if let Ok(mut node) = q_node.get_mut(tab_ent) {
-                node.display = Display::None;
+                match selected_tab {
+                    SelectedTab::Default => {
+                        if idx != 0 {
+                            node.display = Display::None;
+                        }
+                    }
+                    SelectedTab::Tab(t) => {
+                        if &tab.header != t {
+                            node.display = Display::None;
+                        }
+                    }
+                }
                 commands.entity(tab_ent).set_parent(window_body);
             }
         }
@@ -179,15 +196,21 @@ fn add_tab_view(
 fn on_change_selected(
     q_changed_selected: Query<(&SelectedTab, &Children), (With<TabbedView>, Changed<SelectedTab>)>,
     mut q_tab: Query<(&Tab, &mut Node)>,
+    q_tab_bar: Query<&Children, With<TabBar>>,
     q_tabbed_body: Query<&Children, With<TabbedViewBody>>,
+    mut q_bg_color: Query<&mut BackgroundColor>,
 ) {
     for (selected_tab, children) in q_changed_selected.iter() {
+        let Some(tabbed_bar_children) = children.iter().flat_map(|x| q_tab_bar.get(*x)).next() else {
+            continue;
+        };
+
         let Some(children) = children.iter().flat_map(|x| q_tabbed_body.get(*x)).next() else {
             continue;
         };
 
         let mut first = true;
-        for &child in children.iter() {
+        for (&child, &tab_ent) in children.iter().zip(tabbed_bar_children.iter()) {
             let Ok((tab, mut node)) = q_tab.get_mut(child) else {
                 continue;
             };
@@ -199,8 +222,14 @@ fn on_change_selected(
 
             if selected {
                 node.display = Display::Flex;
+                if let Ok(mut bg) = q_bg_color.get_mut(tab_ent) {
+                    bg.0 = css::GREY.into();
+                }
             } else {
                 node.display = Display::None;
+                if let Ok(mut bg) = q_bg_color.get_mut(tab_ent) {
+                    bg.0 = Color::NONE;
+                }
             }
 
             first = false;

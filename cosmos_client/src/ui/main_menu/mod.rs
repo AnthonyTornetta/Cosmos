@@ -188,6 +188,7 @@ pub enum MainMenuSystemSet {
     UpdateMenu,
 }
 
+/// Checks if we are in the main menu state (used for system run conditions)
 pub fn in_main_menu_state(state: MainMenuSubState) -> impl Fn(Option<Res<MainMenuSubState>>) -> bool {
     move |mms: Option<Res<MainMenuSubState>>| mms.map(|x| *x == state).unwrap_or(false)
 }

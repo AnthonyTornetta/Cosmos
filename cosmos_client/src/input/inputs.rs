@@ -266,8 +266,11 @@ fn init_input(mut input_handler: ResMut<CosmosInputHandler>) {
 }
 
 #[derive(Resource, Debug, Serialize, Deserialize, Clone, Copy, Reflect)]
+/// The type of control this is (Mouse or Key)
 pub enum ControlType {
+    /// This control uses the keyboard
     Key(KeyCode),
+    /// This control uses the mouse
     Mouse(MouseButton),
 }
 
@@ -319,9 +322,13 @@ pub trait InputHandler {
     /// Gets the raw mouse inputs structure (Res<ButtonInput<KeyCode>>)
     fn mouse_inputs(&self) -> &ButtonInput<MouseButton>;
 
+    /// Checks if any mouse has been pressed, and returns the first result if any have been
     fn any_mouse_pressed(&self) -> Option<MouseButton>;
+    /// Checks if any key has been pressed, and returns the first result if any have been
     fn any_key_pressed(&self) -> Option<KeyCode>;
+    /// Checks if any mouse has been released, and returns the first result if any have been
     fn any_mouse_released(&self) -> Option<MouseButton>;
+    /// Checks if any key has been released, and returns the first result if any have been
     fn any_key_released(&self) -> Option<KeyCode>;
 }
 
@@ -382,6 +389,9 @@ impl CosmosInputHandler {
         Self::default()
     }
 
+    /// Iterates over every control and what its set to
+    ///
+    /// Order of iteration is effectively random
     pub fn iter(&self) -> impl Iterator<Item = (&'_ CosmosInputs, &'_ Option<ControlType>)> {
         self.0.iter()
     }
@@ -419,6 +429,7 @@ impl CosmosInputHandler {
         keycode.is_some() && keys.pressed(keycode.unwrap()) || mouse_button.is_some() && mouse.pressed(mouse_button.unwrap())
     }
 
+    /// Sets the control to use this keycode
     pub fn set_keycode(&mut self, input: CosmosInputs, keycode: KeyCode) {
         if self.0.contains_key(&input) {
             let mapping = self.0.get_mut(&input).unwrap();
@@ -429,6 +440,7 @@ impl CosmosInputHandler {
         }
     }
 
+    /// Sets the control to use this mouse button
     pub fn set_mouse_button(&mut self, input: CosmosInputs, button: MouseButton) {
         if self.0.contains_key(&input) {
             let mapping = self.0.get_mut(&input).unwrap();
@@ -455,6 +467,7 @@ impl CosmosInputHandler {
         self.0[&input].as_ref().and_then(|x| x.as_mouse())
     }
 
+    /// Removes all ways to use this control
     pub fn remove_control(&mut self, input: CosmosInputs) {
         self.0.remove(&input);
     }

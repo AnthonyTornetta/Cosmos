@@ -1,7 +1,6 @@
 //! Handles the rendering of the settings UI
 
 use bevy::{prelude::*, utils::hashbrown::HashMap};
-// use controls::{ControlsCancelButtonEvent, ControlsDoneButtonEvent, ControlsMenuSet};
 use cosmos_core::registry::{Registry, identifiable::Identifiable};
 
 use crate::{
@@ -26,11 +25,8 @@ use super::{
         tabbed_view::{Tab, TabbedView},
     },
     font::DefaultFont,
-    main_menu::{MainMenuSubState, MainMenuSystemSet, in_main_menu_state},
     reactivity::add_reactable_type,
 };
-
-// mod controls;
 
 #[derive(Component)]
 /// Add this to a UI NodeBundle when you need a settings screen added to it
@@ -62,7 +58,7 @@ impl ReactableValue for WrittenSetting {
 struct SettingsMenu;
 
 #[derive(Component)]
-pub struct ListeningNextInput;
+struct ListeningNextInput;
 
 fn create_settings_screen(
     mut commands: Commands,
@@ -109,6 +105,10 @@ fn create_settings_screen(
                 ..Default::default()
             },
             TabbedView {
+                body_styles: Node {
+                    margin: UiRect::top(Val::Px(20.0)),
+                    ..Default::default()
+                },
                 view_background: Color::NONE.into(),
                 ..Default::default()
             },
@@ -404,12 +404,18 @@ fn click_settings_button(
     mut commands: Commands,
     q_next_input: Query<(), With<ListeningNextInput>>,
     mut q_button: Query<&mut CosmosButton<ControlButtonClickedEvent>>,
+    mut clicked_this_frame: RemovedComponents<ListeningNextInput>,
 ) {
     let Some(ev) = evr_settings_btn_clicked.read().next() else {
         return;
     };
 
     if !q_next_input.is_empty() {
+        return;
+    }
+
+    if clicked_this_frame.read().any(|x| x == ev.0) {
+        // This means that setting the control to `mouse 1` won't immediately try to re-set it.
         return;
     }
 
@@ -498,8 +504,6 @@ fn done_clicked(
                 setting.data = SettingData::String(written_setting.value.clone());
             }
         }
-
-        info!("{setting:?}");
     }
 
     for control in q_setting.iter() {
