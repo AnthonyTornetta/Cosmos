@@ -125,7 +125,7 @@ fn should_sync(
                 return MegaBool::MegaFalse;
             };
 
-            match should_sync(parent.get(), &q_parent, &q_sync_to, player_loc) {
+            match should_sync(parent.get(), q_parent, q_sync_to, player_loc) {
                 MegaBool::MegaFalse => MegaBool::MegaFalse,
                 MegaBool::False => MegaBool::False,
                 MegaBool::True => {
