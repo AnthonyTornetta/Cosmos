@@ -274,6 +274,34 @@ pub enum ControlType {
     Mouse(MouseButton),
 }
 
+fn display_debug_name(input: &str) -> String {
+    let mut result = String::new();
+    for c in input.chars() {
+        if c.is_uppercase() && !result.is_empty() {
+            result.push(' ');
+        }
+        result.push(c);
+    }
+
+    // Reverse the words, because it reads better
+    result
+        .split(" ")
+        .collect::<Vec<_>>()
+        .into_iter()
+        .rev()
+        .collect::<Vec<_>>()
+        .join(" ")
+}
+
+impl std::fmt::Display for ControlType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(&match self {
+            Self::Key(k) => display_debug_name(&format!("{k:?}").replace("Key", "").replace("Digit", "")),
+            Self::Mouse(m) => format!("{m:?} Mouse"),
+        })
+    }
+}
+
 impl ControlType {
     fn as_key(&self) -> Option<KeyCode> {
         match self {
@@ -330,6 +358,9 @@ pub trait InputHandler {
     fn any_mouse_released(&self) -> Option<MouseButton>;
     /// Checks if any key has been released, and returns the first result if any have been
     fn any_key_released(&self) -> Option<KeyCode>;
+
+    /// Returns the control that corresponds to this input
+    fn get_control(&self, input: CosmosInputs) -> Option<ControlType>;
 }
 
 /// A wrapper around [`CosmosInputHandler`] and all the resources it needs.
@@ -380,6 +411,10 @@ impl InputHandler for InputChecker<'_> {
 
     fn any_mouse_released(&self) -> Option<MouseButton> {
         self.2.get_just_released().next().copied()
+    }
+
+    fn get_control(&self, input: CosmosInputs) -> Option<ControlType> {
+        self.0.0.get(&input).copied().flatten()
     }
 }
 

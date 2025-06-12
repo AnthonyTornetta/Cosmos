@@ -449,34 +449,13 @@ fn listen_for_inputs(
     }
 }
 
-fn display_debug_name(input: &str) -> String {
-    let mut result = String::new();
-    for c in input.chars() {
-        if c.is_uppercase()
-            && !result.is_empty() {
-                result.push(' ');
-            }
-        result.push(c);
-    }
-
-    // Reverse the words, because it reads better
-    result
-        .split(" ")
-        .collect::<Vec<_>>()
-        .into_iter()
-        .rev()
-        .collect::<Vec<_>>()
-        .join(" ")
-}
-
 fn on_change_setting_value(
     mut q_changed_setting: Query<(&mut CosmosButton<ControlButtonClickedEvent>, &SettingControlValue), Changed<SettingControlValue>>,
 ) {
     for (mut btn, value) in q_changed_setting.iter_mut() {
         btn.text.as_mut().unwrap().0 = match value.value {
-            None => "None".to_owned(),
-            Some(ControlType::Mouse(m)) => format!("{m:?} Mouse"),
-            Some(ControlType::Key(k)) => display_debug_name(&format!("{k:?}").replace("Key", "").replace("Digit", "")),
+            None => "[None]".to_owned(),
+            Some(c) => c.to_string(),
         }
     }
 }
