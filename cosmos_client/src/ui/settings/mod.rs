@@ -376,8 +376,8 @@ fn create_controls_tab(controls: &CosmosInputHandler, text_style: &TextFont, tex
                         ..Default::default()
                     },
                     SettingControlValue {
-                        input: input.clone(),
-                        value: mapping.clone(),
+                        input: *input,
+                        value: *mapping,
                     },
                     BorderColor(Srgba::hex("555555").unwrap().into()),
                     BackgroundColor(Srgba::hex("111111").unwrap().into()),
@@ -452,11 +452,10 @@ fn listen_for_inputs(
 fn display_debug_name(input: &str) -> String {
     let mut result = String::new();
     for c in input.chars() {
-        if c.is_uppercase() {
-            if !result.is_empty() {
+        if c.is_uppercase()
+            && !result.is_empty() {
                 result.push(' ');
             }
-        }
         result.push(c);
     }
 

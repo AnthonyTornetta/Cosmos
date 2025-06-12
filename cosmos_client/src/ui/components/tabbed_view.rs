@@ -102,8 +102,7 @@ fn add_tab_view(
 
         let tabs = children
             .iter()
-            .map(|x| q_tab.get(*x).map(|y| (*x, y)))
-            .flatten()
+            .flat_map(|x| q_tab.get(*x).map(|y| (*x, y)))
             .collect::<Vec<_>>();
 
         commands.entity(ent).with_children(|parent| {
