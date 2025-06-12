@@ -5,7 +5,7 @@ use std::fs;
 use bevy::{prelude::*, utils::HashMap};
 use serde::{Deserialize, Serialize};
 
-#[derive(Clone, Copy, Eq, PartialEq, Hash, Debug, Serialize, Deserialize)]
+#[derive(Clone, Copy, Eq, PartialEq, Hash, Debug, Serialize, Deserialize, Reflect)]
 /// This should be refactored into a registry, but for now, enjoy enum!
 ///
 /// Use this for input handling to allow things to be automatically changed
@@ -244,7 +244,7 @@ fn init_input(mut input_handler: ResMut<CosmosInputHandler>) {
 
     if let Ok(current_settings) = fs::read_to_string("settings/controls.toml") {
         if let Ok(parsed_settings) = toml::from_str::<CosmosInputHandler>(&current_settings) {
-            for (k, control) in parsed_settings.input_mapping.iter() {
+            for (k, control) in parsed_settings.0.iter() {
                 match control {
                     None => {
                         input_handler.remove_control(*k);
@@ -266,8 +266,8 @@ fn init_input(mut input_handler: ResMut<CosmosInputHandler>) {
     );
 }
 
-#[derive(Resource, Debug, Serialize, Deserialize, Clone, Copy)]
-enum ControlType {
+#[derive(Resource, Debug, Serialize, Deserialize, Clone, Copy, Reflect)]
+pub enum ControlType {
     Key(KeyCode),
     Mouse(MouseButton),
 }
@@ -292,9 +292,7 @@ impl ControlType {
 /// Use this to check if inputs are selected
 ///
 /// You should generally prefer to use the `InputChecker` unless you're doing something super specific.
-pub struct CosmosInputHandler {
-    input_mapping: HashMap<CosmosInputs, Option<ControlType>>,
-}
+pub struct CosmosInputHandler(HashMap<CosmosInputs, Option<ControlType>>);
 
 /// A wrapper around [`CosmosInputHandler`] and all the resources it needs.
 ///
@@ -321,6 +319,9 @@ pub trait InputHandler {
 
     /// Gets the raw mouse inputs structure (Res<ButtonInput<KeyCode>>)
     fn mouse_inputs(&self) -> &ButtonInput<MouseButton>;
+
+    fn any_mouse_pressed(&self) -> Option<MouseButton>;
+    fn any_key_pressed(&self) -> Option<KeyCode>;
 }
 
 /// A wrapper around [`CosmosInputHandler`] and all the resources it needs.
@@ -356,12 +357,24 @@ impl InputHandler for InputChecker<'_> {
     fn mouse_inputs(&self) -> &ButtonInput<MouseButton> {
         &self.2
     }
+
+    fn any_key_pressed(&self) -> Option<KeyCode> {
+        self.1.get_just_pressed().next().copied()
+    }
+
+    fn any_mouse_pressed(&self) -> Option<MouseButton> {
+        self.2.get_just_pressed().next().copied()
+    }
 }
 
 impl CosmosInputHandler {
     /// Default
     pub fn new() -> Self {
         Self::default()
+    }
+
+    pub fn iter(&self) -> impl Iterator<Item = (&'_ CosmosInputs, &'_ Option<ControlType>)> {
+        self.0.iter()
     }
 
     /// Check if the given input was just released.
@@ -398,43 +411,43 @@ impl CosmosInputHandler {
     }
 
     fn set_keycode(&mut self, input: CosmosInputs, keycode: KeyCode) {
-        if self.input_mapping.contains_key(&input) {
-            let mapping = self.input_mapping.get_mut(&input).unwrap();
+        if self.0.contains_key(&input) {
+            let mapping = self.0.get_mut(&input).unwrap();
 
             *mapping = Some(ControlType::Key(keycode));
         } else {
-            self.input_mapping.insert(input, Some(ControlType::Key(keycode)));
+            self.0.insert(input, Some(ControlType::Key(keycode)));
         }
     }
 
     fn set_mouse_button(&mut self, input: CosmosInputs, button: MouseButton) {
-        if self.input_mapping.contains_key(&input) {
-            let mapping = self.input_mapping.get_mut(&input).unwrap();
+        if self.0.contains_key(&input) {
+            let mapping = self.0.get_mut(&input).unwrap();
 
             *mapping = Some(ControlType::Mouse(button));
         } else {
-            self.input_mapping.insert(input, Some(ControlType::Mouse(button)));
+            self.0.insert(input, Some(ControlType::Mouse(button)));
         }
     }
 
     fn keycode_for(&self, input: CosmosInputs) -> Option<KeyCode> {
-        if !self.input_mapping.contains_key(&input) {
+        if !self.0.contains_key(&input) {
             return None;
         }
 
-        self.input_mapping[&input].as_ref().and_then(|x| x.as_key())
+        self.0[&input].as_ref().and_then(|x| x.as_key())
     }
 
     fn mouse_button_for(&self, input: CosmosInputs) -> Option<MouseButton> {
-        if !self.input_mapping.contains_key(&input) {
+        if !self.0.contains_key(&input) {
             return None;
         }
 
-        self.input_mapping[&input].as_ref().and_then(|x| x.as_mouse())
+        self.0[&input].as_ref().and_then(|x| x.as_mouse())
     }
 
     fn remove_control(&mut self, input: CosmosInputs) {
-        self.input_mapping.remove(&input);
+        self.0.remove(&input);
     }
 }
 
