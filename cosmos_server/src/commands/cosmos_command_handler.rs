@@ -62,11 +62,10 @@ pub fn create_cosmos_command<T: CosmosCommandType, M>(command: ServerCommand, ap
                                  mut evw_send_message: EventWriter<SendCommandMessageEvent>| {
         for ev in evr_command_sent.read() {
             if ev.name == unlocalized_name {
-                if T::requires_operator()
-                    && !ev.sender.is_operator(&q_operator) {
-                        ev.sender.send("This command requires operator permissions.", &mut evw_send_message);
-                        continue;
-                    }
+                if T::requires_operator() && !ev.sender.is_operator(&q_operator) {
+                    ev.sender.send("This command requires operator permissions.", &mut evw_send_message);
+                    continue;
+                }
 
                 match T::from_input(ev) {
                     Ok(command) => {
@@ -152,7 +151,7 @@ fn display_help(
         if let Some(info) = commands.from_id(&name) {
             sender.send(format!("=== {} ===", info.display_name()), evw_send_message);
             sender.send(
-                format!("\t{} {}\n\t{}", info.display_name(), info.usage, info.description),
+                format!("\t{} {} \t {}", info.display_name(), info.usage, info.description),
                 evw_send_message,
             );
 
@@ -163,8 +162,12 @@ fn display_help(
     sender.send("=== All Commands ===", evw_send_message);
     for command in commands.iter() {
         sender.send(command.display_name().to_string(), evw_send_message);
-        sender.send(format!("\t{}", command.usage), evw_send_message);
-        sender.send(format!("\t{}", command.description), evw_send_message);
+        if !command.usage.is_empty() {
+            sender.send(format!("\t{}", command.usage), evw_send_message);
+        }
+        if !command.description.is_empty() {
+            sender.send(format!("\t{}", command.description), evw_send_message);
+        }
     }
 }
 
@@ -210,17 +213,18 @@ fn monitor_inputs(mut event_writer: EventWriter<CosmosCommandSent>, mut text: Re
             let x = read();
 
             if let Ok(crossterm::event::Event::Key(KeyEvent { code, modifiers, kind, .. })) = x
-                && kind != KeyEventKind::Release {
-                    if let KeyCode::Char(mut c) = code {
-                        if modifiers.intersects(KeyModifiers::SHIFT) {
-                            c = c.to_uppercase().next().unwrap();
-                        }
-
-                        text.0.push(c);
-                    } else if KeyCode::Enter == code {
-                        text.0.push('\n');
+                && kind != KeyEventKind::Release
+            {
+                if let KeyCode::Char(mut c) = code {
+                    if modifiers.intersects(KeyModifiers::SHIFT) {
+                        c = c.to_uppercase().next().unwrap();
                     }
+
+                    text.0.push(c);
+                } else if KeyCode::Enter == code {
+                    text.0.push('\n');
                 }
+            }
         } else {
             break;
         }

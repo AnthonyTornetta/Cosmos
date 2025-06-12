@@ -53,6 +53,7 @@ pub mod plugin;
 pub mod projectiles;
 pub mod quest;
 pub mod rng;
+pub mod server;
 pub mod settings;
 pub mod shop;
 pub mod structure;
