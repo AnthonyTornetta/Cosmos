@@ -40,15 +40,14 @@ fn sync<T: SyncableResource>(
             continue;
         }
 
-        if let Some(left_to_sync) = left_to_sync.as_mut() {
-            if left_to_sync.0.unwrap_or(0) != 0 {
+        if let Some(left_to_sync) = left_to_sync.as_mut()
+            && left_to_sync.0.unwrap_or(0) != 0 {
                 let new_amt = left_to_sync.0.expect("This should never happen") - 1;
 
                 left_to_sync.0 = Some(new_amt);
 
                 info!("Got resource from server: {}! Need {} more.", ev.resource_name, new_amt);
             }
-        }
 
         let Ok(new_resource) = cosmos_encoder::deserialize_uncompressed::<T>(&ev.serialized_data) else {
             error!("Got bad resource data from server - {}!", ev.resource_name);

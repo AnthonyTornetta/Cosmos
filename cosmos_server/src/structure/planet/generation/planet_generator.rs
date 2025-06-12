@@ -62,13 +62,12 @@ pub fn check_needs_generated_system<T: TGenerateChunkEvent + Event, K: Component
     mut event_writer: EventWriter<T>,
 ) {
     for (entity, chunk) in needs_generated_query.iter() {
-        if let Ok(parent_entity) = parent_query.get(entity) {
-            if correct_type_query.contains(parent_entity.get()) {
+        if let Ok(parent_entity) = parent_query.get(entity)
+            && correct_type_query.contains(parent_entity.get()) {
                 event_writer.send(T::new(chunk.coords, chunk.structure_entity));
 
                 commands.entity(entity).despawn_recursive();
             }
-        }
     }
 }
 
@@ -258,11 +257,10 @@ fn generate_chunks_near_players(
             let mut chunks = Vec::with_capacity(iterator.len());
 
             for chunk in iterator {
-                if let ChunkIteratorResult::EmptyChunk { position: coords } = chunk {
-                    if best_planet.get_chunk_state(coords) == ChunkState::Unloaded {
+                if let ChunkIteratorResult::EmptyChunk { position: coords } = chunk
+                    && best_planet.get_chunk_state(coords) == ChunkState::Unloaded {
                         chunks.push(coords);
                     }
-                }
             }
 
             for coords in chunks {

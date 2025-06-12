@@ -241,8 +241,8 @@ fn init_input(mut input_handler: ResMut<CosmosInputHandler>) {
 
     input_handler.set_keycode(CosmosInputs::ToggleFocusCam, KeyCode::KeyG);
 
-    if let Ok(current_settings) = fs::read_to_string("settings/controls.toml") {
-        if let Ok(parsed_settings) = toml::from_str::<CosmosInputHandler>(&current_settings) {
+    if let Ok(current_settings) = fs::read_to_string("settings/controls.toml")
+        && let Ok(parsed_settings) = toml::from_str::<CosmosInputHandler>(&current_settings) {
             for (k, control) in parsed_settings.0.iter() {
                 match control {
                     None => {
@@ -257,7 +257,6 @@ fn init_input(mut input_handler: ResMut<CosmosInputHandler>) {
                 }
             }
         }
-    }
 
     let _ = fs::write(
         "settings/controls.toml",

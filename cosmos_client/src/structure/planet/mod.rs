@@ -99,11 +99,10 @@ fn load_planet_chunks(
         ),
         true,
     ) {
-        if let ChunkIteratorResult::EmptyChunk { position } = chunk {
-            if best_planet.get_chunk_state(position) == ChunkState::Unloaded {
+        if let ChunkIteratorResult::EmptyChunk { position } = chunk
+            && best_planet.get_chunk_state(position) == ChunkState::Unloaded {
                 chunks.push(position);
             }
-        }
     }
 
     for coordinate in chunks {

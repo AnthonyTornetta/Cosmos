@@ -209,11 +209,10 @@ fn monitor_attached_audio_sources(
 
         // Stop any removed audio emissions
         for (audio_instance, tween) in remove_vec {
-            if let Some(mut ai) = audio_instances.remove(&audio_instance) {
-                if ai.state() != PlaybackState::Stopped {
+            if let Some(mut ai) = audio_instances.remove(&audio_instance)
+                && ai.state() != PlaybackState::Stopped {
                     ai.stop(tween);
                 }
-            }
         }
     }
 }

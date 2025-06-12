@@ -219,11 +219,10 @@ fn add_indicators(
 
             if distance_sqrd <= max_dist_sqrd {
                 if let Some(has_indicator) = has_indicator {
-                    if let Ok(text_entity) = q_text_entity_with_focus.get(has_indicator.0) {
-                        if let Ok(mut text) = text_query.get_mut(text_entity.0) {
+                    if let Ok(text_entity) = q_text_entity_with_focus.get(has_indicator.0)
+                        && let Ok(mut text) = text_query.get_mut(text_entity.0) {
                             text.0 = get_distance_text(distance_sqrd.sqrt());
                         }
-                    }
                 } else {
                     create_indicator(
                         entity,
@@ -421,8 +420,8 @@ fn focus_waypoint(
         *visibility.get_mut(indicator_text_ent.0).expect("This always has visibility") = Visibility::Hidden;
         commands.entity(current_ent).remove::<FocusedWaypointEntity>();
 
-        if let Some(closest_waypoint) = closest_waypoint.0 {
-            if current_ent != closest_waypoint {
+        if let Some(closest_waypoint) = closest_waypoint.0
+            && current_ent != closest_waypoint {
                 let Ok(closest) = q_indicator_text.get(closest_waypoint) else {
                     return;
                 };
@@ -430,7 +429,6 @@ fn focus_waypoint(
                 *visibility.get_mut(closest.0).expect("This always has visibility") = Visibility::Visible;
                 commands.entity(closest_waypoint).insert(FocusedWaypointEntity);
             }
-        }
     } else if let Some(closest_waypoint) = closest_waypoint.0 {
         let Ok(closest) = q_indicator_text.get(closest_waypoint) else {
             return;

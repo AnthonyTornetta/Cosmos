@@ -168,13 +168,11 @@ fn handle_block_break_events(
                 //
                 // If there is no more room after that, just delete the item. I don't want to spawn
                 // thousands of item entities that would mega lag the server + clients near it.
-                if !inserted {
-                    if let Ok(pilot) = q_pilot.get(ev.breaker) {
-                        if let Ok((mut inventory, _, _)) = inventory_query.get_mut(pilot.entity) {
+                if !inserted
+                    && let Ok(pilot) = q_pilot.get(ev.breaker)
+                        && let Ok((mut inventory, _, _)) = inventory_query.get_mut(pilot.entity) {
                             inventory.insert_item(item, leftover, &mut commands, &has_data);
                         }
-                    }
-                }
             } else {
                 warn!("Missing item id for block {:?}", block);
             }

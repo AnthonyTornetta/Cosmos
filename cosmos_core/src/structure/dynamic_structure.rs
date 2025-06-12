@@ -115,8 +115,8 @@ impl DynamicStructure {
         self.set_block_at(coords, block, block_info.get_rotation(), blocks, None);
         self.set_block_info_at(coords, block_info, None);
 
-        if let Some(event_writer) = event_writer {
-            if old_block_info != block_info || old_block != block.id() {
+        if let Some(event_writer) = event_writer
+            && (old_block_info != block_info || old_block != block.id()) {
                 let Some(self_entity) = self.base_structure.self_entity else {
                     return;
                 };
@@ -128,7 +128,6 @@ impl DynamicStructure {
                     new_block_info: self.block_info_at(coords),
                 });
             }
-        }
     }
 
     /// Sets the block at the given block coordinates.
@@ -177,9 +176,9 @@ impl DynamicStructure {
             }
         }
 
-        if send_event {
-            if let Some(self_entity) = self.get_entity() {
-                if let Some(event_writer) = event_writer {
+        if send_event
+            && let Some(self_entity) = self.get_entity()
+                && let Some(event_writer) = event_writer {
                     event_writer.send(BlockChangedEvent {
                         new_block: block.id(),
                         old_block,
@@ -188,8 +187,6 @@ impl DynamicStructure {
                         new_block_info: self.block_info_at(coords),
                     });
                 }
-            }
-        }
     }
 
     fn create_chunk_at(&mut self, coords: ChunkCoordinate) -> &mut Chunk {

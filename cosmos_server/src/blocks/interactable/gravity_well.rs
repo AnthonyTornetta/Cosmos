@@ -62,13 +62,12 @@ fn grav_well_handle_block_event(
         let block = structure.block_at(s_block.coords(), &blocks);
 
         if block.unlocalized_name() == "cosmos:gravity_well" {
-            if let Ok(grav_well) = q_grav_well.get(ev.interactor) {
-                if grav_well.block == s_block.coords() && grav_well.structure_entity == s_block.structure() {
+            if let Ok(grav_well) = q_grav_well.get(ev.interactor)
+                && grav_well.block == s_block.coords() && grav_well.structure_entity == s_block.structure() {
                     commands.entity(ev.interactor).remove::<GravityWell>();
 
                     continue;
                 }
-            }
 
             commands
                 .entity(ev.interactor)

@@ -227,16 +227,14 @@ impl Inventory {
     }
 
     fn update_itemstack_data_parent(&self, slot: InventorySlot, commands: &mut Commands) {
-        if let Some(is) = self.items.get(slot).and_then(|x| x.as_ref()) {
-            if let Some(de) = is.data_entity() {
-                if let Some(mut ecmds) = commands.get_entity(de) {
+        if let Some(is) = self.items.get(slot).and_then(|x| x.as_ref())
+            && let Some(de) = is.data_entity()
+                && let Some(mut ecmds) = commands.get_entity(de) {
                     ecmds.set_parent(self.self_entity).insert(ItemStackData {
                         inventory_pointer: (self.self_entity, slot as u32),
                         item_id: is.item_id(),
                     });
                 }
-            }
-        }
     }
 
     fn set_items_at(&mut self, slot: usize, itemstack: ItemStack, commands: &mut Commands) {
@@ -600,12 +598,11 @@ impl Inventory {
         let is = ItemStack::with_quantity(item, quantity, (self.self_entity, slot as u32), commands, needs_data);
         let qty = self.insert_itemstack_at(slot, &is, commands);
 
-        if let Some(de) = is.data_entity() {
-            if qty != 0 {
+        if let Some(de) = is.data_entity()
+            && qty != 0 {
                 // We weren't able to fit in the data-having item, so delete the newly created data entity.
                 commands.entity(de).despawn_recursive();
             }
-        }
 
         qty
     }
@@ -621,12 +618,11 @@ impl Inventory {
         let is = ItemStack::with_quantity_and_data(item, quantity, (self.self_entity, slot as u32), commands, data);
         let qty = self.insert_itemstack_at(slot, &is, commands);
 
-        if let Some(de) = is.data_entity() {
-            if qty != 0 {
+        if let Some(de) = is.data_entity()
+            && qty != 0 {
                 // We weren't able to fit in the data-having item, so delete the newly created data entity.
                 commands.entity(de).despawn_recursive();
             }
-        }
 
         qty
     }
@@ -689,8 +685,8 @@ impl Inventory {
             0
         };
 
-        if let Some(priority_slots) = self.priority_slots.clone() {
-            if !priority_slots.contains(&slot) {
+        if let Some(priority_slots) = self.priority_slots.clone()
+            && !priority_slots.contains(&slot) {
                 // attempt to move to priority slots first
                 for slot in priority_slots {
                     let left_over = self.insert_itemstack_at(slot, &item_stack, commands);
@@ -702,7 +698,6 @@ impl Inventory {
                     }
                 }
             }
-        }
 
         let n = self.items.len();
         let priority_slots = self.priority_slots.clone();

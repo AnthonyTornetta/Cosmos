@@ -94,13 +94,12 @@ fn toggle_inventory(
             open_inventories.iter().for_each(|ent| {
                 commands.entity(ent).remove::<InventoryNeedsDisplayed>();
             });
-        } else if let Ok(player_inventory_ent) = player_inventory.get_single() {
-            if open_menus.is_empty() {
+        } else if let Ok(player_inventory_ent) = player_inventory.get_single()
+            && open_menus.is_empty() {
                 commands
                     .entity(player_inventory_ent)
                     .insert(InventoryNeedsDisplayed::Normal(InventorySide::Left));
             }
-        }
     } else if inputs.check_just_pressed(CosmosInputs::Interact) && !open_inventories.is_empty() {
         open_inventories.iter().for_each(|ent| {
             commands.entity(ent).remove::<InventoryNeedsDisplayed>();
@@ -768,11 +767,10 @@ fn on_click_creative_category(
             continue;
         };
 
-        if item_category == &ItemCategoryMarker::Search {
-            if let Ok(mut c_search) = q_creative_search.get_single_mut() {
+        if item_category == &ItemCategoryMarker::Search
+            && let Ok(mut c_search) = q_creative_search.get_single_mut() {
                 *c_search = Visibility::Inherited;
             }
-        }
 
         node.height = vis_height.0;
         *vis = Visibility::default();
@@ -1085,15 +1083,14 @@ fn on_click_creative_item(
             return;
         };
 
-        if let Some(inv) = HeldItemStack::get_held_is_inventory_from_children_mut(lp_children, &mut q_held_item) {
-            if let Some(held_is) = inv.itemstack_at(0) {
+        if let Some(inv) = HeldItemStack::get_held_is_inventory_from_children_mut(lp_children, &mut q_held_item)
+            && let Some(held_is) = inv.itemstack_at(0) {
                 if held_is.item_id() != item_id {
                     nevw_trash_item.send_default();
                     continue;
                 }
                 quantity += held_is.quantity();
             }
-        }
 
         nevw_set_item.send(GrabCreativeItemEvent { quantity, item_id });
     }

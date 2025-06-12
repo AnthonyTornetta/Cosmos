@@ -308,8 +308,8 @@ fn on_activate_system(
     mut commands: Commands,
 ) {
     for (system_entity, mining_system, system) in query.iter_mut() {
-        if let Ok((ship_entity, systems, structure, physics_world)) = systems.get(system.structure_entity()) {
-            if let Ok(mut energy_storage_system) = systems.query_mut(&mut es_query) {
+        if let Ok((ship_entity, systems, structure, physics_world)) = systems.get(system.structure_entity())
+            && let Ok(mut energy_storage_system) = systems.query_mut(&mut es_query) {
                 let sec = time.delta_secs();
 
                 for line in mining_system.lines.iter() {
@@ -343,7 +343,6 @@ fn on_activate_system(
                     }
                 }
             }
-        }
     }
 }
 

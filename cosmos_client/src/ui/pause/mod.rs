@@ -38,11 +38,10 @@ fn toggle_pause_menu(
     }
 
     if !q_open_menus.is_empty() {
-        if close_topmost_menus(&mut q_open_menus, &mut commands, &mut evw_close_custom_menus) {
-            if let Ok(ent) = q_pause_menu.get_single() {
+        if close_topmost_menus(&mut q_open_menus, &mut commands, &mut evw_close_custom_menus)
+            && let Ok(ent) = q_pause_menu.get_single() {
                 commands.entity(ent).insert(Visibility::Visible);
             }
-        }
         return;
     }
 

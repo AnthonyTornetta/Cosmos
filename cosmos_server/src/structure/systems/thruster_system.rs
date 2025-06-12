@@ -70,8 +70,8 @@ fn block_update_system(
     systems_query: Query<&StructureSystems>,
 ) {
     for ev in event.read() {
-        if let Ok(systems) = systems_query.get(ev.block.structure()) {
-            if let Ok(mut system) = systems.query_mut(&mut system_query) {
+        if let Ok(systems) = systems_query.get(ev.block.structure())
+            && let Ok(mut system) = systems.query_mut(&mut system_query) {
                 if let Some(prop) = energy_storage_blocks.get(blocks.from_numeric_id(ev.old_block)) {
                     system.block_removed(prop);
                 }
@@ -80,7 +80,6 @@ fn block_update_system(
                     system.block_added(prop);
                 }
             }
-        }
     }
 }
 
@@ -193,9 +192,9 @@ pub(super) fn update_ship_force_and_velocity(
                 }
             };
 
-            if movement.match_speed {
-                if let Some(pilot_focused) = pilot_focused {
-                    if let Ok(focused_loc) = q_loc.get(pilot_focused.0) {
+            if movement.match_speed
+                && let Some(pilot_focused) = pilot_focused
+                    && let Ok(focused_loc) = q_loc.get(pilot_focused.0) {
                         let diff = *focused_loc - *loc;
                         let diff = diff.absolute_coords_f32();
                         const MAX_FOCUS_DISTANCE: f32 = 2_000.0;
@@ -217,8 +216,6 @@ pub(super) fn update_ship_force_and_velocity(
                             movement_vector += match_vec;
                         }
                     }
-                }
-            }
 
             if movement.braking {
                 let Ok(velocity) = q_vel.get(system.structure_entity()) else {

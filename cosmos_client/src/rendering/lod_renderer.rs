@@ -349,11 +349,10 @@ fn kill_all(to_kill: Vec<LodRendersToDespawn>, commands: &mut Commands) {
         let mut unlocked = x.lock().expect("Failed lock");
         unlocked.1 -= 1;
 
-        if unlocked.1 == 0 {
-            if let Some(mut ecmds) = commands.get_entity(unlocked.0) {
+        if unlocked.1 == 0
+            && let Some(mut ecmds) = commands.get_entity(unlocked.0) {
                 ecmds.insert(NeedsDespawned);
             }
-        }
     }
 }
 
@@ -503,11 +502,10 @@ fn poll_rendering_lods(
 
             for (_, _, counter) in to_despawn {
                 let locked = counter.lock().expect("failed to lock");
-                if locked.1 == 0 {
-                    if let Some(mut ecmds) = commands.get_entity(locked.0) {
+                if locked.1 == 0
+                    && let Some(mut ecmds) = commands.get_entity(locked.0) {
                         ecmds.insert(NeedsDespawned);
                     }
-                }
             }
         } else {
             rendering_lods.0.push((structure_entity, rendering_lod))

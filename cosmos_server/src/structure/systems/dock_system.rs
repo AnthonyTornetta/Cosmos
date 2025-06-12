@@ -122,8 +122,8 @@ fn on_active(
 
         let docked = q_docked.get(ss.structure_entity());
 
-        if active_system_flag.is_added() {
-            if let Ok(docked) = docked {
+        if active_system_flag.is_added()
+            && let Ok(docked) = docked {
                 let vel = q_velocity.get(docked.to).copied().unwrap_or_default();
 
                 commands.entity(ss.structure_entity()).remove::<Docked>().insert(vel);
@@ -131,7 +131,6 @@ fn on_active(
 
                 continue;
             }
-        }
 
         if docked.is_ok() || just_undocked.is_some() {
             continue;
@@ -235,12 +234,11 @@ fn on_active(
             unreachable!("Guarenteed because only entities that are in this list are valid structures from above for loop.");
         };
 
-        if let Ok(to_docked) = q_docked.get(docked.to) {
-            if to_docked.to == entity {
+        if let Ok(to_docked) = q_docked.get(docked.to)
+            && to_docked.to == entity {
                 // The other ship is already docked to this - don't re-dock.
                 continue;
             }
-        }
 
         let context = context_access.get(*pw);
 
@@ -261,11 +259,10 @@ fn on_active(
         let mut hit_something_bad = false;
 
         context.colliders_with_aabb_intersecting_aabb(aabb, |e| {
-            if let Ok(ce) = q_chunk_entity.get(e) {
-                if ce.structure_entity != entity && !check_docked_entities(&ce.structure_entity, &q_docked_list, &e) {
+            if let Ok(ce) = q_chunk_entity.get(e)
+                && ce.structure_entity != entity && !check_docked_entities(&ce.structure_entity, &q_docked_list, &e) {
                     hit_something_bad = true;
                 }
-            }
 
             true
         });

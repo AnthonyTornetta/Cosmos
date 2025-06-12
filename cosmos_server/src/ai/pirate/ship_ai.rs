@@ -121,11 +121,10 @@ fn on_melt_down(
     for (ent, pilot) in &q_melting_down {
         commands.entity(ent).remove::<(CombatAi, AiControlled, Pirate, Pilot)>();
 
-        if let Some(pilot) = pilot {
-            if q_is_pirate.contains(pilot.entity) {
+        if let Some(pilot) = pilot
+            && q_is_pirate.contains(pilot.entity) {
                 commands.entity(pilot.entity).insert(NeedsDespawned);
             }
-        }
     }
 }
 

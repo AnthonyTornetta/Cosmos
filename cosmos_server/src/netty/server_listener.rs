@@ -122,11 +122,10 @@ fn server_listen_messages(
                         }
                     }
                     ClientUnreliableMessages::ShipActiveSystem(active_system) => {
-                        if let Ok(pilot) = pilot_query.get(player_entity) {
-                            if let Ok(mut systems) = systems_query.get_mut(pilot.entity) {
+                        if let Ok(pilot) = pilot_query.get(player_entity)
+                            && let Ok(mut systems) = systems_query.get_mut(pilot.entity) {
                                 systems.set_active_system(active_system, &mut commands);
                             }
-                        }
                     }
                 }
             }
@@ -289,28 +288,26 @@ fn server_listen_messages(
                     );
                 }
                 ClientReliableMessages::StopPiloting => {
-                    if let Some(player_entity) = lobby.player_from_id(client_id) {
-                        if let Ok(piloting) = pilot_query.get(player_entity) {
+                    if let Some(player_entity) = lobby.player_from_id(client_id)
+                        && let Ok(piloting) = pilot_query.get(player_entity) {
                             pilot_change_event_writer.send(ChangePilotEvent {
                                 structure_entity: piloting.entity,
                                 pilot_entity: None,
                             });
                         }
-                    }
                 }
                 ClientReliableMessages::ChangeRenderDistance { mut render_distance } => {
-                    if let Some(player_entity) = lobby.player_from_id(client_id) {
-                        if let Some(mut e) = commands.get_entity(player_entity) {
+                    if let Some(player_entity) = lobby.player_from_id(client_id)
+                        && let Some(mut e) = commands.get_entity(player_entity) {
                             if render_distance.sector_range > 8 {
                                 render_distance.sector_range = 8;
                             }
                             e.insert(render_distance);
                         }
-                    }
                 }
                 ClientReliableMessages::LeaveShip => {
-                    if let Some(player_entity) = lobby.player_from_id(client_id) {
-                        if let Some(mut e) = commands.get_entity(player_entity) {
+                    if let Some(player_entity) = lobby.player_from_id(client_id)
+                        && let Some(mut e) = commands.get_entity(player_entity) {
                             // This should be verified in the future to make sure the parent of the player is actually a ship
                             e.remove_parent_in_place();
                             // if let Ok((player_trans, mut player_loc)) =
@@ -325,7 +322,6 @@ fn server_listen_messages(
                                 cosmos_encoder::serialize(&ServerReliableMessages::PlayerLeaveShip { player_entity }),
                             );
                         }
-                    }
                 }
                 ClientReliableMessages::ExitBuildMode => {
                     if let Some(player_entity) = lobby.player_from_id(client_id) {
@@ -333,15 +329,14 @@ fn server_listen_messages(
                     }
                 }
                 ClientReliableMessages::SetSymmetry { axis, coordinate } => {
-                    if let Some(player_entity) = lobby.player_from_id(client_id) {
-                        if let Ok(mut build_mode) = build_mode.get_mut(player_entity) {
+                    if let Some(player_entity) = lobby.player_from_id(client_id)
+                        && let Ok(mut build_mode) = build_mode.get_mut(player_entity) {
                             if let Some(coordinate) = coordinate {
                                 build_mode.set_symmetry(axis, coordinate);
                             } else {
                                 build_mode.remove_symmetry(axis);
                             }
                         }
-                    }
                 }
             }
         }

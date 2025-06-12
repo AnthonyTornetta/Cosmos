@@ -376,8 +376,8 @@ fn create_ui_recipes_list(
             });
         });
 
-        if let Some(s) = selected {
-            if recipe == &s.0 {
+        if let Some(s) = selected
+            && recipe == &s.0 {
                 ecmds.insert((
                     SelectedRecipe,
                     BackgroundColor(
@@ -391,7 +391,6 @@ fn create_ui_recipes_list(
                     ),
                 ));
             }
-        }
     }
 }
 

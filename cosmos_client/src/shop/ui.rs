@@ -805,11 +805,10 @@ fn click_item_event(
             return;
         };
 
-        if let Some(prev_clicked) = &prev_clicked {
-            if let Ok(mut background_color) = q_background_color.get_mut(prev_clicked.0) {
+        if let Some(prev_clicked) = &prev_clicked
+            && let Ok(mut background_color) = q_background_color.get_mut(prev_clicked.0) {
                 *background_color = Color::NONE.into();
             }
-        }
 
         commands.entity(shop_ui_ent.0).insert(PrevClickedEntity(ev.0));
         if let Ok(mut background_color) = q_background_color.get_mut(ev.0) {

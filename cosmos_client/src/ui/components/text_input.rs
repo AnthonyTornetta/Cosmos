@@ -513,11 +513,10 @@ fn handle_keyboard_shortcuts(
         }
     }
 
-    if let Some(highlighted) = text_input.highlight_begin {
-        if highlighted == text_input.cursor_pos {
+    if let Some(highlighted) = text_input.highlight_begin
+        && highlighted == text_input.cursor_pos {
             text_input.highlight_begin = None;
         }
-    }
 }
 
 fn verify_input(text_input: &TextInput, test_value: &str) -> bool {

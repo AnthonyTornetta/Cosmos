@@ -110,8 +110,8 @@ fn update_nodes(
         text.0 = format!("Speed: {:.1}m/s", piloting_vel.linvel.length());
     }
 
-    if let Ok(mut text) = q_energy_text.get_single_mut() {
-        if let Ok(ess) = piloting_systems.query(&q_energy_storage_system) {
+    if let Ok(mut text) = q_energy_text.get_single_mut()
+        && let Ok(ess) = piloting_systems.query(&q_energy_storage_system) {
             let percent = if ess.get_capacity() != 0.0 {
                 ess.get_energy() / ess.get_capacity()
             } else {
@@ -120,7 +120,6 @@ fn update_nodes(
 
             text.0 = format!("Energy {}%", (percent * 100.0).round());
         }
-    }
 }
 
 fn despawn_nodes(

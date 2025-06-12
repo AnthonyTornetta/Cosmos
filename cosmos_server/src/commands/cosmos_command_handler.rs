@@ -209,8 +209,8 @@ fn monitor_inputs(mut event_writer: EventWriter<CosmosCommandSent>, mut text: Re
         if event_available {
             let x = read();
 
-            if let Ok(crossterm::event::Event::Key(KeyEvent { code, modifiers, kind, .. })) = x {
-                if kind != KeyEventKind::Release {
+            if let Ok(crossterm::event::Event::Key(KeyEvent { code, modifiers, kind, .. })) = x
+                && kind != KeyEventKind::Release {
                     if let KeyCode::Char(mut c) = code {
                         if modifiers.intersects(KeyModifiers::SHIFT) {
                             c = c.to_uppercase().next().unwrap();
@@ -221,7 +221,6 @@ fn monitor_inputs(mut event_writer: EventWriter<CosmosCommandSent>, mut text: Re
                         text.0.push('\n');
                     }
                 }
-            }
         } else {
             break;
         }

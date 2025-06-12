@@ -416,15 +416,13 @@ pub(crate) fn client_sync_players(
                     client_entity,
                     server_entity: _,
                 }) = lobby.players.remove(&id)
-                {
-                    if let Some(mut entity) = commands.get_entity(client_entity) {
+                    && let Some(mut entity) = commands.get_entity(client_entity) {
                         if let Ok(player) = query_player.get(client_entity) {
                             info!("Player {} ({id}) disconnected", player.name());
                         }
 
                         entity.insert(NeedsDespawned);
                     }
-                }
             }
             // This could cause issues in the future if a client receives a planet's position first then this packet.
             // Please restructure this + the ship to use the new requesting system.
@@ -488,8 +486,8 @@ pub(crate) fn client_sync_players(
                 serialized_block_data,
                 block_entities,
             } => {
-                if let Some(s_entity) = network_mapping.client_from_server(&server_structure_entity) {
-                    if let Ok(mut structure) = q_structure.get_mut(s_entity) {
+                if let Some(s_entity) = network_mapping.client_from_server(&server_structure_entity)
+                    && let Ok(mut structure) = q_structure.get_mut(s_entity) {
                         let mut chunk: Chunk =
                             cosmos_encoder::deserialize(&serialized_chunk).expect("Unable to deserialize chunk from server");
                         let chunk_coords = chunk.chunk_coordinates();
@@ -515,11 +513,10 @@ pub(crate) fn client_sync_players(
                             serialized_block_data: serialized_block_data.map(|x| Arc::new(Mutex::new(x))),
                         });
                     }
-                }
             }
             ServerReliableMessages::EmptyChunk { structure_entity, coords } => {
-                if let Some(s_entity) = network_mapping.client_from_server(&structure_entity) {
-                    if let Ok(mut structure) = q_structure.get_mut(s_entity) {
+                if let Some(s_entity) = network_mapping.client_from_server(&structure_entity)
+                    && let Ok(mut structure) = q_structure.get_mut(s_entity) {
                         structure.set_to_empty_chunk(coords);
 
                         set_chunk_event_writer.send(ChunkInitEvent {
@@ -528,7 +525,6 @@ pub(crate) fn client_sync_players(
                             serialized_block_data: None,
                         });
                     }
-                }
             }
             ServerReliableMessages::EntityDespawn { entity: server_entity } => {
                 if let Some(entity) = get_entity_identifier_entity_for_despawning(
@@ -538,11 +534,10 @@ pub(crate) fn client_sync_players(
                     &mut q_inventory,
                     &mut q_structure,
                     &mut evw_block_data_changed,
-                ) {
-                    if let Some(mut ecmds) = commands.get_entity(entity) {
+                )
+                    && let Some(mut ecmds) = commands.get_entity(entity) {
                         ecmds.insert(NeedsDespawned);
                     }
-                }
             }
             ServerReliableMessages::MOTD { motd } => {
                 hud_messages.display_message(motd.into());
@@ -552,8 +547,8 @@ pub(crate) fn client_sync_players(
                 structure_entity,
             } => {
                 // Sometimes you'll get block updates for structures that don't exist
-                if let Some(client_ent) = network_mapping.client_from_server(&structure_entity) {
-                    if let Ok(mut structure) = q_structure.get_mut(client_ent) {
+                if let Some(client_ent) = network_mapping.client_from_server(&structure_entity)
+                    && let Ok(mut structure) = q_structure.get_mut(client_ent) {
                         for block_changed in blocks_changed_packet.0 {
                             structure.set_block_and_info_at(
                                 block_changed.coordinates.coords(),
@@ -564,7 +559,6 @@ pub(crate) fn client_sync_players(
                             );
                         }
                     }
-                }
             }
             ServerReliableMessages::PilotChange {
                 structure_entity,
@@ -605,11 +599,10 @@ pub(crate) fn client_sync_players(
                 }
             }
             ServerReliableMessages::PlayerLeaveShip { player_entity } => {
-                if let Some(player_entity) = network_mapping.client_from_server(&player_entity) {
-                    if let Some(mut ecmds) = commands.get_entity(player_entity) {
+                if let Some(player_entity) = network_mapping.client_from_server(&player_entity)
+                    && let Some(mut ecmds) = commands.get_entity(player_entity) {
                         ecmds.remove_parent_in_place();
                     }
-                }
             }
             ServerReliableMessages::PlayerJoinShip {
                 player_entity,

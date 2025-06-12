@@ -246,11 +246,10 @@ fn update_missile_system(
                 .map(|x| x.0)
                 .any(|mut inv| inv.take_and_remove_item(missile_item, 1, &mut commands).0 == 0)
             {
-                if let Some(pilot) = pilot {
-                    if let Ok(player) = q_player.get(pilot.entity) {
+                if let Some(pilot) = pilot
+                    && let Ok(player) = q_player.get(pilot.entity) {
                         nevw_system_failure.send(MissileSystemFailure::NoAmmo, player.client_id());
                     }
-                }
                 break;
             }
 

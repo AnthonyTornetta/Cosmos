@@ -333,9 +333,9 @@ fn logic_block_changed_event_listener(
         let mut events_by_coords: HashMap<BlockCoordinate, BlockChangedEvent> = HashMap::new();
         for &ev in current_entity_events {
             // If was logic block, remove from the logic graph.
-            if let Some(logic_block) = logic_blocks.from_id(blocks.from_numeric_id(ev.old_block).unlocalized_name()) {
-                if let Ok(structure) = q_structure.get_mut(ev.block.structure()) {
-                    if let Ok(mut logic) = q_logic.get_mut(ev.block.structure()) {
+            if let Some(logic_block) = logic_blocks.from_id(blocks.from_numeric_id(ev.old_block).unlocalized_name())
+                && let Ok(structure) = q_structure.get_mut(ev.block.structure())
+                    && let Ok(mut logic) = q_logic.get_mut(ev.block.structure()) {
                         logic.remove_logic_block(
                             logic_block,
                             ev.old_block_rotation(),
@@ -350,13 +350,11 @@ fn logic_block_changed_event_listener(
                             &mut evw_queue_logic_input,
                         )
                     }
-                }
-            }
 
             // If is now logic block, add to the logic graph.
-            if let Some(logic_block) = logic_blocks.from_id(blocks.from_numeric_id(ev.new_block).unlocalized_name()) {
-                if let Ok(mut structure) = q_structure.get_mut(ev.block.structure()) {
-                    if let Ok(mut logic) = q_logic.get_mut(ev.block.structure()) {
+            if let Some(logic_block) = logic_blocks.from_id(blocks.from_numeric_id(ev.new_block).unlocalized_name())
+                && let Ok(mut structure) = q_structure.get_mut(ev.block.structure())
+                    && let Ok(mut logic) = q_logic.get_mut(ev.block.structure()) {
                         let coords = ev.block.coords();
                         logic.add_logic_block(
                             logic_block,
@@ -374,8 +372,6 @@ fn logic_block_changed_event_listener(
                         // Add the logic block's internal data storage to the structure.
                         structure.insert_block_data(coords, BlockLogicData(0), &mut bs_params, &mut q_block_data, &q_has_data);
                     }
-                }
-            }
 
             // Add the event we just processed to the HashMap so we can pretend the structure was updated in the coming iterations DFS.
             events_by_coords.insert(ev.block.coords(), ev.clone());

@@ -599,21 +599,18 @@ fn listen_for_new_physics_event(
         // This isn't super efficient, and in the future we should check if there are any connected
         // blocks in neighborin chunks before doing this. Maybe cache that?
 
-        if let Ok(coord) = ev.chunk.neg_x() {
-            if !todo.iter().any(|(c, se)| *c == coord && *se == ev.structure_entity) {
+        if let Ok(coord) = ev.chunk.neg_x()
+            && !todo.iter().any(|(c, se)| *c == coord && *se == ev.structure_entity) {
                 todo.push((coord, ev.structure_entity));
             }
-        }
-        if let Ok(coord) = ev.chunk.neg_y() {
-            if !todo.iter().any(|(c, se)| *c == coord && *se == ev.structure_entity) {
+        if let Ok(coord) = ev.chunk.neg_y()
+            && !todo.iter().any(|(c, se)| *c == coord && *se == ev.structure_entity) {
                 todo.push((coord, ev.structure_entity));
             }
-        }
-        if let Ok(coord) = ev.chunk.neg_z() {
-            if !todo.iter().any(|(c, se)| *c == coord && *se == ev.structure_entity) {
+        if let Ok(coord) = ev.chunk.neg_z()
+            && !todo.iter().any(|(c, se)| *c == coord && *se == ev.structure_entity) {
                 todo.push((coord, ev.structure_entity));
             }
-        }
         let coord = ev.chunk.pos_x();
         if !todo.iter().any(|(c, se)| *c == coord && *se == ev.structure_entity) {
             todo.push((coord, ev.structure_entity));
