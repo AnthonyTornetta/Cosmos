@@ -95,11 +95,12 @@ fn toggle_inventory(
                 commands.entity(ent).remove::<InventoryNeedsDisplayed>();
             });
         } else if let Ok(player_inventory_ent) = player_inventory.get_single()
-            && open_menus.is_empty() {
-                commands
-                    .entity(player_inventory_ent)
-                    .insert(InventoryNeedsDisplayed::Normal(InventorySide::Left));
-            }
+            && open_menus.is_empty()
+        {
+            commands
+                .entity(player_inventory_ent)
+                .insert(InventoryNeedsDisplayed::Normal(InventorySide::Left));
+        }
     } else if inputs.check_just_pressed(CosmosInputs::Interact) && !open_inventories.is_empty() {
         open_inventories.iter().for_each(|ent| {
             commands.entity(ent).remove::<InventoryNeedsDisplayed>();
@@ -191,7 +192,7 @@ struct InventoryRenderedItem;
 #[derive(Debug, Event)]
 struct ItemCategoryClickedEvent(Entity);
 
-#[derive(Debug, Component, PartialEq, Eq)]
+#[derive(Debug, Component, PartialEq, Eq, Reflect)]
 enum ItemCategoryMarker {
     Category(u16),
     Inventory,
@@ -204,11 +205,8 @@ impl ButtonEvent for ItemCategoryClickedEvent {
     }
 }
 
-#[derive(Component)]
+#[derive(Component, Debug, Reflect)]
 struct SelectedTab(ItemCategoryMarker);
-
-#[derive(Component)]
-struct VisibileHeight(Val);
 
 #[derive(Component)]
 struct InventorySearchBar;
@@ -346,10 +344,10 @@ fn toggle_inventory_rendering(
                         Name::new("Search Bar"),
                         GuiWindowTitleBar,
                         InventorySearchBar,
-                        Visibility::Hidden,
                         BackgroundColor(border_color.0),
                         BorderColor(css::GREY.into()),
                         Node {
+                            display: Display::None,
                             flex_grow: 1.0,
                             padding: UiRect::all(Val::Px(5.0)),
                             border: UiRect::all(Val::Px(1.0)),
@@ -452,14 +450,13 @@ fn toggle_inventory_rendering(
                         border_color,
                         BackgroundColor(Srgba::hex("3D3D3D").unwrap().into()),
                         ScrollBox::default(),
-                        VisibileHeight(Val::Px(non_hotbar_height)),
                         Node {
                             border: UiRect::horizontal(Val::Px(inventory_border_size)),
-                            height: Val::Px(0.0),
+                            display: Display::None,
+                            height: Val::Px(non_hotbar_height),
                             ..default()
                         },
                         SelectedTab(ItemCategoryMarker::Search),
-                        Visibility::Hidden,
                     ))
                     .with_children(|p| {
                         p.spawn((
@@ -489,14 +486,13 @@ fn toggle_inventory_rendering(
                             border_color,
                             BackgroundColor(Srgba::hex("3D3D3D").unwrap().into()),
                             ScrollBox::default(),
-                            VisibileHeight(Val::Px(non_hotbar_height)),
                             Node {
                                 border: UiRect::horizontal(Val::Px(inventory_border_size)),
-                                height: Val::Px(0.0),
+                                height: Val::Px(non_hotbar_height),
+                                display: Display::None,
                                 ..default()
                             },
                             SelectedTab(ItemCategoryMarker::Category(cat.id())),
-                            Visibility::Hidden,
                         ))
                         .with_children(|p| {
                             p.spawn(Node {
@@ -522,21 +518,19 @@ fn toggle_inventory_rendering(
                     }
                 }
 
-                p.spawn((
+                let mut non_hotbar_ecmds = p.spawn((
                     Name::new("Rendered Inventory Non-Hotbar Slots"),
                     border_color,
                     BackgroundColor(Srgba::hex("3D3D3D").unwrap().into()),
                     ScrollBox::default(),
-                    VisibileHeight(Val::Px(non_hotbar_height)),
                     Node {
                         border: UiRect::horizontal(Val::Px(inventory_border_size)),
                         height: Val::Px(non_hotbar_height),
                         ..default()
                     },
                     SelectedTab(ItemCategoryMarker::Inventory),
-                    OpenTab,
-                ))
-                .with_children(|p| {
+                ));
+                non_hotbar_ecmds.with_children(|p| {
                     p.spawn(Node {
                         display: Display::Grid,
                         flex_grow: 1.0,
@@ -554,6 +548,9 @@ fn toggle_inventory_rendering(
                         }
                     });
                 });
+                if is_creative {
+                    non_hotbar_ecmds.insert(OpenTab);
+                }
 
                 if let Some(priority_slots) = priority_slots {
                     p.spawn((
@@ -737,43 +734,42 @@ struct OpenTab;
 fn on_click_creative_category(
     mut evr_click_creative_tab: EventReader<ItemCategoryClickedEvent>,
     q_item_category_marker: Query<&ItemCategoryMarker>,
-    mut q_unopen_tab: Query<
-        (Entity, &mut Node, &mut Visibility, &VisibileHeight, &SelectedTab),
-        (Without<InventorySearchBar>, Without<OpenTab>),
-    >,
-    mut q_open_tab: Query<(Entity, &mut Node, &mut Visibility, &SelectedTab), (Without<InventorySearchBar>, With<OpenTab>)>,
-    mut q_creative_search: Query<&mut Visibility, With<InventorySearchBar>>,
+    mut q_unopen_tab: Query<(Entity, &mut Node, &SelectedTab), (Without<InventorySearchBar>, Without<OpenTab>)>,
+    mut q_open_tab: Query<(Entity, &mut Node, &SelectedTab), (Without<InventorySearchBar>, With<OpenTab>)>,
+    mut q_creative_search: Query<&mut Node, With<InventorySearchBar>>,
     mut commands: Commands,
 ) {
     for ev in evr_click_creative_tab.read() {
         let Ok(item_category) = q_item_category_marker.get(ev.0) else {
+            error!("Invalid item category component!");
             continue;
         };
-        if let Ok((entity, mut node, mut vis, i_category)) = q_open_tab.get_single_mut() {
+        if let Ok((entity, mut node, i_category)) = q_open_tab.get_single_mut() {
             if i_category.0 == *item_category {
                 continue;
             }
 
             if let Ok(mut c_search) = q_creative_search.get_single_mut() {
-                *c_search = Visibility::Hidden;
+                c_search.display = Display::None;
             }
-            node.height = Val::Px(0.0);
-            *vis = Visibility::Hidden;
+            node.display = Display::None;
             commands.entity(entity).remove::<OpenTab>();
+        } else {
+            error!("No tab currently open!");
         }
 
-        let Some((entity, mut node, mut vis, vis_height, _)) = q_unopen_tab.iter_mut().find(|x| x.4.0 == *item_category) else {
+        let Some((entity, mut node, _)) = q_unopen_tab.iter_mut().find(|x| x.2.0 == *item_category) else {
             error!("Bad state");
             continue;
         };
 
         if item_category == &ItemCategoryMarker::Search
-            && let Ok(mut c_search) = q_creative_search.get_single_mut() {
-                *c_search = Visibility::Inherited;
-            }
+            && let Ok(mut c_search) = q_creative_search.get_single_mut()
+        {
+            c_search.display = Display::Flex;
+        }
 
-        node.height = vis_height.0;
-        *vis = Visibility::default();
+        node.display = Display::Flex;
         commands.entity(entity).insert(OpenTab);
     }
 }
@@ -1084,13 +1080,14 @@ fn on_click_creative_item(
         };
 
         if let Some(inv) = HeldItemStack::get_held_is_inventory_from_children_mut(lp_children, &mut q_held_item)
-            && let Some(held_is) = inv.itemstack_at(0) {
-                if held_is.item_id() != item_id {
-                    nevw_trash_item.send_default();
-                    continue;
-                }
-                quantity += held_is.quantity();
+            && let Some(held_is) = inv.itemstack_at(0)
+        {
+            if held_is.item_id() != item_id {
+                nevw_trash_item.send_default();
+                continue;
             }
+            quantity += held_is.quantity();
+        }
 
         nevw_set_item.send(GrabCreativeItemEvent { quantity, item_id });
     }
@@ -1245,7 +1242,8 @@ pub(super) fn register(app: &mut App) {
             .in_set(NetworkingSystemsSet::Between)
             .run_if(in_state(GameState::Playing)),
     )
-    .register_type::<DisplayedItemFromInventory>();
+    .register_type::<DisplayedItemFromInventory>()
+    .register_type::<SelectedTab>();
 
     register_button::<ItemCategoryClickedEvent>(app);
     register_button::<CreativeItemClickedEvent>(app);
