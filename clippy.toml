@@ -2,7 +2,3 @@ type-complexity-threshold = 9999999
 
 too-many-arguments-threshold = 16
 
-disabled_lints = [
-  # This one has a stupid rule where if you have `fn (&self) -> HasLifetime`, you need to do `fn (&self) -> HasLifetime<'_>`. This is stupid.
-  "mismatched_lifetime_syntaxes"
-] 
