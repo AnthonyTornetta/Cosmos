@@ -6,47 +6,46 @@ members = ["cosmos_client", "cosmos_core", "cosmos_server"]
 resolver = "2"
 
 [workspace.dependencies]
-bevy = { version = "0.15.3", default-features = false }
-bevy_rapier3d = { git = "https://github.com/AnthonyTornetta/bevy_rapier", version = "0.28.0", branch = "master", features = [
+bevy = { version = "0.16.1", default-features = false }
+bevy_rapier3d = { git = "https://github.com/AnthonyTornetta/bevy_rapier", version = "0.30.0", branch = "master", features = [
     "simd-stable",
     "serde-serialize",
 ] }
 
-bevy_easy_compute = { git = "https://github.com/AnthonyTornetta/bevy_easy_compute", branch = "no-build-worker", version = "0.15" }
+bevy_easy_compute = { git = "https://github.com/AnthonyTornetta/bevy_easy_compute", branch = "no-build-worker", version = "0.16" }
 
-renet = "1.0.0"
+renet = { git="https://github.com/lucaspoffo/renet/", version = "1.0.0" }
 serde = "1.0"
 serde_json = "1.0"
 bincode = "2.0"
 noise = "0.9.0"
 # Check out https://crates.io/crates/tinyrand in future
-bevy_renet = "1.0.0"
+bevy_renet = { git="https://github.com/lucaspoffo/renet/", version="1.0.0" }
 rand = "0.9"
 rand_chacha = "0.9"
-# bigdecimal 0.4.6 has a formatting regression that causes a crash
 bigdecimal = "0.4.8"
 rayon = "1.10"
 futures-lite = "2.6"
 image = { version = "0.25", default-features = false, features = ["png"] }
-bevy-inspector-egui = "0.28.0"
+bevy-inspector-egui = "0.31.0"
 crossterm = { version = "0.29", features = ["event-stream"] }
 renet_visualizer = "1.0"
 walkdir = "2.5"
-toml = "0.8.20"
+toml = "0.8"
 lz4_flex = "0.11.3"
-bevy_kira_audio = "0.22.0"
+bevy_kira_audio = "0.23.0"
 anyhow = "1.0"
 thiserror = "2.0"
 bitflags = "2.9"
-bevy_mod_debugdump = "0.12.1"
+bevy_mod_debugdump = "0.13"
 arboard = "3.5"
 derive_more = "2.0.1"
 clap = "4.5"
 bytemuck = "1.22"
-bevy_obj = "0.15.1"
-bevy_hanabi = "0.15"
-uuid = "1.12"
-# iyes_perf_ui = "0.3.0"
+bevy_obj = "0.16"
+bevy_hanabi = "0.16"
+uuid = "1.17"
+iyes_perf_ui = "0.5"
 # bevy_mod_billboard = "0.7.0"
 
 # For any non workspace package
