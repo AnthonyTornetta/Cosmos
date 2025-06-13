@@ -12,7 +12,7 @@ use crate::ecs::{NeedsDespawned, add_multi_statebound_resource};
 use crate::events::block_events::BlockDataChangedEvent;
 use crate::inventory::Inventory;
 use crate::inventory::itemstack::ItemStackData;
-use crate::netty::client::{LocalPlayer, NeedsLoadedFromServer};
+use crate::netty::client::LocalPlayer;
 use crate::netty::sync::GotComponentToSyncEvent;
 use crate::netty::sync::mapping::Mappable;
 use crate::netty::system_sets::NetworkingSystemsSet;
@@ -30,7 +30,7 @@ use bevy::ecs::removal_detection::RemovedComponents;
 use bevy::ecs::schedule::IntoSystemConfigs;
 use bevy::ecs::schedule::common_conditions::resource_exists;
 use bevy::ecs::system::{Commands, Resource};
-use bevy::log::{trace, warn};
+use bevy::log::{info, trace, warn};
 use bevy::prelude::SystemSet;
 use bevy::time::Time;
 use bevy::utils::HashMap;
@@ -87,7 +87,16 @@ fn client_add_stored_components<T: SyncableComponent>(
             }
 
             if component.validate() {
+                if T::debug() {
+                    info!(
+                        "Attempting to insert {:?} into entity {ent:?} now that the entity exists {component:?}",
+                        T::get_component_unlocalized_name()
+                    );
+                }
                 ecmds.try_insert(component);
+                if T::debug() {
+                    ecmds.log_components();
+                }
             }
         } else {
             let (_, t) = hm.get_mut(&ent).expect("Must exist");
@@ -141,9 +150,27 @@ fn client_deserialize_component<T: SyncableComponent>(
             }
 
             if component.validate() {
+                if T::debug() {
+                    info!(
+                        "Attempting to insert {:?} into entity {:?}",
+                        T::get_component_unlocalized_name(),
+                        ev.entity
+                    );
+                }
                 ecmds.try_insert(component);
+                if T::debug() {
+                    ecmds.log_components();
+                }
             }
         } else {
+            if T::debug() {
+                info!(
+                    "Going to try to insert {:?} into entity {:?} later (entity doesn't exist yet)",
+                    T::get_component_unlocalized_name(),
+                    ev.entity
+                );
+            }
+
             // Try again later
             stored_components.0.insert(ev.entity, (ev.raw_data.clone(), 0.0));
         }
@@ -169,6 +196,13 @@ fn client_remove_component<T: SyncableComponent>(
         }
 
         if let Some(mut ecmds) = commands.get_entity(ev.entity) {
+            if T::debug() {
+                info!(
+                    "Removing component {} from entity {:?}",
+                    T::get_component_unlocalized_name(),
+                    ev.entity
+                );
+            }
             ecmds.remove::<T>();
         }
     }
@@ -661,9 +695,7 @@ fn get_entity_identifier_info(
 
     let (entity, authority_entity) = match entity_identifier {
         ComponentEntityIdentifier::Entity(entity) => {
-            let client_entity = commands
-                .spawn((ServerEntity(entity), NeedsLoadedFromServer, Name::new("Waiting for server...")))
-                .id();
+            let client_entity = commands.spawn((ServerEntity(entity), Name::new("Waiting for server..."))).id();
             network_mapping.add_mapping(client_entity, entity);
 
             (client_entity, client_entity)

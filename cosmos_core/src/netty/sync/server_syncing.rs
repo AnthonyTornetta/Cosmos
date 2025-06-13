@@ -12,8 +12,7 @@ use crate::netty::server::ServerLobby;
 use crate::netty::sync::{GotComponentToRemoveEvent, GotComponentToSyncEvent};
 use crate::netty::system_sets::NetworkingSystemsSet;
 use crate::netty::{NettyChannelClient, NettyChannelServer, NoSendEntity, cosmos_encoder};
-use crate::persistence::LoadingDistance;
-use crate::physics::location::{CosmosBundleSet, Location};
+use crate::physics::location::CosmosBundleSet;
 use crate::registry::{Registry, identifiable::Identifiable};
 use crate::structure::ship::pilot::Pilot;
 use crate::structure::systems::{StructureSystem, StructureSystems};
@@ -23,10 +22,10 @@ use bevy::ecs::removal_detection::RemovedComponents;
 use bevy::ecs::schedule::common_conditions::resource_exists;
 use bevy::ecs::schedule::{IntoSystemConfigs, IntoSystemSetConfigs};
 use bevy::ecs::system::Commands;
-use bevy::log::warn;
-use bevy::prelude::{Component, Parent, With};
+use bevy::log::{info, warn};
+use bevy::prelude::{Component, With};
 use bevy::reflect::Reflect;
-use bevy::utils::HashMap;
+use bevy::utils::{HashMap, HashSet};
 use bevy::{
     app::{App, Startup, Update},
     ecs::{
@@ -45,6 +44,27 @@ use renet::ClientId;
 ///
 /// This mean the player has already triggered a [`ClientFinishedReceivingRegistriesEvent`].
 pub struct ReadyForSyncing;
+
+#[derive(Component, Debug, Reflect, Clone, Default)]
+/// Contains the list of clients this entity should be synced to
+pub struct SyncTo(HashSet<ClientId>);
+
+impl SyncTo {
+    /// Creates a new list of clients that should be synced with
+    pub fn new(clients: HashSet<ClientId>) -> Self {
+        Self(clients)
+    }
+
+    /// Iterates over all clients this should sync with
+    pub fn iter(&self) -> impl Iterator<Item = &ClientId> {
+        self.0.iter()
+    }
+
+    /// Returns if this should be synced to this client id.
+    pub fn should_sync_to(&self, client_id: ClientId) -> bool {
+        self.0.contains(&client_id)
+    }
+}
 
 fn server_remove_component<T: SyncableComponent>(
     components_registry: Res<Registry<SyncedComponentId>>,
@@ -182,45 +202,20 @@ fn server_deserialize_component<T: SyncableComponent>(
     }
 }
 
-fn recursive_should_load(
-    p_loc: &Location,
-    entity: Entity,
-    q_parent: &Query<(Option<&Location>, Option<&LoadingDistance>, Option<&Parent>)>,
-) -> bool {
-    let (loc, loading_distance, parent) = q_parent.get(entity).expect("Impossible to fail");
-
-    if let (Some(loc), Some(loading_distance)) = (loc, loading_distance) {
-        loading_distance.should_load(p_loc, loc)
-    } else if let Some(parent) = parent {
-        recursive_should_load(p_loc, parent.get(), q_parent)
-    } else {
-        false
-    }
-}
-
-/// Determines if information about this entity should be sent to a player at this location.
-pub fn should_be_sent_to(
-    p_loc: &Location,
-    q_parent: &Query<(Option<&Location>, Option<&LoadingDistance>, Option<&Parent>)>,
-    entity_identifier: &ComponentEntityIdentifier,
-) -> bool {
-    match entity_identifier {
-        ComponentEntityIdentifier::Entity(entity) => recursive_should_load(p_loc, *entity, q_parent),
-        ComponentEntityIdentifier::StructureSystem { structure_entity, .. } => recursive_should_load(p_loc, *structure_entity, q_parent),
-        // TODO: This is probably wrong for dynamic structures like planets
-        ComponentEntityIdentifier::BlockData { identifier, .. } => recursive_should_load(p_loc, identifier.block.structure(), q_parent),
-        ComponentEntityIdentifier::ItemData { inventory_entity, .. } => recursive_should_load(p_loc, *inventory_entity, q_parent),
-    }
-}
-
 fn server_send_component<T: SyncableComponent>(
     id_registry: Res<Registry<SyncedComponentId>>,
-    q_parent: Query<(Option<&Location>, Option<&LoadingDistance>, Option<&Parent>)>,
     q_changed_component: Query<
-        (Entity, &T, Option<&StructureSystem>, Option<&ItemStackData>, Option<&BlockData>),
+        (
+            Entity,
+            &T,
+            &SyncTo,
+            Option<&StructureSystem>,
+            Option<&ItemStackData>,
+            Option<&BlockData>,
+        ),
         (Without<NoSendEntity>, Changed<T>),
     >,
-    q_players: Query<(&Location, &Player), With<ReadyForSyncing>>,
+    q_players: Query<&Player, With<ReadyForSyncing>>,
     mut server: ResMut<RenetServer>,
 ) {
     if q_changed_component.is_empty() {
@@ -232,10 +227,14 @@ fn server_send_component<T: SyncableComponent>(
         return;
     };
 
-    q_players.iter().for_each(|(p_loc, player)| {
+    q_players.iter().for_each(|player| {
         let replicated_data = q_changed_component
             .iter()
-            .map(|(entity, component, structure_system, is_data, block_data)| {
+            .flat_map(|(entity, component, sync_to, structure_system, is_data, block_data)| {
+                if !sync_to.should_sync_to(player.client_id()) {
+                    return None;
+                }
+
                 let entity_identifier = if let Some(structure_system) = structure_system {
                     ComponentEntityIdentifier::StructureSystem {
                         structure_entity: structure_system.structure_entity(),
@@ -256,9 +255,15 @@ fn server_send_component<T: SyncableComponent>(
                     ComponentEntityIdentifier::Entity(entity)
                 };
 
-                (component, entity_identifier)
+                if T::debug() {
+                    info!(
+                        "Syncing change to {} on entity {entity_identifier:?}",
+                        T::get_component_unlocalized_name()
+                    );
+                }
+
+                Some((component, entity_identifier))
             })
-            .filter(|(_, entity_identifier)| should_be_sent_to(p_loc, &q_parent, entity_identifier))
             .map(|(component, identifier)| ReplicatedComponentData {
                 entity_identifier: identifier,
                 raw_data: cosmos_encoder::serialize_uncompressed(component),
@@ -317,6 +322,13 @@ fn server_sync_removed_components<T: SyncableComponent>(
             ComponentEntityIdentifier::Entity(removed_ent)
         };
 
+        if T::debug() {
+            info!(
+                "Syncing removed {} on entity {entity_identifier:?}",
+                T::get_component_unlocalized_name()
+            );
+        }
+
         server.broadcast_message(
             NettyChannelServer::ComponentReplication,
             cosmos_encoder::serialize(&ComponentReplicationMessage::RemovedComponent {
@@ -329,23 +341,13 @@ fn server_sync_removed_components<T: SyncableComponent>(
 
 fn on_request_component<T: SyncableComponent>(
     q_t: Query<(&T, Option<&StructureSystem>, Option<&ItemStackData>, Option<&BlockData>), Without<NoSendEntity>>,
-    q_parent: Query<(Option<&Location>, Option<&LoadingDistance>, Option<&Parent>)>,
     mut ev_reader: EventReader<RequestedEntityEvent>,
     id_registry: Res<Registry<SyncedComponentId>>,
     mut server: ResMut<RenetServer>,
-    q_players: Query<&Location, (With<Player>, With<ReadyForSyncing>)>,
-    lobby: Res<ServerLobby>,
 ) {
     let mut comps_to_send: HashMap<ClientId, Vec<ReplicatedComponentData>> = HashMap::new();
 
     for ev in ev_reader.read() {
-        let Some(player_ent) = lobby.player_from_id(ev.client_id) else {
-            continue;
-        };
-        let Ok(p_loc) = q_players.get(player_ent) else {
-            continue;
-        };
-
         let Ok((component, structure_system, is_data, block_data)) = q_t.get(ev.entity) else {
             continue;
         };
@@ -370,8 +372,8 @@ fn on_request_component<T: SyncableComponent>(
             ComponentEntityIdentifier::Entity(ev.entity)
         };
 
-        if !should_be_sent_to(p_loc, &q_parent, &entity_identifier) {
-            continue;
+        if T::debug() {
+            info!("Requested {} on entity {entity_identifier:?}", T::get_component_unlocalized_name());
         }
 
         comps_to_send.entry(ev.client_id).or_default().push(ReplicatedComponentData {

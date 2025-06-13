@@ -13,7 +13,10 @@ use cosmos_core::{
         netty_rigidbody::{NettyRigidBody, NettyRigidBodyLocation},
         server_reliable_messages::ServerReliableMessages,
         server_unreliable_messages::ServerUnreliableMessages,
-        sync::{ComponentEntityIdentifier, server_syncing::ReadyForSyncing},
+        sync::{
+            ComponentEntityIdentifier,
+            server_syncing::{ReadyForSyncing, SyncTo},
+        },
         system_sets::NetworkingSystemsSet,
     },
     physics::location::{Location, LocationPhysicsSet},
@@ -21,8 +24,6 @@ use cosmos_core::{
 };
 
 use crate::netty::network_helpers::NetworkTick;
-
-use super::flags::SyncTo;
 
 #[derive(Component)]
 /// Does not send a despawn message to the client when this entity is despawned.

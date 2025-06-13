@@ -190,6 +190,12 @@ pub trait SyncableComponent: Serialize + DeserializeOwned + Clone + std::fmt::De
     /// Either from `server -> client` or `client -> server`.
     fn get_sync_type() -> SyncType;
 
+    /// Set this to true to see when this component is synced over the network in the console as
+    /// `info` prints.
+    fn debug() -> bool {
+        false
+    }
+
     /// Returns true if this is a valid instance of this component, false if this should be ignored
     fn validate(&self) -> bool {
         true

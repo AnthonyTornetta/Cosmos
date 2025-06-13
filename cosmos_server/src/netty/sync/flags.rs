@@ -6,16 +6,19 @@ use bevy::{prelude::*, utils::HashSet};
 use cosmos_core::{
     block::data::BlockData,
     entities::player::Player,
+    inventory::itemstack::ItemStackData,
     netty::{
         NoSendEntity,
-        sync::{server_entity_syncing::RequestedEntityEvent, server_syncing::ReadyForSyncing},
+        sync::{
+            server_entity_syncing::RequestedEntityEvent,
+            server_syncing::{ReadyForSyncing, SyncTo},
+        },
         system_sets::NetworkingSystemsSet,
     },
     persistence::LoadingDistance,
     physics::location::Location,
-    prelude::Structure,
+    prelude::{Structure, StructureSystem},
 };
-use renet::ClientId;
 
 use crate::persistence::loading::{NeedsBlueprintLoaded, NeedsLoaded};
 
@@ -43,14 +46,18 @@ pub enum SyncReason {
     Location,
 }
 
-#[derive(Component, Debug, Reflect, Clone, Default)]
-/// Contains the list of entities this component should be synced to
-pub struct SyncTo(HashSet<ClientId>);
+fn add_structure_systems_sync_flag(
+    q_structure_systems: Query<Entity, (With<StructureSystem>, Without<SyncReason>)>,
+    mut commands: Commands,
+) {
+    for ent in q_structure_systems.iter() {
+        commands.entity(ent).insert(SyncReason::Data);
+    }
+}
 
-impl SyncTo {
-    /// Returns if this should be synced to this client id.
-    pub fn should_sync_to(&self, client_id: ClientId) -> bool {
-        self.0.contains(&client_id)
+fn add_item_data_sync_flag(q_item_data: Query<Entity, (With<ItemStackData>, Without<SyncReason>)>, mut commands: Commands) {
+    for ent in q_item_data.iter() {
+        commands.entity(ent).insert(SyncReason::Data);
     }
 }
 
@@ -238,7 +245,7 @@ fn update_sync_players(
 
         let mut sync_to = q_mut_sync_to.get_mut(ent).expect("Invalid state");
 
-        sync_to.0 = to_send_to;
+        *sync_to = SyncTo::new(to_send_to);
     }
 }
 
@@ -253,9 +260,9 @@ fn generate_request_entity_events_for_new_sync_tos(
     for (ent, sync_to, mut prev) in q_sync_to.iter_mut() {
         let mut not_found = vec![];
 
-        for id in sync_to.0.iter() {
-            if !prev.0.0.contains(id) {
-                not_found.push(*id);
+        for &id in sync_to.iter() {
+            if !prev.0.should_sync_to(id) {
+                not_found.push(id);
             }
         }
 
@@ -296,6 +303,8 @@ pub(super) fn register(app: &mut App) {
     app.add_systems(
         Update,
         (
+            add_item_data_sync_flag,
+            add_structure_systems_sync_flag,
             on_needs_sync_data,
             update_sync_players,
             generate_request_entity_events_for_new_sync_tos,
