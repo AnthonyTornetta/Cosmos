@@ -1,8 +1,8 @@
 # Basic Gameplay
 
-To find a full list of controls, please view [`cosmos_client/src/input/inputs.rs`](https://github.com/AnthonyTornetta/Cosmos/blob/main/cosmos_client/src/input/inputs.rs). There is currently no way to change these bindings in-game, and their defaults can be found in the `init_input` function.
+To find a full list of controls, you can view and change them in game via the `Settings` -> `Controls` page.
 
-## Basic Controls:
+## Basic Default Controls:
 
 - `WASD` - Move Forward/Left/Back/Right
 - `Space` - Jump

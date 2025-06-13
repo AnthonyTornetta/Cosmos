@@ -65,7 +65,7 @@ If you want to view the ordering of the systems, run (on linux) `cargo run --fea
 
 See [the issues page](https://github.com/AnthonyTornetta/Cosmos/issues) for the list of current features/bugs in development.
 
-## Release 0.0.9a
+## Release 0.0.9a (In Progress)
 
 - [ ] More pirate ships
 - [ ] More station types
@@ -74,25 +74,36 @@ See [the issues page](https://github.com/AnthonyTornetta/Cosmos/issues) for the 
   - [ ] Physics
 - [ ] Reduce amount of packets server sends per second
 - [ ] Respawn anchor
+- [ ] Screenshots
+- [ ] Update to Bevy 0.16
+- [ ] Steam Integration
+- [ ] Blueprint ship/station in-game
 
-## Release 0.0.8a (In Progress)
+## Release 0.0.8a
 
 - [x] Player Guide
-- [ ] Screenshots
 - [x] Better Creative Mode
 - [x] More asteroid types
 - [x] Balance and improve weapons
 - [x] Fuel for reactor
 - [x] Ores
   - [x] Customizable block drops
+- [x] Better creative mode
+- [x] In-game commands
+  - [x] Graceful server stop command
 - [x] Ship focus camera
 - [x] Rebalance shop prices
 - [x] Add ability for player to die
 - [x] Playtest and implement changes
 - [x] Flying asteroids
-- [x] Pirate Stations
-- [x] Basic quest NPCs
-  - [x] Coms System
+- [x] NPCs
+  - [x] Factions
+  - [x] Faction Stations
+  - [x] Basic quest NPCs
+    - [x] Coms System
+    - [x] Quest system
+- [x] Networking systems improvements
+- [x] Location physics systems improvements
 
 ## Release 0.0.7a
 
@@ -426,8 +437,6 @@ See [the issues page](https://github.com/AnthonyTornetta/Cosmos/issues) for the 
 
 ### Factions
 
-NPC controlled OR player controlled
-
 NPC controlled factions store reputation of other factions + players
 
 Factions have different attributes
@@ -439,7 +448,7 @@ Factions have different attributes
     - Substitute expensive blocks for less expensive ones if needed
     - If ship is below 50% success rate, don't produce it again
 - Dynamic faction expansion
-  Bounty board
+- Bounty board
 - Take down X ship
 - Selling the ship
 - Selling ship designs
