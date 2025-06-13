@@ -19,11 +19,22 @@ cosmos/cosmos_server$ cargo run --release
 
 To run a creative server, add the `--creative` flag. Additional flags can be found with `--help`.
 
+> Note that flags such as `--creative` and `--help` must all be placed after a `--` so cargo recognizes they go to the game, not cargo.
+> For example: `cargo run --release -- --creative --peaceful`
+
+You can also run commands on the server, see [commands](./guides/commands.md).
+
+#### IMPORTANT SERVER NOTE
+
+Do **NOT** close the server by closing the window that opens or closing the terminal - the world may not be saved.
+
+To gracefully close the server, simply run the `stop` command. You can type this in the server's console, or an operator can type
+`/stop` in the game's chat. See [commands](./guides/commands.md) for more information.
+
 ### Start the client
 
 ```sh
 cosmos/cosmos_client$ cargo run --release
 ```
-
 
 [Check out the basic gameplay guide to get started.](./guides/gameplay.md)
