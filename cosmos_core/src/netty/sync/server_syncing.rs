@@ -12,8 +12,7 @@ use crate::netty::server::ServerLobby;
 use crate::netty::sync::{GotComponentToRemoveEvent, GotComponentToSyncEvent};
 use crate::netty::system_sets::NetworkingSystemsSet;
 use crate::netty::{NettyChannelClient, NettyChannelServer, NoSendEntity, cosmos_encoder};
-use crate::persistence::LoadingDistance;
-use crate::physics::location::{CosmosBundleSet, Location};
+use crate::physics::location::CosmosBundleSet;
 use crate::registry::{Registry, identifiable::Identifiable};
 use crate::structure::ship::pilot::Pilot;
 use crate::structure::systems::{StructureSystem, StructureSystems};
@@ -24,7 +23,7 @@ use bevy::ecs::schedule::common_conditions::resource_exists;
 use bevy::ecs::schedule::{IntoSystemConfigs, IntoSystemSetConfigs};
 use bevy::ecs::system::Commands;
 use bevy::log::{info, warn};
-use bevy::prelude::{Component, Parent, With};
+use bevy::prelude::{Component, With};
 use bevy::reflect::Reflect;
 use bevy::utils::{HashMap, HashSet};
 use bevy::{
@@ -51,10 +50,12 @@ pub struct ReadyForSyncing;
 pub struct SyncTo(HashSet<ClientId>);
 
 impl SyncTo {
+    /// Creates a new list of clients that should be synced with
     pub fn new(clients: HashSet<ClientId>) -> Self {
         Self(clients)
     }
 
+    /// Iterates over all clients this should sync with
     pub fn iter(&self) -> impl Iterator<Item = &ClientId> {
         self.0.iter()
     }
@@ -198,37 +199,6 @@ fn server_deserialize_component<T: SyncableComponent>(
                 ecmds.try_insert(deserialized);
             }
         }
-    }
-}
-
-fn recursive_should_load(
-    p_loc: &Location,
-    entity: Entity,
-    q_parent: &Query<(Option<&Location>, Option<&LoadingDistance>, Option<&Parent>)>,
-) -> bool {
-    let (loc, loading_distance, parent) = q_parent.get(entity).expect("Impossible to fail");
-
-    if let (Some(loc), Some(loading_distance)) = (loc, loading_distance) {
-        loading_distance.should_load(p_loc, loc)
-    } else if let Some(parent) = parent {
-        recursive_should_load(p_loc, parent.get(), q_parent)
-    } else {
-        false
-    }
-}
-
-/// Determines if information about this entity should be sent to a player at this location.
-pub fn should_be_sent_to(
-    p_loc: &Location,
-    q_parent: &Query<(Option<&Location>, Option<&LoadingDistance>, Option<&Parent>)>,
-    entity_identifier: &ComponentEntityIdentifier,
-) -> bool {
-    match entity_identifier {
-        ComponentEntityIdentifier::Entity(entity) => recursive_should_load(p_loc, *entity, q_parent),
-        ComponentEntityIdentifier::StructureSystem { structure_entity, .. } => recursive_should_load(p_loc, *structure_entity, q_parent),
-        // TODO: This is probably wrong for dynamic structures like planets
-        ComponentEntityIdentifier::BlockData { identifier, .. } => recursive_should_load(p_loc, identifier.block.structure(), q_parent),
-        ComponentEntityIdentifier::ItemData { inventory_entity, .. } => recursive_should_load(p_loc, *inventory_entity, q_parent),
     }
 }
 

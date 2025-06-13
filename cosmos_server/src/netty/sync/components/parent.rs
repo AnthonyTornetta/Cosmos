@@ -5,36 +5,23 @@ use cosmos_core::{
     inventory::itemstack::ItemStackData,
     netty::{
         NettyChannelServer, NoSendEntity, cosmos_encoder,
-        server::ServerLobby,
         sync::{
             ComponentEntityIdentifier, ComponentId, ComponentReplicationMessage, ComponentSyncingSet, ReplicatedComponentData,
-            server_entity_syncing::RequestedEntityEvent, server_syncing::should_be_sent_to,
+            server_entity_syncing::RequestedEntityEvent, server_syncing::SyncTo,
         },
     },
-    persistence::LoadingDistance,
-    physics::location::Location,
     prelude::StructureSystem,
 };
 use renet::{ClientId, RenetServer};
 
 fn on_request_parent(
     q_component: Query<(&Parent, Option<&StructureSystem>, Option<&ItemStackData>, Option<&BlockData>), Without<NoSendEntity>>,
-    q_parent: Query<(Option<&Location>, Option<&LoadingDistance>, Option<&Parent>)>,
     mut ev_reader: EventReader<RequestedEntityEvent>,
     mut server: ResMut<RenetServer>,
-    q_players: Query<&Location, With<Player>>,
-    lobby: Res<ServerLobby>,
 ) {
     let mut comps_to_send: HashMap<ClientId, Vec<ReplicatedComponentData>> = HashMap::new();
 
     for ev in ev_reader.read() {
-        let Some(player_ent) = lobby.player_from_id(ev.client_id) else {
-            continue;
-        };
-        let Ok(p_loc) = q_players.get(player_ent) else {
-            continue;
-        };
-
         let Ok((component, structure_system, is_data, block_data)) = q_component.get(ev.entity) else {
             continue;
         };
@@ -60,12 +47,6 @@ fn on_request_parent(
             ComponentEntityIdentifier::Entity(ev.entity)
         };
 
-        if !should_be_sent_to(p_loc, &q_parent, &entity_identifier) {
-            info!("Should not send for {:?}", ev.entity);
-            continue;
-        }
-
-        info!("Sending {:?} - {component:?}", ev.entity);
         comps_to_send.entry(ev.client_id).or_default().push(ReplicatedComponentData {
             raw_data: cosmos_encoder::serialize_uncompressed(&component.get()),
             entity_identifier,
@@ -85,28 +66,32 @@ fn on_request_parent(
 }
 
 fn on_change_parent(
-    q_parent: Query<(Option<&Location>, Option<&LoadingDistance>, Option<&Parent>)>,
     q_changed_component: Query<
         (
             Entity,
             &Parent,
+            &SyncTo,
             Option<&StructureSystem>,
             Option<&ItemStackData>,
             Option<&BlockData>,
         ),
         (Without<NoSendEntity>, Changed<Parent>),
     >,
-    q_players: Query<(&Location, &Player)>,
+    q_players: Query<&Player>,
     mut server: ResMut<RenetServer>,
 ) {
     if q_changed_component.is_empty() {
         return;
     }
 
-    q_players.iter().for_each(|(p_loc, player)| {
+    q_players.iter().for_each(|player| {
         let replicated_data = q_changed_component
             .iter()
-            .map(|(entity, component, structure_system, is_data, block_data)| {
+            .flat_map(|(entity, component, sync_to, structure_system, is_data, block_data)| {
+                if !sync_to.should_sync_to(player.client_id()) {
+                    return None;
+                }
+
                 let entity_identifier = if let Some(structure_system) = structure_system {
                     ComponentEntityIdentifier::StructureSystem {
                         structure_entity: structure_system.structure_entity(),
@@ -127,9 +112,8 @@ fn on_change_parent(
                     ComponentEntityIdentifier::Entity(entity)
                 };
 
-                (component, entity_identifier)
+                Some((component, entity_identifier))
             })
-            .filter(|(_, entity_identifier)| should_be_sent_to(p_loc, &q_parent, entity_identifier))
             .map(|(component, identifier)| ReplicatedComponentData {
                 entity_identifier: identifier,
                 raw_data: cosmos_encoder::serialize_uncompressed(&component.get()),
