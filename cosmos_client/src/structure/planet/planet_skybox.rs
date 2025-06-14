@@ -45,7 +45,7 @@ fn color_planet_skybox(
     q_player: Query<&Location, With<LocalPlayer>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
-    let Ok(player_loc) = q_player.get_single() else {
+    let Ok(player_loc) = q_player.single() else {
         return;
     };
 

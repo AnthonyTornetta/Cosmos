@@ -19,7 +19,7 @@ fn add_world_within(
     mut commands: Commands,
     player_world: Query<Entity, With<PlayerWorld>>,
 ) {
-    if let Ok(pw) = player_world.get_single() {
+    if let Ok(pw) = player_world.single() {
         for entity in query.iter() {
             commands.entity(entity).insert(RapierContextEntityLink(pw));
         }

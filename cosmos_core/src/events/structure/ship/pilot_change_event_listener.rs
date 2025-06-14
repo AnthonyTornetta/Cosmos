@@ -59,7 +59,7 @@ fn event_listener(
                 Sensor,
                 Transform::from_xyz(0.5, -0.25, 0.5),
             ));
-        } else if let Some(mut ecmds) = commands.get_entity(ev.structure_entity) {
+        } else if let Ok(mut ecmds) = commands.get_entity(ev.structure_entity) {
             ecmds.remove::<Pilot>();
         }
     }
@@ -96,14 +96,14 @@ fn pilot_removed(
             trans.translation = starting_delta.0;
             trans.rotation = starting_delta.1;
 
-            event_writer.send(RemoveSensorFrom(entity, 0));
+            event_writer.write(RemoveSensorFrom(entity, 0));
         }
     }
 }
 
 fn bouncer(mut reader: EventReader<Bouncer>, mut event_writer: EventWriter<RemoveSensorFrom>) {
     for ev in reader.read() {
-        event_writer.send(RemoveSensorFrom(ev.0, ev.1 + 1));
+        event_writer.write(RemoveSensorFrom(ev.0, ev.1 + 1));
     }
 }
 
@@ -114,7 +114,7 @@ fn remove_sensor(mut reader: EventReader<RemoveSensorFrom>, mut event_writer: Ev
                 e.remove::<Sensor>();
             }
         } else {
-            event_writer.send(Bouncer(ev.0, ev.1 + 1));
+            event_writer.write(Bouncer(ev.0, ev.1 + 1));
         }
     }
 }

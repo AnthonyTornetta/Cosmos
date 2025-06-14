@@ -86,7 +86,7 @@ fn replication_listen_netty(
                     continue;
                 };
 
-                event_writer.send(StructureSystemNeedsUpdated {
+                event_writer.write(StructureSystemNeedsUpdated {
                     raw,
                     structure_entity,
                     system_id,
@@ -127,7 +127,7 @@ fn replication_listen_netty(
                     continue;
                 };
 
-                let Some(mut ecmds) = commands.get_entity(entity) else {
+                let Ok(mut ecmds) = commands.get_entity(entity) else {
                     continue;
                 };
 

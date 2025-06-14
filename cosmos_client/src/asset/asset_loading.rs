@@ -95,11 +95,12 @@ fn assets_done_loading(
     mut end_writer: EventWriter<DoneLoadingEvent>,
 ) {
     if !event_listener.is_empty()
-        && let Some(loading_id) = loading_id.as_ref() {
-            loader.finish_loading(loading_id.0, &mut end_writer);
+        && let Some(loading_id) = loading_id.as_ref()
+    {
+        loader.finish_loading(loading_id.0, &mut end_writer);
 
-            commands.remove_resource::<AssetsLoadingID>();
-        }
+        commands.remove_resource::<AssetsLoadingID>();
+    }
 }
 
 #[derive(Clone, Debug, Reflect)]
@@ -197,67 +198,68 @@ fn check_assets_ready(
             let asset = server.get_id_handle::<LoadedFolder>(*id).unwrap();
 
             if let Some(loaded_folder) = loaded_folders.get(&asset)
-                && let Some(loading_texture_atlases) = loading.iter_mut().find(|x| x.folder_handle.contains(&asset)) {
-                    // all assets are now ready, construct texture atlas for better performance
+                && let Some(loading_texture_atlases) = loading.iter_mut().find(|x| x.folder_handle.contains(&asset))
+            {
+                // all assets are now ready, construct texture atlas for better performance
 
-                    // let mut texture_atlas_builder = SquareTextureAtlasBuilder::new(16);
+                // let mut texture_atlas_builder = SquareTextureAtlasBuilder::new(16);
 
-                    for handle in loaded_folder.handles.iter().map(|x| x.clone().typed::<Image>()) {
-                        let Some(img) = images.get(&handle) else {
-                            continue;
-                        };
+                for handle in loaded_folder.handles.iter().map(|x| x.clone().typed::<Image>()) {
+                    let Some(img) = images.get(&handle) else {
+                        continue;
+                    };
 
-                        let dims = img.width();
+                    let dims = img.width();
 
-                        if let Some(builder) = loading_texture_atlases
-                            .atlas_builders
-                            .iter_mut()
-                            .find(|x| x.texture_dimensions == dims)
-                        {
-                            builder.add_texture(handle);
-                        } else {
-                            let mut builder = SquareTextureAtlasBuilder::new(dims);
-                            builder.add_texture(handle);
-                            loading_texture_atlases.atlas_builders.push(builder);
-                        }
-                    }
-
-                    let (idx, _) = loading_texture_atlases
-                        .folder_handle
-                        .iter()
-                        .enumerate()
-                        .find(|(_, x)| *x == &asset)
-                        .expect("Guarenteed above");
-
-                    loading_texture_atlases.folder_handle.remove(idx);
-
-                    if loading_texture_atlases.folder_handle.is_empty() {
-                        let loading_atlas = std::mem::replace(
-                            loading_texture_atlases,
-                            LoadingTextureAtlas {
-                                atlas_builders: vec![],
-                                folder_handle: vec![],
-                                id: loading_texture_atlases.id,
-                                unlocalized_name: loading_texture_atlases.unlocalized_name.to_owned(),
-                            },
-                        );
-
-                        texture_atlases.register(CosmosTextureAtlas::new(
-                            loading_atlas.unlocalized_name,
-                            loading_atlas
-                                .atlas_builders
-                                .into_iter()
-                                .map(|id| id.create_atlas(&mut images))
-                                .collect(),
-                        ));
-
-                        // Clear out handles to avoid continually checking
-                        commands.remove_resource::<Registry<LoadingTextureAtlas>>();
-
-                        info!("Sending all textures done loading event!");
-                        event_writer.send(AllTexturesDoneLoadingEvent);
+                    if let Some(builder) = loading_texture_atlases
+                        .atlas_builders
+                        .iter_mut()
+                        .find(|x| x.texture_dimensions == dims)
+                    {
+                        builder.add_texture(handle);
+                    } else {
+                        let mut builder = SquareTextureAtlasBuilder::new(dims);
+                        builder.add_texture(handle);
+                        loading_texture_atlases.atlas_builders.push(builder);
                     }
                 }
+
+                let (idx, _) = loading_texture_atlases
+                    .folder_handle
+                    .iter()
+                    .enumerate()
+                    .find(|(_, x)| *x == &asset)
+                    .expect("Guarenteed above");
+
+                loading_texture_atlases.folder_handle.remove(idx);
+
+                if loading_texture_atlases.folder_handle.is_empty() {
+                    let loading_atlas = std::mem::replace(
+                        loading_texture_atlases,
+                        LoadingTextureAtlas {
+                            atlas_builders: vec![],
+                            folder_handle: vec![],
+                            id: loading_texture_atlases.id,
+                            unlocalized_name: loading_texture_atlases.unlocalized_name.to_owned(),
+                        },
+                    );
+
+                    texture_atlases.register(CosmosTextureAtlas::new(
+                        loading_atlas.unlocalized_name,
+                        loading_atlas
+                            .atlas_builders
+                            .into_iter()
+                            .map(|id| id.create_atlas(&mut images))
+                            .collect(),
+                    ));
+
+                    // Clear out handles to avoid continually checking
+                    commands.remove_resource::<Registry<LoadingTextureAtlas>>();
+
+                    info!("Sending all textures done loading event!");
+                    event_writer.write(AllTexturesDoneLoadingEvent);
+                }
+            }
         }
     }
 
@@ -361,9 +363,10 @@ fn handle_select_texture(selector: &TextureSelector, data: BlockInfo) -> Texture
 fn handle_data_driven(data: BlockInfo, dd: &DataDrivenTextureIndex) -> TextureIndex {
     for bit in (0..8).rev() {
         if data.0 & (1 << bit) != 0
-            && let Some(idx) = dd.bit_textures[bit] {
-                return idx;
-            }
+            && let Some(idx) = dd.bit_textures[bit]
+        {
+            return idx;
+        }
     }
 
     dd.default

@@ -73,7 +73,7 @@ impl<Q: QueryData> Drop for MutBlockData<'_, '_, '_, Q> {
             return;
         }
 
-        self.bs_params.borrow_mut().ev_writer.send(BlockDataChangedEvent {
+        self.bs_params.borrow_mut().ev_writer.write(BlockDataChangedEvent {
             block: self.block,
             block_data_entity: Some(self.data_entity),
         });

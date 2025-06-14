@@ -95,7 +95,7 @@ pub(crate) fn process_player_interaction(
     looking_at.looking_at_any = None;
     looking_at.looking_at_block = None;
 
-    let Ok(cam_trans) = camera.get_single() else {
+    let Ok(cam_trans) = camera.single() else {
         return;
     };
 
@@ -139,7 +139,7 @@ pub(crate) fn process_player_interaction(
 
     if input_handler.check_just_pressed(CosmosInputs::BreakBlock)
         && let Some(x) = &looking_at.looking_at_block {
-            break_writer.send(RequestBlockBreakEvent { block: x.block });
+            break_writer.write(RequestBlockBreakEvent { block: x.block });
         }
 
     if input_handler.check_just_pressed(CosmosInputs::PickBlock)
@@ -177,7 +177,7 @@ pub(crate) fn process_player_interaction(
         (|| {
             let looking_at_block = looking_at.looking_at_block.as_ref()?;
 
-            let hotbar = hotbar.get_single().ok()?;
+            let hotbar = hotbar.single().ok()?;
 
             let inventory_slot = hotbar.selected_slot();
 
@@ -258,7 +258,7 @@ pub(crate) fn process_player_interaction(
                 BlockRotation::new(block_up, BlockSubRotation::None)
             };
 
-            place_writer.send(RequestBlockPlaceEvent {
+            place_writer.write(RequestBlockPlaceEvent {
                 block: StructureBlock::new(place_at_coords, structure.get_entity().unwrap()),
                 inventory_slot,
                 block_id,
@@ -271,7 +271,7 @@ pub(crate) fn process_player_interaction(
 
     if input_handler.check_just_pressed(CosmosInputs::Interact)
         && let Some(looking_at_any) = &looking_at.looking_at_any {
-            interact_writer.send(BlockInteractEvent {
+            interact_writer.write(BlockInteractEvent {
                 block_including_fluids: looking_at_any.block,
                 interactor: player_entity,
                 block: looking_at.looking_at_block.map(|looked_at| looked_at.block),

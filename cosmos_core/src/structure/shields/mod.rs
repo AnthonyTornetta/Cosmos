@@ -8,7 +8,7 @@ use bevy::{
         query::Changed,
         system::{Commands, Query},
     },
-    prelude::{IntoSystemConfigs, Parent},
+    prelude::{ChildOf, IntoSystemConfigs},
     reflect::Reflect,
 };
 use bevy_rapier3d::{
@@ -79,7 +79,7 @@ pub const SHIELD_COLLISION_GROUP: Group = Group::GROUP_3;
 
 fn on_add_shield(
     q_rapier_entity_link: Query<&RapierContextEntityLink>,
-    q_added_shield: Query<(Entity, &Shield, &Parent), Changed<Shield>>,
+    q_added_shield: Query<(Entity, &Shield, &ChildOf), Changed<Shield>>,
     mut commands: Commands,
 ) {
     for (ent, shield, parent) in q_added_shield.iter() {
@@ -98,7 +98,7 @@ fn on_add_shield(
             ecmds.insert(Collider::ball(shield.radius));
         }
 
-        if let Ok(&pw) = q_rapier_entity_link.get(parent.get()) {
+        if let Ok(&pw) = q_rapier_entity_link.get(parent.parent()) {
             ecmds.insert(pw);
         }
     }

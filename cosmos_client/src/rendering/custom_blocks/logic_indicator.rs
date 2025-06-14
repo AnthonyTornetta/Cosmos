@@ -70,7 +70,7 @@ fn on_render_logic_indicator(
     for ev in ev_reader.read() {
         if let Ok(logic_indicator_renders) = q_logic_indicator_renders.get(ev.mesh_entity_parent) {
             for e in logic_indicator_renders.0.iter().copied() {
-                commands.entity(e).despawn_recursive();
+                commands.entity(e).despawn();
             }
 
             commands.entity(ev.mesh_entity_parent).remove::<LogicIndicatorRenders>();
@@ -219,7 +219,7 @@ fn on_render_logic_indicator(
                 .set_parent(ev.mesh_entity_parent)
                 .id();
 
-            evw_add_material.send(AddMaterialEvent {
+            evw_add_material.write(AddMaterialEvent {
                 entity,
                 add_material_id: mat_id,
                 texture_dimensions_index,

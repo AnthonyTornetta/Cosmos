@@ -11,7 +11,7 @@ use bevy::{
         query::{Added, Changed, Or, With},
         schedule::SystemSet,
     },
-    hierarchy::{BuildChildren, Parent},
+    hierarchy::{BuildChildren, ChildOf},
     log::warn,
     math::Vec3,
     prelude::{
@@ -219,7 +219,7 @@ fn recalculate_shields_if_needed(
             }
 
             for &(_, e) in placed_shields.0.iter().filter(|(_, e)| !keep.contains(e)) {
-                if let Some(mut ecmds) = commands.get_entity(e) {
+                if let Ok(mut ecmds) = commands.get_entity(e) {
                     ecmds.insert(NeedsDespawned);
                 }
             }
@@ -270,7 +270,7 @@ fn power_shields(
     mut commands: Commands,
     mut q_storage_system: Query<&mut EnergyStorageSystem>,
     q_systems: Query<&StructureSystems>,
-    mut q_shields: Query<(Entity, &mut Shield, &Parent, Option<&mut ShieldDowntime>)>,
+    mut q_shields: Query<(Entity, &mut Shield, &ChildOf, Option<&mut ShieldDowntime>)>,
     time: Res<Time>,
 ) {
     for (ent, mut shield, parent, shield_downtime) in &mut q_shields {
@@ -295,7 +295,7 @@ fn power_shields(
             let optimal_power_usage = strength_missing / shield.power_efficiency;
             let power_usage = optimal_power_usage.min(shield.power_per_second * time.delta_secs());
 
-            let Ok(systems) = q_systems.get(parent.get()) else {
+            let Ok(systems) = q_systems.get(parent.parent()) else {
                 warn!("Shield's parent isn't a structure?");
                 continue;
             };
@@ -349,13 +349,13 @@ fn on_save_shield(mut q_needs_saved: Query<(&Shield, Option<&ShieldDowntime>, &m
 fn on_load_shield(
     mut commands: Commands,
     q_placed_shields: Query<&PlacedShields>,
-    q_needs_saved: Query<(Entity, &SerializedData, &Parent), With<NeedsLoaded>>,
+    q_needs_saved: Query<(Entity, &SerializedData, &ChildOf), With<NeedsLoaded>>,
 ) {
     let mut hm = HashMap::new();
 
     for (ent, sd, parent) in q_needs_saved.iter() {
         if let Ok(shield) = sd.deserialize_data::<Shield>("cosmos:shield") {
-            hm.entry(parent.get()).or_insert(Vec::new()).push((ent, shield.block_coord));
+            hm.entry(parent.parent()).or_insert(Vec::new()).push((ent, shield.block_coord));
             commands.entity(ent).insert((shield, Name::new("Shield")));
 
             if let Ok(downtime) = sd.deserialize_data::<ShieldDowntime>("cosmos:shield_downtime") {

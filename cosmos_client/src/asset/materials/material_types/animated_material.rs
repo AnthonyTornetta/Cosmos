@@ -229,7 +229,7 @@ fn create_materials(
             ));
         }
 
-        event_writer.send(AssetsDoneLoadingEvent);
+        event_writer.write(AssetsDoneLoadingEvent);
     }
 }
 

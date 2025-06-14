@@ -147,7 +147,7 @@ fn toggle_map(
         return;
     };
 
-    if let Ok(galaxy_map_entity) = q_galaxy_map_display.get_single() {
+    if let Ok(galaxy_map_entity) = q_galaxy_map_display.single() {
         commands.entity(galaxy_map_entity).insert(NeedsDespawned);
         return;
     }
@@ -157,7 +157,7 @@ fn toggle_map(
         return;
     }
 
-    let Ok(player_loc) = q_player.get_single() else {
+    let Ok(player_loc) = q_player.single() else {
         return;
     };
 
@@ -325,8 +325,8 @@ fn toggle_map(
                 ));
             });
         });
-    nevw_system_map.send(RequestSystemMap { system: player_system });
-    nevw_galaxy_map.send(RequestGalaxyMap);
+    nevw_system_map.write(RequestSystemMap { system: player_system });
+    nevw_galaxy_map.write(RequestGalaxyMap);
 }
 
 fn update_waypoint_text(
@@ -338,7 +338,7 @@ fn update_waypoint_text(
         return;
     };
 
-    let waypoint_loc = q_waypoint.get_single();
+    let waypoint_loc = q_waypoint.single();
 
     let waypoint_text = waypoint_loc
         .map(|x| format!("{}, {}, {}", x.sector.x(), x.sector.y(), x.sector.z()))
@@ -354,7 +354,7 @@ fn update_waypoint_text(
 }
 
 fn update_sector_text(q_cam: Query<&MapCamera, Changed<MapCamera>>, mut q_text: Query<&mut Text, With<MapSelectedSectorText>>) {
-    let Ok(cam) = q_cam.get_single() else {
+    let Ok(cam) = q_cam.single() else {
         return;
     };
 
@@ -391,7 +391,7 @@ fn handle_waypoint_sector(
         return;
     };
 
-    let Ok(waypoint_loc) = q_waypoint.get_single() else {
+    let Ok(waypoint_loc) = q_waypoint.single() else {
         *text_vis = Visibility::Hidden;
         return;
     };
@@ -417,7 +417,7 @@ fn handle_selected_sector(
     time: Res<Time>,
     mut q_sector_text: Query<&mut Text, With<SelectedSectorText>>,
 ) {
-    let Ok(cam) = q_camera.get_single() else {
+    let Ok(cam) = q_camera.single() else {
         return;
     };
 
@@ -464,7 +464,7 @@ fn render_galaxy_map(
             continue;
         };
 
-        let Ok(player) = q_player_loc.get_single() else {
+        let Ok(player) = q_player_loc.single() else {
             return;
         };
 
@@ -681,7 +681,7 @@ fn camera_movement(
         }
 
         if input_handler.check_just_pressed(CosmosInputs::ResetMapPosition) {
-            let Ok(player_loc) = q_local_player.get_single() else {
+            let Ok(player_loc) = q_local_player.single() else {
                 continue;
             };
 
@@ -781,7 +781,7 @@ fn teleport_at(mut q_player: Query<&mut Location, With<LocalPlayer>>, inputs: In
         let Ok(mut loc) = q_player.get_single_mut() else {
             return;
         };
-        let Ok(cam) = q_camera.get_single() else {
+        let Ok(cam) = q_camera.single() else {
             return;
         };
         loc.sector = cam.sector;
@@ -791,7 +791,7 @@ fn teleport_at(mut q_player: Query<&mut Location, With<LocalPlayer>>, inputs: In
 #[derive(Component)]
 struct ScaleWithZoom;
 fn scale_with_zoom(mut q_scale_with_zoom: Query<&mut Transform, With<ScaleWithZoom>>, q_camera: Query<&MapCamera>) {
-    let Ok(cam) = q_camera.get_single() else {
+    let Ok(cam) = q_camera.single() else {
         return;
     };
 

@@ -118,7 +118,7 @@ const TOGGLED_REASON: &str = "cosmos:toggled_off";
 
 fn render_on_focus(
     hidden: Option<Res<FocusUiHidden>>,
-    mut q_cam: Query<(Entity, &mut Transform, &mut Camera, Option<&Parent>), With<FocusedCam>>,
+    mut q_cam: Query<(Entity, &mut Transform, &mut Camera, Option<&ChildOf>), With<FocusedCam>>,
     mut focused_ui: Query<&mut HiddenReasons, With<FocusedUi>>,
     q_local_player_trans: Query<&GlobalTransform, With<LocalPlayer>>,
     // TODO: Replace this With<Structure> check w/ a FocusCamDistance component read
@@ -138,7 +138,7 @@ fn render_on_focus(
     };
 
     let Some((focused_g_trans, focused_ent)) = q_focused
-        .get_single()
+        .single()
         .ok()
         .and_then(|indicating| q_g_trans.get(indicating.0).ok().map(|x| (x, indicating.0)))
     else {
@@ -150,7 +150,7 @@ fn render_on_focus(
         return;
     };
 
-    let Ok(player_g_trans) = q_local_player_trans.get_single() else {
+    let Ok(player_g_trans) = q_local_player_trans.single() else {
         return;
     };
 

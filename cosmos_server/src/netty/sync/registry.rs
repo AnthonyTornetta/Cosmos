@@ -43,7 +43,7 @@ fn listen_for_done_syncing(
 
             match msg {
                 RegistrySyncing::FinishedReceivingRegistries => {
-                    evw_finished_receiving_registries.send(ClientFinishedReceivingRegistriesEvent(client_id));
+                    evw_finished_receiving_registries.write(ClientFinishedReceivingRegistriesEvent(client_id));
                 }
             }
         }

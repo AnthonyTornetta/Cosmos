@@ -35,12 +35,12 @@ fn interact_with_block(
 
         if let Ok(_build_mode) = q_build_mode.get(ev.interactor) {
             // if build_mode.block == s_block {
-            exit_build_mode_writer.send(ExitBuildModeEvent {
+            exit_build_mode_writer.write(ExitBuildModeEvent {
                 player_entity: ev.interactor,
             });
             // }
         } else {
-            enter_build_mode_writer.send(EnterBuildModeEvent {
+            enter_build_mode_writer.write(EnterBuildModeEvent {
                 player_entity: ev.interactor,
                 structure_entity: s_block.structure(),
                 block: s_block,

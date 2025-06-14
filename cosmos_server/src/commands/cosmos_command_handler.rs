@@ -63,13 +63,13 @@ pub fn create_cosmos_command<T: CosmosCommandType, M>(command: ServerCommand, ap
         for ev in evr_command_sent.read() {
             if ev.name == unlocalized_name {
                 if T::requires_operator() && !ev.sender.is_operator(&q_operator) {
-                    ev.sender.send("This command requires operator permissions.", &mut evw_send_message);
+                    ev.sender.write("This command requires operator permissions.", &mut evw_send_message);
                     continue;
                 }
 
                 match T::from_input(ev) {
                     Ok(command) => {
-                        evw_command.send(CommandEvent {
+                        evw_command.write(CommandEvent {
                             name: ev.name.clone(),
                             text: ev.text.clone(),
                             args: ev.args.clone(),
@@ -78,7 +78,7 @@ pub fn create_cosmos_command<T: CosmosCommandType, M>(command: ServerCommand, ap
                         });
                     }
                     Err(e) => {
-                        ev.sender.send(format!("Command error: {e:?}"), &mut evw_send_message);
+                        ev.sender.write(format!("Command error: {e:?}"), &mut evw_send_message);
                         display_help(&ev.sender, &mut evw_send_message, Some(&ev.name), &commands);
                     }
                 }
@@ -149,8 +149,8 @@ fn display_help(
             command_name.into()
         };
         if let Some(info) = commands.from_id(&name) {
-            sender.send(format!("=== {} ===", info.display_name()), evw_send_message);
-            sender.send(
+            sender.write(format!("=== {} ===", info.display_name()), evw_send_message);
+            sender.write(
                 format!("\t{} {} \t {}", info.display_name(), info.usage, info.description),
                 evw_send_message,
             );
@@ -159,14 +159,14 @@ fn display_help(
         }
     }
 
-    sender.send("=== All Commands ===", evw_send_message);
+    sender.write("=== All Commands ===", evw_send_message);
     for command in commands.iter() {
-        sender.send(command.display_name().to_string(), evw_send_message);
+        sender.write(command.display_name().to_string(), evw_send_message);
         if !command.usage.is_empty() {
-            sender.send(format!("\t{}", command.usage), evw_send_message);
+            sender.write(format!("\t{}", command.usage), evw_send_message);
         }
         if !command.description.is_empty() {
-            sender.send(format!("\t{}", command.description), evw_send_message);
+            sender.write(format!("\t{}", command.description), evw_send_message);
         }
     }
 }
@@ -198,7 +198,7 @@ fn warn_on_no_command_hit(
     for ev in evr_command.read() {
         if !commands.contains(&ev.name) {
             ev.sender
-                .send(format!("{} is not a recognized command.", ev.name), &mut evw_send_message);
+                .write(format!("{} is not a recognized command.", ev.name), &mut evw_send_message);
             display_help(&ev.sender, &mut evw_send_message, None, &commands);
         }
     }
@@ -232,7 +232,7 @@ fn monitor_inputs(mut event_writer: EventWriter<CosmosCommandSent>, mut text: Re
 
     if !text.0.trim().is_empty() && text.0.ends_with('\n') {
         let cmd = CosmosCommandSent::new(text.0[0..text.0.len() - 1].to_owned(), CommandSender::Server);
-        event_writer.send(cmd);
+        event_writer.write(cmd);
 
         text.0.clear();
     }
@@ -263,7 +263,7 @@ fn command_receiver(
         };
 
         info!("Player `{}` ran command: `{}`", p.name(), client_command.command_text);
-        event_writer.send(CosmosCommandSent::new(
+        event_writer.write(CosmosCommandSent::new(
             client_command.command_text.clone(),
             CommandSender::Player(player),
         ));
@@ -281,7 +281,7 @@ fn send_messages(
         };
 
         info!("({}) {}", player.name(), ev.message);
-        evw_chat_event.send(
+        evw_chat_event.write(
             ServerSendChatMessageEvent {
                 sender: None,
                 message: ev.message.clone(),

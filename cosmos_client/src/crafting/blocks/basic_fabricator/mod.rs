@@ -36,7 +36,7 @@ fn open_menu(
         return;
     };
 
-    if let Ok(ent) = q_open_menu.get_single() {
+    if let Ok(ent) = q_open_menu.single() {
         commands.entity(ent).insert(NeedsDespawned);
     }
 

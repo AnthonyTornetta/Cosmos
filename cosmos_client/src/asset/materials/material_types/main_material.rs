@@ -118,7 +118,7 @@ fn create_materials(
             material_registry.register(MaterialDefinition::new("cosmos:transparent", None));
         }
 
-        event_writer.send(AssetsDoneLoadingEvent);
+        event_writer.write(AssetsDoneLoadingEvent);
     }
 }
 

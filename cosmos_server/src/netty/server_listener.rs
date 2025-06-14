@@ -118,7 +118,7 @@ fn server_listen_messages(
                         if let Ok(pilot) = pilot_query.get(player_entity) {
                             let ship = pilot.entity;
 
-                            ship_movement_event_writer.send(ShipSetMovementEvent { movement, ship });
+                            ship_movement_event_writer.write(ShipSetMovementEvent { movement, ship });
                         }
                     }
                     ClientUnreliableMessages::ShipActiveSystem(active_system) => {
@@ -154,7 +154,7 @@ fn server_listen_messages(
                     send_all_chunks.0.entry(server_entity).or_insert(vec![]).push(client_id);
                 }
                 ClientReliableMessages::SendSingleChunk { structure_entity, chunk } => {
-                    request_chunk_event_writer.send(RequestChunkEvent {
+                    request_chunk_event_writer.write(RequestChunkEvent {
                         requester_id: client_id,
                         structure_entity,
                         chunk_coords: chunk,
@@ -162,7 +162,7 @@ fn server_listen_messages(
                 }
                 ClientReliableMessages::BreakBlock { block } => {
                     if let Some(player_entity) = lobby.player_from_id(client_id) {
-                        break_block_event.send(BlockBreakEvent {
+                        break_block_event.write(BlockBreakEvent {
                             breaker: player_entity,
                             block,
                         });
@@ -175,7 +175,7 @@ fn server_listen_messages(
                     inventory_slot,
                 } => {
                     if let Some(player_entity) = lobby.player_from_id(client_id) {
-                        place_block_event.send(
+                        place_block_event.write(
                             BlockPlaceEvent::Event(BlockPlaceEventData {
                                 structure_block: block,
                                 block_id,
@@ -192,7 +192,7 @@ fn server_listen_messages(
                     block_including_fluids,
                     alternate,
                 } => {
-                    block_interact_event.send(BlockInteractEvent {
+                    block_interact_event.write(BlockInteractEvent {
                         block,
                         block_including_fluids,
                         interactor: lobby.player_from_id(client_id).unwrap(),
@@ -230,7 +230,7 @@ fn server_listen_messages(
 
                         info!("Creating ship {name}");
 
-                        create_ship_event_writer.send(CreateShipEvent { ship_location, rotation });
+                        create_ship_event_writer.write(CreateShipEvent { ship_location, rotation });
                     } else {
                         warn!("Invalid player entity - {client:?}");
                     }
@@ -266,7 +266,7 @@ fn server_listen_messages(
 
                         info!("Creating ship {name}");
 
-                        create_station_event_writer.send(CreateStationEvent {
+                        create_station_event_writer.write(CreateStationEvent {
                             station_location,
                             rotation,
                         });
@@ -290,7 +290,7 @@ fn server_listen_messages(
                 ClientReliableMessages::StopPiloting => {
                     if let Some(player_entity) = lobby.player_from_id(client_id)
                         && let Ok(piloting) = pilot_query.get(player_entity) {
-                            pilot_change_event_writer.send(ChangePilotEvent {
+                            pilot_change_event_writer.write(ChangePilotEvent {
                                 structure_entity: piloting.entity,
                                 pilot_entity: None,
                             });
@@ -325,7 +325,7 @@ fn server_listen_messages(
                 }
                 ClientReliableMessages::ExitBuildMode => {
                     if let Some(player_entity) = lobby.player_from_id(client_id) {
-                        exit_build_mode_writer.send(ExitBuildModeEvent { player_entity });
+                        exit_build_mode_writer.write(ExitBuildModeEvent { player_entity });
                     }
                 }
                 ClientReliableMessages::SetSymmetry { axis, coordinate } => {

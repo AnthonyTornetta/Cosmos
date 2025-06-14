@@ -69,7 +69,7 @@ pub(crate) enum SaveFileIdentifierType {
     Base(EntityId, Option<Sector>, Option<u32>),
     /// Denotes that this entity is a "child" of the parent, but is not "owned" by the parent.
     ///
-    /// (Parent SaveFileIdentifier, this entity id)
+    /// (ChildOf SaveFileIdentifier, this entity id)
     SubEntity(Box<SaveFileIdentifier>, EntityId),
     /// Denotes that this entity belongs to another entity, and should be saved
     /// in that entity's folder. Once this entity is saved, the [`SaveFileIdentifierType`] component will be removed.

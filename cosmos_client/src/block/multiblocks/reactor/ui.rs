@@ -56,7 +56,7 @@ fn create_ui(
             continue;
         };
 
-        let Ok(lp) = q_inventory.get_single() else {
+        let Ok(lp) = q_inventory.single() else {
             error!("No block inventory data!");
             continue;
         };
@@ -221,7 +221,7 @@ fn on_click_toggle(
             continue;
         };
 
-        nevw.send(ClientRequestChangeReactorStatus { active, block: mapped_sb });
+        nevw.write(ClientRequestChangeReactorStatus { active, block: mapped_sb });
     }
 }
 

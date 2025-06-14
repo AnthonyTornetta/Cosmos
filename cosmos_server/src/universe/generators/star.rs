@@ -123,7 +123,7 @@ fn generate_stars(
     for ev in evr_generate_system.read() {
         let system = ev.system;
 
-        let Ok(galaxy) = q_galaxy.get_single() else {
+        let Ok(galaxy) = q_galaxy.single() else {
             continue;
         };
 

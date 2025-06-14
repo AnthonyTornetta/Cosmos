@@ -77,7 +77,7 @@ fn check_needs_loaded(
         // TODO: for debug only
         // if q_sfis.iter().take(i).any(|(e, sfi)| *e != ent && *sfi == save_file_identifier) {
         //     error!("Duplicate save file trying to be loaded - {ent:?} - {save_file_identifier:?}. Despawning duplucate.");
-        //     commands.entity(ent).despawn_recursive();
+        //     commands.entity(ent).despawn();
         // }
 
         let path = save_file_identifier.get_save_file_path();

@@ -86,7 +86,7 @@ fn notify_when_done_generating(
                 for res in itr {
                     // This will always be true because include_empty is false
                     if let ChunkIteratorResult::FilledChunk { position, chunk: _ } = res {
-                        chunk_init_event_writer.send(ChunkInitEvent {
+                        chunk_init_event_writer.write(ChunkInitEvent {
                             structure_entity: generating.structure_entity,
                             coords: position,
                             serialized_block_data: None,
@@ -121,7 +121,7 @@ fn send_events(
     asteroids.sort_unstable_by(|(_, t1), (_, t2)| t1.partial_cmp(t2).unwrap());
 
     for (needs_generated, _) in asteroids.into_iter().take(MAX_GENERATING_ASTEROIDS) {
-        ev_writer.send(GenerateAsteroidEvent(needs_generated));
+        ev_writer.write(GenerateAsteroidEvent(needs_generated));
 
         commands
             .entity(needs_generated)

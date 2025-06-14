@@ -15,7 +15,7 @@ use cosmos_core::{
 use crate::{
     asset::asset_loader::load_assets,
     audio::{AudioEmission, CosmosAudioEmitter, DespawnOnNoEmissions},
-    structure::ship::PlayerParentChangingSet,
+    structure::ship::PlayerChildOfChangingSet,
 };
 
 #[derive(Component)]
@@ -94,7 +94,7 @@ fn respond_to_explosion(
     mut particles: ResMut<ParticleEffectsForColor>,
     mut effects: ResMut<Assets<EffectAsset>>,
 ) {
-    let Ok(local_g_trans) = q_local_player.get_single() else {
+    let Ok(local_g_trans) = q_local_player.single() else {
         return;
     };
 
@@ -258,7 +258,7 @@ pub(super) fn register(app: &mut App) {
         respond_to_explosion
             // .chain()
             .in_set(ExplosionSystemSet::ProcessExplosions)
-            .ambiguous_with(PlayerParentChangingSet::ChangeParent)
+            .ambiguous_with(PlayerChildOfChangingSet::ChangeChildOf)
             .run_if(in_state(GameState::Playing)),
     )
     .add_systems(

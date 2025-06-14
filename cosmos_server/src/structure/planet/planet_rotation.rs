@@ -8,7 +8,7 @@ use std::{f32::consts::TAU, time::Duration};
 use bevy::{
     app::FixedUpdate,
     math::{Dir3, Quat, Vec3},
-    prelude::{App, Commands, Component, Entity, IntoSystemConfigs, Parent, Query, Res, Transform, With, Without},
+    prelude::{App, Commands, Component, Entity, IntoSystemConfigs, ChildOf, Query, Res, Transform, With, Without},
     reflect::Reflect,
     time::Time,
 };
@@ -58,7 +58,7 @@ fn within_rotation_range(planet: &Structure, planet_loc: &Location, your_loc: &L
 // chagne this update that too.
 fn rotate_planets(
     mut q_planets: Query<(&PlanetRotation, &mut Transform, &Location, &Structure), With<Planet>>,
-    mut q_everything_else: Query<(&mut Transform, &mut Location), (Without<Parent>, Without<Planet>)>,
+    mut q_everything_else: Query<(&mut Transform, &mut Location), (Without<ChildOf>, Without<Planet>)>,
     time: Res<Time>,
 ) {
     for (planet_rotation, mut transform, planet_loc, structure) in q_planets.iter_mut() {

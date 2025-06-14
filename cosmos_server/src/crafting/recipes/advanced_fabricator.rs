@@ -106,7 +106,7 @@ fn sync_recipes_on_join(
     mut nevw_sync_recipes: NettyEventWriter<SyncAdvancedFabricatorRecipesEvent>,
 ) {
     for ev in evr_loaded_registries.read() {
-        nevw_sync_recipes.send(SyncAdvancedFabricatorRecipesEvent(recipes.clone()), ev.0);
+        nevw_sync_recipes.write(SyncAdvancedFabricatorRecipesEvent(recipes.clone()), ev.0);
     }
 }
 

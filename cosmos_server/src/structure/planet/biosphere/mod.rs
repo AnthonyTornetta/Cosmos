@@ -239,7 +239,7 @@ fn add_biosphere(
 
         commands.entity(entity).insert(BiosphereMarker::new(biosphere.unlocalized_name()));
 
-        event_writer.send(NeedsBiosphereEvent {
+        event_writer.write(NeedsBiosphereEvent {
             biosphere_id: biosphere.unlocalized_name().to_owned(),
             entity,
         });

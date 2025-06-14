@@ -50,18 +50,18 @@ fn on_change_looking_at(
     q_structure: Query<&Structure>,
     mut evw_generate_tooltip: EventWriter<GenerateLookingAtTooltipEvent>,
 ) {
-    let Ok(looking_at) = q_looking_at.get_single() else {
+    let Ok(looking_at) = q_looking_at.single() else {
         return;
     };
 
     let Some(block) = looking_at.looking_at_block else {
-        if let Ok(tooltip_ent) = q_tooltip.get_single() {
+        if let Ok(tooltip_ent) = q_tooltip.single() {
             commands.entity(tooltip_ent).insert(NeedsDespawned);
         }
         return;
     };
 
-    let mut ecmds = if let Ok(tooltip_ent) = q_tooltip.get_single() {
+    let mut ecmds = if let Ok(tooltip_ent) = q_tooltip.single() {
         commands.entity(tooltip_ent)
     } else {
         commands.spawn_empty()
@@ -90,7 +90,7 @@ fn on_change_looking_at(
         .despawn_descendants()
         .id();
 
-    evw_generate_tooltip.send(GenerateLookingAtTooltipEvent {
+    evw_generate_tooltip.write(GenerateLookingAtTooltipEvent {
         looking_at: block.block,
         tooltip_entity: ent,
         block_id,

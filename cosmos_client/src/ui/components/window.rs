@@ -214,7 +214,7 @@ fn move_window(
 ) {
     for (interaction, title_bar) in &q_title_bar {
         if *interaction == Interaction::Pressed {
-            let Ok(window) = q_window.get_single() else {
+            let Ok(window) = q_window.single() else {
                 return;
             };
 

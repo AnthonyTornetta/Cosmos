@@ -293,7 +293,7 @@ fn on_render_tanks(
                 .set_parent(ev.mesh_entity_parent)
                 .id();
 
-            evw_add_material.send(AddMaterialEvent {
+            evw_add_material.write(AddMaterialEvent {
                 entity,
                 add_material_id: mat_id,
                 texture_dimensions_index,

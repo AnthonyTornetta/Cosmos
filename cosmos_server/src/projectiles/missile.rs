@@ -4,7 +4,7 @@ use std::time::Duration;
 
 use bevy::{
     ecs::{component::Component, event::EventReader, schedule::IntoSystemConfigs},
-    hierarchy::Parent,
+    hierarchy::ChildOf,
     math::Vec3,
     prelude::{App, Commands, Entity, Query, Res, Update, With},
     time::Time,
@@ -94,7 +94,7 @@ fn apply_missile_thrust(mut commands: Commands, time: Res<Time>, q_missiles: Que
 fn respond_to_collisions(
     mut ev_reader: EventReader<CollisionEvent>,
     q_missile: Query<(&Location, &Velocity, &Missile, Option<&Causer>, &CollisionBlacklist)>,
-    q_parent: Query<&Parent>,
+    q_parent: Query<&ChildOf>,
     mut commands: Commands,
 ) {
     for ev in ev_reader.read() {

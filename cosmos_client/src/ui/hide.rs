@@ -64,7 +64,7 @@ fn on_hide_ui(
         (&mut Visibility, Option<&mut HiddenReasons>),
         (
             With<Node>,
-            Or<(Without<Parent>, With<HidableUiElement>)>,
+            Or<(Without<ChildOf>, With<HidableUiElement>)>,
             Without<DontHideOnToggleUi>,
             Without<OpenMenu>,
         ),

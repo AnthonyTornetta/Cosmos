@@ -85,7 +85,7 @@ fn create_main_menu(mut commands: Commands, default_font: Res<DefaultFont>, q_ui
         ..Default::default()
     };
 
-    let Ok(main_menu_root) = q_ui_root.get_single() else {
+    let Ok(main_menu_root) = q_ui_root.single() else {
         warn!("No main menu UI root.");
         return;
     };
@@ -333,7 +333,7 @@ fn trigger_connection(
 }
 
 fn quit_game(mut evw_app_exit: EventWriter<AppExit>) {
-    evw_app_exit.send(AppExit::Success);
+    evw_app_exit.write(AppExit::Success);
 }
 
 #[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]

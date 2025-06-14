@@ -368,7 +368,7 @@ fn add_dock_properties(
     mut commands: Commands,
 ) {
     for removed_dock_ent in removed_docks_reader.read() {
-        if let Some(mut ecmds) = commands.get_entity(removed_dock_ent) {
+        if let Ok(mut ecmds) = commands.get_entity(removed_dock_ent) {
             ecmds.remove::<ImpulseJoint>();
         }
 

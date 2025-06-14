@@ -69,7 +69,7 @@ fn create_settings_screen(
     default_font: Res<DefaultFont>,
     controls: Res<CosmosInputHandler>,
 ) {
-    let Ok(main_menu_root) = q_ui_root.get_single() else {
+    let Ok(main_menu_root) = q_ui_root.single() else {
         return;
     };
 

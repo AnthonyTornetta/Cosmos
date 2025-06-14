@@ -12,7 +12,7 @@ bevy_rapier3d = { git = "https://github.com/AnthonyTornetta/bevy_rapier", versio
     "serde-serialize",
 ] }
 
-bevy_easy_compute = { git = "https://github.com/AnthonyTornetta/bevy_easy_compute", branch = "no-build-worker", version = "0.16" }
+bevy_app_compute = { git = "https://github.com/AnthonyTornetta/bevy_app_compute", branch = "no-build-worker", version = "0.16" }
 
 renet = { git="https://github.com/lucaspoffo/renet/", version = "1.0.0" }
 serde = "1.0"

@@ -128,7 +128,7 @@ fn run_spacial_audio(
     mut audio_instances: ResMut<Assets<AudioInstance>>,
     master_volume: Res<MasterVolume>,
 ) {
-    let Ok(receiver_transform) = receiver.get_single() else {
+    let Ok(receiver_transform) = receiver.single() else {
         return;
     };
 
@@ -234,7 +234,7 @@ fn cleanup_stopped_spacial_instances(
         });
 
         if handles.is_empty() && despawn_when_empty.is_some() {
-            commands.entity(entity).despawn_recursive();
+            commands.entity(entity).despawn();
         }
     }
 }

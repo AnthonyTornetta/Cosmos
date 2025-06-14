@@ -5,9 +5,8 @@ use bevy::{
     math::primitives::Cuboid,
     pbr::{MeshMaterial3d, NotShadowCaster, NotShadowReceiver},
     prelude::{
-        Added, App, AssetServer, Assets, BuildChildren, Changed, ChildBuild, Commands, Component, DespawnRecursiveExt, Entity,
-        IntoSystemConfigs, Mesh, Mesh3d, Name, Parent, Query, RemovedComponents, Res, ResMut, Transform, Update, Vec3, With, Without,
-        in_state,
+        Added, App, AssetServer, Assets, BuildChildren, Changed, ChildBuild, ChildOf, Commands, Component, DespawnRecursiveExt, Entity,
+        IntoSystemConfigs, Mesh, Mesh3d, Name, Query, RemovedComponents, Res, ResMut, Transform, Update, Vec3, With, Without, in_state,
     },
     time::Time,
 };
@@ -117,7 +116,7 @@ fn place_symmetries(
     input_handler: InputChecker,
     query: Query<&LookingAt, (With<LocalPlayer>, With<BuildMode>)>,
 ) {
-    let Ok(looking_at) = query.get_single() else {
+    let Ok(looking_at) = query.single() else {
         return;
     };
 
@@ -165,7 +164,7 @@ fn place_symmetries(
 }
 
 fn clear_visuals(
-    parent_query: Query<&Parent>,
+    parent_query: Query<&ChildOf>,
     visuals_query: Query<&SymmetryVisuals>,
     mut removed_build_mode: RemovedComponents<BuildMode>,
     q_local_player: Query<(), With<LocalPlayer>>,
@@ -179,7 +178,7 @@ fn clear_visuals(
         let Ok(parent) = parent_query.get(entity).map(|p| p.get()) else {
             continue;
         };
-        let Some(mut ecmds) = commands.get_entity(parent) else {
+        let Ok(mut ecmds) = commands.get_entity(parent) else {
             continue;
         };
 
@@ -187,13 +186,13 @@ fn clear_visuals(
 
         if let Ok(sym_visuals) = visuals_query.get(parent) {
             if let Some(ent) = sym_visuals.0 {
-                commands.entity(ent).despawn_recursive();
+                commands.entity(ent).despawn();
             }
             if let Some(ent) = sym_visuals.1 {
-                commands.entity(ent).despawn_recursive();
+                commands.entity(ent).despawn();
             }
             if let Some(ent) = sym_visuals.2 {
-                commands.entity(ent).despawn_recursive();
+                commands.entity(ent).despawn();
             }
         }
     }
@@ -201,17 +200,17 @@ fn clear_visuals(
 
 fn change_visuals(
     mut commands: Commands,
-    query: Query<(&BuildMode, &Parent), (With<LocalPlayer>, Changed<BuildMode>)>,
+    query: Query<(&BuildMode, &ChildOf), (With<LocalPlayer>, Changed<BuildMode>)>,
     structure_query: Query<&Structure>,
     visuals: Query<&SymmetryVisuals>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<UnlitRepeatedMaterial>>,
     asset_server: Res<AssetServer>,
 ) {
-    let Ok((build_mode, parent)) = query.get_single() else {
+    let Ok((build_mode, parent)) = query.single() else {
         return;
     };
-    let structure_entity = parent.get();
+    let structure_entity = parent.parent();
     let Ok(structure) = structure_query.get(structure_entity) else {
         return;
     };
@@ -219,15 +218,15 @@ fn change_visuals(
     let mut visuals = visuals.get(structure_entity).copied().unwrap_or_default();
 
     if let Some(ent) = visuals.0 {
-        commands.entity(ent).despawn_recursive();
+        commands.entity(ent).despawn();
         visuals.0 = None;
     }
     if let Some(ent) = visuals.1 {
-        commands.entity(ent).despawn_recursive();
+        commands.entity(ent).despawn();
         visuals.1 = None;
     }
     if let Some(ent) = visuals.2 {
-        commands.entity(ent).despawn_recursive();
+        commands.entity(ent).despawn();
         visuals.2 = None;
     }
 

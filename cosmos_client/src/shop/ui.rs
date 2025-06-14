@@ -242,11 +242,11 @@ fn render_shop_ui(
     player_credits: Query<(Entity, &Credits), With<LocalPlayer>>,
     default_font: Res<DefaultFont>,
 ) {
-    let Ok((shop_ui, ui_ent)) = q_shop_ui.get_single() else {
+    let Ok((shop_ui, ui_ent)) = q_shop_ui.single() else {
         return;
     };
 
-    let Ok((player_entity, credits)) = player_credits.get_single() else {
+    let Ok((player_entity, credits)) = player_credits.single() else {
         error!("Missing credits on player?");
         return;
     };
@@ -819,7 +819,7 @@ fn click_item_event(
             shop_ui.selected_item = Some(SelectedItem { entry: *entry });
         }
 
-        if let Ok(rendered_item) = q_rendered_item.get_single() {
+        if let Ok(rendered_item) = q_rendered_item.single() {
             let item_id = match entry {
                 ShopEntry::Buying {
                     item_id,
@@ -861,7 +861,7 @@ fn on_change_selected_item(
             continue;
         };
 
-        let Ok((credits, inventory)) = q_player.get_single() else {
+        let Ok((credits, inventory)) = q_player.single() else {
             continue;
         };
 
@@ -925,7 +925,7 @@ fn update_total(
     mut q_changed_amount_selected: Query<(&AmountSelected, &PricePerUnit, &ShopMode, &mut NetCredits), Changed<AmountSelected>>,
 ) {
     for (amount_selected, price_per_unit, shop_mode, mut net_credits) in q_changed_amount_selected.iter_mut() {
-        let Ok(credits) = q_credits.get_single() else {
+        let Ok(credits) = q_credits.single() else {
             continue;
         };
 

@@ -3,7 +3,7 @@
 use bevy::{
     ecs::event::EventReader,
     prelude::{
-        App, BuildChildrenTransformExt, Commands, Entity, IntoSystemConfigs, Parent, Query, ResMut, SystemSet, Transform, Update, With,
+        App, BuildChildrenTransformExt, Commands, Entity, IntoSystemConfigs, ChildOf, Query, ResMut, SystemSet, Transform, Update, With,
         Without, in_state,
     },
 };
@@ -30,7 +30,7 @@ pub mod ui;
 
 fn respond_to_collisions(
     mut ev_reader: EventReader<CollisionEvent>,
-    parent_query: Query<&Parent>,
+    parent_query: Query<&ChildOf>,
     is_local_player: Query<(), (With<LocalPlayer>, Without<Pilot>)>,
     is_planet: Query<(), With<Planet>>,
     mut commands: Commands,
@@ -59,13 +59,13 @@ fn respond_to_collisions(
             continue;
         };
 
-        if !is_planet.contains(hit_parent.get()) {
+        if !is_planet.contains(hit_parent.parent()) {
             continue;
         }
 
         // At this point we have verified they hit a structure, now see if they are already a child
         // of that structure.
-        let structure_hit_entity = hit_parent.get();
+        let structure_hit_entity = hit_parent.parent();
 
         let hitting_current_parent = parent_query.get(player_entity).is_ok_and(|p| p.get() == structure_hit_entity);
 
@@ -94,33 +94,34 @@ fn respond_to_collisions(
 }
 
 fn remove_parent_when_too_far(
-    query: Query<(Entity, &Parent, &Transform), (With<LocalPlayer>, Without<Structure>, Without<BuildMode>)>,
+    query: Query<(Entity, &ChildOf, &Transform), (With<LocalPlayer>, Without<Structure>, Without<BuildMode>)>,
     q_structure: Query<&Structure>,
     mut commands: Commands,
     mut renet_client: ResMut<RenetClient>,
 ) {
-    if let Ok((player_entity, parent, player_loc)) = query.get_single()
-        && let Ok(structure) = q_structure.get(parent.get()) {
-            if !matches!(structure, Structure::Full(_)) {
-                return;
-            }
-
-            if player_loc.translation.length() >= CHUNK_DIMENSIONSF * 10.0 {
-                commands.entity(player_entity).remove_parent_in_place();
-
-                renet_client.send_message(
-                    NettyChannelClient::Reliable,
-                    cosmos_encoder::serialize(&ClientReliableMessages::LeaveShip),
-                );
-            }
+    if let Ok((player_entity, parent, player_loc)) = query.single()
+        && let Ok(structure) = q_structure.get(parent.parent())
+    {
+        if !matches!(structure, Structure::Full(_)) {
+            return;
         }
+
+        if player_loc.translation.length() >= CHUNK_DIMENSIONSF * 10.0 {
+            commands.entity(player_entity).remove_parent_in_place();
+
+            renet_client.send_message(
+                NettyChannelClient::Reliable,
+                cosmos_encoder::serialize(&ClientReliableMessages::LeaveShip),
+            );
+        }
+    }
 }
 
 #[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
 /// When the player's parent is changing, it should be done in this set
-pub enum PlayerParentChangingSet {
+pub enum PlayerChildOfChangingSet {
     /// When the player's parent is changing, it should be done in this set
-    ChangeParent,
+    ChangeChildOf,
 }
 
 pub(super) fn register(app: &mut App) {
@@ -130,7 +131,7 @@ pub(super) fn register(app: &mut App) {
     pilot::register(app);
     ui::register(app);
 
-    app.configure_sets(Update, PlayerParentChangingSet::ChangeParent);
+    app.configure_sets(Update, PlayerChildOfChangingSet::ChangeChildOf);
 
     app.add_systems(
         Update,
@@ -141,7 +142,7 @@ pub(super) fn register(app: &mut App) {
             .chain()
             .in_set(NetworkingSystemsSet::Between)
             .after(StructureLoadingSet::StructureLoaded)
-            .in_set(PlayerParentChangingSet::ChangeParent)
+            .in_set(PlayerChildOfChangingSet::ChangeChildOf)
             .run_if(in_state(GameState::Playing)),
     );
 }

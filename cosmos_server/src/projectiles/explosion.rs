@@ -137,7 +137,7 @@ fn respond_to_explosion(
 
         for &hit in ents.iter() {
             let Ok((structure_g_trans, structure_loc, mut structure)) = q_structure.get_mut(hit) else {
-                ev_writer_explosion_hit.send(ExplosionHitEvent {
+                ev_writer_explosion_hit.write(ExplosionHitEvent {
                     explosion,
                     explosion_location: explosion_loc,
                     hit_entity: hit,

@@ -50,7 +50,7 @@ fn generate_needed_loot_tables(
         for block in loot_blocks {
             s.set_block_at(block, storage_block, Default::default(), &blocks, Some(&mut evw_block_changed));
 
-            evw_populate_inventories.send(PopulateLootInventoriesEventCarryOver(PopulateLootInventoriesEvent(
+            evw_populate_inventories.write(PopulateLootInventoriesEventCarryOver(PopulateLootInventoriesEvent(
                 StructureBlock::new(block, ent),
                 needs_gened.loot_classification,
             )));
@@ -62,7 +62,7 @@ fn send_carryover_events(
     mut evr_carry_over: EventReader<PopulateLootInventoriesEventCarryOver>,
     mut evw_events: EventWriter<PopulateLootInventoriesEvent>,
 ) {
-    evw_events.send_batch(evr_carry_over.read().map(|x| x.0));
+    evw_events.write_batch(evr_carry_over.read().map(|x| x.0));
 }
 
 fn populate_loot_table_inventories(

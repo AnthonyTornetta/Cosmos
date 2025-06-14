@@ -14,7 +14,7 @@ use bevy::{
     },
     hierarchy::{BuildChildren, Children},
     log::error,
-    prelude::{Changed, ChildBuild, Parent, Without},
+    prelude::{Changed, ChildBuild, ChildOf, Without},
     reflect::Reflect,
     text::TextFont,
     ui::{AlignItems, BackgroundColor, Display, FlexDirection, JustifyContent, Node, Val},
@@ -100,10 +100,7 @@ fn add_tab_view(
 
         let mut window_body = None;
 
-        let tabs = children
-            .iter()
-            .flat_map(|x| q_tab.get(*x).map(|y| (*x, y)))
-            .collect::<Vec<_>>();
+        let tabs = children.iter().flat_map(|x| q_tab.get(*x).map(|y| (*x, y))).collect::<Vec<_>>();
 
         commands.entity(ent).with_children(|parent| {
             parent
@@ -237,7 +234,7 @@ fn on_change_selected(
 }
 
 fn on_click_tab(
-    q_parent: Query<&Parent>,
+    q_parent: Query<&ChildOf>,
     q_tab: Query<&Tab>,
     mut q_selected_tab: Query<&mut SelectedTab>,
     mut evr_tab_clicked: EventReader<ClickTabEvent>,

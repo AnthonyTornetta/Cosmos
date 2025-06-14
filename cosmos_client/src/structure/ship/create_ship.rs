@@ -37,7 +37,7 @@ fn listener(
     mut event_writer: EventWriter<CreateShipEvent>,
 ) {
     // Don't create ships while in build mode
-    let Ok(inventory) = q_inventory.get_single() else {
+    let Ok(inventory) = q_inventory.single() else {
         return;
     };
 
@@ -49,7 +49,7 @@ fn listener(
 
         if inventory.can_take_item(ship_core, 1) {
             info!("Sending create ship event!");
-            event_writer.send(CreateShipEvent { name: "Cool name".into() });
+            event_writer.write(CreateShipEvent { name: "Cool name".into() });
         } else {
             info!("Does not have ship core");
         }

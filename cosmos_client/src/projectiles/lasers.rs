@@ -104,14 +104,14 @@ fn lasers_netty(
                     continue;
                 };
 
-                ev_writer_laser_cannon_fired.send(LaserCannonSystemFiredEvent(ship_entity));
+                ev_writer_laser_cannon_fired.write(LaserCannonSystemFiredEvent(ship_entity));
             }
             ServerStructureSystemMessages::MissileLauncherSystemFired { ship_entity } => {
                 let Some(ship_entity) = network_mapping.client_from_server(&ship_entity) else {
                     continue;
                 };
 
-                ev_writer_missile_launcher_fired.send(MissileLauncherSystemFiredEvent(ship_entity));
+                ev_writer_missile_launcher_fired.write(MissileLauncherSystemFiredEvent(ship_entity));
             }
             ServerStructureSystemMessages::ShieldHit {
                 shield_entity,

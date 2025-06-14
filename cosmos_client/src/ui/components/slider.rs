@@ -211,7 +211,7 @@ fn on_interact_slider(
 ) {
     for (interaction, slider, mut slider_value, node, g_trans, progress_entities) in q_sliders.iter_mut() {
         if *interaction == Interaction::Pressed {
-            let Ok(window) = q_windows.get_single() else {
+            let Ok(window) = q_windows.single() else {
                 continue;
             };
 

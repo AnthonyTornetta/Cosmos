@@ -53,7 +53,7 @@ fn monitor_advanced_fabricator_interactions(
             continue;
         };
 
-        nevw_open_adv_fabricator.send(OpenAdvancedFabricatorEvent(block), player.client_id());
+        nevw_open_adv_fabricator.write(OpenAdvancedFabricatorEvent(block), player.client_id());
     }
 }
 

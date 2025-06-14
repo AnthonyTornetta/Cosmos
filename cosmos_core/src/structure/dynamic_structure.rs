@@ -120,7 +120,7 @@ impl DynamicStructure {
                 let Some(self_entity) = self.base_structure.self_entity else {
                     return;
                 };
-                event_writer.send(BlockChangedEvent {
+                event_writer.write(BlockChangedEvent {
                     new_block: block.id(),
                     old_block,
                     block: StructureBlock::new(coords, self_entity),
@@ -179,7 +179,7 @@ impl DynamicStructure {
         if send_event
             && let Some(self_entity) = self.get_entity()
                 && let Some(event_writer) = event_writer {
-                    event_writer.send(BlockChangedEvent {
+                    event_writer.write(BlockChangedEvent {
                         new_block: block.id(),
                         old_block,
                         block: StructureBlock::new(coords, self_entity),
@@ -349,7 +349,7 @@ impl DynamicStructure {
 
         if let Some(entity) = self.base_structure.chunk_entities.remove(&index) {
             if let Some(event_writer) = event_writer {
-                event_writer.send(ChunkUnloadEvent {
+                event_writer.write(ChunkUnloadEvent {
                     chunk_entity: entity,
                     coords,
                     structure_entity: self.get_entity().expect("A structure should have an entity at this point"),

@@ -57,7 +57,7 @@ impl CommandSender {
     pub fn send(&self, message: impl Into<String>, evw_send_message: &mut EventWriter<SendCommandMessageEvent>) {
         match self {
             Self::Player(e) => {
-                evw_send_message.send(SendCommandMessageEvent {
+                evw_send_message.write(SendCommandMessageEvent {
                     message: message.into(),
                     to: *e,
                 });

@@ -34,7 +34,7 @@ fn sync(
                 match owner {
                     InventoryIdentifier::Entity(owner) => {
                         if let Some(client_entity) = network_mapping.client_from_server(&owner) {
-                            if let Some(mut ecmds) = commands.get_entity(client_entity) {
+                            if let Ok(mut ecmds) = commands.get_entity(client_entity) {
                                 ecmds.insert(InventoryNeedsDisplayed::default());
                             }
                         } else {

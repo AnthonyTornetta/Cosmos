@@ -25,7 +25,7 @@ fn create_credits_node(
     asset_server: Res<AssetServer>,
     local_player: Query<(Entity, &Credits), (Added<Credits>, With<LocalPlayer>)>,
 ) {
-    let Ok((local_player, credits)) = local_player.get_single() else {
+    let Ok((local_player, credits)) = local_player.single() else {
         return;
     };
 

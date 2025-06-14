@@ -1,12 +1,4 @@
-use bevy::{
-    app::{App, Update},
-    ecs::{
-        event::{EventId, SendBatchIds},
-        system::SystemParam,
-    },
-    log::{error, warn},
-    prelude::{Condition, Event, EventReader, EventWriter, IntoSystemConfigs, Res, ResMut, in_state, resource_exists},
-};
+use bevy::{ecs::system::SystemParam, prelude::*};
 use renet::RenetClient;
 
 use crate::{
@@ -54,7 +46,7 @@ impl<E: NettyEvent> NettyEventWriter<'_, E> {
     ///
     /// See [`Events`] for details.
     pub fn send(&mut self, event: E) -> EventId<NettyEventToSend<E>> {
-        self.ev_writer.send(NettyEventToSend(event))
+        self.ev_writer.write(NettyEventToSend(event))
     }
 
     /// Sends a list of `events` all at once, which can later be read by [`EventReader`]s.
@@ -63,7 +55,7 @@ impl<E: NettyEvent> NettyEventWriter<'_, E> {
     ///
     /// See [`Events`] for details.
     pub fn send_batch(&mut self, events: impl IntoIterator<Item = E>) -> SendBatchIds<NettyEventToSend<E>> {
-        self.ev_writer.send_batch(events.into_iter().map(|x| NettyEventToSend(x)))
+        self.ev_writer.write_batch(events.into_iter().map(|x| NettyEventToSend(x)))
     }
 
     /// Sends the default value of the event. Useful when the event is an empty struct.
@@ -130,7 +122,7 @@ fn receive_events(mut client: ResMut<RenetClient>, mut evw_got_event: EventWrite
 
         match msg {
             NettyEventMessage::SendNettyEvent { component_id, raw_data } => {
-                evw_got_event.send(GotNetworkEvent { component_id, raw_data });
+                evw_got_event.write(GotNetworkEvent { component_id, raw_data });
             }
         }
     }
@@ -167,7 +159,7 @@ fn parse_event<T: NettyEvent>(
             event
         };
 
-        evw_custom_event.send(event);
+        evw_custom_event.write(event);
     }
 }
 

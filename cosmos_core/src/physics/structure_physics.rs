@@ -16,17 +16,10 @@ use crate::structure::coordinates::{ChunkBlockCoordinate, ChunkCoordinate, Coord
 use crate::structure::events::ChunkSetEvent;
 use crate::structure::loading::StructureLoadingSet;
 use crate::structure::{ChunkNeighbors, Structure};
-use bevy::app::PreUpdate;
-use bevy::ecs::schedule::{IntoSystemSetConfigs, SystemSet};
-use bevy::math::{Quat, Vec3};
-use bevy::prelude::{
-    Added, App, BuildChildren, Commands, Component, Deref, DerefMut, DespawnRecursiveExt, Entity, Event, EventReader, EventWriter,
-    IntoSystemConfigs, Query, Res, ResMut, Resource, Transform, resource_exists,
-};
-use bevy::reflect::Reflect;
+use bevy::platform::collections::HashSet;
+use bevy::prelude::*;
 use bevy::tasks::futures_lite::future;
 use bevy::tasks::{AsyncComputeTaskPool, Task};
-use bevy::utils::HashSet;
 use bevy_rapier3d::geometry::{CollisionGroups, Group};
 use bevy_rapier3d::math::Vect;
 use bevy_rapier3d::plugin::RapierContextEntityLink;
@@ -486,7 +479,7 @@ fn read_physics_task(
 
         let mut first = true;
 
-        if let Some(mut chunk_entity_commands) = commands.get_entity(chunk_entity) {
+        if let Ok(mut chunk_entity_commands) = commands.get_entity(chunk_entity) {
             chunk_entity_commands.remove::<(Collider, Sensor, Group)>();
         }
 
@@ -494,7 +487,7 @@ fn read_physics_task(
 
         for (collider, mass, collider_mode, collision_group) in colliders {
             if first {
-                if let Some(mut entity_commands) = commands.get_entity(chunk_entity) {
+                if let Ok(mut entity_commands) = commands.get_entity(chunk_entity) {
                     entity_commands.insert((
                         collider,
                         ColliderMassProperties::Mass(mass),
@@ -544,7 +537,7 @@ fn read_physics_task(
                 }
 
                 let child_entity = child.id();
-                if let Some(mut chunk_entity_cmds) = commands.get_entity(structure_entity) {
+                if let Ok(mut chunk_entity_cmds) = commands.get_entity(structure_entity) {
                     chunk_entity_cmds.add_child(child_entity);
 
                     // Store these children in a container so they can be properly deleted when new colliders are generated
@@ -600,17 +593,20 @@ fn listen_for_new_physics_event(
         // blocks in neighborin chunks before doing this. Maybe cache that?
 
         if let Ok(coord) = ev.chunk.neg_x()
-            && !todo.iter().any(|(c, se)| *c == coord && *se == ev.structure_entity) {
-                todo.push((coord, ev.structure_entity));
-            }
+            && !todo.iter().any(|(c, se)| *c == coord && *se == ev.structure_entity)
+        {
+            todo.push((coord, ev.structure_entity));
+        }
         if let Ok(coord) = ev.chunk.neg_y()
-            && !todo.iter().any(|(c, se)| *c == coord && *se == ev.structure_entity) {
-                todo.push((coord, ev.structure_entity));
-            }
+            && !todo.iter().any(|(c, se)| *c == coord && *se == ev.structure_entity)
+        {
+            todo.push((coord, ev.structure_entity));
+        }
         if let Ok(coord) = ev.chunk.neg_z()
-            && !todo.iter().any(|(c, se)| *c == coord && *se == ev.structure_entity) {
-                todo.push((coord, ev.structure_entity));
-            }
+            && !todo.iter().any(|(c, se)| *c == coord && *se == ev.structure_entity)
+        {
+            todo.push((coord, ev.structure_entity));
+        }
         let coord = ev.chunk.pos_x();
         if !todo.iter().any(|(c, se)| *c == coord && *se == ev.structure_entity) {
             todo.push((coord, ev.structure_entity));
@@ -714,8 +710,8 @@ fn remove_chunk_colliders(
             return true;
         }
 
-        if let Some(x) = commands.get_entity(chunk_part_entity.collider_entity) {
-            x.despawn_recursive();
+        if let Ok(mut x) = commands.get_entity(chunk_part_entity.collider_entity) {
+            x.despawn();
 
             false
         } else {
@@ -752,7 +748,7 @@ fn listen_for_structure_event(
     }
 
     for event in to_do {
-        event_writer.send(event);
+        event_writer.write(event);
     }
 }
 

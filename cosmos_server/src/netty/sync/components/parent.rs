@@ -15,7 +15,7 @@ use cosmos_core::{
 use renet::{ClientId, RenetServer};
 
 fn on_request_parent(
-    q_component: Query<(&Parent, Option<&StructureSystem>, Option<&ItemStackData>, Option<&BlockData>), Without<NoSendEntity>>,
+    q_component: Query<(&ChildOf, Option<&StructureSystem>, Option<&ItemStackData>, Option<&BlockData>), Without<NoSendEntity>>,
     mut ev_reader: EventReader<RequestedEntityEvent>,
     mut server: ResMut<RenetServer>,
 ) {
@@ -58,7 +58,7 @@ fn on_request_parent(
             client_id,
             NettyChannelServer::ComponentReplication,
             cosmos_encoder::serialize(&ComponentReplicationMessage::ComponentReplication {
-                component_id: ComponentId::Parent,
+                component_id: ComponentId::ChildOf,
                 replicated: replicated_component,
             }),
         );
@@ -69,13 +69,13 @@ fn on_change_parent(
     q_changed_component: Query<
         (
             Entity,
-            &Parent,
+            &ChildOf,
             &SyncTo,
             Option<&StructureSystem>,
             Option<&ItemStackData>,
             Option<&BlockData>,
         ),
-        (Without<NoSendEntity>, Changed<Parent>),
+        (Without<NoSendEntity>, Changed<ChildOf>),
     >,
     q_players: Query<&Player>,
     mut server: ResMut<RenetServer>,
@@ -124,7 +124,7 @@ fn on_change_parent(
             player.client_id(),
             NettyChannelServer::ComponentReplication,
             cosmos_encoder::serialize(&ComponentReplicationMessage::ComponentReplication {
-                component_id: ComponentId::Parent,
+                component_id: ComponentId::ChildOf,
                 replicated: replicated_data,
             }),
         );
@@ -132,7 +132,7 @@ fn on_change_parent(
 }
 
 fn on_remove_parent(
-    mut removed_components: RemovedComponents<Parent>,
+    mut removed_components: RemovedComponents<ChildOf>,
     q_entity_identifier: Query<(Option<&StructureSystem>, Option<&ItemStackData>, Option<&BlockData>)>,
     mut server: ResMut<RenetServer>,
 ) {
@@ -169,7 +169,7 @@ fn on_remove_parent(
         server.broadcast_message(
             NettyChannelServer::ComponentReplication,
             cosmos_encoder::serialize(&ComponentReplicationMessage::RemovedComponent {
-                component_id: ComponentId::Parent,
+                component_id: ComponentId::ChildOf,
                 entity_identifier,
             }),
         );

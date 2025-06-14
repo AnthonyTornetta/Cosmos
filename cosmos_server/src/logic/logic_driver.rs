@@ -269,7 +269,7 @@ impl LogicDriver {
                     let new_group = self.logic_graph.get_group(group_id);
                     if new_group.on() != was_on {
                         // Update the inputs to every input port in this newly created group, if the value of the group has changed.
-                        evw_queue_logic_input.send_batch(
+                        evw_queue_logic_input.write_batch(
                             new_group
                                 .consumers
                                 .iter()

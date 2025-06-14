@@ -14,7 +14,7 @@ use super::{
 };
 
 fn create_settings_screen(mut commands: Commands, q_ui_root: Query<Entity, With<MainMenuRootUiNode>>) {
-    let Ok(main_menu_root) = q_ui_root.get_single() else {
+    let Ok(main_menu_root) = q_ui_root.single() else {
         warn!("No main menu UI root.");
         return;
     };

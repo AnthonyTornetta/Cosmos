@@ -350,9 +350,10 @@ fn kill_all(to_kill: Vec<LodRendersToDespawn>, commands: &mut Commands) {
         unlocked.1 -= 1;
 
         if unlocked.1 == 0
-            && let Some(mut ecmds) = commands.get_entity(unlocked.0) {
-                ecmds.insert(NeedsDespawned);
-            }
+            && let Ok(mut ecmds) = commands.get_entity(unlocked.0)
+        {
+            ecmds.insert(NeedsDespawned);
+        }
     }
 }
 
@@ -383,7 +384,7 @@ fn compute_meshes_and_kill_dead_entities(
         };
 
         // The entity was verified to exist above
-        if let Some(mut ecmds) = commands.get_entity(entity) {
+        if let Ok(mut ecmds) = commands.get_entity(entity) {
             ecmds.insert(Mesh3d(meshes.add(delayed_mesh)));
         }
 
@@ -435,7 +436,7 @@ fn poll_rendering_lods(
                         ))
                         .id();
 
-                    event_writer.send(AddMaterialEvent {
+                    event_writer.write(AddMaterialEvent {
                         entity: ent,
                         add_material_id: mesh_material.material_id,
                         texture_dimensions_index: mesh_material.texture_dimensions_index,
@@ -503,9 +504,10 @@ fn poll_rendering_lods(
             for (_, _, counter) in to_despawn {
                 let locked = counter.lock().expect("failed to lock");
                 if locked.1 == 0
-                    && let Some(mut ecmds) = commands.get_entity(locked.0) {
-                        ecmds.insert(NeedsDespawned);
-                    }
+                    && let Ok(mut ecmds) = commands.get_entity(locked.0)
+                {
+                    ecmds.insert(NeedsDespawned);
+                }
             }
         } else {
             rendering_lods.0.push((structure_entity, rendering_lod))
@@ -513,13 +515,13 @@ fn poll_rendering_lods(
     }
 }
 
-fn hide_lod(mut query: Query<(&Transform, &Parent, &mut Visibility, &RenderedLod)>, structure_query: Query<&Structure>) {
+fn hide_lod(mut query: Query<(&Transform, &ChildOf, &mut Visibility, &RenderedLod)>, structure_query: Query<&Structure>) {
     for (transform, parent, mut vis, rendered_lod) in query.iter_mut() {
         if rendered_lod.scale != 1 {
             continue;
         }
 
-        let structure = structure_query.get(parent.get()).expect("This should always be a structure");
+        let structure = structure_query.get(parent.parent()).expect("This should always be a structure");
 
         let translation = transform.translation;
         if let Ok(bc) = structure.relative_coords_to_local_coords_checked(translation.x, translation.y, translation.z) {

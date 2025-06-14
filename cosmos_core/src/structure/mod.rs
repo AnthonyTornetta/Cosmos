@@ -965,7 +965,7 @@ fn add_chunks_system(
 
             let data = std::mem::take(data);
 
-            ev_writer.send(ChunkLoadBlockDataEvent {
+            ev_writer.write(ChunkLoadBlockDataEvent {
                 data,
                 chunk: ev.coords,
                 structure_entity: ev.structure_entity,
@@ -995,7 +995,7 @@ fn add_chunks_system(
     }
 
     for ev in chunk_set_events {
-        chunk_set_event_writer.send(ev);
+        chunk_set_event_writer.write(ev);
     }
 }
 

@@ -21,14 +21,14 @@ impl LoadingManager {
     pub fn register_loader(&mut self, event_writer: &mut EventWriter<AddLoadingEvent>) -> usize {
         self.next_id += 1;
 
-        event_writer.send(AddLoadingEvent { loading_id: self.next_id });
+        event_writer.write(AddLoadingEvent { loading_id: self.next_id });
 
         self.next_id
     }
 
     /// Finishes loading for this id.
     pub fn finish_loading(&mut self, id: usize, event_writer: &mut EventWriter<DoneLoadingEvent>) {
-        event_writer.send(DoneLoadingEvent { loading_id: id });
+        event_writer.write(DoneLoadingEvent { loading_id: id });
     }
 }
 

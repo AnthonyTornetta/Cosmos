@@ -70,14 +70,14 @@ enum MegaBool {
 
 fn should_sync(
     this_ent: Entity,
-    q_parent: &Query<&Parent>,
+    q_parent: &Query<&ChildOf>,
     q_sync_to: &Query<
         (
             Entity,
             Option<&SyncReason>,
             Option<&Location>,
             Option<&LoadingDistance>,
-            Option<&Parent>,
+            Option<&ChildOf>,
             Option<&Structure>,
             Has<BlockData>,
         ),
@@ -117,22 +117,22 @@ fn should_sync(
                 return MegaBool::MegaFalse;
             };
 
-            should_sync(parent.get(), q_parent, q_sync_to, player_loc)
+            should_sync(parent.parent(), q_parent, q_sync_to, player_loc)
         }
         SyncReason::BlockData => {
             let Some(parent) = parent else {
                 return MegaBool::MegaFalse;
             };
 
-            let Ok(parent) = q_parent.get(parent.get()) else {
+            let Ok(parent) = q_parent.get(parent.parent()) else {
                 return MegaBool::MegaFalse;
             };
 
-            let Ok(Some(location)) = q_sync_to.get(parent.get()).map(|(_, _, location, _, _, _, _)| location) else {
+            let Ok(Some(location)) = q_sync_to.get(parent.parent()).map(|(_, _, location, _, _, _, _)| location) else {
                 return MegaBool::MegaFalse;
             };
 
-            match should_sync(parent.get(), q_parent, q_sync_to, player_loc) {
+            match should_sync(parent.parent(), q_parent, q_sync_to, player_loc) {
                 MegaBool::MegaFalse => MegaBool::MegaFalse,
                 MegaBool::False => MegaBool::False,
                 MegaBool::True => {
@@ -165,7 +165,7 @@ fn update_sync_players(
             Option<&SyncReason>,
             Option<&Location>,
             Option<&LoadingDistance>,
-            Option<&Parent>,
+            Option<&ChildOf>,
             Option<&Structure>,
             Has<BlockData>,
         ),
@@ -176,7 +176,7 @@ fn update_sync_players(
             Without<NeedsLoaded>,
         ),
     >,
-    q_parent: Query<&Parent>,
+    q_parent: Query<&ChildOf>,
     mut q_mut_sync_to: Query<&mut SyncTo>,
     q_players: Query<(&Player, &Location), With<ReadyForSyncing>>,
 ) {
@@ -194,22 +194,22 @@ fn update_sync_players(
                         break;
                     };
 
-                    should_sync(parent.get(), &q_parent, &q_sync_to, player_loc)
+                    should_sync(parent.parent(), &q_parent, &q_sync_to, player_loc)
                 }
                 SyncReason::BlockData => {
                     let Some(parent) = parent else {
                         break;
                     };
 
-                    let Ok(parent) = q_parent.get(parent.get()) else {
+                    let Ok(parent) = q_parent.get(parent.parent()) else {
                         break;
                     };
 
-                    let Ok(Some(location)) = q_sync_to.get(parent.get()).map(|(_, _, location, _, _, _, _)| location) else {
+                    let Ok(Some(location)) = q_sync_to.get(parent.parent()).map(|(_, _, location, _, _, _, _)| location) else {
                         break;
                     };
 
-                    match should_sync(parent.get(), &q_parent, &q_sync_to, player_loc) {
+                    match should_sync(parent.parent(), &q_parent, &q_sync_to, player_loc) {
                         MegaBool::MegaFalse => break,
                         MegaBool::False => MegaBool::False,
                         MegaBool::True => {
@@ -275,7 +275,7 @@ fn generate_request_entity_events_for_new_sync_tos(
         for id in not_found {
             info!("Send {ent:?} to player id {id}");
             commands.entity(ent).log_components();
-            evr_request_entity.send(RequestedEntityEvent {
+            evr_request_entity.write(RequestedEntityEvent {
                 entity: ent,
                 client_id: id,
             });

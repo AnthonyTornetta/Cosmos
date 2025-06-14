@@ -49,7 +49,7 @@ fn swap_camera(
     q_camera_system: Query<&CameraSystem>,
     mut q_ship_query: Query<(&mut SelectedCamera, &StructureSystems)>,
 ) {
-    let Ok(pilot) = q_pilot.get_single() else {
+    let Ok(pilot) = q_pilot.single() else {
         return;
     };
 
@@ -121,7 +121,7 @@ fn on_change_selected_camera(
     q_changed_camera_system: Query<(&StructureSystem, &CameraSystem), Changed<CameraSystem>>,
     q_camera_system: Query<&CameraSystem>,
 ) {
-    let Ok((pilot, camera_player_offset)) = q_pilot.get_single() else {
+    let Ok((pilot, camera_player_offset)) = q_pilot.single() else {
         return;
     };
     let Ok(mut main_cam_trans) = main_camera.get_single_mut() else {

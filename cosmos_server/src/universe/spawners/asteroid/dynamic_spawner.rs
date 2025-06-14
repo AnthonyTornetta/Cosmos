@@ -157,7 +157,7 @@ fn send_done_generating_event(
         for res in itr {
             // This will always be true because include_empty is false
             if let ChunkIteratorResult::FilledChunk { position, chunk: _ } = res {
-                chunk_init_event_writer.send(ChunkInitEvent {
+                chunk_init_event_writer.write(ChunkInitEvent {
                     structure_entity: ent,
                     coords: position,
                     serialized_block_data: None,

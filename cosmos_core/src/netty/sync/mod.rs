@@ -37,8 +37,8 @@ pub struct ReplicatedComponentData {
 pub enum ComponentId {
     /// The ID given to this component after registration in [`sync_component`].
     Custom(u16),
-    /// This is bevy's [`Parent`] component.
-    Parent,
+    /// This is bevy's [`ChildOf`] component.
+    ChildOf,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]

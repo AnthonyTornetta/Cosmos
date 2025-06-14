@@ -22,7 +22,7 @@ fn handle_laser_hits(
         };
 
         shield.take_damage(ev.laser_strength());
-        ev_writer.send(ShieldHitEvent {
+        ev_writer.write(ShieldHitEvent {
             relative_position: shield_g_trans.affine().matrix3.mul_vec3(ev.local_position_hit()),
             shield_entity: ev.entity_hit(),
         });

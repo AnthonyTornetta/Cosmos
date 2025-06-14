@@ -49,7 +49,7 @@ fn add_priority_when_flying(
         return;
     }
 
-    let Ok(local_ent) = q_local_player.get_single() else {
+    let Ok(local_ent) = q_local_player.single() else {
         return;
     };
 
@@ -76,7 +76,7 @@ fn sync_ship_systems(
     has_data: Res<ItemShouldHaveData>,
     mut commands: Commands,
 ) {
-    let Ok(piloting) = q_piloting.get_single() else {
+    let Ok(piloting) = q_piloting.single() else {
         return;
     };
 
@@ -134,7 +134,7 @@ fn on_self_become_pilot(
     q_changed_hotbar: Query<(&HotbarPriorityQueue, &Hotbar), With<LocalPlayerHotbar>>,
     mut q_hovered_system: Query<&mut HoveredSystem, (Or<(Added<Pilot>, Added<HoveredSystem>)>, With<LocalPlayer>)>,
 ) {
-    let Ok((queue, hotbar)) = q_changed_hotbar.get_single() else {
+    let Ok((queue, hotbar)) = q_changed_hotbar.single() else {
         return;
     };
 
@@ -157,7 +157,7 @@ fn on_change_hotbar(
     >,
     mut q_hovered_system: Query<&mut HoveredSystem, (With<Pilot>, With<LocalPlayer>)>,
 ) {
-    let Ok((queue, hotbar)) = q_changed_hotbar.get_single() else {
+    let Ok((queue, hotbar)) = q_changed_hotbar.single() else {
         return;
     };
 

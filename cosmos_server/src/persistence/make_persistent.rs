@@ -10,7 +10,7 @@ use bevy::{
         schedule::IntoSystemConfigs,
         system::{Commands, Query, SystemParam},
     },
-    hierarchy::Parent,
+    hierarchy::ChildOf,
     log::{error, warn},
 };
 use cosmos_core::{
@@ -57,13 +57,13 @@ fn save_component<T: PersistentComponent>(
 }
 
 fn save_component_block_data<T: PersistentComponent>(
-    q_storage_blocks: Query<(Entity, &Parent, &T, &BlockData), With<BlockDataNeedsSaved>>,
+    q_storage_blocks: Query<(Entity, &ChildOf, &T, &BlockData), With<BlockDataNeedsSaved>>,
     mut q_chunk: Query<&mut SerializedBlockData>,
     q_entity_ids: Query<&EntityId>,
 ) {
     q_storage_blocks.iter().for_each(|(entity, parent, component, block_data)| {
         let mut serialized_block_data = q_chunk
-            .get_mut(parent.get())
+            .get_mut(parent.parent())
             .expect("Block data's parent didn't have SerializedBlockData???");
 
         let Some(save_type) = component.convert_to_save_type(&q_entity_ids) else {

@@ -32,7 +32,7 @@ struct UiComsMessage;
 struct SelectedComs(Entity);
 //
 // fn on_add_coms(
-//     q_added_coms: Query<(Entity, &Parent, &ComsChannel), Added<ComsChannel>>,
+//     q_added_coms: Query<(Entity, &ChildOf, &ComsChannel), Added<ComsChannel>>,
 //     q_pilot: Query<&Pilot>,
 //     q_local_player: Query<Entity, With<LocalPlayer>>,
 //     q_coms_ui: Query<Entity, With<ComsUi>>,
@@ -46,7 +46,7 @@ struct SelectedComs(Entity);
 //         return;
 //     };
 //
-//     let Ok(pilot) = q_pilot.get(parent.get()) else {
+//     let Ok(pilot) = q_pilot.get(parent.parent()) else {
 //         return;
 //     };
 //
@@ -61,7 +61,7 @@ struct SelectedComs(Entity);
 //     let messages = coms.messages.iter().map(|x| x.text.as_str()).collect::<Vec<_>>();
 //     if !q_coms_ui.is_empty() {
 //         commands
-//             .entity(q_body.get_single().expect("Body missing"))
+//             .entity(q_body.single().expect("Body missing"))
 //             .despawn_descendants()
 //             .with_children(|p| create_messages_ui(&font, p, &messages));
 //
@@ -75,7 +75,7 @@ struct SelectedComs(Entity);
 // }
 
 fn on_change_selected_coms(
-    q_changed_coms: Query<(Entity, &Parent, &ComsChannel)>,
+    q_changed_coms: Query<(Entity, &ChildOf, &ComsChannel)>,
     q_pilot: Query<&Pilot>,
     q_local_player: Query<Entity, With<LocalPlayer>>,
     q_coms_ui: Query<Entity, With<ComsUi>>,
@@ -93,7 +93,7 @@ fn on_change_selected_coms(
         return;
     };
 
-    let your_ship = parent.get();
+    let your_ship = parent.parent();
     let Ok(pilot) = q_pilot.get(your_ship) else {
         return;
     };
@@ -109,7 +109,7 @@ fn on_change_selected_coms(
     let messages = coms.messages.iter().collect::<Vec<_>>();
     if !q_coms_ui.is_empty() {
         commands
-            .entity(q_body.get_single().expect("Body missing"))
+            .entity(q_body.single().expect("Body missing"))
             .despawn_descendants()
             .with_children(|p| create_messages_ui(&font, p, &messages, your_ship));
 
@@ -128,7 +128,7 @@ fn on_change_selected_coms(
 }
 
 fn on_change_coms(
-    q_changed_coms: Query<(Entity, &Parent, &ComsChannel), Or<(Changed<ComsChannel>, Changed<Parent>)>>,
+    q_changed_coms: Query<(Entity, &ChildOf, &ComsChannel), Or<(Changed<ComsChannel>, Changed<ChildOf>)>>,
     q_pilot: Query<&Pilot>,
     q_local_player: Query<(), With<LocalPlayer>>,
     q_coms_ui: Query<Entity, With<ComsUi>>,
@@ -139,7 +139,7 @@ fn on_change_coms(
     q_body: Query<Entity, With<MessageArea>>,
 ) {
     for (coms_ent, parent, coms) in q_changed_coms.iter() {
-        let Ok(pilot) = q_pilot.get(parent.get()) else {
+        let Ok(pilot) = q_pilot.get(parent.parent()) else {
             continue;
         };
 
@@ -159,7 +159,7 @@ fn on_change_coms(
             }
 
             commands
-                .entity(q_body.get_single().expect("Body missing"))
+                .entity(q_body.single().expect("Body missing"))
                 .despawn_descendants()
                 .with_children(|p| create_messages_ui(&font, p, &messages, your_ship));
 
@@ -187,7 +187,7 @@ fn on_remove_coms(
     font: Res<DefaultFont>,
 ) {
     for ent in removed_components.read() {
-        let Ok(selected_coms) = q_selected_coms.get_single() else {
+        let Ok(selected_coms) = q_selected_coms.single() else {
             continue;
         };
 
@@ -195,7 +195,7 @@ fn on_remove_coms(
             continue;
         }
 
-        let Ok(msg_area_e) = q_messages.get_single() else {
+        let Ok(msg_area_e) = q_messages.single() else {
             continue;
         };
 
@@ -640,7 +640,7 @@ fn on_not_pilot(
     coms_assets: Res<ComsAssets>,
     mut q_toggle_button: Query<&mut CosmosButton<ToggleButton>>,
     mut focused: ResMut<Focus>,
-    q_coms: Query<(Entity, &Parent, &ComsChannel)>,
+    q_coms: Query<(Entity, &ChildOf, &ComsChannel)>,
     q_local_player: Query<Entity, With<LocalPlayer>>,
     q_pilot: Query<&Pilot>,
     q_lp_not_pilot: Query<(), (With<LocalPlayer>, Without<Pilot>)>,
@@ -675,7 +675,7 @@ fn on_toggle(
     coms_assets: Res<ComsAssets>,
     mut q_toggle_button: Query<&mut CosmosButton<ToggleButton>>,
     mut focused: ResMut<Focus>,
-    q_coms: Query<(Entity, &Parent, &ComsChannel)>,
+    q_coms: Query<(Entity, &ChildOf, &ComsChannel)>,
     q_local_player: Query<Entity, With<LocalPlayer>>,
     q_pilot: Query<&Pilot>,
 ) {
@@ -683,7 +683,7 @@ fn on_toggle(
         return;
     }
 
-    let Ok(lp) = q_local_player.get_single() else {
+    let Ok(lp) = q_local_player.single() else {
         return;
     };
     if !q_pilot.contains(lp) {
@@ -705,13 +705,14 @@ fn on_toggle(
             );
         } else {
             if let Ok(mut selected) = q_selected_coms.get_single_mut()
-                && !q_coms.contains(selected.0) {
-                    let all_coms = get_all_coms(&q_coms, &q_pilot, &q_local_player);
-                    let Some(first) = all_coms.first() else {
-                        continue;
-                    };
-                    selected.0 = first.0;
-                }
+                && !q_coms.contains(selected.0)
+            {
+                let all_coms = get_all_coms(&q_coms, &q_pilot, &q_local_player);
+                let Some(first) = all_coms.first() else {
+                    continue;
+                };
+                selected.0 = first.0;
+            }
             node.right = Val::Px(0.0);
             commands
                 .entity(entity)
@@ -731,7 +732,7 @@ fn minimize_ui(
     entity: Entity,
     node: &mut Node,
     focused: &mut Focus,
-    q_coms: &Query<(Entity, &Parent, &ComsChannel)>,
+    q_coms: &Query<(Entity, &ChildOf, &ComsChannel)>,
     q_local_player: &Query<Entity, With<LocalPlayer>>,
     q_pilot: &Query<&Pilot>,
 ) {
@@ -758,7 +759,7 @@ fn on_close_menu(
     mut commands: Commands,
     mut q_toggle_button: Query<&mut CosmosButton<ToggleButton>>,
     mut focused: ResMut<Focus>,
-    q_coms: Query<(Entity, &Parent, &ComsChannel)>,
+    q_coms: Query<(Entity, &ChildOf, &ComsChannel)>,
     q_local_player: Query<Entity, With<LocalPlayer>>,
     q_pilot: Query<&Pilot>,
 ) {
@@ -795,7 +796,7 @@ fn send_text(
         return;
     };
 
-    let Ok(selected) = q_selected_coms.get_single() else {
+    let Ok(selected) = q_selected_coms.single() else {
         return;
     };
 
@@ -809,7 +810,7 @@ fn send_text(
         return;
     };
 
-    nevw_send_coms_message.send(SendComsMessage {
+    nevw_send_coms_message.write(SendComsMessage {
         message: SendComsMessageType::Message(val.to_owned()),
         to: coms_channel.with,
     });
@@ -827,7 +828,7 @@ fn yes_clicked(
         return;
     }
 
-    let Ok(selected) = q_selected_coms.get_single() else {
+    let Ok(selected) = q_selected_coms.single() else {
         return;
     };
 
@@ -835,7 +836,7 @@ fn yes_clicked(
         return;
     };
 
-    nevw_send_coms_message.send(SendComsMessage {
+    nevw_send_coms_message.write(SendComsMessage {
         message: SendComsMessageType::Yes,
         to: coms_channel.with,
     });
@@ -851,7 +852,7 @@ fn no_clicked(
         return;
     }
 
-    let Ok(selected) = q_selected_coms.get_single() else {
+    let Ok(selected) = q_selected_coms.single() else {
         return;
     };
 
@@ -859,7 +860,7 @@ fn no_clicked(
         return;
     };
 
-    nevw_send_coms_message.send(SendComsMessage {
+    nevw_send_coms_message.write(SendComsMessage {
         message: SendComsMessageType::No,
         to: coms_channel.with,
     });
@@ -870,12 +871,12 @@ fn end_selected_coms(mut evw_close_coms: NettyEventWriter<RequestCloseComsEvent>
         return;
     };
 
-    evw_close_coms.send(RequestCloseComsEvent(selected.0));
+    evw_close_coms.write(RequestCloseComsEvent(selected.0));
 }
 
 fn on_left_clicked(
     mut q_selected_coms: Query<&mut SelectedComs>,
-    q_coms: Query<(Entity, &Parent, &ComsChannel)>,
+    q_coms: Query<(Entity, &ChildOf, &ComsChannel)>,
     q_local_player: Query<Entity, With<LocalPlayer>>,
     q_pilot: Query<&Pilot>,
 ) {
@@ -888,14 +889,15 @@ fn on_left_clicked(
     if let Some([prev, _]) = all_coms.array_windows::<2>().find(|[_, b]| b.0 == selected.0) {
         selected.0 = prev.0;
     } else if let Some(last) = all_coms.last()
-        && selected.0 != last.0 {
-            selected.0 = last.0;
-        }
+        && selected.0 != last.0
+    {
+        selected.0 = last.0;
+    }
 }
 
 fn on_right_clicked(
     mut q_selected_coms: Query<&mut SelectedComs>,
-    q_coms: Query<(Entity, &Parent, &ComsChannel)>,
+    q_coms: Query<(Entity, &ChildOf, &ComsChannel)>,
     q_pilot: Query<&Pilot>,
     q_local_player: Query<Entity, With<LocalPlayer>>,
 ) {
@@ -908,17 +910,18 @@ fn on_right_clicked(
     if let Some([_, next]) = all_coms.array_windows::<2>().find(|[a, _]| a.0 == selected.0) {
         selected.0 = next.0;
     } else if let Some(first) = all_coms.first()
-        && selected.0 != first.0 {
-            selected.0 = first.0;
-        }
+        && selected.0 != first.0
+    {
+        selected.0 = first.0;
+    }
 }
 
 fn get_all_coms<'a>(
-    q_coms: &'a Query<(Entity, &Parent, &ComsChannel)>,
+    q_coms: &'a Query<(Entity, &ChildOf, &ComsChannel)>,
     q_pilot: &'a Query<&Pilot>,
     q_local_player: &'a Query<Entity, With<LocalPlayer>>,
-) -> Vec<(Entity, &'a Parent, &'a ComsChannel)> {
-    let lp = q_local_player.get_single().expect("Local player missing");
+) -> Vec<(Entity, &'a ChildOf, &'a ComsChannel)> {
+    let lp = q_local_player.single().expect("Local player missing");
     let Ok(pilot) = q_pilot.get(lp) else {
         return vec![];
     };
@@ -926,7 +929,7 @@ fn get_all_coms<'a>(
 
     q_coms
         .iter()
-        .filter(|(_, parent, _)| parent.get() == lp_piloting_ship)
+        .filter(|(_, parent, _)| parent.parent() == lp_piloting_ship)
         .collect::<Vec<_>>()
 }
 

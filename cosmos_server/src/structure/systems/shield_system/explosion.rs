@@ -31,7 +31,7 @@ fn respond_to_explosion_damage(
             let relative_position = (ev.explosion_location - *shield_location).absolute_coords_f32();
 
             shield.take_damage(damage * 2.0);
-            ev_writer.send(ShieldHitEvent {
+            ev_writer.write(ShieldHitEvent {
                 relative_position,
                 shield_entity: ev.hit_entity,
             });

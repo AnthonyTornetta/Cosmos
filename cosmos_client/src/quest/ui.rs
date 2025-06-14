@@ -40,7 +40,7 @@ fn open_quest_ui(
         return;
     }
 
-    if let Ok(ent) = q_quests_ui.get_single() {
+    if let Ok(ent) = q_quests_ui.single() {
         commands.entity(ent).insert(NeedsDespawned);
         return;
     }
@@ -81,7 +81,7 @@ fn open_quest_ui(
         ))
         .with_children(|p| {
             let (ongoing_quests, active_quest) = q_quests
-                .get_single()
+                .single()
                 .map(|x| (x.0.iter().collect::<Vec<_>>(), x.1.copied()))
                 .unwrap_or_default();
 

@@ -225,7 +225,7 @@ fn on_interact_slider(
                 continue;
             };
 
-            let Ok(window) = q_windows.get_single() else {
+            let Ok(window) = q_windows.single() else {
                 continue;
             };
 

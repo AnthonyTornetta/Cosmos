@@ -15,7 +15,7 @@ use bevy::{
     hierarchy::BuildChildren,
     log::{error, warn},
     math::Vec3,
-    prelude::{Changed, EventWriter, Has, Or, Parent, Transform, in_state},
+    prelude::{Changed, EventWriter, Has, Or, ChildOf, Transform, in_state},
     reflect::Reflect,
 };
 use bevy_rapier3d::prelude::Velocity;
@@ -319,7 +319,7 @@ struct SaidNoList(Vec<Entity>);
 
 fn on_change_coms(
     mut evw_send_coms: EventWriter<NpcSendComsMessage>,
-    q_create_coms: Query<(Entity, &Parent, &ComsChannel), Changed<ComsChannel>>,
+    q_create_coms: Query<(Entity, &ChildOf, &ComsChannel), Changed<ComsChannel>>,
     factions: Res<Factions>,
     q_faction: Query<&FactionId>,
     q_entity_id: Query<&EntityId>,
@@ -336,24 +336,24 @@ fn on_change_coms(
     }
 
     for (coms_entity, parent, coms) in q_create_coms.iter() {
-        let Ok(mut merchant_ai_state) = q_merchant.get_mut(parent.get()) else {
+        let Ok(mut merchant_ai_state) = q_merchant.get_mut(parent.parent()) else {
             continue;
         };
 
         if let Some(last) = coms.messages.last()
-            && last.sender == parent.get() {
+            && last.sender == parent.parent() {
                 // Don't reply to ourselves
                 continue;
             }
 
         if let Ok(pilot) = q_pilot.get(coms.with)
-            && let Some(faction) = q_faction.get(parent.get()).ok().and_then(|x| factions.from_id(x)) {
+            && let Some(faction) = q_faction.get(parent.parent()).ok().and_then(|x| factions.from_id(x)) {
                 let with_fac = q_faction.get(pilot.entity).ok().and_then(|x| factions.from_id(x));
                 if let Ok(with_ent_id) = q_entity_id.get(pilot.entity)
                     && faction.relation_with_entity(with_ent_id, with_fac) == FactionRelation::Enemy {
-                        evw_send_coms.send(NpcSendComsMessage {
+                        evw_send_coms.write(NpcSendComsMessage {
                             message: "BEGONE SCALLYWAG!!!".to_owned(),
-                            from_ship: parent.get(),
+                            from_ship: parent.parent(),
                             to_ship: coms.with,
                         });
                         continue;
@@ -375,7 +375,7 @@ fn on_change_coms(
             ComsState::SaidNo => ("I understand. I, too, value my life.", true),
             ComsState::Accepted => {
                 if let Ok(pilot) = q_pilot.get(coms.with) {
-                    evw_start_quest.send(AddQuestEvent {
+                    evw_start_quest.write(AddQuestEvent {
                         unlocalized_name: "cosmos:fight_pirate".into(),
                         to: pilot.entity,
                         details: OngoingQuestDetails {
@@ -396,8 +396,8 @@ fn on_change_coms(
         let message = response.to_owned();
 
         if end_coms {
-            evw_end_coms.send(NpcRequestCloseComsEvent {
-                npc_ship: parent.get(),
+            evw_end_coms.write(NpcRequestCloseComsEvent {
+                npc_ship: parent.parent(),
                 coms_entity,
             });
         }
@@ -406,9 +406,9 @@ fn on_change_coms(
             *merchant_ai_state = MerchantAiState::Fleeing;
         }
 
-        evw_send_coms.send(NpcSendComsMessage {
+        evw_send_coms.write(NpcSendComsMessage {
             message,
-            from_ship: parent.get(),
+            from_ship: parent.parent(),
             to_ship: coms.with,
         });
     }
@@ -430,7 +430,7 @@ fn talking_merchant_ai(
         ),
         (With<MerchantFederation>, Without<AiTargetting>, With<Pilot>),
     >,
-    q_coms: Query<(&ComsChannel, &Parent)>,
+    q_coms: Query<(&ComsChannel, &ChildOf)>,
     q_targets: Query<
         (
             Entity,
@@ -515,7 +515,7 @@ fn talking_merchant_ai(
             continue;
         }
 
-        evw_send_coms.send(RequestHailFromNpc {
+        evw_send_coms.write(RequestHailFromNpc {
             npc_ship: entity,
             player_ship: target_ent,
             ai_coms_type: AiComsType::YesNo,

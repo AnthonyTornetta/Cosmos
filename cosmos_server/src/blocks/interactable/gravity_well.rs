@@ -8,7 +8,7 @@ use bevy::{
         schedule::IntoSystemConfigs,
         system::{Commands, Query, ResMut},
     },
-    hierarchy::Parent,
+    hierarchy::ChildOf,
     log::info,
     math::Vec3,
     prelude::{BuildChildrenTransformExt, Res, With},
@@ -123,14 +123,14 @@ fn sync_gravity_well(
     }
 }
 
-fn remove_gravity_wells(mut commands: Commands, q_grav_wells: Query<(Entity, &GravityWell, Option<&Parent>)>) {
+fn remove_gravity_wells(mut commands: Commands, q_grav_wells: Query<(Entity, &GravityWell, Option<&ChildOf>)>) {
     for (ent, grav_well, parent) in q_grav_wells.iter() {
         let Some(parent) = parent else {
             commands.entity(ent).remove::<GravityWell>();
             continue;
         };
 
-        if parent.get() != grav_well.structure_entity {
+        if parent.parent() != grav_well.structure_entity {
             commands.entity(ent).remove::<GravityWell>();
         }
     }

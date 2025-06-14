@@ -48,7 +48,7 @@ fn handle_block_event(
 
         // Only works on ships (maybe replace this with pilotable component instead of only checking ships)
         if q_can_be_pilot.contains(s_block.structure()) {
-            change_pilot_event.send(ChangePilotEvent {
+            change_pilot_event.write(ChangePilotEvent {
                 structure_entity: s_block.structure(),
                 pilot_entity: Some(ev.interactor),
             });

@@ -29,7 +29,7 @@ fn send_galaxy_map(
     q_galaxy: Query<&Galaxy>,
 ) {
     for ev in evr_request_map.read() {
-        let Ok(galaxy) = q_galaxy.get_single() else {
+        let Ok(galaxy) = q_galaxy.single() else {
             continue;
         };
 
@@ -42,7 +42,7 @@ fn send_galaxy_map(
             );
         }
 
-        nevw_galaxy_map.send(GalaxyMapResponseEvent { map: g_map }, ev.client_id);
+        nevw_galaxy_map.write(GalaxyMapResponseEvent { map: g_map }, ev.client_id);
     }
 }
 
@@ -150,7 +150,7 @@ fn send_map(
             );
         }
 
-        nevw_system_map.send(
+        nevw_system_map.write(
             SystemMapResponseEvent {
                 map: system_map,
                 system: ev.system,

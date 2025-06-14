@@ -3,15 +3,15 @@
 //! Add this as a bevy resource by calling
 //! [`create_many_to_one_registry`]
 
+use std::collections::hash_map::Values;
 use std::marker::PhantomData;
 use std::sync::{Arc, RwLock, RwLockReadGuard};
 
-use bevy::prelude::{App, IntoSystemConfigs, Res, ResMut, Resource, Update, resource_exists_and_changed};
-use bevy::utils::HashMap;
-use bevy::utils::hashbrown::hash_map::Values;
+use bevy::prelude::*;
 
 use super::AddLinkError;
 use super::identifiable::Identifiable;
+use std::collections::HashMap;
 
 /// Represents a many to one link
 #[derive(Resource, Default, Debug, Clone)]

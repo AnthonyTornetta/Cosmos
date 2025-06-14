@@ -48,7 +48,7 @@ fn handle_block_event(
         let block_id = s_block.block_id(structure);
 
         if block_id == block.id() {
-            nevw_open_ui.send(OpenDyeMachine(s_block), player.client_id());
+            nevw_open_ui.write(OpenDyeMachine(s_block), player.client_id());
         }
     }
 }

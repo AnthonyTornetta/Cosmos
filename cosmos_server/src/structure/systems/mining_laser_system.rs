@@ -80,7 +80,7 @@ fn check_should_break(
             let block = structure.block_at(mining_block.block_coord, &blocks);
 
             if mining_block.time_mined >= block.mining_resistance() {
-                ev_writer.send(BlockBreakEvent {
+                ev_writer.write(BlockBreakEvent {
                     block: StructureBlock::new(*coordinate, structure_entity),
                     breaker: mining_block.last_toucher,
                 });
@@ -120,7 +120,7 @@ fn update_mining_beams(
     mut q_being_mined: Query<&mut BeingMined>,
     q_is_system_active: Query<(), With<SystemActive>>,
     rapier_context_access: ReadRapierContext,
-    q_parent: Query<&Parent>,
+    q_parent: Query<&ChildOf>,
     time: Res<Time>,
 ) {
     #[derive(Debug)]
@@ -194,7 +194,7 @@ fn update_mining_beams(
                     if beam.structure_entity == entity {
                         false
                     } else if let Ok(parent) = q_parent.get(entity) {
-                        parent.get() != beam.structure_entity
+                        parent.parent() != beam.structure_entity
                     } else {
                         false
                     }
@@ -208,7 +208,7 @@ fn update_mining_beams(
             if let Ok((structure, g_trans)) = q_structure.get(hit_entity) {
                 return Some((beam, structure, g_trans, ray_start, ray_dir, toi));
             } else if let Ok(parent) = q_parent.get(hit_entity) {
-                let entity = parent.get();
+                let entity = parent.parent();
                 if let Ok((structure, g_trans)) = q_structure.get(entity) {
                     return Some((beam, structure, g_trans, ray_start, ray_dir, toi));
                 }

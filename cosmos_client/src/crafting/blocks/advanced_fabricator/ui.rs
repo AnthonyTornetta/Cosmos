@@ -100,7 +100,7 @@ fn populate_menu(
     q_cam: Query<Entity, With<MainCamera>>,
 ) {
     for (ent, fab_menu) in q_added_menu.iter() {
-        let Ok(cam) = q_cam.get_single() else {
+        let Ok(cam) = q_cam.single() else {
             return;
         };
 
@@ -113,7 +113,7 @@ fn populate_menu(
             error!("No inventory in advanced_fabricator!");
             continue;
         };
-        let Ok(player_ent) = q_player.get_single() else {
+        let Ok(player_ent) = q_player.single() else {
             return;
         };
 
@@ -407,7 +407,7 @@ fn on_change_inventory(
                 continue;
             }
 
-            let selected = q_selected_recipe.get_single().ok();
+            let selected = q_selected_recipe.single().ok();
 
             let text_style = TextFont {
                 font: font.0.clone_weak(),
@@ -503,17 +503,17 @@ fn on_select_item(
     mapping: Res<NetworkMapping>,
 ) {
     for ev in evr_select_item.read() {
-        if let Ok(selected_recipe) = q_selected_recipe.get_single() {
+        if let Ok(selected_recipe) = q_selected_recipe.single() {
             if ev.0 == selected_recipe {
                 let Ok(recipe) = q_recipe.get(selected_recipe) else {
                     continue;
                 };
 
-                let Ok((player_ent, player_inv)) = q_player.get_single() else {
+                let Ok((player_ent, player_inv)) = q_player.single() else {
                     continue;
                 };
 
-                let Ok(menu) = q_menu.get_single() else {
+                let Ok(menu) = q_menu.single() else {
                     continue;
                 };
 
@@ -562,7 +562,7 @@ fn listen_create(
     input_handler: InputChecker,
 ) {
     for _ in evr_create.read() {
-        let Ok(fab_menu) = q_open_fab_menu.get_single() else {
+        let Ok(fab_menu) = q_open_fab_menu.single() else {
             return;
         };
 
@@ -573,7 +573,7 @@ fn listen_create(
             continue;
         };
 
-        let Ok(recipe) = q_selected_recipe.get_single() else {
+        let Ok(recipe) = q_selected_recipe.single() else {
             return;
         };
 
@@ -592,7 +592,7 @@ fn listen_create(
 
             info!("Sending craft {quantity} event!");
 
-            nevw_craft_event.send(CraftAdvancedFabricatorRecipeEvent {
+            nevw_craft_event.write(CraftAdvancedFabricatorRecipeEvent {
                 block,
                 recipe: recipe.0.clone(),
                 quantity,
@@ -612,7 +612,7 @@ fn color_fabricate_button(
         return;
     };
 
-    let Ok(fab_menu) = q_open_fab_menu.get_single() else {
+    let Ok(fab_menu) = q_open_fab_menu.single() else {
         return;
     };
 
@@ -624,7 +624,7 @@ fn color_fabricate_button(
         return;
     };
 
-    let Ok(recipe) = q_selected_recipe.get_single() else {
+    let Ok(recipe) = q_selected_recipe.single() else {
         return;
     };
 

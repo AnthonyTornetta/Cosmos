@@ -37,7 +37,7 @@ fn handle_door_block_event(
             return;
         }
 
-        ev_writer.send(ToggleDoorEvent(s_block));
+        ev_writer.write(ToggleDoorEvent(s_block));
     }
 }
 

@@ -39,6 +39,10 @@ default = [
     "bevy/webgl2",
     "bevy/sysinfo_plugin",
     "bevy/bevy_window",
+    "bevy/std", 
+    "bevy/async_executor",
+    "bevy/bevy_log",
+    "bevy/bevy_input_focus"
 ]
 
 [dependencies]
@@ -75,7 +79,7 @@ bevy_mod_debugdump = { workspace = true }
 derive_more = { workspace = true, features = ["full"] }
 uuid = { workspace = true }
 
-bevy_easy_compute = { workspace = true }
+bevy_app_compute = { workspace = true }
 bytemuck = { workspace = true }
 zip = "2.2.2"
 chrono = "0.4.39"

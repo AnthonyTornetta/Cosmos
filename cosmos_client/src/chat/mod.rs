@@ -65,7 +65,7 @@ fn toggle_chat_display_visibility(
     mut q_chat_display: Query<&mut Visibility, (Without<ChatContainer>, With<ChatDisplay>)>,
     q_chat_box: Query<&Visibility, (Changed<Visibility>, With<ChatContainer>)>,
 ) {
-    let Ok(changed_vis) = q_chat_box.get_single() else {
+    let Ok(changed_vis) = q_chat_box.single() else {
         return;
     };
 
@@ -226,12 +226,12 @@ fn display_messages(
             ..Default::default()
         };
 
-        let Ok(chat_box) = q_chat_box.get_single() else {
+        let Ok(chat_box) = q_chat_box.single() else {
             error!("No chat box?");
             return;
         };
 
-        let Ok(display_box) = q_display_box.get_single() else {
+        let Ok(display_box) = q_display_box.single() else {
             error!("No display box?");
             return;
         };
@@ -271,7 +271,7 @@ fn send_chat_msg(
         return;
     }
 
-    if q_chat_box.get_single().map(|x| *x == Visibility::Hidden).unwrap_or(true) {
+    if q_chat_box.single().map(|x| *x == Visibility::Hidden).unwrap_or(true) {
         return;
     }
 
@@ -285,11 +285,11 @@ fn send_chat_msg(
     }
 
     if let Some(stripped) = value.strip_prefix("/") {
-        nevw_command.send(ClientCommandEvent {
+        nevw_command.write(ClientCommandEvent {
             command_text: stripped.to_owned(),
         });
     } else {
-        nevw_chat.send(ClientSendChatMessageEvent::Global(value.to_owned()));
+        nevw_chat.write(ClientSendChatMessageEvent::Global(value.to_owned()));
     }
 
     // Set val to "" in case toggle chat box and send message are bound to different keys
@@ -342,7 +342,7 @@ fn toggle_chat_box(
 const MAX_MESSAGES: usize = 100;
 
 fn remove_very_old_messages(mut commands: Commands, q_children: Query<&Children, With<ReceivedMessagesContainer>>) {
-    let Ok(children) = q_children.get_single() else {
+    let Ok(children) = q_children.single() else {
         return;
     };
 

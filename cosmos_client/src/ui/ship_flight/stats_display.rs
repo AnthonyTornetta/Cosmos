@@ -45,7 +45,7 @@ fn create_nodes(
     q_became_pilot: Query<(), (With<LocalPlayer>, Added<Pilot>)>,
 ) {
     if !q_became_pilot.is_empty() {
-        // let Ok(ui_root) = q_ui_root.get_single() else {
+        // let Ok(ui_root) = q_ui_root.single() else {
         //     return;
         // };
 
@@ -98,7 +98,7 @@ fn update_nodes(
 
     q_energy_storage_system: Query<&EnergyStorageSystem>,
 ) {
-    let Ok(piloting) = piloting.get_single() else {
+    let Ok(piloting) = piloting.single() else {
         return;
     };
 
@@ -130,7 +130,7 @@ fn despawn_nodes(
 ) {
     for ent in removed_pilot.read() {
         if q_local_player.contains(ent) {
-            let Ok(stats_node) = q_stats_nodes.get_single() else {
+            let Ok(stats_node) = q_stats_nodes.single() else {
                 return;
             };
 

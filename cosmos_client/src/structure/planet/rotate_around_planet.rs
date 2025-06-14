@@ -1,7 +1,7 @@
 use bevy::{
     app::Update,
     math::{Quat, Vec3},
-    prelude::{App, Commands, Component, Entity, IntoSystemConfigs, Parent, Query, Transform, With, Without},
+    prelude::{App, Commands, Component, Entity, IntoSystemConfigs, ChildOf, Query, Transform, With, Without},
 };
 use cosmos_core::{
     netty::{client::LocalPlayer, system_sets::NetworkingSystemsSet},
@@ -16,7 +16,7 @@ fn add_last_planet_rotation(
     mut commands: Commands,
     q_needs_last_planet_rot: Query<Entity, (With<LocalPlayer>, Without<LastPlanetRotation>)>,
 ) {
-    let Ok(ent) = q_needs_last_planet_rot.get_single() else {
+    let Ok(ent) = q_needs_last_planet_rot.single() else {
         return;
     };
 
@@ -38,7 +38,7 @@ fn rotate_client_around_planets(
     q_planets: Query<(&Transform, &Location, &Structure), With<Planet>>,
     mut q_local_player: Query<
         (&mut Transform, &mut Location, &mut LastPlanetRotation),
-        (Without<Parent>, Without<Planet>, With<LocalPlayer>),
+        (Without<ChildOf>, Without<Planet>, With<LocalPlayer>),
     >,
 ) {
     let Ok((mut trans, mut loc, mut last_planet_rotation)) = q_local_player.get_single_mut() else {

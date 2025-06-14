@@ -189,11 +189,11 @@ fn add_indicators(
     q_text_entity_with_focus: Query<&IndicatorTextEntity, With<FocusedWaypointEntity>>,
 ) {
     let despawn_indicator = |(entity, indicator): (Entity, &HasIndicator)| {
-        commands.entity(indicator.0).despawn_recursive();
+        commands.entity(indicator.0).despawn();
         commands.entity(entity).remove::<HasIndicator>();
     };
 
-    let Ok(pilot) = player_piloting.get_single() else {
+    let Ok(pilot) = player_piloting.single() else {
         all_indicators.iter().for_each(despawn_indicator);
         return;
     };
@@ -237,7 +237,7 @@ fn add_indicators(
             } else if let Some(has_indicator) = has_indicator {
                 commands.entity(entity).remove::<HasIndicator>();
                 if let Some(ecmds) = commands.get_entity(has_indicator.0) {
-                    ecmds.despawn_recursive();
+                    ecmds.despawn();
                 }
             }
         });
@@ -254,7 +254,7 @@ fn added(
     mut commands: Commands,
 ) {
     ship_query.iter().for_each(|(ent, fac)| {
-        let player_faction = q_local_faction.get_single().ok().and_then(|x| factions.from_id(x));
+        let player_faction = q_local_faction.single().ok().and_then(|x| factions.from_id(x));
         let relation = Faction::relation_with_option(fac.and_then(|x| factions.from_id(x)), player_faction);
 
         commands.entity(ent).insert(IndicatorSettings {
@@ -270,7 +270,7 @@ fn added(
         });
     });
     station_query.iter().for_each(|(ent, fac)| {
-        let player_faction = q_local_faction.get_single().ok().and_then(|x| factions.from_id(x));
+        let player_faction = q_local_faction.single().ok().and_then(|x| factions.from_id(x));
         let relation = Faction::relation_with_option(fac.and_then(|x| factions.from_id(x)), player_faction);
 
         commands.entity(ent).insert(IndicatorSettings {
@@ -316,7 +316,7 @@ fn position_diamonds(
     mut commands: Commands,
     mut closest_waypoint: ResMut<ClosestWaypoint>,
 ) {
-    let Ok((cam, cam_trans)) = cam_query.get_single() else {
+    let Ok((cam, cam_trans)) = cam_query.single() else {
         warn!("Missing main camera.");
         return;
     };
@@ -326,7 +326,7 @@ fn position_diamonds(
 
     for (entity, mut style, indicating) in indicators.iter_mut() {
         let Ok(settings) = indicator_settings_query.get(indicating.0) else {
-            commands.entity(entity).despawn_recursive();
+            commands.entity(entity).despawn();
             continue;
         };
 
@@ -416,7 +416,7 @@ fn focus_waypoint(
         return;
     }
 
-    if let Ok((current_ent, indicator_text_ent)) = focused.get_single() {
+    if let Ok((current_ent, indicator_text_ent)) = focused.single() {
         *visibility.get_mut(indicator_text_ent.0).expect("This always has visibility") = Visibility::Hidden;
         commands.entity(current_ent).remove::<FocusedWaypointEntity>();
 

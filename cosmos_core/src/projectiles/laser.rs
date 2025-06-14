@@ -6,10 +6,7 @@ use std::time::Duration;
 use bevy::{
     log::warn,
     pbr::{NotShadowCaster, NotShadowReceiver},
-    prelude::{
-        App, Commands, Component, Entity, EntityCommands, Event, EventWriter, GlobalTransform, IntoSystemConfigs, Parent, Quat, Query, Res,
-        SystemSet, Transform, Update, Vec3, With, Without,
-    },
+    prelude::*,
     time::Time,
 };
 use bevy_rapier3d::{
@@ -167,8 +164,8 @@ fn send_laser_hit_events(
     >,
     mut commands: Commands,
     mut event_writer: EventWriter<LaserCollideEvent>,
-    parent_query: Query<&Parent>,
-    chunk_parent_query: Query<&Parent, With<ChunkEntity>>,
+    parent_query: Query<&ChildOf>,
+    chunk_parent_query: Query<&ChildOf, With<ChunkEntity>>,
     transform_query: Query<&GlobalTransform, Without<Laser>>,
     worlds: Query<&Location, With<PlayerWorld>>,
     q_rapier_context: WriteRapierContext,
@@ -209,7 +206,7 @@ fn send_laser_hit_events(
                         if no_collide_entity.0 == entity {
                             false
                         } else if let Ok(parent) = parent_query.get(entity) {
-                            parent.get() != no_collide_entity.0
+                            parent.parent() != no_collide_entity.0
                         } else {
                             true
                         }
@@ -221,13 +218,13 @@ fn send_laser_hit_events(
                 let pos = ray_start + (toi * ray_direction) + (velocity.linvel.normalize() * 0.01);
 
                 if let Ok(parent) = chunk_parent_query.get(entity) {
-                    if let Ok(transform) = transform_query.get(parent.get()) {
+                    if let Ok(transform) = transform_query.get(parent.parent()) {
                         let lph = Quat::from_affine3(&transform.affine())
                             .inverse()
                             .mul_vec3(pos - transform.translation());
 
-                        event_writer.send(LaserCollideEvent {
-                            entity_hit: parent.get(),
+                        event_writer.write(LaserCollideEvent {
+                            entity_hit: parent.parent(),
                             local_position_hit: lph,
                             laser_strength: laser.strength,
                             causer: causer.copied(),
@@ -238,7 +235,7 @@ fn send_laser_hit_events(
                         .inverse()
                         .mul_vec3(pos - transform.translation());
 
-                    event_writer.send(LaserCollideEvent {
+                    event_writer.write(LaserCollideEvent {
                         entity_hit: entity,
                         local_position_hit: lph,
                         laser_strength: laser.strength,

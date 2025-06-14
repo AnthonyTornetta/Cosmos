@@ -19,12 +19,12 @@ use crate::rendering::MainCamera;
 
 fn send_position(
     mut client: ResMut<RenetClient>,
-    q_player: Query<(&Velocity, &Transform, &Location, Option<&Parent>), With<LocalPlayer>>,
+    q_player: Query<(&Velocity, &Transform, &Location, Option<&ChildOf>), With<LocalPlayer>>,
     camera_query: Query<&Transform, With<MainCamera>>,
     netty_mapping: Res<NetworkMapping>,
 ) {
-    if let Ok((velocity, transform, location, parent)) = q_player.get_single() {
-        let looking = if let Ok(trans) = camera_query.get_single() {
+    if let Ok((velocity, transform, location, parent)) = q_player.single() {
+        let looking = if let Ok(trans) = camera_query.single() {
             Quat::from_affine3(&trans.compute_affine())
         } else {
             Quat::IDENTITY

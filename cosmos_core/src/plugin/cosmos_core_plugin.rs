@@ -15,7 +15,7 @@ use bevy::input::common_conditions::input_toggle_active;
 use bevy::prelude::KeyCode;
 use bevy::prelude::{App, Plugin, PluginGroup, States};
 use bevy::state::state::FreelyMutableState;
-use bevy_easy_compute::prelude::AppComputePlugin;
+use bevy_app_compute::prelude::AppComputePlugin;
 use bevy_inspector_egui::quick::WorldInspectorPlugin;
 
 /// This plugin group should contain everything needed for a cosmos application to run

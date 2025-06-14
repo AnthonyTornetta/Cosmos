@@ -3,7 +3,7 @@
 use bevy::{
     core::Name,
     log::info,
-    prelude::{App, Commands, Entity, IntoSystemConfigs, Parent, Query, Update, With, Without},
+    prelude::{App, Commands, Entity, IntoSystemConfigs, ChildOf, Query, Update, With, Without},
 };
 use cosmos_core::{
     ecs::NeedsDespawned,
@@ -14,11 +14,11 @@ use cosmos_core::{
 };
 
 fn unload_far_entities(
-    query: Query<(Entity, &Location, &LoadingDistance, Option<&Name>), (Without<Player>, Without<Parent>)>,
+    query: Query<(Entity, &Location, &LoadingDistance, Option<&Name>), (Without<Player>, Without<ChildOf>)>,
     my_loc: Query<&Location, With<LocalPlayer>>,
     mut commands: Commands,
 ) {
-    if let Ok(my_loc) = my_loc.get_single() {
+    if let Ok(my_loc) = my_loc.single() {
         for (ent, loc, unload_distance, name) in query.iter() {
             let ul_distance = unload_distance.unload_distance() as SectorUnit;
 

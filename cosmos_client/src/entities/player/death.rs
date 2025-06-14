@@ -66,7 +66,7 @@ fn display_death_ui(
                 *visibility = Visibility::Hidden;
             }
             CloseMethod::Custom => {
-                evw_close_custom_menus.send(CloseMenuEvent(ent));
+                evw_close_custom_menus.write(CloseMenuEvent(ent));
             }
         }
     }
@@ -166,7 +166,7 @@ fn on_not_dead(
 ) {
     for c in removed_components.read() {
         if q_local_player.contains(c)
-            && let Ok(ent) = q_respawn_ui.get_single() {
+            && let Ok(ent) = q_respawn_ui.single() {
                 commands.entity(ent).insert(NeedsDespawned);
             }
     }

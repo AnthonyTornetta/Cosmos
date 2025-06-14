@@ -58,7 +58,7 @@ fn on_add_block<T: Component>(
         blocks.entry(ev.block.structure()).or_default().push(ev.block.coords());
     }
 
-    evw_bd.send(InsertBlockDataEvent(blocks, Default::default()));
+    evw_bd.write(InsertBlockDataEvent(blocks, Default::default()));
 }
 
 #[derive(Event)]

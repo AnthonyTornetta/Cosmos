@@ -8,7 +8,7 @@ use bevy::{
     reflect::TypePath,
     render::{mesh::MeshVertexBufferLayoutRef, render_resource::AsBindGroup},
 };
-use bevy_easy_compute::prelude::ShaderRef;
+use bevy_app_compute::prelude::ShaderRef;
 
 /// The maximum number of shield hits that can be rendered
 pub const MAX_SHIELD_HIT_POINTS: usize = 100;

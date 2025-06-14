@@ -9,7 +9,7 @@ use cosmos_core::{
 };
 
 fn send_render_distance(query: Query<&RenderDistance, (With<LocalPlayer>, Changed<RenderDistance>)>, mut client: ResMut<RenetClient>) {
-    if let Ok(render_distance) = query.get_single() {
+    if let Ok(render_distance) = query.single() {
         client.send_message(
             NettyChannelClient::Reliable,
             cosmos_encoder::serialize(&ClientReliableMessages::ChangeRenderDistance {

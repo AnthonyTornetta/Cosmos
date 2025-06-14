@@ -17,7 +17,7 @@ use bevy::{
         in_state,
     },
 };
-use bevy_easy_compute::prelude::{AppComputeWorker, BevyEasyComputeSet};
+use bevy_app_compute::prelude::{AppComputeWorker, BevyEasyComputeSet};
 use cosmos_core::{
     block::{Block, block_face::BlockFace},
     ecs::mut_events::{EventWriterCustomSend, MutEvent, MutEventsCommand},
@@ -477,7 +477,7 @@ fn generate_player_lods(
         (Without<LodStuffTodo>, Without<LodBeingGenerated>, With<Planet>),
     >,
 ) {
-    let Ok(player_location) = players.get_single() else {
+    let Ok(player_location) = players.single() else {
         return;
     };
 

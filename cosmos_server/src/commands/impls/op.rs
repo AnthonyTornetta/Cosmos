@@ -48,15 +48,15 @@ pub(super) fn register(app: &mut App) {
                     Receiver::Entity(e) => q_players.get(*e).ok(),
                 }) else {
                     ev.sender
-                        .send(format!("Unable to find player {:?}", ev.command.receiver), &mut evw_send_message);
+                        .write(format!("Unable to find player {:?}", ev.command.receiver), &mut evw_send_message);
                     continue;
                 };
 
                 if q_operator.contains(ent) {
-                    ev.sender.send(format!("De-opped {}.", player.name()), &mut evw_send_message);
+                    ev.sender.write(format!("De-opped {}.", player.name()), &mut evw_send_message);
                     commands.entity(ent).remove::<Operator>();
                 } else {
-                    ev.sender.send(format!("Opped {}.", player.name()), &mut evw_send_message);
+                    ev.sender.write(format!("Opped {}.", player.name()), &mut evw_send_message);
                     commands.entity(ent).insert(Operator);
                 }
             }

@@ -62,7 +62,7 @@ fn check_became_pilot(mut commands: Commands, query: Query<Entity, (Added<Pilot>
 
 fn check_removed_pilot(mut commands: Commands, mut removed: RemovedComponents<Pilot>) {
     for ent in removed.read() {
-        if let Some(mut ecmds) = commands.get_entity(ent) {
+        if let Ok(mut ecmds) = commands.get_entity(ent) {
             ecmds.remove::<HoveredSystem>();
         }
     }

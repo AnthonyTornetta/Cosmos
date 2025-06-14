@@ -79,7 +79,7 @@ pub fn send_block_updates(
         })
         .flatten();
 
-    event_writer.send_batch(block_updates);
+    event_writer.write_batch(block_updates);
 }
 
 pub(super) fn register(app: &mut App) {

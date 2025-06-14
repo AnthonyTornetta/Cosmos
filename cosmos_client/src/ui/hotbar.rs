@@ -290,8 +290,8 @@ fn listen_for_change_events(
 
         hb.prev_slot = hb.selected_slot;
 
-        if let Ok(inv) = inventory_unchanged.get_single()
-            && let Ok(ent) = item_name_query.get_single()
+        if let Ok(inv) = inventory_unchanged.single()
+            && let Ok(ent) = item_name_query.single()
                 && let Ok((mut name_text, mut name_color)) = text_query.get_mut(ent) {
                     if let Some(is) = inv.itemstack_at(hb.selected_slot()) {
                         names
@@ -306,7 +306,7 @@ fn listen_for_change_events(
                 }
     }
 
-    if let Ok(hotbar_contents) = query_inventory.get_single() {
+    if let Ok(hotbar_contents) = query_inventory.single() {
         for hb_slot in 0..hb.max_slots {
             let is = hotbar_contents.itemstack_at(hb_slot);
 
@@ -372,12 +372,12 @@ fn populate_hotbar(
     render_item_query: Query<&RenderItem>,
     mut commands: Commands,
 ) {
-    let Ok(hotbar) = hotbar.get_single() else {
+    let Ok(hotbar) = hotbar.single() else {
         warn!("Missing hotbar");
         return;
     };
 
-    let Ok(hotbar_contents) = q_hotbar_contents.get_single() else {
+    let Ok(hotbar_contents) = q_hotbar_contents.single() else {
         return;
     };
 
@@ -510,7 +510,7 @@ fn add_hotbar_contents_to_player(
     mut commands: Commands,
     q_player: Query<(Entity, &Hotbar), (With<LocalPlayerHotbar>, Without<HotbarContents>)>,
 ) {
-    if let Ok((player_ent, hotbar)) = q_player.get_single() {
+    if let Ok((player_ent, hotbar)) = q_player.single() {
         commands
             .entity(player_ent)
             .insert((HotbarPriorityQueue::default(), HotbarContents::new(hotbar.max_slots)));
@@ -567,7 +567,7 @@ fn sync_hotbar_to_inventory(
         return;
     }
 
-    let Ok(inventory) = q_inventory.get_single() else {
+    let Ok(inventory) = q_inventory.single() else {
         return;
     };
 

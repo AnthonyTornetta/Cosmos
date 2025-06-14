@@ -7,7 +7,7 @@ use bevy::{
         schedule::{IntoSystemConfigs, IntoSystemSetConfigs, SystemSet},
         system::{Commands, Query, Res},
     },
-    hierarchy::Parent,
+    hierarchy::ChildOf,
     math::{Quat, Vec3},
     prelude::in_state,
     reflect::Reflect,
@@ -97,7 +97,7 @@ fn handle_combat_ai(
         ),
         (Without<Missile>, With<AiControlled>), // Without<Missile> fixes ambiguity issues
     >,
-    q_parent: Query<&Parent>,
+    q_parent: Query<&ChildOf>,
     q_velocity: Query<&Velocity>,
     q_targets: Query<(Entity, &Location, &Velocity)>,
     time: Res<Time>,
@@ -122,7 +122,7 @@ fn handle_combat_ai(
 
         let mut entity = target_ent;
         while let Ok(parent) = q_parent.get(entity) {
-            entity = parent.get();
+            entity = parent.parent();
             target_linvel += q_velocity.get(entity).map(|x| x.linvel).unwrap_or(Vec3::ZERO);
         }
 
@@ -130,7 +130,7 @@ fn handle_combat_ai(
 
         let mut entity = pirate_ent;
         while let Ok(parent) = q_parent.get(entity) {
-            entity = parent.get();
+            entity = parent.parent();
             this_linvel += q_velocity.get(entity).map(|x| x.linvel).unwrap_or(Vec3::ZERO);
         }
 

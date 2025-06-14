@@ -104,7 +104,7 @@ fn update_looking_at_text(
         return;
     };
 
-    let Ok(looking_at) = q_looking_at.get_single() else {
+    let Ok(looking_at) = q_looking_at.single() else {
         return;
     };
 
@@ -132,7 +132,7 @@ fn update_coords(
     mut txt_coords: Query<&mut Text, (With<CoordsCounter>, Without<ActualCoordsCounter>)>,
     mut txt_coords_actual: Query<&mut Text, (With<ActualCoordsCounter>, Without<CoordsCounter>)>,
 ) {
-    if let Ok(loc) = query.get_single() {
+    if let Ok(loc) = query.single() {
         for mut txt_coords in txt_coords.iter_mut() {
             txt_coords.as_mut().0 = format!("({}), ({:.1}, {:.1}, {:.1})", loc.sector(), loc.local.x, loc.local.y, loc.local.z);
         }
