@@ -3,7 +3,7 @@
 //! Eventually this should be broken down into more specific functions
 
 use bevy::prelude::*;
-use bevy::utils::HashMap;
+use bevy::platform::collections::HashMap;
 use bevy_rapier3d::prelude::Velocity;
 use bevy_renet::renet::{ClientId, RenetServer};
 use cosmos_core::block::block_events::{BlockBreakEvent, BlockInteractEvent, BlockPlaceEvent, BlockPlaceEventData};

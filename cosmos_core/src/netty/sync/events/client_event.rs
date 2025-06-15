@@ -1,18 +1,22 @@
-use bevy::{ecs::system::SystemParam, prelude::*};
+use bevy::{
+    ecs::{
+        event::{EventId, SendBatchIds},
+        system::SystemParam,
+    },
+    prelude::*,
+};
 use renet::RenetClient;
 
 use crate::{
     netty::{
-        NettyChannelClient,
+        NettyChannelClient, NettyChannelServer,
         cosmos_encoder::{self, serialize_uncompressed},
+        sync::mapping::NetworkMapping,
         system_sets::NetworkingSystemsSet,
     },
+    registry::Registry,
     registry::identifiable::Identifiable,
     state::GameState,
-};
-use crate::{
-    netty::{NettyChannelServer, sync::mapping::NetworkMapping},
-    registry::Registry,
 };
 
 use super::netty_event::{EventReceiver, NettyEvent, NettyEventMessage, RegisteredNettyEvent};
@@ -62,11 +66,11 @@ impl<E: NettyEvent> NettyEventWriter<'_, E> {
     /// This method returns the [ID](`EventId`) of the sent `event`.
     ///
     /// See [`Events`] for details.
-    pub fn send_default(&mut self) -> EventId<NettyEventToSend<E>>
+    pub fn write_default(&mut self) -> EventId<NettyEventToSend<E>>
     where
         E: Default,
     {
-        self.ev_writer.send_default()
+        self.ev_writer.write_default()
     }
 }
 

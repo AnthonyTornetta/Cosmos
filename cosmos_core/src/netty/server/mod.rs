@@ -4,7 +4,7 @@
 
 use bevy::{
     prelude::{Entity, Resource},
-    utils::HashMap,
+    platform::collections::HashMap,
 };
 use bevy_renet::renet::ClientId;
 

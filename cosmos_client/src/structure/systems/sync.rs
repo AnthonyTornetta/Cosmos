@@ -12,7 +12,7 @@ use bevy::{
     log::{error, warn},
     prelude::{BuildChildrenTransformExt, Deref, DerefMut, SystemSet},
     state::condition::in_state,
-    utils::HashMap,
+    platform::collections::HashMap,
 };
 use bevy_renet::renet::RenetClient;
 use cosmos_core::{

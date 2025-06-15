@@ -18,10 +18,10 @@ use bevy::{
         system::{Commands, Query, ResMut, Resource},
     },
     hierarchy::DespawnRecursiveExt,
+    platform::collections::HashMap,
     prelude::{Deref, DerefMut, Res, SystemSet, Transform},
     reflect::Reflect,
     transform::components::GlobalTransform,
-    utils::hashbrown::HashMap,
 };
 use bevy_kira_audio::{AudioSystemSet, prelude::*};
 use bevy_rapier3d::plugin::RapierTransformPropagateSet;
@@ -210,9 +210,10 @@ fn monitor_attached_audio_sources(
         // Stop any removed audio emissions
         for (audio_instance, tween) in remove_vec {
             if let Some(mut ai) = audio_instances.remove(&audio_instance)
-                && ai.state() != PlaybackState::Stopped {
-                    ai.stop(tween);
-                }
+                && ai.state() != PlaybackState::Stopped
+            {
+                ai.stop(tween);
+            }
         }
     }
 }

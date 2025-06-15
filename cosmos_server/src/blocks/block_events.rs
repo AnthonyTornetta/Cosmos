@@ -2,7 +2,7 @@ use crate::{
     persistence::make_persistent::{DefaultPersistentComponent, make_persistent},
     structure::block_health::BlockHealthSet,
 };
-use bevy::{prelude::*, utils::HashMap};
+use bevy::{prelude::*, platform::collections::HashMap};
 use bevy_rapier3d::prelude::Velocity;
 use bevy_renet::renet::RenetServer;
 use cosmos_core::{

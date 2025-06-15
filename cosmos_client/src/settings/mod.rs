@@ -9,7 +9,7 @@ use bevy::{
         AmbientLight, App, Commands, IntoSystemConfigs, IntoSystemSetConfigs, OnEnter, OnExit, Projection, Query, Res, ResMut, Resource,
         SystemSet, With, in_state, not, resource_changed, resource_exists, resource_exists_and_changed,
     },
-    utils::HashMap,
+    platform::collections::HashMap,
 };
 use cosmos_core::{
     registry::{Registry, create_registry, identifiable::Identifiable},

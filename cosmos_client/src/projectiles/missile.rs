@@ -1,6 +1,6 @@
 use std::time::Duration;
 
-use bevy::{asset::LoadState, color::palettes::css, prelude::*, utils::HashMap};
+use bevy::{asset::LoadState, color::palettes::css, prelude::*, platform::collections::HashMap};
 use bevy_hanabi::prelude::*;
 
 use bevy_kira_audio::{Audio, AudioControl, AudioInstance, AudioSource};

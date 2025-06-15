@@ -1,6 +1,6 @@
 //! Handles the creation of lasers
 
-use bevy::{prelude::*, utils::HashMap};
+use bevy::{prelude::*, platform::collections::HashMap};
 use bevy_rapier3d::{plugin::RapierContextEntityLink, prelude::RapierContextSimulation};
 use bevy_renet::renet::*;
 use cosmos_core::{

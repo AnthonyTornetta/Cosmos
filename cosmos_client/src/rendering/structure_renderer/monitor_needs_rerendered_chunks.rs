@@ -1,5 +1,5 @@
 use bevy::prelude::{App, Commands, Entity, EventReader, IntoSystemConfigs, Query, Update, With};
-use bevy::utils::hashbrown::HashMap;
+use bevy::platform::collections::HashMap;
 use cosmos_core::events::block_events::{BlockChangedEvent, BlockDataChangedEvent};
 use cosmos_core::structure::Structure;
 use cosmos_core::structure::chunk::CHUNK_DIMENSIONS;

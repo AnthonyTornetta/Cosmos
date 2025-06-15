@@ -1,6 +1,6 @@
 //! Displays the information a player sees while piloting a ship
 
-use bevy::{asset::LoadState, prelude::*, utils::HashMap};
+use bevy::{asset::LoadState, prelude::*, platform::collections::HashMap};
 use cosmos_core::{
     faction::{Faction, FactionId, FactionRelation, Factions},
     netty::{client::LocalPlayer, system_sets::NetworkingSystemsSet},

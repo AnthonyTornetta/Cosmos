@@ -6,7 +6,7 @@ use bevy::{
     app::App,
     ecs::system::{Commands, Res, Resource},
     state::state::OnEnter,
-    utils::hashbrown::HashSet,
+    platform::collections::HashSet,
 };
 use cosmos_core::{
     registry::{Registry, identifiable::Identifiable},

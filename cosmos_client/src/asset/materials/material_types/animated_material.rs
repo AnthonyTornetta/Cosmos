@@ -12,7 +12,7 @@ use crate::{
 use bevy::{
     prelude::*,
     render::mesh::{MeshVertexAttribute, VertexAttributeValues},
-    utils::HashMap,
+    platform::collections::HashMap,
 };
 use cosmos_core::{
     registry::{Registry, identifiable::Identifiable},

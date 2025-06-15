@@ -1,7 +1,4 @@
-use bevy::prelude::{
-    App, BuildChildren, Commands, Component, Entity, Event, EventReader, EventWriter, IntoSystemConfigs, IntoSystemSetConfigs, Quat, Query,
-    RemovedComponents, States, SystemSet, Transform, Update, Vec3, With, Without, in_state,
-};
+use bevy::prelude::*;
 use bevy_rapier3d::prelude::{RigidBody, Sensor};
 
 use crate::events::structure::change_pilot_event::ChangePilotEvent;
@@ -22,11 +19,11 @@ fn event_listener(
     for ev in event_reader.read() {
         // Make sure there is no other player thinking they are the pilot of this ship
         if let Ok(prev_pilot) = pilot_query.get(ev.structure_entity) {
-            if let Some(mut ec) = commands.get_entity(ev.structure_entity) {
+            if let Ok(mut ec) = commands.get_entity(ev.structure_entity) {
                 ec.remove::<Pilot>();
             }
 
-            if let Some(mut ec) = commands.get_entity(prev_pilot.entity) {
+            if let Ok(mut ec) = commands.get_entity(prev_pilot.entity) {
                 ec.remove::<Pilot>();
             }
         }
@@ -110,7 +107,7 @@ fn bouncer(mut reader: EventReader<Bouncer>, mut event_writer: EventWriter<Remov
 fn remove_sensor(mut reader: EventReader<RemoveSensorFrom>, mut event_writer: EventWriter<Bouncer>, mut commands: Commands) {
     for ev in reader.read() {
         if ev.1 >= BOUNCES {
-            if let Some(mut e) = commands.get_entity(ev.0) {
+            if let Ok(mut e) = commands.get_entity(ev.0) {
                 e.remove::<Sensor>();
             }
         } else {
@@ -121,7 +118,7 @@ fn remove_sensor(mut reader: EventReader<RemoveSensorFrom>, mut event_writer: Ev
 
 fn verify_pilot_exists(mut commands: Commands, query: Query<(Entity, &Pilot)>) {
     for (entity, pilot) in query.iter() {
-        if commands.get_entity(pilot.entity).is_none() {
+        if commands.get_entity(pilot.entity).is_err() {
             commands.entity(entity).remove::<Pilot>();
         }
     }

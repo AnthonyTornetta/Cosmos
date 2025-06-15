@@ -6,7 +6,7 @@ use bevy::{
     log::{error, warn},
     math::Quat,
     prelude::{App, Commands, Deref, DerefMut, EventReader, IntoSystemConfigs, Query, Res, ResMut, Resource, Update, Vec3, With, in_state},
-    utils::HashSet,
+    platform::collections::HashSet,
 };
 use cosmos_core::{
     entities::player::Player,

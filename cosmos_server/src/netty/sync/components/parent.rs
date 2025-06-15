@@ -1,4 +1,4 @@
-use bevy::{prelude::*, utils::HashMap};
+use bevy::{prelude::*, platform::collections::HashMap};
 use cosmos_core::{
     block::data::BlockData,
     entities::player::Player,

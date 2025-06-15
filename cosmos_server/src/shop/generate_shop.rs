@@ -6,7 +6,7 @@ use bevy::{
     log::{error, info},
     prelude::{App, Commands, EventReader, IntoSystemConfigs, Query, Res, ResMut, Update, Vec3, With, in_state},
     time::common_conditions::on_timer,
-    utils::HashSet,
+    platform::collections::HashSet,
 };
 use cosmos_core::{
     entities::player::Player,

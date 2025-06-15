@@ -13,7 +13,7 @@ use bevy::{
         system::{Commands, Query},
     },
     prelude::{Deref, DerefMut},
-    utils::HashMap,
+    platform::collections::HashMap,
 };
 use cosmos_core::{
     ecs::NeedsDespawned,

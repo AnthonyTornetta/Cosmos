@@ -6,8 +6,8 @@ use std::fs;
 
 use bevy::{
     asset::{LoadState, LoadedFolder, RecursiveDependencyLoadState},
+    platform::collections::HashMap,
     prelude::*,
-    utils::HashMap,
 };
 use bitflags::bitflags;
 use cosmos_core::{

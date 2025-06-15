@@ -1083,7 +1083,7 @@ fn on_click_creative_item(
             && let Some(held_is) = inv.itemstack_at(0)
         {
             if held_is.item_id() != item_id {
-                nevw_trash_item.send_default();
+                nevw_trash_item.write_default();
                 continue;
             }
             quantity += held_is.quantity();

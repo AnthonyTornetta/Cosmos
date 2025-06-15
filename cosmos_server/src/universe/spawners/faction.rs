@@ -4,7 +4,7 @@ use bevy::{
     log::{error, info},
     prelude::{App, Commands, IntoSystemConfigs, Query, Res, ResMut, Update, With, in_state},
     time::common_conditions::on_timer,
-    utils::HashSet,
+    platform::collections::HashSet,
 };
 use cosmos_core::{
     faction::Factions,

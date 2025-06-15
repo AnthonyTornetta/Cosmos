@@ -9,7 +9,7 @@ use bevy::{
     math::Vec3,
     prelude::{App, Commands, IntoSystemConfigs, OnEnter, OnExit, Res, ResMut, any_with_component, in_state},
     time::common_conditions::{on_real_timer, on_timer},
-    utils::HashSet,
+    platform::collections::HashSet,
 };
 use cosmos_core::{
     entities::player::Player,

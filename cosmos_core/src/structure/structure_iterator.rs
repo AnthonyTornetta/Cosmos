@@ -1,6 +1,6 @@
 //! Used to iterate over the blocks or chunks of a structure.
 
-use bevy::utils::hashbrown::hash_map;
+use bevy::platform::collections::hash_map;
 
 use super::{
     Structure,

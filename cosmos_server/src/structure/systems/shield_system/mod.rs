@@ -20,7 +20,7 @@ use bevy::{
     reflect::Reflect,
     time::Time,
     transform::components::Transform,
-    utils::hashbrown::HashMap,
+    platform::collections::HashMap,
 };
 
 use bevy_renet::renet::RenetServer;

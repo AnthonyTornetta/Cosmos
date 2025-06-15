@@ -16,7 +16,7 @@ use bevy::{
     reflect::Reflect,
     render::mesh::Mesh,
     state::state::OnEnter,
-    utils::HashMap,
+    platform::collections::HashMap,
 };
 use cosmos_core::{
     block::{Block, block_direction::BlockDirection, block_face::ALL_BLOCK_FACES},

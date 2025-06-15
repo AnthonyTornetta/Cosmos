@@ -10,7 +10,7 @@ use bevy::{
     },
     prelude::{Entity, EventWriter, GlobalTransform, Vec3},
     reflect::Reflect,
-    utils::HashMap,
+    platform::collections::HashMap,
 };
 use serde::{Deserialize, Serialize};
 

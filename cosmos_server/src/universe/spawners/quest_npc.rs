@@ -17,7 +17,7 @@ use bevy::{
     reflect::Reflect,
     state::condition::in_state,
     time::Time,
-    utils::hashbrown::HashMap,
+    platform::collections::HashMap,
 };
 use cosmos_core::{
     entities::player::Player,

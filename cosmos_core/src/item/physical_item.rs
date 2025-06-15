@@ -1,9 +1,6 @@
 //! Items that are thrown on the ground
 
-use bevy::app::Update;
-use bevy::core::Name;
-use bevy::prelude::{Added, App, Commands, Entity, IntoSystemConfigs, Query};
-use bevy::{prelude::Component, reflect::Reflect};
+use bevy::prelude::*;
 use bevy_rapier3d::prelude::{Collider, ReadMassProperties, RigidBody};
 use serde::{Deserialize, Serialize};
 

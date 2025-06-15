@@ -14,7 +14,7 @@ use crate::{
 use bevy::{
     prelude::*,
     tasks::{AsyncComputeTaskPool, Task},
-    utils::HashSet,
+    platform::collections::HashSet,
 };
 use cosmos_core::{
     block::{

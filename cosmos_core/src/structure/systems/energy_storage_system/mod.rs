@@ -1,9 +1,9 @@
 //! Represents all the energy stored on a structure
 
 use bevy::{
+    platform::collections::HashMap,
     prelude::{App, Component, Resource},
     reflect::Reflect,
-    utils::HashMap,
 };
 use serde::{Deserialize, Serialize};
 

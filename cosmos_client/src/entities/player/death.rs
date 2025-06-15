@@ -166,9 +166,10 @@ fn on_not_dead(
 ) {
     for c in removed_components.read() {
         if q_local_player.contains(c)
-            && let Ok(ent) = q_respawn_ui.single() {
-                commands.entity(ent).insert(NeedsDespawned);
-            }
+            && let Ok(ent) = q_respawn_ui.single()
+        {
+            commands.entity(ent).insert(NeedsDespawned);
+        }
     }
 }
 
@@ -191,7 +192,7 @@ fn on_respawn(
 }
 
 fn respawn_clicked(mut nevw_respawn: NettyEventWriter<RequestRespawnEvent>) {
-    nevw_respawn.send_default();
+    nevw_respawn.write_default();
 }
 
 fn title_screen_clicked(mut client: ResMut<RenetClient>) {

@@ -84,7 +84,7 @@ fn press_decline(
         return;
     };
 
-    nevw_decline_coms.send_default();
+    nevw_decline_coms.write_default();
 
     commands.entity(ent).despawn();
 }

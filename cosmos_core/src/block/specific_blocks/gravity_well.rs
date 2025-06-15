@@ -2,19 +2,7 @@
 
 use std::time::Duration;
 
-use bevy::{
-    app::{App, Update},
-    ecs::{
-        component::Component,
-        entity::Entity,
-        system::{Query, Res},
-    },
-    math::{Quat, Vec3},
-    prelude::{Commands, IntoSystemConfigs, With},
-    reflect::Reflect,
-    time::{Time, common_conditions::on_timer},
-    transform::components::GlobalTransform,
-};
+use bevy::{prelude::*, time::common_conditions::on_timer};
 use bevy_rapier3d::{
     dynamics::{ExternalImpulse, ReadMassProperties},
     prelude::AdditionalMassProperties,

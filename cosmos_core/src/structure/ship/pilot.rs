@@ -1,10 +1,6 @@
 //! Manages the pilot of a ship
 
-use bevy::{
-    app::Update,
-    prelude::{App, Commands, Component, Entity, IntoSystemConfigs, Query, With, Without, in_state},
-    reflect::Reflect,
-};
+use bevy::prelude::*;
 use serde::{Deserialize, Serialize};
 
 use crate::{

@@ -1,16 +1,6 @@
 //! Handles the [`Shield`] component and its shared logic
 
-use bevy::{
-    app::{App, PostUpdate},
-    ecs::{
-        component::Component,
-        entity::Entity,
-        query::Changed,
-        system::{Commands, Query},
-    },
-    prelude::{ChildOf, IntoSystemConfigs},
-    reflect::Reflect,
-};
+use bevy::prelude::*;
 use bevy_rapier3d::{
     geometry::{Collider, ColliderMassProperties, Group, Sensor},
     plugin::{PhysicsSet, RapierContextEntityLink},

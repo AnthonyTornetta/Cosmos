@@ -10,7 +10,7 @@ use bevy::{
     math::{Quat, Vec3},
     prelude::{App, Commands, Entity, Query, Res, Update, With},
     transform::components::{GlobalTransform, Transform},
-    utils::HashSet,
+    platform::collections::HashSet,
 };
 use bevy_rapier3d::{
     geometry::Collider,

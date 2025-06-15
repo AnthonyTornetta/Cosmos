@@ -6,7 +6,7 @@
 //! Just if you ever remove a call to `register_loader` or `finish_loading` you may have to add it to another
 //! system in that state.
 
-use bevy::{prelude::*, state::state::FreelyMutableState, utils::HashSet};
+use bevy::{platform::collections::HashSet, prelude::*, state::state::FreelyMutableState};
 
 /// Using the LoadingManager struct avoids passing ugly generics around the code, rather than directly using the LoadingStatus struct
 #[derive(Default, Resource)]

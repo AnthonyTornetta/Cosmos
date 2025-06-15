@@ -1,6 +1,6 @@
 //! Handles the rendering of the settings UI
 
-use bevy::{prelude::*, utils::hashbrown::HashMap};
+use bevy::{platform::collections::HashMap, prelude::*};
 use cosmos_core::registry::{Registry, identifiable::Identifiable};
 
 use crate::{

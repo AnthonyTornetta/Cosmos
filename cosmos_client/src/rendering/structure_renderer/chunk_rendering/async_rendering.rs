@@ -10,7 +10,7 @@ use bevy::prelude::{
 use bevy::render::mesh::MeshAabb;
 use bevy::render::primitives::Aabb;
 use bevy::tasks::AsyncComputeTaskPool;
-use bevy::utils::HashMap;
+use bevy::platform::collections::HashMap;
 use cosmos_core::block::Block;
 use cosmos_core::netty::client::LocalPlayer;
 use cosmos_core::physics::location::SECTOR_DIMENSIONS;

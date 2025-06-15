@@ -2,7 +2,7 @@
 
 use std::fs;
 
-use bevy::{prelude::*, text::FontStyle, utils::HashMap};
+use bevy::{prelude::*, text::FontStyle, platform::collections::HashMap};
 use cosmos_core::{
     item::Item,
     registry::{Registry, identifiable::Identifiable},

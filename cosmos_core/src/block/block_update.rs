@@ -1,6 +1,6 @@
 //! Events sent to adjacent blocks on block changes
 
-use bevy::prelude::{App, Entity, Event, EventReader, EventWriter, IntoSystemConfigs, Query, Update};
+use bevy::prelude::*;
 
 use crate::{
     ecs::mut_events::{MutEvent, MutEventsCommand},

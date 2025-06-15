@@ -4,7 +4,7 @@ use bevy::{
     ecs::{entity::Entity, event::Event},
     prelude::{App, IntoSystemConfigs, OnExit, ResMut, SystemSet},
     state::state::OnEnter,
-    utils::HashSet,
+    platform::collections::HashSet,
 };
 use cosmos_core::{
     registry::Registry,

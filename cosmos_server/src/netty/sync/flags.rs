@@ -2,7 +2,7 @@
 //!
 //! Notably: [`SyncTo`] and [`SyncReason`]
 
-use bevy::{prelude::*, utils::HashSet};
+use bevy::{prelude::*, platform::collections::HashSet};
 use cosmos_core::{
     block::data::BlockData,
     entities::player::Player,

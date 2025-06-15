@@ -4,7 +4,7 @@ use bevy::{
     asset::LoadState,
     pbr::{NotShadowCaster, NotShadowReceiver},
     prelude::*,
-    utils::HashMap,
+    platform::collections::HashMap,
 };
 use bevy_kira_audio::prelude::*;
 use bevy_rapier3d::{

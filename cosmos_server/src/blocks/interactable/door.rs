@@ -1,4 +1,4 @@
-use bevy::{prelude::*, utils::hashbrown::HashSet};
+use bevy::{prelude::*, platform::collections::HashSet};
 use cosmos_core::{
     block::{
         Block,

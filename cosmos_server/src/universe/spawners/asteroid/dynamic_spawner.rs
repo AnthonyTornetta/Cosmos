@@ -7,7 +7,7 @@ use bevy::{
     },
     reflect::Reflect,
     time::Time,
-    utils::hashbrown::HashMap,
+    platform::collections::HashMap,
 };
 use bevy_rapier3d::prelude::Velocity;
 use cosmos_core::{
