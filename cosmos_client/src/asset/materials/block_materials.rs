@@ -1,4 +1,5 @@
 //! The material used by most blocks
+
 use bevy::pbr::{ExtendedMaterial, MaterialExtension, MaterialExtensionKey, MaterialExtensionPipeline};
 use bevy::prelude::*;
 use bevy::render::mesh::{MeshVertexAttribute, MeshVertexBufferLayoutRef, VertexBufferLayout, VertexFormat};
@@ -6,7 +7,6 @@ use bevy::render::render_resource::{
     AsBindGroup, PushConstantRange, RenderPipelineDescriptor, ShaderDefVal, ShaderRef, ShaderStages, ShaderType,
     SpecializedMeshPipelineError, VertexAttribute, VertexStepMode,
 };
-use wgpu::{IndexFormat, PushConstantRange, ShaderStages, vertex_attr_array};
 
 pub type ArrayTextureMaterial = ExtendedMaterial<StandardMaterial, ArrayTextureMaterialExtension>;
 
@@ -16,16 +16,25 @@ pub const ATTRIBUTE_TEXTURE_INDEX: MeshVertexAttribute =
     // See the MeshVertexAttribute docs for more info.
     MeshVertexAttribute::new("ArrayTextureIndex", 923840841, VertexFormat::Uint32);
 
-#[derive(Clone, Debug, Default, Reflect, ShaderType)]
-#[repr(C)]
-pub struct ArrayTextureMaterialUniform {
-    pub texture_index: u32,
-}
-
 #[derive(Asset, AsBindGroup, Reflect, Debug, Clone)]
 pub struct ArrayTextureMaterialExtension {
-    #[uniform(100)]
-    pub uniform: ArrayTextureMaterialUniform,
+    /// The texture component of the material's color before lighting.
+    /// The actual pre-lighting color is `base_color * this_texture`.
+    ///
+    /// See [`base_color`] for details.
+    ///
+    /// You should set `base_color` to [`Color::WHITE`] (the default)
+    /// if you want the texture to show as-is.
+    ///
+    /// Setting `base_color` to something else than white will tint
+    /// the texture. For example, setting `base_color` to pure red will
+    /// tint the texture red.
+    ///
+    /// [`base_color`]: AnimatedArrayTextureMaterial::base_color
+    #[texture(101, dimension = "2d_array")]
+    #[sampler(102)]
+    #[dependency]
+    pub base_color_texture: Option<Handle<Image>>,
 }
 
 impl MaterialExtension for ArrayTextureMaterialExtension {
@@ -42,19 +51,28 @@ impl MaterialExtension for ArrayTextureMaterialExtension {
     fn specialize(
         _pipeline: &MaterialExtensionPipeline,
         descriptor: &mut RenderPipelineDescriptor,
-        _layout: &MeshVertexBufferLayoutRef,
+        layout: &MeshVertexBufferLayoutRef,
         _key: MaterialExtensionKey<Self>,
     ) -> Result<(), SpecializedMeshPipelineError> {
-        descriptor.vertex.buffers.push(VertexBufferLayout {
-            array_stride: size_of::<u32>() as u64 / 8,
-            step_mode: VertexStepMode::Instance,
-            attributes: [VertexAttribute {
-                shader_location: 20,
-                offset: 0,
-                format: VertexFormat::Float32x4,
-            }]
-            .to_vec(),
-        });
+        // descriptor.vertex.buffers.push(VertexBufferLayout {
+        //     array_stride: size_of::<u32>() as u64 / 8,
+        //     step_mode: VertexStepMode::Instance,
+        //     attributes: [VertexAttribute {
+        //         shader_location: 20,
+        //         offset: 0,
+        //         format: VertexFormat::Uint32,
+        //     }]
+        //     .to_vec(),
+        // });
+
+        let vertex_layout = layout.0.get_layout(&[
+            Mesh::ATTRIBUTE_POSITION.at_shader_location(0),
+            Mesh::ATTRIBUTE_NORMAL.at_shader_location(1),
+            Mesh::ATTRIBUTE_UV_0.at_shader_location(2),
+            ATTRIBUTE_TEXTURE_INDEX.at_shader_location(20),
+        ])?;
+
+        descriptor.vertex.buffers = vec![vertex_layout];
 
         // let vertex_layout = layout.0.get_layout(&[
         //     Mesh::ATTRIBUTE_POSITION.at_shader_location(0),
@@ -68,7 +86,7 @@ impl MaterialExtension for ArrayTextureMaterialExtension {
     }
 }
 
-pub fn add_vertex_extension(
+fn add_vertex_extension(
     layout: &MeshVertexBufferLayoutRef,
     descriptor: &mut RenderPipelineDescriptor,
     attribute: MeshVertexAttribute,
@@ -84,4 +102,8 @@ pub fn add_vertex_extension(
     } else {
         panic!("Attribute {} not specified in a mesh", attribute.name)
     }
+}
+
+pub(super) fn register(app: &mut App) {
+    app.add_plugins(MaterialPlugin::<ExtendedMaterial<StandardMaterial, ArrayTextureMaterialExtension>>::default());
 }

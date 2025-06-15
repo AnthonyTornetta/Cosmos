@@ -5,19 +5,19 @@
     mesh_functions,
     skinning,
     morph::morph,
-    forward_io::{Vertex, VertexOutput},
     view_transformations::position_world_to_clip,
 }
 
 #ifdef PREPASS_PIPELINE
 #import bevy_pbr::{
-    prepass_io::{VertexOutput, FragmentOutput},
+    prepass_io::{VertexOutput, Vertex, FragmentOutput},
     pbr_deferred_functions::deferred_output,
 }
 #else
 #import bevy_pbr::{
-    forward_io::{VertexOutput, FragmentOutput},
+    forward_io::{VertexOutput, Vertex, FragmentOutput},
     pbr_functions::{apply_pbr_lighting, main_pass_post_lighting_processing},
+    pbr_types::STANDARD_MATERIAL_FLAGS_UNLIT_BIT,
 }
 #endif
 
@@ -26,13 +26,10 @@ struct ExtendedMesh {
     @location(20) texture_index: u32,
 }
 
-@group(2) @binding(1)
+@group(2) @binding(101)
 var my_array_texture: texture_2d_array<f32>;
-@group(2) @binding(2)
+@group(2) @binding(102)
 var my_array_texture_sampler: sampler;
-
-@group(2) @binding(100)
-var<uniform> my_extended_material: MyExtendedMaterial;
 
 // Semi based on https://github.com/DarkZek/RustCraft/blob/master/assets/shaders/extended_material.wgsl
 
@@ -122,7 +119,7 @@ fn vertex(vertex_no_morph: Vertex, extended_mesh: ExtendedMesh) -> CustomVertexO
         out.instance_index = vertex_no_morph.instance_index;
     #endif
 
-    out.texture_index = vertex_no_morph.texture_index;
+    out.texture_index = extended_mesh.texture_index;
 
     return out;
 }
@@ -140,12 +137,30 @@ fn fragment(
     #ifdef VERTEX_UVS_A
         in.uv = custom.uv;
     #endif // VERTEX_UVS_A
+    // This is `clip position` when the struct is used as a vertex stage output
+    // and `frag coord` when used as a fragment stage input
+#ifdef VERTEX_UVS_B
+    in.uv_b = custom.uv_b;
+#endif
+#ifdef VERTEX_TANGENTS
+    in.world_tangent = custom.world_tangent;
+#endif
+#ifdef VERTEX_COLORS
+    in.color = custom.color;
+#endif
+#ifdef VERTEX_OUTPUT_INSTANCE_INDEX
+    in.instance_index = custom.instance_index;
+#endif
+#ifdef VISIBILITY_RANGE_DITHER
+    in.visibility_range_dither = custom.visibility_range_dither;
+#endif
+
     in.instance_index = custom.instance_index;
 
     // generate a PbrInput struct from the StandardMaterial bindings
     var pbr_input = pbr_input_from_standard_material(in, is_front);
 
-    pbr_input.material.base_color *= textureSample(my_array_texture, my_array_texture_sampler, in.uv, in.texture_index);
+    pbr_input.material.base_color *= textureSample(my_array_texture, my_array_texture_sampler, in.uv, custom.texture_index);
     
     // alpha discard
     pbr_input.material.base_color = alpha_discard(pbr_input.material, pbr_input.material.base_color);
@@ -156,7 +171,11 @@ fn fragment(
 #else
     var out: FragmentOutput;
     // apply lighting
-    out.color = apply_pbr_lighting(pbr_input);
+    if (pbr_input.material.flags & STANDARD_MATERIAL_FLAGS_UNLIT_BIT) == 0u {
+        out.color = apply_pbr_lighting(pbr_input);
+    } else {
+        out.color = pbr_input.material.base_color;
+    }
 
     // apply in-shader post processing (fog, alpha-premultiply, and also tonemapping, debanding if the camera is non-hdr)
     // note this does not include fullscreen postprocessing effects like bloom.
