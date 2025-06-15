@@ -1,6 +1,6 @@
 //! Displays the information a player sees while piloting a ship
 
-use bevy::{asset::LoadState, prelude::*, platform::collections::HashMap};
+use bevy::{asset::LoadState, platform::collections::HashMap, prelude::*};
 use cosmos_core::{
     faction::{Faction, FactionId, FactionRelation, Factions},
     netty::{client::LocalPlayer, system_sets::NetworkingSystemsSet},
@@ -131,7 +131,7 @@ fn create_indicator(
             let handle = indicator_images.0.get(&color_hash).map(|x| x.clone_weak()).unwrap_or_else(|| {
                 let mut img = images.get(&base_texture).expect("Waypoint diamond image removed?").clone();
 
-                for [img_r, img_g, img_b, img_a] in img.data.iter_mut().array_chunks::<4>() {
+                for [img_r, img_g, img_b, img_a] in img.data.as_mut().expect("Invalid image data").iter_mut().array_chunks::<4>() {
                     *img_r = r;
                     *img_g = g;
                     *img_b = b;
@@ -220,9 +220,10 @@ fn add_indicators(
             if distance_sqrd <= max_dist_sqrd {
                 if let Some(has_indicator) = has_indicator {
                     if let Ok(text_entity) = q_text_entity_with_focus.get(has_indicator.0)
-                        && let Ok(mut text) = text_query.get_mut(text_entity.0) {
-                            text.0 = get_distance_text(distance_sqrd.sqrt());
-                        }
+                        && let Ok(mut text) = text_query.get_mut(text_entity.0)
+                    {
+                        text.0 = get_distance_text(distance_sqrd.sqrt());
+                    }
                 } else {
                     create_indicator(
                         entity,
@@ -236,7 +237,7 @@ fn add_indicators(
                 }
             } else if let Some(has_indicator) = has_indicator {
                 commands.entity(entity).remove::<HasIndicator>();
-                if let Some(ecmds) = commands.get_entity(has_indicator.0) {
+                if let Ok(mut ecmds) = commands.get_entity(has_indicator.0) {
                     ecmds.despawn();
                 }
             }
@@ -421,14 +422,15 @@ fn focus_waypoint(
         commands.entity(current_ent).remove::<FocusedWaypointEntity>();
 
         if let Some(closest_waypoint) = closest_waypoint.0
-            && current_ent != closest_waypoint {
-                let Ok(closest) = q_indicator_text.get(closest_waypoint) else {
-                    return;
-                };
+            && current_ent != closest_waypoint
+        {
+            let Ok(closest) = q_indicator_text.get(closest_waypoint) else {
+                return;
+            };
 
-                *visibility.get_mut(closest.0).expect("This always has visibility") = Visibility::Visible;
-                commands.entity(closest_waypoint).insert(FocusedWaypointEntity);
-            }
+            *visibility.get_mut(closest.0).expect("This always has visibility") = Visibility::Visible;
+            commands.entity(closest_waypoint).insert(FocusedWaypointEntity);
+        }
     } else if let Some(closest_waypoint) = closest_waypoint.0 {
         let Ok(closest) = q_indicator_text.get(closest_waypoint) else {
             return;

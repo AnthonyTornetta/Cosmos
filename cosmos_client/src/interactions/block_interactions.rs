@@ -85,10 +85,10 @@ pub(crate) fn process_player_interaction(
     mut client: ResMut<RenetClient>,
     mapping: Res<NetworkMapping>,
 ) {
-    let rapier_context = rapier_context_access.single();
+    let rapier_context = rapier_context_access.single().expect("No single rapier context");
 
     // this fails if the player is a pilot
-    let Ok((player_entity, mut inventory, mut looking_at, creative)) = q_player.get_single_mut() else {
+    let Ok((player_entity, mut inventory, mut looking_at, creative)) = q_player.single_mut() else {
         return;
     };
 
@@ -138,40 +138,43 @@ pub(crate) fn process_player_interaction(
     }
 
     if input_handler.check_just_pressed(CosmosInputs::BreakBlock)
-        && let Some(x) = &looking_at.looking_at_block {
-            break_writer.write(RequestBlockBreakEvent { block: x.block });
-        }
+        && let Some(x) = &looking_at.looking_at_block
+    {
+        break_writer.write(RequestBlockBreakEvent { block: x.block });
+    }
 
     if input_handler.check_just_pressed(CosmosInputs::PickBlock)
-        && let Some(x) = &looking_at.looking_at_block {
-            let block = structure.block_at(x.block.coords(), &blocks);
+        && let Some(x) = &looking_at.looking_at_block
+    {
+        let block = structure.block_at(x.block.coords(), &blocks);
 
-            if let Some(block_item) = block_items.item_from_block(block).map(|x| items.from_numeric_id(x))
-                && let Some((slot, _)) = inventory
-                    .iter()
-                    .enumerate()
-                    .flat_map(|(idx, item)| item.as_ref().map(|i| (idx, i)))
-                    .find(|(_, is)| is.item_id() == block_item.id())
-                    && let Ok(mut hotbar) = hotbar.get_single_mut() {
-                        if slot < hotbar.n_slots() {
-                            hotbar.set_selected_slot(slot);
-                        } else {
-                            let held_slot = hotbar.selected_slot();
+        if let Some(block_item) = block_items.item_from_block(block).map(|x| items.from_numeric_id(x))
+            && let Some((slot, _)) = inventory
+                .iter()
+                .enumerate()
+                .flat_map(|(idx, item)| item.as_ref().map(|i| (idx, i)))
+                .find(|(_, is)| is.item_id() == block_item.id())
+            && let Ok(mut hotbar) = hotbar.single_mut()
+        {
+            if slot < hotbar.n_slots() {
+                hotbar.set_selected_slot(slot);
+            } else {
+                let held_slot = hotbar.selected_slot();
 
-                            if let Some(server_player_entity) = mapping.server_from_client(&player_entity) {
-                                client.send_message(
-                                    NettyChannelClient::Inventory,
-                                    cosmos_encoder::serialize(&ClientInventoryMessages::SwapSlots {
-                                        slot_a: slot as u32,
-                                        inventory_a: InventoryIdentifier::Entity(server_player_entity),
-                                        slot_b: held_slot as u32,
-                                        inventory_b: InventoryIdentifier::Entity(server_player_entity),
-                                    }),
-                                );
-                            }
-                        }
-                    }
+                if let Some(server_player_entity) = mapping.server_from_client(&player_entity) {
+                    client.send_message(
+                        NettyChannelClient::Inventory,
+                        cosmos_encoder::serialize(&ClientInventoryMessages::SwapSlots {
+                            slot_a: slot as u32,
+                            inventory_a: InventoryIdentifier::Entity(server_player_entity),
+                            slot_b: held_slot as u32,
+                            inventory_b: InventoryIdentifier::Entity(server_player_entity),
+                        }),
+                    );
+                }
+            }
         }
+    }
 
     if input_handler.check_just_pressed(CosmosInputs::PlaceBlock) {
         (|| {
@@ -270,14 +273,15 @@ pub(crate) fn process_player_interaction(
     }
 
     if input_handler.check_just_pressed(CosmosInputs::Interact)
-        && let Some(looking_at_any) = &looking_at.looking_at_any {
-            interact_writer.write(BlockInteractEvent {
-                block_including_fluids: looking_at_any.block,
-                interactor: player_entity,
-                block: looking_at.looking_at_block.map(|looked_at| looked_at.block),
-                alternate: input_handler.check_pressed(CosmosInputs::AlternateInteraction),
-            });
-        }
+        && let Some(looking_at_any) = &looking_at.looking_at_any
+    {
+        interact_writer.write(BlockInteractEvent {
+            block_including_fluids: looking_at_any.block,
+            interactor: player_entity,
+            block: looking_at.looking_at_block.map(|looked_at| looked_at.block),
+            alternate: input_handler.check_pressed(CosmosInputs::AlternateInteraction),
+        });
+    }
 }
 
 fn send_ray<'a>(

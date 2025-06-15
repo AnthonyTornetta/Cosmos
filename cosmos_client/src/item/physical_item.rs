@@ -1,13 +1,6 @@
 //! Renders physical items in the client
 
-use bevy::{
-    app::Update,
-    math::Vec3,
-    prelude::{
-        Added, App, Changed, Commands, Entity, EventWriter, IntoSystemConfigs, Mesh3d, Or, Query, Res, Transform, Visibility, With,
-        in_state,
-    },
-};
+use bevy::prelude::*;
 use cosmos_core::{
     inventory::Inventory,
     item::{Item, physical_item::PhysicalItem},

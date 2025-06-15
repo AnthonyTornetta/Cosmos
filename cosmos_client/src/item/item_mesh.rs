@@ -1,13 +1,6 @@
 //! Mesh-creation logic for items
 
-use bevy::{
-    asset::{Assets, Handle},
-    color::Srgba,
-    log::warn,
-    math::{Rect, Vec2, Vec3},
-    prelude::{App, Image, IntoSystemConfigs, OnExit, Res, ResMut},
-    render::mesh::Mesh,
-};
+use bevy::prelude::*;
 use cosmos_core::{
     block::{
         Block,

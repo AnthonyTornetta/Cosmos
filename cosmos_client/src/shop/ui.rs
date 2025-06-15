@@ -1,23 +1,4 @@
-use bevy::{
-    app::{App, Update},
-    color::{Color, Srgba, palettes::css},
-    core::Name,
-    ecs::{
-        component::Component,
-        entity::Entity,
-        event::{Event, EventReader},
-        query::{Added, Changed, Or, With},
-        schedule::{IntoSystemConfigs, IntoSystemSetConfigs, SystemSet},
-        system::{Commands, Query, Res, ResMut},
-    },
-    hierarchy::{BuildChildren, DespawnRecursiveExt},
-    log::{error, info},
-    prelude::{ChildBuild, Text},
-    reflect::Reflect,
-    state::condition::in_state,
-    text::{TextFont, TextSpan},
-    ui::{BackgroundColor, BorderColor, FlexDirection, JustifyContent, Node, UiRect, Val, widget::Label},
-};
+use bevy::{color::palettes::css, prelude::*};
 use bevy_renet::renet::RenetClient;
 use cosmos_core::{
     economy::Credits,
@@ -806,9 +787,10 @@ fn click_item_event(
         };
 
         if let Some(prev_clicked) = &prev_clicked
-            && let Ok(mut background_color) = q_background_color.get_mut(prev_clicked.0) {
-                *background_color = Color::NONE.into();
-            }
+            && let Ok(mut background_color) = q_background_color.get_mut(prev_clicked.0)
+        {
+            *background_color = Color::NONE.into();
+        }
 
         commands.entity(shop_ui_ent.0).insert(PrevClickedEntity(ev.0));
         if let Ok(mut background_color) = q_background_color.get_mut(ev.0) {
@@ -954,75 +936,78 @@ fn update_search(
             ..Default::default()
         };
 
-        commands.entity(shop_ents.contents_entity).despawn_descendants().with_children(|p| {
-            let search = search_item_query.0.to_lowercase();
+        commands
+            .entity(shop_ents.contents_entity)
+            .despawn_related::<Children>()
+            .with_children(|p| {
+                let search = search_item_query.0.to_lowercase();
 
-            for shop_entry in shop_ui.shop.contents.iter() {
-                let (item_id, price_per) = match *shop_mode {
-                    ShopMode::Buy => {
-                        let ShopEntry::Selling {
-                            item_id,
-                            max_quantity_selling: _,
-                            price_per,
-                        } = shop_entry
-                        else {
-                            continue;
-                        };
+                for shop_entry in shop_ui.shop.contents.iter() {
+                    let (item_id, price_per) = match *shop_mode {
+                        ShopMode::Buy => {
+                            let ShopEntry::Selling {
+                                item_id,
+                                max_quantity_selling: _,
+                                price_per,
+                            } = shop_entry
+                            else {
+                                continue;
+                            };
 
-                        (*item_id, *price_per)
+                            (*item_id, *price_per)
+                        }
+                        ShopMode::Sell => {
+                            let ShopEntry::Buying {
+                                item_id,
+                                max_quantity_buying: _,
+                                price_per,
+                            } = shop_entry
+                            else {
+                                continue;
+                            };
+
+                            (*item_id, *price_per)
+                        }
+                    };
+
+                    let item = items.from_numeric_id(item_id);
+                    let display_name = lang.get_name(item).unwrap_or(item.unlocalized_name());
+
+                    if !display_name.to_lowercase().contains(&search) {
+                        continue;
                     }
-                    ShopMode::Sell => {
-                        let ShopEntry::Buying {
-                            item_id,
-                            max_quantity_buying: _,
-                            price_per,
-                        } = shop_entry
-                        else {
-                            continue;
-                        };
 
-                        (*item_id, *price_per)
-                    }
-                };
+                    let amount_display = format!("${price_per}");
 
-                let item = items.from_numeric_id(item_id);
-                let display_name = lang.get_name(item).unwrap_or(item.unlocalized_name());
-
-                if !display_name.to_lowercase().contains(&search) {
-                    continue;
-                }
-
-                let amount_display = format!("${price_per}");
-
-                p.spawn((
-                    Name::new(display_name.to_owned()),
-                    *shop_entry,
-                    ShopUiEntity(ui_ent),
-                    CosmosButton::<ClickItemEvent> { ..Default::default() },
-                    Node {
-                        flex_direction: FlexDirection::Row,
-                        margin: UiRect::vertical(Val::Px(2.0)),
-                        ..Default::default()
-                    },
-                ))
-                .with_children(|p| {
                     p.spawn((
-                        Name::new("Item Name"),
-                        Text::new(display_name),
-                        text_style_small.clone(),
+                        Name::new(display_name.to_owned()),
+                        *shop_entry,
+                        ShopUiEntity(ui_ent),
+                        CosmosButton::<ClickItemEvent> { ..Default::default() },
                         Node {
-                            flex_grow: 1.0,
+                            flex_direction: FlexDirection::Row,
+                            margin: UiRect::vertical(Val::Px(2.0)),
                             ..Default::default()
                         },
-                    ));
-                    p.spawn((
-                        Name::new("Price"),
-                        Text::new(format!("({amount_display})")),
-                        text_style_small.clone(),
-                    ));
-                });
-            }
-        });
+                    ))
+                    .with_children(|p| {
+                        p.spawn((
+                            Name::new("Item Name"),
+                            Text::new(display_name),
+                            text_style_small.clone(),
+                            Node {
+                                flex_grow: 1.0,
+                                ..Default::default()
+                            },
+                        ));
+                        p.spawn((
+                            Name::new("Price"),
+                            Text::new(format!("({amount_display})")),
+                            text_style_small.clone(),
+                        ));
+                    });
+                }
+            });
     }
 }
 

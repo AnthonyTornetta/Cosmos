@@ -1,19 +1,6 @@
 use std::marker::PhantomData;
 
-use bevy::{
-    app::{App, Update},
-    ecs::{
-        entity::Entity,
-        event::{Event, EventReader, EventWriter},
-        query::With,
-        schedule::{IntoSystemConfigs, IntoSystemSetConfigs},
-        system::{Commands, Query, Res, ResMut, Resource},
-    },
-    log::{error, warn},
-    prelude::{BuildChildrenTransformExt, Deref, DerefMut, SystemSet},
-    state::condition::in_state,
-    platform::collections::HashMap,
-};
+use bevy::{ecs::component::Mutable, platform::collections::HashMap, prelude::*};
 use bevy_renet::renet::RenetClient;
 use cosmos_core::{
     block::specific_blocks::gravity_well::GravityWell,
@@ -156,7 +143,7 @@ fn replication_listen_netty(
     }
 }
 
-fn sync<T: StructureSystemImpl + Serialize + DeserializeOwned>(
+fn sync<T: Component<Mutability = Mutable> + StructureSystemImpl + Serialize + DeserializeOwned>(
     system_types: Res<Registry<StructureSystemType>>,
     mut ev_reader: EventReader<StructureSystemNeedsUpdated>,
     mut systems_query: Query<&mut StructureSystems>,
@@ -217,7 +204,10 @@ enum SystemSyncingSet {
     SyncSystems,
 }
 
-pub fn sync_system<T: StructureSystemImpl + Serialize + DeserializeOwned>(app: &mut App) {
+pub fn sync_system<T: StructureSystemImpl + Serialize + DeserializeOwned>(app: &mut App)
+where
+    T: Component<Mutability = Mutable>,
+{
     app.configure_sets(Update, SystemSyncingSet::SyncSystems.in_set(NetworkingSystemsSet::SyncComponents));
 
     app.add_systems(

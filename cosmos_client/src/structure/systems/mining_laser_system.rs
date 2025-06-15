@@ -3,8 +3,8 @@
 use bevy::{
     asset::LoadState,
     pbr::{NotShadowCaster, NotShadowReceiver},
-    prelude::*,
     platform::collections::HashMap,
+    prelude::*,
 };
 use bevy_kira_audio::prelude::*;
 use bevy_rapier3d::{
@@ -86,7 +86,7 @@ fn remove_dead_mining_beams(
         };
 
         for beam in active_beams.0.iter() {
-            if let Some(mut beam) = commands.get_entity(*beam) {
+            if let Ok(mut beam) = commands.get_entity(*beam) {
                 beam.insert(NeedsDespawned);
             }
         }

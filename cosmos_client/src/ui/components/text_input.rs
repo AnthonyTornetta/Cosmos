@@ -4,30 +4,13 @@ use std::ops::Range;
 
 use arboard::Clipboard;
 use bevy::{
-    a11y::Focus,
-    app::{App, Update},
-    color::Color,
-    core::Name,
-    ecs::{
-        component::Component,
-        entity::Entity,
-        event::EventReader,
-        query::{Added, Changed, Or},
-        schedule::{IntoSystemConfigs, IntoSystemSetConfigs, SystemSet, common_conditions::resource_changed},
-        system::{Commands, Query, Res, ResMut, Resource},
-    },
-    hierarchy::BuildChildren,
     input::{
-        ButtonInput, ButtonState,
-        keyboard::{Key, KeyCode, KeyboardInput},
-        mouse::MouseButton,
+        ButtonState,
+        keyboard::{Key, KeyboardInput},
     },
-    log::warn,
-    prelude::{ChildBuild, Deref, Text, TextUiWriter},
-    reflect::Reflect,
-    text::{LineBreak, TextColor, TextFont, TextLayout, TextSpan},
-    time::Time,
-    ui::{AlignSelf, FocusPolicy, Interaction, Node},
+    input_focus::InputFocus,
+    prelude::*,
+    ui::FocusPolicy,
 };
 
 use crate::ui::UiSystemSet;
@@ -134,7 +117,7 @@ impl Default for TextInput {
 }
 
 fn monitor_clicked(
-    mut focused: ResMut<Focus>,
+    mut focused: ResMut<InputFocus>,
     mut focused_time: ResMut<CursorFlashTime>,
     mut q_clicked_text_inputs: Query<(Entity, &mut TextInput, &Interaction)>,
     mouse_inputs: Res<ButtonInput<MouseButton>>,
@@ -161,7 +144,7 @@ struct TextEnt(Entity);
 fn added_text_input_bundle(
     mut commands: Commands,
     q_added: Query<(Entity, Option<&TextLayout>, &InputValue, &TextFont, &TextColor, &TextInput), Added<TextInput>>,
-    focused: Res<Focus>,
+    focused: Res<InputFocus>,
 ) {
     for (entity, text_layout, input_value, t_font, t_col, ti) in q_added.iter() {
         commands.entity(entity).insert(Interaction::None).insert(FocusPolicy::Block);
@@ -200,7 +183,7 @@ fn added_text_input_bundle(
 
 fn send_key_inputs(
     mut evr_keyboard: EventReader<KeyboardInput>,
-    focused: Res<Focus>,
+    focused: Res<InputFocus>,
     mut q_focused_input_field: Query<(&mut TextInput, &mut InputValue, &Interaction)>,
     inputs: Res<ButtonInput<KeyCode>>,
 ) {
@@ -291,7 +274,7 @@ fn send_key_inputs(
     }
 }
 
-fn show_text_cursor(mut writer: TextUiWriter, focused: Res<Focus>, q_text_inputs: Query<(Entity, &TextEnt)>) {
+fn show_text_cursor(mut writer: TextUiWriter, focused: Res<InputFocus>, q_text_inputs: Query<(Entity, &TextEnt)>) {
     for (ent, text) in q_text_inputs.iter() {
         if focused.0.map(|x| x == ent).unwrap_or(false) {
             let col = writer.color(text.0, 0).0;
@@ -304,7 +287,7 @@ fn show_text_cursor(mut writer: TextUiWriter, focused: Res<Focus>, q_text_inputs
 
 fn flash_cursor(
     mut cursor_flash_time: ResMut<CursorFlashTime>,
-    focused: Res<Focus>,
+    focused: Res<InputFocus>,
     q_text_inputs: Query<&TextEnt>,
     time: Res<Time>,
     mut writer: TextUiWriter,
@@ -335,7 +318,7 @@ fn flash_cursor(
 }
 
 fn value_changed(
-    focused: Res<Focus>,
+    focused: Res<InputFocus>,
     mut q_values_changed: Query<(Entity, &InputValue, &mut TextInput, &TextEnt), Or<(Changed<InputValue>, Changed<TextInput>)>>,
     mut cursor_flash_time: ResMut<CursorFlashTime>,
     mut writer: TextUiWriter,
@@ -360,7 +343,7 @@ fn value_changed(
 }
 
 fn handle_keyboard_shortcuts(
-    focused: Res<Focus>,
+    focused: Res<InputFocus>,
     mut q_text_inputs: Query<(&mut InputValue, &mut TextInput)>,
     mut cursor_flash_time: ResMut<CursorFlashTime>,
     inputs: Res<ButtonInput<KeyCode>>,
@@ -514,9 +497,10 @@ fn handle_keyboard_shortcuts(
     }
 
     if let Some(highlighted) = text_input.highlight_begin
-        && highlighted == text_input.cursor_pos {
-            text_input.highlight_begin = None;
-        }
+        && highlighted == text_input.cursor_pos
+    {
+        text_input.highlight_begin = None;
+    }
 }
 
 fn verify_input(text_input: &TextInput, test_value: &str) -> bool {
@@ -563,7 +547,7 @@ pub(super) fn register(app: &mut App) {
             added_text_input_bundle.in_set(TextInputUiSystemSet::AddTextInputBundle),
             (
                 monitor_clicked.run_if(any_open_menus),
-                show_text_cursor.run_if(resource_changed::<Focus>),
+                show_text_cursor.run_if(resource_changed::<InputFocus>),
                 handle_keyboard_shortcuts.run_if(any_open_menus),
                 flash_cursor,
                 send_key_inputs.run_if(any_open_menus),

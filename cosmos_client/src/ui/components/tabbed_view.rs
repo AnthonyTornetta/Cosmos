@@ -1,25 +1,6 @@
 //! A wrapper around ui components that will make them movable and have a title bar with a close button.
 
-use bevy::{
-    app::{App, Update},
-    color::{Color, Srgba, palettes::css},
-    core::Name,
-    ecs::{
-        component::Component,
-        entity::Entity,
-        event::{Event, EventReader},
-        query::{Added, With},
-        schedule::{IntoSystemConfigs, IntoSystemSetConfigs, SystemSet},
-        system::{Commands, Query, Res},
-    },
-    hierarchy::{BuildChildren, Children},
-    log::error,
-    prelude::{Changed, ChildBuild, ChildOf, Without},
-    reflect::Reflect,
-    text::TextFont,
-    ui::{AlignItems, BackgroundColor, Display, FlexDirection, JustifyContent, Node, Val},
-    utils::default,
-};
+use bevy::{color::palettes::css, prelude::*};
 
 use crate::ui::{UiSystemSet, font::DefaultFont};
 
@@ -100,7 +81,7 @@ fn add_tab_view(
 
         let mut window_body = None;
 
-        let tabs = children.iter().flat_map(|x| q_tab.get(*x).map(|y| (*x, y))).collect::<Vec<_>>();
+        let tabs = children.iter().flat_map(|x| q_tab.get(x).map(|y| (x, y))).collect::<Vec<_>>();
 
         commands.entity(ent).with_children(|parent| {
             parent
@@ -183,7 +164,7 @@ fn add_tab_view(
                         }
                     }
                 }
-                commands.entity(tab_ent).set_parent(window_body);
+                commands.entity(tab_ent).insert(ChildOf(window_body));
             }
         }
     }
@@ -197,16 +178,16 @@ fn on_change_selected(
     mut q_bg_color: Query<&mut BackgroundColor>,
 ) {
     for (selected_tab, children) in q_changed_selected.iter() {
-        let Some(tabbed_bar_children) = children.iter().flat_map(|x| q_tab_bar.get(*x)).next() else {
+        let Some(tabbed_bar_children) = children.iter().flat_map(|x| q_tab_bar.get(x)).next() else {
             continue;
         };
 
-        let Some(children) = children.iter().flat_map(|x| q_tabbed_body.get(*x)).next() else {
+        let Some(children) = children.iter().flat_map(|x| q_tabbed_body.get(x)).next() else {
             continue;
         };
 
         let mut first = true;
-        for (&child, &tab_ent) in children.iter().zip(tabbed_bar_children.iter()) {
+        for (child, tab_ent) in children.iter().zip(tabbed_bar_children.iter()) {
             let Ok((tab, mut node)) = q_tab.get_mut(child) else {
                 continue;
             };
@@ -244,12 +225,12 @@ fn on_click_tab(
             error!("No tab component on tab!");
             continue;
         };
-        let Ok(p) = q_parent.get(ev.0).and_then(|e| q_parent.get(e.get())) else {
+        let Ok(p) = q_parent.get(ev.0).and_then(|e| q_parent.get(e.parent())) else {
             error!("Invalid UI heirarchy");
             continue;
         };
 
-        let Ok(mut selected) = q_selected_tab.get_mut(p.get()) else {
+        let Ok(mut selected) = q_selected_tab.get_mut(p.parent()) else {
             error!("Unable to get selected tab component");
             continue;
         };

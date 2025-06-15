@@ -1,12 +1,6 @@
 //! Handles client-related ship things
 
-use bevy::{
-    ecs::event::EventReader,
-    prelude::{
-        App, BuildChildrenTransformExt, Commands, Entity, IntoSystemConfigs, ChildOf, Query, ResMut, SystemSet, Transform, Update, With,
-        Without, in_state,
-    },
-};
+use bevy::prelude::*;
 use bevy_rapier3d::pipeline::CollisionEvent;
 use bevy_renet::renet::RenetClient;
 use cosmos_core::{
@@ -67,7 +61,7 @@ fn respond_to_collisions(
         // of that structure.
         let structure_hit_entity = hit_parent.parent();
 
-        let hitting_current_parent = parent_query.get(player_entity).is_ok_and(|p| p.get() == structure_hit_entity);
+        let hitting_current_parent = parent_query.get(player_entity).is_ok_and(|p| p.parent() == structure_hit_entity);
 
         // If they are a child of that structure, do nothing.
         if hitting_current_parent {

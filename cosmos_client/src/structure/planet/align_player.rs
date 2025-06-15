@@ -2,9 +2,7 @@
 
 use std::f32::consts::PI;
 
-use bevy::prelude::{
-    App, Commands, Component, Entity, GlobalTransform, IntoSystemConfigs, ChildOf, Quat, Query, Transform, Update, Vec3, With, Without,
-};
+use bevy::prelude::*;
 use cosmos_core::{
     block::block_face::BlockFace,
     netty::{client::LocalPlayer, system_sets::NetworkingSystemsSet},
@@ -32,7 +30,7 @@ fn align_player(
     planets: Query<(Entity, &Location, &GravityEmitter, &GlobalTransform), With<Planet>>,
     mut commands: Commands,
 ) {
-    let Ok((entity, location, mut transform, alignment, prev_orientation)) = player.get_single_mut() else {
+    let Ok((entity, location, mut transform, alignment, prev_orientation)) = player.single_mut() else {
         return;
     };
     let mut best_planet = None;

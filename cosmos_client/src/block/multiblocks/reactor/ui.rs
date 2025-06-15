@@ -251,13 +251,13 @@ fn maintain_active_text(
         if s.query_block_data(active_text.0.coords(), &q_active).is_some() {
             if txt.0 != "ACTIVE" {
                 txt.0 = "ACTIVE".into();
-                if let Ok(mut btn) = q_btn.get_single_mut() {
+                if let Ok(mut btn) = q_btn.single_mut() {
                     btn.text.as_mut().expect("No text?").0 = "DEACTIVATE".into();
                 }
             }
         } else if txt.0 != "IDLE" {
             txt.0 = "IDLE".into();
-            if let Ok(mut btn) = q_btn.get_single_mut() {
+            if let Ok(mut btn) = q_btn.single_mut() {
                 btn.text.as_mut().expect("No text?").0 = "ACTIVATE".into();
             }
         }

@@ -94,7 +94,7 @@ pub(crate) fn process_player_movement(
     };
 
     // This will be err if the player is piloting a ship
-    let Ok((mut velocity, player_transform, player_alignment, grounded, under_gravity_well)) = q_local_player.get_single_mut() else {
+    let Ok((mut velocity, player_transform, player_alignment, grounded, under_gravity_well)) = q_local_player.single_mut() else {
         return;
     };
 

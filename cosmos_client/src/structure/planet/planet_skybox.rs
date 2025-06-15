@@ -49,7 +49,7 @@ fn color_planet_skybox(
         return;
     };
 
-    let Ok((mut vis, skybox_material_handle)) = q_planet_skybox.get_single_mut() else {
+    let Ok((mut vis, skybox_material_handle)) = q_planet_skybox.single_mut() else {
         return;
     };
 

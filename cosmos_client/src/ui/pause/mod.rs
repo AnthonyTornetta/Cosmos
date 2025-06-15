@@ -201,7 +201,7 @@ fn close_topmost_menus(
 struct PauseMenuSettingsMenu;
 
 fn settings_clicked(mut commands: Commands, mut q_pause_menu: Query<&mut Visibility, With<PauseMenu>>) {
-    if let Ok(mut vis) = q_pause_menu.get_single_mut() {
+    if let Ok(mut vis) = q_pause_menu.single_mut() {
         *vis = Visibility::Hidden;
     }
 

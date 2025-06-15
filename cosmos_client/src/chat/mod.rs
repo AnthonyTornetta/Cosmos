@@ -1,19 +1,6 @@
 //! Client-side chat logic
 
-use bevy::{
-    a11y::Focus,
-    app::Update,
-    color::{Alpha, Color, Srgba},
-    core::Name,
-    log::error,
-    prelude::{
-        App, BuildChildren, Changed, ChildBuild, Children, Commands, Component, Entity, EventReader, IntoSystemConfigs, OnEnter, Query,
-        Res, ResMut, Text, TextUiWriter, Visibility, With, Without, in_state,
-    },
-    text::{LineBreak, TextFont, TextLayout},
-    time::Time,
-    ui::{BackgroundColor, FlexDirection, Node, Overflow, OverflowAxis, Val},
-};
+use bevy::{input_focus::InputFocus, prelude::*};
 use cosmos_core::{
     chat::{ClientSendChatMessageEvent, ServerSendChatMessageEvent},
     commands::ClientCommandEvent,
@@ -69,7 +56,7 @@ fn toggle_chat_display_visibility(
         return;
     };
 
-    let Ok(mut vis) = q_chat_display.get_single_mut() else {
+    let Ok(mut vis) = q_chat_display.single_mut() else {
         return;
     };
 
@@ -242,19 +229,22 @@ fn display_messages(
             ..Default::default()
         };
 
-        commands
-            .spawn((Name::new("Received chat message"), text.clone(), text_style.clone(), text_layout))
-            .set_parent(chat_box);
+        commands.spawn((
+            Name::new("Received chat message"),
+            text.clone(),
+            text_style.clone(),
+            text_layout,
+            ChildOf(chat_box),
+        ));
 
-        commands
-            .spawn((
-                Name::new("Display received chat message"),
-                ChatMessage(CHAT_MSG_ALIVE_SEC),
-                text,
-                text_style.clone(),
-                text_layout,
-            ))
-            .set_parent(display_box);
+        commands.spawn((
+            Name::new("Display received chat message"),
+            ChatMessage(CHAT_MSG_ALIVE_SEC),
+            text,
+            text_style.clone(),
+            text_layout,
+            ChildOf(display_box),
+        ));
     }
 }
 
@@ -275,7 +265,7 @@ fn send_chat_msg(
         return;
     }
 
-    let Ok(mut val) = q_value.get_single_mut() else {
+    let Ok(mut val) = q_value.single_mut() else {
         return;
     };
 
@@ -302,11 +292,11 @@ fn toggle_chat_box(
     mut q_scroll_box: Query<&mut ScrollBox, With<ChatScrollContainer>>,
     inputs: InputChecker,
     mut commands: Commands,
-    mut focus: ResMut<Focus>,
+    mut focus: ResMut<InputFocus>,
     q_open_menus: Query<(), With<OpenMenu>>,
 ) {
     if inputs.check_just_pressed(CosmosInputs::ToggleChat) {
-        let Ok((chat_box_ent, mut cb)) = q_chat_box.get_single_mut() else {
+        let Ok((chat_box_ent, mut cb)) = q_chat_box.single_mut() else {
             return;
         };
 
@@ -315,7 +305,7 @@ fn toggle_chat_box(
                 return;
             }
 
-            let Ok((input_ent, mut input_value)) = q_input_value.get_single_mut() else {
+            let Ok((input_ent, mut input_value)) = q_input_value.single_mut() else {
                 return;
             };
             input_value.set_value("");
@@ -325,7 +315,7 @@ fn toggle_chat_box(
                 .insert(ShowCursor)
                 .insert(OpenMenu::with_close_method(0, CloseMethod::Visibility));
             focus.0 = Some(input_ent);
-            if let Ok(mut scrollbox) = q_scroll_box.get_single_mut() {
+            if let Ok(mut scrollbox) = q_scroll_box.single_mut() {
                 // Start them at the bottom of the chat messages
                 scrollbox.scroll_amount = Val::Percent(100.0);
             }
@@ -347,7 +337,7 @@ fn remove_very_old_messages(mut commands: Commands, q_children: Query<&Children,
     };
 
     for ent in children.iter().take(children.len().max(MAX_MESSAGES) - MAX_MESSAGES) {
-        commands.entity(*ent).insert(NeedsDespawned);
+        commands.entity(ent).insert(NeedsDespawned);
     }
 }
 

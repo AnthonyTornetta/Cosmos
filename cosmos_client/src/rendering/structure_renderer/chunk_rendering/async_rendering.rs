@@ -3,14 +3,11 @@ use crate::asset::materials::{AddMaterialEvent, BlockMaterialMapping, MaterialDe
 use crate::block::lighting::{BlockLightProperties, BlockLighting};
 use crate::rendering::structure_renderer::{BlockRenderingModes, StructureRenderingSet};
 use crate::rendering::{CosmosMeshBuilder, ReadOnlyBlockMeshRegistry};
-use bevy::prelude::{
-    App, Assets, BuildChildren, Commands, DespawnRecursiveExt, Entity, EventWriter, GlobalTransform, IntoSystemConfigs, Mesh, Mesh3d,
-    PointLight, Query, Res, ResMut, Transform, Update, Vec3, Visibility, With,
-};
+use bevy::platform::collections::HashMap;
+use bevy::prelude::*;
 use bevy::render::mesh::MeshAabb;
 use bevy::render::primitives::Aabb;
 use bevy::tasks::AsyncComputeTaskPool;
-use bevy::platform::collections::HashMap;
 use cosmos_core::block::Block;
 use cosmos_core::netty::client::LocalPlayer;
 use cosmos_core::physics::location::SECTOR_DIMENSIONS;
@@ -54,7 +51,7 @@ fn poll_rendering_chunks(
 
         let (entity, mut chunk_mesh) = (rendered_chunk.chunk_entity, rendered_chunk.mesh);
 
-        if commands.get_entity(entity).is_none() {
+        if commands.get_entity(entity).is_err() {
             // Chunk may have been despawned during its rendering
             continue;
         }

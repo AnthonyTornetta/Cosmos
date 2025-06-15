@@ -130,7 +130,7 @@ fn display_hud_messages(
     mut writer: TextUiWriter,
     time: Res<Time>,
 ) {
-    if let Ok((entity, parent, mut shown_hud_message)) = shown_hud_message.get_single_mut() {
+    if let Ok((entity, parent, mut shown_hud_message)) = shown_hud_message.single_mut() {
         let time_now = time.elapsed_secs();
 
         if let Some(current_hud_message) = hud_messages.1.as_mut()

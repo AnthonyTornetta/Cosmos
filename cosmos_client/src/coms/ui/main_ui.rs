@@ -12,7 +12,7 @@ use crate::{
         font::DefaultFont,
     },
 };
-use bevy::{a11y::Focus, color::palettes::css, prelude::*};
+use bevy::{color::palettes::css, input_focus::InputFocus, prelude::*};
 use cosmos_core::{coms::ComsChannelType, netty::system_sets::NetworkingSystemsSet};
 use cosmos_core::{coms::ComsMessage, netty::client::LocalPlayer};
 use cosmos_core::{coms::events::RequestCloseComsEvent, structure::ship::pilot::Pilot};
@@ -65,7 +65,7 @@ struct SelectedComs(Entity);
 //             .despawn_descendants()
 //             .with_children(|p| create_messages_ui(&font, p, &messages));
 //
-//         let (mut coms, mut text) = q_header.get_single_mut().expect("Header missing");
+//         let (mut coms, mut text) = q_header.single_mut().expect("Header missing");
 //         coms.0 = coms_ent;
 //         text.0 = "[Ship Name]".into();
 //     } else {
@@ -85,7 +85,7 @@ fn on_change_selected_coms(
     mut q_header: Query<(&SelectedComs, &mut Text), Changed<SelectedComs>>,
     q_body: Query<Entity, With<MessageArea>>,
 ) {
-    let Ok((selected_coms, mut text)) = q_header.get_single_mut() else {
+    let Ok((selected_coms, mut text)) = q_header.single_mut() else {
         return;
     };
 
@@ -110,7 +110,7 @@ fn on_change_selected_coms(
     if !q_coms_ui.is_empty() {
         commands
             .entity(q_body.single().expect("Body missing"))
-            .despawn_descendants()
+            .despawn_related::<Children>()
             .with_children(|p| create_messages_ui(&font, p, &messages, your_ship));
 
         text.0 = "[Ship Name]".into();
@@ -153,14 +153,14 @@ fn on_change_coms(
 
         let messages = coms.messages.iter().collect::<Vec<_>>();
         if !q_coms_ui.is_empty() {
-            let (mut coms, mut text) = q_header.get_single_mut().expect("Header missing");
+            let (mut coms, mut text) = q_header.single_mut().expect("Header missing");
             if coms.0 != coms_ent {
                 continue;
             }
 
             commands
                 .entity(q_body.single().expect("Body missing"))
-                .despawn_descendants()
+                .despawn_related::<Children>()
                 .with_children(|p| create_messages_ui(&font, p, &messages, your_ship));
 
             coms.0 = coms_ent;
@@ -472,7 +472,7 @@ fn create_coms_ui(
         });
 }
 
-fn create_messages_ui(font: &Handle<Font>, messages_container: &mut ChildBuilder, messages: &[&ComsMessage], your_ship: Entity) {
+fn create_messages_ui(font: &Handle<Font>, messages_container: &mut ChildSpawnerCommands, messages: &[&ComsMessage], your_ship: Entity) {
     let message_font = TextFont {
         font: font.clone_weak(),
         font_size: 20.0,
@@ -639,7 +639,7 @@ fn on_not_pilot(
     mut q_coms_ui: Query<(Entity, &mut Node, Has<ShowCursor>), With<ComsUi>>,
     coms_assets: Res<ComsAssets>,
     mut q_toggle_button: Query<&mut CosmosButton<ToggleButton>>,
-    mut focused: ResMut<Focus>,
+    mut focused: ResMut<InputFocus>,
     q_coms: Query<(Entity, &ChildOf, &ComsChannel)>,
     q_local_player: Query<Entity, With<LocalPlayer>>,
     q_pilot: Query<&Pilot>,
@@ -648,7 +648,7 @@ fn on_not_pilot(
     if q_lp_not_pilot.is_empty() {
         return;
     }
-    let Ok((entity, mut node, has)) = q_coms_ui.get_single_mut() else {
+    let Ok((entity, mut node, has)) = q_coms_ui.single_mut() else {
         return;
     };
     if has {
@@ -674,7 +674,7 @@ fn on_toggle(
     mut evr_toggle: EventReader<ToggleButton>,
     coms_assets: Res<ComsAssets>,
     mut q_toggle_button: Query<&mut CosmosButton<ToggleButton>>,
-    mut focused: ResMut<Focus>,
+    mut focused: ResMut<InputFocus>,
     q_coms: Query<(Entity, &ChildOf, &ComsChannel)>,
     q_local_player: Query<Entity, With<LocalPlayer>>,
     q_pilot: Query<&Pilot>,
@@ -704,7 +704,7 @@ fn on_toggle(
                 &q_pilot,
             );
         } else {
-            if let Ok(mut selected) = q_selected_coms.get_single_mut()
+            if let Ok(mut selected) = q_selected_coms.single_mut()
                 && !q_coms.contains(selected.0)
             {
                 let all_coms = get_all_coms(&q_coms, &q_pilot, &q_local_player);
@@ -718,7 +718,7 @@ fn on_toggle(
                 .entity(entity)
                 .insert((ShowCursor, OpenMenu::with_close_method(0, CloseMethod::Custom)));
 
-            if let Ok(mut tb) = q_toggle_button.get_single_mut() {
+            if let Ok(mut tb) = q_toggle_button.single_mut() {
                 tb.image = Some(ImageNode::new(coms_assets.close.clone_weak()));
             }
         }
@@ -731,7 +731,7 @@ fn minimize_ui(
     q_toggle_button: &mut Query<&mut CosmosButton<ToggleButton>>,
     entity: Entity,
     node: &mut Node,
-    focused: &mut Focus,
+    focused: &mut InputFocus,
     q_coms: &Query<(Entity, &ChildOf, &ComsChannel)>,
     q_local_player: &Query<Entity, With<LocalPlayer>>,
     q_pilot: &Query<&Pilot>,
@@ -747,7 +747,7 @@ fn minimize_ui(
     node.right = Val::Px(-w + on_screen_amt);
     commands.entity(entity).remove::<ShowCursor>().remove::<OpenMenu>();
     focused.0 = None;
-    if let Ok(mut tb) = q_toggle_button.get_single_mut() {
+    if let Ok(mut tb) = q_toggle_button.single_mut() {
         tb.image = Some(ImageNode::new(coms_assets.open.clone_weak()));
     }
 }
@@ -758,7 +758,7 @@ fn on_close_menu(
     mut q_coms_ui: Query<&mut Node, With<ComsUi>>,
     mut commands: Commands,
     mut q_toggle_button: Query<&mut CosmosButton<ToggleButton>>,
-    mut focused: ResMut<Focus>,
+    mut focused: ResMut<InputFocus>,
     q_coms: Query<(Entity, &ChildOf, &ComsChannel)>,
     q_local_player: Query<Entity, With<LocalPlayer>>,
     q_pilot: Query<&Pilot>,
@@ -792,7 +792,7 @@ fn send_text(
         return;
     }
 
-    let Ok(mut text) = q_text_value.get_single_mut() else {
+    let Ok(mut text) = q_text_value.single_mut() else {
         return;
     };
 
@@ -867,7 +867,7 @@ fn no_clicked(
 }
 
 fn end_selected_coms(mut evw_close_coms: NettyEventWriter<RequestCloseComsEvent>, mut q_selected_coms: Query<&mut SelectedComs>) {
-    let Ok(selected) = q_selected_coms.get_single_mut() else {
+    let Ok(selected) = q_selected_coms.single_mut() else {
         return;
     };
 
@@ -880,7 +880,7 @@ fn on_left_clicked(
     q_local_player: Query<Entity, With<LocalPlayer>>,
     q_pilot: Query<&Pilot>,
 ) {
-    let Ok(mut selected) = q_selected_coms.get_single_mut() else {
+    let Ok(mut selected) = q_selected_coms.single_mut() else {
         return;
     };
 
@@ -901,7 +901,7 @@ fn on_right_clicked(
     q_pilot: Query<&Pilot>,
     q_local_player: Query<Entity, With<LocalPlayer>>,
 ) {
-    let Ok(mut selected) = q_selected_coms.get_single_mut() else {
+    let Ok(mut selected) = q_selected_coms.single_mut() else {
         return;
     };
 

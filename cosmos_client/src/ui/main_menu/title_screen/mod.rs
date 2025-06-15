@@ -273,7 +273,7 @@ fn trigger_connection(
     mut state: ResMut<NextState<GameState>>,
     mut commands: Commands,
 ) {
-    let Ok((player_name, connection_string, mut em)) = q_vars.get_single_mut() else {
+    let Ok((player_name, connection_string, mut em)) = q_vars.single_mut() else {
         return;
     };
 

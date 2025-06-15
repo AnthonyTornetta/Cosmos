@@ -49,7 +49,7 @@ impl<E: NettyEvent> NettyEventWriter<'_, E> {
     /// This method returns the [ID](`EventId`) of the sent `event`.
     ///
     /// See [`Events`] for details.
-    pub fn send(&mut self, event: E) -> EventId<NettyEventToSend<E>> {
+    pub fn write(&mut self, event: E) -> EventId<NettyEventToSend<E>> {
         self.ev_writer.write(NettyEventToSend(event))
     }
 
@@ -58,7 +58,7 @@ impl<E: NettyEvent> NettyEventWriter<'_, E> {
     /// This method returns the [IDs](`EventId`) of the sent `events`.
     ///
     /// See [`Events`] for details.
-    pub fn send_batch(&mut self, events: impl IntoIterator<Item = E>) -> SendBatchIds<NettyEventToSend<E>> {
+    pub fn write_batch(&mut self, events: impl IntoIterator<Item = E>) -> SendBatchIds<NettyEventToSend<E>> {
         self.ev_writer.write_batch(events.into_iter().map(|x| NettyEventToSend(x)))
     }
 

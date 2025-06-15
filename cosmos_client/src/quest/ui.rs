@@ -131,11 +131,11 @@ fn on_toggle_active(
     mut q_inactive: Query<(Entity, &QuestComp, &mut BorderColor), Without<ActiveQuestUi>>,
 ) {
     for ev in evr_toggle_active.read() {
-        let Ok(player_ent) = q_selected_quest.get_single_mut() else {
+        let Ok(player_ent) = q_selected_quest.single_mut() else {
             continue;
         };
 
-        if let Ok((ent, mut bc)) = q_active.get_single_mut() {
+        if let Ok((ent, mut bc)) = q_active.single_mut() {
             commands.entity(ent).remove::<ActiveQuestUi>();
             bc.0 = css::LIGHT_GREY.into();
         }
@@ -158,7 +158,7 @@ struct ActiveQuestUi;
 struct QuestComp(OngoingQuestId);
 
 fn quest_node(
-    commands: &mut ChildBuilder,
+    commands: &mut ChildSpawnerCommands,
     ongoing: &OngoingQuest,
     quests: &Registry<Quest>,
     lang: &Lang<Quest>,

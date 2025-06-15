@@ -1,22 +1,4 @@
-use bevy::{
-    app::{App, Update},
-    asset::Assets,
-    core::Name,
-    ecs::{
-        component::Component,
-        entity::Entity,
-        event::{EventReader, EventWriter},
-        schedule::IntoSystemConfigs,
-        system::{Commands, Query, Res, ResMut},
-    },
-    hierarchy::{BuildChildren, DespawnRecursiveExt},
-    math::{Rect, Vec3},
-    prelude::{Mesh3d, Transform, Visibility},
-    reflect::Reflect,
-    render::mesh::Mesh,
-    state::state::OnEnter,
-    platform::collections::HashMap,
-};
+use bevy::{platform::collections::HashMap, prelude::*};
 use cosmos_core::{
     block::{Block, block_face::ALL_BLOCK_FACES},
     logic::BlockLogicData,
@@ -215,8 +197,8 @@ fn on_render_logic_indicator(
                     Visibility::default(),
                     Mesh3d(meshes.add(mesh)),
                     Name::new("Rendered Logic Indicators"),
+                    ChildOf(ev.mesh_entity_parent),
                 ))
-                .set_parent(ev.mesh_entity_parent)
                 .id();
 
             evw_add_material.write(AddMaterialEvent {

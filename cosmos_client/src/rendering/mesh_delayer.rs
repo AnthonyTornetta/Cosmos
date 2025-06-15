@@ -41,7 +41,7 @@ fn add_meshes(mut meshes: ResMut<Assets<Mesh>>, mut commands: Commands, mut mesh
     swap(&mut to_clean_meshes, &mut meshes_to_add.0);
 
     for delayed_mesh in to_clean_meshes {
-        if commands.get_entity(delayed_mesh.entity).is_some() {
+        if commands.get_entity(delayed_mesh.entity).is_ok() {
             meshes_to_add.0.push_back(delayed_mesh);
         }
     }

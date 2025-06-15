@@ -1,12 +1,6 @@
 //! Map-waypoint logic
 
-use bevy::{
-    app::Update,
-    color::palettes::css,
-    core::Name,
-    math::Vec3,
-    prelude::{App, Commands, Component, Entity, IntoSystemConfigs, Query, With},
-};
+use bevy::{color::palettes::css, prelude::*};
 use cosmos_core::{ecs::NeedsDespawned, netty::system_sets::NetworkingSystemsSet, physics::location::Location};
 
 use crate::{

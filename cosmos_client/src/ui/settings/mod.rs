@@ -178,7 +178,7 @@ fn create_general_tab(
     lang: &Lang<Setting>,
     text_style: &TextFont,
     text_style_small: &TextFont,
-    p: &mut ChildBuilder,
+    p: &mut ChildSpawnerCommands,
 ) {
     p.spawn((
         Tab::new("General"),
@@ -337,7 +337,7 @@ impl ButtonEvent for ControlButtonClickedEvent {
     }
 }
 
-fn create_controls_tab(controls: &CosmosInputHandler, text_style: &TextFont, text_style_small: &TextFont, p: &mut ChildBuilder) {
+fn create_controls_tab(controls: &CosmosInputHandler, text_style: &TextFont, text_style_small: &TextFont, p: &mut ChildSpawnerCommands) {
     p.spawn((
         Tab::new("Controls"),
         Node {

@@ -1,18 +1,4 @@
-use bevy::{
-    app::{App, Update},
-    ecs::{
-        component::Component,
-        entity::Entity,
-        query::{Added, Changed, With, Without},
-        removal_detection::RemovedComponents,
-        schedule::IntoSystemConfigs,
-        system::{Commands, Query},
-    },
-    math::{Quat, Vec3},
-    reflect::Reflect,
-    state::condition::in_state,
-    transform::components::Transform,
-};
+use bevy::prelude::*;
 use cosmos_core::{
     netty::{client::LocalPlayer, system_sets::NetworkingSystemsSet},
     state::GameState,
@@ -124,7 +110,7 @@ fn on_change_selected_camera(
     let Ok((pilot, camera_player_offset)) = q_pilot.single() else {
         return;
     };
-    let Ok(mut main_cam_trans) = main_camera.get_single_mut() else {
+    let Ok(mut main_cam_trans) = main_camera.single_mut() else {
         return;
     };
 
@@ -215,7 +201,7 @@ fn on_stop_piloting(
             continue;
         };
 
-        let Ok(mut trans) = q_main_camera.get_single_mut() else {
+        let Ok(mut trans) = q_main_camera.single_mut() else {
             return;
         };
 

@@ -1,17 +1,6 @@
 //! Displays the ships's system selection hotbar
 
-use bevy::{
-    app::{App, Update},
-    ecs::{
-        entity::Entity,
-        query::{Added, Changed, Or, With},
-        removal_detection::RemovedComponents,
-        schedule::IntoSystemConfigs,
-        system::{Commands, Query, Res},
-    },
-    prelude::SystemSet,
-    state::condition::in_state,
-};
+use bevy::prelude::*;
 use cosmos_core::{
     inventory::itemstack::{ItemShouldHaveData, ItemStack, ItemStackSystemSet},
     item::Item,
@@ -38,7 +27,7 @@ fn add_priority_when_flying(
     q_local_player: Query<Entity, With<LocalPlayer>>,
 ) {
     if !q_started_flying.is_empty() {
-        let Ok(mut priority) = q_hotbar_priority.get_single_mut() else {
+        let Ok(mut priority) = q_hotbar_priority.single_mut() else {
             return;
         };
 
@@ -55,7 +44,7 @@ fn add_priority_when_flying(
 
     for ent in q_stopped_piloting.read() {
         if ent == local_ent {
-            let Ok(mut priority) = q_hotbar_priority.get_single_mut() else {
+            let Ok(mut priority) = q_hotbar_priority.single_mut() else {
                 return;
             };
 
@@ -80,7 +69,7 @@ fn sync_ship_systems(
         return;
     };
 
-    let Ok((hotbar_prio_queue, mut hotbar_contents)) = q_hotbar.get_single_mut() else {
+    let Ok((hotbar_prio_queue, mut hotbar_contents)) = q_hotbar.single_mut() else {
         return;
     };
 
@@ -138,7 +127,7 @@ fn on_self_become_pilot(
         return;
     };
 
-    let Ok(mut selected_system) = q_hovered_system.get_single_mut() else {
+    let Ok(mut selected_system) = q_hovered_system.single_mut() else {
         return;
     };
 
@@ -161,7 +150,7 @@ fn on_change_hotbar(
         return;
     };
 
-    let Ok(mut selected_system) = q_hovered_system.get_single_mut() else {
+    let Ok(mut selected_system) = q_hovered_system.single_mut() else {
         return;
     };
 

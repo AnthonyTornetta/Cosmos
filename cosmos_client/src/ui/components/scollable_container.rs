@@ -1,29 +1,8 @@
 //! A UI component that is used to scroll through a larger UI element.
 
 use bevy::{
-    app::{App, Update},
-    color::{Color, Srgba},
-    core::Name,
-    ecs::{
-        component::Component,
-        entity::Entity,
-        event::EventReader,
-        query::{Added, With, Without},
-        schedule::{IntoSystemConfigs, IntoSystemSetConfigs, SystemSet},
-        system::{Commands, Query, Res},
-    },
-    hierarchy::{BuildChildren, Children},
-    input::{
-        ButtonInput,
-        keyboard::KeyCode,
-        mouse::{MouseButton, MouseScrollUnit, MouseWheel},
-    },
-    log::error,
-    math::{Rect, Vec2},
-    prelude::{Changed, ChildBuild},
-    reflect::Reflect,
-    transform::components::GlobalTransform,
-    ui::{BackgroundColor, ComputedNode, FlexDirection, Interaction, Node, Overflow, PositionType, UiRect, Val},
+    input::mouse::{MouseScrollUnit, MouseWheel},
+    prelude::*,
     window::{PrimaryWindow, Window},
 };
 
@@ -135,8 +114,8 @@ fn on_add_scrollbar(mut commands: Commands, mut q_added_button: Query<(Entity, &
             })
             .id();
 
-        for &child in children.iter() {
-            commands.entity(child).set_parent(container_entity);
+        for child in children.iter() {
+            commands.entity(child).insert(ChildOf(container_entity));
         }
 
         commands.entity(ent).add_child(container_entity).add_child(scroll_bar).insert((

@@ -1,8 +1,4 @@
-use bevy::{
-    app::{App, Update},
-    ecs::{event::EventWriter, schedule::IntoSystemConfigs, system::ResMut},
-    state::condition::in_state,
-};
+use bevy::prelude::*;
 use bevy_renet::renet::RenetClient;
 use cosmos_core::{
     ecs::mut_events::MutEvent,

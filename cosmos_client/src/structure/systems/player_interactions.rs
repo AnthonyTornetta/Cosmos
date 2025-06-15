@@ -1,12 +1,6 @@
 //! Player interactions with structures
 
-use bevy::{
-    prelude::{
-        Added, App, Commands, Component, Entity, IntoSystemConfigs, IntoSystemSetConfigs, Query, RemovedComponents, ResMut, SystemSet,
-        Update, With, in_state,
-    },
-    reflect::Reflect,
-};
+use bevy::prelude::*;
 use bevy_renet::renet::RenetClient;
 use cosmos_core::{
     netty::{
@@ -36,7 +30,7 @@ fn check_system_in_use(
     input_handler: InputChecker,
     mut client: ResMut<RenetClient>,
 ) {
-    let Ok(mut hovered_system) = query.get_single_mut() else {
+    let Ok(mut hovered_system) = query.single_mut() else {
         return;
     };
 

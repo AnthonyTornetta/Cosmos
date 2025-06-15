@@ -1,21 +1,4 @@
-use bevy::{
-    app::{App, Update},
-    asset::AssetServer,
-    color::palettes::css,
-    core::Name,
-    ecs::{
-        component::Component,
-        entity::Entity,
-        query::{Added, With, Without},
-        removal_detection::RemovedComponents,
-        schedule::IntoSystemConfigs,
-        system::{Commands, Query, Res},
-    },
-    hierarchy::BuildChildren,
-    prelude::{ChildBuild, Text},
-    text::{TextColor, TextFont},
-    ui::{FlexDirection, Node, PositionType, UiRect, Val},
-};
+use bevy::{color::palettes::css, prelude::*};
 use bevy_rapier3d::dynamics::Velocity;
 use cosmos_core::{
     ecs::NeedsDespawned,
@@ -106,20 +89,21 @@ fn update_nodes(
         return;
     };
 
-    if let Ok(mut text) = q_speed_text.get_single_mut() {
+    if let Ok(mut text) = q_speed_text.single_mut() {
         text.0 = format!("Speed: {:.1}m/s", piloting_vel.linvel.length());
     }
 
-    if let Ok(mut text) = q_energy_text.get_single_mut()
-        && let Ok(ess) = piloting_systems.query(&q_energy_storage_system) {
-            let percent = if ess.get_capacity() != 0.0 {
-                ess.get_energy() / ess.get_capacity()
-            } else {
-                0.0
-            };
+    if let Ok(mut text) = q_energy_text.single_mut()
+        && let Ok(ess) = piloting_systems.query(&q_energy_storage_system)
+    {
+        let percent = if ess.get_capacity() != 0.0 {
+            ess.get_energy() / ess.get_capacity()
+        } else {
+            0.0
+        };
 
-            text.0 = format!("Energy {}%", (percent * 100.0).round());
-        }
+        text.0 = format!("Energy {}%", (percent * 100.0).round());
+    }
 }
 
 fn despawn_nodes(

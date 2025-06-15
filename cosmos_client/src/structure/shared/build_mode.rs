@@ -1,14 +1,8 @@
 //! Handles the build mode logic on the client-side
 
 use bevy::{
-    color::LinearRgba,
-    math::primitives::Cuboid,
-    pbr::{MeshMaterial3d, NotShadowCaster, NotShadowReceiver},
-    prelude::{
-        Added, App, AssetServer, Assets, BuildChildren, Changed, ChildBuild, ChildOf, Commands, Component, DespawnRecursiveExt, Entity,
-        IntoSystemConfigs, Mesh, Mesh3d, Name, Query, RemovedComponents, Res, ResMut, Transform, Update, Vec3, With, Without, in_state,
-    },
-    time::Time,
+    pbr::{NotShadowCaster, NotShadowReceiver},
+    prelude::*,
 };
 use bevy_rapier3d::prelude::Velocity;
 use bevy_renet::renet::RenetClient;
@@ -49,13 +43,13 @@ fn control_build_mode(
     time: Res<Time>,
     mut query: Query<(&mut Transform, &mut Velocity, Option<&PlayerAlignment>), (With<LocalPlayer>, With<BuildMode>, Without<MainCamera>)>,
 ) {
-    let Ok((mut transform, mut velocity, player_alignment)) = query.get_single_mut() else {
+    let Ok((mut transform, mut velocity, player_alignment)) = query.single_mut() else {
         return;
     };
     velocity.linvel = Vec3::ZERO;
     velocity.angvel = Vec3::ZERO;
 
-    let cam_trans = transform.mul_transform(*cam_query.single());
+    let cam_trans = transform.mul_transform(*cam_query.single().expect("Missing main camera"));
 
     let max_speed: f32 = match input_handler.check_pressed(CosmosInputs::Sprint) {
         false => 5.0,
@@ -175,7 +169,7 @@ fn clear_visuals(
             continue;
         };
 
-        let Ok(parent) = parent_query.get(entity).map(|p| p.get()) else {
+        let Ok(parent) = parent_query.get(entity).map(|p| p.parent()) else {
             continue;
         };
         let Ok(mut ecmds) = commands.get_entity(parent) else {

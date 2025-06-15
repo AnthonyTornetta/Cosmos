@@ -1,17 +1,6 @@
 use std::cmp::Ordering;
 
-use bevy::{
-    app::Update,
-    color::{Color, Srgba, palettes::css},
-    core::Name,
-    log::{error, info},
-    prelude::{
-        Added, App, BuildChildren, Changed, ChildBuild, ChildBuilder, Commands, Component, DespawnRecursiveExt, Entity, Event, EventReader,
-        IntoSystemConfigs, Query, Res, ResMut, Text, With, in_state, resource_exists,
-    },
-    text::TextFont,
-    ui::{AlignItems, BackgroundColor, FlexDirection, JustifyContent, Node, TargetCamera, UiRect, Val},
-};
+use bevy::{color::palettes::css, prelude::*};
 use cosmos_core::{
     block::data::{BlockData, BlockDataIdentifier},
     crafting::{
@@ -132,7 +121,7 @@ fn populate_menu(
         let item_slot_size = 64.0;
 
         ecmds.insert((
-            TargetCamera(cam),
+            UiTargetCamera(cam),
             OpenMenu::new(0),
             BackgroundColor(Srgba::hex("2D2D2D").unwrap().into()),
             Node {
@@ -247,7 +236,7 @@ fn create_ui_recipes_list(
     lang: &Lang<Item>,
     text_style: &TextFont,
     inv_items: Vec<&ItemStack>,
-    p: &mut ChildBuilder,
+    p: &mut ChildSpawnerCommands,
     selected: Option<&Recipe>,
 ) {
     let mut recipes = crafting_recipes.iter().collect::<Vec<_>>();
@@ -374,20 +363,21 @@ fn create_ui_recipes_list(
         });
 
         if let Some(s) = selected
-            && recipe == &s.0 {
-                ecmds.insert((
-                    SelectedRecipe,
-                    BackgroundColor(
-                        Srgba {
-                            red: 1.0,
-                            green: 1.0,
-                            blue: 1.0,
-                            alpha: 0.1,
-                        }
-                        .into(),
-                    ),
-                ));
-            }
+            && recipe == &s.0
+        {
+            ecmds.insert((
+                SelectedRecipe,
+                BackgroundColor(
+                    Srgba {
+                        red: 1.0,
+                        green: 1.0,
+                        blue: 1.0,
+                        alpha: 0.1,
+                    }
+                    .into(),
+                ),
+            ));
+        }
     }
 }
 
@@ -417,7 +407,7 @@ fn on_change_inventory(
 
             let inv_items = inv.iter().flatten().collect::<Vec<_>>();
 
-            commands.entity(ent).despawn_descendants().with_children(|p| {
+            commands.entity(ent).despawn_related::<Children>().with_children(|p| {
                 create_ui_recipes_list(&crafting_recipes, &items, &lang, &text_style, inv_items, p, selected);
             });
         }
@@ -608,7 +598,7 @@ fn color_fabricate_button(
     q_inventory: Query<&Inventory>,
     mut q_fab_button: Query<&mut CosmosButton<CreateClickedEvent>, With<FabricateButton>>,
 ) {
-    let Ok(mut btn) = q_fab_button.get_single_mut() else {
+    let Ok(mut btn) = q_fab_button.single_mut() else {
         return;
     };
 

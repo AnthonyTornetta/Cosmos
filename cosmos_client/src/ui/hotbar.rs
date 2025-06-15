@@ -193,7 +193,7 @@ fn listen_button_presses(
     mut q_held_item_slot: Query<&mut HeldItemSlot, With<LocalPlayer>>,
     mut hotbar: Query<&mut Hotbar>,
 ) {
-    let Ok(mut hotbar) = hotbar.get_single_mut() else {
+    let Ok(mut hotbar) = hotbar.single_mut() else {
         return;
     };
 
@@ -241,7 +241,7 @@ fn listen_button_presses(
         hotbar.selected_slot = 8;
     }
 
-    let Ok(mut held_item_slot) = q_held_item_slot.get_single_mut() else {
+    let Ok(mut held_item_slot) = q_held_item_slot.single_mut() else {
         return;
     };
 
@@ -251,7 +251,7 @@ fn listen_button_presses(
 }
 
 fn tick_text_alpha_down(mut query: Query<&mut TextColor, With<ItemNameDisplay>>, time: Res<Time>) {
-    if let Ok(mut text) = query.get_single_mut() {
+    if let Ok(mut text) = query.single_mut() {
         let col: Srgba = text.as_ref().0.into();
 
         text.as_mut().0 = Srgba {
@@ -275,7 +275,7 @@ fn listen_for_change_events(
     names: Res<Lang<Item>>,
     items: Res<Registry<Item>>,
 ) {
-    let Ok(mut hb) = query_hb.get_single_mut() else {
+    let Ok(mut hb) = query_hb.single_mut() else {
         return;
     };
 
@@ -292,18 +292,19 @@ fn listen_for_change_events(
 
         if let Ok(inv) = inventory_unchanged.single()
             && let Ok(ent) = item_name_query.single()
-                && let Ok((mut name_text, mut name_color)) = text_query.get_mut(ent) {
-                    if let Some(is) = inv.itemstack_at(hb.selected_slot()) {
-                        names
-                            .get_name_from_numeric_id(is.item_id())
-                            .unwrap_or(items.from_numeric_id(is.item_id()).unlocalized_name())
-                            .clone_into(&mut name_text.as_mut().0);
+            && let Ok((mut name_text, mut name_color)) = text_query.get_mut(ent)
+        {
+            if let Some(is) = inv.itemstack_at(hb.selected_slot()) {
+                names
+                    .get_name_from_numeric_id(is.item_id())
+                    .unwrap_or(items.from_numeric_id(is.item_id()).unlocalized_name())
+                    .clone_into(&mut name_text.as_mut().0);
 
-                        name_color.as_mut().0 = Color::WHITE;
-                    } else {
-                        "".clone_into(&mut name_text.as_mut().0);
-                    }
-                }
+                name_color.as_mut().0 = Color::WHITE;
+            } else {
+                "".clone_into(&mut name_text.as_mut().0);
+            }
+        }
     }
 
     if let Ok(hotbar_contents) = query_inventory.single() {
@@ -555,7 +556,7 @@ fn sync_hotbar_to_inventory(
     q_priority_changed: Query<(), (Changed<HotbarPriorityQueue>, With<LocalPlayerHotbar>)>,
     mut q_hotbar: Query<(&HotbarPriorityQueue, &mut HotbarContents), With<LocalPlayerHotbar>>,
 ) {
-    let Ok((hotbar_prio_queue, mut hotbar_contents)) = q_hotbar.get_single_mut() else {
+    let Ok((hotbar_prio_queue, mut hotbar_contents)) = q_hotbar.single_mut() else {
         return;
     };
 

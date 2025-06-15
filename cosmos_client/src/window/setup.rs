@@ -55,7 +55,7 @@ pub struct DeltaCursorPosition {
 }
 
 fn setup_window(mut primary_query: Query<&mut Window, With<PrimaryWindow>>) {
-    let mut window = primary_query.get_single_mut().expect("Missing primary window.");
+    let mut window = primary_query.single_mut().expect("Missing primary window.");
 
     window.title = "Cosmos".into();
     window.cursor_options.visible = false;
@@ -77,7 +77,7 @@ fn window_focus_changed(
     mut ev_focus: EventReader<WindowFocused>,
     cursor_flags: Res<CursorFlags>,
 ) {
-    let Ok((window_entity, mut window)) = primary_query.get_single_mut() else {
+    let Ok((window_entity, mut window)) = primary_query.single_mut() else {
         return;
     };
 
@@ -101,7 +101,7 @@ fn apply_cursor_flags(window: &mut Window, cursor_flags: CursorFlags) {
 }
 
 fn apply_cursor_flags_on_change(cursor_flags: Res<CursorFlags>, mut primary_query: Query<&mut Window, With<PrimaryWindow>>) {
-    let Ok(mut window) = primary_query.get_single_mut() else {
+    let Ok(mut window) = primary_query.single_mut() else {
         return;
     };
 
@@ -109,7 +109,7 @@ fn apply_cursor_flags_on_change(cursor_flags: Res<CursorFlags>, mut primary_quer
 }
 
 fn show_cursor(mut primary_query: Query<&mut Window, With<PrimaryWindow>>) {
-    let Ok(mut window) = primary_query.get_single_mut() else {
+    let Ok(mut window) = primary_query.single_mut() else {
         return;
     };
 

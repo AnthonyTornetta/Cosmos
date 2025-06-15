@@ -1,10 +1,6 @@
 //! Syncs the inventories with the server-provided inventories
 
-use bevy::{
-    ecs::query::With,
-    log::warn,
-    prelude::{App, Commands, Entity, IntoSystemConfigs, Query, Res, ResMut, Update, in_state},
-};
+use bevy::prelude::*;
 use bevy_renet::renet::RenetClient;
 use cosmos_core::{
     inventory::{
@@ -72,7 +68,7 @@ fn sync(
                 }
 
                 commands
-                    .entity(local_player.single())
+                    .entity(local_player.single().expect("Missing local player"))
                     .insert(InventoryNeedsDisplayed::Normal(InventorySide::Left));
             }
         }

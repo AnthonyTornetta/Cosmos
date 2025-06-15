@@ -12,9 +12,9 @@ use crate::{
     block::lighting::BlockLighting,
 };
 use bevy::{
+    platform::collections::HashSet,
     prelude::*,
     tasks::{AsyncComputeTaskPool, Task},
-    platform::collections::HashSet,
 };
 use cosmos_core::{
     block::{
@@ -371,7 +371,7 @@ fn compute_meshes_and_kill_dead_entities(
     swap(&mut to_clean_meshes, &mut meshes_to_compute.0);
 
     for (delayed_mesh, entity, to_kill) in to_clean_meshes {
-        if commands.get_entity(entity).is_some() {
+        if commands.get_entity(entity).is_ok() {
             meshes_to_compute.push_back((delayed_mesh, entity, to_kill));
         } else {
             kill_all(to_kill, &mut commands);
@@ -475,7 +475,7 @@ fn poll_rendering_lods(
                 }
             }
 
-            let Some(mut entity_commands) = commands.get_entity(structure_entity) else {
+            let Ok(mut entity_commands) = commands.get_entity(structure_entity) else {
                 continue;
             };
 

@@ -422,13 +422,13 @@ pub(crate) fn client_sync_players(
                     client_entity,
                     server_entity: _,
                 }) = lobby.players.remove(&id)
-                    && let Some(mut entity) = commands.get_entity(client_entity)
+                    && let Ok(mut ecmds) = commands.get_entity(client_entity)
                 {
                     if let Ok(player) = query_player.get(client_entity) {
                         info!("Player {} ({id}) disconnected", player.name());
                     }
 
-                    entity.insert(NeedsDespawned);
+                    ecmds.insert(NeedsDespawned);
                 }
             }
             // This could cause issues in the future if a client receives a planet's position first then this packet.
@@ -783,7 +783,7 @@ fn get_entity_identifier_entity_for_despawning(
 //     q_parent: Query<(&GlobalTransform, &Location)>,
 //     mut q_local_player: Query<(&mut Transform, &Location, &ChildOf), (Changed<ChildOf>, With<LocalPlayer>)>,
 // ) {
-//     let Ok((mut player_trans, player_loc, parent)) = q_local_player.get_single_mut() else {
+//     let Ok((mut player_trans, player_loc, parent)) = q_local_player.single_mut() else {
 //         return;
 //     };
 //

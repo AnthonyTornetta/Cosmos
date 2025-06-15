@@ -132,7 +132,7 @@ fn on_interact_button<T: ButtonEvent>(
             };
 
             if let Some(children) = children
-                && let Some(&text_child) = children.iter().find(|&x| q_has_text.contains(*x))
+                && let Some(text_child) = children.iter().find(|&x| q_has_text.contains(x))
             {
                 let color = match *interaction {
                     Interaction::None => btn_styles.foreground_color,

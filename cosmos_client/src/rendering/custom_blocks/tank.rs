@@ -1,23 +1,4 @@
-use bevy::{
-    app::{App, Update},
-    asset::Assets,
-    core::Name,
-    ecs::{
-        component::Component,
-        entity::Entity,
-        event::{EventReader, EventWriter},
-        schedule::IntoSystemConfigs,
-        system::{Commands, Query, Res, ResMut},
-    },
-    hierarchy::BuildChildren,
-    log::warn,
-    math::{Rect, Vec3},
-    prelude::{Mesh3d, Transform, Visibility},
-    reflect::Reflect,
-    render::mesh::Mesh,
-    state::state::OnEnter,
-    platform::collections::HashMap,
-};
+use bevy::{platform::collections::HashMap, prelude::*};
 use cosmos_core::{
     block::{Block, block_direction::BlockDirection, block_face::ALL_BLOCK_FACES},
     ecs::NeedsDespawned,
@@ -137,12 +118,13 @@ fn on_render_tanks(
 
             let faces = ALL_BLOCK_FACES.iter().copied().filter(|face| {
                 if let Ok(new_coord) = BlockCoordinate::try_from(block + face.direction().to_coordinates())
-                    && structure.block_id_at(new_coord) == tank_id {
-                        return match structure.query_block_data(new_coord, &q_stored_fluid) {
-                            Some(BlockFluidData::Fluid(sf)) => sf.fluid_stored == 0,
-                            _ => true,
-                        };
-                    }
+                    && structure.block_id_at(new_coord) == tank_id
+                {
+                    return match structure.query_block_data(new_coord, &q_stored_fluid) {
+                        Some(BlockFluidData::Fluid(sf)) => sf.fluid_stored == 0,
+                        _ => true,
+                    };
+                }
 
                 true
             });
@@ -289,8 +271,8 @@ fn on_render_tanks(
                     Visibility::default(),
                     Mesh3d(meshes.add(mesh)),
                     Name::new("Rendered Tank Fluid"),
+                    ChildOf(ev.mesh_entity_parent),
                 ))
-                .set_parent(ev.mesh_entity_parent)
                 .id();
 
             evw_add_material.write(AddMaterialEvent {

@@ -179,7 +179,7 @@ fn on_respawn(
     mut q_local_player: Query<(Entity, &mut Location, &mut Transform), With<LocalPlayer>>,
 ) {
     for ev in evr_respawn.read() {
-        let Ok((entity, mut loc, mut trans)) = q_local_player.get_single_mut() else {
+        let Ok((entity, mut loc, mut trans)) = q_local_player.single_mut() else {
             continue;
         };
 
@@ -187,7 +187,7 @@ fn on_respawn(
         trans.rotation = ev.rotation;
 
         // not removing parent in place, since we're setting the transform's rotation aboslutely
-        commands.entity(entity).remove_parent().insert(SetPosition::Transform);
+        commands.entity(entity).remove::<ChildOf>().insert(SetPosition::Transform);
     }
 }
 

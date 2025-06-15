@@ -100,7 +100,7 @@ fn update_looking_at_text(
     mut q_looking_at_text: Query<&mut TextSpan, With<LookingAtText>>,
     lang: Res<Lang<Block>>,
 ) {
-    let Ok(mut text) = q_looking_at_text.get_single_mut() else {
+    let Ok(mut text) = q_looking_at_text.single_mut() else {
         return;
     };
 

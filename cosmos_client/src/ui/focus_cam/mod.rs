@@ -126,11 +126,11 @@ fn render_on_focus(
     q_focused: Query<&Indicating, With<FocusedWaypointEntity>>,
     mut commands: Commands,
 ) {
-    let Ok((cam_entity, mut cam_trans, mut cam, parent)) = q_cam.get_single_mut() else {
+    let Ok((cam_entity, mut cam_trans, mut cam, parent)) = q_cam.single_mut() else {
         return;
     };
 
-    let Ok(mut focused_reasons) = focused_ui.get_single_mut() else {
+    let Ok(mut focused_reasons) = focused_ui.single_mut() else {
         if parent.is_some() {
             commands.entity(cam_entity).remove_parent();
         }

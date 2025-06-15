@@ -87,7 +87,7 @@ fn on_change_looking_at(
                 ..Default::default()
             },
         ))
-        .despawn_descendants()
+        .despawn_related::<Children>()
         .id();
 
     evw_generate_tooltip.write(GenerateLookingAtTooltipEvent {
@@ -114,11 +114,9 @@ fn on_finish_tooltip_text(
             let mut ecmds = if let Some(ent) = message.ent {
                 commands.entity(ent)
             } else {
-                let mut ecmds = commands.spawn(Name::new("Tooltip Message"));
+                let ecmds = commands.spawn((ChildOf(ent), Name::new("Tooltip Message")));
 
                 message.ent = Some(ecmds.id());
-
-                ecmds.set_parent(ent);
 
                 ecmds
             };

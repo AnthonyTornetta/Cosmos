@@ -3,24 +3,11 @@
 use std::f32::consts::PI;
 
 use bevy::{
-    app::Update,
-    asset::{AssetServer, Assets},
-    color::{Alpha, palettes::css},
-    core::Name,
+    color::palettes::css,
     core_pipeline::bloom::Bloom,
     input::mouse::{MouseScrollUnit, MouseWheel},
-    math::{Dir3, Quat, Vec3},
-    pbr::{MeshMaterial3d, StandardMaterial},
-    prelude::{
-        AlphaMode, App, BuildChildren, Camera, Camera3d, Capsule3d, Changed, ChildBuild, Commands, Component, Cuboid, Entity, EventReader,
-        IntoSystemConfigs, Mesh, Mesh3d, MouseButton, OnEnter, PerspectiveProjection, Projection, Query, Res, ResMut, Sphere, Text,
-        Transform, Visibility, With, Without, in_state,
-    },
-    reflect::Reflect,
+    prelude::*,
     render::view::RenderLayers,
-    text::TextFont,
-    time::Time,
-    ui::{AlignSelf, FlexDirection, JustifyContent, Node, PositionType, TargetCamera, UiRect, Val},
 };
 // use bevy_mod_billboard::{BillboardDepth, BillboardTextBundle};
 use cosmos_core::{
@@ -143,7 +130,7 @@ fn toggle_map(
         return;
     }
 
-    let Ok((map_cam_ent, mut map_camera)) = q_map_camera.get_single_mut() else {
+    let Ok((map_cam_ent, mut map_camera)) = q_map_camera.single_mut() else {
         return;
     };
 
@@ -192,7 +179,7 @@ fn toggle_map(
 
     commands
         .spawn((
-            TargetCamera(map_cam_ent),
+            UiTargetCamera(map_cam_ent),
             DespawnWith(map_display),
             Name::new("Galaxy map UI root"),
             Node {
@@ -206,7 +193,7 @@ fn toggle_map(
         ))
         .with_children(|p| {
             p.spawn((
-                TargetCamera(map_cam_ent),
+                UiTargetCamera(map_cam_ent),
                 DespawnWith(map_display),
                 Name::new("Galaxy map text UI"),
                 Node {
@@ -334,7 +321,7 @@ fn update_waypoint_text(
     q_waypoint: Query<&Location, With<Waypoint>>,
     mut q_text: Query<&mut Text, With<WaypointText>>,
 ) {
-    let Ok(mut text) = q_text.get_single_mut() else {
+    let Ok(mut text) = q_text.single_mut() else {
         return;
     };
 
@@ -358,7 +345,7 @@ fn update_sector_text(q_cam: Query<&MapCamera, Changed<MapCamera>>, mut q_text: 
         return;
     };
 
-    let Ok(mut text) = q_text.get_single_mut() else {
+    let Ok(mut text) = q_text.single_mut() else {
         return;
     };
 
@@ -368,7 +355,7 @@ fn update_sector_text(q_cam: Query<&MapCamera, Changed<MapCamera>>, mut q_text: 
 const SECTOR_SCALE: f32 = 1.0;
 
 fn position_camera(mut q_camera: Query<(&mut Transform, &mut MapCamera)>) {
-    let Ok((mut trans, mut cam)) = q_camera.get_single_mut() else {
+    let Ok((mut trans, mut cam)) = q_camera.single_mut() else {
         return;
     };
 
@@ -387,7 +374,7 @@ fn handle_waypoint_sector(
     time: Res<Time>,
     mut q_sector_text: Query<&mut Text, With<WaypointSectorText>>,
 ) {
-    let Ok((mut text_vis, mut sector_trans, standard_material)) = q_selected_sector.get_single_mut() else {
+    let Ok((mut text_vis, mut sector_trans, standard_material)) = q_selected_sector.single_mut() else {
         return;
     };
 
@@ -404,7 +391,7 @@ fn handle_waypoint_sector(
     let standard_material = materials.get_mut(standard_material).expect("Material missing");
     standard_material.base_color.set_alpha(time.elapsed_secs().sin().abs() * 0.1);
 
-    let Ok(mut text) = q_sector_text.get_single_mut() else {
+    let Ok(mut text) = q_sector_text.single_mut() else {
         return;
     };
 
@@ -421,7 +408,7 @@ fn handle_selected_sector(
         return;
     };
 
-    let Ok((mut sector_trans, standard_material)) = q_selected_sector.get_single_mut() else {
+    let Ok((mut sector_trans, standard_material)) = q_selected_sector.single_mut() else {
         return;
     };
 
@@ -429,7 +416,7 @@ fn handle_selected_sector(
     let standard_material = materials.get_mut(standard_material).expect("Material missing");
     standard_material.base_color.set_alpha(time.elapsed_secs().sin().abs() * 0.1);
 
-    let Ok(mut text) = q_sector_text.get_single_mut() else {
+    let Ok(mut text) = q_sector_text.single_mut() else {
         return;
     };
 
@@ -468,7 +455,7 @@ fn render_galaxy_map(
             return;
         };
 
-        let Ok(mut cam) = q_camera.get_single_mut() else {
+        let Ok(mut cam) = q_camera.single_mut() else {
             return;
         };
 
@@ -715,7 +702,7 @@ fn camera_movement(
 }
 
 fn handle_map_camera(mut q_map_camera: Query<&mut Camera, With<MapCamera>>, q_exists: Query<(), With<GalaxyMapDisplay>>) {
-    let Ok(mut cam) = q_map_camera.get_single_mut() else {
+    let Ok(mut cam) = q_map_camera.single_mut() else {
         return;
     };
 
@@ -728,7 +715,7 @@ fn receive_map(
     mut q_galaxy_map: Query<&mut GalaxyMapDisplay>,
 ) {
     for ev in nevr_galaxy_map.read() {
-        let Ok(mut gmap) = q_galaxy_map.get_single_mut() else {
+        let Ok(mut gmap) = q_galaxy_map.single_mut() else {
             return;
         };
 
@@ -750,7 +737,7 @@ fn receive_map(
     }
 
     for ev in nevr_system_map.read() {
-        let Ok(mut gmap) = q_galaxy_map.get_single_mut() else {
+        let Ok(mut gmap) = q_galaxy_map.single_mut() else {
             return;
         };
 
@@ -778,7 +765,7 @@ fn map_active(q_map: Query<(), With<GalaxyMapDisplay>>) -> bool {
 
 fn teleport_at(mut q_player: Query<&mut Location, With<LocalPlayer>>, inputs: InputChecker, q_camera: Query<&MapCamera>) {
     if inputs.check_just_pressed(CosmosInputs::TeleportSelected) {
-        let Ok(mut loc) = q_player.get_single_mut() else {
+        let Ok(mut loc) = q_player.single_mut() else {
             return;
         };
         let Ok(cam) = q_camera.single() else {

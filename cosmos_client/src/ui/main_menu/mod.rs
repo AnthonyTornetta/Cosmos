@@ -1,9 +1,6 @@
 //! The menu that first appears when you load into the game.
 
-use bevy::{
-    app::App, core_pipeline::bloom::Bloom, hierarchy::DespawnRecursiveExt, picking::pointer::PointerPress, prelude::*,
-    render::camera::Camera, window::Monitor,
-};
+use bevy::{core_pipeline::bloom::Bloom, picking::pointer::PointerPress, prelude::*, window::Monitor};
 use bevy_kira_audio::SpatialAudioReceiver;
 use bevy_rapier3d::plugin::DefaultRapierContext;
 use cosmos_core::state::GameState;
@@ -62,7 +59,7 @@ fn create_main_menu_background_node(mut commands: Commands, q_main_menu_camera: 
 
     commands.spawn((
         BackgroundColorNode,
-        TargetCamera(cam_ent),
+        UiTargetCamera(cam_ent),
         DespawnOnSwitchState,
         Node {
             width: Val::Percent(100.0),

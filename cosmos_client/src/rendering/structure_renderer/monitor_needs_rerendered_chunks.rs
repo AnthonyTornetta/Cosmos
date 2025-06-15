@@ -1,5 +1,5 @@
-use bevy::prelude::{App, Commands, Entity, EventReader, IntoSystemConfigs, Query, Update, With};
 use bevy::platform::collections::HashMap;
+use bevy::prelude::*;
 use cosmos_core::events::block_events::{BlockChangedEvent, BlockDataChangedEvent};
 use cosmos_core::structure::Structure;
 use cosmos_core::structure::chunk::CHUNK_DIMENSIONS;
@@ -143,7 +143,7 @@ fn monitor_block_updates_system(
                 continue;
             };
 
-            if let Some(mut chunk_ent) = commands.get_entity(chunk_entity) {
+            if let Ok(mut chunk_ent) = commands.get_entity(chunk_entity) {
                 chunk_ent.insert(ChunkNeedsRendered);
             }
         }

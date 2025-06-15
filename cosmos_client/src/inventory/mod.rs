@@ -2,7 +2,7 @@
 //!
 //! Sphagetti town
 
-use bevy::{a11y::Focus, color::palettes::css, ecs::system::EntityCommands, prelude::*, window::PrimaryWindow};
+use bevy::{color::palettes::css, input_focus::InputFocus, prelude::*, window::PrimaryWindow};
 use bevy_renet::renet::RenetClient;
 use cosmos_core::{
     block::{
@@ -81,11 +81,11 @@ fn toggle_inventory(
     open_inventories: Query<Entity, With<InventoryNeedsDisplayed>>,
     open_menus: Query<(), With<OpenMenu>>,
     inputs: InputChecker,
-    focused: Res<Focus>,
+    focused: Res<InputFocus>,
     q_input: Query<(), With<TextInput>>,
 ) {
     // Don't toggle the inventory while typing in the search bar (or any other text box)
-    if focused.map(|x| q_input.contains(x)).unwrap_or(false) {
+    if focused.0.map(|x| q_input.contains(x)).unwrap_or(false) {
         return;
     }
 
@@ -114,7 +114,7 @@ fn close_button_system(
     open_inventories: Query<Entity, With<InventoryNeedsDisplayed>>,
 ) {
     for rendered_inventory in q_close_inventory.iter() {
-        if let Some(mut _ecmds) = commands.get_entity(rendered_inventory.inventory_holder) {
+        if let Ok(mut _ecmds) = commands.get_entity(rendered_inventory.inventory_holder) {
             open_inventories.iter().for_each(|ent| {
                 commands.entity(ent).remove::<InventoryNeedsDisplayed>();
             });
@@ -662,7 +662,7 @@ fn rerender_inventory_slot(
     asset_server: &AssetServer,
     as_child: bool,
 ) {
-    ecmds.despawn_descendants();
+    ecmds.despawn_related::<Children>();
 
     let Some(is) = displayed_item.item_stack.as_ref() else {
         return;
@@ -707,7 +707,7 @@ impl ButtonEvent for CreativeItemClickedEvent {
     }
 }
 
-fn create_creative_slot(slots: &mut ChildBuilder, item: &Item, text_style: TextFont) {
+fn create_creative_slot(slots: &mut ChildSpawnerCommands, item: &Item, text_style: TextFont) {
     let mut ecmds = slots.spawn((
         Name::new("Creative Inventory Item"),
         Node {
@@ -744,12 +744,12 @@ fn on_click_creative_category(
             error!("Invalid item category component!");
             continue;
         };
-        if let Ok((entity, mut node, i_category)) = q_open_tab.get_single_mut() {
+        if let Ok((entity, mut node, i_category)) = q_open_tab.single_mut() {
             if i_category.0 == *item_category {
                 continue;
             }
 
-            if let Ok(mut c_search) = q_creative_search.get_single_mut() {
+            if let Ok(mut c_search) = q_creative_search.single_mut() {
                 c_search.display = Display::None;
             }
             node.display = Display::None;
@@ -764,7 +764,7 @@ fn on_click_creative_category(
         };
 
         if item_category == &ItemCategoryMarker::Search
-            && let Ok(mut c_search) = q_creative_search.get_single_mut()
+            && let Ok(mut c_search) = q_creative_search.single_mut()
         {
             c_search.display = Display::Flex;
         }
@@ -777,7 +777,7 @@ fn on_click_creative_category(
 fn create_inventory_slot(
     inventory_holder: Entity,
     slot_number: usize,
-    slots: &mut ChildBuilder,
+    slots: &mut ChildSpawnerCommands,
     item_stack: Option<&ItemStack>,
     text_style: TextFont,
 ) {
@@ -1113,7 +1113,7 @@ fn draw_held_item(
         return;
     };
 
-    if !q_changed_held_item.iter().any(|p| p.get() == local_ent) && !q_follow_cursor.is_empty() {
+    if !q_changed_held_item.iter().any(|p| p.parent() == local_ent) && !q_follow_cursor.is_empty() {
         return;
     }
 
@@ -1130,7 +1130,7 @@ fn draw_held_item(
 
     let mut ecmds = if let Ok(ent) = q_follow_cursor.single() {
         let mut ecmds = commands.entity(ent);
-        ecmds.despawn_descendants();
+        ecmds.despawn_related::<Children>();
         ecmds
     } else {
         commands.spawn((
@@ -1154,7 +1154,7 @@ fn draw_held_item(
 
     create_item_stack_slot_data(is, &mut ecmds, text_style, is.quantity());
 
-    // if let Ok((ent, mut render_item)) = q_follow_cursor.get_single_mut() {
+    // if let Ok((ent, mut render_item)) = q_follow_cursor.single_mut() {
     //     if render_item.item_id != is.item_id() {
     //         render_item.item_id = is.item_id();
     //     }
@@ -1187,7 +1187,7 @@ fn on_change_search(
         return;
     };
 
-    commands.entity(search).despawn_descendants().with_children(|p| {
+    commands.entity(search).despawn_related::<Children>().with_children(|p| {
         let lower = input_value.value().to_lowercase();
         let mut sorted_items = items
             .iter()
