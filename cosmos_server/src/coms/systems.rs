@@ -228,7 +228,7 @@ fn ensure_coms_still_active(mut commands: Commands, q_coms: Query<(Entity, &Coms
     for (ent, coms_channel, parent) in q_coms.iter() {
         if q_coms
             .iter()
-            .any(|(_, c, p)| c.with == parent.parent() && p.get() == coms_channel.with)
+            .any(|(_, c, p)| c.with == parent.parent() && p.parent() == coms_channel.with)
         {
             continue;
         }
@@ -267,16 +267,16 @@ fn on_req_close_coms(
             continue;
         };
 
-        if my_ship_ent.get() != this_ship {
+        if my_ship_ent.parent() != this_ship {
             warn!("No authority to close this coms!");
             continue;
         }
 
-        let coms_parent = my_ship_ent.get();
+        let coms_parent = my_ship_ent.parent();
 
         let Some((other_coms_ent, _)) = q_coms
             .iter()
-            .find(|(ent, x)| x.with == coms_parent && q_parent.get(*ent).expect("Invalid coms heirarchy").get() == coms.with)
+            .find(|(ent, x)| x.with == coms_parent && q_parent.get(*ent).expect("Invalid coms heirarchy").parent() == coms.with)
         else {
             warn!("Unable to find coms.");
             continue;

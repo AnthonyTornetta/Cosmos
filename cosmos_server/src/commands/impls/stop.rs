@@ -17,7 +17,7 @@ impl CosmosCommandType for StopCommand {
 }
 
 fn send_stop_server_event(mut evw_stop_server: EventWriter<StopServerEvent>) {
-    evw_stop_server.send_default();
+    evw_stop_server.write_default();
 }
 
 pub(super) fn register(app: &mut App) {

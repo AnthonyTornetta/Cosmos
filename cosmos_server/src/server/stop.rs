@@ -39,13 +39,13 @@ fn on_stop_server(
         commands.entity(ent).insert((NeedsSaved, NeedsDespawned));
     }
 
-    evw_close_after_save.send_default();
+    evw_close_after_save.write_default();
 }
 
 fn shut_server_down(mut evw_app_exit: EventWriter<AppExit>) {
     info!("Shutting down server...");
 
-    evw_app_exit.send_default();
+    evw_app_exit.write_default();
 }
 
 #[derive(Event, Default)]

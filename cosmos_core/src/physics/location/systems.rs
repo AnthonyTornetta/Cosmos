@@ -49,10 +49,10 @@ fn loc_from_trans(
         None | Some(SetPosition::Transform) => loc.copied(),
         Some(SetPosition::Location) => {
             if let Ok(p) = q_parent.get(entity) {
-                let parent_g_trans = q_g_trans.get(p.get()).ok()?;
+                let parent_g_trans = q_g_trans.get(p.parent()).ok()?;
                 let my_trans = q_trans.get(entity).ok()?;
 
-                loc_from_trans(p.get(), q_trans, q_x, q_g_trans, q_parent)
+                loc_from_trans(p.parent(), q_trans, q_x, q_g_trans, q_parent)
                     .map(|x| x + (parent_g_trans.rotation().inverse() * my_trans.translation))
             } else {
                 error!("Location set based solely on global transform - you probably didn't mean to do this.");

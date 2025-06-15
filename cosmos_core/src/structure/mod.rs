@@ -1126,5 +1126,6 @@ pub(super) fn register(app: &mut App) {
     );
 
     app.add_systems(Update, add_chunks_system.in_set(StructureLoadingSet::CreateChunkEntities))
-        .add_systems(PreUpdate, remove_empty_chunks);
+        .add_systems(PreUpdate, remove_empty_chunks)
+        .add_systems(Startup, register_structure_hooks);
 }

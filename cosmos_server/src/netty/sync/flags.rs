@@ -2,7 +2,7 @@
 //!
 //! Notably: [`SyncTo`] and [`SyncReason`]
 
-use bevy::{prelude::*, platform::collections::HashSet};
+use bevy::{platform::collections::HashSet, prelude::*};
 use cosmos_core::{
     block::data::BlockData,
     entities::player::Player,
@@ -255,7 +255,6 @@ struct PreviousSyncTo(SyncTo);
 fn generate_request_entity_events_for_new_sync_tos(
     mut evr_request_entity: EventWriter<RequestedEntityEvent>,
     mut q_sync_to: Query<(Entity, &SyncTo, &mut PreviousSyncTo)>,
-    mut commands: Commands,
 ) {
     for (ent, sync_to, mut prev) in q_sync_to.iter_mut() {
         let mut not_found = vec![];
@@ -273,8 +272,6 @@ fn generate_request_entity_events_for_new_sync_tos(
         prev.0 = sync_to.clone();
 
         for id in not_found {
-            info!("Send {ent:?} to player id {id}");
-            commands.entity(ent).log_components();
             evr_request_entity.write(RequestedEntityEvent {
                 entity: ent,
                 client_id: id,

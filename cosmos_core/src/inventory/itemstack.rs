@@ -217,7 +217,7 @@ impl ItemStack {
     }
 
     fn create_itemstack_data_entity<T: Bundle>(&mut self, commands: &mut Commands, data: T, inventory_pointer: (Entity, u32)) -> Entity {
-        let mut ecmds = commands.spawn((
+        let ecmds = commands.spawn((
             data,
             Name::new("ItemStack data"),
             ItemStackData {
