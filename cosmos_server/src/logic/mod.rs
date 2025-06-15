@@ -5,9 +5,9 @@ use crate::persistence::{
     make_persistent::{DefaultPersistentComponent, make_persistent},
 };
 use bevy::{
+    platform::collections::{HashMap, HashSet},
     prelude::*,
     time::common_conditions::on_timer,
-    utils::{HashMap, hashbrown::HashSet},
 };
 use cosmos_core::{
     block::{

@@ -1,17 +1,6 @@
 //! Triggers asteroid generation + handles the async generation of them
 
-use bevy::{
-    ecs::{
-        component::Component,
-        event::Event,
-        query::With,
-        schedule::{IntoSystemSetConfigs, SystemSet},
-        system::{ResMut, Resource},
-    },
-    prelude::{App, Commands, Entity, EventWriter, IntoSystemConfigs, Query, Update, in_state},
-    tasks::Task,
-    transform::components::Transform,
-};
+use bevy::{prelude::*, tasks::Task};
 use cosmos_core::{
     state::GameState,
     structure::{

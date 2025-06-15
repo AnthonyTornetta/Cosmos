@@ -1,14 +1,6 @@
 //! Responsible for spawning asteroids that move, based on the random timing of them spawning
 
-use bevy::{
-    log::error,
-    prelude::{
-        App, Commands, Component, Entity, EventWriter, IntoSystemConfigs, Query, Res, Resource, Update, Vec3, With, Without, in_state,
-    },
-    reflect::Reflect,
-    time::Time,
-    platform::collections::HashMap,
-};
+use bevy::{platform::collections::HashMap, prelude::*};
 use bevy_rapier3d::prelude::Velocity;
 use cosmos_core::{
     block::Block,

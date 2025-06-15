@@ -29,7 +29,7 @@ futures-lite = "2.6"
 image = { version = "0.25", default-features = false, features = ["png"] }
 bevy-inspector-egui = "0.31.0"
 crossterm = { version = "0.29", features = ["event-stream"] }
-renet_visualizer = "1.0"
+renet_visualizer = { git="https://github.com/lucaspoffo/renet/", version="1.0.0" }
 walkdir = "2.5"
 toml = "0.8"
 lz4_flex = "0.11.3"

@@ -6,9 +6,8 @@ use std::{
 };
 
 use bevy::{
-    prelude::{App, Component, Resource},
-    reflect::Reflect,
-    utils::{HashMap, HashSet},
+    platform::collections::{HashMap, HashSet},
+    prelude::*,
 };
 use serde::{Deserialize, Serialize, de::DeserializeOwned};
 

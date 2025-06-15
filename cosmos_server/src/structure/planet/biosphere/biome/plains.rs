@@ -1,10 +1,6 @@
 //! Plains biome
 
-use bevy::{
-    app::Update,
-    ecs::{event::EventReader, schedule::IntoSystemConfigs, system::Query},
-    prelude::{App, EventWriter, OnExit, Res, ResMut},
-};
+use bevy::prelude::*;
 use cosmos_core::{
     block::{
         Block,

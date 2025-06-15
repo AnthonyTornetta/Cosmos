@@ -1,11 +1,4 @@
-use bevy::{
-    app::{App, Update},
-    ecs::{
-        event::{EventReader, EventWriter},
-        schedule::IntoSystemConfigs,
-        system::Query,
-    },
-};
+use bevy::prelude::*;
 use cosmos_core::{
     entities::health::{Health, HealthSet},
     netty::system_sets::NetworkingSystemsSet,

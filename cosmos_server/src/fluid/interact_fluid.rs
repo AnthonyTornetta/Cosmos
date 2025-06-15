@@ -2,19 +2,7 @@
 
 use std::{cell::RefCell, rc::Rc};
 
-use bevy::{
-    app::{App, Update},
-    ecs::{
-        entity::Entity,
-        event::EventReader,
-        query::{With, Without},
-        schedule::IntoSystemConfigs,
-        system::{Commands, Query, Res, ResMut},
-    },
-    log::{error, info},
-    prelude::SystemSet,
-    state::state::OnEnter,
-};
+use bevy::prelude::*;
 use cosmos_core::{
     block::{
         Block,
@@ -395,12 +383,13 @@ fn register_fluid_holder_items(
     mut fluid_holders: ResMut<Registry<FluidHolder>>,
 ) {
     if let Some(fluid_cell_filled) = items.from_id("cosmos:fluid_cell_filled")
-        && let Some(fluid_cell) = items.from_id("cosmos:fluid_cell") {
-            fluid_holders.register(FluidHolder::new(fluid_cell_filled, fluid_cell_filled, fluid_cell, 10_000));
-            needs_data.add_item(fluid_cell_filled);
+        && let Some(fluid_cell) = items.from_id("cosmos:fluid_cell")
+    {
+        fluid_holders.register(FluidHolder::new(fluid_cell_filled, fluid_cell_filled, fluid_cell, 10_000));
+        needs_data.add_item(fluid_cell_filled);
 
-            fluid_holders.register(FluidHolder::new(fluid_cell, fluid_cell_filled, fluid_cell, 10_000));
-        }
+        fluid_holders.register(FluidHolder::new(fluid_cell, fluid_cell_filled, fluid_cell, 10_000));
+    }
 }
 
 fn fill_tank_registry(mut tank_reg: ResMut<Registry<FluidTankBlock>>, blocks: Res<Registry<Block>>) {

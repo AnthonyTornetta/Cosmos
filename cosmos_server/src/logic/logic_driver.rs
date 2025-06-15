@@ -1,9 +1,8 @@
 //! Public interface for controlling the behavior of the logic system, which involves all logic blocks in an entity.
 
 use bevy::{
-    prelude::{Component, Entity, EventWriter},
-    reflect::Reflect,
-    utils::{HashMap, HashSet},
+    platform::collections::{HashMap, HashSet},
+    prelude::*,
 };
 use serde::{Deserialize, Serialize};
 

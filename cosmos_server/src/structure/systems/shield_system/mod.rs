@@ -2,26 +2,7 @@
 
 use std::time::Duration;
 
-use bevy::{
-    core::Name,
-    ecs::{
-        component::Component,
-        entity::Entity,
-        event::Event,
-        query::{Added, Changed, Or, With},
-        schedule::SystemSet,
-    },
-    hierarchy::{BuildChildren, ChildOf},
-    log::warn,
-    math::Vec3,
-    prelude::{
-        App, ChildBuild, Commands, EventReader, IntoSystemConfigs, IntoSystemSetConfigs, OnEnter, Query, Res, ResMut, Update, in_state,
-    },
-    reflect::Reflect,
-    time::Time,
-    transform::components::Transform,
-    platform::collections::HashMap,
-};
+use bevy::{platform::collections::HashMap, prelude::*};
 
 use bevy_renet::renet::RenetServer;
 use cosmos_core::{
@@ -112,23 +93,24 @@ fn block_update_system(
 ) {
     for ev in event.read() {
         if let Ok(systems) = systems_query.get(ev.block.structure())
-            && let Ok(mut system) = systems.query_mut(&mut system_query) {
-                if shield_projector_blocks.0.get(&ev.old_block).is_some() {
-                    system.projector_removed(ev.block.coords());
-                }
-
-                if let Some(&prop) = shield_projector_blocks.0.get(&ev.new_block) {
-                    system.projector_added(prop, ev.block.coords());
-                }
-
-                if shield_generator_blocks.0.get(&ev.old_block).is_some() {
-                    system.generator_removed(ev.block.coords());
-                }
-
-                if let Some(&prop) = shield_generator_blocks.0.get(&ev.new_block) {
-                    system.generator_added(prop, ev.block.coords());
-                }
+            && let Ok(mut system) = systems.query_mut(&mut system_query)
+        {
+            if shield_projector_blocks.0.get(&ev.old_block).is_some() {
+                system.projector_removed(ev.block.coords());
             }
+
+            if let Some(&prop) = shield_projector_blocks.0.get(&ev.new_block) {
+                system.projector_added(prop, ev.block.coords());
+            }
+
+            if shield_generator_blocks.0.get(&ev.old_block).is_some() {
+                system.generator_removed(ev.block.coords());
+            }
+
+            if let Some(&prop) = shield_generator_blocks.0.get(&ev.new_block) {
+                system.generator_added(prop, ev.block.coords());
+            }
+        }
     }
 }
 

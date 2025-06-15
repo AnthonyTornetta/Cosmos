@@ -7,14 +7,7 @@
 //!
 //! See [`saving::default_save`] for an example.
 
-use bevy::{
-    core::Name,
-    ecs::schedule::{IntoSystemSetConfigs, SystemSet},
-    hierarchy::ChildOf,
-    log::{error, info, warn},
-    prelude::{App, Commands, Component, Entity, First, IntoSystemConfigs, Or, Query, ResMut, Transform, With, Without},
-    reflect::Reflect,
-};
+use bevy::prelude::*;
 use bevy_rapier3d::prelude::Velocity;
 use cosmos_core::{
     ecs::{NeedsDespawned, despawn_needed},
@@ -83,7 +76,7 @@ fn check_needs_saved(
 
         // If something that needs saved has parents, we must propagate it up to work properly.
         while let Some(p) = parent {
-            let ent = p.get();
+            let ent = p.parent();
             commands.entity(ent).insert((SerializedData::default(), NeedsSaved));
             parent = q_parent.get(ent).ok();
         }
@@ -260,9 +253,10 @@ fn done_saving(
         }
 
         if matches!(&save_file_identifier.identifier_type, SaveFileIdentifierType::Base(_, _, _))
-            && let Some(loc) = sd.location {
-                sectors_cache.insert(loc.sector(), *entity_id, loading_distance.map(|ld| ld.load_distance()));
-            }
+            && let Some(loc) = sd.location
+        {
+            sectors_cache.insert(loc.sector(), *entity_id, loading_distance.map(|ld| ld.load_distance()));
+        }
     }
 }
 

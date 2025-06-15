@@ -2,12 +2,7 @@
 
 use std::{ffi::OsStr, fs};
 
-use bevy::{
-    app::App,
-    ecs::system::{Commands, Res, Resource},
-    state::state::OnEnter,
-    platform::collections::HashSet,
-};
+use bevy::{platform::collections::HashSet, prelude::*};
 use cosmos_core::{
     registry::{Registry, identifiable::Identifiable},
     state::GameState,

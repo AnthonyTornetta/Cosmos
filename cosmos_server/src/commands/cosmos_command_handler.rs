@@ -2,12 +2,7 @@
 
 use std::time::Duration;
 
-use bevy::{
-    app::Update,
-    ecs::schedule::IntoSystemConfigs,
-    log::info,
-    prelude::{App, Event, EventReader, EventWriter, IntoSystemSetConfigs, OnEnter, Query, Res, ResMut, Resource, SystemSet, on_event},
-};
+use bevy::{ecs::system::ScheduleSystem, prelude::*};
 use cosmos_core::{
     chat::ServerSendChatMessageEvent,
     commands::ClientCommandEvent,
@@ -48,7 +43,11 @@ pub struct CommandEvent<T> {
 ///
 /// The system passed will be called when a [`CommandEvent<T>`] for your `T` is generated. You will
 /// still need to read them via a normal [`EventReader<CommandEvent<T>>`] in your system.
-pub fn create_cosmos_command<T: CosmosCommandType, M>(command: ServerCommand, app: &mut App, on_get_command: impl IntoSystemConfigs<M>) {
+pub fn create_cosmos_command<T: CosmosCommandType, M>(
+    command: ServerCommand,
+    app: &mut App,
+    on_get_command: impl IntoScheduleConfigs<ScheduleSystem, M>,
+) {
     let unlocalized_name = command.unlocalized_name().to_owned();
 
     app.add_systems(OnEnter(GameState::Loading), move |mut reg: ResMut<Registry<ServerCommand>>| {
@@ -63,7 +62,8 @@ pub fn create_cosmos_command<T: CosmosCommandType, M>(command: ServerCommand, ap
         for ev in evr_command_sent.read() {
             if ev.name == unlocalized_name {
                 if T::requires_operator() && !ev.sender.is_operator(&q_operator) {
-                    ev.sender.write("This command requires operator permissions.", &mut evw_send_message);
+                    ev.sender
+                        .write("This command requires operator permissions.", &mut evw_send_message);
                     continue;
                 }
 

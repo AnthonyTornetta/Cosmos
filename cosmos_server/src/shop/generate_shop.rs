@@ -2,12 +2,7 @@
 
 use std::time::Duration;
 
-use bevy::{
-    log::{error, info},
-    prelude::{App, Commands, EventReader, IntoSystemConfigs, Query, Res, ResMut, Update, Vec3, With, in_state},
-    time::common_conditions::on_timer,
-    platform::collections::HashSet,
-};
+use bevy::{platform::collections::HashSet, prelude::*, time::common_conditions::on_timer};
 use cosmos_core::{
     entities::player::Player,
     faction::Factions,
@@ -50,7 +45,7 @@ fn generate_shops(
         let multiplier = SECTOR_DIMENSIONS;
         let adder = -SECTOR_DIMENSIONS / 2.0;
 
-        let mut placed_shops = HashSet::default();
+        let mut placed_shops = HashSet::<Sector>::default();
 
         for _ in 0..asteroid_shops {
             let Some(generated_item) = system

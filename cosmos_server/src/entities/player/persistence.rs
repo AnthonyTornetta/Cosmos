@@ -102,7 +102,7 @@ fn save_player_link(
 
         let mut parent = q_parent.get(entity).ok();
         while let Some(p) = parent {
-            let next = q_parent.get(p.get()).ok();
+            let next = q_parent.get(p.parent()).ok();
             if next.is_some() {
                 parent = next;
             } else {
@@ -354,7 +354,7 @@ fn finish_loading_player(
         info!("Sending player create message for {} @ {}!", load_player.name(), *location);
         let msg = cosmos_encoder::serialize(&ServerReliableMessages::PlayerCreate {
             entity: player_entity,
-            parent: maybe_parent.map(|x| x.get()),
+            parent: maybe_parent.map(|x| x.parent()),
             id: load_player.client_id(),
             name: load_player.name().into(),
             body: netty_body,

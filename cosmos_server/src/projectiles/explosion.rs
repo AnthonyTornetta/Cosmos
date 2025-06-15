@@ -1,17 +1,6 @@
 //! Server-related logic for explosions
 
-use bevy::{
-    ecs::{
-        event::{Event, EventWriter},
-        query::{Added, Or, Without},
-        schedule::IntoSystemConfigs,
-    },
-    log::info,
-    math::{Quat, Vec3},
-    prelude::{App, Commands, Entity, Query, Res, Update, With},
-    transform::components::{GlobalTransform, Transform},
-    platform::collections::HashSet,
-};
+use bevy::{platform::collections::HashSet, prelude::*};
 use bevy_rapier3d::{
     geometry::Collider,
     pipeline::QueryFilter,

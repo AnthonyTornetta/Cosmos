@@ -2,14 +2,7 @@
 
 use std::time::Duration;
 
-use bevy::{
-    ecs::{component::Component, event::EventReader, schedule::IntoSystemConfigs},
-    hierarchy::ChildOf,
-    math::Vec3,
-    prelude::{App, Commands, Entity, Query, Res, Update, With},
-    time::Time,
-    transform::components::{GlobalTransform, Transform},
-};
+use bevy::prelude::*;
 use bevy_rapier3d::{
     dynamics::{ExternalImpulse, Velocity},
     pipeline::CollisionEvent,

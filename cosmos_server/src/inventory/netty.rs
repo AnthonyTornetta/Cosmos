@@ -1,13 +1,6 @@
 //! Syncs player inventories
 
-use bevy::{
-    ecs::world::Mut,
-    log::{error, warn},
-    math::{Quat, Vec3},
-    prelude::{
-        App, Children, Commands, Entity, GlobalTransform, IntoSystemConfigs, Query, Res, ResMut, Transform, Update, With, Without, in_state,
-    },
-};
+use bevy::prelude::*;
 use bevy_rapier3d::prelude::Velocity;
 use bevy_renet::renet::RenetServer;
 use cosmos_core::{
@@ -193,23 +186,24 @@ fn listen_for_inventory_messages(
                     // TODO: Check if has access to inventory
 
                     if let Some(mut inventory) = get_inventory_mut(inventory_holder, &mut q_inventory, &q_structure)
-                        && let Some(is) = inventory.mut_itemstack_at(slot) {
-                            let quantity = quantity.min(is.quantity());
+                        && let Some(is) = inventory.mut_itemstack_at(slot)
+                    {
+                        let quantity = quantity.min(is.quantity());
 
-                            let mut held_itemstack = is.clone();
-                            held_itemstack.set_quantity(quantity);
+                        let mut held_itemstack = is.clone();
+                        held_itemstack.set_quantity(quantity);
 
-                            held_item_inv.set_itemstack_at(0, Some(held_itemstack), &mut commands);
-                            // We have confirmed they're not holding anything, so safe to create new entry
-                            // commands.entity(client_entity).insert(HeldItemStack(held_itemstack));
+                        held_item_inv.set_itemstack_at(0, Some(held_itemstack), &mut commands);
+                        // We have confirmed they're not holding anything, so safe to create new entry
+                        // commands.entity(client_entity).insert(HeldItemStack(held_itemstack));
 
-                            let leftover_quantity = is.quantity() - quantity;
-                            is.set_quantity(leftover_quantity);
+                        let leftover_quantity = is.quantity() - quantity;
+                        is.set_quantity(leftover_quantity);
 
-                            if is.is_empty() {
-                                inventory.remove_itemstack_at(slot);
-                            }
+                        if is.is_empty() {
+                            inventory.remove_itemstack_at(slot);
                         }
+                    }
                 }
                 ClientInventoryMessages::DepositHeldItemstack {
                     inventory_holder,

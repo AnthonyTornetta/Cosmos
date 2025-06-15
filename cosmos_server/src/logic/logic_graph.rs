@@ -1,10 +1,8 @@
 //! The behavior of the logic system, on a structure by structure basis.
 
 use bevy::{
-    log::error,
-    prelude::{Entity, EventWriter},
-    reflect::Reflect,
-    utils::{HashMap, HashSet},
+    platform::collections::{HashMap, HashSet},
+    prelude::*,
 };
 use serde::{Deserialize, Serialize};
 

@@ -83,7 +83,7 @@ fn server_sync_bodies(
             NettyRigidBody::new(
                 velocity.copied(),
                 transform.rotation,
-                match parent.map(|p| p.get()) {
+                match parent.map(|p| p.parent()) {
                     Some(parent_entity) => NettyRigidBodyLocation::Relative(transform.translation, parent_entity),
                     None => NettyRigidBodyLocation::Absolute(*location),
                 },

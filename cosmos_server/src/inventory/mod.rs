@@ -2,14 +2,7 @@
 
 use std::ops::Range;
 
-use bevy::{
-    core::Name,
-    log::{error, warn},
-    prelude::{
-        App, Children, Commands, Component, Deref, DerefMut, Entity, EventReader, IntoSystemConfigs, IntoSystemSetConfigs, Or, ChildOf,
-        Query, Res, SystemSet, With,
-    },
-};
+use bevy::prelude::*;
 use cosmos_core::{
     block::data::{BlockData, persistence::ChunkLoadBlockDataEvent},
     events::block_events::BlockDataSystemParams,
@@ -93,7 +86,7 @@ fn on_save_inventory(
     q_needs_saved: Query<&Children, (Or<(With<NeedsSaved>, With<BlockDataNeedsSaved>)>, With<Inventory>)>,
 ) {
     for children in q_needs_saved.iter() {
-        for &child in children.iter().filter(|x| q_item_data.contains(**x)) {
+        for child in children.iter().filter(|x| q_item_data.contains(*x)) {
             commands
                 .entity(child)
                 .insert((ItemStackDataNeedsSaved, SerializedItemStackData::default()));

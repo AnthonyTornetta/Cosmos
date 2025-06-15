@@ -1,9 +1,6 @@
 //! Shared systems between different structure types
 
-use bevy::{
-    prelude::{App, Commands, Entity, EventWriter, IntoSystemConfigs, IntoSystemSetConfigs, Query, Res, SystemSet, Update, in_state},
-    time::Time,
-};
+use bevy::prelude::*;
 use cosmos_core::{
     block::{Block, block_events::BlockEventsSet},
     ecs::NeedsDespawned,

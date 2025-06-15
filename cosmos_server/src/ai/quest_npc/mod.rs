@@ -2,22 +2,7 @@
 
 use std::num::NonZeroU32;
 
-use bevy::{
-    app::{App, Update},
-    core::Name,
-    ecs::{
-        component::Component,
-        entity::Entity,
-        query::{With, Without},
-        schedule::{IntoSystemConfigs, IntoSystemSetConfigs, SystemSet},
-        system::{Commands, Query, Res},
-    },
-    hierarchy::BuildChildren,
-    log::{error, warn},
-    math::Vec3,
-    prelude::{Changed, EventWriter, Has, Or, ChildOf, Transform, in_state},
-    reflect::Reflect,
-};
+use bevy::prelude::*;
 use bevy_rapier3d::prelude::Velocity;
 use cosmos_core::{
     coms::{AiComsType, ComsChannel, RequestedComs},
@@ -180,9 +165,10 @@ fn on_melt_down(
         commands.entity(ent).remove::<(CombatAi, AiControlled, MerchantFederation, Pilot)>();
 
         if let Some(pilot) = pilot
-            && q_is_merchant.contains(pilot.entity) {
-                commands.entity(pilot.entity).insert(NeedsDespawned);
-            }
+            && q_is_merchant.contains(pilot.entity)
+        {
+            commands.entity(pilot.entity).insert(NeedsDespawned);
+        }
     }
 }
 
@@ -341,24 +327,27 @@ fn on_change_coms(
         };
 
         if let Some(last) = coms.messages.last()
-            && last.sender == parent.parent() {
-                // Don't reply to ourselves
-                continue;
-            }
+            && last.sender == parent.parent()
+        {
+            // Don't reply to ourselves
+            continue;
+        }
 
         if let Ok(pilot) = q_pilot.get(coms.with)
-            && let Some(faction) = q_faction.get(parent.parent()).ok().and_then(|x| factions.from_id(x)) {
-                let with_fac = q_faction.get(pilot.entity).ok().and_then(|x| factions.from_id(x));
-                if let Ok(with_ent_id) = q_entity_id.get(pilot.entity)
-                    && faction.relation_with_entity(with_ent_id, with_fac) == FactionRelation::Enemy {
-                        evw_send_coms.write(NpcSendComsMessage {
-                            message: "BEGONE SCALLYWAG!!!".to_owned(),
-                            from_ship: parent.parent(),
-                            to_ship: coms.with,
-                        });
-                        continue;
-                    }
+            && let Some(faction) = q_faction.get(parent.parent()).ok().and_then(|x| factions.from_id(x))
+        {
+            let with_fac = q_faction.get(pilot.entity).ok().and_then(|x| factions.from_id(x));
+            if let Ok(with_ent_id) = q_entity_id.get(pilot.entity)
+                && faction.relation_with_entity(with_ent_id, with_fac) == FactionRelation::Enemy
+            {
+                evw_send_coms.write(NpcSendComsMessage {
+                    message: "BEGONE SCALLYWAG!!!".to_owned(),
+                    from_ship: parent.parent(),
+                    to_ship: coms.with,
+                });
+                continue;
             }
+        }
 
         let mut itr = coms.messages.iter();
 
@@ -463,7 +452,7 @@ fn talking_merchant_ai(
 
         let coms_with_this = q_coms.iter().filter(|c| c.0.with == entity).collect::<Vec<_>>();
 
-        let (target, needs_coms) = if let Some(target) = coms_with_this.iter().flat_map(|x| q_targets.get(x.1.get())).next() {
+        let (target, needs_coms) = if let Some(target) = coms_with_this.iter().flat_map(|x| q_targets.get(x.1.parent())).next() {
             (Some(target), false)
         } else {
             let target = q_targets

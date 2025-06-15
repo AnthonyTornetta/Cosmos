@@ -1,19 +1,6 @@
 //! Represents all the energy stored on a structure
 
-use bevy::{
-    ecs::{
-        change_detection::DetectChanges,
-        component::Component,
-        entity::Entity,
-        query::{Changed, With, Without},
-        removal_detection::RemovedComponents,
-        world::Ref,
-    },
-    math::{Quat, Vec3, bounding::Aabb3d},
-    prelude::{App, Commands, EventReader, IntoSystemConfigs, Query, Res, Update, in_state},
-    reflect::Reflect,
-    transform::components::GlobalTransform,
-};
+use bevy::{math::bounding::Aabb3d, prelude::*};
 
 use bevy_rapier3d::{
     dynamics::{FixedJointBuilder, ImpulseJoint, Velocity},
@@ -123,14 +110,15 @@ fn on_active(
         let docked = q_docked.get(ss.structure_entity());
 
         if active_system_flag.is_added()
-            && let Ok(docked) = docked {
-                let vel = q_velocity.get(docked.to).copied().unwrap_or_default();
+            && let Ok(docked) = docked
+        {
+            let vel = q_velocity.get(docked.to).copied().unwrap_or_default();
 
-                commands.entity(ss.structure_entity()).remove::<Docked>().insert(vel);
-                commands.entity(system_entity).insert(JustUndocked);
+            commands.entity(ss.structure_entity()).remove::<Docked>().insert(vel);
+            commands.entity(system_entity).insert(JustUndocked);
 
-                continue;
-            }
+            continue;
+        }
 
         if docked.is_ok() || just_undocked.is_some() {
             continue;
@@ -235,10 +223,11 @@ fn on_active(
         };
 
         if let Ok(to_docked) = q_docked.get(docked.to)
-            && to_docked.to == entity {
-                // The other ship is already docked to this - don't re-dock.
-                continue;
-            }
+            && to_docked.to == entity
+        {
+            // The other ship is already docked to this - don't re-dock.
+            continue;
+        }
 
         let context = context_access.get(*pw);
 
@@ -260,9 +249,11 @@ fn on_active(
 
         context.colliders_with_aabb_intersecting_aabb(aabb, |e| {
             if let Ok(ce) = q_chunk_entity.get(e)
-                && ce.structure_entity != entity && !check_docked_entities(&ce.structure_entity, &q_docked_list, &e) {
-                    hit_something_bad = true;
-                }
+                && ce.structure_entity != entity
+                && !check_docked_entities(&ce.structure_entity, &q_docked_list, &e)
+            {
+                hit_something_bad = true;
+            }
 
             true
         });

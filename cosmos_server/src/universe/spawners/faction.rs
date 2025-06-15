@@ -1,11 +1,6 @@
 use std::time::Duration;
 
-use bevy::{
-    log::{error, info},
-    prelude::{App, Commands, IntoSystemConfigs, Query, Res, ResMut, Update, With, in_state},
-    time::common_conditions::on_timer,
-    platform::collections::HashSet,
-};
+use bevy::{platform::collections::HashSet, prelude::*, time::common_conditions::on_timer};
 use cosmos_core::{
     faction::Factions,
     physics::location::{Location, SectorUnit, systems::Anchor},

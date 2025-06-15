@@ -1,11 +1,6 @@
 //! Contains logic related to the localized formation of terrain
 
-use bevy::{
-    ecs::{entity::Entity, event::Event},
-    prelude::{App, IntoSystemConfigs, OnExit, ResMut, SystemSet},
-    state::state::OnEnter,
-    platform::collections::HashSet,
-};
+use bevy::{platform::collections::HashSet, prelude::*};
 use cosmos_core::{
     registry::Registry,
     state::GameState,
