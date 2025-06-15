@@ -30,7 +30,7 @@ fn send_position(
             Quat::IDENTITY
         };
 
-        let netty_loc = if let Some(parent) = parent.map(|p| p.get()) {
+        let netty_loc = if let Some(parent) = parent.map(|p| p.parent()) {
             if let Some(server_ent) = netty_mapping.server_from_client(&parent) {
                 NettyRigidBodyLocation::Relative(transform.translation, server_ent)
             } else {

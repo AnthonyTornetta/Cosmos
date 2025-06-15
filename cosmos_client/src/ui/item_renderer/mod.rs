@@ -119,11 +119,11 @@ fn render_tooltips(
                     ),
                     Name::new("Item Tooltip"),
                     GlobalZIndex(100),
+                    ChildOf(ent),
                 ))
                 .with_children(|p| {
                     p.spawn((Text::new(text), text_style.clone()));
                 })
-                .set_parent(ent)
                 .id();
 
             commands.entity(ent).insert(ItemTooltipPointer(tt_ent));

@@ -40,7 +40,7 @@ impl SquareTextureAtlas {
     ///
     /// The bits are formatted in the U8rgba format. I think.
     pub fn get_sub_image_data(atlas_image: &Image, index: u32) -> &[u8] {
-        &atlas_image.data.expect("Texture data not init :(")[(index * atlas_image.width() * atlas_image.width() * 4) as usize
+        &atlas_image.data.as_ref().expect("Texture data not init :(")[(index * atlas_image.width() * atlas_image.width() * 4) as usize
             ..(((1 + index) * atlas_image.width() * atlas_image.width() * 4) as usize)]
     }
 
@@ -157,7 +157,7 @@ impl SquareTextureAtlasBuilder {
         let data = atlas_texture.data.as_mut().expect("Pixel data not initialized?");
         for texture in images {
             let next_y = y + self.texture_dimensions as usize * texture.size().y as usize * format_size;
-            data[y..next_y].copy_from_slice(&texture.data.expect("Pixel data for individual texture not initialized?"));
+            data[y..next_y].copy_from_slice(&texture.data.as_ref().expect("Pixel data for individual texture not initialized?"));
             y = next_y;
         }
 

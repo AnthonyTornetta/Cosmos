@@ -132,7 +132,7 @@ fn render_on_focus(
 
     let Ok(mut focused_reasons) = focused_ui.single_mut() else {
         if parent.is_some() {
-            commands.entity(cam_entity).remove_parent();
+            commands.entity(cam_entity).remove::<ChildOf>();
         }
         return;
     };
@@ -143,7 +143,7 @@ fn render_on_focus(
         .and_then(|indicating| q_g_trans.get(indicating.0).ok().map(|x| (x, indicating.0)))
     else {
         if parent.is_some() {
-            commands.entity(cam_entity).remove_parent();
+            commands.entity(cam_entity).remove::<ChildOf>();
         }
         cam.is_active = false;
         focused_reasons.add_reason(VIS_REASON);
@@ -163,8 +163,8 @@ fn render_on_focus(
 
     let local_player_delta = focused_g_trans.rotation().inverse() * (player_g_trans.translation() - focused_g_trans.translation());
 
-    if parent.map(|x| x.get()) != Some(focused_ent) {
-        commands.entity(cam_entity).set_parent(focused_ent);
+    if parent.map(|x| x.parent()) != Some(focused_ent) {
+        commands.entity(cam_entity).insert(ChildOf(focused_ent));
     }
 
     cam_trans.translation = local_player_delta.normalize_or(Vec3::Z) * 100.0;

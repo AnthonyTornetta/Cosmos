@@ -42,5 +42,6 @@ pub(super) fn register(app: &mut App) {
     show_cursor::register(app);
     tabbed_view::register(app);
 
-    app.add_systems(Update, clear_focus.in_set(UiSystemSet::PreDoUi));
+    app.add_systems(Update, clear_focus.in_set(UiSystemSet::PreDoUi))
+        .init_resource::<InputFocus>();
 }

@@ -381,7 +381,7 @@ fn unload_chunks_far_from_players(
                     for (_, &entity) in chunk.all_block_data_entities() {
                         // Block data saving relies on the block data being a child of the thing being saved,
                         // so make that hold true here
-                        commands.entity(entity).insert(BlockDataNeedsSaved).set_parent(save_ent);
+                        commands.entity(entity).insert((BlockDataNeedsSaved, ChildOf(save_ent)));
                     }
 
                     commands.entity(save_ent).insert(SaveChunk(chunk));

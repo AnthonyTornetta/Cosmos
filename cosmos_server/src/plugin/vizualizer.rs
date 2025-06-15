@@ -12,8 +12,8 @@ fn update_visulizer_system(
     server: Res<RenetServer>,
 ) {
     if !q_windows.is_empty() {
-        visualizer.update(&server);
-        visualizer.show_window(egui_context.ctx_mut());
+        // visualizer.update(&server);
+        // visualizer.show_window(egui_context.ctx_mut());
     }
 }
 
