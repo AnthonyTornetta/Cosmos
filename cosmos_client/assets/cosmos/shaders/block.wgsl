@@ -1,6 +1,12 @@
 #import bevy_pbr::{
     pbr_fragment::pbr_input_from_standard_material,
     pbr_functions::alpha_discard,
+    mesh_bindings::mesh,
+    mesh_functions,
+    skinning,
+    morph::morph,
+    forward_io::{Vertex, VertexOutput},
+    view_transformations::position_world_to_clip,
 }
 
 #ifdef PREPASS_PIPELINE
@@ -15,8 +21,9 @@
 }
 #endif
 
-struct MyExtendedMaterial {
-    texture_index: u32,
+
+struct ExtendedMesh {
+    @location(20) texture_index: u32,
 }
 
 @group(2) @binding(1)
@@ -28,38 +35,6 @@ var my_array_texture_sampler: sampler;
 var<uniform> my_extended_material: MyExtendedMaterial;
 
 // Semi based on https://github.com/DarkZek/RustCraft/blob/master/assets/shaders/extended_material.wgsl
-
-struct CustomVertexInput {
-    @builtin(instance_index) instance_index: u32,
-#ifdef VERTEX_POSITIONS
-    @location(0) position: vec3<f32>,
-#endif
-#ifdef VERTEX_NORMALS
-    @location(1) normal: vec3<f32>,
-#endif
-#ifdef VERTEX_UVS_A
-    @location(2) uv: vec2<f32>,
-#endif
-#ifdef VERTEX_UVS_B
-    @location(3) uv_b: vec2<f32>,
-#endif
-#ifdef VERTEX_TANGENTS
-    @location(4) tangent: vec4<f32>,
-#endif
-#ifdef VERTEX_COLORS
-    @location(5) color: vec4<f32>,
-#endif
-#ifdef SKINNED
-    @location(6) joint_indices: vec4<u32>,
-    @location(7) joint_weights: vec4<f32>,
-#endif
-
-    @location(20) texture_index: u32,
-
-#ifdef MORPH_TARGETS
-    @builtin(vertex_index) index: u32,
-#endif
-};
 
 struct CustomVertexOutput {
     // This is `clip position` when the struct is used as a vertex stage output
@@ -90,7 +65,7 @@ struct CustomVertexOutput {
 }
 
 @vertex
-fn vertex(vertex_no_morph: CustomVertexInput) -> CustomVertexOutput {
+fn vertex(vertex_no_morph: Vertex, extended_mesh: ExtendedMesh) -> CustomVertexOutput {
     var out: CustomVertexOutput;
 
     #ifdef SKINNED

@@ -46,7 +46,7 @@ impl MaterialExtension for ArrayTextureMaterialExtension {
         _key: MaterialExtensionKey<Self>,
     ) -> Result<(), SpecializedMeshPipelineError> {
         descriptor.vertex.buffers.push(VertexBufferLayout {
-            array_stride: 16,
+            array_stride: size_of::<u32>() as u64 / 8,
             step_mode: VertexStepMode::Instance,
             attributes: [VertexAttribute {
                 shader_location: 20,
