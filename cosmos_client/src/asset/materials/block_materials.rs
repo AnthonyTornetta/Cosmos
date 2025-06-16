@@ -57,17 +57,6 @@ impl MaterialExtension for ArrayTextureMaterialExtension {
         layout: &MeshVertexBufferLayoutRef,
         _key: MaterialExtensionKey<Self>,
     ) -> Result<(), SpecializedMeshPipelineError> {
-        // descriptor.vertex.buffers.push(VertexBufferLayout {
-        //     array_stride: size_of::<u32>() as u64 / 8,
-        //     step_mode: VertexStepMode::Instance,
-        //     attributes: [VertexAttribute {
-        //         shader_location: 20,
-        //         offset: 0,
-        //         format: VertexFormat::Uint32,
-        //     }]
-        //     .to_vec(),
-        // });
-
         let vertex_layout = layout.0.get_layout(&[
             Mesh::ATTRIBUTE_POSITION.at_shader_location(0),
             Mesh::ATTRIBUTE_NORMAL.at_shader_location(1),
@@ -77,18 +66,10 @@ impl MaterialExtension for ArrayTextureMaterialExtension {
 
         descriptor.vertex.buffers = vec![vertex_layout];
 
-        // let vertex_layout = layout.0.get_layout(&[
-        //     Mesh::ATTRIBUTE_POSITION.at_shader_location(0),
-        //     Mesh::ATTRIBUTE_NORMAL.at_shader_location(1),
-        //     Mesh::ATTRIBUTE_UV_0.at_shader_location(2),
-        //     ATTRIBUTE_TEXTURE_INDEX.at_shader_location(20),
-        // ])?;
-
-        // descriptor.vertex.buffers = vec![vertex_layout];
         Ok(())
     }
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_plugins(MaterialPlugin::<ExtendedMaterial<StandardMaterial, ArrayTextureMaterialExtension>>::default());
+    app.add_plugins(MaterialPlugin::<ArrayTextureMaterial>::default());
 }
