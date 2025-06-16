@@ -10,7 +10,7 @@
 
 #ifdef PREPASS_PIPELINE
 #import bevy_pbr::{
-    prepass_io::{VertexOutput, Vertex, FragmentOutput},
+    prepass_io::{VertexOutput, Vertex},
     pbr_deferred_functions::deferred_output,
 }
 #else
@@ -20,7 +20,6 @@
     pbr_types::STANDARD_MATERIAL_FLAGS_UNLIT_BIT,
 }
 #endif
-
 
 struct ExtendedMesh {
     @location(20) texture_index: u32,
@@ -34,17 +33,18 @@ var my_array_texture_sampler: sampler;
 // Semi based on https://github.com/DarkZek/RustCraft/blob/master/assets/shaders/extended_material.wgsl
 
 struct CustomVertexOutput {
+    @builtin(position) position: vec4<f32>,
+    #ifdef PREPASS_PIPELINE
+    @location(0) uv: vec2<f32>,
+    @location(3) world_position: vec4<f32>,
+    #else
     // This is `clip position` when the struct is used as a vertex stage output
     // and `frag coord` when used as a fragment stage input
-    @builtin(position) position: vec4<f32>,
     @location(0) world_position: vec4<f32>,
-    @location(1) world_normal: vec3<f32>,
-#ifdef VERTEX_UVS_A
     @location(2) uv: vec2<f32>,
-#endif
-#ifdef VERTEX_UVS_B
-    @location(3) uv_b: vec2<f32>,
-#endif
+    #endif
+
+    @location(1) world_normal: vec3<f32>,
 #ifdef VERTEX_TANGENTS
     @location(4) world_tangent: vec4<f32>,
 #endif
@@ -92,9 +92,8 @@ fn vertex(vertex_no_morph: Vertex, extended_mesh: ExtendedMesh) -> CustomVertexO
         out.position = position_world_to_clip(out.world_position.xyz);
     #endif
 
-    #ifdef VERTEX_UVS_A
-        out.uv = vertex_no_morph.uv;
-    #endif
+    out.uv = vertex_no_morph.uv;
+    
     #ifdef VERTEX_UVS_B
         out.uv_b = vertex_no_morph.uv_b;
     #endif
@@ -124,6 +123,7 @@ fn vertex(vertex_no_morph: Vertex, extended_mesh: ExtendedMesh) -> CustomVertexO
     return out;
 }
 
+#ifndef PREPASS_PIPELINE
 @fragment
 fn fragment(
     custom: CustomVertexOutput,
@@ -134,9 +134,7 @@ fn fragment(
     in.position = custom.position;
     in.world_position = custom.world_position;
     in.world_normal = custom.world_normal;
-    #ifdef VERTEX_UVS_A
-        in.uv = custom.uv;
-    #endif // VERTEX_UVS_A
+    in.uv = custom.uv;
     // This is `clip position` when the struct is used as a vertex stage output
     // and `frag coord` when used as a fragment stage input
 #ifdef VERTEX_UVS_B
@@ -184,3 +182,5 @@ fn fragment(
 
     return out;
 }
+
+#endif // PREPASS_PIPELINE

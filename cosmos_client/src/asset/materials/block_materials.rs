@@ -44,9 +44,12 @@ impl MaterialExtension for ArrayTextureMaterialExtension {
     fn fragment_shader() -> ShaderRef {
         "cosmos/shaders/block.wgsl".into()
     }
-    // fn prepass_vertex_shader() -> ShaderRef {
-    //     "cosmos/shaders/extended_material_prepass.wgsl".into()
-    // }
+    fn prepass_vertex_shader() -> ShaderRef {
+        "cosmos/shaders/block_prepass.wgsl".into()
+    }
+    fn prepass_fragment_shader() -> ShaderRef {
+        "cosmos/shaders/block_prepass.wgsl".into()
+    }
 
     fn specialize(
         _pipeline: &MaterialExtensionPipeline,
