@@ -3,14 +3,11 @@ use crate::asset::materials::{AddMaterialEvent, BlockMaterialMapping, MaterialDe
 use crate::block::lighting::{BlockLightProperties, BlockLighting};
 use crate::rendering::structure_renderer::{BlockRenderingModes, StructureRenderingSet};
 use crate::rendering::{CosmosMeshBuilder, ReadOnlyBlockMeshRegistry};
-use bevy::prelude::{
-    App, Assets, BuildChildren, Commands, DespawnRecursiveExt, Entity, EventWriter, GlobalTransform, IntoSystemConfigs, Mesh, Mesh3d,
-    PointLight, Query, Res, ResMut, Transform, Update, Vec3, Visibility, With,
-};
+use bevy::platform::collections::HashMap;
+use bevy::prelude::*;
 use bevy::render::mesh::MeshAabb;
 use bevy::render::primitives::Aabb;
 use bevy::tasks::AsyncComputeTaskPool;
-use bevy::utils::HashMap;
 use cosmos_core::block::Block;
 use cosmos_core::netty::client::LocalPlayer;
 use cosmos_core::physics::location::SECTOR_DIMENSIONS;
@@ -54,7 +51,7 @@ fn poll_rendering_chunks(
 
         let (entity, mut chunk_mesh) = (rendered_chunk.chunk_entity, rendered_chunk.mesh);
 
-        if commands.get_entity(entity).is_none() {
+        if commands.get_entity(entity).is_err() {
             // Chunk may have been despawned during its rendering
             continue;
         }
@@ -99,7 +96,7 @@ fn poll_rendering_chunks(
         // The first mesh a chunk has will be on the chunk entity instead of child entities,
         // so clear that out first.
         commands.entity(entity).remove::<Mesh3d>();
-        evw_remove_all_materials.send(RemoveAllMaterialsEvent { entity });
+        evw_remove_all_materials.write(RemoveAllMaterialsEvent { entity });
 
         let mut chunk_meshes_component = ChunkMeshes::default();
 
@@ -122,7 +119,7 @@ fn poll_rendering_chunks(
 
             entities_to_add.push(ent);
 
-            evw_add_material_event.send(AddMaterialEvent {
+            evw_add_material_event.write(AddMaterialEvent {
                 entity: ent,
                 add_material_id: mesh_material.material_id,
                 texture_dimensions_index: mesh_material.texture_dimensions_index,
@@ -148,7 +145,7 @@ fn poll_rendering_chunks(
                 aabb.unwrap_or_default(),
             ));
 
-            evw_add_material_event.send(AddMaterialEvent {
+            evw_add_material_event.write(AddMaterialEvent {
                 entity,
                 add_material_id: mesh_material.material_id,
                 texture_dimensions_index: mesh_material.texture_dimensions_index,
@@ -158,7 +155,7 @@ fn poll_rendering_chunks(
 
         // Any leftover entities are useless now, so kill them
         for mesh in old_mesh_entities {
-            commands.entity(mesh).despawn_recursive();
+            commands.entity(mesh).despawn();
         }
 
         let mut entity_commands = commands.entity(entity);
@@ -173,7 +170,7 @@ fn poll_rendering_chunks(
     // Undo the reverse above
     rendering_chunks.0.reverse();
 
-    evw_chunk_needs_custom_blocks_rerendered.send_batch(events_to_send);
+    evw_chunk_needs_custom_blocks_rerendered.write_batch(events_to_send);
 }
 
 fn create_lighting_data(
@@ -243,7 +240,7 @@ fn create_lighting_data(
     }
 
     for light in new_lights.lights.iter().filter(|x| !x.valid) {
-        commands.entity(light.entity).despawn_recursive();
+        commands.entity(light.entity).despawn();
     }
 
     new_lights.lights.retain(|x| x.valid);
@@ -266,7 +263,7 @@ fn monitor_needs_rendered_system(
     materials_registry: Res<ReadOnlyRegistry<MaterialDefinition>>,
     block_rendering_mode: Res<BlockRenderingModes>,
 ) {
-    let Ok(local_transform) = local_player.get_single() else {
+    let Ok(local_transform) = local_player.single() else {
         return;
     };
 

@@ -5,7 +5,7 @@ use std::sync::{Arc, RwLock};
 use bevy::{
     prelude::*,
     render::mesh::{MeshVertexAttribute, VertexAttributeValues},
-    utils::HashMap,
+    platform::collections::HashMap,
 };
 use cosmos_core::{
     block::Block,

@@ -38,10 +38,10 @@ pub mod ui;
 pub mod universe;
 pub mod window;
 
+use bevy::diagnostic::FrameTimeDiagnosticsPlugin;
 use bevy::diagnostic::{EntityCountDiagnosticsPlugin, SystemInformationDiagnosticsPlugin};
 use bevy::prelude::*;
 use bevy::window::WindowMode;
-use bevy::{core::TaskPoolThreadAssignmentPolicy, diagnostic::FrameTimeDiagnosticsPlugin};
 use bevy_hanabi::HanabiPlugin;
 // use bevy_mod_billboard::plugin::BillboardPlugin;
 use bevy_mod_debugdump::schedule_graph;
@@ -85,11 +85,11 @@ fn main() {
     let default_plugins = DefaultPlugins
         .set(TaskPoolPlugin {
             task_pool_options: TaskPoolOptions {
-                compute: TaskPoolThreadAssignmentPolicy {
-                    min_threads: 1,
-                    max_threads: usize::MAX,
-                    percent: 0.25,
-                },
+                // compute: TaskPoolThreadAssignmentPolicy {
+                //     min_threads: 1,
+                //     max_threads: usize::MAX,
+                //     percent: 0.25,
+                // },
                 ..Default::default()
             },
         })
@@ -148,7 +148,7 @@ fn main() {
             // Used for diagnostics
             SystemInformationDiagnosticsPlugin,
             EntityCountDiagnosticsPlugin,
-            FrameTimeDiagnosticsPlugin,
+            FrameTimeDiagnosticsPlugin::default(),
             // PerfUiPlugin,
             // BillboardPlugin,
         ))

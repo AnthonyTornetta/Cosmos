@@ -13,11 +13,11 @@ fn focus_looking_at(
     q_indicating: Query<&Indicating>,
     mut commands: Commands,
 ) {
-    let Ok(pilot) = q_local_player.get_single() else {
+    let Ok(pilot) = q_local_player.single() else {
         return;
     };
 
-    let Ok(focused) = q_focused.get_single() else {
+    let Ok(focused) = q_focused.single() else {
         commands.entity(pilot.entity).remove::<PilotFocused>();
         return;
     };

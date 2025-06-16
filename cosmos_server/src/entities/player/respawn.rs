@@ -82,7 +82,7 @@ fn on_respawn(
         // *location = loc;
         // transform.rotation = rot;
         //
-        nevw_respawn.send(
+        nevw_respawn.write(
             RespawnEvent {
                 rotation: rot,
                 location: loc,

@@ -3,7 +3,7 @@
 
 pub mod mut_events;
 
-use bevy::prelude::{App, Commands, Component, DespawnRecursiveExt, Entity, First, OnEnter, OnExit, Query, Resource, States, With};
+use bevy::prelude::*;
 
 #[derive(Component, Debug)]
 /// Marks an entity that needs to be recurisvely despawned.
@@ -22,7 +22,7 @@ pub struct NeedsDespawned;
 /// Recursively despawns all entities that need despawned in `CoreSet::First`.
 pub fn despawn_needed(mut commands: Commands, needs_despawned_query: Query<Entity, With<NeedsDespawned>>) {
     for ent in needs_despawned_query.iter() {
-        commands.entity(ent).despawn_recursive();
+        commands.entity(ent).despawn();
     }
 }
 

@@ -114,7 +114,7 @@ impl FullStructure {
                 let Some(self_entity) = self.base_structure.self_entity else {
                     return;
                 };
-                event_writer.send(BlockChangedEvent {
+                event_writer.write(BlockChangedEvent {
                     new_block: block.id(),
                     old_block,
                     block: StructureBlock::new(coords, self_entity),
@@ -181,7 +181,7 @@ impl FullStructure {
             return;
         };
 
-        event_writer.send(BlockChangedEvent {
+        event_writer.write(BlockChangedEvent {
             new_block: block.id(),
             old_block,
             block: StructureBlock::new(coords, self_entity),

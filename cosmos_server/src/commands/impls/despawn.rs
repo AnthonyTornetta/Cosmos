@@ -37,7 +37,7 @@ pub(super) fn register(app: &mut App) {
         app,
         |mut commands: Commands, mut evr_command: EventReader<CommandEvent<DespawnCommand>>| {
             for ev in evr_command.read() {
-                if let Some(mut entity_commands) = commands.get_entity(ev.command.0) {
+                if let Ok(mut entity_commands) = commands.get_entity(ev.command.0) {
                     entity_commands.insert(NeedsDespawned);
                     println!("Despawned entity {:?}", ev.command.0);
                 } else {

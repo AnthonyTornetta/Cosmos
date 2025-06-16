@@ -1,14 +1,6 @@
 //! Responsible for spawning asteroids that move, based on the random timing of them spawning
 
-use bevy::{
-    log::error,
-    prelude::{
-        App, Commands, Component, Entity, EventWriter, IntoSystemConfigs, Query, Res, Resource, Update, Vec3, With, Without, in_state,
-    },
-    reflect::Reflect,
-    time::Time,
-    utils::hashbrown::HashMap,
-};
+use bevy::{platform::collections::HashMap, prelude::*};
 use bevy_rapier3d::prelude::Velocity;
 use cosmos_core::{
     block::Block,
@@ -157,7 +149,7 @@ fn send_done_generating_event(
         for res in itr {
             // This will always be true because include_empty is false
             if let ChunkIteratorResult::FilledChunk { position, chunk: _ } = res {
-                chunk_init_event_writer.send(ChunkInitEvent {
+                chunk_init_event_writer.write(ChunkInitEvent {
                     structure_entity: ent,
                     coords: position,
                     serialized_block_data: None,

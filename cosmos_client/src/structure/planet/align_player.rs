@@ -2,9 +2,7 @@
 
 use std::f32::consts::PI;
 
-use bevy::prelude::{
-    App, Commands, Component, Entity, GlobalTransform, IntoSystemConfigs, Parent, Quat, Query, Transform, Update, Vec3, With, Without,
-};
+use bevy::prelude::*;
 use cosmos_core::{
     block::block_face::BlockFace,
     netty::{client::LocalPlayer, system_sets::NetworkingSystemsSet},
@@ -27,12 +25,12 @@ fn align_player(
             Option<&PlayerAlignment>,
             Option<&PreviousOrientation>,
         ),
-        (With<LocalPlayer>, Without<Parent>),
+        (With<LocalPlayer>, Without<ChildOf>),
     >,
     planets: Query<(Entity, &Location, &GravityEmitter, &GlobalTransform), With<Planet>>,
     mut commands: Commands,
 ) {
-    let Ok((entity, location, mut transform, alignment, prev_orientation)) = player.get_single_mut() else {
+    let Ok((entity, location, mut transform, alignment, prev_orientation)) = player.single_mut() else {
         return;
     };
     let mut best_planet = None;
@@ -112,7 +110,7 @@ fn align_player(
 }
 
 fn align_on_ship(query: Query<Entity, (With<LocalPlayer>, With<Pilot>)>, mut commands: Commands) {
-    if let Ok(ent) = query.get_single() {
+    if let Ok(ent) = query.single() {
         commands.entity(ent).insert(PlayerAlignment {
             aligned_to: None,
             axis: Axis::Y,

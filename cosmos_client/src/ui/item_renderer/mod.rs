@@ -119,11 +119,11 @@ fn render_tooltips(
                     ),
                     Name::new("Item Tooltip"),
                     GlobalZIndex(100),
+                    ChildOf(ent),
                 ))
                 .with_children(|p| {
                     p.spawn((Text::new(text), text_style.clone()));
                 })
-                .set_parent(ent)
                 .id();
 
             commands.entity(ent).insert(ItemTooltipPointer(tt_ent));
@@ -133,11 +133,11 @@ fn render_tooltips(
 
 fn reposition_tooltips(
     q_windows: Query<&Window, With<PrimaryWindow>>,
-    mut q_tooltip: Query<(&mut Node, &Parent), With<ItemTooltip>>,
+    mut q_tooltip: Query<(&mut Node, &ChildOf), With<ItemTooltip>>,
     q_node: Query<(&GlobalTransform, &ComputedNode)>,
 ) {
     for (mut tt_node, parent) in q_tooltip.iter_mut() {
-        let Ok(window) = q_windows.get_single() else {
+        let Ok(window) = q_windows.single() else {
             continue;
         };
 
@@ -145,7 +145,7 @@ fn reposition_tooltips(
             continue;
         };
 
-        let Ok((g_trans, parent_node)) = q_node.get(parent.get()) else {
+        let Ok((g_trans, parent_node)) = q_node.get(parent.parent()) else {
             continue;
         };
 
@@ -166,7 +166,7 @@ fn render_items(
     mut removed_render_items: RemovedComponents<RenderItem>,
 ) {
     for entity in removed_render_items.read() {
-        if let Some(mut ecmds) = commands.get_entity(entity) {
+        if let Ok(mut ecmds) = commands.get_entity(entity) {
             ecmds.remove::<(ImageNode, Interaction)>();
         }
     }

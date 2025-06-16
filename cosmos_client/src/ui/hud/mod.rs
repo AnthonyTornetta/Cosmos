@@ -1,18 +1,4 @@
-use bevy::{
-    app::{App, Update},
-    asset::AssetServer,
-    core::Name,
-    ecs::{
-        entity::Entity,
-        query::With,
-        system::{Commands, Query, Res},
-    },
-    hierarchy::BuildChildren,
-    prelude::{Added, ChildBuild, IntoSystemConfigs, Text, in_state},
-    state::state::OnEnter,
-    text::{TextFont, TextSpan},
-    ui::{AlignContent, JustifyContent, Node, PositionType, UiRect, Val},
-};
+use bevy::prelude::*;
 use cosmos_core::{economy::Credits, netty::client::LocalPlayer, state::GameState};
 
 use super::reactivity::{BindValue, BindValues, ReactableFields};
@@ -25,7 +11,7 @@ fn create_credits_node(
     asset_server: Res<AssetServer>,
     local_player: Query<(Entity, &Credits), (Added<Credits>, With<LocalPlayer>)>,
 ) {
-    let Ok((local_player, credits)) = local_player.get_single() else {
+    let Ok((local_player, credits)) = local_player.single() else {
         return;
     };
 
@@ -50,7 +36,7 @@ fn create_credits_node(
                 ..Default::default()
             },
         ))
-        .with_children(|p: &mut bevy::prelude::ChildBuilder<'_>| {
+        .with_children(|p| {
             p.spawn((
                 Name::new("Credits Text"),
                 BindValues::<Credits>::new(vec![BindValue::new(local_player, ReactableFields::Text { section: 1 })]),

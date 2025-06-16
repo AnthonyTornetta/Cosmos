@@ -181,7 +181,7 @@ fn create_booth(
                     ))
                     .id();
 
-                event_writer.send(AddMaterialEvent {
+                event_writer.write(AddMaterialEvent {
                     entity,
                     add_material_id: item_mat_material.material_id(),
                     texture_dimensions_index: item_mat_material.texture_dimension_index(),

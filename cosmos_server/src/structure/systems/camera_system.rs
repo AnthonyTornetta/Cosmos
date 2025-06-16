@@ -1,6 +1,6 @@
 //! Represents all the energy stored on a structure
 
-use bevy::prelude::{App, Commands, EventReader, IntoSystemConfigs, OnEnter, Query, Res, ResMut, Update, in_state};
+use bevy::prelude::*;
 
 use cosmos_core::{
     block::{Block, block_events::BlockEventsSet},

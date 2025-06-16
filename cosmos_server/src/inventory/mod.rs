@@ -2,14 +2,7 @@
 
 use std::ops::Range;
 
-use bevy::{
-    core::Name,
-    log::{error, warn},
-    prelude::{
-        App, Children, Commands, Component, Deref, DerefMut, Entity, EventReader, IntoSystemConfigs, IntoSystemSetConfigs, Or, Parent,
-        Query, Res, SystemSet, With,
-    },
-};
+use bevy::prelude::*;
 use cosmos_core::{
     block::data::{BlockData, persistence::ChunkLoadBlockDataEvent},
     events::block_events::BlockDataSystemParams,
@@ -93,7 +86,7 @@ fn on_save_inventory(
     q_needs_saved: Query<&Children, (Or<(With<NeedsSaved>, With<BlockDataNeedsSaved>)>, With<Inventory>)>,
 ) {
     for children in q_needs_saved.iter() {
-        for &child in children.iter().filter(|x| q_item_data.contains(**x)) {
+        for child in children.iter().filter(|x| q_item_data.contains(*x)) {
             commands
                 .entity(child)
                 .insert((ItemStackDataNeedsSaved, SerializedItemStackData::default()));
@@ -163,14 +156,14 @@ fn serialize_inventory(
 }
 
 fn serialize_inventory_block_data(
-    q_storage_blocks: Query<(&Parent, &Inventory, &BlockData), With<BlockDataNeedsSaved>>,
+    q_storage_blocks: Query<(&ChildOf, &Inventory, &BlockData), With<BlockDataNeedsSaved>>,
     mut q_serialized_is_data: Query<&mut SerializedItemStackData>,
     mut commands: Commands,
     mut q_chunk: Query<&mut SerializedBlockData>,
 ) {
     q_storage_blocks.iter().for_each(|(parent, inventory, block_data)| {
         let mut serialized_block_data = q_chunk
-            .get_mut(parent.get())
+            .get_mut(parent.parent())
             .expect("Block data's parent didn't have SerializedBlockData???");
 
         let serialized_inventory = create_serialized_inventory(&mut q_serialized_is_data, &mut commands, inventory);

@@ -1,8 +1,6 @@
 //! This handles what to do when a block is destroyed
 
-use bevy::prelude::{
-    App, EventReader, EventWriter, IntoSystemConfigs, IntoSystemSetConfigs, Query, Res, ResMut, SystemSet, Update, in_state,
-};
+use bevy::prelude::*;
 use bevy_renet::renet::RenetServer;
 use cosmos_core::{
     block::{Block, block_events::BlockEventsSet},

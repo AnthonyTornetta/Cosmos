@@ -1,17 +1,6 @@
 //! Server-related logic for explosions
 
-use bevy::{
-    ecs::{
-        event::{Event, EventWriter},
-        query::{Added, Or, Without},
-        schedule::IntoSystemConfigs,
-    },
-    log::info,
-    math::{Quat, Vec3},
-    prelude::{App, Commands, Entity, Query, Res, Update, With},
-    transform::components::{GlobalTransform, Transform},
-    utils::HashSet,
-};
+use bevy::{platform::collections::HashSet, prelude::*};
 use bevy_rapier3d::{
     geometry::Collider,
     pipeline::QueryFilter,
@@ -137,7 +126,7 @@ fn respond_to_explosion(
 
         for &hit in ents.iter() {
             let Ok((structure_g_trans, structure_loc, mut structure)) = q_structure.get_mut(hit) else {
-                ev_writer_explosion_hit.send(ExplosionHitEvent {
+                ev_writer_explosion_hit.write(ExplosionHitEvent {
                     explosion,
                     explosion_location: explosion_loc,
                     hit_entity: hit,

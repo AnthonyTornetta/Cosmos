@@ -3,24 +3,11 @@
 use std::f32::consts::PI;
 
 use bevy::{
-    app::Update,
-    asset::{AssetServer, Assets},
-    color::{Alpha, palettes::css},
-    core::Name,
+    color::palettes::css,
     core_pipeline::bloom::Bloom,
     input::mouse::{MouseScrollUnit, MouseWheel},
-    math::{Dir3, Quat, Vec3},
-    pbr::{MeshMaterial3d, StandardMaterial},
-    prelude::{
-        AlphaMode, App, BuildChildren, Camera, Camera3d, Capsule3d, Changed, ChildBuild, Commands, Component, Cuboid, Entity, EventReader,
-        IntoSystemConfigs, Mesh, Mesh3d, MouseButton, OnEnter, PerspectiveProjection, Projection, Query, Res, ResMut, Sphere, Text,
-        Transform, Visibility, With, Without, in_state,
-    },
-    reflect::Reflect,
+    prelude::*,
     render::view::RenderLayers,
-    text::TextFont,
-    time::Time,
-    ui::{AlignSelf, FlexDirection, JustifyContent, Node, PositionType, TargetCamera, UiRect, Val},
 };
 // use bevy_mod_billboard::{BillboardDepth, BillboardTextBundle};
 use cosmos_core::{
@@ -143,11 +130,11 @@ fn toggle_map(
         return;
     }
 
-    let Ok((map_cam_ent, mut map_camera)) = q_map_camera.get_single_mut() else {
+    let Ok((map_cam_ent, mut map_camera)) = q_map_camera.single_mut() else {
         return;
     };
 
-    if let Ok(galaxy_map_entity) = q_galaxy_map_display.get_single() {
+    if let Ok(galaxy_map_entity) = q_galaxy_map_display.single() {
         commands.entity(galaxy_map_entity).insert(NeedsDespawned);
         return;
     }
@@ -157,7 +144,7 @@ fn toggle_map(
         return;
     }
 
-    let Ok(player_loc) = q_player.get_single() else {
+    let Ok(player_loc) = q_player.single() else {
         return;
     };
 
@@ -192,7 +179,7 @@ fn toggle_map(
 
     commands
         .spawn((
-            TargetCamera(map_cam_ent),
+            UiTargetCamera(map_cam_ent),
             DespawnWith(map_display),
             Name::new("Galaxy map UI root"),
             Node {
@@ -206,7 +193,7 @@ fn toggle_map(
         ))
         .with_children(|p| {
             p.spawn((
-                TargetCamera(map_cam_ent),
+                UiTargetCamera(map_cam_ent),
                 DespawnWith(map_display),
                 Name::new("Galaxy map text UI"),
                 Node {
@@ -325,8 +312,8 @@ fn toggle_map(
                 ));
             });
         });
-    nevw_system_map.send(RequestSystemMap { system: player_system });
-    nevw_galaxy_map.send(RequestGalaxyMap);
+    nevw_system_map.write(RequestSystemMap { system: player_system });
+    nevw_galaxy_map.write(RequestGalaxyMap);
 }
 
 fn update_waypoint_text(
@@ -334,11 +321,11 @@ fn update_waypoint_text(
     q_waypoint: Query<&Location, With<Waypoint>>,
     mut q_text: Query<&mut Text, With<WaypointText>>,
 ) {
-    let Ok(mut text) = q_text.get_single_mut() else {
+    let Ok(mut text) = q_text.single_mut() else {
         return;
     };
 
-    let waypoint_loc = q_waypoint.get_single();
+    let waypoint_loc = q_waypoint.single();
 
     let waypoint_text = waypoint_loc
         .map(|x| format!("{}, {}, {}", x.sector.x(), x.sector.y(), x.sector.z()))
@@ -354,11 +341,11 @@ fn update_waypoint_text(
 }
 
 fn update_sector_text(q_cam: Query<&MapCamera, Changed<MapCamera>>, mut q_text: Query<&mut Text, With<MapSelectedSectorText>>) {
-    let Ok(cam) = q_cam.get_single() else {
+    let Ok(cam) = q_cam.single() else {
         return;
     };
 
-    let Ok(mut text) = q_text.get_single_mut() else {
+    let Ok(mut text) = q_text.single_mut() else {
         return;
     };
 
@@ -368,7 +355,7 @@ fn update_sector_text(q_cam: Query<&MapCamera, Changed<MapCamera>>, mut q_text: 
 const SECTOR_SCALE: f32 = 1.0;
 
 fn position_camera(mut q_camera: Query<(&mut Transform, &mut MapCamera)>) {
-    let Ok((mut trans, mut cam)) = q_camera.get_single_mut() else {
+    let Ok((mut trans, mut cam)) = q_camera.single_mut() else {
         return;
     };
 
@@ -387,11 +374,11 @@ fn handle_waypoint_sector(
     time: Res<Time>,
     mut q_sector_text: Query<&mut Text, With<WaypointSectorText>>,
 ) {
-    let Ok((mut text_vis, mut sector_trans, standard_material)) = q_selected_sector.get_single_mut() else {
+    let Ok((mut text_vis, mut sector_trans, standard_material)) = q_selected_sector.single_mut() else {
         return;
     };
 
-    let Ok(waypoint_loc) = q_waypoint.get_single() else {
+    let Ok(waypoint_loc) = q_waypoint.single() else {
         *text_vis = Visibility::Hidden;
         return;
     };
@@ -404,7 +391,7 @@ fn handle_waypoint_sector(
     let standard_material = materials.get_mut(standard_material).expect("Material missing");
     standard_material.base_color.set_alpha(time.elapsed_secs().sin().abs() * 0.1);
 
-    let Ok(mut text) = q_sector_text.get_single_mut() else {
+    let Ok(mut text) = q_sector_text.single_mut() else {
         return;
     };
 
@@ -417,11 +404,11 @@ fn handle_selected_sector(
     time: Res<Time>,
     mut q_sector_text: Query<&mut Text, With<SelectedSectorText>>,
 ) {
-    let Ok(cam) = q_camera.get_single() else {
+    let Ok(cam) = q_camera.single() else {
         return;
     };
 
-    let Ok((mut sector_trans, standard_material)) = q_selected_sector.get_single_mut() else {
+    let Ok((mut sector_trans, standard_material)) = q_selected_sector.single_mut() else {
         return;
     };
 
@@ -429,7 +416,7 @@ fn handle_selected_sector(
     let standard_material = materials.get_mut(standard_material).expect("Material missing");
     standard_material.base_color.set_alpha(time.elapsed_secs().sin().abs() * 0.1);
 
-    let Ok(mut text) = q_sector_text.get_single_mut() else {
+    let Ok(mut text) = q_sector_text.single_mut() else {
         return;
     };
 
@@ -464,11 +451,11 @@ fn render_galaxy_map(
             continue;
         };
 
-        let Ok(player) = q_player_loc.get_single() else {
+        let Ok(player) = q_player_loc.single() else {
             return;
         };
 
-        let Ok(mut cam) = q_camera.get_single_mut() else {
+        let Ok(mut cam) = q_camera.single_mut() else {
             return;
         };
 
@@ -681,7 +668,7 @@ fn camera_movement(
         }
 
         if input_handler.check_just_pressed(CosmosInputs::ResetMapPosition) {
-            let Ok(player_loc) = q_local_player.get_single() else {
+            let Ok(player_loc) = q_local_player.single() else {
                 continue;
             };
 
@@ -715,7 +702,7 @@ fn camera_movement(
 }
 
 fn handle_map_camera(mut q_map_camera: Query<&mut Camera, With<MapCamera>>, q_exists: Query<(), With<GalaxyMapDisplay>>) {
-    let Ok(mut cam) = q_map_camera.get_single_mut() else {
+    let Ok(mut cam) = q_map_camera.single_mut() else {
         return;
     };
 
@@ -728,7 +715,7 @@ fn receive_map(
     mut q_galaxy_map: Query<&mut GalaxyMapDisplay>,
 ) {
     for ev in nevr_galaxy_map.read() {
-        let Ok(mut gmap) = q_galaxy_map.get_single_mut() else {
+        let Ok(mut gmap) = q_galaxy_map.single_mut() else {
             return;
         };
 
@@ -750,7 +737,7 @@ fn receive_map(
     }
 
     for ev in nevr_system_map.read() {
-        let Ok(mut gmap) = q_galaxy_map.get_single_mut() else {
+        let Ok(mut gmap) = q_galaxy_map.single_mut() else {
             return;
         };
 
@@ -778,10 +765,10 @@ fn map_active(q_map: Query<(), With<GalaxyMapDisplay>>) -> bool {
 
 fn teleport_at(mut q_player: Query<&mut Location, With<LocalPlayer>>, inputs: InputChecker, q_camera: Query<&MapCamera>) {
     if inputs.check_just_pressed(CosmosInputs::TeleportSelected) {
-        let Ok(mut loc) = q_player.get_single_mut() else {
+        let Ok(mut loc) = q_player.single_mut() else {
             return;
         };
-        let Ok(cam) = q_camera.get_single() else {
+        let Ok(cam) = q_camera.single() else {
             return;
         };
         loc.sector = cam.sector;
@@ -791,7 +778,7 @@ fn teleport_at(mut q_player: Query<&mut Location, With<LocalPlayer>>, inputs: In
 #[derive(Component)]
 struct ScaleWithZoom;
 fn scale_with_zoom(mut q_scale_with_zoom: Query<&mut Transform, With<ScaleWithZoom>>, q_camera: Query<&MapCamera>) {
-    let Ok(cam) = q_camera.get_single() else {
+    let Ok(cam) = q_camera.single() else {
         return;
     };
 

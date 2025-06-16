@@ -9,7 +9,7 @@ fn raycast(
     ray_start: Vec3,
     ray_dir: Vec3,
     ray_distance: f32,
-    q_parent: Query<&Parent>,
+    q_parent: Query<&ChildOf>,
     pen: u32,
     power: f32,
     q_structure: Query<&Structure>,
@@ -19,7 +19,7 @@ fn raycast(
             if no_collide_entity == entity {
                 false
             } else if let Ok(parent) = q_parent.get(entity) {
-                parent.get() != no_collide_entity
+                parent.parent() != no_collide_entity
             } else {
                 true
             }
@@ -47,13 +47,13 @@ fn raycast(
             let pos = ray_start + (toi * ray_direction) + (velocity.linvel.normalize() * 0.01);
 
             if let Ok(parent) = chunk_parent_query.get(entity) {
-                if let Ok(transform) = transform_query.get(parent.get()) {
+                if let Ok(transform) = transform_query.get(parent.parent()) {
                     let lph = Quat::from_affine3(&transform.affine())
                         .inverse()
                         .mul_vec3(pos - transform.translation());
 
-                    event_writer.send(LaserCollideEvent {
-                        entity_hit: parent.get(),
+                    event_writer.write(LaserCollideEvent {
+                        entity_hit: parent.parent(),
                         local_position_hit: lph,
                         laser_strength: laser.strength,
                         causer: causer.copied(),
@@ -64,7 +64,7 @@ fn raycast(
                     .inverse()
                     .mul_vec3(pos - transform.translation());
 
-                event_writer.send(LaserCollideEvent {
+                event_writer.write(LaserCollideEvent {
                     entity_hit: entity,
                     local_position_hit: lph,
                     laser_strength: laser.strength,

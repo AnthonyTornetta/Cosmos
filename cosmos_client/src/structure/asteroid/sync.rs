@@ -1,6 +1,6 @@
 //! Syncs the client with the server for asteroids
 
-use bevy::prelude::{App, Commands, IntoSystemConfigs, ResMut, Update, resource_exists};
+use bevy::prelude::*;
 use bevy_renet::renet::RenetClient;
 use cosmos_core::{
     netty::{NettyChannelServer, cosmos_encoder, sync::mapping::NetworkMapping, system_sets::NetworkingSystemsSet},

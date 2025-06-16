@@ -1,19 +1,6 @@
 //! Controls pirate ships
 
-use bevy::{
-    app::{App, Update},
-    core::Name,
-    ecs::{
-        component::Component,
-        entity::Entity,
-        query::{Or, With, Without},
-        schedule::{IntoSystemConfigs, IntoSystemSetConfigs, SystemSet},
-        system::{Commands, Query, Res},
-    },
-    hierarchy::BuildChildren,
-    log::error,
-    prelude::{Has, in_state},
-};
+use bevy::prelude::*;
 use cosmos_core::{
     ecs::NeedsDespawned,
     entities::player::Player,
@@ -122,9 +109,10 @@ fn on_melt_down(
         commands.entity(ent).remove::<(CombatAi, AiControlled, Pirate, Pilot)>();
 
         if let Some(pilot) = pilot
-            && q_is_pirate.contains(pilot.entity) {
-                commands.entity(pilot.entity).insert(NeedsDespawned);
-            }
+            && q_is_pirate.contains(pilot.entity)
+        {
+            commands.entity(pilot.entity).insert(NeedsDespawned);
+        }
     }
 }
 

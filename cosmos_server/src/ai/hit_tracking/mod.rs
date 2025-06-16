@@ -3,7 +3,7 @@
 
 use std::time::Duration;
 
-use bevy::{prelude::*, time::common_conditions::on_timer, utils::HashMap};
+use bevy::{prelude::*, time::common_conditions::on_timer, platform::collections::HashMap};
 use cosmos_core::{
     block::block_events::BlockEventsSet,
     entities::EntityId,

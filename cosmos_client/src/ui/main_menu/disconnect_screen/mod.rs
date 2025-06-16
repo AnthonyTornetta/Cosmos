@@ -31,7 +31,7 @@ fn create_disconnect_screen(
         ..Default::default()
     };
 
-    let Ok(main_menu_root) = q_ui_root.get_single() else {
+    let Ok(main_menu_root) = q_ui_root.single() else {
         warn!("No main menu UI root.");
         return;
     };

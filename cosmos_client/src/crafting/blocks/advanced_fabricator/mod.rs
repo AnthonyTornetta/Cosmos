@@ -1,12 +1,4 @@
-use bevy::{
-    app::Update,
-    core::Name,
-    log::error,
-    prelude::{
-        App, Commands, Component, Entity, EventReader, IntoSystemConfigs, IntoSystemSetConfigs, Query, Res, SystemSet, With, in_state,
-    },
-    reflect::Reflect,
-};
+use bevy::prelude::*;
 use cosmos_core::{
     crafting::blocks::advanced_fabricator::OpenAdvancedFabricatorEvent,
     ecs::NeedsDespawned,
@@ -36,7 +28,7 @@ fn open_menu(
         return;
     };
 
-    if let Ok(ent) = q_open_menu.get_single() {
+    if let Ok(ent) = q_open_menu.single() {
         commands.entity(ent).insert(NeedsDespawned);
     }
 

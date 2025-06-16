@@ -1,15 +1,6 @@
 //! basically agi
 
-use bevy::{
-    app::App,
-    ecs::{
-        component::Component,
-        entity::Entity,
-        query::With,
-        schedule::IntoSystemConfigs,
-        system::{Commands, Query},
-    },
-};
+use bevy::prelude::*;
 
 use crate::persistence::{
     SerializedData,

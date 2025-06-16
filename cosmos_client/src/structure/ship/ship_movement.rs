@@ -36,11 +36,11 @@ fn process_ship_movement(
     cursor_flags: Res<CursorFlags>,
     mouse_sensitivity: Res<MouseSensitivity>,
 ) {
-    let Ok(pilot) = q_local_pilot.get_single() else {
+    let Ok(pilot) = q_local_pilot.single() else {
         return;
     };
 
-    let Ok(cam_trans) = q_cam_trans.get_single() else {
+    let Ok(cam_trans) = q_cam_trans.single() else {
         return;
     };
 
@@ -104,7 +104,7 @@ fn process_ship_movement(
         );
     }
 
-    let Ok(w) = primary_query.get_single() else {
+    let Ok(w) = primary_query.single() else {
         return;
     };
 

@@ -23,18 +23,9 @@ use crate::state::GameState;
 use crate::structure::Structure;
 use crate::structure::ship::pilot::Pilot;
 use crate::structure::systems::{StructureSystem, StructureSystems};
-use bevy::core::Name;
-use bevy::ecs::event::EventReader;
-use bevy::ecs::query::{With, Without};
-use bevy::ecs::removal_detection::RemovedComponents;
-use bevy::ecs::schedule::IntoSystemConfigs;
-use bevy::ecs::schedule::common_conditions::resource_exists;
-use bevy::ecs::system::{Commands, Resource};
-use bevy::log::{info, trace, warn};
-use bevy::prelude::SystemSet;
+use bevy::platform::collections::{HashMap, HashSet};
+use bevy::prelude::*;
 use bevy::time::Time;
-use bevy::utils::HashMap;
-use bevy::utils::hashbrown::HashSet;
 use bevy::{
     app::{App, Update},
     ecs::{
@@ -66,7 +57,7 @@ fn client_add_stored_components<T: SyncableComponent>(
     let hm = &mut sc.as_mut().0;
     let ents = hm.keys().copied().collect::<Vec<Entity>>();
     for ent in ents {
-        if let Some(mut ecmds) = commands.get_entity(ent) {
+        if let Ok(mut ecmds) = commands.get_entity(ent) {
             let (c, _) = hm.remove(&ent).expect("Must exist");
 
             let mut component =
@@ -131,7 +122,7 @@ fn client_deserialize_component<T: SyncableComponent>(
             continue;
         }
 
-        if let Some(mut ecmds) = commands.get_entity(ev.entity) {
+        if let Ok(mut ecmds) = commands.get_entity(ev.entity) {
             let mut component =
                 cosmos_encoder::deserialize_uncompressed::<T>(&ev.raw_data).expect("Failed to deserialize component sent from server!");
 
@@ -195,7 +186,7 @@ fn client_remove_component<T: SyncableComponent>(
             continue;
         }
 
-        if let Some(mut ecmds) = commands.get_entity(ev.entity) {
+        if let Ok(mut ecmds) = commands.get_entity(ev.entity) {
             if T::debug() {
                 info!(
                     "Removing component {} from entity {:?}",
@@ -250,7 +241,7 @@ fn client_send_components<T: SyncableComponent>(
             match authority {
                 ClientAuthority::Anything => {}
                 ClientAuthority::Piloting => {
-                    let Ok(piloting) = q_local_piloting.get_single() else {
+                    let Ok(piloting) = q_local_piloting.single() else {
                         return None;
                     };
 
@@ -338,7 +329,7 @@ fn client_send_removed_components<T: SyncableComponent>(
         match authority {
             ClientAuthority::Anything => {}
             ClientAuthority::Piloting => {
-                let Ok(piloting) = q_local_piloting.get_single() else {
+                let Ok(piloting) = q_local_piloting.single() else {
                     return;
                 };
 
@@ -501,7 +492,7 @@ fn client_receive_components(
                     }
                 };
 
-                ev_writer_remove.send(GotComponentToRemoveEvent {
+                ev_writer_remove.write(GotComponentToRemoveEvent {
                     // `client_id` only matters on the server-side, but I don't feel like fighting with
                     // my LSP to have this variable only show up in the server project. Thus, I fill it with
                     // dummy data.
@@ -564,7 +555,7 @@ fn repl_comp_data(
         raw_data,
     };
 
-    ev_writer_sync.send(ev);
+    ev_writer_sync.write(ev);
     None
 }
 
@@ -629,7 +620,7 @@ fn get_entity_identifier_info(
 
                             network_mapping.add_mapping(data_entity, server_data_entity);
 
-                            evw_block_data_changed.send(BlockDataChangedEvent {
+                            evw_block_data_changed.write(BlockDataChangedEvent {
                                 block: identifier.block,
                                 block_data_entity: Some(data_entity),
                             });
@@ -639,7 +630,7 @@ fn get_entity_identifier_info(
                 };
 
                 if let Ok(block) = identifier.block.map_to_client(network_mapping) {
-                    evw_block_data_changed.send(BlockDataChangedEvent {
+                    evw_block_data_changed.write(BlockDataChangedEvent {
                         block,
                         block_data_entity: Some(x),
                     });
@@ -679,7 +670,7 @@ fn get_entity_identifier_info(
 
                         identifier.block.set_structure(structure_entity);
 
-                        evw_block_data_changed.send(BlockDataChangedEvent {
+                        evw_block_data_changed.write(BlockDataChangedEvent {
                             block: identifier.block,
                             block_data_entity: Some(data_entity),
                         });

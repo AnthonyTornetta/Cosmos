@@ -1,9 +1,8 @@
 //! Public interface for controlling the behavior of the logic system, which involves all logic blocks in an entity.
 
 use bevy::{
-    prelude::{Component, Entity, EventWriter},
-    reflect::Reflect,
-    utils::{HashMap, HashSet},
+    platform::collections::{HashMap, HashSet},
+    prelude::*,
 };
 use serde::{Deserialize, Serialize};
 
@@ -269,7 +268,7 @@ impl LogicDriver {
                     let new_group = self.logic_graph.get_group(group_id);
                     if new_group.on() != was_on {
                         // Update the inputs to every input port in this newly created group, if the value of the group has changed.
-                        evw_queue_logic_input.send_batch(
+                        evw_queue_logic_input.write_batch(
                             new_group
                                 .consumers
                                 .iter()

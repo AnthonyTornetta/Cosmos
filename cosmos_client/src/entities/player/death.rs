@@ -66,7 +66,7 @@ fn display_death_ui(
                 *visibility = Visibility::Hidden;
             }
             CloseMethod::Custom => {
-                evw_close_custom_menus.send(CloseMenuEvent(ent));
+                evw_close_custom_menus.write(CloseMenuEvent(ent));
             }
         }
     }
@@ -166,9 +166,10 @@ fn on_not_dead(
 ) {
     for c in removed_components.read() {
         if q_local_player.contains(c)
-            && let Ok(ent) = q_respawn_ui.get_single() {
-                commands.entity(ent).insert(NeedsDespawned);
-            }
+            && let Ok(ent) = q_respawn_ui.single()
+        {
+            commands.entity(ent).insert(NeedsDespawned);
+        }
     }
 }
 
@@ -178,7 +179,7 @@ fn on_respawn(
     mut q_local_player: Query<(Entity, &mut Location, &mut Transform), With<LocalPlayer>>,
 ) {
     for ev in evr_respawn.read() {
-        let Ok((entity, mut loc, mut trans)) = q_local_player.get_single_mut() else {
+        let Ok((entity, mut loc, mut trans)) = q_local_player.single_mut() else {
             continue;
         };
 
@@ -186,12 +187,12 @@ fn on_respawn(
         trans.rotation = ev.rotation;
 
         // not removing parent in place, since we're setting the transform's rotation aboslutely
-        commands.entity(entity).remove_parent().insert(SetPosition::Transform);
+        commands.entity(entity).remove::<ChildOf>().insert(SetPosition::Transform);
     }
 }
 
 fn respawn_clicked(mut nevw_respawn: NettyEventWriter<RequestRespawnEvent>) {
-    nevw_respawn.send_default();
+    nevw_respawn.write_default();
 }
 
 fn title_screen_clicked(mut client: ResMut<RenetClient>) {

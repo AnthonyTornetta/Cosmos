@@ -12,9 +12,9 @@ use crate::{
     block::lighting::BlockLighting,
 };
 use bevy::{
+    platform::collections::HashSet,
     prelude::*,
     tasks::{AsyncComputeTaskPool, Task},
-    utils::HashSet,
 };
 use cosmos_core::{
     block::{
@@ -350,9 +350,10 @@ fn kill_all(to_kill: Vec<LodRendersToDespawn>, commands: &mut Commands) {
         unlocked.1 -= 1;
 
         if unlocked.1 == 0
-            && let Some(mut ecmds) = commands.get_entity(unlocked.0) {
-                ecmds.insert(NeedsDespawned);
-            }
+            && let Ok(mut ecmds) = commands.get_entity(unlocked.0)
+        {
+            ecmds.insert(NeedsDespawned);
+        }
     }
 }
 
@@ -370,7 +371,7 @@ fn compute_meshes_and_kill_dead_entities(
     swap(&mut to_clean_meshes, &mut meshes_to_compute.0);
 
     for (delayed_mesh, entity, to_kill) in to_clean_meshes {
-        if commands.get_entity(entity).is_some() {
+        if commands.get_entity(entity).is_ok() {
             meshes_to_compute.push_back((delayed_mesh, entity, to_kill));
         } else {
             kill_all(to_kill, &mut commands);
@@ -383,7 +384,7 @@ fn compute_meshes_and_kill_dead_entities(
         };
 
         // The entity was verified to exist above
-        if let Some(mut ecmds) = commands.get_entity(entity) {
+        if let Ok(mut ecmds) = commands.get_entity(entity) {
             ecmds.insert(Mesh3d(meshes.add(delayed_mesh)));
         }
 
@@ -405,121 +406,125 @@ fn poll_rendering_lods(
     swap(&mut rendering_lods.0, &mut todo);
 
     for (structure_entity, mut rendering_lod) in todo {
-        if let Some((to_keep_locations, ent_meshes)) = future::block_on(future::poll_once(&mut rendering_lod.0)) {
-            let mut structure_meshes_component = LodMeshes::default();
-            let mut entities_to_add = Vec::new();
+        let Some((to_keep_locations, ent_meshes)) = future::block_on(future::poll_once(&mut rendering_lod.0)) else {
+            rendering_lods.0.push((structure_entity, rendering_lod));
+            continue;
+        };
 
-            let old_mesh_entities = structure_lod_meshes_query
-                .get(structure_entity)
-                .map(|x| x.0.clone())
-                .unwrap_or_default();
+        let mut structure_meshes_component = LodMeshes::default();
+        let mut entities_to_add = Vec::new();
 
-            // grab entities to kill
-            //   insert them into list of Arc<Mutex<(Entity, usize)>> where usize represents a counter
-            //   loop through every created lod and assign them the dirty entity where they go (or none)
+        let old_mesh_entities = structure_lod_meshes_query
+            .get(structure_entity)
+            .map(|x| x.0.clone())
+            .unwrap_or_default();
 
-            // once the new entity's mesh is ready, decrease the counter
-            // if the counter is 0, despawn the dirty entity.
+        // grab entities to kill
+        //   insert them into list of Arc<Mutex<(Entity, usize)>> where usize represents a counter
+        //   loop through every created lod and assign them the dirty entity where they go (or none)
 
-            for (lod_mesh, offset, scale) in ent_meshes {
-                for mesh_material in lod_mesh.mesh_materials {
-                    // let s = (CHUNK_DIMENSIONS / 2) as f32 * lod_mesh.scale;
+        // once the new entity's mesh is ready, decrease the counter
+        // if the counter is 0, despawn the dirty entity.
+        //
 
-                    let ent = commands
-                        .spawn((
-                            Transform::from_translation(offset),
-                            Visibility::default(),
-                            // Aabb::from_min_max(Vec3::new(-s, -s, -s), Vec3::new(s, s, s)),
-                            RenderedLod { scale },
-                            DespawnWithStructure,
-                        ))
-                        .id();
+        for (lod_mesh, offset, scale) in ent_meshes {
+            for mesh_material in lod_mesh.mesh_materials {
+                // let s = (CHUNK_DIMENSIONS / 2) as f32 * lod_mesh.scale;
 
-                    event_writer.send(AddMaterialEvent {
-                        entity: ent,
-                        add_material_id: mesh_material.material_id,
-                        texture_dimensions_index: mesh_material.texture_dimensions_index,
-                        material_type: if scale >= 2 { MaterialType::FarAway } else { MaterialType::Normal },
-                    });
+                let ent = commands
+                    .spawn((
+                        Transform::from_translation(offset),
+                        Visibility::default(),
+                        // Aabb::from_min_max(Vec3::new(-s, -s, -s), Vec3::new(s, s, s)),
+                        RenderedLod { scale },
+                        DespawnWithStructure,
+                    ))
+                    .id();
 
-                    entities_to_add.push((ent, offset, scale, mesh_material.mesh));
+                event_writer.write(AddMaterialEvent {
+                    entity: ent,
+                    add_material_id: mesh_material.material_id,
+                    texture_dimensions_index: mesh_material.texture_dimensions_index,
+                    material_type: if scale >= 2 { MaterialType::FarAway } else { MaterialType::Normal },
+                });
 
-                    structure_meshes_component.0.push(ent);
-                }
+                entities_to_add.push((ent, offset, scale, mesh_material.mesh));
+
+                structure_meshes_component.0.push(ent);
             }
+        }
 
-            let mut to_despawn = Vec::with_capacity(old_mesh_entities.len());
+        let mut to_despawn = Vec::with_capacity(old_mesh_entities.len());
 
-            // Any dirty entities are useless now, so kill them
-            for mesh_entity in old_mesh_entities {
-                let Ok(transform) = transform_query.get(mesh_entity) else {
-                    unreachable!();
-                };
-
-                let is_clean = to_keep_locations.contains(&transform.translation);
-                if is_clean {
-                    structure_meshes_component.push(mesh_entity);
-                } else {
-                    let Ok(rendered_lod) = rendered_lod_query.get(mesh_entity) else {
-                        warn!("Invalid mesh entity {mesh_entity:?}!");
-                        commands.entity(mesh_entity).insert(NeedsDespawned);
-                        continue;
-                    };
-
-                    to_despawn.push((
-                        transform.translation,
-                        rendered_lod.scale,
-                        LodRendersToDespawn(Arc::new(Mutex::new((mesh_entity, 0)))),
-                    ));
-                }
-            }
-
-            let Some(mut entity_commands) = commands.get_entity(structure_entity) else {
-                continue;
+        // Any dirty entities are useless now, so kill them
+        for mesh_entity in old_mesh_entities {
+            let Ok(transform) = transform_query.get(mesh_entity) else {
+                unreachable!();
             };
 
-            for (entity, offset, scale, mesh) in entities_to_add {
-                let mut to_kill = vec![];
+            let is_clean = to_keep_locations.contains(&transform.translation);
+            if is_clean {
+                structure_meshes_component.push(mesh_entity);
+            } else {
+                let Ok(rendered_lod) = rendered_lod_query.get(mesh_entity) else {
+                    warn!("Invalid mesh entity {mesh_entity:?}!");
+                    commands.entity(mesh_entity).insert(NeedsDespawned);
+                    continue;
+                };
 
-                for (other_offset, other_scale, counter) in to_despawn.iter() {
-                    let diff = (offset - *other_offset).abs();
-                    let max = diff.x.max(diff.y).max(diff.z);
+                to_despawn.push((
+                    transform.translation,
+                    rendered_lod.scale,
+                    LodRendersToDespawn(Arc::new(Mutex::new((mesh_entity, 0)))),
+                ));
+            }
+        }
 
-                    if CHUNK_DIMENSIONS * scale + CHUNK_DIMENSIONS * *other_scale < max.floor() as CoordinateType {
-                        let counter = counter.clone();
+        let Ok(mut entity_commands) = commands.get_entity(structure_entity) else {
+            info!("Failed to get ecmds for planet ;(");
+            continue;
+        };
 
-                        counter.0.lock().expect("lock failed").1 += 1;
+        for (entity, offset, scale, mesh) in entities_to_add {
+            let mut to_kill = vec![];
 
-                        to_kill.push(counter);
-                    }
+            for (other_offset, other_scale, counter) in to_despawn.iter() {
+                let diff = (offset - *other_offset).abs();
+                let max = diff.x.max(diff.y).max(diff.z);
+
+                if CHUNK_DIMENSIONS * scale + CHUNK_DIMENSIONS * *other_scale < max.floor() as CoordinateType {
+                    let counter = counter.clone();
+
+                    counter.0.lock().expect("lock failed").1 += 1;
+
+                    to_kill.push(counter);
                 }
-
-                meshes_to_compute.0.push_back((mesh, entity, to_kill));
-                entity_commands.add_child(entity);
             }
 
-            entity_commands.insert(structure_meshes_component);
+            meshes_to_compute.0.push_back((mesh, entity, to_kill));
+            entity_commands.add_child(entity);
+        }
 
-            for (_, _, counter) in to_despawn {
-                let locked = counter.lock().expect("failed to lock");
-                if locked.1 == 0
-                    && let Some(mut ecmds) = commands.get_entity(locked.0) {
-                        ecmds.insert(NeedsDespawned);
-                    }
+        entity_commands.insert(structure_meshes_component);
+
+        for (_, _, counter) in to_despawn {
+            let locked = counter.lock().expect("failed to lock");
+            if locked.1 == 0
+                && let Ok(mut ecmds) = commands.get_entity(locked.0)
+            {
+                ecmds.insert(NeedsDespawned);
             }
-        } else {
-            rendering_lods.0.push((structure_entity, rendering_lod))
         }
     }
 }
 
-fn hide_lod(mut query: Query<(&Transform, &Parent, &mut Visibility, &RenderedLod)>, structure_query: Query<&Structure>) {
+fn hide_lod(mut query: Query<(&Transform, &ChildOf, &mut Visibility, &RenderedLod)>, structure_query: Query<&Structure>) {
     for (transform, parent, mut vis, rendered_lod) in query.iter_mut() {
         if rendered_lod.scale != 1 {
             continue;
         }
 
-        let structure = structure_query.get(parent.get()).expect("This should always be a structure");
+        let structure = structure_query.get(parent.parent()).expect("This should always be a structure");
 
         let translation = transform.translation;
         if let Ok(bc) = structure.relative_coords_to_local_coords_checked(translation.x, translation.y, translation.z) {

@@ -18,7 +18,7 @@ use cosmos_core::{physics::location::SECTOR_DIMENSIONS, state::GameState, univer
 const LIGHT_INTENSITY_CONSTANT: f32 = 300_000_000_000_000.0;
 
 fn point_light_from_sun(sun: Query<&Transform, With<Star>>, mut light: Query<(&mut Transform, &mut DirectionalLight), Without<Star>>) {
-    if let Ok((mut transform, mut light)) = light.get_single_mut() {
+    if let Ok((mut transform, mut light)) = light.single_mut() {
         if let Some(sun) = sun.iter().next() {
             transform.look_at(-sun.translation, Vec3::Y);
             let sun_dist_sqrd = sun.translation.dot(sun.translation);

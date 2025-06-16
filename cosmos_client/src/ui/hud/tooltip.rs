@@ -50,18 +50,18 @@ fn on_change_looking_at(
     q_structure: Query<&Structure>,
     mut evw_generate_tooltip: EventWriter<GenerateLookingAtTooltipEvent>,
 ) {
-    let Ok(looking_at) = q_looking_at.get_single() else {
+    let Ok(looking_at) = q_looking_at.single() else {
         return;
     };
 
     let Some(block) = looking_at.looking_at_block else {
-        if let Ok(tooltip_ent) = q_tooltip.get_single() {
+        if let Ok(tooltip_ent) = q_tooltip.single() {
             commands.entity(tooltip_ent).insert(NeedsDespawned);
         }
         return;
     };
 
-    let mut ecmds = if let Ok(tooltip_ent) = q_tooltip.get_single() {
+    let mut ecmds = if let Ok(tooltip_ent) = q_tooltip.single() {
         commands.entity(tooltip_ent)
     } else {
         commands.spawn_empty()
@@ -87,10 +87,10 @@ fn on_change_looking_at(
                 ..Default::default()
             },
         ))
-        .despawn_descendants()
+        .despawn_related::<Children>()
         .id();
 
-    evw_generate_tooltip.send(GenerateLookingAtTooltipEvent {
+    evw_generate_tooltip.write(GenerateLookingAtTooltipEvent {
         looking_at: block.block,
         tooltip_entity: ent,
         block_id,
@@ -114,11 +114,9 @@ fn on_finish_tooltip_text(
             let mut ecmds = if let Some(ent) = message.ent {
                 commands.entity(ent)
             } else {
-                let mut ecmds = commands.spawn(Name::new("Tooltip Message"));
+                let ecmds = commands.spawn((ChildOf(ent), Name::new("Tooltip Message")));
 
                 message.ent = Some(ecmds.id());
-
-                ecmds.set_parent(ent);
 
                 ecmds
             };

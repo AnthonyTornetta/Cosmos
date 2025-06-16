@@ -2,15 +2,7 @@
 
 use std::fs;
 
-use bevy::{
-    app::Update,
-    log::error,
-    prelude::{
-        AmbientLight, App, Commands, IntoSystemConfigs, IntoSystemSetConfigs, OnEnter, OnExit, Projection, Query, Res, ResMut, Resource,
-        SystemSet, With, in_state, not, resource_changed, resource_exists, resource_exists_and_changed,
-    },
-    utils::HashMap,
-};
+use bevy::{platform::collections::HashMap, prelude::*};
 use cosmos_core::{
     registry::{Registry, create_registry, identifiable::Identifiable},
     state::GameState,

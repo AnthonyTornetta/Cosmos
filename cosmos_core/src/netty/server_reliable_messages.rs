@@ -4,8 +4,8 @@
 //! In the future, this itself will be broken up.
 
 use bevy::{
+    platform::collections::HashMap,
     prelude::{Component, Entity},
-    utils::HashMap,
 };
 use bevy_renet::renet::ClientId;
 use serde::{Deserialize, Serialize};

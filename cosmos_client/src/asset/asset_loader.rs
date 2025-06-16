@@ -4,7 +4,7 @@ use std::marker::PhantomData;
 
 use bevy::{
     asset::{Asset, LoadState},
-    prelude::{App, AssetServer, Commands, EventWriter, Handle, IntoSystemConfigs, OnEnter, Res, ResMut, Resource, Update, in_state},
+    prelude::*,
 };
 use cosmos_core::{
     loader::{AddLoadingEvent, DoneLoadingEvent, LoadingManager},

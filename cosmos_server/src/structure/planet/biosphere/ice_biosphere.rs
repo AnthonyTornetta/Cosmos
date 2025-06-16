@@ -1,10 +1,6 @@
 //! Creates a ice planet
 
-use bevy::{
-    log::warn,
-    prelude::{App, Component, Entity, Event, IntoSystemConfigs, OnEnter, Res, ResMut},
-    reflect::TypePath,
-};
+use bevy::prelude::*;
 use cosmos_core::{
     registry::Registry,
     structure::{

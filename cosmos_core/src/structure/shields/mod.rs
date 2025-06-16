@@ -1,16 +1,6 @@
 //! Handles the [`Shield`] component and its shared logic
 
-use bevy::{
-    app::{App, PostUpdate},
-    ecs::{
-        component::Component,
-        entity::Entity,
-        query::Changed,
-        system::{Commands, Query},
-    },
-    prelude::{IntoSystemConfigs, Parent},
-    reflect::Reflect,
-};
+use bevy::prelude::*;
 use bevy_rapier3d::{
     geometry::{Collider, ColliderMassProperties, Group, Sensor},
     plugin::{PhysicsSet, RapierContextEntityLink},
@@ -79,7 +69,7 @@ pub const SHIELD_COLLISION_GROUP: Group = Group::GROUP_3;
 
 fn on_add_shield(
     q_rapier_entity_link: Query<&RapierContextEntityLink>,
-    q_added_shield: Query<(Entity, &Shield, &Parent), Changed<Shield>>,
+    q_added_shield: Query<(Entity, &Shield, &ChildOf), Changed<Shield>>,
     mut commands: Commands,
 ) {
     for (ent, shield, parent) in q_added_shield.iter() {
@@ -98,7 +88,7 @@ fn on_add_shield(
             ecmds.insert(Collider::ball(shield.radius));
         }
 
-        if let Ok(&pw) = q_rapier_entity_link.get(parent.get()) {
+        if let Ok(&pw) = q_rapier_entity_link.get(parent.parent()) {
             ecmds.insert(pw);
         }
     }

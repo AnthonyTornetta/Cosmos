@@ -1,7 +1,4 @@
-use bevy::{
-    app::Update,
-    prelude::{App, Commands, Entity, IntoSystemConfigs, Parent, Query, With, Without, in_state},
-};
+use bevy::prelude::*;
 use cosmos_core::{
     netty::{client::LocalPlayer, system_sets::NetworkingSystemsSet},
     physics::{
@@ -17,7 +14,7 @@ const REASON: &str = "cosmos:far_away";
 
 fn disable_colliders(
     mut commands: Commands,
-    mut q_entity: Query<(Entity, &Location, Option<&mut DisableRigidBody>), (Without<LocalPlayer>, Without<Parent>)>,
+    mut q_entity: Query<(Entity, &Location, Option<&mut DisableRigidBody>), (Without<LocalPlayer>, Without<ChildOf>)>,
     q_players: Query<&Location, With<LocalPlayer>>,
 ) {
     for (ent, loc, disabled_rb) in q_entity.iter_mut() {

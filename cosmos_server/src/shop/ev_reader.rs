@@ -279,7 +279,7 @@ fn listen_client_shop_messages(
                     item_id,
                     quantity,
                 } => {
-                    ev_writer_buy.send(BuyEvent {
+                    ev_writer_buy.write(BuyEvent {
                         client_id,
                         item_id,
                         quantity,
@@ -293,7 +293,7 @@ fn listen_client_shop_messages(
                     item_id,
                     quantity,
                 } => {
-                    ev_writer_sell.send(SellEvent {
+                    ev_writer_sell.write(SellEvent {
                         client_id,
                         item_id,
                         quantity,

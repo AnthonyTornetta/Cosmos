@@ -4,7 +4,7 @@ use std::fs;
 
 use crate::netty::loading::WaitingOnServer;
 use bevy::prelude::*;
-use bevy_easy_compute::prelude::*;
+use bevy_app_compute::prelude::*;
 use cosmos_core::{
     ecs::{add_multi_statebound_resource, add_statebound_resource, init_resource},
     netty::system_sets::NetworkingSystemsSet,
@@ -94,7 +94,7 @@ fn setup_lod_generation(
 
         commands.insert_resource(ev.permutation_table.clone());
         commands.remove_resource::<NeedsTerrainDataFlag>();
-        commands.entity(terrain_data_flag.0).despawn_recursive();
+        commands.entity(terrain_data_flag.0).despawn();
     }
 }
 

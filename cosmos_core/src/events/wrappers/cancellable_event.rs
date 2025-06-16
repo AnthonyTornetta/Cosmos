@@ -1,7 +1,7 @@
 // use bevy::{
 //     prelude::Resource,
 //     reflect::{FromReflect, Reflect},
-//     utils::HashSet,
+//     platform::collections::HashSet,
 // };
 
 // pub struct CancellableEvent<T> {

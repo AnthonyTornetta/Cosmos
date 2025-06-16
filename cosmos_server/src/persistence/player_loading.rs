@@ -7,11 +7,7 @@ use std::{
 };
 
 use bevy::{
-    log::{info, warn},
-    prelude::{
-        App, Commands, Component, Entity, IntoSystemConfigs, Name, Or, Query, ResMut, Resource, Update, With, Without, not, resource_exists,
-    },
-    state::condition::in_state,
+    prelude::*,
     tasks::{AsyncComputeTaskPool, Task},
     time::common_conditions::on_timer,
 };
@@ -44,9 +40,10 @@ fn unload_far(
         let ul_distance = ul_distance.unload_block_distance();
 
         if let Some(min_dist) = query.iter().map(|l| l.relative_coords_to(loc).abs().max_element()).reduce(f32::min)
-            && min_dist <= ul_distance {
-                continue;
-            }
+            && min_dist <= ul_distance
+        {
+            continue;
+        }
 
         if let Some(name) = name {
             info!("Unloading {name} ({ent:?}) at {loc} - too far away from any anchor.");

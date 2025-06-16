@@ -19,7 +19,7 @@ const LATEST_VERSION: SaveVersion = SaveVersion::Alpha0_0_8;
 fn close_server_after_ticks(mut ticks: Local<u32>, mut evw_app_exit: EventWriter<AppExit>) {
     if *ticks == 10 {
         info!("Closing server after converting files.");
-        evw_app_exit.send(AppExit::Success);
+        evw_app_exit.write(AppExit::Success);
     } else {
         *ticks += 1;
     }

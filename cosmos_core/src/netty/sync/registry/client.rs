@@ -7,23 +7,9 @@ use crate::{
     },
     registry::{Registry, identifiable::Identifiable},
 };
-use bevy::{
-    app::{App, Update},
-    ecs::{
-        event::{Event, EventReader, EventWriter},
-        schedule::{IntoSystemConfigs, common_conditions::resource_exists},
-        system::{Res, ResMut, Resource},
-    },
-    log::{error, info},
-    prelude::{IntoSystemSetConfigs, States, SystemSet},
-    reflect::erased_serde::Serialize,
-    state::{
-        condition::in_state,
-        state::{FreelyMutableState, NextState},
-    },
-};
+use bevy::{prelude::*, state::state::FreelyMutableState};
 use bevy_renet::renet::RenetClient;
-use serde::de::DeserializeOwned;
+use serde::{Serialize, de::DeserializeOwned};
 
 use crate::ecs::add_multi_statebound_resource;
 
@@ -96,7 +82,7 @@ fn registry_listen_netty(
                 registry_count.0 = Some(count as i64 + registry_count.0.unwrap_or(0));
             }
             RegistrySyncing::Registry { serialized, registry_name } => {
-                ev_writer.send(ReceivedRegistryEvent {
+                ev_writer.write(ReceivedRegistryEvent {
                     serialized_data: serialized,
                     registry_name,
                 });

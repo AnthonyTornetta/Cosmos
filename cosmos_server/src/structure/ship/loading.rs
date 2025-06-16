@@ -1,9 +1,6 @@
 //! Handles the loading of ships
 
-use bevy::{
-    log::info,
-    prelude::{App, Commands, Component, Entity, EventWriter, IntoSystemConfigs, Query, Res, Update, With, in_state},
-};
+use bevy::prelude::*;
 use cosmos_core::{
     block::{Block, block_rotation::BlockRotation},
     registry::Registry,
@@ -56,7 +53,7 @@ fn create_ships(
                 chunk: _,
             } = res
             {
-                chunk_set_event_writer.send(ChunkInitEvent {
+                chunk_set_event_writer.write(ChunkInitEvent {
                     structure_entity: entity,
                     coords,
                     serialized_block_data: None,

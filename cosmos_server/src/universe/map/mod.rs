@@ -1,9 +1,6 @@
 //! Controls the generation and sending of map data to clients
 
-use bevy::{
-    app::Update,
-    prelude::{App, EventReader, IntoSystemConfigs, Query, Res, With, in_state},
-};
+use bevy::prelude::*;
 use cosmos_core::{
     entities::{EntityId, player::Player},
     faction::{FactionId, FactionRelation, Factions},
@@ -29,7 +26,7 @@ fn send_galaxy_map(
     q_galaxy: Query<&Galaxy>,
 ) {
     for ev in evr_request_map.read() {
-        let Ok(galaxy) = q_galaxy.get_single() else {
+        let Ok(galaxy) = q_galaxy.single() else {
             continue;
         };
 
@@ -42,7 +39,7 @@ fn send_galaxy_map(
             );
         }
 
-        nevw_galaxy_map.send(GalaxyMapResponseEvent { map: g_map }, ev.client_id);
+        nevw_galaxy_map.write(GalaxyMapResponseEvent { map: g_map }, ev.client_id);
     }
 }
 
@@ -150,7 +147,7 @@ fn send_map(
             );
         }
 
-        nevw_system_map.send(
+        nevw_system_map.write(
             SystemMapResponseEvent {
                 map: system_map,
                 system: ev.system,

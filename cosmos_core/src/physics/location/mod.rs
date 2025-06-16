@@ -17,12 +17,7 @@ use std::{
     ops::{Add, AddAssign, Mul, Sub},
 };
 
-#[cfg(doc)]
-use bevy::prelude::Transform;
-use bevy::{
-    prelude::{App, Component, Deref, DerefMut, IntoSystemSetConfigs, SystemSet, Update, Vec3},
-    reflect::Reflect,
-};
+use bevy::prelude::*;
 use bevy_rapier3d::na::Vector3;
 use bigdecimal::{BigDecimal, FromPrimitive};
 use serde::{Deserialize, Serialize};
@@ -51,7 +46,7 @@ pub enum LocationPhysicsSet {
 }
 
 // Component impl in systems.rs
-#[derive(Default, Debug, PartialEq, Serialize, Deserialize, Reflect, Clone, Copy)]
+#[derive(Default, Component, Debug, PartialEq, Serialize, Deserialize, Reflect, Clone, Copy)]
 /// Used to represent a point in a near-infinite space
 ///
 /// Rather than represent coordinates as imprecise f32, a location is used instead.

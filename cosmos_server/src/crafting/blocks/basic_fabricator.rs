@@ -1,10 +1,6 @@
 use std::{cell::RefCell, rc::Rc};
 
-use bevy::{
-    app::Update,
-    log::{error, warn},
-    prelude::{App, Commands, EventReader, IntoSystemConfigs, Query, Res, With, Without, in_state},
-};
+use bevy::prelude::*;
 
 use cosmos_core::{
     block::{
@@ -53,7 +49,7 @@ fn monitor_basic_fabricator_interactions(
             continue;
         };
 
-        nevw_open_basic_fabricator.send(OpenBasicFabricatorEvent(block), player.client_id());
+        nevw_open_basic_fabricator.write(OpenBasicFabricatorEvent(block), player.client_id());
     }
 }
 

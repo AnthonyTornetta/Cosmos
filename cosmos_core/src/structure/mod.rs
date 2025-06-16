@@ -8,16 +8,38 @@ use std::ops::DerefMut;
 use std::rc::Rc;
 use std::sync::{Arc, Mutex};
 
-use bevy::app::Update;
-use bevy::ecs::query::{QueryData, QueryFilter, ROQueryItem, With};
-use bevy::prelude::{App, Event, IntoSystemConfigs, IntoSystemSetConfigs, Name, PreUpdate, SystemSet, Visibility};
-use bevy::reflect::Reflect;
-use bevy::utils::{HashMap, HashSet};
+use crate::block::block_direction::BlockDirection;
+use crate::block::data::BlockData;
+use crate::block::data::persistence::ChunkLoadBlockDataEvent;
+use crate::block::{Block, block_face::BlockFace, block_rotation::BlockRotation};
+use crate::ecs::NeedsDespawned;
+use crate::events::block_events::{BlockChangedEvent, BlockDataChangedEvent, BlockDataSystemParams};
+use crate::netty::NoSendEntity;
+use crate::physics::location::Location;
+use crate::registry::Registry;
+use crate::structure::chunk::Chunk;
+use bevy::ecs::component::HookContext;
+use bevy::ecs::query::{QueryData, QueryFilter, ROQueryItem};
+use bevy::platform::collections::{HashMap, HashSet};
+use bevy::prelude::*;
 use bevy_rapier3d::plugin::RapierContextEntityLink;
 use chunk::{BlockInfo, CHUNK_DIMENSIONS};
 use coordinates::{CoordinateType, UnboundCoordinateType};
 use prelude::{ChunkBlockCoordinate, UnboundChunkBlockCoordinate};
 use query::MutBlockData;
+use serde::{Deserialize, Serialize};
+
+use self::base_structure::RaycastIter;
+use self::block_health::events::{BlockDestroyedEvent, BlockTakeDamageEvent};
+use self::block_storage::BlockStorer;
+use self::chunk::ChunkEntity;
+use self::chunk::netty::SerializedChunkBlockData;
+use self::coordinates::{BlockCoordinate, ChunkCoordinate, UnboundBlockCoordinate, UnboundChunkCoordinate};
+use self::dynamic_structure::DynamicStructure;
+use self::events::ChunkSetEvent;
+use self::full_structure::FullStructure;
+use self::loading::StructureLoadingSet;
+use self::structure_iterator::{BlockIterator, ChunkIterator};
 
 pub mod asteroid;
 pub mod base_structure;
@@ -42,31 +64,6 @@ pub mod station;
 pub mod structure_block;
 pub mod structure_iterator;
 pub mod systems;
-
-use crate::block::block_direction::BlockDirection;
-use crate::block::data::BlockData;
-use crate::block::data::persistence::ChunkLoadBlockDataEvent;
-use crate::block::{Block, block_face::BlockFace, block_rotation::BlockRotation};
-use crate::ecs::NeedsDespawned;
-use crate::events::block_events::{BlockChangedEvent, BlockDataChangedEvent, BlockDataSystemParams};
-use crate::netty::NoSendEntity;
-use crate::physics::location::Location;
-use crate::registry::Registry;
-use crate::structure::chunk::Chunk;
-use bevy::prelude::{BuildChildren, Commands, Component, Entity, EventReader, EventWriter, GlobalTransform, Query, Transform, Vec3};
-use serde::{Deserialize, Serialize};
-
-use self::base_structure::RaycastIter;
-use self::block_health::events::{BlockDestroyedEvent, BlockTakeDamageEvent};
-use self::block_storage::BlockStorer;
-use self::chunk::ChunkEntity;
-use self::chunk::netty::SerializedChunkBlockData;
-use self::coordinates::{BlockCoordinate, ChunkCoordinate, UnboundBlockCoordinate, UnboundChunkCoordinate};
-use self::dynamic_structure::DynamicStructure;
-use self::events::ChunkSetEvent;
-use self::full_structure::FullStructure;
-use self::loading::StructureLoadingSet;
-use self::structure_iterator::{BlockIterator, ChunkIterator};
 
 #[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
 /// These systems don't run at any specific time.
@@ -100,7 +97,7 @@ pub enum ChunkState {
     Loaded,
 }
 
-#[derive(Serialize, Deserialize, Reflect, Debug)]
+#[derive(Serialize, Deserialize, Component, Reflect, Debug)]
 /// A structure represents many blocks, grouped into chunks.
 pub enum Structure {
     /// This structure does not have all its chunks loaded at once, such as planets
@@ -109,16 +106,14 @@ pub enum Structure {
     Full(FullStructure),
 }
 
-impl Component for Structure {
-    const STORAGE_TYPE: bevy::ecs::component::StorageType = bevy::ecs::component::StorageType::Table;
+fn register_structure_hooks(world: &mut World) {
+    world
+        .register_component_hooks::<Structure>()
+        .on_add(|mut world, HookContext { entity, .. }| {
+            let mut s = world.get_mut::<Structure>(entity).expect("This component has just been added");
 
-    fn register_component_hooks(hooks: &mut bevy::ecs::component::ComponentHooks) {
-        hooks.on_add(|mut world, ent, _| {
-            let mut s = world.get_mut::<Structure>(ent).expect("This component has just been added");
-
-            s.set_entity(ent);
+            s.set_entity(entity);
         });
-    }
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -894,11 +889,12 @@ fn remove_empty_chunks(
         let chunk_coords = bce.block.chunk_coords();
 
         if structure.chunk_at(chunk_coords).is_none()
-            && let Some(chunk_entity) = structure.chunk_entity(chunk_coords) {
-                commands.entity(chunk_entity).insert(NeedsDespawned);
+            && let Some(chunk_entity) = structure.chunk_entity(chunk_coords)
+        {
+            commands.entity(chunk_entity).insert(NeedsDespawned);
 
-                structure.remove_chunk_entity(chunk_coords);
-            }
+            structure.remove_chunk_entity(chunk_coords);
+        }
     }
 }
 
@@ -965,7 +961,7 @@ fn add_chunks_system(
 
             let data = std::mem::take(data);
 
-            ev_writer.send(ChunkLoadBlockDataEvent {
+            ev_writer.write(ChunkLoadBlockDataEvent {
                 data,
                 chunk: ev.coords,
                 structure_entity: ev.structure_entity,
@@ -995,7 +991,7 @@ fn add_chunks_system(
     }
 
     for ev in chunk_set_events {
-        chunk_set_event_writer.send(ev);
+        chunk_set_event_writer.write(ev);
     }
 }
 
@@ -1130,5 +1126,6 @@ pub(super) fn register(app: &mut App) {
     );
 
     app.add_systems(Update, add_chunks_system.in_set(StructureLoadingSet::CreateChunkEntities))
-        .add_systems(PreUpdate, remove_empty_chunks);
+        .add_systems(PreUpdate, remove_empty_chunks)
+        .add_systems(Startup, register_structure_hooks);
 }

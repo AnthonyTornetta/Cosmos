@@ -2,7 +2,7 @@
 
 use std::fs;
 
-use bevy::{prelude::*, utils::HashMap};
+use bevy::{prelude::*, platform::collections::HashMap};
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Copy, Eq, PartialEq, Hash, Debug, Serialize, Deserialize, Reflect, PartialOrd, Ord)]

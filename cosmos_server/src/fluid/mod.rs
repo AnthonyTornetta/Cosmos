@@ -1,9 +1,6 @@
 //! Server fluid logic
 
-use bevy::{
-    app::{App, Update},
-    prelude::{EventReader, IntoSystemConfigs, Query, Res, With},
-};
+use bevy::prelude::*;
 use cosmos_core::{
     block::{Block, block_events::BlockEventsSet, data::BlockData},
     events::block_events::{BlockChangedEvent, BlockDataSystemParams},

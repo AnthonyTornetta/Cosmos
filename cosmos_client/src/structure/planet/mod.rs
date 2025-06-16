@@ -1,12 +1,6 @@
 //! Handles client-related planet things
 
-use bevy::{
-    math::Quat,
-    prelude::{
-        App, Commands, Condition, Entity, EventWriter, GlobalTransform, IntoSystemConfigs, Mut, Query, Res, ResMut, Update, Vec3, With,
-        in_state,
-    },
-};
+use bevy::prelude::*;
 use bevy_renet::renet::RenetClient;
 use cosmos_core::{
     netty::{
@@ -72,7 +66,7 @@ fn load_planet_chunks(
     mapper: Res<NetworkMapping>,
     mut client: ResMut<RenetClient>,
 ) {
-    let Ok(player_location) = q_player_location.get_single() else {
+    let Ok(player_location) = q_player_location.single() else {
         return;
     };
 
@@ -100,9 +94,10 @@ fn load_planet_chunks(
         true,
     ) {
         if let ChunkIteratorResult::EmptyChunk { position } = chunk
-            && best_planet.get_chunk_state(position) == ChunkState::Unloaded {
-                chunks.push(position);
-            }
+            && best_planet.get_chunk_state(position) == ChunkState::Unloaded
+        {
+            chunks.push(position);
+        }
     }
 
     for coordinate in chunks {
@@ -127,7 +122,7 @@ pub(crate) fn unload_chunks_far_from_players(
     mut event_writer: EventWriter<ChunkUnloadEvent>,
     mut commands: Commands,
 ) {
-    let Ok(player) = q_player.get_single() else {
+    let Ok(player) = q_player.single() else {
         return;
     };
 

@@ -1,6 +1,6 @@
 //! Contains useful resources for the network
 
-use bevy::{prelude::Resource, utils::HashMap};
+use bevy::{prelude::Resource, platform::collections::HashMap};
 use bevy_renet::renet::ClientId;
 use serde::{Deserialize, Serialize};
 

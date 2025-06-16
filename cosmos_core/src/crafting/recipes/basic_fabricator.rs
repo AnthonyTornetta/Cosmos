@@ -2,7 +2,7 @@
 
 use bevy::{
     prelude::{App, Event, Resource},
-    utils::HashMap,
+    platform::collections::HashMap,
 };
 use serde::{Deserialize, Serialize};
 

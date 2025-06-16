@@ -1,4 +1,4 @@
-use bevy::prelude::{App, EventReader, IntoSystemConfigs, Query, Res, Update, resource_exists};
+use bevy::prelude::*;
 use cosmos_core::{
     block::{Block, block_events::BlockEventsSet},
     netty::system_sets::NetworkingSystemsSet,

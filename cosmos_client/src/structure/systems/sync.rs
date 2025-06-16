@@ -1,19 +1,6 @@
 use std::marker::PhantomData;
 
-use bevy::{
-    app::{App, Update},
-    ecs::{
-        entity::Entity,
-        event::{Event, EventReader, EventWriter},
-        query::With,
-        schedule::{IntoSystemConfigs, IntoSystemSetConfigs},
-        system::{Commands, Query, Res, ResMut, Resource},
-    },
-    log::{error, warn},
-    prelude::{BuildChildrenTransformExt, Deref, DerefMut, SystemSet},
-    state::condition::in_state,
-    utils::HashMap,
-};
+use bevy::{ecs::component::Mutable, platform::collections::HashMap, prelude::*};
 use bevy_renet::renet::RenetClient;
 use cosmos_core::{
     block::specific_blocks::gravity_well::GravityWell,
@@ -86,7 +73,7 @@ fn replication_listen_netty(
                     continue;
                 };
 
-                event_writer.send(StructureSystemNeedsUpdated {
+                event_writer.write(StructureSystemNeedsUpdated {
                     raw,
                     structure_entity,
                     system_id,
@@ -127,7 +114,7 @@ fn replication_listen_netty(
                     continue;
                 };
 
-                let Some(mut ecmds) = commands.get_entity(entity) else {
+                let Ok(mut ecmds) = commands.get_entity(entity) else {
                     continue;
                 };
 
@@ -156,7 +143,7 @@ fn replication_listen_netty(
     }
 }
 
-fn sync<T: StructureSystemImpl + Serialize + DeserializeOwned>(
+fn sync<T: Component<Mutability = Mutable> + StructureSystemImpl + Serialize + DeserializeOwned>(
     system_types: Res<Registry<StructureSystemType>>,
     mut ev_reader: EventReader<StructureSystemNeedsUpdated>,
     mut systems_query: Query<&mut StructureSystems>,
@@ -217,7 +204,7 @@ enum SystemSyncingSet {
     SyncSystems,
 }
 
-pub fn sync_system<T: StructureSystemImpl + Serialize + DeserializeOwned>(app: &mut App) {
+pub fn sync_system<T: StructureSystemImpl + Component<Mutability = Mutable> + Serialize + DeserializeOwned>(app: &mut App) {
     app.configure_sets(Update, SystemSyncingSet::SyncSystems.in_set(NetworkingSystemsSet::SyncComponents));
 
     app.add_systems(

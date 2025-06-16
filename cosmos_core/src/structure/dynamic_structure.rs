@@ -5,9 +5,8 @@
 use std::ops::{Deref, DerefMut};
 
 use bevy::{
-    prelude::{Commands, EventWriter, Vec3},
-    reflect::Reflect,
-    utils::{HashMap, hashbrown::HashSet},
+    platform::collections::{HashMap, HashSet},
+    prelude::*,
 };
 use serde::{Deserialize, Serialize};
 
@@ -116,18 +115,19 @@ impl DynamicStructure {
         self.set_block_info_at(coords, block_info, None);
 
         if let Some(event_writer) = event_writer
-            && (old_block_info != block_info || old_block != block.id()) {
-                let Some(self_entity) = self.base_structure.self_entity else {
-                    return;
-                };
-                event_writer.send(BlockChangedEvent {
-                    new_block: block.id(),
-                    old_block,
-                    block: StructureBlock::new(coords, self_entity),
-                    old_block_info,
-                    new_block_info: self.block_info_at(coords),
-                });
-            }
+            && (old_block_info != block_info || old_block != block.id())
+        {
+            let Some(self_entity) = self.base_structure.self_entity else {
+                return;
+            };
+            event_writer.write(BlockChangedEvent {
+                new_block: block.id(),
+                old_block,
+                block: StructureBlock::new(coords, self_entity),
+                old_block_info,
+                new_block_info: self.block_info_at(coords),
+            });
+        }
     }
 
     /// Sets the block at the given block coordinates.
@@ -178,15 +178,16 @@ impl DynamicStructure {
 
         if send_event
             && let Some(self_entity) = self.get_entity()
-                && let Some(event_writer) = event_writer {
-                    event_writer.send(BlockChangedEvent {
-                        new_block: block.id(),
-                        old_block,
-                        block: StructureBlock::new(coords, self_entity),
-                        old_block_info,
-                        new_block_info: self.block_info_at(coords),
-                    });
-                }
+            && let Some(event_writer) = event_writer
+        {
+            event_writer.write(BlockChangedEvent {
+                new_block: block.id(),
+                old_block,
+                block: StructureBlock::new(coords, self_entity),
+                old_block_info,
+                new_block_info: self.block_info_at(coords),
+            });
+        }
     }
 
     fn create_chunk_at(&mut self, coords: ChunkCoordinate) -> &mut Chunk {
@@ -349,7 +350,7 @@ impl DynamicStructure {
 
         if let Some(entity) = self.base_structure.chunk_entities.remove(&index) {
             if let Some(event_writer) = event_writer {
-                event_writer.send(ChunkUnloadEvent {
+                event_writer.write(ChunkUnloadEvent {
                     chunk_entity: entity,
                     coords,
                     structure_entity: self.get_entity().expect("A structure should have an entity at this point"),

@@ -1,9 +1,6 @@
 //! The menu that first appears when you load into the game.
 
-use bevy::{
-    app::App, core_pipeline::bloom::Bloom, hierarchy::DespawnRecursiveExt, picking::pointer::PointerPress, prelude::*,
-    render::camera::Camera, window::Monitor,
-};
+use bevy::{core_pipeline::bloom::Bloom, picking::pointer::PointerPress, prelude::*, window::Monitor};
 use bevy_kira_audio::SpatialAudioReceiver;
 use bevy_rapier3d::plugin::DefaultRapierContext;
 use cosmos_core::state::GameState;
@@ -51,18 +48,18 @@ pub enum MainMenuSubState {
 
 fn despawn_all_main_menu_ents<T: Component>(mut commands: Commands, q_main_menu_entities: Query<Entity, With<T>>) {
     for e in q_main_menu_entities.iter() {
-        commands.entity(e).despawn_recursive();
+        commands.entity(e).despawn();
     }
 }
 
 fn create_main_menu_background_node(mut commands: Commands, q_main_menu_camera: Query<Entity, With<MainMenuCamera>>) {
-    let Ok(cam_ent) = q_main_menu_camera.get_single() else {
+    let Ok(cam_ent) = q_main_menu_camera.single() else {
         return;
     };
 
     commands.spawn((
         BackgroundColorNode,
-        TargetCamera(cam_ent),
+        UiTargetCamera(cam_ent),
         DespawnOnSwitchState,
         Node {
             width: Val::Percent(100.0),
@@ -76,7 +73,7 @@ fn create_main_menu_background_node(mut commands: Commands, q_main_menu_camera: 
 }
 
 fn create_main_menu_root_node(q_bg_node: Query<Entity, With<BackgroundColorNode>>, mut commands: Commands) {
-    let Ok(ent) = q_bg_node.get_single() else {
+    let Ok(ent) = q_bg_node.single() else {
         return;
     };
 
@@ -154,7 +151,7 @@ fn create_main_menu_resource(
             Without<SurviveMainMenu>,
             Without<Window>,
             Without<DefaultRapierContext>,
-            Without<Parent>,
+            Without<ChildOf>,
             Without<Observer>,
             Without<Monitor>,
             Without<Pointer<PointerPress>>,
@@ -164,7 +161,7 @@ fn create_main_menu_resource(
     mm_resource: Option<Res<MainMenuSubState>>,
 ) {
     for ent in q_entity.iter() {
-        commands.entity(ent).despawn_recursive();
+        commands.entity(ent).despawn();
     }
 
     // trigger change detection, even if the resource already exists

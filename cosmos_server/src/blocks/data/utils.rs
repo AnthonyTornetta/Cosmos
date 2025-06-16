@@ -2,7 +2,7 @@
 
 use std::marker::PhantomData;
 
-use bevy::{prelude::*, utils::HashMap};
+use bevy::{prelude::*, platform::collections::HashMap};
 use cosmos_core::{
     block::{Block, block_events::BlockEventsSet, data::BlockData},
     events::block_events::{BlockChangedEvent, BlockDataSystemParams},
@@ -58,7 +58,7 @@ fn on_add_block<T: Component>(
         blocks.entry(ev.block.structure()).or_default().push(ev.block.coords());
     }
 
-    evw_bd.send(InsertBlockDataEvent(blocks, Default::default()));
+    evw_bd.write(InsertBlockDataEvent(blocks, Default::default()));
 }
 
 #[derive(Event)]
