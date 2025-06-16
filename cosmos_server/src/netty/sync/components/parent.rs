@@ -1,4 +1,4 @@
-use bevy::{prelude::*, platform::collections::HashMap};
+use bevy::{platform::collections::HashMap, prelude::*};
 use cosmos_core::{
     block::data::BlockData,
     entities::player::Player,
@@ -48,7 +48,7 @@ fn on_request_parent(
         };
 
         comps_to_send.entry(ev.client_id).or_default().push(ReplicatedComponentData {
-            raw_data: cosmos_encoder::serialize_uncompressed(&component.get()),
+            raw_data: cosmos_encoder::serialize_uncompressed(&component.parent()),
             entity_identifier,
         });
     }
@@ -116,7 +116,7 @@ fn on_change_parent(
             })
             .map(|(component, identifier)| ReplicatedComponentData {
                 entity_identifier: identifier,
-                raw_data: cosmos_encoder::serialize_uncompressed(&component.get()),
+                raw_data: cosmos_encoder::serialize_uncompressed(&component.parent()),
             })
             .collect::<Vec<ReplicatedComponentData>>();
 

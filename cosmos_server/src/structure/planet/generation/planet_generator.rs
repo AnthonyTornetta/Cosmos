@@ -63,7 +63,7 @@ pub fn check_needs_generated_system<T: TGenerateChunkEvent + Event, K: Component
 ) {
     for (entity, chunk) in needs_generated_query.iter() {
         if let Ok(parent_entity) = parent_query.get(entity)
-            && correct_type_query.contains(parent_entity.get())
+            && correct_type_query.contains(parent_entity.parent())
         {
             event_writer.write(T::new(chunk.coords, chunk.structure_entity));
 
