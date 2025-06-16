@@ -2,6 +2,10 @@
 //!
 //! Or maybe parts of it? Not sure yet
 
+// I think there's a bug in something causing a bunch of unused `check` function errors in this
+// file. Probably one of the derives.
+#![allow(dead_code)]
+
 use std::{mem::size_of, time::Duration};
 
 use crate::structure::chunk::CHUNK_DIMENSIONS_USIZE;

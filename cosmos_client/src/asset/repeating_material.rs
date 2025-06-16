@@ -1,5 +1,9 @@
 //! A garbage repeated material. Don't use this.
 
+// I think there's a bug in something causing a bunch of unused `check` function errors in this
+// file. Probably one of the derives on the `UnlitRepeatedMaterial` struct.
+#![allow(dead_code)]
+
 use bevy::{
     asset::Asset,
     color::LinearRgba,
@@ -11,13 +15,9 @@ use bevy::{
 #[repr(C, align(16))] // All WebGPU uniforms must be aligned to 16 bytes
 #[derive(Clone, Copy, ShaderType, Debug, Hash, Eq, PartialEq, Default, Reflect)]
 pub(crate) struct Repeats {
-    #[allow(dead_code)]
     pub(crate) horizontal: u32,
-    #[allow(dead_code)]
     pub(crate) vertical: u32,
-    #[allow(dead_code)]
     pub(crate) _wasm_padding1: u32,
-    #[allow(dead_code)]
     pub(crate) _wasm_padding2: u32,
 }
 

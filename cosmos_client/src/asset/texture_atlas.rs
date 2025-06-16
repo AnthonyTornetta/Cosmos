@@ -157,7 +157,7 @@ impl SquareTextureAtlasBuilder {
         let data = atlas_texture.data.as_mut().expect("Pixel data not initialized?");
         for texture in images {
             let next_y = y + self.texture_dimensions as usize * texture.size().y as usize * format_size;
-            data[y..next_y].copy_from_slice(&texture.data.as_ref().expect("Pixel data for individual texture not initialized?"));
+            data[y..next_y].copy_from_slice(texture.data.as_ref().expect("Pixel data for individual texture not initialized?"));
             y = next_y;
         }
 

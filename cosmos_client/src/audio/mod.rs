@@ -187,7 +187,7 @@ fn monitor_attached_audio_sources(
     mut audio_instances: ResMut<Assets<AudioInstance>>,
 ) {
     for (entity, audio_emitter) in query.iter() {
-        let cur_items = attached_audio_sources.0.remove(&entity).unwrap_or(vec![]);
+        let cur_items = attached_audio_sources.0.remove(&entity).unwrap_or_default();
 
         let new_items = audio_emitter
             .emissions

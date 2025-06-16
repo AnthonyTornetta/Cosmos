@@ -152,7 +152,7 @@ fn server_listen_messages(
 
                     info!("Send all chunks for received {server_entity:?}!");
 
-                    send_all_chunks.0.entry(server_entity).or_insert(vec![]).push(client_id);
+                    send_all_chunks.0.entry(server_entity).or_default().push(client_id);
                 }
                 ClientReliableMessages::SendSingleChunk { structure_entity, chunk } => {
                     request_chunk_event_writer.write(RequestChunkEvent {
