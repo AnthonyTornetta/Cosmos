@@ -18,6 +18,9 @@
 #import bevy_core_pipeline::oit::oit_draw
 #endif // OIT_ENABLED
 
+// Semi based on https://github.com/RyanSpaker/CornGame/blob/35f600e7065d9c4f0ef294f4699b40ae69b7fb1b/shaders/corn/render/vertex.wgsl
+// and https://github.com/bevyengine/bevy/blob/v0.16.0/crates/bevy_pbr/src/render/pbr.wgsl
+
 struct ExtendedMesh {
     @location(20) texture_index: u32,
 }
@@ -26,8 +29,6 @@ struct ExtendedMesh {
 var my_array_texture: texture_2d_array<f32>;
 @group(2) @binding(102)
 var my_array_texture_sampler: sampler;
-
-// Semi based on https://github.com/DarkZek/RustCraft/blob/master/assets/shaders/extended_material.wgsl
 
 struct CustomVertexOutput {
     @builtin(position) position: vec4<f32>,

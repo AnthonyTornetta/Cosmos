@@ -6,11 +6,14 @@
     skinning,
     morph::morph,
     view_transformations::position_world_to_clip,
-    prepass_io::{VertexOutput, Vertex, FragmentOutput},
+    prepass_io::{VertexOutput, FragmentOutput},
     pbr_deferred_functions::deferred_output,
 }
 
-const PREMULTIPLIED_ALPHA_CUTOFF = 0.5;
+// Semi based on https://github.com/RyanSpaker/CornGame/blob/35f600e7065d9c4f0ef294f4699b40ae69b7fb1b/shaders/corn/render/vertex.wgsl
+// and https://github.com/bevyengine/bevy/blob/v0.16.0/crates/bevy_pbr/src/render/pbr.wgsl
+
+const PREMULTIPLIED_ALPHA_CUTOFF = 0.3;
 
 // We can use a simplified version of alpha_discard() here since we only need to handle the alpha_cutoff
 fn prepass_alpha_discard(in: CustomVertexOutput) {
@@ -34,9 +37,9 @@ var my_array_texture_sampler: sampler;
 
 struct CustomVertexOutput {
     @builtin(position) position: vec4<f32>,
-    @location(0) uv: vec2<f32>,
-    @location(3) world_position: vec4<f32>,
+    @location(0) world_position: vec4<f32>,
     @location(1) world_normal: vec3<f32>,
+    @location(2) uv: vec2<f32>,
 #ifdef VERTEX_TANGENTS
     @location(4) world_tangent: vec4<f32>,
 #endif
@@ -56,6 +59,7 @@ struct CustomVertexOutput {
 // Most of these attributes are not used in the default prepass fragment shader, but they are still needed so we can
 // pass them to custom prepass shaders like pbr_prepass.wgsl.
 struct CustomVertex {
+    // For some reason the default bevy `Vertex` object just doesn't work here - idk why.
     @builtin(instance_index) instance_index: u32,
     @location(0) position: vec3<f32>,
 
