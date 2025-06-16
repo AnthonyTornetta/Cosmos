@@ -2,9 +2,9 @@ name: Rust
 
 on:
   push:
-    branches: [ "main" ]
+    branches: ["main", "develop"]
   pull_request:
-    branches: [ "main" ]
+    branches: ["main", "develop"]
 
 env:
   CARGO_TERM_COLOR: always
@@ -16,27 +16,27 @@ jobs:
     env:
       RUSTFLAGS: -Dwarnings
     steps:
-    - uses: actions/checkout@v4
-    - uses: actions-rs/toolchain@v1
-      with:
-        toolchain: nightly
-        components: clippy, rustfmt
-        override: true
-    - name: Cache
-      uses: Swatinem/rust-cache@v2
-    # Needed for certain dependencies
-    - name: Update System
-      run: sudo apt update -y && sudo apt upgrade -y
-    - name: Install Bevy Dependencies
-      run: sudo apt-get install -y g++ pkg-config libx11-dev libasound2-dev libudev-dev libwayland-dev
-    - name: rust-clippy-check
-      uses: actions-rs/clippy-check@v1.0.7
-      with:
-        token: ${{ secrets.GITHUB_TOKEN }}
-        args: --all-targets --all-features -- -D warnings
-    - name: rustfmt check
-      uses: mbrobbel/rustfmt-check@0.8.0
-      with:
-        token: ${{ secrets.GITHUB_TOKEN }}
-    - name: Run tests
-      run: cargo test
+      - uses: actions/checkout@v4
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: nightly
+          components: clippy, rustfmt
+          override: true
+      - name: Cache
+        uses: Swatinem/rust-cache@v2
+      # Needed for certain dependencies
+      - name: Update System
+        run: sudo apt update -y && sudo apt upgrade -y
+      - name: Install Bevy Dependencies
+        run: sudo apt-get install -y g++ pkg-config libx11-dev libasound2-dev libudev-dev libwayland-dev
+      - name: rust-clippy-check
+        uses: actions-rs/clippy-check@v1.0.7
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          args: --all-targets --all-features -- -D warnings
+      - name: rustfmt check
+        uses: mbrobbel/rustfmt-check@0.8.0
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Run tests
+        run: cargo test
