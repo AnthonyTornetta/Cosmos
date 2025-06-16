@@ -8,7 +8,7 @@ use cosmos_core::{
     netty::{client::LocalPlayer, system_sets::NetworkingSystemsSet},
     physics::{
         gravity_system::GravityEmitter,
-        location::{CosmosBundleSet, Location},
+        location::{Location, LocationPhysicsSet},
     },
     structure::{planet::Planet, ship::pilot::Pilot},
 };
@@ -146,7 +146,7 @@ pub(super) fn register(app: &mut App) {
         Update,
         (align_player, align_on_ship)
             .in_set(NetworkingSystemsSet::Between)
-            .before(CosmosBundleSet::HandleCosmosBundles)
+            .before(LocationPhysicsSet::DoPhysics)
             .chain(),
     );
 }

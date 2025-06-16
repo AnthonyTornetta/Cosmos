@@ -19,7 +19,7 @@ use crate::netty::system_sets::NetworkingSystemsSet;
 use crate::{
     block::blocks::fluid::FLUID_COLLISION_GROUP,
     netty::sync::{ComponentSyncingSet, IdentifiableComponent, SyncableComponent, sync_component},
-    physics::location::{CosmosBundleSet, LocationPhysicsSet},
+    physics::location::LocationPhysicsSet,
 };
 
 #[derive(Component, Debug, Serialize, Deserialize, Clone, PartialEq)]
@@ -117,11 +117,7 @@ pub(super) fn register(app: &mut App) {
             Update,
             (
                 ExplosionSystemSet::PreProcessExplosions,
-                // .before(LocationPhysicsSet::DoPhysics)
-                // .before(CosmosBundleSet::HandleCosmosBundles),
-                ExplosionSystemSet::ProcessExplosions
-                    .after(LocationPhysicsSet::DoPhysics)
-                    .after(CosmosBundleSet::HandleCosmosBundles),
+                ExplosionSystemSet::ProcessExplosions.after(LocationPhysicsSet::DoPhysics),
             )
                 .chain(),
         );
@@ -134,7 +130,6 @@ pub(super) fn register(app: &mut App) {
             (ExplosionSystemSet::PreProcessExplosions, ExplosionSystemSet::ProcessExplosions)
                 .after(LocationPhysicsSet::DoPhysics)
                 .in_set(NetworkingSystemsSet::Between)
-                .after(CosmosBundleSet::HandleCosmosBundles)
                 .chain(),
         );
     }

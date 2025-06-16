@@ -12,7 +12,7 @@ use crate::netty::server::ServerLobby;
 use crate::netty::sync::{GotComponentToRemoveEvent, GotComponentToSyncEvent};
 use crate::netty::system_sets::NetworkingSystemsSet;
 use crate::netty::{NettyChannelClient, NettyChannelServer, NoSendEntity, cosmos_encoder};
-use crate::physics::location::CosmosBundleSet;
+use crate::physics::location::LocationPhysicsSet;
 use crate::registry::{Registry, identifiable::Identifiable};
 use crate::structure::ship::pilot::Pilot;
 use crate::structure::systems::{StructureSystem, StructureSystems};
@@ -519,7 +519,8 @@ pub(super) fn setup_server(app: &mut App) {
             ComponentSyncingSet::DoComponentSyncing,
             ComponentSyncingSet::PostComponentSyncing,
         )
-            .after(CosmosBundleSet::HandleCosmosBundles)
+            // Should this be before?
+            .after(LocationPhysicsSet::DoPhysics)
             .in_set(NetworkingSystemsSet::SyncComponents)
             .chain(),
     );

@@ -523,25 +523,12 @@ impl Location {
 /// Stores the location from the previous frame
 pub struct PreviousLocation(pub Location);
 
-#[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
-/// Handles ordering of systems that rely on custom bundles.
-///
-/// Make sure to put anything that creates a custom bundle before this set.
-pub enum CosmosBundleSet {
-    /// Make sure to put anything that creates a custom bundle before this set.
-    ///
-    /// It's also a good idea to put anything that adds a Location to an entity before this set.
-    HandleCosmosBundles,
-}
-
 pub(super) fn register(app: &mut App) {
     systems::register(app);
     app.configure_sets(Update, LocationPhysicsSet::DoPhysics);
 
     // TODO: Remove system set
-    app.register_type::<Location>()
-        .register_type::<PreviousLocation>()
-        .configure_sets(Update, CosmosBundleSet::HandleCosmosBundles.before(LocationPhysicsSet::DoPhysics));
+    app.register_type::<Location>().register_type::<PreviousLocation>();
 }
 
 #[cfg(test)]

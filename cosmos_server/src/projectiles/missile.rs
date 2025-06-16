@@ -15,7 +15,7 @@ use cosmos_core::{
     persistence::LoadingDistance,
     physics::{
         collision_handling::CollisionBlacklist,
-        location::{CosmosBundleSet, Location, LocationPhysicsSet},
+        location::{Location, LocationPhysicsSet},
     },
     projectiles::{
         causer::Causer,
@@ -175,7 +175,7 @@ pub(super) fn register(app: &mut App) {
             look_and_move_towards_target.ambiguous_with(StructureTypeSet::Ship),
             apply_missile_thrust,
         )
-            .after(CosmosBundleSet::HandleCosmosBundles)
+            .after(LocationPhysicsSet::DoPhysics)
             .in_set(NetworkingSystemsSet::Between)
             .chain(),
     );
