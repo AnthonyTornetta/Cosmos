@@ -14,9 +14,6 @@ const PREMULTIPLIED_ALPHA_CUTOFF = 0.5;
 
 // We can use a simplified version of alpha_discard() here since we only need to handle the alpha_cutoff
 fn prepass_alpha_discard(in: CustomVertexOutput) {
-    if in.uv.x == 0.0 && in.uv.y == 0.0 {
-        discard;
-    }
     var sample = textureSample(my_array_texture, my_array_texture_sampler, in.uv, in.texture_index);
 
     if sample.a < PREMULTIPLIED_ALPHA_CUTOFF {
@@ -56,17 +53,35 @@ struct CustomVertexOutput {
     @location(20) texture_index: u32,
 }
 
+// Most of these attributes are not used in the default prepass fragment shader, but they are still needed so we can
+// pass them to custom prepass shaders like pbr_prepass.wgsl.
+struct CustomVertex {
+    @builtin(instance_index) instance_index: u32,
+    @location(0) position: vec3<f32>,
+
+#ifdef VERTEX_UVS
+    @location(2) uv: vec2<f32>,
+#endif
+
+#ifdef NORMAL_PREPASS_OR_DEFERRED_PREPASS
+    @location(1) normal: vec3<f32>,
+#ifdef VERTEX_TANGENTS
+    @location(3) tangent: vec4<f32>,
+#endif
+#endif // NORMAL_PREPASS_OR_DEFERRED_PREPASS
+
+#ifdef VERTEX_COLORS
+    @location(6) color: vec4<f32>,
+#endif
+}
+
 @vertex
-fn vertex(vertex_no_morph: Vertex, extended_mesh: ExtendedMesh) -> CustomVertexOutput {
+fn vertex(vertex_no_morph: CustomVertex, extended_mesh: ExtendedMesh) -> CustomVertexOutput {
     var out: CustomVertexOutput;
 
-    #ifdef SKINNED
-        var world_from_local = skinning::skin_model(vertex.joint_indices, vertex.joint_weights);
-    #else
-        // Use vertex_no_morph.instance_index instead of vertex.instance_index to work around a wgpu dx12 bug.
-        // See https://github.com/gfx-rs/naga/issues/2416 .
-        var world_from_local = mesh_functions::get_world_from_local(vertex_no_morph.instance_index);
-    #endif
+    // Use vertex_no_morph.instance_index instead of vertex.instance_index to work around a wgpu dx12 bug.
+    // See https://github.com/gfx-rs/naga/issues/2416 .
+    var world_from_local = mesh_functions::get_world_from_local(vertex_no_morph.instance_index);
 
     #ifdef VERTEX_POSITIONS
         out.world_position = mesh_functions::mesh_position_local_to_world(world_from_local, vec4<f32>(vertex_no_morph.position, 1.0));

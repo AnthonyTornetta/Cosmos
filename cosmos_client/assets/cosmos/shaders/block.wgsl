@@ -8,18 +8,15 @@
     view_transformations::position_world_to_clip,
 }
 
-#ifdef PREPASS_PIPELINE
-#import bevy_pbr::{
-    prepass_io::{VertexOutput, Vertex},
-    pbr_deferred_functions::deferred_output,
-}
-#else
 #import bevy_pbr::{
     forward_io::{VertexOutput, Vertex, FragmentOutput},
     pbr_functions::{apply_pbr_lighting, main_pass_post_lighting_processing},
-    pbr_types::STANDARD_MATERIAL_FLAGS_UNLIT_BIT,
+    pbr_types::{STANDARD_MATERIAL_FLAGS_UNLIT_BIT, STANDARD_MATERIAL_FLAGS_ALPHA_MODE_RESERVED_BITS, STANDARD_MATERIAL_FLAGS_ALPHA_MODE_OPAQUE},
 }
-#endif
+
+#ifdef OIT_ENABLED
+#import bevy_core_pipeline::oit::oit_draw
+#endif // OIT_ENABLED
 
 struct ExtendedMesh {
     @location(20) texture_index: u32,
@@ -34,17 +31,12 @@ var my_array_texture_sampler: sampler;
 
 struct CustomVertexOutput {
     @builtin(position) position: vec4<f32>,
-    #ifdef PREPASS_PIPELINE
-    @location(0) uv: vec2<f32>,
-    @location(3) world_position: vec4<f32>,
-    #else
     // This is `clip position` when the struct is used as a vertex stage output
     // and `frag coord` when used as a fragment stage input
     @location(0) world_position: vec4<f32>,
-    @location(2) uv: vec2<f32>,
-    #endif
-
     @location(1) world_normal: vec3<f32>,
+    @location(2) uv: vec2<f32>,
+
 #ifdef VERTEX_TANGENTS
     @location(4) world_tangent: vec4<f32>,
 #endif
@@ -123,7 +115,6 @@ fn vertex(vertex_no_morph: Vertex, extended_mesh: ExtendedMesh) -> CustomVertexO
     return out;
 }
 
-#ifndef PREPASS_PIPELINE
 @fragment
 fn fragment(
     custom: CustomVertexOutput,
@@ -162,11 +153,6 @@ fn fragment(
     
     // alpha discard
     pbr_input.material.base_color = alpha_discard(pbr_input.material, pbr_input.material.base_color);
-
-#ifdef PREPASS_PIPELINE
-    // in deferred mode we can't modify anything after that, as lighting is run in a separate fullscreen shader.
-    let out = deferred_output(in, pbr_input);
-#else
     var out: FragmentOutput;
     // apply lighting
     if (pbr_input.material.flags & STANDARD_MATERIAL_FLAGS_UNLIT_BIT) == 0u {
@@ -178,9 +164,17 @@ fn fragment(
     // apply in-shader post processing (fog, alpha-premultiply, and also tonemapping, debanding if the camera is non-hdr)
     // note this does not include fullscreen postprocessing effects like bloom.
     out.color = main_pass_post_lighting_processing(pbr_input, out.color);
-#endif
+
+    // OIT is transparent stuff
+#ifdef OIT_ENABLED
+    let alpha_mode = pbr_input.material.flags & STANDARD_MATERIAL_FLAGS_ALPHA_MODE_RESERVED_BITS;
+    if alpha_mode != STANDARD_MATERIAL_FLAGS_ALPHA_MODE_OPAQUE {
+        // The fragments will only be drawn during the oit resolve pass.
+        oit_draw(in.position, out.color);
+        discard;
+    }
+#endif // OIT_ENABLED
 
     return out;
 }
 
-#endif // PREPASS_PIPELINE
