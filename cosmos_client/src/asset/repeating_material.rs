@@ -11,9 +11,13 @@ use bevy::{
 #[repr(C, align(16))] // All WebGPU uniforms must be aligned to 16 bytes
 #[derive(Clone, Copy, ShaderType, Debug, Hash, Eq, PartialEq, Default, Reflect)]
 pub(crate) struct Repeats {
+    #[allow(dead_code)]
     pub(crate) horizontal: u32,
+    #[allow(dead_code)]
     pub(crate) vertical: u32,
+    #[allow(dead_code)]
     pub(crate) _wasm_padding1: u32,
+    #[allow(dead_code)]
     pub(crate) _wasm_padding2: u32,
 }
 
