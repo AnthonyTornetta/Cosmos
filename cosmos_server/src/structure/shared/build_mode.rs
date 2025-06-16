@@ -4,6 +4,7 @@ use bevy::prelude::*;
 use cosmos_core::{
     block::{Block, block_events::BlockInteractEvent},
     netty::system_sets::NetworkingSystemsSet,
+    prelude::{Ship, Station},
     registry::{Registry, identifiable::Identifiable},
     state::GameState,
     structure::{
@@ -14,7 +15,7 @@ use cosmos_core::{
 
 fn interact_with_block(
     mut event_reader: EventReader<BlockInteractEvent>,
-    structure_query: Query<&Structure>,
+    structure_query: Query<&Structure, Or<(With<Ship>, With<Station>)>>,
     mut enter_build_mode_writer: EventWriter<EnterBuildModeEvent>,
     mut exit_build_mode_writer: EventWriter<ExitBuildModeEvent>,
     q_build_mode: Query<&BuildMode>,
