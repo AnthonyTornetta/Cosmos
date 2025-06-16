@@ -204,10 +204,7 @@ enum SystemSyncingSet {
     SyncSystems,
 }
 
-pub fn sync_system<T: StructureSystemImpl + Serialize + DeserializeOwned>(app: &mut App)
-where
-    T: Component<Mutability = Mutable>,
-{
+pub fn sync_system<T: StructureSystemImpl + Component<Mutability = Mutable> + Serialize + DeserializeOwned>(app: &mut App) {
     app.configure_sets(Update, SystemSyncingSet::SyncSystems.in_set(NetworkingSystemsSet::SyncComponents));
 
     app.add_systems(
