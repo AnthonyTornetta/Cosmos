@@ -411,8 +411,6 @@ fn poll_rendering_lods(
             continue;
         };
 
-        info!("LODs done generating for planet!");
-
         let mut structure_meshes_component = LodMeshes::default();
         let mut entities_to_add = Vec::new();
 
@@ -428,7 +426,6 @@ fn poll_rendering_lods(
         // once the new entity's mesh is ready, decrease the counter
         // if the counter is 0, despawn the dirty entity.
         //
-        info!("{ent_meshes:?}");
 
         for (lod_mesh, offset, scale) in ent_meshes {
             for mesh_material in lod_mesh.mesh_materials {
