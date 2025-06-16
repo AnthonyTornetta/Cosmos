@@ -2,12 +2,7 @@
 
 use std::time::Duration;
 
-use bevy::{
-    app::Update,
-    prelude::{App, Commands, Component, Entity, IntoSystemConfigs, Query, Res, With, Without},
-    reflect::Reflect,
-    time::Time,
-};
+use bevy::prelude::*;
 use cosmos_core::{
     ecs::NeedsDespawned,
     entities::{health::Dead, player::Player},

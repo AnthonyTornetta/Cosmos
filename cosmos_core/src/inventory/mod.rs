@@ -5,19 +5,8 @@
 use std::ops::Range;
 
 use bevy::{
-    app::Update,
-    core::Name,
-    ecs::{
-        bundle::Bundle,
-        entity::Entity,
-        query::{QueryData, QueryFilter, QueryItem, ROQueryItem},
-        system::{Commands, Query},
-    },
-    hierarchy::{BuildChildren, DespawnRecursiveExt},
-    log::error,
-    prelude::{Added, App, Children, Component, IntoSystemConfigs, Mut, Or, With, Without},
-    reflect::Reflect,
-    state::state::States,
+    ecs::query::{QueryData, QueryFilter, QueryItem, ROQueryItem},
+    prelude::*,
 };
 use serde::{Deserialize, Serialize};
 
@@ -81,8 +70,8 @@ impl HeldItemStack {
 
         for child in children.iter() {
             // This is the only way to make the borrow checker happy
-            if q_held_item.contains(*child) {
-                return q_held_item.get(*child).ok();
+            if q_held_item.contains(child) {
+                return q_held_item.get(child).ok();
             }
         }
 
@@ -97,8 +86,8 @@ impl HeldItemStack {
     ) -> Option<&'a Inventory> {
         for child in children.iter() {
             // This is the only way to make the borrow checker happy
-            if q_held_item.contains(*child) {
-                return q_held_item.get(*child).ok();
+            if q_held_item.contains(child) {
+                return q_held_item.get(child).ok();
             }
         }
 
@@ -117,8 +106,8 @@ impl HeldItemStack {
 
         for child in children.iter() {
             // This is the only way to make the borrow checker happy
-            if q_held_item.contains(*child) {
-                return q_held_item.get_mut(*child).ok();
+            if q_held_item.contains(child) {
+                return q_held_item.get_mut(child).ok();
             }
         }
 
@@ -133,8 +122,8 @@ impl HeldItemStack {
     ) -> Option<Mut<'a, Inventory>> {
         for child in children.iter() {
             // This is the only way to make the borrow checker happy
-            if q_held_item.contains(*child) {
-                return q_held_item.get_mut(*child).ok();
+            if q_held_item.contains(child) {
+                return q_held_item.get_mut(child).ok();
             }
         }
 
@@ -229,12 +218,16 @@ impl Inventory {
     fn update_itemstack_data_parent(&self, slot: InventorySlot, commands: &mut Commands) {
         if let Some(is) = self.items.get(slot).and_then(|x| x.as_ref())
             && let Some(de) = is.data_entity()
-                && let Some(mut ecmds) = commands.get_entity(de) {
-                    ecmds.set_parent(self.self_entity).insert(ItemStackData {
-                        inventory_pointer: (self.self_entity, slot as u32),
-                        item_id: is.item_id(),
-                    });
-                }
+            && let Ok(mut ecmds) = commands.get_entity(de)
+        {
+            ecmds.insert((
+                ItemStackData {
+                    inventory_pointer: (self.self_entity, slot as u32),
+                    item_id: is.item_id(),
+                },
+                ChildOf(self.self_entity),
+            ));
+        }
     }
 
     fn set_items_at(&mut self, slot: usize, itemstack: ItemStack, commands: &mut Commands) {
@@ -320,7 +313,7 @@ impl Inventory {
     pub fn insert_itemstack_data<T: Bundle>(&mut self, slot: usize, data: T, commands: &mut Commands) -> Option<Entity> {
         let self_ent = self.self_entity;
         #[cfg(debug_assertions)]
-        if commands.get_entity(self_ent).is_none() {
+        if commands.get_entity(self_ent).is_err() {
             panic!("Inventory entity {self_ent:?} does not exist, but is stored in an inventory component!");
         }
 
@@ -599,10 +592,11 @@ impl Inventory {
         let qty = self.insert_itemstack_at(slot, &is, commands);
 
         if let Some(de) = is.data_entity()
-            && qty != 0 {
-                // We weren't able to fit in the data-having item, so delete the newly created data entity.
-                commands.entity(de).despawn_recursive();
-            }
+            && qty != 0
+        {
+            // We weren't able to fit in the data-having item, so delete the newly created data entity.
+            commands.entity(de).despawn();
+        }
 
         qty
     }
@@ -619,10 +613,11 @@ impl Inventory {
         let qty = self.insert_itemstack_at(slot, &is, commands);
 
         if let Some(de) = is.data_entity()
-            && qty != 0 {
-                // We weren't able to fit in the data-having item, so delete the newly created data entity.
-                commands.entity(de).despawn_recursive();
-            }
+            && qty != 0
+        {
+            // We weren't able to fit in the data-having item, so delete the newly created data entity.
+            commands.entity(de).despawn();
+        }
 
         qty
     }
@@ -686,18 +681,19 @@ impl Inventory {
         };
 
         if let Some(priority_slots) = self.priority_slots.clone()
-            && !priority_slots.contains(&slot) {
-                // attempt to move to priority slots first
-                for slot in priority_slots {
-                    let left_over = self.insert_itemstack_at(slot, &item_stack, commands);
+            && !priority_slots.contains(&slot)
+        {
+            // attempt to move to priority slots first
+            for slot in priority_slots {
+                let left_over = self.insert_itemstack_at(slot, &item_stack, commands);
 
-                    item_stack.set_quantity(left_over);
+                item_stack.set_quantity(left_over);
 
-                    if item_stack.quantity() == 0 {
-                        break;
-                    }
+                if item_stack.quantity() == 0 {
+                    break;
                 }
             }
+        }
 
         let n = self.items.len();
         let priority_slots = self.priority_slots.clone();

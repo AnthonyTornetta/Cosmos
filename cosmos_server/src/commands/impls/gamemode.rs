@@ -67,7 +67,7 @@ pub(super) fn register(app: &mut App) {
                     Receiver::Entity(e) => q_players.get(*e).ok(),
                 }) else {
                     ev.sender
-                        .send(format!("Unable to find player {:?}", ev.command.receiver), &mut evw_send_message);
+                        .write(format!("Unable to find player {:?}", ev.command.receiver), &mut evw_send_message);
                     continue;
                 };
 
@@ -75,12 +75,12 @@ pub(super) fn register(app: &mut App) {
                     GameMode::Survival => {
                         commands.entity(ent).remove::<Creative>();
                         ev.sender
-                            .send(format!("Swapped {} to survival.", player.name()), &mut evw_send_message);
+                            .write(format!("Swapped {} to survival.", player.name()), &mut evw_send_message);
                     }
                     GameMode::Creative => {
                         commands.entity(ent).insert(Creative);
                         ev.sender
-                            .send(format!("Swapped {} to creative.", player.name()), &mut evw_send_message);
+                            .write(format!("Swapped {} to creative.", player.name()), &mut evw_send_message);
                     }
                 }
             }

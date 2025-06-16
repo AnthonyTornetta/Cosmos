@@ -1,6 +1,6 @@
 //! Shared asteroid generation logic
 
-use bevy::{prelude::*, tasks::AsyncComputeTaskPool, utils::HashMap};
+use bevy::{prelude::*, tasks::AsyncComputeTaskPool, platform::collections::HashMap};
 use cosmos_core::{
     block::{Block, block_rotation::BlockRotation},
     physics::location::Location,

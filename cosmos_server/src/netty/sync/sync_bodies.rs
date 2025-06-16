@@ -61,17 +61,17 @@ fn server_sync_bodies(
     mut server: ResMut<RenetServer>,
     mut tick: ResMut<NetworkTick>,
     entities: Query<
-        (Entity, &Transform, &Location, Option<&Velocity>, &SyncTo, Option<&Parent>),
+        (Entity, &Transform, &Location, Option<&Velocity>, &SyncTo, Option<&ChildOf>),
         (Or<(Changed<Location>, Changed<Transform>, Changed<SyncTo>)>, Without<NoSendEntity>),
     >,
     players: Query<(&Player, &RenderDistance), With<ReadyForSyncing>>,
     // Often children will not have locations or loading distances, but still need to by synced
     // q_children_need_synced: Query<
-    //     (Entity, Option<&Velocity>, &Transform, &Parent),
+    //     (Entity, Option<&Velocity>, &Transform, &ChildOf),
     //     (Without<LoadingDistance>, Without<NoSendEntity>, Without<Location>),
     // >,
     // q_loading_distance: Query<(&Location, &LoadingDistance)>,
-    // q_parent: Query<&Parent>,
+    // q_parent: Query<&ChildOf>,
 ) {
     tick.0 += 1;
 
@@ -83,7 +83,7 @@ fn server_sync_bodies(
             NettyRigidBody::new(
                 velocity.copied(),
                 transform.rotation,
-                match parent.map(|p| p.get()) {
+                match parent.map(|p| p.parent()) {
                     Some(parent_entity) => NettyRigidBodyLocation::Relative(transform.translation, parent_entity),
                     None => NettyRigidBodyLocation::Absolute(*location),
                 },

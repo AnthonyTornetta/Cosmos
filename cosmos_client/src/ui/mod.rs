@@ -1,15 +1,6 @@
 //! Responsible for all the user interfaces the client can have
 
-use bevy::{
-    app::Update,
-    ecs::{
-        component::Component,
-        schedule::{IntoSystemSetConfigs, SystemSet},
-    },
-    prelude::{App, Entity, Event, ImageNode, Text},
-    reflect::Reflect,
-    ui::{BackgroundColor, Node},
-};
+use bevy::prelude::*;
 
 pub mod components;
 pub mod crosshair;

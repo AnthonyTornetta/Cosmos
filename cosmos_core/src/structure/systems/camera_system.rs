@@ -1,10 +1,6 @@
 //! Represents all the energy stored on a structure
 
-use bevy::{
-    prelude::{App, Component, Resource},
-    reflect::Reflect,
-    utils::HashSet,
-};
+use bevy::{platform::collections::HashSet, prelude::*};
 use serde::{Deserialize, Serialize};
 
 use crate::{block::Block, registry::identifiable::Identifiable, structure::coordinates::BlockCoordinate};

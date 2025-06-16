@@ -1,28 +1,6 @@
 //! A wrapper around ui components that will make them movable and have a title bar with a close button.
 
-use bevy::{
-    app::{App, Update},
-    asset::Handle,
-    color::{Srgba, palettes::css},
-    core::Name,
-    ecs::{
-        component::Component,
-        entity::Entity,
-        event::{Event, EventReader},
-        query::{Added, With},
-        schedule::{IntoSystemConfigs, IntoSystemSetConfigs, SystemSet},
-        system::{Commands, Query, Res},
-    },
-    hierarchy::{BuildChildren, Children},
-    image::Image,
-    math::{Rect, Vec2},
-    prelude::{ChildBuild, ImageNode, Resource, Text, resource_exists},
-    text::{JustifyText, TextFont, TextLayout},
-    transform::components::GlobalTransform,
-    ui::{AlignItems, BackgroundColor, ComputedNode, Display, FlexDirection, Interaction, JustifyContent, Node, PositionType, UiRect, Val},
-    utils::default,
-    window::{PrimaryWindow, Window},
-};
+use bevy::{color::palettes::css, prelude::*, window::PrimaryWindow};
 use cosmos_core::{ecs::NeedsDespawned, state::GameState};
 
 use crate::{
@@ -105,7 +83,7 @@ fn add_window(
         let close_button = CloseButton { window_entity: ent };
 
         let titlebar_children = children
-            .map(|x| x.iter().filter(|x| q_title_bar.contains(**x)).collect::<Vec<_>>())
+            .map(|x| x.iter().filter(|x| q_title_bar.contains(*x)).collect::<Vec<_>>())
             .unwrap_or_default();
 
         commands.entity(ent).with_children(|parent| {
@@ -147,7 +125,7 @@ fn add_window(
             });
 
             for child in titlebar_children {
-                title_bar.add_child(*child);
+                title_bar.add_child(child);
             }
 
             title_bar.with_children(|parent| {
@@ -194,7 +172,7 @@ fn add_window(
             let window_body = window_body.expect("Set above");
             for &child in children {
                 if !q_title_bar.contains(child) {
-                    commands.entity(child).set_parent(window_body);
+                    commands.entity(child).insert(ChildOf(window_body));
                 }
             }
         }
@@ -214,7 +192,7 @@ fn move_window(
 ) {
     for (interaction, title_bar) in &q_title_bar {
         if *interaction == Interaction::Pressed {
-            let Ok(window) = q_window.get_single() else {
+            let Ok(window) = q_window.single() else {
                 return;
             };
 

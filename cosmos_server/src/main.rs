@@ -9,7 +9,6 @@
 #![allow(mismatched_lifetime_syntaxes)]
 
 use bevy::{
-    core::TaskPoolThreadAssignmentPolicy,
     diagnostic::{EntityCountDiagnosticsPlugin, FrameTimeDiagnosticsPlugin, SystemInformationDiagnosticsPlugin},
     prelude::*,
 };
@@ -71,11 +70,12 @@ fn main() {
     let default_plugins = DefaultPlugins
         .set(TaskPoolPlugin {
             task_pool_options: TaskPoolOptions {
-                compute: TaskPoolThreadAssignmentPolicy {
-                    min_threads: 1,
-                    max_threads: usize::MAX,
-                    percent: 0.25,
-                },
+                // compute: TaskPoolThreadAssignmentPolicy {
+                //     min_threads: 1,
+                //     max_threads: usize::MAX,
+                //     percent: 0.25,
+                //     ..default()
+                // },
                 ..Default::default()
             },
         })
@@ -115,7 +115,7 @@ fn main() {
             // Used for diagnostics
             SystemInformationDiagnosticsPlugin,
             EntityCountDiagnosticsPlugin,
-            FrameTimeDiagnosticsPlugin,
+            FrameTimeDiagnosticsPlugin::default(),
             // PerfUiPlugin,
         ))
         .insert_resource(server_settings);

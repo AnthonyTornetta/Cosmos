@@ -33,7 +33,7 @@
 //!
 //! // `client` project
 //! fn send_event_to_server(mut nevw_example: NettyEventWriter<ExampleEvent>) {
-//!     nevw_example.send(ExampleEvent("Hello from client!".to_owned()));
+//!     nevw_example.write(ExampleEvent("Hello from client!".to_owned()));
 //! }
 //!
 //! // `server` project

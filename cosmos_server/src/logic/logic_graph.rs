@@ -1,10 +1,8 @@
 //! The behavior of the logic system, on a structure by structure basis.
 
 use bevy::{
-    log::error,
-    prelude::{Entity, EventWriter},
-    reflect::Reflect,
-    utils::{HashMap, HashSet},
+    platform::collections::{HashMap, HashSet},
+    prelude::*,
 };
 use serde::{Deserialize, Serialize};
 
@@ -89,7 +87,7 @@ impl LogicGroup {
 
         // if self.signal() != old_signal {
         // Notify the input ports in this port's group if the group's total signal has changed.
-        evw_queue_logic_input.send_batch(
+        evw_queue_logic_input.write_batch(
             self.consumers
                 .iter()
                 .map(|input_port| QueueLogicInputEvent::new(StructureBlock::new(input_port.coords, entity))),
@@ -370,11 +368,11 @@ impl LogicGraph {
         match port_type {
             PortType::Input => {
                 logic_group.consumers.insert(Port::new(coords, direction));
-                evw_queue_logic_input.send(QueueLogicInputEvent::new(StructureBlock::new(coords, entity)));
+                evw_queue_logic_input.write(QueueLogicInputEvent::new(StructureBlock::new(coords, entity)));
             }
             PortType::Output => {
                 logic_group.producers.insert(Port::new(coords, direction), signal);
-                evw_queue_logic_output.send(QueueLogicOutputEvent::new(StructureBlock::new(coords, entity)));
+                evw_queue_logic_output.write(QueueLogicOutputEvent::new(StructureBlock::new(coords, entity)));
             }
         };
     }
@@ -435,7 +433,7 @@ impl LogicGraph {
             // Ping all inputs in this group to let them know this output port is gone.
             if port_type == PortType::Output {
                 for &input_port in self.groups.get(&group_id).expect("Port should have logic group.").consumers.iter() {
-                    evw_queue_logic_input.send(QueueLogicInputEvent::new(StructureBlock::new(
+                    evw_queue_logic_input.write(QueueLogicInputEvent::new(StructureBlock::new(
                         input_port.coords,
                         structure.get_entity().expect("Structure should have entity."),
                     )));
@@ -504,7 +502,7 @@ impl LogicGraph {
             .consumers
             .iter()
         {
-            evw_queue_logic_input.send(QueueLogicInputEvent::new(StructureBlock::new(input_port.coords, entity)));
+            evw_queue_logic_input.write(QueueLogicInputEvent::new(StructureBlock::new(input_port.coords, entity)));
         }
     }
 

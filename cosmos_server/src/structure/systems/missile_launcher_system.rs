@@ -249,7 +249,7 @@ fn update_missile_system(
                 if let Some(pilot) = pilot
                     && let Ok(player) = q_player.get(pilot.entity)
                 {
-                    nevw_system_failure.send(MissileSystemFailure::NoAmmo, player.client_id());
+                    nevw_system_failure.write(MissileSystemFailure::NoAmmo, player.client_id());
                 }
                 break;
             }

@@ -91,7 +91,7 @@ impl DefaultPersistentComponent for PlayerSaveLink {}
 /// Creates a file that points the player's name to their respective data file.
 fn save_player_link(
     mut commands: Commands,
-    q_parent: Query<&Parent>,
+    q_parent: Query<&ChildOf>,
     q_entity_id: Query<&EntityId>,
     q_player_link_needs_saved: Query<(Entity, &EntityId, &PlayerSaveLink, &Location), With<NeedsSaved>>,
     q_serialized_data: Query<(&SerializedData, &EntityId, Option<&LoadingDistance>)>,
@@ -102,7 +102,7 @@ fn save_player_link(
 
         let mut parent = q_parent.get(entity).ok();
         while let Some(p) = parent {
-            let next = q_parent.get(p.get()).ok();
+            let next = q_parent.get(p.parent()).ok();
             if next.is_some() {
                 parent = next;
             } else {
@@ -111,7 +111,7 @@ fn save_player_link(
         }
         if let Some(parent) = parent {
             // We need to load the player save link immediately after this is saved.
-            commands.entity(parent.get()).insert(RecomputeNeedLoadedChildren);
+            commands.entity(parent.parent()).insert(RecomputeNeedLoadedChildren);
         }
 
         let sfi = calculate_sfi(entity, &q_parent, &q_entity_id, &q_serialized_data).expect("Missing save file identifier for player!");
@@ -148,7 +148,7 @@ fn load_player(
                 .insert(Player::new(load_player.name.clone(), load_player.client_id));
 
             // We don't need this anymore, since this player already has their link loaded.
-            commands.entity(ent).despawn_recursive();
+            commands.entity(ent).despawn();
 
             continue;
         }
@@ -302,7 +302,7 @@ fn finish_loading_player(
     mut evw_player_join: EventWriter<PlayerConnectedEvent>,
     mut evw_sync_registries: EventWriter<SyncRegistriesEvent>,
     server_settings: Res<ServerSettings>,
-    q_player_finished_loading: Query<(Entity, &Player, &Location, &Velocity, Option<&Parent>, Option<&Transform>), Added<Player>>,
+    q_player_finished_loading: Query<(Entity, &Player, &Location, &Velocity, Option<&ChildOf>, Option<&Transform>), Added<Player>>,
     mut nevw_send_chat_msg: NettyEventWriter<ServerSendChatMessageEvent>,
     q_held_item: Query<&Inventory, With<HeldItemStack>>,
     q_children: Query<&Children>,
@@ -354,7 +354,7 @@ fn finish_loading_player(
         info!("Sending player create message for {} @ {}!", load_player.name(), *location);
         let msg = cosmos_encoder::serialize(&ServerReliableMessages::PlayerCreate {
             entity: player_entity,
-            parent: maybe_parent.map(|x| x.get()),
+            parent: maybe_parent.map(|x| x.parent()),
             id: load_player.client_id(),
             name: load_player.name().into(),
             body: netty_body,
@@ -376,12 +376,12 @@ fn finish_loading_player(
             message: format!("{} joined the game.", load_player.name()),
         });
 
-        evw_player_join.send(PlayerConnectedEvent {
+        evw_player_join.write(PlayerConnectedEvent {
             player_entity,
             client_id: load_player.client_id(),
         });
 
-        evw_sync_registries.send(SyncRegistriesEvent { player_entity });
+        evw_sync_registries.write(SyncRegistriesEvent { player_entity });
     }
 }
 

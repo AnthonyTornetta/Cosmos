@@ -2,17 +2,7 @@
 //!
 //! TODO: add docs on how to use
 
-use bevy::app::Update;
-use bevy::prelude::App;
-use bevy::prelude::Changed;
-use bevy::prelude::Commands;
-use bevy::prelude::Component;
-use bevy::prelude::Entity;
-use bevy::prelude::IntoSystemConfigs;
-use bevy::prelude::Query;
-use bevy::prelude::RemovedComponents;
-use bevy::prelude::SystemSet;
-use bevy::reflect::Reflect;
+use bevy::prelude::*;
 use bevy_rapier3d::prelude::RigidBodyDisabled;
 
 use crate::netty::system_sets::NetworkingSystemsSet;
@@ -60,7 +50,7 @@ fn disable_rigid_bodies(
     q_with_disable: Query<(Entity, &DisableRigidBody), Changed<DisableRigidBody>>,
 ) {
     for ent in removed_disable_rb.read() {
-        if let Some(mut ecmds) = commands.get_entity(ent) {
+        if let Ok(mut ecmds) = commands.get_entity(ent) {
             ecmds.remove::<RigidBodyDisabled>();
         }
     }

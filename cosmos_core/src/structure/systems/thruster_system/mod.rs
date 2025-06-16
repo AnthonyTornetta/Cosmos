@@ -3,7 +3,7 @@
 use bevy::{
     prelude::{App, Component, Resource},
     reflect::Reflect,
-    utils::HashMap,
+    platform::collections::HashMap,
 };
 use serde::{Deserialize, Serialize};
 

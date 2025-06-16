@@ -62,13 +62,13 @@ fn press_accept(
     if !inputs.check_just_pressed(CosmosInputs::AcceptComsRequest) {
         return;
     }
-    let Ok((ent, rendered_req_coms_ui)) = q_rendered_coms_req_ui.get_single() else {
+    let Ok((ent, rendered_req_coms_ui)) = q_rendered_coms_req_ui.single() else {
         return;
     };
 
-    commands.entity(ent).despawn_recursive();
+    commands.entity(ent).despawn();
     info!("Sending ACC");
-    nevw_accept_coms.send(AcceptComsEvent(rendered_req_coms_ui.0));
+    nevw_accept_coms.write(AcceptComsEvent(rendered_req_coms_ui.0));
 }
 
 fn press_decline(
@@ -80,13 +80,13 @@ fn press_decline(
     if !inputs.check_just_pressed(CosmosInputs::DeclineComsRequest) {
         return;
     }
-    let Ok(ent) = q_rendered_coms_req_ui.get_single() else {
+    let Ok(ent) = q_rendered_coms_req_ui.single() else {
         return;
     };
 
-    nevw_decline_coms.send_default();
+    nevw_decline_coms.write_default();
 
-    commands.entity(ent).despawn_recursive();
+    commands.entity(ent).despawn();
 }
 
 pub(super) fn register(app: &mut App) {

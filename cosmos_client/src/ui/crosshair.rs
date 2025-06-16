@@ -42,7 +42,7 @@ fn add_crosshair(mut commands: Commands, asset_server: Res<AssetServer>) {
 pub struct Crosshair;
 
 fn update_cursor_pos(pos: Res<CrosshairOffset>, mut query: Query<&mut Node, With<Crosshair>>) {
-    if let Ok(mut crosshair) = query.get_single_mut() {
+    if let Ok(mut crosshair) = query.single_mut() {
         crosshair.left = Val::Px(pos.x);
         // bottom doesn't seem to work, so -pos.y is used.
         crosshair.top = Val::Px(-pos.y);

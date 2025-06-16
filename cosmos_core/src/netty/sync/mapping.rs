@@ -7,11 +7,11 @@ use crate::{
     netty::netty_rigidbody::{NettyRigidBody, NettyRigidBodyLocation},
     prelude::StructureBlock,
 };
+use bevy::platform::collections::HashMap;
 use bevy::{
     ecs::component::Component,
     prelude::{Commands, Entity, Resource},
     reflect::Reflect,
-    utils::HashMap,
 };
 
 /// This is the server entity that refers to this entity.

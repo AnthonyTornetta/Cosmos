@@ -22,7 +22,7 @@ pub fn wait_for_done_loading(
         return;
     }
 
-    if query.get_single().is_ok() {
+    if query.single().is_ok() {
         info!("Got local player, starting game!");
         state_changer.set(GameState::Playing);
     }

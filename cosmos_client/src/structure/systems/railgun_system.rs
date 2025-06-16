@@ -59,11 +59,11 @@ fn on_fire_railgun(
 
         let mut closest_sound: Option<(f32, Location, Vec3)> = None;
 
-        let Ok((g_trans, local_loc)) = q_local_player.get_single() else {
+        let Ok((g_trans, local_loc)) = q_local_player.single() else {
             return;
         };
 
-        let Ok(main_cam_trans) = q_main_camera.get_single() else {
+        let Ok(main_cam_trans) = q_main_camera.single() else {
             return;
         };
 

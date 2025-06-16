@@ -1,9 +1,6 @@
 //! Logic behavior for the switch, a block that outputs a logic signal on all 6 faces when on.
 
-use bevy::{
-    app::{App, Update},
-    prelude::{EventReader, EventWriter, IntoSystemConfigs, OnEnter, Query, Res, ResMut},
-};
+use bevy::prelude::*;
 
 use cosmos_core::{
     block::{

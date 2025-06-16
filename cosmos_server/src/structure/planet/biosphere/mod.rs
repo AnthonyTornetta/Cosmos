@@ -2,17 +2,7 @@
 
 use std::marker::PhantomData;
 
-use bevy::{
-    color::palettes::css,
-    log::{error, info},
-    prelude::{
-        Added, App, Commands, Component, Entity, Event, EventReader, EventWriter, IntoSystemConfigs, IntoSystemSetConfigs, Query, Res,
-        ResMut, Resource, Startup, SystemSet, Update, With, Without, in_state,
-    },
-    reflect::TypePath,
-    state::state::OnEnter,
-    tasks::Task,
-};
+use bevy::{color::palettes::css, prelude::*, tasks::Task};
 use bevy_renet::renet::RenetServer;
 use biome::RegisterBiomesSet;
 use cosmos_core::{
@@ -239,7 +229,7 @@ fn add_biosphere(
 
         commands.entity(entity).insert(BiosphereMarker::new(biosphere.unlocalized_name()));
 
-        event_writer.send(NeedsBiosphereEvent {
+        event_writer.write(NeedsBiosphereEvent {
             biosphere_id: biosphere.unlocalized_name().to_owned(),
             entity,
         });

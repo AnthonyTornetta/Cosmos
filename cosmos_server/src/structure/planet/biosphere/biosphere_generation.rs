@@ -1,8 +1,8 @@
 //! Responsible for the default generation of biospheres.
 
 use crate::{init::init_world::ServerSeed, structure::planet::biosphere::biome::GenerateChunkFeaturesEvent};
-use bevy::{prelude::*, utils::hashbrown::HashSet};
-use bevy_easy_compute::prelude::*;
+use bevy::{prelude::*, platform::collections::HashSet};
+use bevy_app_compute::prelude::*;
 use cosmos_core::{
     block::{Block, block_events::BlockEventsSet, block_face::BlockFace},
     ecs::mut_events::{EventWriterCustomSend, MutEvent, MutEventsCommand},
@@ -207,7 +207,7 @@ pub(crate) fn generate_chunks_from_gpu_data<T: BiosphereMarkerComponent>(
             }
         }
 
-        ev_writer.send(GenerateChunkFeaturesEvent {
+        ev_writer.write(GenerateChunkFeaturesEvent {
             included_biomes,
             // biome_ids,
             chunk: needs_generated_chunk.chunk.chunk_coordinates(),
@@ -224,7 +224,7 @@ pub(crate) fn generate_chunks_from_gpu_data<T: BiosphereMarkerComponent>(
 /// so by the end of this set the chunk is ready to go.
 fn send_chunk_init_event(mut chunk_init_event_writer: EventWriter<ChunkInitEvent>, mut ev_reader: EventReader<GenerateChunkFeaturesEvent>) {
     for generate_chunk_features_event_reader in ev_reader.read() {
-        chunk_init_event_writer.send(ChunkInitEvent {
+        chunk_init_event_writer.write(ChunkInitEvent {
             coords: generate_chunk_features_event_reader.chunk,
             serialized_block_data: None,
             structure_entity: generate_chunk_features_event_reader.structure_entity,

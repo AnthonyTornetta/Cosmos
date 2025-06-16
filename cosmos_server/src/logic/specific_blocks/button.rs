@@ -1,10 +1,7 @@
 //! Logic behavior for the button, a block that outputs a logic signal on all 6 faces when on for a
 //! short period, before turning off again.
 
-use bevy::{
-    app::{App, Update},
-    prelude::{Component, Entity, EventReader, EventWriter, IntoSystemConfigs, OnEnter, Query, Res, ResMut, With},
-};
+use bevy::prelude::*;
 
 use cosmos_core::{
     block::{

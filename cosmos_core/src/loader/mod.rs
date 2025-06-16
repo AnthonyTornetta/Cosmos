@@ -6,7 +6,7 @@
 //! Just if you ever remove a call to `register_loader` or `finish_loading` you may have to add it to another
 //! system in that state.
 
-use bevy::{prelude::*, state::state::FreelyMutableState, utils::HashSet};
+use bevy::{platform::collections::HashSet, prelude::*, state::state::FreelyMutableState};
 
 /// Using the LoadingManager struct avoids passing ugly generics around the code, rather than directly using the LoadingStatus struct
 #[derive(Default, Resource)]
@@ -21,14 +21,14 @@ impl LoadingManager {
     pub fn register_loader(&mut self, event_writer: &mut EventWriter<AddLoadingEvent>) -> usize {
         self.next_id += 1;
 
-        event_writer.send(AddLoadingEvent { loading_id: self.next_id });
+        event_writer.write(AddLoadingEvent { loading_id: self.next_id });
 
         self.next_id
     }
 
     /// Finishes loading for this id.
     pub fn finish_loading(&mut self, id: usize, event_writer: &mut EventWriter<DoneLoadingEvent>) {
-        event_writer.send(DoneLoadingEvent { loading_id: id });
+        event_writer.write(DoneLoadingEvent { loading_id: id });
     }
 }
 

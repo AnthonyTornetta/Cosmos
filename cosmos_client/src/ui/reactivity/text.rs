@@ -1,12 +1,7 @@
 //! Reactivity for text
 
 use super::{BindValues, NeedsValueFetched, ReactableFields, ReactableValue, ReactiveUiSystemSet};
-use bevy::{
-    app::{App, Update},
-    ecs::{event::EventReader, system::Query},
-    log::{error, warn},
-    prelude::{Entity, IntoSystemConfigs, Text, TextUiWriter, With},
-};
+use bevy::prelude::*;
 
 fn on_need_update_value<T: ReactableValue>(
     q_react_value: Query<&T>,

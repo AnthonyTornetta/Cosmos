@@ -8,19 +8,7 @@ use super::{
     UiSystemSet,
     components::{slider::SliderUiSystemSet, text_input::TextInputUiSystemSet},
 };
-use bevy::{
-    app::{App, Update},
-    ecs::{
-        component::Component,
-        entity::Entity,
-        event::{Event, EventWriter},
-        query::Changed,
-        schedule::IntoSystemConfigs,
-        schedule::IntoSystemSetConfigs,
-        system::Query,
-    },
-    prelude::{Deref, SystemSet},
-};
+use bevy::{ecs::component::Mutable, prelude::*};
 use cosmos_core::netty::system_sets::NetworkingSystemsSet;
 
 pub mod slider;
@@ -48,7 +36,7 @@ pub enum ReactableFields {
 }
 
 /// A value that can be reacted to
-pub trait ReactableValue: Send + Sync + 'static + PartialEq + Component {
+pub trait ReactableValue: Send + Sync + 'static + PartialEq + Component<Mutability = Mutable> {
     /// Convert whatever value this is into a string representation
     fn as_value(&self) -> String;
     /// Parse this value back from the string representation
@@ -117,7 +105,7 @@ fn listen_changes_to_reactors<T: ReactableValue>(
     for ent in q_changed_reactors.iter_mut() {
         for (bound_ent, bound_value) in q_bound_listeners.iter() {
             if bound_value.iter().any(|x| x.bound_entity == ent) {
-                ev_writer.send(NeedsValueFetched(bound_ent));
+                ev_writer.write(NeedsValueFetched(bound_ent));
             }
         }
     }

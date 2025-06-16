@@ -1,16 +1,6 @@
 //! Handles the backbone for blocks that store their own data, such as containers
 
-use bevy::{
-    app::{App, First},
-    core::Name,
-    ecs::{
-        component::Component,
-        entity::Entity,
-        query::Without,
-        system::{Commands, Query},
-    },
-    reflect::Reflect,
-};
+use bevy::prelude::*;
 use serde::{Deserialize, Serialize};
 
 use crate::structure::{coordinates::ChunkBlockCoordinate, structure_block::StructureBlock};

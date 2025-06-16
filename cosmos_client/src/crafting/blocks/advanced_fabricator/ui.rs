@@ -1,17 +1,6 @@
 use std::cmp::Ordering;
 
-use bevy::{
-    app::Update,
-    color::{Color, Srgba, palettes::css},
-    core::Name,
-    log::{error, info},
-    prelude::{
-        Added, App, BuildChildren, Changed, ChildBuild, ChildBuilder, Commands, Component, DespawnRecursiveExt, Entity, Event, EventReader,
-        IntoSystemConfigs, Query, Res, ResMut, Text, With, in_state, resource_exists,
-    },
-    text::TextFont,
-    ui::{AlignItems, BackgroundColor, FlexDirection, JustifyContent, Node, TargetCamera, UiRect, Val},
-};
+use bevy::{color::palettes::css, prelude::*};
 use cosmos_core::{
     block::data::{BlockData, BlockDataIdentifier},
     crafting::{
@@ -100,7 +89,7 @@ fn populate_menu(
     q_cam: Query<Entity, With<MainCamera>>,
 ) {
     for (ent, fab_menu) in q_added_menu.iter() {
-        let Ok(cam) = q_cam.get_single() else {
+        let Ok(cam) = q_cam.single() else {
             return;
         };
 
@@ -113,7 +102,7 @@ fn populate_menu(
             error!("No inventory in advanced_fabricator!");
             continue;
         };
-        let Ok(player_ent) = q_player.get_single() else {
+        let Ok(player_ent) = q_player.single() else {
             return;
         };
 
@@ -132,7 +121,7 @@ fn populate_menu(
         let item_slot_size = 64.0;
 
         ecmds.insert((
-            TargetCamera(cam),
+            UiTargetCamera(cam),
             OpenMenu::new(0),
             BackgroundColor(Srgba::hex("2D2D2D").unwrap().into()),
             Node {
@@ -247,7 +236,7 @@ fn create_ui_recipes_list(
     lang: &Lang<Item>,
     text_style: &TextFont,
     inv_items: Vec<&ItemStack>,
-    p: &mut ChildBuilder,
+    p: &mut ChildSpawnerCommands,
     selected: Option<&Recipe>,
 ) {
     let mut recipes = crafting_recipes.iter().collect::<Vec<_>>();
@@ -374,20 +363,21 @@ fn create_ui_recipes_list(
         });
 
         if let Some(s) = selected
-            && recipe == &s.0 {
-                ecmds.insert((
-                    SelectedRecipe,
-                    BackgroundColor(
-                        Srgba {
-                            red: 1.0,
-                            green: 1.0,
-                            blue: 1.0,
-                            alpha: 0.1,
-                        }
-                        .into(),
-                    ),
-                ));
-            }
+            && recipe == &s.0
+        {
+            ecmds.insert((
+                SelectedRecipe,
+                BackgroundColor(
+                    Srgba {
+                        red: 1.0,
+                        green: 1.0,
+                        blue: 1.0,
+                        alpha: 0.1,
+                    }
+                    .into(),
+                ),
+            ));
+        }
     }
 }
 
@@ -407,7 +397,7 @@ fn on_change_inventory(
                 continue;
             }
 
-            let selected = q_selected_recipe.get_single().ok();
+            let selected = q_selected_recipe.single().ok();
 
             let text_style = TextFont {
                 font: font.0.clone_weak(),
@@ -417,7 +407,7 @@ fn on_change_inventory(
 
             let inv_items = inv.iter().flatten().collect::<Vec<_>>();
 
-            commands.entity(ent).despawn_descendants().with_children(|p| {
+            commands.entity(ent).despawn_related::<Children>().with_children(|p| {
                 create_ui_recipes_list(&crafting_recipes, &items, &lang, &text_style, inv_items, p, selected);
             });
         }
@@ -503,17 +493,17 @@ fn on_select_item(
     mapping: Res<NetworkMapping>,
 ) {
     for ev in evr_select_item.read() {
-        if let Ok(selected_recipe) = q_selected_recipe.get_single() {
+        if let Ok(selected_recipe) = q_selected_recipe.single() {
             if ev.0 == selected_recipe {
                 let Ok(recipe) = q_recipe.get(selected_recipe) else {
                     continue;
                 };
 
-                let Ok((player_ent, player_inv)) = q_player.get_single() else {
+                let Ok((player_ent, player_inv)) = q_player.single() else {
                     continue;
                 };
 
-                let Ok(menu) = q_menu.get_single() else {
+                let Ok(menu) = q_menu.single() else {
                     continue;
                 };
 
@@ -562,7 +552,7 @@ fn listen_create(
     input_handler: InputChecker,
 ) {
     for _ in evr_create.read() {
-        let Ok(fab_menu) = q_open_fab_menu.get_single() else {
+        let Ok(fab_menu) = q_open_fab_menu.single() else {
             return;
         };
 
@@ -573,7 +563,7 @@ fn listen_create(
             continue;
         };
 
-        let Ok(recipe) = q_selected_recipe.get_single() else {
+        let Ok(recipe) = q_selected_recipe.single() else {
             return;
         };
 
@@ -592,7 +582,7 @@ fn listen_create(
 
             info!("Sending craft {quantity} event!");
 
-            nevw_craft_event.send(CraftAdvancedFabricatorRecipeEvent {
+            nevw_craft_event.write(CraftAdvancedFabricatorRecipeEvent {
                 block,
                 recipe: recipe.0.clone(),
                 quantity,
@@ -608,11 +598,11 @@ fn color_fabricate_button(
     q_inventory: Query<&Inventory>,
     mut q_fab_button: Query<&mut CosmosButton<CreateClickedEvent>, With<FabricateButton>>,
 ) {
-    let Ok(mut btn) = q_fab_button.get_single_mut() else {
+    let Ok(mut btn) = q_fab_button.single_mut() else {
         return;
     };
 
-    let Ok(fab_menu) = q_open_fab_menu.get_single() else {
+    let Ok(fab_menu) = q_open_fab_menu.single() else {
         return;
     };
 
@@ -624,7 +614,7 @@ fn color_fabricate_button(
         return;
     };
 
-    let Ok(recipe) = q_selected_recipe.get_single() else {
+    let Ok(recipe) = q_selected_recipe.single() else {
         return;
     };
 

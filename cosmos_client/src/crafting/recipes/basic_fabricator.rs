@@ -1,7 +1,4 @@
-use bevy::{
-    app::Update,
-    prelude::{App, Commands, EventReader, IntoSystemConfigs},
-};
+use bevy::prelude::*;
 use cosmos_core::{
     crafting::recipes::basic_fabricator::SyncBasicFabricatorRecipesEvent,
     netty::{sync::events::client_event::NettyEventReceived, system_sets::NetworkingSystemsSet},

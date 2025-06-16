@@ -1,10 +1,6 @@
 //! Molten biome generation
 
-use bevy::{
-    ecs::system::{Res, ResMut},
-    prelude::{App, IntoSystemConfigs},
-    state::state::OnExit,
-};
+use bevy::prelude::*;
 use cosmos_core::{
     block::Block,
     registry::Registry,

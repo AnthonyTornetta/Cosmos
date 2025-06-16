@@ -4,11 +4,7 @@ use crate::{
     netty::system_sets::NetworkingSystemsSet,
     structure::events::{ChunkSetEvent, StructureLoadedEvent},
 };
-use bevy::{
-    ecs::schedule::{IntoSystemConfigs, IntoSystemSetConfigs, SystemSet},
-    prelude::{App, Commands, Component, EventReader, EventWriter, Query, Update},
-    reflect::Reflect,
-};
+use bevy::prelude::*;
 use serde::{Deserialize, Serialize};
 
 use super::Structure;
@@ -38,7 +34,7 @@ fn listen_chunk_done_loading(
             if chunks_needed.amount_needed == 0 {
                 commands.entity(ev.structure_entity).remove::<ChunksNeedLoaded>();
 
-                event_writer.send(StructureLoadedEvent {
+                event_writer.write(StructureLoadedEvent {
                     structure_entity: ev.structure_entity,
                 });
             }

@@ -7,14 +7,7 @@
 //!
 //! See [`saving::default_save`] for an example.
 
-use bevy::{
-    core::Name,
-    ecs::schedule::{IntoSystemSetConfigs, SystemSet},
-    hierarchy::Parent,
-    log::{error, info, warn},
-    prelude::{App, Commands, Component, Entity, First, IntoSystemConfigs, Or, Query, ResMut, Transform, With, Without},
-    reflect::Reflect,
-};
+use bevy::prelude::*;
 use bevy_rapier3d::prelude::Velocity;
 use cosmos_core::{
     ecs::{NeedsDespawned, despawn_needed},
@@ -74,8 +67,8 @@ pub struct NeedsBlueprinted {
 }
 
 fn check_needs_saved(
-    q_parent: Query<&Parent, Or<(Without<SerializedData>, Without<NeedsSaved>)>>,
-    q_needs_serialized_data: Query<(Entity, Option<&Parent>), (With<NeedsSaved>, Without<NeverSave>, Without<SerializedData>)>,
+    q_parent: Query<&ChildOf, Or<(Without<SerializedData>, Without<NeedsSaved>)>>,
+    q_needs_serialized_data: Query<(Entity, Option<&ChildOf>), (With<NeedsSaved>, Without<NeverSave>, Without<SerializedData>)>,
     mut commands: Commands,
 ) {
     for (ent, mut parent) in q_needs_serialized_data.iter() {
@@ -83,7 +76,7 @@ fn check_needs_saved(
 
         // If something that needs saved has parents, we must propagate it up to work properly.
         while let Some(p) = parent {
-            let ent = p.get();
+            let ent = p.parent();
             commands.entity(ent).insert((SerializedData::default(), NeedsSaved));
             parent = q_parent.get(ent).ok();
         }
@@ -174,7 +167,7 @@ fn done_saving(
         ),
         (With<NeedsSaved>, Without<NeverSave>),
     >,
-    q_parent: Query<&Parent>,
+    q_parent: Query<&ChildOf>,
     q_entity_id: Query<&EntityId>,
     q_serialized_data: Query<(&SerializedData, &EntityId, Option<&LoadingDistance>)>,
     dead_saves_query: Query<&PreviousSaveFileIdentifier, (With<NeedsDespawned>, Without<NeedsSaved>)>,
@@ -260,16 +253,17 @@ fn done_saving(
         }
 
         if matches!(&save_file_identifier.identifier_type, SaveFileIdentifierType::Base(_, _, _))
-            && let Some(loc) = sd.location {
-                sectors_cache.insert(loc.sector(), *entity_id, loading_distance.map(|ld| ld.load_distance()));
-            }
+            && let Some(loc) = sd.location
+        {
+            sectors_cache.insert(loc.sector(), *entity_id, loading_distance.map(|ld| ld.load_distance()));
+        }
     }
 }
 
 /// This is in a bad spot, and should be moved.
 pub(crate) fn calculate_sfi(
     entity: Entity,
-    q_parent: &Query<&Parent>,
+    q_parent: &Query<&ChildOf>,
     q_entity_id: &Query<&EntityId>,
     q_serialized_data: &Query<(&SerializedData, &EntityId, Option<&LoadingDistance>)>,
 ) -> Option<SaveFileIdentifier> {
@@ -291,7 +285,7 @@ pub(crate) fn calculate_sfi(
         return None;
     };
 
-    let Some(parent_sfi) = calculate_sfi(parent.get(), q_parent, q_entity_id, q_serialized_data) else {
+    let Some(parent_sfi) = calculate_sfi(parent.parent(), q_parent, q_entity_id, q_serialized_data) else {
         error!("Could not calculate parent save file identifier - not saving {entity:?}");
         return None;
     };

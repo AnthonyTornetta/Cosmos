@@ -2,14 +2,7 @@
 //!
 //! Note that build mode is currently only intended for ships, but is not yet manually limited to only ships.
 
-use bevy::{
-    math::Quat,
-    prelude::{
-        Added, App, BuildChildrenTransformExt, Changed, Commands, Component, Entity, Event, EventReader, EventWriter, IntoSystemConfigs,
-        IntoSystemSetConfigs, Parent, Query, RemovedComponents, SystemSet, Transform, Update, With, Without,
-    },
-    reflect::Reflect,
-};
+use bevy::prelude::*;
 use bevy_rapier3d::{
     dynamics::RigidBody,
     prelude::{RigidBodyDisabled, Sensor},
@@ -132,7 +125,7 @@ pub struct ExitBuildModeEvent {
 
 fn enter_build_mode_listener(mut commands: Commands, mut event_reader: EventReader<EnterBuildModeEvent>) {
     for ev in event_reader.read() {
-        let Some(mut ecmds) = commands.get_entity(ev.player_entity) else {
+        let Ok(mut ecmds) = commands.get_entity(ev.player_entity) else {
             continue;
         };
 
@@ -155,7 +148,7 @@ fn on_add_build_mode(mut commands: Commands, q_added_build_mode: Query<(Entity, 
 
 fn on_remove_build_mode(mut commands: Commands, mut removed_components: RemovedComponents<BuildMode>) {
     for ent in removed_components.read() {
-        if let Some(mut ecmds) = commands.get_entity(ent) {
+        if let Ok(mut ecmds) = commands.get_entity(ent) {
             ecmds
                 .remove::<BuildMode>()
                 .remove::<RigidBodyDisabled>()
@@ -168,7 +161,7 @@ fn on_remove_build_mode(mut commands: Commands, mut removed_components: RemovedC
 
 fn exit_build_mode_listener(mut commands: Commands, mut event_reader: EventReader<ExitBuildModeEvent>) {
     for ev in event_reader.read() {
-        let Some(mut ecmds) = commands.get_entity(ev.player_entity) else {
+        let Ok(mut ecmds) = commands.get_entity(ev.player_entity) else {
             continue;
         };
 
@@ -186,18 +179,18 @@ fn exit_build_mode_listener(mut commands: Commands, mut event_reader: EventReade
 struct InBuildModeFlag;
 
 fn exit_build_mode_when_parent_dies(
-    query: Query<Entity, (With<BuildMode>, Without<Parent>)>,
-    changed_query: Query<(Entity, Option<&InBuildModeFlag>), (With<BuildMode>, Changed<Parent>)>,
+    query: Query<Entity, (With<BuildMode>, Without<ChildOf>)>,
+    changed_query: Query<(Entity, Option<&InBuildModeFlag>), (With<BuildMode>, Changed<ChildOf>)>,
     mut event_writer: EventWriter<ExitBuildModeEvent>,
     mut commands: Commands,
 ) {
     for entity in query.iter() {
-        event_writer.send(ExitBuildModeEvent { player_entity: entity });
+        event_writer.write(ExitBuildModeEvent { player_entity: entity });
     }
 
     for (entity, in_build_mode) in changed_query.iter() {
         if in_build_mode.is_some() {
-            event_writer.send(ExitBuildModeEvent { player_entity: entity });
+            event_writer.write(ExitBuildModeEvent { player_entity: entity });
         } else {
             commands.entity(entity).insert(InBuildModeFlag);
         }

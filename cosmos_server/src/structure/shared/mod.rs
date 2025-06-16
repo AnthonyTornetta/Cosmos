@@ -1,9 +1,6 @@
 //! Shared systems between different structure types
 
-use bevy::{
-    prelude::{App, Commands, Entity, EventWriter, IntoSystemConfigs, IntoSystemSetConfigs, Query, Res, SystemSet, Update, in_state},
-    time::Time,
-};
+use bevy::prelude::*;
 use cosmos_core::{
     block::{Block, block_events::BlockEventsSet},
     ecs::NeedsDespawned,
@@ -27,7 +24,7 @@ fn on_melting_down(
 ) {
     for (entity, mut structure, mut melting_down) in query.iter_mut() {
         if pilot_query.contains(entity) {
-            change_pilot_event.send(ChangePilotEvent {
+            change_pilot_event.write(ChangePilotEvent {
                 structure_entity: entity,
                 pilot_entity: None,
             });

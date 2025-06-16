@@ -1,9 +1,6 @@
 //! Logic behavior for "Logic On", a block that outputs a logic signal on all 6 faces.
 
-use bevy::{
-    app::{App, Update},
-    prelude::{EventReader, EventWriter, IntoSystemConfigs, OnEnter, Query, Res, ResMut, States},
-};
+use bevy::prelude::*;
 
 use cosmos_core::{
     block::Block,

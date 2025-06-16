@@ -5,7 +5,7 @@
 use bevy::{
     prelude::{App, EventWriter, Res, ResMut, Resource, States},
     state::state::OnExit,
-    utils::HashMap,
+    platform::collections::HashMap,
 };
 
 use crate::{

@@ -1,22 +1,9 @@
 //! An ItemStack represents an item & the quantity of that item.
 
 use bevy::{
-    app::Update,
-    core::Name,
-    ecs::{
-        bundle::Bundle,
-        component::Component,
-        entity::Entity,
-        query::{Added, QueryData, QueryFilter, QueryItem, ROQueryItem, With, Without},
-        schedule::{IntoSystemConfigs, IntoSystemSetConfigs, SystemSet},
-        system::{Commands, Query, Resource},
-    },
-    hierarchy::BuildChildren,
-    log::warn,
-    prelude::App,
-    reflect::Reflect,
-    state::{condition::in_state, state::States},
-    utils::HashSet,
+    ecs::query::{QueryData, QueryFilter, QueryItem, ROQueryItem},
+    platform::collections::HashSet,
+    prelude::*,
 };
 use serde::{Deserialize, Serialize};
 
@@ -217,7 +204,7 @@ impl ItemStack {
     /// * `inventory_pointer` - If this is a part of an inventory, this should be (inventory_entity, slot).
     pub fn insert_itemstack_data<T: Bundle>(&mut self, inventory_pointer: (Entity, u32), data: T, commands: &mut Commands) -> Entity {
         if let Some(data_ent) = self.data_entity {
-            if commands.get_entity(data_ent).is_none() {
+            if commands.get_entity(data_ent).is_err() {
                 warn!("Invalid itemstack entity - {data_ent:?}. Creating new one.");
 
                 return self.create_itemstack_data_entity(commands, data, inventory_pointer);
@@ -230,16 +217,15 @@ impl ItemStack {
     }
 
     fn create_itemstack_data_entity<T: Bundle>(&mut self, commands: &mut Commands, data: T, inventory_pointer: (Entity, u32)) -> Entity {
-        let mut ecmds = commands.spawn((
+        let ecmds = commands.spawn((
             data,
             Name::new("ItemStack data"),
             ItemStackData {
                 inventory_pointer,
                 item_id: self.item_id,
             },
+            ChildOf(inventory_pointer.0),
         ));
-
-        ecmds.set_parent(inventory_pointer.0);
 
         let ent = ecmds.id();
         self.data_entity = Some(ent);
@@ -271,6 +257,7 @@ impl ItemStack {
                     inventory_pointer,
                     item_id: self.item_id,
                 },
+                ChildOf(inventory_pointer.0),
             ));
 
             let data_ent = ecmds.id();
@@ -278,8 +265,6 @@ impl ItemStack {
             let data = create_data_closure(data_ent);
 
             ecmds.insert(data);
-
-            ecmds.set_parent(inventory_pointer.0);
 
             self.data_entity = Some(data_ent);
 
@@ -325,13 +310,13 @@ impl ItemStack {
             return;
         };
 
-        commands
-            .entity(data_ent)
-            .insert(ItemStackData {
+        commands.entity(data_ent).insert((
+            ItemStackData {
                 inventory_pointer: new_inventory_pointer,
                 item_id: self.item_id,
-            })
-            .set_parent(new_inventory_pointer.0);
+            },
+            ChildOf(new_inventory_pointer.0),
+        ));
     }
 
     #[inline]

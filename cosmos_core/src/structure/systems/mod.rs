@@ -12,7 +12,7 @@ use std::{error::Error, fmt::Formatter};
 use bevy::{
     ecs::query::{QueryData, QueryFilter, QueryItem, ROQueryItem},
     prelude::*,
-    utils::HashMap,
+    platform::collections::HashMap,
 };
 use serde::{Deserialize, Serialize};
 

@@ -58,7 +58,7 @@ fn load_structure(
         } = res
         {
             // Maybe wait till block data is set for this?
-            chunk_set_event_writer.send(ChunkInitEvent {
+            chunk_set_event_writer.write(ChunkInitEvent {
                 structure_entity: entity,
                 coords,
                 serialized_block_data: None,
@@ -70,11 +70,11 @@ fn load_structure(
 
     entity_cmd.insert((structure, Station, loc));
 
-    structure_loaded_event_writer.send(StructureLoadedEvent { structure_entity: entity });
+    structure_loaded_event_writer.write(StructureLoadedEvent { structure_entity: entity });
 
     if let Ok(block_data) = s_data.deserialize_data::<AllBlockData>("cosmos:block_data") {
         for (chunk_coord, data) in block_data.0 {
-            chunk_load_block_data_event_writer.send(ChunkLoadBlockDataEvent {
+            chunk_load_block_data_event_writer.write(ChunkLoadBlockDataEvent {
                 data,
                 chunk: chunk_coord,
                 structure_entity: entity,

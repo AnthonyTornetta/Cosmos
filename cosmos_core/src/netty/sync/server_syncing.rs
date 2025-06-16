@@ -20,12 +20,11 @@ use bevy::ecs::event::EventReader;
 use bevy::ecs::query::Without;
 use bevy::ecs::removal_detection::RemovedComponents;
 use bevy::ecs::schedule::common_conditions::resource_exists;
-use bevy::ecs::schedule::{IntoSystemConfigs, IntoSystemSetConfigs};
 use bevy::ecs::system::Commands;
 use bevy::log::{info, warn};
-use bevy::prelude::{Component, With};
+use bevy::platform::collections::{HashMap, HashSet};
+use bevy::prelude::{Component, IntoScheduleConfigs, With};
 use bevy::reflect::Reflect;
-use bevy::utils::{HashMap, HashSet};
 use bevy::{
     app::{App, Startup, Update},
     ecs::{
@@ -121,7 +120,7 @@ fn server_remove_component<T: SyncableComponent>(
             }
         }
 
-        if let Some(mut ecmds) = commands.get_entity(ev.entity) {
+        if let Ok(mut ecmds) = commands.get_entity(ev.entity) {
             ecmds.remove::<T>();
         }
     }
@@ -183,7 +182,7 @@ fn server_deserialize_component<T: SyncableComponent>(
             }
         }
 
-        if let Some(mut ecmds) = commands.get_entity(ev.entity) {
+        if let Ok(mut ecmds) = commands.get_entity(ev.entity) {
             let Ok(deserialized) = cosmos_encoder::deserialize_uncompressed::<T>(&ev.raw_data) else {
                 continue;
             };
@@ -453,7 +452,7 @@ fn server_receive_components(
                             }
                         };
 
-                        ev_writer_sync.send(GotComponentToSyncEvent {
+                        ev_writer_sync.write(GotComponentToSyncEvent {
                             client_id,
                             component_id,
                             entity,
@@ -500,7 +499,7 @@ fn server_receive_components(
                         }
                     };
 
-                    ev_writer_remove.send(GotComponentToRemoveEvent {
+                    ev_writer_remove.write(GotComponentToRemoveEvent {
                         client_id,
                         component_id,
                         entity,

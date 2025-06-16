@@ -4,7 +4,7 @@ use bevy::{
     math::Quat,
     prelude::{App, Component, Resource},
     reflect::Reflect,
-    utils::HashMap,
+    platform::collections::HashMap,
 };
 use cosmos_core::{
     faction::FactionId,

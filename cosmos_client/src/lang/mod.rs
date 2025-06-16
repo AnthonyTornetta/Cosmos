@@ -7,7 +7,7 @@ use std::{fs, marker::PhantomData};
 use bevy::{
     log::warn,
     prelude::{App, Resource},
-    utils::HashMap,
+    platform::collections::HashMap,
 };
 use cosmos_core::{block::Block, item::Item, registry::identifiable::Identifiable};
 

@@ -3,21 +3,8 @@ use std::{
     time::SystemTime,
 };
 
-use bevy::{
-    ecs::{
-        change_detection::DetectChangesMut,
-        event::{Event, EventReader, EventWriter},
-        query::{Added, Changed, Without},
-        schedule::common_conditions::resource_exists,
-    },
-    log::{info, warn},
-    math::{Vec3, Vec4},
-    prelude::{
-        App, Commands, Component, Condition, Entity, GlobalTransform, IntoSystemConfigs, Quat, Query, Res, ResMut, Resource, Update, With,
-        in_state,
-    },
-};
-use bevy_easy_compute::prelude::{AppComputeWorker, BevyEasyComputeSet};
+use bevy::prelude::*;
+use bevy_app_compute::prelude::{AppComputeWorker, BevyEasyComputeSet};
 use cosmos_core::{
     block::{Block, block_face::BlockFace},
     ecs::mut_events::{EventWriterCustomSend, MutEvent, MutEventsCommand},
@@ -477,7 +464,7 @@ fn generate_player_lods(
         (Without<LodStuffTodo>, Without<LodBeingGenerated>, With<Planet>),
     >,
 ) {
-    let Ok(player_location) = players.get_single() else {
+    let Ok(player_location) = players.single() else {
         return;
     };
 

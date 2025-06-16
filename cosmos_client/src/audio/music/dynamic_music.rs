@@ -142,7 +142,7 @@ fn trigger_music_playing(mut next_song_time: ResMut<NextSongTime>, mut event_wri
 
     next_song_time.0 = time.elapsed_secs() + random_range(MIN_DELAY_SEC, MAX_DELAY_SEC);
 
-    event_writer.send(PlayMusicEvent {
+    event_writer.write(PlayMusicEvent {
         atmosphere: MusicAtmosphere::Calm,
     });
 }

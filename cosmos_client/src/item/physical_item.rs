@@ -1,13 +1,6 @@
 //! Renders physical items in the client
 
-use bevy::{
-    app::Update,
-    math::Vec3,
-    prelude::{
-        Added, App, Changed, Commands, Entity, EventWriter, IntoSystemConfigs, Mesh3d, Or, Query, Res, Transform, Visibility, With,
-        in_state,
-    },
-};
+use bevy::prelude::*;
 use cosmos_core::{
     inventory::Inventory,
     item::{Item, physical_item::PhysicalItem},
@@ -49,8 +42,8 @@ fn render_physical_item(
         trans.scale = Vec3::splat(0.2);
 
         ecmds.insert((Visibility::default(), Mesh3d(rendering_info.mesh_handle().clone_weak())));
-        evw_remove_material.send(RemoveAllMaterialsEvent { entity: ent });
-        evw_add_material.send(AddMaterialEvent {
+        evw_remove_material.write(RemoveAllMaterialsEvent { entity: ent });
+        evw_add_material.write(AddMaterialEvent {
             entity: ent,
             add_material_id: rendering_info.material_id(),
             material_type: MaterialType::Normal,

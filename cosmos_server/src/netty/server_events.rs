@@ -65,9 +65,10 @@ pub(super) fn handle_server_events(
                 client_ticks.ticks.remove(client_id);
 
                 if let Some(player_entity) = lobby.remove_player(*client_id)
-                    && let Some(mut ecmds) = commands.get_entity(player_entity) {
-                        ecmds.insert((NeedsSaved, NeedsDespawned));
-                    }
+                    && let Ok(mut ecmds) = commands.get_entity(player_entity)
+                {
+                    ecmds.insert((NeedsSaved, NeedsDespawned));
+                }
 
                 let message = cosmos_encoder::serialize(&ServerReliableMessages::PlayerRemove { id: *client_id });
 

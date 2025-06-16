@@ -75,7 +75,7 @@ See [the issues page](https://github.com/AnthonyTornetta/Cosmos/issues) for the 
 - [ ] Reduce amount of packets server sends per second
 - [ ] Respawn anchor
 - [ ] Screenshots
-- [ ] Update to Bevy 0.16
+- [x] Update to Bevy 0.16
 - [ ] Steam Integration
 - [ ] Blueprint ship/station in-game
 

@@ -1,9 +1,6 @@
 //! Netty system sets
 
-use bevy::{
-    app::{App, Update},
-    ecs::schedule::{IntoSystemSetConfigs, SystemSet},
-};
+use bevy::prelude::*;
 
 use crate::physics::location::CosmosBundleSet;
 

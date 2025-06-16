@@ -1,10 +1,6 @@
 use std::{ffi::OsStr, fs};
 
-use bevy::{
-    app::Update,
-    log::{error, info},
-    prelude::{App, Commands, EventReader, IntoSystemConfigs, OnEnter, Res, in_state, resource_exists_and_changed},
-};
+use bevy::prelude::*;
 use serde::{Deserialize, Serialize};
 
 use cosmos_core::{
@@ -106,7 +102,7 @@ fn sync_recipes_on_join(
     mut nevw_sync_recipes: NettyEventWriter<SyncAdvancedFabricatorRecipesEvent>,
 ) {
     for ev in evr_loaded_registries.read() {
-        nevw_sync_recipes.send(SyncAdvancedFabricatorRecipesEvent(recipes.clone()), ev.0);
+        nevw_sync_recipes.write(SyncAdvancedFabricatorRecipesEvent(recipes.clone()), ev.0);
     }
 }
 

@@ -30,7 +30,7 @@ pub struct Grounded;
 struct GroundedChecker;
 
 fn append_grounded_check(mut commands: Commands, q_player: Query<Entity, Added<LocalPlayer>>) {
-    let Ok(player_ent) = q_player.get_single() else {
+    let Ok(player_ent) = q_player.single() else {
         return;
     };
     commands.entity(player_ent).with_children(|p| {
@@ -52,11 +52,11 @@ fn check_grounded(
     q_player: Query<Entity, With<LocalPlayer>>,
     q_ground_checker: Query<(&RapierContextEntityLink, Entity), With<GroundedChecker>>,
 ) {
-    let Ok((rapier_link, collider_ent)) = q_ground_checker.get_single() else {
+    let Ok((rapier_link, collider_ent)) = q_ground_checker.single() else {
         return;
     };
 
-    let Ok(player_ent) = q_player.get_single() else {
+    let Ok(player_ent) = q_player.single() else {
         return;
     };
 
@@ -89,12 +89,12 @@ pub(crate) fn process_player_movement(
 ) {
     let any_open_menus = !q_show_cursor.is_empty();
 
-    let Ok(cam_trans) = q_camera.get_single() else {
+    let Ok(cam_trans) = q_camera.single() else {
         return;
     };
 
     // This will be err if the player is piloting a ship
-    let Ok((mut velocity, player_transform, player_alignment, grounded, under_gravity_well)) = q_local_player.get_single_mut() else {
+    let Ok((mut velocity, player_transform, player_alignment, grounded, under_gravity_well)) = q_local_player.single_mut() else {
         return;
     };
 

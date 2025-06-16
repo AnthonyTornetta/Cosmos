@@ -53,7 +53,7 @@ fn gravity_system(
 
             if let Some(mut external_force) = external_force {
                 external_force.impulse += force;
-            } else if let Some(mut entity) = commands.get_entity(ent) {
+            } else if let Ok(mut entity) = commands.get_entity(ent) {
                 entity.insert(ExternalImpulse {
                     impulse: force,
                     ..Default::default()

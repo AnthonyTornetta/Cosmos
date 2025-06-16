@@ -4,7 +4,7 @@ pub mod identifiable;
 pub mod many_to_one;
 pub mod one_to_one;
 
-use bevy::prelude::{App, IntoSystemConfigs, Res, ResMut, Resource, Update, resource_exists_and_changed};
+use bevy::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fmt;

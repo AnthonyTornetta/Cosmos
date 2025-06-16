@@ -36,7 +36,10 @@ fn process_player_camera(
 
     // get the camera info and transform
     // assuming there is exactly one main camera entity, so query::single() is OK
-    let (mut camera_transform, mut camera_helper) = query.single_mut();
+    let Ok((mut camera_transform, mut camera_helper)) = query.single_mut() else {
+        error!("Missing player camera!");
+        return;
+    };
 
     if is_pilot_query.is_empty() {
         camera_helper.angle_x += cursor_delta.y * 0.005 * sensitivity.0;

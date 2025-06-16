@@ -113,7 +113,7 @@ fn load_universe_systems_near_players(
     }
 
     info!("Triggering system generation for {sectors_todo:?}");
-    evw_generate_system.send_batch(sectors_todo.into_iter().map(|system| GenerateSystemEvent { system }));
+    evw_generate_system.write_batch(sectors_todo.into_iter().map(|system| GenerateSystemEvent { system }));
 }
 
 pub(super) fn register(app: &mut App) {

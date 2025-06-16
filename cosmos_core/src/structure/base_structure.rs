@@ -10,7 +10,7 @@ use bevy::{
     },
     prelude::{Entity, EventWriter, GlobalTransform, Vec3},
     reflect::Reflect,
-    utils::HashMap,
+    platform::collections::HashMap,
 };
 use serde::{Deserialize, Serialize};
 
@@ -495,14 +495,14 @@ impl BaseStructure {
                 && let Some((take_damage_event_writer, destroyed_event_writer)) = event_writers {
                     let block = StructureBlock::new(coords, structure_entity);
 
-                    take_damage_event_writer.send(BlockTakeDamageEvent {
+                    take_damage_event_writer.write(BlockTakeDamageEvent {
                         structure_entity,
                         block,
                         new_health: health_left,
                         causer,
                     });
                     if health_left <= 0.0 {
-                        destroyed_event_writer.send(BlockDestroyedEvent { structure_entity, block });
+                        destroyed_event_writer.write(BlockDestroyedEvent { structure_entity, block });
                     }
                 }
 
@@ -862,7 +862,7 @@ impl BaseStructure {
 
             if let Some(evw_block_data_changed) = evw_block_data_changed
                 && let Some(structure_entity) = self.get_entity() {
-                    evw_block_data_changed.send(BlockDataChangedEvent {
+                    evw_block_data_changed.write(BlockDataChangedEvent {
                         block_data_entity: self.block_data(coords),
                         block: StructureBlock::new(coords, structure_entity),
                     });

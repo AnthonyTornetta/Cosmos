@@ -15,7 +15,8 @@ use bevy::input::common_conditions::input_toggle_active;
 use bevy::prelude::KeyCode;
 use bevy::prelude::{App, Plugin, PluginGroup, States};
 use bevy::state::state::FreelyMutableState;
-use bevy_easy_compute::prelude::AppComputePlugin;
+use bevy_app_compute::prelude::AppComputePlugin;
+use bevy_inspector_egui::bevy_egui::EguiPlugin;
 use bevy_inspector_egui::quick::WorldInspectorPlugin;
 
 /// This plugin group should contain everything needed for a cosmos application to run
@@ -130,6 +131,10 @@ impl<T: States + Clone + Copy + FreelyMutableState> Plugin for CosmosCorePlugin<
 impl<T: States + Clone + Copy + FreelyMutableState> PluginGroup for CosmosCorePluginGroup<T> {
     fn build(self) -> PluginGroupBuilder {
         let mut pg = PluginGroupBuilder::start::<Self>();
+
+        pg = pg.add(EguiPlugin {
+            enable_multipass_for_primary_context: true,
+        });
 
         #[cfg(feature = "client")]
         {

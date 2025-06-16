@@ -1,12 +1,4 @@
-use bevy::{
-    app::{App, Update},
-    ecs::{
-        event::{EventReader, EventWriter},
-        schedule::IntoSystemConfigs,
-        system::Query,
-    },
-    transform::components::GlobalTransform,
-};
+use bevy::prelude::*;
 use cosmos_core::{netty::system_sets::NetworkingSystemsSet, projectiles::laser::LaserCollideEvent, structure::shields::Shield};
 
 use super::{ShieldHitEvent, ShieldSet};
@@ -22,7 +14,7 @@ fn handle_laser_hits(
         };
 
         shield.take_damage(ev.laser_strength());
-        ev_writer.send(ShieldHitEvent {
+        ev_writer.write(ShieldHitEvent {
             relative_position: shield_g_trans.affine().matrix3.mul_vec3(ev.local_position_hit()),
             shield_entity: ev.entity_hit(),
         });

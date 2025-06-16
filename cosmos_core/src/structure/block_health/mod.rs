@@ -1,6 +1,6 @@
 //! Blocks have health, and this module is used to represent that.
 
-use bevy::{prelude::App, reflect::Reflect, utils::HashMap};
+use bevy::{platform::collections::HashMap, prelude::App, reflect::Reflect};
 use serde::{Deserialize, Serialize};
 
 pub mod events;

@@ -2,11 +2,7 @@
 
 use std::slice::Iter;
 
-use bevy::{
-    core::Name,
-    math::Quat,
-    prelude::{App, Commands, EventReader, IntoSystemConfigs, Query, Res, ResMut, Update, With, in_state},
-};
+use bevy::prelude::*;
 use bevy_rapier3d::prelude::Velocity;
 use bevy_renet::renet::RenetServer;
 use cosmos_core::{
@@ -123,7 +119,7 @@ fn generate_stars(
     for ev in evr_generate_system.read() {
         let system = ev.system;
 
-        let Ok(galaxy) = q_galaxy.get_single() else {
+        let Ok(galaxy) = q_galaxy.single() else {
             continue;
         };
 

@@ -2,8 +2,8 @@
 
 use bevy::{
     ecs::event::Event,
+    platform::collections::{HashMap, HashSet},
     prelude::*,
-    utils::{HashMap, HashSet},
 };
 use bevy_renet::renet::{ClientId, RenetServer};
 use cosmos_core::{
@@ -57,17 +57,18 @@ pub struct ChunkNeedsGenerated {
 pub fn check_needs_generated_system<T: TGenerateChunkEvent + Event, K: Component>(
     mut commands: Commands,
     needs_generated_query: Query<(Entity, &ChunkNeedsGenerated)>,
-    parent_query: Query<&Parent>,
+    parent_query: Query<&ChildOf>,
     correct_type_query: Query<(), With<K>>,
     mut event_writer: EventWriter<T>,
 ) {
     for (entity, chunk) in needs_generated_query.iter() {
         if let Ok(parent_entity) = parent_query.get(entity)
-            && correct_type_query.contains(parent_entity.get()) {
-                event_writer.send(T::new(chunk.coords, chunk.structure_entity));
+            && correct_type_query.contains(parent_entity.parent())
+        {
+            event_writer.write(T::new(chunk.coords, chunk.structure_entity));
 
-                commands.entity(entity).despawn_recursive();
-            }
+            commands.entity(entity).despawn();
+        }
     }
 }
 
@@ -89,7 +90,7 @@ struct RequestChunkBouncer(RequestChunkEvent);
 
 fn bounce_events(mut event_reader: EventReader<RequestChunkBouncer>, mut event_writer: EventWriter<RequestChunkEvent>) {
     for ev in event_reader.read() {
-        event_writer.send(ev.0);
+        event_writer.write(ev.0);
     }
 }
 
@@ -180,7 +181,7 @@ fn get_requested_chunk(
         });
 
     for bounce in bounced {
-        event_writer.send(bounce);
+        event_writer.write(bounce);
     }
 
     for (client_id, serialized) in serialized {
@@ -195,7 +196,7 @@ fn get_requested_chunk(
         mark_chunk_for_generation(&mut structure, &mut commands, chunk_coords, structure_entity);
 
         for client_id in client_ids {
-            event_writer.send(RequestChunkBouncer(RequestChunkEvent {
+            event_writer.write(RequestChunkBouncer(RequestChunkEvent {
                 chunk_coords,
                 structure_entity,
                 requester_id: client_id,
@@ -258,9 +259,10 @@ fn generate_chunks_near_players(
 
             for chunk in iterator {
                 if let ChunkIteratorResult::EmptyChunk { position: coords } = chunk
-                    && best_planet.get_chunk_state(coords) == ChunkState::Unloaded {
-                        chunks.push(coords);
-                    }
+                    && best_planet.get_chunk_state(coords) == ChunkState::Unloaded
+                {
+                    chunks.push(coords);
+                }
             }
 
             for coords in chunks {
@@ -379,7 +381,7 @@ fn unload_chunks_far_from_players(
                     for (_, &entity) in chunk.all_block_data_entities() {
                         // Block data saving relies on the block data being a child of the thing being saved,
                         // so make that hold true here
-                        commands.entity(entity).insert(BlockDataNeedsSaved).set_parent(save_ent);
+                        commands.entity(entity).insert((BlockDataNeedsSaved, ChildOf(save_ent)));
                     }
 
                     commands.entity(save_ent).insert(SaveChunk(chunk));

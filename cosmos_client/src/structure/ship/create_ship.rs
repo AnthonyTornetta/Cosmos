@@ -1,10 +1,6 @@
 //! Event & its processing for when a player wants to create a ship
 
-use bevy::{
-    ecs::{query::Without, system::Res},
-    log::info,
-    prelude::{App, Event, EventReader, EventWriter, IntoSystemConfigs, Query, ResMut, Update, With, in_state},
-};
+use bevy::prelude::*;
 use bevy_renet::renet::RenetClient;
 use cosmos_core::{
     block::block_events::BlockEventsSet,
@@ -37,7 +33,7 @@ fn listener(
     mut event_writer: EventWriter<CreateShipEvent>,
 ) {
     // Don't create ships while in build mode
-    let Ok(inventory) = q_inventory.get_single() else {
+    let Ok(inventory) = q_inventory.single() else {
         return;
     };
 
@@ -49,7 +45,7 @@ fn listener(
 
         if inventory.can_take_item(ship_core, 1) {
             info!("Sending create ship event!");
-            event_writer.send(CreateShipEvent { name: "Cool name".into() });
+            event_writer.write(CreateShipEvent { name: "Cool name".into() });
         } else {
             info!("Does not have ship core");
         }

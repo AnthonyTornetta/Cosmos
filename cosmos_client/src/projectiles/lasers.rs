@@ -1,6 +1,6 @@
 //! Handles the creation of lasers
 
-use bevy::{prelude::*, utils::HashMap};
+use bevy::{platform::collections::HashMap, prelude::*};
 use bevy_rapier3d::{plugin::RapierContextEntityLink, prelude::RapierContextSimulation};
 use bevy_renet::renet::*;
 use cosmos_core::{
@@ -56,9 +56,10 @@ fn lasers_netty(
                 causer,
             } => {
                 if let Some(server_entity) = no_hit
-                    && let Some(client_entity) = network_mapping.client_from_server(&server_entity) {
-                        no_hit = Some(client_entity);
-                    }
+                    && let Some(client_entity) = network_mapping.client_from_server(&server_entity)
+                {
+                    no_hit = Some(client_entity);
+                }
 
                 let causer = causer.map(|c| network_mapping.client_from_server(&c.0)).and_then(|e| e.map(Causer));
 
@@ -89,7 +90,7 @@ fn lasers_netty(
                     strength,
                     no_hit,
                     &time,
-                    RapierContextEntityLink(q_default_world.single()),
+                    RapierContextEntityLink(q_default_world.single().expect("Missing single rapier context")),
                     &mut commands,
                     causer,
                 )
@@ -104,14 +105,14 @@ fn lasers_netty(
                     continue;
                 };
 
-                ev_writer_laser_cannon_fired.send(LaserCannonSystemFiredEvent(ship_entity));
+                ev_writer_laser_cannon_fired.write(LaserCannonSystemFiredEvent(ship_entity));
             }
             ServerStructureSystemMessages::MissileLauncherSystemFired { ship_entity } => {
                 let Some(ship_entity) = network_mapping.client_from_server(&ship_entity) else {
                     continue;
                 };
 
-                ev_writer_missile_launcher_fired.send(MissileLauncherSystemFiredEvent(ship_entity));
+                ev_writer_missile_launcher_fired.write(MissileLauncherSystemFiredEvent(ship_entity));
             }
             ServerStructureSystemMessages::ShieldHit {
                 shield_entity,

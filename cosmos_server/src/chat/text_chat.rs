@@ -1,8 +1,4 @@
-use bevy::{
-    app::Update,
-    log::info,
-    prelude::{App, EventReader, IntoSystemConfigs, Query, Res, in_state},
-};
+use bevy::prelude::*;
 use cosmos_core::{
     chat::{ClientSendChatMessageEvent, ServerSendChatMessageEvent},
     entities::player::Player,

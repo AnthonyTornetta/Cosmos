@@ -2,22 +2,7 @@
 
 use std::time::Duration;
 
-use bevy::{
-    app::{App, Startup, Update},
-    core::Name,
-    ecs::{
-        component::Component,
-        entity::Entity,
-        query::{With, Without},
-        schedule::{IntoSystemConfigs, IntoSystemSetConfigs, SystemSet},
-        system::{Commands, Query, Res, Resource},
-    },
-    math::{Quat, Vec3},
-    reflect::Reflect,
-    state::condition::in_state,
-    time::{Time, common_conditions::on_timer},
-    utils::hashbrown::HashMap,
-};
+use bevy::{platform::collections::HashMap, prelude::*, time::common_conditions::on_timer};
 use cosmos_core::{
     entities::player::Player,
     physics::location::{Location, SECTOR_DIMENSIONS, Sector, SectorUnit},

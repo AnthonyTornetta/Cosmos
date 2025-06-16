@@ -1,10 +1,6 @@
 //! Syncs the inventories with the server-provided inventories
 
-use bevy::{
-    ecs::query::With,
-    log::warn,
-    prelude::{App, Commands, Entity, IntoSystemConfigs, Query, Res, ResMut, Update, in_state},
-};
+use bevy::prelude::*;
 use bevy_renet::renet::RenetClient;
 use cosmos_core::{
     inventory::{
@@ -34,7 +30,7 @@ fn sync(
                 match owner {
                     InventoryIdentifier::Entity(owner) => {
                         if let Some(client_entity) = network_mapping.client_from_server(&owner) {
-                            if let Some(mut ecmds) = commands.get_entity(client_entity) {
+                            if let Ok(mut ecmds) = commands.get_entity(client_entity) {
                                 ecmds.insert(InventoryNeedsDisplayed::default());
                             }
                         } else {
@@ -72,7 +68,7 @@ fn sync(
                 }
 
                 commands
-                    .entity(local_player.single())
+                    .entity(local_player.single().expect("Missing local player"))
                     .insert(InventoryNeedsDisplayed::Normal(InventorySide::Left));
             }
         }

@@ -1,6 +1,6 @@
 //! Event & its processing for when a player wants to create a station
 
-use bevy::prelude::{App, Event, EventReader, EventWriter, IntoSystemConfigs, Or, Query, ResMut, Update, With, in_state};
+use bevy::prelude::*;
 use bevy_renet::renet::RenetClient;
 use cosmos_core::{
     netty::{NettyChannelClient, client::LocalPlayer, client_reliable_messages::ClientReliableMessages, cosmos_encoder},
@@ -24,13 +24,13 @@ fn listener(
     input_handler: InputChecker,
     mut event_writer: EventWriter<CreateStationEvent>,
 ) {
-    if q_invalid_player.get_single().is_ok() {
+    if q_invalid_player.single().is_ok() {
         // Don't create stations while in build mode
         return;
     }
 
     if input_handler.check_just_pressed(CosmosInputs::CreateStation) {
-        event_writer.send(CreateStationEvent { name: "Cool name".into() });
+        event_writer.write(CreateStationEvent { name: "Cool name".into() });
     }
 }
 

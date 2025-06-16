@@ -1,4 +1,4 @@
-use bevy::{prelude::*, utils::hashbrown::HashSet};
+use bevy::{prelude::*, platform::collections::HashSet};
 use cosmos_core::{
     block::{
         Block,
@@ -37,7 +37,7 @@ fn handle_door_block_event(
             return;
         }
 
-        ev_writer.send(ToggleDoorEvent(s_block));
+        ev_writer.write(ToggleDoorEvent(s_block));
     }
 }
 

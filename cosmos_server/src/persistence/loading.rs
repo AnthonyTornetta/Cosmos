@@ -9,13 +9,7 @@
 
 use std::fs;
 
-use bevy::{
-    ecs::schedule::{IntoSystemConfigs, IntoSystemSetConfigs, SystemSet},
-    hierarchy::BuildChildren,
-    log::{error, info, warn},
-    prelude::{App, Commands, Component, Entity, Quat, Query, Transform, Update, With, Without},
-    reflect::Reflect,
-};
+use bevy::prelude::*;
 use bevy_rapier3d::prelude::Velocity;
 
 use cosmos_core::{
@@ -77,7 +71,7 @@ fn check_needs_loaded(
         // TODO: for debug only
         // if q_sfis.iter().take(i).any(|(e, sfi)| *e != ent && *sfi == save_file_identifier) {
         //     error!("Duplicate save file trying to be loaded - {ent:?} - {save_file_identifier:?}. Despawning duplucate.");
-        //     commands.entity(ent).despawn_recursive();
+        //     commands.entity(ent).despawn();
         // }
 
         let path = save_file_identifier.get_save_file_path();
@@ -123,13 +117,14 @@ fn check_needs_loaded(
 
                     // Correct
                     if parent.is_none()
-                        && let Some((ent, _)) = q_entity_ids.iter().find(|(_, eid)| *eid == looking_for_entity) {
-                            parent = Some(ent);
-                        }
+                        && let Some((ent, _)) = q_entity_ids.iter().find(|(_, eid)| *eid == looking_for_entity)
+                    {
+                        parent = Some(ent);
+                    }
 
                     if let Some(parent) = parent {
                         info!("Setting parent for {ent:?} to {parent:?} (this is correct)");
-                        commands.entity(ent).set_parent(parent);
+                        commands.entity(ent).insert(ChildOf(parent));
                     } else {
                         warn!("Unable to find parent with entity id {looking_for_entity:?} for entity {ent:?}");
                     }

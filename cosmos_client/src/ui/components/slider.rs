@@ -3,25 +3,8 @@
 //! Similar to the HTML `input type="range"`.use std::ops::Range;
 
 use bevy::{
-    app::{App, Update},
-    color::{Color, palettes::css},
-    core::Name,
-    ecs::{
-        change_detection::DetectChanges,
-        component::Component,
-        entity::Entity,
-        query::{Added, With, Without},
-        schedule::{IntoSystemConfigs, IntoSystemSetConfigs, SystemSet},
-        system::{Commands, Query},
-        world::Ref,
-    },
-    hierarchy::BuildChildren,
-    log::info,
-    math::{Rect, Vec2},
-    prelude::ChildBuild,
-    reflect::Reflect,
-    transform::components::GlobalTransform,
-    ui::{BackgroundColor, ComputedNode, Interaction, Node, PositionType, UiRect, Val},
+    color::palettes::css,
+    prelude::*,
     window::{PrimaryWindow, Window},
 };
 
@@ -211,7 +194,7 @@ fn on_interact_slider(
 ) {
     for (interaction, slider, mut slider_value, node, g_trans, progress_entities) in q_sliders.iter_mut() {
         if *interaction == Interaction::Pressed {
-            let Ok(window) = q_windows.get_single() else {
+            let Ok(window) = q_windows.single() else {
                 continue;
             };
 
@@ -239,22 +222,23 @@ fn on_interact_slider(
         }
 
         if interaction.is_changed()
-            && let Some(slider_styles) = &slider.slider_styles {
-                if let Ok(mut bg_color) = q_bg_color.get_mut(progress_entities.empty_bar_entity) {
-                    bg_color.0 = match *interaction {
-                        Interaction::None => slider.background_color,
-                        Interaction::Hovered => slider_styles.hover_background_color,
-                        Interaction::Pressed => slider_styles.press_background_color,
-                    };
-                }
-                if let Ok(mut bg_color) = q_bg_color.get_mut(progress_entities.bar_entity) {
-                    bg_color.0 = match *interaction {
-                        Interaction::None => slider.foreground_color,
-                        Interaction::Hovered => slider_styles.hover_foreground_color,
-                        Interaction::Pressed => slider_styles.press_foreground_color,
-                    };
-                }
+            && let Some(slider_styles) = &slider.slider_styles
+        {
+            if let Ok(mut bg_color) = q_bg_color.get_mut(progress_entities.empty_bar_entity) {
+                bg_color.0 = match *interaction {
+                    Interaction::None => slider.background_color,
+                    Interaction::Hovered => slider_styles.hover_background_color,
+                    Interaction::Pressed => slider_styles.press_background_color,
+                };
             }
+            if let Ok(mut bg_color) = q_bg_color.get_mut(progress_entities.bar_entity) {
+                bg_color.0 = match *interaction {
+                    Interaction::None => slider.foreground_color,
+                    Interaction::Hovered => slider_styles.hover_foreground_color,
+                    Interaction::Pressed => slider_styles.press_foreground_color,
+                };
+            }
+        }
     }
 }
 

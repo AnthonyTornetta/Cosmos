@@ -5,7 +5,7 @@ use crate::rendering::structure_renderer::{BlockRenderingModes, RenderingMode};
 use bevy::ecs::event::Event;
 use bevy::prelude::{App, Deref, DerefMut, Entity, Rect, Resource, Vec3};
 use bevy::tasks::Task;
-use bevy::utils::hashbrown::HashMap;
+use bevy::platform::collections::HashMap;
 use cosmos_core::block::{Block, block_direction::BlockDirection};
 use cosmos_core::registry::Registry;
 use cosmos_core::registry::identifiable::Identifiable;
