@@ -173,7 +173,7 @@ pub(super) fn register(app: &mut App) {
     app.add_netty_event::<RailgunFiredEvent>().register_type::<RailgunBlock>();
 
     app.register_type::<RailgunSystem>().add_systems(
-        Update,
+        FixedUpdate,
         name_railgun_system
             .ambiguous_with_all() // doesn't matter if this is 1-frame delayed
             .after(StructureSystemsSet::InitSystems),

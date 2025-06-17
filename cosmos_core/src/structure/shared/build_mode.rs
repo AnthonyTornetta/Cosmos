@@ -243,7 +243,6 @@ pub(super) fn register(app: &mut App) {
                 .in_set(BuildModeSet::ExitBuildMode),
         )
             .chain()
-            .in_set(FixedUpdateSet::Main)
             .in_set(BlockEventsSet::ProcessEvents),
     )
     .add_event::<EnterBuildModeEvent>()

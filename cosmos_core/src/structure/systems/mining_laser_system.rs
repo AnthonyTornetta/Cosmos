@@ -64,7 +64,7 @@ fn name_mining_laser_system(mut commands: Commands, q_added: Query<Entity, Added
 
 pub(super) fn register(app: &mut App) {
     app.register_type::<MiningLaserSystem>().add_systems(
-        Update,
+        FixedUpdate,
         name_mining_laser_system
             .ambiguous_with_all() // doesn't matter if this is 1-frame delayed
             .after(StructureSystemsSet::InitSystems),

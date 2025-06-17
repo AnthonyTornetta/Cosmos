@@ -132,7 +132,6 @@ impl SyncableComponent for MissileLauncherFocus {
 }
 
 #[derive(Default, Debug, Serialize, Deserialize, Component, Clone, Copy, Reflect, PartialEq, Eq)]
-#[require(MissileLauncherFocus, MissileLauncherPreferredFocus)]
 /// Prefers focusing this entity if there are many potential candidates
 pub struct MissileLauncherPreferredFocus {
     /// The **SERVER** entity that is being focused. Even on the client, this
@@ -150,6 +149,14 @@ impl IdentifiableComponent for MissileLauncherPreferredFocus {
 impl SyncableComponent for MissileLauncherPreferredFocus {
     fn get_sync_type() -> crate::netty::sync::SyncType {
         crate::netty::sync::SyncType::ClientAuthoritative(ClientAuthority::Piloting)
+    }
+}
+
+fn add_focus_to_new_missile_system(mut commands: Commands, q_added_missile_launcher_system: Query<Entity, Added<MissileLauncherSystem>>) {
+    for ent in &q_added_missile_launcher_system {
+        commands
+            .entity(ent)
+            .insert((MissileLauncherFocus::default(), MissileLauncherPreferredFocus::default()));
     }
 }
 
@@ -182,13 +189,17 @@ pub(super) fn register(app: &mut App) {
     sync_component::<MissileLauncherPreferredFocus>(app);
     sync_component::<MissileLauncherFocus>(app);
 
-    app.register_type::<MissileLauncherPreferredFocus>()
-        .register_type::<MissileLauncherFocus>()
-        .add_systems(
-            Update,
-            name_missile_launcher_system
-                .ambiguous_with_all() // doesn't matter if this is 1-frame delayed
-                .after(StructureSystemsSet::InitSystems),
-        )
-        .add_netty_event::<MissileSystemFailure>();
+    app.add_systems(
+        FixedUpdate,
+        add_focus_to_new_missile_system.after(StructureSystemsSet::UpdateSystems),
+    )
+    .register_type::<MissileLauncherPreferredFocus>()
+    .register_type::<MissileLauncherFocus>()
+    .add_systems(
+        FixedUpdate,
+        name_missile_launcher_system
+            .ambiguous_with_all() // doesn't matter if this is 1-frame delayed
+            .after(StructureSystemsSet::InitSystems),
+    )
+    .add_netty_event::<MissileSystemFailure>();
 }

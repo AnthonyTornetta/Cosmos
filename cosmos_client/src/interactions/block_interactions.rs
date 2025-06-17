@@ -329,7 +329,7 @@ pub(super) fn register(app: &mut App) {
         FixedUpdate,
         (add_looking_at_component, process_player_interaction)
             .chain()
-            .in_set(FixedUpdateSet::PostPhysics)
+            // .in_set(FixedUpdateSet::PostPhysics)
             .in_set(BlockEventsSet::SendEventsForThisFrame)
             .run_if(no_open_menus)
             .run_if(in_state(GameState::Playing)),

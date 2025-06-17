@@ -108,7 +108,6 @@ pub(super) fn register(app: &mut App) {
         .add_systems(
             FixedUpdate,
             (handle_block_break, handle_block_place, handle_block_interact)
-                .in_set(FixedUpdateSet::Main)
                 .in_set(BlockEventsSet::ProcessEventsPrePlacement)
                 .after(process_player_interaction)
                 .run_if(in_state(GameState::Playing)),

@@ -497,7 +497,7 @@ pub(super) fn register(app: &mut App) {
     impls::register(app);
 
     app.add_systems(
-        Update,
+        FixedUpdate,
         (
             on_piloted_by_ai.in_set(StructureSystemsSet::InitSystems),
             on_interact_reactor

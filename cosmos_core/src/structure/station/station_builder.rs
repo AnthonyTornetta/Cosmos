@@ -29,10 +29,5 @@ fn on_add_station(query: Query<(Entity, &Location), Or<(Added<Station>, (With<St
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_systems(
-        Update,
-        on_add_station
-            .after(LocationPhysicsSet::DoPhysics)
-            .in_set(StructureLoadingSet::AddStructureComponents),
-    );
+    app.add_systems(Update, on_add_station.in_set(StructureLoadingSet::AddStructureComponents));
 }

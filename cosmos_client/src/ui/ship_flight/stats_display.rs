@@ -124,14 +124,5 @@ fn despawn_nodes(
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_systems(
-        Update,
-        (
-            create_nodes,
-            update_nodes.after(PlayerMovementSet::ProcessPlayerMovement),
-            despawn_nodes,
-        )
-            .after(StructureSystemsSet::UpdateSystems)
-            .chain(),
-    );
+    app.add_systems(Update, (create_nodes, update_nodes, despawn_nodes).chain());
 }

@@ -130,10 +130,7 @@ pub(super) fn register(app: &mut App) {
 
     app.add_systems(
         FixedUpdate,
-        (
-            respond_to_collisions.before(LocationPhysicsSet::DoPhysics),
-            remove_parent_when_too_far.after(LocationPhysicsSet::DoPhysics),
-        )
+        (respond_to_collisions, remove_parent_when_too_far)
             .chain()
             .in_set(FixedUpdateSet::PostPhysics)
             .before(FixedUpdateSet::LocationSyncingPostPhysics)
