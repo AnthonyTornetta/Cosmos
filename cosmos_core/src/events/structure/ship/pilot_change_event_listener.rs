@@ -157,7 +157,6 @@ pub(super) fn register<T: States + Clone + Copy>(app: &mut App, playing_state: T
         )
             .in_set(PilotEventSystemSet::ChangePilotListener)
             .in_set(StructureTypeSet::Ship)
-            .in_set(NetworkingSystemsSet::Between)
             .chain()
             .run_if(in_state(playing_state)),
     )

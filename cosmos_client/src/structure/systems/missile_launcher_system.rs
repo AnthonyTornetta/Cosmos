@@ -382,8 +382,6 @@ pub(super) fn register(app: &mut App) {
         )
             .chain()
             .after(SystemUsageSet::ChangeSystemBeingUsed)
-            .in_set(NetworkingSystemsSet::Between)
-            .after(LocationPhysicsSet::DoPhysics)
             .run_if(in_state(GameState::Playing)),
     );
 }

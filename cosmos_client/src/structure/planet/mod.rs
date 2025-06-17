@@ -3,6 +3,7 @@
 use bevy::prelude::*;
 use bevy_renet::renet::RenetClient;
 use cosmos_core::{
+    ecs::sets::FixedUpdateSet,
     netty::{
         NettyChannelClient, client::LocalPlayer, client_reliable_messages::ClientReliableMessages, cosmos_encoder,
         sync::mapping::NetworkMapping, system_sets::NetworkingSystemsSet,
@@ -177,11 +178,10 @@ pub(super) fn register(app: &mut App) {
     planet_skybox::register(app);
 
     app.add_systems(
-        Update,
+        FixedUpdate,
         (load_planet_chunks, unload_chunks_far_from_players)
             .chain()
-            .in_set(NetworkingSystemsSet::Between)
-            .after(LocationPhysicsSet::DoPhysics)
+            .in_set(FixedUpdateSet::LocationSyncingPostPhysics)
             .run_if(in_state(GameState::Playing).or(in_state(GameState::LoadingWorld))),
     );
 }

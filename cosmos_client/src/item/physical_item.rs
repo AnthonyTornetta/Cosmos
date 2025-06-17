@@ -57,7 +57,6 @@ pub(super) fn register(app: &mut App) {
         Update,
         render_physical_item
             .run_if(in_state(GameState::Playing))
-            .in_set(MaterialsSystemSet::RequestMaterialChanges)
-            .in_set(NetworkingSystemsSet::Between),
+            .in_set(MaterialsSystemSet::RequestMaterialChanges),
     );
 }

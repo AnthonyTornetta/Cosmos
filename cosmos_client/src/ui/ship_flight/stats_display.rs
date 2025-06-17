@@ -132,8 +132,6 @@ pub(super) fn register(app: &mut App) {
             despawn_nodes,
         )
             .after(StructureSystemsSet::UpdateSystems)
-            .after(LocationPhysicsSet::DoPhysics)
-            .in_set(NetworkingSystemsSet::Between)
             .chain(),
     );
 }

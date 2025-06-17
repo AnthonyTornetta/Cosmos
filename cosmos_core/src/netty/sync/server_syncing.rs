@@ -16,6 +16,7 @@ use crate::physics::location::LocationPhysicsSet;
 use crate::registry::{Registry, identifiable::Identifiable};
 use crate::structure::ship::pilot::Pilot;
 use crate::structure::systems::{StructureSystem, StructureSystems};
+use bevy::app::FixedUpdate;
 use bevy::ecs::event::EventReader;
 use bevy::ecs::query::Without;
 use bevy::ecs::removal_detection::RemovedComponents;
@@ -26,7 +27,7 @@ use bevy::platform::collections::{HashMap, HashSet};
 use bevy::prelude::{Component, IntoScheduleConfigs, With};
 use bevy::reflect::Reflect;
 use bevy::{
-    app::{App, Startup, Update},
+    app::{App, Startup},
     ecs::{
         entity::Entity,
         event::EventWriter,
@@ -513,7 +514,7 @@ fn server_receive_components(
 
 pub(super) fn setup_server(app: &mut App) {
     app.configure_sets(
-        Update,
+        FixedUpdate,
         (
             ComponentSyncingSet::PreComponentSyncing,
             ComponentSyncingSet::DoComponentSyncing,
@@ -526,12 +527,15 @@ pub(super) fn setup_server(app: &mut App) {
     );
 
     app.configure_sets(
-        Update,
+        FixedUpdate,
         ComponentSyncingSet::ReceiveComponents.in_set(NetworkingSystemsSet::ReceiveMessages),
     );
 
-    app.add_systems(Update, server_receive_components.in_set(ComponentSyncingSet::PreComponentSyncing))
-        .add_event::<RequestedEntityEvent>();
+    app.add_systems(
+        FixedUpdate,
+        server_receive_components.in_set(ComponentSyncingSet::PreComponentSyncing),
+    )
+    .add_event::<RequestedEntityEvent>();
 }
 
 fn register_component<T: SyncableComponent>(mut registry: ResMut<Registry<SyncedComponentId>>) {
@@ -552,7 +556,7 @@ pub(super) fn sync_component_server<T: SyncableComponent>(app: &mut App) {
     match T::get_sync_type() {
         SyncType::ServerAuthoritative => {
             app.add_systems(
-                Update,
+                FixedUpdate,
                 (
                     on_request_component::<T>,
                     server_send_component::<T>,
@@ -565,7 +569,7 @@ pub(super) fn sync_component_server<T: SyncableComponent>(app: &mut App) {
         }
         SyncType::ClientAuthoritative(_) => {
             app.add_systems(
-                Update,
+                FixedUpdate,
                 (server_deserialize_component::<T>, server_remove_component::<T>)
                     .chain()
                     .in_set(ComponentSyncingSet::ReceiveComponents),
@@ -573,7 +577,7 @@ pub(super) fn sync_component_server<T: SyncableComponent>(app: &mut App) {
         }
         SyncType::BothAuthoritative(_) => {
             app.add_systems(
-                Update,
+                FixedUpdate,
                 (
                     on_request_component::<T>,
                     server_send_component::<T>,
@@ -584,7 +588,7 @@ pub(super) fn sync_component_server<T: SyncableComponent>(app: &mut App) {
                     .in_set(ComponentSyncingSet::DoComponentSyncing),
             );
             app.add_systems(
-                Update,
+                FixedUpdate,
                 (server_deserialize_component::<T>, server_remove_component::<T>)
                     .chain()
                     .in_set(ComponentSyncingSet::ReceiveComponents),

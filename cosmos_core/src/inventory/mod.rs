@@ -969,7 +969,7 @@ pub(super) fn register<T: States>(app: &mut App, playing_state: T) {
     sync_component::<Inventory>(app);
     sync_component::<HeldItemStack>(app);
 
-    app.add_systems(Update, name_held_itemstacks.in_set(NetworkingSystemsSet::Between));
+    app.add_systems(Update, name_held_itemstacks);
 
     app.register_type::<Inventory>().register_type::<HeldItemStack>();
 }

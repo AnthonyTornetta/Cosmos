@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use cosmos_core::{logic::BlockLogicData, netty::system_sets::NetworkingSystemsSet};
+use cosmos_core::logic::BlockLogicData;
 
 use crate::rendering::structure_renderer::{BlockDataRerenderOnChange, StructureRenderingSet};
 
@@ -15,8 +15,6 @@ fn rerender_on_block_logic_changes(
 pub(super) fn register(app: &mut App) {
     app.add_systems(
         Update,
-        rerender_on_block_logic_changes
-            .before(StructureRenderingSet::MonitorBlockUpdates)
-            .in_set(NetworkingSystemsSet::Between),
+        rerender_on_block_logic_changes.before(StructureRenderingSet::MonitorBlockUpdates),
     );
 }

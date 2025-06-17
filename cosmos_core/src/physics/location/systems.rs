@@ -13,7 +13,7 @@ use bevy_rapier3d::{plugin::RapierConfiguration, prelude::RapierContextSimulatio
 #[cfg(feature = "server")]
 use crate::ecs::NeedsDespawned;
 
-use crate::{netty::system_sets::NetworkingSystemsSet, physics::player_world::PlayerWorld};
+use crate::{ecs::sets::FixedUpdateSet, physics::player_world::PlayerWorld};
 
 use super::{Location, LocationPhysicsSet, SetPosition};
 
@@ -669,7 +669,7 @@ fn register_location_component_hooks(world: &mut World) {
 
 pub(super) fn register(app: &mut App) {
     app.add_systems(
-        Update,
+        FixedUpdate,
         (
             (mark_dirty_trees, sync_simple_transforms, propagate_parent_transforms).chain(), // TODO: Maybe not this?
             apply_set_position,
@@ -682,9 +682,7 @@ pub(super) fn register(app: &mut App) {
             do_physics_done,
         )
             .chain()
-            .in_set(LocationPhysicsSet::DoPhysics)
-            // .in_set(CosmosBundleSet::HandleCosmosBundles)
-            .in_set(NetworkingSystemsSet::Between),
+            .in_set(FixedUpdateSet::LocationSyncing),
     )
     .add_systems(Startup, register_location_component_hooks)
     .add_systems(PostUpdate, remove_do_physics_done);

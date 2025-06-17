@@ -2,7 +2,7 @@
 
 use bevy::{color::palettes::css, prelude::*};
 use cosmos_core::{
-    ecs::NeedsDespawned,
+    ecs::{NeedsDespawned, sets::FixedUpdateSet},
     entities::{
         health::Dead,
         player::respawn::{RequestRespawnEvent, RespawnEvent},
@@ -212,9 +212,8 @@ pub(super) fn register(app: &mut App) {
                 .after(UiSystemSet::FinishUi)
                 .run_if(on_event::<TitleScreenBtnClicked>),
             respawn_clicked.after(UiSystemSet::FinishUi).run_if(on_event::<RespawnBtnClicked>),
-            on_respawn.before(LocationPhysicsSet::DoPhysics),
         )
-            .chain()
-            .in_set(NetworkingSystemsSet::Between),
-    );
+            .chain(),
+    )
+    .add_systems(FixedUpdate, on_respawn.in_set(FixedUpdateSet::Main));
 }

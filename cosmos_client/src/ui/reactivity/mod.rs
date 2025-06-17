@@ -150,8 +150,7 @@ pub(super) fn register(app: &mut App) {
             ReactiveUiSystemSet::ProcessTextValueChanges.in_set(TextInputUiSystemSet::HandleReactValues),
             ReactiveUiSystemSet::ProcessSliderValueChanges.in_set(SliderUiSystemSet::HandleReactValues),
         )
-            .chain()
-            .in_set(NetworkingSystemsSet::Between),
+            .chain(),
     )
     .configure_sets(Update, DoReactorsSet::DoReactors);
 }

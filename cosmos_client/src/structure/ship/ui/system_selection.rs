@@ -183,7 +183,6 @@ pub(super) fn register(app: &mut App) {
                 .after(SystemUsageSet::AddHoveredSlotComponent),
         )
             .in_set(SystemSelectionSet::ApplyUserChanges)
-            .in_set(NetworkingSystemsSet::Between)
             .chain()
             .run_if(in_state(GameState::Playing)),
     );

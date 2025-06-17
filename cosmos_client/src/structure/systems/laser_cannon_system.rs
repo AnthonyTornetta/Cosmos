@@ -83,11 +83,6 @@ pub(super) fn register(app: &mut App) {
         },
     );
 
-    app.add_event::<LaserCannonSystemFiredEvent>().add_systems(
-        Update,
-        apply_shooting_sound
-            .after(LocationPhysicsSet::DoPhysics)
-            .in_set(NetworkingSystemsSet::Between)
-            .run_if(in_state(GameState::Playing)),
-    );
+    app.add_event::<LaserCannonSystemFiredEvent>()
+        .add_systems(Update, apply_shooting_sound.run_if(in_state(GameState::Playing)));
 }

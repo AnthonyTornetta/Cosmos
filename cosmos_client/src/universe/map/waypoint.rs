@@ -52,5 +52,5 @@ fn create_waypoint(
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_systems(Update, create_waypoint.in_set(NetworkingSystemsSet::Between));
+    app.add_systems(Update, create_waypoint);
 }

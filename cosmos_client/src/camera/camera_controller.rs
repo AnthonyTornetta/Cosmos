@@ -60,7 +60,6 @@ pub(super) fn register(app: &mut App) {
     app.add_systems(
         Update,
         process_player_camera
-            .in_set(NetworkingSystemsSet::Between)
             .after(CursorFlagsSet::ApplyCursorFlagsUpdates)
             .run_if(in_state(GameState::Playing)),
     );

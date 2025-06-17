@@ -66,10 +66,5 @@ pub(super) fn register(app: &mut App) {
 
     sync_component::<PilotFocused>(app);
 
-    app.add_systems(
-        Update,
-        remove_pilot_focused_on_no_pilot
-            .in_set(NetworkingSystemsSet::Between)
-            .run_if(in_state(GameState::Playing)),
-    );
+    app.add_systems(Update, remove_pilot_focused_on_no_pilot.run_if(in_state(GameState::Playing)));
 }

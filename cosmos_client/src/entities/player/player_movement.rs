@@ -7,6 +7,7 @@ use bevy_rapier3d::{
 };
 use cosmos_core::{
     block::specific_blocks::gravity_well::GravityWell,
+    ecs::sets::FixedUpdateSet,
     netty::{client::LocalPlayer, system_sets::NetworkingSystemsSet},
     physics::location::LocationPhysicsSet,
     prelude::Planet,
@@ -193,20 +194,20 @@ pub enum PlayerMovementSet {
 
 pub(super) fn register(app: &mut App) {
     app.configure_sets(
-        Update,
+        FixedUpdate,
         PlayerMovementSet::ProcessPlayerMovement.before(LocationPhysicsSet::DoPhysics),
     );
 
     app.add_systems(
-        Update,
+        FixedUpdate,
         (append_grounded_check, check_grounded).run_if(in_state(GameState::Playing)).chain(),
     );
 
     app.add_systems(
-        Update,
+        FixedUpdate,
         process_player_movement
             .ambiguous_with(LaserSystemSet::SendHitEvents)
-            .in_set(NetworkingSystemsSet::Between)
+            .in_set(FixedUpdateSet::Main)
             .in_set(PlayerMovementSet::ProcessPlayerMovement)
             .run_if(in_state(GameState::Playing)),
     );

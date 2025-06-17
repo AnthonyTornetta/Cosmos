@@ -90,11 +90,6 @@ fn press_decline(
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_systems(
-        Update,
-        (on_open_req_coms_ui, press_decline, press_accept)
-            .chain()
-            .in_set(NetworkingSystemsSet::Between),
-    )
-    .add_event::<OpenRequestComsUi>();
+    app.add_systems(Update, (on_open_req_coms_ui, press_decline, press_accept).chain())
+        .add_event::<OpenRequestComsUi>();
 }

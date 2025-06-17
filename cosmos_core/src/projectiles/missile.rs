@@ -18,6 +18,7 @@ use crate::netty::system_sets::NetworkingSystemsSet;
 
 use crate::{
     block::blocks::fluid::FLUID_COLLISION_GROUP,
+    ecs::sets::FixedUpdateSet,
     netty::sync::{ComponentSyncingSet, IdentifiableComponent, SyncableComponent, sync_component},
     physics::location::LocationPhysicsSet,
 };
@@ -126,10 +127,9 @@ pub(super) fn register(app: &mut App) {
     {
         // Receive explosions from server before processing them
         app.configure_sets(
-            Update,
+            FixedUpdate,
             (ExplosionSystemSet::PreProcessExplosions, ExplosionSystemSet::ProcessExplosions)
-                .after(LocationPhysicsSet::DoPhysics)
-                .in_set(NetworkingSystemsSet::Between)
+                .in_set(FixedUpdateSet::LocationSyncing)
                 .chain(),
         );
     }

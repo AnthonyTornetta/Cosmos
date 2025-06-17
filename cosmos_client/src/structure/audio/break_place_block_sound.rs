@@ -100,13 +100,11 @@ pub(super) fn register(app: &mut App) {
     );
 
     app.add_systems(
-        Update,
+        FixedUpdate,
         (
             play_block_place_sound.run_if(resource_exists::<BlockPlaceSound>),
             play_block_break_sound.run_if(resource_exists::<BlockBreakSound>),
         )
-            .chain()
-            .in_set(NetworkingSystemsSet::Between)
-            .after(BlockEventsSet::SendEventsForNextFrame),
+            .chain(),
     );
 }

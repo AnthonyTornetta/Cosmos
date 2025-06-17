@@ -53,10 +53,7 @@ pub(super) fn register(app: &mut App) {
 
     app.add_systems(
         Update,
-        open_menu
-            .in_set(NetworkingSystemsSet::Between)
-            .in_set(FabricatorMenuSet::OpenMenu)
-            .run_if(in_state(GameState::Playing)),
+        open_menu.in_set(FabricatorMenuSet::OpenMenu).run_if(in_state(GameState::Playing)),
     )
     .register_type::<OpenAdvancedFabricatorMenu>();
 }

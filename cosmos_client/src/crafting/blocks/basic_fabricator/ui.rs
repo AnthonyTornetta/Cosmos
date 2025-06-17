@@ -648,7 +648,6 @@ pub(super) fn register(app: &mut App) {
                 .in_set(UiSystemSet::DoUi),
         )
             .chain()
-            .in_set(NetworkingSystemsSet::Between)
             .in_set(FabricatorMenuSet::PopulateMenu)
             .run_if(in_state(GameState::Playing))
             .run_if(resource_exists::<BasicFabricatorRecipes>),

@@ -2,7 +2,10 @@
 
 use bevy::{color::palettes::css, prelude::*};
 use bevy_rapier3d::prelude::{ActiveEvents, CoefficientCombineRule, Collider, Friction, LockedAxes, ReadMassProperties, RigidBody};
-use cosmos_core::{entities::player::Player, netty::system_sets::NetworkingSystemsSet, persistence::LoadingDistance, state::GameState};
+use cosmos_core::{
+    ecs::sets::FixedUpdateSet, entities::player::Player, netty::system_sets::NetworkingSystemsSet, persistence::LoadingDistance,
+    state::GameState,
+};
 
 pub mod death;
 pub mod player_movement;
@@ -38,9 +41,9 @@ fn on_add_player(
 
 pub(super) fn register(app: &mut App) {
     app.add_systems(
-        Update,
+        FixedUpdate,
         on_add_player
-            .in_set(NetworkingSystemsSet::Between)
+            .in_set(FixedUpdateSet::Main)
             .run_if(in_state(GameState::Playing).or(in_state(GameState::LoadingWorld))),
     );
 

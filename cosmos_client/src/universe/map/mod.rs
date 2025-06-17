@@ -816,8 +816,7 @@ pub(super) fn register(app: &mut App) {
                 handle_map_camera.after(UiSystemSet::FinishUi),
             )
                 .chain()
-                .run_if(in_state(GameState::Playing))
-                .in_set(NetworkingSystemsSet::Between),
+                .run_if(in_state(GameState::Playing)),
         )
         .register_type::<MapCamera>();
 }

@@ -18,9 +18,11 @@ use std::{
 };
 
 use bevy::prelude::*;
-use bevy_rapier3d::na::Vector3;
+use bevy_rapier3d::{na::Vector3, plugin::PhysicsSet};
 use bigdecimal::{BigDecimal, FromPrimitive};
 use serde::{Deserialize, Serialize};
+
+use crate::ecs::sets::FixedUpdateSet;
 
 pub mod systems;
 
@@ -525,9 +527,13 @@ pub struct PreviousLocation(pub Location);
 
 pub(super) fn register(app: &mut App) {
     systems::register(app);
-    app.configure_sets(Update, LocationPhysicsSet::DoPhysics);
+    app.configure_sets(
+        FixedUpdate,
+        LocationPhysicsSet::DoPhysics
+            .after(FixedUpdateSet::PrePhysics)
+            .before(PhysicsSet::SyncBackend),
+    );
 
-    // TODO: Remove system set
     app.register_type::<Location>().register_type::<PreviousLocation>();
 }
 

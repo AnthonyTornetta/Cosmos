@@ -532,7 +532,6 @@ pub(super) fn register(app: &mut App) {
                 tick_text_alpha_down,
             )
                 .before(SystemSelectionSet::ApplyUserChanges)
-                .in_set(NetworkingSystemsSet::Between)
                 .chain()
                 .run_if(in_state(GameState::Playing))
                 .run_if(is_hotbar_enabled),

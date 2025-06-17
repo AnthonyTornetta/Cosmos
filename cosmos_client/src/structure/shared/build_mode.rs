@@ -342,7 +342,7 @@ fn on_enter_build_mode(q_add_build_mode: Query<(), (Added<BuildMode>, With<Local
 
 pub(super) fn register(app: &mut App) {
     app.add_systems(
-        Update,
+        FixedUpdate,
         (
             (
                 place_symmetries,

@@ -5,6 +5,7 @@ use std::f32::consts::PI;
 use bevy::prelude::*;
 use cosmos_core::{
     block::block_face::BlockFace,
+    ecs::sets::FixedUpdateSet,
     netty::{client::LocalPlayer, system_sets::NetworkingSystemsSet},
     physics::{
         gravity_system::GravityEmitter,
@@ -101,7 +102,7 @@ fn align_player(
                             Quat::from_axis_angle(Vec3::Z, PI / 2.0)
                         }
                     },
-                0.1,
+                0.3,
             );
         } else {
             commands.entity(entity).remove::<PlayerAlignment>();
@@ -143,9 +144,9 @@ pub struct PlayerAlignment {
 
 pub(super) fn register(app: &mut App) {
     app.add_systems(
-        Update,
+        FixedUpdate,
         (align_player, align_on_ship)
-            .in_set(NetworkingSystemsSet::Between)
+            .in_set(FixedUpdateSet::Main)
             .before(LocationPhysicsSet::DoPhysics)
             .chain(),
     );

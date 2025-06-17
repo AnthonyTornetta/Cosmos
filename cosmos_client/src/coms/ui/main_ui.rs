@@ -951,8 +951,7 @@ pub(super) fn register(app: &mut App) {
             end_selected_coms.run_if(on_event::<EndComsClicked>),
         )
             .chain()
-            .run_if(in_state(GameState::Playing))
-            .in_set(NetworkingSystemsSet::Between),
+            .run_if(in_state(GameState::Playing)),
     );
 
     register_button::<LeftClicked>(app);

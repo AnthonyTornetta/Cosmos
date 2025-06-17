@@ -133,7 +133,6 @@ pub(super) fn register(app: &mut App) {
             on_change_shield_update_rendering.ambiguous_with(WaypointSet::FocusWaypoints),
             update_shield_times,
         )
-            .after(NetworkingSystemsSet::Between)
             .chain(),
     );
 }

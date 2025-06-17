@@ -356,7 +356,6 @@ pub(super) fn register(app: &mut App) {
         )
             .chain()
             .run_if(in_state(GameState::Playing))
-            .after(CloseMenusSet::CloseMenus)
-            .in_set(NetworkingSystemsSet::Between),
+            .after(CloseMenusSet::CloseMenus),
     );
 }

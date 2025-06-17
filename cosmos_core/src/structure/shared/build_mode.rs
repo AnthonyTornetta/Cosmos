@@ -11,6 +11,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     block::block_events::BlockEventsSet,
+    ecs::sets::FixedUpdateSet,
     netty::{
         sync::{IdentifiableComponent, SyncableComponent, sync_component},
         system_sets::NetworkingSystemsSet,
@@ -220,7 +221,7 @@ pub(super) fn register(app: &mut App) {
     sync_component::<BuildMode>(app);
 
     app.configure_sets(
-        Update,
+        FixedUpdate,
         (
             BuildModeSet::SendEnterBuildModeEvent,
             BuildModeSet::EnterBuildMode,
@@ -231,7 +232,7 @@ pub(super) fn register(app: &mut App) {
     );
 
     app.add_systems(
-        Update,
+        FixedUpdate,
         (
             (enter_build_mode_listener, on_add_build_mode, adjust_transform_build_mode)
                 .chain()
@@ -242,7 +243,7 @@ pub(super) fn register(app: &mut App) {
                 .in_set(BuildModeSet::ExitBuildMode),
         )
             .chain()
-            .in_set(NetworkingSystemsSet::Between)
+            .in_set(FixedUpdateSet::Main)
             .in_set(BlockEventsSet::ProcessEvents),
     )
     .add_event::<EnterBuildModeEvent>()

@@ -105,11 +105,6 @@ fn color_planet_skybox(
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_systems(
-        Update,
-        color_planet_skybox
-            .run_if(in_state(GameState::Playing))
-            .in_set(NetworkingSystemsSet::Between),
-    )
-    .add_systems(OnEnter(GameState::Playing), spawn_planet_skysphere);
+    app.add_systems(Update, color_planet_skybox.run_if(in_state(GameState::Playing)))
+        .add_systems(OnEnter(GameState::Playing), spawn_planet_skysphere);
 }

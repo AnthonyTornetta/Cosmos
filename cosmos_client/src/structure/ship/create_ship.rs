@@ -66,7 +66,6 @@ pub(super) fn register(app: &mut App) {
     app.add_event::<CreateShipEvent>().add_systems(
         Update,
         (listener.run_if(no_open_menus), event_handler)
-            .in_set(NetworkingSystemsSet::Between)
             .in_set(BlockEventsSet::SendEventsForNextFrame)
             .chain()
             .run_if(in_state(GameState::Playing)),

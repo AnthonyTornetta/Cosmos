@@ -172,9 +172,6 @@ pub(super) fn register(app: &mut App) {
     app.add_systems(OnEnter(GameState::PreLoading), create_railgun_mesh);
     app.add_systems(
         Update,
-        (on_fire_railgun, fade_railgun_blast)
-            .chain()
-            .in_set(NetworkingSystemsSet::Between)
-            .run_if(in_state(GameState::Playing)),
+        (on_fire_railgun, fade_railgun_blast).chain().run_if(in_state(GameState::Playing)),
     );
 }

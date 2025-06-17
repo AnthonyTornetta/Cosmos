@@ -484,7 +484,6 @@ pub(super) fn register(app: &mut App) {
                     .in_set(WaypointSet::CreateWaypoints),
                 focus_waypoint.in_set(WaypointSet::FocusWaypoints).run_if(no_open_menus),
             )
-                .in_set(NetworkingSystemsSet::Between)
                 .chain()
                 .run_if(in_state(GameState::Playing)),
         )

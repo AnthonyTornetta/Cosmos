@@ -80,8 +80,5 @@ fn read_coms_request(
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_systems(
-        Update,
-        (initiate_coms_request, read_coms_request).in_set(NetworkingSystemsSet::Between),
-    );
+    app.add_systems(Update, (initiate_coms_request, read_coms_request));
 }

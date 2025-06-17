@@ -1270,7 +1270,6 @@ pub(super) fn register(app: &mut App) {
     app.configure_sets(
         Update,
         ShopLogicSet::ShopLogic
-            .in_set(NetworkingSystemsSet::Between)
             .before(UiSystemSet::PreDoUi)
             .run_if(in_state(GameState::Playing)),
     );

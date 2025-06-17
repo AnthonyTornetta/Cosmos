@@ -32,7 +32,6 @@ pub(super) fn register(app: &mut App) {
     app.add_systems(
         Update,
         wait_for_done_loading
-            .in_set(NetworkingSystemsSet::Between)
             // This is stupid. For some reason, if the client doesn't get a couple updates first,
             // if the player spawns in as a child of another entity, the transform heirarchy isn't
             // loaded and the player seemingly gets despawned. This should really get fixed instead

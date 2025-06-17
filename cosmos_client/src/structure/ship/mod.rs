@@ -4,6 +4,7 @@ use bevy::prelude::*;
 use bevy_rapier3d::pipeline::CollisionEvent;
 use bevy_renet::renet::RenetClient;
 use cosmos_core::{
+    ecs::sets::FixedUpdateSet,
     netty::{
         NettyChannelClient, client::LocalPlayer, client_reliable_messages::ClientReliableMessages, cosmos_encoder,
         system_sets::NetworkingSystemsSet,
@@ -125,17 +126,17 @@ pub(super) fn register(app: &mut App) {
     pilot::register(app);
     ui::register(app);
 
-    app.configure_sets(Update, PlayerChildOfChangingSet::ChangeChildOf);
+    app.configure_sets(FixedUpdate, PlayerChildOfChangingSet::ChangeChildOf);
 
     app.add_systems(
-        Update,
+        FixedUpdate,
         (
             respond_to_collisions.before(LocationPhysicsSet::DoPhysics),
             remove_parent_when_too_far.after(LocationPhysicsSet::DoPhysics),
         )
             .chain()
-            .in_set(NetworkingSystemsSet::Between)
-            .after(StructureLoadingSet::StructureLoaded)
+            .in_set(FixedUpdateSet::PostPhysics)
+            .before(FixedUpdateSet::LocationSyncingPostPhysics)
             .in_set(PlayerChildOfChangingSet::ChangeChildOf)
             .run_if(in_state(GameState::Playing)),
     );

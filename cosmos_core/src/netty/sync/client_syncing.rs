@@ -27,7 +27,7 @@ use bevy::platform::collections::{HashMap, HashSet};
 use bevy::prelude::*;
 use bevy::time::Time;
 use bevy::{
-    app::{App, Update},
+    app::App,
     ecs::{
         entity::Entity,
         event::EventWriter,
@@ -723,12 +723,12 @@ fn get_entity_identifier_info(
 }
 
 pub(super) fn setup_client(app: &mut App) {
-    app.configure_sets(Update, ClientReceiveComponents::ClientReceiveComponents);
+    app.configure_sets(FixedUpdate, ClientReceiveComponents::ClientReceiveComponents);
 
     // ComponentSyncingSet configuration in cosmos_client/netty/mod
 
     app.add_systems(
-        Update,
+        FixedUpdate,
         client_receive_components
             .in_set(ClientReceiveComponents::ClientReceiveComponents)
             .in_set(NetworkingSystemsSet::ReceiveMessages)
@@ -744,7 +744,7 @@ pub(super) fn sync_component_client<T: SyncableComponent>(app: &mut App) {
     match T::get_sync_type() {
         SyncType::ClientAuthoritative(_) => {
             app.add_systems(
-                Update,
+                FixedUpdate,
                 (client_send_components::<T>, client_send_removed_components::<T>)
                     .chain()
                     .run_if(resource_exists::<RenetClient>)
@@ -755,7 +755,7 @@ pub(super) fn sync_component_client<T: SyncableComponent>(app: &mut App) {
             add_multi_statebound_resource::<StoredComponents<T>, GameState>(app, GameState::LoadingWorld, GameState::Playing);
 
             app.add_systems(
-                Update,
+                FixedUpdate,
                 (
                     client_add_stored_components::<T>,
                     client_deserialize_component::<T>,
@@ -771,14 +771,14 @@ pub(super) fn sync_component_client<T: SyncableComponent>(app: &mut App) {
             add_multi_statebound_resource::<StoredComponents<T>, GameState>(app, GameState::LoadingWorld, GameState::Playing);
 
             app.add_systems(
-                Update,
+                FixedUpdate,
                 (client_send_components::<T>, client_send_removed_components::<T>)
                     .chain()
                     .run_if(resource_exists::<RenetClient>)
                     .in_set(ComponentSyncingSet::DoComponentSyncing),
             );
             app.add_systems(
-                Update,
+                FixedUpdate,
                 (
                     client_add_stored_components::<T>,
                     client_deserialize_component::<T>,

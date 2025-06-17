@@ -16,6 +16,7 @@ use cosmos_core::{
         blocks::fluid::FLUID_COLLISION_GROUP,
     },
     blockitems::BlockItems,
+    ecs::sets::FixedUpdateSet,
     entities::player::creative::Creative,
     inventory::{
         Inventory,
@@ -325,10 +326,10 @@ fn send_ray<'a>(
 
 pub(super) fn register(app: &mut App) {
     app.add_systems(
-        Update,
+        FixedUpdate,
         (add_looking_at_component, process_player_interaction)
             .chain()
-            .in_set(NetworkingSystemsSet::Between)
+            .in_set(FixedUpdateSet::PostPhysics)
             .in_set(BlockEventsSet::SendEventsForThisFrame)
             .run_if(no_open_menus)
             .run_if(in_state(GameState::Playing)),

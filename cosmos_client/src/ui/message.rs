@@ -169,7 +169,6 @@ fn display_hud_messages(
                 },
             ))
             .with_children(|p| {
-                // TODO: This
                 let mut messages = hud_message.text.into_iter();
                 if let Some(first) = messages.next() {
                     let font = TextFont {
@@ -203,10 +202,6 @@ fn display_hud_messages(
 }
 
 pub(super) fn register(app: &mut App) {
-    app.init_resource::<HudMessages>().add_systems(
-        Update,
-        display_hud_messages
-            .in_set(NetworkingSystemsSet::Between)
-            .run_if(in_state(GameState::Playing)),
-    );
+    app.init_resource::<HudMessages>()
+        .add_systems(Update, display_hud_messages.run_if(in_state(GameState::Playing)));
 }

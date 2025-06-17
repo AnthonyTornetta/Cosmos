@@ -15,7 +15,7 @@ use bevy_rapier3d::prelude::*;
 use bevy_renet::{netcode::NetcodeClientTransport, renet::RenetClient};
 use cosmos_core::{
     block::Block,
-    ecs::NeedsDespawned,
+    ecs::{NeedsDespawned, sets::FixedUpdateSet},
     entities::player::{Player, render_distance::RenderDistance},
     events::{
         block_events::{BlockChangedEvent, BlockDataChangedEvent},
@@ -124,35 +124,31 @@ pub struct NetworkTick(pub u64);
 #[derive(Debug, Component, Deref)]
 pub(crate) struct LerpTowards(NettyRigidBody);
 
-fn lerp_towards(
-    mut location_query: Query<&mut Location>,
-    mut query: Query<(Entity, &LerpTowards, &mut Transform, &mut Velocity), With<Location>>,
-) {
-    for (entity, lerp_towards, mut transform, mut velocity) in query.iter_mut() {
+fn lerp_towards(mut query: Query<(&LerpTowards, &mut Transform, &mut Velocity, &mut Location)>) {
+    for (lerp_towards, mut transform, mut velocity, mut location) in query.iter_mut() {
         match lerp_towards.location {
-            NettyRigidBodyLocation::Absolute(location) => {
-                let to_location = location;
-                let mut location = location_query.get_mut(entity).expect("The above With statement guarentees this");
+            NettyRigidBodyLocation::Absolute(abs_loc) => {
+                let to_location = abs_loc;
 
-                if to_location.distance_sqrd(&location) > 100.0 {
-                    location.set_from(&to_location);
-                } else {
-                    let lerpped_loc = *location + (location.relative_coords_to(&to_location)) * 0.1;
-
-                    location.set_from(&lerpped_loc);
-                }
+                // if to_location.distance_sqrd(&location) > 100.0 {
+                location.set_from(&to_location);
+                // } else {
+                // let lerpped_loc = *location + (location.relative_coords_to(&to_location)) * 0.1;
+                //
+                // location.set_from(&lerpped_loc);
+                // }
             }
             NettyRigidBodyLocation::Relative(rel_trans, _) => {
-                if transform.translation.distance_squared(rel_trans) > 100.0 {
-                    transform.translation = rel_trans;
-                } else {
-                    transform.translation = transform.translation.lerp(rel_trans, 0.1);
-                }
+                // if transform.translation.distance_squared(rel_trans) > 100.0 {
+                transform.translation = rel_trans;
+                // } else {
+                //     transform.translation = transform.translation.lerp(rel_trans, 0.1);
+                // }
             }
         };
 
-        transform.rotation = //lerp_towards.rotation;
-            transform.rotation.lerp(lerp_towards.rotation, 0.1);
+        transform.rotation = lerp_towards.rotation;
+        // transform.rotation.lerp(lerp_towards.rotation, 0.1);
 
         let vel = lerp_towards.body_vel.unwrap_or_default();
 
@@ -800,30 +796,27 @@ fn get_entity_identifier_entity_for_despawning(
 
 pub(super) fn register(app: &mut App) {
     app.add_systems(
-        Update,
+        FixedUpdate,
         (
             insert_last_rotation,
             update_crosshair.in_set(CrosshairOffsetSet::ApplyCrosshairChanges),
         )
             .after(ClientCreateShipMovementSet::ProcessShipMovement)
-            .in_set(NetworkingSystemsSet::Between)
-            .after(CursorFlagsSet::ApplyCursorFlagsUpdates)
+            .in_set(FixedUpdateSet::LocationSyncingPostPhysics)
             .chain(),
     )
     .add_systems(
-        Update,
-        (client_sync_players
-            .before(ClientReceiveComponents::ClientReceiveComponents)
+        FixedUpdate,
+        (client_sync_players, lerp_towards)
+            .chain()
             .in_set(NetworkingSystemsSet::ReceiveMessages)
-            .before(LocationPhysicsSet::DoPhysics))
-        .run_if(in_state(GameState::Playing).or(in_state(GameState::LoadingWorld)))
-        .chain(),
-    )
-    .add_systems(
-        Update,
-        lerp_towards
-            .before(LocationPhysicsSet::DoPhysics)
-            .in_set(NetworkingSystemsSet::Between)
             .run_if(in_state(GameState::Playing).or(in_state(GameState::LoadingWorld))),
     );
+    // .add_systems(
+    //     FixedUpdate,
+    //lerp_towards
+    //         .after(FixedUpdateSet::NettyReceive)
+    //         .before(FixedUpdateSet::Main)
+    //         .run_if(in_state(GameState::Playing).or(in_state(GameState::LoadingWorld))),
+    // );
 }

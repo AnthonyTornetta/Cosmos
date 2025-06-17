@@ -81,12 +81,9 @@ pub(super) fn register(app: &mut App) {
         Update,
         (
             (check_system_in_use.run_if(no_open_menus), check_removed_pilot)
-                .in_set(NetworkingSystemsSet::Between)
                 .in_set(SystemUsageSet::ChangeSystemBeingUsed)
                 .chain(),
-            check_became_pilot
-                .in_set(NetworkingSystemsSet::Between)
-                .before(SystemUsageSet::AddHoveredSlotComponent),
+            check_became_pilot.before(SystemUsageSet::AddHoveredSlotComponent),
         )
             .run_if(in_state(GameState::Playing)),
     )

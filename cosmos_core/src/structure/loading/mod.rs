@@ -83,7 +83,7 @@ pub(super) fn register(app: &mut App) {
             StructureLoadingSet::LoadChunkData,
             StructureLoadingSet::StructureLoaded,
         )
-            .after(NetworkingSystemsSet::ProcessReceivedMessages)
+            // .after(NetworkingSystemsSet::ProcessReceivedMessages)
             .chain(),
     );
 

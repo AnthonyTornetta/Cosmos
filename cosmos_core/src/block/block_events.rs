@@ -83,7 +83,7 @@ pub enum BlockEventsSet {
 
 pub(super) fn register(app: &mut App) {
     app.configure_sets(
-        Update,
+        FixedUpdate,
         (
             BlockEventsSet::SendEventsForThisFrame,
             BlockEventsSet::PreProcessEvents,
@@ -94,7 +94,6 @@ pub(super) fn register(app: &mut App) {
             BlockEventsSet::PostProcessEvents,
             BlockEventsSet::SendEventsForNextFrame,
         )
-            .chain()
-            .after(StructureLoadingSet::StructureLoaded),
+            .chain(), // .after(StructureLoadingSet::StructureLoaded),
     );
 }

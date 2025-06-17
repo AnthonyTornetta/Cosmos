@@ -5,7 +5,7 @@
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::RigidBodyDisabled;
 
-use crate::netty::system_sets::NetworkingSystemsSet;
+use crate::{ecs::sets::FixedUpdateSet, netty::system_sets::NetworkingSystemsSet};
 
 #[derive(Component, Default, Reflect, Debug)]
 /// Instead of directly using [`RigidBodyDisabled`], use this to not risk overwriting other systems
@@ -74,12 +74,12 @@ pub enum DisableRigidBodySet {
 }
 
 pub(super) fn register(app: &mut App) {
-    app.configure_sets(Update, DisableRigidBodySet::DisableRigidBodies);
+    app.configure_sets(FixedUpdate, DisableRigidBodySet::DisableRigidBodies);
 
     app.add_systems(
-        Update,
+        FixedUpdate,
         disable_rigid_bodies
-            .in_set(NetworkingSystemsSet::Between)
+            .in_set(FixedUpdateSet::PrePhysics)
             .in_set(DisableRigidBodySet::DisableRigidBodies),
     )
     .register_type::<DisableRigidBody>();

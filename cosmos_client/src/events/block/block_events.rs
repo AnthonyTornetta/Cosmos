@@ -7,6 +7,7 @@ use cosmos_core::{
         block_events::{BlockEventsSet, BlockInteractEvent},
         block_rotation::BlockRotation,
     },
+    ecs::sets::FixedUpdateSet,
     netty::{
         NettyChannelClient,
         client_reliable_messages::ClientReliableMessages,
@@ -105,9 +106,9 @@ pub(super) fn register(app: &mut App) {
         .add_event::<RequestBlockPlaceEvent>()
         .add_event::<BlockInteractEvent>()
         .add_systems(
-            Update,
+            FixedUpdate,
             (handle_block_break, handle_block_place, handle_block_interact)
-                .in_set(NetworkingSystemsSet::Between)
+                .in_set(FixedUpdateSet::Main)
                 .in_set(BlockEventsSet::ProcessEventsPrePlacement)
                 .after(process_player_interaction)
                 .run_if(in_state(GameState::Playing)),

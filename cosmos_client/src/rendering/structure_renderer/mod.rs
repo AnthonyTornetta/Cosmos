@@ -76,8 +76,6 @@ pub(super) fn register(app: &mut App) {
         )
             .chain()
             .run_if(in_state(GameState::Playing).or(in_state(GameState::LoadingWorld)))
-            .before(unload_chunks_far_from_players)
-            .in_set(NetworkingSystemsSet::Between)
             .in_set(MaterialsSystemSet::RequestMaterialChanges)
             .after(BlockEventsSet::SendEventsForNextFrame),
     );

@@ -3,6 +3,8 @@
 
 pub mod mut_events;
 
+pub mod sets;
+
 use bevy::prelude::*;
 
 #[derive(Component, Debug)]
@@ -26,10 +28,6 @@ pub fn despawn_needed(mut commands: Commands, needs_despawned_query: Query<Entit
     }
 }
 
-pub(super) fn register(app: &mut App) {
-    app.add_systems(First, despawn_needed);
-}
-
 /// Runs `commands.init_resource` in a system. Useful for adding `run_if` statements quickly
 pub fn init_resource<R: Resource + Default>(mut commands: Commands) {
     commands.init_resource::<R>();
@@ -49,4 +47,9 @@ pub fn add_statebound_resource<R: Resource + Default, S: States + Clone + Copy>(
 pub fn add_multi_statebound_resource<R: Resource + Default, S: States>(app: &mut App, add_state: S, remove_on_exit_state: S) {
     app.add_systems(OnEnter(add_state), init_resource::<R>)
         .add_systems(OnExit(remove_on_exit_state), remove_resource::<R>);
+}
+
+pub(super) fn register(app: &mut App) {
+    app.add_systems(First, despawn_needed);
+    sets::register(app);
 }

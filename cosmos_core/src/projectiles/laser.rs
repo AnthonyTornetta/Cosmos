@@ -15,7 +15,7 @@ use bevy_rapier3d::{
 };
 
 use crate::{
-    ecs::NeedsDespawned,
+    ecs::{NeedsDespawned, sets::FixedUpdateSet},
     netty::{NoSendEntity, system_sets::NetworkingSystemsSet},
     physics::{
         location::{Location, SetPosition},
@@ -266,11 +266,12 @@ pub enum LaserSystemSet {
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_systems(
-        Update,
-        (send_laser_hit_events.in_set(LaserSystemSet::SendHitEvents), despawn_lasers)
-            .in_set(NetworkingSystemsSet::Between)
-            .chain(),
-    )
-    .add_event::<LaserCollideEvent>();
+    app.configure_sets(FixedUpdate, LaserSystemSet::SendHitEvents)
+        .add_systems(
+            FixedUpdate,
+            (send_laser_hit_events.in_set(LaserSystemSet::SendHitEvents), despawn_lasers)
+                .in_set(FixedUpdateSet::Main)
+                .chain(),
+        )
+        .add_event::<LaserCollideEvent>();
 }

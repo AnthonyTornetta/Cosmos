@@ -10,6 +10,7 @@ use bevy_rapier3d::{
 use serde::{Deserialize, Serialize};
 
 use crate::{
+    ecs::sets::FixedUpdateSet,
     netty::{sync::IdentifiableComponent, system_sets::NetworkingSystemsSet},
     structure::coordinates::BlockCoordinate,
 };
@@ -57,10 +58,10 @@ fn update_mass_props(mut commands: Commands, q_ent: Query<Entity, With<ReadMassP
 
 pub(super) fn register(app: &mut App) {
     app.add_systems(
-        Update,
+        FixedUpdate,
         (update_mass_props.run_if(on_timer(Duration::from_secs(5))), do_gravity_well)
             .chain()
-            .in_set(NetworkingSystemsSet::Between),
+            .in_set(FixedUpdateSet::Main),
     )
     .register_type::<GravityWell>();
 }
