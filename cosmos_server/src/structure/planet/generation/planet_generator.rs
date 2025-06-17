@@ -7,7 +7,7 @@ use bevy::{
 };
 use bevy_renet::renet::{ClientId, RenetServer};
 use cosmos_core::{
-    ecs::NeedsDespawned,
+    ecs::{NeedsDespawned, sets::FixedUpdateSet},
     entities::{EntityId, player::Player},
     netty::{
         NettyChannelServer, NoSendEntity, cosmos_encoder, server_reliable_messages::ServerReliableMessages,
@@ -397,10 +397,10 @@ fn unload_chunks_far_from_players(
 
 pub(super) fn register(app: &mut App) {
     app.add_systems(
-        Update,
+        FixedUpdate,
         (generate_chunks_near_players, get_requested_chunk, bounce_events)
             .chain()
-            .in_set(NetworkingSystemsSet::Between)
+            .in_set(FixedUpdateSet::Main)
             .run_if(in_state(GameState::Playing)),
     )
     .add_systems(

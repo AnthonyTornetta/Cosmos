@@ -1,6 +1,6 @@
 //! Shared asteroid generation logic
 
-use bevy::{prelude::*, tasks::AsyncComputeTaskPool, platform::collections::HashMap};
+use bevy::{platform::collections::HashMap, prelude::*, tasks::AsyncComputeTaskPool};
 use cosmos_core::{
     block::{Block, block_rotation::BlockRotation},
     physics::location::Location,
@@ -172,7 +172,7 @@ pub fn register_standard_asteroid_generation<T: AsteroidGeneratorComponent>(
         };
 
     app.add_systems(
-        Update,
+        FixedUpdate,
         start_generating_molten_asteroid
             .in_set(AsteroidGenerationSet::GenerateAsteroid)
             .ambiguous_with(AsteroidGenerationSet::GenerateAsteroid)

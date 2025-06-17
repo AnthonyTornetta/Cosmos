@@ -94,16 +94,17 @@ pub(crate) fn create_ship_event_reader(mut event_reader: EventReader<CreateShipE
 
 pub(super) fn register(app: &mut App) {
     app.add_event::<ShipSetMovementEvent>().add_systems(
-        Update,
+        FixedUpdate,
         (monitor_pilot_changes, monitor_set_movement_events)
             .after(BlockEventsSet::PostProcessEvents)
             .in_set(StructureTypeSet::Ship)
+            // TODO: this in_set makes no sense - check this
             .in_set(NetworkingSystemsSet::SyncComponents)
             .run_if(in_state(GameState::Playing)),
     );
 
     app.add_event::<CreateShipEvent>().add_systems(
-        Update,
+        FixedUpdate,
         create_ship_event_reader
             .in_set(StructureLoadingSet::LoadStructure)
             .run_if(in_state(GameState::Playing)),

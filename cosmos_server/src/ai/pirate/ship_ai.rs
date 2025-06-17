@@ -163,7 +163,7 @@ fn add_difficuly_increase(mut commands: Commands, q_merchant: Query<Entity, (Wit
 
 pub(super) fn register(app: &mut App) {
     app.configure_sets(
-        Update,
+        FixedUpdate,
         PirateSystemSet::PirateAiLogic
             .before(CombatAiSystemSet::CombatAiLogic)
             .in_set(StructureTypeSet::Ship)
@@ -171,7 +171,7 @@ pub(super) fn register(app: &mut App) {
             .after(StructureEventListenerSet::ChangePilotListener),
     )
     .add_systems(
-        Update,
+        FixedUpdate,
         (
             on_melt_down,
             add_pirate_ai,
@@ -181,7 +181,6 @@ pub(super) fn register(app: &mut App) {
             handle_pirate_targetting.before(ShipMovementSet::RemoveShipMovement),
         )
             .run_if(in_state(GameState::Playing))
-            .in_set(NetworkingSystemsSet::Between)
             .in_set(PirateSystemSet::PirateAiLogic)
             .chain(),
     )

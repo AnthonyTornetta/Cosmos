@@ -115,7 +115,7 @@ pub(super) fn register(app: &mut App) {
     {
         // Setup explosion before they are synced to clients
         app.configure_sets(
-            Update,
+            FixedUpdate,
             (
                 ExplosionSystemSet::PreProcessExplosions,
                 ExplosionSystemSet::ProcessExplosions.after(LocationPhysicsSet::DoPhysics),

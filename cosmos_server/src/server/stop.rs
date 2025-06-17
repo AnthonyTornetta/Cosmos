@@ -12,7 +12,10 @@ use cosmos_core::{
 };
 use renet::RenetServer;
 
-use crate::persistence::saving::{NeedsSaved, SavingSystemSet};
+use crate::{
+    commands::cosmos_command_handler::ProcessCommandsSet,
+    persistence::saving::{NeedsSaved, SavingSystemSet},
+};
 
 #[derive(Debug, Event, Default)]
 /// Tells the server to gracefully exit - saving all entities in the process.
@@ -73,12 +76,10 @@ pub(super) fn register(app: &mut App) {
     app.add_event::<StopServerEvent>()
         .add_event::<CloseServerPostSaveEvent>()
         .add_systems(
-            //
-            Update,
+            FixedUpdate,
             on_stop_server
-                .in_set(NetworkingSystemsSet::Between)
+                .after(ProcessCommandsSet::HandleCommands)
                 .in_set(StopServerSet::Stop)
-                .after(LocationPhysicsSet::DoPhysics)
                 .run_if(on_event::<StopServerEvent>),
         )
         .add_systems(

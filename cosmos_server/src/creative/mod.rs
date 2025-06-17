@@ -3,6 +3,7 @@
 use bevy::prelude::*;
 use cosmos_core::{
     creative::{CreativeTrashHeldItem, GrabCreativeItemEvent},
+    ecs::sets::FixedUpdateSet,
     entities::player::creative::Creative,
     inventory::{HeldItemStack, Inventory, itemstack::ItemShouldHaveData},
     item::Item,
@@ -79,9 +80,7 @@ fn on_grab_creative_item(
 
 pub(super) fn register(app: &mut App) {
     app.add_systems(
-        Update,
-        (on_trash_item_creative, on_grab_creative_item)
-            .in_set(NetworkingSystemsSet::Between)
-            .chain(),
+        FixedUpdate,
+        (on_trash_item_creative, on_grab_creative_item).in_set(FixedUpdateSet::Main).chain(),
     );
 }

@@ -6,7 +6,7 @@ use bevy::prelude::*;
 use bevy_rapier3d::prelude::Velocity;
 use cosmos_core::{
     coms::{AiComsType, ComsChannel, RequestedComs},
-    ecs::NeedsDespawned,
+    ecs::{NeedsDespawned, sets::FixedUpdateSet},
     entities::EntityId,
     events::structure::StructureEventListenerSet,
     faction::{Faction, FactionId, FactionRelation, Factions},
@@ -550,7 +550,7 @@ pub(super) fn register(app: &mut App) {
     make_persistent::<MerchantFederation>(app);
 
     app.configure_sets(
-        Update,
+        FixedUpdate,
         MerchantSystemSet::MerchantAiLogic
             .before(CombatAiSystemSet::CombatAiLogic)
             .in_set(StructureTypeSet::Ship)
@@ -558,7 +558,7 @@ pub(super) fn register(app: &mut App) {
             .after(StructureEventListenerSet::ChangePilotListener),
     )
     .add_systems(
-        Update,
+        FixedUpdate,
         (
             on_melt_down,
             add_merchant_ai,
@@ -573,7 +573,7 @@ pub(super) fn register(app: &mut App) {
             dont_save,
         )
             .run_if(in_state(GameState::Playing))
-            .in_set(NetworkingSystemsSet::Between)
+            .in_set(FixedUpdateSet::Main)
             .in_set(MerchantSystemSet::MerchantAiLogic)
             .chain(),
     )

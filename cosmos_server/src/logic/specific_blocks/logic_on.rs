@@ -53,7 +53,7 @@ fn logic_on_output_event_listener(
 pub(super) fn register<T: States>(app: &mut App, post_loading_state: T) {
     app.add_systems(OnEnter(post_loading_state), register_logic_connections)
         .add_systems(
-            Update,
+            FixedUpdate,
             logic_on_output_event_listener
                 .in_set(LogicSystemSet::Produce)
                 .ambiguous_with(LogicSystemSet::Produce),

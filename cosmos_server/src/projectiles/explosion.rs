@@ -9,7 +9,7 @@ use bevy_rapier3d::{
 
 use cosmos_core::{
     block::{Block, block_events::BlockEventsSet},
-    ecs::NeedsDespawned,
+    ecs::{NeedsDespawned, sets::FixedUpdateSet},
     physics::{
         location::{Location, LocationPhysicsSet},
         player_world::PlayerWorld,
@@ -242,14 +242,15 @@ pub(super) fn register(app: &mut App) {
     app.add_event::<ExplosionHitEvent>();
 
     app.add_systems(
-        Update,
+        FixedUpdate,
         respond_to_explosion
             .ambiguous_with(MeltingDownSet::ProcessMeltingDown)
             .in_set(ExplosionSystemSet::ProcessExplosions)
             .in_set(BlockEventsSet::SendEventsForNextFrame)
             .ambiguous_with(BlockEventsSet::SendEventsForNextFrame) // Order of blocks being updated doesn't matter
             .after(ShieldSet::RechargeShields)
-            .after(LocationPhysicsSet::DoPhysics)
+            .after(FixedUpdateSet::LocationSyncing)
+            .before(FixedUpdateSet::PrePhysics)
             .before(ShieldSet::OnShieldHit)
             .in_set(BlockHealthSet::SendHealthChanges),
     );

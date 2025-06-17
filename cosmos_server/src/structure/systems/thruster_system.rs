@@ -271,7 +271,7 @@ pub(super) fn register(app: &mut App) {
     app.insert_resource(ThrusterBlocks::default())
         .add_systems(OnEnter(GameState::PostLoading), register_thruster_blocks)
         .add_systems(
-            Update,
+            FixedUpdate,
             (
                 structure_loaded_event
                     .in_set(StructureSystemsSet::InitSystems)
@@ -281,7 +281,6 @@ pub(super) fn register(app: &mut App) {
                     .in_set(StructureSystemsSet::UpdateSystemsBlocks),
             )
                 .chain()
-                .in_set(NetworkingSystemsSet::Between)
                 .run_if(in_state(GameState::Playing)),
         )
         .add_systems(

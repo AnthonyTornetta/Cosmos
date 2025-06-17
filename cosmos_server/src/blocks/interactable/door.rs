@@ -1,4 +1,4 @@
-use bevy::{prelude::*, platform::collections::HashSet};
+use bevy::{platform::collections::HashSet, prelude::*};
 use cosmos_core::{
     block::{
         Block,
@@ -91,9 +91,10 @@ fn toggle_doors(
 
                 for dir in ALL_BLOCK_DIRECTIONS {
                     if let Ok(coord) = BlockCoordinate::try_from(dir.to_coordinates() + coord)
-                        && !done.contains(&coord) {
-                            new_todo.insert(coord);
-                        }
+                        && !done.contains(&coord)
+                    {
+                        new_todo.insert(coord);
+                    }
                 }
             }
 
@@ -104,13 +105,12 @@ fn toggle_doors(
 
 pub(super) fn register(app: &mut App) {
     app.add_systems(
-        Update,
+        FixedUpdate,
         (
             handle_door_block_event.in_set(BlockEventsSet::ProcessEvents),
             toggle_doors.in_set(BlockEventsSet::SendEventsForNextFrame),
         )
             .chain()
-            .in_set(NetworkingSystemsSet::Between)
             .run_if(in_state(GameState::Playing)),
     )
     .add_event::<ToggleDoorEvent>();

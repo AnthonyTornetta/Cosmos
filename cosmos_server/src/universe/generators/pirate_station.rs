@@ -89,7 +89,7 @@ fn generate_pirate_stations(
 
 pub(super) fn register(app: &mut App) {
     app.add_systems(
-        Update,
+        FixedUpdate,
         generate_pirate_stations
             .in_set(SystemGenerationSet::PirateStation)
             .run_if(in_state(GameState::Playing)),

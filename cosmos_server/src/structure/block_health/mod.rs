@@ -63,7 +63,7 @@ pub enum BlockHealthSet {
 
 pub(super) fn register(app: &mut App) {
     app.configure_sets(
-        Update,
+        FixedUpdate,
         (
             BlockHealthSet::SendHealthChanges,
             BlockHealthSet::ProcessHealthChanges
@@ -76,7 +76,7 @@ pub(super) fn register(app: &mut App) {
     );
 
     app.add_systems(
-        Update,
+        FixedUpdate,
         (monitor_block_health_changed, monitor_block_destroyed)
             .in_set(BlockHealthSet::ProcessHealthChanges)
             .in_set(BlockEventsSet::SendEventsForNextFrame)

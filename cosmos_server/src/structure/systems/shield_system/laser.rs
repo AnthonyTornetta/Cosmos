@@ -23,10 +23,9 @@ fn handle_laser_hits(
 
 pub(super) fn register(app: &mut App) {
     app.add_systems(
-        Update,
+        FixedUpdate,
         handle_laser_hits
             .in_set(ShieldSet::OnShieldHit)
-            .in_set(NetworkingSystemsSet::Between)
             .ambiguous_with(ShieldSet::OnShieldHit),
     );
 }

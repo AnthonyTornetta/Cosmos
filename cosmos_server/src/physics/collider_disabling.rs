@@ -1,5 +1,6 @@
 use bevy::prelude::*;
 use cosmos_core::{
+    ecs::sets::FixedUpdateSet,
     entities::player::Player,
     netty::system_sets::NetworkingSystemsSet,
     physics::{
@@ -42,10 +43,10 @@ fn disable_colliders(
 
 pub(super) fn register(app: &mut App) {
     app.add_systems(
-        Update,
+        FixedUpdate,
         disable_colliders
             .run_if(in_state(GameState::Playing))
-            .in_set(NetworkingSystemsSet::Between)
+            .in_set(FixedUpdateSet::PrePhysics)
             .before(DisableRigidBodySet::DisableRigidBodies),
     );
 }

@@ -2,6 +2,7 @@ use bevy::prelude::*;
 use bevy_rapier3d::prelude::Velocity;
 use cosmos_core::{
     block::block_events::{BlockBreakEvent, BlockEventsSet},
+    ecs::sets::FixedUpdateSet,
     inventory::Inventory,
     item::physical_item::PhysicalItem,
     netty::system_sets::NetworkingSystemsSet,
@@ -82,15 +83,14 @@ fn monitor_block_breaks(
 
 pub(super) fn register(app: &mut App) {
     app.add_systems(
-        Update,
+        FixedUpdate,
         (
             // We want to target blocks after events are sent, but before blocks are removed.
             monitor_block_breaks
-                .in_set(NetworkingSystemsSet::Between)
-                .in_set(BlockEventsSet::PreProcessEvents),
+                .in_set(BlockEventsSet::PreProcessEvents)
+                .after(FixedUpdateSet::NettyReceive),
             // We want to target blocks after events are sent, but before blocks are removed.
             monitor_block_detroy
-                .in_set(NetworkingSystemsSet::Between)
                 .after(BlockHealthSet::SendHealthChanges)
                 .before(BlockHealthSet::ProcessHealthChanges),
         ),

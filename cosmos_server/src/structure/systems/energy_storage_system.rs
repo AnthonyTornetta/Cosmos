@@ -78,7 +78,7 @@ pub(super) fn register(app: &mut App) {
     app.insert_resource(EnergyStorageBlocks::default())
         .add_systems(OnEnter(GameState::PostLoading), register_energy_blocks)
         .add_systems(
-            Update,
+            FixedUpdate,
             (
                 structure_loaded_event
                     .in_set(StructureSystemsSet::InitSystems)

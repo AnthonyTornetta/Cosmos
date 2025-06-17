@@ -66,7 +66,7 @@ fn create_stations(
 
 pub(super) fn register(app: &mut App) {
     app.add_systems(
-        Update,
+        FixedUpdate,
         create_stations
             .in_set(StructureLoadingSet::LoadStructure)
             .in_set(StructureTypeSet::Station)

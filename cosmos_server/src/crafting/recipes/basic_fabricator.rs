@@ -106,7 +106,7 @@ fn sync_recipes_on_join(
 
 pub(super) fn register(app: &mut App) {
     app.add_systems(OnEnter(GameState::PostLoading), load_recipes).add_systems(
-        Update,
+        FixedUpdate,
         (
             sync_recipes_on_join,
             sync_recipes_on_change.run_if(resource_exists_and_changed::<BasicFabricatorRecipes>),

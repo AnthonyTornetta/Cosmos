@@ -6,6 +6,7 @@ use bevy::{ecs::system::ScheduleSystem, prelude::*};
 use cosmos_core::{
     chat::ServerSendChatMessageEvent,
     commands::ClientCommandEvent,
+    ecs::sets::FixedUpdateSet,
     entities::player::Player,
     netty::{
         server::ServerLobby,
@@ -88,7 +89,7 @@ pub fn create_cosmos_command<T: CosmosCommandType, M>(
     };
 
     app.add_systems(
-        Update,
+        FixedUpdate,
         (monitor_commands, on_get_command.run_if(on_event::<CommandEvent<T>>))
             .in_set(ProcessCommandsSet::HandleCommands)
             .chain(),
@@ -293,23 +294,25 @@ fn send_messages(
 
 pub(super) fn register(app: &mut App) {
     app.configure_sets(
-        Update,
+        FixedUpdate,
         (ProcessCommandsSet::ParseCommands, ProcessCommandsSet::HandleCommands)
             .chain()
             .before(LoadingSystemSet::BeginLoading),
     );
 
     register_commands(app);
-    app.insert_resource(CurrentlyWriting::default()).add_systems(
-        Update,
-        (
-            (command_receiver, monitor_inputs, warn_on_no_command_hit)
-                .chain()
-                .in_set(NetworkingSystemsSet::Between)
-                .in_set(ProcessCommandsSet::ParseCommands),
-            send_messages
-                .after(ProcessCommandsSet::HandleCommands)
-                .before(NetworkingSystemsSet::SyncComponents),
-        ),
-    );
+    app.insert_resource(CurrentlyWriting::default())
+        .add_systems(Update, monitor_inputs)
+        .add_systems(
+            FixedUpdate,
+            (
+                (command_receiver, warn_on_no_command_hit)
+                    .chain()
+                    .in_set(FixedUpdateSet::Main)
+                    .in_set(ProcessCommandsSet::ParseCommands),
+                send_messages
+                    .after(ProcessCommandsSet::HandleCommands)
+                    .before(NetworkingSystemsSet::SyncComponents),
+            ),
+        );
 }

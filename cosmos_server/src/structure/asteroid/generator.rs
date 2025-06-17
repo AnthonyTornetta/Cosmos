@@ -132,7 +132,7 @@ pub enum AsteroidGenerationSet {
 
 pub(super) fn register(app: &mut App) {
     app.configure_sets(
-        Update,
+        FixedUpdate,
         (
             AsteroidGenerationSet::StartGeneratingAsteroid,
             AsteroidGenerationSet::GenerateAsteroid,
@@ -144,7 +144,7 @@ pub(super) fn register(app: &mut App) {
     );
 
     app.add_systems(
-        Update,
+        FixedUpdate,
         (
             send_events.in_set(AsteroidGenerationSet::StartGeneratingAsteroid),
             notify_when_done_generating.in_set(AsteroidGenerationSet::NotifyFinished),

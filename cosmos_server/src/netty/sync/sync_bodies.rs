@@ -143,11 +143,6 @@ fn notify_despawned_entities(
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_systems(
-        Update,
-        server_sync_bodies
-            .after(LocationPhysicsSet::DoPhysics)
-            .in_set(NetworkingSystemsSet::SyncComponents),
-    )
-    .add_systems(First, notify_despawned_entities.before(despawn_needed));
+    app.add_systems(FixedUpdate, server_sync_bodies.in_set(NetworkingSystemsSet::SyncComponents))
+        .add_systems(First, notify_despawned_entities.before(despawn_needed));
 }

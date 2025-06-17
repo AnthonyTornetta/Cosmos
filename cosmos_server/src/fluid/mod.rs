@@ -51,9 +51,8 @@ pub(super) fn register(app: &mut App) {
     tank::register(app);
 
     app.add_systems(
-        Update,
+        FixedUpdate,
         on_place_tank
-            .in_set(NetworkingSystemsSet::Between)
             .in_set(BlockEventsSet::SendEventsForThisFrame)
             .in_set(FluidInteractionSet::InteractWithFluidBlocks)
             .ambiguous_with(FluidInteractionSet::InteractWithFluidBlocks),

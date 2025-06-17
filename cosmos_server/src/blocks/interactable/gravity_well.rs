@@ -188,7 +188,7 @@ pub(super) fn register(app: &mut App) {
     make_persistent::<GravityWell>(app);
 
     app.add_systems(
-        Update,
+        FixedUpdate,
         (
             grav_well_handle_block_event,
             remove_gravity_wells,

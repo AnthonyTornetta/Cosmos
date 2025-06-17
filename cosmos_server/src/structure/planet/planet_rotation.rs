@@ -7,6 +7,7 @@ use std::{f32::consts::TAU, time::Duration};
 
 use bevy::prelude::*;
 use cosmos_core::{
+    ecs::sets::FixedUpdateSet,
     netty::{sync::IdentifiableComponent, system_sets::NetworkingSystemsSet},
     physics::location::Location,
     prelude::{Planet, Structure},
@@ -96,7 +97,7 @@ fn add_planet_rotation(
 pub(super) fn register(app: &mut App) {
     app.add_systems(
         FixedUpdate,
-        (add_planet_rotation, rotate_planets).chain().in_set(NetworkingSystemsSet::Between),
+        (add_planet_rotation, rotate_planets).chain().in_set(FixedUpdateSet::Main),
     )
     .register_type::<PlanetRotation>();
 

@@ -236,14 +236,14 @@ pub(super) fn register(app: &mut App) {
     make_persistent::<PlayerStrength>(app);
 
     app.configure_sets(
-        Update,
+        FixedUpdate,
         MerchantSpawningSet::MerchantSpawningLogic
             .before(LoadingBlueprintSystemSet::BeginLoadingBlueprints)
             .run_if(in_state(GameState::Playing)),
     )
     .add_systems(Startup, load_settings)
     .add_systems(
-        Update,
+        FixedUpdate,
         (add_spawn_times, spawn_merchant_ships, on_needs_merchant_spawned)
             .in_set(MerchantSpawningSet::MerchantSpawningLogic)
             .chain(),

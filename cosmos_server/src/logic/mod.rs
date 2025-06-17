@@ -535,7 +535,7 @@ pub(super) fn register(app: &mut App) {
     let run_con = on_timer(Duration::from_millis(1000 / LOGIC_TICKS_PER_SECOND));
 
     app.configure_sets(
-        Update,
+        FixedUpdate,
         (
             LogicSystemSet::PreLogicTick.run_if(run_con.clone()),
             LogicSystemSet::EditLogicGraph
@@ -558,7 +558,7 @@ pub(super) fn register(app: &mut App) {
     );
 
     app.add_systems(
-        Update,
+        FixedUpdate,
         (
             add_default_logic.in_set(StructureLoadingSet::AddStructureComponents),
             logic_block_changed_event_listener.in_set(LogicSystemSet::EditLogicGraph),

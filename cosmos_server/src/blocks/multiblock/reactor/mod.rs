@@ -504,7 +504,7 @@ pub(super) fn register(app: &mut App) {
                 .in_set(BlockEventsSet::PostProcessEvents)
                 .after(StructureSystemsSet::UpdateSystems),
         )
-            .in_set(NetworkingSystemsSet::Between)
+            // .in_set(NetworkingSystemsSet::Between)
             .chain()
             .run_if(in_state(GameState::Playing)),
     );

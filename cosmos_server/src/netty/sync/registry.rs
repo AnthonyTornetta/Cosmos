@@ -48,7 +48,7 @@ fn listen_for_done_syncing(
 
 pub(super) fn register(app: &mut App) {
     app.add_systems(
-        Update,
+        FixedUpdate,
         listen_for_done_syncing
             .run_if(in_state(GameState::Playing))
             .in_set(NetworkingSystemsSet::ReceiveMessages),

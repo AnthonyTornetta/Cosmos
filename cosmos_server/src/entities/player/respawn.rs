@@ -3,6 +3,7 @@
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::Velocity;
 use cosmos_core::{
+    ecs::sets::FixedUpdateSet,
     entities::{
         EntityId,
         health::{Dead, Health, HealthSet, MaxHealth},
@@ -48,9 +49,10 @@ fn on_die(
 ) {
     for (location, mut inventory, children) in q_player.iter_mut() {
         if let Some(mut inv) = HeldItemStack::get_held_is_inventory_from_children_mut(children, &mut q_held_item)
-            && let Some(held_is) = inv.remove_itemstack_at(0) {
-                drop_itemstack(&mut commands, location, held_is);
-            }
+            && let Some(held_is) = inv.remove_itemstack_at(0)
+        {
+            drop_itemstack(&mut commands, location, held_is);
+        }
 
         inventory.retain_mut(|is| {
             drop_itemstack(&mut commands, location, is);
@@ -130,6 +132,6 @@ pub(super) fn register(app: &mut App) {
             on_respawn.before(LocationPhysicsSet::DoPhysics),
             on_die.after(HealthSet::ProcessHealthChange),
         )
-            .in_set(NetworkingSystemsSet::Between),
+            .in_set(FixedUpdateSet::Main),
     );
 }

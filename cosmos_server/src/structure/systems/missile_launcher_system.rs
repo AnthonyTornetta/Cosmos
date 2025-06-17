@@ -11,6 +11,7 @@ use bevy_rapier3d::{
 use bevy_renet::renet::RenetServer;
 use cosmos_core::{
     block::{Block, data::BlockData},
+    ecs::sets::FixedUpdateSet,
     entities::player::Player,
     inventory::Inventory,
     item::Item,
@@ -362,13 +363,13 @@ pub(super) fn register(app: &mut App) {
     )
     .add_systems(OnEnter(GameState::PostLoading), register_missile_launcher_blocks)
     .add_systems(
-        Update,
+        FixedUpdate,
         (add_missile_targettable, on_add_missile_launcher, missile_lockon)
-            .in_set(NetworkingSystemsSet::Between)
+            .in_set(FixedUpdateSet::Main)
             .chain(),
     )
     .add_systems(
-        Update,
+        FixedUpdate,
         missile_launcher_input_event_listener
             .in_set(LogicSystemSet::Consume)
             .in_set(StructureSystemsSet::UpdateSystems)

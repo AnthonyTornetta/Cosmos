@@ -207,7 +207,7 @@ fn load_blueprint_rotation(mut commands: Commands, mut q_needs_blueprint: Query<
 }
 
 /// The schedule loading takes place in - this may change in the future
-pub const LOADING_SCHEDULE: Update = Update;
+pub const LOADING_SCHEDULE: FixedUpdate = FixedUpdate;
 
 pub(super) fn register(app: &mut App) {
     app.configure_sets(

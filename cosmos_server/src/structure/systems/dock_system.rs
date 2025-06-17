@@ -417,7 +417,7 @@ fn nearest_axis(direction: Vec3) -> Vec3 {
 
 pub(super) fn register(app: &mut App) {
     app.add_systems(
-        Update,
+        FixedUpdate,
         (
             dock_structure_loaded_event_processor
                 .in_set(StructureSystemsSet::InitSystems)

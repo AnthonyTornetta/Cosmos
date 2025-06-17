@@ -49,6 +49,6 @@ fn load_all_blueprints(mut commands: Commands, mut ran: Local<bool>) {
 
 pub(super) fn register(app: &mut App, version: SaveVersion) {
     if version == SaveVersion::Old {
-        app.add_systems(Update, load_all_blueprints.run_if(in_state(GameState::Playing)));
+        app.add_systems(FixedUpdate, load_all_blueprints.run_if(in_state(GameState::Playing)));
     }
 }

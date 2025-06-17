@@ -759,11 +759,11 @@ enum StructurePhysicsSet {
 }
 
 pub(super) fn register(app: &mut App) {
-    // This goes in `PreUpdate` because rapier seems to hate adding a rigid body w/ children that have colliders in the same frame.
+    // OLD: This goes in `PreUpdate` because rapier seems to hate adding a rigid body w/ children that have colliders in the same frame.
     // If you feel like fixing this, more power to you.
     app.configure_sets(
-        PreUpdate,
-        StructurePhysicsSet::StructurePhysicsLogic.after(StructureLoadingSet::StructureLoaded),
+        FixedUpdate,
+        StructurePhysicsSet::StructurePhysicsLogic,
         // StructurePhysicsSet::StructurePhysicsLogic.after(StructureLoadingSet::StructureLoaded),
     );
 

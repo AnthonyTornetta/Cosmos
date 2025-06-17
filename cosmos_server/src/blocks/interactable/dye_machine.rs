@@ -123,9 +123,8 @@ fn dye_block(
 
 pub(super) fn register(app: &mut App) {
     app.add_systems(
-        Update,
+        FixedUpdate,
         (handle_block_event, dye_block)
-            .in_set(NetworkingSystemsSet::Between)
             .in_set(BlockEventsSet::ProcessEvents)
             .run_if(in_state(GameState::Playing)),
     );

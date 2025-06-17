@@ -398,7 +398,7 @@ fn send_all_chunks(
 
 pub(super) fn register(app: &mut App) {
     app.add_systems(
-        Update,
+        FixedUpdate,
         (handle_server_events, server_listen_messages)
             .chain()
             .in_set(NetworkingSystemsSet::ReceiveMessages)

@@ -65,7 +65,7 @@ fn create_ships(
 
 pub(super) fn register(app: &mut App) {
     app.add_systems(
-        Update,
+        FixedUpdate,
         create_ships
             .in_set(StructureLoadingSet::LoadStructure)
             .in_set(StructureTypeSet::Ship)

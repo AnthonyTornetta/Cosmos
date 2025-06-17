@@ -205,10 +205,13 @@ enum SystemSyncingSet {
 }
 
 pub fn sync_system<T: StructureSystemImpl + Component<Mutability = Mutable> + Serialize + DeserializeOwned>(app: &mut App) {
-    app.configure_sets(Update, SystemSyncingSet::SyncSystems.in_set(NetworkingSystemsSet::SyncComponents));
+    app.configure_sets(
+        FixedUpdate,
+        SystemSyncingSet::SyncSystems.in_set(NetworkingSystemsSet::SyncComponents),
+    );
 
     app.add_systems(
-        Update,
+        FixedUpdate,
         sync::<T>
             .in_set(SystemSyncingSet::SyncSystems)
             .ambiguous_with(SystemSyncingSet::SyncSystems)
@@ -220,7 +223,7 @@ pub fn sync_system<T: StructureSystemImpl + Component<Mutability = Mutable> + Se
 
 pub(super) fn register(app: &mut App) {
     app.add_systems(
-        Update,
+        FixedUpdate,
         replication_listen_netty
             .before(LocationPhysicsSet::DoPhysics)
             .run_if(in_state(GameState::Playing))

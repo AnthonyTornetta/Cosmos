@@ -1,6 +1,7 @@
 use bevy::prelude::*;
 use bevy_rapier3d::dynamics::Velocity;
 use cosmos_core::{
+    ecs::sets::FixedUpdateSet,
     events::structure::StructureEventListenerSet,
     netty::{sync::IdentifiableComponent, system_sets::NetworkingSystemsSet},
     physics::location::Location,
@@ -191,7 +192,7 @@ pub(super) fn register(app: &mut App) {
     make_persistent::<CombatAi>(app);
 
     app.configure_sets(
-        Update,
+        FixedUpdate,
         CombatAiSystemSet::CombatAiLogic
             .in_set(StructureTypeSet::Ship)
             .after(LoadingSystemSet::DoneLoading)
@@ -200,10 +201,10 @@ pub(super) fn register(app: &mut App) {
     .register_type::<AiTargetting>()
     .register_type::<CombatAi>()
     .add_systems(
-        Update,
+        FixedUpdate,
         (handle_combat_ai.before(ShipMovementSet::RemoveShipMovement),)
             .run_if(in_state(GameState::Playing))
-            .in_set(NetworkingSystemsSet::Between)
+            .in_set(FixedUpdateSet::Main)
             .in_set(CombatAiSystemSet::CombatAiLogic)
             .chain(),
     );

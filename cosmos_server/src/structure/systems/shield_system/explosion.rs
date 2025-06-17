@@ -38,9 +38,8 @@ fn respond_to_explosion_damage(
 
 pub(super) fn register(app: &mut App) {
     app.add_systems(
-        Update,
+        FixedUpdate,
         respond_to_explosion_damage
-            .in_set(NetworkingSystemsSet::Between)
             .before(HealthSet::ProcessHealthChange)
             .in_set(ShieldSet::OnShieldHit),
     );

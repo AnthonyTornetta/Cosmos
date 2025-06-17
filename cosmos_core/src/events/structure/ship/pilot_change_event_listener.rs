@@ -1,6 +1,7 @@
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::{RigidBody, Sensor};
 
+use crate::ecs::sets::FixedUpdateSet;
 use crate::events::structure::change_pilot_event::ChangePilotEvent;
 use crate::netty::system_sets::NetworkingSystemsSet;
 use crate::physics::location::{Location, LocationPhysicsSet};
@@ -137,16 +138,10 @@ fn pilot_needs_sensor(mut commands: Commands, q_pilot: Query<Entity, (With<Pilot
 }
 
 pub(super) fn register<T: States + Clone + Copy>(app: &mut App, playing_state: T) {
-    app.configure_sets(
-        Update,
-        PilotEventSystemSet::ChangePilotListener
-            // Normally you'd want to put parent-changing systems before this set, but this was all designed before this was a thing.
-            // Perhaps in the future refactor this? To see how you should actually change parents, see the GravityWell logic.
-            .after(LocationPhysicsSet::DoPhysics),
-    );
+    app.configure_sets(FixedUpdate, PilotEventSystemSet::ChangePilotListener);
 
     app.add_systems(
-        Update,
+        FixedUpdate,
         (
             pilot_removed,
             remove_sensor,
@@ -157,6 +152,8 @@ pub(super) fn register<T: States + Clone + Copy>(app: &mut App, playing_state: T
         )
             .in_set(PilotEventSystemSet::ChangePilotListener)
             .in_set(StructureTypeSet::Ship)
+            // TODO: this could be wrong
+            .in_set(FixedUpdateSet::Main)
             .chain()
             .run_if(in_state(playing_state)),
     )

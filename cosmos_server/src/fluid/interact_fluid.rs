@@ -406,11 +406,11 @@ pub enum FluidInteractionSet {
 }
 
 pub(super) fn register(app: &mut App) {
-    app.configure_sets(Update, FluidInteractionSet::InteractWithFluidBlocks);
+    app.configure_sets(FixedUpdate, FluidInteractionSet::InteractWithFluidBlocks);
 
     app.add_systems(OnEnter(GameState::PostLoading), (register_fluid_holder_items, fill_tank_registry))
         .add_systems(
-            Update,
+            FixedUpdate,
             (
                 on_interact_with_tank
                     .in_set(ItemStackSystemSet::CreateDataEntity)
@@ -419,7 +419,6 @@ pub(super) fn register(app: &mut App) {
                 add_item_fluid_data.in_set(ItemStackSystemSet::FillDataEntity),
                 on_interact_with_fluid.after(ItemStackSystemSet::FillDataEntity),
             )
-                .in_set(NetworkingSystemsSet::Between)
                 .in_set(FluidInteractionSet::InteractWithFluidBlocks),
         );
 }

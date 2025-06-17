@@ -187,7 +187,7 @@ pub(super) fn register(app: &mut App) {
     app.add_systems(OnExit(GameState::PostLoading), init_game_info)
         .add_systems(OnEnter(GameState::Playing), populate_galaxy)
         .add_systems(
-            Update,
+            FixedUpdate,
             (
                 save_game_info_on_tick
                     .run_if(on_real_timer(Duration::from_secs(5)))

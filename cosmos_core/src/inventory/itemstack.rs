@@ -7,7 +7,7 @@ use bevy::{
 };
 use serde::{Deserialize, Serialize};
 
-use crate::{ecs::NeedsDespawned, item::Item, registry::identifiable::Identifiable};
+use crate::{ecs::NeedsDespawned, item::Item, registry::identifiable::Identifiable, state::GameState};
 
 #[derive(Serialize, Deserialize, Component, Debug, Reflect, Clone, PartialEq, Eq)]
 /// An item & the quantity of that item
@@ -433,21 +433,24 @@ pub(super) fn register<T: States>(app: &mut App, playing_state: T) {
             ItemStackSystemSet::CreateDataEntity,
             ItemStackSystemSet::FillDataEntity,
             ItemStackSystemSet::DoneFillingDataEntity,
-            // ItemStackSystemSet::AddCanSplit,
-            // ItemStackSystemSet::CanSplit,
-            // ItemStackSystemSet::ReadCanSplit,
-            // ItemStackSystemSet::SplitItemStacks,
-            // ItemStackSystemSet::CopyItemStackData,
-            // ItemStackSystemSet::RemoveCopyFlag,
+        )
+            .run_if(in_state(GameState::Playing))
+            .chain(),
+    )
+    .add_systems(Update, name_itemstack_data.after(ItemStackSystemSet::FillDataEntity))
+    .add_systems(Update, remove_needs_filled.in_set(ItemStackSystemSet::DoneFillingDataEntity))
+    .configure_sets(
+        FixedUpdate,
+        (
+            ItemStackSystemSet::CreateDataEntity,
+            ItemStackSystemSet::FillDataEntity,
+            ItemStackSystemSet::DoneFillingDataEntity,
         )
             .run_if(in_state(playing_state))
             .chain(),
     )
-    // .add_systems(Update, create_itemstack_data_entity.in_set(ItemStackSystemSet::CreateDataEntity))
-    // .add_systems(Update, remove_copy_flag.in_set(ItemStackSystemSet::RemoveCopyFlag))
-    .add_systems(Update, name_itemstack_data.after(ItemStackSystemSet::FillDataEntity))
-    .add_systems(Update, remove_needs_filled.in_set(ItemStackSystemSet::DoneFillingDataEntity))
-    // .add_event::<ItemStackNeedsDataCreatedEvent>()
+    .add_systems(FixedUpdate, name_itemstack_data.after(ItemStackSystemSet::FillDataEntity))
+    .add_systems(FixedUpdate, remove_needs_filled.in_set(ItemStackSystemSet::DoneFillingDataEntity))
     .init_resource::<ItemShouldHaveData>()
     .register_type::<ItemStackData>();
 }

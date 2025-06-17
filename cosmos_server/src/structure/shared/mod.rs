@@ -55,7 +55,7 @@ pub enum MeltingDownSet {
 
 pub(super) fn register(app: &mut App) {
     app.configure_sets(
-        Update,
+        FixedUpdate,
         (
             MeltingDownSet::StartMeltingDown.in_set(BlockEventsSet::ProcessEvents),
             MeltingDownSet::ProcessMeltingDown
@@ -67,7 +67,7 @@ pub(super) fn register(app: &mut App) {
             .run_if(in_state(GameState::Playing)),
     );
 
-    app.add_systems(Update, on_melting_down.in_set(MeltingDownSet::ProcessMeltingDown));
+    app.add_systems(FixedUpdate, on_melting_down.in_set(MeltingDownSet::ProcessMeltingDown));
 
     build_mode::register(app);
     melt_down::register(app);

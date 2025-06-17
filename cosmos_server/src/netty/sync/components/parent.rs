@@ -178,7 +178,7 @@ fn on_remove_parent(
 
 pub(super) fn register(app: &mut App) {
     app.add_systems(
-        Update,
+        FixedUpdate,
         (on_request_parent, on_change_parent, on_remove_parent)
             .chain()
             .run_if(resource_exists::<RenetServer>)
