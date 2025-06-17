@@ -246,12 +246,10 @@ pub(super) fn register(app: &mut App) {
         respond_to_explosion
             .ambiguous_with(MeltingDownSet::ProcessMeltingDown)
             .in_set(ExplosionSystemSet::ProcessExplosions)
-            .in_set(BlockEventsSet::SendEventsForNextFrame)
-            .ambiguous_with(BlockEventsSet::SendEventsForNextFrame) // Order of blocks being updated doesn't matter
-            .after(ShieldSet::RechargeShields)
-            .after(FixedUpdateSet::LocationSyncing)
-            .before(FixedUpdateSet::PrePhysics)
-            .before(ShieldSet::OnShieldHit)
-            .in_set(BlockHealthSet::SendHealthChanges),
+            .ambiguous_with(BlockEventsSet::SendEventsForNextFrame), // Order of blocks being updated doesn't matter
+                                                                     // .after(ShieldSet::RechargeShields)
+                                                                     // .after(FixedUpdateSet::LocationSyncing)
+                                                                     // .before(FixedUpdateSet::PrePhysics)
+                                                                     // .before(ShieldSet::OnShieldHit), // .in_set(BlockHealthSet::SendHealthChanges),
     );
 }

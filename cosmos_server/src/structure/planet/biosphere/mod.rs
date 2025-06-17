@@ -176,7 +176,6 @@ pub fn register_biosphere<T: BiosphereMarkerComponent + Default + Clone, E: Send
                         }
                     }
                 })
-                .in_set(LoadingSystemSet::DoLoading)
                 .in_set(NeedsBiosphereSet::AddBiosphere),
                 // Checks if any blocks need generated for this biosphere
                 ((

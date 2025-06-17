@@ -264,11 +264,9 @@ pub(super) fn register(app: &mut App) {
     )
     .add_systems(
         Update,
-        on_add_missile
-            .in_set(ComponentSyncingSet::PostComponentSyncing)
-            .run_if(in_state(GameState::Playing).or(in_state(GameState::LoadingWorld))),
+        on_add_missile.run_if(in_state(GameState::Playing).or(in_state(GameState::LoadingWorld))),
     )
     .add_systems(OnEnter(GameState::Loading), create_missile_mesh)
-    .add_systems(Update, track_time_alive)
+    .add_systems(FixedUpdate, track_time_alive)
     .init_resource::<ParticleEffectsForColor>();
 }

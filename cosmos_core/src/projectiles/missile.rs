@@ -118,7 +118,7 @@ pub(super) fn register(app: &mut App) {
             FixedUpdate,
             (
                 ExplosionSystemSet::PreProcessExplosions,
-                ExplosionSystemSet::ProcessExplosions.after(LocationPhysicsSet::DoPhysics),
+                ExplosionSystemSet::ProcessExplosions, //.after(LocationPhysicsSet::DoPhysics),
             )
                 .chain(),
         );

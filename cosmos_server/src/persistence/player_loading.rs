@@ -243,7 +243,7 @@ fn load_all(base: SaveFileIdentifier, file: DirEntry, to_load: &mut Vec<SaveFile
 }
 
 pub(super) fn register(app: &mut App) {
-    app.insert_resource(SectorsCache::default()).add_systems(
+    app.init_resource::<SectorsCache>().add_systems(
         FixedUpdate,
         (
             unload_far
