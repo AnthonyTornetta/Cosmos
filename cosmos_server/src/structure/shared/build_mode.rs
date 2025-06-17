@@ -4,7 +4,6 @@ use bevy::prelude::*;
 use cosmos_core::{
     block::{Block, block_events::BlockInteractEvent},
     ecs::sets::FixedUpdateSet,
-    netty::system_sets::NetworkingSystemsSet,
     prelude::{Ship, Station},
     registry::{Registry, identifiable::Identifiable},
     state::GameState,

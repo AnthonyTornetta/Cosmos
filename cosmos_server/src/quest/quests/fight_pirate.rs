@@ -2,7 +2,7 @@ use bevy::prelude::*;
 use cosmos_core::{
     economy::Credits,
     ecs::sets::FixedUpdateSet,
-    netty::{sync::IdentifiableComponent, system_sets::NetworkingSystemsSet},
+    netty::sync::IdentifiableComponent,
     physics::location::{Location, SECTOR_DIMENSIONS},
     quest::{OngoingQuestDetails, OngoingQuestId, OngoingQuests, Quest},
     registry::Registry,

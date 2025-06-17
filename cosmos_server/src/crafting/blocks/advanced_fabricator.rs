@@ -21,7 +21,6 @@ use cosmos_core::{
             netty_event::SyncedEventImpl,
             server_event::{NettyEventReceived, NettyEventWriter},
         },
-        system_sets::NetworkingSystemsSet,
     },
     prelude::Structure,
     registry::{Registry, identifiable::Identifiable},

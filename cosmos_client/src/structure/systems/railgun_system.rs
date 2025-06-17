@@ -7,7 +7,7 @@ use bevy_kira_audio::{Audio, AudioControl, AudioInstance};
 use bevy_rapier3d::prelude::{RigidBody, Velocity};
 use cosmos_core::{
     ecs::NeedsDespawned,
-    netty::{client::LocalPlayer, system_sets::NetworkingSystemsSet},
+    netty::client::LocalPlayer,
     physics::location::Location,
     prelude::{DespawnWithStructure, Structure},
     state::GameState,

@@ -5,7 +5,7 @@ use std::fmt::Display;
 use bevy::prelude::*;
 use serde::{Deserialize, Serialize};
 
-use crate::{ecs::sets::FixedUpdateSet, netty::system_sets::NetworkingSystemsSet};
+use crate::ecs::sets::FixedUpdateSet;
 
 use super::pilot::Pilot;
 

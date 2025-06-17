@@ -4,10 +4,7 @@ use bevy::prelude::*;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    netty::{
-        sync::{IdentifiableComponent, SyncableComponent, sync_component},
-        system_sets::NetworkingSystemsSet,
-    },
+    netty::sync::{IdentifiableComponent, SyncableComponent, sync_component},
     state::GameState,
 };
 

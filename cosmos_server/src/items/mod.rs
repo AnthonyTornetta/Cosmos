@@ -8,7 +8,7 @@ use cosmos_core::{
     entities::{health::Dead, player::Player},
     inventory::Inventory,
     item::physical_item::PhysicalItem,
-    netty::{sync::IdentifiableComponent, system_sets::NetworkingSystemsSet},
+    netty::sync::IdentifiableComponent,
     physics::location::Location,
 };
 use serde::{Deserialize, Serialize};

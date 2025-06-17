@@ -3,7 +3,7 @@ use bevy_rapier3d::dynamics::Velocity;
 use cosmos_core::{
     ecs::sets::FixedUpdateSet,
     events::structure::StructureEventListenerSet,
-    netty::{sync::IdentifiableComponent, system_sets::NetworkingSystemsSet},
+    netty::sync::IdentifiableComponent,
     physics::location::Location,
     projectiles::{laser::LASER_LIVE_TIME, missile::Missile},
     state::GameState,

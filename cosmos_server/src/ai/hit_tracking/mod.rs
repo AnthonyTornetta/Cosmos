@@ -1,12 +1,11 @@
 //! Keeps track of the entities that have hit other AI-Controlled ships, if the [`Hitters`]
 //! component is added.
 
-use bevy::{platform::collections::HashMap, prelude::*, time::common_conditions::on_timer};
+use bevy::{platform::collections::HashMap, prelude::*};
 use cosmos_core::{
     block::block_events::BlockEventsSet,
     entities::EntityId,
     faction::{FactionId, FactionRelation, Factions},
-    netty::system_sets::NetworkingSystemsSet,
     state::GameState,
     structure::{block_health::events::BlockTakeDamageEvent, shared::MeltingDown, ship::pilot::Pilot},
 };

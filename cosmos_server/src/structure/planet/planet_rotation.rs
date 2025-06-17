@@ -8,7 +8,7 @@ use std::{f32::consts::TAU, time::Duration};
 use bevy::prelude::*;
 use cosmos_core::{
     ecs::sets::FixedUpdateSet,
-    netty::{sync::IdentifiableComponent, system_sets::NetworkingSystemsSet},
+    netty::sync::IdentifiableComponent,
     physics::location::Location,
     prelude::{Planet, Structure},
 };

@@ -4,7 +4,6 @@ use cosmos_core::{
     block::{Block, block_events::BlockEventsSet, block_update::BlockUpdate},
     ecs::mut_events::MutEvent,
     events::block_events::BlockChangedEvent,
-    netty::system_sets::NetworkingSystemsSet,
     registry::{Registry, identifiable::Identifiable},
     state::GameState,
     structure::{Structure, coordinates::BlockCoordinate},

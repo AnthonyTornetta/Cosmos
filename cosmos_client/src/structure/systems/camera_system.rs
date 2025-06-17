@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 use cosmos_core::{
-    netty::{client::LocalPlayer, system_sets::NetworkingSystemsSet},
+    netty::client::LocalPlayer,
     state::GameState,
     structure::{
         Structure,

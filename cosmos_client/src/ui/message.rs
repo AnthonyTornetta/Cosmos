@@ -3,7 +3,7 @@
 use std::{collections::VecDeque, time::Duration};
 
 use bevy::prelude::*;
-use cosmos_core::{netty::system_sets::NetworkingSystemsSet, state::GameState};
+use cosmos_core::state::GameState;
 
 use super::font::DefaultFont;
 

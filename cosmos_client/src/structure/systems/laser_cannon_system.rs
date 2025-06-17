@@ -3,8 +3,7 @@
 use bevy::{asset::LoadState, prelude::*};
 use bevy_kira_audio::prelude::*;
 use cosmos_core::{
-    netty::system_sets::NetworkingSystemsSet,
-    physics::location::{Location, LocationPhysicsSet},
+    physics::location::Location,
     state::GameState,
     structure::systems::laser_cannon_system::LaserCannonSystem,
 };

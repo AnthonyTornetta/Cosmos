@@ -4,7 +4,7 @@ use bevy::prelude::*;
 use cosmos_core::{
     inventory::itemstack::{ItemShouldHaveData, ItemStack, ItemStackSystemSet},
     item::Item,
-    netty::{client::LocalPlayer, system_sets::NetworkingSystemsSet},
+    netty::client::LocalPlayer,
     registry::Registry,
     state::GameState,
     structure::{

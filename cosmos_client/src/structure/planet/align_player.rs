@@ -6,7 +6,7 @@ use bevy::prelude::*;
 use cosmos_core::{
     block::block_face::BlockFace,
     ecs::sets::FixedUpdateSet,
-    netty::{client::LocalPlayer, system_sets::NetworkingSystemsSet},
+    netty::client::LocalPlayer,
     physics::{
         gravity_system::GravityEmitter,
         location::{Location, LocationPhysicsSet},

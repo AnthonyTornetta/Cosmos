@@ -5,7 +5,6 @@ use cosmos_core::{
         block_events::{BlockEventsSet, BlockInteractEvent},
     },
     events::structure::change_pilot_event::ChangePilotEvent,
-    netty::system_sets::NetworkingSystemsSet,
     registry::{Registry, identifiable::Identifiable},
     state::GameState,
     structure::{

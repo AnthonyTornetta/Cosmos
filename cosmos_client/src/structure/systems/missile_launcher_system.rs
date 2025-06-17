@@ -4,8 +4,8 @@ use bevy::{asset::LoadState, color::palettes::css, prelude::*};
 use bevy_kira_audio::prelude::*;
 use cosmos_core::{
     ecs::NeedsDespawned,
-    netty::{client::LocalPlayer, sync::mapping::NetworkMapping, system_sets::NetworkingSystemsSet},
-    physics::location::{Location, LocationPhysicsSet},
+    netty::{client::LocalPlayer, sync::mapping::NetworkMapping},
+    physics::location::Location,
     state::GameState,
     structure::{
         ship::pilot::Pilot,

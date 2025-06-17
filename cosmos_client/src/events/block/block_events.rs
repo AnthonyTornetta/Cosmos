@@ -7,13 +7,11 @@ use cosmos_core::{
         block_events::{BlockEventsSet, BlockInteractEvent},
         block_rotation::BlockRotation,
     },
-    ecs::sets::FixedUpdateSet,
     netty::{
         NettyChannelClient,
         client_reliable_messages::ClientReliableMessages,
         cosmos_encoder,
         sync::mapping::{Mappable, NetworkMapping},
-        system_sets::NetworkingSystemsSet,
     },
     state::GameState,
     structure::structure_block::StructureBlock,

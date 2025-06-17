@@ -2,7 +2,7 @@ use bevy::prelude::*;
 use cosmos_core::{
     crafting::recipes::advanced_fabricator::SyncAdvancedFabricatorRecipesEvent,
     ecs::sets::FixedUpdateSet,
-    netty::{sync::events::client_event::NettyEventReceived, system_sets::NetworkingSystemsSet},
+    netty::sync::events::client_event::NettyEventReceived,
 };
 
 fn sync_recipes(mut commands: Commands, mut nevr: EventReader<NettyEventReceived<SyncAdvancedFabricatorRecipesEvent>>) {

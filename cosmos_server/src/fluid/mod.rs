@@ -5,7 +5,6 @@ use cosmos_core::{
     block::{Block, block_events::BlockEventsSet, data::BlockData},
     events::block_events::{BlockChangedEvent, BlockDataSystemParams},
     fluid::data::{BlockFluidData, FluidItemData},
-    netty::system_sets::NetworkingSystemsSet,
     registry::{Registry, identifiable::Identifiable},
     structure::Structure,
 };

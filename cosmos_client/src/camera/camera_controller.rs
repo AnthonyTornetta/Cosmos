@@ -5,7 +5,7 @@ use std::f32::consts::PI;
 use bevy::prelude::*;
 use bevy_rapier3d::na::clamp;
 use cosmos_core::{
-    netty::{client::LocalPlayer, system_sets::NetworkingSystemsSet},
+    netty::client::LocalPlayer,
     state::GameState,
     structure::ship::pilot::Pilot,
 };

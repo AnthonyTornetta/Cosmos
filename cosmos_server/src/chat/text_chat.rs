@@ -6,7 +6,6 @@ use cosmos_core::{
     netty::{
         server::ServerLobby,
         sync::events::server_event::{NettyEventReceived, NettyEventWriter},
-        system_sets::NetworkingSystemsSet,
     },
     state::GameState,
 };

@@ -10,7 +10,6 @@ use cosmos_core::{
     block::Block,
     netty::{
         NettyChannelServer, cosmos_encoder, server_laser_cannon_system_messages::ServerStructureSystemMessages,
-        system_sets::NetworkingSystemsSet,
     },
     physics::location::{Location, LocationPhysicsSet},
     projectiles::{causer::Causer, laser::Laser},

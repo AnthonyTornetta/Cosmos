@@ -3,7 +3,7 @@
 use bevy::{asset::LoadState, platform::collections::HashMap, prelude::*};
 use cosmos_core::{
     faction::{Faction, FactionId, FactionRelation, Factions},
-    netty::{client::LocalPlayer, system_sets::NetworkingSystemsSet},
+    netty::client::LocalPlayer,
     physics::location::Location,
     state::GameState,
     structure::{

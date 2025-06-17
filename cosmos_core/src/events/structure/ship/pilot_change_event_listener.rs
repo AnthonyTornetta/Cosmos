@@ -3,8 +3,7 @@ use bevy_rapier3d::prelude::{RigidBody, Sensor};
 
 use crate::ecs::sets::FixedUpdateSet;
 use crate::events::structure::change_pilot_event::ChangePilotEvent;
-use crate::netty::system_sets::NetworkingSystemsSet;
-use crate::physics::location::{Location, LocationPhysicsSet};
+use crate::physics::location::Location;
 use crate::structure::StructureTypeSet;
 use crate::structure::ship::pilot::Pilot;
 

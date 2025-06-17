@@ -5,7 +5,6 @@ use bevy::prelude::*;
 use cosmos_core::{
     block::{Block, block_events::BlockEventsSet},
     events::block_events::BlockChangedEvent,
-    netty::system_sets::NetworkingSystemsSet,
     registry::Registry,
     state::GameState,
     structure::{

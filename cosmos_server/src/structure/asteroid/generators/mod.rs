@@ -3,7 +3,6 @@
 use bevy::prelude::*;
 use cosmos_core::{
     ecs::sets::FixedUpdateSet,
-    netty::system_sets::NetworkingSystemsSet,
     physics::location::Location,
     structure::{Structure, asteroid::Asteroid},
 };

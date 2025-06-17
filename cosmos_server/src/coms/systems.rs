@@ -9,7 +9,6 @@ use cosmos_core::{
     netty::{
         server::ServerLobby,
         sync::events::server_event::{NettyEventReceived, NettyEventWriter},
-        system_sets::NetworkingSystemsSet,
     },
     physics::location::Location,
     prelude::{DespawnWithStructure, Ship},

@@ -8,7 +8,6 @@ use cosmos_core::{
     item::Item,
     netty::{
         NettyChannelClient, client::LocalPlayer, client_reliable_messages::ClientReliableMessages, cosmos_encoder,
-        system_sets::NetworkingSystemsSet,
     },
     registry::Registry,
     state::GameState,

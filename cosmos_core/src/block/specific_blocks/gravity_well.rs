@@ -11,7 +11,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     ecs::sets::FixedUpdateSet,
-    netty::{sync::IdentifiableComponent, system_sets::NetworkingSystemsSet},
+    netty::sync::IdentifiableComponent,
     structure::coordinates::BlockCoordinate,
 };
 

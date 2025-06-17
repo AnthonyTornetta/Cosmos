@@ -11,7 +11,6 @@ use cosmos_core::{
     ecs::mut_events::MutEvent,
     events::block_events::{BlockChangedEvent, BlockDataChangedEvent, BlockDataSystemParams},
     fluid::data::{BlockFluidData, FluidTankBlock, StoredFluidData},
-    netty::system_sets::NetworkingSystemsSet,
     registry::{Registry, identifiable::Identifiable},
     structure::{
         Structure,

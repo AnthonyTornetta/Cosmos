@@ -5,7 +5,7 @@ use bevy_rapier3d::prelude::{ReadMassProperties, RigidBody};
 
 use crate::{
     persistence::{Blueprintable, LoadingDistance},
-    physics::location::{Location, LocationPhysicsSet},
+    physics::location::Location,
     structure::loading::StructureLoadingSet,
 };
 

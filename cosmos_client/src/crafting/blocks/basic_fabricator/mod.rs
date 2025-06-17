@@ -2,13 +2,10 @@ use bevy::prelude::*;
 use cosmos_core::{
     crafting::blocks::basic_fabricator::OpenBasicFabricatorEvent,
     ecs::NeedsDespawned,
-    netty::{
-        sync::{
+    netty::sync::{
             events::client_event::NettyEventReceived,
             mapping::{Mappable, NetworkMapping},
         },
-        system_sets::NetworkingSystemsSet,
-    },
     prelude::StructureBlock,
     state::GameState,
 };

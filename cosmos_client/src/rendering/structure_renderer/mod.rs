@@ -1,9 +1,7 @@
 use crate::asset::materials::MaterialsSystemSet;
-use crate::structure::planet::unload_chunks_far_from_players;
 use bevy::prelude::*;
 use cosmos_core::block::Block;
 use cosmos_core::block::block_events::BlockEventsSet;
-use cosmos_core::netty::system_sets::NetworkingSystemsSet;
 use cosmos_core::registry::Registry;
 use cosmos_core::registry::identifiable::Identifiable;
 use cosmos_core::state::GameState;

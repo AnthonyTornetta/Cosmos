@@ -5,14 +5,11 @@ use std::time::Duration;
 use bevy::prelude::*;
 use serde::{Deserialize, Serialize};
 
-use crate::netty::{
-    sync::{
+use crate::netty::sync::{
         ClientAuthority, IdentifiableComponent, SyncableComponent,
         events::netty_event::{IdentifiableEvent, NettyEvent, SyncedEventImpl},
         sync_component,
-    },
-    system_sets::NetworkingSystemsSet,
-};
+    };
 
 use super::{
     StructureSystemsSet,

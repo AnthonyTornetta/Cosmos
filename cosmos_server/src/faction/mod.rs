@@ -4,7 +4,7 @@ use bevy::prelude::*;
 use cosmos_core::{
     ecs::sets::FixedUpdateSet,
     faction::{Faction, FactionId, FactionSettings, Factions},
-    netty::{cosmos_encoder, system_sets::NetworkingSystemsSet},
+    netty::cosmos_encoder,
     state::GameState,
 };
 use std::fs;

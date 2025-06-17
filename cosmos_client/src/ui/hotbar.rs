@@ -7,7 +7,7 @@ use cosmos_core::{
     block::block_events::BlockEventsSet,
     inventory::{Inventory, held_item_slot::HeldItemSlot, itemstack::ItemStack},
     item::Item,
-    netty::{client::LocalPlayer, system_sets::NetworkingSystemsSet},
+    netty::client::LocalPlayer,
     registry::{Registry, identifiable::Identifiable},
     state::GameState,
 };

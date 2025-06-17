@@ -6,7 +6,6 @@ use cosmos_core::{
     entities::player::Player,
     events::structure::StructureEventListenerSet,
     faction::{FactionId, Factions},
-    netty::system_sets::NetworkingSystemsSet,
     physics::location::Location,
     projectiles::missile::Missile,
     state::GameState,

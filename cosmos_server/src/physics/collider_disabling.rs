@@ -2,7 +2,6 @@ use bevy::prelude::*;
 use cosmos_core::{
     ecs::sets::FixedUpdateSet,
     entities::player::Player,
-    netty::system_sets::NetworkingSystemsSet,
     physics::{
         disable_rigid_body::{DisableRigidBody, DisableRigidBodySet},
         location::{Location, SECTOR_DIMENSIONS},

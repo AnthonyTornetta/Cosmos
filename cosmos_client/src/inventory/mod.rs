@@ -24,7 +24,6 @@ use cosmos_core::{
         client::LocalPlayer,
         cosmos_encoder,
         sync::{events::client_event::NettyEventWriter, mapping::NetworkMapping},
-        system_sets::NetworkingSystemsSet,
     },
     registry::{Registry, identifiable::Identifiable},
     state::GameState,

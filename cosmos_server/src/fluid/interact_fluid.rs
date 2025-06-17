@@ -20,7 +20,6 @@ use cosmos_core::{
         itemstack::{ItemShouldHaveData, ItemStackData, ItemStackNeedsDataCreated, ItemStackSystemSet},
     },
     item::Item,
-    netty::system_sets::NetworkingSystemsSet,
     registry::{Registry, identifiable::Identifiable},
     state::GameState,
     structure::Structure,

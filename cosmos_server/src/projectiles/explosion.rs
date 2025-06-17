@@ -9,9 +9,9 @@ use bevy_rapier3d::{
 
 use cosmos_core::{
     block::{Block, block_events::BlockEventsSet},
-    ecs::{NeedsDespawned, sets::FixedUpdateSet},
+    ecs::NeedsDespawned,
     physics::{
-        location::{Location, LocationPhysicsSet},
+        location::Location,
         player_world::PlayerWorld,
         structure_physics::ChunkPhysicsPart,
     },
@@ -30,7 +30,7 @@ use cosmos_core::{
 
 use crate::{
     netty::sync::sync_bodies::DontNotifyClientOfDespawn,
-    structure::{block_health::BlockHealthSet, shared::MeltingDownSet, systems::shield_system::ShieldSet},
+    structure::shared::MeltingDownSet,
 };
 
 /// 1 unit of explosion power = this amount of health. Bigger this number is, the more damage explosives will do.

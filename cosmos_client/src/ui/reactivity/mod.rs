@@ -9,7 +9,6 @@ use super::{
     components::{slider::SliderUiSystemSet, text_input::TextInputUiSystemSet},
 };
 use bevy::{ecs::component::Mutable, prelude::*};
-use cosmos_core::netty::system_sets::NetworkingSystemsSet;
 
 pub mod slider;
 pub mod text;

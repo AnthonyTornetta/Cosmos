@@ -2,7 +2,6 @@
 
 use crate::{
     ecs::sets::FixedUpdateSet,
-    netty::system_sets::NetworkingSystemsSet,
     structure::events::{ChunkSetEvent, StructureLoadedEvent},
 };
 use bevy::prelude::*;

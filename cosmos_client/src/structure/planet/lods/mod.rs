@@ -8,7 +8,6 @@ use bevy_app_compute::prelude::{AppComputeWorker, BevyEasyComputeSet};
 use cosmos_core::{
     block::{Block, block_face::BlockFace},
     ecs::mut_events::{EventWriterCustomSend, MutEvent, MutEventsCommand},
-    netty::system_sets::NetworkingSystemsSet,
     physics::location::Location,
     registry::Registry,
     state::GameState,

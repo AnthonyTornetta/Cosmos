@@ -10,7 +10,7 @@ use cosmos_core::{
     entities::EntityId,
     events::structure::StructureEventListenerSet,
     faction::{Faction, FactionId, FactionRelation, Factions},
-    netty::{sync::IdentifiableComponent, system_sets::NetworkingSystemsSet},
+    netty::sync::IdentifiableComponent,
     physics::location::Location,
     prelude::Ship,
     projectiles::missile::Missile,

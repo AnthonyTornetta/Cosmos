@@ -11,7 +11,6 @@ use cosmos_core::{
     entities::{EntityId, player::Player},
     netty::{
         NettyChannelServer, NoSendEntity, cosmos_encoder, server_reliable_messages::ServerReliableMessages,
-        system_sets::NetworkingSystemsSet,
     },
     physics::location::Location,
     state::GameState,

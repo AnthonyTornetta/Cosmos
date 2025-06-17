@@ -3,10 +3,9 @@
 use bevy::prelude::*;
 use cosmos_core::{
     ecs::NeedsDespawned,
-    netty::system_sets::NetworkingSystemsSet,
     persistence::LoadingDistance,
     physics::{
-        location::{Location, LocationPhysicsSet},
+        location::Location,
         player_world::PlayerWorld,
     },
 };

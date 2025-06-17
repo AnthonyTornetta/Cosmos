@@ -7,7 +7,7 @@ use cosmos_core::{
     entities::player::creative::Creative,
     inventory::{HeldItemStack, Inventory, itemstack::ItemShouldHaveData},
     item::Item,
-    netty::{server::ServerLobby, sync::events::server_event::NettyEventReceived, system_sets::NetworkingSystemsSet},
+    netty::{server::ServerLobby, sync::events::server_event::NettyEventReceived},
     registry::Registry,
 };
 

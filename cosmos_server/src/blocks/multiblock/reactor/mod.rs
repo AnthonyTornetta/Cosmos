@@ -16,7 +16,7 @@ use cosmos_core::{
     events::block_events::BlockDataSystemParams,
     inventory::{Inventory, itemstack::ItemShouldHaveData},
     item::{DEFAULT_MAX_STACK_SIZE, Item},
-    netty::{NettyChannelServer, cosmos_encoder, server_reliable_messages::ServerReliableMessages, system_sets::NetworkingSystemsSet},
+    netty::{NettyChannelServer, cosmos_encoder, server_reliable_messages::ServerReliableMessages},
     registry::{Registry, identifiable::Identifiable},
     state::GameState,
     structure::{

@@ -9,7 +9,6 @@ use cosmos_core::ecs::sets::FixedUpdateSet;
 use cosmos_core::netty::client::LocalPlayer;
 use cosmos_core::netty::client_reliable_messages::ClientReliableMessages;
 use cosmos_core::netty::client_unreliable_messages::ClientUnreliableMessages;
-use cosmos_core::netty::system_sets::NetworkingSystemsSet;
 use cosmos_core::netty::{NettyChannelClient, cosmos_encoder};
 use cosmos_core::state::GameState;
 use cosmos_core::structure::shared::build_mode::BuildMode;

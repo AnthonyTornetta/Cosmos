@@ -6,7 +6,7 @@ use bevy_hanabi::prelude::*;
 use bevy_kira_audio::{Audio, AudioControl, AudioInstance, AudioSource};
 use cosmos_core::{
     ecs::NeedsDespawned,
-    netty::{client::LocalPlayer, sync::ComponentSyncingSet},
+    netty::client::LocalPlayer,
     physics::location::Location,
     projectiles::missile::{Explosion, ExplosionSystemSet, Missile},
     state::GameState,

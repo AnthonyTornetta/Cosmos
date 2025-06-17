@@ -2,7 +2,6 @@ use bevy::prelude::*;
 use cosmos_core::{
     block::Block,
     entities::health::Health,
-    netty::system_sets::NetworkingSystemsSet,
     projectiles::{
         causer::Causer,
         laser::{Laser, LaserCollideEvent, LaserSystemSet},

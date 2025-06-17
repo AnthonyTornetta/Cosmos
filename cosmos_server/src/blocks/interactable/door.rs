@@ -6,7 +6,6 @@ use cosmos_core::{
         block_events::{BlockEventsSet, BlockInteractEvent},
     },
     events::block_events::BlockChangedEvent,
-    netty::system_sets::NetworkingSystemsSet,
     prelude::{BlockCoordinate, Structure, StructureBlock},
     registry::{Registry, identifiable::Identifiable},
     state::GameState,

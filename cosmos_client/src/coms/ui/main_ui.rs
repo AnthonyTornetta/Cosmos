@@ -13,7 +13,7 @@ use crate::{
     },
 };
 use bevy::{color::palettes::css, input_focus::InputFocus, prelude::*};
-use cosmos_core::{coms::ComsChannelType, netty::system_sets::NetworkingSystemsSet};
+use cosmos_core::coms::ComsChannelType;
 use cosmos_core::{coms::ComsMessage, netty::client::LocalPlayer};
 use cosmos_core::{coms::events::RequestCloseComsEvent, structure::ship::pilot::Pilot};
 use cosmos_core::{coms::events::SendComsMessageType, state::GameState};

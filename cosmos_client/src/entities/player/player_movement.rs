@@ -8,7 +8,7 @@ use bevy_rapier3d::{
 use cosmos_core::{
     block::specific_blocks::gravity_well::GravityWell,
     ecs::sets::FixedUpdateSet,
-    netty::{client::LocalPlayer, system_sets::NetworkingSystemsSet},
+    netty::client::LocalPlayer,
     physics::location::LocationPhysicsSet,
     prelude::Planet,
     projectiles::laser::LaserSystemSet,

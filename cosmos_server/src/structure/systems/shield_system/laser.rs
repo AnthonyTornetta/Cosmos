@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use cosmos_core::{netty::system_sets::NetworkingSystemsSet, projectiles::laser::LaserCollideEvent, structure::shields::Shield};
+use cosmos_core::{projectiles::laser::LaserCollideEvent, structure::shields::Shield};
 
 use super::{ShieldHitEvent, ShieldSet};
 

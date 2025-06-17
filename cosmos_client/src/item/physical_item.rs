@@ -4,7 +4,6 @@ use bevy::prelude::*;
 use cosmos_core::{
     inventory::Inventory,
     item::{Item, physical_item::PhysicalItem},
-    netty::system_sets::NetworkingSystemsSet,
     registry::{Registry, identifiable::Identifiable},
     state::GameState,
 };

@@ -1,8 +1,6 @@
 use bevy::prelude::*;
 use bevy_kira_audio::{Audio, AudioControl, AudioInstance, AudioSource};
 use cosmos_core::{
-    block::block_events::BlockEventsSet,
-    netty::system_sets::NetworkingSystemsSet,
     state::GameState,
     structure::{Structure, shared::DespawnWithStructure},
 };

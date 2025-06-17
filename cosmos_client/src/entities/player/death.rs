@@ -7,8 +7,8 @@ use cosmos_core::{
         health::Dead,
         player::respawn::{RequestRespawnEvent, RespawnEvent},
     },
-    netty::{client::LocalPlayer, sync::events::client_event::NettyEventWriter, system_sets::NetworkingSystemsSet},
-    physics::location::{Location, LocationPhysicsSet, SetPosition},
+    netty::{client::LocalPlayer, sync::events::client_event::NettyEventWriter},
+    physics::location::{Location, SetPosition},
 };
 use renet::RenetClient;
 

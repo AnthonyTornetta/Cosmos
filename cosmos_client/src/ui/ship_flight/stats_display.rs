@@ -2,15 +2,13 @@ use bevy::{color::palettes::css, prelude::*};
 use bevy_rapier3d::dynamics::Velocity;
 use cosmos_core::{
     ecs::NeedsDespawned,
-    netty::{client::LocalPlayer, system_sets::NetworkingSystemsSet},
-    physics::location::LocationPhysicsSet,
+    netty::client::LocalPlayer,
     structure::{
         ship::pilot::Pilot,
-        systems::{StructureSystems, StructureSystemsSet, energy_storage_system::EnergyStorageSystem},
+        systems::{StructureSystems, energy_storage_system::EnergyStorageSystem},
     },
 };
 
-use crate::entities::player::player_movement::PlayerMovementSet;
 
 #[derive(Component)]
 struct StatsNodes;

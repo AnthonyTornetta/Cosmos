@@ -24,7 +24,6 @@ use cosmos_core::{
         server::ServerLobby,
         server_reliable_messages::ServerReliableMessages,
         sync::{IdentifiableComponent, events::server_event::NettyEventWriter, registry::server::SyncRegistriesEvent},
-        system_sets::NetworkingSystemsSet,
     },
     persistence::LoadingDistance,
     physics::location::{Location, LocationPhysicsSet, Sector, SetPosition, systems::Anchor},

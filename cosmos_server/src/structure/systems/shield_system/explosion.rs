@@ -1,7 +1,6 @@
 use bevy::prelude::*;
 use cosmos_core::{
     entities::health::{Health, HealthSet},
-    netty::system_sets::NetworkingSystemsSet,
     physics::location::Location,
     structure::shields::Shield,
 };

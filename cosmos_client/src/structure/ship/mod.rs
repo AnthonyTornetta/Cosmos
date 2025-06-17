@@ -7,12 +7,10 @@ use cosmos_core::{
     ecs::sets::FixedUpdateSet,
     netty::{
         NettyChannelClient, client::LocalPlayer, client_reliable_messages::ClientReliableMessages, cosmos_encoder,
-        system_sets::NetworkingSystemsSet,
     },
-    physics::location::LocationPhysicsSet,
     state::GameState,
     structure::{
-        Structure, chunk::CHUNK_DIMENSIONSF, loading::StructureLoadingSet, planet::Planet, shared::build_mode::BuildMode,
+        Structure, chunk::CHUNK_DIMENSIONSF, planet::Planet, shared::build_mode::BuildMode,
         ship::pilot::Pilot,
     },
 };

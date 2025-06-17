@@ -6,10 +6,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     ecs::sets::FixedUpdateSet,
-    netty::{
-        sync::{IdentifiableComponent, SyncableComponent, sync_component},
-        system_sets::NetworkingSystemsSet,
-    },
+    netty::sync::{IdentifiableComponent, SyncableComponent, sync_component},
     structure::ship::pilot::Pilot,
 };
 

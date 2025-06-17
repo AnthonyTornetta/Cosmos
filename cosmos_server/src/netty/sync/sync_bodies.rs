@@ -19,7 +19,7 @@ use cosmos_core::{
         },
         system_sets::NetworkingSystemsSet,
     },
-    physics::location::{Location, LocationPhysicsSet},
+    physics::location::Location,
     structure::systems::StructureSystem,
 };
 

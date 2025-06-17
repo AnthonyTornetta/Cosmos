@@ -2,7 +2,7 @@
 
 use bevy::{
     app::FixedUpdate,
-    prelude::{App, Commands, Entity, GlobalTransform, IntoScheduleConfigs, Or, PostUpdate, Query, With},
+    prelude::{App, Commands, Entity, GlobalTransform, IntoScheduleConfigs, Or, Query, With},
 };
 use bevy_rapier3d::prelude::Collider;
 

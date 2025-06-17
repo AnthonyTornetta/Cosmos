@@ -4,7 +4,6 @@ use bevy::{prelude::*, time::common_conditions::on_timer};
 use cosmos_core::{
     ecs::sets::FixedUpdateSet,
     entities::health::{Dead, Health, HealthSet, MaxHealth},
-    netty::system_sets::NetworkingSystemsSet,
 };
 
 use crate::persistence::make_persistent::{DefaultPersistentComponent, make_persistent};

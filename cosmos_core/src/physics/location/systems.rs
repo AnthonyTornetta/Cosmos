@@ -15,7 +15,7 @@ use crate::ecs::NeedsDespawned;
 
 use crate::{ecs::sets::FixedUpdateSet, physics::player_world::PlayerWorld};
 
-use super::{Location, LocationPhysicsSet, SetPosition};
+use super::{Location, SetPosition};
 
 #[cfg(doc)]
 use crate::netty::client::LocalPlayer;

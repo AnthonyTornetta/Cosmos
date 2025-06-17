@@ -16,10 +16,7 @@ use cosmos_core::{
     events::block_events::{BlockChangedEvent, BlockDataSystemParams},
     inventory::Inventory,
     item::Item,
-    netty::{
-        sync::events::server_event::{NettyEventReceived, NettyEventWriter},
-        system_sets::NetworkingSystemsSet,
-    },
+    netty::sync::events::server_event::{NettyEventReceived, NettyEventWriter},
     prelude::{Structure, StructureLoadingSet, StructureSystems},
     registry::{Registry, identifiable::Identifiable},
     state::GameState,

@@ -8,7 +8,6 @@ use bevy_rapier3d::{
 use cosmos_core::{
     block::{Block, block_events::BlockEventsSet},
     events::block_events::BlockChangedEvent,
-    netty::system_sets::NetworkingSystemsSet,
     physics::location::Location,
     prelude::FullStructure,
     registry::Registry,

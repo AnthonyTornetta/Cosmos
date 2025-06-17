@@ -32,14 +32,13 @@ use cosmos_core::{
         server_unreliable_messages::ServerUnreliableMessages,
         sync::{
             ComponentEntityIdentifier,
-            client_syncing::ClientReceiveComponents,
             mapping::{Mappable, NetworkMapping, ServerEntity},
         },
         system_sets::NetworkingSystemsSet,
     },
     persistence::LoadingDistance,
     physics::{
-        location::{Location, LocationPhysicsSet, SYSTEM_SECTORS, SetPosition, systems::Anchor},
+        location::{Location, SYSTEM_SECTORS, SetPosition, systems::Anchor},
         player_world::PlayerWorld,
     },
     prelude::Station,
@@ -68,7 +67,6 @@ use crate::{
         crosshair::{CrosshairOffset, CrosshairOffsetSet},
         message::{HudMessage, HudMessages},
     },
-    window::setup::CursorFlagsSet,
 };
 
 #[derive(Component)]

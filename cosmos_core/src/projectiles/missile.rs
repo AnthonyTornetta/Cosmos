@@ -13,14 +13,11 @@ use bevy_rapier3d::{
 };
 use serde::{Deserialize, Serialize};
 
-#[cfg(feature = "client")]
-use crate::netty::system_sets::NetworkingSystemsSet;
 
 use crate::{
     block::blocks::fluid::FLUID_COLLISION_GROUP,
     ecs::sets::FixedUpdateSet,
     netty::sync::{ComponentSyncingSet, IdentifiableComponent, SyncableComponent, sync_component},
-    physics::location::LocationPhysicsSet,
 };
 
 #[derive(Component, Debug, Serialize, Deserialize, Clone, PartialEq)]

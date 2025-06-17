@@ -5,7 +5,6 @@ use std::time::Duration;
 use bevy::prelude::*;
 use bevy_kira_audio::prelude::*;
 use cosmos_core::{
-    netty::system_sets::NetworkingSystemsSet,
     state::GameState,
     structure::{
         ship::ship_movement::{ShipMovement, ShipMovementSet},

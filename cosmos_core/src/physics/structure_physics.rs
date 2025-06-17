@@ -15,7 +15,6 @@ use crate::structure::block_storage::BlockStorer;
 use crate::structure::chunk::{CHUNK_DIMENSIONS, Chunk, ChunkUnloadEvent};
 use crate::structure::coordinates::{ChunkBlockCoordinate, ChunkCoordinate, CoordinateType};
 use crate::structure::events::ChunkSetEvent;
-use crate::structure::loading::StructureLoadingSet;
 use crate::structure::{ChunkNeighbors, Structure};
 use bevy::platform::collections::HashSet;
 use bevy::prelude::*;

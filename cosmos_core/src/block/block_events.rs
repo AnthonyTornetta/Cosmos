@@ -2,7 +2,7 @@
 
 use bevy::prelude::*;
 
-use crate::structure::{loading::StructureLoadingSet, structure_block::StructureBlock};
+use crate::structure::structure_block::StructureBlock;
 
 use super::block_rotation::BlockRotation;
 

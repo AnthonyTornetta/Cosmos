@@ -8,7 +8,7 @@ use cosmos_core::{
     },
     entities::player::Player,
     inventory::netty::{InventoryIdentifier, ServerInventoryMessages},
-    netty::{NettyChannelServer, cosmos_encoder, system_sets::NetworkingSystemsSet},
+    netty::{NettyChannelServer, cosmos_encoder},
     registry::{Registry, identifiable::Identifiable},
     state::GameState,
     structure::Structure,

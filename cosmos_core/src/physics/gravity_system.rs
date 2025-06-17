@@ -3,9 +3,9 @@
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::{ExternalImpulse, ReadMassProperties, RigidBody, RigidBodyDisabled};
 
-use crate::{ecs::sets::FixedUpdateSet, netty::system_sets::NetworkingSystemsSet, structure::planet::Planet};
+use crate::{ecs::sets::FixedUpdateSet, structure::planet::Planet};
 
-use super::location::{Location, LocationPhysicsSet};
+use super::location::Location;
 
 fn gravity_system(
     emitters: Query<(Entity, &GravityEmitter, &GlobalTransform, &Location)>,

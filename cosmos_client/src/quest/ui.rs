@@ -1,7 +1,7 @@
 use bevy::{color::palettes::css, prelude::*};
 use cosmos_core::{
     ecs::NeedsDespawned,
-    netty::{client::LocalPlayer, system_sets::NetworkingSystemsSet},
+    netty::client::LocalPlayer,
     quest::{OngoingQuest, OngoingQuestId, OngoingQuests, Quest},
     registry::Registry,
     state::GameState,

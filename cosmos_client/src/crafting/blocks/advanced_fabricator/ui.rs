@@ -21,7 +21,6 @@ use cosmos_core::{
             events::client_event::NettyEventWriter,
             mapping::{Mappable, NetworkMapping},
         },
-        system_sets::NetworkingSystemsSet,
     },
     prelude::{Structure, StructureBlock},
     registry::{Registry, identifiable::Identifiable},

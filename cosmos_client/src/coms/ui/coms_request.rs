@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 use cosmos_core::{
     coms::events::{AcceptComsEvent, DeclineComsEvent},
-    netty::{sync::events::client_event::NettyEventWriter, system_sets::NetworkingSystemsSet},
+    netty::sync::events::client_event::NettyEventWriter,
 };
 
 use crate::{

@@ -6,9 +6,9 @@ use cosmos_core::{
     ecs::sets::FixedUpdateSet,
     netty::{
         NettyChannelClient, client::LocalPlayer, client_reliable_messages::ClientReliableMessages, cosmos_encoder,
-        sync::mapping::NetworkMapping, system_sets::NetworkingSystemsSet,
+        sync::mapping::NetworkMapping,
     },
-    physics::location::{Location, LocationPhysicsSet},
+    physics::location::Location,
     state::GameState,
     structure::{
         ChunkState, Structure,

@@ -6,7 +6,6 @@ use bevy::{platform::collections::HashMap, prelude::*};
 use cosmos_core::{
     block::{Block, block_events::BlockEventsSet, data::BlockData},
     events::block_events::{BlockChangedEvent, BlockDataSystemParams},
-    netty::system_sets::NetworkingSystemsSet,
     prelude::{BlockCoordinate, Structure, StructureLoadingSet},
     registry::{Registry, identifiable::Identifiable},
     state::GameState,

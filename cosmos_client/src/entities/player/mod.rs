@@ -3,7 +3,7 @@
 use bevy::{color::palettes::css, prelude::*};
 use bevy_rapier3d::prelude::{ActiveEvents, CoefficientCombineRule, Collider, Friction, LockedAxes, ReadMassProperties, RigidBody};
 use cosmos_core::{
-    ecs::sets::FixedUpdateSet, entities::player::Player, netty::system_sets::NetworkingSystemsSet, persistence::LoadingDistance,
+    ecs::sets::FixedUpdateSet, entities::player::Player, persistence::LoadingDistance,
     state::GameState,
 };
 

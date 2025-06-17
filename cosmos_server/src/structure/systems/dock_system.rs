@@ -27,7 +27,7 @@ use cosmos_core::{
     utils::quat_math::QuatMath,
 };
 
-use super::{sync::register_structure_system, thruster_system::ThrusterSystemSet};
+use super::sync::register_structure_system;
 
 const MAX_DOCK_CHECK: f32 = 2.0;
 

@@ -12,10 +12,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     item::Item,
-    netty::{
-        sync::{IdentifiableComponent, SyncableComponent, sync_component},
-        system_sets::NetworkingSystemsSet,
-    },
+    netty::sync::{IdentifiableComponent, SyncableComponent, sync_component},
     registry::identifiable::Identifiable,
 };
 

@@ -5,7 +5,7 @@
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::RigidBodyDisabled;
 
-use crate::{ecs::sets::FixedUpdateSet, netty::system_sets::NetworkingSystemsSet};
+use crate::ecs::sets::FixedUpdateSet;
 
 #[derive(Component, Default, Reflect, Debug)]
 /// Instead of directly using [`RigidBodyDisabled`], use this to not risk overwriting other systems
