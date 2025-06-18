@@ -17,8 +17,6 @@ use cosmos_core::{
     structure::structure_block::StructureBlock,
 };
 
-use crate::interactions::block_interactions::process_player_interaction;
-
 #[derive(Debug, Event)]
 /// Sent when this client tries to breaks a block
 pub struct RequestBlockBreakEvent {
@@ -107,7 +105,6 @@ pub(super) fn register(app: &mut App) {
             FixedUpdate,
             (handle_block_break, handle_block_place, handle_block_interact)
                 .in_set(BlockEventsSet::ProcessEventsPrePlacement)
-                .after(process_player_interaction)
                 .run_if(in_state(GameState::Playing)),
         );
 }
