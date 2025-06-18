@@ -19,10 +19,9 @@ use cosmos_core::structure::systems::dock_system::Docked;
 use crate::input::inputs::{CosmosInputs, InputChecker, InputHandler};
 use crate::rendering::MainCamera;
 use crate::settings::MouseSensitivity;
-use crate::ui::UiSystemSet;
 use crate::ui::components::show_cursor::no_open_menus;
 use crate::ui::crosshair::CrosshairOffset;
-use crate::window::setup::{CursorFlags, CursorFlagsSet, DeltaCursorPosition};
+use crate::window::setup::{CursorFlags, DeltaCursorPosition};
 
 fn process_ship_movement(
     input_handler: InputChecker,
@@ -97,13 +96,6 @@ fn process_ship_movement(
     movement.braking = input_handler.check_pressed(CosmosInputs::SlowDown);
     movement.match_speed = input_handler.check_pressed(CosmosInputs::MatchSpeed);
 
-    if input_handler.check_just_pressed(CosmosInputs::StopPiloting) {
-        client.send_message(
-            NettyChannelClient::Reliable,
-            cosmos_encoder::serialize(&ClientReliableMessages::StopPiloting),
-        );
-    }
-
     let Ok(w) = primary_query.single() else {
         return;
     };
@@ -151,6 +143,15 @@ fn process_ship_movement(
     );
 }
 
+fn monitor_stop_piloting(input_handler: InputChecker, mut client: ResMut<RenetClient>) {
+    if input_handler.check_just_pressed(CosmosInputs::StopPiloting) {
+        client.send_message(
+            NettyChannelClient::Reliable,
+            cosmos_encoder::serialize(&ClientReliableMessages::StopPiloting),
+        );
+    }
+}
+
 fn reset_cursor(
     local_player_without_pilot: Query<(), (With<LocalPlayer>, Without<Pilot>)>,
     mut crosshair_position: ResMut<CrosshairOffset>,
@@ -171,15 +172,14 @@ pub enum ClientCreateShipMovementSet {
 pub(super) fn register(app: &mut App) {
     app.configure_sets(FixedUpdate, ClientCreateShipMovementSet::ProcessShipMovement);
 
-    app.add_systems(
-        FixedUpdate,
-        (reset_cursor, process_ship_movement)
-            .after(UiSystemSet::FinishUi)
-            .run_if(no_open_menus)
-            .in_set(FixedUpdateSet::Main)
-            .after(CursorFlagsSet::ApplyCursorFlagsUpdates)
-            .in_set(ClientCreateShipMovementSet::ProcessShipMovement)
-            .chain()
-            .run_if(in_state(GameState::Playing)),
-    );
+    app.add_systems(Update, monitor_stop_piloting.run_if(in_state(GameState::Playing)))
+        .add_systems(
+            FixedUpdate,
+            (reset_cursor, process_ship_movement)
+                .run_if(no_open_menus)
+                .in_set(FixedUpdateSet::Main)
+                .in_set(ClientCreateShipMovementSet::ProcessShipMovement)
+                .chain()
+                .run_if(in_state(GameState::Playing)),
+        );
 }

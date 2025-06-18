@@ -11,6 +11,7 @@ use cosmos_core::{
         },
     },
     prelude::StructureSystem,
+    utils::ecs::{FixedUpdateRemovedComponents, register_fixed_update_removed_component},
 };
 use renet::{ClientId, RenetServer};
 
@@ -132,7 +133,7 @@ fn on_change_parent(
 }
 
 fn on_remove_parent(
-    mut removed_components: RemovedComponents<ChildOf>,
+    removed_components: FixedUpdateRemovedComponents<ChildOf>,
     q_entity_identifier: Query<(Option<&StructureSystem>, Option<&ItemStackData>, Option<&BlockData>)>,
     mut server: ResMut<RenetServer>,
 ) {
@@ -177,6 +178,8 @@ fn on_remove_parent(
 }
 
 pub(super) fn register(app: &mut App) {
+    register_fixed_update_removed_component::<ChildOf>(app);
+
     app.add_systems(
         FixedUpdate,
         (on_request_parent, on_change_parent, on_remove_parent)

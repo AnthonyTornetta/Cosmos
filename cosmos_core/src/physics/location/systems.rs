@@ -668,8 +668,7 @@ fn register_location_component_hooks(world: &mut World) {
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_systems(
-        FixedUpdate,
+    let location_syncing_systems = || {
         (
             (mark_dirty_trees, sync_simple_transforms, propagate_parent_transforms).chain(), // TODO: Maybe not this?
             apply_set_position,
@@ -682,8 +681,13 @@ pub(super) fn register(app: &mut App) {
             do_physics_done,
         )
             .chain()
-            .in_set(FixedUpdateSet::LocationSyncing),
-    )
-    .add_systems(Startup, register_location_component_hooks)
-    .add_systems(PostUpdate, remove_do_physics_done);
+    };
+
+    app.add_systems(FixedUpdate, location_syncing_systems().in_set(FixedUpdateSet::LocationSyncing))
+        .add_systems(
+            FixedUpdate,
+            location_syncing_systems().in_set(FixedUpdateSet::LocationSyncingPostPhysics),
+        )
+        .add_systems(Startup, register_location_component_hooks)
+        .add_systems(PostUpdate, remove_do_physics_done);
 }

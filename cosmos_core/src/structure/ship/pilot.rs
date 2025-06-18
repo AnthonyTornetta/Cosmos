@@ -6,6 +6,7 @@ use serde::{Deserialize, Serialize};
 use crate::{
     netty::sync::{IdentifiableComponent, SyncableComponent, sync_component},
     state::GameState,
+    utils::ecs::register_fixed_update_removed_component,
 };
 
 /// A pilot component is bi-directional, if a player has the component then the entity it points to also has this component which points to the player.
@@ -62,6 +63,7 @@ pub(super) fn register(app: &mut App) {
     app.register_type::<PilotFocused>();
 
     sync_component::<PilotFocused>(app);
+    register_fixed_update_removed_component::<Pilot>(app);
 
     app.add_systems(Update, remove_pilot_focused_on_no_pilot.run_if(in_state(GameState::Playing)));
 }

@@ -14,6 +14,7 @@ use crate::{
     netty::sync::{IdentifiableComponent, SyncableComponent, sync_component},
     prelude::StructureBlock,
     structure::coordinates::CoordinateType,
+    utils::ecs::{FixedUpdateRemovedComponents, register_fixed_update_removed_component},
 };
 
 type BuildModeSymmetries = (Option<CoordinateType>, Option<CoordinateType>, Option<CoordinateType>);
@@ -143,7 +144,7 @@ fn on_add_build_mode(mut commands: Commands, q_added_build_mode: Query<(Entity, 
     }
 }
 
-fn on_remove_build_mode(mut commands: Commands, mut removed_components: RemovedComponents<BuildMode>) {
+fn on_remove_build_mode(mut commands: Commands, removed_components: FixedUpdateRemovedComponents<BuildMode>) {
     for ent in removed_components.read() {
         if let Ok(mut ecmds) = commands.get_entity(ent) {
             ecmds
@@ -215,6 +216,8 @@ fn adjust_transform_build_mode(mut q_transform: Query<&mut Transform, With<Build
 
 pub(super) fn register(app: &mut App) {
     sync_component::<BuildMode>(app);
+
+    register_fixed_update_removed_component::<BuildMode>(app);
 
     app.configure_sets(
         FixedUpdate,

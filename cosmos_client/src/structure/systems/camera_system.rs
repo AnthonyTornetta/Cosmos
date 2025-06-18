@@ -7,6 +7,7 @@ use cosmos_core::{
         ship::{Ship, pilot::Pilot},
         systems::{StructureSystem, StructureSystems, camera_system::CameraSystem},
     },
+    utils::ecs::FixedUpdateRemovedComponents,
 };
 
 use crate::{
@@ -192,7 +193,7 @@ fn adjust_camera(
 }
 
 fn on_stop_piloting(
-    mut q_removed_pilots: RemovedComponents<Pilot>,
+    q_removed_pilots: FixedUpdateRemovedComponents<Pilot>,
     q_player: Query<&CameraPlayerOffset, With<LocalPlayer>>,
     mut q_main_camera: Query<&mut Transform, With<MainCamera>>,
 ) {

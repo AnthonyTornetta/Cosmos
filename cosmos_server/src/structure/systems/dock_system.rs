@@ -24,7 +24,10 @@ use cosmos_core::{
             dock_system::{DockSystem, Docked},
         },
     },
-    utils::quat_math::QuatMath,
+    utils::{
+        ecs::{FixedUpdateRemovedComponents, register_fixed_update_removed_component},
+        quat_math::QuatMath,
+    },
 };
 
 use super::sync::register_structure_system;
@@ -353,7 +356,7 @@ fn add_dock_list(mut commands: Commands, q_needs_list: Query<Entity, (With<Struc
 }
 
 fn add_dock_properties(
-    mut removed_docks_reader: RemovedComponents<Docked>,
+    removed_docks_reader: FixedUpdateRemovedComponents<Docked>,
     q_added_dock: Query<(Entity, &Docked), Changed<Docked>>,
     mut q_docked_list: Query<&mut DockedEntities>,
     mut commands: Commands,
@@ -416,6 +419,8 @@ fn nearest_axis(direction: Vec3) -> Vec3 {
 }
 
 pub(super) fn register(app: &mut App) {
+    register_fixed_update_removed_component::<Docked>(app);
+
     app.add_systems(
         FixedUpdate,
         (

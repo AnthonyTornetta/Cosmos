@@ -1,18 +1,10 @@
 //! Bevy ECS utilities
 
+use std::marker::PhantomData;
 use std::ops::Deref;
 use std::ops::DerefMut;
 
-use bevy::app::PostUpdate;
-use bevy::prelude::App;
-use bevy::prelude::Commands;
-use bevy::prelude::Component;
-use bevy::prelude::Entity;
-use bevy::prelude::Mut;
-use bevy::prelude::Query;
-use bevy::prelude::With;
-use bevy::prelude::Without;
-use bevy::reflect::Reflect;
+use bevy::prelude::*;
 
 use crate::ecs::NeedsDespawned;
 
@@ -71,6 +63,68 @@ impl<T: Component> DerefMut for MutOrMutRef<'_, T> {
             Self::Ref(r) => r,
         }
     }
+}
+
+/// Bevy's [`RemovedComponents`] doesn't work well w/ fixed updates. This fixes that - just call
+/// [`register_fixed_update_removed_component::<T>`] first, then use this in your [`FixedUpdate`] system.
+///
+/// This gets cleared in [`FixedPostUpdate`] - so make sure to use it before then.
+pub type FixedUpdateRemovedComponents<'a, T> = Res<'a, FixedUpdateRemovedComponentsInner<T>>;
+
+/// Bevy's [`RemovedComponents`] doesn't work well w/ fixed updates. This fixes that - just call
+/// [`register_removed_component::<T>`] first, then use this in your [`FixedUpdate`] system.
+///
+/// This gets cleared in [`FixedPostUpdate`] - so make sure to use it before then.
+#[derive(Resource, Debug)]
+pub struct FixedUpdateRemovedComponentsInner<T: Component>(Vec<Entity>, PhantomData<T>);
+
+impl<T: Component> Default for FixedUpdateRemovedComponentsInner<T> {
+    fn default() -> Self {
+        Self(vec![], Default::default())
+    }
+}
+
+impl<T: Component> FixedUpdateRemovedComponentsInner<T> {
+    /// Iterates over all removed components.
+    pub fn read(&self) -> impl Iterator<Item = Entity> {
+        self.0.iter().copied()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.0.is_empty()
+    }
+
+    pub fn len(&self) -> usize {
+        self.0.len()
+    }
+}
+
+/// Ensures that this component can be checked for removals in the [`FixedUpdate`] schedule, using
+/// [`FixedUpdateRemovedComponents<T>`]
+pub fn register_fixed_update_removed_component<T: Component>(app: &mut App) {
+    // Prevents duplicate registrations of the same component, which can happen if multiple things
+    // rely on this being usable in [`FixedUpdate`].
+    if app.world().get_resource::<FixedUpdateRemovedComponentsInner<T>>().is_some() {
+        return;
+    }
+
+    fn move_to_res<T: Component>(
+        mut fixed_update_version: ResMut<FixedUpdateRemovedComponentsInner<T>>,
+        mut removed_comps: RemovedComponents<T>,
+    ) {
+        fixed_update_version
+            .as_mut()
+            .0
+            .append(&mut removed_comps.read().collect::<Vec<_>>());
+    }
+
+    fn clear_removed_comps<T: Component>(mut fixed_update_removed: ResMut<FixedUpdateRemovedComponentsInner<T>>) {
+        fixed_update_removed.as_mut().0.clear();
+    }
+
+    app.add_systems(PostUpdate, move_to_res::<T>)
+        .add_systems(FixedPostUpdate, clear_removed_comps::<T>)
+        .init_resource::<FixedUpdateRemovedComponentsInner<T>>();
 }
 
 pub(super) fn register(app: &mut App) {

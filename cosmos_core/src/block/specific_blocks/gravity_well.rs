@@ -10,9 +10,8 @@ use bevy_rapier3d::{
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    ecs::sets::FixedUpdateSet,
-    netty::sync::IdentifiableComponent,
-    structure::coordinates::BlockCoordinate,
+    ecs::sets::FixedUpdateSet, netty::sync::IdentifiableComponent, structure::coordinates::BlockCoordinate,
+    utils::ecs::register_fixed_update_removed_component,
 };
 
 /// This component indicates the entity is under the affects of a gravity well.
@@ -57,6 +56,7 @@ fn update_mass_props(mut commands: Commands, q_ent: Query<Entity, With<ReadMassP
 }
 
 pub(super) fn register(app: &mut App) {
+    register_fixed_update_removed_component::<GravityWell>(app);
     app.add_systems(
         FixedUpdate,
         (update_mass_props.run_if(on_timer(Duration::from_secs(5))), do_gravity_well)

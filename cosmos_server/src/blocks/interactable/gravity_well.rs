@@ -15,7 +15,7 @@ use cosmos_core::{
     registry::{Registry, identifiable::Identifiable},
     state::GameState,
     structure::Structure,
-    utils::ownership::MaybeOwned,
+    utils::{ecs::FixedUpdateRemovedComponents, ownership::MaybeOwned},
 };
 use serde::{Deserialize, Serialize};
 
@@ -87,7 +87,7 @@ fn grav_well_handle_block_event(
 fn sync_gravity_well(
     mut server: ResMut<RenetServer>,
     q_grav_well: Query<(Entity, &GravityWell), Changed<GravityWell>>,
-    mut removed_components: RemovedComponents<GravityWell>,
+    removed_components: FixedUpdateRemovedComponents<GravityWell>,
 ) {
     for (entity, under_grav_well) in &q_grav_well {
         server.broadcast_message(

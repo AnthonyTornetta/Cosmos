@@ -5,7 +5,10 @@
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::RigidBodyDisabled;
 
-use crate::ecs::sets::FixedUpdateSet;
+use crate::{
+    ecs::sets::FixedUpdateSet,
+    utils::ecs::{FixedUpdateRemovedComponents, register_fixed_update_removed_component},
+};
 
 #[derive(Component, Default, Reflect, Debug)]
 /// Instead of directly using [`RigidBodyDisabled`], use this to not risk overwriting other systems
@@ -46,7 +49,7 @@ impl DisableRigidBody {
 
 fn disable_rigid_bodies(
     mut commands: Commands,
-    mut removed_disable_rb: RemovedComponents<DisableRigidBody>,
+    removed_disable_rb: FixedUpdateRemovedComponents<DisableRigidBody>,
     q_with_disable: Query<(Entity, &DisableRigidBody), Changed<DisableRigidBody>>,
 ) {
     for ent in removed_disable_rb.read() {
@@ -74,6 +77,8 @@ pub enum DisableRigidBodySet {
 }
 
 pub(super) fn register(app: &mut App) {
+    register_fixed_update_removed_component::<DisableRigidBody>(app);
+
     app.configure_sets(FixedUpdate, DisableRigidBodySet::DisableRigidBodies);
 
     app.add_systems(

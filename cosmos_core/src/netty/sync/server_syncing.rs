@@ -16,10 +16,10 @@ use crate::physics::location::LocationPhysicsSet;
 use crate::registry::{Registry, identifiable::Identifiable};
 use crate::structure::ship::pilot::Pilot;
 use crate::structure::systems::{StructureSystem, StructureSystems};
+use crate::utils::ecs::{FixedUpdateRemovedComponents, register_fixed_update_removed_component};
 use bevy::app::FixedUpdate;
 use bevy::ecs::event::EventReader;
 use bevy::ecs::query::Without;
-use bevy::ecs::removal_detection::RemovedComponents;
 use bevy::ecs::schedule::common_conditions::resource_exists;
 use bevy::ecs::system::Commands;
 use bevy::log::{info, warn};
@@ -282,7 +282,7 @@ fn server_send_component<T: SyncableComponent>(
 }
 
 fn server_sync_removed_components<T: SyncableComponent>(
-    mut removed_components: RemovedComponents<T>,
+    removed_components: FixedUpdateRemovedComponents<T>,
     q_entity_identifier: Query<(Option<&StructureSystem>, Option<&ItemStackData>, Option<&BlockData>)>,
     id_registry: Res<Registry<SyncedComponentId>>,
     mut server: ResMut<RenetServer>,
@@ -553,46 +553,26 @@ pub(super) fn sync_component_server<T: SyncableComponent>(app: &mut App) {
             .ambiguous_with(RegisterComponentSet::RegisterComponent),
     );
 
-    match T::get_sync_type() {
-        SyncType::ServerAuthoritative => {
-            app.add_systems(
-                FixedUpdate,
-                (
-                    on_request_component::<T>,
-                    server_send_component::<T>,
-                    server_sync_removed_components::<T>,
-                )
-                    .chain()
-                    .run_if(resource_exists::<RenetServer>)
-                    .in_set(ComponentSyncingSet::DoComponentSyncing),
-            );
-        }
-        SyncType::ClientAuthoritative(_) => {
-            app.add_systems(
-                FixedUpdate,
-                (server_deserialize_component::<T>, server_remove_component::<T>)
-                    .chain()
-                    .in_set(ComponentSyncingSet::ReceiveComponents),
-            );
-        }
-        SyncType::BothAuthoritative(_) => {
-            app.add_systems(
-                FixedUpdate,
-                (
-                    on_request_component::<T>,
-                    server_send_component::<T>,
-                    server_sync_removed_components::<T>,
-                )
-                    .chain()
-                    .run_if(resource_exists::<RenetServer>)
-                    .in_set(ComponentSyncingSet::DoComponentSyncing),
-            );
-            app.add_systems(
-                FixedUpdate,
-                (server_deserialize_component::<T>, server_remove_component::<T>)
-                    .chain()
-                    .in_set(ComponentSyncingSet::ReceiveComponents),
-            );
-        }
+    if T::get_sync_type().is_server_authoritative() {
+        register_fixed_update_removed_component::<T>(app);
+        app.add_systems(
+            FixedUpdate,
+            (
+                on_request_component::<T>,
+                server_send_component::<T>,
+                server_sync_removed_components::<T>,
+            )
+                .chain()
+                .run_if(resource_exists::<RenetServer>)
+                .in_set(ComponentSyncingSet::DoComponentSyncing),
+        );
+    }
+    if T::get_sync_type().is_client_authoritative() {
+        app.add_systems(
+            FixedUpdate,
+            (server_deserialize_component::<T>, server_remove_component::<T>)
+                .chain()
+                .in_set(ComponentSyncingSet::ReceiveComponents),
+        );
     }
 }
