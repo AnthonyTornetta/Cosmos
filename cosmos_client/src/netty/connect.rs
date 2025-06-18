@@ -116,9 +116,10 @@ pub struct ClientDisconnectReason(pub DisconnectReason);
 
 fn remove_networking_resources(mut commands: Commands, client: Option<Res<RenetClient>>) {
     if let Some(client) = client
-        && let Some(dc_reason) = client.disconnect_reason() {
-            commands.insert_resource(ClientDisconnectReason(dc_reason));
-        }
+        && let Some(dc_reason) = client.disconnect_reason()
+    {
+        commands.insert_resource(ClientDisconnectReason(dc_reason));
+    }
     commands.remove_resource::<NetworkMapping>();
     commands.remove_resource::<RenetClient>();
     commands.remove_resource::<NetcodeClientTransport>();

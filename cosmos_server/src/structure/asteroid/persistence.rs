@@ -91,19 +91,20 @@ fn on_load_asteroid_blueprint(
 ) {
     for (entity, s_data, needs_blueprinted) in query.iter() {
         if let Ok(temperature) = s_data.deserialize_data::<f32>("cosmos:asteroid")
-            && let Ok(structure) = s_data.deserialize_data::<Structure>("cosmos:structure") {
-                load_structure(
-                    entity,
-                    &mut commands,
-                    needs_blueprinted.spawn_at,
-                    structure,
-                    s_data,
-                    temperature,
-                    &mut chunk_load_block_data_event_writer,
-                    &mut chunk_set_event_writer,
-                    &mut structure_loaded_event_writer,
-                );
-            }
+            && let Ok(structure) = s_data.deserialize_data::<Structure>("cosmos:structure")
+        {
+            load_structure(
+                entity,
+                &mut commands,
+                needs_blueprinted.spawn_at,
+                structure,
+                s_data,
+                temperature,
+                &mut chunk_load_block_data_event_writer,
+                &mut chunk_set_event_writer,
+                &mut structure_loaded_event_writer,
+            );
+        }
     }
 }
 
@@ -116,23 +117,24 @@ fn on_load_asteroid(
 ) {
     for (entity, s_data) in query.iter() {
         if let Ok(temperature) = s_data.deserialize_data::<f32>("cosmos:asteroid")
-            && let Ok(structure) = s_data.deserialize_data::<Structure>("cosmos:structure") {
-                let loc = s_data
-                    .deserialize_data("cosmos:location")
-                    .expect("Every asteroid should have a location when saved!");
+            && let Ok(structure) = s_data.deserialize_data::<Structure>("cosmos:structure")
+        {
+            let loc = s_data
+                .deserialize_data("cosmos:location")
+                .expect("Every asteroid should have a location when saved!");
 
-                load_structure(
-                    entity,
-                    &mut commands,
-                    loc,
-                    structure,
-                    s_data,
-                    temperature,
-                    &mut chunk_load_block_data_event_writer,
-                    &mut chunk_set_event_writer,
-                    &mut structure_loaded_event_writer,
-                );
-            }
+            load_structure(
+                entity,
+                &mut commands,
+                loc,
+                structure,
+                s_data,
+                temperature,
+                &mut chunk_load_block_data_event_writer,
+                &mut chunk_set_event_writer,
+                &mut structure_loaded_event_writer,
+            );
+        }
     }
 }
 

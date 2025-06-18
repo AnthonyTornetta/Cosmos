@@ -90,10 +90,9 @@ fn stop_near_unloaded_chunks(
             }
         }
 
-        if !is_fixed
-            && let Some(disable_rb) = disable_rb.as_mut() {
-                disable_rb.remove_reason(REASON);
-            }
+        if !is_fixed && let Some(disable_rb) = disable_rb.as_mut() {
+            disable_rb.remove_reason(REASON);
+        }
     }
 }
 

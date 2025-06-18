@@ -2,9 +2,9 @@
 
 use bevy::{
     math::Quat,
+    platform::collections::HashMap,
     prelude::{App, Component, Resource},
     reflect::Reflect,
-    platform::collections::HashMap,
 };
 use cosmos_core::{
     faction::FactionId,

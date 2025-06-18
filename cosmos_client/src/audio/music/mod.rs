@@ -40,9 +40,10 @@ fn monitor_background_song(
     mut commands: Commands,
 ) {
     if let Some(instance) = audio_instances.get_mut(&bg_song.0)
-        && instance.state() == PlaybackState::Stopped {
-            commands.remove_resource::<PlayingBackgroundSong>();
-        }
+        && instance.state() == PlaybackState::Stopped
+    {
+        commands.remove_resource::<PlayingBackgroundSong>();
+    }
 }
 
 fn adjust_volume(

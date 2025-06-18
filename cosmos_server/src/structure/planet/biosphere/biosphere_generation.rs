@@ -1,7 +1,7 @@
 //! Responsible for the default generation of biospheres.
 
 use crate::{init::init_world::ServerSeed, structure::planet::biosphere::biome::GenerateChunkFeaturesEvent};
-use bevy::{prelude::*, platform::collections::HashSet};
+use bevy::{platform::collections::HashSet, prelude::*};
 use bevy_app_compute::prelude::*;
 use cosmos_core::{
     block::{Block, block_events::BlockEventsSet, block_face::BlockFace},

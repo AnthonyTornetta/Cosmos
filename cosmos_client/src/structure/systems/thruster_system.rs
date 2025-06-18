@@ -47,11 +47,12 @@ fn apply_thruster_sound(
 
         if thrusters_off {
             if let Some(mut audio_emitter) = audio_emitter
-                && let Some(thruster_sound_instance) = thruster_sound_instance {
-                    audio_emitter.remove_and_stop(&thruster_sound_instance.0, &mut audio_instances, &mut stop_later);
+                && let Some(thruster_sound_instance) = thruster_sound_instance
+            {
+                audio_emitter.remove_and_stop(&thruster_sound_instance.0, &mut audio_instances, &mut stop_later);
 
-                    commands.entity(entity).remove::<ThrusterSoundInstace>();
-                }
+                commands.entity(entity).remove::<ThrusterSoundInstace>();
+            }
         } else if !thrusters_off && thruster_sound_instance.is_none() {
             let playing_sound: Handle<AudioInstance> = audio.play(audio_handle.0.clone_weak()).with_volume(0.0).looped().handle();
 

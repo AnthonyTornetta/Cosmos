@@ -48,9 +48,10 @@ fn on_die(
 ) {
     for (location, mut inventory, children) in q_player.iter_mut() {
         if let Some(mut inv) = HeldItemStack::get_held_is_inventory_from_children_mut(children, &mut q_held_item)
-            && let Some(held_is) = inv.remove_itemstack_at(0) {
-                drop_itemstack(&mut commands, location, held_is);
-            }
+            && let Some(held_is) = inv.remove_itemstack_at(0)
+        {
+            drop_itemstack(&mut commands, location, held_is);
+        }
 
         inventory.retain_mut(|is| {
             drop_itemstack(&mut commands, location, is);

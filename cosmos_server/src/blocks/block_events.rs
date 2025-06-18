@@ -2,7 +2,7 @@ use crate::{
     persistence::make_persistent::{DefaultPersistentComponent, make_persistent},
     structure::block_health::BlockHealthSet,
 };
-use bevy::{prelude::*, platform::collections::HashMap};
+use bevy::{platform::collections::HashMap, prelude::*};
 use bevy_rapier3d::prelude::Velocity;
 use bevy_renet::renet::RenetServer;
 use cosmos_core::{
@@ -170,9 +170,10 @@ fn handle_block_break_events(
                 // thousands of item entities that would mega lag the server + clients near it.
                 if !inserted
                     && let Ok(pilot) = q_pilot.get(ev.breaker)
-                        && let Ok((mut inventory, _, _)) = inventory_query.get_mut(pilot.entity) {
-                            inventory.insert_item(item, leftover, &mut commands, &has_data);
-                        }
+                    && let Ok((mut inventory, _, _)) = inventory_query.get_mut(pilot.entity)
+                {
+                    inventory.insert_item(item, leftover, &mut commands, &has_data);
+                }
             } else {
                 warn!("Missing item id for block {:?}", block);
             }

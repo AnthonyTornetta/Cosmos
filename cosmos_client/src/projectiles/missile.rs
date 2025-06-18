@@ -1,6 +1,6 @@
 use std::time::Duration;
 
-use bevy::{asset::LoadState, color::palettes::css, prelude::*, platform::collections::HashMap};
+use bevy::{asset::LoadState, color::palettes::css, platform::collections::HashMap, prelude::*};
 use bevy_hanabi::prelude::*;
 
 use bevy_kira_audio::{Audio, AudioControl, AudioInstance, AudioSource};
@@ -33,9 +33,10 @@ fn track_time_alive(
         time_alive.0 += time.delta_secs();
 
         if let Some(max_time) = max_time
-            && time_alive.0 >= max_time.0.as_secs_f32() {
-                commands.entity(ent).insert(NeedsDespawned);
-            }
+            && time_alive.0 >= max_time.0.as_secs_f32()
+        {
+            commands.entity(ent).insert(NeedsDespawned);
+        }
     }
 }
 

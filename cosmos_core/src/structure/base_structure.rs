@@ -8,9 +8,9 @@ use bevy::{
         query::{QueryData, QueryFilter, ROQueryItem, With},
         system::{Commands, Query},
     },
+    platform::collections::HashMap,
     prelude::{Entity, EventWriter, GlobalTransform, Vec3},
     reflect::Reflect,
-    platform::collections::HashMap,
 };
 use serde::{Deserialize, Serialize};
 
@@ -492,19 +492,20 @@ impl BaseStructure {
             let health_left = chunk.block_take_damage(ChunkBlockCoordinate::for_block_coordinate(coords), amount, blocks);
 
             if let Some(structure_entity) = self.get_entity()
-                && let Some((take_damage_event_writer, destroyed_event_writer)) = event_writers {
-                    let block = StructureBlock::new(coords, structure_entity);
+                && let Some((take_damage_event_writer, destroyed_event_writer)) = event_writers
+            {
+                let block = StructureBlock::new(coords, structure_entity);
 
-                    take_damage_event_writer.write(BlockTakeDamageEvent {
-                        structure_entity,
-                        block,
-                        new_health: health_left,
-                        causer,
-                    });
-                    if health_left <= 0.0 {
-                        destroyed_event_writer.write(BlockDestroyedEvent { structure_entity, block });
-                    }
+                take_damage_event_writer.write(BlockTakeDamageEvent {
+                    structure_entity,
+                    block,
+                    new_health: health_left,
+                    causer,
+                });
+                if health_left <= 0.0 {
+                    destroyed_event_writer.write(BlockDestroyedEvent { structure_entity, block });
                 }
+            }
 
             Some(health_left)
         } else {
@@ -861,12 +862,13 @@ impl BaseStructure {
             chunk.set_block_info_at(c, block_info);
 
             if let Some(evw_block_data_changed) = evw_block_data_changed
-                && let Some(structure_entity) = self.get_entity() {
-                    evw_block_data_changed.write(BlockDataChangedEvent {
-                        block_data_entity: self.block_data(coords),
-                        block: StructureBlock::new(coords, structure_entity),
-                    });
-                }
+                && let Some(structure_entity) = self.get_entity()
+            {
+                evw_block_data_changed.write(BlockDataChangedEvent {
+                    block_data_entity: self.block_data(coords),
+                    block: StructureBlock::new(coords, structure_entity),
+                });
+            }
         }
     }
 

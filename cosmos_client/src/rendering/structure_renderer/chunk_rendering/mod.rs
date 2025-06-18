@@ -1,8 +1,8 @@
 use crate::block::lighting::BlockLightProperties;
+use bevy::platform::collections::HashMap;
 use bevy::prelude::{App, Component, Entity, Mesh, Rect, Vec3};
 use bevy::reflect::Reflect;
 use bevy::render::mesh::{MeshVertexAttribute, VertexAttributeValues};
-use bevy::platform::collections::HashMap;
 use cosmos_core::structure::coordinates::ChunkBlockCoordinate;
 use std::collections::HashSet;
 

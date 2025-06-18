@@ -11,8 +11,8 @@ use std::{error::Error, fmt::Formatter};
 
 use bevy::{
     ecs::query::{QueryData, QueryFilter, QueryItem, ROQueryItem},
-    prelude::*,
     platform::collections::HashMap,
+    prelude::*,
 };
 use serde::{Deserialize, Serialize};
 
@@ -269,14 +269,15 @@ impl StructureSystems {
         }
 
         if let ShipActiveSystem::Active(active_system) = self.active_system
-            && (active_system as usize) < self.activatable_systems.len() {
-                let ent = self
-                    .ids
-                    .get(&self.activatable_systems[active_system as usize])
-                    .expect("Invalid state - system id has no entity mapping");
+            && (active_system as usize) < self.activatable_systems.len()
+        {
+            let ent = self
+                .ids
+                .get(&self.activatable_systems[active_system as usize])
+                .expect("Invalid state - system id has no entity mapping");
 
-                commands.entity(*ent).remove::<SystemActive>();
-            }
+            commands.entity(*ent).remove::<SystemActive>();
+        }
 
         match active {
             ShipActiveSystem::Active(active_system) => {

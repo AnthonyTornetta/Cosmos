@@ -1,6 +1,6 @@
 use std::{cell::RefCell, rc::Rc};
 
-use bevy::{prelude::*, platform::collections::HashSet};
+use bevy::{platform::collections::HashSet, prelude::*};
 
 use bevy_rapier3d::{
     plugin::{RapierContextEntityLink, ReadRapierContext},
