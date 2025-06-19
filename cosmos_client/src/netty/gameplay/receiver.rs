@@ -38,7 +38,7 @@ use cosmos_core::{
     },
     persistence::LoadingDistance,
     physics::{
-        location::{DebugLocation, Location, SYSTEM_SECTORS, SetPosition, systems::Anchor},
+        location::{Location, SYSTEM_SECTORS, SetPosition, systems::Anchor},
         player_world::PlayerWorld,
     },
     prelude::Station,
@@ -344,7 +344,6 @@ pub(crate) fn client_sync_players(
                     SetPosition::Transform,
                     Transform::from_rotation(body.rotation),
                     loc,
-                    DebugLocation,
                     body.create_velocity(),
                     Player::new(name, id),
                     ServerEntity(server_entity),
