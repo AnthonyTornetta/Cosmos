@@ -38,7 +38,7 @@ use cosmos_core::{
     },
     persistence::LoadingDistance,
     physics::{
-        location::{Location, SYSTEM_SECTORS, SetPosition, systems::Anchor},
+        location::{DebugLocation, Location, SYSTEM_SECTORS, SetPosition, systems::Anchor},
         player_world::PlayerWorld,
     },
     prelude::Station,
@@ -279,6 +279,7 @@ pub(crate) fn client_sync_players(
                             if let Ok(mut ecmds) = commands.get_entity(entity) {
                                 ecmds.insert((
                                     loc,
+                                    SetPosition::Transform,
                                     Transform::from_rotation(body.rotation),
                                     body.create_velocity(),
                                     LerpTowards(body),
@@ -321,6 +322,8 @@ pub(crate) fn client_sync_players(
 
                 info!("Player {} ({}) connected!", name.as_str(), id);
 
+                let parent_entity = server_parent_entity.map(|x| network_mapping.client_from_server_or_create(&x, &mut commands));
+
                 // The player entity may have already been created if some of their components were already synced.
                 let mut entity_cmds = if let Some(player_entity) = network_mapping.client_from_server(&server_entity) {
                     commands.entity(player_entity)
@@ -341,19 +344,18 @@ pub(crate) fn client_sync_players(
                     SetPosition::Transform,
                     Transform::from_rotation(body.rotation),
                     loc,
+                    DebugLocation,
                     body.create_velocity(),
                     Player::new(name, id),
                     ServerEntity(server_entity),
                 ));
 
+                info!("Got player @ {loc:?}");
+
                 let client_entity = entity_cmds.id();
 
-                if let Some(server_parent_entity) = server_parent_entity {
-                    if let Some(parent_ent) = network_mapping.client_from_server(&server_parent_entity) {
-                        entity_cmds.set_parent_in_place(parent_ent);
-                    } else {
-                        error!("No parent entity Server{server_parent_entity:?} exists for player {client_entity}!");
-                    }
+                if let Some(parent_entity) = parent_entity {
+                    entity_cmds.set_parent_in_place(parent_entity);
                 }
 
                 let player_info = PlayerInfo {

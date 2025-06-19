@@ -15,7 +15,7 @@ use crate::ecs::NeedsDespawned;
 
 use crate::{ecs::sets::FixedUpdateSet, physics::player_world::PlayerWorld};
 
-use super::{Location, SetPosition};
+use super::{DebugLocation, Location, SetPosition};
 
 #[cfg(doc)]
 use crate::netty::client::LocalPlayer;
@@ -100,8 +100,8 @@ fn apply_set_position_single(
 }
 
 fn apply_set_position(
-    q_location_added: Query<Entity, (Without<SetPosition>, Added<Location>)>,
-    q_set_position: Query<(Entity, &SetPosition)>,
+    q_location_added: Query<(Entity, Has<DebugLocation>), (Without<SetPosition>, Added<Location>)>,
+    q_set_position: Query<(Entity, &SetPosition, Has<DebugLocation>)>,
     q_x: Query<(Entity, Option<&Location>, Option<&SetPosition>)>,
     q_trans: Query<&Transform>,
     q_parent: Query<&ChildOf>,
@@ -110,18 +110,25 @@ fn apply_set_position(
 ) {
     const DEFAULT_SET_POS: SetPosition = SetPosition::Transform;
 
-    for (entity, set_pos) in q_location_added
+    for (entity, set_pos, dbg_loc) in q_location_added
         .iter()
-        .map(|ent| (ent, &DEFAULT_SET_POS))
+        .map(|(ent, dbg_loc)| (ent, &DEFAULT_SET_POS, dbg_loc))
         .chain(q_set_position.iter())
     {
         match set_pos {
             SetPosition::Transform => {
                 let mut ecmds = commands.entity(entity);
                 ecmds.insert(SetTransformBasedOnLocationFlag).remove::<SetPosition>();
+                if dbg_loc {
+                    info!("Setting `SetTransformBasedOnLocationFlag` for entity {entity:?}");
+                }
             }
             SetPosition::Location => {
                 if let Some(loc_from_trans) = loc_from_trans(entity, &q_trans, &q_x, &q_g_trans, &q_parent) {
+                    if dbg_loc {
+                        info!("Setting location based on transform to {loc_from_trans:?} for entity {entity:?}");
+                    }
+
                     commands
                         .entity(entity)
                         .insert((loc_from_trans, PreviousLocation(loc_from_trans)))
@@ -133,9 +140,9 @@ fn apply_set_position(
 }
 
 fn reposition_worlds_around_anchors(
-    q_loc_no_parent: Query<&Location, (Without<PlayerWorld>, Without<ChildOf>)>,
+    q_loc_no_parent: Query<(&Location, Has<DebugLocation>), (Without<PlayerWorld>, Without<ChildOf>)>,
     mut q_trans_no_parent: Query<(&mut Transform, &RapierContextEntityLink), (Without<ChildOf>, With<Location>)>,
-    trans_query_with_parent: Query<&Location, (Without<PlayerWorld>, With<ChildOf>)>,
+    trans_query_with_parent: Query<(&Location, Has<DebugLocation>), (Without<PlayerWorld>, With<ChildOf>)>,
     #[cfg(feature = "server")] q_anchors: Query<(&RapierContextEntityLink, Entity), With<Anchor>>,
     // #[cfg(feature = "server")] everything_query: Query<(&RapierContextEntityLink, Entity)>,
     parent_query: Query<&ChildOf>,
@@ -155,21 +162,32 @@ fn reposition_worlds_around_anchors(
                 }
             }
 
-            let Ok(location) = q_loc_no_parent
+            let Ok((location, debug_player)) = q_loc_no_parent
                 .get(player_entity)
                 .or_else(|_| trans_query_with_parent.get(player_entity))
             else {
+                info!("The player doesn't have a transform yet - skipping setting world position.");
                 // The player was just added & doesn't have a transform yet - only a location.
                 continue;
             };
 
             let delta = (*location - *world_location).absolute_coords_f32();
             if *world_location != *location {
+                if debug_player {
+                    if delta.length_squared() > 0.01 {
+                        info!("Moving player world to {location} (delta: {delta})");
+                    }
+                }
                 *world_location = *location;
             }
 
             for (mut t, _) in q_trans_no_parent.iter_mut().filter(|(_, ww)| ww.0 == world_entity) {
                 t.translation -= delta;
+                if debug_player {
+                    if delta.length_squared() > 0.01 {
+                        info!("Moving world transform to {} (delta: {})", t.translation, -delta);
+                    }
+                }
             }
         } else {
             #[cfg(feature = "server")]
@@ -273,7 +291,7 @@ fn find_groups(points: &[Point3D], threshold: f32) -> Vec<Vec<Point3D>> {
 #[cfg(feature = "server")]
 fn move_anchors_between_worlds(
     q_anchors: Query<(Entity, &Location), With<Anchor>>,
-    mut q_trans: Query<&mut Transform>,
+    mut q_trans: Query<(&mut Transform, Has<DebugLocation>)>,
     q_parent: Query<&ChildOf>,
     mut q_world_within: Query<&mut RapierContextEntityLink>,
     q_worlds: Query<Entity, With<PlayerWorld>>,
@@ -281,7 +299,7 @@ fn move_anchors_between_worlds(
 ) {
     use crate::ecs::NeedsDespawned;
 
-    let points = q_anchors.iter().map(|x| Point3D(*x.1, x.0)).collect::<Vec<_>>();
+    let points = q_anchors.iter().map(|(ent, loc)| Point3D(*loc, ent)).collect::<Vec<_>>();
     let groups = find_groups(&points, WORLD_SWITCH_DISTANCE);
 
     let mut retained_worlds = vec![];
@@ -321,14 +339,19 @@ fn move_anchors_between_worlds(
                     // If this anchor has a parent, then when the parent is moved automatically
                     // this will be automatically handled.
                     if !q_parent.contains(entity)
-                        && let Ok(mut trans) = q_trans.get_mut(entity)
+                        && let Ok((mut trans, debug_loc)) = q_trans.get_mut(entity)
                     {
-                        trans.translation += (loc - world_loc).absolute_coords_f32();
+                        let delta = (loc - world_loc).absolute_coords_f32();
+                        trans.translation += delta;
 
-                        info!(
-                            "Merging anchor ({entity:?}) into ({world_id:?}) world! Resulting transform: {}",
-                            trans.translation
-                        );
+                        if debug_loc {
+                            if delta.length_squared() > 0.01 {
+                                info!(
+                                    "Merging anchor ({entity:?}) into ({world_id:?}) world! Resulting transform: {} (delta: {delta})",
+                                    trans.translation
+                                );
+                            }
+                        }
                     }
                 }
             } else {
@@ -424,10 +447,12 @@ fn move_non_anchors_between_worlds(
                     let delta = *new_loc - *old_loc;
 
                     if *body_world != world_link {
-                        info!(
-                            "Moving non anchor ({entity:?}) between world! Delta: {}",
-                            -delta.absolute_coords_f32()
-                        );
+                        if delta.absolute_coords_f32().length_squared() > 0.01 {
+                            info!(
+                                "Moving non anchor ({entity:?}) between world! Delta: {}",
+                                -delta.absolute_coords_f32()
+                            );
+                        }
                     }
 
                     trans.translation -= delta.absolute_coords_f32();
@@ -494,6 +519,7 @@ type TransformLocationQuery<'w, 's> = Query<
         Option<&'static mut Transform>,
         Option<&'static PreviousLocation>,
         Option<&'static SetTransformBasedOnLocationFlag>,
+        Has<DebugLocation>,
     ),
     Without<PlayerWorld>,
 >;
@@ -547,7 +573,7 @@ fn recursively_sync_transforms_and_locations(
     q_data: &mut TransformLocationQuery,
     q_children: &Query<&Children>,
 ) {
-    let Ok((mut my_loc, my_transform, my_prev_loc, set_trans)) = q_data.get_mut(ent) else {
+    let Ok((mut my_loc, my_transform, my_prev_loc, set_trans, has_debug)) = q_data.get_mut(ent) else {
         return;
     };
 
@@ -555,7 +581,14 @@ fn recursively_sync_transforms_and_locations(
 
     let (local_translation, local_rotation) = if let Some(mut my_transform) = my_transform {
         if set_trans.is_some() {
-            my_transform.translation = parent_g_rot.inverse().normalize() * ((*my_loc - parent_loc).absolute_coords_f32());
+            let new_trans = parent_g_rot.inverse().normalize() * ((*my_loc - parent_loc).absolute_coords_f32());
+            if has_debug {
+                info!(
+                    "Set transform flag found on {ent:?} - setting local transform to {new_trans} (my loc: {}; parent loc: {parent_loc})",
+                    *my_loc
+                );
+            }
+            my_transform.translation = new_trans;
         } else {
             // Calculates the change in location since the last time this ran
             // WARNING: THIS COULD BLOW UP if the delta loc is huge in f32 coords. Idk how to do this better
@@ -570,14 +603,26 @@ fn recursively_sync_transforms_and_locations(
             // Calculates how far away the entity was from its parent + its delta location.
             let transform_delta_parent = parent_g_rot * my_transform.translation;
             let new_loc = parent_loc + transform_delta_parent;
+            let old_loc = *my_loc;
             if *my_loc != new_loc {
+                let delta = new_loc - *my_loc;
                 *my_loc = new_loc;
+
+                if has_debug && delta.absolute_coords_f32().length_squared() > 0.01 {
+                    info!(
+                        "Syncing Loc+Trans for {ent:?}: Delta Loc: {delta_loc}; trans (rel to parent): {transform_delta_parent}; New Loc: {new_loc}; Old Loc: {old_loc}"
+                    );
+                }
             }
         }
 
         (my_transform.translation, my_transform.rotation)
     } else {
         let translation = parent_g_rot.inverse() * ((*my_loc - parent_loc).absolute_coords_f32());
+
+        if has_debug {
+            info!("No transform found for {ent:?}, setting local translation to {translation}");
+        }
 
         commands.entity(ent).insert(Transform::from_translation(translation));
 

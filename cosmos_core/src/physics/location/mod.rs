@@ -525,6 +525,11 @@ impl Location {
 /// Stores the location from the previous frame
 pub struct PreviousLocation(pub Location);
 
+#[derive(Component)]
+/// Prints out debug statements for this entity whenever its location is changed via the location
+/// transform syncing steps
+pub struct DebugLocation;
+
 pub(super) fn register(app: &mut App) {
     systems::register(app);
     app.configure_sets(
