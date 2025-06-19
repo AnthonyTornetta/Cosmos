@@ -52,6 +52,7 @@ use bevy_rapier3d::plugin::{RapierContextInitialization, RapierPhysicsPlugin, Ti
 use bevy_renet::netcode::NetcodeClientPlugin;
 // use bevy_rapier3d::render::RapierDebugRenderPlugin;
 use bevy_renet::RenetClientPlugin;
+use bevy_transform_interpolation::prelude::TransformInterpolationPlugin;
 use clap::{Parser, arg};
 use cosmos_core::netty::sync::registry::RegistrySyncInit;
 use cosmos_core::state::GameState;
@@ -152,6 +153,7 @@ fn main() {
             SystemInformationDiagnosticsPlugin,
             EntityCountDiagnosticsPlugin,
             FrameTimeDiagnosticsPlugin::default(),
+            TransformInterpolationPlugin::interpolate_all(),
             // PerfUiPlugin,
             // BillboardPlugin,
         ))
