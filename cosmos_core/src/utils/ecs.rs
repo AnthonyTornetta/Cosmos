@@ -90,10 +90,12 @@ impl<T: Component> FixedUpdateRemovedComponentsInner<T> {
         self.0.iter().copied()
     }
 
+    /// Checks if there are any removed components
     pub fn is_empty(&self) -> bool {
         self.0.is_empty()
     }
 
+    /// Returns the number of removed components
     pub fn len(&self) -> usize {
         self.0.len()
     }

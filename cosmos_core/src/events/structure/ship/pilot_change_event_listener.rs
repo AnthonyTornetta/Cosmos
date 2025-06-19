@@ -95,8 +95,6 @@ fn pilot_removed(
             trans.rotation = starting_delta.1;
 
             event_writer.write(RemoveSensorFrom(entity, 0));
-
-            info!("Removed pilot!");
         }
     }
 }

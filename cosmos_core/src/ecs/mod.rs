@@ -2,7 +2,6 @@
 //! prone to problems.
 
 pub mod mut_events;
-
 pub mod sets;
 
 use bevy::prelude::*;
