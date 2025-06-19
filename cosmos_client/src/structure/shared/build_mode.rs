@@ -23,7 +23,7 @@ use cosmos_core::{
 
 use crate::{
     asset::repeating_material::{Repeats, UnlitRepeatedMaterial},
-    entities::player::player_movement::{PlayerMovementSet, process_player_movement},
+    entities::player::player_movement::PlayerMovementSet,
     input::inputs::{CosmosInputs, InputChecker, InputHandler},
     interactions::block_interactions::LookingAt,
     rendering::MainCamera,
@@ -347,9 +347,7 @@ pub(super) fn register(app: &mut App) {
             (
                 place_symmetries,
                 on_enter_build_mode,
-                control_build_mode
-                    .in_set(PlayerMovementSet::ProcessPlayerMovement)
-                    .ambiguous_with(process_player_movement), // this system will run if process_player_movement doesn't
+                control_build_mode.in_set(PlayerMovementSet::ProcessPlayerMovement),
             )
                 .chain()
                 .in_set(BlockEventsSet::ProcessEvents)
