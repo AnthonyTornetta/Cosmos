@@ -2,6 +2,7 @@
 
 use bevy::{asset::LoadState, platform::collections::HashMap, prelude::*};
 use cosmos_core::{
+    ecs::compute_totally_accurate_global_transform,
     faction::{Faction, FactionId, FactionRelation, Factions},
     netty::client::LocalPlayer,
     physics::location::Location,
@@ -310,17 +311,20 @@ fn added(
 }
 
 fn position_diamonds(
-    cam_query: Query<(&Camera, &GlobalTransform), With<MainCamera>>,
+    cam_query: Query<(Entity, &Camera), With<MainCamera>>,
     mut indicators: Query<(Entity, &mut Node, &Indicating)>,
-    global_trans_query: Query<&GlobalTransform>,
+    global_trans_query: Query<&Transform>,
     indicator_settings_query: Query<&IndicatorSettings>,
     mut commands: Commands,
     mut closest_waypoint: ResMut<ClosestWaypoint>,
+    q_trans: Query<(&Transform, Option<&ChildOf>)>,
 ) {
-    let Ok((cam, cam_trans)) = cam_query.single() else {
+    let Ok((cam_ent, cam)) = cam_query.single() else {
         warn!("Missing main camera.");
         return;
     };
+
+    let cam_g_trans = compute_totally_accurate_global_transform(cam_ent, q_trans).expect("Invalid camera heirarchy.");
 
     const MAX_DIST_FROM_CENTER: f32 = 0.4;
     let mut closest = None;
@@ -336,16 +340,16 @@ fn position_diamonds(
         };
 
         let offset = settings.offset;
-        let cam_rot = Quat::from_affine3(&indicating_global_trans.affine());
+        let cam_rot = indicating_global_trans.rotation;
 
-        let entity_location = indicating_global_trans.translation() + cam_rot.mul_vec3(offset);
+        let entity_location = indicating_global_trans.translation + cam_g_trans.rotation() * offset;
 
         // X/Y normalized to [-1, 1] when it's on the screen
-        let Some(mut normalized_screen_pos) = cam.world_to_ndc(cam_trans, entity_location) else {
+        let Some(mut normalized_screen_pos) = cam.world_to_ndc(&cam_g_trans, entity_location) else {
             continue;
         };
 
-        let rot_diff = cam_rot.mul_quat(Quat::from_affine3(&indicating_global_trans.affine()).inverse());
+        let rot_diff = cam_rot.mul_quat(indicating_global_trans.rotation.inverse());
 
         normalized_screen_pos = rot_diff.inverse().mul_vec3(normalized_screen_pos);
 

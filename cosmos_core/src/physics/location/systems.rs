@@ -734,5 +734,5 @@ pub(super) fn register(app: &mut App) {
             location_syncing_systems().in_set(FixedUpdateSet::LocationSyncingPostPhysics),
         )
         .add_systems(Startup, register_location_component_hooks)
-        .add_systems(PostUpdate, remove_do_physics_done);
+        .add_systems(FixedPostUpdate, remove_do_physics_done);
 }

@@ -48,6 +48,27 @@ pub fn add_multi_statebound_resource<R: Resource + Default, S: States>(app: &mut
         .add_systems(OnExit(remove_on_exit_state), remove_resource::<R>);
 }
 
+/// Returns the live-computed [`GlobalTransform`] for this entity.
+///
+/// Returns [`None`] if the entity is in an invalid transform heirarchy, so you can typically
+/// `expect` this result unless it could be in an invalid heirarchy.
+///
+/// This is used when the [`GlobalTransform`] is too inaccurate for usage.
+pub fn compute_totally_accurate_global_transform(
+    entity: Entity,
+    q_trans: Query<(&Transform, Option<&ChildOf>)>,
+) -> Option<GlobalTransform> {
+    let (ct, mut maybe_parent) = q_trans.get(entity).ok()?;
+    let mut g_trans = GlobalTransform::default() * ct.clone();
+    while let Some(parent) = maybe_parent {
+        let (parent_trans, new_maybe_parent) = q_trans.get(parent.parent()).ok()?;
+
+        g_trans = *parent_trans * g_trans;
+        maybe_parent = new_maybe_parent;
+    }
+    Some(g_trans)
+}
+
 pub(super) fn register(app: &mut App) {
     app.add_systems(First, despawn_needed);
     sets::register(app);

@@ -15,7 +15,7 @@ use bevy_rapier3d::prelude::*;
 use bevy_renet::{netcode::NetcodeClientTransport, renet::RenetClient};
 use cosmos_core::{
     block::Block,
-    ecs::{NeedsDespawned, sets::FixedUpdateSet},
+    ecs::{NeedsDespawned, compute_totally_accurate_global_transform},
     entities::player::{Player, render_distance::RenderDistance},
     events::{
         block_events::{BlockChangedEvent, BlockDataChangedEvent},
@@ -62,7 +62,7 @@ use crate::{
     netty::lobby::{ClientLobby, PlayerInfo},
     rendering::{CameraPlayerOffset, MainCamera},
     settings::DesiredFov,
-    structure::{planet::generation::SetTerrainGenData, ship::ship_movement::ClientCreateShipMovementSet},
+    structure::planet::generation::SetTerrainGenData,
     ui::{
         crosshair::{CrosshairOffset, CrosshairOffsetSet},
         message::{HudMessage, HudMessages},
@@ -72,46 +72,49 @@ use crate::{
 #[derive(Component)]
 struct LastRotation(Quat);
 
-fn insert_last_rotation(mut commands: Commands, query: Query<Entity, Added<Structure>>) {
+fn insert_last_rotation(mut commands: Commands, query: Query<Entity, Or<(Added<Structure>, Changed<Pilot>)>>) {
     for ent in query.iter() {
         commands.entity(ent).insert(LastRotation(Quat::IDENTITY));
     }
 }
 
 fn update_crosshair(
-    mut q_ships: Query<(&Pilot, &mut LastRotation, &Transform, Option<&Docked>), (With<Ship>, Changed<Transform>)>,
+    mut q_ships: Query<(&Pilot, &mut LastRotation, Option<&Docked>), (With<Ship>,)>,
     local_player_query: Query<(), With<LocalPlayer>>,
-    camera_query: Query<(&GlobalTransform, &Transform, &Camera), With<MainCamera>>,
+    camera_query: Query<(Entity, &Transform, &Camera), With<MainCamera>>,
     mut crosshair_offset: ResMut<CrosshairOffset>,
     primary_query: Query<&Window, With<PrimaryWindow>>,
+    q_trans: Query<(&Transform, Option<&ChildOf>)>,
 ) {
-    for (pilot, mut last_rotation, transform, docked) in q_ships.iter_mut() {
+    for (pilot, mut last_rotation, docked) in q_ships.iter_mut() {
         if !local_player_query.contains(pilot.entity) {
             continue;
         }
 
-        let Ok((cam_global_trans, cam_trans, camera)) = camera_query.single() else {
+        let Ok((cam_ent, cam_trans, camera)) = camera_query.single() else {
             return;
         };
+
+        let cam_global_trans = compute_totally_accurate_global_transform(cam_ent, q_trans).expect("Invalid camera heirarchy.");
 
         let Ok(primary) = primary_query.single() else {
             return;
         };
 
+        let rot_forward = last_rotation.0.mul_vec3(Vec3::from(cam_trans.forward()));
+
         if docked.is_some() {
             crosshair_offset.x = 0.0;
             crosshair_offset.y = 0.0;
-        } else if let Ok(mut pos_on_screen) = camera.world_to_viewport(
-            cam_global_trans,
-            last_rotation.0.mul_vec3(Vec3::from(cam_trans.forward())) + cam_global_trans.translation(),
-        ) {
+        } else if let Ok(mut pos_on_screen) = camera.world_to_viewport(&cam_global_trans, rot_forward + cam_global_trans.translation()) {
             pos_on_screen -= Vec2::new(primary.width() / 2.0, primary.height() / 2.0);
 
+            // info!("{} {:?} {}", cam_global_trans.translation(), rot_forward, pos_on_screen);
             crosshair_offset.x += pos_on_screen.x;
             crosshair_offset.y -= pos_on_screen.y;
         }
 
-        last_rotation.0 = transform.rotation;
+        last_rotation.0 = cam_global_trans.rotation();
     }
 }
 
@@ -795,13 +798,11 @@ fn get_entity_identifier_entity_for_despawning(
 
 pub(super) fn register(app: &mut App) {
     app.add_systems(
-        FixedUpdate,
+        Update,
         (
             insert_last_rotation,
             update_crosshair.in_set(CrosshairOffsetSet::ApplyCrosshairChanges),
         )
-            .after(ClientCreateShipMovementSet::ProcessShipMovement)
-            .in_set(FixedUpdateSet::LocationSyncingPostPhysics)
             .chain(),
     )
     .add_systems(
