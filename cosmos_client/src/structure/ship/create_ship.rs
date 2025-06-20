@@ -6,9 +6,7 @@ use cosmos_core::{
     block::block_events::BlockEventsSet,
     inventory::Inventory,
     item::Item,
-    netty::{
-        NettyChannelClient, client::LocalPlayer, client_reliable_messages::ClientReliableMessages, cosmos_encoder,
-    },
+    netty::{NettyChannelClient, client::LocalPlayer, client_reliable_messages::ClientReliableMessages, cosmos_encoder},
     registry::Registry,
     state::GameState,
     structure::{shared::build_mode::BuildMode, ship::pilot::Pilot},

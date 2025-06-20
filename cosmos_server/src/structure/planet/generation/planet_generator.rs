@@ -9,9 +9,7 @@ use bevy_renet::renet::{ClientId, RenetServer};
 use cosmos_core::{
     ecs::{NeedsDespawned, sets::FixedUpdateSet},
     entities::{EntityId, player::Player},
-    netty::{
-        NettyChannelServer, NoSendEntity, cosmos_encoder, server_reliable_messages::ServerReliableMessages,
-    },
+    netty::{NettyChannelServer, NoSendEntity, cosmos_encoder, server_reliable_messages::ServerReliableMessages},
     physics::location::Location,
     state::GameState,
     structure::{

@@ -8,9 +8,7 @@ use bevy_rapier3d::{plugin::RapierContextEntityLink, prelude::Velocity};
 use bevy_renet::renet::RenetServer;
 use cosmos_core::{
     block::Block,
-    netty::{
-        NettyChannelServer, cosmos_encoder, server_laser_cannon_system_messages::ServerStructureSystemMessages,
-    },
+    netty::{NettyChannelServer, cosmos_encoder, server_laser_cannon_system_messages::ServerStructureSystemMessages},
     physics::location::{Location, LocationPhysicsSet},
     projectiles::{causer::Causer, laser::Laser},
     registry::{Registry, identifiable::Identifiable},

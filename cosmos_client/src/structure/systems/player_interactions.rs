@@ -3,9 +3,7 @@
 use bevy::prelude::*;
 use bevy_renet::renet::RenetClient;
 use cosmos_core::{
-    netty::{
-        NettyChannelClient, client::LocalPlayer, client_unreliable_messages::ClientUnreliableMessages, cosmos_encoder,
-    },
+    netty::{NettyChannelClient, client::LocalPlayer, client_unreliable_messages::ClientUnreliableMessages, cosmos_encoder},
     state::GameState,
     structure::{ship::pilot::Pilot, systems::ShipActiveSystem},
 };

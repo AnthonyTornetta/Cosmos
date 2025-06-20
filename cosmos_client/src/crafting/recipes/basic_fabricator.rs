@@ -1,7 +1,6 @@
 use bevy::prelude::*;
 use cosmos_core::{
-    crafting::recipes::basic_fabricator::SyncBasicFabricatorRecipesEvent,
-    ecs::sets::FixedUpdateSet,
+    crafting::recipes::basic_fabricator::SyncBasicFabricatorRecipesEvent, ecs::sets::FixedUpdateSet,
     netty::sync::events::client_event::NettyEventReceived,
 };
 

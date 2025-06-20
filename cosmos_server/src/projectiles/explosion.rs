@@ -10,11 +10,7 @@ use bevy_rapier3d::{
 use cosmos_core::{
     block::{Block, block_events::BlockEventsSet},
     ecs::NeedsDespawned,
-    physics::{
-        location::Location,
-        player_world::PlayerWorld,
-        structure_physics::ChunkPhysicsPart,
-    },
+    physics::{location::Location, player_world::PlayerWorld, structure_physics::ChunkPhysicsPart},
     projectiles::{
         causer::Causer,
         missile::{Explosion, ExplosionSystemSet},
@@ -28,10 +24,7 @@ use cosmos_core::{
     },
 };
 
-use crate::{
-    netty::sync::sync_bodies::DontNotifyClientOfDespawn,
-    structure::shared::MeltingDownSet,
-};
+use crate::{netty::sync::sync_bodies::DontNotifyClientOfDespawn, structure::shared::MeltingDownSet};
 
 /// 1 unit of explosion power = this amount of health. Bigger this number is, the more damage explosives will do.
 const HEALTH_PER_EXPLOSION_POWER: f32 = 8.0;

@@ -3,10 +3,7 @@
 use std::time::Duration;
 
 use bevy::{prelude::*, time::common_conditions::on_timer};
-use cosmos_core::{
-    netty::client::LocalPlayer,
-    state::GameState,
-};
+use cosmos_core::{netty::client::LocalPlayer, state::GameState};
 
 #[derive(Component)]
 /// Add this component to an entity to ensure the state isn't advanced to playing. Remove this when you're ready to start playing.
