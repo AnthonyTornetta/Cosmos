@@ -3,9 +3,9 @@
 //! Used in something like an inventory.
 
 use bevy::{
+    platform::collections::HashMap,
     prelude::{App, EventWriter, Res, ResMut, Resource, States},
     state::state::OnExit,
-    platform::collections::HashMap,
 };
 
 use crate::{

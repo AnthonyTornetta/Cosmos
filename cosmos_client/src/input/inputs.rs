@@ -2,7 +2,7 @@
 
 use std::fs;
 
-use bevy::{prelude::*, platform::collections::HashMap};
+use bevy::{platform::collections::HashMap, prelude::*};
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Copy, Eq, PartialEq, Hash, Debug, Serialize, Deserialize, Reflect, PartialOrd, Ord)]
@@ -242,21 +242,22 @@ fn init_input(mut input_handler: ResMut<CosmosInputHandler>) {
     input_handler.set_keycode(CosmosInputs::ToggleFocusCam, KeyCode::KeyG);
 
     if let Ok(current_settings) = fs::read_to_string("settings/controls.toml")
-        && let Ok(parsed_settings) = toml::from_str::<CosmosInputHandler>(&current_settings) {
-            for (k, control) in parsed_settings.0.iter() {
-                match control {
-                    None => {
-                        input_handler.remove_control(*k);
-                    }
-                    Some(ControlType::Key(key)) => {
-                        input_handler.set_keycode(*k, *key);
-                    }
-                    Some(ControlType::Mouse(mouse)) => {
-                        input_handler.set_mouse_button(*k, *mouse);
-                    }
+        && let Ok(parsed_settings) = toml::from_str::<CosmosInputHandler>(&current_settings)
+    {
+        for (k, control) in parsed_settings.0.iter() {
+            match control {
+                None => {
+                    input_handler.remove_control(*k);
+                }
+                Some(ControlType::Key(key)) => {
+                    input_handler.set_keycode(*k, *key);
+                }
+                Some(ControlType::Mouse(mouse)) => {
+                    input_handler.set_mouse_button(*k, *mouse);
                 }
             }
         }
+    }
 
     let _ = fs::write(
         "settings/controls.toml",

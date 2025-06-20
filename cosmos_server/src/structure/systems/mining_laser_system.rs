@@ -1,4 +1,4 @@
-use bevy::{prelude::*, platform::collections::HashMap};
+use bevy::{platform::collections::HashMap, prelude::*};
 use bevy_rapier3d::{
     geometry::{CollisionGroups, Group},
     pipeline::QueryFilter,
@@ -309,40 +309,41 @@ fn on_activate_system(
 ) {
     for (system_entity, mining_system, system) in query.iter_mut() {
         if let Ok((ship_entity, systems, structure, physics_world)) = systems.get(system.structure_entity())
-            && let Ok(mut energy_storage_system) = systems.query_mut(&mut es_query) {
-                let sec = time.delta_secs();
+            && let Ok(mut energy_storage_system) = systems.query_mut(&mut es_query)
+        {
+            let sec = time.delta_secs();
 
-                for line in mining_system.lines.iter() {
-                    let energy = line.property.energy_per_second * sec;
+            for line in mining_system.lines.iter() {
+                let energy = line.property.energy_per_second * sec;
 
-                    if energy_storage_system.decrease_energy(energy) == 0.0 {
-                        let beam_direction = line.direction.as_vec3();
+                if energy_storage_system.decrease_energy(energy) == 0.0 {
+                    let beam_direction = line.direction.as_vec3();
 
-                        let beam_begin = line.end();
-                        let rel_pos = structure.block_relative_position(beam_begin);
+                    let beam_begin = line.end();
+                    let rel_pos = structure.block_relative_position(beam_begin);
 
-                        let mining_beam = commands
-                            .spawn((
-                                Name::new("Mining beam"),
-                                NoSendEntity,
-                                MiningBeam {
-                                    property: line.property,
-                                    structure_entity: ship_entity,
-                                    system_entity,
-                                },
-                                DespawnWithStructure,
-                                Transform::from_translation(rel_pos).looking_to(beam_direction, Vec3::Y),
-                                *physics_world,
-                            ))
-                            .id();
+                    let mining_beam = commands
+                        .spawn((
+                            Name::new("Mining beam"),
+                            NoSendEntity,
+                            MiningBeam {
+                                property: line.property,
+                                structure_entity: ship_entity,
+                                system_entity,
+                            },
+                            DespawnWithStructure,
+                            Transform::from_translation(rel_pos).looking_to(beam_direction, Vec3::Y),
+                            *physics_world,
+                        ))
+                        .id();
 
-                        commands.entity(ship_entity).add_child(mining_beam);
-                    } else {
-                        // Not enough power for all the beams, don't bother turning them on for a single frame.
-                        break;
-                    }
+                    commands.entity(ship_entity).add_child(mining_beam);
+                } else {
+                    // Not enough power for all the beams, don't bother turning them on for a single frame.
+                    break;
                 }
             }
+        }
     }
 }
 

@@ -13,7 +13,6 @@ use bevy_rapier3d::{
 };
 use serde::{Deserialize, Serialize};
 
-
 use crate::{
     block::blocks::fluid::FLUID_COLLISION_GROUP,
     ecs::sets::FixedUpdateSet,

@@ -1,9 +1,9 @@
 //! Thruster block system
 
 use bevy::{
+    platform::collections::HashMap,
     prelude::{App, Component, Resource},
     reflect::Reflect,
-    platform::collections::HashMap,
 };
 use serde::{Deserialize, Serialize};
 

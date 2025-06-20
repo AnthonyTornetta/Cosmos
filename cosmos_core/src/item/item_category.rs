@@ -1,6 +1,6 @@
 //! Item categories are ways of grouping items into categories viewable by the player
 
-use bevy::{prelude::*, platform::collections::HashSet};
+use bevy::{platform::collections::HashSet, prelude::*};
 use serde::{Deserialize, Serialize};
 
 use crate::{

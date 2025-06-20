@@ -38,10 +38,9 @@ pub(crate) fn save_structure(structure: &Structure, s_data: &mut SerializedData,
             has_block_data_to_save = true;
         }
 
-        if has_block_data_to_save
-            && let Some(chunk_ent) = structure.chunk_entity(position) {
-                commands.entity(chunk_ent).insert((SerializedBlockData::new(position), NeedsSaved));
-            }
+        if has_block_data_to_save && let Some(chunk_ent) = structure.chunk_entity(position) {
+            commands.entity(chunk_ent).insert((SerializedBlockData::new(position), NeedsSaved));
+        }
     }
 }
 
