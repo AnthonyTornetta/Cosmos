@@ -126,10 +126,7 @@ impl SyncType {
     /// This will also return true if BOTH the client and server dictate the value of this
     /// component
     pub fn is_client_authoritative(&self) -> bool {
-        match self {
-            Self::ServerAuthoritative => false,
-            _ => true,
-        }
+        !matches!(self, Self::ServerAuthoritative)
     }
 
     /// Returns true if the server dicates the value of this component.
@@ -137,10 +134,7 @@ impl SyncType {
     /// This will also return true if BOTH the client and server dictate the value of this
     /// component
     pub fn is_server_authoritative(&self) -> bool {
-        match self {
-            Self::ClientAuthoritative(_) => false,
-            _ => true,
-        }
+        !matches!(self, Self::ClientAuthoritative(_))
     }
 }
 

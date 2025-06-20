@@ -173,21 +173,19 @@ fn reposition_worlds_around_anchors(
 
             let delta = (*location - *world_location).absolute_coords_f32();
             if *world_location != *location {
-                if debug_player {
-                    if delta.length_squared() > 0.01 {
+                if debug_player
+                    && delta.length_squared() > 0.01 {
                         info!("Moving player world to {location} (delta: {delta})");
                     }
-                }
                 *world_location = *location;
             }
 
             for (mut t, _) in q_trans_no_parent.iter_mut().filter(|(_, ww)| ww.0 == world_entity) {
                 t.translation -= delta;
-                if debug_player {
-                    if delta.length_squared() > 0.01 {
+                if debug_player
+                    && delta.length_squared() > 0.01 {
                         info!("Moving world transform to {} (delta: {})", t.translation, -delta);
                     }
-                }
             }
         } else {
             #[cfg(feature = "server")]
@@ -344,14 +342,13 @@ fn move_anchors_between_worlds(
                         let delta = (loc - world_loc).absolute_coords_f32();
                         trans.translation += delta;
 
-                        if debug_loc {
-                            if delta.length_squared() > 0.01 {
+                        if debug_loc
+                            && delta.length_squared() > 0.01 {
                                 info!(
                                     "Merging anchor ({entity:?}) into ({world_id:?}) world! Resulting transform: {} (delta: {delta})",
                                     trans.translation
                                 );
                             }
-                        }
                     }
                 }
             } else {
@@ -446,14 +443,13 @@ fn move_non_anchors_between_worlds(
 
                     let delta = *new_loc - *old_loc;
 
-                    if *body_world != world_link {
-                        if delta.absolute_coords_f32().length_squared() > 0.01 {
+                    if *body_world != world_link
+                        && delta.absolute_coords_f32().length_squared() > 0.01 {
                             info!(
                                 "Moving non anchor ({entity:?}) between world! Delta: {}",
                                 -delta.absolute_coords_f32()
                             );
                         }
-                    }
 
                     trans.translation -= delta.absolute_coords_f32();
                 }

@@ -54,13 +54,12 @@ pub fn add_multi_statebound_resource<R: Resource + Default, S: States>(app: &mut
 /// `expect` this result unless it could be in an invalid heirarchy.
 ///
 /// This is used when the [`GlobalTransform`] is too inaccurate for usage.
-#[allow(invalid_type_param_default)]
-pub fn compute_totally_accurate_global_transform<F: QueryFilter = ()>(
+pub fn compute_totally_accurate_global_transform<F: QueryFilter>(
     entity: Entity,
     q_trans: &Query<(&Transform, Option<&ChildOf>), F>,
 ) -> Option<GlobalTransform> {
     let (ct, mut maybe_parent) = q_trans.get(entity).ok()?;
-    let mut g_trans = GlobalTransform::default() * ct.clone();
+    let mut g_trans = GlobalTransform::default() * *ct;
     while let Some(parent) = maybe_parent {
         let (parent_trans, new_maybe_parent) = q_trans.get(parent.parent()).ok()?;
 
