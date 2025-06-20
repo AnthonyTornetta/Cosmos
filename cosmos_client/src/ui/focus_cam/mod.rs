@@ -6,6 +6,7 @@ use bevy::{
     render::render_resource::{Extent3d, TextureDimension, TextureFormat, TextureUsages},
 };
 use cosmos_core::{
+    ecs::compute_totally_accurate_global_transform,
     netty::client::LocalPlayer,
     prelude::{Asteroid, Ship, Station},
     state::GameState,
@@ -120,11 +121,12 @@ fn render_on_focus(
     hidden: Option<Res<FocusUiHidden>>,
     mut q_cam: Query<(Entity, &mut Transform, &mut Camera, Option<&ChildOf>), With<FocusedCam>>,
     mut focused_ui: Query<&mut HiddenReasons, With<FocusedUi>>,
-    q_local_player_trans: Query<&GlobalTransform, With<LocalPlayer>>,
+    q_local_player: Query<Entity, With<LocalPlayer>>,
     // TODO: Replace this With<Structure> check w/ a FocusCamDistance component read
-    q_g_trans: Query<&GlobalTransform, Or<(With<Ship>, With<Asteroid>, With<Station>)>>,
     q_focused: Query<&Indicating, With<FocusedWaypointEntity>>,
+    q_is_valid_focus_target: Query<(), Or<(With<Asteroid>, With<Ship>, With<Station>)>>,
     mut commands: Commands,
+    q_trans: Query<(&Transform, Option<&ChildOf>), Without<FocusedCam>>,
 ) {
     let Ok((cam_entity, mut cam_trans, mut cam, parent)) = q_cam.single_mut() else {
         return;
@@ -140,7 +142,8 @@ fn render_on_focus(
     let Some((focused_g_trans, focused_ent)) = q_focused
         .single()
         .ok()
-        .and_then(|indicating| q_g_trans.get(indicating.0).ok().map(|x| (x, indicating.0)))
+        .filter(|indicating| q_is_valid_focus_target.contains(indicating.0))
+        .and_then(|indicating| compute_totally_accurate_global_transform(indicating.0, &q_trans).map(|x| (x, indicating.0)))
     else {
         if parent.is_some() {
             commands.entity(cam_entity).remove::<ChildOf>();
@@ -150,7 +153,11 @@ fn render_on_focus(
         return;
     };
 
-    let Ok(player_g_trans) = q_local_player_trans.single() else {
+    let Ok(local_ent) = q_local_player.single() else {
+        return;
+    };
+
+    let Some(player_g_trans) = compute_totally_accurate_global_transform(local_ent, &q_trans) else {
         return;
     };
 

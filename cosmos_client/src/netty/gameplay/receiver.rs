@@ -95,7 +95,7 @@ fn update_crosshair(
             return;
         };
 
-        let cam_global_trans = compute_totally_accurate_global_transform(cam_ent, q_trans).expect("Invalid camera heirarchy.");
+        let cam_global_trans = compute_totally_accurate_global_transform(cam_ent, &q_trans).expect("Invalid camera heirarchy.");
 
         let Ok(primary) = primary_query.single() else {
             return;
