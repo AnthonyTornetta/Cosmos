@@ -4,10 +4,7 @@ use bevy::prelude::*;
 use cosmos_core::{
     ecs::NeedsDespawned,
     persistence::LoadingDistance,
-    physics::{
-        location::Location,
-        player_world::PlayerWorld,
-    },
+    physics::{location::Location, player_world::PlayerWorld},
 };
 use renet::RenetServer;
 

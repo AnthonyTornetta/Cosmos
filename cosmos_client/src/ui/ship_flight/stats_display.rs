@@ -9,7 +9,6 @@ use cosmos_core::{
     },
 };
 
-
 #[derive(Component)]
 struct StatsNodes;
 

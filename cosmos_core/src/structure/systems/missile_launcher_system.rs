@@ -6,10 +6,10 @@ use bevy::prelude::*;
 use serde::{Deserialize, Serialize};
 
 use crate::netty::sync::{
-        ClientAuthority, IdentifiableComponent, SyncableComponent,
-        events::netty_event::{IdentifiableEvent, NettyEvent, SyncedEventImpl},
-        sync_component,
-    };
+    ClientAuthority, IdentifiableComponent, SyncableComponent,
+    events::netty_event::{IdentifiableEvent, NettyEvent, SyncedEventImpl},
+    sync_component,
+};
 
 use super::{
     StructureSystemsSet,

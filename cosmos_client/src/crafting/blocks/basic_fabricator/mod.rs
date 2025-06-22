@@ -3,9 +3,9 @@ use cosmos_core::{
     crafting::blocks::basic_fabricator::OpenBasicFabricatorEvent,
     ecs::NeedsDespawned,
     netty::sync::{
-            events::client_event::NettyEventReceived,
-            mapping::{Mappable, NetworkMapping},
-        },
+        events::client_event::NettyEventReceived,
+        mapping::{Mappable, NetworkMapping},
+    },
     prelude::StructureBlock,
     state::GameState,
 };

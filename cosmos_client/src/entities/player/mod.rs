@@ -2,10 +2,7 @@
 
 use bevy::{color::palettes::css, prelude::*};
 use bevy_rapier3d::prelude::{ActiveEvents, CoefficientCombineRule, Collider, Friction, LockedAxes, ReadMassProperties, RigidBody};
-use cosmos_core::{
-    ecs::sets::FixedUpdateSet, entities::player::Player, persistence::LoadingDistance,
-    state::GameState,
-};
+use cosmos_core::{ecs::sets::FixedUpdateSet, entities::player::Player, persistence::LoadingDistance, state::GameState};
 
 pub mod death;
 pub mod player_movement;

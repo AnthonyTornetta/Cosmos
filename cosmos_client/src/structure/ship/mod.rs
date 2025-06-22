@@ -5,14 +5,9 @@ use bevy_rapier3d::pipeline::CollisionEvent;
 use bevy_renet::renet::RenetClient;
 use cosmos_core::{
     ecs::sets::FixedUpdateSet,
-    netty::{
-        NettyChannelClient, client::LocalPlayer, client_reliable_messages::ClientReliableMessages, cosmos_encoder,
-    },
+    netty::{NettyChannelClient, client::LocalPlayer, client_reliable_messages::ClientReliableMessages, cosmos_encoder},
     state::GameState,
-    structure::{
-        Structure, chunk::CHUNK_DIMENSIONSF, planet::Planet, shared::build_mode::BuildMode,
-        ship::pilot::Pilot,
-    },
+    structure::{Structure, chunk::CHUNK_DIMENSIONSF, planet::Planet, shared::build_mode::BuildMode, ship::pilot::Pilot},
 };
 
 mod client_ship_builder;

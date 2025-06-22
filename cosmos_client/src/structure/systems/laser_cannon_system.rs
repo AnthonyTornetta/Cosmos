@@ -2,11 +2,7 @@
 
 use bevy::{asset::LoadState, prelude::*};
 use bevy_kira_audio::prelude::*;
-use cosmos_core::{
-    physics::location::Location,
-    state::GameState,
-    structure::systems::laser_cannon_system::LaserCannonSystem,
-};
+use cosmos_core::{physics::location::Location, state::GameState, structure::systems::laser_cannon_system::LaserCannonSystem};
 
 use crate::{
     asset::asset_loader::load_assets,
