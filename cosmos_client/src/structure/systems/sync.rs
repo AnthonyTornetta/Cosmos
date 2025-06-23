@@ -131,7 +131,7 @@ fn replication_listen_netty(
                             grav_well,
                             PlayerAlignment {
                                 axis: align_player::Axis::Y,
-                                aligned_to: None,
+                                aligned_to: structure_entity,
                             },
                         ))
                         .set_parent_in_place(structure_entity);

@@ -66,7 +66,7 @@ fn align_player(
                 }
             }
 
-            let aligned_to = Some(planet_ent);
+            let aligned_to = planet_ent;
 
             transform.rotation = transform.rotation.lerp(
                 planet_rotation
@@ -110,10 +110,10 @@ fn align_player(
     }
 }
 
-fn align_on_ship(query: Query<Entity, (With<LocalPlayer>, With<Pilot>)>, mut commands: Commands) {
-    if let Ok(ent) = query.single() {
+fn align_on_ship(query: Query<(Entity, &Pilot), With<LocalPlayer>>, mut commands: Commands) {
+    if let Ok((ent, pilot)) = query.single() {
         commands.entity(ent).insert(PlayerAlignment {
-            aligned_to: None,
+            aligned_to: pilot.entity,
             axis: Axis::Y,
         });
     }
@@ -137,7 +137,7 @@ pub enum Axis {
 /// Used to represent the player's orientation on a planet
 pub struct PlayerAlignment {
     /// The entity this player is aligned to
-    pub aligned_to: Option<Entity>,
+    pub aligned_to: Entity,
     /// The axis RELATIVE to the `aligned_to`'s rotation
     pub axis: Axis,
 }
