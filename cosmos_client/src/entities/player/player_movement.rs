@@ -1,5 +1,7 @@
 //! Handles the basic player movement while walking around. This is not responsible for piloting ships. See [`ship_movement`] for that.
 
+use std::f32::consts::PI;
+
 use bevy::prelude::*;
 use bevy_rapier3d::{
     plugin::{RapierContextEntityLink, ReadRapierContext},
@@ -88,7 +90,6 @@ fn process_player_movement(
     mut evr_jump: EventReader<Jump>,
     mut q_camera: Query<(&GlobalTransform, &mut Transform, &mut CameraHelper), With<MainCamera>>,
     mut q_local_trans: Query<&mut Transform, (With<LocalPlayer>, Without<MainCamera>)>,
-    q_main_cam_ent: Query<Entity, With<MainCamera>>,
     q_show_cursor: Query<(), With<ShowCursor>>,
     q_exerts_gravity: Query<(), With<Planet>>,
 ) {
@@ -222,6 +223,16 @@ fn process_player_movement(
         }
         if input_handler.check_pressed(CosmosInputs::MoveRight) {
             new_linvel += right;
+        }
+
+        let Ok(mut local_trans) = q_local_trans.single_mut() else {
+            return;
+        };
+        if input_handler.check_pressed(CosmosInputs::RollLeft) {
+            local_trans.rotation *= Quat::from_axis_angle(Vec3::Z, PI / 3.0 * time.delta_secs());
+        }
+        if input_handler.check_pressed(CosmosInputs::RollRight) {
+            local_trans.rotation *= Quat::from_axis_angle(Vec3::Z, PI / -3.0 * time.delta_secs());
         }
 
         new_linvel = new_linvel.normalize_or_zero() * accel;

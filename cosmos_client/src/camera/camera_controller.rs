@@ -21,7 +21,7 @@ pub struct CameraHelper {
 }
 
 impl CameraHelper {
-    pub fn reset(&mut self) {
+    fn reset(&mut self) {
         self.angle_x = 0.0;
         self.angle_y = 0.0;
     }
@@ -57,12 +57,6 @@ fn process_player_camera(
             camera_transform.rotation =
                 Quat::from_axis_angle(Vec3::Y, camera_helper.angle_y) * Quat::from_axis_angle(Vec3::X, camera_helper.angle_x);
         }
-
-        // if let Ok(mut local_trans) = q_non_aligned.single_mut() {
-        //     local_trans.rotation *= camera_transform.rotation;
-        //     camera_transform.rotation = Quat::IDENTITY;
-        //     camera_helper.reset();
-        // }
     } else {
         camera_helper.reset();
     }
