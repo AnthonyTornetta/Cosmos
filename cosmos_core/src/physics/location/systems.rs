@@ -9,6 +9,7 @@ use bevy_rapier3d::plugin::RapierContextEntityLink;
 
 #[cfg(feature = "server")]
 use bevy_rapier3d::{plugin::RapierConfiguration, prelude::RapierContextSimulation};
+use bevy_transform_interpolation::TranslationEasingState;
 
 #[cfg(feature = "server")]
 use crate::ecs::NeedsDespawned;
@@ -141,7 +142,15 @@ fn apply_set_position(
 
 fn reposition_worlds_around_anchors(
     q_loc_no_parent: Query<(&Location, Has<DebugLocation>), (Without<PlayerWorld>, Without<ChildOf>)>,
-    mut q_trans_no_parent: Query<(&mut Transform, &RapierContextEntityLink), (Without<ChildOf>, With<Location>)>,
+    mut q_trans_no_parent: Query<
+        (
+            &mut Transform,
+            &RapierContextEntityLink,
+            Option<&mut TranslationEasingState>,
+            Has<DebugLocation>,
+        ),
+        (Without<ChildOf>, With<Location>),
+    >,
     trans_query_with_parent: Query<(&Location, Has<DebugLocation>), (Without<PlayerWorld>, With<ChildOf>)>,
     #[cfg(feature = "server")] q_anchors: Query<(&RapierContextEntityLink, Entity), With<Anchor>>,
     // #[cfg(feature = "server")] everything_query: Query<(&RapierContextEntityLink, Entity)>,
@@ -179,10 +188,14 @@ fn reposition_worlds_around_anchors(
                 *world_location = *location;
             }
 
-            for (mut t, _) in q_trans_no_parent.iter_mut().filter(|(_, ww)| ww.0 == world_entity) {
+            for (mut t, _, translation_easing_state, dbg_loc) in q_trans_no_parent.iter_mut().filter(|(_, ww, _, _)| ww.0 == world_entity) {
                 t.translation -= delta;
-                if debug_player && delta.length_squared() > 0.01 {
-                    info!("Moving world transform to {} (delta: {})", t.translation, -delta);
+                if let Some(mut easing_state) = translation_easing_state {
+                    easing_state.start = easing_state.start.map(|x| x - delta);
+                    easing_state.end = easing_state.end.map(|x| x - delta);
+                }
+                if dbg_loc && delta.length_squared() > 0.01 {
+                    info!("Moving transform after world move to {} (delta: {})", t.translation, -delta);
                 }
             }
         } else {
@@ -511,6 +524,8 @@ type TransformLocationQuery<'w, 's> = Query<
         Option<&'static mut Transform>,
         Option<&'static PreviousLocation>,
         Option<&'static SetTransformBasedOnLocationFlag>,
+        // This is only present on the client
+        Option<&'static mut bevy_transform_interpolation::TranslationEasingState>,
         Has<DebugLocation>,
     ),
     Without<PlayerWorld>,
@@ -565,7 +580,7 @@ fn recursively_sync_transforms_and_locations(
     q_data: &mut TransformLocationQuery,
     q_children: &Query<&Children>,
 ) {
-    let Ok((mut my_loc, my_transform, my_prev_loc, set_trans, has_debug)) = q_data.get_mut(ent) else {
+    let Ok((mut my_loc, my_transform, my_prev_loc, set_trans, transform_easing_state, has_debug)) = q_data.get_mut(ent) else {
         return;
     };
 
@@ -589,8 +604,8 @@ fn recursively_sync_transforms_and_locations(
             // Applies that change to the transform
             let delta = parent_g_rot.inverse().mul_vec3(delta_loc);
             if delta != Vec3::ZERO {
+                my_transform.translation += delta;
                 if has_debug {
-                    my_transform.translation += delta;
                     info!(
                         "Moving trans for entity {ent:?} by {delta}; new value: {}",
                         my_transform.translation

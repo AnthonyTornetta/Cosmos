@@ -38,7 +38,7 @@ use cosmos_core::{
     },
     persistence::LoadingDistance,
     physics::{
-        location::{DebugLocation, Location, SYSTEM_SECTORS, SetPosition, systems::Anchor},
+        location::{Location, SYSTEM_SECTORS, SetPosition, systems::Anchor},
         player_world::PlayerWorld,
     },
     prelude::Station,
@@ -483,7 +483,7 @@ pub(crate) fn client_sync_players(
                 let mut entity_cmds = commands.entity(entity);
                 let structure = Structure::Full(FullStructure::new(dimensions));
 
-                entity_cmds.insert((structure, Station, DebugLocation));
+                entity_cmds.insert((structure, Station));
             }
             ServerReliableMessages::ChunkData {
                 structure_entity: server_structure_entity,

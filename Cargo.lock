@@ -2355,6 +2355,7 @@ dependencies = [
  "bevy_app_compute",
  "bevy_rapier3d",
  "bevy_renet",
+ "bevy_transform_interpolation",
  "bigdecimal",
  "bincode",
  "bitflags 2.9.1",
