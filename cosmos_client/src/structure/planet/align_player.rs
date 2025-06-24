@@ -107,6 +107,8 @@ fn align_player(
         } else {
             commands.entity(entity).remove::<PlayerAlignment>();
         }
+    } else {
+        commands.entity(entity).remove::<PlayerAlignment>();
     }
 }
 
@@ -134,7 +136,7 @@ pub enum Axis {
 }
 
 #[derive(Debug, Component, Clone, Copy, PartialEq, Eq)]
-/// Used to represent the player's orientation on a planet
+/// Used to represent the player's orientation on a structure
 pub struct PlayerAlignment {
     /// The entity this player is aligned to
     pub aligned_to: Entity,

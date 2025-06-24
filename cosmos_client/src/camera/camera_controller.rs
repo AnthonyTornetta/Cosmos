@@ -33,7 +33,7 @@ fn process_player_camera(
     cursor_delta: Res<DeltaCursorPosition>,
     cursor_flags: Res<CursorFlags>,
     sensitivity: Res<MouseSensitivity>,
-    mut q_non_aligned: Query<&mut Transform, (Without<PlayerAlignment>, With<LocalPlayer>, Without<MainCamera>)>,
+    q_is_player_aligned: Query<(), (With<PlayerAlignment>, With<LocalPlayer>, Without<MainCamera>)>,
 ) {
     if !cursor_flags.is_cursor_locked() {
         return;
@@ -53,8 +53,10 @@ fn process_player_camera(
         // looking straight down/up breaks movement - too lazy to make better fix
         camera_helper.angle_x = clamp(camera_helper.angle_x, -PI / 2.0 + 0.001, PI / 2.0 - 0.001);
 
-        camera_transform.rotation =
-            Quat::from_axis_angle(Vec3::Y, camera_helper.angle_y) * Quat::from_axis_angle(Vec3::X, camera_helper.angle_x);
+        if !q_is_player_aligned.is_empty() {
+            camera_transform.rotation =
+                Quat::from_axis_angle(Vec3::Y, camera_helper.angle_y) * Quat::from_axis_angle(Vec3::X, camera_helper.angle_x);
+        }
 
         // if let Ok(mut local_trans) = q_non_aligned.single_mut() {
         //     local_trans.rotation *= camera_transform.rotation;
@@ -67,7 +69,7 @@ fn process_player_camera(
 }
 
 fn adjust_player_to_face_camera(
-    mut q_player_trans: Query<(&mut Transform), (Without<PlayerAlignment>, With<LocalPlayer>, Without<MainCamera>)>,
+    mut q_player_trans: Query<&mut Transform, (Without<PlayerAlignment>, With<LocalPlayer>, Without<MainCamera>)>,
     mut q_cam_trans: Query<(&mut Transform, &mut CameraHelper), With<MainCamera>>,
 ) {
     let Ok(mut local_t) = q_player_trans.single_mut() else {
@@ -76,6 +78,8 @@ fn adjust_player_to_face_camera(
     let Ok((mut cam_t, mut cam_helper)) = q_cam_trans.single_mut() else {
         return;
     };
+
+    cam_t.rotation = Quat::from_axis_angle(Vec3::Y, cam_helper.angle_y) * Quat::from_axis_angle(Vec3::X, cam_helper.angle_x);
 
     local_t.rotation *= cam_t.rotation;
     cam_t.rotation = Quat::IDENTITY;
