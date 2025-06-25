@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 use cosmos_core::{
     block::data::persistence::ChunkLoadBlockDataEvent,
-    physics::location::{DebugLocation, Location},
+    physics::location::Location,
     structure::{
         ChunkInitEvent, Structure, StructureTypeSet, events::StructureLoadedEvent, station::Station,
         structure_iterator::ChunkIteratorResult,

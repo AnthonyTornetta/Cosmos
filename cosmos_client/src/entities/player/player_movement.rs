@@ -9,7 +9,7 @@ use bevy_rapier3d::{
 };
 use cosmos_core::{
     block::specific_blocks::gravity_well::GravityWell,
-    ecs::{compute_totally_accurate_global_transform, sets::FixedUpdateSet},
+    ecs::sets::FixedUpdateSet,
     netty::client::LocalPlayer,
     physics::location::LocationPhysicsSet,
     prelude::Planet,
@@ -19,7 +19,6 @@ use cosmos_core::{
 };
 
 use crate::{
-    camera::camera_controller::CameraHelper,
     input::inputs::{CosmosInputs, InputChecker, InputHandler},
     rendering::MainCamera,
     structure::planet::align_player::PlayerAlignment,
@@ -88,14 +87,14 @@ fn process_player_movement(
         (With<LocalPlayer>, Without<Pilot>, Without<BuildMode>),
     >,
     mut evr_jump: EventReader<Jump>,
-    mut q_camera: Query<(&GlobalTransform, &mut Transform, &mut CameraHelper), With<MainCamera>>,
+    mut q_camera: Query<(&GlobalTransform, &Transform), With<MainCamera>>,
     mut q_local_trans: Query<&mut Transform, (With<LocalPlayer>, Without<MainCamera>)>,
     q_show_cursor: Query<(), With<ShowCursor>>,
     q_exerts_gravity: Query<(), With<Planet>>,
 ) {
     let any_open_menus = !q_show_cursor.is_empty();
 
-    let Ok((cam_trans, mut cam_trans_local, mut cam_helper)) = q_camera.single_mut() else {
+    let Ok((cam_trans, cam_trans_local)) = q_camera.single_mut() else {
         return;
     };
 

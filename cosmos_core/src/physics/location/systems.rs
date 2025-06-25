@@ -525,7 +525,7 @@ type TransformLocationQuery<'w, 's> = Query<
         Option<&'static PreviousLocation>,
         Option<&'static SetTransformBasedOnLocationFlag>,
         // This is only present on the client
-        Option<&'static mut bevy_transform_interpolation::TranslationEasingState>,
+        // Option<&'static mut bevy_transform_interpolation::TranslationEasingState>,
         Has<DebugLocation>,
     ),
     Without<PlayerWorld>,
@@ -580,7 +580,7 @@ fn recursively_sync_transforms_and_locations(
     q_data: &mut TransformLocationQuery,
     q_children: &Query<&Children>,
 ) {
-    let Ok((mut my_loc, my_transform, my_prev_loc, set_trans, transform_easing_state, has_debug)) = q_data.get_mut(ent) else {
+    let Ok((mut my_loc, my_transform, my_prev_loc, set_trans, has_debug)) = q_data.get_mut(ent) else {
         return;
     };
 
