@@ -1,11 +1,13 @@
 //! The thrusters that move a ship
 
 use bevy::prelude::*;
-use bevy_rapier3d::prelude::{ExternalImpulse, ReadMassProperties, Velocity};
+use bevy_rapier3d::{
+    plugin::PhysicsSet,
+    prelude::{ExternalImpulse, ReadMassProperties, Velocity},
+};
 use cosmos_core::{
     block::{Block, block_events::BlockEventsSet},
     events::block_events::BlockChangedEvent,
-    netty::system_sets::NetworkingSystemsSet,
     physics::location::Location,
     prelude::FullStructure,
     registry::Registry,
@@ -263,12 +265,12 @@ pub enum ThrusterSystemSet {
 }
 
 pub(super) fn register(app: &mut App) {
-    app.configure_sets(Update, ThrusterSystemSet::ApplyThrusters);
+    app.configure_sets(FixedUpdate, ThrusterSystemSet::ApplyThrusters);
 
     app.insert_resource(ThrusterBlocks::default())
         .add_systems(OnEnter(GameState::PostLoading), register_thruster_blocks)
         .add_systems(
-            Update,
+            FixedUpdate,
             (
                 structure_loaded_event
                     .in_set(StructureSystemsSet::InitSystems)
@@ -276,15 +278,18 @@ pub(super) fn register(app: &mut App) {
                 block_update_system
                     .in_set(BlockEventsSet::ProcessEvents)
                     .in_set(StructureSystemsSet::UpdateSystemsBlocks),
-                update_ship_force_and_velocity
-                    .after(ShipMovementSet::RemoveShipMovement)
-                    .in_set(ThrusterSystemSet::ApplyThrusters)
-                    .in_set(StructureSystemsSet::UpdateSystemsBlocks)
-                    .in_set(StructureTypeSet::Ship),
             )
                 .chain()
-                .in_set(NetworkingSystemsSet::Between)
                 .run_if(in_state(GameState::Playing)),
+        )
+        .add_systems(
+            FixedUpdate,
+            update_ship_force_and_velocity
+                .before(PhysicsSet::SyncBackend)
+                .after(ShipMovementSet::RemoveShipMovement)
+                .in_set(ThrusterSystemSet::ApplyThrusters)
+                .in_set(StructureSystemsSet::UpdateSystems)
+                .in_set(StructureTypeSet::Ship),
         )
         .register_type::<ThrusterSystem>()
         .register_type::<MaxShipSpeedModifier>();

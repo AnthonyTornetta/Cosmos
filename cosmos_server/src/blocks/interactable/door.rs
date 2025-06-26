@@ -6,7 +6,6 @@ use cosmos_core::{
         block_events::{BlockEventsSet, BlockInteractEvent},
     },
     events::block_events::BlockChangedEvent,
-    netty::system_sets::NetworkingSystemsSet,
     prelude::{BlockCoordinate, Structure, StructureBlock},
     registry::{Registry, identifiable::Identifiable},
     state::GameState,
@@ -105,13 +104,12 @@ fn toggle_doors(
 
 pub(super) fn register(app: &mut App) {
     app.add_systems(
-        Update,
+        FixedUpdate,
         (
             handle_door_block_event.in_set(BlockEventsSet::ProcessEvents),
             toggle_doors.in_set(BlockEventsSet::SendEventsForNextFrame),
         )
             .chain()
-            .in_set(NetworkingSystemsSet::Between)
             .run_if(in_state(GameState::Playing)),
     )
     .add_event::<ToggleDoorEvent>();

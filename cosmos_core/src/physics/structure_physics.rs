@@ -5,6 +5,7 @@ use std::sync::RwLockReadGuard;
 use crate::block::Block;
 use crate::block::blocks::fluid::FLUID_COLLISION_GROUP;
 use crate::ecs::add_multi_statebound_resource;
+use crate::ecs::sets::FixedUpdateSet;
 use crate::events::block_events::BlockChangedEvent;
 use crate::prelude::UnboundChunkBlockCoordinate;
 use crate::registry::identifiable::Identifiable;
@@ -14,7 +15,6 @@ use crate::structure::block_storage::BlockStorer;
 use crate::structure::chunk::{CHUNK_DIMENSIONS, Chunk, ChunkUnloadEvent};
 use crate::structure::coordinates::{ChunkBlockCoordinate, ChunkCoordinate, CoordinateType};
 use crate::structure::events::ChunkSetEvent;
-use crate::structure::loading::StructureLoadingSet;
 use crate::structure::{ChunkNeighbors, Structure};
 use bevy::platform::collections::HashSet;
 use bevy::prelude::*;
@@ -758,11 +758,11 @@ enum StructurePhysicsSet {
 }
 
 pub(super) fn register(app: &mut App) {
-    // This goes in `PreUpdate` because rapier seems to hate adding a rigid body w/ children that have colliders in the same frame.
+    // OLD: This goes in `PreUpdate` because rapier seems to hate adding a rigid body w/ children that have colliders in the same frame.
     // If you feel like fixing this, more power to you.
     app.configure_sets(
-        PreUpdate,
-        StructurePhysicsSet::StructurePhysicsLogic.after(StructureLoadingSet::StructureLoaded),
+        FixedUpdate,
+        StructurePhysicsSet::StructurePhysicsLogic,
         // StructurePhysicsSet::StructurePhysicsLogic.after(StructureLoadingSet::StructureLoaded),
     );
 
@@ -777,7 +777,7 @@ pub(super) fn register(app: &mut App) {
         .register_type::<ColliderMassProperties>()
         .register_type::<ChunkPhysicsParts>()
         .add_systems(
-            PreUpdate,
+            FixedUpdate,
             (
                 add_physics_parts,
                 listen_for_structure_event,
@@ -785,6 +785,7 @@ pub(super) fn register(app: &mut App) {
                 read_physics_task.run_if(resource_exists::<GeneratingChunkCollidersTask>),
                 clean_unloaded_chunk_colliders,
             )
+                .in_set(FixedUpdateSet::Main)
                 .run_if(resource_exists::<ChunksToGenerateColliders>)
                 .chain()
                 .in_set(StructurePhysicsSet::StructurePhysicsLogic),

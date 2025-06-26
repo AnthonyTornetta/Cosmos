@@ -10,6 +10,7 @@ use bevy_rapier3d::prelude::*;
 use cosmos_core::{
     chat::ServerSendChatMessageEvent,
     economy::Credits,
+    ecs::sets::FixedUpdateSet,
     entities::{
         EntityId,
         health::{Health, MaxHealth},
@@ -23,7 +24,6 @@ use cosmos_core::{
         server::ServerLobby,
         server_reliable_messages::ServerReliableMessages,
         sync::{IdentifiableComponent, events::server_event::NettyEventWriter, registry::server::SyncRegistriesEvent},
-        system_sets::NetworkingSystemsSet,
     },
     persistence::LoadingDistance,
     physics::location::{Location, LocationPhysicsSet, Sector, SetPosition, systems::Anchor},
@@ -414,10 +414,10 @@ pub(super) fn register(app: &mut App) {
                 .chain()
                 .before(LoadingSystemSet::BeginLoading)
                 .before(LocationPhysicsSet::DoPhysics)
-                .in_set(NetworkingSystemsSet::Between),
+                .in_set(FixedUpdateSet::Main),
             (finish_loading_player, add_player_save_link, name_player_save_links)
                 .chain()
-                .in_set(NetworkingSystemsSet::Between)
+                .in_set(FixedUpdateSet::Main)
                 .after(LoadingSystemSet::DoneLoading),
         )
             .chain(),

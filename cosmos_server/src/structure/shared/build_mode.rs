@@ -3,7 +3,7 @@
 use bevy::prelude::*;
 use cosmos_core::{
     block::{Block, block_events::BlockInteractEvent},
-    netty::system_sets::NetworkingSystemsSet,
+    ecs::sets::FixedUpdateSet,
     prelude::{Ship, Station},
     registry::{Registry, identifiable::Identifiable},
     state::GameState,
@@ -52,10 +52,10 @@ fn interact_with_block(
 
 pub(super) fn register(app: &mut App) {
     app.add_systems(
-        Update,
+        FixedUpdate,
         (interact_with_block
             .in_set(BuildModeSet::SendEnterBuildModeEvent)
-            .in_set(NetworkingSystemsSet::Between))
+            .before(FixedUpdateSet::NettySend))
         .run_if(in_state(GameState::Playing)),
     );
 }

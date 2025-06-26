@@ -5,7 +5,6 @@ use cosmos_core::{
         block_events::{BlockEventsSet, BlockInteractEvent},
     },
     events::structure::change_pilot_event::ChangePilotEvent,
-    netty::system_sets::NetworkingSystemsSet,
     registry::{Registry, identifiable::Identifiable},
     state::GameState,
     structure::{
@@ -58,10 +57,9 @@ fn handle_block_event(
 
 pub(super) fn register(app: &mut App) {
     app.add_systems(
-        Update,
+        FixedUpdate,
         handle_block_event
             .in_set(BlockEventsSet::ProcessEvents)
-            .in_set(NetworkingSystemsSet::Between)
             .run_if(in_state(GameState::Playing)),
     );
 }

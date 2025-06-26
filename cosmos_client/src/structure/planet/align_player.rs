@@ -5,10 +5,11 @@ use std::f32::consts::PI;
 use bevy::prelude::*;
 use cosmos_core::{
     block::block_face::BlockFace,
-    netty::{client::LocalPlayer, system_sets::NetworkingSystemsSet},
+    ecs::sets::FixedUpdateSet,
+    netty::client::LocalPlayer,
     physics::{
         gravity_system::GravityEmitter,
-        location::{CosmosBundleSet, Location},
+        location::{Location, LocationPhysicsSet},
     },
     structure::{planet::Planet, ship::pilot::Pilot},
 };
@@ -65,7 +66,7 @@ fn align_player(
                 }
             }
 
-            let aligned_to = Some(planet_ent);
+            let aligned_to = planet_ent;
 
             transform.rotation = transform.rotation.lerp(
                 planet_rotation
@@ -101,18 +102,20 @@ fn align_player(
                             Quat::from_axis_angle(Vec3::Z, PI / 2.0)
                         }
                     },
-                0.1,
+                0.3,
             );
         } else {
             commands.entity(entity).remove::<PlayerAlignment>();
         }
+    } else {
+        commands.entity(entity).remove::<PlayerAlignment>();
     }
 }
 
-fn align_on_ship(query: Query<Entity, (With<LocalPlayer>, With<Pilot>)>, mut commands: Commands) {
-    if let Ok(ent) = query.single() {
+fn align_on_ship(query: Query<(Entity, &Pilot), With<LocalPlayer>>, mut commands: Commands) {
+    if let Ok((ent, pilot)) = query.single() {
         commands.entity(ent).insert(PlayerAlignment {
-            aligned_to: None,
+            aligned_to: pilot.entity,
             axis: Axis::Y,
         });
     }
@@ -133,20 +136,20 @@ pub enum Axis {
 }
 
 #[derive(Debug, Component, Clone, Copy, PartialEq, Eq)]
-/// Used to represent the player's orientation on a planet
+/// Used to represent the player's orientation on a structure
 pub struct PlayerAlignment {
     /// The entity this player is aligned to
-    pub aligned_to: Option<Entity>,
+    pub aligned_to: Entity,
     /// The axis RELATIVE to the `aligned_to`'s rotation
     pub axis: Axis,
 }
 
 pub(super) fn register(app: &mut App) {
     app.add_systems(
-        Update,
+        FixedUpdate,
         (align_player, align_on_ship)
-            .in_set(NetworkingSystemsSet::Between)
-            .before(CosmosBundleSet::HandleCosmosBundles)
+            .in_set(FixedUpdateSet::Main)
+            .before(LocationPhysicsSet::DoPhysics)
             .chain(),
     );
 }

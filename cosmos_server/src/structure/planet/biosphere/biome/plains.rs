@@ -554,7 +554,7 @@ pub(super) fn register(app: &mut App) {
             .ambiguous_with(RegisterBiomesSet::RegisterBiomes),
     )
     .add_systems(
-        Update,
+        FixedUpdate,
         plains_generate_chunk_features
             .ambiguous_with(BiosphereGenerationSet::GenerateChunkFeatures)
             .in_set(BiosphereGenerationSet::GenerateChunkFeatures),

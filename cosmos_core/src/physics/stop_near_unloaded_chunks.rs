@@ -1,9 +1,13 @@
 //! Freezes entities that are near unloaded chunks so they don't fly into unloaded areas.
 
-use bevy::prelude::{App, Commands, Entity, GlobalTransform, Or, PostUpdate, Query, With};
+use bevy::{
+    app::FixedUpdate,
+    prelude::{App, Commands, Entity, GlobalTransform, IntoScheduleConfigs, Or, Query, With},
+};
 use bevy_rapier3d::prelude::Collider;
 
 use crate::{
+    ecs::sets::FixedUpdateSet,
     entities::player::Player,
     physics::location::SECTOR_DIMENSIONS,
     prelude::Ship,
@@ -14,7 +18,10 @@ use crate::{
     },
 };
 
-use super::{disable_rigid_body::DisableRigidBody, location::Location};
+use super::{
+    disable_rigid_body::{DisableRigidBody, DisableRigidBodySet},
+    location::Location,
+};
 
 /// At some point this may have to be based on the size of the entity. For now though, this is fine.
 const FREEZE_RADIUS: UnboundCoordinateType = 1;
@@ -97,5 +104,10 @@ fn stop_near_unloaded_chunks(
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_systems(PostUpdate, stop_near_unloaded_chunks);
+    app.add_systems(
+        FixedUpdate,
+        stop_near_unloaded_chunks
+            .before(DisableRigidBodySet::DisableRigidBodies)
+            .in_set(FixedUpdateSet::PrePhysics),
+    );
 }

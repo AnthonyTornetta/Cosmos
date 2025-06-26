@@ -1,7 +1,7 @@
 //! Displays the crosshair the player sees in & out of a ship
 
 use bevy::prelude::*;
-use cosmos_core::{netty::system_sets::NetworkingSystemsSet, state::GameState, utils::smooth_clamp::SmoothClamp};
+use cosmos_core::{state::GameState, utils::smooth_clamp::SmoothClamp};
 
 use crate::window::setup::CursorFlagsSet;
 
@@ -101,7 +101,6 @@ pub(super) fn register(app: &mut App) {
             update_cursor_pos
                 .after(CrosshairOffsetSet::ApplyCrosshairChanges)
                 .after(CursorFlagsSet::ApplyCursorFlagsUpdates)
-                .in_set(NetworkingSystemsSet::Between)
                 .run_if(in_state(GameState::Playing)),
         );
 }

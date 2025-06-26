@@ -507,7 +507,7 @@ pub(super) fn register(app: &mut App) {
     sync_registry::<StructureSystemType>(app);
 
     app.configure_sets(
-        Update,
+        FixedUpdate,
         (
             StructureSystemsSet::InitSystems.in_set(StructureLoadingSet::StructureLoaded),
             StructureSystemsSet::UpdateSystemsBlocks,
@@ -516,8 +516,10 @@ pub(super) fn register(app: &mut App) {
             .chain(),
     );
 
+    app.configure_sets(FixedUpdate, StructureSystemsSet::UpdateSystems);
+
     app.add_systems(
-        Update,
+        FixedUpdate,
         (
             add_structure.in_set(StructureLoadingSet::LoadChunkData),
             remove_system_actives_when_melting_down.in_set(StructureSystemsSet::UpdateSystems),

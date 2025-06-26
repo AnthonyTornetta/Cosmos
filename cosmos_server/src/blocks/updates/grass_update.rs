@@ -4,7 +4,6 @@ use cosmos_core::{
     block::{Block, block_events::BlockEventsSet, block_update::BlockUpdate},
     ecs::mut_events::MutEvent,
     events::block_events::BlockChangedEvent,
-    netty::system_sets::NetworkingSystemsSet,
     registry::{Registry, identifiable::Identifiable},
     state::GameState,
     structure::{Structure, coordinates::BlockCoordinate},
@@ -47,11 +46,10 @@ fn monitor_grass_updated(
 
 pub(super) fn register(app: &mut App) {
     app.add_systems(
-        Update,
+        FixedUpdate,
         monitor_grass_updated
             .in_set(BlockEventsSet::SendEventsForNextFrame)
             .ambiguous_with(BlockEventsSet::SendEventsForNextFrame) // Order of blocks being updated doesn't matter
-            .in_set(NetworkingSystemsSet::Between)
             .run_if(in_state(GameState::Playing)),
     );
 }

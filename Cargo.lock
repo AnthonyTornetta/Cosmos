@@ -1577,6 +1577,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "bevy_transform_interpolation"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "72c7c6c4e6a3d5415b3a29a17bd20c17cd0e2f068b96b24e263316d58d5346ea"
+dependencies = [
+ "bevy",
+]
+
+[[package]]
 name = "bevy_ui"
 version = "0.16.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2314,6 +2323,7 @@ dependencies = [
  "bevy_obj",
  "bevy_rapier3d",
  "bevy_renet",
+ "bevy_transform_interpolation",
  "bigdecimal",
  "bincode",
  "bitflags 2.9.1",
@@ -2345,6 +2355,7 @@ dependencies = [
  "bevy_app_compute",
  "bevy_rapier3d",
  "bevy_renet",
+ "bevy_transform_interpolation",
  "bigdecimal",
  "bincode",
  "bitflags 2.9.1",

@@ -445,9 +445,10 @@ fn listen_for_inventory_messages(
 
 pub(super) fn register(app: &mut App) {
     app.add_systems(
-        Update,
+        FixedUpdate,
         listen_for_inventory_messages
-            .in_set(NetworkingSystemsSet::Between)
+            .in_set(NetworkingSystemsSet::ReceiveMessages) // THIS
+            // WAS CHANGED - was between
             .run_if(in_state(GameState::Playing)),
     );
 }

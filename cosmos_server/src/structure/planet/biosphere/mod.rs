@@ -8,6 +8,7 @@ use biome::RegisterBiomesSet;
 use cosmos_core::{
     netty::{NettyChannelServer, cosmos_encoder, server_reliable_messages::ServerReliableMessages, system_sets::NetworkingSystemsSet},
     physics::location::Location,
+    prelude::StructureLoadingSet,
     registry::{Registry, identifiable::Identifiable},
     state::GameState,
     structure::{
@@ -165,7 +166,7 @@ pub fn register_biosphere<T: BiosphereMarkerComponent + Default + Clone, E: Send
             ),
         )
         .add_systems(
-            Update,
+            FixedUpdate,
             (
                 // Loads this biosphere when the structure is loaded
                 (move |query: Query<(Entity, &SerializedData), With<NeedsLoaded>>, mut commands: Commands| {
@@ -175,7 +176,6 @@ pub fn register_biosphere<T: BiosphereMarkerComponent + Default + Clone, E: Send
                         }
                     }
                 })
-                .in_set(LoadingSystemSet::DoLoading)
                 .in_set(NeedsBiosphereSet::AddBiosphere),
                 // Checks if any blocks need generated for this biosphere
                 ((
@@ -309,7 +309,10 @@ fn assign_planet_atmosphere(mut commands: Commands, q_needs_atmosphere: Query<En
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_systems(Update, assign_planet_atmosphere);
+    app.add_systems(
+        FixedUpdate,
+        assign_planet_atmosphere.in_set(StructureLoadingSet::AddStructureComponents),
+    );
 
     app.configure_sets(Startup, BiosphereRegistrationSet::RegisterBiospheres);
     app.configure_sets(OnEnter(GameState::PostLoading), RegisterBiomesSet::RegisterBiomes);
@@ -317,7 +320,7 @@ pub(super) fn register(app: &mut App) {
     app.add_event::<NeedsBiosphereEvent>()
         .insert_resource(BiosphereTemperatureRegistry::default())
         .add_systems(
-            Update,
+            FixedUpdate,
             (
                 on_connect.in_set(NetworkingSystemsSet::SyncComponents),
                 add_biosphere.in_set(NeedsBiosphereSet::SendEvent),
@@ -326,10 +329,12 @@ pub(super) fn register(app: &mut App) {
         );
 
     app.configure_sets(
-        Update,
-        (NeedsBiosphereSet::SendEvent, NeedsBiosphereSet::AddBiosphere)
-            .chain()
-            .in_set(NetworkingSystemsSet::Between),
+        FixedUpdate,
+        (
+            NeedsBiosphereSet::SendEvent.in_set(StructureLoadingSet::AddStructureComponents),
+            NeedsBiosphereSet::AddBiosphere.in_set(LoadingSystemSet::DoLoading),
+        )
+            .chain(),
     );
 
     biosphere_generation::register(app);

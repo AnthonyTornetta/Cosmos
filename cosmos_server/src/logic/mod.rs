@@ -535,7 +535,7 @@ pub(super) fn register(app: &mut App) {
     let run_con = on_timer(Duration::from_millis(1000 / LOGIC_TICKS_PER_SECOND));
 
     app.configure_sets(
-        Update,
+        FixedUpdate,
         (
             LogicSystemSet::PreLogicTick.run_if(run_con.clone()),
             LogicSystemSet::EditLogicGraph
@@ -558,16 +558,21 @@ pub(super) fn register(app: &mut App) {
     );
 
     app.add_systems(
-        Update,
+        FixedUpdate,
         (
-            add_default_logic.in_set(StructureLoadingSet::AddStructureComponents),
-            logic_block_changed_event_listener.in_set(LogicSystemSet::EditLogicGraph),
             queue_logic_producers.in_set(LogicSystemSet::QueueProducers),
             queue_logic_consumers.in_set(LogicSystemSet::QueueConsumers),
             send_queued_logic_events.in_set(LogicSystemSet::SendQueues),
             // queue_logic_producers.chain().in_set(LogicSystemSet::BlockLogicDataUpdate),
         )
             .run_if(in_state(GameState::Playing)),
+    )
+    .add_systems(
+        Update,
+        (
+            add_default_logic.in_set(StructureLoadingSet::AddStructureComponents),
+            logic_block_changed_event_listener.in_set(LogicSystemSet::EditLogicGraph),
+        ),
     )
     .register_type::<LogicDriver>()
     .register_type::<LogicGraph>()

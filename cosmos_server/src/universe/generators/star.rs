@@ -137,7 +137,7 @@ fn generate_stars(
 
 pub(super) fn register(app: &mut App) {
     app.add_systems(
-        Update,
+        FixedUpdate,
         (
             generate_stars.in_set(SystemGenerationSet::Star),
             load_stars_in_universe.in_set(NetworkingSystemsSet::Between),
@@ -146,7 +146,7 @@ pub(super) fn register(app: &mut App) {
             .run_if(in_state(GameState::Playing)),
     )
     .add_systems(
-        Update,
+        FixedUpdate,
         on_request_star
             .in_set(NetworkingSystemsSet::SyncComponents)
             .run_if(in_state(GameState::Playing)),

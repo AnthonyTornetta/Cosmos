@@ -118,13 +118,13 @@ fn flip_flop_output_event_listener(
 pub(super) fn register(app: &mut App) {
     app.add_systems(OnEnter(GameState::PostLoading), register_logic_connections)
         .add_systems(
-            Update,
+            FixedUpdate,
             flip_flop_input_event_listener
                 .in_set(LogicSystemSet::Consume)
                 .ambiguous_with(LogicSystemSet::Consume),
         )
         .add_systems(
-            Update,
+            FixedUpdate,
             flip_flop_output_event_listener
                 .in_set(LogicSystemSet::Produce)
                 .ambiguous_with(LogicSystemSet::Produce),

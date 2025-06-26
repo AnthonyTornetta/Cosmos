@@ -2,15 +2,12 @@ use bevy::{color::palettes::css, prelude::*};
 use bevy_rapier3d::dynamics::Velocity;
 use cosmos_core::{
     ecs::NeedsDespawned,
-    netty::{client::LocalPlayer, system_sets::NetworkingSystemsSet},
-    physics::location::LocationPhysicsSet,
+    netty::client::LocalPlayer,
     structure::{
         ship::pilot::Pilot,
-        systems::{StructureSystems, StructureSystemsSet, energy_storage_system::EnergyStorageSystem},
+        systems::{StructureSystems, energy_storage_system::EnergyStorageSystem},
     },
 };
-
-use crate::entities::player::player_movement::PlayerMovementSet;
 
 #[derive(Component)]
 struct StatsNodes;
@@ -124,16 +121,5 @@ fn despawn_nodes(
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_systems(
-        Update,
-        (
-            create_nodes,
-            update_nodes.after(PlayerMovementSet::ProcessPlayerMovement),
-            despawn_nodes,
-        )
-            .after(StructureSystemsSet::UpdateSystems)
-            .after(LocationPhysicsSet::DoPhysics)
-            .in_set(NetworkingSystemsSet::Between)
-            .chain(),
-    );
+    app.add_systems(Update, (create_nodes, update_nodes, despawn_nodes).chain());
 }

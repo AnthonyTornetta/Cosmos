@@ -9,7 +9,6 @@ use super::{
     components::{slider::SliderUiSystemSet, text_input::TextInputUiSystemSet},
 };
 use bevy::{ecs::component::Mutable, prelude::*};
-use cosmos_core::netty::system_sets::NetworkingSystemsSet;
 
 pub mod slider;
 pub mod text;
@@ -150,8 +149,7 @@ pub(super) fn register(app: &mut App) {
             ReactiveUiSystemSet::ProcessTextValueChanges.in_set(TextInputUiSystemSet::HandleReactValues),
             ReactiveUiSystemSet::ProcessSliderValueChanges.in_set(SliderUiSystemSet::HandleReactValues),
         )
-            .chain()
-            .in_set(NetworkingSystemsSet::Between),
+            .chain(),
     )
     .configure_sets(Update, DoReactorsSet::DoReactors);
 }

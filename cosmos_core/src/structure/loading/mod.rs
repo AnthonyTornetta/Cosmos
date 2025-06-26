@@ -1,7 +1,7 @@
 //! Handles the loading of structures
 
 use crate::{
-    netty::system_sets::NetworkingSystemsSet,
+    ecs::sets::FixedUpdateSet,
     structure::events::{ChunkSetEvent, StructureLoadedEvent},
 };
 use bevy::prelude::*;
@@ -73,7 +73,7 @@ pub enum StructureLoadingSet {
 
 pub(super) fn register(app: &mut App) {
     app.configure_sets(
-        Update,
+        FixedUpdate,
         (
             StructureLoadingSet::LoadStructure,
             StructureLoadingSet::AddStructureComponents,
@@ -83,12 +83,13 @@ pub(super) fn register(app: &mut App) {
             StructureLoadingSet::LoadChunkData,
             StructureLoadingSet::StructureLoaded,
         )
-            .after(NetworkingSystemsSet::ProcessReceivedMessages)
+            .before(FixedUpdateSet::NettySend)
+            // .after(NetworkingSystemsSet::ProcessReceivedMessages)
             .chain(),
     );
 
     app.add_systems(
-        Update,
+        FixedUpdate,
         (
             listen_chunk_done_loading.in_set(StructureLoadingSet::LoadChunkData),
             set_structure_done_loading

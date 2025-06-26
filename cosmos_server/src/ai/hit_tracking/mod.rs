@@ -1,14 +1,11 @@
 //! Keeps track of the entities that have hit other AI-Controlled ships, if the [`Hitters`]
 //! component is added.
 
-use std::time::Duration;
-
-use bevy::{platform::collections::HashMap, prelude::*, time::common_conditions::on_timer};
+use bevy::{platform::collections::HashMap, prelude::*};
 use cosmos_core::{
     block::block_events::BlockEventsSet,
     entities::EntityId,
     faction::{FactionId, FactionRelation, Factions},
-    netty::system_sets::NetworkingSystemsSet,
     state::GameState,
     structure::{block_health::events::BlockTakeDamageEvent, shared::MeltingDown, ship::pilot::Pilot},
 };
@@ -132,7 +129,7 @@ fn on_melt_down(
 
 pub(super) fn register(app: &mut App) {
     app.add_systems(
-        Update,
+        FixedUpdate,
         (add_hitters, process_hit_events, add_faction_enemies)
             .chain()
             .after(PlayerStrengthSystemSet::UpdatePlayerStrength)
@@ -141,18 +138,10 @@ pub(super) fn register(app: &mut App) {
             .in_set(BlockEventsSet::ProcessEvents),
     )
     .add_systems(
-        Update,
-        on_melt_down
-            .run_if(in_state(GameState::Playing))
-            .after(process_hit_events)
-            .in_set(NetworkingSystemsSet::Between),
+        FixedUpdate,
+        on_melt_down.run_if(in_state(GameState::Playing)).after(process_hit_events),
     )
-    .add_systems(
-        Update,
-        tick_down_hitters
-            .run_if(in_state(GameState::Playing))
-            .run_if(on_timer(Duration::from_secs(1))),
-    )
+    .add_systems(FixedUpdate, tick_down_hitters.run_if(in_state(GameState::Playing)))
     .register_type::<Hitters>()
     .register_type::<DifficultyIncreaseOnKill>();
 }

@@ -24,10 +24,13 @@ use cosmos_core::{
             dock_system::{DockSystem, Docked},
         },
     },
-    utils::quat_math::QuatMath,
+    utils::{
+        ecs::{FixedUpdateRemovedComponents, register_fixed_update_removed_component},
+        quat_math::QuatMath,
+    },
 };
 
-use super::{sync::register_structure_system, thruster_system::ThrusterSystemSet};
+use super::sync::register_structure_system;
 
 const MAX_DOCK_CHECK: f32 = 2.0;
 
@@ -353,7 +356,7 @@ fn add_dock_list(mut commands: Commands, q_needs_list: Query<Entity, (With<Struc
 }
 
 fn add_dock_properties(
-    mut removed_docks_reader: RemovedComponents<Docked>,
+    removed_docks_reader: FixedUpdateRemovedComponents<Docked>,
     q_added_dock: Query<(Entity, &Docked), Changed<Docked>>,
     mut q_docked_list: Query<&mut DockedEntities>,
     mut commands: Commands,
@@ -416,8 +419,10 @@ fn nearest_axis(direction: Vec3) -> Vec3 {
 }
 
 pub(super) fn register(app: &mut App) {
+    register_fixed_update_removed_component::<Docked>(app);
+
     app.add_systems(
-        Update,
+        FixedUpdate,
         (
             dock_structure_loaded_event_processor
                 .in_set(StructureSystemsSet::InitSystems)
@@ -427,9 +432,9 @@ pub(super) fn register(app: &mut App) {
                 dock_block_update_system
                     .in_set(BlockEventsSet::ProcessEvents)
                     .in_set(StructureSystemsSet::UpdateSystemsBlocks),
-                on_active.after(ThrusterSystemSet::ApplyThrusters),
+                on_active, //.after(ThrusterSystemSet::ApplyThrusters),
                 monitor_removed_dock_blocks
-                    .after(ThrusterSystemSet::ApplyThrusters) // velocity is changed in `ApplyThrusters`, which is needed here.
+                    //.after(ThrusterSystemSet::ApplyThrusters) // velocity is changed in `ApplyThrusters`, which is needed here.
                     .in_set(BlockEventsSet::ProcessEvents)
                     .in_set(StructureSystemsSet::UpdateSystemsBlocks),
                 add_dock_list,

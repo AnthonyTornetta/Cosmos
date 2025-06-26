@@ -8,10 +8,7 @@ use bevy_rapier3d::{plugin::RapierContextEntityLink, prelude::Velocity};
 use bevy_renet::renet::RenetServer;
 use cosmos_core::{
     block::Block,
-    netty::{
-        NettyChannelServer, cosmos_encoder, server_laser_cannon_system_messages::ServerStructureSystemMessages,
-        system_sets::NetworkingSystemsSet,
-    },
+    netty::{NettyChannelServer, cosmos_encoder, server_laser_cannon_system_messages::ServerStructureSystemMessages},
     physics::location::{Location, LocationPhysicsSet},
     projectiles::{causer::Causer, laser::Laser},
     registry::{Registry, identifiable::Identifiable},
@@ -184,24 +181,23 @@ pub(super) fn register(app: &mut App) {
     add_line_system::<LaserCannonProperty, LaserCannonCalculator>(app);
 
     app.add_systems(
-        Update,
+        FixedUpdate,
         update_system
             .ambiguous_with(thruster_system::update_ship_force_and_velocity)
             // .after(BlockEventsSet::ProcessEvents)
             .in_set(StructureSystemsSet::UpdateSystemsBlocks)
-            .in_set(NetworkingSystemsSet::Between)
             .after(LocationPhysicsSet::DoPhysics)
             .run_if(in_state(GameState::Playing)),
     )
     .add_systems(OnEnter(GameState::PostLoading), register_laser_blocks)
     .add_systems(
-        Update,
+        FixedUpdate,
         on_add_laser
             .before(laser_cannon_input_event_listener)
             .after(StructureSystemsSet::UpdateSystemsBlocks),
     )
     .add_systems(
-        Update,
+        FixedUpdate,
         laser_cannon_input_event_listener
             .in_set(StructureSystemsSet::UpdateSystems)
             .in_set(LogicSystemSet::Consume)

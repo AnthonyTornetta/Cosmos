@@ -23,11 +23,12 @@ use crate::state::GameState;
 use crate::structure::Structure;
 use crate::structure::ship::pilot::Pilot;
 use crate::structure::systems::{StructureSystem, StructureSystems};
+use crate::utils::ecs::{FixedUpdateRemovedComponents, register_fixed_update_removed_component};
 use bevy::platform::collections::{HashMap, HashSet};
 use bevy::prelude::*;
 use bevy::time::Time;
 use bevy::{
-    app::{App, Update},
+    app::App,
     ecs::{
         entity::Entity,
         event::EventWriter,
@@ -290,7 +291,7 @@ fn client_send_components<T: SyncableComponent>(
 
 fn client_send_removed_components<T: SyncableComponent>(
     id_registry: Res<Registry<SyncedComponentId>>,
-    mut removed_components: RemovedComponents<T>,
+    removed_components: FixedUpdateRemovedComponents<T>,
     q_entity_identifier: Query<(Option<&StructureSystem>, Option<&ItemStackData>)>,
     mut client: ResMut<RenetClient>,
     mapping: Res<NetworkMapping>,
@@ -723,12 +724,12 @@ fn get_entity_identifier_info(
 }
 
 pub(super) fn setup_client(app: &mut App) {
-    app.configure_sets(Update, ClientReceiveComponents::ClientReceiveComponents);
+    app.configure_sets(FixedUpdate, ClientReceiveComponents::ClientReceiveComponents);
 
     // ComponentSyncingSet configuration in cosmos_client/netty/mod
 
     app.add_systems(
-        Update,
+        FixedUpdate,
         client_receive_components
             .in_set(ClientReceiveComponents::ClientReceiveComponents)
             .in_set(NetworkingSystemsSet::ReceiveMessages)
@@ -741,54 +742,30 @@ pub(super) fn setup_client(app: &mut App) {
 pub(super) fn sync_component_client<T: SyncableComponent>(app: &mut App) {
     app.register_type::<ServerEntity>();
 
-    match T::get_sync_type() {
-        SyncType::ClientAuthoritative(_) => {
-            app.add_systems(
-                Update,
-                (client_send_components::<T>, client_send_removed_components::<T>)
-                    .chain()
-                    .run_if(resource_exists::<RenetClient>)
-                    .in_set(ComponentSyncingSet::DoComponentSyncing),
-            );
-        }
-        SyncType::ServerAuthoritative => {
-            add_multi_statebound_resource::<StoredComponents<T>, GameState>(app, GameState::LoadingWorld, GameState::Playing);
+    if T::get_sync_type().is_client_authoritative() {
+        register_fixed_update_removed_component::<T>(app);
+        app.add_systems(
+            FixedUpdate,
+            (client_send_components::<T>, client_send_removed_components::<T>)
+                .chain()
+                .run_if(resource_exists::<RenetClient>)
+                .in_set(ComponentSyncingSet::DoComponentSyncing),
+        );
+    }
+    if T::get_sync_type().is_server_authoritative() {
+        add_multi_statebound_resource::<StoredComponents<T>, GameState>(app, GameState::LoadingWorld, GameState::Playing);
 
-            app.add_systems(
-                Update,
-                (
-                    client_add_stored_components::<T>,
-                    client_deserialize_component::<T>,
-                    client_remove_component::<T>,
-                )
-                    .chain()
-                    .run_if(resource_exists::<NetworkMapping>)
-                    .run_if(resource_exists::<Registry<SyncedComponentId>>)
-                    .in_set(ComponentSyncingSet::ReceiveComponents),
-            );
-        }
-        SyncType::BothAuthoritative(_) => {
-            add_multi_statebound_resource::<StoredComponents<T>, GameState>(app, GameState::LoadingWorld, GameState::Playing);
-
-            app.add_systems(
-                Update,
-                (client_send_components::<T>, client_send_removed_components::<T>)
-                    .chain()
-                    .run_if(resource_exists::<RenetClient>)
-                    .in_set(ComponentSyncingSet::DoComponentSyncing),
-            );
-            app.add_systems(
-                Update,
-                (
-                    client_add_stored_components::<T>,
-                    client_deserialize_component::<T>,
-                    client_remove_component::<T>,
-                )
-                    .chain()
-                    .run_if(resource_exists::<NetworkMapping>)
-                    .run_if(resource_exists::<Registry<SyncedComponentId>>)
-                    .in_set(ComponentSyncingSet::ReceiveComponents),
-            );
-        }
+        app.add_systems(
+            FixedUpdate,
+            (
+                client_add_stored_components::<T>,
+                client_deserialize_component::<T>,
+                client_remove_component::<T>,
+            )
+                .chain()
+                .run_if(resource_exists::<NetworkMapping>)
+                .run_if(resource_exists::<Registry<SyncedComponentId>>)
+                .in_set(ComponentSyncingSet::ReceiveComponents),
+        );
     }
 }

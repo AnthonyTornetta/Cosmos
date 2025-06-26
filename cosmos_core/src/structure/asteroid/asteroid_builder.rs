@@ -22,5 +22,8 @@ fn add_rigidbody_to_asteroid(mut commands: Commands, q_asteroid_added: Query<(En
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_systems(Update, add_rigidbody_to_asteroid.in_set(StructureLoadingSet::StructureLoaded));
+    app.add_systems(
+        FixedUpdate,
+        add_rigidbody_to_asteroid.in_set(StructureLoadingSet::AddStructureComponents),
+    );
 }

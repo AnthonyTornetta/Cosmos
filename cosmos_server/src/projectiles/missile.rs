@@ -10,12 +10,12 @@ use bevy_rapier3d::{
 };
 
 use cosmos_core::{
-    ecs::NeedsDespawned,
+    ecs::{NeedsDespawned, sets::FixedUpdateSet},
     netty::system_sets::NetworkingSystemsSet,
     persistence::LoadingDistance,
     physics::{
         collision_handling::CollisionBlacklist,
-        location::{CosmosBundleSet, Location, LocationPhysicsSet},
+        location::{Location, LocationPhysicsSet},
     },
     projectiles::{
         causer::Causer,
@@ -162,7 +162,7 @@ fn despawn_missiles(
 
 pub(super) fn register(app: &mut App) {
     app.add_systems(
-        Update,
+        FixedUpdate,
         (respond_to_collisions.before(NetworkingSystemsSet::SyncComponents), despawn_missiles)
             .before(ExplosionSystemSet::PreProcessExplosions)
             .after(LocationPhysicsSet::DoPhysics)
@@ -170,13 +170,13 @@ pub(super) fn register(app: &mut App) {
     );
 
     app.add_systems(
-        Update,
+        FixedUpdate,
         (
             look_and_move_towards_target.ambiguous_with(StructureTypeSet::Ship),
             apply_missile_thrust,
         )
-            .after(CosmosBundleSet::HandleCosmosBundles)
-            .in_set(NetworkingSystemsSet::Between)
+            .after(FixedUpdateSet::LocationSyncing)
+            .before(FixedUpdateSet::PrePhysics)
             .chain(),
     );
 }

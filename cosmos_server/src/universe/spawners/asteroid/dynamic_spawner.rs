@@ -387,7 +387,7 @@ pub(super) fn register(app: &mut App) {
     );
 
     app.add_systems(
-        Update,
+        FixedUpdate,
         (
             spawn_tiny_asteroids.in_set(AsteroidGenerationSet::StartGeneratingAsteroid),
             send_done_generating_event.in_set(AsteroidGenerationSet::NotifyFinished),

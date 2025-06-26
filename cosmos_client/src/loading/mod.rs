@@ -2,11 +2,11 @@
 
 use bevy::prelude::*;
 use cosmos_core::{
-    ecs::NeedsDespawned,
+    ecs::{NeedsDespawned, sets::FixedUpdateSet},
     entities::player::Player,
-    netty::{client::LocalPlayer, system_sets::NetworkingSystemsSet},
+    netty::client::LocalPlayer,
     persistence::LoadingDistance,
-    physics::location::{Location, LocationPhysicsSet, SectorUnit},
+    physics::location::{Location, SectorUnit},
 };
 
 fn unload_far_entities(
@@ -27,10 +27,5 @@ fn unload_far_entities(
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_systems(
-        Update,
-        unload_far_entities
-            .in_set(NetworkingSystemsSet::Between)
-            .after(LocationPhysicsSet::DoPhysics),
-    );
+    app.add_systems(FixedUpdate, unload_far_entities.in_set(FixedUpdateSet::LocationSyncingPostPhysics));
 }

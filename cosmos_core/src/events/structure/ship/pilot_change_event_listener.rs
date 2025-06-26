@@ -1,11 +1,12 @@
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::{RigidBody, Sensor};
 
+use crate::ecs::sets::FixedUpdateSet;
 use crate::events::structure::change_pilot_event::ChangePilotEvent;
-use crate::netty::system_sets::NetworkingSystemsSet;
-use crate::physics::location::{Location, LocationPhysicsSet};
+use crate::physics::location::Location;
 use crate::structure::StructureTypeSet;
 use crate::structure::ship::pilot::Pilot;
+use crate::utils::ecs::FixedUpdateRemovedComponents;
 
 #[derive(Component, Debug)]
 struct PilotStartingDelta(Vec3, Quat);
@@ -78,12 +79,12 @@ struct RemoveSensorFrom(Entity, u8);
 #[derive(Debug, Event)]
 struct Bouncer(Entity, u8);
 
-const BOUNCES: u8 = if cfg!(feature = "server") { 100 } else { 0 };
+const BOUNCES: u8 = if cfg!(feature = "server") { 30 } else { 0 };
 
 fn pilot_removed(
     mut commands: Commands,
     mut query: Query<(&mut Transform, &PilotStartingDelta)>,
-    mut removed_pilots: RemovedComponents<Pilot>,
+    removed_pilots: FixedUpdateRemovedComponents<Pilot>,
     mut event_writer: EventWriter<RemoveSensorFrom>,
 ) {
     for entity in removed_pilots.read() {
@@ -104,8 +105,18 @@ fn bouncer(mut reader: EventReader<Bouncer>, mut event_writer: EventWriter<Remov
     }
 }
 
-fn remove_sensor(mut reader: EventReader<RemoveSensorFrom>, mut event_writer: EventWriter<Bouncer>, mut commands: Commands) {
+fn remove_sensor(
+    mut reader: EventReader<RemoveSensorFrom>,
+    q_pilot: Query<(), With<Pilot>>,
+    mut event_writer: EventWriter<Bouncer>,
+    mut commands: Commands,
+) {
     for ev in reader.read() {
+        if q_pilot.contains(ev.0) {
+            // In case they become a pilot again within the short timespan of the bounces
+            continue;
+        }
+
         if ev.1 >= BOUNCES {
             if let Ok(mut e) = commands.get_entity(ev.0) {
                 e.remove::<Sensor>();
@@ -137,16 +148,10 @@ fn pilot_needs_sensor(mut commands: Commands, q_pilot: Query<Entity, (With<Pilot
 }
 
 pub(super) fn register<T: States + Clone + Copy>(app: &mut App, playing_state: T) {
-    app.configure_sets(
-        Update,
-        PilotEventSystemSet::ChangePilotListener
-            // Normally you'd want to put parent-changing systems before this set, but this was all designed before this was a thing.
-            // Perhaps in the future refactor this? To see how you should actually change parents, see the GravityWell logic.
-            .after(LocationPhysicsSet::DoPhysics),
-    );
+    app.configure_sets(FixedUpdate, PilotEventSystemSet::ChangePilotListener);
 
     app.add_systems(
-        Update,
+        FixedUpdate,
         (
             pilot_removed,
             remove_sensor,
@@ -157,7 +162,8 @@ pub(super) fn register<T: States + Clone + Copy>(app: &mut App, playing_state: T
         )
             .in_set(PilotEventSystemSet::ChangePilotListener)
             .in_set(StructureTypeSet::Ship)
-            .in_set(NetworkingSystemsSet::Between)
+            // TODO: this could be wrong
+            .in_set(FixedUpdateSet::Main)
             .chain()
             .run_if(in_state(playing_state)),
     )

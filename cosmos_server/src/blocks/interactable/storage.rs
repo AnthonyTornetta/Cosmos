@@ -8,7 +8,7 @@ use cosmos_core::{
     },
     entities::player::Player,
     inventory::netty::{InventoryIdentifier, ServerInventoryMessages},
-    netty::{NettyChannelServer, cosmos_encoder, system_sets::NetworkingSystemsSet},
+    netty::{NettyChannelServer, cosmos_encoder},
     registry::{Registry, identifiable::Identifiable},
     state::GameState,
     structure::Structure,
@@ -54,9 +54,8 @@ fn handle_block_event(
 
 pub(super) fn register(app: &mut App) {
     app.add_systems(
-        Update,
+        FixedUpdate,
         handle_block_event
-            .in_set(NetworkingSystemsSet::Between)
             .in_set(BlockEventsSet::ProcessEvents)
             .run_if(in_state(GameState::Playing)),
     );

@@ -8,6 +8,7 @@ use bevy::{
     prelude::{App, Component, Entity},
     reflect::Reflect,
 };
+use bevy_transform_interpolation::NoTranslationEasing;
 
 /// Represents a world of objects that are based around a certain entity
 ///
@@ -15,6 +16,7 @@ use bevy::{
 /// - On the server, a player
 /// - On the client, the local player
 #[derive(Component, Reflect, Debug, Clone, Copy)]
+#[require(NoTranslationEasing)]
 pub struct PlayerWorld {
     /// The player this is centered around.
     pub player: Entity,

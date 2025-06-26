@@ -2,7 +2,6 @@ use bevy::prelude::*;
 use cosmos_core::{
     block::Block,
     entities::health::Health,
-    netty::system_sets::NetworkingSystemsSet,
     projectiles::{
         causer::Causer,
         laser::{Laser, LaserCollideEvent, LaserSystemSet},
@@ -84,9 +83,8 @@ fn on_save_laser(mut query: Query<&mut SerializedData, (With<NeedsSaved>, With<L
 
 pub(super) fn register(app: &mut App) {
     app.add_systems(
-        Update,
+        FixedUpdate,
         respond_laser_hit_event
-            .in_set(NetworkingSystemsSet::Between)
             .in_set(BlockHealthSet::SendHealthChanges)
             .after(LaserSystemSet::SendHitEvents)
             .after(ShieldSet::OnShieldHit)

@@ -82,7 +82,7 @@ fn spawn_pirate_stations(
 
 pub(super) fn register(app: &mut App) {
     app.add_systems(
-        Update,
+        FixedUpdate,
         spawn_pirate_stations
             .run_if(on_timer(Duration::from_secs(1)))
             .before(LoadingBlueprintSystemSet::BeginLoadingBlueprints)

@@ -1,7 +1,8 @@
 use bevy::prelude::*;
 use cosmos_core::{
     economy::Credits,
-    netty::{sync::IdentifiableComponent, system_sets::NetworkingSystemsSet},
+    ecs::sets::FixedUpdateSet,
+    netty::sync::IdentifiableComponent,
     physics::location::{Location, SECTOR_DIMENSIONS},
     quest::{OngoingQuestDetails, OngoingQuestId, OngoingQuests, Quest},
     registry::Registry,
@@ -118,10 +119,10 @@ pub(super) fn register(app: &mut App) {
     make_persistent::<FightPirateQuestNPC>(app);
 
     app.add_systems(OnEnter(GameState::Loading), register_quest).add_systems(
-        Update,
+        FixedUpdate,
         (on_add_quest, on_kill_pirates)
             .chain()
             .before(PirateSpawningSet::PirateSpawningLogic)
-            .in_set(NetworkingSystemsSet::Between),
+            .in_set(FixedUpdateSet::Main),
     );
 }

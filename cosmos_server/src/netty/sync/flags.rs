@@ -5,6 +5,7 @@
 use bevy::{platform::collections::HashSet, prelude::*};
 use cosmos_core::{
     block::data::BlockData,
+    ecs::sets::FixedUpdateSet,
     entities::player::Player,
     inventory::itemstack::ItemStackData,
     netty::{
@@ -298,7 +299,7 @@ fn on_needs_sync_data(
 
 pub(super) fn register(app: &mut App) {
     app.add_systems(
-        Update,
+        FixedUpdate,
         (
             add_item_data_sync_flag,
             add_structure_systems_sync_flag,
@@ -307,7 +308,7 @@ pub(super) fn register(app: &mut App) {
             generate_request_entity_events_for_new_sync_tos,
         )
             .chain()
-            .after(NetworkingSystemsSet::Between)
+            .in_set(FixedUpdateSet::NettySend)
             .before(NetworkingSystemsSet::SyncComponents),
     )
     .register_type::<SyncTo>()

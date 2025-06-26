@@ -1,12 +1,13 @@
 use bevy::prelude::*;
 use cosmos_core::{
-    netty::{client::LocalPlayer, system_sets::NetworkingSystemsSet},
+    netty::client::LocalPlayer,
     state::GameState,
     structure::{
         Structure,
         ship::{Ship, pilot::Pilot},
         systems::{StructureSystem, StructureSystems, camera_system::CameraSystem},
     },
+    utils::ecs::FixedUpdateRemovedComponents,
 };
 
 use crate::{
@@ -192,7 +193,7 @@ fn adjust_camera(
 }
 
 fn on_stop_piloting(
-    mut q_removed_pilots: RemovedComponents<Pilot>,
+    q_removed_pilots: FixedUpdateRemovedComponents<Pilot>,
     q_player: Query<&CameraPlayerOffset, With<LocalPlayer>>,
     mut q_main_camera: Query<&mut Transform, With<MainCamera>>,
 ) {
@@ -217,7 +218,6 @@ pub(super) fn register(app: &mut App) {
         Update,
         (on_add_camera_system, swap_camera, on_change_selected_camera, on_stop_piloting)
             .chain()
-            .in_set(NetworkingSystemsSet::Between)
             .run_if(in_state(GameState::Playing)),
     )
     .register_type::<SelectedCamera>();

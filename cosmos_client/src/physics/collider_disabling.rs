@@ -1,6 +1,7 @@
 use bevy::prelude::*;
 use cosmos_core::{
-    netty::{client::LocalPlayer, system_sets::NetworkingSystemsSet},
+    ecs::sets::FixedUpdateSet,
+    netty::client::LocalPlayer,
     physics::{
         disable_rigid_body::{DisableRigidBody, DisableRigidBodySet},
         location::{Location, SECTOR_DIMENSIONS},
@@ -42,10 +43,10 @@ fn disable_colliders(
 
 pub(super) fn register(app: &mut App) {
     app.add_systems(
-        Update,
+        FixedUpdate,
         disable_colliders
             .run_if(in_state(GameState::Playing))
-            .in_set(NetworkingSystemsSet::Between)
+            .in_set(FixedUpdateSet::PrePhysics)
             .before(DisableRigidBodySet::DisableRigidBodies),
     );
 }

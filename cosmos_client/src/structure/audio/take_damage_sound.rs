@@ -1,8 +1,6 @@
 use bevy::prelude::*;
 use bevy_kira_audio::{Audio, AudioControl, AudioInstance, AudioSource};
 use cosmos_core::{
-    block::block_events::BlockEventsSet,
-    netty::system_sets::NetworkingSystemsSet,
     state::GameState,
     structure::{Structure, block_health::events::BlockTakeDamageEvent, shared::DespawnWithStructure},
 };
@@ -57,11 +55,5 @@ pub(super) fn register(app: &mut App) {
         commands.insert_resource(BlockDamageSound(sound.0));
     });
 
-    app.add_systems(
-        Update,
-        play_block_damage_sound
-            .in_set(BlockEventsSet::ProcessEvents)
-            .in_set(NetworkingSystemsSet::Between)
-            .run_if(resource_exists::<BlockDamageSound>),
-    );
+    app.add_systems(Update, play_block_damage_sound.run_if(resource_exists::<BlockDamageSound>));
 }

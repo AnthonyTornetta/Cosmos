@@ -4,7 +4,6 @@ use bevy::prelude::*;
 use cosmos_core::{
     inventory::Inventory,
     item::{Item, physical_item::PhysicalItem},
-    netty::system_sets::NetworkingSystemsSet,
     registry::{Registry, identifiable::Identifiable},
     state::GameState,
 };
@@ -57,7 +56,6 @@ pub(super) fn register(app: &mut App) {
         Update,
         render_physical_item
             .run_if(in_state(GameState::Playing))
-            .in_set(MaterialsSystemSet::RequestMaterialChanges)
-            .in_set(NetworkingSystemsSet::Between),
+            .in_set(MaterialsSystemSet::RequestMaterialChanges),
     );
 }

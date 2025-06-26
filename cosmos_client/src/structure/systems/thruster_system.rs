@@ -5,7 +5,6 @@ use std::time::Duration;
 use bevy::prelude::*;
 use bevy_kira_audio::prelude::*;
 use cosmos_core::{
-    netty::system_sets::NetworkingSystemsSet,
     state::GameState,
     structure::{
         ship::ship_movement::{ShipMovement, ShipMovementSet},
@@ -94,7 +93,6 @@ pub(super) fn register(app: &mut App) {
     app.add_systems(
         Update,
         apply_thruster_sound
-            .in_set(NetworkingSystemsSet::Between)
             .in_set(AudioSet::CreateSounds)
             .after(ShipMovementSet::RemoveShipMovement)
             .run_if(in_state(GameState::Playing)),

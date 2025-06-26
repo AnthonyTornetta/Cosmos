@@ -13,7 +13,7 @@ use bevy::{
 use cosmos_core::{
     ecs::NeedsDespawned,
     faction::FactionRelation,
-    netty::{client::LocalPlayer, sync::events::client_event::NettyEventWriter, system_sets::NetworkingSystemsSet},
+    netty::{client::LocalPlayer, sync::events::client_event::NettyEventWriter},
     physics::location::{Location, Sector, SectorUnit},
     registry::{Registry, identifiable::Identifiable},
     state::GameState,
@@ -816,8 +816,7 @@ pub(super) fn register(app: &mut App) {
                 handle_map_camera.after(UiSystemSet::FinishUi),
             )
                 .chain()
-                .run_if(in_state(GameState::Playing))
-                .in_set(NetworkingSystemsSet::Between),
+                .run_if(in_state(GameState::Playing)),
         )
         .register_type::<MapCamera>();
 }

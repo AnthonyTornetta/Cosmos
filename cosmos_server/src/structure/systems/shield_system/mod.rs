@@ -372,7 +372,7 @@ pub(super) fn register(app: &mut App) {
     explosion::register(app);
 
     app.configure_sets(
-        Update,
+        FixedUpdate,
         (
             ShieldSet::RechargeShields,
             ShieldSet::OnShieldHit.after(LaserSystemSet::SendHitEvents),
@@ -384,7 +384,7 @@ pub(super) fn register(app: &mut App) {
         .init_resource::<ShieldGeneratorBlocks>()
         .add_systems(OnEnter(GameState::PostLoading), register_energy_blocks)
         .add_systems(
-            Update,
+            FixedUpdate,
             (
                 recalculate_shields_if_needed, // before so this runs next frame (so the globaltransform has been added to the structure)
                 fill_ai_controlled_shields_on_spawn,
@@ -401,7 +401,7 @@ pub(super) fn register(app: &mut App) {
                 .run_if(in_state(GameState::Playing)),
         )
         .add_systems(
-            Update,
+            FixedUpdate,
             send_shield_hits
                 .in_set(NetworkingSystemsSet::SyncComponents)
                 .after(ShieldSet::OnShieldHit),

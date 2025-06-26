@@ -4,16 +4,10 @@ use bevy::prelude::*;
 use bevy_rapier3d::pipeline::CollisionEvent;
 use bevy_renet::renet::RenetClient;
 use cosmos_core::{
-    netty::{
-        NettyChannelClient, client::LocalPlayer, client_reliable_messages::ClientReliableMessages, cosmos_encoder,
-        system_sets::NetworkingSystemsSet,
-    },
-    physics::location::LocationPhysicsSet,
+    ecs::sets::FixedUpdateSet,
+    netty::{NettyChannelClient, client::LocalPlayer, client_reliable_messages::ClientReliableMessages, cosmos_encoder},
     state::GameState,
-    structure::{
-        Structure, chunk::CHUNK_DIMENSIONSF, loading::StructureLoadingSet, planet::Planet, shared::build_mode::BuildMode,
-        ship::pilot::Pilot,
-    },
+    structure::{Structure, chunk::CHUNK_DIMENSIONSF, planet::Planet, shared::build_mode::BuildMode, ship::pilot::Pilot},
 };
 
 mod client_ship_builder;
@@ -125,17 +119,14 @@ pub(super) fn register(app: &mut App) {
     pilot::register(app);
     ui::register(app);
 
-    app.configure_sets(Update, PlayerChildOfChangingSet::ChangeChildOf);
+    app.configure_sets(FixedUpdate, PlayerChildOfChangingSet::ChangeChildOf);
 
     app.add_systems(
-        Update,
-        (
-            respond_to_collisions.before(LocationPhysicsSet::DoPhysics),
-            remove_parent_when_too_far.after(LocationPhysicsSet::DoPhysics),
-        )
+        FixedUpdate,
+        (respond_to_collisions, remove_parent_when_too_far)
             .chain()
-            .in_set(NetworkingSystemsSet::Between)
-            .after(StructureLoadingSet::StructureLoaded)
+            .in_set(FixedUpdateSet::PostPhysics)
+            .before(FixedUpdateSet::LocationSyncingPostPhysics)
             .in_set(PlayerChildOfChangingSet::ChangeChildOf)
             .run_if(in_state(GameState::Playing)),
     );

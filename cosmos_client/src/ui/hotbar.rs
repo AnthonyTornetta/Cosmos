@@ -7,7 +7,7 @@ use cosmos_core::{
     block::block_events::BlockEventsSet,
     inventory::{Inventory, held_item_slot::HeldItemSlot, itemstack::ItemStack},
     item::Item,
-    netty::{client::LocalPlayer, system_sets::NetworkingSystemsSet},
+    netty::client::LocalPlayer,
     registry::{Registry, identifiable::Identifiable},
     state::GameState,
 };
@@ -532,7 +532,6 @@ pub(super) fn register(app: &mut App) {
                 tick_text_alpha_down,
             )
                 .before(SystemSelectionSet::ApplyUserChanges)
-                .in_set(NetworkingSystemsSet::Between)
                 .chain()
                 .run_if(in_state(GameState::Playing))
                 .run_if(is_hotbar_enabled),

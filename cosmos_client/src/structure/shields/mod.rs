@@ -8,7 +8,7 @@ use bevy::{
     prelude::*,
     render::mesh::{SphereKind, SphereMeshBuilder},
 };
-use cosmos_core::{netty::system_sets::NetworkingSystemsSet, structure::shields::Shield};
+use cosmos_core::structure::shields::Shield;
 
 use crate::{
     asset::materials::shield::{MAX_SHIELD_HIT_POINTS, ShieldMaterial, ShieldMaterialExtension},
@@ -133,7 +133,6 @@ pub(super) fn register(app: &mut App) {
             on_change_shield_update_rendering.ambiguous_with(WaypointSet::FocusWaypoints),
             update_shield_times,
         )
-            .after(NetworkingSystemsSet::Between)
             .chain(),
     );
 }

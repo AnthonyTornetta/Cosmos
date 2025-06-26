@@ -11,14 +11,12 @@ use cosmos_core::{
             ReactorPowerGenerationBlock, Reactors,
         },
     },
+    ecs::sets::FixedUpdateSet,
     entities::player::Player,
     events::block_events::{BlockChangedEvent, BlockDataSystemParams},
     inventory::Inventory,
     item::Item,
-    netty::{
-        sync::events::server_event::{NettyEventReceived, NettyEventWriter},
-        system_sets::NetworkingSystemsSet,
-    },
+    netty::sync::events::server_event::{NettyEventReceived, NettyEventWriter},
     prelude::{Structure, StructureLoadingSet, StructureSystems},
     registry::{Registry, identifiable::Identifiable},
     state::GameState,
@@ -278,25 +276,22 @@ pub(super) fn register(app: &mut App) {
     app.add_systems(OnEnter(GameState::PostLoading), (register_power_blocks, register_reactor_fuel));
 
     app.add_systems(
-        Update,
+        FixedUpdate,
         handle_block_event
-            .in_set(NetworkingSystemsSet::Between)
             .in_set(BlockEventsSet::ProcessEvents)
             .run_if(in_state(GameState::Playing)),
     );
 
     app.add_systems(
-        Update,
+        FixedUpdate,
         (
             add_reactor_to_structure.in_set(StructureLoadingSet::AddStructureComponents),
-            process_activate_reactor.in_set(NetworkingSystemsSet::Between),
+            process_activate_reactor.in_set(FixedUpdateSet::Main),
             (on_modify_reactor.in_set(BlockEventsSet::ProcessEvents), generate_power)
                 .in_set(StructureSystemsSet::UpdateSystemsBlocks)
-                .in_set(NetworkingSystemsSet::Between)
                 .chain(),
         )
             .chain()
-            .in_set(NetworkingSystemsSet::Between)
             .run_if(in_state(GameState::Playing)),
     );
 }

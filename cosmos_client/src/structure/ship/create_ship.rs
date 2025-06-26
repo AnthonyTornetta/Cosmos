@@ -6,10 +6,7 @@ use cosmos_core::{
     block::block_events::BlockEventsSet,
     inventory::Inventory,
     item::Item,
-    netty::{
-        NettyChannelClient, client::LocalPlayer, client_reliable_messages::ClientReliableMessages, cosmos_encoder,
-        system_sets::NetworkingSystemsSet,
-    },
+    netty::{NettyChannelClient, client::LocalPlayer, client_reliable_messages::ClientReliableMessages, cosmos_encoder},
     registry::Registry,
     state::GameState,
     structure::{shared::build_mode::BuildMode, ship::pilot::Pilot},
@@ -66,7 +63,6 @@ pub(super) fn register(app: &mut App) {
     app.add_event::<CreateShipEvent>().add_systems(
         Update,
         (listener.run_if(no_open_menus), event_handler)
-            .in_set(NetworkingSystemsSet::Between)
             .in_set(BlockEventsSet::SendEventsForNextFrame)
             .chain()
             .run_if(in_state(GameState::Playing)),

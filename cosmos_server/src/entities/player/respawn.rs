@@ -3,6 +3,7 @@
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::Velocity;
 use cosmos_core::{
+    ecs::sets::FixedUpdateSet,
     entities::{
         EntityId,
         health::{Dead, Health, HealthSet, MaxHealth},
@@ -13,7 +14,6 @@ use cosmos_core::{
     netty::{
         server::ServerLobby,
         sync::events::server_event::{NettyEventReceived, NettyEventWriter},
-        system_sets::NetworkingSystemsSet,
     },
     persistence::LoadingDistance,
     physics::location::{Location, LocationPhysicsSet, SetPosition},
@@ -131,6 +131,6 @@ pub(super) fn register(app: &mut App) {
             on_respawn.before(LocationPhysicsSet::DoPhysics),
             on_die.after(HealthSet::ProcessHealthChange),
         )
-            .in_set(NetworkingSystemsSet::Between),
+            .in_set(FixedUpdateSet::Main),
     );
 }

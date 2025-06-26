@@ -10,7 +10,6 @@ use cosmos_core::{
             events::client_event::NettyEventWriter,
             mapping::{Mappable, NetworkMapping},
         },
-        system_sets::NetworkingSystemsSet,
     },
     prelude::{Structure, StructureBlock},
     state::GameState,
@@ -190,7 +189,6 @@ pub(super) fn register(app: &mut App) {
             click_color_btn.in_set(UiSystemSet::FinishUi),
         )
             .chain()
-            .in_set(NetworkingSystemsSet::Between)
             .run_if(in_state(GameState::Playing)),
     )
     .register_type::<BtnColor>();

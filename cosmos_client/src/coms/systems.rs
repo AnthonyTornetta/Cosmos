@@ -4,7 +4,6 @@ use cosmos_core::coms::ComsChannel;
 use cosmos_core::coms::events::{AcceptComsEvent, RequestComsEvent};
 use cosmos_core::netty::client::LocalPlayer;
 use cosmos_core::netty::sync::events::client_event::NettyEventWriter;
-use cosmos_core::netty::system_sets::NetworkingSystemsSet;
 use cosmos_core::prelude::Ship;
 use cosmos_core::structure::ship::pilot::{Pilot, PilotFocused};
 
@@ -80,8 +79,5 @@ fn read_coms_request(
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_systems(
-        Update,
-        (initiate_coms_request, read_coms_request).in_set(NetworkingSystemsSet::Between),
-    );
+    app.add_systems(Update, (initiate_coms_request, read_coms_request));
 }

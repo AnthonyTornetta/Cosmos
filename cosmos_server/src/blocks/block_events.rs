@@ -522,7 +522,7 @@ pub(super) fn register(app: &mut App) {
         .add_mut_event::<BlockPlaceEvent>()
         .add_event::<BlockInteractEvent>()
         .add_systems(
-            Update,
+            FixedUpdate,
             (handle_block_break_events, handle_block_place_events)
                 .chain()
                 .in_set(ItemStackSystemSet::CreateDataEntity)
@@ -530,7 +530,7 @@ pub(super) fn register(app: &mut App) {
         );
 
     app.add_systems(
-        Update,
+        FixedUpdate,
         handle_block_changed_event
             .in_set(NetworkingSystemsSet::SyncComponents)
             .after(BlockHealthSet::ProcessHealthChanges)

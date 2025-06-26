@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 use cosmos_core::{
-    netty::{client::LocalPlayer, system_sets::NetworkingSystemsSet},
+    netty::client::LocalPlayer,
     state::GameState,
     structure::ship::pilot::{Pilot, PilotFocused},
 };
@@ -31,10 +31,5 @@ fn focus_looking_at(
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_systems(
-        Update,
-        focus_looking_at
-            .in_set(NetworkingSystemsSet::Between)
-            .run_if(in_state(GameState::Playing)),
-    );
+    app.add_systems(Update, focus_looking_at.run_if(in_state(GameState::Playing)));
 }

@@ -10,7 +10,6 @@ use cosmos_core::{
             events::client_event::NettyEventWriter,
             mapping::{Mappable, NetworkMapping},
         },
-        system_sets::NetworkingSystemsSet,
     },
     prelude::{Structure, StructureBlock},
     registry::Registry,
@@ -324,7 +323,6 @@ pub(super) fn register(app: &mut App) {
             update_status_bar,
             update_generation_stats,
         )
-            .in_set(NetworkingSystemsSet::Between)
             .run_if(in_state(GameState::Playing)),
     );
 }

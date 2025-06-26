@@ -4,12 +4,11 @@ use cosmos_core::{
         ComsChannel, ComsChannelType, ComsMessage, RequestedComs,
         events::{AcceptComsEvent, DeclineComsEvent, RequestCloseComsEvent, RequestComsEvent, SendComsMessage, SendComsMessageType},
     },
-    ecs::NeedsDespawned,
+    ecs::{NeedsDespawned, sets::FixedUpdateSet},
     entities::player::Player,
     netty::{
         server::ServerLobby,
         sync::events::server_event::{NettyEventReceived, NettyEventWriter},
-        system_sets::NetworkingSystemsSet,
     },
     physics::location::Location,
     prelude::{DespawnWithStructure, Ship},
@@ -309,7 +308,7 @@ fn on_decline_coms(
 
 pub(super) fn register(app: &mut App) {
     app.add_systems(
-        Update,
+        FixedUpdate,
         (
             on_request_coms,
             on_accept_coms,
@@ -320,6 +319,6 @@ pub(super) fn register(app: &mut App) {
             on_decline_coms,
         )
             .chain()
-            .in_set(NetworkingSystemsSet::Between),
+            .in_set(FixedUpdateSet::Main),
     );
 }

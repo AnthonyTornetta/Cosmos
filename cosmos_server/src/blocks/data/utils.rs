@@ -6,7 +6,6 @@ use bevy::{platform::collections::HashMap, prelude::*};
 use cosmos_core::{
     block::{Block, block_events::BlockEventsSet, data::BlockData},
     events::block_events::{BlockChangedEvent, BlockDataSystemParams},
-    netty::system_sets::NetworkingSystemsSet,
     prelude::{BlockCoordinate, Structure, StructureLoadingSet},
     registry::{Registry, identifiable::Identifiable},
     state::GameState,
@@ -159,7 +158,7 @@ pub fn add_default_block_data_for_block<T: Component>(app: &mut App, ctor: DataC
         app.add_event::<InsertBlockDataEvent<T>>();
 
         app.add_systems(
-            Update,
+            FixedUpdate,
             (
                 on_load_blueprint_storage::<T>.in_set(LoadingBlueprintSystemSet::DoneLoadingBlueprints),
                 (
@@ -168,8 +167,7 @@ pub fn add_default_block_data_for_block<T: Component>(app: &mut App, ctor: DataC
                         .in_set(BlockEventsSet::ProcessEvents)
                         .ambiguous_with(FluidInteractionSet::InteractWithFluidBlocks),
                 )
-                    .chain()
-                    .in_set(NetworkingSystemsSet::Between),
+                    .chain(),
             ),
         );
     }

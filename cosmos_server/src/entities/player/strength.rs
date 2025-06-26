@@ -76,16 +76,16 @@ pub(super) fn register(app: &mut App) {
     make_persistent::<PlayerStrength>(app);
     make_persistent::<TotalTimePlayed>(app);
 
-    app.configure_sets(Update, PlayerStrengthSystemSet::UpdatePlayerStrength);
+    app.configure_sets(FixedUpdate, PlayerStrengthSystemSet::UpdatePlayerStrength);
 
     app.add_systems(
-        Update,
+        FixedUpdate,
         (add_total_time_played, add_player_strength)
             .after(LoadingSystemSet::DoneLoading)
             .in_set(PlayerStrengthSystemSet::UpdatePlayerStrength),
     )
     .add_systems(
-        Update,
+        FixedUpdate,
         advance_total_time
             .in_set(PlayerStrengthSystemSet::UpdatePlayerStrength)
             .run_if(on_timer(Duration::from_secs(1))),

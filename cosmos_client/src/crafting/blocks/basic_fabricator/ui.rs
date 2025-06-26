@@ -24,7 +24,6 @@ use cosmos_core::{
             events::client_event::NettyEventWriter,
             mapping::{Mappable, NetworkMapping},
         },
-        system_sets::NetworkingSystemsSet,
     },
     prelude::{Structure, StructureBlock},
     registry::{Registry, identifiable::Identifiable},
@@ -648,7 +647,6 @@ pub(super) fn register(app: &mut App) {
                 .in_set(UiSystemSet::DoUi),
         )
             .chain()
-            .in_set(NetworkingSystemsSet::Between)
             .in_set(FabricatorMenuSet::PopulateMenu)
             .run_if(in_state(GameState::Playing))
             .run_if(resource_exists::<BasicFabricatorRecipes>),

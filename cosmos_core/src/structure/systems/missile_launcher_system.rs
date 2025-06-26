@@ -5,13 +5,10 @@ use std::time::Duration;
 use bevy::prelude::*;
 use serde::{Deserialize, Serialize};
 
-use crate::netty::{
-    sync::{
-        ClientAuthority, IdentifiableComponent, SyncableComponent,
-        events::netty_event::{IdentifiableEvent, NettyEvent, SyncedEventImpl},
-        sync_component,
-    },
-    system_sets::NetworkingSystemsSet,
+use crate::netty::sync::{
+    ClientAuthority, IdentifiableComponent, SyncableComponent,
+    events::netty_event::{IdentifiableEvent, NettyEvent, SyncedEventImpl},
+    sync_component,
 };
 
 use super::{
@@ -190,15 +187,13 @@ pub(super) fn register(app: &mut App) {
     sync_component::<MissileLauncherFocus>(app);
 
     app.add_systems(
-        Update,
-        add_focus_to_new_missile_system
-            .after(StructureSystemsSet::UpdateSystems)
-            .in_set(NetworkingSystemsSet::Between),
+        FixedUpdate,
+        add_focus_to_new_missile_system.after(StructureSystemsSet::UpdateSystems),
     )
     .register_type::<MissileLauncherPreferredFocus>()
     .register_type::<MissileLauncherFocus>()
     .add_systems(
-        Update,
+        FixedUpdate,
         name_missile_launcher_system
             .ambiguous_with_all() // doesn't matter if this is 1-frame delayed
             .after(StructureSystemsSet::InitSystems),

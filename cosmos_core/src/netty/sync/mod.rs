@@ -120,6 +120,24 @@ pub enum SyncType {
     BothAuthoritative(ClientAuthority),
 }
 
+impl SyncType {
+    /// Returns true if the client dicates the value of this component.
+    ///
+    /// This will also return true if BOTH the client and server dictate the value of this
+    /// component
+    pub fn is_client_authoritative(&self) -> bool {
+        !matches!(self, Self::ServerAuthoritative)
+    }
+
+    /// Returns true if the server dicates the value of this component.
+    ///
+    /// This will also return true if BOTH the client and server dictate the value of this
+    /// component
+    pub fn is_server_authoritative(&self) -> bool {
+        !matches!(self, Self::ClientAuthoritative(_))
+    }
+}
+
 /// Clients can rarely (if ever) sync components that belong to anything.
 ///
 /// They normally have to have some sort of authority over it, and this enforces that.

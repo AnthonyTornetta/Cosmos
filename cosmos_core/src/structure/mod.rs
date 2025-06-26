@@ -20,6 +20,7 @@ use crate::registry::Registry;
 use crate::structure::chunk::Chunk;
 use bevy::ecs::component::HookContext;
 use bevy::ecs::query::{QueryData, QueryFilter, ROQueryItem};
+use bevy::ecs::schedule::ScheduleLabel;
 use bevy::platform::collections::{HashMap, HashSet};
 use bevy::prelude::*;
 use bevy_rapier3d::plugin::RapierContextEntityLink;
@@ -1094,38 +1095,43 @@ pub(super) fn register(app: &mut App) {
 
     use StructureTypeSet as S;
 
-    app.configure_sets(
-        Update,
-        (
-            S::Ship
-                .ambiguous_with(S::Planet)
-                .ambiguous_with(S::Station)
-                .ambiguous_with(S::Asteroid)
-                .ambiguous_with(S::None),
-            S::Planet
-                .ambiguous_with(S::Ship)
-                .ambiguous_with(S::Station)
-                .ambiguous_with(S::Asteroid)
-                .ambiguous_with(S::None),
-            S::Station
-                .ambiguous_with(S::Ship)
-                .ambiguous_with(S::Planet)
-                .ambiguous_with(S::Asteroid)
-                .ambiguous_with(S::None),
-            S::Asteroid
-                .ambiguous_with(S::Ship)
-                .ambiguous_with(S::Planet)
-                .ambiguous_with(S::Station)
-                .ambiguous_with(S::None),
-            S::None
-                .ambiguous_with(S::Ship)
-                .ambiguous_with(S::Planet)
-                .ambiguous_with(S::Station)
-                .ambiguous_with(S::Asteroid),
-        ),
-    );
+    fn configure(schedule: impl ScheduleLabel, app: &mut App) {
+        app.configure_sets(
+            schedule,
+            (
+                S::Ship
+                    .ambiguous_with(S::Planet)
+                    .ambiguous_with(S::Station)
+                    .ambiguous_with(S::Asteroid)
+                    .ambiguous_with(S::None),
+                S::Planet
+                    .ambiguous_with(S::Ship)
+                    .ambiguous_with(S::Station)
+                    .ambiguous_with(S::Asteroid)
+                    .ambiguous_with(S::None),
+                S::Station
+                    .ambiguous_with(S::Ship)
+                    .ambiguous_with(S::Planet)
+                    .ambiguous_with(S::Asteroid)
+                    .ambiguous_with(S::None),
+                S::Asteroid
+                    .ambiguous_with(S::Ship)
+                    .ambiguous_with(S::Planet)
+                    .ambiguous_with(S::Station)
+                    .ambiguous_with(S::None),
+                S::None
+                    .ambiguous_with(S::Ship)
+                    .ambiguous_with(S::Planet)
+                    .ambiguous_with(S::Station)
+                    .ambiguous_with(S::Asteroid),
+            ),
+        );
+    }
 
-    app.add_systems(Update, add_chunks_system.in_set(StructureLoadingSet::CreateChunkEntities))
-        .add_systems(PreUpdate, remove_empty_chunks)
+    configure(Update, app);
+    configure(FixedUpdate, app);
+
+    app.add_systems(FixedUpdate, add_chunks_system.in_set(StructureLoadingSet::CreateChunkEntities))
+        .add_systems(FixedPreUpdate, remove_empty_chunks)
         .add_systems(Startup, register_structure_hooks);
 }

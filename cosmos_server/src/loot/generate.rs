@@ -111,7 +111,7 @@ fn populate_loot_table_inventories(
 
 pub(super) fn register(app: &mut App) {
     app.add_systems(
-        Update,
+        FixedUpdate,
         (
             generate_needed_loot_tables.in_set(BlockEventsSet::SendEventsForThisFrame),
             populate_loot_table_inventories

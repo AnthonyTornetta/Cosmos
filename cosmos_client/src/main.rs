@@ -5,6 +5,7 @@
 #![feature(array_windows)]
 // This one has a stupid rule where if you have `fn (&self) -> HasLifetime`, you need to do `fn (&self) -> HasLifetime<'_>`. This is stupid.
 #![allow(mismatched_lifetime_syntaxes)]
+#![feature(try_blocks)]
 
 pub mod asset;
 pub mod audio;
@@ -47,10 +48,11 @@ use bevy_hanabi::HanabiPlugin;
 use bevy_mod_debugdump::schedule_graph;
 use bevy_obj::ObjPlugin;
 
-use bevy_rapier3d::plugin::{RapierContextInitialization, RapierPhysicsPlugin};
+use bevy_rapier3d::plugin::{RapierContextInitialization, RapierPhysicsPlugin, TimestepMode};
 use bevy_renet::netcode::NetcodeClientPlugin;
 // use bevy_rapier3d::render::RapierDebugRenderPlugin;
 use bevy_renet::RenetClientPlugin;
+use bevy_transform_interpolation::prelude::TransformInterpolationPlugin;
 use clap::{Parser, arg};
 use cosmos_core::netty::sync::registry::RegistrySyncInit;
 use cosmos_core::state::GameState;
@@ -112,13 +114,15 @@ fn main() {
     #[cfg(feature = "print-schedule")]
     let default_plugins = default_plugins.disable::<LogPlugin>();
 
+    const FIXED_UPDATE_HZ: f32 = 20.0;
+
     app
         // .insert_resource(HostConfig { host_name })
-        // .insert_resource(TimestepMode::Interpolated {
-        //     dt: 1.0 / 60.0,
-        //     time_scale: 1.0,
-        //     substeps: 2,
-        // })
+        .insert_resource(TimestepMode::Fixed {
+            dt: 1.0 / FIXED_UPDATE_HZ,
+            substeps: 4,
+        })
+        .insert_resource(Time::<Fixed>::from_hz(FIXED_UPDATE_HZ as f64))
         .insert_resource(ClearColor(Color::BLACK))
         // This must be registered here, before it is used anywhere
         .add_plugins(default_plugins)
@@ -137,8 +141,8 @@ fn main() {
         ))
         .add_plugins(
             RapierPhysicsPlugin::<CosmosPhysicsFilter>::default()
-                // .in_schedule(FixedUpdate)
-                .with_custom_initialization(RapierContextInitialization::default()),
+                .with_custom_initialization(RapierContextInitialization::default())
+                .in_fixed_schedule(),
         )
         .add_plugins((
             RenetClientPlugin,
@@ -149,6 +153,7 @@ fn main() {
             SystemInformationDiagnosticsPlugin,
             EntityCountDiagnosticsPlugin,
             FrameTimeDiagnosticsPlugin::default(),
+            TransformInterpolationPlugin::interpolate_all(),
             // PerfUiPlugin,
             // BillboardPlugin,
         ))

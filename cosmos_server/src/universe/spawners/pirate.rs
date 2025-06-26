@@ -247,7 +247,7 @@ fn calculate_next_spawn_time(time: &Time, min_pirate_spawn_time: &MinPirateSpawn
 
 pub(super) fn register(app: &mut App) {
     app.configure_sets(
-        Update,
+        FixedUpdate,
         PirateSpawningSet::PirateSpawningLogic
             .before(LoadingBlueprintSystemSet::BeginLoadingBlueprints)
             .run_if(in_state(GameState::Playing))
@@ -255,7 +255,7 @@ pub(super) fn register(app: &mut App) {
     )
     .add_systems(Startup, load_settings)
     .add_systems(
-        Update,
+        FixedUpdate,
         (add_spawn_times, spawn_pirates, on_needs_pirate_spawned)
             .in_set(PirateSpawningSet::PirateSpawningLogic)
             .chain(),

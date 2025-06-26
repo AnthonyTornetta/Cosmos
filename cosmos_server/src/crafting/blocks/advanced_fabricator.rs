@@ -21,7 +21,6 @@ use cosmos_core::{
             netty_event::SyncedEventImpl,
             server_event::{NettyEventReceived, NettyEventWriter},
         },
-        system_sets::NetworkingSystemsSet,
     },
     prelude::Structure,
     registry::{Registry, identifiable::Identifiable},
@@ -137,9 +136,8 @@ fn monitor_craft_event(
 
 pub(super) fn register(app: &mut App) {
     app.add_systems(
-        Update,
+        FixedUpdate,
         (monitor_advanced_fabricator_interactions, monitor_craft_event)
-            .in_set(NetworkingSystemsSet::Between)
             .in_set(BlockEventsSet::ProcessEvents)
             .run_if(in_state(GameState::Playing)),
     )

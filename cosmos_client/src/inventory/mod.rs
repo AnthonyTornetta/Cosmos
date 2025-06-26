@@ -24,7 +24,6 @@ use cosmos_core::{
         client::LocalPlayer,
         cosmos_encoder,
         sync::{events::client_event::NettyEventWriter, mapping::NetworkMapping},
-        system_sets::NetworkingSystemsSet,
     },
     registry::{Registry, identifiable::Identifiable},
     state::GameState,
@@ -1239,7 +1238,6 @@ pub(super) fn register(app: &mut App) {
             follow_cursor.in_set(InventorySet::FollowCursor),
             toggle_inventory_rendering.in_set(InventorySet::ToggleInventoryRendering),
         )
-            .in_set(NetworkingSystemsSet::Between)
             .run_if(in_state(GameState::Playing)),
     )
     .register_type::<DisplayedItemFromInventory>()

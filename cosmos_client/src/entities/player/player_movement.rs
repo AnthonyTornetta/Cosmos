@@ -1,5 +1,7 @@
 //! Handles the basic player movement while walking around. This is not responsible for piloting ships. See [`ship_movement`] for that.
 
+use std::f32::consts::PI;
+
 use bevy::prelude::*;
 use bevy_rapier3d::{
     plugin::{RapierContextEntityLink, ReadRapierContext},
@@ -7,7 +9,8 @@ use bevy_rapier3d::{
 };
 use cosmos_core::{
     block::specific_blocks::gravity_well::GravityWell,
-    netty::{client::LocalPlayer, system_sets::NetworkingSystemsSet},
+    ecs::sets::FixedUpdateSet,
+    netty::client::LocalPlayer,
     physics::location::LocationPhysicsSet,
     prelude::Planet,
     projectiles::laser::LaserSystemSet,
@@ -70,7 +73,7 @@ fn check_grounded(
     }
 }
 
-pub(crate) fn process_player_movement(
+fn process_player_movement(
     time: Res<Time>,
     input_handler: InputChecker,
     mut q_local_player: Query<
@@ -78,18 +81,20 @@ pub(crate) fn process_player_movement(
             &mut Velocity,
             &GlobalTransform,
             Option<&PlayerAlignment>,
-            Option<&Grounded>,
+            Has<Grounded>,
             Has<GravityWell>,
         ),
         (With<LocalPlayer>, Without<Pilot>, Without<BuildMode>),
     >,
-    q_camera: Query<&Transform, With<MainCamera>>,
+    mut evr_jump: EventReader<Jump>,
+    mut q_camera: Query<(&GlobalTransform, &Transform), With<MainCamera>>,
+    mut q_local_trans: Query<&mut Transform, (With<LocalPlayer>, Without<MainCamera>)>,
     q_show_cursor: Query<(), With<ShowCursor>>,
     q_exerts_gravity: Query<(), With<Planet>>,
 ) {
     let any_open_menus = !q_show_cursor.is_empty();
 
-    let Ok(cam_trans) = q_camera.single() else {
+    let Ok((cam_trans, cam_trans_local)) = q_camera.single_mut() else {
         return;
     };
 
@@ -98,66 +103,140 @@ pub(crate) fn process_player_movement(
         return;
     };
 
-    let max_speed: f32 = if !any_open_menus && input_handler.check_pressed(CosmosInputs::Sprint) {
-        20.0
+    if let Some(player_alignment) = player_alignment {
+        let max_speed: f32 = if !any_open_menus && input_handler.check_pressed(CosmosInputs::Sprint) {
+            20.0
+        } else {
+            3.0
+        };
+
+        let player_rot = Quat::from_affine3(&player_transform.affine());
+        let player_inv_rot = player_rot.inverse();
+
+        let mut forward = *cam_trans_local.forward();
+        let mut right = *cam_trans_local.right();
+        let up = Vec3::Y;
+
+        forward.y = 0.0;
+        right.y = 0.0;
+
+        forward = forward.normalize_or_zero() * 100.0;
+        right = right.normalize_or_zero() * 100.0;
+
+        // TODO This is stupid - please rework this later.
+        let normalize_y = !under_gravity_well && !q_exerts_gravity.contains(player_alignment.aligned_to);
+
+        let movement_up = up.normalize_or_zero() * if normalize_y { 100.0 } else { 0.0 };
+
+        let time = time.delta_secs();
+
+        let mut new_linvel = player_inv_rot * velocity.linvel;
+
+        // Simulate friction
+        if grounded {
+            new_linvel.x *= 0.5;
+            new_linvel.z *= 0.5;
+        }
+
+        if !any_open_menus {
+            if input_handler.check_pressed(CosmosInputs::MoveForward) {
+                new_linvel += forward * time;
+            }
+            if input_handler.check_pressed(CosmosInputs::MoveBackward) {
+                new_linvel -= forward * time;
+            }
+            if input_handler.check_pressed(CosmosInputs::MoveUp) {
+                new_linvel += movement_up * time;
+            }
+            if input_handler.check_pressed(CosmosInputs::MoveDown) {
+                new_linvel -= movement_up * time;
+            }
+            if evr_jump.read().next().is_some() && grounded {
+                new_linvel += up * 5.0;
+            }
+            if input_handler.check_pressed(CosmosInputs::MoveLeft) {
+                new_linvel -= right * time;
+            }
+            if input_handler.check_pressed(CosmosInputs::MoveRight) {
+                new_linvel += right * time;
+            }
+            if input_handler.check_pressed(CosmosInputs::SlowDown) {
+                let mut amt = new_linvel * 0.5;
+                if amt.dot(amt) > max_speed * max_speed {
+                    amt = amt.normalize() * max_speed;
+                }
+                new_linvel -= amt;
+            }
+        }
+
+        if !normalize_y {
+            let y = new_linvel.y;
+
+            new_linvel.y = 0.0;
+
+            if new_linvel.dot(new_linvel) > max_speed * max_speed {
+                new_linvel = new_linvel.normalize_or_zero() * max_speed;
+            }
+
+            new_linvel.y = y;
+        } else if new_linvel.dot(new_linvel) > max_speed * max_speed {
+            new_linvel = new_linvel.normalize_or_zero() * max_speed;
+        }
+
+        velocity.linvel = player_rot * new_linvel;
     } else {
-        3.0
-    };
+        // let Ok(main_cam) = q_main_cam_ent.single() else {
+        //     return;
+        // };
+        // let Some(cam_g_trans) = compute_totally_accurate_global_transform(main_cam, &q_trans) else {
+        //     error!("Invalid heirarchy!");
+        //     return;
+        // };
 
-    let player_rot = Quat::from_affine3(&player_transform.affine());
-    let player_inv_rot = player_rot.inverse();
+        let accel = 3.0 * time.delta_secs();
 
-    let mut forward = *cam_trans.forward();
-    let mut right = *cam_trans.right();
-    let up = Vec3::Y;
+        let cam_g_trans = cam_trans;
 
-    forward.y = 0.0;
-    right.y = 0.0;
+        let forward = cam_g_trans.forward() * accel;
+        let up = cam_g_trans.up() * accel;
+        let right = cam_g_trans.right() * accel;
 
-    forward = forward.normalize_or_zero() * 100.0;
-    right = right.normalize_or_zero() * 100.0;
+        let max_speed = 7.0;
 
-    // TODO This is stupid - please rework this later.
-    let normalize_y = !under_gravity_well
-        && player_alignment
-            .and_then(|x| x.aligned_to)
-            .map(|x| !q_exerts_gravity.contains(x))
-            .unwrap_or(true);
+        let mut new_linvel = Vec3::ZERO;
 
-    let movement_up = up.normalize_or_zero() * if normalize_y { 100.0 } else { 0.0 };
-
-    let time = time.delta_secs();
-
-    let mut new_linvel = player_inv_rot * velocity.linvel;
-
-    // Simulate friction
-    if grounded.is_some() {
-        new_linvel.x *= 0.5;
-        new_linvel.z *= 0.5;
-    }
-
-    if !any_open_menus {
         if input_handler.check_pressed(CosmosInputs::MoveForward) {
-            new_linvel += forward * time;
+            new_linvel += forward;
         }
         if input_handler.check_pressed(CosmosInputs::MoveBackward) {
-            new_linvel -= forward * time;
+            new_linvel -= forward;
         }
         if input_handler.check_pressed(CosmosInputs::MoveUp) {
-            new_linvel += movement_up * time;
+            new_linvel += up;
         }
         if input_handler.check_pressed(CosmosInputs::MoveDown) {
-            new_linvel -= movement_up * time;
-        }
-        if input_handler.check_just_pressed(CosmosInputs::Jump) {
-            new_linvel += up * 5.0;
+            new_linvel -= up;
         }
         if input_handler.check_pressed(CosmosInputs::MoveLeft) {
-            new_linvel -= right * time;
+            new_linvel -= right;
         }
         if input_handler.check_pressed(CosmosInputs::MoveRight) {
-            new_linvel += right * time;
+            new_linvel += right;
         }
+
+        let Ok(mut local_trans) = q_local_trans.single_mut() else {
+            return;
+        };
+        if input_handler.check_pressed(CosmosInputs::RollLeft) {
+            local_trans.rotation *= Quat::from_axis_angle(Vec3::Z, PI / 3.0 * time.delta_secs());
+        }
+        if input_handler.check_pressed(CosmosInputs::RollRight) {
+            local_trans.rotation *= Quat::from_axis_angle(Vec3::Z, PI / -3.0 * time.delta_secs());
+        }
+
+        new_linvel = new_linvel.normalize_or_zero() * accel;
+        new_linvel += velocity.linvel;
+
         if input_handler.check_pressed(CosmosInputs::SlowDown) {
             let mut amt = new_linvel * 0.5;
             if amt.dot(amt) > max_speed * max_speed {
@@ -165,23 +244,9 @@ pub(crate) fn process_player_movement(
             }
             new_linvel -= amt;
         }
+
+        velocity.linvel = new_linvel.clamp_length_max(max_speed);
     }
-
-    if !normalize_y {
-        let y = new_linvel.y;
-
-        new_linvel.y = 0.0;
-
-        if new_linvel.dot(new_linvel) > max_speed * max_speed {
-            new_linvel = new_linvel.normalize_or_zero() * max_speed;
-        }
-
-        new_linvel.y = y;
-    } else if new_linvel.dot(new_linvel) > max_speed * max_speed {
-        new_linvel = new_linvel.normalize_or_zero() * max_speed;
-    }
-
-    velocity.linvel = player_rot * new_linvel;
 }
 
 #[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
@@ -191,23 +256,38 @@ pub enum PlayerMovementSet {
     ProcessPlayerMovement,
 }
 
+#[derive(Event, Default)]
+struct Jump;
+
+fn jump_ev(inputs: InputChecker, mut evw_jump: EventWriter<Jump>) {
+    if inputs.check_just_pressed(CosmosInputs::Jump) {
+        evw_jump.write_default();
+    }
+}
+
 pub(super) fn register(app: &mut App) {
     app.configure_sets(
-        Update,
+        FixedUpdate,
         PlayerMovementSet::ProcessPlayerMovement.before(LocationPhysicsSet::DoPhysics),
     );
 
     app.add_systems(
-        Update,
-        (append_grounded_check, check_grounded).run_if(in_state(GameState::Playing)).chain(),
+        FixedUpdate,
+        (append_grounded_check, check_grounded)
+            .run_if(in_state(GameState::Playing))
+            .before(PlayerMovementSet::ProcessPlayerMovement)
+            .chain(),
     );
 
+    app.add_systems(Update, jump_ev);
+
     app.add_systems(
-        Update,
+        FixedUpdate,
         process_player_movement
             .ambiguous_with(LaserSystemSet::SendHitEvents)
-            .in_set(NetworkingSystemsSet::Between)
+            .in_set(FixedUpdateSet::Main)
             .in_set(PlayerMovementSet::ProcessPlayerMovement)
             .run_if(in_state(GameState::Playing)),
-    );
+    )
+    .add_event::<Jump>();
 }

@@ -118,7 +118,7 @@ fn load_universe_systems_near_players(
 
 pub(super) fn register(app: &mut App) {
     app.configure_sets(
-        Update,
+        FixedUpdate,
         (
             SystemGenerationSet::SendEvents,
             SystemGenerationSet::Star,
@@ -134,7 +134,7 @@ pub(super) fn register(app: &mut App) {
     );
 
     app.add_systems(
-        Update,
+        FixedUpdate,
         (
             (load_universe_systems_near_players, unload_universe_systems_without_players).chain(),
             save_universe_systems.run_if(on_timer(Duration::from_secs(10))),

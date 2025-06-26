@@ -3,16 +3,15 @@
 use bevy::prelude::*;
 use cosmos_core::{
     ecs::NeedsDespawned,
-    netty::system_sets::NetworkingSystemsSet,
     persistence::LoadingDistance,
-    physics::{
-        location::{Location, LocationPhysicsSet},
-        player_world::PlayerWorld,
-    },
+    physics::{location::Location, player_world::PlayerWorld},
 };
 use renet::RenetServer;
 
-use crate::persistence::saving::{NeedsSaved, SavingSystemSet};
+use crate::{
+    commands::cosmos_command_handler::ProcessCommandsSet,
+    persistence::saving::{NeedsSaved, SavingSystemSet},
+};
 
 #[derive(Debug, Event, Default)]
 /// Tells the server to gracefully exit - saving all entities in the process.
@@ -73,12 +72,10 @@ pub(super) fn register(app: &mut App) {
     app.add_event::<StopServerEvent>()
         .add_event::<CloseServerPostSaveEvent>()
         .add_systems(
-            //
-            Update,
+            FixedUpdate,
             on_stop_server
-                .in_set(NetworkingSystemsSet::Between)
+                .after(ProcessCommandsSet::HandleCommands)
                 .in_set(StopServerSet::Stop)
-                .after(LocationPhysicsSet::DoPhysics)
                 .run_if(on_event::<StopServerEvent>),
         )
         .add_systems(

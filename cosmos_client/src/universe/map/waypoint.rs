@@ -1,7 +1,7 @@
 //! Map-waypoint logic
 
 use bevy::{color::palettes::css, prelude::*};
-use cosmos_core::{ecs::NeedsDespawned, netty::system_sets::NetworkingSystemsSet, physics::location::Location};
+use cosmos_core::{ecs::NeedsDespawned, physics::location::Location};
 
 use crate::{
     input::inputs::{CosmosInputs, InputChecker, InputHandler},
@@ -52,5 +52,5 @@ fn create_waypoint(
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_systems(Update, create_waypoint.in_set(NetworkingSystemsSet::Between));
+    app.add_systems(Update, create_waypoint);
 }

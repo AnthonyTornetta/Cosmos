@@ -1,6 +1,7 @@
 use bevy::prelude::*;
 use cosmos_core::{
-    netty::{client::LocalPlayer, system_sets::NetworkingSystemsSet},
+    ecs::sets::FixedUpdateSet,
+    netty::client::LocalPlayer,
     physics::location::Location,
     prelude::{Planet, Structure},
 };
@@ -68,9 +69,9 @@ fn rotate_client_around_planets(
 
 pub(super) fn register(app: &mut App) {
     app.add_systems(
-        Update,
+        FixedUpdate,
         (add_last_planet_rotation, rotate_client_around_planets)
-            .in_set(NetworkingSystemsSet::Between)
+            .in_set(FixedUpdateSet::Main)
             .chain(),
     );
 }

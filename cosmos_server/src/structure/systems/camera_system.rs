@@ -78,7 +78,7 @@ pub(super) fn register(app: &mut App) {
     app.insert_resource(CameraBlocks::default())
         .add_systems(OnEnter(GameState::PostLoading), register_camera_blocks)
         .add_systems(
-            Update,
+            FixedUpdate,
             (
                 camera_structure_loaded_event_processor
                     .in_set(StructureSystemsSet::InitSystems)

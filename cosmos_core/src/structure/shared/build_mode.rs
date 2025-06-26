@@ -11,12 +11,10 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     block::block_events::BlockEventsSet,
-    netty::{
-        sync::{IdentifiableComponent, SyncableComponent, sync_component},
-        system_sets::NetworkingSystemsSet,
-    },
+    netty::sync::{IdentifiableComponent, SyncableComponent, sync_component},
     prelude::StructureBlock,
     structure::coordinates::CoordinateType,
+    utils::ecs::{FixedUpdateRemovedComponents, register_fixed_update_removed_component},
 };
 
 type BuildModeSymmetries = (Option<CoordinateType>, Option<CoordinateType>, Option<CoordinateType>);
@@ -146,7 +144,7 @@ fn on_add_build_mode(mut commands: Commands, q_added_build_mode: Query<(Entity, 
     }
 }
 
-fn on_remove_build_mode(mut commands: Commands, mut removed_components: RemovedComponents<BuildMode>) {
+fn on_remove_build_mode(mut commands: Commands, removed_components: FixedUpdateRemovedComponents<BuildMode>) {
     for ent in removed_components.read() {
         if let Ok(mut ecmds) = commands.get_entity(ent) {
             ecmds
@@ -219,8 +217,10 @@ fn adjust_transform_build_mode(mut q_transform: Query<&mut Transform, With<Build
 pub(super) fn register(app: &mut App) {
     sync_component::<BuildMode>(app);
 
+    register_fixed_update_removed_component::<BuildMode>(app);
+
     app.configure_sets(
-        Update,
+        FixedUpdate,
         (
             BuildModeSet::SendEnterBuildModeEvent,
             BuildModeSet::EnterBuildMode,
@@ -231,7 +231,7 @@ pub(super) fn register(app: &mut App) {
     );
 
     app.add_systems(
-        Update,
+        FixedUpdate,
         (
             (enter_build_mode_listener, on_add_build_mode, adjust_transform_build_mode)
                 .chain()
@@ -242,7 +242,6 @@ pub(super) fn register(app: &mut App) {
                 .in_set(BuildModeSet::ExitBuildMode),
         )
             .chain()
-            .in_set(NetworkingSystemsSet::Between)
             .in_set(BlockEventsSet::ProcessEvents),
     )
     .add_event::<EnterBuildModeEvent>()

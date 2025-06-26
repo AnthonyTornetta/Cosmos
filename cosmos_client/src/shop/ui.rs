@@ -8,7 +8,7 @@ use cosmos_core::{
     },
     inventory::Inventory,
     item::Item,
-    netty::{NettyChannelClient, client::LocalPlayer, cosmos_encoder, system_sets::NetworkingSystemsSet},
+    netty::{NettyChannelClient, client::LocalPlayer, cosmos_encoder},
     registry::{Registry, identifiable::Identifiable},
     shop::{Shop, ShopEntry, netty::ClientShopMessages},
     state::GameState,
@@ -1270,7 +1270,6 @@ pub(super) fn register(app: &mut App) {
     app.configure_sets(
         Update,
         ShopLogicSet::ShopLogic
-            .in_set(NetworkingSystemsSet::Between)
             .before(UiSystemSet::PreDoUi)
             .run_if(in_state(GameState::Playing)),
     );

@@ -13,7 +13,7 @@ use crate::{
     },
 };
 use bevy::{color::palettes::css, input_focus::InputFocus, prelude::*};
-use cosmos_core::{coms::ComsChannelType, netty::system_sets::NetworkingSystemsSet};
+use cosmos_core::coms::ComsChannelType;
 use cosmos_core::{coms::ComsMessage, netty::client::LocalPlayer};
 use cosmos_core::{coms::events::RequestCloseComsEvent, structure::ship::pilot::Pilot};
 use cosmos_core::{coms::events::SendComsMessageType, state::GameState};
@@ -951,8 +951,7 @@ pub(super) fn register(app: &mut App) {
             end_selected_coms.run_if(on_event::<EndComsClicked>),
         )
             .chain()
-            .run_if(in_state(GameState::Playing))
-            .in_set(NetworkingSystemsSet::Between),
+            .run_if(in_state(GameState::Playing)),
     );
 
     register_button::<LeftClicked>(app);

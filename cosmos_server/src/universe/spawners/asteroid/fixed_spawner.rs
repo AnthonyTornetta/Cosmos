@@ -169,7 +169,7 @@ fn generate_asteroids(mut commands: Commands, q_players: Query<&Location, With<P
 
 pub(super) fn register(app: &mut App) {
     app.add_systems(
-        Update,
+        FixedUpdate,
         (
             spawn_asteroids.in_set(SystemGenerationSet::Asteroid),
             generate_asteroids.in_set(NetworkingSystemsSet::Between),

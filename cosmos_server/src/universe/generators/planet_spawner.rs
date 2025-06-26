@@ -174,7 +174,7 @@ fn spawn_planets(
 
 pub(super) fn register(app: &mut App) {
     app.add_systems(
-        Update,
+        FixedUpdate,
         (
             spawn_planets.in_set(SystemGenerationSet::Planet),
             monitor_planets_to_spawn.in_set(NetworkingSystemsSet::Between),

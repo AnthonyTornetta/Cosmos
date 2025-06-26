@@ -3,7 +3,6 @@
 use bevy::prelude::*;
 use cosmos_core::{
     netty::{sync::ComponentSyncingSet, system_sets::NetworkingSystemsSet},
-    physics::location::CosmosBundleSet,
     state::GameState,
 };
 
@@ -19,20 +18,19 @@ pub(super) fn register(app: &mut App) {
     sync::register(app);
 
     app.configure_sets(
-        Update,
+        FixedUpdate,
         (
             ComponentSyncingSet::PreComponentSyncing,
             ComponentSyncingSet::DoComponentSyncing,
             ComponentSyncingSet::PostComponentSyncing,
         )
             .run_if(in_state(GameState::Playing).or(in_state(GameState::LoadingWorld)))
-            .after(CosmosBundleSet::HandleCosmosBundles)
             .in_set(NetworkingSystemsSet::SyncComponents)
             .chain(),
     );
 
     app.configure_sets(
-        Update,
+        FixedUpdate,
         ComponentSyncingSet::ReceiveComponents
             .in_set(NetworkingSystemsSet::ReceiveMessages)
             .run_if(in_state(GameState::Playing).or(in_state(GameState::LoadingWorld))),

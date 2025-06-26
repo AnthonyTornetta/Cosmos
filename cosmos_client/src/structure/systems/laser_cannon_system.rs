@@ -2,12 +2,7 @@
 
 use bevy::{asset::LoadState, prelude::*};
 use bevy_kira_audio::prelude::*;
-use cosmos_core::{
-    netty::system_sets::NetworkingSystemsSet,
-    physics::location::{Location, LocationPhysicsSet},
-    state::GameState,
-    structure::systems::laser_cannon_system::LaserCannonSystem,
-};
+use cosmos_core::{physics::location::Location, state::GameState, structure::systems::laser_cannon_system::LaserCannonSystem};
 
 use crate::{
     asset::asset_loader::load_assets,
@@ -83,11 +78,6 @@ pub(super) fn register(app: &mut App) {
         },
     );
 
-    app.add_event::<LaserCannonSystemFiredEvent>().add_systems(
-        Update,
-        apply_shooting_sound
-            .after(LocationPhysicsSet::DoPhysics)
-            .in_set(NetworkingSystemsSet::Between)
-            .run_if(in_state(GameState::Playing)),
-    );
+    app.add_event::<LaserCannonSystemFiredEvent>()
+        .add_systems(Update, apply_shooting_sound.run_if(in_state(GameState::Playing)));
 }

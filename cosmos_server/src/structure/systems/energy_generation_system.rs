@@ -5,7 +5,6 @@ use bevy::prelude::*;
 use cosmos_core::{
     block::{Block, block_events::BlockEventsSet},
     events::block_events::BlockChangedEvent,
-    netty::system_sets::NetworkingSystemsSet,
     registry::Registry,
     state::GameState,
     structure::{
@@ -95,7 +94,7 @@ pub(super) fn register(app: &mut App) {
     app.insert_resource(EnergyGenerationBlocks::default())
         .add_systems(OnEnter(GameState::PostLoading), register_energy_blocks)
         .add_systems(
-            Update,
+            FixedUpdate,
             (
                 structure_loaded_event
                     .in_set(StructureSystemsSet::InitSystems)
@@ -105,7 +104,6 @@ pub(super) fn register(app: &mut App) {
                     update_energy.in_set(StructureSystemsSet::UpdateSystemsBlocks),
                 )
                     .run_if(in_state(GameState::Playing))
-                    .in_set(NetworkingSystemsSet::Between)
                     .chain(),
             ),
         )

@@ -2,7 +2,7 @@
 
 use bevy::prelude::*;
 
-use crate::structure::{loading::StructureLoadingSet, structure_block::StructureBlock};
+use crate::structure::structure_block::StructureBlock;
 
 use super::block_rotation::BlockRotation;
 
@@ -83,7 +83,7 @@ pub enum BlockEventsSet {
 
 pub(super) fn register(app: &mut App) {
     app.configure_sets(
-        Update,
+        FixedUpdate,
         (
             BlockEventsSet::SendEventsForThisFrame,
             BlockEventsSet::PreProcessEvents,
@@ -94,7 +94,6 @@ pub(super) fn register(app: &mut App) {
             BlockEventsSet::PostProcessEvents,
             BlockEventsSet::SendEventsForNextFrame,
         )
-            .chain()
-            .after(StructureLoadingSet::StructureLoaded),
+            .chain(), // .after(StructureLoadingSet::StructureLoaded),
     );
 }

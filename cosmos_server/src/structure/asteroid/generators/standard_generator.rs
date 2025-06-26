@@ -172,7 +172,7 @@ pub fn register_standard_asteroid_generation<T: AsteroidGeneratorComponent>(
         };
 
     app.add_systems(
-        Update,
+        FixedUpdate,
         start_generating_molten_asteroid
             .in_set(AsteroidGenerationSet::GenerateAsteroid)
             .ambiguous_with(AsteroidGenerationSet::GenerateAsteroid)

@@ -1,7 +1,7 @@
 use bevy::{color::palettes::css, prelude::*};
 use cosmos_core::{
     ecs::NeedsDespawned,
-    netty::{client::LocalPlayer, system_sets::NetworkingSystemsSet},
+    netty::client::LocalPlayer,
     quest::{OngoingQuest, OngoingQuestId, OngoingQuests, Quest},
     registry::Registry,
     state::GameState,
@@ -238,7 +238,6 @@ pub(super) fn register(app: &mut App) {
         Update,
         (open_quest_ui, on_toggle_active.in_set(UiSystemSet::FinishUi))
             .run_if(no_open_menus.or(any_with_component::<QuestUi>))
-            .run_if(in_state(GameState::Playing))
-            .in_set(NetworkingSystemsSet::Between),
+            .run_if(in_state(GameState::Playing)),
     );
 }

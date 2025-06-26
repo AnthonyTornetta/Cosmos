@@ -143,7 +143,7 @@ pub(super) fn register(app: &mut App) {
 
     app.add_systems(OnEnter(GameState::PostLoading), register_logic_connections)
         .add_systems(
-            Update,
+            FixedUpdate,
             (
                 tick_button_down.in_set(LogicSystemSet::PreLogicTick),
                 logic_on_output_event_listener
@@ -151,5 +151,5 @@ pub(super) fn register(app: &mut App) {
                     .ambiguous_with(LogicSystemSet::Produce),
             ),
         )
-        .add_systems(Update, on_interact_with_button.in_set(BlockEventsSet::ProcessEvents));
+        .add_systems(FixedUpdate, on_interact_with_button.in_set(BlockEventsSet::ProcessEvents));
 }

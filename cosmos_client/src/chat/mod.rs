@@ -5,10 +5,7 @@ use cosmos_core::{
     chat::{ClientSendChatMessageEvent, ServerSendChatMessageEvent},
     commands::ClientCommandEvent,
     ecs::NeedsDespawned,
-    netty::{
-        sync::events::client_event::{NettyEventReceived, NettyEventWriter},
-        system_sets::NetworkingSystemsSet,
-    },
+    netty::sync::events::client_event::{NettyEventReceived, NettyEventWriter},
     state::GameState,
 };
 
@@ -356,7 +353,6 @@ pub(super) fn register(app: &mut App) {
         )
             .chain()
             .run_if(in_state(GameState::Playing))
-            .after(CloseMenusSet::CloseMenus)
-            .in_set(NetworkingSystemsSet::Between),
+            .after(CloseMenusSet::CloseMenus),
     );
 }
