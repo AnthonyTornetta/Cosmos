@@ -199,7 +199,7 @@ fn main() {
             "{}",
             bevy_mod_debugdump::schedule_graph_dot(
                 &mut app,
-                Update,
+                FixedUpdate,
                 &schedule_graph::Settings {
                     ambiguity_enable: false,
                     ambiguity_enable_on_world: false,

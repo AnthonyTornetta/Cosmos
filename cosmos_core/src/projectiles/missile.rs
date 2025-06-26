@@ -113,8 +113,9 @@ pub(super) fn register(app: &mut App) {
         app.configure_sets(
             FixedUpdate,
             (
-                ExplosionSystemSet::PreProcessExplosions,
-                ExplosionSystemSet::ProcessExplosions, //.after(LocationPhysicsSet::DoPhysics),
+                ExplosionSystemSet::PreProcessExplosions.before(FixedUpdateSet::LocationSyncingPostPhysics),
+                ExplosionSystemSet::ProcessExplosions //.after(LocationPhysicsSet::DoPhysics),
+                    .after(FixedUpdateSet::LocationSyncingPostPhysics),
             )
                 .chain(),
         );

@@ -10,12 +10,13 @@ use cosmos_core::{
     block::{
         Block,
         block_direction::BlockDirection,
-        block_events::{BlockEventsSet, BlockInteractEvent},
+        block_events::BlockInteractEvent,
         block_face::BlockFace,
         block_rotation::{BlockRotation, BlockSubRotation},
         blocks::fluid::FLUID_COLLISION_GROUP,
     },
     blockitems::BlockItems,
+    ecs::{compute_totally_accurate_global_transform, sets::FixedUpdateSet},
     entities::player::creative::Creative,
     inventory::{
         Inventory,
@@ -93,7 +94,7 @@ fn generate_input_events(mut evr_block_ev: EventWriter<BlockEvent>, input_handle
 }
 
 fn process_player_interaction(
-    camera: Query<&GlobalTransform, With<MainCamera>>,
+    camera: Query<Entity, With<MainCamera>>,
     mut q_player: Query<(Entity, &mut Inventory, &mut LookingAt, Option<&Creative>), (With<LocalPlayer>, Without<Pilot>)>,
     rapier_context_access: ReadRapierContext,
     q_chunk_physics_part: Query<&ChunkPhysicsPart>,
@@ -102,13 +103,12 @@ fn process_player_interaction(
     mut place_writer: EventWriter<RequestBlockPlaceEvent>,
     mut interact_writer: EventWriter<BlockInteractEvent>,
     mut hotbar: Query<&mut Hotbar>,
-    items: Res<Registry<Item>>,
-    blocks: Res<Registry<Block>>,
-    block_items: Res<BlockItems>,
+    (items, blocks, block_items): (Res<Registry<Item>>, Res<Registry<Block>>, Res<BlockItems>),
     mut commands: Commands,
     mut client: ResMut<RenetClient>,
     mapping: Res<NetworkMapping>,
     mut block_evs: EventReader<BlockEvent>,
+    q_trans: Query<(&Transform, Option<&ChildOf>)>,
 ) {
     let rapier_context = rapier_context_access.single().expect("No single rapier context");
 
@@ -120,17 +120,18 @@ fn process_player_interaction(
     looking_at.looking_at_any = None;
     looking_at.looking_at_block = None;
 
-    let Ok(cam_trans) = camera.single() else {
+    let Some(cam_trans) = compute_totally_accurate_global_transform(camera.single().unwrap(), &q_trans) else {
         return;
     };
 
     let Some((hit_block, mut structure, mut structure_g_transform, mut is_planet)) = send_ray(
         &rapier_context,
-        cam_trans,
+        &cam_trans,
         player_entity,
         &q_chunk_physics_part,
         &q_structure,
         Group::ALL & !SHIELD_COLLISION_GROUP,
+        &q_trans,
     ) else {
         return;
     };
@@ -144,11 +145,12 @@ fn process_player_interaction(
     if structure.block_at(hit_block.block.coords(), &blocks).is_fluid() {
         if let Some((hit_block, s, sgt, ip)) = send_ray(
             &rapier_context,
-            cam_trans,
+            &cam_trans,
             player_entity,
             &q_chunk_physics_part,
             &q_structure,
             Group::ALL & !(SHIELD_COLLISION_GROUP | FLUID_COLLISION_GROUP),
+            &q_trans,
         ) {
             structure = s;
             structure_g_transform = sgt;
@@ -318,7 +320,8 @@ fn send_ray<'a>(
     q_chunk_physics_part: &Query<&ChunkPhysicsPart>,
     q_structure: &'a Query<(&Structure, &GlobalTransform, Option<&Planet>)>,
     collision_group: Group,
-) -> Option<(LookedAtBlock, &'a Structure, &'a GlobalTransform, Option<&'a Planet>)> {
+    q_trans: &Query<(&Transform, Option<&ChildOf>)>,
+) -> Option<(LookedAtBlock, &'a Structure, GlobalTransform, Option<&'a Planet>)> {
     let (entity, intersection) = rapier_context.cast_ray_and_get_normal(
         cam_trans.translation(),
         cam_trans.forward().into(),
@@ -331,11 +334,13 @@ fn send_ray<'a>(
 
     let structure_entity = q_chunk_physics_part.get(entity).map(|x| x.structure_entity).ok()?;
 
-    let (structure, structure_g_transform, is_planet) = q_structure.get(structure_entity).ok()?;
+    let g_trans = compute_totally_accurate_global_transform(structure_entity, q_trans)?;
+
+    let (structure, _, is_planet) = q_structure.get(structure_entity).ok()?;
 
     let moved_point = intersection.point - intersection.normal * 0.01;
 
-    let point = structure_g_transform.compute_matrix().inverse().transform_point3(moved_point);
+    let point = g_trans.compute_matrix().inverse().transform_point3(moved_point);
 
     let coords = structure.relative_coords_to_local_coords_checked(point.x, point.y, point.z).ok()?;
 
@@ -345,7 +350,7 @@ fn send_ray<'a>(
             intersection,
         },
         structure,
-        structure_g_transform,
+        g_trans,
         is_planet,
     ))
 }
@@ -356,8 +361,8 @@ pub(super) fn register(app: &mut App) {
             FixedUpdate,
             (add_looking_at_component, process_player_interaction)
                 .chain()
-                // .in_set(FixedUpdateSet::PostPhysics)
-                .in_set(BlockEventsSet::SendEventsForThisFrame)
+                .in_set(FixedUpdateSet::PostPhysics)
+                // .in_set(BlockEventsSet::SendEventsForThisFrame)
                 .run_if(no_open_menus)
                 .run_if(in_state(GameState::Playing)),
         )

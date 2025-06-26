@@ -15,6 +15,8 @@ use cosmos_core::{
     structure::ship::pilot::Pilot,
 };
 
+use crate::netty::sync::flags::SyncReason;
+
 use super::{NpcRequestCloseComsEvent, NpcSendComsMessage, RequestHailFromNpc, RequestHailToNpc};
 
 const MAX_HAIL_RANGE: f32 = 20_000.0;
@@ -149,6 +151,7 @@ fn on_accept_coms(
                     messages: vec![],
                     channel_type,
                 },
+                SyncReason::Data,
             ));
         });
 
@@ -160,6 +163,7 @@ fn on_accept_coms(
                     messages: vec![],
                     channel_type,
                 },
+                SyncReason::Data,
             ));
         });
     }
