@@ -37,8 +37,8 @@ pub struct ReplicatedComponentData {
 pub enum ComponentId {
     /// The ID given to this component after registration in [`sync_component`].
     Custom(u16),
-    /// This is bevy's [`Parent`] component.
-    Parent,
+    /// This is bevy's [`ChildOf`] component.
+    ChildOf,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -118,6 +118,24 @@ pub enum SyncType {
     ClientAuthoritative(ClientAuthority),
     /// Both the server and client will sync each other on changes.
     BothAuthoritative(ClientAuthority),
+}
+
+impl SyncType {
+    /// Returns true if the client dicates the value of this component.
+    ///
+    /// This will also return true if BOTH the client and server dictate the value of this
+    /// component
+    pub fn is_client_authoritative(&self) -> bool {
+        !matches!(self, Self::ServerAuthoritative)
+    }
+
+    /// Returns true if the server dicates the value of this component.
+    ///
+    /// This will also return true if BOTH the client and server dictate the value of this
+    /// component
+    pub fn is_server_authoritative(&self) -> bool {
+        !matches!(self, Self::ClientAuthoritative(_))
+    }
 }
 
 /// Clients can rarely (if ever) sync components that belong to anything.

@@ -1,11 +1,10 @@
-use bevy::prelude::{App, EventReader, EventWriter, IntoSystemConfigs, Query, Res, Update, With, Without, in_state};
+use bevy::prelude::*;
 use cosmos_core::{
     block::{
         Block,
         block_events::{BlockEventsSet, BlockInteractEvent},
     },
     events::structure::change_pilot_event::ChangePilotEvent,
-    netty::system_sets::NetworkingSystemsSet,
     registry::{Registry, identifiable::Identifiable},
     state::GameState,
     structure::{
@@ -48,7 +47,7 @@ fn handle_block_event(
 
         // Only works on ships (maybe replace this with pilotable component instead of only checking ships)
         if q_can_be_pilot.contains(s_block.structure()) {
-            change_pilot_event.send(ChangePilotEvent {
+            change_pilot_event.write(ChangePilotEvent {
                 structure_entity: s_block.structure(),
                 pilot_entity: Some(ev.interactor),
             });
@@ -58,10 +57,9 @@ fn handle_block_event(
 
 pub(super) fn register(app: &mut App) {
     app.add_systems(
-        Update,
+        FixedUpdate,
         handle_block_event
             .in_set(BlockEventsSet::ProcessEvents)
-            .in_set(NetworkingSystemsSet::Between)
             .run_if(in_state(GameState::Playing)),
     );
 }

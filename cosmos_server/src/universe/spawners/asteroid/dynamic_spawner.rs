@@ -1,14 +1,6 @@
 //! Responsible for spawning asteroids that move, based on the random timing of them spawning
 
-use bevy::{
-    log::error,
-    prelude::{
-        App, Commands, Component, Entity, EventWriter, IntoSystemConfigs, Query, Res, Resource, Update, Vec3, With, Without, in_state,
-    },
-    reflect::Reflect,
-    time::Time,
-    utils::hashbrown::HashMap,
-};
+use bevy::{platform::collections::HashMap, prelude::*};
 use bevy_rapier3d::prelude::Velocity;
 use cosmos_core::{
     block::Block,
@@ -157,7 +149,7 @@ fn send_done_generating_event(
         for res in itr {
             // This will always be true because include_empty is false
             if let ChunkIteratorResult::FilledChunk { position, chunk: _ } = res {
-                chunk_init_event_writer.send(ChunkInitEvent {
+                chunk_init_event_writer.write(ChunkInitEvent {
                     structure_entity: ent,
                     coords: position,
                     serialized_block_data: None,
@@ -207,10 +199,10 @@ fn register_small_asteroid_generator(app: &mut App, id: &'static str, asteroid_b
 fn register_small_asteroid_generation(app: &mut App, id: &'static str, block_entries: Vec<SmallAsteroidBlockEntry>) {
     register_small_asteroid_generator(app, id, block_entries);
 
-    let start_generating_molten_asteroid = move |mut q_asteroids: Query<(&mut Structure, &Location, &SmallAsteroidNeedsCreated)>,
-                                                 noise: Res<Noise>,
-                                                 asteroid_types: Res<SmallAsteroidTypes>,
-                                                 blocks: Res<Registry<Block>>| {
+    let start_generating_small_asteroid = move |mut q_asteroids: Query<(&mut Structure, &Location, &SmallAsteroidNeedsCreated)>,
+                                                noise: Res<Noise>,
+                                                asteroid_types: Res<SmallAsteroidTypes>,
+                                                blocks: Res<Registry<Block>>| {
         for (mut structure, loc, needs_created) in q_asteroids.iter_mut() {
             let Some(block_entries) = asteroid_types.0.get(needs_created.id) else {
                 error!("Invalid asteroid type: {}", needs_created.id);
@@ -273,8 +265,8 @@ fn register_small_asteroid_generation(app: &mut App, id: &'static str, block_ent
     };
 
     app.add_systems(
-        Update,
-        start_generating_molten_asteroid
+        FixedUpdate,
+        start_generating_small_asteroid
             .in_set(AsteroidGenerationSet::GenerateAsteroid)
             .ambiguous_with(AsteroidGenerationSet::GenerateAsteroid)
             .run_if(in_state(GameState::Playing)),
@@ -395,7 +387,7 @@ pub(super) fn register(app: &mut App) {
     );
 
     app.add_systems(
-        Update,
+        FixedUpdate,
         (
             spawn_tiny_asteroids.in_set(AsteroidGenerationSet::StartGeneratingAsteroid),
             send_done_generating_event.in_set(AsteroidGenerationSet::NotifyFinished),
@@ -404,5 +396,8 @@ pub(super) fn register(app: &mut App) {
             .run_if(in_state(GameState::Playing)),
     )
     .register_type::<NextDynamicAsteroidSpawnTime>()
-    .add_systems(Update, add_next_dynamic_asteroid_spawn_time.in_set(NetworkingSystemsSet::Between));
+    .add_systems(
+        FixedUpdate,
+        add_next_dynamic_asteroid_spawn_time.in_set(NetworkingSystemsSet::Between),
+    );
 }

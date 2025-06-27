@@ -4,17 +4,7 @@ use crate::{
     netty::{NettyChannelServer, cosmos_encoder, system_sets::NetworkingSystemsSet},
     state::GameState,
 };
-use bevy::{
-    app::{App, Update},
-    ecs::{
-        event::{Event, EventReader, EventWriter},
-        schedule::IntoSystemConfigs,
-        system::{ResMut, Resource},
-    },
-    log::{error, info},
-    prelude::{Commands, Condition, IntoSystemSetConfigs, SystemSet},
-    state::condition::in_state,
-};
+use bevy::prelude::*;
 use bevy_renet::renet::RenetClient;
 
 use crate::ecs::add_multi_statebound_resource;
@@ -41,13 +31,14 @@ fn sync<T: SyncableResource>(
         }
 
         if let Some(left_to_sync) = left_to_sync.as_mut()
-            && left_to_sync.0.unwrap_or(0) != 0 {
-                let new_amt = left_to_sync.0.expect("This should never happen") - 1;
+            && left_to_sync.0.unwrap_or(0) != 0
+        {
+            let new_amt = left_to_sync.0.expect("This should never happen") - 1;
 
-                left_to_sync.0 = Some(new_amt);
+            left_to_sync.0 = Some(new_amt);
 
-                info!("Got resource from server: {}! Need {} more.", ev.resource_name, new_amt);
-            }
+            info!("Got resource from server: {}! Need {} more.", ev.resource_name, new_amt);
+        }
 
         let Ok(new_resource) = cosmos_encoder::deserialize_uncompressed::<T>(&ev.serialized_data) else {
             error!("Got bad resource data from server - {}!", ev.resource_name);
@@ -97,7 +88,7 @@ fn resources_listen_netty(
                 }
             }
             ResourceSyncingMessage::Resource { data, unlocalized_name } => {
-                ev_writer.send(ReceivedResourceEvent {
+                ev_writer.write(ReceivedResourceEvent {
                     serialized_data: data,
                     resource_name: unlocalized_name,
                 });

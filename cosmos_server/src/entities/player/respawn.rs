@@ -3,6 +3,7 @@
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::Velocity;
 use cosmos_core::{
+    ecs::sets::FixedUpdateSet,
     entities::{
         EntityId,
         health::{Dead, Health, HealthSet, MaxHealth},
@@ -13,7 +14,6 @@ use cosmos_core::{
     netty::{
         server::ServerLobby,
         sync::events::server_event::{NettyEventReceived, NettyEventWriter},
-        system_sets::NetworkingSystemsSet,
     },
     persistence::LoadingDistance,
     physics::location::{Location, LocationPhysicsSet, SetPosition},
@@ -48,9 +48,10 @@ fn on_die(
 ) {
     for (location, mut inventory, children) in q_player.iter_mut() {
         if let Some(mut inv) = HeldItemStack::get_held_is_inventory_from_children_mut(children, &mut q_held_item)
-            && let Some(held_is) = inv.remove_itemstack_at(0) {
-                drop_itemstack(&mut commands, location, held_is);
-            }
+            && let Some(held_is) = inv.remove_itemstack_at(0)
+        {
+            drop_itemstack(&mut commands, location, held_is);
+        }
 
         inventory.retain_mut(|is| {
             drop_itemstack(&mut commands, location, is);
@@ -82,7 +83,7 @@ fn on_respawn(
         // *location = loc;
         // transform.rotation = rot;
         //
-        nevw_respawn.send(
+        nevw_respawn.write(
             RespawnEvent {
                 rotation: rot,
                 location: loc,
@@ -130,6 +131,6 @@ pub(super) fn register(app: &mut App) {
             on_respawn.before(LocationPhysicsSet::DoPhysics),
             on_die.after(HealthSet::ProcessHealthChange),
         )
-            .in_set(NetworkingSystemsSet::Between),
+            .in_set(FixedUpdateSet::Main),
     );
 }

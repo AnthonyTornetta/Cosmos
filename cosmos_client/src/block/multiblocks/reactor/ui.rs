@@ -10,7 +10,6 @@ use cosmos_core::{
             events::client_event::NettyEventWriter,
             mapping::{Mappable, NetworkMapping},
         },
-        system_sets::NetworkingSystemsSet,
     },
     prelude::{Structure, StructureBlock},
     registry::Registry,
@@ -56,7 +55,7 @@ fn create_ui(
             continue;
         };
 
-        let Ok(lp) = q_inventory.get_single() else {
+        let Ok(lp) = q_inventory.single() else {
             error!("No block inventory data!");
             continue;
         };
@@ -221,7 +220,7 @@ fn on_click_toggle(
             continue;
         };
 
-        nevw.send(ClientRequestChangeReactorStatus { active, block: mapped_sb });
+        nevw.write(ClientRequestChangeReactorStatus { active, block: mapped_sb });
     }
 }
 
@@ -251,13 +250,13 @@ fn maintain_active_text(
         if s.query_block_data(active_text.0.coords(), &q_active).is_some() {
             if txt.0 != "ACTIVE" {
                 txt.0 = "ACTIVE".into();
-                if let Ok(mut btn) = q_btn.get_single_mut() {
+                if let Ok(mut btn) = q_btn.single_mut() {
                     btn.text.as_mut().expect("No text?").0 = "DEACTIVATE".into();
                 }
             }
         } else if txt.0 != "IDLE" {
             txt.0 = "IDLE".into();
-            if let Ok(mut btn) = q_btn.get_single_mut() {
+            if let Ok(mut btn) = q_btn.single_mut() {
                 btn.text.as_mut().expect("No text?").0 = "ACTIVATE".into();
             }
         }
@@ -324,7 +323,6 @@ pub(super) fn register(app: &mut App) {
             update_status_bar,
             update_generation_stats,
         )
-            .in_set(NetworkingSystemsSet::Between)
             .run_if(in_state(GameState::Playing)),
     );
 }

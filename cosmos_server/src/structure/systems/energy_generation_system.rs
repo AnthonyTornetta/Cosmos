@@ -5,7 +5,6 @@ use bevy::prelude::*;
 use cosmos_core::{
     block::{Block, block_events::BlockEventsSet},
     events::block_events::BlockChangedEvent,
-    netty::system_sets::NetworkingSystemsSet,
     registry::Registry,
     state::GameState,
     structure::{
@@ -40,15 +39,16 @@ fn block_update_system(
 ) {
     for ev in event.read() {
         if let Ok(systems) = systems_query.get(ev.block.structure())
-            && let Ok(mut system) = systems.query_mut(&mut system_query) {
-                if let Some(prop) = energy_generation_blocks.get(blocks.from_numeric_id(ev.old_block)) {
-                    system.block_removed(prop);
-                }
-
-                if let Some(prop) = energy_generation_blocks.get(blocks.from_numeric_id(ev.new_block)) {
-                    system.block_added(prop);
-                }
+            && let Ok(mut system) = systems.query_mut(&mut system_query)
+        {
+            if let Some(prop) = energy_generation_blocks.get(blocks.from_numeric_id(ev.old_block)) {
+                system.block_removed(prop);
             }
+
+            if let Some(prop) = energy_generation_blocks.get(blocks.from_numeric_id(ev.new_block)) {
+                system.block_added(prop);
+            }
+        }
     }
 }
 
@@ -60,9 +60,10 @@ fn update_energy(
 ) {
     for (g, system) in e_gen_query.iter() {
         if let Ok(systems) = sys_query.get(system.structure_entity())
-            && let Ok(mut storage) = systems.query_mut(&mut e_storage_query) {
-                storage.increase_energy(g.energy_generation_rate() * time.delta_secs());
-            }
+            && let Ok(mut storage) = systems.query_mut(&mut e_storage_query)
+        {
+            storage.increase_energy(g.energy_generation_rate() * time.delta_secs());
+        }
     }
 }
 
@@ -93,7 +94,7 @@ pub(super) fn register(app: &mut App) {
     app.insert_resource(EnergyGenerationBlocks::default())
         .add_systems(OnEnter(GameState::PostLoading), register_energy_blocks)
         .add_systems(
-            Update,
+            FixedUpdate,
             (
                 structure_loaded_event
                     .in_set(StructureSystemsSet::InitSystems)
@@ -103,7 +104,6 @@ pub(super) fn register(app: &mut App) {
                     update_energy.in_set(StructureSystemsSet::UpdateSystemsBlocks),
                 )
                     .run_if(in_state(GameState::Playing))
-                    .in_set(NetworkingSystemsSet::Between)
                     .chain(),
             ),
         )

@@ -7,7 +7,7 @@ use bevy_kira_audio::{Audio, AudioControl, AudioInstance};
 use bevy_rapier3d::prelude::{RigidBody, Velocity};
 use cosmos_core::{
     ecs::NeedsDespawned,
-    netty::{client::LocalPlayer, system_sets::NetworkingSystemsSet},
+    netty::client::LocalPlayer,
     physics::location::Location,
     prelude::{DespawnWithStructure, Structure},
     state::GameState,
@@ -59,11 +59,11 @@ fn on_fire_railgun(
 
         let mut closest_sound: Option<(f32, Location, Vec3)> = None;
 
-        let Ok((g_trans, local_loc)) = q_local_player.get_single() else {
+        let Ok((g_trans, local_loc)) = q_local_player.single() else {
             return;
         };
 
-        let Ok(main_cam_trans) = q_main_camera.get_single() else {
+        let Ok(main_cam_trans) = q_main_camera.single() else {
             return;
         };
 
@@ -172,9 +172,6 @@ pub(super) fn register(app: &mut App) {
     app.add_systems(OnEnter(GameState::PreLoading), create_railgun_mesh);
     app.add_systems(
         Update,
-        (on_fire_railgun, fade_railgun_blast)
-            .chain()
-            .in_set(NetworkingSystemsSet::Between)
-            .run_if(in_state(GameState::Playing)),
+        (on_fire_railgun, fade_railgun_blast).chain().run_if(in_state(GameState::Playing)),
     );
 }

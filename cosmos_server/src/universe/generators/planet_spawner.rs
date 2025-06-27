@@ -11,15 +11,7 @@ use crate::{
     structure::planet::biosphere::BiosphereTemperatureRegistry,
     universe::{SystemItem, SystemItemPlanet, UniverseSystems},
 };
-use bevy::{
-    log::{info, warn},
-    math::{Dir3, Quat},
-    prelude::{
-        App, Commands, Deref, DerefMut, EventReader, IntoSystemConfigs, Query, Res, ResMut, Resource, Transform, Update, Vec3, With,
-        in_state,
-    },
-    utils::HashSet,
-};
+use bevy::{platform::collections::HashSet, prelude::*};
 use cosmos_core::{
     entities::player::Player,
     netty::system_sets::NetworkingSystemsSet,
@@ -182,7 +174,7 @@ fn spawn_planets(
 
 pub(super) fn register(app: &mut App) {
     app.add_systems(
-        Update,
+        FixedUpdate,
         (
             spawn_planets.in_set(SystemGenerationSet::Planet),
             monitor_planets_to_spawn.in_set(NetworkingSystemsSet::Between),

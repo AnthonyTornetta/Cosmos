@@ -1,6 +1,6 @@
 //! Represents all the energy stored on a structure
 
-use bevy::prelude::{App, Commands, EventReader, IntoSystemConfigs, OnEnter, Query, Res, ResMut, Update, in_state};
+use bevy::prelude::*;
 
 use cosmos_core::{
     block::{Block, block_events::BlockEventsSet},
@@ -38,15 +38,16 @@ fn block_update_system(
 ) {
     for ev in event.read() {
         if let Ok(systems) = systems_query.get(ev.block.structure())
-            && let Ok(mut system) = systems.query_mut(&mut system_query) {
-                if let Some(prop) = energy_storage_blocks.get(blocks.from_numeric_id(ev.old_block)) {
-                    system.block_removed(prop);
-                }
-
-                if let Some(prop) = energy_storage_blocks.get(blocks.from_numeric_id(ev.new_block)) {
-                    system.block_added(prop);
-                }
+            && let Ok(mut system) = systems.query_mut(&mut system_query)
+        {
+            if let Some(prop) = energy_storage_blocks.get(blocks.from_numeric_id(ev.old_block)) {
+                system.block_removed(prop);
             }
+
+            if let Some(prop) = energy_storage_blocks.get(blocks.from_numeric_id(ev.new_block)) {
+                system.block_added(prop);
+            }
+        }
     }
 }
 
@@ -77,7 +78,7 @@ pub(super) fn register(app: &mut App) {
     app.insert_resource(EnergyStorageBlocks::default())
         .add_systems(OnEnter(GameState::PostLoading), register_energy_blocks)
         .add_systems(
-            Update,
+            FixedUpdate,
             (
                 structure_loaded_event
                     .in_set(StructureSystemsSet::InitSystems)

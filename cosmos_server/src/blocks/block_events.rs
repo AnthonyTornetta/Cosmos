@@ -2,7 +2,7 @@ use crate::{
     persistence::make_persistent::{DefaultPersistentComponent, make_persistent},
     structure::block_health::BlockHealthSet,
 };
-use bevy::{prelude::*, utils::HashMap};
+use bevy::{platform::collections::HashMap, prelude::*};
 use bevy_rapier3d::prelude::Velocity;
 use bevy_renet::renet::RenetServer;
 use cosmos_core::{
@@ -107,7 +107,7 @@ fn handle_block_break_events(
     blocks: Res<Registry<Block>>,
     items: Res<Registry<Item>>,
     block_items: Res<BlockItems>,
-    mut inventory_query: Query<(&mut Inventory, Option<&BuildMode>, Option<&Parent>), Without<BlockData>>,
+    mut inventory_query: Query<(&mut Inventory, Option<&BuildMode>, Option<&ChildOf>), Without<BlockData>>,
     mut event_writer: EventWriter<BlockChangedEvent>,
     mut q_inventory_block_data: Query<(&BlockData, &mut Inventory), With<AutoInsertMinedItems>>,
     mut commands: Commands,
@@ -170,9 +170,10 @@ fn handle_block_break_events(
                 // thousands of item entities that would mega lag the server + clients near it.
                 if !inserted
                     && let Ok(pilot) = q_pilot.get(ev.breaker)
-                        && let Ok((mut inventory, _, _)) = inventory_query.get_mut(pilot.entity) {
-                            inventory.insert_item(item, leftover, &mut commands, &has_data);
-                        }
+                    && let Ok((mut inventory, _, _)) = inventory_query.get_mut(pilot.entity)
+                {
+                    inventory.insert_item(item, leftover, &mut commands, &has_data);
+                }
             } else {
                 warn!("Missing item id for block {:?}", block);
             }
@@ -276,13 +277,13 @@ fn unique_push(vec: &mut Vec<(BlockCoordinate, BlockRotation)>, item: (BlockCoor
 fn calculate_build_mode_blocks(
     mut structure_blocks: Vec<(BlockCoordinate, BlockRotation)>,
     build_mode: &BuildMode,
-    parent: &Parent,
+    parent: &ChildOf,
     structure_entity: Entity,
     inventory: &mut Mut<'_, Inventory>,
     structure: &Structure,
     block: &Block,
 ) -> Vec<(BlockCoordinate, BlockRotation)> {
-    if parent.get() != structure_entity {
+    if parent.parent() != structure_entity {
         // Tried to place a block on a structure they're not in build mode on
 
         // Update player that they didn't place the block
@@ -440,7 +441,7 @@ fn handle_block_place_events(
     mut query: Query<&mut Structure>,
     mut event_reader: EventReader<MutEvent<BlockPlaceEvent>>,
     mut event_writer: EventWriter<BlockChangedEvent>,
-    mut player_query: Query<(&mut Inventory, Option<&BuildMode>, Option<&Parent>, Option<&Creative>)>,
+    mut player_query: Query<(&mut Inventory, Option<&BuildMode>, Option<&ChildOf>, Option<&Creative>)>,
     items: Res<Registry<Item>>,
     blocks: Res<Registry<Block>>,
     block_items: Res<BlockItems>,
@@ -521,7 +522,7 @@ pub(super) fn register(app: &mut App) {
         .add_mut_event::<BlockPlaceEvent>()
         .add_event::<BlockInteractEvent>()
         .add_systems(
-            Update,
+            FixedUpdate,
             (handle_block_break_events, handle_block_place_events)
                 .chain()
                 .in_set(ItemStackSystemSet::CreateDataEntity)
@@ -529,7 +530,7 @@ pub(super) fn register(app: &mut App) {
         );
 
     app.add_systems(
-        Update,
+        FixedUpdate,
         handle_block_changed_event
             .in_set(NetworkingSystemsSet::SyncComponents)
             .after(BlockHealthSet::ProcessHealthChanges)

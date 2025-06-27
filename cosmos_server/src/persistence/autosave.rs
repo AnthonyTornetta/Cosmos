@@ -21,7 +21,7 @@ fn backup_before_saving(mut evw_create_backup: EventWriter<CreateWorldBackup>, m
         return;
     }
     evr_save_everything.clear();
-    evw_create_backup.send_default();
+    evw_create_backup.write_default();
 }
 
 fn save_everything(
@@ -46,7 +46,7 @@ fn trigger_autosave(mut evw_create_backup: EventWriter<SaveEverything>, q_player
     }
 
     info!("Triggering autosave");
-    evw_create_backup.send_default();
+    evw_create_backup.write_default();
 }
 
 pub(super) fn register(app: &mut App) {

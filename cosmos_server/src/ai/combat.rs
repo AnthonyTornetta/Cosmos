@@ -1,23 +1,9 @@
-use bevy::{
-    app::{App, Update},
-    ecs::{
-        component::Component,
-        entity::Entity,
-        query::{With, Without},
-        schedule::{IntoSystemConfigs, IntoSystemSetConfigs, SystemSet},
-        system::{Commands, Query, Res},
-    },
-    hierarchy::Parent,
-    math::{Quat, Vec3},
-    prelude::in_state,
-    reflect::Reflect,
-    time::Time,
-    transform::components::{GlobalTransform, Transform},
-};
+use bevy::prelude::*;
 use bevy_rapier3d::dynamics::Velocity;
 use cosmos_core::{
+    ecs::sets::FixedUpdateSet,
     events::structure::StructureEventListenerSet,
-    netty::{sync::IdentifiableComponent, system_sets::NetworkingSystemsSet},
+    netty::sync::IdentifiableComponent,
     physics::location::Location,
     projectiles::{laser::LASER_LIVE_TIME, missile::Missile},
     state::GameState,
@@ -97,7 +83,7 @@ fn handle_combat_ai(
         ),
         (Without<Missile>, With<AiControlled>), // Without<Missile> fixes ambiguity issues
     >,
-    q_parent: Query<&Parent>,
+    q_parent: Query<&ChildOf>,
     q_velocity: Query<&Velocity>,
     q_targets: Query<(Entity, &Location, &Velocity)>,
     time: Res<Time>,
@@ -122,7 +108,7 @@ fn handle_combat_ai(
 
         let mut entity = target_ent;
         while let Ok(parent) = q_parent.get(entity) {
-            entity = parent.get();
+            entity = parent.parent();
             target_linvel += q_velocity.get(entity).map(|x| x.linvel).unwrap_or(Vec3::ZERO);
         }
 
@@ -130,7 +116,7 @@ fn handle_combat_ai(
 
         let mut entity = pirate_ent;
         while let Ok(parent) = q_parent.get(entity) {
-            entity = parent.get();
+            entity = parent.parent();
             this_linvel += q_velocity.get(entity).map(|x| x.linvel).unwrap_or(Vec3::ZERO);
         }
 
@@ -206,7 +192,7 @@ pub(super) fn register(app: &mut App) {
     make_persistent::<CombatAi>(app);
 
     app.configure_sets(
-        Update,
+        FixedUpdate,
         CombatAiSystemSet::CombatAiLogic
             .in_set(StructureTypeSet::Ship)
             .after(LoadingSystemSet::DoneLoading)
@@ -215,10 +201,10 @@ pub(super) fn register(app: &mut App) {
     .register_type::<AiTargetting>()
     .register_type::<CombatAi>()
     .add_systems(
-        Update,
+        FixedUpdate,
         (handle_combat_ai.before(ShipMovementSet::RemoveShipMovement),)
             .run_if(in_state(GameState::Playing))
-            .in_set(NetworkingSystemsSet::Between)
+            .in_set(FixedUpdateSet::Main)
             .in_set(CombatAiSystemSet::CombatAiLogic)
             .chain(),
     );

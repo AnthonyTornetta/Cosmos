@@ -1,11 +1,9 @@
 use bevy::{
-    app::{App, Update},
     ecs::{
         event::{EventId, SendBatchIds},
         system::SystemParam,
     },
-    log::error,
-    prelude::{Deref, Event, EventReader, EventWriter, IntoSystemConfigs, OnEnter, Res, ResMut, resource_exists},
+    prelude::*,
 };
 use renet::{ClientId, RenetServer};
 
@@ -60,8 +58,8 @@ impl<E: NettyEvent> NettyEventWriter<'_, E> {
     /// See [`bevy::prelude::Events`] for details.
     ///
     /// If you wish to send this event to all clients, see [`Self::broadcast`].
-    pub fn send(&mut self, event: E, client_id: ClientId) -> EventId<NettyEventToSend<E>> {
-        self.ev_writer.send(NettyEventToSend {
+    pub fn write(&mut self, event: E, client_id: ClientId) -> EventId<NettyEventToSend<E>> {
+        self.ev_writer.write(NettyEventToSend {
             event,
             client_ids: Some(vec![client_id]),
         })
@@ -73,8 +71,8 @@ impl<E: NettyEvent> NettyEventWriter<'_, E> {
     /// See [`bevy::prelude::Events`] for details.
     ///
     /// If you wish to send this event to all clients, see [`Self::broadcast`].
-    pub fn send_to_many(&mut self, event: E, client_ids: impl Iterator<Item = ClientId>) -> EventId<NettyEventToSend<E>> {
-        self.ev_writer.send(NettyEventToSend {
+    pub fn write_to_many(&mut self, event: E, client_ids: impl Iterator<Item = ClientId>) -> EventId<NettyEventToSend<E>> {
+        self.ev_writer.write(NettyEventToSend {
             event,
             client_ids: Some(client_ids.collect::<Vec<_>>()),
         })
@@ -85,7 +83,7 @@ impl<E: NettyEvent> NettyEventWriter<'_, E> {
     ///
     /// See [`bevy::prelude::Events`] for details.
     pub fn broadcast(&mut self, event: E) -> EventId<NettyEventToSend<E>> {
-        self.ev_writer.send(NettyEventToSend { event, client_ids: None })
+        self.ev_writer.write(NettyEventToSend { event, client_ids: None })
     }
 
     /// Sends a list of `events` all at once, which can later be read by [`EventReader`]s.
@@ -93,12 +91,12 @@ impl<E: NettyEvent> NettyEventWriter<'_, E> {
     /// This method returns the [IDs](`EventId`) of the sent `events`.
     ///
     /// See [`bevy::prelude::Events`] for details.
-    pub fn send_batch(
+    pub fn write_batch(
         &mut self,
         events: impl IntoIterator<Item = E>,
         client_ids: Option<Vec<ClientId>>,
     ) -> SendBatchIds<NettyEventToSend<E>> {
-        self.ev_writer.send_batch(events.into_iter().map(|event| NettyEventToSend {
+        self.ev_writer.write_batch(events.into_iter().map(|event| NettyEventToSend {
             event,
             client_ids: client_ids.clone(),
         }))
@@ -108,11 +106,11 @@ impl<E: NettyEvent> NettyEventWriter<'_, E> {
     /// This method returns the [ID](`EventId`) of the sent `event`.
     ///
     /// See [`bevy::prelude::Events`] for details.
-    pub fn send_default(&mut self, client_ids: Option<Vec<ClientId>>) -> EventId<NettyEventToSend<E>>
+    pub fn write_default(&mut self, client_ids: Option<Vec<ClientId>>) -> EventId<NettyEventToSend<E>>
     where
         E: Default,
     {
-        self.ev_writer.send(NettyEventToSend {
+        self.ev_writer.write(NettyEventToSend {
             event: E::default(),
             client_ids,
         })
@@ -128,7 +126,7 @@ fn receive_event(mut server: ResMut<RenetServer>, mut evw_got_event: EventWriter
 
             match msg {
                 NettyEventMessage::SendNettyEvent { component_id, raw_data } => {
-                    evw_got_event.send(GotNetworkEvent {
+                    evw_got_event.write(GotNetworkEvent {
                         component_id,
                         raw_data,
                         client_id,
@@ -158,7 +156,7 @@ fn parse_event<T: NettyEvent>(
             continue;
         };
 
-        evw_custom_event.send(NettyEventReceived {
+        evw_custom_event.write(NettyEventReceived {
             event,
             client_id: ev.client_id,
         });

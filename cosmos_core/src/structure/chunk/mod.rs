@@ -7,11 +7,8 @@ use std::rc::Rc;
 
 use bevy::ecs::query::{QueryData, QueryFilter, ROQueryItem, With};
 use bevy::ecs::system::{Commands, Query};
-use bevy::hierarchy::{BuildChildren, DespawnRecursiveExt};
-use bevy::log::{error, warn};
-use bevy::prelude::{App, Component, Entity, Event, Vec3};
-use bevy::reflect::Reflect;
-use bevy::utils::HashMap;
+use bevy::platform::collections::HashMap;
+use bevy::prelude::*;
 use serde::{Deserialize, Serialize};
 
 use crate::block::data::{BlockData, BlockDataIdentifier};
@@ -290,8 +287,8 @@ impl Chunk {
             // Don't send block data changed event here, since the only way this happens is if the block itself is changed
             // to another block.
 
-            if let Some(ecmds) = bs_commands.commands.get_entity(ent) {
-                ecmds.despawn_recursive();
+            if let Ok(mut ecmds) = bs_commands.commands.get_entity(ent) {
+                ecmds.despawn();
             }
         }
     }
@@ -319,7 +316,7 @@ impl Chunk {
 
             system_params.commands.entity(data_ent).insert(data);
 
-            system_params.ev_writer.send(BlockDataChangedEvent {
+            system_params.ev_writer.write(BlockDataChangedEvent {
                 block_data_entity: Some(data_ent),
                 block: StructureBlock::new(self.chunk_coordinates().first_structure_block() + coords, structure_entity),
             });
@@ -339,8 +336,8 @@ impl Chunk {
                             block_id: id,
                         },
                     },
+                    ChildOf(chunk_entity),
                 ))
-                .set_parent(chunk_entity)
                 .id();
 
             self.block_data_components.push((
@@ -356,7 +353,7 @@ impl Chunk {
 
             self.block_data.insert((id, coords), data_ent);
 
-            system_params.ev_writer.send(BlockDataChangedEvent {
+            system_params.ev_writer.write(BlockDataChangedEvent {
                 block_data_entity: Some(data_ent),
                 block: StructureBlock::new(self.chunk_coordinates().first_structure_block() + coords, structure_entity),
             });
@@ -390,14 +387,16 @@ impl Chunk {
         }
 
         let data_ent = commands
-            .spawn(BlockData {
-                data_count: 1,
-                identifier: BlockDataIdentifier {
-                    block: StructureBlock::new(self.chunk_coordinates().first_structure_block() + coords, structure_entity),
-                    block_id,
+            .spawn((
+                BlockData {
+                    data_count: 1,
+                    identifier: BlockDataIdentifier {
+                        block: StructureBlock::new(self.chunk_coordinates().first_structure_block() + coords, structure_entity),
+                        block_id,
+                    },
                 },
-            })
-            .set_parent(chunk_entity)
+                ChildOf(chunk_entity),
+            ))
             .id();
 
         self.block_data_components.push((
@@ -458,13 +457,16 @@ impl Chunk {
         } else {
             let id = self.block_at(coords);
 
-            let mut ecmds = system_params.commands.spawn(BlockData {
-                data_count: 1,
-                identifier: BlockDataIdentifier {
-                    block: StructureBlock::new(self.chunk_coordinates().first_structure_block() + coords, structure_entity),
-                    block_id: id,
+            let mut ecmds = system_params.commands.spawn((
+                BlockData {
+                    data_count: 1,
+                    identifier: BlockDataIdentifier {
+                        block: StructureBlock::new(self.chunk_coordinates().first_structure_block() + coords, structure_entity),
+                        block_id: id,
+                    },
                 },
-            });
+                ChildOf(chunk_entity),
+            ));
 
             self.block_data_components.push((
                 coords,
@@ -477,8 +479,6 @@ impl Chunk {
                 },
             ));
 
-            ecmds.set_parent(chunk_entity);
-
             let data_ent = ecmds.id();
 
             let data = create_data_closure(data_ent);
@@ -490,7 +490,7 @@ impl Chunk {
             data_ent
         };
 
-        system_params.ev_writer.send(BlockDataChangedEvent {
+        system_params.ev_writer.write(BlockDataChangedEvent {
             block_data_entity: Some(data_ent),
             block: StructureBlock::new(self.chunk_coordinates().first_structure_block() + coords, structure_entity),
         });
@@ -525,7 +525,7 @@ impl Chunk {
 
         match query.get_mut(data_ent) {
             Ok(result) => {
-                // block_system_params.ev_writer.send(BlockDataChangedEvent {
+                // block_system_params.ev_writer.write(BlockDataChangedEvent {
                 //     block_data_entity: Some(data_ent),
                 //     block: StructureBlock::new(self.chunk_coordinates().first_structure_block() + coords),
                 //     structure_entity,
@@ -574,7 +574,7 @@ impl Chunk {
             let id = self.block_at(coords);
             self.block_data.remove(&(id, coords));
 
-            system_params.ev_writer.send(BlockDataChangedEvent {
+            system_params.ev_writer.write(BlockDataChangedEvent {
                 block_data_entity: None,
                 block: StructureBlock::new(self.chunk_coordinates().first_structure_block() + coords, structure_entity),
             });
@@ -583,7 +583,7 @@ impl Chunk {
         } else {
             system_params.commands.entity(ent).remove::<T>();
 
-            system_params.ev_writer.send(BlockDataChangedEvent {
+            system_params.ev_writer.write(BlockDataChangedEvent {
                 block_data_entity: Some(ent),
                 block: StructureBlock::new(self.chunk_coordinates().first_structure_block() + coords, structure_entity),
             });

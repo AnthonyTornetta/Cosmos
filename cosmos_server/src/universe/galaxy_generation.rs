@@ -4,12 +4,9 @@
 
 use crate::{init::init_world::ServerSeed, rng::get_rng_for_sector};
 use bevy::{
-    app::Update,
-    core::Name,
-    math::Vec3,
-    prelude::{App, Commands, IntoSystemConfigs, OnEnter, OnExit, Res, ResMut, any_with_component, in_state},
+    platform::collections::HashSet,
+    prelude::*,
     time::common_conditions::{on_real_timer, on_timer},
-    utils::HashSet,
 };
 use cosmos_core::{
     entities::player::Player,
@@ -190,7 +187,7 @@ pub(super) fn register(app: &mut App) {
     app.add_systems(OnExit(GameState::PostLoading), init_game_info)
         .add_systems(OnEnter(GameState::Playing), populate_galaxy)
         .add_systems(
-            Update,
+            FixedUpdate,
             (
                 save_game_info_on_tick
                     .run_if(on_real_timer(Duration::from_secs(5)))

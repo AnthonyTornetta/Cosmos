@@ -6,8 +6,8 @@ use std::{fs, marker::PhantomData};
 
 use bevy::{
     log::warn,
+    platform::collections::HashMap,
     prelude::{App, Resource},
-    utils::HashMap,
 };
 use cosmos_core::{block::Block, item::Item, registry::identifiable::Identifiable};
 

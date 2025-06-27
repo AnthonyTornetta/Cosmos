@@ -3,28 +3,12 @@
 use std::time::Duration;
 
 use bevy::{
-    app::Update,
-    asset::Assets,
     color::palettes::css,
-    core::Name,
-    ecs::{
-        component::Component,
-        entity::Entity,
-        query::{Added, Changed},
-        schedule::IntoSystemConfigs,
-        system::{Commands, Query, Res, ResMut},
-    },
-    math::{Vec3, Vec4},
-    pbr::{MeshMaterial3d, NotShadowCaster, StandardMaterial},
-    prelude::{App, Mesh3d},
-    render::{
-        alpha::AlphaMode,
-        mesh::{Mesh, MeshBuilder, SphereKind, SphereMeshBuilder},
-        view::Visibility,
-    },
-    time::Time,
+    pbr::NotShadowCaster,
+    prelude::*,
+    render::mesh::{SphereKind, SphereMeshBuilder},
 };
-use cosmos_core::{netty::system_sets::NetworkingSystemsSet, structure::shields::Shield};
+use cosmos_core::structure::shields::Shield;
 
 use crate::{
     asset::materials::shield::{MAX_SHIELD_HIT_POINTS, ShieldMaterial, ShieldMaterialExtension},
@@ -149,7 +133,6 @@ pub(super) fn register(app: &mut App) {
             on_change_shield_update_rendering.ambiguous_with(WaypointSet::FocusWaypoints),
             update_shield_times,
         )
-            .after(NetworkingSystemsSet::Between)
             .chain(),
     );
 }

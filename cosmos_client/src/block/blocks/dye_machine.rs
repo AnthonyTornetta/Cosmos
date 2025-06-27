@@ -10,7 +10,6 @@ use cosmos_core::{
             events::client_event::NettyEventWriter,
             mapping::{Mappable, NetworkMapping},
         },
-        system_sets::NetworkingSystemsSet,
     },
     prelude::{Structure, StructureBlock},
     state::GameState,
@@ -44,7 +43,7 @@ fn open_dye_ui(
         return;
     };
 
-    let Ok(lp) = q_local_player.get_single() else {
+    let Ok(lp) = q_local_player.single() else {
         return;
     };
 
@@ -160,7 +159,7 @@ fn click_color_btn(
         };
 
         if let Ok(b) = btn_color.1.map_to_server(&netty_mapping) {
-            nevw_dye_block.send(DyeBlock {
+            nevw_dye_block.write(DyeBlock {
                 block: b,
                 color: btn_color.0,
             });
@@ -190,7 +189,6 @@ pub(super) fn register(app: &mut App) {
             click_color_btn.in_set(UiSystemSet::FinishUi),
         )
             .chain()
-            .in_set(NetworkingSystemsSet::Between)
             .run_if(in_state(GameState::Playing)),
     )
     .register_type::<BtnColor>();

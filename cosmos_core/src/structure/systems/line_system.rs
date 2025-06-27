@@ -2,7 +2,7 @@
 
 use std::marker::PhantomData;
 
-use bevy::{prelude::*, reflect::Reflect, utils::HashMap};
+use bevy::{platform::collections::HashMap, prelude::*, reflect::Reflect};
 use serde::{Deserialize, Serialize};
 
 use crate::{

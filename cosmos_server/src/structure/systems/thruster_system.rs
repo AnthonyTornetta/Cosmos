@@ -1,18 +1,13 @@
 //! The thrusters that move a ship
 
-use bevy::{
-    prelude::{
-        App, Commands, Component, EventReader, IntoSystemConfigs, OnEnter, Query, Res, ResMut, SystemSet, Transform, Update, Vec3, With,
-        in_state,
-    },
-    reflect::Reflect,
-    time::Time,
+use bevy::prelude::*;
+use bevy_rapier3d::{
+    plugin::PhysicsSet,
+    prelude::{ExternalImpulse, ReadMassProperties, Velocity},
 };
-use bevy_rapier3d::prelude::{ExternalImpulse, ReadMassProperties, Velocity};
 use cosmos_core::{
     block::{Block, block_events::BlockEventsSet},
     events::block_events::BlockChangedEvent,
-    netty::system_sets::NetworkingSystemsSet,
     physics::location::Location,
     prelude::FullStructure,
     registry::Registry,
@@ -71,15 +66,16 @@ fn block_update_system(
 ) {
     for ev in event.read() {
         if let Ok(systems) = systems_query.get(ev.block.structure())
-            && let Ok(mut system) = systems.query_mut(&mut system_query) {
-                if let Some(prop) = energy_storage_blocks.get(blocks.from_numeric_id(ev.old_block)) {
-                    system.block_removed(prop);
-                }
-
-                if let Some(prop) = energy_storage_blocks.get(blocks.from_numeric_id(ev.new_block)) {
-                    system.block_added(prop);
-                }
+            && let Ok(mut system) = systems.query_mut(&mut system_query)
+        {
+            if let Some(prop) = energy_storage_blocks.get(blocks.from_numeric_id(ev.old_block)) {
+                system.block_removed(prop);
             }
+
+            if let Some(prop) = energy_storage_blocks.get(blocks.from_numeric_id(ev.new_block)) {
+                system.block_added(prop);
+            }
+        }
     }
 }
 
@@ -194,28 +190,29 @@ pub(super) fn update_ship_force_and_velocity(
 
             if movement.match_speed
                 && let Some(pilot_focused) = pilot_focused
-                    && let Ok(focused_loc) = q_loc.get(pilot_focused.0) {
-                        let diff = *focused_loc - *loc;
-                        let diff = diff.absolute_coords_f32();
-                        const MAX_FOCUS_DISTANCE: f32 = 2_000.0;
-                        if diff.length_squared() <= MAX_FOCUS_DISTANCE * MAX_FOCUS_DISTANCE {
-                            let Ok(velocity) = q_vel.get(system.structure_entity()) else {
-                                continue;
-                            };
+                && let Ok(focused_loc) = q_loc.get(pilot_focused.0)
+            {
+                let diff = *focused_loc - *loc;
+                let diff = diff.absolute_coords_f32();
+                const MAX_FOCUS_DISTANCE: f32 = 2_000.0;
+                if diff.length_squared() <= MAX_FOCUS_DISTANCE * MAX_FOCUS_DISTANCE {
+                    let Ok(velocity) = q_vel.get(system.structure_entity()) else {
+                        continue;
+                    };
 
-                            let other_vel = q_vel.get(pilot_focused.0).copied().unwrap_or_default();
+                    let other_vel = q_vel.get(pilot_focused.0).copied().unwrap_or_default();
 
-                            let diff = other_vel.linvel - velocity.linvel;
-                            let mut match_vec = diff.normalize_or_zero() * readmass.get().mass;
-                            let delta = time.delta_secs() * MAX_MATCH_SPEED_PER_THRUST * thruster_system.thrust_total();
+                    let diff = other_vel.linvel - velocity.linvel;
+                    let mut match_vec = diff.normalize_or_zero() * readmass.get().mass;
+                    let delta = time.delta_secs() * MAX_MATCH_SPEED_PER_THRUST * thruster_system.thrust_total();
 
-                            if match_vec.length_squared() >= delta * delta {
-                                match_vec = match_vec.normalize() * delta;
-                            }
-
-                            movement_vector += match_vec;
-                        }
+                    if match_vec.length_squared() >= delta * delta {
+                        match_vec = match_vec.normalize() * delta;
                     }
+
+                    movement_vector += match_vec;
+                }
+            }
 
             if movement.braking {
                 let Ok(velocity) = q_vel.get(system.structure_entity()) else {
@@ -268,12 +265,12 @@ pub enum ThrusterSystemSet {
 }
 
 pub(super) fn register(app: &mut App) {
-    app.configure_sets(Update, ThrusterSystemSet::ApplyThrusters);
+    app.configure_sets(FixedUpdate, ThrusterSystemSet::ApplyThrusters);
 
     app.insert_resource(ThrusterBlocks::default())
         .add_systems(OnEnter(GameState::PostLoading), register_thruster_blocks)
         .add_systems(
-            Update,
+            FixedUpdate,
             (
                 structure_loaded_event
                     .in_set(StructureSystemsSet::InitSystems)
@@ -281,15 +278,18 @@ pub(super) fn register(app: &mut App) {
                 block_update_system
                     .in_set(BlockEventsSet::ProcessEvents)
                     .in_set(StructureSystemsSet::UpdateSystemsBlocks),
-                update_ship_force_and_velocity
-                    .after(ShipMovementSet::RemoveShipMovement)
-                    .in_set(ThrusterSystemSet::ApplyThrusters)
-                    .in_set(StructureSystemsSet::UpdateSystemsBlocks)
-                    .in_set(StructureTypeSet::Ship),
             )
                 .chain()
-                .in_set(NetworkingSystemsSet::Between)
                 .run_if(in_state(GameState::Playing)),
+        )
+        .add_systems(
+            FixedUpdate,
+            update_ship_force_and_velocity
+                .before(PhysicsSet::SyncBackend)
+                .after(ShipMovementSet::RemoveShipMovement)
+                .in_set(ThrusterSystemSet::ApplyThrusters)
+                .in_set(StructureSystemsSet::UpdateSystems)
+                .in_set(StructureTypeSet::Ship),
         )
         .register_type::<ThrusterSystem>()
         .register_type::<MaxShipSpeedModifier>();

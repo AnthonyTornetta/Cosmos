@@ -1,12 +1,12 @@
 use std::time::Duration;
 
-use bevy::{asset::LoadState, color::palettes::css, prelude::*, utils::HashMap};
+use bevy::{asset::LoadState, color::palettes::css, platform::collections::HashMap, prelude::*};
 use bevy_hanabi::prelude::*;
 
 use bevy_kira_audio::{Audio, AudioControl, AudioInstance, AudioSource};
 use cosmos_core::{
     ecs::NeedsDespawned,
-    netty::{client::LocalPlayer, sync::ComponentSyncingSet},
+    netty::client::LocalPlayer,
     physics::location::Location,
     projectiles::missile::{Explosion, ExplosionSystemSet, Missile},
     state::GameState,
@@ -15,7 +15,7 @@ use cosmos_core::{
 use crate::{
     asset::asset_loader::load_assets,
     audio::{AudioEmission, CosmosAudioEmitter, DespawnOnNoEmissions},
-    structure::ship::PlayerParentChangingSet,
+    structure::ship::PlayerChildOfChangingSet,
 };
 
 #[derive(Component)]
@@ -33,9 +33,10 @@ fn track_time_alive(
         time_alive.0 += time.delta_secs();
 
         if let Some(max_time) = max_time
-            && time_alive.0 >= max_time.0.as_secs_f32() {
-                commands.entity(ent).insert(NeedsDespawned);
-            }
+            && time_alive.0 >= max_time.0.as_secs_f32()
+        {
+            commands.entity(ent).insert(NeedsDespawned);
+        }
     }
 }
 
@@ -94,7 +95,7 @@ fn respond_to_explosion(
     mut particles: ResMut<ParticleEffectsForColor>,
     mut effects: ResMut<Assets<EffectAsset>>,
 ) {
-    let Ok(local_g_trans) = q_local_player.get_single() else {
+    let Ok(local_g_trans) = q_local_player.single() else {
         return;
     };
 
@@ -253,21 +254,19 @@ pub(super) fn register(app: &mut App) {
     );
 
     app.add_systems(
-        Update,
+        FixedUpdate,
         // (start_explosion_particle_system, respond_to_explosion)
         respond_to_explosion
             // .chain()
             .in_set(ExplosionSystemSet::ProcessExplosions)
-            .ambiguous_with(PlayerParentChangingSet::ChangeParent)
+            .ambiguous_with(PlayerChildOfChangingSet::ChangeChildOf)
             .run_if(in_state(GameState::Playing)),
     )
     .add_systems(
         Update,
-        on_add_missile
-            .in_set(ComponentSyncingSet::PostComponentSyncing)
-            .run_if(in_state(GameState::Playing).or(in_state(GameState::LoadingWorld))),
+        on_add_missile.run_if(in_state(GameState::Playing).or(in_state(GameState::LoadingWorld))),
     )
     .add_systems(OnEnter(GameState::Loading), create_missile_mesh)
-    .add_systems(Update, track_time_alive)
+    .add_systems(FixedUpdate, track_time_alive)
     .init_resource::<ParticleEffectsForColor>();
 }

@@ -1,10 +1,6 @@
 //! Desert biome
 
-use bevy::{
-    app::Update,
-    ecs::{event::EventReader, schedule::IntoSystemConfigs, system::Query},
-    prelude::{App, EventWriter, OnExit, Res, ResMut},
-};
+use bevy::prelude::*;
 use cosmos_core::{
     block::{Block, block_face::BlockFace},
     events::block_events::BlockChangedEvent,
@@ -172,7 +168,7 @@ pub(super) fn register(app: &mut App) {
             .ambiguous_with(RegisterBiomesSet::RegisterBiomes),
     )
     .add_systems(
-        Update,
+        FixedUpdate,
         desert_generate_chunk_features
             .in_set(BiosphereGenerationSet::GenerateChunkFeatures)
             .ambiguous_with(BiosphereGenerationSet::GenerateChunkFeatures),

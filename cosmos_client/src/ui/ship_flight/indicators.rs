@@ -1,9 +1,10 @@
 //! Displays the information a player sees while piloting a ship
 
-use bevy::{asset::LoadState, prelude::*, utils::HashMap};
+use bevy::{asset::LoadState, platform::collections::HashMap, prelude::*};
 use cosmos_core::{
+    ecs::compute_totally_accurate_global_transform,
     faction::{Faction, FactionId, FactionRelation, Factions},
-    netty::{client::LocalPlayer, system_sets::NetworkingSystemsSet},
+    netty::client::LocalPlayer,
     physics::location::Location,
     state::GameState,
     structure::{
@@ -131,7 +132,7 @@ fn create_indicator(
             let handle = indicator_images.0.get(&color_hash).map(|x| x.clone_weak()).unwrap_or_else(|| {
                 let mut img = images.get(&base_texture).expect("Waypoint diamond image removed?").clone();
 
-                for [img_r, img_g, img_b, img_a] in img.data.iter_mut().array_chunks::<4>() {
+                for [img_r, img_g, img_b, img_a] in img.data.as_mut().expect("Invalid image data").iter_mut().array_chunks::<4>() {
                     *img_r = r;
                     *img_g = g;
                     *img_b = b;
@@ -189,11 +190,11 @@ fn add_indicators(
     q_text_entity_with_focus: Query<&IndicatorTextEntity, With<FocusedWaypointEntity>>,
 ) {
     let despawn_indicator = |(entity, indicator): (Entity, &HasIndicator)| {
-        commands.entity(indicator.0).despawn_recursive();
+        commands.entity(indicator.0).despawn();
         commands.entity(entity).remove::<HasIndicator>();
     };
 
-    let Ok(pilot) = player_piloting.get_single() else {
+    let Ok(pilot) = player_piloting.single() else {
         all_indicators.iter().for_each(despawn_indicator);
         return;
     };
@@ -220,9 +221,10 @@ fn add_indicators(
             if distance_sqrd <= max_dist_sqrd {
                 if let Some(has_indicator) = has_indicator {
                     if let Ok(text_entity) = q_text_entity_with_focus.get(has_indicator.0)
-                        && let Ok(mut text) = text_query.get_mut(text_entity.0) {
-                            text.0 = get_distance_text(distance_sqrd.sqrt());
-                        }
+                        && let Ok(mut text) = text_query.get_mut(text_entity.0)
+                    {
+                        text.0 = get_distance_text(distance_sqrd.sqrt());
+                    }
                 } else {
                     create_indicator(
                         entity,
@@ -236,8 +238,8 @@ fn add_indicators(
                 }
             } else if let Some(has_indicator) = has_indicator {
                 commands.entity(entity).remove::<HasIndicator>();
-                if let Some(ecmds) = commands.get_entity(has_indicator.0) {
-                    ecmds.despawn_recursive();
+                if let Ok(mut ecmds) = commands.get_entity(has_indicator.0) {
+                    ecmds.despawn();
                 }
             }
         });
@@ -254,7 +256,7 @@ fn added(
     mut commands: Commands,
 ) {
     ship_query.iter().for_each(|(ent, fac)| {
-        let player_faction = q_local_faction.get_single().ok().and_then(|x| factions.from_id(x));
+        let player_faction = q_local_faction.single().ok().and_then(|x| factions.from_id(x));
         let relation = Faction::relation_with_option(fac.and_then(|x| factions.from_id(x)), player_faction);
 
         commands.entity(ent).insert(IndicatorSettings {
@@ -270,7 +272,7 @@ fn added(
         });
     });
     station_query.iter().for_each(|(ent, fac)| {
-        let player_faction = q_local_faction.get_single().ok().and_then(|x| factions.from_id(x));
+        let player_faction = q_local_faction.single().ok().and_then(|x| factions.from_id(x));
         let relation = Faction::relation_with_option(fac.and_then(|x| factions.from_id(x)), player_faction);
 
         commands.entity(ent).insert(IndicatorSettings {
@@ -309,24 +311,27 @@ fn added(
 }
 
 fn position_diamonds(
-    cam_query: Query<(&Camera, &GlobalTransform), With<MainCamera>>,
+    cam_query: Query<(Entity, &Camera), With<MainCamera>>,
     mut indicators: Query<(Entity, &mut Node, &Indicating)>,
-    global_trans_query: Query<&GlobalTransform>,
+    global_trans_query: Query<&Transform>,
     indicator_settings_query: Query<&IndicatorSettings>,
     mut commands: Commands,
     mut closest_waypoint: ResMut<ClosestWaypoint>,
+    q_trans: Query<(&Transform, Option<&ChildOf>)>,
 ) {
-    let Ok((cam, cam_trans)) = cam_query.get_single() else {
+    let Ok((cam_ent, cam)) = cam_query.single() else {
         warn!("Missing main camera.");
         return;
     };
+
+    let cam_g_trans = compute_totally_accurate_global_transform(cam_ent, &q_trans).expect("Invalid camera heirarchy.");
 
     const MAX_DIST_FROM_CENTER: f32 = 0.4;
     let mut closest = None;
 
     for (entity, mut style, indicating) in indicators.iter_mut() {
         let Ok(settings) = indicator_settings_query.get(indicating.0) else {
-            commands.entity(entity).despawn_recursive();
+            commands.entity(entity).despawn();
             continue;
         };
 
@@ -335,16 +340,16 @@ fn position_diamonds(
         };
 
         let offset = settings.offset;
-        let cam_rot = Quat::from_affine3(&indicating_global_trans.affine());
+        let cam_rot = indicating_global_trans.rotation;
 
-        let entity_location = indicating_global_trans.translation() + cam_rot.mul_vec3(offset);
+        let entity_location = indicating_global_trans.translation + cam_g_trans.rotation() * offset;
 
         // X/Y normalized to [-1, 1] when it's on the screen
-        let Some(mut normalized_screen_pos) = cam.world_to_ndc(cam_trans, entity_location) else {
+        let Some(mut normalized_screen_pos) = cam.world_to_ndc(&cam_g_trans, entity_location) else {
             continue;
         };
 
-        let rot_diff = cam_rot.mul_quat(Quat::from_affine3(&indicating_global_trans.affine()).inverse());
+        let rot_diff = cam_rot.mul_quat(indicating_global_trans.rotation.inverse());
 
         normalized_screen_pos = rot_diff.inverse().mul_vec3(normalized_screen_pos);
 
@@ -416,19 +421,20 @@ fn focus_waypoint(
         return;
     }
 
-    if let Ok((current_ent, indicator_text_ent)) = focused.get_single() {
+    if let Ok((current_ent, indicator_text_ent)) = focused.single() {
         *visibility.get_mut(indicator_text_ent.0).expect("This always has visibility") = Visibility::Hidden;
         commands.entity(current_ent).remove::<FocusedWaypointEntity>();
 
         if let Some(closest_waypoint) = closest_waypoint.0
-            && current_ent != closest_waypoint {
-                let Ok(closest) = q_indicator_text.get(closest_waypoint) else {
-                    return;
-                };
+            && current_ent != closest_waypoint
+        {
+            let Ok(closest) = q_indicator_text.get(closest_waypoint) else {
+                return;
+            };
 
-                *visibility.get_mut(closest.0).expect("This always has visibility") = Visibility::Visible;
-                commands.entity(closest_waypoint).insert(FocusedWaypointEntity);
-            }
+            *visibility.get_mut(closest.0).expect("This always has visibility") = Visibility::Visible;
+            commands.entity(closest_waypoint).insert(FocusedWaypointEntity);
+        }
     } else if let Some(closest_waypoint) = closest_waypoint.0 {
         let Ok(closest) = q_indicator_text.get(closest_waypoint) else {
             return;
@@ -482,7 +488,6 @@ pub(super) fn register(app: &mut App) {
                     .in_set(WaypointSet::CreateWaypoints),
                 focus_waypoint.in_set(WaypointSet::FocusWaypoints).run_if(no_open_menus),
             )
-                .in_set(NetworkingSystemsSet::Between)
                 .chain()
                 .run_if(in_state(GameState::Playing)),
         )

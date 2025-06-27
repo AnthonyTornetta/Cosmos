@@ -5,7 +5,7 @@ use bevy_rapier3d::prelude::{ReadMassProperties, RigidBody};
 
 use crate::{
     persistence::{Blueprintable, LoadingDistance},
-    physics::location::{CosmosBundleSet, Location},
+    physics::location::Location,
     structure::loading::StructureLoadingSet,
 };
 
@@ -29,10 +29,5 @@ fn on_add_station(query: Query<(Entity, &Location), Or<(Added<Station>, (With<St
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_systems(
-        Update,
-        on_add_station
-            .after(CosmosBundleSet::HandleCosmosBundles)
-            .in_set(StructureLoadingSet::AddStructureComponents),
-    );
+    app.add_systems(FixedUpdate, on_add_station.in_set(StructureLoadingSet::AddStructureComponents));
 }

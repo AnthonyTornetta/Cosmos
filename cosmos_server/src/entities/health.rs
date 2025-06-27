@@ -2,8 +2,8 @@ use std::time::Duration;
 
 use bevy::{prelude::*, time::common_conditions::on_timer};
 use cosmos_core::{
+    ecs::sets::FixedUpdateSet,
     entities::health::{Dead, Health, HealthSet, MaxHealth},
-    netty::system_sets::NetworkingSystemsSet,
 };
 
 use crate::persistence::make_persistent::{DefaultPersistentComponent, make_persistent};
@@ -32,9 +32,9 @@ pub(super) fn register(app: &mut App) {
     make_persistent::<Dead>(app);
 
     app.add_systems(
-        Update,
+        FixedUpdate,
         (regenerate_health.run_if(on_timer(Duration::from_secs(10))), on_change_health)
             .in_set(HealthSet::ProcessHealthChange)
-            .in_set(NetworkingSystemsSet::Between),
+            .in_set(FixedUpdateSet::Main),
     );
 }

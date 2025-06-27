@@ -1,27 +1,11 @@
 //! Client-side chat logic
 
-use bevy::{
-    a11y::Focus,
-    app::Update,
-    color::{Alpha, Color, Srgba},
-    core::Name,
-    log::error,
-    prelude::{
-        App, BuildChildren, Changed, ChildBuild, Children, Commands, Component, Entity, EventReader, IntoSystemConfigs, OnEnter, Query,
-        Res, ResMut, Text, TextUiWriter, Visibility, With, Without, in_state,
-    },
-    text::{LineBreak, TextFont, TextLayout},
-    time::Time,
-    ui::{BackgroundColor, FlexDirection, Node, Overflow, OverflowAxis, Val},
-};
+use bevy::{input_focus::InputFocus, prelude::*};
 use cosmos_core::{
     chat::{ClientSendChatMessageEvent, ServerSendChatMessageEvent},
     commands::ClientCommandEvent,
     ecs::NeedsDespawned,
-    netty::{
-        sync::events::client_event::{NettyEventReceived, NettyEventWriter},
-        system_sets::NetworkingSystemsSet,
-    },
+    netty::sync::events::client_event::{NettyEventReceived, NettyEventWriter},
     state::GameState,
 };
 
@@ -65,11 +49,11 @@ fn toggle_chat_display_visibility(
     mut q_chat_display: Query<&mut Visibility, (Without<ChatContainer>, With<ChatDisplay>)>,
     q_chat_box: Query<&Visibility, (Changed<Visibility>, With<ChatContainer>)>,
 ) {
-    let Ok(changed_vis) = q_chat_box.get_single() else {
+    let Ok(changed_vis) = q_chat_box.single() else {
         return;
     };
 
-    let Ok(mut vis) = q_chat_display.get_single_mut() else {
+    let Ok(mut vis) = q_chat_display.single_mut() else {
         return;
     };
 
@@ -226,12 +210,12 @@ fn display_messages(
             ..Default::default()
         };
 
-        let Ok(chat_box) = q_chat_box.get_single() else {
+        let Ok(chat_box) = q_chat_box.single() else {
             error!("No chat box?");
             return;
         };
 
-        let Ok(display_box) = q_display_box.get_single() else {
+        let Ok(display_box) = q_display_box.single() else {
             error!("No display box?");
             return;
         };
@@ -242,19 +226,22 @@ fn display_messages(
             ..Default::default()
         };
 
-        commands
-            .spawn((Name::new("Received chat message"), text.clone(), text_style.clone(), text_layout))
-            .set_parent(chat_box);
+        commands.spawn((
+            Name::new("Received chat message"),
+            text.clone(),
+            text_style.clone(),
+            text_layout,
+            ChildOf(chat_box),
+        ));
 
-        commands
-            .spawn((
-                Name::new("Display received chat message"),
-                ChatMessage(CHAT_MSG_ALIVE_SEC),
-                text,
-                text_style.clone(),
-                text_layout,
-            ))
-            .set_parent(display_box);
+        commands.spawn((
+            Name::new("Display received chat message"),
+            ChatMessage(CHAT_MSG_ALIVE_SEC),
+            text,
+            text_style.clone(),
+            text_layout,
+            ChildOf(display_box),
+        ));
     }
 }
 
@@ -271,11 +258,11 @@ fn send_chat_msg(
         return;
     }
 
-    if q_chat_box.get_single().map(|x| *x == Visibility::Hidden).unwrap_or(true) {
+    if q_chat_box.single().map(|x| *x == Visibility::Hidden).unwrap_or(true) {
         return;
     }
 
-    let Ok(mut val) = q_value.get_single_mut() else {
+    let Ok(mut val) = q_value.single_mut() else {
         return;
     };
 
@@ -285,11 +272,11 @@ fn send_chat_msg(
     }
 
     if let Some(stripped) = value.strip_prefix("/") {
-        nevw_command.send(ClientCommandEvent {
+        nevw_command.write(ClientCommandEvent {
             command_text: stripped.to_owned(),
         });
     } else {
-        nevw_chat.send(ClientSendChatMessageEvent::Global(value.to_owned()));
+        nevw_chat.write(ClientSendChatMessageEvent::Global(value.to_owned()));
     }
 
     // Set val to "" in case toggle chat box and send message are bound to different keys
@@ -302,11 +289,11 @@ fn toggle_chat_box(
     mut q_scroll_box: Query<&mut ScrollBox, With<ChatScrollContainer>>,
     inputs: InputChecker,
     mut commands: Commands,
-    mut focus: ResMut<Focus>,
+    mut focus: ResMut<InputFocus>,
     q_open_menus: Query<(), With<OpenMenu>>,
 ) {
     if inputs.check_just_pressed(CosmosInputs::ToggleChat) {
-        let Ok((chat_box_ent, mut cb)) = q_chat_box.get_single_mut() else {
+        let Ok((chat_box_ent, mut cb)) = q_chat_box.single_mut() else {
             return;
         };
 
@@ -315,7 +302,7 @@ fn toggle_chat_box(
                 return;
             }
 
-            let Ok((input_ent, mut input_value)) = q_input_value.get_single_mut() else {
+            let Ok((input_ent, mut input_value)) = q_input_value.single_mut() else {
                 return;
             };
             input_value.set_value("");
@@ -325,7 +312,7 @@ fn toggle_chat_box(
                 .insert(ShowCursor)
                 .insert(OpenMenu::with_close_method(0, CloseMethod::Visibility));
             focus.0 = Some(input_ent);
-            if let Ok(mut scrollbox) = q_scroll_box.get_single_mut() {
+            if let Ok(mut scrollbox) = q_scroll_box.single_mut() {
                 // Start them at the bottom of the chat messages
                 scrollbox.scroll_amount = Val::Percent(100.0);
             }
@@ -342,12 +329,12 @@ fn toggle_chat_box(
 const MAX_MESSAGES: usize = 100;
 
 fn remove_very_old_messages(mut commands: Commands, q_children: Query<&Children, With<ReceivedMessagesContainer>>) {
-    let Ok(children) = q_children.get_single() else {
+    let Ok(children) = q_children.single() else {
         return;
     };
 
     for ent in children.iter().take(children.len().max(MAX_MESSAGES) - MAX_MESSAGES) {
-        commands.entity(*ent).insert(NeedsDespawned);
+        commands.entity(ent).insert(NeedsDespawned);
     }
 }
 
@@ -366,7 +353,6 @@ pub(super) fn register(app: &mut App) {
         )
             .chain()
             .run_if(in_state(GameState::Playing))
-            .after(CloseMenusSet::CloseMenus)
-            .in_set(NetworkingSystemsSet::Between),
+            .after(CloseMenusSet::CloseMenus),
     );
 }

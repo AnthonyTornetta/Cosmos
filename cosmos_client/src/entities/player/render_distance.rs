@@ -1,6 +1,6 @@
 //! Represents how far the player can see entities
 
-use bevy::prelude::{App, Changed, Condition, IntoSystemConfigs, Query, ResMut, Update, With, in_state};
+use bevy::prelude::*;
 use bevy_renet::renet::RenetClient;
 use cosmos_core::{
     entities::player::render_distance::RenderDistance,
@@ -9,7 +9,7 @@ use cosmos_core::{
 };
 
 fn send_render_distance(query: Query<&RenderDistance, (With<LocalPlayer>, Changed<RenderDistance>)>, mut client: ResMut<RenetClient>) {
-    if let Ok(render_distance) = query.get_single() {
+    if let Ok(render_distance) = query.single() {
         client.send_message(
             NettyChannelClient::Reliable,
             cosmos_encoder::serialize(&ClientReliableMessages::ChangeRenderDistance {

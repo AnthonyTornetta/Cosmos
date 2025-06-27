@@ -6,6 +6,7 @@ use bevy::{
     render::render_resource::{Extent3d, TextureDimension, TextureFormat, TextureUsages},
 };
 use cosmos_core::{
+    ecs::compute_totally_accurate_global_transform,
     netty::client::LocalPlayer,
     prelude::{Asteroid, Ship, Station},
     state::GameState,
@@ -118,39 +119,45 @@ const TOGGLED_REASON: &str = "cosmos:toggled_off";
 
 fn render_on_focus(
     hidden: Option<Res<FocusUiHidden>>,
-    mut q_cam: Query<(Entity, &mut Transform, &mut Camera, Option<&Parent>), With<FocusedCam>>,
+    mut q_cam: Query<(Entity, &mut Transform, &mut Camera, Option<&ChildOf>), With<FocusedCam>>,
     mut focused_ui: Query<&mut HiddenReasons, With<FocusedUi>>,
-    q_local_player_trans: Query<&GlobalTransform, With<LocalPlayer>>,
+    q_local_player: Query<Entity, With<LocalPlayer>>,
     // TODO: Replace this With<Structure> check w/ a FocusCamDistance component read
-    q_g_trans: Query<&GlobalTransform, Or<(With<Ship>, With<Asteroid>, With<Station>)>>,
     q_focused: Query<&Indicating, With<FocusedWaypointEntity>>,
+    q_is_valid_focus_target: Query<(), Or<(With<Asteroid>, With<Ship>, With<Station>)>>,
     mut commands: Commands,
+    q_trans: Query<(&Transform, Option<&ChildOf>), Without<FocusedCam>>,
 ) {
-    let Ok((cam_entity, mut cam_trans, mut cam, parent)) = q_cam.get_single_mut() else {
+    let Ok((cam_entity, mut cam_trans, mut cam, parent)) = q_cam.single_mut() else {
         return;
     };
 
-    let Ok(mut focused_reasons) = focused_ui.get_single_mut() else {
+    let Ok(mut focused_reasons) = focused_ui.single_mut() else {
         if parent.is_some() {
-            commands.entity(cam_entity).remove_parent();
+            commands.entity(cam_entity).remove::<ChildOf>();
         }
         return;
     };
 
     let Some((focused_g_trans, focused_ent)) = q_focused
-        .get_single()
+        .single()
         .ok()
-        .and_then(|indicating| q_g_trans.get(indicating.0).ok().map(|x| (x, indicating.0)))
+        .filter(|indicating| q_is_valid_focus_target.contains(indicating.0))
+        .and_then(|indicating| compute_totally_accurate_global_transform(indicating.0, &q_trans).map(|x| (x, indicating.0)))
     else {
         if parent.is_some() {
-            commands.entity(cam_entity).remove_parent();
+            commands.entity(cam_entity).remove::<ChildOf>();
         }
         cam.is_active = false;
         focused_reasons.add_reason(VIS_REASON);
         return;
     };
 
-    let Ok(player_g_trans) = q_local_player_trans.get_single() else {
+    let Ok(local_ent) = q_local_player.single() else {
+        return;
+    };
+
+    let Some(player_g_trans) = compute_totally_accurate_global_transform(local_ent, &q_trans) else {
         return;
     };
 
@@ -163,8 +170,8 @@ fn render_on_focus(
 
     let local_player_delta = focused_g_trans.rotation().inverse() * (player_g_trans.translation() - focused_g_trans.translation());
 
-    if parent.map(|x| x.get()) != Some(focused_ent) {
-        commands.entity(cam_entity).set_parent(focused_ent);
+    if parent.map(|x| x.parent()) != Some(focused_ent) {
+        commands.entity(cam_entity).insert(ChildOf(focused_ent));
     }
 
     cam_trans.translation = local_player_delta.normalize_or(Vec3::Z) * 100.0;

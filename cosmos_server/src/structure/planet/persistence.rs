@@ -66,9 +66,10 @@ fn generate_planet(entity: Entity, s_data: &SerializedData, planet_save_data: Pl
 fn on_load_planet_structure(query: Query<(Entity, &SerializedData), With<NeedsLoaded>>, mut commands: Commands) {
     for (entity, s_data) in query.iter() {
         if s_data.deserialize_data::<bool>("cosmos:is_planet").unwrap_or(false)
-            && let Ok(planet_save_data) = s_data.deserialize_data::<PlanetSaveData>("cosmos:planet") {
-                generate_planet(entity, s_data, planet_save_data, &mut commands);
-            }
+            && let Ok(planet_save_data) = s_data.deserialize_data::<PlanetSaveData>("cosmos:planet")
+        {
+            generate_planet(entity, s_data, planet_save_data, &mut commands);
+        }
     }
 }
 
@@ -176,7 +177,7 @@ fn load_chunk(
 
         structure.set_chunk(chunk);
 
-        evw_chunk_init.send(ChunkInitEvent {
+        evw_chunk_init.write(ChunkInitEvent {
             structure_entity: ce.structure_entity,
             coords,
             serialized_block_data: None,
@@ -185,7 +186,7 @@ fn load_chunk(
         // Block data is stored per-chunk as `SerializedChunkBlockData` on dynamic structures,
         // instead of fixed structures storing it as `AllBlockData` on the structure itself.
         if let Ok(data) = sd.deserialize_data::<SerializedChunkBlockData>("cosmos:block_data") {
-            evw_chunk_load_block_data.send(ChunkLoadBlockDataEvent {
+            evw_chunk_load_block_data.write(ChunkLoadBlockDataEvent {
                 data,
                 chunk: coords,
                 structure_entity: ce.structure_entity,

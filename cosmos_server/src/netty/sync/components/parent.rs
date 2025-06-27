@@ -1,4 +1,4 @@
-use bevy::{prelude::*, utils::HashMap};
+use bevy::{platform::collections::HashMap, prelude::*};
 use cosmos_core::{
     block::data::BlockData,
     entities::player::Player,
@@ -11,11 +11,12 @@ use cosmos_core::{
         },
     },
     prelude::StructureSystem,
+    utils::ecs::{FixedUpdateRemovedComponents, register_fixed_update_removed_component},
 };
 use renet::{ClientId, RenetServer};
 
 fn on_request_parent(
-    q_component: Query<(&Parent, Option<&StructureSystem>, Option<&ItemStackData>, Option<&BlockData>), Without<NoSendEntity>>,
+    q_component: Query<(&ChildOf, Option<&StructureSystem>, Option<&ItemStackData>, Option<&BlockData>), Without<NoSendEntity>>,
     mut ev_reader: EventReader<RequestedEntityEvent>,
     mut server: ResMut<RenetServer>,
 ) {
@@ -48,7 +49,7 @@ fn on_request_parent(
         };
 
         comps_to_send.entry(ev.client_id).or_default().push(ReplicatedComponentData {
-            raw_data: cosmos_encoder::serialize_uncompressed(&component.get()),
+            raw_data: cosmos_encoder::serialize_uncompressed(&component.parent()),
             entity_identifier,
         });
     }
@@ -58,7 +59,7 @@ fn on_request_parent(
             client_id,
             NettyChannelServer::ComponentReplication,
             cosmos_encoder::serialize(&ComponentReplicationMessage::ComponentReplication {
-                component_id: ComponentId::Parent,
+                component_id: ComponentId::ChildOf,
                 replicated: replicated_component,
             }),
         );
@@ -69,13 +70,13 @@ fn on_change_parent(
     q_changed_component: Query<
         (
             Entity,
-            &Parent,
+            &ChildOf,
             &SyncTo,
             Option<&StructureSystem>,
             Option<&ItemStackData>,
             Option<&BlockData>,
         ),
-        (Without<NoSendEntity>, Changed<Parent>),
+        (Without<NoSendEntity>, Changed<ChildOf>),
     >,
     q_players: Query<&Player>,
     mut server: ResMut<RenetServer>,
@@ -116,7 +117,7 @@ fn on_change_parent(
             })
             .map(|(component, identifier)| ReplicatedComponentData {
                 entity_identifier: identifier,
-                raw_data: cosmos_encoder::serialize_uncompressed(&component.get()),
+                raw_data: cosmos_encoder::serialize_uncompressed(&component.parent()),
             })
             .collect::<Vec<ReplicatedComponentData>>();
 
@@ -124,7 +125,7 @@ fn on_change_parent(
             player.client_id(),
             NettyChannelServer::ComponentReplication,
             cosmos_encoder::serialize(&ComponentReplicationMessage::ComponentReplication {
-                component_id: ComponentId::Parent,
+                component_id: ComponentId::ChildOf,
                 replicated: replicated_data,
             }),
         );
@@ -132,7 +133,7 @@ fn on_change_parent(
 }
 
 fn on_remove_parent(
-    mut removed_components: RemovedComponents<Parent>,
+    removed_components: FixedUpdateRemovedComponents<ChildOf>,
     q_entity_identifier: Query<(Option<&StructureSystem>, Option<&ItemStackData>, Option<&BlockData>)>,
     mut server: ResMut<RenetServer>,
 ) {
@@ -169,7 +170,7 @@ fn on_remove_parent(
         server.broadcast_message(
             NettyChannelServer::ComponentReplication,
             cosmos_encoder::serialize(&ComponentReplicationMessage::RemovedComponent {
-                component_id: ComponentId::Parent,
+                component_id: ComponentId::ChildOf,
                 entity_identifier,
             }),
         );
@@ -177,8 +178,10 @@ fn on_remove_parent(
 }
 
 pub(super) fn register(app: &mut App) {
+    register_fixed_update_removed_component::<ChildOf>(app);
+
     app.add_systems(
-        Update,
+        FixedUpdate,
         (on_request_parent, on_change_parent, on_remove_parent)
             .chain()
             .run_if(resource_exists::<RenetServer>)

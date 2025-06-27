@@ -1,10 +1,6 @@
 //! Server registry syncing
 
-use bevy::{
-    app::Update,
-    log::{info, warn},
-    prelude::{App, Commands, Event, EventWriter, IntoSystemConfigs, Res, ResMut, in_state},
-};
+use bevy::prelude::*;
 use cosmos_core::{
     netty::{
         NettyChannelClient, client_registry::RegistrySyncing, cosmos_encoder, server::ServerLobby, sync::server_syncing::ReadyForSyncing,
@@ -43,7 +39,7 @@ fn listen_for_done_syncing(
 
             match msg {
                 RegistrySyncing::FinishedReceivingRegistries => {
-                    evw_finished_receiving_registries.send(ClientFinishedReceivingRegistriesEvent(client_id));
+                    evw_finished_receiving_registries.write(ClientFinishedReceivingRegistriesEvent(client_id));
                 }
             }
         }
@@ -52,7 +48,7 @@ fn listen_for_done_syncing(
 
 pub(super) fn register(app: &mut App) {
     app.add_systems(
-        Update,
+        FixedUpdate,
         listen_for_done_syncing
             .run_if(in_state(GameState::Playing))
             .in_set(NetworkingSystemsSet::ReceiveMessages),

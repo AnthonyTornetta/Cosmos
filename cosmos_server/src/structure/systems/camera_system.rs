@@ -1,6 +1,6 @@
 //! Represents all the energy stored on a structure
 
-use bevy::prelude::{App, Commands, EventReader, IntoSystemConfigs, OnEnter, Query, Res, ResMut, Update, in_state};
+use bevy::prelude::*;
 
 use cosmos_core::{
     block::{Block, block_events::BlockEventsSet},
@@ -78,7 +78,7 @@ pub(super) fn register(app: &mut App) {
     app.insert_resource(CameraBlocks::default())
         .add_systems(OnEnter(GameState::PostLoading), register_camera_blocks)
         .add_systems(
-            Update,
+            FixedUpdate,
             (
                 camera_structure_loaded_event_processor
                     .in_set(StructureSystemsSet::InitSystems)

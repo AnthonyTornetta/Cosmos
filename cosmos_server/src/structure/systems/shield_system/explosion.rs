@@ -1,14 +1,6 @@
-use bevy::{
-    app::{App, Update},
-    ecs::{
-        event::{EventReader, EventWriter},
-        schedule::IntoSystemConfigs,
-        system::Query,
-    },
-};
+use bevy::prelude::*;
 use cosmos_core::{
     entities::health::{Health, HealthSet},
-    netty::system_sets::NetworkingSystemsSet,
     physics::location::Location,
     structure::shields::Shield,
 };
@@ -31,7 +23,7 @@ fn respond_to_explosion_damage(
             let relative_position = (ev.explosion_location - *shield_location).absolute_coords_f32();
 
             shield.take_damage(damage * 2.0);
-            ev_writer.send(ShieldHitEvent {
+            ev_writer.write(ShieldHitEvent {
                 relative_position,
                 shield_entity: ev.hit_entity,
             });
@@ -45,9 +37,8 @@ fn respond_to_explosion_damage(
 
 pub(super) fn register(app: &mut App) {
     app.add_systems(
-        Update,
+        FixedUpdate,
         respond_to_explosion_damage
-            .in_set(NetworkingSystemsSet::Between)
             .before(HealthSet::ProcessHealthChange)
             .in_set(ShieldSet::OnShieldHit),
     );

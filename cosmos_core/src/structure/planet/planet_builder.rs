@@ -37,5 +37,5 @@ fn on_add_planet(
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_systems(Update, on_add_planet.in_set(StructureLoadingSet::AddStructureComponents));
+    app.add_systems(FixedUpdate, on_add_planet.in_set(StructureLoadingSet::AddStructureComponents));
 }

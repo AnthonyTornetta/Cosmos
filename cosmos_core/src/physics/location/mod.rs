@@ -17,15 +17,12 @@ use std::{
     ops::{Add, AddAssign, Mul, Sub},
 };
 
-#[cfg(doc)]
-use bevy::prelude::Transform;
-use bevy::{
-    prelude::{App, Component, Deref, DerefMut, IntoSystemSetConfigs, SystemSet, Update, Vec3},
-    reflect::Reflect,
-};
-use bevy_rapier3d::na::Vector3;
+use bevy::prelude::*;
+use bevy_rapier3d::{na::Vector3, plugin::PhysicsSet};
 use bigdecimal::{BigDecimal, FromPrimitive};
 use serde::{Deserialize, Serialize};
+
+use crate::ecs::sets::FixedUpdateSet;
 
 pub mod systems;
 
@@ -51,7 +48,7 @@ pub enum LocationPhysicsSet {
 }
 
 // Component impl in systems.rs
-#[derive(Default, Debug, PartialEq, Serialize, Deserialize, Reflect, Clone, Copy)]
+#[derive(Default, Component, Debug, PartialEq, Serialize, Deserialize, Reflect, Clone, Copy)]
 /// Used to represent a point in a near-infinite space
 ///
 /// Rather than represent coordinates as imprecise f32, a location is used instead.
@@ -528,25 +525,21 @@ impl Location {
 /// Stores the location from the previous frame
 pub struct PreviousLocation(pub Location);
 
-#[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
-/// Handles ordering of systems that rely on custom bundles.
-///
-/// Make sure to put anything that creates a custom bundle before this set.
-pub enum CosmosBundleSet {
-    /// Make sure to put anything that creates a custom bundle before this set.
-    ///
-    /// It's also a good idea to put anything that adds a Location to an entity before this set.
-    HandleCosmosBundles,
-}
+#[derive(Component)]
+/// Prints out debug statements for this entity whenever its location is changed via the location
+/// transform syncing steps
+pub struct DebugLocation;
 
 pub(super) fn register(app: &mut App) {
     systems::register(app);
-    app.configure_sets(Update, LocationPhysicsSet::DoPhysics);
+    app.configure_sets(
+        FixedUpdate,
+        LocationPhysicsSet::DoPhysics
+            .after(FixedUpdateSet::PrePhysics)
+            .before(PhysicsSet::SyncBackend),
+    );
 
-    // TODO: Remove system set
-    app.register_type::<Location>()
-        .register_type::<PreviousLocation>()
-        .configure_sets(Update, CosmosBundleSet::HandleCosmosBundles.before(LocationPhysicsSet::DoPhysics));
+    app.register_type::<Location>().register_type::<PreviousLocation>();
 }
 
 #[cfg(test)]

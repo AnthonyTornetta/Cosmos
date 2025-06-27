@@ -25,7 +25,7 @@ fn populate_structures(
     network_mapping: Res<NetworkMapping>,
     mut commands: Commands,
 ) {
-    let Ok(player_location) = player_location.get_single() else {
+    let Ok(player_location) = player_location.single() else {
         return;
     };
 

@@ -1,6 +1,6 @@
 //! A collection of generic UI elements that can be used
 
-use bevy::{a11y::Focus, prelude::*};
+use bevy::{input_focus::InputFocus, prelude::*};
 
 use super::UiSystemSet;
 
@@ -17,7 +17,7 @@ pub mod window;
 pub struct Disabled;
 
 fn clear_focus(
-    mut focused: ResMut<Focus>,
+    mut focused: ResMut<InputFocus>,
     q_interaction: Query<(Entity, &Interaction), Without<Disabled>>,
     mouse_inputs: Res<ButtonInput<MouseButton>>,
 ) {
@@ -42,5 +42,6 @@ pub(super) fn register(app: &mut App) {
     show_cursor::register(app);
     tabbed_view::register(app);
 
-    app.add_systems(Update, clear_focus.in_set(UiSystemSet::PreDoUi));
+    app.add_systems(Update, clear_focus.in_set(UiSystemSet::PreDoUi))
+        .init_resource::<InputFocus>();
 }

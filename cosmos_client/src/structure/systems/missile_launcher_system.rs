@@ -4,8 +4,8 @@ use bevy::{asset::LoadState, color::palettes::css, prelude::*};
 use bevy_kira_audio::prelude::*;
 use cosmos_core::{
     ecs::NeedsDespawned,
-    netty::{client::LocalPlayer, sync::mapping::NetworkMapping, system_sets::NetworkingSystemsSet},
-    physics::location::{Location, LocationPhysicsSet},
+    netty::{client::LocalPlayer, sync::mapping::NetworkMapping},
+    physics::location::Location,
     state::GameState,
     structure::{
         ship::pilot::Pilot,
@@ -85,7 +85,7 @@ fn focus_looking_at(
 
     mapping: Res<NetworkMapping>,
 ) {
-    let Ok(pilot) = q_local_player.get_single() else {
+    let Ok(pilot) = q_local_player.single() else {
         return;
     };
 
@@ -97,7 +97,7 @@ fn focus_looking_at(
         return;
     };
 
-    let ent = if let Ok(focused_ent) = q_focused.get_single() {
+    let ent = if let Ok(focused_ent) = q_focused.single() {
         focused_ent
     } else {
         if missile_focus.focusing_server_entity.is_some() {
@@ -145,9 +145,9 @@ fn render_lockon_status(
     mut q_style: Query<(&mut Node, &mut ImageNode)>,
     mut q_column_style: Query<&mut Node, Without<ImageNode>>,
 ) {
-    let focus_ui = q_missile_focus_ui.get_single();
+    let focus_ui = q_missile_focus_ui.single();
 
-    let Ok((hovered_system, piloting)) = q_piloting.get_single() else {
+    let Ok((hovered_system, piloting)) = q_piloting.single() else {
         if let Ok((ent, _)) = focus_ui {
             commands.entity(ent).insert(NeedsDespawned);
         }
@@ -382,8 +382,6 @@ pub(super) fn register(app: &mut App) {
         )
             .chain()
             .after(SystemUsageSet::ChangeSystemBeingUsed)
-            .in_set(NetworkingSystemsSet::Between)
-            .after(LocationPhysicsSet::DoPhysics)
             .run_if(in_state(GameState::Playing)),
     );
 }

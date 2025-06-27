@@ -1,14 +1,10 @@
 //! Server fluid logic
 
-use bevy::{
-    app::{App, Update},
-    prelude::{EventReader, IntoSystemConfigs, Query, Res, With},
-};
+use bevy::prelude::*;
 use cosmos_core::{
     block::{Block, block_events::BlockEventsSet, data::BlockData},
     events::block_events::{BlockChangedEvent, BlockDataSystemParams},
     fluid::data::{BlockFluidData, FluidItemData},
-    netty::system_sets::NetworkingSystemsSet,
     registry::{Registry, identifiable::Identifiable},
     structure::Structure,
 };
@@ -54,9 +50,8 @@ pub(super) fn register(app: &mut App) {
     tank::register(app);
 
     app.add_systems(
-        Update,
+        FixedUpdate,
         on_place_tank
-            .in_set(NetworkingSystemsSet::Between)
             .in_set(BlockEventsSet::SendEventsForThisFrame)
             .in_set(FluidInteractionSet::InteractWithFluidBlocks)
             .ambiguous_with(FluidInteractionSet::InteractWithFluidBlocks),

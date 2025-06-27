@@ -2,10 +2,7 @@
 
 use std::time::Duration;
 
-use bevy::{
-    prelude::{App, IntoSystemConfigs, ResMut, Resource, Update, resource_exists},
-    time::common_conditions::on_timer,
-};
+use bevy::{prelude::*, time::common_conditions::on_timer};
 
 /// The maximum amount of ticks per second the client/server will have.
 const MAX_TPS: u64 = 20;

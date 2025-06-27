@@ -1,15 +1,4 @@
-use bevy::{
-    app::{App, Update},
-    ecs::{
-        entity::Entity,
-        event::EventReader,
-        query::{Added, Changed, Without},
-        removal_detection::RemovedComponents,
-        schedule::IntoSystemConfigs,
-        system::{Query, Res, ResMut},
-    },
-    state::{condition::in_state, state::OnExit},
-};
+use bevy::prelude::*;
 use bevy_renet::renet::RenetServer;
 use cosmos_core::{
     item::Item,
@@ -20,6 +9,7 @@ use cosmos_core::{
     registry::{Registry, identifiable::Identifiable},
     state::GameState,
     structure::systems::{StructureSystem, StructureSystemType, StructureSystems, StructureSystemsSet, SystemActive, sync::SyncableSystem},
+    utils::ecs::{FixedUpdateRemovedComponents, register_fixed_update_removed_component},
 };
 
 fn sync_system<T: SyncableSystem>(
@@ -71,7 +61,7 @@ fn sync_active_systems(
     mut server: ResMut<RenetServer>,
     q_structure_system: Query<&StructureSystem>,
     q_active: Query<Entity, Added<SystemActive>>,
-    mut q_inactive: RemovedComponents<SystemActive>,
+    q_inactive: FixedUpdateRemovedComponents<SystemActive>,
 ) {
     for active in q_active.iter() {
         let Ok(system) = q_structure_system.get(active) else {
@@ -107,8 +97,10 @@ fn sync_active_systems(
 pub fn register_structure_system<T: SyncableSystem>(app: &mut App, activatable: bool, item_icon_unlocalized_name: impl Into<String>) {
     let item_icon_unlocalized_name = item_icon_unlocalized_name.into();
 
+    register_fixed_update_removed_component::<SystemActive>(app);
+
     app.add_systems(
-        Update,
+        FixedUpdate,
         (sync_system::<T>, sync_active_systems, on_request_systems_entity::<T>)
             .after(StructureSystemsSet::UpdateSystems)
             .run_if(in_state(GameState::Playing)),

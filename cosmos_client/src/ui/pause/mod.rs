@@ -39,9 +39,10 @@ fn toggle_pause_menu(
 
     if !q_open_menus.is_empty() {
         if close_topmost_menus(&mut q_open_menus, &mut commands, &mut evw_close_custom_menus)
-            && let Ok(ent) = q_pause_menu.get_single() {
-                commands.entity(ent).insert(Visibility::Visible);
-            }
+            && let Ok(ent) = q_pause_menu.single()
+        {
+            commands.entity(ent).insert(Visibility::Visible);
+        }
         return;
     }
 
@@ -188,7 +189,7 @@ fn close_topmost_menus(
                 *visibility = Visibility::Hidden;
             }
             CloseMethod::Custom => {
-                evw_close_custom_menus.send(CloseMenuEvent(ent));
+                evw_close_custom_menus.write(CloseMenuEvent(ent));
             }
         }
     }
@@ -200,7 +201,7 @@ fn close_topmost_menus(
 struct PauseMenuSettingsMenu;
 
 fn settings_clicked(mut commands: Commands, mut q_pause_menu: Query<&mut Visibility, With<PauseMenu>>) {
-    if let Ok(mut vis) = q_pause_menu.get_single_mut() {
+    if let Ok(mut vis) = q_pause_menu.single_mut() {
         *vis = Visibility::Hidden;
     }
 
@@ -249,7 +250,7 @@ fn disconnect_clicked(mut client: ResMut<RenetClient>) {
 }
 
 fn resume(mut commands: Commands, q_pause_menu: Query<Entity, With<PauseMenu>>) {
-    if let Ok(pause_ent) = q_pause_menu.get_single() {
+    if let Ok(pause_ent) = q_pause_menu.single() {
         commands.entity(pause_ent).insert(NeedsDespawned);
     }
 }

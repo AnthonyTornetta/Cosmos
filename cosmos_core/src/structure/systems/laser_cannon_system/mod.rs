@@ -2,7 +2,7 @@
 
 use std::time::Duration;
 
-use bevy::{prelude::*, reflect::Reflect, utils::HashMap};
+use bevy::{platform::collections::HashMap, prelude::*, reflect::Reflect};
 use serde::{Deserialize, Serialize};
 
 use crate::prelude::BlockCoordinate;
@@ -85,7 +85,7 @@ pub(super) fn register(app: &mut App) {
     app.register_type::<LaserCannonSystem>()
         .register_type::<LineSystemCooldown>()
         .add_systems(
-            Update,
+            FixedUpdate,
             name_laser_cannon_system
                 .ambiguous_with_all() // doesn't matter if this is 1-frame delayed
                 .after(StructureSystemsSet::InitSystems),

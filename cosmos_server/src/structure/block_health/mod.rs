@@ -1,8 +1,6 @@
 //! This handles what to do when a block is destroyed
 
-use bevy::prelude::{
-    App, EventReader, EventWriter, IntoSystemConfigs, IntoSystemSetConfigs, Query, Res, ResMut, SystemSet, Update, in_state,
-};
+use bevy::prelude::*;
 use bevy_renet::renet::RenetServer;
 use cosmos_core::{
     block::{Block, block_events::BlockEventsSet},
@@ -65,7 +63,7 @@ pub enum BlockHealthSet {
 
 pub(super) fn register(app: &mut App) {
     app.configure_sets(
-        Update,
+        FixedUpdate,
         (
             BlockHealthSet::SendHealthChanges,
             BlockHealthSet::ProcessHealthChanges
@@ -78,7 +76,7 @@ pub(super) fn register(app: &mut App) {
     );
 
     app.add_systems(
-        Update,
+        FixedUpdate,
         (monitor_block_health_changed, monitor_block_destroyed)
             .in_set(BlockHealthSet::ProcessHealthChanges)
             .in_set(BlockEventsSet::SendEventsForNextFrame)

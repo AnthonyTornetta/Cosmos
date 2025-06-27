@@ -2,13 +2,10 @@
 
 use std::fmt::Display;
 
-use bevy::{
-    prelude::{App, Component, IntoSystemConfigs, Query, SystemSet, Update, Vec3, Without},
-    reflect::Reflect,
-};
+use bevy::prelude::*;
 use serde::{Deserialize, Serialize};
 
-use crate::netty::system_sets::NetworkingSystemsSet;
+use crate::ecs::sets::FixedUpdateSet;
 
 use super::pilot::Pilot;
 
@@ -61,12 +58,12 @@ pub enum ShipMovementSet {
 }
 
 pub(super) fn register(app: &mut App) {
-    app.configure_sets(Update, ShipMovementSet::RemoveShipMovement);
+    app.configure_sets(FixedUpdate, ShipMovementSet::RemoveShipMovement);
 
     app.register_type::<ShipMovement>().add_systems(
-        Update,
+        FixedUpdate,
         clear_movement_when_no_pilot
             .in_set(ShipMovementSet::RemoveShipMovement)
-            .in_set(NetworkingSystemsSet::Between),
+            .in_set(FixedUpdateSet::Main),
     );
 }

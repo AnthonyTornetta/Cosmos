@@ -1,10 +1,6 @@
 //! Plains biome
 
-use bevy::{
-    app::Update,
-    ecs::{event::EventReader, schedule::IntoSystemConfigs, system::Query},
-    prelude::{App, EventWriter, OnExit, Res, ResMut},
-};
+use bevy::prelude::*;
 use cosmos_core::{
     block::{
         Block,
@@ -558,7 +554,7 @@ pub(super) fn register(app: &mut App) {
             .ambiguous_with(RegisterBiomesSet::RegisterBiomes),
     )
     .add_systems(
-        Update,
+        FixedUpdate,
         plains_generate_chunk_features
             .ambiguous_with(BiosphereGenerationSet::GenerateChunkFeatures)
             .in_set(BiosphereGenerationSet::GenerateChunkFeatures),

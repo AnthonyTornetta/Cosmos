@@ -1,8 +1,4 @@
-use bevy::{
-    app::App,
-    prelude::{IntoSystemSetConfigs, SystemSet},
-    state::state::OnEnter,
-};
+use bevy::prelude::*;
 use cosmos_core::state::GameState;
 
 mod logic_indicator;

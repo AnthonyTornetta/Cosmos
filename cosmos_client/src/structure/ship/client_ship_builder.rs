@@ -1,9 +1,6 @@
 //! Responsible for building ships for the client.
 
-use bevy::prelude::{
-    Added, App, BuildChildren, ChildBuild, Commands, Entity, Handle, IntoSystemConfigs, Name, Query, Res, Resource, Transform, Update,
-    resource_exists,
-};
+use bevy::prelude::*;
 use bevy_kira_audio::{Audio, AudioControl, AudioInstance, AudioSource};
 use cosmos_core::{
     state::GameState,
@@ -58,7 +55,7 @@ pub(super) fn register(app: &mut App) {
     );
 
     app.add_systems(
-        Update,
+        FixedUpdate,
         client_on_add_ship
             .in_set(StructureLoadingSet::AddStructureComponents)
             .run_if(resource_exists::<EngineIdleSound>),

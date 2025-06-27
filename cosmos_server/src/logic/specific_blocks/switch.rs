@@ -1,9 +1,6 @@
 //! Logic behavior for the switch, a block that outputs a logic signal on all 6 faces when on.
 
-use bevy::{
-    app::{App, Update},
-    prelude::{EventReader, EventWriter, IntoSystemConfigs, OnEnter, Query, Res, ResMut},
-};
+use bevy::prelude::*;
 
 use cosmos_core::{
     block::{
@@ -88,10 +85,10 @@ fn logic_on_output_event_listener(
 pub(super) fn register(app: &mut App) {
     app.add_systems(OnEnter(GameState::PostLoading), register_logic_connections)
         .add_systems(
-            Update,
+            FixedUpdate,
             logic_on_output_event_listener
                 .in_set(LogicSystemSet::Produce)
                 .ambiguous_with(LogicSystemSet::Produce),
         )
-        .add_systems(Update, on_interact_with_switch.in_set(BlockEventsSet::ProcessEvents));
+        .add_systems(FixedUpdate, on_interact_with_switch.in_set(BlockEventsSet::ProcessEvents));
 }

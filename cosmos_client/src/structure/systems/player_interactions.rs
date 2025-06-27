@@ -1,18 +1,9 @@
 //! Player interactions with structures
 
-use bevy::{
-    prelude::{
-        Added, App, Commands, Component, Entity, IntoSystemConfigs, IntoSystemSetConfigs, Query, RemovedComponents, ResMut, SystemSet,
-        Update, With, in_state,
-    },
-    reflect::Reflect,
-};
+use bevy::prelude::*;
 use bevy_renet::renet::RenetClient;
 use cosmos_core::{
-    netty::{
-        NettyChannelClient, client::LocalPlayer, client_unreliable_messages::ClientUnreliableMessages, cosmos_encoder,
-        system_sets::NetworkingSystemsSet,
-    },
+    netty::{NettyChannelClient, client::LocalPlayer, client_unreliable_messages::ClientUnreliableMessages, cosmos_encoder},
     state::GameState,
     structure::{ship::pilot::Pilot, systems::ShipActiveSystem},
 };
@@ -36,7 +27,7 @@ fn check_system_in_use(
     input_handler: InputChecker,
     mut client: ResMut<RenetClient>,
 ) {
-    let Ok(mut hovered_system) = query.get_single_mut() else {
+    let Ok(mut hovered_system) = query.single_mut() else {
         return;
     };
 
@@ -62,7 +53,7 @@ fn check_became_pilot(mut commands: Commands, query: Query<Entity, (Added<Pilot>
 
 fn check_removed_pilot(mut commands: Commands, mut removed: RemovedComponents<Pilot>) {
     for ent in removed.read() {
-        if let Some(mut ecmds) = commands.get_entity(ent) {
+        if let Ok(mut ecmds) = commands.get_entity(ent) {
             ecmds.remove::<HoveredSystem>();
         }
     }
@@ -87,12 +78,9 @@ pub(super) fn register(app: &mut App) {
         Update,
         (
             (check_system_in_use.run_if(no_open_menus), check_removed_pilot)
-                .in_set(NetworkingSystemsSet::Between)
                 .in_set(SystemUsageSet::ChangeSystemBeingUsed)
                 .chain(),
-            check_became_pilot
-                .in_set(NetworkingSystemsSet::Between)
-                .before(SystemUsageSet::AddHoveredSlotComponent),
+            check_became_pilot.before(SystemUsageSet::AddHoveredSlotComponent),
         )
             .run_if(in_state(GameState::Playing)),
     )

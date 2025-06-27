@@ -9,12 +9,12 @@
 #![allow(mismatched_lifetime_syntaxes)]
 
 use bevy::{
-    core::TaskPoolThreadAssignmentPolicy,
     diagnostic::{EntityCountDiagnosticsPlugin, FrameTimeDiagnosticsPlugin, SystemInformationDiagnosticsPlugin},
     prelude::*,
 };
+use bevy_framepace::Limiter;
 use bevy_mod_debugdump::schedule_graph;
-use bevy_rapier3d::plugin::{RapierContextInitialization, RapierPhysicsPlugin};
+use bevy_rapier3d::plugin::{RapierContextInitialization, RapierPhysicsPlugin, TimestepMode};
 use bevy_renet::{RenetServerPlugin, netcode::NetcodeServerPlugin};
 use cosmos_core::{
     netty::sync::registry::RegistrySyncInit, physics::collision_handling::CosmosPhysicsFilter,
@@ -71,11 +71,12 @@ fn main() {
     let default_plugins = DefaultPlugins
         .set(TaskPoolPlugin {
             task_pool_options: TaskPoolOptions {
-                compute: TaskPoolThreadAssignmentPolicy {
-                    min_threads: 1,
-                    max_threads: usize::MAX,
-                    percent: 0.25,
-                },
+                // compute: TaskPoolThreadAssignmentPolicy {
+                //     min_threads: 1,
+                //     max_threads: usize::MAX,
+                //     percent: 0.25,
+                //     ..default()
+                // },
                 ..Default::default()
             },
         })
@@ -84,7 +85,15 @@ fn main() {
     #[cfg(feature = "print-schedule")]
     let default_plugins = default_plugins.disable::<LogPlugin>();
 
+    const FIXED_UPDATE_HZ: u64 = 20;
+
     app
+        // .insert_resource(HostConfig { host_name })
+        .insert_resource(TimestepMode::Fixed {
+            dt: 1.0 / FIXED_UPDATE_HZ as f32,
+            substeps: 4,
+        })
+        .insert_resource(Time::<Fixed>::from_hz(FIXED_UPDATE_HZ as f64))
         // .insert_resource(TimestepMode::Interpolated {
         //     dt: 1.0 / 60.0,
         //     time_scale: 1.0,
@@ -103,10 +112,11 @@ fn main() {
                 playing_state: GameState::Playing,
             },
         ))
+        .add_plugins(bevy_framepace::FramepacePlugin)
         .add_plugins(
             RapierPhysicsPlugin::<CosmosPhysicsFilter>::default()
-                // .in_schedule(FixedUpdate)
-                .with_custom_initialization(RapierContextInitialization::NoAutomaticRapierContext),
+                .with_custom_initialization(RapierContextInitialization::NoAutomaticRapierContext)
+                .in_fixed_schedule(),
         )
         .add_plugins((
             RenetServerPlugin,
@@ -115,9 +125,12 @@ fn main() {
             // Used for diagnostics
             SystemInformationDiagnosticsPlugin,
             EntityCountDiagnosticsPlugin,
-            FrameTimeDiagnosticsPlugin,
+            FrameTimeDiagnosticsPlugin::default(),
             // PerfUiPlugin,
         ))
+        .insert_resource(bevy_framepace::FramepaceSettings {
+            limiter: Limiter::from_framerate(FIXED_UPDATE_HZ as f64),
+        })
         .insert_resource(server_settings);
 
     if cfg!(feature = "print-schedule") {

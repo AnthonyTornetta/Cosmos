@@ -4,17 +4,18 @@ use cosmos_core::{
         ComsChannel, ComsChannelType, ComsMessage, RequestedComs,
         events::{AcceptComsEvent, DeclineComsEvent, RequestCloseComsEvent, RequestComsEvent, SendComsMessage, SendComsMessageType},
     },
-    ecs::NeedsDespawned,
+    ecs::{NeedsDespawned, sets::FixedUpdateSet},
     entities::player::Player,
     netty::{
         server::ServerLobby,
         sync::events::server_event::{NettyEventReceived, NettyEventWriter},
-        system_sets::NetworkingSystemsSet,
     },
     physics::location::Location,
     prelude::{DespawnWithStructure, Ship},
     structure::ship::pilot::Pilot,
 };
+
+use crate::netty::sync::flags::SyncReason;
 
 use super::{NpcRequestCloseComsEvent, NpcSendComsMessage, RequestHailFromNpc, RequestHailToNpc};
 
@@ -30,7 +31,7 @@ fn on_request_coms(
     lobby: Res<ServerLobby>,
     q_pilot: Query<(&Location, &Pilot)>,
     q_ship_loc: Query<&Location, With<Ship>>,
-    q_coms: Query<(&Parent, &ComsChannel)>,
+    q_coms: Query<(&ChildOf, &ComsChannel)>,
     q_requested_coms: Query<&RequestedComs>,
     mut commands: Commands,
 ) {
@@ -67,7 +68,7 @@ fn on_request_coms(
 
         if q_coms
             .iter()
-            .any(|(com_parent, com)| com_parent.get() == this_ship_ent && com.with == other_ship_ent)
+            .any(|(com_parent, com)| com_parent.parent() == this_ship_ent && com.with == other_ship_ent)
         {
             warn!("Already an open channel");
             // There is already an open coms channel
@@ -77,7 +78,7 @@ fn on_request_coms(
         if let Ok((_, pilot)) = q_pilot.get(other_ship_ent) {
             if let Ok(player) = q_player.get(pilot.entity) {
                 info!("Requesting player hail.");
-                nevw_req.send(RequestComsEvent(this_ship_ent), player.client_id());
+                nevw_req.write(RequestComsEvent(this_ship_ent), player.client_id());
                 commands.entity(other_ship_ent).insert(RequestedComs {
                     coms_type: Some(coms_type),
                     from: this_ship_ent,
@@ -85,7 +86,7 @@ fn on_request_coms(
                 });
             } else {
                 info!("Requesting NPC hail.");
-                evw_request_hail_npc.send(RequestHailToNpc {
+                evw_request_hail_npc.write(RequestHailToNpc {
                     player_ship: this_ship_ent,
                     npc_ship: other_ship_ent,
                 });
@@ -150,6 +151,7 @@ fn on_accept_coms(
                     messages: vec![],
                     channel_type,
                 },
+                SyncReason::Data,
             ));
         });
 
@@ -161,6 +163,7 @@ fn on_accept_coms(
                     messages: vec![],
                     channel_type,
                 },
+                SyncReason::Data,
             ));
         });
     }
@@ -183,7 +186,7 @@ fn send_coms_message(
     q_pilot: Query<&Pilot>,
     mut nevr_com_msg: EventReader<NettyEventReceived<SendComsMessage>>,
     mut evr_send_coms: EventReader<NpcSendComsMessage>,
-    mut q_coms: Query<(&Parent, &mut ComsChannel)>,
+    mut q_coms: Query<(&ChildOf, &mut ComsChannel)>,
 ) {
     for (from, message, to) in nevr_com_msg
         .read()
@@ -199,7 +202,7 @@ fn send_coms_message(
                 .map(|ev| (ev.from_ship, SendComsMessageType::Message(ev.message.to_owned()), ev.to_ship)),
         )
     {
-        let Some((_, mut coms)) = q_coms.iter_mut().find(|(parent, coms)| parent.get() == from && coms.with == to) else {
+        let Some((_, mut coms)) = q_coms.iter_mut().find(|(parent, coms)| parent.parent() == from && coms.with == to) else {
             warn!("(1) No coms entry! to: {:?} | ship = {:?}", to, from);
             continue;
         };
@@ -215,7 +218,7 @@ fn send_coms_message(
 
         coms.messages.push(msg.clone());
 
-        let Some((_, mut coms)) = q_coms.iter_mut().find(|(parent, coms)| parent.get() == to && coms.with == from) else {
+        let Some((_, mut coms)) = q_coms.iter_mut().find(|(parent, coms)| parent.parent() == to && coms.with == from) else {
             warn!("(2) No coms entry! to: {:?} | ship = {:?}", to, from);
             continue;
         };
@@ -224,11 +227,11 @@ fn send_coms_message(
     }
 }
 
-fn ensure_coms_still_active(mut commands: Commands, q_coms: Query<(Entity, &ComsChannel, &Parent)>) {
+fn ensure_coms_still_active(mut commands: Commands, q_coms: Query<(Entity, &ComsChannel, &ChildOf)>) {
     for (ent, coms_channel, parent) in q_coms.iter() {
         if q_coms
             .iter()
-            .any(|(_, c, p)| c.with == parent.get() && p.get() == coms_channel.with)
+            .any(|(_, c, p)| c.with == parent.parent() && p.parent() == coms_channel.with)
         {
             continue;
         }
@@ -241,7 +244,7 @@ fn ensure_coms_still_active(mut commands: Commands, q_coms: Query<(Entity, &Coms
 fn on_req_close_coms(
     lobby: Res<ServerLobby>,
     q_pilot: Query<&Pilot>,
-    q_parent: Query<&Parent>,
+    q_parent: Query<&ChildOf>,
     mut nevr_close_coms: EventReader<NettyEventReceived<RequestCloseComsEvent>>,
     mut npc_close_coms: EventReader<NpcRequestCloseComsEvent>,
     q_coms: Query<(Entity, &ComsChannel)>,
@@ -267,16 +270,16 @@ fn on_req_close_coms(
             continue;
         };
 
-        if my_ship_ent.get() != this_ship {
+        if my_ship_ent.parent() != this_ship {
             warn!("No authority to close this coms!");
             continue;
         }
 
-        let coms_parent = my_ship_ent.get();
+        let coms_parent = my_ship_ent.parent();
 
         let Some((other_coms_ent, _)) = q_coms
             .iter()
-            .find(|(ent, x)| x.with == coms_parent && q_parent.get(*ent).expect("Invalid coms heirarchy").get() == coms.with)
+            .find(|(ent, x)| x.with == coms_parent && q_parent.get(*ent).expect("Invalid coms heirarchy").parent() == coms.with)
         else {
             warn!("Unable to find coms.");
             continue;
@@ -309,7 +312,7 @@ fn on_decline_coms(
 
 pub(super) fn register(app: &mut App) {
     app.add_systems(
-        Update,
+        FixedUpdate,
         (
             on_request_coms,
             on_accept_coms,
@@ -320,6 +323,6 @@ pub(super) fn register(app: &mut App) {
             on_decline_coms,
         )
             .chain()
-            .in_set(NetworkingSystemsSet::Between),
+            .in_set(FixedUpdateSet::Main),
     );
 }

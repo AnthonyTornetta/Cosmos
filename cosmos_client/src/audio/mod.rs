@@ -14,14 +14,12 @@ use bevy::{
         entity::Entity,
         query::{Changed, With},
         removal_detection::RemovedComponents,
-        schedule::{IntoSystemConfigs, IntoSystemSetConfigs},
-        system::{Commands, Query, ResMut, Resource},
+        system::{Commands, Query, ResMut},
     },
-    hierarchy::DespawnRecursiveExt,
-    prelude::{Deref, DerefMut, Res, SystemSet, Transform},
+    platform::collections::HashMap,
+    prelude::{Deref, DerefMut, IntoScheduleConfigs, Res, Resource, SystemSet, Transform},
     reflect::Reflect,
     transform::components::GlobalTransform,
-    utils::hashbrown::HashMap,
 };
 use bevy_kira_audio::{AudioSystemSet, prelude::*};
 use bevy_rapier3d::plugin::RapierTransformPropagateSet;
@@ -128,7 +126,7 @@ fn run_spacial_audio(
     mut audio_instances: ResMut<Assets<AudioInstance>>,
     master_volume: Res<MasterVolume>,
 ) {
-    let Ok(receiver_transform) = receiver.get_single() else {
+    let Ok(receiver_transform) = receiver.single() else {
         return;
     };
 
@@ -189,7 +187,7 @@ fn monitor_attached_audio_sources(
     mut audio_instances: ResMut<Assets<AudioInstance>>,
 ) {
     for (entity, audio_emitter) in query.iter() {
-        let cur_items = attached_audio_sources.0.remove(&entity).unwrap_or(vec![]);
+        let cur_items = attached_audio_sources.0.remove(&entity).unwrap_or_default();
 
         let new_items = audio_emitter
             .emissions
@@ -210,9 +208,10 @@ fn monitor_attached_audio_sources(
         // Stop any removed audio emissions
         for (audio_instance, tween) in remove_vec {
             if let Some(mut ai) = audio_instances.remove(&audio_instance)
-                && ai.state() != PlaybackState::Stopped {
-                    ai.stop(tween);
-                }
+                && ai.state() != PlaybackState::Stopped
+            {
+                ai.stop(tween);
+            }
         }
     }
 }
@@ -234,7 +233,7 @@ fn cleanup_stopped_spacial_instances(
         });
 
         if handles.is_empty() && despawn_when_empty.is_some() {
-            commands.entity(entity).despawn_recursive();
+            commands.entity(entity).despawn();
         }
     }
 }

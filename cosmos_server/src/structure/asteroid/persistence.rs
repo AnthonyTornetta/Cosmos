@@ -59,7 +59,7 @@ fn load_structure(
         } = res
         {
             // Maybe wait till block data is set for this?
-            chunk_set_event_writer.send(ChunkInitEvent {
+            chunk_set_event_writer.write(ChunkInitEvent {
                 structure_entity: entity,
                 coords,
                 serialized_block_data: None,
@@ -69,11 +69,11 @@ fn load_structure(
 
     entity_cmd.insert((structure, Asteroid::new(temperature), loc));
 
-    structure_loaded_event_writer.send(StructureLoadedEvent { structure_entity: entity });
+    structure_loaded_event_writer.write(StructureLoadedEvent { structure_entity: entity });
 
     if let Ok(block_data) = s_data.deserialize_data::<AllBlockData>("cosmos:block_data") {
         for (chunk_coord, data) in block_data.0 {
-            chunk_load_block_data_event_writer.send(ChunkLoadBlockDataEvent {
+            chunk_load_block_data_event_writer.write(ChunkLoadBlockDataEvent {
                 data,
                 chunk: chunk_coord,
                 structure_entity: entity,
@@ -91,19 +91,20 @@ fn on_load_asteroid_blueprint(
 ) {
     for (entity, s_data, needs_blueprinted) in query.iter() {
         if let Ok(temperature) = s_data.deserialize_data::<f32>("cosmos:asteroid")
-            && let Ok(structure) = s_data.deserialize_data::<Structure>("cosmos:structure") {
-                load_structure(
-                    entity,
-                    &mut commands,
-                    needs_blueprinted.spawn_at,
-                    structure,
-                    s_data,
-                    temperature,
-                    &mut chunk_load_block_data_event_writer,
-                    &mut chunk_set_event_writer,
-                    &mut structure_loaded_event_writer,
-                );
-            }
+            && let Ok(structure) = s_data.deserialize_data::<Structure>("cosmos:structure")
+        {
+            load_structure(
+                entity,
+                &mut commands,
+                needs_blueprinted.spawn_at,
+                structure,
+                s_data,
+                temperature,
+                &mut chunk_load_block_data_event_writer,
+                &mut chunk_set_event_writer,
+                &mut structure_loaded_event_writer,
+            );
+        }
     }
 }
 
@@ -116,23 +117,24 @@ fn on_load_asteroid(
 ) {
     for (entity, s_data) in query.iter() {
         if let Ok(temperature) = s_data.deserialize_data::<f32>("cosmos:asteroid")
-            && let Ok(structure) = s_data.deserialize_data::<Structure>("cosmos:structure") {
-                let loc = s_data
-                    .deserialize_data("cosmos:location")
-                    .expect("Every asteroid should have a location when saved!");
+            && let Ok(structure) = s_data.deserialize_data::<Structure>("cosmos:structure")
+        {
+            let loc = s_data
+                .deserialize_data("cosmos:location")
+                .expect("Every asteroid should have a location when saved!");
 
-                load_structure(
-                    entity,
-                    &mut commands,
-                    loc,
-                    structure,
-                    s_data,
-                    temperature,
-                    &mut chunk_load_block_data_event_writer,
-                    &mut chunk_set_event_writer,
-                    &mut structure_loaded_event_writer,
-                );
-            }
+            load_structure(
+                entity,
+                &mut commands,
+                loc,
+                structure,
+                s_data,
+                temperature,
+                &mut chunk_load_block_data_event_writer,
+                &mut chunk_set_event_writer,
+                &mut structure_loaded_event_writer,
+            );
+        }
     }
 }
 

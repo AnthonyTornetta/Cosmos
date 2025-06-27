@@ -5,9 +5,9 @@ use crate::persistence::{
     make_persistent::{DefaultPersistentComponent, make_persistent},
 };
 use bevy::{
+    platform::collections::{HashMap, HashSet},
     prelude::*,
     time::common_conditions::on_timer,
-    utils::{HashMap, hashbrown::HashSet},
 };
 use cosmos_core::{
     block::{
@@ -335,43 +335,45 @@ fn logic_block_changed_event_listener(
             // If was logic block, remove from the logic graph.
             if let Some(logic_block) = logic_blocks.from_id(blocks.from_numeric_id(ev.old_block).unlocalized_name())
                 && let Ok(structure) = q_structure.get_mut(ev.block.structure())
-                    && let Ok(mut logic) = q_logic.get_mut(ev.block.structure()) {
-                        logic.remove_logic_block(
-                            logic_block,
-                            ev.old_block_rotation(),
-                            ev.block.coords(),
-                            &structure,
-                            entity,
-                            &events_by_coords,
-                            &blocks,
-                            &logic_blocks,
-                            &logic_wire_colors,
-                            &mut evw_queue_logic_output,
-                            &mut evw_queue_logic_input,
-                        )
-                    }
+                && let Ok(mut logic) = q_logic.get_mut(ev.block.structure())
+            {
+                logic.remove_logic_block(
+                    logic_block,
+                    ev.old_block_rotation(),
+                    ev.block.coords(),
+                    &structure,
+                    entity,
+                    &events_by_coords,
+                    &blocks,
+                    &logic_blocks,
+                    &logic_wire_colors,
+                    &mut evw_queue_logic_output,
+                    &mut evw_queue_logic_input,
+                )
+            }
 
             // If is now logic block, add to the logic graph.
             if let Some(logic_block) = logic_blocks.from_id(blocks.from_numeric_id(ev.new_block).unlocalized_name())
                 && let Ok(mut structure) = q_structure.get_mut(ev.block.structure())
-                    && let Ok(mut logic) = q_logic.get_mut(ev.block.structure()) {
-                        let coords = ev.block.coords();
-                        logic.add_logic_block(
-                            logic_block,
-                            ev.new_block_rotation(),
-                            coords,
-                            &structure,
-                            entity,
-                            &events_by_coords,
-                            &blocks,
-                            &logic_blocks,
-                            &logic_wire_colors,
-                            &mut evw_queue_logic_output,
-                            &mut evw_queue_logic_input,
-                        );
-                        // Add the logic block's internal data storage to the structure.
-                        structure.insert_block_data(coords, BlockLogicData(0), &mut bs_params, &mut q_block_data, &q_has_data);
-                    }
+                && let Ok(mut logic) = q_logic.get_mut(ev.block.structure())
+            {
+                let coords = ev.block.coords();
+                logic.add_logic_block(
+                    logic_block,
+                    ev.new_block_rotation(),
+                    coords,
+                    &structure,
+                    entity,
+                    &events_by_coords,
+                    &blocks,
+                    &logic_blocks,
+                    &logic_wire_colors,
+                    &mut evw_queue_logic_output,
+                    &mut evw_queue_logic_input,
+                );
+                // Add the logic block's internal data storage to the structure.
+                structure.insert_block_data(coords, BlockLogicData(0), &mut bs_params, &mut q_block_data, &q_has_data);
+            }
 
             // Add the event we just processed to the HashMap so we can pretend the structure was updated in the coming iterations DFS.
             events_by_coords.insert(ev.block.coords(), ev.clone());
@@ -424,8 +426,8 @@ fn send_queued_logic_events(
     mut evw_logic_output: EventWriter<LogicOutputEvent>,
     mut evw_logic_input: EventWriter<LogicInputEvent>,
 ) {
-    evw_logic_input.send_batch(inputs.0.drain(..));
-    evw_logic_output.send_batch(outputs.0.drain(..));
+    evw_logic_input.write_batch(inputs.0.drain(..));
+    evw_logic_output.write_batch(outputs.0.drain(..));
 }
 
 /// Many logic blocks simply push their block logic data to their output ports on
@@ -507,7 +509,7 @@ fn perform_initial_block_logic_tick(
     q_logic_data: Query<(Entity, &BlockData), Added<BlockLogicData>>,
 ) {
     for (ent, data) in q_logic_data.iter() {
-        evw_block_data_changed.send(BlockDataChangedEvent {
+        evw_block_data_changed.write(BlockDataChangedEvent {
             block: data.identifier.block,
             block_data_entity: Some(ent),
         });
@@ -533,7 +535,7 @@ pub(super) fn register(app: &mut App) {
     let run_con = on_timer(Duration::from_millis(1000 / LOGIC_TICKS_PER_SECOND));
 
     app.configure_sets(
-        Update,
+        FixedUpdate,
         (
             LogicSystemSet::PreLogicTick.run_if(run_con.clone()),
             LogicSystemSet::EditLogicGraph
@@ -556,16 +558,21 @@ pub(super) fn register(app: &mut App) {
     );
 
     app.add_systems(
-        Update,
+        FixedUpdate,
         (
-            add_default_logic.in_set(StructureLoadingSet::AddStructureComponents),
-            logic_block_changed_event_listener.in_set(LogicSystemSet::EditLogicGraph),
             queue_logic_producers.in_set(LogicSystemSet::QueueProducers),
             queue_logic_consumers.in_set(LogicSystemSet::QueueConsumers),
             send_queued_logic_events.in_set(LogicSystemSet::SendQueues),
             // queue_logic_producers.chain().in_set(LogicSystemSet::BlockLogicDataUpdate),
         )
             .run_if(in_state(GameState::Playing)),
+    )
+    .add_systems(
+        Update,
+        (
+            add_default_logic.in_set(StructureLoadingSet::AddStructureComponents),
+            logic_block_changed_event_listener.in_set(LogicSystemSet::EditLogicGraph),
+        ),
     )
     .register_type::<LogicDriver>()
     .register_type::<LogicGraph>()

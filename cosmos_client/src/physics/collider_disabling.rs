@@ -1,9 +1,7 @@
-use bevy::{
-    app::Update,
-    prelude::{App, Commands, Entity, IntoSystemConfigs, Parent, Query, With, Without, in_state},
-};
+use bevy::prelude::*;
 use cosmos_core::{
-    netty::{client::LocalPlayer, system_sets::NetworkingSystemsSet},
+    ecs::sets::FixedUpdateSet,
+    netty::client::LocalPlayer,
     physics::{
         disable_rigid_body::{DisableRigidBody, DisableRigidBodySet},
         location::{Location, SECTOR_DIMENSIONS},
@@ -17,7 +15,7 @@ const REASON: &str = "cosmos:far_away";
 
 fn disable_colliders(
     mut commands: Commands,
-    mut q_entity: Query<(Entity, &Location, Option<&mut DisableRigidBody>), (Without<LocalPlayer>, Without<Parent>)>,
+    mut q_entity: Query<(Entity, &Location, Option<&mut DisableRigidBody>), (Without<LocalPlayer>, Without<ChildOf>)>,
     q_players: Query<&Location, With<LocalPlayer>>,
 ) {
     for (ent, loc, disabled_rb) in q_entity.iter_mut() {
@@ -45,10 +43,10 @@ fn disable_colliders(
 
 pub(super) fn register(app: &mut App) {
     app.add_systems(
-        Update,
+        FixedUpdate,
         disable_colliders
             .run_if(in_state(GameState::Playing))
-            .in_set(NetworkingSystemsSet::Between)
+            .in_set(FixedUpdateSet::PrePhysics)
             .before(DisableRigidBodySet::DisableRigidBodies),
     );
 }

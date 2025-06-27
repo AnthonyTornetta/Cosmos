@@ -1,8 +1,8 @@
 //! Shared logic for Basic Fabricator recipes.
 
 use bevy::{
+    platform::collections::HashMap,
     prelude::{App, Event, Resource},
-    utils::HashMap,
 };
 use serde::{Deserialize, Serialize};
 

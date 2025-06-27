@@ -2,10 +2,8 @@ use bevy::prelude::*;
 use bevy_renet::renet::RenetServer;
 use cosmos_core::{
     netty::{
-        NettyChannelServer, cosmos_encoder,
-        server_reliable_messages::ServerReliableMessages,
-        sync::server_entity_syncing::RequestedEntityEvent,
-        system_sets::NetworkingSystemsSet,
+        NettyChannelServer, cosmos_encoder, server_reliable_messages::ServerReliableMessages,
+        sync::server_entity_syncing::RequestedEntityEvent, system_sets::NetworkingSystemsSet,
     },
     state::GameState,
     structure::{Structure, ship::Ship},

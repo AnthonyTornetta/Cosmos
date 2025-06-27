@@ -1,15 +1,7 @@
 //! Custom collision filtering system, based off
 //! https://rapier.rs/docs/user_guides/bevy_plugin/advanced_collision_detection/#contact-and-intersection-filtering
 
-use bevy::{
-    app::App,
-    ecs::{
-        component::Component,
-        entity::Entity,
-        system::{Query, SystemParam},
-    },
-    hierarchy::Parent,
-};
+use bevy::{ecs::system::SystemParam, prelude::*};
 use bevy_rapier3d::{
     geometry::SolverFlags,
     pipeline::{BevyPhysicsHooks, PairFilterContextView},
@@ -60,7 +52,7 @@ impl CollisionBlacklist {
     }
 
     /// Checks if this entity should be collided with.
-    pub fn check_should_collide(&self, mut entity_checking: Entity, q_parent: &Query<&Parent>) -> bool {
+    pub fn check_should_collide(&self, mut entity_checking: Entity, q_parent: &Query<&ChildOf>) -> bool {
         self.0.iter().any(|x| {
             if x.entity == entity_checking {
                 return false;
@@ -71,7 +63,7 @@ impl CollisionBlacklist {
             }
 
             while let Ok(check_next) = q_parent.get(entity_checking) {
-                entity_checking = check_next.get();
+                entity_checking = check_next.parent();
                 if x.entity == entity_checking {
                     return false;
                 }
@@ -121,20 +113,22 @@ impl SyncableComponent for CollisionBlacklist {
 #[derive(SystemParam)]
 pub struct CosmosPhysicsFilter<'w, 's> {
     q_collision_blacklist: Query<'w, 's, &'static CollisionBlacklist>,
-    q_parent: Query<'w, 's, &'static Parent>,
+    q_parent: Query<'w, 's, &'static ChildOf>,
 }
 
 impl CosmosPhysicsFilter<'_, '_> {
     fn check_pair_filter(&self, context: PairFilterContextView) -> bool {
         if let Ok(collision_blacklist) = self.q_collision_blacklist.get(context.collider1())
-            && !collision_blacklist.check_should_collide(context.collider2(), &self.q_parent) {
-                return false;
-            }
+            && !collision_blacklist.check_should_collide(context.collider2(), &self.q_parent)
+        {
+            return false;
+        }
 
         if let Ok(collision_blacklist) = self.q_collision_blacklist.get(context.collider2())
-            && !collision_blacklist.check_should_collide(context.collider1(), &self.q_parent) {
-                return false;
-            }
+            && !collision_blacklist.check_should_collide(context.collider1(), &self.q_parent)
+        {
+            return false;
+        }
 
         true
     }

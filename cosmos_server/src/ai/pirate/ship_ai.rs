@@ -1,25 +1,11 @@
 //! Controls pirate ships
 
-use bevy::{
-    app::{App, Update},
-    core::Name,
-    ecs::{
-        component::Component,
-        entity::Entity,
-        query::{Or, With, Without},
-        schedule::{IntoSystemConfigs, IntoSystemSetConfigs, SystemSet},
-        system::{Commands, Query, Res},
-    },
-    hierarchy::BuildChildren,
-    log::error,
-    prelude::{Has, in_state},
-};
+use bevy::prelude::*;
 use cosmos_core::{
     ecs::NeedsDespawned,
     entities::player::Player,
     events::structure::StructureEventListenerSet,
     faction::{FactionId, Factions},
-    netty::system_sets::NetworkingSystemsSet,
     physics::location::Location,
     projectiles::missile::Missile,
     state::GameState,
@@ -122,9 +108,10 @@ fn on_melt_down(
         commands.entity(ent).remove::<(CombatAi, AiControlled, Pirate, Pilot)>();
 
         if let Some(pilot) = pilot
-            && q_is_pirate.contains(pilot.entity) {
-                commands.entity(pilot.entity).insert(NeedsDespawned);
-            }
+            && q_is_pirate.contains(pilot.entity)
+        {
+            commands.entity(pilot.entity).insert(NeedsDespawned);
+        }
     }
 }
 
@@ -175,7 +162,7 @@ fn add_difficuly_increase(mut commands: Commands, q_merchant: Query<Entity, (Wit
 
 pub(super) fn register(app: &mut App) {
     app.configure_sets(
-        Update,
+        FixedUpdate,
         PirateSystemSet::PirateAiLogic
             .before(CombatAiSystemSet::CombatAiLogic)
             .in_set(StructureTypeSet::Ship)
@@ -183,7 +170,7 @@ pub(super) fn register(app: &mut App) {
             .after(StructureEventListenerSet::ChangePilotListener),
     )
     .add_systems(
-        Update,
+        FixedUpdate,
         (
             on_melt_down,
             add_pirate_ai,
@@ -193,7 +180,6 @@ pub(super) fn register(app: &mut App) {
             handle_pirate_targetting.before(ShipMovementSet::RemoveShipMovement),
         )
             .run_if(in_state(GameState::Playing))
-            .in_set(NetworkingSystemsSet::Between)
             .in_set(PirateSystemSet::PirateAiLogic)
             .chain(),
     )

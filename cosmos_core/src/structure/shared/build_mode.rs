@@ -2,14 +2,7 @@
 //!
 //! Note that build mode is currently only intended for ships, but is not yet manually limited to only ships.
 
-use bevy::{
-    math::Quat,
-    prelude::{
-        Added, App, BuildChildrenTransformExt, Changed, Commands, Component, Entity, Event, EventReader, EventWriter, IntoSystemConfigs,
-        IntoSystemSetConfigs, Parent, Query, RemovedComponents, SystemSet, Transform, Update, With, Without,
-    },
-    reflect::Reflect,
-};
+use bevy::prelude::*;
 use bevy_rapier3d::{
     dynamics::RigidBody,
     prelude::{RigidBodyDisabled, Sensor},
@@ -18,12 +11,10 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     block::block_events::BlockEventsSet,
-    netty::{
-        sync::{IdentifiableComponent, SyncableComponent, sync_component},
-        system_sets::NetworkingSystemsSet,
-    },
+    netty::sync::{IdentifiableComponent, SyncableComponent, sync_component},
     prelude::StructureBlock,
     structure::coordinates::CoordinateType,
+    utils::ecs::{FixedUpdateRemovedComponents, register_fixed_update_removed_component},
 };
 
 type BuildModeSymmetries = (Option<CoordinateType>, Option<CoordinateType>, Option<CoordinateType>);
@@ -132,7 +123,7 @@ pub struct ExitBuildModeEvent {
 
 fn enter_build_mode_listener(mut commands: Commands, mut event_reader: EventReader<EnterBuildModeEvent>) {
     for ev in event_reader.read() {
-        let Some(mut ecmds) = commands.get_entity(ev.player_entity) else {
+        let Ok(mut ecmds) = commands.get_entity(ev.player_entity) else {
             continue;
         };
 
@@ -153,9 +144,9 @@ fn on_add_build_mode(mut commands: Commands, q_added_build_mode: Query<(Entity, 
     }
 }
 
-fn on_remove_build_mode(mut commands: Commands, mut removed_components: RemovedComponents<BuildMode>) {
+fn on_remove_build_mode(mut commands: Commands, removed_components: FixedUpdateRemovedComponents<BuildMode>) {
     for ent in removed_components.read() {
-        if let Some(mut ecmds) = commands.get_entity(ent) {
+        if let Ok(mut ecmds) = commands.get_entity(ent) {
             ecmds
                 .remove::<BuildMode>()
                 .remove::<RigidBodyDisabled>()
@@ -168,7 +159,7 @@ fn on_remove_build_mode(mut commands: Commands, mut removed_components: RemovedC
 
 fn exit_build_mode_listener(mut commands: Commands, mut event_reader: EventReader<ExitBuildModeEvent>) {
     for ev in event_reader.read() {
-        let Some(mut ecmds) = commands.get_entity(ev.player_entity) else {
+        let Ok(mut ecmds) = commands.get_entity(ev.player_entity) else {
             continue;
         };
 
@@ -186,18 +177,18 @@ fn exit_build_mode_listener(mut commands: Commands, mut event_reader: EventReade
 struct InBuildModeFlag;
 
 fn exit_build_mode_when_parent_dies(
-    query: Query<Entity, (With<BuildMode>, Without<Parent>)>,
-    changed_query: Query<(Entity, Option<&InBuildModeFlag>), (With<BuildMode>, Changed<Parent>)>,
+    query: Query<Entity, (With<BuildMode>, Without<ChildOf>)>,
+    changed_query: Query<(Entity, Option<&InBuildModeFlag>), (With<BuildMode>, Changed<ChildOf>)>,
     mut event_writer: EventWriter<ExitBuildModeEvent>,
     mut commands: Commands,
 ) {
     for entity in query.iter() {
-        event_writer.send(ExitBuildModeEvent { player_entity: entity });
+        event_writer.write(ExitBuildModeEvent { player_entity: entity });
     }
 
     for (entity, in_build_mode) in changed_query.iter() {
         if in_build_mode.is_some() {
-            event_writer.send(ExitBuildModeEvent { player_entity: entity });
+            event_writer.write(ExitBuildModeEvent { player_entity: entity });
         } else {
             commands.entity(entity).insert(InBuildModeFlag);
         }
@@ -226,8 +217,10 @@ fn adjust_transform_build_mode(mut q_transform: Query<&mut Transform, With<Build
 pub(super) fn register(app: &mut App) {
     sync_component::<BuildMode>(app);
 
+    register_fixed_update_removed_component::<BuildMode>(app);
+
     app.configure_sets(
-        Update,
+        FixedUpdate,
         (
             BuildModeSet::SendEnterBuildModeEvent,
             BuildModeSet::EnterBuildMode,
@@ -238,7 +231,7 @@ pub(super) fn register(app: &mut App) {
     );
 
     app.add_systems(
-        Update,
+        FixedUpdate,
         (
             (enter_build_mode_listener, on_add_build_mode, adjust_transform_build_mode)
                 .chain()
@@ -249,7 +242,6 @@ pub(super) fn register(app: &mut App) {
                 .in_set(BuildModeSet::ExitBuildMode),
         )
             .chain()
-            .in_set(NetworkingSystemsSet::Between)
             .in_set(BlockEventsSet::ProcessEvents),
     )
     .add_event::<EnterBuildModeEvent>()

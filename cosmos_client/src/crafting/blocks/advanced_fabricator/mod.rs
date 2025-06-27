@@ -1,21 +1,10 @@
-use bevy::{
-    app::Update,
-    core::Name,
-    log::error,
-    prelude::{
-        App, Commands, Component, Entity, EventReader, IntoSystemConfigs, IntoSystemSetConfigs, Query, Res, SystemSet, With, in_state,
-    },
-    reflect::Reflect,
-};
+use bevy::prelude::*;
 use cosmos_core::{
     crafting::blocks::advanced_fabricator::OpenAdvancedFabricatorEvent,
     ecs::NeedsDespawned,
-    netty::{
-        sync::{
-            events::client_event::NettyEventReceived,
-            mapping::{Mappable, NetworkMapping},
-        },
-        system_sets::NetworkingSystemsSet,
+    netty::sync::{
+        events::client_event::NettyEventReceived,
+        mapping::{Mappable, NetworkMapping},
     },
     prelude::StructureBlock,
     state::GameState,
@@ -36,7 +25,7 @@ fn open_menu(
         return;
     };
 
-    if let Ok(ent) = q_open_menu.get_single() {
+    if let Ok(ent) = q_open_menu.single() {
         commands.entity(ent).insert(NeedsDespawned);
     }
 
@@ -61,10 +50,7 @@ pub(super) fn register(app: &mut App) {
 
     app.add_systems(
         Update,
-        open_menu
-            .in_set(NetworkingSystemsSet::Between)
-            .in_set(FabricatorMenuSet::OpenMenu)
-            .run_if(in_state(GameState::Playing)),
+        open_menu.in_set(FabricatorMenuSet::OpenMenu).run_if(in_state(GameState::Playing)),
     )
     .register_type::<OpenAdvancedFabricatorMenu>();
 }

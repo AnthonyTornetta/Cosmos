@@ -1,14 +1,10 @@
 //! Handles the loading of structures
 
 use crate::{
-    netty::system_sets::NetworkingSystemsSet,
+    ecs::sets::FixedUpdateSet,
     structure::events::{ChunkSetEvent, StructureLoadedEvent},
 };
-use bevy::{
-    ecs::schedule::{IntoSystemConfigs, IntoSystemSetConfigs, SystemSet},
-    prelude::{App, Commands, Component, EventReader, EventWriter, Query, Update},
-    reflect::Reflect,
-};
+use bevy::prelude::*;
 use serde::{Deserialize, Serialize};
 
 use super::Structure;
@@ -38,7 +34,7 @@ fn listen_chunk_done_loading(
             if chunks_needed.amount_needed == 0 {
                 commands.entity(ev.structure_entity).remove::<ChunksNeedLoaded>();
 
-                event_writer.send(StructureLoadedEvent {
+                event_writer.write(StructureLoadedEvent {
                     structure_entity: ev.structure_entity,
                 });
             }
@@ -77,7 +73,7 @@ pub enum StructureLoadingSet {
 
 pub(super) fn register(app: &mut App) {
     app.configure_sets(
-        Update,
+        FixedUpdate,
         (
             StructureLoadingSet::LoadStructure,
             StructureLoadingSet::AddStructureComponents,
@@ -87,12 +83,13 @@ pub(super) fn register(app: &mut App) {
             StructureLoadingSet::LoadChunkData,
             StructureLoadingSet::StructureLoaded,
         )
-            .after(NetworkingSystemsSet::ProcessReceivedMessages)
+            .before(FixedUpdateSet::NettySend)
+            // .after(NetworkingSystemsSet::ProcessReceivedMessages)
             .chain(),
     );
 
     app.add_systems(
-        Update,
+        FixedUpdate,
         (
             listen_chunk_done_loading.in_set(StructureLoadingSet::LoadChunkData),
             set_structure_done_loading

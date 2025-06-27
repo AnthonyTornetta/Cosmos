@@ -1,19 +1,4 @@
-use bevy::{
-    app::{App, Update},
-    ecs::{
-        entity::Entity,
-        event::EventReader,
-        query::Changed,
-        removal_detection::RemovedComponents,
-        schedule::IntoSystemConfigs,
-        system::{Commands, Query, ResMut},
-    },
-    hierarchy::Parent,
-    log::info,
-    math::Vec3,
-    prelude::{BuildChildrenTransformExt, Res, With},
-    state::condition::in_state,
-};
+use bevy::prelude::*;
 use bevy_renet::renet::RenetServer;
 use cosmos_core::{
     block::{
@@ -30,7 +15,7 @@ use cosmos_core::{
     registry::{Registry, identifiable::Identifiable},
     state::GameState,
     structure::Structure,
-    utils::ownership::MaybeOwned,
+    utils::{ecs::FixedUpdateRemovedComponents, ownership::MaybeOwned},
 };
 use serde::{Deserialize, Serialize};
 
@@ -63,11 +48,13 @@ fn grav_well_handle_block_event(
 
         if block.unlocalized_name() == "cosmos:gravity_well" {
             if let Ok(grav_well) = q_grav_well.get(ev.interactor)
-                && grav_well.block == s_block.coords() && grav_well.structure_entity == s_block.structure() {
-                    commands.entity(ev.interactor).remove::<GravityWell>();
+                && grav_well.block == s_block.coords()
+                && grav_well.structure_entity == s_block.structure()
+            {
+                commands.entity(ev.interactor).remove::<GravityWell>();
 
-                    continue;
-                }
+                continue;
+            }
 
             commands
                 .entity(ev.interactor)
@@ -100,7 +87,7 @@ fn grav_well_handle_block_event(
 fn sync_gravity_well(
     mut server: ResMut<RenetServer>,
     q_grav_well: Query<(Entity, &GravityWell), Changed<GravityWell>>,
-    mut removed_components: RemovedComponents<GravityWell>,
+    removed_components: FixedUpdateRemovedComponents<GravityWell>,
 ) {
     for (entity, under_grav_well) in &q_grav_well {
         server.broadcast_message(
@@ -123,14 +110,14 @@ fn sync_gravity_well(
     }
 }
 
-fn remove_gravity_wells(mut commands: Commands, q_grav_wells: Query<(Entity, &GravityWell, Option<&Parent>)>) {
+fn remove_gravity_wells(mut commands: Commands, q_grav_wells: Query<(Entity, &GravityWell, Option<&ChildOf>)>) {
     for (ent, grav_well, parent) in q_grav_wells.iter() {
         let Some(parent) = parent else {
             commands.entity(ent).remove::<GravityWell>();
             continue;
         };
 
-        if parent.get() != grav_well.structure_entity {
+        if parent.parent() != grav_well.structure_entity {
             commands.entity(ent).remove::<GravityWell>();
         }
     }
@@ -201,7 +188,7 @@ pub(super) fn register(app: &mut App) {
     make_persistent::<GravityWell>(app);
 
     app.add_systems(
-        Update,
+        FixedUpdate,
         (
             grav_well_handle_block_event,
             remove_gravity_wells,

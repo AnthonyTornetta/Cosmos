@@ -1,13 +1,7 @@
 //! Map-waypoint logic
 
-use bevy::{
-    app::Update,
-    color::palettes::css,
-    core::Name,
-    math::Vec3,
-    prelude::{App, Commands, Component, Entity, IntoSystemConfigs, Query, With},
-};
-use cosmos_core::{ecs::NeedsDespawned, netty::system_sets::NetworkingSystemsSet, physics::location::Location};
+use bevy::{color::palettes::css, prelude::*};
+use cosmos_core::{ecs::NeedsDespawned, physics::location::Location};
 
 use crate::{
     input::inputs::{CosmosInputs, InputChecker, InputHandler},
@@ -37,10 +31,10 @@ fn create_waypoint(
         return;
     }
 
-    if let Ok(waypoint) = q_waypoint.get_single() {
+    if let Ok(waypoint) = q_waypoint.single() {
         commands.entity(waypoint).insert(NeedsDespawned);
     } else {
-        let Ok(map_cam) = q_map_cam.get_single() else {
+        let Ok(map_cam) = q_map_cam.single() else {
             return;
         };
 
@@ -58,5 +52,5 @@ fn create_waypoint(
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_systems(Update, create_waypoint.in_set(NetworkingSystemsSet::Between));
+    app.add_systems(Update, create_waypoint);
 }

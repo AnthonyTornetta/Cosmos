@@ -1,15 +1,8 @@
 //! Handles the build mode logic on the client-side
 
 use bevy::{
-    color::LinearRgba,
-    math::primitives::Cuboid,
-    pbr::{MeshMaterial3d, NotShadowCaster, NotShadowReceiver},
-    prelude::{
-        Added, App, AssetServer, Assets, BuildChildren, Changed, ChildBuild, Commands, Component, DespawnRecursiveExt, Entity,
-        IntoSystemConfigs, Mesh, Mesh3d, Name, Parent, Query, RemovedComponents, Res, ResMut, Transform, Update, Vec3, With, Without,
-        in_state,
-    },
-    time::Time,
+    pbr::{NotShadowCaster, NotShadowReceiver},
+    prelude::*,
 };
 use bevy_rapier3d::prelude::Velocity;
 use bevy_renet::renet::RenetClient;
@@ -30,7 +23,7 @@ use cosmos_core::{
 
 use crate::{
     asset::repeating_material::{Repeats, UnlitRepeatedMaterial},
-    entities::player::player_movement::{PlayerMovementSet, process_player_movement},
+    entities::player::player_movement::PlayerMovementSet,
     input::inputs::{CosmosInputs, InputChecker, InputHandler},
     interactions::block_interactions::LookingAt,
     rendering::MainCamera,
@@ -50,13 +43,13 @@ fn control_build_mode(
     time: Res<Time>,
     mut query: Query<(&mut Transform, &mut Velocity, Option<&PlayerAlignment>), (With<LocalPlayer>, With<BuildMode>, Without<MainCamera>)>,
 ) {
-    let Ok((mut transform, mut velocity, player_alignment)) = query.get_single_mut() else {
+    let Ok((mut transform, mut velocity, player_alignment)) = query.single_mut() else {
         return;
     };
     velocity.linvel = Vec3::ZERO;
     velocity.angvel = Vec3::ZERO;
 
-    let cam_trans = transform.mul_transform(*cam_query.single());
+    let cam_trans = transform.mul_transform(*cam_query.single().expect("Missing main camera"));
 
     let max_speed: f32 = match input_handler.check_pressed(CosmosInputs::Sprint) {
         false => 5.0,
@@ -117,7 +110,7 @@ fn place_symmetries(
     input_handler: InputChecker,
     query: Query<&LookingAt, (With<LocalPlayer>, With<BuildMode>)>,
 ) {
-    let Ok(looking_at) = query.get_single() else {
+    let Ok(looking_at) = query.single() else {
         return;
     };
 
@@ -165,7 +158,7 @@ fn place_symmetries(
 }
 
 fn clear_visuals(
-    parent_query: Query<&Parent>,
+    parent_query: Query<&ChildOf>,
     visuals_query: Query<&SymmetryVisuals>,
     mut removed_build_mode: RemovedComponents<BuildMode>,
     q_local_player: Query<(), With<LocalPlayer>>,
@@ -176,10 +169,10 @@ fn clear_visuals(
             continue;
         };
 
-        let Ok(parent) = parent_query.get(entity).map(|p| p.get()) else {
+        let Ok(parent) = parent_query.get(entity).map(|p| p.parent()) else {
             continue;
         };
-        let Some(mut ecmds) = commands.get_entity(parent) else {
+        let Ok(mut ecmds) = commands.get_entity(parent) else {
             continue;
         };
 
@@ -187,13 +180,13 @@ fn clear_visuals(
 
         if let Ok(sym_visuals) = visuals_query.get(parent) {
             if let Some(ent) = sym_visuals.0 {
-                commands.entity(ent).despawn_recursive();
+                commands.entity(ent).despawn();
             }
             if let Some(ent) = sym_visuals.1 {
-                commands.entity(ent).despawn_recursive();
+                commands.entity(ent).despawn();
             }
             if let Some(ent) = sym_visuals.2 {
-                commands.entity(ent).despawn_recursive();
+                commands.entity(ent).despawn();
             }
         }
     }
@@ -201,17 +194,17 @@ fn clear_visuals(
 
 fn change_visuals(
     mut commands: Commands,
-    query: Query<(&BuildMode, &Parent), (With<LocalPlayer>, Changed<BuildMode>)>,
+    query: Query<(&BuildMode, &ChildOf), (With<LocalPlayer>, Changed<BuildMode>)>,
     structure_query: Query<&Structure>,
     visuals: Query<&SymmetryVisuals>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<UnlitRepeatedMaterial>>,
     asset_server: Res<AssetServer>,
 ) {
-    let Ok((build_mode, parent)) = query.get_single() else {
+    let Ok((build_mode, parent)) = query.single() else {
         return;
     };
-    let structure_entity = parent.get();
+    let structure_entity = parent.parent();
     let Ok(structure) = structure_query.get(structure_entity) else {
         return;
     };
@@ -219,15 +212,15 @@ fn change_visuals(
     let mut visuals = visuals.get(structure_entity).copied().unwrap_or_default();
 
     if let Some(ent) = visuals.0 {
-        commands.entity(ent).despawn_recursive();
+        commands.entity(ent).despawn();
         visuals.0 = None;
     }
     if let Some(ent) = visuals.1 {
-        commands.entity(ent).despawn_recursive();
+        commands.entity(ent).despawn();
         visuals.1 = None;
     }
     if let Some(ent) = visuals.2 {
-        commands.entity(ent).despawn_recursive();
+        commands.entity(ent).despawn();
         visuals.2 = None;
     }
 
@@ -349,14 +342,12 @@ fn on_enter_build_mode(q_add_build_mode: Query<(), (Added<BuildMode>, With<Local
 
 pub(super) fn register(app: &mut App) {
     app.add_systems(
-        Update,
+        FixedUpdate,
         (
             (
                 place_symmetries,
                 on_enter_build_mode,
-                control_build_mode
-                    .in_set(PlayerMovementSet::ProcessPlayerMovement)
-                    .ambiguous_with(process_player_movement), // this system will run if process_player_movement doesn't
+                control_build_mode.in_set(PlayerMovementSet::ProcessPlayerMovement),
             )
                 .chain()
                 .in_set(BlockEventsSet::ProcessEvents)

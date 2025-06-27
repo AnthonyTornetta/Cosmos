@@ -36,16 +36,16 @@ pub trait EventWriterCustomSend<E: Event> {
     /// ```rs
     /// event_writer.send_mut(e);
     /// // is the same as
-    /// event_writer.send(e.into());
+    /// event_writer.write(e.into());
     /// // is the same as
-    /// event_writer.send(MutEvent::from(e));
+    /// event_writer.write(MutEvent::from(e));
     /// ```
     fn send_mut(&mut self, e: impl Into<MutEvent<E>>);
 }
 
 impl<E: Event + Send + Sync + 'static> EventWriterCustomSend<E> for EventWriter<'_, MutEvent<E>> {
     fn send_mut(&mut self, e: impl Into<MutEvent<E>>) {
-        self.send(e.into());
+        self.write(e.into());
     }
 }
 
@@ -73,7 +73,7 @@ pub trait MutEventsCommand {
     /// }
     ///
     /// fn send_system(mut event_writer: EventWriter<MutEvent<EventType>>) {
-    ///     event_writer.send(EventType::default().into());
+    ///     event_writer.write(EventType::default().into());
     /// }
     /// ```
     fn add_mut_event<E: Event>(&mut self) -> &mut Self;

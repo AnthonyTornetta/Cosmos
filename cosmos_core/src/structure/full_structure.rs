@@ -110,18 +110,19 @@ impl FullStructure {
         self.set_block_info_at(coords, block_info, None);
 
         if let Some(event_writer) = event_writer
-            && (old_block_info != block_info || old_block != block.id()) {
-                let Some(self_entity) = self.base_structure.self_entity else {
-                    return;
-                };
-                event_writer.send(BlockChangedEvent {
-                    new_block: block.id(),
-                    old_block,
-                    block: StructureBlock::new(coords, self_entity),
-                    old_block_info,
-                    new_block_info: self.block_info_at(coords),
-                });
-            }
+            && (old_block_info != block_info || old_block != block.id())
+        {
+            let Some(self_entity) = self.base_structure.self_entity else {
+                return;
+            };
+            event_writer.write(BlockChangedEvent {
+                new_block: block.id(),
+                old_block,
+                block: StructureBlock::new(coords, self_entity),
+                old_block_info,
+                new_block_info: self.block_info_at(coords),
+            });
+        }
     }
 
     /// Sets the block at the given block coordinates.
@@ -151,10 +152,11 @@ impl FullStructure {
         let block_id = block.id();
 
         if let Some((min, max)) = &self.block_bounds
-            && !(coords.x > min.x && coords.y > min.y && coords.z > min.z && coords.x < max.x && coords.y < max.y && coords.z < max.z) {
-                // Recompute these later lazily
-                self.block_bounds = None;
-            }
+            && !(coords.x > min.x && coords.y > min.y && coords.z > min.z && coords.x < max.x && coords.y < max.y && coords.z < max.z)
+        {
+            // Recompute these later lazily
+            self.block_bounds = None;
+        }
 
         if let Some(chunk) = self.mut_chunk_at(chunk_coords) {
             chunk.set_block_at(chunk_block_coords, block, block_rotation);
@@ -181,7 +183,7 @@ impl FullStructure {
             return;
         };
 
-        event_writer.send(BlockChangedEvent {
+        event_writer.write(BlockChangedEvent {
             new_block: block.id(),
             old_block,
             block: StructureBlock::new(coords, self_entity),

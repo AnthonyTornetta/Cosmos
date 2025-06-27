@@ -22,13 +22,13 @@ fn on_active_quest(
         if !q_local_player.contains(e) {
             continue;
         }
-        if let Ok(ent) = q_active_quest_waypoint.get_single() {
+        if let Ok(ent) = q_active_quest_waypoint.single() {
             commands.entity(ent).insert(NeedsDespawned);
         }
     }
 
     for (aq, ongoing) in q_active.iter() {
-        if let Ok(ent) = q_active_quest_waypoint.get_single() {
+        if let Ok(ent) = q_active_quest_waypoint.single() {
             commands.entity(ent).insert(NeedsDespawned);
         }
 

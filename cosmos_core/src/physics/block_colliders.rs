@@ -2,11 +2,7 @@
 
 use std::f32::consts::PI;
 
-use bevy::{
-    ecs::schedule::{IntoSystemSetConfigs, SystemSet},
-    math::Quat,
-    prelude::{App, IntoSystemConfigs, OnEnter, Res, ResMut, States, Vec3},
-};
+use bevy::prelude::*;
 use bevy_rapier3d::prelude::Collider;
 
 use crate::{

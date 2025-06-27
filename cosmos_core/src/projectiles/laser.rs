@@ -6,10 +6,7 @@ use std::time::Duration;
 use bevy::{
     log::warn,
     pbr::{NotShadowCaster, NotShadowReceiver},
-    prelude::{
-        App, Commands, Component, Entity, EntityCommands, Event, EventWriter, GlobalTransform, IntoSystemConfigs, Parent, Quat, Query, Res,
-        SystemSet, Transform, Update, Vec3, With, Without,
-    },
+    prelude::*,
     time::Time,
 };
 use bevy_rapier3d::{
@@ -18,8 +15,8 @@ use bevy_rapier3d::{
 };
 
 use crate::{
-    ecs::NeedsDespawned,
-    netty::{NoSendEntity, system_sets::NetworkingSystemsSet},
+    ecs::{NeedsDespawned, sets::FixedUpdateSet},
+    netty::NoSendEntity,
     physics::{
         location::{Location, SetPosition},
         player_world::PlayerWorld,
@@ -167,8 +164,8 @@ fn send_laser_hit_events(
     >,
     mut commands: Commands,
     mut event_writer: EventWriter<LaserCollideEvent>,
-    parent_query: Query<&Parent>,
-    chunk_parent_query: Query<&Parent, With<ChunkEntity>>,
+    parent_query: Query<&ChildOf>,
+    chunk_parent_query: Query<&ChildOf, With<ChunkEntity>>,
     transform_query: Query<&GlobalTransform, Without<Laser>>,
     worlds: Query<&Location, With<PlayerWorld>>,
     q_rapier_context: WriteRapierContext,
@@ -209,7 +206,7 @@ fn send_laser_hit_events(
                         if no_collide_entity.0 == entity {
                             false
                         } else if let Ok(parent) = parent_query.get(entity) {
-                            parent.get() != no_collide_entity.0
+                            parent.parent() != no_collide_entity.0
                         } else {
                             true
                         }
@@ -221,13 +218,13 @@ fn send_laser_hit_events(
                 let pos = ray_start + (toi * ray_direction) + (velocity.linvel.normalize() * 0.01);
 
                 if let Ok(parent) = chunk_parent_query.get(entity) {
-                    if let Ok(transform) = transform_query.get(parent.get()) {
+                    if let Ok(transform) = transform_query.get(parent.parent()) {
                         let lph = Quat::from_affine3(&transform.affine())
                             .inverse()
                             .mul_vec3(pos - transform.translation());
 
-                        event_writer.send(LaserCollideEvent {
-                            entity_hit: parent.get(),
+                        event_writer.write(LaserCollideEvent {
+                            entity_hit: parent.parent(),
                             local_position_hit: lph,
                             laser_strength: laser.strength,
                             causer: causer.copied(),
@@ -238,7 +235,7 @@ fn send_laser_hit_events(
                         .inverse()
                         .mul_vec3(pos - transform.translation());
 
-                    event_writer.send(LaserCollideEvent {
+                    event_writer.write(LaserCollideEvent {
                         entity_hit: entity,
                         local_position_hit: lph,
                         laser_strength: laser.strength,
@@ -269,11 +266,12 @@ pub enum LaserSystemSet {
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_systems(
-        Update,
-        (send_laser_hit_events.in_set(LaserSystemSet::SendHitEvents), despawn_lasers)
-            .in_set(NetworkingSystemsSet::Between)
-            .chain(),
-    )
-    .add_event::<LaserCollideEvent>();
+    app.configure_sets(FixedUpdate, LaserSystemSet::SendHitEvents)
+        .add_systems(
+            FixedUpdate,
+            (send_laser_hit_events.in_set(LaserSystemSet::SendHitEvents), despawn_lasers)
+                .in_set(FixedUpdateSet::Main)
+                .chain(),
+        )
+        .add_event::<LaserCollideEvent>();
 }

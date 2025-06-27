@@ -7,7 +7,6 @@ use serde::{Deserialize, Serialize};
 
 use crate::persistence::make_persistent::{DefaultPersistentComponent, make_persistent};
 
-mod kits;
 pub mod persistence;
 pub mod respawn;
 mod spawn_player;

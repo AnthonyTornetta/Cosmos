@@ -5,7 +5,6 @@ use std::time::Duration;
 use bevy::prelude::*;
 use bevy_kira_audio::prelude::*;
 use cosmos_core::{
-    netty::system_sets::NetworkingSystemsSet,
     state::GameState,
     structure::{
         ship::ship_movement::{ShipMovement, ShipMovementSet},
@@ -47,11 +46,12 @@ fn apply_thruster_sound(
 
         if thrusters_off {
             if let Some(mut audio_emitter) = audio_emitter
-                && let Some(thruster_sound_instance) = thruster_sound_instance {
-                    audio_emitter.remove_and_stop(&thruster_sound_instance.0, &mut audio_instances, &mut stop_later);
+                && let Some(thruster_sound_instance) = thruster_sound_instance
+            {
+                audio_emitter.remove_and_stop(&thruster_sound_instance.0, &mut audio_instances, &mut stop_later);
 
-                    commands.entity(entity).remove::<ThrusterSoundInstace>();
-                }
+                commands.entity(entity).remove::<ThrusterSoundInstace>();
+            }
         } else if !thrusters_off && thruster_sound_instance.is_none() {
             let playing_sound: Handle<AudioInstance> = audio.play(audio_handle.0.clone_weak()).with_volume(0.0).looped().handle();
 
@@ -93,7 +93,6 @@ pub(super) fn register(app: &mut App) {
     app.add_systems(
         Update,
         apply_thruster_sound
-            .in_set(NetworkingSystemsSet::Between)
             .in_set(AudioSet::CreateSounds)
             .after(ShipMovementSet::RemoveShipMovement)
             .run_if(in_state(GameState::Playing)),

@@ -15,7 +15,7 @@ use bevy_rapier3d::prelude::*;
 use bevy_renet::{netcode::NetcodeClientTransport, renet::RenetClient};
 use cosmos_core::{
     block::Block,
-    ecs::NeedsDespawned,
+    ecs::{NeedsDespawned, compute_totally_accurate_global_transform},
     entities::player::{Player, render_distance::RenderDistance},
     events::{
         block_events::{BlockChangedEvent, BlockDataChangedEvent},
@@ -32,14 +32,13 @@ use cosmos_core::{
         server_unreliable_messages::ServerUnreliableMessages,
         sync::{
             ComponentEntityIdentifier,
-            client_syncing::ClientReceiveComponents,
             mapping::{Mappable, NetworkMapping, ServerEntity},
         },
         system_sets::NetworkingSystemsSet,
     },
     persistence::LoadingDistance,
     physics::{
-        location::{Location, LocationPhysicsSet, SYSTEM_SECTORS, SetPosition, systems::Anchor},
+        location::{Location, SYSTEM_SECTORS, SetPosition, systems::Anchor},
         player_world::PlayerWorld,
     },
     prelude::Station,
@@ -63,57 +62,59 @@ use crate::{
     netty::lobby::{ClientLobby, PlayerInfo},
     rendering::{CameraPlayerOffset, MainCamera},
     settings::DesiredFov,
-    structure::{planet::generation::SetTerrainGenData, ship::ship_movement::ClientCreateShipMovementSet},
+    structure::planet::generation::SetTerrainGenData,
     ui::{
         crosshair::{CrosshairOffset, CrosshairOffsetSet},
         message::{HudMessage, HudMessages},
     },
-    window::setup::CursorFlagsSet,
 };
 
 #[derive(Component)]
 struct LastRotation(Quat);
 
-fn insert_last_rotation(mut commands: Commands, query: Query<Entity, Added<Structure>>) {
+fn insert_last_rotation(mut commands: Commands, query: Query<Entity, Or<(Added<Structure>, Changed<Pilot>)>>) {
     for ent in query.iter() {
         commands.entity(ent).insert(LastRotation(Quat::IDENTITY));
     }
 }
 
 fn update_crosshair(
-    mut q_ships: Query<(&Pilot, &mut LastRotation, &Transform, Option<&Docked>), (With<Ship>, Changed<Transform>)>,
+    mut q_ships: Query<(&Pilot, &mut LastRotation, Option<&Docked>), (With<Ship>,)>,
     local_player_query: Query<(), With<LocalPlayer>>,
-    camera_query: Query<(&GlobalTransform, &Transform, &Camera), With<MainCamera>>,
+    camera_query: Query<(Entity, &Transform, &Camera), With<MainCamera>>,
     mut crosshair_offset: ResMut<CrosshairOffset>,
     primary_query: Query<&Window, With<PrimaryWindow>>,
+    q_trans: Query<(&Transform, Option<&ChildOf>)>,
 ) {
-    for (pilot, mut last_rotation, transform, docked) in q_ships.iter_mut() {
+    for (pilot, mut last_rotation, docked) in q_ships.iter_mut() {
         if !local_player_query.contains(pilot.entity) {
             continue;
         }
 
-        let Ok((cam_global_trans, cam_trans, camera)) = camera_query.get_single() else {
+        let Ok((cam_ent, cam_trans, camera)) = camera_query.single() else {
             return;
         };
 
-        let Ok(primary) = primary_query.get_single() else {
+        let cam_global_trans = compute_totally_accurate_global_transform(cam_ent, &q_trans).expect("Invalid camera heirarchy.");
+
+        let Ok(primary) = primary_query.single() else {
             return;
         };
+
+        let rot_forward = last_rotation.0.mul_vec3(Vec3::from(cam_trans.forward()));
 
         if docked.is_some() {
             crosshair_offset.x = 0.0;
             crosshair_offset.y = 0.0;
-        } else if let Ok(mut pos_on_screen) = camera.world_to_viewport(
-            cam_global_trans,
-            last_rotation.0.mul_vec3(Vec3::from(cam_trans.forward())) + cam_global_trans.translation(),
-        ) {
+        } else if let Ok(mut pos_on_screen) = camera.world_to_viewport(&cam_global_trans, rot_forward + cam_global_trans.translation()) {
             pos_on_screen -= Vec2::new(primary.width() / 2.0, primary.height() / 2.0);
 
+            // info!("{} {:?} {}", cam_global_trans.translation(), rot_forward, pos_on_screen);
             crosshair_offset.x += pos_on_screen.x;
             crosshair_offset.y -= pos_on_screen.y;
         }
 
-        last_rotation.0 = transform.rotation;
+        last_rotation.0 = cam_global_trans.rotation();
     }
 }
 
@@ -124,35 +125,31 @@ pub struct NetworkTick(pub u64);
 #[derive(Debug, Component, Deref)]
 pub(crate) struct LerpTowards(NettyRigidBody);
 
-fn lerp_towards(
-    mut location_query: Query<&mut Location>,
-    mut query: Query<(Entity, &LerpTowards, &mut Transform, &mut Velocity), With<Location>>,
-) {
-    for (entity, lerp_towards, mut transform, mut velocity) in query.iter_mut() {
+fn lerp_towards(mut query: Query<(&LerpTowards, &mut Transform, &mut Velocity, &mut Location)>) {
+    for (lerp_towards, mut transform, mut velocity, mut location) in query.iter_mut() {
         match lerp_towards.location {
-            NettyRigidBodyLocation::Absolute(location) => {
-                let to_location = location;
-                let mut location = location_query.get_mut(entity).expect("The above With statement guarentees this");
+            NettyRigidBodyLocation::Absolute(abs_loc) => {
+                let to_location = abs_loc;
 
-                if to_location.distance_sqrd(&location) > 100.0 {
-                    location.set_from(&to_location);
-                } else {
-                    let lerpped_loc = *location + (location.relative_coords_to(&to_location)) * 0.1;
-
-                    location.set_from(&lerpped_loc);
-                }
+                // if to_location.distance_sqrd(&location) > 100.0 {
+                location.set_from(&to_location);
+                // } else {
+                // let lerpped_loc = *location + (location.relative_coords_to(&to_location)) * 0.1;
+                //
+                // location.set_from(&lerpped_loc);
+                // }
             }
             NettyRigidBodyLocation::Relative(rel_trans, _) => {
-                if transform.translation.distance_squared(rel_trans) > 100.0 {
-                    transform.translation = rel_trans;
-                } else {
-                    transform.translation = transform.translation.lerp(rel_trans, 0.1);
-                }
+                // if transform.translation.distance_squared(rel_trans) > 100.0 {
+                transform.translation = rel_trans;
+                // } else {
+                //     transform.translation = transform.translation.lerp(rel_trans, 0.1);
+                // }
             }
         };
 
-        transform.rotation = //lerp_towards.rotation;
-            transform.rotation.lerp(lerp_towards.rotation, 0.1);
+        transform.rotation = lerp_towards.rotation;
+        // transform.rotation.lerp(lerp_towards.rotation, 0.1);
 
         let vel = lerp_towards.body_vel.unwrap_or_default();
 
@@ -211,7 +208,7 @@ pub(crate) fn client_sync_players(
         Query<&GlobalTransform>,
     ),
     desired_fov: Res<DesiredFov>,
-    q_parent: Query<&Parent>,
+    q_parent: Query<&ChildOf>,
     blocks: Res<Registry<Block>>,
     mut pilot_change_event_writer: EventWriter<ChangePilotEvent>,
 
@@ -271,7 +268,7 @@ pub(crate) fn client_sync_players(
                                     let parent_rot = q_g_trans.get(parent_ent).map(|x| x.rotation()).unwrap_or_default();
 
                                     if let Ok(parent) = q_parent.get(entity) {
-                                        if parent.get() != parent_ent {
+                                        if parent.parent() != parent_ent {
                                             commands.entity(entity).set_parent_in_place(parent_ent);
                                         }
                                     } else {
@@ -282,9 +279,10 @@ pub(crate) fn client_sync_players(
                                 }
                             };
 
-                            if let Some(mut ecmds) = commands.get_entity(entity) {
+                            if let Ok(mut ecmds) = commands.get_entity(entity) {
                                 ecmds.insert((
                                     loc,
+                                    SetPosition::Transform,
                                     Transform::from_rotation(body.rotation),
                                     body.create_velocity(),
                                     LerpTowards(body),
@@ -327,6 +325,8 @@ pub(crate) fn client_sync_players(
 
                 info!("Player {} ({}) connected!", name.as_str(), id);
 
+                let parent_entity = server_parent_entity.map(|x| network_mapping.client_from_server_or_create(&x, &mut commands));
+
                 // The player entity may have already been created if some of their components were already synced.
                 let mut entity_cmds = if let Some(player_entity) = network_mapping.client_from_server(&server_entity) {
                     commands.entity(player_entity)
@@ -352,14 +352,12 @@ pub(crate) fn client_sync_players(
                     ServerEntity(server_entity),
                 ));
 
+                info!("Got player @ {loc:?}");
+
                 let client_entity = entity_cmds.id();
 
-                if let Some(server_parent_entity) = server_parent_entity {
-                    if let Some(parent_ent) = network_mapping.client_from_server(&server_parent_entity) {
-                        entity_cmds.set_parent_in_place(parent_ent);
-                    } else {
-                        error!("No parent entity Server{server_parent_entity:?} exists for player {client_entity}!");
-                    }
+                if let Some(parent_entity) = parent_entity {
+                    entity_cmds.set_parent_in_place(parent_entity);
                 }
 
                 let player_info = PlayerInfo {
@@ -406,7 +404,7 @@ pub(crate) fn client_sync_players(
                         });
 
                     let physics_world_ent = q_default_rapier_context
-                        .get_single()
+                        .single()
                         .expect("The client has no default rapier context!");
 
                     commands.entity(physics_world_ent).insert((
@@ -422,13 +420,13 @@ pub(crate) fn client_sync_players(
                     client_entity,
                     server_entity: _,
                 }) = lobby.players.remove(&id)
-                    && let Some(mut entity) = commands.get_entity(client_entity)
+                    && let Ok(mut ecmds) = commands.get_entity(client_entity)
                 {
                     if let Ok(player) = query_player.get(client_entity) {
                         info!("Player {} ({id}) disconnected", player.name());
                     }
 
-                    entity.insert(NeedsDespawned);
+                    ecmds.insert(NeedsDespawned);
                 }
             }
             // This could cause issues in the future if a client receives a planet's position first then this packet.
@@ -454,7 +452,7 @@ pub(crate) fn client_sync_players(
                     continue;
                 };
 
-                if let Some(mut ecmds) = commands.get_entity(entity) {
+                if let Ok(mut ecmds) = commands.get_entity(entity) {
                     ecmds.insert(chunks_needed);
                 }
             }
@@ -514,7 +512,7 @@ pub(crate) fn client_sync_players(
 
                     structure.set_chunk(chunk);
 
-                    set_chunk_event_writer.send(ChunkInitEvent {
+                    set_chunk_event_writer.write(ChunkInitEvent {
                         coords: chunk_coords,
                         structure_entity: s_entity,
                         serialized_block_data: serialized_block_data.map(|x| Arc::new(Mutex::new(x))),
@@ -527,7 +525,7 @@ pub(crate) fn client_sync_players(
                 {
                     structure.set_to_empty_chunk(coords);
 
-                    set_chunk_event_writer.send(ChunkInitEvent {
+                    set_chunk_event_writer.write(ChunkInitEvent {
                         coords,
                         structure_entity: s_entity,
                         serialized_block_data: None,
@@ -542,7 +540,7 @@ pub(crate) fn client_sync_players(
                     &mut q_inventory,
                     &mut q_structure,
                     &mut evw_block_data_changed,
-                ) && let Some(mut ecmds) = commands.get_entity(entity)
+                ) && let Ok(mut ecmds) = commands.get_entity(entity)
                 {
                     ecmds.insert(NeedsDespawned);
                 }
@@ -588,7 +586,7 @@ pub(crate) fn client_sync_players(
                     continue;
                 };
 
-                pilot_change_event_writer.send(ChangePilotEvent {
+                pilot_change_event_writer.write(ChangePilotEvent {
                     structure_entity,
                     pilot_entity,
                 });
@@ -609,7 +607,7 @@ pub(crate) fn client_sync_players(
             }
             ServerReliableMessages::PlayerLeaveShip { player_entity } => {
                 if let Some(player_entity) = network_mapping.client_from_server(&player_entity)
-                    && let Some(mut ecmds) = commands.get_entity(player_entity)
+                    && let Ok(mut ecmds) = commands.get_entity(player_entity)
                 {
                     ecmds.remove_parent_in_place();
                 }
@@ -622,7 +620,7 @@ pub(crate) fn client_sync_players(
                     continue;
                 };
 
-                let Some(mut ecmds) = commands.get_entity(player_entity) else {
+                let Ok(mut ecmds) = commands.get_entity(player_entity) else {
                     continue;
                 };
 
@@ -639,7 +637,7 @@ pub(crate) fn client_sync_players(
                 ));
             }
             ServerReliableMessages::BlockHealthChange { changes } => {
-                take_damage_event_writer.send_batch(changes.into_iter().filter_map(|ev| {
+                take_damage_event_writer.write_batch(changes.into_iter().filter_map(|ev| {
                     network_mapping
                         .client_from_server(&ev.structure_entity)
                         .map(|structure_entity| BlockTakeDamageEvent {
@@ -654,7 +652,7 @@ pub(crate) fn client_sync_players(
                 shaders,
                 permutation_table,
             } => {
-                set_terrain_data_ev_writer.send(SetTerrainGenData {
+                set_terrain_data_ev_writer.write(SetTerrainGenData {
                     files: shaders,
                     permutation_table,
                 });
@@ -727,7 +725,7 @@ fn get_entity_identifier_entity_for_despawning(
 
                     structure.set_block_data_entity(identifier.block.coords(), None);
 
-                    block_data_changed.send(BlockDataChangedEvent {
+                    block_data_changed.write(BlockDataChangedEvent {
                         block: identifier.block,
                         block_data_entity: None,
                     });
@@ -781,13 +779,13 @@ fn get_entity_identifier_entity_for_despawning(
 // /// Fixes oddities that happen when changing parent of player
 // fn player_changed_parent(
 //     q_parent: Query<(&GlobalTransform, &Location)>,
-//     mut q_local_player: Query<(&mut Transform, &Location, &Parent), (Changed<Parent>, With<LocalPlayer>)>,
+//     mut q_local_player: Query<(&mut Transform, &Location, &ChildOf), (Changed<ChildOf>, With<LocalPlayer>)>,
 // ) {
-//     let Ok((mut player_trans, player_loc, parent)) = q_local_player.get_single_mut() else {
+//     let Ok((mut player_trans, player_loc, parent)) = q_local_player.single_mut() else {
 //         return;
 //     };
 //
-//     let Ok((parent_trans, parent_loc)) = q_parent.get(parent.get()) else {
+//     let Ok((parent_trans, parent_loc)) = q_parent.get(parent.parent()) else {
 //         return;
 //     };
 //
@@ -805,25 +803,20 @@ pub(super) fn register(app: &mut App) {
             insert_last_rotation,
             update_crosshair.in_set(CrosshairOffsetSet::ApplyCrosshairChanges),
         )
-            .after(ClientCreateShipMovementSet::ProcessShipMovement)
-            .in_set(NetworkingSystemsSet::Between)
-            .after(CursorFlagsSet::ApplyCursorFlagsUpdates)
             .chain(),
     )
     .add_systems(
-        Update,
-        (client_sync_players
-            .before(ClientReceiveComponents::ClientReceiveComponents)
+        FixedUpdate,
+        (client_sync_players, lerp_towards)
+            .chain()
             .in_set(NetworkingSystemsSet::ReceiveMessages)
-            .before(LocationPhysicsSet::DoPhysics))
-        .run_if(in_state(GameState::Playing).or(in_state(GameState::LoadingWorld)))
-        .chain(),
-    )
-    .add_systems(
-        Update,
-        lerp_towards
-            .before(LocationPhysicsSet::DoPhysics)
-            .in_set(NetworkingSystemsSet::Between)
             .run_if(in_state(GameState::Playing).or(in_state(GameState::LoadingWorld))),
     );
+    // .add_systems(
+    //     FixedUpdate,
+    //lerp_towards
+    //         .after(FixedUpdateSet::NettyReceive)
+    //         .before(FixedUpdateSet::Main)
+    //         .run_if(in_state(GameState::Playing).or(in_state(GameState::LoadingWorld))),
+    // );
 }

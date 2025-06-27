@@ -2,23 +2,7 @@
 
 use std::time::Duration;
 
-use bevy::{
-    app::{App, Startup, Update},
-    core::Name,
-    ecs::{
-        component::Component,
-        entity::Entity,
-        query::{With, Without},
-        schedule::{IntoSystemConfigs, IntoSystemSetConfigs, SystemSet},
-        system::{Commands, Query, Res, Resource},
-    },
-    log::info,
-    math::{Quat, Vec3},
-    reflect::Reflect,
-    state::condition::in_state,
-    time::Time,
-    utils::hashbrown::HashMap,
-};
+use bevy::{platform::collections::HashMap, prelude::*};
 use cosmos_core::{
     entities::player::Player,
     physics::location::{Location, SECTOR_DIMENSIONS, Sector, SectorUnit},
@@ -252,14 +236,14 @@ pub(super) fn register(app: &mut App) {
     make_persistent::<PlayerStrength>(app);
 
     app.configure_sets(
-        Update,
+        FixedUpdate,
         MerchantSpawningSet::MerchantSpawningLogic
             .before(LoadingBlueprintSystemSet::BeginLoadingBlueprints)
             .run_if(in_state(GameState::Playing)),
     )
     .add_systems(Startup, load_settings)
     .add_systems(
-        Update,
+        FixedUpdate,
         (add_spawn_times, spawn_merchant_ships, on_needs_merchant_spawned)
             .in_set(MerchantSpawningSet::MerchantSpawningLogic)
             .chain(),

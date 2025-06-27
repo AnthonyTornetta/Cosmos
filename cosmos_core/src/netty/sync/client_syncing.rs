@@ -23,20 +23,12 @@ use crate::state::GameState;
 use crate::structure::Structure;
 use crate::structure::ship::pilot::Pilot;
 use crate::structure::systems::{StructureSystem, StructureSystems};
-use bevy::core::Name;
-use bevy::ecs::event::EventReader;
-use bevy::ecs::query::{With, Without};
-use bevy::ecs::removal_detection::RemovedComponents;
-use bevy::ecs::schedule::IntoSystemConfigs;
-use bevy::ecs::schedule::common_conditions::resource_exists;
-use bevy::ecs::system::{Commands, Resource};
-use bevy::log::{info, trace, warn};
-use bevy::prelude::SystemSet;
+use crate::utils::ecs::{FixedUpdateRemovedComponents, register_fixed_update_removed_component};
+use bevy::platform::collections::{HashMap, HashSet};
+use bevy::prelude::*;
 use bevy::time::Time;
-use bevy::utils::HashMap;
-use bevy::utils::hashbrown::HashSet;
 use bevy::{
-    app::{App, Update},
+    app::App,
     ecs::{
         entity::Entity,
         event::EventWriter,
@@ -66,7 +58,7 @@ fn client_add_stored_components<T: SyncableComponent>(
     let hm = &mut sc.as_mut().0;
     let ents = hm.keys().copied().collect::<Vec<Entity>>();
     for ent in ents {
-        if let Some(mut ecmds) = commands.get_entity(ent) {
+        if let Ok(mut ecmds) = commands.get_entity(ent) {
             let (c, _) = hm.remove(&ent).expect("Must exist");
 
             let mut component =
@@ -131,7 +123,7 @@ fn client_deserialize_component<T: SyncableComponent>(
             continue;
         }
 
-        if let Some(mut ecmds) = commands.get_entity(ev.entity) {
+        if let Ok(mut ecmds) = commands.get_entity(ev.entity) {
             let mut component =
                 cosmos_encoder::deserialize_uncompressed::<T>(&ev.raw_data).expect("Failed to deserialize component sent from server!");
 
@@ -195,7 +187,7 @@ fn client_remove_component<T: SyncableComponent>(
             continue;
         }
 
-        if let Some(mut ecmds) = commands.get_entity(ev.entity) {
+        if let Ok(mut ecmds) = commands.get_entity(ev.entity) {
             if T::debug() {
                 info!(
                     "Removing component {} from entity {:?}",
@@ -250,7 +242,7 @@ fn client_send_components<T: SyncableComponent>(
             match authority {
                 ClientAuthority::Anything => {}
                 ClientAuthority::Piloting => {
-                    let Ok(piloting) = q_local_piloting.get_single() else {
+                    let Ok(piloting) = q_local_piloting.single() else {
                         return None;
                     };
 
@@ -299,7 +291,7 @@ fn client_send_components<T: SyncableComponent>(
 
 fn client_send_removed_components<T: SyncableComponent>(
     id_registry: Res<Registry<SyncedComponentId>>,
-    mut removed_components: RemovedComponents<T>,
+    removed_components: FixedUpdateRemovedComponents<T>,
     q_entity_identifier: Query<(Option<&StructureSystem>, Option<&ItemStackData>)>,
     mut client: ResMut<RenetClient>,
     mapping: Res<NetworkMapping>,
@@ -338,7 +330,7 @@ fn client_send_removed_components<T: SyncableComponent>(
         match authority {
             ClientAuthority::Anything => {}
             ClientAuthority::Piloting => {
-                let Ok(piloting) = q_local_piloting.get_single() else {
+                let Ok(piloting) = q_local_piloting.single() else {
                     return;
                 };
 
@@ -501,7 +493,7 @@ fn client_receive_components(
                     }
                 };
 
-                ev_writer_remove.send(GotComponentToRemoveEvent {
+                ev_writer_remove.write(GotComponentToRemoveEvent {
                     // `client_id` only matters on the server-side, but I don't feel like fighting with
                     // my LSP to have this variable only show up in the server project. Thus, I fill it with
                     // dummy data.
@@ -564,7 +556,7 @@ fn repl_comp_data(
         raw_data,
     };
 
-    ev_writer_sync.send(ev);
+    ev_writer_sync.write(ev);
     None
 }
 
@@ -613,8 +605,6 @@ fn get_entity_identifier_info(
             .client_from_server(&server_data_entity)
             .map(|x| {
                 if !q_block_data.contains(x) {
-                    error!("Component got for block data but had no block data component - requesting entity. (Client: {x:?})");
-
                     return network_mapping
                         .client_from_server(&identifier.block.structure())
                         .and_then(|structure_entity| {
@@ -629,7 +619,7 @@ fn get_entity_identifier_info(
 
                             network_mapping.add_mapping(data_entity, server_data_entity);
 
-                            evw_block_data_changed.send(BlockDataChangedEvent {
+                            evw_block_data_changed.write(BlockDataChangedEvent {
                                 block: identifier.block,
                                 block_data_entity: Some(data_entity),
                             });
@@ -639,7 +629,7 @@ fn get_entity_identifier_info(
                 };
 
                 if let Ok(block) = identifier.block.map_to_client(network_mapping) {
-                    evw_block_data_changed.send(BlockDataChangedEvent {
+                    evw_block_data_changed.write(BlockDataChangedEvent {
                         block,
                         block_data_entity: Some(x),
                     });
@@ -679,7 +669,7 @@ fn get_entity_identifier_info(
 
                         identifier.block.set_structure(structure_entity);
 
-                        evw_block_data_changed.send(BlockDataChangedEvent {
+                        evw_block_data_changed.write(BlockDataChangedEvent {
                             block: identifier.block,
                             block_data_entity: Some(data_entity),
                         });
@@ -732,12 +722,12 @@ fn get_entity_identifier_info(
 }
 
 pub(super) fn setup_client(app: &mut App) {
-    app.configure_sets(Update, ClientReceiveComponents::ClientReceiveComponents);
+    app.configure_sets(FixedUpdate, ClientReceiveComponents::ClientReceiveComponents);
 
     // ComponentSyncingSet configuration in cosmos_client/netty/mod
 
     app.add_systems(
-        Update,
+        FixedUpdate,
         client_receive_components
             .in_set(ClientReceiveComponents::ClientReceiveComponents)
             .in_set(NetworkingSystemsSet::ReceiveMessages)
@@ -750,54 +740,30 @@ pub(super) fn setup_client(app: &mut App) {
 pub(super) fn sync_component_client<T: SyncableComponent>(app: &mut App) {
     app.register_type::<ServerEntity>();
 
-    match T::get_sync_type() {
-        SyncType::ClientAuthoritative(_) => {
-            app.add_systems(
-                Update,
-                (client_send_components::<T>, client_send_removed_components::<T>)
-                    .chain()
-                    .run_if(resource_exists::<RenetClient>)
-                    .in_set(ComponentSyncingSet::DoComponentSyncing),
-            );
-        }
-        SyncType::ServerAuthoritative => {
-            add_multi_statebound_resource::<StoredComponents<T>, GameState>(app, GameState::LoadingWorld, GameState::Playing);
+    if T::get_sync_type().is_client_authoritative() {
+        register_fixed_update_removed_component::<T>(app);
+        app.add_systems(
+            FixedUpdate,
+            (client_send_components::<T>, client_send_removed_components::<T>)
+                .chain()
+                .run_if(resource_exists::<RenetClient>)
+                .in_set(ComponentSyncingSet::DoComponentSyncing),
+        );
+    }
+    if T::get_sync_type().is_server_authoritative() {
+        add_multi_statebound_resource::<StoredComponents<T>, GameState>(app, GameState::LoadingWorld, GameState::Playing);
 
-            app.add_systems(
-                Update,
-                (
-                    client_add_stored_components::<T>,
-                    client_deserialize_component::<T>,
-                    client_remove_component::<T>,
-                )
-                    .chain()
-                    .run_if(resource_exists::<NetworkMapping>)
-                    .run_if(resource_exists::<Registry<SyncedComponentId>>)
-                    .in_set(ComponentSyncingSet::ReceiveComponents),
-            );
-        }
-        SyncType::BothAuthoritative(_) => {
-            add_multi_statebound_resource::<StoredComponents<T>, GameState>(app, GameState::LoadingWorld, GameState::Playing);
-
-            app.add_systems(
-                Update,
-                (client_send_components::<T>, client_send_removed_components::<T>)
-                    .chain()
-                    .run_if(resource_exists::<RenetClient>)
-                    .in_set(ComponentSyncingSet::DoComponentSyncing),
-            );
-            app.add_systems(
-                Update,
-                (
-                    client_add_stored_components::<T>,
-                    client_deserialize_component::<T>,
-                    client_remove_component::<T>,
-                )
-                    .chain()
-                    .run_if(resource_exists::<NetworkMapping>)
-                    .run_if(resource_exists::<Registry<SyncedComponentId>>)
-                    .in_set(ComponentSyncingSet::ReceiveComponents),
-            );
-        }
+        app.add_systems(
+            FixedUpdate,
+            (
+                client_add_stored_components::<T>,
+                client_deserialize_component::<T>,
+                client_remove_component::<T>,
+            )
+                .chain()
+                .run_if(resource_exists::<NetworkMapping>)
+                .run_if(resource_exists::<Registry<SyncedComponentId>>)
+                .in_set(ComponentSyncingSet::ReceiveComponents),
+        );
     }
 }

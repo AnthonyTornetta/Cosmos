@@ -1,8 +1,4 @@
-use bevy::{
-    app::{App, Update},
-    ecs::{event::EventWriter, schedule::IntoSystemConfigs, system::ResMut},
-    state::condition::in_state,
-};
+use bevy::prelude::*;
 use bevy_renet::renet::RenetClient;
 use cosmos_core::{
     ecs::mut_events::MutEvent,
@@ -29,7 +25,7 @@ fn shop_listen_netty(
                 structure_entity,
                 shop_data,
             } => {
-                ev_writer_open_shop_ui.send(
+                ev_writer_open_shop_ui.write(
                     OpenShopUiEvent {
                         shop: shop_data,
                         structure_block: StructureBlock::new(shop_block, structure_entity),
@@ -42,7 +38,7 @@ fn shop_listen_netty(
                 structure_entity,
                 details,
             } => {
-                ev_writer_purchased.send(PurchasedEvent {
+                ev_writer_purchased.write(PurchasedEvent {
                     details,
                     shop_block,
                     structure_entity,
@@ -53,7 +49,7 @@ fn shop_listen_netty(
                 structure_entity,
                 details,
             } => {
-                ev_writer_sold.send(SoldEvent {
+                ev_writer_sold.write(SoldEvent {
                     details,
                     shop_block,
                     structure_entity,

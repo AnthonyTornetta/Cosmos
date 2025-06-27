@@ -57,7 +57,7 @@ fn save_the_kids(
     mut commands: Commands,
 ) {
     for children in query.iter() {
-        for child in children.iter().copied().filter(|x| !is_this_structure.contains(*x)) {
+        for &child in children.iter().filter(|x| !is_this_structure.contains(**x)) {
             commands.entity(child).remove_parent_in_place();
         }
     }

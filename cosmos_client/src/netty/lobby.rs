@@ -1,8 +1,8 @@
 //! Stores information pertaining to the current multiplayer session
 
 use bevy::{
+    platform::collections::HashMap,
     prelude::{Entity, Resource},
-    utils::HashMap,
 };
 use bevy_renet::renet::ClientId;
 

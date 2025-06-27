@@ -1,7 +1,7 @@
 //! Displays the crosshair the player sees in & out of a ship
 
 use bevy::prelude::*;
-use cosmos_core::{netty::system_sets::NetworkingSystemsSet, state::GameState, utils::smooth_clamp::SmoothClamp};
+use cosmos_core::{state::GameState, utils::smooth_clamp::SmoothClamp};
 
 use crate::window::setup::CursorFlagsSet;
 
@@ -42,7 +42,7 @@ fn add_crosshair(mut commands: Commands, asset_server: Res<AssetServer>) {
 pub struct Crosshair;
 
 fn update_cursor_pos(pos: Res<CrosshairOffset>, mut query: Query<&mut Node, With<Crosshair>>) {
-    if let Ok(mut crosshair) = query.get_single_mut() {
+    if let Ok(mut crosshair) = query.single_mut() {
         crosshair.left = Val::Px(pos.x);
         // bottom doesn't seem to work, so -pos.y is used.
         crosshair.top = Val::Px(-pos.y);
@@ -101,7 +101,6 @@ pub(super) fn register(app: &mut App) {
             update_cursor_pos
                 .after(CrosshairOffsetSet::ApplyCrosshairChanges)
                 .after(CursorFlagsSet::ApplyCursorFlagsUpdates)
-                .in_set(NetworkingSystemsSet::Between)
                 .run_if(in_state(GameState::Playing)),
         );
 }

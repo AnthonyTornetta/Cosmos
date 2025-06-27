@@ -1,6 +1,6 @@
 //! Some utility systems that make working with the bevy ECS a bit easier in a multiplayer environment.
 
-use bevy::prelude::{App, Children, Entity, First, IntoSystemConfigs, Query, ResMut, With, resource_exists};
+use bevy::prelude::*;
 use cosmos_core::{
     ecs::{NeedsDespawned, despawn_needed},
     netty::sync::mapping::NetworkMapping,
@@ -19,10 +19,7 @@ pub fn remove_mappings(
 
 fn recursively_remove(entity: Entity, children_query: &Query<&Children>, network_mapping: &mut NetworkMapping) {
     if let Ok(children) = children_query.get(entity) {
-        children
-            .iter()
-            .copied()
-            .for_each(|c| recursively_remove(c, children_query, network_mapping));
+        children.iter().for_each(|c| recursively_remove(c, children_query, network_mapping));
     }
 
     network_mapping.remove_mapping_from_client_entity(&entity);

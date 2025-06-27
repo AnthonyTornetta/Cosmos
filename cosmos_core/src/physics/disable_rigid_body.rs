@@ -2,20 +2,13 @@
 //!
 //! TODO: add docs on how to use
 
-use bevy::app::Update;
-use bevy::prelude::App;
-use bevy::prelude::Changed;
-use bevy::prelude::Commands;
-use bevy::prelude::Component;
-use bevy::prelude::Entity;
-use bevy::prelude::IntoSystemConfigs;
-use bevy::prelude::Query;
-use bevy::prelude::RemovedComponents;
-use bevy::prelude::SystemSet;
-use bevy::reflect::Reflect;
+use bevy::prelude::*;
 use bevy_rapier3d::prelude::RigidBodyDisabled;
 
-use crate::netty::system_sets::NetworkingSystemsSet;
+use crate::{
+    ecs::sets::FixedUpdateSet,
+    utils::ecs::{FixedUpdateRemovedComponents, register_fixed_update_removed_component},
+};
 
 #[derive(Component, Default, Reflect, Debug)]
 /// Instead of directly using [`RigidBodyDisabled`], use this to not risk overwriting other systems
@@ -56,11 +49,11 @@ impl DisableRigidBody {
 
 fn disable_rigid_bodies(
     mut commands: Commands,
-    mut removed_disable_rb: RemovedComponents<DisableRigidBody>,
+    removed_disable_rb: FixedUpdateRemovedComponents<DisableRigidBody>,
     q_with_disable: Query<(Entity, &DisableRigidBody), Changed<DisableRigidBody>>,
 ) {
     for ent in removed_disable_rb.read() {
-        if let Some(mut ecmds) = commands.get_entity(ent) {
+        if let Ok(mut ecmds) = commands.get_entity(ent) {
             ecmds.remove::<RigidBodyDisabled>();
         }
     }
@@ -84,12 +77,14 @@ pub enum DisableRigidBodySet {
 }
 
 pub(super) fn register(app: &mut App) {
-    app.configure_sets(Update, DisableRigidBodySet::DisableRigidBodies);
+    register_fixed_update_removed_component::<DisableRigidBody>(app);
+
+    app.configure_sets(FixedUpdate, DisableRigidBodySet::DisableRigidBodies);
 
     app.add_systems(
-        Update,
+        FixedUpdate,
         disable_rigid_bodies
-            .in_set(NetworkingSystemsSet::Between)
+            .in_set(FixedUpdateSet::PrePhysics)
             .in_set(DisableRigidBodySet::DisableRigidBodies),
     )
     .register_type::<DisableRigidBody>();

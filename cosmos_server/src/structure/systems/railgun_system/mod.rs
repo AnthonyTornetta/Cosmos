@@ -1,6 +1,6 @@
 use std::{cell::RefCell, rc::Rc};
 
-use bevy::{prelude::*, utils::HashSet};
+use bevy::{platform::collections::HashSet, prelude::*};
 
 use bevy_rapier3d::{
     plugin::{RapierContextEntityLink, ReadRapierContext},
@@ -281,9 +281,9 @@ fn on_active(
     mut q_structure: Query<(&mut Structure, &GlobalTransform, &RapierContextEntityLink)>,
     q_active: Query<(&StructureSystem, &RailgunSystem), With<SystemActive>>,
     blocks: Res<Registry<Block>>,
-    q_parent: Query<&Parent>,
+    q_parent: Query<&ChildOf>,
     q_chunk_entity: Query<&ChunkEntity>,
-    mut q_shield: Query<(Entity, &mut Shield, &GlobalTransform, &Parent, &RapierContextEntityLink)>,
+    mut q_shield: Query<(Entity, &mut Shield, &GlobalTransform, &ChildOf, &RapierContextEntityLink)>,
     mut evw_take_damage: EventWriter<BlockTakeDamageEvent>,
     mut evw_block_destroyed: EventWriter<BlockDestroyedEvent>,
     q_players: Query<(&Player, &Location)>,
@@ -344,7 +344,7 @@ fn on_active(
                     if no_collide_entity == entity {
                         false
                     } else if let Ok(parent) = q_parent.get(entity) {
-                        parent.get() != no_collide_entity
+                        parent.parent() != no_collide_entity
                     } else {
                         true
                     }
@@ -393,7 +393,7 @@ fn on_active(
 
             let mut shields = q_shield
                 .iter_mut()
-                .filter(|(_, s, _, parent, rapier_link)| *rapier_link == pw && parent.get() != ss.structure_entity() && s.is_enabled())
+                .filter(|(_, s, _, parent, rapier_link)| *rapier_link == pw && parent.parent() != ss.structure_entity() && s.is_enabled())
                 .collect::<Vec<_>>();
 
             let mut strength = (railgun_entry.length as f32).powf(1.2) * 1000.0;
@@ -408,7 +408,7 @@ fn on_active(
                     let remaining_strength = shield.strength() - strength;
                     shield.take_damage(strength);
 
-                    evw_shield_hit_event.send(ShieldHitEvent {
+                    evw_shield_hit_event.write(ShieldHitEvent {
                         shield_entity: *shield_entity,
                         relative_position: shield_g_trans.rotation().inverse() * (abs_hit - shield_g_trans.translation()),
                     });
@@ -455,7 +455,7 @@ fn on_active(
             });
         }
 
-        nevw_railgun_fired.send_to_many(
+        nevw_railgun_fired.write_to_many(
             RailgunFiredEvent {
                 railguns: fired,
                 structure: ss.structure_entity(),

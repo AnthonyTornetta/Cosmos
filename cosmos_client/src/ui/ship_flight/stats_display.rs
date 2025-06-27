@@ -1,33 +1,13 @@
-use bevy::{
-    app::{App, Update},
-    asset::AssetServer,
-    color::palettes::css,
-    core::Name,
-    ecs::{
-        component::Component,
-        entity::Entity,
-        query::{Added, With, Without},
-        removal_detection::RemovedComponents,
-        schedule::IntoSystemConfigs,
-        system::{Commands, Query, Res},
-    },
-    hierarchy::BuildChildren,
-    prelude::{ChildBuild, Text},
-    text::{TextColor, TextFont},
-    ui::{FlexDirection, Node, PositionType, UiRect, Val},
-};
+use bevy::{color::palettes::css, prelude::*};
 use bevy_rapier3d::dynamics::Velocity;
 use cosmos_core::{
     ecs::NeedsDespawned,
-    netty::{client::LocalPlayer, system_sets::NetworkingSystemsSet},
-    physics::location::LocationPhysicsSet,
+    netty::client::LocalPlayer,
     structure::{
         ship::pilot::Pilot,
-        systems::{StructureSystems, StructureSystemsSet, energy_storage_system::EnergyStorageSystem},
+        systems::{StructureSystems, energy_storage_system::EnergyStorageSystem},
     },
 };
-
-use crate::entities::player::player_movement::PlayerMovementSet;
 
 #[derive(Component)]
 struct StatsNodes;
@@ -45,7 +25,7 @@ fn create_nodes(
     q_became_pilot: Query<(), (With<LocalPlayer>, Added<Pilot>)>,
 ) {
     if !q_became_pilot.is_empty() {
-        // let Ok(ui_root) = q_ui_root.get_single() else {
+        // let Ok(ui_root) = q_ui_root.single() else {
         //     return;
         // };
 
@@ -98,7 +78,7 @@ fn update_nodes(
 
     q_energy_storage_system: Query<&EnergyStorageSystem>,
 ) {
-    let Ok(piloting) = piloting.get_single() else {
+    let Ok(piloting) = piloting.single() else {
         return;
     };
 
@@ -106,20 +86,21 @@ fn update_nodes(
         return;
     };
 
-    if let Ok(mut text) = q_speed_text.get_single_mut() {
+    if let Ok(mut text) = q_speed_text.single_mut() {
         text.0 = format!("Speed: {:.1}m/s", piloting_vel.linvel.length());
     }
 
-    if let Ok(mut text) = q_energy_text.get_single_mut()
-        && let Ok(ess) = piloting_systems.query(&q_energy_storage_system) {
-            let percent = if ess.get_capacity() != 0.0 {
-                ess.get_energy() / ess.get_capacity()
-            } else {
-                0.0
-            };
+    if let Ok(mut text) = q_energy_text.single_mut()
+        && let Ok(ess) = piloting_systems.query(&q_energy_storage_system)
+    {
+        let percent = if ess.get_capacity() != 0.0 {
+            ess.get_energy() / ess.get_capacity()
+        } else {
+            0.0
+        };
 
-            text.0 = format!("Energy {}%", (percent * 100.0).round());
-        }
+        text.0 = format!("Energy {}%", (percent * 100.0).round());
+    }
 }
 
 fn despawn_nodes(
@@ -130,7 +111,7 @@ fn despawn_nodes(
 ) {
     for ent in removed_pilot.read() {
         if q_local_player.contains(ent) {
-            let Ok(stats_node) = q_stats_nodes.get_single() else {
+            let Ok(stats_node) = q_stats_nodes.single() else {
                 return;
             };
 
@@ -140,16 +121,5 @@ fn despawn_nodes(
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_systems(
-        Update,
-        (
-            create_nodes,
-            update_nodes.after(PlayerMovementSet::ProcessPlayerMovement),
-            despawn_nodes,
-        )
-            .after(StructureSystemsSet::UpdateSystems)
-            .after(LocationPhysicsSet::DoPhysics)
-            .in_set(NetworkingSystemsSet::Between)
-            .chain(),
-    );
+    app.add_systems(Update, (create_nodes, update_nodes, despawn_nodes).chain());
 }

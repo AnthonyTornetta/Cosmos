@@ -3,7 +3,7 @@
 use std::{collections::VecDeque, time::Duration};
 
 use bevy::prelude::*;
-use cosmos_core::{netty::system_sets::NetworkingSystemsSet, state::GameState};
+use cosmos_core::state::GameState;
 
 use super::font::DefaultFont;
 
@@ -103,10 +103,11 @@ impl HudMessages {
             |m: &HudMessage| m.text.len() == message.text.len() && m.text.iter().zip(message.text.iter()).all(|(x, y)| x.text == y.text);
 
         if let Some(currently_displayed_hud_cache) = self.1.as_mut()
-            && check_duplicate(&currently_displayed_hud_cache.cached_message) {
-                currently_displayed_hud_cache.time_needs_reset = true;
-                return;
-            }
+            && check_duplicate(&currently_displayed_hud_cache.cached_message)
+        {
+            currently_displayed_hud_cache.time_needs_reset = true;
+            return;
+        }
 
         if self.0.iter().any(check_duplicate) {
             return;
@@ -124,24 +125,25 @@ struct ShownHudMessage {
 fn display_hud_messages(
     default_font: Res<DefaultFont>,
     mut commands: Commands,
-    mut shown_hud_message: Query<(Entity, &Parent, &mut ShownHudMessage)>,
+    mut shown_hud_message: Query<(Entity, &ChildOf, &mut ShownHudMessage)>,
     mut hud_messages: ResMut<HudMessages>,
     mut writer: TextUiWriter,
     time: Res<Time>,
 ) {
-    if let Ok((entity, parent, mut shown_hud_message)) = shown_hud_message.get_single_mut() {
+    if let Ok((entity, parent, mut shown_hud_message)) = shown_hud_message.single_mut() {
         let time_now = time.elapsed_secs();
 
         if let Some(current_hud_message) = hud_messages.1.as_mut()
-            && current_hud_message.time_needs_reset {
-                shown_hud_message.time_created = time_now;
-                current_hud_message.time_needs_reset = false;
-            }
+            && current_hud_message.time_needs_reset
+        {
+            shown_hud_message.time_created = time_now;
+            current_hud_message.time_needs_reset = false;
+        }
 
         let time_remaining = HUD_DISPLAY_DURATION.as_secs_f32() - (time_now - shown_hud_message.time_created);
 
         if time_remaining <= 0.0 {
-            commands.entity(parent.get()).despawn_recursive();
+            commands.entity(parent.parent()).despawn();
             hud_messages.1 = None;
         } else {
             writer.for_each_color(entity, |mut c| c.set_alpha((time_remaining / FADE_DURATION.as_secs_f32()).min(1.0)));
@@ -167,7 +169,6 @@ fn display_hud_messages(
                 },
             ))
             .with_children(|p| {
-                // TODO: This
                 let mut messages = hud_message.text.into_iter();
                 if let Some(first) = messages.next() {
                     let font = TextFont {
@@ -201,10 +202,6 @@ fn display_hud_messages(
 }
 
 pub(super) fn register(app: &mut App) {
-    app.init_resource::<HudMessages>().add_systems(
-        Update,
-        display_hud_messages
-            .in_set(NetworkingSystemsSet::Between)
-            .run_if(in_state(GameState::Playing)),
-    );
+    app.init_resource::<HudMessages>()
+        .add_systems(Update, display_hud_messages.run_if(in_state(GameState::Playing)));
 }

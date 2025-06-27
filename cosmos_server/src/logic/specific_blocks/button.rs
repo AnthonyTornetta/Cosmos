@@ -1,10 +1,7 @@
 //! Logic behavior for the button, a block that outputs a logic signal on all 6 faces when on for a
 //! short period, before turning off again.
 
-use bevy::{
-    app::{App, Update},
-    prelude::{Component, Entity, EventReader, EventWriter, IntoSystemConfigs, OnEnter, Query, Res, ResMut, With},
-};
+use bevy::prelude::*;
 
 use cosmos_core::{
     block::{
@@ -146,7 +143,7 @@ pub(super) fn register(app: &mut App) {
 
     app.add_systems(OnEnter(GameState::PostLoading), register_logic_connections)
         .add_systems(
-            Update,
+            FixedUpdate,
             (
                 tick_button_down.in_set(LogicSystemSet::PreLogicTick),
                 logic_on_output_event_listener
@@ -154,5 +151,5 @@ pub(super) fn register(app: &mut App) {
                     .ambiguous_with(LogicSystemSet::Produce),
             ),
         )
-        .add_systems(Update, on_interact_with_button.in_set(BlockEventsSet::ProcessEvents));
+        .add_systems(FixedUpdate, on_interact_with_button.in_set(BlockEventsSet::ProcessEvents));
 }

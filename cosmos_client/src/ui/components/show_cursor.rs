@@ -1,14 +1,6 @@
 //! An easy way to show/hide the cursor
 
-use bevy::{
-    app::{App, Update},
-    ecs::{
-        component::Component,
-        query::With,
-        schedule::IntoSystemConfigs,
-        system::{Query, ResMut},
-    },
-};
+use bevy::prelude::*;
 
 use crate::{
     ui::UiSystemSet,

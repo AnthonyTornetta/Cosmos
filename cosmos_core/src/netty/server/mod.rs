@@ -3,8 +3,8 @@
 //! This module is only available if the "server" feature is set.
 
 use bevy::{
+    platform::collections::HashMap,
     prelude::{Entity, Resource},
-    utils::HashMap,
 };
 use bevy_renet::renet::ClientId;
 

@@ -2,11 +2,7 @@
 
 use std::{cell::RefCell, rc::Rc};
 
-use bevy::{
-    ecs::query::{Added, Or, With},
-    log::warn,
-    prelude::{App, Commands, EventReader, IntoSystemConfigs, Query, Res, ResMut, Update, in_state},
-};
+use bevy::prelude::*;
 use bevy_renet::renet::RenetServer;
 use cosmos_core::{
     block::{
@@ -20,7 +16,7 @@ use cosmos_core::{
     events::block_events::BlockDataSystemParams,
     inventory::{Inventory, itemstack::ItemShouldHaveData},
     item::{DEFAULT_MAX_STACK_SIZE, Item},
-    netty::{NettyChannelServer, cosmos_encoder, server_reliable_messages::ServerReliableMessages, system_sets::NetworkingSystemsSet},
+    netty::{NettyChannelServer, cosmos_encoder, server_reliable_messages::ServerReliableMessages},
     registry::{Registry, identifiable::Identifiable},
     state::GameState,
     structure::{
@@ -501,14 +497,14 @@ pub(super) fn register(app: &mut App) {
     impls::register(app);
 
     app.add_systems(
-        Update,
+        FixedUpdate,
         (
             on_piloted_by_ai.in_set(StructureSystemsSet::InitSystems),
             on_interact_reactor
                 .in_set(BlockEventsSet::PostProcessEvents)
                 .after(StructureSystemsSet::UpdateSystems),
         )
-            .in_set(NetworkingSystemsSet::Between)
+            // .in_set(NetworkingSystemsSet::Between)
             .chain()
             .run_if(in_state(GameState::Playing)),
     );

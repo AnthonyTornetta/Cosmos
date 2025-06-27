@@ -2,15 +2,15 @@
 //!
 //! Or maybe parts of it? Not sure yet
 
+// I think there's a bug in something causing a bunch of unused `check` function errors in this
+// file. Probably one of the derives.
+#![allow(dead_code)]
+
 use std::{mem::size_of, time::Duration};
 
 use crate::structure::chunk::CHUNK_DIMENSIONS_USIZE;
-use bevy::{
-    ecs::{system::Resource, world::World},
-    math::{Vec3, Vec4},
-    reflect::TypePath,
-};
-use bevy_easy_compute::prelude::*;
+use bevy::prelude::*;
+use bevy_app_compute::prelude::*;
 use bytemuck::{Pod, Zeroable};
 use serde::{Deserialize, Serialize};
 
@@ -87,7 +87,7 @@ impl ChunkData {
 }
 
 #[derive(TypePath, Default)]
-/// Internally used by `bevy_easy_compute`
+/// Internally used by `bevy_app_compute`
 struct ComputeShaderInstance;
 
 impl ComputeShader for ComputeShaderInstance {

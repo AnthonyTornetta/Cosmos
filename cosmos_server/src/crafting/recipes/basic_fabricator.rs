@@ -1,10 +1,6 @@
 use std::{ffi::OsStr, fs};
 
-use bevy::{
-    app::Update,
-    log::{error, info},
-    prelude::{App, Commands, EventReader, IntoSystemConfigs, OnEnter, Res, in_state, resource_exists_and_changed},
-};
+use bevy::prelude::*;
 use serde::{Deserialize, Serialize};
 
 use cosmos_core::{
@@ -104,13 +100,13 @@ fn sync_recipes_on_join(
     mut nevw_sync_recipes: NettyEventWriter<SyncBasicFabricatorRecipesEvent>,
 ) {
     for ev in evr_loaded_registries.read() {
-        nevw_sync_recipes.send(SyncBasicFabricatorRecipesEvent(recipes.clone()), ev.0);
+        nevw_sync_recipes.write(SyncBasicFabricatorRecipesEvent(recipes.clone()), ev.0);
     }
 }
 
 pub(super) fn register(app: &mut App) {
     app.add_systems(OnEnter(GameState::PostLoading), load_recipes).add_systems(
-        Update,
+        FixedUpdate,
         (
             sync_recipes_on_join,
             sync_recipes_on_change.run_if(resource_exists_and_changed::<BasicFabricatorRecipes>),

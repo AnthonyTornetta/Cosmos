@@ -1,16 +1,9 @@
 use std::{f32::consts::PI, time::Duration};
 
 use bevy::{
-    app::{App, Update},
-    math::{Quat, Vec3},
-    prelude::{Commands, Component, Entity, IntoSystemConfigs, Query, Res, ResMut, Resource, With, not, resource_exists},
-    render::view::{
-        Visibility,
-        screenshot::{Screenshot, save_to_disk},
-    },
-    time::{Time, common_conditions::on_timer},
-    transform::components::Transform,
-    ui::Node,
+    prelude::*,
+    render::view::screenshot::{Screenshot, save_to_disk},
+    time::common_conditions::on_timer,
 };
 use cosmos_core::ecs::NeedsDespawned;
 
@@ -41,7 +34,7 @@ fn take_panorama(
     if inputs.check_just_pressed(CosmosInputs::PanoramaScreenshot) {
         commands.insert_resource(PanAngle(0));
 
-        q_camera.single_mut().rotation = Quat::IDENTITY;
+        q_camera.single_mut().expect("Missing main camera").rotation = Quat::IDENTITY;
         commands.spawn((ShowCursor, PanLocked));
 
         for (entity, mut vis) in q_ui_elements.iter_mut() {
@@ -57,12 +50,13 @@ fn taking_panorama(mut pan_angle: ResMut<PanAngle>, mut commands: Commands, mut 
     commands.spawn(Screenshot::primary_window()).observe(save_to_disk(path));
 
     pan_angle.0 += 1;
-    q_camera.single_mut().rotation = Quat::from_axis_angle(Vec3::Y, pan_angle.0 as f32 / (N_SCREENSHOTS - 2) as f32 * PI * 2.0);
+    let mut cam = q_camera.single_mut().expect("Missing main camera");
+    cam.rotation = Quat::from_axis_angle(Vec3::Y, pan_angle.0 as f32 / (N_SCREENSHOTS - 2) as f32 * PI * 2.0);
 
     if pan_angle.0 == N_SCREENSHOTS - 1 {
-        q_camera.single_mut().rotation = Quat::from_axis_angle(Vec3::X, PI / 2.0);
+        cam.rotation = Quat::from_axis_angle(Vec3::X, PI / 2.0);
     } else if pan_angle.0 == N_SCREENSHOTS {
-        q_camera.single_mut().rotation = Quat::from_axis_angle(-Vec3::X, PI / 2.0);
+        cam.rotation = Quat::from_axis_angle(-Vec3::X, PI / 2.0);
         commands.remove_resource::<PanAngle>();
         commands.insert_resource(FinishedPan(0.0));
     }

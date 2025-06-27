@@ -2,7 +2,7 @@
 //!
 //! Sphagetti town
 
-use bevy::{a11y::Focus, color::palettes::css, ecs::system::EntityCommands, prelude::*, window::PrimaryWindow};
+use bevy::{color::palettes::css, input_focus::InputFocus, prelude::*, window::PrimaryWindow};
 use bevy_renet::renet::RenetClient;
 use cosmos_core::{
     block::{
@@ -24,7 +24,6 @@ use cosmos_core::{
         client::LocalPlayer,
         cosmos_encoder,
         sync::{events::client_event::NettyEventWriter, mapping::NetworkMapping},
-        system_sets::NetworkingSystemsSet,
     },
     registry::{Registry, identifiable::Identifiable},
     state::GameState,
@@ -81,11 +80,11 @@ fn toggle_inventory(
     open_inventories: Query<Entity, With<InventoryNeedsDisplayed>>,
     open_menus: Query<(), With<OpenMenu>>,
     inputs: InputChecker,
-    focused: Res<Focus>,
+    focused: Res<InputFocus>,
     q_input: Query<(), With<TextInput>>,
 ) {
     // Don't toggle the inventory while typing in the search bar (or any other text box)
-    if focused.map(|x| q_input.contains(x)).unwrap_or(false) {
+    if focused.0.map(|x| q_input.contains(x)).unwrap_or(false) {
         return;
     }
 
@@ -94,7 +93,7 @@ fn toggle_inventory(
             open_inventories.iter().for_each(|ent| {
                 commands.entity(ent).remove::<InventoryNeedsDisplayed>();
             });
-        } else if let Ok(player_inventory_ent) = player_inventory.get_single()
+        } else if let Ok(player_inventory_ent) = player_inventory.single()
             && open_menus.is_empty()
         {
             commands
@@ -114,7 +113,7 @@ fn close_button_system(
     open_inventories: Query<Entity, With<InventoryNeedsDisplayed>>,
 ) {
     for rendered_inventory in q_close_inventory.iter() {
-        if let Some(mut _ecmds) = commands.get_entity(rendered_inventory.inventory_holder) {
+        if let Ok(mut _ecmds) = commands.get_entity(rendered_inventory.inventory_holder) {
             open_inventories.iter().for_each(|ent| {
                 commands.entity(ent).remove::<InventoryNeedsDisplayed>();
             });
@@ -247,7 +246,7 @@ fn toggle_inventory_rendering(
         };
 
         commands.entity(inventory_holder).remove::<OpenInventoryEntity>();
-        if let Some(mut ecmds) = commands.get_entity(open_ent.0) {
+        if let Ok(mut ecmds) = commands.get_entity(open_ent.0) {
             ecmds.insert(NeedsDespawned);
         }
 
@@ -257,7 +256,7 @@ fn toggle_inventory_rendering(
                 cosmos_encoder::serialize(&ClientInventoryMessages::DropOrDepositHeldItemstack),
             );
         }
-        if let Ok(entity) = q_displayed_item.get_single() {
+        if let Ok(entity) = q_displayed_item.single() {
             commands.entity(entity).insert(NeedsDespawned);
         }
     }
@@ -599,7 +598,7 @@ fn drop_item(
         return;
     }
 
-    let Ok((local_player_entity, inventory, held_item_slot)) = q_inventory.get_single() else {
+    let Ok((local_player_entity, inventory, held_item_slot)) = q_inventory.single() else {
         return;
     };
 
@@ -646,7 +645,7 @@ fn on_update_inventory(
             {
                 displayed_slot.item_stack = inventory.itemstack_at(displayed_slot.slot_number).cloned();
 
-                let Some(mut ecmds) = commands.get_entity(display_entity) else {
+                let Ok(mut ecmds) = commands.get_entity(display_entity) else {
                     continue;
                 };
 
@@ -662,7 +661,7 @@ fn rerender_inventory_slot(
     asset_server: &AssetServer,
     as_child: bool,
 ) {
-    ecmds.despawn_descendants();
+    ecmds.despawn_related::<Children>();
 
     let Some(is) = displayed_item.item_stack.as_ref() else {
         return;
@@ -707,7 +706,7 @@ impl ButtonEvent for CreativeItemClickedEvent {
     }
 }
 
-fn create_creative_slot(slots: &mut ChildBuilder, item: &Item, text_style: TextFont) {
+fn create_creative_slot(slots: &mut ChildSpawnerCommands, item: &Item, text_style: TextFont) {
     let mut ecmds = slots.spawn((
         Name::new("Creative Inventory Item"),
         Node {
@@ -744,12 +743,12 @@ fn on_click_creative_category(
             error!("Invalid item category component!");
             continue;
         };
-        if let Ok((entity, mut node, i_category)) = q_open_tab.get_single_mut() {
+        if let Ok((entity, mut node, i_category)) = q_open_tab.single_mut() {
             if i_category.0 == *item_category {
                 continue;
             }
 
-            if let Ok(mut c_search) = q_creative_search.get_single_mut() {
+            if let Ok(mut c_search) = q_creative_search.single_mut() {
                 c_search.display = Display::None;
             }
             node.display = Display::None;
@@ -764,7 +763,7 @@ fn on_click_creative_category(
         };
 
         if item_category == &ItemCategoryMarker::Search
-            && let Ok(mut c_search) = q_creative_search.get_single_mut()
+            && let Ok(mut c_search) = q_creative_search.single_mut()
         {
             c_search.display = Display::Flex;
         }
@@ -777,7 +776,7 @@ fn on_click_creative_category(
 fn create_inventory_slot(
     inventory_holder: Entity,
     slot_number: usize,
-    slots: &mut ChildBuilder,
+    slots: &mut ChildSpawnerCommands,
     item_stack: Option<&ItemStack>,
     text_style: TextFont,
 ) {
@@ -871,7 +870,7 @@ fn handle_interactions(
 
     let server_inventory_holder = get_server_inventory_identifier(displayed_item_clicked.inventory_holder, &mapping, &q_block_data);
 
-    let player_kids = q_children.get_single().expect("Player missing all children");
+    let player_kids = q_children.single().expect("Player missing all children");
     let held_item_inv =
         HeldItemStack::get_held_is_inventory_from_children_mut(player_kids, &mut q_held_item).expect("Missing held item inventory");
 
@@ -1033,7 +1032,7 @@ fn create_item_slot_data_raw(item_id: u16, ecmds: &mut EntityCommands, text_styl
 }
 
 fn follow_cursor(mut query: Query<&mut Node, With<FollowCursor>>, primary_window_query: Query<&Window, With<PrimaryWindow>>) {
-    let Some(Some(cursor_pos)) = primary_window_query.get_single().ok().map(|x| x.cursor_position()) else {
+    let Some(Some(cursor_pos)) = primary_window_query.single().ok().map(|x| x.cursor_position()) else {
         return; // cursor is outside of window or the window was closed
     };
     for mut style in query.iter_mut() {
@@ -1075,7 +1074,7 @@ fn on_click_creative_item(
             1
         };
 
-        let Ok(lp_children) = q_children.get_single() else {
+        let Ok(lp_children) = q_children.single() else {
             return;
         };
 
@@ -1083,18 +1082,18 @@ fn on_click_creative_item(
             && let Some(held_is) = inv.itemstack_at(0)
         {
             if held_is.item_id() != item_id {
-                nevw_trash_item.send_default();
+                nevw_trash_item.write_default();
                 continue;
             }
             quantity += held_is.quantity();
         }
 
-        nevw_set_item.send(GrabCreativeItemEvent { quantity, item_id });
+        nevw_set_item.write(GrabCreativeItemEvent { quantity, item_id });
     }
 }
 
 fn draw_held_item(
-    q_changed_held_item: Query<&Parent, (Changed<Inventory>, With<HeldItemStack>)>,
+    q_changed_held_item: Query<&ChildOf, (Changed<Inventory>, With<HeldItemStack>)>,
     q_opened_inventories: Query<(), With<RenderedInventory>>,
     q_local_player: Query<(Entity, &Children), With<LocalPlayer>>,
     q_held_item: Query<&Inventory, With<HeldItemStack>>,
@@ -1103,17 +1102,17 @@ fn draw_held_item(
     default_font: Res<DefaultFont>,
 ) {
     if q_opened_inventories.is_empty() {
-        if let Ok(ent) = q_follow_cursor.get_single() {
+        if let Ok(ent) = q_follow_cursor.single() {
             commands.entity(ent).insert(NeedsDespawned);
         }
         return;
     }
 
-    let Ok((local_ent, children)) = q_local_player.get_single() else {
+    let Ok((local_ent, children)) = q_local_player.single() else {
         return;
     };
 
-    if !q_changed_held_item.iter().any(|p| p.get() == local_ent) && !q_follow_cursor.is_empty() {
+    if !q_changed_held_item.iter().any(|p| p.parent() == local_ent) && !q_follow_cursor.is_empty() {
         return;
     }
 
@@ -1122,15 +1121,15 @@ fn draw_held_item(
     };
 
     let Some(is) = held_inv.itemstack_at(0) else {
-        if let Ok(ent) = q_follow_cursor.get_single() {
+        if let Ok(ent) = q_follow_cursor.single() {
             commands.entity(ent).insert(NeedsDespawned);
         }
         return;
     };
 
-    let mut ecmds = if let Ok(ent) = q_follow_cursor.get_single() {
+    let mut ecmds = if let Ok(ent) = q_follow_cursor.single() {
         let mut ecmds = commands.entity(ent);
-        ecmds.despawn_descendants();
+        ecmds.despawn_related::<Children>();
         ecmds
     } else {
         commands.spawn((
@@ -1154,7 +1153,7 @@ fn draw_held_item(
 
     create_item_stack_slot_data(is, &mut ecmds, text_style, is.quantity());
 
-    // if let Ok((ent, mut render_item)) = q_follow_cursor.get_single_mut() {
+    // if let Ok((ent, mut render_item)) = q_follow_cursor.single_mut() {
     //     if render_item.item_id != is.item_id() {
     //         render_item.item_id = is.item_id();
     //     }
@@ -1173,7 +1172,7 @@ fn on_change_search(
     lang: Res<Lang<Item>>,
     mut commands: Commands,
 ) {
-    let Ok(input_value) = q_changed_search.get_single() else {
+    let Ok(input_value) = q_changed_search.single() else {
         return;
     };
 
@@ -1183,11 +1182,11 @@ fn on_change_search(
         ..Default::default()
     };
 
-    let Ok(search) = q_rendered_category.get_single() else {
+    let Ok(search) = q_rendered_category.single() else {
         return;
     };
 
-    commands.entity(search).despawn_descendants().with_children(|p| {
+    commands.entity(search).despawn_related::<Children>().with_children(|p| {
         let lower = input_value.value().to_lowercase();
         let mut sorted_items = items
             .iter()
@@ -1239,7 +1238,6 @@ pub(super) fn register(app: &mut App) {
             follow_cursor.in_set(InventorySet::FollowCursor),
             toggle_inventory_rendering.in_set(InventorySet::ToggleInventoryRendering),
         )
-            .in_set(NetworkingSystemsSet::Between)
             .run_if(in_state(GameState::Playing)),
     )
     .register_type::<DisplayedItemFromInventory>()

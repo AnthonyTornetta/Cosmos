@@ -1,6 +1,6 @@
 //! Events sent to adjacent blocks on block changes
 
-use bevy::prelude::{App, Entity, Event, EventReader, EventWriter, IntoSystemConfigs, Query, Update};
+use bevy::prelude::*;
 
 use crate::{
     ecs::mut_events::{MutEvent, MutEventsCommand},
@@ -79,7 +79,7 @@ pub fn send_block_updates(
         })
         .flatten();
 
-    event_writer.send_batch(block_updates);
+    event_writer.write_batch(block_updates);
 }
 
 pub(super) fn register(app: &mut App) {

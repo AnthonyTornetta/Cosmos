@@ -1,11 +1,6 @@
 //! Reactivity for text inputs
 
-use bevy::{
-    app::{App, Update},
-    ecs::{event::EventReader, query::Changed, system::Query},
-    log::{error, warn},
-    prelude::IntoSystemConfigs,
-};
+use bevy::prelude::*;
 
 use crate::ui::components::text_input::{InputType, InputValue, TextInput};
 

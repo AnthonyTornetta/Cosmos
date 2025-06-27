@@ -3,9 +3,9 @@
 use std::sync::{Arc, RwLock};
 
 use bevy::{
+    platform::collections::HashMap,
     prelude::*,
     render::mesh::{MeshVertexAttribute, VertexAttributeValues},
-    utils::HashMap,
 };
 use cosmos_core::{
     block::Block,

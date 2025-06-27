@@ -3,17 +3,14 @@
 use std::{cell::RefCell, rc::Rc};
 
 use bevy::{
-    app::{App, Update},
-    log::warn,
-    prelude::{Entity, EventReader, IntoSystemConfigs, Query, Res, ResMut, Resource, With},
-    utils::{HashMap, hashbrown::HashSet},
+    platform::collections::{HashMap, HashSet},
+    prelude::*,
 };
 use cosmos_core::{
     block::{Block, block_events::BlockEventsSet, block_face::BlockFace, block_update::BlockUpdate, data::BlockData},
     ecs::mut_events::MutEvent,
     events::block_events::{BlockChangedEvent, BlockDataChangedEvent, BlockDataSystemParams},
     fluid::data::{BlockFluidData, FluidTankBlock, StoredFluidData},
-    netty::system_sets::NetworkingSystemsSet,
     registry::{Registry, identifiable::Identifiable},
     structure::{
         Structure,
@@ -79,25 +76,31 @@ fn balance_tanks(
                 to_check.insert(pos_x);
             }
             if let Ok(neg_x) = coord.neg_x()
-                && !all_tanks_within.contains(&neg_x) && !checking.contains(&neg_x) {
-                    to_check.insert(neg_x);
-                }
+                && !all_tanks_within.contains(&neg_x)
+                && !checking.contains(&neg_x)
+            {
+                to_check.insert(neg_x);
+            }
             let pos_y = coord.pos_y();
             if !all_tanks_within.contains(&pos_y) && !checking.contains(&pos_y) {
                 to_check.insert(pos_y);
             }
             if let Ok(neg_y) = coord.neg_y()
-                && !all_tanks_within.contains(&neg_y) && !checking.contains(&neg_y) {
-                    to_check.insert(neg_y);
-                }
+                && !all_tanks_within.contains(&neg_y)
+                && !checking.contains(&neg_y)
+            {
+                to_check.insert(neg_y);
+            }
             let pos_z = coord.pos_z();
             if !all_tanks_within.contains(&pos_z) && !checking.contains(&pos_z) {
                 to_check.insert(pos_z);
             }
             if let Ok(neg_z) = coord.neg_z()
-                && !all_tanks_within.contains(&neg_z) && !checking.contains(&neg_z) {
-                    to_check.insert(neg_z);
-                }
+                && !all_tanks_within.contains(&neg_z)
+                && !checking.contains(&neg_z)
+            {
+                to_check.insert(neg_z);
+            }
 
             all_tanks_within.insert(coord);
         }
@@ -319,11 +322,10 @@ fn call_balance_tanks(
 
 pub(super) fn register(app: &mut App) {
     app.add_systems(
-        Update,
+        FixedUpdate,
         (on_add_tank, listen_for_changed_fluid_data, call_balance_tanks)
             .chain()
-            .in_set(BlockEventsSet::PostProcessEvents)
-            .in_set(NetworkingSystemsSet::Between),
+            .in_set(BlockEventsSet::PostProcessEvents),
     )
     .init_resource::<TanksToBalance>();
 }

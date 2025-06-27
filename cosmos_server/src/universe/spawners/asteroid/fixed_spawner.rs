@@ -2,12 +2,7 @@
 
 use std::f32::consts::PI;
 
-use bevy::{
-    log::{error, warn},
-    math::Quat,
-    prelude::{App, Commands, Deref, DerefMut, EventReader, IntoSystemConfigs, Query, Res, ResMut, Resource, Update, Vec3, With, in_state},
-    utils::HashSet,
-};
+use bevy::{platform::collections::HashSet, prelude::*};
 use cosmos_core::{
     entities::player::Player,
     netty::system_sets::NetworkingSystemsSet,
@@ -174,7 +169,7 @@ fn generate_asteroids(mut commands: Commands, q_players: Query<&Location, With<P
 
 pub(super) fn register(app: &mut App) {
     app.add_systems(
-        Update,
+        FixedUpdate,
         (
             spawn_asteroids.in_set(SystemGenerationSet::Asteroid),
             generate_asteroids.in_set(NetworkingSystemsSet::Between),

@@ -7,7 +7,7 @@ use cosmos_core::{
     block::block_events::BlockEventsSet,
     inventory::{Inventory, held_item_slot::HeldItemSlot, itemstack::ItemStack},
     item::Item,
-    netty::{client::LocalPlayer, system_sets::NetworkingSystemsSet},
+    netty::client::LocalPlayer,
     registry::{Registry, identifiable::Identifiable},
     state::GameState,
 };
@@ -193,7 +193,7 @@ fn listen_button_presses(
     mut q_held_item_slot: Query<&mut HeldItemSlot, With<LocalPlayer>>,
     mut hotbar: Query<&mut Hotbar>,
 ) {
-    let Ok(mut hotbar) = hotbar.get_single_mut() else {
+    let Ok(mut hotbar) = hotbar.single_mut() else {
         return;
     };
 
@@ -241,7 +241,7 @@ fn listen_button_presses(
         hotbar.selected_slot = 8;
     }
 
-    let Ok(mut held_item_slot) = q_held_item_slot.get_single_mut() else {
+    let Ok(mut held_item_slot) = q_held_item_slot.single_mut() else {
         return;
     };
 
@@ -251,7 +251,7 @@ fn listen_button_presses(
 }
 
 fn tick_text_alpha_down(mut query: Query<&mut TextColor, With<ItemNameDisplay>>, time: Res<Time>) {
-    if let Ok(mut text) = query.get_single_mut() {
+    if let Ok(mut text) = query.single_mut() {
         let col: Srgba = text.as_ref().0.into();
 
         text.as_mut().0 = Srgba {
@@ -275,7 +275,7 @@ fn listen_for_change_events(
     names: Res<Lang<Item>>,
     items: Res<Registry<Item>>,
 ) {
-    let Ok(mut hb) = query_hb.get_single_mut() else {
+    let Ok(mut hb) = query_hb.single_mut() else {
         return;
     };
 
@@ -290,23 +290,24 @@ fn listen_for_change_events(
 
         hb.prev_slot = hb.selected_slot;
 
-        if let Ok(inv) = inventory_unchanged.get_single()
-            && let Ok(ent) = item_name_query.get_single()
-                && let Ok((mut name_text, mut name_color)) = text_query.get_mut(ent) {
-                    if let Some(is) = inv.itemstack_at(hb.selected_slot()) {
-                        names
-                            .get_name_from_numeric_id(is.item_id())
-                            .unwrap_or(items.from_numeric_id(is.item_id()).unlocalized_name())
-                            .clone_into(&mut name_text.as_mut().0);
+        if let Ok(inv) = inventory_unchanged.single()
+            && let Ok(ent) = item_name_query.single()
+            && let Ok((mut name_text, mut name_color)) = text_query.get_mut(ent)
+        {
+            if let Some(is) = inv.itemstack_at(hb.selected_slot()) {
+                names
+                    .get_name_from_numeric_id(is.item_id())
+                    .unwrap_or(items.from_numeric_id(is.item_id()).unlocalized_name())
+                    .clone_into(&mut name_text.as_mut().0);
 
-                        name_color.as_mut().0 = Color::WHITE;
-                    } else {
-                        "".clone_into(&mut name_text.as_mut().0);
-                    }
-                }
+                name_color.as_mut().0 = Color::WHITE;
+            } else {
+                "".clone_into(&mut name_text.as_mut().0);
+            }
+        }
     }
 
-    if let Ok(hotbar_contents) = query_inventory.get_single() {
+    if let Ok(hotbar_contents) = query_inventory.single() {
         for hb_slot in 0..hb.max_slots {
             let is = hotbar_contents.itemstack_at(hb_slot);
 
@@ -372,12 +373,12 @@ fn populate_hotbar(
     render_item_query: Query<&RenderItem>,
     mut commands: Commands,
 ) {
-    let Ok(hotbar) = hotbar.get_single() else {
+    let Ok(hotbar) = hotbar.single() else {
         warn!("Missing hotbar");
         return;
     };
 
-    let Ok(hotbar_contents) = q_hotbar_contents.get_single() else {
+    let Ok(hotbar_contents) = q_hotbar_contents.single() else {
         return;
     };
 
@@ -510,7 +511,7 @@ fn add_hotbar_contents_to_player(
     mut commands: Commands,
     q_player: Query<(Entity, &Hotbar), (With<LocalPlayerHotbar>, Without<HotbarContents>)>,
 ) {
-    if let Ok((player_ent, hotbar)) = q_player.get_single() {
+    if let Ok((player_ent, hotbar)) = q_player.single() {
         commands
             .entity(player_ent)
             .insert((HotbarPriorityQueue::default(), HotbarContents::new(hotbar.max_slots)));
@@ -531,7 +532,6 @@ pub(super) fn register(app: &mut App) {
                 tick_text_alpha_down,
             )
                 .before(SystemSelectionSet::ApplyUserChanges)
-                .in_set(NetworkingSystemsSet::Between)
                 .chain()
                 .run_if(in_state(GameState::Playing))
                 .run_if(is_hotbar_enabled),
@@ -555,7 +555,7 @@ fn sync_hotbar_to_inventory(
     q_priority_changed: Query<(), (Changed<HotbarPriorityQueue>, With<LocalPlayerHotbar>)>,
     mut q_hotbar: Query<(&HotbarPriorityQueue, &mut HotbarContents), With<LocalPlayerHotbar>>,
 ) {
-    let Ok((hotbar_prio_queue, mut hotbar_contents)) = q_hotbar.get_single_mut() else {
+    let Ok((hotbar_prio_queue, mut hotbar_contents)) = q_hotbar.single_mut() else {
         return;
     };
 
@@ -567,7 +567,7 @@ fn sync_hotbar_to_inventory(
         return;
     }
 
-    let Ok(inventory) = q_inventory.get_single() else {
+    let Ok(inventory) = q_inventory.single() else {
         return;
     };
 

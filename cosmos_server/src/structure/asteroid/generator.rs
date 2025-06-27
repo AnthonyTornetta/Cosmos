@@ -1,17 +1,6 @@
 //! Triggers asteroid generation + handles the async generation of them
 
-use bevy::{
-    ecs::{
-        component::Component,
-        event::Event,
-        query::With,
-        schedule::{IntoSystemSetConfigs, SystemSet},
-        system::{ResMut, Resource},
-    },
-    prelude::{App, Commands, Entity, EventWriter, IntoSystemConfigs, Query, Update, in_state},
-    tasks::Task,
-    transform::components::Transform,
-};
+use bevy::{prelude::*, tasks::Task};
 use cosmos_core::{
     state::GameState,
     structure::{
@@ -86,7 +75,7 @@ fn notify_when_done_generating(
                 for res in itr {
                     // This will always be true because include_empty is false
                     if let ChunkIteratorResult::FilledChunk { position, chunk: _ } = res {
-                        chunk_init_event_writer.send(ChunkInitEvent {
+                        chunk_init_event_writer.write(ChunkInitEvent {
                             structure_entity: generating.structure_entity,
                             coords: position,
                             serialized_block_data: None,
@@ -121,7 +110,7 @@ fn send_events(
     asteroids.sort_unstable_by(|(_, t1), (_, t2)| t1.partial_cmp(t2).unwrap());
 
     for (needs_generated, _) in asteroids.into_iter().take(MAX_GENERATING_ASTEROIDS) {
-        ev_writer.send(GenerateAsteroidEvent(needs_generated));
+        ev_writer.write(GenerateAsteroidEvent(needs_generated));
 
         commands
             .entity(needs_generated)
@@ -143,7 +132,7 @@ pub enum AsteroidGenerationSet {
 
 pub(super) fn register(app: &mut App) {
     app.configure_sets(
-        Update,
+        FixedUpdate,
         (
             AsteroidGenerationSet::StartGeneratingAsteroid,
             AsteroidGenerationSet::GenerateAsteroid,
@@ -155,7 +144,7 @@ pub(super) fn register(app: &mut App) {
     );
 
     app.add_systems(
-        Update,
+        FixedUpdate,
         (
             send_events.in_set(AsteroidGenerationSet::StartGeneratingAsteroid),
             notify_when_done_generating.in_set(AsteroidGenerationSet::NotifyFinished),

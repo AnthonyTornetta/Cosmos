@@ -1,4 +1,4 @@
-use block_materials::ArrayTextureMaterial;
+use block_materials::{ArrayTextureMaterial, ArrayTextureMaterialExtension};
 
 use crate::asset::asset_loading::{AllTexturesDoneLoadingEvent, AssetsDoneLoadingEvent, CosmosTextureAtlas};
 
@@ -63,25 +63,33 @@ fn respond_to_remove_materails_event(mut event_reader: EventReader<RemoveAllMate
 
 fn create_main_material(image_handle: Handle<Image>, unlit: bool) -> ArrayTextureMaterial {
     ArrayTextureMaterial {
-        base_color_texture: Some(image_handle),
-        alpha_mode: AlphaMode::Mask(0.5),
-        unlit,
-        metallic: 0.0,
-        reflectance: 0.0,
-        perceptual_roughness: 1.0,
-        ..Default::default()
+        base: StandardMaterial {
+            alpha_mode: AlphaMode::Mask(0.5),
+            unlit,
+            metallic: 0.0,
+            reflectance: 0.0,
+            perceptual_roughness: 1.0,
+            ..Default::default()
+        },
+        extension: ArrayTextureMaterialExtension {
+            base_color_texture: Some(image_handle),
+        },
     }
 }
 
 fn create_transparent_material(image_handle: Handle<Image>, unlit: bool) -> ArrayTextureMaterial {
     ArrayTextureMaterial {
-        base_color_texture: Some(image_handle),
-        alpha_mode: AlphaMode::Blend,
-        unlit,
-        metallic: 0.0,
-        reflectance: 0.0,
-        perceptual_roughness: 1.0,
-        ..Default::default()
+        base: StandardMaterial {
+            alpha_mode: AlphaMode::Blend,
+            unlit,
+            metallic: 0.0,
+            reflectance: 0.0,
+            perceptual_roughness: 1.0,
+            ..Default::default()
+        },
+        extension: ArrayTextureMaterialExtension {
+            base_color_texture: Some(image_handle),
+        },
     }
 }
 
@@ -118,7 +126,7 @@ fn create_materials(
             material_registry.register(MaterialDefinition::new("cosmos:transparent", None));
         }
 
-        event_writer.send(AssetsDoneLoadingEvent);
+        event_writer.write(AssetsDoneLoadingEvent);
     }
 }
 

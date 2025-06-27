@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 use cosmos_core::{
-    netty::{client::LocalPlayer, system_sets::NetworkingSystemsSet},
+    netty::client::LocalPlayer,
     state::GameState,
     structure::ship::pilot::{Pilot, PilotFocused},
 };
@@ -13,11 +13,11 @@ fn focus_looking_at(
     q_indicating: Query<&Indicating>,
     mut commands: Commands,
 ) {
-    let Ok(pilot) = q_local_player.get_single() else {
+    let Ok(pilot) = q_local_player.single() else {
         return;
     };
 
-    let Ok(focused) = q_focused.get_single() else {
+    let Ok(focused) = q_focused.single() else {
         commands.entity(pilot.entity).remove::<PilotFocused>();
         return;
     };
@@ -31,10 +31,5 @@ fn focus_looking_at(
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_systems(
-        Update,
-        focus_looking_at
-            .in_set(NetworkingSystemsSet::Between)
-            .run_if(in_state(GameState::Playing)),
-    );
+    app.add_systems(Update, focus_looking_at.run_if(in_state(GameState::Playing)));
 }

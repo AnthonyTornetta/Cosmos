@@ -2,19 +2,7 @@
 
 use std::{cell::RefCell, rc::Rc};
 
-use bevy::{
-    app::{App, Update},
-    ecs::{
-        entity::Entity,
-        event::EventReader,
-        query::{With, Without},
-        schedule::IntoSystemConfigs,
-        system::{Commands, Query, Res, ResMut},
-    },
-    log::{error, info},
-    prelude::SystemSet,
-    state::state::OnEnter,
-};
+use bevy::prelude::*;
 use cosmos_core::{
     block::{
         Block,
@@ -32,7 +20,6 @@ use cosmos_core::{
         itemstack::{ItemShouldHaveData, ItemStackData, ItemStackNeedsDataCreated, ItemStackSystemSet},
     },
     item::Item,
-    netty::system_sets::NetworkingSystemsSet,
     registry::{Registry, identifiable::Identifiable},
     state::GameState,
     structure::Structure,
@@ -395,12 +382,13 @@ fn register_fluid_holder_items(
     mut fluid_holders: ResMut<Registry<FluidHolder>>,
 ) {
     if let Some(fluid_cell_filled) = items.from_id("cosmos:fluid_cell_filled")
-        && let Some(fluid_cell) = items.from_id("cosmos:fluid_cell") {
-            fluid_holders.register(FluidHolder::new(fluid_cell_filled, fluid_cell_filled, fluid_cell, 10_000));
-            needs_data.add_item(fluid_cell_filled);
+        && let Some(fluid_cell) = items.from_id("cosmos:fluid_cell")
+    {
+        fluid_holders.register(FluidHolder::new(fluid_cell_filled, fluid_cell_filled, fluid_cell, 10_000));
+        needs_data.add_item(fluid_cell_filled);
 
-            fluid_holders.register(FluidHolder::new(fluid_cell, fluid_cell_filled, fluid_cell, 10_000));
-        }
+        fluid_holders.register(FluidHolder::new(fluid_cell, fluid_cell_filled, fluid_cell, 10_000));
+    }
 }
 
 fn fill_tank_registry(mut tank_reg: ResMut<Registry<FluidTankBlock>>, blocks: Res<Registry<Block>>) {
@@ -417,11 +405,11 @@ pub enum FluidInteractionSet {
 }
 
 pub(super) fn register(app: &mut App) {
-    app.configure_sets(Update, FluidInteractionSet::InteractWithFluidBlocks);
+    app.configure_sets(FixedUpdate, FluidInteractionSet::InteractWithFluidBlocks);
 
     app.add_systems(OnEnter(GameState::PostLoading), (register_fluid_holder_items, fill_tank_registry))
         .add_systems(
-            Update,
+            FixedUpdate,
             (
                 on_interact_with_tank
                     .in_set(ItemStackSystemSet::CreateDataEntity)
@@ -430,7 +418,6 @@ pub(super) fn register(app: &mut App) {
                 add_item_fluid_data.in_set(ItemStackSystemSet::FillDataEntity),
                 on_interact_with_fluid.after(ItemStackSystemSet::FillDataEntity),
             )
-                .in_set(NetworkingSystemsSet::Between)
                 .in_set(FluidInteractionSet::InteractWithFluidBlocks),
         );
 }

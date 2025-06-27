@@ -12,10 +12,7 @@ use cosmos_core::{
     events::block_events::BlockDataSystemParams,
     inventory::{Inventory, itemstack::ItemShouldHaveData},
     item::Item,
-    netty::{
-        sync::events::server_event::{NettyEventReceived, NettyEventWriter},
-        system_sets::NetworkingSystemsSet,
-    },
+    netty::sync::events::server_event::{NettyEventReceived, NettyEventWriter},
     registry::{Registry, identifiable::Identifiable},
     state::GameState,
     structure::Structure,
@@ -48,7 +45,7 @@ fn handle_block_event(
         let block_id = s_block.block_id(structure);
 
         if block_id == block.id() {
-            nevw_open_ui.send(OpenDyeMachine(s_block), player.client_id());
+            nevw_open_ui.write(OpenDyeMachine(s_block), player.client_id());
         }
     }
 }
@@ -123,9 +120,8 @@ fn dye_block(
 
 pub(super) fn register(app: &mut App) {
     app.add_systems(
-        Update,
+        FixedUpdate,
         (handle_block_event, dye_block)
-            .in_set(NetworkingSystemsSet::Between)
             .in_set(BlockEventsSet::ProcessEvents)
             .run_if(in_state(GameState::Playing)),
     );

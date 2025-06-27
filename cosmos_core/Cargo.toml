@@ -38,6 +38,10 @@ default = [
     "bevy/default_font",
     "bevy/webgl2",
     "bevy/sysinfo_plugin",
+    "bevy/std", 
+    "bevy/bevy_log",
+    "bevy/async_executor",
+    "bevy/bevy_input_focus"
 ]
 [dependencies]
 bevy = { workspace = true }
@@ -50,7 +54,7 @@ bigdecimal = { workspace = true }
 noise = { workspace = true }
 rand = { workspace = true }
 rand_chacha = { workspace = true }
-bevy_easy_compute = { workspace = true }
+bevy_app_compute = { workspace = true }
 bytemuck = { workspace = true }
 
 bevy_rapier3d = { workspace = true }
@@ -63,3 +67,4 @@ thiserror = { workspace = true }
 bitflags = { workspace = true }
 derive_more = { workspace = true, features = ["full"] }
 uuid = { workspace = true }
+bevy_transform_interpolation = { workspace = true }

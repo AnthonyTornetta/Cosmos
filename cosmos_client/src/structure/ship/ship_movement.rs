@@ -5,10 +5,10 @@ use std::f32::consts::PI;
 use bevy::prelude::*;
 use bevy::window::PrimaryWindow;
 use bevy_renet::renet::RenetClient;
+use cosmos_core::ecs::sets::FixedUpdateSet;
 use cosmos_core::netty::client::LocalPlayer;
 use cosmos_core::netty::client_reliable_messages::ClientReliableMessages;
 use cosmos_core::netty::client_unreliable_messages::ClientUnreliableMessages;
-use cosmos_core::netty::system_sets::NetworkingSystemsSet;
 use cosmos_core::netty::{NettyChannelClient, cosmos_encoder};
 use cosmos_core::state::GameState;
 use cosmos_core::structure::shared::build_mode::BuildMode;
@@ -20,14 +20,14 @@ use crate::input::inputs::{CosmosInputs, InputChecker, InputHandler};
 use crate::rendering::MainCamera;
 use crate::settings::MouseSensitivity;
 use crate::ui::UiSystemSet;
-use crate::ui::components::show_cursor::no_open_menus;
+use crate::ui::components::show_cursor::ShowCursor;
 use crate::ui::crosshair::CrosshairOffset;
 use crate::window::setup::{CursorFlags, CursorFlagsSet, DeltaCursorPosition};
 
 fn process_ship_movement(
     input_handler: InputChecker,
     q_local_pilot: Query<&Pilot, (With<LocalPlayer>, Without<BuildMode>)>,
-    q_cam_trans: Query<&Transform, With<MainCamera>>,
+    q_cam_trans: Query<(&Transform, &Projection), With<MainCamera>>,
     mut client: ResMut<RenetClient>,
     mut crosshair_offset: ResMut<CrosshairOffset>,
     q_docked: Query<&Docked>,
@@ -35,12 +35,13 @@ fn process_ship_movement(
     primary_query: Query<&Window, With<PrimaryWindow>>,
     cursor_flags: Res<CursorFlags>,
     mouse_sensitivity: Res<MouseSensitivity>,
+    q_show_cursor: Query<(), With<ShowCursor>>,
 ) {
-    let Ok(pilot) = q_local_pilot.get_single() else {
+    let Ok(pilot) = q_local_pilot.single() else {
         return;
     };
 
-    let Ok(cam_trans) = q_cam_trans.get_single() else {
+    let Ok((cam_trans, camera)) = q_cam_trans.single() else {
         return;
     };
 
@@ -52,59 +53,54 @@ fn process_ship_movement(
 
     let mut movement = ShipMovement::default();
 
-    if input_handler.check_pressed(CosmosInputs::MoveForward) {
-        // z movement is inverted for when cam forward is in the +/-Z direction for some reason
-        if cam_trans.forward().z != 0.0 {
-            movement.movement -= Vec3::from(cam_trans.forward());
-        } else {
-            movement.movement += Vec3::from(cam_trans.forward());
+    if q_show_cursor.is_empty() {
+        if input_handler.check_pressed(CosmosInputs::MoveForward) {
+            // z movement is inverted for when cam forward is in the +/-Z direction for some reason
+            if cam_trans.forward().z != 0.0 {
+                movement.movement -= Vec3::from(cam_trans.forward());
+            } else {
+                movement.movement += Vec3::from(cam_trans.forward());
+            }
         }
-    }
-    if input_handler.check_pressed(CosmosInputs::MoveBackward) {
-        // z movement is inverted for when cam forward is in the +/-Z direction for some reason
-        if cam_trans.forward().z != 0.0 {
-            movement.movement += Vec3::from(cam_trans.forward());
-        } else {
-            movement.movement -= Vec3::from(cam_trans.forward());
+        if input_handler.check_pressed(CosmosInputs::MoveBackward) {
+            // z movement is inverted for when cam forward is in the +/-Z direction for some reason
+            if cam_trans.forward().z != 0.0 {
+                movement.movement += Vec3::from(cam_trans.forward());
+            } else {
+                movement.movement -= Vec3::from(cam_trans.forward());
+            }
         }
-    }
-    if input_handler.check_pressed(CosmosInputs::MoveUp) {
-        movement.movement += Vec3::from(cam_trans.up());
-    }
-    if input_handler.check_pressed(CosmosInputs::MoveDown) {
-        movement.movement -= Vec3::from(cam_trans.up());
-    }
-    if input_handler.check_pressed(CosmosInputs::MoveRight) {
-        // x movement is inverted for when cam forward is not in the +/-Z direction for some reason
-        if cam_trans.forward().z == 0.0 {
-            movement.movement -= Vec3::from(cam_trans.right());
-        } else {
-            movement.movement += Vec3::from(cam_trans.right());
+        if input_handler.check_pressed(CosmosInputs::MoveUp) {
+            movement.movement += Vec3::from(cam_trans.up());
         }
-    }
-    if input_handler.check_pressed(CosmosInputs::MoveLeft) {
-        // x movement is inverted for when cam forward is not in the +/-Z direction for some reason
-        if cam_trans.forward().z == 0.0 {
-            movement.movement += Vec3::from(cam_trans.right());
-        } else {
-            movement.movement -= Vec3::from(cam_trans.right());
+        if input_handler.check_pressed(CosmosInputs::MoveDown) {
+            movement.movement -= Vec3::from(cam_trans.up());
         }
+        if input_handler.check_pressed(CosmosInputs::MoveRight) {
+            // x movement is inverted for when cam forward is not in the +/-Z direction for some reason
+            if cam_trans.forward().z == 0.0 {
+                movement.movement -= Vec3::from(cam_trans.right());
+            } else {
+                movement.movement += Vec3::from(cam_trans.right());
+            }
+        }
+        if input_handler.check_pressed(CosmosInputs::MoveLeft) {
+            // x movement is inverted for when cam forward is not in the +/-Z direction for some reason
+            if cam_trans.forward().z == 0.0 {
+                movement.movement += Vec3::from(cam_trans.right());
+            } else {
+                movement.movement -= Vec3::from(cam_trans.right());
+            }
+        }
+
+        // Redundant because this is done on the server, but makes for nicer printouts
+        movement.movement = movement.movement.normalize_or_zero();
+
+        movement.braking = input_handler.check_pressed(CosmosInputs::SlowDown);
+        movement.match_speed = input_handler.check_pressed(CosmosInputs::MatchSpeed);
     }
 
-    // Redundant because this is done on the server, but makes for nicer printouts
-    movement.movement = movement.movement.normalize_or_zero();
-
-    movement.braking = input_handler.check_pressed(CosmosInputs::SlowDown);
-    movement.match_speed = input_handler.check_pressed(CosmosInputs::MatchSpeed);
-
-    if input_handler.check_just_pressed(CosmosInputs::StopPiloting) {
-        client.send_message(
-            NettyChannelClient::Reliable,
-            cosmos_encoder::serialize(&ClientReliableMessages::StopPiloting),
-        );
-    }
-
-    let Ok(w) = primary_query.get_single() else {
+    let Ok(w) = primary_query.single() else {
         return;
     };
 
@@ -113,7 +109,7 @@ fn process_ship_movement(
     if !is_docked {
         let hw = w.width() / 2.0;
         let hh = w.height() / 2.0;
-        let p2 = PI / 2.0; // 45 deg (half of FOV)
+        let p2 = if let Projection::Perspective(p) = camera { p.fov } else { PI } / 2.0;
 
         let max_w = hw * 0.9;
         let max_h = hh * 0.9;
@@ -130,11 +126,13 @@ fn process_ship_movement(
 
         let mut roll = 0.0;
 
-        if input_handler.check_pressed(CosmosInputs::RollLeft) {
-            roll += 0.25;
-        }
-        if input_handler.check_pressed(CosmosInputs::RollRight) {
-            roll -= 0.25;
+        if q_show_cursor.is_empty() {
+            if input_handler.check_pressed(CosmosInputs::RollLeft) {
+                roll += 0.25;
+            }
+            if input_handler.check_pressed(CosmosInputs::RollRight) {
+                roll -= 0.25;
+            }
         }
 
         // Camera rotation must effect torque to support steering ship from multiple angles
@@ -149,6 +147,15 @@ fn process_ship_movement(
         NettyChannelClient::Unreliable,
         cosmos_encoder::serialize(&ClientUnreliableMessages::SetMovement { movement }),
     );
+}
+
+fn monitor_stop_piloting(input_handler: InputChecker, mut client: ResMut<RenetClient>) {
+    if input_handler.check_just_pressed(CosmosInputs::StopPiloting) {
+        client.send_message(
+            NettyChannelClient::Reliable,
+            cosmos_encoder::serialize(&ClientReliableMessages::StopPiloting),
+        );
+    }
 }
 
 fn reset_cursor(
@@ -169,17 +176,17 @@ pub enum ClientCreateShipMovementSet {
 }
 
 pub(super) fn register(app: &mut App) {
-    app.configure_sets(Update, ClientCreateShipMovementSet::ProcessShipMovement);
+    app.configure_sets(FixedUpdate, ClientCreateShipMovementSet::ProcessShipMovement);
 
-    app.add_systems(
-        Update,
-        (reset_cursor, process_ship_movement)
-            .after(UiSystemSet::FinishUi)
-            .run_if(no_open_menus)
-            .in_set(NetworkingSystemsSet::Between)
-            .after(CursorFlagsSet::ApplyCursorFlagsUpdates)
-            .in_set(ClientCreateShipMovementSet::ProcessShipMovement)
-            .chain()
-            .run_if(in_state(GameState::Playing)),
-    );
+    app.add_systems(Update, monitor_stop_piloting.run_if(in_state(GameState::Playing)))
+        .add_systems(
+            Update,
+            (reset_cursor, process_ship_movement)
+                .after(UiSystemSet::FinishUi)
+                .in_set(FixedUpdateSet::Main)
+                .after(CursorFlagsSet::ApplyCursorFlagsUpdates)
+                .in_set(ClientCreateShipMovementSet::ProcessShipMovement)
+                .chain()
+                .run_if(in_state(GameState::Playing)),
+        );
 }

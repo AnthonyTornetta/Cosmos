@@ -1,11 +1,6 @@
 use std::time::Duration;
 
-use bevy::{
-    log::{error, info},
-    prelude::{App, Commands, IntoSystemConfigs, Query, Res, ResMut, Update, With, in_state},
-    time::common_conditions::on_timer,
-    utils::HashSet,
-};
+use bevy::{platform::collections::HashSet, prelude::*, time::common_conditions::on_timer};
 use cosmos_core::{
     faction::Factions,
     physics::location::{Location, SectorUnit, systems::Anchor},
@@ -76,7 +71,7 @@ fn spawn_npc_stations(
 
 pub(super) fn register(app: &mut App) {
     app.add_systems(
-        Update,
+        FixedUpdate,
         spawn_npc_stations
             .run_if(on_timer(Duration::from_secs(1)))
             .before(LoadingBlueprintSystemSet::BeginLoadingBlueprints)

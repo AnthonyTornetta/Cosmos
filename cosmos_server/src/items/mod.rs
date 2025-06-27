@@ -2,18 +2,13 @@
 
 use std::time::Duration;
 
-use bevy::{
-    app::Update,
-    prelude::{App, Commands, Component, Entity, IntoSystemConfigs, Query, Res, With, Without},
-    reflect::Reflect,
-    time::Time,
-};
+use bevy::prelude::*;
 use cosmos_core::{
-    ecs::NeedsDespawned,
+    ecs::{NeedsDespawned, sets::FixedUpdateSet},
     entities::{health::Dead, player::Player},
     inventory::Inventory,
     item::physical_item::PhysicalItem,
-    netty::{sync::IdentifiableComponent, system_sets::NetworkingSystemsSet},
+    netty::sync::IdentifiableComponent,
     physics::location::Location,
 };
 use serde::{Deserialize, Serialize};
@@ -99,10 +94,8 @@ pub(super) fn register(app: &mut App) {
     make_persistent::<PhysicalItem>(app);
 
     app.add_systems(
-        Update,
-        (pickup_near_item, advance_time_since_spawn)
-            .chain()
-            .in_set(NetworkingSystemsSet::Between),
+        FixedUpdate,
+        (pickup_near_item, advance_time_since_spawn).chain().in_set(FixedUpdateSet::Main),
     )
     .register_type::<TimeSinceSpawn>();
 }

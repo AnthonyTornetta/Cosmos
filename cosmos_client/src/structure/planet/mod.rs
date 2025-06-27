@@ -1,19 +1,14 @@
 //! Handles client-related planet things
 
-use bevy::{
-    math::Quat,
-    prelude::{
-        App, Commands, Condition, Entity, EventWriter, GlobalTransform, IntoSystemConfigs, Mut, Query, Res, ResMut, Update, Vec3, With,
-        in_state,
-    },
-};
+use bevy::prelude::*;
 use bevy_renet::renet::RenetClient;
 use cosmos_core::{
+    ecs::sets::FixedUpdateSet,
     netty::{
         NettyChannelClient, client::LocalPlayer, client_reliable_messages::ClientReliableMessages, cosmos_encoder,
-        sync::mapping::NetworkMapping, system_sets::NetworkingSystemsSet,
+        sync::mapping::NetworkMapping,
     },
-    physics::location::{Location, LocationPhysicsSet},
+    physics::location::Location,
     state::GameState,
     structure::{
         ChunkState, Structure,
@@ -72,7 +67,7 @@ fn load_planet_chunks(
     mapper: Res<NetworkMapping>,
     mut client: ResMut<RenetClient>,
 ) {
-    let Ok(player_location) = q_player_location.get_single() else {
+    let Ok(player_location) = q_player_location.single() else {
         return;
     };
 
@@ -100,9 +95,10 @@ fn load_planet_chunks(
         true,
     ) {
         if let ChunkIteratorResult::EmptyChunk { position } = chunk
-            && best_planet.get_chunk_state(position) == ChunkState::Unloaded {
-                chunks.push(position);
-            }
+            && best_planet.get_chunk_state(position) == ChunkState::Unloaded
+        {
+            chunks.push(position);
+        }
     }
 
     for coordinate in chunks {
@@ -127,7 +123,7 @@ pub(crate) fn unload_chunks_far_from_players(
     mut event_writer: EventWriter<ChunkUnloadEvent>,
     mut commands: Commands,
 ) {
-    let Ok(player) = q_player.get_single() else {
+    let Ok(player) = q_player.single() else {
         return;
     };
 
@@ -182,11 +178,10 @@ pub(super) fn register(app: &mut App) {
     planet_skybox::register(app);
 
     app.add_systems(
-        Update,
+        FixedUpdate,
         (load_planet_chunks, unload_chunks_far_from_players)
             .chain()
-            .in_set(NetworkingSystemsSet::Between)
-            .after(LocationPhysicsSet::DoPhysics)
+            .in_set(FixedUpdateSet::LocationSyncingPostPhysics)
             .run_if(in_state(GameState::Playing).or(in_state(GameState::LoadingWorld))),
     );
 }

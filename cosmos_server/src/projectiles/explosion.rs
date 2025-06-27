@@ -1,17 +1,6 @@
 //! Server-related logic for explosions
 
-use bevy::{
-    ecs::{
-        event::{Event, EventWriter},
-        query::{Added, Or, Without},
-        schedule::IntoSystemConfigs,
-    },
-    log::info,
-    math::{Quat, Vec3},
-    prelude::{App, Commands, Entity, Query, Res, Update, With},
-    transform::components::{GlobalTransform, Transform},
-    utils::HashSet,
-};
+use bevy::{platform::collections::HashSet, prelude::*};
 use bevy_rapier3d::{
     geometry::Collider,
     pipeline::QueryFilter,
@@ -21,11 +10,7 @@ use bevy_rapier3d::{
 use cosmos_core::{
     block::{Block, block_events::BlockEventsSet},
     ecs::NeedsDespawned,
-    physics::{
-        location::{Location, LocationPhysicsSet},
-        player_world::PlayerWorld,
-        structure_physics::ChunkPhysicsPart,
-    },
+    physics::{location::Location, player_world::PlayerWorld, structure_physics::ChunkPhysicsPart},
     projectiles::{
         causer::Causer,
         missile::{Explosion, ExplosionSystemSet},
@@ -39,10 +24,7 @@ use cosmos_core::{
     },
 };
 
-use crate::{
-    netty::sync::sync_bodies::DontNotifyClientOfDespawn,
-    structure::{block_health::BlockHealthSet, shared::MeltingDownSet, systems::shield_system::ShieldSet},
-};
+use crate::{netty::sync::sync_bodies::DontNotifyClientOfDespawn, structure::shared::MeltingDownSet};
 
 /// 1 unit of explosion power = this amount of health. Bigger this number is, the more damage explosives will do.
 const HEALTH_PER_EXPLOSION_POWER: f32 = 8.0;
@@ -137,7 +119,7 @@ fn respond_to_explosion(
 
         for &hit in ents.iter() {
             let Ok((structure_g_trans, structure_loc, mut structure)) = q_structure.get_mut(hit) else {
-                ev_writer_explosion_hit.send(ExplosionHitEvent {
+                ev_writer_explosion_hit.write(ExplosionHitEvent {
                     explosion,
                     explosion_location: explosion_loc,
                     hit_entity: hit,
@@ -253,15 +235,14 @@ pub(super) fn register(app: &mut App) {
     app.add_event::<ExplosionHitEvent>();
 
     app.add_systems(
-        Update,
+        FixedUpdate,
         respond_to_explosion
             .ambiguous_with(MeltingDownSet::ProcessMeltingDown)
             .in_set(ExplosionSystemSet::ProcessExplosions)
-            .in_set(BlockEventsSet::SendEventsForNextFrame)
-            .ambiguous_with(BlockEventsSet::SendEventsForNextFrame) // Order of blocks being updated doesn't matter
-            .after(ShieldSet::RechargeShields)
-            .after(LocationPhysicsSet::DoPhysics)
-            .before(ShieldSet::OnShieldHit)
-            .in_set(BlockHealthSet::SendHealthChanges),
+            .ambiguous_with(BlockEventsSet::SendEventsForNextFrame), // Order of blocks being updated doesn't matter
+                                                                     // .after(ShieldSet::RechargeShields)
+                                                                     // .after(FixedUpdateSet::LocationSyncing)
+                                                                     // .before(FixedUpdateSet::PrePhysics)
+                                                                     // .before(ShieldSet::OnShieldHit), // .in_set(BlockHealthSet::SendHealthChanges),
     );
 }

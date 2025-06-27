@@ -1,10 +1,6 @@
 use std::{cell::RefCell, rc::Rc};
 
-use bevy::{
-    app::Update,
-    log::{error, warn},
-    prelude::{App, Commands, EventReader, IntoSystemConfigs, Query, Res, With, Without, in_state},
-};
+use bevy::prelude::*;
 
 use cosmos_core::{
     block::{
@@ -25,7 +21,6 @@ use cosmos_core::{
             netty_event::SyncedEventImpl,
             server_event::{NettyEventReceived, NettyEventWriter},
         },
-        system_sets::NetworkingSystemsSet,
     },
     prelude::Structure,
     registry::{Registry, identifiable::Identifiable},
@@ -53,7 +48,7 @@ fn monitor_basic_fabricator_interactions(
             continue;
         };
 
-        nevw_open_basic_fabricator.send(OpenBasicFabricatorEvent(block), player.client_id());
+        nevw_open_basic_fabricator.write(OpenBasicFabricatorEvent(block), player.client_id());
     }
 }
 
@@ -141,9 +136,8 @@ fn monitor_craft_event(
 
 pub(super) fn register(app: &mut App) {
     app.add_systems(
-        Update,
+        FixedUpdate,
         (monitor_basic_fabricator_interactions, monitor_craft_event)
-            .in_set(NetworkingSystemsSet::Between)
             .in_set(BlockEventsSet::ProcessEvents)
             .run_if(in_state(GameState::Playing)),
     )

@@ -1,25 +1,13 @@
 //! Handles client-related ship things
 
-use bevy::{
-    ecs::event::EventReader,
-    prelude::{
-        App, BuildChildrenTransformExt, Commands, Entity, IntoSystemConfigs, Parent, Query, ResMut, SystemSet, Transform, Update, With,
-        Without, in_state,
-    },
-};
+use bevy::prelude::*;
 use bevy_rapier3d::pipeline::CollisionEvent;
 use bevy_renet::renet::RenetClient;
 use cosmos_core::{
-    netty::{
-        NettyChannelClient, client::LocalPlayer, client_reliable_messages::ClientReliableMessages, cosmos_encoder,
-        system_sets::NetworkingSystemsSet,
-    },
-    physics::location::LocationPhysicsSet,
+    ecs::sets::FixedUpdateSet,
+    netty::{NettyChannelClient, client::LocalPlayer, client_reliable_messages::ClientReliableMessages, cosmos_encoder},
     state::GameState,
-    structure::{
-        Structure, chunk::CHUNK_DIMENSIONSF, loading::StructureLoadingSet, planet::Planet, shared::build_mode::BuildMode,
-        ship::pilot::Pilot,
-    },
+    structure::{Structure, chunk::CHUNK_DIMENSIONSF, planet::Planet, shared::build_mode::BuildMode, ship::pilot::Pilot},
 };
 
 mod client_ship_builder;
@@ -30,7 +18,7 @@ pub mod ui;
 
 fn respond_to_collisions(
     mut ev_reader: EventReader<CollisionEvent>,
-    parent_query: Query<&Parent>,
+    parent_query: Query<&ChildOf>,
     is_local_player: Query<(), (With<LocalPlayer>, Without<Pilot>)>,
     is_planet: Query<(), With<Planet>>,
     mut commands: Commands,
@@ -59,15 +47,15 @@ fn respond_to_collisions(
             continue;
         };
 
-        if !is_planet.contains(hit_parent.get()) {
+        if !is_planet.contains(hit_parent.parent()) {
             continue;
         }
 
         // At this point we have verified they hit a structure, now see if they are already a child
         // of that structure.
-        let structure_hit_entity = hit_parent.get();
+        let structure_hit_entity = hit_parent.parent();
 
-        let hitting_current_parent = parent_query.get(player_entity).is_ok_and(|p| p.get() == structure_hit_entity);
+        let hitting_current_parent = parent_query.get(player_entity).is_ok_and(|p| p.parent() == structure_hit_entity);
 
         // If they are a child of that structure, do nothing.
         if hitting_current_parent {
@@ -94,33 +82,34 @@ fn respond_to_collisions(
 }
 
 fn remove_parent_when_too_far(
-    query: Query<(Entity, &Parent, &Transform), (With<LocalPlayer>, Without<Structure>, Without<BuildMode>)>,
+    query: Query<(Entity, &ChildOf, &Transform), (With<LocalPlayer>, Without<Structure>, Without<BuildMode>)>,
     q_structure: Query<&Structure>,
     mut commands: Commands,
     mut renet_client: ResMut<RenetClient>,
 ) {
-    if let Ok((player_entity, parent, player_loc)) = query.get_single()
-        && let Ok(structure) = q_structure.get(parent.get()) {
-            if !matches!(structure, Structure::Full(_)) {
-                return;
-            }
-
-            if player_loc.translation.length() >= CHUNK_DIMENSIONSF * 10.0 {
-                commands.entity(player_entity).remove_parent_in_place();
-
-                renet_client.send_message(
-                    NettyChannelClient::Reliable,
-                    cosmos_encoder::serialize(&ClientReliableMessages::LeaveShip),
-                );
-            }
+    if let Ok((player_entity, parent, player_loc)) = query.single()
+        && let Ok(structure) = q_structure.get(parent.parent())
+    {
+        if !matches!(structure, Structure::Full(_)) {
+            return;
         }
+
+        if player_loc.translation.length() >= CHUNK_DIMENSIONSF * 10.0 {
+            commands.entity(player_entity).remove_parent_in_place();
+
+            renet_client.send_message(
+                NettyChannelClient::Reliable,
+                cosmos_encoder::serialize(&ClientReliableMessages::LeaveShip),
+            );
+        }
+    }
 }
 
 #[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
 /// When the player's parent is changing, it should be done in this set
-pub enum PlayerParentChangingSet {
+pub enum PlayerChildOfChangingSet {
     /// When the player's parent is changing, it should be done in this set
-    ChangeParent,
+    ChangeChildOf,
 }
 
 pub(super) fn register(app: &mut App) {
@@ -130,18 +119,15 @@ pub(super) fn register(app: &mut App) {
     pilot::register(app);
     ui::register(app);
 
-    app.configure_sets(Update, PlayerParentChangingSet::ChangeParent);
+    app.configure_sets(FixedUpdate, PlayerChildOfChangingSet::ChangeChildOf);
 
     app.add_systems(
-        Update,
-        (
-            respond_to_collisions.before(LocationPhysicsSet::DoPhysics),
-            remove_parent_when_too_far.after(LocationPhysicsSet::DoPhysics),
-        )
+        FixedUpdate,
+        (respond_to_collisions, remove_parent_when_too_far)
             .chain()
-            .in_set(NetworkingSystemsSet::Between)
-            .after(StructureLoadingSet::StructureLoaded)
-            .in_set(PlayerParentChangingSet::ChangeParent)
+            .in_set(FixedUpdateSet::PostPhysics)
+            .before(FixedUpdateSet::LocationSyncingPostPhysics)
+            .in_set(PlayerChildOfChangingSet::ChangeChildOf)
             .run_if(in_state(GameState::Playing)),
     );
 }

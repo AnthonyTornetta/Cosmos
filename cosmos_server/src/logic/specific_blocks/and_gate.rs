@@ -3,10 +3,7 @@
 
 use std::{cell::RefCell, rc::Rc};
 
-use bevy::{
-    app::{App, Update},
-    prelude::{EventReader, EventWriter, IntoSystemConfigs, OnEnter, Query, Res, ResMut, States},
-};
+use bevy::prelude::*;
 
 use cosmos_core::{
     block::{Block, block_face::BlockFace},
@@ -96,13 +93,13 @@ fn and_gate_output_event_listener(
 pub(super) fn register<T: States>(app: &mut App, post_loading_state: T) {
     app.add_systems(OnEnter(post_loading_state), register_logic_connections)
         .add_systems(
-            Update,
+            FixedUpdate,
             and_gate_input_event_listener
                 .in_set(LogicSystemSet::Consume)
                 .ambiguous_with(LogicSystemSet::Consume),
         )
         .add_systems(
-            Update,
+            FixedUpdate,
             and_gate_output_event_listener
                 .in_set(LogicSystemSet::Produce)
                 .ambiguous_with(LogicSystemSet::Produce),

@@ -1,5 +1,9 @@
 //! A garbage repeated material. Don't use this.
 
+// I think there's a bug in something causing a bunch of unused `check` function errors in this
+// file. Probably one of the derives on the `UnlitRepeatedMaterial` struct.
+#![allow(dead_code)]
+
 use bevy::{
     asset::Asset,
     color::LinearRgba,

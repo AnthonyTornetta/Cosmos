@@ -4,15 +4,8 @@
 use std::time::Duration;
 
 use bevy::{
-    color::Color,
-    core::Name,
-    ecs::{
-        query::Added,
-        schedule::{IntoSystemConfigs, IntoSystemSetConfigs, SystemSet},
-    },
     pbr::{NotShadowCaster, NotShadowReceiver},
-    prelude::{App, Commands, Component, Entity, Query, Update},
-    reflect::Reflect,
+    prelude::*,
 };
 use bevy_rapier3d::{
     geometry::{ActiveEvents, ActiveHooks, Collider},
@@ -20,13 +13,10 @@ use bevy_rapier3d::{
 };
 use serde::{Deserialize, Serialize};
 
-#[cfg(feature = "client")]
-use crate::netty::system_sets::NetworkingSystemsSet;
-
 use crate::{
     block::blocks::fluid::FLUID_COLLISION_GROUP,
+    ecs::sets::FixedUpdateSet,
     netty::sync::{ComponentSyncingSet, IdentifiableComponent, SyncableComponent, sync_component},
-    physics::location::{CosmosBundleSet, LocationPhysicsSet},
 };
 
 #[derive(Component, Debug, Serialize, Deserialize, Clone, PartialEq)]
@@ -121,14 +111,11 @@ pub(super) fn register(app: &mut App) {
     {
         // Setup explosion before they are synced to clients
         app.configure_sets(
-            Update,
+            FixedUpdate,
             (
-                ExplosionSystemSet::PreProcessExplosions,
-                // .before(LocationPhysicsSet::DoPhysics)
-                // .before(CosmosBundleSet::HandleCosmosBundles),
-                ExplosionSystemSet::ProcessExplosions
-                    .after(LocationPhysicsSet::DoPhysics)
-                    .after(CosmosBundleSet::HandleCosmosBundles),
+                ExplosionSystemSet::PreProcessExplosions.before(FixedUpdateSet::LocationSyncingPostPhysics),
+                ExplosionSystemSet::ProcessExplosions //.after(LocationPhysicsSet::DoPhysics),
+                    .after(FixedUpdateSet::LocationSyncingPostPhysics),
             )
                 .chain(),
         );
@@ -137,11 +124,9 @@ pub(super) fn register(app: &mut App) {
     {
         // Receive explosions from server before processing them
         app.configure_sets(
-            Update,
+            FixedUpdate,
             (ExplosionSystemSet::PreProcessExplosions, ExplosionSystemSet::ProcessExplosions)
-                .after(LocationPhysicsSet::DoPhysics)
-                .in_set(NetworkingSystemsSet::Between)
-                .after(CosmosBundleSet::HandleCosmosBundles)
+                .in_set(FixedUpdateSet::LocationSyncing)
                 .chain(),
         );
     }

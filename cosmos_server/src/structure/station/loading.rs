@@ -1,6 +1,6 @@
 //! Handles the loading of stations
 
-use bevy::prelude::{App, Commands, Component, Entity, EventWriter, IntoSystemConfigs, Query, Res, Update, With, in_state};
+use bevy::prelude::*;
 use cosmos_core::{
     block::{Block, block_rotation::BlockRotation},
     registry::Registry,
@@ -54,7 +54,7 @@ fn create_stations(
                 chunk: _,
             } = res
             {
-                chunk_set_event_writer.send(ChunkInitEvent {
+                chunk_set_event_writer.write(ChunkInitEvent {
                     structure_entity: entity,
                     coords,
                     serialized_block_data: None,
@@ -66,7 +66,7 @@ fn create_stations(
 
 pub(super) fn register(app: &mut App) {
     app.add_systems(
-        Update,
+        FixedUpdate,
         create_stations
             .in_set(StructureLoadingSet::LoadStructure)
             .in_set(StructureTypeSet::Station)

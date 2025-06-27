@@ -1,6 +1,6 @@
 use std::fs;
 
-use bevy::{prelude::*, utils::HashSet};
+use bevy::{platform::collections::HashSet, prelude::*};
 use cosmos_core::{
     faction::{Faction, FactionSettings, Factions},
     physics::location::{Location, SYSTEM_SECTORS, Sector},
@@ -116,7 +116,7 @@ fn generate_factions(
                 }),
             );
 
-            let mut sectors_done = HashSet::default();
+            let mut sectors_done = HashSet::<Sector>::default();
             sectors_done.insert(faction_origin);
 
             let faction_size = rng.random_range(10..15);
@@ -162,7 +162,7 @@ fn generate_factions(
 
 pub(super) fn register(app: &mut App) {
     app.add_systems(
-        Update,
+        FixedUpdate,
         generate_factions
             .in_set(SystemGenerationSet::FactionStations)
             .run_if(in_state(GameState::Playing)),

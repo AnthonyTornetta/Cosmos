@@ -2,14 +2,7 @@
 
 use std::time::Duration;
 
-use bevy::{
-    ecs::{component::Component, event::EventReader, schedule::IntoSystemConfigs},
-    hierarchy::Parent,
-    math::Vec3,
-    prelude::{App, Commands, Entity, Query, Res, Update, With},
-    time::Time,
-    transform::components::{GlobalTransform, Transform},
-};
+use bevy::prelude::*;
 use bevy_rapier3d::{
     dynamics::{ExternalImpulse, Velocity},
     pipeline::CollisionEvent,
@@ -17,12 +10,12 @@ use bevy_rapier3d::{
 };
 
 use cosmos_core::{
-    ecs::NeedsDespawned,
+    ecs::{NeedsDespawned, sets::FixedUpdateSet},
     netty::system_sets::NetworkingSystemsSet,
     persistence::LoadingDistance,
     physics::{
         collision_handling::CollisionBlacklist,
-        location::{CosmosBundleSet, Location, LocationPhysicsSet},
+        location::{Location, LocationPhysicsSet},
     },
     projectiles::{
         causer::Causer,
@@ -94,7 +87,7 @@ fn apply_missile_thrust(mut commands: Commands, time: Res<Time>, q_missiles: Que
 fn respond_to_collisions(
     mut ev_reader: EventReader<CollisionEvent>,
     q_missile: Query<(&Location, &Velocity, &Missile, Option<&Causer>, &CollisionBlacklist)>,
-    q_parent: Query<&Parent>,
+    q_parent: Query<&ChildOf>,
     mut commands: Commands,
 ) {
     for ev in ev_reader.read() {
@@ -169,7 +162,7 @@ fn despawn_missiles(
 
 pub(super) fn register(app: &mut App) {
     app.add_systems(
-        Update,
+        FixedUpdate,
         (respond_to_collisions.before(NetworkingSystemsSet::SyncComponents), despawn_missiles)
             .before(ExplosionSystemSet::PreProcessExplosions)
             .after(LocationPhysicsSet::DoPhysics)
@@ -177,13 +170,13 @@ pub(super) fn register(app: &mut App) {
     );
 
     app.add_systems(
-        Update,
+        FixedUpdate,
         (
             look_and_move_towards_target.ambiguous_with(StructureTypeSet::Ship),
             apply_missile_thrust,
         )
-            .after(CosmosBundleSet::HandleCosmosBundles)
-            .in_set(NetworkingSystemsSet::Between)
+            .after(FixedUpdateSet::LocationSyncing)
+            .before(FixedUpdateSet::PrePhysics)
             .chain(),
     );
 }
