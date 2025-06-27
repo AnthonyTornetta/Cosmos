@@ -199,10 +199,10 @@ fn register_small_asteroid_generator(app: &mut App, id: &'static str, asteroid_b
 fn register_small_asteroid_generation(app: &mut App, id: &'static str, block_entries: Vec<SmallAsteroidBlockEntry>) {
     register_small_asteroid_generator(app, id, block_entries);
 
-    let start_generating_molten_asteroid = move |mut q_asteroids: Query<(&mut Structure, &Location, &SmallAsteroidNeedsCreated)>,
-                                                 noise: Res<Noise>,
-                                                 asteroid_types: Res<SmallAsteroidTypes>,
-                                                 blocks: Res<Registry<Block>>| {
+    let start_generating_small_asteroid = move |mut q_asteroids: Query<(&mut Structure, &Location, &SmallAsteroidNeedsCreated)>,
+                                                noise: Res<Noise>,
+                                                asteroid_types: Res<SmallAsteroidTypes>,
+                                                blocks: Res<Registry<Block>>| {
         for (mut structure, loc, needs_created) in q_asteroids.iter_mut() {
             let Some(block_entries) = asteroid_types.0.get(needs_created.id) else {
                 error!("Invalid asteroid type: {}", needs_created.id);
@@ -265,8 +265,8 @@ fn register_small_asteroid_generation(app: &mut App, id: &'static str, block_ent
     };
 
     app.add_systems(
-        Update,
-        start_generating_molten_asteroid
+        FixedUpdate,
+        start_generating_small_asteroid
             .in_set(AsteroidGenerationSet::GenerateAsteroid)
             .ambiguous_with(AsteroidGenerationSet::GenerateAsteroid)
             .run_if(in_state(GameState::Playing)),
@@ -396,5 +396,8 @@ pub(super) fn register(app: &mut App) {
             .run_if(in_state(GameState::Playing)),
     )
     .register_type::<NextDynamicAsteroidSpawnTime>()
-    .add_systems(Update, add_next_dynamic_asteroid_spawn_time.in_set(NetworkingSystemsSet::Between));
+    .add_systems(
+        FixedUpdate,
+        add_next_dynamic_asteroid_spawn_time.in_set(NetworkingSystemsSet::Between),
+    );
 }

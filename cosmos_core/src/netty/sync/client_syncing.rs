@@ -605,8 +605,6 @@ fn get_entity_identifier_info(
             .client_from_server(&server_data_entity)
             .map(|x| {
                 if !q_block_data.contains(x) {
-                    error!("Component got for block data but had no block data component - requesting entity. (Client: {x:?})");
-
                     return network_mapping
                         .client_from_server(&identifier.block.structure())
                         .and_then(|structure_entity| {
