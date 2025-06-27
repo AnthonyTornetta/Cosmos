@@ -78,7 +78,7 @@ bitflags = { workspace = true }
 bevy_mod_debugdump = { workspace = true }
 derive_more = { workspace = true, features = ["full"] }
 uuid = { workspace = true }
-
+bevy_framepace = { workspace = true }
 bevy_app_compute = { workspace = true }
 bytemuck = { workspace = true }
 zip = "2.2.2"

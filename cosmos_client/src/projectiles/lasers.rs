@@ -8,7 +8,6 @@ use cosmos_core::{
         NettyChannelServer, cosmos_encoder, server_laser_cannon_system_messages::ServerStructureSystemMessages,
         sync::mapping::NetworkMapping, system_sets::NetworkingSystemsSet,
     },
-    physics::location::LocationPhysicsSet,
     projectiles::{causer::Causer, laser::Laser},
     state::GameState,
 };
@@ -134,11 +133,10 @@ fn lasers_netty(
 
 pub(super) fn register(app: &mut App) {
     app.add_systems(OnEnter(GameState::Loading), create_laser_mesh).add_systems(
-        Update,
+        FixedUpdate,
         lasers_netty
             .in_set(NetworkingSystemsSet::ReceiveMessages)
             .ambiguous_with(NetworkingSystemsSet::ReceiveMessages)
-            .before(LocationPhysicsSet::DoPhysics)
             .run_if(in_state(GameState::Playing)),
     );
 }

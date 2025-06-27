@@ -275,7 +275,7 @@ pub(super) fn register(app: &mut App) {
         FixedUpdate,
         (append_grounded_check, check_grounded)
             .run_if(in_state(GameState::Playing))
-            .before(PlayerMovementSet::ProcessPlayerMovement)
+            .in_set(FixedUpdateSet::PostPhysics)
             .chain(),
     );
 

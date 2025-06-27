@@ -53,6 +53,10 @@ impl SyncableComponent for ComsChannel {
         true
     }
 
+    fn debug() -> bool {
+        true
+    }
+
     #[cfg(feature = "client")]
     fn convert_entities_server_to_client(self, mapping: &crate::netty::sync::mapping::NetworkMapping) -> Option<Self> {
         mapping.client_from_server(&self.with).map(|with| Self {
