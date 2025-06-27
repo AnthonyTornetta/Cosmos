@@ -8,11 +8,14 @@ use cosmos_core::entities::player::Player;
 use cosmos_core::netty::server::ServerLobby;
 use cosmos_core::netty::server_reliable_messages::ServerReliableMessages;
 use cosmos_core::netty::{NettyChannelServer, cosmos_encoder};
+use renet_steam::SteamServerTransport;
 use renet_visualizer::RenetServerVisualizer;
 
 use crate::entities::player::persistence::LoadPlayer;
 use crate::netty::network_helpers::ClientTicks;
 use crate::persistence::saving::NeedsSaved;
+
+// use super::auth::AuthenticationServer;
 
 #[derive(Event, Debug)]
 /// Sent whenever a player just connected
@@ -26,7 +29,7 @@ pub struct PlayerConnectedEvent {
 pub(super) fn handle_server_events(
     mut commands: Commands,
     mut server: ResMut<RenetServer>,
-    transport: Res<NetcodeServerTransport>,
+    transport: NonSend<SteamServerTransport>,
     mut server_events: EventReader<ServerEvent>,
     mut lobby: ResMut<ServerLobby>,
     mut client_ticks: ResMut<ClientTicks>,
@@ -39,16 +42,26 @@ pub(super) fn handle_server_events(
                 let client_id = *client_id;
                 info!("Client {client_id} connected");
 
-                let Some(user_data) = transport.user_data(client_id) else {
-                    warn!("Unable to get user data - rejecting connection!");
-                    server.disconnect(client_id);
-                    continue;
-                };
-                let Ok(name) = cosmos_encoder::deserialize_uncompressed::<String>(user_data.as_slice()) else {
-                    warn!("Unable to deserialize name - rejecting connection!");
-                    server.disconnect(client_id);
-                    continue;
-                };
+                // let Some(user_data) = transport.(client_id) else {
+                //     warn!("Unable to get user data - rejecting connection!");
+                //     server.disconnect(client_id);
+                //     continue;
+                // };
+
+                // match auth_server.as_ref() {
+                //     AuthenticationServer::Steam(s) => {
+                //         s.begin_authentication_session(user, ticket);
+                //     }
+                //     AuthenticationServer::None => {}
+                // }
+                //
+                let name = "hi".into();
+
+                // let Ok(name) = cosmos_encoder::deserialize_uncompressed::<String>(user_data.as_slice()) else {
+                //     warn!("Unable to deserialize name - rejecting connection!");
+                //     server.disconnect(client_id);
+                //     continue;
+                // };
 
                 if q_players.iter().any(|x| x.name() == name) {
                     warn!("Duplicate name - rejecting connection!");

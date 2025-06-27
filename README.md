@@ -70,9 +70,9 @@ See [the issues page](https://github.com/AnthonyTornetta/Cosmos/issues) for the 
 - [ ] More pirate ships
 - [ ] More station types
 - [ ] Performance fixes
-- [ ] Rework systems to use FixedUpdate
-  - [ ] Physics
-- [ ] Reduce amount of packets server sends per second
+- [x] Rework systems to use FixedUpdate
+  - [x] Physics
+- [x] Reduce amount of packets server sends per second
 - [ ] Respawn anchor
 - [ ] Screenshots
 - [x] Update to Bevy 0.16

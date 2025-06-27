@@ -2,6 +2,7 @@
 
 use bevy::prelude::App;
 
+pub mod auth;
 pub mod network_helpers;
 pub mod server_events;
 pub mod server_listener;
@@ -11,4 +12,5 @@ pub(super) fn register(app: &mut App) {
     sync::register(app);
     server_events::register(app);
     server_listener::register(app);
+    auth::register(app);
 }

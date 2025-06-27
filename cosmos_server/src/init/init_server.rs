@@ -2,21 +2,25 @@
 //!
 //! Use `init` to do this.
 
+use bevy::prelude::*;
+
 use std::{net::UdpSocket, time::SystemTime};
 
 use bevy::prelude::*;
 use bevy_renet::{
     netcode::{NetcodeServerTransport, ServerAuthentication, ServerConfig},
     renet::RenetServer,
+    steam::steamworks::{Client, ServerMode, SingleClient},
 };
 use cosmos_core::netty::{PROTOCOL_ID, connection_config, server::ServerLobby};
+use renet_steam::{SteamServerConfig, SteamServerTransport};
 
 use crate::netty::network_helpers::{ClientTicks, NetworkTick};
 
 /// Sets up the server & makes it ready to be connected to
 pub fn init(app: &mut App, port: u16) {
-    let public_addr = format!("0.0.0.0:{port}").parse().unwrap();
-    let socket = UdpSocket::bind(public_addr).unwrap();
+    // let public_addr = format!("0.0.0.0:{port}").parse().unwrap();
+    // let socket = UdpSocket::bind(public_addr).unwrap();
 
     let current_time = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).unwrap();
 
@@ -25,12 +29,13 @@ pub fn init(app: &mut App, port: u16) {
     //     public_addresses: vec![public_addr],
     // };
 
-    let setup_config = ServerConfig {
-        current_time,
+    let setup_config = SteamServerConfig {
+        access_permission: renet_steam::AccessPermission::Public,
+        // current_time,
         max_clients: 64,
-        protocol_id: PROTOCOL_ID,
-        public_addresses: vec![public_addr],
-        authentication: ServerAuthentication::Unsecure,
+        // protocol_id: PROTOCOL_ID,
+        // public_addresses: vec![public_addr],
+        // authentication: ServerAuthentication::Unsecure,
     };
 
     // let server_config = ServerConfig {
@@ -41,14 +46,41 @@ pub fn init(app: &mut App, port: u16) {
     //     authentication: ServerAuthentication::Unsecure,
     // };
 
-    let transport = NetcodeServerTransport::new(setup_config, socket).unwrap();
+    info!("Creating steam server...");
+
+    // let (steam_server, c) =
+    //     renet_steam::steamworks::Server::init("0.0.0.0".parse().unwrap(), port, port + 1, ServerMode::Authentication, "0.0.9a").unwrap();
+    //
+    //     info!("Created steam server!");
+    //
+    //     commands.insert_resource(AuthenticationServer::Steam(steam_server));
+
+    let (steam_client, single) = Client::init().unwrap();
+    // info!("Server steam id: {:?}", steam_client.user().steam_id());
+    let netty = steam_client.networking_utils();
+    netty.init_relay_network_access();
+
+    let transport = SteamServerTransport::new(&steam_client, setup_config).unwrap();
     let server = RenetServer::new(connection_config());
 
     app.insert_resource(ServerLobby::default())
         .insert_resource(NetworkTick(0))
         .insert_resource(ClientTicks::default())
         .insert_resource(server)
-        .insert_resource(transport);
+        .insert_non_send_resource(transport)
+        .insert_non_send_resource(single);
 
-    info!("Public address: {public_addr}");
+    info!("Steam server created!");
+
+    // info!("Public address: {public_addr}");
+}
+
+fn steam_callbacks(client: Option<NonSend<SingleClient>>) {
+    if let Some(client) = client {
+        client.run_callbacks();
+    }
+}
+
+pub(super) fn register(app: &mut App) {
+    app.add_systems(PreUpdate, steam_callbacks);
 }

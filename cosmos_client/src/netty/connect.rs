@@ -11,17 +11,24 @@ use bevy::prelude::*;
 use bevy_renet::{
     netcode::{ClientAuthentication, NetcodeClientTransport},
     renet::RenetClient,
+    steam::steamworks::SteamId,
 };
 use cosmos_core::{
     netty::{PROTOCOL_ID, connection_config, cosmos_encoder, sync::mapping::NetworkMapping},
     state::GameState,
 };
 use renet::DisconnectReason;
+use renet_steam::SteamClientTransport;
 
 use crate::{
-    netty::lobby::{ClientLobby, MostRecentTick},
+    netty::{
+        lobby::{ClientLobby, MostRecentTick},
+        steam::new_steam_transport,
+    },
     ui::main_menu::MainMenuSubState,
 };
+
+use super::steam::User;
 
 fn new_netcode_transport(player_name: &str, mut host: &str, port: u16) -> NetcodeClientTransport {
     if host == "localhost" {
@@ -70,27 +77,26 @@ fn new_netcode_transport(player_name: &str, mut host: &str, port: u16) -> Netcod
 ///
 /// This must be present before entering the `GameState::Connecting` state.
 pub struct HostConfig {
-    /// The server's host (excluding port)
-    pub host_name: String,
-    /// The server's port
-    pub port: u16,
-    /// The player's name
-    pub name: String,
+    /// The server's steam id
+    pub steam_id: Option<SteamId>,
 }
 
 /// Establishes a connection with the server.
 ///
 /// Make sure the `ConnectionConfig` resource was added first.
-pub fn establish_connection(mut commands: Commands, host_config: Res<HostConfig>) {
+pub fn establish_connection(mut commands: Commands, host_config: Res<HostConfig>, client: Res<User>) {
+    // match client.as_ref() {
+    //     User::Steam(steam_client) => {
+    //         let user = steam_client.user();
+    //         let (ticket, handle) = user.authentication_session_ticket_with_steam_id(user.steam_id());
+    //     }
+    //     User::NoAuth(name) => {}
+    // }
     info!("Establishing connection w/ server...");
     commands.insert_resource(ClientLobby::default());
     commands.insert_resource(MostRecentTick(None));
     commands.insert_resource(RenetClient::new(connection_config()));
-    commands.insert_resource(new_netcode_transport(
-        &host_config.name,
-        host_config.host_name.as_str(),
-        host_config.port,
-    ));
+    commands.insert_resource(new_steam_transport(client.client(), host_config.steam_id));
     commands.init_resource::<NetworkMapping>();
     commands.remove_resource::<ClientDisconnectReason>();
 }
@@ -122,7 +128,7 @@ fn remove_networking_resources(mut commands: Commands, client: Option<Res<RenetC
     }
     commands.remove_resource::<NetworkMapping>();
     commands.remove_resource::<RenetClient>();
-    commands.remove_resource::<NetcodeClientTransport>();
+    commands.remove_resource::<SteamClientTransport>();
     commands.remove_resource::<MostRecentTick>();
     commands.remove_resource::<ClientLobby>();
 }

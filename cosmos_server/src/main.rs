@@ -15,7 +15,7 @@ use bevy::{
 use bevy_framepace::Limiter;
 use bevy_mod_debugdump::schedule_graph;
 use bevy_rapier3d::plugin::{RapierContextInitialization, RapierPhysicsPlugin, TimestepMode};
-use bevy_renet::{RenetServerPlugin, netcode::NetcodeServerPlugin};
+use bevy_renet::{RenetServerPlugin, netcode::NetcodeServerPlugin, steam::SteamServerPlugin};
 use cosmos_core::{
     netty::sync::registry::RegistrySyncInit, physics::collision_handling::CosmosPhysicsFilter,
     plugin::cosmos_core_plugin::CosmosCorePluginGroup, state::GameState,
@@ -120,7 +120,8 @@ fn main() {
         )
         .add_plugins((
             RenetServerPlugin,
-            NetcodeServerPlugin,
+            SteamServerPlugin,
+            // NetcodeServerPlugin,
             ServerPlugin { port },
             // Used for diagnostics
             SystemInformationDiagnosticsPlugin,

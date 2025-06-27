@@ -56,10 +56,14 @@ use cosmos_core::{
         systems::{StructureSystems, dock_system::Docked},
     },
 };
+use renet_steam::SteamClientTransport;
 
 use crate::{
     camera::camera_controller::CameraHelper,
-    netty::lobby::{ClientLobby, PlayerInfo},
+    netty::{
+        lobby::{ClientLobby, PlayerInfo},
+        steam::User,
+    },
     rendering::{CameraPlayerOffset, MainCamera},
     settings::DesiredFov,
     structure::planet::generation::SetTerrainGenData,
@@ -169,7 +173,7 @@ pub(crate) fn client_sync_players(
     mut commands: Commands,
     (mut client, transport, mut lobby, mut network_mapping): (
         ResMut<RenetClient>,
-        Res<NetcodeClientTransport>,
+        Res<SteamClientTransport>,
         ResMut<ClientLobby>,
         ResMut<NetworkMapping>,
     ),
@@ -207,6 +211,7 @@ pub(crate) fn client_sync_players(
         >,
         Query<&GlobalTransform>,
     ),
+    user: Res<User>,
     desired_fov: Res<DesiredFov>,
     q_parent: Query<&ChildOf>,
     blocks: Res<Registry<Block>>,
@@ -214,8 +219,6 @@ pub(crate) fn client_sync_players(
 
     mut hud_messages: ResMut<HudMessages>,
 ) {
-    let client_id = transport.client_id();
-
     while let Some(message) = client.receive_message(NettyChannelServer::Unreliable) {
         let msg: ServerUnreliableMessages = cosmos_encoder::deserialize(&message).unwrap();
 
@@ -370,6 +373,7 @@ pub(crate) fn client_sync_players(
 
                 let camera_offset = Vec3::new(0.0, 0.75, 0.0);
 
+                let client_id = transport.client_id(user.client());
                 if client_id == id {
                     entity_cmds
                         .insert((

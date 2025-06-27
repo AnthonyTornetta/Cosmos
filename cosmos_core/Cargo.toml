@@ -45,7 +45,9 @@ default = [
 ]
 [dependencies]
 bevy = { workspace = true }
-bevy_renet = { workspace = true }
+bevy_renet = { workspace = true, features = [ "steam" ] }
+renet_steam = { workspace = true }
+# steamworks = { workspace = true }
 renet = { workspace = true }
 serde = { workspace = true }
 bincode = { workspace = true, features = [ "serde" ] }

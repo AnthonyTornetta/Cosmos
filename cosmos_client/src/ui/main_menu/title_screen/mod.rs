@@ -4,6 +4,7 @@ use bevy::{
     app::{App, AppExit},
     prelude::*,
 };
+use bevy_renet::steam::steamworks::SteamId;
 use cosmos_core::state::GameState;
 use rand::seq::IteratorRandom;
 
@@ -277,57 +278,8 @@ fn trigger_connection(
         return;
     };
 
-    info!("Parsing connection string: {connection_string:?}");
-
-    let mut split = connection_string.0.split(":");
-
-    let Some(host_name) = split.next() else {
-        em.0 = "Must specify host".to_owned();
-        return;
-    };
-
-    let port = split.next();
-    let excess = split.next();
-
-    if excess.is_some() {
-        em.0 = "Cannot have multiple colons in address".to_owned();
-        return;
-    }
-
-    let port = if let Some(port) = port {
-        if let Ok(port) = port.parse::<u16>() {
-            port
-        } else {
-            em.0 = "Invalid port".to_owned();
-            return;
-        }
-    } else {
-        1337
-    };
-
-    let host_name = host_name.trim();
-    if host_name.is_empty() {
-        em.0 = "Must specify host".to_owned();
-    }
-
-    if format!("{host_name}:{port}").to_socket_addrs().is_err() {
-        em.0 = "Invalid host".to_owned();
-        return;
-    }
-
-    if player_name.0.is_empty() || player_name.0.len() > 32 {
-        em.0 = "Must have a name".to_owned();
-        return;
-    }
-
-    fs::write("name.env", &player_name.0).unwrap_or_else(|e| {
-        error!("Failed to save name ;(\n{e:?}");
-    });
-
     commands.insert_resource(HostConfig {
-        name: player_name.0.clone(),
-        host_name: host_name.into(),
-        port,
+        steam_id: connection_string.0.parse().map(|x| SteamId::from_raw(x)).ok(),
     });
     state.set(GameState::Connecting);
 }
