@@ -12,6 +12,7 @@ use bevy::{
     diagnostic::{EntityCountDiagnosticsPlugin, FrameTimeDiagnosticsPlugin, SystemInformationDiagnosticsPlugin},
     prelude::*,
 };
+use bevy_framepace::Limiter;
 use bevy_mod_debugdump::schedule_graph;
 use bevy_rapier3d::plugin::{RapierContextInitialization, RapierPhysicsPlugin, TimestepMode};
 use bevy_renet::{RenetServerPlugin, netcode::NetcodeServerPlugin};
@@ -84,15 +85,18 @@ fn main() {
     #[cfg(feature = "print-schedule")]
     let default_plugins = default_plugins.disable::<LogPlugin>();
 
-    const FIXED_UPDATE_HZ: f32 = 20.0;
+    const FIXED_UPDATE_HZ: u64 = 20;
 
     app
         // .insert_resource(HostConfig { host_name })
         .insert_resource(TimestepMode::Fixed {
-            dt: 1.0 / FIXED_UPDATE_HZ,
+            dt: 1.0 / FIXED_UPDATE_HZ as f32,
             substeps: 4,
         })
         .insert_resource(Time::<Fixed>::from_hz(FIXED_UPDATE_HZ as f64))
+        .insert_resource(bevy_framepace::FramepaceSettings {
+            limiter: Limiter::from_framerate(FIXED_UPDATE_HZ as f64),
+        })
         // .insert_resource(TimestepMode::Interpolated {
         //     dt: 1.0 / 60.0,
         //     time_scale: 1.0,
@@ -111,6 +115,7 @@ fn main() {
                 playing_state: GameState::Playing,
             },
         ))
+        .add_plugins(bevy_framepace::FramepacePlugin)
         .add_plugins(
             RapierPhysicsPlugin::<CosmosPhysicsFilter>::default()
                 .with_custom_initialization(RapierContextInitialization::NoAutomaticRapierContext)

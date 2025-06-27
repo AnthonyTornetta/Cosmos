@@ -76,7 +76,16 @@ enum BlockEvent {
     Pick,
 }
 
-fn generate_input_events(mut evr_block_ev: EventWriter<BlockEvent>, input_handler: InputChecker) {
+fn generate_input_events(
+    mut evr_block_ev: EventWriter<BlockEvent>,
+    input_handler: InputChecker,
+    q_piloting: Query<(), (With<LocalPlayer>, With<Pilot>)>,
+) {
+    if !q_piloting.is_empty() {
+        // Can't do any of these things while piloting a ship
+        return;
+    }
+
     if input_handler.check_just_pressed(CosmosInputs::BreakBlock) {
         evr_block_ev.write(BlockEvent::Break);
     }
