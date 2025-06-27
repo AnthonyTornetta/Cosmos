@@ -94,9 +94,6 @@ fn main() {
             substeps: 4,
         })
         .insert_resource(Time::<Fixed>::from_hz(FIXED_UPDATE_HZ as f64))
-        .insert_resource(bevy_framepace::FramepaceSettings {
-            limiter: Limiter::from_framerate(FIXED_UPDATE_HZ as f64),
-        })
         // .insert_resource(TimestepMode::Interpolated {
         //     dt: 1.0 / 60.0,
         //     time_scale: 1.0,
@@ -131,6 +128,9 @@ fn main() {
             FrameTimeDiagnosticsPlugin::default(),
             // PerfUiPlugin,
         ))
+        .insert_resource(bevy_framepace::FramepaceSettings {
+            limiter: Limiter::from_framerate(FIXED_UPDATE_HZ as f64),
+        })
         .insert_resource(server_settings);
 
     if cfg!(feature = "print-schedule") {
