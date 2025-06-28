@@ -42,7 +42,7 @@ fn append_grounded_check(mut commands: Commands, q_player: Query<Entity, Added<L
             Visibility::default(),
             Transform::from_xyz(0.0, -0.80, 0.0),
             Name::new("Ground checker"),
-            Collider::cuboid(0.1, 0.1, 0.1),
+            Collider::cuboid(0.1, 0.2, 0.1),
             Sensor,
             ActiveEvents::COLLISION_EVENTS,
         ));
@@ -86,7 +86,6 @@ fn process_player_movement(
         ),
         (With<LocalPlayer>, Without<Pilot>, Without<BuildMode>),
     >,
-    mut evr_jump: EventReader<Jump>,
     mut q_camera: Query<(&GlobalTransform, &Transform), With<MainCamera>>,
     mut q_local_trans: Query<&mut Transform, (With<LocalPlayer>, Without<MainCamera>)>,
     q_show_cursor: Query<(), With<ShowCursor>>,
@@ -151,7 +150,7 @@ fn process_player_movement(
             if input_handler.check_pressed(CosmosInputs::MoveDown) {
                 new_linvel -= movement_up * time;
             }
-            if evr_jump.read().next().is_some() && grounded {
+            if input_handler.check_pressed(CosmosInputs::Jump) && grounded {
                 new_linvel += up * 5.0;
             }
             if input_handler.check_pressed(CosmosInputs::MoveLeft) {
@@ -256,15 +255,6 @@ pub enum PlayerMovementSet {
     ProcessPlayerMovement,
 }
 
-#[derive(Event, Default)]
-struct Jump;
-
-fn jump_ev(inputs: InputChecker, mut evw_jump: EventWriter<Jump>) {
-    if inputs.check_just_pressed(CosmosInputs::Jump) {
-        evw_jump.write_default();
-    }
-}
-
 pub(super) fn register(app: &mut App) {
     app.configure_sets(
         FixedUpdate,
@@ -279,8 +269,6 @@ pub(super) fn register(app: &mut App) {
             .chain(),
     );
 
-    app.add_systems(Update, jump_ev);
-
     app.add_systems(
         FixedUpdate,
         process_player_movement
@@ -288,6 +276,5 @@ pub(super) fn register(app: &mut App) {
             .in_set(FixedUpdateSet::Main)
             .in_set(PlayerMovementSet::ProcessPlayerMovement)
             .run_if(in_state(GameState::Playing)),
-    )
-    .add_event::<Jump>();
+    );
 }

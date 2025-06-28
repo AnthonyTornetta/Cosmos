@@ -39,12 +39,22 @@ pub fn new_steam_transport(client: &Client, server_steam_id: Option<SteamId>) ->
     // let connection = client.networking_sockets().connect_p2p(netty_identitiy, 0, options).unwrap();
 
     info!("Creating client transport...");
-    let transport = match SteamClientTransport::new_ip(client, "127.0.0.1:1337".parse().unwrap()) {
-        //SteamClientTransport::new_ip(&client, "127.0.0.1:1337".parse().unwrap()) {
-        Ok(t) => t,
-        Err(e) => {
-            panic!("{e:?}");
-        }
+
+    let my_steam_id = client.user().steam_id();
+
+    let transport = match server_steam_id.filter(|x| *x != my_steam_id) {
+        None => match SteamClientTransport::new_ip(client, "127.0.0.1:1337".parse().unwrap()) {
+            Ok(t) => t,
+            Err(e) => {
+                panic!("{e:?}");
+            }
+        },
+        Some(steam_id) => match SteamClientTransport::new_p2p(client, &steam_id) {
+            Ok(t) => t,
+            Err(e) => {
+                panic!("{e:?}");
+            }
+        },
     };
     info!("Created transport!");
     transport
