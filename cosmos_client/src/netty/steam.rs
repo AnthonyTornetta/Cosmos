@@ -1,7 +1,7 @@
 use std::net::SocketAddr;
 
 use bevy::prelude::*;
-use bevy_renet::steam::steamworks::{Client, SingleClient, SteamId, networking_types::NetworkingIdentity};
+use bevy_renet::steam::steamworks::{Client, SingleClient, SteamAPIInitError, SteamId, networking_types::NetworkingIdentity};
 use renet_steam::SteamClientTransport;
 
 // #[derive(Resource)]
@@ -51,7 +51,12 @@ pub fn new_steam_transport(client: &Client, server_steam_id: Option<SteamId>) ->
 }
 
 pub(super) fn register(app: &mut App) {
-    let (client, single) = Client::init().unwrap();
+    let (client, single) = match Client::init() {
+        Ok(c) => c,
+        Err(e) => {
+            panic!("{e:?}");
+        }
+    };
 
     // let messages = steam_client.networking_messages();
     //

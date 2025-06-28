@@ -1424,11 +1424,12 @@ dependencies = [
 [[package]]
 name = "bevy_renet"
 version = "1.0.0"
+source = "git+https://github.com/AnthonyTornetta/renet?branch=183-support-socketaddress-connections#449221bf9ff196df563a956e4241b5d045217f02"
 dependencies = [
  "bevy_app",
  "bevy_ecs",
  "bevy_time",
- "renet 1.0.0",
+ "renet",
  "renet_netcode",
  "renet_steam",
 ]
@@ -2356,7 +2357,7 @@ dependencies = [
  "rand 0.9.1",
  "rand_chacha 0.9.0",
  "rayon",
- "renet 1.0.0",
+ "renet",
  "renet_steam",
  "serde",
  "serde_json",
@@ -2387,7 +2388,7 @@ dependencies = [
  "rand 0.9.1",
  "rand_chacha 0.9.0",
  "rayon",
- "renet 1.0.0",
+ "renet",
  "renet_steam",
  "serde",
  "thiserror 2.0.12",
@@ -2419,7 +2420,7 @@ dependencies = [
  "rand 0.9.1",
  "rand_chacha 0.9.0",
  "rayon",
- "renet 1.0.0",
+ "renet",
  "renet_steam",
  "renet_visualizer",
  "serde",
@@ -5273,18 +5274,9 @@ checksum = "19b30a45b0cd0bcca8037f3d0dc3421eaf95327a17cad11964fb8179b4fc4832"
 [[package]]
 name = "renet"
 version = "1.0.0"
+source = "git+https://github.com/AnthonyTornetta/renet?branch=183-support-socketaddress-connections#449221bf9ff196df563a956e4241b5d045217f02"
 dependencies = [
  "bevy_ecs",
- "bytes",
- "log",
- "octets",
-]
-
-[[package]]
-name = "renet"
-version = "1.0.0"
-source = "git+https://github.com/lucaspoffo/renet/#d2c5074bc232781889c26acfe68d8622b8ebd88e"
-dependencies = [
  "bytes",
  "log",
  "octets",
@@ -5293,36 +5285,39 @@ dependencies = [
 [[package]]
 name = "renet_netcode"
 version = "1.0.0"
+source = "git+https://github.com/AnthonyTornetta/renet?branch=183-support-socketaddress-connections#449221bf9ff196df563a956e4241b5d045217f02"
 dependencies = [
  "bevy_ecs",
  "log",
- "renet 1.0.0",
+ "renet",
  "renetcode",
 ]
 
 [[package]]
 name = "renet_steam"
 version = "1.0.0"
+source = "git+https://github.com/AnthonyTornetta/renet?branch=183-support-socketaddress-connections#449221bf9ff196df563a956e4241b5d045217f02"
 dependencies = [
  "bevy_ecs",
  "log",
- "renet 1.0.0",
+ "renet",
  "steamworks",
 ]
 
 [[package]]
 name = "renet_visualizer"
 version = "1.0.0"
-source = "git+https://github.com/lucaspoffo/renet/#d2c5074bc232781889c26acfe68d8622b8ebd88e"
+source = "git+https://github.com/AnthonyTornetta/renet?branch=183-support-socketaddress-connections#449221bf9ff196df563a956e4241b5d045217f02"
 dependencies = [
  "bevy_ecs",
  "egui",
- "renet 1.0.0 (git+https://github.com/lucaspoffo/renet/)",
+ "renet",
 ]
 
 [[package]]
 name = "renetcode"
 version = "1.0.0"
+source = "git+https://github.com/AnthonyTornetta/renet?branch=183-support-socketaddress-connections#449221bf9ff196df563a956e4241b5d045217f02"
 dependencies = [
  "chacha20poly1305",
  "log",

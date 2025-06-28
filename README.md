@@ -28,9 +28,7 @@ Beware! In the depths of space, there's always someone that wants you dead. Watc
 
 To get started, install your OS dependencies [here](https://bevyengine.org/learn/book/getting-started/setup/#install-os-dependencies). The dependencies section is all you need to do.
 
-This project requires the latest nightly rust to compile. To swap to nightly, run the command
-
-`rustup default nightly`.
+You need to be running [Steam](https://store.steampowered.com/about/) in the background to launch the server and client.
 
 To run the client, navigate to the cosmos_client directory and run
 
@@ -76,7 +74,7 @@ See [the issues page](https://github.com/AnthonyTornetta/Cosmos/issues) for the 
 - [ ] Respawn anchor
 - [ ] Screenshots
 - [x] Update to Bevy 0.16
-- [ ] Steam Integration
+- [x] Steam Integration
 - [ ] Blueprint ship/station in-game
 
 ## Release 0.0.8a

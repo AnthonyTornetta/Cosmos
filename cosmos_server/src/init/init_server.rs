@@ -13,7 +13,7 @@ use bevy_renet::{
     steam::steamworks::{Client, ServerMode, SingleClient},
 };
 use cosmos_core::netty::{PROTOCOL_ID, connection_config, server::ServerLobby};
-use renet_steam::{SteamServerConfig, SteamServerTransport};
+use renet_steam::{SteamServerConfig, SteamServerSocketOptions, SteamServerTransport};
 
 use crate::netty::network_helpers::{ClientTicks, NetworkTick};
 
@@ -22,7 +22,7 @@ pub fn init(app: &mut App, port: u16) {
     // let public_addr = format!("0.0.0.0:{port}").parse().unwrap();
     // let socket = UdpSocket::bind(public_addr).unwrap();
 
-    let current_time = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).unwrap();
+    // let current_time = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).unwrap();
 
     // let config = ServerSocketConfig {
     //     needs_encryption: false,
@@ -60,7 +60,9 @@ pub fn init(app: &mut App, port: u16) {
     let netty = steam_client.networking_utils();
     netty.init_relay_network_access();
 
-    let transport = SteamServerTransport::new(&steam_client, setup_config).unwrap();
+    let socket_options = SteamServerSocketOptions::default().with_address(format!("0.0.0.0:{port}").parse().unwrap());
+
+    let transport = SteamServerTransport::new(&steam_client, setup_config, socket_options).unwrap();
     let server = RenetServer::new(connection_config());
 
     app.insert_resource(ServerLobby::default())
