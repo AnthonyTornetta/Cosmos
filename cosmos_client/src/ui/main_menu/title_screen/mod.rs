@@ -235,7 +235,7 @@ fn trigger_connection(
         if !con_str.contains(":") {
             con_str.push_str(":1337");
         }
-        if let Ok(hc) = con_str.parse::<SocketAddr>().map(|addr| ConnectToConfig::Ip(addr)) {
+        if let Ok(hc) = con_str.parse::<SocketAddr>().map(ConnectToConfig::Ip) {
             hc
         } else {
             em.0 = "Must be steam id or ip address".into();

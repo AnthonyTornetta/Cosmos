@@ -4,15 +4,12 @@
 
 use bevy::prelude::*;
 
-use std::{net::UdpSocket, time::SystemTime};
 
-use bevy::prelude::*;
 use bevy_renet::{
-    netcode::{NetcodeServerTransport, ServerAuthentication, ServerConfig},
     renet::RenetServer,
-    steam::steamworks::{Client, ServerMode, SingleClient},
+    steam::steamworks::{Client, SingleClient},
 };
-use cosmos_core::netty::{PROTOCOL_ID, connection_config, server::ServerLobby};
+use cosmos_core::netty::{connection_config, server::ServerLobby};
 use renet_steam::{SteamServerConfig, SteamServerSocketOptions, SteamServerTransport};
 
 use crate::netty::network_helpers::{ClientTicks, NetworkTick};
