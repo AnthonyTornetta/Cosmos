@@ -17,6 +17,17 @@ use renet_steam::{SteamServerConfig, SteamServerSocketOptions, SteamServerTransp
 
 use crate::netty::network_helpers::{ClientTicks, NetworkTick};
 
+#[derive(Resource)]
+pub struct ServerSteamClient {
+    client: Client,
+}
+
+impl ServerSteamClient {
+    pub fn client(&self) -> &Client {
+        &self.client
+    }
+}
+
 /// Sets up the server & makes it ready to be connected to
 pub fn init(app: &mut App, port: u16) {
     // let public_addr = format!("0.0.0.0:{port}").parse().unwrap();
@@ -70,7 +81,8 @@ pub fn init(app: &mut App, port: u16) {
         .insert_resource(ClientTicks::default())
         .insert_resource(server)
         .insert_non_send_resource(transport)
-        .insert_non_send_resource(single);
+        .insert_non_send_resource(single)
+        .insert_resource(ServerSteamClient { client: steam_client });
 
     info!("Steam server created!");
 

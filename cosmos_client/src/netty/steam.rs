@@ -1,63 +1,69 @@
-use std::net::SocketAddr;
+//! Handles client steam networking + setup
 
 use bevy::prelude::*;
-use bevy_renet::steam::steamworks::{Client, SingleClient, SteamAPIInitError, SteamId, networking_types::NetworkingIdentity};
+use bevy_renet::steam::steamworks::{Client, SingleClient, SteamId, networking_sockets::InvalidHandle};
+use derive_more::{Display, Error};
 use renet_steam::SteamClientTransport;
 
-// #[derive(Resource)]
-// pub struct SteamTicket {
-//     /// This needs to be cancelled when the client disconnects!
-//     ticket: AuthTicket,
-// }
-//
+use super::connect::ConnectToConfig;
+
 #[derive(Resource)]
+/// A wrapper around the steam [`Client`]
 pub struct User {
     client: Client,
-    // NoAuth(String),
-}
-
-struct SingleThreadedClient {
-    client: SingleClient,
 }
 
 impl User {
+    /// Returns the steam [`Client`] for this user
     pub fn client(&self) -> &Client {
         &self.client
     }
 
+    /// Returns the [`SteamId`] for this user
     pub fn steam_id(&self) -> SteamId {
         self.client.user().steam_id()
     }
 }
 
-pub fn new_steam_transport(client: &Client, server_steam_id: Option<SteamId>) -> SteamClientTransport {
-    // let networking_sockets = client.networking_sockets();
+#[derive(Error, Display, Debug)]
+/// All the things that can go wrong when trying to create the steam transport
+pub enum SteamTransportError {
+    /// Something was wrong when trying to connect to the server
+    InvalidHandle(InvalidHandle),
+    /// The same steam id as the client was passed as what to connect to - steam
+    /// prevents this from working.
+    SameSteamId,
+}
 
-    // let options = Vec::new();
-    // let mut netty_identitiy = NetworkingIdentity::new();
-    // netty_identitiy.set_local_host();
-    // let connection = client.networking_sockets().connect_p2p(netty_identitiy, 0, options).unwrap();
-
+/// Creates a new steam transport for this client
+pub fn new_steam_transport(client: &Client, host_config: &ConnectToConfig) -> Result<SteamClientTransport, SteamTransportError> {
     info!("Creating client transport...");
 
     let my_steam_id = client.user().steam_id();
 
-    let transport = match server_steam_id.filter(|x| *x != my_steam_id) {
-        None => match SteamClientTransport::new_ip(client, "127.0.0.1:1337".parse().unwrap()) {
+    let transport = match host_config {
+        ConnectToConfig::Ip(ip) => match SteamClientTransport::new_ip(client, *ip) {
             Ok(t) => t,
             Err(e) => {
-                panic!("{e:?}");
+                return Err(SteamTransportError::InvalidHandle(e));
             }
         },
-        Some(steam_id) => match SteamClientTransport::new_p2p(client, &steam_id) {
-            Ok(t) => t,
-            Err(e) => {
-                panic!("{e:?}");
+        ConnectToConfig::SteamId(steam_id) => {
+            if my_steam_id == *steam_id {
+                return Err(SteamTransportError::SameSteamId);
             }
-        },
+            match SteamClientTransport::new_p2p(client, steam_id) {
+                Ok(t) => t,
+                Err(e) => {
+                    return Err(SteamTransportError::InvalidHandle(e));
+                }
+            }
+        }
     };
+
     info!("Created transport!");
-    transport
+
+    Ok(transport)
 }
 
 pub(super) fn register(app: &mut App) {
@@ -67,21 +73,6 @@ pub(super) fn register(app: &mut App) {
             panic!("{e:?}");
         }
     };
-
-    // let messages = steam_client.networking_messages();
-    //
-    // // Even though NetworkingMessages appears as ad-hoc API, it's internally session based. We must accept any incoming
-    // // messages before communicating with the peer.
-    // messages.session_request_callback(move |req| {
-    //     println!("Accepting session request from {:?}", req.remote());
-    //     // assert!(req.accept())
-    // });
-    // // Install a callback to debug print failed peer connections
-    // messages.session_failed_callback(|info| {
-    //     eprintln!("Session failed: {info:#?}");
-    // });
-
-    // renet_steam::steamworks::
 
     client.networking_utils().init_relay_network_access();
 
