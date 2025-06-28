@@ -4,7 +4,6 @@
 
 use bevy::prelude::*;
 
-
 use bevy_renet::{
     renet::RenetServer,
     steam::steamworks::{Client, SingleClient},
@@ -15,11 +14,13 @@ use renet_steam::{SteamServerConfig, SteamServerSocketOptions, SteamServerTransp
 use crate::netty::network_helpers::{ClientTicks, NetworkTick};
 
 #[derive(Resource)]
+/// Stores the steam [`Client`] used by the server
 pub struct ServerSteamClient {
     client: Client,
 }
 
 impl ServerSteamClient {
+    /// Returns the steam [`Client`] used by the server
     pub fn client(&self) -> &Client {
         &self.client
     }
