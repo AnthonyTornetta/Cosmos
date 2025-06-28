@@ -6,7 +6,10 @@ use bevy::prelude::*;
 
 use bevy_renet::{
     renet::RenetServer,
-    steam::steamworks::{Client, SingleClient},
+    steam::steamworks::{
+        Client, SingleClient,
+        networking_types::{NetworkingConfigEntry, NetworkingConfigValue},
+    },
 };
 use cosmos_core::netty::{connection_config, server::ServerLobby};
 use renet_steam::{SteamServerConfig, SteamServerSocketOptions, SteamServerTransport};
@@ -70,6 +73,16 @@ pub fn init(app: &mut App, port: u16) {
     netty.init_relay_network_access();
 
     let socket_options = SteamServerSocketOptions::default().with_address(format!("0.0.0.0:{port}").parse().unwrap());
+
+    /*
+        * const MEGABYTE: i32 = 1024 * 1024;
+        let socket_options = SteamServerSocketOptions::default()
+            .with_address(format!("0.0.0.0:{port}").parse().unwrap())
+            .with_config(NetworkingConfigEntry::new_int32(
+                NetworkingConfigValue::SendBufferSize,
+                10 * MEGABYTE,
+            ));
+    */
 
     let transport = SteamServerTransport::new(&steam_client, setup_config, socket_options).unwrap();
     let server = RenetServer::new(connection_config());

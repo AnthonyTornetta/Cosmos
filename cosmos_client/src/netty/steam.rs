@@ -42,13 +42,17 @@ pub fn new_steam_transport(client: &Client, host_config: &ConnectToConfig) -> Re
     let my_steam_id = client.user().steam_id();
 
     let transport = match host_config {
-        ConnectToConfig::Ip(ip) => match SteamClientTransport::new_ip(client, *ip) {
-            Ok(t) => t,
-            Err(e) => {
-                return Err(SteamTransportError::InvalidHandle(e));
+        ConnectToConfig::Ip(ip) => {
+            info!("Creating transport for ip {ip:?}");
+            match SteamClientTransport::new_ip(client, *ip) {
+                Ok(t) => t,
+                Err(e) => {
+                    return Err(SteamTransportError::InvalidHandle(e));
+                }
             }
-        },
+        }
         ConnectToConfig::SteamId(steam_id) => {
+            info!("Creating transport for steam id {steam_id:?}");
             if my_steam_id == *steam_id {
                 return Err(SteamTransportError::SameSteamId);
             }
