@@ -255,11 +255,15 @@ fn create_new_player(
     universe_systems: Res<UniverseSystems>,
 ) {
     for (player_entity, load_player) in q_player_needs_loaded.iter() {
+        let Some((location, rot)) = find_new_player_location(&universe_systems) else {
+            info!("Universe not generated yet - will delay spawning player {}", load_player.name);
+            continue;
+        };
+
         info!("Creating new player for {}", load_player.name);
 
         let player = Player::new(load_player.name.clone(), load_player.client_id);
 
-        let (location, rot) = find_new_player_location(&universe_systems);
         let velocity = Velocity::default();
         let inventory = generate_player_inventory(player_entity, &items, &mut commands, &needs_data);
 

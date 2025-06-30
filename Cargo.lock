@@ -305,7 +305,7 @@ dependencies = [
  "objc2-foundation 0.3.1",
  "parking_lot",
  "percent-encoding",
- "windows-sys 0.52.0",
+ "windows-sys 0.59.0",
  "x11rb",
 ]
 
@@ -1424,6 +1424,7 @@ dependencies = [
 [[package]]
 name = "bevy_renet"
 version = "1.0.0"
+source = "git+https://github.com/AnthonyTornetta/renet?branch=master#21b1078ca41963b0edc788db7b7484333129f61a"
 dependencies = [
  "bevy_app",
  "bevy_ecs",
@@ -2936,7 +2937,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cea14ef9355e3beab063703aa9dab15afd25f0667c341310c1e5274bb1d0da18"
 dependencies = [
  "libc",
- "windows-sys 0.52.0",
+ "windows-sys 0.59.0",
 ]
 
 [[package]]
@@ -5273,6 +5274,7 @@ checksum = "19b30a45b0cd0bcca8037f3d0dc3421eaf95327a17cad11964fb8179b4fc4832"
 [[package]]
 name = "renet"
 version = "1.0.0"
+source = "git+https://github.com/AnthonyTornetta/renet?branch=master#21b1078ca41963b0edc788db7b7484333129f61a"
 dependencies = [
  "bevy_ecs",
  "bytes",
@@ -5283,6 +5285,7 @@ dependencies = [
 [[package]]
 name = "renet_netcode"
 version = "1.0.0"
+source = "git+https://github.com/AnthonyTornetta/renet?branch=master#21b1078ca41963b0edc788db7b7484333129f61a"
 dependencies = [
  "bevy_ecs",
  "log",
@@ -5293,6 +5296,7 @@ dependencies = [
 [[package]]
 name = "renet_steam"
 version = "1.0.0"
+source = "git+https://github.com/AnthonyTornetta/renet?branch=master#21b1078ca41963b0edc788db7b7484333129f61a"
 dependencies = [
  "bevy_ecs",
  "log",
@@ -5303,6 +5307,7 @@ dependencies = [
 [[package]]
 name = "renet_visualizer"
 version = "1.0.0"
+source = "git+https://github.com/AnthonyTornetta/renet?branch=master#21b1078ca41963b0edc788db7b7484333129f61a"
 dependencies = [
  "bevy_ecs",
  "egui",
@@ -5312,6 +5317,7 @@ dependencies = [
 [[package]]
 name = "renetcode"
 version = "1.0.0"
+source = "git+https://github.com/AnthonyTornetta/renet?branch=master#21b1078ca41963b0edc788db7b7484333129f61a"
 dependencies = [
  "chacha20poly1305",
  "log",
@@ -5398,7 +5404,7 @@ dependencies = [
  "errno",
  "libc",
  "linux-raw-sys 0.4.15",
- "windows-sys 0.52.0",
+ "windows-sys 0.59.0",
 ]
 
 [[package]]
@@ -5411,7 +5417,7 @@ dependencies = [
  "errno",
  "libc",
  "linux-raw-sys 0.9.4",
- "windows-sys 0.52.0",
+ "windows-sys 0.59.0",
 ]
 
 [[package]]
@@ -6836,7 +6842,7 @@ version = "0.1.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cf221c93e13a30d793f7645a0e7762c55d169dbb0a49671918a2319d289b10bb"
 dependencies = [
- "windows-sys 0.52.0",
+ "windows-sys 0.59.0",
 ]
 
 [[package]]

@@ -38,7 +38,10 @@ pub struct RespawnBlock {
 }
 
 fn compute_respawn_location(universe_systems: &UniverseSystems) -> (Location, Quat) {
-    find_new_player_location(universe_systems)
+    find_new_player_location(universe_systems).unwrap_or_else(|| {
+        error!("Unable to find good respawn point! Returning Default!");
+        Default::default()
+    })
 }
 
 fn on_die(
