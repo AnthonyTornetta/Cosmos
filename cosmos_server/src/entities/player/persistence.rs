@@ -1,9 +1,6 @@
 //! Player persistence
 
-use std::{
-    fs,
-    hash::{DefaultHasher, Hash, Hasher},
-};
+use std::fs;
 
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::*;
@@ -66,18 +63,15 @@ pub struct LoadPlayer {
     pub client_id: ClientId,
 }
 
-fn generate_player_file_id(player_name: &str) -> String {
-    let mut hasher = DefaultHasher::default();
-    player_name.hash(&mut hasher);
-    let hash = hasher.finish();
-    format!("{hash}.json")
+fn generate_player_file_id(player_id: u64) -> String {
+    format!("{player_id}.json")
 }
 
 const PLAYER_LINK_PATH: &str = "world/players";
 
 #[derive(Component, Serialize, Deserialize, Debug, Reflect)]
 struct PlayerSaveLink {
-    name: String,
+    id: u64,
 }
 
 impl IdentifiableComponent for PlayerSaveLink {
@@ -125,7 +119,7 @@ fn save_player_link(
 
         let json_data = serde_json::to_string(&player_identifier).expect("Failed to create json");
 
-        let player_file_name = generate_player_file_id(&player.name);
+        let player_file_name = generate_player_file_id(player.id);
         fs::write(format!("{PLAYER_LINK_PATH}/{player_file_name}"), json_data).expect("Failed to save player!!!");
     }
 }
@@ -137,7 +131,7 @@ fn load_player(
     q_player_save_links: Query<(Entity, &PlayerSaveLink), Without<Player>>,
 ) {
     for (ent, load_player) in q_player_needs_loaded.iter() {
-        if let Some((already_loaded_player_link, _)) = q_player_save_links.iter().find(|(_, link)| link.name == load_player.name) {
+        if let Some((already_loaded_player_link, _)) = q_player_save_links.iter().find(|(_, link)| link.id == load_player.client_id) {
             info!(
                 "Player entity already exists in game for {} - adding Player component.",
                 load_player.name
@@ -153,7 +147,7 @@ fn load_player(
             continue;
         }
 
-        let player_file_name = generate_player_file_id(&load_player.name);
+        let player_file_name = generate_player_file_id(load_player.client_id);
 
         info!("Attempting to load player {}", load_player.name);
         let Ok(data) = fs::read(format!("{PLAYER_LINK_PATH}/{player_file_name}")) else {
@@ -261,11 +255,15 @@ fn create_new_player(
     universe_systems: Res<UniverseSystems>,
 ) {
     for (player_entity, load_player) in q_player_needs_loaded.iter() {
+        let Some((location, rot)) = find_new_player_location(&universe_systems) else {
+            info!("Universe not generated yet - will delay spawning player {}", load_player.name);
+            continue;
+        };
+
         info!("Creating new player for {}", load_player.name);
 
         let player = Player::new(load_player.name.clone(), load_player.client_id);
 
-        let (location, rot) = find_new_player_location(&universe_systems);
         let velocity = Velocity::default();
         let inventory = generate_player_inventory(player_entity, &items, &mut commands, &needs_data);
 
@@ -387,15 +385,13 @@ fn finish_loading_player(
 
 fn add_player_save_link(mut commands: Commands, q_player_needs_save_link: Query<(Entity, &Player), Without<PlayerSaveLink>>) {
     for (e, player) in q_player_needs_save_link.iter() {
-        commands.entity(e).insert(PlayerSaveLink {
-            name: player.name().to_owned(),
-        });
+        commands.entity(e).insert(PlayerSaveLink { id: player.client_id() });
     }
 }
 
 fn name_player_save_links(mut commands: Commands, q_player_save_links: Query<(Entity, &PlayerSaveLink), Without<Player>>) {
     for (e, link) in q_player_save_links.iter() {
-        commands.entity(e).insert(Name::new(format!("Player Save Link ({})", link.name)));
+        commands.entity(e).insert(Name::new(format!("Player Save Link ({})", link.id)));
     }
 }
 

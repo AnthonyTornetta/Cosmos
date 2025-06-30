@@ -1,8 +1,8 @@
 //! Handles client connecting and disconnecting
 
 use bevy::prelude::*;
-use bevy_renet::netcode::NetcodeServerTransport;
 use bevy_renet::renet::{ClientId, RenetServer, ServerEvent};
+use bevy_renet::steam::steamworks::SteamId;
 use cosmos_core::ecs::NeedsDespawned;
 use cosmos_core::entities::player::Player;
 use cosmos_core::netty::server::ServerLobby;
@@ -11,8 +11,11 @@ use cosmos_core::netty::{NettyChannelServer, cosmos_encoder};
 use renet_visualizer::RenetServerVisualizer;
 
 use crate::entities::player::persistence::LoadPlayer;
+use crate::init::init_server::ServerSteamClient;
 use crate::netty::network_helpers::ClientTicks;
 use crate::persistence::saving::NeedsSaved;
+
+// use super::auth::AuthenticationServer;
 
 #[derive(Event, Debug)]
 /// Sent whenever a player just connected
@@ -26,12 +29,12 @@ pub struct PlayerConnectedEvent {
 pub(super) fn handle_server_events(
     mut commands: Commands,
     mut server: ResMut<RenetServer>,
-    transport: Res<NetcodeServerTransport>,
     mut server_events: EventReader<ServerEvent>,
     mut lobby: ResMut<ServerLobby>,
     mut client_ticks: ResMut<ClientTicks>,
     mut visualizer: ResMut<RenetServerVisualizer<200>>,
     q_players: Query<&Player>,
+    steam_client: Res<ServerSteamClient>,
 ) {
     for event in server_events.read() {
         match event {
@@ -39,16 +42,26 @@ pub(super) fn handle_server_events(
                 let client_id = *client_id;
                 info!("Client {client_id} connected");
 
-                let Some(user_data) = transport.user_data(client_id) else {
-                    warn!("Unable to get user data - rejecting connection!");
-                    server.disconnect(client_id);
-                    continue;
-                };
-                let Ok(name) = cosmos_encoder::deserialize_uncompressed::<String>(user_data.as_slice()) else {
-                    warn!("Unable to deserialize name - rejecting connection!");
-                    server.disconnect(client_id);
-                    continue;
-                };
+                // let Some(user_data) = transport.(client_id) else {
+                //     warn!("Unable to get user data - rejecting connection!");
+                //     server.disconnect(client_id);
+                //     continue;
+                // };
+
+                // match auth_server.as_ref() {
+                //     AuthenticationServer::Steam(s) => {
+                //         s.begin_authentication_session(user, ticket);
+                //     }
+                //     AuthenticationServer::None => {}
+                // }
+                //
+                let name = steam_client.client().friends().get_friend(SteamId::from_raw(client_id)).name();
+
+                // let Ok(name) = cosmos_encoder::deserialize_uncompressed::<String>(user_data.as_slice()) else {
+                //     warn!("Unable to deserialize name - rejecting connection!");
+                //     server.disconnect(client_id);
+                //     continue;
+                // };
 
                 if q_players.iter().any(|x| x.name() == name) {
                     warn!("Duplicate name - rejecting connection!");

@@ -1,14 +1,14 @@
-use std::{fs, net::ToSocketAddrs};
+use std::net::SocketAddr;
 
 use bevy::{
     app::{App, AppExit},
     prelude::*,
 };
+use bevy_renet::steam::steamworks::SteamId;
 use cosmos_core::state::GameState;
-use rand::seq::IteratorRandom;
 
 use crate::{
-    netty::connect::HostConfig,
+    netty::connect::ConnectToConfig,
     ui::{
         components::{
             button::{ButtonEvent, ButtonStyles, CosmosButton, register_button},
@@ -24,19 +24,6 @@ use super::{
     super::components::text_input::InputValue, MainMenuRootUiNode, MainMenuSubState, MainMenuSystemSet,
     disconnect_screen::DisconnectMenuSet, in_main_menu_state,
 };
-
-#[derive(Debug, Clone, Component, PartialEq, Eq)]
-struct PlayerName(String);
-
-impl ReactableValue for PlayerName {
-    fn as_value(&self) -> String {
-        self.0.clone()
-    }
-
-    fn set_from_value(&mut self, new_value: &str) {
-        self.0 = new_value.to_owned();
-    }
-}
 
 #[derive(Debug, Clone, Component, PartialEq, Eq)]
 struct ConnectionString(String);
@@ -123,48 +110,7 @@ fn create_main_menu(mut commands: Commands, default_font: Res<DefaultFont>, q_ui
             },
         ));
 
-        let name = fs::read_to_string("name.env").unwrap_or_else(|_| {
-            let adjective = fs::read_to_string("assets/adjectives.txt").expect("Missing adjectives :O");
-            let adjective = adjective.split_whitespace().choose(&mut rand::rng()).expect("No adjectives ;(");
-
-            let animal = fs::read_to_string("assets/animals.txt").expect("Missing animals :O");
-            let animal = animal.split_whitespace().choose(&mut rand::rng()).expect("No animals ;(");
-
-            format!("{adjective}{animal}")
-        });
-
-        let vars_entity = p
-            .spawn((
-                PlayerName(name.clone()),
-                ConnectionString("localhost".into()),
-                ErrorMessage::default(),
-            ))
-            .id();
-
-        p.spawn((
-            BindValues::single(BindValue::<PlayerName>::new(vars_entity, ReactableFields::Value)),
-            text_style_small.clone(),
-            TextInput {
-                input_type: InputType::Text { max_length: Some(32) },
-                ..Default::default()
-            },
-            InputValue::new(name),
-            BorderColor(Srgba::hex("555555").unwrap().into()),
-            BackgroundColor(Srgba::hex("111111").unwrap().into()),
-            Node {
-                border: UiRect::all(Val::Px(2.0)),
-                width: Val::Px(500.0),
-                min_height: Val::Px(45.0),
-                align_self: AlignSelf::Center,
-                margin: UiRect::top(Val::Px(20.0)),
-                padding: UiRect {
-                    top: Val::Px(4.0),
-                    bottom: Val::Px(4.0),
-                    ..Default::default()
-                },
-                ..Default::default()
-            },
-        ));
+        let vars_entity = p.spawn((ConnectionString("localhost".into()), ErrorMessage::default())).id();
 
         p.spawn((
             BindValues::single(BindValue::<ConnectionString>::new(vars_entity, ReactableFields::Value)),
@@ -269,66 +215,36 @@ fn goto_settings(mut mms: ResMut<MainMenuSubState>) {
 }
 
 fn trigger_connection(
-    mut q_vars: Query<(&PlayerName, &ConnectionString, &mut ErrorMessage)>,
+    mut q_vars: Query<(&ConnectionString, &mut ErrorMessage)>,
     mut state: ResMut<NextState<GameState>>,
     mut commands: Commands,
 ) {
-    let Ok((player_name, connection_string, mut em)) = q_vars.single_mut() else {
+    let Ok((connection_string, mut em)) = q_vars.single_mut() else {
         return;
     };
 
-    info!("Parsing connection string: {connection_string:?}");
+    let con_str = connection_string.0.replace("localhost", "127.0.0.1");
+    let con_str = con_str.trim();
 
-    let mut split = connection_string.0.split(":");
-
-    let Some(host_name) = split.next() else {
-        em.0 = "Must specify host".to_owned();
-        return;
-    };
-
-    let port = split.next();
-    let excess = split.next();
-
-    if excess.is_some() {
-        em.0 = "Cannot have multiple colons in address".to_owned();
-        return;
-    }
-
-    let port = if let Some(port) = port {
-        if let Ok(port) = port.parse::<u16>() {
-            port
+    let host_cfg = if con_str.is_empty() {
+        ConnectToConfig::Ip("127.0.0.1:1337".parse().unwrap())
+    } else if let Ok(hc) = con_str.parse::<u64>().map(|s_id| ConnectToConfig::SteamId(SteamId::from_raw(s_id))) {
+        hc
+    } else {
+        let mut con_str = con_str.to_owned();
+        if !con_str.contains(":") {
+            con_str.push_str(":1337");
+        }
+        if let Ok(hc) = con_str.parse::<SocketAddr>().map(ConnectToConfig::Ip) {
+            hc
         } else {
-            em.0 = "Invalid port".to_owned();
+            em.0 = "Must be steam id or ip address".into();
+            info!("{}", em.0);
             return;
         }
-    } else {
-        1337
     };
 
-    let host_name = host_name.trim();
-    if host_name.is_empty() {
-        em.0 = "Must specify host".to_owned();
-    }
-
-    if format!("{host_name}:{port}").to_socket_addrs().is_err() {
-        em.0 = "Invalid host".to_owned();
-        return;
-    }
-
-    if player_name.0.is_empty() || player_name.0.len() > 32 {
-        em.0 = "Must have a name".to_owned();
-        return;
-    }
-
-    fs::write("name.env", &player_name.0).unwrap_or_else(|e| {
-        error!("Failed to save name ;(\n{e:?}");
-    });
-
-    commands.insert_resource(HostConfig {
-        name: player_name.0.clone(),
-        host_name: host_name.into(),
-        port,
-    });
+    commands.insert_resource(host_cfg);
     state.set(GameState::Connecting);
 }
 
@@ -347,7 +263,6 @@ pub(super) fn register(app: &mut App) {
     register_button::<QuitButtonEvent>(app);
 
     add_reactable_type::<ConnectionString>(app);
-    add_reactable_type::<PlayerName>(app);
 
     app.configure_sets(
         Update,

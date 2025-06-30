@@ -2,95 +2,74 @@
 //!
 //! This does not add them to the bevy systems by default, and they must be manually added when needed.
 
-use std::{
-    net::{ToSocketAddrs, UdpSocket},
-    time::{SystemTime, UNIX_EPOCH},
-};
+use std::net::SocketAddr;
 
 use bevy::prelude::*;
-use bevy_renet::{
-    netcode::{ClientAuthentication, NetcodeClientTransport},
-    renet::RenetClient,
-};
+use bevy_renet::{renet::RenetClient, steam::steamworks::SteamId};
 use cosmos_core::{
-    netty::{PROTOCOL_ID, connection_config, cosmos_encoder, sync::mapping::NetworkMapping},
+    netty::{connection_config, sync::mapping::NetworkMapping},
     state::GameState,
 };
 use renet::DisconnectReason;
+use renet_steam::SteamClientTransport;
 
 use crate::{
-    netty::lobby::{ClientLobby, MostRecentTick},
+    netty::{
+        lobby::{ClientLobby, MostRecentTick},
+        steam::new_steam_transport,
+    },
     ui::main_menu::MainMenuSubState,
 };
 
-fn new_netcode_transport(player_name: &str, mut host: &str, port: u16) -> NetcodeClientTransport {
-    if host == "localhost" {
-        host = "127.0.0.1"; // to_socket_addrs turns localhost into an ipv6 IP, which fails to connect to the server listening on an ipv4 address.
-    }
-
-    let addr = format!("{host}:{port}");
-
-    let server_addr = addr
-        .to_socket_addrs()
-        .unwrap_or_else(|e| panic!("Error creating IP address for \"{addr}\". Error: {e:?}"))
-        .next()
-        .unwrap();
-
-    let socket = UdpSocket::bind("0.0.0.0:0").unwrap();
-
-    let current_time = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();
-    let client_id = current_time.as_millis() as u64;
-
-    let mut token = [0; 256];
-
-    // This is stored un a u8[256]
-    let serialized_name = cosmos_encoder::serialize_uncompressed(&player_name);
-    if serialized_name.len() > 256 {
-        panic!("name too long. TODO: Handle this gracefully");
-    }
-
-    for (i, byte) in serialized_name.iter().enumerate() {
-        token[i] = *byte;
-    }
-
-    let auth = ClientAuthentication::Unsecure {
-        client_id,
-        protocol_id: PROTOCOL_ID,
-        server_addr,
-        user_data: Some(token),
-    };
-
-    info!("Connecting to {server_addr}");
-
-    NetcodeClientTransport::new(current_time, auth, socket).unwrap()
-}
+use super::steam::User;
 
 #[derive(Resource)]
 /// Used to setup the connection with the server
 ///
 /// This must be present before entering the `GameState::Connecting` state.
-pub struct HostConfig {
-    /// The server's host (excluding port)
-    pub host_name: String,
-    /// The server's port
-    pub port: u16,
-    /// The player's name
-    pub name: String,
+pub enum ConnectToConfig {
+    /// Connect via an ip address
+    Ip(SocketAddr),
+    /// Connect via their steam id.
+    ///
+    /// This CANNOT be your own steam id - steam prevents a client + server connection if they
+    /// both have the same steam id ;(
+    SteamId(SteamId),
 }
 
 /// Establishes a connection with the server.
 ///
 /// Make sure the `ConnectionConfig` resource was added first.
-pub fn establish_connection(mut commands: Commands, host_config: Res<HostConfig>) {
+pub fn establish_connection(
+    mut commands: Commands,
+    host_config: Res<ConnectToConfig>,
+    client: Res<User>,
+    mut state_changer: ResMut<NextState<GameState>>,
+) {
+    // match client.as_ref() {
+    //     User::Steam(steam_client) => {
+    //         let user = steam_client.user();
+    //         let (ticket, handle) = user.authentication_session_ticket_with_steam_id(user.steam_id());
+    //     }
+    //     User::NoAuth(name) => {}
+    // }
+
+    let steam_transport = match new_steam_transport(client.client(), &host_config) {
+        Ok(t) => t,
+        Err(e) => {
+            error!("{e:?}");
+            state_changer.set(GameState::MainMenu);
+            commands.insert_resource(MainMenuSubState::Disconnect);
+            commands.insert_resource(ClientDisconnectReason(DisconnectReason::Transport));
+            return;
+        }
+    };
+
     info!("Establishing connection w/ server...");
     commands.insert_resource(ClientLobby::default());
     commands.insert_resource(MostRecentTick(None));
     commands.insert_resource(RenetClient::new(connection_config()));
-    commands.insert_resource(new_netcode_transport(
-        &host_config.name,
-        host_config.host_name.as_str(),
-        host_config.port,
-    ));
+    commands.insert_resource(steam_transport);
     commands.init_resource::<NetworkMapping>();
     commands.remove_resource::<ClientDisconnectReason>();
 }
@@ -122,7 +101,7 @@ fn remove_networking_resources(mut commands: Commands, client: Option<Res<RenetC
     }
     commands.remove_resource::<NetworkMapping>();
     commands.remove_resource::<RenetClient>();
-    commands.remove_resource::<NetcodeClientTransport>();
+    commands.remove_resource::<SteamClientTransport>();
     commands.remove_resource::<MostRecentTick>();
     commands.remove_resource::<ClientLobby>();
 }

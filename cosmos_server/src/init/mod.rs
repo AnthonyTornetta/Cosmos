@@ -9,4 +9,5 @@ pub mod init_world;
 
 pub(super) fn register(app: &mut App) {
     init_world::register(app);
+    init_server::register(app);
 }

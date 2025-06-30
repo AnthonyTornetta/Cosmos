@@ -49,7 +49,7 @@ use bevy_mod_debugdump::schedule_graph;
 use bevy_obj::ObjPlugin;
 
 use bevy_rapier3d::plugin::{RapierContextInitialization, RapierPhysicsPlugin, TimestepMode};
-use bevy_renet::netcode::NetcodeClientPlugin;
+use bevy_renet::steam::SteamClientPlugin;
 // use bevy_rapier3d::render::RapierDebugRenderPlugin;
 use bevy_renet::RenetClientPlugin;
 use bevy_transform_interpolation::prelude::TransformInterpolationPlugin;
@@ -146,7 +146,7 @@ fn main() {
         )
         .add_plugins((
             RenetClientPlugin,
-            NetcodeClientPlugin,
+            SteamClientPlugin,
             ObjPlugin,
             HanabiPlugin,
             // Used for diagnostics

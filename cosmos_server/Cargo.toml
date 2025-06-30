@@ -51,7 +51,9 @@ cosmos_core = { version = "0.0.8", path = "../cosmos_core", features = [
 ] }
 
 bevy = { workspace = true }
-bevy_renet = { workspace = true }
+bevy_renet = { workspace = true, features = [ "steam" ] }
+# steamworks = { workspace = true }
+renet_steam = { workspace = true }
 renet = { workspace = true }
 serde = { workspace = true }
 bincode = { workspace = true, features = [ "serde" ]}
