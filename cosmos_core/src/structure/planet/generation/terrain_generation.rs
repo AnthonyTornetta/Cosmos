@@ -136,7 +136,7 @@ impl U32Vec4 {
 
 impl ComputeWorker for BiosphereShaderWorker {
     fn build(world: &mut bevy::prelude::World) -> AppComputeWorker<Self> {
-        assert!(DIMS as u32 % WORKGROUP_SIZE == 0);
+        assert!((DIMS as u32).is_multiple_of(WORKGROUP_SIZE));
 
         const GRAD_TABLE: [Vec3; 24] = [
             Vec3::new(-11.0, 4.0, 4.0),

@@ -6,10 +6,7 @@ use bevy::prelude::*;
 
 use bevy_renet::{
     renet::RenetServer,
-    steam::steamworks::{
-        Client, SingleClient,
-        networking_types::{NetworkingConfigEntry, NetworkingConfigValue},
-    },
+    steam::steamworks::{Client, SingleClient},
 };
 use cosmos_core::netty::{connection_config, server::ServerLobby};
 use renet_steam::{SteamServerConfig, SteamServerSocketOptions, SteamServerTransport};
