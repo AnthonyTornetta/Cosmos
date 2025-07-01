@@ -9,7 +9,7 @@ use crate::persistence::make_persistent::{DefaultPersistentComponent, make_persi
 
 pub mod persistence;
 pub mod respawn;
-mod spawn_player;
+pub mod spawn_player;
 pub mod strength;
 
 #[derive(Component, Debug, Serialize, Deserialize)]

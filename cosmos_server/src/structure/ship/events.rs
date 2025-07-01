@@ -67,6 +67,8 @@ fn monitor_pilot_changes(mut event_reader: EventReader<ChangePilotEvent>, mut se
 /// This event is done when a ship is being created
 #[derive(Debug, Event)]
 pub struct CreateShipEvent {
+    /// The entity (likely a player) that created this ship.
+    pub creator: Entity,
     /// Starting location of the ship
     pub ship_location: Location,
     /// The rotation of the ship

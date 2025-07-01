@@ -68,7 +68,7 @@ fn on_add_quest(
             ..ev.details.clone()
         };
 
-        let quest_id = quests.start_quest(quest_entry, details);
+        let quest_id = quests.start_quest(quest_entry, details, 3);
 
         let pirates = [2, 2, 3];
 
