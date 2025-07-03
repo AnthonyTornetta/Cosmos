@@ -2,19 +2,17 @@ use bevy::prelude::*;
 use bevy_rapier3d::prelude::Velocity;
 use cosmos_core::{
     netty::sync::IdentifiableComponent,
-    physics::location::{Location, PreviousLocation},
     prelude::Ship,
     quest::{CompleteQuestEvent, OngoingQuests, Quest, QuestBuilder},
     registry::{Registry, identifiable::Identifiable},
     state::GameState,
-    structure::ship::pilot::Pilot,
+    structure::ship::{pilot::Pilot, ship_movement::ShipMovement},
 };
 use serde::{Deserialize, Serialize};
 
 use crate::{
     persistence::make_persistent::{DefaultPersistentComponent, make_persistent},
     quest::QuestsSet,
-    structure::ship::events::CreateShipEvent,
 };
 
 use super::TutorialState;
@@ -25,9 +23,12 @@ const MOVE_SHIP_QUEST: &str = "cosmos:tutorial_move_ship";
 const ROTATE_SHIP_QUEST: &str = "cosmos:tutorial_rotate_ship";
 
 fn register_quest(mut quests: ResMut<Registry<Quest>>) {
-    quests.register(Quest::new(MAIN_QUEST_NAME.to_string(), "Learn to fly your ship".to_string()));
-    quests.register(Quest::new(ENTER_SHIP_QUEST.to_string(), "Use <R> to enter the ship".to_string()));
-    quests.register(Quest::new(MOVE_SHIP_QUEST.to_string(), "Use WASDEQ to move your ship.".to_string()));
+    quests.register(Quest::new(MAIN_QUEST_NAME.to_string(), "Learn to fly your ship.".to_string()));
+    quests.register(Quest::new(ENTER_SHIP_QUEST.to_string(), "Use <R> to enter the ship.".to_string()));
+    quests.register(Quest::new(
+        MOVE_SHIP_QUEST.to_string(),
+        "Use WASDEQ to move your ship. Hold <Shift> to brake.".to_string(),
+    ));
     quests.register(Quest::new(
         ROTATE_SHIP_QUEST.to_string(),
         "Use your mouse and ZC to rotate your ship.".to_string(),
@@ -82,6 +83,7 @@ fn on_change_tutorial_state(
 #[derive(Component, Serialize, Deserialize, Default, Debug, Reflect)]
 struct MoveShipQuestActive {
     distance_travelled: f32,
+    braked: bool,
 }
 
 impl IdentifiableComponent for MoveShipQuestActive {
@@ -151,7 +153,7 @@ fn resolve_enter_ship_quest(
 fn resolve_move_quest(
     quests: Res<Registry<Quest>>,
     mut commands: Commands,
-    q_ship_vel: Query<&Velocity, With<Ship>>,
+    q_ship_vel: Query<(&Velocity, &ShipMovement), With<Ship>>,
     mut q_on_quest_and_ready: Query<(Entity, &mut OngoingQuests, &mut MoveShipQuestActive, &Pilot)>,
     time: Res<Time>,
 ) {
@@ -164,9 +166,13 @@ fn resolve_move_quest(
             continue;
         };
 
-        let Ok(ship_vel) = q_ship_vel.get(pilot.entity) else {
+        let Ok((ship_vel, ship_movement)) = q_ship_vel.get(pilot.entity) else {
             continue;
         };
+
+        if ship_movement.braking {
+            move_ship_quest_active.braked = true;
+        }
 
         let distance_travelled = ship_vel.linvel.length() * time.delta_secs();
 
@@ -178,7 +184,10 @@ fn resolve_move_quest(
                 .map(|subquests| subquests.iter_specific_mut(move_ship_quest))
             {
                 for ongoing in iterator {
-                    if ongoing.set_progress(move_ship_quest_active.distance_travelled.round() as u32) {
+                    let max_prog = ongoing.max_progress();
+                    if ongoing.set_progress(
+                        (max_prog - 1).min(move_ship_quest_active.distance_travelled.round() as u32) + move_ship_quest_active.braked as u32,
+                    ) {
                         commands.entity(ent).remove::<MoveShipQuestActive>();
                     }
                 }
@@ -208,8 +217,6 @@ fn resolve_rotation_quest(
         };
 
         rotate_ship_quest_active.rotation_amount += ship_vel.angvel.length() * time.delta_secs();
-
-        info!("{rotate_ship_quest_active:?}");
 
         for ongoing in ongoing_quests.iter_specific_mut(quest) {
             if let Some(iterator) = ongoing
@@ -255,12 +262,6 @@ fn on_complete_quest(
     }
 }
 
-fn print_ongoing(q_ongoing: Query<&OngoingQuests>) {
-    for o in q_ongoing.iter() {
-        info!("{o:?}");
-    }
-}
-
 pub(super) fn register(app: &mut App) {
     make_persistent::<EnterShipQuestActive>(app);
     make_persistent::<MoveShipQuestActive>(app);
@@ -271,7 +272,7 @@ pub(super) fn register(app: &mut App) {
             FixedUpdate,
             (
                 on_change_tutorial_state.in_set(QuestsSet::CreateNewQuests),
-                (resolve_enter_ship_quest, resolve_move_quest, resolve_rotation_quest, print_ongoing)
+                (resolve_enter_ship_quest, resolve_move_quest, resolve_rotation_quest)
                     .after(on_change_tutorial_state)
                     .before(QuestsSet::CompleteQuests),
                 on_complete_quest.after(QuestsSet::CompleteQuests),

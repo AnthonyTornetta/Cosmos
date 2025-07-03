@@ -164,6 +164,10 @@ impl OngoingQuest {
         }
     }
 
+    pub fn max_progress(&self) -> u32 {
+        self.max_progress
+    }
+
     pub fn add_subquest(&mut self, subquest: OngoingQuest) -> &mut Self {
         self.subquests.get_or_insert_default().start_quest(subquest);
         self
