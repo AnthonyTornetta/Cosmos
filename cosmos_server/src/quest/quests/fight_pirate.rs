@@ -4,7 +4,7 @@ use cosmos_core::{
     ecs::sets::FixedUpdateSet,
     netty::sync::IdentifiableComponent,
     physics::location::{Location, SECTOR_DIMENSIONS},
-    quest::{OngoingQuestDetails, OngoingQuestId, OngoingQuests, Quest},
+    quest::{OngoingQuest, OngoingQuestDetails, OngoingQuestId, OngoingQuests, Quest},
     registry::Registry,
     state::GameState,
     structure::shared::MeltingDown,
@@ -68,7 +68,7 @@ fn on_add_quest(
             ..ev.details.clone()
         };
 
-        let quest_id = quests.start_quest(quest_entry, details, 3);
+        let quest_id = quests.start_quest(OngoingQuest::new(quest_entry, details, 3));
 
         let pirates = [2, 2, 3];
 

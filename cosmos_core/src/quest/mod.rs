@@ -1,6 +1,6 @@
 //! Shared quest logic
 
-use std::num::NonZeroU32;
+use std::num::{NonZero, NonZeroU32};
 
 use bevy::prelude::*;
 use serde::{Deserialize, Serialize};
@@ -38,6 +38,86 @@ pub struct OngoingQuest {
     progress: u32,
     max_progress: u32,
     ongoing_id: OngoingQuestId,
+
+    // This field breaks the reflect derive, even though I wish this could be reflected :(
+    #[reflect(ignore)]
+    subquests: Option<OngoingQuests>,
+
+    block_on: Vec<OngoingQuestId>,
+}
+
+pub struct QuestBuilder {
+    quest_id: u16,
+    details: OngoingQuestDetails,
+    starting_progress: u32,
+    max_progress: Option<u32>,
+    subquests: Option<OngoingQuests>,
+    block_on: Vec<OngoingQuestId>,
+}
+
+impl QuestBuilder {
+    pub fn new(quest_type: &Quest) -> Self {
+        Self {
+            quest_id: quest_type.id(),
+            subquests: None,
+            max_progress: None,
+            starting_progress: 0,
+            details: Default::default(),
+            block_on: vec![],
+        }
+    }
+
+    pub fn with_payout(mut self, amount: NonZero<u32>) -> Self {
+        self.details.payout = Some(amount);
+        self
+    }
+
+    pub fn with_location(mut self, location: Location) -> Self {
+        self.details.location = Some(location);
+        self
+    }
+
+    pub fn with_subquests(mut self, subquests: impl IntoIterator<Item = OngoingQuest>) -> Self {
+        let subqs = self.subquests.get_or_insert_default();
+        for q in subquests.into_iter() {
+            subqs.start_quest(q);
+        }
+        self
+    }
+
+    pub fn depends_on_being_done(mut self, needs_done: &OngoingQuest) -> Self {
+        self.block_on.push(needs_done.ongoing_id());
+        self
+    }
+
+    pub fn with_max_progress(mut self, max_progress: u32) -> Self {
+        self.max_progress = Some(max_progress);
+        self
+    }
+
+    pub fn with_starting_progress(mut self, starting_progress: u32) -> Self {
+        self.starting_progress = starting_progress;
+        self
+    }
+
+    pub fn build(self) -> OngoingQuest {
+        let max_progress = self.max_progress.unwrap_or_else(|| {
+            if self.subquests.as_ref().is_some_and(|sq| !sq.0.is_empty()) {
+                0
+            } else {
+                1
+            }
+        });
+
+        OngoingQuest::new_raw(
+            self.quest_id,
+            self.details,
+            self.starting_progress.min(max_progress),
+            max_progress,
+            self.subquests,
+            self.block_on,
+        )
+    }
 }
 
 #[derive(Reflect, Debug, Serialize, Deserialize, Clone, PartialEq, Copy)]
@@ -49,6 +129,46 @@ pub struct OngoingQuestId(Uuid);
 pub struct OngoingQuests(Vec<OngoingQuest>);
 
 impl OngoingQuest {
+    pub fn new(quest_type: &Quest, details: OngoingQuestDetails, max_progress: u32) -> Self {
+        let id = OngoingQuestId(Uuid::new_v4());
+
+        Self {
+            ongoing_id: id,
+            quest_id: quest_type.id(),
+            subquests: None,
+            details,
+            progress: 0,
+            max_progress,
+            block_on: vec![],
+        }
+    }
+
+    fn new_raw(
+        quest_id: u16,
+        details: OngoingQuestDetails,
+        progress: u32,
+        max_progress: u32,
+        subquests: Option<OngoingQuests>,
+        block_on: Vec<OngoingQuestId>,
+    ) -> Self {
+        let id = OngoingQuestId(Uuid::new_v4());
+
+        Self {
+            ongoing_id: id,
+            quest_id,
+            subquests,
+            details,
+            progress,
+            max_progress,
+            block_on,
+        }
+    }
+
+    pub fn add_subquest(&mut self, subquest: OngoingQuest) -> &mut Self {
+        self.subquests.get_or_insert_default().start_quest(subquest);
+        self
+    }
+
     pub fn quest_id(&self) -> u16 {
         self.quest_id
     }
@@ -58,34 +178,45 @@ impl OngoingQuest {
         self.ongoing_id
     }
 
-    pub fn progress_quest(&mut self, progress: u32) -> bool {
-        if self.progress + progress >= self.max_progress {
+    pub fn set_progress(&mut self, progress: u32) -> bool {
+        if progress >= self.max_progress {
             self.progress = self.max_progress;
             true
         } else {
-            self.progress += progress;
+            self.progress = progress;
             false
         }
     }
 
+    pub fn progress_quest(&mut self, progress: u32) -> bool {
+        self.set_progress(self.progress + progress)
+    }
+
+    pub fn complete(&mut self) {
+        self.progress = self.max_progress;
+    }
+
+    pub fn subquests(&self) -> Option<&OngoingQuests> {
+        self.subquests.as_ref()
+    }
+
+    pub fn subquests_mut(&mut self) -> Option<&mut OngoingQuests> {
+        self.subquests.as_mut()
+    }
+
     pub fn completed(&self) -> bool {
-        self.progress == self.max_progress
+        self.subquests.as_ref().map(|x| x.iter().all(|q| q.completed())).unwrap_or(true) && self.progress == self.max_progress
     }
 }
 
 impl OngoingQuests {
     /// Starts a quest with the given details.
-    pub fn start_quest(&mut self, quest: &Quest, details: OngoingQuestDetails, max_progress: u32) -> OngoingQuestId {
-        let id = OngoingQuestId(Uuid::new_v4());
-        self.0.push(OngoingQuest {
-            quest_id: quest.id(),
-            details,
-            ongoing_id: id,
-            progress: 0,
-            max_progress,
-        });
-
-        id
+    ///
+    /// Returns the [`OngoingQuestId`] for this quest for convenience
+    pub fn start_quest(&mut self, ongoing_quest: OngoingQuest) -> OngoingQuestId {
+        let q_id = ongoing_quest.ongoing_id();
+        self.0.push(ongoing_quest);
+        q_id
     }
 
     /// Gets an ongoing quest from its id, if one exists

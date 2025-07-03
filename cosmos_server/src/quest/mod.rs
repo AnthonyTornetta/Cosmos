@@ -2,7 +2,6 @@
 
 use bevy::prelude::*;
 use cosmos_core::{
-    ecs::sets::FixedUpdateSet,
     entities::player::Player,
     netty::sync::events::server_event::NettyEventWriter,
     quest::{CompleteQuestEvent, OngoingQuestDetails, OngoingQuests},
@@ -63,6 +62,8 @@ fn on_complete_quest(
                 .expect("This was proven to exist above");
 
             let complete_quest_event = CompleteQuestEvent::new(entity, completed);
+
+            info!("{complete_quest_event:?}");
 
             nevw_complete_quest_event.write(complete_quest_event.clone(), player.client_id());
             evw_complete_quest_event.write(complete_quest_event);

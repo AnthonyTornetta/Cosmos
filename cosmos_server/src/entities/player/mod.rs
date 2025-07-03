@@ -32,4 +32,5 @@ pub(super) fn register(app: &mut App) {
     make_persistent::<PlayerLooking>(app);
     persistence::register(app);
     strength::register(app);
+    spawn_player::register(app);
 }

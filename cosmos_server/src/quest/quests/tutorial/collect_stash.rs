@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 use cosmos_core::{
-    quest::{CompleteQuestEvent, OngoingQuestDetails, OngoingQuests, Quest},
+    quest::{CompleteQuestEvent, OngoingQuests, Quest, QuestBuilder},
     registry::{Registry, identifiable::Identifiable},
     state::GameState,
 };
@@ -30,7 +30,7 @@ fn on_create_player(
             continue;
         };
 
-        ongoing_quests.start_quest(quest, OngoingQuestDetails { ..Default::default() }, 1);
+        ongoing_quests.start_quest(QuestBuilder::new(quest).build());
     }
 }
 
@@ -68,19 +68,12 @@ fn on_complete_quest(
             continue;
         };
 
-        ongoing.start_quest(
-            quest,
-            OngoingQuestDetails {
-                payout: None,
-                location: None,
-            },
-            1,
-        );
+        ongoing.start_quest(QuestBuilder::new(quest).build());
     }
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_systems(OnEnter(GameState::Loading), register_quest)
-        .add_systems(FixedUpdate, on_create_player.in_set(QuestsSet::CreateNewQuests))
-        .add_systems(FixedUpdate, resolve_quest.after(on_create_player));
+    // app.add_systems(OnEnter(GameState::Loading), register_quest)
+    //     .add_systems(FixedUpdate, on_create_player.in_set(QuestsSet::CreateNewQuests))
+    //     .add_systems(FixedUpdate, resolve_quest.after(on_create_player));
 }
