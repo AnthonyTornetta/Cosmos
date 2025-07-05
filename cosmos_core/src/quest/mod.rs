@@ -223,6 +223,10 @@ impl OngoingQuests {
         q_id
     }
 
+    pub fn contains(&self, quest: &Quest) -> bool {
+        self.0.iter().any(|ongoing| ongoing.quest_id() == quest.id())
+    }
+
     /// Gets an ongoing quest from its id, if one exists
     pub fn from_id(&self, id: &OngoingQuestId) -> Option<&OngoingQuest> {
         self.0.iter().find(|x| x.ongoing_id == *id)

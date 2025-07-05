@@ -34,6 +34,13 @@ impl IdentifiableComponent for LogicDriver {
 
 impl DefaultPersistentComponent for LogicDriver {}
 
+#[derive(Clone, Copy, Debug)]
+pub(super) struct LogicBlockChangedEvent<'a> {
+    pub coord: BlockCoordinate,
+    pub old: Option<(&'a LogicBlock, BlockRotation)>,
+    pub new: Option<(&'a LogicBlock, BlockRotation)>,
+}
+
 impl LogicDriver {
     /// Returns an array of the Boolean value of the given block's input port groups.
     /// A block face without an input port is assigned `0`.
@@ -56,7 +63,7 @@ impl LogicDriver {
         port_type: PortType,
         structure: &Structure,
         entity: Entity,
-        events_by_coords: &HashMap<BlockCoordinate, BlockChangedEvent>,
+        events_by_coords: &HashMap<BlockCoordinate, LogicBlockChangedEvent>,
         blocks: &Registry<Block>,
         logic_blocks: &Registry<LogicBlock>,
         evw_queue_logic_output: &mut EventWriter<QueueLogicOutputEvent>,
@@ -102,7 +109,7 @@ impl LogicDriver {
         coords: BlockCoordinate,
         structure: &Structure,
         entity: Entity,
-        events_by_coords: &HashMap<BlockCoordinate, BlockChangedEvent>,
+        events_by_coords: &HashMap<BlockCoordinate, LogicBlockChangedEvent>,
         blocks: &Registry<Block>,
         logic_blocks: &Registry<LogicBlock>,
         logic_wire_colors: &Registry<LogicWireColor>,
@@ -190,7 +197,7 @@ impl LogicDriver {
         coords: BlockCoordinate,
         structure: &Structure,
         entity: Entity,
-        events_by_coords: &HashMap<BlockCoordinate, BlockChangedEvent>,
+        events_by_coords: &HashMap<BlockCoordinate, LogicBlockChangedEvent>,
         blocks: &Registry<Block>,
         logic_blocks: &Registry<LogicBlock>,
         logic_wire_colors: &Registry<LogicWireColor>,

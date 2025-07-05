@@ -51,6 +51,11 @@ fn on_change_tutorial_state(
         let Some(main_quest) = quests.from_id(MAIN_QUEST_NAME) else {
             continue;
         };
+
+        if ongoing_quests.contains(main_quest) {
+            continue;
+        }
+
         let Some(enter_ship) = quests.from_id(ENTER_SHIP_QUEST) else {
             continue;
         };

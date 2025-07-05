@@ -31,6 +31,10 @@ fn on_change_tutorial_state(
             continue;
         };
 
+        if ongoing_quests.contains(quest) {
+            continue;
+        }
+
         info!("ADDING QUEST: {quest:?}");
 
         ongoing_quests.start_quest(OngoingQuest::new(quest, OngoingQuestDetails { ..Default::default() }, 1));
