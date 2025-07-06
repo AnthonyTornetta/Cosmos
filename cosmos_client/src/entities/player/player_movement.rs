@@ -21,7 +21,7 @@ use cosmos_core::{
 use crate::{
     input::inputs::{CosmosInputs, InputChecker, InputHandler},
     rendering::MainCamera,
-    structure::planet::align_player::{AlignmentAxis, PlayerAlignment},
+    structure::planet::align_player::PlayerAlignment,
     ui::components::show_cursor::ShowCursor,
 };
 
@@ -92,7 +92,6 @@ fn process_player_movement(
             Option<&PlayerAlignment>,
             Has<Grounded>,
             Has<GravityWell>,
-            Option<&ChildOf>,
         ),
         (With<LocalPlayer>, Without<Pilot>, Without<BuildMode>),
     >,
@@ -108,7 +107,7 @@ fn process_player_movement(
     };
 
     // This will be err if the player is piloting a ship
-    let Ok((mut velocity, player_transform, player_alignment, grounded, under_gravity_well, child_of)) = q_local_player.single_mut() else {
+    let Ok((mut velocity, player_transform, player_alignment, grounded, under_gravity_well)) = q_local_player.single_mut() else {
         return;
     };
 
@@ -214,44 +213,48 @@ fn process_player_movement(
 
         let mut new_linvel = Vec3::ZERO;
 
-        if input_handler.check_pressed(CosmosInputs::MoveForward) {
-            new_linvel += forward;
-        }
-        if input_handler.check_pressed(CosmosInputs::MoveBackward) {
-            new_linvel -= forward;
-        }
-        if input_handler.check_pressed(CosmosInputs::MoveUp) {
-            new_linvel += up;
-        }
-        if input_handler.check_pressed(CosmosInputs::MoveDown) {
-            new_linvel -= up;
-        }
-        if input_handler.check_pressed(CosmosInputs::MoveLeft) {
-            new_linvel -= right;
-        }
-        if input_handler.check_pressed(CosmosInputs::MoveRight) {
-            new_linvel += right;
-        }
+        if !any_open_menus {
+            if input_handler.check_pressed(CosmosInputs::MoveForward) {
+                new_linvel += forward;
+            }
+            if input_handler.check_pressed(CosmosInputs::MoveBackward) {
+                new_linvel -= forward;
+            }
+            if input_handler.check_pressed(CosmosInputs::MoveUp) {
+                new_linvel += up;
+            }
+            if input_handler.check_pressed(CosmosInputs::MoveDown) {
+                new_linvel -= up;
+            }
+            if input_handler.check_pressed(CosmosInputs::MoveLeft) {
+                new_linvel -= right;
+            }
+            if input_handler.check_pressed(CosmosInputs::MoveRight) {
+                new_linvel += right;
+            }
 
-        let Ok(mut local_trans) = q_local_trans.single_mut() else {
-            return;
-        };
-        if input_handler.check_pressed(CosmosInputs::RollLeft) {
-            local_trans.rotation *= Quat::from_axis_angle(Vec3::Z, PI / 3.0 * time.delta_secs());
-        }
-        if input_handler.check_pressed(CosmosInputs::RollRight) {
-            local_trans.rotation *= Quat::from_axis_angle(Vec3::Z, PI / -3.0 * time.delta_secs());
+            let Ok(mut local_trans) = q_local_trans.single_mut() else {
+                return;
+            };
+            if input_handler.check_pressed(CosmosInputs::RollLeft) {
+                local_trans.rotation *= Quat::from_axis_angle(Vec3::Z, PI / 3.0 * time.delta_secs());
+            }
+            if input_handler.check_pressed(CosmosInputs::RollRight) {
+                local_trans.rotation *= Quat::from_axis_angle(Vec3::Z, PI / -3.0 * time.delta_secs());
+            }
         }
 
         new_linvel = new_linvel.normalize_or_zero() * accel;
         new_linvel += velocity.linvel;
 
-        if input_handler.check_pressed(CosmosInputs::SlowDown) {
-            let mut amt = new_linvel * 0.5;
-            if amt.dot(amt) > max_speed * max_speed {
-                amt = amt.normalize() * max_speed;
+        if !any_open_menus {
+            if input_handler.check_pressed(CosmosInputs::SlowDown) {
+                let mut amt = new_linvel * 0.5;
+                if amt.dot(amt) > max_speed * max_speed {
+                    amt = amt.normalize() * max_speed;
+                }
+                new_linvel -= amt;
             }
-            new_linvel -= amt;
         }
 
         velocity.linvel = new_linvel.clamp_length_max(max_speed);
