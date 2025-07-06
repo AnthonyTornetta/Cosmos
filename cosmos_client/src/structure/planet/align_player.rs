@@ -15,7 +15,7 @@ use cosmos_core::{
 };
 
 #[derive(Debug, Component)]
-struct PreviousOrientation(Axis);
+struct PreviousOrientation(AlignmentAxis);
 
 fn align_player(
     mut player: Query<
@@ -56,9 +56,9 @@ fn align_player(
             let face = Planet::planet_face_relative(relative_position);
             if let Some(a) = alignment {
                 let old_atlas = match face {
-                    BlockFace::Back | BlockFace::Front => Axis::Z,
-                    BlockFace::Left | BlockFace::Right => Axis::X,
-                    BlockFace::Top | BlockFace::Bottom => Axis::Y,
+                    BlockFace::Back | BlockFace::Front => AlignmentAxis::Z,
+                    BlockFace::Left | BlockFace::Right => AlignmentAxis::X,
+                    BlockFace::Top | BlockFace::Bottom => AlignmentAxis::Y,
                 };
 
                 if old_atlas != a.axis {
@@ -72,33 +72,51 @@ fn align_player(
                 planet_rotation
                     * match face {
                         BlockFace::Top => {
-                            commands.entity(entity).insert(PlayerAlignment { axis: Axis::Y, aligned_to });
+                            commands.entity(entity).insert(PlayerAlignment {
+                                axis: AlignmentAxis::Y,
+                                aligned_to,
+                            });
                             Quat::IDENTITY
                         }
                         BlockFace::Bottom => {
-                            commands.entity(entity).insert(PlayerAlignment { axis: Axis::Y, aligned_to });
+                            commands.entity(entity).insert(PlayerAlignment {
+                                axis: AlignmentAxis::Y,
+                                aligned_to,
+                            });
 
                             match prev_orientation {
                                 // Fixes the player rotating in a weird direction when coming from
                                 // the left/right faces of a planet.
-                                Some(PreviousOrientation(Axis::X)) => Quat::from_axis_angle(Vec3::Z, PI),
+                                Some(PreviousOrientation(AlignmentAxis::X)) => Quat::from_axis_angle(Vec3::Z, PI),
                                 _ => Quat::from_axis_angle(Vec3::X, PI),
                             }
                         }
                         BlockFace::Front => {
-                            commands.entity(entity).insert(PlayerAlignment { axis: Axis::Z, aligned_to });
+                            commands.entity(entity).insert(PlayerAlignment {
+                                axis: AlignmentAxis::Z,
+                                aligned_to,
+                            });
                             Quat::from_axis_angle(Vec3::X, -PI / 2.0)
                         }
                         BlockFace::Back => {
-                            commands.entity(entity).insert(PlayerAlignment { axis: Axis::Z, aligned_to });
+                            commands.entity(entity).insert(PlayerAlignment {
+                                axis: AlignmentAxis::Z,
+                                aligned_to,
+                            });
                             Quat::from_axis_angle(Vec3::X, PI / 2.0)
                         }
                         BlockFace::Right => {
-                            commands.entity(entity).insert(PlayerAlignment { axis: Axis::X, aligned_to });
+                            commands.entity(entity).insert(PlayerAlignment {
+                                axis: AlignmentAxis::X,
+                                aligned_to,
+                            });
                             Quat::from_axis_angle(Vec3::Z, -PI / 2.0)
                         }
                         BlockFace::Left => {
-                            commands.entity(entity).insert(PlayerAlignment { axis: Axis::X, aligned_to });
+                            commands.entity(entity).insert(PlayerAlignment {
+                                axis: AlignmentAxis::X,
+                                aligned_to,
+                            });
                             Quat::from_axis_angle(Vec3::Z, PI / 2.0)
                         }
                     },
@@ -116,7 +134,7 @@ fn align_on_ship(query: Query<(Entity, &Pilot), With<LocalPlayer>>, mut commands
     if let Ok((ent, pilot)) = query.single() {
         commands.entity(ent).insert(PlayerAlignment {
             aligned_to: pilot.entity,
-            axis: Axis::Y,
+            axis: AlignmentAxis::Y,
         });
     }
 }
@@ -125,7 +143,7 @@ fn align_on_ship(query: Query<(Entity, &Pilot), With<LocalPlayer>>, mut commands
 /// Represents an X/Y/Z axis
 ///
 /// Used for orientation on a planet
-pub enum Axis {
+pub enum AlignmentAxis {
     /// X axis
     X,
     #[default]
@@ -141,7 +159,7 @@ pub struct PlayerAlignment {
     /// The entity this player is aligned to
     pub aligned_to: Entity,
     /// The axis RELATIVE to the `aligned_to`'s rotation
-    pub axis: Axis,
+    pub axis: AlignmentAxis,
 }
 
 pub(super) fn register(app: &mut App) {

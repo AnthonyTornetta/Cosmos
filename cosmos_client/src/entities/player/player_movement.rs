@@ -21,7 +21,7 @@ use cosmos_core::{
 use crate::{
     input::inputs::{CosmosInputs, InputChecker, InputHandler},
     rendering::MainCamera,
-    structure::planet::align_player::PlayerAlignment,
+    structure::planet::align_player::{AlignmentAxis, PlayerAlignment},
     ui::components::show_cursor::ShowCursor,
 };
 
@@ -73,6 +73,15 @@ fn check_grounded(
     }
 }
 
+fn add_alignment(mut commands: Commands, q_player: Query<(Entity, &ChildOf), (With<LocalPlayer>, Without<PlayerAlignment>)>) {
+    for (ent, child_of) in q_player.iter() {
+        commands.entity(ent).insert(PlayerAlignment {
+            axis: Default::default(),
+            aligned_to: child_of.parent(),
+        });
+    }
+}
+
 fn process_player_movement(
     time: Res<Time>,
     input_handler: InputChecker,
@@ -83,6 +92,7 @@ fn process_player_movement(
             Option<&PlayerAlignment>,
             Has<Grounded>,
             Has<GravityWell>,
+            Option<&ChildOf>,
         ),
         (With<LocalPlayer>, Without<Pilot>, Without<BuildMode>),
     >,
@@ -98,7 +108,7 @@ fn process_player_movement(
     };
 
     // This will be err if the player is piloting a ship
-    let Ok((mut velocity, player_transform, player_alignment, grounded, under_gravity_well)) = q_local_player.single_mut() else {
+    let Ok((mut velocity, player_transform, player_alignment, grounded, under_gravity_well, child_of)) = q_local_player.single_mut() else {
         return;
     };
 
@@ -271,7 +281,8 @@ pub(super) fn register(app: &mut App) {
 
     app.add_systems(
         FixedUpdate,
-        process_player_movement
+        (add_alignment, process_player_movement)
+            .chain()
             .ambiguous_with(LaserSystemSet::SendHitEvents)
             .in_set(FixedUpdateSet::Main)
             .in_set(PlayerMovementSet::ProcessPlayerMovement)
