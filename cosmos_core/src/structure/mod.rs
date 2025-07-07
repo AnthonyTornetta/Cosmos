@@ -910,7 +910,7 @@ fn spawn_chunk_entity(
     let mut entity_cmds = commands.spawn((
         Visibility::default(),
         Transform::from_translation(structure.chunk_relative_position(chunk_coordinate)),
-        Name::new("Chunk Entity"),
+        Name::new(format!("Chunk Entity {chunk_coordinate}")),
         NoSendEntity,
         ChunkEntity {
             structure_entity,

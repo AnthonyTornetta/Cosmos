@@ -130,7 +130,7 @@ fn replication_listen_netty(
                         .insert((
                             grav_well,
                             PlayerAlignment {
-                                axis: align_player::Axis::Y,
+                                axis: align_player::AlignmentAxis::Y,
                                 aligned_to: structure_entity,
                             },
                         ))

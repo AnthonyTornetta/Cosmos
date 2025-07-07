@@ -324,7 +324,10 @@ fn position_diamonds(
         return;
     };
 
-    let cam_g_trans = compute_totally_accurate_global_transform(cam_ent, &q_trans).expect("Invalid camera heirarchy.");
+    let Some(cam_g_trans) = compute_totally_accurate_global_transform(cam_ent, &q_trans) else {
+        warn!("Invalid camera heirarchy.");
+        return;
+    };
 
     const MAX_DIST_FROM_CENTER: f32 = 0.4;
     let mut closest = None;

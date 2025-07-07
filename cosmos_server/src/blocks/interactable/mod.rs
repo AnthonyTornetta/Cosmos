@@ -6,7 +6,7 @@ mod door;
 mod dye_machine;
 mod gravity_well;
 mod ship_core;
-mod storage;
+pub mod storage;
 
 pub(super) fn register(app: &mut App) {
     dye_machine::register(app);

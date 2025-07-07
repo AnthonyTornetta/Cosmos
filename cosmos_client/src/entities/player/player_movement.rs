@@ -73,6 +73,15 @@ fn check_grounded(
     }
 }
 
+fn add_alignment(mut commands: Commands, q_player: Query<(Entity, &ChildOf), (With<LocalPlayer>, Without<PlayerAlignment>)>) {
+    for (ent, child_of) in q_player.iter() {
+        commands.entity(ent).insert(PlayerAlignment {
+            axis: Default::default(),
+            aligned_to: child_of.parent(),
+        });
+    }
+}
+
 fn process_player_movement(
     time: Res<Time>,
     input_handler: InputChecker,
@@ -204,45 +213,48 @@ fn process_player_movement(
 
         let mut new_linvel = Vec3::ZERO;
 
-        if input_handler.check_pressed(CosmosInputs::MoveForward) {
-            new_linvel += forward;
-        }
-        if input_handler.check_pressed(CosmosInputs::MoveBackward) {
-            new_linvel -= forward;
-        }
-        if input_handler.check_pressed(CosmosInputs::MoveUp) {
-            new_linvel += up;
-        }
-        if input_handler.check_pressed(CosmosInputs::MoveDown) {
-            new_linvel -= up;
-        }
-        if input_handler.check_pressed(CosmosInputs::MoveLeft) {
-            new_linvel -= right;
-        }
-        if input_handler.check_pressed(CosmosInputs::MoveRight) {
-            new_linvel += right;
-        }
+        if !any_open_menus {
+            if input_handler.check_pressed(CosmosInputs::MoveForward) {
+                new_linvel += forward;
+            }
+            if input_handler.check_pressed(CosmosInputs::MoveBackward) {
+                new_linvel -= forward;
+            }
+            if input_handler.check_pressed(CosmosInputs::MoveUp) {
+                new_linvel += up;
+            }
+            if input_handler.check_pressed(CosmosInputs::MoveDown) {
+                new_linvel -= up;
+            }
+            if input_handler.check_pressed(CosmosInputs::MoveLeft) {
+                new_linvel -= right;
+            }
+            if input_handler.check_pressed(CosmosInputs::MoveRight) {
+                new_linvel += right;
+            }
 
-        let Ok(mut local_trans) = q_local_trans.single_mut() else {
-            return;
-        };
-        if input_handler.check_pressed(CosmosInputs::RollLeft) {
-            local_trans.rotation *= Quat::from_axis_angle(Vec3::Z, PI / 3.0 * time.delta_secs());
-        }
-        if input_handler.check_pressed(CosmosInputs::RollRight) {
-            local_trans.rotation *= Quat::from_axis_angle(Vec3::Z, PI / -3.0 * time.delta_secs());
+            let Ok(mut local_trans) = q_local_trans.single_mut() else {
+                return;
+            };
+            if input_handler.check_pressed(CosmosInputs::RollLeft) {
+                local_trans.rotation *= Quat::from_axis_angle(Vec3::Z, PI / 3.0 * time.delta_secs());
+            }
+            if input_handler.check_pressed(CosmosInputs::RollRight) {
+                local_trans.rotation *= Quat::from_axis_angle(Vec3::Z, PI / -3.0 * time.delta_secs());
+            }
         }
 
         new_linvel = new_linvel.normalize_or_zero() * accel;
         new_linvel += velocity.linvel;
 
-        if input_handler.check_pressed(CosmosInputs::SlowDown) {
-            let mut amt = new_linvel * 0.5;
-            if amt.dot(amt) > max_speed * max_speed {
-                amt = amt.normalize() * max_speed;
+        if !any_open_menus
+            && input_handler.check_pressed(CosmosInputs::SlowDown) {
+                let mut amt = new_linvel * 0.5;
+                if amt.dot(amt) > max_speed * max_speed {
+                    amt = amt.normalize() * max_speed;
+                }
+                new_linvel -= amt;
             }
-            new_linvel -= amt;
-        }
 
         velocity.linvel = new_linvel.clamp_length_max(max_speed);
     }
@@ -271,7 +283,8 @@ pub(super) fn register(app: &mut App) {
 
     app.add_systems(
         FixedUpdate,
-        process_player_movement
+        (add_alignment, process_player_movement)
+            .chain()
             .ambiguous_with(LaserSystemSet::SendHitEvents)
             .in_set(FixedUpdateSet::Main)
             .in_set(PlayerMovementSet::ProcessPlayerMovement)

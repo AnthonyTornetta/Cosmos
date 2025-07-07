@@ -9,7 +9,7 @@ use crate::persistence::make_persistent::{DefaultPersistentComponent, make_persi
 
 pub mod persistence;
 pub mod respawn;
-mod spawn_player;
+pub mod spawn_player;
 pub mod strength;
 
 #[derive(Component, Debug, Serialize, Deserialize)]
@@ -32,4 +32,5 @@ pub(super) fn register(app: &mut App) {
     make_persistent::<PlayerLooking>(app);
     persistence::register(app);
     strength::register(app);
+    spawn_player::register(app);
 }

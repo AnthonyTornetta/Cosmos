@@ -17,6 +17,7 @@ use renet::{ClientId, RenetServer};
 
 fn on_request_parent(
     q_component: Query<(&ChildOf, Option<&StructureSystem>, Option<&ItemStackData>, Option<&BlockData>), Without<NoSendEntity>>,
+    q_no_sync: Query<(), With<NoSendEntity>>,
     mut ev_reader: EventReader<RequestedEntityEvent>,
     mut server: ResMut<RenetServer>,
 ) {
@@ -26,6 +27,11 @@ fn on_request_parent(
         let Ok((component, structure_system, is_data, block_data)) = q_component.get(ev.entity) else {
             continue;
         };
+
+        if q_no_sync.contains(component.parent()) {
+            // Don't sync the parent entity if it's marked as no sync.
+            continue;
+        }
 
         let entity_identifier = if let Some(structure_system) = structure_system {
             ComponentEntityIdentifier::StructureSystem {
@@ -78,6 +84,7 @@ fn on_change_parent(
         ),
         (Without<NoSendEntity>, Changed<ChildOf>),
     >,
+    q_no_sync: Query<(), With<NoSendEntity>>,
     q_players: Query<&Player>,
     mut server: ResMut<RenetServer>,
 ) {
@@ -90,6 +97,11 @@ fn on_change_parent(
             .iter()
             .flat_map(|(entity, component, sync_to, structure_system, is_data, block_data)| {
                 if !sync_to.should_sync_to(player.client_id()) {
+                    return None;
+                }
+
+                if q_no_sync.contains(component.parent()) {
+                    // Don't sync the parent entity if it's marked as no sync.
                     return None;
                 }
 

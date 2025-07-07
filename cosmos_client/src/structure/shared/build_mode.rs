@@ -61,15 +61,15 @@ fn control_build_mode(
     let up = *transform.up();
 
     match player_alignment.map(|x| x.axis).unwrap_or_default() {
-        align_player::Axis::X => {
+        align_player::AlignmentAxis::X => {
             forward.x = 0.0;
             right.x = 0.0;
         }
-        align_player::Axis::Y => {
+        align_player::AlignmentAxis::Y => {
             forward.y = 0.0;
             right.y = 0.0;
         }
-        align_player::Axis::Z => {
+        align_player::AlignmentAxis::Z => {
             forward.z = 0.0;
             right.z = 0.0;
         }

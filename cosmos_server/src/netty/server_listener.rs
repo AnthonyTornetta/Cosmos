@@ -231,7 +231,11 @@ fn server_listen_messages(
 
                         info!("Creating ship {name}");
 
-                        create_ship_event_writer.write(CreateShipEvent { ship_location, rotation });
+                        create_ship_event_writer.write(CreateShipEvent {
+                            ship_location,
+                            rotation,
+                            creator: client,
+                        });
                     } else {
                         warn!("Invalid player entity - {client:?}");
                     }

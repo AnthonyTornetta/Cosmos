@@ -1,13 +1,9 @@
 //! The game's logic system: for wires, logic gates, etc.
 
-use crate::persistence::{
-    loading::{LOADING_SCHEDULE, LoadingSystemSet},
-    make_persistent::{DefaultPersistentComponent, make_persistent},
-};
+use crate::persistence::make_persistent::{DefaultPersistentComponent, make_persistent};
 use bevy::{
     platform::collections::{HashMap, HashSet},
     prelude::*,
-    time::common_conditions::on_timer,
 };
 use cosmos_core::{
     block::{
@@ -21,14 +17,15 @@ use cosmos_core::{
     events::block_events::{BlockChangedEvent, BlockDataChangedEvent, BlockDataSystemParams},
     logic::BlockLogicData,
     netty::system_sets::NetworkingSystemsSet,
+    prelude::StructureLoadedEvent,
     registry::{Registry, create_registry, identifiable::Identifiable},
     state::GameState,
     structure::{Structure, coordinates::BlockCoordinate, loading::StructureLoadingSet, structure_block::StructureBlock},
 };
-use logic_driver::LogicDriver;
+use logic_driver::{LogicBlockChangedEvent, LogicDriver};
 use logic_graph::{LogicGraph, LogicGroup};
 use serde::{Deserialize, Serialize};
-use std::{collections::VecDeque, time::Duration};
+use std::collections::VecDeque;
 
 pub mod logic_driver;
 mod logic_graph;
@@ -314,56 +311,75 @@ pub enum LogicSystemRegistrySet {
 
 fn logic_block_changed_event_listener(
     mut evr_block_changed: EventReader<BlockChangedEvent>,
+    q_block_logic_data: Query<&BlockLogicData>,
+    mut evr_structure_loaded: EventReader<StructureLoadedEvent>,
     blocks: Res<Registry<Block>>,
     logic_blocks: Res<Registry<LogicBlock>>,
     logic_wire_colors: Res<Registry<LogicWireColor>>,
-    mut q_logic: Query<&mut LogicDriver>,
-    mut q_structure: Query<&mut Structure>,
+    mut q_structure: Query<(&mut Structure, &mut LogicDriver)>,
     q_has_data: Query<(), With<BlockLogicData>>,
     mut q_block_data: Query<&mut BlockData>,
     mut bs_params: BlockDataSystemParams,
     mut evw_queue_logic_output: EventWriter<QueueLogicOutputEvent>,
     mut evw_queue_logic_input: EventWriter<QueueLogicInputEvent>,
 ) {
-    // We group the events by entity so we can track the block changes the previous events made.
-    let events = evr_block_changed.read().collect::<Vec<_>>();
-    let entities = events.iter().map(|ev| ev.block.structure()).collect::<HashSet<Entity>>();
-    for entity in entities {
-        let current_entity_events = events.iter().filter(|ev| ev.block.structure() == entity);
-        let mut events_by_coords: HashMap<BlockCoordinate, BlockChangedEvent> = HashMap::new();
-        for &ev in current_entity_events {
-            // If was logic block, remove from the logic graph.
-            if let Some(logic_block) = logic_blocks.from_id(blocks.from_numeric_id(ev.old_block).unlocalized_name())
-                && let Ok(structure) = q_structure.get_mut(ev.block.structure())
-                && let Ok(mut logic) = q_logic.get_mut(ev.block.structure())
-            {
-                logic.remove_logic_block(
-                    logic_block,
-                    ev.old_block_rotation(),
-                    ev.block.coords(),
-                    &structure,
-                    entity,
-                    &events_by_coords,
-                    &blocks,
-                    &logic_blocks,
-                    &logic_wire_colors,
-                    &mut evw_queue_logic_output,
-                    &mut evw_queue_logic_input,
-                )
-            }
+    let mut structures: HashMap<Entity, Vec<LogicBlockChangedEvent<'_>>> = HashMap::default();
 
-            // If is now logic block, add to the logic graph.
-            if let Some(logic_block) = logic_blocks.from_id(blocks.from_numeric_id(ev.new_block).unlocalized_name())
-                && let Ok(mut structure) = q_structure.get_mut(ev.block.structure())
-                && let Ok(mut logic) = q_logic.get_mut(ev.block.structure())
-            {
-                let coords = ev.block.coords();
-                logic.add_logic_block(
-                    logic_block,
-                    ev.new_block_rotation(),
-                    coords,
+    for sle in evr_structure_loaded.read() {
+        let Ok((structure, _)) = q_structure.get(sle.structure_entity) else {
+            error!("Not structure w/ logicdriver from structure loaded event!");
+            continue;
+        };
+
+        let all_blocks = structure.all_blocks_iter(false).flat_map(|block_coord| {
+            logic_blocks
+                .from_id(structure.block_at(block_coord, &blocks).unlocalized_name())
+                .map(|logic_block| LogicBlockChangedEvent {
+                    coord: block_coord,
+                    old: None,
+                    new: Some((logic_block, structure.block_rotation(block_coord))),
+                })
+        });
+
+        structures.insert(sle.structure_entity, all_blocks.collect::<Vec<_>>());
+    }
+
+    for ev in evr_block_changed.read() {
+        let mut logic_entry = LogicBlockChangedEvent {
+            coord: ev.block.coords(),
+            old: None,
+            new: None,
+        };
+
+        if let Some(logic_block) = logic_blocks.from_id(blocks.from_numeric_id(ev.old_block).unlocalized_name()) {
+            logic_entry.old = Some((logic_block, ev.old_block_rotation()));
+        }
+
+        if let Some(logic_block) = logic_blocks.from_id(blocks.from_numeric_id(ev.new_block).unlocalized_name()) {
+            logic_entry.new = Some((logic_block, ev.new_block_rotation()));
+        }
+
+        if logic_entry.old.is_some() || logic_entry.new.is_some() {
+            structures.entry(ev.block.structure()).or_default().push(logic_entry);
+        }
+    }
+
+    for (structure_entity, events) in structures {
+        let Ok((mut structure, mut logic)) = q_structure.get_mut(structure_entity) else {
+            continue;
+        };
+
+        let mut events_by_coords = HashMap::new();
+
+        for ev in &events {
+            let &LogicBlockChangedEvent { coord, old, new } = ev;
+            if let Some((old_logic_block, old_rotation)) = old {
+                logic.remove_logic_block(
+                    old_logic_block,
+                    old_rotation,
+                    coord,
                     &structure,
-                    entity,
+                    structure_entity,
                     &events_by_coords,
                     &blocks,
                     &logic_blocks,
@@ -371,12 +387,30 @@ fn logic_block_changed_event_listener(
                     &mut evw_queue_logic_output,
                     &mut evw_queue_logic_input,
                 );
-                // Add the logic block's internal data storage to the structure.
-                structure.insert_block_data(coords, BlockLogicData(0), &mut bs_params, &mut q_block_data, &q_has_data);
             }
 
-            // Add the event we just processed to the HashMap so we can pretend the structure was updated in the coming iterations DFS.
-            events_by_coords.insert(ev.block.coords(), ev.clone());
+            if let Some((new_logic_block, new_rotation)) = new {
+                logic.add_logic_block(
+                    new_logic_block,
+                    new_rotation,
+                    coord,
+                    &structure,
+                    structure_entity,
+                    &events_by_coords,
+                    &blocks,
+                    &logic_blocks,
+                    &logic_wire_colors,
+                    &mut evw_queue_logic_output,
+                    &mut evw_queue_logic_input,
+                );
+
+                let new_block_data = structure.query_block_data(coord, &q_block_logic_data).copied().unwrap_or_default();
+
+                // Add the logic block's internal data storage to the structure.
+                structure.insert_block_data(coord, new_block_data, &mut bs_params, &mut q_block_data, &q_has_data);
+            }
+
+            events_by_coords.insert(ev.coord, *ev);
         }
     }
 }
@@ -504,27 +538,10 @@ fn register_logic_groups(mut logic_wire_colors: ResMut<Registry<LogicWireColor>>
 
 impl DefaultPersistentComponent for BlockLogicData {}
 
-fn perform_initial_block_logic_tick(
-    mut evw_block_data_changed: EventWriter<BlockDataChangedEvent>,
-    q_logic_data: Query<(Entity, &BlockData), Added<BlockLogicData>>,
-) {
-    for (ent, data) in q_logic_data.iter() {
-        evw_block_data_changed.write(BlockDataChangedEvent {
-            block: data.identifier.block,
-            block_data_entity: Some(ent),
-        });
-    }
-}
-
 pub(super) fn register(app: &mut App) {
     specific_blocks::register(app);
 
-    make_persistent::<LogicDriver>(app);
     make_persistent::<BlockLogicData>(app);
-
-    /// All logic signal production and consumption happens on ticks that occur with this many milliseconds between them.
-    pub const LOGIC_TICKS_PER_SECOND: u64 = 10;
-
     create_registry::<LogicBlock>(app, "cosmos:logic_blocks");
     create_registry::<LogicWireColor>(app, "cosmos:logic_wire_colors");
     app.init_resource::<LogicOutputEventQueue>();
@@ -532,12 +549,12 @@ pub(super) fn register(app: &mut App) {
 
     app.add_systems(OnEnter(GameState::Loading), register_logic_groups);
 
-    let run_con = on_timer(Duration::from_millis(1000 / LOGIC_TICKS_PER_SECOND));
+    // let run_con = on_timer(Duration::from_millis(1000 / LOGIC_TICKS_PER_SECOND));
 
     app.configure_sets(
         FixedUpdate,
         (
-            LogicSystemSet::PreLogicTick.run_if(run_con.clone()),
+            LogicSystemSet::PreLogicTick, //.run_if(run_con.clone()),
             LogicSystemSet::EditLogicGraph
                 .in_set(BlockEventsSet::ProcessEvents)
                 // This may be a bad idea?
@@ -550,8 +567,7 @@ pub(super) fn register(app: &mut App) {
                 // LogicSystemSet::BlockLogicDataUpdate,
                 LogicSystemSet::Produce,
             )
-                .chain()
-                .run_if(run_con),
+                .chain(), // .run_if(run_con),
         )
             .in_set(NetworkingSystemsSet::Between)
             .chain(),
@@ -568,10 +584,12 @@ pub(super) fn register(app: &mut App) {
             .run_if(in_state(GameState::Playing)),
     )
     .add_systems(
-        Update,
+        FixedUpdate,
         (
             add_default_logic.in_set(StructureLoadingSet::AddStructureComponents),
-            logic_block_changed_event_listener.in_set(LogicSystemSet::EditLogicGraph),
+            logic_block_changed_event_listener
+                .in_set(LogicSystemSet::EditLogicGraph)
+                .in_set(StructureLoadingSet::StructureLoaded),
         ),
     )
     .register_type::<LogicDriver>()
@@ -585,12 +603,12 @@ pub(super) fn register(app: &mut App) {
     // TODO: Move this all to server, then add them to LogicSystemRegistrySet::RegisterLogicBlocks.
     app.allow_ambiguous_resource::<Registry<LogicBlock>>();
 
-    app.add_systems(
-        LOADING_SCHEDULE,
-        perform_initial_block_logic_tick
-            .before(LogicSystemSet::EditLogicGraph)
-            .in_set(LoadingSystemSet::DoneLoading),
-    );
+    // app.add_systems(
+    // LOADING_SCHEDULE,
+    // perform_initial_block_logic_tick
+    // .before(LogicSystemSet::EditLogicGraph)
+    // .in_set(LoadingSystemSet::DoneLoading),
+    // );
 
     app.configure_sets(
         OnEnter(GameState::PostLoading),

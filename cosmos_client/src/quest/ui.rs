@@ -165,7 +165,7 @@ fn quest_node(
     font: TextFont,
     active: bool,
 ) {
-    let Some(quest) = quests.try_from_numeric_id(ongoing.quest_id) else {
+    let Some(quest) = quests.try_from_numeric_id(ongoing.quest_id()) else {
         return;
     };
 

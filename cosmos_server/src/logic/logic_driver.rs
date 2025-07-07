@@ -8,7 +8,6 @@ use serde::{Deserialize, Serialize};
 
 use cosmos_core::{
     block::{Block, block_direction::BlockDirection, block_face::ALL_BLOCK_FACES, block_rotation::BlockRotation},
-    events::block_events::BlockChangedEvent,
     netty::sync::IdentifiableComponent,
     registry::Registry,
     structure::{Structure, coordinates::BlockCoordinate, structure_block::StructureBlock},
@@ -34,6 +33,13 @@ impl IdentifiableComponent for LogicDriver {
 
 impl DefaultPersistentComponent for LogicDriver {}
 
+#[derive(Clone, Copy, Debug)]
+pub(super) struct LogicBlockChangedEvent<'a> {
+    pub coord: BlockCoordinate,
+    pub old: Option<(&'a LogicBlock, BlockRotation)>,
+    pub new: Option<(&'a LogicBlock, BlockRotation)>,
+}
+
 impl LogicDriver {
     /// Returns an array of the Boolean value of the given block's input port groups.
     /// A block face without an input port is assigned `0`.
@@ -56,7 +62,7 @@ impl LogicDriver {
         port_type: PortType,
         structure: &Structure,
         entity: Entity,
-        events_by_coords: &HashMap<BlockCoordinate, BlockChangedEvent>,
+        events_by_coords: &HashMap<BlockCoordinate, LogicBlockChangedEvent>,
         blocks: &Registry<Block>,
         logic_blocks: &Registry<LogicBlock>,
         evw_queue_logic_output: &mut EventWriter<QueueLogicOutputEvent>,
@@ -95,14 +101,14 @@ impl LogicDriver {
 
     /// Adds a logic block, along with all of its ports and wire connections, to the graph.
     /// If the added block has wire connections, merges adjacent [`LogicGroup`]s into a single group.
-    pub fn add_logic_block(
+    pub(super) fn add_logic_block(
         &mut self,
         logic_block: &LogicBlock,
         rotation: BlockRotation,
         coords: BlockCoordinate,
         structure: &Structure,
         entity: Entity,
-        events_by_coords: &HashMap<BlockCoordinate, BlockChangedEvent>,
+        events_by_coords: &HashMap<BlockCoordinate, LogicBlockChangedEvent>,
         blocks: &Registry<Block>,
         logic_blocks: &Registry<LogicBlock>,
         logic_wire_colors: &Registry<LogicWireColor>,
@@ -183,14 +189,14 @@ impl LogicDriver {
 
     /// Removes a logic block, along with all of its ports and wire connections, from the graph.
     /// If the removed block has wire connections, might split its [`LogicGroup`] into several disconnected groups.
-    pub fn remove_logic_block(
+    pub(super) fn remove_logic_block(
         &mut self,
         logic_block: &LogicBlock,
         rotation: BlockRotation,
         coords: BlockCoordinate,
         structure: &Structure,
         entity: Entity,
-        events_by_coords: &HashMap<BlockCoordinate, BlockChangedEvent>,
+        events_by_coords: &HashMap<BlockCoordinate, LogicBlockChangedEvent>,
         blocks: &Registry<Block>,
         logic_blocks: &Registry<LogicBlock>,
         logic_wire_colors: &Registry<LogicWireColor>,

@@ -2,6 +2,7 @@ use bevy::prelude::*;
 use cosmos_core::{
     block::data::persistence::ChunkLoadBlockDataEvent,
     physics::location::Location,
+    prelude::StructureLoadingSet,
     structure::{
         ChunkInitEvent, Structure, StructureTypeSet,
         asteroid::{Asteroid, MovingAsteroid},
@@ -161,9 +162,11 @@ pub(super) fn register(app: &mut App) {
         (
             on_load_asteroid_blueprint
                 .in_set(LoadingBlueprintSystemSet::DoLoadingBlueprints)
+                .in_set(StructureLoadingSet::LoadStructure)
                 .in_set(StructureTypeSet::Asteroid),
             on_load_asteroid
                 .in_set(LoadingSystemSet::DoLoading)
+                .in_set(StructureLoadingSet::LoadStructure)
                 .in_set(StructureTypeSet::Asteroid),
         ),
     );

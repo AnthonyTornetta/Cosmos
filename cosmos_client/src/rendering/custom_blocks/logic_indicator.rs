@@ -94,6 +94,7 @@ fn on_render_logic_indicator(
             let rotation = block_rotation.as_quat();
 
             let Some(&logic_data) = structure.query_block_data(block, &q_logic_data) else {
+                error!("MISSING LOGIC DATA @ {block}!");
                 continue;
             };
 

@@ -43,7 +43,7 @@ use crate::{
     universe::UniverseSystems,
 };
 
-use super::PlayerLooking;
+use super::{PlayerLooking, spawn_player::CreateNewPlayerEvent};
 
 #[derive(Debug, Serialize, Deserialize)]
 struct PlayerIdentifier {
@@ -253,6 +253,7 @@ fn create_new_player(
     needs_data: Res<ItemShouldHaveData>,
     q_player_needs_loaded: Query<(Entity, &LoadPlayer)>,
     universe_systems: Res<UniverseSystems>,
+    mut evw_create_new_player: EventWriter<CreateNewPlayerEvent>,
 ) {
     for (player_entity, load_player) in q_player_needs_loaded.iter() {
         let Some((location, rot)) = find_new_player_location(&universe_systems) else {
@@ -270,6 +271,8 @@ fn create_new_player(
         let credits = Credits::new(5_000);
 
         let starting_health = MaxHealth::new(20);
+
+        evw_create_new_player.write(CreateNewPlayerEvent::new(player_entity));
 
         commands
             .entity(player_entity)
