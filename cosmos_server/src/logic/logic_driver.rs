@@ -8,7 +8,6 @@ use serde::{Deserialize, Serialize};
 
 use cosmos_core::{
     block::{Block, block_direction::BlockDirection, block_face::ALL_BLOCK_FACES, block_rotation::BlockRotation},
-    events::block_events::BlockChangedEvent,
     netty::sync::IdentifiableComponent,
     registry::Registry,
     structure::{Structure, coordinates::BlockCoordinate, structure_block::StructureBlock},

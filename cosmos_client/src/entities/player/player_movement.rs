@@ -247,15 +247,14 @@ fn process_player_movement(
         new_linvel = new_linvel.normalize_or_zero() * accel;
         new_linvel += velocity.linvel;
 
-        if !any_open_menus {
-            if input_handler.check_pressed(CosmosInputs::SlowDown) {
+        if !any_open_menus
+            && input_handler.check_pressed(CosmosInputs::SlowDown) {
                 let mut amt = new_linvel * 0.5;
                 if amt.dot(amt) > max_speed * max_speed {
                     amt = amt.normalize() * max_speed;
                 }
                 new_linvel -= amt;
             }
-        }
 
         velocity.linvel = new_linvel.clamp_length_max(max_speed);
     }

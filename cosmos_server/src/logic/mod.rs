@@ -1,9 +1,6 @@
 //! The game's logic system: for wires, logic gates, etc.
 
-use crate::persistence::{
-    loading::{LOADING_SCHEDULE, LoadingSystemSet},
-    make_persistent::{DefaultPersistentComponent, make_persistent},
-};
+use crate::persistence::make_persistent::{DefaultPersistentComponent, make_persistent};
 use bevy::{
     platform::collections::{HashMap, HashSet},
     prelude::*,

@@ -1,22 +1,14 @@
 use bevy::prelude::*;
-use bevy_rapier3d::prelude::Velocity;
 use cosmos_core::{
-    netty::sync::IdentifiableComponent,
     physics::location::Location,
-    prelude::Ship,
     quest::{CompleteQuestEvent, OngoingQuests, Quest, QuestBuilder},
     registry::{Registry, identifiable::Identifiable},
     state::GameState,
-    structure::ship::{
-        pilot::{Pilot, PilotFocused},
-        ship_movement::ShipMovement,
-    },
+    structure::ship::pilot::{Pilot, PilotFocused},
 };
-use serde::{Deserialize, Serialize};
 
 use crate::{
     blocks::interactable::storage::OpenStorageEvent,
-    persistence::make_persistent::{DefaultPersistentComponent, make_persistent},
     quest::QuestsSet,
 };
 
