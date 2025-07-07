@@ -1,3 +1,5 @@
+//! Server-related storage block logic
+
 use bevy::prelude::*;
 use bevy_renet::renet::RenetServer;
 use cosmos_core::{
@@ -16,8 +18,11 @@ use cosmos_core::{
 };
 
 #[derive(Debug, Event, Clone, Copy)]
+/// Sent whenever the player opens a storage container
 pub struct OpenStorageEvent {
+    /// The block the player interacted with to open the storage
     pub block: StructureBlock,
+    /// The player's entity
     pub player_ent: Entity,
 }
 
@@ -71,5 +76,6 @@ pub(super) fn register(app: &mut App) {
         handle_block_event
             .in_set(BlockEventsSet::ProcessEvents)
             .run_if(in_state(GameState::Playing)),
-    ).add_event::<OpenStorageEvent>();
+    )
+    .add_event::<OpenStorageEvent>();
 }

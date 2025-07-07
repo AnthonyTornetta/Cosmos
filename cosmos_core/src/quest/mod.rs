@@ -46,6 +46,7 @@ pub struct OngoingQuest {
     block_on: Vec<OngoingQuestId>,
 }
 
+/// Used to easily create new [`OngoingQuest`]s.
 pub struct QuestBuilder {
     quest_id: u16,
     details: OngoingQuestDetails,
@@ -56,6 +57,7 @@ pub struct QuestBuilder {
 }
 
 impl QuestBuilder {
+    /// Creates a new [`OngoingQuest`] builder with default values
     pub fn new(quest_type: &Quest) -> Self {
         Self {
             quest_id: quest_type.id(),
@@ -67,16 +69,23 @@ impl QuestBuilder {
         }
     }
 
+    /// Assigns the payout upon compelting this quest
     pub fn with_payout(mut self, amount: NonZero<u32>) -> Self {
         self.details.payout = Some(amount);
         self
     }
 
+    /// Sets the location this quest takes place in. Useful for adding waypoints to the map for the
+    /// player.
     pub fn with_location(mut self, location: Location) -> Self {
         self.details.location = Some(location);
         self
     }
 
+    /// Assigns subquests as part of this quest.
+    ///
+    /// This quest will only be considered completed if all these subquests are complete and any
+    /// other completion conditions are met.
     pub fn with_subquests(mut self, subquests: impl IntoIterator<Item = OngoingQuest>) -> Self {
         let subqs = self.subquests.get_or_insert_default();
         for q in subquests.into_iter() {
@@ -85,21 +94,28 @@ impl QuestBuilder {
         self
     }
 
+    /// TODO: This does nothing. Probably going to be removed
     pub fn depends_on_being_done(mut self, needs_done: &OngoingQuest) -> Self {
         self.block_on.push(needs_done.ongoing_id());
         self
     }
 
+    /// Assigns the maximum progress this quest can have before it's marked for completion. Once
+    /// progress == max_progress, this completion criteria will be met. If max_progress is 0, this
+    /// completion criteria will always be true.
     pub fn with_max_progress(mut self, max_progress: u32) -> Self {
         self.max_progress = Some(max_progress);
         self
     }
 
+    /// Assigns the starting progress this quest will have. This will be capped to the
+    /// `max_progress`.
     pub fn with_starting_progress(mut self, starting_progress: u32) -> Self {
         self.starting_progress = starting_progress;
         self
     }
 
+    /// Creates the [`OngoingQuest`] instance ready to be used.
     pub fn build(self) -> OngoingQuest {
         let max_progress = self.max_progress.unwrap_or_else(|| {
             if self.subquests.as_ref().is_some_and(|sq| !sq.0.is_empty()) {
@@ -129,6 +145,7 @@ pub struct OngoingQuestId(Uuid);
 pub struct OngoingQuests(Vec<OngoingQuest>);
 
 impl OngoingQuest {
+    /// Creates a new ongoing quest with these details. You probably want to use the [`QuestBuilder`] instead.
     pub fn new(quest_type: &Quest, details: OngoingQuestDetails, max_progress: u32) -> Self {
         let id = OngoingQuestId(Uuid::new_v4());
 
@@ -164,15 +181,20 @@ impl OngoingQuest {
         }
     }
 
+    /// Returns the maximum progress this quest can have
     pub fn max_progress(&self) -> u32 {
         self.max_progress
     }
 
+    /// Adds a subquest to this ongoing quest. This quest can only be marked as complete if all
+    /// subquests are complete too.
     pub fn add_subquest(&mut self, subquest: OngoingQuest) -> &mut Self {
         self.subquests.get_or_insert_default().start_quest(subquest);
         self
     }
 
+    /// Returns the id for the [`Quest`] this is an instance of. Get the [`Quest`] via
+    /// [`Registry<Quest>`].
     pub fn quest_id(&self) -> u16 {
         self.quest_id
     }
@@ -182,6 +204,7 @@ impl OngoingQuest {
         self.ongoing_id
     }
 
+    /// Sets the progress of this quest - capped at `max_progress`
     pub fn set_progress(&mut self, progress: u32) -> bool {
         if progress >= self.max_progress {
             self.progress = self.max_progress;
@@ -192,22 +215,32 @@ impl OngoingQuest {
         }
     }
 
+    /// Adds this amount of progress to the quest
     pub fn progress_quest(&mut self, progress: u32) -> bool {
         self.set_progress(self.progress + progress)
     }
 
+    /// Completes this quest by setting this quest's progress to its maximum value.
+    ///
+    /// # IMPORTANT NOTE
+    ///
+    /// [`Self::completed`] can still return `false` after calling this if any of the subquests are
+    /// not compelte.
     pub fn complete(&mut self) {
         self.progress = self.max_progress;
     }
 
+    /// Returns all subquests this has (if any)
     pub fn subquests(&self) -> Option<&OngoingQuests> {
         self.subquests.as_ref()
     }
 
+    /// Returns all subquests this has (if any)
     pub fn subquests_mut(&mut self) -> Option<&mut OngoingQuests> {
         self.subquests.as_mut()
     }
 
+    /// Checks if this quest is completed (all its completion criteria are met).
     pub fn completed(&self) -> bool {
         self.subquests.as_ref().map(|x| x.iter().all(|q| q.completed())).unwrap_or(true) && self.progress == self.max_progress
     }
@@ -223,6 +256,7 @@ impl OngoingQuests {
         q_id
     }
 
+    /// Checks if this contains any [`OngoingQuest`]s of this [`Quest`] type.
     pub fn contains(&self, quest: &Quest) -> bool {
         self.0.iter().any(|ongoing| ongoing.quest_id() == quest.id())
     }
@@ -249,19 +283,22 @@ impl OngoingQuests {
             .map(|quest| quest.progress_quest(progress))
     }
 
-    /// Iterates over all ongoing quests
+    /// Iterates over all [`OngoingQuest`]s.
     pub fn iter(&self) -> impl Iterator<Item = &'_ OngoingQuest> {
         self.0.iter()
     }
 
+    /// Iterates over [`OngoingQuest`]s of this [`Quest`] type.
     pub fn iter_specific(&self, quest: &Quest) -> impl Iterator<Item = &'_ OngoingQuest> {
         self.iter().filter(|q| q.quest_id == quest.id())
     }
 
+    /// Iterates over all [`OngoingQuest`]s.
     pub fn iter_mut(&mut self) -> impl Iterator<Item = &'_ mut OngoingQuest> {
         self.0.iter_mut()
     }
 
+    /// Iterates over [`OngoingQuest`]s of this [`Quest`] type.
     pub fn iter_specific_mut(&mut self, quest: &Quest) -> impl Iterator<Item = &'_ mut OngoingQuest> {
         self.iter_mut().filter(|q| q.quest_id == quest.id())
     }
@@ -317,12 +354,18 @@ impl Identifiable for Quest {
 }
 
 #[derive(Event, Serialize, Deserialize, Clone, Debug)]
+/// Sent whenever the player completes an [`OngoingQuest`].
 pub struct CompleteQuestEvent {
     completer: Entity,
     completed_quest: OngoingQuest,
 }
 
 impl CompleteQuestEvent {
+    /// Creates a new quest complete event
+    ///
+    /// - `completer` - The entity that completed the quest (Should have the [`OngoingQuests`]
+    /// component).
+    /// - `completed` - The [`OngoingQuest`] they completed.
     pub fn new(completer: Entity, completed: OngoingQuest) -> Self {
         Self {
             completer,
@@ -330,10 +373,14 @@ impl CompleteQuestEvent {
         }
     }
 
+    /// The quest that was completed
     pub fn completed_quest(&self) -> &OngoingQuest {
         &self.completed_quest
     }
 
+    /// Who completed the quest
+    ///
+    /// This entity should have an [`OngoingQuests`] component.
     pub fn completer(&self) -> Entity {
         self.completer
     }

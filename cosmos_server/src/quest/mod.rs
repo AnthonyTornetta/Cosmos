@@ -37,8 +37,11 @@ fn add_ongoing_quests(mut commands: Commands, q_players_no_quests: Query<Entity,
 impl DefaultPersistentComponent for OngoingQuests {}
 
 #[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
+/// The system sets Quests systems should run in
 pub enum QuestsSet {
+    /// Adds the [`OngoingQuests`] component if the player doesn't have one.
     AddOngoingQuestsComponent,
+    /// Creates new [`cosmos_core::quest::OngoingQuest`]s and adds them to the [`OngoingQuests`] component.
     CreateNewQuests,
     /// Quests are checked for completion, and if finished the [`CompleteQuestEvent`] is sent out
     CompleteQuests,

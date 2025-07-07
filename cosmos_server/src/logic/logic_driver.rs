@@ -101,7 +101,7 @@ impl LogicDriver {
 
     /// Adds a logic block, along with all of its ports and wire connections, to the graph.
     /// If the added block has wire connections, merges adjacent [`LogicGroup`]s into a single group.
-    pub fn add_logic_block(
+    pub(super) fn add_logic_block(
         &mut self,
         logic_block: &LogicBlock,
         rotation: BlockRotation,
@@ -189,7 +189,7 @@ impl LogicDriver {
 
     /// Removes a logic block, along with all of its ports and wire connections, from the graph.
     /// If the removed block has wire connections, might split its [`LogicGroup`] into several disconnected groups.
-    pub fn remove_logic_block(
+    pub(super) fn remove_logic_block(
         &mut self,
         logic_block: &LogicBlock,
         rotation: BlockRotation,
