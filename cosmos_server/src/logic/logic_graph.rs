@@ -125,8 +125,10 @@ impl LogicGraph {
         id
     }
 
-    pub fn remove_group(&mut self, group_id: usize) -> LogicGroup {
-        self.groups.remove(&group_id).expect("Logic group to be removed should exist.")
+    pub fn remove_group(&mut self, group_id: usize) {
+        if self.groups.remove(&group_id).is_none() {
+            error!("Logic group to be removed should exist.");
+        }
     }
 
     pub fn get_group(&self, group_id: usize) -> &LogicGroup {

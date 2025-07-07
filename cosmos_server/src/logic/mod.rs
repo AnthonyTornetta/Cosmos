@@ -7,7 +7,6 @@ use crate::persistence::{
 use bevy::{
     platform::collections::{HashMap, HashSet},
     prelude::*,
-    time::common_conditions::on_timer,
 };
 use cosmos_core::{
     block::{
@@ -29,7 +28,7 @@ use cosmos_core::{
 use logic_driver::{LogicBlockChangedEvent, LogicDriver};
 use logic_graph::{LogicGraph, LogicGroup};
 use serde::{Deserialize, Serialize};
-use std::{collections::VecDeque, time::Duration};
+use std::collections::VecDeque;
 
 pub mod logic_driver;
 mod logic_graph;
@@ -331,6 +330,7 @@ fn logic_block_changed_event_listener(
 
     for sle in evr_structure_loaded.read() {
         let Ok((structure, _)) = q_structure.get(sle.structure_entity) else {
+            error!("Not structure w/ logicdriver from structure loaded event!");
             continue;
         };
 

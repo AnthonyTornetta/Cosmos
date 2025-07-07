@@ -2,6 +2,7 @@ use bevy::prelude::*;
 use cosmos_core::{
     block::data::persistence::ChunkLoadBlockDataEvent,
     physics::location::Location,
+    prelude::StructureLoadingSet,
     structure::{
         ChunkInitEvent, Structure, StructureTypeSet, events::StructureLoadedEvent, station::Station,
         structure_iterator::ChunkIteratorResult,
@@ -149,8 +150,12 @@ pub(super) fn register(app: &mut App) {
     .add_systems(
         LOADING_SCHEDULE,
         (
-            on_load_blueprint.in_set(LoadingBlueprintSystemSet::DoLoadingBlueprints),
-            on_load_structure.in_set(LoadingSystemSet::DoLoading),
+            on_load_blueprint
+                .in_set(LoadingBlueprintSystemSet::DoLoadingBlueprints)
+                .in_set(StructureLoadingSet::LoadStructure),
+            on_load_structure
+                .in_set(LoadingSystemSet::DoLoading)
+                .in_set(StructureLoadingSet::LoadStructure),
         )
             .in_set(StructureTypeSet::Station),
     );

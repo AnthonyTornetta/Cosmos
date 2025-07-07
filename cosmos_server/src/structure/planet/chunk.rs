@@ -81,7 +81,10 @@ fn send_chunks(
     mut server: ResMut<RenetServer>,
 ) {
     for (ent, needs_sent, serialized_chunk_block_data, chunk_ent) in q_chunks_need_serialized.iter_mut() {
-        commands.entity(ent).remove::<ChunkNeedsSent>().insert(Name::new("Chunk Entity"));
+        commands
+            .entity(ent)
+            .remove::<ChunkNeedsSent>()
+            .insert(Name::new(format!("Chunk Entity {}", chunk_ent.chunk_location)));
 
         let Ok(structure) = q_structure.get(chunk_ent.structure_entity) else {
             warn!("Missing structure for chunk!");
