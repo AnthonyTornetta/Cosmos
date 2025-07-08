@@ -1,0 +1,35 @@
+{
+  "n_items": [12, 12],
+  "loot": [
+    {
+      "item": "cosmos:thruster",
+      "quantity": [10, 10],
+      "weight": 40
+    },
+    {
+      "item": "cosmos:plasma_drill",
+      "quantity": [40, 40],
+      "weight": 40
+    },
+    {
+      "item": "cosmos:energy_cell",
+      "quantity": [3, 3],
+      "weight": 4
+    },
+    {
+      "item": "cosmos:passive_generator",
+      "quantity": [30, 30],
+      "weight": 40
+    },
+    {
+      "item": "cosmos:missile",
+      "quantity": [70, 70],
+      "weight": 10
+    },
+    {
+      "item": "cosmos:ship_hull_white",
+      "quantity": [100, 100],
+      "weight": 10
+    }
+  ]
+}

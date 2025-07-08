@@ -1,14 +1,23 @@
 use bevy::prelude::*;
 use cosmos_core::{
+    netty::sync::IdentifiableComponent,
     physics::location::Location,
     quest::{CompleteQuestEvent, OngoingQuests, Quest, QuestBuilder},
     registry::{Registry, identifiable::Identifiable},
     state::GameState,
     structure::ship::pilot::{Pilot, PilotFocused},
+    utils::quat_math::random_quat,
 };
+use rand::rng;
+use serde::{Deserialize, Serialize};
 
 use crate::{
     blocks::interactable::storage::OpenStorageEvent,
+    loot::{LootTable, NeedsLootGenerated},
+    persistence::{
+        loading::NeedsBlueprintLoaded,
+        make_persistent::{DefaultPersistentComponent, make_persistent},
+    },
     quest::QuestsSet,
 };
 
@@ -33,10 +42,15 @@ fn register_quest(mut quests: ResMut<Registry<Quest>>) {
 }
 
 fn on_change_tutorial_state(
-    mut q_quests: Query<(&mut OngoingQuests, &TutorialState), Or<(Changed<TutorialState>, (Added<OngoingQuests>, With<TutorialState>))>>,
+    mut q_quests: Query<
+        (&mut OngoingQuests, &TutorialState, &Location),
+        Or<(Changed<TutorialState>, (Added<OngoingQuests>, With<TutorialState>))>,
+    >,
     quests: Res<Registry<Quest>>,
+    mut commands: Commands,
+    loot: Res<Registry<LootTable>>,
 ) {
-    for (mut ongoing_quests, tutorial_state) in q_quests.iter_mut() {
+    for (mut ongoing_quests, tutorial_state, loc) in q_quests.iter_mut() {
         if *tutorial_state != TutorialState::CollectStash {
             continue;
         }
@@ -67,12 +81,30 @@ fn on_change_tutorial_state(
             .with_subquests([focus_quest, fly_to_stash_quest, collect_items_quest])
             .build();
 
+        commands.spawn((
+            NeedsBlueprintLoaded {
+                path: "default_blueprints/quests/tutorial/abandon_stash.bp".into(),
+                spawn_at: *loc + Vec3::new(20.0, 20.0, 20.0),
+                rotation: random_quat(&mut rng()),
+            },
+            NeedsLootGenerated::from_loot_id("cosmos:tutorial_stash", &loot).expect("Missing tutorial_stash.json"),
+            AbandonStash,
+        ));
+
         ongoing_quests.start_quest(main_quest);
     }
 }
 
-#[derive(Component)]
+#[derive(Component, Serialize, Deserialize)]
 struct AbandonStash;
+
+impl IdentifiableComponent for AbandonStash {
+    fn get_component_unlocalized_name() -> &'static str {
+        "cosmos:abandon_stash"
+    }
+}
+
+impl DefaultPersistentComponent for AbandonStash {}
 
 fn resolve_focus_waypoint_quest(
     quests: Res<Registry<Quest>>,
@@ -202,6 +234,8 @@ fn on_complete_quest(
 }
 
 pub(super) fn register(app: &mut App) {
+    make_persistent::<AbandonStash>(app);
+
     app.add_systems(OnEnter(GameState::Loading), register_quest).add_systems(
         FixedUpdate,
         (
