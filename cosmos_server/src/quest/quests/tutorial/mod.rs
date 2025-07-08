@@ -2,6 +2,7 @@ use bevy::prelude::*;
 
 use crate::{entities::player::spawn_player::CreateNewPlayerEvent, quest::QuestsSet};
 
+mod build_ship;
 mod collect_stash;
 mod create_a_ship;
 mod fly_a_ship;
@@ -109,6 +110,7 @@ pub(super) fn register(app: &mut App) {
     app.add_systems(FixedUpdate, on_create_player.in_set(QuestsSet::CreateNewQuests))
         .register_type::<TutorialState>();
 
+    build_ship::register(app);
     create_a_ship::register(app);
     collect_stash::register(app);
     fly_a_ship::register(app);

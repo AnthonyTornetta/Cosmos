@@ -3,9 +3,9 @@
   "loot": [
     {
       "item": "cosmos:thruster",
-      "quantity": [10, 10],
+      "quantity": [20, 20],
       "weight": 40,
-      "amount_required": 10
+      "amount_required": 20
     },
     {
       "item": "cosmos:plasma_drill",
@@ -36,6 +36,18 @@
       "quantity": [100, 100],
       "weight": 10,
       "amount_required": 100
+    },
+    {
+      "item": "cosmos:storage",
+      "quantity": [1, 1],
+      "weight": 10,
+      "amount_required": 1
+    },
+    {
+      "item": "cosmos:basic_fabricator",
+      "quantity": [1, 1],
+      "weight": 10,
+      "amount_required": 1
     }
   ]
 }
