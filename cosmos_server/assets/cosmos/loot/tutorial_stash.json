@@ -4,32 +4,38 @@
     {
       "item": "cosmos:thruster",
       "quantity": [10, 10],
-      "weight": 40
+      "weight": 40,
+      "amount_required": 10
     },
     {
       "item": "cosmos:plasma_drill",
       "quantity": [40, 40],
-      "weight": 40
+      "weight": 40,
+      "amount_required": 40
     },
     {
       "item": "cosmos:energy_cell",
       "quantity": [3, 3],
-      "weight": 4
+      "weight": 4,
+      "amount_required": 3
     },
     {
       "item": "cosmos:passive_generator",
       "quantity": [30, 30],
-      "weight": 40
+      "weight": 40,
+      "amount_required": 30
     },
     {
       "item": "cosmos:missile",
       "quantity": [70, 70],
-      "weight": 10
+      "weight": 10,
+      "amount_required": 70
     },
     {
       "item": "cosmos:ship_hull_white",
       "quantity": [100, 100],
-      "weight": 10
+      "weight": 10,
+      "amount_required": 100
     }
   ]
 }

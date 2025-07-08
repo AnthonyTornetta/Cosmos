@@ -90,7 +90,31 @@ fn populate_loot_table_inventories(
 
         let loot_table = loot_tables.from_numeric_id(ev.1);
 
-        let total_tries = rand::random_range(loot_table.n_items.low..=loot_table.n_items.high);
+        let mut total_tries = rand::random_range(loot_table.n_items.low..=loot_table.n_items.high);
+
+        let required_quantities = loot_table
+            .iter()
+            .flat_map(|x| x.amount_required.map(|ar| (x, ar)))
+            .collect::<Vec<_>>();
+
+        for &(entry, mut amt_required) in required_quantities.iter() {
+            if total_tries == 0 {
+                break;
+            }
+
+            while amt_required > 0 {
+                total_tries -= 1;
+                let qty = rand::random_range(entry.amount.low..=entry.amount.high);
+                amt_required = amt_required.checked_sub(qty).unwrap_or(0);
+
+                let item = items.from_numeric_id(entry.item);
+                inv.insert_item(item, qty as u16, &mut commands, &has_data);
+
+                if total_tries == 0 {
+                    break;
+                }
+            }
+        }
 
         for _ in 0..total_tries {
             let total_weight = loot_table.total_weight();
