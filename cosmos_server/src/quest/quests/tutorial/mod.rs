@@ -6,6 +6,7 @@ mod build_ship;
 mod collect_stash;
 mod create_a_ship;
 mod fly_a_ship;
+mod fly_to_asteroid;
 
 #[derive(Component, Debug, Clone, Copy, PartialEq, Eq, Reflect)]
 enum TutorialState {
@@ -37,7 +38,7 @@ impl TutorialState {
 
 fn on_create_player(mut commands: Commands, mut evr_create_new_player: EventReader<CreateNewPlayerEvent>) {
     for ev in evr_create_new_player.read() {
-        commands.entity(ev.player()).try_insert(TutorialState::CollectStash);
+        commands.entity(ev.player()).try_insert(TutorialState::FlyToAsteroid);
     }
 }
 
@@ -114,4 +115,5 @@ pub(super) fn register(app: &mut App) {
     create_a_ship::register(app);
     collect_stash::register(app);
     fly_a_ship::register(app);
+    fly_to_asteroid::register(app);
 }

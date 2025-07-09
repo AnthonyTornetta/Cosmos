@@ -283,6 +283,14 @@ impl OngoingQuests {
             .map(|quest| quest.progress_quest(progress))
     }
 
+    pub fn get_quest(&self, quest: &Quest) -> Option<&OngoingQuest> {
+        self.iter_specific(quest).next()
+    }
+
+    pub fn get_quest_mut(&mut self, quest: &Quest) -> Option<&mut OngoingQuest> {
+        self.iter_specific_mut(quest).next()
+    }
+
     /// Iterates over all [`OngoingQuest`]s.
     pub fn iter(&self) -> impl Iterator<Item = &'_ OngoingQuest> {
         self.0.iter()
