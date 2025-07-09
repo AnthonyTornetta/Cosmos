@@ -116,6 +116,8 @@ fn spawn_pirates(
             continue;
         }
 
+        player_next_pirate_spawn.current_spawn_time -= time.delta_secs_f64();
+
         if let Some(sec) = player_groups
             .keys()
             .find(|&sec| {
@@ -144,7 +146,7 @@ fn spawn_pirates(
     }
 
     for (sector, (next_pirate_spawn, player_ents, total_time, player_strength)) in player_groups {
-        if next_pirate_spawn.current_spawn_time <= 0.0 {
+        if next_pirate_spawn.current_spawn_time > 0.0 {
             continue;
         }
 

@@ -1,6 +1,7 @@
 //! Contains server-side logic for the universe & how it's generated
 
 use bevy::{
+    log::info,
     math::Quat,
     platform::collections::HashMap,
     prelude::{App, Component, Resource},
@@ -10,6 +11,7 @@ use cosmos_core::{
     faction::FactionId,
     physics::location::{Location, SYSTEM_SECTORS, Sector, SystemCoordinate},
     prelude::Planet,
+    structure::coordinates::UnboundCoordinateType,
     universe::star::Star,
 };
 use serde::{Deserialize, Serialize};
@@ -145,13 +147,13 @@ impl SystemItem {
     /// Distance is a percentage of how far away this is from the maximum danger threshold
     pub fn compute_danger_modifier(&self, multiplier: f32) -> f32 {
         match self {
-            Self::Star(_) => -10.0 * multiplier,
+            Self::Star(_) => -100.0 * multiplier,
             Self::Planet(_) => -30.0 * multiplier,
             Self::Shop => -30.0 * multiplier,
             Self::PirateStation(_) => 100.0 * multiplier,
             Self::Asteroid(_) => 0.0,
             Self::PlayerStation => -500.0 * multiplier * multiplier,
-            Self::NpcStation(_) => -30.0 * multiplier,
+            Self::NpcStation(_) => -100.0 * multiplier,
         }
     }
 }
@@ -230,13 +232,12 @@ impl UniverseSystem {
     pub fn sector_danger(&self, relative_sector: Sector) -> SectorDanger {
         const DANGER_DISTANCE: i64 = 4;
         const SS2: i64 = (SYSTEM_SECTORS / 2) as i64;
-        const EDGE_DANGER_SCALING: f32 = 8.0;
+        const EDGE_DANGER_SCALING: f32 = 16.0;
 
         let center_dist = (relative_sector - Sector::splat(SS2)).abs().max_element();
         let max_dist = SS2 - DANGER_DISTANCE / 2;
 
-        let mut danger = (center_dist as f32).powf(EDGE_DANGER_SCALING) / (max_dist as f32).powf(EDGE_DANGER_SCALING).min(1.0)
-            * SectorDanger::MAX_DANGER;
+        let mut danger = (center_dist as f32).powf(EDGE_DANGER_SCALING) / (SS2 as f32).powf(EDGE_DANGER_SCALING) * SectorDanger::MAX_DANGER;
 
         if center_dist >= max_dist {
             return SectorDanger { danger };
@@ -245,7 +246,9 @@ impl UniverseSystem {
         for dz in -DANGER_DISTANCE..=DANGER_DISTANCE / 2 {
             for dy in -DANGER_DISTANCE..=DANGER_DISTANCE / 2 {
                 for dx in -DANGER_DISTANCE..=DANGER_DISTANCE / 2 {
-                    let multiplier = 1.0 - (dz.abs().max(dy.abs().max(dx.abs())) as f32 / (DANGER_DISTANCE / 2) as f32);
+                    const D2: UnboundCoordinateType = DANGER_DISTANCE / 2;
+                    let distance = dz.abs().max(dy.abs().max(dx.abs())) as f32;
+                    let multiplier = 1.0 / (distance + 1.0);
                     let danger_here = self
                         .items_at(relative_sector + Sector::new(dx, dy, dz))
                         .map(|x| x.item.compute_danger_modifier(multiplier))

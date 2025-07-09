@@ -64,7 +64,7 @@ fn generate_pirate_stations(
                 if system.sector_danger(faction_origin) < PIRATE_STATION_MIN_DANGER {
                     n_asteroid_stations -= 1;
                     // Don't generate too close to safe things
-                    continue;
+                    break;
                 }
 
                 faction_origin = faction_origin + ev.system.negative_most_sector();
