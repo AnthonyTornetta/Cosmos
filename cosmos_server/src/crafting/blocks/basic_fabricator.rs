@@ -9,7 +9,10 @@ use cosmos_core::{
     },
     crafting::{
         blocks::basic_fabricator::{CraftBasicFabricatorRecipeEvent, OpenBasicFabricatorEvent},
-        recipes::{RecipeItem, basic_fabricator::BasicFabricatorRecipes},
+        recipes::{
+            RecipeItem,
+            basic_fabricator::{BasicFabricatorRecipe, BasicFabricatorRecipes},
+        },
     },
     entities::player::Player,
     events::block_events::BlockDataSystemParams,
@@ -22,10 +25,25 @@ use cosmos_core::{
             server_event::{NettyEventReceived, NettyEventWriter},
         },
     },
-    prelude::Structure,
+    prelude::{Structure, StructureBlock},
     registry::{Registry, identifiable::Identifiable},
     state::GameState,
 };
+
+/// Sent whenever a player uses a basic fabricator to craft something.
+#[derive(Event, Debug)]
+pub struct BasicFabricatorCraftEvent {
+    /// The player's entity
+    pub crafter: Entity,
+    /// The block that contains the fabricator the player is using
+    pub block: StructureBlock,
+    /// The recipe that was used
+    pub recipe: BasicFabricatorRecipe,
+    /// The quantity they crafted.
+    pub quantity: u32,
+    /// The id of the item crafted
+    pub item_crafted: u16,
+}
 
 fn monitor_basic_fabricator_interactions(
     mut evr_block_interact: EventReader<BlockInteractEvent>,
@@ -64,6 +82,7 @@ fn monitor_craft_event(
     recipes: Res<BasicFabricatorRecipes>,
     mut commands: Commands,
     needs_data: Res<ItemShouldHaveData>,
+    mut evw_craft: EventWriter<BasicFabricatorCraftEvent>,
     items: Res<Registry<Item>>,
 ) {
     let bd_params = Rc::new(RefCell::new(bd_params));
@@ -127,6 +146,13 @@ fn monitor_craft_event(
         }
 
         let (leftover, _) = player_inv.insert_item(item, qty_crafted as u16, &mut commands, &needs_data);
+        evw_craft.write(BasicFabricatorCraftEvent {
+            crafter: player_ent,
+            block: ev.block,
+            recipe: ev.recipe.clone(),
+            quantity: qty_crafted,
+            item_crafted: item.id(),
+        });
         assert_eq!(
             leftover, 0,
             "Invalid crafting occured! Unable to insert all products! ({leftover} leftover)"
@@ -141,5 +167,6 @@ pub(super) fn register(app: &mut App) {
             .in_set(BlockEventsSet::ProcessEvents)
             .run_if(in_state(GameState::Playing)),
     )
-    .add_netty_event::<OpenBasicFabricatorEvent>();
+    .add_netty_event::<OpenBasicFabricatorEvent>()
+    .add_event::<BasicFabricatorCraftEvent>();
 }

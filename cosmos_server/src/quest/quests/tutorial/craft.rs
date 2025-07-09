@@ -1,22 +1,19 @@
 use bevy::prelude::*;
 use cosmos_core::{
-    block::{Block, block_events::BlockBreakEvent},
     item::Item,
     quest::{CompleteQuestEvent, OngoingQuests, Quest, QuestBuilder},
     registry::{Registry, identifiable::Identifiable},
     state::GameState,
-    structure::ship::pilot::Pilot,
 };
 
-use crate::quest::QuestsSet;
+use crate::{crafting::blocks::basic_fabricator::BasicFabricatorCraftEvent, quest::QuestsSet};
 
 use super::TutorialState;
 
-const MAIN_QUEST_NAME: &str = "cosmos:tutorial_mine_asteroid";
-const MINE_IRON: &str = "cosmos:tutorial_mine_iron";
-const MINE_COPPER: &str = "cosmos:tutorial_mine_copper";
-const MINE_ENERGITE: &str = "cosmos:tutorial_mine_energite";
-const MINE_PHOTONIUM: &str = "cosmos:tutorial_mine_photonium";
+const MAIN_QUEST_NAME: &str = "cosmos:tutorial_craft";
+const CRAFT_LASER_CANNON: &str = "cosmos:tutorial_craft_laser_cannon";
+const CRAFT_PASSIVE_GEN: &str = "cosmos:tutorial_craft_passive_gen";
+const CRAFT_PLASMA_DRILLS: &str = "cosmos:tutorial_craft_plasma_drills";
 
 fn register_quest(mut quests: ResMut<Registry<Quest>>, items: Res<Registry<Item>>) {
     quests.register(Quest::new(
@@ -24,24 +21,25 @@ fn register_quest(mut quests: ResMut<Registry<Quest>>, items: Res<Registry<Item>
         "Mine an asteroid - use the plasma drills".to_string(),
     ));
 
-    if let Some(iron_ore) = items.from_id("cosmos:iron_ore") {
-        quests.register(Quest::new_with_icon(MINE_IRON.to_string(), "Mine Iron".to_string(), iron_ore));
-    }
-    if let Some(copper_ore) = items.from_id("cosmos:copper_ore") {
-        quests.register(Quest::new_with_icon(MINE_COPPER.to_string(), "Mine Copper".to_string(), copper_ore));
-    }
-    if let Some(energite_ore) = items.from_id("cosmos:energite_crystal_ore") {
+    if let Some(icon) = items.from_id("cosmos:plasma_drill") {
         quests.register(Quest::new_with_icon(
-            MINE_ENERGITE.to_string(),
-            "Mine Energite".to_string(),
-            energite_ore,
+            CRAFT_PLASMA_DRILLS.to_string(),
+            "Craft plasma drills".to_string(),
+            icon,
         ));
     }
-    if let Some(photonium_ore) = items.from_id("cosmos:photonium_crystal_ore") {
+    if let Some(icon) = items.from_id("cosmos:laser_cannon") {
         quests.register(Quest::new_with_icon(
-            MINE_PHOTONIUM.to_string(),
-            "Mine Photonium".to_string(),
-            photonium_ore,
+            CRAFT_LASER_CANNON.to_string(),
+            "Craft passive generators".to_string(),
+            icon,
+        ));
+    }
+    if let Some(icon) = items.from_id("cosmos:passive_generator") {
+        quests.register(Quest::new_with_icon(
+            CRAFT_PASSIVE_GEN.to_string(),
+            "Craft passive generators".to_string(),
+            icon,
         ));
     }
 }
@@ -51,7 +49,7 @@ fn on_change_tutorial_state(
     quests: Res<Registry<Quest>>,
 ) {
     for (mut ongoing_quests, tutorial_state) in q_quests.iter_mut() {
-        if *tutorial_state != TutorialState::MineAsteroid {
+        if *tutorial_state != TutorialState::Craft {
             continue;
         }
 
@@ -63,26 +61,22 @@ fn on_change_tutorial_state(
             continue;
         }
 
-        let Some(copper) = quests.from_id(MINE_COPPER) else {
+        let Some(plasma_drills) = quests.from_id(CRAFT_PLASMA_DRILLS) else {
             continue;
         };
-        let Some(iron) = quests.from_id(MINE_IRON) else {
+        let Some(passive_gen) = quests.from_id(CRAFT_PASSIVE_GEN) else {
             continue;
         };
-        let Some(energite) = quests.from_id(MINE_ENERGITE) else {
-            continue;
-        };
-        let Some(photonium) = quests.from_id(MINE_PHOTONIUM) else {
+        let Some(laser_cannon) = quests.from_id(CRAFT_LASER_CANNON) else {
             continue;
         };
 
-        let copper = QuestBuilder::new(copper).with_max_progress(100).build();
-        let iron = QuestBuilder::new(iron).with_max_progress(100).build();
-        let energite = QuestBuilder::new(energite).with_max_progress(20).build();
-        let photonium = QuestBuilder::new(photonium).with_max_progress(50).build();
+        let plasma_drills = QuestBuilder::new(plasma_drills).with_max_progress(100).build();
+        let passive_gen = QuestBuilder::new(passive_gen).with_max_progress(20).build();
+        let laser_cannon = QuestBuilder::new(laser_cannon).with_max_progress(20).build();
 
         let main_quest = QuestBuilder::new(main_quest)
-            .with_subquests([copper, iron, energite, photonium])
+            .with_subquests([plasma_drills, passive_gen, laser_cannon])
             .build();
 
         ongoing_quests.start_quest(main_quest);
@@ -92,25 +86,15 @@ fn on_change_tutorial_state(
 fn resolve_quests(
     quests: Res<Registry<Quest>>,
     mut q_ongoing_quests: Query<&mut OngoingQuests>,
-    mut evr_block_break: EventReader<BlockBreakEvent>,
-    q_pilot: Query<&Pilot>,
-    blocks: Res<Registry<Block>>,
+    items: Res<Registry<Item>>,
+    mut evr_craft: EventReader<BasicFabricatorCraftEvent>,
 ) {
     let Some(quest) = quests.from_id(MAIN_QUEST_NAME) else {
         return;
     };
 
-    for ev in evr_block_break.read() {
-        let mut ongoing_quests = q_ongoing_quests.get_mut(ev.breaker);
-
-        if ongoing_quests.is_err() {
-            let Ok(pilot) = q_pilot.get(ev.breaker) else {
-                continue;
-            };
-            ongoing_quests = q_ongoing_quests.get_mut(pilot.entity);
-        }
-
-        let Ok(mut ongoing_quests) = ongoing_quests else {
+    for ev in evr_craft.read() {
+        let Ok(mut ongoing_quests) = q_ongoing_quests.get_mut(ev.crafter) else {
             continue;
         };
 
@@ -122,37 +106,29 @@ fn resolve_quests(
             continue;
         };
 
-        match blocks.from_numeric_id(ev.broken_id).unlocalized_name() {
-            "cosmos:copper_ore" => {
-                let Some(quest) = quests.from_id(MINE_COPPER) else {
+        match items.from_numeric_id(ev.item_crafted).unlocalized_name() {
+            "cosmos:passive_generator" => {
+                let Some(quest) = quests.from_id(CRAFT_PASSIVE_GEN) else {
                     continue;
                 };
                 if let Some(quest) = subquests.get_quest_mut(quest) {
-                    quest.progress_quest(1);
+                    quest.progress_quest(ev.quantity);
                 }
             }
-            "cosmos:iron_ore" => {
-                let Some(quest) = quests.from_id(MINE_IRON) else {
+            "cosmos:laser_cannon" => {
+                let Some(quest) = quests.from_id(CRAFT_LASER_CANNON) else {
                     continue;
                 };
                 if let Some(quest) = subquests.get_quest_mut(quest) {
-                    quest.progress_quest(1);
+                    quest.progress_quest(ev.quantity);
                 }
             }
-            "cosmos:energite_crystal_ore" => {
-                let Some(quest) = quests.from_id(MINE_ENERGITE) else {
+            "cosmos:plasma_drill" => {
+                let Some(quest) = quests.from_id(CRAFT_PLASMA_DRILLS) else {
                     continue;
                 };
                 if let Some(quest) = subquests.get_quest_mut(quest) {
-                    quest.progress_quest(1);
-                }
-            }
-            "cosmos:photonium_crystal_ore" => {
-                let Some(quest) = quests.from_id(MINE_PHOTONIUM) else {
-                    continue;
-                };
-                if let Some(quest) = subquests.get_quest_mut(quest) {
-                    quest.progress_quest(1);
+                    quest.progress_quest(ev.quantity);
                 }
             }
             _ => {}

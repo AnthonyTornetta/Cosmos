@@ -2,7 +2,7 @@
 
 use bevy::prelude::App;
 
-mod blocks;
+pub mod blocks;
 mod recipes;
 
 pub(super) fn register(app: &mut App) {
