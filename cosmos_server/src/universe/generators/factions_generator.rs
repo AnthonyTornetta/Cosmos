@@ -156,6 +156,8 @@ fn generate_factions(
 
                 shop_done = true;
             }
+
+            info!("Done creating factions.");
         }
     }
 }

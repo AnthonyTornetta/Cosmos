@@ -12,7 +12,7 @@ use crate::{
 use super::Station;
 
 /// Distance (in sectors) a station should be loaded in
-pub const STATION_LOAD_DISTANCE: u32 = 6;
+pub const STATION_LOAD_DISTANCE: u32 = 2;
 /// Distance (in sectors) a station should be unloaded
 pub const STATION_UNLOAD_DISTANCE: u32 = STATION_LOAD_DISTANCE + 1;
 
