@@ -268,7 +268,6 @@ fn listen_for_inventory_messages(
                                 .spawn((
                                     PhysicalItem,
                                     *location + linvel.normalize(),
-                                    LoadingDistance::new(1, 2),
                                     Transform::from_rotation(player_rot),
                                     Velocity {
                                         linvel,
@@ -348,7 +347,6 @@ fn listen_for_inventory_messages(
                         .spawn((
                             PhysicalItem,
                             *location + linvel.normalize(),
-                            LoadingDistance::new(1, 2),
                             Transform::from_rotation(player_rot),
                             Velocity {
                                 linvel,
@@ -393,7 +391,6 @@ fn listen_for_inventory_messages(
                         .spawn((
                             PhysicalItem,
                             *location + linvel.normalize(),
-                            LoadingDistance::new(1, 2),
                             Transform::from_rotation(player_rot),
                             Velocity {
                                 linvel,

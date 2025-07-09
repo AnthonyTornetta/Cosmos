@@ -38,7 +38,6 @@ fn process_event(
             .spawn((
                 PhysicalItem,
                 item_spawn,
-                LoadingDistance::new(1, 2),
                 Transform::from_rotation(structure_rot),
                 Velocity {
                     linvel: item_vel
