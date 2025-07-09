@@ -66,17 +66,22 @@ fn on_needs_pirate_spawned(mut commands: Commands, q_needs_pirate_spawned: Query
 
 #[derive(Component, Clone, Copy, PartialEq, PartialOrd, Reflect, Debug)]
 /// Goes on the player and ensures they don't deal with too many pirates
-struct NextPirateSpawn(f64);
+struct NextPirateSpawn {
+    max_spawn_time: f64,
+    current_spawn_time: f64,
+}
 
 fn add_spawn_times(
     q_players: Query<Entity, (With<Player>, Without<NextPirateSpawn>)>,
-    time: Res<Time>,
     min_pirate_spawn_time: Res<MinPirateSpawnTime>,
     mut commands: Commands,
 ) {
     for ent in q_players.iter() {
-        let next_spawn_time = calculate_next_spawn_time(&time, &min_pirate_spawn_time);
-        commands.entity(ent).insert(NextPirateSpawn(next_spawn_time));
+        let next_spawn_time = calculate_next_spawn_time(&min_pirate_spawn_time);
+        commands.entity(ent).insert(NextPirateSpawn {
+            current_spawn_time: next_spawn_time,
+            max_spawn_time: next_spawn_time,
+        });
     }
 }
 
@@ -103,10 +108,11 @@ fn spawn_pirates(
             .unwrap_or_default();
 
         if danger <= SectorDanger::MIDDLE {
-            // 1.0 means the pirate spawn time is pushed back forever until leaving, any lower will
-            // still push the time back, just not the full amount
-            const PIRATE_SPAWN_DELAY_AMOUNT: f64 = 0.75;
-            player_next_pirate_spawn.0 += time.delta_secs_f64() * PIRATE_SPAWN_DELAY_AMOUNT;
+            const PIRATE_SPAWN_DELAY_AMOUNT: f64 = 0.1;
+            player_next_pirate_spawn.current_spawn_time += time.delta_secs_f64() * PIRATE_SPAWN_DELAY_AMOUNT;
+            player_next_pirate_spawn.current_spawn_time = player_next_pirate_spawn
+                .current_spawn_time
+                .min(player_next_pirate_spawn.max_spawn_time);
             continue;
         }
 
@@ -138,7 +144,7 @@ fn spawn_pirates(
     }
 
     for (sector, (next_pirate_spawn, player_ents, total_time, player_strength)) in player_groups {
-        if time.elapsed_secs_f64() < next_pirate_spawn.0 {
+        if next_pirate_spawn.current_spawn_time <= 0.0 {
             continue;
         }
 
@@ -214,10 +220,13 @@ fn spawn_pirates(
             }
         }
 
-        let next_spawn_time = calculate_next_spawn_time(&time, &min_pirate_spawn_time);
+        let next_spawn_time = calculate_next_spawn_time(&min_pirate_spawn_time);
 
         for player_ent in player_ents {
-            commands.entity(player_ent).insert(NextPirateSpawn(next_spawn_time));
+            commands.entity(player_ent).insert(NextPirateSpawn {
+                max_spawn_time: next_spawn_time,
+                current_spawn_time: next_spawn_time,
+            });
         }
     }
 }
@@ -240,9 +249,9 @@ pub enum PirateSpawningSet {
     PirateSpawningLogic,
 }
 
-fn calculate_next_spawn_time(time: &Time, min_pirate_spawn_time: &MinPirateSpawnTime) -> f64 {
+fn calculate_next_spawn_time(min_pirate_spawn_time: &MinPirateSpawnTime) -> f64 {
     let min_secs = min_pirate_spawn_time.0.as_secs_f64();
-    rand::random::<f64>() * min_secs * 3.0 + min_secs + time.elapsed_secs_f64()
+    rand::random::<f64>() * min_secs * 3.0 + min_secs
 }
 
 pub(super) fn register(app: &mut App) {
