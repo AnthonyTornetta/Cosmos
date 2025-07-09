@@ -10,7 +10,6 @@ use cosmos_core::{
     },
     item::physical_item::PhysicalItem,
     netty::{NettyChannelClient, cosmos_encoder, server::ServerLobby, system_sets::NetworkingSystemsSet},
-    persistence::LoadingDistance,
     physics::location::Location,
     state::GameState,
     structure::{Structure, ship::pilot::Pilot},

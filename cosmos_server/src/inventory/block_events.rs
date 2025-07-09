@@ -5,7 +5,6 @@ use cosmos_core::{
     ecs::sets::FixedUpdateSet,
     inventory::Inventory,
     item::physical_item::PhysicalItem,
-    persistence::LoadingDistance,
     physics::location::Location,
     prelude::{Structure, StructureBlock},
     structure::block_health::events::BlockDestroyedEvent,

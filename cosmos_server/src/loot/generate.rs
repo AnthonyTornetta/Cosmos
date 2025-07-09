@@ -105,7 +105,7 @@ fn populate_loot_table_inventories(
             while amt_required > 0 {
                 total_tries -= 1;
                 let qty = rand::random_range(entry.amount.low..=entry.amount.high);
-                amt_required = amt_required.checked_sub(qty).unwrap_or(0);
+                amt_required = amt_required.saturating_sub(qty);
 
                 let item = items.from_numeric_id(entry.item);
                 inv.insert_item(item, qty as u16, &mut commands, &has_data);

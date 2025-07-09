@@ -33,7 +33,6 @@ use cosmos_core::{
         itemstack::{ItemShouldHaveData, ItemStackSystemSet},
     },
     item::{Item, physical_item::PhysicalItem},
-    persistence::LoadingDistance,
     physics::location::{Location, SetPosition},
     registry::{Registry, identifiable::Identifiable},
     structure::{
