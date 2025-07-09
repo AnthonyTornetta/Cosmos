@@ -1,0 +1,201 @@
+use bevy::prelude::*;
+use cosmos_core::{
+    block::{Block, block_events::BlockBreakEvent},
+    item::Item,
+    quest::{CompleteQuestEvent, OngoingQuests, Quest, QuestBuilder},
+    registry::{Registry, identifiable::Identifiable},
+    state::GameState,
+    structure::ship::pilot::Pilot,
+};
+
+use crate::quest::QuestsSet;
+
+use super::TutorialState;
+
+const MAIN_QUEST_NAME: &str = "cosmos:tutorial_mine_asteroid";
+const MINE_IRON: &str = "cosmos:tutorial_mine_iron";
+const MINE_COPPER: &str = "cosmos:tutorial_mine_copper";
+const MINE_ENERGITE: &str = "cosmos:tutorial_mine_energite";
+const MINE_PHOTONIUM: &str = "cosmos:tutorial_mine_photonium";
+
+fn register_quest(mut quests: ResMut<Registry<Quest>>, items: Res<Registry<Item>>) {
+    quests.register(Quest::new(
+        MAIN_QUEST_NAME.to_string(),
+        "Mine an asteroid - use the plasma drills".to_string(),
+    ));
+
+    if let Some(iron_ore) = items.from_id("cosmos:iron_ore") {
+        quests.register(Quest::new_with_icon(MINE_IRON.to_string(), "Mine Iron".to_string(), iron_ore));
+    }
+    if let Some(copper_ore) = items.from_id("cosmos:copper_ore") {
+        quests.register(Quest::new_with_icon(MINE_COPPER.to_string(), "Mine Copper".to_string(), copper_ore));
+    }
+    if let Some(energite_ore) = items.from_id("cosmos:energite_crystal_ore") {
+        quests.register(Quest::new_with_icon(
+            MINE_ENERGITE.to_string(),
+            "Mine Energite".to_string(),
+            energite_ore,
+        ));
+    }
+    if let Some(photonium_ore) = items.from_id("cosmos:photonium_crystal_ore") {
+        quests.register(Quest::new_with_icon(
+            MINE_PHOTONIUM.to_string(),
+            "Mine Photonium".to_string(),
+            photonium_ore,
+        ));
+    }
+}
+
+fn on_change_tutorial_state(
+    mut q_quests: Query<(&mut OngoingQuests, &TutorialState), Or<(Changed<TutorialState>, (Added<OngoingQuests>, With<TutorialState>))>>,
+    quests: Res<Registry<Quest>>,
+) {
+    for (mut ongoing_quests, tutorial_state) in q_quests.iter_mut() {
+        if *tutorial_state != TutorialState::MineAsteroid {
+            continue;
+        }
+
+        let Some(main_quest) = quests.from_id(MAIN_QUEST_NAME) else {
+            continue;
+        };
+
+        if ongoing_quests.contains(main_quest) {
+            continue;
+        }
+
+        let Some(copper) = quests.from_id(MINE_COPPER) else {
+            continue;
+        };
+        let Some(iron) = quests.from_id(MINE_IRON) else {
+            continue;
+        };
+        let Some(energite) = quests.from_id(MINE_ENERGITE) else {
+            continue;
+        };
+        let Some(photonium) = quests.from_id(MINE_PHOTONIUM) else {
+            continue;
+        };
+
+        let copper = QuestBuilder::new(copper).with_max_progress(100).build();
+        let iron = QuestBuilder::new(iron).with_max_progress(100).build();
+        let energite = QuestBuilder::new(energite).with_max_progress(50).build();
+        let photonium = QuestBuilder::new(photonium).with_max_progress(50).build();
+
+        let main_quest = QuestBuilder::new(main_quest)
+            .with_subquests([copper, iron, energite, photonium])
+            .build();
+
+        ongoing_quests.start_quest(main_quest);
+    }
+}
+
+fn resolve_quests(
+    quests: Res<Registry<Quest>>,
+    mut q_ongoing_quests: Query<&mut OngoingQuests>,
+    mut evr_block_break: EventReader<BlockBreakEvent>,
+    q_pilot: Query<&Pilot>,
+    blocks: Res<Registry<Block>>,
+) {
+    let Some(quest) = quests.from_id(MAIN_QUEST_NAME) else {
+        return;
+    };
+
+    for ev in evr_block_break.read() {
+        let mut ongoing_quests = q_ongoing_quests.get_mut(ev.breaker);
+
+        if ongoing_quests.is_err() {
+            let Ok(pilot) = q_pilot.get(ev.breaker) else {
+                continue;
+            };
+            ongoing_quests = q_ongoing_quests.get_mut(pilot.entity);
+        }
+
+        let Ok(mut ongoing_quests) = ongoing_quests else {
+            continue;
+        };
+
+        let Some(ongoing) = ongoing_quests.get_quest_mut(quest) else {
+            continue;
+        };
+
+        let Some(subquests) = ongoing.subquests_mut() else {
+            continue;
+        };
+
+        match blocks.from_numeric_id(ev.broken_id).unlocalized_name() {
+            "cosmos:copper_ore" => {
+                let Some(quest) = quests.from_id(MINE_COPPER) else {
+                    continue;
+                };
+                if let Some(quest) = subquests.get_quest_mut(quest) {
+                    quest.progress_quest(1);
+                }
+            }
+            "cosmos:iron_ore" => {
+                let Some(quest) = quests.from_id(MINE_IRON) else {
+                    continue;
+                };
+                if let Some(quest) = subquests.get_quest_mut(quest) {
+                    quest.progress_quest(1);
+                }
+            }
+            "cosmos:energite_crystal_ore" => {
+                let Some(quest) = quests.from_id(MINE_ENERGITE) else {
+                    continue;
+                };
+                if let Some(quest) = subquests.get_quest_mut(quest) {
+                    quest.progress_quest(1);
+                }
+            }
+            "cosmos:photonium_crystal_ore" => {
+                let Some(quest) = quests.from_id(MINE_PHOTONIUM) else {
+                    continue;
+                };
+                if let Some(quest) = subquests.get_quest_mut(quest) {
+                    quest.progress_quest(1);
+                }
+            }
+            _ => {}
+        }
+    }
+}
+
+fn on_complete_quest(
+    mut q_tutorial_state: Query<&mut TutorialState>,
+    quests: Res<Registry<Quest>>,
+    mut evr_quest_complete: EventReader<CompleteQuestEvent>,
+    mut commands: Commands,
+) {
+    for ev in evr_quest_complete.read() {
+        let Some(quest) = quests.from_id(MAIN_QUEST_NAME) else {
+            continue;
+        };
+
+        let completed = ev.completed_quest();
+        if completed.quest_id() != quest.id() {
+            continue;
+        }
+
+        let Ok(mut tutorial_state) = q_tutorial_state.get_mut(ev.completer()) else {
+            continue;
+        };
+
+        if let Some(state) = tutorial_state.next_state() {
+            info!("Advancing tutorital state to {state:?}");
+            *tutorial_state = state;
+        } else {
+            commands.entity(ev.completer()).remove::<TutorialState>();
+        }
+    }
+}
+
+pub(super) fn register(app: &mut App) {
+    app.add_systems(OnEnter(GameState::PostLoading), register_quest).add_systems(
+        FixedUpdate,
+        (
+            on_change_tutorial_state.in_set(QuestsSet::CreateNewQuests),
+            resolve_quests.after(on_change_tutorial_state).before(QuestsSet::CompleteQuests),
+            on_complete_quest.after(QuestsSet::CompleteQuests),
+        ),
+    );
+}

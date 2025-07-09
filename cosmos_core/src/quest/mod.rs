@@ -7,6 +7,7 @@ use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 use crate::{
+    item::Item,
     netty::sync::{
         IdentifiableComponent, SyncableComponent,
         events::netty_event::{IdentifiableEvent, NettyEvent, SyncedEventImpl},
@@ -336,6 +337,8 @@ pub struct Quest {
     unlocalized_name: String,
     /// TODO: Encode this in some sort of registry loaded from a lang file
     pub description: String,
+    /// An item's id
+    icon: Option<u16>,
 }
 
 impl Quest {
@@ -345,6 +348,17 @@ impl Quest {
             id: 0,
             unlocalized_name: unlocalized_name.into(),
             description: description.into(),
+            icon: None,
+        }
+    }
+
+    /// Creates a quest type that will show up with an item icon
+    pub fn new_with_icon(unlocalized_name: impl Into<String>, description: impl Into<String>, icon: &Item) -> Self {
+        Self {
+            id: 0,
+            unlocalized_name: unlocalized_name.into(),
+            description: description.into(),
+            icon: Some(icon.id()),
         }
     }
 }

@@ -14,7 +14,7 @@ use cosmos_core::{
     netty::NoSendEntity,
     physics::location::LocationPhysicsSet,
     prelude::Station,
-    registry::Registry,
+    registry::{Registry, identifiable::Identifiable},
     state::GameState,
     structure::{
         Structure,
@@ -83,6 +83,7 @@ fn check_should_break(
                 ev_writer.write(BlockBreakEvent {
                     block: StructureBlock::new(*coordinate, structure_entity),
                     breaker: mining_block.last_toucher,
+                    broken_id: block.id(),
                 });
                 commands.entity(entity).insert(NeedsDespawned);
                 return false;
