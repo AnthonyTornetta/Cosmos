@@ -80,8 +80,8 @@ fn on_change_tutorial_state(
 
         let plasma_drills = QuestBuilder::new(plasma_drills).with_max_progress(100).build();
         let passive_gen = QuestBuilder::new(passive_gen).with_max_progress(20).build();
-        let missile_launcher = QuestBuilder::new(missile_launcher).with_max_progress(40).build();
-        let missile = QuestBuilder::new(missile).with_max_progress(40).build();
+        let missile_launcher = QuestBuilder::new(missile_launcher).with_max_progress(20).build();
+        let missile = QuestBuilder::new(missile).with_max_progress(20).build();
 
         let main_quest = QuestBuilder::new(main_quest)
             .with_subquests([plasma_drills, passive_gen, missile_launcher, missile])

@@ -15,8 +15,8 @@ use super::TutorialState;
 
 const MAIN_QUEST_NAME: &str = "cosmos:tutorial_arm_ship";
 const PLACE_MISSILE_LAUNCHER_QUEST: &str = "cosmos:tutorial_arm_ship_missile_launcher";
-const PLACE_STORAGE: &str = "cosmos:tutorial_place_storage";
-const INSERT_MISSILES: &str = "cosmos:tutorial_insert_missiles";
+const PLACE_STORAGE_QUEST: &str = "cosmos:tutorial_place_storage";
+const INSERT_MISSILES_QUEST: &str = "cosmos:tutorial_insert_missiles";
 
 const N_MISSILE_LAUNCHERS: u32 = 40;
 const N_MISSILES: u32 = 40;
@@ -31,11 +31,11 @@ fn register_quest(mut quests: ResMut<Registry<Quest>>) {
         format!("Place at least {N_MISSILE_LAUNCHERS} missile launchers. These can be fired at a target to deal damage to their ship. These deal more damage if placed in a line with each other.")
     ));
     quests.register(Quest::new(
-        PLACE_STORAGE.to_string(),
+        PLACE_STORAGE_QUEST.to_string(),
         format!("Place at least one storage unit on the ship."),
     ));
     quests.register(Quest::new(
-        INSERT_MISSILES.to_string(),
+        INSERT_MISSILES_QUEST.to_string(),
         format!("Insert at least {N_MISSILES} missiles into the storage you placed. Missile launchers use these as ammunition."),
     ));
 }
@@ -57,13 +57,19 @@ fn on_change_tutorial_state(
             continue;
         }
 
-        let Some(laser_cannons) = quests.from_id(PLACE_MISSILE_LAUNCHER_QUEST) else {
+        let Some(missile_launchers) = quests.from_id(PLACE_MISSILE_LAUNCHER_QUEST) else {
+            continue;
+        };
+        let Some(storage) = quests.from_id(PLACE_STORAGE_QUEST) else {
+            continue;
+        };
+        let Some(missiles) = quests.from_id(INSERT_MISSILES_QUEST) else {
             continue;
         };
 
-        let missile_launchers = QuestBuilder::new(laser_cannons).with_max_progress(N_MISSILE_LAUNCHERS).build();
-        let storage = QuestBuilder::new(laser_cannons).with_max_progress(1).build();
-        let missiles = QuestBuilder::new(laser_cannons).with_max_progress(N_MISSILES).build();
+        let missile_launchers = QuestBuilder::new(missile_launchers).with_max_progress(N_MISSILE_LAUNCHERS).build();
+        let storage = QuestBuilder::new(storage).with_max_progress(1).build();
+        let missiles = QuestBuilder::new(missiles).with_max_progress(N_MISSILES).build();
 
         let main_quest = QuestBuilder::new(main_quest)
             .with_subquests([missile_launchers, storage, missiles])
@@ -98,7 +104,7 @@ fn resolve_quests(
                 advance_subquest(&quests, &mut ongoing_quests, PLACE_MISSILE_LAUNCHER_QUEST, 1);
             }
             "cosmos:storage" => {
-                advance_subquest(&quests, &mut ongoing_quests, PLACE_STORAGE, 1);
+                advance_subquest(&quests, &mut ongoing_quests, PLACE_STORAGE_QUEST, 1);
             }
             _ => {}
         }
@@ -117,7 +123,7 @@ fn resolve_quests(
                 if let Ok(bd) = q_block_data.get(ev.inventory_entity) {
                     if let Ok(structure) = q_structure.get(bd.identifier.block.structure()) {
                         if structure.block_at(bd.identifier.block.coords(), &blocks).unlocalized_name() == "cosmos:storage" {
-                            advance_subquest(&quests, &mut ongoing_quests, INSERT_MISSILES, ev.item.amount as u32);
+                            advance_subquest(&quests, &mut ongoing_quests, INSERT_MISSILES_QUEST, ev.item.amount as u32);
                         }
                     }
                 }

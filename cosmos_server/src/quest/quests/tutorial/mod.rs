@@ -43,7 +43,7 @@ impl TutorialState {
 
 fn on_create_player(mut commands: Commands, mut evr_create_new_player: EventReader<CreateNewPlayerEvent>) {
     for ev in evr_create_new_player.read() {
-        commands.entity(ev.player()).try_insert(TutorialState::Craft);
+        commands.entity(ev.player()).try_insert(TutorialState::ArmShip);
     }
 }
 
