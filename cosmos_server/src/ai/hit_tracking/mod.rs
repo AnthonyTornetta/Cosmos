@@ -107,11 +107,19 @@ fn add_hitters(mut commands: Commands, q_needs_hitter: Query<Entity, (With<AiCon
     }
 }
 
+#[derive(Event)]
+pub struct PlayerDestroyedNpcShipEvent {
+    pub player: Entity,
+    pub ship: Entity,
+    pub difficulty_increase: f32,
+}
+
 fn on_melt_down(
     mut q_players: Query<&mut PlayerStrength>,
-    q_melting_down: Query<(&Hitters, &DifficultyIncreaseOnKill), Added<MeltingDown>>,
+    q_melting_down: Query<(Entity, &Hitters, &DifficultyIncreaseOnKill), Added<MeltingDown>>,
+    mut evw_player_destroyed_npc_ship: EventWriter<PlayerDestroyedNpcShipEvent>,
 ) {
-    for (hitters, difficulty_increase) in q_melting_down.iter() {
+    for (melting_down_ent, hitters, difficulty_increase) in q_melting_down.iter() {
         let dmg_total = hitters.0.iter().map(|(_, hits)| *hits).sum::<u64>();
 
         for (&hitter_ent, &hits) in hitters.0.iter() {
@@ -121,8 +129,14 @@ fn on_melt_down(
                 continue;
             };
 
+            let old = player_strength.0;
             player_strength.0 += percent * difficulty_increase.0;
             player_strength.0 = player_strength.0.clamp(0.0, 100.0);
+            evw_player_destroyed_npc_ship.write(PlayerDestroyedNpcShipEvent {
+                difficulty_increase: player_strength.0 - old,
+                player: hitter_ent,
+                ship: melting_down_ent,
+            });
         }
     }
 }
@@ -143,5 +157,6 @@ pub(super) fn register(app: &mut App) {
     )
     .add_systems(FixedUpdate, tick_down_hitters.run_if(in_state(GameState::Playing)))
     .register_type::<Hitters>()
-    .register_type::<DifficultyIncreaseOnKill>();
+    .register_type::<DifficultyIncreaseOnKill>()
+    .add_event::<PlayerDestroyedNpcShipEvent>();
 }

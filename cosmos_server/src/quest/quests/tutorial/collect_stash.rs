@@ -236,7 +236,7 @@ fn on_complete_quest(
 pub(super) fn register(app: &mut App) {
     make_persistent::<AbandonStash>(app);
 
-    app.add_systems(OnEnter(GameState::Loading), register_quest).add_systems(
+    app.add_systems(OnEnter(GameState::PostLoading), register_quest).add_systems(
         FixedUpdate,
         (
             on_change_tutorial_state.in_set(QuestsSet::CreateNewQuests),

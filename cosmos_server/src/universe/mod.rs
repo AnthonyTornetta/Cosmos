@@ -245,7 +245,6 @@ impl UniverseSystem {
         for dz in -DANGER_DISTANCE..=DANGER_DISTANCE / 2 {
             for dy in -DANGER_DISTANCE..=DANGER_DISTANCE / 2 {
                 for dx in -DANGER_DISTANCE..=DANGER_DISTANCE / 2 {
-                    const D2: UnboundCoordinateType = DANGER_DISTANCE / 2;
                     let distance = dz.abs().max(dy.abs().max(dx.abs())) as f32;
                     let multiplier = 1.0 / (distance + 1.0);
                     let danger_here = self

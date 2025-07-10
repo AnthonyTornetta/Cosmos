@@ -272,7 +272,7 @@ pub(super) fn register(app: &mut App) {
     make_persistent::<MoveShipQuestActive>(app);
     make_persistent::<RotateShipQuestActive>(app);
 
-    app.add_systems(OnEnter(GameState::Loading), register_quest)
+    app.add_systems(OnEnter(GameState::PostLoading), register_quest)
         .add_systems(
             FixedUpdate,
             (

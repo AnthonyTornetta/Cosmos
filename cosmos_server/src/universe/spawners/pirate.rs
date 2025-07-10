@@ -66,9 +66,18 @@ fn on_needs_pirate_spawned(mut commands: Commands, q_needs_pirate_spawned: Query
 
 #[derive(Component, Clone, Copy, PartialEq, PartialOrd, Reflect, Debug)]
 /// Goes on the player and ensures they don't deal with too many pirates
-struct NextPirateSpawn {
+pub struct NextPirateSpawn {
     max_spawn_time: f64,
     current_spawn_time: f64,
+}
+
+impl NextPirateSpawn {
+    /// This will spawn a pirate the next time one should be spawned (such as the player entering a
+    /// danger zone), with no delay.
+    pub fn spawn_now(&mut self) {
+        self.current_spawn_time = 0.0;
+        self.max_spawn_time = 0.0;
+    }
 }
 
 fn add_spawn_times(

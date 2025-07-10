@@ -1,8 +1,13 @@
 use bevy::prelude::*;
+use cosmos_core::{
+    quest::{CompleteQuestEvent, Quest},
+    registry::{Registry, identifiable::Identifiable},
+};
 
 use crate::{entities::player::spawn_player::CreateNewPlayerEvent, quest::QuestsSet};
 
 mod arm_ship;
+mod attack_pirate;
 mod build_ship;
 mod collect_stash;
 mod craft;
@@ -112,6 +117,37 @@ fn on_create_player(mut commands: Commands, mut evr_create_new_player: EventRead
 //     }
 // }
 
+fn add_tutorial(app: &mut App, quest_name: &'static str) {
+    let on_complete_quest = |mut q_tutorial_state: Query<&mut TutorialState>,
+                             quests: Res<Registry<Quest>>,
+                             mut evr_quest_complete: EventReader<CompleteQuestEvent>,
+                             mut commands: Commands| {
+        for ev in evr_quest_complete.read() {
+            let Some(quest) = quests.from_id(quest_name) else {
+                continue;
+            };
+
+            let completed = ev.completed_quest();
+            if completed.quest_id() != quest.id() {
+                continue;
+            }
+
+            let Ok(mut tutorial_state) = q_tutorial_state.get_mut(ev.completer()) else {
+                continue;
+            };
+
+            if let Some(state) = tutorial_state.next_state() {
+                info!("Advancing tutorital state to {state:?}");
+                *tutorial_state = state;
+            } else {
+                commands.entity(ev.completer()).remove::<TutorialState>();
+            }
+        }
+    };
+
+    app.add_systems(FixedUpdate, on_complete_quest.after(QuestsSet::CompleteQuests));
+}
+
 pub(super) fn register(app: &mut App) {
     app.add_systems(FixedUpdate, on_create_player.in_set(QuestsSet::CreateNewQuests))
         .register_type::<TutorialState>();
@@ -124,4 +160,5 @@ pub(super) fn register(app: &mut App) {
     mine_asteroid::register(app);
     craft::register(app);
     arm_ship::register(app);
+    attack_pirate::register(app);
 }
