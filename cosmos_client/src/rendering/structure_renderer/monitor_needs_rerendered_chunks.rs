@@ -33,29 +33,29 @@ fn monitor_block_updates_system(
 
         let cc = ev.block.chunk_coords();
 
-        if ev.block.x() != 0 && ev.block.x() % CHUNK_DIMENSIONS == 0 {
+        if ev.block.x() != 0 && ev.block.x().is_multiple_of(CHUNK_DIMENSIONS) {
             chunks.insert(ChunkCoordinate::new(cc.x - 1, cc.y, cc.z));
         }
 
         let dims = structure.block_dimensions();
 
-        if ev.block.x() != dims.x - 1 && (ev.block.x() + 1) % CHUNK_DIMENSIONS == 0 {
+        if ev.block.x() != dims.x - 1 && (ev.block.x() + 1).is_multiple_of(CHUNK_DIMENSIONS) {
             chunks.insert(ChunkCoordinate::new(cc.x + 1, cc.y, cc.z));
         }
 
-        if ev.block.y() != 0 && ev.block.y() % CHUNK_DIMENSIONS == 0 {
+        if ev.block.y() != 0 && ev.block.y().is_multiple_of(CHUNK_DIMENSIONS) {
             chunks.insert(ChunkCoordinate::new(cc.x, cc.y - 1, cc.z));
         }
 
-        if ev.block.y() != dims.y - 1 && (ev.block.y() + 1) % CHUNK_DIMENSIONS == 0 {
+        if ev.block.y() != dims.y - 1 && (ev.block.y() + 1).is_multiple_of(CHUNK_DIMENSIONS) {
             chunks.insert(ChunkCoordinate::new(cc.x, cc.y + 1, cc.z));
         }
 
-        if ev.block.z() != 0 && ev.block.z() % CHUNK_DIMENSIONS == 0 {
+        if ev.block.z() != 0 && ev.block.z().is_multiple_of(CHUNK_DIMENSIONS) {
             chunks.insert(ChunkCoordinate::new(cc.x, cc.y, cc.z - 1));
         }
 
-        if ev.block.z() != dims.z - 1 && (ev.block.z() + 1) % CHUNK_DIMENSIONS == 0 {
+        if ev.block.z() != dims.z - 1 && (ev.block.z() + 1).is_multiple_of(CHUNK_DIMENSIONS) {
             chunks.insert(ChunkCoordinate::new(cc.x, cc.y, cc.z + 1));
         }
 
@@ -71,29 +71,29 @@ fn monitor_block_updates_system(
 
         let cc = ev.block.chunk_coords();
 
-        if ev.block.x() != 0 && ev.block.x() % CHUNK_DIMENSIONS == 0 {
+        if ev.block.x() != 0 && ev.block.x().is_multiple_of(CHUNK_DIMENSIONS) {
             chunks.insert(ChunkCoordinate::new(cc.x - 1, cc.y, cc.z));
         }
 
         let dims = structure.block_dimensions();
 
-        if ev.block.x() != dims.x - 1 && (ev.block.x() + 1) % CHUNK_DIMENSIONS == 0 {
+        if ev.block.x() != dims.x - 1 && (ev.block.x() + 1).is_multiple_of(CHUNK_DIMENSIONS) {
             chunks.insert(ChunkCoordinate::new(cc.x + 1, cc.y, cc.z));
         }
 
-        if ev.block.y() != 0 && ev.block.y() % CHUNK_DIMENSIONS == 0 {
+        if ev.block.y() != 0 && ev.block.y().is_multiple_of(CHUNK_DIMENSIONS) {
             chunks.insert(ChunkCoordinate::new(cc.x, cc.y - 1, cc.z));
         }
 
-        if ev.block.y() != dims.y - 1 && (ev.block.y() + 1) % CHUNK_DIMENSIONS == 0 {
+        if ev.block.y() != dims.y - 1 && (ev.block.y() + 1).is_multiple_of(CHUNK_DIMENSIONS) {
             chunks.insert(ChunkCoordinate::new(cc.x, cc.y + 1, cc.z));
         }
 
-        if ev.block.z() != 0 && ev.block.z() % CHUNK_DIMENSIONS == 0 {
+        if ev.block.z() != 0 && ev.block.z().is_multiple_of(CHUNK_DIMENSIONS) {
             chunks.insert(ChunkCoordinate::new(cc.x, cc.y, cc.z - 1));
         }
 
-        if ev.block.z() != dims.z - 1 && (ev.block.z() + 1) % CHUNK_DIMENSIONS == 0 {
+        if ev.block.z() != dims.z - 1 && (ev.block.z() + 1).is_multiple_of(CHUNK_DIMENSIONS) {
             chunks.insert(ChunkCoordinate::new(cc.x, cc.y, cc.z + 1));
         }
 

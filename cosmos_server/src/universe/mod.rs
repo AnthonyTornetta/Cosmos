@@ -1,7 +1,6 @@
 //! Contains server-side logic for the universe & how it's generated
 
 use bevy::{
-    log::info,
     math::Quat,
     platform::collections::HashMap,
     prelude::{App, Component, Resource},
