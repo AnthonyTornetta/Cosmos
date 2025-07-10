@@ -45,7 +45,7 @@ pub struct Pirate;
 /// The maximum difficulty of ship we can spawn. This is NOT the total difficulty.
 ///
 /// Difficulty range is [0, MAX_DIFFICULTY]
-pub const MAX_PIRATE_DIFFICULTY: u64 = 3;
+pub const MAX_PIRATE_DIFFICULTY: u64 = 4;
 
 fn on_needs_pirate_spawned(mut commands: Commands, q_needs_pirate_spawned: Query<(Entity, &PirateNeedsSpawned)>) {
     for (ent, pns) in q_needs_pirate_spawned.iter() {
