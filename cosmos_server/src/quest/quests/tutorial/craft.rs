@@ -11,9 +11,10 @@ use crate::{crafting::blocks::basic_fabricator::BasicFabricatorCraftEvent, quest
 use super::TutorialState;
 
 const MAIN_QUEST_NAME: &str = "cosmos:tutorial_craft";
-const CRAFT_LASER_CANNON: &str = "cosmos:tutorial_craft_laser_cannon";
+const CRAFT_MISSILE_LAUNCHERS: &str = "cosmos:tutorial_craft_missile_launchers";
 const CRAFT_PASSIVE_GEN: &str = "cosmos:tutorial_craft_passive_gen";
 const CRAFT_PLASMA_DRILLS: &str = "cosmos:tutorial_craft_plasma_drills";
+const CRAFT_MISSILE: &str = "cosmos:tutorial_craft_missile";
 
 fn register_quest(mut quests: ResMut<Registry<Quest>>, items: Res<Registry<Item>>) {
     quests.register(Quest::new(
@@ -28,12 +29,15 @@ fn register_quest(mut quests: ResMut<Registry<Quest>>, items: Res<Registry<Item>
             icon,
         ));
     }
-    if let Some(icon) = items.from_id("cosmos:laser_cannon") {
+    if let Some(icon) = items.from_id("cosmos:missile_launcher") {
         quests.register(Quest::new_with_icon(
-            CRAFT_LASER_CANNON.to_string(),
-            "Craft passive generators".to_string(),
+            CRAFT_MISSILE_LAUNCHERS.to_string(),
+            "Craft missile launchers".to_string(),
             icon,
         ));
+    }
+    if let Some(icon) = items.from_id("cosmos:missile") {
+        quests.register(Quest::new_with_icon(CRAFT_MISSILE.to_string(), "Craft missiles".to_string(), icon));
     }
     if let Some(icon) = items.from_id("cosmos:passive_generator") {
         quests.register(Quest::new_with_icon(
@@ -67,16 +71,20 @@ fn on_change_tutorial_state(
         let Some(passive_gen) = quests.from_id(CRAFT_PASSIVE_GEN) else {
             continue;
         };
-        let Some(laser_cannon) = quests.from_id(CRAFT_LASER_CANNON) else {
+        let Some(missile_launcher) = quests.from_id(CRAFT_MISSILE_LAUNCHERS) else {
+            continue;
+        };
+        let Some(missile) = quests.from_id(CRAFT_MISSILE) else {
             continue;
         };
 
         let plasma_drills = QuestBuilder::new(plasma_drills).with_max_progress(100).build();
         let passive_gen = QuestBuilder::new(passive_gen).with_max_progress(20).build();
-        let laser_cannon = QuestBuilder::new(laser_cannon).with_max_progress(20).build();
+        let missile_launcher = QuestBuilder::new(missile_launcher).with_max_progress(40).build();
+        let missile = QuestBuilder::new(missile).with_max_progress(40).build();
 
         let main_quest = QuestBuilder::new(main_quest)
-            .with_subquests([plasma_drills, passive_gen, laser_cannon])
+            .with_subquests([plasma_drills, passive_gen, missile_launcher, missile])
             .build();
 
         ongoing_quests.start_quest(main_quest);
@@ -115,8 +123,16 @@ fn resolve_quests(
                     quest.progress_quest(ev.quantity);
                 }
             }
-            "cosmos:laser_cannon" => {
-                let Some(quest) = quests.from_id(CRAFT_LASER_CANNON) else {
+            "cosmos:missile_launcher" => {
+                let Some(quest) = quests.from_id(CRAFT_MISSILE_LAUNCHERS) else {
+                    continue;
+                };
+                if let Some(quest) = subquests.get_quest_mut(quest) {
+                    quest.progress_quest(ev.quantity);
+                }
+            }
+            "cosmos:missile" => {
+                let Some(quest) = quests.from_id(CRAFT_MISSILE) else {
                     continue;
                 };
                 if let Some(quest) = subquests.get_quest_mut(quest) {

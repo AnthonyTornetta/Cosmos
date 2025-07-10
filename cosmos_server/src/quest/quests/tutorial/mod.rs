@@ -2,6 +2,7 @@ use bevy::prelude::*;
 
 use crate::{entities::player::spawn_player::CreateNewPlayerEvent, quest::QuestsSet};
 
+mod arm_ship;
 mod build_ship;
 mod collect_stash;
 mod craft;
@@ -19,6 +20,7 @@ enum TutorialState {
     FlyToAsteroid,
     MineAsteroid,
     Craft,
+    ArmShip,
     Fight,
 }
 
@@ -32,7 +34,8 @@ impl TutorialState {
             S::BuildShip => Some(S::FlyToAsteroid),
             S::FlyToAsteroid => Some(S::MineAsteroid),
             S::MineAsteroid => Some(S::Craft),
-            S::Craft => Some(S::Fight),
+            S::Craft => Some(S::ArmShip),
+            S::ArmShip => Some(S::Fight),
             S::Fight => None,
         }
     }
@@ -120,4 +123,5 @@ pub(super) fn register(app: &mut App) {
     fly_to_asteroid::register(app);
     mine_asteroid::register(app);
     craft::register(app);
+    arm_ship::register(app);
 }

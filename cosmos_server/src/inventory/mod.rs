@@ -294,9 +294,33 @@ fn remove_itemstack_loading_markers(
     }
 }
 
+#[derive(Debug, Clone)]
+pub struct MovedItem {
+    pub amount: u16,
+    pub slot: u32,
+    pub item_id: u16,
+}
+
+#[derive(Debug, Clone, Event)]
+pub struct InventoryAddItemEvent {
+    pub inventory_entity: Entity,
+    pub item: MovedItem,
+    pub adder: Option<Entity>,
+}
+
+#[derive(Debug, Clone, Event)]
+pub struct InventoryRemoveItemEvent {
+    pub inventory_entity: Entity,
+    pub item: MovedItem,
+    pub remover: Option<Entity>,
+}
+
 pub(super) fn register(app: &mut App) {
     netty::register(app);
     block_events::register(app);
+
+    app.add_event::<InventoryRemoveItemEvent>();
+    app.add_event::<InventoryAddItemEvent>();
 
     app.configure_sets(
         SAVING_SCHEDULE,
