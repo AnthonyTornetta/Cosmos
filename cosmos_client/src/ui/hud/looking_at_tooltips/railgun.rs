@@ -7,6 +7,7 @@ use cosmos_core::{
 };
 
 use crate::ui::{
+    constants,
     hud::tooltip::{GenerateLookingAtTooltipEvent, LookingAtTooltip, LookingAtTooltipSet},
     message::HudMessage,
 };
@@ -60,12 +61,12 @@ fn add_tooltip_text(
                 InvalidRailgunReason::NoCooling => "This railgun has no cooling mechanism",
             };
             tooltip.add_or_modify_message(
-                HudMessage::with_colored_string(format!("✕ {reason_text}"), css::RED.into()),
+                HudMessage::with_colored_string(format!("{} {reason_text}", constants::CROSS), css::RED.into()),
                 RAILGUN_MSG_LABEL,
             );
         } else {
             tooltip.add_or_modify_message(
-                HudMessage::with_colored_string("✓ Railgun Ready", css::GREEN.into()),
+                HudMessage::with_colored_string(format!("{} Railgun Ready", constants::CHECK), css::GREEN.into()),
                 RAILGUN_MSG_LABEL,
             );
         }

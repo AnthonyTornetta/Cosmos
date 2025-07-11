@@ -2,8 +2,8 @@ use bevy::prelude::*;
 use cosmos_core::{
     physics::location::Location,
     prelude::Asteroid,
-    quest::{CompleteQuestEvent, OngoingQuests, Quest, QuestBuilder},
-    registry::{Registry, identifiable::Identifiable},
+    quest::{OngoingQuests, Quest, QuestBuilder},
+    registry::Registry,
     state::GameState,
 };
 
@@ -53,6 +53,10 @@ fn resolve_quests(
     };
 
     for (loc, mut ongoing_quests) in q_ongoing_quests.iter_mut() {
+        if !ongoing_quests.contains(quest) {
+            continue;
+        }
+
         let Some(ongoing) = ongoing_quests.get_quest_mut(quest) else {
             continue;
         };
@@ -66,42 +70,14 @@ fn resolve_quests(
     }
 }
 
-fn on_complete_quest(
-    mut q_tutorial_state: Query<&mut TutorialState>,
-    quests: Res<Registry<Quest>>,
-    mut evr_quest_complete: EventReader<CompleteQuestEvent>,
-    mut commands: Commands,
-) {
-    for ev in evr_quest_complete.read() {
-        let Some(quest) = quests.from_id(MAIN_QUEST_NAME) else {
-            continue;
-        };
-
-        let completed = ev.completed_quest();
-        if completed.quest_id() != quest.id() {
-            continue;
-        }
-
-        let Ok(mut tutorial_state) = q_tutorial_state.get_mut(ev.completer()) else {
-            continue;
-        };
-
-        if let Some(state) = tutorial_state.next_state() {
-            info!("Advancing tutorital state to {state:?}");
-            *tutorial_state = state;
-        } else {
-            commands.entity(ev.completer()).remove::<TutorialState>();
-        }
-    }
-}
-
 pub(super) fn register(app: &mut App) {
+    super::add_tutorial(app, MAIN_QUEST_NAME);
+
     app.add_systems(OnEnter(GameState::PostLoading), register_quest).add_systems(
         FixedUpdate,
         (
             on_change_tutorial_state.in_set(QuestsSet::CreateNewQuests),
             resolve_quests.after(on_change_tutorial_state).before(QuestsSet::CompleteQuests),
-            on_complete_quest.after(QuestsSet::CompleteQuests),
         ),
     );
 }

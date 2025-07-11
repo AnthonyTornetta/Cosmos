@@ -1,3 +1,5 @@
+mod hud;
+
 use bevy::{color::palettes::css, prelude::*};
 use cosmos_core::{
     ecs::NeedsDespawned,
@@ -232,6 +234,8 @@ fn quest_node(
 }
 
 pub(super) fn register(app: &mut App) {
+    hud::register(app);
+
     register_button::<ToggleActiveClicked>(app);
 
     app.add_systems(

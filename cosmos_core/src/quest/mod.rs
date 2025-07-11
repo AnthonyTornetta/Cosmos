@@ -187,6 +187,12 @@ impl OngoingQuest {
         self.max_progress
     }
 
+    /// Returns how much progress has been made on this quest so far. Will always be <=
+    /// [`Self::max_progress`]
+    pub fn progress(&self) -> u32 {
+        self.progress
+    }
+
     /// Adds a subquest to this ongoing quest. This quest can only be marked as complete if all
     /// subquests are complete too.
     pub fn add_subquest(&mut self, subquest: OngoingQuest) -> &mut Self {
@@ -310,6 +316,9 @@ impl OngoingQuests {
     }
 
     /// Iterates over [`OngoingQuest`]s of this [`Quest`] type.
+    ///
+    /// # WARNING: This triggers change detection, even if the quest isn't found!
+    /// Please use [`Self::contains`] first!
     pub fn iter_specific_mut(&mut self, quest: &Quest) -> impl Iterator<Item = &'_ mut OngoingQuest> {
         self.iter_mut().filter(|q| q.quest_id == quest.id())
     }

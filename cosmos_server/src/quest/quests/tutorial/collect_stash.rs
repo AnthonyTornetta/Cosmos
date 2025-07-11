@@ -2,8 +2,8 @@ use bevy::prelude::*;
 use cosmos_core::{
     netty::sync::IdentifiableComponent,
     physics::location::Location,
-    quest::{CompleteQuestEvent, OngoingQuests, Quest, QuestBuilder},
-    registry::{Registry, identifiable::Identifiable},
+    quest::{OngoingQuests, Quest, QuestBuilder},
+    registry::Registry,
     state::GameState,
     structure::ship::pilot::{Pilot, PilotFocused},
     utils::quat_math::random_quat,
@@ -117,6 +117,10 @@ fn resolve_focus_waypoint_quest(
             continue;
         };
 
+        if !ongoing_quests.contains(quest) {
+            continue;
+        }
+
         let Some(enter_ship_quest) = quests.from_id(FOCUS_STRUCTURE_QUEST) else {
             continue;
         };
@@ -147,6 +151,10 @@ fn resolve_fly_ship_quest(
         let Some(quest) = quests.from_id(MAIN_QUEST_NAME) else {
             continue;
         };
+
+        if !ongoing_quests.contains(quest) {
+            continue;
+        }
 
         let Some(fly_quest) = quests.from_id(FLY_TO_STASH) else {
             continue;
@@ -188,6 +196,10 @@ fn resolve_loot_stash_quest(
             continue;
         };
 
+        if !ongoing_quests.contains(quest) {
+            continue;
+        }
+
         let Some(collect_items_quest) = quests.from_id(COLLECT_ITEMS_QUEST) else {
             continue;
         };
@@ -204,37 +216,11 @@ fn resolve_loot_stash_quest(
         }
     }
 }
-fn on_complete_quest(
-    mut q_tutorial_state: Query<&mut TutorialState>,
-    quests: Res<Registry<Quest>>,
-    mut evr_quest_complete: EventReader<CompleteQuestEvent>,
-    mut commands: Commands,
-) {
-    for ev in evr_quest_complete.read() {
-        let Some(quest) = quests.from_id(MAIN_QUEST_NAME) else {
-            continue;
-        };
-
-        let completed = ev.completed_quest();
-        if completed.quest_id() != quest.id() {
-            continue;
-        }
-
-        let Ok(mut tutorial_state) = q_tutorial_state.get_mut(ev.completer()) else {
-            continue;
-        };
-
-        if let Some(state) = tutorial_state.next_state() {
-            info!("Advancing tutorital state to {state:?}");
-            *tutorial_state = state;
-        } else {
-            commands.entity(ev.completer()).remove::<TutorialState>();
-        }
-    }
-}
 
 pub(super) fn register(app: &mut App) {
     make_persistent::<AbandonStash>(app);
+
+    super::add_tutorial(app, MAIN_QUEST_NAME);
 
     app.add_systems(OnEnter(GameState::PostLoading), register_quest).add_systems(
         FixedUpdate,
@@ -243,7 +229,6 @@ pub(super) fn register(app: &mut App) {
             (resolve_focus_waypoint_quest, resolve_fly_ship_quest, resolve_loot_stash_quest)
                 .after(on_change_tutorial_state)
                 .before(QuestsSet::CompleteQuests),
-            on_complete_quest.after(QuestsSet::CompleteQuests),
         ),
     );
 }

@@ -3,8 +3,8 @@ use bevy_rapier3d::prelude::Velocity;
 use cosmos_core::{
     netty::sync::IdentifiableComponent,
     prelude::Ship,
-    quest::{CompleteQuestEvent, OngoingQuests, Quest, QuestBuilder},
-    registry::{Registry, identifiable::Identifiable},
+    quest::{OngoingQuests, Quest, QuestBuilder},
+    registry::Registry,
     state::GameState,
     structure::ship::{pilot::Pilot, ship_movement::ShipMovement},
 };
@@ -133,6 +133,10 @@ fn resolve_enter_ship_quest(
             continue;
         };
 
+        if !ongoing_quests.contains(quest) {
+            continue;
+        }
+
         let Some(enter_ship_quest) = quests.from_id(ENTER_SHIP_QUEST) else {
             continue;
         };
@@ -166,6 +170,10 @@ fn resolve_move_quest(
         let Some(quest) = quests.from_id(MAIN_QUEST_NAME) else {
             continue;
         };
+
+        if !ongoing_quests.contains(quest) {
+            continue;
+        }
 
         let Some(move_ship_quest) = quests.from_id(MOVE_SHIP_QUEST) else {
             continue;
@@ -213,6 +221,10 @@ fn resolve_rotation_quest(
             continue;
         };
 
+        if !ongoing_quests.contains(quest) {
+            continue;
+        }
+
         let Some(rotate_ship_quest) = quests.from_id(ROTATE_SHIP_QUEST) else {
             continue;
         };
@@ -238,39 +250,12 @@ fn resolve_rotation_quest(
     }
 }
 
-fn on_complete_quest(
-    mut q_tutorial_state: Query<&mut TutorialState>,
-    quests: Res<Registry<Quest>>,
-    mut evr_quest_complete: EventReader<CompleteQuestEvent>,
-    mut commands: Commands,
-) {
-    for ev in evr_quest_complete.read() {
-        let Some(quest) = quests.from_id(MAIN_QUEST_NAME) else {
-            continue;
-        };
-
-        let completed = ev.completed_quest();
-        if completed.quest_id() != quest.id() {
-            continue;
-        }
-
-        let Ok(mut tutorial_state) = q_tutorial_state.get_mut(ev.completer()) else {
-            continue;
-        };
-
-        if let Some(state) = tutorial_state.next_state() {
-            info!("Advancing tutorital state to {state:?}");
-            *tutorial_state = state;
-        } else {
-            commands.entity(ev.completer()).remove::<TutorialState>();
-        }
-    }
-}
-
 pub(super) fn register(app: &mut App) {
     make_persistent::<EnterShipQuestActive>(app);
     make_persistent::<MoveShipQuestActive>(app);
     make_persistent::<RotateShipQuestActive>(app);
+
+    super::add_tutorial(app, MAIN_QUEST_NAME);
 
     app.add_systems(OnEnter(GameState::PostLoading), register_quest)
         .add_systems(
@@ -280,7 +265,6 @@ pub(super) fn register(app: &mut App) {
                 (resolve_enter_ship_quest, resolve_move_quest, resolve_rotation_quest)
                     .after(on_change_tutorial_state)
                     .before(QuestsSet::CompleteQuests),
-                on_complete_quest.after(QuestsSet::CompleteQuests),
             ),
         )
         .register_type::<MoveShipQuestActive>()

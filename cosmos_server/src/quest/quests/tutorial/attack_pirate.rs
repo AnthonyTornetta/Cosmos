@@ -9,7 +9,7 @@ use cosmos_core::{
 
 use crate::{
     ai::hit_tracking::PlayerDestroyedNpcShipEvent,
-    quest::{QuestsSet, quests::tutorial::add_tutorial},
+    quest::QuestsSet,
     universe::{
         SectorDanger, UniverseSystems,
         spawners::pirate::{NextPirateSpawn, Pirate},
@@ -87,6 +87,10 @@ fn resolve_fly_to_dangerous_area(
             continue;
         };
 
+        if !ongoing_quests.contains(quest) {
+            continue;
+        }
+
         let Some(fly_to_danger_zone) = quests.from_id(FLY_TO_DANGER_ZONE_QUEST) else {
             continue;
         };
@@ -127,6 +131,10 @@ fn resolve_kill_npc_ship(
             continue;
         };
 
+        if !ongoing_quests.contains(quest) {
+            continue;
+        }
+
         let Some(win_fight) = quests.from_id(WIN_FIGHT_QUEST) else {
             continue;
         };
@@ -145,7 +153,8 @@ fn resolve_kill_npc_ship(
 }
 
 pub(super) fn register(app: &mut App) {
-    add_tutorial(app, MAIN_QUEST_NAME);
+    super::add_tutorial(app, MAIN_QUEST_NAME);
+
     app.add_systems(OnEnter(GameState::PostLoading), register_quest).add_systems(
         FixedUpdate,
         (

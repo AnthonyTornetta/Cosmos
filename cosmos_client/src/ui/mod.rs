@@ -3,6 +3,7 @@
 use bevy::prelude::*;
 
 pub mod components;
+pub mod constants;
 pub mod crosshair;
 pub mod debug_info_display;
 mod focus_cam;
