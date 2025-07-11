@@ -9,9 +9,9 @@
     },
     {
       "item": "cosmos:plasma_drill",
-      "quantity": [40, 40],
+      "quantity": [120, 120],
       "weight": 40,
-      "amount_required": 40
+      "amount_required": 120
     },
     {
       "item": "cosmos:energy_cell",

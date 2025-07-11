@@ -19,7 +19,7 @@ const PLACE_ENERGY_CELL_QUEST: &str = "cosmos:tutorial_place_energy_cell";
 const PLACE_LASER_CANNON_QUEST: &str = "cosmos:tutorial_place_laser_cannon";
 
 const N_THRUSTERS: u32 = 10;
-const N_PLASMA_DRILLS: u32 = 30;
+const N_PLASMA_DRILLS: u32 = 120;
 const N_PASSIVE_GENS: u32 = 30;
 const N_ENERGY_CELLS: u32 = 1;
 const N_LASER_CANNONS: u32 = 30;
