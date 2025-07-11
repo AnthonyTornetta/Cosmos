@@ -1,7 +1,7 @@
 use bevy::{platform::collections::HashMap, prelude::*};
 use cosmos_core::{
     block::{Block, block_face::ALL_BLOCK_FACES},
-    logic::BlockLogicData,
+    logic::{BlockLogicData, HasOnOffInfo},
     registry::{Registry, identifiable::Identifiable, many_to_one::ManyToOneRegistry},
     state::GameState,
     structure::{
@@ -93,12 +93,7 @@ fn on_render_logic_indicator(
 
             let rotation = block_rotation.as_quat();
 
-            let Some(&logic_data) = structure.query_block_data(block, &q_logic_data) else {
-                error!("MISSING LOGIC DATA @ {block}!");
-                continue;
-            };
-
-            let material_type = if logic_data.on() {
+            let material_type = if structure.block_info_at(block).on() {
                 MaterialType::Illuminated
             } else {
                 MaterialType::Normal

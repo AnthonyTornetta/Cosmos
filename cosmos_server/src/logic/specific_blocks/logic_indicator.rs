@@ -6,8 +6,8 @@ use bevy::prelude::*;
 
 use cosmos_core::{
     block::Block,
-    events::block_events::BlockDataSystemParams,
-    logic::BlockLogicData,
+    events::block_events::BlockDataChangedEvent,
+    logic::{BlockLogicData, HasOnOffInfo},
     registry::{Registry, identifiable::Identifiable},
     structure::Structure,
 };
@@ -23,25 +23,16 @@ fn register_logic_ports(blocks: Res<Registry<Block>>, mut registry: ResMut<Regis
 fn logic_indicator_input_event_listener(
     mut evr_logic_input: EventReader<LogicInputEvent>,
     blocks: Res<Registry<Block>>,
-    mut q_logic_driver: Query<&mut LogicDriver>,
-    q_structure: Query<&Structure>,
-    mut q_logic_data: Query<&mut BlockLogicData>,
-    bs_params: BlockDataSystemParams,
+    mut q_structure: Query<(&mut Structure, &LogicDriver)>,
+    mut evw_block_data_changed: EventWriter<BlockDataChangedEvent>,
 ) {
-    let bs_params = Rc::new(RefCell::new(bs_params));
     for ev in evr_logic_input.read() {
-        let Ok(structure) = q_structure.get(ev.block.structure()) else {
+        let Ok((mut structure, logic_driver)) = q_structure.get_mut(ev.block.structure()) else {
             continue;
         };
         if structure.block_at(ev.block.coords(), &blocks).unlocalized_name() != "cosmos:logic_indicator" {
             continue;
         }
-        let Ok(logic_driver) = q_logic_driver.get_mut(ev.block.structure()) else {
-            continue;
-        };
-        let Some(mut logic_data) = structure.query_block_data_mut(ev.block.coords(), &mut q_logic_data, bs_params.clone()) else {
-            continue;
-        };
 
         let new_state = BlockLogicData(
             logic_driver
@@ -50,9 +41,16 @@ fn logic_indicator_input_event_listener(
                 .any(|signal| *signal != 0) as i32,
         );
 
-        if **logic_data != new_state {
-            // Don't trigger unneccesary change detection.
-            **logic_data = new_state;
+        let cur_info = structure.block_info_at(ev.block.coords());
+        let mut new_info = cur_info;
+        if new_state.on() {
+            new_info.set_on();
+        } else {
+            new_info.set_off();
+        }
+
+        if cur_info != new_info {
+            structure.set_block_info_at(ev.block.coords(), new_info, &mut evw_block_data_changed);
         }
     }
 }
