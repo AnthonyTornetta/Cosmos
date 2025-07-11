@@ -181,9 +181,7 @@ fn update_sync_players(
     mut q_mut_sync_to: Query<&mut SyncTo>,
     q_players: Query<(&Player, &Location), With<ReadyForSyncing>>,
 ) {
-    info!("N todo: {}", q_sync_to.iter().len());
     for (ent, sync_reason, this_loc, loading_distance, parent, _, block_data) in q_sync_to.iter() {
-        // info!("{ent:?}");
         let sync_reason = sync_reason
             .cloned()
             .unwrap_or(if block_data { SyncReason::BlockData } else { Default::default() });
