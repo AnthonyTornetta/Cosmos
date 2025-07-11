@@ -139,6 +139,7 @@ fn on_toggle_active(
 
         if let Ok((ent, mut bc)) = q_active.single_mut() {
             commands.entity(ent).remove::<ActiveQuestUi>();
+            commands.entity(player_ent).remove::<ActiveQuest>();
             bc.0 = css::LIGHT_GREY.into();
         }
 

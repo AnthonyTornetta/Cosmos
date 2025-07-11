@@ -61,16 +61,13 @@ fn display_active_mission(
             },
         ))
         .with_children(|p| {
-            p.spawn((
-                Text::new("ACTIVE MISSION"),
-                TextFont {
-                    font: font.get(),
-                    font_size: 32.0,
-                    ..Default::default()
-                },
-            ));
+            display_quest(p, &quests_lang, &font, false, quest, &quests, ongoing_quest);
 
             p.spawn((
+                Node {
+                    margin: UiRect::top(Val::Px(20.0)),
+                    ..Default::default()
+                },
                 Text::new(format!(
                     "Press {} to view all quests.",
                     inputs
@@ -84,8 +81,6 @@ fn display_active_mission(
                     ..Default::default()
                 },
             ));
-
-            display_quest(p, &quests_lang, &font, false, quest, &quests, ongoing_quest);
         });
 }
 
@@ -100,11 +95,21 @@ fn display_quest<R: Relationship>(
 ) {
     let text_font = TextFont {
         font: font.get(),
-        font_size: if subquest { 16.0 } else { 24.0 },
+        font_size: if subquest { 20.0 } else { 32.0 },
         ..Default::default()
     };
 
-    let mut ecmds = p.spawn((Text::new(quests_lang.get_name_or_unlocalized(quest)), text_font.clone()));
+    let text_font_desc = TextFont {
+        font: font.get(),
+        font_size: if subquest { 16.0 } else { 20.0 },
+        ..Default::default()
+    };
+
+    let mut ecmds = p.spawn((
+        Name::new("Quest Name"),
+        Text::new(quests_lang.get_name_or_unlocalized(quest)),
+        text_font.clone(),
+    ));
 
     let complete = ongoing_quest.completed();
 
@@ -112,7 +117,7 @@ fn display_quest<R: Relationship>(
         ecmds.with_children(|p| {
             p.spawn((
                 TextColor(Color::from(if complete { css::GREEN } else { css::RED })),
-                Text::new(format!(" {}", if complete { constants::CHECK } else { constants::CROSS })),
+                TextSpan::new(format!(" {}", if complete { constants::CHECK } else { constants::CROSS })),
                 text_font.clone(),
             ));
         });
@@ -123,19 +128,31 @@ fn display_quest<R: Relationship>(
             p.spawn((
                 TextColor(Color::from(if complete { css::GREEN } else { css::RED })),
                 text_font.clone(),
+                TextSpan::new(format!(" {}/{}", ongoing_quest.progress(), ongoing_quest.max_progress())),
             ));
         });
     }
 
+    p.spawn((
+        Name::new("Description"),
+        Text::new(&quest.description),
+        text_font_desc,
+        Node {
+            margin: UiRect::bottom(Val::Px(16.0)),
+            ..Default::default()
+        },
+    ));
+
     if let Some(subquests) = ongoing_quest.subquests() {
-        p.spawn(
-            (Node {
+        p.spawn((
+            Name::new("Subquests"),
+            Node {
                 flex_grow: 1.0,
                 margin: UiRect::left(Val::Px(20.0)),
                 flex_direction: FlexDirection::Column,
                 ..Default::default()
-            }),
-        )
+            },
+        ))
         .with_children(|p| {
             for subquest in subquests.iter() {
                 let quest = quests.from_numeric_id(subquest.quest_id());

@@ -26,6 +26,12 @@
       "amount_required": 30
     },
     {
+      "item": "cosmos:laser_cannon",
+      "quantity": [30, 30],
+      "weight": 40,
+      "amount_required": 30
+    },
+    {
       "item": "cosmos:missile",
       "quantity": [70, 70],
       "weight": 10,
