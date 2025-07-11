@@ -5,7 +5,7 @@ use std::{cell::RefCell, rc::Rc};
 use bevy::prelude::*;
 
 use cosmos_core::{
-    block::{Block, block_face::BlockFace},
+    block::{Block, block_face::BlockFace, data::BlockData},
     events::block_events::BlockDataSystemParams,
     logic::BlockLogicData,
     registry::{Registry, identifiable::Identifiable},
@@ -45,6 +45,8 @@ fn flip_flop_input_event_listener(
     mut q_structure: Query<&mut Structure>,
     mut q_logic_data: Query<&mut BlockLogicData>,
     bs_params: BlockDataSystemParams,
+    q_has_data: Query<(), With<BlockLogicData>>,
+    mut q_block_data: Query<&mut BlockData>,
 ) {
     let bs_params = Rc::new(RefCell::new(bs_params));
     for ev in evr_logic_input.read() {
@@ -57,9 +59,10 @@ fn flip_flop_input_event_listener(
         let Ok(logic_driver) = q_logic_driver.get_mut(ev.block.structure()) else {
             continue;
         };
-        let Some(mut logic_data) = structure.query_block_data_mut(ev.block.coords(), &mut q_logic_data, bs_params.clone()) else {
-            continue;
-        };
+        let mut logic_data = structure
+            .query_block_data(ev.block.coords(), &mut q_logic_data)
+            .copied()
+            .unwrap_or_default();
 
         let coords = ev.block.coords();
         let rotation = structure.block_rotation(ev.block.coords());
@@ -76,9 +79,9 @@ fn flip_flop_input_event_listener(
                 data.0 |= LAST_STATE_BIT;
                 data.0 ^= LOGIC_BIT;
                 if data.0 & LOGIC_BIT == 0 {
-                    **logic_data = BlockLogicData::default();
+                    logic_data = BlockLogicData::default();
                 } else {
-                    **logic_data = new_state;
+                    logic_data = new_state;
                 }
             }
         } else {
@@ -86,6 +89,14 @@ fn flip_flop_input_event_listener(
             if new_state.0 == 0 {
                 data.0 &= !LAST_STATE_BIT;
             }
+        }
+
+        if let Some(mut old_data) = structure.query_block_data_mut(ev.block.coords(), &mut q_logic_data, bs_params.clone()) {
+            if **old_data != new_state {
+                **old_data = new_state;
+            }
+        } else if logic_data.0 != 0 {
+            structure.insert_block_data(coords, logic_data, &mut bs_params.borrow_mut(), &mut q_block_data, &q_has_data);
         }
 
         if og_data != data {
@@ -99,8 +110,7 @@ fn flip_flop_output_event_listener(
     evw_queue_logic_input: EventWriter<QueueLogicInputEvent>,
     logic_blocks: Res<Registry<LogicBlock>>,
     blocks: Res<Registry<Block>>,
-    q_logic_driver: Query<&mut LogicDriver>,
-    q_structure: Query<&mut Structure>,
+    q_structure: Query<(&mut Structure, &mut LogicDriver)>,
     q_logic_data: Query<&BlockLogicData>,
 ) {
     default_logic_block_output(
@@ -109,7 +119,6 @@ fn flip_flop_output_event_listener(
         evw_queue_logic_input,
         &logic_blocks,
         &blocks,
-        q_logic_driver,
         q_structure,
         q_logic_data,
     );

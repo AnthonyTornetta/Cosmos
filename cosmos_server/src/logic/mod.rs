@@ -475,20 +475,16 @@ pub fn default_logic_block_output(
     mut evw_queue_logic_input: EventWriter<QueueLogicInputEvent>,
     logic_blocks: &Registry<LogicBlock>,
     blocks: &Registry<Block>,
-    mut q_logic_driver: Query<&mut LogicDriver>,
-    mut q_structure: Query<&mut Structure>,
+    mut q_structure: Query<(&mut Structure, &mut LogicDriver)>,
     q_logic_data: Query<&BlockLogicData>,
 ) {
     for ev in evr_logic_output.read() {
-        let Ok(structure) = q_structure.get_mut(ev.block.structure()) else {
+        let Ok((structure, mut logic_driver)) = q_structure.get_mut(ev.block.structure()) else {
             continue;
         };
         if structure.block_at(ev.block.coords(), blocks).unlocalized_name() != block_name {
             continue;
         }
-        let Ok(mut logic_driver) = q_logic_driver.get_mut(ev.block.structure()) else {
-            continue;
-        };
         let BlockLogicData(signal) = structure
             .query_block_data(ev.block.coords(), &q_logic_data)
             .copied()

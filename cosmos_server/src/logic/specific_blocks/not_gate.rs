@@ -6,7 +6,7 @@ use std::{cell::RefCell, rc::Rc};
 use bevy::prelude::*;
 
 use cosmos_core::{
-    block::{Block, block_face::BlockFace},
+    block::{Block, block_face::BlockFace, data::BlockData},
     events::block_events::BlockDataSystemParams,
     registry::{Registry, identifiable::Identifiable},
     structure::Structure,
@@ -37,13 +37,15 @@ fn not_gate_input_event_listener(
     mut evr_logic_input: EventReader<LogicInputEvent>,
     blocks: Res<Registry<Block>>,
     mut q_logic_driver: Query<&mut LogicDriver>,
-    q_structure: Query<&Structure>,
+    mut q_structure: Query<&mut Structure>,
     mut q_logic_data: Query<&mut BlockLogicData>,
     bs_params: BlockDataSystemParams,
+    q_has_data: Query<(), With<BlockLogicData>>,
+    mut q_block_data: Query<&mut BlockData>,
 ) {
     let bs_params = Rc::new(RefCell::new(bs_params));
     for ev in evr_logic_input.read() {
-        let Ok(structure) = q_structure.get(ev.block.structure()) else {
+        let Ok(mut structure) = q_structure.get_mut(ev.block.structure()) else {
             continue;
         };
         if structure.block_at(ev.block.coords(), &blocks).unlocalized_name() != "cosmos:not_gate" {
@@ -52,18 +54,18 @@ fn not_gate_input_event_listener(
         let Ok(logic_driver) = q_logic_driver.get_mut(ev.block.structure()) else {
             continue;
         };
-        let Some(mut logic_data) = structure.query_block_data_mut(ev.block.coords(), &mut q_logic_data, bs_params.clone()) else {
-            continue;
-        };
 
         let coords = ev.block.coords();
         let rotation = structure.block_rotation(ev.block.coords());
         let input = logic_driver.read_input(coords, rotation.direction_of(BlockFace::Back)) != 0;
         let new_state = BlockLogicData(!input as i32);
 
-        if **logic_data != new_state {
-            // Don't trigger unneccesary change detection.
-            **logic_data = new_state;
+        if let Some(mut logic_data) = structure.query_block_data_mut(ev.block.coords(), &mut q_logic_data, bs_params.clone()) {
+            if **logic_data != new_state {
+                **logic_data = new_state;
+            }
+        } else if new_state.0 != 0 {
+            structure.insert_block_data(coords, new_state, &mut bs_params.borrow_mut(), &mut q_block_data, &q_has_data);
         }
     }
 }
@@ -73,8 +75,7 @@ fn not_gate_output_event_listener(
     evw_queue_logic_input: EventWriter<QueueLogicInputEvent>,
     logic_blocks: Res<Registry<LogicBlock>>,
     blocks: Res<Registry<Block>>,
-    q_logic_driver: Query<&mut LogicDriver>,
-    q_structure: Query<&mut Structure>,
+    q_structure: Query<(&mut Structure, &mut LogicDriver)>,
     q_logic_data: Query<&BlockLogicData>,
 ) {
     default_logic_block_output(
@@ -83,7 +84,6 @@ fn not_gate_output_event_listener(
         evw_queue_logic_input,
         &logic_blocks,
         &blocks,
-        q_logic_driver,
         q_structure,
         q_logic_data,
     );

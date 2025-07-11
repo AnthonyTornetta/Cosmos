@@ -1,7 +1,5 @@
 //! Logic behavior for "Logic Indicator", a block that changes its appearance to indicate if any of its 6 input ports are recieving logic "on".
 
-use std::{cell::RefCell, rc::Rc};
-
 use bevy::prelude::*;
 
 use cosmos_core::{

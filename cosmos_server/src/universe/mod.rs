@@ -10,7 +10,6 @@ use cosmos_core::{
     faction::FactionId,
     physics::location::{Location, SYSTEM_SECTORS, Sector, SystemCoordinate},
     prelude::Planet,
-    structure::coordinates::UnboundCoordinateType,
     universe::star::Star,
 };
 use serde::{Deserialize, Serialize};

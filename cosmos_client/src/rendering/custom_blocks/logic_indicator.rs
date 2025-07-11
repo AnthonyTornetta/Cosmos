@@ -1,7 +1,7 @@
 use bevy::{platform::collections::HashMap, prelude::*};
 use cosmos_core::{
     block::{Block, block_face::ALL_BLOCK_FACES},
-    logic::{BlockLogicData, HasOnOffInfo},
+    logic::HasOnOffInfo,
     registry::{Registry, identifiable::Identifiable, many_to_one::ManyToOneRegistry},
     state::GameState,
     structure::{
@@ -41,7 +41,6 @@ fn on_render_logic_indicator(
     blocks: Res<Registry<Block>>,
     mut commands: Commands,
     q_structure: Query<&Structure>,
-    q_logic_data: Query<&BlockLogicData>,
     materials: Res<ManyToOneRegistry<Block, BlockMaterialMapping>>,
     block_textures: Res<Registry<BlockTextureIndex>>,
     block_mesh_registry: Res<BlockMeshRegistry>,
