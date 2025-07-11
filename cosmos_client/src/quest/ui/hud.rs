@@ -50,11 +50,11 @@ fn display_active_mission(
     commands
         .spawn((
             ActiveMissionDisplay,
-            Name::new("Active Mission Dsplay"),
+            Name::new("Active Mission Display"),
             Node {
                 width: Val::Px(500.0),
                 right: Val::Px(0.0),
-                top: Val::Px(400.0),
+                top: Val::Percent(10.0),
                 position_type: PositionType::Absolute,
                 flex_direction: FlexDirection::Column,
                 ..Default::default()
