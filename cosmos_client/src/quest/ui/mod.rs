@@ -4,7 +4,7 @@ use bevy::{color::palettes::css, prelude::*};
 use cosmos_core::{
     ecs::NeedsDespawned,
     netty::client::LocalPlayer,
-    quest::{OngoingQuest, OngoingQuestId, OngoingQuests, Quest},
+    quest::{ActiveQuest, OngoingQuest, OngoingQuestId, OngoingQuests, Quest},
     registry::Registry,
     state::GameState,
 };
@@ -23,8 +23,6 @@ use crate::{
         font::DefaultFont,
     },
 };
-
-use super::ActiveQuest;
 
 #[derive(Component)]
 struct QuestUi;

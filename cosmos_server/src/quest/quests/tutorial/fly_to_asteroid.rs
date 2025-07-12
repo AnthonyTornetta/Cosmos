@@ -2,7 +2,7 @@ use bevy::prelude::*;
 use cosmos_core::{
     physics::location::Location,
     prelude::Asteroid,
-    quest::{OngoingQuests, Quest, QuestBuilder},
+    quest::{ActiveQuest, OngoingQuests, Quest, QuestBuilder},
     registry::Registry,
     state::GameState,
 };
@@ -21,10 +21,14 @@ fn register_quest(mut quests: ResMut<Registry<Quest>>) {
 }
 
 fn on_change_tutorial_state(
-    mut q_quests: Query<(&mut OngoingQuests, &TutorialState), Or<(Changed<TutorialState>, (Added<OngoingQuests>, With<TutorialState>))>>,
+    mut commands: Commands,
+    mut q_quests: Query<
+        (Entity, &mut OngoingQuests, &TutorialState),
+        Or<(Changed<TutorialState>, (Added<OngoingQuests>, With<TutorialState>))>,
+    >,
     quests: Res<Registry<Quest>>,
 ) {
-    for (mut ongoing_quests, tutorial_state) in q_quests.iter_mut() {
+    for (ent, mut ongoing_quests, tutorial_state) in q_quests.iter_mut() {
         if *tutorial_state != TutorialState::FlyToAsteroid {
             continue;
         }
@@ -39,7 +43,8 @@ fn on_change_tutorial_state(
 
         let main_quest = QuestBuilder::new(main_quest).build();
 
-        ongoing_quests.start_quest(main_quest);
+        let q_id = ongoing_quests.start_quest(main_quest);
+        commands.entity(ent).insert(ActiveQuest(q_id));
     }
 }
 

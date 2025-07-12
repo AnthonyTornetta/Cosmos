@@ -137,7 +137,6 @@ fn add_tutorial(app: &mut App, quest_name: &'static str) {
             };
 
             if let Some(state) = tutorial_state.next_state() {
-                info!("Advancing tutorital state to {state:?}");
                 *tutorial_state = state;
             } else {
                 commands.entity(ev.completer()).remove::<TutorialState>();

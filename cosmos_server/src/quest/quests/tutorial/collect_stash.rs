@@ -2,7 +2,7 @@ use bevy::prelude::*;
 use cosmos_core::{
     netty::sync::IdentifiableComponent,
     physics::location::Location,
-    quest::{OngoingQuests, Quest, QuestBuilder},
+    quest::{ActiveQuest, OngoingQuests, Quest, QuestBuilder},
     registry::Registry,
     state::GameState,
     structure::ship::pilot::{Pilot, PilotFocused},
@@ -43,14 +43,14 @@ fn register_quest(mut quests: ResMut<Registry<Quest>>) {
 
 fn on_change_tutorial_state(
     mut q_quests: Query<
-        (&mut OngoingQuests, &TutorialState, &Location),
+        (Entity, &mut OngoingQuests, &TutorialState, &Location),
         Or<(Changed<TutorialState>, (Added<OngoingQuests>, With<TutorialState>))>,
     >,
     quests: Res<Registry<Quest>>,
     mut commands: Commands,
     loot: Res<Registry<LootTable>>,
 ) {
-    for (mut ongoing_quests, tutorial_state, loc) in q_quests.iter_mut() {
+    for (ent, mut ongoing_quests, tutorial_state, loc) in q_quests.iter_mut() {
         if *tutorial_state != TutorialState::CollectStash {
             continue;
         }
@@ -91,7 +91,8 @@ fn on_change_tutorial_state(
             AbandonStash,
         ));
 
-        ongoing_quests.start_quest(main_quest);
+        let q_id = ongoing_quests.start_quest(main_quest);
+        commands.entity(ent).insert(ActiveQuest(q_id));
     }
 }
 

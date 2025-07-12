@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 use cosmos_core::{
-    quest::{OngoingQuest, OngoingQuestDetails, OngoingQuests, Quest},
+    quest::{ActiveQuest, OngoingQuest, OngoingQuestDetails, OngoingQuests, Quest},
     registry::Registry,
     state::GameState,
 };
@@ -19,10 +19,14 @@ fn register_quest(mut quests: ResMut<Registry<Quest>>) {
 }
 
 fn on_change_tutorial_state(
-    mut q_quests: Query<(&mut OngoingQuests, &TutorialState), Or<(Changed<TutorialState>, (Added<OngoingQuests>, With<TutorialState>))>>,
+    mut q_quests: Query<
+        (Entity, &mut OngoingQuests, &TutorialState),
+        Or<(Changed<TutorialState>, (Added<OngoingQuests>, With<TutorialState>))>,
+    >,
     quests: Res<Registry<Quest>>,
+    mut commands: Commands,
 ) {
-    for (mut ongoing_quests, tutorial_state) in q_quests.iter_mut() {
+    for (ent, mut ongoing_quests, tutorial_state) in q_quests.iter_mut() {
         if *tutorial_state != TutorialState::CreateShip {
             continue;
         }
@@ -35,9 +39,8 @@ fn on_change_tutorial_state(
             continue;
         }
 
-        info!("ADDING QUEST: {quest:?}");
-
-        ongoing_quests.start_quest(OngoingQuest::new(quest, OngoingQuestDetails { ..Default::default() }, 1));
+        let q_id = ongoing_quests.start_quest(OngoingQuest::new(quest, OngoingQuestDetails { ..Default::default() }, 1));
+        commands.entity(ent).insert(ActiveQuest(q_id));
     }
 }
 

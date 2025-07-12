@@ -2,7 +2,7 @@ use bevy::prelude::*;
 use cosmos_core::{
     item::Item,
     physics::location::{Location, SECTOR_DIMENSIONS},
-    quest::{OngoingQuests, Quest, QuestBuilder},
+    quest::{ActiveQuest, OngoingQuests, Quest, QuestBuilder},
     registry::Registry,
     state::GameState,
 };
@@ -38,13 +38,14 @@ fn register_quest(mut quests: ResMut<Registry<Quest>>, items: Res<Registry<Item>
 }
 
 fn on_change_tutorial_state(
+    mut commands: Commands,
     mut q_quests: Query<
-        (&mut OngoingQuests, &TutorialState, &mut NextPirateSpawn),
+        (Entity, &mut OngoingQuests, &TutorialState, &mut NextPirateSpawn),
         Or<(Changed<TutorialState>, (Added<OngoingQuests>, With<TutorialState>))>,
     >,
     quests: Res<Registry<Quest>>,
 ) {
-    for (mut ongoing_quests, tutorial_state, mut next_pirate_spawn) in q_quests.iter_mut() {
+    for (ent, mut ongoing_quests, tutorial_state, mut next_pirate_spawn) in q_quests.iter_mut() {
         if *tutorial_state != TutorialState::Fight {
             continue;
         }
@@ -69,10 +70,12 @@ fn on_change_tutorial_state(
 
         let main_quest = QuestBuilder::new(main_quest).with_subquests([danger_area, win_fight]).build();
 
-        ongoing_quests.start_quest(main_quest);
+        let q_id = ongoing_quests.start_quest(main_quest);
 
         // This will spawn a pirate as soon as they enter a danger zone
         next_pirate_spawn.spawn_now();
+
+        commands.entity(ent).insert(ActiveQuest(q_id));
     }
 }
 

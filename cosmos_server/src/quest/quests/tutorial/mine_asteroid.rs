@@ -2,7 +2,7 @@ use bevy::prelude::*;
 use cosmos_core::{
     block::{Block, block_events::BlockBreakEvent},
     item::Item,
-    quest::{OngoingQuests, Quest, QuestBuilder},
+    quest::{ActiveQuest, OngoingQuests, Quest, QuestBuilder},
     registry::{Registry, identifiable::Identifiable},
     state::GameState,
     structure::ship::pilot::Pilot,
@@ -47,10 +47,14 @@ fn register_quest(mut quests: ResMut<Registry<Quest>>, items: Res<Registry<Item>
 }
 
 fn on_change_tutorial_state(
-    mut q_quests: Query<(&mut OngoingQuests, &TutorialState), Or<(Changed<TutorialState>, (Added<OngoingQuests>, With<TutorialState>))>>,
+    mut q_quests: Query<
+        (Entity, &mut OngoingQuests, &TutorialState),
+        Or<(Changed<TutorialState>, (Added<OngoingQuests>, With<TutorialState>))>,
+    >,
     quests: Res<Registry<Quest>>,
+    mut commands: Commands,
 ) {
-    for (mut ongoing_quests, tutorial_state) in q_quests.iter_mut() {
+    for (ent, mut ongoing_quests, tutorial_state) in q_quests.iter_mut() {
         if *tutorial_state != TutorialState::MineAsteroid {
             continue;
         }
@@ -85,7 +89,8 @@ fn on_change_tutorial_state(
             .with_subquests([copper, iron, energite, photonium])
             .build();
 
-        ongoing_quests.start_quest(main_quest);
+        let q_id = ongoing_quests.start_quest(main_quest);
+        commands.entity(ent).insert(ActiveQuest(q_id));
     }
 }
 

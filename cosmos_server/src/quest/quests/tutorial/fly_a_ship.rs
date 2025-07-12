@@ -3,7 +3,7 @@ use bevy_rapier3d::prelude::Velocity;
 use cosmos_core::{
     netty::sync::IdentifiableComponent,
     prelude::Ship,
-    quest::{OngoingQuests, Quest, QuestBuilder},
+    quest::{ActiveQuest, OngoingQuests, Quest, QuestBuilder},
     registry::Registry,
     state::GameState,
     structure::ship::{pilot::Pilot, ship_movement::ShipMovement},
@@ -80,8 +80,8 @@ fn on_change_tutorial_state(
             .with_subquests([enter_ship_quest, move_ship_quest, rotate_ship_quest])
             .build();
 
-        commands.entity(ent).insert(EnterShipQuestActive);
-        ongoing_quests.start_quest(learn_to_fly_quest);
+        let q_id = ongoing_quests.start_quest(learn_to_fly_quest);
+        commands.entity(ent).insert((ActiveQuest(q_id), EnterShipQuestActive));
     }
 }
 

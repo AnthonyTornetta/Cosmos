@@ -6,7 +6,7 @@ use bevy::{
 use cosmos_core::{
     ecs::{NeedsDespawned, sets::FixedUpdateSet},
     netty::client::LocalPlayer,
-    quest::{OngoingQuest, OngoingQuests, Quest},
+    quest::{ActiveQuest, OngoingQuest, OngoingQuests, Quest},
     registry::Registry,
     state::GameState,
 };
@@ -14,7 +14,6 @@ use cosmos_core::{
 use crate::{
     input::inputs::{CosmosInputs, InputChecker, InputHandler},
     lang::Lang,
-    quest::ActiveQuest,
     ui::{constants, font::DefaultFont},
 };
 

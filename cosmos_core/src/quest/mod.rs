@@ -137,7 +137,7 @@ impl QuestBuilder {
     }
 }
 
-#[derive(Reflect, Debug, Serialize, Deserialize, Clone, PartialEq, Copy)]
+#[derive(Reflect, Debug, Serialize, Deserialize, Clone, PartialEq, Copy, Eq, Hash)]
 /// A unique ID that can be used to find an ongoing quest that a player has
 pub struct OngoingQuestId(Uuid);
 
@@ -266,6 +266,11 @@ impl OngoingQuests {
     /// Checks if this contains any [`OngoingQuest`]s of this [`Quest`] type.
     pub fn contains(&self, quest: &Quest) -> bool {
         self.0.iter().any(|ongoing| ongoing.quest_id() == quest.id())
+    }
+
+    /// Checks if this contains any [`OngoingQuest`]s of this [`Quest`] type.
+    pub fn contains_ongoing(&self, quest: &OngoingQuestId) -> bool {
+        self.0.iter().any(|ongoing| ongoing.ongoing_id() == *quest)
     }
 
     /// Gets an ongoing quest from its id, if one exists
@@ -444,13 +449,37 @@ impl NettyEvent for CompleteQuestEvent {
     }
 }
 
+#[derive(Component, Debug, Reflect, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+/// The player will have this if they currently have this quest selected.
+///
+/// This does NOT mean they can only do this quest - rather they have this one focused on at the
+/// moment for information reasons. We should display information relevant to this quest in places
+/// that make sense.
+pub struct ActiveQuest(pub OngoingQuestId);
+
+impl IdentifiableComponent for ActiveQuest {
+    fn get_component_unlocalized_name() -> &'static str {
+        "cosmos:active_quest"
+    }
+}
+
+impl SyncableComponent for ActiveQuest {
+    fn get_sync_type() -> crate::netty::sync::SyncType {
+        crate::netty::sync::SyncType::BothAuthoritative(crate::netty::sync::ClientAuthority::Themselves)
+    }
+    fn debug() -> bool {
+        true
+    }
+}
+
 pub(super) fn register(app: &mut App) {
     create_registry::<Quest>(app, "cosmos:quest");
     sync_registry::<Quest>(app);
 
+    sync_component::<ActiveQuest>(app);
     sync_component::<OngoingQuests>(app);
 
-    app.register_type::<OngoingQuests>();
-
-    app.add_netty_event::<CompleteQuestEvent>();
+    app.register_type::<OngoingQuests>()
+        .register_type::<ActiveQuest>()
+        .add_netty_event::<CompleteQuestEvent>();
 }
