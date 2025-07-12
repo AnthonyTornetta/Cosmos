@@ -3,15 +3,18 @@ use bevy::{
     ecs::relationship::{RelatedSpawnerCommands, Relationship},
     prelude::*,
 };
+use bevy_kira_audio::{Audio, AudioControl, AudioSource};
 use cosmos_core::{
     ecs::{NeedsDespawned, sets::FixedUpdateSet},
     netty::client::LocalPlayer,
-    quest::{ActiveQuest, OngoingQuest, OngoingQuests, Quest},
+    quest::{ActiveQuest, CompleteQuestEvent, OngoingQuest, OngoingQuests, Quest},
     registry::Registry,
     state::GameState,
 };
 
 use crate::{
+    asset::asset_loader::load_assets,
+    audio::volume::MasterVolume,
     input::inputs::{CosmosInputs, InputChecker, InputHandler},
     lang::Lang,
     ui::{constants, font::DefaultFont},
@@ -53,7 +56,7 @@ fn display_active_mission(
             Node {
                 width: Val::Px(500.0),
                 right: Val::Px(0.0),
-                top: Val::Percent(10.0),
+                bottom: Val::Percent(10.0),
                 position_type: PositionType::Absolute,
                 flex_direction: FlexDirection::Column,
                 ..Default::default()
@@ -162,11 +165,106 @@ fn display_quest<R: Relationship>(
     }
 }
 
+#[derive(Component)]
+struct QuestCompleteFadeout(f32);
+
+#[derive(Component)]
+struct QuestCompleteText;
+
+const FADE_SECS: f32 = 10.0;
+
+fn on_quest_complete(
+    sound: Res<QuestCompleteSound>,
+    quests: Res<Registry<Quest>>,
+    lang: Res<Lang<Quest>>,
+    font: Res<DefaultFont>,
+    mut evr_quest_complete: EventReader<CompleteQuestEvent>,
+    mut commands: Commands,
+    audio: Res<Audio>,
+    master_volume: Res<MasterVolume>,
+) {
+    for ev in evr_quest_complete.read() {
+        let quest = ev.completed_quest();
+
+        let font_style = TextFont {
+            font_size: 48.0,
+            font: font.get(),
+            ..Default::default()
+        };
+
+        audio.play(sound.0.clone()).with_volume(master_volume.multiplier()).handle();
+
+        commands
+            .spawn((
+                QuestCompleteFadeout(FADE_SECS),
+                Name::new("Quest Complete"),
+                Node {
+                    margin: UiRect::horizontal(Val::Auto),
+                    ..Default::default()
+                },
+            ))
+            .with_children(|p| {
+                p.spawn((
+                    font_style.clone(),
+                    QuestCompleteText,
+                    Text::new(format!(
+                        "Mission Complete: {}",
+                        lang.get_name_or_unlocalized(quests.from_numeric_id(quest.quest_id()))
+                    )),
+                ));
+
+                if let Some(reward) = quest.details.payout {
+                    p.spawn((
+                        font_style,
+                        QuestCompleteText,
+                        TextColor(css::GREEN.into()),
+                        Text::new(format!("+ ${}", reward)),
+                    ));
+                }
+            });
+    }
+}
+
+fn fade_text(
+    mut commands: Commands,
+    time: Res<Time>,
+    mut q_quest_complete_fade: Query<(&mut QuestCompleteFadeout, Entity)>,
+    mut q_text: Query<&mut TextColor, With<QuestCompleteText>>,
+) {
+    let Ok((mut fadeout, ent)) = q_quest_complete_fade.single_mut() else {
+        return;
+    };
+
+    fadeout.0 -= time.delta_secs();
+
+    if fadeout.0 <= 0.0 {
+        commands.entity(ent).insert(NeedsDespawned);
+        return;
+    }
+
+    for mut text_color in q_text.iter_mut() {
+        text_color.0.set_alpha(fadeout.0 / FADE_SECS);
+    }
+}
+
+#[derive(Resource)]
+struct QuestCompleteSound(Handle<AudioSource>);
+
 pub(super) fn register(app: &mut App) {
+    load_assets::<AudioSource, QuestCompleteSound, 1>(
+        app,
+        GameState::Loading,
+        ["cosmos/sounds/sfx/quest_complete.ogg"],
+        |mut commands, [(sound, _)]| {
+            commands.insert_resource(QuestCompleteSound(sound));
+        },
+    );
+
     app.add_systems(
         FixedUpdate,
-        display_active_mission
+        (on_quest_complete, display_active_mission)
             .in_set(FixedUpdateSet::Main)
             .run_if(in_state(GameState::Playing)),
-    );
+    )
+    .add_systems(Update, fade_text);
 }

@@ -37,7 +37,7 @@ fn register_quest(mut quests: ResMut<Registry<Quest>>) {
     quests.register(Quest::new(FLY_TO_STASH.to_string(), "Fly to the abandon stash.".to_string()));
     quests.register(Quest::new(
         COLLECT_ITEMS_QUEST.to_string(),
-        "Exit your ship (R), locate the storage container and take the items from it.".to_string(),
+        "Exit your ship using <F>. You can de-align yourself with your ship by pressing <L> - you can now rotate freely. Locate the storage container and take the items from it.".to_string(),
     ));
 }
 

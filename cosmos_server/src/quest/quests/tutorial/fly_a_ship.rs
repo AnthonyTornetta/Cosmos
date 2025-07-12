@@ -20,18 +20,20 @@ use super::TutorialState;
 const MAIN_QUEST_NAME: &str = "cosmos:tutorial_fly_a_ship";
 const ENTER_SHIP_QUEST: &str = "cosmos:tutorial_enter_ship";
 const MOVE_SHIP_QUEST: &str = "cosmos:tutorial_move_ship";
+const BRAKE_SHIP_QUEST: &str = "cosmos:tutorial_brake_ship";
 const ROTATE_SHIP_QUEST: &str = "cosmos:tutorial_rotate_ship";
 
 fn register_quest(mut quests: ResMut<Registry<Quest>>) {
     quests.register(Quest::new(MAIN_QUEST_NAME.to_string(), "Learn to fly your ship.".to_string()));
     quests.register(Quest::new(ENTER_SHIP_QUEST.to_string(), "Use <R> to enter the ship.".to_string()));
-    quests.register(Quest::new(
-        MOVE_SHIP_QUEST.to_string(),
-        "Use WASDEQ to move your ship. Hold <Shift> to brake.".to_string(),
-    ));
+    quests.register(Quest::new(MOVE_SHIP_QUEST.to_string(), "Use WASDEQ to move your ship.".to_string()));
     quests.register(Quest::new(
         ROTATE_SHIP_QUEST.to_string(),
         "Use your mouse and ZC to rotate your ship.".to_string(),
+    ));
+    quests.register(Quest::new(
+        BRAKE_SHIP_QUEST.to_string(),
+        "Hold <Shift> to cause your ship to rapidly slow down.".to_string(),
     ));
 }
 
@@ -65,6 +67,9 @@ fn on_change_tutorial_state(
         let Some(rotate_ship) = quests.from_id(ROTATE_SHIP_QUEST) else {
             continue;
         };
+        let Some(brake_ship) = quests.from_id(BRAKE_SHIP_QUEST) else {
+            continue;
+        };
 
         let enter_ship_quest = QuestBuilder::new(enter_ship).build();
         let move_ship_quest = QuestBuilder::new(move_ship)
@@ -75,9 +80,10 @@ fn on_change_tutorial_state(
             .with_max_progress(10)
             .depends_on_being_done(&enter_ship_quest)
             .build();
+        let brake_ship_quest = QuestBuilder::new(brake_ship).depends_on_being_done(&enter_ship_quest).build();
 
         let learn_to_fly_quest = QuestBuilder::new(main_quest)
-            .with_subquests([enter_ship_quest, move_ship_quest, rotate_ship_quest])
+            .with_subquests([enter_ship_quest, move_ship_quest, rotate_ship_quest, brake_ship_quest])
             .build();
 
         let q_id = ongoing_quests.start_quest(learn_to_fly_quest);
@@ -183,25 +189,36 @@ fn resolve_move_quest(
             continue;
         };
 
-        if ship_movement.braking {
-            move_ship_quest_active.braked = true;
+        if ship_movement.braking && !move_ship_quest_active.braked {
+            if let Some(braking_quest) = quests.from_id(BRAKE_SHIP_QUEST) {
+                for ongoing in ongoing_quests.iter_specific_mut(quest) {
+                    if let Some(iterator) = ongoing.subquests_mut().map(|subquests| subquests.iter_specific_mut(braking_quest)) {
+                        for ongoing in iterator {
+                            ongoing.complete();
+                            move_ship_quest_active.braked = true;
+                        }
+                    }
+                }
+            }
         }
 
         let distance_travelled = ship_vel.linvel.length() * time.delta_secs();
 
+        let old_val = move_ship_quest_active.distance_travelled;
         move_ship_quest_active.distance_travelled += distance_travelled;
 
-        for ongoing in ongoing_quests.iter_specific_mut(quest) {
-            if let Some(iterator) = ongoing
-                .subquests_mut()
-                .map(|subquests| subquests.iter_specific_mut(move_ship_quest))
-            {
-                for ongoing in iterator {
-                    let max_prog = ongoing.max_progress();
-                    if ongoing.set_progress(
-                        (max_prog - 1).min(move_ship_quest_active.distance_travelled.round() as u32) + move_ship_quest_active.braked as u32,
-                    ) {
-                        commands.entity(ent).remove::<MoveShipQuestActive>();
+        // cuts down on change detection a little bit
+        if move_ship_quest_active.distance_travelled.round() != old_val.round() {
+            for ongoing in ongoing_quests.iter_specific_mut(quest) {
+                if let Some(iterator) = ongoing
+                    .subquests_mut()
+                    .map(|subquests| subquests.iter_specific_mut(move_ship_quest))
+                {
+                    for ongoing in iterator {
+                        let max_prog = ongoing.max_progress();
+                        if ongoing.set_progress(max_prog.min(move_ship_quest_active.distance_travelled.round() as u32)) {
+                            commands.entity(ent).remove::<MoveShipQuestActive>();
+                        }
                     }
                 }
             }

@@ -467,9 +467,6 @@ impl SyncableComponent for ActiveQuest {
     fn get_sync_type() -> crate::netty::sync::SyncType {
         crate::netty::sync::SyncType::BothAuthoritative(crate::netty::sync::ClientAuthority::Themselves)
     }
-    fn debug() -> bool {
-        true
-    }
 }
 
 pub(super) fn register(app: &mut App) {
