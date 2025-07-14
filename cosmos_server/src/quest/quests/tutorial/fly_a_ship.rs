@@ -94,8 +94,18 @@ fn on_change_tutorial_state(
 #[derive(Component, Serialize, Deserialize, Default, Debug, Reflect)]
 struct MoveShipQuestActive {
     distance_travelled: f32,
-    braked: bool,
 }
+
+#[derive(Component, Serialize, Deserialize, Default, Debug, Reflect)]
+struct BrakeShipQuestActive;
+
+impl IdentifiableComponent for BrakeShipQuestActive {
+    fn get_component_unlocalized_name() -> &'static str {
+        "cosmos:brake_ship_quest_active"
+    }
+}
+
+impl DefaultPersistentComponent for BrakeShipQuestActive {}
 
 impl IdentifiableComponent for MoveShipQuestActive {
     fn get_component_unlocalized_name() -> &'static str {
@@ -149,7 +159,11 @@ fn resolve_enter_ship_quest(
 
         commands
             .entity(ent)
-            .insert((MoveShipQuestActive::default(), RotateShipQuestActive::default()))
+            .insert((
+                MoveShipQuestActive::default(),
+                RotateShipQuestActive::default(),
+                BrakeShipQuestActive::default(),
+            ))
             .remove::<EnterShipQuestActive>();
 
         for ongoing in ongoing_quests.iter_specific_mut(quest) {
@@ -165,10 +179,46 @@ fn resolve_enter_ship_quest(
     }
 }
 
+fn resolve_brake_quest(
+    quests: Res<Registry<Quest>>,
+    mut commands: Commands,
+    q_ship_vel: Query<&ShipMovement, With<Ship>>,
+    mut q_on_quest_and_ready: Query<(Entity, &mut OngoingQuests, &Pilot), With<BrakeShipQuestActive>>,
+) {
+    for (ent, mut ongoing_quests, pilot) in q_on_quest_and_ready.iter_mut() {
+        let Some(quest) = quests.from_id(MAIN_QUEST_NAME) else {
+            continue;
+        };
+
+        if !ongoing_quests.contains(quest) {
+            continue;
+        }
+
+        let Some(braking_quest) = quests.from_id(BRAKE_SHIP_QUEST) else {
+            continue;
+        };
+
+        let Ok(ship_movement) = q_ship_vel.get(pilot.entity) else {
+            continue;
+        };
+
+        if ship_movement.braking {
+            for ongoing in ongoing_quests.iter_specific_mut(quest) {
+                if let Some(iterator) = ongoing.subquests_mut().map(|subquests| subquests.iter_specific_mut(braking_quest)) {
+                    for ongoing in iterator {
+                        ongoing.complete();
+                        commands.entity(ent).remove::<BrakeShipQuestActive>();
+                    }
+                }
+            }
+        }
+    }
+}
+
 fn resolve_move_quest(
     quests: Res<Registry<Quest>>,
     mut commands: Commands,
-    q_ship_vel: Query<(&Velocity, &ShipMovement), With<Ship>>,
+    q_ship_vel: Query<&Velocity, With<Ship>>,
     mut q_on_quest_and_ready: Query<(Entity, &mut OngoingQuests, &mut MoveShipQuestActive, &Pilot)>,
     time: Res<Time>,
 ) {
@@ -185,22 +235,9 @@ fn resolve_move_quest(
             continue;
         };
 
-        let Ok((ship_vel, ship_movement)) = q_ship_vel.get(pilot.entity) else {
+        let Ok(ship_vel) = q_ship_vel.get(pilot.entity) else {
             continue;
         };
-
-        if ship_movement.braking && !move_ship_quest_active.braked {
-            if let Some(braking_quest) = quests.from_id(BRAKE_SHIP_QUEST) {
-                for ongoing in ongoing_quests.iter_specific_mut(quest) {
-                    if let Some(iterator) = ongoing.subquests_mut().map(|subquests| subquests.iter_specific_mut(braking_quest)) {
-                        for ongoing in iterator {
-                            ongoing.complete();
-                            move_ship_quest_active.braked = true;
-                        }
-                    }
-                }
-            }
-        }
 
         let distance_travelled = ship_vel.linvel.length() * time.delta_secs();
 
@@ -270,6 +307,7 @@ fn resolve_rotation_quest(
 pub(super) fn register(app: &mut App) {
     make_persistent::<EnterShipQuestActive>(app);
     make_persistent::<MoveShipQuestActive>(app);
+    make_persistent::<BrakeShipQuestActive>(app);
     make_persistent::<RotateShipQuestActive>(app);
 
     super::add_tutorial(app, MAIN_QUEST_NAME);
@@ -279,7 +317,12 @@ pub(super) fn register(app: &mut App) {
             FixedUpdate,
             (
                 on_change_tutorial_state.in_set(QuestsSet::CreateNewQuests),
-                (resolve_enter_ship_quest, resolve_move_quest, resolve_rotation_quest)
+                (
+                    resolve_enter_ship_quest,
+                    resolve_move_quest,
+                    resolve_brake_quest,
+                    resolve_rotation_quest,
+                )
                     .after(on_change_tutorial_state)
                     .before(QuestsSet::CompleteQuests),
             ),
