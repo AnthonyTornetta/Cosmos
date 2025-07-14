@@ -1,3 +1,5 @@
+//! Events used by the basic fabricator
+
 use std::{cell::RefCell, rc::Rc};
 
 use bevy::prelude::*;

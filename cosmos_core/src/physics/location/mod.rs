@@ -186,9 +186,12 @@ impl Display for SystemCoordinate {
 }
 
 impl SystemCoordinate {
+    /// The [`SystemCoordinate`] at 0, 0, 0.
+    pub const ZERO: SystemCoordinate = SystemCoordinate::new(0, 0, 0);
+
     #[inline]
     /// Creates a new [`SystemCoordinate`] at the given system coordinates
-    pub fn new(x: SystemUnit, y: SystemUnit, z: SystemUnit) -> Self {
+    pub const fn new(x: SystemUnit, y: SystemUnit, z: SystemUnit) -> Self {
         Self(x, y, z)
     }
 

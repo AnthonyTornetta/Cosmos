@@ -54,6 +54,18 @@
       "quantity": [1, 1],
       "weight": 10,
       "amount_required": 1
+    },
+    {
+      "item": "cosmos:copper_bar",
+      "quantity": [200, 200],
+      "weight": 1,
+      "amount_required": 200
+    },
+    {
+      "item": "cosmos:iron_bar",
+      "quantity": [200, 200],
+      "weight": 1,
+      "amount_required": 200
     }
   ]
 }

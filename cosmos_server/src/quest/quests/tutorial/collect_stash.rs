@@ -1,7 +1,6 @@
 use bevy::prelude::*;
 use cosmos_core::{
     block::{Block, block_events::BlockBreakEvent},
-    events::block_events::BlockChangedEvent,
     netty::sync::IdentifiableComponent,
     physics::location::Location,
     prelude::Structure,
@@ -35,7 +34,7 @@ fn register_quest(mut quests: ResMut<Registry<Quest>>) {
     quests.register(Quest::new(MAIN_QUEST_NAME.to_string(), "Collect an abandon stash.".to_string()));
     quests.register(Quest::new(
         FOCUS_STRUCTURE_QUEST.to_string(),
-        "Use <F> to 'focus' a waypoint while looking at it.".to_string(),
+        "Use <F> to 'focus' a waypoint while looking at it. The stash's waypoint is light blue.".to_string(),
     ));
     quests.register(Quest::new(FLY_TO_STASH.to_string(), "Fly to the abandon stash.".to_string()));
     quests.register(Quest::new(
@@ -84,10 +83,12 @@ fn on_change_tutorial_state(
             .with_subquests([focus_quest, fly_to_stash_quest, collect_items_quest])
             .build();
 
+        const STASH_DISTANCE: f32 = 2_000.0;
+
         commands.spawn((
             NeedsBlueprintLoaded {
                 path: "default_blueprints/quests/tutorial/abandon_stash.bp".into(),
-                spawn_at: *loc + Vec3::new(20.0, 20.0, 20.0),
+                spawn_at: *loc + random_quat(&mut rng()) * Vec3::new(0.0, 0.0, STASH_DISTANCE),
                 rotation: random_quat(&mut rng()),
             },
             NeedsLootGenerated::from_loot_id("cosmos:tutorial_stash", &loot).expect("Missing tutorial_stash.json"),

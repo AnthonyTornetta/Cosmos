@@ -14,7 +14,7 @@ use crate::{
 
 use super::generation::{GenerateSystemEvent, SystemGenerationSet};
 
-const PIRATE_STATION_MIN_DANGER: SectorDanger = SectorDanger::new(-5.0);
+const PIRATE_STATION_MIN_DANGER: SectorDanger = SectorDanger::new(-1.0);
 
 fn generate_pirate_stations(
     mut evr_generate_system: EventReader<GenerateSystemEvent>,

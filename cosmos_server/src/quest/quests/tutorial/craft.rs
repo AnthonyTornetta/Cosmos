@@ -1,6 +1,12 @@
 use bevy::prelude::*;
 use cosmos_core::{
+    block::{
+        Block,
+        block_events::{BlockInteractEvent, BlockPlaceEvent},
+    },
+    ecs::mut_events::MutEvent,
     item::Item,
+    prelude::Structure,
     quest::{ActiveQuest, OngoingQuests, Quest, QuestBuilder},
     registry::{Registry, identifiable::Identifiable},
     state::GameState,
@@ -11,10 +17,10 @@ use crate::{crafting::blocks::basic_fabricator::BasicFabricatorCraftEvent, quest
 use super::TutorialState;
 
 const MAIN_QUEST_NAME: &str = "cosmos:tutorial_craft";
+const PLACE_FABRICATOR: &str = "cosmos:tutorial_place_basic_fabricator";
 const CRAFT_MISSILE_LAUNCHERS: &str = "cosmos:tutorial_craft_missile_launchers";
 const CRAFT_PASSIVE_GEN: &str = "cosmos:tutorial_craft_passive_gen";
 const CRAFT_PLASMA_DRILLS: &str = "cosmos:tutorial_craft_plasma_drills";
-const CRAFT_MISSILE: &str = "cosmos:tutorial_craft_missile";
 
 fn register_quest(mut quests: ResMut<Registry<Quest>>, items: Res<Registry<Item>>) {
     quests.register(Quest::new(
@@ -22,27 +28,33 @@ fn register_quest(mut quests: ResMut<Registry<Quest>>, items: Res<Registry<Item>
         "Mine an asteroid - use the plasma drills".to_string(),
     ));
 
+    if let Some(icon) = items.from_id("cosmos:basic_fabricator") {
+        quests.register(Quest::new_with_icon(
+            PLACE_FABRICATOR.to_string(),
+            "The Basic Fabricator allows you to fabricate many things.".to_string(),
+            icon,
+        ));
+    }
+
     if let Some(icon) = items.from_id("cosmos:plasma_drill") {
         quests.register(Quest::new_with_icon(
             CRAFT_PLASMA_DRILLS.to_string(),
-            "Craft plasma drills".to_string(),
+            "Plasma drills allow you to drill into asteroids and decaying structures".to_string(),
             icon,
         ));
     }
     if let Some(icon) = items.from_id("cosmos:missile_launcher") {
         quests.register(Quest::new_with_icon(
             CRAFT_MISSILE_LAUNCHERS.to_string(),
-            "Craft missile launchers".to_string(),
+            "A powerful, tracking explosive missile launcher. Excellent for damaging ships but very weak against shields.".to_string(),
             icon,
         ));
-    }
-    if let Some(icon) = items.from_id("cosmos:missile") {
-        quests.register(Quest::new_with_icon(CRAFT_MISSILE.to_string(), "Craft missiles".to_string(), icon));
     }
     if let Some(icon) = items.from_id("cosmos:passive_generator") {
         quests.register(Quest::new_with_icon(
             CRAFT_PASSIVE_GEN.to_string(),
-            "Craft passive generators".to_string(),
+            "Passive generators will passively generate small amounts of power over time. You need many for these to be effective."
+                .to_string(),
             icon,
         ));
     }
@@ -69,6 +81,10 @@ fn on_change_tutorial_state(
             continue;
         }
 
+        let Some(fabricator) = quests.from_id(PLACE_FABRICATOR) else {
+            continue;
+        };
+
         let Some(plasma_drills) = quests.from_id(CRAFT_PLASMA_DRILLS) else {
             continue;
         };
@@ -78,17 +94,14 @@ fn on_change_tutorial_state(
         let Some(missile_launcher) = quests.from_id(CRAFT_MISSILE_LAUNCHERS) else {
             continue;
         };
-        let Some(missile) = quests.from_id(CRAFT_MISSILE) else {
-            continue;
-        };
 
+        let fabricator = QuestBuilder::new(fabricator).build();
         let plasma_drills = QuestBuilder::new(plasma_drills).with_max_progress(100).build();
         let passive_gen = QuestBuilder::new(passive_gen).with_max_progress(20).build();
         let missile_launcher = QuestBuilder::new(missile_launcher).with_max_progress(20).build();
-        let missile = QuestBuilder::new(missile).with_max_progress(20).build();
 
         let main_quest = QuestBuilder::new(main_quest)
-            .with_subquests([plasma_drills, passive_gen, missile_launcher, missile])
+            .with_subquests([fabricator, plasma_drills, passive_gen, missile_launcher])
             .build();
 
         let q_id = ongoing_quests.start_quest(main_quest);
@@ -97,14 +110,59 @@ fn on_change_tutorial_state(
 }
 
 fn resolve_quests(
+    mut evr_placed_block: EventReader<MutEvent<BlockPlaceEvent>>,
+    mut evr_interact_event: EventReader<BlockInteractEvent>,
     quests: Res<Registry<Quest>>,
     mut q_ongoing_quests: Query<&mut OngoingQuests>,
     items: Res<Registry<Item>>,
     mut evr_craft: EventReader<BasicFabricatorCraftEvent>,
+    q_structure: Query<&Structure>,
+    blocks: Res<Registry<Block>>,
 ) {
     let Some(quest) = quests.from_id(MAIN_QUEST_NAME) else {
         return;
     };
+
+    for (player, block) in evr_placed_block
+        .read()
+        .flat_map(|ev| match *ev.read() {
+            BlockPlaceEvent::Event(e) => Some((e.placer, blocks.from_numeric_id(e.block_id))),
+            _ => None,
+        })
+        .chain(evr_interact_event.read().flat_map(|ev| {
+            let b = ev.block?;
+            let s = q_structure.get(b.structure()).ok()?;
+            Some((ev.interactor, s.block_at(b.coords(), &blocks)))
+        }))
+    {
+        let Ok(mut ongoing_quests) = q_ongoing_quests.get_mut(player) else {
+            continue;
+        };
+
+        if !ongoing_quests.contains(quest) {
+            continue;
+        }
+
+        match block.unlocalized_name() {
+            "cosmos:basic_fabricator" => {
+                let Some(ongoing) = ongoing_quests.get_quest_mut(quest) else {
+                    continue;
+                };
+
+                let Some(subquests) = ongoing.subquests_mut() else {
+                    continue;
+                };
+
+                let Some(quest) = quests.from_id(PLACE_FABRICATOR) else {
+                    continue;
+                };
+                if let Some(quest) = subquests.get_quest_mut(quest) {
+                    quest.complete();
+                }
+            }
+            _ => {}
+        }
+    }
 
     for ev in evr_craft.read() {
         let Ok(mut ongoing_quests) = q_ongoing_quests.get_mut(ev.crafter) else {
@@ -134,14 +192,6 @@ fn resolve_quests(
             }
             "cosmos:missile_launcher" => {
                 let Some(quest) = quests.from_id(CRAFT_MISSILE_LAUNCHERS) else {
-                    continue;
-                };
-                if let Some(quest) = subquests.get_quest_mut(quest) {
-                    quest.progress_quest(ev.quantity);
-                }
-            }
-            "cosmos:missile" => {
-                let Some(quest) = quests.from_id(CRAFT_MISSILE) else {
                     continue;
                 };
                 if let Some(quest) = subquests.get_quest_mut(quest) {

@@ -332,7 +332,7 @@ fn update_waypoint_text(
         .unwrap_or(format!(
             "<{} to set>",
             input_handler
-                .get_control(CosmosInputs::MoveDown)
+                .get_control(CosmosInputs::ToggleWaypoint)
                 .map(|x| x.to_string())
                 .unwrap_or("[None]".into()),
         ));

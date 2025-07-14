@@ -62,14 +62,15 @@ fn resolve_quests(
             continue;
         }
 
-        let Some(ongoing) = ongoing_quests.get_quest_mut(quest) else {
-            continue;
-        };
-
         if q_asteroid
             .iter()
             .any(|l| l.is_within_reasonable_range(loc) && l.distance_sqrd(loc) < 500.0 * 500.0)
         {
+            // Avoids change detection unless we are 100% changing it by doing this get here
+            let Some(ongoing) = ongoing_quests.get_quest_mut(quest) else {
+                continue;
+            };
+
             ongoing.complete();
         }
     }

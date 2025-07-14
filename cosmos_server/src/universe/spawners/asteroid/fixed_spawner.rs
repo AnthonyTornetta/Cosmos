@@ -68,16 +68,21 @@ fn spawn_asteroids(
         let mut rng = get_rng_for_sector(&server_seed, &star_sector);
 
         // Favors lower numbers
-        let n_asteroid_rings: usize = (1.0 + 5.0 * (1.0 - (1.0 - rng.random::<f32>()).sqrt())) as usize + 1;
+        let mut n_asteroid_rings: usize = (1.0 + 5.0 * (1.0 - (1.0 - rng.random::<f32>()).sqrt())) as usize + 1;
+        if system.coordinate() == SystemCoordinate::ZERO {
+            n_asteroid_rings = n_asteroid_rings.max(3);
+        }
 
         for _ in 0..n_asteroid_rings {
-            let ring_diameter = rng.random_range(10..=90);
+            const RING_MIN_SECTOR_RADIUS: u32 = 20;
+            const RING_MAX_SECTOR_RADIUS: u32 = 90;
+            let ring_diameter = rng.random_range(RING_MIN_SECTOR_RADIUS..=RING_MAX_SECTOR_RADIUS);
             let circum = ring_diameter as f32 * PI;
-            let n_iterations = (circum * rng.random_range(1..=6) as f32) as SectorUnit;
+            let n_asteroids_in_this_sector = (circum * rng.random_range(1..=6) as f32) as SectorUnit;
             let asteroid_axis = random_quat(&mut rng);
 
-            for i in 0..n_iterations {
-                let angle = (i as f32 * PI * 2.0) / (n_iterations as f32);
+            for i in 0..n_asteroids_in_this_sector {
+                let angle = (i as f32 * PI * 2.0) / (n_asteroids_in_this_sector as f32);
                 let coordinate = asteroid_axis * Quat::from_axis_angle(Vec3::Y, angle) * (Vec3::NEG_Z * ring_diameter as f32 / 2.0);
 
                 let sector = Sector::new(

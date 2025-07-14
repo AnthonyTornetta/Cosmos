@@ -108,9 +108,15 @@ fn add_hitters(mut commands: Commands, q_needs_hitter: Query<Entity, (With<AiCon
 }
 
 #[derive(Event)]
+/// Sent whenever a player destroys an NPC ship by causing it to melt down
+///
+/// Multiple players can be credited with destroying the same ship if they all hit it recently
 pub struct PlayerDestroyedNpcShipEvent {
+    /// The player being creidted with the destruction
     pub player: Entity,
+    /// The NPC ship that has now started to melt down
     pub ship: Entity,
+    /// The amount this player's difficulty has been increased by.
     pub difficulty_increase: f32,
 }
 

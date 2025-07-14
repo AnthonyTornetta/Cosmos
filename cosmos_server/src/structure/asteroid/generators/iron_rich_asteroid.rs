@@ -45,12 +45,12 @@ pub(super) fn register(app: &mut App) {
             },
             AsteroidBlockEntry {
                 block_id: "cosmos:energite_crystal_ore",
-                size: 0.05,
+                size: 0.2,
                 rarity: 0.3,
             },
             AsteroidBlockEntry {
                 block_id: "cosmos:photonium_crystal_ore",
-                size: 0.05,
+                size: 0.2,
                 rarity: 0.3,
             },
             AsteroidBlockEntry {

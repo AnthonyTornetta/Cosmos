@@ -25,22 +25,30 @@ fn register_quest(mut quests: ResMut<Registry<Quest>>, items: Res<Registry<Item>
     ));
 
     if let Some(iron_ore) = items.from_id("cosmos:iron_ore") {
-        quests.register(Quest::new_with_icon(MINE_IRON.to_string(), "Mine Iron".to_string(), iron_ore));
+        quests.register(Quest::new_with_icon(
+            MINE_IRON.to_string(),
+            "Iron the provides strength and structure for most ship components and hull.".to_string(),
+            iron_ore,
+        ));
     }
     if let Some(copper_ore) = items.from_id("cosmos:copper_ore") {
-        quests.register(Quest::new_with_icon(MINE_COPPER.to_string(), "Mine Copper".to_string(), copper_ore));
+        quests.register(Quest::new_with_icon(
+            MINE_COPPER.to_string(),
+            "Copper's highly conductive nature makes it essential for any electronic devices.".to_string(),
+            copper_ore,
+        ));
     }
     if let Some(energite_ore) = items.from_id("cosmos:energite_crystal_ore") {
         quests.register(Quest::new_with_icon(
             MINE_ENERGITE.to_string(),
-            "Mine Energite".to_string(),
+            "Energite's properties make it ideal for anything that creates or stores power.".to_string(),
             energite_ore,
         ));
     }
     if let Some(photonium_ore) = items.from_id("cosmos:photonium_crystal_ore") {
         quests.register(Quest::new_with_icon(
             MINE_PHOTONIUM.to_string(),
-            "Mine Photonium".to_string(),
+            "Photonium focuses light into high-density energy packets we call lasers.".to_string(),
             photonium_ore,
         ));
     }
@@ -83,7 +91,7 @@ fn on_change_tutorial_state(
         let copper = QuestBuilder::new(copper).with_max_progress(100).build();
         let iron = QuestBuilder::new(iron).with_max_progress(100).build();
         let energite = QuestBuilder::new(energite).with_max_progress(20).build();
-        let photonium = QuestBuilder::new(photonium).with_max_progress(50).build();
+        let photonium = QuestBuilder::new(photonium).with_max_progress(30).build();
 
         let main_quest = QuestBuilder::new(main_quest)
             .with_subquests([copper, iron, energite, photonium])

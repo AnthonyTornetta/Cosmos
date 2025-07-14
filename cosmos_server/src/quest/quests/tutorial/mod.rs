@@ -1,10 +1,16 @@
 use bevy::prelude::*;
 use cosmos_core::{
+    netty::sync::IdentifiableComponent,
     quest::{CompleteQuestEvent, Quest},
     registry::{Registry, identifiable::Identifiable},
 };
+use serde::{Deserialize, Serialize};
 
-use crate::{entities::player::spawn_player::CreateNewPlayerEvent, quest::QuestsSet};
+use crate::{
+    entities::player::spawn_player::CreateNewPlayerEvent,
+    persistence::make_persistent::{DefaultPersistentComponent, make_persistent},
+    quest::QuestsSet,
+};
 
 mod arm_ship;
 mod attack_pirate;
@@ -16,7 +22,7 @@ mod fly_a_ship;
 mod fly_to_asteroid;
 mod mine_asteroid;
 
-#[derive(Component, Debug, Clone, Copy, PartialEq, Eq, Reflect)]
+#[derive(Component, Debug, Clone, Copy, PartialEq, Eq, Reflect, Serialize, Deserialize)]
 enum TutorialState {
     CreateShip,
     LearnToFly,
@@ -28,6 +34,14 @@ enum TutorialState {
     ArmShip,
     Fight,
 }
+
+impl IdentifiableComponent for TutorialState {
+    fn get_component_unlocalized_name() -> &'static str {
+        "cosmos:tutorial_state"
+    }
+}
+
+impl DefaultPersistentComponent for TutorialState {}
 
 impl TutorialState {
     pub fn next_state(&self) -> Option<Self> {
@@ -150,6 +164,8 @@ fn add_tutorial(app: &mut App, quest_name: &'static str) {
 pub(super) fn register(app: &mut App) {
     app.add_systems(FixedUpdate, on_create_player.in_set(QuestsSet::CreateNewQuests))
         .register_type::<TutorialState>();
+
+    make_persistent::<TutorialState>(app);
 
     build_ship::register(app);
     create_a_ship::register(app);

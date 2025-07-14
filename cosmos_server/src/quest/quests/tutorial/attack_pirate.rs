@@ -24,7 +24,10 @@ const WIN_FIGHT_QUEST: &str = "cosmos:tutorial_fight_win";
 const MINE_SHIP_QUEST: &str = "cosmos:tutorial_mine_ship";
 
 fn register_quest(mut quests: ResMut<Registry<Quest>>, items: Res<Registry<Item>>) {
-    quests.register(Quest::new(MAIN_QUEST_NAME.to_string(), "Collect an abandon stash.".to_string()));
+    quests.register(Quest::new(
+        MAIN_QUEST_NAME.to_string(),
+        "Obliterate the stellar scallywag!".to_string(),
+    ));
     quests.register(Quest::new(
         FLY_TO_DANGER_ZONE_QUEST.to_string(),
         "Once you feel ready for combat, fly to a dangerous area. Use your map (M) to find a dangerous region.".to_string(),
@@ -98,19 +101,28 @@ fn resolve_fly_to_dangerous_area(
             continue;
         };
 
-        for ongoing in ongoing_quests.iter_specific_mut(quest) {
-            if let Some(iterator) = ongoing
-                .subquests_mut()
-                .map(|subquests| subquests.iter_specific_mut(fly_to_danger_zone).filter(|x| !x.completed()))
-            {
-                if universe
-                    .system(loc.get_system_coordinates())
-                    .map(|x| x.sector_danger(loc.relative_sector()))
-                    .unwrap_or_default()
-                    > SectorDanger::MIDDLE
-                    || q_pirates
-                        .iter()
-                        .any(|l| l.is_within_reasonable_range(loc) && l.distance_sqrd(loc) < SECTOR_DIMENSIONS * SECTOR_DIMENSIONS)
+        // Avoids change detection unless needed
+        if ongoing_quests
+            .get_quest(quest)
+            .and_then(|x| x.subquests().and_then(|x| x.get_quest(fly_to_danger_zone).map(|x| x.completed())))
+            .unwrap_or(true)
+        {
+            continue;
+        }
+
+        if universe
+            .system(loc.get_system_coordinates())
+            .map(|x| x.sector_danger(loc.relative_sector()))
+            .unwrap_or_default()
+            > SectorDanger::MIDDLE
+            || q_pirates
+                .iter()
+                .any(|l| l.is_within_reasonable_range(loc) && l.distance_sqrd(loc) < SECTOR_DIMENSIONS * SECTOR_DIMENSIONS)
+        {
+            for ongoing in ongoing_quests.iter_specific_mut(quest) {
+                if let Some(iterator) = ongoing
+                    .subquests_mut()
+                    .map(|subquests| subquests.iter_specific_mut(fly_to_danger_zone).filter(|x| !x.completed()))
                 {
                     for ongoing in iterator {
                         ongoing.complete();

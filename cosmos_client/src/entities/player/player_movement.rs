@@ -113,7 +113,7 @@ fn process_player_movement(
 
     if let Some(player_alignment) = player_alignment {
         let max_speed: f32 = if !any_open_menus && input_handler.check_pressed(CosmosInputs::Sprint) {
-            20.0
+            8.0
         } else {
             3.0
         };
@@ -247,14 +247,13 @@ fn process_player_movement(
         new_linvel = new_linvel.normalize_or_zero() * accel;
         new_linvel += velocity.linvel;
 
-        if !any_open_menus
-            && input_handler.check_pressed(CosmosInputs::SlowDown) {
-                let mut amt = new_linvel * 0.5;
-                if amt.dot(amt) > max_speed * max_speed {
-                    amt = amt.normalize() * max_speed;
-                }
-                new_linvel -= amt;
+        if !any_open_menus && input_handler.check_pressed(CosmosInputs::SlowDown) {
+            let mut amt = new_linvel * 0.5;
+            if amt.dot(amt) > max_speed * max_speed {
+                amt = amt.normalize() * max_speed;
             }
+            new_linvel -= amt;
+        }
 
         velocity.linvel = new_linvel.clamp_length_max(max_speed);
     }

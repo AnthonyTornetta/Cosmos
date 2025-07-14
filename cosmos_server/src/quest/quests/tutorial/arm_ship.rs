@@ -18,8 +18,8 @@ const PLACE_MISSILE_LAUNCHER_QUEST: &str = "cosmos:tutorial_arm_ship_missile_lau
 const PLACE_STORAGE_QUEST: &str = "cosmos:tutorial_place_storage";
 const INSERT_MISSILES_QUEST: &str = "cosmos:tutorial_insert_missiles";
 
-const N_MISSILE_LAUNCHERS: u32 = 40;
-const N_MISSILES: u32 = 40;
+const N_MISSILE_LAUNCHERS: u32 = 20;
+const N_MISSILES: u32 = 60;
 
 fn register_quest(mut quests: ResMut<Registry<Quest>>) {
     quests.register(Quest::new(
@@ -28,7 +28,7 @@ fn register_quest(mut quests: ResMut<Registry<Quest>>) {
     ));
     quests.register(Quest::new(
         PLACE_MISSILE_LAUNCHER_QUEST.to_string(),
-        format!("Place at least {N_MISSILE_LAUNCHERS} missile launchers. These can be fired at a target to deal damage to their ship. These deal more damage if placed in a line with each other.")
+        format!("Place at least {N_MISSILE_LAUNCHERS} missile launchers. These can be fired at a target to deal damage to their ship. These deal much more damage if placed in a line with each other.")
     ));
     quests.register(Quest::new(
         PLACE_STORAGE_QUEST.to_string(),

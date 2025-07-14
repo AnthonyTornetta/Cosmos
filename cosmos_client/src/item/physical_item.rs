@@ -53,7 +53,7 @@ fn render_physical_item(
 
 pub(super) fn register(app: &mut App) {
     app.add_systems(
-        Update,
+        FixedUpdate,
         render_physical_item
             .run_if(in_state(GameState::Playing))
             .in_set(MaterialsSystemSet::RequestMaterialChanges),

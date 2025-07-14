@@ -12,6 +12,7 @@ use bevy::{
 pub struct DefaultFont(pub Handle<Font>);
 
 impl DefaultFont {
+    /// Returns a weakly cloned handle to this font
     pub fn get(&self) -> Handle<Font> {
         self.0.clone_weak()
     }

@@ -228,7 +228,7 @@ impl UniverseSystem {
 
     /// Computes the danger levels for this sector
     pub fn sector_danger(&self, relative_sector: Sector) -> SectorDanger {
-        const DANGER_DISTANCE: i64 = 4;
+        const DANGER_DISTANCE: i64 = 6;
         const SS2: i64 = (SYSTEM_SECTORS / 2) as i64;
         const EDGE_DANGER_SCALING: f32 = 16.0;
 

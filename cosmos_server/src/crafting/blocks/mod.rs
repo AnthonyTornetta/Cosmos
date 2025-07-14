@@ -1,3 +1,5 @@
+//! Blocks used for crafting things
+
 use bevy::prelude::App;
 
 mod advanced_fabricator;
