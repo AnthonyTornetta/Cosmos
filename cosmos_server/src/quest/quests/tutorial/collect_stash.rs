@@ -1,9 +1,12 @@
 use bevy::prelude::*;
 use cosmos_core::{
+    block::{Block, block_events::BlockBreakEvent},
+    events::block_events::BlockChangedEvent,
     netty::sync::IdentifiableComponent,
     physics::location::Location,
+    prelude::Structure,
     quest::{ActiveQuest, OngoingQuests, Quest, QuestBuilder},
-    registry::Registry,
+    registry::{Registry, identifiable::Identifiable},
     state::GameState,
     structure::ship::pilot::{Pilot, PilotFocused},
     utils::quat_math::random_quat,
@@ -182,8 +185,46 @@ fn resolve_loot_stash_quest(
     quests: Res<Registry<Quest>>,
     mut q_ongoing_quest: Query<&mut OngoingQuests>,
     mut evr_open_storage: EventReader<OpenStorageEvent>,
-    q_abandon_stash: Query<(), With<AbandonStash>>,
+    mut evr_block_changed: EventReader<BlockBreakEvent>,
+    q_abandon_stash: Query<&Structure, With<AbandonStash>>,
+    blocks: Res<Registry<Block>>,
 ) {
+    for ev in evr_block_changed.read() {
+        let Ok(structure) = q_abandon_stash.get(ev.block.structure()) else {
+            continue;
+        };
+
+        if structure.block_at(ev.block.coords(), &blocks).unlocalized_name() != "cosmos:storage" {
+            continue;
+        }
+
+        let Some(quest) = quests.from_id(MAIN_QUEST_NAME) else {
+            continue;
+        };
+
+        let Ok(mut ongoing_quests) = q_ongoing_quest.get_mut(ev.breaker) else {
+            continue;
+        };
+
+        if !ongoing_quests.contains(quest) {
+            continue;
+        }
+
+        let Some(collect_items_quest) = quests.from_id(COLLECT_ITEMS_QUEST) else {
+            continue;
+        };
+
+        for ongoing in ongoing_quests.iter_specific_mut(quest) {
+            if let Some(iterator) = ongoing
+                .subquests_mut()
+                .map(|subquests| subquests.iter_specific_mut(collect_items_quest).filter(|x| !x.completed()))
+            {
+                for ongoing in iterator {
+                    ongoing.complete();
+                }
+            }
+        }
+    }
     for ev in evr_open_storage.read() {
         let Ok(mut ongoing_quests) = q_ongoing_quest.get_mut(ev.player_ent) else {
             continue;
