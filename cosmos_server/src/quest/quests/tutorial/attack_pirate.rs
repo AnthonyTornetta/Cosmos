@@ -5,13 +5,14 @@ use cosmos_core::{
     quest::{ActiveQuest, OngoingQuests, Quest, QuestBuilder},
     registry::Registry,
     state::GameState,
+    universe::SectorDanger,
 };
 
 use crate::{
     ai::hit_tracking::PlayerDestroyedNpcShipEvent,
     quest::QuestsSet,
     universe::{
-        SectorDanger, UniverseSystems,
+        UniverseSystems,
         spawners::pirate::{NextPirateSpawn, Pirate},
     },
 };
@@ -112,7 +113,7 @@ fn resolve_fly_to_dangerous_area(
 
         if universe
             .system(loc.get_system_coordinates())
-            .map(|x| x.sector_danger(loc.relative_sector()))
+            .map(|x| x.sector_danger(loc.sector()))
             .unwrap_or_default()
             > SectorDanger::MIDDLE
             || q_pirates

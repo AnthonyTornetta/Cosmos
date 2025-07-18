@@ -68,6 +68,10 @@ fn send_map(
             continue;
         };
 
+        for (sector, danger) in system.iter_sector_danger() {
+            system_map.set_danger(sector, danger);
+        }
+
         for item in system.iter() {
             let sector = item.location.relative_sector();
             match &item.item {

@@ -7,6 +7,7 @@ use cosmos_core::{
     entities::player::Player,
     physics::location::{Location, SECTOR_DIMENSIONS, Sector, SectorUnit},
     state::GameState,
+    universe::SectorDangerRange,
     utils::{quat_math::QuatMath, random::random_range},
 };
 
@@ -14,7 +15,7 @@ use crate::{
     entities::player::strength::{PlayerStrength, TotalTimePlayed},
     persistence::loading::{LoadingBlueprintSystemSet, NeedsBlueprintLoaded},
     settings::ServerSettings,
-    universe::{SectorDanger, UniverseSystems},
+    universe::UniverseSystems,
 };
 
 /// TODO: Load this from config
@@ -113,19 +114,32 @@ fn spawn_pirates(
     for (player_ent, player_loc, mut player_next_pirate_spawn, total_time_played, player_strength) in q_players.iter_mut() {
         let danger = universe
             .system(player_loc.get_system_coordinates())
-            .map(|x| x.sector_danger(player_loc.relative_sector()))
+            .map(|x| x.sector_danger(player_loc.sector()))
             .unwrap_or_default();
 
-        if danger <= SectorDanger::MIDDLE {
-            const PIRATE_SPAWN_DELAY_AMOUNT: f64 = 0.1;
-            player_next_pirate_spawn.current_spawn_time += time.delta_secs_f64() * PIRATE_SPAWN_DELAY_AMOUNT;
-            player_next_pirate_spawn.current_spawn_time = player_next_pirate_spawn
-                .current_spawn_time
-                .min(player_next_pirate_spawn.max_spawn_time);
+        let danger_range = danger.sector_danger_range();
+
+        if danger_range <= SectorDangerRange::Neutral {
+            if danger_range < SectorDangerRange::Neutral {
+                let pirate_delay_amount = 0.1;
+
+                // pushes back pirate spawn time while in more peaceful areas.
+                player_next_pirate_spawn.current_spawn_time += time.delta_secs_f64() * pirate_delay_amount;
+                player_next_pirate_spawn.current_spawn_time = player_next_pirate_spawn
+                    .current_spawn_time
+                    .min(player_next_pirate_spawn.max_spawn_time);
+            }
+
             continue;
         }
 
-        player_next_pirate_spawn.current_spawn_time -= time.delta_secs_f64();
+        let time_multiplier = if danger_range == SectorDangerRange::VeryDangerous {
+            3.0
+        } else {
+            1.0
+        };
+
+        player_next_pirate_spawn.current_spawn_time -= time.delta_secs_f64() * time_multiplier;
 
         if let Some(sec) = player_groups
             .keys()

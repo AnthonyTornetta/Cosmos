@@ -188,6 +188,8 @@ impl Display for SystemCoordinate {
 impl SystemCoordinate {
     /// The [`SystemCoordinate`] at 0, 0, 0.
     pub const ZERO: SystemCoordinate = SystemCoordinate::new(0, 0, 0);
+    /// The [`SystemCoordinate`] at 1, 1, 1.
+    pub const ONE: SystemCoordinate = SystemCoordinate::new(1, 1, 1);
 
     #[inline]
     /// Creates a new [`SystemCoordinate`] at the given system coordinates

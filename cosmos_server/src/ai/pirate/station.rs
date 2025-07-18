@@ -82,11 +82,7 @@ fn spawn_pirates_for_station(
                     continue;
                 };
 
-                let danger = sys
-                    .sector_danger(loc.sector() - sys_coord.negative_most_sector())
-                    .bounded()
-                    .max(0.2)
-                    * (MAX_PIRATE_DIFFICULTY + 1) as f32;
+                let danger = sys.compute_sector_danger(loc.sector()).bounded().max(0.2) * (MAX_PIRATE_DIFFICULTY + 1) as f32;
                 let difficulty = (danger.round() as u32).max(1) - 1;
 
                 let spawn_offset = Vec3::new(

@@ -2,14 +2,17 @@
 //!
 //! These should probably be separated in the future, but oh well.
 
-use bevy::prelude::{App, Event};
+use bevy::{
+    platform::collections::HashMap,
+    prelude::{App, Event},
+};
 use serde::{Deserialize, Serialize};
 
 use crate::{
     faction::FactionRelation,
     netty::sync::events::netty_event::{IdentifiableEvent, NettyEvent, SyncedEventImpl},
     physics::location::{Location, Sector, SystemCoordinate},
-    universe::star::Star,
+    universe::{SectorDanger, star::Star},
 };
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
@@ -90,6 +93,7 @@ pub struct SystemMap {
     /// The coordinate this system is at
     pub system: SystemCoordinate,
     destinations: Vec<(Sector, Destination)>,
+    danger: HashMap<Sector, SectorDanger>,
 }
 
 impl SystemMap {
@@ -98,6 +102,7 @@ impl SystemMap {
         Self {
             system,
             destinations: Default::default(),
+            danger: Default::default(),
         }
     }
 
@@ -113,6 +118,20 @@ impl SystemMap {
     pub fn destinations(&self) -> impl Iterator<Item = &'_ (Sector, Destination)> + '_ {
         self.destinations.iter()
     }
+
+    /// Sets the danger at these coordinates to this value
+    pub fn set_danger(&mut self, sector: Sector, danger: SectorDanger) {
+        if danger != SectorDanger::default() {
+            self.danger.insert(sector, danger);
+        } else {
+            self.danger.remove(&sector);
+        }
+    }
+
+    /// Gets the danger at these coordinates
+    pub fn sector_danger(&self, sector: Sector) -> SectorDanger {
+        self.danger.get(&sector).copied().unwrap_or_default()
+    }
 }
 
 #[derive(Default, Serialize, Deserialize, Debug, Clone)]
@@ -122,6 +141,7 @@ impl SystemMap {
 /// should generally only contain massive things, such as stars.
 pub struct GalaxyMap {
     destinations: Vec<(Sector, Destination)>,
+    danger: HashMap<Sector, SectorDanger>,
 }
 
 impl GalaxyMap {
@@ -135,9 +155,24 @@ impl GalaxyMap {
         self.destinations.push((sector, destination));
     }
 
+    /// Sets the danger at these sector coordinates
+    pub fn set_danger(&mut self, sector: Sector, danger: SectorDanger) {
+        // saves a decent amount of space since most sectors are default danger
+        if danger != SectorDanger::default() {
+            self.danger.insert(sector, danger);
+        } else {
+            self.danger.remove(&sector);
+        }
+    }
+
     /// Iterates over all the destinations in this map
     pub fn destinations(&self) -> impl Iterator<Item = &'_ (Sector, Destination)> + '_ {
         self.destinations.iter()
+    }
+
+    /// Returns the danger value at this sector
+    pub fn danger_at(&self, sector: Sector) -> SectorDanger {
+        self.danger.get(&sector).copied().unwrap_or_default()
     }
 }
 
