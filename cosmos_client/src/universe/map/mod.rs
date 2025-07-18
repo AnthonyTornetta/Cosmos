@@ -222,8 +222,8 @@ fn toggle_map(
                     big_text.clone(),
                 ));
                 p.spawn((
-                    Name::new("Danger Text"),
-                    DangerText,
+                    Name::new("Waypoint text"),
+                    WaypointText,
                     Node {
                         align_self: AlignSelf::Center,
                         ..Default::default()
@@ -232,8 +232,8 @@ fn toggle_map(
                     small_text.clone(),
                 ));
                 p.spawn((
-                    Name::new("Waypoint text"),
-                    WaypointText,
+                    Name::new("Danger Text"),
+                    DangerText,
                     Node {
                         align_self: AlignSelf::Center,
                         ..Default::default()
