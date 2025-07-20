@@ -1,6 +1,6 @@
 //! Contains server-side logic for the universe & how it's generated
 
-use bevy::{platform::collections::HashMap, prelude::*, time::common_conditions::on_timer};
+use bevy::{platform::collections::HashMap, prelude::*};
 use cosmos_core::{
     faction::FactionId,
     physics::location::{Location, SYSTEM_SECTORS, Sector, SystemCoordinate},
@@ -8,7 +8,7 @@ use cosmos_core::{
     universe::{SectorDanger, star::Star},
 };
 use serde::{Deserialize, Serialize};
-use std::{collections::HashSet, time::Duration};
+use std::collections::HashSet;
 
 pub mod galaxy_generation;
 pub mod generators;
@@ -410,15 +410,9 @@ impl UniverseSystem {
     }
 }
 
-fn dbg_u_sys(us: Res<UniverseSystems>) {
-    println!("{us:?}");
-}
-
 pub(super) fn register(app: &mut App) {
     map::register(app);
     spawners::register(app);
     generators::register(app);
     galaxy_generation::register(app);
-
-    app.add_systems(Update, dbg_u_sys.run_if(on_timer(Duration::from_mins(1))));
 }

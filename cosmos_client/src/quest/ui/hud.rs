@@ -231,19 +231,17 @@ fn fade_text(
     mut q_quest_complete_fade: Query<(&mut QuestCompleteFadeout, Entity)>,
     mut q_text: Query<&mut TextColor, With<QuestCompleteText>>,
 ) {
-    let Ok((mut fadeout, ent)) = q_quest_complete_fade.single_mut() else {
-        return;
-    };
+    for (mut fadeout, ent) in q_quest_complete_fade.iter_mut() {
+        fadeout.0 -= time.delta_secs();
 
-    fadeout.0 -= time.delta_secs();
+        if fadeout.0 <= 0.0 {
+            commands.entity(ent).insert(NeedsDespawned);
+            return;
+        }
 
-    if fadeout.0 <= 0.0 {
-        commands.entity(ent).insert(NeedsDespawned);
-        return;
-    }
-
-    for mut text_color in q_text.iter_mut() {
-        text_color.0.set_alpha(fadeout.0 / FADE_SECS);
+        for mut text_color in q_text.iter_mut() {
+            text_color.0.set_alpha(fadeout.0 / FADE_SECS);
+        }
     }
 }
 

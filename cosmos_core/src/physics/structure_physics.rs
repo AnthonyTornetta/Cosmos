@@ -462,6 +462,7 @@ fn read_physics_task(
         return;
     };
 
+    info!("Processing result!");
     commands.remove_resource::<GeneratingChunkCollidersTask>();
 
     // Create new colliders
@@ -552,6 +553,8 @@ fn read_physics_task(
             }
         }
     }
+
+    info!("{:?}", new_physics_entities);
 
     for (pair, structure_entity) in new_physics_entities {
         let Ok(mut chunk_phys_parts) = physics_components_query.get_mut(structure_entity) else {
@@ -659,7 +662,9 @@ fn listen_for_new_physics_event(
         let blocks = blocks.registry();
         let colliders = colliders.registry();
 
-        moved_todo
+        info!("Starting Generation Task!");
+
+        let result = moved_todo
             .into_par_iter()
             .map(
                 |(chunk_entity, structure_entity, chunk, (neg_x, pos_x, neg_y, pos_y, neg_z, pos_z))| {
@@ -679,7 +684,11 @@ fn listen_for_new_physics_event(
                     }
                 },
             )
-            .collect::<Vec<_>>()
+            .collect::<Vec<_>>();
+
+        info!("Finished Generation Task!");
+
+        result
     });
 
     commands.insert_resource(GeneratingChunkCollidersTask(task));
@@ -711,6 +720,7 @@ fn remove_chunk_colliders(
         }
 
         if let Ok(mut x) = commands.get_entity(chunk_part_entity.collider_entity) {
+            info!("DESPAWNING UNUSED STUFF FOR STRUCTURE {structure_entity:?}!");
             x.despawn();
 
             false
@@ -748,6 +758,7 @@ fn listen_for_structure_event(
     }
 
     for event in to_do {
+        info!("{event:?}");
         event_writer.write(event);
     }
 }

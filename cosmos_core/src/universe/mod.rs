@@ -29,7 +29,7 @@ pub enum SectorDangerRange {
 }
 
 impl SectorDanger {
-    /// The midpoint between minimum danger and maximum danger
+    /// The midpoint between minimum danger and maximum danger. The neutral point.
     pub const MIDDLE: Self = Self { danger: 0 };
 
     /// Creates a new danger value bounded between [`SectorDanger::MIN_DANGER`] and
