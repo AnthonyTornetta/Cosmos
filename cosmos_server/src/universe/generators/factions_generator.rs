@@ -61,7 +61,7 @@ fn generate_factions(
                 let fo = system
                     .iter()
                     .filter(|maybe_asteroid| matches!(maybe_asteroid.item, SystemItem::Asteroid(_)))
-                    .map(|asteroid| asteroid.relative_sector(ev.system))
+                    .map(|asteroid| asteroid.location.sector)
                     .choose(&mut rng)
                     .unwrap_or_else(|| {
                         Sector::new(
