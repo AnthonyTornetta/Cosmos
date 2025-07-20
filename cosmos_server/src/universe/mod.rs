@@ -7,6 +7,7 @@ use cosmos_core::{
     prelude::Planet,
     universe::{SectorDanger, star::Star},
 };
+use rayon::iter::{IntoParallelIterator, ParallelIterator};
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 
@@ -254,9 +255,15 @@ impl UniverseSystem {
 
         info!("Need to process {} sectors.", todo.len());
 
-        for sector in todo {
-            self.set_sector_danger(sector, self.compute_sector_danger(sector));
+        let dangers = todo.into_par_iter().map(|x| (x, self.compute_sector_danger(x))).collect::<Vec<_>>();
+
+        info!("Done computing danger - applying danger.");
+
+        for (sector, danger) in dangers {
+            self.set_sector_danger(sector, danger);
         }
+
+        info!("Done applying danger.");
     }
 
     /// Computes the danger levels for this sector
