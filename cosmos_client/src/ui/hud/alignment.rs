@@ -1,6 +1,5 @@
 use bevy::prelude::*;
 use cosmos_core::{
-    block::specific_blocks::gravity_well::GravityWell,
     netty::client::LocalPlayer,
     prelude::{Asteroid, Planet, Ship, Station},
     state::GameState,
@@ -10,27 +9,35 @@ use cosmos_core::{
 use crate::{structure::planet::align_player::PlayerAlignment, ui::font::DefaultFont};
 
 #[derive(Component)]
+struct AlignmentHudText;
+
+#[derive(Component)]
 struct AlignmentHud;
 
 fn create_alignment_hud(mut commands: Commands, font: Res<DefaultFont>) {
     commands
         .spawn((
             AlignmentHud,
+            Name::new("Alignment Hud Display"),
             Node {
                 position_type: PositionType::Absolute,
                 top: Val::Percent(5.0),
                 left: Val::Percent(5.0),
                 display: Display::None,
-                ..Default::default()
-            },
-            Text::new(""),
-            TextFont {
-                font: font.get(),
-                font_size: 24.0,
+                flex_direction: FlexDirection::Column,
                 ..Default::default()
             },
         ))
         .with_children(|p| {
+            p.spawn((
+                AlignmentHudText,
+                Text::new(""),
+                TextFont {
+                    font: font.get(),
+                    font_size: 24.0,
+                    ..Default::default()
+                },
+            ));
             p.spawn((
                 TextFont {
                     font: font.get(),
@@ -43,21 +50,27 @@ fn create_alignment_hud(mut commands: Commands, font: Res<DefaultFont>) {
 }
 
 fn update_text_to_alignment(
-    q_player: Query<
-        (Option<&PlayerAlignment>, Option<&GravityWell>, Has<Pilot>),
-        (With<LocalPlayer>, Or<(Changed<PlayerAlignment>, Changed<Pilot>)>),
-    >,
-    mut q_text: Query<(&mut Text, &mut Node), With<AlignmentHud>>,
+    mut removed_player_alignment: RemovedComponents<PlayerAlignment>,
+    q_local_player: Query<(), With<LocalPlayer>>,
+    q_player: Query<(Option<&PlayerAlignment>, Has<Pilot>), (With<LocalPlayer>, Or<(Changed<PlayerAlignment>, Changed<Pilot>)>)>,
+    mut q_hud_node: Query<&mut Node, With<AlignmentHud>>,
+    mut q_text: Query<&mut Text, With<AlignmentHudText>>,
     q_planet: Query<(), With<Planet>>,
     q_station: Query<(), With<Station>>,
     q_ship: Query<&Ship>,
     q_asteroid: Query<(), With<Asteroid>>,
 ) {
-    let Ok((alignment, grav_well, pilot)) = q_player.single() else {
+    if removed_player_alignment.read().any(|x| q_local_player.contains(x)) {
+        if let Ok(mut node) = q_hud_node.single_mut() {
+            node.display = Display::None;
+        }
+    }
+
+    let Ok((alignment, pilot)) = q_player.single() else {
         return;
     };
 
-    let Ok((mut txt, mut node)) = q_text.single_mut() else {
+    let Ok(mut node) = q_hud_node.single_mut() else {
         return;
     };
 
@@ -83,6 +96,10 @@ fn update_text_to_alignment(
         }
         return;
     }
+
+    let Ok(mut txt) = q_text.single_mut() else {
+        return;
+    };
 
     if let Ok(_) = q_ship.get(aligned_to) {
         if node.display != Display::Flex {

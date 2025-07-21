@@ -49,10 +49,8 @@ use bevy_mod_debugdump::schedule_graph;
 use bevy_obj::ObjPlugin;
 
 use bevy_rapier3d::plugin::{RapierContextInitialization, RapierPhysicsPlugin, TimestepMode};
-use bevy_rapier3d::render::RapierDebugRenderPlugin;
-use bevy_renet::steam::SteamClientPlugin;
-// use bevy_rapier3d::render::RapierDebugRenderPlugin;
 use bevy_renet::RenetClientPlugin;
+use bevy_renet::steam::SteamClientPlugin;
 use bevy_transform_interpolation::prelude::TransformInterpolationPlugin;
 use clap::{Parser, arg};
 use cosmos_core::netty::sync::registry::RegistrySyncInit;
@@ -160,7 +158,7 @@ fn main() {
         ))
         // If you enable rapier debug, make sure to disable order independent transparency
         // on camera.
-        .add_plugins(RapierDebugRenderPlugin::default())
+        // .add_plugins(RapierDebugRenderPlugin::default())
         .add_systems(OnEnter(GameState::Connecting), connect::establish_connection)
         .add_systems(Update, connect::wait_for_connection.run_if(in_state(GameState::Connecting)));
 
