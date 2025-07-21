@@ -23,7 +23,7 @@ use bevy::tasks::{AsyncComputeTaskPool, Task};
 use bevy_rapier3d::geometry::{CollisionGroups, Group};
 use bevy_rapier3d::math::Vect;
 use bevy_rapier3d::plugin::RapierContextEntityLink;
-use bevy_rapier3d::prelude::{Collider, ColliderMassProperties, ReadMassProperties, RigidBody, Rot, Sensor};
+use bevy_rapier3d::prelude::{Collider, ColliderMassProperties, ReadMassProperties, Rot, Sensor};
 use rayon::prelude::{IntoParallelIterator, ParallelIterator};
 
 use super::block_colliders::{BlockCollider, BlockColliderMode, BlockColliderType, ConnectedCollider, CustomCollider};
@@ -457,7 +457,6 @@ fn read_physics_task(
     q_entity_link: Query<&RapierContextEntityLink>,
     transform_query: Query<&Transform>,
     mut physics_components_query: Query<&mut ChunkPhysicsParts>,
-    mut q_rb: Query<&mut RigidBody>,
 ) {
     let Some(processed_chunk_colliders) = future::block_on(future::poll_once(&mut task.0)) else {
         return;
@@ -478,15 +477,6 @@ fn read_physics_task(
         } = processed;
 
         remove_chunk_colliders(&mut commands, &mut physics_components_query, structure_entity, chunk_entity);
-
-        if let Ok(mut rb) = q_rb.get_mut(structure_entity) {
-            // This trigger's bevy's change detection, so rapier knows to update this rigidbody.
-            // Sometimes rapier is stupid and doesn't do it properly for changing colliders. Idk
-            // why :(
-            let _ = &mut rb;
-        } else {
-            error!("RB NOT FOUND!");
-        }
 
         let mut first = true;
 
@@ -587,7 +577,7 @@ fn listen_for_new_physics_event(
     mut todo: ResMut<ChunksToGenerateColliders>,
     generating: Option<Res<GeneratingChunkCollidersTask>>,
 ) {
-    if event_reader.is_empty() {
+    if event_reader.is_empty() && todo.is_empty() {
         return;
     }
 
