@@ -23,7 +23,7 @@ use bevy::tasks::{AsyncComputeTaskPool, Task};
 use bevy_rapier3d::geometry::{CollisionGroups, Group};
 use bevy_rapier3d::math::Vect;
 use bevy_rapier3d::plugin::RapierContextEntityLink;
-use bevy_rapier3d::prelude::{Collider, ColliderMassProperties, ReadMassProperties, Rot, Sensor};
+use bevy_rapier3d::prelude::{Collider, ColliderMassProperties, ReadMassProperties, RigidBody, Rot, Sensor};
 use rayon::prelude::{IntoParallelIterator, ParallelIterator};
 
 use super::block_colliders::{BlockCollider, BlockColliderMode, BlockColliderType, ConnectedCollider, CustomCollider};
@@ -457,12 +457,12 @@ fn read_physics_task(
     q_entity_link: Query<&RapierContextEntityLink>,
     transform_query: Query<&Transform>,
     mut physics_components_query: Query<&mut ChunkPhysicsParts>,
+    mut q_rb: Query<&mut RigidBody>,
 ) {
     let Some(processed_chunk_colliders) = future::block_on(future::poll_once(&mut task.0)) else {
         return;
     };
 
-    info!("Processing result!");
     commands.remove_resource::<GeneratingChunkCollidersTask>();
 
     // Create new colliders
@@ -476,7 +476,17 @@ fn read_physics_task(
             structure_entity,
             colliders,
         } = processed;
+
         remove_chunk_colliders(&mut commands, &mut physics_components_query, structure_entity, chunk_entity);
+
+        if let Ok(mut rb) = q_rb.get_mut(structure_entity) {
+            // This trigger's bevy's change detection, so rapier knows to update this rigidbody.
+            // Sometimes rapier is stupid and doesn't do it properly for changing colliders. Idk
+            // why :(
+            let _ = &mut rb;
+        } else {
+            error!("RB NOT FOUND!");
+        }
 
         let mut first = true;
 
@@ -553,8 +563,6 @@ fn read_physics_task(
             }
         }
     }
-
-    info!("{:?}", new_physics_entities);
 
     for (pair, structure_entity) in new_physics_entities {
         let Ok(mut chunk_phys_parts) = physics_components_query.get_mut(structure_entity) else {
@@ -662,8 +670,6 @@ fn listen_for_new_physics_event(
         let blocks = blocks.registry();
         let colliders = colliders.registry();
 
-        info!("Starting Generation Task!");
-
         let result = moved_todo
             .into_par_iter()
             .map(
@@ -685,8 +691,6 @@ fn listen_for_new_physics_event(
                 },
             )
             .collect::<Vec<_>>();
-
-        info!("Finished Generation Task!");
 
         result
     });
@@ -720,7 +724,6 @@ fn remove_chunk_colliders(
         }
 
         if let Ok(mut x) = commands.get_entity(chunk_part_entity.collider_entity) {
-            info!("DESPAWNING UNUSED STUFF FOR STRUCTURE {structure_entity:?}!");
             x.despawn();
 
             false
@@ -758,7 +761,6 @@ fn listen_for_structure_event(
     }
 
     for event in to_do {
-        info!("{event:?}");
         event_writer.write(event);
     }
 }
