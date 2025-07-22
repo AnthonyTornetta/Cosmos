@@ -6,7 +6,11 @@ use cosmos_core::{
     structure::ship::pilot::Pilot,
 };
 
-use crate::{structure::planet::align_player::PlayerAlignment, ui::font::DefaultFont};
+use crate::{
+    input::inputs::{CosmosInputs, InputChecker, InputHandler},
+    structure::planet::align_player::PlayerAlignment,
+    ui::font::DefaultFont,
+};
 
 #[derive(Component)]
 struct AlignmentHudText;
@@ -14,7 +18,7 @@ struct AlignmentHudText;
 #[derive(Component)]
 struct AlignmentHud;
 
-fn create_alignment_hud(mut commands: Commands, font: Res<DefaultFont>) {
+fn create_alignment_hud(mut commands: Commands, font: Res<DefaultFont>, inputs: InputChecker) {
     commands
         .spawn((
             AlignmentHud,
@@ -44,7 +48,13 @@ fn create_alignment_hud(mut commands: Commands, font: Res<DefaultFont>) {
                     font_size: 16.0,
                     ..Default::default()
                 },
-                Text::new("Press <L> to de-align yourself."),
+                Text::new(format!(
+                    "Press `{}` to de-align yourself.",
+                    inputs
+                        .get_control(CosmosInputs::LeaveShip)
+                        .map(|x| x.to_string())
+                        .unwrap_or("<unbound>".to_string())
+                )),
             ));
         });
 }
