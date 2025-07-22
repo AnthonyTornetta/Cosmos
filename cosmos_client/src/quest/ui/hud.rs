@@ -34,9 +34,10 @@ fn display_active_mission(
     inputs: InputChecker,
 ) {
     if (removed_active_quest.read().next().is_some() || !q_changed_active_quest.is_empty())
-        && let Ok(ent) = q_display.single() {
-            commands.entity(ent).insert(NeedsDespawned);
-        }
+        && let Ok(ent) = q_display.single()
+    {
+        commands.entity(ent).insert(NeedsDespawned);
+    }
 
     let Ok((ongoing_quests, active_quest)) = q_changed_active_quest.single() else {
         return;

@@ -128,10 +128,11 @@ fn resolve_quests(
 
         if items.from_numeric_id(ev.item.item_id).unlocalized_name() == "cosmos:missile"
             && let Ok(bd) = q_block_data.get(ev.inventory_entity)
-                && let Ok(structure) = q_structure.get(bd.identifier.block.structure())
-                    && structure.block_at(bd.identifier.block.coords(), &blocks).unlocalized_name() == "cosmos:storage" {
-                        advance_subquest(&quests, &mut ongoing_quests, INSERT_MISSILES_QUEST, ev.item.amount as u32);
-                    }
+            && let Ok(structure) = q_structure.get(bd.identifier.block.structure())
+            && structure.block_at(bd.identifier.block.coords(), &blocks).unlocalized_name() == "cosmos:storage"
+        {
+            advance_subquest(&quests, &mut ongoing_quests, INSERT_MISSILES_QUEST, ev.item.amount as u32);
+        }
     }
 }
 
