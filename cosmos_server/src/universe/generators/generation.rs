@@ -31,6 +31,8 @@ pub enum SystemGenerationSet {
     Shop,
     /// Adds pirate stations to the system
     PirateStation,
+    /// Comptues the danger values for the system
+    ComputeDanger,
 }
 
 #[derive(Event, Debug)]
@@ -102,18 +104,27 @@ fn load_universe_systems_near_players(
     }
 
     for &system_coordinate in &sectors_todo {
-        universe_systems.systems.insert(
-            system_coordinate,
-            UniverseSystem {
-                coordinate: system_coordinate,
-                generated_flags: Default::default(),
-                generated_items: Default::default(),
-            },
-        );
+        universe_systems
+            .systems
+            .insert(system_coordinate, UniverseSystem::new(system_coordinate));
     }
 
     info!("Triggering system generation for {sectors_todo:?}");
     evw_generate_system.write_batch(sectors_todo.into_iter().map(|system| GenerateSystemEvent { system }));
+}
+
+fn recompute_sector_danger(mut evr_generate_system: EventReader<GenerateSystemEvent>, mut systems: ResMut<UniverseSystems>) {
+    for ev in evr_generate_system.read() {
+        let Some(system) = systems.system_mut(ev.system) else {
+            continue;
+        };
+
+        info!("Computing system {}'s danger...", system.coordinate);
+
+        system.recompute_all_danger();
+
+        info!("Done computing system {}'s danger.", system.coordinate);
+    }
 }
 
 pub(super) fn register(app: &mut App) {
@@ -127,6 +138,7 @@ pub(super) fn register(app: &mut App) {
             SystemGenerationSet::FactionStations,
             SystemGenerationSet::Shop,
             SystemGenerationSet::PirateStation,
+            SystemGenerationSet::ComputeDanger,
         )
             .in_set(NetworkingSystemsSet::Between)
             .before(LoadingBlueprintSystemSet::BeginLoadingBlueprints)
@@ -141,6 +153,12 @@ pub(super) fn register(app: &mut App) {
         )
             .run_if(in_state(GameState::Playing))
             .in_set(SystemGenerationSet::SendEvents),
+    )
+    .add_systems(
+        FixedUpdate,
+        recompute_sector_danger
+            .in_set(SystemGenerationSet::ComputeDanger)
+            .run_if(in_state(GameState::Playing)),
     )
     .init_resource::<UniverseSystems>()
     .add_event::<GenerateSystemEvent>();

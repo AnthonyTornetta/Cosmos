@@ -61,7 +61,7 @@ fn generate_factions(
                 let fo = system
                     .iter()
                     .filter(|maybe_asteroid| matches!(maybe_asteroid.item, SystemItem::Asteroid(_)))
-                    .map(|asteroid| asteroid.relative_sector(ev.system))
+                    .map(|asteroid| asteroid.location.sector)
                     .choose(&mut rng)
                     .unwrap_or_else(|| {
                         Sector::new(
@@ -72,7 +72,7 @@ fn generate_factions(
                     })
                     + ev.system.negative_most_sector();
 
-                if !done_zones.iter().map(|&x| (x - fo)).any(|x: Sector| x.abs().min_element() <= 5) {
+                if !done_zones.iter().map(|&x| x - fo).any(|x: Sector| x.abs().min_element() <= 5) {
                     faction_origin = Some(fo);
                     break;
                 }
@@ -156,6 +156,8 @@ fn generate_factions(
 
                 shop_done = true;
             }
+
+            info!("Done creating factions.");
         }
     }
 }

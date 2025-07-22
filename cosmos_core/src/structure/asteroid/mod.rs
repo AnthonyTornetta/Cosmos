@@ -11,9 +11,9 @@ pub mod asteroid_netty;
 pub mod loading;
 
 /// How far away an asteroid should be loaded
-pub const ASTEROID_LOAD_RADIUS: u32 = 2;
+pub const ASTEROID_LOAD_RADIUS: u32 = 1;
 /// How far away an asteroid should be unloaded
-pub const ASTEROID_UNLOAD_RADIUS: u32 = 3;
+pub const ASTEROID_UNLOAD_RADIUS: u32 = 2;
 
 #[derive(Debug, Component, Reflect)]
 /// A small structure that is non-controllable

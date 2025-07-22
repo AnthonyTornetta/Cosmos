@@ -5,7 +5,6 @@ use cosmos_core::{
     ecs::sets::FixedUpdateSet,
     inventory::Inventory,
     item::physical_item::PhysicalItem,
-    persistence::LoadingDistance,
     physics::location::Location,
     prelude::{Structure, StructureBlock},
     structure::block_health::events::BlockDestroyedEvent,
@@ -38,7 +37,6 @@ fn process_event(
             .spawn((
                 PhysicalItem,
                 item_spawn,
-                LoadingDistance::new(1, 2),
                 Transform::from_rotation(structure_rot),
                 Velocity {
                     linvel: item_vel

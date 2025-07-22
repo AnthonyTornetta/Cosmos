@@ -7,6 +7,7 @@ use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 use crate::{
+    item::Item,
     netty::sync::{
         IdentifiableComponent, SyncableComponent,
         events::netty_event::{IdentifiableEvent, NettyEvent, SyncedEventImpl},
@@ -136,7 +137,7 @@ impl QuestBuilder {
     }
 }
 
-#[derive(Reflect, Debug, Serialize, Deserialize, Clone, PartialEq, Copy)]
+#[derive(Reflect, Debug, Serialize, Deserialize, Clone, PartialEq, Copy, Eq, Hash)]
 /// A unique ID that can be used to find an ongoing quest that a player has
 pub struct OngoingQuestId(Uuid);
 
@@ -184,6 +185,12 @@ impl OngoingQuest {
     /// Returns the maximum progress this quest can have
     pub fn max_progress(&self) -> u32 {
         self.max_progress
+    }
+
+    /// Returns how much progress has been made on this quest so far. Will always be <=
+    /// [`Self::max_progress`]
+    pub fn progress(&self) -> u32 {
+        self.progress
     }
 
     /// Adds a subquest to this ongoing quest. This quest can only be marked as complete if all
@@ -261,6 +268,11 @@ impl OngoingQuests {
         self.0.iter().any(|ongoing| ongoing.quest_id() == quest.id())
     }
 
+    /// Checks if this contains any [`OngoingQuest`]s of this [`Quest`] type.
+    pub fn contains_ongoing(&self, quest: &OngoingQuestId) -> bool {
+        self.0.iter().any(|ongoing| ongoing.ongoing_id() == *quest)
+    }
+
     /// Gets an ongoing quest from its id, if one exists
     pub fn from_id(&self, id: &OngoingQuestId) -> Option<&OngoingQuest> {
         self.0.iter().find(|x| x.ongoing_id == *id)
@@ -283,6 +295,16 @@ impl OngoingQuests {
             .map(|quest| quest.progress_quest(progress))
     }
 
+    /// Returns the first instance of this quest if one exists
+    pub fn get_quest(&self, quest: &Quest) -> Option<&OngoingQuest> {
+        self.iter_specific(quest).next()
+    }
+
+    /// Returns the first instance of this quest if one exists
+    pub fn get_quest_mut(&mut self, quest: &Quest) -> Option<&mut OngoingQuest> {
+        self.iter_specific_mut(quest).next()
+    }
+
     /// Iterates over all [`OngoingQuest`]s.
     pub fn iter(&self) -> impl Iterator<Item = &'_ OngoingQuest> {
         self.0.iter()
@@ -299,6 +321,9 @@ impl OngoingQuests {
     }
 
     /// Iterates over [`OngoingQuest`]s of this [`Quest`] type.
+    ///
+    /// # WARNING: This triggers change detection, even if the quest isn't found!
+    /// Please use [`Self::contains`] first!
     pub fn iter_specific_mut(&mut self, quest: &Quest) -> impl Iterator<Item = &'_ mut OngoingQuest> {
         self.iter_mut().filter(|q| q.quest_id == quest.id())
     }
@@ -326,6 +351,8 @@ pub struct Quest {
     unlocalized_name: String,
     /// TODO: Encode this in some sort of registry loaded from a lang file
     pub description: String,
+    /// An item's id
+    icon: Option<u16>,
 }
 
 impl Quest {
@@ -335,6 +362,17 @@ impl Quest {
             id: 0,
             unlocalized_name: unlocalized_name.into(),
             description: description.into(),
+            icon: None,
+        }
+    }
+
+    /// Creates a quest type that will show up with an item icon
+    pub fn new_with_icon(unlocalized_name: impl Into<String>, description: impl Into<String>, icon: &Item) -> Self {
+        Self {
+            id: 0,
+            unlocalized_name: unlocalized_name.into(),
+            description: description.into(),
+            icon: Some(icon.id()),
         }
     }
 }
@@ -364,7 +402,7 @@ impl CompleteQuestEvent {
     /// Creates a new quest complete event
     ///
     /// - `completer` - The entity that completed the quest (Should have the [`OngoingQuests`]
-    /// component).
+    ///   component).
     /// - `completed` - The [`OngoingQuest`] they completed.
     pub fn new(completer: Entity, completed: OngoingQuest) -> Self {
         Self {
@@ -411,13 +449,34 @@ impl NettyEvent for CompleteQuestEvent {
     }
 }
 
+#[derive(Component, Debug, Reflect, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+/// The player will have this if they currently have this quest selected.
+///
+/// This does NOT mean they can only do this quest - rather they have this one focused on at the
+/// moment for information reasons. We should display information relevant to this quest in places
+/// that make sense.
+pub struct ActiveQuest(pub OngoingQuestId);
+
+impl IdentifiableComponent for ActiveQuest {
+    fn get_component_unlocalized_name() -> &'static str {
+        "cosmos:active_quest"
+    }
+}
+
+impl SyncableComponent for ActiveQuest {
+    fn get_sync_type() -> crate::netty::sync::SyncType {
+        crate::netty::sync::SyncType::BothAuthoritative(crate::netty::sync::ClientAuthority::Themselves)
+    }
+}
+
 pub(super) fn register(app: &mut App) {
     create_registry::<Quest>(app, "cosmos:quest");
     sync_registry::<Quest>(app);
 
+    sync_component::<ActiveQuest>(app);
     sync_component::<OngoingQuests>(app);
 
-    app.register_type::<OngoingQuests>();
-
-    app.add_netty_event::<CompleteQuestEvent>();
+    app.register_type::<OngoingQuests>()
+        .register_type::<ActiveQuest>()
+        .add_netty_event::<CompleteQuestEvent>();
 }

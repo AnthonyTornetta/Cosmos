@@ -14,7 +14,7 @@ use crate::{
 
 use super::generation::{GenerateSystemEvent, SystemGenerationSet};
 
-const PIRATE_STATION_MIN_DANGER: SectorDanger = SectorDanger::new(-5.0);
+const PIRATE_STATION_MIN_DANGER: SectorDanger = SectorDanger::MIDDLE;
 
 fn generate_pirate_stations(
     mut evr_generate_system: EventReader<GenerateSystemEvent>,
@@ -44,7 +44,7 @@ fn generate_pirate_stations(
                     system
                         .iter()
                         .filter(|maybe_asteroid| matches!(maybe_asteroid.item, SystemItem::Asteroid(_)))
-                        .map(|asteroid| asteroid.relative_sector(ev.system))
+                        .map(|asteroid| asteroid.location.sector)
                         .choose(&mut rng)
                         .unwrap_or_else(|| {
                             Sector::new(
@@ -54,17 +54,22 @@ fn generate_pirate_stations(
                             )
                         })
                 } else {
-                    Sector::new(
-                        rng.random_range(0..SYSTEM_SECTORS as i64),
-                        rng.random_range(0..SYSTEM_SECTORS as i64),
-                        rng.random_range(0..SYSTEM_SECTORS as i64),
-                    )
+                    system.coordinate().negative_most_sector()
+                        + Sector::new(
+                            rng.random_range(0..SYSTEM_SECTORS as i64),
+                            rng.random_range(0..SYSTEM_SECTORS as i64),
+                            rng.random_range(0..SYSTEM_SECTORS as i64),
+                        )
                 };
 
-                if system.sector_danger(faction_origin) < PIRATE_STATION_MIN_DANGER {
+                let sector_danger = system.compute_sector_danger(faction_origin);
+
+                info!("Sector Danger @ {faction_origin}: {sector_danger:?}");
+
+                if sector_danger < PIRATE_STATION_MIN_DANGER {
                     n_asteroid_stations -= 1;
                     // Don't generate too close to safe things
-                    continue;
+                    break;
                 }
 
                 faction_origin = faction_origin + ev.system.negative_most_sector();

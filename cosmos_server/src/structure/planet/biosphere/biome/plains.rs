@@ -199,7 +199,7 @@ fn redwood_tree(
         height += SEGMENT_HEIGHT;
     }
     while height - dy >= SEGMENT_HEIGHT * 2 {
-        if dy >= branch_height && (height - dy) % BETWEEN_BRANCHES == 0 {
+        if dy >= branch_height && (height - dy).is_multiple_of(BETWEEN_BRANCHES) {
             // 3 branch steps in each cardinal direction and 2 on each diagonal.
             let h = dy as UnboundCoordinateType;
             branch(
@@ -263,7 +263,7 @@ fn redwood_tree(
         height += SEGMENT_HEIGHT;
     }
     while height - dy >= SEGMENT_HEIGHT {
-        if dy >= branch_height && (height - dy) % BETWEEN_BRANCHES == 0 {
+        if dy >= branch_height && (height - dy).is_multiple_of(BETWEEN_BRANCHES) {
             // 2 branch steps in each cardinal direction and 2 on each diagonal.
             let h = dy as UnboundCoordinateType;
             branch(

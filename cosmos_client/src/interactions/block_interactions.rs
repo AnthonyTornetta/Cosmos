@@ -365,15 +365,18 @@ fn send_ray<'a>(
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_systems(Update, generate_input_events)
-        .add_systems(
-            FixedUpdate,
-            (add_looking_at_component, process_player_interaction)
-                .chain()
-                .in_set(FixedUpdateSet::PostPhysics)
-                // .in_set(BlockEventsSet::SendEventsForThisFrame)
-                .run_if(no_open_menus)
-                .run_if(in_state(GameState::Playing)),
-        )
-        .add_event::<BlockEvent>();
+    app.add_systems(
+        Update,
+        generate_input_events.run_if(no_open_menus).run_if(in_state(GameState::Playing)),
+    )
+    .add_systems(
+        FixedUpdate,
+        (add_looking_at_component, process_player_interaction)
+            .chain()
+            .in_set(FixedUpdateSet::PostPhysics)
+            // .in_set(BlockEventsSet::SendEventsForThisFrame)
+            .run_if(no_open_menus)
+            .run_if(in_state(GameState::Playing)),
+    )
+    .add_event::<BlockEvent>();
 }

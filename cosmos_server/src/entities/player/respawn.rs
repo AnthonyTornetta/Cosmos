@@ -15,7 +15,6 @@ use cosmos_core::{
         server::ServerLobby,
         sync::events::server_event::{NettyEventReceived, NettyEventWriter},
     },
-    persistence::LoadingDistance,
     physics::location::{Location, LocationPhysicsSet, SetPosition},
     prelude::BlockCoordinate,
     structure::{shared::build_mode::BuildMode, ship::pilot::Pilot},
@@ -111,7 +110,6 @@ fn drop_itemstack(commands: &mut Commands, location: &Location, is: ItemStack) {
         .spawn((
             PhysicalItem,
             *location,
-            LoadingDistance::new(1, 2),
             Transform::from_rotation(random_quat(&mut rand::rng())),
             Velocity {
                 linvel: Vec3::new(rand::random(), rand::random(), rand::random()),

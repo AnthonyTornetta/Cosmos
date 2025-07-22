@@ -13,6 +13,8 @@ pub struct BlockBreakEvent {
     pub breaker: Entity,
     /// The block broken with
     pub block: StructureBlock,
+    /// The block that was broken's id
+    pub broken_id: u16,
 }
 
 /// This is sent whenever a player interacts with a block

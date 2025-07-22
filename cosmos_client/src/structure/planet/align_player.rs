@@ -139,7 +139,7 @@ fn align_on_ship(query: Query<(Entity, &Pilot), With<LocalPlayer>>, mut commands
     }
 }
 
-#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Reflect)]
 /// Represents an X/Y/Z axis
 ///
 /// Used for orientation on a planet
@@ -153,7 +153,7 @@ pub enum AlignmentAxis {
     Z,
 }
 
-#[derive(Debug, Component, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Component, Clone, Copy, PartialEq, Eq, Reflect)]
 /// Used to represent the player's orientation on a structure
 pub struct PlayerAlignment {
     /// The entity this player is aligned to
@@ -169,5 +169,6 @@ pub(super) fn register(app: &mut App) {
             .in_set(FixedUpdateSet::Main)
             .before(LocationPhysicsSet::DoPhysics)
             .chain(),
-    );
+    )
+    .register_type::<PlayerAlignment>();
 }

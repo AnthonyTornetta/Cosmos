@@ -162,10 +162,13 @@ fn server_listen_messages(
                     });
                 }
                 ClientReliableMessages::BreakBlock { block } => {
-                    if let Some(player_entity) = lobby.player_from_id(client_id) {
+                    if let Some(player_entity) = lobby.player_from_id(client_id)
+                        && let Ok(structure) = structure_query.get(block.structure())
+                    {
                         break_block_event.write(BlockBreakEvent {
                             breaker: player_entity,
                             block,
+                            broken_id: structure.block_id_at(block.coords()),
                         });
                     }
                 }

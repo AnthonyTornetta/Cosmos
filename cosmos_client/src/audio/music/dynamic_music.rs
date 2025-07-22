@@ -132,8 +132,8 @@ fn start_playing(
 #[derive(Reflect, Resource, InspectorOptions, Debug)]
 #[reflect(Resource, InspectorOptions)]
 struct NextSongTime(f32);
-const MIN_DELAY_SEC: f32 = 5.0 * 60.0; // 5min
-const MAX_DELAY_SEC: f32 = 20.0 * 60.0; // 20min
+const MIN_DELAY_SEC: f32 = 0.5 * 60.0; // 30 sec
+const MAX_DELAY_SEC: f32 = 2.0 * 60.0; // 2 min 
 
 fn trigger_music_playing(mut next_song_time: ResMut<NextSongTime>, mut event_writer: EventWriter<PlayMusicEvent>, time: Res<Time>) {
     if next_song_time.0 > time.elapsed_secs() {

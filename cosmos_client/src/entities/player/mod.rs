@@ -11,12 +11,14 @@ pub mod render_distance;
 fn on_add_player(
     mut commands: Commands,
     mut materials: ResMut<Assets<StandardMaterial>>,
-    mut meshes: ResMut<Assets<Mesh>>,
+    // mut meshes: ResMut<Assets<Mesh>>,
     q_player: Query<(Entity, &Player), Added<Player>>,
+    asset_server: Res<AssetServer>,
 ) {
     for (ent, player) in q_player.iter() {
         commands.entity(ent).insert((
-            Mesh3d(meshes.add(Capsule3d::default())),
+            Mesh3d(asset_server.load("cosmos/models/misc/person.glb")),
+            // Mesh3d(meshes.add(Capsule3d::default())),
             MeshMaterial3d(materials.add(StandardMaterial {
                 base_color: css::GREEN.into(),
                 ..Default::default()

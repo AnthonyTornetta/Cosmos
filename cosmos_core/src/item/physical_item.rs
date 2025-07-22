@@ -7,6 +7,7 @@ use serde::{Deserialize, Serialize};
 use crate::{
     ecs::sets::FixedUpdateSet,
     netty::sync::{IdentifiableComponent, SyncableComponent, sync_component},
+    persistence::LoadingDistance,
 };
 
 #[derive(Component, Reflect, Debug, Serialize, Deserialize, PartialEq, Eq, Clone)]
@@ -32,6 +33,7 @@ fn on_add_physical_item(mut commands: Commands, q_added: Query<Entity, Added<Phy
             Collider::cuboid(0.1, 0.1, 0.1),
             ReadMassProperties::default(),
             Name::new("Physical Item"),
+            LoadingDistance::new(1, 1),
         ));
     }
 }

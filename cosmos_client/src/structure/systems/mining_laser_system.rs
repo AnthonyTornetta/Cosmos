@@ -14,7 +14,7 @@ use bevy_rapier3d::{
 };
 use cosmos_core::{
     block::block_direction::BlockDirection,
-    ecs::NeedsDespawned,
+    ecs::{NeedsDespawned, compute_totally_accurate_global_transform},
     physics::location::LocationPhysicsSet,
     state::GameState,
     structure::{
@@ -216,12 +216,19 @@ fn apply_mining_effects(
 
 fn resize_mining_lasers(
     q_parent: Query<&ChildOf>,
-    mut q_lasers: Query<(&GlobalTransform, &mut Transform, &RapierContextEntityLink, &MiningLaser, &ChildOf)>,
+    mut q_lasers: Query<(&mut Transform, &RapierContextEntityLink, &MiningLaser, &ChildOf)>,
     q_global_trans: Query<&GlobalTransform>,
     rapier_context_access: ReadRapierContext,
+    q_transform: Query<(&Transform, Option<&ChildOf>), Without<MiningLaser>>,
 ) {
-    for (g_trans, mut trans, phys_world, mining_laser, parent) in q_lasers.iter_mut() {
+    for (mut trans, phys_world, mining_laser, parent) in q_lasers.iter_mut() {
         let parent_structure_ent = parent.parent();
+
+        let Some(parent_g_trans) = compute_totally_accurate_global_transform(parent.parent(), &q_transform) else {
+            continue;
+        };
+
+        let g_trans = parent_g_trans * *trans;
 
         let Ok(parent_g_trans) = q_global_trans.get(parent_structure_ent) else {
             warn!("Mining laser missing parent!");

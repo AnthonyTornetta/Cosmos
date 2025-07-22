@@ -1,0 +1,71 @@
+{
+  "n_items": [12, 12],
+  "loot": [
+    {
+      "item": "cosmos:thruster",
+      "quantity": [20, 20],
+      "weight": 40,
+      "amount_required": 20
+    },
+    {
+      "item": "cosmos:plasma_drill",
+      "quantity": [120, 120],
+      "weight": 40,
+      "amount_required": 120
+    },
+    {
+      "item": "cosmos:energy_cell",
+      "quantity": [3, 3],
+      "weight": 4,
+      "amount_required": 3
+    },
+    {
+      "item": "cosmos:passive_generator",
+      "quantity": [30, 30],
+      "weight": 40,
+      "amount_required": 30
+    },
+    {
+      "item": "cosmos:laser_cannon",
+      "quantity": [30, 30],
+      "weight": 40,
+      "amount_required": 30
+    },
+    {
+      "item": "cosmos:missile",
+      "quantity": [70, 70],
+      "weight": 10,
+      "amount_required": 70
+    },
+    {
+      "item": "cosmos:ship_hull_white",
+      "quantity": [100, 100],
+      "weight": 10,
+      "amount_required": 100
+    },
+    {
+      "item": "cosmos:storage",
+      "quantity": [1, 1],
+      "weight": 10,
+      "amount_required": 1
+    },
+    {
+      "item": "cosmos:basic_fabricator",
+      "quantity": [1, 1],
+      "weight": 10,
+      "amount_required": 1
+    },
+    {
+      "item": "cosmos:copper_bar",
+      "quantity": [200, 200],
+      "weight": 1,
+      "amount_required": 200
+    },
+    {
+      "item": "cosmos:iron_bar",
+      "quantity": [200, 200],
+      "weight": 1,
+      "amount_required": 200
+    }
+  ]
+}

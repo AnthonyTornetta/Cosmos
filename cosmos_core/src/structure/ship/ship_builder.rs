@@ -18,7 +18,7 @@ fn on_add_ship(query: Query<Entity, Added<Ship>>, mut commands: Commands) {
             ReadMassProperties::default(),
             ExternalImpulse::default(),
             Blueprintable,
-            LoadingDistance::new(6, 7),
+            LoadingDistance::new(2, 3),
             Name::new("Ship"),
         ));
     }

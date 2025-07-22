@@ -404,10 +404,14 @@ fn logic_block_changed_event_listener(
                     &mut evw_queue_logic_input,
                 );
 
-                let new_block_data = structure.query_block_data(coord, &q_block_logic_data).copied().unwrap_or_default();
-
-                // Add the logic block's internal data storage to the structure.
-                structure.insert_block_data(coord, new_block_data, &mut bs_params, &mut q_block_data, &q_has_data);
+                if let Some(new_block_data) = structure.query_block_data(coord, &q_block_logic_data).copied() {
+                    // Add the logic block's internal data storage to the structure.
+                    if new_block_data.0 != 0 {
+                        structure.insert_block_data(coord, new_block_data, &mut bs_params, &mut q_block_data, &q_has_data);
+                    } else {
+                        structure.remove_block_data::<BlockLogicData>(coord, &mut bs_params, &mut q_block_data, &q_has_data);
+                    }
+                }
             }
 
             events_by_coords.insert(ev.coord, *ev);
@@ -471,23 +475,20 @@ pub fn default_logic_block_output(
     mut evw_queue_logic_input: EventWriter<QueueLogicInputEvent>,
     logic_blocks: &Registry<LogicBlock>,
     blocks: &Registry<Block>,
-    mut q_logic_driver: Query<&mut LogicDriver>,
-    mut q_structure: Query<&mut Structure>,
+    mut q_structure: Query<(&mut Structure, &mut LogicDriver)>,
     q_logic_data: Query<&BlockLogicData>,
 ) {
     for ev in evr_logic_output.read() {
-        let Ok(structure) = q_structure.get_mut(ev.block.structure()) else {
+        let Ok((structure, mut logic_driver)) = q_structure.get_mut(ev.block.structure()) else {
             continue;
         };
         if structure.block_at(ev.block.coords(), blocks).unlocalized_name() != block_name {
             continue;
         }
-        let Ok(mut logic_driver) = q_logic_driver.get_mut(ev.block.structure()) else {
-            continue;
-        };
-        let Some(&BlockLogicData(signal)) = structure.query_block_data(ev.block.coords(), &q_logic_data) else {
-            continue;
-        };
+        let BlockLogicData(signal) = structure
+            .query_block_data(ev.block.coords(), &q_logic_data)
+            .copied()
+            .unwrap_or_default();
         // Could cause performance problems if many of the same logic block are updated in a single frame. Might move this lookup somewhere else.
         let Some(logic_block) = logic_blocks.from_id(block_name) else {
             continue;

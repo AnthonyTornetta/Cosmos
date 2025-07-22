@@ -341,21 +341,21 @@ fn on_enter_build_mode(q_add_build_mode: Query<(), (Added<BuildMode>, With<Local
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_systems(
-        FixedUpdate,
-        (
+    app.add_systems(Update, place_symmetries.run_if(no_open_menus).run_if(in_state(GameState::Playing)))
+        .add_systems(
+            FixedUpdate,
             (
-                place_symmetries,
-                on_enter_build_mode,
-                control_build_mode.in_set(PlayerMovementSet::ProcessPlayerMovement),
+                (
+                    on_enter_build_mode,
+                    control_build_mode.in_set(PlayerMovementSet::ProcessPlayerMovement),
+                )
+                    .chain()
+                    .in_set(BlockEventsSet::ProcessEvents)
+                    .run_if(no_open_menus),
+                change_visuals,
+                clear_visuals.after(BuildModeSet::ExitBuildMode),
             )
                 .chain()
-                .in_set(BlockEventsSet::ProcessEvents)
-                .run_if(no_open_menus),
-            change_visuals,
-            clear_visuals.after(BuildModeSet::ExitBuildMode),
-        )
-            .chain()
-            .run_if(in_state(GameState::Playing)),
-    );
+                .run_if(in_state(GameState::Playing)),
+        );
 }

@@ -1,12 +1,28 @@
 use bevy::prelude::*;
+use cosmos_core::{
+    netty::sync::IdentifiableComponent,
+    quest::{CompleteQuestEvent, Quest},
+    registry::{Registry, identifiable::Identifiable},
+};
+use serde::{Deserialize, Serialize};
 
-use crate::{entities::player::spawn_player::CreateNewPlayerEvent, quest::QuestsSet};
+use crate::{
+    entities::player::spawn_player::CreateNewPlayerEvent,
+    persistence::make_persistent::{DefaultPersistentComponent, make_persistent},
+    quest::QuestsSet,
+};
 
+mod arm_ship;
+mod attack_pirate;
+mod build_ship;
 mod collect_stash;
+mod craft;
 mod create_a_ship;
 mod fly_a_ship;
+mod fly_to_asteroid;
+mod mine_asteroid;
 
-#[derive(Component, Debug, Clone, Copy, PartialEq, Eq, Reflect)]
+#[derive(Component, Debug, Clone, Copy, PartialEq, Eq, Reflect, Serialize, Deserialize)]
 enum TutorialState {
     CreateShip,
     LearnToFly,
@@ -15,8 +31,17 @@ enum TutorialState {
     FlyToAsteroid,
     MineAsteroid,
     Craft,
+    ArmShip,
     Fight,
 }
+
+impl IdentifiableComponent for TutorialState {
+    fn get_component_unlocalized_name() -> &'static str {
+        "cosmos:tutorial_state"
+    }
+}
+
+impl DefaultPersistentComponent for TutorialState {}
 
 impl TutorialState {
     pub fn next_state(&self) -> Option<Self> {
@@ -28,7 +53,8 @@ impl TutorialState {
             S::BuildShip => Some(S::FlyToAsteroid),
             S::FlyToAsteroid => Some(S::MineAsteroid),
             S::MineAsteroid => Some(S::Craft),
-            S::Craft => Some(S::Fight),
+            S::Craft => Some(S::ArmShip),
+            S::ArmShip => Some(S::Fight),
             S::Fight => None,
         }
     }
@@ -105,11 +131,49 @@ fn on_create_player(mut commands: Commands, mut evr_create_new_player: EventRead
 //     }
 // }
 
+fn add_tutorial(app: &mut App, quest_name: &'static str) {
+    let on_complete_quest = |mut q_tutorial_state: Query<&mut TutorialState>,
+                             quests: Res<Registry<Quest>>,
+                             mut evr_quest_complete: EventReader<CompleteQuestEvent>,
+                             mut commands: Commands| {
+        for ev in evr_quest_complete.read() {
+            let Some(quest) = quests.from_id(quest_name) else {
+                continue;
+            };
+
+            let completed = ev.completed_quest();
+            if completed.quest_id() != quest.id() {
+                continue;
+            }
+
+            let Ok(mut tutorial_state) = q_tutorial_state.get_mut(ev.completer()) else {
+                continue;
+            };
+
+            if let Some(state) = tutorial_state.next_state() {
+                *tutorial_state = state;
+            } else {
+                commands.entity(ev.completer()).remove::<TutorialState>();
+            }
+        }
+    };
+
+    app.add_systems(FixedUpdate, on_complete_quest.after(QuestsSet::CompleteQuests));
+}
+
 pub(super) fn register(app: &mut App) {
     app.add_systems(FixedUpdate, on_create_player.in_set(QuestsSet::CreateNewQuests))
         .register_type::<TutorialState>();
 
+    make_persistent::<TutorialState>(app);
+
+    build_ship::register(app);
     create_a_ship::register(app);
     collect_stash::register(app);
     fly_a_ship::register(app);
+    fly_to_asteroid::register(app);
+    mine_asteroid::register(app);
+    craft::register(app);
+    arm_ship::register(app);
+    attack_pirate::register(app);
 }

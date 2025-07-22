@@ -15,6 +15,7 @@ pub struct LootEntry {
     weight: u32,
     item: u16,
     amount: LootRange,
+    amount_required: Option<u32>,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -84,11 +85,12 @@ impl LootTableBuilder {
     }
 
     /// Adds a loot entry to this table
-    pub fn add_item(mut self, item: &Item, weight: u32, amount_range: LootRange) -> Self {
+    pub fn add_item(mut self, item: &Item, weight: u32, amount_range: LootRange, amount_required: Option<u32>) -> Self {
         self.0.items.push(LootEntry {
             item: item.id(),
             amount: amount_range,
             weight,
+            amount_required,
         });
 
         self

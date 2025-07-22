@@ -362,6 +362,16 @@ pub enum ChunkIteratorResult<'a> {
     },
 }
 
+impl<'a> ChunkIteratorResult<'a> {
+    /// Returns the [`ChunkCoordinate`] for this chunk
+    pub fn coordinate(&self) -> ChunkCoordinate {
+        match self {
+            Self::EmptyChunk { position } => *position,
+            Self::FilledChunk { position, chunk: _ } => *position,
+        }
+    }
+}
+
 impl<'a> Iterator for ChunkIterator<'a> {
     type Item = ChunkIteratorResult<'a>;
 

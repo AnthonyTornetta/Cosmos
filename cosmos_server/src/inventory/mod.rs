@@ -294,9 +294,45 @@ fn remove_itemstack_loading_markers(
     }
 }
 
+#[derive(Debug, Clone)]
+/// An item being moved
+pub struct MovedItem {
+    /// The amount of that item being moved
+    pub amount: u16,
+    /// The slot it's being moved to if added, or from if being removed
+    pub slot: u32,
+    /// The item's id for [`Registry<Item>`].
+    pub item_id: u16,
+}
+
+#[derive(Debug, Clone, Event)]
+/// An item has been added to an [`Inventory`]
+pub struct InventoryAddItemEvent {
+    /// The inventory that had the item added
+    pub inventory_entity: Entity,
+    /// The item that was added
+    pub item: MovedItem,
+    /// The entity that added this item (if any)
+    pub adder: Option<Entity>,
+}
+
+#[derive(Debug, Clone, Event)]
+/// An item has been removed from an [`Inventory`]
+pub struct InventoryRemoveItemEvent {
+    /// The inventory that had the item removed
+    pub inventory_entity: Entity,
+    /// The item that was removed
+    pub item: MovedItem,
+    /// The entity that removed this item (if any)
+    pub remover: Option<Entity>,
+}
+
 pub(super) fn register(app: &mut App) {
     netty::register(app);
     block_events::register(app);
+
+    app.add_event::<InventoryRemoveItemEvent>();
+    app.add_event::<InventoryAddItemEvent>();
 
     app.configure_sets(
         SAVING_SCHEDULE,

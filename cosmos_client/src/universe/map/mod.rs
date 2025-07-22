@@ -18,8 +18,11 @@ use cosmos_core::{
     registry::{Registry, identifiable::Identifiable},
     state::GameState,
     structure::planet::biosphere::Biosphere,
-    universe::map::system::{
-        Destination, GalaxyMap, GalaxyMapResponseEvent, RequestGalaxyMap, RequestSystemMap, SystemMap, SystemMapResponseEvent,
+    universe::{
+        SectorDangerRange,
+        map::system::{
+            Destination, GalaxyMap, GalaxyMapResponseEvent, RequestGalaxyMap, RequestSystemMap, SystemMap, SystemMapResponseEvent,
+        },
     },
     utils::ecs::DespawnWith,
 };
@@ -114,6 +117,9 @@ struct MapSelectedSectorText;
 
 #[derive(Component)]
 struct WaypointText;
+
+#[derive(Component)]
+struct DangerText;
 
 fn toggle_map(
     asset_server: Res<AssetServer>,
@@ -218,6 +224,16 @@ fn toggle_map(
                 p.spawn((
                     Name::new("Waypoint text"),
                     WaypointText,
+                    Node {
+                        align_self: AlignSelf::Center,
+                        ..Default::default()
+                    },
+                    Text::new(""),
+                    small_text.clone(),
+                ));
+                p.spawn((
+                    Name::new("Danger Text"),
+                    DangerText,
                     Node {
                         align_self: AlignSelf::Center,
                         ..Default::default()
@@ -332,12 +348,45 @@ fn update_waypoint_text(
         .unwrap_or(format!(
             "<{} to set>",
             input_handler
-                .get_control(CosmosInputs::MoveDown)
+                .get_control(CosmosInputs::ToggleWaypoint)
                 .map(|x| x.to_string())
                 .unwrap_or("[None]".into()),
         ));
 
     text.as_mut().0 = format!("Waypoint: {waypoint_text}");
+}
+
+fn update_danger_text(
+    q_galaxy_map: Query<&GalaxyMapDisplay>,
+    q_cam: Query<&MapCamera, Changed<MapCamera>>,
+    mut q_text: Query<(&mut Text, &mut TextColor), With<DangerText>>,
+) {
+    let Ok(cam) = q_cam.single() else {
+        return;
+    };
+
+    let Ok((mut text, mut text_color)) = q_text.single_mut() else {
+        return;
+    };
+
+    let Ok(g_map) = q_galaxy_map.single() else {
+        return;
+    };
+
+    if let GalaxyMapDisplay::Map { galaxy_map: _, system_map } = g_map {
+        let danger_range = system_map.sector_danger(cam.sector).sector_danger_range();
+
+        let (value, color) = match danger_range {
+            SectorDangerRange::VeryPeaceful => ("Peaceful", css::GREEN),
+            SectorDangerRange::Peaceful => ("Calm", css::GREEN),
+            SectorDangerRange::Neutral => ("Neutral", css::WHITE),
+            SectorDangerRange::Dangerous => ("Hostile", css::RED),
+            SectorDangerRange::VeryDangerous => ("Deadly", css::RED),
+        };
+
+        text.0 = value.into();
+        text_color.0 = color.into();
+    }
 }
 
 fn update_sector_text(q_cam: Query<&MapCamera, Changed<MapCamera>>, mut q_text: Query<&mut Text, With<MapSelectedSectorText>>) {
@@ -806,6 +855,7 @@ pub(super) fn register(app: &mut App) {
                         teleport_at,
                         update_sector_text,
                         update_waypoint_text,
+                        update_danger_text,
                         scale_with_zoom,
                     )
                         .chain()

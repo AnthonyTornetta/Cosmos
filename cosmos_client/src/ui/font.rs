@@ -11,6 +11,13 @@ use bevy::{
 /// The default font used for most things
 pub struct DefaultFont(pub Handle<Font>);
 
+impl DefaultFont {
+    /// Returns a weakly cloned handle to this font
+    pub fn get(&self) -> Handle<Font> {
+        self.0.clone_weak()
+    }
+}
+
 fn init_default_font(mut commands: Commands, asset_server: Res<AssetServer>) {
     commands.insert_resource(DefaultFont(asset_server.load("fonts/PixeloidSans.ttf")));
 }

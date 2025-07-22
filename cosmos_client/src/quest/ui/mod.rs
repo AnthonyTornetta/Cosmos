@@ -1,8 +1,10 @@
+mod hud;
+
 use bevy::{color::palettes::css, prelude::*};
 use cosmos_core::{
     ecs::NeedsDespawned,
     netty::client::LocalPlayer,
-    quest::{OngoingQuest, OngoingQuestId, OngoingQuests, Quest},
+    quest::{ActiveQuest, OngoingQuest, OngoingQuestId, OngoingQuests, Quest},
     registry::Registry,
     state::GameState,
 };
@@ -21,8 +23,6 @@ use crate::{
         font::DefaultFont,
     },
 };
-
-use super::ActiveQuest;
 
 #[derive(Component)]
 struct QuestUi;
@@ -137,6 +137,7 @@ fn on_toggle_active(
 
         if let Ok((ent, mut bc)) = q_active.single_mut() {
             commands.entity(ent).remove::<ActiveQuestUi>();
+            commands.entity(player_ent).remove::<ActiveQuest>();
             bc.0 = css::LIGHT_GREY.into();
         }
 
@@ -232,6 +233,8 @@ fn quest_node(
 }
 
 pub(super) fn register(app: &mut App) {
+    hud::register(app);
+
     register_button::<ToggleActiveClicked>(app);
 
     app.add_systems(

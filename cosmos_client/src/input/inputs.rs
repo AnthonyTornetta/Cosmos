@@ -56,7 +56,7 @@ pub enum CosmosInputs {
     ///
     /// This does not remove you as the pilot, but rather makes you no longer
     /// move with the ship
-    LeaveShip,
+    DealignSelf,
 
     /// Stop piloting whatever ship they're in
     StopPiloting,
@@ -198,7 +198,7 @@ fn init_input(mut input_handler: ResMut<CosmosInputHandler>) {
 
     input_handler.set_mouse_button(CosmosInputs::UseSelectedSystem, MouseButton::Left);
 
-    input_handler.set_keycode(CosmosInputs::LeaveShip, KeyCode::KeyL);
+    input_handler.set_keycode(CosmosInputs::DealignSelf, KeyCode::KeyL);
 
     input_handler.set_keycode(CosmosInputs::ToggleInventory, KeyCode::KeyT);
     input_handler.set_keycode(CosmosInputs::AutoMoveItem, KeyCode::ShiftLeft);

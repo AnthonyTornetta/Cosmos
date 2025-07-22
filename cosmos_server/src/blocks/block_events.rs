@@ -33,7 +33,6 @@ use cosmos_core::{
         itemstack::{ItemShouldHaveData, ItemStackSystemSet},
     },
     item::{Item, physical_item::PhysicalItem},
-    persistence::LoadingDistance,
     physics::location::{Location, SetPosition},
     registry::{Registry, identifiable::Identifiable},
     structure::{
@@ -231,7 +230,6 @@ fn handle_block_break_events(
                                     .spawn((
                                         PhysicalItem,
                                         item_spawn_loc,
-                                        LoadingDistance::new(1, 2),
                                         Transform::from_rotation(structure_rot),
                                         SetPosition::Transform,
                                         Velocity {

@@ -4,7 +4,7 @@ use bevy::prelude::*;
 use cosmos_core::{
     entities::player::Player,
     netty::sync::events::server_event::NettyEventWriter,
-    quest::{CompleteQuestEvent, OngoingQuestDetails, OngoingQuests},
+    quest::{ActiveQuest, CompleteQuestEvent, OngoingQuestDetails, OngoingQuests},
 };
 
 use crate::persistence::{
@@ -66,10 +66,18 @@ fn on_complete_quest(
 
             let complete_quest_event = CompleteQuestEvent::new(entity, completed);
 
-            info!("{complete_quest_event:?}");
-
             nevw_complete_quest_event.write(complete_quest_event.clone(), player.client_id());
             evw_complete_quest_event.write(complete_quest_event);
+        }
+    }
+}
+
+impl DefaultPersistentComponent for ActiveQuest {}
+
+fn clear_invalid_active_quest(q_active: Query<(Entity, &OngoingQuests, &ActiveQuest)>, mut commands: Commands) {
+    for (ent, ongoing, active) in q_active.iter() {
+        if !ongoing.contains_ongoing(&active.0) {
+            commands.entity(ent).remove::<ActiveQuest>();
         }
     }
 }
@@ -78,6 +86,7 @@ pub(super) fn register(app: &mut App) {
     quests::register(app);
 
     make_persistent::<OngoingQuests>(app);
+    make_persistent::<ActiveQuest>(app);
 
     app.configure_sets(
         FixedUpdate,
@@ -96,6 +105,9 @@ pub(super) fn register(app: &mut App) {
         (
             add_ongoing_quests.in_set(QuestsSet::AddOngoingQuestsComponent),
             on_complete_quest.in_set(QuestsSet::CompleteQuests),
+            clear_invalid_active_quest
+                .before(QuestsSet::CompleteQuests)
+                .after(QuestsSet::CreateNewQuests),
         ),
     );
 

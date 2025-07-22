@@ -12,6 +12,7 @@ struct RawLootEntry {
     item: String,
     quantity: (u32, u32),
     weight: u32,
+    amount_required: Option<u32>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -53,7 +54,12 @@ fn load_loot_tables(mut loot_tables: ResMut<Registry<LootTable>>, items: Res<Reg
                 continue;
             };
 
-            loot_table = loot_table.add_item(item, entry.weight, LootRange::new(entry.quantity.0, entry.quantity.1));
+            loot_table = loot_table.add_item(
+                item,
+                entry.weight,
+                LootRange::new(entry.quantity.0, entry.quantity.1),
+                entry.amount_required,
+            );
         }
 
         let Some(loot_table) = loot_table.build() else {

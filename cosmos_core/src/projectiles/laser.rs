@@ -17,6 +17,7 @@ use bevy_rapier3d::{
 use crate::{
     ecs::{NeedsDespawned, sets::FixedUpdateSet},
     netty::NoSendEntity,
+    persistence::LoadingDistance,
     physics::{
         location::{Location, SetPosition},
         player_world::PlayerWorld,
@@ -135,6 +136,7 @@ impl Laser {
             NotShadowCaster,
             NotShadowReceiver,
             NoSendEntity,
+            LoadingDistance::new(1, 1),
         ));
 
         if let Some(causer) = causer {

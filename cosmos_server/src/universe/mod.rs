@@ -1,17 +1,13 @@
 //! Contains server-side logic for the universe & how it's generated
 
-use bevy::{
-    math::Quat,
-    platform::collections::HashMap,
-    prelude::{App, Component, Resource},
-    reflect::Reflect,
-};
+use bevy::{platform::collections::HashMap, prelude::*};
 use cosmos_core::{
     faction::FactionId,
     physics::location::{Location, SYSTEM_SECTORS, Sector, SystemCoordinate},
     prelude::Planet,
-    universe::star::Star,
+    universe::{SectorDanger, star::Star},
 };
+use rayon::iter::{IntoParallelIterator, ParallelIterator};
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 
@@ -145,13 +141,13 @@ impl SystemItem {
     /// Distance is a percentage of how far away this is from the maximum danger threshold
     pub fn compute_danger_modifier(&self, multiplier: f32) -> f32 {
         match self {
-            Self::Star(_) => -10.0 * multiplier,
+            Self::Star(_) => -100.0 * multiplier,
             Self::Planet(_) => -30.0 * multiplier,
             Self::Shop => -30.0 * multiplier,
             Self::PirateStation(_) => 100.0 * multiplier,
             Self::Asteroid(_) => 0.0,
             Self::PlayerStation => -500.0 * multiplier * multiplier,
-            Self::NpcStation(_) => -30.0 * multiplier,
+            Self::NpcStation(_) => -100.0 * multiplier,
         }
     }
 }
@@ -180,74 +176,123 @@ impl GeneratedItem {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize, Default, PartialOrd, PartialEq)]
-/// The danger level in this faction
-pub struct SectorDanger {
-    danger: f32,
-}
-
-impl SectorDanger {
-    /// The midpoint between minimum danger and maximum danger
-    pub const MIDDLE: Self = Self::new(0.0);
-
-    /// Creates a new danger value bounded between [`SectorDanger::MIN_DANGER`] and
-    /// [`SectorDanger::MAX_DANGER`]
-    pub const fn new(danger: f32) -> Self {
-        Self {
-            danger: danger.clamp(Self::MIN_DANGER, Self::MAX_DANGER),
-        }
-    }
-
-    /// Returns the danger as a f32 bounded between [-1.0, 1.0] (negative least danger, positive
-    /// most danger)
-    pub fn bounded(&self) -> f32 {
-        self.danger / 100.0
-    }
-}
-
-impl SectorDanger {
-    /// The maximum danger value a sector can be
-    pub const MAX_DANGER: f32 = 100.0;
-    /// The minimum danger value (most peaceful)
-    pub const MIN_DANGER: f32 = -100.0;
-}
-
 #[derive(Debug, Serialize, Deserialize)]
 /// Represents everything that exists within a System - a 100x100x100 ([`SYSTEM_SECTORS`]^3) region of [`Sector`]s
 pub struct UniverseSystem {
     coordinate: SystemCoordinate,
     generated_items: HashMap<Sector, Vec<GeneratedItem>>,
     generated_flags: HashMap<Sector, HashSet<String>>,
+    sector_danger: HashMap<Sector, SectorDanger>,
+    danger_computed: bool,
 }
 
+/// The square radius that represents how far danger values will spread.
+const DANGER_DISTANCE: i64 = 6;
+
 impl UniverseSystem {
+    /// Creates a new system from this coordinates. It is initially empty.
+    pub fn new(coordinate: SystemCoordinate) -> Self {
+        Self {
+            coordinate,
+            generated_flags: Default::default(),
+            generated_items: Default::default(),
+            sector_danger: Default::default(),
+            danger_computed: false,
+        }
+    }
+
     /// Returns the [`SystemCoordinate`] of this system.
     pub fn coordinate(&self) -> SystemCoordinate {
         self.coordinate
     }
 
-    /// Computes the danger levels for this sector
-    pub fn sector_danger(&self, relative_sector: Sector) -> SectorDanger {
-        const DANGER_DISTANCE: i64 = 4;
-        const SS2: i64 = (SYSTEM_SECTORS / 2) as i64;
-        const EDGE_DANGER_SCALING: f32 = 8.0;
+    /// Returns the pre-computed sector danger at this location
+    ///
+    /// # IMPORTANT NOTE!!!
+    ///
+    /// If this system is currently being generated, this value will be inaccurate! Use
+    /// [`Self::compute_sector_danger`] instead to get a correct value. This method will only be
+    /// correct after all generation of this system is done. This will only be accurate after
+    /// [`Self::recompute_all_danger`] is called for the first time (typically after the generation
+    /// set is completely finished).
+    pub fn sector_danger(&self, sector: Sector) -> SectorDanger {
+        debug_assert!(self.is_within(sector));
 
-        let center_dist = (relative_sector - Sector::splat(SS2)).abs().max_element();
+        self.sector_danger.get(&sector).copied().unwrap_or_default()
+    }
+
+    /// Recomputes all danger values for this system
+    ///
+    /// **NOTE**: This is a very expensive operation, and should only be done during its initial generation.
+    ///
+    /// Once this method is called, future additions/removals to this [`UniverseSystem`] will
+    /// automatic recomputation of relevent danger values. Before this is called, no danger
+    /// calculations will happen on additions/removals.
+    pub fn recompute_all_danger(&mut self) {
+        self.danger_computed = true;
+
+        self.sector_danger.clear();
+
+        let mut todo: HashSet<Sector> = HashSet::default();
+
+        for item in self
+            .generated_items
+            .iter()
+            .filter(|(_, i)| i.iter().any(|x| x.item.compute_danger_modifier(1.0) != 0.0))
+            .map(|(s, _)| *s)
+        {
+            for dz in -DANGER_DISTANCE..=DANGER_DISTANCE / 2 {
+                for dy in -DANGER_DISTANCE..=DANGER_DISTANCE / 2 {
+                    for dx in -DANGER_DISTANCE..=DANGER_DISTANCE / 2 {
+                        let s = item + Sector::new(dx, dy, dz);
+                        if self.is_within(s) {
+                            todo.insert(s);
+                        }
+                    }
+                }
+            }
+        }
+
+        info!("Need to process {} sectors.", todo.len());
+
+        let dangers = todo.into_par_iter().map(|x| (x, self.compute_sector_danger(x))).collect::<Vec<_>>();
+
+        info!("Done computing danger - applying danger.");
+
+        for (sector, danger) in dangers {
+            self.set_sector_danger(sector, danger);
+        }
+
+        info!("Done applying danger.");
+    }
+
+    /// Computes the danger levels for this sector
+    ///
+    ///
+    pub fn compute_sector_danger(&self, sector: Sector) -> SectorDanger {
+        debug_assert!(self.is_within(sector));
+
+        const SS2: i64 = (SYSTEM_SECTORS / 2) as i64;
+        const EDGE_DANGER_SCALING: f32 = 16.0;
+
+        let center_dist = (sector - self.coordinate.negative_most_sector() - Sector::splat(SS2))
+            .abs()
+            .max_element();
         let max_dist = SS2 - DANGER_DISTANCE / 2;
 
-        let mut danger = (center_dist as f32).powf(EDGE_DANGER_SCALING) / (max_dist as f32).powf(EDGE_DANGER_SCALING).min(1.0)
-            * SectorDanger::MAX_DANGER;
+        let mut danger = (center_dist as f32).powf(EDGE_DANGER_SCALING) / (SS2 as f32).powf(EDGE_DANGER_SCALING) * SectorDanger::MAX_DANGER;
 
         if center_dist >= max_dist {
-            return SectorDanger { danger };
+            return SectorDanger::new(danger);
         }
 
         for dz in -DANGER_DISTANCE..=DANGER_DISTANCE / 2 {
             for dy in -DANGER_DISTANCE..=DANGER_DISTANCE / 2 {
                 for dx in -DANGER_DISTANCE..=DANGER_DISTANCE / 2 {
-                    let multiplier = 1.0 - (dz.abs().max(dy.abs().max(dx.abs())) as f32 / (DANGER_DISTANCE / 2) as f32);
+                    let distance = dz.abs().max(dy.abs().max(dx.abs())) as f32;
+                    let multiplier = 1.0 / (distance + 1.0);
                     let danger_here = self
-                        .items_at(relative_sector + Sector::new(dx, dy, dz))
+                        .items_at(sector + Sector::new(dx, dy, dz))
                         .map(|x| x.item.compute_danger_modifier(multiplier))
                         .sum::<f32>();
 
@@ -256,9 +301,30 @@ impl UniverseSystem {
             }
         }
 
-        danger = danger.clamp(-SectorDanger::MAX_DANGER, SectorDanger::MAX_DANGER);
+        SectorDanger::new(danger)
+    }
 
-        SectorDanger { danger }
+    fn set_sector_danger(&mut self, sector: Sector, danger: SectorDanger) {
+        debug_assert!(self.is_within(sector));
+
+        if danger == SectorDanger::default() {
+            self.sector_danger.remove(&sector);
+        } else {
+            self.sector_danger.insert(sector, danger);
+        }
+    }
+
+    /// Checks if a [`Sector`] is within this [`UniverseSystem`]
+    pub fn is_within(&self, sector: Sector) -> bool {
+        let neg = self.coordinate.negative_most_sector();
+        let pos = (self.coordinate + SystemCoordinate::ONE).negative_most_sector();
+
+        sector.x() >= neg.x()
+            && sector.x() < pos.x()
+            && sector.y() >= neg.y()
+            && sector.y() < pos.y()
+            && sector.z() >= neg.z()
+            && sector.z() < pos.z()
     }
 
     /// This location should NOT be relative to this system. Make this a normal absolute location
@@ -266,10 +332,32 @@ impl UniverseSystem {
     /// Adds a generated item to this. This does NOT mark the sector as generated. Call
     /// [`Self::mark_sector_generated_for`] to do that.
     pub fn add_item(&mut self, location: Location, rotation: Quat, item: SystemItem) {
+        if !self.is_within(location.sector) {
+            panic!("Sector {} not within this system ({})", location.sector, self.coordinate);
+        }
+
+        let recompute = self.danger_computed && item.compute_danger_modifier(1.0) != 0.0;
+
         self.generated_items
             .entry(location.sector)
             .or_default()
             .push(GeneratedItem { location, rotation, item });
+
+        if recompute {
+            for dz in -DANGER_DISTANCE..=DANGER_DISTANCE / 2 {
+                for dy in -DANGER_DISTANCE..=DANGER_DISTANCE / 2 {
+                    for dx in -DANGER_DISTANCE..=DANGER_DISTANCE / 2 {
+                        let s = location.sector + Sector::new(dx, dy, dz);
+                        if !self.is_within(s) {
+                            continue;
+                        }
+
+                        let new_danger = self.compute_sector_danger(location.sector);
+                        self.set_sector_danger(location.sector, new_danger);
+                    }
+                }
+            }
+        }
     }
 
     /// Iterates over everything that is so far generated within this system. Note that just
@@ -321,6 +409,11 @@ impl UniverseSystem {
     /// this returns true.
     pub fn is_sector_generated_for_relative(&self, sector: Sector, marker_id: &str) -> bool {
         self.generated_flags.get(&sector).map(|x| x.contains(marker_id)).unwrap_or(false)
+    }
+
+    /// Iterates over all sectors with a non-zero danger level.
+    pub fn iter_sector_danger(&self) -> impl Iterator<Item = (Sector, SectorDanger)> {
+        self.sector_danger.iter().map(|(&s, &d)| (s, d))
     }
 }
 
