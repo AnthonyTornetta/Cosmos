@@ -169,9 +169,11 @@ fn generate_colliders(
                     None => panic!("Got None for block collider for block {}!", block.unlocalized_name()),
                 };
 
-                if contains_any_empty_block.is_none() {
+                let Some(contains_any_empty_block) = contains_any_empty_block else {
                     contains_any_empty_block = Some(is_empty);
-                } else if contains_any_empty_block.unwrap() != is_empty || is_different {
+                    continue;
+                };
+                if contains_any_empty_block != is_empty || is_different {
                     let s2 = size / 2;
                     let s4 = s2 as f32 / 2.0;
 
@@ -659,8 +661,6 @@ fn listen_for_new_physics_event(
     let task = task_spawn.spawn(async move {
         let blocks = blocks.registry();
         let colliders = colliders.registry();
-
-        
 
         moved_todo
             .into_par_iter()
