@@ -72,7 +72,7 @@ fn generate_factions(
                     })
                     + ev.system.negative_most_sector();
 
-                if !done_zones.iter().map(|&x| (x - fo)).any(|x: Sector| x.abs().min_element() <= 5) {
+                if !done_zones.iter().map(|&x| x - fo).any(|x: Sector| x.abs().min_element() <= 5) {
                     faction_origin = Some(fo);
                     break;
                 }
