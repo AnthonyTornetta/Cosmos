@@ -8,8 +8,9 @@ use bevy::{
 use cosmos_core::{
     ecs::compute_totally_accurate_global_transform,
     netty::client::LocalPlayer,
-    prelude::{Asteroid, Ship, Station},
+    prelude::{Asteroid, Ship, Station, Structure},
     state::GameState,
+    structure::chunk::CHUNK_DIMENSIONSF,
 };
 
 use crate::{
@@ -126,6 +127,7 @@ fn render_on_focus(
     q_focused: Query<&Indicating, With<FocusedWaypointEntity>>,
     q_is_valid_focus_target: Query<(), Or<(With<Asteroid>, With<Ship>, With<Station>)>>,
     mut commands: Commands,
+    q_structure: Query<&Structure>,
     q_trans: Query<(&Transform, Option<&ChildOf>), Without<FocusedCam>>,
 ) {
     let Ok((cam_entity, mut cam_trans, mut cam, parent)) = q_cam.single_mut() else {
@@ -174,7 +176,28 @@ fn render_on_focus(
         commands.entity(cam_entity).insert(ChildOf(focused_ent));
     }
 
-    cam_trans.translation = local_player_delta.normalize_or(Vec3::Z) * 100.0;
+    let cam_dist = if let Ok(structure) = q_structure.get(focused_ent) {
+        let Some(neg_most) = structure.all_chunks_iter(false).next() else {
+            return;
+        };
+
+        let neg_most = neg_most.coordinate();
+        let mut neg_most = Vec3::new(neg_most.x as f32, neg_most.y as f32, neg_most.z as f32) * CHUNK_DIMENSIONSF;
+        let mut pos_most = neg_most;
+
+        for c in structure.all_chunks_iter(false).skip(1) {
+            let coord = c.coordinate();
+            let coord = Vec3::new(coord.x as f32, coord.y as f32, coord.z as f32) * CHUNK_DIMENSIONSF;
+            neg_most = neg_most.min(coord);
+            pos_most = pos_most.max(coord);
+        }
+
+        CHUNK_DIMENSIONSF.max((pos_most - neg_most).abs().max_element())
+    } else {
+        100.0
+    };
+
+    cam_trans.translation = local_player_delta.normalize_or(Vec3::Z) * cam_dist;
     cam_trans.look_at(Vec3::ZERO, focused_g_trans.rotation().inverse() * player_g_trans.up());
 }
 

@@ -51,7 +51,7 @@ fn create_alignment_hud(mut commands: Commands, font: Res<DefaultFont>, inputs: 
                 Text::new(format!(
                     "Press `{}` to de-align yourself.",
                     inputs
-                        .get_control(CosmosInputs::LeaveShip)
+                        .get_control(CosmosInputs::DealignSelf)
                         .map(|x| x.to_string())
                         .unwrap_or("<unbound>".to_string())
                 )),

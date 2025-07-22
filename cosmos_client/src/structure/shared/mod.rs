@@ -4,6 +4,7 @@ use bevy::prelude::*;
 use bevy_renet::renet::RenetClient;
 use cosmos_core::{
     netty::{NettyChannelClient, client::LocalPlayer, client_reliable_messages::ClientReliableMessages, cosmos_encoder},
+    prelude::{Asteroid, Station},
     state::GameState,
     structure::ship::{Ship, pilot::Pilot},
 };
@@ -17,7 +18,7 @@ pub mod build_mode;
 
 fn remove_self_from_structure(
     has_parent: Query<(Entity, &ChildOf), (With<LocalPlayer>, Without<Pilot>)>,
-    ship_is_parent: Query<(), With<Ship>>,
+    ship_is_parent: Query<(), Or<(With<Station>, With<Asteroid>, With<Ship>)>>,
     input_handler: InputChecker,
     mut commands: Commands,
 
@@ -25,7 +26,7 @@ fn remove_self_from_structure(
 ) {
     if let Ok((entity, parent)) = has_parent.single()
         && ship_is_parent.contains(parent.parent())
-        && input_handler.check_just_pressed(CosmosInputs::LeaveShip)
+        && input_handler.check_just_pressed(CosmosInputs::DealignSelf)
     {
         commands.entity(entity).remove_parent_in_place();
 
