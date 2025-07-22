@@ -70,10 +70,10 @@ fn update_text_to_alignment(
     q_ship: Query<&Ship>,
     q_asteroid: Query<(), With<Asteroid>>,
 ) {
-    if removed_player_alignment.read().any(|x| q_local_player.contains(x)) {
-        if let Ok(mut node) = q_hud_node.single_mut() {
-            node.display = Display::None;
-        }
+    if removed_player_alignment.read().any(|x| q_local_player.contains(x))
+        && let Ok(mut node) = q_hud_node.single_mut()
+    {
+        node.display = Display::None;
     }
 
     let Ok((alignment, pilot)) = q_player.single() else {
@@ -111,24 +111,24 @@ fn update_text_to_alignment(
         return;
     };
 
-    if let Ok(_) = q_ship.get(aligned_to) {
+    if q_ship.get(aligned_to).is_ok() {
         if node.display != Display::Flex {
             node.display = Display::Flex;
         }
 
-        txt.0 = format!("Aligned to Ship");
+        txt.0 = "Aligned to Ship".to_string();
     } else if q_station.contains(aligned_to) {
         if node.display != Display::Flex {
             node.display = Display::Flex;
         }
 
-        txt.0 = format!("Aligned to Station");
+        txt.0 = "Aligned to Station".to_string();
     } else if q_asteroid.contains(aligned_to) {
         if node.display != Display::Flex {
             node.display = Display::Flex;
         }
 
-        txt.0 = format!("Aligned to Asteroid");
+        txt.0 = "Aligned to Asteroid".to_string();
     }
 }
 

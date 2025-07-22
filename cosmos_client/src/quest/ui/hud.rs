@@ -33,11 +33,10 @@ fn display_active_mission(
     font: Res<DefaultFont>,
     inputs: InputChecker,
 ) {
-    if removed_active_quest.read().next().is_some() || !q_changed_active_quest.is_empty() {
-        if let Ok(ent) = q_display.single() {
+    if (removed_active_quest.read().next().is_some() || !q_changed_active_quest.is_empty())
+        && let Ok(ent) = q_display.single() {
             commands.entity(ent).insert(NeedsDespawned);
         }
-    }
 
     let Ok((ongoing_quests, active_quest)) = q_changed_active_quest.single() else {
         return;
@@ -218,7 +217,7 @@ fn on_quest_complete(
                         font_style,
                         QuestCompleteText,
                         TextColor(css::GREEN.into()),
-                        Text::new(format!("+ ${}", reward)),
+                        Text::new(format!("+ ${reward}")),
                     ));
                 }
             });

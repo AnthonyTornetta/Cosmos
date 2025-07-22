@@ -162,7 +162,7 @@ fn resolve_enter_ship_quest(
             .insert((
                 MoveShipQuestActive::default(),
                 RotateShipQuestActive::default(),
-                BrakeShipQuestActive::default(),
+                BrakeShipQuestActive,
             ))
             .remove::<EnterShipQuestActive>();
 

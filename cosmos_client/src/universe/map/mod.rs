@@ -373,22 +373,19 @@ fn update_danger_text(
         return;
     };
 
-    match g_map {
-        GalaxyMapDisplay::Map { galaxy_map: _, system_map } => {
-            let danger_range = system_map.sector_danger(cam.sector).sector_danger_range();
+    if let GalaxyMapDisplay::Map { galaxy_map: _, system_map } = g_map {
+        let danger_range = system_map.sector_danger(cam.sector).sector_danger_range();
 
-            let (value, color) = match danger_range {
-                SectorDangerRange::VeryPeaceful => ("Peaceful", css::GREEN),
-                SectorDangerRange::Peaceful => ("Calm", css::GREEN),
-                SectorDangerRange::Neutral => ("Neutral", css::WHITE),
-                SectorDangerRange::Dangerous => ("Hostile", css::RED),
-                SectorDangerRange::VeryDangerous => ("Deadly", css::RED),
-            };
+        let (value, color) = match danger_range {
+            SectorDangerRange::VeryPeaceful => ("Peaceful", css::GREEN),
+            SectorDangerRange::Peaceful => ("Calm", css::GREEN),
+            SectorDangerRange::Neutral => ("Neutral", css::WHITE),
+            SectorDangerRange::Dangerous => ("Hostile", css::RED),
+            SectorDangerRange::VeryDangerous => ("Deadly", css::RED),
+        };
 
-            text.0 = value.into();
-            text_color.0 = color.into();
-        }
-        _ => {}
+        text.0 = value.into();
+        text_color.0 = color.into();
     }
 }
 

@@ -50,15 +50,15 @@ impl SectorDanger {
     /// Returns the sector danger as a more easy-to-use [`SectorDangerRange`].
     pub fn sector_danger_range(&self) -> SectorDangerRange {
         if self.danger == Self::MIDDLE.danger {
-            return SectorDangerRange::Neutral;
+            SectorDangerRange::Neutral
         } else if self.danger > 50 {
-            return SectorDangerRange::VeryDangerous;
+            SectorDangerRange::VeryDangerous
         } else if self.danger > 0 {
-            return SectorDangerRange::Dangerous;
+            SectorDangerRange::Dangerous
         } else if self.danger > -50 {
-            return SectorDangerRange::Peaceful;
+            SectorDangerRange::Peaceful
         } else {
-            return SectorDangerRange::VeryPeaceful;
+            SectorDangerRange::VeryPeaceful
         }
     }
 }

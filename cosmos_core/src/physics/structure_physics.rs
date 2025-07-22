@@ -660,7 +660,9 @@ fn listen_for_new_physics_event(
         let blocks = blocks.registry();
         let colliders = colliders.registry();
 
-        let result = moved_todo
+        
+
+        moved_todo
             .into_par_iter()
             .map(
                 |(chunk_entity, structure_entity, chunk, (neg_x, pos_x, neg_y, pos_y, neg_z, pos_z))| {
@@ -680,9 +682,7 @@ fn listen_for_new_physics_event(
                     }
                 },
             )
-            .collect::<Vec<_>>();
-
-        result
+            .collect::<Vec<_>>()
     });
 
     commands.insert_resource(GeneratingChunkCollidersTask(task));

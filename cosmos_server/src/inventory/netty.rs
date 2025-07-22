@@ -232,8 +232,7 @@ fn listen_for_inventory_messages(
                         }
                     } else if let Some(([mut inventory_a, mut inventory_b], [from, to])) =
                         get_many_inventories_mut([from_inventory, to_inventory], &mut q_inventory, &q_structure)
-                    {
-                        if let Some(is) = inventory_a.itemstack_at(from_slot as usize) {
+                        && let Some(is) = inventory_a.itemstack_at(from_slot as usize) {
                             let qty = is.quantity();
                             let item_id = is.item_id();
                             if let Ok(leftover) =
@@ -244,7 +243,7 @@ fn listen_for_inventory_messages(
                                     inventory_entity: to,
                                     item: MovedItem {
                                         amount,
-                                        slot: to_slot as u32,
+                                        slot: to_slot,
                                         item_id,
                                     },
                                     adder: Some(client_entity),
@@ -253,14 +252,13 @@ fn listen_for_inventory_messages(
                                     inventory_entity: from,
                                     item: MovedItem {
                                         amount,
-                                        slot: from_slot as u32,
+                                        slot: from_slot,
                                         item_id,
                                     },
                                     remover: Some(client_entity),
                                 });
                             }
                         }
-                    }
                 }
                 ClientInventoryMessages::PickupItemstack {
                     inventory_holder,
@@ -483,7 +481,7 @@ fn listen_for_inventory_messages(
                         inventory_entity: inv_ent,
                         item: MovedItem {
                             amount: quantity_being_thrown,
-                            slot: slot as u32,
+                            slot,
                             item_id: is.item_id(),
                         },
                         remover: Some(client_entity),

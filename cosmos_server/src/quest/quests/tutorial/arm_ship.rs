@@ -32,7 +32,7 @@ fn register_quest(mut quests: ResMut<Registry<Quest>>) {
     ));
     quests.register(Quest::new(
         PLACE_STORAGE_QUEST.to_string(),
-        format!("Place at least one storage unit on the ship."),
+        "Place at least one storage unit on the ship.".to_string(),
     ));
     quests.register(Quest::new(
         INSERT_MISSILES_QUEST.to_string(),
@@ -126,17 +126,12 @@ fn resolve_quests(
             continue;
         };
 
-        match items.from_numeric_id(ev.item.item_id).unlocalized_name() {
-            "cosmos:missile" => {
-                if let Ok(bd) = q_block_data.get(ev.inventory_entity) {
-                    if let Ok(structure) = q_structure.get(bd.identifier.block.structure()) {
-                        if structure.block_at(bd.identifier.block.coords(), &blocks).unlocalized_name() == "cosmos:storage" {
-                            advance_subquest(&quests, &mut ongoing_quests, INSERT_MISSILES_QUEST, ev.item.amount as u32);
-                        }
+        if items.from_numeric_id(ev.item.item_id).unlocalized_name() == "cosmos:missile" {
+            if let Ok(bd) = q_block_data.get(ev.inventory_entity)
+                && let Ok(structure) = q_structure.get(bd.identifier.block.structure())
+                    && structure.block_at(bd.identifier.block.coords(), &blocks).unlocalized_name() == "cosmos:storage" {
+                        advance_subquest(&quests, &mut ongoing_quests, INSERT_MISSILES_QUEST, ev.item.amount as u32);
                     }
-                }
-            }
-            _ => {}
         }
     }
 }

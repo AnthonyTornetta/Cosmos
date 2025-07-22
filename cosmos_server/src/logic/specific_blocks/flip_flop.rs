@@ -60,7 +60,7 @@ fn flip_flop_input_event_listener(
             continue;
         };
         let mut logic_data = structure
-            .query_block_data(ev.block.coords(), &mut q_logic_data)
+            .query_block_data(ev.block.coords(), &q_logic_data)
             .copied()
             .unwrap_or_default();
 

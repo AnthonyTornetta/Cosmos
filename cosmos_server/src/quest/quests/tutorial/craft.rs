@@ -143,24 +143,21 @@ fn resolve_quests(
             continue;
         }
 
-        match block.unlocalized_name() {
-            "cosmos:basic_fabricator" => {
-                let Some(ongoing) = ongoing_quests.get_quest_mut(quest) else {
-                    continue;
-                };
+        if block.unlocalized_name() == "cosmos:basic_fabricator" {
+            let Some(ongoing) = ongoing_quests.get_quest_mut(quest) else {
+                continue;
+            };
 
-                let Some(subquests) = ongoing.subquests_mut() else {
-                    continue;
-                };
+            let Some(subquests) = ongoing.subquests_mut() else {
+                continue;
+            };
 
-                let Some(quest) = quests.from_id(PLACE_FABRICATOR) else {
-                    continue;
-                };
-                if let Some(quest) = subquests.get_quest_mut(quest) {
-                    quest.complete();
-                }
+            let Some(quest) = quests.from_id(PLACE_FABRICATOR) else {
+                continue;
+            };
+            if let Some(quest) = subquests.get_quest_mut(quest) {
+                quest.complete();
             }
-            _ => {}
         }
     }
 
