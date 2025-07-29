@@ -1,4 +1,4 @@
-use crate::commands::{CommandSender, Operator, SendCommandMessageEvent};
+use crate::commands::{CommandSender, Operators, SendCommandMessageEvent};
 
 use super::super::prelude::*;
 use bevy::prelude::*;
@@ -37,14 +37,13 @@ pub(super) fn register(app: &mut App) {
     create_cosmos_command::<OpCommand, _>(
         ServerCommand::new("cosmos:op", "(player)", "Toggles this player's operator status"),
         app,
-        |q_players: Query<(Entity, &Player)>,
-         mut commands: Commands,
+        |q_players: Query<&Player>,
          mut evw_send_message: EventWriter<SendCommandMessageEvent>,
-         q_operator: Query<&Operator>,
+         mut operators: ResMut<Operators>,
          mut evr_command: EventReader<CommandEvent<OpCommand>>| {
             for ev in evr_command.read() {
-                let Some((ent, player)) = (match &ev.command.receiver {
-                    Receiver::Name(name) => q_players.iter().find(|x| x.1.name() == name),
+                let Some(player) = (match &ev.command.receiver {
+                    Receiver::Name(name) => q_players.iter().find(|x| x.name() == name),
                     Receiver::Entity(e) => q_players.get(*e).ok(),
                 }) else {
                     ev.sender
@@ -52,12 +51,12 @@ pub(super) fn register(app: &mut App) {
                     continue;
                 };
 
-                if q_operator.contains(ent) {
+                if operators.is_operator(player.client_id()) {
+                    operators.remove_operator(player.client_id());
                     ev.sender.write(format!("De-opped {}.", player.name()), &mut evw_send_message);
-                    commands.entity(ent).remove::<Operator>();
                 } else {
+                    operators.add_operator(player.client_id(), player.name());
                     ev.sender.write(format!("Opped {}.", player.name()), &mut evw_send_message);
-                    commands.entity(ent).insert(Operator);
                 }
             }
         },

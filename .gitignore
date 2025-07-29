@@ -20,6 +20,7 @@ cosmos_server/world/*
 # This directory is for run-time generated assets
 cosmos_server/assets/temp/
 cosmos_server/backups/*
+cosmos_server/operators.json
 
 trace-*.json
 
