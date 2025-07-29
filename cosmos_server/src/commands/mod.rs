@@ -1,17 +1,51 @@
 //! Responsible for the registration & creation elements of all server console commands
 
-use bevy::prelude::{App, Component, Entity, Event, EventWriter, Query};
+use bevy::prelude::*;
 use cosmos_core::{
     netty::sync::IdentifiableComponent,
     registry::{create_registry, identifiable::Identifiable},
 };
+use renet::ClientId;
 use serde::{Deserialize, Serialize};
 
 use crate::persistence::make_persistent::{DefaultPersistentComponent, make_persistent};
 
 pub mod cosmos_command_handler;
 mod impls;
+mod operator;
 pub mod prelude;
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct ServerOperator {
+    /// This name field is just to easily identify people in the operators.json. This is NOT used
+    /// for any actual logic
+    name: String,
+    steam_id: ClientId,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, Default, Resource)]
+pub struct Operators(Vec<ServerOperator>);
+
+impl Operators {
+    pub fn is_operator(&self, steam_id: ClientId) -> bool {
+        self.0.iter().any(|x| x.steam_id == steam_id)
+    }
+
+    pub fn add_operator(&mut self, steam_id: ClientId, name: impl Into<String>) {
+        if let Some(existing) = self.0.iter_mut().find(|x| x.steam_id == steam_id) {
+            existing.name = name.into();
+        } else {
+            self.0.push(ServerOperator {
+                steam_id,
+                name: name.into(),
+            })
+        }
+    }
+
+    pub fn remove_operator(&mut self, steam_id: ClientId) {
+        self.0.retain(|x| x.steam_id != steam_id);
+    }
+}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 /// The entity or server that sent this command
@@ -133,7 +167,7 @@ impl Identifiable for ServerCommand {
         &self.unlocalized_name
     }
 }
-
+ 
 impl ServerCommand {
     /// Creates a new cosmos command with these identifiers
     ///
@@ -162,10 +196,9 @@ impl ServerCommand {
 pub(super) fn register(app: &mut App) {
     create_registry::<ServerCommand>(app, "cosmos:commands");
 
-    make_persistent::<Operator>(app);
-
     app.add_event::<CosmosCommandSent>().add_event::<SendCommandMessageEvent>();
 
     cosmos_command_handler::register(app);
     impls::register(app);
+    operator::register(app);
 }

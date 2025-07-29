@@ -23,9 +23,13 @@ use crate::{
 #[derive(Component)]
 struct ActiveMissionDisplay;
 
+#[derive(Component)]
+struct DisplayedOngoingQuest(OngoingQuest);
+
 fn display_active_mission(
     q_display: Query<Entity, With<ActiveMissionDisplay>>,
     mut commands: Commands,
+    q_displayed_ongoing_quest: Query<&DisplayedOngoingQuest>,
     q_changed_active_quest: Query<(&OngoingQuests, &ActiveQuest), (Or<(Changed<ActiveQuest>, Changed<OngoingQuests>)>, With<LocalPlayer>)>,
     mut removed_active_quest: RemovedComponents<ActiveQuest>,
     quests: Res<Registry<Quest>>,
@@ -36,6 +40,16 @@ fn display_active_mission(
     if (removed_active_quest.read().next().is_some() || !q_changed_active_quest.is_empty())
         && let Ok(ent) = q_display.single()
     {
+        if let Ok(displayed_ongoing) = q_displayed_ongoing_quest.single() {
+            if let Ok((ongoing_quests, active_quest)) = q_changed_active_quest.single() {
+                if let Some(ongoing_quest) = ongoing_quests.from_id(&active_quest.0) {
+                    if ongoing_quest == &displayed_ongoing.0 {
+                        // Don't rerender the quest if it's the same
+                        return;
+                    }
+                }
+            }
+        }
         commands.entity(ent).insert(NeedsDespawned);
     }
 
@@ -112,6 +126,10 @@ fn display_quest<R: Relationship>(
         Text::new(quests_lang.get_name_or_unlocalized(quest)),
         text_font.clone(),
     ));
+
+    if !subquest {
+        ecmds.insert(DisplayedOngoingQuest(ongoing_quest.clone()));
+    }
 
     let complete = ongoing_quest.completed();
 
