@@ -8,7 +8,7 @@ use cosmos_core::{
 use renet::ClientId;
 use serde::{Deserialize, Serialize};
 
-use crate::persistence::make_persistent::{DefaultPersistentComponent, make_persistent};
+use crate::persistence::make_persistent::DefaultPersistentComponent;
 
 pub mod cosmos_command_handler;
 mod impls;
