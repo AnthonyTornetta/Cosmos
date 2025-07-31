@@ -7,7 +7,7 @@ use bevy_renet::steam::steamworks::{
     networking_types::{NetworkingConfigEntry, NetworkingConfigValue},
 };
 use derive_more::{Display, Error};
-use renet_steam::SteamClientTransport;
+use renet_steam::{SteamClientTransport, SteamClientTransportConfig};
 
 use super::connect::ConnectToConfig;
 
@@ -46,10 +46,10 @@ pub fn new_steam_transport(client: &Client, host_config: &ConnectToConfig) -> Re
     let my_steam_id = client.user().steam_id();
 
     const MEGABYTE: i32 = 1024 * 1024;
-    let config = vec![NetworkingConfigEntry::new_int32(
+    let config = SteamClientTransportConfig::new().with_config(NetworkingConfigEntry::new_int32(
         NetworkingConfigValue::SendBufferSize,
         10 * MEGABYTE,
-    )];
+    ));
 
     let transport = match host_config {
         ConnectToConfig::Ip(ip) => {

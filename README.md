@@ -67,7 +67,7 @@ See [the issues page](https://github.com/AnthonyTornetta/Cosmos/issues) for the 
 
 - [ ] More pirate ships
 - [ ] More station types
-- [ ] Performance fixes
+- [x] Performance fixes
 - [x] Rework systems to use FixedUpdate
   - [x] Physics
 - [x] Reduce amount of packets server sends per second

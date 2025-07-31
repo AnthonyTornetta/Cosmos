@@ -78,7 +78,12 @@ pub fn init(app: &mut App, port: u16) {
         .with_config(NetworkingConfigEntry::new_int32(
             NetworkingConfigValue::SendBufferSize,
             10 * MEGABYTE,
-        ));
+        ))
+        // Just a big number, we should find a value using science later. If this is too small,
+        // the client can't process the server's messages fast enough and it stalls out
+        //
+        // SERVER NOTE: idk if this is even needed for the server.
+        .with_max_batch_size(100000);
 
     /*
         *
