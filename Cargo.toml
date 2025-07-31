@@ -14,10 +14,10 @@ bevy_rapier3d = { git = "https://github.com/AnthonyTornetta/bevy_rapier", versio
 
 bevy_app_compute = { git = "https://github.com/AnthonyTornetta/bevy_app_compute", branch = "no-build-worker", version = "0.16" }
 
-renet = { path = "../renet/renet", version = "1.0.0" }
-renet_steam = { path = "../renet/renet_steam", version = "1.0.0" }
-bevy_renet = { path = "../renet/bevy_renet/", version="1.0.0" }
-renet_visualizer = { path = "../renet/renet_visualizer/", version="1.0.0" }
+renet = { git = "https://github.com/AnthonyTornetta/renet", branch = "cosmos", version = "1.0.0" }
+renet_steam = { git = "https://github.com/AnthonyTornetta/renet", branch = "cosmos", version = "1.0.0" }
+bevy_renet = { git = "https://github.com/AnthonyTornetta/renet", branch = "cosmos", version="1.0.0" }
+renet_visualizer = { git = "https://github.com/AnthonyTornetta/renet", branch = "cosmos", version="1.0.0" }
 # steamworks = "0.12"
 serde = "1.0"
 serde_json = "1.0"
