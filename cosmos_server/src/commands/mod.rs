@@ -16,7 +16,7 @@ mod operator;
 pub mod prelude;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct ServerOperator {
+struct ServerOperator {
     /// This name field is just to easily identify people in the operators.json. This is NOT used
     /// for any actual logic
     name: String,
@@ -24,13 +24,18 @@ pub struct ServerOperator {
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, Default, Resource)]
+/// A list of all operators a server has (includes logged out players)
+///
+/// An operator can execute server commands, and has the highest level of permissions
 pub struct Operators(Vec<ServerOperator>);
 
 impl Operators {
+    /// Checks if a given client id is an operator
     pub fn is_operator(&self, steam_id: ClientId) -> bool {
         self.0.iter().any(|x| x.steam_id == steam_id)
     }
 
+    /// Adds a player to the list of server operators
     pub fn add_operator(&mut self, steam_id: ClientId, name: impl Into<String>) {
         if let Some(existing) = self.0.iter_mut().find(|x| x.steam_id == steam_id) {
             existing.name = name.into();
@@ -42,6 +47,7 @@ impl Operators {
         }
     }
 
+    /// Removes a player from the list of server operators
     pub fn remove_operator(&mut self, steam_id: ClientId) {
         self.0.retain(|x| x.steam_id != steam_id);
     }
@@ -167,7 +173,7 @@ impl Identifiable for ServerCommand {
         &self.unlocalized_name
     }
 }
- 
+
 impl ServerCommand {
     /// Creates a new cosmos command with these identifiers
     ///
