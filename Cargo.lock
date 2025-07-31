@@ -1414,6 +1414,7 @@ dependencies = [
 [[package]]
 name = "bevy_renet"
 version = "1.0.0"
+source = "git+https://github.com/AnthonyTornetta/renet?branch=cosmos#af1b7b7d4e3c3a718f28dc88657aa1111f49c5e3"
 dependencies = [
  "bevy_app",
  "bevy_ecs",
@@ -5220,6 +5221,7 @@ checksum = "19b30a45b0cd0bcca8037f3d0dc3421eaf95327a17cad11964fb8179b4fc4832"
 [[package]]
 name = "renet"
 version = "1.0.0"
+source = "git+https://github.com/AnthonyTornetta/renet?branch=cosmos#af1b7b7d4e3c3a718f28dc88657aa1111f49c5e3"
 dependencies = [
  "bevy_ecs",
  "bytes",
@@ -5230,6 +5232,7 @@ dependencies = [
 [[package]]
 name = "renet_steam"
 version = "1.0.0"
+source = "git+https://github.com/AnthonyTornetta/renet?branch=cosmos#af1b7b7d4e3c3a718f28dc88657aa1111f49c5e3"
 dependencies = [
  "bevy_ecs",
  "log",
@@ -5240,6 +5243,7 @@ dependencies = [
 [[package]]
 name = "renet_visualizer"
 version = "1.0.0"
+source = "git+https://github.com/AnthonyTornetta/renet?branch=cosmos#af1b7b7d4e3c3a718f28dc88657aa1111f49c5e3"
 dependencies = [
  "bevy_ecs",
  "egui",
