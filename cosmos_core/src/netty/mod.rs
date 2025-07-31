@@ -279,7 +279,7 @@ pub const PROTOCOL_ID: u64 = 7;
 /// Assembles the configuration for a renet connection
 pub fn connection_config() -> ConnectionConfig {
     ConnectionConfig {
-        available_bytes_per_tick: MB as u64,
+        available_bytes_per_tick: KB as u64 * 5,
         client_channels_config: NettyChannelClient::channels_config(),
         server_channels_config: NettyChannelServer::channels_config(),
     }
