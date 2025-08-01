@@ -118,6 +118,12 @@ impl StructureSystemImpl for RailgunSystem {
 
 impl SyncableSystem for RailgunSystem {}
 
+impl RailgunSystem {
+    pub fn new(railguns: Vec<RailgunSystemEntry>) -> Self {
+        Self { railguns }
+    }
+}
+
 fn name_railgun_system(mut commands: Commands, q_added: Query<Entity, Added<RailgunSystem>>) {
     for e in q_added.iter() {
         commands.entity(e).insert(Name::new("Railgun System"));

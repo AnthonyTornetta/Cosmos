@@ -28,6 +28,7 @@ use cosmos_core::{
             railgun_system::{InvalidRailgunReason, RailgunBlock, RailgunFiredEvent, RailgunFiredInfo, RailgunSystem, RailgunSystemEntry},
         },
     },
+    utils::ecs::MutOrMutRef,
 };
 
 use super::{shield_system::ShieldHitEvent, sync::register_structure_system};
@@ -209,10 +210,13 @@ fn block_update_system(
     blocks: Res<Registry<Block>>,
     mut system_query: Query<&mut RailgunSystem>,
     q_structure: Query<&Structure>,
-    systems_query: Query<&StructureSystems>,
+    q_system: Query<&StructureSystem>,
+    mut systems_query: Query<&mut StructureSystems>,
+    registry: Res<Registry<StructureSystemType>>,
+    mut commands: Commands,
 ) {
     for ev in evr_block_changed.read() {
-        let Ok(systems) = systems_query.get(ev.block.structure()) else {
+        let Ok(mut systems) = systems_query.get_mut(ev.block.structure()) else {
             continue;
         };
 
@@ -220,14 +224,17 @@ fn block_update_system(
             continue;
         };
 
-        let Ok(mut system) = systems.query_mut(&mut system_query) else {
-            continue;
-        };
+        let mut new_system_if_needed = RailgunSystem::default();
+
+        let railgun_system = systems
+            .query_mut(&mut system_query)
+            .map(|x| MutOrMutRef::from(x))
+            .unwrap_or(MutOrMutRef::from(&mut new_system_if_needed));
 
         let railguns = compute_railguns(
             structure,
             &blocks,
-            system.railguns.iter().cloned().chain(
+            railgun_system.railguns.iter().cloned().chain(
                 [RailgunSystemEntry {
                     origin: ev.block.coords(),
                     ..Default::default()
@@ -236,7 +243,21 @@ fn block_update_system(
             ),
         );
 
-        system.railguns = railguns;
+        match railgun_system {
+            MutOrMutRef::Mut(mut existing_system) => {
+                if railguns.is_empty() {
+                    let system = *systems.query(&q_system).expect("This should always exist on a StructureSystem");
+                    systems.remove_system(&mut commands, &system, &registry);
+                } else {
+                    existing_system.railguns = railguns;
+                }
+            }
+            MutOrMutRef::Ref(_) => {
+                if !railguns.is_empty() {
+                    systems.add_system(&mut commands, RailgunSystem::new(railguns), &registry);
+                }
+            }
+        }
     }
 }
 
@@ -267,9 +288,11 @@ fn structure_loaded_event(
                     }),
             );
 
-            system.railguns = railguns;
+            if !railguns.is_empty() {
+                system.railguns = railguns;
 
-            systems.add_system(&mut commands, system, &registry);
+                systems.add_system(&mut commands, system, &registry);
+            }
         }
     }
 }

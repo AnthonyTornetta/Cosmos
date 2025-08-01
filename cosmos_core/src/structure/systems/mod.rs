@@ -17,6 +17,7 @@ use bevy::{
 use serde::{Deserialize, Serialize};
 
 use crate::{
+    ecs::NeedsDespawned,
     netty::sync::registry::sync_registry,
     registry::{Registry, create_registry, identifiable::Identifiable},
 };
@@ -96,7 +97,7 @@ fn remove_system_actives_when_melting_down(
 /// This does not need to be provided if no controller is used
 pub struct SystemBlock;
 
-#[derive(Component, Debug, Reflect)]
+#[derive(Component, Debug, Reflect, Clone, Copy)]
 /// Every system has this as a component.
 pub struct StructureSystem {
     structure_entity: Entity,
@@ -393,6 +394,33 @@ impl StructureSystems {
         self.add_system_with_id(commands, system, system_id, registry)
     }
 
+    pub fn remove_system(&mut self, commands: &mut Commands, system: &StructureSystem, registry: &Registry<StructureSystemType>) {
+        let system_id = system.system_id;
+        let Some(entity) = self.ids.remove(&system_id) else {
+            return;
+        };
+        commands.entity(entity).insert(NeedsDespawned);
+
+        let Some((idx, _)) = self.systems.iter().enumerate().find(|(_, x)| **x == system_id) else {
+            return;
+        };
+        self.systems.remove(idx);
+        // This ensures the client + server have the same order, which is important.
+        // Making this up to user preference would be pointless, since they only should be able
+        // to interact with activatable systems.
+        self.systems.sort();
+        if registry.from_numeric_id(system.system_type_id.0).is_activatable() {
+            let Some((idx, _)) = self.activatable_systems.iter().enumerate().find(|(_, x)| **x == system_id) else {
+                return;
+            };
+
+            self.activatable_systems.remove(idx);
+            // This ensures the client + server have the same order, which is important.
+            // In the future, this should be up to user-preference.
+            self.activatable_systems.sort();
+        }
+    }
+
     /// Queries all the systems of a structure with this specific query, or returns `Err(NoSystemFound)` if none matched this query.
     pub fn query<'a, Q, F>(&'a self, query: &'a Query<Q, F>) -> Result<ROQueryItem<'a, Q>, NoSystemFound>
     where
@@ -449,6 +477,8 @@ fn add_structure(mut commands: Commands, query: Query<Entity, (Added<Structure>,
 pub trait StructureSystemImpl: Component + std::fmt::Debug {
     /// The unlocalized name of this system. Used for unique serialization
     fn unlocalized_name() -> &'static str;
+
+    // fn is_present_on_ship(&self) -> bool;
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
