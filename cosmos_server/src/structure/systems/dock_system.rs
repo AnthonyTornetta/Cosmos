@@ -10,7 +10,7 @@ use bevy_rapier3d::{
 };
 use cosmos_core::{
     block::{Block, block_events::BlockEventsSet, block_face::BlockFace},
-    events::block_events::BlockChangedEvent,
+    events::{block_events::BlockChangedEvent, structure::structure_event::StructureEventIterator},
     physics::structure_physics::ChunkPhysicsPart,
     registry::{Registry, identifiable::Identifiable},
     state::GameState,
@@ -25,7 +25,7 @@ use cosmos_core::{
         },
     },
     utils::{
-        ecs::{FixedUpdateRemovedComponents, register_fixed_update_removed_component},
+        ecs::{FixedUpdateRemovedComponents, MutOrMutRef, register_fixed_update_removed_component},
         quat_math::QuatMath,
     },
 };
@@ -42,22 +42,44 @@ fn dock_block_update_system(
     blocks: Res<Registry<Block>>,
     mut system_query: Query<&mut DockSystem>,
     mut q_systems: Query<&mut StructureSystems>,
+    mut commands: Commands,
+    q_system: Query<&StructureSystem>,
+    registry: Res<Registry<StructureSystemType>>,
 ) {
-    for ev in event.read() {
-        let Ok(systems) = q_systems.get_mut(ev.block.structure()) else {
+    for (structure, events) in event.read().group_by_structure() {
+        let Ok(mut systems) = q_systems.get_mut(structure) else {
             continue;
         };
 
-        let Ok(mut system) = systems.query_mut(&mut system_query) else {
-            continue;
-        };
+        let mut new_system_if_needed = DockSystem::default();
 
-        if blocks.from_numeric_id(ev.old_block).unlocalized_name() == "cosmos:ship_dock" {
-            system.block_removed(ev.block.coords());
+        let mut system = systems
+            .query_mut(&mut system_query)
+            .map(MutOrMutRef::from)
+            .unwrap_or(MutOrMutRef::from(&mut new_system_if_needed));
+
+        for ev in events {
+            if blocks.from_numeric_id(ev.old_block).unlocalized_name() == "cosmos:ship_dock" {
+                system.block_removed(ev.block.coords());
+            }
+
+            if blocks.from_numeric_id(ev.new_block).unlocalized_name() == "cosmos:ship_dock" {
+                system.block_added(ev.block.coords());
+            }
         }
 
-        if blocks.from_numeric_id(ev.new_block).unlocalized_name() == "cosmos:ship_dock" {
-            system.block_added(ev.block.coords());
+        match system {
+            MutOrMutRef::Mut(existing_system) => {
+                if existing_system.is_empty() {
+                    let system = *systems.query(&q_system).expect("This should always exist on a StructureSystem");
+                    systems.remove_system(&mut commands, &system, &registry);
+                }
+            }
+            MutOrMutRef::Ref(new_system) => {
+                if !new_system.is_empty() {
+                    systems.add_system(&mut commands, std::mem::take(&mut new_system_if_needed), &registry);
+                }
+            }
         }
     }
 }

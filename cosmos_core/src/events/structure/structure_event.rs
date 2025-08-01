@@ -16,10 +16,10 @@ pub trait StructureEventIterator<E: StructureEvent> {
 
 impl<E: StructureEvent> StructureEventIterator<E> for EventIterator<'_, E> {
     fn group_by_structure(&mut self) -> HashMap<Entity, Vec<&E>> {
-        let mut mapped: HashMap<Entity, Vec<&E>> = HashMap::default();
+        let mut grouped: HashMap<Entity, Vec<&E>> = HashMap::default();
         for ev in self {
-            mapped.entry(ev.structure_entity()).or_default().push(ev);
+            grouped.entry(ev.structure_entity()).or_default().push(ev);
         }
-        mapped
+        grouped
     }
 }
