@@ -37,52 +37,53 @@ fn generate_pirate_stations(
         let mut n_asteroid_stations = rng.random_range(10..=n_stations / 2);
 
         for _ in 0..n_stations {
-            let mut faction_origin: Sector;
-
-            loop {
-                faction_origin = if n_asteroid_stations != 0 {
-                    system
-                        .iter()
-                        .filter(|maybe_asteroid| matches!(maybe_asteroid.item, SystemItem::Asteroid(_)))
-                        .map(|asteroid| asteroid.location.sector)
-                        .choose(&mut rng)
-                        .unwrap_or_else(|| {
-                            Sector::new(
-                                rng.random_range(0..SYSTEM_SECTORS as i64),
-                                rng.random_range(0..SYSTEM_SECTORS as i64),
-                                rng.random_range(0..SYSTEM_SECTORS as i64),
-                            )
-                        })
-                } else {
-                    system.coordinate().negative_most_sector()
-                        + Sector::new(
+            let mut pirate_station_sector = if n_asteroid_stations != 0 {
+                system
+                    .iter()
+                    .filter(|maybe_asteroid| matches!(maybe_asteroid.item, SystemItem::Asteroid(_)))
+                    .map(|asteroid| asteroid.location.sector)
+                    .choose(&mut rng)
+                    .unwrap_or_else(|| {
+                        Sector::new(
                             rng.random_range(0..SYSTEM_SECTORS as i64),
                             rng.random_range(0..SYSTEM_SECTORS as i64),
                             rng.random_range(0..SYSTEM_SECTORS as i64),
                         )
-                };
+                    })
+            } else {
+                system.coordinate().negative_most_sector()
+                    + Sector::new(
+                        rng.random_range(0..SYSTEM_SECTORS as i64),
+                        rng.random_range(0..SYSTEM_SECTORS as i64),
+                        rng.random_range(0..SYSTEM_SECTORS as i64),
+                    )
+            };
 
-                let sector_danger = system.compute_sector_danger(faction_origin);
+            pirate_station_sector = pirate_station_sector + ev.system.negative_most_sector();
 
-                info!("Sector Danger @ {faction_origin}: {sector_danger:?}");
-
-                if sector_danger < PIRATE_STATION_MIN_DANGER {
+            if done_zones.contains(&pirate_station_sector) {
+                if n_asteroid_stations != 0 {
                     n_asteroid_stations -= 1;
-                    // Don't generate too close to safe things
-                    break;
                 }
 
-                faction_origin = faction_origin + ev.system.negative_most_sector();
-
-                if !done_zones.contains(&faction_origin) {
-                    break;
-                }
+                continue;
             }
 
-            done_zones.push(faction_origin);
+            let sector_danger = system.compute_sector_danger(pirate_station_sector);
+
+            if sector_danger < PIRATE_STATION_MIN_DANGER {
+                if n_asteroid_stations != 0 {
+                    n_asteroid_stations -= 1;
+                }
+
+                // Don't generate too close to safe things
+                continue;
+            }
+
+            done_zones.push(pirate_station_sector);
 
             system.add_item(
-                Location::new(Vec3::ZERO, faction_origin),
+                Location::new(Vec3::ZERO, pirate_station_sector),
                 random_quat(&mut rng),
                 SystemItem::PirateStation(SystemItemPirateStation {
                     build_type: "default".into(),
