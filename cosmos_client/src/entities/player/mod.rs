@@ -17,7 +17,7 @@ fn on_add_player(
 ) {
     for (ent, player) in q_player.iter() {
         commands.entity(ent).insert((
-            Mesh3d(asset_server.load("cosmos/models/misc/person.glb")),
+            Mesh3d(asset_server.load("cosmos/models/misc/person.obj")),
             // Mesh3d(meshes.add(Capsule3d::default())),
             MeshMaterial3d(materials.add(StandardMaterial {
                 base_color: css::GREEN.into(),
