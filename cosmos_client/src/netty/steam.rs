@@ -1,9 +1,13 @@
 //! Handles client steam networking + setup
 
 use bevy::prelude::*;
-use bevy_renet::steam::steamworks::{Client, SingleClient, SteamId, networking_sockets::InvalidHandle};
+use bevy_renet::steam::steamworks::{
+    Client, SteamId,
+    networking_sockets::InvalidHandle,
+    networking_types::{NetworkingConfigEntry, NetworkingConfigValue},
+};
 use derive_more::{Display, Error};
-use renet_steam::SteamClientTransport;
+use renet_steam::{SteamClientTransport, SteamClientTransportConfig};
 
 use super::connect::ConnectToConfig;
 
@@ -41,10 +45,16 @@ pub fn new_steam_transport(client: &Client, host_config: &ConnectToConfig) -> Re
 
     let my_steam_id = client.user().steam_id();
 
+    const MEGABYTE: i32 = 1024 * 1024;
+    let config = SteamClientTransportConfig::new().with_config(NetworkingConfigEntry::new_int32(
+        NetworkingConfigValue::SendBufferSize,
+        10 * MEGABYTE,
+    ));
+
     let transport = match host_config {
         ConnectToConfig::Ip(ip) => {
             info!("Creating transport for ip {ip:?}");
-            match SteamClientTransport::new_ip(client, *ip) {
+            match SteamClientTransport::new_ip_with_config(client, *ip, config) {
                 Ok(t) => t,
                 Err(e) => {
                     return Err(SteamTransportError::InvalidHandle(e));
@@ -56,7 +66,7 @@ pub fn new_steam_transport(client: &Client, host_config: &ConnectToConfig) -> Re
             if my_steam_id == *steam_id {
                 return Err(SteamTransportError::SameSteamId);
             }
-            match SteamClientTransport::new_p2p(client, steam_id) {
+            match SteamClientTransport::new_p2p_with_config(client, steam_id, config) {
                 Ok(t) => t,
                 Err(e) => {
                     return Err(SteamTransportError::InvalidHandle(e));
@@ -71,7 +81,7 @@ pub fn new_steam_transport(client: &Client, host_config: &ConnectToConfig) -> Re
 }
 
 pub(super) fn register(app: &mut App) {
-    let (client, single) = match Client::init() {
+    let client = match Client::init() {
         Ok(c) => c,
         Err(e) => {
             panic!("{e:?}");
@@ -82,9 +92,8 @@ pub(super) fn register(app: &mut App) {
 
     app.insert_resource(User { client });
 
-    app.insert_non_send_resource(single);
-    fn steam_callbacks(client: NonSend<SingleClient>) {
-        client.run_callbacks();
+    fn steam_callbacks(client: Res<User>) {
+        client.client.run_callbacks();
     }
 
     app.add_systems(PreUpdate, steam_callbacks);

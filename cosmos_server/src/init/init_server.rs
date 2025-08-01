@@ -6,7 +6,10 @@ use bevy::prelude::*;
 
 use bevy_renet::{
     renet::RenetServer,
-    steam::steamworks::{Client, SingleClient},
+    steam::steamworks::{
+        Client,
+        networking_types::{NetworkingConfigEntry, NetworkingConfigValue},
+    },
 };
 use cosmos_core::netty::{connection_config, server::ServerLobby};
 use renet_steam::{SteamServerConfig, SteamServerSocketOptions, SteamServerTransport};
@@ -64,15 +67,26 @@ pub fn init(app: &mut App, port: u16) {
     //
     //     commands.insert_resource(AuthenticationServer::Steam(steam_server));
 
-    let (steam_client, single) = Client::init().unwrap();
-    // info!("Server steam id: {:?}", steam_client.user().steam_id());
+    let steam_client = Client::init().unwrap();
+    info!("Server steam id: {:?}", steam_client.user().steam_id());
     let netty = steam_client.networking_utils();
     netty.init_relay_network_access();
 
-    let socket_options = SteamServerSocketOptions::default().with_address(format!("0.0.0.0:{port}").parse().unwrap());
+    const MEGABYTE: i32 = 1024 * 1024;
+    let socket_options = SteamServerSocketOptions::default()
+        .with_address(format!("0.0.0.0:{port}").parse().unwrap())
+        .with_config(NetworkingConfigEntry::new_int32(
+            NetworkingConfigValue::SendBufferSize,
+            10 * MEGABYTE,
+        ))
+        // Just a big number, we should find a value using science later. If this is too small,
+        // the client can't process the server's messages fast enough and it stalls out
+        //
+        // SERVER NOTE: idk if this is even needed for the server.
+        .with_max_batch_size(100000);
 
     /*
-        * const MEGABYTE: i32 = 1024 * 1024;
+        *
         let socket_options = SteamServerSocketOptions::default()
             .with_address(format!("0.0.0.0:{port}").parse().unwrap())
             .with_config(NetworkingConfigEntry::new_int32(
@@ -89,7 +103,6 @@ pub fn init(app: &mut App, port: u16) {
         .insert_resource(ClientTicks::default())
         .insert_resource(server)
         .insert_non_send_resource(transport)
-        .insert_non_send_resource(single)
         .insert_resource(ServerSteamClient { client: steam_client });
 
     info!("Steam server created!");
@@ -97,9 +110,9 @@ pub fn init(app: &mut App, port: u16) {
     // info!("Public address: {public_addr}");
 }
 
-fn steam_callbacks(client: Option<NonSend<SingleClient>>) {
+fn steam_callbacks(client: Option<Res<ServerSteamClient>>) {
     if let Some(client) = client {
-        client.run_callbacks();
+        client.client.run_callbacks();
     }
 }
 

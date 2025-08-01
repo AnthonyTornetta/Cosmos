@@ -140,6 +140,7 @@ pub enum SystemItem {
 impl SystemItem {
     /// Distance is a percentage of how far away this is from the maximum danger threshold
     pub fn compute_danger_modifier(&self, multiplier: f32) -> f32 {
+        // println!("{self:?} ({multiplier})");
         match self {
             Self::Star(_) => -100.0 * multiplier,
             Self::Planet(_) => -30.0 * multiplier,
@@ -147,7 +148,7 @@ impl SystemItem {
             Self::PirateStation(_) => 100.0 * multiplier,
             Self::Asteroid(_) => 0.0,
             Self::PlayerStation => -500.0 * multiplier * multiplier,
-            Self::NpcStation(_) => -100.0 * multiplier,
+            Self::NpcStation(_) => -100000.0 * multiplier,
         }
     }
 }
@@ -280,7 +281,8 @@ impl UniverseSystem {
             .max_element();
         let max_dist = SS2 - DANGER_DISTANCE / 2;
 
-        let mut danger = (center_dist as f32).powf(EDGE_DANGER_SCALING) / (SS2 as f32).powf(EDGE_DANGER_SCALING) * SectorDanger::MAX_DANGER;
+        let mut danger =
+            ((center_dist as f32).powf(EDGE_DANGER_SCALING) / (SS2 as f32).powf(EDGE_DANGER_SCALING) * SectorDanger::MAX_DANGER).floor();
 
         if center_dist >= max_dist {
             return SectorDanger::new(danger);

@@ -110,7 +110,7 @@ impl NettyChannelClient {
                 channel_id: Self::Reliable.into(),
                 max_memory_usage_bytes: 5 * MB,
                 send_type: SendType::ReliableOrdered {
-                    resend_time: Duration::from_millis(200),
+                    resend_time: Duration::from_millis(1000),
                 },
             },
             ChannelConfig {
@@ -122,42 +122,42 @@ impl NettyChannelClient {
                 channel_id: Self::Inventory.into(),
                 max_memory_usage_bytes: 5 * MB,
                 send_type: SendType::ReliableOrdered {
-                    resend_time: Duration::from_millis(200),
+                    resend_time: Duration::from_millis(1000),
                 },
             },
             ChannelConfig {
                 channel_id: Self::Shop.into(),
                 max_memory_usage_bytes: 5 * MB,
                 send_type: SendType::ReliableOrdered {
-                    resend_time: Duration::from_millis(200),
+                    resend_time: Duration::from_millis(1000),
                 },
             },
             ChannelConfig {
                 channel_id: Self::ComponentReplication.into(),
                 max_memory_usage_bytes: 5 * MB,
                 send_type: SendType::ReliableOrdered {
-                    resend_time: Duration::from_millis(200),
+                    resend_time: Duration::from_millis(1000),
                 },
             },
             ChannelConfig {
                 channel_id: Self::NettyEvent.into(),
                 max_memory_usage_bytes: 5 * MB,
                 send_type: SendType::ReliableOrdered {
-                    resend_time: Duration::from_millis(200),
+                    resend_time: Duration::from_millis(1000),
                 },
             },
             ChannelConfig {
                 channel_id: Self::Registry.into(),
                 max_memory_usage_bytes: MB,
                 send_type: SendType::ReliableOrdered {
-                    resend_time: Duration::from_millis(200),
+                    resend_time: Duration::from_millis(1000),
                 },
             },
             ChannelConfig {
                 channel_id: Self::Resource.into(),
                 max_memory_usage_bytes: MB,
                 send_type: SendType::ReliableOrdered {
-                    resend_time: Duration::from_millis(200),
+                    resend_time: Duration::from_millis(1000),
                 },
             },
         ]
@@ -191,7 +191,7 @@ impl NettyChannelServer {
                 channel_id: Self::Reliable.into(),
                 max_memory_usage_bytes: 5 * MB,
                 send_type: SendType::ReliableOrdered {
-                    resend_time: Duration::from_millis(200),
+                    resend_time: Duration::from_millis(1000),
                 },
             },
             ChannelConfig {
@@ -208,63 +208,63 @@ impl NettyChannelServer {
                 channel_id: Self::Asteroid.into(),
                 max_memory_usage_bytes: 5 * MB,
                 send_type: SendType::ReliableOrdered {
-                    resend_time: Duration::from_millis(200),
+                    resend_time: Duration::from_millis(1000),
                 },
             },
             ChannelConfig {
                 channel_id: Self::Inventory.into(),
                 max_memory_usage_bytes: 5 * MB,
                 send_type: SendType::ReliableOrdered {
-                    resend_time: Duration::from_millis(200),
+                    resend_time: Duration::from_millis(1000),
                 },
             },
             ChannelConfig {
                 channel_id: Self::DeltaLod.into(),
                 max_memory_usage_bytes: 5 * MB,
                 send_type: SendType::ReliableOrdered {
-                    resend_time: Duration::from_millis(200),
+                    resend_time: Duration::from_millis(1000),
                 },
             },
             ChannelConfig {
                 channel_id: Self::SystemReplication.into(),
                 max_memory_usage_bytes: 5 * MB,
                 send_type: SendType::ReliableOrdered {
-                    resend_time: Duration::from_millis(200),
+                    resend_time: Duration::from_millis(1000),
                 },
             },
             ChannelConfig {
                 channel_id: Self::Registry.into(),
                 max_memory_usage_bytes: 5 * MB,
                 send_type: SendType::ReliableOrdered {
-                    resend_time: Duration::from_millis(200),
+                    resend_time: Duration::from_millis(1000),
                 },
             },
             ChannelConfig {
                 channel_id: Self::Shop.into(),
                 max_memory_usage_bytes: 5 * MB,
                 send_type: SendType::ReliableOrdered {
-                    resend_time: Duration::from_millis(200),
+                    resend_time: Duration::from_millis(1000),
                 },
             },
             ChannelConfig {
                 channel_id: Self::ComponentReplication.into(),
                 max_memory_usage_bytes: 5 * MB,
                 send_type: SendType::ReliableOrdered {
-                    resend_time: Duration::from_millis(200),
+                    resend_time: Duration::from_millis(1000),
                 },
             },
             ChannelConfig {
                 channel_id: Self::NettyEvent.into(),
                 max_memory_usage_bytes: 5 * MB,
                 send_type: SendType::ReliableOrdered {
-                    resend_time: Duration::from_millis(200),
+                    resend_time: Duration::from_millis(1000),
                 },
             },
             ChannelConfig {
                 channel_id: Self::Resource.into(),
                 max_memory_usage_bytes: 5 * MB,
                 send_type: SendType::ReliableOrdered {
-                    resend_time: Duration::from_millis(200),
+                    resend_time: Duration::from_millis(1000),
                 },
             },
         ]
@@ -279,7 +279,7 @@ pub const PROTOCOL_ID: u64 = 7;
 /// Assembles the configuration for a renet connection
 pub fn connection_config() -> ConnectionConfig {
     ConnectionConfig {
-        available_bytes_per_tick: MB as u64,
+        available_bytes_per_tick: KB as u64 * 5,
         client_channels_config: NettyChannelClient::channels_config(),
         server_channels_config: NettyChannelServer::channels_config(),
     }

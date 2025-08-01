@@ -67,6 +67,7 @@ crossterm = { workspace = true }
 renet_visualizer = { workspace = true, features = ["bevy"] }
 futures-lite = { workspace = true }
 serde_json = { workspace = true }
+toml = { workspace = true }
 
 rayon = { workspace = true }
 
