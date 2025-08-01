@@ -41,10 +41,10 @@ fn dock_block_update_system(
     mut event: EventReader<BlockChangedEvent>,
     blocks: Res<Registry<Block>>,
     mut system_query: Query<&mut DockSystem>,
-    q_systems: Query<&StructureSystems>,
+    mut q_systems: Query<&mut StructureSystems>,
 ) {
     for ev in event.read() {
-        let Ok(systems) = q_systems.get(ev.block.structure()) else {
+        let Ok(systems) = q_systems.get_mut(ev.block.structure()) else {
             continue;
         };
 
@@ -79,7 +79,9 @@ fn dock_structure_loaded_event_processor(
                 }
             }
 
-            systems.add_system(&mut commands, system, &registry);
+            if !system.is_empty() {
+                systems.add_system(&mut commands, system, &registry);
+            }
         }
     }
 }

@@ -9,7 +9,10 @@ use bevy_rapier3d::{
 use cosmos_core::{
     block::{Block, block_events::BlockEventsSet, block_face::BlockFace, data::BlockData},
     entities::player::Player,
-    events::block_events::{BlockChangedEvent, BlockDataSystemParams},
+    events::{
+        block_events::{BlockChangedEvent, BlockDataSystemParams},
+        structure::structure_event::StructureEventIterator,
+    },
     netty::{sync::events::server_event::NettyEventWriter, system_sets::NetworkingSystemsSet},
     physics::location::{Location, LocationPhysicsSet, SECTOR_DIMENSIONS},
     prelude::StructureSystem,
@@ -215,12 +218,12 @@ fn block_update_system(
     registry: Res<Registry<StructureSystemType>>,
     mut commands: Commands,
 ) {
-    for ev in evr_block_changed.read() {
-        let Ok(mut systems) = systems_query.get_mut(ev.block.structure()) else {
+    for (structure, events) in evr_block_changed.read().group_by_structure() {
+        let Ok(mut systems) = systems_query.get_mut(structure) else {
             continue;
         };
 
-        let Ok(structure) = q_structure.get(ev.block.structure()) else {
+        let Ok(structure) = q_structure.get(structure) else {
             continue;
         };
 
@@ -234,13 +237,14 @@ fn block_update_system(
         let railguns = compute_railguns(
             structure,
             &blocks,
-            railgun_system.railguns.iter().cloned().chain(
-                [RailgunSystemEntry {
+            railgun_system
+                .railguns
+                .iter()
+                .cloned()
+                .chain(events.iter().map(|ev| RailgunSystemEntry {
                     origin: ev.block.coords(),
                     ..Default::default()
-                }]
-                .into_iter(),
-            ),
+                })),
         );
 
         match railgun_system {

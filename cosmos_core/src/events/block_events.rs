@@ -1,6 +1,7 @@
 //! Events that are related to blocks
 
 use crate::block::block_rotation::BlockRotation;
+use crate::events::structure::structure_event::StructureEvent;
 use crate::structure::chunk::BlockInfo;
 use crate::structure::structure_block::StructureBlock;
 use bevy::ecs::event::EventWriter;
@@ -28,6 +29,12 @@ pub struct BlockChangedEvent {
     pub old_block_info: BlockInfo,
     /// New block's rotation
     pub new_block_info: BlockInfo,
+}
+
+impl StructureEvent for BlockChangedEvent {
+    fn structure_entity(&self) -> Entity {
+        self.block.structure()
+    }
 }
 
 impl BlockChangedEvent {
