@@ -14,6 +14,7 @@ pub struct BlockBuilder {
     connect_to_groups: Vec<ConnectionGroup>,
     connection_groups: Vec<ConnectionGroup>,
     category: Option<String>,
+    interactable: bool,
 }
 
 impl BlockBuilder {
@@ -30,6 +31,7 @@ impl BlockBuilder {
             connect_to_groups: vec![],
             connection_groups: vec![],
             category: None,
+            interactable: false,
         }
     }
 
@@ -38,6 +40,12 @@ impl BlockBuilder {
     /// See [`crate::item::item_category::ItemCategory`]
     pub fn with_category(mut self, category: impl Into<String>) -> Self {
         self.category = Some(category.into());
+        self
+    }
+
+    /// Enables the flag that this block is interactable
+    pub fn with_interactable(mut self) -> Self {
+        self.interactable = true;
         self
     }
 
@@ -86,6 +94,7 @@ impl BlockBuilder {
             self.connect_to_groups,
             self.connection_groups,
             self.category,
+            self.interactable,
         )
     }
 }

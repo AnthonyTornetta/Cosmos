@@ -100,7 +100,7 @@ fn generate_factions(
                 faction = Faction::new(fac_name, vec![], Default::default(), FactionSettings { ..Default::default() });
                 fac_id = faction.id();
 
-                info!("Creating new NPC faction - {faction:?}");
+                info!("Creating new NPC faction - {faction:?} @ {faction_origin}");
 
                 if factions.add_new_faction(faction) {
                     break;
@@ -141,8 +141,13 @@ fn generate_factions(
             for i in 0..faction_size {
                 let spot = inner_circle.pop().expect("Not enough sectors") * (1 + (i as f32 * 3.0 / faction_size as f32) as i64);
 
+                let sector = faction_origin + spot;
+                if !system.is_within(sector) {
+                    continue;
+                }
+
                 system.add_item(
-                    Location::new(Vec3::ZERO, faction_origin + spot),
+                    Location::new(Vec3::ZERO, sector),
                     random_quat(&mut rng),
                     SystemItem::NpcStation(SystemItemNpcFaction {
                         faction: fac_id,

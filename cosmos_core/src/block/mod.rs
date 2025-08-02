@@ -80,6 +80,9 @@ pub struct Block {
     mining_resistance: f32,
     category: Option<String>,
 
+    /// If this block can be interacted with by the player
+    interactable: bool,
+
     /// TODO: make this not pub
     pub connect_to_groups: Vec<ConnectionGroup>,
     connection_groups: Vec<ConnectionGroup>,
@@ -115,6 +118,7 @@ impl Block {
         connect_to_groups: Vec<ConnectionGroup>,
         connection_groups: Vec<ConnectionGroup>,
         category: Option<String>,
+        interactable: bool,
     ) -> Self {
         Self {
             property_flags: BlockProperty::create_id(properties),
@@ -126,6 +130,7 @@ impl Block {
             connect_to_groups,
             connection_groups,
             category,
+            interactable,
         }
     }
 
@@ -161,6 +166,11 @@ impl Block {
     #[inline(always)]
     pub fn is_empty(&self) -> bool {
         self.property_flags & BlockProperty::Empty.id() != 0
+    }
+
+    /// Returns true if this block can be interacted with by the player
+    pub fn interactable(&self) -> bool {
+        self.interactable
     }
 
     /// Returns true if this block can have sub-rotations.

@@ -3,9 +3,53 @@
 use bevy::prelude::*;
 use cosmos_core::{state::GameState, utils::smooth_clamp::SmoothClamp};
 
-use crate::window::setup::CursorFlagsSet;
+use crate::{asset::asset_loader::load_assets, window::setup::CursorFlagsSet};
 
-fn add_crosshair(mut commands: Commands, asset_server: Res<AssetServer>) {
+#[derive(PartialEq, Eq, Default, Reflect)]
+enum State {
+    #[default]
+    Normal,
+    Indicating,
+}
+
+#[derive(Default, Component, Reflect)]
+pub struct CrosshairState {
+    indicating_requests: Vec<&'static str>,
+    prev_state: State,
+}
+
+impl CrosshairState {
+    pub fn request_indicating(&mut self, id: &'static str) {
+        if !self.indicating_requests.contains(&id) {
+            self.indicating_requests.push(id);
+        }
+    }
+
+    pub fn remove_indicating(&mut self, id: &'static str) {
+        let Some((idx, _)) = self.indicating_requests.iter().enumerate().find(|(_, x)| **x == id) else {
+            return;
+        };
+        self.indicating_requests.swap_remove(idx);
+    }
+
+    fn state(&self) -> State {
+        if self.indicating_requests.is_empty() {
+            State::Normal
+        } else {
+            State::Indicating
+        }
+    }
+
+    fn is_different_state(&self) -> bool {
+        self.prev_state != self.state()
+    }
+
+    fn update_prev_state(&mut self) {
+        self.prev_state = self.state();
+    }
+}
+
+fn add_crosshair(mut commands: Commands, crosshair_assets: Res<CrosshairAssets>) {
     commands
         .spawn((
             Node {
@@ -20,21 +64,45 @@ fn add_crosshair(mut commands: Commands, asset_server: Res<AssetServer>) {
             Name::new("Crosshair"),
         ))
         .with_children(|parent| {
-            parent
-                .spawn((
-                    ImageNode::new(asset_server.load("cosmos/images/ui/crosshair.png")),
-                    Node {
-                        width: Val::Px(8.0),
-                        height: Val::Px(8.0),
-                        left: Val::Px(0.0),
-                        right: Val::Px(0.0),
-                        top: Val::Px(0.0),
-                        bottom: Val::Px(0.0),
-                        ..default()
-                    },
-                ))
-                .insert(Crosshair);
+            parent.spawn((
+                ImageNode::new(crosshair_assets.normal.clone_weak()),
+                Node {
+                    width: Val::Px(8.0),
+                    height: Val::Px(8.0),
+                    left: Val::Px(0.0),
+                    right: Val::Px(0.0),
+                    top: Val::Px(0.0),
+                    bottom: Val::Px(0.0),
+                    ..default()
+                },
+                CrosshairState::default(),
+                Crosshair,
+            ));
         });
+}
+
+fn on_change_crosshair_state(
+    crosshair_assets: Res<CrosshairAssets>,
+    mut q_changed_state: Query<(&mut CrosshairState, &mut Node, &mut ImageNode)>,
+) {
+    for (mut state, mut node, mut img) in q_changed_state.iter_mut() {
+        if !state.is_different_state() {
+            continue;
+        }
+        state.update_prev_state();
+        img.image = match state.state() {
+            State::Normal => {
+                node.width = Val::Px(8.0);
+                node.height = Val::Px(8.0);
+                crosshair_assets.normal.clone_weak()
+            }
+            State::Indicating => {
+                node.width = Val::Px(16.0);
+                node.height = Val::Px(16.0);
+                crosshair_assets.indicating.clone_weak()
+            }
+        };
+    }
 }
 
 #[derive(Component)]
@@ -88,7 +156,22 @@ pub enum CrosshairOffsetSet {
     ApplyCrosshairChanges,
 }
 
+#[derive(Resource)]
+struct CrosshairAssets {
+    normal: Handle<Image>,
+    indicating: Handle<Image>,
+}
+
 pub(super) fn register(app: &mut App) {
+    load_assets::<Image, CrosshairAssets, 2>(
+        app,
+        GameState::Loading,
+        ["cosmos/images/ui/crosshair.png", "cosmos/images/ui/crosshair-indicating.png"],
+        |mut commands, [(normal, _), (indicating, _)]| {
+            commands.insert_resource(CrosshairAssets { normal, indicating });
+        },
+    );
+
     app.configure_sets(
         Update,
         CrosshairOffsetSet::ApplyCrosshairChanges.after(CursorFlagsSet::ApplyCursorFlagsUpdates),
@@ -98,9 +181,11 @@ pub(super) fn register(app: &mut App) {
         .add_systems(OnEnter(GameState::Playing), add_crosshair)
         .add_systems(
             Update,
-            update_cursor_pos
+            (update_cursor_pos, on_change_crosshair_state)
+                .chain()
                 .after(CrosshairOffsetSet::ApplyCrosshairChanges)
                 .after(CursorFlagsSet::ApplyCursorFlagsUpdates)
                 .run_if(in_state(GameState::Playing)),
-        );
+        )
+        .register_type::<CrosshairState>();
 }
