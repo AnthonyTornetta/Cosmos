@@ -43,7 +43,7 @@ fn dock_block_update_system(
     mut system_query: Query<&mut DockSystem>,
     mut q_systems: Query<&mut StructureSystems>,
     mut commands: Commands,
-    q_system: Query<&StructureSystem>,
+    q_system: Query<&StructureSystem, With<DockSystem>>,
     registry: Res<Registry<StructureSystemType>>,
 ) {
     for (structure, events) in event.read().group_by_structure() {

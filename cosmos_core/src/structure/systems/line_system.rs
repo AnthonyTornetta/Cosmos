@@ -230,6 +230,11 @@ impl<T: LineProperty, S: LinePropertyCalculator<T>> LineSystem<T, S> {
     pub fn line_containing(&mut self, block: BlockCoordinate) -> Option<&Line<T>> {
         self.lines.iter().find(|x| x.within(&block))
     }
+
+    /// Returns if this system has no lines
+    pub fn is_empty(&self) -> bool {
+        self.lines.is_empty()
+    }
 }
 
 impl<T: LineProperty, S: LinePropertyCalculator<T>> StructureSystemImpl for LineSystem<T, S> {

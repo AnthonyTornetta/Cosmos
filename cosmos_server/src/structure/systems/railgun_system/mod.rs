@@ -213,7 +213,7 @@ fn block_update_system(
     blocks: Res<Registry<Block>>,
     mut system_query: Query<&mut RailgunSystem>,
     q_structure: Query<&Structure>,
-    q_system: Query<&StructureSystem>,
+    q_system: Query<&StructureSystem, With<RailgunSystem>>,
     mut systems_query: Query<&mut StructureSystems>,
     registry: Res<Registry<StructureSystemType>>,
     mut commands: Commands,

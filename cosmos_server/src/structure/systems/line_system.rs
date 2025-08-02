@@ -1,7 +1,8 @@
 use bevy::{color::palettes::css, prelude::*};
 use cosmos_core::{
     block::{Block, block_direction::BlockDirection, block_events::BlockEventsSet, block_face::BlockFace, block_rotation::BlockRotation},
-    events::block_events::BlockChangedEvent,
+    events::{block_events::BlockChangedEvent, structure::structure_event::StructureEventIterator},
+    prelude::StructureSystem,
     registry::Registry,
     state::GameState,
     structure::{
@@ -13,6 +14,7 @@ use cosmos_core::{
             line_system::{Line, LineBlocks, LineColorBlock, LineColorProperty, LineProperty, LinePropertyCalculator, LineSystem},
         },
     },
+    utils::ecs::MutOrMutRef,
 };
 
 use super::BlockStructureSystem;
@@ -23,40 +25,62 @@ fn block_update_system<T: LineProperty, S: LinePropertyCalculator<T>>(
     color_blocks: Res<Registry<LineColorBlock>>,
     blocks: Res<Registry<Block>>,
     mut system_query: Query<&mut LineSystem<T, S>>,
-    systems_query: Query<&StructureSystems>,
+    mut systems_query: Query<&mut StructureSystems>,
+    mut commands: Commands,
+    q_system: Query<&StructureSystem, With<LineSystem<T, S>>>,
+    registry: Res<Registry<StructureSystemType>>,
 ) {
-    for ev in event.read() {
-        let Ok(systems) = systems_query.get(ev.block.structure()) else {
+    for (structure, events) in event.read().group_by_structure() {
+        let Ok(mut systems) = systems_query.get_mut(structure) else {
             continue;
         };
 
-        let Ok(mut system) = systems.query_mut(&mut system_query) else {
-            continue;
-        };
+        let mut new_system_if_needed = LineSystem::<T, S>::default();
 
-        let old_block = blocks.from_numeric_id(ev.old_block);
-        let new_block = blocks.from_numeric_id(ev.new_block);
+        let mut system = systems
+            .query_mut(&mut system_query)
+            .map(MutOrMutRef::from)
+            .unwrap_or(MutOrMutRef::from(&mut new_system_if_needed));
 
-        if laser_cannon_blocks.get(old_block).is_some() {
-            system.remove_block(ev.block.coords());
+        for ev in events {
+            let old_block = blocks.from_numeric_id(ev.old_block);
+            let new_block = blocks.from_numeric_id(ev.new_block);
+
+            if laser_cannon_blocks.get(old_block).is_some() {
+                system.remove_block(ev.block.coords());
+            }
+
+            if let Some(property) = laser_cannon_blocks.get(new_block) {
+                system.add_block(ev.block.coords(), ev.new_block_rotation(), property);
+            }
+
+            let mut recalc = false;
+            if color_blocks.from_block(old_block).is_some() {
+                system.colors.retain(|x| x.0 != ev.block.coords());
+                recalc = true;
+            }
+
+            if let Some(color_property) = color_blocks.from_block(new_block) {
+                system.colors.push((ev.block.coords(), color_property.properties));
+                recalc = true;
+            }
+            if recalc {
+                recalculate_colors(&mut system, Some(ev.block.coords()));
+            }
         }
 
-        if let Some(property) = laser_cannon_blocks.get(new_block) {
-            system.add_block(ev.block.coords(), ev.new_block_rotation(), property);
-        }
-
-        let mut recalc = false;
-        if color_blocks.from_block(old_block).is_some() {
-            system.colors.retain(|x| x.0 != ev.block.coords());
-            recalc = true;
-        }
-
-        if let Some(color_property) = color_blocks.from_block(new_block) {
-            system.colors.push((ev.block.coords(), color_property.properties));
-            recalc = true;
-        }
-        if recalc {
-            recalculate_colors(&mut system, Some(ev.block.coords()));
+        match system {
+            MutOrMutRef::Mut(existing_system) => {
+                if existing_system.is_empty() {
+                    let system = *systems.query(&q_system).expect("This should always exist on a StructureSystem");
+                    systems.remove_system(&mut commands, &system, &registry);
+                }
+            }
+            MutOrMutRef::Ref(new_system) => {
+                if !new_system.is_empty() {
+                    systems.add_system(&mut commands, std::mem::take(&mut new_system_if_needed), &registry);
+                }
+            }
         }
     }
 }
@@ -92,7 +116,9 @@ fn structure_loaded_event<T: LineProperty, S: LinePropertyCalculator<T>>(
                 recalculate_colors(&mut system, None);
             }
 
-            systems.add_system(&mut commands, system, &registry);
+            if !system.is_empty() {
+                systems.add_system(&mut commands, system, &registry);
+            }
         }
     }
 }
