@@ -97,6 +97,7 @@ fn create_indicator(
                     // Horizontally centers the text - textalign center doesn't work for some reason (shrug)
                     left: Val::Auto,
                     right: Val::Auto,
+                    top: Val::Px(90.0),
                     ..Default::default()
                 },
                 ..default()
@@ -313,7 +314,6 @@ fn added(
 fn position_diamonds(
     cam_query: Query<(Entity, &Camera), With<MainCamera>>,
     mut indicators: Query<(Entity, &mut Node, &Indicating)>,
-    global_trans_query: Query<&Transform>,
     indicator_settings_query: Query<&IndicatorSettings>,
     mut commands: Commands,
     mut closest_waypoint: ResMut<ClosestWaypoint>,
