@@ -1,10 +1,7 @@
 use bevy::prelude::*;
 use cosmos_core::{
-    block::Block,
-    ecs::sets::FixedUpdateSet,
-    netty::client::LocalPlayer,
-    prelude::Structure,
-    registry::{Registry, identifiable::Identifiable},
+    block::Block, ecs::sets::FixedUpdateSet, netty::client::LocalPlayer, prelude::Structure, registry::Registry,
+    structure::ship::pilot::Pilot,
 };
 
 use crate::{interactions::block_interactions::LookingAt, ui::crosshair::CrosshairState};
@@ -12,7 +9,7 @@ use crate::{interactions::block_interactions::LookingAt, ui::crosshair::Crosshai
 const ID: &str = "cosmos:indicating";
 
 fn on_look_at_interactable_block(
-    q_looking_at: Query<&LookingAt, With<LocalPlayer>>,
+    q_looking_at: Query<&LookingAt, (With<LocalPlayer>, Without<Pilot>)>,
     mut q_crosshair: Query<&mut CrosshairState>,
     q_structure: Query<&Structure>,
     blocks: Res<Registry<Block>>,

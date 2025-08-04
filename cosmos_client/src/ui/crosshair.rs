@@ -13,18 +13,21 @@ enum State {
 }
 
 #[derive(Default, Component, Reflect)]
+/// Controls the type of crosshair being displayed
 pub struct CrosshairState {
     indicating_requests: Vec<&'static str>,
     prev_state: State,
 }
 
 impl CrosshairState {
+    /// Shows an indicator crosshair so long as this reason is valid
     pub fn request_indicating(&mut self, id: &'static str) {
         if !self.indicating_requests.contains(&id) {
             self.indicating_requests.push(id);
         }
     }
 
+    /// Removes this reason from using an indicator crosshair. Once there are no reasons, the indicating crosshair will not be used.
     pub fn remove_indicating(&mut self, id: &'static str) {
         let Some((idx, _)) = self.indicating_requests.iter().enumerate().find(|(_, x)| **x == id) else {
             return;

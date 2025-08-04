@@ -97,6 +97,7 @@ fn create_indicator(
                     // Horizontally centers the text - textalign center doesn't work for some reason (shrug)
                     left: Val::Auto,
                     right: Val::Auto,
+                    top: Val::Px(44.0),
                     ..Default::default()
                 },
                 ..default()

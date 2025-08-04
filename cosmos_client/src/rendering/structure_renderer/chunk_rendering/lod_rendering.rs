@@ -173,7 +173,7 @@ mod test {
     fn test_block_at() {
         const BLOCK_ID: u16 = 1;
         let mut lod_chunk = LodChunk::default();
-        let block = Block::new(&[], BLOCK_ID, "a".into(), 0.0, 0.0, 0.0, vec![], vec![], None);
+        let block = Block::new(&[], BLOCK_ID, "a".into(), 0.0, 0.0, 0.0, vec![], vec![], None, false);
         lod_chunk.set_block_at(
             ChunkBlockCoordinate::new(CHUNK_DIMENSIONS - 1, CHUNK_DIMENSIONS - 1, CHUNK_DIMENSIONS - 1).unwrap(),
             &block,
