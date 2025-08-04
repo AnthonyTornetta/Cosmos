@@ -162,10 +162,7 @@ impl ChunkRendererBackend<LodChunk> for LodChunkRenderingChecker<'_> {
 
 #[cfg(test)]
 mod test {
-    use cosmos_core::{
-        block::{BlockProperty, block_direction::ALL_BLOCK_DIRECTIONS},
-        structure::chunk::CHUNK_DIMENSIONS,
-    };
+    use cosmos_core::{block::block_direction::ALL_BLOCK_DIRECTIONS, structure::chunk::CHUNK_DIMENSIONS};
 
     use super::*;
 
@@ -173,7 +170,7 @@ mod test {
     fn test_block_at() {
         const BLOCK_ID: u16 = 1;
         let mut lod_chunk = LodChunk::default();
-        let block = Block::new(&[], BLOCK_ID, "a".into(), 0.0, 0.0, 0.0, vec![], vec![], None, false);
+        let block = Block::new_dummy(BLOCK_ID);
         lod_chunk.set_block_at(
             ChunkBlockCoordinate::new(CHUNK_DIMENSIONS - 1, CHUNK_DIMENSIONS - 1, CHUNK_DIMENSIONS - 1).unwrap(),
             &block,
@@ -215,7 +212,7 @@ mod test {
     fn test_block_at_2() {
         const BLOCK_ID: u16 = 1;
         let mut lod_chunk = LodChunk::default();
-        let block = Block::new(&[], BLOCK_ID, "a".into(), 0.0, 0.0, 0.0, vec![], vec![], None);
+        let block = Block::new_dummy(BLOCK_ID);
         lod_chunk.set_block_at(ChunkBlockCoordinate::new(0, 0, 0).unwrap(), &block, Default::default());
 
         let lod = Lod::Children(Box::new([
@@ -248,20 +245,9 @@ mod test {
     fn test_renderer() {
         const BLOCK_ID: u16 = 1;
         let mut full_lod_chunk = LodChunk::default();
-        let block = Block::new(
-            &[BlockProperty::Full],
-            BLOCK_ID,
-            "cosmos:test".into(),
-            0.0,
-            0.0,
-            0.0,
-            vec![],
-            vec![],
-            None,
-        );
-
+        let block = Block::new_dummy(BLOCK_ID);
         let mut blocks_registry = Registry::<Block>::new("cosmos:block");
-        blocks_registry.register(Block::new(&[], 0, "cosmos:air".into(), 0.0, 0.0, 0.0, vec![], vec![], None));
+        blocks_registry.register(Block::new(&[], 0, "cosmos:air".into(), 0.0, 0.0, 0.0, vec![], vec![], None, false));
         blocks_registry.register(block.clone());
 
         for z in 0..CHUNK_DIMENSIONS {
@@ -273,7 +259,7 @@ mod test {
         }
 
         let mut half_full_lod_chunk = LodChunk::default();
-        let block = Block::new(&[], BLOCK_ID, "a".into(), 0.0, 0.0, 0.0, vec![], vec![], None);
+        let block = Block::new_dummy(BLOCK_ID);
         for z in 0..CHUNK_DIMENSIONS / 2 {
             for y in 0..CHUNK_DIMENSIONS {
                 for x in 0..CHUNK_DIMENSIONS {
