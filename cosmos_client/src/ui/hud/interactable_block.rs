@@ -1,11 +1,5 @@
 use bevy::prelude::*;
-use cosmos_core::{
-    block::Block,
-    ecs::sets::FixedUpdateSet,
-    netty::client::LocalPlayer,
-    prelude::Structure,
-    registry::{Registry, identifiable::Identifiable},
-};
+use cosmos_core::{block::Block, ecs::sets::FixedUpdateSet, netty::client::LocalPlayer, prelude::Structure, registry::Registry};
 
 use crate::{interactions::block_interactions::LookingAt, ui::crosshair::CrosshairState};
 

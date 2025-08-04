@@ -119,6 +119,7 @@ impl StructureSystemImpl for RailgunSystem {
 impl SyncableSystem for RailgunSystem {}
 
 impl RailgunSystem {
+    /// Creates a new railgun system based on these railgun entries
     pub fn new(railguns: Vec<RailgunSystemEntry>) -> Self {
         Self { railguns }
     }

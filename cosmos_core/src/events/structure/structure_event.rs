@@ -1,3 +1,5 @@
+//! Utilities for working for structure-based events
+
 use bevy::{
     ecs::{
         entity::Entity,
@@ -6,11 +8,15 @@ use bevy::{
     platform::collections::HashMap,
 };
 
+/// An event that contains an entity referencing a single structure
 pub trait StructureEvent: Event {
+    /// Returns the structure entity this event is referencing
     fn structure_entity(&self) -> Entity;
 }
 
+/// Something that iterates over structure events
 pub trait StructureEventIterator<E: StructureEvent> {
+    /// Groups the results of this iterator into a HashMap of <StructureEntity, Vec<&StructureEvent>>
     fn group_by_structure(&mut self) -> HashMap<Entity, Vec<&E>>;
 }
 
