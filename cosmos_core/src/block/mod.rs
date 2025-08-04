@@ -134,6 +134,24 @@ impl Block {
         }
     }
 
+    /// Returns a new dummy block used for testing
+    ///
+    /// Not for used within the actual game
+    pub fn new_dummy(id: u16) -> Self {
+        Block::new(
+            &[],
+            id,
+            format!("cosmos:test_block_{id}"),
+            1.0,
+            1.0,
+            1.0,
+            vec![],
+            vec![],
+            None,
+            false,
+        )
+    }
+
     /// Returns the category this block (and its item equivalent) should be in
     pub fn item_category(&self) -> Option<&String> {
         self.category.as_ref()
