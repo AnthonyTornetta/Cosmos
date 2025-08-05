@@ -18,7 +18,12 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     ecs::NeedsDespawned,
-    netty::sync::registry::sync_registry,
+    netty::sync::{
+        IdentifiableComponent, SyncableComponent,
+        events::netty_event::{IdentifiableEvent, NettyEvent, SyncedEventImpl},
+        registry::sync_registry,
+        sync_component,
+    },
     registry::{Registry, create_registry, identifiable::Identifiable},
 };
 
@@ -161,7 +166,93 @@ impl std::fmt::Display for NoSystemFound {
 
 impl Error for NoSystemFound {}
 
+#[derive(Event, Serialize, Deserialize, Debug, Clone)]
+pub struct ChangeSystemSlot {
+    pub system_id: Option<StructureSystemId>,
+    pub structure: Entity,
+    /// 0-8
+    pub slot: u32,
+}
+
+impl IdentifiableEvent for ChangeSystemSlot {
+    fn unlocalized_name() -> &'static str {
+        "cosmos:change_system_slot"
+    }
+}
+
+impl NettyEvent for ChangeSystemSlot {
+    fn event_receiver() -> crate::netty::sync::events::netty_event::EventReceiver {
+        crate::netty::sync::events::netty_event::EventReceiver::Server
+    }
+
+    #[cfg(feature = "client")]
+    fn needs_entity_conversion() -> bool {
+        true
+    }
+
+    #[cfg(feature = "client")]
+    fn convert_entities_client_to_server(self, mapping: &crate::netty::sync::mapping::NetworkMapping) -> Option<Self> {
+        mapping.server_from_client(&self.structure).map(|e| Self {
+            structure: e,
+            system_id: self.system_id,
+            slot: self.slot,
+        })
+    }
+}
+
+#[derive(Debug, Component, Serialize, Deserialize, Clone, PartialEq, Eq, Reflect)]
+pub struct StructureSystemOrdering {
+    // 0-8
+    system_slots: Vec<Option<StructureSystemId>>,
+}
+
+impl Default for StructureSystemOrdering {
+    fn default() -> Self {
+        Self {
+            system_slots: vec![None; 9],
+        }
+    }
+}
+
+impl IdentifiableComponent for StructureSystemOrdering {
+    fn get_component_unlocalized_name() -> &'static str {
+        "cosmos:structure_system_ordering"
+    }
+}
+
+impl SyncableComponent for StructureSystemOrdering {
+    fn get_sync_type() -> crate::netty::sync::SyncType {
+        crate::netty::sync::SyncType::ServerAuthoritative
+    }
+}
+
+impl StructureSystemOrdering {
+    pub fn set_slot(&mut self, slot: u32, system: StructureSystemId) {
+        assert!(slot < self.system_slots.len() as u32);
+        self.system_slots[slot as usize] = Some(system);
+    }
+
+    pub fn clear_slot(&mut self, slot: u32) {
+        assert!(slot < self.system_slots.len() as u32);
+        self.system_slots[slot as usize] = None;
+    }
+
+    pub fn get_slot(&self, slot: u32) -> Option<StructureSystemId> {
+        assert!(slot < self.system_slots.len() as u32);
+        self.system_slots[slot as usize]
+    }
+
+    pub fn iter(&self) -> impl Iterator<Item = Option<StructureSystemId>> {
+        self.system_slots.iter().copied()
+    }
+
+    pub fn ordering_for(&self, system_id: StructureSystemId) -> Option<u32> {
+        self.iter().enumerate().find(|(_, x)| *x == Some(system_id)).map(|x| x.0 as u32)
+    }
+}
+
 #[derive(Component, Debug, Reflect)]
+#[require(StructureSystemOrdering)]
 /// Stores all the systems a structure has
 pub struct StructureSystems {
     /// These entities should have the `StructureSystem` component
@@ -479,8 +570,6 @@ fn add_structure(mut commands: Commands, query: Query<Entity, (Added<Structure>,
 pub trait StructureSystemImpl: Component + std::fmt::Debug {
     /// The unlocalized name of this system. Used for unique serialization
     fn unlocalized_name() -> &'static str;
-
-    // fn is_present_on_ship(&self) -> bool;
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -538,6 +627,8 @@ pub(super) fn register(app: &mut App) {
     create_registry::<StructureSystemType>(app, "cosmos:structure_system_types");
     sync_registry::<StructureSystemType>(app);
 
+    sync_component::<StructureSystemOrdering>(app);
+
     app.configure_sets(
         FixedUpdate,
         (
@@ -558,7 +649,9 @@ pub(super) fn register(app: &mut App) {
         ),
     )
     .register_type::<StructureSystem>()
-    .register_type::<StructureSystems>();
+    .register_type::<StructureSystems>()
+    .register_type::<StructureSystemOrdering>()
+    .add_netty_event::<ChangeSystemSlot>();
 
     line_system::register(app);
     shield_system::register(app);

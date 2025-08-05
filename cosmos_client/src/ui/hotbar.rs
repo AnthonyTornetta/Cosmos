@@ -15,7 +15,7 @@ use cosmos_core::{
 use crate::{
     input::inputs::{CosmosInputs, InputChecker, InputHandler},
     lang::Lang,
-    structure::ship::ui::system_selection::SystemSelectionSet,
+    structure::ship::ui::system_hotbar::SystemSelectionSet,
 };
 
 use super::{

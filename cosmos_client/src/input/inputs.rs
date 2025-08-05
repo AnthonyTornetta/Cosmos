@@ -157,6 +157,9 @@ pub enum CosmosInputs {
 
     /// Shows/Hides the ship focus camera
     ToggleFocusCam,
+
+    /// Opens the ship's configuration menu
+    OpenShipConfiguration,
 }
 
 fn init_input(mut input_handler: ResMut<CosmosInputHandler>) {
@@ -240,6 +243,8 @@ fn init_input(mut input_handler: ResMut<CosmosInputHandler>) {
     input_handler.set_keycode(CosmosInputs::HideUi, KeyCode::F1);
 
     input_handler.set_keycode(CosmosInputs::ToggleFocusCam, KeyCode::KeyG);
+
+    input_handler.set_keycode(CosmosInputs::OpenShipConfiguration, KeyCode::Tab);
 
     if let Ok(current_settings) = fs::read_to_string("settings/controls.toml")
         && let Ok(parsed_settings) = toml::from_str::<CosmosInputHandler>(&current_settings)
