@@ -2,13 +2,14 @@ use bevy::{color::palettes::css, ecs::relationship::RelatedSpawnerCommands, prel
 use cosmos_core::{
     netty::sync::events::client_event::NettyEventWriter,
     prelude::{StructureSystem, StructureSystems},
-    registry::{Registry, identifiable::Identifiable},
+    registry::Registry,
     state::GameState,
     structure::systems::{ChangeSystemSlot, StructureSystemId, StructureSystemOrdering, StructureSystemType},
 };
 
 use crate::{
     input::inputs::{CosmosInputs, InputChecker, InputHandler},
+    lang::Lang,
     ui::{
         components::{
             button::{ButtonEvent, CosmosButton, register_button},
@@ -47,6 +48,7 @@ fn on_change_structure_systems(
     mut commands: Commands,
     font: Res<DefaultFont>,
     q_system_ui: Query<(Entity, &ShipSystemsUi)>,
+    lang: Res<Lang<StructureSystemType>>,
 ) {
     for (structure_ent, systems, ordering) in q_changed_ship_systems.iter() {
         let Some((ent, ss)) = q_system_ui.iter().find(|(_, x)| x.ship_ent == structure_ent) else {
@@ -59,7 +61,7 @@ fn on_change_structure_systems(
             .remove::<ScrollBox>()
             .insert(ScrollBox::default())
             .with_children(|p| {
-                render_ui(p, &font, &q_structure_system, systems, &system_types, ss, ordering);
+                render_ui(p, &font, &q_structure_system, systems, &system_types, ss, ordering, &lang);
             });
     }
 }
@@ -72,6 +74,7 @@ fn render_ui(
     system_types: &Registry<StructureSystemType>,
     ss: &ShipSystemsUi,
     ordering: &StructureSystemOrdering,
+    lang: &Lang<StructureSystemType>,
 ) {
     for (system, system_type) in systems
         .all_activatable_systems()
@@ -91,7 +94,7 @@ fn render_ui(
             },
         ))
         .with_children(|p| {
-            let system_name = system_type.unlocalized_name();
+            let system_name = lang.get_name_or_unlocalized(system_type);
             p.spawn((
                 RenderItem {
                     item_id: system_type.item_icon_id(),
@@ -107,10 +110,14 @@ fn render_ui(
             let ordering = ordering.ordering_for(system.id());
 
             p.spawn((
+                Node {
+                    width: Val::Px(50.0),
+                    ..Default::default()
+                },
                 Text::new(if let Some(ordering) = ordering {
                     format!("{}", ordering + 1)
                 } else {
-                    "_".into()
+                    " ".into()
                 }),
                 TextFont {
                     font: font.get(),
@@ -120,6 +127,10 @@ fn render_ui(
             ));
 
             p.spawn((
+                Node {
+                    flex_grow: 1.0,
+                    ..Default::default()
+                },
                 Text::new(system_name),
                 TextFont {
                     font: font.get(),
@@ -138,6 +149,7 @@ pub(super) fn attach_ui(
     mut commands: Commands,
     q_needs_ship_systems_ui: Query<(Entity, &ShipSystemsUi), Added<ShipSystemsUi>>,
     font: Res<DefaultFont>,
+    lang: Res<Lang<StructureSystemType>>,
 ) {
     for (ent, ss) in q_needs_ship_systems_ui.iter() {
         let Ok((systems, ordering)) = q_ship_systems.get(ss.ship_ent) else {
@@ -157,7 +169,7 @@ pub(super) fn attach_ui(
                 },
             ))
             .with_children(|p| {
-                render_ui(p, &font, &q_structure_system, systems, &system_types, ss, ordering);
+                render_ui(p, &font, &q_structure_system, systems, &system_types, ss, ordering, &lang);
             });
     }
 }
@@ -172,7 +184,7 @@ impl ButtonEvent for SystemClicked {
 }
 
 fn on_add_active_system(mut q_active_system: Query<&mut BackgroundColor, Added<ActiveSystem>>) {
-    for (mut bg) in q_active_system.iter_mut() {
+    for mut bg in q_active_system.iter_mut() {
         bg.0 = css::AQUA.into();
     }
 }

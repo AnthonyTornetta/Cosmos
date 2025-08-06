@@ -249,6 +249,12 @@ impl StructureSystemOrdering {
     pub fn ordering_for(&self, system_id: StructureSystemId) -> Option<u32> {
         self.iter().enumerate().find(|(_, x)| *x == Some(system_id)).map(|x| x.0 as u32)
     }
+
+    pub fn add_to_next_available(&mut self, system_id: StructureSystemId) {
+        if let Some(slot) = self.system_slots.iter_mut().find(|x| x.is_none()) {
+            *slot = Some(system_id);
+        }
+    }
 }
 
 #[derive(Component, Debug, Reflect)]
