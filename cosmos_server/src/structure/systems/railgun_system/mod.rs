@@ -26,7 +26,7 @@ use cosmos_core::{
         events::StructureLoadedEvent,
         shields::Shield,
         systems::{
-            StructureSystemType, StructureSystems, StructureSystemsSet, SystemActive,
+            StructureSystemImpl, StructureSystemOrdering, StructureSystemType, StructureSystems, StructureSystemsSet, SystemActive,
             energy_storage_system::EnergyStorageSystem,
             railgun_system::{InvalidRailgunReason, RailgunBlock, RailgunFiredEvent, RailgunFiredInfo, RailgunSystem, RailgunSystemEntry},
         },
@@ -214,12 +214,12 @@ fn block_update_system(
     mut system_query: Query<&mut RailgunSystem>,
     q_structure: Query<&Structure>,
     q_system: Query<&StructureSystem, With<RailgunSystem>>,
-    mut systems_query: Query<&mut StructureSystems>,
+    mut systems_query: Query<(&mut StructureSystems, &mut StructureSystemOrdering)>,
     registry: Res<Registry<StructureSystemType>>,
     mut commands: Commands,
 ) {
     for (structure, events) in evr_block_changed.read().group_by_structure() {
-        let Ok(mut systems) = systems_query.get_mut(structure) else {
+        let Ok((mut systems, mut ordering)) = systems_query.get_mut(structure) else {
             continue;
         };
 
@@ -251,14 +251,19 @@ fn block_update_system(
             MutOrMutRef::Mut(mut existing_system) => {
                 if railguns.is_empty() {
                     let system = *systems.query(&q_system).expect("This should always exist on a StructureSystem");
-                    systems.remove_system(&mut commands, &system, &registry);
+                    systems.remove_system(&mut commands, &system, &registry, &mut ordering);
                 } else {
                     existing_system.railguns = railguns;
                 }
             }
             MutOrMutRef::Ref(_) => {
                 if !railguns.is_empty() {
-                    systems.add_system(&mut commands, RailgunSystem::new(railguns), &registry);
+                    let (id, _) = systems.add_system(&mut commands, RailgunSystem::new(railguns), &registry);
+                    if let Some(system_type) = registry.from_id(RailgunSystem::unlocalized_name()) {
+                        if system_type.is_activatable() {
+                            ordering.add_to_next_available(id);
+                        }
+                    }
                 }
             }
         }

@@ -457,16 +457,26 @@ impl StructureSystems {
         commands: &mut Commands,
         system: T,
         registry: &Registry<StructureSystemType>,
-    ) -> Entity {
+    ) -> (StructureSystemId, Entity) {
         let system_id = self.generate_new_system_id();
 
-        self.add_system_with_id(commands, system, system_id, registry)
+        (system_id, self.add_system_with_id(commands, system, system_id, registry))
     }
 
     /// Removes a structure system from this systems registry. This will also despawn the system
     /// and its children.
-    pub fn remove_system(&mut self, commands: &mut Commands, system: &StructureSystem, registry: &Registry<StructureSystemType>) {
+    pub fn remove_system(
+        &mut self,
+        commands: &mut Commands,
+        system: &StructureSystem,
+        registry: &Registry<StructureSystemType>,
+        ordering: &mut StructureSystemOrdering,
+    ) {
         let system_id = system.system_id;
+        if let Some(slot) = ordering.ordering_for(system_id) {
+            ordering.clear_slot(slot);
+        }
+
         let Some(entity) = self.ids.remove(&system_id) else {
             return;
         };

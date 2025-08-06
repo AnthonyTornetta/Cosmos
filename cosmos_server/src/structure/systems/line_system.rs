@@ -10,7 +10,7 @@ use cosmos_core::{
         coordinates::{BlockCoordinate, CoordinateType, UnboundBlockCoordinate, UnboundCoordinateType},
         events::StructureLoadedEvent,
         systems::{
-            StructureSystemType, StructureSystems, StructureSystemsSet,
+            StructureSystemImpl, StructureSystemOrdering, StructureSystemType, StructureSystems, StructureSystemsSet,
             line_system::{Line, LineBlocks, LineColorBlock, LineColorProperty, LineProperty, LinePropertyCalculator, LineSystem},
         },
     },
@@ -25,13 +25,13 @@ fn block_update_system<T: LineProperty, S: LinePropertyCalculator<T>>(
     color_blocks: Res<Registry<LineColorBlock>>,
     blocks: Res<Registry<Block>>,
     mut system_query: Query<&mut LineSystem<T, S>>,
-    mut systems_query: Query<&mut StructureSystems>,
+    mut systems_query: Query<(&mut StructureSystems, &mut StructureSystemOrdering)>,
     mut commands: Commands,
     q_system: Query<&StructureSystem, With<LineSystem<T, S>>>,
     registry: Res<Registry<StructureSystemType>>,
 ) {
     for (structure, events) in event.read().group_by_structure() {
-        let Ok(mut systems) = systems_query.get_mut(structure) else {
+        let Ok((mut systems, mut sys_ordering)) = systems_query.get_mut(structure) else {
             continue;
         };
 
@@ -73,12 +73,17 @@ fn block_update_system<T: LineProperty, S: LinePropertyCalculator<T>>(
             MutOrMutRef::Mut(existing_system) => {
                 if existing_system.is_empty() {
                     let system = *systems.query(&q_system).expect("This should always exist on a StructureSystem");
-                    systems.remove_system(&mut commands, &system, &registry);
+                    systems.remove_system(&mut commands, &system, &registry, &mut sys_ordering);
                 }
             }
             MutOrMutRef::Ref(new_system) => {
                 if !new_system.is_empty() {
-                    systems.add_system(&mut commands, std::mem::take(&mut new_system_if_needed), &registry);
+                    let (id, _) = systems.add_system(&mut commands, std::mem::take(&mut new_system_if_needed), &registry);
+                    if let Some(system_type) = registry.from_id(LineSystem::<T, S>::unlocalized_name()) {
+                        if system_type.is_activatable() {
+                            sys_ordering.add_to_next_available(id);
+                        }
+                    }
                 }
             }
         }

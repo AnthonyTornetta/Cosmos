@@ -20,7 +20,8 @@ use cosmos_core::{
         full_structure::FullStructure,
         shields::SHIELD_COLLISION_GROUP,
         systems::{
-            StructureSystem, StructureSystemType, StructureSystems, StructureSystemsSet, SystemActive,
+            StructureSystem, StructureSystemImpl, StructureSystemOrdering, StructureSystemType, StructureSystems, StructureSystemsSet,
+            SystemActive,
             dock_system::{DockSystem, Docked},
         },
     },
@@ -41,13 +42,13 @@ fn dock_block_update_system(
     mut event: EventReader<BlockChangedEvent>,
     blocks: Res<Registry<Block>>,
     mut system_query: Query<&mut DockSystem>,
-    mut q_systems: Query<&mut StructureSystems>,
+    mut q_systems: Query<(&mut StructureSystems, &mut StructureSystemOrdering)>,
     mut commands: Commands,
     q_system: Query<&StructureSystem, With<DockSystem>>,
     registry: Res<Registry<StructureSystemType>>,
 ) {
     for (structure, events) in event.read().group_by_structure() {
-        let Ok(mut systems) = q_systems.get_mut(structure) else {
+        let Ok((mut systems, mut ordering)) = q_systems.get_mut(structure) else {
             continue;
         };
 
@@ -72,12 +73,17 @@ fn dock_block_update_system(
             MutOrMutRef::Mut(existing_system) => {
                 if existing_system.is_empty() {
                     let system = *systems.query(&q_system).expect("This should always exist on a StructureSystem");
-                    systems.remove_system(&mut commands, &system, &registry);
+                    systems.remove_system(&mut commands, &system, &registry, &mut ordering);
                 }
             }
             MutOrMutRef::Ref(new_system) => {
                 if !new_system.is_empty() {
-                    systems.add_system(&mut commands, std::mem::take(&mut new_system_if_needed), &registry);
+                    let (id, _) = systems.add_system(&mut commands, std::mem::take(&mut new_system_if_needed), &registry);
+                    if let Some(system_type) = registry.from_id(DockSystem::unlocalized_name()) {
+                        if system_type.is_activatable() {
+                            ordering.add_to_next_available(id);
+                        }
+                    }
                 }
             }
         }

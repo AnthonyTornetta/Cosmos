@@ -25,18 +25,18 @@ fn open_config_menu(
     let toggle_menu = inputs.check_just_pressed(CosmosInputs::OpenShipConfiguration);
 
     if toggle_menu && !q_open_menu.is_empty() {
-        let Ok(open) = q_open_menu.single() else {
-            return;
-        };
-        commands.entity(open).insert(NeedsDespawned);
+        if let Ok(open) = q_open_menu.single() {
+            info!("Closing!");
+            commands.entity(open).insert(NeedsDespawned);
+        }
         return;
     }
 
     let Ok(pilot) = q_pilot.single() else {
-        let Ok(open) = q_open_menu.single() else {
-            return;
-        };
-        commands.entity(open).insert(NeedsDespawned);
+        if let Ok(open) = q_open_menu.single() {
+            info!("Closing!");
+            commands.entity(open).insert(NeedsDespawned);
+        }
         return;
     };
 
@@ -44,8 +44,10 @@ fn open_config_menu(
         return;
     }
 
+    info!("Opening!");
     commands
         .spawn((
+            OpenShipMenu,
             Name::new("Ship Config Menu"),
             GuiWindow {
                 title: "Ship".into(),
