@@ -1,4 +1,4 @@
-use bevy::prelude::*;
+use bevy::{color::palettes::css, ecs::relationship::RelatedSpawnerCommands, prelude::*};
 use cosmos_core::{
     netty::sync::events::client_event::NettyEventWriter,
     prelude::{StructureSystem, StructureSystems},
@@ -37,6 +37,100 @@ struct StructureSystemMarker {
     structure: Entity,
 }
 
+fn on_change_structure_systems(
+    q_changed_ship_systems: Query<
+        (Entity, &StructureSystems, &StructureSystemOrdering),
+        Or<(Changed<StructureSystems>, Changed<StructureSystemOrdering>)>,
+    >,
+    q_structure_system: Query<&StructureSystem>,
+    system_types: Res<Registry<StructureSystemType>>,
+    mut commands: Commands,
+    font: Res<DefaultFont>,
+    q_system_ui: Query<(Entity, &ShipSystemsUi)>,
+) {
+    for (structure_ent, systems, ordering) in q_changed_ship_systems.iter() {
+        let Some((ent, ss)) = q_system_ui.iter().find(|(_, x)| x.ship_ent == structure_ent) else {
+            continue;
+        };
+
+        commands
+            .entity(ent)
+            .despawn_related::<Children>()
+            .remove::<ScrollBox>()
+            .insert(ScrollBox::default())
+            .with_children(|p| {
+                render_ui(p, &font, &q_structure_system, systems, &system_types, ss, ordering);
+            });
+    }
+}
+
+fn render_ui(
+    p: &mut RelatedSpawnerCommands<ChildOf>,
+    font: &DefaultFont,
+    q_structure_system: &Query<&StructureSystem>,
+    systems: &StructureSystems,
+    system_types: &Registry<StructureSystemType>,
+    ss: &ShipSystemsUi,
+    ordering: &StructureSystemOrdering,
+) {
+    for (system, system_type) in systems
+        .all_activatable_systems()
+        .flat_map(|x| q_structure_system.get(x))
+        .map(|x| (x, system_types.from_numeric_id(x.system_type_id().into())))
+    {
+        p.spawn((
+            CosmosButton::<SystemClicked> { ..Default::default() },
+            Node {
+                align_items: AlignItems::Center,
+                justify_content: JustifyContent::SpaceBetween,
+                ..Default::default()
+            },
+            StructureSystemMarker {
+                system_id: system.id(),
+                structure: ss.ship_ent,
+            },
+        ))
+        .with_children(|p| {
+            let system_name = system_type.unlocalized_name();
+            p.spawn((
+                RenderItem {
+                    item_id: system_type.item_icon_id(),
+                },
+                Node {
+                    width: Val::Px(100.0),
+                    height: Val::Px(100.0),
+                    ..Default::default()
+                },
+                CustomHoverTooltip::new(system_name),
+            ));
+
+            let ordering = ordering.ordering_for(system.id());
+
+            p.spawn((
+                Text::new(if let Some(ordering) = ordering {
+                    format!("{}", ordering + 1)
+                } else {
+                    "_".into()
+                }),
+                TextFont {
+                    font: font.get(),
+                    font_size: 32.0,
+                    ..Default::default()
+                },
+            ));
+
+            p.spawn((
+                Text::new(system_name),
+                TextFont {
+                    font: font.get(),
+                    font_size: 24.0,
+                    ..Default::default()
+                },
+            ));
+        });
+    }
+}
+
 pub(super) fn attach_ui(
     q_ship_systems: Query<(&StructureSystems, &StructureSystemOrdering)>,
     q_structure_system: Query<&StructureSystem>,
@@ -63,62 +157,7 @@ pub(super) fn attach_ui(
                 },
             ))
             .with_children(|p| {
-                for (system, system_type) in systems
-                    .all_activatable_systems()
-                    .flat_map(|x| q_structure_system.get(x))
-                    .map(|x| (x, system_types.from_numeric_id(x.system_type_id().into())))
-                {
-                    p.spawn((
-                        CosmosButton::<SystemClicked> { ..Default::default() },
-                        Node {
-                            align_items: AlignItems::Center,
-                            justify_content: JustifyContent::SpaceBetween,
-                            ..Default::default()
-                        },
-                        StructureSystemMarker {
-                            system_id: system.id(),
-                            structure: ss.ship_ent,
-                        },
-                    ))
-                    .with_children(|p| {
-                        let system_name = system_type.unlocalized_name();
-                        p.spawn((
-                            RenderItem {
-                                item_id: system_type.item_icon_id(),
-                            },
-                            Node {
-                                width: Val::Px(100.0),
-                                height: Val::Px(100.0),
-                                ..Default::default()
-                            },
-                            CustomHoverTooltip::new(system_name),
-                        ));
-
-                        let ordering = ordering.ordering_for(system.id());
-
-                        p.spawn((
-                            Text::new(if let Some(ordering) = ordering {
-                                format!("{}", ordering + 1)
-                            } else {
-                                "_".into()
-                            }),
-                            TextFont {
-                                font: font.get(),
-                                font_size: 32.0,
-                                ..Default::default()
-                            },
-                        ));
-
-                        p.spawn((
-                            Text::new(system_name),
-                            TextFont {
-                                font: font.get(),
-                                font_size: 24.0,
-                                ..Default::default()
-                            },
-                        ));
-                    });
-                }
+                render_ui(p, &font, &q_structure_system, systems, &system_types, ss, ordering);
             });
     }
 }
@@ -129,6 +168,20 @@ struct SystemClicked(Entity);
 impl ButtonEvent for SystemClicked {
     fn create_event(btn_entity: Entity) -> Self {
         Self(btn_entity)
+    }
+}
+
+fn on_add_active_system(mut q_active_system: Query<&mut BackgroundColor, Added<ActiveSystem>>) {
+    for (mut bg) in q_active_system.iter_mut() {
+        bg.0 = css::AQUA.into();
+    }
+}
+
+fn on_remove_active_system(mut removed: RemovedComponents<ActiveSystem>, mut q_bg: Query<&mut BackgroundColor>) {
+    for ent in removed.read() {
+        if let Ok(mut bg) = q_bg.get_mut(ent) {
+            *bg = Default::default();
+        }
     }
 }
 
@@ -224,6 +277,14 @@ pub(super) fn register(app: &mut App) {
 
     app.add_systems(
         Update,
-        (attach_ui, on_system_clicked, listen_button_inputs).run_if(in_state(GameState::Playing)),
+        (
+            attach_ui,
+            on_change_structure_systems,
+            on_system_clicked,
+            listen_button_inputs,
+            on_add_active_system,
+            on_remove_active_system,
+        )
+            .run_if(in_state(GameState::Playing)),
     );
 }

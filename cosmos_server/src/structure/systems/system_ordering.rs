@@ -40,10 +40,11 @@ fn on_change_system_slot(
                 error!("Invalid system id - {sys:?}");
                 continue;
             }
-            info!("Set {sys:?}");
+            if let Some(previous_ordering) = sys_ordering.ordering_for(sys) {
+                sys_ordering.clear_slot(previous_ordering);
+            }
             sys_ordering.set_slot(ev.slot, sys);
         } else {
-            info!("Set to null");
             sys_ordering.clear_slot(ev.slot);
         }
     }

@@ -4,9 +4,12 @@ use cosmos_core::{ecs::NeedsDespawned, netty::client::LocalPlayer, state::GameSt
 use crate::{
     input::inputs::{CosmosInputs, InputChecker, InputHandler},
     structure::ship::ui::ship_systems::ShipSystemsUi,
-    ui::components::{
-        tabbed_view::{Tab, TabbedView},
-        window::GuiWindow,
+    ui::{
+        OpenMenu,
+        components::{
+            tabbed_view::{Tab, TabbedView},
+            window::GuiWindow,
+        },
     },
 };
 
@@ -53,6 +56,7 @@ fn open_config_menu(
                 },
                 ..Default::default()
             },
+            OpenMenu::new(0),
             BorderColor(css::DARK_GREY.into()),
             Node {
                 margin: UiRect::all(Val::Auto),

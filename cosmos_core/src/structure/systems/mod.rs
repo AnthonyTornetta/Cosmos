@@ -354,58 +354,33 @@ impl StructureSystems {
 
     /// Activates the passed in selected system, and deactivates the system that was previously selected
     ///
-    /// The passed in system index must be based off the [`Self::all_activatable_systems`] iterator.
-    pub fn set_active_system(&mut self, active: ShipActiveSystem, commands: &mut Commands) {
+    /// The passed in system index must be based off the [`StructureSystemOrdering`] ordering.
+    pub fn set_active_system(&mut self, active: ShipActiveSystem, ordering: &StructureSystemOrdering, commands: &mut Commands) {
         if active == self.active_system {
             return;
         }
 
-        if let ShipActiveSystem::Active(active_system) = self.active_system
-            && (active_system as usize) < self.activatable_systems.len()
-        {
-            let ent = self
-                .ids
-                .get(&self.activatable_systems[active_system as usize])
-                .expect("Invalid state - system id has no entity mapping");
-
-            commands.entity(*ent).remove::<SystemActive>();
+        if let Some(ent) = self.active_system(ordering) {
+            commands.entity(ent).remove::<SystemActive>();
         }
 
-        match active {
-            ShipActiveSystem::Active(active_system) => {
-                if (active_system as usize) < self.activatable_systems.len() {
-                    let ent = self
-                        .ids
-                        .get(&self.activatable_systems[active_system as usize])
-                        .expect("Invalid state - system id has no entity mapping");
+        self.active_system = active;
 
-                    commands.entity(*ent).insert(SystemActive);
+        if let Some(ent) = self.active_system(ordering) {
+            commands.entity(ent).insert(SystemActive);
 
-                    self.active_system = active;
-                } else {
-                    self.active_system = ShipActiveSystem::None;
-                }
-            }
-            ShipActiveSystem::Hovered(hovered_system) => {
-                if (hovered_system as usize) < self.activatable_systems.len() {
-                    self.active_system = active;
-                } else {
-                    self.active_system = ShipActiveSystem::None;
-                }
-            }
-            ShipActiveSystem::None => self.active_system = ShipActiveSystem::None,
+            self.active_system = active;
+        } else if self.hovered_system(ordering).is_none() {
+            self.active_system = ShipActiveSystem::None;
         }
     }
 
     /// Returns the active system entity, if there is one.
-    pub fn active_system(&self) -> Option<Entity> {
+    pub fn active_system(&self, ordering: &StructureSystemOrdering) -> Option<Entity> {
         match self.active_system {
-            ShipActiveSystem::Active(active_system_idx) => Some(
-                *self
-                    .ids
-                    .get(&self.activatable_systems[active_system_idx as usize])
-                    .expect("Invalid state - system id has no entity mapping"),
-            ),
+            ShipActiveSystem::Active(active_system_idx) => ordering
+                .get_slot(active_system_idx)
+                .map(|x| *self.ids.get(&x).expect("Invalid state - system id has no entity mapping")),
             _ => None,
         }
     }
@@ -413,14 +388,11 @@ impl StructureSystems {
     /// Returns the hovered system entity, if there is one.
     ///
     /// If this system is active, it would still also count as hovered.
-    pub fn hovered_system(&self) -> Option<Entity> {
+    pub fn hovered_system(&self, ordering: &StructureSystemOrdering) -> Option<Entity> {
         match self.active_system {
-            ShipActiveSystem::Active(active_system_idx) | ShipActiveSystem::Hovered(active_system_idx) => Some(
-                *self
-                    .ids
-                    .get(&self.activatable_systems[active_system_idx as usize])
-                    .expect("Invalid state - system id has no entity mapping"),
-            ),
+            ShipActiveSystem::Active(active_system_idx) | ShipActiveSystem::Hovered(active_system_idx) => ordering
+                .get_slot(active_system_idx)
+                .map(|x| *self.ids.get(&x).expect("Invalid state - system id has no entity mapping")),
             ShipActiveSystem::None => None,
         }
     }
