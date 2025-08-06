@@ -228,18 +228,30 @@ impl SyncableComponent for StructureSystemOrdering {
 
 impl StructureSystemOrdering {
     pub fn set_slot(&mut self, slot: u32, system: StructureSystemId) {
-        assert!(slot < self.system_slots.len() as u32);
-        self.system_slots[slot as usize] = Some(system);
+        if slot < self.system_slots.len() as u32 {
+            self.system_slots[slot as usize] = Some(system);
+        } else {
+            error!("Invalid set slot - {slot}");
+        }
     }
 
     pub fn clear_slot(&mut self, slot: u32) {
+        if slot < self.system_slots.len() as u32 {
+            self.system_slots[slot as usize] = None;
+        } else {
+            error!("Invalid clear slot - {slot}");
+        }
+
         assert!(slot < self.system_slots.len() as u32);
-        self.system_slots[slot as usize] = None;
     }
 
     pub fn get_slot(&self, slot: u32) -> Option<StructureSystemId> {
-        assert!(slot < self.system_slots.len() as u32);
-        self.system_slots[slot as usize]
+        if slot < self.system_slots.len() as u32 {
+            self.system_slots[slot as usize]
+        } else {
+            error!("Invalid get slot - {slot}");
+            None
+        }
     }
 
     pub fn iter(&self) -> impl Iterator<Item = Option<StructureSystemId>> {
