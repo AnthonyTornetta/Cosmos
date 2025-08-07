@@ -16,6 +16,9 @@ use cosmos_core::{
     },
     utils::ecs::MutOrMutRef,
 };
+use serde::{Serialize, de::DeserializeOwned};
+
+use crate::persistence::make_persistent::{DefaultPersistentComponent, make_persistent};
 
 use super::BlockStructureSystem;
 
@@ -98,9 +101,16 @@ fn structure_loaded_event<T: LineProperty, S: LinePropertyCalculator<T>>(
     mut commands: Commands,
     line_blocks: Res<LineBlocks<T>>,
     registry: Res<Registry<StructureSystemType>>,
+    q_line_system: Query<(), With<LineSystem<T, S>>>,
 ) {
     for ev in event_reader.read() {
         if let Ok((structure, mut systems)) = structure_query.get_mut(ev.structure_entity) {
+            if systems.query(&q_line_system).is_ok() {
+                // This system already exists - skip
+                info!("System already exsists - skip!");
+                continue;
+            }
+
             let mut system = LineSystem::<T, S>::default();
 
             let mut color_found = false;
@@ -463,8 +473,12 @@ fn recalculate_colors<T: LineProperty, S: LinePropertyCalculator<T>>(
     line_system.lines = lines;
 }
 
+impl<T: LineProperty + DeserializeOwned + Serialize, S: LinePropertyCalculator<T>> DefaultPersistentComponent for LineSystem<T, S> {}
+
 /// Adds all the functions a line system needs to operate
-pub fn add_line_system<T: LineProperty, S: LinePropertyCalculator<T>>(app: &mut App) {
+pub fn add_line_system<T: LineProperty + DeserializeOwned + Serialize, S: LinePropertyCalculator<T>>(app: &mut App) {
+    make_persistent::<LineSystem<T, S>>(app);
+
     app.add_systems(
         Update,
         (

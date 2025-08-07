@@ -37,6 +37,7 @@ use crate::{
     persistence::{
         SerializedData,
         loading::{LOADING_SCHEDULE, LoadingSystemSet, NeedsLoaded},
+        make_persistent::{DefaultPersistentComponent, make_persistent},
         saving::{NeedsSaved, SAVING_SCHEDULE, SavingSystemSet},
     },
 };
@@ -367,9 +368,13 @@ pub enum ShieldSet {
     OnShieldHit,
 }
 
+impl DefaultPersistentComponent for ShieldSystem {}
+
 pub(super) fn register(app: &mut App) {
     laser::register(app);
     explosion::register(app);
+
+    make_persistent::<ShieldSystem>(app);
 
     app.configure_sets(
         FixedUpdate,

@@ -31,6 +31,8 @@ use cosmos_core::{
     },
 };
 
+use crate::persistence::make_persistent::{DefaultPersistentComponent, make_persistent};
+
 use super::sync::register_structure_system;
 
 const MAX_DOCK_CHECK: f32 = 2.0;
@@ -448,7 +450,10 @@ fn nearest_axis(direction: Vec3) -> Vec3 {
     }
 }
 
+impl DefaultPersistentComponent for DockSystem {}
+
 pub(super) fn register(app: &mut App) {
+    make_persistent::<DockSystem>(app);
     register_fixed_update_removed_component::<Docked>(app);
 
     app.add_systems(

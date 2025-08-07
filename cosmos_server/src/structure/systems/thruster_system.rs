@@ -29,6 +29,8 @@ use cosmos_core::{
     },
 };
 
+use crate::persistence::make_persistent::{DefaultPersistentComponent, make_persistent};
+
 use super::sync::register_structure_system;
 
 const MAX_SHIP_SPEED: f32 = 350.0;
@@ -264,7 +266,11 @@ pub enum ThrusterSystemSet {
     ApplyThrusters,
 }
 
+impl DefaultPersistentComponent for ThrusterSystem {}
+
 pub(super) fn register(app: &mut App) {
+    make_persistent::<ThrusterSystem>(app);
+
     app.configure_sets(FixedUpdate, ThrusterSystemSet::ApplyThrusters);
 
     app.insert_resource(ThrusterBlocks::default())

@@ -1,6 +1,7 @@
 //! Contains utilities that make interacting with the bevy ECS easier & less
 //! prone to problems.
 
+pub mod data;
 pub mod mut_events;
 pub mod sets;
 
@@ -72,4 +73,5 @@ pub fn compute_totally_accurate_global_transform<F: QueryFilter>(
 pub(super) fn register(app: &mut App) {
     app.add_systems(First, despawn_needed);
     sets::register(app);
+    data::register(app);
 }

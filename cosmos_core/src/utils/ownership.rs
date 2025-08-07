@@ -28,3 +28,15 @@ impl<T> Deref for MaybeOwned<'_, T> {
         self.as_ref()
     }
 }
+
+impl<T> From<T> for MaybeOwned<'_, T> {
+    fn from(value: T) -> Self {
+        Self::Owned(Box::new(value))
+    }
+}
+
+impl<'a, T> From<&'a T> for MaybeOwned<'a, T> {
+    fn from(value: &'a T) -> MaybeOwned<'a, T> {
+        Self::Borrowed(value)
+    }
+}

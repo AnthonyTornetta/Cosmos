@@ -17,7 +17,7 @@ use bevy::{
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    ecs::NeedsDespawned,
+    ecs::{NeedsDespawned, data::DataFor},
     netty::sync::{
         IdentifiableComponent, SyncableComponent,
         events::netty_event::{IdentifiableEvent, NettyEvent, SyncedEventImpl},
@@ -110,7 +110,21 @@ pub struct StructureSystem {
     system_type_id: StructureSystemTypeId,
 }
 
+impl IdentifiableComponent for StructureSystem {
+    fn get_component_unlocalized_name() -> &'static str {
+        "cosmos:structure_system"
+    }
+}
+
 impl StructureSystem {
+    pub fn from_raw(structure_entity: Entity, system_id: StructureSystemId, system_type_id: StructureSystemTypeId) -> Self {
+        Self {
+            structure_entity,
+            system_type_id,
+            system_id,
+        }
+    }
+
     /// This system's unique id
     pub fn id(&self) -> StructureSystemId {
         self.system_id
@@ -285,6 +299,50 @@ pub struct StructureSystems {
     entity: Entity,
 }
 
+impl StructureSystems {
+    /// For saving this to disk
+    pub fn activatable_systems(&self) -> &[StructureSystemId] {
+        self.activatable_systems.as_slice()
+    }
+    /// For saving this to disk
+    pub fn systems(&self) -> &[StructureSystemId] {
+        self.systems.as_slice()
+    }
+    /// For saving this to disk
+    pub fn ids(&self) -> &HashMap<StructureSystemId, Entity> {
+        &self.ids
+    }
+    /// WARNING: Only call this if you know what you're doing!
+    ///
+    /// This needs to be properly initialized after this is called with its own entity via
+    /// [`Self::set_entity`]. This should really only be used for deserialization.
+    pub fn new_from_raw(
+        systems: Vec<StructureSystemId>,
+        activatable_systems: Vec<StructureSystemId>,
+        ids: HashMap<StructureSystemId, Entity>,
+    ) -> Self {
+        Self {
+            activatable_systems,
+            ids,
+            active_system: ShipActiveSystem::None,
+            systems,
+            // This will get immediately set when this is initialized
+            entity: Entity::PLACEHOLDER,
+        }
+    }
+
+    /// Sets the self entity of this structure system - this should be the Structure it's apart of.
+    pub fn set_entity(&mut self, entity: Entity) {
+        self.entity = entity;
+    }
+}
+
+impl IdentifiableComponent for StructureSystems {
+    fn get_component_unlocalized_name() -> &'static str {
+        "cosmos:structure_systems"
+    }
+}
+
 /// Iterates over structure systems a structure has
 pub struct SystemsIterator<'a> {
     iterating_over: &'a [StructureSystemId],
@@ -447,12 +505,15 @@ impl StructureSystems {
             };
 
             let entity = p
-                .spawn(system)
-                .insert(StructureSystem {
-                    structure_entity: self.entity,
-                    system_id,
-                    system_type_id: system_type.id,
-                })
+                .spawn((
+                    system,
+                    DataFor(self.entity),
+                    StructureSystem {
+                        structure_entity: self.entity,
+                        system_id,
+                        system_type_id: system_type.id,
+                    },
+                ))
                 .id();
 
             self.insert_system(system_id, system_type, entity);
@@ -554,7 +615,7 @@ impl StructureSystems {
     }
 }
 
-fn add_structure(mut commands: Commands, query: Query<Entity, (Added<Structure>, With<Ship>)>) {
+fn add_structure(mut commands: Commands, query: Query<Entity, (Added<Structure>, Without<StructureSystems>, With<Ship>)>) {
     for entity in query.iter() {
         commands.entity(entity).insert(StructureSystems {
             systems: Vec::new(),
@@ -570,6 +631,12 @@ fn add_structure(mut commands: Commands, query: Query<Entity, (Added<Structure>,
 pub trait StructureSystemImpl: Component + std::fmt::Debug {
     /// The unlocalized name of this system. Used for unique serialization
     fn unlocalized_name() -> &'static str;
+}
+
+impl<T: StructureSystemImpl> IdentifiableComponent for T {
+    fn get_component_unlocalized_name() -> &'static str {
+        Self::unlocalized_name()
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

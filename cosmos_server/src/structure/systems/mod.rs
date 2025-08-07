@@ -1,9 +1,7 @@
 //! Contains projectile systems needed on the server
 
 use bevy::prelude::App;
-use cosmos_core::{block::block_rotation::BlockRotation, prelude::BlockCoordinate, structure::systems::StructureSystemOrdering};
-
-use crate::persistence::make_persistent::{DefaultPersistentComponent, make_persistent};
+use cosmos_core::{block::block_rotation::BlockRotation, prelude::BlockCoordinate};
 
 mod camera_system;
 mod dock_system;
@@ -13,6 +11,7 @@ pub mod laser_cannon_system;
 mod line_system;
 mod mining_laser_system;
 pub mod missile_launcher_system;
+mod persistence;
 mod railgun_system;
 pub mod shield_system;
 pub(crate) mod sync;
@@ -27,11 +26,8 @@ pub trait BlockStructureSystem<T> {
     fn remove_block(&mut self, sb: BlockCoordinate);
 }
 
-impl DefaultPersistentComponent for StructureSystemOrdering {}
-
 pub(super) fn register(app: &mut App) {
-    make_persistent::<StructureSystemOrdering>(app);
-
+    persistence::register(app);
     dock_system::register(app);
     line_system::register(app);
     camera_system::register(app);

@@ -10,16 +10,23 @@
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::Velocity;
 use cosmos_core::{
-    ecs::{NeedsDespawned, despawn_needed},
+    ecs::{
+        NeedsDespawned,
+        data::{DataEntities, DataFor},
+        despawn_needed,
+    },
     entities::player::Player,
     netty::cosmos_encoder,
     persistence::LoadingDistance,
     physics::location::Location,
 };
+use serde::{Deserialize, Serialize};
 use std::{
     fs,
     io::{self, ErrorKind},
 };
+
+use crate::persistence::make_persistent::{PersistentComponent, make_persistent};
 
 use super::{EntityId, PreviousSaveFileIdentifier, SaveFileIdentifier, SaveFileIdentifierType, SectorsCache, SerializedData};
 
@@ -79,6 +86,45 @@ fn check_needs_saved(
             let ent = p.parent();
             commands.entity(ent).insert((SerializedData::default(), NeedsSaved));
             parent = q_parent.get(ent).ok();
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct DataFlag(EntityId);
+
+impl PersistentComponent for DataFor {
+    type SaveType = DataFlag;
+
+    fn convert_to_save_type<'a>(
+        &'a self,
+        q_entity_ids: &Query<&EntityId>,
+    ) -> Option<cosmos_core::utils::ownership::MaybeOwned<'a, Self::SaveType>> {
+        Some(DataFlag(q_entity_ids.get(self.0).ok().copied()?).into())
+    }
+
+    fn convert_from_save_type(saved_type: Self::SaveType, entity_id_manager: &super::make_persistent::EntityIdManager) -> Option<Self> {
+        entity_id_manager.entity_from_entity_id(&saved_type.0).map(|e| Self(e))
+    }
+}
+
+fn save_data_entities(
+    mut commands: Commands,
+    q_data_ents: Query<&DataEntities>,
+    q_data_ents_need_saved: Query<&DataEntities, With<NeedsSaved>>,
+) {
+    for de in q_data_ents_need_saved.iter() {
+        for ent in de.iter() {
+            rec_save_des(ent, &q_data_ents, &mut commands);
+        }
+    }
+}
+
+fn rec_save_des(ent: Entity, q_data_ents: &Query<&DataEntities>, commands: &mut Commands) {
+    commands.entity(ent).insert(NeedsSaved);
+    if let Ok(data_ents) = q_data_ents.get(ent) {
+        for de in data_ents.iter() {
+            rec_save_des(de, q_data_ents, commands);
         }
     }
 }
@@ -152,6 +198,17 @@ fn create_entity_ids(mut commands: Commands, q_without_id: Query<(Entity, &Seria
     }
 }
 
+fn ensure_data_entities_have_correct_parents(
+    q_data_ent: Query<(Entity, &DataFor, Option<&ChildOf>), Changed<DataFor>>,
+    mut commands: Commands,
+) {
+    for (ent, data_for, child_of) in q_data_ent.iter() {
+        if Some(data_for.0) != child_of.map(|x| x.parent()) {
+            commands.entity(ent).insert(ChildOf(data_for.0));
+        }
+    }
+}
+
 /// Make sure any systems that serialize data for saving are run before this
 fn done_saving(
     q_needs_saved: Query<
@@ -177,7 +234,9 @@ fn done_saving(
     for dead_save in dead_saves_query.iter() {
         let path = dead_save.0.get_save_file_path();
         if fs::exists(&path).unwrap_or(false) {
-            fs::remove_file(path).expect("Error deleting old save file!");
+            if let Err(e) = fs::remove_file(&path) {
+                error!("Error deleting old save file @ {path}! - {e:?}");
+            }
 
             if let SaveFileIdentifierType::Base(entity_id, Some(sector), load_distance) = &dead_save.0.identifier_type {
                 sectors_cache.remove(entity_id, *sector, *load_distance);
@@ -340,6 +399,8 @@ fn default_save(
 pub const SAVING_SCHEDULE: First = First;
 
 pub(super) fn register(app: &mut App) {
+    make_persistent::<DataFor>(app);
+
     app.configure_sets(
         SAVING_SCHEDULE,
         (
@@ -354,10 +415,10 @@ pub(super) fn register(app: &mut App) {
     .add_systems(
         SAVING_SCHEDULE,
         (
-            check_needs_saved.in_set(SavingSystemSet::BeginSaving),
+            (check_needs_saved, save_data_entities).chain().in_set(SavingSystemSet::BeginSaving),
             default_save.in_set(SavingSystemSet::DoSaving),
             create_entity_ids.in_set(SavingSystemSet::CreateEntityIds),
-            done_saving.in_set(SavingSystemSet::DoneSaving),
+            (ensure_data_entities_have_correct_parents, done_saving).in_set(SavingSystemSet::DoneSaving),
         ),
     );
 

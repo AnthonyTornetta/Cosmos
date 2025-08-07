@@ -34,6 +34,8 @@ use cosmos_core::{
     utils::ecs::MutOrMutRef,
 };
 
+use crate::persistence::make_persistent::DefaultPersistentComponent;
+
 use super::{shield_system::ShieldHitEvent, sync::register_structure_system};
 
 fn compute_railguns(
@@ -542,8 +544,12 @@ fn charge_and_cool_railguns(
     }
 }
 
+impl DefaultPersistentComponent for RailgunSystem {}
+
 pub(super) fn register(app: &mut App) {
     register_structure_system::<RailgunSystem>(app, true, "cosmos:railgun_launcher");
+
+    make_persistent::<RailgunSystem>(app);
 
     app.add_systems(
         Update,
