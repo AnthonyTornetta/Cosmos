@@ -70,6 +70,12 @@ pub fn compute_totally_accurate_global_transform<F: QueryFilter>(
     Some(g_trans)
 }
 
+/// A utility system to automatically [`Name`] this component to the given name when added.
+///
+/// Usage:
+/// ```rs
+/// app.add_systems(Update, name::<LaserCannonSystem>("Laser Cannon System"));
+/// ```
 pub fn name<T: Component>(name: &'static str) -> impl Fn(Commands, Query<Entity, Added<T>>) {
     move |mut commands: Commands, q: Query<Entity, Added<T>>| {
         for e in q.iter() {

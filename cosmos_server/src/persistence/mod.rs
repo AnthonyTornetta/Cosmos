@@ -272,9 +272,6 @@ impl SerializedData {
     }
 }
 
-#[derive(Component)]
-pub struct DataEntity;
-
 /// Returns true if a sector has at some point been generated at this location
 pub fn is_sector_generated(sector: Sector) -> bool {
     fs::exists(SaveFileIdentifier::get_sector_path(sector)).unwrap_or(false)

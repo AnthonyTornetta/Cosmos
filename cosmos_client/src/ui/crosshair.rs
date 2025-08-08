@@ -13,18 +13,23 @@ enum State {
 }
 
 #[derive(Default, Component, Reflect)]
+/// Represents the look of the crosshair
 pub struct CrosshairState {
     indicating_requests: Vec<&'static str>,
     prev_state: State,
 }
 
 impl CrosshairState {
+    /// Adds yourself to the list of things requesting the cursor looks like an indicator.
+    /// If there are >= 1 requesting ids, the cursor will look like an indicator
     pub fn request_indicating(&mut self, id: &'static str) {
         if !self.indicating_requests.contains(&id) {
             self.indicating_requests.push(id);
         }
     }
 
+    /// Removs yourself froms the list of things requesting the cursor looks like an indicator.
+    /// If there are >= 1 requesting ids, the cursor will look like an indicator
     pub fn remove_indicating(&mut self, id: &'static str) {
         let Some((idx, _)) = self.indicating_requests.iter().enumerate().find(|(_, x)| **x == id) else {
             return;

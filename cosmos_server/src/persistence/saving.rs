@@ -93,6 +93,9 @@ fn check_needs_saved(
 }
 
 #[derive(Serialize, Deserialize)]
+/// Internal component (Serialized version of [`DataFor`])
+///
+/// Only public because the interface requires it to be.
 pub struct DataFlag(EntityId);
 
 impl PersistentComponent for DataFor {

@@ -7,7 +7,6 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     block::{Block, block_direction::BlockDirection},
-    netty::sync::IdentifiableComponent,
     registry::{Registry, create_registry, identifiable::Identifiable},
     structure::coordinates::{BlockCoordinate, CoordinateType},
 };

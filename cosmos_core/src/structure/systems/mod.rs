@@ -117,6 +117,8 @@ impl IdentifiableComponent for StructureSystem {
 }
 
 impl StructureSystem {
+    /// Creates a structure system from raw data. This should only be used if you are loading this
+    /// from serialized data.
     pub fn from_raw(structure_entity: Entity, system_id: StructureSystemId, system_type_id: StructureSystemTypeId) -> Self {
         Self {
             structure_entity,
@@ -181,8 +183,12 @@ impl std::fmt::Display for NoSystemFound {
 impl Error for NoSystemFound {}
 
 #[derive(Event, Serialize, Deserialize, Debug, Clone)]
+/// Sent by the player to request changing a system slot to point to a specific system
 pub struct ChangeSystemSlot {
+    /// The system they want the slot to be (or `None` to clear it)
     pub system_id: Option<StructureSystemId>,
+    /// The structure that are changging (must be the one they are piloting - leaving this field
+    /// for now in case I add other conditions later)
     pub structure: Entity,
     /// 0-8
     pub slot: u32,
@@ -215,6 +221,8 @@ impl NettyEvent for ChangeSystemSlot {
 }
 
 #[derive(Debug, Component, Serialize, Deserialize, Clone, PartialEq, Eq, Reflect)]
+/// Represents the ordering of activatable [`StructureSystem`]s that can be directly activated by
+/// the player.
 pub struct StructureSystemOrdering {
     // 0-8
     system_slots: Vec<Option<StructureSystemId>>,
@@ -241,6 +249,7 @@ impl SyncableComponent for StructureSystemOrdering {
 }
 
 impl StructureSystemOrdering {
+    /// Sets the slot for this system to be activated from
     pub fn set_slot(&mut self, slot: u32, system: StructureSystemId) {
         if slot < self.system_slots.len() as u32 {
             self.system_slots[slot as usize] = Some(system);
@@ -249,16 +258,16 @@ impl StructureSystemOrdering {
         }
     }
 
+    /// This slot will no longer point to a system
     pub fn clear_slot(&mut self, slot: u32) {
         if slot < self.system_slots.len() as u32 {
             self.system_slots[slot as usize] = None;
         } else {
             error!("Invalid clear slot - {slot}");
         }
-
-        assert!(slot < self.system_slots.len() as u32);
     }
 
+    /// Returns the system at this slot
     pub fn get_slot(&self, slot: u32) -> Option<StructureSystemId> {
         if slot < self.system_slots.len() as u32 {
             self.system_slots[slot as usize]
@@ -268,14 +277,18 @@ impl StructureSystemOrdering {
         }
     }
 
+    /// Iterates over every slot that can be used by the player - even those that contain no
+    /// systems
     pub fn iter(&self) -> impl Iterator<Item = Option<StructureSystemId>> {
         self.system_slots.iter().copied()
     }
 
+    /// Returns the slot this system is in (if it is in any slot)
     pub fn ordering_for(&self, system_id: StructureSystemId) -> Option<u32> {
         self.iter().enumerate().find(|(_, x)| *x == Some(system_id)).map(|x| x.0 as u32)
     }
 
+    /// Adds this system to the next available slot, or does nothing if no slots are available.
     pub fn add_to_next_available(&mut self, system_id: StructureSystemId) {
         if let Some(slot) = self.system_slots.iter_mut().find(|x| x.is_none()) {
             *slot = Some(system_id);
