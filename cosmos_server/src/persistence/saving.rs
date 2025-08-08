@@ -33,6 +33,8 @@ use super::{EntityId, PreviousSaveFileIdentifier, SaveFileIdentifier, SaveFileId
 #[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
 /// This system set is for when entities are being saved normally - NOT FOR A BLUEPRINT (use [`BlueprintingSystemSet`] for that.)
 pub enum SavingSystemSet {
+    /// Marks all entities that can be saved with [`ShouldBeSaved`].
+    MarkSavable,
     /// Adds the `SerializedData` component to any entities that have the `NeedsSaved` component.
     BeginSaving,
     /// Put all your saving logic in here
@@ -395,6 +397,18 @@ fn default_save(
     }
 }
 
+#[derive(Component)]
+struct ShouldBeSaved;
+
+fn mark_savable_entities(
+    mut commands: Commands,
+    q_savable: Query<Entity, (Without<ShouldBeSaved>, Or<((With<Location>, With<LoadingDistance>), With<DataFor>)>)>,
+) {
+    for ent in q_savable.iter() {
+        commands.entity(ent).insert(ShouldBeSaved);
+    }
+}
+
 /// The schedule saving takes place in - this may change in the future
 pub const SAVING_SCHEDULE: First = First;
 
@@ -404,6 +418,7 @@ pub(super) fn register(app: &mut App) {
     app.configure_sets(
         SAVING_SCHEDULE,
         (
+            SavingSystemSet::MarkSavable,
             SavingSystemSet::BeginSaving,
             SavingSystemSet::DoSaving,
             SavingSystemSet::CreateEntityIds,
@@ -415,7 +430,8 @@ pub(super) fn register(app: &mut App) {
     .add_systems(
         SAVING_SCHEDULE,
         (
-            (check_needs_saved, save_data_entities).chain().in_set(SavingSystemSet::BeginSaving),
+            mark_savable_entities.in_set(SavingSystemSet::MarkSavable),
+            (save_data_entities, check_needs_saved).chain().in_set(SavingSystemSet::BeginSaving),
             default_save.in_set(SavingSystemSet::DoSaving),
             create_entity_ids.in_set(SavingSystemSet::CreateEntityIds),
             (ensure_data_entities_have_correct_parents, done_saving).in_set(SavingSystemSet::DoneSaving),

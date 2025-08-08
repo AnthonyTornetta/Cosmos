@@ -34,7 +34,7 @@ use cosmos_core::{
     utils::ecs::MutOrMutRef,
 };
 
-use crate::persistence::make_persistent::DefaultPersistentComponent;
+use crate::persistence::make_persistent::{DefaultPersistentComponent, make_persistent};
 
 use super::{shield_system::ShieldHitEvent, sync::register_structure_system};
 
@@ -278,9 +278,14 @@ fn structure_loaded_event(
     blocks: Res<Registry<Block>>,
     mut commands: Commands,
     registry: Res<Registry<StructureSystemType>>,
+    q_railgun_system: Query<(), With<RailgunSystem>>,
 ) {
     for ev in event_reader.read() {
         if let Ok((structure, mut systems)) = structure_query.get_mut(ev.structure_entity) {
+            if systems.query(&q_railgun_system).is_ok() {
+                continue;
+            }
+
             let mut system = RailgunSystem::default();
 
             let Some(railgun_controller) = blocks.from_id("cosmos:railgun_launcher").map(|x| x.id()) else {

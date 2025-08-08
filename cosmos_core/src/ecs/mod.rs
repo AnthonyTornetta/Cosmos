@@ -70,6 +70,14 @@ pub fn compute_totally_accurate_global_transform<F: QueryFilter>(
     Some(g_trans)
 }
 
+pub fn name<T: Component>(name: &'static str) -> impl Fn(Commands, Query<Entity, Added<T>>) {
+    move |mut commands: Commands, q: Query<Entity, Added<T>>| {
+        for e in q.iter() {
+            commands.entity(e).insert(Name::new(name));
+        }
+    }
+}
+
 pub(super) fn register(app: &mut App) {
     app.add_systems(First, despawn_needed);
     sets::register(app);

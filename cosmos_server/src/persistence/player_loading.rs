@@ -195,12 +195,15 @@ fn load_near(
         for sfi in to_load {
             let child_dir = sfi.get_children_directory();
 
+            info!("Checking CD: {child_dir:?}");
+
             for file in WalkDir::new(&child_dir)
                 .max_depth(1)
                 .into_iter()
                 .flatten()
                 .filter(|x| x.file_type().is_file())
             {
+                info!("Checking {file:?}");
                 load_all(sfi.clone(), file, &mut new_to_load, &loaded_entities);
             }
 
@@ -215,10 +218,12 @@ fn load_near(
     commands.insert_resource(LoadingTask(task));
 }
 
-fn load_all(base: SaveFileIdentifier, file: DirEntry, to_load: &mut Vec<SaveFileIdentifier>, loaded_entities: &[EntityId]) {
+pub fn load_all(base: SaveFileIdentifier, file: DirEntry, to_load: &mut Vec<SaveFileIdentifier>, loaded_entities: &[EntityId]) {
     let path = file.path();
 
     if path.extension() == Some(OsStr::new("cent")) {
+        info!("Loading child! {path:?}");
+
         let entity_information = path.file_stem().expect("Failed to get file stem").to_str().expect("to_str failed");
 
         let entity_id = EntityId::new(Uuid::parse_str(entity_information).expect("Failed to parse entity id!"));

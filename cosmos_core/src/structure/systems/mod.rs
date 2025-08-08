@@ -466,9 +466,12 @@ impl StructureSystems {
     /// If this system is active, it would still also count as hovered.
     pub fn hovered_system(&self, ordering: &StructureSystemOrdering) -> Option<Entity> {
         match self.active_system {
-            ShipActiveSystem::Active(active_system_idx) | ShipActiveSystem::Hovered(active_system_idx) => ordering
-                .get_slot(active_system_idx)
-                .map(|x| *self.ids.get(&x).expect("Invalid state - system id has no entity mapping")),
+            ShipActiveSystem::Active(active_system_idx) | ShipActiveSystem::Hovered(active_system_idx) => {
+                ordering.get_slot(active_system_idx).map(|x| {
+                    info!("{x:?}");
+                    *self.ids.get(&x).expect("Invalid state - system id has no entity mapping")
+                })
+            }
             ShipActiveSystem::None => None,
         }
     }
@@ -581,11 +584,7 @@ impl StructureSystems {
         F: QueryFilter,
         Q: QueryData,
     {
-        for ent in self
-            .systems
-            .iter()
-            .map(|x| self.ids.get(x).expect("Invalid state - system id has no entity mapping"))
-        {
+        for ent in self.systems.iter().flat_map(|x| self.ids.get(x)) {
             if let Ok(res) = query.get(*ent) {
                 return Ok(res);
             }
@@ -600,11 +599,7 @@ impl StructureSystems {
         F: QueryFilter,
         Q: QueryData,
     {
-        for ent in self
-            .systems
-            .iter()
-            .map(|x| self.ids.get(x).expect("Invalid state - system id has no entity mapping"))
-        {
+        for ent in self.systems.iter().flat_map(|x| self.ids.get(x)) {
             // the borrow checker gets mad when I do a get_mut in this if statement
             if query.contains(*ent) {
                 return Ok(query.get_mut(*ent).expect("This should be valid"));
@@ -699,14 +694,12 @@ pub(super) fn register(app: &mut App) {
     app.configure_sets(
         FixedUpdate,
         (
-            StructureSystemsSet::InitSystems.in_set(StructureLoadingSet::StructureLoaded),
+            StructureSystemsSet::InitSystems,
             StructureSystemsSet::UpdateSystemsBlocks,
             StructureSystemsSet::UpdateSystems,
         )
             .chain(),
     );
-
-    app.configure_sets(FixedUpdate, StructureSystemsSet::UpdateSystems);
 
     app.add_systems(
         FixedUpdate,

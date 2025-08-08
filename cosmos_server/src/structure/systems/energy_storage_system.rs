@@ -60,9 +60,14 @@ fn structure_loaded_event(
     mut commands: Commands,
     energy_storage_blocks: Res<EnergyStorageBlocks>,
     registry: Res<Registry<StructureSystemType>>,
+    q_storage_system: Query<(), With<EnergyStorageSystem>>,
 ) {
     for ev in event_reader.read() {
         if let Ok((structure, mut systems)) = structure_query.get_mut(ev.structure_entity) {
+            if systems.query(&q_storage_system).is_ok() {
+                continue;
+            }
+
             let mut system = EnergyStorageSystem::default();
 
             for block in structure.all_blocks_iter(false) {

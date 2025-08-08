@@ -43,7 +43,10 @@ impl PersistentComponent for StructureSystems {
                 ids: self
                     .ids()
                     .iter()
-                    .flat_map(|(id, e)| q_entity_ids.get(*e).map(|e| (*id, *e)))
+                    .map(|(id, e)| {
+                        let eid = q_entity_ids.get(*e).expect("Missing EntityId on StructureSystem");
+                        (*id, *eid)
+                    })
                     .collect::<HashMap<StructureSystemId, EntityId>>(),
             }
             .into(),
@@ -60,7 +63,17 @@ impl PersistentComponent for StructureSystems {
             serialized_version
                 .ids
                 .into_iter()
-                .flat_map(|(id, eid)| entity_id_manager.entity_from_entity_id(&eid).map(|e| (id, e)))
+                .flat_map(|(id, eid)| {
+                    let res = entity_id_manager.entity_from_entity_id(&eid).map(|e| (id, e));
+
+                    if res.is_none() {
+                        error!("Entity id {eid:?} not found when loading structure systems!");
+                    }
+
+                    info!("{res:?}");
+
+                    res
+                })
                 .collect::<HashMap<StructureSystemId, Entity>>(),
         ))
     }

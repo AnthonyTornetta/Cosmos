@@ -122,9 +122,14 @@ fn structure_loaded_event(
     shield_projector_blocks: Res<ShieldProjectorBlocks>,
     shield_generator_blocks: Res<ShieldGeneratorBlocks>,
     registry: Res<Registry<StructureSystemType>>,
+    q_shield_system: Query<(), With<ShieldSystem>>,
 ) {
     for ev in event_reader.read() {
         if let Ok((structure, mut systems)) = structure_query.get_mut(ev.structure_entity) {
+            if systems.query(&q_shield_system).is_ok() {
+                continue;
+            }
+
             let mut system = ShieldSystem::default();
 
             for block in structure.all_blocks_iter(false) {

@@ -18,7 +18,7 @@ use cosmos_core::{
     netty::cosmos_encoder,
     persistence::LoadingDistance,
     physics::location::{Location, LocationPhysicsSet, SetPosition},
-    structure::loading::StructureLoadingSet,
+    structure::{loading::StructureLoadingSet, systems::StructureSystemsSet},
 };
 
 use super::{PreviousSaveFileIdentifier, SaveFileIdentifier, SaveFileIdentifierType, SerializedData};
@@ -216,7 +216,9 @@ pub(super) fn register(app: &mut App) {
             LoadingSystemSet::BeginLoading,
             LoadingSystemSet::LoadBasicComponents.before(StructureLoadingSet::LoadStructure),
             LoadingSystemSet::DoLoading,
-            LoadingSystemSet::DoneLoading.after(StructureLoadingSet::StructureLoaded),
+            LoadingSystemSet::DoneLoading
+                .after(StructureLoadingSet::StructureLoaded)
+                .before(StructureSystemsSet::InitSystems),
         )
             .before(LocationPhysicsSet::DoPhysics)
             .chain(),

@@ -4,7 +4,10 @@ use std::time::Duration;
 
 use bevy::{prelude::*, time::common_conditions::on_timer};
 use cosmos_core::{
-    ecs::NeedsDespawned, entities::player::Player, netty::system_sets::NetworkingSystemsSet, persistence::LoadingDistance,
+    ecs::{NeedsDespawned, data::DataFor},
+    entities::player::Player,
+    netty::system_sets::NetworkingSystemsSet,
+    persistence::LoadingDistance,
     physics::location::Location,
 };
 
@@ -26,7 +29,7 @@ fn backup_before_saving(mut evw_create_backup: EventWriter<CreateWorldBackup>, m
 
 fn save_everything(
     mut commands: Commands,
-    q_needs_saved: Query<Entity, (Without<NeedsDespawned>, With<Location>, With<LoadingDistance>)>,
+    q_needs_saved: Query<Entity, (Without<NeedsDespawned>, With<DataFor>, With<Location>, With<LoadingDistance>)>,
     mut evr_save_everything: EventReader<SaveEverything>,
 ) {
     if evr_save_everything.is_empty() {

@@ -60,9 +60,14 @@ fn camera_structure_loaded_event_processor(
     mut commands: Commands,
     camera_blocks: Res<CameraBlocks>,
     registry: Res<Registry<StructureSystemType>>,
+    q_thruster_system: Query<(), With<CameraSystem>>,
 ) {
     for ev in event_reader.read() {
         if let Ok((structure, mut systems)) = structure_query.get_mut(ev.structure_entity) {
+            if systems.query(&q_thruster_system).is_ok() {
+                continue;
+            }
+
             let mut system = CameraSystem::default();
 
             for block in structure.all_blocks_iter(false) {

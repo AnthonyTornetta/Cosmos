@@ -98,9 +98,14 @@ fn dock_structure_loaded_event_processor(
     blocks: Res<Registry<Block>>,
     mut commands: Commands,
     registry: Res<Registry<StructureSystemType>>,
+    q_dock_system: Query<(), With<DockSystem>>,
 ) {
     for ev in event_reader.read() {
         if let Ok((structure, mut systems)) = structure_query.get_mut(ev.structure_entity) {
+            if systems.query(&q_dock_system).is_ok() {
+                continue;
+            }
+
             let mut system = DockSystem::default();
 
             for block in structure.all_blocks_iter(false) {
