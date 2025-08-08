@@ -420,8 +420,8 @@ pub(super) fn register(app: &mut App) {
         (
             SavingSystemSet::MarkSavable,
             SavingSystemSet::BeginSaving,
-            SavingSystemSet::DoSaving,
             SavingSystemSet::CreateEntityIds,
+            SavingSystemSet::DoSaving,
             SavingSystemSet::DoneSaving,
         )
             .chain()

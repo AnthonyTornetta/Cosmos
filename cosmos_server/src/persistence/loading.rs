@@ -37,6 +37,12 @@ pub enum LoadingSystemSet {
 }
 
 #[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
+pub(crate) enum PreLoadingStages {
+    EnsureCorrectHeirarchies,
+    AttachLoadingComponents,
+}
+
+#[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
 /// Put anything related to loading blueprinted entities in from serialized data into this set
 pub enum LoadingBlueprintSystemSet {
     /// Sets up the loading entities
@@ -223,10 +229,19 @@ pub(super) fn register(app: &mut App) {
             .before(LocationPhysicsSet::DoPhysics)
             .chain(),
     )
+    .configure_sets(
+        LOADING_SCHEDULE,
+        (
+            PreLoadingStages::EnsureCorrectHeirarchies,
+            PreLoadingStages::AttachLoadingComponents,
+        )
+            .chain()
+            .in_set(LoadingSystemSet::BeginLoading),
+    )
     .add_systems(
         LOADING_SCHEDULE,
         (
-            check_needs_loaded.in_set(LoadingSystemSet::BeginLoading),
+            check_needs_loaded.in_set(PreLoadingStages::AttachLoadingComponents),
             default_load.in_set(LoadingSystemSet::DoLoading),
             done_loading.in_set(LoadingSystemSet::DoneLoading),
         ),
