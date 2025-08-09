@@ -14,8 +14,13 @@ mod sync;
 pub mod thruster_system;
 
 use bevy::prelude::App;
+use cosmos_core::structure::systems::StructureSystemType;
+
+use crate::lang::register_lang;
 
 pub(super) fn register(app: &mut App) {
+    register_lang::<StructureSystemType>(app, vec!["systems"]);
+
     dock_system::register(app);
     player_interactions::register(app);
     shield_system::register(app);

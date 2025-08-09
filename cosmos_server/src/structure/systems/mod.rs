@@ -11,9 +11,11 @@ pub mod laser_cannon_system;
 mod line_system;
 mod mining_laser_system;
 pub mod missile_launcher_system;
+mod persistence;
 mod railgun_system;
 pub mod shield_system;
 pub(crate) mod sync;
+mod system_ordering;
 pub mod thruster_system;
 
 /// A system that is created by the addition and removal of blocks
@@ -25,6 +27,7 @@ pub trait BlockStructureSystem<T> {
 }
 
 pub(super) fn register(app: &mut App) {
+    persistence::register(app);
     dock_system::register(app);
     line_system::register(app);
     camera_system::register(app);
@@ -36,4 +39,5 @@ pub(super) fn register(app: &mut App) {
     energy_storage_system::register(app);
     missile_launcher_system::register(app);
     railgun_system::register(app);
+    system_ordering::register(app);
 }

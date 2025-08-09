@@ -26,6 +26,8 @@ use futures_lite::future;
 use uuid::Uuid;
 use walkdir::{DirEntry, WalkDir};
 
+use crate::persistence::loading::PreLoadingStages;
+
 use super::{EntityId, SaveFileIdentifier, SectorsCache, loading::NeedsLoaded, saving::NeedsSaved};
 
 fn unload_far(
@@ -75,7 +77,7 @@ fn monitor_loading_task(
             if !loaded_entities.iter().any(|x| {
                 x == sfi
                     .entity_id()
-                    .expect("A non-base SaveFileIdentifier was attempted to be loaded in load_near")
+                    .expect("A non-entity id SaveFileIdentifier was attempted to be loaded in load_near")
             }) {
                 let entity_id = *sfi.entity_id().expect("Missing entity id");
 
@@ -91,14 +93,86 @@ fn monitor_loading_task(
 
 #[derive(Component)]
 /// This component can be added to any entity, which will signify to the loading system that its
-/// children may not all be loaded.
+/// children may not all be loaded. This component will immediately trigger a load of all this
+/// entity's children in the next [`LoadingSystemSet`] execution.
 pub struct RecomputeNeedLoadedChildren;
+
+fn recompute_need_loaded_children(
+    q_need_reloaded_children: Query<
+        (
+            Option<&Location>,
+            Option<&LoadingDistance>,
+            Option<&SaveFileIdentifier>,
+            &EntityId,
+            Entity,
+        ),
+        With<RecomputeNeedLoadedChildren>,
+    >,
+    mut commands: Commands,
+    loaded_entities: Query<&EntityId>,
+) {
+    if q_need_reloaded_children.is_empty() {
+        return;
+    }
+
+    let loaded_entities = loaded_entities.iter().copied().collect::<Vec<_>>();
+
+    // These need to be done immediately, because one of the entities already exists and we need to
+    // fix the invalid heirarchy now, not in some async task that can be take multiple frames.
+
+    let mut to_load = vec![];
+    for (loc, loading_distance, sfi, entity_id, entity) in q_need_reloaded_children {
+        let sfi = sfi.cloned().or_else(|| {
+            let loc = loc?;
+            let loading_distance = loading_distance?;
+
+            Some(SaveFileIdentifier::new(
+                Some(loc.sector()),
+                *entity_id,
+                Some(loading_distance.load_distance()),
+            ))
+        });
+
+        let Some(sfi) = sfi else {
+            error!("Unable to compute save file identifier for {entity_id:?} ({entity:?})");
+            continue;
+        };
+
+        let child_dir = sfi.get_children_directory();
+
+        info!("Fixing Parent Heirarchy: {child_dir:?}");
+
+        for file in WalkDir::new(&child_dir)
+            .max_depth(1)
+            .into_iter()
+            .flatten()
+            .filter(|x| x.file_type().is_file())
+        {
+            load_all(sfi.clone(), file, &mut to_load, &loaded_entities);
+        }
+
+        if !loaded_entities.iter().any(|x| Some(x) == sfi.entity_id()) {
+            to_load.push(sfi);
+        }
+
+        commands.entity(entity).remove::<RecomputeNeedLoadedChildren>();
+    }
+
+    for sfi in to_load {
+        let entity_id = *sfi.entity_id().expect("Missing entity id");
+
+        let name = format!("Needs Loaded Entity - {entity_id}");
+
+        info!("Loading {entity_id}");
+
+        commands.spawn((sfi, entity_id, NeedsLoaded, Name::new(name)));
+    }
+}
 
 /// Performance hot spot
 fn load_near(
     q_player_locations: Query<&Location, With<Anchor>>,
     loaded_entities: Query<&EntityId>,
-    q_need_reloaded_children: Query<(&EntityId, Entity), With<RecomputeNeedLoadedChildren>>,
     // This is modified below, despite it being cloned. Use ResMut to make purpose clear
     sectors_cache: ResMut<SectorsCache>,
     mut commands: Commands,
@@ -117,10 +191,6 @@ fn load_near(
 
     // If this ever gets laggy, either of this clone could be the cause
     let loaded_entities = loaded_entities.iter().copied().collect::<Vec<_>>();
-    let need_reloaded_children = q_need_reloaded_children.iter().map(|x| *x.0).collect::<Vec<_>>();
-    for (_, ent) in q_need_reloaded_children.iter() {
-        commands.entity(ent).remove::<RecomputeNeedLoadedChildren>();
-    }
 
     let task = thread_pool.spawn(async move {
         let mut to_load = vec![];
@@ -134,9 +204,7 @@ fn load_near(
 
                         if let Some(entities) = sectors_cache.get(&sector) {
                             for (entity_id, load_distance) in entities.lock().expect("Failed to lock").iter() {
-                                if max_delta <= load_distance.unwrap_or(DEFAULT_LOAD_DISTANCE)
-                                    && (need_reloaded_children.contains(entity_id) || !loaded_entities.contains(entity_id))
-                                {
+                                if max_delta <= load_distance.unwrap_or(DEFAULT_LOAD_DISTANCE) && !loaded_entities.contains(entity_id) {
                                     to_load.push(SaveFileIdentifier::new(Some(sector), *entity_id, *load_distance));
                                 }
                             }
@@ -177,7 +245,7 @@ fn load_near(
                                         sectors_cache.insert(sector, entity_id, load_distance);
 
                                         if max_delta <= load_distance.unwrap_or(DEFAULT_LOAD_DISTANCE)
-                                            && (need_reloaded_children.contains(&entity_id) || !loaded_entities.contains(&entity_id))
+                                            && !loaded_entities.contains(&entity_id)
                                         {
                                             to_load.push(SaveFileIdentifier::new(Some(sector), entity_id, load_distance));
                                         }
@@ -250,6 +318,7 @@ pub(super) fn register(app: &mut App) {
                 .in_set(NetworkingSystemsSet::Between)
                 .after(LocationPhysicsSet::DoPhysics),
             // .run_if(on_timer(Duration::from_millis(1000))),
+            recompute_need_loaded_children.in_set(PreLoadingStages::EnsureCorrectHeirarchies),
             load_near
                 .run_if(not(resource_exists::<LoadingTask>))
                 .in_set(NetworkingSystemsSet::Between)

@@ -7,6 +7,7 @@ use cosmos_core::{
     quest::{ActiveQuest, OngoingQuest, OngoingQuestId, OngoingQuests, Quest},
     registry::Registry,
     state::GameState,
+    structure::ship::pilot::Pilot,
 };
 
 use crate::{
@@ -35,7 +36,12 @@ fn open_quest_ui(
     q_quests: Query<(&OngoingQuests, Option<&ActiveQuest>), With<LocalPlayer>>,
     quests: Res<Registry<Quest>>,
     lang: Res<Lang<Quest>>,
+    q_is_flying: Query<(), (With<LocalPlayer>, With<Pilot>)>,
 ) {
+    // TODO: Workaround - remove later
+    if !q_is_flying.is_empty() {
+        return;
+    }
     if !input_checker.check_just_pressed(CosmosInputs::ToggleQuestsUi) {
         return;
     }

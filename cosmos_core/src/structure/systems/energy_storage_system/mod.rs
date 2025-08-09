@@ -1,10 +1,6 @@
 //! Represents all the energy stored on a structure
 
-use bevy::{
-    platform::collections::HashMap,
-    prelude::{App, Component, Resource},
-    reflect::Reflect,
-};
+use bevy::{platform::collections::HashMap, prelude::*};
 use serde::{Deserialize, Serialize};
 
 use crate::{block::Block, registry::identifiable::Identifiable};
@@ -90,8 +86,15 @@ impl EnergyStorageSystem {
     }
 }
 
+fn name_system(mut commands: Commands, q_added: Query<Entity, Added<EnergyStorageSystem>>) {
+    for e in q_added.iter() {
+        commands.entity(e).insert(Name::new("Energy Storage System"));
+    }
+}
+
 pub(super) fn register(app: &mut App) {
     app.insert_resource(EnergyStorageBlocks::default())
+        .add_systems(Update, name_system)
         .register_type::<EnergyStorageSystem>()
         // This is allowed to be ambiguous, because it will be being replaced in the future, once electric wires are done.
         .allow_ambiguous_component::<EnergyStorageSystem>();

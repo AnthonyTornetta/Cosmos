@@ -5,6 +5,7 @@ use ship::ShipEventListenerSet;
 
 pub mod change_pilot_event;
 mod ship;
+pub mod structure_event;
 
 /// Systems that listen to structure events are in here (currently just ships use this)
 pub type StructureEventListenerSet = ShipEventListenerSet;

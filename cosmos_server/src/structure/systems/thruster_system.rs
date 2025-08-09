@@ -29,6 +29,8 @@ use cosmos_core::{
     },
 };
 
+use crate::persistence::make_persistent::{DefaultPersistentComponent, make_persistent};
+
 use super::sync::register_structure_system;
 
 const MAX_SHIP_SPEED: f32 = 350.0;
@@ -241,9 +243,14 @@ fn structure_loaded_event(
     mut commands: Commands,
     thruster_blocks: Res<ThrusterBlocks>,
     registry: Res<Registry<StructureSystemType>>,
+    q_thruster_system: Query<(), With<ThrusterSystem>>,
 ) {
     for ev in event_reader.read() {
         if let Ok((structure, mut systems)) = structure_query.get_mut(ev.structure_entity) {
+            if systems.query(&q_thruster_system).is_ok() {
+                continue;
+            }
+
             let mut system = ThrusterSystem::default();
 
             for block in structure.all_blocks_iter(false) {
@@ -264,7 +271,11 @@ pub enum ThrusterSystemSet {
     ApplyThrusters,
 }
 
+impl DefaultPersistentComponent for ThrusterSystem {}
+
 pub(super) fn register(app: &mut App) {
+    make_persistent::<ThrusterSystem>(app);
+
     app.configure_sets(FixedUpdate, ThrusterSystemSet::ApplyThrusters);
 
     app.insert_resource(ThrusterBlocks::default())

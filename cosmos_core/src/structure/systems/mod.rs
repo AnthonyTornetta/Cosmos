@@ -17,7 +17,13 @@ use bevy::{
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    netty::sync::registry::sync_registry,
+    ecs::{NeedsDespawned, data::DataFor},
+    netty::sync::{
+        IdentifiableComponent, SyncableComponent,
+        events::netty_event::{IdentifiableEvent, NettyEvent, SyncedEventImpl},
+        registry::sync_registry,
+        sync_component,
+    },
     registry::{Registry, create_registry, identifiable::Identifiable},
 };
 
@@ -96,7 +102,7 @@ fn remove_system_actives_when_melting_down(
 /// This does not need to be provided if no controller is used
 pub struct SystemBlock;
 
-#[derive(Component, Debug, Reflect)]
+#[derive(Component, Debug, Reflect, Clone, Copy)]
 /// Every system has this as a component.
 pub struct StructureSystem {
     structure_entity: Entity,
@@ -104,7 +110,23 @@ pub struct StructureSystem {
     system_type_id: StructureSystemTypeId,
 }
 
+impl IdentifiableComponent for StructureSystem {
+    fn get_component_unlocalized_name() -> &'static str {
+        "cosmos:structure_system"
+    }
+}
+
 impl StructureSystem {
+    /// Creates a structure system from raw data. This should only be used if you are loading this
+    /// from serialized data.
+    pub fn from_raw(structure_entity: Entity, system_id: StructureSystemId, system_type_id: StructureSystemTypeId) -> Self {
+        Self {
+            structure_entity,
+            system_type_id,
+            system_id,
+        }
+    }
+
     /// This system's unique id
     pub fn id(&self) -> StructureSystemId {
         self.system_id
@@ -160,7 +182,122 @@ impl std::fmt::Display for NoSystemFound {
 
 impl Error for NoSystemFound {}
 
+#[derive(Event, Serialize, Deserialize, Debug, Clone)]
+/// Sent by the player to request changing a system slot to point to a specific system
+pub struct ChangeSystemSlot {
+    /// The system they want the slot to be (or `None` to clear it)
+    pub system_id: Option<StructureSystemId>,
+    /// The structure that are changging (must be the one they are piloting - leaving this field
+    /// for now in case I add other conditions later)
+    pub structure: Entity,
+    /// 0-8
+    pub slot: u32,
+}
+
+impl IdentifiableEvent for ChangeSystemSlot {
+    fn unlocalized_name() -> &'static str {
+        "cosmos:change_system_slot"
+    }
+}
+
+impl NettyEvent for ChangeSystemSlot {
+    fn event_receiver() -> crate::netty::sync::events::netty_event::EventReceiver {
+        crate::netty::sync::events::netty_event::EventReceiver::Server
+    }
+
+    #[cfg(feature = "client")]
+    fn needs_entity_conversion() -> bool {
+        true
+    }
+
+    #[cfg(feature = "client")]
+    fn convert_entities_client_to_server(self, mapping: &crate::netty::sync::mapping::NetworkMapping) -> Option<Self> {
+        mapping.server_from_client(&self.structure).map(|e| Self {
+            structure: e,
+            system_id: self.system_id,
+            slot: self.slot,
+        })
+    }
+}
+
+#[derive(Debug, Component, Serialize, Deserialize, Clone, PartialEq, Eq, Reflect)]
+/// Represents the ordering of activatable [`StructureSystem`]s that can be directly activated by
+/// the player.
+pub struct StructureSystemOrdering {
+    // 0-8
+    system_slots: Vec<Option<StructureSystemId>>,
+}
+
+impl Default for StructureSystemOrdering {
+    fn default() -> Self {
+        Self {
+            system_slots: vec![None; 9],
+        }
+    }
+}
+
+impl IdentifiableComponent for StructureSystemOrdering {
+    fn get_component_unlocalized_name() -> &'static str {
+        "cosmos:structure_system_ordering"
+    }
+}
+
+impl SyncableComponent for StructureSystemOrdering {
+    fn get_sync_type() -> crate::netty::sync::SyncType {
+        crate::netty::sync::SyncType::ServerAuthoritative
+    }
+}
+
+impl StructureSystemOrdering {
+    /// Sets the slot for this system to be activated from
+    pub fn set_slot(&mut self, slot: u32, system: StructureSystemId) {
+        if slot < self.system_slots.len() as u32 {
+            self.system_slots[slot as usize] = Some(system);
+        } else {
+            error!("Invalid set slot - {slot}");
+        }
+    }
+
+    /// This slot will no longer point to a system
+    pub fn clear_slot(&mut self, slot: u32) {
+        if slot < self.system_slots.len() as u32 {
+            self.system_slots[slot as usize] = None;
+        } else {
+            error!("Invalid clear slot - {slot}");
+        }
+    }
+
+    /// Returns the system at this slot
+    pub fn get_slot(&self, slot: u32) -> Option<StructureSystemId> {
+        if slot < self.system_slots.len() as u32 {
+            self.system_slots[slot as usize]
+        } else {
+            error!("Invalid get slot - {slot}");
+            None
+        }
+    }
+
+    /// Iterates over every slot that can be used by the player - even those that contain no
+    /// systems
+    pub fn iter(&self) -> impl Iterator<Item = Option<StructureSystemId>> {
+        self.system_slots.iter().copied()
+    }
+
+    /// Returns the slot this system is in (if it is in any slot)
+    pub fn ordering_for(&self, system_id: StructureSystemId) -> Option<u32> {
+        self.iter().enumerate().find(|(_, x)| *x == Some(system_id)).map(|x| x.0 as u32)
+    }
+
+    /// Adds this system to the next available slot, or does nothing if no slots are available.
+    pub fn add_to_next_available(&mut self, system_id: StructureSystemId) {
+        if let Some(slot) = self.system_slots.iter_mut().find(|x| x.is_none()) {
+            *slot = Some(system_id);
+        }
+    }
+}
+
 #[derive(Component, Debug, Reflect)]
+#[require(StructureSystemOrdering)]
 /// Stores all the systems a structure has
 pub struct StructureSystems {
     /// These entities should have the `StructureSystem` component
@@ -173,6 +310,50 @@ pub struct StructureSystems {
     /// Currently this limits a ship to one pilot, the above would fix this issue, but this is a future concern.
     active_system: ShipActiveSystem,
     entity: Entity,
+}
+
+impl StructureSystems {
+    /// For saving this to disk
+    pub fn activatable_systems(&self) -> &[StructureSystemId] {
+        self.activatable_systems.as_slice()
+    }
+    /// For saving this to disk
+    pub fn systems(&self) -> &[StructureSystemId] {
+        self.systems.as_slice()
+    }
+    /// For saving this to disk
+    pub fn ids(&self) -> &HashMap<StructureSystemId, Entity> {
+        &self.ids
+    }
+    /// WARNING: Only call this if you know what you're doing!
+    ///
+    /// This needs to be properly initialized after this is called with its own entity via
+    /// [`Self::set_entity`]. This should really only be used for deserialization.
+    pub fn new_from_raw(
+        systems: Vec<StructureSystemId>,
+        activatable_systems: Vec<StructureSystemId>,
+        ids: HashMap<StructureSystemId, Entity>,
+    ) -> Self {
+        Self {
+            activatable_systems,
+            ids,
+            active_system: ShipActiveSystem::None,
+            systems,
+            // This will get immediately set when this is initialized
+            entity: Entity::PLACEHOLDER,
+        }
+    }
+
+    /// Sets the self entity of this structure system - this should be the Structure it's apart of.
+    pub fn set_entity(&mut self, entity: Entity) {
+        self.entity = entity;
+    }
+}
+
+impl IdentifiableComponent for StructureSystems {
+    fn get_component_unlocalized_name() -> &'static str {
+        "cosmos:structure_systems"
+    }
 }
 
 /// Iterates over structure systems a structure has
@@ -262,58 +443,33 @@ impl StructureSystems {
 
     /// Activates the passed in selected system, and deactivates the system that was previously selected
     ///
-    /// The passed in system index must be based off the [`Self::all_activatable_systems`] iterator.
-    pub fn set_active_system(&mut self, active: ShipActiveSystem, commands: &mut Commands) {
+    /// The passed in system index must be based off the [`StructureSystemOrdering`] ordering.
+    pub fn set_active_system(&mut self, active: ShipActiveSystem, ordering: &StructureSystemOrdering, commands: &mut Commands) {
         if active == self.active_system {
             return;
         }
 
-        if let ShipActiveSystem::Active(active_system) = self.active_system
-            && (active_system as usize) < self.activatable_systems.len()
-        {
-            let ent = self
-                .ids
-                .get(&self.activatable_systems[active_system as usize])
-                .expect("Invalid state - system id has no entity mapping");
-
-            commands.entity(*ent).remove::<SystemActive>();
+        if let Some(ent) = self.active_system(ordering) {
+            commands.entity(ent).remove::<SystemActive>();
         }
 
-        match active {
-            ShipActiveSystem::Active(active_system) => {
-                if (active_system as usize) < self.activatable_systems.len() {
-                    let ent = self
-                        .ids
-                        .get(&self.activatable_systems[active_system as usize])
-                        .expect("Invalid state - system id has no entity mapping");
+        self.active_system = active;
 
-                    commands.entity(*ent).insert(SystemActive);
+        if let Some(ent) = self.active_system(ordering) {
+            commands.entity(ent).insert(SystemActive);
 
-                    self.active_system = active;
-                } else {
-                    self.active_system = ShipActiveSystem::None;
-                }
-            }
-            ShipActiveSystem::Hovered(hovered_system) => {
-                if (hovered_system as usize) < self.activatable_systems.len() {
-                    self.active_system = active;
-                } else {
-                    self.active_system = ShipActiveSystem::None;
-                }
-            }
-            ShipActiveSystem::None => self.active_system = ShipActiveSystem::None,
+            self.active_system = active;
+        } else if self.hovered_system(ordering).is_none() {
+            self.active_system = ShipActiveSystem::None;
         }
     }
 
     /// Returns the active system entity, if there is one.
-    pub fn active_system(&self) -> Option<Entity> {
+    pub fn active_system(&self, ordering: &StructureSystemOrdering) -> Option<Entity> {
         match self.active_system {
-            ShipActiveSystem::Active(active_system_idx) => Some(
-                *self
-                    .ids
-                    .get(&self.activatable_systems[active_system_idx as usize])
-                    .expect("Invalid state - system id has no entity mapping"),
-            ),
+            ShipActiveSystem::Active(active_system_idx) => ordering
+                .get_slot(active_system_idx)
+                .map(|x| *self.ids.get(&x).expect("Invalid state - system id has no entity mapping")),
             _ => None,
         }
     }
@@ -321,14 +477,14 @@ impl StructureSystems {
     /// Returns the hovered system entity, if there is one.
     ///
     /// If this system is active, it would still also count as hovered.
-    pub fn hovered_system(&self) -> Option<Entity> {
+    pub fn hovered_system(&self, ordering: &StructureSystemOrdering) -> Option<Entity> {
         match self.active_system {
-            ShipActiveSystem::Active(active_system_idx) | ShipActiveSystem::Hovered(active_system_idx) => Some(
-                *self
-                    .ids
-                    .get(&self.activatable_systems[active_system_idx as usize])
-                    .expect("Invalid state - system id has no entity mapping"),
-            ),
+            ShipActiveSystem::Active(active_system_idx) | ShipActiveSystem::Hovered(active_system_idx) => {
+                ordering.get_slot(active_system_idx).map(|x| {
+                    info!("{x:?}");
+                    *self.ids.get(&x).expect("Invalid state - system id has no entity mapping")
+                })
+            }
             ShipActiveSystem::None => None,
         }
     }
@@ -365,12 +521,15 @@ impl StructureSystems {
             };
 
             let entity = p
-                .spawn(system)
-                .insert(StructureSystem {
-                    structure_entity: self.entity,
-                    system_id,
-                    system_type_id: system_type.id,
-                })
+                .spawn((
+                    system,
+                    DataFor(self.entity),
+                    StructureSystem {
+                        structure_entity: self.entity,
+                        system_id,
+                        system_type_id: system_type.id,
+                    },
+                ))
                 .id();
 
             self.insert_system(system_id, system_type, entity);
@@ -387,10 +546,49 @@ impl StructureSystems {
         commands: &mut Commands,
         system: T,
         registry: &Registry<StructureSystemType>,
-    ) -> Entity {
+    ) -> (StructureSystemId, Entity) {
         let system_id = self.generate_new_system_id();
 
-        self.add_system_with_id(commands, system, system_id, registry)
+        (system_id, self.add_system_with_id(commands, system, system_id, registry))
+    }
+
+    /// Removes a structure system from this systems registry. This will also despawn the system
+    /// and its children.
+    pub fn remove_system(
+        &mut self,
+        commands: &mut Commands,
+        system: &StructureSystem,
+        registry: &Registry<StructureSystemType>,
+        ordering: &mut StructureSystemOrdering,
+    ) {
+        let system_id = system.system_id;
+        if let Some(slot) = ordering.ordering_for(system_id) {
+            ordering.clear_slot(slot);
+        }
+
+        let Some(entity) = self.ids.remove(&system_id) else {
+            return;
+        };
+        commands.entity(entity).insert(NeedsDespawned);
+
+        let Some((idx, _)) = self.systems.iter().enumerate().find(|(_, x)| **x == system_id) else {
+            return;
+        };
+        self.systems.remove(idx);
+        // This ensures the client + server have the same order, which is important.
+        // Making this up to user preference would be pointless, since they only should be able
+        // to interact with activatable systems.
+        self.systems.sort();
+        if registry.from_numeric_id(system.system_type_id.0).is_activatable() {
+            let Some((idx, _)) = self.activatable_systems.iter().enumerate().find(|(_, x)| **x == system_id) else {
+                return;
+            };
+
+            self.activatable_systems.remove(idx);
+            // This ensures the client + server have the same order, which is important.
+            // In the future, this should be up to user-preference.
+            self.activatable_systems.sort();
+        }
     }
 
     /// Queries all the systems of a structure with this specific query, or returns `Err(NoSystemFound)` if none matched this query.
@@ -399,11 +597,7 @@ impl StructureSystems {
         F: QueryFilter,
         Q: QueryData,
     {
-        for ent in self
-            .systems
-            .iter()
-            .map(|x| self.ids.get(x).expect("Invalid state - system id has no entity mapping"))
-        {
+        for ent in self.systems.iter().flat_map(|x| self.ids.get(x)) {
             if let Ok(res) = query.get(*ent) {
                 return Ok(res);
             }
@@ -418,11 +612,7 @@ impl StructureSystems {
         F: QueryFilter,
         Q: QueryData,
     {
-        for ent in self
-            .systems
-            .iter()
-            .map(|x| self.ids.get(x).expect("Invalid state - system id has no entity mapping"))
-        {
+        for ent in self.systems.iter().flat_map(|x| self.ids.get(x)) {
             // the borrow checker gets mad when I do a get_mut in this if statement
             if query.contains(*ent) {
                 return Ok(query.get_mut(*ent).expect("This should be valid"));
@@ -433,7 +623,7 @@ impl StructureSystems {
     }
 }
 
-fn add_structure(mut commands: Commands, query: Query<Entity, (Added<Structure>, With<Ship>)>) {
+fn add_structure(mut commands: Commands, query: Query<Entity, (Added<Structure>, Without<StructureSystems>, With<Ship>)>) {
     for entity in query.iter() {
         commands.entity(entity).insert(StructureSystems {
             systems: Vec::new(),
@@ -449,6 +639,12 @@ fn add_structure(mut commands: Commands, query: Query<Entity, (Added<Structure>,
 pub trait StructureSystemImpl: Component + std::fmt::Debug {
     /// The unlocalized name of this system. Used for unique serialization
     fn unlocalized_name() -> &'static str;
+}
+
+impl<T: StructureSystemImpl> IdentifiableComponent for T {
+    fn get_component_unlocalized_name() -> &'static str {
+        Self::unlocalized_name()
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -506,17 +702,17 @@ pub(super) fn register(app: &mut App) {
     create_registry::<StructureSystemType>(app, "cosmos:structure_system_types");
     sync_registry::<StructureSystemType>(app);
 
+    sync_component::<StructureSystemOrdering>(app);
+
     app.configure_sets(
         FixedUpdate,
         (
-            StructureSystemsSet::InitSystems.in_set(StructureLoadingSet::StructureLoaded),
+            StructureSystemsSet::InitSystems,
             StructureSystemsSet::UpdateSystemsBlocks,
             StructureSystemsSet::UpdateSystems,
         )
             .chain(),
     );
-
-    app.configure_sets(FixedUpdate, StructureSystemsSet::UpdateSystems);
 
     app.add_systems(
         FixedUpdate,
@@ -526,7 +722,9 @@ pub(super) fn register(app: &mut App) {
         ),
     )
     .register_type::<StructureSystem>()
-    .register_type::<StructureSystems>();
+    .register_type::<StructureSystems>()
+    .register_type::<StructureSystemOrdering>()
+    .add_netty_event::<ChangeSystemSlot>();
 
     line_system::register(app);
     shield_system::register(app);

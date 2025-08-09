@@ -9,7 +9,7 @@ use cosmos_core::{
     state::GameState,
     structure::{
         ship::pilot::Pilot,
-        systems::{StructureSystem, StructureSystemType, StructureSystems},
+        systems::{StructureSystem, StructureSystemOrdering, StructureSystemType, StructureSystems},
     },
 };
 
@@ -54,9 +54,9 @@ fn add_priority_when_flying(
 }
 
 fn sync_ship_systems(
-    q_systems: Query<&StructureSystems>,
+    q_systems: Query<(&StructureSystems, &StructureSystemOrdering)>,
     q_piloting: Query<&Pilot, With<LocalPlayer>>,
-    q_systems_changed: Query<(), Changed<StructureSystems>>,
+    q_systems_changed: Query<(), Or<(Changed<StructureSystems>, Changed<StructureSystemOrdering>)>>,
     q_priority_changed: Query<(), (Changed<HotbarPriorityQueue>, With<LocalPlayerHotbar>)>,
     q_structure_system: Query<&StructureSystem>,
     structure_system_types: Res<Registry<StructureSystemType>>,
@@ -81,7 +81,7 @@ fn sync_ship_systems(
         return;
     }
 
-    let Ok(ship_systems) = q_systems.get(piloting.entity) else {
+    let Ok((ship_systems, systems_ordering)) = q_systems.get(piloting.entity) else {
         return;
     };
 
@@ -90,7 +90,17 @@ fn sync_ship_systems(
 
     hotbar_contents.clear_contents(Some(&mut commands));
 
-    for system_ent in ship_systems.all_activatable_systems() {
+    for system_id in systems_ordering.iter() {
+        let Some(system_id) = system_id else {
+            slot += 1;
+            continue;
+        };
+
+        let Some(system_ent) = ship_systems.get_system_entity(system_id) else {
+            slot += 1;
+            continue;
+        };
+
         let Ok(system) = q_structure_system.get(system_ent) else {
             continue;
         };

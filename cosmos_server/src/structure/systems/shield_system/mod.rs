@@ -37,6 +37,7 @@ use crate::{
     persistence::{
         SerializedData,
         loading::{LOADING_SCHEDULE, LoadingSystemSet, NeedsLoaded},
+        make_persistent::{DefaultPersistentComponent, make_persistent},
         saving::{NeedsSaved, SAVING_SCHEDULE, SavingSystemSet},
     },
 };
@@ -121,9 +122,14 @@ fn structure_loaded_event(
     shield_projector_blocks: Res<ShieldProjectorBlocks>,
     shield_generator_blocks: Res<ShieldGeneratorBlocks>,
     registry: Res<Registry<StructureSystemType>>,
+    q_shield_system: Query<(), With<ShieldSystem>>,
 ) {
     for ev in event_reader.read() {
         if let Ok((structure, mut systems)) = structure_query.get_mut(ev.structure_entity) {
+            if systems.query(&q_shield_system).is_ok() {
+                continue;
+            }
+
             let mut system = ShieldSystem::default();
 
             for block in structure.all_blocks_iter(false) {
@@ -367,9 +373,13 @@ pub enum ShieldSet {
     OnShieldHit,
 }
 
+impl DefaultPersistentComponent for ShieldSystem {}
+
 pub(super) fn register(app: &mut App) {
     laser::register(app);
     explosion::register(app);
+
+    make_persistent::<ShieldSystem>(app);
 
     app.configure_sets(
         FixedUpdate,

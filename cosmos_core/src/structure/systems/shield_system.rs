@@ -4,7 +4,10 @@ use bevy::{platform::collections::HashMap, prelude::*};
 use bigdecimal::num_traits::Pow;
 use serde::{Deserialize, Serialize};
 
-use crate::structure::coordinates::{BlockCoordinate, CoordinateType, UnboundBlockCoordinate};
+use crate::{
+    ecs::name,
+    structure::coordinates::{BlockCoordinate, CoordinateType, UnboundBlockCoordinate},
+};
 
 use super::{StructureSystemImpl, sync::SyncableSystem};
 
@@ -259,5 +262,6 @@ impl StructureSystemImpl for ShieldSystem {
 impl SyncableSystem for ShieldSystem {}
 
 pub(super) fn register(app: &mut App) {
-    app.register_type::<ShieldSystem>();
+    app.register_type::<ShieldSystem>()
+        .add_systems(Update, name::<ShieldSystem>("Shield System"));
 }

@@ -10,6 +10,7 @@ mod list;
 mod load;
 mod op;
 mod ping;
+mod save;
 mod say;
 mod stop;
 
@@ -26,4 +27,5 @@ pub(super) fn register(app: &mut App) {
     items::register(app);
     op::register(app);
     stop::register(app);
+    save::register(app);
 }

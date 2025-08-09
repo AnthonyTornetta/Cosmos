@@ -21,7 +21,7 @@ use cosmos_core::registry::Registry;
 use cosmos_core::state::GameState;
 use cosmos_core::structure::loading::ChunksNeedLoaded;
 use cosmos_core::structure::shared::build_mode::{BuildMode, ExitBuildModeEvent};
-use cosmos_core::structure::systems::StructureSystems;
+use cosmos_core::structure::systems::{StructureSystemOrdering, StructureSystems};
 use cosmos_core::{
     entities::player::Player,
     events::structure::change_pilot_event::ChangePilotEvent,
@@ -61,7 +61,7 @@ fn server_listen_messages(
         mut create_station_event_writer,
         mut request_chunk_event_writer,
     ): (
-        Query<&mut StructureSystems>,
+        Query<(&mut StructureSystems, &StructureSystemOrdering)>,
         EventWriter<BlockBreakEvent>,
         EventWriter<MutEvent<BlockPlaceEvent>>,
         EventWriter<BlockInteractEvent>,
@@ -123,9 +123,9 @@ fn server_listen_messages(
                     }
                     ClientUnreliableMessages::ShipActiveSystem(active_system) => {
                         if let Ok(pilot) = pilot_query.get(player_entity)
-                            && let Ok(mut systems) = systems_query.get_mut(pilot.entity)
+                            && let Ok((mut systems, ordering)) = systems_query.get_mut(pilot.entity)
                         {
-                            systems.set_active_system(active_system, &mut commands);
+                            systems.set_active_system(active_system, ordering, &mut commands);
                         }
                     }
                 }

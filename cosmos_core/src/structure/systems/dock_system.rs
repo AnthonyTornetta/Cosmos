@@ -1,6 +1,7 @@
 //! Represents all the energy stored on a structure
 
 use bevy::{
+    app::Update,
     ecs::entity::Entity,
     math::{Quat, Vec3},
     prelude::{App, Component},
@@ -9,6 +10,7 @@ use bevy::{
 use serde::{Deserialize, Serialize};
 
 use crate::{
+    ecs::name,
     netty::sync::{IdentifiableComponent, SyncableComponent, sync_component},
     structure::coordinates::BlockCoordinate,
 };
@@ -87,10 +89,16 @@ impl DockSystem {
     pub fn block_locations(&self) -> &[BlockCoordinate] {
         self.docking_blocks.as_slice()
     }
+
+    /// Returns true if this system has no valid docking blocks
+    pub fn is_empty(&self) -> bool {
+        self.docking_blocks.is_empty()
+    }
 }
 
 pub(super) fn register(app: &mut App) {
     sync_component::<Docked>(app);
 
-    app.register_type::<DockSystem>();
+    app.register_type::<DockSystem>()
+        .add_systems(Update, name::<DockSystem>("Dock System"));
 }

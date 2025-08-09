@@ -115,6 +115,7 @@ fn add_cosmos_blocks(
     blocks.register(
         BlockBuilder::new("cosmos:ship_core", 2.0, 20.0, 20.0)
             .with_category("cosmos:utility")
+            .with_interactable()
             .add_property(BlockProperty::Full)
             .create(),
     );
@@ -233,6 +234,7 @@ fn add_cosmos_blocks(
     blocks.register(
         BlockBuilder::new("cosmos:build_block", 2.0, 20.0, 5.0)
             .add_property(BlockProperty::Full)
+            .with_interactable()
             .with_category("cosmos:utility")
             .create(),
     );
@@ -283,6 +285,7 @@ fn add_cosmos_blocks(
         BlockBuilder::new("cosmos:reactor_controller", 2.0, 20.0, 5.0)
             .add_property(BlockProperty::Full)
             .add_property(BlockProperty::FaceFront)
+            .with_interactable()
             .add_connection_group("cosmos:uses_logic")
             .add_connection_group("cosmos:produces_power")
             .with_category("cosmos:utility")
@@ -367,6 +370,7 @@ fn add_cosmos_blocks(
     blocks.register(
         BlockBuilder::new("cosmos:shop", 2.0, 20.0, 5.0)
             .add_property(BlockProperty::Full)
+            .with_interactable()
             .with_category("cosmos:utility")
             .create(),
     );
@@ -382,6 +386,7 @@ fn add_cosmos_blocks(
     blocks.register(
         BlockBuilder::new("cosmos:gravity_well", 2.0, 20.0, 5.0)
             .add_property(BlockProperty::Full)
+            .with_interactable()
             .with_category("cosmos:utility")
             .create(),
     );
@@ -522,6 +527,7 @@ fn add_cosmos_blocks(
     blocks.register(
         BlockBuilder::new("cosmos:switch", 5.0, 20.0, 5.0)
             .add_property(BlockProperty::Full)
+            .with_interactable()
             .add_connection_group("cosmos:uses_logic")
             .with_category("cosmos:logic")
             .create(),
@@ -530,6 +536,7 @@ fn add_cosmos_blocks(
     blocks.register(
         BlockBuilder::new("cosmos:button", 5.0, 20.0, 5.0)
             .add_property(BlockProperty::Full)
+            .with_interactable()
             .add_connection_group("cosmos:uses_logic")
             .with_category("cosmos:logic")
             .create(),
@@ -547,12 +554,14 @@ fn add_cosmos_blocks(
     blocks.register(
         BlockBuilder::new("cosmos:door", 4.0, 100.0, 10.0)
             .add_property(BlockProperty::Full)
+            .with_interactable()
             .with_category("cosmos:utility")
             .create(),
     );
     blocks.register(
         BlockBuilder::new("cosmos:door_open", 4.0, 100.0, 10.0)
             .add_connection_group("cosmos:door_open")
+            .with_interactable()
             .connect_to_group("cosmos:door_open")
             .create(),
     );
@@ -560,6 +569,7 @@ fn add_cosmos_blocks(
     blocks.register(
         BlockBuilder::new("cosmos:basic_fabricator", 2.0, 20.0, 5.0)
             .add_property(BlockProperty::Full)
+            .with_interactable()
             .with_category("cosmos:utility")
             .create(),
     );
@@ -628,6 +638,7 @@ fn add_cosmos_blocks(
     blocks.register(
         BlockBuilder::new("cosmos:dye_machine", 2.0, 20.0, 5.0)
             .add_property(BlockProperty::Full)
+            .with_interactable()
             .with_category("cosmos:utility")
             .create(),
     );
@@ -635,6 +646,7 @@ fn add_cosmos_blocks(
     blocks.register(
         BlockBuilder::new("cosmos:cloning_bay_base", 2.0, 20.0, 5.0)
             .add_property(BlockProperty::Full)
+            .with_interactable()
             .with_category("cosmos:utility")
             .create(),
     );
@@ -642,6 +654,7 @@ fn add_cosmos_blocks(
     blocks.register(
         BlockBuilder::new("cosmos:cloning_bay_top", 2.0, 20.0, 5.0)
             .add_property(BlockProperty::Full)
+            .with_interactable()
             .with_category("cosmos:utility")
             .create(),
     );
@@ -716,6 +729,7 @@ fn add_cosmos_blocks(
     blocks.register(
         BlockBuilder::new("cosmos:advanced_fabricator", 2.0, 20.0, 5.0)
             .add_property(BlockProperty::Full)
+            .with_interactable()
             .with_category("cosmos:utility")
             .create(),
     );

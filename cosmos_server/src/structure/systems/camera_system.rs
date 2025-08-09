@@ -17,6 +17,8 @@ use cosmos_core::{
     },
 };
 
+use crate::persistence::make_persistent::{DefaultPersistentComponent, make_persistent};
+
 use super::sync::register_structure_system;
 
 fn register_camera_blocks(blocks: Res<Registry<Block>>, mut camera_blocks: ResMut<CameraBlocks>) {
@@ -58,9 +60,14 @@ fn camera_structure_loaded_event_processor(
     mut commands: Commands,
     camera_blocks: Res<CameraBlocks>,
     registry: Res<Registry<StructureSystemType>>,
+    q_thruster_system: Query<(), With<CameraSystem>>,
 ) {
     for ev in event_reader.read() {
         if let Ok((structure, mut systems)) = structure_query.get_mut(ev.structure_entity) {
+            if systems.query(&q_thruster_system).is_ok() {
+                continue;
+            }
+
             let mut system = CameraSystem::default();
 
             for block in structure.all_blocks_iter(false) {
@@ -74,7 +81,11 @@ fn camera_structure_loaded_event_processor(
     }
 }
 
+impl DefaultPersistentComponent for CameraSystem {}
+
 pub(super) fn register(app: &mut App) {
+    make_persistent::<CameraSystem>(app);
+
     app.insert_resource(CameraBlocks::default())
         .add_systems(OnEnter(GameState::PostLoading), register_camera_blocks)
         .add_systems(

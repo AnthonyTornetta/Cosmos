@@ -97,6 +97,7 @@ fn create_indicator(
                     // Horizontally centers the text - textalign center doesn't work for some reason (shrug)
                     left: Val::Auto,
                     right: Val::Auto,
+                    top: Val::Px(90.0),
                     ..Default::default()
                 },
                 ..default()
@@ -313,7 +314,6 @@ fn added(
 fn position_diamonds(
     cam_query: Query<(Entity, &Camera), With<MainCamera>>,
     mut indicators: Query<(Entity, &mut Node, &Indicating)>,
-    global_trans_query: Query<&Transform>,
     indicator_settings_query: Query<&IndicatorSettings>,
     mut commands: Commands,
     mut closest_waypoint: ResMut<ClosestWaypoint>,
@@ -338,23 +338,19 @@ fn position_diamonds(
             continue;
         };
 
-        let Ok(indicating_global_trans) = global_trans_query.get(indicating.0) else {
+        let Some(indicating_global_trans) = compute_totally_accurate_global_transform(indicating.0, &q_trans) else {
             continue;
         };
 
         let offset = settings.offset;
-        let cam_rot = indicating_global_trans.rotation;
+        let indicating_item_rotation = indicating_global_trans.rotation();
 
-        let entity_location = indicating_global_trans.translation + cam_g_trans.rotation() * offset;
+        let entity_location = indicating_global_trans.translation() + indicating_item_rotation * offset;
 
         // X/Y normalized to [-1, 1] when it's on the screen
         let Some(mut normalized_screen_pos) = cam.world_to_ndc(&cam_g_trans, entity_location) else {
             continue;
         };
-
-        let rot_diff = cam_rot.mul_quat(indicating_global_trans.rotation.inverse());
-
-        normalized_screen_pos = rot_diff.inverse().mul_vec3(normalized_screen_pos);
 
         // This code is largely based on https://forum.unity.com/threads/hud-waypoint-indicator-with-problem.1102957/
 

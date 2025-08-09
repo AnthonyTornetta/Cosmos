@@ -3,7 +3,7 @@
 use bevy::{platform::collections::HashSet, prelude::*};
 use serde::{Deserialize, Serialize};
 
-use crate::{block::Block, registry::identifiable::Identifiable, structure::coordinates::BlockCoordinate};
+use crate::{block::Block, ecs::name, registry::identifiable::Identifiable, structure::coordinates::BlockCoordinate};
 
 use super::{StructureSystemImpl, sync::SyncableSystem};
 
@@ -61,5 +61,7 @@ impl CameraSystem {
 }
 
 pub(super) fn register(app: &mut App) {
-    app.insert_resource(CameraBlocks::default()).register_type::<CameraSystem>();
+    app.insert_resource(CameraBlocks::default())
+        .register_type::<CameraSystem>()
+        .add_systems(Update, name::<CameraSystem>("Camera System"));
 }

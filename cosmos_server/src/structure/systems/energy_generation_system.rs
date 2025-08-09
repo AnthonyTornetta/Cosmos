@@ -18,6 +18,8 @@ use cosmos_core::{
     },
 };
 
+use crate::persistence::make_persistent::{DefaultPersistentComponent, make_persistent};
+
 use super::sync::register_structure_system;
 
 fn register_energy_blocks(blocks: Res<Registry<Block>>, mut generation: ResMut<EnergyGenerationBlocks>) {
@@ -74,9 +76,14 @@ fn structure_loaded_event(
     mut commands: Commands,
     energy_generation_blocks: Res<EnergyGenerationBlocks>,
     registry: Res<Registry<StructureSystemType>>,
+    q_energy_gen_system: Query<(), With<EnergyGenerationSystem>>,
 ) {
     for ev in event_reader.read() {
         if let Ok((structure, mut systems)) = structure_query.get_mut(ev.structure_entity) {
+            if systems.query(&q_energy_gen_system).is_ok() {
+                continue;
+            }
+
             let mut system = EnergyGenerationSystem::default();
 
             for block in structure.all_blocks_iter(false) {
@@ -90,7 +97,11 @@ fn structure_loaded_event(
     }
 }
 
+impl DefaultPersistentComponent for EnergyGenerationSystem {}
+
 pub(super) fn register(app: &mut App) {
+    make_persistent::<EnergyGenerationSystem>(app);
+
     app.insert_resource(EnergyGenerationBlocks::default())
         .add_systems(OnEnter(GameState::PostLoading), register_energy_blocks)
         .add_systems(

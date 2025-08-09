@@ -65,7 +65,14 @@ impl EnergyGenerationSystem {
     }
 }
 
+fn name_system(mut commands: Commands, q_added: Query<Entity, Added<EnergyGenerationSystem>>) {
+    for e in q_added.iter() {
+        commands.entity(e).insert(Name::new("Energy Storage System"));
+    }
+}
+
 pub(super) fn register(app: &mut App) {
     app.insert_resource(EnergyGenerationBlocks::default())
+        .add_systems(Update, name_system)
         .register_type::<EnergyGenerationSystem>();
 }

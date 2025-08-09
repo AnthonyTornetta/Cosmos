@@ -9,7 +9,10 @@ use bevy_rapier3d::{
 use cosmos_core::{
     block::{Block, block_events::BlockEventsSet, block_face::BlockFace, data::BlockData},
     entities::player::Player,
-    events::block_events::{BlockChangedEvent, BlockDataSystemParams},
+    events::{
+        block_events::{BlockChangedEvent, BlockDataSystemParams},
+        structure::structure_event::StructureEventIterator,
+    },
     netty::{sync::events::server_event::NettyEventWriter, system_sets::NetworkingSystemsSet},
     physics::location::{Location, LocationPhysicsSet, SECTOR_DIMENSIONS},
     prelude::StructureSystem,
@@ -23,12 +26,15 @@ use cosmos_core::{
         events::StructureLoadedEvent,
         shields::Shield,
         systems::{
-            StructureSystemType, StructureSystems, StructureSystemsSet, SystemActive,
+            StructureSystemImpl, StructureSystemOrdering, StructureSystemType, StructureSystems, StructureSystemsSet, SystemActive,
             energy_storage_system::EnergyStorageSystem,
             railgun_system::{InvalidRailgunReason, RailgunBlock, RailgunFiredEvent, RailgunFiredInfo, RailgunSystem, RailgunSystemEntry},
         },
     },
+    utils::ecs::MutOrMutRef,
 };
+
+use crate::persistence::make_persistent::{DefaultPersistentComponent, make_persistent};
 
 use super::{shield_system::ShieldHitEvent, sync::register_structure_system};
 
@@ -209,34 +215,60 @@ fn block_update_system(
     blocks: Res<Registry<Block>>,
     mut system_query: Query<&mut RailgunSystem>,
     q_structure: Query<&Structure>,
-    systems_query: Query<&StructureSystems>,
+    q_system: Query<&StructureSystem, With<RailgunSystem>>,
+    mut systems_query: Query<(&mut StructureSystems, &mut StructureSystemOrdering)>,
+    registry: Res<Registry<StructureSystemType>>,
+    mut commands: Commands,
 ) {
-    for ev in evr_block_changed.read() {
-        let Ok(systems) = systems_query.get(ev.block.structure()) else {
+    for (structure, events) in evr_block_changed.read().group_by_structure() {
+        let Ok((mut systems, mut ordering)) = systems_query.get_mut(structure) else {
             continue;
         };
 
-        let Ok(structure) = q_structure.get(ev.block.structure()) else {
+        let Ok(structure) = q_structure.get(structure) else {
             continue;
         };
 
-        let Ok(mut system) = systems.query_mut(&mut system_query) else {
-            continue;
-        };
+        let mut new_system_if_needed = RailgunSystem::default();
+
+        let railgun_system = systems
+            .query_mut(&mut system_query)
+            .map(MutOrMutRef::from)
+            .unwrap_or(MutOrMutRef::from(&mut new_system_if_needed));
 
         let railguns = compute_railguns(
             structure,
             &blocks,
-            system.railguns.iter().cloned().chain(
-                [RailgunSystemEntry {
+            railgun_system
+                .railguns
+                .iter()
+                .cloned()
+                .chain(events.iter().map(|ev| RailgunSystemEntry {
                     origin: ev.block.coords(),
                     ..Default::default()
-                }]
-                .into_iter(),
-            ),
+                })),
         );
 
-        system.railguns = railguns;
+        match railgun_system {
+            MutOrMutRef::Mut(mut existing_system) => {
+                if railguns.is_empty() {
+                    let system = *systems.query(&q_system).expect("This should always exist on a StructureSystem");
+                    systems.remove_system(&mut commands, &system, &registry, &mut ordering);
+                } else {
+                    existing_system.railguns = railguns;
+                }
+            }
+            MutOrMutRef::Ref(_) => {
+                if !railguns.is_empty() {
+                    let (id, _) = systems.add_system(&mut commands, RailgunSystem::new(railguns), &registry);
+                    if let Some(system_type) = registry.from_id(RailgunSystem::unlocalized_name())
+                        && system_type.is_activatable()
+                    {
+                        ordering.add_to_next_available(id);
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -246,9 +278,14 @@ fn structure_loaded_event(
     blocks: Res<Registry<Block>>,
     mut commands: Commands,
     registry: Res<Registry<StructureSystemType>>,
+    q_railgun_system: Query<(), With<RailgunSystem>>,
 ) {
     for ev in event_reader.read() {
         if let Ok((structure, mut systems)) = structure_query.get_mut(ev.structure_entity) {
+            if systems.query(&q_railgun_system).is_ok() {
+                continue;
+            }
+
             let mut system = RailgunSystem::default();
 
             let Some(railgun_controller) = blocks.from_id("cosmos:railgun_launcher").map(|x| x.id()) else {
@@ -267,9 +304,11 @@ fn structure_loaded_event(
                     }),
             );
 
-            system.railguns = railguns;
+            if !railguns.is_empty() {
+                system.railguns = railguns;
 
-            systems.add_system(&mut commands, system, &registry);
+                systems.add_system(&mut commands, system, &registry);
+            }
         }
     }
 }
@@ -510,8 +549,12 @@ fn charge_and_cool_railguns(
     }
 }
 
+impl DefaultPersistentComponent for RailgunSystem {}
+
 pub(super) fn register(app: &mut App) {
     register_structure_system::<RailgunSystem>(app, true, "cosmos:railgun_launcher");
+
+    make_persistent::<RailgunSystem>(app);
 
     app.add_systems(
         Update,

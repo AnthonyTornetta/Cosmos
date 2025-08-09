@@ -2,7 +2,9 @@
 
 use bevy::{color::palettes::css, prelude::*};
 use bevy_rapier3d::prelude::{ActiveEvents, CoefficientCombineRule, Collider, Friction, LockedAxes, ReadMassProperties, RigidBody};
-use cosmos_core::{ecs::sets::FixedUpdateSet, entities::player::Player, persistence::LoadingDistance, state::GameState};
+use cosmos_core::{
+    ecs::sets::FixedUpdateSet, entities::player::Player, netty::client::LocalPlayer, persistence::LoadingDistance, state::GameState,
+};
 
 pub mod death;
 pub mod player_movement;
@@ -12,15 +14,29 @@ fn on_add_player(
     mut commands: Commands,
     mut materials: ResMut<Assets<StandardMaterial>>,
     // mut meshes: ResMut<Assets<Mesh>>,
-    q_player: Query<(Entity, &Player), Added<Player>>,
+    q_player: Query<(Entity, &Player, Has<LocalPlayer>), Added<Player>>,
     asset_server: Res<AssetServer>,
 ) {
-    for (ent, player) in q_player.iter() {
+    for (ent, player, local) in q_player.iter() {
         commands.entity(ent).insert((
             Mesh3d(asset_server.load("cosmos/models/misc/person.obj")),
             // Mesh3d(meshes.add(Capsule3d::default())),
             MeshMaterial3d(materials.add(StandardMaterial {
-                base_color: css::GREEN.into(),
+                // Makes the local player's body effectively invisible without disabling their
+                // shadow
+                base_color: if local {
+                    Srgba {
+                        red: 0.0,
+                        green: 0.0,
+                        blue: 0.0,
+                        alpha: 0.1,
+                    }
+                    .into()
+                } else {
+                    css::GREEN.into()
+                },
+                alpha_mode: if local { AlphaMode::Multiply } else { Default::default() },
+                unlit: !local,
                 ..Default::default()
             })),
             Collider::capsule_y(0.65, 0.25),

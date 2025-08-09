@@ -10,7 +10,7 @@ use bevy_rapier3d::{
 };
 use cosmos_core::{
     block::{Block, block_events::BlockEventsSet, block_face::BlockFace},
-    events::block_events::BlockChangedEvent,
+    events::{block_events::BlockChangedEvent, structure::structure_event::StructureEventIterator},
     physics::structure_physics::ChunkPhysicsPart,
     registry::{Registry, identifiable::Identifiable},
     state::GameState,
@@ -20,15 +20,18 @@ use cosmos_core::{
         full_structure::FullStructure,
         shields::SHIELD_COLLISION_GROUP,
         systems::{
-            StructureSystem, StructureSystemType, StructureSystems, StructureSystemsSet, SystemActive,
+            StructureSystem, StructureSystemImpl, StructureSystemOrdering, StructureSystemType, StructureSystems, StructureSystemsSet,
+            SystemActive,
             dock_system::{DockSystem, Docked},
         },
     },
     utils::{
-        ecs::{FixedUpdateRemovedComponents, register_fixed_update_removed_component},
+        ecs::{FixedUpdateRemovedComponents, MutOrMutRef, register_fixed_update_removed_component},
         quat_math::QuatMath,
     },
 };
+
+use crate::persistence::make_persistent::{DefaultPersistentComponent, make_persistent};
 
 use super::sync::register_structure_system;
 
@@ -41,23 +44,50 @@ fn dock_block_update_system(
     mut event: EventReader<BlockChangedEvent>,
     blocks: Res<Registry<Block>>,
     mut system_query: Query<&mut DockSystem>,
-    q_systems: Query<&StructureSystems>,
+    mut q_systems: Query<(&mut StructureSystems, &mut StructureSystemOrdering)>,
+    mut commands: Commands,
+    q_system: Query<&StructureSystem, With<DockSystem>>,
+    registry: Res<Registry<StructureSystemType>>,
 ) {
-    for ev in event.read() {
-        let Ok(systems) = q_systems.get(ev.block.structure()) else {
+    for (structure, events) in event.read().group_by_structure() {
+        let Ok((mut systems, mut ordering)) = q_systems.get_mut(structure) else {
             continue;
         };
 
-        let Ok(mut system) = systems.query_mut(&mut system_query) else {
-            continue;
-        };
+        let mut new_system_if_needed = DockSystem::default();
 
-        if blocks.from_numeric_id(ev.old_block).unlocalized_name() == "cosmos:ship_dock" {
-            system.block_removed(ev.block.coords());
+        let mut system = systems
+            .query_mut(&mut system_query)
+            .map(MutOrMutRef::from)
+            .unwrap_or(MutOrMutRef::from(&mut new_system_if_needed));
+
+        for ev in events {
+            if blocks.from_numeric_id(ev.old_block).unlocalized_name() == "cosmos:ship_dock" {
+                system.block_removed(ev.block.coords());
+            }
+
+            if blocks.from_numeric_id(ev.new_block).unlocalized_name() == "cosmos:ship_dock" {
+                system.block_added(ev.block.coords());
+            }
         }
 
-        if blocks.from_numeric_id(ev.new_block).unlocalized_name() == "cosmos:ship_dock" {
-            system.block_added(ev.block.coords());
+        match system {
+            MutOrMutRef::Mut(existing_system) => {
+                if existing_system.is_empty() {
+                    let system = *systems.query(&q_system).expect("This should always exist on a StructureSystem");
+                    systems.remove_system(&mut commands, &system, &registry, &mut ordering);
+                }
+            }
+            MutOrMutRef::Ref(new_system) => {
+                if !new_system.is_empty() {
+                    let (id, _) = systems.add_system(&mut commands, std::mem::take(&mut new_system_if_needed), &registry);
+                    if let Some(system_type) = registry.from_id(DockSystem::unlocalized_name())
+                        && system_type.is_activatable()
+                    {
+                        ordering.add_to_next_available(id);
+                    }
+                }
+            }
         }
     }
 }
@@ -68,9 +98,14 @@ fn dock_structure_loaded_event_processor(
     blocks: Res<Registry<Block>>,
     mut commands: Commands,
     registry: Res<Registry<StructureSystemType>>,
+    q_dock_system: Query<(), With<DockSystem>>,
 ) {
     for ev in event_reader.read() {
         if let Ok((structure, mut systems)) = structure_query.get_mut(ev.structure_entity) {
+            if systems.query(&q_dock_system).is_ok() {
+                continue;
+            }
+
             let mut system = DockSystem::default();
 
             for block in structure.all_blocks_iter(false) {
@@ -79,7 +114,9 @@ fn dock_structure_loaded_event_processor(
                 }
             }
 
-            systems.add_system(&mut commands, system, &registry);
+            if !system.is_empty() {
+                systems.add_system(&mut commands, system, &registry);
+            }
         }
     }
 }
@@ -418,7 +455,10 @@ fn nearest_axis(direction: Vec3) -> Vec3 {
     }
 }
 
+impl DefaultPersistentComponent for DockSystem {}
+
 pub(super) fn register(app: &mut App) {
+    make_persistent::<DockSystem>(app);
     register_fixed_update_removed_component::<Docked>(app);
 
     app.add_systems(
