@@ -233,7 +233,7 @@ fn block_update_system(
 
         let railgun_system = systems
             .query_mut(&mut system_query)
-            .map(|x| MutOrMutRef::from(x))
+            .map(MutOrMutRef::from)
             .unwrap_or(MutOrMutRef::from(&mut new_system_if_needed));
 
         let railguns = compute_railguns(
@@ -261,11 +261,10 @@ fn block_update_system(
             MutOrMutRef::Ref(_) => {
                 if !railguns.is_empty() {
                     let (id, _) = systems.add_system(&mut commands, RailgunSystem::new(railguns), &registry);
-                    if let Some(system_type) = registry.from_id(RailgunSystem::unlocalized_name()) {
-                        if system_type.is_activatable() {
+                    if let Some(system_type) = registry.from_id(RailgunSystem::unlocalized_name())
+                        && system_type.is_activatable() {
                             ordering.add_to_next_available(id);
                         }
-                    }
                 }
             }
         }

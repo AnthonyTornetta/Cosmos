@@ -278,7 +278,7 @@ fn listen_button_inputs(
 
     info!("Sending Event!");
     nevw_change_system_slot.write(ChangeSystemSlot {
-        slot: slot,
+        slot,
         system_id: Some(active.system_id),
         structure: active.structure,
     });

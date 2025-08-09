@@ -109,7 +109,7 @@ impl PersistentComponent for DataFor {
     }
 
     fn convert_from_save_type(saved_type: Self::SaveType, entity_id_manager: &super::make_persistent::EntityIdManager) -> Option<Self> {
-        entity_id_manager.entity_from_entity_id(&saved_type.0).map(|e| Self(e))
+        entity_id_manager.entity_from_entity_id(&saved_type.0).map(Self)
     }
 }
 

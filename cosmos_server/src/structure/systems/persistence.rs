@@ -38,8 +38,8 @@ impl PersistentComponent for StructureSystems {
     ) -> Option<cosmos_core::utils::ownership::MaybeOwned<'a, Self::SaveType>> {
         Some(
             SerializedStructureSystems {
-                activatable_systems: self.activatable_systems().iter().copied().collect::<Vec<_>>(),
-                systems: self.systems().iter().copied().collect::<Vec<_>>(),
+                activatable_systems: self.activatable_systems().to_vec(),
+                systems: self.systems().to_vec(),
                 ids: self
                     .ids()
                     .iter()

@@ -82,11 +82,10 @@ fn block_update_system<T: LineProperty, S: LinePropertyCalculator<T>>(
             MutOrMutRef::Ref(new_system) => {
                 if !new_system.is_empty() {
                     let (id, _) = systems.add_system(&mut commands, std::mem::take(&mut new_system_if_needed), &registry);
-                    if let Some(system_type) = registry.from_id(LineSystem::<T, S>::unlocalized_name()) {
-                        if system_type.is_activatable() {
+                    if let Some(system_type) = registry.from_id(LineSystem::<T, S>::unlocalized_name())
+                        && system_type.is_activatable() {
                             sys_ordering.add_to_next_available(id);
                         }
-                    }
                 }
             }
         }
