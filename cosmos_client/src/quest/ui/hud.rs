@@ -42,11 +42,12 @@ fn display_active_mission(
     {
         if let Ok(displayed_ongoing) = q_displayed_ongoing_quest.single()
             && let Ok((ongoing_quests, active_quest)) = q_changed_active_quest.single()
-                && let Some(ongoing_quest) = ongoing_quests.from_id(&active_quest.0)
-                    && ongoing_quest == &displayed_ongoing.0 {
-                        // Don't rerender the quest if it's the same
-                        return;
-                    }
+            && let Some(ongoing_quest) = ongoing_quests.from_id(&active_quest.0)
+            && ongoing_quest == &displayed_ongoing.0
+        {
+            // Don't rerender the quest if it's the same
+            return;
+        }
         commands.entity(ent).insert(NeedsDespawned);
     }
 
