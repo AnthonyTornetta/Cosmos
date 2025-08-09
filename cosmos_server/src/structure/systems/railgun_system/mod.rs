@@ -262,9 +262,10 @@ fn block_update_system(
                 if !railguns.is_empty() {
                     let (id, _) = systems.add_system(&mut commands, RailgunSystem::new(railguns), &registry);
                     if let Some(system_type) = registry.from_id(RailgunSystem::unlocalized_name())
-                        && system_type.is_activatable() {
-                            ordering.add_to_next_available(id);
-                        }
+                        && system_type.is_activatable()
+                    {
+                        ordering.add_to_next_available(id);
+                    }
                 }
             }
         }
