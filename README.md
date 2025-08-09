@@ -77,6 +77,7 @@ See [the issues page](https://github.com/AnthonyTornetta/Cosmos/issues) for the 
 - [x] Steam Integration
 - [ ] Blueprint ship/station in-game
 - [ ] Faction Management
+- [x] Ship System Management
 
 ## Release 0.0.8a
 

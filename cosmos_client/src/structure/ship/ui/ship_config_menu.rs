@@ -3,7 +3,7 @@ use cosmos_core::{ecs::NeedsDespawned, netty::client::LocalPlayer, state::GameSt
 
 use crate::{
     input::inputs::{CosmosInputs, InputChecker, InputHandler},
-    structure::ship::ui::ship_systems::ShipSystemsUi,
+    structure::ship::ui::{details::ShipDetailsUi, ship_systems::ShipSystemsUi},
     ui::{
         OpenMenu,
         components::{
@@ -79,8 +79,8 @@ fn open_config_menu(
                 },
             ))
             .with_children(|p| {
-                p.spawn((ShipSystemsUi::new(pilot.entity), Node::default(), Tab::new("Systems")));
-                p.spawn((Text::new("details"), Tab::new("Details")));
+                p.spawn((ShipSystemsUi::new(pilot.entity), Tab::new("Systems")));
+                p.spawn((ShipDetailsUi::new(pilot.entity), Tab::new("Details")));
                 p.spawn((Text::new("quests"), Tab::new("Quests")));
             });
         });

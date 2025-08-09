@@ -13,6 +13,8 @@ use crate::{
     },
 };
 
+pub mod events;
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize, Reflect, Default)]
 /// One faction's relationship with another
 pub enum FactionRelation {
@@ -118,6 +120,11 @@ impl Faction {
         } else {
             FactionRelation::Neutral
         }
+    }
+
+    /// Returns the player-chosen name of this faction
+    pub fn name(&self) -> &str {
+        &self.name
     }
 }
 
