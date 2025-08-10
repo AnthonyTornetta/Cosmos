@@ -1,6 +1,9 @@
 //! Factions
 
-use bevy::{platform::collections::HashMap, prelude::*};
+use bevy::{
+    platform::collections::{HashMap, HashSet},
+    prelude::*,
+};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
@@ -222,12 +225,34 @@ impl SyncableResource for Factions {
     }
 }
 
+#[derive(Component, Clone, Debug, Reflect, Serialize, Deserialize, PartialEq, Eq)]
+/// A list of factions this player has been invited to
+///
+/// This will be cleared when the player disconnects
+pub struct FactionInvites(HashSet<FactionId>);
+
+impl IdentifiableComponent for FactionInvites {
+    fn get_component_unlocalized_name() -> &'static str {
+        "cosmos:faction_invites"
+    }
+}
+
+impl SyncableComponent for FactionInvites {
+    fn get_sync_type() -> crate::netty::sync::SyncType {
+        crate::netty::sync::SyncType::ServerAuthoritative
+    }
+}
+
 pub(super) fn register(app: &mut App) {
+    events::register(app);
+
     sync_resource::<Factions>(app);
     sync_component::<FactionId>(app);
+    sync_component::<FactionInvites>(app);
 
     app.register_type::<FactionRelation>()
         .register_type::<Faction>()
         .register_type::<Uuid>()
-        .register_type::<FactionId>();
+        .register_type::<FactionId>()
+        .register_type::<FactionInvites>();
 }
