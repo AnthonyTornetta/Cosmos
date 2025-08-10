@@ -129,6 +129,26 @@ impl Faction {
     pub fn name(&self) -> &str {
         &self.name
     }
+
+    pub fn add_player(&mut self, player_id: EntityId) {
+        if !self.players.contains(&player_id) {
+            self.players.push(player_id);
+        }
+    }
+
+    pub fn remove_player(&mut self, player_id: EntityId) {
+        if let Some((idx, _)) = self.players.iter().enumerate().find(|(_, x)| **x == player_id) {
+            self.players.remove(idx);
+        }
+    }
+
+    pub fn players(&self) -> impl Iterator<Item = EntityId> {
+        self.players.iter().copied()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.players.is_empty()
+    }
 }
 
 #[derive(Clone, Copy, Component, Debug, PartialEq, Eq, Hash, Serialize, Deserialize, Reflect, Default)]
@@ -181,6 +201,22 @@ impl Factions {
         self.0.get(id)
     }
 
+    /// Gets a faction from this id
+    pub fn from_id_mut(&mut self, id: &FactionId) -> Option<&mut Faction> {
+        self.0.get_mut(id)
+    }
+
+    pub fn remove_faction(&mut self, id: &FactionId) -> Option<Faction> {
+        self.0.remove(id)
+    }
+
+    /// Returns if there already contains a faction with a name similar to this. This does NOT mean
+    /// [`Self::from_name`] will return a faction for this valid.
+    pub fn is_name_unique(&self, name: &str) -> bool {
+        let stripped = name.replace(" ", "").to_lowercase();
+        self.0.values().any(|x| x.name.replace(" ", "").to_lowercase() == stripped)
+    }
+
     /// Gets a faction that matches this name (case sensitive).
     pub fn from_name(&self, name: &str) -> Option<&Faction> {
         self.0.values().find(|x| x.name == name)
@@ -225,11 +261,31 @@ impl SyncableResource for Factions {
     }
 }
 
-#[derive(Component, Clone, Debug, Reflect, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Component, Clone, Debug, Reflect, Serialize, Deserialize, PartialEq, Eq, Default)]
 /// A list of factions this player has been invited to
 ///
 /// This will be cleared when the player disconnects
 pub struct FactionInvites(HashSet<FactionId>);
+
+impl FactionInvites {
+    pub fn with_invite(faction: FactionId) -> Self {
+        let mut s = Self::default();
+        s.add_invite(faction);
+        s
+    }
+
+    pub fn contains(&self, faction: FactionId) -> bool {
+        self.0.contains(&faction)
+    }
+
+    pub fn add_invite(&mut self, faction: FactionId) {
+        self.0.insert(faction);
+    }
+
+    pub fn remove_invite(&mut self, faction: FactionId) {
+        self.0.remove(&faction);
+    }
+}
 
 impl IdentifiableComponent for FactionInvites {
     fn get_component_unlocalized_name() -> &'static str {

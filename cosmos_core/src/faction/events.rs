@@ -17,18 +17,64 @@ pub enum FactionSwapAction {
 /// Requests to create a new faction with the player within it
 #[derive(Event, Debug, Serialize, Deserialize, Clone)]
 pub struct PlayerCreateFactionEvent {
-    faction_name: String,
+    pub faction_name: String,
+}
+
+impl IdentifiableEvent for PlayerCreateFactionEvent {
+    fn unlocalized_name() -> &'static str {
+        "cosmos:player_accept_faction_invite"
+    }
+}
+
+impl NettyEvent for PlayerCreateFactionEvent {
+    fn event_receiver() -> crate::netty::sync::events::netty_event::EventReceiver {
+        crate::netty::sync::events::netty_event::EventReceiver::Server
+    }
 }
 
 /// Requests to leave the faction the player is within
 #[derive(Event, Debug, Serialize, Deserialize, Clone)]
 pub struct PlayerLeaveFactionEvent;
 
+impl IdentifiableEvent for PlayerLeaveFactionEvent {
+    fn unlocalized_name() -> &'static str {
+        "cosmos:player_accept_faction_invite"
+    }
+}
+
+impl NettyEvent for PlayerLeaveFactionEvent {
+    fn event_receiver() -> crate::netty::sync::events::netty_event::EventReceiver {
+        crate::netty::sync::events::netty_event::EventReceiver::Server
+    }
+}
+
 /// Invites a player to your faction
 #[derive(Event, Debug, Serialize, Deserialize, Clone)]
-pub struct InviteToFactionEvent {
+pub struct PlayerInviteToFactionEvent {
     /// Must be another player you are inviting to your faction
-    inviting: Entity,
+    pub inviting: Entity,
+}
+
+impl IdentifiableEvent for PlayerInviteToFactionEvent {
+    fn unlocalized_name() -> &'static str {
+        "cosmos:player_invite_to_faction"
+    }
+}
+
+impl NettyEvent for PlayerInviteToFactionEvent {
+    fn event_receiver() -> crate::netty::sync::events::netty_event::EventReceiver {
+        crate::netty::sync::events::netty_event::EventReceiver::Server
+    }
+
+    #[cfg(feature = "client")]
+    fn needs_entity_conversion() -> bool {
+        true
+    }
+
+    #[cfg(feature = "client")]
+    fn convert_entities_client_to_server(self, mapping: &crate::netty::sync::mapping::NetworkMapping) -> Option<Self> {
+        mapping.server_from_client(&self.inviting).map(|e| Self { inviting: e })
+    }
 }
 
 /// Accepts an invitation to this faction
@@ -36,7 +82,19 @@ pub struct InviteToFactionEvent {
 /// This does nothing if the player is not currently invited to this faction
 #[derive(Event, Debug, Serialize, Deserialize, Clone)]
 pub struct PlayerAcceptFactionInvitation {
-    faction_id: FactionId,
+    pub faction_id: FactionId,
+}
+
+impl IdentifiableEvent for PlayerAcceptFactionInvitation {
+    fn unlocalized_name() -> &'static str {
+        "cosmos:player_accept_faction_invite"
+    }
+}
+
+impl NettyEvent for PlayerAcceptFactionInvitation {
+    fn event_receiver() -> crate::netty::sync::events::netty_event::EventReceiver {
+        crate::netty::sync::events::netty_event::EventReceiver::Server
+    }
 }
 
 #[derive(Event, Debug, Serialize, Deserialize, Clone)]
@@ -71,5 +129,9 @@ impl NettyEvent for SwapToPlayerFactionEvent {
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_netty_event::<SwapToPlayerFactionEvent>();
+    app.add_netty_event::<SwapToPlayerFactionEvent>()
+        .add_netty_event::<PlayerAcceptFactionInvitation>()
+        .add_netty_event::<PlayerInviteToFactionEvent>()
+        .add_netty_event::<PlayerCreateFactionEvent>()
+        .add_netty_event::<PlayerLeaveFactionEvent>();
 }
