@@ -38,7 +38,7 @@ pub struct PlayerLeaveFactionEvent;
 
 impl IdentifiableEvent for PlayerLeaveFactionEvent {
     fn unlocalized_name() -> &'static str {
-        "cosmos:player_accept_faction_invite"
+        "cosmos:player_leave_faction_event"
     }
 }
 

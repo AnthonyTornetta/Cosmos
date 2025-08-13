@@ -71,23 +71,30 @@ fn on_create_faction(
 ) {
     for ev in nevr_create_fac.read() {
         let Some(player) = lobby.player_from_id(ev.client_id) else {
+            error!("Failed - Invalid player!");
             continue;
         };
 
         if ev.faction_name.len() > 30 {
+            warn!("Failed - Name too long!");
             continue;
         }
 
         let Ok(ent_id) = q_player_in_faction.get(player) else {
+            warn!("Failed - Already in faction!");
             continue;
         };
 
         if !factions.is_name_unique(&ev.faction_name) {
+            info!("Failed - Name not unique!");
             continue;
         }
 
         let faction = Faction::new(ev.faction_name.clone(), vec![*ent_id], Default::default(), Default::default());
         let id = faction.id();
+
+        info!("Creating faction {faction:?}");
+
         commands.entity(player).insert(id).remove::<FactionInvites>();
         factions.add_new_faction(faction);
     }

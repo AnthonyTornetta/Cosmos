@@ -151,8 +151,13 @@ fn parse_event<T: NettyEvent>(
             continue;
         }
 
-        let Ok(event) = cosmos_encoder::deserialize_uncompressed::<T>(&ev.raw_data) else {
-            error!("Got invalid event from client!");
+        let Ok(event) = cosmos_encoder::deserialize_uncompressed::<T>(&ev.raw_data).map_err(|e| {
+            error!(
+                "Got invalid event from client! ({}) {e:?} - {:?}",
+                T::unlocalized_name(),
+                ev.raw_data
+            )
+        }) else {
             continue;
         };
 

@@ -206,6 +206,7 @@ impl Factions {
         self.0.get_mut(id)
     }
 
+    /// Removes a faction from the game.
     pub fn remove_faction(&mut self, id: &FactionId) -> Option<Faction> {
         self.0.remove(id)
     }
@@ -214,7 +215,7 @@ impl Factions {
     /// [`Self::from_name`] will return a faction for this valid.
     pub fn is_name_unique(&self, name: &str) -> bool {
         let stripped = name.replace(" ", "").to_lowercase();
-        self.0.values().any(|x| x.name.replace(" ", "").to_lowercase() == stripped)
+        !self.0.values().any(|x| x.name.replace(" ", "").to_lowercase() == stripped)
     }
 
     /// Gets a faction that matches this name (case sensitive).

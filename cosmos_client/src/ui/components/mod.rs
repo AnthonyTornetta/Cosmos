@@ -5,6 +5,7 @@ use bevy::{input_focus::InputFocus, prelude::*};
 use super::UiSystemSet;
 
 pub mod button;
+pub mod modal;
 pub mod scollable_container;
 pub mod show_cursor;
 pub mod slider;
@@ -41,6 +42,7 @@ pub(super) fn register(app: &mut App) {
     window::register(app);
     show_cursor::register(app);
     tabbed_view::register(app);
+    modal::register(app);
 
     app.add_systems(Update, clear_focus.in_set(UiSystemSet::PreDoUi))
         .init_resource::<InputFocus>();

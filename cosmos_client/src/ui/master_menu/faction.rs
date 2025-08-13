@@ -1,10 +1,17 @@
 use bevy::{ecs::relationship::RelatedSpawnerCommands, prelude::*};
-use cosmos_core::{faction::FactionId, netty::client::LocalPlayer, state::GameState};
+use cosmos_core::{
+    faction::{FactionId, events::PlayerCreateFactionEvent},
+    netty::{client::LocalPlayer, sync::events::client_event::NettyEventWriter},
+    state::GameState,
+};
 
 use crate::{
     create_button_event,
     ui::{
-        components::button::{ButtonEvent, CosmosButton, register_button},
+        components::{
+            button::{ButtonEvent, CosmosButton, register_button},
+            modal::text_modal::{TextModal, TextModalComplete},
+        },
         font::DefaultFont,
     },
 };
@@ -65,7 +72,45 @@ fn render_faction_display(
     }
 }
 
+#[derive(Component)]
+struct FactionNameBox;
+
+fn on_create_faction_click(
+    mut evr_create_faction: EventReader<CreateFaction>,
+    q_faction_box: Query<Entity, With<FactionNameBox>>,
+    mut commands: Commands,
+) {
+    if !evr_create_faction.read().next().is_some() {
+        return;
+    }
+
+    if q_faction_box.iter().next().is_some() {
+        return;
+    }
+
+    commands
+        .spawn((FactionNameBox, Name::new("Faction Name Box"), TextModal { ..Default::default() }))
+        .observe(
+            |ev: Trigger<TextModalComplete>, mut nevw_create_faction: NettyEventWriter<PlayerCreateFactionEvent>| {
+                nevw_create_faction.write(PlayerCreateFactionEvent {
+                    faction_name: ev.text.clone(),
+                });
+                info!("Sending create for {ev:?}");
+            },
+        );
+}
+
+/*
+on_create_faction,
+on_leave_faction,
+on_invite_player,
+on_accept_invite,
+* */
+
 pub(super) fn register(app: &mut App) {
     register_button::<CreateFaction>(app);
-    app.add_systems(Update, render_faction_display.run_if(in_state(GameState::Playing)));
+    app.add_systems(
+        Update,
+        (render_faction_display, on_create_faction_click).run_if(in_state(GameState::Playing)),
+    );
 }
