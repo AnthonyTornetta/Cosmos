@@ -1,6 +1,10 @@
 use bevy::{ecs::relationship::RelatedSpawnerCommands, prelude::*};
 use cosmos_core::{
-    faction::{FactionId, events::PlayerCreateFactionEvent},
+    ecs::NeedsDespawned,
+    faction::{
+        FactionId,
+        events::{PlayerCreateFactionEvent, PlayerCreateFactionEventResponse},
+    },
     netty::{client::LocalPlayer, sync::events::client_event::NettyEventWriter},
     state::GameState,
 };
@@ -11,8 +15,10 @@ use crate::{
         components::{
             button::{ButtonEvent, CosmosButton, register_button},
             modal::text_modal::{TextModal, TextModalComplete},
+            text_input::InputType,
         },
         font::DefaultFont,
+        hud::error::ShowError,
     },
 };
 
@@ -89,15 +95,54 @@ fn on_create_faction_click(
     }
 
     commands
-        .spawn((FactionNameBox, Name::new("Faction Name Box"), TextModal { ..Default::default() }))
+        .spawn((
+            FactionNameBox,
+            Name::new("Faction Name Box"),
+            TextModal {
+                input_type: InputType::Text { max_length: Some(30) },
+                ..Default::default()
+            },
+        ))
         .observe(
             |ev: Trigger<TextModalComplete>, mut nevw_create_faction: NettyEventWriter<PlayerCreateFactionEvent>| {
                 nevw_create_faction.write(PlayerCreateFactionEvent {
                     faction_name: ev.text.clone(),
                 });
+
                 info!("Sending create for {ev:?}");
             },
         );
+}
+
+fn get_faction_response(
+    mut nevr_create_response: EventReader<PlayerCreateFactionEventResponse>,
+    q_faction_name_box: Query<Entity, With<FactionNameBox>>,
+    mut errors: EventWriter<ShowError>,
+    mut commands: Commands,
+) {
+    for ev in nevr_create_response.read() {
+        match ev {
+            PlayerCreateFactionEventResponse::NameTaken => {
+                errors.write(ShowError::new("Faction name already taken."));
+            }
+            PlayerCreateFactionEventResponse::ServerError => {
+                errors.write(ShowError::new("Something bad happened - check server logs."));
+            }
+            PlayerCreateFactionEventResponse::NameTooLong => {
+                errors.write(ShowError::new("Faction name too long."));
+            }
+            PlayerCreateFactionEventResponse::AlreadyInFaction => {
+                errors.write(ShowError::new("You cannot create a faction while being in one."));
+            }
+            PlayerCreateFactionEventResponse::Success => {
+                let Ok(modal) = q_faction_name_box.single() else {
+                    return;
+                };
+
+                commands.entity(modal).insert(NeedsDespawned);
+            }
+        }
+    }
 }
 
 /*
@@ -111,6 +156,8 @@ pub(super) fn register(app: &mut App) {
     register_button::<CreateFaction>(app);
     app.add_systems(
         Update,
-        (render_faction_display, on_create_faction_click).run_if(in_state(GameState::Playing)),
+        (render_faction_display, on_create_faction_click, get_faction_response)
+            .chain()
+            .run_if(in_state(GameState::Playing)),
     );
 }

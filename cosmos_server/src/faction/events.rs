@@ -5,11 +5,14 @@ use cosmos_core::{
     faction::{
         Faction, FactionId, FactionInvites, Factions,
         events::{
-            FactionSwapAction, PlayerAcceptFactionInvitation, PlayerCreateFactionEvent, PlayerInviteToFactionEvent,
-            PlayerLeaveFactionEvent, SwapToPlayerFactionEvent,
+            FactionSwapAction, PlayerAcceptFactionInvitation, PlayerCreateFactionEvent, PlayerCreateFactionEventResponse,
+            PlayerInviteToFactionEvent, PlayerLeaveFactionEvent, SwapToPlayerFactionEvent,
         },
     },
-    netty::{server::ServerLobby, sync::events::server_event::NettyEventReceived},
+    netty::{
+        server::ServerLobby,
+        sync::events::server_event::{NettyEventReceived, NettyEventWriter},
+    },
     prelude::{Ship, Station},
     state::GameState,
     structure::ship::pilot::Pilot,
@@ -68,25 +71,30 @@ fn on_create_faction(
     q_player_in_faction: Query<&EntityId, (Without<FactionId>, With<Player>)>,
     mut factions: ResMut<Factions>,
     mut commands: Commands,
+    mut nevw_response: NettyEventWriter<PlayerCreateFactionEventResponse>,
 ) {
     for ev in nevr_create_fac.read() {
         let Some(player) = lobby.player_from_id(ev.client_id) else {
             error!("Failed - Invalid player!");
+            nevw_response.write(PlayerCreateFactionEventResponse::ServerError, ev.client_id);
             continue;
         };
 
         if ev.faction_name.len() > 30 {
             warn!("Failed - Name too long!");
+            nevw_response.write(PlayerCreateFactionEventResponse::NameTooLong, ev.client_id);
             continue;
         }
 
         let Ok(ent_id) = q_player_in_faction.get(player) else {
             warn!("Failed - Already in faction!");
+            nevw_response.write(PlayerCreateFactionEventResponse::AlreadyInFaction, ev.client_id);
             continue;
         };
 
         if !factions.is_name_unique(&ev.faction_name) {
             info!("Failed - Name not unique!");
+            nevw_response.write(PlayerCreateFactionEventResponse::NameTaken, ev.client_id);
             continue;
         }
 
@@ -97,6 +105,8 @@ fn on_create_faction(
 
         commands.entity(player).insert(id).remove::<FactionInvites>();
         factions.add_new_faction(faction);
+
+        nevw_response.write(PlayerCreateFactionEventResponse::Success, ev.client_id);
     }
 }
 

@@ -6,6 +6,7 @@ pub mod client_registry;
 pub mod client_reliable_messages;
 pub mod client_unreliable_messages;
 pub mod cosmos_encoder;
+pub mod fetch;
 pub mod netty_rigidbody;
 #[cfg(feature = "server")]
 pub mod server;

@@ -16,13 +16,35 @@ pub enum FactionSwapAction {
 
 /// Requests to create a new faction with the player within it
 #[derive(Event, Debug, Serialize, Deserialize, Clone)]
+pub enum PlayerCreateFactionEventResponse {
+    NameTaken,
+    ServerError,
+    NameTooLong,
+    AlreadyInFaction,
+    Success,
+}
+
+impl IdentifiableEvent for PlayerCreateFactionEventResponse {
+    fn unlocalized_name() -> &'static str {
+        "cosmos:player_create_faction_event_response"
+    }
+}
+
+impl NettyEvent for PlayerCreateFactionEventResponse {
+    fn event_receiver() -> crate::netty::sync::events::netty_event::EventReceiver {
+        crate::netty::sync::events::netty_event::EventReceiver::Client
+    }
+}
+
+/// Requests to create a new faction with the player within it
+#[derive(Event, Debug, Serialize, Deserialize, Clone)]
 pub struct PlayerCreateFactionEvent {
     pub faction_name: String,
 }
 
 impl IdentifiableEvent for PlayerCreateFactionEvent {
     fn unlocalized_name() -> &'static str {
-        "cosmos:player_accept_faction_invite"
+        "cosmos:player_create_faction_event"
     }
 }
 
@@ -129,9 +151,13 @@ impl NettyEvent for SwapToPlayerFactionEvent {
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_netty_event::<SwapToPlayerFactionEvent>()
+    app
+        // Client -> Server
+        .add_netty_event::<SwapToPlayerFactionEvent>()
         .add_netty_event::<PlayerAcceptFactionInvitation>()
         .add_netty_event::<PlayerInviteToFactionEvent>()
         .add_netty_event::<PlayerCreateFactionEvent>()
-        .add_netty_event::<PlayerLeaveFactionEvent>();
+        .add_netty_event::<PlayerLeaveFactionEvent>()
+        // Server -> Client
+        .add_netty_event::<PlayerCreateFactionEventResponse>();
 }
