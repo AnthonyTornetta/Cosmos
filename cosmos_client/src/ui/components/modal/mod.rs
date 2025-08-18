@@ -19,9 +19,17 @@ pub const MODAL_MENU_LEVEL: u32 = 10;
 fn on_add_modal(mut commands: Commands, q_modal: Query<(&mut Node, Entity, &Modal), Added<Modal>>) {
     for (node, ent, modal) in q_modal.iter() {
         let body_node = node.clone();
-        let modal_body = commands.spawn((Node::default(), Name::new("Modal Body"))).id();
+        let modal_body = commands
+            .spawn((
+                Node {
+                    flex_grow: 1.0,
+                    ..Default::default()
+                },
+                Name::new("Modal Body"),
+            ))
+            .id();
 
-        let ecmds = commands
+        commands
             .entity(ent)
             .insert((
                 GuiWindow {

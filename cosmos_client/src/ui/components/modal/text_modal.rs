@@ -10,7 +10,7 @@ use crate::{
     },
 };
 
-use bevy::{input_focus::InputFocus, prelude::*};
+use bevy::{color::palettes::css, input_focus::InputFocus, prelude::*};
 use cosmos_core::ecs::NeedsDespawned;
 
 #[derive(Default)]
@@ -41,6 +41,8 @@ fn on_add_text_modal(
             p.spawn(
                 (Node {
                     flex_direction: FlexDirection::Column,
+                    flex_grow: 1.0,
+                    width: Val::Percent(100.0),
                     ..Default::default()
                 }),
             )
@@ -49,6 +51,7 @@ fn on_add_text_modal(
                 p.spawn(
                     (Node {
                         flex_grow: 1.0,
+                        margin: UiRect::all(Val::Px(10.0)),
                         ..Default::default()
                     }),
                 )
@@ -65,6 +68,10 @@ fn on_add_text_modal(
                                 font_size: 24.0,
                                 ..Default::default()
                             },
+                            Node {
+                                width: Val::Percent(100.0),
+                                ..Default::default()
+                            },
                         ))
                         .id(),
                     );
@@ -74,7 +81,13 @@ fn on_add_text_modal(
 
                 focus.set(ent);
 
-                p.spawn((Node { ..Default::default() })).with_children(|p| match modal.buttons {
+                p.spawn(
+                    (Node {
+                        width: Val::Percent(100.0),
+                        ..Default::default()
+                    }),
+                )
+                .with_children(|p| match modal.buttons {
                     TextModalButtons::OkCancel => {
                         p.spawn((
                             TextValueEnt(ent),
@@ -90,9 +103,20 @@ fn on_add_text_modal(
                                 )),
                                 ..Default::default()
                             },
+                            Node {
+                                flex_grow: 1.0,
+                                padding: UiRect::all(Val::Px(8.0)),
+                                ..Default::default()
+                            },
+                            BackgroundColor(css::DARK_GREY.into()),
                         ));
 
                         p.spawn((
+                            Node {
+                                flex_grow: 1.0,
+                                padding: UiRect::all(Val::Px(8.0)),
+                                ..Default::default()
+                            },
                             TextValueEnt(ent),
                             CosmosButton::<OkButton> {
                                 text: Some((
@@ -102,10 +126,11 @@ fn on_add_text_modal(
                                         font: font.get(),
                                         ..Default::default()
                                     },
-                                    Default::default(),
+                                    TextColor(css::BLACK.into()),
                                 )),
                                 ..Default::default()
                             },
+                            BackgroundColor(css::AQUA.into()),
                         ));
                     }
                 });

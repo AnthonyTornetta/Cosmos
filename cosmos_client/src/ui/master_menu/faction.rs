@@ -1,4 +1,4 @@
-use bevy::{ecs::relationship::RelatedSpawnerCommands, prelude::*};
+use bevy::{color::palettes::css, ecs::relationship::RelatedSpawnerCommands, prelude::*};
 use cosmos_core::{
     ecs::{NeedsDespawned, sets::FixedUpdateSet},
     faction::{
@@ -34,53 +34,100 @@ create_button_event!(LeaveFaction);
 create_button_event!(InviteToFaction);
 
 fn render_with_faction(p: &mut RelatedSpawnerCommands<ChildOf>, faction: &Faction, font: &DefaultFont) {
-    p.spawn((Node { ..Default::default() })).with_children(|p| {
+    p.spawn(
+        (Node {
+            flex_direction: FlexDirection::Column,
+            margin: UiRect::all(Val::Px(20.0)),
+            ..Default::default()
+        }),
+    )
+    .with_children(|p| {
+        p.spawn((
+            Text::new(faction.name()),
+            Node {
+                margin: UiRect::bottom(Val::Px(20.0)),
+                ..Default::default()
+            },
+            TextFont {
+                font_size: 32.0,
+                font: font.get(),
+                ..Default::default()
+            },
+            TextColor(css::AQUA.into()),
+        ));
+
         p.spawn(
             (Node {
-                flex_direction: FlexDirection::Column,
                 flex_grow: 1.0,
-                margin: UiRect::right(Val::Px(10.0)),
                 ..Default::default()
             }),
         )
         .with_children(|p| {
-            p.spawn((
-                Text::new(faction.name()),
-                TextFont {
-                    font_size: 24.0,
-                    font: font.get(),
+            p.spawn(
+                (Node {
+                    flex_direction: FlexDirection::Column,
+                    flex_grow: 1.0,
+                    margin: UiRect::right(Val::Px(10.0)),
                     ..Default::default()
-                },
-            ));
-        });
-
-        p.spawn(
-            (Node {
-                flex_direction: FlexDirection::Column,
-                flex_grow: 1.0,
-                margin: UiRect::left(Val::Px(10.0)),
-                ..Default::default()
-            }),
-        )
-        .with_children(|p| {
-            p.spawn((
-                Text::new("Members"),
-                TextFont {
-                    font_size: 24.0,
-                    font: font.get(),
-                    ..Default::default()
-                },
-                Node {
-                    margin: UiRect::bottom(Val::Px(20.0)),
-                    ..Default::default()
-                },
-            ));
-
-            for player in faction.players() {
+                }),
+            )
+            .with_children(|p| {
                 p.spawn((
-                    Text::new(format!("{player:?}")),
+                    BackgroundColor(css::AQUA.into()),
+                    Node {
+                        padding: UiRect::all(Val::Px(8.0)),
+                        margin: UiRect::bottom(Val::Px(10.0)),
+                        ..Default::default()
+                    },
+                    CosmosButton::<InviteToFaction> {
+                        text: Some((
+                            "Invite to Faction".into(),
+                            TextFont {
+                                font_size: 24.0,
+                                font: font.get(),
+                                ..Default::default()
+                            },
+                            TextColor(css::BLACK.into()),
+                        )),
+                        ..Default::default()
+                    },
+                ));
+
+                p.spawn((
+                    BackgroundColor(css::DARK_RED.into()),
+                    Node {
+                        padding: UiRect::all(Val::Px(8.0)),
+                        margin: UiRect::bottom(Val::Px(10.0)),
+                        ..Default::default()
+                    },
+                    CosmosButton::<LeaveFaction> {
+                        text: Some((
+                            "Leave Faction".into(),
+                            TextFont {
+                                font_size: 24.0,
+                                font: font.get(),
+                                ..Default::default()
+                            },
+                            Default::default(),
+                        )),
+                        ..Default::default()
+                    },
+                ));
+            });
+
+            p.spawn(
+                (Node {
+                    flex_direction: FlexDirection::Column,
+                    flex_grow: 1.0,
+                    margin: UiRect::left(Val::Px(10.0)),
+                    ..Default::default()
+                }),
+            )
+            .with_children(|p| {
+                p.spawn((
+                    Text::new("Members"),
                     TextFont {
-                        font_size: 16.0,
+                        font_size: 24.0,
                         font: font.get(),
                         ..Default::default()
                     },
@@ -89,46 +136,24 @@ fn render_with_faction(p: &mut RelatedSpawnerCommands<ChildOf>, faction: &Factio
                         ..Default::default()
                     },
                 ));
-            }
+
+                for player in faction.players() {
+                    p.spawn((
+                        Text::new(format!("{player:?}")),
+                        TextFont {
+                            font_size: 16.0,
+                            font: font.get(),
+                            ..Default::default()
+                        },
+                        Node {
+                            margin: UiRect::bottom(Val::Px(20.0)),
+                            ..Default::default()
+                        },
+                    ));
+                }
+            });
         });
     });
-
-    p.spawn(
-        (Node {
-            flex_grow: 1.0,
-            ..Default::default()
-        }),
-    );
-
-    p.spawn(
-        (CosmosButton::<InviteToFaction> {
-            text: Some((
-                "Invite to Faction".into(),
-                TextFont {
-                    font_size: 24.0,
-                    font: font.get(),
-                    ..Default::default()
-                },
-                Default::default(),
-            )),
-            ..Default::default()
-        }),
-    );
-
-    p.spawn(
-        (CosmosButton::<LeaveFaction> {
-            text: Some((
-                "Leave Faction".into(),
-                TextFont {
-                    font_size: 24.0,
-                    font: font.get(),
-                    ..Default::default()
-                },
-                Default::default(),
-            )),
-            ..Default::default()
-        }),
-    );
 }
 
 fn render_no_faction(p: &mut RelatedSpawnerCommands<ChildOf>, font: &DefaultFont) {

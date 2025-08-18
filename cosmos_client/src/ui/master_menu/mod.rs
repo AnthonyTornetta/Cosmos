@@ -54,7 +54,7 @@ fn toggle_menu(
             Node {
                 margin: UiRect::all(Val::Auto),
                 position_type: PositionType::Absolute,
-                width: Val::Px(600.0),
+                width: Val::Px(800.0),
                 height: Val::Px(800.0),
                 border: UiRect::all(Val::Px(2.0)),
                 ..Default::default()
