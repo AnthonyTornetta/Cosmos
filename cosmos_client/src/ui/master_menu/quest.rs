@@ -1,91 +1,49 @@
-mod hud;
-
 use bevy::{color::palettes::css, prelude::*};
 use cosmos_core::{
-    ecs::NeedsDespawned,
     netty::client::LocalPlayer,
     quest::{ActiveQuest, OngoingQuest, OngoingQuestId, OngoingQuests, Quest},
     registry::Registry,
     state::GameState,
-    structure::ship::pilot::Pilot,
 };
 
 use crate::{
-    input::inputs::{CosmosInputs, InputChecker, InputHandler},
     lang::Lang,
     ui::{
-        OpenMenu, UiSystemSet,
+        UiSystemSet,
         components::{
             button::{ButtonEvent, CosmosButton, register_button},
             scollable_container::ScrollBox,
-            show_cursor::{ShowCursor, no_open_menus},
-            window::GuiWindow,
         },
         font::DefaultFont,
     },
 };
 
 #[derive(Component)]
-struct QuestUi;
+#[require(Node)]
+pub struct QuestDisplay;
 
-fn open_quest_ui(
-    input_checker: InputChecker,
+fn on_add_quest_display(
     mut commands: Commands,
     default_font: Res<DefaultFont>,
-    q_quests_ui: Query<Entity, With<QuestUi>>,
     q_quests: Query<(&OngoingQuests, Option<&ActiveQuest>), With<LocalPlayer>>,
     quests: Res<Registry<Quest>>,
     lang: Res<Lang<Quest>>,
-    q_is_flying: Query<(), (With<LocalPlayer>, With<Pilot>)>,
+    q_ui_added: Query<Entity, Added<QuestDisplay>>,
 ) {
-    // TODO: Workaround - remove later
-    if !q_is_flying.is_empty() {
-        return;
-    }
-    if !input_checker.check_just_pressed(CosmosInputs::ToggleQuestsUi) {
-        return;
-    }
-
-    if let Ok(ent) = q_quests_ui.single() {
-        commands.entity(ent).insert(NeedsDespawned);
-        return;
-    }
-
-    let font = TextFont {
-        font: default_font.0.clone_weak(),
-        font_size: 24.0,
-        ..Default::default()
-    };
-
-    let font_small = TextFont {
-        font: default_font.0.clone_weak(),
-        font_size: 20.0,
-        ..Default::default()
-    };
-
-    commands
-        .spawn((
-            Name::new("Ongoing Missions UI"),
-            QuestUi,
-            OpenMenu::new(0),
-            ShowCursor,
-            GuiWindow {
-                title: "Ongoing Missions".into(),
-                body_styles: Node {
-                    flex_direction: FlexDirection::Column,
-                    ..Default::default()
-                },
+    for ent in q_ui_added.iter() {
+        commands.entity(ent).with_children(|p| {
+            let font = TextFont {
+                font: default_font.0.clone_weak(),
+                font_size: 24.0,
                 ..Default::default()
-            },
-            Node {
-                margin: UiRect::all(Val::Auto),
-                position_type: PositionType::Absolute,
-                width: Val::Px(600.0),
-                height: Val::Px(800.0),
+            };
+
+            let font_small = TextFont {
+                font: default_font.0.clone_weak(),
+                font_size: 20.0,
                 ..Default::default()
-            },
-        ))
-        .with_children(|p| {
+            };
+
             let (ongoing_quests, active_quest) = q_quests
                 .single()
                 .map(|x| (x.0.iter().collect::<Vec<_>>(), x.1.copied()))
@@ -118,6 +76,7 @@ fn open_quest_ui(
                 }
             });
         });
+    }
 }
 
 #[derive(Event, Debug)]
@@ -239,14 +198,10 @@ fn quest_node(
 }
 
 pub(super) fn register(app: &mut App) {
-    hud::register(app);
+    register_button::<ToggleActiveClicked>(app);
 
-    // register_button::<ToggleActiveClicked>(app);
-    //
-    // app.add_systems(
-    //     Update,
-    //     (open_quest_ui, on_toggle_active.in_set(UiSystemSet::FinishUi))
-    //         .run_if(no_open_menus.or(any_with_component::<QuestUi>))
-    //         .run_if(in_state(GameState::Playing)),
-    // );
+    app.add_systems(
+        Update,
+        (on_add_quest_display, on_toggle_active.in_set(UiSystemSet::FinishUi)).run_if(in_state(GameState::Playing)),
+    );
 }

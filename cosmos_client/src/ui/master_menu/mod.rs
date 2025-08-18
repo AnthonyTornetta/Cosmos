@@ -10,11 +10,12 @@ use crate::{
             window::GuiWindow,
         },
         font::DefaultFont,
-        master_menu::faction::FactionDisplay,
+        master_menu::{faction::FactionDisplay, quest::QuestDisplay},
     },
 };
 
 mod faction;
+mod quest;
 
 #[derive(Component)]
 struct OpenMasterMenu;
@@ -23,7 +24,6 @@ fn toggle_menu(
     q_piloting: Query<(), (With<LocalPlayer>, With<Pilot>)>,
     q_open_menu: Query<Entity, With<OpenMasterMenu>>,
     mut commands: Commands,
-    font: Res<DefaultFont>,
     inputs: InputChecker,
 ) {
     if !inputs.check_just_pressed(CosmosInputs::OpenShipConfiguration) {
@@ -43,7 +43,7 @@ fn toggle_menu(
         .spawn((
             OpenMasterMenu,
             GuiWindow {
-                title: "idk what to call this".into(),
+                title: "Datapad".into(),
                 body_styles: Node {
                     flex_grow: 1.0,
                     flex_direction: FlexDirection::Column,
@@ -71,13 +71,29 @@ fn toggle_menu(
                 },
             ))
             .with_children(|p| {
-                p.spawn((Tab::new("Faction"), FactionDisplay));
+                p.spawn((
+                    Tab::new("Quest"),
+                    Node {
+                        flex_grow: 1.0,
+                        ..Default::default()
+                    },
+                    QuestDisplay,
+                ));
+                p.spawn((
+                    Tab::new("Faction"),
+                    Node {
+                        flex_grow: 1.0,
+                        ..Default::default()
+                    },
+                    FactionDisplay,
+                ));
             });
         });
 }
 
 pub(super) fn register(app: &mut App) {
     faction::register(app);
+    quest::register(app);
 
     app.add_systems(Update, toggle_menu.run_if(in_state(GameState::Playing)));
 }
