@@ -72,7 +72,7 @@ fn toggle_menu(
             ))
             .with_children(|p| {
                 p.spawn((
-                    Tab::new("Quest"),
+                    Tab::new("Missions"),
                     Node {
                         flex_grow: 1.0,
                         ..Default::default()
