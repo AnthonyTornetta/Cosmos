@@ -55,7 +55,7 @@ impl NettyEvent for PlayerCreateFactionEvent {
 }
 
 /// Requests to leave the faction the player is within
-#[derive(Event, Debug, Serialize, Deserialize, Clone)]
+#[derive(Event, Debug, Serialize, Deserialize, Clone, Default)]
 pub struct PlayerLeaveFactionEvent;
 
 impl IdentifiableEvent for PlayerLeaveFactionEvent {

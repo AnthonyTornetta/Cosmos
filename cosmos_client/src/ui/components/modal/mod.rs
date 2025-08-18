@@ -2,6 +2,7 @@ use bevy::prelude::*;
 
 use crate::ui::{OpenMenu, components::window::GuiWindow};
 
+pub mod confirm_modal;
 pub mod text_modal;
 
 #[derive(Component, Default)]
@@ -45,6 +46,7 @@ fn on_add_modal(mut commands: Commands, q_modal: Query<(&mut Node, Entity, &Moda
 
 pub(super) fn register(app: &mut App) {
     text_modal::register(app);
+    confirm_modal::register(app);
 
     app.add_systems(Update, on_add_modal);
 }
