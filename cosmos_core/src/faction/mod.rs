@@ -295,10 +295,14 @@ impl FactionInvites {
         self.0.remove(&faction);
     }
 
+    /// Iterates over all factions they have been invited to
+    ///
+    /// Some of these may no longer be valid IDs, so make sure to properly handle that case
     pub fn iter(&self) -> impl Iterator<Item = FactionId> {
         self.0.iter().copied()
     }
 
+    /// Checks if there are no invites (valid or invalid).
     pub fn is_empty(&self) -> bool {
         self.0.is_empty()
     }

@@ -256,12 +256,13 @@ fn render_no_faction(p: &mut RelatedSpawnerCommands<ChildOf>, font: &DefaultFont
                 continue;
             };
 
-            p.spawn(
-                (Node {
+            p.spawn((
+                Name::new("Invites"),
+                Node {
                     margin: UiRect::bottom(Val::Px(20.0)),
                     ..Default::default()
-                }),
-            )
+                },
+            ))
             .with_children(|p| {
                 p.spawn((
                     Text::new(faction.name()),

@@ -1,7 +1,7 @@
 use bevy::{color::palettes::css, prelude::*};
 use cosmos_core::{
-    netty::client::LocalPlayer,
-    quest::{ActiveQuest, OngoingQuest, OngoingQuestId, OngoingQuests, Quest},
+    netty::{client::LocalPlayer, sync::events::client_event::NettyEventWriter},
+    quest::{ActiveQuest, OngoingQuest, OngoingQuestId, OngoingQuests, Quest, SetActiveQuestEvent},
     registry::Registry,
     state::GameState,
 };
@@ -90,30 +90,26 @@ impl ButtonEvent for ToggleActiveClicked {
 
 fn on_toggle_active(
     mut commands: Commands,
-    mut q_selected_quest: Query<Entity, With<LocalPlayer>>,
     mut evr_toggle_active: EventReader<ToggleActiveClicked>,
     mut q_active: Query<(Entity, &mut BorderColor), With<ActiveQuestUi>>,
     mut q_inactive: Query<(Entity, &QuestComp, &mut BorderColor), Without<ActiveQuestUi>>,
+    mut nevw_set_active: NettyEventWriter<SetActiveQuestEvent>,
 ) {
     for ev in evr_toggle_active.read() {
-        let Ok(player_ent) = q_selected_quest.single_mut() else {
-            continue;
-        };
-
         if let Ok((ent, mut bc)) = q_active.single_mut() {
             commands.entity(ent).remove::<ActiveQuestUi>();
-            commands.entity(player_ent).remove::<ActiveQuest>();
+            nevw_set_active.write(SetActiveQuestEvent { quest: None });
             bc.0 = css::LIGHT_GREY.into();
         }
 
         let Ok((ui_ent, q, mut bc)) = q_inactive.get_mut(ev.0) else {
-            commands.entity(player_ent).remove::<ActiveQuest>();
+            nevw_set_active.write(SetActiveQuestEvent { quest: None });
             continue;
         };
 
         bc.0 = css::AQUA.into();
         commands.entity(ui_ent).insert(ActiveQuestUi);
-        commands.entity(player_ent).insert(ActiveQuest(q.0));
+        nevw_set_active.write(SetActiveQuestEvent { quest: Some(q.0) });
     }
 }
 

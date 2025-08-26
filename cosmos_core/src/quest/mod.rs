@@ -465,7 +465,27 @@ impl IdentifiableComponent for ActiveQuest {
 
 impl SyncableComponent for ActiveQuest {
     fn get_sync_type() -> crate::netty::sync::SyncType {
-        crate::netty::sync::SyncType::BothAuthoritative(crate::netty::sync::ClientAuthority::Themselves)
+        crate::netty::sync::SyncType::ServerAuthoritative
+    }
+}
+
+#[derive(Event, Serialize, Deserialize, Clone, Debug)]
+/// Sent by the client to set their active quest
+pub struct SetActiveQuestEvent {
+    /// The quest they want to make their active quest. Must be in their [`OngoingQuests`]
+    /// componment.
+    pub quest: Option<OngoingQuestId>,
+}
+
+impl IdentifiableEvent for SetActiveQuestEvent {
+    fn unlocalized_name() -> &'static str {
+        "cosmos:set_active_quest"
+    }
+}
+
+impl NettyEvent for SetActiveQuestEvent {
+    fn event_receiver() -> crate::netty::sync::events::netty_event::EventReceiver {
+        crate::netty::sync::events::netty_event::EventReceiver::Server
     }
 }
 
@@ -478,5 +498,6 @@ pub(super) fn register(app: &mut App) {
 
     app.register_type::<OngoingQuests>()
         .register_type::<ActiveQuest>()
-        .add_netty_event::<CompleteQuestEvent>();
+        .add_netty_event::<CompleteQuestEvent>()
+        .add_netty_event::<SetActiveQuestEvent>();
 }
