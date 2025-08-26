@@ -15,6 +15,7 @@ use crate::{
         components::{
             button::{CosmosButton, register_button},
             modal::{
+                Modal,
                 confirm_modal::{ConfirmModal, ConfirmModalComplete},
                 text_modal::{TextModal, TextModalComplete},
             },
@@ -160,6 +161,7 @@ fn render_no_faction(p: &mut RelatedSpawnerCommands<ChildOf>, font: &DefaultFont
     p.spawn(
         (Node {
             flex_direction: FlexDirection::Column,
+            margin: UiRect::all(Val::Px(50.0)),
             ..Default::default()
         }),
     )
@@ -171,10 +173,20 @@ fn render_no_faction(p: &mut RelatedSpawnerCommands<ChildOf>, font: &DefaultFont
                 font: font.get(),
                 ..Default::default()
             },
+            Node {
+                margin: UiRect::bottom(Val::Px(20.0)),
+                ..Default::default()
+            },
         ));
 
-        p.spawn(
-            (CosmosButton::<CreateFaction> {
+        p.spawn((
+            BackgroundColor(css::AQUA.into()),
+            Node {
+                padding: UiRect::all(Val::Px(8.0)),
+                margin: UiRect::bottom(Val::Px(10.0)),
+                ..Default::default()
+            },
+            CosmosButton::<CreateFaction> {
                 text: Some((
                     "Create Faction".into(),
                     TextFont {
@@ -182,11 +194,11 @@ fn render_no_faction(p: &mut RelatedSpawnerCommands<ChildOf>, font: &DefaultFont
                         font: font.get(),
                         ..Default::default()
                     },
-                    Default::default(),
+                    TextColor(css::BLACK.into()),
                 )),
                 ..Default::default()
-            }),
-        );
+            },
+        ));
     });
 }
 
@@ -242,6 +254,9 @@ fn on_create_faction_click(
         .spawn((
             FactionNameBox,
             Name::new("Faction Name Box"),
+            Modal {
+                title: "Faction Name".into(),
+            },
             TextModal {
                 input_type: InputType::Text { max_length: Some(30) },
                 ..Default::default()
@@ -291,12 +306,15 @@ fn get_faction_response(
 
 fn on_leave_faction(mut commands: Commands) {
     commands
-        .spawn(
-            (ConfirmModal {
+        .spawn((
+            Modal {
+                title: "Leave Faction".into(),
+            },
+            ConfirmModal {
                 prompt: "Are you sure you want to leave your faction?".into(),
                 ..Default::default()
-            }),
-        )
+            },
+        ))
         .observe(
             |ev: Trigger<ConfirmModalComplete>, mut nevw_leave_faction: NettyEventWriter<PlayerLeaveFactionEvent>| {
                 if !ev.confirmed {

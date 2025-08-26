@@ -8,7 +8,7 @@ pub mod text_modal;
 #[derive(Component, Default)]
 #[require(Node)]
 pub struct Modal {
-    title: String,
+    pub title: String,
 }
 
 #[derive(Component)]
