@@ -1,9 +1,13 @@
 use bevy::{color::palettes::css, ecs::relationship::RelatedSpawnerCommands, prelude::*};
 use cosmos_core::{
     ecs::{NeedsDespawned, sets::FixedUpdateSet},
+    entities::player::Player,
     faction::{
-        Faction, FactionId, Factions,
-        events::{PlayerCreateFactionEvent, PlayerCreateFactionEventResponse, PlayerLeaveFactionEvent},
+        Faction, FactionId, FactionInvites, Factions,
+        events::{
+            PlayerAcceptFactionInvitation, PlayerCreateFactionEvent, PlayerCreateFactionEventResponse, PlayerInviteToFactionEvent,
+            PlayerLeaveFactionEvent,
+        },
     },
     netty::{client::LocalPlayer, sync::events::client_event::NettyEventWriter},
     state::GameState,
@@ -33,15 +37,15 @@ pub struct FactionDisplay;
 create_button_event!(CreateFaction);
 create_button_event!(LeaveFaction);
 create_button_event!(InviteToFaction);
+create_button_event!(AcceptInvite);
+create_button_event!(DeclineInvite);
 
 fn render_with_faction(p: &mut RelatedSpawnerCommands<ChildOf>, faction: &Faction, font: &DefaultFont) {
-    p.spawn(
-        Node {
-            flex_direction: FlexDirection::Column,
-            margin: UiRect::all(Val::Px(20.0)),
-            ..Default::default()
-        },
-    )
+    p.spawn(Node {
+        flex_direction: FlexDirection::Column,
+        margin: UiRect::all(Val::Px(20.0)),
+        ..Default::default()
+    })
     .with_children(|p| {
         p.spawn((
             Text::new(faction.name()),
@@ -57,21 +61,17 @@ fn render_with_faction(p: &mut RelatedSpawnerCommands<ChildOf>, faction: &Factio
             TextColor(css::AQUA.into()),
         ));
 
-        p.spawn(
-            Node {
-                flex_grow: 1.0,
-                ..Default::default()
-            },
-        )
+        p.spawn(Node {
+            flex_grow: 1.0,
+            ..Default::default()
+        })
         .with_children(|p| {
-            p.spawn(
-                Node {
-                    flex_direction: FlexDirection::Column,
-                    flex_grow: 1.0,
-                    margin: UiRect::right(Val::Px(10.0)),
-                    ..Default::default()
-                },
-            )
+            p.spawn(Node {
+                flex_direction: FlexDirection::Column,
+                flex_grow: 1.0,
+                margin: UiRect::right(Val::Px(10.0)),
+                ..Default::default()
+            })
             .with_children(|p| {
                 p.spawn((
                     BackgroundColor(css::AQUA.into()),
@@ -116,14 +116,12 @@ fn render_with_faction(p: &mut RelatedSpawnerCommands<ChildOf>, faction: &Factio
                 ));
             });
 
-            p.spawn(
-                Node {
-                    flex_direction: FlexDirection::Column,
-                    flex_grow: 1.0,
-                    margin: UiRect::left(Val::Px(10.0)),
-                    ..Default::default()
-                },
-            )
+            p.spawn(Node {
+                flex_direction: FlexDirection::Column,
+                flex_grow: 1.0,
+                margin: UiRect::left(Val::Px(10.0)),
+                ..Default::default()
+            })
             .with_children(|p| {
                 p.spawn((
                     Text::new("Members"),
@@ -157,14 +155,12 @@ fn render_with_faction(p: &mut RelatedSpawnerCommands<ChildOf>, faction: &Factio
     });
 }
 
-fn render_no_faction(p: &mut RelatedSpawnerCommands<ChildOf>, font: &DefaultFont) {
-    p.spawn(
-        Node {
-            flex_direction: FlexDirection::Column,
-            margin: UiRect::all(Val::Px(50.0)),
-            ..Default::default()
-        },
-    )
+fn render_no_faction(p: &mut RelatedSpawnerCommands<ChildOf>, font: &DefaultFont, invites: Option<&FactionInvites>, factions: &Factions) {
+    p.spawn(Node {
+        flex_direction: FlexDirection::Column,
+        margin: UiRect::all(Val::Px(50.0)),
+        ..Default::default()
+    })
     .with_children(|p| {
         p.spawn((
             Text::new("No Faction"),
@@ -200,6 +196,129 @@ fn render_no_faction(p: &mut RelatedSpawnerCommands<ChildOf>, font: &DefaultFont
             },
         ));
     });
+
+    p.spawn((
+        Node {
+            flex_direction: FlexDirection::Column,
+            margin: UiRect::all(Val::Px(50.0)),
+            flex_grow: 1.0,
+            ..Default::default()
+        },
+        Name::new("Invites"),
+    ))
+    .with_children(|p| {
+        let Some(invites) = invites else {
+            p.spawn((
+                Text::new("No Faction Invites."),
+                TextFont {
+                    font_size: 24.0,
+                    font: font.get(),
+                    ..Default::default()
+                },
+                Node {
+                    margin: UiRect::bottom(Val::Px(20.0)),
+                    ..Default::default()
+                },
+            ));
+            return;
+        };
+        if invites.is_empty() {
+            p.spawn((
+                Text::new("No Faction Invites."),
+                TextFont {
+                    font_size: 24.0,
+                    font: font.get(),
+                    ..Default::default()
+                },
+                Node {
+                    margin: UiRect::bottom(Val::Px(20.0)),
+                    ..Default::default()
+                },
+            ));
+            return;
+        }
+
+        p.spawn((
+            Text::new("Faction Invites"),
+            TextFont {
+                font_size: 24.0,
+                font: font.get(),
+                ..Default::default()
+            },
+            Node {
+                margin: UiRect::bottom(Val::Px(20.0)),
+                ..Default::default()
+            },
+        ));
+
+        for faction_invite in invites.iter() {
+            let Some(faction) = factions.from_id(&faction_invite) else {
+                continue;
+            };
+
+            p.spawn(
+                (Node {
+                    margin: UiRect::bottom(Val::Px(20.0)),
+                    ..Default::default()
+                }),
+            )
+            .with_children(|p| {
+                p.spawn((
+                    Text::new(faction.name()),
+                    TextFont {
+                        font_size: 24.0,
+                        font: font.get(),
+                        ..Default::default()
+                    },
+                    Node { ..Default::default() },
+                ));
+
+                p.spawn((
+                    BackgroundColor(css::AQUA.into()),
+                    Node {
+                        padding: UiRect::all(Val::Px(8.0)),
+                        margin: UiRect::horizontal(Val::Px(5.0)),
+                        ..Default::default()
+                    },
+                    faction_invite,
+                    CosmosButton::<AcceptInvite> {
+                        text: Some((
+                            "JOIN".into(),
+                            TextFont {
+                                font_size: 24.0,
+                                font: font.get(),
+                                ..Default::default()
+                            },
+                            TextColor(css::BLACK.into()),
+                        )),
+                        ..Default::default()
+                    },
+                ));
+
+                p.spawn((
+                    BackgroundColor(css::RED.into()),
+                    Node {
+                        padding: UiRect::all(Val::Px(8.0)),
+                        margin: UiRect::horizontal(Val::Px(5.0)),
+                        ..Default::default()
+                    },
+                    faction_invite,
+                    CosmosButton::<DeclineInvite> {
+                        text: Some((
+                            "DECLINE".into(),
+                            TextFont {
+                                font_size: 24.0,
+                                font: font.get(),
+                                ..Default::default()
+                            },
+                            TextColor(css::WHITE.into()),
+                        )),
+                        ..Default::default()
+                    },
+                ));
+            });
+        }
+    });
 }
 
 #[derive(Component)]
@@ -209,6 +328,7 @@ fn render_faction_display(
     mut commands: Commands,
     q_added_fac_display: Query<Entity, Or<(Added<RerenderFactionDisplay>, Added<FactionDisplay>)>>,
     q_faction: Query<&FactionId, With<LocalPlayer>>,
+    q_invites: Query<&FactionInvites, With<LocalPlayer>>,
     font: Res<DefaultFont>,
     factions: Res<Factions>,
 ) {
@@ -221,14 +341,14 @@ fn render_faction_display(
             .with_children(|p| {
                 if let Ok(fac_id) = q_faction.single() {
                     let Some(fac) = factions.from_id(fac_id) else {
-                        render_no_faction(p, &font);
+                        render_no_faction(p, &font, q_invites.single().ok(), &factions);
                         error!("Missing faction for faction id {fac_id:?}!");
                         return;
                     };
 
                     render_with_faction(p, fac, &font);
                 } else {
-                    render_no_faction(p, &font);
+                    render_no_faction(p, &font, q_invites.single().ok(), &factions);
                 }
             });
     }
@@ -356,10 +476,75 @@ fn on_change_faction(
     }
 }
 
+fn on_invite_to_faction(mut commands: Commands) {
+    commands
+        .spawn((
+            Name::new("Faction Name Box"),
+            Modal {
+                title: "Invite to Faction".into(),
+            },
+            TextModal {
+                input_type: InputType::Text { max_length: Some(30) },
+                prompt: "Enter Player Name".into(),
+                ..Default::default()
+            },
+        ))
+        .observe(
+            |trigger: Trigger<TextModalComplete>,
+             q_players: Query<(Entity, &Player, Has<FactionId>), Without<LocalPlayer>>,
+             mut nevw_invite: NettyEventWriter<PlayerInviteToFactionEvent>,
+             mut popups: EventWriter<ShowInfoPopup>| {
+                let player_name = trigger.text.trim();
+                let lower = player_name.to_lowercase();
+
+                if let Some((ent, _, in_fac)) = q_players.iter().find(|(_, p, _)| p.name().to_lowercase().trim() == lower) {
+                    if in_fac {
+                        popups.write(ShowInfoPopup::error(format!("Player {player_name} is already in a faction.")));
+                    } else {
+                        nevw_invite.write(PlayerInviteToFactionEvent { inviting: ent });
+                        popups.write(ShowInfoPopup::success(format!("Sent faction invite to {player_name}!")));
+                    }
+                } else {
+                    popups.write(ShowInfoPopup::error(format!("Player {player_name} not found.")));
+                }
+            },
+        );
+}
+
+fn on_accept_invite(
+    q_fac_id: Query<&FactionId>,
+    mut evr_accept: EventReader<AcceptInvite>,
+    mut nevw_accept_invite: NettyEventWriter<PlayerAcceptFactionInvitation>,
+) {
+    for ev in evr_accept.read() {
+        let Ok(fac) = q_fac_id.get(ev.0) else {
+            continue;
+        };
+
+        nevw_accept_invite.write(PlayerAcceptFactionInvitation { faction_id: *fac });
+    }
+}
+
+fn on_decline_invite(
+    q_fac_id: Query<&FactionId>,
+    mut evr_accept: EventReader<DeclineInvite>,
+    mut nevw_accept_invite: NettyEventWriter<PlayerAcceptFactionInvitation>,
+) {
+    for ev in evr_accept.read() {
+        let Ok(fac) = q_fac_id.get(ev.0) else {
+            continue;
+        };
+
+        nevw_accept_invite.write(PlayerAcceptFactionInvitation { faction_id: *fac });
+    }
+}
+
 pub(super) fn register(app: &mut App) {
     register_button::<CreateFaction>(app);
     register_button::<LeaveFaction>(app);
     register_button::<InviteToFaction>(app);
+    register_button::<AcceptInvite>(app);
+    register_button::<DeclineInvite>(app);
 
     app.add_systems(
         FixedUpdate,
@@ -372,6 +557,9 @@ pub(super) fn register(app: &mut App) {
             on_create_faction_click,
             get_faction_response,
             on_leave_faction.run_if(on_event::<LeaveFaction>),
+            on_invite_to_faction.run_if(on_event::<InviteToFaction>),
+            on_accept_invite,
+            on_decline_invite,
         )
             .chain()
             .run_if(in_state(GameState::Playing)),

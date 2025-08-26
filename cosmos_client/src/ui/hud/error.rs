@@ -11,10 +11,18 @@ pub struct ShowInfoPopup {
 
 #[derive(Debug, Clone, Copy)]
 pub enum PopupType {
+    Success,
     Error,
 }
 
 impl ShowInfoPopup {
+    pub fn success(message: impl Into<String>) -> Self {
+        Self {
+            text: message.into(),
+            popup_type: PopupType::Success,
+        }
+    }
+
     pub fn error(message: impl Into<String>) -> Self {
         Self {
             text: message.into(),
@@ -56,6 +64,8 @@ fn show_error(
             return;
         };
 
+        info!("{ev:?}");
+
         commands.entity(ent).with_children(|p| {
             p.spawn((
                 Popup(0.0),
@@ -73,12 +83,22 @@ fn show_error(
                             blue: 0.3,
                             alpha: 0.7,
                         },
+                        PopupType::Success => Srgba {
+                            red: 0.3,
+                            green: 1.0,
+                            blue: 1.0,
+                            alpha: 0.7,
+                        },
                     }
                     .into(),
                 ),
             ))
             .with_children(|p| {
                 p.spawn((
+                    Node {
+                        margin: UiRect::all(Val::Px(30.0)),
+                        ..Default::default()
+                    },
                     Text::new(ev.text.clone()),
                     TextFont {
                         font: font.get(),

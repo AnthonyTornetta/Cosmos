@@ -27,6 +27,8 @@ pub enum TextModalButtons {
 #[require(Modal)]
 /// A modal where the user enters text
 pub struct TextModal {
+    /// The prompt
+    pub prompt: String,
     /// The starting value of that text
     pub starting_value: String,
     /// The buttons this will have
@@ -57,9 +59,25 @@ fn on_add_text_modal(
                 p.spawn(Node {
                     flex_grow: 1.0,
                     margin: UiRect::all(Val::Px(10.0)),
+                    flex_direction: FlexDirection::Column,
                     ..Default::default()
                 })
                 .with_children(|p| {
+                    if !modal.prompt.is_empty() {
+                        p.spawn((
+                            Text::new(modal.prompt.clone()),
+                            TextFont {
+                                font: font.get(),
+                                font_size: 24.0,
+                                ..Default::default()
+                            },
+                            Node {
+                                margin: UiRect::bottom(Val::Px(10.0)),
+                                ..Default::default()
+                            },
+                        ));
+                    }
+
                     ent = Some(
                         p.spawn((
                             ModalEntity(modal_ent),
@@ -67,6 +85,7 @@ fn on_add_text_modal(
                                 input_type: modal.input_type,
                                 ..Default::default()
                             },
+                            InputValue::new(modal.starting_value.clone()),
                             TextFont {
                                 font: font.get(),
                                 font_size: 24.0,

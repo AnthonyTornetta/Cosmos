@@ -6,7 +6,7 @@ use cosmos_core::{
         Faction, FactionId, FactionInvites, Factions,
         events::{
             FactionSwapAction, PlayerAcceptFactionInvitation, PlayerCreateFactionEvent, PlayerCreateFactionEventResponse,
-            PlayerInviteToFactionEvent, PlayerLeaveFactionEvent, SwapToPlayerFactionEvent,
+            PlayerDeclineFactionInvitation, PlayerInviteToFactionEvent, PlayerLeaveFactionEvent, SwapToPlayerFactionEvent,
         },
     },
     netty::{
@@ -195,6 +195,24 @@ fn on_accept_invite(
     }
 }
 
+fn on_decline_invite(
+    mut nevr_leave_faction: EventReader<NettyEventReceived<PlayerDeclineFactionInvitation>>,
+    lobby: Res<ServerLobby>,
+    mut q_player: Query<&mut FactionInvites, With<Player>>,
+) {
+    for ev in nevr_leave_faction.read() {
+        let Some(player) = lobby.player_from_id(ev.client_id) else {
+            continue;
+        };
+
+        let Ok(mut invites) = q_player.get_mut(player) else {
+            continue;
+        };
+
+        invites.remove_invite(ev.faction_id);
+    }
+}
+
 pub(super) fn register(app: &mut App) {
     app.add_systems(
         FixedUpdate,
@@ -202,6 +220,7 @@ pub(super) fn register(app: &mut App) {
             on_create_faction,
             on_leave_faction,
             on_invite_player,
+            on_decline_invite,
             on_accept_invite,
             on_swap_faction_from_player,
         )

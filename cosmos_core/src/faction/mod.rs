@@ -294,6 +294,14 @@ impl FactionInvites {
     pub fn remove_invite(&mut self, faction: FactionId) {
         self.0.remove(&faction);
     }
+
+    pub fn iter(&self) -> impl Iterator<Item = FactionId> {
+        self.0.iter().copied()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.0.is_empty()
+    }
 }
 
 impl IdentifiableComponent for FactionInvites {

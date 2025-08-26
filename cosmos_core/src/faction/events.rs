@@ -114,7 +114,7 @@ impl NettyEvent for PlayerInviteToFactionEvent {
 /// This does nothing if the player is not currently invited to this faction
 #[derive(Event, Debug, Serialize, Deserialize, Clone)]
 pub struct PlayerAcceptFactionInvitation {
-    /// Accepts the invvitation to join this faction. There must be a valid invite for this to do
+    /// Accepts the invitation to join this faction. There must be a valid invite for this to do
     /// anything.
     pub faction_id: FactionId,
 }
@@ -126,6 +126,28 @@ impl IdentifiableEvent for PlayerAcceptFactionInvitation {
 }
 
 impl NettyEvent for PlayerAcceptFactionInvitation {
+    fn event_receiver() -> crate::netty::sync::events::netty_event::EventReceiver {
+        crate::netty::sync::events::netty_event::EventReceiver::Server
+    }
+}
+
+/// Declines an invitation to this faction
+///
+/// This does nothing if the player is not currently invited to this faction
+#[derive(Event, Debug, Serialize, Deserialize, Clone)]
+pub struct PlayerDeclineFactionInvitation {
+    /// Declines the invitation to join this faction. There must be a valid invite for this to do
+    /// anything.
+    pub faction_id: FactionId,
+}
+
+impl IdentifiableEvent for PlayerDeclineFactionInvitation {
+    fn unlocalized_name() -> &'static str {
+        "cosmos:player_decline_faction_invite"
+    }
+}
+
+impl NettyEvent for PlayerDeclineFactionInvitation {
     fn event_receiver() -> crate::netty::sync::events::netty_event::EventReceiver {
         crate::netty::sync::events::netty_event::EventReceiver::Server
     }
@@ -170,6 +192,7 @@ pub(super) fn register(app: &mut App) {
         // Client -> Server
         .add_netty_event::<SwapToPlayerFactionEvent>()
         .add_netty_event::<PlayerAcceptFactionInvitation>()
+        .add_netty_event::<PlayerDeclineFactionInvitation>()
         .add_netty_event::<PlayerInviteToFactionEvent>()
         .add_netty_event::<PlayerCreateFactionEvent>()
         .add_netty_event::<PlayerLeaveFactionEvent>()
