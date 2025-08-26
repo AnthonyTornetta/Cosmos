@@ -1,3 +1,5 @@
+//! A simple confirmation modal
+
 use crate::{
     create_private_button_event,
     ui::{
@@ -13,15 +15,20 @@ use bevy::{color::palettes::css, prelude::*};
 use cosmos_core::ecs::NeedsDespawned;
 
 #[derive(Default)]
+/// The type of buttons that can be used on a [`ConfirmModal`]
 pub enum TextModalButtons {
     #[default]
+    /// A Yes + No Button combo
     YesNo,
 }
 
 #[derive(Component, Default)]
 #[require(Modal)]
+/// A modal where the user answers a simple yes/no prompt
 pub struct ConfirmModal {
+    /// The text to show the user
     pub prompt: String,
+    /// The buttons the user can choose
     pub buttons: TextModalButtons,
 }
 
@@ -35,12 +42,10 @@ fn on_add_text_modal(
 ) {
     for (modal_ent, modal, modal_body) in q_text_modal.iter() {
         commands.entity(modal_body.0).with_children(|p| {
-            p.spawn(
-                Node {
-                    flex_direction: FlexDirection::Column,
-                    ..Default::default()
-                },
-            )
+            p.spawn(Node {
+                flex_direction: FlexDirection::Column,
+                ..Default::default()
+            })
             .with_children(|p| {
                 p.spawn((
                     Text::new(modal.prompt.clone()),
@@ -113,7 +118,9 @@ create_private_button_event!(CancelButton);
 
 #[derive(Event, Debug)]
 #[event(traversal = &'static ChildOf, auto_propagate)]
+/// Sent whenever the user clicks the Yes/No modal button
 pub struct ConfirmModalComplete {
+    /// If the user clicked the confirm option or not
     pub confirmed: bool,
 }
 

@@ -19,6 +19,7 @@ pub trait ButtonEvent: Sized + Event + std::fmt::Debug {
 }
 
 #[macro_export]
+/// Stupid - will be removed soon
 macro_rules! create_private_button_event {
     ($name: ident) => {
         #[derive(Event, Debug, Clone, Copy)]
@@ -33,6 +34,7 @@ macro_rules! create_private_button_event {
 }
 
 #[macro_export]
+/// Stupid - will be removed soon
 macro_rules! create_button_event {
     ($name: ident) => {
         #[derive(Event, Debug, Clone, Copy)]

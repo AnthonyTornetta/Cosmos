@@ -1,3 +1,5 @@
+//! The menu that contains all sub-menu that can be accessed when not flying a ship
+
 use bevy::prelude::*;
 use cosmos_core::{ecs::NeedsDespawned, netty::client::LocalPlayer, state::GameState, structure::ship::pilot::Pilot};
 

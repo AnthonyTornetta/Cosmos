@@ -1,3 +1,5 @@
+//! A modal where the user enters text
+
 use crate::{
     create_private_button_event,
     ui::{
@@ -14,16 +16,22 @@ use bevy::{color::palettes::css, input_focus::InputFocus, prelude::*};
 use cosmos_core::ecs::NeedsDespawned;
 
 #[derive(Default)]
+/// The types of buttons a [`TextModal`] can have.
 pub enum TextModalButtons {
     #[default]
+    /// Ok + Cancel buttons
     OkCancel,
 }
 
 #[derive(Component, Default)]
 #[require(Modal)]
+/// A modal where the user enters text
 pub struct TextModal {
+    /// The starting value of that text
     pub starting_value: String,
+    /// The buttons this will have
     pub buttons: TextModalButtons,
+    /// What type of input we want
     pub input_type: InputType,
 }
 
@@ -38,23 +46,19 @@ fn on_add_text_modal(
 ) {
     for (modal_ent, modal, modal_body) in q_text_modal.iter() {
         commands.entity(modal_body.0).with_children(|p| {
-            p.spawn(
-                Node {
-                    flex_direction: FlexDirection::Column,
-                    flex_grow: 1.0,
-                    width: Val::Percent(100.0),
-                    ..Default::default()
-                },
-            )
+            p.spawn(Node {
+                flex_direction: FlexDirection::Column,
+                flex_grow: 1.0,
+                width: Val::Percent(100.0),
+                ..Default::default()
+            })
             .with_children(|p| {
                 let mut ent = None;
-                p.spawn(
-                    Node {
-                        flex_grow: 1.0,
-                        margin: UiRect::all(Val::Px(10.0)),
-                        ..Default::default()
-                    },
-                )
+                p.spawn(Node {
+                    flex_grow: 1.0,
+                    margin: UiRect::all(Val::Px(10.0)),
+                    ..Default::default()
+                })
                 .with_children(|p| {
                     ent = Some(
                         p.spawn((
@@ -81,12 +85,10 @@ fn on_add_text_modal(
 
                 focus.set(ent);
 
-                p.spawn(
-                    Node {
-                        width: Val::Percent(100.0),
-                        ..Default::default()
-                    },
-                )
+                p.spawn(Node {
+                    width: Val::Percent(100.0),
+                    ..Default::default()
+                })
                 .with_children(|p| match modal.buttons {
                     TextModalButtons::OkCancel => {
                         p.spawn((
@@ -147,7 +149,9 @@ create_private_button_event!(CancelButton);
 
 #[derive(Event, Debug)]
 #[event(traversal = &'static ChildOf, auto_propagate)]
+/// Sent whenever a text modal has its `ok` button pressed
 pub struct TextModalComplete {
+    /// The value of text the user input
     pub text: String,
 }
 

@@ -130,22 +130,26 @@ impl Faction {
         &self.name
     }
 
+    /// Adds a player to this faction
     pub fn add_player(&mut self, player_id: EntityId) {
         if !self.players.contains(&player_id) {
             self.players.push(player_id);
         }
     }
 
+    /// Removes a player from this faction if they are in it
     pub fn remove_player(&mut self, player_id: EntityId) {
         if let Some((idx, _)) = self.players.iter().enumerate().find(|(_, x)| **x == player_id) {
             self.players.remove(idx);
         }
     }
 
+    /// Iterates over all players in this faction
     pub fn players(&self) -> impl Iterator<Item = EntityId> {
         self.players.iter().copied()
     }
 
+    /// Checks if this faction has no players. AI only factions will count as empty.
     pub fn is_empty(&self) -> bool {
         self.players.is_empty()
     }
@@ -269,20 +273,24 @@ impl SyncableResource for Factions {
 pub struct FactionInvites(HashSet<FactionId>);
 
 impl FactionInvites {
+    /// Creates a [`FactionInvites`] list with an invite to this faction
     pub fn with_invite(faction: FactionId) -> Self {
         let mut s = Self::default();
         s.add_invite(faction);
         s
     }
 
+    /// Checks if this contains an invite to this faction
     pub fn contains(&self, faction: FactionId) -> bool {
         self.0.contains(&faction)
     }
 
+    /// Adds an invite to this faction (or does nothing if one already exists)
     pub fn add_invite(&mut self, faction: FactionId) {
         self.0.insert(faction);
     }
 
+    /// Removes the invite to this faction (or does nothing if none exist)
     pub fn remove_invite(&mut self, faction: FactionId) {
         self.0.remove(&faction);
     }

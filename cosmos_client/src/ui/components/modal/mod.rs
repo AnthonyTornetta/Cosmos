@@ -1,3 +1,5 @@
+//! A pop-up that appears over all other UI elements
+
 use bevy::prelude::*;
 
 use crate::ui::{OpenMenu, components::window::GuiWindow};
@@ -7,13 +9,17 @@ pub mod text_modal;
 
 #[derive(Component, Default)]
 #[require(Node)]
+/// A pop-up that appears over all other UI elements
 pub struct Modal {
+    /// The title of the modal that will be shown
     pub title: String,
 }
 
 #[derive(Component)]
+/// The body of a pop-up that appears over all other UI elements
 pub struct ModalBody(Entity);
 
+/// The Z-Index of all modals
 pub const MODAL_MENU_LEVEL: u32 = 10;
 
 fn on_add_modal(mut commands: Commands, q_modal: Query<(&mut Node, Entity, &Modal), Added<Modal>>) {

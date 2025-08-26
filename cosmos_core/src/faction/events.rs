@@ -9,18 +9,27 @@ use crate::{
 };
 
 #[derive(Debug, Serialize, Deserialize, Clone, Copy, PartialEq, Eq)]
+/// Sent when the player tries to assign a faction to a structure
 pub enum FactionSwapAction {
+    /// Assign this structure to the player's faction
     AssignToSelfFaction,
+    /// Remove the faction from this structure. The player must be of the same faction for this to
+    /// work
     RemoveFaction,
 }
 
-/// Requests to create a new faction with the player within it
+/// The responses the server can have when the player tries to create a new faction
 #[derive(Event, Debug, Serialize, Deserialize, Clone)]
 pub enum PlayerCreateFactionEventResponse {
+    /// The faction's name is already taken
     NameTaken,
+    /// Something went wrong on the server
     ServerError,
+    /// The faction's name was too long
     NameTooLong,
+    /// The player is already in a faction
     AlreadyInFaction,
+    /// New faction created
     Success,
 }
 
@@ -39,6 +48,7 @@ impl NettyEvent for PlayerCreateFactionEventResponse {
 /// Requests to create a new faction with the player within it
 #[derive(Event, Debug, Serialize, Deserialize, Clone)]
 pub struct PlayerCreateFactionEvent {
+    /// The name of the faction to create
     pub faction_name: String,
 }
 
@@ -104,6 +114,8 @@ impl NettyEvent for PlayerInviteToFactionEvent {
 /// This does nothing if the player is not currently invited to this faction
 #[derive(Event, Debug, Serialize, Deserialize, Clone)]
 pub struct PlayerAcceptFactionInvitation {
+    /// Accepts the invvitation to join this faction. There must be a valid invite for this to do
+    /// anything.
     pub faction_id: FactionId,
 }
 
@@ -120,8 +132,11 @@ impl NettyEvent for PlayerAcceptFactionInvitation {
 }
 
 #[derive(Event, Debug, Serialize, Deserialize, Clone)]
+/// Changes a structure to the player's faction or removes the faction
 pub struct SwapToPlayerFactionEvent {
+    /// The structure we are swapping
     pub to_swap: Entity,
+    /// The type of swap we are doing (swap/remove)
     pub action: FactionSwapAction,
 }
 
