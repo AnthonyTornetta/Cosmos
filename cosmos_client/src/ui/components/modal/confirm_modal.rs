@@ -4,13 +4,12 @@ use crate::{
         components::{
             button::{CosmosButton, register_button},
             modal::{Modal, ModalBody},
-            text_input::{InputType, InputValue, TextInput},
         },
         font::DefaultFont,
     },
 };
 
-use bevy::{color::palettes::css, input_focus::InputFocus, prelude::*};
+use bevy::{color::palettes::css, prelude::*};
 use cosmos_core::ecs::NeedsDespawned;
 
 #[derive(Default)]
@@ -37,10 +36,10 @@ fn on_add_text_modal(
     for (modal_ent, modal, modal_body) in q_text_modal.iter() {
         commands.entity(modal_body.0).with_children(|p| {
             p.spawn(
-                (Node {
+                Node {
                     flex_direction: FlexDirection::Column,
                     ..Default::default()
-                }),
+                },
             )
             .with_children(|p| {
                 p.spawn((
@@ -57,7 +56,7 @@ fn on_add_text_modal(
                     },
                 ));
 
-                p.spawn((Node { ..Default::default() })).with_children(|p| match modal.buttons {
+                p.spawn(Node { ..Default::default() }).with_children(|p| match modal.buttons {
                     TextModalButtons::YesNo => {
                         p.spawn((
                             ModalEntity(modal_ent),

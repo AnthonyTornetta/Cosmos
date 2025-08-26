@@ -24,7 +24,7 @@ macro_rules! create_private_button_event {
         #[derive(Event, Debug, Clone, Copy)]
         struct $name(#[allow(unused)] pub Entity);
 
-        impl crate::ui::components::button::ButtonEvent for $name {
+        impl $crate::ui::components::button::ButtonEvent for $name {
             fn create_event(btn_entity: Entity) -> Self {
                 Self(btn_entity)
             }
@@ -38,7 +38,7 @@ macro_rules! create_button_event {
         #[derive(Event, Debug, Clone, Copy)]
         struct $name(#[allow(unused)] pub Entity);
 
-        impl crate::ui::components::button::ButtonEvent for $name {
+        impl $crate::ui::components::button::ButtonEvent for $name {
             fn create_event(btn_entity: Entity) -> Self {
                 Self(btn_entity)
             }

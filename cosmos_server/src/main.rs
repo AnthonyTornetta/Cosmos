@@ -3,7 +3,6 @@
 #![feature(duration_constructors)]
 #![feature(iter_array_chunks)]
 #![feature(iterator_try_collect)]
-#![feature(duration_constructors_lite)]
 #![warn(missing_docs)]
 // This one has a stupid rule where if you have `fn (&self) -> HasLifetime`, you need to do `fn (&self) -> HasLifetime<'_>`. This is stupid.
 #![allow(mismatched_lifetime_syntaxes)]

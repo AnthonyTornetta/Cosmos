@@ -9,7 +9,6 @@ use crate::{
             tabbed_view::{Tab, TabbedView},
             window::GuiWindow,
         },
-        font::DefaultFont,
         master_menu::{faction::FactionDisplay, quest::QuestDisplay},
     },
 };

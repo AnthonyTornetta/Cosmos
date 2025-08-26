@@ -36,11 +36,11 @@ create_button_event!(InviteToFaction);
 
 fn render_with_faction(p: &mut RelatedSpawnerCommands<ChildOf>, faction: &Faction, font: &DefaultFont) {
     p.spawn(
-        (Node {
+        Node {
             flex_direction: FlexDirection::Column,
             margin: UiRect::all(Val::Px(20.0)),
             ..Default::default()
-        }),
+        },
     )
     .with_children(|p| {
         p.spawn((
@@ -58,19 +58,19 @@ fn render_with_faction(p: &mut RelatedSpawnerCommands<ChildOf>, faction: &Factio
         ));
 
         p.spawn(
-            (Node {
+            Node {
                 flex_grow: 1.0,
                 ..Default::default()
-            }),
+            },
         )
         .with_children(|p| {
             p.spawn(
-                (Node {
+                Node {
                     flex_direction: FlexDirection::Column,
                     flex_grow: 1.0,
                     margin: UiRect::right(Val::Px(10.0)),
                     ..Default::default()
-                }),
+                },
             )
             .with_children(|p| {
                 p.spawn((
@@ -117,12 +117,12 @@ fn render_with_faction(p: &mut RelatedSpawnerCommands<ChildOf>, faction: &Factio
             });
 
             p.spawn(
-                (Node {
+                Node {
                     flex_direction: FlexDirection::Column,
                     flex_grow: 1.0,
                     margin: UiRect::left(Val::Px(10.0)),
                     ..Default::default()
-                }),
+                },
             )
             .with_children(|p| {
                 p.spawn((
@@ -159,11 +159,11 @@ fn render_with_faction(p: &mut RelatedSpawnerCommands<ChildOf>, faction: &Factio
 
 fn render_no_faction(p: &mut RelatedSpawnerCommands<ChildOf>, font: &DefaultFont) {
     p.spawn(
-        (Node {
+        Node {
             flex_direction: FlexDirection::Column,
             margin: UiRect::all(Val::Px(50.0)),
             ..Default::default()
-        }),
+        },
     )
     .with_children(|p| {
         p.spawn((
@@ -242,7 +242,7 @@ fn on_create_faction_click(
     q_faction_box: Query<Entity, With<FactionNameBox>>,
     mut commands: Commands,
 ) {
-    if !evr_create_faction.read().next().is_some() {
+    if evr_create_faction.read().next().is_none() {
         return;
     }
 

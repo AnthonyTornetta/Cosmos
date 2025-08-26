@@ -39,21 +39,21 @@ fn on_add_text_modal(
     for (modal_ent, modal, modal_body) in q_text_modal.iter() {
         commands.entity(modal_body.0).with_children(|p| {
             p.spawn(
-                (Node {
+                Node {
                     flex_direction: FlexDirection::Column,
                     flex_grow: 1.0,
                     width: Val::Percent(100.0),
                     ..Default::default()
-                }),
+                },
             )
             .with_children(|p| {
                 let mut ent = None;
                 p.spawn(
-                    (Node {
+                    Node {
                         flex_grow: 1.0,
                         margin: UiRect::all(Val::Px(10.0)),
                         ..Default::default()
-                    }),
+                    },
                 )
                 .with_children(|p| {
                     ent = Some(
@@ -82,10 +82,10 @@ fn on_add_text_modal(
                 focus.set(ent);
 
                 p.spawn(
-                    (Node {
+                    Node {
                         width: Val::Percent(100.0),
                         ..Default::default()
-                    }),
+                    },
                 )
                 .with_children(|p| match modal.buttons {
                     TextModalButtons::OkCancel => {
