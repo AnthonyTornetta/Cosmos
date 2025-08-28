@@ -10,6 +10,7 @@ use crate::{
             tabbed_view::{Tab, TabbedView},
             window::GuiWindow,
         },
+        master_menu::quest::QuestDisplay,
     },
 };
 
@@ -26,7 +27,6 @@ fn open_config_menu(
 
     if toggle_menu && !q_open_menu.is_empty() {
         if let Ok(open) = q_open_menu.single() {
-            info!("Closing!");
             commands.entity(open).insert(NeedsDespawned);
         }
         return;
@@ -34,7 +34,6 @@ fn open_config_menu(
 
     let Ok(pilot) = q_pilot.single() else {
         if let Ok(open) = q_open_menu.single() {
-            info!("Closing!");
             commands.entity(open).insert(NeedsDespawned);
         }
         return;
@@ -44,7 +43,6 @@ fn open_config_menu(
         return;
     }
 
-    info!("Opening!");
     commands
         .spawn((
             OpenShipMenu,
@@ -81,7 +79,14 @@ fn open_config_menu(
             .with_children(|p| {
                 p.spawn((ShipSystemsUi::new(pilot.entity), Tab::new("Systems")));
                 p.spawn((ShipDetailsUi::new(pilot.entity), Tab::new("Details")));
-                p.spawn((Text::new("quests"), Tab::new("Quests")));
+                p.spawn((
+                    QuestDisplay,
+                    Node {
+                        flex_grow: 1.0,
+                        ..Default::default()
+                    },
+                    Tab::new("Quests"),
+                ));
             });
         });
 }

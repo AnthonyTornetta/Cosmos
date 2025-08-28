@@ -16,7 +16,7 @@ use crate::{
 };
 
 mod faction;
-mod quest;
+pub mod quest;
 
 #[derive(Component)]
 struct OpenMasterMenu;

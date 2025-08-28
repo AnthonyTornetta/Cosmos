@@ -76,6 +76,27 @@ fn render_ui(
     ordering: &StructureSystemOrdering,
     lang: &Lang<StructureSystemType>,
 ) {
+    let n_systems = systems
+        .all_activatable_systems()
+        .filter(|x| q_structure_system.contains(*x))
+        .count();
+
+    if n_systems == 0 {
+        p.spawn((
+            Node {
+                margin: UiRect::all(Val::Px(20.0)),
+                ..Default::default()
+            },
+            TextFont {
+                font: font.get(),
+                font_size: 24.0,
+                ..Default::default()
+            },
+            Text::new("No Ship Systems!"),
+        ));
+        return;
+    }
+
     for (system, system_type) in systems
         .all_activatable_systems()
         .flat_map(|x| q_structure_system.get(x))
