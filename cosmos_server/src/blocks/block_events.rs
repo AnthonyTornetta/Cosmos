@@ -128,12 +128,12 @@ fn handle_block_break_events(
                 .and_then(|id| factions.from_id(id))
                 .map(|fac| fac.id() != broken_fac.id())
                 .unwrap_or(true)
-            {
-                if let Ok(player) = q_player.get(ev.breaker) {
-                    nevw_invalid_break.write(InvalidBlockBreakEventReason::DifferentFaction, player.client_id());
-                }
-                continue;
-            };
+        {
+            if let Ok(player) = q_player.get(ev.breaker) {
+                nevw_invalid_break.write(InvalidBlockBreakEventReason::DifferentFaction, player.client_id());
+            }
+            continue;
+        };
 
         // This is a temporary fix for mining lasers - eventually these items will have specified destinations,
         // but for now just throw them where ever there is space. This will get horribly laggy as there are more
@@ -498,12 +498,12 @@ fn handle_block_place_events(
                 .and_then(|id| factions.from_id(id))
                 .map(|fac| fac.id() != broken_fac.id())
                 .unwrap_or(true)
-            {
-                if let Ok(player) = q_player.get(place_event_data.placer) {
-                    nevw_invalid_place.write(InvalidBlockPlaceEventReason::DifferentFaction, player.client_id());
-                }
-                continue;
-            };
+        {
+            if let Ok(player) = q_player.get(place_event_data.placer) {
+                nevw_invalid_place.write(InvalidBlockPlaceEventReason::DifferentFaction, player.client_id());
+            }
+            continue;
+        };
 
         let Ok(mut structure) = query.get_mut(place_event_data.structure_block.structure()) else {
             continue;
