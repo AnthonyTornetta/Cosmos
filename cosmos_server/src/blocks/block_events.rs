@@ -121,8 +121,8 @@ fn handle_block_break_events(
     q_player: Query<&Player>,
 ) {
     for ev in event_reader.read() {
-        if let Some(broken_fac) = q_faction.get(ev.block.structure()).ok().and_then(|id| factions.from_id(id)) {
-            if q_faction
+        if let Some(broken_fac) = q_faction.get(ev.block.structure()).ok().and_then(|id| factions.from_id(id))
+            && q_faction
                 .get(ev.breaker)
                 .ok()
                 .and_then(|id| factions.from_id(id))
@@ -134,7 +134,6 @@ fn handle_block_break_events(
                 }
                 continue;
             };
-        }
 
         // This is a temporary fix for mining lasers - eventually these items will have specified destinations,
         // but for now just throw them where ever there is space. This will get horribly laggy as there are more
@@ -493,8 +492,7 @@ fn handle_block_place_events(
             .get(place_event_data.structure_block.structure())
             .ok()
             .and_then(|id| factions.from_id(id))
-        {
-            if q_faction
+            && q_faction
                 .get(place_event_data.placer)
                 .ok()
                 .and_then(|id| factions.from_id(id))
@@ -506,7 +504,6 @@ fn handle_block_place_events(
                 }
                 continue;
             };
-        }
 
         let Ok(mut structure) = query.get_mut(place_event_data.structure_block.structure()) else {
             continue;
