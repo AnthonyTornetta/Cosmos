@@ -4,6 +4,7 @@ use cosmos_core::{economy::Credits, netty::client::LocalPlayer, state::GameState
 use super::reactivity::{BindValue, BindValues, ReactableFields};
 
 mod alignment;
+pub mod error;
 mod interactable_block;
 mod looking_at_tooltips;
 pub mod tooltip;
@@ -56,6 +57,7 @@ pub(super) fn register(app: &mut App) {
     looking_at_tooltips::register(app);
     alignment::register(app);
     interactable_block::register(app);
+    error::register(app);
 
     app.add_systems(OnEnter(GameState::Playing), create_credits_node)
         .add_systems(Update, create_credits_node.run_if(in_state(GameState::Playing)));

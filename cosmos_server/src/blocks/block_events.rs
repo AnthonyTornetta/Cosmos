@@ -14,11 +14,13 @@ use cosmos_core::{
         blocks::AIR_BLOCK_ID,
         data::BlockData,
     },
+    entities::player::Player,
     events::block_events::{BlockChangedEvent, BlockDataChangedEvent},
+    faction::{FactionId, Factions},
     netty::{
         NettyChannelServer, cosmos_encoder,
         server_reliable_messages::{BlockChanged, BlocksChangedPacket, ServerReliableMessages},
-        sync::IdentifiableComponent,
+        sync::{IdentifiableComponent, events::server_event::NettyEventWriter},
         system_sets::NetworkingSystemsSet,
     },
     prelude::Structure,
@@ -113,8 +115,26 @@ fn handle_block_break_events(
     has_data: Res<ItemShouldHaveData>,
     q_pilot: Query<&Pilot>,
     drops: Res<BlockDrops>,
+    q_faction: Query<&FactionId>,
+    factions: Res<Factions>,
+    mut nevw_invalid_break: NettyEventWriter<InvalidBlockBreakEventReason>,
+    q_player: Query<&Player>,
 ) {
     for ev in event_reader.read() {
+        if let Some(broken_fac) = q_faction.get(ev.block.structure()).ok().and_then(|id| factions.from_id(id))
+            && q_faction
+                .get(ev.breaker)
+                .ok()
+                .and_then(|id| factions.from_id(id))
+                .map(|fac| fac.id() != broken_fac.id())
+                .unwrap_or(true)
+        {
+            if let Ok(player) = q_player.get(ev.breaker) {
+                nevw_invalid_break.write(InvalidBlockBreakEventReason::DifferentFaction, player.client_id());
+            }
+            continue;
+        };
+
         // This is a temporary fix for mining lasers - eventually these items will have specified destinations,
         // but for now just throw them where ever there is space. This will get horribly laggy as there are more
         // structures in the game
@@ -139,7 +159,11 @@ fn handle_block_break_events(
                 // ship core               some other block
                 if itr.next().is_some() && itr.next().is_some() {
                     // Do not allow player to mine ship core if another block exists on the ship
-                    return;
+
+                    if let Ok(player) = q_player.get(ev.breaker) {
+                        nevw_invalid_break.write(InvalidBlockBreakEventReason::StructureCore, player.client_id());
+                    };
+                    continue;
                 }
             }
 
@@ -444,6 +468,10 @@ fn handle_block_place_events(
     blocks: Res<Registry<Block>>,
     block_items: Res<BlockItems>,
     mut commands: Commands,
+    q_faction: Query<&FactionId>,
+    factions: Res<Factions>,
+    mut nevw_invalid_place: NettyEventWriter<InvalidBlockPlaceEventReason>,
+    q_player: Query<&Player>,
 ) {
     for ev in event_reader.read() {
         let place_event = ev.read();
@@ -459,6 +487,23 @@ fn handle_block_place_events(
         // Even if nothing gets placed, the client will assume there was something placed.
         // Thus, we still want to update the client about their inventory to make sure their inventory is up-to-date.
         inv.set_changed();
+
+        if let Some(broken_fac) = q_faction
+            .get(place_event_data.structure_block.structure())
+            .ok()
+            .and_then(|id| factions.from_id(id))
+            && q_faction
+                .get(place_event_data.placer)
+                .ok()
+                .and_then(|id| factions.from_id(id))
+                .map(|fac| fac.id() != broken_fac.id())
+                .unwrap_or(true)
+        {
+            if let Ok(player) = q_player.get(place_event_data.placer) {
+                nevw_invalid_place.write(InvalidBlockPlaceEventReason::DifferentFaction, player.client_id());
+            }
+            continue;
+        };
 
         let Ok(mut structure) = query.get_mut(place_event_data.structure_block.structure()) else {
             continue;

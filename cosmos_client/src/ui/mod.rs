@@ -13,6 +13,7 @@ pub mod hotbar;
 mod hud;
 pub mod item_renderer;
 pub mod main_menu;
+pub mod master_menu;
 pub mod message;
 pub mod pause;
 pub mod reactivity;
@@ -116,6 +117,7 @@ pub(super) fn register(app: &mut App) {
     settings::register(app);
     focus_cam::register(app);
     hide::register(app);
+    master_menu::register(app);
 
     app.configure_sets(Update, (UiSystemSet::PreDoUi, UiSystemSet::DoUi, UiSystemSet::FinishUi).chain())
         .register_type::<OpenMenu>()

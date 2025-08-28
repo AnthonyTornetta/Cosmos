@@ -1,54 +1,50 @@
-use bevy::{color::palettes::css, prelude::*};
+//! The menu that contains all sub-menu that can be accessed when not flying a ship
+
+use bevy::prelude::*;
 use cosmos_core::{ecs::NeedsDespawned, netty::client::LocalPlayer, state::GameState, structure::ship::pilot::Pilot};
 
 use crate::{
     input::inputs::{CosmosInputs, InputChecker, InputHandler},
-    structure::ship::ui::{details::ShipDetailsUi, ship_systems::ShipSystemsUi},
     ui::{
         OpenMenu,
         components::{
             tabbed_view::{Tab, TabbedView},
             window::GuiWindow,
         },
-        master_menu::quest::QuestDisplay,
+        master_menu::{faction::FactionDisplay, quest::QuestDisplay},
     },
 };
 
+mod faction;
+pub mod quest;
+
 #[derive(Component)]
-struct OpenShipMenu;
+struct OpenMasterMenu;
 
-fn open_config_menu(
-    q_open_menu: Query<Entity, With<OpenShipMenu>>,
-    inputs: InputChecker,
+fn toggle_menu(
+    q_piloting: Query<(), (With<LocalPlayer>, With<Pilot>)>,
+    q_open_menu: Query<Entity, With<OpenMasterMenu>>,
     mut commands: Commands,
-    q_pilot: Query<&Pilot, With<LocalPlayer>>,
+    inputs: InputChecker,
 ) {
-    let toggle_menu = inputs.check_just_pressed(CosmosInputs::OpenShipConfiguration);
-
-    if toggle_menu && !q_open_menu.is_empty() {
-        if let Ok(open) = q_open_menu.single() {
-            commands.entity(open).insert(NeedsDespawned);
-        }
+    if !inputs.check_just_pressed(CosmosInputs::OpenShipConfiguration) {
         return;
     }
 
-    let Ok(pilot) = q_pilot.single() else {
-        if let Ok(open) = q_open_menu.single() {
-            commands.entity(open).insert(NeedsDespawned);
-        }
+    if !q_piloting.is_empty() {
         return;
-    };
+    }
 
-    if !toggle_menu {
+    if let Ok(ent) = q_open_menu.single() {
+        commands.entity(ent).insert(NeedsDespawned);
         return;
     }
 
     commands
         .spawn((
-            OpenShipMenu,
-            Name::new("Ship Config Menu"),
+            OpenMasterMenu,
             GuiWindow {
-                title: "Ship".into(),
+                title: "Datapad".into(),
                 body_styles: Node {
                     flex_grow: 1.0,
                     flex_direction: FlexDirection::Column,
@@ -56,16 +52,15 @@ fn open_config_menu(
                 },
                 ..Default::default()
             },
-            OpenMenu::new(0),
-            BorderColor(css::DARK_GREY.into()),
             Node {
                 margin: UiRect::all(Val::Auto),
                 position_type: PositionType::Absolute,
-                width: Val::Px(600.0),
+                width: Val::Px(800.0),
                 height: Val::Px(800.0),
                 border: UiRect::all(Val::Px(2.0)),
                 ..Default::default()
             },
+            OpenMenu::new(0),
         ))
         .with_children(|p| {
             p.spawn((
@@ -77,20 +72,29 @@ fn open_config_menu(
                 },
             ))
             .with_children(|p| {
-                p.spawn((ShipSystemsUi::new(pilot.entity), Tab::new("Systems")));
-                p.spawn((ShipDetailsUi::new(pilot.entity), Tab::new("Details")));
                 p.spawn((
-                    QuestDisplay,
+                    Tab::new("Missions"),
                     Node {
                         flex_grow: 1.0,
                         ..Default::default()
                     },
-                    Tab::new("Quests"),
+                    QuestDisplay,
+                ));
+                p.spawn((
+                    Tab::new("Faction"),
+                    Node {
+                        flex_grow: 1.0,
+                        ..Default::default()
+                    },
+                    FactionDisplay,
                 ));
             });
         });
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_systems(Update, open_config_menu.run_if(in_state(GameState::Playing)));
+    faction::register(app);
+    quest::register(app);
+
+    app.add_systems(Update, toggle_menu.run_if(in_state(GameState::Playing)));
 }

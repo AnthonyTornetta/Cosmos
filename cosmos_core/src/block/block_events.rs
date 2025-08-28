@@ -1,8 +1,12 @@
 //! Contains the various types of block events
 
 use bevy::prelude::*;
+use serde::{Deserialize, Serialize};
 
-use crate::structure::structure_block::StructureBlock;
+use crate::{
+    netty::sync::events::netty_event::{IdentifiableEvent, NettyEvent, SyncedEventImpl},
+    structure::structure_block::StructureBlock,
+};
 
 use super::block_rotation::BlockRotation;
 
@@ -15,6 +19,28 @@ pub struct BlockBreakEvent {
     pub block: StructureBlock,
     /// The block that was broken's id
     pub broken_id: u16,
+}
+
+#[derive(Debug, Event, Serialize, Deserialize, Clone, Copy)]
+/// A block was attempted to be broken, but was rejected by the server. Sent to the client
+pub enum InvalidBlockBreakEventReason {
+    /// The structure this block was broken on does not allow breaking by this player
+    DifferentFaction,
+    /// The structure's core block (ship core or station core) must be the last block a player
+    /// breaks.
+    StructureCore,
+}
+
+impl IdentifiableEvent for InvalidBlockBreakEventReason {
+    fn unlocalized_name() -> &'static str {
+        "cosmos:invalid_block_break_event_reason"
+    }
+}
+
+impl NettyEvent for InvalidBlockBreakEventReason {
+    fn event_receiver() -> crate::netty::sync::events::netty_event::EventReceiver {
+        crate::netty::sync::events::netty_event::EventReceiver::Client
+    }
 }
 
 /// This is sent whenever a player interacts with a block
@@ -31,6 +57,25 @@ pub struct BlockInteractEvent {
     /// If the block being interacted with has two modes of interaction, this should be used to trigger
     /// the second mode.
     pub alternate: bool,
+}
+
+#[derive(Debug, Event, Serialize, Deserialize, Clone, Copy)]
+/// A block was attempted to be interacted with, but was rejected by the server. Sent to the client
+pub enum InvalidBlockInteractEventReason {
+    /// The structure this block was interacted with does not allow interactions by this player
+    DifferentFaction,
+}
+
+impl IdentifiableEvent for InvalidBlockInteractEventReason {
+    fn unlocalized_name() -> &'static str {
+        "cosmos:invalid_block_interact_event_reason"
+    }
+}
+
+impl NettyEvent for InvalidBlockInteractEventReason {
+    fn event_receiver() -> crate::netty::sync::events::netty_event::EventReceiver {
+        crate::netty::sync::events::netty_event::EventReceiver::Client
+    }
 }
 
 #[derive(Debug, Event)]
@@ -59,6 +104,24 @@ pub struct BlockPlaceEventData {
     pub placer: Entity,
 }
 
+#[derive(Debug, Event, Serialize, Deserialize, Clone, Copy)]
+/// A block was attempted to be placed, but was rejected by the server. Sent to the client
+pub enum InvalidBlockPlaceEventReason {
+    /// The structure this block was placed on does not allow placements by this player
+    DifferentFaction,
+}
+
+impl IdentifiableEvent for InvalidBlockPlaceEventReason {
+    fn unlocalized_name() -> &'static str {
+        "cosmos:invalid_block_place_event_reason"
+    }
+}
+
+impl NettyEvent for InvalidBlockPlaceEventReason {
+    fn event_receiver() -> crate::netty::sync::events::netty_event::EventReceiver {
+        crate::netty::sync::events::netty_event::EventReceiver::Client
+    }
+}
 #[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
 /// The event set used for processing block events
 pub enum BlockEventsSet {
@@ -97,5 +160,8 @@ pub(super) fn register(app: &mut App) {
             BlockEventsSet::SendEventsForNextFrame,
         )
             .chain(), // .after(StructureLoadingSet::StructureLoaded),
-    );
+    )
+    .add_netty_event::<InvalidBlockBreakEventReason>()
+    .add_netty_event::<InvalidBlockPlaceEventReason>()
+    .add_netty_event::<InvalidBlockInteractEventReason>();
 }

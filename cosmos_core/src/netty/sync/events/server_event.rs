@@ -45,7 +45,7 @@ pub struct NettyEventReceived<T: NettyEvent> {
 }
 
 /// Send your [`NettyEvent`] via this before [`NetworkingSystemsSet::SyncComponents`] to have it
-/// automatically sent to the server.
+/// automatically sent to the client.
 #[derive(SystemParam)]
 pub struct NettyEventWriter<'w, T: NettyEvent> {
     ev_writer: EventWriter<'w, NettyEventToSend<T>>,
@@ -151,8 +151,13 @@ fn parse_event<T: NettyEvent>(
             continue;
         }
 
-        let Ok(event) = cosmos_encoder::deserialize_uncompressed::<T>(&ev.raw_data) else {
-            error!("Got invalid event from client!");
+        let Ok(event) = cosmos_encoder::deserialize_uncompressed::<T>(&ev.raw_data).map_err(|e| {
+            error!(
+                "Got invalid event from client! ({}) {e:?} - {:?}",
+                T::unlocalized_name(),
+                ev.raw_data
+            )
+        }) else {
             continue;
         };
 

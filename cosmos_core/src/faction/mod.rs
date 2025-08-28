@@ -1,11 +1,14 @@
 //! Factions
 
-use bevy::{platform::collections::HashMap, prelude::*};
+use bevy::{
+    platform::collections::{HashMap, HashSet},
+    prelude::*,
+};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 use crate::{
-    entities::EntityId,
+    entities::{EntityId, player::Player},
     netty::sync::{
         IdentifiableComponent, SyncableComponent,
         resources::{SyncableResource, sync_resource},
@@ -35,13 +38,40 @@ pub struct FactionSettings {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, Reflect)]
+/// A player in a faction.
+///
+/// Stores basic information about the player that may be out of date, such as their name.
+pub struct FactionPlayer {
+    /// The player's entity id
+    pub entity_id: EntityId,
+    /// This name may be out of date, but good enough for easy display
+    pub name: String,
+}
+
+impl FactionPlayer {
+    /// Creates a new faction player referring to this player. Please make sure this entity id
+    /// matches this player
+    pub fn new(entity_id: EntityId, player: &Player) -> Self {
+        Self {
+            entity_id,
+            name: player.name().to_owned(),
+        }
+    }
+
+    /// Returns the cached name of this player
+    pub fn name(&self) -> &str {
+        &self.name
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, Reflect)]
 /// A collection of players/NPCs under a common team
 ///
 /// Not every player will have a faction.
 pub struct Faction {
     id: FactionId,
     name: String,
-    players: Vec<EntityId>,
+    players: Vec<FactionPlayer>,
     relationships: HashMap<FactionId, FactionRelation>,
     at_war_with: Vec<EntityId>,
     settings: FactionSettings,
@@ -54,7 +84,7 @@ impl Faction {
     ///   [`FactionSettings`] specifies otherwise.
     pub fn new(
         name: String,
-        players: Vec<EntityId>,
+        players: Vec<FactionPlayer>,
         relationships: HashMap<FactionId, FactionRelation>,
         settings: FactionSettings,
     ) -> Self {
@@ -126,6 +156,30 @@ impl Faction {
     pub fn name(&self) -> &str {
         &self.name
     }
+
+    /// Adds a player to this faction
+    pub fn add_player(&mut self, player: FactionPlayer) {
+        if !self.players.iter().any(|x| x.entity_id == player.entity_id) {
+            self.players.push(player);
+        }
+    }
+
+    /// Removes a player from this faction if they are in it
+    pub fn remove_player(&mut self, player_id: EntityId) {
+        if let Some((idx, _)) = self.players.iter().enumerate().find(|(_, x)| x.entity_id == player_id) {
+            self.players.remove(idx);
+        }
+    }
+
+    /// Iterates over all players in this faction
+    pub fn players(&self) -> impl Iterator<Item = &FactionPlayer> {
+        self.players.iter()
+    }
+
+    /// Checks if this faction has no players. AI only factions will count as empty.
+    pub fn is_empty(&self) -> bool {
+        self.players.is_empty()
+    }
 }
 
 #[derive(Clone, Copy, Component, Debug, PartialEq, Eq, Hash, Serialize, Deserialize, Reflect, Default)]
@@ -178,6 +232,23 @@ impl Factions {
         self.0.get(id)
     }
 
+    /// Gets a faction from this id
+    pub fn from_id_mut(&mut self, id: &FactionId) -> Option<&mut Faction> {
+        self.0.get_mut(id)
+    }
+
+    /// Removes a faction from the game.
+    pub fn remove_faction(&mut self, id: &FactionId) -> Option<Faction> {
+        self.0.remove(id)
+    }
+
+    /// Returns if there already contains a faction with a name similar to this. This does NOT mean
+    /// [`Self::from_name`] will return a faction for this valid.
+    pub fn is_name_unique(&self, name: &str) -> bool {
+        let stripped = name.replace(" ", "").to_lowercase();
+        !self.0.values().any(|x| x.name.replace(" ", "").to_lowercase() == stripped)
+    }
+
     /// Gets a faction that matches this name (case sensitive).
     pub fn from_name(&self, name: &str) -> Option<&Faction> {
         self.0.values().find(|x| x.name == name)
@@ -222,12 +293,70 @@ impl SyncableResource for Factions {
     }
 }
 
+#[derive(Component, Clone, Debug, Reflect, Serialize, Deserialize, PartialEq, Eq, Default)]
+/// A list of factions this player has been invited to
+///
+/// This will be cleared when the player disconnects
+pub struct FactionInvites(HashSet<FactionId>);
+
+impl FactionInvites {
+    /// Creates a [`FactionInvites`] list with an invite to this faction
+    pub fn with_invite(faction: FactionId) -> Self {
+        let mut s = Self::default();
+        s.add_invite(faction);
+        s
+    }
+
+    /// Checks if this contains an invite to this faction
+    pub fn contains(&self, faction: FactionId) -> bool {
+        self.0.contains(&faction)
+    }
+
+    /// Adds an invite to this faction (or does nothing if one already exists)
+    pub fn add_invite(&mut self, faction: FactionId) {
+        self.0.insert(faction);
+    }
+
+    /// Removes the invite to this faction (or does nothing if none exist)
+    pub fn remove_invite(&mut self, faction: FactionId) {
+        self.0.remove(&faction);
+    }
+
+    /// Iterates over all factions they have been invited to
+    ///
+    /// Some of these may no longer be valid IDs, so make sure to properly handle that case
+    pub fn iter(&self) -> impl Iterator<Item = FactionId> {
+        self.0.iter().copied()
+    }
+
+    /// Checks if there are no invites (valid or invalid).
+    pub fn is_empty(&self) -> bool {
+        self.0.is_empty()
+    }
+}
+
+impl IdentifiableComponent for FactionInvites {
+    fn get_component_unlocalized_name() -> &'static str {
+        "cosmos:faction_invites"
+    }
+}
+
+impl SyncableComponent for FactionInvites {
+    fn get_sync_type() -> crate::netty::sync::SyncType {
+        crate::netty::sync::SyncType::ServerAuthoritative
+    }
+}
+
 pub(super) fn register(app: &mut App) {
+    events::register(app);
+
     sync_resource::<Factions>(app);
     sync_component::<FactionId>(app);
+    sync_component::<FactionInvites>(app);
 
     app.register_type::<FactionRelation>()
         .register_type::<Faction>()
         .register_type::<Uuid>()
-        .register_type::<FactionId>();
+        .register_type::<FactionId>()
+        .register_type::<FactionInvites>();
 }

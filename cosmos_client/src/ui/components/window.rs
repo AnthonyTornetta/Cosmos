@@ -86,87 +86,92 @@ fn add_window(
             .map(|x| x.iter().filter(|x| q_title_bar.contains(*x)).collect::<Vec<_>>())
             .unwrap_or_default();
 
-        commands.entity(ent).with_children(|parent| {
-            // Title bar
+        style.border = UiRect::all(Val::Px(2.0));
 
-            let mut title_bar = parent.spawn((
-                Name::new("Title Bar"),
-                TitleBar { window_entity: ent },
-                Interaction::None,
-                Node {
-                    display: Display::Flex,
-                    flex_direction: FlexDirection::Row,
-                    justify_content: JustifyContent::SpaceBetween,
-                    align_items: AlignItems::Center,
-                    width: Val::Percent(100.0),
-                    height: Val::Px(60.0),
-                    padding: UiRect::new(Val::Px(20.0), Val::Px(20.0), Val::Px(0.0), Val::Px(0.0)),
+        commands
+            .entity(ent)
+            .insert((BorderColor(Srgba::hex("#111").unwrap().into()), GlobalZIndex(5)))
+            .with_children(|parent| {
+                // Title bar
 
-                    ..default()
-                },
-                BackgroundColor(css::WHITE.into()),
-                ImageNode::new(window_assets.title_bar_image.clone_weak()),
-            ));
-
-            title_bar.with_children(|parent| {
-                parent.spawn((
-                    Name::new("Title Text"),
-                    Text::new(&window.title),
-                    TextFont {
-                        font_size: 24.0,
-                        font: font.clone(),
-                        ..Default::default()
-                    },
-                    TextLayout {
-                        justify: JustifyText::Center,
-                        ..Default::default()
-                    },
-                ));
-            });
-
-            for child in titlebar_children {
-                title_bar.add_child(child);
-            }
-
-            title_bar.with_children(|parent| {
-                parent.spawn((
-                    Name::new("Window Close Button"),
-                    close_button,
-                    BackgroundColor(css::WHITE.into()),
+                let mut title_bar = parent.spawn((
+                    Name::new("Title Bar"),
+                    TitleBar { window_entity: ent },
+                    Interaction::None,
                     Node {
-                        width: Val::Px(50.0),
-                        height: Val::Px(50.0),
-                        ..Default::default()
-                    },
-                    CosmosButton::<CloseUiEvent> {
-                        image: Some(ImageNode::new(window_assets.close_btn_image.clone_weak())),
-                        text: Some((
-                            "X".into(),
-                            TextFont {
-                                font_size: 24.0,
-                                font: font.clone(),
-                                ..Default::default()
-                            },
-                            Default::default(),
-                        )),
-                        ..Default::default()
-                    },
-                ));
-            });
+                        display: Display::Flex,
+                        flex_direction: FlexDirection::Row,
+                        justify_content: JustifyContent::SpaceBetween,
+                        align_items: AlignItems::Center,
+                        width: Val::Percent(100.0),
+                        height: Val::Px(60.0),
+                        padding: UiRect::new(Val::Px(20.0), Val::Px(20.0), Val::Px(0.0), Val::Px(0.0)),
 
-            window_body = Some(
-                parent
-                    .spawn((
-                        Name::new("Window Body"),
-                        window.window_background,
-                        Node {
-                            flex_grow: 1.0,
-                            ..window.body_styles.clone()
+                        ..default()
+                    },
+                    BackgroundColor(css::WHITE.into()),
+                    ImageNode::new(window_assets.title_bar_image.clone_weak()),
+                ));
+
+                title_bar.with_children(|parent| {
+                    parent.spawn((
+                        Name::new("Title Text"),
+                        Text::new(&window.title),
+                        TextFont {
+                            font_size: 24.0,
+                            font: font.clone(),
+                            ..Default::default()
                         },
-                    ))
-                    .id(),
-            );
-        });
+                        TextLayout {
+                            justify: JustifyText::Center,
+                            ..Default::default()
+                        },
+                    ));
+                });
+
+                for child in titlebar_children {
+                    title_bar.add_child(child);
+                }
+
+                title_bar.with_children(|parent| {
+                    parent.spawn((
+                        Name::new("Window Close Button"),
+                        close_button,
+                        BackgroundColor(css::WHITE.into()),
+                        Node {
+                            width: Val::Px(50.0),
+                            height: Val::Px(50.0),
+                            ..Default::default()
+                        },
+                        CosmosButton::<CloseUiEvent> {
+                            image: Some(ImageNode::new(window_assets.close_btn_image.clone_weak())),
+                            text: Some((
+                                "X".into(),
+                                TextFont {
+                                    font_size: 24.0,
+                                    font: font.clone(),
+                                    ..Default::default()
+                                },
+                                Default::default(),
+                            )),
+                            ..Default::default()
+                        },
+                    ));
+                });
+
+                window_body = Some(
+                    parent
+                        .spawn((
+                            Name::new("Window Body"),
+                            window.window_background,
+                            Node {
+                                flex_grow: 1.0,
+                                ..window.body_styles.clone()
+                            },
+                        ))
+                        .id(),
+                );
+            });
 
         if let Some(children) = children {
             let window_body = window_body.expect("Set above");

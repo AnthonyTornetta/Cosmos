@@ -18,6 +18,36 @@ pub trait ButtonEvent: Sized + Event + std::fmt::Debug {
     fn create_event(btn_entity: Entity) -> Self;
 }
 
+#[macro_export]
+/// Stupid - will be removed soon
+macro_rules! create_private_button_event {
+    ($name: ident) => {
+        #[derive(Event, Debug, Clone, Copy)]
+        struct $name(#[allow(unused)] pub Entity);
+
+        impl $crate::ui::components::button::ButtonEvent for $name {
+            fn create_event(btn_entity: Entity) -> Self {
+                Self(btn_entity)
+            }
+        }
+    };
+}
+
+#[macro_export]
+/// Stupid - will be removed soon
+macro_rules! create_button_event {
+    ($name: ident) => {
+        #[derive(Event, Debug, Clone, Copy)]
+        struct $name(#[allow(unused)] pub Entity);
+
+        impl $crate::ui::components::button::ButtonEvent for $name {
+            fn create_event(btn_entity: Entity) -> Self {
+                Self(btn_entity)
+            }
+        }
+    };
+}
+
 #[derive(Component, Debug)]
 #[require(Node)]
 /// A UI element that will send out events (of type `T`) when it is pressed.

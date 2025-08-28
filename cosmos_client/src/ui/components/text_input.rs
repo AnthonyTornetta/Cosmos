@@ -51,7 +51,7 @@ impl InputValue {
     }
 }
 
-#[derive(Debug, Reflect)]
+#[derive(Debug, Reflect, Clone, Copy)]
 /// Used to validate user input for a given TextInput field.
 pub enum InputType {
     /// Input can by anything, with an optional maximum length.
@@ -75,6 +75,12 @@ pub enum InputType {
     },
     // /// Input only valid if the given callback returns true for that input
     // Custom(fn(&str) -> bool),
+}
+
+impl Default for InputType {
+    fn default() -> Self {
+        Self::Text { max_length: None }
+    }
 }
 
 #[derive(Component, Debug, Reflect)]

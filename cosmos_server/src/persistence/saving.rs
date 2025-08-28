@@ -405,10 +405,14 @@ struct ShouldBeSaved;
 
 fn mark_savable_entities(
     mut commands: Commands,
-    q_savable: Query<Entity, (Without<ShouldBeSaved>, Or<((With<Location>, With<LoadingDistance>), With<DataFor>)>)>,
+    q_savable: Query<(Entity, Has<EntityId>), (Without<ShouldBeSaved>, Or<((With<Location>, With<LoadingDistance>), With<DataFor>)>)>,
 ) {
-    for ent in q_savable.iter() {
-        commands.entity(ent).insert(ShouldBeSaved);
+    for (ent, has_ent_id) in q_savable.iter() {
+        let mut ecmds = commands.entity(ent);
+        ecmds.insert(ShouldBeSaved);
+        if !has_ent_id {
+            ecmds.insert(EntityId::generate());
+        }
     }
 }
 

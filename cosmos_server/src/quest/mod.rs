@@ -3,8 +3,11 @@
 use bevy::prelude::*;
 use cosmos_core::{
     entities::player::Player,
-    netty::sync::events::server_event::NettyEventWriter,
-    quest::{ActiveQuest, CompleteQuestEvent, OngoingQuestDetails, OngoingQuests},
+    netty::{
+        server::ServerLobby,
+        sync::events::server_event::{NettyEventReceived, NettyEventWriter},
+    },
+    quest::{ActiveQuest, CompleteQuestEvent, OngoingQuestDetails, OngoingQuests, SetActiveQuestEvent},
 };
 
 use crate::persistence::{
@@ -82,6 +85,38 @@ fn clear_invalid_active_quest(q_active: Query<(Entity, &OngoingQuests, &ActiveQu
     }
 }
 
+fn on_set_ongoing(
+    mut nevr_ongoing_quest: EventReader<NettyEventReceived<SetActiveQuestEvent>>,
+    lobby: Res<ServerLobby>,
+    mut commands: Commands,
+    q_ongoing: Query<&OngoingQuests>,
+) {
+    for ev in nevr_ongoing_quest.read() {
+        let Some(player) = lobby.player_from_id(ev.client_id) else {
+            continue;
+        };
+
+        match ev.quest {
+            Some(q) => {
+                let Ok(ongoing) = q_ongoing.get(player) else {
+                    error!("Player {player:?} did not have ongoing quests!");
+                    continue;
+                };
+
+                if !ongoing.contains_ongoing(&q) {
+                    error!("Player set quest they didn't have as their active one!");
+                    continue;
+                }
+
+                commands.entity(player).insert(ActiveQuest(q));
+            }
+            None => {
+                commands.entity(player).remove::<ActiveQuest>();
+            }
+        }
+    }
+}
+
 pub(super) fn register(app: &mut App) {
     quests::register(app);
 
@@ -105,7 +140,8 @@ pub(super) fn register(app: &mut App) {
         (
             add_ongoing_quests.in_set(QuestsSet::AddOngoingQuestsComponent),
             on_complete_quest.in_set(QuestsSet::CompleteQuests),
-            clear_invalid_active_quest
+            (clear_invalid_active_quest, on_set_ongoing)
+                .chain()
                 .before(QuestsSet::CompleteQuests)
                 .after(QuestsSet::CreateNewQuests),
         ),

@@ -11,6 +11,8 @@ use std::fs;
 
 use crate::persistence::make_persistent::{DefaultPersistentComponent, make_persistent};
 
+mod events;
+
 fn load_factions(mut commands: Commands) {
     let factions = if let Ok(data) = fs::read("world/factions.bin") {
         // We want to panic if something is corrupted
@@ -48,6 +50,7 @@ impl DefaultPersistentComponent for FactionId {}
 
 pub(super) fn register(app: &mut App) {
     make_persistent::<FactionId>(app);
+    events::register(app);
 
     app.add_systems(
         FixedUpdate,

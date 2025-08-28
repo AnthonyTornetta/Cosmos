@@ -1,10 +1,12 @@
 //! All events that are related to blocks
 
-use bevy::prelude::*;
+use bevy::{color::palettes::css, prelude::*};
 use bevy_renet::renet::RenetClient;
 use cosmos_core::{
     block::{
-        block_events::{BlockEventsSet, BlockInteractEvent},
+        block_events::{
+            BlockEventsSet, BlockInteractEvent, InvalidBlockBreakEventReason, InvalidBlockInteractEventReason, InvalidBlockPlaceEventReason,
+        },
         block_rotation::BlockRotation,
     },
     netty::{
@@ -16,6 +18,8 @@ use cosmos_core::{
     state::GameState,
     structure::structure_block::StructureBlock,
 };
+
+use crate::ui::message::{HudMessage, HudMessages};
 
 #[derive(Debug, Event)]
 /// Sent when this client tries to breaks a block
@@ -97,13 +101,45 @@ fn handle_block_interact(
     }
 }
 
+fn show_errors(
+    mut nevr_block_place_error: EventReader<InvalidBlockPlaceEventReason>,
+    mut nevr_block_break_error: EventReader<InvalidBlockBreakEventReason>,
+    mut nevr_block_interact_error: EventReader<InvalidBlockInteractEventReason>,
+    mut hud_messages: ResMut<HudMessages>,
+) {
+    for ev in nevr_block_place_error.read() {
+        let reason = match ev {
+            InvalidBlockPlaceEventReason::DifferentFaction => "This structure belongs to a different faction.",
+        };
+
+        hud_messages.display_message(HudMessage::with_colored_string(reason, css::RED.into()));
+    }
+
+    for ev in nevr_block_interact_error.read() {
+        let reason = match ev {
+            InvalidBlockInteractEventReason::DifferentFaction => "This structure belongs to a different faction.",
+        };
+
+        hud_messages.display_message(HudMessage::with_colored_string(reason, css::RED.into()));
+    }
+
+    for ev in nevr_block_break_error.read() {
+        let reason = match ev {
+            InvalidBlockBreakEventReason::DifferentFaction => "This structure belongs to a different faction.",
+            InvalidBlockBreakEventReason::StructureCore => "The core of this structure must be the last block mined.",
+        };
+
+        hud_messages.display_message(HudMessage::with_colored_string(reason, css::RED.into()));
+    }
+}
+
 pub(super) fn register(app: &mut App) {
     app.add_event::<RequestBlockBreakEvent>()
         .add_event::<RequestBlockPlaceEvent>()
         .add_event::<BlockInteractEvent>()
         .add_systems(
             FixedUpdate,
-            (handle_block_break, handle_block_place, handle_block_interact)
+            (handle_block_break, handle_block_place, handle_block_interact, show_errors)
                 .in_set(BlockEventsSet::ProcessEventsPrePlacement)
                 .run_if(in_state(GameState::Playing)),
         );
