@@ -45,7 +45,7 @@ pub struct NettyEventReceived<T: NettyEvent> {
 }
 
 /// Send your [`NettyEvent`] via this before [`NetworkingSystemsSet::SyncComponents`] to have it
-/// automatically sent to the server.
+/// automatically sent to the client.
 #[derive(SystemParam)]
 pub struct NettyEventWriter<'w, T: NettyEvent> {
     ev_writer: EventWriter<'w, NettyEventToSend<T>>,
