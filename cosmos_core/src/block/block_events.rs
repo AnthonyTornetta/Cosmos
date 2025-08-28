@@ -22,8 +22,12 @@ pub struct BlockBreakEvent {
 }
 
 #[derive(Debug, Event, Serialize, Deserialize, Clone, Copy)]
+/// A block was attempted to be broken, but was rejected by the server. Sent to the client
 pub enum InvalidBlockBreakEventReason {
+    /// The structure this block was broken on does not allow breaking by this player
     DifferentFaction,
+    /// The structure's core block (ship core or station core) must be the last block a player
+    /// breaks.
     StructureCore,
 }
 
@@ -56,7 +60,9 @@ pub struct BlockInteractEvent {
 }
 
 #[derive(Debug, Event, Serialize, Deserialize, Clone, Copy)]
+/// A block was attempted to be interacted with, but was rejected by the server. Sent to the client
 pub enum InvalidBlockInteractEventReason {
+    /// The structure this block was interacted with does not allow interactions by this player
     DifferentFaction,
 }
 
@@ -99,7 +105,9 @@ pub struct BlockPlaceEventData {
 }
 
 #[derive(Debug, Event, Serialize, Deserialize, Clone, Copy)]
+/// A block was attempted to be placed, but was rejected by the server. Sent to the client
 pub enum InvalidBlockPlaceEventReason {
+    /// The structure this block was placed on does not allow placements by this player
     DifferentFaction,
 }
 

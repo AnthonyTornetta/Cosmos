@@ -1,3 +1,5 @@
+//! Quest-related UI menu
+
 use bevy::{color::palettes::css, prelude::*};
 use cosmos_core::{
     netty::{client::LocalPlayer, sync::events::client_event::NettyEventWriter},
@@ -20,6 +22,7 @@ use crate::{
 
 #[derive(Component)]
 #[require(Node)]
+/// Will render the default Quest UI on this Node entity
 pub struct QuestDisplay;
 
 fn on_add_quest_display(
