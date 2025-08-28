@@ -138,7 +138,7 @@ fn render_with_faction(p: &mut RelatedSpawnerCommands<ChildOf>, faction: &Factio
 
                 for player in faction.players() {
                     p.spawn((
-                        Text::new(format!("{player:?}")),
+                        Text::new(player.name()),
                         TextFont {
                             font_size: 16.0,
                             font: font.get(),

@@ -3,7 +3,7 @@ use cosmos_core::{
     ecs::sets::FixedUpdateSet,
     entities::{EntityId, player::Player},
     faction::{
-        Faction, FactionId, FactionInvites, Factions,
+        Faction, FactionId, FactionInvites, FactionPlayer, Factions,
         events::{
             FactionSwapAction, PlayerAcceptFactionInvitation, PlayerCreateFactionEvent, PlayerCreateFactionEventResponse,
             PlayerDeclineFactionInvitation, PlayerInviteToFactionEvent, PlayerLeaveFactionEvent, SwapToPlayerFactionEvent,
@@ -68,13 +68,13 @@ fn on_swap_faction_from_player(
 fn on_create_faction(
     mut nevr_create_fac: EventReader<NettyEventReceived<PlayerCreateFactionEvent>>,
     lobby: Res<ServerLobby>,
-    q_player_in_faction: Query<&EntityId, (Without<FactionId>, With<Player>)>,
+    q_player_not_in_faction: Query<(&EntityId, &Player), Without<FactionId>>,
     mut factions: ResMut<Factions>,
     mut commands: Commands,
     mut nevw_response: NettyEventWriter<PlayerCreateFactionEventResponse>,
 ) {
     for ev in nevr_create_fac.read() {
-        let Some(player) = lobby.player_from_id(ev.client_id) else {
+        let Some(player_ent) = lobby.player_from_id(ev.client_id) else {
             error!("Failed - Invalid player!");
             nevw_response.write(PlayerCreateFactionEventResponse::ServerError, ev.client_id);
             continue;
@@ -86,7 +86,7 @@ fn on_create_faction(
             continue;
         }
 
-        let Ok(ent_id) = q_player_in_faction.get(player) else {
+        let Ok((ent_id, player)) = q_player_not_in_faction.get(player_ent) else {
             warn!("Failed - Already in faction!");
             nevw_response.write(PlayerCreateFactionEventResponse::AlreadyInFaction, ev.client_id);
             continue;
@@ -98,12 +98,17 @@ fn on_create_faction(
             continue;
         }
 
-        let faction = Faction::new(ev.faction_name.clone(), vec![*ent_id], Default::default(), Default::default());
+        let faction = Faction::new(
+            ev.faction_name.clone(),
+            vec![FactionPlayer::new(*ent_id, player)],
+            Default::default(),
+            Default::default(),
+        );
         let id = faction.id();
 
         info!("Creating faction {faction:?}");
 
-        commands.entity(player).insert(id).remove::<FactionInvites>();
+        commands.entity(player_ent).insert(id).remove::<FactionInvites>();
         factions.add_new_faction(faction);
 
         nevw_response.write(PlayerCreateFactionEventResponse::Success, ev.client_id);
@@ -168,16 +173,16 @@ fn on_invite_player(
 fn on_accept_invite(
     mut nevr_leave_faction: EventReader<NettyEventReceived<PlayerAcceptFactionInvitation>>,
     lobby: Res<ServerLobby>,
-    mut q_player_not_in_faction: Query<(&EntityId, &mut FactionInvites), (With<Player>, Without<FactionId>)>,
+    mut q_player_not_in_faction: Query<(&EntityId, &mut FactionInvites, &Player), Without<FactionId>>,
     mut factions: ResMut<Factions>,
     mut commands: Commands,
 ) {
     for ev in nevr_leave_faction.read() {
-        let Some(player) = lobby.player_from_id(ev.client_id) else {
+        let Some(player_ent) = lobby.player_from_id(ev.client_id) else {
             continue;
         };
 
-        let Ok((ent_id, mut invites)) = q_player_not_in_faction.get_mut(player) else {
+        let Ok((ent_id, mut invites, player)) = q_player_not_in_faction.get_mut(player_ent) else {
             continue;
         };
 
@@ -190,8 +195,8 @@ fn on_accept_invite(
             continue;
         };
 
-        fac.add_player(*ent_id);
-        commands.entity(player).insert(ev.faction_id).remove::<FactionInvites>();
+        fac.add_player(FactionPlayer::new(*ent_id, player));
+        commands.entity(player_ent).insert(ev.faction_id).remove::<FactionInvites>();
     }
 }
 

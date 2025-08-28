@@ -5,6 +5,7 @@ use cosmos_core::{
         events::{FactionSwapAction, SwapToPlayerFactionEvent},
     },
     netty::{client::LocalPlayer, sync::events::client_event::NettyEventWriter},
+    prelude::Ship,
     state::GameState,
 };
 
@@ -113,7 +114,7 @@ fn render_ui(
 
 pub(super) fn attach_ui(
     mut commands: Commands,
-    mut q_needs_ship_systems_ui: Query<(Entity, &ShipDetailsUi, &mut Node), Added<ShipDetailsUi>>,
+    mut q_needs_ship_systems_ui: Query<(Entity, &ShipDetailsUi, &mut Node), Changed<ShipDetailsUi>>,
     q_faction: Query<&FactionId>,
     factions: Res<Factions>,
     font: Res<DefaultFont>,
@@ -127,6 +128,7 @@ pub(super) fn attach_ui(
         commands
             .entity(ent)
             .insert((Name::new("Ship Details"),))
+            .despawn_related::<Children>()
             .with_children(|p| render_ui(p, &q_faction, &factions, &font, ui.0, local_fac));
     }
 }
@@ -154,7 +156,27 @@ fn on_change_faction(
     }
 }
 
+fn change_ship_faction_id(
+    mut removed_faction_id: RemovedComponents<FactionId>,
+    q_changed_faction: Query<Entity, (Changed<FactionId>, With<Ship>)>,
+    mut q_active_ui: Query<&mut ShipDetailsUi>,
+) {
+    for ship_ent in q_changed_faction.iter().chain(removed_faction_id.read()) {
+        let Some(mut details) = q_active_ui.iter_mut().find(|x| x.0 == ship_ent) else {
+            continue;
+        };
+
+        // Triggers re-render
+        details.set_changed();
+    }
+}
+
 pub(super) fn register(app: &mut App) {
-    app.add_systems(Update, (attach_ui, on_change_faction).run_if(in_state(GameState::Playing)));
+    app.add_systems(
+        Update,
+        (change_ship_faction_id, attach_ui, on_change_faction)
+            .chain()
+            .run_if(in_state(GameState::Playing)),
+    );
     register_button::<FactionButtonEvent>(app);
 }

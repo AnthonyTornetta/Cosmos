@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 use crate::{
-    entities::EntityId,
+    entities::{EntityId, player::Player},
     netty::sync::{
         IdentifiableComponent, SyncableComponent,
         resources::{SyncableResource, sync_resource},
@@ -38,13 +38,40 @@ pub struct FactionSettings {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, Reflect)]
+/// A player in a faction.
+///
+/// Stores basic information about the player that may be out of date, such as their name.
+pub struct FactionPlayer {
+    /// The player's entity id
+    pub entity_id: EntityId,
+    /// This name may be out of date, but good enough for easy display
+    pub name: String,
+}
+
+impl FactionPlayer {
+    /// Creates a new faction player referring to this player. Please make sure this entity id
+    /// matches this player
+    pub fn new(entity_id: EntityId, player: &Player) -> Self {
+        Self {
+            entity_id,
+            name: player.name().to_owned(),
+        }
+    }
+
+    /// Returns the cached name of this player
+    pub fn name(&self) -> &str {
+        &self.name
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, Reflect)]
 /// A collection of players/NPCs under a common team
 ///
 /// Not every player will have a faction.
 pub struct Faction {
     id: FactionId,
     name: String,
-    players: Vec<EntityId>,
+    players: Vec<FactionPlayer>,
     relationships: HashMap<FactionId, FactionRelation>,
     at_war_with: Vec<EntityId>,
     settings: FactionSettings,
@@ -57,7 +84,7 @@ impl Faction {
     ///   [`FactionSettings`] specifies otherwise.
     pub fn new(
         name: String,
-        players: Vec<EntityId>,
+        players: Vec<FactionPlayer>,
         relationships: HashMap<FactionId, FactionRelation>,
         settings: FactionSettings,
     ) -> Self {
@@ -131,22 +158,22 @@ impl Faction {
     }
 
     /// Adds a player to this faction
-    pub fn add_player(&mut self, player_id: EntityId) {
-        if !self.players.contains(&player_id) {
-            self.players.push(player_id);
+    pub fn add_player(&mut self, player: FactionPlayer) {
+        if !self.players.iter().any(|x| x.entity_id == player.entity_id) {
+            self.players.push(player);
         }
     }
 
     /// Removes a player from this faction if they are in it
     pub fn remove_player(&mut self, player_id: EntityId) {
-        if let Some((idx, _)) = self.players.iter().enumerate().find(|(_, x)| **x == player_id) {
+        if let Some((idx, _)) = self.players.iter().enumerate().find(|(_, x)| x.entity_id == player_id) {
             self.players.remove(idx);
         }
     }
 
     /// Iterates over all players in this faction
-    pub fn players(&self) -> impl Iterator<Item = EntityId> {
-        self.players.iter().copied()
+    pub fn players(&self) -> impl Iterator<Item = &FactionPlayer> {
+        self.players.iter()
     }
 
     /// Checks if this faction has no players. AI only factions will count as empty.
