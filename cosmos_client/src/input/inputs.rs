@@ -160,6 +160,9 @@ pub enum CosmosInputs {
 
     /// Opens the ship's configuration menu
     OpenShipConfiguration,
+
+    /// Uses the player's held item
+    UseHeldItem,
 }
 
 fn init_input(mut input_handler: ResMut<CosmosInputHandler>) {
@@ -245,6 +248,8 @@ fn init_input(mut input_handler: ResMut<CosmosInputHandler>) {
     input_handler.set_keycode(CosmosInputs::ToggleFocusCam, KeyCode::KeyG);
 
     input_handler.set_keycode(CosmosInputs::OpenShipConfiguration, KeyCode::Tab);
+
+    input_handler.set_mouse_button(CosmosInputs::UseHeldItem, MouseButton::Right);
 
     if let Ok(current_settings) = fs::read_to_string("settings/controls.toml")
         && let Ok(parsed_settings) = toml::from_str::<CosmosInputHandler>(&current_settings)
