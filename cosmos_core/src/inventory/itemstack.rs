@@ -207,10 +207,12 @@ impl ItemStack {
             if commands.get_entity(data_ent).is_err() {
                 warn!("Invalid itemstack entity - {data_ent:?}. Creating new one.");
 
-                return self.create_itemstack_data_entity(commands, data, inventory_pointer);
-            }
+                self.create_itemstack_data_entity(commands, data, inventory_pointer)
+            } else {
+                commands.entity(data_ent).insert(data);
 
-            data_ent
+                data_ent
+            }
         } else {
             self.create_itemstack_data_entity(commands, data, inventory_pointer)
         }
