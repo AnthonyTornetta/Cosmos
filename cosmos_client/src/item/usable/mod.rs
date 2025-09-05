@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 use cosmos_core::{
-    item::usable::PlayerRequestUseHeldItemEvent,
+    item::usable::{PlayerRequestUseHeldItemEvent, UseHeldItemEvent},
     netty::{client::LocalPlayer, sync::events::client_event::NettyEventWriter},
     state::GameState,
     structure::ship::pilot::Pilot,
@@ -9,7 +9,10 @@ use cosmos_core::{
 use crate::{
     input::inputs::{CosmosInputs, InputChecker, InputHandler},
     interactions::block_interactions::LookingAt,
+    ui::components::show_cursor::no_open_menus,
 };
+
+mod blueprint;
 
 fn on_use_item(
     inputs: InputChecker,
@@ -30,5 +33,7 @@ fn on_use_item(
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_systems(Update, on_use_item.run_if(in_state(GameState::Playing)));
+    blueprint::register(app);
+
+    app.add_systems(Update, on_use_item.run_if(in_state(GameState::Playing)).run_if(no_open_menus));
 }

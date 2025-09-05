@@ -3,17 +3,16 @@ use cosmos_core::{
     block::Block,
     entities::player::Player,
     inventory::{Inventory, itemstack::ItemShouldHaveData},
-    item::Item,
-    netty::{
-        sync::{IdentifiableComponent, events::server_event::NettyEventWriter},
-        system_sets::NetworkingSystemsSet,
+    item::{
+        Item,
+        usable::blueprint::{BlueprintItemData, BlueprintType},
     },
+    netty::{sync::events::server_event::NettyEventWriter, system_sets::NetworkingSystemsSet},
     notifications::{Notification, NotificationKind},
     prelude::{Ship, Station, Structure},
     registry::{Registry, identifiable::Identifiable},
     state::GameState,
 };
-use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 use crate::{
@@ -23,34 +22,6 @@ use crate::{
         saving::{BlueprintingSystemSet, NeedsBlueprinted},
     },
 };
-
-#[derive(Component, Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq, Reflect)]
-pub enum BlueprintType {
-    Ship,
-    Station,
-}
-
-impl BlueprintType {
-    pub fn blueprint_directory(&self) -> &'static str {
-        match self {
-            Self::Ship => "ship",
-            Self::Station => "station",
-        }
-    }
-}
-
-#[derive(Component, Serialize, Deserialize, Debug, Clone, Reflect)]
-struct BlueprintItemData {
-    blueprint_id: Uuid,
-    blueprint_type: BlueprintType,
-    name: String,
-}
-
-impl IdentifiableComponent for BlueprintItemData {
-    fn get_component_unlocalized_name() -> &'static str {
-        "cosmos:blueprint_item_data"
-    }
-}
 
 impl DefaultPersistentComponent for BlueprintItemData {}
 
