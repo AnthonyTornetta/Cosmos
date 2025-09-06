@@ -21,6 +21,10 @@ impl BlueprintType {
             Self::Station => "station",
         }
     }
+
+    pub fn path_for(&self, blueprint_name: &str) -> String {
+        format!("blueprints/{}/{}.bp", self.blueprint_directory(), blueprint_name)
+    }
 }
 
 #[derive(Component, Serialize, Deserialize, Debug, Clone, Reflect, PartialEq, Eq)]
@@ -81,8 +85,10 @@ impl NettyEvent for DownloadBlueprintResponse {
 
 #[derive(Event, Serialize, Deserialize, Debug, Clone, Reflect, PartialEq, Eq)]
 pub struct UploadBlueprint {
-    pub data: Vec<u8>,
+    pub data: BlueprintData,
     pub name: String,
+    /// The slot the player has a blueprint they want to set
+    pub slot: u32,
 }
 
 impl IdentifiableEvent for UploadBlueprint {

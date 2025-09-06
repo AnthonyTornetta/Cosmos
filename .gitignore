@@ -16,6 +16,7 @@ cosmos_client/assets/temp/shaders/biosphere/
 
 # Don't include any saved world files
 cosmos_server/blueprints/
+cosmos_client/blueprints/
 cosmos_server/world/*
 # This directory is for run-time generated assets
 cosmos_server/assets/temp/

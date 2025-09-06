@@ -1,3 +1,5 @@
+use std::fs;
+
 use bevy::prelude::*;
 use cosmos_core::{
     block::Block,
@@ -5,9 +7,12 @@ use cosmos_core::{
     inventory::{Inventory, itemstack::ItemShouldHaveData},
     item::{
         Item,
-        usable::blueprint::{BlueprintItemData, BlueprintType},
+        usable::blueprint::{BlueprintItemData, BlueprintType, DownloadBlueprint, DownloadBlueprintResponse},
     },
-    netty::{sync::events::server_event::NettyEventWriter, system_sets::NetworkingSystemsSet},
+    netty::{
+        sync::events::server_event::{NettyEventReceived, NettyEventWriter},
+        system_sets::NetworkingSystemsSet,
+    },
     notifications::{Notification, NotificationKind},
     prelude::{Ship, Station, Structure},
     registry::{Registry, identifiable::Identifiable},
@@ -18,6 +23,7 @@ use uuid::Uuid;
 use crate::{
     items::usable::UseHeldItemEvent,
     persistence::{
+        loading::NeedsBlueprintLoaded,
         make_persistent::{DefaultPersistentComponent, make_persistent},
         saving::{BlueprintingSystemSet, NeedsBlueprinted},
     },
@@ -102,13 +108,38 @@ fn register_blueprint_item(items: Res<Registry<Item>>, mut needs_data: ResMut<It
     }
 }
 
+fn on_download_bp(
+    mut nevr_download_bp: EventReader<NettyEventReceived<DownloadBlueprint>>,
+    mut nevw_blueprint_response: NettyEventWriter<DownloadBlueprintResponse>,
+) {
+    for ev in nevr_download_bp.read() {
+        let path = ev.blueprint_type.path_for(&ev.blueprint_id.to_string());
+
+        match fs::read(path) {
+            Ok(data) => {
+                nevw_blueprint_response.write(
+                    DownloadBlueprintResponse {
+                        data,
+                        blueprint_id: ev.blueprint_id,
+                        blueprint_type: ev.blueprint_type,
+                    },
+                    ev.client_id,
+                );
+            }
+            Err(e) => {
+                error!("Error sending blueprint {ev:?} - {e:?}");
+            }
+        }
+    }
+}
+
 pub(super) fn register(app: &mut App) {
     make_persistent::<BlueprintItemData>(app);
 
     app.add_systems(OnEnter(GameState::PostLoading), register_blueprint_item)
         .add_systems(
             FixedUpdate,
-            on_use_blueprint
+            (on_use_blueprint, on_download_bp)
                 .before(BlueprintingSystemSet::BeginBlueprinting)
                 .in_set(NetworkingSystemsSet::Between),
         )

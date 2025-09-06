@@ -1,20 +1,29 @@
-use bevy::{color::palettes::css, prelude::*};
+use std::fs;
+
+use bevy::{
+    color::palettes::css,
+    prelude::*,
+    tasks::{AsyncComputeTaskPool, Task},
+};
 use cosmos_core::{
     ecs::sets::FixedUpdateSet,
-    inventory::{Inventory, itemstack::ItemStackData},
+    inventory::{Inventory, held_item_slot::HeldItemSlot, itemstack::ItemStackData},
     item::{
         Item,
         usable::{
             UseHeldItemEvent,
-            blueprint::{BlueprintItemData, DownloadBlueprint, DownloadBlueprintResponse},
+            blueprint::{BlueprintItemData, DownloadBlueprint, DownloadBlueprintResponse, UploadBlueprint},
         },
     },
     netty::{client::LocalPlayer, sync::events::client_event::NettyEventWriter},
     registry::{Registry, identifiable::Identifiable},
 };
+use futures_lite::future;
+use rfd::{AsyncFileDialog, FileDialog};
 
 use crate::{
     create_private_button_event,
+    interactions::block_interactions::LookingAt,
     ui::{
         OpenMenu,
         components::{
@@ -31,7 +40,7 @@ struct OpenedBp(BlueprintItemData);
 fn on_use_blueprint(
     items: Res<Registry<Item>>,
     mut evr_use_item: EventReader<UseHeldItemEvent>,
-    q_inventory: Query<&Inventory, With<LocalPlayer>>,
+    q_player: Query<(&Inventory, &LookingAt), With<LocalPlayer>>,
     q_blueprint_data: Query<&BlueprintItemData>,
     mut commands: Commands,
     font: Res<DefaultFont>,
@@ -49,7 +58,7 @@ fn on_use_blueprint(
             continue;
         };
 
-        let Ok(inv) = q_inventory.get(ev.player) else {
+        let Ok((inv, looking_at)) = q_player.get(ev.player) else {
             continue;
         };
 
@@ -58,7 +67,80 @@ fn on_use_blueprint(
         }
 
         let Some(data) = inv.query_itemstack_data(ev.held_slot, &q_blueprint_data) else {
-            continue;
+            if looking_at.looking_at_block.is_some() {
+                // Server handles this
+                continue;
+            }
+
+            commands
+                .spawn((
+                    Name::new("Blueprint Window"),
+                    GuiWindow {
+                        title: "Blueprint".into(),
+                        body_styles: Node {
+                            flex_grow: 1.0,
+                            flex_direction: FlexDirection::Column,
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    },
+                    Node {
+                        margin: UiRect::all(Val::Auto),
+                        position_type: PositionType::Absolute,
+                        width: Val::Px(300.0),
+                        height: Val::Px(400.0),
+                        border: UiRect::all(Val::Px(2.0)),
+                        ..Default::default()
+                    },
+                    OpenMenu::new(0),
+                ))
+                .with_children(|p| {
+                    p.spawn((
+                        Text::new("Blueprint"),
+                        TextFont {
+                            font: font.get(),
+                            font_size: 24.0,
+                            ..default()
+                        },
+                        TextColor(css::AQUA.into()),
+                    ));
+
+                    p.spawn((
+                        Text::new("Right click a ship or station core to create a blueprint of it."),
+                        TextFont {
+                            font: font.get(),
+                            font_size: 24.0,
+                            ..Default::default()
+                        },
+                    ));
+
+                    p.spawn(Node {
+                        flex_grow: 1.0,
+                        ..Default::default()
+                    });
+
+                    p.spawn((
+                        CosmosButton::<LoadBlueprint> {
+                            text: Some((
+                                "Load".into(),
+                                TextFont {
+                                    font: font.get(),
+                                    font_size: 24.0,
+                                    ..Default::default()
+                                },
+                                Default::default(),
+                            )),
+                            ..Default::default()
+                        },
+                        Node {
+                            padding: UiRect::all(Val::Px(8.0)),
+                            width: Val::Percent(100.0),
+                            ..Default::default()
+                        },
+                        BackgroundColor(css::LIGHT_GREY.into()),
+                    ));
+                });
+            break;
         };
 
         commands
@@ -76,8 +158,8 @@ fn on_use_blueprint(
                 Node {
                     margin: UiRect::all(Val::Auto),
                     position_type: PositionType::Absolute,
-                    width: Val::Px(800.0),
-                    height: Val::Px(800.0),
+                    width: Val::Px(300.0),
+                    height: Val::Px(400.0),
                     border: UiRect::all(Val::Px(2.0)),
                     ..Default::default()
                 },
@@ -112,7 +194,7 @@ fn on_use_blueprint(
                     OpenedBp(data.clone()),
                     CosmosButton::<SaveBlueprint> {
                         text: Some((
-                            "Export".into(),
+                            "Download".into(),
                             TextFont {
                                 font: font.get(),
                                 font_size: 24.0,
@@ -135,6 +217,7 @@ fn on_use_blueprint(
 }
 
 create_private_button_event!(SaveBlueprint);
+create_private_button_event!(LoadBlueprint);
 
 fn on_export(
     mut evr_save: EventReader<SaveBlueprint>,
@@ -153,9 +236,89 @@ fn on_export(
     }
 }
 
+#[derive(Resource)]
+struct LoadTask(Task<Option<(u32, Vec<u8>)>>);
+
+fn on_load(mut evr_save: EventReader<LoadBlueprint>, q_held_item: Query<&HeldItemSlot, With<LocalPlayer>>, mut commands: Commands) {
+    if evr_save.read().next().is_some() {
+        let Ok(held_item) = q_held_item.single() else {
+            return;
+        };
+
+        let bp_slot = held_item.slot();
+
+        let task = AsyncComputeTaskPool::get().spawn(async move {
+            let _ = fs::create_dir("./blueprints");
+            let cur_dir = std::env::current_dir().unwrap_or_default();
+            let file = AsyncFileDialog::new()
+                .add_filter("Blueprints", &["bp"])
+                .set_directory(cur_dir.join("./blueprints/"))
+                .set_title("Save Blueprint")
+                .set_can_create_directories(true)
+                .pick_file()
+                .await;
+
+            let handle = file?;
+            fs::read(handle.path()).ok().map(|data| (bp_slot, data))
+        });
+
+        commands.insert_resource(LoadTask(task));
+
+        // nevw_upload_bp.write(UploadBlueprint{
+        //     name: "Blueprint".into(),
+        //     data:
+        //     blueprint_id: blueprint_data.0.blueprint_id,
+        //     blueprint_type: blueprint_data.0.blueprint_type,
+        // });
+    }
+}
+
+fn upload_selected_blueprint(mut commands: Commands, load_task: ResMut<LoadTask>, mut nevw_upload_bp: NettyEventWriter<UploadBlueprint>) {
+    let Some(data) = future::block_on(future::poll_once(&mut load_task.as_mut().0)) else {
+        return;
+    };
+
+    commands.remove_resource::<LoadTask>();
+
+    let Some((slot, data)) = data else {
+        return;
+    };
+
+    nevw_upload_bp.write(UploadBlueprint {
+        name: "Blueprint".into(),
+        data,
+        slot,
+    });
+}
+
 fn on_receive_download(mut nevr_download: EventReader<DownloadBlueprintResponse>) {
     for ev in nevr_download.read() {
-        info!("{:?}", ev.data);
+        let thread_pool = AsyncComputeTaskPool::get();
+
+        let data = ev.data.clone();
+
+        let task = thread_pool.spawn(async move {
+            let _ = fs::create_dir("./blueprints");
+            let cur_dir = std::env::current_dir().unwrap_or_default();
+            let file = AsyncFileDialog::new()
+                .add_filter("Blueprints", &["bp"])
+                .set_directory(cur_dir.join("./blueprints/"))
+                .set_title("Save Blueprint")
+                .set_file_name("blueprint.bp")
+                .set_can_create_directories(true)
+                .save_file()
+                .await;
+
+            if let Some(handle) = file {
+                if let Err(e) = fs::write(handle.path(), data) {
+                    error!("Error saving blueprint - {e:?}");
+                } else {
+                    info!("Successfully saved blueprint to {}", handle.path().to_string_lossy());
+                }
+            }
+        });
+
+        task.detach();
     }
 }
 
@@ -163,5 +326,8 @@ pub(super) fn register(app: &mut App) {
     register_button::<SaveBlueprint>(app);
 
     app.add_systems(FixedUpdate, on_use_blueprint.in_set(FixedUpdateSet::Main))
-        .add_systems(Update, (on_export, on_receive_download));
+        .add_systems(
+            Update,
+            (on_export, on_receive_download, on_load.run_if(not(resource_exists::<LoadTask>))),
+        );
 }
