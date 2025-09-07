@@ -2474,6 +2474,7 @@ dependencies = [
  "renet",
  "renet_steam",
  "serde",
+ "serde-versioning",
  "thiserror 2.0.12",
  "uuid",
 ]
@@ -5825,6 +5826,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "serde-versioning"
+version = "1.0.219"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "164eee2986f34dc29687b373f23204a66c3f4e1ae86c51987f726fabf59326a8"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
+]
+
+[[package]]
 name = "serde_derive"
 version = "1.0.219"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -6228,9 +6240,9 @@ dependencies = [
 
 [[package]]
 name = "syn"
-version = "2.0.103"
+version = "2.0.106"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e4307e30089d6fd6aff212f2da3a1f9e32f3223b1f010fb09b7c95f90f3ca1e8"
+checksum = "ede7c438028d4436d71104916910f5bb611972c5cfd7f89b8300a8186e6fada6"
 dependencies = [
  "proc-macro2",
  "quote",

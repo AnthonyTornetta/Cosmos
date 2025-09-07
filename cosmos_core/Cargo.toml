@@ -70,3 +70,4 @@ bitflags = { workspace = true }
 derive_more = { workspace = true, features = ["full"] }
 uuid = { workspace = true }
 bevy_transform_interpolation = { workspace = true }
+serde-versioning = { workspace = true }

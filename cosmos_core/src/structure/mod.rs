@@ -47,6 +47,7 @@ pub mod base_structure;
 mod bevy_systems;
 pub mod block_health;
 pub mod block_storage;
+pub mod blueprint;
 pub mod chunk;
 pub mod coordinates;
 pub mod dynamic_structure;

@@ -19,6 +19,7 @@ use cosmos_core::{
     netty::cosmos_encoder,
     persistence::LoadingDistance,
     physics::location::Location,
+    structure::blueprint::{Blueprint, BlueprintType},
 };
 use serde::{Deserialize, Serialize};
 use std::{
@@ -67,12 +68,16 @@ pub struct NeverSave;
 
 /// Denotes that this entity should be saved as a blueprint. Once this entity is saved,
 /// this component will be removed.
-#[derive(Component, Debug, Default, Reflect)]
+#[derive(Component, Debug, Reflect)]
 pub struct NeedsBlueprinted {
     /// The blueprint file's name (without .bp or the path to it)
     pub blueprint_name: String,
     /// The subdirectory the blueprint resides in (same as the blueprint type)
-    pub subdir_name: String,
+    ///
+    /// Leave as [`None`] for this to be auto-generated
+    pub blueprint_type: Option<BlueprintType>,
+    /// The friendly name of the blueprint
+    pub name: String,
 }
 
 fn check_needs_saved(
@@ -152,19 +157,26 @@ fn save_blueprint(data: &SerializedData, needs_blueprinted: &NeedsBlueprinted, l
         }
     }
 
-    if let Err(e) = fs::create_dir(format!("blueprints/{}", needs_blueprinted.subdir_name)) {
+    let Some(kind) = needs_blueprinted.blueprint_type else {
+        error!("Blueprint Type was None at time of saving! Something went wrong! {needs_blueprinted:?}");
+        return Ok(());
+    };
+
+    if let Err(e) = fs::create_dir(format!("blueprints/{}", kind.blueprint_directory())) {
         match e.kind() {
             ErrorKind::AlreadyExists => {}
             _ => return Err(e),
         }
     }
 
+    let blueprint = Blueprint::new(
+        cosmos_encoder::serialize_uncompressed(&data.save_data),
+        needs_blueprinted.name.clone(),
+        kind,
+    );
     fs::write(
-        format!(
-            "blueprints/{}/{}.bp",
-            needs_blueprinted.subdir_name, needs_blueprinted.blueprint_name
-        ),
-        cosmos_encoder::serialize(&data),
+        format!("blueprints/{}/{}.bp", kind.blueprint_directory(), needs_blueprinted.blueprint_name),
+        cosmos_encoder::serialize(&blueprint),
     )?;
 
     info!("Finished blueprinting {log_name}");

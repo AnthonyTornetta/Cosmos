@@ -18,7 +18,7 @@ use cosmos_core::{
     netty::cosmos_encoder,
     persistence::LoadingDistance,
     physics::location::{Location, LocationPhysicsSet, SetPosition},
-    structure::{loading::StructureLoadingSet, systems::StructureSystemsSet},
+    structure::{blueprint::Blueprint, chunk::netty::SaveData, loading::StructureLoadingSet, systems::StructureSystemsSet},
 };
 
 use super::{PreviousSaveFileIdentifier, SaveFileIdentifier, SaveFileIdentifierType, SerializedData};
@@ -158,9 +158,19 @@ fn check_blueprint_needs_loaded(query: Query<(Entity, &NeedsBlueprintLoaded), Wi
             continue;
         };
 
-        let Ok(serialized_data) = cosmos_encoder::deserialize::<SerializedData>(&data) else {
+        let Ok(blueprint) = cosmos_encoder::deserialize::<Blueprint>(&data) else {
             error!("Error deserializing data for {path}");
             continue;
+        };
+
+        let Ok(save_data) = cosmos_encoder::deserialize_uncompressed::<SaveData>(blueprint.serialized_data()) else {
+            error!("Error deserializing data for {path} (inner)");
+            continue;
+        };
+
+        let serialized_data = SerializedData {
+            save_data,
+            ..Default::default()
         };
 
         commands.entity(ent).insert(serialized_data);

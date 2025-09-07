@@ -54,7 +54,8 @@ pub(super) fn register(app: &mut App) {
 
                 commands.entity(ev.command.0).insert(NeedsBlueprinted {
                     blueprint_name: ev.args[1].to_owned(),
-                    ..Default::default()
+                    name: ev.args[1].to_owned(),
+                    blueprint_type: None,
                 });
             }
         },

@@ -7,9 +7,10 @@ use cosmos_core::{
     inventory::{Inventory, itemstack::ItemShouldHaveData},
     item::{
         Item,
-        usable::blueprint::{BlueprintItemData, BlueprintType, DownloadBlueprint, DownloadBlueprintResponse},
+        usable::blueprint::{BlueprintItemData, DownloadBlueprint, DownloadBlueprintResponse},
     },
     netty::{
+        cosmos_encoder,
         sync::events::server_event::{NettyEventReceived, NettyEventWriter},
         system_sets::NetworkingSystemsSet,
     },
@@ -17,6 +18,7 @@ use cosmos_core::{
     prelude::{Ship, Station, Structure},
     registry::{Registry, identifiable::Identifiable},
     state::GameState,
+    structure::blueprint::{Blueprint, BlueprintType},
 };
 use uuid::Uuid;
 
@@ -88,12 +90,13 @@ fn on_use_blueprint(
         let bp_data = BlueprintItemData {
             blueprint_id: id,
             blueprint_type: if ship { BlueprintType::Ship } else { BlueprintType::Station },
-            name: "Cool Blueprint".into(),
+            name: "Blueprint".into(),
         };
 
         commands.entity(block.structure()).insert(NeedsBlueprinted {
-            subdir_name: bp_data.blueprint_type.blueprint_directory().to_owned(),
+            blueprint_type: Some(bp_data.blueprint_type),
             blueprint_name: format!("{id}"),
+            name: "Blueprint".into(),
         });
 
         inv.insert_itemstack_data(ev.held_slot, bp_data, &mut commands);
@@ -115,13 +118,17 @@ fn on_download_bp(
     for ev in nevr_download_bp.read() {
         let path = ev.blueprint_type.path_for(&ev.blueprint_id.to_string());
 
-        match fs::read(path) {
+        match fs::read(&path) {
             Ok(data) => {
+                let Ok(blueprint) = cosmos_encoder::deserialize::<Blueprint>(&data) else {
+                    error!("Error deserializing blueprint @ {path:?}");
+                    continue;
+                };
+
                 nevw_blueprint_response.write(
                     DownloadBlueprintResponse {
-                        data,
+                        blueprint,
                         blueprint_id: ev.blueprint_id,
-                        blueprint_type: ev.blueprint_type,
                     },
                     ev.client_id,
                 );

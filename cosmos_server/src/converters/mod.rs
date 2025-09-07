@@ -6,8 +6,6 @@ use bevy::prelude::*;
 use cosmos_core::{netty::cosmos_encoder, state::GameState};
 use serde::{Deserialize, Serialize};
 
-mod bincode_convert;
-
 #[derive(PartialEq, Eq, PartialOrd, Ord, Debug, Serialize, Deserialize)]
 enum SaveVersion {
     Old,
@@ -40,7 +38,7 @@ pub(super) fn register(app: &mut App) {
 
     info!("Current save version is out of date - converting files.");
 
-    bincode_convert::register(app, version);
+    // bincode_convert::register(app, version);
 
     app.add_systems(Update, close_server_after_ticks.run_if(in_state(GameState::Playing)));
 

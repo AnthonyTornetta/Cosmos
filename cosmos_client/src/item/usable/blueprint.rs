@@ -15,8 +15,10 @@ use cosmos_core::{
             blueprint::{BlueprintItemData, DownloadBlueprint, DownloadBlueprintResponse, UploadBlueprint},
         },
     },
-    netty::{client::LocalPlayer, sync::events::client_event::NettyEventWriter},
+    netty::{client::LocalPlayer, cosmos_encoder, sync::events::client_event::NettyEventWriter},
     registry::{Registry, identifiable::Identifiable},
+    state::GameState,
+    structure::blueprint::Blueprint,
 };
 use futures_lite::future;
 use rfd::{AsyncFileDialog, FileDialog};
@@ -273,8 +275,12 @@ fn on_load(mut evr_save: EventReader<LoadBlueprint>, q_held_item: Query<&HeldIte
     }
 }
 
-fn upload_selected_blueprint(mut commands: Commands, load_task: ResMut<LoadTask>, mut nevw_upload_bp: NettyEventWriter<UploadBlueprint>) {
-    let Some(data) = future::block_on(future::poll_once(&mut load_task.as_mut().0)) else {
+fn upload_selected_blueprint(
+    mut commands: Commands,
+    mut load_task: ResMut<LoadTask>,
+    mut nevw_upload_bp: NettyEventWriter<UploadBlueprint>,
+) {
+    let Some(data) = future::block_on(future::poll_once(&mut load_task.0)) else {
         return;
     };
 
@@ -284,18 +290,19 @@ fn upload_selected_blueprint(mut commands: Commands, load_task: ResMut<LoadTask>
         return;
     };
 
-    nevw_upload_bp.write(UploadBlueprint {
-        name: "Blueprint".into(),
-        data,
-        slot,
-    });
+    let Ok(blueprint) = cosmos_encoder::deserialize::<Blueprint>(&data) else {
+        error!("Invalid blueprint data!");
+        return;
+    };
+
+    nevw_upload_bp.write(UploadBlueprint { blueprint, slot });
 }
 
 fn on_receive_download(mut nevr_download: EventReader<DownloadBlueprintResponse>) {
     for ev in nevr_download.read() {
         let thread_pool = AsyncComputeTaskPool::get();
 
-        let data = ev.data.clone();
+        let data = cosmos_encoder::serialize(&ev.blueprint);
 
         let task = thread_pool.spawn(async move {
             let _ = fs::create_dir("./blueprints");
@@ -328,6 +335,12 @@ pub(super) fn register(app: &mut App) {
     app.add_systems(FixedUpdate, on_use_blueprint.in_set(FixedUpdateSet::Main))
         .add_systems(
             Update,
-            (on_export, on_receive_download, on_load.run_if(not(resource_exists::<LoadTask>))),
+            (
+                on_export,
+                on_receive_download,
+                upload_selected_blueprint.run_if(resource_exists::<LoadTask>),
+                on_load.run_if(not(resource_exists::<LoadTask>)),
+            )
+                .run_if(in_state(GameState::Playing)),
         );
 }
