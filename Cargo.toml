@@ -52,7 +52,6 @@ bevy_transform_interpolation = "0.2.0"
 bevy_framepace = "0.19.1"
 # bevy_mod_billboard = "0.7.0"
 rfd = "0.15.4"
-serde-versioning = "1.0"
 
 # For any non workspace package
 [profile.dev.package."*"]

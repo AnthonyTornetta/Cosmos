@@ -1,6 +1,6 @@
 use bevy::{platform::collections::HashMap, prelude::*};
-use serde::Serialize;
-use serde_versioning::Deserialize;
+use serde::{Deserialize, Serialize};
+// use serde_versioning::;
 
 use crate::{netty::cosmos_encoder, physics::location::Location};
 
@@ -13,7 +13,7 @@ pub struct BlueprintOld {
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Reflect)]
-#[versioning(previous_version = BlueprintOld, pessimistic)]
+// #[versioning(previous_version = BlueprintOld, pessimistic)]
 pub struct Blueprint {
     name: String,
     kind: BlueprintType,

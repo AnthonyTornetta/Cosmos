@@ -87,6 +87,5 @@ bevy_hanabi = { workspace = true }
 uuid = { workspace = true }
 bevy_transform_interpolation = { workspace = true }
 rfd = { workspace = true }
-serde-versioning = { workspace = true }
 # iyes_perf_ui = { workspace = true }
 # bevy_mod_billboard = { workspace = true }
