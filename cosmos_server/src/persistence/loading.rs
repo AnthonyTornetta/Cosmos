@@ -7,7 +7,7 @@
 //!
 //! See [`default_load`] for an example.
 
-use std::fs;
+use std::{fs, path::Path};
 
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::Velocity;
@@ -18,7 +18,12 @@ use cosmos_core::{
     netty::cosmos_encoder,
     persistence::LoadingDistance,
     physics::location::{Location, LocationPhysicsSet, SetPosition},
-    structure::{blueprint::Blueprint, chunk::netty::SaveData, loading::StructureLoadingSet, systems::StructureSystemsSet},
+    structure::{
+        blueprint::{Blueprint, BlueprintOld, BlueprintType},
+        chunk::netty::SaveData,
+        loading::StructureLoadingSet,
+        systems::StructureSystemsSet,
+    },
 };
 
 use super::{PreviousSaveFileIdentifier, SaveFileIdentifier, SaveFileIdentifierType, SerializedData};
@@ -158,13 +163,38 @@ fn check_blueprint_needs_loaded(query: Query<(Entity, &NeedsBlueprintLoaded), Wi
             continue;
         };
 
-        let Ok(blueprint) = cosmos_encoder::deserialize::<Blueprint>(&data) else {
-            error!("Error deserializing data for {path}");
-            continue;
+        let blueprint = match cosmos_encoder::deserialize::<Blueprint>(&data) {
+            Err(_) => {
+                match cosmos_encoder::deserialize::<BlueprintOld>(&data) {
+                    Err(_) => {
+                        error!("Error deserializing data for {path}");
+                        continue;
+                    }
+                    Ok(b) => {
+                        let bp = b.try_into().unwrap(); // Ok(blueprint) => Blueprint::new(
+                        //     cosmos_encoder::serialize_uncompressed(&blueprint.save_data.0),
+                        //     "Blueprint".into(),
+                        //     BlueprintType::Ship,
+                        // ),
+                        info!("Found old blueprint - updating to new format and making backup!");
+
+                        if fs::copy(path, format!("{path}.bak")).is_ok() {
+                            if let Err(e) = fs::write(path, cosmos_encoder::serialize(&bp)) {
+                                error!("{e:?}");
+                            }
+                        } else {
+                            error!("Error copying {path:?}!");
+                        }
+
+                        bp
+                    }
+                }
+            }
+            Ok(b) => b,
         };
 
         let Ok(save_data) = cosmos_encoder::deserialize_uncompressed::<SaveData>(blueprint.serialized_data()) else {
-            error!("Error deserializing data for {path} (inner)");
+            error!("Error deserializing inner data for {path}");
             continue;
         };
 

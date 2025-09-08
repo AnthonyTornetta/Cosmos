@@ -5,15 +5,15 @@ use serde_versioning::Deserialize;
 use crate::{netty::cosmos_encoder, physics::location::Location};
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Reflect)]
-struct BlueprintOld {
+pub struct BlueprintOld {
     data: HashMap<String, Vec<u8>>,
-    /// Used to identify the location this should be saved under
+    // Used to identify the location this should be saved under
     location: Option<Location>,
     should_save: bool,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Reflect)]
-#[versioning(previous_version = BlueprintOld)]
+#[versioning(previous_version = BlueprintOld, pessimistic)]
 pub struct Blueprint {
     name: String,
     kind: BlueprintType,

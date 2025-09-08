@@ -331,6 +331,7 @@ fn on_receive_download(mut nevr_download: EventReader<DownloadBlueprintResponse>
 
 pub(super) fn register(app: &mut App) {
     register_button::<SaveBlueprint>(app);
+    register_button::<LoadBlueprint>(app);
 
     app.add_systems(FixedUpdate, on_use_blueprint.in_set(FixedUpdateSet::Main))
         .add_systems(

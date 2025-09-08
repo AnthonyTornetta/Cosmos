@@ -86,4 +86,5 @@ bevy_app_compute = { workspace = true }
 bytemuck = { workspace = true }
 zip = "2.2.2"
 chrono = "0.4.39"
+serde-versioning = { workspace = true }
 # iyes_perf_ui = { workspace = true }

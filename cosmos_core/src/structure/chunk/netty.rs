@@ -15,7 +15,7 @@ pub struct SerializedChunkBlockData(HashMap<ChunkBlockCoordinate, SaveData>);
 
 #[derive(Debug, Reflect, Serialize, Deserialize, Default, Clone)]
 /// A version of `SerializedData` without the location field and the inability to disable saving
-pub struct SaveData(HashMap<String, Vec<u8>>);
+pub struct SaveData(pub HashMap<String, Vec<u8>>);
 
 impl SaveData {
     /// Saves the data to that data id. Will overwrite any existing data at that id.
