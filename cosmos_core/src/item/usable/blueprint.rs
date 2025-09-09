@@ -85,10 +85,46 @@ impl NettyEvent for UploadBlueprint {
     }
 }
 
+#[derive(Event, Serialize, Deserialize, Debug, Clone, Reflect, PartialEq, Eq)]
+pub struct ClearBlueprint {
+    pub slot: u32,
+}
+
+impl IdentifiableEvent for ClearBlueprint {
+    fn unlocalized_name() -> &'static str {
+        "cosmos:clear_blueprint"
+    }
+}
+
+impl NettyEvent for ClearBlueprint {
+    fn event_receiver() -> crate::netty::sync::events::netty_event::EventReceiver {
+        crate::netty::sync::events::netty_event::EventReceiver::Server
+    }
+}
+
+#[derive(Event, Serialize, Deserialize, Debug, Clone, Reflect, PartialEq, Eq)]
+pub struct CopyBlueprint {
+    pub slot: u32,
+}
+
+impl IdentifiableEvent for CopyBlueprint {
+    fn unlocalized_name() -> &'static str {
+        "cosmos:copy_blueprint"
+    }
+}
+
+impl NettyEvent for CopyBlueprint {
+    fn event_receiver() -> crate::netty::sync::events::netty_event::EventReceiver {
+        crate::netty::sync::events::netty_event::EventReceiver::Server
+    }
+}
+
 pub(super) fn register(app: &mut App) {
     app.register_type::<BlueprintItemData>()
         .add_netty_event::<DownloadBlueprintResponse>()
         .add_netty_event::<UploadBlueprint>()
+        .add_netty_event::<ClearBlueprint>()
+        .add_netty_event::<CopyBlueprint>()
         .add_netty_event::<DownloadBlueprint>();
 
     sync_component::<BlueprintItemData>(app);

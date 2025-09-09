@@ -4,10 +4,15 @@ use bevy::prelude::*;
 use cosmos_core::{
     block::Block,
     entities::player::Player,
-    inventory::{Inventory, itemstack::ItemShouldHaveData},
+    inventory::{
+        HeldItemStack, Inventory,
+        itemstack::{ItemShouldHaveData, ItemStackSystemSet},
+    },
     item::{
         Item,
-        usable::blueprint::{BlueprintItemData, DownloadBlueprint, DownloadBlueprintResponse, UploadBlueprint},
+        usable::blueprint::{
+            BlueprintItemData, ClearBlueprint, CopyBlueprint, DownloadBlueprint, DownloadBlueprintResponse, UploadBlueprint,
+        },
     },
     netty::{
         cosmos_encoder,
@@ -26,7 +31,6 @@ use uuid::Uuid;
 use crate::{
     items::usable::UseHeldItemEvent,
     persistence::{
-        loading::NeedsBlueprintLoaded,
         make_persistent::{DefaultPersistentComponent, make_persistent},
         saving::{BlueprintingSystemSet, NeedsBlueprinted, save_blueprint},
     },
@@ -61,10 +65,6 @@ fn on_use_blueprint(
         };
 
         if inv.query_itemstack_data(ev.held_slot, &q_blueprint_data).is_some() {
-            nevw_notification.write(
-                Notification::new("This already contains a blueprint.", NotificationKind::Error),
-                player.client_id(),
-            );
             continue;
         }
 
@@ -208,14 +208,88 @@ fn on_upload_blueprint(
     }
 }
 
+fn copy_blueprint(
+    lobby: Res<ServerLobby>,
+    mut q_player: Query<&mut Inventory, With<Player>>,
+    q_bp_data: Query<&BlueprintItemData>,
+    mut commands: Commands,
+    items: Res<Registry<Item>>,
+    mut nevr_copy_bp: EventReader<NettyEventReceived<CopyBlueprint>>,
+    mut nevr_notif: NettyEventWriter<Notification>,
+) {
+    for ev in nevr_copy_bp.read() {
+        let Some(player) = lobby.player_from_id(ev.client_id) else {
+            continue;
+        };
+
+        let Some(bp_item) = items.from_id("cosmos:blueprint") else {
+            continue;
+        };
+
+        let Ok(mut player_inv) = q_player.get_mut(player) else {
+            continue;
+        };
+
+        let Some(bp_data) = player_inv.query_itemstack_data(ev.slot as usize, &q_bp_data).cloned() else {
+            continue;
+        };
+
+        let (leftover, _) = player_inv.insert_item_with_data(bp_item, 1, &mut commands, bp_data);
+        if leftover != 1 {
+            nevr_notif.write(Notification::info("Copied Blueprint"), ev.client_id);
+        } else {
+            nevr_notif.write(Notification::error("Could not copy blueprint - inventory full"), ev.client_id);
+        }
+    }
+}
+
+fn clear_blueprint(
+    lobby: Res<ServerLobby>,
+    mut q_player: Query<&mut Inventory, With<Player>>,
+    mut commands: Commands,
+    items: Res<Registry<Item>>,
+    mut nevr_copy_bp: EventReader<NettyEventReceived<ClearBlueprint>>,
+) {
+    for ev in nevr_copy_bp.read() {
+        let Some(player) = lobby.player_from_id(ev.client_id) else {
+            continue;
+        };
+
+        let Some(bp_item) = items.from_id("cosmos:blueprint") else {
+            continue;
+        };
+
+        let Ok(mut player_inv) = q_player.get_mut(player) else {
+            continue;
+        };
+
+        if player_inv
+            .itemstack_at(ev.slot as usize)
+            .map(|x| x.item_id() != bp_item.id())
+            .unwrap_or(true)
+        {
+            continue;
+        }
+
+        player_inv.remove_itemstack_data::<BlueprintItemData>(ev.slot as usize, &mut commands);
+    }
+}
+
 pub(super) fn register(app: &mut App) {
     make_persistent::<BlueprintItemData>(app);
 
     app.add_systems(OnEnter(GameState::PostLoading), register_blueprint_item)
         .add_systems(
             FixedUpdate,
-            (on_use_blueprint, on_download_bp, on_upload_blueprint)
+            (
+                on_use_blueprint,
+                on_download_bp,
+                on_upload_blueprint,
+                copy_blueprint,
+                clear_blueprint,
+            )
                 .before(BlueprintingSystemSet::BeginBlueprinting)
+                .before(ItemStackSystemSet::CreateDataEntity)
                 .in_set(NetworkingSystemsSet::Between),
         )
         .register_type::<BlueprintItemData>();

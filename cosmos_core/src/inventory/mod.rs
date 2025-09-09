@@ -528,11 +528,19 @@ impl Inventory {
 
     /// Returns the ItemStack at that slot
     pub fn itemstack_at(&self, slot: usize) -> Option<&ItemStack> {
+        if slot > self.items.len() {
+            error!("Invalid item slot queried - {slot} but size is {}", self.items.len());
+            return None;
+        }
         self.items[slot].as_ref()
     }
 
     /// Returns the ItemStack at that slot
     pub fn mut_itemstack_at(&mut self, slot: usize) -> Option<&mut ItemStack> {
+        if slot > self.items.len() {
+            error!("Invalid item slot queried - {slot} but size is {}", self.items.len());
+            return None;
+        }
         self.items[slot].as_mut()
     }
 

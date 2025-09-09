@@ -23,6 +23,14 @@ impl Notification {
         }
     }
 
+    pub fn info(message: impl Into<String>) -> Self {
+        Self::new(message, NotificationKind::Info)
+    }
+
+    pub fn error(message: impl Into<String>) -> Self {
+        Self::new(message, NotificationKind::Error)
+    }
+
     pub fn kind(&self) -> NotificationKind {
         self.kind
     }

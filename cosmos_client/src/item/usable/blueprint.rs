@@ -12,7 +12,7 @@ use cosmos_core::{
         Item,
         usable::{
             UseHeldItemEvent,
-            blueprint::{BlueprintItemData, DownloadBlueprint, DownloadBlueprintResponse, UploadBlueprint},
+            blueprint::{BlueprintItemData, ClearBlueprint, CopyBlueprint, DownloadBlueprint, DownloadBlueprintResponse, UploadBlueprint},
         },
     },
     netty::{client::LocalPlayer, cosmos_encoder, sync::events::client_event::NettyEventWriter},
@@ -89,7 +89,7 @@ fn on_use_blueprint(
                     Node {
                         margin: UiRect::all(Val::Auto),
                         position_type: PositionType::Absolute,
-                        width: Val::Px(300.0),
+                        width: Val::Px(400.0),
                         height: Val::Px(400.0),
                         border: UiRect::all(Val::Px(2.0)),
                         ..Default::default()
@@ -97,16 +97,6 @@ fn on_use_blueprint(
                     OpenMenu::new(0),
                 ))
                 .with_children(|p| {
-                    p.spawn((
-                        Text::new("Blueprint"),
-                        TextFont {
-                            font: font.get(),
-                            font_size: 24.0,
-                            ..default()
-                        },
-                        TextColor(css::AQUA.into()),
-                    ));
-
                     p.spawn((
                         Text::new("Right click a ship or station core to create a blueprint of it."),
                         TextFont {
@@ -160,7 +150,7 @@ fn on_use_blueprint(
                 Node {
                     margin: UiRect::all(Val::Auto),
                     position_type: PositionType::Absolute,
-                    width: Val::Px(300.0),
+                    width: Val::Px(400.0),
                     height: Val::Px(400.0),
                     border: UiRect::all(Val::Px(2.0)),
                     ..Default::default()
@@ -168,15 +158,55 @@ fn on_use_blueprint(
                 OpenMenu::new(0),
             ))
             .with_children(|p| {
-                p.spawn((
-                    Text::new("Blueprint"),
-                    TextFont {
-                        font: font.get(),
-                        font_size: 24.0,
-                        ..default()
-                    },
-                    TextColor(css::AQUA.into()),
-                ));
+                p.spawn(
+                    (Node {
+                        justify_content: JustifyContent::SpaceBetween,
+                        ..Default::default()
+                    }),
+                )
+                .with_children(|p| {
+                    p.spawn((
+                        CosmosButton::<ClearBlueprintBtn> {
+                            text: Some((
+                                "-".into(),
+                                TextFont {
+                                    font: font.get(),
+                                    font_size: 24.0,
+                                    ..Default::default()
+                                },
+                                Default::default(),
+                            )),
+                            ..Default::default()
+                        },
+                        Node {
+                            width: Val::Px(64.0),
+                            height: Val::Px(64.0),
+                            ..Default::default()
+                        },
+                        BackgroundColor(css::RED.into()),
+                    ));
+
+                    p.spawn((
+                        CosmosButton::<CopyBlueprintBtn> {
+                            text: Some((
+                                "+".into(),
+                                TextFont {
+                                    font: font.get(),
+                                    font_size: 24.0,
+                                    ..Default::default()
+                                },
+                                Default::default(),
+                            )),
+                            ..Default::default()
+                        },
+                        Node {
+                            width: Val::Px(64.0),
+                            height: Val::Px(64.0),
+                            ..Default::default()
+                        },
+                        BackgroundColor(css::GREEN.into()),
+                    ));
+                });
 
                 p.spawn((
                     Text::new(data.name.clone()),
@@ -219,6 +249,8 @@ fn on_use_blueprint(
 }
 
 create_private_button_event!(SaveBlueprint);
+create_private_button_event!(CopyBlueprintBtn);
+create_private_button_event!(ClearBlueprintBtn);
 create_private_button_event!(LoadBlueprint);
 
 fn on_export(
@@ -329,9 +361,39 @@ fn on_receive_download(mut nevr_download: EventReader<DownloadBlueprintResponse>
     }
 }
 
+fn on_clear(
+    mut evr_clear: EventReader<ClearBlueprintBtn>,
+    mut nevw_clear: NettyEventWriter<ClearBlueprint>,
+    q_held_item: Query<&HeldItemSlot, With<LocalPlayer>>,
+) {
+    if evr_clear.read().next().is_some() {
+        let Ok(held_item) = q_held_item.single() else {
+            return;
+        };
+
+        nevw_clear.write(ClearBlueprint { slot: held_item.slot() });
+    }
+}
+
+fn on_copy(
+    mut evr_copy: EventReader<CopyBlueprintBtn>,
+    mut nevw_copy: NettyEventWriter<CopyBlueprint>,
+    q_held_item: Query<&HeldItemSlot, With<LocalPlayer>>,
+) {
+    if evr_copy.read().next().is_some() {
+        let Ok(held_item) = q_held_item.single() else {
+            return;
+        };
+
+        nevw_copy.write(CopyBlueprint { slot: held_item.slot() });
+    }
+}
+
 pub(super) fn register(app: &mut App) {
     register_button::<SaveBlueprint>(app);
     register_button::<LoadBlueprint>(app);
+    register_button::<ClearBlueprintBtn>(app);
+    register_button::<CopyBlueprintBtn>(app);
 
     app.add_systems(FixedUpdate, on_use_blueprint.in_set(FixedUpdateSet::Main))
         .add_systems(
@@ -341,6 +403,8 @@ pub(super) fn register(app: &mut App) {
                 on_receive_download,
                 upload_selected_blueprint.run_if(resource_exists::<LoadTask>),
                 on_load.run_if(not(resource_exists::<LoadTask>)),
+                on_copy,
+                on_clear,
             )
                 .run_if(in_state(GameState::Playing)),
         );
