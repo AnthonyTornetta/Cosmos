@@ -7,10 +7,8 @@ use cosmos_core::{
     events::block_events::BlockDataSystemParams,
     netty::sync::IdentifiableComponent,
     structure::{
-        Structure,
-        chunk::netty::{DeserializationError, SerializedBlockData},
-        coordinates::ChunkBlockCoordinate,
-        loading::StructureLoadingSet,
+        Structure, chunk::netty::SerializedBlockData, coordinates::ChunkBlockCoordinate, loading::StructureLoadingSet,
+        persistence::DeserializationError,
     },
     utils::ownership::MaybeOwned,
 };

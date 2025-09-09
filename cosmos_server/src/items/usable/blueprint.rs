@@ -7,10 +7,11 @@ use cosmos_core::{
     inventory::{Inventory, itemstack::ItemShouldHaveData},
     item::{
         Item,
-        usable::blueprint::{BlueprintItemData, DownloadBlueprint, DownloadBlueprintResponse},
+        usable::blueprint::{BlueprintItemData, DownloadBlueprint, DownloadBlueprintResponse, UploadBlueprint},
     },
     netty::{
         cosmos_encoder,
+        server::ServerLobby,
         sync::events::server_event::{NettyEventReceived, NettyEventWriter},
         system_sets::NetworkingSystemsSet,
     },
@@ -18,7 +19,7 @@ use cosmos_core::{
     prelude::{Ship, Station, Structure},
     registry::{Registry, identifiable::Identifiable},
     state::GameState,
-    structure::blueprint::{Blueprint, BlueprintType},
+    structure::blueprint::{Blueprint, BlueprintAuthor, BlueprintType},
 };
 use uuid::Uuid;
 
@@ -27,7 +28,7 @@ use crate::{
     persistence::{
         loading::NeedsBlueprintLoaded,
         make_persistent::{DefaultPersistentComponent, make_persistent},
-        saving::{BlueprintingSystemSet, NeedsBlueprinted},
+        saving::{BlueprintingSystemSet, NeedsBlueprinted, save_blueprint},
     },
 };
 
@@ -140,13 +141,80 @@ fn on_download_bp(
     }
 }
 
+fn on_upload_blueprint(
+    lobby: Res<ServerLobby>,
+    mut q_player: Query<(&Player, &mut Inventory)>,
+    mut nevr_upload_blueprint: EventReader<NettyEventReceived<UploadBlueprint>>,
+    q_bp_data: Query<(), With<BlueprintItemData>>,
+    mut commands: Commands,
+    items: Res<Registry<Item>>,
+    mut nevw_notif: NettyEventWriter<Notification>,
+) {
+    for ev in nevr_upload_blueprint.read() {
+        let Some((player, mut inv)) = lobby.player_from_id(ev.client_id).and_then(|e| q_player.get_mut(e).ok()) else {
+            continue;
+        };
+
+        let Some(blueprint) = items.from_id("cosmos:blueprint") else {
+            continue;
+        };
+
+        if inv
+            .itemstack_at(ev.slot as usize)
+            .map(|x| x.item_id() == blueprint.id())
+            .unwrap_or(false)
+        {
+            warn!("Player not holding blueprint at that slot!");
+            continue;
+        }
+
+        if inv.query_itemstack_data(ev.slot as usize, &q_bp_data).is_some() {
+            warn!("This blueprint already has data!");
+            continue;
+        }
+
+        let mut blueprint = ev.blueprint.clone();
+        blueprint.set_author(BlueprintAuthor::Player {
+            name: player.name().to_owned(),
+            id: player.client_id(),
+        });
+
+        let id = Uuid::new_v4();
+
+        if let Err(e) = save_blueprint(&ev.blueprint, &id.to_string()) {
+            error!("Error saving blueprint! {e:?}");
+
+            nevw_notif.write(
+                Notification::new(format!("Error Uploading Blueprint"), NotificationKind::Error),
+                ev.client_id,
+            );
+            continue;
+        }
+
+        inv.insert_itemstack_data(
+            ev.slot as usize,
+            BlueprintItemData {
+                blueprint_id: id,
+                blueprint_type: blueprint.kind(),
+                name: blueprint.name().to_owned(),
+            },
+            &mut commands,
+        );
+
+        nevw_notif.write(
+            Notification::new(format!("Successfully Uploaded {}", blueprint.name()), NotificationKind::Info),
+            ev.client_id,
+        );
+    }
+}
+
 pub(super) fn register(app: &mut App) {
     make_persistent::<BlueprintItemData>(app);
 
     app.add_systems(OnEnter(GameState::PostLoading), register_blueprint_item)
         .add_systems(
             FixedUpdate,
-            (on_use_blueprint, on_download_bp)
+            (on_use_blueprint, on_download_bp, on_upload_blueprint)
                 .before(BlueprintingSystemSet::BeginBlueprinting)
                 .in_set(NetworkingSystemsSet::Between),
         )

@@ -19,7 +19,10 @@ use cosmos_core::{
     netty::cosmos_encoder,
     persistence::LoadingDistance,
     physics::location::Location,
-    structure::blueprint::{Blueprint, BlueprintType},
+    structure::{
+        blueprint::{Blueprint, BlueprintAuthor, BlueprintType},
+        persistence::SaveData,
+    },
 };
 use serde::{Deserialize, Serialize};
 use std::{
@@ -149,7 +152,19 @@ fn check_needs_blueprinted(query: Query<Entity, (With<NeedsBlueprinted>, Without
 ///
 /// This is NOT how the structures are saved in the world, but rather used to get structure
 /// files that can be loaded through commands.
-fn save_blueprint(data: &SerializedData, needs_blueprinted: &NeedsBlueprinted, log_name: &str) -> std::io::Result<()> {
+fn save_blueprint_data(data: SaveData, needs_blueprinted: &NeedsBlueprinted, log_name: &str) -> std::io::Result<()> {
+    let Some(kind) = needs_blueprinted.blueprint_type else {
+        error!("Blueprint Type was None at time of saving! Something went wrong! {needs_blueprinted:?}");
+        return Ok(());
+    };
+
+    let blueprint = Blueprint::new(data, needs_blueprinted.name.clone(), kind, BlueprintAuthor::Server);
+
+    info!("Saving blueprint for {log_name} as {}...", blueprint.name());
+    save_blueprint(&blueprint, &needs_blueprinted.blueprint_name)
+}
+
+pub fn save_blueprint(blueprint: &Blueprint, file_name: &str) -> std::io::Result<()> {
     if let Err(e) = fs::create_dir("blueprints") {
         match e.kind() {
             ErrorKind::AlreadyExists => {}
@@ -157,29 +172,19 @@ fn save_blueprint(data: &SerializedData, needs_blueprinted: &NeedsBlueprinted, l
         }
     }
 
-    let Some(kind) = needs_blueprinted.blueprint_type else {
-        error!("Blueprint Type was None at time of saving! Something went wrong! {needs_blueprinted:?}");
-        return Ok(());
-    };
-
-    if let Err(e) = fs::create_dir(format!("blueprints/{}", kind.blueprint_directory())) {
+    if let Err(e) = fs::create_dir(format!("blueprints/{}", blueprint.kind().blueprint_directory())) {
         match e.kind() {
             ErrorKind::AlreadyExists => {}
             _ => return Err(e),
         }
     }
 
-    let blueprint = Blueprint::new(
-        cosmos_encoder::serialize_uncompressed(&data.save_data),
-        needs_blueprinted.name.clone(),
-        kind,
-    );
     fs::write(
-        format!("blueprints/{}/{}.bp", kind.blueprint_directory(), needs_blueprinted.blueprint_name),
+        format!("blueprints/{}/{}.bp", blueprint.kind().blueprint_directory(), file_name),
         cosmos_encoder::serialize(&blueprint),
     )?;
 
-    info!("Finished blueprinting {log_name}");
+    info!("Finished blueprinting {file_name}");
 
     Ok(())
 }
@@ -191,7 +196,7 @@ fn done_blueprinting(
 ) {
     for (entity, mut serialized_data, needs_blueprinted, needs_saved, name) in query.iter_mut() {
         let bp_name = name.map(|n| format!("{n} ({entity:?})")).unwrap_or(format!("{entity:?}"));
-        save_blueprint(&serialized_data, needs_blueprinted, &bp_name)
+        save_blueprint_data(serialized_data.save_data.clone(), needs_blueprinted, &bp_name)
             .unwrap_or_else(|e| warn!("Failed to save blueprint for {entity:?} \n\n{e}\n\n"));
 
         commands.entity(entity).remove::<NeedsBlueprinted>();

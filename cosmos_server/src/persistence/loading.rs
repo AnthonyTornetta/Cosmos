@@ -20,8 +20,8 @@ use cosmos_core::{
     physics::location::{Location, LocationPhysicsSet, SetPosition},
     structure::{
         blueprint::{Blueprint, BlueprintOld, BlueprintType},
-        chunk::netty::SaveData,
         loading::StructureLoadingSet,
+        persistence::SaveData,
         systems::StructureSystemsSet,
     },
 };
@@ -193,13 +193,8 @@ fn check_blueprint_needs_loaded(query: Query<(Entity, &NeedsBlueprintLoaded), Wi
             Ok(b) => b,
         };
 
-        let Ok(save_data) = cosmos_encoder::deserialize_uncompressed::<SaveData>(blueprint.serialized_data()) else {
-            error!("Error deserializing inner data for {path}");
-            continue;
-        };
-
         let serialized_data = SerializedData {
-            save_data,
+            save_data: blueprint.serialized_data().clone(),
             ..Default::default()
         };
 

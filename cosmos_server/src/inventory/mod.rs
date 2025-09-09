@@ -14,7 +14,7 @@ use cosmos_core::{
     netty::sync::IdentifiableComponent,
     prelude::{ChunkBlockCoordinate, Structure, StructureLoadingSet},
     registry::Registry,
-    structure::chunk::netty::{DeserializationError, SaveData, SerializedBlockData},
+    structure::{chunk::netty::SerializedBlockData, persistence::*},
 };
 use serde::{Deserialize, Serialize};
 

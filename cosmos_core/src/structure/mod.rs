@@ -56,6 +56,7 @@ pub mod full_structure;
 pub mod loading;
 pub mod lod;
 pub mod lod_chunk;
+pub mod persistence;
 pub mod planet;
 pub mod prelude;
 pub mod query;

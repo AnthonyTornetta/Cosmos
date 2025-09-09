@@ -14,7 +14,7 @@ use serde::{Deserialize, Serialize, de::DeserializeOwned};
 use cosmos_core::{
     entities::EntityId,
     physics::location::{Location, Sector},
-    structure::chunk::netty::{DeserializationError, SaveData},
+    structure::persistence::*,
 };
 
 pub mod autosave;
