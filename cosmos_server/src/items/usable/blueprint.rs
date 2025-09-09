@@ -161,10 +161,10 @@ fn on_upload_blueprint(
 
         if inv
             .itemstack_at(ev.slot as usize)
-            .map(|x| x.item_id() == blueprint.id())
-            .unwrap_or(false)
+            .map(|x| x.item_id() != blueprint.id())
+            .unwrap_or(true)
         {
-            warn!("Player not holding blueprint at that slot!");
+            warn!("Player not holding blueprint at that slot ({})!", ev.slot);
             continue;
         }
 
