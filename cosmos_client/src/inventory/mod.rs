@@ -1141,6 +1141,7 @@ fn draw_held_item(
             },
             FollowCursor,
             NoHoverTooltip,
+            GlobalZIndex(10),
             Name::new("Held Item Render"),
         ))
     };
