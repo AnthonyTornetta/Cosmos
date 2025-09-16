@@ -734,6 +734,23 @@ fn add_cosmos_blocks(
             .create(),
     );
 
+    blocks.register(
+        BlockBuilder::new("cosmos:shipyard_controller", 2.0, 20.0, 5.0)
+            .add_property(BlockProperty::Full)
+            .with_interactable()
+            .with_category("cosmos:utility")
+            .create(),
+    );
+
+    blocks.register(
+        BlockBuilder::new("cosmos:shipyard_frame", 2.0, 20.0, 5.0)
+            .add_property(BlockProperty::Full)
+            .add_property(BlockProperty::Transparent)
+            .with_interactable()
+            .with_category("cosmos:utility")
+            .create(),
+    );
+
     loading.finish_loading(id, &mut end_writer);
 }
 
