@@ -7,12 +7,16 @@ use bevy::{
 };
 use cosmos_core::{
     ecs::sets::FixedUpdateSet,
+    entities::player::creative::Creative,
     inventory::{Inventory, held_item_slot::HeldItemSlot, itemstack::ItemStackData},
     item::{
         Item,
         usable::{
             UseHeldItemEvent,
-            blueprint::{BlueprintItemData, ClearBlueprint, CopyBlueprint, DownloadBlueprint, DownloadBlueprintResponse, UploadBlueprint},
+            blueprint::{
+                BlueprintItemData, ClearBlueprint, CopyBlueprint, DownloadBlueprint, DownloadBlueprintResponse, RequestLoadBlueprint,
+                UploadBlueprint,
+            },
         },
     },
     netty::{client::LocalPlayer, cosmos_encoder, sync::events::client_event::NettyEventWriter},
@@ -42,7 +46,7 @@ struct OpenedBp(BlueprintItemData);
 fn on_use_blueprint(
     items: Res<Registry<Item>>,
     mut evr_use_item: EventReader<UseHeldItemEvent>,
-    q_player: Query<(&Inventory, &LookingAt), With<LocalPlayer>>,
+    q_player: Query<(&Inventory, &LookingAt, Has<Creative>), With<LocalPlayer>>,
     q_blueprint_data: Query<&BlueprintItemData>,
     mut commands: Commands,
     font: Res<DefaultFont>,
@@ -60,7 +64,7 @@ fn on_use_blueprint(
             continue;
         };
 
-        let Ok((inv, looking_at)) = q_player.get(ev.player) else {
+        let Ok((inv, looking_at, creative)) = q_player.get(ev.player) else {
             continue;
         };
 
@@ -168,7 +172,7 @@ fn on_use_blueprint(
                     p.spawn((
                         CosmosButton::<ClearBlueprintBtn> {
                             text: Some((
-                                "-".into(),
+                                "Clear".into(),
                                 TextFont {
                                     font: font.get(),
                                     font_size: 24.0,
@@ -179,7 +183,7 @@ fn on_use_blueprint(
                             ..Default::default()
                         },
                         Node {
-                            width: Val::Px(64.0),
+                            width: Val::Percent(40.0),
                             height: Val::Px(64.0),
                             ..Default::default()
                         },
@@ -189,7 +193,7 @@ fn on_use_blueprint(
                     p.spawn((
                         CosmosButton::<CopyBlueprintBtn> {
                             text: Some((
-                                "+".into(),
+                                "Copy".into(),
                                 TextFont {
                                     font: font.get(),
                                     font_size: 24.0,
@@ -200,7 +204,7 @@ fn on_use_blueprint(
                             ..Default::default()
                         },
                         Node {
-                            width: Val::Px(64.0),
+                            width: Val::Percent(40.0),
                             height: Val::Px(64.0),
                             ..Default::default()
                         },
@@ -221,6 +225,29 @@ fn on_use_blueprint(
                     flex_grow: 1.0,
                     ..Default::default()
                 });
+
+                if creative {
+                    p.spawn((
+                        CosmosButton::<LoadClicked> {
+                            text: Some((
+                                "Load".into(),
+                                TextFont {
+                                    font: font.get(),
+                                    font_size: 24.0,
+                                    ..Default::default()
+                                },
+                                Default::default(),
+                            )),
+                            ..Default::default()
+                        },
+                        Node {
+                            width: Val::Percent(100.0),
+                            margin: UiRect::bottom(Val::Px(30.0)),
+                            ..Default::default()
+                        },
+                        BackgroundColor(css::GREEN.into()),
+                    ));
+                }
 
                 p.spawn((
                     OpenedBp(data.clone()),
@@ -249,6 +276,7 @@ fn on_use_blueprint(
 }
 
 create_private_button_event!(SaveBlueprint);
+create_private_button_event!(LoadClicked);
 create_private_button_event!(CopyBlueprintBtn);
 create_private_button_event!(ClearBlueprintBtn);
 create_private_button_event!(LoadBlueprint);
@@ -389,11 +417,20 @@ fn on_copy(
     }
 }
 
+fn load_clicked(mut nevw_load_bp: NettyEventWriter<RequestLoadBlueprint>, q_held_item: Query<&HeldItemSlot, With<LocalPlayer>>) {
+    let Ok(held_item) = q_held_item.single() else {
+        return;
+    };
+
+    nevw_load_bp.write(RequestLoadBlueprint { slot: held_item.slot() });
+}
+
 pub(super) fn register(app: &mut App) {
     register_button::<SaveBlueprint>(app);
     register_button::<LoadBlueprint>(app);
     register_button::<ClearBlueprintBtn>(app);
     register_button::<CopyBlueprintBtn>(app);
+    register_button::<LoadClicked>(app);
 
     app.add_systems(FixedUpdate, on_use_blueprint.in_set(FixedUpdateSet::Main))
         .add_systems(
@@ -405,6 +442,7 @@ pub(super) fn register(app: &mut App) {
                 on_load.run_if(not(resource_exists::<LoadTask>)),
                 on_copy,
                 on_clear,
+                load_clicked.run_if(on_event::<LoadClicked>),
             )
                 .run_if(in_state(GameState::Playing)),
         );

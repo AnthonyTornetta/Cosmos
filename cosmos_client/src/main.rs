@@ -26,7 +26,6 @@ pub mod item;
 pub mod lang;
 pub mod loading;
 pub mod netty;
-pub mod notifications;
 pub mod physics;
 pub mod plugin;
 pub mod projectiles;
@@ -193,7 +192,6 @@ fn main() {
     crafting::register(&mut app);
     coms::register(&mut app);
     quest::register(&mut app);
-    notifications::register(&mut app);
 
     if cfg!(feature = "print-schedule") {
         println!(

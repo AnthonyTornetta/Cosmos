@@ -3,7 +3,7 @@ use std::fs;
 use bevy::prelude::*;
 use cosmos_core::{
     block::Block,
-    entities::player::Player,
+    entities::player::{Player, creative::Creative},
     inventory::{
         HeldItemStack, Inventory,
         itemstack::{ItemShouldHaveData, ItemStackSystemSet},
@@ -11,7 +11,8 @@ use cosmos_core::{
     item::{
         Item,
         usable::blueprint::{
-            BlueprintItemData, ClearBlueprint, CopyBlueprint, DownloadBlueprint, DownloadBlueprintResponse, UploadBlueprint,
+            BlueprintItemData, ClearBlueprint, CopyBlueprint, DownloadBlueprint, DownloadBlueprintResponse, RequestLoadBlueprint,
+            UploadBlueprint,
         },
     },
     netty::{
@@ -21,6 +22,7 @@ use cosmos_core::{
         system_sets::NetworkingSystemsSet,
     },
     notifications::{Notification, NotificationKind},
+    physics::location::Location,
     prelude::{Ship, Station, Structure},
     registry::{Registry, identifiable::Identifiable},
     state::GameState,
@@ -31,6 +33,7 @@ use uuid::Uuid;
 use crate::{
     items::usable::UseHeldItemEvent,
     persistence::{
+        loading::NeedsBlueprintLoaded,
         make_persistent::{DefaultPersistentComponent, make_persistent},
         saving::{BlueprintingSystemSet, NeedsBlueprinted, save_blueprint},
     },
@@ -275,6 +278,51 @@ fn clear_blueprint(
     }
 }
 
+fn on_place_blueprint(
+    mut nevr_place_blueprint: EventReader<NettyEventReceived<RequestLoadBlueprint>>,
+    lobby: Res<ServerLobby>,
+    q_player: Query<(&Inventory, &Location, &GlobalTransform), With<Creative>>,
+    items: Res<Registry<Item>>,
+    q_bp_data: Query<&BlueprintItemData>,
+    mut commands: Commands,
+) {
+    for ev in nevr_place_blueprint.read() {
+        let Some(player) = lobby.player_from_id(ev.client_id) else {
+            continue;
+        };
+
+        let Some(bp_item) = items.from_id("cosmos:blueprint") else {
+            continue;
+        };
+
+        let Ok((player_inv, player_loc, player_trans)) = q_player.get(player) else {
+            continue;
+        };
+
+        if player_inv
+            .itemstack_at(ev.slot as usize)
+            .map(|x| x.item_id() != bp_item.id())
+            .unwrap_or(true)
+        {
+            continue;
+        }
+
+        let Some(bp_data) = player_inv.query_itemstack_data(ev.slot as usize, &q_bp_data) else {
+            continue;
+        };
+
+        let file_path = bp_data.get_blueprint_path();
+
+        commands.spawn(
+            (NeedsBlueprintLoaded {
+                path: file_path,
+                spawn_at: *player_loc,
+                rotation: player_trans.rotation(),
+            }),
+        );
+    }
+}
+
 pub(super) fn register(app: &mut App) {
     make_persistent::<BlueprintItemData>(app);
 
@@ -287,6 +335,7 @@ pub(super) fn register(app: &mut App) {
                 on_upload_blueprint,
                 copy_blueprint,
                 clear_blueprint,
+                on_place_blueprint,
             )
                 .before(BlueprintingSystemSet::BeginBlueprinting)
                 .before(ItemStackSystemSet::CreateDataEntity)

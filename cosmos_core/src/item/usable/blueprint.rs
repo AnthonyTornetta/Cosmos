@@ -30,6 +30,12 @@ impl SyncableComponent for BlueprintItemData {
     }
 }
 
+impl BlueprintItemData {
+    pub fn get_blueprint_path(&self) -> String {
+        self.blueprint_type.path_for(&self.blueprint_id.to_string())
+    }
+}
+
 #[derive(Event, Serialize, Deserialize, Debug, Clone, Reflect, PartialEq, Eq)]
 pub struct DownloadBlueprint {
     pub blueprint_id: Uuid,
@@ -119,9 +125,29 @@ impl NettyEvent for CopyBlueprint {
     }
 }
 
+#[derive(Event, Serialize, Deserialize, Debug, Clone, Reflect, PartialEq, Eq)]
+/// Loads the blueprint on top of the player if they are in creative
+pub struct RequestLoadBlueprint {
+    /// The slot the player has a blueprint they want to load
+    pub slot: u32,
+}
+
+impl IdentifiableEvent for RequestLoadBlueprint {
+    fn unlocalized_name() -> &'static str {
+        "cosmos:load_blueprint"
+    }
+}
+
+impl NettyEvent for RequestLoadBlueprint {
+    fn event_receiver() -> crate::netty::sync::events::netty_event::EventReceiver {
+        crate::netty::sync::events::netty_event::EventReceiver::Server
+    }
+}
+
 pub(super) fn register(app: &mut App) {
     app.register_type::<BlueprintItemData>()
         .add_netty_event::<DownloadBlueprintResponse>()
+        .add_netty_event::<RequestLoadBlueprint>()
         .add_netty_event::<UploadBlueprint>()
         .add_netty_event::<ClearBlueprint>()
         .add_netty_event::<CopyBlueprint>()
