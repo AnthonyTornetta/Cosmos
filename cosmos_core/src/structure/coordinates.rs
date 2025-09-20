@@ -110,6 +110,10 @@ macro_rules! create_coordinate {
                     })
                 }
             }
+
+            pub fn within(&self, min: Self, max: Self) -> bool {
+                self.x >= min.x && self.x <= max.x && self.y >= min.y && self.y <= max.y && self.z >= min.z && self.z <= max.z
+            }
         }
 
         impl std::fmt::Display for $name {
