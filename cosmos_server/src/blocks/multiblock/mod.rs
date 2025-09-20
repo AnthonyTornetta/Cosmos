@@ -2,6 +2,7 @@
 
 use bevy::prelude::App;
 
+pub mod checker;
 pub mod reactor;
 pub mod shipyard;
 

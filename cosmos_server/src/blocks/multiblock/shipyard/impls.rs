@@ -18,7 +18,10 @@ use cosmos_core::{
 use derive_more::{Display, Error};
 use serde::{Deserialize, Serialize};
 
-use crate::blocks::multiblock::shipyard::{Shipyard, Shipyards};
+use crate::blocks::multiblock::{
+    checker::rectangle::{RectangleMultiblockError, check_is_valid_multiblock_bounds},
+    shipyard::{Shipyard, Shipyards},
+};
 
 fn register_shipyard_component_hooks(world: &mut World) {
     world
@@ -84,7 +87,6 @@ fn on_place_blocks_impacting_shipyard(
 #[derive(Error, Debug, Clone, Copy, Serialize, Deserialize, Display)]
 enum ShipyardError {
     ControllerTouchingTooManyFrames(#[error(not(source))] BlockCoordinate),
-    InvalidSquare(#[error(not(source))] BlockCoordinate),
     FrameNotClear(#[error(not(source))] BlockCoordinate),
     MissingFrames,
 }
@@ -101,24 +103,45 @@ fn compute_shipyard(structure: &Structure, controller: BlockCoordinate, frame_id
         (Some(_), Some(c)) => return Err(ShipyardError::ControllerTouchingTooManyFrames(c)),
         (None, _) => return Err(ShipyardError::MissingFrames),
     };
+
+    let valid = check_is_valid_multiblock_bounds(structure, starting_frame_coord, &[frame_id], 1, usize::MAX);
+
+    let bounds = match valid {
+        Err(e) => match e {
+            RectangleMultiblockError::InvalidSquare(_) => return Err(ShipyardError::MissingFrames),
+            // This shouldn't ever happen, but just in case
+            RectangleMultiblockError::TooBig => {
+                error!("Got a toobig error code - this shouldn't happen.");
+                return Err(ShipyardError::MissingFrames);
+            }
+        },
+        Ok(bounds) => bounds,
+    };
+
+    Ok(Shipyard { bounds, controller })
 }
 
 fn interact_with_shipyard(
-    q_structure: Query<&Structure>,
+    mut q_structure: Query<&mut Structure>,
     q_shipyard: Query<&Shipyard>,
     mut evr_interact: EventReader<BlockInteractEvent>,
     blocks: Res<Registry<Block>>,
+    mut bs_params: BlockDataSystemParams,
+    mut q_block_data: Query<&mut BlockData>,
+    q_has_data: Query<(), With<Shipyard>>,
 ) {
     for ev in evr_interact.read() {
         let Some(b) = ev.block else {
             continue;
         };
 
-        let Ok(structure) = q_structure.get(b.structure()) else {
+        let Ok(mut structure) = q_structure.get_mut(b.structure()) else {
+            error!("No shipyard structure!");
             continue;
         };
 
         let Some(block) = blocks.from_id("cosmos:shipyard_controller") else {
+            error!("No shipyard controller block!");
             return;
         };
 
@@ -132,10 +155,21 @@ fn interact_with_shipyard(
         }
 
         let Some(frame) = blocks.from_id("cosmos:shipyard_frame") else {
+            error!("No frame block!");
             return;
         };
 
-        compute_shipyard();
+        let shipyard = match compute_shipyard(&structure, b.coords(), frame.id()) {
+            Err(e) => {
+                error!("{e}");
+                continue;
+            }
+            Ok(shipyard) => shipyard,
+        };
+
+        info!("Inserted shipyard {shipyard:?}!");
+
+        structure.insert_block_data(b.coords(), shipyard, &mut bs_params, &mut q_block_data, &q_has_data);
     }
 }
 

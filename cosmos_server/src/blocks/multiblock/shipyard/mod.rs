@@ -1,23 +1,19 @@
 use bevy::{ecs::relationship::Relationship, prelude::*};
 use cosmos_core::prelude::BlockCoordinate;
 
-mod impls;
+use crate::blocks::multiblock::checker::rectangle::RectangleMultiblockBounds;
 
-#[derive(Debug, Reflect)]
-struct ShipyardBounds {
-    min: BlockCoordinate,
-    max: BlockCoordinate,
-}
+mod impls;
 
 #[derive(Debug, Component, Reflect)]
 struct Shipyard {
     controller: BlockCoordinate,
-    bounds: ShipyardBounds,
+    bounds: RectangleMultiblockBounds,
 }
 
 impl Shipyard {
     pub fn coordinate_within(&self, coord: BlockCoordinate) -> bool {
-        coord.within(self.bounds.min, self.bounds.max) || coord == self.controller
+        coord.within(self.bounds.negative_coords, self.bounds.positive_coords) || coord == self.controller
     }
 }
 
