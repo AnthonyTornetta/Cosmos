@@ -6,6 +6,7 @@ use cosmos_core::{
         Block,
         block_direction::{ALL_BLOCK_DIRECTIONS, BlockDirection},
         block_events::{BlockEventsSet, BlockInteractEvent},
+        blocks::AIR_BLOCK_ID,
         data::BlockData,
     },
     events::{
@@ -19,7 +20,7 @@ use derive_more::{Display, Error};
 use serde::{Deserialize, Serialize};
 
 use crate::blocks::multiblock::{
-    checker::rectangle::{RectangleMultiblockError, check_is_valid_multiblock_bounds},
+    checker::rectangle::{RectangleLimit, RectangleMultiblockError, RectangleMultiblockValidityError, check_is_valid_multiblock_bounds},
     shipyard::{Shipyard, Shipyards},
 };
 
@@ -86,8 +87,11 @@ fn on_place_blocks_impacting_shipyard(
 
 #[derive(Error, Debug, Clone, Copy, Serialize, Deserialize, Display)]
 enum ShipyardError {
+    #[display("Controller Touching too many frames ({_0}/1)")]
     ControllerTouchingTooManyFrames(#[error(not(source))] BlockCoordinate),
+    #[display("Frame is not clear of obstructions at {_0}")]
     FrameNotClear(#[error(not(source))] BlockCoordinate),
+    #[display("Missing frames")]
     MissingFrames,
 }
 
@@ -124,6 +128,38 @@ fn compute_shipyard(structure: &Structure, controller: BlockCoordinate, frame_id
         },
         Ok(bounds) => bounds,
     };
+
+    info!("Checking filled walls!");
+
+    if let Some(e) = bounds.check_walls_filled(
+        structure,
+        &[frame_id, AIR_BLOCK_ID],
+        &mut [RectangleLimit {
+            block: frame_id,
+            amount: bounds.perimeter() as usize,
+        }],
+    ) {
+        match e {
+            RectangleMultiblockValidityError::BrokenLimit { block: _, coordinate } => {
+                return Err(ShipyardError::FrameNotClear(coordinate));
+            }
+            RectangleMultiblockValidityError::InvalidBlock(coordinate) => {
+                return Err(ShipyardError::FrameNotClear(coordinate));
+            }
+        }
+    }
+
+    info!("Checking filled bounds!");
+    if let Some(e) = bounds.check_inside_filled(structure, &[AIR_BLOCK_ID], &mut []) {
+        match e {
+            RectangleMultiblockValidityError::BrokenLimit { block: _, coordinate } => {
+                return Err(ShipyardError::FrameNotClear(coordinate));
+            }
+            RectangleMultiblockValidityError::InvalidBlock(coordinate) => {
+                return Err(ShipyardError::FrameNotClear(coordinate));
+            }
+        }
+    }
 
     Ok(Shipyard { bounds, controller })
 }
