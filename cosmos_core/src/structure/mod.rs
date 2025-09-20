@@ -863,6 +863,14 @@ impl Structure {
             Self::Dynamic(ds) => ds.blocks_surrounding(coords, blocks),
         }
     }
+
+    /// Checks if this chunk contains any non-air blocks, or is out of bounds
+    pub fn is_chunk_empty(&self, coords: ChunkCoordinate) -> bool {
+        match self {
+            Self::Full(fs) => fs.is_chunk_empty(coords),
+            Self::Dynamic(ds) => ds.is_chunk_empty(coords),
+        }
+    }
 }
 
 /// This event is sent when a chunk is initially filled out

@@ -4,7 +4,7 @@ use bevy::{ecs::component::HookContext, prelude::*};
 use cosmos_core::{
     block::{
         Block,
-        block_direction::ALL_BLOCK_DIRECTIONS,
+        block_direction::{ALL_BLOCK_DIRECTIONS, BlockDirection},
         block_events::{BlockEventsSet, BlockInteractEvent},
         data::BlockData,
     },
@@ -95,7 +95,7 @@ fn compute_shipyard(structure: &Structure, controller: BlockCoordinate, frame_id
     let mut starting_frame_block = ALL_BLOCK_DIRECTIONS.iter().flat_map(|x| {
         BlockCoordinate::try_from(controller + x.to_coordinates())
             .ok()
-            .filter(|c| structure.block_id_at(*c) == frame_id)
+            .filter(|c| structure.is_within_blocks(*c) && structure.block_id_at(*c) == frame_id)
     });
 
     let starting_frame_coord = match (starting_frame_block.next(), starting_frame_block.next()) {
@@ -104,14 +104,21 @@ fn compute_shipyard(structure: &Structure, controller: BlockCoordinate, frame_id
         (None, _) => return Err(ShipyardError::MissingFrames),
     };
 
-    let valid = check_is_valid_multiblock_bounds(structure, starting_frame_coord, &[frame_id], 1, usize::MAX);
+    let valid = check_is_valid_multiblock_bounds(structure, starting_frame_coord, &[frame_id], 5, usize::MAX);
 
     let bounds = match valid {
         Err(e) => match e {
-            RectangleMultiblockError::InvalidSquare(_) => return Err(ShipyardError::MissingFrames),
+            RectangleMultiblockError::InvalidSquare(s) => {
+                error!("{s:?}");
+                return Err(ShipyardError::MissingFrames);
+            }
             // This shouldn't ever happen, but just in case
             RectangleMultiblockError::TooBig => {
                 error!("Got a toobig error code - this shouldn't happen.");
+                return Err(ShipyardError::MissingFrames);
+            }
+            RectangleMultiblockError::TooSmall => {
+                error!("Too small!");
                 return Err(ShipyardError::MissingFrames);
             }
         },
@@ -151,6 +158,7 @@ fn interact_with_shipyard(
 
         if let Some(shipyard) = structure.query_block_data(b.coords(), &q_shipyard) {
             // send event or something to open UI
+            info!("Open UI!");
             continue;
         }
 
@@ -176,6 +184,8 @@ fn interact_with_shipyard(
 pub(super) fn register(app: &mut App) {
     app.add_systems(Startup, register_shipyard_component_hooks).add_systems(
         FixedUpdate,
-        on_place_blocks_impacting_shipyard.in_set(BlockEventsSet::ProcessEvents),
+        (on_place_blocks_impacting_shipyard, interact_with_shipyard)
+            .chain()
+            .in_set(BlockEventsSet::ProcessEvents),
     );
 }

@@ -1,7 +1,15 @@
-use bevy::prelude::*;
+use bevy::{
+    platform::collections::{HashMap, HashSet},
+    prelude::*,
+};
 use cosmos_core::{
-    block::block_face::BlockFace,
-    prelude::{BlockCoordinate, Structure, UnboundBlockCoordinate},
+    block::{
+        block_direction::{ALL_BLOCK_DIRECTIONS, BlockDirection},
+        block_face::BlockFace,
+        block_rotation::BlockRotation,
+    },
+    prelude::{BlockCoordinate, ChunkCoordinate, Structure, UnboundBlockCoordinate},
+    structure::coordinates::{CoordinateType, UnboundCoordinateType},
 };
 use derive_more::{Display, Error};
 use serde::{Deserialize, Serialize};
@@ -96,34 +104,183 @@ pub enum RectangleMultiblockError {
     #[display("InvalidSquare")]
     InvalidSquare(#[error(not(source))] Option<BlockCoordinate>),
     TooBig,
+    TooSmall,
+}
+
+fn connections(coord: BlockCoordinate, structure: &Structure, valid_blocks: &[u16]) -> Vec<BlockCoordinate> {
+    ALL_BLOCK_DIRECTIONS
+        .iter()
+        .flat_map(|d| BlockCoordinate::try_from(coord + d.to_coordinates()))
+        .filter(|&c| structure.is_within_blocks(c) && valid_blocks.contains(&structure.block_id_at(c)))
+        .collect::<Vec<_>>()
 }
 
 pub fn check_is_valid_multiblock_bounds(
+    structure: &Structure,
+    starting_block: BlockCoordinate,
+    valid_blocks: &[u16],
+    min_size: usize,
+    max_size: usize,
+) -> Result<RectangleMultiblockBounds, RectangleMultiblockError> {
+    let mut doing = vec![starting_block];
+    let mut will_do = vec![];
+    let mut already_done = HashSet::<BlockCoordinate>::default();
+    already_done.insert(starting_block);
+
+    // If it's a valid rectangular prism, each direction will be noted 4 times exactly.
+    let mut found_dirs = HashMap::<BlockDirection, u32>::default();
+
+    let mut corners = vec![];
+
+    while !doing.is_empty() {
+        for coord in doing {
+            let neighbors = connections(coord, structure, valid_blocks);
+
+            info!("{coord} - {neighbors:?}");
+
+            if neighbors.len() > 3 {
+                return Err(RectangleMultiblockError::InvalidSquare(neighbors.last().copied()));
+            }
+
+            if neighbors.len() == 3 {
+                corners.push(coord);
+                for neighbor in neighbors.iter().copied() {
+                    let dir = BlockDirection::from_coordinates(neighbor - coord);
+
+                    let val = found_dirs.entry(dir).or_default();
+                    if *val == 4 {
+                        return Err(RectangleMultiblockError::InvalidSquare(Some(neighbor)));
+                    }
+                    *val += 1;
+                }
+            }
+
+            for neighbor in neighbors {
+                if already_done.contains(&neighbor) {
+                    continue;
+                }
+                already_done.insert(neighbor);
+                will_do.push(neighbor);
+            }
+        }
+
+        doing = will_do;
+        will_do = vec![];
+    }
+
+    for (dir, dir_count) in found_dirs {
+        if dir_count != 4 {
+            error!("Missing dir: {dir:?} (only found {dir_count} times)");
+            return Err(RectangleMultiblockError::InvalidSquare(None));
+        }
+    }
+
+    if corners.len() > 8 {
+        return Err(RectangleMultiblockError::InvalidSquare(corners.last().copied()));
+    }
+
+    if corners.len() != 8 {
+        return Err(RectangleMultiblockError::InvalidSquare(None));
+    }
+
+    let mut bounds = RectangleMultiblockBounds {
+        positive_coords: corners[0],
+        negative_coords: corners[0],
+    };
+
+    for corner in corners.into_iter().skip(1) {
+        bounds.negative_coords.x = bounds.negative_coords.x.min(corner.x);
+        bounds.positive_coords.x = bounds.positive_coords.x.max(corner.x);
+
+        bounds.negative_coords.y = bounds.negative_coords.y.min(corner.y);
+        bounds.positive_coords.y = bounds.positive_coords.y.max(corner.y);
+
+        bounds.negative_coords.z = bounds.negative_coords.z.min(corner.z);
+        bounds.positive_coords.z = bounds.positive_coords.z.max(corner.z);
+    }
+
+    if bounds.positive_coords.x - bounds.negative_coords.x < (min_size as CoordinateType)
+        || bounds.positive_coords.y - bounds.negative_coords.y < (min_size as CoordinateType)
+        || bounds.positive_coords.z - bounds.negative_coords.z < (min_size as CoordinateType)
+    {
+        return Err(RectangleMultiblockError::TooSmall);
+    }
+    if bounds.positive_coords.x - bounds.negative_coords.x > (max_size as CoordinateType)
+        || bounds.positive_coords.y - bounds.negative_coords.y > (max_size as CoordinateType)
+        || bounds.positive_coords.z - bounds.negative_coords.z > (max_size as CoordinateType)
+    {
+        return Err(RectangleMultiblockError::TooBig);
+    }
+
+    let total_checked = already_done.len();
+
+    let perimeter = {
+        let diff = bounds.positive_coords - bounds.negative_coords;
+        // This is over by 4, and idk why, thus the -4.
+        (4 * (diff.x + diff.y + diff.z) - 4) as usize
+    };
+
+    if total_checked != perimeter {
+        // If we haven't checked the full perimeter and nothing more, then there was a hole somewhere, or extra
+        // blocks somewhere.
+        error!("Perimeter error: {total_checked} vs {perimeter} ({bounds:?})");
+        return Err(RectangleMultiblockError::InvalidSquare(None));
+    }
+
+    Ok(bounds)
+}
+
+pub fn check_is_valid_multiblock_bounds_bad(
     structure: &Structure,
     controller_coords: BlockCoordinate,
     valid_blocks: &[u16],
     min_size: usize,
     max_size: usize,
+    start_check_dir: BlockDirection,
 ) -> Result<RectangleMultiblockBounds, RectangleMultiblockError> {
     debug_assert!(min_size < max_size);
-    debug_assert!(min_size > 0);
 
-    let rotation = structure.block_rotation(controller_coords);
+    if !structure.is_within_blocks(controller_coords) {
+        return Err(RectangleMultiblockError::InvalidSquare(Some(controller_coords)));
+    }
+
+    let other_axis = match start_check_dir {
+        BlockDirection::PosX | BlockDirection::NegX => [
+            (BlockDirection::PosY, BlockDirection::NegY),
+            (BlockDirection::PosZ, BlockDirection::NegZ),
+        ],
+        BlockDirection::PosY | BlockDirection::NegY => [
+            (BlockDirection::PosX, BlockDirection::NegX),
+            (BlockDirection::PosZ, BlockDirection::NegZ),
+        ],
+        BlockDirection::PosZ | BlockDirection::NegZ => [
+            (BlockDirection::PosX, BlockDirection::NegX),
+            (BlockDirection::PosY, BlockDirection::NegY),
+        ],
+    };
 
     let ub_controller_coords = UnboundBlockCoordinate::from(controller_coords);
 
     let mut found_coords = None;
 
     {
-        let search_direction = rotation.direction_of(BlockFace::Back).to_coordinates();
+        let search_direction = start_check_dir.to_coordinates();
+
+        let offset = search_direction * (min_size - 1) as UnboundCoordinateType;
 
         // Start `min_size` back to now allow a `min_size - 1` size multiblock
-        let mut check_coords = search_direction + search_direction;
+        let mut check_coords = search_direction + offset;
         for _ in 0..(max_size - (min_size - 1)) {
             let Ok(check_here) = BlockCoordinate::try_from(check_coords + ub_controller_coords) else {
                 return Err(RectangleMultiblockError::InvalidSquare(None));
             };
 
+            if !structure.is_within_blocks(check_here) {
+                info!("Oob {check_here}");
+                return Err(RectangleMultiblockError::InvalidSquare(Some(check_here)));
+            }
+
+            info!("Checking {check_here}");
             let block_here = structure.block_id_at(check_here);
 
             if valid_blocks.contains(&block_here) {
@@ -142,18 +299,20 @@ pub fn check_is_valid_multiblock_bounds(
     let (left_wall_coords, right_wall_coords) = find_wall_coords(
         ub_controller_coords,
         structure,
-        rotation.direction_of(BlockFace::Left).to_coordinates(),
-        rotation.direction_of(BlockFace::Right).to_coordinates(),
+        other_axis[0].0.to_coordinates(),
+        other_axis[0].1.to_coordinates(),
         &valid_blocks,
+        min_size,
         max_size,
     )?;
 
     let (down_wall_coords, up_wall_coords) = find_wall_coords(
         ub_controller_coords,
         structure,
-        rotation.direction_of(BlockFace::Bottom).to_coordinates(),
-        rotation.direction_of(BlockFace::Top).to_coordinates(),
+        other_axis[1].0.to_coordinates(),
+        other_axis[1].1.to_coordinates(),
         &valid_blocks,
+        min_size,
         max_size,
     )?;
 
@@ -213,6 +372,7 @@ fn find_wall_coords(
     direction_a: UnboundBlockCoordinate,
     direction_b: UnboundBlockCoordinate,
     valid_blocks: &[u16],
+    min_size: usize,
     max_size: usize,
 ) -> Result<(BlockCoordinate, BlockCoordinate), RectangleMultiblockError> {
     let mut width = 0;
@@ -220,18 +380,24 @@ fn find_wall_coords(
     let mut found_coords = None;
     {
         let search_direction = direction_a;
+        let offset = search_direction * (min_size - 1) as UnboundCoordinateType;
 
-        let mut check_coords = search_direction;
-        for _ in 0..max_size {
+        let mut check_coords = search_direction + offset;
+        for _ in 0..(max_size - (min_size - 1)) {
             let Ok(check_here) = BlockCoordinate::try_from(check_coords + ub_controller_coords) else {
                 return Err(RectangleMultiblockError::InvalidSquare(None));
             };
 
-            // structure.set_block_at(check_here, valid_blocks[1], Default::default(), blocks, Some(ev_writer));
+            if !structure.is_within_blocks(check_here) {
+                error!("OOB {check_here}");
+                return Err(RectangleMultiblockError::InvalidSquare(Some(check_here)));
+            }
 
             width += 1;
 
             let block_here = structure.block_id_at(check_here);
+
+            info!("Checking {check_here}");
 
             if !valid_blocks.contains(&block_here) {
                 found_coords = Some(
@@ -245,21 +411,28 @@ fn find_wall_coords(
         }
     }
 
-    let Some(left_wall_coords) = found_coords else {
+    let Some(negative_wall_coords) = found_coords else {
         return Err(RectangleMultiblockError::TooBig);
     };
 
     let mut found_coords = None;
     {
         let search_direction = direction_b;
+        let offset = search_direction * (min_size - 1) as UnboundCoordinateType;
 
-        let mut check_coords = search_direction;
-        for _ in width..=max_size {
+        let mut check_coords = search_direction + offset;
+        for _ in width..=(max_size - (min_size - 1)) {
             let Ok(check_here) = BlockCoordinate::try_from(check_coords + ub_controller_coords) else {
                 return Err(RectangleMultiblockError::InvalidSquare(None));
             };
 
+            if !structure.is_within_blocks(check_here) {
+                error!("OOB {check_here}");
+                return Err(RectangleMultiblockError::InvalidSquare(Some(check_here)));
+            }
+
             let block_here = structure.block_id_at(check_here);
+            info!("Checking {check_here}");
 
             if !valid_blocks.contains(&block_here) {
                 found_coords = Some(
@@ -273,11 +446,11 @@ fn find_wall_coords(
         }
     }
 
-    let Some(right_wall_coords) = found_coords else {
+    let Some(positive_wall_coords) = found_coords else {
         return Err(RectangleMultiblockError::TooBig);
     };
 
-    Ok((left_wall_coords, right_wall_coords))
+    Ok((negative_wall_coords, positive_wall_coords))
 }
 
 pub(super) fn register(app: &mut App) {}
