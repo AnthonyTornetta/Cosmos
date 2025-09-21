@@ -15,7 +15,9 @@ pub mod blueprint;
 #[derive(Event, Debug, Serialize, Deserialize, Clone, Copy)]
 /// Sent by the player when they use their held item
 pub struct PlayerRequestUseHeldItemEvent {
+    /// The block they are looking at (excluding fluid)
     pub looking_at_block: Option<StructureBlock>,
+    /// The block they are looking at (including fluid)
     pub looking_at_any: Option<StructureBlock>,
 }
 
@@ -50,17 +52,24 @@ impl NettyEvent for PlayerRequestUseHeldItemEvent {
 }
 
 #[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
+/// The system set that items will be used in
 pub enum UseItemSet {
+    /// Sends item use events
     SendUseItemEvents,
 }
 
 #[derive(Event, Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-/// Sent when the client uses an item.
+/// Sent to clients after the player uses an item.
 pub struct UseHeldItemEvent {
+    /// The player that used the item
     pub player: Entity,
+    /// What block they were looking at (excluding fluids)
     pub looking_at_block: Option<StructureBlock>,
+    /// What block they were looking at (including fluids)
     pub looking_at_any: Option<StructureBlock>,
+    /// What item was being used
     pub item: Option<u16>,
+    /// What slot that item was in
     pub held_slot: usize,
 }
 

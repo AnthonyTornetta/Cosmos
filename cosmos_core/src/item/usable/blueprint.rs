@@ -1,3 +1,5 @@
+//! A usable blueprint item
+
 use bevy::prelude::*;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
@@ -12,9 +14,13 @@ use crate::{
 };
 
 #[derive(Component, Serialize, Deserialize, Debug, Clone, Reflect, PartialEq, Eq)]
+/// Is present on an item that points to a blueprint on disk
 pub struct BlueprintItemData {
+    /// The blueprint's unique id
     pub blueprint_id: Uuid,
+    /// The type of blueprint this points to
     pub blueprint_type: BlueprintType,
+    /// The display name of this blueprint (could be out of date)
     pub name: String,
 }
 
@@ -31,14 +37,20 @@ impl SyncableComponent for BlueprintItemData {
 }
 
 impl BlueprintItemData {
+    /// Returns the relative path this blueprint would be saved to disk on
     pub fn get_blueprint_path(&self) -> String {
         self.blueprint_type.path_for(&self.blueprint_id.to_string())
     }
 }
 
 #[derive(Event, Serialize, Deserialize, Debug, Clone, Reflect, PartialEq, Eq)]
+/// client -> server - Client requests to download a blueprint of this id and type.
+///
+/// The server will check for validity + authorization
 pub struct DownloadBlueprint {
+    /// The blueprint's id
     pub blueprint_id: Uuid,
+    /// The blueprint's type
     pub blueprint_type: BlueprintType,
 }
 
@@ -55,8 +67,11 @@ impl NettyEvent for DownloadBlueprint {
 }
 
 #[derive(Event, Serialize, Deserialize, Debug, Clone, Reflect, PartialEq, Eq)]
+/// A response to the [`DownloadBlueprint`] that contains the raw data for that blueprint
 pub struct DownloadBlueprintResponse {
+    /// The blueprint's id (from the [`DownloadBlueprint`] request)
     pub blueprint_id: Uuid,
+    /// The blueprint's data
     pub blueprint: Blueprint,
 }
 
@@ -73,7 +88,9 @@ impl NettyEvent for DownloadBlueprintResponse {
 }
 
 #[derive(Event, Serialize, Deserialize, Debug, Clone, Reflect, PartialEq, Eq)]
+/// client -> server - Uploads a blueprint to the server from the client's computer
 pub struct UploadBlueprint {
+    /// The client's blueprint data
     pub blueprint: Blueprint,
     /// The slot the player has a blueprint they want to set
     pub slot: u32,
@@ -92,7 +109,10 @@ impl NettyEvent for UploadBlueprint {
 }
 
 #[derive(Event, Serialize, Deserialize, Debug, Clone, Reflect, PartialEq, Eq)]
+/// Clears the blueprint from this item. Does not delete the blueprint file, only clears the
+/// reference to it.
 pub struct ClearBlueprint {
+    /// The slot to copy from
     pub slot: u32,
 }
 
@@ -109,7 +129,9 @@ impl NettyEvent for ClearBlueprint {
 }
 
 #[derive(Event, Serialize, Deserialize, Debug, Clone, Reflect, PartialEq, Eq)]
+/// Copys this blueprint item into an empty slot
 pub struct CopyBlueprint {
+    /// The slot to copy from
     pub slot: u32,
 }
 

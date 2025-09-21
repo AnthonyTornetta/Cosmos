@@ -1,3 +1,5 @@
+//! For rectangle-shaped multiblocks
+
 use bevy::{
     platform::collections::{HashMap, HashSet},
     prelude::*,
@@ -11,18 +13,32 @@ use derive_more::{Display, Error};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Reflect, Clone, Copy, Serialize, Deserialize)]
+/// The block bounds for a rectangular multiblock structure
 pub struct RectangleMultiblockBounds {
+    /// The negative-most corner of this rectangle
     pub negative_coords: BlockCoordinate,
+    /// The positive-most corner of this rectangle
     pub positive_coords: BlockCoordinate,
 }
 
+/// A limit to the number of blocks of this type in this multiblock
 pub struct RectangleLimit {
+    /// The maximum amount of this block
     pub amount: usize,
+    /// The block's id
     pub block: u16,
 }
 
+/// Something went wrong validating a multiblock rectangle
 pub enum RectangleMultiblockValidityError {
-    BrokenLimit { block: u16, coordinate: BlockCoordinate },
+    /// The number of this block exceeded the limit at this coordinate.
+    BrokenLimit {
+        /// The block whose limit was broken
+        block: u16,
+        /// The coordinate that had put it over the limit
+        coordinate: BlockCoordinate,
+    },
+    /// The block present at this coordinate was not a part of the valid list
     InvalidBlock(BlockCoordinate),
 }
 
@@ -118,6 +134,7 @@ impl RectangleMultiblockBounds {
         None
     }
 
+    /// Returns the perimeter in blocks of this multiblock
     pub fn perimeter(&self) -> CoordinateType {
         let diff = self.positive_coords - self.negative_coords;
         if diff.x == 0 && diff.y == 0 && diff.z == 0 {
@@ -130,10 +147,14 @@ impl RectangleMultiblockBounds {
 }
 
 #[derive(Error, Debug, Clone, Copy, Serialize, Deserialize, Display)]
+/// Something went wrong assembling the multiblock structure
 pub enum RectangleMultiblockError {
-    #[display("InvalidSquare")]
-    InvalidSquare(#[error(not(source))] Option<BlockCoordinate>),
+    #[display("InvalidSquare {_0:?}")]
+    /// An invalid block was found in this multiblock
+    InvalidMultiblock(#[error(not(source))] Option<BlockCoordinate>),
+    /// The final structure would be too big
     TooBig,
+    /// The final structure would be too small
     TooSmall,
 }
 
@@ -145,7 +166,12 @@ fn connections(coord: BlockCoordinate, structure: &Structure, valid_blocks: &[u1
         .collect::<Vec<_>>()
 }
 
-pub fn check_is_valid_multiblock_bounds(
+/// Checks if this structure, at this starting coordinate, form a valid `rectangle-outline`
+/// multiblock.
+///
+/// A rectangle-outline contains the frame of a rectangle, but not the complete walls, so this only
+/// checks for a valid frame. Note that this will NOT work for a valid frame with walls.
+pub fn check_is_valid_rectangle_outline_multiblock(
     structure: &Structure,
     starting_block: BlockCoordinate,
     valid_blocks: &[u16],
@@ -167,7 +193,7 @@ pub fn check_is_valid_multiblock_bounds(
             let neighbors = connections(coord, structure, valid_blocks);
 
             if neighbors.len() > 3 {
-                return Err(RectangleMultiblockError::InvalidSquare(neighbors.last().copied()));
+                return Err(RectangleMultiblockError::InvalidMultiblock(neighbors.last().copied()));
             }
 
             if neighbors.len() == 3 {
@@ -177,7 +203,7 @@ pub fn check_is_valid_multiblock_bounds(
 
                     let val = found_dirs.entry(dir).or_default();
                     if *val == 4 {
-                        return Err(RectangleMultiblockError::InvalidSquare(Some(neighbor)));
+                        return Err(RectangleMultiblockError::InvalidMultiblock(Some(neighbor)));
                     }
                     *val += 1;
                 }
@@ -199,16 +225,16 @@ pub fn check_is_valid_multiblock_bounds(
     for (dir, dir_count) in found_dirs {
         if dir_count != 4 {
             error!("Missing dir: {dir:?} (only found {dir_count} times)");
-            return Err(RectangleMultiblockError::InvalidSquare(None));
+            return Err(RectangleMultiblockError::InvalidMultiblock(None));
         }
     }
 
     if corners.len() > 8 {
-        return Err(RectangleMultiblockError::InvalidSquare(corners.last().copied()));
+        return Err(RectangleMultiblockError::InvalidMultiblock(corners.last().copied()));
     }
 
     if corners.len() != 8 {
-        return Err(RectangleMultiblockError::InvalidSquare(None));
+        return Err(RectangleMultiblockError::InvalidMultiblock(None));
     }
 
     let mut bounds = RectangleMultiblockBounds {
@@ -248,10 +274,8 @@ pub fn check_is_valid_multiblock_bounds(
         // If we haven't checked the full perimeter and nothing more, then there was a hole somewhere, or extra
         // blocks somewhere.
         error!("Perimeter error: {total_checked} vs {perimeter} ({bounds:?})");
-        return Err(RectangleMultiblockError::InvalidSquare(None));
+        return Err(RectangleMultiblockError::InvalidMultiblock(None));
     }
 
     Ok(bounds)
 }
-
-pub(super) fn register(app: &mut App) {}

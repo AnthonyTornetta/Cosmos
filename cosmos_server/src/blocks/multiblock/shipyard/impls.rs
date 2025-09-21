@@ -1,4 +1,3 @@
-
 use bevy::{ecs::component::HookContext, prelude::*};
 use cosmos_core::{
     block::{
@@ -19,7 +18,9 @@ use derive_more::{Display, Error};
 use serde::{Deserialize, Serialize};
 
 use crate::blocks::multiblock::{
-    checker::rectangle::{RectangleLimit, RectangleMultiblockError, RectangleMultiblockValidityError, check_is_valid_multiblock_bounds},
+    checker::rectangle::{
+        RectangleLimit, RectangleMultiblockError, RectangleMultiblockValidityError, check_is_valid_rectangle_outline_multiblock,
+    },
     shipyard::{Shipyard, Shipyards},
 };
 
@@ -45,9 +46,10 @@ fn register_shipyard_component_hooks(world: &mut World) {
             };
             let structure = block_data.identifier.block.structure();
             if let Some(mut shipyards) = world.get_mut::<Shipyards>(structure)
-                && let Some((idx, _)) = shipyards.0.iter().enumerate().find(|x| *x.1 == entity) {
-                    shipyards.0.swap_remove(idx);
-                }
+                && let Some((idx, _)) = shipyards.0.iter().enumerate().find(|x| *x.1 == entity)
+            {
+                shipyards.0.swap_remove(idx);
+            }
         });
 }
 
@@ -106,11 +108,11 @@ fn compute_shipyard(structure: &Structure, controller: BlockCoordinate, frame_id
         (None, _) => return Err(ShipyardError::MissingFrames),
     };
 
-    let valid = check_is_valid_multiblock_bounds(structure, starting_frame_coord, &[frame_id], 5, usize::MAX);
+    let valid = check_is_valid_rectangle_outline_multiblock(structure, starting_frame_coord, &[frame_id], 5, usize::MAX);
 
     let bounds = match valid {
         Err(e) => match e {
-            RectangleMultiblockError::InvalidSquare(s) => {
+            RectangleMultiblockError::InvalidMultiblock(s) => {
                 error!("{s:?}");
                 return Err(ShipyardError::MissingFrames);
             }
@@ -192,7 +194,7 @@ fn interact_with_shipyard(
 
         if let Some(shipyard) = structure.query_block_data(b.coords(), &q_shipyard) {
             // send event or something to open UI
-            info!("Open UI!");
+            info!("Open UI {shipyard:?}!");
             continue;
         }
 

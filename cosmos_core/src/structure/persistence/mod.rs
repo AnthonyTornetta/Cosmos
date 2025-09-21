@@ -1,3 +1,5 @@
+//! Shared persistence logic between client + server.
+
 use bevy::{platform::collections::HashMap, prelude::*};
 use derive_more::derive::{Display, Error};
 use serde::{Deserialize, Serialize, de::DeserializeOwned};

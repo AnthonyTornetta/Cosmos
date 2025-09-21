@@ -1,3 +1,5 @@
+//! The shipyard multiblock logic
+
 use bevy::prelude::*;
 use cosmos_core::prelude::BlockCoordinate;
 
@@ -18,9 +20,11 @@ impl Shipyard {
 }
 
 #[derive(Debug, Component, Reflect)]
+/// Contains a list of all [`Shipyard`]s this structure has
 pub struct Shipyards(Vec<Entity>);
 
 impl Shipyards {
+    /// Iterates over all the [`Shipyard`]s this structure has
     pub fn iter(&self) -> impl Iterator<Item = Entity> {
         self.0.iter().copied()
     }

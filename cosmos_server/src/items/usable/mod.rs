@@ -1,3 +1,5 @@
+//! Item usage logic
+
 use bevy::prelude::*;
 use cosmos_core::{
     entities::player::Player,

@@ -164,6 +164,7 @@ fn save_blueprint_data(data: SaveData, needs_blueprinted: &NeedsBlueprinted, log
     save_blueprint(&blueprint, &needs_blueprinted.blueprint_name)
 }
 
+/// Saves a blueprint to disk
 pub fn save_blueprint(blueprint: &Blueprint, file_name: &str) -> std::io::Result<()> {
     if let Err(e) = fs::create_dir("blueprints") {
         match e.kind() {
