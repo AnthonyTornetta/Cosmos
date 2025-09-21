@@ -3,13 +3,9 @@ use bevy::{
     prelude::*,
 };
 use cosmos_core::{
-    block::{
-        block_direction::{ALL_BLOCK_DIRECTIONS, BlockDirection},
-        block_face::BlockFace,
-        block_rotation::BlockRotation,
-    },
-    prelude::{BlockCoordinate, ChunkCoordinate, Structure, UnboundBlockCoordinate},
-    structure::coordinates::{CoordinateType, UnboundCoordinateType},
+    block::block_direction::{ALL_BLOCK_DIRECTIONS, BlockDirection},
+    prelude::{BlockCoordinate, Structure},
+    structure::coordinates::CoordinateType,
 };
 use derive_more::{Display, Error};
 use serde::{Deserialize, Serialize};
@@ -65,11 +61,11 @@ impl RectangleMultiblockBounds {
     ) -> Option<RectangleMultiblockValidityError> {
         for z in self.negative_coords.z..=self.positive_coords.z {
             for y in self.negative_coords.y..=self.positive_coords.y {
-                if let Some(res) = check_block(BlockCoordinate::new(self.negative_coords.x, y, z), &valid_blocks, limits, structure) {
+                if let Some(res) = check_block(BlockCoordinate::new(self.negative_coords.x, y, z), valid_blocks, limits, structure) {
                     return Some(res);
                 }
 
-                if let Some(res) = check_block(BlockCoordinate::new(self.positive_coords.x, y, z), &valid_blocks, limits, structure) {
+                if let Some(res) = check_block(BlockCoordinate::new(self.positive_coords.x, y, z), valid_blocks, limits, structure) {
                     return Some(res);
                 }
             }
@@ -77,11 +73,11 @@ impl RectangleMultiblockBounds {
 
         for y in self.negative_coords.y..=self.positive_coords.y {
             for x in self.negative_coords.x + 1..=self.positive_coords.x - 1 {
-                if let Some(res) = check_block(BlockCoordinate::new(x, y, self.negative_coords.z), &valid_blocks, limits, structure) {
+                if let Some(res) = check_block(BlockCoordinate::new(x, y, self.negative_coords.z), valid_blocks, limits, structure) {
                     return Some(res);
                 }
 
-                if let Some(res) = check_block(BlockCoordinate::new(x, y, self.positive_coords.z), &valid_blocks, limits, structure) {
+                if let Some(res) = check_block(BlockCoordinate::new(x, y, self.positive_coords.z), valid_blocks, limits, structure) {
                     return Some(res);
                 }
             }
@@ -89,11 +85,11 @@ impl RectangleMultiblockBounds {
 
         for z in self.negative_coords.z + 1..=self.positive_coords.z - 1 {
             for x in self.negative_coords.x + 1..=self.positive_coords.x - 1 {
-                if let Some(res) = check_block(BlockCoordinate::new(x, self.negative_coords.y, z), &valid_blocks, limits, structure) {
+                if let Some(res) = check_block(BlockCoordinate::new(x, self.negative_coords.y, z), valid_blocks, limits, structure) {
                     return Some(res);
                 }
 
-                if let Some(res) = check_block(BlockCoordinate::new(x, self.positive_coords.y, z), &valid_blocks, limits, structure) {
+                if let Some(res) = check_block(BlockCoordinate::new(x, self.positive_coords.y, z), valid_blocks, limits, structure) {
                     return Some(res);
                 }
             }
@@ -112,7 +108,7 @@ impl RectangleMultiblockBounds {
         for z in self.negative_coords.z + 1..=self.positive_coords.z - 1 {
             for y in self.negative_coords.y + 1..=self.positive_coords.y - 1 {
                 for x in self.negative_coords.x + 1..=self.positive_coords.x - 1 {
-                    if let Some(res) = check_block(BlockCoordinate::new(x, y, z), &valid_blocks, limits, structure) {
+                    if let Some(res) = check_block(BlockCoordinate::new(x, y, z), valid_blocks, limits, structure) {
                         return Some(res);
                     }
                 }

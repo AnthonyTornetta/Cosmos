@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 use cosmos_core::{
-    item::usable::{PlayerRequestUseHeldItemEvent, UseHeldItemEvent},
+    item::usable::PlayerRequestUseHeldItemEvent,
     netty::{client::LocalPlayer, sync::events::client_event::NettyEventWriter},
     state::GameState,
     structure::ship::pilot::Pilot,

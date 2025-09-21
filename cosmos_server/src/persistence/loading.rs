@@ -7,7 +7,7 @@
 //!
 //! See [`default_load`] for an example.
 
-use std::{fs, path::Path};
+use std::fs;
 
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::Velocity;
@@ -19,9 +19,8 @@ use cosmos_core::{
     persistence::LoadingDistance,
     physics::location::{Location, LocationPhysicsSet, SetPosition},
     structure::{
-        blueprint::{Blueprint, BlueprintOld, BlueprintType},
+        blueprint::{Blueprint, BlueprintOld},
         loading::StructureLoadingSet,
-        persistence::SaveData,
         systems::StructureSystemsSet,
     },
 };

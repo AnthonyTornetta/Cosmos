@@ -8,7 +8,7 @@ use bevy::{
 use cosmos_core::{
     ecs::sets::FixedUpdateSet,
     entities::player::creative::Creative,
-    inventory::{Inventory, held_item_slot::HeldItemSlot, itemstack::ItemStackData},
+    inventory::{Inventory, held_item_slot::HeldItemSlot},
     item::{
         Item,
         usable::{
@@ -25,7 +25,7 @@ use cosmos_core::{
     structure::blueprint::Blueprint,
 };
 use futures_lite::future;
-use rfd::{AsyncFileDialog, FileDialog};
+use rfd::AsyncFileDialog;
 
 use crate::{
     create_private_button_event,
@@ -163,10 +163,10 @@ fn on_use_blueprint(
             ))
             .with_children(|p| {
                 p.spawn(
-                    (Node {
+                    Node {
                         justify_content: JustifyContent::SpaceBetween,
                         ..Default::default()
-                    }),
+                    },
                 )
                 .with_children(|p| {
                     p.spawn((

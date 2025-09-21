@@ -5,7 +5,7 @@ use cosmos_core::{
     block::Block,
     entities::player::{Player, creative::Creative},
     inventory::{
-        HeldItemStack, Inventory,
+        Inventory,
         itemstack::{ItemShouldHaveData, ItemStackSystemSet},
     },
     item::{
@@ -188,7 +188,7 @@ fn on_upload_blueprint(
             error!("Error saving blueprint! {e:?}");
 
             nevw_notif.write(
-                Notification::new(format!("Error Uploading Blueprint"), NotificationKind::Error),
+                Notification::new("Error Uploading Blueprint".to_string(), NotificationKind::Error),
                 ev.client_id,
             );
             continue;
@@ -314,11 +314,11 @@ fn on_place_blueprint(
         let file_path = bp_data.get_blueprint_path();
 
         commands.spawn(
-            (NeedsBlueprintLoaded {
+            NeedsBlueprintLoaded {
                 path: file_path,
                 spawn_at: *player_loc,
                 rotation: player_trans.rotation(),
-            }),
+            },
         );
     }
 }

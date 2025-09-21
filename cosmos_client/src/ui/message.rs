@@ -110,7 +110,7 @@ fn display_hud_messages(
     mut writer: TextUiWriter,
     time: Res<Time>,
 ) {
-    if let Ok((entity, parent, mut shown_hud_message)) = shown_hud_message.single_mut() {
+    if let Ok((entity, parent, shown_hud_message)) = shown_hud_message.single_mut() {
         if hud_messages.0.is_some() {
             commands.entity(parent.parent()).despawn();
         } else {

@@ -1,10 +1,9 @@
-use std::{cell::RefCell, rc::Rc};
 
 use bevy::{ecs::component::HookContext, prelude::*};
 use cosmos_core::{
     block::{
         Block,
-        block_direction::{ALL_BLOCK_DIRECTIONS, BlockDirection},
+        block_direction::ALL_BLOCK_DIRECTIONS,
         block_events::{BlockEventsSet, BlockInteractEvent},
         blocks::AIR_BLOCK_ID,
         data::BlockData,
@@ -13,7 +12,7 @@ use cosmos_core::{
         block_events::{BlockChangedEvent, BlockDataSystemParams},
         structure::structure_event::StructureEventIterator,
     },
-    prelude::{BlockCoordinate, Structure, StructureLoadedEvent},
+    prelude::{BlockCoordinate, Structure},
     registry::{Registry, identifiable::Identifiable},
 };
 use derive_more::{Display, Error};
@@ -45,11 +44,10 @@ fn register_shipyard_component_hooks(world: &mut World) {
                 return;
             };
             let structure = block_data.identifier.block.structure();
-            if let Some(mut shipyards) = world.get_mut::<Shipyards>(structure) {
-                if let Some((idx, _)) = shipyards.0.iter().enumerate().find(|x| *x.1 == entity) {
+            if let Some(mut shipyards) = world.get_mut::<Shipyards>(structure)
+                && let Some((idx, _)) = shipyards.0.iter().enumerate().find(|x| *x.1 == entity) {
                     shipyards.0.swap_remove(idx);
                 }
-            }
         });
 }
 
