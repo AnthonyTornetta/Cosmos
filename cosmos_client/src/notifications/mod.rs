@@ -1,3 +1,5 @@
+//! Client-side notification processing
+
 use bevy::{color::palettes::css, prelude::*};
 use cosmos_core::notifications::{Notification, NotificationKind};
 
