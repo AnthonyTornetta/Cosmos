@@ -1,13 +1,13 @@
 //! For rectangle-shaped multiblocks
 
-use bevy::{
-    platform::collections::{HashMap, HashSet},
-    prelude::*,
-};
-use cosmos_core::{
+use crate::{
     block::block_direction::{ALL_BLOCK_DIRECTIONS, BlockDirection},
     prelude::{BlockCoordinate, Structure},
     structure::coordinates::CoordinateType,
+};
+use bevy::{
+    platform::collections::{HashMap, HashSet},
+    prelude::*,
 };
 use derive_more::{Display, Error};
 use serde::{Deserialize, Serialize};

@@ -1,4 +1,4 @@
-use bevy::{ecs::component::HookContext, prelude::*};
+use bevy::prelude::*;
 use cosmos_core::{
     block::{
         Block,
@@ -6,6 +6,7 @@ use cosmos_core::{
         block_events::{BlockEventsSet, BlockInteractEvent},
         blocks::AIR_BLOCK_ID,
         data::BlockData,
+        multiblock::prelude::*,
     },
     events::{
         block_events::{BlockChangedEvent, BlockDataSystemParams},
@@ -16,42 +17,6 @@ use cosmos_core::{
 };
 use derive_more::{Display, Error};
 use serde::{Deserialize, Serialize};
-
-use crate::blocks::multiblock::{
-    checker::rectangle::{
-        RectangleLimit, RectangleMultiblockError, RectangleMultiblockValidityError, check_is_valid_rectangle_outline_multiblock,
-    },
-    shipyard::{Shipyard, Shipyards},
-};
-
-fn register_shipyard_component_hooks(world: &mut World) {
-    world
-        .register_component_hooks::<Shipyard>()
-        .on_add(|mut world, HookContext { entity, .. }| {
-            let Some(block_data) = world.get::<BlockData>(entity) else {
-                error!("Shipyard missing block data!");
-                return;
-            };
-            let structure = block_data.identifier.block.structure();
-            if let Some(mut shipyards) = world.get_mut::<Shipyards>(structure) {
-                shipyards.0.push(entity);
-            } else {
-                world.commands().entity(structure).insert(Shipyards(vec![entity]));
-            }
-        })
-        .on_remove(|mut world, HookContext { entity, .. }| {
-            let Some(block_data) = world.get::<BlockData>(entity) else {
-                error!("Shipyard missing block data!");
-                return;
-            };
-            let structure = block_data.identifier.block.structure();
-            if let Some(mut shipyards) = world.get_mut::<Shipyards>(structure)
-                && let Some((idx, _)) = shipyards.0.iter().enumerate().find(|x| *x.1 == entity)
-            {
-                shipyards.0.swap_remove(idx);
-            }
-        });
-}
 
 fn on_place_blocks_impacting_shipyard(
     mut evr_block_changed_event: EventReader<BlockChangedEvent>,
@@ -161,7 +126,7 @@ fn compute_shipyard(structure: &Structure, controller: BlockCoordinate, frame_id
         }
     }
 
-    Ok(Shipyard { bounds, controller })
+    Ok(Shipyard::new(bounds, controller))
 }
 
 fn interact_with_shipyard(
@@ -218,7 +183,7 @@ fn interact_with_shipyard(
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_systems(Startup, register_shipyard_component_hooks).add_systems(
+    app.add_systems(
         FixedUpdate,
         (on_place_blocks_impacting_shipyard, interact_with_shipyard)
             .chain()

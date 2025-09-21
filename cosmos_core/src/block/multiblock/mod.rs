@@ -2,7 +2,10 @@
 
 use bevy::prelude::App;
 
+pub mod prelude;
 pub mod reactor;
+pub mod rectangle;
+pub mod shipyard;
 
 // enum Multiblock {
 //     Blueprint { layout: Vec<String>, key: HashMap<String, String> },
@@ -11,4 +14,5 @@ pub mod reactor;
 
 pub(super) fn register(app: &mut App) {
     reactor::register(app);
+    shipyard::register(app);
 }
