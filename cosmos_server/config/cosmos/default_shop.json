@@ -659,6 +659,20 @@
   },
   {
     "Selling": {
+      "item_id": "cosmos:numeric_display",
+      "max_quantity_selling": 10000,
+      "price_per": 33
+    }
+  },
+  {
+    "Buying": {
+      "item_id": "cosmos:numeric_display",
+      "max_quantity_buying": null,
+      "price_per": 13
+    }
+  },
+  {
+    "Selling": {
       "item_id": "cosmos:and_gate",
       "max_quantity_selling": 10000,
       "price_per": 20
