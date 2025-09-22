@@ -8,10 +8,12 @@ use cosmos_core::{
         data::BlockData,
         multiblock::prelude::*,
     },
+    entities::player::Player,
     events::{
         block_events::{BlockChangedEvent, BlockDataSystemParams},
         structure::structure_event::StructureEventIterator,
     },
+    netty::sync::events::server_event::NettyEventWriter,
     prelude::{BlockCoordinate, Structure},
     registry::{Registry, identifiable::Identifiable},
 };
@@ -137,9 +139,15 @@ fn interact_with_shipyard(
     mut bs_params: BlockDataSystemParams,
     mut q_block_data: Query<&mut BlockData>,
     q_has_data: Query<(), With<Shipyard>>,
+    mut nevw_open_ui: NettyEventWriter<ShowShipyardUi>,
+    q_player: Query<&Player>,
 ) {
     for ev in evr_interact.read() {
         let Some(b) = ev.block else {
+            continue;
+        };
+
+        let Ok(player) = q_player.get(ev.interactor) else {
             continue;
         };
 
@@ -157,9 +165,8 @@ fn interact_with_shipyard(
             continue;
         }
 
-        if let Some(shipyard) = structure.query_block_data(b.coords(), &q_shipyard) {
-            // send event or something to open UI
-            info!("Open UI {shipyard:?}!");
+        if structure.query_block_data(b.coords(), &q_shipyard).is_some() {
+            nevw_open_ui.write(ShowShipyardUi { shipyard_block: b }, player.client_id());
             continue;
         }
 
@@ -179,6 +186,8 @@ fn interact_with_shipyard(
         info!("Inserted shipyard {shipyard:?}!");
 
         structure.insert_block_data(b.coords(), shipyard, &mut bs_params, &mut q_block_data, &q_has_data);
+
+        nevw_open_ui.write(ShowShipyardUi { shipyard_block: b }, player.client_id());
     }
 }
 

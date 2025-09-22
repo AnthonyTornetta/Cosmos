@@ -12,7 +12,7 @@ use bevy::{
 use derive_more::{Display, Error};
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Reflect, Clone, Copy, Serialize, Deserialize)]
+#[derive(Debug, Reflect, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
 /// The block bounds for a rectangular multiblock structure
 pub struct RectangleMultiblockBounds {
     /// The negative-most corner of this rectangle

@@ -2,11 +2,22 @@
 
 use crate::{
     block::{data::BlockData, multiblock::rectangle::RectangleMultiblockBounds},
-    prelude::BlockCoordinate,
+    item::usable::blueprint::BlueprintItemData,
+    netty::sync::{
+        IdentifiableComponent, SyncableComponent,
+        events::netty_event::{IdentifiableEvent, NettyEvent, SyncedEventImpl},
+        sync_component,
+    },
+    prelude::{BlockCoordinate, FullStructure, Structure, StructureBlock},
 };
-use bevy::{ecs::component::HookContext, prelude::*};
+use bevy::{
+    ecs::component::HookContext,
+    platform::collections::{HashMap, HashSet},
+    prelude::*,
+};
+use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Component, Reflect)]
+#[derive(Debug, Component, Reflect, Serialize, Deserialize, PartialEq, Eq, Clone)]
 /// A place used to assemble ships
 pub struct Shipyard {
     controller: BlockCoordinate,
@@ -35,6 +46,18 @@ impl Shipyard {
     }
 }
 
+impl IdentifiableComponent for Shipyard {
+    fn get_component_unlocalized_name() -> &'static str {
+        "cosmos:shipyard"
+    }
+}
+
+impl SyncableComponent for Shipyard {
+    fn get_sync_type() -> crate::netty::sync::SyncType {
+        crate::netty::sync::SyncType::ServerAuthoritative
+    }
+}
+
 #[derive(Debug, Component, Reflect)]
 /// Contains a list of all [`Shipyard`]s this structure has
 pub struct Shipyards(Vec<Entity>);
@@ -43,6 +66,119 @@ impl Shipyards {
     /// Iterates over all the [`Shipyard`]s this structure has
     pub fn iter(&self) -> impl Iterator<Item = Entity> {
         self.0.iter().copied()
+    }
+}
+
+#[derive(Debug, Reflect, Serialize, Deserialize)]
+pub struct ShipyardDoingBlueprint {
+    pub building: FullStructure,
+    pub need_items: HashMap<u16, u32>,
+    pub creating: Entity,
+}
+
+#[derive(Debug, Reflect, Serialize, Deserialize, PartialEq, Eq, Clone)]
+pub struct ClientFriendlyShipyardDoingBlueprint {
+    pub need_items: HashMap<u16, u32>,
+    pub creating: Entity,
+}
+
+#[derive(Debug, Reflect, Component, Serialize, Deserialize)]
+pub enum ShipyardState {
+    Paused(ShipyardDoingBlueprint),
+    Building(ShipyardDoingBlueprint),
+    Deconstructing(Entity),
+}
+
+impl ShipyardState {
+    pub fn as_client_friendly(&self) -> ClientFriendlyShipyardState {
+        match self {
+            Self::Paused(p) => ClientFriendlyShipyardState::Paused(ClientFriendlyShipyardDoingBlueprint {
+                need_items: p.need_items.clone(),
+                creating: p.creating,
+            }),
+            Self::Building(p) => ClientFriendlyShipyardState::Building(ClientFriendlyShipyardDoingBlueprint {
+                need_items: p.need_items.clone(),
+                creating: p.creating,
+            }),
+            Self::Deconstructing(p) => ClientFriendlyShipyardState::Deconstructing(*p),
+        }
+    }
+}
+
+#[derive(Debug, Reflect, Component, Serialize, Deserialize, PartialEq, Eq, Clone)]
+pub enum ClientFriendlyShipyardState {
+    Paused(ClientFriendlyShipyardDoingBlueprint),
+    Building(ClientFriendlyShipyardDoingBlueprint),
+    Deconstructing(Entity),
+}
+
+impl IdentifiableComponent for ShipyardState {
+    fn get_component_unlocalized_name() -> &'static str {
+        "cosmos:shipyard_state"
+    }
+}
+
+impl IdentifiableComponent for ClientFriendlyShipyardState {
+    fn get_component_unlocalized_name() -> &'static str {
+        "cosmos:client_shipyard_state"
+    }
+}
+
+impl SyncableComponent for ClientFriendlyShipyardState {
+    fn get_sync_type() -> crate::netty::sync::SyncType {
+        crate::netty::sync::SyncType::ServerAuthoritative
+    }
+}
+
+#[derive(Debug, Event, Serialize, Deserialize, Clone, Copy)]
+pub enum ClientSetShipyardState {
+    Paused,
+    Unpause,
+    BuildFromItem { slot: u32 },
+    Deconstruct,
+}
+
+impl IdentifiableEvent for ClientSetShipyardState {
+    fn unlocalized_name() -> &'static str {
+        "cosmos:set_shipyard_state"
+    }
+}
+
+impl NettyEvent for ClientSetShipyardState {
+    fn event_receiver() -> crate::netty::sync::events::netty_event::EventReceiver {
+        crate::netty::sync::events::netty_event::EventReceiver::Server
+    }
+}
+
+#[derive(Event, Debug, Serialize, Deserialize, Clone, Copy)]
+pub struct ShowShipyardUi {
+    pub shipyard_block: StructureBlock,
+}
+
+impl IdentifiableEvent for ShowShipyardUi {
+    fn unlocalized_name() -> &'static str {
+        "cosmos:show_shipyard_ui"
+    }
+}
+
+impl NettyEvent for ShowShipyardUi {
+    fn event_receiver() -> crate::netty::sync::events::netty_event::EventReceiver {
+        crate::netty::sync::events::netty_event::EventReceiver::Client
+    }
+
+    #[cfg(feature = "client")]
+    fn needs_entity_conversion() -> bool {
+        true
+    }
+
+    #[cfg(feature = "client")]
+    fn convert_entities_server_to_client(self, mapping: &crate::netty::sync::mapping::NetworkMapping) -> Option<Self> {
+        use crate::netty::sync::mapping::Mappable;
+
+        self.shipyard_block
+            .map_to_client(mapping)
+            .map(|shipyard_block| Self { shipyard_block })
+            .ok()
     }
 }
 
@@ -76,7 +212,13 @@ fn register_shipyard_component_hooks(world: &mut World) {
 }
 
 pub(super) fn register(app: &mut App) {
+    sync_component::<ClientFriendlyShipyardState>(app);
+    sync_component::<Shipyard>(app);
+
     app.register_type::<Shipyard>()
         .register_type::<Shipyards>()
-        .add_systems(Startup, register_shipyard_component_hooks);
+        .register_type::<ShipyardState>()
+        .add_systems(Startup, register_shipyard_component_hooks)
+        .add_netty_event::<ClientSetShipyardState>()
+        .add_netty_event::<ShowShipyardUi>();
 }
