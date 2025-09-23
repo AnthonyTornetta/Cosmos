@@ -11,7 +11,6 @@ use cosmos_core::{
 use crate::{
     lang::Lang,
     ui::{
-        UiSystemSet,
         components::{
             button::{ButtonEvent, CosmosButton},
             scollable_container::ScrollBox,
@@ -123,21 +122,21 @@ fn quest_node(
         return;
     };
 
-    let mut ecmds = commands
-        .spawn((
-            Name::new("Quest UI Entry"),
-            CosmosButton { ..Default::default() },
-            Node {
-                width: Val::Percent(100.0),
-                min_height: Val::Px(70.0),
-                border: UiRect::vertical(Val::Px(2.0)),
-                flex_direction: FlexDirection::Row,
-                ..Default::default()
-            },
-            QuestComp(ongoing.ongoing_id()),
-            BorderColor(if active { css::AQUA.into() } else { css::LIGHT_GREY.into() }),
-        ))
-        .observe(on_toggle_active);
+    let mut ecmds = commands.spawn((
+        Name::new("Quest UI Entry"),
+        CosmosButton { ..Default::default() },
+        Node {
+            width: Val::Percent(100.0),
+            min_height: Val::Px(70.0),
+            border: UiRect::vertical(Val::Px(2.0)),
+            flex_direction: FlexDirection::Row,
+            ..Default::default()
+        },
+        QuestComp(ongoing.ongoing_id()),
+        BorderColor(if active { css::AQUA.into() } else { css::LIGHT_GREY.into() }),
+    ));
+
+    ecmds.observe(on_toggle_active);
 
     if active {
         ecmds.insert(ActiveQuestUi);
@@ -189,8 +188,5 @@ fn quest_node(
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_systems(
-        Update,
-        (on_add_quest_display, on_toggle_active.in_set(UiSystemSet::FinishUi)).run_if(in_state(GameState::Playing)),
-    );
+    app.add_systems(Update, on_add_quest_display.run_if(in_state(GameState::Playing)));
 }

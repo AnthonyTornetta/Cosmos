@@ -103,7 +103,7 @@ fn render_ui(
         .map(|x| (x, system_types.from_numeric_id(x.system_type_id().into())))
     {
         p.spawn((
-            CosmosButton::<SystemClicked> { ..Default::default() },
+            CosmosButton { ..Default::default() },
             Node {
                 align_items: AlignItems::Center,
                 justify_content: JustifyContent::SpaceBetween,

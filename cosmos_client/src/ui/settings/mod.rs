@@ -135,7 +135,7 @@ fn create_settings_screen(
                     margin: UiRect::top(Val::Px(20.0)),
                     ..Default::default()
                 },
-                CosmosButton::<SettingsCancelButtonEvent> {
+                CosmosButton {
                     button_styles: Some(ButtonStyles {
                         background_color: Srgba::hex("333333").unwrap().into(),
                         hover_background_color: Srgba::hex("232323").unwrap().into(),
@@ -148,7 +148,7 @@ fn create_settings_screen(
             ))
             .observe(
                 |ev: Trigger<ButtonEvent>, mut evw_settings_cancel: EventWriter<SettingsCancelButtonEvent>| {
-                    evw_settings_cancel.send(ev.0);
+                    evw_settings_cancel.write(SettingsCancelButtonEvent(ev.0));
                 },
             );
 
@@ -491,7 +491,7 @@ fn done_clicked(
         }
     }
 
-    evw_done.send(SettingsDoneButtonEvent(ev.0));
+    evw_done.write(SettingsDoneButtonEvent(ev.0));
 }
 
 #[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
@@ -513,7 +513,7 @@ pub(super) fn register(app: &mut App) {
             create_settings_screen
                 .in_set(UiSystemSet::DoUi)
                 .before(SettingsMenuSet::SettingsMenuInteractions),
-            (listen_for_inputs, click_settings_button, on_change_setting_value)
+            (listen_for_inputs, on_change_setting_value)
                 .chain()
                 .in_set(SettingsMenuSet::SettingsMenuInteractions),
             // controls_close

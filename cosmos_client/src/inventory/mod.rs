@@ -692,21 +692,21 @@ struct CreativeItem {
 }
 
 fn create_creative_slot(slots: &mut ChildSpawnerCommands, item: &Item, text_style: TextFont) {
-    let mut ecmds = slots
-        .spawn((
-            Name::new("Creative Inventory Item"),
-            Node {
-                border: UiRect::all(Val::Px(2.0)),
-                width: Val::Px(INVENTORY_SLOTS_DIMS),
-                height: Val::Px(INVENTORY_SLOTS_DIMS),
-                ..default()
-            },
-            BorderColor(Srgba::hex("222222").unwrap().into()),
-            Interaction::None,
-            CosmosButton::default(),
-            CreativeItem { item_id: item.id() },
-        ))
-        .observe(on_click_creative_item);
+    let mut ecmds = slots.spawn((
+        Name::new("Creative Inventory Item"),
+        Node {
+            border: UiRect::all(Val::Px(2.0)),
+            width: Val::Px(INVENTORY_SLOTS_DIMS),
+            height: Val::Px(INVENTORY_SLOTS_DIMS),
+            ..default()
+        },
+        BorderColor(Srgba::hex("222222").unwrap().into()),
+        Interaction::None,
+        CosmosButton::default(),
+        CreativeItem { item_id: item.id() },
+    ));
+
+    ecmds.observe(on_click_creative_item);
 
     ecmds.with_children(|p| {
         let mut ecmds = p.spawn_empty();
@@ -1207,14 +1207,7 @@ pub(super) fn register(app: &mut App) {
         Update,
         (
             drop_item.run_if(no_open_menus),
-            (
-                toggle_inventory,
-                close_button_system,
-                on_click_creative_category,
-                on_click_creative_item,
-                draw_held_item,
-                on_change_search,
-            )
+            (toggle_inventory, close_button_system, draw_held_item, on_change_search)
                 .chain()
                 .in_set(InventorySet::ToggleInventory),
             on_update_inventory.in_set(InventorySet::UpdateInventory),

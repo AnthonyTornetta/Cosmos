@@ -91,29 +91,29 @@ fn add_tab_view(
                 ))
                 .with_children(|p| {
                     for (idx, &(_, tab)) in tabs.iter().enumerate() {
-                        let mut ecmds = p
-                            .spawn((
-                                Name::new(format!("Tab: {}", tab.header)),
-                                tab.clone(),
-                                CosmosButton {
-                                    text: Some((
-                                        tab.header.clone(),
-                                        TextFont {
-                                            font_size: 24.0,
-                                            font: font.clone(),
-                                            ..Default::default()
-                                        },
-                                        Default::default(),
-                                    )),
-                                    ..Default::default()
-                                },
-                                Node {
-                                    flex_grow: 1.0,
-                                    height: Val::Percent(100.0),
-                                    ..Default::default()
-                                },
-                            ))
-                            .observe(on_click_tab);
+                        let mut ecmds = p.spawn((
+                            Name::new(format!("Tab: {}", tab.header)),
+                            tab.clone(),
+                            CosmosButton {
+                                text: Some((
+                                    tab.header.clone(),
+                                    TextFont {
+                                        font_size: 24.0,
+                                        font: font.clone(),
+                                        ..Default::default()
+                                    },
+                                    Default::default(),
+                                )),
+                                ..Default::default()
+                            },
+                            Node {
+                                flex_grow: 1.0,
+                                height: Val::Percent(100.0),
+                                ..Default::default()
+                            },
+                        ));
+
+                        ecmds.observe(on_click_tab);
 
                         let selected = match selected_tab {
                             SelectedTab::Default => idx == 0,
@@ -242,9 +242,7 @@ pub(super) fn register(app: &mut App) {
         Update,
         (
             add_tab_view.in_set(UiTabViewSystemSet::CreateTabView),
-            (on_click_tab, on_change_selected)
-                .chain()
-                .in_set(UiTabViewSystemSet::SendTabViewEvents),
+            on_change_selected.in_set(UiTabViewSystemSet::SendTabViewEvents),
         ),
     )
     .register_type::<Tab>();

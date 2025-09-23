@@ -270,18 +270,18 @@ fn create_ui_recipes_list(
     });
 
     for &recipe in recipes.iter() {
-        let mut ecmds = p
-            .spawn((
-                Node {
-                    height: Val::Px(100.0),
-                    width: Val::Percent(100.0),
-                    justify_content: JustifyContent::SpaceBetween,
-                    ..Default::default()
-                },
-                CosmosButton::default(),
-                Recipe(recipe.clone()),
-            ))
-            .observe(on_select_item);
+        let mut ecmds = p.spawn((
+            Node {
+                height: Val::Px(100.0),
+                width: Val::Percent(100.0),
+                justify_content: JustifyContent::SpaceBetween,
+                ..Default::default()
+            },
+            CosmosButton::default(),
+            Recipe(recipe.clone()),
+        ));
+
+        ecmds.observe(on_select_item);
 
         ecmds.with_children(|p| {
             p.spawn((

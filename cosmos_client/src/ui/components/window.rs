@@ -41,9 +41,6 @@ impl GuiWindow {
     pub const TITLE_BAR_HEIGHT_PX: f32 = 60.0;
 }
 
-#[derive(Event, Debug)]
-struct CloseUiEvent(Entity);
-
 #[derive(Component)]
 struct TitleBar {
     window_entity: Entity,
@@ -225,17 +222,12 @@ fn move_window(
 #[derive(Component, Debug)]
 struct CloseButton(Entity);
 
-fn close_event_listener(
-    ev: Trigger<ButtonEvent>,
-    mut commands: Commands,
-    q_close_button: Query<&CloseButton>,
-    mut ev_reader: EventReader<CloseUiEvent>,
-) {
+fn close_event_listener(ev: Trigger<ButtonEvent>, mut commands: Commands, q_close_button: Query<&CloseButton>) {
     let Ok(close_btn) = q_close_button.get(ev.0) else {
         return;
     };
 
-    commands.entity(close_btn.window_entity).insert(NeedsDespawned);
+    commands.entity(close_btn.0).insert(NeedsDespawned);
 }
 
 #[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
@@ -274,7 +266,7 @@ pub(super) fn register(app: &mut App) {
             add_window
                 .in_set(UiWindowSystemSet::CreateWindow)
                 .run_if(resource_exists::<WindowAssets>),
-            (move_window.run_if(any_open_menus), close_event_listener).in_set(UiWindowSystemSet::SendWindowEvents),
+            move_window.run_if(any_open_menus).in_set(UiWindowSystemSet::SendWindowEvents),
         ),
     );
 }

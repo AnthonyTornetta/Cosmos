@@ -129,14 +129,8 @@ fn on_add_text_modal(
                             BackgroundColor(css::DARK_GREY.into()),
                         ))
                         .observe(
-                            |ev: Trigger<ButtonEvent>,
-                             q_text_modal_ent: Query<&TextValueEnt>,
-                             q_value: Query<&InputValue, &ModalEntity>| {
-                                let Ok(tv) = q_text_modal_ent.get(ev.0) else {
-                                    return;
-                                };
-                                let ent = tv.0;
-                                let modal_ent = q_value.get(ent).expect("Missing modal entity?");
+                            |ev: Trigger<ButtonEvent>, q_modal_ent: Query<&ModalEntity>, mut commands: Commands| {
+                                let modal_ent = q_modal_ent.get(ev.0).expect("Missing modal entity?");
                                 commands.entity(modal_ent.0).insert(NeedsDespawned);
                             },
                         );
@@ -164,13 +158,14 @@ fn on_add_text_modal(
                         ))
                         .observe(
                             |ev: Trigger<ButtonEvent>,
-                             q_text_modal_ent: Query<&TextValueEnt>,
-                             q_value: Query<&InputValue, &ModalEntity>| {
-                                let Ok(tv) = q_text_modal_ent.get(ev.0) else {
+                             q_text_ent: Query<&TextValueEnt>,
+                             q_modal_value: Query<(&InputValue, &ModalEntity)>,
+                             mut commands: Commands| {
+                                let Ok(tv) = q_text_ent.get(ev.0) else {
                                     return;
                                 };
                                 let ent = tv.0;
-                                let (text, modal_ent) = q_value.get(ent).expect("Missing input?");
+                                let (text, modal_ent) = q_modal_value.get(ent).expect("Missing input?");
                                 commands.entity(ent).trigger(TextModalComplete {
                                     text: text.value().to_owned(),
                                 });
