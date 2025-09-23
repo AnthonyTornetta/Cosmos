@@ -10,7 +10,7 @@ use crate::{
 };
 
 use super::{
-    button::{ButtonEvent, CosmosButton, register_button},
+    button::{ButtonEvent, CosmosButton},
     show_cursor::{ShowCursor, any_open_menus},
 };
 
@@ -44,17 +44,6 @@ impl GuiWindow {
 #[derive(Event, Debug)]
 struct CloseUiEvent(Entity);
 
-#[derive(Component, Debug)]
-struct CloseButton {
-    window_entity: Entity,
-}
-
-impl ButtonEvent for CloseUiEvent {
-    fn create_event(btn_entity: Entity) -> Self {
-        Self(btn_entity)
-    }
-}
-
 #[derive(Component)]
 struct TitleBar {
     window_entity: Entity,
@@ -80,7 +69,7 @@ fn add_window(
 
         let mut window_body = None;
 
-        let close_button = CloseButton { window_entity: ent };
+        let close_button = CloseButton(ent);
 
         let titlebar_children = children
             .map(|x| x.iter().filter(|x| q_title_bar.contains(*x)).collect::<Vec<_>>())
@@ -134,29 +123,31 @@ fn add_window(
                 }
 
                 title_bar.with_children(|parent| {
-                    parent.spawn((
-                        Name::new("Window Close Button"),
-                        close_button,
-                        BackgroundColor(css::WHITE.into()),
-                        Node {
-                            width: Val::Px(50.0),
-                            height: Val::Px(50.0),
-                            ..Default::default()
-                        },
-                        CosmosButton::<CloseUiEvent> {
-                            image: Some(ImageNode::new(window_assets.close_btn_image.clone_weak())),
-                            text: Some((
-                                "X".into(),
-                                TextFont {
-                                    font_size: 24.0,
-                                    font: font.clone(),
-                                    ..Default::default()
-                                },
-                                Default::default(),
-                            )),
-                            ..Default::default()
-                        },
-                    ));
+                    parent
+                        .spawn((
+                            Name::new("Window Close Button"),
+                            close_button,
+                            BackgroundColor(css::WHITE.into()),
+                            Node {
+                                width: Val::Px(50.0),
+                                height: Val::Px(50.0),
+                                ..Default::default()
+                            },
+                            CosmosButton {
+                                image: Some(ImageNode::new(window_assets.close_btn_image.clone_weak())),
+                                text: Some((
+                                    "X".into(),
+                                    TextFont {
+                                        font_size: 24.0,
+                                        font: font.clone(),
+                                        ..Default::default()
+                                    },
+                                    Default::default(),
+                                )),
+                                ..Default::default()
+                            },
+                        ))
+                        .observe(close_event_listener);
                 });
 
                 window_body = Some(
@@ -231,14 +222,20 @@ fn move_window(
     }
 }
 
-fn close_event_listener(mut commands: Commands, q_close_button: Query<&CloseButton>, mut ev_reader: EventReader<CloseUiEvent>) {
-    for ev in ev_reader.read() {
-        let Ok(close_btn) = q_close_button.get(ev.0) else {
-            continue;
-        };
+#[derive(Component, Debug)]
+struct CloseButton(Entity);
 
-        commands.entity(close_btn.window_entity).insert(NeedsDespawned);
-    }
+fn close_event_listener(
+    ev: Trigger<ButtonEvent>,
+    mut commands: Commands,
+    q_close_button: Query<&CloseButton>,
+    mut ev_reader: EventReader<CloseUiEvent>,
+) {
+    let Ok(close_btn) = q_close_button.get(ev.0) else {
+        return;
+    };
+
+    commands.entity(close_btn.window_entity).insert(NeedsDespawned);
 }
 
 #[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
@@ -265,8 +262,6 @@ pub(super) fn register(app: &mut App) {
             })
         },
     );
-
-    register_button::<CloseUiEvent>(app);
 
     app.configure_sets(
         Update,

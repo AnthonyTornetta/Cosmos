@@ -1,14 +1,11 @@
 //! A simple confirmation modal
 
-use crate::{
-    create_private_button_event,
-    ui::{
-        components::{
-            button::{CosmosButton, register_button},
-            modal::{Modal, ModalBody},
-        },
-        font::DefaultFont,
+use crate::ui::{
+    components::{
+        button::{ButtonEvent, CosmosButton},
+        modal::{Modal, ModalBody},
     },
+    font::DefaultFont,
 };
 
 use bevy::{color::palettes::css, prelude::*};
@@ -65,7 +62,7 @@ fn on_add_text_modal(
                     TextModalButtons::YesNo => {
                         p.spawn((
                             ModalEntity(modal_ent),
-                            CosmosButton::<CancelButton> {
+                            CosmosButton {
                                 text: Some((
                                     "No".into(),
                                     TextFont {
@@ -83,12 +80,21 @@ fn on_add_text_modal(
                                 ..Default::default()
                             },
                             BackgroundColor(css::DARK_GREY.into()),
-                        ));
+                        ))
+                        .observe(
+                            |ev: Trigger<ButtonEvent>, q_value: Query<&ModalEntity>, mut commands: Commands| {
+                                let modal_ent = q_value.get(ev.0).expect("Missing modal entity?");
+                                commands
+                                    .entity(modal_ent.0)
+                                    .trigger(ConfirmModalComplete { confirmed: false })
+                                    .insert(NeedsDespawned);
+                            },
+                        );
 
                         p.spawn((
                             BackgroundColor(css::AQUA.into()),
                             ModalEntity(modal_ent),
-                            CosmosButton::<OkButton> {
+                            CosmosButton {
                                 text: Some((
                                     "Yes".into(),
                                     TextFont {
@@ -105,16 +111,22 @@ fn on_add_text_modal(
                                 padding: UiRect::all(Val::Px(8.0)),
                                 ..Default::default()
                             },
-                        ));
+                        ))
+                        .observe(
+                            |ev: Trigger<ButtonEvent>, q_value: Query<&ModalEntity>, mut commands: Commands| {
+                                let modal_ent = q_value.get(ev.0).expect("Missing input?");
+                                commands
+                                    .entity(modal_ent.0)
+                                    .trigger(ConfirmModalComplete { confirmed: true })
+                                    .insert(NeedsDespawned);
+                            },
+                        );
                     }
                 });
             });
         });
     }
 }
-
-create_private_button_event!(OkButton);
-create_private_button_event!(CancelButton);
 
 #[derive(Event, Debug)]
 #[event(traversal = &'static ChildOf, auto_propagate)]
@@ -124,29 +136,6 @@ pub struct ConfirmModalComplete {
     pub confirmed: bool,
 }
 
-fn on_ok(mut commands: Commands, q_value: Query<&ModalEntity>, mut evr_ok: EventReader<OkButton>) {
-    for ev in evr_ok.read() {
-        let modal_ent = q_value.get(ev.0).expect("Missing input?");
-        commands
-            .entity(modal_ent.0)
-            .trigger(ConfirmModalComplete { confirmed: true })
-            .insert(NeedsDespawned);
-    }
-}
-
-fn on_cancel(mut commands: Commands, q_value: Query<&ModalEntity>, mut evr_cancel: EventReader<CancelButton>) {
-    for ev in evr_cancel.read() {
-        let modal_ent = q_value.get(ev.0).expect("Missing modal entity?");
-        commands
-            .entity(modal_ent.0)
-            .trigger(ConfirmModalComplete { confirmed: false })
-            .insert(NeedsDespawned);
-    }
-}
-
 pub(super) fn register(app: &mut App) {
-    register_button::<OkButton>(app);
-    register_button::<CancelButton>(app);
-
-    app.add_systems(Update, (on_add_text_modal, on_ok, on_cancel));
+    app.add_systems(Update, on_add_text_modal);
 }

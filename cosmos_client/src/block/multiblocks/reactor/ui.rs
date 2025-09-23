@@ -21,7 +21,7 @@ use crate::{
     ui::{
         OpenMenu, UiSystemSet,
         components::{
-            button::{ButtonEvent, ButtonStyles, register_button},
+            button::{ButtonEvent, ButtonStyles, CosmosButton},
             window::GuiWindow,
         },
         font::DefaultFont,
@@ -155,7 +155,8 @@ fn create_ui(
 
                     p.spawn((
                         ReactorBlockReference(ev.0),
-                        crate::ui::components::button::CosmosButton::<ToggleReactorEvent> {
+                        ToggleReactorBtn,
+                        CosmosButton {
                             text: Some((
                                 if active { "DEACTIVATE" } else { "ACTIVATE" }.into(),
                                 font.clone(),
@@ -171,7 +172,8 @@ fn create_ui(
                             padding: UiRect::new(Val::Px(8.0), Val::Px(4.0), Val::Px(8.0), Val::Px(4.0)),
                             ..Default::default()
                         },
-                    ));
+                    ))
+                    .observe(on_click_toggle);
 
                     p.spawn((
                         ReactorPowerGenStats,
@@ -198,40 +200,32 @@ fn create_ui(
 }
 
 fn on_click_toggle(
-    mut evr_btn_pressed: EventReader<ToggleReactorEvent>,
+    ev: Trigger<ButtonEvent>,
     q_active: Query<(), With<ReactorActive>>,
     q_structure: Query<&Structure>,
     q_ref: Query<&ReactorBlockReference>,
     mut nevw: NettyEventWriter<ClientRequestChangeReactorStatus>,
     mapping: Res<NetworkMapping>,
 ) {
-    for ev in evr_btn_pressed.read() {
-        let Ok(reference) = q_ref.get(ev.0) else {
-            continue;
-        };
+    let Ok(reference) = q_ref.get(ev.0) else {
+        return;
+    };
 
-        let Ok(structure) = q_structure.get(reference.0.structure()) else {
-            continue;
-        };
+    let Ok(structure) = q_structure.get(reference.0.structure()) else {
+        return;
+    };
 
-        let active = structure.query_block_data(reference.0.coords(), &q_active).is_none();
+    let active = structure.query_block_data(reference.0.coords(), &q_active).is_none();
 
-        let Ok(mapped_sb) = reference.0.map_to_server(&mapping) else {
-            continue;
-        };
+    let Ok(mapped_sb) = reference.0.map_to_server(&mapping) else {
+        return;
+    };
 
-        nevw.write(ClientRequestChangeReactorStatus { active, block: mapped_sb });
-    }
+    nevw.write(ClientRequestChangeReactorStatus { active, block: mapped_sb });
 }
 
-#[derive(Event, Debug)]
-struct ToggleReactorEvent(Entity);
-
-impl ButtonEvent for ToggleReactorEvent {
-    fn create_event(btn_entity: Entity) -> Self {
-        Self(btn_entity)
-    }
-}
+#[derive(Component, Debug)]
+struct ToggleReactorBtn;
 
 #[derive(Component)]
 struct ReactorFuelStatusBar;
@@ -240,7 +234,7 @@ fn maintain_active_text(
     q_active: Query<(), With<ReactorActive>>,
     q_structure: Query<&Structure>,
     mut q_active_text: Query<(&mut Text, &ActiveText)>,
-    mut q_btn: Query<&mut crate::ui::components::button::CosmosButton<ToggleReactorEvent>>,
+    mut q_btn: Query<&mut CosmosButton, With<ToggleReactorBtn>>,
 ) {
     for (mut txt, active_text) in q_active_text.iter_mut() {
         let Ok(s) = q_structure.get(active_text.0.structure()) else {
@@ -312,13 +306,10 @@ fn update_generation_stats(
 }
 
 pub(super) fn register(app: &mut App) {
-    register_button::<ToggleReactorEvent>(app);
-
     app.add_systems(
         Update,
         (
             create_ui.before(UiSystemSet::PreDoUi),
-            on_click_toggle.in_set(UiSystemSet::DoUi),
             maintain_active_text,
             update_status_bar,
             update_generation_stats,

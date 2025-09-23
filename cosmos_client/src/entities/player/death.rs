@@ -15,7 +15,7 @@ use renet::RenetClient;
 use crate::ui::{
     CloseMenuEvent, CloseMethod, OpenMenu, UiSystemSet,
     components::{
-        button::{ButtonEvent, ButtonStyles, CosmosButton, register_button},
+        button::{ButtonEvent, ButtonStyles, CosmosButton},
         show_cursor::ShowCursor,
     },
     font::DefaultFont,
@@ -23,21 +23,6 @@ use crate::ui::{
 
 #[derive(Component)]
 struct DeathUi;
-
-#[derive(Event, Debug)]
-struct RespawnBtnClicked;
-impl ButtonEvent for RespawnBtnClicked {
-    fn create_event(_: Entity) -> Self {
-        Self
-    }
-}
-#[derive(Event, Debug)]
-struct TitleScreenBtnClicked;
-impl ButtonEvent for TitleScreenBtnClicked {
-    fn create_event(_: Entity) -> Self {
-        Self
-    }
-}
 
 fn display_death_ui(
     mut commands: Commands,
@@ -140,21 +125,23 @@ fn display_death_ui(
 
             p.spawn((
                 btn_node.clone(),
-                CosmosButton::<RespawnBtnClicked> {
+                CosmosButton {
                     text: Some(("Respawn".into(), btn_font.clone(), color)),
                     button_styles: btn_styles.clone(),
                     ..Default::default()
                 },
-            ));
+            ))
+            .observe(respawn_clicked);
 
             p.spawn((
                 btn_node,
-                CosmosButton::<TitleScreenBtnClicked> {
+                CosmosButton {
                     text: Some(("Quit".into(), btn_font, color)),
                     button_styles: btn_styles,
                     ..Default::default()
                 },
-            ));
+            ))
+            .observe(title_screen_clicked);
         });
 }
 
@@ -191,29 +178,15 @@ fn on_respawn(
     }
 }
 
-fn respawn_clicked(mut nevw_respawn: NettyEventWriter<RequestRespawnEvent>) {
+fn respawn_clicked(_trigger: Trigger<ButtonEvent>, mut nevw_respawn: NettyEventWriter<RequestRespawnEvent>) {
     nevw_respawn.write_default();
 }
 
-fn title_screen_clicked(mut client: ResMut<RenetClient>) {
+fn title_screen_clicked(_trigger: Trigger<ButtonEvent>, mut client: ResMut<RenetClient>) {
     client.disconnect();
 }
 
 pub(super) fn register(app: &mut App) {
-    register_button::<RespawnBtnClicked>(app);
-    register_button::<TitleScreenBtnClicked>(app);
-
-    app.add_systems(
-        Update,
-        (
-            display_death_ui.before(UiSystemSet::PreDoUi),
-            on_not_dead,
-            title_screen_clicked
-                .after(UiSystemSet::FinishUi)
-                .run_if(on_event::<TitleScreenBtnClicked>),
-            respawn_clicked.after(UiSystemSet::FinishUi).run_if(on_event::<RespawnBtnClicked>),
-        )
-            .chain(),
-    )
-    .add_systems(FixedUpdate, on_respawn.in_set(FixedUpdateSet::Main));
+    app.add_systems(Update, (display_death_ui.before(UiSystemSet::PreDoUi), on_not_dead).chain())
+        .add_systems(FixedUpdate, on_respawn.in_set(FixedUpdateSet::Main));
 }

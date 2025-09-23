@@ -35,7 +35,7 @@ use crate::{
     ui::{
         OpenMenu, UiSystemSet,
         components::{
-            button::{ButtonEvent, CosmosButton, register_button},
+            button::{ButtonEvent, CosmosButton},
             scollable_container::ScrollBox,
             show_cursor::no_open_menus,
             text_input::{InputType, InputValue, TextInput},
@@ -188,20 +188,11 @@ struct InventoryRenderedItem;
 //     }
 // }
 
-#[derive(Debug, Event)]
-struct ItemCategoryClickedEvent(Entity);
-
 #[derive(Debug, Component, PartialEq, Eq, Reflect)]
 enum ItemCategoryMarker {
     Category(u16),
     Inventory,
     Search,
-}
-
-impl ButtonEvent for ItemCategoryClickedEvent {
-    fn create_event(btn_entity: Entity) -> Self {
-        Self(btn_entity)
-    }
 }
 
 #[derive(Component, Debug, Reflect)]
@@ -389,10 +380,11 @@ fn toggle_inventory_rendering(
                                 ..Default::default()
                             },
                             ItemCategoryMarker::Search,
-                            CosmosButton::<ItemCategoryClickedEvent> { ..Default::default() },
+                            CosmosButton { ..Default::default() },
                             BackgroundColor(Srgba::hex("2D2D2D").unwrap().into()),
                         ));
-                    });
+                    })
+                    .observe(on_click_creative_category);
 
                     p.spawn((
                         Name::new("Creative Tabs"),
@@ -420,9 +412,10 @@ fn toggle_inventory_rendering(
                                 ..Default::default()
                             },
                             ItemCategoryMarker::Inventory,
-                            CosmosButton::<ItemCategoryClickedEvent> { ..Default::default() },
+                            CosmosButton { ..Default::default() },
                             BackgroundColor(Srgba::hex("2D2D2D").unwrap().into()),
-                        ));
+                        ))
+                        .observe(on_click_creative_category);
 
                         for cat in sorted_categories.iter() {
                             let category_symbol = items.from_id(cat.item_icon_id()).map(|x| x.id()).unwrap_or_default();
@@ -438,9 +431,10 @@ fn toggle_inventory_rendering(
                                     ..Default::default()
                                 },
                                 ItemCategoryMarker::Category(cat.id()),
-                                CosmosButton::<ItemCategoryClickedEvent> { ..Default::default() },
+                                CosmosButton { ..Default::default() },
                                 BackgroundColor(Srgba::hex("2D2D2D").unwrap().into()),
-                            ));
+                            ))
+                            .observe(on_click_creative_category);
                         }
                     });
 
@@ -697,29 +691,22 @@ struct CreativeItem {
     item_id: u16,
 }
 
-#[derive(Event, Debug)]
-struct CreativeItemClickedEvent(Entity);
-
-impl ButtonEvent for CreativeItemClickedEvent {
-    fn create_event(btn_entity: Entity) -> Self {
-        Self(btn_entity)
-    }
-}
-
 fn create_creative_slot(slots: &mut ChildSpawnerCommands, item: &Item, text_style: TextFont) {
-    let mut ecmds = slots.spawn((
-        Name::new("Creative Inventory Item"),
-        Node {
-            border: UiRect::all(Val::Px(2.0)),
-            width: Val::Px(INVENTORY_SLOTS_DIMS),
-            height: Val::Px(INVENTORY_SLOTS_DIMS),
-            ..default()
-        },
-        BorderColor(Srgba::hex("222222").unwrap().into()),
-        Interaction::None,
-        CosmosButton::<CreativeItemClickedEvent>::default(),
-        CreativeItem { item_id: item.id() },
-    ));
+    let mut ecmds = slots
+        .spawn((
+            Name::new("Creative Inventory Item"),
+            Node {
+                border: UiRect::all(Val::Px(2.0)),
+                width: Val::Px(INVENTORY_SLOTS_DIMS),
+                height: Val::Px(INVENTORY_SLOTS_DIMS),
+                ..default()
+            },
+            BorderColor(Srgba::hex("222222").unwrap().into()),
+            Interaction::None,
+            CosmosButton::default(),
+            CreativeItem { item_id: item.id() },
+        ))
+        .observe(on_click_creative_item);
 
     ecmds.with_children(|p| {
         let mut ecmds = p.spawn_empty();
@@ -731,46 +718,44 @@ fn create_creative_slot(slots: &mut ChildSpawnerCommands, item: &Item, text_styl
 struct OpenTab;
 
 fn on_click_creative_category(
-    mut evr_click_creative_tab: EventReader<ItemCategoryClickedEvent>,
+    ev: Trigger<ButtonEvent>,
     q_item_category_marker: Query<&ItemCategoryMarker>,
     mut q_unopen_tab: Query<(Entity, &mut Node, &SelectedTab), (Without<InventorySearchBar>, Without<OpenTab>)>,
     mut q_open_tab: Query<(Entity, &mut Node, &SelectedTab), (Without<InventorySearchBar>, With<OpenTab>)>,
     mut q_creative_search: Query<&mut Node, With<InventorySearchBar>>,
     mut commands: Commands,
 ) {
-    for ev in evr_click_creative_tab.read() {
-        let Ok(item_category) = q_item_category_marker.get(ev.0) else {
-            error!("Invalid item category component!");
-            continue;
-        };
-        if let Ok((entity, mut node, i_category)) = q_open_tab.single_mut() {
-            if i_category.0 == *item_category {
-                continue;
-            }
-
-            if let Ok(mut c_search) = q_creative_search.single_mut() {
-                c_search.display = Display::None;
-            }
-            node.display = Display::None;
-            commands.entity(entity).remove::<OpenTab>();
-        } else {
-            error!("No tab currently open!");
+    let Ok(item_category) = q_item_category_marker.get(ev.0) else {
+        error!("Invalid item category component!");
+        return;
+    };
+    if let Ok((entity, mut node, i_category)) = q_open_tab.single_mut() {
+        if i_category.0 == *item_category {
+            return;
         }
 
-        let Some((entity, mut node, _)) = q_unopen_tab.iter_mut().find(|x| x.2.0 == *item_category) else {
-            error!("Bad state");
-            continue;
-        };
-
-        if item_category == &ItemCategoryMarker::Search
-            && let Ok(mut c_search) = q_creative_search.single_mut()
-        {
-            c_search.display = Display::Flex;
+        if let Ok(mut c_search) = q_creative_search.single_mut() {
+            c_search.display = Display::None;
         }
-
-        node.display = Display::Flex;
-        commands.entity(entity).insert(OpenTab);
+        node.display = Display::None;
+        commands.entity(entity).remove::<OpenTab>();
+    } else {
+        error!("No tab currently open!");
     }
+
+    let Some((entity, mut node, _)) = q_unopen_tab.iter_mut().find(|x| x.2.0 == *item_category) else {
+        error!("Bad state");
+        return;
+    };
+
+    if item_category == &ItemCategoryMarker::Search
+        && let Ok(mut c_search) = q_creative_search.single_mut()
+    {
+        c_search.display = Display::Flex;
+    }
+
+    node.display = Display::Flex;
+    commands.entity(entity).insert(OpenTab);
 }
 
 fn create_inventory_slot(
@@ -1053,8 +1038,8 @@ enum InventorySet {
 }
 
 fn on_click_creative_item(
+    ev: Trigger<ButtonEvent>,
     q_creative_item: Query<&CreativeItem>,
-    mut evr_clicked_creative_item: EventReader<CreativeItemClickedEvent>,
     inputs: InputChecker,
     items: Res<Registry<Item>>,
     mut nevw_set_item: NettyEventWriter<GrabCreativeItemEvent>,
@@ -1062,34 +1047,32 @@ fn on_click_creative_item(
     q_children: Query<&Children, With<LocalPlayer>>,
     mut q_held_item: Query<&mut Inventory, With<HeldItemStack>>,
 ) {
-    for ev in evr_clicked_creative_item.read() {
-        let Ok(item_id) = q_creative_item.get(ev.0).map(|x| x.item_id) else {
-            error!("Bad item - {ev:?}");
-            continue;
-        };
+    let Ok(item_id) = q_creative_item.get(ev.0).map(|x| x.item_id) else {
+        error!("Bad item - {ev:?}");
+        return;
+    };
 
-        let mut quantity = if inputs.check_pressed(CosmosInputs::AutoMoveItem) {
-            items.from_numeric_id(item_id).max_stack_size()
-        } else {
-            1
-        };
+    let mut quantity = if inputs.check_pressed(CosmosInputs::AutoMoveItem) {
+        items.from_numeric_id(item_id).max_stack_size()
+    } else {
+        1
+    };
 
-        let Ok(lp_children) = q_children.single() else {
+    let Ok(lp_children) = q_children.single() else {
+        return;
+    };
+
+    if let Some(inv) = HeldItemStack::get_held_is_inventory_from_children_mut(lp_children, &mut q_held_item)
+        && let Some(held_is) = inv.itemstack_at(0)
+    {
+        if held_is.item_id() != item_id {
+            nevw_trash_item.write_default();
             return;
-        };
-
-        if let Some(inv) = HeldItemStack::get_held_is_inventory_from_children_mut(lp_children, &mut q_held_item)
-            && let Some(held_is) = inv.itemstack_at(0)
-        {
-            if held_is.item_id() != item_id {
-                nevw_trash_item.write_default();
-                continue;
-            }
-            quantity += held_is.quantity();
         }
-
-        nevw_set_item.write(GrabCreativeItemEvent { quantity, item_id });
+        quantity += held_is.quantity();
     }
+
+    nevw_set_item.write(GrabCreativeItemEvent { quantity, item_id });
 }
 
 fn draw_held_item(
@@ -1243,9 +1226,6 @@ pub(super) fn register(app: &mut App) {
     )
     .register_type::<DisplayedItemFromInventory>()
     .register_type::<SelectedTab>();
-
-    register_button::<ItemCategoryClickedEvent>(app);
-    register_button::<CreativeItemClickedEvent>(app);
 
     netty::register(app);
 }

@@ -4,7 +4,7 @@ use crate::{
     ui::{
         CloseMenuEvent, CloseMethod, OpenMenu,
         components::{
-            button::{ButtonEvent, CosmosButton, register_button},
+            button::{ButtonEvent, CosmosButton},
             scollable_container::ScrollBox,
             show_cursor::ShowCursor,
             text_input::{InputType, InputValue, TextInput},
@@ -287,12 +287,13 @@ fn create_coms_ui(
                         ..Default::default()
                     },
                     BackgroundColor(accent),
-                    CosmosButton::<LeftClicked> {
+                    CosmosButton {
                         text: Some(("<".into(), title_font.clone(), Default::default())),
                         ..Default::default()
                     },
                     btn_node.clone(),
-                ));
+                ))
+                .observe(on_left_clicked);
 
                 p.spawn((
                     Text::new("Cool Ship"),
@@ -312,12 +313,13 @@ fn create_coms_ui(
                 p.spawn((
                     Name::new("Right btn"),
                     BackgroundColor(accent),
-                    CosmosButton::<RightClicked> {
+                    CosmosButton {
                         text: Some((">".into(), title_font.clone(), Default::default())),
                         ..Default::default()
                     },
                     btn_node,
-                ));
+                ))
+                .observe(on_right_clicked);
             });
 
             p.spawn((
@@ -340,10 +342,12 @@ fn create_coms_ui(
                         bottom_left: Val::Px(5.0),
                         ..Default::default()
                     },
-                    CosmosButton::<ToggleButton> {
+                    CosmosButton {
                         image: Some(ImageNode::new(coms_assets.close.clone_weak())),
+                        submit_control: Some(CosmosInputs::ToggleComs),
                         ..Default::default()
                     },
+                    ToggleButton,
                     BackgroundColor(accent),
                 ));
                 p.spawn((
@@ -425,22 +429,25 @@ fn create_coms_ui(
                                         flex_grow: 1.0,
                                         ..Default::default()
                                     },
-                                    CosmosButton::<EndComsClicked> {
+                                    CosmosButton {
                                         text: Some(("END COM".into(), message_font.clone(), Default::default())),
                                         ..Default::default()
                                     },
-                                ));
+                                ))
+                                .observe(end_selected_coms);
 
                                 p.spawn((
                                     Node {
                                         flex_grow: 1.0,
                                         ..Default::default()
                                     },
-                                    CosmosButton::<SendClicked> {
+                                    CosmosButton {
                                         text: Some(("SEND".into(), message_font.clone(), Default::default())),
+                                        submit_control: Some(CosmosInputs::SendComs),
                                         ..Default::default()
                                     },
-                                ));
+                                ))
+                                .observe(send_text);
                             });
                         }
                         ComsChannelType::Ai(_) => {
@@ -449,22 +456,24 @@ fn create_coms_ui(
                                     flex_grow: 1.0,
                                     ..Default::default()
                                 },
-                                CosmosButton::<YesClicked> {
+                                CosmosButton {
                                     text: Some(("YES".into(), message_font.clone(), Default::default())),
                                     ..Default::default()
                                 },
-                            ));
+                            ))
+                            .observe(yes_clicked);
 
                             p.spawn((
                                 Node {
                                     flex_grow: 1.0,
                                     ..Default::default()
                                 },
-                                CosmosButton::<NoClicked> {
+                                CosmosButton {
                                     text: Some(("NO".into(), message_font.clone(), Default::default())),
                                     ..Default::default()
                                 },
-                            ));
+                            ))
+                            .observe(no_clicked);
                         }
                     });
                 });
@@ -572,73 +581,14 @@ pub struct ComsAssets {
     close: Handle<Image>,
 }
 
-#[derive(Event, Debug)]
-struct LeftClicked;
-
-impl ButtonEvent for LeftClicked {
-    fn create_event(_: Entity) -> Self {
-        Self
-    }
-}
-#[derive(Event, Debug)]
-struct RightClicked;
-
-impl ButtonEvent for RightClicked {
-    fn create_event(_: Entity) -> Self {
-        Self
-    }
-}
-
-#[derive(Event, Debug)]
-struct EndComsClicked;
-
-impl ButtonEvent for EndComsClicked {
-    fn create_event(_: Entity) -> Self {
-        Self
-    }
-}
-
-#[derive(Event, Debug)]
-struct SendClicked;
-
-impl ButtonEvent for SendClicked {
-    fn create_event(_: Entity) -> Self {
-        Self
-    }
-}
-
-#[derive(Event, Debug)]
-struct NoClicked;
-
-impl ButtonEvent for NoClicked {
-    fn create_event(_: Entity) -> Self {
-        Self
-    }
-}
-
-#[derive(Event, Debug)]
-struct YesClicked;
-
-impl ButtonEvent for YesClicked {
-    fn create_event(_: Entity) -> Self {
-        Self
-    }
-}
-
-#[derive(Event, Debug)]
+#[derive(Component, Debug)]
 struct ToggleButton;
-
-impl ButtonEvent for ToggleButton {
-    fn create_event(_: Entity) -> Self {
-        Self
-    }
-}
 
 fn on_not_pilot(
     mut commands: Commands,
     mut q_coms_ui: Query<(Entity, &mut Node, Has<ShowCursor>), With<ComsUi>>,
     coms_assets: Res<ComsAssets>,
-    mut q_toggle_button: Query<&mut CosmosButton<ToggleButton>>,
+    mut q_toggle_button: Query<&mut CosmosButton, With<ToggleButton>>,
     mut focused: ResMut<InputFocus>,
     q_coms: Query<(Entity, &ChildOf, &ComsChannel)>,
     q_local_player: Query<Entity, With<LocalPlayer>>,
@@ -667,19 +617,19 @@ fn on_not_pilot(
 }
 
 fn on_toggle(
+    _trigger: Trigger<ButtonEvent>,
     mut commands: Commands,
     inputs: InputChecker,
     mut q_selected_coms: Query<&mut SelectedComs>,
     mut q_coms_ui: Query<(Entity, &mut Node, Has<ShowCursor>), With<ComsUi>>,
-    mut evr_toggle: EventReader<ToggleButton>,
     coms_assets: Res<ComsAssets>,
-    mut q_toggle_button: Query<&mut CosmosButton<ToggleButton>>,
+    mut q_toggle_button: Query<&mut CosmosButton, With<ToggleButton>>,
     mut focused: ResMut<InputFocus>,
     q_coms: Query<(Entity, &ChildOf, &ComsChannel)>,
     q_local_player: Query<Entity, With<LocalPlayer>>,
     q_pilot: Query<&Pilot>,
 ) {
-    if evr_toggle.read().next().is_none() && !inputs.check_just_pressed(CosmosInputs::ToggleComs) {
+    if inputs.check_just_pressed(CosmosInputs::ToggleComs) {
         return;
     }
 
@@ -728,7 +678,7 @@ fn on_toggle(
 fn minimize_ui(
     commands: &mut Commands,
     coms_assets: &ComsAssets,
-    q_toggle_button: &mut Query<&mut CosmosButton<ToggleButton>>,
+    q_toggle_button: &mut Query<&mut CosmosButton, With<ToggleButton>>,
     entity: Entity,
     node: &mut Node,
     focused: &mut InputFocus,
@@ -757,7 +707,7 @@ fn on_close_menu(
     mut evr: EventReader<CloseMenuEvent>,
     mut q_coms_ui: Query<&mut Node, With<ComsUi>>,
     mut commands: Commands,
-    mut q_toggle_button: Query<&mut CosmosButton<ToggleButton>>,
+    mut q_toggle_button: Query<&mut CosmosButton, With<ToggleButton>>,
     mut focused: ResMut<InputFocus>,
     q_coms: Query<(Entity, &ChildOf, &ComsChannel)>,
     q_local_player: Query<Entity, With<LocalPlayer>>,
@@ -781,17 +731,13 @@ fn on_close_menu(
 }
 
 fn send_text(
+    _trigger: Trigger<ButtonEvent>,
     mut nevw_send_coms_message: NettyEventWriter<SendComsMessage>,
     q_selected_coms: Query<&SelectedComs>,
     mut q_text_value: Query<&mut InputValue, With<UiComsMessage>>,
-    mut evr_send: EventReader<SendClicked>,
     inputs: InputChecker,
     q_coms_channel: Query<&ComsChannel>,
 ) {
-    if evr_send.read().next().is_none() & !inputs.check_just_pressed(CosmosInputs::SendComs) {
-        return;
-    }
-
     let Ok(mut text) = q_text_value.single_mut() else {
         return;
     };
@@ -819,15 +765,11 @@ fn send_text(
 }
 
 fn yes_clicked(
+    _trigger: Trigger<ButtonEvent>,
     mut nevw_send_coms_message: NettyEventWriter<SendComsMessage>,
     q_selected_coms: Query<&SelectedComs>,
-    mut evr_send: EventReader<YesClicked>,
     q_coms_channel: Query<&ComsChannel>,
 ) {
-    if evr_send.read().next().is_none() {
-        return;
-    }
-
     let Ok(selected) = q_selected_coms.single() else {
         return;
     };
@@ -843,15 +785,11 @@ fn yes_clicked(
 }
 
 fn no_clicked(
+    _trigger: Trigger<ButtonEvent>,
     mut nevw_send_coms_message: NettyEventWriter<SendComsMessage>,
     q_selected_coms: Query<&SelectedComs>,
-    mut evr_send: EventReader<NoClicked>,
     q_coms_channel: Query<&ComsChannel>,
 ) {
-    if evr_send.read().next().is_none() {
-        return;
-    }
-
     let Ok(selected) = q_selected_coms.single() else {
         return;
     };
@@ -866,7 +804,11 @@ fn no_clicked(
     });
 }
 
-fn end_selected_coms(mut evw_close_coms: NettyEventWriter<RequestCloseComsEvent>, mut q_selected_coms: Query<&mut SelectedComs>) {
+fn end_selected_coms(
+    _trigger: Trigger<ButtonEvent>,
+    mut evw_close_coms: NettyEventWriter<RequestCloseComsEvent>,
+    mut q_selected_coms: Query<&mut SelectedComs>,
+) {
     let Ok(selected) = q_selected_coms.single_mut() else {
         return;
     };
@@ -875,6 +817,7 @@ fn end_selected_coms(mut evw_close_coms: NettyEventWriter<RequestCloseComsEvent>
 }
 
 fn on_left_clicked(
+    _trigger: Trigger<ButtonEvent>,
     mut q_selected_coms: Query<&mut SelectedComs>,
     q_coms: Query<(Entity, &ChildOf, &ComsChannel)>,
     q_local_player: Query<Entity, With<LocalPlayer>>,
@@ -896,6 +839,7 @@ fn on_left_clicked(
 }
 
 fn on_right_clicked(
+    _trigger: Trigger<ButtonEvent>,
     mut q_selected_coms: Query<&mut SelectedComs>,
     q_coms: Query<(Entity, &ChildOf, &ComsChannel)>,
     q_pilot: Query<&Pilot>,
@@ -936,31 +880,10 @@ fn get_all_coms<'a>(
 pub(super) fn register(app: &mut App) {
     app.add_systems(
         Update,
-        (
-            on_remove_coms,
-            on_change_coms,
-            on_change_selected_coms,
-            on_toggle,
-            on_not_pilot,
-            on_close_menu,
-            send_text,
-            yes_clicked,
-            no_clicked,
-            on_left_clicked.run_if(on_event::<LeftClicked>),
-            on_right_clicked.run_if(on_event::<RightClicked>),
-            end_selected_coms.run_if(on_event::<EndComsClicked>),
-        )
+        (on_remove_coms, on_change_coms, on_change_selected_coms, on_not_pilot, on_close_menu)
             .chain()
             .run_if(in_state(GameState::Playing)),
     );
-
-    register_button::<LeftClicked>(app);
-    register_button::<RightClicked>(app);
-    register_button::<SendClicked>(app);
-    register_button::<YesClicked>(app);
-    register_button::<NoClicked>(app);
-    register_button::<ToggleButton>(app);
-    register_button::<EndComsClicked>(app);
 
     load_assets::<Image, ComsAssets, 2>(
         app,

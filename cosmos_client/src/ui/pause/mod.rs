@@ -13,9 +13,9 @@ use crate::{
 };
 
 use super::{
-    CloseMenuEvent, CloseMethod, OpenMenu, UiSystemSet,
+    CloseMenuEvent, CloseMethod, OpenMenu,
     components::{
-        button::{ButtonEvent, ButtonStyles, CosmosButton, register_button},
+        button::{ButtonEvent, ButtonStyles, CosmosButton},
         show_cursor::ShowCursor,
     },
     font::DefaultFont,
@@ -99,60 +99,36 @@ fn toggle_pause_menu(
             p.spawn((
                 BorderColor(cool_blue.into()),
                 style.clone(),
-                CosmosButton::<ResumeButtonEvent> {
+                CosmosButton {
                     button_styles: button_styles.clone(),
                     text: Some(("RESUME".into(), text_style.clone(), Default::default())),
                     ..Default::default()
                 },
-            ));
+            ))
+            .observe(resume);
 
             p.spawn((
                 BorderColor(cool_blue.into()),
                 style.clone(),
-                CosmosButton::<SettingsButtonEvent> {
+                CosmosButton {
                     button_styles: button_styles.clone(),
                     text: Some(("SETTINGS".into(), text_style.clone(), Default::default())),
                     ..Default::default()
                 },
-            ));
+            ))
+            .observe(settings_clicked);
 
             p.spawn((
                 BorderColor(cool_blue.into()),
                 style.clone(),
-                CosmosButton::<DisconnectButtonEvent> {
+                CosmosButton {
                     button_styles: button_styles.clone(),
                     text: Some(("DISCONNECT".into(), text_style.clone(), Default::default())),
                     ..Default::default()
                 },
-            ));
+            ))
+            .observe(disconnect_clicked);
         });
-}
-
-#[derive(Event, Debug)]
-struct ResumeButtonEvent;
-
-impl ButtonEvent for ResumeButtonEvent {
-    fn create_event(_: Entity) -> Self {
-        Self
-    }
-}
-
-#[derive(Event, Debug)]
-struct SettingsButtonEvent;
-
-impl ButtonEvent for SettingsButtonEvent {
-    fn create_event(_: Entity) -> Self {
-        Self
-    }
-}
-
-#[derive(Event, Debug)]
-struct DisconnectButtonEvent;
-
-impl ButtonEvent for DisconnectButtonEvent {
-    fn create_event(_: Entity) -> Self {
-        Self
-    }
 }
 
 fn close_topmost_menus(
@@ -200,7 +176,7 @@ fn close_topmost_menus(
 #[derive(Component)]
 struct PauseMenuSettingsMenu;
 
-fn settings_clicked(mut commands: Commands, mut q_pause_menu: Query<&mut Visibility, With<PauseMenu>>) {
+fn settings_clicked(ev: Trigger<ButtonEvent>, mut commands: Commands, mut q_pause_menu: Query<&mut Visibility, With<PauseMenu>>) {
     if let Ok(mut vis) = q_pause_menu.single_mut() {
         *vis = Visibility::Hidden;
     }
@@ -245,11 +221,11 @@ fn show_pause_if_no_settings(
     }
 }
 
-fn disconnect_clicked(mut client: ResMut<RenetClient>) {
+fn disconnect_clicked(_trigger: Trigger<ButtonEvent>, mut client: ResMut<RenetClient>) {
     client.disconnect();
 }
 
-fn resume(mut commands: Commands, q_pause_menu: Query<Entity, With<PauseMenu>>) {
+fn resume(_trigger: Trigger<ButtonEvent>, mut commands: Commands, q_pause_menu: Query<Entity, With<PauseMenu>>) {
     if let Ok(pause_ent) = q_pause_menu.single() {
         commands.entity(pause_ent).insert(NeedsDespawned);
     }
@@ -263,18 +239,11 @@ pub enum CloseMenusSet {
 }
 
 pub(super) fn register(app: &mut App) {
-    register_button::<ResumeButtonEvent>(app);
-    register_button::<DisconnectButtonEvent>(app);
-    register_button::<SettingsButtonEvent>(app);
-
     app.configure_sets(Update, CloseMenusSet::CloseMenus);
 
     app.add_systems(
         Update,
-        (
-            toggle_pause_menu.in_set(CloseMenusSet::CloseMenus),
-            settings_clicked.run_if(on_event::<SettingsButtonEvent>).after(UiSystemSet::DoUi),
-        )
+        (toggle_pause_menu.in_set(CloseMenusSet::CloseMenus),)
             .chain()
             .run_if(in_state(GameState::Playing))
             .before(CursorFlagsSet::UpdateCursorFlags),
@@ -286,10 +255,6 @@ pub(super) fn register(app: &mut App) {
                 .run_if(on_event::<SettingsDoneButtonEvent>.or(on_event::<SettingsCancelButtonEvent>))
                 .after(SettingsMenuSet::SettingsMenuInteractions),
             show_pause_if_no_settings,
-            resume.run_if(on_event::<ResumeButtonEvent>).after(UiSystemSet::DoUi),
-            disconnect_clicked
-                .run_if(on_event::<DisconnectButtonEvent>)
-                .after(UiSystemSet::DoUi),
         )
             .chain(),
     );

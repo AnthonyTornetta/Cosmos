@@ -11,7 +11,7 @@ use crate::{
     netty::connect::ConnectToConfig,
     ui::{
         components::{
-            button::{ButtonEvent, ButtonStyles, CosmosButton, register_button},
+            button::{ButtonEvent, ButtonStyles, CosmosButton},
             text_input::{InputType, TextInput},
         },
         font::DefaultFont,
@@ -98,7 +98,7 @@ fn create_main_menu(mut commands: Commands, default_font: Res<DefaultFont>, q_ui
                 align_self: AlignSelf::Center,
                 ..Default::default()
             },
-            CosmosButton::<ConnectButtonEvent> {
+            CosmosButton {
                 button_styles: Some(ButtonStyles {
                     background_color: Srgba::hex("333333").unwrap().into(),
                     hover_background_color: Srgba::hex("232323").unwrap().into(),
@@ -108,7 +108,8 @@ fn create_main_menu(mut commands: Commands, default_font: Res<DefaultFont>, q_ui
                 text: Some(("Connect".into(), text_style.clone(), Default::default())),
                 ..Default::default()
             },
-        ));
+        ))
+        .observe(trigger_connection);
 
         let vars_entity = p.spawn((ConnectionString("localhost".into()), ErrorMessage::default())).id();
 
@@ -147,7 +148,7 @@ fn create_main_menu(mut commands: Commands, default_font: Res<DefaultFont>, q_ui
                 margin: UiRect::top(Val::Px(20.0)),
                 ..Default::default()
             },
-            CosmosButton::<SettingsButtonEvent> {
+            CosmosButton {
                 button_styles: Some(ButtonStyles {
                     background_color: Srgba::hex("333333").unwrap().into(),
                     hover_background_color: Srgba::hex("232323").unwrap().into(),
@@ -157,7 +158,8 @@ fn create_main_menu(mut commands: Commands, default_font: Res<DefaultFont>, q_ui
                 text: Some(("Settings".into(), text_style.clone(), Default::default())),
                 ..Default::default()
             },
-        ));
+        ))
+        .observe(goto_settings);
 
         p.spawn((
             BorderColor(cool_blue),
@@ -169,7 +171,7 @@ fn create_main_menu(mut commands: Commands, default_font: Res<DefaultFont>, q_ui
                 margin: UiRect::top(Val::Px(20.0)),
                 ..Default::default()
             },
-            CosmosButton::<QuitButtonEvent> {
+            CosmosButton {
                 button_styles: Some(ButtonStyles {
                     background_color: Srgba::hex("333333").unwrap().into(),
                     hover_background_color: Srgba::hex("232323").unwrap().into(),
@@ -179,42 +181,17 @@ fn create_main_menu(mut commands: Commands, default_font: Res<DefaultFont>, q_ui
                 text: Some(("Quit".into(), text_style.clone(), Default::default())),
                 ..Default::default()
             },
-        ));
+        ))
+        .observe(quit_game);
     });
 }
 
-#[derive(Default, Event, Debug)]
-struct ConnectButtonEvent;
-
-impl ButtonEvent for ConnectButtonEvent {
-    fn create_event(_: Entity) -> Self {
-        Self
-    }
-}
-
-#[derive(Default, Event, Debug)]
-struct SettingsButtonEvent;
-
-impl ButtonEvent for SettingsButtonEvent {
-    fn create_event(_: Entity) -> Self {
-        Self
-    }
-}
-
-#[derive(Default, Event, Debug)]
-struct QuitButtonEvent;
-
-impl ButtonEvent for QuitButtonEvent {
-    fn create_event(_: Entity) -> Self {
-        Self
-    }
-}
-
-fn goto_settings(mut mms: ResMut<MainMenuSubState>) {
+fn goto_settings(_trigger: Trigger<ButtonEvent>, mut mms: ResMut<MainMenuSubState>) {
     *mms = MainMenuSubState::Settings;
 }
 
 fn trigger_connection(
+    _trigger: Trigger<ButtonEvent>,
     mut q_vars: Query<(&ConnectionString, &mut ErrorMessage)>,
     mut state: ResMut<NextState<GameState>>,
     mut commands: Commands,
@@ -248,7 +225,7 @@ fn trigger_connection(
     state.set(GameState::Connecting);
 }
 
-fn quit_game(mut evw_app_exit: EventWriter<AppExit>) {
+fn quit_game(_trigger: Trigger<ButtonEvent>, mut evw_app_exit: EventWriter<AppExit>) {
     evw_app_exit.write(AppExit::Success);
 }
 
@@ -258,10 +235,6 @@ pub(super) enum TitleScreenSet {
 }
 
 pub(super) fn register(app: &mut App) {
-    register_button::<ConnectButtonEvent>(app);
-    register_button::<SettingsButtonEvent>(app);
-    register_button::<QuitButtonEvent>(app);
-
     add_reactable_type::<ConnectionString>(app);
 
     app.configure_sets(
@@ -273,25 +246,10 @@ pub(super) fn register(app: &mut App) {
 
     app.add_systems(
         Update,
-        (
-            create_main_menu
-                .run_if(in_main_menu_state(MainMenuSubState::TitleScreen))
-                .run_if(resource_exists_and_changed::<MainMenuSubState>)
-                .in_set(MainMenuSystemSet::InitializeMenu),
-            goto_settings
-                .run_if(on_event::<SettingsButtonEvent>)
-                .run_if(in_main_menu_state(MainMenuSubState::TitleScreen))
-                .in_set(MainMenuSystemSet::UpdateMenu),
-            trigger_connection
-                .run_if(in_state(GameState::MainMenu))
-                .run_if(on_event::<ConnectButtonEvent>)
-                .run_if(in_main_menu_state(MainMenuSubState::TitleScreen))
-                .in_set(MainMenuSystemSet::UpdateMenu),
-            quit_game
-                .run_if(on_event::<QuitButtonEvent>)
-                .run_if(in_main_menu_state(MainMenuSubState::TitleScreen))
-                .in_set(MainMenuSystemSet::UpdateMenu),
-        )
+        (create_main_menu
+            .run_if(in_main_menu_state(MainMenuSubState::TitleScreen))
+            .run_if(resource_exists_and_changed::<MainMenuSubState>)
+            .in_set(MainMenuSystemSet::InitializeMenu),)
             .in_set(TitleScreenSet::TitleScreenInteractions)
             .chain(),
     );

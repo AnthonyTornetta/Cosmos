@@ -13,32 +13,23 @@ use cosmos_core::{
     state::GameState,
 };
 
-use crate::{
-    create_button_event,
-    ui::{
-        components::{
-            button::{CosmosButton, register_button},
-            modal::{
-                Modal,
-                confirm_modal::{ConfirmModal, ConfirmModalComplete},
-                text_modal::{TextModal, TextModalComplete},
-            },
-            text_input::InputType,
+use crate::ui::{
+    components::{
+        button::{ButtonEvent, CosmosButton},
+        modal::{
+            Modal,
+            confirm_modal::{ConfirmModal, ConfirmModalComplete},
+            text_modal::{TextModal, TextModalComplete},
         },
-        font::DefaultFont,
-        hud::error::ShowInfoPopup,
+        text_input::InputType,
     },
+    font::DefaultFont,
+    hud::error::ShowInfoPopup,
 };
 
 #[derive(Component)]
 #[require(Node)]
 pub struct FactionDisplay;
-
-create_button_event!(CreateFaction);
-create_button_event!(LeaveFaction);
-create_button_event!(InviteToFaction);
-create_button_event!(AcceptInvite);
-create_button_event!(DeclineInvite);
 
 fn render_with_faction(p: &mut RelatedSpawnerCommands<ChildOf>, faction: &Faction, font: &DefaultFont) {
     p.spawn(Node {
@@ -80,7 +71,7 @@ fn render_with_faction(p: &mut RelatedSpawnerCommands<ChildOf>, faction: &Factio
                         margin: UiRect::bottom(Val::Px(10.0)),
                         ..Default::default()
                     },
-                    CosmosButton::<InviteToFaction> {
+                    CosmosButton {
                         text: Some((
                             "Invite to Faction".into(),
                             TextFont {
@@ -92,7 +83,8 @@ fn render_with_faction(p: &mut RelatedSpawnerCommands<ChildOf>, faction: &Factio
                         )),
                         ..Default::default()
                     },
-                ));
+                ))
+                .observe(on_invite_to_faction);
 
                 p.spawn((
                     BackgroundColor(css::DARK_RED.into()),
@@ -101,7 +93,7 @@ fn render_with_faction(p: &mut RelatedSpawnerCommands<ChildOf>, faction: &Factio
                         margin: UiRect::bottom(Val::Px(10.0)),
                         ..Default::default()
                     },
-                    CosmosButton::<LeaveFaction> {
+                    CosmosButton {
                         text: Some((
                             "Leave Faction".into(),
                             TextFont {
@@ -113,7 +105,8 @@ fn render_with_faction(p: &mut RelatedSpawnerCommands<ChildOf>, faction: &Factio
                         )),
                         ..Default::default()
                     },
-                ));
+                ))
+                .observe(on_leave_faction);
             });
 
             p.spawn(Node {
@@ -182,7 +175,7 @@ fn render_no_faction(p: &mut RelatedSpawnerCommands<ChildOf>, font: &DefaultFont
                 margin: UiRect::bottom(Val::Px(10.0)),
                 ..Default::default()
             },
-            CosmosButton::<CreateFaction> {
+            CosmosButton {
                 text: Some((
                     "Create Faction".into(),
                     TextFont {
@@ -194,7 +187,8 @@ fn render_no_faction(p: &mut RelatedSpawnerCommands<ChildOf>, font: &DefaultFont
                 )),
                 ..Default::default()
             },
-        ));
+        ))
+        .observe(on_create_faction_click);
     });
 
     p.spawn((
@@ -282,7 +276,7 @@ fn render_no_faction(p: &mut RelatedSpawnerCommands<ChildOf>, font: &DefaultFont
                         ..Default::default()
                     },
                     faction_invite,
-                    CosmosButton::<AcceptInvite> {
+                    CosmosButton {
                         text: Some((
                             "JOIN".into(),
                             TextFont {
@@ -294,7 +288,8 @@ fn render_no_faction(p: &mut RelatedSpawnerCommands<ChildOf>, font: &DefaultFont
                         )),
                         ..Default::default()
                     },
-                ));
+                ))
+                .observe(on_accept_invite);
 
                 p.spawn((
                     BackgroundColor(css::RED.into()),
@@ -304,7 +299,7 @@ fn render_no_faction(p: &mut RelatedSpawnerCommands<ChildOf>, font: &DefaultFont
                         ..Default::default()
                     },
                     faction_invite,
-                    CosmosButton::<DeclineInvite> {
+                    CosmosButton {
                         text: Some((
                             "DECLINE".into(),
                             TextFont {
@@ -316,7 +311,8 @@ fn render_no_faction(p: &mut RelatedSpawnerCommands<ChildOf>, font: &DefaultFont
                         )),
                         ..Default::default()
                     },
-                ));
+                ))
+                .observe(on_decline_invite);
             });
         }
     });
@@ -358,15 +354,7 @@ fn render_faction_display(
 #[derive(Component)]
 struct FactionNameBox;
 
-fn on_create_faction_click(
-    mut evr_create_faction: EventReader<CreateFaction>,
-    q_faction_box: Query<Entity, With<FactionNameBox>>,
-    mut commands: Commands,
-) {
-    if evr_create_faction.read().next().is_none() {
-        return;
-    }
-
+fn on_create_faction_click(_trigger: Trigger<ButtonEvent>, q_faction_box: Query<Entity, With<FactionNameBox>>, mut commands: Commands) {
     if q_faction_box.iter().next().is_some() {
         return;
     }
@@ -425,7 +413,7 @@ fn get_faction_response(
     }
 }
 
-fn on_leave_faction(mut commands: Commands) {
+fn on_leave_faction(_trigger: Trigger<ButtonEvent>, mut commands: Commands) {
     commands
         .spawn((
             Modal {
@@ -477,7 +465,7 @@ fn on_change_faction(
     }
 }
 
-fn on_invite_to_faction(mut commands: Commands) {
+fn on_invite_to_faction(_trigger: Trigger<ButtonEvent>, mut commands: Commands) {
     commands
         .spawn((
             Name::new("Faction Name Box"),
@@ -513,55 +501,37 @@ fn on_invite_to_faction(mut commands: Commands) {
 }
 
 fn on_accept_invite(
+    ev: Trigger<ButtonEvent>,
     q_fac_id: Query<&FactionId>,
-    mut evr_accept: EventReader<AcceptInvite>,
     mut nevw_accept_invite: NettyEventWriter<PlayerAcceptFactionInvitation>,
 ) {
-    for ev in evr_accept.read() {
-        let Ok(fac) = q_fac_id.get(ev.0) else {
-            continue;
-        };
+    let Ok(fac) = q_fac_id.get(ev.0) else {
+        return;
+    };
 
-        nevw_accept_invite.write(PlayerAcceptFactionInvitation { faction_id: *fac });
-    }
+    nevw_accept_invite.write(PlayerAcceptFactionInvitation { faction_id: *fac });
 }
 
 fn on_decline_invite(
+    ev: Trigger<ButtonEvent>,
     q_fac_id: Query<&FactionId>,
-    mut evr_accept: EventReader<DeclineInvite>,
     mut nevw_accept_invite: NettyEventWriter<PlayerAcceptFactionInvitation>,
 ) {
-    for ev in evr_accept.read() {
-        let Ok(fac) = q_fac_id.get(ev.0) else {
-            continue;
-        };
+    let Ok(fac) = q_fac_id.get(ev.0) else {
+        return;
+    };
 
-        nevw_accept_invite.write(PlayerAcceptFactionInvitation { faction_id: *fac });
-    }
+    nevw_accept_invite.write(PlayerAcceptFactionInvitation { faction_id: *fac });
 }
 
 pub(super) fn register(app: &mut App) {
-    register_button::<CreateFaction>(app);
-    register_button::<LeaveFaction>(app);
-    register_button::<InviteToFaction>(app);
-    register_button::<AcceptInvite>(app);
-    register_button::<DeclineInvite>(app);
-
     app.add_systems(
         FixedUpdate,
         on_change_faction.run_if(in_state(GameState::Playing)).in_set(FixedUpdateSet::Main),
     )
     .add_systems(
         Update,
-        (
-            render_faction_display,
-            on_create_faction_click,
-            get_faction_response,
-            on_leave_faction.run_if(on_event::<LeaveFaction>),
-            on_invite_to_faction.run_if(on_event::<InviteToFaction>),
-            on_accept_invite,
-            on_decline_invite,
-        )
+        (render_faction_display, get_faction_response)
             .chain()
             .run_if(in_state(GameState::Playing)),
     );

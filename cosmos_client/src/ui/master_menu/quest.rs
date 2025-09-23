@@ -13,7 +13,7 @@ use crate::{
     ui::{
         UiSystemSet,
         components::{
-            button::{ButtonEvent, CosmosButton, register_button},
+            button::{ButtonEvent, CosmosButton},
             scollable_container::ScrollBox,
         },
         font::DefaultFont,
@@ -82,38 +82,27 @@ fn on_add_quest_display(
     }
 }
 
-#[derive(Event, Debug)]
-struct ToggleActiveClicked(Entity);
-
-impl ButtonEvent for ToggleActiveClicked {
-    fn create_event(btn_entity: Entity) -> Self {
-        Self(btn_entity)
-    }
-}
-
 fn on_toggle_active(
+    ev: Trigger<ButtonEvent>,
     mut commands: Commands,
-    mut evr_toggle_active: EventReader<ToggleActiveClicked>,
     mut q_active: Query<(Entity, &mut BorderColor), With<ActiveQuestUi>>,
     mut q_inactive: Query<(Entity, &QuestComp, &mut BorderColor), Without<ActiveQuestUi>>,
     mut nevw_set_active: NettyEventWriter<SetActiveQuestEvent>,
 ) {
-    for ev in evr_toggle_active.read() {
-        if let Ok((ent, mut bc)) = q_active.single_mut() {
-            commands.entity(ent).remove::<ActiveQuestUi>();
-            nevw_set_active.write(SetActiveQuestEvent { quest: None });
-            bc.0 = css::LIGHT_GREY.into();
-        }
-
-        let Ok((ui_ent, q, mut bc)) = q_inactive.get_mut(ev.0) else {
-            nevw_set_active.write(SetActiveQuestEvent { quest: None });
-            continue;
-        };
-
-        bc.0 = css::AQUA.into();
-        commands.entity(ui_ent).insert(ActiveQuestUi);
-        nevw_set_active.write(SetActiveQuestEvent { quest: Some(q.0) });
+    if let Ok((ent, mut bc)) = q_active.single_mut() {
+        commands.entity(ent).remove::<ActiveQuestUi>();
+        nevw_set_active.write(SetActiveQuestEvent { quest: None });
+        bc.0 = css::LIGHT_GREY.into();
     }
+
+    let Ok((ui_ent, q, mut bc)) = q_inactive.get_mut(ev.0) else {
+        nevw_set_active.write(SetActiveQuestEvent { quest: None });
+        return;
+    };
+
+    bc.0 = css::AQUA.into();
+    commands.entity(ui_ent).insert(ActiveQuestUi);
+    nevw_set_active.write(SetActiveQuestEvent { quest: Some(q.0) });
 }
 
 #[derive(Component)]
@@ -134,19 +123,22 @@ fn quest_node(
         return;
     };
 
-    let mut ecmds = commands.spawn((
-        Name::new("Quest UI Entry"),
-        CosmosButton::<ToggleActiveClicked> { ..Default::default() },
-        Node {
-            width: Val::Percent(100.0),
-            min_height: Val::Px(70.0),
-            border: UiRect::vertical(Val::Px(2.0)),
-            flex_direction: FlexDirection::Row,
-            ..Default::default()
-        },
-        QuestComp(ongoing.ongoing_id()),
-        BorderColor(if active { css::AQUA.into() } else { css::LIGHT_GREY.into() }),
-    ));
+    let mut ecmds = commands
+        .spawn((
+            Name::new("Quest UI Entry"),
+            CosmosButton { ..Default::default() },
+            Node {
+                width: Val::Percent(100.0),
+                min_height: Val::Px(70.0),
+                border: UiRect::vertical(Val::Px(2.0)),
+                flex_direction: FlexDirection::Row,
+                ..Default::default()
+            },
+            QuestComp(ongoing.ongoing_id()),
+            BorderColor(if active { css::AQUA.into() } else { css::LIGHT_GREY.into() }),
+        ))
+        .observe(on_toggle_active);
+
     if active {
         ecmds.insert(ActiveQuestUi);
     }
@@ -197,8 +189,6 @@ fn quest_node(
 }
 
 pub(super) fn register(app: &mut App) {
-    register_button::<ToggleActiveClicked>(app);
-
     app.add_systems(
         Update,
         (on_add_quest_display, on_toggle_active.in_set(UiSystemSet::FinishUi)).run_if(in_state(GameState::Playing)),

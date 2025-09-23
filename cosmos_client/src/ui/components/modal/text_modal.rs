@@ -1,15 +1,12 @@
 //! A modal where the user enters text
 
-use crate::{
-    create_private_button_event,
-    ui::{
-        components::{
-            button::{CosmosButton, register_button},
-            modal::{Modal, ModalBody},
-            text_input::{InputType, InputValue, TextInput},
-        },
-        font::DefaultFont,
+use crate::ui::{
+    components::{
+        button::{ButtonEvent, CosmosButton},
+        modal::{Modal, ModalBody},
+        text_input::{InputType, InputValue, TextInput},
     },
+    font::DefaultFont,
 };
 
 use bevy::{color::palettes::css, input_focus::InputFocus, prelude::*};
@@ -112,7 +109,7 @@ fn on_add_text_modal(
                     TextModalButtons::OkCancel => {
                         p.spawn((
                             TextValueEnt(ent),
-                            CosmosButton::<CancelButton> {
+                            CosmosButton {
                                 text: Some((
                                     "Cancel".into(),
                                     TextFont {
@@ -130,7 +127,19 @@ fn on_add_text_modal(
                                 ..Default::default()
                             },
                             BackgroundColor(css::DARK_GREY.into()),
-                        ));
+                        ))
+                        .observe(
+                            |ev: Trigger<ButtonEvent>,
+                             q_text_modal_ent: Query<&TextValueEnt>,
+                             q_value: Query<&InputValue, &ModalEntity>| {
+                                let Ok(tv) = q_text_modal_ent.get(ev.0) else {
+                                    return;
+                                };
+                                let ent = tv.0;
+                                let modal_ent = q_value.get(ent).expect("Missing modal entity?");
+                                commands.entity(modal_ent.0).insert(NeedsDespawned);
+                            },
+                        );
 
                         p.spawn((
                             Node {
@@ -139,7 +148,7 @@ fn on_add_text_modal(
                                 ..Default::default()
                             },
                             TextValueEnt(ent),
-                            CosmosButton::<OkButton> {
+                            CosmosButton {
                                 text: Some((
                                     "Ok".into(),
                                     TextFont {
@@ -152,7 +161,23 @@ fn on_add_text_modal(
                                 ..Default::default()
                             },
                             BackgroundColor(css::AQUA.into()),
-                        ));
+                        ))
+                        .observe(
+                            |ev: Trigger<ButtonEvent>,
+                             q_text_modal_ent: Query<&TextValueEnt>,
+                             q_value: Query<&InputValue, &ModalEntity>| {
+                                let Ok(tv) = q_text_modal_ent.get(ev.0) else {
+                                    return;
+                                };
+                                let ent = tv.0;
+                                let (text, modal_ent) = q_value.get(ent).expect("Missing input?");
+                                commands.entity(ent).trigger(TextModalComplete {
+                                    text: text.value().to_owned(),
+                                });
+
+                                commands.entity(modal_ent.0).insert(NeedsDespawned);
+                            },
+                        );
                     }
                 });
             });
@@ -163,9 +188,6 @@ fn on_add_text_modal(
 #[derive(Component)]
 struct TextValueEnt(Entity);
 
-create_private_button_event!(OkButton);
-create_private_button_event!(CancelButton);
-
 #[derive(Event, Debug)]
 #[event(traversal = &'static ChildOf, auto_propagate)]
 /// Sent whenever a text modal has its `ok` button pressed
@@ -174,45 +196,6 @@ pub struct TextModalComplete {
     pub text: String,
 }
 
-fn on_ok(
-    mut commands: Commands,
-    q_text_modal_ent: Query<&TextValueEnt>,
-    q_value: Query<(&InputValue, &ModalEntity)>,
-    mut evr_ok: EventReader<OkButton>,
-) {
-    for ev in evr_ok.read() {
-        let Ok(tv) = q_text_modal_ent.get(ev.0) else {
-            continue;
-        };
-        let ent = tv.0;
-        let (text, modal_ent) = q_value.get(ent).expect("Missing input?");
-        commands.entity(ent).trigger(TextModalComplete {
-            text: text.value().to_owned(),
-        });
-
-        commands.entity(modal_ent.0).insert(NeedsDespawned);
-    }
-}
-
-fn on_cancel(
-    mut commands: Commands,
-    q_text_modal_ent: Query<&TextValueEnt>,
-    q_value: Query<&ModalEntity>,
-    mut evr_cancel: EventReader<CancelButton>,
-) {
-    for ev in evr_cancel.read() {
-        let Ok(tv) = q_text_modal_ent.get(ev.0) else {
-            continue;
-        };
-        let ent = tv.0;
-        let modal_ent = q_value.get(ent).expect("Missing modal entity?");
-        commands.entity(modal_ent.0).insert(NeedsDespawned);
-    }
-}
-
 pub(super) fn register(app: &mut App) {
-    register_button::<OkButton>(app);
-    register_button::<CancelButton>(app);
-
-    app.add_systems(Update, (on_add_text_modal, on_ok, on_cancel));
+    app.add_systems(Update, on_add_text_modal);
 }

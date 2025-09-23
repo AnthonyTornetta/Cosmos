@@ -12,7 +12,10 @@ use crate::{
     inventory::InventoryNeedsDisplayed,
     ui::{
         OpenMenu,
-        components::{button::CosmosButton, window::GuiWindow},
+        components::{
+            button::{ButtonEvent, CosmosButton},
+            window::GuiWindow,
+        },
         item_renderer::RenderItem,
     },
 };
@@ -87,17 +90,18 @@ fn create_shipyard_ui(
                     .filter(|i| i.item_id() == blueprint.id())
                     .flat_map(|i| i.data_entity().and_then(|e| q_blueprint_data.get(e).ok()))
                 {
-                    p.spawn((
-
-                    ))
-                    p.spawn((
-                        RenderItem { item_id: blueprint.id() },
-                        Node {
-                            width: Val::Px(64.0),
-                            height: Val::Px(64.0),
-                            ..Default::default()
-                        },
-                    ));
+                    p.spawn((CosmosButton { ..Default::default() }))
+                        .observe(|ev: Trigger<ButtonEvent>| info!("{ev:?}"))
+                        .with_children(|p| {
+                            p.spawn((
+                                RenderItem { item_id: blueprint.id() },
+                                Node {
+                                    width: Val::Px(64.0),
+                                    height: Val::Px(64.0),
+                                    ..Default::default()
+                                },
+                            ));
+                        });
                 }
             }
             Some(ClientFriendlyShipyardState::Paused(p)) => {}

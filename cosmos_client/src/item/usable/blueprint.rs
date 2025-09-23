@@ -28,12 +28,11 @@ use futures_lite::future;
 use rfd::AsyncFileDialog;
 
 use crate::{
-    create_private_button_event,
     interactions::block_interactions::LookingAt,
     ui::{
         OpenMenu,
         components::{
-            button::{CosmosButton, register_button},
+            button::{ButtonEvent, CosmosButton},
             window::GuiWindow,
         },
         font::DefaultFont,
@@ -116,7 +115,7 @@ fn on_use_blueprint(
                     });
 
                     p.spawn((
-                        CosmosButton::<LoadBlueprint> {
+                        CosmosButton {
                             text: Some((
                                 "Load".into(),
                                 TextFont {
@@ -134,7 +133,8 @@ fn on_use_blueprint(
                             ..Default::default()
                         },
                         BackgroundColor(css::LIGHT_GREY.into()),
-                    ));
+                    ))
+                    .observe(on_load);
                 });
             break;
         };
@@ -162,15 +162,13 @@ fn on_use_blueprint(
                 OpenMenu::new(0),
             ))
             .with_children(|p| {
-                p.spawn(
-                    Node {
-                        justify_content: JustifyContent::SpaceBetween,
-                        ..Default::default()
-                    },
-                )
+                p.spawn(Node {
+                    justify_content: JustifyContent::SpaceBetween,
+                    ..Default::default()
+                })
                 .with_children(|p| {
                     p.spawn((
-                        CosmosButton::<ClearBlueprintBtn> {
+                        CosmosButton {
                             text: Some((
                                 "Clear".into(),
                                 TextFont {
@@ -188,10 +186,11 @@ fn on_use_blueprint(
                             ..Default::default()
                         },
                         BackgroundColor(css::RED.into()),
-                    ));
+                    ))
+                    .observe(on_clear);
 
                     p.spawn((
-                        CosmosButton::<CopyBlueprintBtn> {
+                        CosmosButton {
                             text: Some((
                                 "Copy".into(),
                                 TextFont {
@@ -209,7 +208,8 @@ fn on_use_blueprint(
                             ..Default::default()
                         },
                         BackgroundColor(css::GREEN.into()),
-                    ));
+                    ))
+                    .observe(on_copy);
                 });
 
                 p.spawn((
@@ -228,7 +228,7 @@ fn on_use_blueprint(
 
                 if creative {
                     p.spawn((
-                        CosmosButton::<LoadClicked> {
+                        CosmosButton {
                             text: Some((
                                 "Load".into(),
                                 TextFont {
@@ -246,12 +246,13 @@ fn on_use_blueprint(
                             ..Default::default()
                         },
                         BackgroundColor(css::GREEN.into()),
-                    ));
+                    ))
+                    .observe(load_clicked);
                 }
 
                 p.spawn((
                     OpenedBp(data.clone()),
-                    CosmosButton::<SaveBlueprint> {
+                    CosmosButton {
                         text: Some((
                             "Download".into(),
                             TextFont {
@@ -269,70 +270,66 @@ fn on_use_blueprint(
                         ..Default::default()
                     },
                     BackgroundColor(css::LIGHT_GREY.into()),
-                ));
+                ))
+                .observe(on_export);
             });
         break;
     }
 }
 
-create_private_button_event!(SaveBlueprint);
-create_private_button_event!(LoadClicked);
-create_private_button_event!(CopyBlueprintBtn);
-create_private_button_event!(ClearBlueprintBtn);
-create_private_button_event!(LoadBlueprint);
+fn on_export(ev: Trigger<ButtonEvent>, mut nevw_download_bp: NettyEventWriter<DownloadBlueprint>, q_item_data: Query<&OpenedBp>) {
+    let Ok(blueprint_data) = q_item_data.get(ev.0) else {
+        return;
+    };
 
-fn on_export(
-    mut evr_save: EventReader<SaveBlueprint>,
-    mut nevw_download_bp: NettyEventWriter<DownloadBlueprint>,
-    q_item_data: Query<&OpenedBp>,
-) {
-    for ev in evr_save.read() {
-        let Ok(blueprint_data) = q_item_data.get(ev.0) else {
-            continue;
-        };
-
-        nevw_download_bp.write(DownloadBlueprint {
-            blueprint_id: blueprint_data.0.blueprint_id,
-            blueprint_type: blueprint_data.0.blueprint_type,
-        });
-    }
+    nevw_download_bp.write(DownloadBlueprint {
+        blueprint_id: blueprint_data.0.blueprint_id,
+        blueprint_type: blueprint_data.0.blueprint_type,
+    });
 }
 
 #[derive(Resource)]
 struct LoadTask(Task<Option<(u32, Vec<u8>)>>);
 
-fn on_load(mut evr_save: EventReader<LoadBlueprint>, q_held_item: Query<&HeldItemSlot, With<LocalPlayer>>, mut commands: Commands) {
-    if evr_save.read().next().is_some() {
-        let Ok(held_item) = q_held_item.single() else {
-            return;
-        };
-
-        let bp_slot = held_item.slot();
-
-        let task = AsyncComputeTaskPool::get().spawn(async move {
-            let _ = fs::create_dir("./blueprints");
-            let cur_dir = std::env::current_dir().unwrap_or_default();
-            let file = AsyncFileDialog::new()
-                .add_filter("Blueprints", &["bp"])
-                .set_directory(cur_dir.join("./blueprints/"))
-                .set_title("Save Blueprint")
-                .set_can_create_directories(true)
-                .pick_file()
-                .await;
-
-            let handle = file?;
-            fs::read(handle.path()).ok().map(|data| (bp_slot, data))
-        });
-
-        commands.insert_resource(LoadTask(task));
-
-        // nevw_upload_bp.write(UploadBlueprint{
-        //     name: "Blueprint".into(),
-        //     data:
-        //     blueprint_id: blueprint_data.0.blueprint_id,
-        //     blueprint_type: blueprint_data.0.blueprint_type,
-        // });
+fn on_load(
+    _trigger: Trigger<ButtonEvent>,
+    q_held_item: Query<&HeldItemSlot, With<LocalPlayer>>,
+    mut commands: Commands,
+    loading_already: Option<Res<LoadTask>>,
+) {
+    if loading_already.is_some() {
+        return;
     }
+
+    let Ok(held_item) = q_held_item.single() else {
+        return;
+    };
+
+    let bp_slot = held_item.slot();
+
+    let task = AsyncComputeTaskPool::get().spawn(async move {
+        let _ = fs::create_dir("./blueprints");
+        let cur_dir = std::env::current_dir().unwrap_or_default();
+        let file = AsyncFileDialog::new()
+            .add_filter("Blueprints", &["bp"])
+            .set_directory(cur_dir.join("./blueprints/"))
+            .set_title("Save Blueprint")
+            .set_can_create_directories(true)
+            .pick_file()
+            .await;
+
+        let handle = file?;
+        fs::read(handle.path()).ok().map(|data| (bp_slot, data))
+    });
+
+    commands.insert_resource(LoadTask(task));
+
+    // nevw_upload_bp.write(UploadBlueprint{
+    //     name: "Blueprint".into(),
+    //     data:
+    //     blueprint_id: blueprint_data.0.blueprint_id,
+    //     blueprint_type: blueprint_data.0.blueprint_type,
+    // });
 }
 
 fn upload_selected_blueprint(
@@ -390,34 +387,34 @@ fn on_receive_download(mut nevr_download: EventReader<DownloadBlueprintResponse>
 }
 
 fn on_clear(
-    mut evr_clear: EventReader<ClearBlueprintBtn>,
+    _trigger: Trigger<ButtonEvent>,
     mut nevw_clear: NettyEventWriter<ClearBlueprint>,
     q_held_item: Query<&HeldItemSlot, With<LocalPlayer>>,
 ) {
-    if evr_clear.read().next().is_some() {
-        let Ok(held_item) = q_held_item.single() else {
-            return;
-        };
+    let Ok(held_item) = q_held_item.single() else {
+        return;
+    };
 
-        nevw_clear.write(ClearBlueprint { slot: held_item.slot() });
-    }
+    nevw_clear.write(ClearBlueprint { slot: held_item.slot() });
 }
 
 fn on_copy(
-    mut evr_copy: EventReader<CopyBlueprintBtn>,
+    _trigger: Trigger<ButtonEvent>,
     mut nevw_copy: NettyEventWriter<CopyBlueprint>,
     q_held_item: Query<&HeldItemSlot, With<LocalPlayer>>,
 ) {
-    if evr_copy.read().next().is_some() {
-        let Ok(held_item) = q_held_item.single() else {
-            return;
-        };
+    let Ok(held_item) = q_held_item.single() else {
+        return;
+    };
 
-        nevw_copy.write(CopyBlueprint { slot: held_item.slot() });
-    }
+    nevw_copy.write(CopyBlueprint { slot: held_item.slot() });
 }
 
-fn load_clicked(mut nevw_load_bp: NettyEventWriter<RequestLoadBlueprint>, q_held_item: Query<&HeldItemSlot, With<LocalPlayer>>) {
+fn load_clicked(
+    _trigger: Trigger<ButtonEvent>,
+    mut nevw_load_bp: NettyEventWriter<RequestLoadBlueprint>,
+    q_held_item: Query<&HeldItemSlot, With<LocalPlayer>>,
+) {
     let Ok(held_item) = q_held_item.single() else {
         return;
     };
@@ -426,24 +423,9 @@ fn load_clicked(mut nevw_load_bp: NettyEventWriter<RequestLoadBlueprint>, q_held
 }
 
 pub(super) fn register(app: &mut App) {
-    register_button::<SaveBlueprint>(app);
-    register_button::<LoadBlueprint>(app);
-    register_button::<ClearBlueprintBtn>(app);
-    register_button::<CopyBlueprintBtn>(app);
-    register_button::<LoadClicked>(app);
-
     app.add_systems(FixedUpdate, on_use_blueprint.in_set(FixedUpdateSet::Main))
         .add_systems(
             Update,
-            (
-                on_export,
-                on_receive_download,
-                upload_selected_blueprint.run_if(resource_exists::<LoadTask>),
-                on_load.run_if(not(resource_exists::<LoadTask>)),
-                on_copy,
-                on_clear,
-                load_clicked.run_if(on_event::<LoadClicked>),
-            )
-                .run_if(in_state(GameState::Playing)),
+            (on_receive_download, upload_selected_blueprint.run_if(resource_exists::<LoadTask>)).run_if(in_state(GameState::Playing)),
         );
 }
