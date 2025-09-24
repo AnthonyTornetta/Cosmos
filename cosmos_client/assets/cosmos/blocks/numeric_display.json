@@ -2,22 +2,22 @@
     "texture": {
         "Sides": {
             "right": {
-                "Single": "cosmos:ship_hull_dark_grey"
+                "Single": "cosmos:logic_block"
             },
             "left": {
-                "Single": "cosmos:ship_hull_dark_grey"
+                "Single": "cosmos:logic_pointing_left"
             },
             "front": {
-                "Single": "cosmos:numeric_display_0"
+                "Single": "cosmos:numeric_display_blank"
             },
             "back": {
-                "Single": "cosmos:ship_hull_dark_grey"
+                "Single": "cosmos:logic_block"
             },
             "top": {
-                "Single": "cosmos:ship_hull_dark_grey"
+                "Single": "cosmos:logic_block"
             },
             "bottom": {
-                "Single": "cosmos:ship_hull_dark_grey"
+                "Single": "cosmos:logic_block"
             }
         }
     }

@@ -471,6 +471,7 @@ fn add_cosmos_blocks(
     blocks.register(
         BlockBuilder::new("cosmos:numeric_display", 0.1, 20.0, 5.0)
             .add_property(BlockProperty::Full)
+            .add_property(BlockProperty::FaceFront)
             .add_connection_group("cosmos:uses_logic")
             .with_category("cosmos:logic")
             .create(),
