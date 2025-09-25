@@ -128,7 +128,7 @@ fn on_interact_button(
             }
         }
 
-        if button.submit_control.map(|c| inputs.check_just_pressed(c)).unwrap_or(true)
+        if button.submit_control.map(|c| inputs.check_just_pressed(c)).unwrap_or(false)
             || (*interaction == Interaction::Hovered && button.last_interaction == Interaction::Pressed)
         {
             // Click and still hovering the button, so they didn't move out while holding the mouse down,
