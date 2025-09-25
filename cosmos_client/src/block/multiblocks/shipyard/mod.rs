@@ -6,6 +6,7 @@ use cosmos_core::{
     netty::client::LocalPlayer,
     prelude::{Structure, StructureBlock},
     registry::identifiable::Identifiable,
+    structure::blueprint::BlueprintType,
 };
 
 use crate::{
@@ -16,7 +17,7 @@ use crate::{
             button::{ButtonEvent, CosmosButton},
             window::GuiWindow,
         },
-        item_renderer::RenderItem,
+        item_renderer::{CustomHoverTooltip, RenderItem},
     },
 };
 
@@ -89,11 +90,13 @@ fn create_shipyard_ui(
                     .flatten()
                     .filter(|i| i.item_id() == blueprint.id())
                     .flat_map(|i| i.data_entity().and_then(|e| q_blueprint_data.get(e).ok()))
+                    .filter(|bp| bp.blueprint_type == BlueprintType::Ship)
                 {
                     p.spawn((CosmosButton { ..Default::default() }))
                         .observe(|ev: Trigger<ButtonEvent>| info!("{ev:?}"))
                         .with_children(|p| {
                             p.spawn((
+                                CustomHoverTooltip::new(bp.name.clone()),
                                 RenderItem { item_id: blueprint.id() },
                                 Node {
                                     width: Val::Px(64.0),
