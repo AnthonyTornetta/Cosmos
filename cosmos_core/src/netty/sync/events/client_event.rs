@@ -92,7 +92,11 @@ fn send_events<T: NettyEvent>(
 
         let serialized = if T::needs_entity_conversion() {
             let Some(x) = ev.0.clone().convert_entities_client_to_server(&mapping) else {
-                warn!("Unable to convert entity to server entity for {}!", T::unlocalized_name());
+                warn!(
+                    "Unable to convert entity to server entity for {}! \n {:?}",
+                    T::unlocalized_name(),
+                    ev.0
+                );
                 continue;
             };
 

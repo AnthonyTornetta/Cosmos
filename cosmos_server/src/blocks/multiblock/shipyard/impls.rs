@@ -1,4 +1,6 @@
-use bevy::prelude::*;
+use std::time::Duration;
+
+use bevy::{platform::collections::HashMap, prelude::*, time::common_conditions::on_timer};
 use bevy_rapier3d::prelude::{RigidBody, Velocity};
 use cosmos_core::{
     block::{
@@ -9,7 +11,7 @@ use cosmos_core::{
         data::BlockData,
         multiblock::prelude::*,
     },
-    ecs::sets::FixedUpdateSet,
+    ecs::NeedsDespawned,
     entities::player::Player,
     events::{
         block_events::{BlockChangedEvent, BlockDataSystemParams},
@@ -108,8 +110,6 @@ fn compute_shipyard(structure: &Structure, controller: BlockCoordinate, frame_id
         Ok(bounds) => bounds,
     };
 
-    info!("Checking filled walls!");
-
     if let Some(e) = bounds.check_walls_filled(
         structure,
         &[frame_id, AIR_BLOCK_ID],
@@ -128,7 +128,6 @@ fn compute_shipyard(structure: &Structure, controller: BlockCoordinate, frame_id
         }
     }
 
-    info!("Checking filled bounds!");
     if let Some(e) = bounds.check_inside_filled(structure, &[AIR_BLOCK_ID], &mut []) {
         match e {
             RectangleMultiblockValidityError::BrokenLimit { block: _, coordinate } => {
@@ -195,15 +194,11 @@ fn interact_with_shipyard(
             Ok(shipyard) => shipyard,
         };
 
-        info!("Inserted shipyard {shipyard:?}!");
-
         structure.insert_block_data(b.coords(), shipyard, &mut bs_params, &mut q_block_data, &q_has_data);
 
         nevw_open_ui.write(ShowShipyardUi { shipyard_block: b }, player.client_id());
     }
 }
-
-struct OngoingShipyardLoad;
 
 fn on_set_blueprint(
     mut nevr_set_shipyard_blueprint: EventReader<NettyEventReceived<SetShipyardBlueprint>>,
@@ -235,12 +230,7 @@ fn on_set_blueprint(
                 .map(|i| i.query_itemstack_data(ev.blueprint_slot as usize, &q_blueprint_item_data))
                 .flatten()
         }) else {
-            error!(
-                "
-            Invalid slot - {}
-                ",
-                ev.blueprint_slot
-            );
+            error!("Invalid slot - {}", ev.blueprint_slot);
             continue;
         };
 
@@ -260,9 +250,10 @@ fn on_set_blueprint(
             continue;
         };
         let structure_size = BlockCoordinate::try_from(structure_bounds.1 - structure_bounds.0).unwrap();
-        let midpoint = structure_bounds.1 + structure_bounds.0;
+        let midpoint =
+            (structure.block_relative_position(structure_bounds.0) + structure.block_relative_position(structure_bounds.1)) / 2.0;
 
-        let full_structure = match structure {
+        let full_structure = match &structure {
             Structure::Full(f) => f,
             Structure::Dynamic(_) => {
                 error!("Cannot load dynamic structure in shipyard!");
@@ -286,9 +277,26 @@ fn on_set_blueprint(
             continue;
         }
 
-        let ship_origin = full_structure.block_relative_position(
-            bounds.negative_coords + BlockCoordinate::new(shipyard_size.x / 2, shipyard_size.y / 2, shipyard_size.z / 2) + midpoint,
-        );
+        let ship_origin = (shipyard_structure.block_relative_position(bounds.negative_coords)
+            + shipyard_structure.block_relative_position(bounds.positive_coords))
+            / 2.0
+            + midpoint;
+
+        info!("Shipyrd Size: {shipyard_size:?}");
+        info!("Midpt: {midpoint}");
+
+        info!("Ship Origin: {ship_origin:?}");
+
+        let mut totals_count = HashMap::default();
+        let blocks_todo = full_structure
+            .all_blocks_iter(&structure, false)
+            .map(|c| {
+                let id = full_structure.block_id_at(c);
+                let block_info = full_structure.block_info_at(c);
+                *totals_count.entry(id).or_default() += 1;
+                (c, id, block_info)
+            })
+            .collect::<Vec<_>>();
 
         // 3. Attach data to block
 
@@ -311,9 +319,9 @@ fn on_set_blueprint(
         shipyard_structure.insert_block_data(
             ev.shipyard_block.coords(),
             ShipyardState::Building(ShipyardDoingBlueprint {
-                building: full_structure,
+                blocks_todo,
+                total_blocks_count: totals_count,
                 creating: entity,
-                need_items: Default::default(),
             }),
             &mut bs_params,
             &mut q_block_data,
@@ -328,6 +336,77 @@ fn dont_move_being_built(q_being_built: Query<Entity, Added<StructureBeingBuilt>
     }
 }
 
+fn manage_shipyards(
+    mut q_shipyard_state: Query<(Entity, &mut ShipyardState)>,
+    mut commands: Commands,
+    mut q_structure: Query<&mut Structure, With<Ship>>,
+    blocks: Res<Registry<Block>>,
+    mut evw_block_change: EventWriter<BlockChangedEvent>,
+) {
+    for (ent, mut state) in q_shipyard_state.iter_mut() {
+        match state.as_mut() {
+            ShipyardState::Paused(_) => {
+                continue;
+            }
+            ShipyardState::Building(doing_bp) => {
+                let Ok(mut structure) = q_structure.get_mut(doing_bp.creating) else {
+                    continue;
+                };
+
+                let Some((coords, block, info)) = doing_bp.blocks_todo.pop() else {
+                    info!("Done building ship!");
+                    commands.entity(ent).remove::<ShipyardState>();
+                    commands
+                        .entity(doing_bp.creating)
+                        .remove::<StructureBeingBuilt>()
+                        .insert(RigidBody::Dynamic)
+                        .remove_parent_in_place();
+                    continue;
+                };
+
+                if let Some(count) = doing_bp.total_blocks_count.get_mut(&block) {
+                    *count -= 1;
+                    if *count == 0 {
+                        doing_bp.total_blocks_count.remove(&block);
+                    }
+                }
+
+                if structure.has_block_at(coords) {
+                    continue;
+                }
+
+                let Some(block) = blocks.try_from_numeric_id(block) else {
+                    error!("Missing block id {block}");
+                    continue;
+                };
+
+                structure.set_block_and_info_at(coords, block, info, &blocks, Some(&mut evw_block_change));
+            }
+            ShipyardState::Deconstructing(ent) => {
+                let Ok(mut structure) = q_structure.get_mut(*ent) else {
+                    continue;
+                };
+
+                let mut itr = structure.all_blocks_iter(false);
+                if let Some(mut coords) = itr.next() {
+                    if structure.block_at(coords, &blocks).unlocalized_name() == "cosmos:ship_core" {
+                        if let Some(next) = itr.next() {
+                            coords = next;
+                        } else {
+                            commands.entity(*ent).insert(NeedsDespawned);
+                            commands.entity(*ent).remove::<ShipyardState>();
+                        }
+                    }
+                    structure.remove_block_at(coords, &blocks, Some(&mut evw_block_change));
+                } else {
+                    commands.entity(*ent).insert(NeedsDespawned);
+                    commands.entity(*ent).remove::<ShipyardState>();
+                }
+            }
+        }
+    }
+}
+
 pub(super) fn register(app: &mut App) {
     app.add_systems(
         FixedUpdate,
@@ -337,7 +416,7 @@ pub(super) fn register(app: &mut App) {
     )
     .add_systems(
         FixedUpdate,
-        (on_set_blueprint, dont_move_being_built)
+        (manage_shipyards.run_if(on_timer(Duration::from_millis(200))), on_set_blueprint)
             .chain()
             .in_set(StructureLoadingSet::LoadStructure)
             .in_set(StructureTypeSet::Ship)

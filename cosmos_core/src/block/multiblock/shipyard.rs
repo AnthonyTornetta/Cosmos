@@ -9,6 +9,7 @@ use crate::{
         sync_component,
     },
     prelude::{BlockCoordinate, FullStructure, Structure, StructureBlock},
+    structure::chunk::BlockInfo,
 };
 use bevy::{
     ecs::component::HookContext,
@@ -71,8 +72,8 @@ impl Shipyards {
 
 #[derive(Debug, Reflect, Serialize, Deserialize)]
 pub struct ShipyardDoingBlueprint {
-    pub building: FullStructure,
-    pub need_items: HashMap<u16, u32>,
+    pub blocks_todo: Vec<(BlockCoordinate, u16, BlockInfo)>,
+    pub total_blocks_count: HashMap<u16, u32>,
     pub creating: Entity,
 }
 
@@ -93,11 +94,11 @@ impl ShipyardState {
     pub fn as_client_friendly(&self) -> ClientFriendlyShipyardState {
         match self {
             Self::Paused(p) => ClientFriendlyShipyardState::Paused(ClientFriendlyShipyardDoingBlueprint {
-                need_items: p.need_items.clone(),
+                need_items: p.total_blocks_count.clone(),
                 creating: p.creating,
             }),
             Self::Building(p) => ClientFriendlyShipyardState::Building(ClientFriendlyShipyardDoingBlueprint {
-                need_items: p.need_items.clone(),
+                need_items: p.total_blocks_count.clone(),
                 creating: p.creating,
             }),
             Self::Deconstructing(p) => ClientFriendlyShipyardState::Deconstructing(*p),
@@ -209,7 +210,7 @@ impl NettyEvent for SetShipyardBlueprint {
         use crate::netty::sync::mapping::Mappable;
 
         self.shipyard_block
-            .map_to_client(mapping)
+            .map_to_server(mapping)
             .map(|shipyard_block| Self {
                 shipyard_block,
                 blueprint_slot: self.blueprint_slot,
