@@ -182,6 +182,42 @@ impl NettyEvent for ShowShipyardUi {
     }
 }
 
+#[derive(Event, Debug, Serialize, Deserialize, Clone, Copy)]
+pub struct SetShipyardBlueprint {
+    pub shipyard_block: StructureBlock,
+    pub blueprint_slot: u32,
+}
+
+impl IdentifiableEvent for SetShipyardBlueprint {
+    fn unlocalized_name() -> &'static str {
+        "cosmos:set_shipyard_blueprint"
+    }
+}
+
+impl NettyEvent for SetShipyardBlueprint {
+    fn event_receiver() -> crate::netty::sync::events::netty_event::EventReceiver {
+        crate::netty::sync::events::netty_event::EventReceiver::Server
+    }
+
+    #[cfg(feature = "client")]
+    fn needs_entity_conversion() -> bool {
+        true
+    }
+
+    #[cfg(feature = "client")]
+    fn convert_entities_client_to_server(self, mapping: &crate::netty::sync::mapping::NetworkMapping) -> Option<Self> {
+        use crate::netty::sync::mapping::Mappable;
+
+        self.shipyard_block
+            .map_to_client(mapping)
+            .map(|shipyard_block| Self {
+                shipyard_block,
+                blueprint_slot: self.blueprint_slot,
+            })
+            .ok()
+    }
+}
+
 fn register_shipyard_component_hooks(world: &mut World) {
     world
         .register_component_hooks::<Shipyard>()
@@ -220,5 +256,6 @@ pub(super) fn register(app: &mut App) {
         .register_type::<ShipyardState>()
         .add_systems(Startup, register_shipyard_component_hooks)
         .add_netty_event::<ClientSetShipyardState>()
+        .add_netty_event::<SetShipyardBlueprint>()
         .add_netty_event::<ShowShipyardUi>();
 }

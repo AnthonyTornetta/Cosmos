@@ -1,4 +1,5 @@
 use bevy::prelude::*;
+use bevy_rapier3d::prelude::{RigidBody, Velocity};
 use cosmos_core::{
     block::{
         Block,
@@ -8,17 +9,28 @@ use cosmos_core::{
         data::BlockData,
         multiblock::prelude::*,
     },
+    ecs::sets::FixedUpdateSet,
     entities::player::Player,
     events::{
         block_events::{BlockChangedEvent, BlockDataSystemParams},
         structure::structure_event::StructureEventIterator,
     },
-    netty::sync::events::server_event::NettyEventWriter,
-    prelude::{BlockCoordinate, Structure},
+    inventory::Inventory,
+    item::usable::blueprint::BlueprintItemData,
+    netty::{
+        server::ServerLobby,
+        sync::events::server_event::{NettyEventReceived, NettyEventWriter},
+    },
+    physics::location::{Location, SetPosition},
+    prelude::{BlockCoordinate, ChunkCoordinate, FullStructure, Ship, Structure, StructureLoadingSet, StructureTypeSet},
     registry::{Registry, identifiable::Identifiable},
 };
 use derive_more::{Display, Error};
 use serde::{Deserialize, Serialize};
+
+use crate::{
+    blocks::multiblock::shipyard::StructureBeingBuilt, persistence::loading::load_blueprint, structure::ship::loading::ShipNeedsCreated,
+};
 
 fn on_place_blocks_impacting_shipyard(
     mut evr_block_changed_event: EventReader<BlockChangedEvent>,
@@ -191,11 +203,144 @@ fn interact_with_shipyard(
     }
 }
 
+struct OngoingShipyardLoad;
+
+fn on_set_blueprint(
+    mut nevr_set_shipyard_blueprint: EventReader<NettyEventReceived<SetShipyardBlueprint>>,
+    mut q_structure: Query<&mut Structure>,
+    mut q_block_data: Query<&mut BlockData>,
+    q_has_data: Query<(), With<ShipyardState>>,
+    players: Res<ServerLobby>,
+    q_player_inventory: Query<&Inventory, With<Player>>,
+    q_blueprint_item_data: Query<&BlueprintItemData>,
+    q_shipyard: Query<&Shipyard, Without<ShipyardState>>,
+    mut commands: Commands,
+    mut bs_params: BlockDataSystemParams,
+) {
+    for ev in nevr_set_shipyard_blueprint.read() {
+        let structure_ent = ev.shipyard_block.structure();
+        let Ok(mut shipyard_structure) = q_structure.get_mut(structure_ent) else {
+            continue;
+        };
+        let Some(shipyard) = shipyard_structure.query_block_data(ev.shipyard_block.coords(), &q_shipyard) else {
+            error!("Invalid shipyard block given!");
+            continue;
+        };
+
+        let Some(Some(data)) = players.player_from_id(ev.client_id).map(|e| {
+            q_player_inventory
+                .get(e)
+                .ok()
+                .filter(|i| i.len() > ev.blueprint_slot as usize)
+                .map(|i| i.query_itemstack_data(ev.blueprint_slot as usize, &q_blueprint_item_data))
+                .flatten()
+        }) else {
+            error!(
+                "
+            Invalid slot - {}
+                ",
+                ev.blueprint_slot
+            );
+            continue;
+        };
+
+        let path = data.get_blueprint_path();
+        let Ok(bp) = load_blueprint(&path) else {
+            error!("Could not read blueprint @ {path}");
+            continue;
+        };
+
+        // 1. Load blueprint structure
+        let Ok(mut structure) = bp.serialized_data().deserialize_data::<Structure>("cosmos:structure") else {
+            error!("Could not load structure from blueprint!");
+            continue;
+        };
+
+        let Some(structure_bounds) = FullStructure::placed_block_bounds(&mut structure) else {
+            continue;
+        };
+        let structure_size = BlockCoordinate::try_from(structure_bounds.1 - structure_bounds.0).unwrap();
+        let midpoint = structure_bounds.1 + structure_bounds.0;
+
+        let full_structure = match structure {
+            Structure::Full(f) => f,
+            Structure::Dynamic(_) => {
+                error!("Cannot load dynamic structure in shipyard!");
+                continue;
+            }
+        };
+
+        // 2. Validate blueprint size
+        let bounds = shipyard.bounds();
+        let shipyard_size = bounds.size();
+        if shipyard_size.x - 1 <= structure_size.x {
+            error!("Blueprint too big!");
+            continue;
+        }
+        if shipyard_size.x - 1 <= structure_size.x {
+            error!("Blueprint too big!");
+            continue;
+        }
+        if shipyard_size.x - 1 <= structure_size.x {
+            error!("Blueprint too big!");
+            continue;
+        }
+
+        let ship_origin = full_structure.block_relative_position(
+            bounds.negative_coords + BlockCoordinate::new(shipyard_size.x / 2, shipyard_size.y / 2, shipyard_size.z / 2) + midpoint,
+        );
+
+        // 3. Attach data to block
+
+        let entity = commands
+            .spawn((
+                Name::new("Ship being built"),
+                Velocity::default(),
+                Ship,
+                ShipNeedsCreated,
+                Transform::from_translation(ship_origin),
+                Location::default(),
+                SetPosition::Location,
+                Structure::Full(FullStructure::new(ChunkCoordinate::new(10, 10, 10))),
+                ChildOf(structure_ent),
+                RigidBody::Fixed,
+                StructureBeingBuilt,
+            ))
+            .id();
+
+        shipyard_structure.insert_block_data(
+            ev.shipyard_block.coords(),
+            ShipyardState::Building(ShipyardDoingBlueprint {
+                building: full_structure,
+                creating: entity,
+                need_items: Default::default(),
+            }),
+            &mut bs_params,
+            &mut q_block_data,
+            &q_has_data,
+        );
+    }
+}
+
+fn dont_move_being_built(q_being_built: Query<Entity, Added<StructureBeingBuilt>>, mut commands: Commands) {
+    for ent in q_being_built.iter() {
+        commands.entity(ent).insert((RigidBody::Fixed, Velocity::zero()));
+    }
+}
+
 pub(super) fn register(app: &mut App) {
     app.add_systems(
         FixedUpdate,
-        (on_place_blocks_impacting_shipyard, interact_with_shipyard)
+        (on_place_blocks_impacting_shipyard, interact_with_shipyard, dont_move_being_built)
             .chain()
             .in_set(BlockEventsSet::ProcessEvents),
+    )
+    .add_systems(
+        FixedUpdate,
+        (on_set_blueprint, dont_move_being_built)
+            .chain()
+            .in_set(StructureLoadingSet::LoadStructure)
+            .in_set(StructureTypeSet::Ship)
+            .ambiguous_with(StructureLoadingSet::LoadStructure),
     );
 }

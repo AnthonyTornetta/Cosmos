@@ -21,6 +21,14 @@ pub struct RectangleMultiblockBounds {
     pub positive_coords: BlockCoordinate,
 }
 
+impl RectangleMultiblockBounds {
+    pub fn size(&self) -> BlockCoordinate {
+        (self.positive_coords - self.negative_coords)
+            .try_into()
+            .expect("Invalid state - negative > positive")
+    }
+}
+
 /// A limit to the number of blocks of this type in this multiblock
 pub struct RectangleLimit {
     /// The maximum amount of this block
