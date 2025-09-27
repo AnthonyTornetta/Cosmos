@@ -35,7 +35,7 @@ fn listen_for_done_syncing(
 
             info!("Got registry message from client {client_id}");
 
-            commands.entity(player_ent).insert(ReadyForSyncing);
+            commands.entity(player_ent).try_insert(ReadyForSyncing);
 
             match msg {
                 RegistrySyncing::FinishedReceivingRegistries => {

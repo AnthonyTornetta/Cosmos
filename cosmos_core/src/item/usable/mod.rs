@@ -23,7 +23,7 @@ pub struct PlayerRequestUseHeldItemEvent {
 
 impl IdentifiableEvent for PlayerRequestUseHeldItemEvent {
     fn unlocalized_name() -> &'static str {
-        "cosmos:use_held_item"
+        "cosmos:request_use_held_item"
     }
 }
 
