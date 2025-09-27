@@ -2,6 +2,7 @@ use bevy::prelude::*;
 use cosmos_core::state::GameState;
 
 mod logic_indicator;
+mod numeric_display;
 mod tank;
 
 #[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
@@ -12,6 +13,7 @@ pub enum RenderingModesSet {
 pub(super) fn register(app: &mut App) {
     tank::register(app);
     logic_indicator::register(app);
+    numeric_display::register(app);
 
     app.configure_sets(
         OnEnter(GameState::PostLoading),

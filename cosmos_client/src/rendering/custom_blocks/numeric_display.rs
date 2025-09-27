@@ -1,0 +1,260 @@
+use bevy::{platform::collections::HashMap, prelude::*};
+use cosmos_core::{
+    block::{
+        Block,
+        block_face::{ALL_BLOCK_FACES, BlockFace},
+        specific_blocks::numeric_display::NumericDisplayValue,
+    },
+    registry::{Registry, identifiable::Identifiable, many_to_one::ManyToOneRegistry},
+    state::GameState,
+    structure::{
+        Structure,
+        chunk::CHUNK_DIMENSIONSF,
+        coordinates::{BlockCoordinate, ChunkBlockCoordinate},
+    },
+};
+
+use crate::{
+    asset::{
+        asset_loading::{BlockNeighbors, BlockTextureIndex},
+        materials::{AddMaterialEvent, BlockMaterialMapping, MaterialDefinition, MaterialType, MaterialsSystemSet},
+    },
+    rendering::{
+        BlockMeshRegistry, CosmosMeshBuilder, MeshBuilder,
+        structure_renderer::{
+            BlockRenderingModes, RenderingMode, StructureRenderingSet, chunk_rendering::chunk_renderer::ChunkNeedsCustomBlocksRendered,
+        },
+    },
+};
+
+use super::RenderingModesSet;
+
+fn set_custom_rendering_for_numeric_display(mut rendering_modes: ResMut<BlockRenderingModes>, blocks: Res<Registry<Block>>) {
+    if let Some(numeric_display) = blocks.from_id("cosmos:numeric_display") {
+        rendering_modes.set_rendering_mode(numeric_display, RenderingMode::Custom);
+    }
+}
+
+#[derive(Component, Reflect)]
+struct NumericDisplayRenders(Vec<Entity>);
+
+fn on_render_numeric_display(
+    q_logic_numeric_display: Query<&NumericDisplayRenders>,
+    mut ev_reader: EventReader<ChunkNeedsCustomBlocksRendered>,
+    blocks: Res<Registry<Block>>,
+    mut commands: Commands,
+    q_structure: Query<&Structure>,
+    materials: Res<ManyToOneRegistry<Block, BlockMaterialMapping>>,
+    block_textures: Res<Registry<BlockTextureIndex>>,
+    block_mesh_registry: Res<BlockMeshRegistry>,
+    materials_registry: Res<Registry<MaterialDefinition>>,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut evw_add_material: EventWriter<AddMaterialEvent>,
+    q_numeric_display_value: Query<&NumericDisplayValue>,
+) {
+    for ev in ev_reader.read() {
+        if let Ok(logic_indicator_renders) = q_logic_numeric_display.get(ev.mesh_entity_parent) {
+            for e in logic_indicator_renders.0.iter().copied() {
+                commands.entity(e).despawn();
+            }
+
+            commands.entity(ev.mesh_entity_parent).remove::<NumericDisplayRenders>();
+        }
+        let numeric_display_block = blocks
+            .from_id("cosmos:numeric_display")
+            .expect("Numeric display block should exist.");
+        let numeric_display_id = numeric_display_block.id();
+        if !ev.block_ids.contains(&numeric_display_id) {
+            continue;
+        }
+
+        let Ok(structure) = q_structure.get(ev.structure_entity) else {
+            continue;
+        };
+
+        let mut material_meshes: HashMap<(MaterialType, u16, u32), CosmosMeshBuilder> = HashMap::default();
+
+        for block in structure.block_iter_for_chunk(ev.chunk_coordinate, true) {
+            if structure.block_id_at(block) != numeric_display_id {
+                continue;
+            }
+
+            let Some(material_definition) = materials.get_value(numeric_display_block) else {
+                continue;
+            };
+
+            let Some(block_mesh_info) = block_mesh_registry.get_value(numeric_display_block) else {
+                continue;
+            };
+
+            let mat_id = material_definition.material_id();
+            let material_definition = materials_registry.from_numeric_id(mat_id);
+
+            let mut one_mesh_only = false;
+
+            let block_rotation = structure.block_rotation(block);
+
+            let rotation = block_rotation.as_quat();
+
+            let display_value = structure
+                .query_block_data(block, &q_numeric_display_value)
+                .copied()
+                .unwrap_or_default();
+
+            let custom_index = match display_value {
+                NumericDisplayValue::Zero => 0,
+                NumericDisplayValue::One => 1,
+                NumericDisplayValue::Two => 2,
+                NumericDisplayValue::Three => 3,
+                NumericDisplayValue::Four => 4,
+                NumericDisplayValue::Five => 5,
+                NumericDisplayValue::Six => 6,
+                NumericDisplayValue::Seven => 7,
+                NumericDisplayValue::Eight => 8,
+                NumericDisplayValue::Nine => 9,
+            };
+
+            let material_type = MaterialType::Normal;
+
+            let mut mesh_builder = None;
+            // let mesh_builder = material_meshes.entry((material_type, mat_id)).or_default();
+
+            let faces = ALL_BLOCK_FACES.iter().copied().filter(|face| {
+                if let Ok(new_coord) = BlockCoordinate::try_from(block + block_rotation.direction_of(*face).to_coordinates()) {
+                    return structure.block_at(new_coord, &blocks).is_see_through();
+                }
+                true
+            });
+
+            for (_, direction) in faces.map(|face| (face, block_rotation.direction_of(face))) {
+                let Some(mut mesh_info) = block_mesh_info
+                    .info_for_face(direction.block_face(), false)
+                    .map(Some)
+                    .unwrap_or_else(|| {
+                        let single_mesh = block_mesh_info.info_for_whole_block();
+
+                        if single_mesh.is_some() {
+                            one_mesh_only = true;
+                        }
+
+                        single_mesh
+                    })
+                    .cloned()
+                else {
+                    // This face has no model, ignore
+                    continue;
+                };
+
+                let index = block_textures
+                    .from_id(numeric_display_block.unlocalized_name())
+                    .unwrap_or_else(|| block_textures.from_id("missing").expect("Missing texture should exist."));
+
+                let neighbors = BlockNeighbors::empty();
+
+                let face = direction.block_face();
+                let image_index = match direction.block_face() {
+                    BlockFace::Front => index
+                        .atlas_index_from_face_and_custom_index(face, neighbors, custom_index)
+                        .expect("Numeric display value should have a texture"),
+                    _ => index.atlas_index_from_face(face, neighbors, structure.block_info_at(block)),
+                };
+
+                let uvs = Rect::new(0.0, 0.0, 1.0, 1.0);
+
+                for pos in mesh_info.positions.iter_mut() {
+                    *pos = rotation.mul_vec3(Vec3::from(*pos)).into();
+                }
+
+                for norm in mesh_info.normals.iter_mut() {
+                    *norm = rotation.mul_vec3((*norm).into()).into();
+                }
+
+                // Fix for display values appearing flipped horizontally.
+                if face == BlockFace::Front {
+                    for uv in mesh_info.uvs.iter_mut() {
+                        uv[0] = 1.0 - uv[0];
+                    }
+                }
+
+                // Scale the rotated positions, not the pre-rotated positions since our side checks are absolute
+
+                let structure_coords = block;
+
+                let additional_info = material_definition.add_material_data(numeric_display_id, &mesh_info);
+
+                let coords = ChunkBlockCoordinate::for_block_coordinate(structure_coords);
+                const CHUNK_DIMS_HALVED: f32 = CHUNK_DIMENSIONSF / 2.0;
+
+                let (center_offset_x, center_offset_y, center_offset_z) = (
+                    coords.x as f32 - CHUNK_DIMS_HALVED + 0.5,
+                    coords.y as f32 - CHUNK_DIMS_HALVED + 0.5,
+                    coords.z as f32 - CHUNK_DIMS_HALVED + 0.5,
+                );
+                if mesh_builder.is_none() {
+                    mesh_builder = Some(
+                        material_meshes
+                            .entry((material_type, mat_id, image_index.dimension_index))
+                            .or_default(),
+                    );
+                }
+
+                mesh_builder.as_mut().unwrap().add_mesh_information(
+                    &mesh_info,
+                    Vec3::new(center_offset_x, center_offset_y, center_offset_z),
+                    uvs,
+                    image_index.texture_index,
+                    additional_info,
+                );
+
+                if one_mesh_only {
+                    break;
+                }
+            }
+        }
+
+        let mut ents = vec![];
+
+        for ((material_type, mat_id, texture_dimensions_index), mesh_builder) in material_meshes {
+            let mesh = mesh_builder.build_mesh();
+
+            let entity = commands
+                .spawn((
+                    Transform::default(),
+                    Visibility::default(),
+                    Mesh3d(meshes.add(mesh)),
+                    Name::new("Rendered Numeric Displays"),
+                    ChildOf(ev.mesh_entity_parent),
+                ))
+                .id();
+
+            evw_add_material.write(AddMaterialEvent {
+                entity,
+                add_material_id: mat_id,
+                texture_dimensions_index,
+                material_type,
+            });
+
+            ents.push(entity);
+        }
+
+        if !ents.is_empty() {
+            commands.entity(ev.mesh_entity_parent).insert(NumericDisplayRenders(ents));
+        }
+    }
+}
+
+pub(super) fn register(app: &mut App) {
+    app.add_systems(
+        OnEnter(GameState::PostLoading),
+        set_custom_rendering_for_numeric_display.in_set(RenderingModesSet::SetRenderingModes),
+    );
+
+    app.add_systems(
+        Update,
+        on_render_numeric_display
+            .ambiguous_with(MaterialsSystemSet::RequestMaterialChanges)
+            .in_set(StructureRenderingSet::CustomRendering),
+    );
+
+    app.register_type::<NumericDisplayRenders>();
+}

@@ -8,7 +8,21 @@
                 "Single": "cosmos:logic_pointing_left"
             },
             "front": {
-                "Single": "cosmos:numeric_display_blank"
+                "Custom": {
+                    "default": "cosmos:numeric_display_blank",
+                    "textures": [
+                        "cosmos:numeric_display_0",
+                        "cosmos:numeric_display_1",
+                        "cosmos:numeric_display_2",
+                        "cosmos:numeric_display_3",
+                        "cosmos:numeric_display_4",
+                        "cosmos:numeric_display_5",
+                        "cosmos:numeric_display_6",
+                        "cosmos:numeric_display_7",
+                        "cosmos:numeric_display_8",
+                        "cosmos:numeric_display_9"
+                    ]
+                }
             },
             "back": {
                 "Single": "cosmos:logic_block"

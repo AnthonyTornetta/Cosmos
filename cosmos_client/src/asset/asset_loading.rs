@@ -2,7 +2,7 @@
 //!
 //! This also combines the textures into one big atlas.
 
-use std::fs;
+use std::{fs, usize};
 
 use bevy::{
     asset::{LoadState, LoadedFolder, RecursiveDependencyLoadState},
@@ -334,6 +334,28 @@ impl BlockTextureIndex {
         }
     }
 
+    /// If the [`BlockFace`] has custom textures, returns the custom texture at the index.
+    ///
+    /// Never panics. Returns `None` if the face has no custom textures or the index is invalid.
+    pub fn atlas_index_from_face_and_custom_index(
+        &self,
+        face: BlockFace,
+        neighbors: BlockNeighbors,
+        custom_index: usize,
+    ) -> Option<TextureIndex> {
+        match &self.texture {
+            LoadedTexture::All(texture_type) => get_texture_index_from_type_and_custom_index(texture_type, neighbors, custom_index),
+            LoadedTexture::Sides(sides) => match face {
+                BlockFace::Right => get_texture_index_from_type_and_custom_index(&sides.right, neighbors, custom_index),
+                BlockFace::Left => get_texture_index_from_type_and_custom_index(&sides.left, neighbors, custom_index),
+                BlockFace::Top => get_texture_index_from_type_and_custom_index(&sides.top, neighbors, custom_index),
+                BlockFace::Bottom => get_texture_index_from_type_and_custom_index(&sides.bottom, neighbors, custom_index),
+                BlockFace::Front => get_texture_index_from_type_and_custom_index(&sides.front, neighbors, custom_index),
+                BlockFace::Back => get_texture_index_from_type_and_custom_index(&sides.back, neighbors, custom_index),
+            },
+        }
+    }
+
     /// Returns the atlas information for a simplified LOD texture
     pub fn atlas_index_for_lod(&self, neighbors: BlockNeighbors) -> Option<TextureIndex> {
         self.lod_texture
@@ -353,10 +375,27 @@ fn get_texture_index_from_type_and_data(texture_type: &LoadedTextureType, neighb
     }
 }
 
+#[inline(always)]
+fn get_texture_index_from_type_and_custom_index(
+    texture_type: &LoadedTextureType,
+    neighbors: BlockNeighbors,
+    custom_index: usize,
+) -> Option<TextureIndex> {
+    match texture_type {
+        LoadedTextureType::Single(selector) => handle_select_texture_by_index(selector, custom_index),
+        LoadedTextureType::Connected(connected) => {
+            let checking = &connected[neighbors.bits()];
+            handle_select_texture_by_index(checking, custom_index)
+        }
+    }
+}
+
 fn handle_select_texture(selector: &TextureSelector, data: BlockInfo) -> TextureIndex {
     match selector {
         TextureSelector::Normal(index) => *index,
         TextureSelector::DataDriven(dd) => handle_data_driven(data, dd),
+        //
+        TextureSelector::Custom(custom) => custom.default,
     }
 }
 
@@ -370,6 +409,16 @@ fn handle_data_driven(data: BlockInfo, dd: &DataDrivenTextureIndex) -> TextureIn
     }
 
     dd.default
+}
+
+/// Returns the atlas index at the custom texture index, or None if the given selector is not
+/// custom or the index is out-of-bounds.
+fn handle_select_texture_by_index(selector: &TextureSelector, custom_index: usize) -> Option<TextureIndex> {
+    match selector {
+        TextureSelector::Normal(_) => None,
+        TextureSelector::DataDriven(_) => None,
+        TextureSelector::Custom(custom) => custom.textures.get(custom_index).copied(),
+    }
 }
 
 impl Identifiable for BlockTextureIndex {
@@ -563,6 +612,11 @@ pub enum LoadingTextureType {
     ///
     /// The left-most non-zero bit will be used.
     DataDriven(Box<LoadingDataDrivenTextureType>),
+    /// This can be used to change the texture used arbitrarily.
+    ///
+    /// Should only be used for blocks with custom rendering code, where the texture to use on each
+    /// render should be specified. For an example, see the rendering code for the numeric display.
+    Custom(Box<LoadingCustomTextureType>),
 }
 
 /// This can be used to change the texture used based on the block's data bits.
@@ -573,6 +627,17 @@ pub struct LoadingDataDrivenTextureType {
     /// The left-most texture will be used if that bit is enabled
     bit_textures: [Option<String>; 8],
     /// The default texture to use if none of the bit textures were met
+    default: String,
+}
+
+/// This can be used to change the texture used arbitrarily.
+///
+/// Supports any number of possible textures.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct LoadingCustomTextureType {
+    /// The list of possible textures that can be used in place of the default.
+    textures: Vec<String>,
+    /// The default texture to use, important for rendering the block in item form.
     default: String,
 }
 
@@ -624,6 +689,8 @@ pub enum TextureSelector {
     Normal(TextureIndex),
     /// The chosen texture should be based on the block's data
     DataDriven(Box<DataDrivenTextureIndex>),
+    /// The chosen texture should be specified in the block's custom rendering code.
+    Custom(Box<CustomTextureIndex>),
 }
 
 /// This can be used to change the texture used based on the block's data bits.
@@ -632,6 +699,17 @@ pub enum TextureSelector {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DataDrivenTextureIndex {
     bit_textures: [Option<TextureIndex>; 8],
+    default: TextureIndex,
+}
+
+/// This can be used to change the texture arbitrarily.
+///
+/// Supports any number of possible textures.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CustomTextureIndex {
+    /// The list of possible texture indexes that can be used in place of the default.
+    textures: Vec<TextureIndex>,
+    /// The default texture index to use, important for rendering the block in item form.
     default: TextureIndex,
 }
 
@@ -843,6 +921,7 @@ fn load_item_rendering_information(
         let item_texture_index = match texture {
             TextureSelector::Normal(id) => id,
             TextureSelector::DataDriven(dd) => dd.default,
+            TextureSelector::Custom(custom) => custom.default,
         };
 
         registry.register(ItemTextureIndex {
@@ -888,6 +967,11 @@ fn process_loading_texture_type(
 
             LoadedTextureType::Single(selector)
         }
+        LoadingTextureType::Custom(custom) => {
+            let selector = get_custom_texture_selector(atlas_registry, server, images, missing_texture_index, folder_name, custom);
+
+            LoadedTextureType::Single(selector)
+        }
     }
 }
 
@@ -921,6 +1005,25 @@ fn get_data_driven_texture_selector(
         .unwrap();
 
     TextureSelector::DataDriven(Box::new(DataDrivenTextureIndex { default, bit_textures }))
+}
+
+fn get_custom_texture_selector(
+    atlas_registry: &Registry<CosmosTextureAtlas>,
+    server: &AssetServer,
+    images: &Assets<Image>,
+    missing_texture_index: TextureIndex,
+    folder_name: &str,
+    custom: &LoadingCustomTextureType,
+) -> TextureSelector {
+    let default = get_texture_index_for_name(atlas_registry, server, images, missing_texture_index, &custom.default, folder_name);
+
+    let textures = custom
+        .textures
+        .iter()
+        .map(|texture_name| get_texture_index_for_name(atlas_registry, server, images, missing_texture_index, texture_name, folder_name))
+        .collect();
+
+    TextureSelector::Custom(Box::new(CustomTextureIndex { default, textures }))
 }
 
 fn get_texture_index_for_name(
