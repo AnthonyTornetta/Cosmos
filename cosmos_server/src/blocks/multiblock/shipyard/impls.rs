@@ -23,6 +23,7 @@ use cosmos_core::{
         server::ServerLobby,
         sync::events::server_event::{NettyEventReceived, NettyEventWriter},
     },
+    notifications::Notification,
     physics::location::{Location, SetPosition},
     prelude::{BlockCoordinate, ChunkCoordinate, FullStructure, Ship, Structure, StructureLoadingSet, StructureTypeSet},
     registry::{Registry, identifiable::Identifiable},
@@ -211,6 +212,7 @@ fn on_set_blueprint(
     q_shipyard: Query<&Shipyard, Without<ShipyardState>>,
     mut commands: Commands,
     mut bs_params: BlockDataSystemParams,
+    mut nevw_notification: NettyEventWriter<Notification>,
 ) {
     for ev in nevr_set_shipyard_blueprint.read() {
         let structure_ent = ev.shipyard_block.structure();
@@ -219,6 +221,7 @@ fn on_set_blueprint(
         };
         let Some(shipyard) = shipyard_structure.query_block_data(ev.shipyard_block.coords(), &q_shipyard) else {
             error!("Invalid shipyard block given!");
+            nevw_notification.write(Notification::error("This shipyard is already working!"), ev.client_id);
             continue;
         };
 
@@ -237,12 +240,14 @@ fn on_set_blueprint(
         let path = data.get_blueprint_path();
         let Ok(bp) = load_blueprint(&path) else {
             error!("Could not read blueprint @ {path}");
+            nevw_notification.write(Notification::error("Unknown blueprint!"), ev.client_id);
             continue;
         };
 
         // 1. Load blueprint structure
         let Ok(mut structure) = bp.serialized_data().deserialize_data::<Structure>("cosmos:structure") else {
             error!("Could not load structure from blueprint!");
+            nevw_notification.write(Notification::error("Invalid blueprint!"), ev.client_id);
             continue;
         };
 
@@ -264,28 +269,27 @@ fn on_set_blueprint(
         // 2. Validate blueprint size
         let bounds = shipyard.bounds();
         let shipyard_size = bounds.size();
+
         if shipyard_size.x - 1 <= structure_size.x {
             error!("Blueprint too big!");
+            nevw_notification.write(Notification::error("Ship too big for this shipyard!"), ev.client_id);
             continue;
         }
-        if shipyard_size.x - 1 <= structure_size.x {
+        if shipyard_size.y - 1 <= structure_size.y {
             error!("Blueprint too big!");
+            nevw_notification.write(Notification::error("Ship too big for this shipyard!"), ev.client_id);
             continue;
         }
-        if shipyard_size.x - 1 <= structure_size.x {
+        if shipyard_size.z - 1 <= structure_size.z {
             error!("Blueprint too big!");
+            nevw_notification.write(Notification::error("Ship too big for this shipyard!"), ev.client_id);
             continue;
         }
 
         let ship_origin = (shipyard_structure.block_relative_position(bounds.negative_coords)
             + shipyard_structure.block_relative_position(bounds.positive_coords))
             / 2.0
-            + midpoint;
-
-        info!("Shipyrd Size: {shipyard_size:?}");
-        info!("Midpt: {midpoint}");
-
-        info!("Ship Origin: {ship_origin:?}");
+            - midpoint;
 
         let mut totals_count = HashMap::default();
         let blocks_todo = full_structure
