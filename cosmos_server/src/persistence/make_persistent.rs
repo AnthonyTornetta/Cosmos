@@ -260,7 +260,7 @@ pub trait PersistentComponent: IdentifiableComponent + Sized {
     /// but in the case you need to serialize different data than what is present at runtime (for
     /// instance storing [`EntityId`]s instead of raw [`Entity`]s) you can use this and its pair
     /// [`PersistentComponent::convert_to_save_type`].
-    fn convert_from_save_type(e_id_type: Self::SaveType, entity_id_manager: &EntityIdManager) -> Option<Self>;
+    fn convert_from_save_type(save_type: Self::SaveType, entity_id_manager: &EntityIdManager) -> Option<Self>;
 }
 
 /// This component will be saved & loaded when the entity it is a part of is saved/unloaded.

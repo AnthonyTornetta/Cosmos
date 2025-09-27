@@ -1,6 +1,6 @@
 use std::time::Duration;
 
-use bevy::{platform::collections::HashMap, prelude::*, time::common_conditions::on_timer};
+use bevy::{ecs::component::HookContext, platform::collections::HashMap, prelude::*, time::common_conditions::on_timer};
 use bevy_rapier3d::prelude::{RigidBody, Velocity};
 use cosmos_core::{
     block::{
@@ -407,6 +407,26 @@ fn manage_shipyards(
     }
 }
 
+fn add_shipyard_state_hooks(world: &mut World) {
+    world
+        .register_component_hooks::<ShipyardState>()
+        .on_remove(|mut world, HookContext { entity, .. }| {
+            let state = world.get::<ShipyardState>(entity).expect("Impossible to fail");
+            match state {
+                ShipyardState::Building(d) | ShipyardState::Paused(d) => {
+                    let creating = d.creating;
+                    if let Ok(mut ecmds) = world.commands().get_entity(creating) {
+                        ecmds
+                            .remove::<StructureBeingBuilt>()
+                            .insert(RigidBody::Dynamic)
+                            .remove_parent_in_place();
+                    }
+                }
+                ShipyardState::Deconstructing(_) => {}
+            }
+        });
+}
+
 pub(super) fn register(app: &mut App) {
     app.add_systems(
         FixedUpdate,
@@ -421,5 +441,6 @@ pub(super) fn register(app: &mut App) {
             .in_set(StructureLoadingSet::LoadStructure)
             .in_set(StructureTypeSet::Ship)
             .ambiguous_with(StructureLoadingSet::LoadStructure),
-    );
+    )
+    .add_systems(Startup, add_shipyard_state_hooks);
 }

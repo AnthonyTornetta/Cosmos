@@ -155,7 +155,6 @@ impl NettyEvent for ClientSetShipyardState {
 pub struct ShowShipyardUi {
     pub shipyard_block: StructureBlock,
 }
-
 impl IdentifiableEvent for ShowShipyardUi {
     fn unlocalized_name() -> &'static str {
         "cosmos:show_shipyard_ui"
