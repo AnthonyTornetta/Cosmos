@@ -314,7 +314,6 @@ fn on_set_blueprint(
                 Location::default(),
                 SetPosition::Location,
                 Structure::Full(FullStructure::new(ChunkCoordinate::new(10, 10, 10))),
-                ChildOf(structure_ent),
                 RigidBody::Fixed,
                 StructureBeingBuilt,
             ))
@@ -363,8 +362,7 @@ fn manage_shipyards(
                     commands
                         .entity(doing_bp.creating)
                         .remove::<StructureBeingBuilt>()
-                        .insert(RigidBody::Dynamic)
-                        .remove_parent_in_place();
+                        .insert(RigidBody::Dynamic);
                     continue;
                 };
 
@@ -420,10 +418,7 @@ fn add_shipyard_state_hooks(world: &mut World) {
                 ShipyardState::Building(d) | ShipyardState::Paused(d) => {
                     let creating = d.creating;
                     if let Ok(mut ecmds) = world.commands().get_entity(creating) {
-                        ecmds
-                            .remove::<StructureBeingBuilt>()
-                            .insert(RigidBody::Dynamic)
-                            .remove_parent_in_place();
+                        ecmds.remove::<StructureBeingBuilt>().insert(RigidBody::Dynamic);
                     }
                 }
                 ShipyardState::Deconstructing(_) => {}

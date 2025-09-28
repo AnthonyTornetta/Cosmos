@@ -1,12 +1,13 @@
 use bevy::{color::palettes::css, prelude::*};
 use cosmos_core::{
     block::multiblock::prelude::{ClientFriendlyShipyardState, SetShipyardBlueprint, ShowShipyardUi},
+    faction::Factions,
     inventory::Inventory,
     item::{Item, usable::blueprint::BlueprintItemData},
     netty::{client::LocalPlayer, sync::events::client_event::NettyEventWriter},
     prelude::{Structure, StructureBlock},
     registry::{Registry, identifiable::Identifiable},
-    structure::blueprint::BlueprintType,
+    structure::blueprint::{BlueprintAuthor, BlueprintType},
 };
 
 use crate::{
@@ -17,6 +18,7 @@ use crate::{
             button::{ButtonEvent, CosmosButton},
             window::GuiWindow,
         },
+        font::DefaultFont,
         item_renderer::{CustomHoverTooltip, RenderItem},
     },
 };
@@ -29,6 +31,8 @@ fn on_open_shipyard(
     q_blueprint_data: Query<&BlueprintItemData>,
     items: Res<Registry<Item>>,
     mut commands: Commands,
+    font: Res<DefaultFont>,
+    factions: Res<Factions>,
 ) {
     let Some(ev) = nevr_open_shipyard.read().next() else {
         return;
@@ -44,7 +48,16 @@ fn on_open_shipyard(
 
     let state = structure.query_block_data(ev.shipyard_block.coords(), &q_shipyard_state);
 
-    create_shipyard_ui(&mut commands, state, ev.shipyard_block, &q_blueprint_data, blueprint, &q_inventory);
+    create_shipyard_ui(
+        &mut commands,
+        state,
+        ev.shipyard_block,
+        &q_blueprint_data,
+        blueprint,
+        &q_inventory,
+        &font,
+        &factions,
+    );
 }
 
 fn create_shipyard_ui(
@@ -54,6 +67,8 @@ fn create_shipyard_ui(
     q_blueprint_data: &Query<&BlueprintItemData>,
     blueprint: &Item,
     q_inventory: &Query<(Entity, &Inventory), With<LocalPlayer>>,
+    font: &DefaultFont,
+    factions: &Factions,
 ) {
     let Ok((inv, inventory)) = q_inventory.single() else {
         return;
@@ -92,7 +107,18 @@ fn create_shipyard_ui(
         ))
         .with_children(|p| match state {
             None => {
-                p.spawn((Text::new("Select Blueprint")));
+                p.spawn((
+                    Text::new("Select Blueprint"),
+                    TextFont {
+                        font: font.get(),
+                        font_size: 24.0,
+                        ..Default::default()
+                    },
+                    Node {
+                        margin: UiRect::new(Val::Px(10.0), Val::Px(10.0), Val::Px(10.0), Val::Px(20.0)),
+                        ..Default::default()
+                    },
+                ));
 
                 for (slot, bp) in inventory
                     .iter()
@@ -102,23 +128,31 @@ fn create_shipyard_ui(
                     .flat_map(|(slot, i)| i.data_entity().and_then(|e| q_blueprint_data.get(e).ok().map(|d| (slot, d))))
                     .filter(|(_, bp)| bp.blueprint_type == BlueprintType::Ship)
                 {
-                    p.spawn((Name::new("Blueprint btn"), CosmosButton { ..Default::default() }))
-                        .observe(
-                            move |ev: Trigger<ButtonEvent>, mut nevw_set_blueprint: NettyEventWriter<SetShipyardBlueprint>| {
-                                info!("Setting shipyard blueprint ({ev:?})");
-                                nevw_set_blueprint.write(SetShipyardBlueprint {
-                                    shipyard_block: block,
-                                    blueprint_slot: slot as u32,
-                                });
-                            },
-                        )
-                        .with_children(|p| {
+                    p.spawn((
+                        Name::new("Blueprint btn"),
+                        CosmosButton { ..Default::default() },
+                        Node {
+                            flex_direction: FlexDirection::Column,
+                            ..Default::default()
+                        },
+                    ))
+                    .observe(
+                        move |ev: Trigger<ButtonEvent>, mut nevw_set_blueprint: NettyEventWriter<SetShipyardBlueprint>| {
+                            info!("Setting shipyard blueprint ({ev:?})");
+                            nevw_set_blueprint.write(SetShipyardBlueprint {
+                                shipyard_block: block,
+                                blueprint_slot: slot as u32,
+                            });
+                        },
+                    )
+                    .with_children(|p| {
+                        p.spawn((Node { ..Default::default() },)).with_children(|p| {
                             p.spawn((
                                 CustomHoverTooltip::new(bp.name.clone()),
                                 RenderItem { item_id: blueprint.id() },
                                 Node {
-                                    width: Val::Px(128.0),
-                                    height: Val::Px(128.0),
+                                    width: Val::Px(64.0),
+                                    height: Val::Px(64.0),
                                     border: UiRect::all(Val::Px(2.0)),
                                     margin: UiRect::all(Val::Px(16.0)),
                                     ..Default::default()
@@ -126,7 +160,43 @@ fn create_shipyard_ui(
                                 BackgroundColor(css::GREY.into()),
                                 BorderColor(css::AQUA.into()),
                             ));
+
+                            p.spawn((
+                                Text::new(bp.name.clone()),
+                                TextFont {
+                                    font: font.get(),
+                                    font_size: 24.0,
+                                    ..Default::default()
+                                },
+                            ));
                         });
+
+                        match &bp.author {
+                            BlueprintAuthor::Player { name, id: _ } => {
+                                p.spawn((
+                                    Text::new(format!("Creator: {}", name.clone())),
+                                    TextFont {
+                                        font: font.get(),
+                                        font_size: 20.0,
+                                        ..Default::default()
+                                    },
+                                ));
+                            }
+                            BlueprintAuthor::Faction(f) => {
+                                if let Some(fac) = factions.from_id(f) {
+                                    p.spawn((
+                                        Text::new(format!("Creator: {}", fac.name())),
+                                        TextFont {
+                                            font: font.get(),
+                                            font_size: 20.0,
+                                            ..Default::default()
+                                        },
+                                    ));
+                                }
+                            }
+                            BlueprintAuthor::Server => {}
+                        }
+                    });
                 }
             }
             Some(ClientFriendlyShipyardState::Paused(p)) => {}

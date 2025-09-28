@@ -95,6 +95,10 @@ fn on_use_blueprint(
             blueprint_id: id,
             blueprint_type: if ship { BlueprintType::Ship } else { BlueprintType::Station },
             name: "Blueprint".into(),
+            author: BlueprintAuthor::Player {
+                name: player.name().to_owned(),
+                id: player.client_id(),
+            },
         };
 
         commands.entity(block.structure()).insert(NeedsBlueprinted {
@@ -200,6 +204,7 @@ fn on_upload_blueprint(
                 blueprint_id: id,
                 blueprint_type: blueprint.kind(),
                 name: blueprint.name().to_owned(),
+                author: blueprint.author().clone(),
             },
             &mut commands,
         );
@@ -313,13 +318,11 @@ fn on_place_blueprint(
 
         let file_path = bp_data.get_blueprint_path();
 
-        commands.spawn(
-            NeedsBlueprintLoaded {
-                path: file_path,
-                spawn_at: *player_loc,
-                rotation: player_trans.rotation(),
-            },
-        );
+        commands.spawn(NeedsBlueprintLoaded {
+            path: file_path,
+            spawn_at: *player_loc,
+            rotation: player_trans.rotation(),
+        });
     }
 }
 

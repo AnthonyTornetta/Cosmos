@@ -10,7 +10,7 @@ use crate::{
         events::netty_event::{IdentifiableEvent, NettyEvent, SyncedEventImpl},
         sync_component,
     },
-    structure::blueprint::{Blueprint, BlueprintType},
+    structure::blueprint::{Blueprint, BlueprintAuthor, BlueprintType},
 };
 
 #[derive(Component, Serialize, Deserialize, Debug, Clone, Reflect, PartialEq, Eq)]
@@ -22,6 +22,8 @@ pub struct BlueprintItemData {
     pub blueprint_type: BlueprintType,
     /// The display name of this blueprint (could be out of date)
     pub name: String,
+    /// The author of this blueprint (could be out of date)
+    pub author: BlueprintAuthor,
 }
 
 impl IdentifiableComponent for BlueprintItemData {
