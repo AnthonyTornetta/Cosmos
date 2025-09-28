@@ -122,8 +122,6 @@ fn on_render_numeric_display(
             let mat_id = material_definition.material_id();
             let material_definition = materials_registry.from_numeric_id(mat_id);
 
-            let mut one_mesh_only = false;
-
             let block_rotation = structure.block_rotation(coords);
 
             let rotation = block_rotation.as_quat();
@@ -145,6 +143,7 @@ fn on_render_numeric_display(
                 NumericDisplayValue::Seven => Some(7),
                 NumericDisplayValue::Eight => Some(8),
                 NumericDisplayValue::Nine => Some(9),
+                NumericDisplayValue::Minus => Some(10),
             };
 
             let mut mesh_builder = None;
@@ -327,6 +326,12 @@ fn on_render_numeric_display(
 
                 for norm in mesh_info.normals.iter_mut() {
                     *norm = rotation.mul_vec3((*norm).into()).into();
+                }
+
+                if face == BlockFace::Front {
+                    for uv in mesh_info.uvs.iter_mut() {
+                        uv[0] = 1.0 - uv[0]; // Flip U coordinate
+                    }
                 }
 
                 let additional_info = material_definition.add_material_data(block_here.id(), &mesh_info);

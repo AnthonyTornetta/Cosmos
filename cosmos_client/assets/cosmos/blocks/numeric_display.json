@@ -20,7 +20,8 @@
                         "cosmos:numeric_display_6",
                         "cosmos:numeric_display_7",
                         "cosmos:numeric_display_8",
-                        "cosmos:numeric_display_9"
+                        "cosmos:numeric_display_9",
+                        "cosmos:numeric_display_minus"
                     ]
                 }
             },

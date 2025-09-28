@@ -5,10 +5,13 @@ use std::{cell::RefCell, rc::Rc};
 use bevy::prelude::*;
 
 use cosmos_core::{
-    block::{Block, block_face::BlockFace, data::BlockData, specific_blocks::numeric_display::NumericDisplayValue},
+    block::{
+        Block, block_face::BlockFace, block_rotation::BlockRotation, data::BlockData, specific_blocks::numeric_display::NumericDisplayValue,
+    },
     events::block_events::BlockDataSystemParams,
+    prelude::BlockCoordinate,
     registry::{Registry, identifiable::Identifiable},
-    structure::Structure,
+    structure::{Structure, coordinates::BoundsError},
 };
 
 use crate::logic::{BlockLogicData, LogicBlock, LogicConnection, LogicInputEvent, LogicSystemSet, PortType, logic_driver::LogicDriver};
@@ -39,53 +42,125 @@ fn numeric_display_input_event_listener(
         let Ok(mut structure) = q_structure.get_mut(ev.block.structure()) else {
             continue;
         };
-        if structure.block_at(ev.block.coords(), &blocks).unlocalized_name() != "cosmos:numeric_display" {
+        let coords = ev.block.coords();
+        if structure.block_at(coords, &blocks).unlocalized_name() != "cosmos:numeric_display" {
             continue;
         }
         let Ok(logic_driver) = q_logic_driver.get_mut(ev.block.structure()) else {
             continue;
         };
+        let rotation = structure.block_rotation(coords);
 
-        let coords = ev.block.coords();
-        let rotation = structure.block_rotation(ev.block.coords());
-        let new_state = BlockLogicData(logic_driver.read_input(coords, rotation.direction_of(BlockFace::Left)));
-        let display_value = match (new_state.0 % 10).abs() {
-            0 => NumericDisplayValue::Zero,
-            1 => NumericDisplayValue::One,
-            2 => NumericDisplayValue::Two,
-            3 => NumericDisplayValue::Three,
-            4 => NumericDisplayValue::Four,
-            5 => NumericDisplayValue::Five,
-            6 => NumericDisplayValue::Six,
-            7 => NumericDisplayValue::Seven,
-            8 => NumericDisplayValue::Eight,
-            9 => NumericDisplayValue::Nine,
-            _ => unreachable!(),
-        };
-
-        if let Some(mut logic_data) = structure.query_block_data_mut(ev.block.coords(), &mut q_logic_data, bs_params.clone()) {
-            if **logic_data != new_state {
-                **logic_data = new_state;
-            }
-        } else if new_state.0 != 0 {
-            structure.insert_block_data(coords, new_state, &mut bs_params.borrow_mut(), &mut q_block_data, &q_has_data);
+        // The root numeric display is the leftmost one in the line (with the exposed input port).
+        let left_direction = rotation.direction_of(BlockFace::Left);
+        let mut steps_to_root_display = 0;
+        let mut root_display_coords = coords;
+        let mut check_coords = coords.step(left_direction);
+        while let Some(display_coords) = aligned_display_coords(&check_coords, rotation, &structure, &blocks) {
+            steps_to_root_display += 1;
+            root_display_coords = display_coords;
+            check_coords = root_display_coords.step(left_direction);
         }
+        let root_display_logic_value = BlockLogicData(logic_driver.read_input(root_display_coords, left_direction));
 
-        if let Some(mut numeric_display_data) =
-            structure.query_block_data_mut(ev.block.coords(), &mut q_numeric_display_value, bs_params.clone())
-        {
-            if **numeric_display_data != display_value {
-                **numeric_display_data = display_value;
-            }
-        } else {
-            structure.insert_block_data(
-                coords,
-                display_value,
-                &mut bs_params.borrow_mut(),
+        // Updates the display value on the numeric display from the current event.
+        let display_string = root_display_logic_value.0.to_string();
+        let mut character_iterator = display_string.chars().rev();
+        display_character_at(
+            character_iterator.nth(steps_to_root_display),
+            coords,
+            &mut structure,
+            &mut q_numeric_display_value,
+            &mut q_block_data,
+            &q_has_display_value,
+            bs_params.clone(),
+        );
+
+        // Updates the display values of every numeric display to the right.
+        // This is necessary for when the current numeric display connected two existing displays.
+        let right_direction = rotation.direction_of(BlockFace::Right);
+        check_coords = coords.step(right_direction);
+        while let Some(display_coords) = aligned_display_coords(&check_coords, rotation, &structure, &blocks) {
+            display_character_at(
+                character_iterator.next(),
+                display_coords,
+                &mut structure,
+                &mut q_numeric_display_value,
                 &mut q_block_data,
                 &q_has_display_value,
+                bs_params.clone(),
+            );
+            check_coords = display_coords.step(right_direction);
+        }
+
+        // Sets the block's logic data, not necessary for rendering.
+        if let Some(mut logic_data) = structure.query_block_data_mut(coords, &mut q_logic_data, bs_params.clone()) {
+            if **logic_data != root_display_logic_value {
+                **logic_data = root_display_logic_value;
+            }
+        } else if root_display_logic_value.0 != 0 {
+            structure.insert_block_data(
+                coords,
+                root_display_logic_value,
+                &mut bs_params.borrow_mut(),
+                &mut q_block_data,
+                &q_has_data,
             );
         }
+    }
+}
+
+fn aligned_display_coords(
+    check_coords: &Result<BlockCoordinate, BoundsError>,
+    rotation: BlockRotation,
+    structure: &Structure,
+    blocks: &Registry<Block>,
+) -> Option<BlockCoordinate> {
+    let Ok(coords) = *check_coords else {
+        return None;
+    };
+    if structure.block_at(coords, &blocks).unlocalized_name() == "cosmos:numeric_display" && structure.block_rotation(coords) == rotation {
+        return Some(coords);
+    }
+    None
+}
+
+fn display_character_at(
+    character: Option<char>,
+    coords: BlockCoordinate,
+    structure: &mut Structure,
+    q_numeric_display_value: &mut Query<&mut NumericDisplayValue>,
+    q_block_data: &mut Query<&mut BlockData>,
+    q_has_display_value: &Query<(), With<NumericDisplayValue>>,
+    block_system_params: Rc<RefCell<BlockDataSystemParams>>,
+) {
+    let display_value = match character {
+        None => NumericDisplayValue::Blank,
+        Some('0') => NumericDisplayValue::Zero,
+        Some('1') => NumericDisplayValue::One,
+        Some('2') => NumericDisplayValue::Two,
+        Some('3') => NumericDisplayValue::Three,
+        Some('4') => NumericDisplayValue::Four,
+        Some('5') => NumericDisplayValue::Five,
+        Some('6') => NumericDisplayValue::Six,
+        Some('7') => NumericDisplayValue::Seven,
+        Some('8') => NumericDisplayValue::Eight,
+        Some('9') => NumericDisplayValue::Nine,
+        Some('-') => NumericDisplayValue::Minus,
+        _ => unreachable!("Logic signal should not contain characters other than '-' and 0-9"),
+    };
+    if let Some(mut numeric_display_data) = structure.query_block_data_mut(coords, q_numeric_display_value, block_system_params.clone()) {
+        if **numeric_display_data != display_value {
+            **numeric_display_data = display_value;
+        }
+    } else {
+        structure.insert_block_data(
+            coords,
+            display_value,
+            &mut block_system_params.borrow_mut(),
+            q_block_data,
+            q_has_display_value,
+        );
     }
 }
 

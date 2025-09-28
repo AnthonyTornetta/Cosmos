@@ -18,6 +18,7 @@ pub enum NumericDisplayValue {
     Seven,
     Eight,
     Nine,
+    Minus,
 }
 
 impl IdentifiableComponent for NumericDisplayValue {
