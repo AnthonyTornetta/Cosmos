@@ -220,6 +220,15 @@ impl Chunk {
         )
     }
 
+    /// Calculates the block coordinates used in something like `Self::block_at` from their f32 coordinates relative to the chunk's center.
+    pub fn block_coords_to_relative_coords(&self, block: ChunkBlockCoordinate) -> Vec3 {
+        Vec3::new(
+            block.x as f32 - CHUNK_DIMENSIONS as f32 / 2.0 + 0.5,
+            block.y as f32 - CHUNK_DIMENSIONS as f32 / 2.0 + 0.5,
+            block.z as f32 - CHUNK_DIMENSIONS as f32 / 2.0 + 0.5,
+        )
+    }
+
     /// Gets the block's health at that given coordinate
     /// * `x/y/z`: block coordinate
     /// * `block_hardness`: The hardness for the block at those coordinates

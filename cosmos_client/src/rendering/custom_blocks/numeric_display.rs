@@ -9,7 +9,7 @@ use cosmos_core::{
     prelude::UnboundChunkCoordinate,
     registry::{Registry, identifiable::Identifiable, many_to_one::ManyToOneRegistry},
     state::GameState,
-    structure::{ChunkNeighbors, Structure, chunk::CHUNK_DIMENSIONSF, coordinates::ChunkBlockCoordinate},
+    structure::{ChunkNeighbors, Structure, block_storage::BlockStorer, chunk::CHUNK_DIMENSIONSF, coordinates::ChunkBlockCoordinate},
 };
 
 use crate::{
@@ -75,7 +75,7 @@ fn on_render_numeric_display(
             continue;
         };
 
-        let mut material_meshes: HashMap<(MaterialType, u16, u32), CosmosMeshBuilder> = HashMap::default();
+        let mut material_meshes: HashMap<(u16, u32), CosmosMeshBuilder> = HashMap::default();
 
         let unbound = UnboundChunkCoordinate::from(ev.chunk_coordinate);
 
@@ -86,7 +86,7 @@ fn on_render_numeric_display(
         let pos_z = structure.chunk_at_unbound(unbound.pos_z());
         let neg_z = structure.chunk_at_unbound(unbound.neg_z());
 
-        let backend = ChunkRenderingChecker {
+        let rendering_backend = ChunkRenderingChecker {
             neighbors: ChunkNeighbors {
                 neg_x,
                 pos_x,
@@ -101,13 +101,13 @@ fn on_render_numeric_display(
             continue;
         };
 
-        for block in structure.block_iter_for_chunk(ev.chunk_coordinate, true) {
-            let block_here = structure.block_at(block, &blocks);
+        for coords in structure.block_iter_for_chunk(ev.chunk_coordinate, true) {
+            let block_here = structure.block_at(coords, &blocks);
             if block_here.id() != numeric_display_id {
                 continue;
             }
 
-            if structure.block_id_at(block) != numeric_display_id {
+            if structure.block_id_at(coords) != numeric_display_id {
                 continue;
             }
 
@@ -115,7 +115,7 @@ fn on_render_numeric_display(
                 continue;
             };
 
-            let Some(block_mesh_info) = block_mesh_registry.get_value(numeric_display_block) else {
+            let Some(mesh) = block_mesh_registry.get_value(numeric_display_block) else {
                 continue;
             };
 
@@ -124,12 +124,12 @@ fn on_render_numeric_display(
 
             let mut one_mesh_only = false;
 
-            let block_rotation = structure.block_rotation(block);
+            let block_rotation = structure.block_rotation(coords);
 
             let rotation = block_rotation.as_quat();
 
             let display_value = structure
-                .query_block_data(block, &q_numeric_display_value)
+                .query_block_data(coords, &q_numeric_display_value)
                 .copied()
                 .unwrap_or_default();
 
@@ -147,19 +147,19 @@ fn on_render_numeric_display(
                 NumericDisplayValue::Nine => Some(9),
             };
 
-            let material_type = MaterialType::Normal;
-
             let mut mesh_builder = None;
 
             let mut directions = Vec::with_capacity(6);
 
             let mut block_connections = [false; 6];
 
+            let chunk_block_coords = ChunkBlockCoordinate::for_block_coordinate(coords);
+
             let mut check_rendering = |direction: BlockDirection| {
-                if backend.check_should_render(
+                if rendering_backend.check_should_render(
                     chunk,
                     block_here,
-                    ChunkBlockCoordinate::for_block_coordinate(block),
+                    chunk_block_coords,
                     &blocks,
                     direction,
                     &mut block_connections[direction.index()],
@@ -171,12 +171,19 @@ fn on_render_numeric_display(
 
             ALL_BLOCK_DIRECTIONS.iter().copied().for_each(|d| check_rendering(d));
 
-            for direction in directions {
-                let Some(mut mesh_info) = block_mesh_info
-                    .info_for_face(direction.block_face(), false)
+            let offset = chunk.block_coords_to_relative_coords(chunk_block_coords);
+
+            for (direction, face) in directions
+                .iter()
+                .map(|direction| (*direction, block_rotation.block_face_pointing(*direction)))
+            {
+                let mut one_mesh_only = false;
+
+                let Some(mut mesh_info) = mesh
+                    .info_for_face(face, block_connections[direction.index()])
                     .map(Some)
                     .unwrap_or_else(|| {
-                        let single_mesh = block_mesh_info.info_for_whole_block();
+                        let single_mesh = mesh.info_for_whole_block();
 
                         if single_mesh.is_some() {
                             one_mesh_only = true;
@@ -191,64 +198,150 @@ fn on_render_numeric_display(
                 };
 
                 let index = block_textures
-                    .from_id(numeric_display_block.unlocalized_name())
+                    .from_id(block_here.unlocalized_name())
                     .unwrap_or_else(|| block_textures.from_id("missing").expect("Missing texture should exist."));
 
-                let neighbors = BlockNeighbors::empty();
+                let mut neighbors = BlockNeighbors::empty();
 
+                // These starting values are unused, but required to be set by the compiler.
+                let mut pos_x = BlockDirection::PosX;
+                let mut neg_x = BlockDirection::NegX;
+                let mut pos_y = BlockDirection::PosY;
+                let mut neg_y = BlockDirection::NegY;
+                let mut pos_z = BlockDirection::PosZ;
+                let mut neg_z = BlockDirection::NegZ;
+
+                #[inline]
+                fn account_for_rotation_in_neighbor_check(dir_vec: Vec3, pos_dir: &mut BlockDirection, neg_dir: &mut BlockDirection) {
+                    use BlockDirection::*;
+
+                    if dir_vec.x > 0.99 {
+                        *pos_dir = PosX;
+                        *neg_dir = NegX;
+                    } else if dir_vec.x < -0.99 {
+                        *pos_dir = NegX;
+                        *neg_dir = PosX;
+                    } else if dir_vec.y > 0.99 {
+                        *pos_dir = PosY;
+                        *neg_dir = NegY;
+                    } else if dir_vec.y < -0.99 {
+                        *pos_dir = NegY;
+                        *neg_dir = PosY;
+                    } else if dir_vec.z > 0.99 {
+                        *pos_dir = PosZ;
+                        *neg_dir = NegZ;
+                    } else if dir_vec.z < -0.99 {
+                        *pos_dir = NegZ;
+                        *neg_dir = PosZ;
+                    } else {
+                        unreachable!("Bad");
+                    }
+                }
+
+                // TODO: This fails for sub-rotations :(
+                let x = rotation * Vec3::X;
+                let y = rotation * Vec3::Y;
+                let z = rotation * Vec3::Z;
+
+                account_for_rotation_in_neighbor_check(x, &mut pos_x, &mut neg_x);
+                account_for_rotation_in_neighbor_check(y, &mut pos_y, &mut neg_y);
+                account_for_rotation_in_neighbor_check(z, &mut pos_z, &mut neg_z);
+
+                match direction {
+                    BlockDirection::PosZ | BlockDirection::NegZ => {
+                        if block_connections[pos_x.index()] {
+                            neighbors |= BlockNeighbors::Right;
+                        }
+                        if block_connections[neg_x.index()] {
+                            neighbors |= BlockNeighbors::Left;
+                        }
+                        if block_connections[pos_y.index()] {
+                            neighbors |= BlockNeighbors::Top;
+                        }
+                        if block_connections[neg_y.index()] {
+                            neighbors |= BlockNeighbors::Bottom;
+                        }
+                    }
+                    BlockDirection::PosY | BlockDirection::NegY => {
+                        if block_connections[pos_x.index()] {
+                            neighbors |= BlockNeighbors::Right;
+                        }
+                        if block_connections[neg_x.index()] {
+                            neighbors |= BlockNeighbors::Left;
+                        }
+                        if block_connections[pos_z.index()] {
+                            neighbors |= BlockNeighbors::Top;
+                        }
+                        if block_connections[neg_z.index()] {
+                            neighbors |= BlockNeighbors::Bottom;
+                        }
+                    }
+                    // idk why right and left have to separate, and I don't want to know why
+                    BlockDirection::PosX => {
+                        if block_connections[pos_z.index()] {
+                            neighbors |= BlockNeighbors::Right;
+                        }
+                        if block_connections[neg_z.index()] {
+                            neighbors |= BlockNeighbors::Left;
+                        }
+                        if block_connections[pos_y.index()] {
+                            neighbors |= BlockNeighbors::Top;
+                        }
+                        if block_connections[neg_y.index()] {
+                            neighbors |= BlockNeighbors::Bottom;
+                        }
+                    }
+                    BlockDirection::NegX => {
+                        if block_connections[neg_z.index()] {
+                            neighbors |= BlockNeighbors::Right;
+                        }
+                        if block_connections[pos_z.index()] {
+                            neighbors |= BlockNeighbors::Left;
+                        }
+                        if block_connections[pos_y.index()] {
+                            neighbors |= BlockNeighbors::Top;
+                        }
+                        if block_connections[neg_y.index()] {
+                            neighbors |= BlockNeighbors::Bottom;
+                        }
+                    }
+                }
                 let face = block_rotation.block_face_pointing(direction);
                 let image_index = match face {
                     BlockFace::Front => match maybe_custom_index {
-                        None => index.atlas_index_from_face(face, neighbors, structure.block_info_at(block)),
+                        None => rendering_backend.get_texture_index(index, neighbors, face, chunk.block_info_at(chunk_block_coords)),
                         Some(custom_index) => index
                             .atlas_index_from_face_and_custom_index(face, neighbors, custom_index)
                             .expect("Numeric display value should have a texture"),
                     },
-                    _ => index.atlas_index_from_face(face, neighbors, structure.block_info_at(block)),
+                    _ => rendering_backend.get_texture_index(index, neighbors, face, chunk.block_info_at(chunk_block_coords)),
                 };
 
                 let uvs = Rect::new(0.0, 0.0, 1.0, 1.0);
 
                 for pos in mesh_info.positions.iter_mut() {
-                    *pos = rotation.mul_vec3(Vec3::from(*pos)).into();
+                    let position_vec3 =
+                        rendering_backend.transform_position(chunk, chunk_block_coords, direction, rotation.mul_vec3(Vec3::from(*pos)));
+                    *pos = (offset + position_vec3).into();
                 }
 
                 for norm in mesh_info.normals.iter_mut() {
                     *norm = rotation.mul_vec3((*norm).into()).into();
                 }
 
-                // Fix for display values appearing flipped horizontally.
-                if face == BlockFace::Front {
-                    for uv in mesh_info.uvs.iter_mut() {
-                        uv[0] = 1.0 - uv[0];
-                    }
-                }
+                let additional_info = material_definition.add_material_data(block_here.id(), &mesh_info);
 
-                // Scale the rotated positions, not the pre-rotated positions since our side checks are absolute
-
-                let structure_coords = block;
-
-                let additional_info = material_definition.add_material_data(numeric_display_id, &mesh_info);
-
-                let coords = ChunkBlockCoordinate::for_block_coordinate(structure_coords);
-                const CHUNK_DIMS_HALVED: f32 = CHUNK_DIMENSIONSF / 2.0;
-
-                let (center_offset_x, center_offset_y, center_offset_z) = (
-                    coords.x as f32 - CHUNK_DIMS_HALVED + 0.5,
-                    coords.y as f32 - CHUNK_DIMS_HALVED + 0.5,
-                    coords.z as f32 - CHUNK_DIMS_HALVED + 0.5,
-                );
                 if mesh_builder.is_none() {
                     mesh_builder = Some(
                         material_meshes
-                            .entry((material_type, mat_id, image_index.dimension_index))
+                            .entry((material_definition.id(), image_index.dimension_index))
                             .or_default(),
                     );
                 }
 
                 mesh_builder.as_mut().unwrap().add_mesh_information(
                     &mesh_info,
-                    Vec3::new(center_offset_x, center_offset_y, center_offset_z),
+                    Vec3::ZERO,
                     uvs,
                     image_index.texture_index,
                     additional_info,
@@ -258,11 +351,13 @@ fn on_render_numeric_display(
                     break;
                 }
             }
+
+            directions.clear();
         }
 
         let mut ents = vec![];
 
-        for ((material_type, mat_id, texture_dimensions_index), mesh_builder) in material_meshes {
+        for ((mat_id, texture_dimensions_index), mesh_builder) in material_meshes {
             let mesh = mesh_builder.build_mesh();
 
             let entity = commands
@@ -279,7 +374,7 @@ fn on_render_numeric_display(
                 entity,
                 add_material_id: mat_id,
                 texture_dimensions_index,
-                material_type,
+                material_type: MaterialType::Normal,
             });
 
             ents.push(entity);
