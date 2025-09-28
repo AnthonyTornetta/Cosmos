@@ -7,6 +7,7 @@ use crate::netty::sync::{IdentifiableComponent, SyncableComponent, sync_componen
 #[derive(Component, Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
 pub enum NumericDisplayValue {
     #[default]
+    Blank,
     Zero,
     One,
     Two,

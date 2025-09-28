@@ -101,17 +101,18 @@ fn on_render_numeric_display(
                 .copied()
                 .unwrap_or_default();
 
-            let custom_index = match display_value {
-                NumericDisplayValue::Zero => 0,
-                NumericDisplayValue::One => 1,
-                NumericDisplayValue::Two => 2,
-                NumericDisplayValue::Three => 3,
-                NumericDisplayValue::Four => 4,
-                NumericDisplayValue::Five => 5,
-                NumericDisplayValue::Six => 6,
-                NumericDisplayValue::Seven => 7,
-                NumericDisplayValue::Eight => 8,
-                NumericDisplayValue::Nine => 9,
+            let maybe_custom_index = match display_value {
+                NumericDisplayValue::Blank => None,
+                NumericDisplayValue::Zero => Some(0),
+                NumericDisplayValue::One => Some(1),
+                NumericDisplayValue::Two => Some(2),
+                NumericDisplayValue::Three => Some(3),
+                NumericDisplayValue::Four => Some(4),
+                NumericDisplayValue::Five => Some(5),
+                NumericDisplayValue::Six => Some(6),
+                NumericDisplayValue::Seven => Some(7),
+                NumericDisplayValue::Eight => Some(8),
+                NumericDisplayValue::Nine => Some(9),
             };
 
             let material_type = MaterialType::Normal;
@@ -153,9 +154,12 @@ fn on_render_numeric_display(
 
                 let face = direction.block_face();
                 let image_index = match direction.block_face() {
-                    BlockFace::Front => index
-                        .atlas_index_from_face_and_custom_index(face, neighbors, custom_index)
-                        .expect("Numeric display value should have a texture"),
+                    BlockFace::Front => match maybe_custom_index {
+                        None => index.atlas_index_from_face(face, neighbors, structure.block_info_at(block)),
+                        Some(custom_index) => index
+                            .atlas_index_from_face_and_custom_index(face, neighbors, custom_index)
+                            .expect("Numeric display value should have a texture"),
+                    },
                     _ => index.atlas_index_from_face(face, neighbors, structure.block_info_at(block)),
                 };
 
