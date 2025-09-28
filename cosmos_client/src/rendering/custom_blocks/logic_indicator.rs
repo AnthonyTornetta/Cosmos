@@ -95,7 +95,7 @@ fn on_render_logic_indicator(
             },
         };
 
-        let Some(c) = structure.chunk_at(ev.chunk_coordinate) else {
+        let Some(chunk) = structure.chunk_at(ev.chunk_coordinate) else {
             continue;
         };
 
@@ -136,7 +136,7 @@ fn on_render_logic_indicator(
 
             let mut check_rendering = |direction: BlockDirection| {
                 if backend.check_should_render(
-                    c,
+                    chunk,
                     block_here,
                     ChunkBlockCoordinate::for_block_coordinate(block),
                     &blocks,
