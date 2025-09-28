@@ -500,6 +500,7 @@ fn add_cosmos_blocks(
             .add_property(BlockProperty::Full)
             .add_property(BlockProperty::FullyRotatable)
             .add_connection_group("cosmos:uses_logic")
+            .with_category("cosmos:logic")
             .create(),
     );
 
