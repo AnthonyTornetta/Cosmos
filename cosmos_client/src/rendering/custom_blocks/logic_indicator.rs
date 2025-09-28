@@ -1,14 +1,14 @@
 use bevy::{platform::collections::HashMap, prelude::*};
 use cosmos_core::{
-    block::{Block, block_face::ALL_BLOCK_FACES},
+    block::{
+        Block,
+        block_direction::{ALL_BLOCK_DIRECTIONS, BlockDirection},
+    },
     logic::HasOnOffInfo,
+    prelude::UnboundChunkCoordinate,
     registry::{Registry, identifiable::Identifiable, many_to_one::ManyToOneRegistry},
     state::GameState,
-    structure::{
-        Structure,
-        chunk::CHUNK_DIMENSIONSF,
-        coordinates::{BlockCoordinate, ChunkBlockCoordinate},
-    },
+    structure::{ChunkNeighbors, Structure, chunk::CHUNK_DIMENSIONSF, coordinates::ChunkBlockCoordinate},
 };
 
 use crate::{
@@ -19,7 +19,11 @@ use crate::{
     rendering::{
         BlockMeshRegistry, CosmosMeshBuilder, MeshBuilder,
         structure_renderer::{
-            BlockRenderingModes, RenderingMode, StructureRenderingSet, chunk_rendering::chunk_renderer::ChunkNeedsCustomBlocksRendered,
+            BlockRenderingModes, RenderingMode, StructureRenderingSet,
+            chunk_rendering::{
+                chunk_renderer::ChunkNeedsCustomBlocksRendered,
+                neighbor_checking::{ChunkRendererBackend, ChunkRenderingChecker},
+            },
         },
     },
 };
@@ -47,6 +51,7 @@ fn on_render_logic_indicator(
     materials_registry: Res<Registry<MaterialDefinition>>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut evw_add_material: EventWriter<AddMaterialEvent>,
+    rendering_modes: Res<BlockRenderingModes>,
 ) {
     for ev in ev_reader.read() {
         if let Ok(logic_indicator_renders) = q_logic_indicator_renders.get(ev.mesh_entity_parent) {
@@ -70,8 +75,33 @@ fn on_render_logic_indicator(
 
         let mut material_meshes: HashMap<(MaterialType, u16, u32), CosmosMeshBuilder> = HashMap::default();
 
+        let unbound = UnboundChunkCoordinate::from(ev.chunk_coordinate);
+
+        let pos_x = structure.chunk_at_unbound(unbound.pos_x());
+        let neg_x = structure.chunk_at_unbound(unbound.neg_x());
+        let pos_y = structure.chunk_at_unbound(unbound.pos_y());
+        let neg_y = structure.chunk_at_unbound(unbound.neg_y());
+        let pos_z = structure.chunk_at_unbound(unbound.pos_z());
+        let neg_z = structure.chunk_at_unbound(unbound.neg_z());
+
+        let backend = ChunkRenderingChecker {
+            neighbors: ChunkNeighbors {
+                neg_x,
+                pos_x,
+                neg_y,
+                pos_y,
+                neg_z,
+                pos_z,
+            },
+        };
+
+        let Some(c) = structure.chunk_at(ev.chunk_coordinate) else {
+            continue;
+        };
+
         for block in structure.block_iter_for_chunk(ev.chunk_coordinate, true) {
-            if structure.block_id_at(block) != logic_indicator_id {
+            let block_here = structure.block_at(block, &blocks);
+            if block_here.id() != logic_indicator_id {
                 continue;
             }
 
@@ -99,16 +129,28 @@ fn on_render_logic_indicator(
             };
 
             let mut mesh_builder = None;
-            // let mesh_builder = material_meshes.entry((material_type, mat_id)).or_default();
 
-            let faces = ALL_BLOCK_FACES.iter().copied().filter(|face| {
-                if let Ok(new_coord) = BlockCoordinate::try_from(block + face.direction().to_coordinates()) {
-                    return structure.block_at(new_coord, &blocks).is_see_through();
+            let mut directions = Vec::with_capacity(6);
+
+            let mut block_connections = [false; 6];
+
+            let mut check_rendering = |direction: BlockDirection| {
+                if backend.check_should_render(
+                    c,
+                    block_here,
+                    ChunkBlockCoordinate::for_block_coordinate(block),
+                    &blocks,
+                    direction,
+                    &mut block_connections[direction.index()],
+                    &rendering_modes,
+                ) {
+                    directions.push(direction);
                 }
-                true
-            });
+            };
 
-            for (_, direction) in faces.map(|face| (face, block_rotation.direction_of(face))) {
+            ALL_BLOCK_DIRECTIONS.iter().copied().for_each(|d| check_rendering(d));
+
+            for direction in directions {
                 let Some(mut mesh_info) = block_mesh_info
                     .info_for_face(direction.block_face(), false)
                     .map(Some)

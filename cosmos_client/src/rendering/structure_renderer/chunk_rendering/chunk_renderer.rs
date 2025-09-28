@@ -48,7 +48,7 @@ impl<M: MeshBuilder + Default> ChunkRenderer<M> {
     ) -> HashSet<u16> {
         let cd2 = CHUNK_DIMENSIONSF / 2.0;
 
-        let mut faces = Vec::with_capacity(6);
+        let mut directions = Vec::with_capacity(6);
 
         let mut custom_blocks = HashSet::new();
 
@@ -95,7 +95,7 @@ impl<M: MeshBuilder + Default> ChunkRenderer<M> {
                     &mut block_connections[direction.index()],
                     rendering_modes,
                 ) {
-                    faces.push(direction);
+                    directions.push(direction);
                 }
             };
 
@@ -106,7 +106,7 @@ impl<M: MeshBuilder + Default> ChunkRenderer<M> {
             check_rendering(BlockDirection::NegY);
             check_rendering(BlockDirection::NegZ);
 
-            if !faces.is_empty() {
+            if !directions.is_empty() {
                 let block = blocks.from_numeric_id(block_id);
 
                 let material_definition = if !lod {
@@ -131,7 +131,7 @@ impl<M: MeshBuilder + Default> ChunkRenderer<M> {
 
                 let mut mesh_builder = None;
 
-                for (direction, face) in faces
+                for (direction, face) in directions
                     .iter()
                     .map(|direction| (*direction, block_rotation.block_face_pointing(*direction)))
                 {
@@ -302,7 +302,7 @@ impl<M: MeshBuilder + Default> ChunkRenderer<M> {
                     }
                 }
 
-                faces.clear();
+                directions.clear();
 
                 if let Some(lighting) = lighting.from_id(block.unlocalized_name()) {
                     self.lights.insert(coords, lighting.properties);
