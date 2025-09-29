@@ -140,6 +140,5 @@ pub(super) fn register(app: &mut App) {
         (monitor_advanced_fabricator_interactions, monitor_craft_event)
             .in_set(BlockEventsSet::ProcessEvents)
             .run_if(in_state(GameState::Playing)),
-    )
-    .add_netty_event::<OpenAdvancedFabricatorEvent>();
+    );
 }

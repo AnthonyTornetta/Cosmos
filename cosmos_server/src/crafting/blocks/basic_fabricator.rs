@@ -169,6 +169,5 @@ pub(super) fn register(app: &mut App) {
             .in_set(BlockEventsSet::ProcessEvents)
             .run_if(in_state(GameState::Playing)),
     )
-    .add_netty_event::<OpenBasicFabricatorEvent>()
     .add_event::<BasicFabricatorCraftEvent>();
 }

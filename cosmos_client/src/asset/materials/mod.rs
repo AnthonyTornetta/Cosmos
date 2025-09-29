@@ -349,8 +349,8 @@ pub(super) fn register(app: &mut App) {
 
     app.add_systems(
         OnExit(GameState::PostLoading),
-        (load_block_rendering_information, register_materials)
-            .chain()
+        register_materials
+            .after(load_block_rendering_information)
             .in_set(ItemMeshingLoadingSet::LoadItemRenderingInformation),
     )
     .add_event::<RemoveAllMaterialsEvent>()

@@ -7,6 +7,7 @@ use cosmos_core::{
     netty::{client::LocalPlayer, sync::events::client_event::NettyEventWriter},
     prelude::{Structure, StructureBlock},
     registry::{Registry, identifiable::Identifiable},
+    state::GameState,
     structure::blueprint::{BlueprintAuthor, BlueprintType},
 };
 
@@ -206,5 +207,5 @@ fn create_shipyard_ui(
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_systems(Update, on_open_shipyard);
+    app.add_systems(Update, on_open_shipyard.run_if(in_state(GameState::Playing)));
 }

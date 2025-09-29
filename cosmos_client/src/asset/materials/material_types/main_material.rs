@@ -101,7 +101,7 @@ fn create_materials(
     mut event_writer: EventWriter<AssetsDoneLoadingEvent>,
     texture_atlases: Res<Registry<CosmosTextureAtlas>>,
 ) {
-    if !event_reader.is_empty() {
+    if !event_reader.is_empty() && !material_registry.contains("cosmos:main") {
         if let Some(atlas) = texture_atlases.from_id("cosmos:main") {
             let mut default_material = vec![];
             let mut unlit_default_material = vec![];
