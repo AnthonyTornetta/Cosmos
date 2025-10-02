@@ -69,7 +69,7 @@ pub struct Location {
     pub sector: Sector,
 }
 
-#[derive(Default, Component, Debug, PartialEq, Eq, Reflect, Clone, Copy)]
+#[derive(Default, Component, Debug, PartialEq, Reflect, Clone, Copy)]
 /// Sets the position of this entity based on the specified source of truth
 pub enum SetPosition {
     #[default]
@@ -79,6 +79,12 @@ pub enum SetPosition {
     /// The source of truth is the [`Transform`] component of this entity. The [`Location`] will be
     /// updated to match this [`Transform`].
     Location,
+    /// Sets the position of this entity relative to the location of that entity.
+    RelativeTo {
+        entity: Entity,
+        /// The offset relative to the entity field's rotation
+        offset: Vec3,
+    },
 }
 
 /// Datatype used to store sector coordinates

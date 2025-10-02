@@ -37,7 +37,7 @@ use crate::netty::client::LocalPlayer;
 /// point for a [`PlayerWorld`].
 pub struct Anchor;
 
-fn loc_from_trans(
+fn compute_location(
     entity: Entity,
     q_trans: &Query<&Transform>,
     q_x: &Query<(Entity, Option<&Location>, Option<&SetPosition>)>,
@@ -53,16 +53,31 @@ fn loc_from_trans(
                 let parent_g_trans = q_g_trans.get(p.parent()).ok()?;
                 let my_trans = q_trans.get(entity).ok()?;
 
-                loc_from_trans(p.parent(), q_trans, q_x, q_g_trans, q_parent)
+                compute_location(p.parent(), q_trans, q_x, q_g_trans, q_parent)
                     .map(|x| x + (parent_g_trans.rotation().inverse() * my_trans.translation))
             } else {
-                error!("Location set based solely on global transform - you probably didn't mean to do this.");
+                error!("Location for {entity:?} set based solely on global transform - you probably didn't mean to do this.");
                 None
                 // q_g_trans
                 //     .get(entity)
                 //     .ok()
                 //     .map(|g_trans| Location::new(g_trans.translation(), Default::default()))
             }
+        }
+        Some(SetPosition::RelativeTo { entity, offset }) => {
+            let Ok((_, Some(loc), None)) = q_x.get(*entity) else {
+                error!("Unable to get accurate location for relative entity ({entity:?})! Trying again next update.");
+                return None;
+            };
+
+            let Ok(real_trans) = q_g_trans.get(*entity) else {
+                error!("Relative entity ({entity:?}) has no global trans! Trying again next update.");
+                return None;
+            };
+
+            let res = Some(*loc + real_trans.rotation() * *offset);
+            info!("{res:?}");
+            res
         }
     }
 }
@@ -90,10 +105,18 @@ fn apply_set_position_single(
             ecmds.insert(SetTransformBasedOnLocationFlag).remove::<SetPosition>();
         }
         SetPosition::Location => {
-            if let Some(loc_from_trans) = loc_from_trans(entity, &q_trans, &q_x, &q_g_trans, &q_parent) {
+            if let Some(computed_loc) = compute_location(entity, &q_trans, &q_x, &q_g_trans, &q_parent) {
                 commands
                     .entity(entity)
-                    .insert((loc_from_trans, PreviousLocation(loc_from_trans)))
+                    .insert((computed_loc, PreviousLocation(computed_loc)))
+                    .remove::<SetPosition>();
+            }
+        }
+        SetPosition::RelativeTo { entity: _, offset: _ } => {
+            if let Some(computed_loc) = compute_location(entity, &q_trans, &q_x, &q_g_trans, &q_parent) {
+                commands
+                    .entity(entity)
+                    .insert((computed_loc, PreviousLocation(computed_loc), SetTransformBasedOnLocationFlag))
                     .remove::<SetPosition>();
             }
         }
@@ -125,7 +148,7 @@ fn apply_set_position(
                 }
             }
             SetPosition::Location => {
-                if let Some(loc_from_trans) = loc_from_trans(entity, &q_trans, &q_x, &q_g_trans, &q_parent) {
+                if let Some(loc_from_trans) = compute_location(entity, &q_trans, &q_x, &q_g_trans, &q_parent) {
                     if dbg_loc {
                         info!("Setting location based on transform to {loc_from_trans:?} for entity {entity:?}");
                     }
@@ -133,6 +156,24 @@ fn apply_set_position(
                     commands
                         .entity(entity)
                         .insert((loc_from_trans, PreviousLocation(loc_from_trans)))
+                        .remove::<SetPosition>();
+                }
+            }
+            SetPosition::RelativeTo { entity: rel, offset: _ } => {
+                if let Some(loc_from_relative) = compute_location(entity, &q_trans, &q_x, &q_g_trans, &q_parent) {
+                    if dbg_loc {
+                        info!(
+                            "Setting location + transform based on relative location {loc_from_relative:?} for entity {entity:?} (rel: {rel:?})"
+                        );
+                    }
+
+                    commands
+                        .entity(entity)
+                        .insert((
+                            loc_from_relative,
+                            PreviousLocation(loc_from_relative),
+                            SetTransformBasedOnLocationFlag,
+                        ))
                         .remove::<SetPosition>();
                 }
             }

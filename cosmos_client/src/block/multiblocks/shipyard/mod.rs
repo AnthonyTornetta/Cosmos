@@ -1,6 +1,9 @@
 use bevy::{color::palettes::css, prelude::*};
 use cosmos_core::{
-    block::multiblock::prelude::{ClientFriendlyShipyardState, SetShipyardBlueprint, ShowShipyardUi},
+    block::{
+        Block,
+        multiblock::prelude::{ClientFriendlyShipyardState, ClientSetShipyardState, SetShipyardBlueprint, ShowShipyardUi},
+    },
     faction::Factions,
     inventory::Inventory,
     item::{Item, usable::blueprint::BlueprintItemData},
@@ -13,6 +16,7 @@ use cosmos_core::{
 
 use crate::{
     inventory::InventoryNeedsDisplayed,
+    lang::Lang,
     ui::{
         OpenMenu,
         components::{
@@ -34,6 +38,8 @@ fn on_open_shipyard(
     mut commands: Commands,
     font: Res<DefaultFont>,
     factions: Res<Factions>,
+    blocks: Res<Registry<Block>>,
+    lang: Res<Lang<Block>>,
 ) {
     let Some(ev) = nevr_open_shipyard.read().next() else {
         return;
@@ -58,6 +64,8 @@ fn on_open_shipyard(
         &q_inventory,
         &font,
         &factions,
+        &blocks,
+        &lang,
     );
 }
 
@@ -70,6 +78,8 @@ fn create_shipyard_ui(
     q_inventory: &Query<(Entity, &Inventory), With<LocalPlayer>>,
     font: &DefaultFont,
     factions: &Factions,
+    blocks: &Registry<Block>,
+    lang: &Lang<Block>,
 ) {
     let Ok((inv, inventory)) = q_inventory.single() else {
         return;
@@ -129,9 +139,71 @@ fn create_shipyard_ui(
                     .flat_map(|(slot, i)| i.data_entity().and_then(|e| q_blueprint_data.get(e).ok().map(|d| (slot, d))))
                     .filter(|(_, bp)| bp.blueprint_type == BlueprintType::Ship)
                 {
+                    p.spawn((Node { ..Default::default() },)).with_children(|p| {
+                        p.spawn((
+                            CustomHoverTooltip::new(bp.name.clone()),
+                            RenderItem { item_id: blueprint.id() },
+                            Node {
+                                width: Val::Px(64.0),
+                                height: Val::Px(64.0),
+                                border: UiRect::all(Val::Px(2.0)),
+                                margin: UiRect::all(Val::Px(16.0)),
+                                ..Default::default()
+                            },
+                            BackgroundColor(css::GREY.into()),
+                            BorderColor(css::AQUA.into()),
+                        ));
+
+                        p.spawn((
+                            Text::new(bp.name.clone()),
+                            TextFont {
+                                font: font.get(),
+                                font_size: 24.0,
+                                ..Default::default()
+                            },
+                        ));
+                    });
+
+                    match &bp.author {
+                        BlueprintAuthor::Player { name, id: _ } => {
+                            p.spawn((
+                                Text::new(format!("Creator: {}", name.clone())),
+                                TextFont {
+                                    font: font.get(),
+                                    font_size: 20.0,
+                                    ..Default::default()
+                                },
+                            ));
+                        }
+                        BlueprintAuthor::Faction(f) => {
+                            if let Some(fac) = factions.from_id(f) {
+                                p.spawn((
+                                    Text::new(format!("Creator: {}", fac.name())),
+                                    TextFont {
+                                        font: font.get(),
+                                        font_size: 20.0,
+                                        ..Default::default()
+                                    },
+                                ));
+                            }
+                        }
+                        BlueprintAuthor::Server => {}
+                    }
+
                     p.spawn((
                         Name::new("Blueprint btn"),
-                        CosmosButton { ..Default::default() },
+                        CosmosButton {
+                            text: Some((
+                                "Construct".into(),
+                                TextFont {
+                                    font: font.get(),
+                                    font_size: 20.0,
+                                    ..Default::default()
+                                },
+                                Default::default(),
+                            )),
+                            ..Default::default()
+                        },
                         Node {
                             flex_direction: FlexDirection::Column,
                             ..Default::default()
@@ -145,63 +217,121 @@ fn create_shipyard_ui(
                                 blueprint_slot: slot as u32,
                             });
                         },
-                    )
-                    .with_children(|p| {
-                        p.spawn((Node { ..Default::default() },)).with_children(|p| {
-                            p.spawn((
-                                CustomHoverTooltip::new(bp.name.clone()),
-                                RenderItem { item_id: blueprint.id() },
-                                Node {
-                                    width: Val::Px(64.0),
-                                    height: Val::Px(64.0),
-                                    border: UiRect::all(Val::Px(2.0)),
-                                    margin: UiRect::all(Val::Px(16.0)),
-                                    ..Default::default()
-                                },
-                                BackgroundColor(css::GREY.into()),
-                                BorderColor(css::AQUA.into()),
-                            ));
-
-                            p.spawn((
-                                Text::new(bp.name.clone()),
-                                TextFont {
-                                    font: font.get(),
-                                    font_size: 24.0,
-                                    ..Default::default()
-                                },
-                            ));
-                        });
-
-                        match &bp.author {
-                            BlueprintAuthor::Player { name, id: _ } => {
-                                p.spawn((
-                                    Text::new(format!("Creator: {}", name.clone())),
-                                    TextFont {
-                                        font: font.get(),
-                                        font_size: 20.0,
-                                        ..Default::default()
-                                    },
-                                ));
-                            }
-                            BlueprintAuthor::Faction(f) => {
-                                if let Some(fac) = factions.from_id(f) {
-                                    p.spawn((
-                                        Text::new(format!("Creator: {}", fac.name())),
-                                        TextFont {
-                                            font: font.get(),
-                                            font_size: 20.0,
-                                            ..Default::default()
-                                        },
-                                    ));
-                                }
-                            }
-                            BlueprintAuthor::Server => {}
-                        }
-                    });
+                    );
                 }
             }
-            Some(ClientFriendlyShipyardState::Paused(p)) => {}
-            Some(ClientFriendlyShipyardState::Building(b)) => {}
+            Some(ClientFriendlyShipyardState::Paused(d)) => {
+                p.spawn((
+                    Text::new("Building (Paused)"),
+                    TextFont {
+                        font_size: 24.0,
+                        font: font.get(),
+                        ..Default::default()
+                    },
+                    Node { ..Default::default() },
+                ));
+
+                p.spawn((
+                    CosmosButton {
+                        text: Some((
+                            "Resume".into(),
+                            TextFont {
+                                font_size: 20.0,
+                                font: font.get(),
+                                ..Default::default()
+                            },
+                            Default::default(),
+                        )),
+                        ..Default::default()
+                    },
+                    Node {
+                        padding: UiRect::all(Val::Px(8.0)),
+                        ..Default::default()
+                    },
+                ))
+                .observe(
+                    move |_trigger: Trigger<ButtonEvent>, mut nevw_change_shipyard_state: NettyEventWriter<ClientSetShipyardState>| {
+                        nevw_change_shipyard_state.write(ClientSetShipyardState::Unpause { controller: block });
+                    },
+                );
+
+                // Sort by amt required
+                let mut items_needed = d
+                    .need_items
+                    .iter()
+                    .map(|(a, b)| (blocks.from_numeric_id(*a), *b))
+                    .collect::<Vec<_>>();
+
+                items_needed.sort_unstable_by_key(|x| !x.1);
+
+                for (block, qty) in items_needed {
+                    p.spawn((
+                        Text::new(format!("{} - {}", lang.get_name_or_unlocalized(block), qty)),
+                        TextFont {
+                            font_size: 20.0,
+                            font: font.get(),
+                            ..Default::default()
+                        },
+                        Node { ..Default::default() },
+                    ));
+                }
+            }
+            Some(ClientFriendlyShipyardState::Building(b)) => {
+                p.spawn((
+                    Text::new("Building"),
+                    TextFont {
+                        font_size: 24.0,
+                        font: font.get(),
+                        ..Default::default()
+                    },
+                    Node { ..Default::default() },
+                ));
+
+                p.spawn((
+                    CosmosButton {
+                        text: Some((
+                            "Pause".into(),
+                            TextFont {
+                                font_size: 20.0,
+                                font: font.get(),
+                                ..Default::default()
+                            },
+                            Default::default(),
+                        )),
+                        ..Default::default()
+                    },
+                    Node {
+                        padding: UiRect::all(Val::Px(8.0)),
+                        ..Default::default()
+                    },
+                ))
+                .observe(
+                    move |_trigger: Trigger<ButtonEvent>, mut nevw_change_shipyard_state: NettyEventWriter<ClientSetShipyardState>| {
+                        nevw_change_shipyard_state.write(ClientSetShipyardState::Pause { controller: block });
+                    },
+                );
+
+                // Sort by amt required
+                let mut items_needed = b
+                    .need_items
+                    .iter()
+                    .map(|(a, b)| (blocks.from_numeric_id(*a), *b))
+                    .collect::<Vec<_>>();
+
+                items_needed.sort_unstable_by_key(|x| !x.1);
+
+                for (block, qty) in items_needed {
+                    p.spawn((
+                        Text::new(format!("{} - {}", lang.get_name_or_unlocalized(block), qty)),
+                        TextFont {
+                            font_size: 20.0,
+                            font: font.get(),
+                            ..Default::default()
+                        },
+                        Node { ..Default::default() },
+                    ));
+                }
+            }
             Some(ClientFriendlyShipyardState::Deconstructing(e)) => {}
         });
 }

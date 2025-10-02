@@ -1,4 +1,4 @@
-use std::time::Duration;
+use std::{cell::RefCell, rc::Rc, time::Duration};
 
 use bevy::{ecs::component::HookContext, platform::collections::HashMap, prelude::*, time::common_conditions::on_timer};
 use bevy_rapier3d::prelude::{RigidBody, Velocity};
@@ -11,7 +11,7 @@ use cosmos_core::{
         data::BlockData,
         multiblock::prelude::*,
     },
-    ecs::NeedsDespawned,
+    ecs::{NeedsDespawned, sets::FixedUpdateSet},
     entities::player::Player,
     events::{
         block_events::{BlockChangedEvent, BlockDataSystemParams},
@@ -213,6 +213,7 @@ fn on_set_blueprint(
     mut commands: Commands,
     mut bs_params: BlockDataSystemParams,
     mut nevw_notification: NettyEventWriter<Notification>,
+    q_global_trans: Query<&GlobalTransform>,
 ) {
     for ev in nevr_set_shipyard_blueprint.read() {
         let structure_ent = ev.shipyard_block.structure();
@@ -304,15 +305,20 @@ fn on_set_blueprint(
 
         // 3. Attach data to block
 
+        let station_global_trans = q_global_trans.get(structure_ent).expect("Station missing global trans??");
+
         let entity = commands
             .spawn((
                 Name::new("Ship being built"),
                 Velocity::default(),
                 Ship,
                 ShipNeedsCreated,
-                Transform::from_translation(ship_origin),
+                Transform::from_rotation(station_global_trans.rotation()),
                 Location::default(),
-                SetPosition::Location,
+                SetPosition::RelativeTo {
+                    entity: structure_ent,
+                    offset: ship_origin,
+                },
                 Structure::Full(FullStructure::new(ChunkCoordinate::new(10, 10, 10))),
                 RigidBody::Fixed,
                 StructureBeingBuilt,
@@ -426,12 +432,51 @@ fn add_shipyard_state_hooks(world: &mut World) {
         });
 }
 
+fn on_change_shipyard_state(
+    mut nevr_change_shipyard_state: EventReader<NettyEventReceived<ClientSetShipyardState>>,
+    q_structure: Query<&Structure>,
+    mut q_shipyard_state: Query<&mut ShipyardState>,
+    bs_params: BlockDataSystemParams,
+) {
+    let bs_params = Rc::new(RefCell::new(bs_params));
+    for ev in nevr_change_shipyard_state.read() {
+        let controller = ev.controller();
+        let Ok(structure) = q_structure.get(controller.structure()) else {
+            continue;
+        };
+
+        let Some(mut cur_state) = structure.query_block_data_mut(controller.coords(), &mut q_shipyard_state, bs_params.clone()) else {
+            continue;
+        };
+
+        match &ev.event {
+            ClientSetShipyardState::Deconstruct { controller: _ } => {
+                error!("Not implemented yet!");
+            }
+            ClientSetShipyardState::Unpause { controller: _ } => match &**cur_state {
+                ShipyardState::Paused(d) => **cur_state = ShipyardState::Building(d.clone()),
+                _ => {}
+            },
+            ClientSetShipyardState::Pause { controller: _ } => match &**cur_state {
+                ShipyardState::Building(d) => **cur_state = ShipyardState::Paused(d.clone()),
+                _ => {}
+            },
+        }
+    }
+}
+
 pub(super) fn register(app: &mut App) {
     app.add_systems(
         FixedUpdate,
-        (on_place_blocks_impacting_shipyard, interact_with_shipyard, dont_move_being_built)
+        (
+            on_place_blocks_impacting_shipyard,
+            interact_with_shipyard,
+            dont_move_being_built,
+            on_change_shipyard_state,
+        )
             .chain()
-            .in_set(BlockEventsSet::ProcessEvents),
+            .in_set(BlockEventsSet::ProcessEvents)
+            .before(FixedUpdateSet::PrePhysics),
     )
     .add_systems(
         FixedUpdate,

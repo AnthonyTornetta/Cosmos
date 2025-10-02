@@ -70,7 +70,7 @@ impl Shipyards {
     }
 }
 
-#[derive(Debug, Reflect, Serialize, Deserialize)]
+#[derive(Debug, Reflect, Serialize, Deserialize, Clone)]
 pub struct ShipyardDoingBlueprint {
     pub blocks_todo: Vec<(BlockCoordinate, u16, BlockInfo)>,
     pub total_blocks_count: HashMap<u16, u32>,
@@ -133,10 +133,19 @@ impl SyncableComponent for ClientFriendlyShipyardState {
 
 #[derive(Debug, Event, Serialize, Deserialize, Clone, Copy)]
 pub enum ClientSetShipyardState {
-    Paused,
-    Unpause,
-    BuildFromItem { slot: u32 },
-    Deconstruct,
+    Pause { controller: StructureBlock },
+    Unpause { controller: StructureBlock },
+    Deconstruct { controller: StructureBlock },
+}
+
+impl ClientSetShipyardState {
+    pub fn controller(&self) -> StructureBlock {
+        match *self {
+            Self::Pause { controller } => controller,
+            Self::Unpause { controller } => controller,
+            Self::Deconstruct { controller } => controller,
+        }
+    }
 }
 
 impl IdentifiableEvent for ClientSetShipyardState {
@@ -148,6 +157,22 @@ impl IdentifiableEvent for ClientSetShipyardState {
 impl NettyEvent for ClientSetShipyardState {
     fn event_receiver() -> crate::netty::sync::events::netty_event::EventReceiver {
         crate::netty::sync::events::netty_event::EventReceiver::Server
+    }
+
+    #[cfg(feature = "client")]
+    fn needs_entity_conversion() -> bool {
+        true
+    }
+
+    #[cfg(feature = "client")]
+    fn convert_entities_client_to_server(self, mapping: &crate::netty::sync::mapping::NetworkMapping) -> Option<Self> {
+        use crate::netty::sync::mapping::Mappable;
+
+        self.controller().map_to_server(&mapping).ok().map(|controller| match self {
+            Self::Pause { controller: _ } => Self::Pause { controller },
+            Self::Unpause { controller: _ } => Self::Unpause { controller },
+            Self::Deconstruct { controller: _ } => Self::Deconstruct { controller },
+        })
     }
 }
 
