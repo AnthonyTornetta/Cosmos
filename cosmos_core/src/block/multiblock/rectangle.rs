@@ -22,6 +22,7 @@ pub struct RectangleMultiblockBounds {
 }
 
 impl RectangleMultiblockBounds {
+    /// Returns the size of these bounds (pos - neg)
     pub fn size(&self) -> BlockCoordinate {
         (self.positive_coords - self.negative_coords)
             .try_into()

@@ -62,12 +62,6 @@ fn on_grab_creative_item(
             continue;
         };
 
-        if item.category().is_none() {
-            info!("Bad category");
-            // You can only get items that have a category
-            continue;
-        };
-
         if let Some(mut inv) = HeldItemStack::get_held_is_inventory_mut(player, &q_children, &mut q_held_item) {
             inv.take_itemstack_at(0, &mut commands);
 

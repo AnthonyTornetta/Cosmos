@@ -11,6 +11,7 @@ use cosmos_core::{
         data::BlockData,
         multiblock::prelude::*,
     },
+    blockitems::BlockItems,
     ecs::{NeedsDespawned, sets::FixedUpdateSet},
     entities::player::Player,
     events::{
@@ -18,7 +19,7 @@ use cosmos_core::{
         structure::structure_event::StructureEventIterator,
     },
     inventory::Inventory,
-    item::usable::blueprint::BlueprintItemData,
+    item::{Item, usable::blueprint::BlueprintItemData},
     netty::{
         server::ServerLobby,
         sync::events::server_event::{NettyEventReceived, NettyEventWriter},
@@ -207,14 +208,18 @@ fn on_set_blueprint(
     mut q_block_data: Query<&mut BlockData>,
     q_has_data: Query<(), With<ShipyardState>>,
     players: Res<ServerLobby>,
-    q_player_inventory: Query<&Inventory, With<Player>>,
+    q_player_inventory: Query<&Inventory, (With<Player>, Without<BlockData>)>,
     q_blueprint_item_data: Query<&BlueprintItemData>,
     q_shipyard: Query<&Shipyard, Without<ShipyardState>>,
     mut commands: Commands,
-    mut bs_params: BlockDataSystemParams,
+    bs_params: BlockDataSystemParams,
     mut nevw_notification: NettyEventWriter<Notification>,
     q_global_trans: Query<&GlobalTransform>,
+    mut q_inventory: Query<&mut Inventory, With<BlockData>>,
+    items: Res<Registry<Item>>,
 ) {
+    let bs_params = Rc::new(RefCell::new(bs_params));
+
     for ev in nevr_set_shipyard_blueprint.read() {
         let structure_ent = ev.shipyard_block.structure();
         let Ok(mut shipyard_structure) = q_structure.get_mut(structure_ent) else {
@@ -223,6 +228,10 @@ fn on_set_blueprint(
         let Some(shipyard) = shipyard_structure.query_block_data(ev.shipyard_block.coords(), &q_shipyard) else {
             error!("Invalid shipyard block given!");
             nevw_notification.write(Notification::error("This shipyard is already working!"), ev.client_id);
+            continue;
+        };
+
+        let Some(ship_core) = items.from_id("cosmos:ship_core") else {
             continue;
         };
 
@@ -272,18 +281,30 @@ fn on_set_blueprint(
         let shipyard_size = bounds.size();
 
         if shipyard_size.x - 1 <= structure_size.x {
-            error!("Blueprint too big!");
             nevw_notification.write(Notification::error("Ship too big for this shipyard!"), ev.client_id);
             continue;
         }
         if shipyard_size.y - 1 <= structure_size.y {
-            error!("Blueprint too big!");
             nevw_notification.write(Notification::error("Ship too big for this shipyard!"), ev.client_id);
             continue;
         }
         if shipyard_size.z - 1 <= structure_size.z {
-            error!("Blueprint too big!");
             nevw_notification.write(Notification::error("Ship too big for this shipyard!"), ev.client_id);
+            continue;
+        }
+
+        if !consume_item(
+            &mut q_inventory,
+            ev.shipyard_block.coords(),
+            &shipyard_structure,
+            ship_core,
+            bs_params.clone(),
+            &mut commands,
+        ) {
+            nevw_notification.write(
+                Notification::error("No ship core in adjacent inventory to begin building ship!"),
+                ev.client_id,
+            );
             continue;
         }
 
@@ -302,6 +323,10 @@ fn on_set_blueprint(
                 (c, id, block_info)
             })
             .collect::<Vec<_>>();
+
+        if let Some(entry) = totals_count.get_mut(&ship_core.id()) {
+            *entry -= 1;
+        }
 
         // 3. Attach data to block
 
@@ -332,7 +357,7 @@ fn on_set_blueprint(
                 total_blocks_count: totals_count,
                 creating: entity,
             }),
-            &mut bs_params,
+            &mut bs_params.borrow_mut(),
             &mut q_block_data,
             &q_has_data,
         );
@@ -346,19 +371,30 @@ fn dont_move_being_built(q_being_built: Query<Entity, Added<StructureBeingBuilt>
 }
 
 fn manage_shipyards(
-    mut q_shipyard_state: Query<(Entity, &mut ShipyardState)>,
+    mut q_shipyard_state: Query<(Entity, &mut ShipyardState, &BlockData)>,
     mut commands: Commands,
-    mut q_structure: Query<&mut Structure, With<Ship>>,
+    mut q_structure: Query<&mut Structure, (With<Ship>, With<StructureBeingBuilt>)>,
+    q_building: Query<&Structure, Without<StructureBeingBuilt>>,
     blocks: Res<Registry<Block>>,
     mut evw_block_change: EventWriter<BlockChangedEvent>,
+    bs_params: BlockDataSystemParams,
+    items: Res<Registry<Item>>,
+    block_items: Res<BlockItems>,
+    mut q_inventory: Query<&mut Inventory, With<BlockData>>,
 ) {
-    for (ent, mut state) in q_shipyard_state.iter_mut() {
+    let bs_params = Rc::new(RefCell::new(bs_params));
+
+    for (ent, mut state, block_data) in q_shipyard_state.iter_mut() {
         match state.as_mut() {
             ShipyardState::Paused(_) => {
                 continue;
             }
             ShipyardState::Building(doing_bp) => {
                 let Ok(mut structure) = q_structure.get_mut(doing_bp.creating) else {
+                    continue;
+                };
+
+                let Ok(shipyard_structure) = q_building.get(block_data.structure()) else {
                     continue;
                 };
 
@@ -387,6 +423,28 @@ fn manage_shipyards(
                     error!("Missing block id {block}");
                     continue;
                 };
+
+                let Some(block_item) = block_items.item_from_block(block).map(|id| items.from_numeric_id(id)) else {
+                    error!("Missing item for block {block:?}");
+                    continue;
+                };
+
+                if !consume_item(
+                    &mut q_inventory,
+                    block_data.coords(),
+                    &shipyard_structure,
+                    block_item,
+                    bs_params.clone(),
+                    &mut commands,
+                ) {
+                    if let Some(count) = doing_bp.total_blocks_count.get_mut(&block.id()) {
+                        *count += 1;
+                    } else {
+                        doing_bp.total_blocks_count.insert(block.id(), 1);
+                    }
+                    info!("Missing item {block_item:?} for shipyard");
+                    continue;
+                }
 
                 structure.set_block_and_info_at(coords, block, info, &blocks, Some(&mut evw_block_change));
             }
@@ -465,14 +523,47 @@ fn on_change_shipyard_state(
     }
 }
 
+fn create_client_friendly_state(mut commands: Commands, q_state: Query<(Entity, &ShipyardState), Changed<ShipyardState>>) {
+    for (ent, state) in q_state.iter() {
+        commands.entity(ent).insert(state.as_client_friendly());
+    }
+}
+
+fn consume_item(
+    q_inventory: &mut Query<&mut Inventory, With<BlockData>>,
+    center: BlockCoordinate,
+    structure: &Structure,
+    item: &Item,
+    bs_params: Rc<RefCell<BlockDataSystemParams>>,
+    commands: &mut Commands,
+) -> bool {
+    for dir in ALL_BLOCK_DIRECTIONS.iter().copied() {
+        let Ok(coord) = BlockCoordinate::try_from(dir.to_coordinates() + center) else {
+            continue;
+        };
+
+        if !structure.is_within_blocks(coord) {
+            continue;
+        }
+
+        if let Some(mut inv) = structure.query_block_data_mut(coord, q_inventory, bs_params.clone()) {
+            if inv.take_and_remove_item(item, 1, commands).0 == 0 {
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
 pub(super) fn register(app: &mut App) {
     app.add_systems(
         FixedUpdate,
         (
             on_place_blocks_impacting_shipyard,
+            on_change_shipyard_state,
             interact_with_shipyard,
             dont_move_being_built,
-            on_change_shipyard_state,
+            create_client_friendly_state,
         )
             .chain()
             .in_set(BlockEventsSet::ProcessEvents)

@@ -3,7 +3,10 @@
 use bevy::prelude::*;
 use serde::{Deserialize, Serialize};
 
-use crate::structure::{coordinates::ChunkBlockCoordinate, structure_block::StructureBlock};
+use crate::{
+    prelude::BlockCoordinate,
+    structure::{coordinates::ChunkBlockCoordinate, structure_block::StructureBlock},
+};
 
 pub mod persistence;
 
@@ -42,6 +45,15 @@ impl BlockData {
     /// Returns true if this [`BlockData`] entity contains no actual data
     pub fn is_empty(&self) -> bool {
         self.data_count == 0
+    }
+
+    /// Returns the coordinates this block has on the structure
+    pub fn coords(&self) -> BlockCoordinate {
+        self.identifier.block.coords()
+    }
+
+    pub fn structure(&self) -> Entity {
+        self.identifier.block.structure()
     }
 }
 
