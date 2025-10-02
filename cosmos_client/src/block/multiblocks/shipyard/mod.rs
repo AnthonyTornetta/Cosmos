@@ -257,7 +257,7 @@ fn create_shipyard_ui(
 
                 // Sort by amt required
                 let mut items_needed = d
-                    .need_items
+                    .remaining_blocks
                     .iter()
                     .map(|(a, b)| (blocks.from_numeric_id(*a), *b))
                     .collect::<Vec<_>>();
@@ -313,7 +313,7 @@ fn create_shipyard_ui(
 
                 // Sort by amt required
                 let mut items_needed = b
-                    .need_items
+                    .remaining_blocks
                     .iter()
                     .map(|(a, b)| (blocks.from_numeric_id(*a), *b))
                     .collect::<Vec<_>>();
@@ -332,7 +332,9 @@ fn create_shipyard_ui(
                     ));
                 }
             }
-            Some(ClientFriendlyShipyardState::Deconstructing(e)) => {}
+            Some(ClientFriendlyShipyardState::Deconstructing(e)) => {
+                p.spawn(Text::new(format!("DECONSTRUCTING TODO {e:?}")));
+            }
         });
 }
 

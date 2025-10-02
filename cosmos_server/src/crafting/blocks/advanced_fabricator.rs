@@ -17,10 +17,7 @@ use cosmos_core::{
     item::Item,
     netty::{
         server::ServerLobby,
-        sync::events::{
-            netty_event::SyncedEventImpl,
-            server_event::{NettyEventReceived, NettyEventWriter},
-        },
+        sync::events::server_event::{NettyEventReceived, NettyEventWriter},
     },
     prelude::Structure,
     registry::{Registry, identifiable::Identifiable},

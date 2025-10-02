@@ -21,7 +21,6 @@ use cosmos_core::{
     structure::{
         blueprint::{Blueprint, BlueprintOld},
         loading::StructureLoadingSet,
-        persistence::DeserializationError,
         systems::StructureSystemsSet,
     },
 };
@@ -169,6 +168,7 @@ fn check_blueprint_needs_loaded(query: Query<(Entity, &NeedsBlueprintLoaded), Wi
     }
 }
 
+/// Loads a blueprint from the given file path
 pub fn load_blueprint(path: &str) -> Result<Blueprint, Box<bincode::error::DecodeError>> {
     let Ok(data) = fs::read(path) else {
         error!("Error reading file at '{path}'. Is it there?");

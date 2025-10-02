@@ -500,8 +500,10 @@ pub(super) enum SettingsMenuSet {
 }
 
 #[derive(Event, Debug)]
+/// Sent when the Settings Cancel button is clicked
 pub struct SettingsCancelButtonEvent(pub Entity);
 #[derive(Event, Debug)]
+/// Sent when the Settings Done button is clicked
 pub struct SettingsDoneButtonEvent(pub Entity);
 
 pub(super) fn register(app: &mut App) {
@@ -516,11 +518,6 @@ pub(super) fn register(app: &mut App) {
             (listen_for_inputs, on_change_setting_value)
                 .chain()
                 .in_set(SettingsMenuSet::SettingsMenuInteractions),
-            // controls_close
-            //     .run_if(on_event::<ControlsCancelButtonEvent>.or(on_event::<ControlsDoneButtonEvent>))
-            //     .run_if(in_main_menu_state(MainMenuSubState::Settings))
-            //     .in_set(MainMenuSystemSet::UpdateMenu)
-            //     .after(ControlsMenuSet::ControlsMenuInteractions),
         ),
     )
     .register_type::<WrittenSetting>()

@@ -52,6 +52,7 @@ impl BlockData {
         self.identifier.block.coords()
     }
 
+    /// Returns the structure this block data is a part of
     pub fn structure(&self) -> Entity {
         self.identifier.block.structure()
     }

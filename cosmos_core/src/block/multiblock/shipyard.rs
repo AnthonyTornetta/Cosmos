@@ -2,20 +2,15 @@
 
 use crate::{
     block::{data::BlockData, multiblock::rectangle::RectangleMultiblockBounds},
-    item::usable::blueprint::BlueprintItemData,
     netty::sync::{
         IdentifiableComponent, SyncableComponent,
         events::netty_event::{IdentifiableEvent, NettyEvent, SyncedEventImpl},
         sync_component,
     },
-    prelude::{BlockCoordinate, FullStructure, Structure, StructureBlock},
+    prelude::{BlockCoordinate, StructureBlock},
     structure::chunk::BlockInfo,
 };
-use bevy::{
-    ecs::component::HookContext,
-    platform::collections::{HashMap, HashSet},
-    prelude::*,
-};
+use bevy::{ecs::component::HookContext, platform::collections::HashMap, prelude::*};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Component, Reflect, Serialize, Deserialize, PartialEq, Eq, Clone)]
@@ -71,34 +66,49 @@ impl Shipyards {
 }
 
 #[derive(Debug, Reflect, Serialize, Deserialize, Clone)]
+/// A shipyard is creating a blueprint
 pub struct ShipyardDoingBlueprint {
+    /// The blocks remaining to be placed
     pub blocks_todo: Vec<(BlockCoordinate, u16, BlockInfo)>,
+    /// The total blocks of that type left to place (block id, amount left)
     pub total_blocks_count: HashMap<u16, u32>,
+    /// The structure we are creating
     pub creating: Entity,
 }
 
 #[derive(Debug, Reflect, Serialize, Deserialize, PartialEq, Eq, Clone)]
+/// The version of [`ShipyardDoingBlueprint`] that the client needs to know about
+///
+/// This is automatically updated when [`ShipyardDoingBlueprint`] changes
 pub struct ClientFriendlyShipyardDoingBlueprint {
-    pub need_items: HashMap<u16, u32>,
+    /// The remaining blocks we stil need to place
+    pub remaining_blocks: HashMap<u16, u32>,
+    /// The entity we are creating
     pub creating: Entity,
 }
 
 #[derive(Debug, Reflect, Component, Serialize, Deserialize)]
+/// Represents the state a shipyard is in
 pub enum ShipyardState {
+    /// The shipyard is currently paused - storing data for `ShipyardState::Building` but not
+    /// doing any of the building.
     Paused(ShipyardDoingBlueprint),
+    /// The shipyard is currently trying to build a ship
     Building(ShipyardDoingBlueprint),
+    /// The shipyard is currently removing the blocks of whatever ship is inside of its bounds
     Deconstructing(Entity),
 }
 
 impl ShipyardState {
+    /// Returns this state as the version that should be sent to the client(s) that care
     pub fn as_client_friendly(&self) -> ClientFriendlyShipyardState {
         match self {
             Self::Paused(p) => ClientFriendlyShipyardState::Paused(ClientFriendlyShipyardDoingBlueprint {
-                need_items: p.total_blocks_count.clone(),
+                remaining_blocks: p.total_blocks_count.clone(),
                 creating: p.creating,
             }),
             Self::Building(p) => ClientFriendlyShipyardState::Building(ClientFriendlyShipyardDoingBlueprint {
-                need_items: p.total_blocks_count.clone(),
+                remaining_blocks: p.total_blocks_count.clone(),
                 creating: p.creating,
             }),
             Self::Deconstructing(p) => ClientFriendlyShipyardState::Deconstructing(*p),
@@ -107,9 +117,14 @@ impl ShipyardState {
 }
 
 #[derive(Debug, Reflect, Component, Serialize, Deserialize, PartialEq, Eq, Clone)]
+/// A client-friendly version of the [`ShipyardState`]. This is sent to the client instead of
+/// [`ShipyardState`].
 pub enum ClientFriendlyShipyardState {
+    /// See [`ShipyardState::Paused`]
     Paused(ClientFriendlyShipyardDoingBlueprint),
+    /// See [`ShipyardState::Building`]
     Building(ClientFriendlyShipyardDoingBlueprint),
+    /// See [`ShipyardState::Deconstructing`]
     Deconstructing(Entity),
 }
 
@@ -129,16 +144,54 @@ impl SyncableComponent for ClientFriendlyShipyardState {
     fn get_sync_type() -> crate::netty::sync::SyncType {
         crate::netty::sync::SyncType::ServerAuthoritative
     }
+
+    #[cfg(feature = "client")]
+    fn convert_entities_server_to_client(self, mapping: &crate::netty::sync::mapping::NetworkMapping) -> Option<Self> {
+        match self {
+            ClientFriendlyShipyardState::Paused(d) => {
+                let creating = mapping.client_from_server(&d.creating)?;
+                Some(Self::Paused(ClientFriendlyShipyardDoingBlueprint {
+                    creating,
+                    remaining_blocks: d.remaining_blocks,
+                }))
+            }
+            ClientFriendlyShipyardState::Building(d) => {
+                let creating = mapping.client_from_server(&d.creating)?;
+                Some(Self::Building(ClientFriendlyShipyardDoingBlueprint {
+                    creating,
+                    remaining_blocks: d.remaining_blocks,
+                }))
+            }
+            ClientFriendlyShipyardState::Deconstructing(e) => {
+                let entity = mapping.client_from_server(&e)?;
+                Some(Self::Deconstructing(entity))
+            }
+        }
+    }
 }
 
 #[derive(Debug, Event, Serialize, Deserialize, Clone, Copy)]
+/// Client->Server to request setting a shipyards state.
 pub enum ClientSetShipyardState {
-    Pause { controller: StructureBlock },
-    Unpause { controller: StructureBlock },
-    Deconstruct { controller: StructureBlock },
+    /// Sets the state to paused (if building - otherwise does nothing)
+    Pause {
+        /// The block that has the `cosmos:shipyard_controller`
+        controller: StructureBlock,
+    },
+    /// Sets state back to building (if paused - otherwise does nothing)
+    Unpause {
+        /// The block that has the `cosmos:shipyard_controller`
+        controller: StructureBlock,
+    },
+    /// Sets the state to deconstructing (if not currently in any state - otherwise does nothing)
+    Deconstruct {
+        /// The block that has the `cosmos:shipyard_controller`
+        controller: StructureBlock,
+    },
 }
 
 impl ClientSetShipyardState {
+    /// Returns the block the `cosmos:shipyard_controller` is at.
     pub fn controller(&self) -> StructureBlock {
         match *self {
             Self::Pause { controller } => controller,
@@ -177,7 +230,11 @@ impl NettyEvent for ClientSetShipyardState {
 }
 
 #[derive(Event, Debug, Serialize, Deserialize, Clone, Copy)]
+/// Server->client
+///
+/// Triggers the client to display a shipyard's UI
 pub struct ShowShipyardUi {
+    /// The shipyard controller block
     pub shipyard_block: StructureBlock,
 }
 impl IdentifiableEvent for ShowShipyardUi {
@@ -208,8 +265,14 @@ impl NettyEvent for ShowShipyardUi {
 }
 
 #[derive(Event, Debug, Serialize, Deserialize, Clone, Copy)]
+/// Client->Server
+///
+/// Requests the server to set the shipyard's blueprint based on the given item in the player's
+/// inventory (should be a `cosmos:blueprint`)
 pub struct SetShipyardBlueprint {
+    /// The shipyard controller's block coordinate
     pub shipyard_block: StructureBlock,
+    /// The slot in the player's inventory the blueprint is at
     pub blueprint_slot: u32,
 }
 

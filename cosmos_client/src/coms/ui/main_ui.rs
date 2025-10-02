@@ -1,6 +1,6 @@
 use crate::{
     asset::asset_loader::load_assets,
-    input::inputs::{CosmosInputs, InputChecker, InputHandler},
+    input::inputs::CosmosInputs,
     ui::{
         CloseMenuEvent, CloseMethod, OpenMenu,
         components::{
@@ -349,7 +349,8 @@ fn create_coms_ui(
                     },
                     ToggleButton,
                     BackgroundColor(accent),
-                ));
+                ))
+                .observe(on_toggle);
                 p.spawn((
                     Name::new("Body"),
                     Node {
@@ -619,7 +620,6 @@ fn on_not_pilot(
 fn on_toggle(
     _trigger: Trigger<ButtonEvent>,
     mut commands: Commands,
-    inputs: InputChecker,
     mut q_selected_coms: Query<&mut SelectedComs>,
     mut q_coms_ui: Query<(Entity, &mut Node, Has<ShowCursor>), With<ComsUi>>,
     coms_assets: Res<ComsAssets>,
@@ -629,10 +629,6 @@ fn on_toggle(
     q_local_player: Query<Entity, With<LocalPlayer>>,
     q_pilot: Query<&Pilot>,
 ) {
-    if inputs.check_just_pressed(CosmosInputs::ToggleComs) {
-        return;
-    }
-
     let Ok(lp) = q_local_player.single() else {
         return;
     };
@@ -735,7 +731,6 @@ fn send_text(
     mut nevw_send_coms_message: NettyEventWriter<SendComsMessage>,
     q_selected_coms: Query<&SelectedComs>,
     mut q_text_value: Query<&mut InputValue, With<UiComsMessage>>,
-    inputs: InputChecker,
     q_coms_channel: Query<&ComsChannel>,
 ) {
     let Ok(mut text) = q_text_value.single_mut() else {

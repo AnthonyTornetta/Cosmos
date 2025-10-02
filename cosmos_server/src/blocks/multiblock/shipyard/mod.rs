@@ -28,16 +28,21 @@ impl DefaultPersistentComponent for StructureBeingBuilt {}
 impl DefaultPersistentComponent for Shipyard {}
 
 #[derive(Debug, Reflect, Serialize, Deserialize)]
+/// The serialized version of [`ShipyardDoingBlueprint`] stored on disk
 pub struct SerializedShipyardDoingBlueprint {
-    pub blocks_todo: Vec<(BlockCoordinate, u16, BlockInfo)>,
-    pub total_blocks_count: HashMap<u16, u32>,
-    pub creating: EntityId,
+    blocks_todo: Vec<(BlockCoordinate, u16, BlockInfo)>,
+    total_blocks_count: HashMap<u16, u32>,
+    creating: EntityId,
 }
 
 #[derive(Debug, Reflect, Serialize, Deserialize)]
+/// The serialized version of [`ShipyardState`] stored on disk
 pub enum SerializedShipyardState {
+    /// See [`ShipyardState`]
     Paused(SerializedShipyardDoingBlueprint),
+    /// See [`ShipyardState`]
     Building(SerializedShipyardDoingBlueprint),
+    /// See [`ShipyardState`]
     Deconstructing(EntityId),
 }
 

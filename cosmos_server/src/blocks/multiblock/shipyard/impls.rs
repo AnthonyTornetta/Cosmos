@@ -163,6 +163,7 @@ fn interact_with_shipyard(
     q_has_data: Query<(), With<Shipyard>>,
     mut nevw_open_ui: NettyEventWriter<ShowShipyardUi>,
     q_player: Query<&Player>,
+    mut nevw_notification: NettyEventWriter<Notification>,
 ) {
     for ev in evr_interact.read() {
         let Some(b) = ev.block else {
@@ -199,7 +200,28 @@ fn interact_with_shipyard(
 
         let shipyard = match compute_shipyard(&structure, b.coords(), frame.id()) {
             Err(e) => {
-                error!("{e}");
+                match e {
+                    ShipyardError::MissingFrames => {
+                        nevw_notification.write(
+                            Notification::error("The shipyard is missing frames (min size 5x5x5)."),
+                            player.client_id(),
+                        );
+                    }
+                    ShipyardError::FrameNotClear(block) => {
+                        nevw_notification.write(
+                            Notification::error(format!("The shipyard is not clear of blocks. ({block})")),
+                            player.client_id(),
+                        );
+                    }
+                    ShipyardError::ControllerTouchingTooManyFrames(block) => {
+                        nevw_notification.write(
+                            Notification::error(format!("The controller can only be used for one shipyard. ({block})")),
+                            player.client_id(),
+                        );
+                    }
+                }
+
+                info!("{e}");
                 continue;
             }
             Ok(shipyard) => shipyard,
@@ -235,7 +257,6 @@ fn on_set_blueprint(
             continue;
         };
         let Some(shipyard) = shipyard_structure.query_block_data(ev.shipyard_block.coords(), &q_shipyard) else {
-            error!("Invalid shipyard block given!");
             nevw_notification.write(Notification::error("This shipyard is already working!"), ev.client_id);
             continue;
         };

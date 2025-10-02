@@ -712,7 +712,7 @@ fn render_shop_ui(
                                 ..Default::default()
                             },
                         ))
-                        .observe(click_buy_tab)
+                        .observe(on_buy)
                         .id();
                 });
             });
