@@ -43,7 +43,9 @@ fn on_place_blocks_impacting_shipyard(
     q_shipyard: Query<(&Shipyard, Entity)>,
     mut q_block_data: Query<&mut BlockData>,
     mut bs_params: BlockDataSystemParams,
-    q_has_data: Query<(), With<Shipyard>>,
+    q_has_shipyard_data: Query<(), With<Shipyard>>,
+    q_has_shipyard_state_data: Query<(), With<ShipyardState>>,
+    q_has_shipyard_client_data: Query<(), With<ClientFriendlyShipyardState>>,
 ) {
     for (structure, bce) in evr_block_changed_event.read().group_by_structure() {
         let Ok((shipyards, mut structure)) = q_shipyards.get_mut(structure) else {
@@ -62,7 +64,14 @@ fn on_place_blocks_impacting_shipyard(
                 };
                 let block_coords = block_coords.identifier.block.coords();
 
-                structure.remove_block_data::<Shipyard>(block_coords, &mut bs_params, &mut q_block_data, &q_has_data);
+                structure.remove_block_data::<Shipyard>(block_coords, &mut bs_params, &mut q_block_data, &q_has_shipyard_data);
+                structure.remove_block_data::<ShipyardState>(block_coords, &mut bs_params, &mut q_block_data, &q_has_shipyard_state_data);
+                structure.remove_block_data::<ClientFriendlyShipyardState>(
+                    block_coords,
+                    &mut bs_params,
+                    &mut q_block_data,
+                    &q_has_shipyard_client_data,
+                );
             }
         }
     }
