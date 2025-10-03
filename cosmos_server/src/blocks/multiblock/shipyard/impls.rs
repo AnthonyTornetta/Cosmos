@@ -221,7 +221,6 @@ fn interact_with_shipyard(
                     }
                 }
 
-                info!("{e}");
                 continue;
             }
             Ok(shipyard) => shipyard,
@@ -429,8 +428,11 @@ fn manage_shipyards(
                 };
 
                 let Some((coords, block, info)) = doing_bp.blocks_todo.pop() else {
-                    info!("Done building ship!");
-                    commands.entity(ent).remove::<ShipyardState>();
+                    info!("Done building ship in shipyard!");
+                    commands
+                        .entity(ent)
+                        .remove::<ShipyardState>()
+                        .remove::<ClientFriendlyShipyardState>();
                     commands
                         .entity(doing_bp.creating)
                         .remove::<StructureBeingBuilt>()
@@ -467,12 +469,12 @@ fn manage_shipyards(
                     bs_params.clone(),
                     &mut commands,
                 ) {
+                    doing_bp.blocks_todo.insert(0, (coords, block.id(), info));
                     if let Some(count) = doing_bp.total_blocks_count.get_mut(&block.id()) {
                         *count += 1;
                     } else {
                         doing_bp.total_blocks_count.insert(block.id(), 1);
                     }
-                    info!("Missing item {block_item:?} for shipyard");
                     continue;
                 }
 
