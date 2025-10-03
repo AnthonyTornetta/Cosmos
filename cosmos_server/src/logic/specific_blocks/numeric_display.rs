@@ -8,7 +8,7 @@ use cosmos_core::{
     block::{
         Block, block_face::BlockFace, block_rotation::BlockRotation, data::BlockData, specific_blocks::numeric_display::NumericDisplayValue,
     },
-    events::block_events::BlockDataSystemParams,
+    events::block_events::{BlockChangedEvent, BlockDataSystemParams},
     prelude::BlockCoordinate,
     registry::{Registry, identifiable::Identifiable},
     structure::{Structure, coordinates::BoundsError},
@@ -25,6 +25,10 @@ fn register_logic_ports(blocks: Res<Registry<Block>>, mut registry: ResMut<Regis
     }
 }
 
+/// Handles changes to the input value of "root" displays (those show the "ones" digit).
+///
+/// Also handles updating child display values after a display is placed next to an
+/// existing root, since its logic input of 0 is processed after it's placed.
 fn numeric_display_input_event_listener(
     mut evr_logic_input: EventReader<LogicInputEvent>,
     blocks: Res<Registry<Block>>,
@@ -33,7 +37,7 @@ fn numeric_display_input_event_listener(
     mut q_logic_data: Query<&mut BlockLogicData>,
     mut q_numeric_display_value: Query<&mut NumericDisplayValue>,
     bs_params: BlockDataSystemParams,
-    q_has_data: Query<(), With<BlockLogicData>>,
+    q_has_logic_data: Query<(), With<BlockLogicData>>,
     q_has_display_value: Query<(), With<NumericDisplayValue>>,
     mut q_block_data: Query<&mut BlockData>,
 ) {
@@ -49,68 +53,144 @@ fn numeric_display_input_event_listener(
         let Ok(logic_driver) = q_logic_driver.get_mut(ev.block.structure()) else {
             continue;
         };
+
+        // Sets the block's logic data, not necessary for rendering.
         let rotation = structure.block_rotation(coords);
+        let logic_value = BlockLogicData(logic_driver.read_input(coords, rotation.direction_of(BlockFace::Left)));
+        if let Some(mut logic_data) = structure.query_block_data_mut(coords, &mut q_logic_data, bs_params.clone()) {
+            if **logic_data != logic_value {
+                **logic_data = logic_value;
+            }
+        } else if logic_value.0 != 0 {
+            structure.insert_block_data(
+                coords,
+                logic_value,
+                &mut bs_params.borrow_mut(),
+                &mut q_block_data,
+                &q_has_logic_data,
+            );
+        }
 
         // The root numeric display is the leftmost one in the line (with the exposed input port).
+        let rotation = structure.block_rotation(coords);
         let left_direction = rotation.direction_of(BlockFace::Left);
-        let mut steps_to_root_display = 0;
-        let mut root_display_coords = coords;
+        let mut steps_to_root = 0;
+        let mut root_coords = coords;
         let mut check_coords = coords.step(left_direction);
-        while let Some(display_coords) = aligned_display_coords(&check_coords, rotation, &structure, &blocks) {
-            steps_to_root_display += 1;
-            root_display_coords = display_coords;
-            check_coords = root_display_coords.step(left_direction);
+        while let Some(display_coords) = check_for_aligned_display(&check_coords, rotation, &structure, &blocks) {
+            steps_to_root += 1;
+            root_coords = display_coords;
+            check_coords = root_coords.step(left_direction);
         }
-        let root_display_logic_value = BlockLogicData(logic_driver.read_input(root_display_coords, left_direction));
 
-        // Updates the display value on the numeric display from the current event.
-        let display_string = root_display_logic_value.0.to_string();
-        let mut character_iterator = display_string.chars().rev();
-        display_character_at(
-            character_iterator.nth(steps_to_root_display),
+        update_child_displays(
             coords,
+            root_coords,
+            steps_to_root,
             &mut structure,
+            &logic_driver,
             &mut q_numeric_display_value,
             &mut q_block_data,
             &q_has_display_value,
-            bs_params.clone(),
+            &bs_params,
+            &blocks,
         );
-
-        // Updates the display values of every numeric display to the right.
-        // This is necessary for when the current numeric display connected two existing displays.
-        let right_direction = rotation.direction_of(BlockFace::Right);
-        check_coords = coords.step(right_direction);
-        while let Some(display_coords) = aligned_display_coords(&check_coords, rotation, &structure, &blocks) {
-            display_character_at(
-                character_iterator.next(),
-                display_coords,
-                &mut structure,
-                &mut q_numeric_display_value,
-                &mut q_block_data,
-                &q_has_display_value,
-                bs_params.clone(),
-            );
-            check_coords = display_coords.step(right_direction);
-        }
-
-        // Sets the block's logic data, not necessary for rendering.
-        if let Some(mut logic_data) = structure.query_block_data_mut(coords, &mut q_logic_data, bs_params.clone()) {
-            if **logic_data != root_display_logic_value {
-                **logic_data = root_display_logic_value;
-            }
-        } else if root_display_logic_value.0 != 0 {
-            structure.insert_block_data(
-                coords,
-                root_display_logic_value,
-                &mut bs_params.borrow_mut(),
-                &mut q_block_data,
-                &q_has_data,
-            );
-        }
     }
 }
 
-fn aligned_display_coords(
+/// Handles updating child display values after a display closer to the root is broken.
+fn numeric_display_block_broken_event_listener(
+    mut evr_block_changed: EventReader<BlockChangedEvent>,
+    blocks: Res<Registry<Block>>,
+    mut q_logic_driver: Query<&mut LogicDriver>,
+    mut q_structure: Query<&mut Structure>,
+    mut q_numeric_display_value: Query<&mut NumericDisplayValue>,
+    bs_params: BlockDataSystemParams,
+    q_has_display_value: Query<(), With<NumericDisplayValue>>,
+    mut q_block_data: Query<&mut BlockData>,
+) {
+    let bs_params = Rc::new(RefCell::new(bs_params));
+    for ev in evr_block_changed.read() {
+        if blocks.from_numeric_id(ev.old_block).unlocalized_name() != "cosmos:numeric_display" {
+            continue;
+        };
+        let Ok(mut structure) = q_structure.get_mut(ev.block.structure()) else {
+            continue;
+        };
+        let Ok(logic_driver) = q_logic_driver.get_mut(ev.block.structure()) else {
+            continue;
+        };
+
+        let coords = ev.block.coords();
+        let rotation = ev.old_block_rotation();
+        let check_coords = coords.step(rotation.direction_of(BlockFace::Right));
+
+        let Some(root_coords) = check_for_aligned_display(&check_coords, rotation, &structure, &blocks) else {
+            continue;
+        };
+
+        update_child_displays(
+            root_coords,
+            root_coords,
+            0,
+            &mut structure,
+            &logic_driver,
+            &mut q_numeric_display_value,
+            &mut q_block_data,
+            &q_has_display_value,
+            &bs_params,
+            &blocks,
+        );
+    }
+}
+
+fn update_child_displays(
+    coords: BlockCoordinate,
+    root_coords: BlockCoordinate,
+    steps_to_root: usize,
+    structure: &mut Structure,
+    logic_driver: &LogicDriver,
+    q_numeric_display_value: &mut Query<&mut NumericDisplayValue>,
+    q_block_data: &mut Query<&mut BlockData>,
+    q_has_display_value: &Query<(), With<NumericDisplayValue>>,
+    block_system_params: &Rc<RefCell<BlockDataSystemParams>>,
+    blocks: &Registry<Block>,
+) {
+    let rotation = structure.block_rotation(coords);
+    let root_display_logic_value = BlockLogicData(logic_driver.read_input(root_coords, rotation.direction_of(BlockFace::Left)));
+
+    // Updates the display value on the numeric display from the current event.
+    let display_string = root_display_logic_value.0.to_string();
+    let mut character_iterator = display_string.chars().rev();
+    display_character_at(
+        character_iterator.nth(steps_to_root),
+        coords,
+        structure,
+        q_numeric_display_value,
+        q_block_data,
+        q_has_display_value,
+        block_system_params.clone(),
+    );
+
+    // Updates the display values of every numeric display to the right.
+    // This is necessary for when the current numeric display connected two existing displays.
+    let right_direction = rotation.direction_of(BlockFace::Right);
+    let mut check_coords = coords.step(right_direction);
+    while let Some(display_coords) = check_for_aligned_display(&check_coords, rotation, &structure, &blocks) {
+        display_character_at(
+            character_iterator.next(),
+            display_coords,
+            structure,
+            q_numeric_display_value,
+            q_block_data,
+            q_has_display_value,
+            block_system_params.clone(),
+        );
+        check_coords = display_coords.step(right_direction);
+    }
+}
+
+fn check_for_aligned_display(
     check_coords: &Result<BlockCoordinate, BoundsError>,
     rotation: BlockRotation,
     structure: &Structure,
@@ -165,10 +245,15 @@ fn display_character_at(
 }
 
 pub(super) fn register<T: States>(app: &mut App, post_loading_state: T) {
-    app.add_systems(OnEnter(post_loading_state), register_logic_ports).add_systems(
-        FixedUpdate,
-        numeric_display_input_event_listener
-            .in_set(LogicSystemSet::Consume)
-            .ambiguous_with(LogicSystemSet::Consume),
-    );
+    app.add_systems(OnEnter(post_loading_state), register_logic_ports)
+        .add_systems(
+            FixedUpdate,
+            numeric_display_input_event_listener
+                .in_set(LogicSystemSet::Consume)
+                .ambiguous_with(LogicSystemSet::Consume),
+        )
+        .add_systems(
+            FixedUpdate,
+            numeric_display_block_broken_event_listener.in_set(LogicSystemSet::EditLogicGraph),
+        );
 }
