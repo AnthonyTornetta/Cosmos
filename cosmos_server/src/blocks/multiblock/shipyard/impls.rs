@@ -1,7 +1,10 @@
 use std::{cell::RefCell, rc::Rc, time::Duration};
 
 use bevy::{ecs::component::HookContext, platform::collections::HashMap, prelude::*, time::common_conditions::on_timer};
-use bevy_rapier3d::prelude::{RigidBody, Velocity};
+use bevy_rapier3d::{
+    plugin::{RapierContextEntityLink, ReadRapierContext},
+    prelude::{Collider, QueryFilter, RigidBody, Velocity},
+};
 use cosmos_core::{
     block::{
         Block,
@@ -25,7 +28,10 @@ use cosmos_core::{
         sync::events::server_event::{NettyEventReceived, NettyEventWriter},
     },
     notifications::Notification,
-    physics::location::{Location, SetPosition},
+    physics::{
+        location::{Location, SetPosition},
+        structure_physics::ChunkPhysicsPart,
+    },
     prelude::{BlockCoordinate, ChunkCoordinate, FullStructure, Ship, Structure, StructureLoadingSet, StructureTypeSet},
     registry::{Registry, identifiable::Identifiable},
 };
@@ -233,26 +239,30 @@ fn interact_with_shipyard(
 }
 
 fn on_set_blueprint(
-    mut nevr_set_shipyard_blueprint: EventReader<NettyEventReceived<SetShipyardBlueprint>>,
-    mut q_structure: Query<&mut Structure>,
-    mut q_block_data: Query<&mut BlockData>,
-    q_has_data: Query<(), With<ShipyardState>>,
     players: Res<ServerLobby>,
-    q_player_inventory: Query<&Inventory, (With<Player>, Without<BlockData>)>,
-    q_blueprint_item_data: Query<&BlueprintItemData>,
-    q_shipyard: Query<&Shipyard, Without<ShipyardState>>,
+    items: Res<Registry<Item>>,
+    blocks: Res<Registry<Block>>,
+    mut nevr_set_shipyard_blueprint: EventReader<NettyEventReceived<SetShipyardBlueprint>>,
+    mut q_structure: Query<(&GlobalTransform, &mut Structure, &RapierContextEntityLink)>,
+    mut q_block_data: Query<&mut BlockData>,
+    q_has_shipyard_data: Query<(), With<ShipyardState>>,
+    mut q_inventory: Query<&mut Inventory, With<BlockData>>,
+    (q_player_inventory, q_blueprint_item_data, q_shipyard, q_chunk_collider): (
+        Query<&Inventory, (With<Player>, Without<BlockData>)>,
+        Query<&BlueprintItemData>,
+        Query<&Shipyard, Without<ShipyardState>>,
+        Query<&ChunkPhysicsPart>,
+    ),
     mut commands: Commands,
     bs_params: BlockDataSystemParams,
     mut nevw_notification: NettyEventWriter<Notification>,
-    q_global_trans: Query<&GlobalTransform>,
-    mut q_inventory: Query<&mut Inventory, With<BlockData>>,
-    items: Res<Registry<Item>>,
+    read_context: ReadRapierContext,
 ) {
     let bs_params = Rc::new(RefCell::new(bs_params));
 
     for ev in nevr_set_shipyard_blueprint.read() {
         let structure_ent = ev.shipyard_block.structure();
-        let Ok(mut shipyard_structure) = q_structure.get_mut(structure_ent) else {
+        let Ok((station_g_trans, mut shipyard_structure, world)) = q_structure.get_mut(structure_ent) else {
             continue;
         };
         let Some(shipyard) = shipyard_structure.query_block_data(ev.shipyard_block.coords(), &q_shipyard) else {
@@ -260,7 +270,11 @@ fn on_set_blueprint(
             continue;
         };
 
-        let Some(ship_core) = items.from_id("cosmos:ship_core") else {
+        let Some(ship_core_item) = items.from_id("cosmos:ship_core") else {
+            continue;
+        };
+
+        let Some(ship_core_block) = blocks.from_id("cosmos:ship_core") else {
             continue;
         };
 
@@ -282,6 +296,52 @@ fn on_set_blueprint(
             nevw_notification.write(Notification::error("Unknown blueprint!"), ev.client_id);
             continue;
         };
+
+        let bounds = shipyard.bounds();
+        let shipyard_size = bounds.size();
+
+        let half_size = Vec3::new(
+            shipyard_size.x as f32 / 2.0,
+            shipyard_size.y as f32 / 2.0,
+            shipyard_size.z as f32 / 2.0,
+        );
+
+        let context = read_context.get(*world);
+
+        let shipyard_world_pos = station_g_trans.translation()
+            + station_g_trans.rotation() * (shipyard_structure.block_relative_position(shipyard.bounds().negative_coords) + half_size);
+
+        info!("Checking {shipyard_world_pos}");
+
+        let mut hit_something = false;
+
+        context.intersections_with_shape(
+            shipyard_world_pos,
+            station_g_trans.rotation(),
+            &Collider::cuboid(half_size.x, half_size.y, half_size.z),
+            QueryFilter {
+                exclude_rigid_body: Some(structure_ent),
+                ..Default::default()
+            },
+            |e| {
+                if let Ok(c) = q_chunk_collider.get(e) {
+                    if c.structure_entity == structure_ent {
+                        return true;
+                    }
+                }
+
+                hit_something = true;
+                false
+            },
+        );
+
+        if hit_something {
+            nevw_notification.write(
+                Notification::error("Please make sure shipyard is empty before starting!"),
+                ev.client_id,
+            );
+            continue;
+        }
 
         // 1. Load blueprint structure
         let Ok(mut structure) = bp.serialized_data().deserialize_data::<Structure>("cosmos:structure") else {
@@ -306,8 +366,6 @@ fn on_set_blueprint(
         };
 
         // 2. Validate blueprint size
-        let bounds = shipyard.bounds();
-        let shipyard_size = bounds.size();
 
         if shipyard_size.x - 1 <= structure_size.x {
             nevw_notification.write(Notification::error("Ship too big for this shipyard!"), ev.client_id);
@@ -326,7 +384,7 @@ fn on_set_blueprint(
             &mut q_inventory,
             ev.shipyard_block.coords(),
             &shipyard_structure,
-            ship_core,
+            ship_core_item,
             bs_params.clone(),
             &mut commands,
         ) {
@@ -353,13 +411,11 @@ fn on_set_blueprint(
             })
             .collect::<Vec<_>>();
 
-        if let Some(entry) = totals_count.get_mut(&ship_core.id()) {
+        if let Some(entry) = totals_count.get_mut(&ship_core_block.id()) {
             *entry -= 1;
         }
 
         // 3. Attach data to block
-
-        let station_global_trans = q_global_trans.get(structure_ent).expect("Station missing global trans??");
 
         let entity = commands
             .spawn((
@@ -367,7 +423,7 @@ fn on_set_blueprint(
                 Velocity::default(),
                 Ship,
                 ShipNeedsCreated,
-                Transform::from_rotation(station_global_trans.rotation()),
+                Transform::from_rotation(station_g_trans.rotation()),
                 Location::default(),
                 SetPosition::RelativeTo {
                     entity: structure_ent,
@@ -388,7 +444,7 @@ fn on_set_blueprint(
             }),
             &mut bs_params.borrow_mut(),
             &mut q_block_data,
-            &q_has_data,
+            &q_has_shipyard_data,
         );
     }
 }
@@ -441,7 +497,9 @@ fn manage_shipyards(
                 };
 
                 if let Some(count) = doing_bp.total_blocks_count.get_mut(&block) {
-                    *count -= 1;
+                    if *count != 0 {
+                        *count -= 1;
+                    }
                     if *count == 0 {
                         doing_bp.total_blocks_count.remove(&block);
                     }
