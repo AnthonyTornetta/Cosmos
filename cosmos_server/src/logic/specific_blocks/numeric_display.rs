@@ -175,7 +175,7 @@ fn update_child_displays(
     // Updates the display values of every numeric display to the right.
     let right_direction = rotation.direction_of(BlockFace::Right);
     let mut check_coords = coords.step(right_direction);
-    while let Some(display_coords) = check_for_aligned_display(&check_coords, rotation, &structure, &blocks) {
+    while let Some(display_coords) = check_for_aligned_display(&check_coords, rotation, structure, blocks) {
         display_character_at(
             character_iterator.next(),
             display_coords,
@@ -198,7 +198,7 @@ fn check_for_aligned_display(
     let Ok(coords) = *check_coords else {
         return None;
     };
-    if structure.block_at(coords, &blocks).unlocalized_name() == "cosmos:numeric_display" && structure.block_rotation(coords) == rotation {
+    if structure.block_at(coords, blocks).unlocalized_name() == "cosmos:numeric_display" && structure.block_rotation(coords) == rotation {
         return Some(coords);
     }
     None

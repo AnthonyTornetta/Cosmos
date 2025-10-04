@@ -148,7 +148,7 @@ fn on_render_logic_indicator(
                 }
             };
 
-            ALL_BLOCK_DIRECTIONS.iter().copied().for_each(|d| check_rendering(d));
+            ALL_BLOCK_DIRECTIONS.iter().copied().for_each(check_rendering);
 
             for direction in directions {
                 let Some(mut mesh_info) = block_mesh_info

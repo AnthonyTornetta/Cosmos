@@ -168,7 +168,7 @@ fn on_render_numeric_display(
                 }
             };
 
-            ALL_BLOCK_DIRECTIONS.iter().copied().for_each(|d| check_rendering(d));
+            ALL_BLOCK_DIRECTIONS.iter().copied().for_each(check_rendering);
 
             let offset = chunk.block_coords_to_relative_coords(chunk_block_coords);
 
