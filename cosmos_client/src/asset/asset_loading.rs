@@ -394,7 +394,7 @@ fn handle_select_texture(selector: &TextureSelector, data: BlockInfo) -> Texture
     match selector {
         TextureSelector::Normal(index) => *index,
         TextureSelector::DataDriven(dd) => handle_data_driven(data, dd),
-        //
+        // Custom textures should be selected explicitly in their custom renderer.
         TextureSelector::Custom(custom) => custom.default,
     }
 }
@@ -612,7 +612,7 @@ pub enum LoadingTextureType {
     ///
     /// The left-most non-zero bit will be used.
     DataDriven(Box<LoadingDataDrivenTextureType>),
-    /// This can be used to change the texture used arbitrarily.
+    /// This is used to change the texture used arbitrarily.
     ///
     /// Should only be used for blocks with custom rendering code, where the texture to use on each
     /// render should be specified. For an example, see the rendering code for the numeric display.
@@ -630,7 +630,7 @@ pub struct LoadingDataDrivenTextureType {
     default: String,
 }
 
-/// This can be used to change the texture used arbitrarily.
+/// This is used to change the texture used arbitrarily.
 ///
 /// Supports any number of possible textures.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -702,7 +702,7 @@ pub struct DataDrivenTextureIndex {
     default: TextureIndex,
 }
 
-/// This can be used to change the texture arbitrarily.
+/// This is used to change the texture arbitrarily.
 ///
 /// Supports any number of possible textures.
 #[derive(Debug, Clone, Serialize, Deserialize)]
