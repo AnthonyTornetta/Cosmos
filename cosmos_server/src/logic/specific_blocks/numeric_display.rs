@@ -173,7 +173,6 @@ fn update_child_displays(
     );
 
     // Updates the display values of every numeric display to the right.
-    // This is necessary for when the current numeric display connected two existing displays.
     let right_direction = rotation.direction_of(BlockFace::Right);
     let mut check_coords = coords.step(right_direction);
     while let Some(display_coords) = check_for_aligned_display(&check_coords, rotation, &structure, &blocks) {
