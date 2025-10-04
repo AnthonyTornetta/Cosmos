@@ -1,3 +1,5 @@
+//! Defines the values that the server sends to the client to be rendered on numeric display blocks.
+
 use bevy::prelude::*;
 use serde::{Deserialize, Serialize};
 
