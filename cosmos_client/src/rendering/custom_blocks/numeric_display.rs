@@ -154,7 +154,7 @@ fn on_render_numeric_display(
 
             let chunk_block_coords = ChunkBlockCoordinate::for_block_coordinate(coords);
 
-            let mut check_rendering = |direction: BlockDirection| {
+            let check_rendering = |direction: BlockDirection| {
                 if rendering_backend.check_should_render(
                     chunk,
                     block_here,

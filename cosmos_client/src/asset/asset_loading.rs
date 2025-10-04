@@ -2,7 +2,7 @@
 //!
 //! This also combines the textures into one big atlas.
 
-use std::{fs, usize};
+use std::fs;
 
 use bevy::{
     asset::{LoadState, LoadedFolder, RecursiveDependencyLoadState},

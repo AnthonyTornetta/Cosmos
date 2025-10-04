@@ -134,7 +134,7 @@ fn on_render_logic_indicator(
 
             let mut block_connections = [false; 6];
 
-            let mut check_rendering = |direction: BlockDirection| {
+            let check_rendering = |direction: BlockDirection| {
                 if backend.check_should_render(
                     chunk,
                     block_here,
