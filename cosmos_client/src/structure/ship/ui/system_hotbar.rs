@@ -88,7 +88,7 @@ fn sync_ship_systems(
     let n_slots = hotbar_contents.n_slots();
     let mut slot = 0;
 
-    hotbar_contents.clear_contents(Some(&mut commands));
+    hotbar_contents.clear_contents();
 
     for system_id in systems_ordering.iter() {
         let Some(system_id) = system_id else {
