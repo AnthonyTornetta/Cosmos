@@ -752,6 +752,15 @@ fn add_cosmos_blocks(
             .create(),
     );
 
+    blocks.register(
+        BlockBuilder::new("cosmos:numeric_display", 0.1, 20.0, 5.0)
+            .add_property(BlockProperty::Full)
+            .add_property(BlockProperty::FullyRotatable)
+            .add_connection_group("cosmos:uses_logic")
+            .with_category("cosmos:logic")
+            .create(),
+    );
+
     loading.finish_loading(id, &mut end_writer);
 }
 

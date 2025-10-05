@@ -11,6 +11,7 @@ mod logic_indicator;
 mod logic_on;
 mod missile_launcher;
 mod not_gate;
+mod numeric_display;
 mod or_gate;
 mod switch;
 mod xor_gate;
@@ -19,6 +20,7 @@ pub(super) fn register(app: &mut App) {
     logic_bus::register(app, GameState::PostLoading);
     logic_on::register(app, GameState::PostLoading);
     logic_indicator::register(app, GameState::PostLoading);
+    numeric_display::register(app, GameState::PostLoading);
     and_gate::register(app, GameState::PostLoading);
     or_gate::register(app, GameState::PostLoading);
     not_gate::register(app, GameState::PostLoading);

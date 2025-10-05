@@ -1,7 +1,7 @@
 //! Settings for the server
 
 use bevy::prelude::*;
-use clap::{Parser, arg};
+use clap::Parser;
 
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]

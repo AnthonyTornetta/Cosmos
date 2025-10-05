@@ -116,6 +116,7 @@ cosmos:power_cable=Power Cable
 cosmos:ship_dock=Ship Docking Unit
 
 cosmos:logic_indicator=Logic Indicator
+cosmos:numeric_display=Numeric Display
 cosmos:logic_on=Logic On
 cosmos:and_gate=And Gate
 cosmos:or_gate=Or Gate
