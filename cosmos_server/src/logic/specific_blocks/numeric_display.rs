@@ -32,8 +32,7 @@ fn register_logic_ports(blocks: Res<Registry<Block>>, mut registry: ResMut<Regis
 fn numeric_display_input_event_listener(
     mut evr_logic_input: EventReader<LogicInputEvent>,
     blocks: Res<Registry<Block>>,
-    mut q_logic_driver: Query<&mut LogicDriver>,
-    mut q_structure: Query<&mut Structure>,
+    mut q_structure_logic_driver: Query<(&mut Structure, &mut LogicDriver)>,
     mut q_logic_data: Query<&mut BlockLogicData>,
     mut q_numeric_display_value: Query<&mut NumericDisplayValue>,
     bs_params: BlockDataSystemParams,
@@ -43,16 +42,13 @@ fn numeric_display_input_event_listener(
 ) {
     let bs_params = Rc::new(RefCell::new(bs_params));
     for ev in evr_logic_input.read() {
-        let Ok(mut structure) = q_structure.get_mut(ev.block.structure()) else {
+        let Ok((mut structure, logic_driver)) = q_structure_logic_driver.get_mut(ev.block.structure()) else {
             continue;
         };
         let coords = ev.block.coords();
         if structure.block_at(coords, &blocks).unlocalized_name() != "cosmos:numeric_display" {
             continue;
         }
-        let Ok(logic_driver) = q_logic_driver.get_mut(ev.block.structure()) else {
-            continue;
-        };
 
         // Sets the block's logic data, not necessary for rendering.
         let rotation = structure.block_rotation(coords);
@@ -102,8 +98,7 @@ fn numeric_display_input_event_listener(
 fn numeric_display_block_broken_event_listener(
     mut evr_block_changed: EventReader<BlockChangedEvent>,
     blocks: Res<Registry<Block>>,
-    mut q_logic_driver: Query<&mut LogicDriver>,
-    mut q_structure: Query<&mut Structure>,
+    mut q_structure_logic_driver: Query<(&mut Structure, &mut LogicDriver)>,
     mut q_numeric_display_value: Query<&mut NumericDisplayValue>,
     bs_params: BlockDataSystemParams,
     q_has_display_value: Query<(), With<NumericDisplayValue>>,
@@ -114,10 +109,7 @@ fn numeric_display_block_broken_event_listener(
         if blocks.from_numeric_id(ev.old_block).unlocalized_name() != "cosmos:numeric_display" {
             continue;
         };
-        let Ok(mut structure) = q_structure.get_mut(ev.block.structure()) else {
-            continue;
-        };
-        let Ok(logic_driver) = q_logic_driver.get_mut(ev.block.structure()) else {
+        let Ok((mut structure, logic_driver)) = q_structure_logic_driver.get_mut(ev.block.structure()) else {
             continue;
         };
 

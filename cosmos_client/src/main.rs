@@ -52,7 +52,7 @@ use bevy_rapier3d::plugin::{RapierContextInitialization, RapierPhysicsPlugin, Ti
 use bevy_renet::RenetClientPlugin;
 use bevy_renet::steam::SteamClientPlugin;
 use bevy_transform_interpolation::prelude::TransformInterpolationPlugin;
-use clap::{Parser, arg};
+use clap::Parser;
 use cosmos_core::netty::sync::registry::RegistrySyncInit;
 use cosmos_core::state::GameState;
 use cosmos_core::{physics::collision_handling::CosmosPhysicsFilter, plugin::cosmos_core_plugin::CosmosCorePluginGroup};
