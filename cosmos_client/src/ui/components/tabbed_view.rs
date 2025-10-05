@@ -4,7 +4,7 @@ use bevy::{color::palettes::css, prelude::*};
 
 use crate::ui::{UiSystemSet, font::DefaultFont};
 
-use super::button::{ButtonEvent, CosmosButton, register_button};
+use super::button::{ButtonEvent, CosmosButton};
 
 #[derive(Debug, Component, Default)]
 /// The tab selected to be viewed - Should be put on the [`TabbedView`] entity.
@@ -35,17 +35,6 @@ impl Default for TabbedView {
             tabs_background: BackgroundColor(Srgba::hex("2D2D2D").unwrap().into()),
             body_styles: Default::default(),
         }
-    }
-}
-
-impl TabbedView {}
-
-#[derive(Event, Debug)]
-struct ClickTabEvent(Entity);
-
-impl ButtonEvent for ClickTabEvent {
-    fn create_event(btn_entity: Entity) -> Self {
-        Self(btn_entity)
     }
 }
 
@@ -105,7 +94,7 @@ fn add_tab_view(
                         let mut ecmds = p.spawn((
                             Name::new(format!("Tab: {}", tab.header)),
                             tab.clone(),
-                            CosmosButton::<ClickTabEvent> {
+                            CosmosButton {
                                 text: Some((
                                     tab.header.clone(),
                                     TextFont {
@@ -123,6 +112,8 @@ fn add_tab_view(
                                 ..Default::default()
                             },
                         ));
+
+                        ecmds.observe(on_click_tab);
 
                         let selected = match selected_tab {
                             SelectedTab::Default => idx == 0,
@@ -214,29 +205,22 @@ fn on_change_selected(
     }
 }
 
-fn on_click_tab(
-    q_parent: Query<&ChildOf>,
-    q_tab: Query<&Tab>,
-    mut q_selected_tab: Query<&mut SelectedTab>,
-    mut evr_tab_clicked: EventReader<ClickTabEvent>,
-) {
-    for ev in evr_tab_clicked.read() {
-        let Ok(tab) = q_tab.get(ev.0) else {
-            error!("No tab component on tab!");
-            continue;
-        };
-        let Ok(p) = q_parent.get(ev.0).and_then(|e| q_parent.get(e.parent())) else {
-            error!("Invalid UI heirarchy");
-            continue;
-        };
+fn on_click_tab(ev: Trigger<ButtonEvent>, q_parent: Query<&ChildOf>, q_tab: Query<&Tab>, mut q_selected_tab: Query<&mut SelectedTab>) {
+    let Ok(tab) = q_tab.get(ev.0) else {
+        error!("No tab component on tab!");
+        return;
+    };
+    let Ok(p) = q_parent.get(ev.0).and_then(|e| q_parent.get(e.parent())) else {
+        error!("Invalid UI heirarchy");
+        return;
+    };
 
-        let Ok(mut selected) = q_selected_tab.get_mut(p.parent()) else {
-            error!("Unable to get selected tab component");
-            continue;
-        };
+    let Ok(mut selected) = q_selected_tab.get_mut(p.parent()) else {
+        error!("Unable to get selected tab component");
+        return;
+    };
 
-        *selected = SelectedTab::Tab(tab.header.clone());
-    }
+    *selected = SelectedTab::Tab(tab.header.clone());
 }
 
 #[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
@@ -249,8 +233,6 @@ pub enum UiTabViewSystemSet {
 }
 
 pub(super) fn register(app: &mut App) {
-    register_button::<ClickTabEvent>(app);
-
     app.configure_sets(
         Update,
         (UiTabViewSystemSet::CreateTabView, UiTabViewSystemSet::SendTabViewEvents).in_set(UiSystemSet::DoUi),
@@ -260,9 +242,7 @@ pub(super) fn register(app: &mut App) {
         Update,
         (
             add_tab_view.in_set(UiTabViewSystemSet::CreateTabView),
-            (on_click_tab, on_change_selected)
-                .chain()
-                .in_set(UiTabViewSystemSet::SendTabViewEvents),
+            on_change_selected.in_set(UiTabViewSystemSet::SendTabViewEvents),
         ),
     )
     .register_type::<Tab>();

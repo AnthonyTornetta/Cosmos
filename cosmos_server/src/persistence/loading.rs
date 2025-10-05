@@ -18,7 +18,11 @@ use cosmos_core::{
     netty::cosmos_encoder,
     persistence::LoadingDistance,
     physics::location::{Location, LocationPhysicsSet, SetPosition},
-    structure::{loading::StructureLoadingSet, systems::StructureSystemsSet},
+    structure::{
+        blueprint::{Blueprint, BlueprintOld},
+        loading::StructureLoadingSet,
+        systems::StructureSystemsSet,
+    },
 };
 
 use super::{PreviousSaveFileIdentifier, SaveFileIdentifier, SaveFileIdentifierType, SerializedData};
@@ -151,19 +155,56 @@ fn check_needs_loaded(
 
 fn check_blueprint_needs_loaded(query: Query<(Entity, &NeedsBlueprintLoaded), Without<SerializedData>>, mut commands: Commands) {
     for (ent, blueprint_needs_loaded) in query.iter() {
-        let path = &blueprint_needs_loaded.path;
-        let Ok(data) = fs::read(path) else {
-            error!("Error reading file at '{path}'. Is it there?");
-            commands.entity(ent).insert(NeedsDespawned);
+        let Ok(blueprint) = load_blueprint(&blueprint_needs_loaded.path) else {
             continue;
         };
 
-        let Ok(serialized_data) = cosmos_encoder::deserialize::<SerializedData>(&data) else {
-            error!("Error deserializing data for {path}");
-            continue;
+        let serialized_data = SerializedData {
+            save_data: blueprint.serialized_data().clone(),
+            ..Default::default()
         };
 
         commands.entity(ent).insert(serialized_data);
+    }
+}
+
+/// Loads a blueprint from the given file path
+pub fn load_blueprint(path: &str) -> Result<Blueprint, Box<bincode::error::DecodeError>> {
+    let Ok(data) = fs::read(path) else {
+        error!("Error reading file at '{path}'. Is it there?");
+        return Err(Box::new(bincode::error::DecodeError::OtherString(format!(
+            "Invalid blueprint load path ({path})"
+        ))));
+    };
+
+    match cosmos_encoder::deserialize::<Blueprint>(&data) {
+        Err(_) => {
+            match cosmos_encoder::deserialize::<BlueprintOld>(&data) {
+                Err(e) => {
+                    error!("Error deserializing data for {path}");
+                    Err(e)
+                }
+                Ok(b) => {
+                    let bp = b.try_into().unwrap(); // Ok(blueprint) => Blueprint::new(
+                    //     cosmos_encoder::serialize_uncompressed(&blueprint.save_data.0),
+                    //     "Blueprint".into(),
+                    //     BlueprintType::Ship,
+                    // ),
+                    info!("Found old blueprint - updating to new format and making backup!");
+
+                    if fs::copy(path, format!("{path}.bak")).is_ok() {
+                        if let Err(e) = fs::write(path, cosmos_encoder::serialize(&bp)) {
+                            error!("{e:?}");
+                        }
+                    } else {
+                        error!("Error copying {path:?}!");
+                    }
+
+                    Ok(bp)
+                }
+            }
+        }
+        Ok(b) => Ok(b),
     }
 }
 

@@ -3,6 +3,7 @@
 pub mod item_category;
 pub mod items;
 pub mod physical_item;
+pub mod usable;
 
 use bevy::{prelude::App, prelude::States};
 
@@ -99,4 +100,5 @@ pub(super) fn register<T: States>(app: &mut App, loading_state: T) {
     items::register(app, loading_state);
     physical_item::register(app);
     item_category::register(app);
+    usable::register(app);
 }

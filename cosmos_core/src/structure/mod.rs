@@ -47,6 +47,7 @@ pub mod base_structure;
 mod bevy_systems;
 pub mod block_health;
 pub mod block_storage;
+pub mod blueprint;
 pub mod chunk;
 pub mod coordinates;
 pub mod dynamic_structure;
@@ -55,6 +56,7 @@ pub mod full_structure;
 pub mod loading;
 pub mod lod;
 pub mod lod_chunk;
+pub mod persistence;
 pub mod planet;
 pub mod prelude;
 pub mod query;
@@ -859,6 +861,14 @@ impl Structure {
         match self {
             Self::Full(fs) => fs.blocks_surrounding(coords, blocks),
             Self::Dynamic(ds) => ds.blocks_surrounding(coords, blocks),
+        }
+    }
+
+    /// Checks if this chunk contains any non-air blocks, or is out of bounds
+    pub fn is_chunk_empty(&self, coords: ChunkCoordinate) -> bool {
+        match self {
+            Self::Full(fs) => fs.is_chunk_empty(coords),
+            Self::Dynamic(ds) => ds.is_chunk_empty(coords),
         }
     }
 }

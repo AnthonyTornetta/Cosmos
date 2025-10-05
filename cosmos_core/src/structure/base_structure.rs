@@ -887,6 +887,11 @@ impl BaseStructure {
     pub fn blocks_surrounding<'a>(&self, coords: BlockCoordinate, blocks: &'a Registry<Block>) -> [&'a Block; 6] {
         self.block_ids_surrounding(coords).map(|id| blocks.from_numeric_id(id))
     }
+
+    /// Checks if this chunk contains any non-air blocks, or is out of bounds
+    pub fn is_chunk_empty(&self, chunk: ChunkCoordinate) -> bool {
+        self.chunk_at(chunk).is_none()
+    }
 }
 
 fn calculate_raycast_delta(at: Vec3, direction: Vec3) -> Vec3 {

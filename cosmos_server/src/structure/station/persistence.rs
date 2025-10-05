@@ -4,7 +4,7 @@ use cosmos_core::{
     physics::location::Location,
     prelude::StructureLoadingSet,
     structure::{
-        ChunkInitEvent, Structure, StructureTypeSet, events::StructureLoadedEvent, station::Station,
+        ChunkInitEvent, Structure, StructureTypeSet, blueprint::BlueprintType, events::StructureLoadedEvent, station::Station,
         structure_iterator::ChunkIteratorResult,
     },
 };
@@ -23,7 +23,7 @@ fn on_blueprint_structure(
     mut commands: Commands,
 ) {
     for (mut s_data, structure, mut blueprint) in query.iter_mut() {
-        blueprint.subdir_name = "station".into();
+        blueprint.blueprint_type = Some(BlueprintType::Station);
 
         save_structure(structure, &mut s_data, &mut commands);
         s_data.serialize_data("cosmos:is_station", &true);

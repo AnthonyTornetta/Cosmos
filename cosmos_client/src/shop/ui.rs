@@ -21,7 +21,7 @@ use crate::{
         OpenMenu, UiSystemSet,
         components::{
             Disabled,
-            button::{ButtonEvent, ButtonStyles, CosmosButton, register_button},
+            button::{ButtonEvent, ButtonStyles, CosmosButton},
             scollable_container::ScrollBox,
             slider::Slider,
             text_input::{InputType, TextInput},
@@ -303,7 +303,7 @@ fn render_shop_ui(
                         flex_grow: 1.0,
                         ..Default::default()
                     },
-                    CosmosButton::<ClickSellTabEvent> {
+                    CosmosButton {
                         button_styles: Some(ButtonStyles {
                             background_color: Srgba::hex("880000").unwrap().into(),
                             hover_background_color: Srgba::hex("880000").unwrap().into(),
@@ -313,7 +313,8 @@ fn render_shop_ui(
                         text: Some(("Sell".into(), text_style.clone(), Default::default())),
                         ..Default::default()
                     },
-                ));
+                ))
+                .observe(click_sell_tab);
 
                 p.spawn((
                     ShopUiEntity(ui_ent),
@@ -321,7 +322,7 @@ fn render_shop_ui(
                         flex_grow: 1.0,
                         ..Default::default()
                     },
-                    CosmosButton::<ClickBuyTabEvent> {
+                    CosmosButton {
                         button_styles: Some(ButtonStyles {
                             background_color: css::DARK_GREEN.into(),
                             hover_background_color: css::DARK_GREEN.into(),
@@ -331,7 +332,8 @@ fn render_shop_ui(
                         text: Some(("Buy".into(), text_style.clone(), Default::default())),
                         ..Default::default()
                     },
-                ));
+                ))
+                .observe(click_buy_tab);
             });
 
             p.spawn((
@@ -699,7 +701,7 @@ fn render_shop_ui(
                                 height: Val::Px(80.0),
                                 ..Default::default()
                             },
-                            CosmosButton::<BuyOrSellBtnEvent> {
+                            CosmosButton {
                                 text: Some(("BUY".into(), text_style.clone(), Default::default())),
                                 button_styles: Some(ButtonStyles {
                                     background_color: Srgba::hex("008000").unwrap().into(),
@@ -710,6 +712,7 @@ fn render_shop_ui(
                                 ..Default::default()
                             },
                         ))
+                        .observe(on_buy)
                         .id();
                 });
             });
@@ -720,45 +723,9 @@ fn render_shop_ui(
     commands.entity(ui_ent).insert(shop_entities);
 }
 
-#[derive(Event, Debug)]
-struct ClickSellTabEvent(Entity);
-
-impl ButtonEvent for ClickSellTabEvent {
-    fn create_event(e: Entity) -> Self {
-        Self(e)
-    }
-}
-
-#[derive(Event, Debug)]
-struct ClickBuyTabEvent(Entity);
-
-impl ButtonEvent for ClickBuyTabEvent {
-    fn create_event(e: Entity) -> Self {
-        Self(e)
-    }
-}
-
 #[derive(Component)]
 struct BuyOrSellButton {
     shop_entity: Entity,
-}
-
-#[derive(Event, Debug)]
-struct BuyOrSellBtnEvent(Entity);
-
-impl ButtonEvent for BuyOrSellBtnEvent {
-    fn create_event(entity: Entity) -> Self {
-        Self(entity)
-    }
-}
-
-#[derive(Event, Debug)]
-struct ClickItemEvent(Entity);
-
-impl ButtonEvent for ClickItemEvent {
-    fn create_event(entity: Entity) -> Self {
-        Self(entity)
-    }
 }
 
 #[derive(Component)]
@@ -768,54 +735,52 @@ struct PrevClickedEntity(Entity);
 struct ShopRenderedItem;
 
 fn click_item_event(
-    mut ev_reader: EventReader<ClickItemEvent>,
+    ev: Trigger<ButtonEvent>,
     q_shop_entry: Query<(&ShopEntry, &ShopUiEntity)>,
     mut q_shop: Query<(&mut ShopUi, Option<&PrevClickedEntity>)>,
     mut q_background_color: Query<&mut BackgroundColor>,
     q_rendered_item: Query<Entity, With<ShopRenderedItem>>,
     mut commands: Commands,
 ) {
-    for ev in ev_reader.read() {
-        let Ok((entry, shop_ui_ent)) = q_shop_entry.get(ev.0) else {
-            error!("Shop item button didn't have shop entry or shop ui entity?");
-            return;
+    let Ok((entry, shop_ui_ent)) = q_shop_entry.get(ev.0) else {
+        error!("Shop item button didn't have shop entry or shop ui entity?");
+        return;
+    };
+
+    let Ok((mut shop_ui, prev_clicked)) = q_shop.get_mut(shop_ui_ent.0) else {
+        error!("Shop item button had invalid shop ui entity?");
+        return;
+    };
+
+    if let Some(prev_clicked) = &prev_clicked
+        && let Ok(mut background_color) = q_background_color.get_mut(prev_clicked.0)
+    {
+        *background_color = Color::NONE.into();
+    }
+
+    commands.entity(shop_ui_ent.0).insert(PrevClickedEntity(ev.0));
+    if let Ok(mut background_color) = q_background_color.get_mut(ev.0) {
+        *background_color = css::AQUAMARINE.into();
+    }
+
+    if shop_ui.selected_item.as_ref().map(|x| x.entry != *entry).unwrap_or(true) {
+        shop_ui.selected_item = Some(SelectedItem { entry: *entry });
+    }
+
+    if let Ok(rendered_item) = q_rendered_item.single() {
+        let item_id = match entry {
+            ShopEntry::Buying {
+                item_id,
+                max_quantity_buying: _,
+                price_per: _,
+            } => *item_id,
+            ShopEntry::Selling {
+                item_id,
+                max_quantity_selling: _,
+                price_per: _,
+            } => *item_id,
         };
-
-        let Ok((mut shop_ui, prev_clicked)) = q_shop.get_mut(shop_ui_ent.0) else {
-            error!("Shop item button had invalid shop ui entity?");
-            return;
-        };
-
-        if let Some(prev_clicked) = &prev_clicked
-            && let Ok(mut background_color) = q_background_color.get_mut(prev_clicked.0)
-        {
-            *background_color = Color::NONE.into();
-        }
-
-        commands.entity(shop_ui_ent.0).insert(PrevClickedEntity(ev.0));
-        if let Ok(mut background_color) = q_background_color.get_mut(ev.0) {
-            *background_color = css::AQUAMARINE.into();
-        }
-
-        if shop_ui.selected_item.as_ref().map(|x| x.entry != *entry).unwrap_or(true) {
-            shop_ui.selected_item = Some(SelectedItem { entry: *entry });
-        }
-
-        if let Ok(rendered_item) = q_rendered_item.single() {
-            let item_id = match entry {
-                ShopEntry::Buying {
-                    item_id,
-                    max_quantity_buying: _,
-                    price_per: _,
-                } => *item_id,
-                ShopEntry::Selling {
-                    item_id,
-                    max_quantity_selling: _,
-                    price_per: _,
-                } => *item_id,
-            };
-            commands.entity(rendered_item).insert(RenderItem { item_id });
-        }
+        commands.entity(rendered_item).insert(RenderItem { item_id });
     }
 }
 
@@ -983,13 +948,14 @@ fn update_search(
                         Name::new(display_name.to_owned()),
                         *shop_entry,
                         ShopUiEntity(ui_ent),
-                        CosmosButton::<ClickItemEvent> { ..Default::default() },
+                        CosmosButton::default(),
                         Node {
                             flex_direction: FlexDirection::Row,
                             margin: UiRect::vertical(Val::Px(2.0)),
                             ..Default::default()
                         },
                     ))
+                    .observe(click_item_event)
                     .with_children(|p| {
                         p.spawn((
                             Name::new("Item Name"),
@@ -1014,7 +980,7 @@ fn update_search(
 fn enable_buy_button(
     mut commands: Commands,
     mut q_shop_ui: Query<&mut ShopUi>,
-    q_buy_button: Query<(Entity, &BuyOrSellButton), With<CosmosButton<BuyOrSellBtnEvent>>>,
+    q_buy_button: Query<(Entity, &BuyOrSellButton), With<CosmosButton>>,
     mut ev_reader: EventReader<PurchasedEvent>,
 ) {
     for ev in ev_reader.read() {
@@ -1043,7 +1009,7 @@ fn enable_buy_button(
 fn enable_sell_button(
     mut commands: Commands,
     mut q_shop_ui: Query<&mut ShopUi>,
-    q_buy_button: Query<(Entity, &BuyOrSellButton), With<CosmosButton<BuyOrSellBtnEvent>>>,
+    q_buy_button: Query<(Entity, &BuyOrSellButton), With<CosmosButton>>,
     mut ev_reader: EventReader<SoldEvent>,
 ) {
     for ev in ev_reader.read() {
@@ -1070,101 +1036,87 @@ fn enable_sell_button(
 }
 
 fn on_buy(
+    ev: Trigger<ButtonEvent>,
     mut commands: Commands,
     mut client: ResMut<RenetClient>,
     q_shop_ui: Query<(&ShopUi, &AmountSelected)>,
     q_buy_button: Query<&BuyOrSellButton>,
-    mut ev_reader: EventReader<BuyOrSellBtnEvent>,
 ) {
-    for ev in ev_reader.read() {
-        let Ok(buy_button) = q_buy_button.get(ev.0) else {
-            error!("Buy button event missing buy button entity");
-            continue;
-        };
+    let Ok(buy_button) = q_buy_button.get(ev.0) else {
+        error!("Buy button event missing buy button entity");
+        return;
+    };
 
-        let Ok((shop_ui, amount_selected)) = q_shop_ui.get(buy_button.shop_entity) else {
-            continue;
-        };
+    let Ok((shop_ui, amount_selected)) = q_shop_ui.get(buy_button.shop_entity) else {
+        return;
+    };
 
-        let Some(selected_item) = &shop_ui.selected_item else {
-            continue;
-        };
+    let Some(selected_item) = &shop_ui.selected_item else {
+        return;
+    };
 
-        // Prevent accidental duplicate purchases
-        commands.entity(ev.0).insert(Disabled);
+    // Prevent accidental duplicate purchases
+    commands.entity(ev.0).insert(Disabled);
 
-        match selected_item.entry {
-            ShopEntry::Buying {
-                item_id,
-                max_quantity_buying: _,
-                price_per: _,
-            } => {
-                client.send_message(
-                    NettyChannelClient::Shop,
-                    cosmos_encoder::serialize(&ClientShopMessages::Sell {
-                        shop_block: shop_ui.structure_block.coords(),
-                        structure_entity: shop_ui.structure_block.structure(),
-                        item_id,
-                        quantity: amount_selected.0 as u32,
-                    }),
-                );
-            }
-            ShopEntry::Selling {
-                item_id,
-                max_quantity_selling: _,
-                price_per: _,
-            } => {
-                client.send_message(
-                    NettyChannelClient::Shop,
-                    cosmos_encoder::serialize(&ClientShopMessages::Buy {
-                        shop_block: shop_ui.structure_block.coords(),
-                        structure_entity: shop_ui.structure_block.structure(),
-                        item_id,
-                        quantity: amount_selected.0 as u32,
-                    }),
-                );
-            }
+    match selected_item.entry {
+        ShopEntry::Buying {
+            item_id,
+            max_quantity_buying: _,
+            price_per: _,
+        } => {
+            client.send_message(
+                NettyChannelClient::Shop,
+                cosmos_encoder::serialize(&ClientShopMessages::Sell {
+                    shop_block: shop_ui.structure_block.coords(),
+                    structure_entity: shop_ui.structure_block.structure(),
+                    item_id,
+                    quantity: amount_selected.0 as u32,
+                }),
+            );
+        }
+        ShopEntry::Selling {
+            item_id,
+            max_quantity_selling: _,
+            price_per: _,
+        } => {
+            client.send_message(
+                NettyChannelClient::Shop,
+                cosmos_encoder::serialize(&ClientShopMessages::Buy {
+                    shop_block: shop_ui.structure_block.coords(),
+                    structure_entity: shop_ui.structure_block.structure(),
+                    item_id,
+                    quantity: amount_selected.0 as u32,
+                }),
+            );
         }
     }
 }
 
-fn click_buy_tab(
-    mut q_shop_mode: Query<&mut ShopMode>,
-    q_shop_ui_entity: Query<&ShopUiEntity>,
-    mut ev_reader: EventReader<ClickBuyTabEvent>,
-) {
-    for ev in ev_reader.read() {
-        let Ok(shop_ui_ent) = q_shop_ui_entity.get(ev.0) else {
-            continue;
-        };
+fn click_buy_tab(ev: Trigger<ButtonEvent>, mut q_shop_mode: Query<&mut ShopMode>, q_shop_ui_entity: Query<&ShopUiEntity>) {
+    let Ok(shop_ui_ent) = q_shop_ui_entity.get(ev.0) else {
+        return;
+    };
 
-        let Ok(mut shop_mode) = q_shop_mode.get_mut(shop_ui_ent.0) else {
-            continue;
-        };
+    let Ok(mut shop_mode) = q_shop_mode.get_mut(shop_ui_ent.0) else {
+        return;
+    };
 
-        if *shop_mode != ShopMode::Buy {
-            *shop_mode = ShopMode::Buy;
-        }
+    if *shop_mode != ShopMode::Buy {
+        *shop_mode = ShopMode::Buy;
     }
 }
 
-fn click_sell_tab(
-    mut q_shop_mode: Query<&mut ShopMode>,
-    q_shop_ui_entity: Query<&ShopUiEntity>,
-    mut ev_reader: EventReader<ClickSellTabEvent>,
-) {
-    for ev in ev_reader.read() {
-        let Ok(shop_ui_ent) = q_shop_ui_entity.get(ev.0) else {
-            continue;
-        };
+fn click_sell_tab(ev: Trigger<ButtonEvent>, mut q_shop_mode: Query<&mut ShopMode>, q_shop_ui_entity: Query<&ShopUiEntity>) {
+    let Ok(shop_ui_ent) = q_shop_ui_entity.get(ev.0) else {
+        return;
+    };
 
-        let Ok(mut shop_mode) = q_shop_mode.get_mut(shop_ui_ent.0) else {
-            continue;
-        };
+    let Ok(mut shop_mode) = q_shop_mode.get_mut(shop_ui_ent.0) else {
+        return;
+    };
 
-        if *shop_mode != ShopMode::Sell {
-            *shop_mode = ShopMode::Sell;
-        }
+    if *shop_mode != ShopMode::Sell {
+        *shop_mode = ShopMode::Sell;
     }
 }
 
@@ -1194,7 +1146,7 @@ fn on_change_shop_mode(
         ),
         Changed<ShopMode>,
     >,
-    mut q_button: Query<&mut CosmosButton<BuyOrSellBtnEvent>>,
+    mut q_button: Query<&mut CosmosButton>,
 ) {
     for (
         &shop_mode,
@@ -1262,11 +1214,6 @@ pub(super) fn register(app: &mut App) {
     add_reactable_type::<SearchItemQuery>(app);
     add_reactable_type::<ShopModeSign>(app);
 
-    register_button::<ClickSellTabEvent>(app);
-    register_button::<ClickBuyTabEvent>(app);
-    register_button::<BuyOrSellBtnEvent>(app);
-    register_button::<ClickItemEvent>(app);
-
     app.configure_sets(
         Update,
         ShopLogicSet::ShopLogic
@@ -1279,17 +1226,13 @@ pub(super) fn register(app: &mut App) {
             Update,
             (
                 open_shop_ui,
-                click_buy_tab,
-                click_sell_tab,
                 on_change_shop_mode,
-                click_item_event,
                 on_change_selected_item,
                 update_total,
                 update_search,
                 render_shop_ui,
                 enable_buy_button,
                 enable_sell_button,
-                on_buy,
             )
                 .in_set(ShopLogicSet::ShopLogic)
                 .chain(),

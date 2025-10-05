@@ -19,7 +19,6 @@ use crate::{
 use super::{
     UiSystemSet,
     components::{
-        button::register_button,
         scollable_container::ScrollBox,
         slider::{Slider, SliderValue},
         tabbed_view::{Tab, TabbedView},
@@ -136,7 +135,7 @@ fn create_settings_screen(
                     margin: UiRect::top(Val::Px(20.0)),
                     ..Default::default()
                 },
-                CosmosButton::<SettingsCancelButtonEvent> {
+                CosmosButton {
                     button_styles: Some(ButtonStyles {
                         background_color: Srgba::hex("333333").unwrap().into(),
                         hover_background_color: Srgba::hex("232323").unwrap().into(),
@@ -146,7 +145,12 @@ fn create_settings_screen(
                     text: Some(("Cancel".into(), text_style.clone(), Default::default())),
                     ..Default::default()
                 },
-            ));
+            ))
+            .observe(
+                |ev: Trigger<ButtonEvent>, mut evw_settings_cancel: EventWriter<SettingsCancelButtonEvent>| {
+                    evw_settings_cancel.write(SettingsCancelButtonEvent(ev.0));
+                },
+            );
 
             p.spawn((
                 BorderColor(cool_blue),
@@ -158,7 +162,7 @@ fn create_settings_screen(
                     margin: UiRect::top(Val::Px(20.0)),
                     ..Default::default()
                 },
-                CosmosButton::<SettingsDoneButtonEvent> {
+                CosmosButton {
                     button_styles: Some(ButtonStyles {
                         background_color: Srgba::hex("333333").unwrap().into(),
                         hover_background_color: Srgba::hex("232323").unwrap().into(),
@@ -168,7 +172,8 @@ fn create_settings_screen(
                     text: Some(("Done".into(), text_style.clone(), Default::default())),
                     ..Default::default()
                 },
-            ));
+            ))
+            .observe(done_clicked);
         });
     });
 }
@@ -328,15 +333,6 @@ fn create_general_tab(
     });
 }
 
-#[derive(Event, Debug)]
-struct ControlButtonClickedEvent(Entity);
-
-impl ButtonEvent for ControlButtonClickedEvent {
-    fn create_event(btn_entity: Entity) -> Self {
-        Self(btn_entity)
-    }
-}
-
 fn create_controls_tab(controls: &CosmosInputHandler, text_style: &TextFont, text_style_small: &TextFont, p: &mut ChildSpawnerCommands) {
     p.spawn((
         Tab::new("Controls"),
@@ -371,7 +367,7 @@ fn create_controls_tab(controls: &CosmosInputHandler, text_style: &TextFont, tex
                 ));
 
                 p.spawn((
-                    CosmosButton::<ControlButtonClickedEvent> {
+                    CosmosButton {
                         text: Some(("".to_owned(), text_style_small.clone(), Default::default())),
                         ..Default::default()
                     },
@@ -393,23 +389,20 @@ fn create_controls_tab(controls: &CosmosInputHandler, text_style: &TextFont, tex
                         },
                         ..Default::default()
                     },
-                ));
+                ))
+                .observe(click_settings_button);
             });
         }
     });
 }
 
 fn click_settings_button(
-    mut evr_settings_btn_clicked: EventReader<ControlButtonClickedEvent>,
+    ev: Trigger<ButtonEvent>,
     mut commands: Commands,
     q_next_input: Query<(), With<ListeningNextInput>>,
-    mut q_button: Query<&mut CosmosButton<ControlButtonClickedEvent>>,
+    mut q_button: Query<&mut CosmosButton>,
     mut clicked_this_frame: RemovedComponents<ListeningNextInput>,
 ) {
-    let Some(ev) = evr_settings_btn_clicked.read().next() else {
-        return;
-    };
-
     if !q_next_input.is_empty() {
         return;
     }
@@ -449,9 +442,7 @@ fn listen_for_inputs(
     }
 }
 
-fn on_change_setting_value(
-    mut q_changed_setting: Query<(&mut CosmosButton<ControlButtonClickedEvent>, &SettingControlValue), Changed<SettingControlValue>>,
-) {
+fn on_change_setting_value(mut q_changed_setting: Query<(&mut CosmosButton, &SettingControlValue), Changed<SettingControlValue>>) {
     for (mut btn, value) in q_changed_setting.iter_mut() {
         btn.text.as_mut().unwrap().0 = match value.value {
             None => "[None]".to_owned(),
@@ -461,10 +452,12 @@ fn on_change_setting_value(
 }
 
 fn done_clicked(
+    ev: Trigger<ButtonEvent>,
     mut settings: ResMut<Registry<Setting>>,
     q_written_settings: Query<&WrittenSetting>,
     q_setting: Query<&SettingControlValue>,
     mut inputs: ResMut<CosmosInputHandler>,
+    mut evw_done: EventWriter<SettingsDoneButtonEvent>,
 ) {
     for written_setting in q_written_settings.iter() {
         let setting = settings.from_numeric_id_mut(written_setting.setting_id);
@@ -497,30 +490,8 @@ fn done_clicked(
             }
         }
     }
-}
 
-#[derive(Event, Debug)]
-/// The cancel button was clicked on the settings menu
-///
-/// The entity is the button's entity
-pub struct SettingsCancelButtonEvent(pub Entity);
-
-impl ButtonEvent for SettingsCancelButtonEvent {
-    fn create_event(e: Entity) -> Self {
-        Self(e)
-    }
-}
-
-#[derive(Event, Debug)]
-/// The done button was clicked on the settings menu
-///
-/// The entity is the button's entity
-pub struct SettingsDoneButtonEvent(pub Entity);
-
-impl ButtonEvent for SettingsDoneButtonEvent {
-    fn create_event(e: Entity) -> Self {
-        Self(e)
-    }
+    evw_done.write(SettingsDoneButtonEvent(ev.0));
 }
 
 #[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
@@ -528,11 +499,14 @@ pub(super) enum SettingsMenuSet {
     SettingsMenuInteractions,
 }
 
-pub(super) fn register(app: &mut App) {
-    register_button::<SettingsCancelButtonEvent>(app);
-    register_button::<SettingsDoneButtonEvent>(app);
-    register_button::<ControlButtonClickedEvent>(app);
+#[derive(Event, Debug)]
+/// Sent when the Settings Cancel button is clicked
+pub struct SettingsCancelButtonEvent(pub Entity);
+#[derive(Event, Debug)]
+/// Sent when the Settings Done button is clicked
+pub struct SettingsDoneButtonEvent(pub Entity);
 
+pub(super) fn register(app: &mut App) {
     add_reactable_type::<WrittenSetting>(app);
 
     app.add_systems(
@@ -541,20 +515,12 @@ pub(super) fn register(app: &mut App) {
             create_settings_screen
                 .in_set(UiSystemSet::DoUi)
                 .before(SettingsMenuSet::SettingsMenuInteractions),
-            (
-                listen_for_inputs,
-                click_settings_button,
-                on_change_setting_value,
-                done_clicked.run_if(on_event::<SettingsDoneButtonEvent>),
-            )
+            (listen_for_inputs, on_change_setting_value)
                 .chain()
                 .in_set(SettingsMenuSet::SettingsMenuInteractions),
-            // controls_close
-            //     .run_if(on_event::<ControlsCancelButtonEvent>.or(on_event::<ControlsDoneButtonEvent>))
-            //     .run_if(in_main_menu_state(MainMenuSubState::Settings))
-            //     .in_set(MainMenuSystemSet::UpdateMenu)
-            //     .after(ControlsMenuSet::ControlsMenuInteractions),
         ),
     )
-    .register_type::<WrittenSetting>();
+    .register_type::<WrittenSetting>()
+    .add_event::<SettingsDoneButtonEvent>()
+    .add_event::<SettingsCancelButtonEvent>();
 }

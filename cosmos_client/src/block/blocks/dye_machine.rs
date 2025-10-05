@@ -20,7 +20,7 @@ use crate::{
     ui::{
         OpenMenu, UiSystemSet,
         components::{
-            button::{ButtonEvent, ButtonStyles, CosmosButton, register_button},
+            button::{ButtonEvent, ButtonStyles, CosmosButton},
             window::GuiWindow,
         },
     },
@@ -121,7 +121,7 @@ fn open_dye_ui(
                                 height: Val::Px(32.0),
                                 ..Default::default()
                             },
-                            CosmosButton::<ColorBtnClicked> {
+                            CosmosButton {
                                 button_styles: Some(ButtonStyles {
                                     background_color: c.into(),
                                     hover_background_color: c.into(),
@@ -130,7 +130,8 @@ fn open_dye_ui(
                                 }),
                                 ..Default::default()
                             },
-                        ));
+                        ))
+                        .observe(click_color_btn);
                     }
                 });
             });
@@ -147,47 +148,31 @@ fn open_dye_ui(
 }
 
 fn click_color_btn(
+    ev: Trigger<ButtonEvent>,
     netty_mapping: Res<NetworkMapping>,
     q_btn_color: Query<&BtnColor>,
-    mut evr_color_btn: EventReader<ColorBtnClicked>,
     mut nevw_dye_block: NettyEventWriter<DyeBlock>,
 ) {
-    for ev in evr_color_btn.read() {
-        let Ok(btn_color) = q_btn_color.get(ev.0) else {
-            error!("No button color componnet!");
-            continue;
-        };
+    let Ok(btn_color) = q_btn_color.get(ev.0) else {
+        error!("No button color componnet!");
+        return;
+    };
 
-        if let Ok(b) = btn_color.1.map_to_server(&netty_mapping) {
-            nevw_dye_block.write(DyeBlock {
-                block: b,
-                color: btn_color.0,
-            });
-        }
+    if let Ok(b) = btn_color.1.map_to_server(&netty_mapping) {
+        nevw_dye_block.write(DyeBlock {
+            block: b,
+            color: btn_color.0,
+        });
     }
 }
 
 #[derive(Component, Reflect, Debug)]
 struct BtnColor(Srgba, StructureBlock);
 
-#[derive(Event, Debug)]
-struct ColorBtnClicked(Entity);
-
-impl ButtonEvent for ColorBtnClicked {
-    fn create_event(btn_entity: Entity) -> Self {
-        Self(btn_entity)
-    }
-}
-
 pub(super) fn register(app: &mut App) {
-    register_button::<ColorBtnClicked>(app);
-
     app.add_systems(
         Update,
-        (
-            open_dye_ui.in_set(UiSystemSet::PreDoUi),
-            click_color_btn.in_set(UiSystemSet::FinishUi),
-        )
+        (open_dye_ui.in_set(UiSystemSet::PreDoUi),)
             .chain()
             .run_if(in_state(GameState::Playing)),
     )

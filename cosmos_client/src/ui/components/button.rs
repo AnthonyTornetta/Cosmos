@@ -1,61 +1,27 @@
 //! An batteries included way to add an interactive button that will easily send out events when a button is clicked.
 
-use std::marker::PhantomData;
-
 use bevy::color::palettes::css;
 use bevy::prelude::*;
 
 use cosmos_core::ecs::NeedsDespawned;
 
+use crate::input::inputs::{CosmosInputs, InputChecker, InputHandler};
 use crate::ui::UiSystemSet;
 
 use super::Disabled;
 use super::show_cursor::any_open_menus;
 
 /// An event that will be created and sent when a button is interacted with
-pub trait ButtonEvent: Sized + Event + std::fmt::Debug {
-    /// Create an instance of this event
-    fn create_event(btn_entity: Entity) -> Self;
-}
+#[derive(Event, Debug)]
+#[event(traversal = &'static ChildOf, auto_propagate)]
+pub struct ButtonEvent(pub Entity);
 
-#[macro_export]
-/// Stupid - will be removed soon
-macro_rules! create_private_button_event {
-    ($name: ident) => {
-        #[derive(Event, Debug, Clone, Copy)]
-        struct $name(#[allow(unused)] pub Entity);
-
-        impl $crate::ui::components::button::ButtonEvent for $name {
-            fn create_event(btn_entity: Entity) -> Self {
-                Self(btn_entity)
-            }
-        }
-    };
-}
-
-#[macro_export]
-/// Stupid - will be removed soon
-macro_rules! create_button_event {
-    ($name: ident) => {
-        #[derive(Event, Debug, Clone, Copy)]
-        struct $name(#[allow(unused)] pub Entity);
-
-        impl $crate::ui::components::button::ButtonEvent for $name {
-            fn create_event(btn_entity: Entity) -> Self {
-                Self(btn_entity)
-            }
-        }
-    };
-}
-
-#[derive(Component, Debug)]
+#[derive(Component, Debug, Default)]
 #[require(Node)]
 /// A UI element that will send out events (of type `T`) when it is pressed.
 ///
 /// This does NOT use the default bevy `Button` component.
-pub struct CosmosButton<T: ButtonEvent> {
-    /// boo
-    pub _phantom: PhantomData<T>,
+pub struct CosmosButton {
     /// Interaction state of the button.
     pub last_interaction: Interaction,
     /// Out-of-the-box color changing for the different
@@ -65,6 +31,8 @@ pub struct CosmosButton<T: ButtonEvent> {
     pub text: Option<(String, TextFont, TextColor)>,
     /// Image to display in the button. The image will take up the entire button.
     pub image: Option<ImageNode>,
+    /// Will treat it as a click when this key is pressed
+    pub submit_control: Option<CosmosInputs>,
 }
 
 #[derive(Debug, Clone)]
@@ -100,25 +68,10 @@ impl Default for ButtonStyles {
     }
 }
 
-impl<T: ButtonEvent> Default for CosmosButton<T> {
-    fn default() -> Self {
-        Self {
-            _phantom: Default::default(),
-            button_styles: Default::default(),
-            last_interaction: Default::default(),
-            text: Default::default(),
-            image: Default::default(),
-        }
-    }
-}
-
 #[derive(Component)]
 struct ButtonText(Entity);
 
-fn on_add_button<T: ButtonEvent>(
-    mut commands: Commands,
-    mut q_added_button: Query<(Entity, &CosmosButton<T>, &mut Node), Added<CosmosButton<T>>>,
-) {
+fn on_add_button(mut commands: Commands, mut q_added_button: Query<(Entity, &CosmosButton, &mut Node), Added<CosmosButton>>) {
     for (ent, button, mut style) in q_added_button.iter_mut() {
         commands.entity(ent).insert(Interaction::default());
 
@@ -144,14 +97,12 @@ fn on_add_button<T: ButtonEvent>(
     }
 }
 
-fn on_interact_button<T: ButtonEvent>(
-    mut ev_writer: EventWriter<T>,
-    mut q_added_button: Query<
-        (Entity, &Interaction, &mut CosmosButton<T>, &mut BackgroundColor, Option<&Children>),
-        (Changed<Interaction>, Without<Disabled>),
-    >,
+fn on_interact_button(
+    mut q_added_button: Query<(Entity, &Interaction, &mut CosmosButton, &mut BackgroundColor, Option<&Children>), Without<Disabled>>,
     mut writer: TextUiWriter,
     q_has_text: Query<(), With<Text>>,
+    mut commands: Commands,
+    inputs: InputChecker,
 ) {
     for (btn_entity, interaction, mut button, mut bg_color, children) in q_added_button.iter_mut() {
         if let Some(btn_styles) = &button.button_styles {
@@ -174,33 +125,35 @@ fn on_interact_button<T: ButtonEvent>(
             }
         }
 
-        if *interaction == Interaction::Hovered && button.last_interaction == Interaction::Pressed {
+        if button.submit_control.map(|c| inputs.check_just_pressed(c)).unwrap_or(false)
+            || (*interaction == Interaction::Hovered && button.last_interaction == Interaction::Pressed)
+        {
             // Click and still hovering the button, so they didn't move out while holding the mouse down,
             // which should cancel the mouse click
-            ev_writer.write(T::create_event(btn_entity));
+            commands.entity(btn_entity).trigger(ButtonEvent(btn_entity));
         }
 
         button.last_interaction = *interaction;
     }
 }
 
-fn on_change_button<T: ButtonEvent>(
+fn on_change_button(
     mut commands: Commands,
     mut q_changed_button: Query<
         (
             Entity,
-            Ref<CosmosButton<T>>,
+            Ref<CosmosButton>,
             Option<&ImageNode>,
             Option<&ButtonText>,
             &Interaction,
             &mut BackgroundColor,
         ),
-        Changed<CosmosButton<T>>,
+        Changed<CosmosButton>,
     >,
     mut writer: TextUiWriter,
 ) {
     for (ent, btn, image, button_text, &interaction, mut bg_color) in q_changed_button.iter_mut().filter(|x| !x.1.is_added()) {
-        fn calc_text_color<T: ButtonEvent>(btn: &CosmosButton<T>, interaction: Interaction, text_style: &mut TextColor) {
+        fn calc_text_color(btn: &CosmosButton, interaction: Interaction, text_style: &mut TextColor) {
             if let Some(btn_styles) = &btn.button_styles {
                 text_style.0 = match interaction {
                     Interaction::None => btn_styles.foreground_color,
@@ -281,27 +234,23 @@ pub enum ButtonUiSystemSet {
     SendButtonEvents,
 }
 
-/// When you make a new [`ButtonEvent`] type and add a button, you must call this method or they will not work.
-pub fn register_button<T: ButtonEvent>(app: &mut App) {
-    app.add_systems(
-        Update,
-        (
-            on_add_button::<T>.in_set(ButtonUiSystemSet::AddButtonBundle),
-            on_change_button::<T>.in_set(ButtonUiSystemSet::SendButtonEvents),
-            on_interact_button::<T>
-                .in_set(ButtonUiSystemSet::SendButtonEvents)
-                .run_if(any_open_menus),
-        )
-            .chain(),
-    )
-    .add_event::<T>();
-}
-
 pub(super) fn register(app: &mut App) {
     app.configure_sets(
         Update,
         (ButtonUiSystemSet::AddButtonBundle, ButtonUiSystemSet::SendButtonEvents)
             .chain()
             .in_set(UiSystemSet::DoUi),
-    );
+    )
+    .add_systems(
+        Update,
+        (
+            on_add_button.in_set(ButtonUiSystemSet::AddButtonBundle),
+            on_change_button.in_set(ButtonUiSystemSet::SendButtonEvents),
+            on_interact_button
+                .in_set(ButtonUiSystemSet::SendButtonEvents)
+                .run_if(any_open_menus),
+        )
+            .chain(),
+    )
+    .add_event::<ButtonEvent>();
 }

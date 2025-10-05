@@ -1,0 +1,27 @@
+{
+    "lod_texture": {
+        "Single": "cosmos:shipyard_controller"
+    },
+    "texture": {
+        "Sides": {
+            "left": {
+                "Single": "cosmos:shipyard_controller"
+            },
+            "right": {
+                "Single": "cosmos:shipyard_controller"
+            },
+            "front": {
+                "Single": "cosmos:shipyard_controller"
+            },
+            "back": {
+                "Single": "cosmos:shipyard_controller"
+            },
+            "top": {
+                "Single": "cosmos:shipyard_controller_top_bottom"
+            },
+            "bottom": {
+                "Single": "cosmos:shipyard_controller_top_bottom"
+            }
+        }
+    }
+}

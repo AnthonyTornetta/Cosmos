@@ -10,7 +10,7 @@ use cosmos_core::{
 };
 
 use crate::ui::{
-    components::button::{ButtonEvent, CosmosButton, register_button},
+    components::button::{ButtonEvent, CosmosButton},
     font::DefaultFont,
 };
 
@@ -27,15 +27,6 @@ impl ShipDetailsUi {
 #[derive(Component)]
 struct FactionButton {
     ship_ent: Entity,
-}
-
-#[derive(Event, Debug)]
-struct FactionButtonEvent(Entity);
-
-impl ButtonEvent for FactionButtonEvent {
-    fn create_event(btn_entity: Entity) -> Self {
-        Self(btn_entity)
-    }
 }
 
 fn render_ui(
@@ -79,7 +70,7 @@ fn render_ui(
             p.spawn((
                 Name::new("Faction Button"),
                 BackgroundColor(css::DARK_GREY.into()),
-                CosmosButton::<FactionButtonEvent> {
+                CosmosButton {
                     text: Some((
                         if faction.map(|x| x.id() == local_faction.id()).unwrap_or(false) {
                             "Remove Faction".into()
@@ -107,7 +98,8 @@ fn render_ui(
                     font: font.get(),
                     ..Default::default()
                 },
-            ));
+            ))
+            .observe(on_change_faction);
         }
     });
 }
@@ -134,26 +126,24 @@ pub(super) fn attach_ui(
 }
 
 fn on_change_faction(
-    mut evr_change_fac: EventReader<FactionButtonEvent>,
+    ev: Trigger<ButtonEvent>,
     q_faction_id: Query<(), With<FactionId>>,
     mut nevw_set_faction: NettyEventWriter<SwapToPlayerFactionEvent>,
     q_faction_button: Query<&FactionButton>,
 ) {
-    for ev in evr_change_fac.read() {
-        let fac_button = q_faction_button.get(ev.0).unwrap();
-        let action = if q_faction_id.contains(fac_button.ship_ent) {
-            FactionSwapAction::RemoveFaction
-        } else {
-            FactionSwapAction::AssignToSelfFaction
-        };
+    let fac_button = q_faction_button.get(ev.0).unwrap();
+    let action = if q_faction_id.contains(fac_button.ship_ent) {
+        FactionSwapAction::RemoveFaction
+    } else {
+        FactionSwapAction::AssignToSelfFaction
+    };
 
-        info!("Change faction for {:?} ({action:?})", fac_button.ship_ent);
+    info!("Change faction for {:?} ({action:?})", fac_button.ship_ent);
 
-        nevw_set_faction.write(SwapToPlayerFactionEvent {
-            action,
-            to_swap: fac_button.ship_ent,
-        });
-    }
+    nevw_set_faction.write(SwapToPlayerFactionEvent {
+        action,
+        to_swap: fac_button.ship_ent,
+    });
 }
 
 fn change_ship_faction_id(
@@ -174,9 +164,6 @@ fn change_ship_faction_id(
 pub(super) fn register(app: &mut App) {
     app.add_systems(
         Update,
-        (change_ship_faction_id, attach_ui, on_change_faction)
-            .chain()
-            .run_if(in_state(GameState::Playing)),
+        (change_ship_faction_id, attach_ui).chain().run_if(in_state(GameState::Playing)),
     );
-    register_button::<FactionButtonEvent>(app);
 }

@@ -49,6 +49,13 @@ fn add_cosmos_items(
 
     items.register(ItemBuilder::new("cosmos:magnite").with_category("cosmos:material").create());
 
+    items.register(
+        ItemBuilder::new("cosmos:blueprint")
+            .with_category("cosmos:utility")
+            .with_stack_size(1)
+            .create(),
+    );
+
     loading.finish_loading(id, &mut end_writer);
 }
 

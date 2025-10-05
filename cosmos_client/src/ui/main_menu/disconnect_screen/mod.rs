@@ -4,7 +4,7 @@ use bevy_renet::renet::DisconnectReason;
 use crate::{
     netty::connect::ClientDisconnectReason,
     ui::{
-        components::button::{ButtonEvent, ButtonStyles, CosmosButton, register_button},
+        components::button::{ButtonEvent, ButtonStyles, CosmosButton},
         font::DefaultFont,
         settings::SettingsMenuSet,
     },
@@ -87,7 +87,7 @@ fn create_disconnect_screen(
                 margin: UiRect::top(Val::Px(20.0)),
                 ..Default::default()
             },
-            CosmosButton::<OkButtonEvent> {
+            CosmosButton {
                 button_styles: Some(ButtonStyles {
                     background_color: Srgba::hex("333333").unwrap().into(),
                     hover_background_color: Srgba::hex("232323").unwrap().into(),
@@ -97,20 +97,12 @@ fn create_disconnect_screen(
                 text: Some(("OK".into(), text_style.clone(), Default::default())),
                 ..Default::default()
             },
-        ));
+        ))
+        .observe(ok_clicked);
     });
 }
 
-#[derive(Default, Event, Debug)]
-struct OkButtonEvent;
-
-impl ButtonEvent for OkButtonEvent {
-    fn create_event(_: Entity) -> Self {
-        Self
-    }
-}
-
-fn ok_clicked(mut mms: ResMut<MainMenuSubState>) {
+fn ok_clicked(_trigger: Trigger<ButtonEvent>, mut mms: ResMut<MainMenuSubState>) {
     *mms = MainMenuSubState::TitleScreen;
 }
 
@@ -120,8 +112,6 @@ pub(super) enum DisconnectMenuSet {
 }
 
 pub(super) fn register(app: &mut App) {
-    register_button::<OkButtonEvent>(app);
-
     app.configure_sets(
         Update,
         DisconnectMenuSet::DisconnectMenuInteractions
@@ -131,16 +121,10 @@ pub(super) fn register(app: &mut App) {
 
     app.add_systems(
         Update,
-        (
-            create_disconnect_screen
-                .run_if(in_main_menu_state(MainMenuSubState::Disconnect))
-                .run_if(resource_exists_and_changed::<MainMenuSubState>)
-                .in_set(MainMenuSystemSet::InitializeMenu),
-            ok_clicked
-                .run_if(on_event::<OkButtonEvent>)
-                .run_if(in_main_menu_state(MainMenuSubState::Disconnect))
-                .in_set(MainMenuSystemSet::UpdateMenu),
-        )
+        (create_disconnect_screen
+            .run_if(in_main_menu_state(MainMenuSubState::Disconnect))
+            .run_if(resource_exists_and_changed::<MainMenuSubState>)
+            .in_set(MainMenuSystemSet::InitializeMenu),)
             .in_set(DisconnectMenuSet::DisconnectMenuInteractions)
             .chain(),
     );

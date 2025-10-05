@@ -75,8 +75,9 @@ See [the issues page](https://github.com/AnthonyTornetta/Cosmos/issues) for the 
 - [ ] Screenshots
 - [x] Update to Bevy 0.16
 - [x] Steam Integration
-- [ ] Blueprint ship/station in-game
-- [ ] Faction Management
+- [x] Blueprint ship/station in-game
+  - [x] Create ships via shipyard 
+- [x] Faction Management
 - [x] Ship System Management
 
 ## Release 0.0.8a

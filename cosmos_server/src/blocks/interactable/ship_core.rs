@@ -4,7 +4,10 @@ use cosmos_core::{
         Block,
         block_events::{BlockEventsSet, BlockInteractEvent},
     },
+    entities::player::Player,
     events::structure::change_pilot_event::ChangePilotEvent,
+    netty::sync::events::server_event::NettyEventWriter,
+    notifications::Notification,
     registry::{Registry, identifiable::Identifiable},
     state::GameState,
     structure::{
@@ -14,24 +17,32 @@ use cosmos_core::{
     },
 };
 
+use crate::blocks::multiblock::shipyard::StructureBeingBuilt;
+
 fn handle_block_event(
     mut interact_events: EventReader<BlockInteractEvent>,
     mut change_pilot_event: EventWriter<ChangePilotEvent>,
-    q_ship: Query<&Structure, With<Ship>>,
+    q_ship: Query<(&Structure, Has<StructureBeingBuilt>), With<Ship>>,
     q_can_be_pilot: Query<(), Without<Pilot>>,
     q_can_be_pilot_player: Query<(), Without<BuildMode>>,
     blocks: Res<Registry<Block>>,
+    mut nevw_noticication: NettyEventWriter<Notification>,
+    q_player: Query<&Player>,
 ) {
     for ev in interact_events.read() {
         let Some(s_block) = ev.block else {
             continue;
         };
 
-        let Ok(structure) = q_ship.get(s_block.structure()) else {
+        let Ok((structure, being_built)) = q_ship.get(s_block.structure()) else {
             continue;
         };
 
         let Some(block) = blocks.from_id("cosmos:ship_core") else {
+            continue;
+        };
+
+        let Ok(player) = q_player.get(ev.interactor) else {
             continue;
         };
 
@@ -42,16 +53,25 @@ fn handle_block_event(
         }
 
         if !q_can_be_pilot_player.contains(ev.interactor) {
+            nevw_noticication.write(Notification::error("Cannot enter ship while in build mode"), player.client_id());
+            continue;
+        }
+
+        if being_built {
+            nevw_noticication.write(Notification::error("Cannot enter ship that is being built"), player.client_id());
             continue;
         }
 
         // Only works on ships (maybe replace this with pilotable component instead of only checking ships)
-        if q_can_be_pilot.contains(s_block.structure()) {
-            change_pilot_event.write(ChangePilotEvent {
-                structure_entity: s_block.structure(),
-                pilot_entity: Some(ev.interactor),
-            });
+        if !q_can_be_pilot.contains(s_block.structure()) {
+            nevw_noticication.write(Notification::error("This ship already has a pilot"), player.client_id());
+            continue;
         }
+
+        change_pilot_event.write(ChangePilotEvent {
+            structure_entity: s_block.structure(),
+            pilot_entity: Some(ev.interactor),
+        });
     }
 }
 

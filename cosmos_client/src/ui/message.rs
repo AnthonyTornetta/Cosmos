@@ -1,6 +1,6 @@
 //! Displays any messages the player needs to see
 
-use std::{collections::VecDeque, time::Duration};
+use std::time::Duration;
 
 use bevy::prelude::*;
 use cosmos_core::state::GameState;
@@ -84,36 +84,16 @@ impl HudMessage {
     }
 }
 
-#[derive(Debug)]
-struct CurrentDisplayedHudCache {
-    time_needs_reset: bool,
-    cached_message: HudMessage,
-}
-
 #[derive(Resource, Debug, Default)]
 /// Used to interact with messages shown to the user in the above-hotbar dislay area.
-pub struct HudMessages(VecDeque<HudMessage>, Option<CurrentDisplayedHudCache>);
+pub struct HudMessages(Option<HudMessage>);
 
 impl HudMessages {
     /// Adds this HUD message to the queue of messages to be displayed, and will display it when it is ready.
     ///
     /// Note that this will check for hud messages with the same text and prevent duplicate entries
     pub fn display_message(&mut self, message: HudMessage) {
-        let check_duplicate =
-            |m: &HudMessage| m.text.len() == message.text.len() && m.text.iter().zip(message.text.iter()).all(|(x, y)| x.text == y.text);
-
-        if let Some(currently_displayed_hud_cache) = self.1.as_mut()
-            && check_duplicate(&currently_displayed_hud_cache.cached_message)
-        {
-            currently_displayed_hud_cache.time_needs_reset = true;
-            return;
-        }
-
-        if self.0.iter().any(check_duplicate) {
-            return;
-        }
-
-        self.0.push_back(message);
+        self.0 = Some(message);
     }
 }
 
@@ -130,33 +110,26 @@ fn display_hud_messages(
     mut writer: TextUiWriter,
     time: Res<Time>,
 ) {
-    if let Ok((entity, parent, mut shown_hud_message)) = shown_hud_message.single_mut() {
-        let time_now = time.elapsed_secs();
-
-        if let Some(current_hud_message) = hud_messages.1.as_mut()
-            && current_hud_message.time_needs_reset
-        {
-            shown_hud_message.time_created = time_now;
-            current_hud_message.time_needs_reset = false;
-        }
-
-        let time_remaining = HUD_DISPLAY_DURATION.as_secs_f32() - (time_now - shown_hud_message.time_created);
-
-        if time_remaining <= 0.0 {
+    if let Ok((entity, parent, shown_hud_message)) = shown_hud_message.single_mut() {
+        if hud_messages.0.is_some() {
             commands.entity(parent.parent()).despawn();
-            hud_messages.1 = None;
         } else {
-            writer.for_each_color(entity, |mut c| c.set_alpha((time_remaining / FADE_DURATION.as_secs_f32()).min(1.0)));
+            let time_now = time.elapsed_secs();
+
+            let time_remaining = HUD_DISPLAY_DURATION.as_secs_f32() - (time_now - shown_hud_message.time_created);
+
+            if time_remaining <= 0.0 {
+                commands.entity(parent.parent()).despawn();
+            } else {
+                writer.for_each_color(entity, |mut c| c.set_alpha((time_remaining / FADE_DURATION.as_secs_f32()).min(1.0)));
+            }
         }
-    } else if let Some(hud_message) = hud_messages.0.pop_front() {
+    }
+
+    if let Some(hud_message) = std::mem::take(&mut hud_messages.0) {
         let shown_hud_message = ShownHudMessage {
             time_created: time.elapsed_secs(),
         };
-
-        hud_messages.1 = Some(CurrentDisplayedHudCache {
-            cached_message: hud_message.clone(),
-            time_needs_reset: false,
-        });
 
         commands
             .spawn((

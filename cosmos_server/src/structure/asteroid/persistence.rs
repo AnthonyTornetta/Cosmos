@@ -6,6 +6,7 @@ use cosmos_core::{
     structure::{
         ChunkInitEvent, Structure, StructureTypeSet,
         asteroid::{Asteroid, MovingAsteroid},
+        blueprint::BlueprintType,
         events::StructureLoadedEvent,
         structure_iterator::ChunkIteratorResult,
     },
@@ -23,7 +24,7 @@ use crate::{
 
 fn on_blueprint_asteroid(mut query: Query<(&mut SerializedData, &Structure, &mut NeedsBlueprinted, &Asteroid)>, mut commands: Commands) {
     for (mut s_data, structure, mut blueprint, asteroid) in query.iter_mut() {
-        blueprint.subdir_name = "asteroid".into();
+        blueprint.blueprint_type = Some(BlueprintType::Asteroid);
 
         save_structure(structure, &mut s_data, &mut commands);
         s_data.serialize_data("cosmos:asteroid", &asteroid.temperature());

@@ -3,6 +3,8 @@
 //! This compresses items before their usage & decompresses them before deserializing to save a ton
 //! of space + bits sent over the network.
 
+use std::backtrace::Backtrace;
+
 use bevy::log::error;
 // use bincode::config::{Fixint, LittleEndian, NoLimit};
 use serde::{Serialize, de::DeserializeOwned};
@@ -38,6 +40,7 @@ pub fn deserialize<T: DeserializeOwned>(raw: &[u8]) -> Result<T, Box<bincode::er
     let res = deserialize_uncompressed(&decompressed);
 
     if res.is_err() {
+        println!("Custom backtrace: {}", Backtrace::force_capture());
         error!("Error deserializing - decompressed form: {:?}", decompressed);
     }
 

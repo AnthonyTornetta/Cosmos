@@ -121,8 +121,12 @@ impl<T: Identifiable + Sync + Send> Registry<T> {
     /// Adds an item to this registry.
     pub fn register(&mut self, mut item: T) {
         let id = self.contents.len() as u16;
+        let unlocalized_name = item.unlocalized_name().to_owned();
         item.set_numeric_id(id);
-        self.unlocalized_name_to_id.insert(item.unlocalized_name().to_owned(), id);
+        if self.unlocalized_name_to_id.contains_key(&unlocalized_name) {
+            panic!("This registry ({}) already contains the id {unlocalized_name}.", self.registry_name);
+        }
+        self.unlocalized_name_to_id.insert(unlocalized_name, id);
         self.contents.push(item);
     }
 

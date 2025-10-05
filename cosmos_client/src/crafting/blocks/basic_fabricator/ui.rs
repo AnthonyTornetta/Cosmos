@@ -39,7 +39,7 @@ use crate::{
     ui::{
         OpenMenu, UiSystemSet,
         components::{
-            button::{ButtonEvent, ButtonStyles, CosmosButton, register_button},
+            button::{ButtonEvent, ButtonStyles, CosmosButton},
             scollable_container::ScrollBox,
             window::GuiWindow,
         },
@@ -49,22 +49,6 @@ use crate::{
 };
 
 use super::{FabricatorMenuSet, OpenBasicFabricatorMenu};
-
-#[derive(Event, Debug)]
-struct SelectItemEvent(Entity);
-impl ButtonEvent for SelectItemEvent {
-    fn create_event(btn_entity: Entity) -> Self {
-        Self(btn_entity)
-    }
-}
-
-#[derive(Event, Debug)]
-struct CreateClickedEvent;
-impl ButtonEvent for CreateClickedEvent {
-    fn create_event(_: Entity) -> Self {
-        Self
-    }
-}
 
 #[derive(Component, Debug, Clone)]
 struct Recipe(BasicFabricatorRecipe);
@@ -213,7 +197,7 @@ fn populate_menu(
                 p.spawn((
                     Name::new("Fabricate Button"),
                     FabricateButton,
-                    CosmosButton::<CreateClickedEvent> {
+                    CosmosButton {
                         text: Some(("Fabricate".into(), text_style, Default::default())),
                         button_styles: Some(ButtonStyles { ..Default::default() }),
                         ..Default::default()
@@ -222,7 +206,8 @@ fn populate_menu(
                         flex_grow: 1.0,
                         ..Default::default()
                     },
-                ));
+                ))
+                .observe(listen_create);
             });
         });
 
@@ -292,9 +277,11 @@ fn create_ui_recipes_list(
                 justify_content: JustifyContent::SpaceBetween,
                 ..Default::default()
             },
-            CosmosButton::<SelectItemEvent>::default(),
+            CosmosButton::default(),
             Recipe(recipe.clone()),
         ));
+
+        ecmds.observe(on_select_item);
 
         ecmds.with_children(|p| {
             p.spawn((
@@ -482,8 +469,8 @@ fn auto_insert_items(
 }
 
 fn on_select_item(
+    ev: Trigger<ButtonEvent>,
     mut commands: Commands,
-    mut evr_select_item: EventReader<SelectItemEvent>,
     q_selected_recipe: Query<Entity, With<SelectedRecipe>>,
     q_recipe: Query<&Recipe>,
     q_menu: Query<&DisplayedFabRecipes>,
@@ -494,102 +481,98 @@ fn on_select_item(
     mut client: ResMut<RenetClient>,
     mapping: Res<NetworkMapping>,
 ) {
-    for ev in evr_select_item.read() {
-        if let Ok(selected_recipe) = q_selected_recipe.single() {
-            if ev.0 == selected_recipe {
-                let Ok(recipe) = q_recipe.get(selected_recipe) else {
-                    continue;
-                };
+    if let Ok(selected_recipe) = q_selected_recipe.single() {
+        if ev.0 == selected_recipe {
+            let Ok(recipe) = q_recipe.get(selected_recipe) else {
+                return;
+            };
 
-                let Ok((player_ent, player_inv)) = q_player.single() else {
-                    continue;
-                };
+            let Ok((player_ent, player_inv)) = q_player.single() else {
+                return;
+            };
 
-                let Ok(menu) = q_menu.single() else {
-                    continue;
-                };
+            let Ok(menu) = q_menu.single() else {
+                return;
+            };
 
-                let Ok(structure) = q_structure.get(menu.0.structure()) else {
-                    continue;
-                };
+            let Ok(structure) = q_structure.get(menu.0.structure()) else {
+                return;
+            };
 
-                let Some(inv) = structure.query_block_data(menu.0.coords(), &q_inventory) else {
-                    continue;
-                };
+            let Some(inv) = structure.query_block_data(menu.0.coords(), &q_inventory) else {
+                return;
+            };
 
-                auto_insert_items(
-                    &recipe.0,
-                    player_inv,
-                    inv,
-                    &mut client,
-                    &mapping,
-                    menu.0,
-                    structure.block_id_at(menu.0.coords()),
-                    player_ent,
-                );
-                continue;
-            }
-            commands.entity(selected_recipe).remove::<SelectedRecipe>();
-            q_bg_col.get_mut(selected_recipe).expect("Must be ui node").0 = Color::NONE;
+            auto_insert_items(
+                &recipe.0,
+                player_inv,
+                inv,
+                &mut client,
+                &mapping,
+                menu.0,
+                structure.block_id_at(menu.0.coords()),
+                player_ent,
+            );
+            return;
         }
-        commands.entity(ev.0).insert(SelectedRecipe);
-        q_bg_col.get_mut(ev.0).expect("Must be ui node").0 = Srgba {
-            red: 1.0,
-            green: 1.0,
-            blue: 1.0,
-            alpha: 0.1,
-        }
-        .into();
+        commands.entity(selected_recipe).remove::<SelectedRecipe>();
+        q_bg_col.get_mut(selected_recipe).expect("Must be ui node").0 = Color::NONE;
     }
+    commands.entity(ev.0).insert(SelectedRecipe);
+    q_bg_col.get_mut(ev.0).expect("Must be ui node").0 = Srgba {
+        red: 1.0,
+        green: 1.0,
+        blue: 1.0,
+        alpha: 0.1,
+    }
+    .into();
 }
 
 fn listen_create(
+    _trigger: Trigger<ButtonEvent>,
     q_structure: Query<&Structure>,
     q_inventory: Query<&Inventory>,
     q_open_fab_menu: Query<&OpenBasicFabricatorMenu>,
     q_selected_recipe: Query<&Recipe, With<SelectedRecipe>>,
-    mut evr_create: EventReader<CreateClickedEvent>,
     mut nevw_craft_event: NettyEventWriter<CraftBasicFabricatorRecipeEvent>,
     network_mapping: Res<NetworkMapping>,
     input_handler: InputChecker,
 ) {
-    for _ in evr_create.read() {
-        let Ok(fab_menu) = q_open_fab_menu.single() else {
-            return;
+    let Ok(fab_menu) = q_open_fab_menu.single() else {
+        return;
+    };
+
+    let Ok(structure) = q_structure.get(fab_menu.0.structure()) else {
+        return;
+    };
+    let Some(block_inv) = structure.query_block_data(fab_menu.0.coords(), &q_inventory) else {
+        return;
+    };
+
+    let Ok(recipe) = q_selected_recipe.single() else {
+        return;
+    };
+
+    let max_can_create = recipe.0.max_can_create(block_inv.iter().flatten());
+
+    if max_can_create == 0 {
+        return;
+    }
+
+    if let Ok(block) = fab_menu.0.map_to_server(&network_mapping) {
+        let quantity = if input_handler.check_pressed(CosmosInputs::BulkCraft) {
+            max_can_create
+        } else {
+            recipe.0.output.quantity as u32
         };
 
-        let Ok(structure) = q_structure.get(fab_menu.0.structure()) else {
-            continue;
-        };
-        let Some(block_inv) = structure.query_block_data(fab_menu.0.coords(), &q_inventory) else {
-            continue;
-        };
+        info!("Sending craft {quantity} event!");
 
-        let Ok(recipe) = q_selected_recipe.single() else {
-            return;
-        };
-
-        let max_can_create = recipe.0.max_can_create(block_inv.iter().flatten());
-
-        if max_can_create == 0 {
-            continue;
-        }
-
-        if let Ok(block) = fab_menu.0.map_to_server(&network_mapping) {
-            let quantity = if input_handler.check_pressed(CosmosInputs::BulkCraft) {
-                max_can_create
-            } else {
-                recipe.0.output.quantity as u32
-            };
-
-            info!("Sending craft {quantity} event!");
-
-            nevw_craft_event.write(CraftBasicFabricatorRecipeEvent {
-                block,
-                recipe: recipe.0.clone(),
-                quantity,
-            });
-        }
+        nevw_craft_event.write(CraftBasicFabricatorRecipeEvent {
+            block,
+            recipe: recipe.0.clone(),
+            quantity,
+        });
     }
 }
 
@@ -598,7 +581,7 @@ fn color_fabricate_button(
     q_structure: Query<&Structure>,
     q_selected_recipe: Query<&Recipe, With<SelectedRecipe>>,
     q_inventory: Query<&Inventory>,
-    mut q_fab_button: Query<&mut CosmosButton<CreateClickedEvent>, With<FabricateButton>>,
+    mut q_fab_button: Query<&mut CosmosButton, With<FabricateButton>>,
 ) {
     let Ok(mut btn) = q_fab_button.single_mut() else {
         return;
@@ -635,16 +618,11 @@ fn color_fabricate_button(
 }
 
 pub(super) fn register(app: &mut App) {
-    register_button::<SelectItemEvent>(app);
-    register_button::<CreateClickedEvent>(app);
-
     app.add_systems(
         Update,
         (
             (populate_menu, on_change_inventory).chain(),
-            (on_select_item, listen_create, color_fabricate_button)
-                .chain()
-                .in_set(UiSystemSet::DoUi),
+            color_fabricate_button.in_set(UiSystemSet::DoUi),
         )
             .chain()
             .in_set(FabricatorMenuSet::PopulateMenu)

@@ -69,7 +69,7 @@ pub struct Location {
     pub sector: Sector,
 }
 
-#[derive(Default, Component, Debug, PartialEq, Eq, Reflect, Clone, Copy)]
+#[derive(Default, Component, Debug, PartialEq, Reflect, Clone, Copy)]
 /// Sets the position of this entity based on the specified source of truth
 pub enum SetPosition {
     #[default]
@@ -79,6 +79,18 @@ pub enum SetPosition {
     /// The source of truth is the [`Transform`] component of this entity. The [`Location`] will be
     /// updated to match this [`Transform`].
     Location,
+    /// Sets the position of this entity relative to the location of that entity.
+    RelativeTo {
+        /// Which entity this should be relative to
+        entity: Entity,
+        /// The offset relative to the entity field's rotation
+        ///
+        /// Pretend this is the `translation` value in a [`Transform`], and the entity is your
+        /// parent. That's how this should be specified. You do not need to be a child
+        /// of this entity for this to work - in fact this is typically used to NOT be a child but
+        /// still get the same positioning logic.
+        offset: Vec3,
+    },
 }
 
 /// Datatype used to store sector coordinates

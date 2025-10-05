@@ -19,6 +19,10 @@ use cosmos_core::{
     netty::cosmos_encoder,
     persistence::LoadingDistance,
     physics::location::Location,
+    structure::{
+        blueprint::{Blueprint, BlueprintAuthor, BlueprintType},
+        persistence::SaveData,
+    },
 };
 use serde::{Deserialize, Serialize};
 use std::{
@@ -67,12 +71,16 @@ pub struct NeverSave;
 
 /// Denotes that this entity should be saved as a blueprint. Once this entity is saved,
 /// this component will be removed.
-#[derive(Component, Debug, Default, Reflect)]
+#[derive(Component, Debug, Reflect)]
 pub struct NeedsBlueprinted {
     /// The blueprint file's name (without .bp or the path to it)
     pub blueprint_name: String,
     /// The subdirectory the blueprint resides in (same as the blueprint type)
-    pub subdir_name: String,
+    ///
+    /// Leave as [`None`] for this to be auto-generated
+    pub blueprint_type: Option<BlueprintType>,
+    /// The friendly name of the blueprint
+    pub name: String,
 }
 
 fn check_needs_saved(
@@ -144,7 +152,20 @@ fn check_needs_blueprinted(query: Query<Entity, (With<NeedsBlueprinted>, Without
 ///
 /// This is NOT how the structures are saved in the world, but rather used to get structure
 /// files that can be loaded through commands.
-fn save_blueprint(data: &SerializedData, needs_blueprinted: &NeedsBlueprinted, log_name: &str) -> std::io::Result<()> {
+fn save_blueprint_data(data: SaveData, needs_blueprinted: &NeedsBlueprinted, log_name: &str) -> std::io::Result<()> {
+    let Some(kind) = needs_blueprinted.blueprint_type else {
+        error!("Blueprint Type was None at time of saving! Something went wrong! {needs_blueprinted:?}");
+        return Ok(());
+    };
+
+    let blueprint = Blueprint::new(data, needs_blueprinted.name.clone(), kind, BlueprintAuthor::Server);
+
+    info!("Saving blueprint for {log_name} as {}...", blueprint.name());
+    save_blueprint(&blueprint, &needs_blueprinted.blueprint_name)
+}
+
+/// Saves a blueprint to disk
+pub fn save_blueprint(blueprint: &Blueprint, file_name: &str) -> std::io::Result<()> {
     if let Err(e) = fs::create_dir("blueprints") {
         match e.kind() {
             ErrorKind::AlreadyExists => {}
@@ -152,7 +173,7 @@ fn save_blueprint(data: &SerializedData, needs_blueprinted: &NeedsBlueprinted, l
         }
     }
 
-    if let Err(e) = fs::create_dir(format!("blueprints/{}", needs_blueprinted.subdir_name)) {
+    if let Err(e) = fs::create_dir(format!("blueprints/{}", blueprint.kind().blueprint_directory())) {
         match e.kind() {
             ErrorKind::AlreadyExists => {}
             _ => return Err(e),
@@ -160,14 +181,11 @@ fn save_blueprint(data: &SerializedData, needs_blueprinted: &NeedsBlueprinted, l
     }
 
     fs::write(
-        format!(
-            "blueprints/{}/{}.bp",
-            needs_blueprinted.subdir_name, needs_blueprinted.blueprint_name
-        ),
-        cosmos_encoder::serialize(&data),
+        format!("blueprints/{}/{}.bp", blueprint.kind().blueprint_directory(), file_name),
+        cosmos_encoder::serialize(&blueprint),
     )?;
 
-    info!("Finished blueprinting {log_name}");
+    info!("Finished blueprinting {file_name}");
 
     Ok(())
 }
@@ -179,7 +197,7 @@ fn done_blueprinting(
 ) {
     for (entity, mut serialized_data, needs_blueprinted, needs_saved, name) in query.iter_mut() {
         let bp_name = name.map(|n| format!("{n} ({entity:?})")).unwrap_or(format!("{entity:?}"));
-        save_blueprint(&serialized_data, needs_blueprinted, &bp_name)
+        save_blueprint_data(serialized_data.save_data.clone(), needs_blueprinted, &bp_name)
             .unwrap_or_else(|e| warn!("Failed to save blueprint for {entity:?} \n\n{e}\n\n"));
 
         commands.entity(entity).remove::<NeedsBlueprinted>();
@@ -231,7 +249,7 @@ fn done_saving(
     >,
     q_parent: Query<&ChildOf>,
     q_entity_id: Query<&EntityId>,
-    q_serialized_data: Query<(&SerializedData, &EntityId, Option<&LoadingDistance>)>,
+    q_serialized_data: Query<(&SerializedData, &EntityId, Option<&Location>, Option<&LoadingDistance>)>,
     dead_saves_query: Query<&PreviousSaveFileIdentifier, (With<NeedsDespawned>, Without<NeedsSaved>)>,
     mut sectors_cache: ResMut<SectorsCache>,
     mut commands: Commands,
@@ -329,16 +347,16 @@ pub(crate) fn calculate_sfi(
     entity: Entity,
     q_parent: &Query<&ChildOf>,
     q_entity_id: &Query<&EntityId>,
-    q_serialized_data: &Query<(&SerializedData, &EntityId, Option<&LoadingDistance>)>,
+    q_serialized_data: &Query<(&SerializedData, &EntityId, Option<&Location>, Option<&LoadingDistance>)>,
 ) -> Option<SaveFileIdentifier> {
     let Ok(parent) = q_parent.get(entity) else {
-        let Ok((sd, entity_id, loading_distance)) = q_serialized_data.get(entity) else {
+        let Ok((sd, entity_id, loc, loading_distance)) = q_serialized_data.get(entity) else {
             error!("Entity {entity:?} missing entity serialized data. Cannot save {entity:?}.");
             return None;
         };
 
         return Some(SaveFileIdentifier::new(
-            sd.location.map(|l| l.sector()),
+            sd.location.or(loc.copied()).map(|l| l.sector()),
             *entity_id,
             loading_distance.map(|ld| ld.load_distance()),
         ));

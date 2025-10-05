@@ -114,13 +114,11 @@ fn update_looking_at_text(
         };
 
         let block = structure.block_at(looking_at.block.coords(), &blocks);
-        let block_rotation = structure.block_rotation(looking_at.block.coords());
 
         text.as_mut().0 = format!(
-            "{}: {:?}, {:?}",
+            "{} ({})",
             lang.get_name(block).unwrap_or(block.unlocalized_name()),
-            block_rotation.face_pointing_pos_y,
-            block_rotation.sub_rotation
+            looking_at.block.coords(),
         );
     } else {
         text.as_mut().0 = "Nothing".into();

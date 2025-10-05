@@ -249,7 +249,8 @@ impl FullStructure {
     /// If no blocks are placed on this structure, None is returned.
     pub fn placed_block_bounds(self_as_structure: &mut Structure) -> Option<(BlockCoordinate, BlockCoordinate)> {
         let Structure::Full(fs) = &self_as_structure else {
-            panic!("This method can only be used on a full structure!");
+            // This can only be used on a full structure
+            return None;
         };
 
         let bb = match fs.block_bounds {

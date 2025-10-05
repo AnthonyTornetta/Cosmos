@@ -12,7 +12,7 @@ use crate::{
     lang::Lang,
     ui::{
         components::{
-            button::{ButtonEvent, CosmosButton, register_button},
+            button::{ButtonEvent, CosmosButton},
             scollable_container::ScrollBox,
         },
         font::DefaultFont,
@@ -103,7 +103,7 @@ fn render_ui(
         .map(|x| (x, system_types.from_numeric_id(x.system_type_id().into())))
     {
         p.spawn((
-            CosmosButton::<SystemClicked> { ..Default::default() },
+            CosmosButton { ..Default::default() },
             Node {
                 align_items: AlignItems::Center,
                 justify_content: JustifyContent::SpaceBetween,
@@ -114,6 +114,7 @@ fn render_ui(
                 structure: ss.ship_ent,
             },
         ))
+        .observe(on_system_clicked)
         .with_children(|p| {
             let system_name = lang.get_name_or_unlocalized(system_type);
             p.spawn((
@@ -195,15 +196,6 @@ pub(super) fn attach_ui(
     }
 }
 
-#[derive(Event, Debug)]
-struct SystemClicked(Entity);
-
-impl ButtonEvent for SystemClicked {
-    fn create_event(btn_entity: Entity) -> Self {
-        Self(btn_entity)
-    }
-}
-
 fn on_add_active_system(mut q_active_system: Query<&mut BackgroundColor, Added<ActiveSystem>>) {
     for mut bg in q_active_system.iter_mut() {
         bg.0 = css::AQUA.into();
@@ -221,15 +213,7 @@ fn on_remove_active_system(mut removed: RemovedComponents<ActiveSystem>, mut q_b
 #[derive(Component)]
 struct ActiveSystem;
 
-fn on_system_clicked(
-    mut commands: Commands,
-    q_active: Query<Entity, With<ActiveSystem>>,
-    mut evr_system_clicked: EventReader<SystemClicked>,
-) {
-    let Some(ev) = evr_system_clicked.read().next() else {
-        return;
-    };
-
+fn on_system_clicked(ev: Trigger<ButtonEvent>, mut commands: Commands, q_active: Query<Entity, With<ActiveSystem>>) {
     if let Ok(active) = q_active.single() {
         commands.entity(active).remove::<ActiveSystem>();
 
@@ -306,14 +290,11 @@ fn listen_button_inputs(
 }
 
 pub(super) fn register(app: &mut App) {
-    register_button::<SystemClicked>(app);
-
     app.add_systems(
         Update,
         (
             attach_ui,
             on_change_structure_systems,
-            on_system_clicked,
             listen_button_inputs,
             on_add_active_system,
             on_remove_active_system,

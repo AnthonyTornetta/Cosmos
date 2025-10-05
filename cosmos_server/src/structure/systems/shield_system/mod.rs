@@ -11,7 +11,7 @@ use cosmos_core::{
     events::block_events::BlockChangedEvent,
     netty::{
         NettyChannelServer, cosmos_encoder, server_laser_cannon_system_messages::ServerStructureSystemMessages,
-        system_sets::NetworkingSystemsSet,
+        sync::IdentifiableComponent, system_sets::NetworkingSystemsSet,
     },
     persistence::LoadingDistance,
     physics::location::SetPosition,
@@ -252,6 +252,14 @@ fn recalculate_shields_if_needed(
 #[derive(Component, Serialize, Deserialize, Debug, Reflect)]
 struct ShieldDowntime(f32);
 
+impl IdentifiableComponent for ShieldDowntime {
+    fn get_component_unlocalized_name() -> &'static str {
+        "cosmos:shield_downtime"
+    }
+}
+
+impl DefaultPersistentComponent for ShieldDowntime {}
+
 const MAX_SHIELD_DOWNTIME: Duration = Duration::from_secs(30);
 
 fn power_shields(
@@ -325,12 +333,9 @@ fn fill_ai_controlled_shields_on_spawn(
     }
 }
 
-fn on_save_shield(mut q_needs_saved: Query<(&Shield, Option<&ShieldDowntime>, &mut SerializedData), With<NeedsSaved>>) {
-    for (shield, downtime, mut sd) in q_needs_saved.iter_mut() {
+fn on_save_shield(mut q_needs_saved: Query<(&Shield, &mut SerializedData), With<NeedsSaved>>) {
+    for (shield, mut sd) in q_needs_saved.iter_mut() {
         sd.serialize_data("cosmos:shield", shield);
-        if let Some(dt) = downtime {
-            sd.serialize_data("cosmos:shield_downtime", dt);
-        }
     }
 }
 
@@ -345,10 +350,6 @@ fn on_load_shield(
         if let Ok(shield) = sd.deserialize_data::<Shield>("cosmos:shield") {
             hm.entry(parent.parent()).or_insert(Vec::new()).push((ent, shield.block_coord));
             commands.entity(ent).insert((shield, Name::new("Shield")));
-
-            if let Ok(downtime) = sd.deserialize_data::<ShieldDowntime>("cosmos:shield_downtime") {
-                commands.entity(ent).insert(downtime);
-            }
         }
     }
 
@@ -380,6 +381,7 @@ pub(super) fn register(app: &mut App) {
     explosion::register(app);
 
     make_persistent::<ShieldSystem>(app);
+    make_persistent::<ShieldDowntime>(app);
 
     app.configure_sets(
         FixedUpdate,

@@ -22,10 +22,7 @@ use cosmos_core::{
     item::Item,
     netty::{
         server::ServerLobby,
-        sync::events::{
-            netty_event::SyncedEventImpl,
-            server_event::{NettyEventReceived, NettyEventWriter},
-        },
+        sync::events::server_event::{NettyEventReceived, NettyEventWriter},
     },
     prelude::{Structure, StructureBlock},
     registry::{Registry, identifiable::Identifiable},
@@ -169,6 +166,5 @@ pub(super) fn register(app: &mut App) {
             .in_set(BlockEventsSet::ProcessEvents)
             .run_if(in_state(GameState::Playing)),
     )
-    .add_netty_event::<OpenBasicFabricatorEvent>()
     .add_event::<BasicFabricatorCraftEvent>();
 }
