@@ -131,7 +131,7 @@ impl LogicDriver {
             )
         }
 
-        // Adding output faces as consumers to their connected group, or a new group if there is no connected group.
+        // Adding output faces as producers to their connected group, or a new group if there is no connected group.
         for output_face in logic_block.output_faces() {
             self.port_placed(
                 coords,

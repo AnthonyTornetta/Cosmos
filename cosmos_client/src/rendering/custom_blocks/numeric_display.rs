@@ -3,12 +3,13 @@ use cosmos_core::{
     block::{
         Block,
         block_direction::{ALL_BLOCK_DIRECTIONS, BlockDirection},
+        block_face::BlockFace,
+        specific_blocks::numeric_display::NumericDisplayValue,
     },
-    logic::HasOnOffInfo,
     prelude::UnboundChunkCoordinate,
     registry::{Registry, identifiable::Identifiable, many_to_one::ManyToOneRegistry},
     state::GameState,
-    structure::{ChunkNeighbors, Structure, chunk::CHUNK_DIMENSIONSF, coordinates::ChunkBlockCoordinate},
+    structure::{ChunkNeighbors, Structure, block_storage::BlockStorer, coordinates::ChunkBlockCoordinate},
 };
 
 use crate::{
@@ -30,17 +31,17 @@ use crate::{
 
 use super::RenderingModesSet;
 
-fn set_custom_rendering_for_logic_indicator(mut rendering_modes: ResMut<BlockRenderingModes>, blocks: Res<Registry<Block>>) {
-    if let Some(logic_indicator) = blocks.from_id("cosmos:logic_indicator") {
-        rendering_modes.set_rendering_mode(logic_indicator, RenderingMode::Custom);
+fn set_custom_rendering_for_numeric_display(mut rendering_modes: ResMut<BlockRenderingModes>, blocks: Res<Registry<Block>>) {
+    if let Some(numeric_display) = blocks.from_id("cosmos:numeric_display") {
+        rendering_modes.set_rendering_mode(numeric_display, RenderingMode::Custom);
     }
 }
 
 #[derive(Component, Reflect)]
-struct LogicIndicatorRenders(Vec<Entity>);
+struct NumericDisplayRenders(Vec<Entity>);
 
-fn on_render_logic_indicator(
-    q_logic_indicator_renders: Query<&LogicIndicatorRenders>,
+fn on_render_numeric_display(
+    q_logic_numeric_display: Query<&NumericDisplayRenders>,
     mut ev_reader: EventReader<ChunkNeedsCustomBlocksRendered>,
     blocks: Res<Registry<Block>>,
     mut commands: Commands,
@@ -51,21 +52,22 @@ fn on_render_logic_indicator(
     materials_registry: Res<Registry<MaterialDefinition>>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut evw_add_material: EventWriter<AddMaterialEvent>,
+    q_numeric_display_value: Query<&NumericDisplayValue>,
     rendering_modes: Res<BlockRenderingModes>,
 ) {
     for ev in ev_reader.read() {
-        if let Ok(logic_indicator_renders) = q_logic_indicator_renders.get(ev.mesh_entity_parent) {
+        if let Ok(logic_indicator_renders) = q_logic_numeric_display.get(ev.mesh_entity_parent) {
             for e in logic_indicator_renders.0.iter().copied() {
                 commands.entity(e).despawn();
             }
 
-            commands.entity(ev.mesh_entity_parent).remove::<LogicIndicatorRenders>();
+            commands.entity(ev.mesh_entity_parent).remove::<NumericDisplayRenders>();
         }
-        let logic_indicator_block = blocks
-            .from_id("cosmos:logic_indicator")
-            .expect("Logic Indicator block should exist.");
-        let logic_indicator_id = logic_indicator_block.id();
-        if !ev.block_ids.contains(&logic_indicator_id) {
+        let numeric_display_block = blocks
+            .from_id("cosmos:numeric_display")
+            .expect("Numeric display block should exist.");
+        let numeric_display_id = numeric_display_block.id();
+        if !ev.block_ids.contains(&numeric_display_id) {
             continue;
         }
 
@@ -73,7 +75,7 @@ fn on_render_logic_indicator(
             continue;
         };
 
-        let mut material_meshes: HashMap<(MaterialType, u16, u32), CosmosMeshBuilder> = HashMap::default();
+        let mut material_meshes: HashMap<(u16, u32), CosmosMeshBuilder> = HashMap::default();
 
         let unbound = UnboundChunkCoordinate::from(ev.chunk_coordinate);
 
@@ -84,7 +86,7 @@ fn on_render_logic_indicator(
         let pos_z = structure.chunk_at_unbound(unbound.pos_z());
         let neg_z = structure.chunk_at_unbound(unbound.neg_z());
 
-        let backend = ChunkRenderingChecker {
+        let rendering_backend = ChunkRenderingChecker {
             neighbors: ChunkNeighbors {
                 neg_x,
                 pos_x,
@@ -99,33 +101,49 @@ fn on_render_logic_indicator(
             continue;
         };
 
-        for block in structure.block_iter_for_chunk(ev.chunk_coordinate, true) {
-            let block_here = structure.block_at(block, &blocks);
-            if block_here.id() != logic_indicator_id {
+        for coords in structure.block_iter_for_chunk(ev.chunk_coordinate, true) {
+            let block_here = structure.block_at(coords, &blocks);
+            if block_here.id() != numeric_display_id {
                 continue;
             }
 
-            let Some(material_definition) = materials.get_value(logic_indicator_block) else {
+            if structure.block_id_at(coords) != numeric_display_id {
+                continue;
+            }
+
+            let Some(material_definition) = materials.get_value(numeric_display_block) else {
                 continue;
             };
 
-            let Some(block_mesh_info) = block_mesh_registry.get_value(logic_indicator_block) else {
+            let Some(mesh) = block_mesh_registry.get_value(numeric_display_block) else {
                 continue;
             };
 
             let mat_id = material_definition.material_id();
             let material_definition = materials_registry.from_numeric_id(mat_id);
 
-            let mut one_mesh_only = false;
-
-            let block_rotation = structure.block_rotation(block);
+            let block_rotation = structure.block_rotation(coords);
 
             let rotation = block_rotation.as_quat();
 
-            let material_type = if structure.block_info_at(block).on() {
-                MaterialType::Illuminated
-            } else {
-                MaterialType::Normal
+            let display_value = structure
+                .query_block_data(coords, &q_numeric_display_value)
+                .copied()
+                .unwrap_or_default();
+
+            let maybe_custom_index = match display_value {
+                NumericDisplayValue::Blank => None,
+                NumericDisplayValue::Zero => Some(0),
+                NumericDisplayValue::One => Some(1),
+                NumericDisplayValue::Two => Some(2),
+                NumericDisplayValue::Three => Some(3),
+                NumericDisplayValue::Four => Some(4),
+                NumericDisplayValue::Five => Some(5),
+                NumericDisplayValue::Six => Some(6),
+                NumericDisplayValue::Seven => Some(7),
+                NumericDisplayValue::Eight => Some(8),
+                NumericDisplayValue::Nine => Some(9),
+                NumericDisplayValue::Minus => Some(10),
             };
 
             let mut mesh_builder = None;
@@ -134,11 +152,13 @@ fn on_render_logic_indicator(
 
             let mut block_connections = [false; 6];
 
+            let chunk_block_coords = ChunkBlockCoordinate::for_block_coordinate(coords);
+
             let check_rendering = |direction: BlockDirection| {
-                if backend.check_should_render(
+                if rendering_backend.check_should_render(
                     chunk,
                     block_here,
-                    ChunkBlockCoordinate::for_block_coordinate(block),
+                    chunk_block_coords,
                     &blocks,
                     direction,
                     &mut block_connections[direction.index()],
@@ -150,12 +170,19 @@ fn on_render_logic_indicator(
 
             ALL_BLOCK_DIRECTIONS.iter().copied().for_each(check_rendering);
 
-            for direction in directions {
-                let Some(mut mesh_info) = block_mesh_info
-                    .info_for_face(direction.block_face(), false)
+            let offset = chunk.block_coords_to_relative_coords(chunk_block_coords);
+
+            for (direction, face) in directions
+                .iter()
+                .map(|direction| (*direction, block_rotation.block_face_pointing(*direction)))
+            {
+                let mut one_mesh_only = false;
+
+                let Some(mut mesh_info) = mesh
+                    .info_for_face(face, block_connections[direction.index()])
                     .map(Some)
                     .unwrap_or_else(|| {
-                        let single_mesh = block_mesh_info.info_for_whole_block();
+                        let single_mesh = mesh.info_for_whole_block();
 
                         if single_mesh.is_some() {
                             one_mesh_only = true;
@@ -170,48 +197,53 @@ fn on_render_logic_indicator(
                 };
 
                 let index = block_textures
-                    .from_id(logic_indicator_block.unlocalized_name())
+                    .from_id(block_here.unlocalized_name())
                     .unwrap_or_else(|| block_textures.from_id("missing").expect("Missing texture should exist."));
 
                 let neighbors = BlockNeighbors::empty();
-
-                let image_index = index.atlas_index_from_face(direction.block_face(), neighbors, structure.block_info_at(block));
+                let face = block_rotation.block_face_pointing(direction);
+                let image_index = match face {
+                    BlockFace::Front => match maybe_custom_index {
+                        None => rendering_backend.get_texture_index(index, neighbors, face, chunk.block_info_at(chunk_block_coords)),
+                        Some(custom_index) => index
+                            .atlas_index_from_face_and_custom_index(face, neighbors, custom_index)
+                            .expect("Numeric display value should have a texture"),
+                    },
+                    _ => rendering_backend.get_texture_index(index, neighbors, face, chunk.block_info_at(chunk_block_coords)),
+                };
 
                 let uvs = Rect::new(0.0, 0.0, 1.0, 1.0);
 
                 for pos in mesh_info.positions.iter_mut() {
-                    *pos = rotation.mul_vec3(Vec3::from(*pos)).into();
+                    let position_vec3 =
+                        rendering_backend.transform_position(chunk, chunk_block_coords, direction, rotation.mul_vec3(Vec3::from(*pos)));
+                    *pos = (offset + position_vec3).into();
                 }
 
                 for norm in mesh_info.normals.iter_mut() {
                     *norm = rotation.mul_vec3((*norm).into()).into();
                 }
 
-                // Scale the rotated positions, not the pre-rotated positions since our side checks are absolute
+                // TODO: remove once front uvs are fixed for all blocks.
+                if face == BlockFace::Front {
+                    for uv in mesh_info.uvs.iter_mut() {
+                        uv[0] = 1.0 - uv[0]; // Flip horizontally. 
+                    }
+                }
 
-                let structure_coords = block;
+                let additional_info = material_definition.add_material_data(block_here.id(), &mesh_info);
 
-                let additional_info = material_definition.add_material_data(logic_indicator_id, &mesh_info);
-
-                let coords = ChunkBlockCoordinate::for_block_coordinate(structure_coords);
-                const CHUNK_DIMS_HALVED: f32 = CHUNK_DIMENSIONSF / 2.0;
-
-                let (center_offset_x, center_offset_y, center_offset_z) = (
-                    coords.x as f32 - CHUNK_DIMS_HALVED + 0.5,
-                    coords.y as f32 - CHUNK_DIMS_HALVED + 0.5,
-                    coords.z as f32 - CHUNK_DIMS_HALVED + 0.5,
-                );
                 if mesh_builder.is_none() {
                     mesh_builder = Some(
                         material_meshes
-                            .entry((material_type, mat_id, image_index.dimension_index))
+                            .entry((material_definition.id(), image_index.dimension_index))
                             .or_default(),
                     );
                 }
 
                 mesh_builder.as_mut().unwrap().add_mesh_information(
                     &mesh_info,
-                    Vec3::new(center_offset_x, center_offset_y, center_offset_z),
+                    Vec3::ZERO,
                     uvs,
                     image_index.texture_index,
                     additional_info,
@@ -221,11 +253,13 @@ fn on_render_logic_indicator(
                     break;
                 }
             }
+
+            directions.clear();
         }
 
         let mut ents = vec![];
 
-        for ((material_type, mat_id, texture_dimensions_index), mesh_builder) in material_meshes {
+        for ((mat_id, texture_dimensions_index), mesh_builder) in material_meshes {
             let mesh = mesh_builder.build_mesh();
 
             let entity = commands
@@ -233,7 +267,7 @@ fn on_render_logic_indicator(
                     Transform::default(),
                     Visibility::default(),
                     Mesh3d(meshes.add(mesh)),
-                    Name::new("Rendered Logic Indicators"),
+                    Name::new("Rendered Numeric Displays"),
                     ChildOf(ev.mesh_entity_parent),
                 ))
                 .id();
@@ -242,14 +276,14 @@ fn on_render_logic_indicator(
                 entity,
                 add_material_id: mat_id,
                 texture_dimensions_index,
-                material_type,
+                material_type: MaterialType::Normal,
             });
 
             ents.push(entity);
         }
 
         if !ents.is_empty() {
-            commands.entity(ev.mesh_entity_parent).insert(LogicIndicatorRenders(ents));
+            commands.entity(ev.mesh_entity_parent).insert(NumericDisplayRenders(ents));
         }
     }
 }
@@ -257,15 +291,15 @@ fn on_render_logic_indicator(
 pub(super) fn register(app: &mut App) {
     app.add_systems(
         OnEnter(GameState::PostLoading),
-        set_custom_rendering_for_logic_indicator.in_set(RenderingModesSet::SetRenderingModes),
+        set_custom_rendering_for_numeric_display.in_set(RenderingModesSet::SetRenderingModes),
     );
 
     app.add_systems(
         Update,
-        on_render_logic_indicator
+        on_render_numeric_display
             .ambiguous_with(MaterialsSystemSet::RequestMaterialChanges)
             .in_set(StructureRenderingSet::CustomRendering),
     );
 
-    app.register_type::<LogicIndicatorRenders>();
+    app.register_type::<NumericDisplayRenders>();
 }
