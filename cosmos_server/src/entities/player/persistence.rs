@@ -88,7 +88,7 @@ fn save_player_link(
     q_parent: Query<&ChildOf>,
     q_entity_id: Query<&EntityId>,
     q_player_link_needs_saved: Query<(Entity, &EntityId, &PlayerSaveLink, &Location), With<NeedsSaved>>,
-    q_serialized_data: Query<(&SerializedData, &EntityId, Option<&LoadingDistance>)>,
+    q_serialized_data: Query<(&SerializedData, &EntityId, Option<&Location>, Option<&LoadingDistance>)>,
 ) {
     for (entity, e_id, player, loc) in q_player_link_needs_saved.iter() {
         info!("Saving player {player:?} ({entity:?}) @ {loc}");

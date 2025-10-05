@@ -249,7 +249,7 @@ fn done_saving(
     >,
     q_parent: Query<&ChildOf>,
     q_entity_id: Query<&EntityId>,
-    q_serialized_data: Query<(&SerializedData, &EntityId, Option<&LoadingDistance>)>,
+    q_serialized_data: Query<(&SerializedData, &EntityId, Option<&Location>, Option<&LoadingDistance>)>,
     dead_saves_query: Query<&PreviousSaveFileIdentifier, (With<NeedsDespawned>, Without<NeedsSaved>)>,
     mut sectors_cache: ResMut<SectorsCache>,
     mut commands: Commands,
@@ -347,16 +347,16 @@ pub(crate) fn calculate_sfi(
     entity: Entity,
     q_parent: &Query<&ChildOf>,
     q_entity_id: &Query<&EntityId>,
-    q_serialized_data: &Query<(&SerializedData, &EntityId, Option<&LoadingDistance>)>,
+    q_serialized_data: &Query<(&SerializedData, &EntityId, Option<&Location>, Option<&LoadingDistance>)>,
 ) -> Option<SaveFileIdentifier> {
     let Ok(parent) = q_parent.get(entity) else {
-        let Ok((sd, entity_id, loading_distance)) = q_serialized_data.get(entity) else {
+        let Ok((sd, entity_id, loc, loading_distance)) = q_serialized_data.get(entity) else {
             error!("Entity {entity:?} missing entity serialized data. Cannot save {entity:?}.");
             return None;
         };
 
         return Some(SaveFileIdentifier::new(
-            sd.location.map(|l| l.sector()),
+            sd.location.or(loc.copied()).map(|l| l.sector()),
             *entity_id,
             loading_distance.map(|ld| ld.load_distance()),
         ));

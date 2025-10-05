@@ -162,7 +162,12 @@ impl SaveFileIdentifier {
     fn get_save_file_directory(&self, base_get_save_file_name: impl Fn(&Self) -> String) -> String {
         match &self.identifier_type {
             SaveFileIdentifierType::Base(_, sector, _) => {
-                let directory = sector.map(Self::get_sector_path).unwrap_or("world/nowhere".into());
+                let directory = sector.map(Self::get_sector_path).unwrap_or_else(|| {
+                    error!("SAVING SOMEWHERE TO NOWHERE DIRECTORY - THIS IS NOT GOING TO GO WELL!");
+                    error!("{self:?}");
+
+                    "world/nowhere".into()
+                });
 
                 format!("{directory}/{}", base_get_save_file_name(self))
             }

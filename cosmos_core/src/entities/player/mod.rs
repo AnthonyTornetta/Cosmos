@@ -4,13 +4,16 @@ pub mod creative;
 pub mod render_distance;
 pub mod respawn;
 
-use bevy::prelude::{App, Component};
+use bevy::{
+    prelude::{App, Component},
+    reflect::Reflect,
+};
 use bevy_renet::renet::ClientId;
 use serde::{Deserialize, Serialize};
 
 use crate::netty::sync::{IdentifiableComponent, SyncableComponent, sync_component};
 
-#[derive(Component, Debug, Serialize, Deserialize, PartialEq, Eq, Clone)]
+#[derive(Component, Debug, Serialize, Deserialize, PartialEq, Eq, Clone, Reflect)]
 /// Represents a player
 pub struct Player {
     name: String,
@@ -50,6 +53,7 @@ impl SyncableComponent for Player {
 
 pub(super) fn register(app: &mut App) {
     sync_component::<Player>(app);
+    app.register_type::<Player>();
 
     creative::register(app);
     respawn::register(app);

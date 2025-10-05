@@ -98,10 +98,7 @@ fn on_add_button(mut commands: Commands, mut q_added_button: Query<(Entity, &Cos
 }
 
 fn on_interact_button(
-    mut q_added_button: Query<
-        (Entity, &Interaction, &mut CosmosButton, &mut BackgroundColor, Option<&Children>),
-        (Changed<Interaction>, Without<Disabled>),
-    >,
+    mut q_added_button: Query<(Entity, &Interaction, &mut CosmosButton, &mut BackgroundColor, Option<&Children>), Without<Disabled>>,
     mut writer: TextUiWriter,
     q_has_text: Query<(), With<Text>>,
     mut commands: Commands,
