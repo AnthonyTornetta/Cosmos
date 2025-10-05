@@ -324,9 +324,10 @@ fn on_set_blueprint(
             },
             |e| {
                 if let Ok(c) = q_chunk_collider.get(e)
-                    && c.structure_entity == structure_ent {
-                        return true;
-                    }
+                    && c.structure_entity == structure_ent
+                {
+                    return true;
+                }
 
                 hit_something = true;
                 false
@@ -599,8 +600,16 @@ fn on_change_shipyard_state(
             ClientSetShipyardState::Deconstruct { controller: _ } => {
                 error!("Not implemented yet!");
             }
-            ClientSetShipyardState::Unpause { controller: _ } => if let ShipyardState::Paused(d) = &**cur_state { **cur_state = ShipyardState::Building(d.clone()) },
-            ClientSetShipyardState::Pause { controller: _ } => if let ShipyardState::Building(d) = &**cur_state { **cur_state = ShipyardState::Paused(d.clone()) },
+            ClientSetShipyardState::Unpause { controller: _ } => {
+                if let ShipyardState::Paused(d) = &**cur_state {
+                    **cur_state = ShipyardState::Building(d.clone())
+                }
+            }
+            ClientSetShipyardState::Pause { controller: _ } => {
+                if let ShipyardState::Building(d) = &**cur_state {
+                    **cur_state = ShipyardState::Paused(d.clone())
+                }
+            }
         }
     }
 }
@@ -629,9 +638,10 @@ fn consume_item(
         }
 
         if let Some(mut inv) = structure.query_block_data_mut(coord, q_inventory, bs_params.clone())
-            && inv.take_and_remove_item(item, 1, commands).0 == 0 {
-                return true;
-            }
+            && inv.take_and_remove_item(item, 1, commands).0 == 0
+        {
+            return true;
+        }
     }
     false
 }
