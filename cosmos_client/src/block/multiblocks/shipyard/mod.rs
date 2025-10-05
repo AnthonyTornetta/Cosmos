@@ -299,7 +299,7 @@ fn create_shipyard_ui(
                     ..Default::default()
                 },
                 Node {
-                    margin: UiRect::bottom(Val::Px(20.0)),
+                    margin: UiRect::all(Val::Px(20.0)),
                     ..Default::default()
                 },
             ));
@@ -330,7 +330,7 @@ fn create_shipyard_ui(
                             ..Default::default()
                         },
                         Node {
-                            margin: UiRect::all(Val::Px(5.0)),
+                            margin: UiRect::all(Val::Px(25.0)),
                             ..Default::default()
                         },
                     ));
@@ -375,7 +375,7 @@ fn create_shipyard_ui(
                     ..Default::default()
                 },
                 Node {
-                    margin: UiRect::bottom(Val::Px(20.0)),
+                    margin: UiRect::all(Val::Px(20.0)),
                     ..Default::default()
                 },
             ));
@@ -406,7 +406,7 @@ fn create_shipyard_ui(
                             ..Default::default()
                         },
                         Node {
-                            margin: UiRect::all(Val::Px(5.0)),
+                            margin: UiRect::all(Val::Px(25.0)),
                             ..Default::default()
                         },
                     ));

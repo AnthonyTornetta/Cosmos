@@ -659,20 +659,6 @@
   },
   {
     "Selling": {
-      "item_id": "cosmos:numeric_display",
-      "max_quantity_selling": 10000,
-      "price_per": 33
-    }
-  },
-  {
-    "Buying": {
-      "item_id": "cosmos:numeric_display",
-      "max_quantity_buying": null,
-      "price_per": 13
-    }
-  },
-  {
-    "Selling": {
       "item_id": "cosmos:and_gate",
       "max_quantity_selling": 10000,
       "price_per": 20
@@ -837,6 +823,34 @@
       "item_id": "cosmos:dye_machine",
       "max_quantity_buying": null,
       "price_per": 16
+    }
+  },
+  {
+    "Selling": {
+      "item_id": "cosmos:shipyard_controller",
+      "max_quantity_selling": 10000,
+      "price_per": 41000
+    }
+  },
+  {
+    "Buying": {
+      "item_id": "cosmos:shipyard_controller",
+      "max_quantity_buying": null,
+      "price_per": 16400
+    }
+  },
+  {
+    "Selling": {
+      "item_id": "cosmos:shipyard_frame",
+      "max_quantity_selling": 10000,
+      "price_per": 100
+    }
+  },
+  {
+    "Buying": {
+      "item_id": "cosmos:shipyard_frame",
+      "max_quantity_buying": null,
+      "price_per": 40
     }
   }
 ]
