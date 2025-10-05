@@ -79,7 +79,7 @@ impl PersistentComponent for ShipyardState {
         entity_id_manager: &crate::persistence::make_persistent::EntityIdManager,
     ) -> Option<Self> {
         match save_type {
-            SerializedShipyardState::Deconstructing(e) => entity_id_manager.entity_from_entity_id(&e).map(|e| Self::Deconstructing(e)),
+            SerializedShipyardState::Deconstructing(e) => entity_id_manager.entity_from_entity_id(&e).map(Self::Deconstructing),
             SerializedShipyardState::Paused(d) => entity_id_manager.entity_from_entity_id(&d.creating).map(|e| {
                 Self::Paused(ShipyardDoingBlueprint {
                     blocks_todo: d.blocks_todo.clone(),

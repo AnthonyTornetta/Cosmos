@@ -221,7 +221,7 @@ impl NettyEvent for ClientSetShipyardState {
     fn convert_entities_client_to_server(self, mapping: &crate::netty::sync::mapping::NetworkMapping) -> Option<Self> {
         use crate::netty::sync::mapping::Mappable;
 
-        self.controller().map_to_server(&mapping).ok().map(|controller| match self {
+        self.controller().map_to_server(mapping).ok().map(|controller| match self {
             Self::Pause { controller: _ } => Self::Pause { controller },
             Self::Unpause { controller: _ } => Self::Unpause { controller },
             Self::Deconstruct { controller: _ } => Self::Deconstruct { controller },

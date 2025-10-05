@@ -283,8 +283,7 @@ fn on_set_blueprint(
                 .get(e)
                 .ok()
                 .filter(|i| i.len() > ev.blueprint_slot as usize)
-                .map(|i| i.query_itemstack_data(ev.blueprint_slot as usize, &q_blueprint_item_data))
-                .flatten()
+                .and_then(|i| i.query_itemstack_data(ev.blueprint_slot as usize, &q_blueprint_item_data))
         }) else {
             error!("Invalid slot - {}", ev.blueprint_slot);
             continue;
@@ -324,11 +323,10 @@ fn on_set_blueprint(
                 ..Default::default()
             },
             |e| {
-                if let Ok(c) = q_chunk_collider.get(e) {
-                    if c.structure_entity == structure_ent {
+                if let Ok(c) = q_chunk_collider.get(e)
+                    && c.structure_entity == structure_ent {
                         return true;
                     }
-                }
 
                 hit_something = true;
                 false
@@ -522,7 +520,7 @@ fn manage_shipyards(
                 if !consume_item(
                     &mut q_inventory,
                     block_data.coords(),
-                    &shipyard_structure,
+                    shipyard_structure,
                     block_item,
                     bs_params.clone(),
                     &mut commands,
@@ -601,14 +599,8 @@ fn on_change_shipyard_state(
             ClientSetShipyardState::Deconstruct { controller: _ } => {
                 error!("Not implemented yet!");
             }
-            ClientSetShipyardState::Unpause { controller: _ } => match &**cur_state {
-                ShipyardState::Paused(d) => **cur_state = ShipyardState::Building(d.clone()),
-                _ => {}
-            },
-            ClientSetShipyardState::Pause { controller: _ } => match &**cur_state {
-                ShipyardState::Building(d) => **cur_state = ShipyardState::Paused(d.clone()),
-                _ => {}
-            },
+            ClientSetShipyardState::Unpause { controller: _ } => if let ShipyardState::Paused(d) = &**cur_state { **cur_state = ShipyardState::Building(d.clone()) },
+            ClientSetShipyardState::Pause { controller: _ } => if let ShipyardState::Building(d) = &**cur_state { **cur_state = ShipyardState::Paused(d.clone()) },
         }
     }
 }
@@ -627,7 +619,7 @@ fn consume_item(
     bs_params: Rc<RefCell<BlockDataSystemParams>>,
     commands: &mut Commands,
 ) -> bool {
-    for dir in ALL_BLOCK_DIRECTIONS.iter().copied() {
+    for dir in ALL_BLOCK_DIRECTIONS.iter() {
         let Ok(coord) = BlockCoordinate::try_from(dir.to_coordinates() + center) else {
             continue;
         };
@@ -636,13 +628,12 @@ fn consume_item(
             continue;
         }
 
-        if let Some(mut inv) = structure.query_block_data_mut(coord, q_inventory, bs_params.clone()) {
-            if inv.take_and_remove_item(item, 1, commands).0 == 0 {
+        if let Some(mut inv) = structure.query_block_data_mut(coord, q_inventory, bs_params.clone())
+            && inv.take_and_remove_item(item, 1, commands).0 == 0 {
                 return true;
             }
-        }
     }
-    return false;
+    false
 }
 
 pub(super) fn register(app: &mut App) {

@@ -182,7 +182,7 @@ pub fn load_blueprint(path: &str) -> Result<Blueprint, Box<bincode::error::Decod
             match cosmos_encoder::deserialize::<BlueprintOld>(&data) {
                 Err(e) => {
                     error!("Error deserializing data for {path}");
-                    return Err(e);
+                    Err(e)
                 }
                 Ok(b) => {
                     let bp = b.try_into().unwrap(); // Ok(blueprint) => Blueprint::new(

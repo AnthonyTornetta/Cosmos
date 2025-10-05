@@ -61,7 +61,7 @@ impl HotbarContents {
     /// This does NOT delete the items from the world - since a hotbar is typically a visual
     /// representation of the items, not the items themselves
     pub fn clear_contents(&mut self) {
-        self.items.clear();
+        self.items = vec![None; self.items.len()];
     }
 
     /// Iterates over every slot
