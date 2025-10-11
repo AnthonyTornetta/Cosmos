@@ -178,6 +178,11 @@ pub enum ClientSetShipyardState {
         /// The block that has the `cosmos:shipyard_controller`
         controller: StructureBlock,
     },
+    /// Sets the state to stopped
+    Stop {
+        /// The block that has the `cosmos:shipyard_controller`
+        controller: StructureBlock,
+    },
     /// Sets state back to building (if paused - otherwise does nothing)
     Unpause {
         /// The block that has the `cosmos:shipyard_controller`
@@ -194,6 +199,7 @@ impl ClientSetShipyardState {
     /// Returns the block the `cosmos:shipyard_controller` is at.
     pub fn controller(&self) -> StructureBlock {
         match *self {
+            Self::Stop { controller } => controller,
             Self::Pause { controller } => controller,
             Self::Unpause { controller } => controller,
             Self::Deconstruct { controller } => controller,
@@ -222,6 +228,7 @@ impl NettyEvent for ClientSetShipyardState {
         use crate::netty::sync::mapping::Mappable;
 
         self.controller().map_to_server(mapping).ok().map(|controller| match self {
+            Self::Stop { controller: _ } => Self::Stop { controller },
             Self::Pause { controller: _ } => Self::Pause { controller },
             Self::Unpause { controller: _ } => Self::Unpause { controller },
             Self::Deconstruct { controller: _ } => Self::Deconstruct { controller },

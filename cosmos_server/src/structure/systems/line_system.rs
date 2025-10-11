@@ -111,8 +111,6 @@ fn structure_loaded_event<T: LineProperty, S: LinePropertyCalculator<T>>(
                 continue;
             }
 
-            info!("Adding line system!");
-
             let mut system = LineSystem::<T, S>::default();
 
             let mut color_found = false;

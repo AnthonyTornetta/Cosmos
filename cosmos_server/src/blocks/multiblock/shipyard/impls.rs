@@ -581,14 +581,17 @@ fn add_shipyard_state_hooks(world: &mut World) {
 
 fn on_change_shipyard_state(
     mut nevr_change_shipyard_state: EventReader<NettyEventReceived<ClientSetShipyardState>>,
-    q_structure: Query<&Structure>,
+    mut q_structure: Query<&mut Structure>,
     mut q_shipyard_state: Query<&mut ShipyardState>,
     bs_params: BlockDataSystemParams,
+    mut q_block_data: Query<&mut BlockData>,
+    q_has_shipyard_state_data: Query<(), With<ShipyardState>>,
+    q_has_shipyard_client_data: Query<(), With<ClientFriendlyShipyardState>>,
 ) {
     let bs_params = Rc::new(RefCell::new(bs_params));
     for ev in nevr_change_shipyard_state.read() {
         let controller = ev.controller();
-        let Ok(structure) = q_structure.get(controller.structure()) else {
+        let Ok(mut structure) = q_structure.get_mut(controller.structure()) else {
             continue;
         };
 
@@ -609,6 +612,20 @@ fn on_change_shipyard_state(
                 if let ShipyardState::Building(d) = &**cur_state {
                     **cur_state = ShipyardState::Paused(d.clone())
                 }
+            }
+            ClientSetShipyardState::Stop { controller: _ } => {
+                structure.remove_block_data::<ShipyardState>(
+                    controller.coords(),
+                    &mut *bs_params.borrow_mut(),
+                    &mut q_block_data,
+                    &q_has_shipyard_state_data,
+                );
+                structure.remove_block_data::<ClientFriendlyShipyardState>(
+                    controller.coords(),
+                    &mut *bs_params.borrow_mut(),
+                    &mut q_block_data,
+                    &q_has_shipyard_client_data,
+                );
             }
         }
     }
