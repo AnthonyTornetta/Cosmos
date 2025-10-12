@@ -1,6 +1,7 @@
 //! Contains utilities that make interacting with the bevy ECS easier & less
 //! prone to problems.
 
+pub mod commands;
 pub mod data;
 pub mod mut_events;
 pub mod sets;

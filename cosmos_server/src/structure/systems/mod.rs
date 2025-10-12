@@ -17,6 +17,7 @@ pub mod shield_system;
 pub(crate) mod sync;
 mod system_ordering;
 pub mod thruster_system;
+mod warp;
 
 /// A system that is created by the addition and removal of blocks
 pub trait BlockStructureSystem<T> {
@@ -40,4 +41,5 @@ pub(super) fn register(app: &mut App) {
     missile_launcher_system::register(app);
     railgun_system::register(app);
     system_ordering::register(app);
+    warp::register(app);
 }

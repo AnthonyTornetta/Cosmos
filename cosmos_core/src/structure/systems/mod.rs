@@ -41,6 +41,7 @@ pub mod railgun_system;
 pub mod shield_system;
 pub mod sync;
 pub mod thruster_system;
+pub mod warp;
 
 #[derive(Component)]
 #[component(storage = "SparseSet")]
@@ -737,4 +738,5 @@ pub(super) fn register(app: &mut App) {
     mining_laser_system::register(app);
     dock_system::register(app);
     railgun_system::register(app);
+    warp::register(app);
 }

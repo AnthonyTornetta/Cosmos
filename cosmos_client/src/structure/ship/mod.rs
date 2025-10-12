@@ -95,6 +95,7 @@ fn remove_parent_when_too_far(
         }
 
         if player_loc.translation.length() >= CHUNK_DIMENSIONSF * 10.0 {
+            info!("Removing parent because you are too far!");
             commands.entity(player_entity).remove_parent_in_place();
 
             renet_client.send_message(
@@ -126,7 +127,6 @@ pub(super) fn register(app: &mut App) {
         (respond_to_collisions, remove_parent_when_too_far)
             .chain()
             .in_set(FixedUpdateSet::PostPhysics)
-            .before(FixedUpdateSet::LocationSyncingPostPhysics)
             .in_set(PlayerChildOfChangingSet::ChangeChildOf)
             .run_if(in_state(GameState::Playing)),
     );
