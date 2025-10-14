@@ -15,6 +15,7 @@ pub mod galaxy_generation;
 pub mod generators;
 pub mod map;
 pub mod spawners;
+mod warp;
 
 #[derive(Deserialize, Serialize, Reflect)]
 /// Represents a star in a galaxy
@@ -424,4 +425,5 @@ pub(super) fn register(app: &mut App) {
     spawners::register(app);
     generators::register(app);
     galaxy_generation::register(app);
+    warp::register(app);
 }

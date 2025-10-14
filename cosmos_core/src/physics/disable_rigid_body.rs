@@ -17,10 +17,14 @@ use crate::{
 /// this rigidbody. If there are no reasons, the body will be enabled. If there are any current
 /// reasons, the body will be disabled.
 pub struct DisableRigidBody {
-    reasons: Vec<String>,
+    reasons: Vec<&'static str>,
 }
 
 impl DisableRigidBody {
+    pub fn new_with_reason(reason: &'static str) -> Self {
+        Self { reasons: vec![reason] }
+    }
+
     /// Returns true if there are any reasons present
     pub fn should_be_disabled(&self) -> bool {
         !self.reasons.is_empty()
@@ -31,19 +35,19 @@ impl DisableRigidBody {
         if self.contains_reason(reason) {
             return;
         }
-        self.reasons.push(reason.into());
+        self.reasons.push(reason);
     }
 
     /// Removes your reason for this being disabled.
     pub fn remove_reason(&mut self, reason: &'static str) {
-        if let Some((idx, _)) = self.reasons.iter().enumerate().find(|(_, x)| *x == reason) {
+        if let Some((idx, _)) = self.reasons.iter().enumerate().find(|(_, x)| **x == reason) {
             self.reasons.remove(idx);
         }
     }
 
     /// Checks if this contains the given reason
     pub fn contains_reason(&self, reason: &str) -> bool {
-        self.reasons.iter().any(|x| x.as_str() == reason)
+        self.reasons.iter().any(|x| *x == reason)
     }
 }
 

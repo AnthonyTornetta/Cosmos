@@ -13,6 +13,7 @@ use cosmos_core::{
         energy_storage_system::EnergyStorageSystem,
         warp::warp_drive::{WarpBlockProperty, WarpDriveSystem},
     },
+    universe::warp::{WarpTo, Warping, WarpingSet},
 };
 
 use crate::{
@@ -117,12 +118,13 @@ fn register_warp_blocks(mut warp_blocks: ResMut<WarpDriveBlocks>, blocks: Res<Re
 
 fn on_activate_system(
     mut q_active: Query<(&mut WarpDriveSystem, &StructureSystem), With<SystemActive>>,
-    mut q_systems: Query<(&mut Location, &Transform, &ReadMassProperties), Without<ChildOf>>,
+    mut q_systems: Query<(Entity, &mut Location, &Transform, &ReadMassProperties), (Without<ChildOf>, Without<Warping>)>,
+    mut commands: Commands,
 ) {
     const MAX_JUMP_DIST: f32 = SECTOR_DIMENSIONS * 50.0;
 
     for (mut warp, ss) in q_active.iter_mut() {
-        let Ok((mut loc, trans, mass)) = q_systems.get_mut(ss.structure_entity()) else {
+        let Ok((ent, mut loc, trans, mass)) = q_systems.get_mut(ss.structure_entity()) else {
             continue;
         };
 
@@ -132,13 +134,15 @@ fn on_activate_system(
 
         warp.discharge();
 
-        *loc = *loc + Location::new((trans.rotation * Vec3::NEG_Z) * MAX_JUMP_DIST, Default::default());
+        // *loc =
+        let warp_to = *loc + Location::new((trans.rotation * Vec3::NEG_Z) * MAX_JUMP_DIST, Default::default());
+        commands.entity(ent).insert(WarpTo { loc: warp_to });
     }
 }
 
 fn charge_warp_drive(
     mut q_warp: Query<(&mut WarpDriveSystem, &StructureSystem)>,
-    q_systems: Query<(&StructureSystems, &ReadMassProperties)>,
+    q_systems: Query<(&StructureSystems, &ReadMassProperties), Without<Warping>>,
     mut q_ess: Query<&mut EnergyStorageSystem>,
 ) {
     for (mut warp, ss) in q_warp.iter_mut() {
@@ -173,7 +177,7 @@ pub(super) fn register(app: &mut App) {
         .add_systems(OnEnter(GameState::PostLoading), register_warp_blocks)
         .add_systems(
             FixedUpdate,
-            (charge_warp_drive, on_activate_system)
+            (charge_warp_drive, on_activate_system.before(WarpingSet::StartWarping))
                 .chain()
                 .in_set(StructureSystemsSet::UpdateSystems),
         )
