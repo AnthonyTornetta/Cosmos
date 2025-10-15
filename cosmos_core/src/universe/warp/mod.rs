@@ -1,4 +1,5 @@
 use bevy::prelude::*;
+use serde::{Deserialize, Serialize};
 
 use crate::{ecs::sets::FixedUpdateSet, physics::location::Location};
 
@@ -22,13 +23,18 @@ pub enum WarpingSet {
     DoneWarping,
 }
 
+#[derive(Debug, PartialEq, Eq, Clone, Copy, Serialize, Deserialize)]
+pub enum WarpError {
+    Planet,
+    TooOccupied,
+    StarTooClose,
+}
+
 pub(super) fn register(app: &mut App) {
     app.register_type::<WarpTo>();
 
     app.configure_sets(
         FixedUpdate,
-        (WarpingSet::StartWarping, WarpingSet::DoneWarping)
-            .chain()
-            .in_set(FixedUpdateSet::Main),
+        (WarpingSet::StartWarping, WarpingSet::DoneWarping).chain(), // .in_set(FixedUpdateSet::Main),
     );
 }
