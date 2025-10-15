@@ -1,9 +1,9 @@
 use std::time::Duration;
 
 use bevy::prelude::*;
-use bevy_rapier3d::prelude::RigidBodyDisabled;
+use bevy_rapier3d::{plugin::PhysicsSet, prelude::RigidBodyDisabled};
 use cosmos_core::{
-    ecs::NeedsDespawned,
+    ecs::{NeedsDespawned, sets::FixedUpdateSet},
     netty::NoSendEntity,
     physics::{
         disable_rigid_body::DisableRigidBody,
@@ -134,7 +134,8 @@ fn finish_warping(mut q_warping: Query<(Entity, &mut DisableRigidBody, &mut Warp
                 .entity(ent)
                 .remove::<WarpingTime>()
                 .remove::<WarpTo>()
-                .remove::<RigidBodyDisabled>();
+                .remove::<RigidBodyDisabled>()
+                .remove::<DisableRigidBody>();
             drb.remove_reason(REASON);
             info!("Removed reason!");
             continue;
@@ -169,7 +170,7 @@ pub(super) fn register(app: &mut App) {
             )
                 .chain()
                 .in_set(WarpingSet::StartWarping),
-            finish_warping.in_set(WarpingSet::DoneWarping),
+            finish_warping.before(PhysicsSet::SyncBackend).in_set(WarpingSet::DoneWarping),
         ),
     );
 }
