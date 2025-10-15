@@ -118,13 +118,13 @@ fn register_warp_blocks(mut warp_blocks: ResMut<WarpDriveBlocks>, blocks: Res<Re
 
 fn on_activate_system(
     mut q_active: Query<(&mut WarpDriveSystem, &StructureSystem), With<SystemActive>>,
-    mut q_systems: Query<(Entity, &mut Location, &Transform, &ReadMassProperties), (Without<ChildOf>, Without<Warping>)>,
+    q_systems: Query<(Entity, &Location, &Transform, &ReadMassProperties), (Without<ChildOf>, Without<Warping>)>,
     mut commands: Commands,
 ) {
     const MAX_JUMP_DIST: f32 = SECTOR_DIMENSIONS * 50.0;
 
     for (mut warp, ss) in q_active.iter_mut() {
-        let Ok((ent, mut loc, trans, mass)) = q_systems.get_mut(ss.structure_entity()) else {
+        let Ok((ent, loc, trans, mass)) = q_systems.get(ss.structure_entity()) else {
             continue;
         };
 
