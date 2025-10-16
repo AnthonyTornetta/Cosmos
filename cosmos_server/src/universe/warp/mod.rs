@@ -38,6 +38,7 @@ fn find_good_warp_spot(
     q_star: &Query<&Location, (Without<CheckWarpSpot>, With<Star>)>,
 ) -> Result<Location, WarpError> {
     const STAR_CLEARANCE: f32 = SECTOR_DIMENSIONS * 5.0;
+    const MAX_TRIES: usize = 20;
 
     if q_star.iter().any(|l| l.distance_sqrd(&around) < STAR_CLEARANCE * STAR_CLEARANCE) {
         return Err(WarpError::StarTooClose);
@@ -54,13 +55,13 @@ fn find_good_warp_spot(
         return Err(WarpError::Planet);
     }
 
-    if !locs.iter().any(|(loc, _)| loc.distance_sqrd(&around) < CLEARANCE * CLEARANCE) {
+    if locs.iter().all(|(loc, _)| loc.distance_sqrd(&around) > CLEARANCE * CLEARANCE) {
         return Ok(around);
     }
 
     let mut check;
 
-    for _ in 0..20 {
+    for _ in 0..MAX_TRIES {
         const FUDGE_LOW: f32 = -JUMP_SEARCH_RADIUS + CLEARANCE;
         const FUDGE_HIGH: f32 = JUMP_SEARCH_RADIUS - CLEARANCE;
         check = Location::new(
@@ -72,8 +73,8 @@ fn find_good_warp_spot(
             default(),
         ) + around;
 
-        if !locs.iter().any(|(loc, _)| loc.distance_sqrd(&check) < CLEARANCE * CLEARANCE) {
-            return Ok(around);
+        if locs.iter().all(|(loc, _)| loc.distance_sqrd(&check) > CLEARANCE * CLEARANCE) {
+            return Ok(check);
         }
     }
 
@@ -137,7 +138,6 @@ fn finish_warping(mut q_warping: Query<(Entity, &mut DisableRigidBody, &mut Warp
                 .remove::<RigidBodyDisabled>()
                 .remove::<DisableRigidBody>();
             drb.remove_reason(REASON);
-            info!("Removed reason!");
             continue;
         }
         warping_time.0 += time.delta_secs();

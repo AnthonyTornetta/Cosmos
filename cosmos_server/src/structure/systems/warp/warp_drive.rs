@@ -3,15 +3,21 @@ use bevy_rapier3d::prelude::ReadMassProperties;
 use cosmos_core::{
     block::{Block, block_events::BlockEventsSet},
     ecs::commands::OwnedOrMut,
+    entities::player::Player,
     events::{block_events::BlockChangedEvent, structure::structure_event::StructureEventIterator},
+    netty::sync::events::server_event::NettyEventWriter,
+    notifications::Notification,
     physics::location::{Location, SECTOR_DIMENSIONS},
     prelude::{Structure, StructureLoadedEvent, StructureSystem, StructureSystems},
     registry::{Registry, identifiable::Identifiable},
     state::GameState,
-    structure::systems::{
-        StructureSystemOrdering, StructureSystemType, StructureSystemsSet, SystemActive,
-        energy_storage_system::EnergyStorageSystem,
-        warp::warp_drive::{WarpBlockProperty, WarpDriveSystem},
+    structure::{
+        ship::{pilot::Pilot, warp::DesiredLocation},
+        systems::{
+            StructureSystemOrdering, StructureSystemType, StructureSystemsSet, SystemActive,
+            energy_storage_system::EnergyStorageSystem,
+            warp::warp_drive::{WarpBlockProperty, WarpDriveSystem},
+        },
     },
     universe::warp::{WarpTo, Warping, WarpingSet},
 };
@@ -118,13 +124,19 @@ fn register_warp_blocks(mut warp_blocks: ResMut<WarpDriveBlocks>, blocks: Res<Re
 
 fn on_activate_system(
     mut q_active: Query<(&mut WarpDriveSystem, &StructureSystem), With<SystemActive>>,
-    q_systems: Query<(Entity, &Location, &Transform, &ReadMassProperties), (Without<ChildOf>, Without<Warping>)>,
+    q_systems: Query<
+        (&Pilot, Entity, &Location, &Transform, &ReadMassProperties, Option<&DesiredLocation>),
+        (Without<ChildOf>, Without<Warping>),
+    >,
     mut commands: Commands,
+    mut notify: NettyEventWriter<Notification>,
+    q_player: Query<&Player>,
 ) {
-    const MAX_JUMP_DIST: f32 = SECTOR_DIMENSIONS * 50.0;
+    const MAX_JUMP_DIST: f32 = SECTOR_DIMENSIONS * 5.0;
+    const MIN_JUMP_DIST: f32 = SECTOR_DIMENSIONS * 1.0;
 
     for (mut warp, ss) in q_active.iter_mut() {
-        let Ok((ent, loc, trans, mass)) = q_systems.get(ss.structure_entity()) else {
+        let Ok((pilot, ent, loc, trans, mass, desierd_loc)) = q_systems.get(ss.structure_entity()) else {
             continue;
         };
 
@@ -132,10 +144,25 @@ fn on_activate_system(
             continue;
         }
 
+        let warp_to = if let Some(desired_loc) = desierd_loc {
+            let dist_sqrd = desired_loc.0.distance_sqrd(loc);
+            if dist_sqrd < MIN_JUMP_DIST * MIN_JUMP_DIST {
+                if let Ok(player) = q_player.get(pilot.entity) {
+                    notify.write(Notification::error("That is too close to warp to!"), player.client_id());
+                    continue;
+                }
+            }
+            if dist_sqrd < MAX_JUMP_DIST * MAX_JUMP_DIST {
+                desired_loc.0
+            } else {
+                *loc + (desired_loc.0 - *loc).absolute_coords_f32().clamp_length_max(MAX_JUMP_DIST)
+            }
+        } else {
+            *loc + Location::new((trans.rotation * Vec3::NEG_Z) * MAX_JUMP_DIST, Default::default())
+        };
+
         warp.discharge();
 
-        // *loc =
-        let warp_to = *loc + Location::new((trans.rotation * Vec3::NEG_Z) * MAX_JUMP_DIST, Default::default());
         commands.entity(ent).insert(WarpTo { loc: warp_to });
     }
 }
