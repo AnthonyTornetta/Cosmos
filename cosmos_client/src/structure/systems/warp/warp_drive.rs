@@ -36,6 +36,8 @@ fn play_warp_sound(
         commands.entity(entity).with_child((
             Transform::default(),
             DespawnOnNoEmissions,
+            // We do NOT want to despawn with structure - so omit the `DespawnWithStructure` here.
+            // This way, if the ship warps away this sfx remains where the ship was.
             CosmosAudioEmitter {
                 emissions: vec![AudioEmission {
                     instance: playing_sound,
