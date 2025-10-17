@@ -15,7 +15,7 @@ pub mod galaxy_generation;
 pub mod generators;
 pub mod map;
 pub mod spawners;
-mod warp;
+pub mod warp;
 
 #[derive(Deserialize, Serialize, Reflect)]
 /// Represents a star in a galaxy

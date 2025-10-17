@@ -8,7 +8,7 @@ use crate::{
 
 #[derive(Component, Debug, Reflect, Serialize, Deserialize, PartialEq, Clone, Copy)]
 /// Set by the client to indicate where they want to go
-pub struct DesiredLocation(pub Location);
+pub struct DesiredLocation(pub Option<Location>);
 
 impl IdentifiableComponent for DesiredLocation {
     fn get_component_unlocalized_name() -> &'static str {

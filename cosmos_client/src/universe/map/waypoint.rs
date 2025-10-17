@@ -62,19 +62,21 @@ fn set_desired_location(
     q_piloting: Query<&Pilot, With<LocalPlayer>>,
     mut commands: Commands,
 ) {
-    let Ok(ind) = q_waypoint.single() else {
-        return;
-    };
-
-    let Ok(loc) = q_loc.get(ind.0) else {
-        return;
-    };
-
     let Ok(pilot) = q_piloting.single() else {
         return;
     };
 
-    commands.entity(pilot.entity).insert(DesiredLocation(*loc));
+    let Ok(ind) = q_waypoint.single() else {
+        commands.entity(pilot.entity).insert(DesiredLocation(None));
+        return;
+    };
+
+    let Ok(loc) = q_loc.get(ind.0) else {
+        commands.entity(pilot.entity).insert(DesiredLocation(None));
+        return;
+    };
+
+    commands.entity(pilot.entity).insert(DesiredLocation(Some(*loc)));
 }
 
 pub(super) fn register(app: &mut App) {

@@ -16,7 +16,7 @@ use cosmos_core::{
         systems::{
             StructureSystemOrdering, StructureSystemType, StructureSystemsSet, SystemActive,
             energy_storage_system::EnergyStorageSystem,
-            warp::warp_drive::{WarpBlockProperty, WarpDriveSystem},
+            warp::warp_drive::{WarpBlockProperty, WarpDriveInitiating, WarpDriveSystem},
         },
     },
     universe::warp::{WarpTo, Warping, WarpingSet},
@@ -25,6 +25,7 @@ use cosmos_core::{
 use crate::{
     persistence::make_persistent::{DefaultPersistentComponent, make_persistent},
     structure::systems::sync::register_structure_system,
+    universe::warp::WarpAnchor,
 };
 
 #[derive(Resource, Debug, Default)]
@@ -126,7 +127,7 @@ fn on_activate_system(
     mut q_active: Query<(&mut WarpDriveSystem, &StructureSystem), With<SystemActive>>,
     q_systems: Query<
         (&Pilot, Entity, &Location, &Transform, &ReadMassProperties, Option<&DesiredLocation>),
-        (Without<ChildOf>, Without<Warping>),
+        (Without<ChildOf>, Without<Warping>, Without<WarpDriveInitiating>, Without<WarpTo>),
     >,
     mut commands: Commands,
     mut notify: NettyEventWriter<Notification>,
@@ -144,8 +145,8 @@ fn on_activate_system(
             continue;
         }
 
-        let warp_to = if let Some(desired_loc) = desierd_loc {
-            let dist_sqrd = desired_loc.0.distance_sqrd(loc);
+        let warp_to = if let Some(desired_loc) = desierd_loc.and_then(|x| x.0) {
+            let dist_sqrd = desired_loc.distance_sqrd(loc);
             if dist_sqrd < MIN_JUMP_DIST * MIN_JUMP_DIST {
                 if let Ok(player) = q_player.get(pilot.entity) {
                     notify.write(Notification::error("That is too close to warp to!"), player.client_id());
@@ -153,9 +154,9 @@ fn on_activate_system(
                 }
             }
             if dist_sqrd < MAX_JUMP_DIST * MAX_JUMP_DIST {
-                desired_loc.0
+                desired_loc
             } else {
-                *loc + (desired_loc.0 - *loc).absolute_coords_f32().clamp_length_max(MAX_JUMP_DIST)
+                *loc + (desired_loc - *loc).absolute_coords_f32().clamp_length_max(MAX_JUMP_DIST)
             }
         } else {
             *loc + Location::new((trans.rotation * Vec3::NEG_Z) * MAX_JUMP_DIST, Default::default())
@@ -163,13 +164,41 @@ fn on_activate_system(
 
         warp.discharge();
 
-        commands.entity(ent).insert(WarpTo { loc: warp_to });
+        commands.entity(ent).insert((
+            WarpDriveInitiating {
+                charge: 0.0,
+                max_charge: 14.5,
+            },
+            ThenTryWarpTo(warp_to),
+        ));
+
+        commands.spawn((warp_to, WarpAnchor));
+    }
+}
+
+#[derive(Component)]
+struct ThenTryWarpTo(Location);
+
+fn warp_to_after_initialized(
+    mut commands: Commands,
+    mut q_initialized: Query<(Entity, &mut WarpDriveInitiating, &ThenTryWarpTo)>,
+    time: Res<Time>,
+) {
+    for (ent, mut initiating, then_warp_to) in q_initialized.iter_mut() {
+        initiating.charge += time.delta_secs();
+        if initiating.max_charge <= initiating.charge {
+            commands
+                .entity(ent)
+                .remove::<WarpDriveInitiating>()
+                .remove::<ThenTryWarpTo>()
+                .insert(WarpTo { loc: then_warp_to.0 });
+        }
     }
 }
 
 fn charge_warp_drive(
     mut q_warp: Query<(&mut WarpDriveSystem, &StructureSystem)>,
-    q_systems: Query<(&StructureSystems, &ReadMassProperties), Without<Warping>>,
+    q_systems: Query<(&StructureSystems, &ReadMassProperties), (Without<Warping>, Without<WarpDriveInitiating>)>,
     mut q_ess: Query<&mut EnergyStorageSystem>,
 ) {
     for (mut warp, ss) in q_warp.iter_mut() {
@@ -204,7 +233,12 @@ pub(super) fn register(app: &mut App) {
         .add_systems(OnEnter(GameState::PostLoading), register_warp_blocks)
         .add_systems(
             FixedUpdate,
-            (charge_warp_drive, on_activate_system.before(WarpingSet::StartWarping))
+            (
+                charge_warp_drive,
+                (on_activate_system, warp_to_after_initialized)
+                    .chain()
+                    .before(WarpingSet::StartWarping),
+            )
                 .chain()
                 .in_set(StructureSystemsSet::UpdateSystems),
         )

@@ -3,6 +3,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     ecs::name,
+    netty::sync::{IdentifiableComponent, SyncableComponent, sync_component},
     prelude::BlockCoordinate,
     structure::systems::{StructureSystemImpl, sync::SyncableSystem},
 };
@@ -27,6 +28,24 @@ impl SyncableSystem for WarpDriveSystem {}
 pub struct WarpBlockProperty {
     pub charge_per_tick: u32,
     pub capacitance: u32,
+}
+
+#[derive(Component, Default, Reflect, Serialize, Deserialize, Debug, Clone, PartialEq)]
+pub struct WarpDriveInitiating {
+    pub charge: f32,
+    pub max_charge: f32,
+}
+
+impl IdentifiableComponent for WarpDriveInitiating {
+    fn get_component_unlocalized_name() -> &'static str {
+        "cosmos:warp_drive_initiating"
+    }
+}
+
+impl SyncableComponent for WarpDriveInitiating {
+    fn get_sync_type() -> crate::netty::sync::SyncType {
+        crate::netty::sync::SyncType::ServerAuthoritative
+    }
 }
 
 impl WarpDriveSystem {
@@ -106,6 +125,9 @@ impl WarpDriveSystem {
 }
 
 pub(super) fn register(app: &mut App) {
+    sync_component::<WarpDriveInitiating>(app);
+
     app.register_type::<WarpDriveSystem>()
+        .register_type::<WarpDriveInitiating>()
         .add_systems(Update, name::<WarpDriveSystem>("Warp Drive System"));
 }
