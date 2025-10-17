@@ -4,13 +4,18 @@ use bevy::prelude::*;
 use bevy_kira_audio::{Audio, AudioControl, AudioEasing, AudioInstance, AudioSource, AudioTween};
 use cosmos_core::{
     ecs::sets::FixedUpdateSet,
+    netty::client::LocalPlayer,
     state::GameState,
-    structure::systems::warp::warp_drive::{WarpDriveInitiating, WarpDriveSystem},
+    structure::{
+        ship::pilot::Pilot,
+        systems::warp::warp_drive::{WarpDriveInitiating, WarpDriveSystem},
+    },
 };
 
 use crate::{
     asset::asset_loader::load_assets,
     audio::{AudioEmission, CosmosAudioEmitter, DespawnOnNoEmissions},
+    rendering::MainCamera,
     structure::systems::sync::sync_system,
 };
 
@@ -44,6 +49,29 @@ fn play_warp_sound(
     }
 }
 
+fn play_warp_animation(
+    q_warping: Query<(&Pilot, &WarpDriveInitiating)>,
+    q_local_player: Query<(), With<LocalPlayer>>,
+    mut q_main_cam: Query<&mut Transform, With<MainCamera>>,
+) {
+    let Ok(mut cam) = q_main_cam.single_mut() else {
+        error!("Missing main cam!");
+        return;
+    };
+
+    if let Some((_, warp_drive_initating)) = q_warping.iter().find(|(p, _)| q_local_player.contains(p.entity)) {
+        const MAX_ZOOM: f32 = 0.8;
+        let amt = MAX_ZOOM - (MAX_ZOOM * (warp_drive_initating.charge.powf(2.0) / warp_drive_initating.max_charge.powf(2.0))).min(MAX_ZOOM)
+            + (1.0 - MAX_ZOOM);
+        cam.scale.x = amt;
+        cam.scale.y = amt;
+    } else {
+        if cam.scale != Vec3::ONE {
+            cam.scale = Vec3::ONE;
+        }
+    }
+}
+
 pub(super) fn register(app: &mut App) {
     sync_system::<WarpDriveSystem>(app);
 
@@ -59,5 +87,6 @@ pub(super) fn register(app: &mut App) {
     app.add_systems(
         FixedUpdate,
         play_warp_sound.run_if(in_state(GameState::Playing)).in_set(FixedUpdateSet::Main),
-    );
+    )
+    .add_systems(Update, play_warp_animation.run_if(in_state(GameState::Playing)));
 }

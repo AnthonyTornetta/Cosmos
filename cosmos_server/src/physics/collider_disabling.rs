@@ -4,7 +4,7 @@ use cosmos_core::{
     entities::player::Player,
     physics::{
         disable_rigid_body::{DisableRigidBody, DisableRigidBodySet},
-        location::{Location, SECTOR_DIMENSIONS},
+        location::{Location, SECTOR_DIMENSIONS, systems::Anchor},
     },
     state::GameState,
 };
@@ -14,8 +14,8 @@ const REASON: &str = "cosmos:far_away";
 
 fn disable_colliders(
     mut commands: Commands,
-    mut q_entity: Query<(Entity, &Location, Option<&mut DisableRigidBody>), (Without<Player>, Without<ChildOf>)>,
-    q_players: Query<&Location, With<Player>>,
+    mut q_entity: Query<(Entity, &Location, Option<&mut DisableRigidBody>), (Without<Player>, Without<Anchor>, Without<ChildOf>)>,
+    q_players: Query<&Location, Or<(With<Anchor>, With<Player>)>>,
 ) {
     for (ent, loc, disabled_rb) in q_entity.iter_mut() {
         let Some(min_dist) = q_players
