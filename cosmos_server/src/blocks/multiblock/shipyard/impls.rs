@@ -616,13 +616,13 @@ fn on_change_shipyard_state(
             ClientSetShipyardState::Stop { controller: _ } => {
                 structure.remove_block_data::<ShipyardState>(
                     controller.coords(),
-                    &mut *bs_params.borrow_mut(),
+                    &mut bs_params.borrow_mut(),
                     &mut q_block_data,
                     &q_has_shipyard_state_data,
                 );
                 structure.remove_block_data::<ClientFriendlyShipyardState>(
                     controller.coords(),
-                    &mut *bs_params.borrow_mut(),
+                    &mut bs_params.borrow_mut(),
                     &mut q_block_data,
                     &q_has_shipyard_client_data,
                 );

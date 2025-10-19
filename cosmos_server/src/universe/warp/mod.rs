@@ -67,7 +67,7 @@ fn find_good_warp_spot(
         }
     }
 
-    return Err(WarpError::TooOccupied);
+    Err(WarpError::TooOccupied)
 }
 
 #[derive(Component)]

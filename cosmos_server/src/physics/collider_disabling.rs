@@ -1,13 +1,11 @@
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::RigidBody;
 use cosmos_core::{
-    ecs::sets::FixedUpdateSet,
     entities::player::Player,
     physics::{
-        disable_rigid_body::{DisableRigidBody, DisableRigidBodySet},
+        disable_rigid_body::DisableRigidBody,
         location::{Location, SECTOR_DIMENSIONS, systems::Anchor},
     },
-    state::GameState,
 };
 
 const N_SECTORS: f32 = 2.0;

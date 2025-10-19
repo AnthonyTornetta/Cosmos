@@ -19,7 +19,7 @@ use cosmos_core::{
             warp::warp_drive::{WarpBlockProperty, WarpCancelledEvent, WarpDriveInitiating, WarpDriveSystem},
         },
     },
-    universe::warp::{WarpTo, Warping, WarpingSet},
+    universe::warp::{WarpTo, Warping},
 };
 
 use crate::{
@@ -159,12 +159,11 @@ fn on_activate_system(
 
         let warp_to = if let Some(desired_loc) = desierd_loc.and_then(|x| x.0) {
             let dist_sqrd = desired_loc.distance_sqrd(loc);
-            if dist_sqrd < MIN_JUMP_DIST * MIN_JUMP_DIST {
-                if let Ok(player) = q_player.get(pilot.entity) {
+            if dist_sqrd < MIN_JUMP_DIST * MIN_JUMP_DIST
+                && let Ok(player) = q_player.get(pilot.entity) {
                     notify.write(Notification::error("That is too close to warp to!"), player.client_id());
                     continue;
                 }
-            }
             if dist_sqrd < MAX_JUMP_DIST * MAX_JUMP_DIST {
                 desired_loc
             } else {

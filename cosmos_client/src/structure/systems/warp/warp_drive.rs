@@ -111,10 +111,8 @@ fn play_warp_animation(
             + (1.0 - MAX_ZOOM);
         cam.scale.x = amt;
         cam.scale.y = amt;
-    } else {
-        if cam.scale != Vec3::ONE {
-            cam.scale = Vec3::ONE;
-        }
+    } else if cam.scale != Vec3::ONE {
+        cam.scale = Vec3::ONE;
     }
 }
 
