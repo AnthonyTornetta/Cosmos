@@ -3,7 +3,11 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     ecs::name,
-    netty::sync::{IdentifiableComponent, SyncableComponent, sync_component},
+    netty::sync::{
+        IdentifiableComponent, SyncableComponent,
+        events::netty_event::{IdentifiableEvent, NettyEvent, SyncedEventImpl},
+        sync_component,
+    },
     prelude::BlockCoordinate,
     structure::systems::{StructureSystemImpl, sync::SyncableSystem},
 };
@@ -124,10 +128,40 @@ impl WarpDriveSystem {
     }
 }
 
+#[derive(Event, Clone, Copy, Serialize, Deserialize, Debug)]
+pub struct WarpCancelledEvent {
+    pub structure_entity: Entity,
+}
+
+impl IdentifiableEvent for WarpCancelledEvent {
+    fn unlocalized_name() -> &'static str {
+        "cosmos:warp_cancelled"
+    }
+}
+
+impl NettyEvent for WarpCancelledEvent {
+    fn event_receiver() -> crate::netty::sync::events::netty_event::EventReceiver {
+        crate::netty::sync::events::netty_event::EventReceiver::Client
+    }
+
+    #[cfg(feature = "client")]
+    fn needs_entity_conversion() -> bool {
+        true
+    }
+
+    #[cfg(feature = "client")]
+    fn convert_entities_server_to_client(self, mapping: &crate::netty::sync::mapping::NetworkMapping) -> Option<Self> {
+        mapping
+            .client_from_server(&self.structure_entity)
+            .map(|structure_entity| Self { structure_entity })
+    }
+}
+
 pub(super) fn register(app: &mut App) {
     sync_component::<WarpDriveInitiating>(app);
 
     app.register_type::<WarpDriveSystem>()
         .register_type::<WarpDriveInitiating>()
-        .add_systems(Update, name::<WarpDriveSystem>("Warp Drive System"));
+        .add_systems(Update, name::<WarpDriveSystem>("Warp Drive System"))
+        .add_netty_event::<WarpCancelledEvent>();
 }

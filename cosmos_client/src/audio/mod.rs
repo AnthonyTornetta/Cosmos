@@ -88,6 +88,10 @@ impl CosmosAudioEmitter {
         Self { emissions }
     }
 
+    pub fn add_emission(&mut self, emission: AudioEmission) {
+        self.emissions.push(emission);
+    }
+
     /// Removes the audio handle from this emitter and returns the emission if one is present.
     ///
     /// This does not stop playing the audio, it is up to you to handle it.

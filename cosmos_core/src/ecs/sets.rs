@@ -20,6 +20,8 @@ pub enum FixedUpdateSet {
     /// after all the physics has been run. This ensures the locations are up-to-date for the most
     /// recent physics data.
     LocationSyncingPostPhysics,
+    /// After all locations have been synced for the final time
+    PostLocationSyncingPostPhysics,
     /// The networking stack sends all needed messages to the clients/server connected.
     NettySend,
 }
@@ -34,6 +36,7 @@ pub(super) fn register(app: &mut App) {
             FixedUpdateSet::PrePhysics.before(PhysicsSet::SyncBackend),
             FixedUpdateSet::PostPhysics.after(PhysicsSet::Writeback),
             FixedUpdateSet::LocationSyncingPostPhysics,
+            FixedUpdateSet::PostLocationSyncingPostPhysics,
             FixedUpdateSet::NettySend,
         )
             .chain(),

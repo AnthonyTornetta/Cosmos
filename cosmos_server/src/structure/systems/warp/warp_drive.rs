@@ -16,7 +16,7 @@ use cosmos_core::{
         systems::{
             StructureSystemOrdering, StructureSystemType, StructureSystemsSet, SystemActive,
             energy_storage_system::EnergyStorageSystem,
-            warp::warp_drive::{WarpBlockProperty, WarpDriveInitiating, WarpDriveSystem},
+            warp::warp_drive::{WarpBlockProperty, WarpCancelledEvent, WarpDriveInitiating, WarpDriveSystem},
         },
     },
     universe::warp::{WarpTo, Warping, WarpingSet},
@@ -124,19 +124,31 @@ fn register_warp_blocks(mut warp_blocks: ResMut<WarpDriveBlocks>, blocks: Res<Re
 }
 
 fn on_activate_system(
-    mut q_active: Query<(&mut WarpDriveSystem, &StructureSystem), With<SystemActive>>,
+    mut q_active: Query<(&mut WarpDriveSystem, &StructureSystem, &SystemActive)>,
     q_systems: Query<
         (&Pilot, Entity, &Location, &Transform, &ReadMassProperties, Option<&DesiredLocation>),
         (Without<ChildOf>, Without<Warping>, Without<WarpDriveInitiating>, Without<WarpTo>),
     >,
+    q_warping: Query<Entity, With<WarpDriveInitiating>>,
     mut commands: Commands,
     mut notify: NettyEventWriter<Notification>,
     q_player: Query<&Player>,
+    mut nevw_warp_cancelled: NettyEventWriter<WarpCancelledEvent>,
 ) {
     const MAX_JUMP_DIST: f32 = SECTOR_DIMENSIONS * 5.0;
     const MIN_JUMP_DIST: f32 = SECTOR_DIMENSIONS * 1.0;
 
-    for (mut warp, ss) in q_active.iter_mut() {
+    for (mut warp, ss, active) in q_active.iter_mut() {
+        if active.secondary() {
+            if let Ok(ent_warping) = q_warping.get(ss.structure_entity()) {
+                commands.entity(ent_warping).remove::<WarpDriveInitiating>();
+                nevw_warp_cancelled.broadcast(WarpCancelledEvent {
+                    structure_entity: ent_warping,
+                });
+            }
+            continue;
+        }
+
         let Ok((pilot, ent, loc, trans, mass, desierd_loc)) = q_systems.get(ss.structure_entity()) else {
             continue;
         };
@@ -233,12 +245,7 @@ pub(super) fn register(app: &mut App) {
         .add_systems(OnEnter(GameState::PostLoading), register_warp_blocks)
         .add_systems(
             FixedUpdate,
-            (
-                charge_warp_drive,
-                (on_activate_system, warp_to_after_initialized)
-                    .chain()
-                    .before(WarpingSet::StartWarping),
-            )
+            (charge_warp_drive, on_activate_system, warp_to_after_initialized)
                 .chain()
                 .in_set(StructureSystemsSet::UpdateSystems),
         )

@@ -100,9 +100,9 @@ fn replication_listen_netty(
                     continue;
                 };
 
-                if active {
+                if let Some(active) = active {
                     if !q_is_active.contains(system) {
-                        commands.entity(system).insert(SystemActive);
+                        commands.entity(system).insert(active);
                     }
                 } else if q_is_active.contains(system) {
                     commands.entity(system).remove::<SystemActive>();

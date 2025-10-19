@@ -5,7 +5,10 @@ use bevy_renet::renet::RenetClient;
 use cosmos_core::{
     netty::{NettyChannelClient, client::LocalPlayer, client_unreliable_messages::ClientUnreliableMessages, cosmos_encoder},
     state::GameState,
-    structure::{ship::pilot::Pilot, systems::ShipActiveSystem},
+    structure::{
+        ship::pilot::Pilot,
+        systems::{ShipActiveSystem, SystemActive},
+    },
 };
 
 use crate::{
@@ -19,7 +22,7 @@ pub struct HoveredSystem {
     /// The index of the system, relative to the `active_systems` iterator
     pub hovered_system_index: usize,
     /// If the hovered system is active
-    pub active: bool,
+    pub active: Option<SystemActive>,
 }
 
 fn check_system_in_use(
@@ -31,9 +34,15 @@ fn check_system_in_use(
         return;
     };
 
-    hovered_system.active = input_handler.check_pressed(CosmosInputs::UseSelectedSystem);
+    hovered_system.active = if input_handler.check_pressed(CosmosInputs::UseSelectedSystem) {
+        Some(SystemActive::Primary)
+    } else if input_handler.check_pressed(CosmosInputs::UseSelectedSystemAlt) {
+        Some(SystemActive::Secondary)
+    } else {
+        None
+    };
 
-    let active_system = if hovered_system.active {
+    let active_system = if hovered_system.active.is_some() {
         ShipActiveSystem::Active(hovered_system.hovered_system_index as u32)
     } else {
         ShipActiveSystem::Hovered(hovered_system.hovered_system_index as u32)
@@ -41,7 +50,10 @@ fn check_system_in_use(
 
     client.send_message(
         NettyChannelClient::Unreliable,
-        cosmos_encoder::serialize(&ClientUnreliableMessages::ShipActiveSystem(active_system)),
+        cosmos_encoder::serialize(&ClientUnreliableMessages::ShipActiveSystem {
+            system: active_system,
+            active: hovered_system.active,
+        }),
     );
 }
 

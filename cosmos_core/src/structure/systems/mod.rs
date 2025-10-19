@@ -43,7 +43,7 @@ pub mod sync;
 pub mod thruster_system;
 pub mod warp;
 
-#[derive(Component)]
+#[derive(Component, Debug, Reflect, PartialEq, Eq, Serialize, Deserialize, Clone, Copy)]
 #[component(storage = "SparseSet")]
 /// Used to tell if the selected system should be active
 /// (ie laser cannons firing)
@@ -57,7 +57,21 @@ pub mod warp;
 /// ```
 ///
 /// would give you every laser cannon system that is currently being activated.
-pub struct SystemActive;
+pub enum SystemActive {
+    Primary,
+    Secondary,
+    Both,
+}
+
+impl SystemActive {
+    pub fn primary(&self) -> bool {
+        matches!(self, Self::Primary | Self::Both)
+    }
+
+    pub fn secondary(&self) -> bool {
+        matches!(self, Self::Secondary | Self::Both)
+    }
+}
 
 #[derive(Default, Clone, Copy, PartialEq, Eq, Debug, Serialize, Deserialize, Reflect)]
 /// Sets the system the player has selected
@@ -445,7 +459,13 @@ impl StructureSystems {
     /// Activates the passed in selected system, and deactivates the system that was previously selected
     ///
     /// The passed in system index must be based off the [`StructureSystemOrdering`] ordering.
-    pub fn set_active_system(&mut self, active: ShipActiveSystem, ordering: &StructureSystemOrdering, commands: &mut Commands) {
+    pub fn set_active_system(
+        &mut self,
+        active: ShipActiveSystem,
+        ordering: &StructureSystemOrdering,
+        commands: &mut Commands,
+        type_of_active: Option<SystemActive>,
+    ) {
         if active == self.active_system {
             return;
         }
@@ -456,12 +476,14 @@ impl StructureSystems {
 
         self.active_system = active;
 
-        if let Some(ent) = self.active_system(ordering) {
-            commands.entity(ent).insert(SystemActive);
+        if let Some(type_of_active) = type_of_active {
+            if let Some(ent) = self.active_system(ordering) {
+                commands.entity(ent).insert(type_of_active);
 
-            self.active_system = active;
-        } else if self.hovered_system(ordering).is_none() {
-            self.active_system = ShipActiveSystem::None;
+                self.active_system = active;
+            } else if self.hovered_system(ordering).is_none() {
+                self.active_system = ShipActiveSystem::None;
+            }
         }
     }
 
@@ -725,6 +747,7 @@ pub(super) fn register(app: &mut App) {
     .register_type::<StructureSystem>()
     .register_type::<StructureSystems>()
     .register_type::<StructureSystemOrdering>()
+    .register_type::<SystemActive>()
     .add_netty_event::<ChangeSystemSlot>();
 
     line_system::register(app);

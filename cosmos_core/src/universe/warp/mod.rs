@@ -35,6 +35,8 @@ pub(super) fn register(app: &mut App) {
 
     app.configure_sets(
         FixedUpdate,
-        (WarpingSet::StartWarping, WarpingSet::DoneWarping).chain(), // .in_set(FixedUpdateSet::Main),
+        (WarpingSet::StartWarping, WarpingSet::DoneWarping)
+            .chain()
+            .before(FixedUpdateSet::PrePhysics),
     );
 }

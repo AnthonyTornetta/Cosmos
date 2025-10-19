@@ -92,7 +92,7 @@ pub(super) fn register(app: &mut App) {
     app.add_systems(
         FixedUpdate,
         disable_rigid_bodies
-            .in_set(FixedUpdateSet::PrePhysics)
+            .in_set(FixedUpdateSet::PostLocationSyncingPostPhysics)
             .in_set(DisableRigidBodySet::DisableRigidBodies),
     )
     .register_type::<DisableRigidBody>();

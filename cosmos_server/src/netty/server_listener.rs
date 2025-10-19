@@ -121,11 +121,11 @@ fn server_listen_messages(
                             ship_movement_event_writer.write(ShipSetMovementEvent { movement, ship });
                         }
                     }
-                    ClientUnreliableMessages::ShipActiveSystem(active_system) => {
+                    ClientUnreliableMessages::ShipActiveSystem { system, active } => {
                         if let Ok(pilot) = pilot_query.get(player_entity)
                             && let Ok((mut systems, ordering)) = systems_query.get_mut(pilot.entity)
                         {
-                            systems.set_active_system(active_system, ordering, &mut commands);
+                            systems.set_active_system(system, ordering, &mut commands, active);
                         }
                     }
                 }
