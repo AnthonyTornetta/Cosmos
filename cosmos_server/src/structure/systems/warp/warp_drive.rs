@@ -2,7 +2,7 @@ use bevy::{platform::collections::HashMap, prelude::*};
 use bevy_rapier3d::prelude::ReadMassProperties;
 use cosmos_core::{
     block::{Block, block_events::BlockEventsSet},
-    ecs::commands::OwnedOrMut,
+    ecs::types::OwnedOrMut,
     entities::player::Player,
     events::{block_events::BlockChangedEvent, structure::structure_event::StructureEventIterator},
     netty::sync::events::server_event::NettyEventWriter,
@@ -19,7 +19,7 @@ use cosmos_core::{
             warp::warp_drive::{WarpBlockProperty, WarpCancelledEvent, WarpDriveInitiating, WarpDriveSystem},
         },
     },
-    universe::warp::{WarpTo, Warping},
+    universe::warp::WarpTo,
 };
 
 use crate::{
@@ -127,7 +127,7 @@ fn on_activate_system(
     mut q_active: Query<(&mut WarpDriveSystem, &StructureSystem, &SystemActive)>,
     q_systems: Query<
         (&Pilot, Entity, &Location, &Transform, &ReadMassProperties, Option<&DesiredLocation>),
-        (Without<ChildOf>, Without<Warping>, Without<WarpDriveInitiating>, Without<WarpTo>),
+        (Without<ChildOf>, Without<WarpDriveInitiating>, Without<WarpTo>),
     >,
     q_warping: Query<Entity, With<WarpDriveInitiating>>,
     mut commands: Commands,
@@ -160,10 +160,11 @@ fn on_activate_system(
         let warp_to = if let Some(desired_loc) = desierd_loc.and_then(|x| x.0) {
             let dist_sqrd = desired_loc.distance_sqrd(loc);
             if dist_sqrd < MIN_JUMP_DIST * MIN_JUMP_DIST
-                && let Ok(player) = q_player.get(pilot.entity) {
-                    notify.write(Notification::error("That is too close to warp to!"), player.client_id());
-                    continue;
-                }
+                && let Ok(player) = q_player.get(pilot.entity)
+            {
+                notify.write(Notification::error("That is too close to warp to!"), player.client_id());
+                continue;
+            }
             if dist_sqrd < MAX_JUMP_DIST * MAX_JUMP_DIST {
                 desired_loc
             } else {
@@ -209,7 +210,7 @@ fn warp_to_after_initialized(
 
 fn charge_warp_drive(
     mut q_warp: Query<(&mut WarpDriveSystem, &StructureSystem)>,
-    q_systems: Query<(&StructureSystems, &ReadMassProperties), (Without<Warping>, Without<WarpDriveInitiating>)>,
+    q_systems: Query<(&StructureSystems, &ReadMassProperties), Without<WarpDriveInitiating>>,
     mut q_ess: Query<&mut EnergyStorageSystem>,
 ) {
     for (mut warp, ss) in q_warp.iter_mut() {

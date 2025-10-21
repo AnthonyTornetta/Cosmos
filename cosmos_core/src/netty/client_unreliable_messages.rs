@@ -28,7 +28,9 @@ pub enum ClientUnreliableMessages {
     },
     /// Which system is the pilot currently setting to active
     ShipActiveSystem {
+        /// The system the player is interacting with and how
         system: ShipActiveSystem,
+        /// Which action (if any) they are taking
         active: Option<SystemActive>,
     },
 }

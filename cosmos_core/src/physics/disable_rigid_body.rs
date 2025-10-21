@@ -21,6 +21,7 @@ pub struct DisableRigidBody {
 }
 
 impl DisableRigidBody {
+    /// [`Self::default`] + [`Self::add_reason`]
     pub fn new_with_reason(reason: &'static str) -> Self {
         Self {
             reasons: vec![reason.into()],
@@ -37,14 +38,12 @@ impl DisableRigidBody {
         if self.contains_reason(reason) {
             return;
         }
-        info!("Added reason {reason:?}");
         self.reasons.push(reason.into());
     }
 
     /// Removes your reason for this being disabled.
     pub fn remove_reason(&mut self, reason: &'static str) {
         if let Some((idx, _)) = self.reasons.iter().enumerate().find(|(_, x)| *x == reason) {
-            info!("Removed reason {reason:?}");
             self.reasons.remove(idx);
         }
     }

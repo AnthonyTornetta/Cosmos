@@ -1,11 +1,13 @@
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::RigidBody;
 use cosmos_core::{
+    ecs::sets::FixedUpdateSet,
     entities::player::Player,
     physics::{
-        disable_rigid_body::DisableRigidBody,
+        disable_rigid_body::{DisableRigidBody, DisableRigidBodySet},
         location::{Location, SECTOR_DIMENSIONS, systems::Anchor},
     },
+    state::GameState,
 };
 
 const N_SECTORS: f32 = 2.0;
@@ -30,27 +32,24 @@ fn disable_colliders(
 
         if min_dist.sqrt() > SECTOR_DIMENSIONS * N_SECTORS {
             if let Some(mut disabled_rb) = disabled_rb {
-                info!("ADDING ({loc:?}): {ent:?}, {min_dist:?}");
                 disabled_rb.add_reason(REASON);
             } else {
                 let mut disabled_rb = DisableRigidBody::default();
-                info!("ADDING: ({loc:?}) {ent:?}");
                 disabled_rb.add_reason(REASON);
                 commands.entity(ent).insert(disabled_rb);
             }
         } else if let Some(mut disabled_rb) = disabled_rb {
-            info!("REMOVING: {ent:?}, {min_dist:?}");
             disabled_rb.remove_reason(REASON);
         }
     }
 }
 
 pub(super) fn register(app: &mut App) {
-    // app.add_systems(
-    //     FixedUpdate,
-    //     disable_colliders
-    //         .run_if(in_state(GameState::Playing))
-    //         .in_set(FixedUpdateSet::PostLocationSyncingPostPhysics)
-    //         .before(DisableRigidBodySet::DisableRigidBodies),
-    // );
+    app.add_systems(
+        FixedUpdate,
+        disable_colliders
+            .run_if(in_state(GameState::Playing))
+            .in_set(FixedUpdateSet::PostLocationSyncingPostPhysics)
+            .before(DisableRigidBodySet::DisableRigidBodies),
+    );
 }

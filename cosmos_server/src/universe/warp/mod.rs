@@ -1,3 +1,5 @@
+//! Responsible for positioning and executing warps
+
 use std::time::Duration;
 
 use bevy::prelude::*;
@@ -19,6 +21,8 @@ const JUMP_SEARCH_RADIUS: f32 = 10_000.0;
 
 #[derive(Component)]
 #[require(Anchor, WarpAnchorDespawnSoon)]
+/// Loads an area around this location, similar to a player. This is used to pre-load the area
+/// someone is warping to, ensuring a smooth jump
 pub struct WarpAnchor;
 
 fn find_good_warp_spot(
@@ -112,7 +116,8 @@ fn check_for_good_warp_spot(
 }
 
 #[derive(Component, Default)]
-pub struct WarpAnchorDespawnSoon(f32);
+/// This [`WarpAnchor`] will despawn in the alloted amount of time ([`ANCHOR_LIVE_TIME`])
+struct WarpAnchorDespawnSoon(f32);
 
 const ANCHOR_LIVE_TIME: Duration = Duration::from_secs(30);
 
@@ -132,9 +137,9 @@ pub(super) fn register(app: &mut App) {
             check_for_good_warp_spot.after(LoadingSystemSet::DoneLoading),
             // We need to load everything we are warping to, so leave one frame game
             despawn_warp_anchors,
-            warp_to,
         )
             .chain()
             .in_set(WarpingSet::StartWarping),),
-    );
+    )
+    .add_systems(FixedUpdate, warp_to.in_set(WarpingSet::PerformWarp));
 }

@@ -1,3 +1,5 @@
+//! Shared warp logic
+
 use bevy::prelude::*;
 use serde::{Deserialize, Serialize};
 

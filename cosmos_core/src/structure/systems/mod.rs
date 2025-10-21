@@ -58,16 +58,21 @@ pub mod warp;
 ///
 /// would give you every laser cannon system that is currently being activated.
 pub enum SystemActive {
+    /// The primary function of this system was used (left click)
     Primary,
+    /// The secondary function of this system was used (right click)
     Secondary,
+    /// Both functions of this system were used (left + right click)
     Both,
 }
 
 impl SystemActive {
+    /// Returns true if the Priamry or Both systems are being used
     pub fn primary(&self) -> bool {
         matches!(self, Self::Primary | Self::Both)
     }
 
+    /// Returns true if the Secondary or Both systems are being used
     pub fn secondary(&self) -> bool {
         matches!(self, Self::Secondary | Self::Both)
     }

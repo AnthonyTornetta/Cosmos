@@ -1,14 +1,20 @@
+//! Useful types for interacting with the ecs
+
 use std::ops::{Deref, DerefMut};
 
 use bevy::ecs::{
     component::{Component, Mutable},
-    entity::Entity,
-    system::{Commands, Query},
     world::Mut,
 };
 
+/// A piece of data that may be owned, or may be a bevy [`Mut`] reference.
+///
+/// Useful when working with data that could be already on the entity, or needs to be attached once
+/// done doing work on this data.
 pub enum OwnedOrMut<'w, T: Component<Mutability = Mutable>> {
+    /// This data is owned
     Owned(T),
+    /// This is a bevy [`Mut`] reference
     Mut(Mut<'w, T>),
 }
 

@@ -88,6 +88,7 @@ impl CosmosAudioEmitter {
         Self { emissions }
     }
 
+    /// Adds an emission to this emitter
     pub fn add_emission(&mut self, emission: AudioEmission) {
         self.emissions.push(emission);
     }
