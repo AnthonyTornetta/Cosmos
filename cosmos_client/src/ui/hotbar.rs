@@ -16,6 +16,7 @@ use crate::{
     input::inputs::{CosmosInputs, InputChecker, InputHandler},
     lang::Lang,
     structure::ship::ui::system_hotbar::SystemSelectionSet,
+    ui::item_renderer::RenderItemCooldown,
 };
 
 use super::{
@@ -361,8 +362,8 @@ fn add_item_text(mut commands: Commands, default_font: Res<DefaultFont>) {
 fn populate_hotbar(
     q_hotbar_contents: Query<&HotbarContents, (Changed<HotbarContents>, With<LocalPlayerHotbar>)>,
     hotbar: Query<&Hotbar>,
-
-    render_item_query: Query<&RenderItem>,
+    q_render_item: Query<&RenderItem>,
+    q_render_item_cooldown: Query<&RenderItemCooldown>,
     mut commands: Commands,
 ) {
     let Ok(hotbar) = hotbar.single() else {
@@ -381,7 +382,7 @@ fn populate_hotbar(
             continue;
         };
 
-        if render_item_query
+        if q_render_item
             .get(item_entity)
             .map(|x| x.item_id != item_stack.item_id())
             .unwrap_or(true)

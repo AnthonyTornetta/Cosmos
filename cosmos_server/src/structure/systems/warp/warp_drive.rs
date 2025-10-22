@@ -14,7 +14,7 @@ use cosmos_core::{
     structure::{
         ship::{pilot::Pilot, warp::DesiredLocation},
         systems::{
-            StructureSystemOrdering, StructureSystemType, StructureSystemsSet, SystemActive,
+            StructureSystemCharge, StructureSystemOrdering, StructureSystemType, StructureSystemsSet, SystemActive,
             energy_storage_system::EnergyStorageSystem,
             warp::warp_drive::{WarpBlockProperty, WarpCancelledEvent, WarpDriveInitiating, WarpDriveSystem},
         },
@@ -153,7 +153,20 @@ fn on_activate_system(
             continue;
         };
 
+        if warp.max_charge() < WarpDriveSystem::compute_jump_charge(mass.get().mass) {
+            if let Ok(player) = q_player.get(pilot.entity) {
+                notify.write(
+                    Notification::error("Not enough warp drives to support this ship's size"),
+                    player.client_id(),
+                );
+            }
+            continue;
+        }
+
         if !warp.can_jump(mass.get().mass) {
+            if let Ok(player) = q_player.get(pilot.entity) {
+                notify.write(Notification::error("This warp drive is not charged"), player.client_id());
+            }
             continue;
         }
 
@@ -209,17 +222,30 @@ fn warp_to_after_initialized(
 }
 
 fn charge_warp_drive(
-    mut q_warp: Query<(&mut WarpDriveSystem, &StructureSystem)>,
+    mut q_warp: Query<(Entity, &mut WarpDriveSystem, &StructureSystem, Option<&mut StructureSystemCharge>)>,
     q_systems: Query<(&StructureSystems, &ReadMassProperties), Without<WarpDriveInitiating>>,
     mut q_ess: Query<&mut EnergyStorageSystem>,
+    mut commands: Commands,
 ) {
-    for (mut warp, ss) in q_warp.iter_mut() {
+    for (ent, mut warp, ss, charge) in q_warp.iter_mut() {
         let Ok((systems, mass)) = q_systems.get(ss.structure_entity()) else {
             continue;
         };
 
+        let set_charge = |amt: f32| {
+            let amt = amt.clamp(0.0, 1.0);
+            if let Some(mut charge) = charge {
+                if charge.0 != amt {
+                    charge.0 = amt;
+                }
+            } else {
+                commands.entity(ent).insert(StructureSystemCharge(amt));
+            }
+        };
+
         if warp.can_jump(mass.get().mass) {
             // Don't keep charging if we can jump
+            set_charge(1.0);
             continue;
         }
 
@@ -233,6 +259,7 @@ fn charge_warp_drive(
         charge_amt -= leftover as u32;
 
         warp.increase_charge(charge_amt);
+        set_charge(warp.charge() as f32 / WarpDriveSystem::compute_jump_charge(mass.get().mass) as f32);
     }
 }
 

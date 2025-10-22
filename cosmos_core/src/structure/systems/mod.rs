@@ -726,11 +726,30 @@ impl Identifiable for StructureSystemType {
     }
 }
 
+/// Used to illustrate charge to client - not used for any logic and is not automatically managed
+///
+/// The value should be bounded between 0.0 to 1.0
+#[derive(Component, Debug, Serialize, Deserialize, Clone, Copy, PartialEq)]
+pub struct StructureSystemCharge(pub f32);
+
+impl IdentifiableComponent for StructureSystemCharge {
+    fn get_component_unlocalized_name() -> &'static str {
+        "cosmos:structure_system_charge"
+    }
+}
+
+impl SyncableComponent for StructureSystemCharge {
+    fn get_sync_type() -> crate::netty::sync::SyncType {
+        crate::netty::sync::SyncType::ServerAuthoritative
+    }
+}
+
 pub(super) fn register(app: &mut App) {
     create_registry::<StructureSystemType>(app, "cosmos:structure_system_types");
     sync_registry::<StructureSystemType>(app);
 
     sync_component::<StructureSystemOrdering>(app);
+    sync_component::<StructureSystemCharge>(app);
 
     app.configure_sets(
         FixedUpdate,

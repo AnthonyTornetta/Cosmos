@@ -2,14 +2,21 @@
 
 use bevy::prelude::*;
 use cosmos_core::{
-    inventory::itemstack::{ItemShouldHaveData, ItemStack, ItemStackSystemSet},
-    item::Item,
+    ecs::NeedsDespawned,
+    inventory::{
+        Inventory,
+        itemstack::{ItemShouldHaveData, ItemStack, ItemStackSystemSet},
+    },
+    item::{Item, usable::cooldown::ItemCooldown},
     netty::client::LocalPlayer,
     registry::Registry,
     state::GameState,
     structure::{
         ship::pilot::Pilot,
-        systems::{StructureSystem, StructureSystemOrdering, StructureSystemType, StructureSystems},
+        systems::{
+            StructureSystem, StructureSystemCharge, StructureSystemOrdering, StructureSystemType, StructureSystems,
+            laser_cannon_system::SystemCooldown,
+        },
     },
 };
 
@@ -19,6 +26,38 @@ use crate::{
 };
 
 const SHIP_PRIORITY_IDENTIFIER: &str = "cosmos:ship_systems";
+
+#[derive(Component)]
+struct PilotStructureSystemsInventory;
+
+fn create_pilot_inventory(
+    q_pilot: Query<(), (With<LocalPlayer>, With<Pilot>)>,
+    q_exists_already: Query<(), (With<PilotStructureSystemsInventory>, Without<NeedsDespawned>)>,
+    mut commands: Commands,
+) {
+    if !(!q_pilot.is_empty() && q_exists_already.is_empty()) {
+        return;
+    }
+
+    let mut ecmds = commands.spawn((PilotStructureSystemsInventory,));
+
+    let inv = Inventory::new("", 9, None, ecmds.id());
+    ecmds.insert(inv);
+}
+
+fn remove_pilot_inventory(
+    q_pilot: Query<(), (With<LocalPlayer>, With<Pilot>)>,
+    q_exists_already: Query<Entity, With<PilotStructureSystemsInventory>>,
+    mut commands: Commands,
+) {
+    if !q_pilot.is_empty() {
+        return;
+    }
+
+    for e in q_exists_already.iter() {
+        commands.entity(e).insert(NeedsDespawned);
+    }
+}
 
 fn add_priority_when_flying(
     mut q_hotbar_priority: Query<&mut HotbarPriorityQueue, With<LocalPlayerHotbar>>,
@@ -58,12 +97,13 @@ fn sync_ship_systems(
     q_piloting: Query<&Pilot, With<LocalPlayer>>,
     q_systems_changed: Query<(), Or<(Changed<StructureSystems>, Changed<StructureSystemOrdering>)>>,
     q_priority_changed: Query<(), (Changed<HotbarPriorityQueue>, With<LocalPlayerHotbar>)>,
-    q_structure_system: Query<&StructureSystem>,
+    q_structure_system: Query<(&StructureSystem, Option<&StructureSystemCharge>)>,
     structure_system_types: Res<Registry<StructureSystemType>>,
     items: Res<Registry<Item>>,
     mut q_hotbar: Query<(&HotbarPriorityQueue, &mut HotbarContents), With<LocalPlayerHotbar>>,
     has_data: Res<ItemShouldHaveData>,
     mut commands: Commands,
+    mut q_pilot_systems_inventory: Query<&mut Inventory, With<PilotStructureSystemsInventory>>,
 ) {
     let Ok(piloting) = q_piloting.single() else {
         return;
@@ -90,6 +130,10 @@ fn sync_ship_systems(
 
     hotbar_contents.clear_contents();
 
+    let Ok(mut inv) = q_pilot_systems_inventory.single_mut() else {
+        return;
+    };
+
     for system_id in systems_ordering.iter() {
         let Some(system_id) = system_id else {
             slot += 1;
@@ -101,7 +145,7 @@ fn sync_ship_systems(
             continue;
         };
 
-        let Ok(system) = q_structure_system.get(system_ent) else {
+        let Ok((system, sys_charge)) = q_structure_system.get(system_ent) else {
             continue;
         };
 
@@ -109,17 +153,12 @@ fn sync_ship_systems(
 
         let item = items.from_numeric_id(system_type.item_icon_id());
 
-        hotbar_contents.set_itemstack_at(
-            slot,
-            Some(ItemStack::with_quantity(
-                item,
-                1,
-                // TODO: Make this hotbar use an actual inventory so this isn't meaningless
-                (Entity::PLACEHOLDER, 0),
-                &mut commands,
-                &has_data,
-            )),
-        );
+        inv.insert_item_at(slot, item, 1, &mut commands, &has_data);
+        if let Some(charge) = sys_charge {
+            inv.insert_itemstack_data(slot, ItemCooldown(1.0 - charge.0), &mut commands);
+        }
+
+        hotbar_contents.set_itemstack_at(slot, inv.itemstack_at(slot).cloned());
 
         slot += 1;
 
@@ -187,7 +226,12 @@ pub(super) fn register(app: &mut App) {
         (
             add_priority_when_flying,
             sync_ship_systems.in_set(ItemStackSystemSet::CreateDataEntity),
-            (on_self_become_pilot, on_change_hotbar)
+            (
+                create_pilot_inventory,
+                on_self_become_pilot,
+                on_change_hotbar,
+                remove_pilot_inventory,
+            )
                 .chain()
                 .before(SystemUsageSet::ChangeSystemBeingUsed)
                 .after(SystemUsageSet::AddHoveredSlotComponent),

@@ -11,6 +11,7 @@ use crate::{
 };
 
 pub mod blueprint;
+pub mod cooldown;
 
 #[derive(Event, Debug, Serialize, Deserialize, Clone, Copy)]
 /// Sent by the player when they use their held item
@@ -97,6 +98,7 @@ impl NettyEvent for UseHeldItemEvent {
 
 pub(super) fn register(app: &mut App) {
     blueprint::register(app);
+    cooldown::register(app);
 
     app.add_netty_event::<PlayerRequestUseHeldItemEvent>()
         .add_netty_event::<UseHeldItemEvent>();

@@ -22,6 +22,17 @@ pub struct RenderItem {
     pub item_id: u16,
 }
 
+/// 1.0 = Max cooldown,
+/// 0.0 = No more cooldown
+#[derive(Debug, Component, Reflect, Default)]
+pub struct RenderItemCooldown(f32);
+
+impl RenderItemCooldown {
+    pub fn new(percent: f32) -> Self {
+        Self(percent)
+    }
+}
+
 #[derive(Component)]
 struct ItemTooltipPointer(Entity);
 
@@ -158,6 +169,48 @@ fn reposition_tooltips(
     }
 }
 
+#[derive(Component)]
+struct RenderItemCooldownMarker;
+
+fn render_cooldowns(
+    mut commands: Commands,
+    q_changed_render_items: Query<(Entity, &RenderItemCooldown, Option<&Children>), Changed<RenderItemCooldown>>,
+    mut q_node: Query<&mut Node, With<RenderItemCooldownMarker>>,
+) {
+    'big_loop: for (changed_render_item_ent, cooldown, children) in q_changed_render_items.iter() {
+        if let Some(children) = children {
+            for child in children.iter() {
+                if let Ok(mut node) = q_node.get_mut(child) {
+                    node.height = Val::Percent(cooldown.0 * 100.0);
+                    continue 'big_loop;
+                }
+            }
+        }
+
+        // No suitable entity already exists - spawn one
+
+        commands.entity(changed_render_item_ent).with_child((
+            BackgroundColor(
+                Srgba {
+                    red: 1.0,
+                    blue: 1.0,
+                    green: 1.0,
+                    alpha: 0.3,
+                }
+                .into(),
+            ),
+            RenderItemCooldownMarker,
+            Node {
+                position_type: PositionType::Absolute,
+                bottom: Val::Px(0.0),
+                width: Val::Percent(100.0),
+                height: Val::Percent(100.0 * cooldown.0),
+                ..Default::default()
+            },
+        ));
+    }
+}
+
 fn render_items(
     mut commands: Commands,
     items: Res<Registry<Item>>,
@@ -198,7 +251,7 @@ pub(super) fn register(app: &mut App) {
     app.configure_sets(Update, RenderItemSystemSet::RenderItems.in_set(UiSystemSet::DoUi))
         .add_systems(
             Update,
-            (render_items, render_tooltips, reposition_tooltips)
+            (render_items, render_cooldowns, render_tooltips, reposition_tooltips)
                 .chain()
                 .in_set(RenderItemSystemSet::RenderItems)
                 .run_if(in_state(GameState::Playing).or(in_state(GameState::LoadingWorld))),
