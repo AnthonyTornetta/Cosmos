@@ -86,9 +86,14 @@ fn structure_loaded_event(
     mut q_system: Query<(&StructureSystem, &mut WarpDriveSystem)>,
     mut commands: Commands,
     systems_registry: Res<Registry<StructureSystemType>>,
+    q_warp_system: Query<(), With<WarpDriveSystem>>,
 ) {
     for ev in event_reader.read() {
         if let Ok((structure, mut systems, mut ordering)) = structure_query.get_mut(ev.structure_entity) {
+            if systems.query(&q_warp_system).is_ok() {
+                continue;
+            }
+
             let (structure_system, mut system) = systems
                 .query_mut(&mut q_system)
                 .map(|(ss, x)| (Some(ss), OwnedOrMut::Mut(x)))
@@ -116,7 +121,7 @@ fn register_warp_blocks(mut warp_blocks: ResMut<WarpDriveBlocks>, blocks: Res<Re
         warp_blocks.insert(
             b,
             WarpBlockProperty {
-                charge_per_tick: 100,
+                charge_per_tick: 30,
                 capacitance: 10_000,
             },
         )

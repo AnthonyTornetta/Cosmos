@@ -5,7 +5,7 @@ use cosmos_core::{
     ecs::NeedsDespawned,
     inventory::{
         Inventory,
-        itemstack::{ItemShouldHaveData, ItemStack, ItemStackSystemSet},
+        itemstack::{ItemShouldHaveData, ItemStackSystemSet},
     },
     item::{Item, usable::cooldown::ItemCooldown},
     netty::client::LocalPlayer,
@@ -13,10 +13,7 @@ use cosmos_core::{
     state::GameState,
     structure::{
         ship::pilot::Pilot,
-        systems::{
-            StructureSystem, StructureSystemCharge, StructureSystemOrdering, StructureSystemType, StructureSystems,
-            laser_cannon_system::SystemCooldown,
-        },
+        systems::{StructureSystem, StructureSystemCharge, StructureSystemOrdering, StructureSystemType, StructureSystems},
     },
 };
 
@@ -92,6 +89,38 @@ fn add_priority_when_flying(
     }
 }
 
+fn change_structure_system_cooldown(
+    q_piloting: Query<&Pilot, With<LocalPlayer>>,
+    q_systems_changed: Query<(&StructureSystem, &StructureSystemCharge), Changed<StructureSystemCharge>>,
+    q_systems: Query<&StructureSystemOrdering>,
+    mut q_pilot_systems_inventory: Query<&mut Inventory, With<PilotStructureSystemsInventory>>,
+    mut commands: Commands,
+) {
+    let Ok(piloting) = q_piloting.single().map(|x| x.entity) else {
+        return;
+    };
+
+    for (ss, charge) in q_systems_changed.iter() {
+        if ss.structure_entity() != piloting {
+            continue;
+        }
+
+        let Ok(ordering) = q_systems.get(ss.structure_entity()) else {
+            continue;
+        };
+
+        let Some(order) = ordering.ordering_for(ss.id()) else {
+            continue;
+        };
+
+        let Ok(mut inv) = q_pilot_systems_inventory.single_mut() else {
+            continue;
+        };
+
+        inv.insert_itemstack_data(order as usize, ItemCooldown(1.0 - charge.0), &mut commands);
+    }
+}
+
 fn sync_ship_systems(
     q_systems: Query<(&StructureSystems, &StructureSystemOrdering)>,
     q_piloting: Query<&Pilot, With<LocalPlayer>>,
@@ -131,6 +160,7 @@ fn sync_ship_systems(
     hotbar_contents.clear_contents();
 
     let Ok(mut inv) = q_pilot_systems_inventory.single_mut() else {
+        error!("Bad inventory!");
         return;
     };
 
@@ -225,11 +255,13 @@ pub(super) fn register(app: &mut App) {
         Update,
         (
             add_priority_when_flying,
-            sync_ship_systems.in_set(ItemStackSystemSet::CreateDataEntity),
+            (create_pilot_inventory, sync_ship_systems)
+                .chain()
+                .in_set(ItemStackSystemSet::CreateDataEntity),
             (
-                create_pilot_inventory,
                 on_self_become_pilot,
                 on_change_hotbar,
+                change_structure_system_cooldown,
                 remove_pilot_inventory,
             )
                 .chain()

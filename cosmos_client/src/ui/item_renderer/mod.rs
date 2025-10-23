@@ -25,7 +25,7 @@ pub struct RenderItem {
 /// 1.0 = Max cooldown,
 /// 0.0 = No more cooldown
 #[derive(Debug, Component, Reflect, Default)]
-pub struct RenderItemCooldown(f32);
+pub struct RenderItemCooldown(pub f32);
 
 impl RenderItemCooldown {
     pub fn new(percent: f32) -> Self {
@@ -176,7 +176,19 @@ fn render_cooldowns(
     mut commands: Commands,
     q_changed_render_items: Query<(Entity, &RenderItemCooldown, Option<&Children>), Changed<RenderItemCooldown>>,
     mut q_node: Query<&mut Node, With<RenderItemCooldownMarker>>,
+    mut removed_render_item_cooldown: RemovedComponents<RenderItemCooldown>,
+    q_children: Query<&Children>,
 ) {
+    for removal in removed_render_item_cooldown.read() {
+        if let Ok(children) = q_children.get(removal) {
+            for child in children.iter() {
+                if q_node.contains(child) {
+                    commands.entity(child).insert(NeedsDespawned);
+                }
+            }
+        }
+    }
+
     'big_loop: for (changed_render_item_ent, cooldown, children) in q_changed_render_items.iter() {
         if let Some(children) = children {
             for child in children.iter() {

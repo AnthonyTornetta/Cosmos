@@ -61,7 +61,28 @@ impl SyncableComponent for WarpDriveInitiating {
     }
 }
 
+/// A summary of the warp drive's state
+pub enum WarpDriveSystemState {
+    /// The warp drive is on a structure that is too big for the number of warp drives placed
+    StructureTooBig,
+    /// The warp drive is fully charged and ready to jump
+    ReadyToWarp,
+    /// The warp drive is charging, and is on a structure that is small enough to jump
+    Charging,
+}
+
 impl WarpDriveSystem {
+    /// Returns an easy to use state of this warp system based on its structure's mass
+    pub fn compute_state(&self, structure_mass: f32) -> WarpDriveSystemState {
+        if self.can_jump(structure_mass) {
+            WarpDriveSystemState::ReadyToWarp
+        } else if Self::compute_jump_charge(structure_mass) > self.max_charge {
+            WarpDriveSystemState::StructureTooBig
+        } else {
+            WarpDriveSystemState::Charging
+        }
+    }
+
     /// Checks if there is enough charge to jump given this structure's mass
     pub fn can_jump(&self, structure_mass: f32) -> bool {
         Self::compute_jump_charge(structure_mass) <= self.charge

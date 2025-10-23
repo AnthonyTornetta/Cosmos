@@ -6,7 +6,7 @@ use bevy::{input::mouse::MouseWheel, prelude::*};
 use cosmos_core::{
     block::block_events::BlockEventsSet,
     inventory::{Inventory, held_item_slot::HeldItemSlot, itemstack::ItemStack},
-    item::Item,
+    item::{Item, usable::cooldown::ItemCooldown},
     netty::client::LocalPlayer,
     registry::{Registry, identifiable::Identifiable},
     state::GameState,
@@ -126,11 +126,16 @@ impl<T> Default for PriorityQueue<T> {
     }
 }
 
+struct HotbarEntities {
+    slot: Entity,
+    slot_text: Entity,
+    render_item_ent: Entity,
+}
+
 #[derive(Component)]
 /// The hotbar the player can see
 pub struct Hotbar {
-    /// Vec<(slot, slot text, slot item)>
-    slots: Vec<(Entity, Entity, Entity)>,
+    slots: Vec<HotbarEntities>,
     selected_slot: usize,
     prev_slot: usize,
     max_slots: usize,
@@ -274,11 +279,11 @@ fn listen_for_change_events(
 
     if hb.selected_slot != hb.prev_slot {
         commands
-            .entity(hb.slots[hb.prev_slot].0)
+            .entity(hb.slots[hb.prev_slot].slot)
             .insert(ImageNode::new(asset_server.load(image_path(false))));
 
         commands
-            .entity(hb.slots[hb.selected_slot].0)
+            .entity(hb.slots[hb.selected_slot].slot)
             .insert(ImageNode::new(asset_server.load(image_path(true))));
 
         hb.prev_slot = hb.selected_slot;
@@ -304,7 +309,7 @@ fn listen_for_change_events(
         for hb_slot in 0..hb.max_slots {
             let is = hotbar_contents.itemstack_at(hb_slot);
 
-            if let Ok((mut text, _)) = text_query.get_mut(hb.slots[hb_slot].1) {
+            if let Ok((mut text, _)) = text_query.get_mut(hb.slots[hb_slot].slot_text) {
                 if let Some(is) = is {
                     if is.quantity() != 1 {
                         text.as_mut().0 = format!("{}", is.quantity());
@@ -362,8 +367,8 @@ fn add_item_text(mut commands: Commands, default_font: Res<DefaultFont>) {
 fn populate_hotbar(
     q_hotbar_contents: Query<&HotbarContents, (Changed<HotbarContents>, With<LocalPlayerHotbar>)>,
     hotbar: Query<&Hotbar>,
+    q_item_cooldown: Query<&ItemCooldown>,
     q_render_item: Query<&RenderItem>,
-    q_render_item_cooldown: Query<&RenderItemCooldown>,
     mut commands: Commands,
 ) {
     let Ok(hotbar) = hotbar.single() else {
@@ -375,24 +380,57 @@ fn populate_hotbar(
         return;
     };
 
-    for (item, &(_, _, item_entity)) in hotbar_contents.iter().take(hotbar.slots.len()).zip(hotbar.slots.iter()) {
+    for (item, hotbar_ents) in hotbar_contents.iter().take(hotbar.slots.len()).zip(hotbar.slots.iter()) {
         let Some(item_stack) = item else {
-            commands.entity(item_entity).remove::<RenderItem>();
+            commands.entity(hotbar_ents.render_item_ent).remove::<RenderItem>();
 
             continue;
         };
 
         if q_render_item
-            .get(item_entity)
+            .get(hotbar_ents.render_item_ent)
             .map(|x| x.item_id != item_stack.item_id())
             .unwrap_or(true)
         {
-            commands.entity(item_entity).insert((
+            let mut ecmds = commands.entity(hotbar_ents.render_item_ent);
+            ecmds.insert((
                 NoHoverTooltip,
                 RenderItem {
                     item_id: item_stack.item_id(),
                 },
             ));
+            if let Some(cooldown) = item_stack.query_itemstack_data(&q_item_cooldown) {
+                ecmds.insert(RenderItemCooldown::new(cooldown.0));
+            }
+        }
+    }
+}
+
+fn monitor_cooldown(
+    q_item_cooldown: Query<&ItemCooldown>,
+    mut q_render_cooldown: Query<&mut RenderItemCooldown>,
+    q_contents: Query<(&Hotbar, &HotbarContents)>,
+    mut commands: Commands,
+) {
+    for (hotbar, content) in q_contents.iter() {
+        for (item, hotbar_ents) in content
+            .iter()
+            .take(hotbar.slots.len())
+            .zip(hotbar.slots.iter())
+            .flat_map(|(item, hb)| item.as_ref().map(|i| (i, hb)))
+        {
+            let Some(cooldown) = item.query_itemstack_data(&q_item_cooldown) else {
+                commands.entity(hotbar_ents.render_item_ent).remove::<RenderItemCooldown>();
+                continue;
+            };
+
+            if let Ok(mut cd) = q_render_cooldown.get_mut(hotbar_ents.render_item_ent) {
+                if cd.0 != cooldown.0 {
+                    cd.0 = cooldown.0;
+                }
+            } else {
+                commands.entity(hotbar_ents.render_item_ent).insert(RenderItemCooldown(cooldown.0));
+            }
         }
     }
 }
@@ -480,11 +518,11 @@ fn add_hotbar(mut commands: Commands, default_font: Res<DefaultFont>, asset_serv
                         );
                     });
 
-                    hotbar.slots.push((
-                        slot.id(),
-                        text_entity.expect("This should have been set in the closure above"),
-                        item_entity.expect("Should have been set above"),
-                    ));
+                    hotbar.slots.push(HotbarEntities {
+                        slot: slot.id(),
+                        slot_text: text_entity.expect("This should have been set in the closure above"),
+                        render_item_ent: item_entity.expect("Should have been set above"),
+                    });
                 }
             });
 
@@ -509,26 +547,6 @@ fn add_hotbar_contents_to_player(
             .entity(player_ent)
             .insert((HotbarPriorityQueue::default(), HotbarContents::new(hotbar.max_slots)));
     }
-}
-
-pub(super) fn register(app: &mut App) {
-    app.add_systems(OnEnter(GameState::Playing), (add_hotbar, add_item_text))
-        .add_systems(
-            Update,
-            (
-                add_inventory_to_priority_queue,
-                add_hotbar_contents_to_player,
-                sync_hotbar_to_inventory.after(BlockEventsSet::SendEventsForNextFrame),
-                populate_hotbar,
-                listen_for_change_events,
-                listen_button_presses.run_if(no_open_menus),
-                tick_text_alpha_down,
-            )
-                .before(SystemSelectionSet::ApplyUserChanges)
-                .chain()
-                .run_if(in_state(GameState::Playing))
-                .run_if(is_hotbar_enabled),
-        );
 }
 
 // move to separate file
@@ -569,4 +587,25 @@ fn sync_hotbar_to_inventory(
     for (slot, itemstack) in inventory.iter().take(n_slots).enumerate() {
         hotbar_contents.set_itemstack_at(slot, itemstack.clone());
     }
+}
+
+pub(super) fn register(app: &mut App) {
+    app.add_systems(OnEnter(GameState::Playing), (add_hotbar, add_item_text))
+        .add_systems(
+            Update,
+            (
+                add_inventory_to_priority_queue,
+                add_hotbar_contents_to_player,
+                sync_hotbar_to_inventory.after(BlockEventsSet::SendEventsForNextFrame),
+                populate_hotbar,
+                listen_for_change_events,
+                monitor_cooldown,
+                listen_button_presses.run_if(no_open_menus),
+                tick_text_alpha_down,
+            )
+                .before(SystemSelectionSet::ApplyUserChanges)
+                .chain()
+                .run_if(in_state(GameState::Playing))
+                .run_if(is_hotbar_enabled),
+        );
 }
