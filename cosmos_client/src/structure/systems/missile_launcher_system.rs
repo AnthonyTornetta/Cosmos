@@ -10,7 +10,7 @@ use cosmos_core::{
     structure::{
         ship::pilot::Pilot,
         systems::{
-            StructureSystems,
+            StructureSystemOrdering, StructureSystems,
             missile_launcher_system::{MissileLauncherFocus, MissileLauncherPreferredFocus, MissileLauncherSystem, MissileSystemFailure},
         },
     },
@@ -139,7 +139,7 @@ fn render_lockon_status(
     mut commands: Commands,
     lockon_graphic: Res<MissileLauncherLockonGraphic>,
     q_piloting: Query<(&HoveredSystem, &Pilot), With<LocalPlayer>>,
-    q_systems: Query<&StructureSystems>,
+    q_systems: Query<(&StructureSystems, &StructureSystemOrdering)>,
     q_missile_focus: Query<&MissileLauncherFocus>,
     q_missile_focus_ui: Query<(Entity, &MissileFocusUi)>,
     mut q_style: Query<(&mut Node, &mut ImageNode)>,
@@ -154,15 +154,16 @@ fn render_lockon_status(
         return;
     };
 
-    let Ok(systems) = q_systems.get(piloting.entity) else {
+    let Ok((systems, ordering)) = q_systems.get(piloting.entity) else {
         if let Ok((ent, _)) = focus_ui {
             commands.entity(ent).insert(NeedsDespawned);
         }
         return;
     };
 
-    let Some(missile_focus) = systems
-        .try_get_activatable_system_from_activatable_index(hovered_system.hovered_system_index)
+    let Some(missile_focus) = ordering
+        .get_slot(hovered_system.hovered_system_index as u32)
+        .and_then(|id| systems.get_system_entity(id))
         .and_then(|x| q_missile_focus.get(x).ok())
     else {
         if let Ok((ent, _)) = focus_ui {
@@ -190,6 +191,8 @@ fn render_lockon_status(
     .into();
 
     if let Ok((_, focus_ui)) = focus_ui {
+        info!("Ui already exists");
+
         update_corner_styles(&mut q_style, focus_ui.top_left, -gap, color);
         update_corner_styles(&mut q_style, focus_ui.bottom_left, gap, color);
         update_corner_styles(&mut q_style, focus_ui.top_right, -gap, color);
@@ -212,6 +215,7 @@ fn render_lockon_status(
             top_right: Entity::PLACEHOLDER,
         };
 
+        info!("Making UI!");
         let mut ecmds = commands.spawn((
             Node {
                 position_type: PositionType::Absolute,
