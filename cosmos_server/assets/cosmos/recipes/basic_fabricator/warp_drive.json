@@ -1,0 +1,32 @@
+{
+  "inputs": [
+    {
+      "item": {
+        "Item": "cosmos:iron_bar"
+      },
+      "quantity": 20
+    },
+    {
+      "item": {
+        "Item": "cosmos:photonium_crystal"
+      },
+      "quantity": 20
+    },
+    {
+      "item": {
+        "Item": "cosmos:gravitron_crystal"
+      },
+      "quantity": 100
+    },
+    {
+      "item": {
+        "Item": "cosmos:copper_bar"
+      },
+      "quantity": 100
+    }
+  ],
+  "output": {
+    "quantity": 1,
+    "item": "cosmos:warp_drive"
+  }
+}
