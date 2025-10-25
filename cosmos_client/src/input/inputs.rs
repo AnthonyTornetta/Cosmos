@@ -165,6 +165,9 @@ pub enum CosmosInputs {
 
     /// Uses the player's held item
     UseHeldItem,
+
+    /// Toggles the window's mode
+    ToggleFullscreen,
 }
 
 fn init_input(mut input_handler: ResMut<CosmosInputHandler>) {
@@ -253,6 +256,8 @@ fn init_input(mut input_handler: ResMut<CosmosInputHandler>) {
     input_handler.set_keycode(CosmosInputs::OpenShipConfiguration, KeyCode::Tab);
 
     input_handler.set_mouse_button(CosmosInputs::UseHeldItem, MouseButton::Right);
+
+    input_handler.set_keycode(CosmosInputs::ToggleFullscreen, KeyCode::F11);
 
     if let Ok(current_settings) = fs::read_to_string("settings/controls.toml")
         && let Ok(parsed_settings) = toml::from_str::<CosmosInputHandler>(&current_settings)
