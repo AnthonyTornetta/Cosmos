@@ -64,11 +64,16 @@ jobs:
             libxcb-render0-dev libxcb-shape0-dev libxcb-xfixes0-dev \
             libwayland-dev
 
-      - name: Build both binaries (release)
+      - name: Build both binaries (release) (Unix)
+        if: runner.os != 'Windows'
         run: |
           cargo build --release -p ${{ env.SERVER_PKG }} -p ${{ env.CLIENT_PKG }} --target ${{ matrix.target }}
-        shell: ${{ matrix.shell }}
 
+      - name: Build both binaries (release) (Windows)
+        if: runner.os == 'Windows'
+        run: |
+          cargo build --release -p $env:SERVER_PKG -p $env:CLIENT_PKG --target ${{ matrix.target }}
+      
       # ---------- Package (non-Windows) ----------
       - name: Package (Unix)
         if: ${{ runner.os != 'Windows' }}
