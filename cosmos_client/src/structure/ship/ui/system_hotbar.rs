@@ -183,7 +183,7 @@ fn sync_ship_systems(
 
         let item = items.from_numeric_id(system_type.item_icon_id());
 
-        inv.insert_item_at(slot, item, 1, &mut commands, &has_data);
+        inv.set_item_at(slot, item, 1, &mut commands, &has_data);
         if let Some(charge) = sys_charge {
             inv.insert_itemstack_data(slot, ItemCooldown::new(1.0 - charge.0), &mut commands);
         }
