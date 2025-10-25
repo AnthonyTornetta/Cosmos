@@ -399,8 +399,8 @@ fn populate_hotbar(
                     item_id: item_stack.item_id(),
                 },
             ));
-            if let Some(cooldown) = item_stack.query_itemstack_data(&q_item_cooldown) {
-                ecmds.insert(RenderItemCooldown::new(cooldown.0));
+            if let Some(cooldown) = item_stack.query_itemstack_data(&q_item_cooldown).copied() {
+                ecmds.insert(RenderItemCooldown::new(cooldown));
             }
         }
     }
@@ -419,17 +419,17 @@ fn monitor_cooldown(
             .zip(hotbar.slots.iter())
             .flat_map(|(item, hb)| item.as_ref().map(|i| (i, hb)))
         {
-            let Some(cooldown) = item.query_itemstack_data(&q_item_cooldown) else {
+            let Some(cooldown) = item.query_itemstack_data(&q_item_cooldown).copied() else {
                 commands.entity(hotbar_ents.render_item_ent).remove::<RenderItemCooldown>();
                 continue;
             };
 
             if let Ok(mut cd) = q_render_cooldown.get_mut(hotbar_ents.render_item_ent) {
-                if cd.0 != cooldown.0 {
-                    cd.0 = cooldown.0;
+                if cd.0 != cooldown {
+                    cd.0 = cooldown;
                 }
             } else {
-                commands.entity(hotbar_ents.render_item_ent).insert(RenderItemCooldown(cooldown.0));
+                commands.entity(hotbar_ents.render_item_ent).insert(RenderItemCooldown(cooldown));
             }
         }
     }

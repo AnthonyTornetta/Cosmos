@@ -117,7 +117,7 @@ fn change_structure_system_cooldown(
             continue;
         };
 
-        inv.insert_itemstack_data(order as usize, ItemCooldown(1.0 - charge.0), &mut commands);
+        inv.insert_itemstack_data(order as usize, ItemCooldown::new(1.0 - charge.0), &mut commands);
     }
 }
 
@@ -185,7 +185,7 @@ fn sync_ship_systems(
 
         inv.insert_item_at(slot, item, 1, &mut commands, &has_data);
         if let Some(charge) = sys_charge {
-            inv.insert_itemstack_data(slot, ItemCooldown(1.0 - charge.0), &mut commands);
+            inv.insert_itemstack_data(slot, ItemCooldown::new(1.0 - charge.0), &mut commands);
         }
 
         hotbar_contents.set_itemstack_at(slot, inv.itemstack_at(slot).cloned());

@@ -3,7 +3,7 @@
 use bevy::{prelude::*, window::PrimaryWindow};
 use cosmos_core::{
     ecs::NeedsDespawned,
-    item::Item,
+    item::{Item, usable::cooldown::ItemCooldown},
     registry::{Registry, identifiable::Identifiable},
     state::GameState,
 };
@@ -22,14 +22,19 @@ pub struct RenderItem {
     pub item_id: u16,
 }
 
-/// 1.0 = Max cooldown,
-/// 0.0 = No more cooldown
 #[derive(Debug, Component, Reflect, Default)]
-pub struct RenderItemCooldown(pub f32);
+/// Indicates that this [`RenderItem`] should have a cooldown amount rendered
+pub struct RenderItemCooldown(pub ItemCooldown);
 
 impl RenderItemCooldown {
-    pub fn new(percent: f32) -> Self {
-        Self(percent)
+    /// Indicates that this [`RenderItem`] should have a cooldown amount rendered
+    pub fn new(cooldown: ItemCooldown) -> Self {
+        Self(cooldown)
+    }
+
+    /// Returns this as a percent between 0.0 and 100.0 (0.0 meaning no cooldown)
+    pub fn as_percent(&self) -> f32 {
+        self.0.get() * 100.0
     }
 }
 
@@ -193,7 +198,7 @@ fn render_cooldowns(
         if let Some(children) = children {
             for child in children.iter() {
                 if let Ok(mut node) = q_node.get_mut(child) {
-                    node.height = Val::Percent(cooldown.0 * 100.0);
+                    node.height = Val::Percent(cooldown.as_percent());
                     continue 'big_loop;
                 }
             }
@@ -216,7 +221,7 @@ fn render_cooldowns(
                 position_type: PositionType::Absolute,
                 bottom: Val::Px(0.0),
                 width: Val::Percent(100.0),
-                height: Val::Percent(100.0 * cooldown.0),
+                height: Val::Percent(cooldown.as_percent()),
                 ..Default::default()
             },
         ));
