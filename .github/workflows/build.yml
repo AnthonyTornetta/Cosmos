@@ -50,7 +50,7 @@ jobs:
         with:
           lfs: false
 
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: dtolnay/rust-toolchain@nightly
         with:
           targets: ${{ matrix.target }}
 
@@ -67,12 +67,12 @@ jobs:
       - name: Build both binaries (release) (Unix)
         if: runner.os != 'Windows'
         run: |
-          cargo build --release -p ${{ env.SERVER_PKG }} -p ${{ env.CLIENT_PKG }} --target ${{ matrix.target }}
+          cargo +nightly build --release -p ${{ env.SERVER_PKG }} -p ${{ env.CLIENT_PKG }} --target ${{ matrix.target }}
 
       - name: Build both binaries (release) (Windows)
         if: runner.os == 'Windows'
         run: |
-          cargo build --release -p $env:SERVER_PKG -p $env:CLIENT_PKG --target ${{ matrix.target }}
+          cargo +nightly build --release -p $env:SERVER_PKG -p $env:CLIENT_PKG --target ${{ matrix.target }}
       
       # ---------- Package (non-Windows) ----------
       - name: Package (Unix)
