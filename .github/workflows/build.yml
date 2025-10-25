@@ -1,253 +1,138 @@
-name: Build 
 
-# Yoinked + modified from https://github.com/bevyengine/bevy_github_ci_template/blob/main/.github/workflows/release.yaml
+name: Build
 
 on:
   push:
+    tags:
+      - '*'
     branches:
       - main
       - 536-github-automated-build
 
 env:
-  # update with the name of the main binary
-  binary: bevy_github_ci_template
-  add_binaries_to_github_release: flase
-  
+  SERVER_PKG: cosmos_server
+  CLIENT_PKG: cosmos_client
 
 jobs:
-  # Build for Linux
-  build-linux:
-    runs-on: ubuntu-latest
+  build-package:
+    name: Build & Package (${{ matrix.target }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            exe_suffix: ""
+            shell: bash
+            needs_deps: true
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            exe_suffix: ".exe"
+            shell: pwsh
+            needs_deps: false
+          - os: macos-latest
+            target: x86_64-apple-darwin
+            exe_suffix: ""
+            shell: bash
+            needs_deps: false
+          - os: macos-latest
+            target: aarch64-apple-darwin
+            exe_suffix: ""
+            shell: bash
+            needs_deps: false
 
     steps:
       - uses: olegtarasov/get-tag@v2.1.2
         id: get_version
+
       - uses: actions/checkout@v4
         with:
-          lfs: ${{ env.use_git_lfs }}
+          lfs: false
+
       - uses: dtolnay/rust-toolchain@stable
         with:
-          targets: x86_64-unknown-linux-gnu
-      - name: install dependencies
-        run: |
-          sudo apt-get update; sudo apt-get install pkg-config libx11-dev libasound2-dev libudev-dev libxcb-render0-dev libxcb-shape0-dev libxcb-xfixes0-dev libwayland-dev
+          targets: ${{ matrix.target }}
 
-      - name: Build
+      # Linux-only native libs (okay to skip elsewhere)
+      - name: Install Linux deps
+        if: ${{ matrix.needs_deps }}
         run: |
-          cargo build --release --target x86_64-unknown-linux-gnu
+          sudo apt-get update
+          sudo apt-get install -y \
+            pkg-config libx11-dev libasound2-dev libudev-dev \
+            libxcb-render0-dev libxcb-shape0-dev libxcb-xfixes0-dev \
+            libwayland-dev
 
-      - name: Prepare package
+      - name: Build both binaries (release)
         run: |
-          mkdir linux
-          cp target/x86_64-unknown-linux-gnu/release/${{ env.binary }} linux/
-          cp -r assets linux/ || true # Try to copy, but ignore if it can't copy if source directory does not exist
+          cargo build --release -p ${{ env.SERVER_PKG }} -p ${{ env.CLIENT_PKG }} --target ${{ matrix.target }}
+        shell: ${{ matrix.shell }}
 
-      - name: Package as a zip
-        working-directory: ./linux
+      # ---------- Package (non-Windows) ----------
+      - name: Package (Unix)
+        if: ${{ runner.os != 'Windows' }}
         run: |
-          zip --recurse-paths ../${{ env.binary }}.zip .
+          set -eu
 
-      - name: Upload binaries to artifacts
+          VERSION="${{ steps.get_version.outputs.tag }}"
+          if [ -z "$VERSION" ]; then VERSION="$(date -u +%Y%m%d%H%M%S)"; fi
+
+          DIST="dist"
+          OUTDIR="${DIST}/cosmos_release_${VERSION}_${{ matrix.target }}"
+          mkdir -p "${OUTDIR}/cosmos_server" "${OUTDIR}/cosmos_client"
+
+          # Copy server binary + data
+          cp "target/${{ matrix.target }}/release/${{ env.SERVER_PKG }}${{ matrix.exe_suffix }}" "${OUTDIR}/cosmos_server/"
+          [ -d "${{ env.SERVER_PKG }}/assets" ] && cp -r "${{ env.SERVER_PKG }}/assets" "${OUTDIR}/cosmos_server/"
+          [ -d "${{ env.SERVER_PKG }}/config" ] && cp -r "${{ env.SERVER_PKG }}/config" "${OUTDIR}/cosmos_server/"
+          [ -d "${{ env.SERVER_PKG }}/default_blueprints" ] && cp -r "${{ env.SERVER_PKG }}/default_blueprints" "${OUTDIR}/cosmos_server/"
+          [ -f "${{ env.SERVER_PKG }}/steam_appid.txt" ] && cp "${{ env.SERVER_PKG }}/steam_appid.txt" "${OUTDIR}/cosmos_server/"
+
+          # Copy client binary + data
+          cp "target/${{ matrix.target }}/release/${{ env.CLIENT_PKG }}${{ matrix.exe_suffix }}" "${OUTDIR}/cosmos_client/"
+          [ -d "${{ env.CLIENT_PKG }}/assets" ] && cp -r "${{ env.CLIENT_PKG }}/assets" "${OUTDIR}/cosmos_client/"
+
+          # Zip it
+          ( cd "${DIST}" && zip -r "cosmos_release_${VERSION}_${{ matrix.target }}.zip" "cosmos_release_${VERSION}_${{ matrix.target }}" >/dev/null )
+        shell: bash
+
+      # ---------- Package (Windows) ----------
+      - name: Package (Windows)
+        if: ${{ runner.os == 'Windows' }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+
+          $version = '${{ steps.get_version.outputs.tag }}'
+          if ([string]::IsNullOrEmpty($version)) { $version = (Get-Date -Format "yyyyMMddHHmmss") }
+
+          $dist   = "dist"
+          $outdir = Join-Path $dist "cosmos_release_${version}_${{ matrix.target }}"
+          New-Item $outdir -ItemType Directory -Force | Out-Null
+          New-Item (Join-Path $outdir "cosmos_server") -ItemType Directory -Force | Out-Null
+          New-Item (Join-Path $outdir "cosmos_client") -ItemType Directory -Force | Out-Null
+
+          # Copy server
+          Copy-Item "target\${{ matrix.target }}\release\${{ env.SERVER_PKG }}${{ matrix.exe_suffix }}" (Join-Path $outdir "cosmos_server\") -Force
+          if (Test-Path "${{ env.SERVER_PKG }}\assets") { Copy-Item "${{ env.SERVER_PKG }}\assets" (Join-Path $outdir "cosmos_server\") -Recurse -Force }
+          if (Test-Path "${{ env.SERVER_PKG }}\config") { Copy-Item "${{ env.SERVER_PKG }}\config" (Join-Path $outdir "cosmos_server\") -Recurse -Force }
+          if (Test-Path "${{ env.SERVER_PKG }}\default_blueprints") { Copy-Item "${{ env.SERVER_PKG }}\default_blueprints" (Join-Path $outdir "cosmos_server\") -Recurse -Force }
+          if (Test-Path "${{ env.SERVER_PKG }}\steam_appid.txt") { Copy-Item "${{ env.SERVER_PKG }}\steam_appid.txt" (Join-Path $outdir "cosmos_server\") -Force }
+
+          # Copy client
+          Copy-Item "target\${{ matrix.target }}\release\${{ env.CLIENT_PKG }}${{ matrix.exe_suffix }}" (Join-Path $outdir "cosmos_client\") -Force
+          if (Test-Path "${{ env.CLIENT_PKG }}\assets") { Copy-Item "${{ env.CLIENT_PKG }}\assets" (Join-Path $outdir "cosmos_client\") -Recurse -Force }
+
+          # Zip it
+          $zipPath = Join-Path $dist "cosmos_release_${version}_${{ matrix.target }}.zip"
+          if (Test-Path $zipPath) { Remove-Item $zipPath -Force }
+          Compress-Archive -Path (Join-Path $outdir '*') -DestinationPath $zipPath -Force
+        shell: pwsh
+
+      - name: Upload artifact (zip)
         uses: actions/upload-artifact@v4
         with:
-          path: ${{ env.binary }}.zip
-          name: linux
-          retention-days: 1
+          name: cosmos-${{ matrix.target }}
+          path: dist/cosmos_release_*_${{ matrix.target }}.zip
+          retention-days: 30
 
-      - name: Upload binaries to release
-        if: ${{ env.add_binaries_to_github_release == 'true' }}
-        uses: svenstaro/upload-release-action@v2
-        with:
-          repo_token: ${{ secrets.GITHUB_TOKEN }}
-          file: ${{ env.binary }}.zip
-          asset_name: ${{ env.binary }}-linux-${{ steps.get_version.outputs.tag }}.zip
-          tag: ${{ github.ref }}
-          overwrite: true
-
-  # Build for Windows
-  release-windows:
-    runs-on: windows-latest
-
-    steps:
-      - uses: olegtarasov/get-tag@v2.1.2
-        id: get_version
-      - uses: actions/checkout@v4
-        with:
-          lfs: ${{ env.use_git_lfs }}
-      - uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: x86_64-pc-windows-msvc
-
-      - name: Build
-        run: |
-          cargo build --release --target x86_64-pc-windows-msvc
-
-      - name: Prepare package
-        run: |
-          mkdir windows
-          cp target/x86_64-pc-windows-msvc/release/${{ env.binary }}.exe windows/
-          mkdir assets -ea 0 # create the assets directory if it does not exist, it will get ignored in the zip if empty
-          cp -r assets windows/
-
-      - name: Package as a zip
-        run: |
-          Compress-Archive -Path windows/* -DestinationPath ${{ env.binary }}.zip
-
-      - name: Upload binaries to artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          path: ${{ env.binary }}.zip
-          name: windows
-          retention-days: 1
-
-      - name: Upload binaries to release
-        if: ${{ env.add_binaries_to_github_release == 'true' }}
-        uses: svenstaro/upload-release-action@v2
-        with:
-          repo_token: ${{ secrets.GITHUB_TOKEN }}
-          file: ${{ env.binary }}.zip
-          asset_name: ${{ env.binary }}-windows-${{ steps.get_version.outputs.tag }}.zip
-          tag: ${{ github.ref }}
-          overwrite: true
-
-  # Build for MacOS x86_64
-  release-macOS-intel:
-    runs-on: macOS-latest
-
-    steps:
-      - uses: olegtarasov/get-tag@v2.1.2
-        id: get_version
-      - uses: actions/checkout@v4
-        with:
-          lfs: ${{ env.use_git_lfs }}
-      - uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: x86_64-apple-darwin
-      - name: Environment Setup
-        run: |
-          export CFLAGS="-fno-stack-check"
-          export MACOSX_DEPLOYMENT_TARGET="10.9"
-
-      - name: Build
-        run: |
-          cargo build --release --target x86_64-apple-darwin
-
-      - name: Prepare Package
-        run: |
-          mkdir -p ${{ env.binary }}.app/Contents/MacOS
-          cp target/x86_64-apple-darwin/release/${{ env.binary }} ${{ env.binary }}.app/Contents/MacOS/
-          cp -r assets ${{ env.binary }}.app/Contents/MacOS/ || true # Try to copy, but ignore if it can't copy if source directory does not exist
-          hdiutil create -fs HFS+ -volname "${{ env.binary }}" -srcfolder ${{ env.binary }}.app ${{ env.binary }}-macOS-intel.dmg
-
-      - name: Upload binaries to artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          path: ${{ env.binary }}-macOS-intel.dmg
-          name: macOS-intel
-          retention-days: 1
-
-      - name: Upload binaries to release
-        if: ${{ env.add_binaries_to_github_release == 'true' }}
-        uses: svenstaro/upload-release-action@v2
-        with:
-          repo_token: ${{ secrets.GITHUB_TOKEN }}
-          file:  ${{ env.binary }}-macOS-intel.dmg
-          asset_name: ${{ env.binary }}-macOS-intel-${{ steps.get_version.outputs.tag }}.dmg
-          tag: ${{ github.ref }}
-          overwrite: true
-
-  # Build for MacOS Apple Silicon
-  release-macOS-apple-silicon:
-    runs-on: macOS-latest
-
-    steps:
-      - uses: olegtarasov/get-tag@v2.1.2
-        id: get_version
-      - uses: actions/checkout@v4
-        with:
-          lfs: ${{ env.use_git_lfs }}
-      - uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: aarch64-apple-darwin
-      - name: Environment 
-        # macOS 11 was the first version to support ARM
-        run: |
-          export MACOSX_DEPLOYMENT_TARGET="11"
-
-      - name: Build
-        run: |
-          cargo build --release --target aarch64-apple-darwin
-
-      - name: Prepare Package
-        run: |
-          mkdir -p ${{ env.binary }}.app/Contents/MacOS
-          cp target/aarch64-apple-darwin/release/${{ env.binary }} ${{ env.binary }}.app/Contents/MacOS/
-          cp -r assets ${{ env.binary }}.app/Contents/MacOS/ || true # Try to copy, but ignore if it can't copy if source directory does not exist
-          hdiutil create -fs HFS+ -volname "${{ env.binary }}-macOS-apple-silicon" -srcfolder ${{ env.binary }}.app ${{ env.binary }}-macOS-apple-silicon.dmg
-
-      - name: Upload binaries to artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          path: ${{ env.binary }}-macOS-apple-silicon.dmg
-          name: macOS-apple-silicon
-          retention-days: 1
-
-      - name: Upload binaries to release
-        if: ${{ env.add_binaries_to_github_release == 'true' }}
-        uses: svenstaro/upload-release-action@v2
-        with:
-          repo_token: ${{ secrets.GITHUB_TOKEN }}
-          file: ${{ env.binary }}-macOS-apple-silicon.dmg
-          asset_name: ${{ env.binary }}-macOS-apple-silicon-${{ steps.get_version.outputs.tag }}.dmg
-          tag: ${{ github.ref }}
-          overwrite: true
-
-  check-if-upload-to-itch-is-configured:
-    runs-on: ubuntu-latest
-    outputs:
-      should-upload: ${{ steps.check-env.outputs.has-itch-target }}
-    steps:
-      - id: check-env
-        run: |
-          if [[ -z "$itch_target" ]]; then
-            echo "has-itch-target=no" >> $GITHUB_OUTPUT
-          else
-            echo "has-itch-target=yes" >> $GITHUB_OUTPUT
-          fi
-
-  upload-to-itch:
-    runs-on: ubuntu-latest
-    needs:
-      - check-if-upload-to-itch-is-configured
-      - release-wasm
-      - release-linux
-      - release-windows
-      - release-macOS-intel
-      - release-macOS-apple-silicon
-    if: ${{ needs.check-if-upload-to-itch-is-configured.outputs.should-upload == 'yes' }}
-
-    steps:
-      - name: Download artifacts
-        uses: actions/download-artifact@v4
-        with:
-          path: ./builds
-
-      - name: Install butler
-        run: |
-          curl -L -o butler.zip https://broth.itch.ovh/butler/linux-amd64/LATEST/archive/default
-          unzip butler.zip
-          chmod +x butler
-          ./butler -V
-      - uses: olegtarasov/get-tag@v2.1.2
-        id: get_version
-      - name: Upload to itch.io
-        env:
-          BUTLER_API_KEY: ${{ secrets.BUTLER_CREDENTIALS }}
-        run: |
-          for channel in $(ls builds); do
-            ./butler push \
-                --fix-permissions \
-                --userversion="${{ steps.get_version.outputs.tag }}" \
-                builds/$channel/* \
-                ${{ env.itch_target }}:$channel
-          done
