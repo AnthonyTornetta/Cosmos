@@ -32,7 +32,7 @@ fn create_pilot_inventory(
     q_exists_already: Query<(), (With<PilotStructureSystemsInventory>, Without<NeedsDespawned>)>,
     mut commands: Commands,
 ) {
-    if !(!q_pilot.is_empty() && q_exists_already.is_empty()) {
+    if q_pilot.is_empty() || !q_exists_already.is_empty() {
         return;
     }
 
