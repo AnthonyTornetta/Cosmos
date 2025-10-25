@@ -41,8 +41,9 @@ pub mod railgun_system;
 pub mod shield_system;
 pub mod sync;
 pub mod thruster_system;
+pub mod warp;
 
-#[derive(Component)]
+#[derive(Component, Debug, Reflect, PartialEq, Eq, Serialize, Deserialize, Clone, Copy)]
 #[component(storage = "SparseSet")]
 /// Used to tell if the selected system should be active
 /// (ie laser cannons firing)
@@ -56,7 +57,26 @@ pub mod thruster_system;
 /// ```
 ///
 /// would give you every laser cannon system that is currently being activated.
-pub struct SystemActive;
+pub enum SystemActive {
+    /// The primary function of this system was used (left click)
+    Primary,
+    /// The secondary function of this system was used (right click)
+    Secondary,
+    /// Both functions of this system were used (left + right click)
+    Both,
+}
+
+impl SystemActive {
+    /// Returns true if the Priamry or Both systems are being used
+    pub fn primary(&self) -> bool {
+        matches!(self, Self::Primary | Self::Both)
+    }
+
+    /// Returns true if the Secondary or Both systems are being used
+    pub fn secondary(&self) -> bool {
+        matches!(self, Self::Secondary | Self::Both)
+    }
+}
 
 #[derive(Default, Clone, Copy, PartialEq, Eq, Debug, Serialize, Deserialize, Reflect)]
 /// Sets the system the player has selected
@@ -444,7 +464,13 @@ impl StructureSystems {
     /// Activates the passed in selected system, and deactivates the system that was previously selected
     ///
     /// The passed in system index must be based off the [`StructureSystemOrdering`] ordering.
-    pub fn set_active_system(&mut self, active: ShipActiveSystem, ordering: &StructureSystemOrdering, commands: &mut Commands) {
+    pub fn set_active_system(
+        &mut self,
+        active: ShipActiveSystem,
+        ordering: &StructureSystemOrdering,
+        commands: &mut Commands,
+        type_of_active: Option<SystemActive>,
+    ) {
         if active == self.active_system {
             return;
         }
@@ -455,12 +481,14 @@ impl StructureSystems {
 
         self.active_system = active;
 
-        if let Some(ent) = self.active_system(ordering) {
-            commands.entity(ent).insert(SystemActive);
+        if let Some(type_of_active) = type_of_active {
+            if let Some(ent) = self.active_system(ordering) {
+                commands.entity(ent).insert(type_of_active);
 
-            self.active_system = active;
-        } else if self.hovered_system(ordering).is_none() {
-            self.active_system = ShipActiveSystem::None;
+                self.active_system = active;
+            } else if self.hovered_system(ordering).is_none() {
+                self.active_system = ShipActiveSystem::None;
+            }
         }
     }
 
@@ -698,11 +726,30 @@ impl Identifiable for StructureSystemType {
     }
 }
 
+/// Used to illustrate charge to client - not used for any logic and is not automatically managed
+///
+/// The value should be bounded between 0.0 to 1.0
+#[derive(Component, Debug, Serialize, Deserialize, Clone, Copy, PartialEq)]
+pub struct StructureSystemCharge(pub f32);
+
+impl IdentifiableComponent for StructureSystemCharge {
+    fn get_component_unlocalized_name() -> &'static str {
+        "cosmos:structure_system_charge"
+    }
+}
+
+impl SyncableComponent for StructureSystemCharge {
+    fn get_sync_type() -> crate::netty::sync::SyncType {
+        crate::netty::sync::SyncType::ServerAuthoritative
+    }
+}
+
 pub(super) fn register(app: &mut App) {
     create_registry::<StructureSystemType>(app, "cosmos:structure_system_types");
     sync_registry::<StructureSystemType>(app);
 
     sync_component::<StructureSystemOrdering>(app);
+    sync_component::<StructureSystemCharge>(app);
 
     app.configure_sets(
         FixedUpdate,
@@ -724,6 +771,7 @@ pub(super) fn register(app: &mut App) {
     .register_type::<StructureSystem>()
     .register_type::<StructureSystems>()
     .register_type::<StructureSystemOrdering>()
+    .register_type::<SystemActive>()
     .add_netty_event::<ChangeSystemSlot>();
 
     line_system::register(app);
@@ -737,4 +785,5 @@ pub(super) fn register(app: &mut App) {
     mining_laser_system::register(app);
     dock_system::register(app);
     railgun_system::register(app);
+    warp::register(app);
 }

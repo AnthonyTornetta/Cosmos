@@ -5,6 +5,7 @@ use serde::{Deserialize, Serialize};
 
 pub mod map;
 pub mod star;
+pub mod warp;
 
 #[derive(Debug, Serialize, Deserialize, Default, PartialOrd, PartialEq, Clone, Copy)]
 /// The danger level in this faction
@@ -73,4 +74,5 @@ impl SectorDanger {
 pub(super) fn register(app: &mut App) {
     star::register(app);
     map::register(app);
+    warp::register(app);
 }

@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     block::specific_blocks::gravity_well::GravityWell,
-    structure::systems::{StructureSystemId, StructureSystemTypeId},
+    structure::systems::{StructureSystemId, StructureSystemTypeId, SystemActive},
 };
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -32,7 +32,7 @@ pub enum ReplicationMessage {
         /// The structure that contains this system
         structure_entity: Entity,
         /// If the system is active or not
-        active: bool,
+        active: Option<SystemActive>,
     },
     /// A gravity well status
     GravityWell {

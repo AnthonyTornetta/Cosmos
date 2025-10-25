@@ -827,6 +827,20 @@
   },
   {
     "Selling": {
+      "item_id": "cosmos:warp_drive",
+      "max_quantity_selling": 10000,
+      "price_per": 75200
+    }
+  },
+  {
+    "Buying": {
+      "item_id": "cosmos:warp_drive",
+      "max_quantity_buying": null,
+      "price_per": 30080
+    }
+  },
+  {
+    "Selling": {
       "item_id": "cosmos:shipyard_controller",
       "max_quantity_selling": 10000,
       "price_per": 41000

@@ -3,7 +3,7 @@
 use bevy::{prelude::*, window::PrimaryWindow};
 use cosmos_core::{
     ecs::NeedsDespawned,
-    item::Item,
+    item::{Item, usable::cooldown::ItemCooldown},
     registry::{Registry, identifiable::Identifiable},
     state::GameState,
 };
@@ -20,6 +20,22 @@ pub mod photo_booth;
 pub struct RenderItem {
     /// The item's id
     pub item_id: u16,
+}
+
+#[derive(Debug, Component, Reflect, Default)]
+/// Indicates that this [`RenderItem`] should have a cooldown amount rendered
+pub struct RenderItemCooldown(pub ItemCooldown);
+
+impl RenderItemCooldown {
+    /// Indicates that this [`RenderItem`] should have a cooldown amount rendered
+    pub fn new(cooldown: ItemCooldown) -> Self {
+        Self(cooldown)
+    }
+
+    /// Returns this as a percent between 0.0 and 100.0 (0.0 meaning no cooldown)
+    pub fn as_percent(&self) -> f32 {
+        self.0.get() * 100.0
+    }
 }
 
 #[derive(Component)]
@@ -158,6 +174,60 @@ fn reposition_tooltips(
     }
 }
 
+#[derive(Component)]
+struct RenderItemCooldownMarker;
+
+fn render_cooldowns(
+    mut commands: Commands,
+    q_changed_render_items: Query<(Entity, &RenderItemCooldown, Option<&Children>), Changed<RenderItemCooldown>>,
+    mut q_node: Query<&mut Node, With<RenderItemCooldownMarker>>,
+    mut removed_render_item_cooldown: RemovedComponents<RenderItemCooldown>,
+    q_children: Query<&Children>,
+) {
+    for removal in removed_render_item_cooldown.read() {
+        if let Ok(children) = q_children.get(removal) {
+            for child in children.iter() {
+                if q_node.contains(child) {
+                    commands.entity(child).insert(NeedsDespawned);
+                }
+            }
+        }
+    }
+
+    'big_loop: for (changed_render_item_ent, cooldown, children) in q_changed_render_items.iter() {
+        if let Some(children) = children {
+            for child in children.iter() {
+                if let Ok(mut node) = q_node.get_mut(child) {
+                    node.height = Val::Percent(cooldown.as_percent());
+                    continue 'big_loop;
+                }
+            }
+        }
+
+        // No suitable entity already exists - spawn one
+
+        commands.entity(changed_render_item_ent).with_child((
+            BackgroundColor(
+                Srgba {
+                    red: 1.0,
+                    blue: 1.0,
+                    green: 1.0,
+                    alpha: 0.3,
+                }
+                .into(),
+            ),
+            RenderItemCooldownMarker,
+            Node {
+                position_type: PositionType::Absolute,
+                bottom: Val::Px(0.0),
+                width: Val::Percent(100.0),
+                height: Val::Percent(cooldown.as_percent()),
+                ..Default::default()
+            },
+        ));
+    }
+}
+
 fn render_items(
     mut commands: Commands,
     items: Res<Registry<Item>>,
@@ -198,7 +268,7 @@ pub(super) fn register(app: &mut App) {
     app.configure_sets(Update, RenderItemSystemSet::RenderItems.in_set(UiSystemSet::DoUi))
         .add_systems(
             Update,
-            (render_items, render_tooltips, reposition_tooltips)
+            (render_items, render_cooldowns, render_tooltips, reposition_tooltips)
                 .chain()
                 .in_set(RenderItemSystemSet::RenderItems)
                 .run_if(in_state(GameState::Playing).or(in_state(GameState::LoadingWorld))),

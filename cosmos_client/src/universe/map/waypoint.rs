@@ -1,11 +1,16 @@
 //! Map-waypoint logic
 
 use bevy::{color::palettes::css, prelude::*};
-use cosmos_core::{ecs::NeedsDespawned, physics::location::Location};
+use cosmos_core::{
+    ecs::{NeedsDespawned, sets::FixedUpdateSet},
+    netty::client::LocalPlayer,
+    physics::location::Location,
+    structure::ship::{pilot::Pilot, warp::DesiredLocation},
+};
 
 use crate::{
     input::inputs::{CosmosInputs, InputChecker, InputHandler},
-    ui::ship_flight::indicators::IndicatorSettings,
+    ui::ship_flight::indicators::{FocusedWaypointEntity, Indicating, IndicatorSettings},
 };
 
 use super::{GalaxyMapDisplay, MapCamera};
@@ -51,6 +56,30 @@ fn create_waypoint(
     }
 }
 
+fn set_desired_location(
+    q_waypoint: Query<&Indicating, With<FocusedWaypointEntity>>,
+    q_loc: Query<&Location>,
+    q_piloting: Query<&Pilot, With<LocalPlayer>>,
+    mut commands: Commands,
+) {
+    let Ok(pilot) = q_piloting.single() else {
+        return;
+    };
+
+    let Ok(ind) = q_waypoint.single() else {
+        commands.entity(pilot.entity).insert(DesiredLocation(None));
+        return;
+    };
+
+    let Ok(loc) = q_loc.get(ind.0) else {
+        commands.entity(pilot.entity).insert(DesiredLocation(None));
+        return;
+    };
+
+    commands.entity(pilot.entity).insert(DesiredLocation(Some(*loc)));
+}
+
 pub(super) fn register(app: &mut App) {
-    app.add_systems(Update, create_waypoint);
+    app.add_systems(Update, create_waypoint)
+        .add_systems(FixedUpdate, set_desired_location.in_set(FixedUpdateSet::PostPhysics));
 }

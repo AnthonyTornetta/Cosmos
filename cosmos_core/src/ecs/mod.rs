@@ -4,6 +4,7 @@
 pub mod data;
 pub mod mut_events;
 pub mod sets;
+pub mod types;
 
 use bevy::{ecs::query::QueryFilter, prelude::*};
 

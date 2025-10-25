@@ -22,6 +22,10 @@ use crate::{
         OpenMenu,
         components::{
             button::{ButtonEvent, CosmosButton},
+            modal::{
+                Modal,
+                confirm_modal::{ConfirmModal, ConfirmModalComplete},
+            },
             scollable_container::ScrollBox,
             window::GuiWindow,
         },
@@ -46,7 +50,14 @@ fn on_change_shipyard_state(
     for (state, block) in q_shipyard_state
         .iter()
         .map(|(s, b)| (Some(s), b))
-        .chain(removed_states.read().flat_map(|e| q_block_data.get(e).map(|d| (None, d))))
+        .chain(removed_states.read().flat_map(|e| {
+            // TODO: This isn't picking up removedcomponents because it looks like the block data
+            // is being despawned on syncing removal - idk why. Need to investigate this
+            info!("{e:?}");
+            let b = q_block_data.get(e).map(|d| (None, d));
+            info!("{b:?}");
+            b
+        }))
     {
         let Ok((ent, opened)) = q_opened_shipyard_ui.single() else {
             return;
@@ -353,7 +364,7 @@ fn create_shipyard_ui(
                 Node {
                     width: Val::Percent(100.0),
                     height: Val::Px(50.0),
-                    margin: UiRect::all(Val::Auto),
+                    margin: UiRect::bottom(Val::Px(20.0)),
                     border: UiRect::all(Val::Px(2.0)),
                     ..Default::default()
                 },
@@ -365,6 +376,52 @@ fn create_shipyard_ui(
                     nevw_change_shipyard_state.write(ClientSetShipyardState::Unpause { controller: block });
                 },
             );
+
+            p.spawn((
+                CosmosButton {
+                    text: Some((
+                        "Stop".into(),
+                        TextFont {
+                            font_size: 20.0,
+                            font: font.get(),
+                            ..Default::default()
+                        },
+                        Default::default(),
+                    )),
+                    ..Default::default()
+                },
+                Node {
+                    width: Val::Percent(100.0),
+                    height: Val::Px(50.0),
+                    margin: UiRect::all(Val::Auto),
+                    border: UiRect::all(Val::Px(2.0)),
+                    ..Default::default()
+                },
+                BorderColor(css::RED.into()),
+            ))
+            .observe(move |_trigger: Trigger<ButtonEvent>, mut commands: Commands| {
+                commands
+                    .spawn((
+                        Modal {
+                            title: "Stop Shipyard".into(),
+                        },
+                        ConfirmModal {
+                            prompt: "Are you sure you want stop this construction?".into(),
+                            ..Default::default()
+                        },
+                    ))
+                    .observe(
+                        move |ev: Trigger<ConfirmModalComplete>,
+                              mut nevw_change_shipyard_state: NettyEventWriter<ClientSetShipyardState>| {
+                            if !ev.confirmed {
+                                return;
+                            }
+
+                            info!("Stop shipyard!");
+                            nevw_change_shipyard_state.write(ClientSetShipyardState::Stop { controller: block });
+                        },
+                    );
+            });
         }
         Some(ClientFriendlyShipyardState::Building(b)) => {
             p.spawn((
@@ -441,6 +498,52 @@ fn create_shipyard_ui(
                     nevw_change_shipyard_state.write(ClientSetShipyardState::Pause { controller: block });
                 },
             );
+
+            p.spawn((
+                CosmosButton {
+                    text: Some((
+                        "Stop".into(),
+                        TextFont {
+                            font_size: 20.0,
+                            font: font.get(),
+                            ..Default::default()
+                        },
+                        Default::default(),
+                    )),
+                    ..Default::default()
+                },
+                Node {
+                    width: Val::Percent(100.0),
+                    height: Val::Px(50.0),
+                    margin: UiRect::top(Val::Px(20.0)),
+                    border: UiRect::all(Val::Px(2.0)),
+                    ..Default::default()
+                },
+                BorderColor(css::RED.into()),
+            ))
+            .observe(move |_trigger: Trigger<ButtonEvent>, mut commands: Commands| {
+                commands
+                    .spawn((
+                        Modal {
+                            title: "Stop Shipyard".into(),
+                        },
+                        ConfirmModal {
+                            prompt: "Are you sure you want stop this construction?".into(),
+                            ..Default::default()
+                        },
+                    ))
+                    .observe(
+                        move |ev: Trigger<ConfirmModalComplete>,
+                              mut nevw_change_shipyard_state: NettyEventWriter<ClientSetShipyardState>| {
+                            if !ev.confirmed {
+                                return;
+                            }
+
+                            info!("Stop shipyard!");
+                            nevw_change_shipyard_state.write(ClientSetShipyardState::Stop { controller: block });
+                        },
+                    );
+            });
         }
         Some(ClientFriendlyShipyardState::Deconstructing(e)) => {
             p.spawn(Text::new(format!("DECONSTRUCTING TODO {e:?}")));

@@ -569,9 +569,21 @@ impl Inventory {
         }
     }
 
-    /// Sets the ItemStack stored at that slot number. Will overwrite any previous stack
+    /// Sets the ItemStack stored at that slot number. Will overwrite any previous stack - does not
+    /// clear out any existing item data
     pub fn set_itemstack_at(&mut self, slot: usize, item_stack: Option<ItemStack>, commands: &mut Commands) {
         if let Some(is) = item_stack {
+            self.set_items_at(slot, is, commands);
+        } else {
+            self.items[slot] = None;
+        }
+    }
+
+    /// Sets the item stored at that slot number. Will overwrite any previous stack - does not
+    /// clear out any existing item data
+    pub fn set_item_at(&mut self, slot: usize, item: &Item, amount: u16, commands: &mut Commands, needs_data: &ItemShouldHaveData) {
+        if amount != 0 {
+            let is = ItemStack::with_quantity(item, amount, (self.self_entity, slot as u32), commands, needs_data);
             self.set_items_at(slot, is, commands);
         } else {
             self.items[slot] = None;

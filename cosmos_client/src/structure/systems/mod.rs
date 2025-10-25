@@ -12,6 +12,7 @@ mod railgun_system;
 mod shield_system;
 mod sync;
 pub mod thruster_system;
+mod warp;
 
 use bevy::prelude::App;
 use cosmos_core::structure::systems::StructureSystemType;
@@ -33,4 +34,5 @@ pub(super) fn register(app: &mut App) {
     missile_launcher_system::register(app);
     sync::register(app);
     railgun_system::register(app);
+    warp::register(app);
 }

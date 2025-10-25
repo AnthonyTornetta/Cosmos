@@ -4,7 +4,10 @@
 use bevy::prelude::Quat;
 use serde::{Deserialize, Serialize};
 
-use crate::structure::{ship::ship_movement::ShipMovement, systems::ShipActiveSystem};
+use crate::structure::{
+    ship::ship_movement::ShipMovement,
+    systems::{ShipActiveSystem, SystemActive},
+};
 
 use super::netty_rigidbody::NettyRigidBody;
 
@@ -23,6 +26,11 @@ pub enum ClientUnreliableMessages {
         /// The movement to set it to
         movement: ShipMovement,
     },
-    /// Which system is the pilot currently settnig to active
-    ShipActiveSystem(ShipActiveSystem),
+    /// Which system is the pilot currently setting to active
+    ShipActiveSystem {
+        /// The system the player is interacting with and how
+        system: ShipActiveSystem,
+        /// Which action (if any) they are taking
+        active: Option<SystemActive>,
+    },
 }

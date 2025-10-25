@@ -21,7 +21,7 @@ use super::{DebugLocation, Location, SetPosition};
 #[cfg(doc)]
 use crate::netty::client::LocalPlayer;
 
-#[derive(Component)]
+#[derive(Component, Default)]
 /// Anything that has this component will be treated as an anchor for the [`PlayerWorld`]s.
 ///
 /// If the [`Anchor`] entity is a child of another, its parent will be treated as the anchor.

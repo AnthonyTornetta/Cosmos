@@ -9,8 +9,10 @@ use cosmos_core::{
     entities::player::Player,
     inventory::itemstack::ItemStackData,
     netty::{
-        NoSendEntity,
+        NettyChannelServer, NoSendEntity, cosmos_encoder,
+        server_reliable_messages::ServerReliableMessages,
         sync::{
+            ComponentEntityIdentifier,
             server_entity_syncing::RequestedEntityEvent,
             server_syncing::{ReadyForSyncing, SyncTo},
         },
@@ -20,6 +22,7 @@ use cosmos_core::{
     physics::location::Location,
     prelude::{Structure, StructureSystem},
 };
+use renet::RenetServer;
 
 use crate::persistence::loading::{NeedsBlueprintLoaded, NeedsLoaded};
 
@@ -256,9 +259,11 @@ struct PreviousSyncTo(SyncTo);
 fn generate_request_entity_events_for_new_sync_tos(
     mut evr_request_entity: EventWriter<RequestedEntityEvent>,
     mut q_sync_to: Query<(Entity, &SyncTo, &mut PreviousSyncTo)>,
+    mut server: ResMut<RenetServer>,
 ) {
     for (ent, sync_to, mut prev) in q_sync_to.iter_mut() {
         let mut not_found = vec![];
+        let mut no_longer_synced_to = vec![];
 
         for &id in sync_to.iter() {
             if !prev.0.should_sync_to(id) {
@@ -266,7 +271,13 @@ fn generate_request_entity_events_for_new_sync_tos(
             }
         }
 
-        if not_found.is_empty() {
+        for &id in prev.0.iter() {
+            if !sync_to.should_sync_to(id) {
+                no_longer_synced_to.push(id);
+            }
+        }
+
+        if not_found.is_empty() && no_longer_synced_to.is_empty() {
             continue;
         }
 
@@ -277,6 +288,18 @@ fn generate_request_entity_events_for_new_sync_tos(
                 entity: ent,
                 client_id: id,
             });
+        }
+
+        for id in no_longer_synced_to {
+            server.send_message(
+                id,
+                NettyChannelServer::Reliable,
+                cosmos_encoder::serialize(&ServerReliableMessages::EntityDespawn {
+                    // We only care about normal entities for this - block data and stuff doesn't
+                    // really matter
+                    entity: ComponentEntityIdentifier::Entity(ent),
+                }),
+            );
         }
     }
 }

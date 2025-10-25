@@ -62,6 +62,8 @@ pub enum CosmosInputs {
     StopPiloting,
     /// Use the ship's selected block system
     UseSelectedSystem,
+    /// The alternate mode for that system
+    UseSelectedSystemAlt,
 
     /// Unlocks the mouse from the window
     Pause,
@@ -203,6 +205,7 @@ fn init_input(mut input_handler: ResMut<CosmosInputHandler>) {
     input_handler.set_keycode(CosmosInputs::HotbarSlot9, KeyCode::Digit9);
 
     input_handler.set_mouse_button(CosmosInputs::UseSelectedSystem, MouseButton::Left);
+    input_handler.set_mouse_button(CosmosInputs::UseSelectedSystemAlt, MouseButton::Right);
 
     input_handler.set_keycode(CosmosInputs::DealignSelf, KeyCode::KeyL);
 

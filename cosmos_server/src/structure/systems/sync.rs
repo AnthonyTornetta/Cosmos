@@ -60,10 +60,10 @@ fn on_request_systems_entity<T: SyncableSystem>(
 fn sync_active_systems(
     mut server: ResMut<RenetServer>,
     q_structure_system: Query<&StructureSystem>,
-    q_active: Query<Entity, Added<SystemActive>>,
+    q_active: Query<(Entity, &SystemActive), Added<SystemActive>>,
     q_inactive: FixedUpdateRemovedComponents<SystemActive>,
 ) {
-    for active in q_active.iter() {
+    for (active, active_type) in q_active.iter() {
         let Ok(system) = q_structure_system.get(active) else {
             continue;
         };
@@ -73,7 +73,7 @@ fn sync_active_systems(
             cosmos_encoder::serialize(&ReplicationMessage::SystemStatus {
                 structure_entity: system.structure_entity(),
                 system_id: system.id(),
-                active: true,
+                active: Some(*active_type),
             }),
         );
     }
@@ -88,7 +88,7 @@ fn sync_active_systems(
             cosmos_encoder::serialize(&ReplicationMessage::SystemStatus {
                 structure_entity: system.structure_entity(),
                 system_id: system.id(),
-                active: false,
+                active: None,
             }),
         );
     }

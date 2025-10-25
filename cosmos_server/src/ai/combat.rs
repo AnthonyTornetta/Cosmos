@@ -169,7 +169,7 @@ fn handle_combat_ai(
             if laser_secs_to_reach_target >= LASER_LIVE_TIME.as_secs_f32() {
                 commands.entity(laser_cannon_system).remove::<SystemActive>();
             } else {
-                commands.entity(laser_cannon_system).insert(SystemActive);
+                commands.entity(laser_cannon_system).insert(SystemActive::Primary);
             }
         }
 
@@ -177,7 +177,7 @@ fn handle_combat_ai(
             if focus.locked_on_to() != Some(target_ent) {
                 commands.entity(laser_cannon_system).remove::<SystemActive>();
             } else {
-                commands.entity(laser_cannon_system).insert(SystemActive);
+                commands.entity(laser_cannon_system).insert(SystemActive::Primary);
             }
         }
     }

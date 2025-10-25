@@ -21,6 +21,13 @@ pub struct DisableRigidBody {
 }
 
 impl DisableRigidBody {
+    /// [`Self::default`] + [`Self::add_reason`]
+    pub fn new_with_reason(reason: &'static str) -> Self {
+        Self {
+            reasons: vec![reason.into()],
+        }
+    }
+
     /// Returns true if there are any reasons present
     pub fn should_be_disabled(&self) -> bool {
         !self.reasons.is_empty()
@@ -84,7 +91,7 @@ pub(super) fn register(app: &mut App) {
     app.add_systems(
         FixedUpdate,
         disable_rigid_bodies
-            .in_set(FixedUpdateSet::PrePhysics)
+            .in_set(FixedUpdateSet::PostLocationSyncingPostPhysics)
             .in_set(DisableRigidBodySet::DisableRigidBodies),
     )
     .register_type::<DisableRigidBody>();

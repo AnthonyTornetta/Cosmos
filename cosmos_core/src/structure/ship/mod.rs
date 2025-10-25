@@ -12,6 +12,7 @@ use super::coordinates::BlockCoordinate;
 pub mod pilot;
 pub mod ship_builder;
 pub mod ship_movement;
+pub mod warp;
 
 #[derive(Component, Debug, Reflect, Clone, Copy)]
 /// A structure that has this component is a ship
@@ -29,6 +30,7 @@ pub(super) fn register(app: &mut App) {
     pilot::register(app);
     ship_movement::register(app);
     ship_builder::register(app);
+    warp::register(app);
 
     app.register_type::<Ship>();
 }

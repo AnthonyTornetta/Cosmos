@@ -37,7 +37,6 @@ fn on_use_item(
             held_slot: held_is.slot() as usize,
         };
 
-        info!("Use held item!!!");
         evw_use_item.write(ev.clone());
 
         nevw_use_item.write(ev, n_ev.client_id);
