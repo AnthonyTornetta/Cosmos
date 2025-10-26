@@ -10,7 +10,7 @@ use cosmos_core::{
         sync::mapping::{Mappable, NetworkMapping},
         system_sets::NetworkingSystemsSet,
     },
-    physics::location::Location,
+    physics::location::{Location, SetPosition},
     projectiles::{causer::Causer, laser::Laser},
     state::GameState,
 };
@@ -58,17 +58,20 @@ fn lasers_netty(
                 mut no_hit,
                 causer,
             } => {
-                let loc = match location.map_to_client(&network_mapping) {
-                    Ok(LaserLoc::Absolute(l)) => l,
-                    Ok(LaserLoc::Relative { entity, offset }) => {
-                        let Ok(loc) = q_loc.get(entity) else {
-                            continue;
-                        };
-
-                        *loc + offset
-                    }
-                    Err(_) => continue,
+                let Ok(location) = location.map_to_client(&network_mapping) else {
+                    continue;
                 };
+                // let loc = match location.map_to_client(&network_mapping) {
+                //     Ok(LaserLoc::Absolute(l)) => l,
+                //     Ok(LaserLoc::Relative { entity, offset }) => {
+                //         let Ok(loc) = q_loc.get(entity) else {
+                //             continue;
+                //         };
+                //
+                //         *loc + offset
+                //     }
+                //     Err(_) => continue,
+                // };
 
                 if let Some(server_entity) = no_hit
                     && let Some(client_entity) = network_mapping.client_from_server(&server_entity)
@@ -99,7 +102,7 @@ fn lasers_netty(
                 });
 
                 Laser::spawn(
-                    loc,
+                    location,
                     laser_velocity,
                     firer_velocity,
                     strength,

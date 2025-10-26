@@ -387,7 +387,7 @@ pub(super) fn register(app: &mut App) {
         FixedUpdate,
         (
             ShieldSet::RechargeShields,
-            ShieldSet::OnShieldHit.after(LaserSystemSet::SendHitEvents),
+            ShieldSet::OnShieldHit, //.after(LaserSystemSet::SendHitEvents),
         )
             .chain(),
     );

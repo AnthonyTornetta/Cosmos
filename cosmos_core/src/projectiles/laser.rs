@@ -16,10 +16,10 @@ use bevy_rapier3d::{
 
 use crate::{
     ecs::{NeedsDespawned, sets::FixedUpdateSet},
-    netty::NoSendEntity,
+    netty::{NoSendEntity, server_laser_cannon_system_messages::LaserLoc},
     persistence::LoadingDistance,
     physics::{
-        location::{Location, SetPosition},
+        location::{Location, PreviousLocation, SetPosition},
         player_world::PlayerWorld,
     },
     structure::chunk::ChunkEntity,
@@ -28,7 +28,7 @@ use crate::{
 use super::causer::Causer;
 
 /// How long a laser will stay alive for before despawning
-pub const LASER_LIVE_TIME: Duration = Duration::from_secs(5);
+pub const LASER_LIVE_TIME: Duration = Duration::from_secs(50);
 
 #[derive(Debug, Event)]
 /// The entity hit represents the entity hit by the laser
@@ -91,9 +91,6 @@ pub struct Laser {
 
     /// The strength of this laser, used to calculate block damage
     pub strength: f32,
-
-    /// Used to calculate an extra-big hitbox to account for hitting something right when it fires
-    last_position: Location,
 }
 
 impl Laser {
@@ -102,7 +99,7 @@ impl Laser {
     /// * `laser_velocity` - The laser's velocity. Do not add the parent's velocity for this, use `firer_velocity` instead.
     /// * `firer_velocity` - The laser's parent's velocity.
     pub fn spawn<'a>(
-        location: Location,
+        location: LaserLoc,
         laser_velocity: Vec3,
         firer_velocity: Vec3,
         strength: f32,
@@ -114,17 +111,17 @@ impl Laser {
     ) -> EntityCommands<'a> {
         let rot = Transform::from_xyz(0.0, 0.0, 0.0).looking_at(laser_velocity, Vec3::Y).rotation;
 
-        let mut ent_cmds = commands.spawn_empty();
+        let mut ecmds = commands.spawn_empty();
 
-        ent_cmds.insert((
-            Laser {
-                strength,
-                active: true,
-                last_position: location,
-            },
-            location,
+        match location {
+            LaserLoc::Absolute(l) => ecmds.insert(l),
+            LaserLoc::Relative { entity, offset } => ecmds.insert(SetPosition::RelativeTo { entity, offset }),
+        };
+
+        ecmds.insert((
+            Laser { strength, active: true },
+            Name::new("Laser"),
             Transform::from_rotation(rot),
-            SetPosition::Transform,
             RigidBody::Dynamic,
             LockedAxes::ROTATION_LOCKED,
             Velocity {
@@ -140,14 +137,14 @@ impl Laser {
         ));
 
         if let Some(causer) = causer {
-            ent_cmds.insert(causer);
+            ecmds.insert(causer);
         }
 
         if let Some(ent) = no_collide_entity {
-            ent_cmds.insert(NoCollide(ent));
+            ecmds.insert(NoCollide(ent));
         }
 
-        ent_cmds
+        ecmds
     }
 }
 
@@ -161,6 +158,7 @@ fn send_laser_hit_events(
             &mut Laser,
             &Velocity,
             Option<&Causer>,
+            &PreviousLocation,
         ),
         With<Laser>,
     >,
@@ -172,11 +170,16 @@ fn send_laser_hit_events(
     worlds: Query<&Location, With<PlayerWorld>>,
     q_rapier_context: WriteRapierContext,
 ) {
-    for (world, location, laser_entity, no_collide_entity, mut laser, velocity, causer) in query.iter_mut() {
+    for (world, location, laser_entity, no_collide_entity, mut laser, velocity, causer, prev_loc) in query.iter_mut() {
+        info!(
+            "Found laser (dist: {} -> {} = {})!",
+            location,
+            prev_loc.0,
+            (*location - prev_loc.0).absolute_coords_f32()
+        );
         if laser.active {
-            let last_pos = laser.last_position;
+            let last_pos = prev_loc.0;
             let delta_position = last_pos.relative_coords_to(location);
-            laser.last_position = *location;
 
             let coords: Option<Vec3> = if let Ok(loc) = worlds.get(world.0) {
                 Some(loc.relative_coords_to(location))
@@ -272,7 +275,7 @@ pub(super) fn register(app: &mut App) {
         .add_systems(
             FixedUpdate,
             (send_laser_hit_events.in_set(LaserSystemSet::SendHitEvents), despawn_lasers)
-                .in_set(FixedUpdateSet::Main)
+                .in_set(FixedUpdateSet::PostLocationSyncingPostPhysics)
                 .chain(),
         )
         .add_event::<LaserCollideEvent>();

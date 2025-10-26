@@ -42,7 +42,7 @@ fn register_laser_blocks(blocks: Res<Registry<Block>>, mut cannon: ResMut<LineBl
 }
 
 /// How fast a laser will travel (m/s) ignoring the speed of its shooter.
-pub const LASER_BASE_VELOCITY: f32 = 200.0;
+pub const LASER_BASE_VELOCITY: f32 = 10.0;
 
 fn update_system(
     mut query: Query<(&LaserCannonSystem, &StructureSystem, &mut LineSystemCooldown, Has<SystemActive>)>,
@@ -96,7 +96,10 @@ fn update_system(
             any_fired = true;
             energy_storage_system.decrease_energy(line.property.energy_per_shot);
 
-            let location = structure.block_world_location(line.start, global_transform, structure_location);
+            let loc = LaserLoc::Relative {
+                entity: system.structure_entity(),
+                offset: structure.block_relative_position(line.end()),
+            };
 
             let relative_direction = line.direction.as_vec3();
             let laser_velocity = global_transform.affine().matrix3.mul_vec3(relative_direction) * LASER_BASE_VELOCITY;
@@ -107,7 +110,7 @@ fn update_system(
             let causer = Some(Causer(system.structure_entity()));
 
             Laser::spawn(
-                location,
+                loc,
                 laser_velocity,
                 ship_velocity.linvel,
                 strength,
@@ -119,11 +122,6 @@ fn update_system(
             );
 
             let color = line.color;
-
-            let loc = LaserLoc::Relative {
-                entity: system.structure_entity(),
-                offset: (location - *structure_location).absolute_coords_f32(),
-            };
 
             server.broadcast_message(
                 NettyChannelServer::StructureSystems,
