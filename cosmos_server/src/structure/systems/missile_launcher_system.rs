@@ -355,10 +355,11 @@ pub(super) fn register(app: &mut App) {
     add_line_system::<MissileLauncherProperty, MissileLauncherCalculator>(app);
 
     app.add_systems(
-        Update,
+        FixedUpdate,
         update_missile_system
             .run_if(in_state(GameState::Playing))
-            .after(LocationPhysicsSet::DoPhysics)
+            .after(FixedUpdateSet::LocationSyncing)
+            .before(FixedUpdateSet::PostLocationSyncingPostPhysics)
             .before(NetworkingSystemsSet::SyncComponents),
     )
     .add_systems(OnEnter(GameState::PostLoading), register_missile_launcher_blocks)

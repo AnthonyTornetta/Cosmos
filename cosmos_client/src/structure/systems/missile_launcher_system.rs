@@ -191,8 +191,6 @@ fn render_lockon_status(
     .into();
 
     if let Ok((_, focus_ui)) = focus_ui {
-        info!("Ui already exists");
-
         update_corner_styles(&mut q_style, focus_ui.top_left, -gap, color);
         update_corner_styles(&mut q_style, focus_ui.bottom_left, gap, color);
         update_corner_styles(&mut q_style, focus_ui.top_right, -gap, color);
@@ -215,7 +213,6 @@ fn render_lockon_status(
             top_right: Entity::PLACEHOLDER,
         };
 
-        info!("Making UI!");
         let mut ecmds = commands.spawn((
             Node {
                 position_type: PositionType::Absolute,

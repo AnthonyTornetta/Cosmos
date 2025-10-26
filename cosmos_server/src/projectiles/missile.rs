@@ -163,10 +163,10 @@ fn despawn_missiles(
 pub(super) fn register(app: &mut App) {
     app.add_systems(
         FixedUpdate,
-        (respond_to_collisions.before(NetworkingSystemsSet::SyncComponents), despawn_missiles)
-            .before(ExplosionSystemSet::PreProcessExplosions)
-            .after(LocationPhysicsSet::DoPhysics)
-            .chain(),
+        (respond_to_collisions, despawn_missiles)
+            .in_set(ExplosionSystemSet::PreProcessExplosions)
+            .chain()
+            .before(NetworkingSystemsSet::SyncComponents),
     );
 
     app.add_systems(

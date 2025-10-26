@@ -98,7 +98,6 @@ fn add_spawn_times(
 fn spawn_pirates(
     mut commands: Commands,
     mut q_players: Query<(Entity, &Location, &mut NextPirateSpawn, &TotalTimePlayed, &PlayerStrength), With<Player>>,
-    time: Res<Time>,
     min_pirate_spawn_time: Res<MinPirateSpawnTime>,
     server_settings: Res<ServerSettings>,
     universe: Res<UniverseSystems>,
@@ -124,7 +123,7 @@ fn spawn_pirates(
                 let pirate_delay_amount = 0.1;
 
                 // pushes back pirate spawn time while in more peaceful areas.
-                player_next_pirate_spawn.current_spawn_time += time.delta_secs_f64() * pirate_delay_amount;
+                player_next_pirate_spawn.current_spawn_time += PIRATE_SPAWN_DELAY.as_secs_f64() * pirate_delay_amount;
                 player_next_pirate_spawn.current_spawn_time = player_next_pirate_spawn
                     .current_spawn_time
                     .min(player_next_pirate_spawn.max_spawn_time);
@@ -139,7 +138,7 @@ fn spawn_pirates(
             1.0
         };
 
-        player_next_pirate_spawn.current_spawn_time -= time.delta_secs_f64() * time_multiplier;
+        player_next_pirate_spawn.current_spawn_time -= PIRATE_SPAWN_DELAY.as_secs_f64() * time_multiplier;
 
         if let Some(sec) = player_groups
             .keys()
@@ -279,13 +278,15 @@ fn calculate_next_spawn_time(min_pirate_spawn_time: &MinPirateSpawnTime) -> f64 
     rand::random::<f64>() * min_secs * 3.0 + min_secs
 }
 
+const PIRATE_SPAWN_DELAY: Duration = Duration::from_secs(10);
+
 pub(super) fn register(app: &mut App) {
     app.configure_sets(
         FixedUpdate,
         PirateSpawningSet::PirateSpawningLogic
             .before(LoadingBlueprintSystemSet::BeginLoadingBlueprints)
             .run_if(in_state(GameState::Playing))
-            .run_if(on_timer(Duration::from_secs(10))),
+            .run_if(on_timer(PIRATE_SPAWN_DELAY)),
     )
     .add_systems(Startup, load_settings)
     .add_systems(
