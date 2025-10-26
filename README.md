@@ -65,8 +65,6 @@ See [the issues page](https://github.com/AnthonyTornetta/Cosmos/issues) for the 
 
 ## Release 0.0.9a (In Progress)
 
-- [ ] More pirate ships
-- [ ] More station types
 - [x] Performance fixes
 - [x] Rework systems to use FixedUpdate
   - [x] Physics
@@ -79,6 +77,8 @@ See [the issues page](https://github.com/AnthonyTornetta/Cosmos/issues) for the 
   - [x] Create ships via shipyard 
 - [x] Faction Management
 - [x] Ship System Management
+- [x] Short-range warp drive
+- [x] Automated builds (for easy download)
 
 ## Release 0.0.8a
 
