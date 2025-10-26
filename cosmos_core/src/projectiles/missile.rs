@@ -54,10 +54,10 @@ fn on_add_missile(q_added_missile: Query<Entity, Added<Missile>>, mut commands: 
             Name::new("Missile"),
             RigidBody::Dynamic,
             Collider::cuboid(0.15, 0.15, 0.5),
-            NotShadowCaster,
+            #[cfg(feature = "client")]
+            (NotShadowCaster, NotShadowReceiver),
             ActiveEvents::COLLISION_EVENTS,
             ActiveHooks::FILTER_CONTACT_PAIRS,
-            NotShadowReceiver,
             CollisionGroups::new(MISSILE_COLLISION_GROUP, !(FLUID_COLLISION_GROUP | MISSILE_COLLISION_GROUP)),
             SolverGroups::new(MISSILE_COLLISION_GROUP, !(FLUID_COLLISION_GROUP | MISSILE_COLLISION_GROUP)),
         ));
@@ -103,9 +103,22 @@ pub enum ExplosionSystemSet {
     ProcessExplosions,
 }
 
+#[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
+pub enum MissileSpawnSet {
+    SpawnMissiles,
+    AddColliders,
+}
+
 pub(super) fn register(app: &mut App) {
     sync_component::<Missile>(app);
     sync_component::<Explosion>(app);
+
+    app.configure_sets(
+        FixedUpdate,
+        (MissileSpawnSet::SpawnMissiles, MissileSpawnSet::AddColliders)
+            .before(FixedUpdateSet::LocationSyncing)
+            .chain(),
+    );
 
     #[cfg(feature = "server")]
     {
@@ -133,9 +146,9 @@ pub(super) fn register(app: &mut App) {
     }
 
     #[cfg(feature = "client")]
-    app.add_systems(Update, on_add_missile.in_set(ComponentSyncingSet::PostComponentSyncing));
+    app.add_systems(FixedUpdate, on_add_missile.in_set(ComponentSyncingSet::PostComponentSyncing));
     #[cfg(feature = "server")]
-    app.add_systems(Update, on_add_missile.in_set(ComponentSyncingSet::PreComponentSyncing));
+    app.add_systems(FixedUpdate, on_add_missile.in_set(MissileSpawnSet::AddColliders));
 
     app.register_type::<Explosion>();
 }

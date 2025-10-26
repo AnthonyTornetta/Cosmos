@@ -8,7 +8,10 @@ use bevy_rapier3d::{plugin::RapierContextEntityLink, prelude::Velocity};
 use bevy_renet::renet::RenetServer;
 use cosmos_core::{
     block::Block,
-    netty::{NettyChannelServer, cosmos_encoder, server_laser_cannon_system_messages::ServerStructureSystemMessages},
+    netty::{
+        NettyChannelServer, cosmos_encoder,
+        server_laser_cannon_system_messages::{LaserLoc, ServerStructureSystemMessages},
+    },
     physics::location::{Location, LocationPhysicsSet},
     projectiles::{causer::Causer, laser::Laser},
     registry::{Registry, identifiable::Identifiable},
@@ -58,7 +61,7 @@ fn update_system(
     mut server: ResMut<RenetServer>,
 ) {
     for (cannon_system, system, mut cooldown, system_active) in query.iter_mut() {
-        let Ok((ship_entity, systems, structure, location, global_transform, ship_velocity, physics_world)) =
+        let Ok((ship_entity, systems, structure, structure_location, global_transform, ship_velocity, physics_world)) =
             systems.get(system.structure_entity())
         else {
             continue;
@@ -93,7 +96,7 @@ fn update_system(
             any_fired = true;
             energy_storage_system.decrease_energy(line.property.energy_per_shot);
 
-            let location = structure.block_world_location(line.start, global_transform, location);
+            let location = structure.block_world_location(line.start, global_transform, structure_location);
 
             let relative_direction = line.direction.as_vec3();
             let laser_velocity = global_transform.affine().matrix3.mul_vec3(relative_direction) * LASER_BASE_VELOCITY;
@@ -117,11 +120,16 @@ fn update_system(
 
             let color = line.color;
 
+            let loc = LaserLoc::Relative {
+                entity: system.structure_entity(),
+                offset: (location - *structure_location).absolute_coords_f32(),
+            };
+
             server.broadcast_message(
                 NettyChannelServer::StructureSystems,
                 cosmos_encoder::serialize(&ServerStructureSystemMessages::CreateLaser {
                     color,
-                    location,
+                    location: loc,
                     laser_velocity,
                     firer_velocity: ship_velocity.linvel,
                     strength,

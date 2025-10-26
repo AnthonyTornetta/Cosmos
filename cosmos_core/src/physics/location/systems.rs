@@ -108,7 +108,7 @@ fn apply_set_position_single(
             if let Some(computed_loc) = compute_location(entity, &q_trans, &q_x, &q_g_trans, &q_parent) {
                 commands
                     .entity(entity)
-                    .insert((computed_loc, PreviousLocation(computed_loc)))
+                    .insert((computed_loc, SetLocationInternally, PreviousLocation(computed_loc)))
                     .remove::<SetPosition>();
             }
         }
@@ -116,23 +116,36 @@ fn apply_set_position_single(
             if let Some(computed_loc) = compute_location(entity, &q_trans, &q_x, &q_g_trans, &q_parent) {
                 commands
                     .entity(entity)
-                    .insert((computed_loc, PreviousLocation(computed_loc), SetTransformBasedOnLocationFlag))
+                    .insert((
+                        computed_loc,
+                        PreviousLocation(computed_loc),
+                        SetTransformBasedOnLocationFlag,
+                        SetLocationInternally,
+                    ))
                     .remove::<SetPosition>();
             }
         }
     }
 }
 
+#[derive(Component)]
+struct SetLocationInternally;
+
 fn apply_set_position(
-    q_location_added: Query<(Entity, Has<DebugLocation>), (Without<SetPosition>, Added<Location>)>,
+    q_location_added: Query<(Entity, Has<DebugLocation>), (Without<SetPosition>, Added<Location>, Without<SetLocationInternally>)>,
     q_set_position: Query<(Entity, &SetPosition, Has<DebugLocation>)>,
     q_x: Query<(Entity, Option<&Location>, Option<&SetPosition>)>,
     q_trans: Query<&Transform>,
     q_parent: Query<&ChildOf>,
     q_g_trans: Query<&GlobalTransform>,
     mut commands: Commands,
+    q_set_internally: Query<Entity, With<SetLocationInternally>>,
 ) {
     const DEFAULT_SET_POS: SetPosition = SetPosition::Transform;
+
+    for ent in q_set_internally.iter() {
+        commands.entity(ent).remove::<SetLocationInternally>();
+    }
 
     for (entity, set_pos, dbg_loc) in q_location_added
         .iter()
@@ -155,7 +168,7 @@ fn apply_set_position(
 
                     commands
                         .entity(entity)
-                        .insert((loc_from_trans, PreviousLocation(loc_from_trans)))
+                        .insert((SetLocationInternally, loc_from_trans, PreviousLocation(loc_from_trans)))
                         .remove::<SetPosition>();
                 }
             }
@@ -172,6 +185,7 @@ fn apply_set_position(
                         .insert((
                             loc_from_relative,
                             PreviousLocation(loc_from_relative),
+                            SetLocationInternally,
                             SetTransformBasedOnLocationFlag,
                         ))
                         .remove::<SetPosition>();
