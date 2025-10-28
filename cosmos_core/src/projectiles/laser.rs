@@ -53,6 +53,7 @@ impl LaserCollideEvent {
         self.entity_hit
     }
 
+    /// Returns the block hit (if any)
     pub fn block_hit(&self) -> Option<StructureBlock> {
         self.block_hit
     }

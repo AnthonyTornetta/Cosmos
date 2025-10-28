@@ -12,7 +12,7 @@ use cosmos_core::{
         NettyChannelServer, cosmos_encoder,
         server_laser_cannon_system_messages::{LaserLoc, ServerStructureSystemMessages},
     },
-    physics::location::{Location, LocationPhysicsSet},
+    physics::location::LocationPhysicsSet,
     projectiles::{causer::Causer, laser::Laser},
     registry::{Registry, identifiable::Identifiable},
     state::GameState,
@@ -51,7 +51,6 @@ fn update_system(
         Entity,
         &StructureSystems,
         &Structure,
-        &Location,
         &GlobalTransform,
         &Velocity,
         &RapierContextEntityLink,
@@ -61,8 +60,7 @@ fn update_system(
     mut server: ResMut<RenetServer>,
 ) {
     for (cannon_system, system, mut cooldown, system_active) in query.iter_mut() {
-        let Ok((ship_entity, systems, structure, structure_location, global_transform, ship_velocity, physics_world)) =
-            systems.get(system.structure_entity())
+        let Ok((ship_entity, systems, structure, global_transform, ship_velocity, physics_world)) = systems.get(system.structure_entity())
         else {
             continue;
         };

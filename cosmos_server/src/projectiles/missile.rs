@@ -13,10 +13,7 @@ use cosmos_core::{
     ecs::{NeedsDespawned, sets::FixedUpdateSet},
     netty::system_sets::NetworkingSystemsSet,
     persistence::LoadingDistance,
-    physics::{
-        collision_handling::CollisionBlacklist,
-        location::{Location, LocationPhysicsSet},
-    },
+    physics::{collision_handling::CollisionBlacklist, location::Location},
     projectiles::{
         causer::Causer,
         missile::{Explosion, ExplosionSystemSet, Missile},

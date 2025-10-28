@@ -8,9 +8,17 @@ use crate::netty::sync::mapping::Mappable;
 use crate::{physics::location::Location, projectiles::causer::Causer};
 
 #[derive(Debug, Serialize, Deserialize, Clone, Copy)]
+/// Where to spawn a laser
 pub enum LaserLoc {
+    /// At an Absolute location
     Absolute(Location),
-    Relative { entity: Entity, offset: Vec3 },
+    /// Relative to this entity
+    Relative {
+        /// The entity this should be relative to
+        entity: Entity,
+        /// The offset relative to that entity (including that entity's rotation)
+        offset: Vec3,
+    },
 }
 
 #[cfg(feature = "client")]

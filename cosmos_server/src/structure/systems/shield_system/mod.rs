@@ -15,7 +15,6 @@ use cosmos_core::{
     },
     persistence::LoadingDistance,
     physics::location::SetPosition,
-    projectiles::laser::LaserSystemSet,
     registry::{Registry, identifiable::Identifiable},
     state::GameState,
     structure::{

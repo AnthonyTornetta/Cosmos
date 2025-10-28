@@ -190,15 +190,7 @@ fn update_missile_system(
         Has<SystemActive>,
     )>,
     mut es_query: Query<&mut EnergyStorageSystem>,
-    q_systems: Query<(
-        Entity,
-        &StructureSystems,
-        &Structure,
-        &Location,
-        &GlobalTransform,
-        &Velocity,
-        Option<&Pilot>,
-    )>,
+    q_systems: Query<(Entity, &StructureSystems, &Structure, &GlobalTransform, &Velocity, Option<&Pilot>)>,
     q_player: Query<&Player>,
     time: Res<Time>,
     mut commands: Commands,
@@ -208,9 +200,7 @@ fn update_missile_system(
     mut nevw_system_failure: NettyEventWriter<MissileSystemFailure>,
 ) {
     for (missile_launcher_system, focus, system, mut cooldown, system_active) in query.iter_mut() {
-        let Ok((ship_entity, systems, structure, ship_location, global_transform, ship_velocity, pilot)) =
-            q_systems.get(system.structure_entity())
-        else {
+        let Ok((ship_entity, systems, structure, global_transform, ship_velocity, pilot)) = q_systems.get(system.structure_entity()) else {
             continue;
         };
         let Ok(mut energy_storage_system) = systems.query_mut(&mut es_query) else {

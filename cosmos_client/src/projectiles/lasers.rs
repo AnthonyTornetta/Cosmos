@@ -6,11 +6,10 @@ use bevy_renet::renet::*;
 use cosmos_core::{
     netty::{
         NettyChannelServer, cosmos_encoder,
-        server_laser_cannon_system_messages::{LaserLoc, ServerStructureSystemMessages},
+        server_laser_cannon_system_messages::ServerStructureSystemMessages,
         sync::mapping::{Mappable, NetworkMapping},
         system_sets::NetworkingSystemsSet,
     },
-    physics::location::{Location, SetPosition},
     projectiles::{causer::Causer, laser::Laser},
     state::GameState,
 };
@@ -43,7 +42,6 @@ fn lasers_netty(
     mut q_shield_render: Query<&mut ShieldRender>,
     q_default_world: Query<Entity, With<RapierContextSimulation>>,
     mut laser_materials: ResMut<LaserMaterials>,
-    q_loc: Query<&Location>,
 ) {
     while let Some(message) = client.receive_message(NettyChannelServer::StructureSystems) {
         let msg: ServerStructureSystemMessages = cosmos_encoder::deserialize(&message).unwrap();
