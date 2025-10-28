@@ -11,6 +11,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     block::block_events::BlockEventsSet,
+    ecs::sets::FixedUpdateSet,
     netty::sync::{IdentifiableComponent, SyncableComponent, sync_component},
     prelude::StructureBlock,
     structure::coordinates::CoordinateType,
@@ -137,6 +138,7 @@ fn enter_build_mode_listener(mut commands: Commands, mut event_reader: EventRead
 
 fn on_add_build_mode(mut commands: Commands, q_added_build_mode: Query<(Entity, &BuildMode), Added<BuildMode>>) {
     for (ent, bm) in q_added_build_mode.iter() {
+        info!("Build mode added! Setting parent in place!");
         commands
             .entity(ent)
             .insert((RigidBodyDisabled, RigidBody::Fixed, Sensor))
@@ -183,11 +185,13 @@ fn exit_build_mode_when_parent_dies(
     mut commands: Commands,
 ) {
     for entity in query.iter() {
+        info!("Removing build mode because no parent!");
         event_writer.write(ExitBuildModeEvent { player_entity: entity });
     }
 
     for (entity, in_build_mode) in changed_query.iter() {
         if in_build_mode.is_some() {
+            info!("Removing cuz changed parent!");
             event_writer.write(ExitBuildModeEvent { player_entity: entity });
         } else {
             commands.entity(entity).insert(InBuildModeFlag);
@@ -242,6 +246,7 @@ pub(super) fn register(app: &mut App) {
                 .in_set(BuildModeSet::ExitBuildMode),
         )
             .chain()
+            .in_set(FixedUpdateSet::Main)
             .in_set(BlockEventsSet::ProcessEvents),
     )
     .add_event::<EnterBuildModeEvent>()
