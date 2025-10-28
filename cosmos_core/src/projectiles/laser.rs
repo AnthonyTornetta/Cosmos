@@ -251,13 +251,13 @@ fn send_laser_hit_events(
                         if let Some(block_hit) = block_hit {
                             info!("HIT: {:?}", block_hit.coords());
 
-                            structure.set_block_at(
-                                block_hit.coords(),
-                                blocks.from_id("cosmos:grass").unwrap(),
-                                default(),
-                                &blocks,
-                                Some(&mut evw_block_change),
-                            );
+                            // structure.set_block_at(
+                            //     block_hit.coords(),
+                            //     blocks.from_id("cosmos:grass").unwrap(),
+                            //     default(),
+                            //     &blocks,
+                            //     Some(&mut evw_block_change),
+                            // );
                         }
 
                         event_writer.write(LaserCollideEvent {

@@ -657,6 +657,9 @@ fn sync_transforms_and_locations<const SET_PREV_LOCATION: bool>(
 struct LocationSinceLastSync(Location);
 
 #[derive(Component, Debug, Reflect, Clone, Copy)]
+/// Contains the location this entity was at before the latest [`FixedUpdateSet::LocationSyncing`]
+///
+/// This does NOT get updated by [`FixedUpdateSet::LocationSyncingPostPhysics`]
 pub struct PreviousLocation(pub Location);
 
 fn recursively_sync_transforms_and_locations(
@@ -684,6 +687,14 @@ fn recursively_sync_transforms_and_locations(
                     *my_loc
                 );
             }
+
+            // We almost never want interpolation in the case of
+            // [`SetTransformBasedOnLocationFlag`] being on the entity.
+            #[cfg(feature = "client")] // only client has interpolation
+            commands.entity(ent).insert(TranslationEasingState {
+                start: Some(new_trans),
+                end: Some(new_trans),
+            });
             my_transform.translation = new_trans;
         } else {
             // Calculates the change in location since the last time this ran

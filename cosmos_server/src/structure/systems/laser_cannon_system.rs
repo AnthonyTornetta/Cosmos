@@ -42,7 +42,7 @@ fn register_laser_blocks(blocks: Res<Registry<Block>>, mut cannon: ResMut<LineBl
 }
 
 /// How fast a laser will travel (m/s) ignoring the speed of its shooter.
-pub const LASER_BASE_VELOCITY: f32 = 10.0;
+pub const LASER_BASE_VELOCITY: f32 = 200.0;
 
 fn update_system(
     mut query: Query<(&LaserCannonSystem, &StructureSystem, &mut LineSystemCooldown, Has<SystemActive>)>,
