@@ -1,9 +1,9 @@
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::{RigidBody, Sensor};
 
+use crate::ecs::compute_totally_accurate_global_transform;
 use crate::ecs::sets::FixedUpdateSet;
 use crate::events::structure::change_pilot_event::ChangePilotEvent;
-use crate::physics::location::Location;
 use crate::structure::StructureTypeSet;
 use crate::structure::ship::pilot::Pilot;
 use crate::utils::ecs::FixedUpdateRemovedComponents;
@@ -14,8 +14,8 @@ struct PilotStartingDelta(Vec3, Quat);
 fn event_listener(
     mut commands: Commands,
     mut event_reader: EventReader<ChangePilotEvent>,
-    location_query: Query<(&Location, &Transform)>,
     pilot_query: Query<&Pilot>,
+    q_trans: Query<(&Transform, Option<&ChildOf>)>,
 ) {
     for ev in event_reader.read() {
         // Make sure there is no other player thinking they are the pilot of this ship
@@ -29,26 +29,30 @@ fn event_listener(
             }
         }
 
-        if let Some(entity) = ev.pilot_entity {
-            let Ok((structure_loc, structure_transform)) = location_query.get(ev.structure_entity) else {
-                // This structure probably wasn't loaded yet
+        if let Some(pilot_ent) = ev.pilot_entity {
+            commands
+                .entity(ev.structure_entity)
+                .insert(Pilot { entity: pilot_ent })
+                .add_child(pilot_ent);
+
+            let Some(structure_g_trans) = compute_totally_accurate_global_transform(ev.structure_entity, &q_trans) else {
+                continue;
+            };
+            let Some(pilot_g_trans) = compute_totally_accurate_global_transform(pilot_ent, &q_trans) else {
                 continue;
             };
 
-            commands.entity(ev.structure_entity).insert(Pilot { entity }).add_child(entity);
+            let delta = structure_g_trans.rotation().inverse() * (pilot_g_trans.translation() - structure_g_trans.translation());
+            let delta_rot = structure_g_trans.rotation().inverse() * pilot_g_trans.rotation();
 
-            let Ok((pilot_loc, pilot_transform)) = location_query.get(entity) else {
-                continue;
-            };
+            // let delta = structure_transform
+            //     .rotation
+            //     .inverse()
+            //     .mul_vec3(structure_loc.relative_coords_to(pilot_loc));
+            //
+            // let delta_rot = pilot_transform.rotation * structure_transform.rotation.inverse();
 
-            let delta = structure_transform
-                .rotation
-                .inverse()
-                .mul_vec3(structure_loc.relative_coords_to(pilot_loc));
-
-            let delta_rot = pilot_transform.rotation * structure_transform.rotation.inverse();
-
-            commands.entity(entity).insert((
+            commands.entity(pilot_ent).insert((
                 Pilot {
                     entity: ev.structure_entity,
                 },
