@@ -176,25 +176,25 @@ fn exit_build_mode_listener(mut commands: Commands, mut event_reader: EventReade
 }
 
 #[derive(Component)]
-struct InBuildModeFlag;
+struct InBuildModeFlag(Entity);
 
 fn exit_build_mode_when_parent_dies(
     query: Query<Entity, (With<BuildMode>, Without<ChildOf>)>,
-    changed_query: Query<(Entity, Option<&InBuildModeFlag>), (With<BuildMode>, Changed<ChildOf>)>,
+    changed_query: Query<(Entity, Option<&InBuildModeFlag>, &ChildOf), (With<BuildMode>, Changed<ChildOf>)>,
     mut event_writer: EventWriter<ExitBuildModeEvent>,
     mut commands: Commands,
 ) {
     for entity in query.iter() {
-        info!("Removing build mode because no parent!");
         event_writer.write(ExitBuildModeEvent { player_entity: entity });
     }
 
-    for (entity, in_build_mode) in changed_query.iter() {
-        if in_build_mode.is_some() {
-            info!("Removing cuz changed parent!");
-            event_writer.write(ExitBuildModeEvent { player_entity: entity });
+    for (entity, in_build_mode, child_of) in changed_query.iter() {
+        if let Some(in_build_mode) = in_build_mode {
+            if in_build_mode.0 != child_of.parent() {
+                event_writer.write(ExitBuildModeEvent { player_entity: entity });
+            }
         } else {
-            commands.entity(entity).insert(InBuildModeFlag);
+            commands.entity(entity).insert(InBuildModeFlag(child_of.parent()));
         }
     }
 }
