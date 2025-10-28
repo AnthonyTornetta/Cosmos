@@ -192,7 +192,7 @@ pub(super) fn register(app: &mut App) {
             .ambiguous_with(thruster_system::update_ship_force_and_velocity)
             // .after(BlockEventsSet::ProcessEvents)
             .in_set(StructureSystemsSet::UpdateSystemsBlocks)
-            .after(LocationPhysicsSet::DoPhysics)
+            .before(LocationPhysicsSet::DoPhysics)
             .run_if(in_state(GameState::Playing)),
     )
     .add_systems(OnEnter(GameState::PostLoading), register_laser_blocks)
