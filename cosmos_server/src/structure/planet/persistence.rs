@@ -47,7 +47,6 @@ fn on_save_structure(mut query: Query<(&mut SerializedData, &Structure, &Planet)
                 temperature: planet.temperature(),
             },
         );
-        s_data.serialize_data("cosmos:is_planet", &true);
     }
 }
 
@@ -198,7 +197,7 @@ fn load_chunk(
 pub(super) fn register(app: &mut App) {
     app.add_systems(SAVING_SCHEDULE, on_save_structure.in_set(SavingSystemSet::DoSaving))
         .add_systems(
-            Update,
+            FixedUpdate,
             (
                 add_entity_id_to_new_structures.in_set(StructureLoadingSet::CreateChunkEntities),
                 populate_chunks.in_set(StructureLoadingSet::CreateChunkEntities).before(load_chunk),

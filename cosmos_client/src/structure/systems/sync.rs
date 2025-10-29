@@ -183,11 +183,15 @@ fn sync<T: Component<Mutability = Mutable> + StructureSystemImpl + Serialize + D
             };
 
             if let Ok((mut sys, structure_system)) = systems.query_mut(&mut q_system) {
-                assert_eq!(
-                    structure_system.id(),
-                    ev.system_id,
-                    "System ids not equal, and multiple systems of the same type aren't supported yet - something went super wrong!"
-                );
+                if structure_system.id() != ev.system_id {
+                    error!(
+                        "System ids not equal {:?} != {:?}, and multiple systems of the same type aren't supported yet - something went super wrong! ({})",
+                        structure_system.id(),
+                        ev.system_id,
+                        T::unlocalized_name()
+                    );
+                    return false;
+                }
 
                 *sys = system;
             } else {

@@ -3,10 +3,7 @@
 
 use std::time::Duration;
 
-use bevy::{
-    pbr::{NotShadowCaster, NotShadowReceiver},
-    prelude::*,
-};
+use bevy::prelude::*;
 use bevy_rapier3d::{
     geometry::{ActiveEvents, ActiveHooks, Collider},
     prelude::{CollisionGroups, Group, RigidBody, SolverGroups},
@@ -16,7 +13,7 @@ use serde::{Deserialize, Serialize};
 use crate::{
     block::blocks::fluid::FLUID_COLLISION_GROUP,
     ecs::sets::FixedUpdateSet,
-    netty::sync::{ComponentSyncingSet, IdentifiableComponent, SyncableComponent, sync_component},
+    netty::sync::{IdentifiableComponent, SyncableComponent, sync_component},
 };
 
 #[derive(Component, Debug, Serialize, Deserialize, Clone, PartialEq)]
@@ -49,15 +46,18 @@ impl SyncableComponent for Missile {
 pub const MISSILE_COLLISION_GROUP: Group = Group::GROUP_5;
 
 fn on_add_missile(q_added_missile: Query<Entity, Added<Missile>>, mut commands: Commands) {
+    #[cfg(feature = "client")]
+    use bevy::pbr::{NotShadowCaster, NotShadowReceiver};
+
     for missile_ent in q_added_missile.iter() {
         commands.entity(missile_ent).insert((
             Name::new("Missile"),
             RigidBody::Dynamic,
             Collider::cuboid(0.15, 0.15, 0.5),
-            NotShadowCaster,
+            #[cfg(feature = "client")]
+            (NotShadowCaster, NotShadowReceiver),
             ActiveEvents::COLLISION_EVENTS,
             ActiveHooks::FILTER_CONTACT_PAIRS,
-            NotShadowReceiver,
             CollisionGroups::new(MISSILE_COLLISION_GROUP, !(FLUID_COLLISION_GROUP | MISSILE_COLLISION_GROUP)),
             SolverGroups::new(MISSILE_COLLISION_GROUP, !(FLUID_COLLISION_GROUP | MISSILE_COLLISION_GROUP)),
         ));
@@ -103,9 +103,25 @@ pub enum ExplosionSystemSet {
     ProcessExplosions,
 }
 
+#[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
+/// The system set for spawning missiles
+pub enum MissileSpawnSet {
+    /// Add the missile component to entities
+    SpawnMissiles,
+    /// Default colliders (and other things) are added to the entities
+    AddColliders,
+}
+
 pub(super) fn register(app: &mut App) {
     sync_component::<Missile>(app);
     sync_component::<Explosion>(app);
+
+    app.configure_sets(
+        FixedUpdate,
+        (MissileSpawnSet::SpawnMissiles, MissileSpawnSet::AddColliders)
+            .before(FixedUpdateSet::LocationSyncing)
+            .chain(),
+    );
 
     #[cfg(feature = "server")]
     {
@@ -113,7 +129,7 @@ pub(super) fn register(app: &mut App) {
         app.configure_sets(
             FixedUpdate,
             (
-                ExplosionSystemSet::PreProcessExplosions.before(FixedUpdateSet::LocationSyncingPostPhysics),
+                ExplosionSystemSet::PreProcessExplosions.after(FixedUpdateSet::LocationSyncingPostPhysics),
                 ExplosionSystemSet::ProcessExplosions //.after(LocationPhysicsSet::DoPhysics),
                     .after(FixedUpdateSet::LocationSyncingPostPhysics),
             )
@@ -133,9 +149,12 @@ pub(super) fn register(app: &mut App) {
     }
 
     #[cfg(feature = "client")]
-    app.add_systems(Update, on_add_missile.in_set(ComponentSyncingSet::PostComponentSyncing));
+    app.add_systems(
+        FixedUpdate,
+        on_add_missile.in_set(crate::netty::sync::ComponentSyncingSet::PostComponentSyncing),
+    );
     #[cfg(feature = "server")]
-    app.add_systems(Update, on_add_missile.in_set(ComponentSyncingSet::PreComponentSyncing));
+    app.add_systems(FixedUpdate, on_add_missile.in_set(MissileSpawnSet::AddColliders));
 
     app.register_type::<Explosion>();
 }

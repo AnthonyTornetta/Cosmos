@@ -26,7 +26,7 @@ use futures_lite::future;
 use uuid::Uuid;
 use walkdir::{DirEntry, WalkDir};
 
-use crate::persistence::loading::PreLoadingStages;
+use crate::persistence::{NORMAL_ENTITY_EXTENSION, loading::PreLoadingStages};
 
 use super::{EntityId, SaveFileIdentifier, SectorsCache, loading::NeedsLoaded, saving::NeedsSaved};
 
@@ -220,7 +220,7 @@ fn load_near(
                                 {
                                     let path = file.path();
 
-                                    if path.extension() == Some(OsStr::new("cent")) {
+                                    if path.extension() == Some(OsStr::new(NORMAL_ENTITY_EXTENSION)) {
                                         let mut entity_information = path
                                             .file_stem()
                                             .expect("Failed to get file stem")
@@ -286,27 +286,31 @@ fn load_near(
 fn load_all(base: SaveFileIdentifier, file: DirEntry, to_load: &mut Vec<SaveFileIdentifier>, loaded_entities: &[EntityId]) {
     let path = file.path();
 
-    if path.extension() == Some(OsStr::new("cent")) {
-        let entity_information = path.file_stem().expect("Failed to get file stem").to_str().expect("to_str failed");
+    if path.extension() != Some(OsStr::new(NORMAL_ENTITY_EXTENSION)) {
+        return;
+    }
 
-        let entity_id = EntityId::new(Uuid::parse_str(entity_information).expect("Failed to parse entity id!"));
+    let entity_information = path.file_stem().expect("Failed to get file stem").to_str().expect("to_str failed");
 
-        let sfi = SaveFileIdentifier::sub_entity(base, entity_id);
+    let entity_id = EntityId::new(
+        Uuid::parse_str(entity_information).unwrap_or_else(|e| panic!("Failed to parse entity id `{entity_information}` {e:?}!")),
+    );
 
-        let child_dir = sfi.get_children_directory();
+    let sfi = SaveFileIdentifier::sub_entity(base, entity_id);
 
-        for file in WalkDir::new(child_dir)
-            .max_depth(1)
-            .into_iter()
-            .flatten()
-            .filter(|x| x.file_type().is_file())
-        {
-            load_all(sfi.clone(), file, to_load, loaded_entities);
-        }
+    let child_dir = sfi.get_children_directory();
 
-        if !loaded_entities.iter().any(|x| Some(x) == sfi.entity_id()) {
-            to_load.push(sfi);
-        }
+    for file in WalkDir::new(child_dir)
+        .max_depth(1)
+        .into_iter()
+        .flatten()
+        .filter(|x| x.file_type().is_file())
+    {
+        load_all(sfi.clone(), file, to_load, loaded_entities);
+    }
+
+    if !loaded_entities.iter().any(|x| Some(x) == sfi.entity_id()) {
+        to_load.push(sfi);
     }
 }
 

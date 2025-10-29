@@ -4,7 +4,6 @@
 use std::time::Duration;
 
 use bevy::{
-    log::warn,
     pbr::{NotShadowCaster, NotShadowReceiver},
     prelude::*,
     time::Time,
@@ -15,20 +14,18 @@ use bevy_rapier3d::{
 };
 
 use crate::{
-    ecs::{NeedsDespawned, sets::FixedUpdateSet},
-    netty::NoSendEntity,
+    ecs::{NeedsDespawned, compute_totally_accurate_global_transform, sets::FixedUpdateSet},
+    netty::{NoSendEntity, server_laser_cannon_system_messages::LaserLoc},
     persistence::LoadingDistance,
-    physics::{
-        location::{Location, SetPosition},
-        player_world::PlayerWorld,
-    },
+    physics::location::{Location, SetPosition, systems::PreviousLocation},
+    prelude::{BlockCoordinate, Structure, StructureBlock},
     structure::chunk::ChunkEntity,
 };
 
 use super::causer::Causer;
 
 /// How long a laser will stay alive for before despawning
-pub const LASER_LIVE_TIME: Duration = Duration::from_secs(5);
+pub const LASER_LIVE_TIME: Duration = Duration::from_secs(50);
 
 #[derive(Debug, Event)]
 /// The entity hit represents the entity hit by the laser
@@ -43,6 +40,7 @@ pub const LASER_LIVE_TIME: Duration = Duration::from_secs(5);
 pub struct LaserCollideEvent {
     entity_hit: Entity,
     local_position_hit: Vec3,
+    block_hit: Option<StructureBlock>,
     laser_strength: f32,
     causer: Option<Causer>,
 }
@@ -53,6 +51,11 @@ impl LaserCollideEvent {
     /// *NOTE*: Make sure to verify this entity still exists before processing it
     pub fn entity_hit(&self) -> Entity {
         self.entity_hit
+    }
+
+    /// Returns the block hit (if any)
+    pub fn block_hit(&self) -> Option<StructureBlock> {
+        self.block_hit
     }
 
     /// The strength of this laser
@@ -91,9 +94,6 @@ pub struct Laser {
 
     /// The strength of this laser, used to calculate block damage
     pub strength: f32,
-
-    /// Used to calculate an extra-big hitbox to account for hitting something right when it fires
-    last_position: Location,
 }
 
 impl Laser {
@@ -102,7 +102,7 @@ impl Laser {
     /// * `laser_velocity` - The laser's velocity. Do not add the parent's velocity for this, use `firer_velocity` instead.
     /// * `firer_velocity` - The laser's parent's velocity.
     pub fn spawn<'a>(
-        location: Location,
+        location: LaserLoc,
         laser_velocity: Vec3,
         firer_velocity: Vec3,
         strength: f32,
@@ -114,17 +114,17 @@ impl Laser {
     ) -> EntityCommands<'a> {
         let rot = Transform::from_xyz(0.0, 0.0, 0.0).looking_at(laser_velocity, Vec3::Y).rotation;
 
-        let mut ent_cmds = commands.spawn_empty();
+        let mut ecmds = commands.spawn_empty();
 
-        ent_cmds.insert((
-            Laser {
-                strength,
-                active: true,
-                last_position: location,
-            },
-            location,
+        match location {
+            LaserLoc::Absolute(l) => ecmds.insert(l),
+            LaserLoc::Relative { entity, offset } => ecmds.insert(SetPosition::RelativeTo { entity, offset }),
+        };
+
+        ecmds.insert((
+            Laser { strength, active: true },
+            Name::new("Laser"),
             Transform::from_rotation(rot),
-            SetPosition::Transform,
             RigidBody::Dynamic,
             LockedAxes::ROTATION_LOCKED,
             Velocity {
@@ -140,56 +140,50 @@ impl Laser {
         ));
 
         if let Some(causer) = causer {
-            ent_cmds.insert(causer);
+            ecmds.insert(causer);
         }
 
         if let Some(ent) = no_collide_entity {
-            ent_cmds.insert(NoCollide(ent));
+            ecmds.insert(NoCollide(ent));
         }
 
-        ent_cmds
+        ecmds
     }
 }
 
 fn send_laser_hit_events(
-    mut query: Query<
-        (
-            &RapierContextEntityLink,
-            &Location,
-            Entity,
-            Option<&NoCollide>,
-            &mut Laser,
-            &Velocity,
-            Option<&Causer>,
-        ),
-        With<Laser>,
-    >,
+    mut query: Query<(
+        &RapierContextEntityLink,
+        &Location,
+        Entity,
+        Option<&NoCollide>,
+        &mut Laser,
+        &Velocity,
+        Option<&Causer>,
+        Option<&PreviousLocation>,
+    )>,
     mut commands: Commands,
     mut event_writer: EventWriter<LaserCollideEvent>,
     parent_query: Query<&ChildOf>,
     chunk_parent_query: Query<&ChildOf, With<ChunkEntity>>,
-    transform_query: Query<&GlobalTransform, Without<Laser>>,
-    worlds: Query<&Location, With<PlayerWorld>>,
     q_rapier_context: WriteRapierContext,
+    q_transform: Query<(&Transform, Option<&ChildOf>)>,
+    q_structure: Query<&Structure>,
 ) {
-    for (world, location, laser_entity, no_collide_entity, mut laser, velocity, causer) in query.iter_mut() {
+    for (world, location, laser_entity, no_collide_entity, mut laser, velocity, causer, prev_loc) in query.iter_mut() {
+        let Some(prev_loc) = prev_loc else {
+            continue;
+        };
+
         if laser.active {
-            let last_pos = laser.last_position;
+            let last_pos = prev_loc.0;
             let delta_position = last_pos.relative_coords_to(location);
-            laser.last_position = *location;
 
-            let coords: Option<Vec3> = if let Ok(loc) = worlds.get(world.0) {
-                Some(loc.relative_coords_to(location))
-            } else {
-                warn!("Laser playerworld not found!");
-                None
-            };
-
-            let Some(coords) = coords else {
+            let Some(laser_g_trans) = compute_totally_accurate_global_transform(laser_entity, &q_transform) else {
                 continue;
             };
 
-            let ray_start = coords - delta_position;
+            let ray_start = laser_g_trans.translation() - delta_position;
 
             // * 2.0 to account for checking behind the laser
             let ray_distance = ((delta_position * 2.0).dot(delta_position * 2.0)).sqrt();
@@ -198,7 +192,9 @@ fn send_laser_hit_events(
             // so rather use its actual delta position for direction of travel calculations
             let ray_direction = delta_position.normalize_or_zero();
 
-            if let Some((entity, toi)) = q_rapier_context.get(*world).cast_ray(
+            let context = q_rapier_context.get(*world);
+
+            if let Some((entity, toi)) = context.cast_ray(
                 ray_start, // sometimes lasers pass through things that are next to where they are spawned, thus we check starting a bit behind them
                 ray_direction,
                 ray_distance,
@@ -219,20 +215,29 @@ fn send_laser_hit_events(
             ) {
                 let pos = ray_start + (toi * ray_direction) + (velocity.linvel.normalize() * 0.01);
 
-                if let Ok(parent) = chunk_parent_query.get(entity) {
-                    if let Ok(transform) = transform_query.get(parent.parent()) {
+                if let Ok((structure, entity_hit)) = chunk_parent_query
+                    .get(entity)
+                    .and_then(|e| q_structure.get(e.parent()).map(|s| (s, e.parent())))
+                {
+                    if let Some(transform) = compute_totally_accurate_global_transform(entity_hit, &q_transform) {
                         let lph = Quat::from_affine3(&transform.affine())
                             .inverse()
                             .mul_vec3(pos - transform.translation());
 
+                        let block_hit = BlockCoordinate::try_from(structure.relative_coords_to_local_coords(lph.x, lph.y, lph.z))
+                            .ok()
+                            .filter(|c| structure.is_within_blocks(*c))
+                            .map(|c| StructureBlock::new(c, entity_hit));
+
                         event_writer.write(LaserCollideEvent {
-                            entity_hit: parent.parent(),
+                            entity_hit,
                             local_position_hit: lph,
+                            block_hit,
                             laser_strength: laser.strength,
                             causer: causer.copied(),
                         });
                     }
-                } else if let Ok(transform) = transform_query.get(entity) {
+                } else if let Some(transform) = compute_totally_accurate_global_transform(entity, &q_transform) {
                     let lph = Quat::from_affine3(&transform.affine())
                         .inverse()
                         .mul_vec3(pos - transform.translation());
@@ -241,6 +246,7 @@ fn send_laser_hit_events(
                         entity_hit: entity,
                         local_position_hit: lph,
                         laser_strength: laser.strength,
+                        block_hit: None,
                         causer: causer.copied(),
                     });
                 }
@@ -272,7 +278,7 @@ pub(super) fn register(app: &mut App) {
         .add_systems(
             FixedUpdate,
             (send_laser_hit_events.in_set(LaserSystemSet::SendHitEvents), despawn_lasers)
-                .in_set(FixedUpdateSet::Main)
+                .in_set(FixedUpdateSet::PostLocationSyncingPostPhysics)
                 .chain(),
         )
         .add_event::<LaserCollideEvent>();

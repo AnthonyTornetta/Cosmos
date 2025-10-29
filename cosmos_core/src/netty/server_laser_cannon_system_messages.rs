@@ -3,7 +3,56 @@
 use bevy::prelude::{Color, Component, Entity, Vec3};
 use serde::{Deserialize, Serialize};
 
+#[cfg(feature = "client")]
+use crate::netty::sync::mapping::Mappable;
 use crate::{physics::location::Location, projectiles::causer::Causer};
+
+#[derive(Debug, Serialize, Deserialize, Clone, Copy)]
+/// Where to spawn a laser
+pub enum LaserLoc {
+    /// At an Absolute location
+    Absolute(Location),
+    /// Relative to this entity
+    Relative {
+        /// The entity this should be relative to
+        entity: Entity,
+        /// The offset relative to that entity (including that entity's rotation)
+        offset: Vec3,
+    },
+}
+
+#[cfg(feature = "client")]
+impl Mappable for LaserLoc {
+    fn map_to_server(self, network_mapping: &super::sync::mapping::NetworkMapping) -> Result<Self, super::sync::mapping::MappingError<Self>>
+    where
+        Self: Sized,
+    {
+        use crate::netty::sync::mapping::MappingError;
+
+        match self {
+            Self::Absolute(l) => Ok(Self::Absolute(l)),
+            Self::Relative { entity, offset } => network_mapping
+                .server_from_client(&entity)
+                .map(|e| Ok(Self::Relative { entity: e, offset }))
+                .unwrap_or_else(|| Err(MappingError::MissingRecord(self))),
+        }
+    }
+
+    fn map_to_client(self, network_mapping: &super::sync::mapping::NetworkMapping) -> Result<Self, super::sync::mapping::MappingError<Self>>
+    where
+        Self: Sized,
+    {
+        use crate::netty::sync::mapping::MappingError;
+
+        match self {
+            Self::Absolute(l) => Ok(Self::Absolute(l)),
+            Self::Relative { entity, offset } => network_mapping
+                .client_from_server(&entity)
+                .map(|e| Ok(Self::Relative { entity: e, offset }))
+                .unwrap_or_else(|| Err(MappingError::MissingRecord(self))),
+        }
+    }
+}
 
 #[derive(Debug, Serialize, Deserialize, Component)]
 /// All the laser cannon system messages
@@ -13,7 +62,7 @@ pub enum ServerStructureSystemMessages {
         /// The color the laser should have
         color: Option<Color>,
         /// Where the laser should be spawned
-        location: Location,
+        location: LaserLoc,
         /// The laser's initial velocity
         laser_velocity: Vec3,
         /// The firer's velocity

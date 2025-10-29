@@ -8,8 +8,11 @@ use bevy_rapier3d::{plugin::RapierContextEntityLink, prelude::Velocity};
 use bevy_renet::renet::RenetServer;
 use cosmos_core::{
     block::Block,
-    netty::{NettyChannelServer, cosmos_encoder, server_laser_cannon_system_messages::ServerStructureSystemMessages},
-    physics::location::{Location, LocationPhysicsSet},
+    netty::{
+        NettyChannelServer, cosmos_encoder,
+        server_laser_cannon_system_messages::{LaserLoc, ServerStructureSystemMessages},
+    },
+    physics::location::LocationPhysicsSet,
     projectiles::{causer::Causer, laser::Laser},
     registry::{Registry, identifiable::Identifiable},
     state::GameState,
@@ -48,7 +51,6 @@ fn update_system(
         Entity,
         &StructureSystems,
         &Structure,
-        &Location,
         &GlobalTransform,
         &Velocity,
         &RapierContextEntityLink,
@@ -58,8 +60,7 @@ fn update_system(
     mut server: ResMut<RenetServer>,
 ) {
     for (cannon_system, system, mut cooldown, system_active) in query.iter_mut() {
-        let Ok((ship_entity, systems, structure, location, global_transform, ship_velocity, physics_world)) =
-            systems.get(system.structure_entity())
+        let Ok((ship_entity, systems, structure, global_transform, ship_velocity, physics_world)) = systems.get(system.structure_entity())
         else {
             continue;
         };
@@ -93,7 +94,10 @@ fn update_system(
             any_fired = true;
             energy_storage_system.decrease_energy(line.property.energy_per_shot);
 
-            let location = structure.block_world_location(line.start, global_transform, location);
+            let loc = LaserLoc::Relative {
+                entity: system.structure_entity(),
+                offset: structure.block_relative_position(line.end()),
+            };
 
             let relative_direction = line.direction.as_vec3();
             let laser_velocity = global_transform.affine().matrix3.mul_vec3(relative_direction) * LASER_BASE_VELOCITY;
@@ -104,7 +108,7 @@ fn update_system(
             let causer = Some(Causer(system.structure_entity()));
 
             Laser::spawn(
-                location,
+                loc,
                 laser_velocity,
                 ship_velocity.linvel,
                 strength,
@@ -121,7 +125,7 @@ fn update_system(
                 NettyChannelServer::StructureSystems,
                 cosmos_encoder::serialize(&ServerStructureSystemMessages::CreateLaser {
                     color,
-                    location,
+                    location: loc,
                     laser_velocity,
                     firer_velocity: ship_velocity.linvel,
                     strength,
@@ -186,7 +190,7 @@ pub(super) fn register(app: &mut App) {
             .ambiguous_with(thruster_system::update_ship_force_and_velocity)
             // .after(BlockEventsSet::ProcessEvents)
             .in_set(StructureSystemsSet::UpdateSystemsBlocks)
-            .after(LocationPhysicsSet::DoPhysics)
+            .before(LocationPhysicsSet::DoPhysics)
             .run_if(in_state(GameState::Playing)),
     )
     .add_systems(OnEnter(GameState::PostLoading), register_laser_blocks)

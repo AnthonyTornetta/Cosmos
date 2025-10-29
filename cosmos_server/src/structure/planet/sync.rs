@@ -37,5 +37,5 @@ fn on_request_planet(
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_systems(Update, on_request_planet.in_set(NetworkingSystemsSet::SyncComponents));
+    app.add_systems(FixedUpdate, on_request_planet.in_set(NetworkingSystemsSet::SyncComponents));
 }
