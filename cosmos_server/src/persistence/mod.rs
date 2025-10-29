@@ -24,6 +24,11 @@ pub mod make_persistent;
 pub mod player_loading;
 pub mod saving;
 
+pub const NORMAL_ENTITY_EXTENSION: &str = "cent";
+/// This entity should NOT be loaded through the normaly mechanisms, and is fully controlled by its
+/// parent when it gets loaded/saved.
+pub const OWNED_ENTITY_EXTENSION: &str = "ocent";
+
 #[derive(Debug, Resource, Default, Clone)]
 /// This is a resource that caches the saved entities of different sectors that a player has been near.
 ///
@@ -135,7 +140,12 @@ impl SaveFileIdentifier {
 
     /// Gets the file path a given entity will be saved to.
     pub fn get_save_file_path(&self) -> String {
-        format!("{}.cent", self.get_save_file_directory(Self::get_save_file_name))
+        let extension = match self.identifier_type {
+            SaveFileIdentifierType::BelongsTo(_, _) => OWNED_ENTITY_EXTENSION,
+            _ => NORMAL_ENTITY_EXTENSION,
+        };
+
+        format!("{}.{extension}", self.get_save_file_directory(Self::get_save_file_name))
     }
 
     /// Gets the save file name without the .cent extension, but not the whole path
