@@ -59,17 +59,6 @@ fn lasers_netty(
                 let Ok(location) = location.map_to_client(&network_mapping) else {
                     continue;
                 };
-                // let loc = match location.map_to_client(&network_mapping) {
-                //     Ok(LaserLoc::Absolute(l)) => l,
-                //     Ok(LaserLoc::Relative { entity, offset }) => {
-                //         let Ok(loc) = q_loc.get(entity) else {
-                //             continue;
-                //         };
-                //
-                //         *loc + offset
-                //     }
-                //     Err(_) => continue,
-                // };
 
                 if let Some(server_entity) = no_hit
                     && let Some(client_entity) = network_mapping.client_from_server(&server_entity)

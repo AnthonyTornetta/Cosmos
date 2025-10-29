@@ -45,13 +45,6 @@ fn event_listener(
             let delta = structure_g_trans.rotation().inverse() * (pilot_g_trans.translation() - structure_g_trans.translation());
             let delta_rot = structure_g_trans.rotation().inverse() * pilot_g_trans.rotation();
 
-            // let delta = structure_transform
-            //     .rotation
-            //     .inverse()
-            //     .mul_vec3(structure_loc.relative_coords_to(pilot_loc));
-            //
-            // let delta_rot = pilot_transform.rotation * structure_transform.rotation.inverse();
-
             commands.entity(pilot_ent).insert((
                 Pilot {
                     entity: ev.structure_entity,
