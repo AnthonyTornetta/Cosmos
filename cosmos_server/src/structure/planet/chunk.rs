@@ -123,7 +123,7 @@ pub(super) fn register(app: &mut App) {
     app.add_systems(SAVING_SCHEDULE, save_chunks.in_set(SavingSystemSet::DoSaving));
 
     app.configure_sets(
-        Update,
+        FixedUpdate,
         (
             SerializeChunkBlockDataSet::BeginSerialization,
             SerializeChunkBlockDataSet::Serialize,
@@ -134,7 +134,7 @@ pub(super) fn register(app: &mut App) {
             .chain(),
     )
     .add_systems(
-        Update,
+        FixedUpdate,
         (
             begin_serialization.in_set(SerializeChunkBlockDataSet::BeginSerialization),
             send_chunks.in_set(SerializeChunkBlockDataSet::SendChunks),

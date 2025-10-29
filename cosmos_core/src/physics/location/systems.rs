@@ -1,7 +1,7 @@
 //! Handles the systems that sync up worlds, locations, and transforms
 
 use bevy::{
-    ecs::component::HookContext,
+    ecs::{component::HookContext, schedule::ScheduleConfigs},
     prelude::*,
     transform::systems::{mark_dirty_trees, propagate_parent_transforms, sync_simple_transforms},
 };
@@ -108,7 +108,12 @@ fn apply_set_position_single(
             if let Some(computed_loc) = compute_location(entity, &q_trans, &q_x, &q_g_trans, &q_parent) {
                 commands
                     .entity(entity)
-                    .insert((computed_loc, PreviousLocation(computed_loc)))
+                    .insert((
+                        computed_loc,
+                        SetLocationInternally,
+                        PreviousLocation(computed_loc),
+                        LocationSinceLastSync(computed_loc),
+                    ))
                     .remove::<SetPosition>();
             }
         }
@@ -116,23 +121,37 @@ fn apply_set_position_single(
             if let Some(computed_loc) = compute_location(entity, &q_trans, &q_x, &q_g_trans, &q_parent) {
                 commands
                     .entity(entity)
-                    .insert((computed_loc, PreviousLocation(computed_loc), SetTransformBasedOnLocationFlag))
+                    .insert((
+                        computed_loc,
+                        PreviousLocation(computed_loc),
+                        LocationSinceLastSync(computed_loc),
+                        SetTransformBasedOnLocationFlag,
+                        SetLocationInternally,
+                    ))
                     .remove::<SetPosition>();
             }
         }
     }
 }
 
+#[derive(Component)]
+struct SetLocationInternally;
+
 fn apply_set_position(
-    q_location_added: Query<(Entity, Has<DebugLocation>), (Without<SetPosition>, Added<Location>)>,
+    q_location_added: Query<(Entity, Has<DebugLocation>), (Without<SetPosition>, Added<Location>, Without<SetLocationInternally>)>,
     q_set_position: Query<(Entity, &SetPosition, Has<DebugLocation>)>,
     q_x: Query<(Entity, Option<&Location>, Option<&SetPosition>)>,
     q_trans: Query<&Transform>,
     q_parent: Query<&ChildOf>,
     q_g_trans: Query<&GlobalTransform>,
     mut commands: Commands,
+    q_set_internally: Query<Entity, With<SetLocationInternally>>,
 ) {
     const DEFAULT_SET_POS: SetPosition = SetPosition::Transform;
+
+    for ent in q_set_internally.iter() {
+        commands.entity(ent).remove::<SetLocationInternally>();
+    }
 
     for (entity, set_pos, dbg_loc) in q_location_added
         .iter()
@@ -155,7 +174,12 @@ fn apply_set_position(
 
                     commands
                         .entity(entity)
-                        .insert((loc_from_trans, PreviousLocation(loc_from_trans)))
+                        .insert((
+                            SetLocationInternally,
+                            loc_from_trans,
+                            PreviousLocation(loc_from_trans),
+                            LocationSinceLastSync(loc_from_trans),
+                        ))
                         .remove::<SetPosition>();
                 }
             }
@@ -172,6 +196,8 @@ fn apply_set_position(
                         .insert((
                             loc_from_relative,
                             PreviousLocation(loc_from_relative),
+                            LocationSinceLastSync(loc_from_relative),
+                            SetLocationInternally,
                             SetTransformBasedOnLocationFlag,
                         ))
                         .remove::<SetPosition>();
@@ -563,7 +589,7 @@ type TransformLocationQuery<'w, 's> = Query<
     (
         &'static mut Location,
         Option<&'static mut Transform>,
-        Option<&'static PreviousLocation>,
+        Option<&'static LocationSinceLastSync>,
         Option<&'static SetTransformBasedOnLocationFlag>,
         // This is only present on the client
         // Option<&'static mut bevy_transform_interpolation::TranslationEasingState>,
@@ -588,12 +614,21 @@ fn sync_transforms_and_locations_single(
             return;
         };
 
-        recursively_sync_transforms_and_locations(*pw_loc, Vec3::ZERO, Quat::IDENTITY, entity, &mut commands, &mut q_data, &q_children);
+        recursively_sync_transforms_and_locations(
+            *pw_loc,
+            Vec3::ZERO,
+            Quat::IDENTITY,
+            entity,
+            &mut commands,
+            &mut q_data,
+            &q_children,
+            true,
+        );
     }
 }
 
 /// This system syncs the locations up with their changes in transforms.
-fn sync_transforms_and_locations(
+fn sync_transforms_and_locations<const SET_PREV_LOCATION: bool>(
     q_entities: Query<(Entity, &RapierContextEntityLink), (Without<PlayerWorld>, With<Location>, Without<ChildOf>)>,
     q_loc: Query<&Location, With<PlayerWorld>>,
     mut q_data: TransformLocationQuery,
@@ -605,12 +640,27 @@ fn sync_transforms_and_locations(
             continue;
         };
 
-        recursively_sync_transforms_and_locations(*pw_loc, Vec3::ZERO, Quat::IDENTITY, entity, &mut commands, &mut q_data, &q_children);
+        recursively_sync_transforms_and_locations(
+            *pw_loc,
+            Vec3::ZERO,
+            Quat::IDENTITY,
+            entity,
+            &mut commands,
+            &mut q_data,
+            &q_children,
+            SET_PREV_LOCATION,
+        );
     }
 }
 
 #[derive(Component)]
-struct PreviousLocation(Location);
+struct LocationSinceLastSync(Location);
+
+#[derive(Component, Debug, Reflect, Clone, Copy)]
+/// Contains the location this entity was at before the latest [`FixedUpdateSet::LocationSyncing`]
+///
+/// This does NOT get updated by [`FixedUpdateSet::LocationSyncingPostPhysics`]
+pub struct PreviousLocation(pub Location);
 
 fn recursively_sync_transforms_and_locations(
     parent_loc: Location,
@@ -620,6 +670,7 @@ fn recursively_sync_transforms_and_locations(
     commands: &mut Commands,
     q_data: &mut TransformLocationQuery,
     q_children: &Query<&Children>,
+    set_previous_loc: bool,
 ) {
     let Ok((mut my_loc, my_transform, my_prev_loc, set_trans, has_debug)) = q_data.get_mut(ent) else {
         return;
@@ -636,6 +687,14 @@ fn recursively_sync_transforms_and_locations(
                     *my_loc
                 );
             }
+
+            // We almost never want interpolation in the case of
+            // [`SetTransformBasedOnLocationFlag`] being on the entity.
+            #[cfg(feature = "client")] // only client has interpolation
+            commands.entity(ent).insert(TranslationEasingState {
+                start: Some(new_trans),
+                end: Some(new_trans),
+            });
             my_transform.translation = new_trans;
         } else {
             // Calculates the change in location since the last time this ran
@@ -684,10 +743,15 @@ fn recursively_sync_transforms_and_locations(
     };
 
     let my_g_trans = parent_g_trans + parent_g_rot * local_translation;
-    commands
-        .entity(ent)
-        .insert(PreviousLocation(*my_loc))
+    let mut ecmds = commands.entity(ent);
+
+    ecmds
+        .insert(LocationSinceLastSync(*my_loc))
         .remove::<SetTransformBasedOnLocationFlag>();
+
+    if set_previous_loc {
+        ecmds.insert(PreviousLocation(*my_loc));
+    }
 
     let my_loc = *my_loc;
     let my_g_rot = parent_g_rot * local_rotation;
@@ -695,7 +759,16 @@ fn recursively_sync_transforms_and_locations(
 
     if let Ok(children) = q_children.get(ent) {
         for child in children.iter() {
-            recursively_sync_transforms_and_locations(my_prev_loc, my_g_trans, my_g_rot, child, commands, q_data, q_children);
+            recursively_sync_transforms_and_locations(
+                my_prev_loc,
+                my_g_trans,
+                my_g_rot,
+                child,
+                commands,
+                q_data,
+                q_children,
+                set_previous_loc,
+            );
         }
     }
 }
@@ -766,27 +839,31 @@ fn register_location_component_hooks(world: &mut World) {
         });
 }
 
-pub(super) fn register(app: &mut App) {
-    let location_syncing_systems = || {
-        (
-            (mark_dirty_trees, sync_simple_transforms, propagate_parent_transforms).chain(), // TODO: Maybe not this?
-            apply_set_position,
-            reposition_worlds_around_anchors,
-            #[cfg(feature = "server")]
-            (move_anchors_between_worlds, move_non_anchors_between_worlds, remove_empty_worlds).chain(),
-            #[cfg(feature = "client")]
-            assign_everything_client_world,
-            sync_transforms_and_locations,
-            do_physics_done,
-        )
-            .chain()
-    };
+fn location_syncing_systems<const SET_PREV_LOCATION: bool>()
+-> ScheduleConfigs<std::boxed::Box<dyn bevy::prelude::System<In = (), Out = std::result::Result<(), BevyError>> + 'static>> {
+    (
+        (mark_dirty_trees, sync_simple_transforms, propagate_parent_transforms).chain(), // TODO: Maybe not this?
+        apply_set_position,
+        reposition_worlds_around_anchors,
+        #[cfg(feature = "server")]
+        (move_anchors_between_worlds, move_non_anchors_between_worlds, remove_empty_worlds).chain(),
+        #[cfg(feature = "client")]
+        assign_everything_client_world,
+        sync_transforms_and_locations::<SET_PREV_LOCATION>,
+        do_physics_done,
+    )
+        .chain()
+}
 
-    app.add_systems(FixedUpdate, location_syncing_systems().in_set(FixedUpdateSet::LocationSyncing))
-        .add_systems(
-            FixedUpdate,
-            location_syncing_systems().in_set(FixedUpdateSet::LocationSyncingPostPhysics),
-        )
-        .add_systems(Startup, register_location_component_hooks)
-        .add_systems(FixedPostUpdate, remove_do_physics_done);
+pub(super) fn register(app: &mut App) {
+    app.add_systems(
+        FixedUpdate,
+        location_syncing_systems::<true>().in_set(FixedUpdateSet::LocationSyncing),
+    )
+    .add_systems(
+        FixedUpdate,
+        location_syncing_systems::<false>().in_set(FixedUpdateSet::LocationSyncingPostPhysics),
+    )
+    .add_systems(Startup, register_location_component_hooks)
+    .add_systems(FixedPostUpdate, remove_do_physics_done);
 }

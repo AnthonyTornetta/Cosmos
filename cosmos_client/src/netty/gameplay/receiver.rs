@@ -260,6 +260,7 @@ pub(crate) fn client_sync_players(
                             let loc = match body.location {
                                 NettyRigidBodyLocation::Absolute(location) => {
                                     if q_parent.contains(entity) {
+                                        info!("Removing parent for {entity:?}");
                                         commands.entity(entity).remove_parent_in_place();
                                     }
 

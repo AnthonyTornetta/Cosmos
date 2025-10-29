@@ -9,7 +9,7 @@ use bevy_rapier3d::{
 
 use cosmos_core::{
     block::{Block, block_events::BlockEventsSet},
-    ecs::NeedsDespawned,
+    ecs::{NeedsDespawned, compute_totally_accurate_global_transform},
     physics::{location::Location, player_world::PlayerWorld, structure_physics::ChunkPhysicsPart},
     projectiles::{
         causer::Causer,
@@ -48,7 +48,7 @@ fn respond_to_explosion(
     q_player_world: Query<&Location, With<PlayerWorld>>,
     q_excluded: Query<(), Or<(With<Explosion>, Without<Collider>)>>,
 
-    mut q_structure: Query<(&GlobalTransform, &Location, &mut Structure)>,
+    mut q_structure: Query<(&Location, &mut Structure)>,
     context_access: ReadRapierContext,
 
     q_chunk: Query<&ChunkPhysicsPart>,
@@ -59,6 +59,7 @@ fn respond_to_explosion(
     // blocks: Res<Registry<Block>>,
     // mut evw_bc: EventWriter<BlockChangedEvent>,
     q_shield: Query<&Shield>,
+    q_trans: Query<(&Transform, Option<&ChildOf>)>,
 ) {
     for (ent, &explosion_loc, physics_world, &explosion, causer) in q_explosions.iter() {
         info!("Found explosion @ {explosion_loc}!");
@@ -118,13 +119,17 @@ fn respond_to_explosion(
         let max_radius_sqrd = max_radius * max_radius;
 
         for &hit in ents.iter() {
-            let Ok((structure_g_trans, structure_loc, mut structure)) = q_structure.get_mut(hit) else {
+            let Ok((structure_loc, mut structure)) = q_structure.get_mut(hit) else {
                 ev_writer_explosion_hit.write(ExplosionHitEvent {
                     explosion,
                     explosion_location: explosion_loc,
                     hit_entity: hit,
                 });
 
+                continue;
+            };
+            let Some(structure_g_trans) = compute_totally_accurate_global_transform(hit, &q_trans) else {
+                error!("Error computing gtrans for {hit:?}!");
                 continue;
             };
             let explosion_relative_position =

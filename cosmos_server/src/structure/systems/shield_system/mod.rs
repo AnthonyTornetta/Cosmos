@@ -15,7 +15,6 @@ use cosmos_core::{
     },
     persistence::LoadingDistance,
     physics::location::SetPosition,
-    projectiles::laser::LaserSystemSet,
     registry::{Registry, identifiable::Identifiable},
     state::GameState,
     structure::{
@@ -387,7 +386,7 @@ pub(super) fn register(app: &mut App) {
         FixedUpdate,
         (
             ShieldSet::RechargeShields,
-            ShieldSet::OnShieldHit.after(LaserSystemSet::SendHitEvents),
+            ShieldSet::OnShieldHit, //.after(LaserSystemSet::SendHitEvents),
         )
             .chain(),
     );

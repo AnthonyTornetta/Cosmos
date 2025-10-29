@@ -538,10 +538,6 @@ impl Location {
     }
 }
 
-#[derive(Component, Debug, Reflect, Deref, DerefMut, Clone, Copy)]
-/// Stores the location from the previous frame
-pub struct PreviousLocation(pub Location);
-
 #[derive(Component)]
 /// Prints out debug statements for this entity whenever its location is changed via the location
 /// transform syncing steps
@@ -556,7 +552,7 @@ pub(super) fn register(app: &mut App) {
             .before(PhysicsSet::SyncBackend),
     );
 
-    app.register_type::<Location>().register_type::<PreviousLocation>();
+    app.register_type::<Location>(); //.register_type::<PreviousLocation>();
 }
 
 #[cfg(test)]

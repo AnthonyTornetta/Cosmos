@@ -13,10 +13,7 @@ use cosmos_core::{
     ecs::{NeedsDespawned, sets::FixedUpdateSet},
     netty::system_sets::NetworkingSystemsSet,
     persistence::LoadingDistance,
-    physics::{
-        collision_handling::CollisionBlacklist,
-        location::{Location, LocationPhysicsSet},
-    },
+    physics::{collision_handling::CollisionBlacklist, location::Location},
     projectiles::{
         causer::Causer,
         missile::{Explosion, ExplosionSystemSet, Missile},
@@ -163,10 +160,10 @@ fn despawn_missiles(
 pub(super) fn register(app: &mut App) {
     app.add_systems(
         FixedUpdate,
-        (respond_to_collisions.before(NetworkingSystemsSet::SyncComponents), despawn_missiles)
-            .before(ExplosionSystemSet::PreProcessExplosions)
-            .after(LocationPhysicsSet::DoPhysics)
-            .chain(),
+        (respond_to_collisions, despawn_missiles)
+            .in_set(ExplosionSystemSet::PreProcessExplosions)
+            .chain()
+            .before(NetworkingSystemsSet::SyncComponents),
     );
 
     app.add_systems(

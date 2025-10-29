@@ -5,8 +5,10 @@ use bevy_rapier3d::{plugin::RapierContextEntityLink, prelude::RapierContextSimul
 use bevy_renet::renet::*;
 use cosmos_core::{
     netty::{
-        NettyChannelServer, cosmos_encoder, server_laser_cannon_system_messages::ServerStructureSystemMessages,
-        sync::mapping::NetworkMapping, system_sets::NetworkingSystemsSet,
+        NettyChannelServer, cosmos_encoder,
+        server_laser_cannon_system_messages::ServerStructureSystemMessages,
+        sync::mapping::{Mappable, NetworkMapping},
+        system_sets::NetworkingSystemsSet,
     },
     projectiles::{causer::Causer, laser::Laser},
     state::GameState,
@@ -54,6 +56,21 @@ fn lasers_netty(
                 mut no_hit,
                 causer,
             } => {
+                let Ok(location) = location.map_to_client(&network_mapping) else {
+                    continue;
+                };
+                // let loc = match location.map_to_client(&network_mapping) {
+                //     Ok(LaserLoc::Absolute(l)) => l,
+                //     Ok(LaserLoc::Relative { entity, offset }) => {
+                //         let Ok(loc) = q_loc.get(entity) else {
+                //             continue;
+                //         };
+                //
+                //         *loc + offset
+                //     }
+                //     Err(_) => continue,
+                // };
+
                 if let Some(server_entity) = no_hit
                     && let Some(client_entity) = network_mapping.client_from_server(&server_entity)
                 {

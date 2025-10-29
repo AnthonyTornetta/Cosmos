@@ -2,6 +2,7 @@ use bevy::prelude::*;
 use cosmos_core::{
     block::Block,
     entities::health::Health,
+    prelude::BlockCoordinate,
     projectiles::{
         causer::Causer,
         laser::{Laser, LaserCollideEvent, LaserSystemSet},
@@ -25,25 +26,20 @@ use crate::{
 /// Called when the laser hits a structure at a given position
 fn on_laser_hit_structure(
     structure: &mut Structure,
-    local_position_hit: Vec3,
+    coords: BlockCoordinate,
     blocks: &Registry<Block>,
     block_take_damage_event_writer: &mut EventWriter<BlockTakeDamageEvent>,
     block_destroy_event_writer: &mut EventWriter<BlockDestroyedEvent>,
     strength: f32,
     causer: Option<&Causer>,
 ) {
-    if let Ok(coords) = structure.relative_coords_to_local_coords_checked(local_position_hit.x, local_position_hit.y, local_position_hit.z)
-    {
-        structure.block_take_damage(
-            coords,
-            blocks,
-            strength,
-            Some((block_take_damage_event_writer, block_destroy_event_writer)),
-            causer.map(|x| x.0),
-        );
-    } else {
-        warn!("Bad laser hit spot that isn't actually on structure ;(");
-    }
+    structure.block_take_damage(
+        coords,
+        blocks,
+        strength,
+        Some((block_take_damage_event_writer, block_destroy_event_writer)),
+        causer.map(|x| x.0),
+    );
 }
 
 fn respond_laser_hit_event(
@@ -56,12 +52,18 @@ fn respond_laser_hit_event(
 ) {
     for ev in reader.read() {
         let entity_hit = ev.entity_hit();
+
         if let Ok(mut structure) = structure_query.get_mut(entity_hit) {
-            let local_position_hit = ev.local_position_hit();
+            let Some(block) = ev.block_hit() else {
+                warn!("Bad laser hit spot that isn't actually on structure ;(");
+                continue;
+            };
+
+            info!("Dealing damage to {:?}", block.coords());
 
             on_laser_hit_structure(
                 &mut structure,
-                local_position_hit,
+                block.coords(),
                 &blocks,
                 &mut block_take_damage_event_writer,
                 &mut block_destroy_event_writer,

@@ -17,14 +17,17 @@ use cosmos_core::{
     item::Item,
     netty::{
         NettyChannelServer, cosmos_encoder, server_laser_cannon_system_messages::ServerStructureSystemMessages,
-        sync::events::server_event::NettyEventWriter, system_sets::NetworkingSystemsSet,
+        sync::events::server_event::NettyEventWriter,
     },
     persistence::LoadingDistance,
     physics::{
         collision_handling::{CollisionBlacklist, CollisionBlacklistedEntity},
-        location::{Location, LocationPhysicsSet, SetPosition},
+        location::{Location, SetPosition},
     },
-    projectiles::{causer::Causer, missile::Missile},
+    projectiles::{
+        causer::Causer,
+        missile::{Missile, MissileSpawnSet},
+    },
     registry::{Registry, identifiable::Identifiable},
     state::GameState,
     structure::{
@@ -187,15 +190,7 @@ fn update_missile_system(
         Has<SystemActive>,
     )>,
     mut es_query: Query<&mut EnergyStorageSystem>,
-    q_systems: Query<(
-        Entity,
-        &StructureSystems,
-        &Structure,
-        &Location,
-        &GlobalTransform,
-        &Velocity,
-        Option<&Pilot>,
-    )>,
+    q_systems: Query<(Entity, &StructureSystems, &Structure, &GlobalTransform, &Velocity, Option<&Pilot>)>,
     q_player: Query<&Player>,
     time: Res<Time>,
     mut commands: Commands,
@@ -205,9 +200,7 @@ fn update_missile_system(
     mut nevw_system_failure: NettyEventWriter<MissileSystemFailure>,
 ) {
     for (missile_launcher_system, focus, system, mut cooldown, system_active) in query.iter_mut() {
-        let Ok((ship_entity, systems, structure, location, global_transform, ship_velocity, pilot)) =
-            q_systems.get(system.structure_entity())
-        else {
+        let Ok((ship_entity, systems, structure, global_transform, ship_velocity, pilot)) = q_systems.get(system.structure_entity()) else {
             continue;
         };
         let Ok(mut energy_storage_system) = systems.query_mut(&mut es_query) else {
@@ -259,7 +252,7 @@ fn update_missile_system(
             any_fired = true;
             energy_storage_system.decrease_energy(line.property.energy_per_shot);
 
-            let location = structure.block_world_location(line.start, global_transform, location);
+            let missile_spawn = structure.block_relative_position(line.end());
 
             let relative_direction = line.direction.as_vec3();
 
@@ -282,8 +275,11 @@ fn update_missile_system(
                 },
                 Causer(ship_entity),
                 Transform::from_xyz(0.0, 0.0, 0.0).looking_at(missile_velocity, Vec3::Y),
-                location,
-                SetPosition::Transform,
+                // location,
+                SetPosition::RelativeTo {
+                    entity: ship_entity,
+                    offset: missile_spawn,
+                },
                 Velocity {
                     linvel: missile_velocity + ship_velocity.linvel,
                     ..Default::default()
@@ -355,11 +351,13 @@ pub(super) fn register(app: &mut App) {
     add_line_system::<MissileLauncherProperty, MissileLauncherCalculator>(app);
 
     app.add_systems(
-        Update,
+        FixedUpdate,
         update_missile_system
             .run_if(in_state(GameState::Playing))
-            .after(LocationPhysicsSet::DoPhysics)
-            .before(NetworkingSystemsSet::SyncComponents),
+            .in_set(MissileSpawnSet::SpawnMissiles)
+            .in_set(FixedUpdateSet::Main), // .before(FixedUpdateSet::LocationSyncing)
+                                           // // .before(FixedUpdateSet::PostLocationSyncingPostPhysics)
+                                           // .before(NetworkingSystemsSet::SyncComponents),
     )
     .add_systems(OnEnter(GameState::PostLoading), register_missile_launcher_blocks)
     .add_systems(
