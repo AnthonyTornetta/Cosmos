@@ -72,7 +72,9 @@ impl LodChunkRenderingChecker<'_> {
                                 .lod_root
                                 .block_id_at_and_scale(coords + BlockCoordinate::new(0, dy * s2, dz * s2), self.lod_root_scale);
 
-                            if check_block_should_render(this_block_id, this_block_scale, other_block_id, other_block_scale, blocks) {
+                            if check_neighbor_lod_scale_causes_force_render(other_block_scale)
+                                || check_block_should_render(this_block_id, this_block_scale, other_block_id, other_block_scale, blocks)
+                            {
                                 return true;
                             }
                         }
@@ -85,7 +87,9 @@ impl LodChunkRenderingChecker<'_> {
                                 .lod_root
                                 .block_id_at_and_scale(coords + BlockCoordinate::new(dx * s2, 0, dz * s2), self.lod_root_scale);
 
-                            if check_block_should_render(this_block_id, this_block_scale, other_block_id, other_block_scale, blocks) {
+                            if check_neighbor_lod_scale_causes_force_render(other_block_scale)
+                                || check_block_should_render(this_block_id, this_block_scale, other_block_id, other_block_scale, blocks)
+                            {
                                 return true;
                             }
                         }
@@ -98,7 +102,9 @@ impl LodChunkRenderingChecker<'_> {
                                 .lod_root
                                 .block_id_at_and_scale(coords + BlockCoordinate::new(dx * s2, dy * s2, 0), self.lod_root_scale);
 
-                            if check_block_should_render(this_block_id, this_block_scale, other_block_id, other_block_scale, blocks) {
+                            if check_neighbor_lod_scale_causes_force_render(other_block_scale)
+                                || check_block_should_render(this_block_id, this_block_scale, other_block_id, other_block_scale, blocks)
+                            {
                                 return true;
                             }
                         }
@@ -113,6 +119,12 @@ impl LodChunkRenderingChecker<'_> {
         let other_block_scale = chunk.block_scale(check_coords);
         check_block_should_render(this_block_id, this_block_scale, other_block_id, other_block_scale, blocks)
     }
+}
+
+#[inline]
+/// Always render the walls of LODs when the neighbor LOD scaling is 1.0
+fn check_neighbor_lod_scale_causes_force_render(other_block_scale: LodBlockSubScale) -> bool {
+    other_block_scale.scaling_x == 1.0 || other_block_scale.scaling_y == 1.0 || other_block_scale.scaling_z == 1.0
 }
 
 fn check_block_should_render(
