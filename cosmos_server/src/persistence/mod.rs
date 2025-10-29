@@ -24,9 +24,10 @@ pub mod make_persistent;
 pub mod player_loading;
 pub mod saving;
 
+/// This extension is given to entities that are loaded + saved following the normal rules.
 pub const NORMAL_ENTITY_EXTENSION: &str = "cent";
 /// This entity should NOT be loaded through the normaly mechanisms, and is fully controlled by its
-/// parent when it gets loaded/saved.
+/// parent when it gets loaded/saved and what data is put in that file.
 pub const OWNED_ENTITY_EXTENSION: &str = "ocent";
 
 #[derive(Debug, Resource, Default, Clone)]
