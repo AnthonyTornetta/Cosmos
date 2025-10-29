@@ -14,8 +14,7 @@ use bevy_rapier3d::{
 };
 use cosmos_core::{
     block::block_direction::BlockDirection,
-    ecs::{NeedsDespawned, compute_totally_accurate_global_transform},
-    physics::location::LocationPhysicsSet,
+    ecs::{NeedsDespawned, compute_totally_accurate_global_transform, sets::FixedUpdateSet},
     state::GameState,
     structure::{
         Structure,
@@ -319,9 +318,9 @@ pub(super) fn register(app: &mut App) {
     );
 
     app.configure_sets(
-        Update,
+        FixedUpdate,
         (LasersSystemSet::CreateLasers, LasersSystemSet::UpdateLasers)
-            .after(LocationPhysicsSet::DoPhysics)
+            .after(FixedUpdateSet::LocationSyncingPostPhysics)
             .chain(),
     );
 
@@ -329,7 +328,7 @@ pub(super) fn register(app: &mut App) {
         .init_resource::<MiningLaserMaterialCache>()
         .add_systems(Startup, create_mining_laser_mesh)
         .add_systems(
-            Update,
+            FixedUpdate,
             (
                 apply_mining_effects.in_set(LasersSystemSet::CreateLasers),
                 (resize_mining_lasers, rotate_mining_lasers).in_set(LasersSystemSet::UpdateLasers),
