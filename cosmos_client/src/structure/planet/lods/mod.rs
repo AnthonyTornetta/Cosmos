@@ -9,6 +9,7 @@ use cosmos_core::{
     block::{Block, block_face::BlockFace},
     ecs::mut_events::{EventWriterCustomSend, MutEvent, MutEventsCommand},
     physics::location::Location,
+    prelude::ChunkCoordinate,
     registry::Registry,
     state::GameState,
     structure::{
@@ -357,6 +358,7 @@ fn flag_for_generation(
             needs_generated_lod_chunks.0.push(request);
         }
 
+        info!("Inserting LOD being generated!");
         commands
             .entity(ent)
             .remove::<LodStuffTodo>()
@@ -424,6 +426,8 @@ fn read_gpu_data(
 
     let millis_took = SystemTime::now().duration_since(timer.0).unwrap().as_millis();
 
+    info!("GPU job done - took {millis_took:?}");
+
     if millis_took > 1000 {
         warn!(
             "Got lod chunks back from gpu after a long wait! Took {millis_took}ms for {} lod chunks.",
@@ -447,6 +451,15 @@ fn read_gpu_data(
                 CHUNK_DIMENSIONS_USIZE,
             ),
         };
+
+        // info!(
+        //     "Sent done generating event for chunk {}!",
+        //     Vec3::new(
+        //         needs_generated_chunk.generation_params.chunk_coords.x,
+        //         needs_generated_chunk.generation_params.chunk_coords.y,
+        //         needs_generated_chunk.generation_params.chunk_coords.z,
+        //     )
+        // );
 
         ev_writer.send_mut(DoneGeneratingChunkEvent {
             chunk_data_slice,
@@ -545,6 +558,7 @@ pub(crate) fn generate_chunks_from_gpu_data(
 
     let timer = UtilsTimer::start();
 
+    info!("Generating chunks from GPU data");
     ev_reader.read().par_bridge().for_each(|ev| {
         let mut ev = ev.write();
 
@@ -596,7 +610,7 @@ pub(crate) fn generate_chunks_from_gpu_data(
 
                     let coords = ChunkBlockCoordinate::new(x as CoordinateType, y as CoordinateType, z as CoordinateType).unwrap();
                     if value.depth >= 0 {
-                        // return temperature_u32 << 16 | humidity_u32 << 8 | elevation_u32;
+                        // In shader: `return temperature_u32 << 16 | humidity_u32 << 8 | elevation_u32;`
                         let ideal_elevation = (value.data & 0xFF) as f32;
                         let ideal_humidity = ((value.data >> 8) & 0xFF) as f32;
                         let ideal_temperature = ((value.data >> 16) & 0xFF) as f32;
@@ -697,6 +711,9 @@ pub(crate) fn generate_chunks_from_gpu_data(
             return;
         };
 
+        lod_being_generated.set_changed();
+
+        // info!("Recursively updated LOD generation req");
         recursively_change(
             &mut lod_being_generated.0,
             &needs_generated_chunk.steps,
@@ -704,7 +721,7 @@ pub(crate) fn generate_chunks_from_gpu_data(
         );
     });
 
-    timer.log_duration_if_at_least(&format!("Updated lod data from GPU for {num_events} lod chunks"), 16);
+    timer.log_duration_if_at_least(&format!("Updated lod data from GPU for {num_events} lod chunks"), 0);
 }
 
 fn is_still_working(lod_requst: &LodRequest) -> bool {
@@ -717,7 +734,7 @@ fn is_still_working(lod_requst: &LodRequest) -> bool {
 
 fn propagate_changes(lod_requst: LodRequest, lod: &mut Lod) {
     match lod_requst {
-        LodRequest::Single => panic!("Invalid state!"),
+        LodRequest::Single => panic!("Invalid state! LOD changes should always have differing `Single` locations"),
         LodRequest::Multi(c) => {
             if !matches!(lod, Lod::Children(_)) {
                 const NONE_LOD: Lod = Lod::None;
@@ -743,9 +760,11 @@ fn on_change_being_generated(
 ) {
     for (ent, mut lod_being_generated, mut lod) in q_changed.iter_mut() {
         if is_still_working(&lod_being_generated.0) {
+            info!("Still working ;(");
             continue;
         }
 
+        info!("LOD chage done being done - propagate_changes into LOD!");
         let lod_request = std::mem::take(&mut lod_being_generated.0);
 
         // Because lods use interior mutability, we have to manually trigger change detection
@@ -787,8 +806,8 @@ pub(super) fn register(app: &mut App) {
             (
                 generate_player_lods,
                 flag_for_generation,
-                read_gpu_data.run_if(resource_exists::<ChunkGenerationTimer>),
                 send_chunks_to_gpu,
+                read_gpu_data.run_if(resource_exists::<ChunkGenerationTimer>),
                 generate_chunks_from_gpu_data,
                 on_change_being_generated,
             )

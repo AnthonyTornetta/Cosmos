@@ -162,6 +162,11 @@ fn recursively_process_lod(
 /// If an LOD chunk is dirty, and is rerendered, its neighbors may have faces being culled that shouldn't be
 /// culled. Thus, we need to mark adjacent LODs as dirty to ensure everything is rendered properly.
 fn mark_adjacent_chunks_dirty(root_lod: &mut Lod, lod_root_scale: CoordinateType) {
+    // match root_lod {
+    //     Lod::None => {}
+    //     Lod::Single(_, dirty) => *dirty = true,
+    //     Lod::Children(c) => c.iter_mut().for_each(|c| mark_adjacent_chunks_dirty(c, lod_root_scale)),
+    // }
     let mut to_make_dirty = vec![];
     find_adjacent_neighbors_that_need_dirty_flag(root_lod, &mut to_make_dirty, BlockCoordinate::ZERO, lod_root_scale);
 
@@ -329,7 +334,13 @@ fn find_non_dirty(lod: &Lod, offset: Vec3, to_process: &mut Vec<Vec3>, scale: f3
 }
 
 #[derive(Debug)]
-struct RenderingLod(Task<(Vec<Vec3>, Vec<(ChunkMesh, Vec3, CoordinateType)>)>);
+struct RenderingLodData {
+    keep_locations: Vec<Vec3>,
+    new_meshes: Vec<(ChunkMesh, Vec3, CoordinateType)>,
+}
+
+#[derive(Debug)]
+struct RenderingLod(Task<RenderingLodData>);
 
 #[derive(Component, Debug)]
 struct RenderedLod {
@@ -342,7 +353,7 @@ struct LodRendersToDespawn(Arc<Mutex<(Entity, usize)>>);
 #[derive(Debug, Resource, Default, Deref, DerefMut)]
 struct MeshesToCompute(VecDeque<(Mesh, Entity, Vec<LodRendersToDespawn>)>);
 
-const MESHES_PER_FRAME: usize = 15;
+const MESHES_PER_FRAME: usize = 1500;
 
 fn kill_all(to_kill: Vec<LodRendersToDespawn>, commands: &mut Commands) {
     for x in to_kill {
@@ -406,7 +417,11 @@ fn poll_rendering_lods(
     swap(&mut rendering_lods.0, &mut todo);
 
     for (structure_entity, mut rendering_lod) in todo {
-        let Some((to_keep_locations, ent_meshes)) = future::block_on(future::poll_once(&mut rendering_lod.0)) else {
+        let Some(RenderingLodData {
+            keep_locations: to_keep_locations,
+            new_meshes: ent_meshes,
+        }) = future::block_on(future::poll_once(&mut rendering_lod.0))
+        else {
             rendering_lods.0.push((structure_entity, rendering_lod));
             continue;
         };
@@ -466,6 +481,7 @@ fn poll_rendering_lods(
             if is_clean {
                 structure_meshes_component.push(mesh_entity);
             } else {
+                info!("Killing ent @ {}", transform.translation);
                 let Ok(rendered_lod) = rendered_lod_query.get(mesh_entity) else {
                     warn!("Invalid mesh entity {mesh_entity:?}!");
                     commands.entity(mesh_entity).insert(NeedsDespawned);
@@ -599,7 +615,7 @@ fn trigger_lod_render(
             let mut lod = lod.0.lock().unwrap();
             let mut non_dirty = vec![];
 
-            mark_adjacent_chunks_dirty(&mut lod, chunk_dimensions);
+            // mark_adjacent_chunks_dirty(&mut lod, chunk_dimensions);
 
             find_non_dirty(&lod, Vec3::ZERO, &mut non_dirty, block_dimensions as f32);
 
@@ -637,7 +653,10 @@ fn trigger_lod_render(
 
             let to_process_chunks = to_process.lock().unwrap().take().unwrap();
 
-            (non_dirty, to_process_chunks)
+            RenderingLodData {
+                new_meshes: to_process_chunks,
+                keep_locations: non_dirty,
+            }
         });
 
         rendering_lods.push((entity, RenderingLod(task)));
