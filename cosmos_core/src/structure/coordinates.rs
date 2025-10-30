@@ -184,6 +184,9 @@ macro_rules! create_coordinate {
         }
 
         impl $unbounded {
+            /// 0 in all directions
+            pub const ZERO: $unbounded = $unbounded { x: 0, y: 0, z: 0 };
+
             /// +X
             pub const POS_X: Self = Self::new(1, 0, 0);
             /// +Y
@@ -458,6 +461,12 @@ impl BlockCoordinate {
             BlockDirection::PosZ => Ok(self.pos_z()),
             BlockDirection::NegZ => self.neg_z(),
         }
+    }
+}
+
+impl UnboundBlockCoordinate {
+    pub fn abs(&self) -> BlockCoordinate {
+        BlockCoordinate::new(self.x.unsigned_abs(), self.y.unsigned_abs(), self.z.unsigned_abs())
     }
 }
 
