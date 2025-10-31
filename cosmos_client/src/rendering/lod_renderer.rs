@@ -372,7 +372,7 @@ struct LodRendersToDespawn(Arc<Mutex<(Entity, usize)>>);
 #[derive(Debug, Resource, Default, Deref, DerefMut)]
 struct MeshesToCompute(VecDeque<(Mesh, Entity, Vec<LodRendersToDespawn>)>);
 
-const MESHES_PER_FRAME: usize = 1500;
+const MESHES_PER_FRAME: usize = 15;
 
 fn kill_all(to_kill: Vec<LodRendersToDespawn>, commands: &mut Commands) {
     for x in to_kill {
@@ -638,6 +638,7 @@ fn trigger_lod_render(
             let mut lod = lod.0.lock().unwrap();
             let mut non_dirty = vec![];
 
+            // Might still need to do this:
             // mark_adjacent_chunks_dirty(&mut lod, chunk_dimensions);
 
             find_non_dirty(&lod, UnboundBlockCoordinate::ZERO, &mut non_dirty, block_dimensions);
