@@ -160,7 +160,7 @@ fn process_player_movement(
                 new_linvel -= movement_up * time;
             }
             if input_handler.check_pressed(CosmosInputs::Jump) && grounded {
-                new_linvel += up * 5.0;
+                new_linvel.y = up.y * 5.0;
             }
             if input_handler.check_pressed(CosmosInputs::MoveLeft) {
                 new_linvel -= right * time;

@@ -639,7 +639,7 @@ fn trigger_lod_render(
             let mut non_dirty = vec![];
 
             // Might still need to do this:
-            // mark_adjacent_chunks_dirty(&mut lod, chunk_dimensions);
+            mark_adjacent_chunks_dirty(&mut lod, chunk_dimensions);
 
             find_non_dirty(&lod, UnboundBlockCoordinate::ZERO, &mut non_dirty, block_dimensions);
 

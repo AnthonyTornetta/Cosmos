@@ -24,7 +24,7 @@ impl ShipSpeedModifier {
     ///
     /// - `max_speed` - The highest speed this ship can go
     /// - `impact` - How impactful this speed is (typically bounded between (0.0, 1.0], but you can
-    ///     go infinitely high to have this value have the most effect).
+    ///   go infinitely high to have this value have the most effect).
     pub fn new(max_speed: f32, impact: f32) -> Self {
         Self { max_speed, impact }
     }
