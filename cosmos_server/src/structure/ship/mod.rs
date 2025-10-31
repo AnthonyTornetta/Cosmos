@@ -6,6 +6,7 @@ mod change_pilot_event_listener;
 pub mod events;
 pub mod loading;
 mod persistence;
+pub mod speed;
 mod sync;
 
 pub(super) fn register(app: &mut App) {
@@ -14,4 +15,5 @@ pub(super) fn register(app: &mut App) {
     persistence::register(app);
     sync::register(app);
     events::register(app);
+    speed::register(app);
 }

@@ -30,7 +30,7 @@ use cosmos_core::{
     state::GameState,
     structure::{
         ChunkState, Structure,
-        chunk::{CHUNK_DIMENSIONS, CHUNK_DIMENSIONSF},
+        chunk::{CHUNK_DIMENSIONS, CHUNK_DIMENSIONS_UB, CHUNK_DIMENSIONSF},
         coordinates::{ChunkCoordinate, CoordinateType, UnboundCoordinateType},
         lod::{Lod, LodComponent},
         shared::DespawnWithStructure,
@@ -61,8 +61,8 @@ fn recursively_process_lod(
     scale: CoordinateType,
     current_lod: &Lod,
     negative_most_coord: BlockCoordinate,
-    offset: Vec3,
-    to_process: &Mutex<Option<Vec<(ChunkMesh, Vec3, CoordinateType)>>>,
+    offset: UnboundBlockCoordinate,
+    to_process: &Mutex<Option<Vec<(ChunkMesh, Vec3, CoordinateType, UnboundBlockCoordinate)>>>,
     blocks: &Registry<Block>,
     materials: &ManyToOneRegistry<Block, BlockMaterialMapping>,
     meshes_registry: &BlockMeshRegistry,
@@ -75,7 +75,7 @@ fn recursively_process_lod(
         Lod::None => {}
         Lod::Children(children) => {
             children.par_iter().enumerate().for_each(|(i, child_lod)| {
-                let s4 = scale as f32 / 4.0;
+                let s4 = scale as UnboundCoordinateType / 4;
                 let s2 = scale / 2;
 
                 let nmc = negative_most_coord;
@@ -83,17 +83,35 @@ fn recursively_process_lod(
                 let nmc_delta = s2 * CHUNK_DIMENSIONS;
 
                 let (offset, negative_most_coord) = match i {
-                    0 => (offset + Vec3::new(-s4, -s4, -s4), nmc),
-                    1 => (offset + Vec3::new(-s4, -s4, s4), nmc + BlockCoordinate::new(0, 0, nmc_delta)),
-                    2 => (offset + Vec3::new(s4, -s4, s4), nmc + BlockCoordinate::new(nmc_delta, 0, nmc_delta)),
-                    3 => (offset + Vec3::new(s4, -s4, -s4), nmc + BlockCoordinate::new(nmc_delta, 0, 0)),
-                    4 => (offset + Vec3::new(-s4, s4, -s4), nmc + BlockCoordinate::new(0, nmc_delta, 0)),
-                    5 => (offset + Vec3::new(-s4, s4, s4), nmc + BlockCoordinate::new(0, nmc_delta, nmc_delta)),
+                    0 => (offset + UnboundBlockCoordinate::new(-s4, -s4, -s4), nmc),
+                    1 => (
+                        offset + UnboundBlockCoordinate::new(-s4, -s4, s4),
+                        nmc + BlockCoordinate::new(0, 0, nmc_delta),
+                    ),
+                    2 => (
+                        offset + UnboundBlockCoordinate::new(s4, -s4, s4),
+                        nmc + BlockCoordinate::new(nmc_delta, 0, nmc_delta),
+                    ),
+                    3 => (
+                        offset + UnboundBlockCoordinate::new(s4, -s4, -s4),
+                        nmc + BlockCoordinate::new(nmc_delta, 0, 0),
+                    ),
+                    4 => (
+                        offset + UnboundBlockCoordinate::new(-s4, s4, -s4),
+                        nmc + BlockCoordinate::new(0, nmc_delta, 0),
+                    ),
+                    5 => (
+                        offset + UnboundBlockCoordinate::new(-s4, s4, s4),
+                        nmc + BlockCoordinate::new(0, nmc_delta, nmc_delta),
+                    ),
                     6 => (
-                        offset + Vec3::new(s4, s4, s4),
+                        offset + UnboundBlockCoordinate::new(s4, s4, s4),
                         nmc + BlockCoordinate::new(nmc_delta, nmc_delta, nmc_delta),
                     ),
-                    7 => (offset + Vec3::new(s4, s4, -s4), nmc + BlockCoordinate::new(nmc_delta, nmc_delta, 0)),
+                    7 => (
+                        offset + UnboundBlockCoordinate::new(s4, s4, -s4),
+                        nmc + BlockCoordinate::new(nmc_delta, nmc_delta, 0),
+                    ),
                     _ => unreachable!(),
                 };
 
@@ -149,11 +167,12 @@ fn recursively_process_lod(
             mutex.as_mut().unwrap().push((
                 renderer.create_mesh(),
                 Vec3::new(
-                    offset.x * CHUNK_DIMENSIONSF,
-                    offset.y * CHUNK_DIMENSIONSF,
-                    offset.z * CHUNK_DIMENSIONSF,
+                    offset.x as f32 * CHUNK_DIMENSIONSF,
+                    offset.y as f32 * CHUNK_DIMENSIONSF,
+                    offset.z as f32 * CHUNK_DIMENSIONSF,
                 ),
                 scale as CoordinateType,
+                offset * CHUNK_DIMENSIONS_UB,
             ));
         }
     };
@@ -162,6 +181,11 @@ fn recursively_process_lod(
 /// If an LOD chunk is dirty, and is rerendered, its neighbors may have faces being culled that shouldn't be
 /// culled. Thus, we need to mark adjacent LODs as dirty to ensure everything is rendered properly.
 fn mark_adjacent_chunks_dirty(root_lod: &mut Lod, lod_root_scale: CoordinateType) {
+    // match root_lod {
+    //     Lod::None => {}
+    //     Lod::Single(_, dirty) => *dirty = true,
+    //     Lod::Children(c) => c.iter_mut().for_each(|c| mark_adjacent_chunks_dirty(c, lod_root_scale)),
+    // }
     let mut to_make_dirty = vec![];
     find_adjacent_neighbors_that_need_dirty_flag(root_lod, &mut to_make_dirty, BlockCoordinate::ZERO, lod_root_scale);
 
@@ -296,28 +320,28 @@ fn find_adjacent_neighbors_that_need_dirty_flag(
     };
 }
 
-fn find_non_dirty(lod: &Lod, offset: Vec3, to_process: &mut Vec<Vec3>, scale: f32) {
+fn find_non_dirty(lod: &Lod, offset: UnboundBlockCoordinate, to_process: &mut Vec<UnboundBlockCoordinate>, scale: CoordinateType) {
     match lod {
         Lod::None => {
             to_process.push(offset);
         }
         Lod::Children(children) => {
             children.iter().enumerate().for_each(|(i, c)| {
-                let s4: f32 = scale / 4.0;
+                let s4 = scale as UnboundCoordinateType / 4;
 
                 let offset = match i {
-                    0 => offset + Vec3::new(-s4, -s4, -s4),
-                    1 => offset + Vec3::new(-s4, -s4, s4),
-                    2 => offset + Vec3::new(s4, -s4, s4),
-                    3 => offset + Vec3::new(s4, -s4, -s4),
-                    4 => offset + Vec3::new(-s4, s4, -s4),
-                    5 => offset + Vec3::new(-s4, s4, s4),
-                    6 => offset + Vec3::new(s4, s4, s4),
-                    7 => offset + Vec3::new(s4, s4, -s4),
+                    0 => offset + UnboundBlockCoordinate::new(-s4, -s4, -s4),
+                    1 => offset + UnboundBlockCoordinate::new(-s4, -s4, s4),
+                    2 => offset + UnboundBlockCoordinate::new(s4, -s4, s4),
+                    3 => offset + UnboundBlockCoordinate::new(s4, -s4, -s4),
+                    4 => offset + UnboundBlockCoordinate::new(-s4, s4, -s4),
+                    5 => offset + UnboundBlockCoordinate::new(-s4, s4, s4),
+                    6 => offset + UnboundBlockCoordinate::new(s4, s4, s4),
+                    7 => offset + UnboundBlockCoordinate::new(s4, s4, -s4),
                     _ => unreachable!(),
                 };
 
-                find_non_dirty(c, offset, to_process, scale / 2.0);
+                find_non_dirty(c, offset, to_process, scale / 2);
             });
         }
         Lod::Single(_, dirty) => {
@@ -329,7 +353,13 @@ fn find_non_dirty(lod: &Lod, offset: Vec3, to_process: &mut Vec<Vec3>, scale: f3
 }
 
 #[derive(Debug)]
-struct RenderingLod(Task<(Vec<Vec3>, Vec<(ChunkMesh, Vec3, CoordinateType)>)>);
+struct RenderingLodData {
+    keep_locations: Vec<UnboundBlockCoordinate>,
+    new_meshes: Vec<(ChunkMesh, Vec3, CoordinateType, UnboundBlockCoordinate)>,
+}
+
+#[derive(Debug)]
+struct RenderingLod(Task<RenderingLodData>);
 
 #[derive(Component, Debug)]
 struct RenderedLod {
@@ -392,10 +422,13 @@ fn compute_meshes_and_kill_dead_entities(
     }
 }
 
+#[derive(Component)]
+struct MeshBlockCoordinate(UnboundBlockCoordinate);
+
 fn poll_rendering_lods(
     mut commands: Commands,
     structure_lod_meshes_query: Query<&LodMeshes>,
-    transform_query: Query<&Transform>,
+    transform_query: Query<&MeshBlockCoordinate>,
     rendered_lod_query: Query<&RenderedLod>,
     mut rendering_lods: ResMut<RenderingLods>,
     mut meshes_to_compute: ResMut<MeshesToCompute>,
@@ -406,7 +439,11 @@ fn poll_rendering_lods(
     swap(&mut rendering_lods.0, &mut todo);
 
     for (structure_entity, mut rendering_lod) in todo {
-        let Some((to_keep_locations, ent_meshes)) = future::block_on(future::poll_once(&mut rendering_lod.0)) else {
+        let Some(RenderingLodData {
+            keep_locations: to_keep_locations,
+            new_meshes: ent_meshes,
+        }) = future::block_on(future::poll_once(&mut rendering_lod.0))
+        else {
             rendering_lods.0.push((structure_entity, rendering_lod));
             continue;
         };
@@ -427,7 +464,7 @@ fn poll_rendering_lods(
         // if the counter is 0, despawn the dirty entity.
         //
 
-        for (lod_mesh, offset, scale) in ent_meshes {
+        for (lod_mesh, offset, scale, bc) in ent_meshes {
             for mesh_material in lod_mesh.mesh_materials {
                 // let s = (CHUNK_DIMENSIONS / 2) as f32 * lod_mesh.scale;
 
@@ -435,6 +472,7 @@ fn poll_rendering_lods(
                     .spawn((
                         Transform::from_translation(offset),
                         Visibility::default(),
+                        MeshBlockCoordinate(bc),
                         // Aabb::from_min_max(Vec3::new(-s, -s, -s), Vec3::new(s, s, s)),
                         RenderedLod { scale },
                         DespawnWithStructure,
@@ -448,7 +486,7 @@ fn poll_rendering_lods(
                     material_type: if scale >= 2 { MaterialType::FarAway } else { MaterialType::Normal },
                 });
 
-                entities_to_add.push((ent, offset, scale, mesh_material.mesh));
+                entities_to_add.push((ent, scale, mesh_material.mesh, bc));
 
                 structure_meshes_component.0.push(ent);
             }
@@ -458,14 +496,15 @@ fn poll_rendering_lods(
 
         // Any dirty entities are useless now, so kill them
         for mesh_entity in old_mesh_entities {
-            let Ok(transform) = transform_query.get(mesh_entity) else {
+            let Ok(block_coord) = transform_query.get(mesh_entity) else {
                 unreachable!();
             };
 
-            let is_clean = to_keep_locations.contains(&transform.translation);
+            let is_clean = to_keep_locations.contains(&block_coord.0);
             if is_clean {
                 structure_meshes_component.push(mesh_entity);
             } else {
+                info!("Killing ent @ {}", block_coord.0);
                 let Ok(rendered_lod) = rendered_lod_query.get(mesh_entity) else {
                     warn!("Invalid mesh entity {mesh_entity:?}!");
                     commands.entity(mesh_entity).insert(NeedsDespawned);
@@ -473,7 +512,7 @@ fn poll_rendering_lods(
                 };
 
                 to_despawn.push((
-                    transform.translation,
+                    block_coord.0,
                     rendered_lod.scale,
                     LodRendersToDespawn(Arc::new(Mutex::new((mesh_entity, 0)))),
                 ));
@@ -485,14 +524,14 @@ fn poll_rendering_lods(
             continue;
         };
 
-        for (entity, offset, scale, mesh) in entities_to_add {
+        for (entity, scale, mesh, coord) in entities_to_add {
             let mut to_kill = vec![];
 
-            for (other_offset, other_scale, counter) in to_despawn.iter() {
-                let diff = (offset - *other_offset).abs();
+            for (other_coord, other_scale, counter) in to_despawn.iter() {
+                let diff = (coord - *other_coord).abs();
                 let max = diff.x.max(diff.y).max(diff.z);
 
-                if CHUNK_DIMENSIONS * scale + CHUNK_DIMENSIONS * *other_scale < max.floor() as CoordinateType {
+                if CHUNK_DIMENSIONS * scale + CHUNK_DIMENSIONS * *other_scale < max {
                     let counter = counter.clone();
 
                     counter.0.lock().expect("lock failed").1 += 1;
@@ -599,14 +638,15 @@ fn trigger_lod_render(
             let mut lod = lod.0.lock().unwrap();
             let mut non_dirty = vec![];
 
+            // Might still need to do this:
             mark_adjacent_chunks_dirty(&mut lod, chunk_dimensions);
 
-            find_non_dirty(&lod, Vec3::ZERO, &mut non_dirty, block_dimensions as f32);
+            find_non_dirty(&lod, UnboundBlockCoordinate::ZERO, &mut non_dirty, block_dimensions);
 
             // by making the Vec an Option<Vec> I can take ownership of it later, which I cannot do with
             // just a plain Mutex<Vec>.
             // https://stackoverflow.com/questions/30573188/cannot-move-data-out-of-a-mutex
-            let to_process: Mutex<Option<Vec<(ChunkMesh, Vec3, CoordinateType)>>> = Mutex::new(Some(Vec::new()));
+            let to_process: Mutex<Option<Vec<(ChunkMesh, Vec3, CoordinateType, UnboundBlockCoordinate)>>> = Mutex::new(Some(Vec::new()));
 
             let blocks = blocks.registry();
             let block_textures = block_textures.registry();
@@ -622,7 +662,7 @@ fn trigger_lod_render(
                 chunk_dimensions,
                 &lod,
                 BlockCoordinate::ZERO,
-                Vec3::ZERO,
+                UnboundBlockCoordinate::ZERO,
                 &to_process,
                 &blocks,
                 &materials,
@@ -637,7 +677,10 @@ fn trigger_lod_render(
 
             let to_process_chunks = to_process.lock().unwrap().take().unwrap();
 
-            (non_dirty, to_process_chunks)
+            RenderingLodData {
+                new_meshes: to_process_chunks,
+                keep_locations: non_dirty,
+            }
         });
 
         rendering_lods.push((entity, RenderingLod(task)));

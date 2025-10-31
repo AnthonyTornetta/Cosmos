@@ -76,9 +76,9 @@ use crate::{
 #[derive(Component)]
 struct LastRotation(Quat);
 
-fn insert_last_rotation(mut commands: Commands, query: Query<Entity, Or<(Added<Structure>, Changed<Pilot>)>>) {
-    for ent in query.iter() {
-        commands.entity(ent).insert(LastRotation(Quat::IDENTITY));
+fn insert_last_rotation(mut commands: Commands, query: Query<(Entity, &GlobalTransform), Or<(Added<Structure>, Changed<Pilot>)>>) {
+    for (ent, trans) in query.iter() {
+        commands.entity(ent).insert(LastRotation(trans.rotation()));
     }
 }
 

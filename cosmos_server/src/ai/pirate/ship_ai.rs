@@ -22,7 +22,7 @@ use crate::{
         loading::{LOADING_SCHEDULE, LoadingSystemSet, NeedsLoaded},
         saving::{SAVING_SCHEDULE, SavingSystemSet},
     },
-    structure::systems::thruster_system::MaxShipSpeedModifier,
+    structure::ship::speed::{MaxShipSpeed, ShipSpeedModifier},
     universe::spawners::pirate::Pirate,
 };
 
@@ -94,7 +94,12 @@ fn add_pirate_ai(mut commands: Commands, q_needs_ai: Query<Entity, (With<Pirate>
 
         commands
             .entity(ent)
-            .insert((AiControlled, ai, MaxShipSpeedModifier(0.8), Pilot { entity: pilot_ent }))
+            .insert((
+                AiControlled,
+                ai,
+                MaxShipSpeed::new("cosmos:pirate", ShipSpeedModifier::new(280.0, 1.0)),
+                Pilot { entity: pilot_ent },
+            ))
             .add_child(pilot_ent);
     }
 }
