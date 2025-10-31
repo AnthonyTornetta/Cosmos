@@ -1,3 +1,5 @@
+//! Controls a ship's max speed
+
 use bevy::{platform::collections::HashMap, prelude::*};
 use bevy_rapier3d::prelude::Velocity;
 use cosmos_core::{
@@ -9,23 +11,35 @@ use cosmos_core::{
 const DEFAULT_MAX_SHIP_SPEED: f32 = 350.0;
 
 #[derive(Debug, Reflect)]
+/// Modifies a ship's maxium speed
+///
+/// Works on conjunction with other modifiers in a [`MaxShipSpeed`] component
 pub struct ShipSpeedModifier {
     max_speed: f32,
     impact: f32,
 }
 
 impl ShipSpeedModifier {
+    /// Creates a new speed modifier
+    ///
+    /// - `max_speed` - The highest speed this ship can go
+    /// - `impact` - How impactful this speed is (typically bounded between (0.0, 1.0], but you can
+    ///     go infinitely high to have this value have the most effect).
     pub fn new(max_speed: f32, impact: f32) -> Self {
         Self { max_speed, impact }
     }
 }
 
 #[derive(Component, Debug, Reflect, Default)]
+/// Determines a ship's maximum speed based on modifiers to the normal speed limit
 pub struct MaxShipSpeed {
     modifiers: HashMap<&'static str, ShipSpeedModifier>,
 }
 
 impl MaxShipSpeed {
+    /// Creates a new max ship speed with this modifier to start
+    ///
+    /// If you want one with no modifier, use [`MaxShipSpeed::default`] instead
     pub fn new(name: &'static str, modifier: ShipSpeedModifier) -> Self {
         let mut this = Self {
             modifiers: HashMap::default(),
@@ -36,6 +50,7 @@ impl MaxShipSpeed {
         this
     }
 
+    /// Returns the maximum speed this ship can go based on the modifiers present
     pub fn max_speed(&self) -> f32 {
         let total_percent = self.modifiers.iter().map(|(_, x)| x.impact).sum::<f32>();
 
@@ -56,10 +71,19 @@ impl MaxShipSpeed {
         max_speed
     }
 
+    /// Adds a modifier to this ship's speed.
+    ///
+    /// If a modifier with this name is already here, it is replaced.
+    ///
+    /// Does not overwrite any existing modifiers, and its impact is determined by the
+    /// [`ShipSpeedModifier::impact`]
     pub fn add_modifier(&mut self, name: &'static str, modifier: ShipSpeedModifier) {
         self.modifiers.insert(name, modifier);
     }
 
+    /// Removes a modifier based on its id.
+    ///
+    /// Does nothing if it isn't there
     pub fn remove_modifier(&mut self, name: &'static str) {
         self.modifiers.remove(&name);
     }
@@ -89,10 +113,7 @@ fn add_planet_modifier(
         // All sides are the same side
         let square_radius = planet_structure.block_dimensions().x as f32 / 2.0;
 
-        info!("Delta: {delta} vs {square_radius}");
-
         let impact = (square_radius.powf(2.0) / square_dist.powf(2.0)).clamp(0.0, 1.0);
-        info!("Impact: {impact}");
         if impact < 0.1 {
             max_speed.remove_modifier(REASON);
         } else {

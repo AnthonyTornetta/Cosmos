@@ -9,7 +9,6 @@ use cosmos_core::{
     block::{Block, block_face::BlockFace},
     ecs::mut_events::{EventWriterCustomSend, MutEvent, MutEventsCommand},
     physics::location::Location,
-    prelude::ChunkCoordinate,
     registry::Registry,
     state::GameState,
     structure::{

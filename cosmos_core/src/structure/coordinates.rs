@@ -465,6 +465,7 @@ impl BlockCoordinate {
 }
 
 impl UnboundBlockCoordinate {
+    /// Returns the absolute value of this coordinate
     pub fn abs(&self) -> BlockCoordinate {
         BlockCoordinate::new(self.x.unsigned_abs(), self.y.unsigned_abs(), self.z.unsigned_abs())
     }
