@@ -607,8 +607,6 @@ pub(crate) fn generate_chunks_from_gpu_data(
 
                     let face = Planet::planet_face_relative(block_relative_coord);
 
-                    info!("{face:?} - {block_relative_coord}");
-
                     let coords = ChunkBlockCoordinate::new(x as CoordinateType, y as CoordinateType, z as CoordinateType).unwrap();
                     if value.depth >= 0 {
                         // In shader: `return temperature_u32 << 16 | humidity_u32 << 8 | elevation_u32;`
