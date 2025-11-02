@@ -121,7 +121,7 @@ pub(super) fn register(app: &mut App) {
 
     app.configure_sets(Update, (UiSystemSet::PreDoUi, UiSystemSet::DoUi, UiSystemSet::FinishUi).chain())
         .register_type::<OpenMenu>()
-        .add_event::<CloseMenuMessage>();
+        .add_message::<CloseMenuMessage>();
 
     // These probably don't matter
     app.allow_ambiguous_component::<Text>();

@@ -115,7 +115,7 @@ pub(super) fn register(app: &mut App) {
             .chain()
             .run_if(condition),
     )
-    .add_event::<ReceivedResourceMessage>();
+    .add_message::<ReceivedResourceMessage>();
 
     add_multi_statebound_resource::<ResourcesLeftToSync, GameState>(app, GameState::Connecting, GameState::LoadingData);
 }

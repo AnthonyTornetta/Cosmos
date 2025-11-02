@@ -86,7 +86,7 @@ pub(super) fn register(app: &mut App) {
         )
         .init_resource::<MusicVolume>()
         .register_type::<MusicVolume>()
-        .add_event::<PlayMusicMessage>();
+        .add_message::<PlayMusicMessage>();
 
     app.add_systems(Update, (load_volume).in_set(SettingsSet::LoadSettings));
 }

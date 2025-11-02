@@ -12,5 +12,5 @@ pub struct ChangePilotMessage {
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_event::<ChangePilotMessage>();
+    app.add_message::<ChangePilotMessage>();
 }

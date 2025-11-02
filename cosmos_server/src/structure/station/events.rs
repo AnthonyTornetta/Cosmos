@@ -36,7 +36,7 @@ pub(crate) fn create_station_event_reader(mut event_reader: MessageReader<Create
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_event::<CreateStationMessage>().add_systems(
+    app.add_message::<CreateStationMessage>().add_systems(
         Update,
         create_station_event_reader
             .in_set(StructureLoadingSet::LoadStructure)

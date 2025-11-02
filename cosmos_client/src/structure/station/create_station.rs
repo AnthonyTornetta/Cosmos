@@ -44,7 +44,7 @@ fn event_handler(mut event_reader: MessageReader<CreateStationMessage>, mut clie
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_event::<CreateStationMessage>().add_systems(
+    app.add_message::<CreateStationMessage>().add_systems(
         Update,
         (listener.run_if(no_open_menus), event_handler)
             .chain()

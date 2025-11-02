@@ -331,8 +331,8 @@ pub(super) fn register(app: &mut App) {
     netty::register(app);
     block_events::register(app);
 
-    app.add_event::<InventoryRemoveItemMessage>();
-    app.add_event::<InventoryAddItemMessage>();
+    app.add_message::<InventoryRemoveItemMessage>();
+    app.add_message::<InventoryAddItemMessage>();
 
     app.configure_sets(
         SAVING_SCHEDULE,

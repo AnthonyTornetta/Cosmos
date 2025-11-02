@@ -233,5 +233,5 @@ pub(super) fn register(app: &mut App) {
             .run_if(in_state(GameState::Playing))
             .after(StructureLoadingSet::StructureLoaded),
     )
-    .add_event::<StructureSystemNeedsUpdated>();
+    .add_message::<StructureSystemNeedsUpdated>();
 }

@@ -523,7 +523,7 @@ impl Chunk {
     pub fn query_block_data_mut<'q, 'w, 's, Q, F>(
         &self,
         coords: ChunkBlockCoordinate,
-        query: &'q mut Query<Q, F>,
+        query: &'q mut Query<'w, 's, Q, F>,
         block_system_params: Rc<RefCell<BlockDataSystemParams<'w, 's>>>,
         structure_entity: Entity,
     ) -> Option<MutBlockData<'q, 'w, 's, Q>>
@@ -668,7 +668,7 @@ pub struct ChunkUnloadMessage {
 pub(super) fn register(app: &mut App) {
     systems::register(app);
 
-    app.add_event::<ChunkUnloadMessage>().register_type::<Chunk>();
+    app.add_message::<ChunkUnloadMessage>().register_type::<Chunk>();
 }
 
 // #[cfg(test)]

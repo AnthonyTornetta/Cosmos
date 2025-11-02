@@ -252,5 +252,5 @@ pub(super) fn register(app: &mut App) {
         )
             .chain(),
     )
-    .add_event::<ButtonMessage>();
+    .add_message::<ButtonMessage>();
 }

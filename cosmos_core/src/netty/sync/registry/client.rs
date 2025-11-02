@@ -133,7 +133,7 @@ pub(super) fn register<T: States + FreelyMutableState + Clone + Copy>(
             .chain()
             .run_if(in_state(loading_data_state)),
     )
-    .add_event::<ReceivedRegistryMessage>();
+    .add_message::<ReceivedRegistryMessage>();
 
     add_multi_statebound_resource::<RegistriesLeftToSync, T>(app, connecting_state, loading_data_state);
 }

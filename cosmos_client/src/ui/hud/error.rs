@@ -126,7 +126,7 @@ fn tick_error(mut commands: Commands, mut q_error: Query<(Entity, &mut Node, &mu
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_event::<ShowInfoPopup>()
+    app.add_message::<ShowInfoPopup>()
         .add_systems(Update, (show_error, tick_error).chain())
         .add_systems(OnEnter(GameState::Playing), init_error_list);
 }

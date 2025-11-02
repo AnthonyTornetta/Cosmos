@@ -94,7 +94,7 @@ pub fn create_cosmos_command<T: CosmosCommandType, M>(
             .in_set(ProcessCommandsSet::HandleCommands)
             .chain(),
     )
-    .add_event::<CommandMessage<T>>();
+    .add_message::<CommandMessage<T>>();
 }
 
 /// A cosmos command event type

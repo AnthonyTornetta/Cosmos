@@ -4,7 +4,7 @@
 use std::time::Duration;
 
 use bevy::{
-    pbr::{NotShadowCaster, NotShadowReceiver},
+    light::{NotShadowCaster, NotShadowReceiver},
     prelude::*,
     time::Time,
 };
@@ -281,5 +281,5 @@ pub(super) fn register(app: &mut App) {
                 .in_set(FixedUpdateSet::PostLocationSyncingPostPhysics)
                 .chain(),
         )
-        .add_event::<LaserCollideMessage>();
+        .add_message::<LaserCollideMessage>();
 }

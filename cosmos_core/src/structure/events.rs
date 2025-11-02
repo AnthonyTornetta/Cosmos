@@ -32,5 +32,5 @@ impl ChunkSetMessage {
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_event::<ChunkSetMessage>().add_event::<StructureLoadedMessage>();
+    app.add_message::<ChunkSetMessage>().add_message::<StructureLoadedMessage>();
 }

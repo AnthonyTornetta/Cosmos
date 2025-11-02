@@ -145,6 +145,6 @@ pub(super) fn register(app: &mut App) {
         )
             .chain(),
     )
-    .add_event::<PopulateLootInventoriesMessage>()
-    .add_event::<PopulateLootInventoriesMessageCarryOver>();
+    .add_message::<PopulateLootInventoriesMessage>()
+    .add_message::<PopulateLootInventoriesMessageCarryOver>();
 }

@@ -53,5 +53,5 @@ pub(super) fn register(app: &mut App) {
             .run_if(in_state(GameState::Playing))
             .in_set(NetworkingSystemsSet::ReceiveMessages),
     )
-    .add_event::<ClientFinishedReceivingRegistriesMessage>();
+    .add_message::<ClientFinishedReceivingRegistriesMessage>();
 }

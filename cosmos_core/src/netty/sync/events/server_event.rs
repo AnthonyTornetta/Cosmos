@@ -1,6 +1,6 @@
 use bevy::{
     ecs::{
-        event::{MessageId, SendBatchIds},
+        message::{MessageId, WriteBatchIds},
         system::SystemParam,
     },
     prelude::*,
@@ -95,7 +95,7 @@ impl<E: NettyMessage> NettyMessageWriter<'_, E> {
         &mut self,
         events: impl IntoIterator<Item = E>,
         client_ids: Option<Vec<ClientId>>,
-    ) -> SendBatchIds<NettyMessageToSend<E>> {
+    ) -> WriteBatchIds<NettyMessageToSend<E>> {
         self.ev_writer.write_batch(events.into_iter().map(|event| NettyMessageToSend {
             event,
             client_ids: client_ids.clone(),
@@ -217,12 +217,12 @@ fn send_events<T: NettyMessage>(
 
 fn server_receive_event<T: NettyMessage>(app: &mut App) {
     app.add_systems(Update, parse_event::<T>.in_set(NetworkingSystemsSet::ReceiveMessages))
-        .add_event::<NettyMessageReceived<T>>();
+        .add_message::<NettyMessageReceived<T>>();
 }
 
 fn server_send_event<T: NettyMessage>(app: &mut App) {
     app.add_systems(Update, send_events::<T>.in_set(NetworkingSystemsSet::SyncComponents))
-        .add_event::<NettyMessageToSend<T>>();
+        .add_message::<NettyMessageToSend<T>>();
 }
 
 fn register_event_type_impl<T: NettyMessage>(mut registry: ResMut<Registry<RegisteredNettyMessage>>) {
@@ -254,5 +254,5 @@ pub(super) fn register(app: &mut App) {
             .run_if(resource_exists::<RenetServer>)
             .in_set(NetworkingSystemsSet::ReceiveMessages),
     )
-    .add_event::<GotNetworkMessage>();
+    .add_message::<GotNetworkMessage>();
 }

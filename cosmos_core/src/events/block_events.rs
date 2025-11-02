@@ -72,5 +72,5 @@ pub struct BlockDataSystemParams<'w, 's> {
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_event::<BlockDataChangedMessage>().add_event::<BlockChangedMessage>();
+    app.add_message::<BlockDataChangedMessage>().add_message::<BlockChangedMessage>();
 }

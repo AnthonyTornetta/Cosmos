@@ -141,7 +141,7 @@ pub enum ReactiveUiSystemSet {
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_event::<NeedsValueFetched>();
+    app.add_message::<NeedsValueFetched>();
 
     app.configure_sets(
         Update,

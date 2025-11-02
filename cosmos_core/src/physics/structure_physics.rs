@@ -774,7 +774,7 @@ pub(super) fn register(app: &mut App) {
     #[cfg(feature = "server")]
     add_multi_statebound_resource::<ChunksToGenerateColliders, GameState>(app, GameState::Playing, GameState::Playing);
 
-    app.add_event::<ChunkNeedsPhysicsMessage>()
+    app.add_message::<ChunkNeedsPhysicsMessage>()
         // This wasn't registered in bevy_rapier
         .register_type::<ReadMassProperties>()
         .register_type::<ColliderMassProperties>()

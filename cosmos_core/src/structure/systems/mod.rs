@@ -620,7 +620,7 @@ impl StructureSystems {
     }
 
     /// Queries all the systems of a structure with this specific query, or returns `Err(NoSystemFound)` if none matched this query.
-    pub fn query<'a, Q, F>(&'a self, query: &'a Query<Q, F>) -> Result<ROQueryItem<'a, Q>, NoSystemFound>
+    pub fn query<'a, Q, F>(&'a self, query: &'a Query<Q, F>) -> Result<ROQueryItem<'a, 'a, Q>, NoSystemFound>
     where
         F: QueryFilter,
         Q: QueryData,
@@ -635,7 +635,7 @@ impl StructureSystems {
     }
 
     /// Queries all the systems of a structure with this specific query, or returns `Err(NoSystemFound)` if none matched this query.
-    pub fn query_mut<'a, Q, F>(&'a self, query: &'a mut Query<Q, F>) -> Result<QueryItem<'a, Q>, NoSystemFound>
+    pub fn query_mut<'a, Q, F>(&'a self, query: &'a mut Query<'a, 'a, Q, F>) -> Result<QueryItem<'a, 'a, Q>, NoSystemFound>
     where
         F: QueryFilter,
         Q: QueryData,

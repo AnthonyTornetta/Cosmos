@@ -18,7 +18,7 @@ use crate::netty::NoSendEntity;
 use crate::physics::location::Location;
 use crate::registry::Registry;
 use crate::structure::chunk::Chunk;
-use bevy::ecs::component::HookContext;
+use bevy::ecs::lifecycle::HookContext;
 use bevy::ecs::query::{QueryData, QueryFilter, ROQueryItem};
 use bevy::ecs::schedule::ScheduleLabel;
 use bevy::platform::collections::{HashMap, HashSet};
@@ -616,7 +616,10 @@ impl Structure {
         coords: BlockCoordinate,
         blocks: &Registry<Block>,
         amount: f32,
-        event_writers: Option<(&mut MessageWriter<BlockTakeDamageMessage>, &mut MessageWriter<BlockDestroyedMessage>)>,
+        event_writers: Option<(
+            &mut MessageWriter<BlockTakeDamageMessage>,
+            &mut MessageWriter<BlockDestroyedMessage>,
+        )>,
         causer: Option<Entity>,
     ) -> Option<f32> {
         match self {
@@ -745,7 +748,7 @@ impl Structure {
     }
 
     /// Queries this block's data. Returns `None` if the requested query failed or if no block data exists for this block.
-    pub fn query_block_data<'a, Q, F>(&'a self, coords: BlockCoordinate, query: &'a Query<Q, F>) -> Option<ROQueryItem<'a, Q>>
+    pub fn query_block_data<'a, Q, F>(&'a self, coords: BlockCoordinate, query: &'a Query<Q, F>) -> Option<ROQueryItem<'a, 'a, Q>>
     where
         F: QueryFilter,
         Q: QueryData,
@@ -1087,7 +1090,7 @@ pub fn rotate(
 pub(super) fn register(app: &mut App) {
     app.register_type::<Structure>()
         .register_type::<Chunk>()
-        .add_event::<ChunkInitMessage>();
+        .add_message::<ChunkInitMessage>();
 
     ship::register(app);
     station::register(app);

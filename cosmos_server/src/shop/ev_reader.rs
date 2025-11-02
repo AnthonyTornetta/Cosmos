@@ -320,6 +320,6 @@ pub(super) fn register(app: &mut App) {
             .after(NetworkingSystemsSet::ProcessReceivedMessages)
             .before(ItemStackSystemSet::CreateDataEntity),
     )
-    .add_event::<BuyMessage>()
-    .add_event::<SellMessage>();
+    .add_message::<BuyMessage>()
+    .add_message::<SellMessage>();
 }

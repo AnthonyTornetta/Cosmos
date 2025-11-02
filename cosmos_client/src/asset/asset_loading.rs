@@ -1103,8 +1103,8 @@ pub(super) fn register(app: &mut App) {
             .chain(),
     );
 
-    app.add_event::<AssetsDoneLoadingMessage>()
-        .add_event::<AllTexturesDoneLoadingMessage>()
+    app.add_message::<AssetsDoneLoadingMessage>()
+        .add_message::<AllTexturesDoneLoadingMessage>()
         .add_systems(
             Update,
             (

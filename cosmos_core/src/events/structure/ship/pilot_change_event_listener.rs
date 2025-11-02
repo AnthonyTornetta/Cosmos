@@ -164,6 +164,6 @@ pub(super) fn register<T: States + Clone + Copy>(app: &mut App, playing_state: T
             .chain()
             .run_if(in_state(playing_state)),
     )
-    .add_event::<RemoveSensorFrom>()
-    .add_event::<Bouncer>();
+    .add_message::<RemoveSensorFrom>()
+    .add_message::<Bouncer>();
 }

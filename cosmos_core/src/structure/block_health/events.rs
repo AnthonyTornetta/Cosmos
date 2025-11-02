@@ -30,5 +30,5 @@ pub struct BlockTakeDamageMessage {
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_event::<BlockDestroyedMessage>().add_event::<BlockTakeDamageMessage>();
+    app.add_message::<BlockDestroyedMessage>().add_message::<BlockTakeDamageMessage>();
 }

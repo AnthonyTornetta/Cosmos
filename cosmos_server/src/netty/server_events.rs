@@ -92,5 +92,5 @@ pub(super) fn handle_server_events(
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_event::<PlayerConnectedMessage>();
+    app.add_message::<PlayerConnectedMessage>();
 }

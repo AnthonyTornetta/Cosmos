@@ -152,5 +152,5 @@ pub(super) fn register(app: &mut App) {
             .run_if(in_state(GameState::Playing)),
     )
     .init_resource::<GeneratingAsteroids>()
-    .add_event::<GenerateAsteroidMessage>();
+    .add_message::<GenerateAsteroidMessage>();
 }

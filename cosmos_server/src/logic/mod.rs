@@ -596,10 +596,10 @@ pub(super) fn register(app: &mut App) {
     .register_type::<LogicDriver>()
     .register_type::<LogicGraph>()
     .register_type::<LogicGroup>()
-    .add_event::<LogicInputMessage>()
-    .add_event::<LogicOutputMessage>()
-    .add_event::<QueueLogicInputMessage>()
-    .add_event::<QueueLogicOutputMessage>();
+    .add_message::<LogicInputMessage>()
+    .add_message::<LogicOutputMessage>()
+    .add_message::<QueueLogicInputMessage>()
+    .add_message::<QueueLogicOutputMessage>();
 
     // TODO: Move this all to server, then add them to LogicSystemRegistrySet::RegisterLogicBlocks.
     app.allow_ambiguous_resource::<Registry<LogicBlock>>();

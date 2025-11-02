@@ -161,5 +161,5 @@ pub(super) fn register(app: &mut App) {
             .run_if(in_state(GameState::Playing)),
     )
     .init_resource::<UniverseSystems>()
-    .add_event::<GenerateSystemMessage>();
+    .add_message::<GenerateSystemMessage>();
 }

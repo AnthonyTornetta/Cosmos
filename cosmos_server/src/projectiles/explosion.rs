@@ -237,7 +237,7 @@ fn calculate_block_explosion_power(
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_event::<ExplosionHitMessage>();
+    app.add_message::<ExplosionHitMessage>();
 
     app.add_systems(
         FixedUpdate,

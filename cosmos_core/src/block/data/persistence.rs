@@ -19,5 +19,5 @@ pub struct ChunkLoadBlockDataMessage {
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_event::<ChunkLoadBlockDataMessage>();
+    app.add_message::<ChunkLoadBlockDataMessage>();
 }

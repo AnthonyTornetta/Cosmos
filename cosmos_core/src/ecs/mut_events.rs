@@ -81,7 +81,7 @@ pub trait MutMessagesCommand {
 
 impl MutMessagesCommand for App {
     fn add_mut_event<E: Message>(&mut self) -> &mut Self {
-        self.add_event::<MutMessage<E>>();
+        self.add_message::<MutMessage<E>>();
 
         self
     }

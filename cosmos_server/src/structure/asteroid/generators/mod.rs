@@ -160,5 +160,5 @@ pub(super) fn register(app: &mut App) {
 
     app.add_systems(FixedUpdate, add_asteroid_generator.in_set(FixedUpdateSet::Main))
         .init_resource::<AsteroidTemperatureRegistry>()
-        .add_event::<AsteroidNeedsGeneratorMessage>();
+        .add_message::<AsteroidNeedsGeneratorMessage>();
 }

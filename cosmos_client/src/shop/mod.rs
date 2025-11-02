@@ -45,5 +45,5 @@ pub(super) fn register(app: &mut App) {
     ui::register(app);
     netty::register(app);
 
-    app.add_event::<PurchasedMessage>().add_event::<SoldMessage>();
+    app.add_message::<PurchasedMessage>().add_message::<SoldMessage>();
 }

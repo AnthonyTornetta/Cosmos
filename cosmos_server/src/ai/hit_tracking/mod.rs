@@ -164,5 +164,5 @@ pub(super) fn register(app: &mut App) {
     .add_systems(FixedUpdate, tick_down_hitters.run_if(in_state(GameState::Playing)))
     .register_type::<Hitters>()
     .register_type::<DifficultyIncreaseOnKill>()
-    .add_event::<PlayerDestroyedNpcShipMessage>();
+    .add_message::<PlayerDestroyedNpcShipMessage>();
 }

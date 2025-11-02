@@ -78,6 +78,6 @@ pub(super) fn register(app: &mut App) {
         },
     );
 
-    app.add_event::<LaserCannonSystemFiredMessage>()
+    app.add_message::<LaserCannonSystemFiredMessage>()
         .add_systems(Update, apply_shooting_sound.run_if(in_state(GameState::Playing)));
 }

@@ -50,8 +50,8 @@ pub struct NpcSendComsMessage {
 pub(super) fn register(app: &mut App) {
     systems::register(app);
 
-    app.add_event::<RequestHailToNpc>()
-        .add_event::<RequestHailFromNpc>()
-        .add_event::<NpcSendComsMessage>()
-        .add_event::<NpcRequestCloseComsMessage>();
+    app.add_message::<RequestHailToNpc>()
+        .add_message::<RequestHailFromNpc>()
+        .add_message::<NpcSendComsMessage>()
+        .add_message::<NpcRequestCloseComsMessage>();
 }

@@ -353,6 +353,6 @@ pub(super) fn register(app: &mut App) {
             .after(load_block_rendering_information)
             .in_set(ItemMeshingLoadingSet::LoadItemRenderingInformation),
     )
-    .add_event::<RemoveAllMaterialsMessage>()
-    .add_event::<AddMaterialMessage>();
+    .add_message::<RemoveAllMaterialsMessage>()
+    .add_message::<AddMaterialMessage>();
 }

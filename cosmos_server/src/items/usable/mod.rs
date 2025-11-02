@@ -47,5 +47,5 @@ pub(super) fn register(app: &mut App) {
     blueprint::register(app);
 
     app.add_systems(FixedUpdate, on_use_item.in_set(UseItemSet::SendUseItemMessages))
-        .add_event::<UseHeldItemMessage>();
+        .add_message::<UseHeldItemMessage>();
 }

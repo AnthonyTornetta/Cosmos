@@ -155,7 +155,7 @@ fn init_block_data<T: Component>(
 pub fn add_default_block_data_for_block<T: Component>(app: &mut App, ctor: DataConstructor<T>, block_id: &'static str) {
     if !app.world().contains_resource::<BlockDataInitializers<T>>() {
         app.init_resource::<BlockDataInitializers<T>>();
-        app.add_event::<InsertBlockDataMessage<T>>();
+        app.add_message::<InsertBlockDataMessage<T>>();
 
         app.add_systems(
             FixedUpdate,

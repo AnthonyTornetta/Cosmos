@@ -249,7 +249,7 @@ pub(super) fn register(app: &mut App) {
             .in_set(FixedUpdateSet::Main)
             .in_set(BlockMessagesSet::ProcessMessages),
     )
-    .add_event::<EnterBuildModeMessage>()
-    .add_event::<ExitBuildModeMessage>()
+    .add_message::<EnterBuildModeMessage>()
+    .add_message::<ExitBuildModeMessage>()
     .register_type::<BuildMode>();
 }

@@ -324,7 +324,7 @@ pub(super) fn register(app: &mut App) {
             .chain(),
     );
 
-    app.add_event::<LaserCannonSystemFiredMessage>()
+    app.add_message::<LaserCannonSystemFiredMessage>()
         .init_resource::<MiningLaserMaterialCache>()
         .add_systems(Startup, create_mining_laser_mesh)
         .add_systems(

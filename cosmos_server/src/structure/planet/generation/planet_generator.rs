@@ -406,6 +406,6 @@ pub(super) fn register(app: &mut App) {
             .before(SavingSystemSet::BeginSaving)
             .run_if(in_state(GameState::Playing)),
     )
-    .add_event::<RequestChunkMessage>()
-    .add_event::<RequestChunkBouncer>();
+    .add_message::<RequestChunkMessage>()
+    .add_message::<RequestChunkBouncer>();
 }

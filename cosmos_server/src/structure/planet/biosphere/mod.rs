@@ -138,7 +138,7 @@ pub fn register_biosphere<T: BiosphereMarkerComponent + Default + Clone, E: Send
             temperature_registry.register(biosphere_id.to_owned(), temperature_range);
         };
 
-    app.add_event::<E>()
+    app.add_message::<E>()
         .add_systems(
             Startup,
             register_biosphere_system
@@ -193,7 +193,7 @@ pub fn register_biosphere<T: BiosphereMarkerComponent + Default + Clone, E: Send
             ),
         )
         .init_resource::<GeneratingChunks<T>>();
-    // .add_event::<GenerateChunkFeaturesMessage<T>>();
+    // .add_message::<GenerateChunkFeaturesMessage<T>>();
 }
 
 fn add_biosphere(
@@ -317,7 +317,7 @@ pub(super) fn register(app: &mut App) {
     app.configure_sets(Startup, BiosphereRegistrationSet::RegisterBiospheres);
     app.configure_sets(OnEnter(GameState::PostLoading), RegisterBiomesSet::RegisterBiomes);
 
-    app.add_event::<NeedsBiosphereMessage>()
+    app.add_message::<NeedsBiosphereMessage>()
         .insert_resource(BiosphereTemperatureRegistry::default())
         .add_systems(
             FixedUpdate,

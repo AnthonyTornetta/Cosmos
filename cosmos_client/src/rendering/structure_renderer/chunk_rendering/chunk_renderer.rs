@@ -353,5 +353,5 @@ impl PartialEq for ChunkNeedsCustomBlocksRendered {
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_event::<ChunkNeedsCustomBlocksRendered>().init_resource::<RenderingChunks>();
+    app.add_message::<ChunkNeedsCustomBlocksRendered>().init_resource::<RenderingChunks>();
 }

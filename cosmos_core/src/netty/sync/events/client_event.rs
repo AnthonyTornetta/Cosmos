@@ -1,6 +1,6 @@
 use bevy::{
     ecs::{
-        event::{MessageId, SendBatchIds},
+        message::{MessageId, WriteBatchIds},
         system::SystemParam,
     },
     prelude::*,
@@ -58,7 +58,7 @@ impl<E: NettyMessage> NettyMessageWriter<'_, E> {
     /// This method returns the [IDs](`MessageId`) of the sent `events`.
     ///
     /// See [`Messages`] for details.
-    pub fn write_batch(&mut self, events: impl IntoIterator<Item = E>) -> SendBatchIds<NettyMessageToSend<E>> {
+    pub fn write_batch(&mut self, events: impl IntoIterator<Item = E>) -> WriteBatchIds<NettyMessageToSend<E>> {
         self.ev_writer.write_batch(events.into_iter().map(|x| NettyMessageToSend(x)))
     }
 
@@ -181,7 +181,7 @@ pub(super) fn client_send_event<T: NettyMessage>(app: &mut App) {
             .in_set(NetworkingSystemsSet::SyncComponents)
             .run_if(resource_exists::<RenetClient>),
     );
-    app.add_event::<NettyMessageToSend<T>>();
+    app.add_message::<NettyMessageToSend<T>>();
 }
 
 pub(super) fn client_receive_event<T: NettyMessage>(app: &mut App) {
@@ -192,7 +192,7 @@ pub(super) fn client_receive_event<T: NettyMessage>(app: &mut App) {
             .after(receive_events)
             .run_if(in_state(GameState::Playing).or(in_state(GameState::LoadingWorld))),
     )
-    .add_event::<T>();
+    .add_message::<T>();
 }
 
 pub(super) fn register_event<T: NettyMessage>(app: &mut App) {
@@ -211,5 +211,5 @@ pub(super) fn register(app: &mut App) {
             .run_if(resource_exists::<RenetClient>)
             .in_set(NetworkingSystemsSet::ReceiveMessages),
     )
-    .add_event::<GotNetworkMessage>();
+    .add_message::<GotNetworkMessage>();
 }

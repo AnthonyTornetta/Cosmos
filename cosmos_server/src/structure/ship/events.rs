@@ -95,7 +95,7 @@ pub(crate) fn create_ship_event_reader(mut event_reader: MessageReader<CreateShi
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_event::<ShipSetMovementMessage>().add_systems(
+    app.add_message::<ShipSetMovementMessage>().add_systems(
         FixedUpdate,
         (monitor_pilot_changes, monitor_set_movement_events)
             .after(BlockMessagesSet::PostProcessMessages)
@@ -105,7 +105,7 @@ pub(super) fn register(app: &mut App) {
             .run_if(in_state(GameState::Playing)),
     );
 
-    app.add_event::<CreateShipMessage>().add_systems(
+    app.add_message::<CreateShipMessage>().add_systems(
         FixedUpdate,
         create_ship_event_reader
             .in_set(StructureLoadingSet::LoadStructure)

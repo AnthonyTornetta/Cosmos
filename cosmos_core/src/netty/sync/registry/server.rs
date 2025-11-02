@@ -83,7 +83,7 @@ pub(super) fn sync_registry<'a, T: Identifiable + Serialize + Deserialize<'a>>(a
 
 #[allow(unused)] // LSP assumes this function is never used, even though it's just feature flagged
 pub(super) fn register<T: States>(app: &mut App, playing_state: T) {
-    app.add_event::<SyncRegistriesMessage>();
+    app.add_message::<SyncRegistriesMessage>();
     app.configure_sets(Startup, IncrementSet::Increment.ambiguous_with(IncrementSet::Increment));
 
     app.add_systems(

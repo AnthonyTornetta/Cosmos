@@ -420,7 +420,7 @@ pub(super) fn register(app: &mut App) {
         .add_systems(SAVING_SCHEDULE, on_save_shield.in_set(SavingSystemSet::DoSaving))
         .add_systems(LOADING_SCHEDULE, on_load_shield.in_set(LoadingSystemSet::DoLoading))
         .register_type::<ShieldSystem>()
-        .add_event::<ShieldHitMessage>()
+        .add_message::<ShieldHitMessage>()
         .register_type::<ShieldDowntime>()
         .register_type::<PlacedShields>();
 

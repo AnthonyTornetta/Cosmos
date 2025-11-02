@@ -69,8 +69,8 @@ pub(super) fn register(app: &mut App) {
     app.configure_sets(Update, StopServerSet::Stop);
     app.configure_sets(First, StopServerSet::ShutDown.after(SavingSystemSet::DoneSaving));
 
-    app.add_event::<StopServerMessage>()
-        .add_event::<CloseServerPostSaveMessage>()
+    app.add_message::<StopServerMessage>()
+        .add_message::<CloseServerPostSaveMessage>()
         .add_systems(
             FixedUpdate,
             on_stop_server

@@ -28,5 +28,5 @@ fn event_listener(mut event_reader: MessageReader<ClientChangePilotMessage>, mut
 
 pub(super) fn register(app: &mut App) {
     app.add_systems(Update, event_listener.run_if(in_state(GameState::Playing)))
-        .add_event::<ClientChangePilotMessage>();
+        .add_message::<ClientChangePilotMessage>();
 }

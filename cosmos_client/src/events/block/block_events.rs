@@ -134,9 +134,9 @@ fn show_errors(
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_event::<RequestBlockBreakMessage>()
-        .add_event::<RequestBlockPlaceMessage>()
-        .add_event::<BlockInteractMessage>()
+    app.add_message::<RequestBlockBreakMessage>()
+        .add_message::<RequestBlockPlaceMessage>()
+        .add_message::<BlockInteractMessage>()
         .add_systems(
             FixedUpdate,
             (handle_block_break, handle_block_place, handle_block_interact, show_errors)

@@ -147,5 +147,5 @@ pub(super) fn register(app: &mut App) {
         ),
     );
 
-    app.add_event::<AddQuestMessage>().add_event::<CompleteQuestMessage>();
+    app.add_message::<AddQuestMessage>().add_message::<CompleteQuestMessage>();
 }

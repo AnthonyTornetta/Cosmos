@@ -378,5 +378,5 @@ pub(super) fn register(app: &mut App) {
             .run_if(no_open_menus)
             .run_if(in_state(GameState::Playing)),
     )
-    .add_event::<BlockMessage>();
+    .add_message::<BlockMessage>();
 }

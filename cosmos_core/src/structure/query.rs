@@ -17,21 +17,21 @@ use super::structure_block::StructureBlock;
 
 /// A wrapper around a mutable block data query result. This is used to send out block data changed
 /// events when a change is detected, preventing unexpected errors.
-pub struct MutBlockData<'q, 'w, 's, Q: QueryData> {
-    data: QueryItem<'q, Q>,
+pub struct MutBlockData<'w, 's, Q: QueryData> {
+    data: QueryItem<'w, 's, Q>,
     bs_params: Rc<RefCell<BlockDataSystemParams<'w, 's>>>,
     changed: bool,
     block: StructureBlock,
     data_entity: Entity,
 }
 
-impl<'q, 'w, 's, Q: QueryData> MutBlockData<'q, 'w, 's, Q> {
+impl<'w, 's, Q: QueryData> MutBlockData<'w, 's, Q> {
     /// Creates a wrapper around a mutable block data query result.
     ///
     /// When this item goes out of scope, if a mutable reference has been gotten, an event will be sent indicating
     /// this block's data has been changed.
     pub fn new(
-        data: QueryItem<'q, Q>,
+        data: QueryItem<'q, 'q, Q>,
         bs_params: Rc<RefCell<BlockDataSystemParams<'w, 's>>>,
         block: StructureBlock,
         data_entity: Entity,
@@ -46,13 +46,13 @@ impl<'q, 'w, 's, Q: QueryData> MutBlockData<'q, 'w, 's, Q> {
     }
 
     /// Returns a mutable reference to the data WITHOUT triggering change detection
-    pub fn bypass_change_detection(&mut self) -> &mut QueryItem<'q, Q> {
+    pub fn bypass_change_detection(&mut self) -> &mut QueryItem<'q, 'q, Q> {
         &mut self.data
     }
 }
 
 impl<'q, Q: QueryData> Deref for MutBlockData<'q, '_, '_, Q> {
-    type Target = QueryItem<'q, Q>;
+    type Target = QueryItem<'q, 'q, Q>;
 
     fn deref(&self) -> &Self::Target {
         &self.data

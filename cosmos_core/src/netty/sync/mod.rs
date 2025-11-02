@@ -4,7 +4,7 @@
 
 use bevy::{
     app::{App, Startup},
-    ecs::{component::Component, entity::Entity, event::Message, schedule::SystemSet},
+    ecs::{component::Component, entity::Entity, message::Message, schedule::SystemSet},
     prelude::States,
     state::state::FreelyMutableState,
 };
@@ -332,7 +332,8 @@ pub(super) fn register<T: States + Clone + Copy + FreelyMutableState>(app: &mut 
     resources::register(app);
     events::register(app);
 
-    app.add_event::<GotComponentToSyncMessage>().add_event::<GotComponentToRemoveMessage>();
+    app.add_message::<GotComponentToSyncMessage>()
+        .add_message::<GotComponentToRemoveMessage>();
 
     app.configure_sets(Startup, RegisterComponentSet::RegisterComponent);
 

@@ -109,7 +109,7 @@ pub(super) fn register(app: &mut App) {
             OnEnter(GameState::Playing),
             send_permutation_table_to_worker.after(init_resource::<SetPermutationTable>),
         )
-        .add_event::<SetTerrainGenData>();
+        .add_message::<SetTerrainGenData>();
 
     add_multi_statebound_resource::<SetPermutationTable, GameState>(app, GameState::LoadingData, GameState::Playing);
     add_statebound_resource::<ChunkData, GameState>(app, GameState::Playing);

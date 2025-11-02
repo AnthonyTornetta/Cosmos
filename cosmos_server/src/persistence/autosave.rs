@@ -63,5 +63,5 @@ pub(super) fn register(app: &mut App) {
             .in_set(NetworkingSystemsSet::SyncComponents)
             .chain(),
     )
-    .add_event::<SaveEverything>();
+    .add_message::<SaveEverything>();
 }

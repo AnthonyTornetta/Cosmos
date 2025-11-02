@@ -166,5 +166,5 @@ pub(super) fn register(app: &mut App) {
             .in_set(BlockMessagesSet::ProcessMessages)
             .run_if(in_state(GameState::Playing)),
     )
-    .add_event::<BasicFabricatorCraftMessage>();
+    .add_message::<BasicFabricatorCraftMessage>();
 }

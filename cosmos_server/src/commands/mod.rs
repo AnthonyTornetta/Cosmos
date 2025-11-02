@@ -202,7 +202,7 @@ impl ServerCommand {
 pub(super) fn register(app: &mut App) {
     create_registry::<ServerCommand>(app, "cosmos:commands");
 
-    app.add_event::<CosmosCommandSent>().add_event::<SendCommandMessageMessage>();
+    app.add_message::<CosmosCommandSent>().add_message::<SendCommandMessageMessage>();
 
     cosmos_command_handler::register(app);
     impls::register(app);

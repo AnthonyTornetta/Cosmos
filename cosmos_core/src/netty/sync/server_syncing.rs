@@ -18,7 +18,7 @@ use crate::structure::ship::pilot::Pilot;
 use crate::structure::systems::{StructureSystem, StructureSystems};
 use crate::utils::ecs::{FixedUpdateRemovedComponents, register_fixed_update_removed_component};
 use bevy::app::FixedUpdate;
-use bevy::ecs::event::MessageReader;
+use bevy::ecs::message::MessageReader;
 use bevy::ecs::query::Without;
 use bevy::ecs::schedule::common_conditions::resource_exists;
 use bevy::ecs::system::Commands;
@@ -535,7 +535,7 @@ pub(super) fn setup_server(app: &mut App) {
         FixedUpdate,
         server_receive_components.in_set(ComponentSyncingSet::PreComponentSyncing),
     )
-    .add_event::<RequestedEntityMessage>();
+    .add_message::<RequestedEntityMessage>();
 }
 
 fn register_component<T: SyncableComponent>(mut registry: ResMut<Registry<SyncedComponentId>>) {

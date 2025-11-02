@@ -130,8 +130,8 @@ pub(super) fn register<T: States + Clone + Copy + FreelyMutableState>(
 ) {
     app.configure_sets(Update, MonitorLoadingSet::MonitorLoading);
 
-    app.add_event::<DoneLoadingMessage>()
-        .add_event::<AddLoadingMessage>()
+    app.add_message::<DoneLoadingMessage>()
+        .add_message::<AddLoadingMessage>()
         .add_systems(
             Update,
             monitor_loading::<T>

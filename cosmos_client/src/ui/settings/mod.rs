@@ -521,6 +521,6 @@ pub(super) fn register(app: &mut App) {
         ),
     )
     .register_type::<WrittenSetting>()
-    .add_event::<SettingsDoneButtonMessage>()
-    .add_event::<SettingsCancelButtonMessage>();
+    .add_message::<SettingsDoneButtonMessage>()
+    .add_message::<SettingsCancelButtonMessage>();
 }

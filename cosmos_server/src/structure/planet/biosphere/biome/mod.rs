@@ -67,7 +67,7 @@ pub enum RegisterBiomesSet {
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_event::<GenerateChunkFeaturesMessage>()
+    app.add_message::<GenerateChunkFeaturesMessage>()
         .add_systems(OnExit(GameState::PostLoading), construct_lookup_tables);
 
     app.configure_sets(OnEnter(GameState::PreLoading), CreateBiosphereSet::CreateBiospheres);

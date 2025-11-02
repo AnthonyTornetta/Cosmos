@@ -155,5 +155,5 @@ pub fn zip_directory(src_dir: &Path, dest_file: &Path) -> io::Result<()> {
 pub(super) fn register(app: &mut App) {
     app.add_systems(First, backup_world.before(SavingSystemSet::BeginSaving))
         .add_systems(FixedUpdate, cleanup_backups.run_if(on_timer(std::time::Duration::from_mins(20))))
-        .add_event::<CreateWorldBackup>();
+        .add_message::<CreateWorldBackup>();
 }

@@ -561,9 +561,9 @@ fn handle_block_place_events(
 pub(super) fn register(app: &mut App) {
     make_persistent::<AutoInsertMinedItems>(app);
 
-    app.add_event::<BlockBreakMessage>()
+    app.add_message::<BlockBreakMessage>()
         .add_mut_event::<BlockPlaceMessage>()
-        .add_event::<BlockInteractMessage>()
+        .add_message::<BlockInteractMessage>()
         .add_systems(
             FixedUpdate,
             (handle_block_break_events, handle_block_place_events)

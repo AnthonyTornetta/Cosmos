@@ -373,7 +373,7 @@ pub(super) fn register(app: &mut App) {
         },
     );
 
-    app.add_event::<MissileLauncherSystemFiredMessage>().add_systems(
+    app.add_message::<MissileLauncherSystemFiredMessage>().add_systems(
         Update,
         (
             focus_looking_at,

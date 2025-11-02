@@ -150,7 +150,7 @@ fn on_finish_tooltip_text(
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_event::<GenerateLookingAtTooltipMessage>();
+    app.add_message::<GenerateLookingAtTooltipMessage>();
 
     app.configure_sets(
         Update,

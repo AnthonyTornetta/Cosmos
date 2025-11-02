@@ -51,5 +51,5 @@ pub(super) fn find_new_player_location(universe_systems: &UniverseSystems) -> Op
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_event::<CreateNewPlayerMessage>();
+    app.add_message::<CreateNewPlayerMessage>();
 }

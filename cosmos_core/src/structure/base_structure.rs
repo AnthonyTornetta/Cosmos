@@ -9,7 +9,7 @@ use bevy::{
         system::{Commands, Query},
     },
     platform::collections::HashMap,
-    prelude::{Entity, MessageWriter, GlobalTransform, Vec3},
+    prelude::{Entity, GlobalTransform, MessageWriter, Vec3},
     reflect::Reflect,
 };
 use serde::{Deserialize, Serialize};
@@ -485,7 +485,10 @@ impl BaseStructure {
         coords: BlockCoordinate,
         blocks: &Registry<Block>,
         amount: f32,
-        event_writers: Option<(&mut MessageWriter<BlockTakeDamageMessage>, &mut MessageWriter<BlockDestroyedMessage>)>,
+        event_writers: Option<(
+            &mut MessageWriter<BlockTakeDamageMessage>,
+            &mut MessageWriter<BlockDestroyedMessage>,
+        )>,
         causer: Option<Entity>,
     ) -> Option<f32> {
         if let Some(chunk) = self.mut_chunk_at_block_coordinates(coords) {
@@ -652,7 +655,7 @@ impl BaseStructure {
     }
 
     /// Queries this block's data. Returns `None` if the requested query failed or if no block data exists for this block.
-    pub fn query_block_data<'a, Q, F>(&self, coords: BlockCoordinate, query: &'a Query<Q, F>) -> Option<ROQueryItem<'a, Q>>
+    pub fn query_block_data<'a, Q, F>(&self, coords: BlockCoordinate, query: &'a Query<Q, F>) -> Option<ROQueryItem<'a, 'a, Q>>
     where
         F: QueryFilter,
         Q: QueryData,
@@ -666,7 +669,7 @@ impl BaseStructure {
     pub fn query_block_data_mut<'q, 'w, 's, Q, F>(
         &self,
         coords: BlockCoordinate,
-        query: &'q mut Query<Q, F>,
+        query: &'q mut Query<'w, 's, Q, F>,
         block_system_params: Rc<RefCell<BlockDataSystemParams<'w, 's>>>,
     ) -> Option<MutBlockData<'q, 'w, 's, Q>>
     where

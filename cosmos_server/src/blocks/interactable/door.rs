@@ -112,5 +112,5 @@ pub(super) fn register(app: &mut App) {
             .chain()
             .run_if(in_state(GameState::Playing)),
     )
-    .add_event::<ToggleDoorMessage>();
+    .add_message::<ToggleDoorMessage>();
 }
