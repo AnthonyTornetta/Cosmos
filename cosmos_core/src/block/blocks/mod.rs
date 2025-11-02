@@ -5,7 +5,7 @@
 //! The only guarenteed block is air ("cosmos:air").
 
 use crate::block::block_builder::BlockBuilder;
-use crate::loader::{AddLoadingEvent, DoneLoadingEvent, LoadingManager};
+use crate::loader::{AddLoadingMessage, DoneLoadingMessage, LoadingManager};
 use crate::registry::{self, Registry};
 use bevy::color::Srgba;
 use bevy::prelude::{App, MessageWriter, OnEnter, ResMut, States};
@@ -65,8 +65,8 @@ pub const COLOR_VALUES: [Srgba; 17] = [
 fn add_cosmos_blocks(
     mut blocks: ResMut<Registry<Block>>,
     mut loading: ResMut<LoadingManager>,
-    mut end_writer: MessageWriter<DoneLoadingEvent>,
-    mut start_writer: MessageWriter<AddLoadingEvent>,
+    mut end_writer: MessageWriter<DoneLoadingMessage>,
+    mut start_writer: MessageWriter<AddLoadingMessage>,
 ) {
     let id = loading.register_loader(&mut start_writer);
 
@@ -766,8 +766,8 @@ fn add_cosmos_blocks(
 // Game will break without air & needs this at ID 0
 fn add_air_block(
     mut blocks: ResMut<Registry<Block>>,
-    mut add_loader_event: MessageWriter<AddLoadingEvent>,
-    mut done_loading_event: MessageWriter<DoneLoadingEvent>,
+    mut add_loader_event: MessageWriter<AddLoadingMessage>,
+    mut done_loading_event: MessageWriter<DoneLoadingMessage>,
     mut loader: ResMut<LoadingManager>,
 ) {
     let id = loader.register_loader(&mut add_loader_event);

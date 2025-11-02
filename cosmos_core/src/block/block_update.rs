@@ -1,16 +1,16 @@
-//! Events sent to adjacent blocks on block changes
+//! Messages sent to adjacent blocks on block changes
 
 use bevy::prelude::*;
 
 use crate::{
-    ecs::mut_events::{MutEvent, MutEventsCommand},
-    events::block_events::BlockChangedEvent,
+    ecs::mut_events::{MutMessage, MutMessagesCommand},
+    events::block_events::BlockChangedMessage,
     structure::{Structure, coordinates::BlockCoordinate, structure_block::StructureBlock},
 };
 
-use super::{block_events::BlockEventsSet, block_face::ALL_BLOCK_FACES};
+use super::{block_events::BlockMessagesSet, block_face::ALL_BLOCK_FACES};
 
-#[derive(Debug, Clone, Copy, Event, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, Message, PartialEq, Eq)]
 /// This event is sent whenever an adjacent block is changed
 pub struct BlockUpdate {
     block: StructureBlock,
@@ -52,8 +52,8 @@ impl BlockUpdate {
 /// Sends block updates when blocks are changed
 pub fn send_block_updates(
     structure_query: Query<&Structure>,
-    mut block_chage_event: EventReader<BlockChangedEvent>,
-    mut event_writer: MessageWriter<MutEvent<BlockUpdate>>,
+    mut block_chage_event: MessageReader<BlockChangedMessage>,
+    mut event_writer: MessageWriter<MutMessage<BlockUpdate>>,
 ) {
     let block_updates = block_chage_event
         .read()
@@ -71,7 +71,7 @@ pub fn send_block_updates(
                     return None;
                 }
 
-                Some(MutEvent::from(BlockUpdate {
+                Some(MutMessage::from(BlockUpdate {
                     block: StructureBlock::new(coord, ev.block.structure()),
                     cancelled: false,
                 }))
@@ -83,6 +83,6 @@ pub fn send_block_updates(
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_systems(Update, send_block_updates.in_set(BlockEventsSet::SendBlockUpdateEvents))
+    app.add_systems(Update, send_block_updates.in_set(BlockMessagesSet::SendBlockUpdateMessages))
         .add_mut_event::<BlockUpdate>();
 }

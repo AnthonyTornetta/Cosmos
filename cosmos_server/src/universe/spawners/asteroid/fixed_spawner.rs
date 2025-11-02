@@ -26,7 +26,7 @@ use crate::{
     universe::{
         SystemItem, SystemItemAsteroid, UniverseSystems,
         generators::{
-            generation::{GenerateSystemEvent, SystemGenerationSet},
+            generation::{GenerateSystemMessage, SystemGenerationSet},
             star::calculate_temperature_at,
         },
     },
@@ -36,7 +36,7 @@ use crate::{
 struct CachedSectors(HashSet<Sector>);
 
 fn spawn_asteroids(
-    mut evr_create_system: EventReader<GenerateSystemEvent>,
+    mut evr_create_system: MessageReader<GenerateSystemMessage>,
     server_seed: Res<ServerSeed>,
     mut systems: ResMut<UniverseSystems>,
     settings: Res<ServerSettings>,

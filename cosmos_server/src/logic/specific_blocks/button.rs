@@ -6,7 +6,7 @@ use bevy::prelude::*;
 use cosmos_core::{
     block::{
         Block,
-        block_events::{BlockEventsSet, BlockInteractEvent},
+        block_events::{BlockMessagesSet, BlockInteractMessage},
         data::BlockData,
     },
     events::block_events::BlockDataSystemParams,
@@ -19,7 +19,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     logic::{
-        LOGIC_BIT, LogicBlock, LogicConnection, LogicOutputEvent, LogicSystemSet, Port, PortType, QueueLogicInputEvent,
+        LOGIC_BIT, LogicBlock, LogicConnection, LogicOutputMessage, LogicSystemSet, Port, PortType, QueueLogicInputMessage,
         logic_driver::LogicDriver,
     },
     persistence::make_persistent::{DefaultPersistentComponent, make_persistent},
@@ -47,7 +47,7 @@ fn register_logic_connections(blocks: Res<Registry<Block>>, mut registry: ResMut
 }
 
 fn on_interact_with_button(
-    mut evr_interact: EventReader<BlockInteractEvent>,
+    mut evr_interact: MessageReader<BlockInteractMessage>,
     mut q_structure: Query<&mut Structure>,
     blocks: Res<Registry<Block>>,
     mut bs_params: BlockDataSystemParams,
@@ -107,8 +107,8 @@ fn tick_button_down(
 }
 
 fn logic_on_output_event_listener(
-    mut evr_logic_output: EventReader<LogicOutputEvent>,
-    mut evw_queue_logic_input: MessageWriter<QueueLogicInputEvent>,
+    mut evr_logic_output: MessageReader<LogicOutputMessage>,
+    mut evw_queue_logic_input: MessageWriter<QueueLogicInputMessage>,
     logic_blocks: Res<Registry<LogicBlock>>,
     blocks: Res<Registry<Block>>,
     mut q_logic_driver: Query<&mut LogicDriver>,
@@ -151,5 +151,5 @@ pub(super) fn register(app: &mut App) {
                     .ambiguous_with(LogicSystemSet::Produce),
             ),
         )
-        .add_systems(FixedUpdate, on_interact_with_button.in_set(BlockEventsSet::ProcessEvents));
+        .add_systems(FixedUpdate, on_interact_with_button.in_set(BlockMessagesSet::ProcessMessages));
 }

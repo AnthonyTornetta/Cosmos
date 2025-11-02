@@ -2,7 +2,7 @@
 
 use bevy::prelude::*;
 use cosmos_core::{
-    creative::{CreativeTrashHeldItem, GrabCreativeItemEvent},
+    creative::{CreativeTrashHeldItem, GrabCreativeItemMessage},
     ecs::sets::FixedUpdateSet,
     entities::player::creative::Creative,
     inventory::{HeldItemStack, Inventory, itemstack::ItemShouldHaveData},
@@ -14,7 +14,7 @@ use cosmos_core::{
 fn on_trash_item_creative(
     q_creative: Query<(), With<Creative>>,
     lobby: Res<ServerLobby>,
-    mut nevr_grab_item: EventReader<NettyMessageReceived<CreativeTrashHeldItem>>,
+    mut nevr_grab_item: MessageReader<NettyMessageReceived<CreativeTrashHeldItem>>,
     mut commands: Commands,
     q_children: Query<&Children>,
     mut q_held_item: Query<&mut Inventory, With<HeldItemStack>>,
@@ -39,7 +39,7 @@ fn on_trash_item_creative(
 fn on_grab_creative_item(
     q_creative: Query<(), With<Creative>>,
     lobby: Res<ServerLobby>,
-    mut nevr_grab_item: EventReader<NettyMessageReceived<GrabCreativeItemEvent>>,
+    mut nevr_grab_item: MessageReader<NettyMessageReceived<GrabCreativeItemMessage>>,
     items: Res<Registry<Item>>,
     needs_data: Res<ItemShouldHaveData>,
     mut commands: Commands,

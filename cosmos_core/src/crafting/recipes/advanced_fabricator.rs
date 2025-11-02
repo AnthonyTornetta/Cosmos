@@ -1,10 +1,10 @@
 //! Shared logic for Advanced Weapons Fabricator recipes.
 
-use bevy::prelude::{App, Event, Resource};
+use bevy::prelude::{App, Message, Resource};
 use serde::{Deserialize, Serialize};
 
 use super::basic_fabricator::*;
-use crate::netty::sync::events::netty_event::{IdentifiableEvent, NettyMessage, SyncedEventImpl};
+use crate::netty::sync::events::netty_event::{IdentifiableMessage, NettyMessage, SyncedMessageImpl};
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default, Resource)]
 /// Contains all the Advanced Weapons Fabricator recipes.
@@ -32,23 +32,23 @@ impl AdvancedFabricatorRecipes {
     }
 }
 
-#[derive(Event, Serialize, Deserialize, Debug, Clone)]
+#[derive(Message, Serialize, Deserialize, Debug, Clone)]
 /// Used to sync all recipes to the connecting clients. Sent when a client joins after they have
 /// loaded all the recipes.
-pub struct SyncAdvancedFabricatorRecipesEvent(pub AdvancedFabricatorRecipes);
+pub struct SyncAdvancedFabricatorRecipesMessage(pub AdvancedFabricatorRecipes);
 
-impl IdentifiableEvent for SyncAdvancedFabricatorRecipesEvent {
+impl IdentifiableMessage for SyncAdvancedFabricatorRecipesMessage {
     fn unlocalized_name() -> &'static str {
         "cosmos:sync_advanced_fabricator_recipes"
     }
 }
 
-impl NettyMessage for SyncAdvancedFabricatorRecipesEvent {
-    fn event_receiver() -> crate::netty::sync::events::netty_event::EventReceiver {
-        crate::netty::sync::events::netty_event::EventReceiver::Client
+impl NettyMessage for SyncAdvancedFabricatorRecipesMessage {
+    fn event_receiver() -> crate::netty::sync::events::netty_event::MessageReceiver {
+        crate::netty::sync::events::netty_event::MessageReceiver::Client
     }
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_netty_event::<SyncAdvancedFabricatorRecipesEvent>();
+    app.add_netty_event::<SyncAdvancedFabricatorRecipesMessage>();
 }

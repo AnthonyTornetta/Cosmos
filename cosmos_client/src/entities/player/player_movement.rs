@@ -5,7 +5,7 @@ use std::f32::consts::PI;
 use bevy::prelude::*;
 use bevy_rapier3d::{
     plugin::{RapierContextEntityLink, ReadRapierContext},
-    prelude::{ActiveEvents, Collider, Sensor, Velocity},
+    prelude::{ActiveMessages, Collider, Sensor, Velocity},
 };
 use cosmos_core::{
     block::specific_blocks::gravity_well::GravityWell,
@@ -44,7 +44,7 @@ fn append_grounded_check(mut commands: Commands, q_player: Query<Entity, Added<L
             Name::new("Ground checker"),
             Collider::cuboid(0.1, 0.2, 0.1),
             Sensor,
-            ActiveEvents::COLLISION_EVENTS,
+            ActiveMessages::COLLISION_EVENTS,
         ));
     });
 }
@@ -284,7 +284,7 @@ pub(super) fn register(app: &mut App) {
         FixedUpdate,
         (add_alignment, process_player_movement)
             .chain()
-            .ambiguous_with(LaserSystemSet::SendHitEvents)
+            .ambiguous_with(LaserSystemSet::SendHitMessages)
             .in_set(FixedUpdateSet::Main)
             .in_set(PlayerMovementSet::ProcessPlayerMovement)
             .run_if(in_state(GameState::Playing)),

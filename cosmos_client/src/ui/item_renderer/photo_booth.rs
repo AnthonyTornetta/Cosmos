@@ -20,7 +20,7 @@ use cosmos_core::{
 };
 
 use crate::{
-    asset::materials::{AddMaterialEvent, MaterialType},
+    asset::materials::{AddMaterialMessage, MaterialType},
     item::item_mesh::ItemMeshMaterial,
 };
 
@@ -86,7 +86,7 @@ fn setup_rendered_item_atlas(mut images: ResMut<Assets<Image>>, w: usize, h: usi
 
 fn create_booth(
     mut commands: Commands,
-    mut event_writer: MessageWriter<AddMaterialEvent>,
+    mut event_writer: MessageWriter<AddMaterialMessage>,
     items: Res<Registry<Item>>,
     item_meshes: Res<Registry<ItemMeshMaterial>>,
     block_items: Res<BlockItems>,
@@ -181,7 +181,7 @@ fn create_booth(
                     ))
                     .id();
 
-                event_writer.write(AddMaterialEvent {
+                event_writer.write(AddMaterialMessage {
                     entity,
                     add_material_id: item_mat_material.material_id(),
                     texture_dimensions_index: item_mat_material.texture_dimension_index(),

@@ -4,7 +4,7 @@ use cosmos_core::{
     item::Item,
     netty::{
         NettyChannelServer, NoSendEntity, cosmos_encoder, server_replication::ReplicationMessage,
-        sync::server_entity_syncing::RequestedEntityEvent,
+        sync::server_entity_syncing::RequestedEntityMessage,
     },
     registry::{Registry, identifiable::Identifiable},
     state::GameState,
@@ -31,7 +31,7 @@ fn sync_system<T: SyncableSystem>(
 
 fn on_request_systems_entity<T: SyncableSystem>(
     mut server: ResMut<RenetServer>,
-    mut ev_reader: EventReader<RequestedEntityEvent>,
+    mut ev_reader: MessageReader<RequestedEntityMessage>,
     q_systems: Query<&StructureSystems>,
     q_syncable_system: Query<(&T, &StructureSystem)>,
 ) {

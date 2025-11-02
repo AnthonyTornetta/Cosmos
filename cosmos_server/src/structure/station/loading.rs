@@ -6,7 +6,7 @@ use cosmos_core::{
     registry::Registry,
     state::GameState,
     structure::{
-        ChunkInitEvent, Structure, StructureTypeSet,
+        ChunkInitMessage, Structure, StructureTypeSet,
         coordinates::BlockCoordinate,
         loading::{ChunksNeedLoaded, StructureLoadingSet},
         structure_iterator::ChunkIteratorResult,
@@ -23,7 +23,7 @@ fn create_stations(
     mut query: Query<(&mut Structure, Entity), With<StationNeedsCreated>>,
     mut commands: Commands,
     blocks: Res<Registry<Block>>,
-    mut chunk_set_event_writer: MessageWriter<ChunkInitEvent>,
+    mut chunk_set_event_writer: MessageWriter<ChunkInitMessage>,
 ) {
     for (mut structure, entity) in query.iter_mut() {
         let station_core = blocks.from_id("cosmos:station_core").expect("Station core block missing!");
@@ -54,7 +54,7 @@ fn create_stations(
                 chunk: _,
             } = res
             {
-                chunk_set_event_writer.write(ChunkInitEvent {
+                chunk_set_event_writer.write(ChunkInitMessage {
                     structure_entity: entity,
                     coords,
                     serialized_block_data: None,

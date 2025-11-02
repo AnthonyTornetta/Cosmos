@@ -13,8 +13,8 @@ use serde::{Serialize, de::DeserializeOwned};
 
 use crate::ecs::add_multi_statebound_resource;
 
-#[derive(Event)]
-struct ReceivedRegistryEvent {
+#[derive(Message)]
+struct ReceivedRegistryMessage {
     serialized_data: Vec<u8>,
     registry_name: String,
 }
@@ -24,7 +24,7 @@ struct RegistriesLeftToSync(Option<i64>);
 
 fn sync<T: Identifiable + Serialize + DeserializeOwned + std::fmt::Debug>(
     mut registry: ResMut<Registry<T>>,
-    mut ev_reader: EventReader<ReceivedRegistryEvent>,
+    mut ev_reader: MessageReader<ReceivedRegistryMessage>,
     mut left_to_sync: ResMut<RegistriesLeftToSync>,
 ) {
     for ev in ev_reader.read() {
@@ -70,7 +70,7 @@ pub(super) fn sync_registry<T: Identifiable + Serialize + DeserializeOwned + std
 
 fn registry_listen_netty(
     mut client: ResMut<RenetClient>,
-    mut ev_writer: MessageWriter<ReceivedRegistryEvent>,
+    mut ev_writer: MessageWriter<ReceivedRegistryMessage>,
     mut registry_count: ResMut<RegistriesLeftToSync>,
 ) {
     while let Some(message) = client.receive_message(NettyChannelServer::Registry) {
@@ -82,7 +82,7 @@ fn registry_listen_netty(
                 registry_count.0 = Some(count as i64 + registry_count.0.unwrap_or(0));
             }
             RegistrySyncing::Registry { serialized, registry_name } => {
-                ev_writer.write(ReceivedRegistryEvent {
+                ev_writer.write(ReceivedRegistryMessage {
                     serialized_data: serialized,
                     registry_name,
                 });
@@ -133,7 +133,7 @@ pub(super) fn register<T: States + FreelyMutableState + Clone + Copy>(
             .chain()
             .run_if(in_state(loading_data_state)),
     )
-    .add_event::<ReceivedRegistryEvent>();
+    .add_event::<ReceivedRegistryMessage>();
 
     add_multi_statebound_resource::<RegistriesLeftToSync, T>(app, connecting_state, loading_data_state);
 }

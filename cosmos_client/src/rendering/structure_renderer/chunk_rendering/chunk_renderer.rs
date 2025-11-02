@@ -2,7 +2,7 @@ use crate::asset::asset_loading::{BlockNeighbors, BlockTextureIndex};
 use crate::asset::materials::{BlockMaterialMapping, MaterialDefinition};
 use crate::block::lighting::{BlockLightProperties, BlockLighting};
 use crate::rendering::structure_renderer::{BlockRenderingModes, RenderingMode};
-use bevy::ecs::event::Event;
+use bevy::ecs::event::Message;
 use bevy::platform::collections::HashMap;
 use bevy::prelude::{App, Deref, DerefMut, Entity, Rect, Resource, Vec3};
 use bevy::tasks::Task;
@@ -338,7 +338,7 @@ pub(super) struct RenderingChunk(pub Task<ChunkRenderResult>);
 #[derive(Resource, Debug, DerefMut, Deref, Default)]
 pub(super) struct RenderingChunks(pub Vec<RenderingChunk>);
 
-#[derive(Event, Eq)]
+#[derive(Message, Eq)]
 pub struct ChunkNeedsCustomBlocksRendered {
     pub structure_entity: Entity,
     pub chunk_coordinate: ChunkCoordinate,

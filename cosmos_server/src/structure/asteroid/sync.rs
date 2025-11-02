@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 use bevy_renet::renet::RenetServer;
 use cosmos_core::{
-    netty::{NettyChannelServer, cosmos_encoder, sync::server_entity_syncing::RequestedEntityEvent, system_sets::NetworkingSystemsSet},
+    netty::{NettyChannelServer, cosmos_encoder, sync::server_entity_syncing::RequestedEntityMessage, system_sets::NetworkingSystemsSet},
     structure::{
         Structure,
         asteroid::{Asteroid, asteroid_netty::AsteroidServerMessages},
@@ -9,7 +9,7 @@ use cosmos_core::{
 };
 
 fn on_request_asteroid(
-    mut event_reader: EventReader<RequestedEntityEvent>,
+    mut event_reader: MessageReader<RequestedEntityMessage>,
     query: Query<(&Structure, &Asteroid)>,
     mut server: ResMut<RenetServer>,
 ) {

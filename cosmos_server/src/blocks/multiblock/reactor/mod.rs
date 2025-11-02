@@ -7,7 +7,7 @@ use bevy_renet::renet::RenetServer;
 use cosmos_core::{
     block::{
         Block,
-        block_events::{BlockEventsSet, BlockInteractEvent},
+        block_events::{BlockMessagesSet, BlockInteractMessage},
         block_face::BlockFace,
         data::BlockData,
         multiblock::reactor::{Reactor, ReactorActive, ReactorBounds, ReactorPowerGenerationBlock, Reactors},
@@ -420,7 +420,7 @@ fn on_interact_reactor(
     mut structure_query: Query<(&mut Structure, &mut Reactors)>,
     blocks: Res<Registry<Block>>,
     reactor_blocks: Res<Registry<ReactorPowerGenerationBlock>>,
-    mut interaction: EventReader<BlockInteractEvent>,
+    mut interaction: MessageReader<BlockInteractMessage>,
     mut server: ResMut<RenetServer>,
     player_query: Query<&Player>,
     mut bds_params: BlockDataSystemParams,
@@ -501,7 +501,7 @@ pub(super) fn register(app: &mut App) {
         (
             on_piloted_by_ai.in_set(StructureSystemsSet::InitSystems),
             on_interact_reactor
-                .in_set(BlockEventsSet::PostProcessEvents)
+                .in_set(BlockMessagesSet::PostProcessMessages)
                 .after(StructureSystemsSet::UpdateSystems),
         )
             // .in_set(NetworkingSystemsSet::Between)

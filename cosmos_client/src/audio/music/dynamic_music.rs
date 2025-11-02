@@ -11,7 +11,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::audio::volume::MasterVolume;
 
-use super::{MusicVolume, PlayMusicEvent, PlayingBackgroundSong};
+use super::{MusicVolume, PlayMusicMessage, PlayingBackgroundSong};
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug, Serialize, Deserialize, Reflect)]
 /// Describes the "Atmosphere"/mood the music should be played in.
@@ -105,7 +105,7 @@ fn load_default_songs(asset_server: Res<AssetServer>, mut music_controller: ResM
 
 fn start_playing(
     mut commands: Commands,
-    mut evr_play_music: EventReader<PlayMusicEvent>,
+    mut evr_play_music: MessageReader<PlayMusicMessage>,
     audio: Res<Audio>,
     volume: Res<MusicVolume>,
     master_volume: Res<MasterVolume>,
@@ -135,14 +135,14 @@ struct NextSongTime(f32);
 const MIN_DELAY_SEC: f32 = 0.5 * 60.0; // 30 sec
 const MAX_DELAY_SEC: f32 = 2.0 * 60.0; // 2 min 
 
-fn trigger_music_playing(mut next_song_time: ResMut<NextSongTime>, mut event_writer: MessageWriter<PlayMusicEvent>, time: Res<Time>) {
+fn trigger_music_playing(mut next_song_time: ResMut<NextSongTime>, mut event_writer: MessageWriter<PlayMusicMessage>, time: Res<Time>) {
     if next_song_time.0 > time.elapsed_secs() {
         return;
     }
 
     next_song_time.0 = time.elapsed_secs() + random_range(MIN_DELAY_SEC, MAX_DELAY_SEC);
 
-    event_writer.write(PlayMusicEvent {
+    event_writer.write(PlayMusicMessage {
         atmosphere: MusicAtmosphere::Calm,
     });
 }
@@ -155,7 +155,7 @@ pub(super) fn register(app: &mut App) {
 
     app.add_systems(
         Update,
-        (trigger_music_playing, start_playing.run_if(on_event::<PlayMusicEvent>))
+        (trigger_music_playing, start_playing.run_if(on_event::<PlayMusicMessage>))
             .chain()
             .run_if(in_state(GameState::Playing))
             .run_if(not(resource_exists::<PlayingBackgroundSong>)),

@@ -14,7 +14,7 @@ use cosmos_core::{
 };
 
 use crate::logic::{
-    LOGIC_BIT, LogicBlock, LogicConnection, LogicInputEvent, LogicOutputEvent, LogicSystemSet, PortType, QueueLogicInputEvent,
+    LOGIC_BIT, LogicBlock, LogicConnection, LogicInputMessage, LogicOutputMessage, LogicSystemSet, PortType, QueueLogicInputMessage,
     default_logic_block_output, logic_driver::LogicDriver,
 };
 
@@ -39,7 +39,7 @@ fn register_logic_connections(blocks: Res<Registry<Block>>, mut registry: ResMut
 const LAST_STATE_BIT: u8 = LOGIC_BIT >> 1;
 
 fn flip_flop_input_event_listener(
-    mut evr_logic_input: EventReader<LogicInputEvent>,
+    mut evr_logic_input: MessageReader<LogicInputMessage>,
     blocks: Res<Registry<Block>>,
     mut q_logic_driver: Query<&mut LogicDriver>,
     mut q_structure: Query<&mut Structure>,
@@ -106,8 +106,8 @@ fn flip_flop_input_event_listener(
 }
 
 fn flip_flop_output_event_listener(
-    evr_logic_output: EventReader<LogicOutputEvent>,
-    evw_queue_logic_input: MessageWriter<QueueLogicInputEvent>,
+    evr_logic_output: MessageReader<LogicOutputMessage>,
+    evw_queue_logic_input: MessageWriter<QueueLogicInputMessage>,
     logic_blocks: Res<Registry<LogicBlock>>,
     blocks: Res<Registry<Block>>,
     q_structure: Query<(&mut Structure, &mut LogicDriver)>,

@@ -7,7 +7,7 @@ use cosmos_core::{
     crafting::recipes::{
         RecipeItem,
         basic_fabricator::{
-            BasicFabricatorRecipe, BasicFabricatorRecipes, FabricatorItemInput, FabricatorItemOutput, SyncBasicFabricatorRecipesEvent,
+            BasicFabricatorRecipe, BasicFabricatorRecipes, FabricatorItemInput, FabricatorItemOutput, SyncBasicFabricatorRecipesMessage,
         },
     },
     item::Item,
@@ -17,7 +17,7 @@ use cosmos_core::{
 };
 use walkdir::WalkDir;
 
-use crate::netty::sync::registry::ClientFinishedReceivingRegistriesEvent;
+use crate::netty::sync::registry::ClientFinishedReceivingRegistriesMessage;
 
 use super::RawRecipeItem;
 
@@ -90,17 +90,17 @@ fn load_recipes(items: Res<Registry<Item>>, mut commands: Commands) {
     commands.insert_resource(recipes);
 }
 
-fn sync_recipes_on_change(recipes: Res<BasicFabricatorRecipes>, mut nevw_sync_recipes: NettyMessageWriter<SyncBasicFabricatorRecipesEvent>) {
-    nevw_sync_recipes.broadcast(SyncBasicFabricatorRecipesEvent(recipes.clone()));
+fn sync_recipes_on_change(recipes: Res<BasicFabricatorRecipes>, mut nevw_sync_recipes: NettyMessageWriter<SyncBasicFabricatorRecipesMessage>) {
+    nevw_sync_recipes.broadcast(SyncBasicFabricatorRecipesMessage(recipes.clone()));
 }
 
 fn sync_recipes_on_join(
     recipes: Res<BasicFabricatorRecipes>,
-    mut evr_loaded_registries: EventReader<ClientFinishedReceivingRegistriesEvent>,
-    mut nevw_sync_recipes: NettyMessageWriter<SyncBasicFabricatorRecipesEvent>,
+    mut evr_loaded_registries: MessageReader<ClientFinishedReceivingRegistriesMessage>,
+    mut nevw_sync_recipes: NettyMessageWriter<SyncBasicFabricatorRecipesMessage>,
 ) {
     for ev in evr_loaded_registries.read() {
-        nevw_sync_recipes.write(SyncBasicFabricatorRecipesEvent(recipes.clone()), ev.0);
+        nevw_sync_recipes.write(SyncBasicFabricatorRecipesMessage(recipes.clone()), ev.0);
     }
 }
 

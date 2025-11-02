@@ -8,11 +8,11 @@ use cosmos_core::{
 use crate::{
     asset::asset_loader::load_assets,
     audio::{AudioEmission, CosmosAudioEmitter, DespawnOnNoEmissions},
-    events::block::block_events::{RequestBlockBreakEvent, RequestBlockPlaceEvent},
+    events::block::block_events::{RequestBlockBreakMessage, RequestBlockPlaceMessage},
 };
 
 fn play_block_break_sound(
-    mut event_reader: EventReader<RequestBlockBreakEvent>,
+    mut event_reader: MessageReader<RequestBlockBreakMessage>,
     break_sound: Res<BlockBreakSound>,
     structure_query: Query<&Structure>,
     audio: Res<Audio>,
@@ -46,7 +46,7 @@ fn play_block_break_sound(
 }
 
 fn play_block_place_sound(
-    mut event_reader: EventReader<RequestBlockPlaceEvent>,
+    mut event_reader: MessageReader<RequestBlockPlaceMessage>,
     place_sound: Res<BlockPlaceSound>,
     structure_query: Query<&Structure>,
     audio: Res<Audio>,

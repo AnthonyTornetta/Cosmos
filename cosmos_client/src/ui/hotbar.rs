@@ -4,7 +4,7 @@ use std::marker::PhantomData;
 
 use bevy::{input::mouse::MouseWheel, prelude::*};
 use cosmos_core::{
-    block::block_events::BlockEventsSet,
+    block::block_events::BlockMessagesSet,
     inventory::{Inventory, held_item_slot::HeldItemSlot, itemstack::ItemStack},
     item::{Item, usable::cooldown::ItemCooldown},
     netty::client::LocalPlayer,
@@ -187,7 +187,7 @@ fn image_path(selected: bool) -> &'static str {
 
 fn listen_button_presses(
     input_handler: InputChecker,
-    mut scroll_evr: EventReader<MouseWheel>,
+    mut scroll_evr: MessageReader<MouseWheel>,
     mut q_held_item_slot: Query<&mut HeldItemSlot, With<LocalPlayer>>,
     mut hotbar: Query<&mut Hotbar>,
 ) {
@@ -596,7 +596,7 @@ pub(super) fn register(app: &mut App) {
             (
                 add_inventory_to_priority_queue,
                 add_hotbar_contents_to_player,
-                sync_hotbar_to_inventory.after(BlockEventsSet::SendEventsForNextFrame),
+                sync_hotbar_to_inventory.after(BlockMessagesSet::SendMessagesForNextFrame),
                 populate_hotbar,
                 listen_for_change_events,
                 monitor_cooldown,

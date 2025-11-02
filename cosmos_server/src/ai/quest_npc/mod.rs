@@ -8,7 +8,7 @@ use cosmos_core::{
     coms::{AiComsType, ComsChannel, RequestedComs},
     ecs::{NeedsDespawned, sets::FixedUpdateSet},
     entities::EntityId,
-    events::structure::StructureEventListenerSet,
+    events::structure::StructureMessageListenerSet,
     faction::{Faction, FactionId, FactionRelation, Factions},
     netty::sync::IdentifiableComponent,
     physics::location::Location,
@@ -28,13 +28,13 @@ use cosmos_core::{
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    coms::{NpcRequestCloseComsEvent, NpcSendComsMessage, RequestHailFromNpc},
+    coms::{NpcRequestCloseComsMessage, NpcSendComsMessage, RequestHailFromNpc},
     persistence::{
         loading::LoadingSystemSet,
         make_persistent::{DefaultPersistentComponent, make_persistent},
         saving::NeverSave,
     },
-    quest::AddQuestEvent,
+    quest::AddQuestMessage,
     structure::ship::speed::{MaxShipSpeed, ShipSpeedModifier},
 };
 
@@ -311,8 +311,8 @@ fn on_change_coms(
     q_entity_id: Query<&EntityId>,
     q_pilot: Query<&Pilot>,
     mut q_merchant: Query<&mut MerchantAiState, With<MerchantFederation>>,
-    mut evw_start_quest: MessageWriter<AddQuestEvent>,
-    mut evw_end_coms: MessageWriter<NpcRequestCloseComsEvent>,
+    mut evw_start_quest: MessageWriter<AddQuestMessage>,
+    mut evw_end_coms: MessageWriter<NpcRequestCloseComsMessage>,
 ) {
     enum ComsState {
         Intro,
@@ -364,7 +364,7 @@ fn on_change_coms(
             ComsState::SaidNo => ("I understand. I, too, value my life.", true),
             ComsState::Accepted => {
                 if let Ok(pilot) = q_pilot.get(coms.with) {
-                    evw_start_quest.write(AddQuestEvent {
+                    evw_start_quest.write(AddQuestMessage {
                         unlocalized_name: "cosmos:fight_pirate".into(),
                         to: pilot.entity,
                         details: OngoingQuestDetails {
@@ -385,7 +385,7 @@ fn on_change_coms(
         let message = response.to_owned();
 
         if end_coms {
-            evw_end_coms.write(NpcRequestCloseComsEvent {
+            evw_end_coms.write(NpcRequestCloseComsMessage {
                 npc_ship: parent.parent(),
                 coms_entity,
             });
@@ -555,7 +555,7 @@ pub(super) fn register(app: &mut App) {
             .before(CombatAiSystemSet::CombatAiLogic)
             .in_set(StructureTypeSet::Ship)
             .after(LoadingSystemSet::DoneLoading)
-            .after(StructureEventListenerSet::ChangePilotListener),
+            .after(StructureMessageListenerSet::ChangePilotListener),
     )
     .add_systems(
         FixedUpdate,

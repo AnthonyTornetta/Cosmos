@@ -1,6 +1,6 @@
 //! Loads all the items for cosmos & adds the item registry.
 
-use crate::loader::{AddLoadingEvent, DoneLoadingEvent, LoadingManager};
+use crate::loader::{AddLoadingMessage, DoneLoadingMessage, LoadingManager};
 use crate::registry::{self, Registry};
 use bevy::prelude::*;
 
@@ -9,8 +9,8 @@ use super::{Item, ItemBuilder};
 fn add_cosmos_items(
     mut items: ResMut<Registry<Item>>,
     mut loading: ResMut<LoadingManager>,
-    mut end_writer: MessageWriter<DoneLoadingEvent>,
-    mut start_writer: MessageWriter<AddLoadingEvent>,
+    mut end_writer: MessageWriter<DoneLoadingMessage>,
+    mut start_writer: MessageWriter<AddLoadingMessage>,
 ) {
     let id = loading.register_loader(&mut start_writer);
 

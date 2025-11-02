@@ -12,7 +12,7 @@ use crate::{
     lang::Lang,
     ui::{
         components::{
-            button::{ButtonEvent, CosmosButton},
+            button::{ButtonMessage, CosmosButton},
             scollable_container::ScrollBox,
         },
         font::DefaultFont,
@@ -213,7 +213,7 @@ fn on_remove_active_system(mut removed: RemovedComponents<ActiveSystem>, mut q_b
 #[derive(Component)]
 struct ActiveSystem;
 
-fn on_system_clicked(ev: Trigger<ButtonEvent>, mut commands: Commands, q_active: Query<Entity, With<ActiveSystem>>) {
+fn on_system_clicked(ev: Trigger<ButtonMessage>, mut commands: Commands, q_active: Query<Entity, With<ActiveSystem>>) {
     if let Ok(active) = q_active.single() {
         commands.entity(active).remove::<ActiveSystem>();
 
@@ -281,7 +281,7 @@ fn listen_button_inputs(
 
     commands.entity(ent).remove::<ActiveSystem>();
 
-    info!("Sending Event!");
+    info!("Sending Message!");
     nevw_change_system_slot.write(ChangeSystemSlot {
         slot,
         system_id: Some(active.system_id),

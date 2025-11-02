@@ -1,4 +1,4 @@
-use bevy::{app::App, prelude::Event};
+use bevy::{app::App, prelude::Message};
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 
@@ -12,7 +12,7 @@ use super::client_event;
 use super::server_event;
 
 /// Used to uniquely identify a netty event
-pub trait IdentifiableEvent: Sized {
+pub trait IdentifiableMessage: Sized {
     /// Should be unique from all other netty events.
     ///
     /// Good practice is `modid:event_name`.
@@ -23,7 +23,7 @@ pub trait IdentifiableEvent: Sized {
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 /// Dictates who can receive this message.
-pub enum EventReceiver {
+pub enum MessageReceiver {
     /// Server receives event
     Server,
     /// Client receives event
@@ -35,11 +35,11 @@ pub enum EventReceiver {
 /// This allows an event to be automatically sent to the server/client from the other.
 ///
 /// TODO: Properly document how to use this
-pub trait NettyMessage: std::fmt::Debug + IdentifiableEvent + Event + Clone + Serialize + DeserializeOwned {
+pub trait NettyMessage: std::fmt::Debug + IdentifiableMessage + Message + Clone + Serialize + DeserializeOwned {
     /// Returns how this component should be synced
     ///
     /// Either from `server -> client` or `client -> server`.
-    fn event_receiver() -> EventReceiver;
+    fn event_receiver() -> MessageReceiver;
 
     #[cfg(feature = "client")]
     /// If this event will need its entities converted to the server or client version, make this
@@ -73,7 +73,7 @@ pub(super) enum NettyMessageMessage {
 }
 
 /// `app.add_netty_event` implementation.
-pub trait SyncedEventImpl {
+pub trait SyncedMessageImpl {
     /// Adds a netty-synced event. See [`NettyMessage`].
     fn add_netty_event<T: NettyMessage>(&mut self) -> &mut Self;
 }
@@ -98,7 +98,7 @@ impl Identifiable for RegisteredNettyMessage {
     }
 }
 
-impl SyncedEventImpl for App {
+impl SyncedMessageImpl for App {
     fn add_netty_event<T: NettyMessage>(&mut self) -> &mut Self {
         #[cfg(feature = "client")]
         client_event::register_event::<T>(self);

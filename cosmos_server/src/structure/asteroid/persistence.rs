@@ -1,13 +1,13 @@
 use bevy::prelude::*;
 use cosmos_core::{
-    block::data::persistence::ChunkLoadBlockDataEvent,
+    block::data::persistence::ChunkLoadBlockDataMessage,
     physics::location::Location,
     prelude::StructureLoadingSet,
     structure::{
-        ChunkInitEvent, Structure, StructureTypeSet,
+        ChunkInitMessage, Structure, StructureTypeSet,
         asteroid::{Asteroid, MovingAsteroid},
         blueprint::BlueprintType,
-        events::StructureLoadedEvent,
+        events::StructureLoadedMessage,
         structure_iterator::ChunkIteratorResult,
     },
 };
@@ -45,9 +45,9 @@ fn load_structure(
     structure: Structure,
     s_data: &SerializedData,
     temperature: f32,
-    chunk_load_block_data_event_writer: &mut MessageWriter<ChunkLoadBlockDataEvent>,
-    chunk_set_event_writer: &mut MessageWriter<ChunkInitEvent>,
-    structure_loaded_event_writer: &mut MessageWriter<StructureLoadedEvent>,
+    chunk_load_block_data_event_writer: &mut MessageWriter<ChunkLoadBlockDataMessage>,
+    chunk_set_event_writer: &mut MessageWriter<ChunkInitMessage>,
+    structure_loaded_event_writer: &mut MessageWriter<StructureLoadedMessage>,
 ) {
     let mut entity_cmd = commands.entity(entity);
 
@@ -61,7 +61,7 @@ fn load_structure(
         } = res
         {
             // Maybe wait till block data is set for this?
-            chunk_set_event_writer.write(ChunkInitEvent {
+            chunk_set_event_writer.write(ChunkInitMessage {
                 structure_entity: entity,
                 coords,
                 serialized_block_data: None,
@@ -71,11 +71,11 @@ fn load_structure(
 
     entity_cmd.insert((structure, Asteroid::new(temperature), loc));
 
-    structure_loaded_event_writer.write(StructureLoadedEvent { structure_entity: entity });
+    structure_loaded_event_writer.write(StructureLoadedMessage { structure_entity: entity });
 
     if let Ok(block_data) = s_data.deserialize_data::<AllBlockData>("cosmos:block_data") {
         for (chunk_coord, data) in block_data.0 {
-            chunk_load_block_data_event_writer.write(ChunkLoadBlockDataEvent {
+            chunk_load_block_data_event_writer.write(ChunkLoadBlockDataMessage {
                 data,
                 chunk: chunk_coord,
                 structure_entity: entity,
@@ -87,9 +87,9 @@ fn load_structure(
 fn on_load_asteroid_blueprint(
     query: Query<(Entity, &SerializedData, &NeedsBlueprintLoaded)>,
     mut commands: Commands,
-    mut chunk_load_block_data_event_writer: MessageWriter<ChunkLoadBlockDataEvent>,
-    mut chunk_set_event_writer: MessageWriter<ChunkInitEvent>,
-    mut structure_loaded_event_writer: MessageWriter<StructureLoadedEvent>,
+    mut chunk_load_block_data_event_writer: MessageWriter<ChunkLoadBlockDataMessage>,
+    mut chunk_set_event_writer: MessageWriter<ChunkInitMessage>,
+    mut structure_loaded_event_writer: MessageWriter<StructureLoadedMessage>,
 ) {
     for (entity, s_data, needs_blueprinted) in query.iter() {
         if let Ok(temperature) = s_data.deserialize_data::<f32>("cosmos:asteroid")
@@ -113,9 +113,9 @@ fn on_load_asteroid_blueprint(
 fn on_load_asteroid(
     query: Query<(Entity, &SerializedData), With<NeedsLoaded>>,
     mut commands: Commands,
-    mut chunk_load_block_data_event_writer: MessageWriter<ChunkLoadBlockDataEvent>,
-    mut chunk_set_event_writer: MessageWriter<ChunkInitEvent>,
-    mut structure_loaded_event_writer: MessageWriter<StructureLoadedEvent>,
+    mut chunk_load_block_data_event_writer: MessageWriter<ChunkLoadBlockDataMessage>,
+    mut chunk_set_event_writer: MessageWriter<ChunkInitMessage>,
+    mut structure_loaded_event_writer: MessageWriter<StructureLoadedMessage>,
 ) {
     for (entity, s_data) in query.iter() {
         if let Ok(temperature) = s_data.deserialize_data::<f32>("cosmos:asteroid")

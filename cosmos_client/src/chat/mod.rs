@@ -2,8 +2,8 @@
 
 use bevy::{input_focus::InputFocus, prelude::*};
 use cosmos_core::{
-    chat::{ClientSendChatMessageEvent, ServerSendChatMessageEvent},
-    commands::ClientCommandEvent,
+    chat::{ClientSendChatMessageMessage, ServerSendChatMessageMessage},
+    commands::ClientCommandMessage,
     ecs::NeedsDespawned,
     netty::sync::events::client_event::{NettyMessageReceived, NettyMessageWriter},
     state::GameState,
@@ -196,7 +196,7 @@ fn setup_chat_box(mut commands: Commands, default_font: Res<DefaultFont>) {
 
 fn display_messages(
     default_font: Res<DefaultFont>,
-    mut nevr_chat_msg: EventReader<NettyMessageReceived<ServerSendChatMessageEvent>>,
+    mut nevr_chat_msg: MessageReader<NettyMessageReceived<ServerSendChatMessageMessage>>,
     q_chat_box: Query<Entity, With<ReceivedMessagesContainer>>,
     q_display_box: Query<Entity, With<ChatDisplayReceivedMessagesContainer>>,
     mut commands: Commands,
@@ -251,8 +251,8 @@ fn send_chat_msg(
     inputs: InputChecker,
     mut q_value: Query<&mut InputValue, With<SendingChatMessageBox>>,
     q_chat_box: Query<&Visibility, With<ChatContainer>>,
-    mut nevw_chat: NettyMessageWriter<ClientSendChatMessageEvent>,
-    mut nevw_command: NettyMessageWriter<ClientCommandEvent>,
+    mut nevw_chat: NettyMessageWriter<ClientSendChatMessageMessage>,
+    mut nevw_command: NettyMessageWriter<ClientCommandMessage>,
 ) {
     if !inputs.check_just_pressed(CosmosInputs::SendChatMessage) {
         return;
@@ -272,11 +272,11 @@ fn send_chat_msg(
     }
 
     if let Some(stripped) = value.strip_prefix("/") {
-        nevw_command.write(ClientCommandEvent {
+        nevw_command.write(ClientCommandMessage {
             command_text: stripped.to_owned(),
         });
     } else {
-        nevw_chat.write(ClientSendChatMessageEvent::Global(value.to_owned()));
+        nevw_chat.write(ClientSendChatMessageMessage::Global(value.to_owned()));
     }
 
     // Set val to "" in case toggle chat box and send message are bound to different keys

@@ -7,9 +7,9 @@ use bevy::{
     prelude::*,
 };
 use cosmos_core::{
-    block::{Block, block_events::BlockEventsSet, block_face::BlockFace, block_update::BlockUpdate, data::BlockData},
-    ecs::mut_events::MutEvent,
-    events::block_events::{BlockChangedEvent, BlockDataChangedEvent, BlockDataSystemParams},
+    block::{Block, block_events::BlockMessagesSet, block_face::BlockFace, block_update::BlockUpdate, data::BlockData},
+    ecs::mut_events::MutMessage,
+    events::block_events::{BlockChangedMessage, BlockDataChangedMessage, BlockDataSystemParams},
     fluid::data::{BlockFluidData, FluidTankBlock, StoredFluidData},
     registry::{Registry, identifiable::Identifiable},
     structure::{
@@ -198,7 +198,7 @@ fn balance_tanks(
     assert_eq!(fluid_left, 0);
 }
 
-struct CombinedBlockEvent {
+struct CombinedBlockMessage {
     structure_entity: Entity,
     block: BlockCoordinate,
 }
@@ -206,7 +206,7 @@ struct CombinedBlockEvent {
 fn on_add_tank(
     blocks: Res<Registry<Block>>,
     mut q_structure: Query<&mut Structure>,
-    mut ev_reader: EventReader<BlockChangedEvent>,
+    mut ev_reader: MessageReader<BlockChangedMessage>,
     mut bs_params: BlockDataSystemParams,
     mut q_block_data: Query<&mut BlockData>,
     q_has_data: Query<(), With<BlockFluidData>>,
@@ -236,8 +236,8 @@ struct TanksToBalance(HashMap<Entity, HashSet<BlockCoordinate>>);
 
 fn listen_for_changed_fluid_data(
     blocks: Res<Registry<Block>>,
-    mut evr_block_data_changed: EventReader<BlockDataChangedEvent>,
-    mut evr_block_changed_event: EventReader<MutEvent<BlockUpdate>>,
+    mut evr_block_data_changed: MessageReader<BlockDataChangedMessage>,
+    mut evr_block_changed_event: MessageReader<MutMessage<BlockUpdate>>,
     q_structure: Query<&Structure>,
     mut to_balance: ResMut<TanksToBalance>,
 ) {
@@ -247,14 +247,14 @@ fn listen_for_changed_fluid_data(
 
     for ev in evr_block_data_changed
         .read()
-        .map(|x| CombinedBlockEvent {
+        .map(|x| CombinedBlockMessage {
             block: x.block.coords(),
             structure_entity: x.block.structure(),
         })
         .chain(evr_block_changed_event.read().map(|x| {
             let x = *x.read();
 
-            CombinedBlockEvent {
+            CombinedBlockMessage {
                 block: x.block().coords(),
                 structure_entity: x.structure_entity(),
             }
@@ -325,7 +325,7 @@ pub(super) fn register(app: &mut App) {
         FixedUpdate,
         (on_add_tank, listen_for_changed_fluid_data, call_balance_tanks)
             .chain()
-            .in_set(BlockEventsSet::PostProcessEvents),
+            .in_set(BlockMessagesSet::PostProcessMessages),
     )
     .init_resource::<TanksToBalance>();
 }

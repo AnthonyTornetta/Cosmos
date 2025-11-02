@@ -17,7 +17,7 @@ use cosmos_core::{
 
 use crate::{
     entities::player::PlayerLooking,
-    inventory::{InventoryAddItemEvent, InventoryRemoveItemEvent, MovedItem},
+    inventory::{InventoryAddItemMessage, InventoryRemoveItemMessage, MovedItem},
 };
 
 fn get_inventory_mut<'a>(
@@ -82,8 +82,8 @@ fn listen_for_inventory_messages(
     q_player: Query<(&Location, &GlobalTransform, &PlayerLooking, &Velocity)>,
     q_children: Query<&Children>,
     lobby: Res<ServerLobby>,
-    mut evw_add_item: MessageWriter<InventoryAddItemEvent>,
-    mut evw_remove_item: MessageWriter<InventoryRemoveItemEvent>,
+    mut evw_add_item: MessageWriter<InventoryAddItemMessage>,
+    mut evw_remove_item: MessageWriter<InventoryRemoveItemMessage>,
 ) {
     for client_id in server.clients_id().into_iter() {
         while let Some(message) = server.receive_message(client_id, NettyChannelClient::Inventory) {
@@ -117,7 +117,7 @@ fn listen_for_inventory_messages(
                     {
                         let b_item = inventory_b.itemstack_at(slot_b as usize);
                         if let Some(is) = b_item {
-                            evw_add_item.write(InventoryAddItemEvent {
+                            evw_add_item.write(InventoryAddItemMessage {
                                 inventory_entity: a,
                                 item: MovedItem {
                                     amount: is.quantity(),
@@ -126,7 +126,7 @@ fn listen_for_inventory_messages(
                                 },
                                 adder: Some(client_entity),
                             });
-                            evw_remove_item.write(InventoryRemoveItemEvent {
+                            evw_remove_item.write(InventoryRemoveItemMessage {
                                 inventory_entity: b,
                                 item: MovedItem {
                                     amount: is.quantity(),
@@ -138,7 +138,7 @@ fn listen_for_inventory_messages(
                         }
                         let a_item = inventory_a.itemstack_at(slot_a as usize);
                         if let Some(is) = a_item {
-                            evw_add_item.write(InventoryAddItemEvent {
+                            evw_add_item.write(InventoryAddItemMessage {
                                 inventory_entity: b,
                                 item: MovedItem {
                                     amount: is.quantity(),
@@ -147,7 +147,7 @@ fn listen_for_inventory_messages(
                                 },
                                 adder: Some(client_entity),
                             });
-                            evw_remove_item.write(InventoryRemoveItemEvent {
+                            evw_remove_item.write(InventoryRemoveItemMessage {
                                 inventory_entity: a,
                                 item: MovedItem {
                                     amount: is.quantity(),
@@ -182,7 +182,7 @@ fn listen_for_inventory_messages(
                         if let Some(mut is) = from_inventory.remove_itemstack_at(from_slot) {
                             let (leftover, moved_to) = to_inventory.insert_itemstack(&is, &mut commands);
                             if let Some(moved_to) = moved_to {
-                                evw_add_item.write(InventoryAddItemEvent {
+                                evw_add_item.write(InventoryAddItemMessage {
                                     inventory_entity: to_ent,
                                     item: MovedItem {
                                         amount: is.quantity() - leftover,
@@ -191,7 +191,7 @@ fn listen_for_inventory_messages(
                                     },
                                     adder: Some(client_entity),
                                 });
-                                evw_remove_item.write(InventoryRemoveItemEvent {
+                                evw_remove_item.write(InventoryRemoveItemMessage {
                                     inventory_entity: from_ent,
                                     item: MovedItem {
                                         amount: is.quantity() - leftover,
@@ -240,7 +240,7 @@ fn listen_for_inventory_messages(
                             inventory_a.move_itemstack(from_slot as usize, &mut inventory_b, to_slot as usize, quantity, &mut commands)
                         {
                             let amount = qty - leftover;
-                            evw_add_item.write(InventoryAddItemEvent {
+                            evw_add_item.write(InventoryAddItemMessage {
                                 inventory_entity: to,
                                 item: MovedItem {
                                     amount,
@@ -249,7 +249,7 @@ fn listen_for_inventory_messages(
                                 },
                                 adder: Some(client_entity),
                             });
-                            evw_remove_item.write(InventoryRemoveItemEvent {
+                            evw_remove_item.write(InventoryRemoveItemMessage {
                                 inventory_entity: from,
                                 item: MovedItem {
                                     amount,
@@ -285,7 +285,7 @@ fn listen_for_inventory_messages(
                     {
                         let quantity = quantity.min(is.quantity());
 
-                        evw_remove_item.write(InventoryRemoveItemEvent {
+                        evw_remove_item.write(InventoryRemoveItemMessage {
                             inventory_entity: inv_ent,
                             item: MovedItem {
                                 amount: quantity,
@@ -336,7 +336,7 @@ fn listen_for_inventory_messages(
 
                         let leftover = inventory.insert_itemstack_at(slot, &moving_is, &mut commands);
 
-                        evw_add_item.write(InventoryAddItemEvent {
+                        evw_add_item.write(InventoryAddItemMessage {
                             inventory_entity: inv_ent,
                             item: MovedItem {
                                 amount: quantity - leftover,
@@ -371,7 +371,7 @@ fn listen_for_inventory_messages(
                         let (leftover, slot) = inventory.insert_itemstack(&held_is, &mut commands);
 
                         if let Some(slot) = slot {
-                            evw_add_item.write(InventoryAddItemEvent {
+                            evw_add_item.write(InventoryAddItemMessage {
                                 inventory_entity: inv_ent,
                                 item: MovedItem {
                                     amount: held_is.quantity() - leftover,
@@ -427,7 +427,7 @@ fn listen_for_inventory_messages(
                         let itemstack_here = inventory.remove_itemstack_at(slot);
 
                         if let Some(itemstack_here) = itemstack_here.as_ref() {
-                            evw_remove_item.write(InventoryRemoveItemEvent {
+                            evw_remove_item.write(InventoryRemoveItemMessage {
                                 inventory_entity: inv_ent,
                                 item: MovedItem {
                                     amount: itemstack_here.quantity(),
@@ -440,7 +440,7 @@ fn listen_for_inventory_messages(
 
                         let leftover = inventory.insert_itemstack_at(slot, &held_is, &mut commands);
 
-                        evw_add_item.write(InventoryAddItemEvent {
+                        evw_add_item.write(InventoryAddItemMessage {
                             inventory_entity: inv_ent,
                             item: MovedItem {
                                 amount: held_is.quantity() - leftover,
@@ -478,7 +478,7 @@ fn listen_for_inventory_messages(
                     };
                     let quantity_being_thrown = quantity.min(is.quantity());
 
-                    evw_remove_item.write(InventoryRemoveItemEvent {
+                    evw_remove_item.write(InventoryRemoveItemMessage {
                         inventory_entity: inv_ent,
                         item: MovedItem {
                             amount: quantity_being_thrown,
@@ -589,7 +589,7 @@ fn listen_for_inventory_messages(
                         let (leftover, slot) = inventory.insert_itemstack(&is, &mut commands);
 
                         if let Some(slot) = slot {
-                            evw_add_item.write(InventoryAddItemEvent {
+                            evw_add_item.write(InventoryAddItemMessage {
                                 inventory_entity: inv_ent,
                                 item: MovedItem {
                                     amount: is.quantity() - leftover,

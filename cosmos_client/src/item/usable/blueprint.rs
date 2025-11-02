@@ -12,7 +12,7 @@ use cosmos_core::{
     item::{
         Item,
         usable::{
-            UseHeldItemEvent,
+            UseHeldItemMessage,
             blueprint::{
                 BlueprintItemData, ClearBlueprint, CopyBlueprint, DownloadBlueprint, DownloadBlueprintResponse, RequestLoadBlueprint,
                 UploadBlueprint,
@@ -32,7 +32,7 @@ use crate::{
     ui::{
         OpenMenu,
         components::{
-            button::{ButtonEvent, CosmosButton},
+            button::{ButtonMessage, CosmosButton},
             window::GuiWindow,
         },
         font::DefaultFont,
@@ -44,7 +44,7 @@ struct OpenedBp(BlueprintItemData);
 
 fn on_use_blueprint(
     items: Res<Registry<Item>>,
-    mut evr_use_item: EventReader<UseHeldItemEvent>,
+    mut evr_use_item: MessageReader<UseHeldItemMessage>,
     q_player: Query<(&Inventory, &LookingAt, Has<Creative>), With<LocalPlayer>>,
     q_blueprint_data: Query<&BlueprintItemData>,
     mut commands: Commands,
@@ -277,7 +277,7 @@ fn on_use_blueprint(
     }
 }
 
-fn on_export(ev: Trigger<ButtonEvent>, mut nevw_download_bp: NettyMessageWriter<DownloadBlueprint>, q_item_data: Query<&OpenedBp>) {
+fn on_export(ev: Trigger<ButtonMessage>, mut nevw_download_bp: NettyMessageWriter<DownloadBlueprint>, q_item_data: Query<&OpenedBp>) {
     let Ok(blueprint_data) = q_item_data.get(ev.0) else {
         return;
     };
@@ -292,7 +292,7 @@ fn on_export(ev: Trigger<ButtonEvent>, mut nevw_download_bp: NettyMessageWriter<
 struct LoadTask(Task<Option<(u32, Vec<u8>)>>);
 
 fn on_load(
-    _trigger: Trigger<ButtonEvent>,
+    _trigger: Trigger<ButtonMessage>,
     q_held_item: Query<&HeldItemSlot, With<LocalPlayer>>,
     mut commands: Commands,
     loading_already: Option<Res<LoadTask>>,
@@ -355,7 +355,7 @@ fn upload_selected_blueprint(
     nevw_upload_bp.write(UploadBlueprint { blueprint, slot });
 }
 
-fn on_receive_download(mut nevr_download: EventReader<DownloadBlueprintResponse>) {
+fn on_receive_download(mut nevr_download: MessageReader<DownloadBlueprintResponse>) {
     for ev in nevr_download.read() {
         let thread_pool = AsyncComputeTaskPool::get();
 
@@ -387,7 +387,7 @@ fn on_receive_download(mut nevr_download: EventReader<DownloadBlueprintResponse>
 }
 
 fn on_clear(
-    _trigger: Trigger<ButtonEvent>,
+    _trigger: Trigger<ButtonMessage>,
     mut nevw_clear: NettyMessageWriter<ClearBlueprint>,
     q_held_item: Query<&HeldItemSlot, With<LocalPlayer>>,
 ) {
@@ -399,7 +399,7 @@ fn on_clear(
 }
 
 fn on_copy(
-    _trigger: Trigger<ButtonEvent>,
+    _trigger: Trigger<ButtonMessage>,
     mut nevw_copy: NettyMessageWriter<CopyBlueprint>,
     q_held_item: Query<&HeldItemSlot, With<LocalPlayer>>,
 ) {
@@ -411,7 +411,7 @@ fn on_copy(
 }
 
 fn load_clicked(
-    _trigger: Trigger<ButtonEvent>,
+    _trigger: Trigger<ButtonMessage>,
     mut nevw_load_bp: NettyMessageWriter<RequestLoadBlueprint>,
     q_held_item: Query<&HeldItemSlot, With<LocalPlayer>>,
 ) {

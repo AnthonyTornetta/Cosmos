@@ -8,7 +8,7 @@ use crate::settings::{Setting, SettingsRegistry, SettingsSet};
 
 #[derive(Resource, Debug, Reflect, Default, InspectorOptions)]
 #[reflect(Resource, InspectorOptions)]
-/// Eventually this will be present for every sound type in the game, but for now this only is for music
+/// Messageually this will be present for every sound type in the game, but for now this only is for music
 pub struct MasterVolume(#[inspector(min = 0.0, max = 1.0)] f64);
 
 impl MasterVolume {

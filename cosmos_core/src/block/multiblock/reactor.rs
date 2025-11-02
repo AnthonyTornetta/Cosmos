@@ -3,7 +3,7 @@
 use std::time::Duration;
 
 use bevy::{
-    prelude::{App, Component, Deref, DerefMut, Event},
+    prelude::{App, Component, Deref, DerefMut, Message},
     reflect::Reflect,
 };
 use serde::{Deserialize, Serialize};
@@ -13,7 +13,7 @@ use crate::{
     item::Item,
     netty::sync::{
         IdentifiableComponent, SyncableComponent,
-        events::netty_event::{IdentifiableEvent, NettyMessage, SyncedEventImpl},
+        events::netty_event::{IdentifiableMessage, NettyMessage, SyncedMessageImpl},
         registry::sync_registry,
         sync_component,
     },
@@ -198,19 +198,19 @@ impl Registry<ReactorPowerGenerationBlock> {
     }
 }
 
-#[derive(Event, Debug, Serialize, Deserialize, Clone)]
+#[derive(Message, Debug, Serialize, Deserialize, Clone)]
 /// Send this to the player to cause them to open a reactor
-pub struct OpenReactorEvent(pub StructureBlock);
+pub struct OpenReactorMessage(pub StructureBlock);
 
-impl IdentifiableEvent for OpenReactorEvent {
+impl IdentifiableMessage for OpenReactorMessage {
     fn unlocalized_name() -> &'static str {
         "cosmos:open_reactor"
     }
 }
 
-impl NettyMessage for OpenReactorEvent {
-    fn event_receiver() -> crate::netty::sync::events::netty_event::EventReceiver {
-        crate::netty::sync::events::netty_event::EventReceiver::Client
+impl NettyMessage for OpenReactorMessage {
+    fn event_receiver() -> crate::netty::sync::events::netty_event::MessageReceiver {
+        crate::netty::sync::events::netty_event::MessageReceiver::Client
     }
 
     #[cfg(feature = "client")]
@@ -226,7 +226,7 @@ impl NettyMessage for OpenReactorEvent {
     }
 }
 
-#[derive(Event, Debug, Serialize, Deserialize, Clone)]
+#[derive(Message, Debug, Serialize, Deserialize, Clone)]
 /// The client requests to set the state of the reactor
 pub struct ClientRequestChangeReactorStatus {
     /// The reactor they're controller toggling
@@ -235,15 +235,15 @@ pub struct ClientRequestChangeReactorStatus {
     pub active: bool,
 }
 
-impl IdentifiableEvent for ClientRequestChangeReactorStatus {
+impl IdentifiableMessage for ClientRequestChangeReactorStatus {
     fn unlocalized_name() -> &'static str {
         "cosmos:change_reactor_status"
     }
 }
 
 impl NettyMessage for ClientRequestChangeReactorStatus {
-    fn event_receiver() -> crate::netty::sync::events::netty_event::EventReceiver {
-        crate::netty::sync::events::netty_event::EventReceiver::Server
+    fn event_receiver() -> crate::netty::sync::events::netty_event::MessageReceiver {
+        crate::netty::sync::events::netty_event::MessageReceiver::Server
     }
 }
 
@@ -296,7 +296,7 @@ pub(super) fn register(app: &mut App) {
 
     sync_registry::<ReactorFuel>(app);
 
-    app.add_netty_event::<OpenReactorEvent>();
+    app.add_netty_event::<OpenReactorMessage>();
     app.add_netty_event::<ClientRequestChangeReactorStatus>();
 
     app.register_type::<Reactor>()

@@ -11,7 +11,7 @@ use bevy::{
     prelude::Entity,
 };
 
-use crate::events::block_events::{BlockDataChangedEvent, BlockDataSystemParams};
+use crate::events::block_events::{BlockDataChangedMessage, BlockDataSystemParams};
 
 use super::structure_block::StructureBlock;
 
@@ -73,7 +73,7 @@ impl<Q: QueryData> Drop for MutBlockData<'_, '_, '_, Q> {
             return;
         }
 
-        self.bs_params.borrow_mut().ev_writer.write(BlockDataChangedEvent {
+        self.bs_params.borrow_mut().ev_writer.write(BlockDataChangedMessage {
             block: self.block,
             block_data_entity: Some(self.data_entity),
         });

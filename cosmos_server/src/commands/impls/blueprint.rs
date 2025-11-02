@@ -41,7 +41,7 @@ pub(super) fn register(app: &mut App) {
             "blueprints the given structure to that file. Do not specify the file extension.",
         ),
         app,
-        |mut evr_blueprint: EventReader<CommandEvent<BlueprintCommand>>,
+        |mut evr_blueprint: MessageReader<CommandMessage<BlueprintCommand>>,
          all_blueprintable_entities: Query<(Entity, &Name, &Location), With<Blueprintable>>,
          mut commands: Commands| {
             for ev in evr_blueprint.read() {

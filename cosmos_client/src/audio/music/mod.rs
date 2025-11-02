@@ -17,7 +17,7 @@ struct PlayingBackgroundSong(Handle<AudioInstance>);
 
 #[derive(Reflect, Resource, InspectorOptions)]
 #[reflect(Resource, InspectorOptions)]
-/// Eventually this will be present for every sound type in the game, but for now this only is for music
+/// Messageually this will be present for every sound type in the game, but for now this only is for music
 pub struct MusicVolume(#[inspector(min = 0.0, max = 1.0)] f64);
 
 impl MusicVolume {
@@ -59,9 +59,9 @@ fn adjust_volume(
     instance.set_volume(volume.percent() * master_volume.multiplier(), AudioTween::default());
 }
 
-#[derive(Event)]
+#[derive(Message)]
 /// Signals that the music system should play a background song
-pub struct PlayMusicEvent {
+pub struct PlayMusicMessage {
     /// The atmosphere of the song that should be played
     pub atmosphere: MusicAtmosphere,
 }
@@ -86,7 +86,7 @@ pub(super) fn register(app: &mut App) {
         )
         .init_resource::<MusicVolume>()
         .register_type::<MusicVolume>()
-        .add_event::<PlayMusicEvent>();
+        .add_event::<PlayMusicMessage>();
 
     app.add_systems(Update, (load_volume).in_set(SettingsSet::LoadSettings));
 }

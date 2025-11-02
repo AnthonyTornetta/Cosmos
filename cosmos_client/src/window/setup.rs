@@ -62,7 +62,7 @@ fn setup_window(mut primary_query: Query<&mut Window, With<PrimaryWindow>>) {
     window.cursor_options.grab_mode = CursorGrabMode::Locked;
 }
 
-fn update_mouse_deltas(mut delta: ResMut<DeltaCursorPosition>, mut ev_mouse_motion: EventReader<MouseMotion>) {
+fn update_mouse_deltas(mut delta: ResMut<DeltaCursorPosition>, mut ev_mouse_motion: MessageReader<MouseMotion>) {
     delta.x = 0.0;
     delta.y = 0.0;
 
@@ -74,7 +74,7 @@ fn update_mouse_deltas(mut delta: ResMut<DeltaCursorPosition>, mut ev_mouse_moti
 
 fn window_focus_changed(
     mut primary_query: Query<(Entity, &mut Window), With<PrimaryWindow>>,
-    mut ev_focus: EventReader<WindowFocused>,
+    mut ev_focus: MessageReader<WindowFocused>,
     cursor_flags: Res<CursorFlags>,
 ) {
     let Ok((window_entity, mut window)) = primary_query.single_mut() else {

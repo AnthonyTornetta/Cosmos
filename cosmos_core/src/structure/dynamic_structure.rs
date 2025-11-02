@@ -13,7 +13,7 @@ use serde::{Deserialize, Serialize};
 use crate::{
     block::{Block, block_rotation::BlockRotation, blocks::AIR_BLOCK_ID},
     ecs::NeedsDespawned,
-    events::block_events::BlockChangedEvent,
+    events::block_events::BlockChangedMessage,
     registry::{Registry, identifiable::Identifiable},
 };
 
@@ -21,7 +21,7 @@ use super::{
     ChunkState,
     base_structure::BaseStructure,
     block_storage::BlockStorer,
-    chunk::{BlockInfo, CHUNK_DIMENSIONS, Chunk, ChunkUnloadEvent},
+    chunk::{BlockInfo, CHUNK_DIMENSIONS, Chunk, ChunkUnloadMessage},
     coordinates::{BlockCoordinate, ChunkBlockCoordinate, ChunkCoordinate, Coordinate, CoordinateType},
     structure_block::StructureBlock,
 };
@@ -97,7 +97,7 @@ impl DynamicStructure {
     }
 
     /// Sets the block at the given block coordinates.
-    /// Also sets its block_info. This does NOT send a [`BlockDataChangedEvent`] event!
+    /// Also sets its block_info. This does NOT send a [`BlockDataChangedMessage`] event!
     ///
     /// * `event_writer` If this is `None`, no event will be generated. A valid usecase for this being `None` is when you are initially loading/generating everything and you don't want a billion events being generated.
     pub fn set_block_and_info_at(
@@ -106,7 +106,7 @@ impl DynamicStructure {
         block: &Block,
         block_info: BlockInfo,
         blocks: &Registry<Block>,
-        event_writer: Option<&mut MessageWriter<BlockChangedEvent>>,
+        event_writer: Option<&mut MessageWriter<BlockChangedMessage>>,
     ) {
         let old_block = self.block_id_at(coords);
         let old_block_info = self.block_info_at(coords);
@@ -120,7 +120,7 @@ impl DynamicStructure {
             let Some(self_entity) = self.base_structure.self_entity else {
                 return;
             };
-            event_writer.write(BlockChangedEvent {
+            event_writer.write(BlockChangedMessage {
                 new_block: block.id(),
                 old_block,
                 block: StructureBlock::new(coords, self_entity),
@@ -139,7 +139,7 @@ impl DynamicStructure {
         block: &Block,
         block_rotation: BlockRotation,
         blocks: &Registry<Block>,
-        event_writer: Option<&mut MessageWriter<BlockChangedEvent>>,
+        event_writer: Option<&mut MessageWriter<BlockChangedMessage>>,
     ) {
         let old_block = self.block_id_at(coords);
         if blocks.from_numeric_id(old_block) == block && self.block_rotation(coords) == block_rotation {
@@ -180,7 +180,7 @@ impl DynamicStructure {
             && let Some(self_entity) = self.get_entity()
             && let Some(event_writer) = event_writer
         {
-            event_writer.write(BlockChangedEvent {
+            event_writer.write(BlockChangedMessage {
                 new_block: block.id(),
                 old_block,
                 block: StructureBlock::new(coords, self_entity),
@@ -205,7 +205,7 @@ impl DynamicStructure {
         &mut self,
         coords: BlockCoordinate,
         blocks: &Registry<Block>,
-        event_writer: Option<&mut MessageWriter<BlockChangedEvent>>,
+        event_writer: Option<&mut MessageWriter<BlockChangedMessage>>,
     ) {
         self.set_block_at(
             coords,
@@ -341,7 +341,7 @@ impl DynamicStructure {
         &mut self,
         coords: ChunkCoordinate,
         commands: &mut Commands,
-        event_writer: Option<&mut MessageWriter<ChunkUnloadEvent>>,
+        event_writer: Option<&mut MessageWriter<ChunkUnloadMessage>>,
     ) -> Option<Chunk> {
         let index = self.flatten(coords);
 
@@ -350,7 +350,7 @@ impl DynamicStructure {
 
         if let Some(entity) = self.base_structure.chunk_entities.remove(&index) {
             if let Some(event_writer) = event_writer {
-                event_writer.write(ChunkUnloadEvent {
+                event_writer.write(ChunkUnloadMessage {
                     chunk_entity: entity,
                     coords,
                     structure_entity: self.get_entity().expect("A structure should have an entity at this point"),

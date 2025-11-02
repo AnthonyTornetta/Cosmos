@@ -18,7 +18,7 @@ use cosmos_core::{
 use crate::{
     asset::{
         asset_loading::{BlockNeighbors, BlockTextureIndex},
-        materials::{AddMaterialEvent, BlockMaterialMapping, MaterialDefinition, MaterialType},
+        materials::{AddMaterialMessage, BlockMaterialMapping, MaterialDefinition, MaterialType},
     },
     rendering::{
         BlockMeshRegistry, CosmosMeshBuilder, MeshBuilder,
@@ -41,7 +41,7 @@ struct TankRenders(Vec<Entity>);
 
 fn on_render_tanks(
     q_tank_renders: Query<&TankRenders>,
-    mut ev_reader: EventReader<ChunkNeedsCustomBlocksRendered>,
+    mut ev_reader: MessageReader<ChunkNeedsCustomBlocksRendered>,
     blocks: Res<Registry<Block>>,
     mut commands: Commands,
     q_structure: Query<&Structure>,
@@ -53,7 +53,7 @@ fn on_render_tanks(
     block_mesh_registry: Res<BlockMeshRegistry>,
     materials_registry: Res<Registry<MaterialDefinition>>,
     mut meshes: ResMut<Assets<Mesh>>,
-    mut evw_add_material: MessageWriter<AddMaterialEvent>,
+    mut evw_add_material: MessageWriter<AddMaterialMessage>,
     fluid_tank_blocks: Res<Registry<FluidTankBlock>>,
 ) {
     for ev in ev_reader.read() {
@@ -275,7 +275,7 @@ fn on_render_tanks(
                 ))
                 .id();
 
-            evw_add_material.write(AddMaterialEvent {
+            evw_add_material.write(AddMaterialMessage {
                 entity,
                 add_material_id: mat_id,
                 texture_dimensions_index,

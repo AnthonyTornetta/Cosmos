@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 use cosmos_core::{
     crafting::recipes::{
         RecipeItem,
-        advanced_fabricator::{AdvancedFabricatorRecipes, SyncAdvancedFabricatorRecipesEvent},
+        advanced_fabricator::{AdvancedFabricatorRecipes, SyncAdvancedFabricatorRecipesMessage},
         basic_fabricator::{BasicFabricatorRecipe, FabricatorItemInput, FabricatorItemOutput},
     },
     item::Item,
@@ -16,7 +16,7 @@ use cosmos_core::{
 };
 use walkdir::WalkDir;
 
-use crate::netty::sync::registry::ClientFinishedReceivingRegistriesEvent;
+use crate::netty::sync::registry::ClientFinishedReceivingRegistriesMessage;
 
 use super::RawRecipeItem;
 
@@ -91,18 +91,18 @@ fn load_recipes(items: Res<Registry<Item>>, mut commands: Commands) {
 
 fn sync_recipes_on_change(
     recipes: Res<AdvancedFabricatorRecipes>,
-    mut nevw_sync_recipes: NettyMessageWriter<SyncAdvancedFabricatorRecipesEvent>,
+    mut nevw_sync_recipes: NettyMessageWriter<SyncAdvancedFabricatorRecipesMessage>,
 ) {
-    nevw_sync_recipes.broadcast(SyncAdvancedFabricatorRecipesEvent(recipes.clone()));
+    nevw_sync_recipes.broadcast(SyncAdvancedFabricatorRecipesMessage(recipes.clone()));
 }
 
 fn sync_recipes_on_join(
     recipes: Res<AdvancedFabricatorRecipes>,
-    mut evr_loaded_registries: EventReader<ClientFinishedReceivingRegistriesEvent>,
-    mut nevw_sync_recipes: NettyMessageWriter<SyncAdvancedFabricatorRecipesEvent>,
+    mut evr_loaded_registries: MessageReader<ClientFinishedReceivingRegistriesMessage>,
+    mut nevw_sync_recipes: NettyMessageWriter<SyncAdvancedFabricatorRecipesMessage>,
 ) {
     for ev in evr_loaded_registries.read() {
-        nevw_sync_recipes.write(SyncAdvancedFabricatorRecipesEvent(recipes.clone()), ev.0);
+        nevw_sync_recipes.write(SyncAdvancedFabricatorRecipesMessage(recipes.clone()), ev.0);
     }
 }
 

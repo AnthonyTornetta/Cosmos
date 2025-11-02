@@ -39,24 +39,24 @@ pub enum MaterialType {
     FarAway,
 }
 
-#[derive(Event)]
+#[derive(Message)]
 /// This event is sent when you have to remove all materials from a given entity.
 ///
 /// If you add your own material, make sure to remove it when you receive this event for your material.
 ///
 /// ### Important:
 /// Add your event listeners for this after `remove_materials` and before `add_materials`
-pub struct RemoveAllMaterialsEvent {
+pub struct RemoveAllMaterialsMessage {
     /// The entity to remove the materials from
     pub entity: Entity,
 }
 
-#[derive(Event)]
+#[derive(Message)]
 /// This event is sent whenever a specific material must be added to an entity.
 ///
 /// ### Important:
 /// Add your event listeners for this after `add_materials`.
-pub struct AddMaterialEvent {
+pub struct AddMaterialMessage {
     /// The entity to add your material to
     pub entity: Entity,
     /// The materal's id referring to the `Registry<MaterialDefinition>`.
@@ -79,12 +79,12 @@ pub struct AddMaterialEvent {
 pub enum MaterialsSystemSet {
     /// When you want materials to be dynamically added/removed, do that in this set.
     RequestMaterialChanges,
-    /// Add all event listeners for [`RemoveAllMaterialsEvent`] in this to ensure your material is removed at the right time.
-    ProcessRemoveMaterialsEvents,
+    /// Add all event listeners for [`RemoveAllMaterialsMessage`] in this to ensure your material is removed at the right time.
+    ProcessRemoveMaterialsMessages,
     /// Add materials to those entities
     ///
-    /// Add all event listeners for [`AddMaterialEvent`] to this set this to prevent any 1-frame delays
-    ProcessAddMaterialsEvents,
+    /// Add all event listeners for [`AddMaterialMessage`] to this set this to prevent any 1-frame delays
+    ProcessAddMaterialsMessages,
 }
 
 /// Generates any extra information need for meshes that use this material
@@ -109,7 +109,7 @@ pub trait MaterialMeshInformationGenerator: Send + Sync {
 #[derive(Resource, Clone)]
 /// This stores the texture atlas for all blocks/items in the game.
 ///
-/// Eventually this will be redone to allow for multiple atlases, but for now this works fine.
+/// Messageually this will be redone to allow for multiple atlases, but for now this works fine.
 pub struct MaterialDefinition {
     // /// The main material used to draw blocks
     // pub material: Handle<M>,
@@ -339,8 +339,8 @@ pub(super) fn register(app: &mut App) {
         Update,
         (
             MaterialsSystemSet::RequestMaterialChanges,
-            MaterialsSystemSet::ProcessRemoveMaterialsEvents,
-            MaterialsSystemSet::ProcessAddMaterialsEvents,
+            MaterialsSystemSet::ProcessRemoveMaterialsMessages,
+            MaterialsSystemSet::ProcessAddMaterialsMessages,
         )
             .in_set(AssetsSet::AssetsReady)
             .run_if(in_state(GameState::Playing).or(in_state(GameState::LoadingWorld)))
@@ -353,6 +353,6 @@ pub(super) fn register(app: &mut App) {
             .after(load_block_rendering_information)
             .in_set(ItemMeshingLoadingSet::LoadItemRenderingInformation),
     )
-    .add_event::<RemoveAllMaterialsEvent>()
-    .add_event::<AddMaterialEvent>();
+    .add_event::<RemoveAllMaterialsMessage>()
+    .add_event::<AddMaterialMessage>();
 }

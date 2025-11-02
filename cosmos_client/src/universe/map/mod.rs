@@ -21,7 +21,7 @@ use cosmos_core::{
     universe::{
         SectorDangerRange,
         map::system::{
-            Destination, GalaxyMap, GalaxyMapResponseEvent, RequestGalaxyMap, RequestSystemMap, SystemMap, SystemMapResponseEvent,
+            Destination, GalaxyMap, GalaxyMapResponseMessage, RequestGalaxyMap, RequestSystemMap, SystemMap, SystemMapResponseMessage,
         },
     },
     utils::ecs::DespawnWith,
@@ -691,7 +691,7 @@ fn camera_movement(
     delta: Res<DeltaCursorPosition>,
     input_handler: InputChecker,
     mut q_camera: Query<(&Transform, &mut MapCamera)>,
-    mut evr_mouse_wheel: EventReader<MouseWheel>,
+    mut evr_mouse_wheel: MessageReader<MouseWheel>,
     q_local_player: Query<&Location, With<LocalPlayer>>,
 ) {
     for (trans, mut cam) in q_camera.iter_mut() {
@@ -759,8 +759,8 @@ fn handle_map_camera(mut q_map_camera: Query<&mut Camera, With<MapCamera>>, q_ex
 }
 
 fn receive_map(
-    mut nevr_galaxy_map: EventReader<GalaxyMapResponseEvent>,
-    mut nevr_system_map: EventReader<SystemMapResponseEvent>,
+    mut nevr_galaxy_map: MessageReader<GalaxyMapResponseMessage>,
+    mut nevr_system_map: MessageReader<SystemMapResponseMessage>,
     mut q_galaxy_map: Query<&mut GalaxyMapDisplay>,
 ) {
     for ev in nevr_galaxy_map.read() {

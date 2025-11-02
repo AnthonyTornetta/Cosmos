@@ -4,13 +4,13 @@
 
 use bevy::{
     platform::collections::HashMap,
-    prelude::{App, Event},
+    prelude::{App, Message},
 };
 use serde::{Deserialize, Serialize};
 
 use crate::{
     faction::FactionRelation,
-    netty::sync::events::netty_event::{IdentifiableEvent, NettyMessage, SyncedEventImpl},
+    netty::sync::events::netty_event::{IdentifiableMessage, NettyMessage, SyncedMessageImpl},
     physics::location::{Location, Sector, SystemCoordinate},
     universe::{SectorDanger, star::Star},
 };
@@ -176,89 +176,89 @@ impl GalaxyMap {
     }
 }
 
-#[derive(Serialize, Deserialize, Event, Debug, Clone)]
+#[derive(Serialize, Deserialize, Message, Debug, Clone)]
 /// Send this event to the server to request a [`SystemMap`] be generated for the client.
 ///
-/// The server should respond with a [`SystemMapResponseEvent`]
+/// The server should respond with a [`SystemMapResponseMessage`]
 pub struct RequestSystemMap {
     /// The [`SystemCoordinate`] to generate a map for.
     pub system: SystemCoordinate,
 }
 
-impl IdentifiableEvent for RequestSystemMap {
+impl IdentifiableMessage for RequestSystemMap {
     fn unlocalized_name() -> &'static str {
         "cosmos:request_system_map"
     }
 }
 
 impl NettyMessage for RequestSystemMap {
-    fn event_receiver() -> crate::netty::sync::events::netty_event::EventReceiver {
-        crate::netty::sync::events::netty_event::EventReceiver::Server
+    fn event_receiver() -> crate::netty::sync::events::netty_event::MessageReceiver {
+        crate::netty::sync::events::netty_event::MessageReceiver::Server
     }
 }
 
-#[derive(Serialize, Deserialize, Event, Debug, Clone)]
+#[derive(Serialize, Deserialize, Message, Debug, Clone)]
 /// Send this event to the server to request a [`GalaxyMap`] be generated for the client.
 ///
-/// The server should respond with a [`GalaxyMapResponseEvent`]
+/// The server should respond with a [`GalaxyMapResponseMessage`]
 pub struct RequestGalaxyMap;
 
-impl IdentifiableEvent for RequestGalaxyMap {
+impl IdentifiableMessage for RequestGalaxyMap {
     fn unlocalized_name() -> &'static str {
         "cosmos:request_galaxy_map"
     }
 }
 
 impl NettyMessage for RequestGalaxyMap {
-    fn event_receiver() -> crate::netty::sync::events::netty_event::EventReceiver {
-        crate::netty::sync::events::netty_event::EventReceiver::Server
+    fn event_receiver() -> crate::netty::sync::events::netty_event::MessageReceiver {
+        crate::netty::sync::events::netty_event::MessageReceiver::Server
     }
 }
 
-#[derive(Serialize, Deserialize, Event, Debug, Clone)]
+#[derive(Serialize, Deserialize, Message, Debug, Clone)]
 /// Sent by the server to the client to indicate what their requested [`SystemMap`] is
-pub struct SystemMapResponseEvent {
+pub struct SystemMapResponseMessage {
     /// The system this map is for
     pub system: SystemCoordinate,
     /// The map data
     pub map: SystemMap,
 }
 
-impl IdentifiableEvent for SystemMapResponseEvent {
+impl IdentifiableMessage for SystemMapResponseMessage {
     fn unlocalized_name() -> &'static str {
         "cosmos:system_map"
     }
 }
 
-impl NettyMessage for SystemMapResponseEvent {
-    fn event_receiver() -> crate::netty::sync::events::netty_event::EventReceiver {
-        crate::netty::sync::events::netty_event::EventReceiver::Client
+impl NettyMessage for SystemMapResponseMessage {
+    fn event_receiver() -> crate::netty::sync::events::netty_event::MessageReceiver {
+        crate::netty::sync::events::netty_event::MessageReceiver::Client
     }
 }
 
-#[derive(Serialize, Deserialize, Event, Debug, Clone)]
+#[derive(Serialize, Deserialize, Message, Debug, Clone)]
 /// Sent by the server to the client to indicate what their request [`GalaxyMap`] is
-pub struct GalaxyMapResponseEvent {
+pub struct GalaxyMapResponseMessage {
     /// The map data
     pub map: GalaxyMap,
 }
 
-impl IdentifiableEvent for GalaxyMapResponseEvent {
+impl IdentifiableMessage for GalaxyMapResponseMessage {
     fn unlocalized_name() -> &'static str {
         "cosmos:galaxy_map"
     }
 }
 
-impl NettyMessage for GalaxyMapResponseEvent {
-    fn event_receiver() -> crate::netty::sync::events::netty_event::EventReceiver {
-        crate::netty::sync::events::netty_event::EventReceiver::Client
+impl NettyMessage for GalaxyMapResponseMessage {
+    fn event_receiver() -> crate::netty::sync::events::netty_event::MessageReceiver {
+        crate::netty::sync::events::netty_event::MessageReceiver::Client
     }
 }
 
 pub(super) fn register(app: &mut App) {
     app.add_netty_event::<RequestSystemMap>();
-    app.add_netty_event::<SystemMapResponseEvent>();
+    app.add_netty_event::<SystemMapResponseMessage>();
 
     app.add_netty_event::<RequestGalaxyMap>();
-    app.add_netty_event::<GalaxyMapResponseEvent>();
+    app.add_netty_event::<GalaxyMapResponseMessage>();
 }

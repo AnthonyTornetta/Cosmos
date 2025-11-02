@@ -11,7 +11,7 @@ use cosmos_core::{
     physics::location::Location,
     prelude::{DespawnWithStructure, Structure},
     state::GameState,
-    structure::systems::railgun_system::{RailgunFiredEvent, RailgunSystem},
+    structure::systems::railgun_system::{RailgunFiredMessage, RailgunSystem},
 };
 
 use crate::{
@@ -43,7 +43,7 @@ const TTL: f32 = 1.5;
 fn on_fire_railgun(
     mut commands: Commands,
     q_structure: Query<(&Location, &GlobalTransform, &Structure, &Velocity)>,
-    mut nevr_railgun_fired: EventReader<RailgunFiredEvent>,
+    mut nevr_railgun_fired: MessageReader<RailgunFiredMessage>,
     railgun_mesh: Res<RailgunRendering>,
     mut materials: ResMut<Assets<StandardMaterial>>,
     railgun_sound: Res<RailgunSound>,

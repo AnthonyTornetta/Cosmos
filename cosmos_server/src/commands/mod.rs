@@ -74,9 +74,9 @@ impl IdentifiableComponent for Operator {
 
 impl DefaultPersistentComponent for Operator {}
 
-#[derive(Event, Debug)]
+#[derive(Message, Debug)]
 /// Sends output from a command to the player entity
-pub struct SendCommandMessageEvent {
+pub struct SendCommandMessageMessage {
     to: Entity,
     message: String,
 }
@@ -94,10 +94,10 @@ impl CommandSender {
     ///
     /// Player - logged in chat and logged in server console
     /// Server - logged in server console
-    pub fn write(&self, message: impl Into<String>, evw_send_message: &mut MessageWriter<SendCommandMessageEvent>) {
+    pub fn write(&self, message: impl Into<String>, evw_send_message: &mut MessageWriter<SendCommandMessageMessage>) {
         match self {
             Self::Player(e) => {
-                evw_send_message.write(SendCommandMessageEvent {
+                evw_send_message.write(SendCommandMessageMessage {
                     message: message.into(),
                     to: *e,
                 });
@@ -109,7 +109,7 @@ impl CommandSender {
     }
 }
 
-#[derive(Debug, Event)]
+#[derive(Debug, Message)]
 /// This event is sent when the server admin types a console command
 pub struct CosmosCommandSent {
     /// The sender of this command - None if the server sent it
@@ -202,7 +202,7 @@ impl ServerCommand {
 pub(super) fn register(app: &mut App) {
     create_registry::<ServerCommand>(app, "cosmos:commands");
 
-    app.add_event::<CosmosCommandSent>().add_event::<SendCommandMessageEvent>();
+    app.add_event::<CosmosCommandSent>().add_event::<SendCommandMessageMessage>();
 
     cosmos_command_handler::register(app);
     impls::register(app);

@@ -4,7 +4,7 @@ use cosmos_core::{
     economy::Credits,
     ecs::{
         NeedsDespawned,
-        mut_events::{MutEvent, MutEventsCommand},
+        mut_events::{MutMessage, MutMessagesCommand},
     },
     inventory::Inventory,
     item::Item,
@@ -21,7 +21,7 @@ use crate::{
         OpenMenu, UiSystemSet,
         components::{
             Disabled,
-            button::{ButtonEvent, ButtonStyles, CosmosButton},
+            button::{ButtonMessage, ButtonStyles, CosmosButton},
             scollable_container::ScrollBox,
             slider::Slider,
             text_input::{InputType, TextInput},
@@ -33,10 +33,10 @@ use crate::{
     },
 };
 
-use super::{PurchasedEvent, SoldEvent};
+use super::{PurchasedMessage, SoldMessage};
 
-#[derive(Event)]
-pub(super) struct OpenShopUiEvent {
+#[derive(Message)]
+pub(super) struct OpenShopUiMessage {
     pub shop: Shop,
     pub structure_block: StructureBlock,
 }
@@ -197,7 +197,7 @@ struct SelectedItem {
     entry: ShopEntry,
 }
 
-fn open_shop_ui(mut commands: Commands, mut ev_reader: EventReader<MutEvent<OpenShopUiEvent>>, q_open_shops: Query<Entity, With<ShopUi>>) {
+fn open_shop_ui(mut commands: Commands, mut ev_reader: MessageReader<MutMessage<OpenShopUiMessage>>, q_open_shops: Query<Entity, With<ShopUi>>) {
     for ev in ev_reader.read() {
         let mut ev = ev.write();
         let shop = std::mem::take(&mut ev.shop);
@@ -735,7 +735,7 @@ struct PrevClickedEntity(Entity);
 struct ShopRenderedItem;
 
 fn click_item_event(
-    ev: Trigger<ButtonEvent>,
+    ev: Trigger<ButtonMessage>,
     q_shop_entry: Query<(&ShopEntry, &ShopUiEntity)>,
     mut q_shop: Query<(&mut ShopUi, Option<&PrevClickedEntity>)>,
     mut q_background_color: Query<&mut BackgroundColor>,
@@ -981,7 +981,7 @@ fn enable_buy_button(
     mut commands: Commands,
     mut q_shop_ui: Query<&mut ShopUi>,
     q_buy_button: Query<(Entity, &BuyOrSellButton), With<CosmosButton>>,
-    mut ev_reader: EventReader<PurchasedEvent>,
+    mut ev_reader: MessageReader<PurchasedMessage>,
 ) {
     for ev in ev_reader.read() {
         for (entity, buy_button) in q_buy_button.iter() {
@@ -1010,7 +1010,7 @@ fn enable_sell_button(
     mut commands: Commands,
     mut q_shop_ui: Query<&mut ShopUi>,
     q_buy_button: Query<(Entity, &BuyOrSellButton), With<CosmosButton>>,
-    mut ev_reader: EventReader<SoldEvent>,
+    mut ev_reader: MessageReader<SoldMessage>,
 ) {
     for ev in ev_reader.read() {
         for (entity, buy_button) in q_buy_button.iter() {
@@ -1036,7 +1036,7 @@ fn enable_sell_button(
 }
 
 fn on_buy(
-    ev: Trigger<ButtonEvent>,
+    ev: Trigger<ButtonMessage>,
     mut commands: Commands,
     mut client: ResMut<RenetClient>,
     q_shop_ui: Query<(&ShopUi, &AmountSelected)>,
@@ -1092,7 +1092,7 @@ fn on_buy(
     }
 }
 
-fn click_buy_tab(ev: Trigger<ButtonEvent>, mut q_shop_mode: Query<&mut ShopMode>, q_shop_ui_entity: Query<&ShopUiEntity>) {
+fn click_buy_tab(ev: Trigger<ButtonMessage>, mut q_shop_mode: Query<&mut ShopMode>, q_shop_ui_entity: Query<&ShopUiEntity>) {
     let Ok(shop_ui_ent) = q_shop_ui_entity.get(ev.0) else {
         return;
     };
@@ -1106,7 +1106,7 @@ fn click_buy_tab(ev: Trigger<ButtonEvent>, mut q_shop_mode: Query<&mut ShopMode>
     }
 }
 
-fn click_sell_tab(ev: Trigger<ButtonEvent>, mut q_shop_mode: Query<&mut ShopMode>, q_shop_ui_entity: Query<&ShopUiEntity>) {
+fn click_sell_tab(ev: Trigger<ButtonMessage>, mut q_shop_mode: Query<&mut ShopMode>, q_shop_ui_entity: Query<&ShopUiEntity>) {
     let Ok(shop_ui_ent) = q_shop_ui_entity.get(ev.0) else {
         return;
     };
@@ -1221,7 +1221,7 @@ pub(super) fn register(app: &mut App) {
             .run_if(in_state(GameState::Playing)),
     );
 
-    app.add_mut_event::<OpenShopUiEvent>()
+    app.add_mut_event::<OpenShopUiMessage>()
         .add_systems(
             Update,
             (

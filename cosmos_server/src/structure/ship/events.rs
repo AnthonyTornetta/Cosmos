@@ -1,11 +1,11 @@
-//! Events for the ship
+//! Messages for the ship
 
 use bevy::prelude::*;
 use bevy_rapier3d::dynamics::Velocity;
 use bevy_renet::renet::RenetServer;
 use cosmos_core::{
-    block::block_events::BlockEventsSet,
-    events::structure::change_pilot_event::ChangePilotEvent,
+    block::block_events::BlockMessagesSet,
+    events::structure::change_pilot_event::ChangePilotMessage,
     netty::{
         NettyChannelServer, cosmos_encoder, server_reliable_messages::ServerReliableMessages,
         server_unreliable_messages::ServerUnreliableMessages, system_sets::NetworkingSystemsSet,
@@ -23,9 +23,9 @@ use crate::ai::AiControlled;
 
 use super::loading::ShipNeedsCreated;
 
-#[derive(Debug, Event)]
+#[derive(Debug, Message)]
 /// This event is sent when the ship's movement is set
-pub struct ShipSetMovementEvent {
+pub struct ShipSetMovementMessage {
     /// The entity for the ship
     pub ship: Entity,
     /// The ship's new movement
@@ -34,7 +34,7 @@ pub struct ShipSetMovementEvent {
 
 fn monitor_set_movement_events(
     mut query: Query<&mut ShipMovement, Without<AiControlled>>, // don't sync AI controlled movements to not give players that knowledge
-    mut event_reader: EventReader<ShipSetMovementEvent>,
+    mut event_reader: MessageReader<ShipSetMovementMessage>,
     mut server: ResMut<RenetServer>,
 ) {
     for ev in event_reader.read() {
@@ -52,7 +52,7 @@ fn monitor_set_movement_events(
     }
 }
 
-fn monitor_pilot_changes(mut event_reader: EventReader<ChangePilotEvent>, mut server: ResMut<RenetServer>) {
+fn monitor_pilot_changes(mut event_reader: MessageReader<ChangePilotMessage>, mut server: ResMut<RenetServer>) {
     for ev in event_reader.read() {
         server.broadcast_message(
             NettyChannelServer::Reliable,
@@ -65,8 +65,8 @@ fn monitor_pilot_changes(mut event_reader: EventReader<ChangePilotEvent>, mut se
 }
 
 /// This event is done when a ship is being created
-#[derive(Debug, Event)]
-pub struct CreateShipEvent {
+#[derive(Debug, Message)]
+pub struct CreateShipMessage {
     /// The entity (likely a player) that created this ship.
     pub creator: Entity,
     /// Starting location of the ship
@@ -75,7 +75,7 @@ pub struct CreateShipEvent {
     pub rotation: Quat,
 }
 
-pub(crate) fn create_ship_event_reader(mut event_reader: EventReader<CreateShipEvent>, mut commands: Commands) {
+pub(crate) fn create_ship_event_reader(mut event_reader: MessageReader<CreateShipMessage>, mut commands: Commands) {
     for ev in event_reader.read() {
         info!("Creating ship!!");
 
@@ -95,17 +95,17 @@ pub(crate) fn create_ship_event_reader(mut event_reader: EventReader<CreateShipE
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_event::<ShipSetMovementEvent>().add_systems(
+    app.add_event::<ShipSetMovementMessage>().add_systems(
         FixedUpdate,
         (monitor_pilot_changes, monitor_set_movement_events)
-            .after(BlockEventsSet::PostProcessEvents)
+            .after(BlockMessagesSet::PostProcessMessages)
             .in_set(StructureTypeSet::Ship)
             // TODO: this in_set makes no sense - check this
             .in_set(NetworkingSystemsSet::SyncComponents)
             .run_if(in_state(GameState::Playing)),
     );
 
-    app.add_event::<CreateShipEvent>().add_systems(
+    app.add_event::<CreateShipMessage>().add_systems(
         FixedUpdate,
         create_ship_event_reader
             .in_set(StructureLoadingSet::LoadStructure)

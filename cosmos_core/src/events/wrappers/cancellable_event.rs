@@ -4,24 +4,24 @@
 //     platform::collections::HashSet,
 // };
 
-// pub struct CancellableEvent<T> {
+// pub struct CancellableMessage<T> {
 //     pub event: T,
 //     id: u64,
 // }
 
-// impl<T> CancellableEvent<T> {
-//     pub fn new(event: T, event_manager: &mut CancellableEventManager) -> Self {
+// impl<T> CancellableMessage<T> {
+//     pub fn new(event: T, event_manager: &mut CancellableMessageManager) -> Self {
 //         Self {
 //             event,
 //             id: event_manager.new_event_entry(),
 //         }
 //     }
 
-//     pub fn cancel(&self, event_manager: &mut CancellableEventManager) {
+//     pub fn cancel(&self, event_manager: &mut CancellableMessageManager) {
 //         event_manager.cancel_event(self.id);
 //     }
 
-//     pub fn is_active(&self, event_manager: &mut CancellableEventManager) -> bool {
+//     pub fn is_active(&self, event_manager: &mut CancellableMessageManager) -> bool {
 //         event_manager.is_event_active(self.id)
 //     }
 
@@ -29,12 +29,12 @@
 // }
 
 // #[derive(Resource, Reflect, FromReflect, Debug, Default)]
-// pub struct CancellableEventManager {
+// pub struct CancellableMessageManager {
 //     active_events: HashSet<u64>,
 //     next_id: u64,
 // }
 
-// impl CancellableEventManager {
+// impl CancellableMessageManager {
 //     fn new_event_entry(&mut self) -> u64 {
 //         self.next_id += 1;
 

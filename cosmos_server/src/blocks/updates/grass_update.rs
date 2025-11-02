@@ -1,9 +1,9 @@
 use bevy::prelude::*;
 
 use cosmos_core::{
-    block::{Block, block_events::BlockEventsSet, block_update::BlockUpdate},
-    ecs::mut_events::MutEvent,
-    events::block_events::BlockChangedEvent,
+    block::{Block, block_events::BlockMessagesSet, block_update::BlockUpdate},
+    ecs::mut_events::MutMessage,
+    events::block_events::BlockChangedMessage,
     registry::{Registry, identifiable::Identifiable},
     state::GameState,
     structure::{Structure, coordinates::BlockCoordinate},
@@ -12,8 +12,8 @@ use cosmos_core::{
 fn monitor_grass_updated(
     mut structure_query: Query<&mut Structure>,
     blocks: Res<Registry<Block>>,
-    mut event_reader: EventReader<MutEvent<BlockUpdate>>,
-    mut event_writer: MessageWriter<BlockChangedEvent>,
+    mut event_reader: MessageReader<MutMessage<BlockUpdate>>,
+    mut event_writer: MessageWriter<BlockChangedMessage>,
 ) {
     for ev in event_reader.read() {
         let ev = ev.read();
@@ -48,8 +48,8 @@ pub(super) fn register(app: &mut App) {
     app.add_systems(
         FixedUpdate,
         monitor_grass_updated
-            .in_set(BlockEventsSet::SendEventsForNextFrame)
-            .ambiguous_with(BlockEventsSet::SendEventsForNextFrame) // Order of blocks being updated doesn't matter
+            .in_set(BlockMessagesSet::SendMessagesForNextFrame)
+            .ambiguous_with(BlockMessagesSet::SendMessagesForNextFrame) // Order of blocks being updated doesn't matter
             .run_if(in_state(GameState::Playing)),
     );
 }

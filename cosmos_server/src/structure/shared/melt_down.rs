@@ -3,7 +3,7 @@
 use bevy::prelude::*;
 use cosmos_core::{
     block::Block,
-    events::block_events::BlockChangedEvent,
+    events::block_events::BlockChangedMessage,
     registry::{Registry, identifiable::Identifiable},
     state::GameState,
     structure::shared::MeltingDown,
@@ -13,7 +13,7 @@ use crate::persistence::make_persistent::{DefaultPersistentComponent, make_persi
 
 use super::MeltingDownSet;
 
-fn monitor_block_events(mut commands: Commands, blocks: Res<Registry<Block>>, mut event_reader: EventReader<BlockChangedEvent>) {
+fn monitor_block_events(mut commands: Commands, blocks: Res<Registry<Block>>, mut event_reader: MessageReader<BlockChangedMessage>) {
     for ev in event_reader.read() {
         let block = blocks.from_numeric_id(ev.old_block);
 

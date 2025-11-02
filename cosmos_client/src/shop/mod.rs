@@ -2,7 +2,7 @@
 
 use bevy::{
     app::App,
-    ecs::{entity::Entity, event::Event},
+    ecs::{entity::Entity, event::Message},
 };
 use cosmos_core::{
     shop::{
@@ -15,11 +15,11 @@ use cosmos_core::{
 mod netty;
 mod ui;
 
-#[derive(Event, Debug)]
+#[derive(Message, Debug)]
 /// Sent whenever an item is purchased from the shop.
 ///
 /// The purchase may have been unsuccessful, so make sure to check the details field.
-pub struct PurchasedEvent {
+pub struct PurchasedMessage {
     /// The structure that holds the shop
     pub structure_entity: Entity,
     /// The shop's block's coordinates.
@@ -28,11 +28,11 @@ pub struct PurchasedEvent {
     pub details: Result<Shop, ShopPurchaseError>,
 }
 
-#[derive(Event, Debug)]
+#[derive(Message, Debug)]
 /// Sent whenever an item is sold to the shop.
 ///
 /// The selling may have been unsuccessful, so make sure to check the details field.
-pub struct SoldEvent {
+pub struct SoldMessage {
     /// The structure that holds the shop
     pub structure_entity: Entity,
     /// The shop's block's coordinates.
@@ -45,5 +45,5 @@ pub(super) fn register(app: &mut App) {
     ui::register(app);
     netty::register(app);
 
-    app.add_event::<PurchasedEvent>().add_event::<SoldEvent>();
+    app.add_event::<PurchasedMessage>().add_event::<SoldMessage>();
 }

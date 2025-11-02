@@ -7,7 +7,7 @@ use crate::{
     ecs::name,
     netty::sync::{
         IdentifiableComponent, SyncableComponent,
-        events::netty_event::{IdentifiableEvent, NettyMessage, SyncedEventImpl},
+        events::netty_event::{IdentifiableMessage, NettyMessage, SyncedMessageImpl},
         sync_component,
     },
     prelude::BlockCoordinate,
@@ -181,24 +181,24 @@ impl WarpDriveSystem {
     }
 }
 
-#[derive(Event, Clone, Copy, Serialize, Deserialize, Debug)]
+#[derive(Message, Clone, Copy, Serialize, Deserialize, Debug)]
 /// Sent when a warp drive has its warp sequence cancelled
 ///
 /// Server -> Client
-pub struct WarpCancelledEvent {
+pub struct WarpCancelledMessage {
     /// The structure that had its warp sequence cancelled
     pub structure_entity: Entity,
 }
 
-impl IdentifiableEvent for WarpCancelledEvent {
+impl IdentifiableMessage for WarpCancelledMessage {
     fn unlocalized_name() -> &'static str {
         "cosmos:warp_cancelled"
     }
 }
 
-impl NettyMessage for WarpCancelledEvent {
-    fn event_receiver() -> crate::netty::sync::events::netty_event::EventReceiver {
-        crate::netty::sync::events::netty_event::EventReceiver::Client
+impl NettyMessage for WarpCancelledMessage {
+    fn event_receiver() -> crate::netty::sync::events::netty_event::MessageReceiver {
+        crate::netty::sync::events::netty_event::MessageReceiver::Client
     }
 
     #[cfg(feature = "client")]
@@ -220,5 +220,5 @@ pub(super) fn register(app: &mut App) {
     app.register_type::<WarpDriveSystem>()
         .register_type::<WarpDriveInitiating>()
         .add_systems(Update, name::<WarpDriveSystem>("Warp Drive System"))
-        .add_netty_event::<WarpCancelledEvent>();
+        .add_netty_event::<WarpCancelledMessage>();
 }

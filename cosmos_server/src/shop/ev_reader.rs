@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 use bevy_renet::renet::{ClientId, RenetServer};
 use cosmos_core::{
-    block::{Block, block_events::BlockInteractEvent},
+    block::{Block, block_events::BlockInteractMessage},
     economy::Credits,
     entities::player::Player,
     inventory::{
@@ -34,7 +34,7 @@ fn on_interact_with_shop(
     q_structure: Query<&Structure>,
     q_player: Query<&Player>,
     blocks: Res<Registry<Block>>,
-    mut ev_reader: EventReader<BlockInteractEvent>,
+    mut ev_reader: MessageReader<BlockInteractMessage>,
     default_shop_entries: Res<DefaultShopEntries>,
 ) {
     for ev in ev_reader.read() {
@@ -68,8 +68,8 @@ fn on_interact_with_shop(
     }
 }
 
-#[derive(Event)]
-struct BuyEvent {
+#[derive(Message)]
+struct BuyMessage {
     client_id: ClientId,
     shop_block: BlockCoordinate,
     structure_entity: Entity,
@@ -77,8 +77,8 @@ struct BuyEvent {
     quantity: u32,
 }
 
-#[derive(Event)]
-struct SellEvent {
+#[derive(Message)]
+struct SellMessage {
     client_id: ClientId,
     shop_block: BlockCoordinate,
     structure_entity: Entity,
@@ -104,7 +104,7 @@ fn get_shop(
 
 fn listen_sell_events(
     mut server: ResMut<RenetServer>,
-    mut ev_reader: EventReader<SellEvent>,
+    mut ev_reader: MessageReader<SellMessage>,
     q_structure: Query<&Structure>,
     mut q_shop_data: Query<&mut Shop>,
     lobby: Res<ServerLobby>,
@@ -113,7 +113,7 @@ fn listen_sell_events(
     default_shop_entries: Res<DefaultShopEntries>,
     mut commands: Commands,
 ) {
-    for &SellEvent {
+    for &SellMessage {
         client_id,
         shop_block,
         structure_entity,
@@ -177,7 +177,7 @@ fn listen_sell_events(
 
 fn listen_buy_events(
     mut server: ResMut<RenetServer>,
-    mut ev_reader: EventReader<BuyEvent>,
+    mut ev_reader: MessageReader<BuyMessage>,
     q_structure: Query<&Structure>,
     mut q_shop_data: Query<&mut Shop>,
     lobby: Res<ServerLobby>,
@@ -187,7 +187,7 @@ fn listen_buy_events(
     mut commands: Commands,
     has_data: Res<ItemShouldHaveData>,
 ) {
-    for &BuyEvent {
+    for &BuyMessage {
         client_id,
         shop_block,
         structure_entity,
@@ -261,8 +261,8 @@ fn listen_buy_events(
 }
 
 fn listen_client_shop_messages(
-    mut ev_writer_buy: MessageWriter<BuyEvent>,
-    mut ev_writer_sell: MessageWriter<SellEvent>,
+    mut ev_writer_buy: MessageWriter<BuyMessage>,
+    mut ev_writer_sell: MessageWriter<SellMessage>,
     mut server: ResMut<RenetServer>,
 ) {
     for client_id in server.clients_id() {
@@ -279,7 +279,7 @@ fn listen_client_shop_messages(
                     item_id,
                     quantity,
                 } => {
-                    ev_writer_buy.write(BuyEvent {
+                    ev_writer_buy.write(BuyMessage {
                         client_id,
                         item_id,
                         quantity,
@@ -293,7 +293,7 @@ fn listen_client_shop_messages(
                     item_id,
                     quantity,
                 } => {
-                    ev_writer_sell.write(SellEvent {
+                    ev_writer_sell.write(SellMessage {
                         client_id,
                         item_id,
                         quantity,
@@ -320,6 +320,6 @@ pub(super) fn register(app: &mut App) {
             .after(NetworkingSystemsSet::ProcessReceivedMessages)
             .before(ItemStackSystemSet::CreateDataEntity),
     )
-    .add_event::<BuyEvent>()
-    .add_event::<SellEvent>();
+    .add_event::<BuyMessage>()
+    .add_event::<SellMessage>();
 }

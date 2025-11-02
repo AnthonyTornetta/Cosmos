@@ -9,7 +9,7 @@ use cosmos_core::{
     block::{
         Block,
         block_direction::ALL_BLOCK_DIRECTIONS,
-        block_events::{BlockEventsSet, BlockInteractEvent},
+        block_events::{BlockMessagesSet, BlockInteractMessage},
         blocks::AIR_BLOCK_ID,
         data::BlockData,
         multiblock::prelude::*,
@@ -18,8 +18,8 @@ use cosmos_core::{
     ecs::{NeedsDespawned, sets::FixedUpdateSet},
     entities::player::Player,
     events::{
-        block_events::{BlockChangedEvent, BlockDataSystemParams},
-        structure::structure_event::StructureEventIterator,
+        block_events::{BlockChangedMessage, BlockDataSystemParams},
+        structure::structure_event::StructureMessageIterator,
     },
     inventory::Inventory,
     item::{Item, usable::blueprint::BlueprintItemData},
@@ -43,7 +43,7 @@ use crate::{
 };
 
 fn on_place_blocks_impacting_shipyard(
-    mut evr_block_changed_event: EventReader<BlockChangedEvent>,
+    mut evr_block_changed_event: MessageReader<BlockChangedMessage>,
     // blocks: Res<Registry<Block>>,
     mut q_shipyards: Query<(&Shipyards, &mut Structure)>,
     q_shipyard: Query<(&Shipyard, Entity)>,
@@ -162,7 +162,7 @@ fn compute_shipyard(structure: &Structure, controller: BlockCoordinate, frame_id
 fn interact_with_shipyard(
     mut q_structure: Query<&mut Structure>,
     q_shipyard: Query<&Shipyard>,
-    mut evr_interact: EventReader<BlockInteractEvent>,
+    mut evr_interact: MessageReader<BlockInteractMessage>,
     blocks: Res<Registry<Block>>,
     mut bs_params: BlockDataSystemParams,
     mut q_block_data: Query<&mut BlockData>,
@@ -242,7 +242,7 @@ fn on_set_blueprint(
     players: Res<ServerLobby>,
     items: Res<Registry<Item>>,
     blocks: Res<Registry<Block>>,
-    mut nevr_set_shipyard_blueprint: EventReader<NettyMessageReceived<SetShipyardBlueprint>>,
+    mut nevr_set_shipyard_blueprint: MessageReader<NettyMessageReceived<SetShipyardBlueprint>>,
     mut q_structure: Query<(&GlobalTransform, &mut Structure, &RapierContextEntityLink)>,
     mut q_block_data: Query<&mut BlockData>,
     q_has_shipyard_data: Query<(), With<ShipyardState>>,
@@ -460,7 +460,7 @@ fn manage_shipyards(
     mut q_structure: Query<&mut Structure, (With<Ship>, With<StructureBeingBuilt>)>,
     q_building: Query<&Structure, Without<StructureBeingBuilt>>,
     blocks: Res<Registry<Block>>,
-    mut evw_block_change: MessageWriter<BlockChangedEvent>,
+    mut evw_block_change: MessageWriter<BlockChangedMessage>,
     bs_params: BlockDataSystemParams,
     items: Res<Registry<Item>>,
     block_items: Res<BlockItems>,
@@ -580,7 +580,7 @@ fn add_shipyard_state_hooks(world: &mut World) {
 }
 
 fn on_change_shipyard_state(
-    mut nevr_change_shipyard_state: EventReader<NettyMessageReceived<ClientSetShipyardState>>,
+    mut nevr_change_shipyard_state: MessageReader<NettyMessageReceived<ClientSetShipyardState>>,
     mut q_structure: Query<&mut Structure>,
     mut q_shipyard_state: Query<&mut ShipyardState>,
     bs_params: BlockDataSystemParams,
@@ -674,7 +674,7 @@ pub(super) fn register(app: &mut App) {
             create_client_friendly_state,
         )
             .chain()
-            .in_set(BlockEventsSet::ProcessEvents)
+            .in_set(BlockMessagesSet::ProcessMessages)
             .before(FixedUpdateSet::PrePhysics),
     )
     .add_systems(

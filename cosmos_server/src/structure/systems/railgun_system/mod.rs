@@ -7,11 +7,11 @@ use bevy_rapier3d::{
     prelude::QueryFilter,
 };
 use cosmos_core::{
-    block::{Block, block_events::BlockEventsSet, block_face::BlockFace, data::BlockData},
+    block::{Block, block_events::BlockMessagesSet, block_face::BlockFace, data::BlockData},
     entities::player::Player,
     events::{
-        block_events::{BlockChangedEvent, BlockDataSystemParams},
-        structure::structure_event::StructureEventIterator,
+        block_events::{BlockChangedMessage, BlockDataSystemParams},
+        structure::structure_event::StructureMessageIterator,
     },
     netty::{sync::events::server_event::NettyMessageWriter, system_sets::NetworkingSystemsSet},
     physics::location::{Location, LocationPhysicsSet, SECTOR_DIMENSIONS},
@@ -20,15 +20,15 @@ use cosmos_core::{
     state::GameState,
     structure::{
         Structure,
-        block_health::events::{BlockDestroyedEvent, BlockTakeDamageEvent},
+        block_health::events::{BlockDestroyedMessage, BlockTakeDamageMessage},
         chunk::ChunkEntity,
         coordinates::{BlockCoordinate, UnboundCoordinateType},
-        events::StructureLoadedEvent,
+        events::StructureLoadedMessage,
         shields::Shield,
         systems::{
             StructureSystemImpl, StructureSystemOrdering, StructureSystemType, StructureSystems, StructureSystemsSet, SystemActive,
             energy_storage_system::EnergyStorageSystem,
-            railgun_system::{InvalidRailgunReason, RailgunBlock, RailgunFiredEvent, RailgunFiredInfo, RailgunSystem, RailgunSystemEntry},
+            railgun_system::{InvalidRailgunReason, RailgunBlock, RailgunFiredMessage, RailgunFiredInfo, RailgunSystem, RailgunSystemEntry},
         },
     },
     utils::ecs::MutOrMutRef,
@@ -36,7 +36,7 @@ use cosmos_core::{
 
 use crate::persistence::make_persistent::{DefaultPersistentComponent, make_persistent};
 
-use super::{shield_system::ShieldHitEvent, sync::register_structure_system};
+use super::{shield_system::ShieldHitMessage, sync::register_structure_system};
 
 fn compute_railguns(
     structure: &Structure,
@@ -211,7 +211,7 @@ fn compute_railguns(
 }
 
 fn block_update_system(
-    mut evr_block_changed: EventReader<BlockChangedEvent>,
+    mut evr_block_changed: MessageReader<BlockChangedMessage>,
     blocks: Res<Registry<Block>>,
     mut system_query: Query<&mut RailgunSystem>,
     q_structure: Query<&Structure>,
@@ -273,7 +273,7 @@ fn block_update_system(
 }
 
 fn structure_loaded_event(
-    mut event_reader: EventReader<StructureLoadedEvent>,
+    mut event_reader: MessageReader<StructureLoadedMessage>,
     mut structure_query: Query<(&Structure, &mut StructureSystems)>,
     blocks: Res<Registry<Block>>,
     mut commands: Commands,
@@ -323,12 +323,12 @@ fn on_active(
     q_parent: Query<&ChildOf>,
     q_chunk_entity: Query<&ChunkEntity>,
     mut q_shield: Query<(Entity, &mut Shield, &GlobalTransform, &ChildOf, &RapierContextEntityLink)>,
-    mut evw_take_damage: MessageWriter<BlockTakeDamageEvent>,
-    mut evw_block_destroyed: MessageWriter<BlockDestroyedEvent>,
+    mut evw_take_damage: MessageWriter<BlockTakeDamageMessage>,
+    mut evw_block_destroyed: MessageWriter<BlockDestroyedMessage>,
     q_players: Query<(&Player, &Location)>,
     q_locs: Query<&Location>,
-    mut nevw_railgun_fired: NettyMessageWriter<RailgunFiredEvent>,
-    mut evw_shield_hit_event: MessageWriter<ShieldHitEvent>,
+    mut nevw_railgun_fired: NettyMessageWriter<RailgunFiredMessage>,
+    mut evw_shield_hit_event: MessageWriter<ShieldHitMessage>,
     mut q_railgun_data: Query<&mut RailgunBlock>,
     bs_params: BlockDataSystemParams,
 ) {
@@ -447,7 +447,7 @@ fn on_active(
                     let remaining_strength = shield.strength() - strength;
                     shield.take_damage(strength);
 
-                    evw_shield_hit_event.write(ShieldHitEvent {
+                    evw_shield_hit_event.write(ShieldHitMessage {
                         shield_entity: *shield_entity,
                         relative_position: shield_g_trans.rotation().inverse() * (abs_hit - shield_g_trans.translation()),
                     });
@@ -495,7 +495,7 @@ fn on_active(
         }
 
         nevw_railgun_fired.write_to_many(
-            RailgunFiredEvent {
+            RailgunFiredMessage {
                 railguns: fired,
                 structure: ss.structure_entity(),
             },
@@ -563,7 +563,7 @@ pub(super) fn register(app: &mut App) {
                 .in_set(StructureSystemsSet::InitSystems)
                 .ambiguous_with(StructureSystemsSet::InitSystems),
             block_update_system
-                .in_set(BlockEventsSet::ProcessEvents)
+                .in_set(BlockMessagesSet::ProcessMessages)
                 .in_set(StructureSystemsSet::UpdateSystemsBlocks),
             (charge_and_cool_railguns, on_active)
                 .chain()

@@ -8,14 +8,14 @@ use cosmos_core::{
     state::GameState,
 };
 
-use crate::asset::materials::{AddMaterialEvent, MaterialType, MaterialsSystemSet, RemoveAllMaterialsEvent};
+use crate::asset::materials::{AddMaterialMessage, MaterialType, MaterialsSystemSet, RemoveAllMaterialsMessage};
 
 use super::item_mesh::ItemMeshMaterial;
 
 fn render_physical_item(
     mut commands: Commands,
-    mut evw_add_material: MessageWriter<AddMaterialEvent>,
-    mut evw_remove_material: MessageWriter<RemoveAllMaterialsEvent>,
+    mut evw_add_material: MessageWriter<AddMaterialMessage>,
+    mut evw_remove_material: MessageWriter<RemoveAllMaterialsMessage>,
     items: Res<Registry<Item>>,
     item_rendering_info: Res<Registry<ItemMeshMaterial>>,
     mut q_physical_item: Query<
@@ -41,8 +41,8 @@ fn render_physical_item(
         trans.scale = Vec3::splat(0.2);
 
         ecmds.insert((Visibility::default(), Mesh3d(rendering_info.mesh_handle().clone_weak())));
-        evw_remove_material.write(RemoveAllMaterialsEvent { entity: ent });
-        evw_add_material.write(AddMaterialEvent {
+        evw_remove_material.write(RemoveAllMaterialsMessage { entity: ent });
+        evw_add_material.write(AddMaterialMessage {
             entity: ent,
             add_material_id: rendering_info.material_id(),
             material_type: MaterialType::Normal,

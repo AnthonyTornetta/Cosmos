@@ -16,7 +16,7 @@ use cosmos_core::{
 
 use crate::structure::{
     shields::ShieldRender,
-    systems::{laser_cannon_system::LaserCannonSystemFiredEvent, missile_launcher_system::MissileLauncherSystemFiredEvent},
+    systems::{laser_cannon_system::LaserCannonSystemFiredMessage, missile_launcher_system::MissileLauncherSystemFiredMessage},
 };
 
 #[derive(Resource)]
@@ -37,8 +37,8 @@ fn lasers_netty(
     time: Res<Time>,
     network_mapping: Res<NetworkMapping>,
     laser_mesh: Res<LaserMesh>,
-    mut ev_writer_laser_cannon_fired: MessageWriter<LaserCannonSystemFiredEvent>,
-    mut ev_writer_missile_launcher_fired: MessageWriter<MissileLauncherSystemFiredEvent>,
+    mut ev_writer_laser_cannon_fired: MessageWriter<LaserCannonSystemFiredMessage>,
+    mut ev_writer_missile_launcher_fired: MessageWriter<MissileLauncherSystemFiredMessage>,
     mut q_shield_render: Query<&mut ShieldRender>,
     q_default_world: Query<Entity, With<RapierContextSimulation>>,
     mut laser_materials: ResMut<LaserMaterials>,
@@ -110,14 +110,14 @@ fn lasers_netty(
                     continue;
                 };
 
-                ev_writer_laser_cannon_fired.write(LaserCannonSystemFiredEvent(ship_entity));
+                ev_writer_laser_cannon_fired.write(LaserCannonSystemFiredMessage(ship_entity));
             }
             ServerStructureSystemMessages::MissileLauncherSystemFired { ship_entity } => {
                 let Some(ship_entity) = network_mapping.client_from_server(&ship_entity) else {
                     continue;
                 };
 
-                ev_writer_missile_launcher_fired.write(MissileLauncherSystemFiredEvent(ship_entity));
+                ev_writer_missile_launcher_fired.write(MissileLauncherSystemFiredMessage(ship_entity));
             }
             ServerStructureSystemMessages::ShieldHit {
                 shield_entity,

@@ -4,14 +4,14 @@ use std::sync::{Arc, RwLock, RwLockReadGuard, RwLockWriteGuard};
 
 use bevy::{
     ecs::event::MessageWriter,
-    prelude::{App, Event},
+    prelude::{App, Message},
 };
 
-#[derive(Event)]
-/// Same as a bevy Event, but you can read & write to it
-pub struct MutEvent<E: Event + Send + Sync + 'static>(Arc<RwLock<E>>);
+#[derive(Message)]
+/// Same as a bevy Message, but you can read & write to it
+pub struct MutMessage<E: Message + Send + Sync + 'static>(Arc<RwLock<E>>);
 
-impl<E: Event> MutEvent<E> {
+impl<E: Message> MutMessage<E> {
     /// Reads the contents of this event
     pub fn read(&self) -> RwLockReadGuard<E> {
         self.0.read().unwrap()
@@ -23,14 +23,14 @@ impl<E: Event> MutEvent<E> {
     }
 }
 
-impl<E: Event> From<E> for MutEvent<E> {
+impl<E: Message> From<E> for MutMessage<E> {
     fn from(value: E) -> Self {
         Self(Arc::new(RwLock::new(value)))
     }
 }
 
 /// Custom send function for bevy `MessageWriter`s that will automatically call `into` for you.
-pub trait MessageWriterCustomSend<E: Event> {
+pub trait MessageWriterCustomSend<E: Message> {
     /// Custom send function for bevy `MessageWriter`s that will automatically call `into` for you.
     ///
     /// ```rs
@@ -38,26 +38,26 @@ pub trait MessageWriterCustomSend<E: Event> {
     /// // is the same as
     /// event_writer.write(e.into());
     /// // is the same as
-    /// event_writer.write(MutEvent::from(e));
+    /// event_writer.write(MutMessage::from(e));
     /// ```
-    fn send_mut(&mut self, e: impl Into<MutEvent<E>>);
+    fn send_mut(&mut self, e: impl Into<MutMessage<E>>);
 }
 
-impl<E: Event + Send + Sync + 'static> MessageWriterCustomSend<E> for MessageWriter<'_, MutEvent<E>> {
-    fn send_mut(&mut self, e: impl Into<MutEvent<E>>) {
+impl<E: Message + Send + Sync + 'static> MessageWriterCustomSend<E> for MessageWriter<'_, MutMessage<E>> {
+    fn send_mut(&mut self, e: impl Into<MutMessage<E>>) {
         self.write(e.into());
     }
 }
 
-/// Adds a mutable event that can be used via an EventReader & Writer
+/// Adds a mutable event that can be used via an MessageReader & Writer
 ///
-/// Add your own mutable event via `App::add_mut_event(&mut self, event: Event)`
-pub trait MutEventsCommand {
-    /// Adds a mutable event that can be used via an EventReader & Writer
+/// Add your own mutable event via `App::add_mut_event(&mut self, event: Message)`
+pub trait MutMessagesCommand {
+    /// Adds a mutable event that can be used via an MessageReader & Writer
     ///
     /// Example usage:
     /// ```rs
-    /// fn read_system(mut event_reader: EventReader<MutEvent<EventType>>) {
+    /// fn read_system(mut event_reader: MessageReader<MutMessage<MessageType>>) {
     ///     for ev in event_reader.iter() {
     ///         // Read:
     ///         {
@@ -72,16 +72,16 @@ pub trait MutEventsCommand {
     ///     }
     /// }
     ///
-    /// fn send_system(mut event_writer: MessageWriter<MutEvent<EventType>>) {
-    ///     event_writer.write(EventType::default().into());
+    /// fn send_system(mut event_writer: MessageWriter<MutMessage<MessageType>>) {
+    ///     event_writer.write(MessageType::default().into());
     /// }
     /// ```
-    fn add_mut_event<E: Event>(&mut self) -> &mut Self;
+    fn add_mut_event<E: Message>(&mut self) -> &mut Self;
 }
 
-impl MutEventsCommand for App {
-    fn add_mut_event<E: Event>(&mut self) -> &mut Self {
-        self.add_event::<MutEvent<E>>();
+impl MutMessagesCommand for App {
+    fn add_mut_event<E: Message>(&mut self) -> &mut Self {
+        self.add_event::<MutMessage<E>>();
 
         self
     }

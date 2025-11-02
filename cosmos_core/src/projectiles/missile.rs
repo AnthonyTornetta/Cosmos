@@ -5,7 +5,7 @@ use std::time::Duration;
 
 use bevy::prelude::*;
 use bevy_rapier3d::{
-    geometry::{ActiveEvents, ActiveHooks, Collider},
+    geometry::{ActiveMessages, ActiveHooks, Collider},
     prelude::{CollisionGroups, Group, RigidBody, SolverGroups},
 };
 use serde::{Deserialize, Serialize};
@@ -56,7 +56,7 @@ fn on_add_missile(q_added_missile: Query<Entity, Added<Missile>>, mut commands: 
             Collider::cuboid(0.15, 0.15, 0.5),
             #[cfg(feature = "client")]
             (NotShadowCaster, NotShadowReceiver),
-            ActiveEvents::COLLISION_EVENTS,
+            ActiveMessages::COLLISION_EVENTS,
             ActiveHooks::FILTER_CONTACT_PAIRS,
             CollisionGroups::new(MISSILE_COLLISION_GROUP, !(FLUID_COLLISION_GROUP | MISSILE_COLLISION_GROUP)),
             SolverGroups::new(MISSILE_COLLISION_GROUP, !(FLUID_COLLISION_GROUP | MISSILE_COLLISION_GROUP)),

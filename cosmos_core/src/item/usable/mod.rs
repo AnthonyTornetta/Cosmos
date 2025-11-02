@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     netty::{
-        sync::events::netty_event::{IdentifiableEvent, NettyMessage, SyncedEventImpl},
+        sync::events::netty_event::{IdentifiableMessage, NettyMessage, SyncedMessageImpl},
         system_sets::NetworkingSystemsSet,
     },
     prelude::StructureBlock,
@@ -13,24 +13,24 @@ use crate::{
 pub mod blueprint;
 pub mod cooldown;
 
-#[derive(Event, Debug, Serialize, Deserialize, Clone, Copy)]
+#[derive(Message, Debug, Serialize, Deserialize, Clone, Copy)]
 /// Sent by the player when they use their held item
-pub struct PlayerRequestUseHeldItemEvent {
+pub struct PlayerRequestUseHeldItemMessage {
     /// The block they are looking at (excluding fluid)
     pub looking_at_block: Option<StructureBlock>,
     /// The block they are looking at (including fluid)
     pub looking_at_any: Option<StructureBlock>,
 }
 
-impl IdentifiableEvent for PlayerRequestUseHeldItemEvent {
+impl IdentifiableMessage for PlayerRequestUseHeldItemMessage {
     fn unlocalized_name() -> &'static str {
         "cosmos:request_use_held_item"
     }
 }
 
-impl NettyMessage for PlayerRequestUseHeldItemEvent {
-    fn event_receiver() -> crate::netty::sync::events::netty_event::EventReceiver {
-        crate::netty::sync::events::netty_event::EventReceiver::Server
+impl NettyMessage for PlayerRequestUseHeldItemMessage {
+    fn event_receiver() -> crate::netty::sync::events::netty_event::MessageReceiver {
+        crate::netty::sync::events::netty_event::MessageReceiver::Server
     }
 
     #[cfg(feature = "client")]
@@ -56,12 +56,12 @@ impl NettyMessage for PlayerRequestUseHeldItemEvent {
 /// The system set that items will be used in
 pub enum UseItemSet {
     /// Sends item use events
-    SendUseItemEvents,
+    SendUseItemMessages,
 }
 
-#[derive(Event, Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Message, Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 /// Sent to clients after the player uses an item.
-pub struct UseHeldItemEvent {
+pub struct UseHeldItemMessage {
     /// The player that used the item
     pub player: Entity,
     /// What block they were looking at (excluding fluids)
@@ -74,15 +74,15 @@ pub struct UseHeldItemEvent {
     pub held_slot: usize,
 }
 
-impl IdentifiableEvent for UseHeldItemEvent {
+impl IdentifiableMessage for UseHeldItemMessage {
     fn unlocalized_name() -> &'static str {
         "cosmos:use_held_item"
     }
 }
 
-impl NettyMessage for UseHeldItemEvent {
-    fn event_receiver() -> crate::netty::sync::events::netty_event::EventReceiver {
-        crate::netty::sync::events::netty_event::EventReceiver::Client
+impl NettyMessage for UseHeldItemMessage {
+    fn event_receiver() -> crate::netty::sync::events::netty_event::MessageReceiver {
+        crate::netty::sync::events::netty_event::MessageReceiver::Client
     }
 
     #[cfg(feature = "client")]
@@ -100,10 +100,10 @@ pub(super) fn register(app: &mut App) {
     blueprint::register(app);
     cooldown::register(app);
 
-    app.add_netty_event::<PlayerRequestUseHeldItemEvent>()
-        .add_netty_event::<UseHeldItemEvent>();
+    app.add_netty_event::<PlayerRequestUseHeldItemMessage>()
+        .add_netty_event::<UseHeldItemMessage>();
     app.configure_sets(
         FixedUpdate,
-        UseItemSet::SendUseItemEvents.after(NetworkingSystemsSet::ReceiveMessages),
+        UseItemSet::SendUseItemMessages.after(NetworkingSystemsSet::ReceiveMessages),
     );
 }

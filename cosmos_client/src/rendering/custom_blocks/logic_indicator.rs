@@ -14,7 +14,7 @@ use cosmos_core::{
 use crate::{
     asset::{
         asset_loading::{BlockNeighbors, BlockTextureIndex},
-        materials::{AddMaterialEvent, BlockMaterialMapping, MaterialDefinition, MaterialType, MaterialsSystemSet},
+        materials::{AddMaterialMessage, BlockMaterialMapping, MaterialDefinition, MaterialType, MaterialsSystemSet},
     },
     rendering::{
         BlockMeshRegistry, CosmosMeshBuilder, MeshBuilder,
@@ -41,7 +41,7 @@ struct LogicIndicatorRenders(Vec<Entity>);
 
 fn on_render_logic_indicator(
     q_logic_indicator_renders: Query<&LogicIndicatorRenders>,
-    mut ev_reader: EventReader<ChunkNeedsCustomBlocksRendered>,
+    mut ev_reader: MessageReader<ChunkNeedsCustomBlocksRendered>,
     blocks: Res<Registry<Block>>,
     mut commands: Commands,
     q_structure: Query<&Structure>,
@@ -50,7 +50,7 @@ fn on_render_logic_indicator(
     block_mesh_registry: Res<BlockMeshRegistry>,
     materials_registry: Res<Registry<MaterialDefinition>>,
     mut meshes: ResMut<Assets<Mesh>>,
-    mut evw_add_material: MessageWriter<AddMaterialEvent>,
+    mut evw_add_material: MessageWriter<AddMaterialMessage>,
     rendering_modes: Res<BlockRenderingModes>,
 ) {
     for ev in ev_reader.read() {
@@ -238,7 +238,7 @@ fn on_render_logic_indicator(
                 ))
                 .id();
 
-            evw_add_material.write(AddMaterialEvent {
+            evw_add_material.write(AddMaterialMessage {
                 entity,
                 add_material_id: mat_id,
                 texture_dimensions_index,

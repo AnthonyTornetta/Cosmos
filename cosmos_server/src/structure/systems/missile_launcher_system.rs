@@ -2,7 +2,7 @@
 
 use std::time::Duration;
 
-use crate::logic::{LogicInputEvent, LogicSystemSet, logic_driver::LogicDriver};
+use crate::logic::{LogicInputMessage, LogicSystemSet, logic_driver::LogicDriver};
 use bevy::prelude::*;
 use bevy_rapier3d::{
     geometry::{CollisionGroups, Group},
@@ -311,7 +311,7 @@ fn update_missile_system(
 }
 
 fn missile_launcher_input_event_listener(
-    mut evr_logic_input: EventReader<LogicInputEvent>,
+    mut evr_logic_input: MessageReader<LogicInputMessage>,
     blocks: Res<Registry<Block>>,
     mut q_logic_driver: Query<&mut LogicDriver>,
     q_structure: Query<(&Structure, &StructureSystems)>,

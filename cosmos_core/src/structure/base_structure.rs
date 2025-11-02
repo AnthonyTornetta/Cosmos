@@ -14,7 +14,7 @@ use bevy::{
 };
 use serde::{Deserialize, Serialize};
 
-use crate::{block::block_direction::ALL_BLOCK_DIRECTIONS, events::block_events::BlockDataChangedEvent};
+use crate::{block::block_direction::ALL_BLOCK_DIRECTIONS, events::block_events::BlockDataChangedMessage};
 use crate::{
     block::{Block, block_rotation::BlockRotation, blocks::AIR_BLOCK_ID, data::BlockData},
     physics::location::Location,
@@ -23,7 +23,7 @@ use crate::{
 
 use super::{
     BlockDataSystemParams, Structure,
-    block_health::events::{BlockDestroyedEvent, BlockTakeDamageEvent},
+    block_health::events::{BlockDestroyedMessage, BlockTakeDamageMessage},
     block_storage::BlockStorer,
     chunk::{BlockInfo, CHUNK_DIMENSIONS, Chunk},
     coordinates::{
@@ -485,7 +485,7 @@ impl BaseStructure {
         coords: BlockCoordinate,
         blocks: &Registry<Block>,
         amount: f32,
-        event_writers: Option<(&mut MessageWriter<BlockTakeDamageEvent>, &mut MessageWriter<BlockDestroyedEvent>)>,
+        event_writers: Option<(&mut MessageWriter<BlockTakeDamageMessage>, &mut MessageWriter<BlockDestroyedMessage>)>,
         causer: Option<Entity>,
     ) -> Option<f32> {
         if let Some(chunk) = self.mut_chunk_at_block_coordinates(coords) {
@@ -496,14 +496,14 @@ impl BaseStructure {
             {
                 let block = StructureBlock::new(coords, structure_entity);
 
-                take_damage_event_writer.write(BlockTakeDamageEvent {
+                take_damage_event_writer.write(BlockTakeDamageMessage {
                     structure_entity,
                     block,
                     new_health: health_left,
                     causer,
                 });
                 if health_left <= 0.0 {
-                    destroyed_event_writer.write(BlockDestroyedEvent { structure_entity, block });
+                    destroyed_event_writer.write(BlockDestroyedMessage { structure_entity, block });
                 }
             }
 
@@ -518,7 +518,7 @@ impl BaseStructure {
         self.chunk_entities.remove(&self.flatten(coords));
     }
 
-    /// This should be used in response to a `BlockTakeDamageEvent`
+    /// This should be used in response to a `BlockTakeDamageMessage`
     ///
     /// This will NOT delete the block if the health is 0.0
     pub(crate) fn set_block_health(&mut self, coords: BlockCoordinate, amount: f32, blocks: &Registry<Block>) {
@@ -850,7 +850,7 @@ impl BaseStructure {
         &mut self,
         coords: BlockCoordinate,
         block_info: BlockInfo,
-        evw_block_data_changed: Option<&mut MessageWriter<BlockDataChangedEvent>>,
+        evw_block_data_changed: Option<&mut MessageWriter<BlockDataChangedMessage>>,
     ) {
         if let Some(chunk) = self.mut_chunk_at_block_coordinates(coords) {
             let c = ChunkBlockCoordinate::for_block_coordinate(coords);
@@ -864,7 +864,7 @@ impl BaseStructure {
             if let Some(evw_block_data_changed) = evw_block_data_changed
                 && let Some(structure_entity) = self.get_entity()
             {
-                evw_block_data_changed.write(BlockDataChangedEvent {
+                evw_block_data_changed.write(BlockDataChangedMessage {
                     block_data_entity: self.block_data(coords),
                     block: StructureBlock::new(coords, structure_entity),
                 });

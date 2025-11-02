@@ -9,7 +9,7 @@ use cosmos_core::{
     entities::player::Player,
     netty::{
         NettyChannelServer, cosmos_encoder, server_reliable_messages::ServerReliableMessages,
-        sync::server_entity_syncing::RequestedEntityEvent, system_sets::NetworkingSystemsSet,
+        sync::server_entity_syncing::RequestedEntityMessage, system_sets::NetworkingSystemsSet,
     },
     persistence::LoadingDistance,
     physics::location::{Location, SYSTEM_SECTORS},
@@ -24,7 +24,7 @@ use crate::persistence::{
 
 use super::{
     super::{Galaxy, SystemItem, UniverseSystems},
-    generation::{GenerateSystemEvent, SystemGenerationSet},
+    generation::{GenerateSystemMessage, SystemGenerationSet},
 };
 
 fn load_stars_in_universe(
@@ -68,7 +68,7 @@ fn load_stars_in_universe(
     }
 }
 
-fn on_request_star(mut event_reader: EventReader<RequestedEntityEvent>, query: Query<&Star>, mut server: ResMut<RenetServer>) {
+fn on_request_star(mut event_reader: MessageReader<RequestedEntityMessage>, query: Query<&Star>, mut server: ResMut<RenetServer>) {
     for ev in event_reader.read() {
         if let Ok(star) = query.get(ev.entity) {
             server.send_message(
@@ -112,7 +112,7 @@ pub fn calculate_temperature_at(stars: Iter<'_, (Location, Star)>, location: &Lo
 }
 
 fn generate_stars(
-    mut evr_generate_system: EventReader<GenerateSystemEvent>,
+    mut evr_generate_system: MessageReader<GenerateSystemMessage>,
     mut universe_systems: ResMut<UniverseSystems>,
     q_galaxy: Query<&Galaxy>,
 ) {

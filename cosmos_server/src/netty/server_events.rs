@@ -1,7 +1,7 @@
 //! Handles client connecting and disconnecting
 
 use bevy::prelude::*;
-use bevy_renet::renet::{ClientId, RenetServer, ServerEvent};
+use bevy_renet::renet::{ClientId, RenetServer, ServerMessage};
 use bevy_renet::steam::steamworks::SteamId;
 use cosmos_core::ecs::NeedsDespawned;
 use cosmos_core::entities::player::Player;
@@ -17,9 +17,9 @@ use crate::persistence::saving::NeedsSaved;
 
 // use super::auth::AuthenticationServer;
 
-#[derive(Event, Debug)]
+#[derive(Message, Debug)]
 /// Sent whenever a player just connected
-pub struct PlayerConnectedEvent {
+pub struct PlayerConnectedMessage {
     /// The player's entity
     pub player_entity: Entity,
     /// Player's client id
@@ -29,7 +29,7 @@ pub struct PlayerConnectedEvent {
 pub(super) fn handle_server_events(
     mut commands: Commands,
     mut server: ResMut<RenetServer>,
-    mut server_events: EventReader<ServerEvent>,
+    mut server_events: MessageReader<ServerMessage>,
     mut lobby: ResMut<ServerLobby>,
     mut client_ticks: ResMut<ClientTicks>,
     mut visualizer: ResMut<RenetServerVisualizer<200>>,
@@ -38,7 +38,7 @@ pub(super) fn handle_server_events(
 ) {
     for event in server_events.read() {
         match event {
-            ServerEvent::ClientConnected { client_id } => {
+            ServerMessage::ClientConnected { client_id } => {
                 let client_id = *client_id;
                 info!("Client {client_id} connected");
 
@@ -72,7 +72,7 @@ pub(super) fn handle_server_events(
                 visualizer.add_client(client_id);
                 commands.spawn(LoadPlayer { name, client_id });
             }
-            ServerEvent::ClientDisconnected { client_id, reason } => {
+            ServerMessage::ClientDisconnected { client_id, reason } => {
                 info!("Client {client_id} disconnected: {reason}");
                 visualizer.remove_client(*client_id);
                 client_ticks.ticks.remove(client_id);
@@ -92,5 +92,5 @@ pub(super) fn handle_server_events(
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_event::<PlayerConnectedEvent>();
+    app.add_event::<PlayerConnectedMessage>();
 }

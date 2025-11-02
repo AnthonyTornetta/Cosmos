@@ -3,12 +3,12 @@ use bevy_renet::renet::RenetServer;
 use cosmos_core::{
     block::{
         Block,
-        block_events::{BlockBreakEvent, BlockInteractEvent},
+        block_events::{BlockBreakMessage, BlockInteractMessage},
         specific_blocks::gravity_well::GravityWell,
     },
     entities::EntityId,
     netty::{
-        NettyChannelServer, cosmos_encoder, server_replication::ReplicationMessage, sync::server_entity_syncing::RequestedEntityEvent,
+        NettyChannelServer, cosmos_encoder, server_replication::ReplicationMessage, sync::server_entity_syncing::RequestedEntityMessage,
         system_sets::NetworkingSystemsSet,
     },
     prelude::BlockCoordinate,
@@ -22,8 +22,8 @@ use serde::{Deserialize, Serialize};
 use crate::persistence::make_persistent::{EntityIdManager, PersistentComponent, make_persistent};
 
 fn grav_well_handle_block_event(
-    mut interact_events: EventReader<BlockInteractEvent>,
-    mut block_break_events: EventReader<BlockBreakEvent>,
+    mut interact_events: MessageReader<BlockInteractMessage>,
+    mut block_break_events: MessageReader<BlockBreakMessage>,
     q_grav_well: Query<&GravityWell>,
     q_structure: Query<&Structure>,
     blocks: Res<Registry<Block>>,
@@ -124,7 +124,7 @@ fn remove_gravity_wells(mut commands: Commands, q_grav_wells: Query<(Entity, &Gr
 }
 
 fn on_request_under_grav(
-    mut request_entity_reader: EventReader<RequestedEntityEvent>,
+    mut request_entity_reader: MessageReader<RequestedEntityMessage>,
     mut server: ResMut<RenetServer>,
     q_grav_well: Query<&GravityWell>,
 ) {

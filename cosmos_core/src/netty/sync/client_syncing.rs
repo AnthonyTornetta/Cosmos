@@ -4,16 +4,16 @@ use std::marker::PhantomData;
 
 use super::mapping::{NetworkMapping, ServerEntity};
 use super::{
-    ClientAuthority, ComponentEntityIdentifier, ComponentId, ComponentReplicationMessage, ComponentSyncingSet, GotComponentToRemoveEvent,
+    ClientAuthority, ComponentEntityIdentifier, ComponentId, ComponentReplicationMessage, ComponentSyncingSet, GotComponentToRemoveMessage,
     ReplicatedComponentData, SyncType, SyncableComponent, SyncedComponentId,
 };
 use crate::block::data::BlockData;
 use crate::ecs::{NeedsDespawned, add_multi_statebound_resource};
-use crate::events::block_events::BlockDataChangedEvent;
+use crate::events::block_events::BlockDataChangedMessage;
 use crate::inventory::Inventory;
 use crate::inventory::itemstack::ItemStackData;
 use crate::netty::client::LocalPlayer;
-use crate::netty::sync::GotComponentToSyncEvent;
+use crate::netty::sync::GotComponentToSyncMessage;
 use crate::netty::sync::mapping::Mappable;
 use crate::netty::system_sets::NetworkingSystemsSet;
 use crate::netty::{NettyChannelClient, cosmos_encoder};
@@ -104,7 +104,7 @@ fn client_add_stored_components<T: SyncableComponent>(
 
 fn client_deserialize_component<T: SyncableComponent>(
     components_registry: Res<Registry<SyncedComponentId>>,
-    mut ev_reader: EventReader<GotComponentToSyncEvent>,
+    mut ev_reader: MessageReader<GotComponentToSyncMessage>,
     mut commands: Commands,
     mapping: Res<NetworkMapping>,
     q_t: Query<&T>,
@@ -171,7 +171,7 @@ fn client_deserialize_component<T: SyncableComponent>(
 
 fn client_remove_component<T: SyncableComponent>(
     components_registry: Res<Registry<SyncedComponentId>>,
-    mut ev_reader: EventReader<GotComponentToRemoveEvent>,
+    mut ev_reader: MessageReader<GotComponentToRemoveMessage>,
     mut commands: Commands,
 ) {
     for ev in ev_reader.read() {
@@ -402,9 +402,9 @@ pub enum ClientReceiveComponents {
 
 fn client_receive_components(
     mut client: ResMut<RenetClient>,
-    mut ev_writer_sync: MessageWriter<GotComponentToSyncEvent>,
-    mut ev_writer_remove: MessageWriter<GotComponentToRemoveEvent>,
-    mut evw_block_data_changed: MessageWriter<BlockDataChangedEvent>,
+    mut ev_writer_sync: MessageWriter<GotComponentToSyncMessage>,
+    mut ev_writer_remove: MessageWriter<GotComponentToRemoveMessage>,
+    mut evw_block_data_changed: MessageWriter<BlockDataChangedMessage>,
     q_structure_systems: Query<&StructureSystems>,
     mut q_inventory: Query<&mut Inventory>,
     mut network_mapping: ResMut<NetworkMapping>,
@@ -493,7 +493,7 @@ fn client_receive_components(
                     }
                 };
 
-                ev_writer_remove.write(GotComponentToRemoveEvent {
+                ev_writer_remove.write(GotComponentToRemoveMessage {
                     // `client_id` only matters on the server-side, but I don't feel like fighting with
                     // my LSP to have this variable only show up in the server project. Thus, I fill it with
                     // dummy data.
@@ -515,8 +515,8 @@ fn repl_comp_data(
     q_inventory: &mut Query<&mut Inventory, ()>,
     commands: &mut Commands,
     q_structure: &mut Query<&mut Structure>,
-    ev_writer_sync: &mut MessageWriter<GotComponentToSyncEvent>,
-    evw_block_data_changed: &mut MessageWriter<BlockDataChangedEvent>,
+    ev_writer_sync: &mut MessageWriter<GotComponentToSyncMessage>,
+    evw_block_data_changed: &mut MessageWriter<BlockDataChangedMessage>,
     component_id: ComponentId,
     c: ReplicatedComponentData,
 ) -> Option<ReplicatedComponentData> {
@@ -544,7 +544,7 @@ fn repl_comp_data(
         }
     };
 
-    let ev = GotComponentToSyncEvent {
+    let ev = GotComponentToSyncMessage {
         // `client_id` only matters on the server-side, but I don't feel like fighting with
         // my LSP to have this variable only show up in the server project. Thus, I fill it with
         // dummy data.
@@ -567,7 +567,7 @@ fn get_entity_identifier_info(
     q_structure_systems: &Query<&StructureSystems, ()>,
     q_inventory: &mut Query<&mut Inventory>,
     q_structure: &mut Query<&mut Structure>,
-    evw_block_data_changed: &mut MessageWriter<BlockDataChangedEvent>,
+    evw_block_data_changed: &mut MessageWriter<BlockDataChangedMessage>,
     commands: &mut Commands,
 ) -> Option<(Entity, Entity)> {
     let identifier_entities = match entity_identifier {
@@ -619,7 +619,7 @@ fn get_entity_identifier_info(
 
                             network_mapping.add_mapping(data_entity, server_data_entity);
 
-                            evw_block_data_changed.write(BlockDataChangedEvent {
+                            evw_block_data_changed.write(BlockDataChangedMessage {
                                 block: identifier.block,
                                 block_data_entity: Some(data_entity),
                             });
@@ -629,7 +629,7 @@ fn get_entity_identifier_info(
                 };
 
                 if let Ok(block) = identifier.block.map_to_client(network_mapping) {
-                    evw_block_data_changed.write(BlockDataChangedEvent {
+                    evw_block_data_changed.write(BlockDataChangedMessage {
                         block,
                         block_data_entity: Some(x),
                     });
@@ -669,7 +669,7 @@ fn get_entity_identifier_info(
 
                         identifier.block.set_structure(structure_entity);
 
-                        evw_block_data_changed.write(BlockDataChangedEvent {
+                        evw_block_data_changed.write(BlockDataChangedMessage {
                             block: identifier.block,
                             block_data_entity: Some(data_entity),
                         });

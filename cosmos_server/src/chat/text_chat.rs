@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 use cosmos_core::{
-    chat::{ClientSendChatMessageEvent, ServerSendChatMessageEvent},
+    chat::{ClientSendChatMessageMessage, ServerSendChatMessageMessage},
     ecs::sets::FixedUpdateSet,
     entities::player::Player,
     netty::{
@@ -11,8 +11,8 @@ use cosmos_core::{
 };
 
 fn receive_messages(
-    mut nevw_send_chat_msg: NettyMessageWriter<ServerSendChatMessageEvent>,
-    mut nevr_chat_msg: EventReader<NettyMessageReceived<ClientSendChatMessageEvent>>,
+    mut nevw_send_chat_msg: NettyMessageWriter<ServerSendChatMessageMessage>,
+    mut nevr_chat_msg: MessageReader<NettyMessageReceived<ClientSendChatMessageMessage>>,
     clients: Res<ServerLobby>,
     q_player: Query<&Player>,
 ) {
@@ -25,12 +25,12 @@ fn receive_messages(
         };
 
         match &ev.event {
-            ClientSendChatMessageEvent::Global(msg) => {
+            ClientSendChatMessageMessage::Global(msg) => {
                 let message = format!("{}> {}", player.name(), msg);
 
                 info!("{message}");
 
-                nevw_send_chat_msg.broadcast(ServerSendChatMessageEvent {
+                nevw_send_chat_msg.broadcast(ServerSendChatMessageMessage {
                     sender: Some(player_ent),
                     message,
                 });

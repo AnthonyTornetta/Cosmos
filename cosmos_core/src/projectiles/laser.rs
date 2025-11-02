@@ -27,7 +27,7 @@ use super::causer::Causer;
 /// How long a laser will stay alive for before despawning
 pub const LASER_LIVE_TIME: Duration = Duration::from_secs(50);
 
-#[derive(Debug, Event)]
+#[derive(Debug, Message)]
 /// The entity hit represents the entity hit by the laser
 ///
 /// The world location the exact position the world this collision happened
@@ -37,7 +37,7 @@ pub const LASER_LIVE_TIME: Duration = Duration::from_secs(50);
 /// - This means that the relative counts the hit entity's rotation
 /// - To get the world point (assuming this entity hasn't moved), simply do
 ///     - (That entity's rotation quaternion * relative_location) + that entity's global transform position.
-pub struct LaserCollideEvent {
+pub struct LaserCollideMessage {
     entity_hit: Entity,
     local_position_hit: Vec3,
     block_hit: Option<StructureBlock>,
@@ -45,7 +45,7 @@ pub struct LaserCollideEvent {
     causer: Option<Causer>,
 }
 
-impl LaserCollideEvent {
+impl LaserCollideMessage {
     /// Gets the entity this laser hit
     ///
     /// *NOTE*: Make sure to verify this entity still exists before processing it
@@ -163,7 +163,7 @@ fn send_laser_hit_events(
         Option<&PreviousLocation>,
     )>,
     mut commands: Commands,
-    mut event_writer: MessageWriter<LaserCollideEvent>,
+    mut event_writer: MessageWriter<LaserCollideMessage>,
     parent_query: Query<&ChildOf>,
     chunk_parent_query: Query<&ChildOf, With<ChunkEntity>>,
     q_rapier_context: WriteRapierContext,
@@ -229,7 +229,7 @@ fn send_laser_hit_events(
                             .filter(|c| structure.is_within_blocks(*c))
                             .map(|c| StructureBlock::new(c, entity_hit));
 
-                        event_writer.write(LaserCollideEvent {
+                        event_writer.write(LaserCollideMessage {
                             entity_hit,
                             local_position_hit: lph,
                             block_hit,
@@ -242,7 +242,7 @@ fn send_laser_hit_events(
                         .inverse()
                         .mul_vec3(pos - transform.translation());
 
-                    event_writer.write(LaserCollideEvent {
+                    event_writer.write(LaserCollideMessage {
                         entity_hit: entity,
                         local_position_hit: lph,
                         laser_strength: laser.strength,
@@ -269,17 +269,17 @@ fn despawn_lasers(mut commands: Commands, query: Query<(Entity, &FireTime), With
 #[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
 /// Laser systems should be put here
 pub enum LaserSystemSet {
-    /// When a laser hits something, the set that sends the [`LaserCollideEvent`] event will be here
-    SendHitEvents,
+    /// When a laser hits something, the set that sends the [`LaserCollideMessage`] event will be here
+    SendHitMessages,
 }
 
 pub(super) fn register(app: &mut App) {
-    app.configure_sets(FixedUpdate, LaserSystemSet::SendHitEvents)
+    app.configure_sets(FixedUpdate, LaserSystemSet::SendHitMessages)
         .add_systems(
             FixedUpdate,
-            (send_laser_hit_events.in_set(LaserSystemSet::SendHitEvents), despawn_lasers)
+            (send_laser_hit_events.in_set(LaserSystemSet::SendHitMessages), despawn_lasers)
                 .in_set(FixedUpdateSet::PostLocationSyncingPostPhysics)
                 .chain(),
         )
-        .add_event::<LaserCollideEvent>();
+        .add_event::<LaserCollideMessage>();
 }

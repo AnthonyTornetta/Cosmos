@@ -10,7 +10,7 @@ use cosmos_core::{
     block::{
         Block,
         block_direction::BlockDirection,
-        block_events::BlockInteractEvent,
+        block_events::BlockInteractMessage,
         block_face::BlockFace,
         block_rotation::{BlockRotation, BlockSubRotation},
         blocks::fluid::FLUID_COLLISION_GROUP,
@@ -68,8 +68,8 @@ fn add_looking_at_component(q_added_player: Query<Entity, Added<LocalPlayer>>, m
     }
 }
 
-#[derive(Event, Debug, Hash, PartialEq, Eq)]
-enum BlockEvent {
+#[derive(Message, Debug, Hash, PartialEq, Eq)]
+enum BlockMessage {
     Break,
     Interact { alternate: bool },
     Place,
@@ -77,7 +77,7 @@ enum BlockEvent {
 }
 
 fn generate_input_events(
-    mut evr_block_ev: MessageWriter<BlockEvent>,
+    mut evr_block_ev: MessageWriter<BlockMessage>,
     input_handler: InputChecker,
     q_piloting: Query<(), (With<LocalPlayer>, With<Pilot>)>,
 ) {
@@ -87,16 +87,16 @@ fn generate_input_events(
     }
 
     if input_handler.check_just_pressed(CosmosInputs::BreakBlock) {
-        evr_block_ev.write(BlockEvent::Break);
+        evr_block_ev.write(BlockMessage::Break);
     }
     if input_handler.check_just_pressed(CosmosInputs::PickBlock) {
-        evr_block_ev.write(BlockEvent::Pick);
+        evr_block_ev.write(BlockMessage::Pick);
     }
     if input_handler.check_just_pressed(CosmosInputs::PlaceBlock) {
-        evr_block_ev.write(BlockEvent::Place);
+        evr_block_ev.write(BlockMessage::Place);
     }
     if input_handler.check_just_pressed(CosmosInputs::Interact) {
-        evr_block_ev.write(BlockEvent::Interact {
+        evr_block_ev.write(BlockMessage::Interact {
             alternate: input_handler.check_pressed(CosmosInputs::AlternateInteraction),
         });
     }
@@ -108,15 +108,15 @@ fn process_player_interaction(
     rapier_context_access: ReadRapierContext,
     q_chunk_physics_part: Query<&ChunkPhysicsPart>,
     q_structure: Query<(&Structure, &GlobalTransform, Option<&Planet>)>,
-    mut break_writer: MessageWriter<RequestBlockBreakEvent>,
-    mut place_writer: MessageWriter<RequestBlockPlaceEvent>,
-    mut interact_writer: MessageWriter<BlockInteractEvent>,
+    mut break_writer: MessageWriter<RequestBlockBreakMessage>,
+    mut place_writer: MessageWriter<RequestBlockPlaceMessage>,
+    mut interact_writer: MessageWriter<BlockInteractMessage>,
     mut hotbar: Query<&mut Hotbar>,
     (items, blocks, block_items): (Res<Registry<Item>>, Res<Registry<Block>>, Res<BlockItems>),
     mut commands: Commands,
     mut client: ResMut<RenetClient>,
     mapping: Res<NetworkMapping>,
-    mut block_evs: EventReader<BlockEvent>,
+    mut block_evs: MessageReader<BlockMessage>,
     q_trans: Query<(&Transform, Option<&ChildOf>)>,
 ) {
     let rapier_context = rapier_context_access.single().expect("No single rapier context");
@@ -175,12 +175,12 @@ fn process_player_interaction(
 
     for ev in block_evs.read().collect::<HashSet<_>>() {
         match ev {
-            BlockEvent::Break => {
+            BlockMessage::Break => {
                 if let Some(x) = &looking_at.looking_at_block {
-                    break_writer.write(RequestBlockBreakEvent { block: x.block });
+                    break_writer.write(RequestBlockBreakMessage { block: x.block });
                 }
             }
-            BlockEvent::Pick => {
+            BlockMessage::Pick => {
                 if let Some(x) = &looking_at.looking_at_block {
                     let block = structure.block_at(x.block.coords(), &blocks);
 
@@ -212,7 +212,7 @@ fn process_player_interaction(
                     }
                 }
             }
-            BlockEvent::Place => {
+            BlockMessage::Place => {
                 (|| {
                     let looking_at_block = looking_at.looking_at_block.as_ref()?;
 
@@ -298,7 +298,7 @@ fn process_player_interaction(
                         BlockRotation::new(block_up, BlockSubRotation::None)
                     };
 
-                    place_writer.write(RequestBlockPlaceEvent {
+                    place_writer.write(RequestBlockPlaceMessage {
                         block: StructureBlock::new(place_at_coords, structure.get_entity().unwrap()),
                         inventory_slot,
                         block_id,
@@ -308,9 +308,9 @@ fn process_player_interaction(
                     None
                 })();
             }
-            BlockEvent::Interact { alternate } => {
+            BlockMessage::Interact { alternate } => {
                 if let Some(looking_at_any) = &looking_at.looking_at_any {
-                    interact_writer.write(BlockInteractEvent {
+                    interact_writer.write(BlockInteractMessage {
                         block_including_fluids: looking_at_any.block,
                         interactor: player_entity,
                         block: looking_at.looking_at_block.map(|looked_at| looked_at.block),
@@ -374,9 +374,9 @@ pub(super) fn register(app: &mut App) {
         (add_looking_at_component, process_player_interaction)
             .chain()
             .in_set(FixedUpdateSet::PostPhysics)
-            // .in_set(BlockEventsSet::SendEventsForThisFrame)
+            // .in_set(BlockMessagesSet::SendMessagesForThisFrame)
             .run_if(no_open_menus)
             .run_if(in_state(GameState::Playing)),
     )
-    .add_event::<BlockEvent>();
+    .add_event::<BlockMessage>();
 }

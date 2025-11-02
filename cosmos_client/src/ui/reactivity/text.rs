@@ -5,7 +5,7 @@ use bevy::prelude::*;
 
 fn on_need_update_value<T: ReactableValue>(
     q_react_value: Query<&T>,
-    mut ev_reader: EventReader<NeedsValueFetched>,
+    mut ev_reader: MessageReader<NeedsValueFetched>,
     q_changed_value: Query<(Entity, &BindValues<T>), With<Text>>,
     mut writer: TextUiWriter,
 ) {

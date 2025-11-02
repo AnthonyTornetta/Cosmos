@@ -1,9 +1,9 @@
 use crate::{
     asset::{
-        asset_loading::{AllTexturesDoneLoadingEvent, AssetsDoneLoadingEvent, AssetsSet, CosmosTextureAtlas},
+        asset_loading::{AllTexturesDoneLoadingMessage, AssetsDoneLoadingMessage, AssetsSet, CosmosTextureAtlas},
         materials::{
-            AddMaterialEvent, MaterialDefinition, MaterialMeshInformationGenerator, MaterialType, MaterialsSystemSet,
-            RemoveAllMaterialsEvent,
+            AddMaterialMessage, MaterialDefinition, MaterialMeshInformationGenerator, MaterialType, MaterialsSystemSet,
+            RemoveAllMaterialsMessage,
             animated_material::{ATTRIBUTE_PACKED_ANIMATION_DATA, AnimatedArrayTextureMaterial, AnimatedArrayTextureMaterialExtension},
         },
     },
@@ -32,7 +32,7 @@ pub(crate) struct UnlitTransparentMaterial(pub Vec<Handle<AnimatedArrayTextureMa
 fn respond_to_add_materials_event(
     material_registry: Res<Registry<MaterialDefinition>>,
     mut commands: Commands,
-    mut event_reader: EventReader<AddMaterialEvent>,
+    mut event_reader: MessageReader<AddMaterialMessage>,
 
     default_material: Res<DefaultMaterial>,
     unlit_material: Res<UnlitMaterial>,
@@ -71,7 +71,7 @@ fn respond_to_add_materials_event(
     }
 }
 
-fn respond_to_remove_materails_event(mut event_reader: EventReader<RemoveAllMaterialsEvent>, mut commands: Commands) {
+fn respond_to_remove_materails_event(mut event_reader: MessageReader<RemoveAllMaterialsMessage>, mut commands: Commands) {
     for ev in event_reader.read() {
         commands.entity(ev.entity).remove::<MeshMaterial3d<AnimatedArrayTextureMaterial>>();
     }
@@ -199,8 +199,8 @@ fn create_materials(
     mut commands: Commands,
     mut material_registry: ResMut<Registry<MaterialDefinition>>,
     mut materials: ResMut<Assets<AnimatedArrayTextureMaterial>>,
-    event_reader: EventReader<AllTexturesDoneLoadingEvent>,
-    mut event_writer: MessageWriter<AssetsDoneLoadingEvent>,
+    event_reader: MessageReader<AllTexturesDoneLoadingMessage>,
+    mut event_writer: MessageWriter<AssetsDoneLoadingMessage>,
     texture_atlases: Res<Registry<CosmosTextureAtlas>>,
 ) {
     if !event_reader.is_empty() && !material_registry.contains("cosmos:animated") {
@@ -237,7 +237,7 @@ fn create_materials(
             ));
         }
 
-        event_writer.write(AssetsDoneLoadingEvent);
+        event_writer.write(AssetsDoneLoadingMessage);
     }
 }
 
@@ -245,8 +245,8 @@ pub(super) fn register(app: &mut App) {
     app.add_systems(
         Update,
         (
-            respond_to_remove_materails_event.in_set(MaterialsSystemSet::ProcessRemoveMaterialsEvents),
-            respond_to_add_materials_event.in_set(MaterialsSystemSet::ProcessAddMaterialsEvents),
+            respond_to_remove_materails_event.in_set(MaterialsSystemSet::ProcessRemoveMaterialsMessages),
+            respond_to_add_materials_event.in_set(MaterialsSystemSet::ProcessAddMaterialsMessages),
         ),
     )
     .add_systems(

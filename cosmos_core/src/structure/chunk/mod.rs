@@ -14,7 +14,7 @@ use serde::{Deserialize, Serialize};
 use crate::block::data::{BlockData, BlockDataIdentifier};
 use crate::block::{Block, block_face::BlockFace, block_rotation::BlockRotation, block_rotation::BlockSubRotation};
 use crate::ecs::NeedsDespawned;
-use crate::events::block_events::{BlockDataChangedEvent, BlockDataSystemParams};
+use crate::events::block_events::{BlockDataChangedMessage, BlockDataSystemParams};
 use crate::registry::Registry;
 use crate::registry::identifiable::Identifiable;
 use crate::utils::ecs::MutOrMutRef;
@@ -250,7 +250,7 @@ impl Chunk {
             .take_damage(coords, blocks.from_numeric_id(self.block_at(coords)).hardness(), amount)
     }
 
-    /// This should be used in response to a `BlockTakeDamageEvent`
+    /// This should be used in response to a `BlockTakeDamageMessage`
     ///
     /// This will NOT delete the block if the health is 0.0
     pub(crate) fn set_block_health(&mut self, coords: ChunkBlockCoordinate, amount: f32, blocks: &Registry<Block>) {
@@ -326,7 +326,7 @@ impl Chunk {
 
             system_params.commands.entity(data_ent).insert(data);
 
-            system_params.ev_writer.write(BlockDataChangedEvent {
+            system_params.ev_writer.write(BlockDataChangedMessage {
                 block_data_entity: Some(data_ent),
                 block: StructureBlock::new(self.chunk_coordinates().first_structure_block() + coords, structure_entity),
             });
@@ -363,7 +363,7 @@ impl Chunk {
 
             self.block_data.insert((id, coords), data_ent);
 
-            system_params.ev_writer.write(BlockDataChangedEvent {
+            system_params.ev_writer.write(BlockDataChangedMessage {
                 block_data_entity: Some(data_ent),
                 block: StructureBlock::new(self.chunk_coordinates().first_structure_block() + coords, structure_entity),
             });
@@ -500,7 +500,7 @@ impl Chunk {
             data_ent
         };
 
-        system_params.ev_writer.write(BlockDataChangedEvent {
+        system_params.ev_writer.write(BlockDataChangedMessage {
             block_data_entity: Some(data_ent),
             block: StructureBlock::new(self.chunk_coordinates().first_structure_block() + coords, structure_entity),
         });
@@ -535,7 +535,7 @@ impl Chunk {
 
         match query.get_mut(data_ent) {
             Ok(result) => {
-                // block_system_params.ev_writer.write(BlockDataChangedEvent {
+                // block_system_params.ev_writer.write(BlockDataChangedMessage {
                 //     block_data_entity: Some(data_ent),
                 //     block: StructureBlock::new(self.chunk_coordinates().first_structure_block() + coords),
                 //     structure_entity,
@@ -584,7 +584,7 @@ impl Chunk {
             let id = self.block_at(coords);
             self.block_data.remove(&(id, coords));
 
-            system_params.ev_writer.write(BlockDataChangedEvent {
+            system_params.ev_writer.write(BlockDataChangedMessage {
                 block_data_entity: None,
                 block: StructureBlock::new(self.chunk_coordinates().first_structure_block() + coords, structure_entity),
             });
@@ -593,7 +593,7 @@ impl Chunk {
         } else {
             system_params.commands.entity(ent).remove::<T>();
 
-            system_params.ev_writer.write(BlockDataChangedEvent {
+            system_params.ev_writer.write(BlockDataChangedMessage {
                 block_data_entity: Some(ent),
                 block: StructureBlock::new(self.chunk_coordinates().first_structure_block() + coords, structure_entity),
             });
@@ -650,13 +650,13 @@ pub struct ChunkEntity {
     pub chunk_location: ChunkCoordinate,
 }
 
-#[derive(Debug, Event)]
+#[derive(Debug, Message)]
 /// Sent whenever a chunk is unloaded from a structure
 ///
 /// This event is NOT generated when a structure is despawned or when a chunk loses all its blocks or when a chunk with no blocks is unloaded.
 ///
 /// This event's only current usecase is removing chunk's colliders when planet chunks are unloaded by a player moving away from them.
-pub struct ChunkUnloadEvent {
+pub struct ChunkUnloadMessage {
     /// The chunk's entity. This will not have been despawned yet until after the Update system set.
     pub chunk_entity: Entity,
     /// The coordinates of the chunk in the structure
@@ -668,7 +668,7 @@ pub struct ChunkUnloadEvent {
 pub(super) fn register(app: &mut App) {
     systems::register(app);
 
-    app.add_event::<ChunkUnloadEvent>().register_type::<Chunk>();
+    app.add_event::<ChunkUnloadMessage>().register_type::<Chunk>();
 }
 
 // #[cfg(test)]

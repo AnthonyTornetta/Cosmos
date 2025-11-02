@@ -14,7 +14,7 @@ use cosmos_core::{
     },
 };
 
-#[derive(Event, Debug)]
+#[derive(Message, Debug)]
 /// Sent whenever the terrain generation data is updated from the server
 pub(crate) struct SetTerrainGenData {
     /// The files for wgsl shaders (path, shader code)
@@ -39,7 +39,7 @@ struct SetPermutationTable(GpuPermutationTable);
 
 fn setup_lod_generation(
     mut commands: Commands,
-    mut ev_reader: EventReader<SetTerrainGenData>,
+    mut ev_reader: MessageReader<SetTerrainGenData>,
     terrain_data_flag: Res<NeedsTerrainDataFlag>,
     mut gpu_perm_table: ResMut<SetPermutationTable>,
 ) {

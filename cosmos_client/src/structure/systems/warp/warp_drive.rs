@@ -8,7 +8,7 @@ use cosmos_core::{
     state::GameState,
     structure::{
         ship::pilot::Pilot,
-        systems::warp::warp_drive::{WarpCancelledEvent, WarpDriveInitiating, WarpDriveSystem},
+        systems::warp::warp_drive::{WarpCancelledMessage, WarpDriveInitiating, WarpDriveSystem},
     },
 };
 
@@ -59,7 +59,7 @@ fn play_warp_sound(
 }
 
 fn on_shutdown_warp(
-    mut nevr_shutdown_warp: EventReader<WarpCancelledEvent>,
+    mut nevr_shutdown_warp: MessageReader<WarpCancelledMessage>,
     mut q_warp_sound: Query<(&mut CosmosAudioEmitter, &WarpSoundMarker)>,
     mut audio_instances: ResMut<Assets<AudioInstance>>,
     mut stop_later: ResMut<BufferedStopAudio>,

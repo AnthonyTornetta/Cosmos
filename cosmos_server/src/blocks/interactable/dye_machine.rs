@@ -4,7 +4,7 @@ use bevy::prelude::*;
 use cosmos_core::{
     block::{
         Block,
-        block_events::{BlockEventsSet, BlockInteractEvent},
+        block_events::{BlockMessagesSet, BlockInteractMessage},
         blocks::{COLOR_VALUES, COLORS},
         specific_blocks::dye_machine::{DyeBlock, OpenDyeMachine},
     },
@@ -19,7 +19,7 @@ use cosmos_core::{
 };
 
 fn handle_block_event(
-    mut interact_events: EventReader<BlockInteractEvent>,
+    mut interact_events: MessageReader<BlockInteractMessage>,
     s_query: Query<&Structure>,
     blocks: Res<Registry<Block>>,
     q_player: Query<&Player>,
@@ -54,7 +54,7 @@ fn dye_block(
     blocks: Res<Registry<Block>>,
     mut q_inventory: Query<&mut Inventory>,
     q_structure: Query<&Structure>,
-    mut nevr_dye: EventReader<NettyMessageReceived<DyeBlock>>,
+    mut nevr_dye: MessageReader<NettyMessageReceived<DyeBlock>>,
     bs_params: BlockDataSystemParams,
     items: Res<Registry<Item>>,
     mut commands: Commands,
@@ -122,7 +122,7 @@ pub(super) fn register(app: &mut App) {
     app.add_systems(
         FixedUpdate,
         (handle_block_event, dye_block)
-            .in_set(BlockEventsSet::ProcessEvents)
+            .in_set(BlockMessagesSet::ProcessMessages)
             .run_if(in_state(GameState::Playing)),
     );
 }

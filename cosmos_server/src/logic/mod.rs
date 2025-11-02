@@ -9,20 +9,20 @@ use cosmos_core::{
     block::{
         Block,
         block_direction::{ALL_BLOCK_DIRECTIONS, BlockDirection},
-        block_events::BlockEventsSet,
+        block_events::BlockMessagesSet,
         block_face::BlockFace,
         blocks::COLORS,
         data::BlockData,
     },
-    events::block_events::{BlockChangedEvent, BlockDataChangedEvent, BlockDataSystemParams},
+    events::block_events::{BlockChangedMessage, BlockDataChangedMessage, BlockDataSystemParams},
     logic::BlockLogicData,
     netty::system_sets::NetworkingSystemsSet,
-    prelude::StructureLoadedEvent,
+    prelude::StructureLoadedMessage,
     registry::{Registry, create_registry, identifiable::Identifiable},
     state::GameState,
     structure::{Structure, coordinates::BlockCoordinate, loading::StructureLoadingSet, structure_block::StructureBlock},
 };
-use logic_driver::{LogicBlockChangedEvent, LogicDriver};
+use logic_driver::{LogicBlockChangedMessage, LogicDriver};
 use logic_graph::{LogicGraph, LogicGroup};
 use serde::{Deserialize, Serialize};
 use std::collections::VecDeque;
@@ -264,41 +264,41 @@ impl PartialEq for LogicWireColor {
     }
 }
 
-#[derive(Event, Debug, Clone)]
+#[derive(Message, Debug, Clone)]
 /// Sent when a block's logic inputs change.
 /// For example, in the same tick another block with an output [`Port`] in its [`LogicGroup`] changes its output.
-pub struct LogicInputEvent {
+pub struct LogicInputMessage {
     /// The block coordinates.
     pub block: StructureBlock,
 }
 
-#[derive(Event, Debug)]
+#[derive(Message, Debug)]
 /// Sent when a block's logic input changes for a reason outside a logic tick, like placing a new logic block.
-pub struct QueueLogicInputEvent(pub LogicInputEvent);
+pub struct QueueLogicInputMessage(pub LogicInputMessage);
 
-impl QueueLogicInputEvent {
+impl QueueLogicInputMessage {
     /// Convenience constructor to avoid having to construct the inner type.
     pub fn new(block: StructureBlock) -> Self {
-        Self(LogicInputEvent { block })
+        Self(LogicInputMessage { block })
     }
 }
 
-#[derive(Event, Debug, Clone)]
+#[derive(Message, Debug, Clone)]
 /// Sent when a block's logic output changes.
 /// For example, sent when the block is placed or one tick after its inputs change.
-pub struct LogicOutputEvent {
+pub struct LogicOutputMessage {
     /// The block coordinates.
     pub block: StructureBlock,
 }
 
-#[derive(Event, Debug, Clone)]
+#[derive(Message, Debug, Clone)]
 /// Sent when a block's logic output changes for a reason outside a logic tick, like placing a new logic block.
-pub struct QueueLogicOutputEvent(pub LogicOutputEvent);
+pub struct QueueLogicOutputMessage(pub LogicOutputMessage);
 
-impl QueueLogicOutputEvent {
+impl QueueLogicOutputMessage {
     /// Convenience constructor to avoid having to construct the inner type.
     pub fn new(block: StructureBlock) -> Self {
-        Self(LogicOutputEvent { block })
+        Self(LogicOutputMessage { block })
     }
 }
 
@@ -310,9 +310,9 @@ pub enum LogicSystemRegistrySet {
 }
 
 fn logic_block_changed_event_listener(
-    mut evr_block_changed: EventReader<BlockChangedEvent>,
+    mut evr_block_changed: MessageReader<BlockChangedMessage>,
     q_block_logic_data: Query<&BlockLogicData>,
-    mut evr_structure_loaded: EventReader<StructureLoadedEvent>,
+    mut evr_structure_loaded: MessageReader<StructureLoadedMessage>,
     blocks: Res<Registry<Block>>,
     logic_blocks: Res<Registry<LogicBlock>>,
     logic_wire_colors: Res<Registry<LogicWireColor>>,
@@ -320,10 +320,10 @@ fn logic_block_changed_event_listener(
     q_has_data: Query<(), With<BlockLogicData>>,
     mut q_block_data: Query<&mut BlockData>,
     mut bs_params: BlockDataSystemParams,
-    mut evw_queue_logic_output: MessageWriter<QueueLogicOutputEvent>,
-    mut evw_queue_logic_input: MessageWriter<QueueLogicInputEvent>,
+    mut evw_queue_logic_output: MessageWriter<QueueLogicOutputMessage>,
+    mut evw_queue_logic_input: MessageWriter<QueueLogicInputMessage>,
 ) {
-    let mut structures: HashMap<Entity, Vec<LogicBlockChangedEvent<'_>>> = HashMap::default();
+    let mut structures: HashMap<Entity, Vec<LogicBlockChangedMessage<'_>>> = HashMap::default();
 
     for sle in evr_structure_loaded.read() {
         let Ok((structure, _)) = q_structure.get(sle.structure_entity) else {
@@ -334,7 +334,7 @@ fn logic_block_changed_event_listener(
         let all_blocks = structure.all_blocks_iter(false).flat_map(|block_coord| {
             logic_blocks
                 .from_id(structure.block_at(block_coord, &blocks).unlocalized_name())
-                .map(|logic_block| LogicBlockChangedEvent {
+                .map(|logic_block| LogicBlockChangedMessage {
                     coord: block_coord,
                     old: None,
                     new: Some((logic_block, structure.block_rotation(block_coord))),
@@ -345,7 +345,7 @@ fn logic_block_changed_event_listener(
     }
 
     for ev in evr_block_changed.read() {
-        let mut logic_entry = LogicBlockChangedEvent {
+        let mut logic_entry = LogicBlockChangedMessage {
             coord: ev.block.coords(),
             old: None,
             new: None,
@@ -372,7 +372,7 @@ fn logic_block_changed_event_listener(
         let mut events_by_coords = HashMap::new();
 
         for ev in &events {
-            let &LogicBlockChangedEvent { coord, old, new } = ev;
+            let &LogicBlockChangedMessage { coord, old, new } = ev;
             if let Some((old_logic_block, old_rotation)) = old {
                 logic.remove_logic_block(
                     old_logic_block,
@@ -420,14 +420,14 @@ fn logic_block_changed_event_listener(
 }
 
 #[derive(Resource, Default)]
-struct LogicOutputEventQueue(VecDeque<LogicOutputEvent>);
+struct LogicOutputMessageQueue(VecDeque<LogicOutputMessage>);
 
 #[derive(Resource, Default)]
-struct LogicInputEventQueue(VecDeque<LogicInputEvent>);
+struct LogicInputMessageQueue(VecDeque<LogicInputMessage>);
 
 fn queue_logic_consumers(
-    mut evr_queue_logic_input: EventReader<QueueLogicInputEvent>,
-    mut logic_input_event_queue: ResMut<LogicInputEventQueue>,
+    mut evr_queue_logic_input: MessageReader<QueueLogicInputMessage>,
+    mut logic_input_event_queue: ResMut<LogicInputMessageQueue>,
 ) {
     for ev in evr_queue_logic_input.read() {
         logic_input_event_queue.0.push_back(ev.0.clone());
@@ -435,9 +435,9 @@ fn queue_logic_consumers(
 }
 
 fn queue_logic_producers(
-    mut evr_queue_logic_output: EventReader<QueueLogicOutputEvent>,
-    mut logic_output_event_queue: ResMut<LogicOutputEventQueue>,
-    mut evr_block_data_changed: EventReader<BlockDataChangedEvent>,
+    mut evr_queue_logic_output: MessageReader<QueueLogicOutputMessage>,
+    mut logic_output_event_queue: ResMut<LogicOutputMessageQueue>,
+    mut evr_block_data_changed: MessageReader<BlockDataChangedMessage>,
     logic_blocks: Res<Registry<LogicBlock>>,
     blocks: Res<Registry<Block>>,
     q_structure: Query<&Structure>,
@@ -452,17 +452,17 @@ fn queue_logic_producers(
 
                 logic_blocks.contains(s.block_at(ev.block.coords(), &blocks).unlocalized_name())
             })
-            .map(|x| QueueLogicOutputEvent(LogicOutputEvent { block: x.block })),
+            .map(|x| QueueLogicOutputMessage(LogicOutputMessage { block: x.block })),
     ) {
         logic_output_event_queue.0.push_back(ev.0);
     }
 }
 
 fn send_queued_logic_events(
-    mut outputs: ResMut<LogicOutputEventQueue>,
-    mut inputs: ResMut<LogicInputEventQueue>,
-    mut evw_logic_output: MessageWriter<LogicOutputEvent>,
-    mut evw_logic_input: MessageWriter<LogicInputEvent>,
+    mut outputs: ResMut<LogicOutputMessageQueue>,
+    mut inputs: ResMut<LogicInputMessageQueue>,
+    mut evw_logic_output: MessageWriter<LogicOutputMessage>,
+    mut evw_logic_input: MessageWriter<LogicInputMessage>,
 ) {
     evw_logic_input.write_batch(inputs.0.drain(..));
     evw_logic_output.write_batch(outputs.0.drain(..));
@@ -471,8 +471,8 @@ fn send_queued_logic_events(
 /// Many logic blocks simply push their block logic data to their output ports on
 pub fn default_logic_block_output(
     block_name: &str,
-    mut evr_logic_output: EventReader<LogicOutputEvent>,
-    mut evw_queue_logic_input: MessageWriter<QueueLogicInputEvent>,
+    mut evr_logic_output: MessageReader<LogicOutputMessage>,
+    mut evw_queue_logic_input: MessageWriter<QueueLogicInputMessage>,
     logic_blocks: &Registry<LogicBlock>,
     blocks: &Registry<Block>,
     mut q_structure: Query<(&mut Structure, &mut LogicDriver)>,
@@ -545,8 +545,8 @@ pub(super) fn register(app: &mut App) {
     make_persistent::<BlockLogicData>(app);
     create_registry::<LogicBlock>(app, "cosmos:logic_blocks");
     create_registry::<LogicWireColor>(app, "cosmos:logic_wire_colors");
-    app.init_resource::<LogicOutputEventQueue>();
-    app.init_resource::<LogicInputEventQueue>();
+    app.init_resource::<LogicOutputMessageQueue>();
+    app.init_resource::<LogicInputMessageQueue>();
 
     app.add_systems(OnEnter(GameState::Loading), register_logic_groups);
 
@@ -557,9 +557,9 @@ pub(super) fn register(app: &mut App) {
         (
             LogicSystemSet::PreLogicTick, //.run_if(run_con.clone()),
             LogicSystemSet::EditLogicGraph
-                .in_set(BlockEventsSet::ProcessEvents)
+                .in_set(BlockMessagesSet::ProcessMessages)
                 // This may be a bad idea?
-                .ambiguous_with(BlockEventsSet::ProcessEvents),
+                .ambiguous_with(BlockMessagesSet::ProcessMessages),
             LogicSystemSet::QueueConsumers,
             LogicSystemSet::QueueProducers,
             (
@@ -596,10 +596,10 @@ pub(super) fn register(app: &mut App) {
     .register_type::<LogicDriver>()
     .register_type::<LogicGraph>()
     .register_type::<LogicGroup>()
-    .add_event::<LogicInputEvent>()
-    .add_event::<LogicOutputEvent>()
-    .add_event::<QueueLogicInputEvent>()
-    .add_event::<QueueLogicOutputEvent>();
+    .add_event::<LogicInputMessage>()
+    .add_event::<LogicOutputMessage>()
+    .add_event::<QueueLogicInputMessage>()
+    .add_event::<QueueLogicOutputMessage>();
 
     // TODO: Move this all to server, then add them to LogicSystemRegistrySet::RegisterLogicBlocks.
     app.allow_ambiguous_resource::<Registry<LogicBlock>>();

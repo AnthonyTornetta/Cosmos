@@ -4,16 +4,16 @@ use bevy::prelude::*;
 use cosmos_core::{
     block::{
         Block,
-        block_events::{BlockEventsSet, BlockInteractEvent},
+        block_events::{BlockMessagesSet, BlockInteractMessage},
         data::BlockData,
         multiblock::reactor::{
-            ClientRequestChangeReactorStatus, OpenReactorEvent, Reactor, ReactorActive, ReactorFuel, ReactorFuelConsumption,
+            ClientRequestChangeReactorStatus, OpenReactorMessage, Reactor, ReactorActive, ReactorFuel, ReactorFuelConsumption,
             ReactorPowerGenerationBlock, Reactors,
         },
     },
     ecs::sets::FixedUpdateSet,
     entities::player::Player,
-    events::block_events::{BlockChangedEvent, BlockDataSystemParams},
+    events::block_events::{BlockChangedMessage, BlockDataSystemParams},
     inventory::Inventory,
     item::Item,
     netty::sync::events::server_event::{NettyMessageReceived, NettyMessageWriter},
@@ -34,11 +34,11 @@ impl DefaultPersistentComponent for ReactorFuelConsumption {}
 impl DefaultPersistentComponent for ReactorActive {}
 
 fn handle_block_event(
-    mut interact_events: EventReader<BlockInteractEvent>,
+    mut interact_events: MessageReader<BlockInteractMessage>,
     s_query: Query<&Structure>,
     blocks: Res<Registry<Block>>,
     q_player: Query<&Player>,
-    mut nevw: NettyMessageWriter<OpenReactorEvent>,
+    mut nevw: NettyMessageWriter<OpenReactorMessage>,
 ) {
     for ev in interact_events.read() {
         let Some(s_block) = ev.block else {
@@ -60,7 +60,7 @@ fn handle_block_event(
         let block_id = s_block.block_id(structure);
 
         if block_id == block.id() {
-            nevw.write(OpenReactorEvent(s_block), player.client_id());
+            nevw.write(OpenReactorMessage(s_block), player.client_id());
         }
     }
 }
@@ -161,7 +161,7 @@ fn add_reactor_to_structure(mut commands: Commands, query: Query<Entity, (Added<
 
 fn on_modify_reactor(
     mut reactors_query: Query<&mut Reactors>,
-    mut block_change_event: EventReader<BlockChangedEvent>,
+    mut block_change_event: MessageReader<BlockChangedMessage>,
     blocks: Res<Registry<Block>>,
     reactor_cells: Res<Registry<ReactorPowerGenerationBlock>>,
     mut q_reactor: Query<&mut Reactor>,
@@ -229,7 +229,7 @@ fn on_modify_reactor(
 }
 
 fn process_activate_reactor(
-    mut nevr: EventReader<NettyMessageReceived<ClientRequestChangeReactorStatus>>,
+    mut nevr: MessageReader<NettyMessageReceived<ClientRequestChangeReactorStatus>>,
     mut q_structure: Query<&mut Structure>,
     mut q_block_data: Query<&mut BlockData>,
     mut bds_params: BlockDataSystemParams,
@@ -278,7 +278,7 @@ pub(super) fn register(app: &mut App) {
     app.add_systems(
         FixedUpdate,
         handle_block_event
-            .in_set(BlockEventsSet::ProcessEvents)
+            .in_set(BlockMessagesSet::ProcessMessages)
             .run_if(in_state(GameState::Playing)),
     );
 
@@ -287,7 +287,7 @@ pub(super) fn register(app: &mut App) {
         (
             add_reactor_to_structure.in_set(StructureLoadingSet::AddStructureComponents),
             process_activate_reactor.in_set(FixedUpdateSet::Main),
-            (on_modify_reactor.in_set(BlockEventsSet::ProcessEvents), generate_power)
+            (on_modify_reactor.in_set(BlockMessagesSet::ProcessMessages), generate_power)
                 .in_set(StructureSystemsSet::UpdateSystemsBlocks)
                 .chain(),
         )

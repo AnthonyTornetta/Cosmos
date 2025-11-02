@@ -1,7 +1,7 @@
 use bevy::{color::palettes::css, prelude::*};
 use cosmos_core::{
     block::multiblock::reactor::{
-        ClientRequestChangeReactorStatus, OpenReactorEvent, Reactor, ReactorActive, ReactorFuel, ReactorFuelConsumption,
+        ClientRequestChangeReactorStatus, OpenReactorMessage, Reactor, ReactorActive, ReactorFuel, ReactorFuelConsumption,
     },
     inventory::Inventory,
     netty::{
@@ -21,7 +21,7 @@ use crate::{
     ui::{
         OpenMenu, UiSystemSet,
         components::{
-            button::{ButtonEvent, ButtonStyles, CosmosButton},
+            button::{ButtonMessage, ButtonStyles, CosmosButton},
             window::GuiWindow,
         },
         font::DefaultFont,
@@ -39,7 +39,7 @@ pub struct ReactorPowerGenStats;
 
 fn create_ui(
     mut commands: Commands,
-    mut evr_open_reactor: EventReader<OpenReactorEvent>,
+    mut evr_open_reactor: MessageReader<OpenReactorMessage>,
     q_structure: Query<&Structure>,
     q_reactor_active: Query<&ReactorActive>,
     q_inventory: Query<Entity, (With<LocalPlayer>, With<Inventory>)>,
@@ -200,7 +200,7 @@ fn create_ui(
 }
 
 fn on_click_toggle(
-    ev: Trigger<ButtonEvent>,
+    ev: Trigger<ButtonMessage>,
     q_active: Query<(), With<ReactorActive>>,
     q_structure: Query<&Structure>,
     q_ref: Query<&ReactorBlockReference>,

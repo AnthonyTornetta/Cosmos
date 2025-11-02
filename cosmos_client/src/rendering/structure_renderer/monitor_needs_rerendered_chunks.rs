@@ -1,19 +1,19 @@
 use bevy::platform::collections::HashMap;
 use bevy::prelude::*;
-use cosmos_core::events::block_events::{BlockChangedEvent, BlockDataChangedEvent};
+use cosmos_core::events::block_events::{BlockChangedMessage, BlockDataChangedMessage};
 use cosmos_core::structure::Structure;
 use cosmos_core::structure::chunk::CHUNK_DIMENSIONS;
 use cosmos_core::structure::coordinates::ChunkCoordinate;
-use cosmos_core::structure::events::ChunkSetEvent;
+use cosmos_core::structure::events::ChunkSetMessage;
 use std::collections::HashSet;
 
 use super::chunk_rendering::ChunkNeedsRendered;
 use super::{BlockDataRerenderOnChange, StructureRenderingSet};
 
 fn monitor_block_updates_system(
-    mut evr_block_changed: EventReader<BlockChangedEvent>,
-    mut evr_chunk_set_event: EventReader<ChunkSetEvent>,
-    mut evr_changed_data: EventReader<BlockDataChangedEvent>,
+    mut evr_block_changed: MessageReader<BlockChangedMessage>,
+    mut evr_chunk_set_event: MessageReader<ChunkSetMessage>,
+    mut evr_changed_data: MessageReader<BlockDataChangedMessage>,
     q_structure: Query<&Structure>,
     q_block_data_rerender_flag: Query<(), With<BlockDataRerenderOnChange>>,
     mut commands: Commands,

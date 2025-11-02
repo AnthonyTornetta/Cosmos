@@ -35,7 +35,7 @@ pub(super) fn register(app: &mut App) {
     create_cosmos_command::<DespawnCommand, _>(
         ServerCommand::new("cosmos:despawn", "[entity_id]", "Despawns the given entity."),
         app,
-        |mut commands: Commands, mut evr_command: EventReader<CommandEvent<DespawnCommand>>| {
+        |mut commands: Commands, mut evr_command: MessageReader<CommandMessage<DespawnCommand>>| {
             for ev in evr_command.read() {
                 if let Ok(mut entity_commands) = commands.get_entity(ev.command.0) {
                     entity_commands.insert(NeedsDespawned);

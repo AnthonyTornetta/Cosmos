@@ -5,39 +5,39 @@
 //!
 //! Usage:
 //! ```
-//! # use bevy::prelude::{Event, info, App, EventReader};
+//! # use bevy::prelude::{Message, info, App, MessageReader};
 //! # use serde::{Serialize, Deserialize};
-//! # use crate::cosmos_core::netty::sync::events::netty_event::{IdentifiableEvent, NettyMessage};
+//! # use crate::cosmos_core::netty::sync::events::netty_event::{IdentifiableMessage, NettyMessage};
 //! # use crate::cosmos_core::netty::sync::events::client_event::NettyMessageWriter;
 //! # use crate::cosmos_core::netty::sync::events::server_event::NettyMessageReceived;
-//! # use crate::cosmos_core::netty::sync::events::netty_event::SyncedEventImpl;
+//! # use crate::cosmos_core::netty::sync::events::netty_event::SyncedMessageImpl;
 //! // `core` project
-//! #[derive(Debug, Event, Serialize, Deserialize, Clone)]
-//! struct ExampleEvent(String);
+//! #[derive(Debug, Message, Serialize, Deserialize, Clone)]
+//! struct ExampleMessage(String);
 //!
-//! impl IdentifiableEvent for ExampleEvent {
+//! impl IdentifiableMessage for ExampleMessage {
 //!     fn unlocalized_name() -> &'static str {
 //!         "cosmos:example_event" // Unique to this event
 //!     }
 //! }
-//! impl NettyMessage for ExampleEvent {
-//!     fn event_receiver() -> cosmos_core::netty::sync::events::netty_event::EventReceiver {
-//!         // If this is set to EventReceiver::Client, then the client/server code below would be swapped.
-//!         cosmos_core::netty::sync::events::netty_event::EventReceiver::Server
+//! impl NettyMessage for ExampleMessage {
+//!     fn event_receiver() -> cosmos_core::netty::sync::events::netty_event::MessageReceiver {
+//!         // If this is set to MessageReceiver::Client, then the client/server code below would be swapped.
+//!         cosmos_core::netty::sync::events::netty_event::MessageReceiver::Server
 //!     }
 //! }
 //!
 //! fn register(app: &mut App) {
-//!     app.add_netty_event::<ExampleEvent>();
+//!     app.add_netty_event::<ExampleMessage>();
 //! }
 //!
 //! // `client` project
-//! fn send_event_to_server(mut nevw_example: NettyMessageWriter<ExampleEvent>) {
-//!     nevw_example.write(ExampleEvent("Hello from client!".to_owned()));
+//! fn send_event_to_server(mut nevw_example: NettyMessageWriter<ExampleMessage>) {
+//!     nevw_example.write(ExampleMessage("Hello from client!".to_owned()));
 //! }
 //!
 //! // `server` project
-//! fn receive_event(mut nevr_example: EventReader<NettyMessageReceived<ExampleEvent>>) {
+//! fn receive_event(mut nevr_example: MessageReader<NettyMessageReceived<ExampleMessage>>) {
 //!     for ev in nevr_example.read() {
 //!         info!("Received: {} from client {}", ev.event.0, ev.client_id);
 //!     }

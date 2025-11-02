@@ -1,50 +1,50 @@
 //! Chat messages sent between the server and clients
 
-use crate::netty::sync::events::netty_event::{IdentifiableEvent, NettyMessage, SyncedEventImpl};
-use bevy::prelude::{App, Entity, Event};
+use crate::netty::sync::events::netty_event::{IdentifiableMessage, NettyMessage, SyncedMessageImpl};
+use bevy::prelude::{App, Entity, Message};
 use serde::{Deserialize, Serialize};
 
-#[derive(Event, Debug, Serialize, Deserialize, Clone)]
+#[derive(Message, Debug, Serialize, Deserialize, Clone)]
 /// Sent from client to server to send a chat message to everyone
-pub enum ClientSendChatMessageEvent {
+pub enum ClientSendChatMessageMessage {
     /// This message should be sent to everyone
     Global(String),
 }
 
-impl IdentifiableEvent for ClientSendChatMessageEvent {
+impl IdentifiableMessage for ClientSendChatMessageMessage {
     fn unlocalized_name() -> &'static str {
         "cosmos:client_send_chat_msg"
     }
 }
 
-impl NettyMessage for ClientSendChatMessageEvent {
-    fn event_receiver() -> crate::netty::sync::events::netty_event::EventReceiver {
-        crate::netty::sync::events::netty_event::EventReceiver::Server
+impl NettyMessage for ClientSendChatMessageMessage {
+    fn event_receiver() -> crate::netty::sync::events::netty_event::MessageReceiver {
+        crate::netty::sync::events::netty_event::MessageReceiver::Server
     }
 }
 
-#[derive(Event, Debug, Serialize, Deserialize, Clone)]
+#[derive(Message, Debug, Serialize, Deserialize, Clone)]
 /// Sent from server to clients that should display this chat message
-pub struct ServerSendChatMessageEvent {
+pub struct ServerSendChatMessageMessage {
     /// The entity that sent this message - none if no entity sent it
     pub sender: Option<Entity>,
     /// The message to display
     pub message: String,
 }
 
-impl IdentifiableEvent for ServerSendChatMessageEvent {
+impl IdentifiableMessage for ServerSendChatMessageMessage {
     fn unlocalized_name() -> &'static str {
         "cosmos:server_send_chat_msg"
     }
 }
 
-impl NettyMessage for ServerSendChatMessageEvent {
-    fn event_receiver() -> crate::netty::sync::events::netty_event::EventReceiver {
-        crate::netty::sync::events::netty_event::EventReceiver::Client
+impl NettyMessage for ServerSendChatMessageMessage {
+    fn event_receiver() -> crate::netty::sync::events::netty_event::MessageReceiver {
+        crate::netty::sync::events::netty_event::MessageReceiver::Client
     }
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_netty_event::<ClientSendChatMessageEvent>();
-    app.add_netty_event::<ServerSendChatMessageEvent>();
+    app.add_netty_event::<ClientSendChatMessageMessage>();
+    app.add_netty_event::<ServerSendChatMessageMessage>();
 }

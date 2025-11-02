@@ -23,7 +23,7 @@ use serde::{Serialize, de::DeserializeOwned};
 
 use crate::structure::planet::align_player::{self, PlayerAlignment};
 
-#[derive(Event, Debug, Clone)]
+#[derive(Message, Debug, Clone)]
 struct StructureSystemNeedsUpdated {
     system_id: StructureSystemId,
     structure_entity: Entity,
@@ -145,7 +145,7 @@ fn replication_listen_netty(
 
 fn sync<T: Component<Mutability = Mutable> + StructureSystemImpl + Serialize + DeserializeOwned>(
     system_types: Res<Registry<StructureSystemType>>,
-    mut ev_reader: EventReader<StructureSystemNeedsUpdated>,
+    mut ev_reader: MessageReader<StructureSystemNeedsUpdated>,
     mut systems_query: Query<&mut StructureSystems>,
     mut q_system: Query<(&mut T, &StructureSystem)>,
     mut commands: Commands,

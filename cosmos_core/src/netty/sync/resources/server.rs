@@ -2,7 +2,7 @@
 
 use crate::{
     entities::player::Player,
-    netty::{NettyChannelServer, cosmos_encoder, sync::registry::server::SyncRegistriesEvent, system_sets::NetworkingSystemsSet},
+    netty::{NettyChannelServer, cosmos_encoder, sync::registry::server::SyncRegistriesMessage, system_sets::NetworkingSystemsSet},
     state::GameState,
 };
 use bevy::prelude::*;
@@ -17,7 +17,7 @@ struct NumResourcesToSync(u64);
 fn sync<T: SyncableResource>(
     q_player: Query<&Player>,
     mut server: ResMut<RenetServer>,
-    mut ev_reader: EventReader<SyncRegistriesEvent>,
+    mut ev_reader: MessageReader<SyncRegistriesMessage>,
     resource: Res<T>,
 ) {
     for ev in ev_reader.read() {
@@ -54,7 +54,7 @@ fn incr_resources_to_sync(mut n_resources: ResMut<NumResourcesToSync>) {
 fn send_number_of_resources(
     q_player: Query<&Player>,
     mut server: ResMut<RenetServer>,
-    mut ev_reader: EventReader<SyncRegistriesEvent>,
+    mut ev_reader: MessageReader<SyncRegistriesMessage>,
     n_resources: Res<NumResourcesToSync>,
 ) {
     for ev in ev_reader.read() {

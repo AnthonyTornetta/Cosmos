@@ -7,7 +7,7 @@ use cosmos_core::{
     entities::{
         EntityId,
         health::{Dead, Health, HealthSet, MaxHealth},
-        player::respawn::{RequestRespawnEvent, RespawnEvent},
+        player::respawn::{RequestRespawnMessage, RespawnMessage},
     },
     inventory::{HeldItemStack, Inventory, itemstack::ItemStack},
     item::physical_item::PhysicalItem,
@@ -67,8 +67,8 @@ fn on_respawn(
     mut commands: Commands,
     universe_systems: Res<UniverseSystems>,
     mut q_player: Query<(Entity, &mut Health, &MaxHealth, &mut Velocity, Option<&RespawnBlock>), With<Dead>>,
-    mut nevr: EventReader<NettyMessageReceived<RequestRespawnEvent>>,
-    mut nevw_respawn: NettyMessageWriter<RespawnEvent>,
+    mut nevr: MessageReader<NettyMessageReceived<RequestRespawnMessage>>,
+    mut nevw_respawn: NettyMessageWriter<RespawnMessage>,
 ) {
     for ev in nevr.read() {
         let Some(player_ent) = lobby.player_from_id(ev.client_id) else {
@@ -86,7 +86,7 @@ fn on_respawn(
         // transform.rotation = rot;
         //
         nevw_respawn.write(
-            RespawnEvent {
+            RespawnMessage {
                 rotation: rot,
                 location: loc,
             },

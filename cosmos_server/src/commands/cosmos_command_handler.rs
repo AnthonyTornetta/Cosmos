@@ -4,8 +4,8 @@ use std::time::Duration;
 
 use bevy::{ecs::system::ScheduleSystem, prelude::*};
 use cosmos_core::{
-    chat::ServerSendChatMessageEvent,
-    commands::ClientCommandEvent,
+    chat::ServerSendChatMessageMessage,
+    commands::ClientCommandMessage,
     ecs::sets::FixedUpdateSet,
     entities::player::Player,
     netty::{
@@ -16,18 +16,18 @@ use cosmos_core::{
     registry::{Registry, identifiable::Identifiable},
     state::GameState,
 };
-use crossterm::event::{KeyCode, KeyEvent, KeyEventKind, KeyModifiers, poll, read};
+use crossterm::event::{KeyCode, KeyMessage, KeyMessageKind, KeyModifiers, poll, read};
 use thiserror::Error;
 
 use crate::persistence::loading::LoadingSystemSet;
 
-use super::{CommandSender, CosmosCommandSent, Operator, SendCommandMessageEvent, ServerCommand};
+use super::{CommandSender, CosmosCommandSent, Operator, SendCommandMessageMessage, ServerCommand};
 
-#[derive(Event, Debug)]
+#[derive(Message, Debug)]
 /// An event that is sent when this command for `T` is sent
 ///
 /// Used with [`create_cosmos_command`]
-pub struct CommandEvent<T> {
+pub struct CommandMessage<T> {
     /// The entity that sent this - None if this is called from the server console.
     pub sender: CommandSender,
     /// The raw string the user typed
@@ -42,8 +42,8 @@ pub struct CommandEvent<T> {
 
 /// Used to easily create your own cosmos command.
 ///
-/// The system passed will be called when a [`CommandEvent<T>`] for your `T` is generated. You will
-/// still need to read them via a normal [`EventReader<CommandEvent<T>>`] in your system.
+/// The system passed will be called when a [`CommandMessage<T>`] for your `T` is generated. You will
+/// still need to read them via a normal [`MessageReader<CommandMessage<T>>`] in your system.
 pub fn create_cosmos_command<T: CosmosCommandType, M>(
     command: ServerCommand,
     app: &mut App,
@@ -56,10 +56,10 @@ pub fn create_cosmos_command<T: CosmosCommandType, M>(
     });
 
     let monitor_commands = move |commands: Res<Registry<ServerCommand>>,
-                                 mut evr_command_sent: EventReader<CosmosCommandSent>,
-                                 mut evw_command: MessageWriter<CommandEvent<T>>,
+                                 mut evr_command_sent: MessageReader<CosmosCommandSent>,
+                                 mut evw_command: MessageWriter<CommandMessage<T>>,
                                  q_operator: Query<&Operator>,
-                                 mut evw_send_message: MessageWriter<SendCommandMessageEvent>| {
+                                 mut evw_send_message: MessageWriter<SendCommandMessageMessage>| {
         for ev in evr_command_sent.read() {
             if ev.name == unlocalized_name {
                 if T::requires_operator() && !ev.sender.is_operator(&q_operator) {
@@ -70,7 +70,7 @@ pub fn create_cosmos_command<T: CosmosCommandType, M>(
 
                 match T::from_input(ev) {
                     Ok(command) => {
-                        evw_command.write(CommandEvent {
+                        evw_command.write(CommandMessage {
                             name: ev.name.clone(),
                             text: ev.text.clone(),
                             args: ev.args.clone(),
@@ -90,11 +90,11 @@ pub fn create_cosmos_command<T: CosmosCommandType, M>(
 
     app.add_systems(
         FixedUpdate,
-        (monitor_commands, on_get_command.run_if(on_event::<CommandEvent<T>>))
+        (monitor_commands, on_get_command.run_if(on_event::<CommandMessage<T>>))
             .in_set(ProcessCommandsSet::HandleCommands)
             .chain(),
     )
-    .add_event::<CommandEvent<T>>();
+    .add_event::<CommandMessage<T>>();
 }
 
 /// A cosmos command event type
@@ -123,9 +123,9 @@ fn register_commands(app: &mut App) {
     create_cosmos_command::<HelpCommand, _>(
         ServerCommand::new("cosmos:help", "[command?]", "Gets information about every command."),
         app,
-        |mut evr_command: EventReader<CommandEvent<HelpCommand>>,
+        |mut evr_command: MessageReader<CommandMessage<HelpCommand>>,
          commands: Res<Registry<ServerCommand>>,
-         mut evw_send_message: MessageWriter<SendCommandMessageEvent>| {
+         mut evw_send_message: MessageWriter<SendCommandMessageMessage>| {
             for ev in evr_command.read() {
                 if let Some(cmd) = &ev.command.0 {
                     display_help(&ev.sender, &mut evw_send_message, Some(cmd.as_str()), &commands);
@@ -139,7 +139,7 @@ fn register_commands(app: &mut App) {
 
 fn display_help(
     sender: &CommandSender,
-    evw_send_message: &mut MessageWriter<SendCommandMessageEvent>,
+    evw_send_message: &mut MessageWriter<SendCommandMessageMessage>,
     command_name: Option<&str>,
     commands: &Registry<ServerCommand>,
 ) {
@@ -193,8 +193,8 @@ pub enum ArgumentError {
 
 fn warn_on_no_command_hit(
     commands: Res<Registry<ServerCommand>>,
-    mut evr_command: EventReader<CosmosCommandSent>,
-    mut evw_send_message: MessageWriter<SendCommandMessageEvent>,
+    mut evr_command: MessageReader<CosmosCommandSent>,
+    mut evw_send_message: MessageWriter<SendCommandMessageMessage>,
 ) {
     for ev in evr_command.read() {
         if !commands.contains(&ev.name) {
@@ -213,8 +213,8 @@ fn monitor_inputs(mut event_writer: MessageWriter<CosmosCommandSent>, mut text: 
         if event_available {
             let x = read();
 
-            if let Ok(crossterm::event::Event::Key(KeyEvent { code, modifiers, kind, .. })) = x
-                && kind != KeyEventKind::Release
+            if let Ok(crossterm::event::Message::Key(KeyMessage { code, modifiers, kind, .. })) = x
+                && kind != KeyMessageKind::Release
             {
                 if let KeyCode::Char(mut c) = code {
                     if modifiers.intersects(KeyModifiers::SHIFT) {
@@ -250,7 +250,7 @@ pub enum ProcessCommandsSet {
 
 fn command_receiver(
     mut event_writer: MessageWriter<CosmosCommandSent>,
-    mut nevr_command: EventReader<NettyMessageReceived<ClientCommandEvent>>,
+    mut nevr_command: MessageReader<NettyMessageReceived<ClientCommandMessage>>,
     q_player: Query<&Player>,
     lobby: Res<ServerLobby>,
 ) {
@@ -272,8 +272,8 @@ fn command_receiver(
 }
 
 fn send_messages(
-    mut evw_chat_event: NettyMessageWriter<ServerSendChatMessageEvent>,
-    mut evr_send_message: EventReader<SendCommandMessageEvent>,
+    mut evw_chat_event: NettyMessageWriter<ServerSendChatMessageMessage>,
+    mut evr_send_message: MessageReader<SendCommandMessageMessage>,
     q_player: Query<&Player>,
 ) {
     for ev in evr_send_message.read() {
@@ -283,7 +283,7 @@ fn send_messages(
 
         info!("({}) {}", player.name(), ev.message);
         evw_chat_event.write(
-            ServerSendChatMessageEvent {
+            ServerSendChatMessageMessage {
                 sender: None,
                 message: ev.message.clone(),
             },

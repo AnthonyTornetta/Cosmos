@@ -1,7 +1,7 @@
 //! Contains systems and components for the player
 
 use bevy::{color::palettes::css, prelude::*};
-use bevy_rapier3d::prelude::{ActiveEvents, CoefficientCombineRule, Collider, Friction, LockedAxes, ReadMassProperties, RigidBody};
+use bevy_rapier3d::prelude::{ActiveMessages, CoefficientCombineRule, Collider, Friction, LockedAxes, ReadMassProperties, RigidBody};
 use cosmos_core::{
     ecs::sets::FixedUpdateSet, entities::player::Player, netty::client::LocalPlayer, persistence::LoadingDistance, state::GameState,
 };
@@ -49,7 +49,7 @@ fn on_add_player(
             },
             LoadingDistance::new(1, 2),
             ReadMassProperties::default(),
-            ActiveEvents::COLLISION_EVENTS,
+            ActiveMessages::COLLISION_EVENTS,
         ));
     }
 }

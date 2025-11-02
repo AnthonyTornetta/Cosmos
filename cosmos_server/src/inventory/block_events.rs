@@ -1,13 +1,13 @@
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::Velocity;
 use cosmos_core::{
-    block::block_events::{BlockBreakEvent, BlockEventsSet},
+    block::block_events::{BlockBreakMessage, BlockMessagesSet},
     ecs::sets::FixedUpdateSet,
     inventory::Inventory,
     item::physical_item::PhysicalItem,
     physics::location::Location,
     prelude::{Structure, StructureBlock},
-    structure::block_health::events::BlockDestroyedEvent,
+    structure::block_health::events::BlockDestroyedMessage,
 };
 
 use crate::structure::block_health::BlockHealthSet;
@@ -59,7 +59,7 @@ fn process_event(
 fn monitor_block_detroy(
     q_inventory: Query<&Inventory>,
     q_structure: Query<(&Location, &GlobalTransform, &Structure, &Velocity)>,
-    mut evr_block_destroy: EventReader<BlockDestroyedEvent>,
+    mut evr_block_destroy: MessageReader<BlockDestroyedMessage>,
     mut commands: Commands,
 ) {
     for (block, structure_entity) in evr_block_destroy.read().map(|x| (x.block, x.structure_entity)) {
@@ -70,7 +70,7 @@ fn monitor_block_detroy(
 fn monitor_block_breaks(
     q_inventory: Query<&Inventory>,
     q_structure: Query<(&Location, &GlobalTransform, &Structure, &Velocity)>,
-    mut evr_block_break: EventReader<BlockBreakEvent>,
+    mut evr_block_break: MessageReader<BlockBreakMessage>,
     mut commands: Commands,
 ) {
     for (block, structure_entity) in evr_block_break.read().map(|x| (x.block, x.block.structure())) {
@@ -84,7 +84,7 @@ pub(super) fn register(app: &mut App) {
         (
             // We want to target blocks after events are sent, but before blocks are removed.
             monitor_block_breaks
-                .in_set(BlockEventsSet::PreProcessEvents)
+                .in_set(BlockMessagesSet::PreProcessMessages)
                 .after(FixedUpdateSet::NettyReceive),
             // We want to target blocks after events are sent, but before blocks are removed.
             monitor_block_detroy

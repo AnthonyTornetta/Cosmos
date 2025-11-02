@@ -28,8 +28,8 @@ pub mod standard_generator;
 /// Just an empty component for marking your biosphere
 pub trait AsteroidGeneratorComponent: Default + Clone + Copy + Component {}
 
-#[derive(Debug, Event)]
-struct AsteroidNeedsGeneratorEvent {
+#[derive(Debug, Message)]
+struct AsteroidNeedsGeneratorMessage {
     biosphere_id: String,
     entity: Entity,
 }
@@ -87,7 +87,7 @@ pub fn register_asteroid_generator<T: AsteroidGeneratorComponent>(
         SAVING_SCHEDULE,
         (
             // Adds this biosphere's marker component to anything that needs generated
-            (move |mut event_reader: EventReader<AsteroidNeedsGeneratorEvent>, mut commands: Commands| {
+            (move |mut event_reader: MessageReader<AsteroidNeedsGeneratorMessage>, mut commands: Commands| {
                 for ev in event_reader.read() {
                     if ev.biosphere_id == asteroid_generator_id {
                         commands
@@ -125,7 +125,7 @@ pub fn register_asteroid_generator<T: AsteroidGeneratorComponent>(
 
 fn add_asteroid_generator(
     query: Query<(Entity, &Asteroid, &Location), (Added<Structure>, Without<AsteroidGeneratorMarker>)>,
-    mut event_writer: MessageWriter<AsteroidNeedsGeneratorEvent>,
+    mut event_writer: MessageWriter<AsteroidNeedsGeneratorMessage>,
     registry: Res<AsteroidTemperatureRegistry>,
     server_seed: Res<ServerSeed>,
 ) {
@@ -139,7 +139,7 @@ fn add_asteroid_generator(
 
             let asteroid_generator = generators[rng.random_range(0..generators.len())];
 
-            event_writer.write(AsteroidNeedsGeneratorEvent {
+            event_writer.write(AsteroidNeedsGeneratorMessage {
                 biosphere_id: asteroid_generator.to_owned(),
                 entity,
             });
@@ -160,5 +160,5 @@ pub(super) fn register(app: &mut App) {
 
     app.add_systems(FixedUpdate, add_asteroid_generator.in_set(FixedUpdateSet::Main))
         .init_resource::<AsteroidTemperatureRegistry>()
-        .add_event::<AsteroidNeedsGeneratorEvent>();
+        .add_event::<AsteroidNeedsGeneratorMessage>();
 }

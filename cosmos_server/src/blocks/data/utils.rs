@@ -4,8 +4,8 @@ use std::marker::PhantomData;
 
 use bevy::{platform::collections::HashMap, prelude::*};
 use cosmos_core::{
-    block::{Block, block_events::BlockEventsSet, data::BlockData},
-    events::block_events::{BlockChangedEvent, BlockDataSystemParams},
+    block::{Block, block_events::BlockMessagesSet, data::BlockData},
+    events::block_events::{BlockChangedMessage, BlockDataSystemParams},
     prelude::{BlockCoordinate, Structure, StructureLoadingSet},
     registry::{Registry, identifiable::Identifiable},
     state::GameState,
@@ -33,11 +33,11 @@ impl<T: Component> Default for BlockDataInitializers<T> {
 
 /// Used to process the addition/removal of storage blocks to a structure.
 ///
-/// Sends out the `PopulateBlockInventoryEvent` event when needed.
+/// Sends out the `PopulateBlockInventoryMessage` event when needed.
 fn on_add_block<T: Component>(
     initializers: Res<BlockDataInitializers<T>>,
-    mut evr_block_changed: EventReader<BlockChangedEvent>,
-    mut evw_bd: MessageWriter<InsertBlockDataEvent<T>>,
+    mut evr_block_changed: MessageReader<BlockChangedMessage>,
+    mut evw_bd: MessageWriter<InsertBlockDataMessage<T>>,
 ) {
     if evr_block_changed.is_empty() {
         return Default::default();
@@ -57,14 +57,14 @@ fn on_add_block<T: Component>(
         blocks.entry(ev.block.structure()).or_default().push(ev.block.coords());
     }
 
-    evw_bd.write(InsertBlockDataEvent(blocks, Default::default()));
+    evw_bd.write(InsertBlockDataMessage(blocks, Default::default()));
 }
 
-#[derive(Event)]
-struct InsertBlockDataEvent<T: Component>(HashMap<Entity, Vec<BlockCoordinate>>, PhantomData<T>);
+#[derive(Message)]
+struct InsertBlockDataMessage<T: Component>(HashMap<Entity, Vec<BlockCoordinate>>, PhantomData<T>);
 
 fn insert_block_data<T: Component>(
-    mut evr_todo: EventReader<InsertBlockDataEvent<T>>,
+    mut evr_todo: MessageReader<InsertBlockDataMessage<T>>,
     mut q_structure: Query<&mut Structure>,
     mut q_block_data: Query<&mut BlockData>,
     mut params: BlockDataSystemParams,
@@ -72,7 +72,7 @@ fn insert_block_data<T: Component>(
     initializers: Res<BlockDataInitializers<T>>,
     mut commands: Commands,
 ) {
-    for InsertBlockDataEvent(input, _) in evr_todo.read() {
+    for InsertBlockDataMessage(input, _) in evr_todo.read() {
         for (&entity, coords) in input.iter() {
             let Ok(mut structure) = q_structure.get_mut(entity) else {
                 continue;
@@ -155,7 +155,7 @@ fn init_block_data<T: Component>(
 pub fn add_default_block_data_for_block<T: Component>(app: &mut App, ctor: DataConstructor<T>, block_id: &'static str) {
     if !app.world().contains_resource::<BlockDataInitializers<T>>() {
         app.init_resource::<BlockDataInitializers<T>>();
-        app.add_event::<InsertBlockDataEvent<T>>();
+        app.add_event::<InsertBlockDataMessage<T>>();
 
         app.add_systems(
             FixedUpdate,
@@ -164,7 +164,7 @@ pub fn add_default_block_data_for_block<T: Component>(app: &mut App, ctor: DataC
                 (
                     insert_block_data::<T>.in_set(StructureLoadingSet::InitializeChunkBlockData),
                     on_add_block::<T>
-                        .in_set(BlockEventsSet::ProcessEvents)
+                        .in_set(BlockMessagesSet::ProcessMessages)
                         .ambiguous_with(FluidInteractionSet::InteractWithFluidBlocks),
                 )
                     .chain(),

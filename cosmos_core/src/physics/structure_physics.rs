@@ -6,15 +6,15 @@ use crate::block::Block;
 use crate::block::blocks::fluid::FLUID_COLLISION_GROUP;
 use crate::ecs::add_multi_statebound_resource;
 use crate::ecs::sets::FixedUpdateSet;
-use crate::events::block_events::BlockChangedEvent;
+use crate::events::block_events::BlockChangedMessage;
 use crate::prelude::UnboundChunkBlockCoordinate;
 use crate::registry::identifiable::Identifiable;
 use crate::registry::{ReadOnlyRegistry, Registry};
 use crate::state::GameState;
 use crate::structure::block_storage::BlockStorer;
-use crate::structure::chunk::{CHUNK_DIMENSIONS, Chunk, ChunkUnloadEvent};
+use crate::structure::chunk::{CHUNK_DIMENSIONS, Chunk, ChunkUnloadMessage};
 use crate::structure::coordinates::{ChunkBlockCoordinate, ChunkCoordinate, CoordinateType};
-use crate::structure::events::ChunkSetEvent;
+use crate::structure::events::ChunkSetMessage;
 use crate::structure::{ChunkNeighbors, Structure};
 use bevy::platform::collections::HashSet;
 use bevy::prelude::*;
@@ -434,9 +434,9 @@ fn generate_chunk_collider(
     all_colliders
 }
 
-#[derive(Debug, Hash, PartialEq, Eq, Event)]
+#[derive(Debug, Hash, PartialEq, Eq, Message)]
 /// This event is sent when a chunk needs new physics applied to it.
-struct ChunkNeedsPhysicsEvent {
+struct ChunkNeedsPhysicsMessage {
     chunk: ChunkCoordinate,
     structure_entity: Entity,
 }
@@ -573,7 +573,7 @@ fn read_physics_task(
 fn listen_for_new_physics_event(
     mut commands: Commands,
     structure_query: Query<&Structure>,
-    mut event_reader: EventReader<ChunkNeedsPhysicsEvent>,
+    mut event_reader: MessageReader<ChunkNeedsPhysicsMessage>,
     blocks: Res<ReadOnlyRegistry<Block>>,
     colliders: Res<ReadOnlyRegistry<BlockCollider>>,
     mut todo: ResMut<ChunksToGenerateColliders>,
@@ -583,7 +583,7 @@ fn listen_for_new_physics_event(
         return;
     }
 
-    let to_process = event_reader.read().collect::<Vec<&ChunkNeedsPhysicsEvent>>();
+    let to_process = event_reader.read().collect::<Vec<&ChunkNeedsPhysicsMessage>>();
 
     // Queue up any chunks that need their colliders generated
     for ev in to_process.iter() {
@@ -691,7 +691,7 @@ fn listen_for_new_physics_event(
 fn clean_unloaded_chunk_colliders(
     mut commands: Commands,
     mut physics_components_query: Query<&mut ChunkPhysicsParts>,
-    mut event_reader: EventReader<ChunkUnloadEvent>,
+    mut event_reader: MessageReader<ChunkUnloadMessage>,
 ) {
     for ev in event_reader.read() {
         remove_chunk_colliders(&mut commands, &mut physics_components_query, ev.structure_entity, ev.chunk_entity);
@@ -730,21 +730,21 @@ fn add_physics_parts(mut commands: Commands, query: Query<Entity, Added<Structur
 }
 
 fn listen_for_structure_event(
-    mut event: EventReader<BlockChangedEvent>,
-    mut chunk_set_event: EventReader<ChunkSetEvent>,
-    mut event_writer: MessageWriter<ChunkNeedsPhysicsEvent>,
+    mut event: MessageReader<BlockChangedMessage>,
+    mut chunk_set_event: MessageReader<ChunkSetMessage>,
+    mut event_writer: MessageWriter<ChunkNeedsPhysicsMessage>,
 ) {
-    let mut to_do: HashSet<ChunkNeedsPhysicsEvent> = HashSet::new();
+    let mut to_do: HashSet<ChunkNeedsPhysicsMessage> = HashSet::new();
 
     for ev in event.read() {
-        to_do.insert(ChunkNeedsPhysicsEvent {
+        to_do.insert(ChunkNeedsPhysicsMessage {
             chunk: (ev.block.chunk_coords()),
             structure_entity: ev.block.structure(),
         });
     }
 
     for ev in chunk_set_event.read() {
-        to_do.insert(ChunkNeedsPhysicsEvent {
+        to_do.insert(ChunkNeedsPhysicsMessage {
             chunk: ev.coords,
             structure_entity: ev.structure_entity,
         });
@@ -774,7 +774,7 @@ pub(super) fn register(app: &mut App) {
     #[cfg(feature = "server")]
     add_multi_statebound_resource::<ChunksToGenerateColliders, GameState>(app, GameState::Playing, GameState::Playing);
 
-    app.add_event::<ChunkNeedsPhysicsEvent>()
+    app.add_event::<ChunkNeedsPhysicsMessage>()
         // This wasn't registered in bevy_rapier
         .register_type::<ReadMassProperties>()
         .register_type::<ColliderMassProperties>()

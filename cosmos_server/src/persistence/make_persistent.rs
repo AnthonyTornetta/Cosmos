@@ -2,7 +2,7 @@
 
 use bevy::{ecs::system::SystemParam, prelude::*};
 use cosmos_core::{
-    block::data::{BlockData, persistence::ChunkLoadBlockDataEvent},
+    block::data::{BlockData, persistence::ChunkLoadBlockDataMessage},
     entities::EntityId,
     events::block_events::BlockDataSystemParams,
     netty::sync::IdentifiableComponent,
@@ -169,7 +169,7 @@ fn load_component_from_block_data<T: PersistentComponent>(
     mut q_structure: Query<&mut Structure>,
     mut q_block_data: Query<&mut BlockData>,
     mut block_data_system_params: BlockDataSystemParams,
-    mut ev_reader: EventReader<ChunkLoadBlockDataEvent>,
+    mut ev_reader: MessageReader<ChunkLoadBlockDataMessage>,
     mut commands: Commands,
     q_has_component: Query<(), With<T>>,
     entity_id_manager: EntityIdManager,

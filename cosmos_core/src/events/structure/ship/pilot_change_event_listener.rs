@@ -3,7 +3,7 @@ use bevy_rapier3d::prelude::{RigidBody, Sensor};
 
 use crate::ecs::compute_totally_accurate_global_transform;
 use crate::ecs::sets::FixedUpdateSet;
-use crate::events::structure::change_pilot_event::ChangePilotEvent;
+use crate::events::structure::change_pilot_event::ChangePilotMessage;
 use crate::structure::StructureTypeSet;
 use crate::structure::ship::pilot::Pilot;
 use crate::utils::ecs::FixedUpdateRemovedComponents;
@@ -13,7 +13,7 @@ struct PilotStartingDelta(Vec3, Quat);
 
 fn event_listener(
     mut commands: Commands,
-    mut event_reader: EventReader<ChangePilotEvent>,
+    mut event_reader: MessageReader<ChangePilotMessage>,
     pilot_query: Query<&Pilot>,
     q_trans: Query<(&Transform, Option<&ChildOf>)>,
 ) {
@@ -60,7 +60,7 @@ fn event_listener(
     }
 }
 
-#[derive(Debug, Event)]
+#[derive(Debug, Message)]
 struct RemoveSensorFrom(Entity, u8);
 
 /// This is stupid. But the only actual solution to this would require a ton of work.
@@ -73,7 +73,7 @@ struct RemoveSensorFrom(Entity, u8);
 /// To fix this we would need to some how set the player's position to a later game tick than
 /// the next couple player packets it would receive, but that would require a decent bit of work.
 /// So for now, we just delay the repositioning for quite a while on the server.
-#[derive(Debug, Event)]
+#[derive(Debug, Message)]
 struct Bouncer(Entity, u8);
 
 const BOUNCES: u8 = if cfg!(feature = "server") { 30 } else { 0 };
@@ -96,14 +96,14 @@ fn pilot_removed(
     }
 }
 
-fn bouncer(mut reader: EventReader<Bouncer>, mut event_writer: MessageWriter<RemoveSensorFrom>) {
+fn bouncer(mut reader: MessageReader<Bouncer>, mut event_writer: MessageWriter<RemoveSensorFrom>) {
     for ev in reader.read() {
         event_writer.write(RemoveSensorFrom(ev.0, ev.1 + 1));
     }
 }
 
 fn remove_sensor(
-    mut reader: EventReader<RemoveSensorFrom>,
+    mut reader: MessageReader<RemoveSensorFrom>,
     q_pilot: Query<(), With<Pilot>>,
     mut event_writer: MessageWriter<Bouncer>,
     mut commands: Commands,
@@ -133,7 +133,7 @@ fn verify_pilot_exists(mut commands: Commands, query: Query<(Entity, &Pilot)>) {
 }
 
 #[derive(SystemSet, Debug, Hash, PartialEq, Eq, Clone)]
-pub enum PilotEventSystemSet {
+pub enum PilotMessageSystemSet {
     ChangePilotListener,
 }
 
@@ -145,7 +145,7 @@ fn pilot_needs_sensor(mut commands: Commands, q_pilot: Query<Entity, (With<Pilot
 }
 
 pub(super) fn register<T: States + Clone + Copy>(app: &mut App, playing_state: T) {
-    app.configure_sets(FixedUpdate, PilotEventSystemSet::ChangePilotListener);
+    app.configure_sets(FixedUpdate, PilotMessageSystemSet::ChangePilotListener);
 
     app.add_systems(
         FixedUpdate,
@@ -157,7 +157,7 @@ pub(super) fn register<T: States + Clone + Copy>(app: &mut App, playing_state: T
             verify_pilot_exists,
             event_listener,
         )
-            .in_set(PilotEventSystemSet::ChangePilotListener)
+            .in_set(PilotMessageSystemSet::ChangePilotListener)
             .in_set(StructureTypeSet::Ship)
             // TODO: this could be wrong
             .in_set(FixedUpdateSet::Main)

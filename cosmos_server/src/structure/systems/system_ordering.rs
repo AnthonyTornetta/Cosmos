@@ -10,7 +10,7 @@ use cosmos_core::{
 };
 
 fn on_change_system_slot(
-    mut nevr_change_system_slot: EventReader<NettyMessageReceived<ChangeSystemSlot>>,
+    mut nevr_change_system_slot: MessageReader<NettyMessageReceived<ChangeSystemSlot>>,
     mut q_system_order: Query<(&mut StructureSystemOrdering, &StructureSystems, &Pilot)>,
     lobby: Res<ServerLobby>,
 ) {

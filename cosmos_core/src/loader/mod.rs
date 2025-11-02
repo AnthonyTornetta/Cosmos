@@ -18,17 +18,17 @@ impl LoadingManager {
     /// Registers that there is something loaded.
     ///
     /// Returns the ID that should be passed to `finish_loading` once this is done.
-    pub fn register_loader(&mut self, event_writer: &mut MessageWriter<AddLoadingEvent>) -> usize {
+    pub fn register_loader(&mut self, event_writer: &mut MessageWriter<AddLoadingMessage>) -> usize {
         self.next_id += 1;
 
-        event_writer.write(AddLoadingEvent { loading_id: self.next_id });
+        event_writer.write(AddLoadingMessage { loading_id: self.next_id });
 
         self.next_id
     }
 
     /// Finishes loading for this id.
-    pub fn finish_loading(&mut self, id: usize, event_writer: &mut MessageWriter<DoneLoadingEvent>) {
-        event_writer.write(DoneLoadingEvent { loading_id: id });
+    pub fn finish_loading(&mut self, id: usize, event_writer: &mut MessageWriter<DoneLoadingMessage>) {
+        event_writer.write(DoneLoadingMessage { loading_id: id });
     }
 }
 
@@ -58,8 +58,8 @@ impl<T: States + Copy> LoadingStatus<T> {
 }
 
 fn monitor_loading<T: States + Clone + Copy + FreelyMutableState>(
-    mut event_done_reader: EventReader<DoneLoadingEvent>,
-    mut event_start_reader: EventReader<AddLoadingEvent>,
+    mut event_done_reader: MessageReader<DoneLoadingMessage>,
+    mut event_start_reader: MessageReader<AddLoadingMessage>,
     mut loading_status: ResMut<LoadingStatus<T>>,
     state: Res<State<T>>,
     mut state_changer: ResMut<NextState<T>>,
@@ -93,15 +93,15 @@ fn monitor_loading<T: States + Clone + Copy + FreelyMutableState>(
 }
 
 /// Sent when something is done loading during the game's loading states.
-#[derive(Event, Debug)]
-pub struct DoneLoadingEvent {
+#[derive(Message, Debug)]
+pub struct DoneLoadingMessage {
     /// The loading id assigned by `register_loader`
     pub loading_id: usize,
 }
 
 /// Sent when something starts loading during the game's loading states.
-#[derive(Event, Debug)]
-pub struct AddLoadingEvent {
+#[derive(Message, Debug)]
+pub struct AddLoadingMessage {
     loading_id: usize,
 }
 
@@ -130,8 +130,8 @@ pub(super) fn register<T: States + Clone + Copy + FreelyMutableState>(
 ) {
     app.configure_sets(Update, MonitorLoadingSet::MonitorLoading);
 
-    app.add_event::<DoneLoadingEvent>()
-        .add_event::<AddLoadingEvent>()
+    app.add_event::<DoneLoadingMessage>()
+        .add_event::<AddLoadingMessage>()
         .add_systems(
             Update,
             monitor_loading::<T>
@@ -140,7 +140,7 @@ pub(super) fn register<T: States + Clone + Copy + FreelyMutableState>(
         )
         .insert_resource(LoadingStatus::new(pre_loading_state, loading_state, post_loading_state, done_state))
         .insert_resource(LoadingManager::default())
-        .allow_ambiguous_resource::<Events<DoneLoadingEvent>>()
-        .allow_ambiguous_resource::<Events<AddLoadingEvent>>()
+        .allow_ambiguous_resource::<Messages<DoneLoadingMessage>>()
+        .allow_ambiguous_resource::<Messages<AddLoadingMessage>>()
         .allow_ambiguous_resource::<LoadingManager>();
 }

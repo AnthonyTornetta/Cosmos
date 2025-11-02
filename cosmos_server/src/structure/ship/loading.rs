@@ -6,7 +6,7 @@ use cosmos_core::{
     registry::Registry,
     state::GameState,
     structure::{
-        ChunkInitEvent, Structure, StructureTypeSet,
+        ChunkInitMessage, Structure, StructureTypeSet,
         loading::{ChunksNeedLoaded, StructureLoadingSet},
         ship::Ship,
         structure_iterator::ChunkIteratorResult,
@@ -23,7 +23,7 @@ fn create_ships(
     mut query: Query<(&mut Structure, Entity), With<ShipNeedsCreated>>,
     mut commands: Commands,
     blocks: Res<Registry<Block>>,
-    mut chunk_set_event_writer: MessageWriter<ChunkInitEvent>,
+    mut chunk_set_event_writer: MessageWriter<ChunkInitMessage>,
 ) {
     for (mut structure, entity) in query.iter_mut() {
         info!("Got ship needs created!");
@@ -53,7 +53,7 @@ fn create_ships(
                 chunk: _,
             } = res
             {
-                chunk_set_event_writer.write(ChunkInitEvent {
+                chunk_set_event_writer.write(ChunkInitMessage {
                     structure_entity: entity,
                     coords,
                     serialized_block_data: None,

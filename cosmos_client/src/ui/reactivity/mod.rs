@@ -90,7 +90,7 @@ impl<T: ReactableValue> BindValues<T> {
     }
 }
 
-#[derive(Event)]
+#[derive(Message)]
 /// If this component is on a UI component, then it needs its values fetched from the variable entities it is bound to.
 ///
 /// The entity stored is the entity that holds the values that need fetched.

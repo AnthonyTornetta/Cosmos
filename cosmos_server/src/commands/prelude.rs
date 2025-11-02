@@ -2,5 +2,5 @@
 
 pub use super::{
     CosmosCommandSent, ServerCommand,
-    cosmos_command_handler::{ArgumentError, CommandEvent, CosmosCommandType, create_cosmos_command},
+    cosmos_command_handler::{ArgumentError, CommandMessage, CosmosCommandType, create_cosmos_command},
 };

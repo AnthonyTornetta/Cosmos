@@ -1,6 +1,6 @@
 use bevy::{
     ecs::{
-        event::{EventId, SendBatchIds},
+        event::{MessageId, SendBatchIds},
         system::SystemParam,
     },
     prelude::*,
@@ -19,22 +19,22 @@ use crate::{
     state::GameState,
 };
 
-use super::netty_event::{EventReceiver, NettyMessage, NettyMessageMessage, RegisteredNettyMessage};
+use super::netty_event::{MessageReceiver, NettyMessage, NettyMessageMessage, RegisteredNettyMessage};
 
-#[derive(Event)]
-pub(super) struct GotNetworkEvent {
+#[derive(Message)]
+pub(super) struct GotNetworkMessage {
     pub component_id: u16,
     pub raw_data: Vec<u8>,
 }
 
-#[derive(Event, Default, Debug)]
+#[derive(Message, Default, Debug)]
 /// Send this event before the [`NetworkingSystemsSet::SyncComponents`] set to automatically have
 /// the inner event sent to the server.
 pub struct NettyMessageToSend<T: NettyMessage>(pub T);
 
 /// An event received from the server.
 ///
-/// Read this via an [`EventReader<NettyMessageReceived<T>>`].
+/// Read this via an [`MessageReader<NettyMessageReceived<T>>`].
 pub type NettyMessageReceived<T> = T;
 
 /// Send your [`NettyMessage`] via this before [`NetworkingSystemsSet::SyncComponents`] to have it
@@ -45,28 +45,28 @@ pub struct NettyMessageWriter<'w, T: NettyMessage> {
 }
 
 impl<E: NettyMessage> NettyMessageWriter<'_, E> {
-    /// Sends an `event`, which can later be read by [`EventReader`]s.
-    /// This method returns the [ID](`EventId`) of the sent `event`.
+    /// Sends an `event`, which can later be read by [`MessageReader`]s.
+    /// This method returns the [ID](`MessageId`) of the sent `event`.
     ///
-    /// See [`Events`] for details.
-    pub fn write(&mut self, event: E) -> EventId<NettyMessageToSend<E>> {
+    /// See [`Messages`] for details.
+    pub fn write(&mut self, event: E) -> MessageId<NettyMessageToSend<E>> {
         self.ev_writer.write(NettyMessageToSend(event))
     }
 
-    /// Sends a list of `events` all at once, which can later be read by [`EventReader`]s.
+    /// Sends a list of `events` all at once, which can later be read by [`MessageReader`]s.
     /// This is more efficient than sending each event individually.
-    /// This method returns the [IDs](`EventId`) of the sent `events`.
+    /// This method returns the [IDs](`MessageId`) of the sent `events`.
     ///
-    /// See [`Events`] for details.
+    /// See [`Messages`] for details.
     pub fn write_batch(&mut self, events: impl IntoIterator<Item = E>) -> SendBatchIds<NettyMessageToSend<E>> {
         self.ev_writer.write_batch(events.into_iter().map(|x| NettyMessageToSend(x)))
     }
 
     /// Sends the default value of the event. Useful when the event is an empty struct.
-    /// This method returns the [ID](`EventId`) of the sent `event`.
+    /// This method returns the [ID](`MessageId`) of the sent `event`.
     ///
-    /// See [`Events`] for details.
-    pub fn write_default(&mut self) -> EventId<NettyMessageToSend<E>>
+    /// See [`Messages`] for details.
+    pub fn write_default(&mut self) -> MessageId<NettyMessageToSend<E>>
     where
         E: Default,
     {
@@ -76,14 +76,14 @@ impl<E: NettyMessage> NettyMessageWriter<'_, E> {
 
 fn send_events<T: NettyMessage>(
     mut client: ResMut<RenetClient>,
-    mut evr: EventReader<NettyMessageToSend<T>>,
+    mut evr: MessageReader<NettyMessageToSend<T>>,
     netty_event_registry: Res<Registry<RegisteredNettyMessage>>,
     mapping: Res<NetworkMapping>,
 ) {
     for ev in evr.read() {
         let Some(registered_event) = netty_event_registry.from_id(T::unlocalized_name()) else {
             warn!(
-                "Event not registered to be properly sent -- {}\n{:?}",
+                "Message not registered to be properly sent -- {}\n{:?}",
                 T::unlocalized_name(),
                 netty_event_registry
             );
@@ -115,7 +115,7 @@ fn send_events<T: NettyMessage>(
     }
 }
 
-fn receive_events(mut client: ResMut<RenetClient>, mut evw_got_event: MessageWriter<GotNetworkEvent>) {
+fn receive_events(mut client: ResMut<RenetClient>, mut evw_got_event: MessageWriter<GotNetworkMessage>) {
     while let Some(message) = client.receive_message(NettyChannelServer::NettyMessage) {
         let Some(msg) = cosmos_encoder::deserialize::<NettyMessageMessage>(&message)
             .map(Some)
@@ -130,7 +130,7 @@ fn receive_events(mut client: ResMut<RenetClient>, mut evw_got_event: MessageWri
 
         match msg {
             NettyMessageMessage::SendNettyMessage { component_id, raw_data } => {
-                evw_got_event.write(GotNetworkEvent { component_id, raw_data });
+                evw_got_event.write(GotNetworkMessage { component_id, raw_data });
             }
         }
     }
@@ -139,7 +139,7 @@ fn receive_events(mut client: ResMut<RenetClient>, mut evw_got_event: MessageWri
 fn parse_event<T: NettyMessage>(
     events_registry: Res<Registry<RegisteredNettyMessage>>,
     mut evw_custom_event: MessageWriter<T>,
-    mut evr_need_parsed: EventReader<GotNetworkEvent>,
+    mut evr_need_parsed: MessageReader<GotNetworkMessage>,
     netty_mapping: Res<NetworkMapping>,
 ) {
     for ev in evr_need_parsed.read() {
@@ -196,10 +196,10 @@ pub(super) fn client_receive_event<T: NettyMessage>(app: &mut App) {
 }
 
 pub(super) fn register_event<T: NettyMessage>(app: &mut App) {
-    if T::event_receiver() == EventReceiver::Client || T::event_receiver() == EventReceiver::Both {
+    if T::event_receiver() == MessageReceiver::Client || T::event_receiver() == MessageReceiver::Both {
         client_receive_event::<T>(app);
     }
-    if T::event_receiver() == EventReceiver::Server || T::event_receiver() == EventReceiver::Both {
+    if T::event_receiver() == MessageReceiver::Server || T::event_receiver() == MessageReceiver::Both {
         client_send_event::<T>(app);
     }
 }
@@ -211,5 +211,5 @@ pub(super) fn register(app: &mut App) {
             .run_if(resource_exists::<RenetClient>)
             .in_set(NetworkingSystemsSet::ReceiveMessages),
     )
-    .add_event::<GotNetworkEvent>();
+    .add_event::<GotNetworkMessage>();
 }

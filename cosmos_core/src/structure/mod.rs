@@ -10,10 +10,10 @@ use std::sync::{Arc, Mutex};
 
 use crate::block::block_direction::BlockDirection;
 use crate::block::data::BlockData;
-use crate::block::data::persistence::ChunkLoadBlockDataEvent;
+use crate::block::data::persistence::ChunkLoadBlockDataMessage;
 use crate::block::{Block, block_face::BlockFace, block_rotation::BlockRotation};
 use crate::ecs::NeedsDespawned;
-use crate::events::block_events::{BlockChangedEvent, BlockDataChangedEvent, BlockDataSystemParams};
+use crate::events::block_events::{BlockChangedMessage, BlockDataChangedMessage, BlockDataSystemParams};
 use crate::netty::NoSendEntity;
 use crate::physics::location::Location;
 use crate::registry::Registry;
@@ -31,13 +31,13 @@ use query::MutBlockData;
 use serde::{Deserialize, Serialize};
 
 use self::base_structure::RaycastIter;
-use self::block_health::events::{BlockDestroyedEvent, BlockTakeDamageEvent};
+use self::block_health::events::{BlockDestroyedMessage, BlockTakeDamageMessage};
 use self::block_storage::BlockStorer;
 use self::chunk::ChunkEntity;
 use self::chunk::netty::SerializedChunkBlockData;
 use self::coordinates::{BlockCoordinate, ChunkCoordinate, UnboundBlockCoordinate, UnboundChunkCoordinate};
 use self::dynamic_structure::DynamicStructure;
-use self::events::ChunkSetEvent;
+use self::events::ChunkSetMessage;
 use self::full_structure::FullStructure;
 use self::loading::StructureLoadingSet;
 use self::structure_iterator::{BlockIterator, ChunkIterator};
@@ -446,7 +446,7 @@ impl Structure {
         &mut self,
         coords: BlockCoordinate,
         blocks: &Registry<Block>,
-        event_writer: Option<&mut MessageWriter<BlockChangedEvent>>,
+        event_writer: Option<&mut MessageWriter<BlockChangedMessage>>,
     ) {
         match self {
             Self::Full(fs) => fs.remove_block_at(coords, blocks, event_writer),
@@ -463,7 +463,7 @@ impl Structure {
         block: &Block,
         block_rotation: BlockRotation,
         blocks: &Registry<Block>,
-        event_writer: Option<&mut MessageWriter<BlockChangedEvent>>,
+        event_writer: Option<&mut MessageWriter<BlockChangedMessage>>,
     ) {
         match self {
             Self::Full(fs) => fs.set_block_at(coords, block, block_rotation, blocks, event_writer),
@@ -480,7 +480,7 @@ impl Structure {
         block: &Block,
         block_info: BlockInfo,
         blocks: &Registry<Block>,
-        event_writer: Option<&mut MessageWriter<BlockChangedEvent>>,
+        event_writer: Option<&mut MessageWriter<BlockChangedMessage>>,
     ) {
         match self {
             Self::Full(fs) => fs.set_block_and_info_at(coords, block, block_info, blocks, event_writer),
@@ -616,7 +616,7 @@ impl Structure {
         coords: BlockCoordinate,
         blocks: &Registry<Block>,
         amount: f32,
-        event_writers: Option<(&mut MessageWriter<BlockTakeDamageEvent>, &mut MessageWriter<BlockDestroyedEvent>)>,
+        event_writers: Option<(&mut MessageWriter<BlockTakeDamageMessage>, &mut MessageWriter<BlockDestroyedMessage>)>,
         causer: Option<Entity>,
     ) -> Option<f32> {
         match self {
@@ -625,7 +625,7 @@ impl Structure {
         }
     }
 
-    /// This should be used in response to a `BlockTakeDamageEvent`
+    /// This should be used in response to a `BlockTakeDamageMessage`
     ///
     /// # This will NOT delete the block if the health is 0.0
     pub fn set_block_health(&mut self, coords: BlockCoordinate, amount: f32, blocks: &Registry<Block>) {
@@ -838,7 +838,7 @@ impl Structure {
         &mut self,
         coords: BlockCoordinate,
         block_info: BlockInfo,
-        evw_block_data_changed: &mut MessageWriter<BlockDataChangedEvent>,
+        evw_block_data_changed: &mut MessageWriter<BlockDataChangedMessage>,
     ) {
         match self {
             Self::Full(fs) => fs.set_block_info_at(coords, block_info, Some(evw_block_data_changed)),
@@ -874,8 +874,8 @@ impl Structure {
 }
 
 /// This event is sent when a chunk is initially filled out
-#[derive(Debug, Event)]
-pub struct ChunkInitEvent {
+#[derive(Debug, Message)]
+pub struct ChunkInitMessage {
     /// The entity of the structure this is a part of
     pub structure_entity: Entity,
     /// Chunk's coordinates in the structure
@@ -888,7 +888,7 @@ pub struct ChunkInitEvent {
 
 // Removes chunk entities if they have no blocks
 fn remove_empty_chunks(
-    mut block_change_event: EventReader<BlockChangedEvent>,
+    mut block_change_event: MessageReader<BlockChangedMessage>,
     mut structure_query: Query<&mut Structure>,
     mut commands: Commands,
 ) {
@@ -915,7 +915,7 @@ fn spawn_chunk_entity(
     chunk_coordinate: ChunkCoordinate,
     structure_entity: Entity,
     q_entity_link: Option<&RapierContextEntityLink>,
-    chunk_set_events: &mut HashSet<ChunkSetEvent>,
+    chunk_set_events: &mut HashSet<ChunkSetMessage>,
 ) {
     let mut entity_cmds = commands.spawn((
         Visibility::default(),
@@ -938,19 +938,19 @@ fn spawn_chunk_entity(
 
     structure.set_chunk_entity(chunk_coordinate, entity);
 
-    chunk_set_events.insert(ChunkSetEvent {
+    chunk_set_events.insert(ChunkSetMessage {
         structure_entity,
         coords: chunk_coordinate,
     });
 }
 
 fn add_chunks_system(
-    mut chunk_init_reader: EventReader<ChunkInitEvent>,
-    mut block_reader: EventReader<BlockChangedEvent>,
+    mut chunk_init_reader: MessageReader<ChunkInitMessage>,
+    mut block_reader: MessageReader<BlockChangedMessage>,
     mut structure_query: Query<(&mut Structure, Option<&RapierContextEntityLink>)>,
-    mut chunk_set_event_writer: MessageWriter<ChunkSetEvent>,
+    mut chunk_set_event_writer: MessageWriter<ChunkSetMessage>,
     mut commands: Commands,
-    mut ev_writer: MessageWriter<ChunkLoadBlockDataEvent>,
+    mut ev_writer: MessageWriter<ChunkLoadBlockDataMessage>,
 ) {
     let mut s_chunks = HashSet::new();
     let mut chunk_set_events = HashSet::new();
@@ -961,7 +961,7 @@ fn add_chunks_system(
 
     for ev in chunk_init_reader.read() {
         s_chunks.insert((ev.structure_entity, ev.coords));
-        chunk_set_events.insert(ChunkSetEvent {
+        chunk_set_events.insert(ChunkSetMessage {
             structure_entity: ev.structure_entity,
             coords: ev.coords,
         });
@@ -972,7 +972,7 @@ fn add_chunks_system(
 
             let data = std::mem::take(data);
 
-            ev_writer.write(ChunkLoadBlockDataEvent {
+            ev_writer.write(ChunkLoadBlockDataMessage {
                 data,
                 chunk: ev.coords,
                 structure_entity: ev.structure_entity,
@@ -1087,7 +1087,7 @@ pub fn rotate(
 pub(super) fn register(app: &mut App) {
     app.register_type::<Structure>()
         .register_type::<Chunk>()
-        .add_event::<ChunkInitEvent>();
+        .add_event::<ChunkInitMessage>();
 
     ship::register(app);
     station::register(app);

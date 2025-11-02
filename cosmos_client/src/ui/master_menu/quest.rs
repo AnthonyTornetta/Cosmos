@@ -3,7 +3,7 @@
 use bevy::{color::palettes::css, prelude::*};
 use cosmos_core::{
     netty::{client::LocalPlayer, sync::events::client_event::NettyMessageWriter},
-    quest::{ActiveQuest, OngoingQuest, OngoingQuestId, OngoingQuests, Quest, SetActiveQuestEvent},
+    quest::{ActiveQuest, OngoingQuest, OngoingQuestId, OngoingQuests, Quest, SetActiveQuestMessage},
     registry::Registry,
     state::GameState,
 };
@@ -12,7 +12,7 @@ use crate::{
     lang::Lang,
     ui::{
         components::{
-            button::{ButtonEvent, CosmosButton},
+            button::{ButtonMessage, CosmosButton},
             scollable_container::ScrollBox,
         },
         font::DefaultFont,
@@ -82,26 +82,26 @@ fn on_add_quest_display(
 }
 
 fn on_toggle_active(
-    ev: Trigger<ButtonEvent>,
+    ev: Trigger<ButtonMessage>,
     mut commands: Commands,
     mut q_active: Query<(Entity, &mut BorderColor), With<ActiveQuestUi>>,
     mut q_inactive: Query<(Entity, &QuestComp, &mut BorderColor), Without<ActiveQuestUi>>,
-    mut nevw_set_active: NettyMessageWriter<SetActiveQuestEvent>,
+    mut nevw_set_active: NettyMessageWriter<SetActiveQuestMessage>,
 ) {
     if let Ok((ent, mut bc)) = q_active.single_mut() {
         commands.entity(ent).remove::<ActiveQuestUi>();
-        nevw_set_active.write(SetActiveQuestEvent { quest: None });
+        nevw_set_active.write(SetActiveQuestMessage { quest: None });
         bc.0 = css::LIGHT_GREY.into();
     }
 
     let Ok((ui_ent, q, mut bc)) = q_inactive.get_mut(ev.0) else {
-        nevw_set_active.write(SetActiveQuestEvent { quest: None });
+        nevw_set_active.write(SetActiveQuestMessage { quest: None });
         return;
     };
 
     bc.0 = css::AQUA.into();
     commands.entity(ui_ent).insert(ActiveQuestUi);
-    nevw_set_active.write(SetActiveQuestEvent { quest: Some(q.0) });
+    nevw_set_active.write(SetActiveQuestMessage { quest: Some(q.0) });
 }
 
 #[derive(Component)]

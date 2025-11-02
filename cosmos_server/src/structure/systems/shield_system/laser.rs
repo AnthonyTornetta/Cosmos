@@ -1,11 +1,11 @@
 use bevy::prelude::*;
-use cosmos_core::{projectiles::laser::LaserCollideEvent, structure::shields::Shield};
+use cosmos_core::{projectiles::laser::LaserCollideMessage, structure::shields::Shield};
 
-use super::{ShieldHitEvent, ShieldSet};
+use super::{ShieldHitMessage, ShieldSet};
 
 fn handle_laser_hits(
-    mut ev_reader: EventReader<LaserCollideEvent>,
-    mut ev_writer: MessageWriter<ShieldHitEvent>,
+    mut ev_reader: MessageReader<LaserCollideMessage>,
+    mut ev_writer: MessageWriter<ShieldHitMessage>,
     mut q_shield: Query<(&GlobalTransform, &mut Shield)>,
 ) {
     for ev in ev_reader.read() {
@@ -14,7 +14,7 @@ fn handle_laser_hits(
         };
 
         shield.take_damage(ev.laser_strength());
-        ev_writer.write(ShieldHitEvent {
+        ev_writer.write(ShieldHitMessage {
             relative_position: shield_g_trans.affine().matrix3.mul_vec3(ev.local_position_hit()),
             shield_entity: ev.entity_hit(),
         });

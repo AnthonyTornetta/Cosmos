@@ -5,7 +5,7 @@ use cosmos_core::{
     ecs::{NeedsDespawned, sets::FixedUpdateSet},
     entities::{
         health::Dead,
-        player::respawn::{RequestRespawnEvent, RespawnEvent},
+        player::respawn::{RequestRespawnMessage, RespawnMessage},
     },
     netty::{client::LocalPlayer, sync::events::client_event::NettyMessageWriter},
     physics::location::{Location, SetPosition},
@@ -13,9 +13,9 @@ use cosmos_core::{
 use renet::RenetClient;
 
 use crate::ui::{
-    CloseMenuEvent, CloseMethod, OpenMenu, UiSystemSet,
+    CloseMenuMessage, CloseMethod, OpenMenu, UiSystemSet,
     components::{
-        button::{ButtonEvent, ButtonStyles, CosmosButton},
+        button::{ButtonMessage, ButtonStyles, CosmosButton},
         show_cursor::ShowCursor,
     },
     font::DefaultFont,
@@ -29,7 +29,7 @@ fn display_death_ui(
     mut q_open_menus: Query<(Entity, &OpenMenu, &mut Visibility)>,
     q_added_death: Query<(), (Added<Dead>, With<LocalPlayer>)>,
     font: Res<DefaultFont>,
-    mut evw_close_custom_menus: MessageWriter<CloseMenuEvent>,
+    mut evw_close_custom_menus: MessageWriter<CloseMenuMessage>,
 ) {
     if q_added_death.is_empty() {
         return;
@@ -51,7 +51,7 @@ fn display_death_ui(
                 *visibility = Visibility::Hidden;
             }
             CloseMethod::Custom => {
-                evw_close_custom_menus.write(CloseMenuEvent(ent));
+                evw_close_custom_menus.write(CloseMenuMessage(ent));
             }
         }
     }
@@ -162,7 +162,7 @@ fn on_not_dead(
 
 fn on_respawn(
     mut commands: Commands,
-    mut evr_respawn: EventReader<RespawnEvent>,
+    mut evr_respawn: MessageReader<RespawnMessage>,
     mut q_local_player: Query<(Entity, &mut Location, &mut Transform), With<LocalPlayer>>,
 ) {
     for ev in evr_respawn.read() {
@@ -178,11 +178,11 @@ fn on_respawn(
     }
 }
 
-fn respawn_clicked(_trigger: Trigger<ButtonEvent>, mut nevw_respawn: NettyMessageWriter<RequestRespawnEvent>) {
+fn respawn_clicked(_trigger: Trigger<ButtonMessage>, mut nevw_respawn: NettyMessageWriter<RequestRespawnMessage>) {
     nevw_respawn.write_default();
 }
 
-fn title_screen_clicked(_trigger: Trigger<ButtonEvent>, mut client: ResMut<RenetClient>) {
+fn title_screen_clicked(_trigger: Trigger<ButtonMessage>, mut client: ResMut<RenetClient>) {
     client.disconnect();
 }
 

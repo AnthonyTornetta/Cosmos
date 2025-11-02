@@ -2,10 +2,10 @@ use bevy::prelude::*;
 use cosmos_core::{
     block::{
         Block,
-        block_events::{BlockEventsSet, BlockInteractEvent},
+        block_events::{BlockMessagesSet, BlockInteractMessage},
     },
     entities::player::Player,
-    events::structure::change_pilot_event::ChangePilotEvent,
+    events::structure::change_pilot_event::ChangePilotMessage,
     netty::sync::events::server_event::NettyMessageWriter,
     notifications::Notification,
     registry::{Registry, identifiable::Identifiable},
@@ -20,8 +20,8 @@ use cosmos_core::{
 use crate::blocks::multiblock::shipyard::StructureBeingBuilt;
 
 fn handle_block_event(
-    mut interact_events: EventReader<BlockInteractEvent>,
-    mut change_pilot_event: MessageWriter<ChangePilotEvent>,
+    mut interact_events: MessageReader<BlockInteractMessage>,
+    mut change_pilot_event: MessageWriter<ChangePilotMessage>,
     q_ship: Query<(&Structure, Has<StructureBeingBuilt>), With<Ship>>,
     q_can_be_pilot: Query<(), Without<Pilot>>,
     q_can_be_pilot_player: Query<(), Without<BuildMode>>,
@@ -68,7 +68,7 @@ fn handle_block_event(
             continue;
         }
 
-        change_pilot_event.write(ChangePilotEvent {
+        change_pilot_event.write(ChangePilotMessage {
             structure_entity: s_block.structure(),
             pilot_entity: Some(ev.interactor),
         });
@@ -79,7 +79,7 @@ pub(super) fn register(app: &mut App) {
     app.add_systems(
         FixedUpdate,
         handle_block_event
-            .in_set(BlockEventsSet::ProcessEvents)
+            .in_set(BlockMessagesSet::ProcessMessages)
             .run_if(in_state(GameState::Playing)),
     );
 }

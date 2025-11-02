@@ -12,9 +12,9 @@ use super::Disabled;
 use super::show_cursor::any_open_menus;
 
 /// An event that will be created and sent when a button is interacted with
-#[derive(Event, Debug)]
+#[derive(Message, Debug)]
 #[event(traversal = &'static ChildOf, auto_propagate)]
-pub struct ButtonEvent(pub Entity);
+pub struct ButtonMessage(pub Entity);
 
 #[derive(Component, Debug, Default)]
 #[require(Node)]
@@ -130,7 +130,7 @@ fn on_interact_button(
         {
             // Click and still hovering the button, so they didn't move out while holding the mouse down,
             // which should cancel the mouse click
-            commands.entity(btn_entity).trigger(ButtonEvent(btn_entity));
+            commands.entity(btn_entity).trigger(ButtonMessage(btn_entity));
         }
 
         button.last_interaction = *interaction;
@@ -231,13 +231,13 @@ pub enum ButtonUiSystemSet {
     /// Sets up any [`Button`] components added.
     AddButtonBundle,
     /// Sends user events from the various [`Button`] components.
-    SendButtonEvents,
+    SendButtonMessages,
 }
 
 pub(super) fn register(app: &mut App) {
     app.configure_sets(
         Update,
-        (ButtonUiSystemSet::AddButtonBundle, ButtonUiSystemSet::SendButtonEvents)
+        (ButtonUiSystemSet::AddButtonBundle, ButtonUiSystemSet::SendButtonMessages)
             .chain()
             .in_set(UiSystemSet::DoUi),
     )
@@ -245,12 +245,12 @@ pub(super) fn register(app: &mut App) {
         Update,
         (
             on_add_button.in_set(ButtonUiSystemSet::AddButtonBundle),
-            on_change_button.in_set(ButtonUiSystemSet::SendButtonEvents),
+            on_change_button.in_set(ButtonUiSystemSet::SendButtonMessages),
             on_interact_button
-                .in_set(ButtonUiSystemSet::SendButtonEvents)
+                .in_set(ButtonUiSystemSet::SendButtonMessages)
                 .run_if(any_open_menus),
         )
             .chain(),
     )
-    .add_event::<ButtonEvent>();
+    .add_event::<ButtonMessage>();
 }

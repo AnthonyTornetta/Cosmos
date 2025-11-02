@@ -13,16 +13,16 @@ use cosmos_core::{
     prelude::{Ship, Station},
     state::GameState,
     universe::map::system::{
-        AsteroidDestination, Destination, GalaxyMap, GalaxyMapResponseEvent, PlanetDestination, PlayerDestination, RequestGalaxyMap,
-        RequestSystemMap, ShipDestination, StarDestination, StationDestination, SystemMap, SystemMapResponseEvent,
+        AsteroidDestination, Destination, GalaxyMap, GalaxyMapResponseMessage, PlanetDestination, PlayerDestination, RequestGalaxyMap,
+        RequestSystemMap, ShipDestination, StarDestination, StationDestination, SystemMap, SystemMapResponseMessage,
     },
 };
 
 use super::{Galaxy, SystemItem, UniverseSystems};
 
 fn send_galaxy_map(
-    mut evr_request_map: EventReader<NettyMessageReceived<RequestGalaxyMap>>,
-    mut nevw_galaxy_map: NettyMessageWriter<GalaxyMapResponseEvent>,
+    mut evr_request_map: MessageReader<NettyMessageReceived<RequestGalaxyMap>>,
+    mut nevw_galaxy_map: NettyMessageWriter<GalaxyMapResponseMessage>,
     q_galaxy: Query<&Galaxy>,
 ) {
     for ev in evr_request_map.read() {
@@ -39,13 +39,13 @@ fn send_galaxy_map(
             );
         }
 
-        nevw_galaxy_map.write(GalaxyMapResponseEvent { map: g_map }, ev.client_id);
+        nevw_galaxy_map.write(GalaxyMapResponseMessage { map: g_map }, ev.client_id);
     }
 }
 
 fn send_map(
-    mut evr_request_map: EventReader<NettyMessageReceived<RequestSystemMap>>,
-    mut nevw_system_map: NettyMessageWriter<SystemMapResponseEvent>,
+    mut evr_request_map: MessageReader<NettyMessageReceived<RequestSystemMap>>,
+    mut nevw_system_map: NettyMessageWriter<SystemMapResponseMessage>,
 
     q_players: Query<&Location, With<Player>>,
     q_stations: Query<&Location, With<Station>>,
@@ -152,7 +152,7 @@ fn send_map(
         }
 
         nevw_system_map.write(
-            SystemMapResponseEvent {
+            SystemMapResponseMessage {
                 map: system_map,
                 system: ev.system,
             },

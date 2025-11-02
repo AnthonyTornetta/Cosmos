@@ -1,10 +1,10 @@
 use bevy::prelude::*;
 use cosmos_core::netty::{
     cosmos_encoder,
-    sync::{ComponentId, ComponentSyncingSet, GotComponentToRemoveEvent, GotComponentToSyncEvent, mapping::NetworkMapping},
+    sync::{ComponentId, ComponentSyncingSet, GotComponentToRemoveMessage, GotComponentToSyncMessage, mapping::NetworkMapping},
 };
 
-fn client_deserialize_parent(mut ev_reader: EventReader<GotComponentToSyncEvent>, mut commands: Commands, mapping: Res<NetworkMapping>) {
+fn client_deserialize_parent(mut ev_reader: MessageReader<GotComponentToSyncMessage>, mut commands: Commands, mapping: Res<NetworkMapping>) {
     for ev in ev_reader.read() {
         if !matches!(ev.component_id, ComponentId::ChildOf) {
             continue;
@@ -26,7 +26,7 @@ fn client_deserialize_parent(mut ev_reader: EventReader<GotComponentToSyncEvent>
     }
 }
 
-fn client_remove_parent(mut ev_reader: EventReader<GotComponentToRemoveEvent>, mut commands: Commands) {
+fn client_remove_parent(mut ev_reader: MessageReader<GotComponentToRemoveMessage>, mut commands: Commands) {
     for ev in ev_reader.read() {
         if !matches!(ev.component_id, ComponentId::ChildOf) {
             continue;

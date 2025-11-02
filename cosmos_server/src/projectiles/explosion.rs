@@ -8,7 +8,7 @@ use bevy_rapier3d::{
 };
 
 use cosmos_core::{
-    block::{Block, block_events::BlockEventsSet},
+    block::{Block, block_events::BlockMessagesSet},
     ecs::{NeedsDespawned, compute_totally_accurate_global_transform},
     physics::{location::Location, player_world::PlayerWorld, structure_physics::ChunkPhysicsPart},
     projectiles::{
@@ -18,7 +18,7 @@ use cosmos_core::{
     registry::Registry,
     structure::{
         Structure,
-        block_health::events::{BlockDestroyedEvent, BlockTakeDamageEvent},
+        block_health::events::{BlockDestroyedMessage, BlockTakeDamageMessage},
         coordinates::{BlockCoordinate, UnboundBlockCoordinate, UnboundCoordinateType},
         shields::Shield,
     },
@@ -29,11 +29,11 @@ use crate::{netty::sync::sync_bodies::DontNotifyClientOfDespawn, structure::shar
 /// 1 unit of explosion power = this amount of health. Bigger this number is, the more damage explosives will do.
 const HEALTH_PER_EXPLOSION_POWER: f32 = 8.0;
 
-#[derive(Event, Debug)]
+#[derive(Message, Debug)]
 /// This event is sent whenever an explosion hits an entity
 ///
 /// Currently this **isn't** sent for structures being hit, but it will be in the future.
-pub struct ExplosionHitEvent {
+pub struct ExplosionHitMessage {
     /// The explosion that caused this event
     pub explosion: Explosion,
     /// The explosion's location
@@ -53,11 +53,11 @@ fn respond_to_explosion(
 
     q_chunk: Query<&ChunkPhysicsPart>,
     blocks_registry: Res<Registry<Block>>,
-    mut evw_block_take_damage: MessageWriter<BlockTakeDamageEvent>,
-    mut evw_block_destroyed: MessageWriter<BlockDestroyedEvent>,
-    mut ev_writer_explosion_hit: MessageWriter<ExplosionHitEvent>,
+    mut evw_block_take_damage: MessageWriter<BlockTakeDamageMessage>,
+    mut evw_block_destroyed: MessageWriter<BlockDestroyedMessage>,
+    mut ev_writer_explosion_hit: MessageWriter<ExplosionHitMessage>,
     // blocks: Res<Registry<Block>>,
-    // mut evw_bc: MessageWriter<BlockChangedEvent>,
+    // mut evw_bc: MessageWriter<BlockChangedMessage>,
     q_shield: Query<&Shield>,
     q_trans: Query<(&Transform, Option<&ChildOf>)>,
 ) {
@@ -120,7 +120,7 @@ fn respond_to_explosion(
 
         for &hit in ents.iter() {
             let Ok((structure_loc, mut structure)) = q_structure.get_mut(hit) else {
-                ev_writer_explosion_hit.write(ExplosionHitEvent {
+                ev_writer_explosion_hit.write(ExplosionHitMessage {
                     explosion,
                     explosion_location: explosion_loc,
                     hit_entity: hit,
@@ -237,14 +237,14 @@ fn calculate_block_explosion_power(
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_event::<ExplosionHitEvent>();
+    app.add_event::<ExplosionHitMessage>();
 
     app.add_systems(
         FixedUpdate,
         respond_to_explosion
             .ambiguous_with(MeltingDownSet::ProcessMeltingDown)
             .in_set(ExplosionSystemSet::ProcessExplosions)
-            .ambiguous_with(BlockEventsSet::SendEventsForNextFrame), // Order of blocks being updated doesn't matter
+            .ambiguous_with(BlockMessagesSet::SendMessagesForNextFrame), // Order of blocks being updated doesn't matter
                                                                      // .after(ShieldSet::RechargeShields)
                                                                      // .after(FixedUpdateSet::LocationSyncing)
                                                                      // .before(FixedUpdateSet::PrePhysics)

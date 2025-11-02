@@ -6,7 +6,7 @@ use bevy::prelude::*;
 use cosmos_core::{
     block::{
         Block,
-        block_events::{BlockEventsSet, BlockInteractEvent},
+        block_events::{BlockMessagesSet, BlockInteractMessage},
         data::BlockData,
     },
     events::block_events::BlockDataSystemParams,
@@ -28,7 +28,7 @@ use cosmos_core::{
 const FLUID_PER_BLOCK: u32 = 1000;
 
 fn on_interact_with_fluid(
-    mut ev_reader: EventReader<BlockInteractEvent>,
+    mut ev_reader: MessageReader<BlockInteractMessage>,
     q_structure: Query<&Structure>,
     blocks: Res<Registry<Block>>,
     mut q_held_item: Query<(&HeldItemSlot, &mut Inventory)>,
@@ -110,7 +110,7 @@ fn on_interact_with_fluid(
 }
 
 fn on_interact_with_tank(
-    mut ev_reader: EventReader<BlockInteractEvent>,
+    mut ev_reader: MessageReader<BlockInteractMessage>,
     mut q_structure: Query<&mut Structure>,
     blocks: Res<Registry<Block>>,
     mut q_held_item: Query<(&HeldItemSlot, &mut Inventory)>,
@@ -413,7 +413,7 @@ pub(super) fn register(app: &mut App) {
             (
                 on_interact_with_tank
                     .in_set(ItemStackSystemSet::CreateDataEntity)
-                    .in_set(BlockEventsSet::ProcessEvents)
+                    .in_set(BlockMessagesSet::ProcessMessages)
                     .ambiguous_with(FluidInteractionSet::InteractWithFluidBlocks),
                 add_item_fluid_data.in_set(ItemStackSystemSet::FillDataEntity),
                 on_interact_with_fluid.after(ItemStackSystemSet::FillDataEntity),

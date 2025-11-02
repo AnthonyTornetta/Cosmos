@@ -3,7 +3,7 @@ use cosmos_core::{ecs::NeedsDespawned, state::GameState};
 
 use crate::ui::font::DefaultFont;
 
-#[derive(Event, Debug)]
+#[derive(Message, Debug)]
 pub struct ShowInfoPopup {
     pub text: String,
     pub popup_type: PopupType,
@@ -57,7 +57,7 @@ fn show_error(
     font: Res<DefaultFont>,
     q_errors: Query<Entity, With<PopupsList>>,
     mut commands: Commands,
-    mut evr_error: EventReader<ShowInfoPopup>,
+    mut evr_error: MessageReader<ShowInfoPopup>,
 ) {
     for ev in evr_error.read() {
         let Ok(ent) = q_errors.single() else {

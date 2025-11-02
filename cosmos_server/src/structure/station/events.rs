@@ -11,15 +11,15 @@ use cosmos_core::{
 use super::loading::StationNeedsCreated;
 
 /// This event is done when a station is being created
-#[derive(Debug, Event)]
-pub struct CreateStationEvent {
+#[derive(Debug, Message)]
+pub struct CreateStationMessage {
     /// Starting location of the station
     pub station_location: Location,
     /// The rotation of the station
     pub rotation: Quat,
 }
 
-pub(crate) fn create_station_event_reader(mut event_reader: EventReader<CreateStationEvent>, mut commands: Commands) {
+pub(crate) fn create_station_event_reader(mut event_reader: MessageReader<CreateStationMessage>, mut commands: Commands) {
     for ev in event_reader.read() {
         let mut entity = commands.spawn_empty();
 
@@ -36,7 +36,7 @@ pub(crate) fn create_station_event_reader(mut event_reader: EventReader<CreateSt
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_event::<CreateStationEvent>().add_systems(
+    app.add_event::<CreateStationMessage>().add_systems(
         Update,
         create_station_event_reader
             .in_set(StructureLoadingSet::LoadStructure)

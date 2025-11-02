@@ -2,8 +2,8 @@
 
 use bevy::prelude::*;
 use cosmos_core::{
-    block::{Block, block_events::BlockEventsSet, data::BlockData},
-    events::block_events::{BlockChangedEvent, BlockDataSystemParams},
+    block::{Block, block_events::BlockMessagesSet, data::BlockData},
+    events::block_events::{BlockChangedMessage, BlockDataSystemParams},
     fluid::data::{BlockFluidData, FluidItemData},
     registry::{Registry, identifiable::Identifiable},
     structure::Structure,
@@ -20,7 +20,7 @@ impl DefaultPersistentComponent for BlockFluidData {}
 impl DefaultPersistentComponent for FluidItemData {}
 
 fn on_place_tank(
-    mut evr_changed_block: EventReader<BlockChangedEvent>,
+    mut evr_changed_block: MessageReader<BlockChangedMessage>,
     mut q_structure: Query<&mut Structure>,
     q_has_data: Query<(), With<BlockFluidData>>,
     mut q_block_data: Query<&mut BlockData>,
@@ -52,7 +52,7 @@ pub(super) fn register(app: &mut App) {
     app.add_systems(
         FixedUpdate,
         on_place_tank
-            .in_set(BlockEventsSet::SendEventsForThisFrame)
+            .in_set(BlockMessagesSet::SendMessagesForThisFrame)
             .in_set(FluidInteractionSet::InteractWithFluidBlocks)
             .ambiguous_with(FluidInteractionSet::InteractWithFluidBlocks),
     );

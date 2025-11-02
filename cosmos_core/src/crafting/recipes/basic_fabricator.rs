@@ -2,14 +2,14 @@
 
 use bevy::{
     platform::collections::HashMap,
-    prelude::{App, Event, Resource},
+    prelude::{App, Message, Resource},
 };
 use serde::{Deserialize, Serialize};
 
 use crate::{
     inventory::itemstack::ItemStack,
     item::Item,
-    netty::sync::events::netty_event::{IdentifiableEvent, NettyMessage, SyncedEventImpl},
+    netty::sync::events::netty_event::{IdentifiableMessage, NettyMessage, SyncedMessageImpl},
     registry::identifiable::Identifiable,
 };
 
@@ -117,23 +117,23 @@ impl BasicFabricatorRecipes {
     }
 }
 
-#[derive(Event, Serialize, Deserialize, Debug, Clone)]
+#[derive(Message, Serialize, Deserialize, Debug, Clone)]
 /// Used to sync all recipes to the connecting clients. Sent when a client joins after they have
 /// loaded all the recipes.
-pub struct SyncBasicFabricatorRecipesEvent(pub BasicFabricatorRecipes);
+pub struct SyncBasicFabricatorRecipesMessage(pub BasicFabricatorRecipes);
 
-impl IdentifiableEvent for SyncBasicFabricatorRecipesEvent {
+impl IdentifiableMessage for SyncBasicFabricatorRecipesMessage {
     fn unlocalized_name() -> &'static str {
         "cosmos:sync_basic_fabricator_recipes"
     }
 }
 
-impl NettyMessage for SyncBasicFabricatorRecipesEvent {
-    fn event_receiver() -> crate::netty::sync::events::netty_event::EventReceiver {
-        crate::netty::sync::events::netty_event::EventReceiver::Client
+impl NettyMessage for SyncBasicFabricatorRecipesMessage {
+    fn event_receiver() -> crate::netty::sync::events::netty_event::MessageReceiver {
+        crate::netty::sync::events::netty_event::MessageReceiver::Client
     }
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_netty_event::<SyncBasicFabricatorRecipesEvent>();
+    app.add_netty_event::<SyncBasicFabricatorRecipesMessage>();
 }

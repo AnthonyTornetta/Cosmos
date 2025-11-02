@@ -2,7 +2,7 @@
 
 use crate::{
     ecs::sets::FixedUpdateSet,
-    structure::events::{ChunkSetEvent, StructureLoadedEvent},
+    structure::events::{ChunkSetMessage, StructureLoadedMessage},
 };
 use bevy::prelude::*;
 use serde::{Deserialize, Serialize};
@@ -18,9 +18,9 @@ pub struct ChunksNeedLoaded {
 }
 
 fn listen_chunk_done_loading(
-    mut event: EventReader<ChunkSetEvent>,
+    mut event: MessageReader<ChunkSetMessage>,
     mut query: Query<&mut ChunksNeedLoaded>,
-    mut event_writer: MessageWriter<StructureLoadedEvent>,
+    mut event_writer: MessageWriter<StructureLoadedMessage>,
     mut commands: Commands,
 ) {
     for ev in event.read() {
@@ -34,7 +34,7 @@ fn listen_chunk_done_loading(
             if chunks_needed.amount_needed == 0 {
                 commands.entity(ev.structure_entity).remove::<ChunksNeedLoaded>();
 
-                event_writer.write(StructureLoadedEvent {
+                event_writer.write(StructureLoadedMessage {
                     structure_entity: ev.structure_entity,
                 });
             }
@@ -42,9 +42,9 @@ fn listen_chunk_done_loading(
     }
 }
 
-fn set_structure_done_loading(mut structure_query: Query<&mut Structure>, mut event_reader: EventReader<StructureLoadedEvent>) {
+fn set_structure_done_loading(mut structure_query: Query<&mut Structure>, mut event_reader: MessageReader<StructureLoadedMessage>) {
     for ev in event_reader.read() {
-        let mut structure = structure_query.get_mut(ev.structure_entity).expect("Missing `Structure` component after got StructureLoadedEvent! Did you forget to add it? Make sure your system runs in `LoadingBlueprintSystemSet::DoLoadingBlueprints` or `LoadingBlueprintSystemSet::DoLoading`");
+        let mut structure = structure_query.get_mut(ev.structure_entity).expect("Missing `Structure` component after got StructureLoadedMessage! Did you forget to add it? Make sure your system runs in `LoadingBlueprintSystemSet::DoLoadingBlueprints` or `LoadingBlueprintSystemSet::DoLoading`");
 
         if let Structure::Full(structure) = structure.as_mut() {
             structure.set_loaded();

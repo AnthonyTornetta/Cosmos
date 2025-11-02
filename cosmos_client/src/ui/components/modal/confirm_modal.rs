@@ -2,7 +2,7 @@
 
 use crate::ui::{
     components::{
-        button::{ButtonEvent, CosmosButton},
+        button::{ButtonMessage, CosmosButton},
         modal::{Modal, ModalBody},
     },
     font::DefaultFont,
@@ -82,7 +82,7 @@ fn on_add_text_modal(
                             BackgroundColor(css::DARK_GREY.into()),
                         ))
                         .observe(
-                            |ev: Trigger<ButtonEvent>, q_value: Query<&ModalEntity>, mut commands: Commands| {
+                            |ev: Trigger<ButtonMessage>, q_value: Query<&ModalEntity>, mut commands: Commands| {
                                 let modal_ent = q_value.get(ev.0).expect("Missing modal entity?");
                                 commands
                                     .entity(modal_ent.0)
@@ -113,7 +113,7 @@ fn on_add_text_modal(
                             },
                         ))
                         .observe(
-                            |ev: Trigger<ButtonEvent>, q_value: Query<&ModalEntity>, mut commands: Commands| {
+                            |ev: Trigger<ButtonMessage>, q_value: Query<&ModalEntity>, mut commands: Commands| {
                                 let modal_ent = q_value.get(ev.0).expect("Missing input?");
                                 commands
                                     .entity(modal_ent.0)
@@ -128,7 +128,7 @@ fn on_add_text_modal(
     }
 }
 
-#[derive(Event, Debug)]
+#[derive(Message, Debug)]
 #[event(traversal = &'static ChildOf, auto_propagate)]
 /// Sent whenever the user clicks the Yes/No modal button
 pub struct ConfirmModalComplete {

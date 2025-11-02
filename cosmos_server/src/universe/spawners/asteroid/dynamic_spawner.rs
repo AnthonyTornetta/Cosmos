@@ -11,7 +11,7 @@ use cosmos_core::{
     registry::Registry,
     state::GameState,
     structure::{
-        ChunkInitEvent, Structure, asteroid::MovingAsteroid, coordinates::ChunkCoordinate, full_structure::FullStructure,
+        ChunkInitMessage, Structure, asteroid::MovingAsteroid, coordinates::ChunkCoordinate, full_structure::FullStructure,
         loading::ChunksNeedLoaded, structure_iterator::ChunkIteratorResult,
     },
     utils::{quat_math::random_quat, random::random_range, timer::UtilsTimer},
@@ -130,7 +130,7 @@ fn spawn_tiny_asteroids(
 fn send_done_generating_event(
     mut q_needs_gen: Query<(Entity, &mut Structure), With<SmallAsteroidNeedsCreated>>,
     mut commands: Commands,
-    mut chunk_init_event_writer: MessageWriter<ChunkInitEvent>,
+    mut chunk_init_event_writer: MessageWriter<ChunkInitMessage>,
 ) {
     for (ent, mut s) in q_needs_gen.iter_mut() {
         if let Structure::Full(structure) = s.as_mut() {
@@ -149,7 +149,7 @@ fn send_done_generating_event(
         for res in itr {
             // This will always be true because include_empty is false
             if let ChunkIteratorResult::FilledChunk { position, chunk: _ } = res {
-                chunk_init_event_writer.write(ChunkInitEvent {
+                chunk_init_event_writer.write(ChunkInitMessage {
                     structure_entity: ent,
                     coords: position,
                     serialized_block_data: None,

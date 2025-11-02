@@ -20,7 +20,7 @@ use crate::{
     ecs::{NeedsDespawned, data::DataFor},
     netty::sync::{
         IdentifiableComponent, SyncableComponent,
-        events::netty_event::{IdentifiableEvent, NettyMessage, SyncedEventImpl},
+        events::netty_event::{IdentifiableMessage, NettyMessage, SyncedMessageImpl},
         registry::sync_registry,
         sync_component,
     },
@@ -95,9 +95,9 @@ pub enum ShipActiveSystem {
 #[derive(SystemSet, Debug, Hash, PartialEq, Eq, Clone)]
 /// Holds some of the logic of Structure systems
 pub enum StructureSystemsSet {
-    /// Initialize your structure systems here (from [`super::events::StructureLoadedEvent`]s being generated)
+    /// Initialize your structure systems here (from [`super::events::StructureLoadedMessage`]s being generated)
     InitSystems,
-    /// Update systems when new blocks are placed (from [`crate::events::block_events::BlockChangedEvent`]s)
+    /// Update systems when new blocks are placed (from [`crate::events::block_events::BlockChangedMessage`]s)
     UpdateSystemsBlocks,
     /// Update systems post block placement.
     UpdateSystems,
@@ -202,7 +202,7 @@ impl std::fmt::Display for NoSystemFound {
 
 impl Error for NoSystemFound {}
 
-#[derive(Event, Serialize, Deserialize, Debug, Clone)]
+#[derive(Message, Serialize, Deserialize, Debug, Clone)]
 /// Sent by the player to request changing a system slot to point to a specific system
 pub struct ChangeSystemSlot {
     /// The system they want the slot to be (or `None` to clear it)
@@ -214,15 +214,15 @@ pub struct ChangeSystemSlot {
     pub slot: u32,
 }
 
-impl IdentifiableEvent for ChangeSystemSlot {
+impl IdentifiableMessage for ChangeSystemSlot {
     fn unlocalized_name() -> &'static str {
         "cosmos:change_system_slot"
     }
 }
 
 impl NettyMessage for ChangeSystemSlot {
-    fn event_receiver() -> crate::netty::sync::events::netty_event::EventReceiver {
-        crate::netty::sync::events::netty_event::EventReceiver::Server
+    fn event_receiver() -> crate::netty::sync::events::netty_event::MessageReceiver {
+        crate::netty::sync::events::netty_event::MessageReceiver::Server
     }
 
     #[cfg(feature = "client")]

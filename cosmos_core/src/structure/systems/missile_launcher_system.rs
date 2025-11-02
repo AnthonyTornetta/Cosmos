@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::netty::sync::{
     ClientAuthority, IdentifiableComponent, SyncableComponent,
-    events::netty_event::{IdentifiableEvent, NettyMessage, SyncedEventImpl},
+    events::netty_event::{IdentifiableMessage, NettyMessage, SyncedMessageImpl},
     sync_component,
 };
 
@@ -163,22 +163,22 @@ fn name_missile_launcher_system(mut commands: Commands, q_added: Query<Entity, A
     }
 }
 
-#[derive(Event, Serialize, Deserialize, Debug, Clone)]
+#[derive(Message, Serialize, Deserialize, Debug, Clone)]
 /// Anything that can go wrong when firing a missile launcher system
 pub enum MissileSystemFailure {
     /// The system has no more ammo (missile items) to pull from
     NoAmmo,
 }
 
-impl IdentifiableEvent for MissileSystemFailure {
+impl IdentifiableMessage for MissileSystemFailure {
     fn unlocalized_name() -> &'static str {
         "cosmos:missile_system_failure"
     }
 }
 
 impl NettyMessage for MissileSystemFailure {
-    fn event_receiver() -> crate::netty::sync::events::netty_event::EventReceiver {
-        crate::netty::sync::events::netty_event::EventReceiver::Client
+    fn event_receiver() -> crate::netty::sync::events::netty_event::MessageReceiver {
+        crate::netty::sync::events::netty_event::MessageReceiver::Client
     }
 }
 

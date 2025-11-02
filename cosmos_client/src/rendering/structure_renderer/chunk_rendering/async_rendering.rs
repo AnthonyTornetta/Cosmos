@@ -1,5 +1,5 @@
 use crate::asset::asset_loading::BlockTextureIndex;
-use crate::asset::materials::{AddMaterialEvent, BlockMaterialMapping, MaterialDefinition, MaterialType, RemoveAllMaterialsEvent};
+use crate::asset::materials::{AddMaterialMessage, BlockMaterialMapping, MaterialDefinition, MaterialType, RemoveAllMaterialsMessage};
 use crate::block::lighting::{BlockLightProperties, BlockLighting};
 use crate::rendering::structure_renderer::{BlockRenderingModes, StructureRenderingSet};
 use crate::rendering::{CosmosMeshBuilder, ReadOnlyBlockMeshRegistry};
@@ -31,8 +31,8 @@ fn poll_rendering_chunks(
     q_lights: Query<&LightsHolder>,
     q_chunk_meshes: Query<&ChunkMeshes>,
     q_chunk_entity: Query<&ChunkEntity>,
-    mut evw_add_material_event: MessageWriter<AddMaterialEvent>,
-    mut evw_remove_all_materials: MessageWriter<RemoveAllMaterialsEvent>,
+    mut evw_add_material_event: MessageWriter<AddMaterialMessage>,
+    mut evw_remove_all_materials: MessageWriter<RemoveAllMaterialsMessage>,
     mut evw_chunk_needs_custom_blocks_rerendered: MessageWriter<ChunkNeedsCustomBlocksRendered>,
 ) {
     let mut todo = Vec::with_capacity(rendering_chunks.capacity());
@@ -96,7 +96,7 @@ fn poll_rendering_chunks(
         // The first mesh a chunk has will be on the chunk entity instead of child entities,
         // so clear that out first.
         commands.entity(entity).remove::<Mesh3d>();
-        evw_remove_all_materials.write(RemoveAllMaterialsEvent { entity });
+        evw_remove_all_materials.write(RemoveAllMaterialsMessage { entity });
 
         let mut chunk_meshes_component = ChunkMeshes::default();
 
@@ -119,7 +119,7 @@ fn poll_rendering_chunks(
 
             entities_to_add.push(ent);
 
-            evw_add_material_event.write(AddMaterialEvent {
+            evw_add_material_event.write(AddMaterialMessage {
                 entity: ent,
                 add_material_id: mesh_material.material_id,
                 texture_dimensions_index: mesh_material.texture_dimensions_index,
@@ -145,7 +145,7 @@ fn poll_rendering_chunks(
                 aabb.unwrap_or_default(),
             ));
 
-            evw_add_material_event.write(AddMaterialEvent {
+            evw_add_material_event.write(AddMaterialMessage {
                 entity,
                 add_material_id: mesh_material.material_id,
                 texture_dimensions_index: mesh_material.texture_dimensions_index,

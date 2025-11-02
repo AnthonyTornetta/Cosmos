@@ -2,9 +2,9 @@ use crate::{
     asset::asset_loader::load_assets,
     input::inputs::CosmosInputs,
     ui::{
-        CloseMenuEvent, CloseMethod, OpenMenu,
+        CloseMenuMessage, CloseMethod, OpenMenu,
         components::{
-            button::{ButtonEvent, CosmosButton},
+            button::{ButtonMessage, CosmosButton},
             scollable_container::ScrollBox,
             show_cursor::ShowCursor,
             text_input::{InputType, InputValue, TextInput},
@@ -15,7 +15,7 @@ use crate::{
 use bevy::{color::palettes::css, input_focus::InputFocus, prelude::*};
 use cosmos_core::coms::ComsChannelType;
 use cosmos_core::{coms::ComsMessage, netty::client::LocalPlayer};
-use cosmos_core::{coms::events::RequestCloseComsEvent, structure::ship::pilot::Pilot};
+use cosmos_core::{coms::events::RequestCloseComsMessage, structure::ship::pilot::Pilot};
 use cosmos_core::{coms::events::SendComsMessageType, state::GameState};
 use cosmos_core::{
     coms::{ComsChannel, events::SendComsMessage},
@@ -618,7 +618,7 @@ fn on_not_pilot(
 }
 
 fn on_toggle(
-    _trigger: Trigger<ButtonEvent>,
+    _trigger: Trigger<ButtonMessage>,
     mut commands: Commands,
     mut q_selected_coms: Query<&mut SelectedComs>,
     mut q_coms_ui: Query<(Entity, &mut Node, Has<ShowCursor>), With<ComsUi>>,
@@ -700,7 +700,7 @@ fn minimize_ui(
 
 fn on_close_menu(
     coms_assets: Res<ComsAssets>,
-    mut evr: EventReader<CloseMenuEvent>,
+    mut evr: MessageReader<CloseMenuMessage>,
     mut q_coms_ui: Query<&mut Node, With<ComsUi>>,
     mut commands: Commands,
     mut q_toggle_button: Query<&mut CosmosButton, With<ToggleButton>>,
@@ -727,7 +727,7 @@ fn on_close_menu(
 }
 
 fn send_text(
-    _trigger: Trigger<ButtonEvent>,
+    _trigger: Trigger<ButtonMessage>,
     mut nevw_send_coms_message: NettyMessageWriter<SendComsMessage>,
     q_selected_coms: Query<&SelectedComs>,
     mut q_text_value: Query<&mut InputValue, With<UiComsMessage>>,
@@ -760,7 +760,7 @@ fn send_text(
 }
 
 fn yes_clicked(
-    _trigger: Trigger<ButtonEvent>,
+    _trigger: Trigger<ButtonMessage>,
     mut nevw_send_coms_message: NettyMessageWriter<SendComsMessage>,
     q_selected_coms: Query<&SelectedComs>,
     q_coms_channel: Query<&ComsChannel>,
@@ -780,7 +780,7 @@ fn yes_clicked(
 }
 
 fn no_clicked(
-    _trigger: Trigger<ButtonEvent>,
+    _trigger: Trigger<ButtonMessage>,
     mut nevw_send_coms_message: NettyMessageWriter<SendComsMessage>,
     q_selected_coms: Query<&SelectedComs>,
     q_coms_channel: Query<&ComsChannel>,
@@ -800,19 +800,19 @@ fn no_clicked(
 }
 
 fn end_selected_coms(
-    _trigger: Trigger<ButtonEvent>,
-    mut evw_close_coms: NettyMessageWriter<RequestCloseComsEvent>,
+    _trigger: Trigger<ButtonMessage>,
+    mut evw_close_coms: NettyMessageWriter<RequestCloseComsMessage>,
     mut q_selected_coms: Query<&mut SelectedComs>,
 ) {
     let Ok(selected) = q_selected_coms.single_mut() else {
         return;
     };
 
-    evw_close_coms.write(RequestCloseComsEvent(selected.0));
+    evw_close_coms.write(RequestCloseComsMessage(selected.0));
 }
 
 fn on_left_clicked(
-    _trigger: Trigger<ButtonEvent>,
+    _trigger: Trigger<ButtonMessage>,
     mut q_selected_coms: Query<&mut SelectedComs>,
     q_coms: Query<(Entity, &ChildOf, &ComsChannel)>,
     q_local_player: Query<Entity, With<LocalPlayer>>,
@@ -834,7 +834,7 @@ fn on_left_clicked(
 }
 
 fn on_right_clicked(
-    _trigger: Trigger<ButtonEvent>,
+    _trigger: Trigger<ButtonMessage>,
     mut q_selected_coms: Query<&mut SelectedComs>,
     q_coms: Query<(Entity, &ChildOf, &ComsChannel)>,
     q_pilot: Query<&Pilot>,

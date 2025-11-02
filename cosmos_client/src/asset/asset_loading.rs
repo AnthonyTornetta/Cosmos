@@ -14,7 +14,7 @@ use cosmos_core::{
     block::{Block, block_face::BlockFace},
     blockitems::BlockItems,
     item::Item,
-    loader::{AddLoadingEvent, DoneLoadingEvent, LoadingManager},
+    loader::{AddLoadingMessage, DoneLoadingMessage, LoadingManager},
     registry::{self, Registry, identifiable::Identifiable},
     state::GameState,
     structure::chunk::BlockInfo,
@@ -58,13 +58,13 @@ impl LoadingTextureAtlas {
     }
 }
 
-#[derive(Debug, Event)]
+#[derive(Debug, Message)]
 /// Send this whenever you register a loader and want to signify that your assets are done loading
-pub struct AssetsDoneLoadingEvent;
+pub struct AssetsDoneLoadingMessage;
 
-#[derive(Debug, Event)]
+#[derive(Debug, Message)]
 /// Sent whenever all the textures are done being loaded into the `CosmosTextureAtlas`
-pub struct AllTexturesDoneLoadingEvent;
+pub struct AllTexturesDoneLoadingMessage;
 
 #[derive(Resource, Debug)]
 struct AssetsLoadingID(usize);
@@ -74,7 +74,7 @@ fn setup_textures(
     server: Res<AssetServer>,
     mut loading: ResMut<Registry<LoadingTextureAtlas>>,
     mut loader: ResMut<LoadingManager>,
-    mut start_writer: MessageWriter<AddLoadingEvent>,
+    mut start_writer: MessageWriter<AddLoadingMessage>,
 ) {
     let block_image_handles = server.load_folder("cosmos/images/blocks/");
     let item_image_handles = server.load_folder("cosmos/images/items/");
@@ -89,10 +89,10 @@ fn setup_textures(
 
 fn assets_done_loading(
     mut commands: Commands,
-    event_listener: EventReader<AssetsDoneLoadingEvent>,
+    event_listener: MessageReader<AssetsDoneLoadingMessage>,
     loading_id: Option<Res<AssetsLoadingID>>,
     mut loader: ResMut<LoadingManager>,
-    mut end_writer: MessageWriter<DoneLoadingEvent>,
+    mut end_writer: MessageWriter<DoneLoadingMessage>,
 ) {
     if !event_listener.is_empty()
         && let Some(loading_id) = loading_id.as_ref()
@@ -124,7 +124,7 @@ impl CosmosTextureAtlas {
 
     /// Returns all texture atlases for the different texture sizes that need to be accounted for.
     ///
-    /// The ordering of this WILL match the `texture_dimensions_index` passed in the [`super::materials::AddMaterialEvent`].
+    /// The ordering of this WILL match the `texture_dimensions_index` passed in the [`super::materials::AddMaterialMessage`].
     pub fn texture_atlases(&self) -> impl Iterator<Item = &'_ SquareTextureAtlas> {
         self.texture_atlases.iter()
     }
@@ -132,7 +132,7 @@ impl CosmosTextureAtlas {
     /// Returns the square texture atlas given this dimension index.
     ///
     /// This index should correspond to the ordering of [`Self::texture_atlases`], which should be automatically passed to the
-    /// material in the [`super::materials::AddMaterialEvent`].
+    /// material in the [`super::materials::AddMaterialMessage`].
     pub fn get_atlas_for_dimension_index(&self, dimension_index: u32) -> Option<&SquareTextureAtlas> {
         self.texture_atlases.get(dimension_index as usize)
     }
@@ -163,7 +163,7 @@ impl CosmosTextureAtlas {
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize, Hash, Reflect)]
 /// The index for usage with the [`CosmosTextureAtlas`] for this block.
 pub struct TextureIndex {
-    /// The atlas that should be used for this block's texture dimensions. Pass this to the [`super::materials::AddMaterialEvent`] event.
+    /// The atlas that should be used for this block's texture dimensions. Pass this to the [`super::materials::AddMaterialMessage`] event.
     pub dimension_index: u32,
     /// The index within the atlas for this block. This should be used after getting the proper atlas via the [`Self::dimension_index`].
     pub texture_index: u32,
@@ -189,12 +189,12 @@ fn check_assets_ready(
     mut loading: ResMut<Registry<LoadingTextureAtlas>>,
     mut texture_atlases: ResMut<Registry<CosmosTextureAtlas>>,
     mut images: ResMut<Assets<Image>>,
-    mut event_writer: MessageWriter<AllTexturesDoneLoadingEvent>,
-    mut ev_asset_folder_event: EventReader<AssetEvent<LoadedFolder>>,
+    mut event_writer: MessageWriter<AllTexturesDoneLoadingMessage>,
+    mut ev_asset_folder_event: MessageReader<AssetMessage<LoadedFolder>>,
     loaded_folders: Res<Assets<LoadedFolder>>,
 ) {
     for ev in ev_asset_folder_event.read() {
-        if let AssetEvent::LoadedWithDependencies { id } = ev {
+        if let AssetMessage::LoadedWithDependencies { id } = ev {
             let asset = server.get_id_handle::<LoadedFolder>(*id).unwrap();
 
             if let Some(loaded_folder) = loaded_folders.get(&asset)
@@ -257,7 +257,7 @@ fn check_assets_ready(
                     commands.remove_resource::<Registry<LoadingTextureAtlas>>();
 
                     info!("Sending all textures done loading event!");
-                    event_writer.write(AllTexturesDoneLoadingEvent);
+                    event_writer.write(AllTexturesDoneLoadingMessage);
                 }
             }
         }
@@ -1042,7 +1042,7 @@ fn get_texture_index_for_name(
         .unwrap_or_else(|| panic!("Invalid texture - {texture_name}. Did you forget the 'cosmos:'?"));
 
     atlas_registry
-        .from_id("cosmos:main") // Eventually load this via the block_info file
+        .from_id("cosmos:main") // Messageually load this via the block_info file
         .expect("No main atlas")
         .get_texture_index(
             &server
@@ -1103,8 +1103,8 @@ pub(super) fn register(app: &mut App) {
             .chain(),
     );
 
-    app.add_event::<AssetsDoneLoadingEvent>()
-        .add_event::<AllTexturesDoneLoadingEvent>()
+    app.add_event::<AssetsDoneLoadingMessage>()
+        .add_event::<AllTexturesDoneLoadingMessage>()
         .add_systems(
             Update,
             (

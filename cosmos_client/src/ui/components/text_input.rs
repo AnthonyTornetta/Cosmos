@@ -188,7 +188,7 @@ fn added_text_input_bundle(
 }
 
 fn send_key_inputs(
-    mut evr_keyboard: EventReader<KeyboardInput>,
+    mut evr_keyboard: MessageReader<KeyboardInput>,
     focused: Res<InputFocus>,
     mut q_focused_input_field: Query<(&mut TextInput, &mut InputValue, &Interaction)>,
     inputs: Res<ButtonInput<KeyCode>>,
@@ -353,7 +353,7 @@ fn handle_keyboard_shortcuts(
     mut q_text_inputs: Query<(&mut InputValue, &mut TextInput)>,
     mut cursor_flash_time: ResMut<CursorFlashTime>,
     inputs: Res<ButtonInput<KeyCode>>,
-    mut evr_keyboard: EventReader<KeyboardInput>,
+    mut evr_keyboard: MessageReader<KeyboardInput>,
 ) {
     let Some(focused_entity) = focused.0 else {
         evr_keyboard.clear();

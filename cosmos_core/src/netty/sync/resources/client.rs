@@ -11,8 +11,8 @@ use crate::ecs::add_multi_statebound_resource;
 
 use super::{ResourceSyncingMessage, SyncableResource};
 
-#[derive(Event)]
-struct ReceivedResourceEvent {
+#[derive(Message)]
+struct ReceivedResourceMessage {
     serialized_data: Vec<u8>,
     resource_name: String,
 }
@@ -22,7 +22,7 @@ pub(crate) struct ResourcesLeftToSync(pub Option<i64>);
 
 fn sync<T: SyncableResource>(
     mut commands: Commands,
-    mut ev_reader: EventReader<ReceivedResourceEvent>,
+    mut ev_reader: MessageReader<ReceivedResourceMessage>,
     mut left_to_sync: Option<ResMut<ResourcesLeftToSync>>,
 ) {
     for ev in ev_reader.read() {
@@ -72,7 +72,7 @@ pub(super) fn sync_resource<T: SyncableResource>(app: &mut App) {
 
 fn resources_listen_netty(
     mut client: ResMut<RenetClient>,
-    mut ev_writer: MessageWriter<ReceivedResourceEvent>,
+    mut ev_writer: MessageWriter<ReceivedResourceMessage>,
     mut resource_count: Option<ResMut<ResourcesLeftToSync>>,
 ) {
     while let Some(message) = client.receive_message(NettyChannelServer::Resource) {
@@ -88,7 +88,7 @@ fn resources_listen_netty(
                 }
             }
             ResourceSyncingMessage::Resource { data, unlocalized_name } => {
-                ev_writer.write(ReceivedResourceEvent {
+                ev_writer.write(ReceivedResourceMessage {
                     serialized_data: data,
                     resource_name: unlocalized_name,
                 });
@@ -115,7 +115,7 @@ pub(super) fn register(app: &mut App) {
             .chain()
             .run_if(condition),
     )
-    .add_event::<ReceivedResourceEvent>();
+    .add_event::<ReceivedResourceMessage>();
 
     add_multi_statebound_resource::<ResourcesLeftToSync, GameState>(app, GameState::Connecting, GameState::LoadingData);
 }

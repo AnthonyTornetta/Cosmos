@@ -13,10 +13,10 @@ use serde::{Deserialize, Serialize};
 /// Keeps track of the number of registries a client must be sent to be considered done loading registries.
 struct NumRegistriesToSync(u64);
 
-#[derive(Event)]
+#[derive(Message)]
 /// This event signifies that this player needs to have their registries mapped to the server's
 /// registries. This should be sent whenever the player initially joins.
-pub struct SyncRegistriesEvent {
+pub struct SyncRegistriesMessage {
     /// The player's entity
     pub player_entity: Entity,
 }
@@ -24,7 +24,7 @@ pub struct SyncRegistriesEvent {
 fn sync<'a, T: Identifiable + Serialize + Deserialize<'a>>(
     q_player: Query<&Player>,
     mut server: ResMut<RenetServer>,
-    mut ev_reader: EventReader<SyncRegistriesEvent>,
+    mut ev_reader: MessageReader<SyncRegistriesMessage>,
     registry: Res<Registry<T>>,
 ) {
     for ev in ev_reader.read() {
@@ -51,7 +51,7 @@ fn incr_registries_to_sync(mut n_registries: ResMut<NumRegistriesToSync>) {
 fn send_number_of_registries(
     q_player: Query<&Player>,
     mut server: ResMut<RenetServer>,
-    mut ev_reader: EventReader<SyncRegistriesEvent>,
+    mut ev_reader: MessageReader<SyncRegistriesMessage>,
     n_registries: Res<NumRegistriesToSync>,
 ) {
     for ev in ev_reader.read() {
@@ -83,7 +83,7 @@ pub(super) fn sync_registry<'a, T: Identifiable + Serialize + Deserialize<'a>>(a
 
 #[allow(unused)] // LSP assumes this function is never used, even though it's just feature flagged
 pub(super) fn register<T: States>(app: &mut App, playing_state: T) {
-    app.add_event::<SyncRegistriesEvent>();
+    app.add_event::<SyncRegistriesMessage>();
     app.configure_sets(Startup, IncrementSet::Increment.ambiguous_with(IncrementSet::Increment));
 
     app.add_systems(

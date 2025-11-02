@@ -1,13 +1,13 @@
 //! Listens to almost all the messages received from the client
 //!
-//! Eventually this should be broken down into more specific functions
+//! Messageually this should be broken down into more specific functions
 
 use bevy::platform::collections::HashMap;
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::Velocity;
 use bevy_renet::renet::{ClientId, RenetServer};
-use cosmos_core::block::block_events::{BlockBreakEvent, BlockInteractEvent, BlockPlaceEvent, BlockPlaceEventData};
-use cosmos_core::ecs::mut_events::MutEvent;
+use cosmos_core::block::block_events::{BlockBreakMessage, BlockInteractMessage, BlockPlaceMessage, BlockPlaceMessageData};
+use cosmos_core::ecs::mut_events::MutMessage;
 use cosmos_core::entities::player::creative::Creative;
 use cosmos_core::inventory::Inventory;
 use cosmos_core::inventory::itemstack::ItemStackSystemSet;
@@ -20,11 +20,11 @@ use cosmos_core::physics::location::{Location, SetPosition};
 use cosmos_core::registry::Registry;
 use cosmos_core::state::GameState;
 use cosmos_core::structure::loading::ChunksNeedLoaded;
-use cosmos_core::structure::shared::build_mode::{BuildMode, ExitBuildModeEvent};
+use cosmos_core::structure::shared::build_mode::{BuildMode, ExitBuildModeMessage};
 use cosmos_core::structure::systems::{StructureSystemOrdering, StructureSystems};
 use cosmos_core::{
     entities::player::Player,
-    events::structure::change_pilot_event::ChangePilotEvent,
+    events::structure::change_pilot_event::ChangePilotMessage,
     netty::{
         client_reliable_messages::ClientReliableMessages, client_unreliable_messages::ClientUnreliableMessages,
         server_reliable_messages::ServerReliableMessages,
@@ -34,9 +34,9 @@ use cosmos_core::{
 
 use crate::entities::player::PlayerLooking;
 use crate::structure::planet::chunk::ChunkNeedsSent;
-use crate::structure::planet::generation::planet_generator::RequestChunkEvent;
-use crate::structure::ship::events::{CreateShipEvent, ShipSetMovementEvent};
-use crate::structure::station::events::CreateStationEvent;
+use crate::structure::planet::generation::planet_generator::RequestChunkMessage;
+use crate::structure::ship::events::{CreateShipMessage, ShipSetMovementMessage};
+use crate::structure::station::events::CreateStationMessage;
 
 use super::server_events::handle_server_events;
 
@@ -45,7 +45,7 @@ struct SendAllChunks(HashMap<Entity, Vec<ClientId>>);
 
 /// Bevy system that listens to almost all the messages received from the client
 ///
-/// Eventually this should be broken down into more specific functions
+/// Messageually this should be broken down into more specific functions
 fn server_listen_messages(
     mut commands: Commands,
     mut server: ResMut<RenetServer>,
@@ -62,18 +62,18 @@ fn server_listen_messages(
         mut request_chunk_event_writer,
     ): (
         Query<(&mut StructureSystems, &StructureSystemOrdering)>,
-        MessageWriter<BlockBreakEvent>,
-        MessageWriter<MutEvent<BlockPlaceEvent>>,
-        MessageWriter<BlockInteractEvent>,
-        MessageWriter<ExitBuildModeEvent>,
-        MessageWriter<CreateShipEvent>,
-        MessageWriter<CreateStationEvent>,
-        MessageWriter<RequestChunkEvent>,
+        MessageWriter<BlockBreakMessage>,
+        MessageWriter<MutMessage<BlockPlaceMessage>>,
+        MessageWriter<BlockInteractMessage>,
+        MessageWriter<ExitBuildModeMessage>,
+        MessageWriter<CreateShipMessage>,
+        MessageWriter<CreateStationMessage>,
+        MessageWriter<RequestChunkMessage>,
     ),
     mut q_inventory: Query<&mut Inventory>,
     q_creative: Query<(), With<Creative>>,
     items: Res<Registry<Item>>,
-    (mut ship_movement_event_writer, mut pilot_change_event_writer): (MessageWriter<ShipSetMovementEvent>, MessageWriter<ChangePilotEvent>),
+    (mut ship_movement_event_writer, mut pilot_change_event_writer): (MessageWriter<ShipSetMovementMessage>, MessageWriter<ChangePilotMessage>),
     pilot_query: Query<&Pilot>,
     player_parent_location: Query<&Location, Without<Player>>,
     mut q_player: Query<(&GlobalTransform, &mut Transform, &mut Location, &mut PlayerLooking, &mut Velocity), With<Player>>,
@@ -118,7 +118,7 @@ fn server_listen_messages(
                         if let Ok(pilot) = pilot_query.get(player_entity) {
                             let ship = pilot.entity;
 
-                            ship_movement_event_writer.write(ShipSetMovementEvent { movement, ship });
+                            ship_movement_event_writer.write(ShipSetMovementMessage { movement, ship });
                         }
                     }
                     ClientUnreliableMessages::ShipActiveSystem { system, active } => {
@@ -155,7 +155,7 @@ fn server_listen_messages(
                     send_all_chunks.0.entry(server_entity).or_default().push(client_id);
                 }
                 ClientReliableMessages::SendSingleChunk { structure_entity, chunk } => {
-                    request_chunk_event_writer.write(RequestChunkEvent {
+                    request_chunk_event_writer.write(RequestChunkMessage {
                         requester_id: client_id,
                         structure_entity,
                         chunk_coords: chunk,
@@ -165,7 +165,7 @@ fn server_listen_messages(
                     if let Some(player_entity) = lobby.player_from_id(client_id)
                         && let Ok(structure) = structure_query.get(block.structure())
                     {
-                        break_block_event.write(BlockBreakEvent {
+                        break_block_event.write(BlockBreakMessage {
                             breaker: player_entity,
                             block,
                             broken_id: structure.block_id_at(block.coords()),
@@ -180,7 +180,7 @@ fn server_listen_messages(
                 } => {
                     if let Some(player_entity) = lobby.player_from_id(client_id) {
                         place_block_event.write(
-                            BlockPlaceEvent::Event(BlockPlaceEventData {
+                            BlockPlaceMessage::Message(BlockPlaceMessageData {
                                 structure_block: block,
                                 block_id,
                                 block_up,
@@ -196,7 +196,7 @@ fn server_listen_messages(
                     block_including_fluids,
                     alternate,
                 } => {
-                    block_interact_event.write(BlockInteractEvent {
+                    block_interact_event.write(BlockInteractMessage {
                         block,
                         block_including_fluids,
                         interactor: lobby.player_from_id(client_id).unwrap(),
@@ -234,7 +234,7 @@ fn server_listen_messages(
 
                         info!("Creating ship {name}");
 
-                        create_ship_event_writer.write(CreateShipEvent {
+                        create_ship_event_writer.write(CreateShipMessage {
                             ship_location,
                             rotation,
                             creator: client,
@@ -274,7 +274,7 @@ fn server_listen_messages(
 
                         info!("Creating ship {name}");
 
-                        create_station_event_writer.write(CreateStationEvent {
+                        create_station_event_writer.write(CreateStationMessage {
                             station_location,
                             rotation,
                         });
@@ -299,7 +299,7 @@ fn server_listen_messages(
                     if let Some(player_entity) = lobby.player_from_id(client_id)
                         && let Ok(piloting) = pilot_query.get(player_entity)
                     {
-                        pilot_change_event_writer.write(ChangePilotEvent {
+                        pilot_change_event_writer.write(ChangePilotMessage {
                             structure_entity: piloting.entity,
                             pilot_entity: None,
                         });
@@ -336,7 +336,7 @@ fn server_listen_messages(
                 }
                 ClientReliableMessages::ExitBuildMode => {
                     if let Some(player_entity) = lobby.player_from_id(client_id) {
-                        exit_build_mode_writer.write(ExitBuildModeEvent { player_entity });
+                        exit_build_mode_writer.write(ExitBuildModeMessage { player_entity });
                     }
                 }
                 ClientReliableMessages::SetSymmetry { axis, coordinate } => {

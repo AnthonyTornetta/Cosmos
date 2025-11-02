@@ -8,13 +8,13 @@ use cosmos_core::{
     block::{
         Block, block_face::BlockFace, block_rotation::BlockRotation, data::BlockData, specific_blocks::numeric_display::NumericDisplayValue,
     },
-    events::block_events::{BlockChangedEvent, BlockDataSystemParams},
+    events::block_events::{BlockChangedMessage, BlockDataSystemParams},
     prelude::BlockCoordinate,
     registry::{Registry, identifiable::Identifiable},
     structure::{Structure, coordinates::BoundsError},
 };
 
-use crate::logic::{BlockLogicData, LogicBlock, LogicConnection, LogicInputEvent, LogicSystemSet, PortType, logic_driver::LogicDriver};
+use crate::logic::{BlockLogicData, LogicBlock, LogicConnection, LogicInputMessage, LogicSystemSet, PortType, logic_driver::LogicDriver};
 
 fn register_logic_ports(blocks: Res<Registry<Block>>, mut registry: ResMut<Registry<LogicBlock>>) {
     if let Some(numeric_display) = blocks.from_id("cosmos:numeric_display") {
@@ -30,7 +30,7 @@ fn register_logic_ports(blocks: Res<Registry<Block>>, mut registry: ResMut<Regis
 /// Also handles updating child display values after a display is placed next to an
 /// existing root, since its logic input of 0 is processed after it's placed.
 fn numeric_display_input_event_listener(
-    mut evr_logic_input: EventReader<LogicInputEvent>,
+    mut evr_logic_input: MessageReader<LogicInputMessage>,
     blocks: Res<Registry<Block>>,
     mut q_structure_logic_driver: Query<(&mut Structure, &mut LogicDriver)>,
     mut q_logic_data: Query<&mut BlockLogicData>,
@@ -96,7 +96,7 @@ fn numeric_display_input_event_listener(
 
 /// Handles updating child display values after a display closer to the root is broken.
 fn numeric_display_block_broken_event_listener(
-    mut evr_block_changed: EventReader<BlockChangedEvent>,
+    mut evr_block_changed: MessageReader<BlockChangedMessage>,
     blocks: Res<Registry<Block>>,
     mut q_structure_logic_driver: Query<(&mut Structure, &mut LogicDriver)>,
     mut q_numeric_display_value: Query<&mut NumericDisplayValue>,

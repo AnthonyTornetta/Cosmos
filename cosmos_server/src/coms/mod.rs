@@ -5,8 +5,8 @@ use cosmos_core::coms::AiComsType;
 
 mod systems;
 
-/// Event triggered when a player attempts to hail an NPC ship.
-#[derive(Event, Debug, Clone, Copy)]
+/// Message triggered when a player attempts to hail an NPC ship.
+#[derive(Message, Debug, Clone, Copy)]
 pub struct RequestHailToNpc {
     /// The [`Entity`] representing the player's ship initiating the hail.
     pub player_ship: Entity,
@@ -14,8 +14,8 @@ pub struct RequestHailToNpc {
     pub npc_ship: Entity,
 }
 
-/// Event triggered when an NPC ship initiates a hail to a player's ship.
-#[derive(Event, Debug, Clone, Copy)]
+/// Message triggered when an NPC ship initiates a hail to a player's ship.
+#[derive(Message, Debug, Clone, Copy)]
 pub struct RequestHailFromNpc {
     /// The [`Entity`] representing the NPC ship sending the hail.
     pub npc_ship: Entity,
@@ -25,19 +25,19 @@ pub struct RequestHailFromNpc {
     pub ai_coms_type: AiComsType,
 }
 
-#[derive(Event, Debug, Clone)]
+#[derive(Message, Debug, Clone)]
 /// Sent when an NPC wants to close a coms channel.
-pub struct NpcRequestCloseComsEvent {
+pub struct NpcRequestCloseComsMessage {
     /// The NPC ship closing the COMS
     pub npc_ship: Entity,
     /// The coms entity owned by this ship you wish to close
     pub coms_entity: Entity,
 }
 
-/// Event used to send a communication message from one ship to another.
+/// Message used to send a communication message from one ship to another.
 ///
 /// Used to deliver text-based communication from an NPC to a player.
-#[derive(Event, Debug, Clone)]
+#[derive(Message, Debug, Clone)]
 pub struct NpcSendComsMessage {
     /// The content of the message being sent.
     pub message: String,
@@ -53,5 +53,5 @@ pub(super) fn register(app: &mut App) {
     app.add_event::<RequestHailToNpc>()
         .add_event::<RequestHailFromNpc>()
         .add_event::<NpcSendComsMessage>()
-        .add_event::<NpcRequestCloseComsEvent>();
+        .add_event::<NpcRequestCloseComsMessage>();
 }

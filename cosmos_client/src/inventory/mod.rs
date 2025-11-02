@@ -6,10 +6,10 @@ use bevy::{color::palettes::css, input_focus::InputFocus, prelude::*, window::Pr
 use bevy_renet::renet::RenetClient;
 use cosmos_core::{
     block::{
-        block_events::BlockEventsSet,
+        block_events::BlockMessagesSet,
         data::{BlockData, BlockDataIdentifier},
     },
-    creative::{CreativeTrashHeldItem, GrabCreativeItemEvent},
+    creative::{CreativeTrashHeldItem, GrabCreativeItemMessage},
     ecs::NeedsDespawned,
     entities::player::creative::Creative,
     inventory::{
@@ -35,7 +35,7 @@ use crate::{
     ui::{
         OpenMenu, UiSystemSet,
         components::{
-            button::{ButtonEvent, CosmosButton},
+            button::{ButtonMessage, CosmosButton},
             scollable_container::ScrollBox,
             show_cursor::no_open_menus,
             text_input::{InputType, InputValue, TextInput},
@@ -718,7 +718,7 @@ fn create_creative_slot(slots: &mut ChildSpawnerCommands, item: &Item, text_styl
 struct OpenTab;
 
 fn on_click_creative_category(
-    ev: Trigger<ButtonEvent>,
+    ev: Trigger<ButtonMessage>,
     q_item_category_marker: Query<&ItemCategoryMarker>,
     mut q_unopen_tab: Query<(Entity, &mut Node, &SelectedTab), (Without<InventorySearchBar>, Without<OpenTab>)>,
     mut q_open_tab: Query<(Entity, &mut Node, &SelectedTab), (Without<InventorySearchBar>, With<OpenTab>)>,
@@ -1038,11 +1038,11 @@ enum InventorySet {
 }
 
 fn on_click_creative_item(
-    ev: Trigger<ButtonEvent>,
+    ev: Trigger<ButtonMessage>,
     q_creative_item: Query<&CreativeItem>,
     inputs: InputChecker,
     items: Res<Registry<Item>>,
-    mut nevw_set_item: NettyMessageWriter<GrabCreativeItemEvent>,
+    mut nevw_set_item: NettyMessageWriter<GrabCreativeItemMessage>,
     mut nevw_trash_item: NettyMessageWriter<CreativeTrashHeldItem>,
     q_children: Query<&Children, With<LocalPlayer>>,
     mut q_held_item: Query<&mut Inventory, With<HeldItemStack>>,
@@ -1072,7 +1072,7 @@ fn on_click_creative_item(
         quantity += held_is.quantity();
     }
 
-    nevw_set_item.write(GrabCreativeItemEvent { quantity, item_id });
+    nevw_set_item.write(GrabCreativeItemMessage { quantity, item_id });
 }
 
 fn draw_held_item(
@@ -1195,11 +1195,11 @@ pub(super) fn register(app: &mut App) {
                 InventorySet::ToggleInventoryRendering,
             )
                 .before(UiSystemSet::PreDoUi)
-                .after(BlockEventsSet::SendEventsForNextFrame)
+                .after(BlockMessagesSet::SendMessagesForNextFrame)
                 .chain(),
             InventorySet::MoveWindows
                 .in_set(UiSystemSet::DoUi)
-                .after(UiWindowSystemSet::SendWindowEvents),
+                .after(UiWindowSystemSet::SendWindowMessages),
         )
             .chain(),
     )

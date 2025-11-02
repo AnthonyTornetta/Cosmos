@@ -15,7 +15,7 @@ use cosmos_core::{
         data::BlockData,
     },
     entities::player::Player,
-    events::block_events::{BlockChangedEvent, BlockDataChangedEvent},
+    events::block_events::{BlockChangedMessage, BlockDataChangedMessage},
     faction::{FactionId, Factions},
     netty::{
         NettyChannelServer, cosmos_encoder,
@@ -28,7 +28,7 @@ use cosmos_core::{
 };
 use cosmos_core::{
     blockitems::BlockItems,
-    ecs::mut_events::{MutEvent, MutEventsCommand},
+    ecs::mut_events::{MutMessage, MutMessagesCommand},
     entities::player::creative::Creative,
     inventory::{
         Inventory,
@@ -48,8 +48,8 @@ use serde::{Deserialize, Serialize};
 use super::drops::BlockDrops;
 
 fn handle_block_changed_event(
-    mut evr_block_changed_event: EventReader<BlockChangedEvent>,
-    mut evr_block_data_changed: EventReader<BlockDataChangedEvent>,
+    mut evr_block_changed_event: MessageReader<BlockChangedMessage>,
+    mut evr_block_data_changed: MessageReader<BlockDataChangedMessage>,
     mut server: ResMut<RenetServer>,
     q_structure: Query<&Structure>,
 ) {
@@ -104,12 +104,12 @@ impl DefaultPersistentComponent for AutoInsertMinedItems {}
 /// This system is horribly smelly, and should be refactored soon.
 fn handle_block_break_events(
     mut q_structure: Query<(&mut Structure, &Location, &GlobalTransform, Option<&Velocity>)>,
-    mut event_reader: EventReader<BlockBreakEvent>,
+    mut event_reader: MessageReader<BlockBreakMessage>,
     blocks: Res<Registry<Block>>,
     items: Res<Registry<Item>>,
     block_items: Res<BlockItems>,
     mut inventory_query: Query<(&mut Inventory, Option<&BuildMode>, Option<&ChildOf>), Without<BlockData>>,
-    mut event_writer: MessageWriter<BlockChangedEvent>,
+    mut event_writer: MessageWriter<BlockChangedMessage>,
     mut q_inventory_block_data: Query<(&BlockData, &mut Inventory), With<AutoInsertMinedItems>>,
     mut commands: Commands,
     has_data: Res<ItemShouldHaveData>,
@@ -117,7 +117,7 @@ fn handle_block_break_events(
     drops: Res<BlockDrops>,
     q_faction: Query<&FactionId>,
     factions: Res<Factions>,
-    mut nevw_invalid_break: NettyMessageWriter<InvalidBlockBreakEventReason>,
+    mut nevw_invalid_break: NettyMessageWriter<InvalidBlockBreakMessageReason>,
     q_player: Query<&Player>,
 ) {
     for ev in event_reader.read() {
@@ -130,7 +130,7 @@ fn handle_block_break_events(
                 .unwrap_or(true)
         {
             if let Ok(player) = q_player.get(ev.breaker) {
-                nevw_invalid_break.write(InvalidBlockBreakEventReason::DifferentFaction, player.client_id());
+                nevw_invalid_break.write(InvalidBlockBreakMessageReason::DifferentFaction, player.client_id());
             }
             continue;
         };
@@ -151,7 +151,7 @@ fn handle_block_break_events(
                 continue;
             }
 
-            // Eventually seperate this into another event lsitener that some how interacts with this one
+            // Messageually seperate this into another event lsitener that some how interacts with this one
             // Idk if bevy supports this yet without some hacky stuff?
             if block.unlocalized_name() == "cosmos:ship_core" || block.unlocalized_name() == "cosmos:station_core" {
                 let mut itr = structure.all_blocks_iter(false);
@@ -161,7 +161,7 @@ fn handle_block_break_events(
                     // Do not allow player to mine ship core if another block exists on the ship
 
                     if let Ok(player) = q_player.get(ev.breaker) {
-                        nevw_invalid_break.write(InvalidBlockBreakEventReason::StructureCore, player.client_id());
+                        nevw_invalid_break.write(InvalidBlockBreakMessageReason::StructureCore, player.client_id());
                     };
                     continue;
                 }
@@ -224,7 +224,7 @@ fn handle_block_break_events(
                 for (coord, _) in structure_blocks {
                     let block = structure.block_at(coord, &blocks);
 
-                    // Eventually seperate this into another event lsitener that some how interacts with this one
+                    // Messageually seperate this into another event lsitener that some how interacts with this one
                     // Idk if bevy supports this yet without some hacky stuff?
                     if block.unlocalized_name() == "cosmos:ship_core" || block.unlocalized_name() == "cosmos:station_core" {
                         let mut itr = structure.all_blocks_iter(false);
@@ -461,8 +461,8 @@ fn calculate_build_mode_blocks(
 
 fn handle_block_place_events(
     mut query: Query<&mut Structure>,
-    mut event_reader: EventReader<MutEvent<BlockPlaceEvent>>,
-    mut event_writer: MessageWriter<BlockChangedEvent>,
+    mut event_reader: MessageReader<MutMessage<BlockPlaceMessage>>,
+    mut event_writer: MessageWriter<BlockChangedMessage>,
     mut player_query: Query<(&mut Inventory, Option<&BuildMode>, Option<&ChildOf>, Option<&Creative>)>,
     items: Res<Registry<Item>>,
     blocks: Res<Registry<Block>>,
@@ -470,13 +470,13 @@ fn handle_block_place_events(
     mut commands: Commands,
     q_faction: Query<&FactionId>,
     factions: Res<Factions>,
-    mut nevw_invalid_place: NettyMessageWriter<InvalidBlockPlaceEventReason>,
+    mut nevw_invalid_place: NettyMessageWriter<InvalidBlockPlaceMessageReason>,
     q_player: Query<&Player>,
 ) {
     for ev in event_reader.read() {
         let place_event = ev.read();
 
-        let BlockPlaceEvent::Event(place_event_data) = *place_event else {
+        let BlockPlaceMessage::Message(place_event_data) = *place_event else {
             continue;
         };
 
@@ -500,7 +500,7 @@ fn handle_block_place_events(
                 .unwrap_or(true)
         {
             if let Ok(player) = q_player.get(place_event_data.placer) {
-                nevw_invalid_place.write(InvalidBlockPlaceEventReason::DifferentFaction, player.client_id());
+                nevw_invalid_place.write(InvalidBlockPlaceMessageReason::DifferentFaction, player.client_id());
             }
             continue;
         };
@@ -540,7 +540,7 @@ fn handle_block_place_events(
             }
 
             if block_id != place_event_data.block_id {
-                *ev.write() = BlockPlaceEvent::Cancelled;
+                *ev.write() = BlockPlaceMessage::Cancelled;
                 // May have run out of the item or it was swapped with something else (not really possible currently, but more checks never hurt anyone)
                 break;
             }
@@ -561,15 +561,15 @@ fn handle_block_place_events(
 pub(super) fn register(app: &mut App) {
     make_persistent::<AutoInsertMinedItems>(app);
 
-    app.add_event::<BlockBreakEvent>()
-        .add_mut_event::<BlockPlaceEvent>()
-        .add_event::<BlockInteractEvent>()
+    app.add_event::<BlockBreakMessage>()
+        .add_mut_event::<BlockPlaceMessage>()
+        .add_event::<BlockInteractMessage>()
         .add_systems(
             FixedUpdate,
             (handle_block_break_events, handle_block_place_events)
                 .chain()
                 .in_set(ItemStackSystemSet::CreateDataEntity)
-                .in_set(BlockEventsSet::ChangeBlocks),
+                .in_set(BlockMessagesSet::ChangeBlocks),
         );
 
     app.add_systems(

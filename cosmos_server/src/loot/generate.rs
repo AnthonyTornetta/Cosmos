@@ -2,8 +2,8 @@ use std::{cell::RefCell, rc::Rc};
 
 use bevy::prelude::*;
 use cosmos_core::{
-    block::{Block, block_events::BlockEventsSet},
-    events::block_events::{BlockChangedEvent, BlockDataSystemParams},
+    block::{Block, block_events::BlockMessagesSet},
+    events::block_events::{BlockChangedMessage, BlockDataSystemParams},
     inventory::{Inventory, itemstack::ItemShouldHaveData},
     item::Item,
     prelude::{Structure, StructureBlock, StructureLoadingSet},
@@ -14,18 +14,18 @@ use crate::persistence::loading::NeedsBlueprintLoaded;
 
 use super::{LootTable, NeedsLootGenerated};
 
-#[derive(Event, Clone, Copy)]
-struct PopulateLootInventoriesEvent(StructureBlock, u16);
+#[derive(Message, Clone, Copy)]
+struct PopulateLootInventoriesMessage(StructureBlock, u16);
 
-#[derive(Event)]
-struct PopulateLootInventoriesEventCarryOver(PopulateLootInventoriesEvent);
+#[derive(Message)]
+struct PopulateLootInventoriesMessageCarryOver(PopulateLootInventoriesMessage);
 
 fn generate_needed_loot_tables(
     mut commands: Commands,
     mut q_needs_gen: Query<(Entity, &mut Structure, &NeedsLootGenerated), Without<NeedsBlueprintLoaded>>,
     blocks: Res<Registry<Block>>,
-    mut evw_block_changed: MessageWriter<BlockChangedEvent>,
-    mut evw_populate_inventories: MessageWriter<PopulateLootInventoriesEventCarryOver>,
+    mut evw_block_changed: MessageWriter<BlockChangedMessage>,
+    mut evw_populate_inventories: MessageWriter<PopulateLootInventoriesMessageCarryOver>,
 ) {
     for (ent, mut s, needs_gened) in q_needs_gen.iter_mut() {
         commands.entity(ent).remove::<NeedsLootGenerated>();
@@ -50,7 +50,7 @@ fn generate_needed_loot_tables(
         for block in loot_blocks {
             s.set_block_at(block, storage_block, Default::default(), &blocks, Some(&mut evw_block_changed));
 
-            evw_populate_inventories.write(PopulateLootInventoriesEventCarryOver(PopulateLootInventoriesEvent(
+            evw_populate_inventories.write(PopulateLootInventoriesMessageCarryOver(PopulateLootInventoriesMessage(
                 StructureBlock::new(block, ent),
                 needs_gened.loot_classification,
             )));
@@ -59,15 +59,15 @@ fn generate_needed_loot_tables(
 }
 
 fn send_carryover_events(
-    mut evr_carry_over: EventReader<PopulateLootInventoriesEventCarryOver>,
-    mut evw_events: MessageWriter<PopulateLootInventoriesEvent>,
+    mut evr_carry_over: MessageReader<PopulateLootInventoriesMessageCarryOver>,
+    mut evw_events: MessageWriter<PopulateLootInventoriesMessage>,
 ) {
     evw_events.write_batch(evr_carry_over.read().map(|x| x.0));
 }
 
 fn populate_loot_table_inventories(
     loot_tables: Res<Registry<LootTable>>,
-    mut evr_populate_inventories: EventReader<PopulateLootInventoriesEvent>,
+    mut evr_populate_inventories: MessageReader<PopulateLootInventoriesMessage>,
     q_structure: Query<&Structure>,
     mut q_inventory: Query<&mut Inventory>,
     bs_params: BlockDataSystemParams,
@@ -137,14 +137,14 @@ pub(super) fn register(app: &mut App) {
     app.add_systems(
         FixedUpdate,
         (
-            generate_needed_loot_tables.in_set(BlockEventsSet::SendEventsForThisFrame),
+            generate_needed_loot_tables.in_set(BlockMessagesSet::SendMessagesForThisFrame),
             populate_loot_table_inventories
                 .after(StructureLoadingSet::StructureLoaded)
-                .in_set(BlockEventsSet::SendEventsForNextFrame),
+                .in_set(BlockMessagesSet::SendMessagesForNextFrame),
             send_carryover_events,
         )
             .chain(),
     )
-    .add_event::<PopulateLootInventoriesEvent>()
-    .add_event::<PopulateLootInventoriesEventCarryOver>();
+    .add_event::<PopulateLootInventoriesMessage>()
+    .add_event::<PopulateLootInventoriesMessageCarryOver>();
 }

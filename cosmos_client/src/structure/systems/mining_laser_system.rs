@@ -39,9 +39,9 @@ const BEAM_SIZE: f32 = 0.2;
 /// TODO: sync from server
 const BEAM_MAX_RANGE: f32 = 250.0;
 
-#[derive(Event)]
+#[derive(Message)]
 /// This event is fired whenever a laser cannon system is fired
-pub struct LaserCannonSystemFiredEvent(pub Entity);
+pub struct LaserCannonSystemFiredMessage(pub Entity);
 
 #[derive(Resource)]
 struct LaserCannonFireHandles(Vec<Handle<bevy_kira_audio::prelude::AudioSource>>);
@@ -324,7 +324,7 @@ pub(super) fn register(app: &mut App) {
             .chain(),
     );
 
-    app.add_event::<LaserCannonSystemFiredEvent>()
+    app.add_event::<LaserCannonSystemFiredMessage>()
         .init_resource::<MiningLaserMaterialCache>()
         .add_systems(Startup, create_mining_laser_mesh)
         .add_systems(

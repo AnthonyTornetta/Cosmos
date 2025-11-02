@@ -14,14 +14,14 @@ use zip::write::SimpleFileOptions;
 
 use super::saving::SavingSystemSet;
 
-#[derive(Event, Default)]
+#[derive(Message, Default)]
 /// Send this event to trigger a world backup
 pub struct CreateWorldBackup;
 
 const DATE_FORMAT: &str = "%Y_%m_%d_%H_%M_%S";
 const BACKUP_ENDING: &str = "_world_backup.zip";
 
-fn backup_world(mut evr_create_backup: EventReader<CreateWorldBackup>) {
+fn backup_world(mut evr_create_backup: MessageReader<CreateWorldBackup>) {
     if evr_create_backup.is_empty() {
         return;
     }

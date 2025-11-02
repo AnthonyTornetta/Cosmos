@@ -2,7 +2,7 @@ use bevy::prelude::*;
 use bevy_rapier3d::dynamics::Velocity;
 use cosmos_core::{
     ecs::sets::FixedUpdateSet,
-    events::structure::StructureEventListenerSet,
+    events::structure::StructureMessageListenerSet,
     netty::sync::IdentifiableComponent,
     physics::location::Location,
     projectiles::{laser::LASER_LIVE_TIME, missile::Missile},
@@ -196,7 +196,7 @@ pub(super) fn register(app: &mut App) {
         CombatAiSystemSet::CombatAiLogic
             .in_set(StructureTypeSet::Ship)
             .after(LoadingSystemSet::DoneLoading)
-            .after(StructureEventListenerSet::ChangePilotListener),
+            .after(StructureMessageListenerSet::ChangePilotListener),
     )
     .register_type::<AiTargetting>()
     .register_type::<CombatAi>()

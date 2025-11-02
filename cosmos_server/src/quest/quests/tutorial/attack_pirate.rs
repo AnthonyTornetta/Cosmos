@@ -9,7 +9,7 @@ use cosmos_core::{
 };
 
 use crate::{
-    ai::hit_tracking::PlayerDestroyedNpcShipEvent,
+    ai::hit_tracking::PlayerDestroyedNpcShipMessage,
     quest::QuestsSet,
     universe::{
         UniverseSystems,
@@ -135,7 +135,7 @@ fn resolve_fly_to_dangerous_area(
 }
 
 fn resolve_kill_npc_ship(
-    mut evr_player_killed_npc_ship: EventReader<PlayerDestroyedNpcShipEvent>,
+    mut evr_player_killed_npc_ship: MessageReader<PlayerDestroyedNpcShipMessage>,
     quests: Res<Registry<Quest>>,
     mut q_ongoing_quest: Query<&mut OngoingQuests>,
 ) {

@@ -5,10 +5,10 @@ use bevy::prelude::*;
 use cosmos_core::{
     block::{
         Block,
-        block_events::{BlockEventsSet, BlockInteractEvent},
+        block_events::{BlockMessagesSet, BlockInteractMessage},
     },
     crafting::{
-        blocks::advanced_fabricator::{CraftAdvancedFabricatorRecipeEvent, OpenAdvancedFabricatorEvent},
+        blocks::advanced_fabricator::{CraftAdvancedFabricatorRecipeMessage, OpenAdvancedFabricatorMessage},
         recipes::{RecipeItem, advanced_fabricator::AdvancedFabricatorRecipes},
     },
     entities::player::Player,
@@ -25,8 +25,8 @@ use cosmos_core::{
 };
 
 fn monitor_advanced_fabricator_interactions(
-    mut evr_block_interact: EventReader<BlockInteractEvent>,
-    mut nevw_open_adv_fabricator: NettyMessageWriter<OpenAdvancedFabricatorEvent>,
+    mut evr_block_interact: MessageReader<BlockInteractMessage>,
+    mut nevw_open_adv_fabricator: NettyMessageWriter<OpenAdvancedFabricatorMessage>,
     q_player: Query<&Player>,
     q_structure: Query<&Structure>,
     blocks: Res<Registry<Block>>,
@@ -45,12 +45,12 @@ fn monitor_advanced_fabricator_interactions(
             continue;
         };
 
-        nevw_open_adv_fabricator.write(OpenAdvancedFabricatorEvent(block), player.client_id());
+        nevw_open_adv_fabricator.write(OpenAdvancedFabricatorMessage(block), player.client_id());
     }
 }
 
 fn monitor_craft_event(
-    mut nevr_craft_event: EventReader<NettyMessageReceived<CraftAdvancedFabricatorRecipeEvent>>,
+    mut nevr_craft_event: MessageReader<NettyMessageReceived<CraftAdvancedFabricatorRecipeMessage>>,
     q_structure: Query<&Structure>,
     // Separate queries to please borrow checker
     mut q_player_inventory: Query<&mut Inventory, With<Player>>,
@@ -135,7 +135,7 @@ pub(super) fn register(app: &mut App) {
     app.add_systems(
         FixedUpdate,
         (monitor_advanced_fabricator_interactions, monitor_craft_event)
-            .in_set(BlockEventsSet::ProcessEvents)
+            .in_set(BlockMessagesSet::ProcessMessages)
             .run_if(in_state(GameState::Playing)),
     );
 }

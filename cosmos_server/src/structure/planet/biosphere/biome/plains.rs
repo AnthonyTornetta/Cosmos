@@ -7,7 +7,7 @@ use cosmos_core::{
         block_face::BlockFace,
         block_rotation::{BlockRotation, BlockSubRotation},
     },
-    events::block_events::BlockChangedEvent,
+    events::block_events::BlockChangedMessage,
     physics::location::Location,
     registry::{Registry, identifiable::Identifiable},
     state::GameState,
@@ -26,7 +26,7 @@ use crate::{
     structure::planet::biosphere::{biosphere_generation::BiosphereGenerationSet, generation_tools::fill},
 };
 
-use super::{Biome, GenerateChunkFeaturesEvent, RegisterBiomesSet};
+use super::{Biome, GenerateChunkFeaturesMessage, RegisterBiomesSet};
 
 const DELTA: f64 = 1.0;
 const FOREST: f64 = 0.235;
@@ -41,7 +41,7 @@ fn redwood_tree(
     planet_face: BlockFace,
     structure: &mut Structure,
     location: &Location,
-    block_event_writer: &mut MessageWriter<BlockChangedEvent>,
+    block_event_writer: &mut MessageWriter<BlockChangedMessage>,
     blocks: &Registry<Block>,
     noise_generator: &Noise,
 ) {
@@ -345,7 +345,7 @@ fn branch(
     log: &Block,
     leaf: &Block,
     blocks: &Registry<Block>,
-    event_writer: &mut MessageWriter<BlockChangedEvent>,
+    event_writer: &mut MessageWriter<BlockChangedMessage>,
 ) {
     let s_dims = structure.block_dimensions();
 
@@ -387,8 +387,8 @@ fn branch(
 }
 
 fn plains_generate_chunk_features(
-    mut ev_reader: EventReader<GenerateChunkFeaturesEvent>,
-    mut ev_writer: MessageWriter<BlockChangedEvent>,
+    mut ev_reader: MessageReader<GenerateChunkFeaturesMessage>,
+    mut ev_writer: MessageWriter<BlockChangedMessage>,
     mut q_structure: Query<(&Location, &mut Structure)>,
     biomes: Res<Registry<Biome>>,
     blocks: Res<Registry<Block>>,
@@ -411,7 +411,7 @@ fn plains_generate_chunk_features(
 }
 
 fn generate_chunk_features(
-    block_event_writer: &mut MessageWriter<BlockChangedEvent>,
+    block_event_writer: &mut MessageWriter<BlockChangedMessage>,
     coords: ChunkCoordinate,
     structure: &mut Structure,
     location: &Location,

@@ -1,16 +1,16 @@
 //! Responsible for the default generation of biospheres.
 
-use crate::{init::init_world::ServerSeed, structure::planet::biosphere::biome::GenerateChunkFeaturesEvent};
+use crate::{init::init_world::ServerSeed, structure::planet::biosphere::biome::GenerateChunkFeaturesMessage};
 use bevy::{platform::collections::HashSet, prelude::*};
 use bevy_app_compute::prelude::*;
 use cosmos_core::{
-    block::{Block, block_events::BlockEventsSet, block_face::BlockFace},
-    ecs::mut_events::{MessageWriterCustomSend, MutEvent, MutEventsCommand},
+    block::{Block, block_events::BlockMessagesSet, block_face::BlockFace},
+    ecs::mut_events::{MessageWriterCustomSend, MutMessage, MutMessagesCommand},
     physics::location::Location,
     registry::{Registry, identifiable::Identifiable},
     state::GameState,
     structure::{
-        ChunkInitEvent, Structure, StructureTypeSet,
+        ChunkInitMessage, Structure, StructureTypeSet,
         block_storage::BlockStorer,
         chunk::{CHUNK_DIMENSIONS, CHUNK_DIMENSIONS_USIZE, CHUNK_DIMENSIONSF, Chunk},
         coordinates::{ChunkBlockCoordinate, CoordinateType},
@@ -29,7 +29,7 @@ use cosmos_core::{
     utils::array_utils::{flatten, flatten_4d},
 };
 
-use super::{Biosphere, BiosphereMarkerComponent, TGenerateChunkEvent};
+use super::{Biosphere, BiosphereMarkerComponent, TGenerateChunkMessage};
 
 #[derive(Debug)]
 pub(crate) struct NeedGeneratedChunk {
@@ -49,15 +49,15 @@ pub(crate) struct GeneratingChunks(Vec<NeedGeneratedChunk>);
 #[derive(Resource, Default)]
 pub(crate) struct SentToGpuTime(f32);
 
-#[derive(Event)]
-pub(crate) struct DoneGeneratingChunkEvent {
+#[derive(Message)]
+pub(crate) struct DoneGeneratingChunkMessage {
     needs_generated_chunk: Option<NeedGeneratedChunk>,
     chunk_data_slice: ChunkDataSlice,
 }
 
 fn read_gpu_data(
     worker: ResMut<AppComputeWorker<BiosphereShaderWorker>>,
-    mut ev_writer: MessageWriter<MutEvent<DoneGeneratingChunkEvent>>,
+    mut ev_writer: MessageWriter<MutMessage<DoneGeneratingChunkMessage>>,
     mut currently_generating_chunks: ResMut<GeneratingChunks>,
     mut chunk_data: ResMut<ChunkData>,
 
@@ -90,7 +90,7 @@ fn read_gpu_data(
             ),
         };
 
-        ev_writer.send_mut(DoneGeneratingChunkEvent {
+        ev_writer.send_mut(DoneGeneratingChunkMessage {
             chunk_data_slice,
             needs_generated_chunk: Some(needs_generated_chunk),
         });
@@ -98,11 +98,11 @@ fn read_gpu_data(
 }
 
 pub(crate) fn generate_chunks_from_gpu_data<T: BiosphereMarkerComponent>(
-    mut ev_reader: EventReader<MutEvent<DoneGeneratingChunkEvent>>,
+    mut ev_reader: MessageReader<MutMessage<DoneGeneratingChunkMessage>>,
     chunk_data: Res<ChunkData>,
     biosphere_biomes: Res<Registry<BiosphereBiomesRegistry>>,
     biospheres: Res<Registry<Biosphere>>,
-    mut ev_writer: MessageWriter<GenerateChunkFeaturesEvent>,
+    mut ev_writer: MessageWriter<GenerateChunkFeaturesMessage>,
     mut q_structure: Query<&mut Structure>,
     biome_registry: Res<Registry<Biome>>,
     blocks: Res<Registry<Block>>,
@@ -206,7 +206,7 @@ pub(crate) fn generate_chunks_from_gpu_data<T: BiosphereMarkerComponent>(
             }
         }
 
-        ev_writer.write(GenerateChunkFeaturesEvent {
+        ev_writer.write(GenerateChunkFeaturesMessage {
             included_biomes,
             // biome_ids,
             chunk: needs_generated_chunk.chunk.chunk_coordinates(),
@@ -221,9 +221,9 @@ pub(crate) fn generate_chunks_from_gpu_data<T: BiosphereMarkerComponent>(
 ///
 /// This is because during this set, the chunk features should be being generated,
 /// so by the end of this set the chunk is ready to go.
-fn send_chunk_init_event(mut chunk_init_event_writer: MessageWriter<ChunkInitEvent>, mut ev_reader: EventReader<GenerateChunkFeaturesEvent>) {
+fn send_chunk_init_event(mut chunk_init_event_writer: MessageWriter<ChunkInitMessage>, mut ev_reader: MessageReader<GenerateChunkFeaturesMessage>) {
     for generate_chunk_features_event_reader in ev_reader.read() {
-        chunk_init_event_writer.write(ChunkInitEvent {
+        chunk_init_event_writer.write(ChunkInitMessage {
             coords: generate_chunk_features_event_reader.chunk,
             serialized_block_data: None,
             structure_entity: generate_chunk_features_event_reader.structure_entity,
@@ -272,9 +272,9 @@ fn send_chunks_to_gpu(
 }
 
 /// Calls generate_face_chunk, generate_edge_chunk, and generate_corner_chunk to generate the chunks of a planet.
-pub(crate) fn generate_planet<T: BiosphereMarkerComponent, E: TGenerateChunkEvent>(
+pub(crate) fn generate_planet<T: BiosphereMarkerComponent, E: TGenerateChunkMessage>(
     mut query: Query<(&mut Structure, &Location)>,
-    mut events: EventReader<E>,
+    mut events: MessageReader<E>,
     biosphere_registry: Res<Registry<Biosphere>>,
 
     mut needs_generated_chunks: ResMut<NeedGeneratedChunks>,
@@ -381,7 +381,7 @@ fn setup_permutation_table(seed: Res<ServerSeed>, mut commands: Commands) {
 pub enum BiosphereGenerationSet {
     /// The biosphere should flag the chunks they want generated by adding them to the [`NeedGeneratedChunks`] resource.
     FlagChunksNeedGenerated,
-    /// Chunks that are ready to be populated with blocks are now sent and can be read via the EventReader for [`DoneGeneratingChunkEvent`].
+    /// Chunks that are ready to be populated with blocks are now sent and can be read via the MessageReader for [`DoneGeneratingChunkMessage`].
     GenerateChunks,
     /// Called after the [`BiosphereGenerationSet::GenerateChunks`] set. This should be used for things like trees.
     GenerateChunkFeatures,
@@ -402,7 +402,7 @@ pub(super) fn register(app: &mut App) {
             BiosphereGenerationSet::GenerateChunkFeatures,
         )
             .before(StructureLoadingSet::CreateChunkEntities)
-            .before(BlockEventsSet::PreProcessEvents)
+            .before(BlockMessagesSet::PreProcessMessages)
             .in_set(StructureTypeSet::Planet)
             .run_if(in_state(GameState::Playing))
             .chain(),
@@ -432,5 +432,5 @@ pub(super) fn register(app: &mut App) {
     .init_resource::<GeneratingChunks>()
     .init_resource::<ChunkData>()
     .init_resource::<SentToGpuTime>()
-    .add_mut_event::<DoneGeneratingChunkEvent>();
+    .add_mut_event::<DoneGeneratingChunkMessage>();
 }

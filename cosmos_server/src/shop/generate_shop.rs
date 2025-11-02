@@ -19,13 +19,13 @@ use crate::{
     rng::get_rng_for_sector,
     universe::{
         SystemItem, UniverseSystems,
-        generators::generation::{GenerateSystemEvent, SystemGenerationSet},
+        generators::generation::{GenerateSystemMessage, SystemGenerationSet},
     },
 };
 
 fn generate_shops(
     mut systems: ResMut<UniverseSystems>,
-    mut evr_generate_system: EventReader<GenerateSystemEvent>,
+    mut evr_generate_system: MessageReader<GenerateSystemMessage>,
     server_seed: Res<ServerSeed>,
 ) {
     for ev in evr_generate_system.read() {

@@ -1,4 +1,4 @@
-//! Events used by the basic fabricator
+//! Messages used by the basic fabricator
 
 use std::{cell::RefCell, rc::Rc};
 
@@ -7,10 +7,10 @@ use bevy::prelude::*;
 use cosmos_core::{
     block::{
         Block,
-        block_events::{BlockEventsSet, BlockInteractEvent},
+        block_events::{BlockMessagesSet, BlockInteractMessage},
     },
     crafting::{
-        blocks::basic_fabricator::{CraftBasicFabricatorRecipeEvent, OpenBasicFabricatorEvent},
+        blocks::basic_fabricator::{CraftBasicFabricatorRecipeMessage, OpenBasicFabricatorMessage},
         recipes::{
             RecipeItem,
             basic_fabricator::{BasicFabricatorRecipe, BasicFabricatorRecipes},
@@ -30,8 +30,8 @@ use cosmos_core::{
 };
 
 /// Sent whenever a player uses a basic fabricator to craft something.
-#[derive(Event, Debug)]
-pub struct BasicFabricatorCraftEvent {
+#[derive(Message, Debug)]
+pub struct BasicFabricatorCraftMessage {
     /// The player's entity
     pub crafter: Entity,
     /// The block that contains the fabricator the player is using
@@ -45,8 +45,8 @@ pub struct BasicFabricatorCraftEvent {
 }
 
 fn monitor_basic_fabricator_interactions(
-    mut evr_block_interact: EventReader<BlockInteractEvent>,
-    mut nevw_open_basic_fabricator: NettyMessageWriter<OpenBasicFabricatorEvent>,
+    mut evr_block_interact: MessageReader<BlockInteractMessage>,
+    mut nevw_open_basic_fabricator: NettyMessageWriter<OpenBasicFabricatorMessage>,
     q_player: Query<&Player>,
     q_structure: Query<&Structure>,
     blocks: Res<Registry<Block>>,
@@ -65,12 +65,12 @@ fn monitor_basic_fabricator_interactions(
             continue;
         };
 
-        nevw_open_basic_fabricator.write(OpenBasicFabricatorEvent(block), player.client_id());
+        nevw_open_basic_fabricator.write(OpenBasicFabricatorMessage(block), player.client_id());
     }
 }
 
 fn monitor_craft_event(
-    mut nevr_craft_event: EventReader<NettyMessageReceived<CraftBasicFabricatorRecipeEvent>>,
+    mut nevr_craft_event: MessageReader<NettyMessageReceived<CraftBasicFabricatorRecipeMessage>>,
     q_structure: Query<&Structure>,
     // Separate queries to please borrow checker
     mut q_player_inventory: Query<&mut Inventory, With<Player>>,
@@ -81,7 +81,7 @@ fn monitor_craft_event(
     recipes: Res<BasicFabricatorRecipes>,
     mut commands: Commands,
     needs_data: Res<ItemShouldHaveData>,
-    mut evw_craft: MessageWriter<BasicFabricatorCraftEvent>,
+    mut evw_craft: MessageWriter<BasicFabricatorCraftMessage>,
     items: Res<Registry<Item>>,
 ) {
     let bd_params = Rc::new(RefCell::new(bd_params));
@@ -145,7 +145,7 @@ fn monitor_craft_event(
         }
 
         let (leftover, _) = player_inv.insert_item(item, qty_crafted as u16, &mut commands, &needs_data);
-        evw_craft.write(BasicFabricatorCraftEvent {
+        evw_craft.write(BasicFabricatorCraftMessage {
             crafter: player_ent,
             block: ev.block,
             recipe: ev.recipe.clone(),
@@ -163,8 +163,8 @@ pub(super) fn register(app: &mut App) {
     app.add_systems(
         FixedUpdate,
         (monitor_basic_fabricator_interactions, monitor_craft_event)
-            .in_set(BlockEventsSet::ProcessEvents)
+            .in_set(BlockMessagesSet::ProcessMessages)
             .run_if(in_state(GameState::Playing)),
     )
-    .add_event::<BasicFabricatorCraftEvent>();
+    .add_event::<BasicFabricatorCraftMessage>();
 }

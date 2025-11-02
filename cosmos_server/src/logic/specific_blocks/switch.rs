@@ -5,16 +5,16 @@ use bevy::prelude::*;
 use cosmos_core::{
     block::{
         Block,
-        block_events::{BlockEventsSet, BlockInteractEvent},
+        block_events::{BlockMessagesSet, BlockInteractMessage},
     },
-    events::block_events::BlockDataChangedEvent,
+    events::block_events::BlockDataChangedMessage,
     registry::{Registry, identifiable::Identifiable},
     state::GameState,
     structure::Structure,
 };
 
 use crate::logic::{
-    LOGIC_BIT, LogicBlock, LogicConnection, LogicOutputEvent, LogicSystemSet, Port, PortType, QueueLogicInputEvent,
+    LOGIC_BIT, LogicBlock, LogicConnection, LogicOutputMessage, LogicSystemSet, Port, PortType, QueueLogicInputMessage,
     logic_driver::LogicDriver,
 };
 
@@ -27,10 +27,10 @@ fn register_logic_connections(blocks: Res<Registry<Block>>, mut registry: ResMut
 }
 
 fn on_interact_with_switch(
-    mut evr_interact: EventReader<BlockInteractEvent>,
+    mut evr_interact: MessageReader<BlockInteractMessage>,
     mut q_structure: Query<&mut Structure>,
     blocks: Res<Registry<Block>>,
-    mut evw_block_data_changed: MessageWriter<BlockDataChangedEvent>,
+    mut evw_block_data_changed: MessageWriter<BlockDataChangedMessage>,
 ) {
     for ev in evr_interact.read() {
         let Some(block) = ev.block else {
@@ -51,8 +51,8 @@ fn on_interact_with_switch(
 }
 
 fn logic_on_output_event_listener(
-    mut evr_logic_output: EventReader<LogicOutputEvent>,
-    mut evw_queue_logic_input: MessageWriter<QueueLogicInputEvent>,
+    mut evr_logic_output: MessageReader<LogicOutputMessage>,
+    mut evw_queue_logic_input: MessageWriter<QueueLogicInputMessage>,
     logic_blocks: Res<Registry<LogicBlock>>,
     blocks: Res<Registry<Block>>,
     mut q_logic_driver: Query<&mut LogicDriver>,
@@ -90,5 +90,5 @@ pub(super) fn register(app: &mut App) {
                 .in_set(LogicSystemSet::Produce)
                 .ambiguous_with(LogicSystemSet::Produce),
         )
-        .add_systems(FixedUpdate, on_interact_with_switch.in_set(BlockEventsSet::ProcessEvents));
+        .add_systems(FixedUpdate, on_interact_with_switch.in_set(BlockMessagesSet::ProcessMessages));
 }

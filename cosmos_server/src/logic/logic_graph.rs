@@ -13,8 +13,8 @@ use cosmos_core::{
 };
 
 use super::{
-    LogicBlock, LogicConnection, Port, PortType, QueueLogicInputEvent, QueueLogicOutputEvent, WireType,
-    logic_driver::LogicBlockChangedEvent,
+    LogicBlock, LogicConnection, Port, PortType, QueueLogicInputMessage, QueueLogicOutputMessage, WireType,
+    logic_driver::LogicBlockChangedMessage,
 };
 
 #[derive(Debug, Default, Reflect, PartialEq, Eq, Clone, Serialize, Deserialize)]
@@ -74,7 +74,7 @@ impl LogicGroup {
         &mut self,
         port: Port,
         signal: i32,
-        evw_queue_logic_input: &mut MessageWriter<QueueLogicInputEvent>,
+        evw_queue_logic_input: &mut MessageWriter<QueueLogicInputMessage>,
         entity: Entity,
     ) {
         // let &old_signal = self.producers.get(&port).expect("Output port to be updated should exist.");
@@ -92,7 +92,7 @@ impl LogicGroup {
         evw_queue_logic_input.write_batch(
             self.consumers
                 .iter()
-                .map(|input_port| QueueLogicInputEvent::new(StructureBlock::new(input_port.coords, entity))),
+                .map(|input_port| QueueLogicInputMessage::new(StructureBlock::new(input_port.coords, entity))),
         );
         // }
     }
@@ -164,13 +164,13 @@ impl LogicGraph {
 
     /// `LogicGraph`'s `dfs_for_group` method needs to know which blocks are at each coordinate to properly search the graph.
     ///
-    /// However, several `BlockChangedEvent`s can occur on the same tick.
+    /// However, several `BlockChangedMessage`s can occur on the same tick.
     /// We use `events_by_coords` to track all the events the logic graph has alredy processed this tick, and pretend the blocks have already been changed in the structure.
     fn block_at<'a>(
         &self,
         coords: BlockCoordinate,
         structure: &Structure,
-        events_by_coords: &'a HashMap<BlockCoordinate, LogicBlockChangedEvent>,
+        events_by_coords: &'a HashMap<BlockCoordinate, LogicBlockChangedMessage>,
         blocks: &Registry<Block>,
         logic_blocks: &'a Registry<LogicBlock>,
     ) -> Option<&'a LogicBlock> {
@@ -188,7 +188,7 @@ impl LogicGraph {
         mut required_color_id: Option<u16>,
         from_bus: bool,
         structure: &Structure,
-        events_by_coords: &HashMap<BlockCoordinate, LogicBlockChangedEvent>,
+        events_by_coords: &HashMap<BlockCoordinate, LogicBlockChangedMessage>,
         visited: &mut HashSet<Port>,
         blocks: &Registry<Block>,
         logic_blocks: &Registry<LogicBlock>,
@@ -279,7 +279,7 @@ impl LogicGraph {
         wire_color_id: u16,
         coords: BlockCoordinate,
         structure: &Structure,
-        events_by_coords: &HashMap<BlockCoordinate, LogicBlockChangedEvent>,
+        events_by_coords: &HashMap<BlockCoordinate, LogicBlockChangedMessage>,
         visited: &mut HashSet<Port>,
         blocks: &Registry<Block>,
         logic_blocks: &Registry<LogicBlock>,
@@ -312,7 +312,7 @@ impl LogicGraph {
         wire_color_id: u16,
         logic_block: &LogicBlock,
         structure: &Structure,
-        events_by_coords: &HashMap<BlockCoordinate, LogicBlockChangedEvent>,
+        events_by_coords: &HashMap<BlockCoordinate, LogicBlockChangedMessage>,
         blocks: &Registry<Block>,
         logic_blocks: &Registry<LogicBlock>,
     ) -> usize {
@@ -357,8 +357,8 @@ impl LogicGraph {
         port_type: PortType,
         signal: i32,
         entity: Entity,
-        evw_queue_logic_output: &mut MessageWriter<QueueLogicOutputEvent>,
-        evw_queue_logic_input: &mut MessageWriter<QueueLogicInputEvent>,
+        evw_queue_logic_output: &mut MessageWriter<QueueLogicOutputMessage>,
+        evw_queue_logic_input: &mut MessageWriter<QueueLogicInputMessage>,
     ) {
         match port_type {
             PortType::Input => &mut self.input_port_group_id,
@@ -373,11 +373,11 @@ impl LogicGraph {
         match port_type {
             PortType::Input => {
                 logic_group.consumers.insert(Port::new(coords, direction));
-                evw_queue_logic_input.write(QueueLogicInputEvent::new(StructureBlock::new(coords, entity)));
+                evw_queue_logic_input.write(QueueLogicInputMessage::new(StructureBlock::new(coords, entity)));
             }
             PortType::Output => {
                 logic_group.producers.insert(Port::new(coords, direction), signal);
-                evw_queue_logic_output.write(QueueLogicOutputEvent::new(StructureBlock::new(coords, entity)));
+                evw_queue_logic_output.write(QueueLogicOutputMessage::new(StructureBlock::new(coords, entity)));
             }
         };
     }
@@ -388,10 +388,10 @@ impl LogicGraph {
         direction: BlockDirection,
         port_type: PortType,
         structure: &Structure,
-        events_by_coords: &HashMap<BlockCoordinate, LogicBlockChangedEvent>,
+        events_by_coords: &HashMap<BlockCoordinate, LogicBlockChangedMessage>,
         blocks: &Registry<Block>,
         logic_blocks: &Registry<LogicBlock>,
-        evw_queue_logic_input: &mut MessageWriter<QueueLogicInputEvent>,
+        evw_queue_logic_input: &mut MessageWriter<QueueLogicInputMessage>,
     ) {
         // If the neighbor coordinates don't exist, no port is removed.
         let Ok(neighbor_coords) = coords.step(direction) else {
@@ -438,7 +438,7 @@ impl LogicGraph {
             // Ping all inputs in this group to let them know this output port is gone.
             if port_type == PortType::Output {
                 for &input_port in self.groups.get(&group_id).expect("Port should have logic group.").consumers.iter() {
-                    evw_queue_logic_input.write(QueueLogicInputEvent::new(StructureBlock::new(
+                    evw_queue_logic_input.write(QueueLogicInputMessage::new(StructureBlock::new(
                         input_port.coords,
                         structure.get_entity().expect("Structure should have entity."),
                     )));
@@ -460,7 +460,7 @@ impl LogicGraph {
         group_ids: &HashSet<usize>,
         coords: BlockCoordinate,
         entity: Entity,
-        evw_queue_logic_input: &mut MessageWriter<QueueLogicInputEvent>,
+        evw_queue_logic_input: &mut MessageWriter<QueueLogicInputMessage>,
     ) {
         // Rewrite all output and input ports of adjacent groups to use the new ID number.
         let new_group_id = self.new_group_id();
@@ -507,7 +507,7 @@ impl LogicGraph {
             .consumers
             .iter()
         {
-            evw_queue_logic_input.write(QueueLogicInputEvent::new(StructureBlock::new(input_port.coords, entity)));
+            evw_queue_logic_input.write(QueueLogicInputMessage::new(StructureBlock::new(input_port.coords, entity)));
         }
     }
 
@@ -521,12 +521,12 @@ impl LogicGraph {
         wire_color_id: u16,
         from_bus: bool,
         structure: &Structure,
-        events_by_coords: &HashMap<BlockCoordinate, LogicBlockChangedEvent>,
+        events_by_coords: &HashMap<BlockCoordinate, LogicBlockChangedMessage>,
         visited: &mut HashSet<Port>,
         blocks: &Registry<Block>,
         logic_blocks: &Registry<LogicBlock>,
-        evw_queue_logic_output: &mut MessageWriter<QueueLogicOutputEvent>,
-        evw_queue_logic_input: &mut MessageWriter<QueueLogicInputEvent>,
+        evw_queue_logic_output: &mut MessageWriter<QueueLogicOutputMessage>,
+        evw_queue_logic_input: &mut MessageWriter<QueueLogicInputMessage>,
     ) -> bool {
         if visited.contains(&Port::new(coords, encountered_from_direction)) {
             // Renaming on this portion already completed.
@@ -617,7 +617,7 @@ impl LogicGraph {
         &mut self,
         port: Port,
         signal: i32,
-        evw_queue_logic_input: &mut MessageWriter<QueueLogicInputEvent>,
+        evw_queue_logic_input: &mut MessageWriter<QueueLogicInputMessage>,
         entity: Entity,
     ) {
         self.mut_group_of(&port, PortType::Output)

@@ -1,33 +1,33 @@
 //! Contains logic for the advanced weapons fabricator block
 
-use bevy::prelude::{App, Event};
+use bevy::prelude::{App, Message};
 use serde::{Deserialize, Serialize};
 
 use crate::{
     crafting::recipes::basic_fabricator::BasicFabricatorRecipe,
-    netty::sync::events::netty_event::{IdentifiableEvent, NettyMessage, SyncedEventImpl},
+    netty::sync::events::netty_event::{IdentifiableMessage, NettyMessage, SyncedMessageImpl},
     prelude::StructureBlock,
 };
 
-#[derive(Event, Debug, Clone, Copy, Serialize, Deserialize)]
+#[derive(Message, Debug, Clone, Copy, Serialize, Deserialize)]
 /// Sent by the server to the client to instruct them to open a advanced weapons fabricator.
-pub struct OpenAdvancedFabricatorEvent(pub StructureBlock);
+pub struct OpenAdvancedFabricatorMessage(pub StructureBlock);
 
-impl IdentifiableEvent for OpenAdvancedFabricatorEvent {
+impl IdentifiableMessage for OpenAdvancedFabricatorMessage {
     fn unlocalized_name() -> &'static str {
         "cosmos:open_advanced_fabricator"
     }
 }
 
-impl NettyMessage for OpenAdvancedFabricatorEvent {
-    fn event_receiver() -> crate::netty::sync::events::netty_event::EventReceiver {
-        crate::netty::sync::events::netty_event::EventReceiver::Client
+impl NettyMessage for OpenAdvancedFabricatorMessage {
+    fn event_receiver() -> crate::netty::sync::events::netty_event::MessageReceiver {
+        crate::netty::sync::events::netty_event::MessageReceiver::Client
     }
 }
 
-#[derive(Event, Debug, Clone, Serialize, Deserialize)]
+#[derive(Message, Debug, Clone, Serialize, Deserialize)]
 /// Sent by the client to the server to request crafting a specific recipe.
-pub struct CraftAdvancedFabricatorRecipeEvent {
+pub struct CraftAdvancedFabricatorRecipeMessage {
     /// The block that contains the fabricator the client is using
     pub block: StructureBlock,
     /// The recipe to use. Note that this MUST match one of the recipes the server contains or it
@@ -38,19 +38,19 @@ pub struct CraftAdvancedFabricatorRecipeEvent {
     pub quantity: u32,
 }
 
-impl IdentifiableEvent for CraftAdvancedFabricatorRecipeEvent {
+impl IdentifiableMessage for CraftAdvancedFabricatorRecipeMessage {
     fn unlocalized_name() -> &'static str {
         "cosmos:craft_advanced_fabricator"
     }
 }
 
-impl NettyMessage for CraftAdvancedFabricatorRecipeEvent {
-    fn event_receiver() -> crate::netty::sync::events::netty_event::EventReceiver {
-        crate::netty::sync::events::netty_event::EventReceiver::Server
+impl NettyMessage for CraftAdvancedFabricatorRecipeMessage {
+    fn event_receiver() -> crate::netty::sync::events::netty_event::MessageReceiver {
+        crate::netty::sync::events::netty_event::MessageReceiver::Server
     }
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_netty_event::<OpenAdvancedFabricatorEvent>()
-        .add_netty_event::<CraftAdvancedFabricatorRecipeEvent>();
+    app.add_netty_event::<OpenAdvancedFabricatorMessage>()
+        .add_netty_event::<CraftAdvancedFabricatorRecipeMessage>();
 }
