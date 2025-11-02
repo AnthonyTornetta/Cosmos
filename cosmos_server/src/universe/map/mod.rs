@@ -6,7 +6,7 @@ use cosmos_core::{
     faction::{FactionId, FactionRelation, Factions},
     netty::{
         server::ServerLobby,
-        sync::events::server_event::{NettyEventReceived, NettyEventWriter},
+        sync::events::server_event::{NettyMessageReceived, NettyMessageWriter},
         system_sets::NetworkingSystemsSet,
     },
     physics::location::Location,
@@ -21,8 +21,8 @@ use cosmos_core::{
 use super::{Galaxy, SystemItem, UniverseSystems};
 
 fn send_galaxy_map(
-    mut evr_request_map: EventReader<NettyEventReceived<RequestGalaxyMap>>,
-    mut nevw_galaxy_map: NettyEventWriter<GalaxyMapResponseEvent>,
+    mut evr_request_map: EventReader<NettyMessageReceived<RequestGalaxyMap>>,
+    mut nevw_galaxy_map: NettyMessageWriter<GalaxyMapResponseEvent>,
     q_galaxy: Query<&Galaxy>,
 ) {
     for ev in evr_request_map.read() {
@@ -44,8 +44,8 @@ fn send_galaxy_map(
 }
 
 fn send_map(
-    mut evr_request_map: EventReader<NettyEventReceived<RequestSystemMap>>,
-    mut nevw_system_map: NettyEventWriter<SystemMapResponseEvent>,
+    mut evr_request_map: EventReader<NettyMessageReceived<RequestSystemMap>>,
+    mut nevw_system_map: NettyMessageWriter<SystemMapResponseEvent>,
 
     q_players: Query<&Location, With<Player>>,
     q_stations: Query<&Location, With<Station>>,

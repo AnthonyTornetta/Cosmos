@@ -59,7 +59,7 @@ pub(super) fn register(app: &mut App) {
         app,
         |q_players: Query<(Entity, &Player)>,
          mut commands: Commands,
-         mut evw_send_message: EventWriter<SendCommandMessageEvent>,
+         mut evw_send_message: MessageWriter<SendCommandMessageEvent>,
          mut evr_command: EventReader<CommandEvent<GamemodeCommand>>| {
             for ev in evr_command.read() {
                 let Some((ent, player)) = (match &ev.command.receiver {

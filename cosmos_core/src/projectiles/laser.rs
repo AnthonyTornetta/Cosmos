@@ -163,7 +163,7 @@ fn send_laser_hit_events(
         Option<&PreviousLocation>,
     )>,
     mut commands: Commands,
-    mut event_writer: EventWriter<LaserCollideEvent>,
+    mut event_writer: MessageWriter<LaserCollideEvent>,
     parent_query: Query<&ChildOf>,
     chunk_parent_query: Query<&ChildOf, With<ChunkEntity>>,
     q_rapier_context: WriteRapierContext,

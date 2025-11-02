@@ -28,8 +28,8 @@ fn on_laser_hit_structure(
     structure: &mut Structure,
     coords: BlockCoordinate,
     blocks: &Registry<Block>,
-    block_take_damage_event_writer: &mut EventWriter<BlockTakeDamageEvent>,
-    block_destroy_event_writer: &mut EventWriter<BlockDestroyedEvent>,
+    block_take_damage_event_writer: &mut MessageWriter<BlockTakeDamageEvent>,
+    block_destroy_event_writer: &mut MessageWriter<BlockDestroyedEvent>,
     strength: f32,
     causer: Option<&Causer>,
 ) {
@@ -46,8 +46,8 @@ fn respond_laser_hit_event(
     mut reader: EventReader<LaserCollideEvent>,
     mut structure_query: Query<&mut Structure>,
     blocks: Res<Registry<Block>>,
-    mut block_take_damage_event_writer: EventWriter<BlockTakeDamageEvent>,
-    mut block_destroy_event_writer: EventWriter<BlockDestroyedEvent>,
+    mut block_take_damage_event_writer: MessageWriter<BlockTakeDamageEvent>,
+    mut block_destroy_event_writer: MessageWriter<BlockDestroyedEvent>,
     mut q_health: Query<&mut Health>,
 ) {
     for ev in reader.read() {

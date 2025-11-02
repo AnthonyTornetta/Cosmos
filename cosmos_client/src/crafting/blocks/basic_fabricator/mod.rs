@@ -3,7 +3,7 @@ use cosmos_core::{
     crafting::blocks::basic_fabricator::OpenBasicFabricatorEvent,
     ecs::NeedsDespawned,
     netty::sync::{
-        events::client_event::NettyEventReceived,
+        events::client_event::NettyMessageReceived,
         mapping::{Mappable, NetworkMapping},
     },
     prelude::StructureBlock,
@@ -18,7 +18,7 @@ struct OpenBasicFabricatorMenu(StructureBlock);
 fn open_menu(
     q_open_menu: Query<Entity, With<OpenBasicFabricatorMenu>>,
     mut commands: Commands,
-    mut nevr: EventReader<NettyEventReceived<OpenBasicFabricatorEvent>>,
+    mut nevr: EventReader<NettyMessageReceived<OpenBasicFabricatorEvent>>,
     network_mapping: Res<NetworkMapping>,
 ) {
     let Some(ev) = nevr.read().last() else {

@@ -123,7 +123,7 @@ pub struct PlayerDestroyedNpcShipEvent {
 fn on_melt_down(
     mut q_players: Query<&mut PlayerStrength>,
     q_melting_down: Query<(Entity, &Hitters, &DifficultyIncreaseOnKill), Added<MeltingDown>>,
-    mut evw_player_destroyed_npc_ship: EventWriter<PlayerDestroyedNpcShipEvent>,
+    mut evw_player_destroyed_npc_ship: MessageWriter<PlayerDestroyedNpcShipEvent>,
 ) {
     for (melting_down_ent, hitters, difficulty_increase) in q_melting_down.iter() {
         let dmg_total = hitters.0.iter().map(|(_, hits)| *hits).sum::<u64>();

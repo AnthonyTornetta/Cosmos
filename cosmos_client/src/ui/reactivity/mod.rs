@@ -99,7 +99,7 @@ pub struct NeedsValueFetched(pub Entity);
 fn listen_changes_to_reactors<T: ReactableValue>(
     q_bound_listeners: Query<(Entity, &BindValues<T>)>,
     mut q_changed_reactors: Query<Entity, Changed<T>>,
-    mut ev_writer: EventWriter<NeedsValueFetched>,
+    mut ev_writer: MessageWriter<NeedsValueFetched>,
 ) {
     for ent in q_changed_reactors.iter_mut() {
         for (bound_ent, bound_value) in q_bound_listeners.iter() {

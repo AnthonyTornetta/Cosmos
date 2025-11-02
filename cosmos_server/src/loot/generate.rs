@@ -24,8 +24,8 @@ fn generate_needed_loot_tables(
     mut commands: Commands,
     mut q_needs_gen: Query<(Entity, &mut Structure, &NeedsLootGenerated), Without<NeedsBlueprintLoaded>>,
     blocks: Res<Registry<Block>>,
-    mut evw_block_changed: EventWriter<BlockChangedEvent>,
-    mut evw_populate_inventories: EventWriter<PopulateLootInventoriesEventCarryOver>,
+    mut evw_block_changed: MessageWriter<BlockChangedEvent>,
+    mut evw_populate_inventories: MessageWriter<PopulateLootInventoriesEventCarryOver>,
 ) {
     for (ent, mut s, needs_gened) in q_needs_gen.iter_mut() {
         commands.entity(ent).remove::<NeedsLootGenerated>();
@@ -60,7 +60,7 @@ fn generate_needed_loot_tables(
 
 fn send_carryover_events(
     mut evr_carry_over: EventReader<PopulateLootInventoriesEventCarryOver>,
-    mut evw_events: EventWriter<PopulateLootInventoriesEvent>,
+    mut evw_events: MessageWriter<PopulateLootInventoriesEvent>,
 ) {
     evw_events.write_batch(evr_carry_over.read().map(|x| x.0));
 }

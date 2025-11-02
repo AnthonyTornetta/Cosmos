@@ -20,7 +20,7 @@ use cosmos_core::{
     netty::{
         NettyChannelServer, cosmos_encoder,
         server_reliable_messages::{BlockChanged, BlocksChangedPacket, ServerReliableMessages},
-        sync::{IdentifiableComponent, events::server_event::NettyEventWriter},
+        sync::{IdentifiableComponent, events::server_event::NettyMessageWriter},
         system_sets::NetworkingSystemsSet,
     },
     prelude::Structure,
@@ -109,7 +109,7 @@ fn handle_block_break_events(
     items: Res<Registry<Item>>,
     block_items: Res<BlockItems>,
     mut inventory_query: Query<(&mut Inventory, Option<&BuildMode>, Option<&ChildOf>), Without<BlockData>>,
-    mut event_writer: EventWriter<BlockChangedEvent>,
+    mut event_writer: MessageWriter<BlockChangedEvent>,
     mut q_inventory_block_data: Query<(&BlockData, &mut Inventory), With<AutoInsertMinedItems>>,
     mut commands: Commands,
     has_data: Res<ItemShouldHaveData>,
@@ -117,7 +117,7 @@ fn handle_block_break_events(
     drops: Res<BlockDrops>,
     q_faction: Query<&FactionId>,
     factions: Res<Factions>,
-    mut nevw_invalid_break: NettyEventWriter<InvalidBlockBreakEventReason>,
+    mut nevw_invalid_break: NettyMessageWriter<InvalidBlockBreakEventReason>,
     q_player: Query<&Player>,
 ) {
     for ev in event_reader.read() {
@@ -462,7 +462,7 @@ fn calculate_build_mode_blocks(
 fn handle_block_place_events(
     mut query: Query<&mut Structure>,
     mut event_reader: EventReader<MutEvent<BlockPlaceEvent>>,
-    mut event_writer: EventWriter<BlockChangedEvent>,
+    mut event_writer: MessageWriter<BlockChangedEvent>,
     mut player_query: Query<(&mut Inventory, Option<&BuildMode>, Option<&ChildOf>, Option<&Creative>)>,
     items: Res<Registry<Item>>,
     blocks: Res<Registry<Block>>,
@@ -470,7 +470,7 @@ fn handle_block_place_events(
     mut commands: Commands,
     q_faction: Query<&FactionId>,
     factions: Res<Factions>,
-    mut nevw_invalid_place: NettyEventWriter<InvalidBlockPlaceEventReason>,
+    mut nevw_invalid_place: NettyMessageWriter<InvalidBlockPlaceEventReason>,
     q_player: Query<&Player>,
 ) {
     for ev in event_reader.read() {

@@ -30,7 +30,7 @@ use bevy::{
     app::{App, Startup},
     ecs::{
         entity::Entity,
-        event::EventWriter,
+        event::MessageWriter,
         query::Changed,
         system::{Query, Res, ResMut},
     },
@@ -401,8 +401,8 @@ fn on_request_component<T: SyncableComponent>(
 
 fn server_receive_components(
     mut server: ResMut<RenetServer>,
-    mut ev_writer_sync: EventWriter<GotComponentToSyncEvent>,
-    mut ev_writer_remove: EventWriter<GotComponentToRemoveEvent>,
+    mut ev_writer_sync: MessageWriter<GotComponentToSyncEvent>,
+    mut ev_writer_remove: MessageWriter<GotComponentToRemoveEvent>,
     q_structure_systems: Query<&StructureSystems>,
 ) {
     for client_id in server.clients_id().into_iter() {

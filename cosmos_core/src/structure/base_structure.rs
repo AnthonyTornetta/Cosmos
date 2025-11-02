@@ -9,7 +9,7 @@ use bevy::{
         system::{Commands, Query},
     },
     platform::collections::HashMap,
-    prelude::{Entity, EventWriter, GlobalTransform, Vec3},
+    prelude::{Entity, MessageWriter, GlobalTransform, Vec3},
     reflect::Reflect,
 };
 use serde::{Deserialize, Serialize};
@@ -485,7 +485,7 @@ impl BaseStructure {
         coords: BlockCoordinate,
         blocks: &Registry<Block>,
         amount: f32,
-        event_writers: Option<(&mut EventWriter<BlockTakeDamageEvent>, &mut EventWriter<BlockDestroyedEvent>)>,
+        event_writers: Option<(&mut MessageWriter<BlockTakeDamageEvent>, &mut MessageWriter<BlockDestroyedEvent>)>,
         causer: Option<Entity>,
     ) -> Option<f32> {
         if let Some(chunk) = self.mut_chunk_at_block_coordinates(coords) {
@@ -850,7 +850,7 @@ impl BaseStructure {
         &mut self,
         coords: BlockCoordinate,
         block_info: BlockInfo,
-        evw_block_data_changed: Option<&mut EventWriter<BlockDataChangedEvent>>,
+        evw_block_data_changed: Option<&mut MessageWriter<BlockDataChangedEvent>>,
     ) {
         if let Some(chunk) = self.mut_chunk_at_block_coordinates(coords) {
             let c = ChunkBlockCoordinate::for_block_coordinate(coords);

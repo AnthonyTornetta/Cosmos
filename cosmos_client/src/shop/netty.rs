@@ -12,9 +12,9 @@ use super::{PurchasedEvent, SoldEvent, ui::OpenShopUiEvent};
 
 fn shop_listen_netty(
     mut client: ResMut<RenetClient>,
-    mut ev_writer_open_shop_ui: EventWriter<MutEvent<OpenShopUiEvent>>,
-    mut ev_writer_purchased: EventWriter<PurchasedEvent>,
-    mut ev_writer_sold: EventWriter<SoldEvent>,
+    mut ev_writer_open_shop_ui: MessageWriter<MutEvent<OpenShopUiEvent>>,
+    mut ev_writer_purchased: MessageWriter<PurchasedEvent>,
+    mut ev_writer_sold: MessageWriter<SoldEvent>,
 ) {
     while let Some(message) = client.receive_message(NettyChannelServer::Shop) {
         let msg: ServerShopMessages = cosmos_encoder::deserialize(&message).expect("Bad shop message");

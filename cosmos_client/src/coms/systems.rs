@@ -3,7 +3,7 @@ use bevy::prelude::*;
 use cosmos_core::coms::ComsChannel;
 use cosmos_core::coms::events::{AcceptComsEvent, RequestComsEvent};
 use cosmos_core::netty::client::LocalPlayer;
-use cosmos_core::netty::sync::events::client_event::NettyEventWriter;
+use cosmos_core::netty::sync::events::client_event::NettyMessageWriter;
 use cosmos_core::prelude::Ship;
 use cosmos_core::structure::ship::pilot::{Pilot, PilotFocused};
 
@@ -16,7 +16,7 @@ fn initiate_coms_request(
     q_local_pilot: Query<&Pilot, With<LocalPlayer>>,
     q_focused: Query<&PilotFocused>,
     q_coms: Query<(&ChildOf, &ComsChannel)>,
-    mut nevw_request_coms: NettyEventWriter<RequestComsEvent>,
+    mut nevw_request_coms: NettyMessageWriter<RequestComsEvent>,
 ) {
     let Ok(pilot) = q_local_pilot.single() else {
         return;
@@ -52,8 +52,8 @@ fn read_coms_request(
     q_local_pilot: Query<&Pilot, With<LocalPlayer>>,
     q_coms: Query<(&ChildOf, &ComsChannel)>,
     mut nevr_request_coms: EventReader<RequestComsEvent>,
-    mut nevw_accept_coms: NettyEventWriter<AcceptComsEvent>,
-    mut evw_open_req_coms_ui: EventWriter<OpenRequestComsUi>,
+    mut nevw_accept_coms: NettyMessageWriter<AcceptComsEvent>,
+    mut evw_open_req_coms_ui: MessageWriter<OpenRequestComsUi>,
 ) {
     for ev in nevr_request_coms.read() {
         let Ok(pilot) = q_local_pilot.single() else {

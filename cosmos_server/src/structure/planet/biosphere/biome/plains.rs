@@ -41,7 +41,7 @@ fn redwood_tree(
     planet_face: BlockFace,
     structure: &mut Structure,
     location: &Location,
-    block_event_writer: &mut EventWriter<BlockChangedEvent>,
+    block_event_writer: &mut MessageWriter<BlockChangedEvent>,
     blocks: &Registry<Block>,
     noise_generator: &Noise,
 ) {
@@ -345,7 +345,7 @@ fn branch(
     log: &Block,
     leaf: &Block,
     blocks: &Registry<Block>,
-    event_writer: &mut EventWriter<BlockChangedEvent>,
+    event_writer: &mut MessageWriter<BlockChangedEvent>,
 ) {
     let s_dims = structure.block_dimensions();
 
@@ -388,7 +388,7 @@ fn branch(
 
 fn plains_generate_chunk_features(
     mut ev_reader: EventReader<GenerateChunkFeaturesEvent>,
-    mut ev_writer: EventWriter<BlockChangedEvent>,
+    mut ev_writer: MessageWriter<BlockChangedEvent>,
     mut q_structure: Query<(&Location, &mut Structure)>,
     biomes: Res<Registry<Biome>>,
     blocks: Res<Registry<Block>>,
@@ -411,7 +411,7 @@ fn plains_generate_chunk_features(
 }
 
 fn generate_chunk_features(
-    block_event_writer: &mut EventWriter<BlockChangedEvent>,
+    block_event_writer: &mut MessageWriter<BlockChangedEvent>,
     coords: ChunkCoordinate,
     structure: &mut Structure,
     location: &Location,

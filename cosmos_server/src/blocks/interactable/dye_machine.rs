@@ -12,7 +12,7 @@ use cosmos_core::{
     events::block_events::BlockDataSystemParams,
     inventory::{Inventory, itemstack::ItemShouldHaveData},
     item::Item,
-    netty::sync::events::server_event::{NettyEventReceived, NettyEventWriter},
+    netty::sync::events::server_event::{NettyMessageReceived, NettyMessageWriter},
     registry::{Registry, identifiable::Identifiable},
     state::GameState,
     structure::Structure,
@@ -23,7 +23,7 @@ fn handle_block_event(
     s_query: Query<&Structure>,
     blocks: Res<Registry<Block>>,
     q_player: Query<&Player>,
-    mut nevw_open_ui: NettyEventWriter<OpenDyeMachine>,
+    mut nevw_open_ui: NettyMessageWriter<OpenDyeMachine>,
 ) {
     for ev in interact_events.read() {
         let Some(s_block) = ev.block else {
@@ -54,7 +54,7 @@ fn dye_block(
     blocks: Res<Registry<Block>>,
     mut q_inventory: Query<&mut Inventory>,
     q_structure: Query<&Structure>,
-    mut nevr_dye: EventReader<NettyEventReceived<DyeBlock>>,
+    mut nevr_dye: EventReader<NettyMessageReceived<DyeBlock>>,
     bs_params: BlockDataSystemParams,
     items: Res<Registry<Item>>,
     mut commands: Commands,

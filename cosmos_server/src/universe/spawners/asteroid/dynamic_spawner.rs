@@ -130,7 +130,7 @@ fn spawn_tiny_asteroids(
 fn send_done_generating_event(
     mut q_needs_gen: Query<(Entity, &mut Structure), With<SmallAsteroidNeedsCreated>>,
     mut commands: Commands,
-    mut chunk_init_event_writer: EventWriter<ChunkInitEvent>,
+    mut chunk_init_event_writer: MessageWriter<ChunkInitEvent>,
 ) {
     for (ent, mut s) in q_needs_gen.iter_mut() {
         if let Structure::Full(structure) = s.as_mut() {

@@ -27,7 +27,7 @@ fn listener(
     q_inventory: Query<&Inventory, (With<LocalPlayer>, Without<BuildMode>, Without<Pilot>)>,
     items: Res<Registry<Item>>,
     input_handler: InputChecker,
-    mut event_writer: EventWriter<CreateShipEvent>,
+    mut event_writer: MessageWriter<CreateShipEvent>,
 ) {
     // Don't create ships while in build mode
     let Ok(inventory) = q_inventory.single() else {

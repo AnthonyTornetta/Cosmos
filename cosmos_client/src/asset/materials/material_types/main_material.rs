@@ -98,7 +98,7 @@ fn create_materials(
     mut material_registry: ResMut<Registry<MaterialDefinition>>,
     mut materials: ResMut<Assets<ArrayTextureMaterial>>,
     event_reader: EventReader<AllTexturesDoneLoadingEvent>,
-    mut event_writer: EventWriter<AssetsDoneLoadingEvent>,
+    mut event_writer: MessageWriter<AssetsDoneLoadingEvent>,
     texture_atlases: Res<Registry<CosmosTextureAtlas>>,
 ) {
     if !event_reader.is_empty() && !material_registry.contains("cosmos:main") {

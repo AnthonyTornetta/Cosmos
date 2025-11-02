@@ -3,7 +3,7 @@
 use bevy::prelude::*;
 use serde::{Deserialize, Serialize};
 
-use crate::netty::sync::events::netty_event::{IdentifiableEvent, NettyEvent, SyncedEventImpl};
+use crate::netty::sync::events::netty_event::{IdentifiableEvent, NettyMessage, SyncedEventImpl};
 
 /// A ship requests a coms communication with another ship
 #[derive(Event, Serialize, Deserialize, Debug, Clone)]
@@ -15,7 +15,7 @@ impl IdentifiableEvent for RequestComsEvent {
     }
 }
 
-impl NettyEvent for RequestComsEvent {
+impl NettyMessage for RequestComsEvent {
     fn event_receiver() -> crate::netty::sync::events::netty_event::EventReceiver {
         crate::netty::sync::events::netty_event::EventReceiver::Both
     }
@@ -48,7 +48,7 @@ impl IdentifiableEvent for AcceptComsEvent {
     }
 }
 
-impl NettyEvent for AcceptComsEvent {
+impl NettyMessage for AcceptComsEvent {
     fn event_receiver() -> crate::netty::sync::events::netty_event::EventReceiver {
         crate::netty::sync::events::netty_event::EventReceiver::Both
     }
@@ -96,7 +96,7 @@ impl IdentifiableEvent for SendComsMessage {
     }
 }
 
-impl NettyEvent for SendComsMessage {
+impl NettyMessage for SendComsMessage {
     fn event_receiver() -> crate::netty::sync::events::netty_event::EventReceiver {
         crate::netty::sync::events::netty_event::EventReceiver::Server
     }
@@ -122,7 +122,7 @@ impl IdentifiableEvent for DeclineComsEvent {
     }
 }
 
-impl NettyEvent for DeclineComsEvent {
+impl NettyMessage for DeclineComsEvent {
     fn event_receiver() -> crate::netty::sync::events::netty_event::EventReceiver {
         crate::netty::sync::events::netty_event::EventReceiver::Server
     }
@@ -140,7 +140,7 @@ impl IdentifiableEvent for RequestCloseComsEvent {
     }
 }
 
-impl NettyEvent for RequestCloseComsEvent {
+impl NettyMessage for RequestCloseComsEvent {
     fn event_receiver() -> crate::netty::sync::events::netty_event::EventReceiver {
         crate::netty::sync::events::netty_event::EventReceiver::Server
     }

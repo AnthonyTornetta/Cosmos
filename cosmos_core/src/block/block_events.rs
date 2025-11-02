@@ -4,7 +4,7 @@ use bevy::prelude::*;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    netty::sync::events::netty_event::{IdentifiableEvent, NettyEvent, SyncedEventImpl},
+    netty::sync::events::netty_event::{IdentifiableEvent, NettyMessage, SyncedEventImpl},
     structure::structure_block::StructureBlock,
 };
 
@@ -37,7 +37,7 @@ impl IdentifiableEvent for InvalidBlockBreakEventReason {
     }
 }
 
-impl NettyEvent for InvalidBlockBreakEventReason {
+impl NettyMessage for InvalidBlockBreakEventReason {
     fn event_receiver() -> crate::netty::sync::events::netty_event::EventReceiver {
         crate::netty::sync::events::netty_event::EventReceiver::Client
     }
@@ -72,7 +72,7 @@ impl IdentifiableEvent for InvalidBlockInteractEventReason {
     }
 }
 
-impl NettyEvent for InvalidBlockInteractEventReason {
+impl NettyMessage for InvalidBlockInteractEventReason {
     fn event_receiver() -> crate::netty::sync::events::netty_event::EventReceiver {
         crate::netty::sync::events::netty_event::EventReceiver::Client
     }
@@ -117,7 +117,7 @@ impl IdentifiableEvent for InvalidBlockPlaceEventReason {
     }
 }
 
-impl NettyEvent for InvalidBlockPlaceEventReason {
+impl NettyMessage for InvalidBlockPlaceEventReason {
     fn event_receiver() -> crate::netty::sync::events::netty_event::EventReceiver {
         crate::netty::sync::events::netty_event::EventReceiver::Client
     }

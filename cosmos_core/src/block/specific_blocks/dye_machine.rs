@@ -4,7 +4,7 @@ use bevy::prelude::*;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    netty::sync::events::netty_event::{IdentifiableEvent, NettyEvent, SyncedEventImpl},
+    netty::sync::events::netty_event::{IdentifiableEvent, NettyMessage, SyncedEventImpl},
     prelude::StructureBlock,
 };
 
@@ -18,7 +18,7 @@ impl IdentifiableEvent for OpenDyeMachine {
     }
 }
 
-impl NettyEvent for OpenDyeMachine {
+impl NettyMessage for OpenDyeMachine {
     fn event_receiver() -> crate::netty::sync::events::netty_event::EventReceiver {
         crate::netty::sync::events::netty_event::EventReceiver::Client
     }
@@ -51,7 +51,7 @@ impl IdentifiableEvent for DyeBlock {
     }
 }
 
-impl NettyEvent for DyeBlock {
+impl NettyMessage for DyeBlock {
     fn event_receiver() -> crate::netty::sync::events::netty_event::EventReceiver {
         crate::netty::sync::events::netty_event::EventReceiver::Server
     }

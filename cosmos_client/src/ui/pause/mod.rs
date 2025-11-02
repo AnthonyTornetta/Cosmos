@@ -31,7 +31,7 @@ fn toggle_pause_menu(
     q_pause_menu: Query<Entity, With<PauseMenu>>,
     input_handler: InputChecker,
     default_font: Res<DefaultFont>,
-    mut evw_close_custom_menus: EventWriter<CloseMenuEvent>,
+    mut evw_close_custom_menus: MessageWriter<CloseMenuEvent>,
 ) {
     if !input_handler.check_just_pressed(CosmosInputs::Pause) {
         return;
@@ -134,7 +134,7 @@ fn toggle_pause_menu(
 fn close_topmost_menus(
     q_open_menus: &mut Query<(Entity, &OpenMenu, &mut Visibility)>,
     commands: &mut Commands,
-    evw_close_custom_menus: &mut EventWriter<CloseMenuEvent>,
+    evw_close_custom_menus: &mut MessageWriter<CloseMenuEvent>,
 ) -> bool {
     let mut open = q_open_menus
         .iter_mut()

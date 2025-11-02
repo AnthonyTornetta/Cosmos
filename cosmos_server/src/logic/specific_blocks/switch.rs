@@ -30,7 +30,7 @@ fn on_interact_with_switch(
     mut evr_interact: EventReader<BlockInteractEvent>,
     mut q_structure: Query<&mut Structure>,
     blocks: Res<Registry<Block>>,
-    mut evw_block_data_changed: EventWriter<BlockDataChangedEvent>,
+    mut evw_block_data_changed: MessageWriter<BlockDataChangedEvent>,
 ) {
     for ev in evr_interact.read() {
         let Some(block) = ev.block else {
@@ -52,7 +52,7 @@ fn on_interact_with_switch(
 
 fn logic_on_output_event_listener(
     mut evr_logic_output: EventReader<LogicOutputEvent>,
-    mut evw_queue_logic_input: EventWriter<QueueLogicInputEvent>,
+    mut evw_queue_logic_input: MessageWriter<QueueLogicInputEvent>,
     logic_blocks: Res<Registry<LogicBlock>>,
     blocks: Res<Registry<Block>>,
     mut q_logic_driver: Query<&mut LogicDriver>,

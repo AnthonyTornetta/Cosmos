@@ -3,7 +3,7 @@
 use std::sync::{Arc, RwLock, RwLockReadGuard, RwLockWriteGuard};
 
 use bevy::{
-    ecs::event::EventWriter,
+    ecs::event::MessageWriter,
     prelude::{App, Event},
 };
 
@@ -29,9 +29,9 @@ impl<E: Event> From<E> for MutEvent<E> {
     }
 }
 
-/// Custom send function for bevy `EventWriter`s that will automatically call `into` for you.
-pub trait EventWriterCustomSend<E: Event> {
-    /// Custom send function for bevy `EventWriter`s that will automatically call `into` for you.
+/// Custom send function for bevy `MessageWriter`s that will automatically call `into` for you.
+pub trait MessageWriterCustomSend<E: Event> {
+    /// Custom send function for bevy `MessageWriter`s that will automatically call `into` for you.
     ///
     /// ```rs
     /// event_writer.send_mut(e);
@@ -43,7 +43,7 @@ pub trait EventWriterCustomSend<E: Event> {
     fn send_mut(&mut self, e: impl Into<MutEvent<E>>);
 }
 
-impl<E: Event + Send + Sync + 'static> EventWriterCustomSend<E> for EventWriter<'_, MutEvent<E>> {
+impl<E: Event + Send + Sync + 'static> MessageWriterCustomSend<E> for MessageWriter<'_, MutEvent<E>> {
     fn send_mut(&mut self, e: impl Into<MutEvent<E>>) {
         self.write(e.into());
     }
@@ -72,7 +72,7 @@ pub trait MutEventsCommand {
     ///     }
     /// }
     ///
-    /// fn send_system(mut event_writer: EventWriter<MutEvent<EventType>>) {
+    /// fn send_system(mut event_writer: MessageWriter<MutEvent<EventType>>) {
     ///     event_writer.write(EventType::default().into());
     /// }
     /// ```

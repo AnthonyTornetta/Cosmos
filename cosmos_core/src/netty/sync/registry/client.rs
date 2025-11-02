@@ -70,7 +70,7 @@ pub(super) fn sync_registry<T: Identifiable + Serialize + DeserializeOwned + std
 
 fn registry_listen_netty(
     mut client: ResMut<RenetClient>,
-    mut ev_writer: EventWriter<ReceivedRegistryEvent>,
+    mut ev_writer: MessageWriter<ReceivedRegistryEvent>,
     mut registry_count: ResMut<RegistriesLeftToSync>,
 ) {
     while let Some(message) = client.receive_message(NettyChannelServer::Registry) {

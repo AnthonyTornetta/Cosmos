@@ -108,7 +108,7 @@ fn tick_button_down(
 
 fn logic_on_output_event_listener(
     mut evr_logic_output: EventReader<LogicOutputEvent>,
-    mut evw_queue_logic_input: EventWriter<QueueLogicInputEvent>,
+    mut evw_queue_logic_input: MessageWriter<QueueLogicInputEvent>,
     logic_blocks: Res<Registry<LogicBlock>>,
     blocks: Res<Registry<Block>>,
     mut q_logic_driver: Query<&mut LogicDriver>,

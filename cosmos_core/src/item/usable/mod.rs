@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     netty::{
-        sync::events::netty_event::{IdentifiableEvent, NettyEvent, SyncedEventImpl},
+        sync::events::netty_event::{IdentifiableEvent, NettyMessage, SyncedEventImpl},
         system_sets::NetworkingSystemsSet,
     },
     prelude::StructureBlock,
@@ -28,7 +28,7 @@ impl IdentifiableEvent for PlayerRequestUseHeldItemEvent {
     }
 }
 
-impl NettyEvent for PlayerRequestUseHeldItemEvent {
+impl NettyMessage for PlayerRequestUseHeldItemEvent {
     fn event_receiver() -> crate::netty::sync::events::netty_event::EventReceiver {
         crate::netty::sync::events::netty_event::EventReceiver::Server
     }
@@ -80,7 +80,7 @@ impl IdentifiableEvent for UseHeldItemEvent {
     }
 }
 
-impl NettyEvent for UseHeldItemEvent {
+impl NettyMessage for UseHeldItemEvent {
     fn event_receiver() -> crate::netty::sync::events::netty_event::EventReceiver {
         crate::netty::sync::events::netty_event::EventReceiver::Client
     }

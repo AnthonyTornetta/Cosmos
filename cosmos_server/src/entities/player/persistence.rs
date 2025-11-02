@@ -20,7 +20,7 @@ use cosmos_core::{
         netty_rigidbody::{NettyRigidBody, NettyRigidBodyLocation},
         server::ServerLobby,
         server_reliable_messages::ServerReliableMessages,
-        sync::{IdentifiableComponent, events::server_event::NettyEventWriter, registry::server::SyncRegistriesEvent},
+        sync::{IdentifiableComponent, events::server_event::NettyMessageWriter, registry::server::SyncRegistriesEvent},
     },
     persistence::LoadingDistance,
     physics::location::{Location, LocationPhysicsSet, Sector, SetPosition, systems::Anchor},
@@ -256,7 +256,7 @@ fn create_new_player(
     needs_data: Res<ItemShouldHaveData>,
     q_player_needs_loaded: Query<(Entity, &LoadPlayer)>,
     universe_systems: Res<UniverseSystems>,
-    mut evw_create_new_player: EventWriter<CreateNewPlayerEvent>,
+    mut evw_create_new_player: MessageWriter<CreateNewPlayerEvent>,
 ) {
     for (player_entity, load_player) in q_player_needs_loaded.iter() {
         let Some((location, rot)) = find_new_player_location(&universe_systems) else {
@@ -303,11 +303,11 @@ fn finish_loading_player(
     mut commands: Commands,
     mut server: ResMut<RenetServer>,
     mut lobby: ResMut<ServerLobby>,
-    mut evw_player_join: EventWriter<PlayerConnectedEvent>,
-    mut evw_sync_registries: EventWriter<SyncRegistriesEvent>,
+    mut evw_player_join: MessageWriter<PlayerConnectedEvent>,
+    mut evw_sync_registries: MessageWriter<SyncRegistriesEvent>,
     server_settings: Res<ServerSettings>,
     q_player_finished_loading: Query<(Entity, &Player, &Location, &Velocity, Option<&ChildOf>, Option<&Transform>), Added<Player>>,
-    mut nevw_send_chat_msg: NettyEventWriter<ServerSendChatMessageEvent>,
+    mut nevw_send_chat_msg: NettyMessageWriter<ServerSendChatMessageEvent>,
     q_held_item: Query<&Inventory, With<HeldItemStack>>,
     q_children: Query<&Children>,
 ) {

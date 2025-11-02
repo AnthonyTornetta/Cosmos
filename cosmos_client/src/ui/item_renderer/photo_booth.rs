@@ -86,7 +86,7 @@ fn setup_rendered_item_atlas(mut images: ResMut<Assets<Image>>, w: usize, h: usi
 
 fn create_booth(
     mut commands: Commands,
-    mut event_writer: EventWriter<AddMaterialEvent>,
+    mut event_writer: MessageWriter<AddMaterialEvent>,
     items: Res<Registry<Item>>,
     item_meshes: Res<Registry<ItemMeshMaterial>>,
     block_items: Res<BlockItems>,

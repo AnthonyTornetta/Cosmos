@@ -320,8 +320,8 @@ fn logic_block_changed_event_listener(
     q_has_data: Query<(), With<BlockLogicData>>,
     mut q_block_data: Query<&mut BlockData>,
     mut bs_params: BlockDataSystemParams,
-    mut evw_queue_logic_output: EventWriter<QueueLogicOutputEvent>,
-    mut evw_queue_logic_input: EventWriter<QueueLogicInputEvent>,
+    mut evw_queue_logic_output: MessageWriter<QueueLogicOutputEvent>,
+    mut evw_queue_logic_input: MessageWriter<QueueLogicInputEvent>,
 ) {
     let mut structures: HashMap<Entity, Vec<LogicBlockChangedEvent<'_>>> = HashMap::default();
 
@@ -461,8 +461,8 @@ fn queue_logic_producers(
 fn send_queued_logic_events(
     mut outputs: ResMut<LogicOutputEventQueue>,
     mut inputs: ResMut<LogicInputEventQueue>,
-    mut evw_logic_output: EventWriter<LogicOutputEvent>,
-    mut evw_logic_input: EventWriter<LogicInputEvent>,
+    mut evw_logic_output: MessageWriter<LogicOutputEvent>,
+    mut evw_logic_input: MessageWriter<LogicInputEvent>,
 ) {
     evw_logic_input.write_batch(inputs.0.drain(..));
     evw_logic_output.write_batch(outputs.0.drain(..));
@@ -472,7 +472,7 @@ fn send_queued_logic_events(
 pub fn default_logic_block_output(
     block_name: &str,
     mut evr_logic_output: EventReader<LogicOutputEvent>,
-    mut evw_queue_logic_input: EventWriter<QueueLogicInputEvent>,
+    mut evw_queue_logic_input: MessageWriter<QueueLogicInputEvent>,
     logic_blocks: &Registry<LogicBlock>,
     blocks: &Registry<Block>,
     mut q_structure: Query<(&mut Structure, &mut LogicDriver)>,

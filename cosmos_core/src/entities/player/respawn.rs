@@ -4,7 +4,7 @@ use bevy::prelude::*;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    netty::sync::events::netty_event::{IdentifiableEvent, NettyEvent, SyncedEventImpl},
+    netty::sync::events::netty_event::{IdentifiableEvent, NettyMessage, SyncedEventImpl},
     physics::location::Location,
 };
 
@@ -20,7 +20,7 @@ impl IdentifiableEvent for RequestRespawnEvent {
     }
 }
 
-impl NettyEvent for RequestRespawnEvent {
+impl NettyMessage for RequestRespawnEvent {
     fn event_receiver() -> crate::netty::sync::events::netty_event::EventReceiver {
         crate::netty::sync::events::netty_event::EventReceiver::Server
     }
@@ -41,7 +41,7 @@ impl IdentifiableEvent for RespawnEvent {
     }
 }
 
-impl NettyEvent for RespawnEvent {
+impl NettyMessage for RespawnEvent {
     fn event_receiver() -> crate::netty::sync::events::netty_event::EventReceiver {
         crate::netty::sync::events::netty_event::EventReceiver::Client
     }

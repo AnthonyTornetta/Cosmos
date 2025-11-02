@@ -65,7 +65,7 @@ fn check_should_break(
     mut commands: Commands,
     mut q_structure: Query<(Entity, &Structure, &mut BeingMined)>,
     mut q_mining_blocks: Query<(Entity, &mut MiningBlock)>,
-    mut ev_writer: EventWriter<BlockBreakEvent>,
+    mut ev_writer: MessageWriter<BlockBreakEvent>,
     blocks: Res<Registry<Block>>,
     time: Res<Time>,
 ) {

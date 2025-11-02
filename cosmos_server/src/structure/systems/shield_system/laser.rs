@@ -5,7 +5,7 @@ use super::{ShieldHitEvent, ShieldSet};
 
 fn handle_laser_hits(
     mut ev_reader: EventReader<LaserCollideEvent>,
-    mut ev_writer: EventWriter<ShieldHitEvent>,
+    mut ev_writer: MessageWriter<ShieldHitEvent>,
     mut q_shield: Query<(&GlobalTransform, &mut Shield)>,
 ) {
     for ev in ev_reader.read() {

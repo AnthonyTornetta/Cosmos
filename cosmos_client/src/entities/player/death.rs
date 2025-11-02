@@ -7,7 +7,7 @@ use cosmos_core::{
         health::Dead,
         player::respawn::{RequestRespawnEvent, RespawnEvent},
     },
-    netty::{client::LocalPlayer, sync::events::client_event::NettyEventWriter},
+    netty::{client::LocalPlayer, sync::events::client_event::NettyMessageWriter},
     physics::location::{Location, SetPosition},
 };
 use renet::RenetClient;
@@ -29,7 +29,7 @@ fn display_death_ui(
     mut q_open_menus: Query<(Entity, &OpenMenu, &mut Visibility)>,
     q_added_death: Query<(), (Added<Dead>, With<LocalPlayer>)>,
     font: Res<DefaultFont>,
-    mut evw_close_custom_menus: EventWriter<CloseMenuEvent>,
+    mut evw_close_custom_menus: MessageWriter<CloseMenuEvent>,
 ) {
     if q_added_death.is_empty() {
         return;
@@ -178,7 +178,7 @@ fn on_respawn(
     }
 }
 
-fn respawn_clicked(_trigger: Trigger<ButtonEvent>, mut nevw_respawn: NettyEventWriter<RequestRespawnEvent>) {
+fn respawn_clicked(_trigger: Trigger<ButtonEvent>, mut nevw_respawn: NettyMessageWriter<RequestRespawnEvent>) {
     nevw_respawn.write_default();
 }
 

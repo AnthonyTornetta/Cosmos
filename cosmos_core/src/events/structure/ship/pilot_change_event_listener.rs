@@ -82,7 +82,7 @@ fn pilot_removed(
     mut commands: Commands,
     mut query: Query<(&mut Transform, &PilotStartingDelta)>,
     removed_pilots: FixedUpdateRemovedComponents<Pilot>,
-    mut event_writer: EventWriter<RemoveSensorFrom>,
+    mut event_writer: MessageWriter<RemoveSensorFrom>,
 ) {
     for entity in removed_pilots.read() {
         if let Ok((mut trans, starting_delta)) = query.get_mut(entity) {
@@ -96,7 +96,7 @@ fn pilot_removed(
     }
 }
 
-fn bouncer(mut reader: EventReader<Bouncer>, mut event_writer: EventWriter<RemoveSensorFrom>) {
+fn bouncer(mut reader: EventReader<Bouncer>, mut event_writer: MessageWriter<RemoveSensorFrom>) {
     for ev in reader.read() {
         event_writer.write(RemoveSensorFrom(ev.0, ev.1 + 1));
     }
@@ -105,7 +105,7 @@ fn bouncer(mut reader: EventReader<Bouncer>, mut event_writer: EventWriter<Remov
 fn remove_sensor(
     mut reader: EventReader<RemoveSensorFrom>,
     q_pilot: Query<(), With<Pilot>>,
-    mut event_writer: EventWriter<Bouncer>,
+    mut event_writer: MessageWriter<Bouncer>,
     mut commands: Commands,
 ) {
     for ev in reader.read() {

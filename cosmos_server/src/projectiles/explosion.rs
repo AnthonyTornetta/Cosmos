@@ -53,11 +53,11 @@ fn respond_to_explosion(
 
     q_chunk: Query<&ChunkPhysicsPart>,
     blocks_registry: Res<Registry<Block>>,
-    mut evw_block_take_damage: EventWriter<BlockTakeDamageEvent>,
-    mut evw_block_destroyed: EventWriter<BlockDestroyedEvent>,
-    mut ev_writer_explosion_hit: EventWriter<ExplosionHitEvent>,
+    mut evw_block_take_damage: MessageWriter<BlockTakeDamageEvent>,
+    mut evw_block_destroyed: MessageWriter<BlockDestroyedEvent>,
+    mut ev_writer_explosion_hit: MessageWriter<ExplosionHitEvent>,
     // blocks: Res<Registry<Block>>,
-    // mut evw_bc: EventWriter<BlockChangedEvent>,
+    // mut evw_bc: MessageWriter<BlockChangedEvent>,
     q_shield: Query<&Shield>,
     q_trans: Query<(&Transform, Option<&ChildOf>)>,
 ) {

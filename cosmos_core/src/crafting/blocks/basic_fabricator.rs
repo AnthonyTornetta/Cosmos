@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     crafting::recipes::basic_fabricator::BasicFabricatorRecipe,
-    netty::sync::events::netty_event::{IdentifiableEvent, NettyEvent, SyncedEventImpl},
+    netty::sync::events::netty_event::{IdentifiableEvent, NettyMessage, SyncedEventImpl},
     prelude::StructureBlock,
 };
 
@@ -19,7 +19,7 @@ impl IdentifiableEvent for OpenBasicFabricatorEvent {
     }
 }
 
-impl NettyEvent for OpenBasicFabricatorEvent {
+impl NettyMessage for OpenBasicFabricatorEvent {
     fn event_receiver() -> crate::netty::sync::events::netty_event::EventReceiver {
         crate::netty::sync::events::netty_event::EventReceiver::Client
     }
@@ -44,7 +44,7 @@ impl IdentifiableEvent for CraftBasicFabricatorRecipeEvent {
     }
 }
 
-impl NettyEvent for CraftBasicFabricatorRecipeEvent {
+impl NettyMessage for CraftBasicFabricatorRecipeEvent {
     fn event_receiver() -> crate::netty::sync::events::netty_event::EventReceiver {
         crate::netty::sync::events::netty_event::EventReceiver::Server
     }

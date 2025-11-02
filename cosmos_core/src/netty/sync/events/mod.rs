@@ -7,9 +7,9 @@
 //! ```
 //! # use bevy::prelude::{Event, info, App, EventReader};
 //! # use serde::{Serialize, Deserialize};
-//! # use crate::cosmos_core::netty::sync::events::netty_event::{IdentifiableEvent, NettyEvent};
-//! # use crate::cosmos_core::netty::sync::events::client_event::NettyEventWriter;
-//! # use crate::cosmos_core::netty::sync::events::server_event::NettyEventReceived;
+//! # use crate::cosmos_core::netty::sync::events::netty_event::{IdentifiableEvent, NettyMessage};
+//! # use crate::cosmos_core::netty::sync::events::client_event::NettyMessageWriter;
+//! # use crate::cosmos_core::netty::sync::events::server_event::NettyMessageReceived;
 //! # use crate::cosmos_core::netty::sync::events::netty_event::SyncedEventImpl;
 //! // `core` project
 //! #[derive(Debug, Event, Serialize, Deserialize, Clone)]
@@ -20,7 +20,7 @@
 //!         "cosmos:example_event" // Unique to this event
 //!     }
 //! }
-//! impl NettyEvent for ExampleEvent {
+//! impl NettyMessage for ExampleEvent {
 //!     fn event_receiver() -> cosmos_core::netty::sync::events::netty_event::EventReceiver {
 //!         // If this is set to EventReceiver::Client, then the client/server code below would be swapped.
 //!         cosmos_core::netty::sync::events::netty_event::EventReceiver::Server
@@ -32,12 +32,12 @@
 //! }
 //!
 //! // `client` project
-//! fn send_event_to_server(mut nevw_example: NettyEventWriter<ExampleEvent>) {
+//! fn send_event_to_server(mut nevw_example: NettyMessageWriter<ExampleEvent>) {
 //!     nevw_example.write(ExampleEvent("Hello from client!".to_owned()));
 //! }
 //!
 //! // `server` project
-//! fn receive_event(mut nevr_example: EventReader<NettyEventReceived<ExampleEvent>>) {
+//! fn receive_event(mut nevr_example: EventReader<NettyMessageReceived<ExampleEvent>>) {
 //!     for ev in nevr_example.read() {
 //!         info!("Received: {} from client {}", ev.event.0, ev.client_id);
 //!     }

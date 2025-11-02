@@ -31,9 +31,9 @@ fn poll_rendering_chunks(
     q_lights: Query<&LightsHolder>,
     q_chunk_meshes: Query<&ChunkMeshes>,
     q_chunk_entity: Query<&ChunkEntity>,
-    mut evw_add_material_event: EventWriter<AddMaterialEvent>,
-    mut evw_remove_all_materials: EventWriter<RemoveAllMaterialsEvent>,
-    mut evw_chunk_needs_custom_blocks_rerendered: EventWriter<ChunkNeedsCustomBlocksRendered>,
+    mut evw_add_material_event: MessageWriter<AddMaterialEvent>,
+    mut evw_remove_all_materials: MessageWriter<RemoveAllMaterialsEvent>,
+    mut evw_chunk_needs_custom_blocks_rerendered: MessageWriter<ChunkNeedsCustomBlocksRendered>,
 ) {
     let mut todo = Vec::with_capacity(rendering_chunks.capacity());
 

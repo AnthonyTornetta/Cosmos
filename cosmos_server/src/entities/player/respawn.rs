@@ -13,7 +13,7 @@ use cosmos_core::{
     item::physical_item::PhysicalItem,
     netty::{
         server::ServerLobby,
-        sync::events::server_event::{NettyEventReceived, NettyEventWriter},
+        sync::events::server_event::{NettyMessageReceived, NettyMessageWriter},
     },
     physics::location::{Location, LocationPhysicsSet, SetPosition},
     prelude::BlockCoordinate,
@@ -67,8 +67,8 @@ fn on_respawn(
     mut commands: Commands,
     universe_systems: Res<UniverseSystems>,
     mut q_player: Query<(Entity, &mut Health, &MaxHealth, &mut Velocity, Option<&RespawnBlock>), With<Dead>>,
-    mut nevr: EventReader<NettyEventReceived<RequestRespawnEvent>>,
-    mut nevw_respawn: NettyEventWriter<RespawnEvent>,
+    mut nevr: EventReader<NettyMessageReceived<RequestRespawnEvent>>,
+    mut nevw_respawn: NettyMessageWriter<RespawnEvent>,
 ) {
     for ev in nevr.read() {
         let Some(player_ent) = lobby.player_from_id(ev.client_id) else {

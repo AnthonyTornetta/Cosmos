@@ -1,6 +1,6 @@
 use super::super::prelude::*;
 use bevy::prelude::*;
-use cosmos_core::{chat::ServerSendChatMessageEvent, netty::sync::events::server_event::NettyEventWriter};
+use cosmos_core::{chat::ServerSendChatMessageEvent, netty::sync::events::server_event::NettyMessageWriter};
 
 struct SayCommand(String);
 
@@ -18,7 +18,7 @@ pub(super) fn register(app: &mut App) {
     create_cosmos_command::<SayCommand, _>(
         ServerCommand::new("cosmos:say", "[...message]", "Sends the given text to all connected players"),
         app,
-        |mut nevw_send_chat_msg: NettyEventWriter<ServerSendChatMessageEvent>, mut evr_command: EventReader<CommandEvent<SayCommand>>| {
+        |mut nevw_send_chat_msg: NettyMessageWriter<ServerSendChatMessageEvent>, mut evr_command: EventReader<CommandEvent<SayCommand>>| {
             for ev in evr_command.read() {
                 info!("Saying `{}`", ev.command.0);
                 nevw_send_chat_msg.broadcast(ServerSendChatMessageEvent {

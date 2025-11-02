@@ -32,7 +32,7 @@ fn handle_block_event(
     blocks: Res<Registry<Block>>,
     q_player: Query<&Player>,
     mut server: ResMut<RenetServer>,
-    mut evw_open_storage: EventWriter<OpenStorageEvent>,
+    mut evw_open_storage: MessageWriter<OpenStorageEvent>,
 ) {
     for ev in interact_events.read() {
         let Some(s_block) = ev.block else {

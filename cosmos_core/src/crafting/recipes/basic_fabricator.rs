@@ -9,7 +9,7 @@ use serde::{Deserialize, Serialize};
 use crate::{
     inventory::itemstack::ItemStack,
     item::Item,
-    netty::sync::events::netty_event::{IdentifiableEvent, NettyEvent, SyncedEventImpl},
+    netty::sync::events::netty_event::{IdentifiableEvent, NettyMessage, SyncedEventImpl},
     registry::identifiable::Identifiable,
 };
 
@@ -128,7 +128,7 @@ impl IdentifiableEvent for SyncBasicFabricatorRecipesEvent {
     }
 }
 
-impl NettyEvent for SyncBasicFabricatorRecipesEvent {
+impl NettyMessage for SyncBasicFabricatorRecipesEvent {
     fn event_receiver() -> crate::netty::sync::events::netty_event::EventReceiver {
         crate::netty::sync::events::netty_event::EventReceiver::Client
     }

@@ -7,7 +7,7 @@ use bevy::prelude::*;
 use bevy_app_compute::prelude::{AppComputeWorker, BevyEasyComputeSet};
 use cosmos_core::{
     block::{Block, block_face::BlockFace},
-    ecs::mut_events::{EventWriterCustomSend, MutEvent, MutEventsCommand},
+    ecs::mut_events::{MessageWriterCustomSend, MutEvent, MutEventsCommand},
     physics::location::Location,
     registry::Registry,
     state::GameState,
@@ -414,7 +414,7 @@ pub(crate) struct DoneGeneratingChunkEvent {
 
 fn read_gpu_data(
     worker: ResMut<AppComputeWorker<BiosphereShaderWorker>>,
-    mut ev_writer: EventWriter<MutEvent<DoneGeneratingChunkEvent>>,
+    mut ev_writer: MessageWriter<MutEvent<DoneGeneratingChunkEvent>>,
     mut currently_generating_chunks: ResMut<GeneratingLodChunks>,
     mut chunk_data: ResMut<ChunkData>,
     timer: Res<ChunkGenerationTimer>,
@@ -543,7 +543,7 @@ pub(crate) fn generate_chunks_from_gpu_data(
     biomes: Res<Registry<Biome>>,
     biospheres: Res<Registry<Biosphere>>,
     // sea_level: Option<Res<BiosphereSeaLevel<T>>>,
-    // mut ev_writer: EventWriter<GenerateChunkFeaturesEvent<T>>,
+    // mut ev_writer: MessageWriter<GenerateChunkFeaturesEvent<T>>,
     q_lod: Query<&mut LodBeingGenerated>,
     blocks: Res<Registry<Block>>,
 ) {

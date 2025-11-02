@@ -8,7 +8,7 @@ use cosmos_core::{
     entities::player::Player,
     netty::{
         server::ServerLobby,
-        sync::events::server_event::{NettyEventReceived, NettyEventWriter},
+        sync::events::server_event::{NettyMessageReceived, NettyMessageWriter},
     },
     physics::location::Location,
     prelude::{DespawnWithStructure, Ship},
@@ -23,10 +23,10 @@ const MAX_HAIL_RANGE: f32 = 20_000.0;
 
 fn on_request_coms(
     q_loc: Query<&Location>,
-    mut nevr: EventReader<NettyEventReceived<RequestComsEvent>>,
+    mut nevr: EventReader<NettyMessageReceived<RequestComsEvent>>,
     mut evr: EventReader<RequestHailFromNpc>,
-    mut nevw_req: NettyEventWriter<RequestComsEvent>,
-    mut evw_request_hail_npc: EventWriter<RequestHailToNpc>,
+    mut nevw_req: NettyMessageWriter<RequestComsEvent>,
+    mut evw_request_hail_npc: MessageWriter<RequestHailToNpc>,
     q_player: Query<&Player>,
     lobby: Res<ServerLobby>,
     q_pilot: Query<(&Location, &Pilot)>,
@@ -107,7 +107,7 @@ fn on_accept_coms(
     q_pilot: Query<(&Location, &Pilot)>,
     q_requested_coms: Query<&RequestedComs>,
     mut commands: Commands,
-    mut nevr_accept_coms: EventReader<NettyEventReceived<AcceptComsEvent>>,
+    mut nevr_accept_coms: EventReader<NettyMessageReceived<AcceptComsEvent>>,
 ) {
     for ev in nevr_accept_coms.read() {
         let Some((player_loc, pilot)) = lobby.player_from_id(ev.client_id).and_then(|x| q_pilot.get(x).ok()) else {
@@ -184,7 +184,7 @@ fn tick_requested_coms(mut commands: Commands, time: Res<Time>, mut q_req_coms: 
 fn send_coms_message(
     lobby: Res<ServerLobby>,
     q_pilot: Query<&Pilot>,
-    mut nevr_com_msg: EventReader<NettyEventReceived<SendComsMessage>>,
+    mut nevr_com_msg: EventReader<NettyMessageReceived<SendComsMessage>>,
     mut evr_send_coms: EventReader<NpcSendComsMessage>,
     mut q_coms: Query<(&ChildOf, &mut ComsChannel)>,
 ) {
@@ -245,7 +245,7 @@ fn on_req_close_coms(
     lobby: Res<ServerLobby>,
     q_pilot: Query<&Pilot>,
     q_parent: Query<&ChildOf>,
-    mut nevr_close_coms: EventReader<NettyEventReceived<RequestCloseComsEvent>>,
+    mut nevr_close_coms: EventReader<NettyMessageReceived<RequestCloseComsEvent>>,
     mut npc_close_coms: EventReader<NpcRequestCloseComsEvent>,
     q_coms: Query<(Entity, &ComsChannel)>,
     mut commands: Commands,
@@ -294,7 +294,7 @@ fn on_req_close_coms(
 fn on_decline_coms(
     mut commands: Commands,
     lobby: Res<ServerLobby>,
-    mut nevr_decline_coms: EventReader<NettyEventReceived<DeclineComsEvent>>,
+    mut nevr_decline_coms: EventReader<NettyMessageReceived<DeclineComsEvent>>,
     q_piloting: Query<&Pilot>,
 ) {
     for ev in nevr_decline_coms.read() {

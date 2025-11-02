@@ -21,7 +21,7 @@ use cosmos_core::{
         client::LocalPlayer,
         cosmos_encoder,
         sync::{
-            events::client_event::NettyEventWriter,
+            events::client_event::NettyMessageWriter,
             mapping::{Mappable, NetworkMapping},
         },
     },
@@ -534,7 +534,7 @@ fn listen_create(
     q_inventory: Query<&Inventory>,
     q_open_fab_menu: Query<&OpenBasicFabricatorMenu>,
     q_selected_recipe: Query<&Recipe, With<SelectedRecipe>>,
-    mut nevw_craft_event: NettyEventWriter<CraftBasicFabricatorRecipeEvent>,
+    mut nevw_craft_event: NettyMessageWriter<CraftBasicFabricatorRecipeEvent>,
     network_mapping: Res<NetworkMapping>,
     input_handler: InputChecker,
 ) {

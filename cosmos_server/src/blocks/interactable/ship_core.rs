@@ -6,7 +6,7 @@ use cosmos_core::{
     },
     entities::player::Player,
     events::structure::change_pilot_event::ChangePilotEvent,
-    netty::sync::events::server_event::NettyEventWriter,
+    netty::sync::events::server_event::NettyMessageWriter,
     notifications::Notification,
     registry::{Registry, identifiable::Identifiable},
     state::GameState,
@@ -21,12 +21,12 @@ use crate::blocks::multiblock::shipyard::StructureBeingBuilt;
 
 fn handle_block_event(
     mut interact_events: EventReader<BlockInteractEvent>,
-    mut change_pilot_event: EventWriter<ChangePilotEvent>,
+    mut change_pilot_event: MessageWriter<ChangePilotEvent>,
     q_ship: Query<(&Structure, Has<StructureBeingBuilt>), With<Ship>>,
     q_can_be_pilot: Query<(), Without<Pilot>>,
     q_can_be_pilot_player: Query<(), Without<BuildMode>>,
     blocks: Res<Registry<Block>>,
-    mut nevw_noticication: NettyEventWriter<Notification>,
+    mut nevw_noticication: NettyMessageWriter<Notification>,
     q_player: Query<&Player>,
 ) {
     for ev in interact_events.read() {

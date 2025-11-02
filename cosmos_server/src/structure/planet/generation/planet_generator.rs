@@ -56,7 +56,7 @@ pub fn check_needs_generated_system<T: TGenerateChunkEvent + Event, K: Component
     needs_generated_query: Query<(Entity, &ChunkNeedsGenerated)>,
     parent_query: Query<&ChildOf>,
     correct_type_query: Query<(), With<K>>,
-    mut event_writer: EventWriter<T>,
+    mut event_writer: MessageWriter<T>,
 ) {
     for (entity, chunk) in needs_generated_query.iter() {
         if let Ok(parent_entity) = parent_query.get(entity)
@@ -85,7 +85,7 @@ pub struct RequestChunkEvent {
 #[derive(Debug, Clone, Copy, Event)]
 struct RequestChunkBouncer(RequestChunkEvent);
 
-fn bounce_events(mut event_reader: EventReader<RequestChunkBouncer>, mut event_writer: EventWriter<RequestChunkEvent>) {
+fn bounce_events(mut event_reader: EventReader<RequestChunkBouncer>, mut event_writer: MessageWriter<RequestChunkEvent>) {
     for ev in event_reader.read() {
         event_writer.write(ev.0);
     }
@@ -96,7 +96,7 @@ fn get_requested_chunk(
     mut event_reader: EventReader<RequestChunkEvent>,
     // players: Query<&Location, With<Player>>,
     mut q_structure: Query<&mut Structure /*, &Location, &GlobalTransform*/, With<Planet>>,
-    mut event_writer: EventWriter<RequestChunkBouncer>,
+    mut event_writer: MessageWriter<RequestChunkBouncer>,
     mut server: ResMut<RenetServer>,
     mut commands: Commands,
 ) {
@@ -292,7 +292,7 @@ fn unload_chunks_far_from_players(
     players: Query<&Location, With<Player>>,
     mut q_planets: Query<(&Location, &mut Structure, Entity, &GlobalTransform), With<Planet>>,
     q_entity_id: Query<&EntityId>,
-    mut event_writer: EventWriter<ChunkUnloadEvent>,
+    mut event_writer: MessageWriter<ChunkUnloadEvent>,
     mut commands: Commands,
 ) {
     let mut chunks_to_unload = HashMap::<Entity, HashSet<ChunkCoordinate>>::new();

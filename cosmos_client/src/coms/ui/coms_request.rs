@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 use cosmos_core::{
     coms::events::{AcceptComsEvent, DeclineComsEvent},
-    netty::sync::events::client_event::NettyEventWriter,
+    netty::sync::events::client_event::NettyMessageWriter,
 };
 
 use crate::{
@@ -54,7 +54,7 @@ fn on_open_req_coms_ui(mut commands: Commands, mut evr_open_request_ui: EventRea
 }
 
 fn press_accept(
-    mut nevw_accept_coms: NettyEventWriter<AcceptComsEvent>,
+    mut nevw_accept_coms: NettyMessageWriter<AcceptComsEvent>,
     mut commands: Commands,
     inputs: InputChecker,
     q_rendered_coms_req_ui: Query<(Entity, &RenderedComsRequestUi)>,
@@ -72,7 +72,7 @@ fn press_accept(
 }
 
 fn press_decline(
-    mut nevw_decline_coms: NettyEventWriter<DeclineComsEvent>,
+    mut nevw_decline_coms: NettyMessageWriter<DeclineComsEvent>,
     mut commands: Commands,
     inputs: InputChecker,
     q_rendered_coms_req_ui: Query<Entity, With<RenderedComsRequestUi>>,

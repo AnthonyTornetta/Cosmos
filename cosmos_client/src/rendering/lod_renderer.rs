@@ -432,7 +432,7 @@ fn poll_rendering_lods(
     rendered_lod_query: Query<&RenderedLod>,
     mut rendering_lods: ResMut<RenderingLods>,
     mut meshes_to_compute: ResMut<MeshesToCompute>,
-    mut event_writer: EventWriter<AddMaterialEvent>,
+    mut event_writer: MessageWriter<AddMaterialEvent>,
 ) {
     let mut todo = Vec::with_capacity(rendering_lods.0.capacity());
 

@@ -1,6 +1,6 @@
 //! Chat messages sent between the server and clients
 
-use crate::netty::sync::events::netty_event::{IdentifiableEvent, NettyEvent, SyncedEventImpl};
+use crate::netty::sync::events::netty_event::{IdentifiableEvent, NettyMessage, SyncedEventImpl};
 use bevy::prelude::{App, Entity, Event};
 use serde::{Deserialize, Serialize};
 
@@ -17,7 +17,7 @@ impl IdentifiableEvent for ClientSendChatMessageEvent {
     }
 }
 
-impl NettyEvent for ClientSendChatMessageEvent {
+impl NettyMessage for ClientSendChatMessageEvent {
     fn event_receiver() -> crate::netty::sync::events::netty_event::EventReceiver {
         crate::netty::sync::events::netty_event::EventReceiver::Server
     }
@@ -38,7 +38,7 @@ impl IdentifiableEvent for ServerSendChatMessageEvent {
     }
 }
 
-impl NettyEvent for ServerSendChatMessageEvent {
+impl NettyMessage for ServerSendChatMessageEvent {
     fn event_receiver() -> crate::netty::sync::events::netty_event::EventReceiver {
         crate::netty::sync::events::netty_event::EventReceiver::Client
     }

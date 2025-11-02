@@ -51,7 +51,7 @@ fn on_render_numeric_display(
     block_mesh_registry: Res<BlockMeshRegistry>,
     materials_registry: Res<Registry<MaterialDefinition>>,
     mut meshes: ResMut<Assets<Mesh>>,
-    mut evw_add_material: EventWriter<AddMaterialEvent>,
+    mut evw_add_material: MessageWriter<AddMaterialEvent>,
     q_numeric_display_value: Query<&NumericDisplayValue>,
     rendering_modes: Res<BlockRenderingModes>,
 ) {

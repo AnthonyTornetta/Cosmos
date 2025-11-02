@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::block::block_direction::BlockDirection;
 use crate::netty::sync::IdentifiableComponent;
-use crate::netty::sync::events::netty_event::{IdentifiableEvent, NettyEvent, SyncedEventImpl};
+use crate::netty::sync::events::netty_event::{IdentifiableEvent, NettyMessage, SyncedEventImpl};
 use crate::prelude::BlockCoordinate;
 
 use super::sync::SyncableSystem;
@@ -157,7 +157,7 @@ impl IdentifiableEvent for RailgunFiredEvent {
     }
 }
 
-impl NettyEvent for RailgunFiredEvent {
+impl NettyMessage for RailgunFiredEvent {
     fn event_receiver() -> crate::netty::sync::events::netty_event::EventReceiver {
         crate::netty::sync::events::netty_event::EventReceiver::Client
     }

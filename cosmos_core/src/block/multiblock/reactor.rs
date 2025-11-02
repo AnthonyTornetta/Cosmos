@@ -13,7 +13,7 @@ use crate::{
     item::Item,
     netty::sync::{
         IdentifiableComponent, SyncableComponent,
-        events::netty_event::{IdentifiableEvent, NettyEvent, SyncedEventImpl},
+        events::netty_event::{IdentifiableEvent, NettyMessage, SyncedEventImpl},
         registry::sync_registry,
         sync_component,
     },
@@ -208,7 +208,7 @@ impl IdentifiableEvent for OpenReactorEvent {
     }
 }
 
-impl NettyEvent for OpenReactorEvent {
+impl NettyMessage for OpenReactorEvent {
     fn event_receiver() -> crate::netty::sync::events::netty_event::EventReceiver {
         crate::netty::sync::events::netty_event::EventReceiver::Client
     }
@@ -241,7 +241,7 @@ impl IdentifiableEvent for ClientRequestChangeReactorStatus {
     }
 }
 
-impl NettyEvent for ClientRequestChangeReactorStatus {
+impl NettyMessage for ClientRequestChangeReactorStatus {
     fn event_receiver() -> crate::netty::sync::events::netty_event::EventReceiver {
         crate::netty::sync::events::netty_event::EventReceiver::Server
     }

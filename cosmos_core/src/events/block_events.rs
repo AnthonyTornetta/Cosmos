@@ -4,7 +4,7 @@ use crate::block::block_rotation::BlockRotation;
 use crate::events::structure::structure_event::StructureEvent;
 use crate::structure::chunk::BlockInfo;
 use crate::structure::structure_block::StructureBlock;
-use bevy::ecs::event::EventWriter;
+use bevy::ecs::event::MessageWriter;
 use bevy::ecs::system::Commands;
 use bevy::ecs::system::SystemParam;
 use bevy::prelude::App;
@@ -68,7 +68,7 @@ pub struct BlockDataSystemParams<'w, 's> {
     /// Commands
     pub commands: Commands<'w, 's>,
     /// Sent whenever the structure thinks the BlockData is changing
-    pub ev_writer: EventWriter<'w, BlockDataChangedEvent>,
+    pub ev_writer: MessageWriter<'w, BlockDataChangedEvent>,
 }
 
 pub(super) fn register(app: &mut App) {

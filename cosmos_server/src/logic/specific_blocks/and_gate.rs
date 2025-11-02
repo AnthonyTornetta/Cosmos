@@ -73,7 +73,7 @@ fn and_gate_input_event_listener(
 
 fn and_gate_output_event_listener(
     evr_logic_output: EventReader<LogicOutputEvent>,
-    evw_queue_logic_input: EventWriter<QueueLogicInputEvent>,
+    evw_queue_logic_input: MessageWriter<QueueLogicInputEvent>,
     logic_blocks: Res<Registry<LogicBlock>>,
     blocks: Res<Registry<Block>>,
     q_structure: Query<(&mut Structure, &mut LogicDriver)>,

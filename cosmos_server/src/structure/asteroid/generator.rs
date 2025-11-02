@@ -50,7 +50,7 @@ fn notify_when_done_generating(
     mut generating_asteroids: ResMut<GeneratingAsteroids>,
     mut structure_query: Query<&mut Structure>,
     mut commands: Commands,
-    mut chunk_init_event_writer: EventWriter<ChunkInitEvent>,
+    mut chunk_init_event_writer: MessageWriter<ChunkInitEvent>,
 ) {
     generating_asteroids.generating.retain_mut(|generating| {
         if let Some(chunks) = future::block_on(future::poll_once(&mut generating.task)) {
@@ -94,7 +94,7 @@ fn notify_when_done_generating(
 fn send_events(
     being_generated: Query<(), With<BeingGenerated>>,
     q_need_generated: Query<(Entity, &Transform), (With<AsteroidNeedsCreated>, With<AsteroidGeneratorMarker>)>,
-    mut ev_writer: EventWriter<GenerateAsteroidEvent>,
+    mut ev_writer: MessageWriter<GenerateAsteroidEvent>,
     mut commands: Commands,
 ) {
     if !being_generated.is_empty() {

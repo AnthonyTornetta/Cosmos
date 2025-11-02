@@ -10,7 +10,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     faction::FactionRelation,
-    netty::sync::events::netty_event::{IdentifiableEvent, NettyEvent, SyncedEventImpl},
+    netty::sync::events::netty_event::{IdentifiableEvent, NettyMessage, SyncedEventImpl},
     physics::location::{Location, Sector, SystemCoordinate},
     universe::{SectorDanger, star::Star},
 };
@@ -191,7 +191,7 @@ impl IdentifiableEvent for RequestSystemMap {
     }
 }
 
-impl NettyEvent for RequestSystemMap {
+impl NettyMessage for RequestSystemMap {
     fn event_receiver() -> crate::netty::sync::events::netty_event::EventReceiver {
         crate::netty::sync::events::netty_event::EventReceiver::Server
     }
@@ -209,7 +209,7 @@ impl IdentifiableEvent for RequestGalaxyMap {
     }
 }
 
-impl NettyEvent for RequestGalaxyMap {
+impl NettyMessage for RequestGalaxyMap {
     fn event_receiver() -> crate::netty::sync::events::netty_event::EventReceiver {
         crate::netty::sync::events::netty_event::EventReceiver::Server
     }
@@ -230,7 +230,7 @@ impl IdentifiableEvent for SystemMapResponseEvent {
     }
 }
 
-impl NettyEvent for SystemMapResponseEvent {
+impl NettyMessage for SystemMapResponseEvent {
     fn event_receiver() -> crate::netty::sync::events::netty_event::EventReceiver {
         crate::netty::sync::events::netty_event::EventReceiver::Client
     }
@@ -249,7 +249,7 @@ impl IdentifiableEvent for GalaxyMapResponseEvent {
     }
 }
 
-impl NettyEvent for GalaxyMapResponseEvent {
+impl NettyMessage for GalaxyMapResponseEvent {
     fn event_receiver() -> crate::netty::sync::events::netty_event::EventReceiver {
         crate::netty::sync::events::netty_event::EventReceiver::Client
     }

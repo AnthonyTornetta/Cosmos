@@ -65,8 +65,8 @@ impl LogicDriver {
         events_by_coords: &HashMap<BlockCoordinate, LogicBlockChangedEvent>,
         blocks: &Registry<Block>,
         logic_blocks: &Registry<LogicBlock>,
-        evw_queue_logic_output: &mut EventWriter<QueueLogicOutputEvent>,
-        evw_queue_logic_input: &mut EventWriter<QueueLogicInputEvent>,
+        evw_queue_logic_output: &mut MessageWriter<QueueLogicOutputEvent>,
+        evw_queue_logic_input: &mut MessageWriter<QueueLogicInputEvent>,
     ) {
         // If the neighbor coordinates don't exist, no port is added (and thus no new group).
         let Ok(neighbor_coords) = coords.step(direction) else {
@@ -112,8 +112,8 @@ impl LogicDriver {
         blocks: &Registry<Block>,
         logic_blocks: &Registry<LogicBlock>,
         logic_wire_colors: &Registry<LogicWireColor>,
-        evw_queue_logic_output: &mut EventWriter<QueueLogicOutputEvent>,
-        evw_queue_logic_input: &mut EventWriter<QueueLogicInputEvent>,
+        evw_queue_logic_output: &mut MessageWriter<QueueLogicOutputEvent>,
+        evw_queue_logic_input: &mut MessageWriter<QueueLogicInputEvent>,
     ) {
         // Adding input faces as consumers to their connected group, or a new group if there is no connected group.
         for input_face in logic_block.input_faces() {
@@ -200,8 +200,8 @@ impl LogicDriver {
         blocks: &Registry<Block>,
         logic_blocks: &Registry<LogicBlock>,
         logic_wire_colors: &Registry<LogicWireColor>,
-        evw_queue_logic_output: &mut EventWriter<QueueLogicOutputEvent>,
-        evw_queue_logic_input: &mut EventWriter<QueueLogicInputEvent>,
+        evw_queue_logic_output: &mut MessageWriter<QueueLogicOutputEvent>,
+        evw_queue_logic_input: &mut MessageWriter<QueueLogicInputEvent>,
     ) {
         // Removing input ports from their groups.
         for input_face in logic_block.input_faces() {
@@ -292,7 +292,7 @@ impl LogicDriver {
         &mut self,
         port: Port,
         signal: i32,
-        evw_queue_logic_input: &mut EventWriter<QueueLogicInputEvent>,
+        evw_queue_logic_input: &mut MessageWriter<QueueLogicInputEvent>,
         entity: Entity,
     ) {
         self.logic_graph.update_producer(port, signal, evw_queue_logic_input, entity);

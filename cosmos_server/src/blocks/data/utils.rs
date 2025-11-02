@@ -37,7 +37,7 @@ impl<T: Component> Default for BlockDataInitializers<T> {
 fn on_add_block<T: Component>(
     initializers: Res<BlockDataInitializers<T>>,
     mut evr_block_changed: EventReader<BlockChangedEvent>,
-    mut evw_bd: EventWriter<InsertBlockDataEvent<T>>,
+    mut evw_bd: MessageWriter<InsertBlockDataEvent<T>>,
 ) {
     if evr_block_changed.is_empty() {
         return Default::default();

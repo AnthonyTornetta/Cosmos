@@ -23,7 +23,7 @@ use super::{planet::biosphere::biosphere_generation::BiosphereGenerationSet, sha
 fn monitor_block_destroyed(
     mut event_reader: EventReader<BlockDestroyedEvent>,
     mut structure_query: Query<&mut Structure>,
-    mut event_writer: EventWriter<BlockChangedEvent>,
+    mut event_writer: MessageWriter<BlockChangedEvent>,
     blocks: Res<Registry<Block>>,
 ) {
     for ev in event_reader.read() {

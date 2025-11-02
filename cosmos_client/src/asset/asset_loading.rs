@@ -74,7 +74,7 @@ fn setup_textures(
     server: Res<AssetServer>,
     mut loading: ResMut<Registry<LoadingTextureAtlas>>,
     mut loader: ResMut<LoadingManager>,
-    mut start_writer: EventWriter<AddLoadingEvent>,
+    mut start_writer: MessageWriter<AddLoadingEvent>,
 ) {
     let block_image_handles = server.load_folder("cosmos/images/blocks/");
     let item_image_handles = server.load_folder("cosmos/images/items/");
@@ -92,7 +92,7 @@ fn assets_done_loading(
     event_listener: EventReader<AssetsDoneLoadingEvent>,
     loading_id: Option<Res<AssetsLoadingID>>,
     mut loader: ResMut<LoadingManager>,
-    mut end_writer: EventWriter<DoneLoadingEvent>,
+    mut end_writer: MessageWriter<DoneLoadingEvent>,
 ) {
     if !event_listener.is_empty()
         && let Some(loading_id) = loading_id.as_ref()
@@ -189,7 +189,7 @@ fn check_assets_ready(
     mut loading: ResMut<Registry<LoadingTextureAtlas>>,
     mut texture_atlases: ResMut<Registry<CosmosTextureAtlas>>,
     mut images: ResMut<Assets<Image>>,
-    mut event_writer: EventWriter<AllTexturesDoneLoadingEvent>,
+    mut event_writer: MessageWriter<AllTexturesDoneLoadingEvent>,
     mut ev_asset_folder_event: EventReader<AssetEvent<LoadedFolder>>,
     loaded_folders: Res<Assets<LoadedFolder>>,
 ) {

@@ -1,6 +1,6 @@
 //! Some useful utilities for generating terrain
 
-use bevy::prelude::EventWriter;
+use bevy::prelude::MessageWriter;
 use cosmos_core::{
     block::{
         Block,
@@ -25,7 +25,7 @@ pub(crate) fn fill(
     planet_face: BlockFace,
     structure: &mut Structure,
     blocks: &Registry<Block>,
-    event_writer: &mut EventWriter<BlockChangedEvent>,
+    event_writer: &mut MessageWriter<BlockChangedEvent>,
 ) {
     for offset in offsets {
         if let Ok(rotated_block_pos) = rotate(origin, *offset, structure.block_dimensions(), planet_face) {

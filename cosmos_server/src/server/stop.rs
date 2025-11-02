@@ -21,7 +21,7 @@ fn on_stop_server(
     mut commands: Commands,
     q_savable: Query<(Option<&Name>, &Location, Entity), (With<LoadingDistance>, Without<NeedsDespawned>, Without<PlayerWorld>)>,
     mut server: ResMut<RenetServer>,
-    mut evw_close_after_save: EventWriter<CloseServerPostSaveEvent>,
+    mut evw_close_after_save: MessageWriter<CloseServerPostSaveEvent>,
 ) {
     info!("Received stop server event - Stopping server");
 
@@ -41,7 +41,7 @@ fn on_stop_server(
     evw_close_after_save.write_default();
 }
 
-fn shut_server_down(mut evw_app_exit: EventWriter<AppExit>) {
+fn shut_server_down(mut evw_app_exit: MessageWriter<AppExit>) {
     info!("Shutting down server...");
 
     evw_app_exit.write_default();

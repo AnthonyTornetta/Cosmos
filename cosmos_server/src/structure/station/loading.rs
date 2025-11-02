@@ -23,7 +23,7 @@ fn create_stations(
     mut query: Query<(&mut Structure, Entity), With<StationNeedsCreated>>,
     mut commands: Commands,
     blocks: Res<Registry<Block>>,
-    mut chunk_set_event_writer: EventWriter<ChunkInitEvent>,
+    mut chunk_set_event_writer: MessageWriter<ChunkInitEvent>,
 ) {
     for (mut structure, entity) in query.iter_mut() {
         let station_core = blocks.from_id("cosmos:station_core").expect("Station core block missing!");

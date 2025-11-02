@@ -5,7 +5,7 @@ use cosmos_core::{
     ecs::types::OwnedOrMut,
     entities::player::Player,
     events::{block_events::BlockChangedEvent, structure::structure_event::StructureEventIterator},
-    netty::sync::events::server_event::NettyEventWriter,
+    netty::sync::events::server_event::NettyMessageWriter,
     notifications::Notification,
     physics::location::{Location, SECTOR_DIMENSIONS},
     prelude::{Structure, StructureLoadedEvent, StructureSystem, StructureSystems},
@@ -136,9 +136,9 @@ fn on_activate_system(
     >,
     q_warping: Query<Entity, With<WarpDriveInitiating>>,
     mut commands: Commands,
-    mut notify: NettyEventWriter<Notification>,
+    mut notify: NettyMessageWriter<Notification>,
     q_player: Query<&Player>,
-    mut nevw_warp_cancelled: NettyEventWriter<WarpCancelledEvent>,
+    mut nevw_warp_cancelled: NettyMessageWriter<WarpCancelledEvent>,
 ) {
     const MAX_JUMP_DIST: f32 = SECTOR_DIMENSIONS * 5.0;
     const MIN_JUMP_DIST: f32 = SECTOR_DIMENSIONS * 1.0;

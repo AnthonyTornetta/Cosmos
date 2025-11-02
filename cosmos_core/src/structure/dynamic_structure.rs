@@ -106,7 +106,7 @@ impl DynamicStructure {
         block: &Block,
         block_info: BlockInfo,
         blocks: &Registry<Block>,
-        event_writer: Option<&mut EventWriter<BlockChangedEvent>>,
+        event_writer: Option<&mut MessageWriter<BlockChangedEvent>>,
     ) {
         let old_block = self.block_id_at(coords);
         let old_block_info = self.block_info_at(coords);
@@ -139,7 +139,7 @@ impl DynamicStructure {
         block: &Block,
         block_rotation: BlockRotation,
         blocks: &Registry<Block>,
-        event_writer: Option<&mut EventWriter<BlockChangedEvent>>,
+        event_writer: Option<&mut MessageWriter<BlockChangedEvent>>,
     ) {
         let old_block = self.block_id_at(coords);
         if blocks.from_numeric_id(old_block) == block && self.block_rotation(coords) == block_rotation {
@@ -205,7 +205,7 @@ impl DynamicStructure {
         &mut self,
         coords: BlockCoordinate,
         blocks: &Registry<Block>,
-        event_writer: Option<&mut EventWriter<BlockChangedEvent>>,
+        event_writer: Option<&mut MessageWriter<BlockChangedEvent>>,
     ) {
         self.set_block_at(
             coords,
@@ -341,7 +341,7 @@ impl DynamicStructure {
         &mut self,
         coords: ChunkCoordinate,
         commands: &mut Commands,
-        event_writer: Option<&mut EventWriter<ChunkUnloadEvent>>,
+        event_writer: Option<&mut MessageWriter<ChunkUnloadEvent>>,
     ) -> Option<Chunk> {
         let index = self.flatten(coords);
 

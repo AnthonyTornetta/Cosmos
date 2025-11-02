@@ -16,7 +16,7 @@ use cosmos_core::{
     events::block_events::{BlockChangedEvent, BlockDataSystemParams},
     inventory::Inventory,
     item::Item,
-    netty::sync::events::server_event::{NettyEventReceived, NettyEventWriter},
+    netty::sync::events::server_event::{NettyMessageReceived, NettyMessageWriter},
     prelude::{Structure, StructureLoadingSet, StructureSystems},
     registry::{Registry, identifiable::Identifiable},
     state::GameState,
@@ -38,7 +38,7 @@ fn handle_block_event(
     s_query: Query<&Structure>,
     blocks: Res<Registry<Block>>,
     q_player: Query<&Player>,
-    mut nevw: NettyEventWriter<OpenReactorEvent>,
+    mut nevw: NettyMessageWriter<OpenReactorEvent>,
 ) {
     for ev in interact_events.read() {
         let Some(s_block) = ev.block else {
@@ -229,7 +229,7 @@ fn on_modify_reactor(
 }
 
 fn process_activate_reactor(
-    mut nevr: EventReader<NettyEventReceived<ClientRequestChangeReactorStatus>>,
+    mut nevr: EventReader<NettyMessageReceived<ClientRequestChangeReactorStatus>>,
     mut q_structure: Query<&mut Structure>,
     mut q_block_data: Query<&mut BlockData>,
     mut bds_params: BlockDataSystemParams,

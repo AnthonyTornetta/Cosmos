@@ -125,7 +125,7 @@ pub fn register_asteroid_generator<T: AsteroidGeneratorComponent>(
 
 fn add_asteroid_generator(
     query: Query<(Entity, &Asteroid, &Location), (Added<Structure>, Without<AsteroidGeneratorMarker>)>,
-    mut event_writer: EventWriter<AsteroidNeedsGeneratorEvent>,
+    mut event_writer: MessageWriter<AsteroidNeedsGeneratorEvent>,
     registry: Res<AsteroidTemperatureRegistry>,
     server_seed: Res<ServerSeed>,
 ) {

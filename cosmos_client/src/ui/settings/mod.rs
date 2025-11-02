@@ -147,7 +147,7 @@ fn create_settings_screen(
                 },
             ))
             .observe(
-                |ev: Trigger<ButtonEvent>, mut evw_settings_cancel: EventWriter<SettingsCancelButtonEvent>| {
+                |ev: Trigger<ButtonEvent>, mut evw_settings_cancel: MessageWriter<SettingsCancelButtonEvent>| {
                     evw_settings_cancel.write(SettingsCancelButtonEvent(ev.0));
                 },
             );
@@ -457,7 +457,7 @@ fn done_clicked(
     q_written_settings: Query<&WrittenSetting>,
     q_setting: Query<&SettingControlValue>,
     mut inputs: ResMut<CosmosInputHandler>,
-    mut evw_done: EventWriter<SettingsDoneButtonEvent>,
+    mut evw_done: MessageWriter<SettingsDoneButtonEvent>,
 ) {
     for written_setting in q_written_settings.iter() {
         let setting = settings.from_numeric_id_mut(written_setting.setting_id);

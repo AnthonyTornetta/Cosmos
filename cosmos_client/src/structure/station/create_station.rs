@@ -22,7 +22,7 @@ pub struct CreateStationEvent {
 fn listener(
     q_invalid_player: Query<(), (With<LocalPlayer>, Or<(With<BuildMode>, With<Pilot>)>)>,
     input_handler: InputChecker,
-    mut event_writer: EventWriter<CreateStationEvent>,
+    mut event_writer: MessageWriter<CreateStationEvent>,
 ) {
     if q_invalid_player.single().is_ok() {
         // Don't create stations while in build mode

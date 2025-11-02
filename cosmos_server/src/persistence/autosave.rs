@@ -19,7 +19,7 @@ const AUTOSAVE_INTERVAL: Duration = Duration::from_mins(10);
 /// Send this event to save every savable entity in the game
 pub struct SaveEverything;
 
-fn backup_before_saving(mut evw_create_backup: EventWriter<CreateWorldBackup>, mut evr_save_everything: EventReader<SaveEverything>) {
+fn backup_before_saving(mut evw_create_backup: MessageWriter<CreateWorldBackup>, mut evr_save_everything: EventReader<SaveEverything>) {
     if evr_save_everything.is_empty() {
         return;
     }
@@ -43,7 +43,7 @@ fn save_everything(
     }
 }
 
-fn trigger_autosave(mut evw_create_backup: EventWriter<SaveEverything>, q_players: Query<(), With<Player>>) {
+fn trigger_autosave(mut evw_create_backup: MessageWriter<SaveEverything>, q_players: Query<(), With<Player>>) {
     if q_players.is_empty() {
         return;
     }

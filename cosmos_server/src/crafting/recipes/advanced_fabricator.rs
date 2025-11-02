@@ -10,7 +10,7 @@ use cosmos_core::{
         basic_fabricator::{BasicFabricatorRecipe, FabricatorItemInput, FabricatorItemOutput},
     },
     item::Item,
-    netty::{sync::events::server_event::NettyEventWriter, system_sets::NetworkingSystemsSet},
+    netty::{sync::events::server_event::NettyMessageWriter, system_sets::NetworkingSystemsSet},
     registry::{Registry, identifiable::Identifiable},
     state::GameState,
 };
@@ -91,7 +91,7 @@ fn load_recipes(items: Res<Registry<Item>>, mut commands: Commands) {
 
 fn sync_recipes_on_change(
     recipes: Res<AdvancedFabricatorRecipes>,
-    mut nevw_sync_recipes: NettyEventWriter<SyncAdvancedFabricatorRecipesEvent>,
+    mut nevw_sync_recipes: NettyMessageWriter<SyncAdvancedFabricatorRecipesEvent>,
 ) {
     nevw_sync_recipes.broadcast(SyncAdvancedFabricatorRecipesEvent(recipes.clone()));
 }
@@ -99,7 +99,7 @@ fn sync_recipes_on_change(
 fn sync_recipes_on_join(
     recipes: Res<AdvancedFabricatorRecipes>,
     mut evr_loaded_registries: EventReader<ClientFinishedReceivingRegistriesEvent>,
-    mut nevw_sync_recipes: NettyEventWriter<SyncAdvancedFabricatorRecipesEvent>,
+    mut nevw_sync_recipes: NettyMessageWriter<SyncAdvancedFabricatorRecipesEvent>,
 ) {
     for ev in evr_loaded_registries.read() {
         nevw_sync_recipes.write(SyncAdvancedFabricatorRecipesEvent(recipes.clone()), ev.0);

@@ -7,7 +7,7 @@ use cosmos_core::{
     netty::{
         client::LocalPlayer,
         sync::{
-            events::client_event::NettyEventWriter,
+            events::client_event::NettyMessageWriter,
             mapping::{Mappable, NetworkMapping},
         },
     },
@@ -151,7 +151,7 @@ fn click_color_btn(
     ev: Trigger<ButtonEvent>,
     netty_mapping: Res<NetworkMapping>,
     q_btn_color: Query<&BtnColor>,
-    mut nevw_dye_block: NettyEventWriter<DyeBlock>,
+    mut nevw_dye_block: NettyMessageWriter<DyeBlock>,
 ) {
     let Ok(btn_color) = q_btn_color.get(ev.0) else {
         error!("No button color componnet!");

@@ -17,7 +17,7 @@ use cosmos_core::{
     item::Item,
     netty::{
         server::ServerLobby,
-        sync::events::server_event::{NettyEventReceived, NettyEventWriter},
+        sync::events::server_event::{NettyMessageReceived, NettyMessageWriter},
     },
     prelude::Structure,
     registry::{Registry, identifiable::Identifiable},
@@ -26,7 +26,7 @@ use cosmos_core::{
 
 fn monitor_advanced_fabricator_interactions(
     mut evr_block_interact: EventReader<BlockInteractEvent>,
-    mut nevw_open_adv_fabricator: NettyEventWriter<OpenAdvancedFabricatorEvent>,
+    mut nevw_open_adv_fabricator: NettyMessageWriter<OpenAdvancedFabricatorEvent>,
     q_player: Query<&Player>,
     q_structure: Query<&Structure>,
     blocks: Res<Registry<Block>>,
@@ -50,7 +50,7 @@ fn monitor_advanced_fabricator_interactions(
 }
 
 fn monitor_craft_event(
-    mut nevr_craft_event: EventReader<NettyEventReceived<CraftAdvancedFabricatorRecipeEvent>>,
+    mut nevr_craft_event: EventReader<NettyMessageReceived<CraftAdvancedFabricatorRecipeEvent>>,
     q_structure: Query<&Structure>,
     // Separate queries to please borrow checker
     mut q_player_inventory: Query<&mut Inventory, With<Player>>,

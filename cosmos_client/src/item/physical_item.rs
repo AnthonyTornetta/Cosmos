@@ -14,8 +14,8 @@ use super::item_mesh::ItemMeshMaterial;
 
 fn render_physical_item(
     mut commands: Commands,
-    mut evw_add_material: EventWriter<AddMaterialEvent>,
-    mut evw_remove_material: EventWriter<RemoveAllMaterialsEvent>,
+    mut evw_add_material: MessageWriter<AddMaterialEvent>,
+    mut evw_remove_material: MessageWriter<RemoveAllMaterialsEvent>,
     items: Res<Registry<Item>>,
     item_rendering_info: Res<Registry<ItemMeshMaterial>>,
     mut q_physical_item: Query<

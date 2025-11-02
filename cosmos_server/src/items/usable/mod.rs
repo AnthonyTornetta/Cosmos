@@ -7,17 +7,17 @@ use cosmos_core::{
     item::usable::{PlayerRequestUseHeldItemEvent, UseHeldItemEvent, UseItemSet},
     netty::{
         server::ServerLobby,
-        sync::events::server_event::{NettyEventReceived, NettyEventWriter},
+        sync::events::server_event::{NettyMessageReceived, NettyMessageWriter},
     },
 };
 
 mod blueprint;
 
 fn on_use_item(
-    mut nevr_req_use_item: EventReader<NettyEventReceived<PlayerRequestUseHeldItemEvent>>,
+    mut nevr_req_use_item: EventReader<NettyMessageReceived<PlayerRequestUseHeldItemEvent>>,
     lobby: Res<ServerLobby>,
-    mut evw_use_item: EventWriter<UseHeldItemEvent>,
-    mut nevw_use_item: NettyEventWriter<UseHeldItemEvent>,
+    mut evw_use_item: MessageWriter<UseHeldItemEvent>,
+    mut nevw_use_item: NettyMessageWriter<UseHeldItemEvent>,
     q_inventory: Query<(&Inventory, &HeldItemSlot), With<Player>>,
 ) {
     for n_ev in nevr_req_use_item.read() {

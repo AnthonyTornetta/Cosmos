@@ -19,7 +19,7 @@ use cosmos_core::{coms::events::RequestCloseComsEvent, structure::ship::pilot::P
 use cosmos_core::{coms::events::SendComsMessageType, state::GameState};
 use cosmos_core::{
     coms::{ComsChannel, events::SendComsMessage},
-    netty::sync::events::client_event::NettyEventWriter,
+    netty::sync::events::client_event::NettyMessageWriter,
 };
 
 #[derive(Component)]
@@ -728,7 +728,7 @@ fn on_close_menu(
 
 fn send_text(
     _trigger: Trigger<ButtonEvent>,
-    mut nevw_send_coms_message: NettyEventWriter<SendComsMessage>,
+    mut nevw_send_coms_message: NettyMessageWriter<SendComsMessage>,
     q_selected_coms: Query<&SelectedComs>,
     mut q_text_value: Query<&mut InputValue, With<UiComsMessage>>,
     q_coms_channel: Query<&ComsChannel>,
@@ -761,7 +761,7 @@ fn send_text(
 
 fn yes_clicked(
     _trigger: Trigger<ButtonEvent>,
-    mut nevw_send_coms_message: NettyEventWriter<SendComsMessage>,
+    mut nevw_send_coms_message: NettyMessageWriter<SendComsMessage>,
     q_selected_coms: Query<&SelectedComs>,
     q_coms_channel: Query<&ComsChannel>,
 ) {
@@ -781,7 +781,7 @@ fn yes_clicked(
 
 fn no_clicked(
     _trigger: Trigger<ButtonEvent>,
-    mut nevw_send_coms_message: NettyEventWriter<SendComsMessage>,
+    mut nevw_send_coms_message: NettyMessageWriter<SendComsMessage>,
     q_selected_coms: Query<&SelectedComs>,
     q_coms_channel: Query<&ComsChannel>,
 ) {
@@ -801,7 +801,7 @@ fn no_clicked(
 
 fn end_selected_coms(
     _trigger: Trigger<ButtonEvent>,
-    mut evw_close_coms: NettyEventWriter<RequestCloseComsEvent>,
+    mut evw_close_coms: NettyMessageWriter<RequestCloseComsEvent>,
     mut q_selected_coms: Query<&mut SelectedComs>,
 ) {
     let Ok(selected) = q_selected_coms.single_mut() else {

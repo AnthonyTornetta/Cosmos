@@ -4,7 +4,7 @@ use bevy::prelude::{App, Event, Resource};
 use serde::{Deserialize, Serialize};
 
 use super::basic_fabricator::*;
-use crate::netty::sync::events::netty_event::{IdentifiableEvent, NettyEvent, SyncedEventImpl};
+use crate::netty::sync::events::netty_event::{IdentifiableEvent, NettyMessage, SyncedEventImpl};
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default, Resource)]
 /// Contains all the Advanced Weapons Fabricator recipes.
@@ -43,7 +43,7 @@ impl IdentifiableEvent for SyncAdvancedFabricatorRecipesEvent {
     }
 }
 
-impl NettyEvent for SyncAdvancedFabricatorRecipesEvent {
+impl NettyMessage for SyncAdvancedFabricatorRecipesEvent {
     fn event_receiver() -> crate::netty::sync::events::netty_event::EventReceiver {
         crate::netty::sync::events::netty_event::EventReceiver::Client
     }

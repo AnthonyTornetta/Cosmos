@@ -13,7 +13,7 @@ use bevy::{
 use cosmos_core::{
     ecs::NeedsDespawned,
     faction::FactionRelation,
-    netty::{client::LocalPlayer, sync::events::client_event::NettyEventWriter},
+    netty::{client::LocalPlayer, sync::events::client_event::NettyMessageWriter},
     physics::location::{Location, Sector, SectorUnit},
     registry::{Registry, identifiable::Identifiable},
     state::GameState,
@@ -128,8 +128,8 @@ fn toggle_map(
     q_player: Query<&Location, With<LocalPlayer>>,
     mut commands: Commands,
     mut q_map_camera: Query<(Entity, &mut Transform), With<MapCamera>>,
-    mut nevw_system_map: NettyEventWriter<RequestSystemMap>,
-    mut nevw_galaxy_map: NettyEventWriter<RequestGalaxyMap>,
+    mut nevw_system_map: NettyMessageWriter<RequestSystemMap>,
+    mut nevw_galaxy_map: NettyMessageWriter<RequestGalaxyMap>,
     q_open_menus: Query<(), With<OpenMenu>>,
 ) {
     if !input_handler.check_just_pressed(CosmosInputs::ToggleMap) {

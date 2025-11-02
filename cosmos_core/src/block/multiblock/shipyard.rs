@@ -4,7 +4,7 @@ use crate::{
     block::{data::BlockData, multiblock::rectangle::RectangleMultiblockBounds},
     netty::sync::{
         IdentifiableComponent, SyncableComponent,
-        events::netty_event::{IdentifiableEvent, NettyEvent, SyncedEventImpl},
+        events::netty_event::{IdentifiableEvent, NettyMessage, SyncedEventImpl},
         sync_component,
     },
     prelude::{BlockCoordinate, StructureBlock},
@@ -213,7 +213,7 @@ impl IdentifiableEvent for ClientSetShipyardState {
     }
 }
 
-impl NettyEvent for ClientSetShipyardState {
+impl NettyMessage for ClientSetShipyardState {
     fn event_receiver() -> crate::netty::sync::events::netty_event::EventReceiver {
         crate::netty::sync::events::netty_event::EventReceiver::Server
     }
@@ -250,7 +250,7 @@ impl IdentifiableEvent for ShowShipyardUi {
     }
 }
 
-impl NettyEvent for ShowShipyardUi {
+impl NettyMessage for ShowShipyardUi {
     fn event_receiver() -> crate::netty::sync::events::netty_event::EventReceiver {
         crate::netty::sync::events::netty_event::EventReceiver::Client
     }
@@ -289,7 +289,7 @@ impl IdentifiableEvent for SetShipyardBlueprint {
     }
 }
 
-impl NettyEvent for SetShipyardBlueprint {
+impl NettyMessage for SetShipyardBlueprint {
     fn event_receiver() -> crate::netty::sync::events::netty_event::EventReceiver {
         crate::netty::sync::events::netty_event::EventReceiver::Server
     }

@@ -4,7 +4,7 @@
 
 use bevy::{
     platform::collections::HashMap,
-    prelude::{App, EventWriter, Res, ResMut, Resource, States},
+    prelude::{App, MessageWriter, Res, ResMut, Resource, States},
     state::state::OnExit,
 };
 
@@ -71,8 +71,8 @@ fn create_links(
     blocks: Res<Registry<Block>>,
     mut items: ResMut<Registry<Item>>,
     mut loader: ResMut<LoadingManager>,
-    mut event_writer: EventWriter<AddLoadingEvent>,
-    mut done_event_writer: EventWriter<DoneLoadingEvent>,
+    mut event_writer: MessageWriter<AddLoadingEvent>,
+    mut done_event_writer: MessageWriter<DoneLoadingEvent>,
 ) {
     let id = loader.register_loader(&mut event_writer);
 

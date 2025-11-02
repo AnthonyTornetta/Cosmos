@@ -25,7 +25,7 @@ use cosmos_core::{
     item::{Item, usable::blueprint::BlueprintItemData},
     netty::{
         server::ServerLobby,
-        sync::events::server_event::{NettyEventReceived, NettyEventWriter},
+        sync::events::server_event::{NettyMessageReceived, NettyMessageWriter},
     },
     notifications::Notification,
     physics::{
@@ -167,9 +167,9 @@ fn interact_with_shipyard(
     mut bs_params: BlockDataSystemParams,
     mut q_block_data: Query<&mut BlockData>,
     q_has_data: Query<(), With<Shipyard>>,
-    mut nevw_open_ui: NettyEventWriter<ShowShipyardUi>,
+    mut nevw_open_ui: NettyMessageWriter<ShowShipyardUi>,
     q_player: Query<&Player>,
-    mut nevw_notification: NettyEventWriter<Notification>,
+    mut nevw_notification: NettyMessageWriter<Notification>,
 ) {
     for ev in evr_interact.read() {
         let Some(b) = ev.block else {
@@ -242,7 +242,7 @@ fn on_set_blueprint(
     players: Res<ServerLobby>,
     items: Res<Registry<Item>>,
     blocks: Res<Registry<Block>>,
-    mut nevr_set_shipyard_blueprint: EventReader<NettyEventReceived<SetShipyardBlueprint>>,
+    mut nevr_set_shipyard_blueprint: EventReader<NettyMessageReceived<SetShipyardBlueprint>>,
     mut q_structure: Query<(&GlobalTransform, &mut Structure, &RapierContextEntityLink)>,
     mut q_block_data: Query<&mut BlockData>,
     q_has_shipyard_data: Query<(), With<ShipyardState>>,
@@ -255,7 +255,7 @@ fn on_set_blueprint(
     ),
     mut commands: Commands,
     bs_params: BlockDataSystemParams,
-    mut nevw_notification: NettyEventWriter<Notification>,
+    mut nevw_notification: NettyMessageWriter<Notification>,
     read_context: ReadRapierContext,
 ) {
     let bs_params = Rc::new(RefCell::new(bs_params));
@@ -460,7 +460,7 @@ fn manage_shipyards(
     mut q_structure: Query<&mut Structure, (With<Ship>, With<StructureBeingBuilt>)>,
     q_building: Query<&Structure, Without<StructureBeingBuilt>>,
     blocks: Res<Registry<Block>>,
-    mut evw_block_change: EventWriter<BlockChangedEvent>,
+    mut evw_block_change: MessageWriter<BlockChangedEvent>,
     bs_params: BlockDataSystemParams,
     items: Res<Registry<Item>>,
     block_items: Res<BlockItems>,
@@ -580,7 +580,7 @@ fn add_shipyard_state_hooks(world: &mut World) {
 }
 
 fn on_change_shipyard_state(
-    mut nevr_change_shipyard_state: EventReader<NettyEventReceived<ClientSetShipyardState>>,
+    mut nevr_change_shipyard_state: EventReader<NettyMessageReceived<ClientSetShipyardState>>,
     mut q_structure: Query<&mut Structure>,
     mut q_shipyard_state: Query<&mut ShipyardState>,
     bs_params: BlockDataSystemParams,

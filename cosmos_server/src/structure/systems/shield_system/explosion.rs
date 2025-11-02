@@ -12,7 +12,7 @@ use super::{ShieldHitEvent, ShieldSet};
 fn respond_to_explosion_damage(
     mut ev_reader: EventReader<ExplosionHitEvent>,
     mut q_shield: Query<(&mut Shield, &Location)>,
-    mut ev_writer: EventWriter<ShieldHitEvent>,
+    mut ev_writer: MessageWriter<ShieldHitEvent>,
     mut q_health: Query<(&mut Health, &Location)>,
 ) {
     for ev in ev_reader.read() {

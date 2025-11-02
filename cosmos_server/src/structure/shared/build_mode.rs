@@ -16,8 +16,8 @@ use cosmos_core::{
 fn interact_with_block(
     mut event_reader: EventReader<BlockInteractEvent>,
     structure_query: Query<&Structure, Or<(With<Ship>, With<Station>)>>,
-    mut enter_build_mode_writer: EventWriter<EnterBuildModeEvent>,
-    mut exit_build_mode_writer: EventWriter<ExitBuildModeEvent>,
+    mut enter_build_mode_writer: MessageWriter<EnterBuildModeEvent>,
+    mut exit_build_mode_writer: MessageWriter<ExitBuildModeEvent>,
     q_build_mode: Query<&BuildMode>,
     blocks: Res<Registry<Block>>,
 ) {

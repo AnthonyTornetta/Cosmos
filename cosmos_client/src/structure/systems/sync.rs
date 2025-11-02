@@ -54,7 +54,7 @@ impl<T> Default for SystemsQueue<T> {
 fn replication_listen_netty(
     mut client: ResMut<RenetClient>,
     mapping: Res<NetworkMapping>,
-    mut event_writer: EventWriter<StructureSystemNeedsUpdated>,
+    mut event_writer: MessageWriter<StructureSystemNeedsUpdated>,
     q_systems: Query<&StructureSystems>,
     mut commands: Commands,
     q_is_active: Query<(), With<SystemActive>>,

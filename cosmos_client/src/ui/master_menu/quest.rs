@@ -2,7 +2,7 @@
 
 use bevy::{color::palettes::css, prelude::*};
 use cosmos_core::{
-    netty::{client::LocalPlayer, sync::events::client_event::NettyEventWriter},
+    netty::{client::LocalPlayer, sync::events::client_event::NettyMessageWriter},
     quest::{ActiveQuest, OngoingQuest, OngoingQuestId, OngoingQuests, Quest, SetActiveQuestEvent},
     registry::Registry,
     state::GameState,
@@ -86,7 +86,7 @@ fn on_toggle_active(
     mut commands: Commands,
     mut q_active: Query<(Entity, &mut BorderColor), With<ActiveQuestUi>>,
     mut q_inactive: Query<(Entity, &QuestComp, &mut BorderColor), Without<ActiveQuestUi>>,
-    mut nevw_set_active: NettyEventWriter<SetActiveQuestEvent>,
+    mut nevw_set_active: NettyMessageWriter<SetActiveQuestEvent>,
 ) {
     if let Ok((ent, mut bc)) = q_active.single_mut() {
         commands.entity(ent).remove::<ActiveQuestUi>();

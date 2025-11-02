@@ -20,7 +20,7 @@ use crate::{
     ecs::{NeedsDespawned, data::DataFor},
     netty::sync::{
         IdentifiableComponent, SyncableComponent,
-        events::netty_event::{IdentifiableEvent, NettyEvent, SyncedEventImpl},
+        events::netty_event::{IdentifiableEvent, NettyMessage, SyncedEventImpl},
         registry::sync_registry,
         sync_component,
     },
@@ -220,7 +220,7 @@ impl IdentifiableEvent for ChangeSystemSlot {
     }
 }
 
-impl NettyEvent for ChangeSystemSlot {
+impl NettyMessage for ChangeSystemSlot {
     fn event_receiver() -> crate::netty::sync::events::netty_event::EventReceiver {
         crate::netty::sync::events::netty_event::EventReceiver::Server
     }

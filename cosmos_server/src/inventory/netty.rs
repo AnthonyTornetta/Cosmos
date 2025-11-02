@@ -82,8 +82,8 @@ fn listen_for_inventory_messages(
     q_player: Query<(&Location, &GlobalTransform, &PlayerLooking, &Velocity)>,
     q_children: Query<&Children>,
     lobby: Res<ServerLobby>,
-    mut evw_add_item: EventWriter<InventoryAddItemEvent>,
-    mut evw_remove_item: EventWriter<InventoryRemoveItemEvent>,
+    mut evw_add_item: MessageWriter<InventoryAddItemEvent>,
+    mut evw_remove_item: MessageWriter<InventoryRemoveItemEvent>,
 ) {
     for client_id in server.clients_id().into_iter() {
         while let Some(message) = server.receive_message(client_id, NettyChannelClient::Inventory) {

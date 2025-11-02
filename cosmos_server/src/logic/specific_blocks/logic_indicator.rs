@@ -22,7 +22,7 @@ fn logic_indicator_input_event_listener(
     mut evr_logic_input: EventReader<LogicInputEvent>,
     blocks: Res<Registry<Block>>,
     mut q_structure: Query<(&mut Structure, &LogicDriver)>,
-    mut evw_block_data_changed: EventWriter<BlockDataChangedEvent>,
+    mut evw_block_data_changed: MessageWriter<BlockDataChangedEvent>,
 ) {
     for ev in evr_logic_input.read() {
         let Ok((mut structure, logic_driver)) = q_structure.get_mut(ev.block.structure()) else {

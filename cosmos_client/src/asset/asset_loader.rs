@@ -42,7 +42,7 @@ pub fn load_assets<T: Asset, K: Send + Sync + 'static, const N: usize>(
     let prepare_assets = move |asset_server: Res<AssetServer>,
                                mut commands: Commands,
                                mut loader: ResMut<LoadingManager>,
-                               mut event_writer: EventWriter<AddLoadingEvent>| {
+                               mut event_writer: MessageWriter<AddLoadingEvent>| {
         let id = loader.register_loader(&mut event_writer);
 
         let handles = paths.map(|x| Some(asset_server.load(x)));
@@ -64,7 +64,7 @@ pub fn load_assets<T: Asset, K: Send + Sync + 'static, const N: usize>(
                                           asset_server: Res<AssetServer>,
                                           mut commands: Commands,
                                           mut loader: ResMut<LoadingManager>,
-                                          mut end_writer: EventWriter<DoneLoadingEvent>| {
+                                          mut end_writer: MessageWriter<DoneLoadingEvent>| {
         if let Some(mut loading_assets) = loading_assets {
             let mut done_loading = done_loading.expect("This must exist if loading exists.");
 

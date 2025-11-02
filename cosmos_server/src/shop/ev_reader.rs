@@ -261,8 +261,8 @@ fn listen_buy_events(
 }
 
 fn listen_client_shop_messages(
-    mut ev_writer_buy: EventWriter<BuyEvent>,
-    mut ev_writer_sell: EventWriter<SellEvent>,
+    mut ev_writer_buy: MessageWriter<BuyEvent>,
+    mut ev_writer_sell: MessageWriter<SellEvent>,
     mut server: ResMut<RenetServer>,
 ) {
     for client_id in server.clients_id() {

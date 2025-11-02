@@ -18,7 +18,7 @@ fn handle_door_block_event(
     mut interact_events: EventReader<BlockInteractEvent>,
     q_structure: Query<&Structure>,
     blocks: Res<Registry<Block>>,
-    mut ev_writer: EventWriter<ToggleDoorEvent>,
+    mut ev_writer: MessageWriter<ToggleDoorEvent>,
 ) {
     for ev in interact_events.read() {
         let Some(s_block) = ev.block else {
@@ -43,7 +43,7 @@ fn handle_door_block_event(
 fn toggle_doors(
     mut q_structure: Query<&mut Structure>,
     mut evr_door_toggle: EventReader<ToggleDoorEvent>,
-    mut evw_block_changed: EventWriter<BlockChangedEvent>,
+    mut evw_block_changed: MessageWriter<BlockChangedEvent>,
     blocks: Res<Registry<Block>>,
 ) {
     for ev in evr_door_toggle.read() {

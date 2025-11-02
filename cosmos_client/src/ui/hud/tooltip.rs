@@ -48,7 +48,7 @@ fn on_change_looking_at(
     q_tooltip: Query<Entity, With<LookingAtTooltip>>,
     q_looking_at: Query<&LookingAt, (Changed<LookingAt>, With<LocalPlayer>)>,
     q_structure: Query<&Structure>,
-    mut evw_generate_tooltip: EventWriter<GenerateLookingAtTooltipEvent>,
+    mut evw_generate_tooltip: MessageWriter<GenerateLookingAtTooltipEvent>,
 ) {
     let Ok(looking_at) = q_looking_at.single() else {
         return;

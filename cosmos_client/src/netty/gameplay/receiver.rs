@@ -184,11 +184,11 @@ pub(crate) fn client_sync_players(
         mut set_terrain_data_ev_writer,
         mut evw_block_data_changed,
     ): (
-        EventWriter<ChunkInitEvent>,
-        EventWriter<BlockChangedEvent>,
-        EventWriter<BlockTakeDamageEvent>,
-        EventWriter<SetTerrainGenData>,
-        EventWriter<BlockDataChangedEvent>,
+        MessageWriter<ChunkInitEvent>,
+        MessageWriter<BlockChangedEvent>,
+        MessageWriter<BlockTakeDamageEvent>,
+        MessageWriter<SetTerrainGenData>,
+        MessageWriter<BlockDataChangedEvent>,
     ),
     (q_default_rapier_context, query_player, q_structure_systems, mut q_inventory, mut q_structure): (
         Query<Entity, With<DefaultRapierContext>>,
@@ -215,7 +215,7 @@ pub(crate) fn client_sync_players(
     desired_fov: Res<DesiredFov>,
     q_parent: Query<&ChildOf>,
     blocks: Res<Registry<Block>>,
-    mut pilot_change_event_writer: EventWriter<ChangePilotEvent>,
+    mut pilot_change_event_writer: MessageWriter<ChangePilotEvent>,
 
     mut hud_messages: ResMut<HudMessages>,
 ) {
@@ -672,7 +672,7 @@ fn get_entity_identifier_entity_for_despawning(
     q_structure_systems: &Query<&StructureSystems, ()>,
     q_inventory: &mut Query<&mut Inventory>,
     q_structure: &mut Query<&mut Structure>,
-    block_data_changed: &mut EventWriter<BlockDataChangedEvent>,
+    block_data_changed: &mut MessageWriter<BlockDataChangedEvent>,
 ) -> Option<Entity> {
     let identifier_entities = match entity_identifier {
         ComponentEntityIdentifier::Entity(entity) => network_mapping.client_from_server(&entity),

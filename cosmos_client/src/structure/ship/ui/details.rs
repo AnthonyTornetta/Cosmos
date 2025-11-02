@@ -4,7 +4,7 @@ use cosmos_core::{
         Faction, FactionId, Factions,
         events::{FactionSwapAction, SwapToPlayerFactionEvent},
     },
-    netty::{client::LocalPlayer, sync::events::client_event::NettyEventWriter},
+    netty::{client::LocalPlayer, sync::events::client_event::NettyMessageWriter},
     prelude::Ship,
     state::GameState,
 };
@@ -128,7 +128,7 @@ pub(super) fn attach_ui(
 fn on_change_faction(
     ev: Trigger<ButtonEvent>,
     q_faction_id: Query<(), With<FactionId>>,
-    mut nevw_set_faction: NettyEventWriter<SwapToPlayerFactionEvent>,
+    mut nevw_set_faction: NettyMessageWriter<SwapToPlayerFactionEvent>,
     q_faction_button: Query<&FactionButton>,
 ) {
     let fac_button = q_faction_button.get(ev.0).unwrap();

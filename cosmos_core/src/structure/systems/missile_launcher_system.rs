@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::netty::sync::{
     ClientAuthority, IdentifiableComponent, SyncableComponent,
-    events::netty_event::{IdentifiableEvent, NettyEvent, SyncedEventImpl},
+    events::netty_event::{IdentifiableEvent, NettyMessage, SyncedEventImpl},
     sync_component,
 };
 
@@ -176,7 +176,7 @@ impl IdentifiableEvent for MissileSystemFailure {
     }
 }
 
-impl NettyEvent for MissileSystemFailure {
+impl NettyMessage for MissileSystemFailure {
     fn event_receiver() -> crate::netty::sync::events::netty_event::EventReceiver {
         crate::netty::sync::events::netty_event::EventReceiver::Client
     }

@@ -13,7 +13,7 @@ fn monitor_grass_updated(
     mut structure_query: Query<&mut Structure>,
     blocks: Res<Registry<Block>>,
     mut event_reader: EventReader<MutEvent<BlockUpdate>>,
-    mut event_writer: EventWriter<BlockChangedEvent>,
+    mut event_writer: MessageWriter<BlockChangedEvent>,
 ) {
     for ev in event_reader.read() {
         let ev = ev.read();

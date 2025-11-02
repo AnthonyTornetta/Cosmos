@@ -19,7 +19,7 @@ use cosmos_core::{
             },
         },
     },
-    netty::{client::LocalPlayer, cosmos_encoder, sync::events::client_event::NettyEventWriter},
+    netty::{client::LocalPlayer, cosmos_encoder, sync::events::client_event::NettyMessageWriter},
     registry::{Registry, identifiable::Identifiable},
     state::GameState,
     structure::blueprint::Blueprint,
@@ -277,7 +277,7 @@ fn on_use_blueprint(
     }
 }
 
-fn on_export(ev: Trigger<ButtonEvent>, mut nevw_download_bp: NettyEventWriter<DownloadBlueprint>, q_item_data: Query<&OpenedBp>) {
+fn on_export(ev: Trigger<ButtonEvent>, mut nevw_download_bp: NettyMessageWriter<DownloadBlueprint>, q_item_data: Query<&OpenedBp>) {
     let Ok(blueprint_data) = q_item_data.get(ev.0) else {
         return;
     };
@@ -335,7 +335,7 @@ fn on_load(
 fn upload_selected_blueprint(
     mut commands: Commands,
     mut load_task: ResMut<LoadTask>,
-    mut nevw_upload_bp: NettyEventWriter<UploadBlueprint>,
+    mut nevw_upload_bp: NettyMessageWriter<UploadBlueprint>,
 ) {
     let Some(data) = future::block_on(future::poll_once(&mut load_task.0)) else {
         return;
@@ -388,7 +388,7 @@ fn on_receive_download(mut nevr_download: EventReader<DownloadBlueprintResponse>
 
 fn on_clear(
     _trigger: Trigger<ButtonEvent>,
-    mut nevw_clear: NettyEventWriter<ClearBlueprint>,
+    mut nevw_clear: NettyMessageWriter<ClearBlueprint>,
     q_held_item: Query<&HeldItemSlot, With<LocalPlayer>>,
 ) {
     let Ok(held_item) = q_held_item.single() else {
@@ -400,7 +400,7 @@ fn on_clear(
 
 fn on_copy(
     _trigger: Trigger<ButtonEvent>,
-    mut nevw_copy: NettyEventWriter<CopyBlueprint>,
+    mut nevw_copy: NettyMessageWriter<CopyBlueprint>,
     q_held_item: Query<&HeldItemSlot, With<LocalPlayer>>,
 ) {
     let Ok(held_item) = q_held_item.single() else {
@@ -412,7 +412,7 @@ fn on_copy(
 
 fn load_clicked(
     _trigger: Trigger<ButtonEvent>,
-    mut nevw_load_bp: NettyEventWriter<RequestLoadBlueprint>,
+    mut nevw_load_bp: NettyMessageWriter<RequestLoadBlueprint>,
     q_held_item: Query<&HeldItemSlot, With<LocalPlayer>>,
 ) {
     let Ok(held_item) = q_held_item.single() else {

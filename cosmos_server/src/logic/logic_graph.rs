@@ -74,7 +74,7 @@ impl LogicGroup {
         &mut self,
         port: Port,
         signal: i32,
-        evw_queue_logic_input: &mut EventWriter<QueueLogicInputEvent>,
+        evw_queue_logic_input: &mut MessageWriter<QueueLogicInputEvent>,
         entity: Entity,
     ) {
         // let &old_signal = self.producers.get(&port).expect("Output port to be updated should exist.");
@@ -357,8 +357,8 @@ impl LogicGraph {
         port_type: PortType,
         signal: i32,
         entity: Entity,
-        evw_queue_logic_output: &mut EventWriter<QueueLogicOutputEvent>,
-        evw_queue_logic_input: &mut EventWriter<QueueLogicInputEvent>,
+        evw_queue_logic_output: &mut MessageWriter<QueueLogicOutputEvent>,
+        evw_queue_logic_input: &mut MessageWriter<QueueLogicInputEvent>,
     ) {
         match port_type {
             PortType::Input => &mut self.input_port_group_id,
@@ -391,7 +391,7 @@ impl LogicGraph {
         events_by_coords: &HashMap<BlockCoordinate, LogicBlockChangedEvent>,
         blocks: &Registry<Block>,
         logic_blocks: &Registry<LogicBlock>,
-        evw_queue_logic_input: &mut EventWriter<QueueLogicInputEvent>,
+        evw_queue_logic_input: &mut MessageWriter<QueueLogicInputEvent>,
     ) {
         // If the neighbor coordinates don't exist, no port is removed.
         let Ok(neighbor_coords) = coords.step(direction) else {
@@ -460,7 +460,7 @@ impl LogicGraph {
         group_ids: &HashSet<usize>,
         coords: BlockCoordinate,
         entity: Entity,
-        evw_queue_logic_input: &mut EventWriter<QueueLogicInputEvent>,
+        evw_queue_logic_input: &mut MessageWriter<QueueLogicInputEvent>,
     ) {
         // Rewrite all output and input ports of adjacent groups to use the new ID number.
         let new_group_id = self.new_group_id();
@@ -525,8 +525,8 @@ impl LogicGraph {
         visited: &mut HashSet<Port>,
         blocks: &Registry<Block>,
         logic_blocks: &Registry<LogicBlock>,
-        evw_queue_logic_output: &mut EventWriter<QueueLogicOutputEvent>,
-        evw_queue_logic_input: &mut EventWriter<QueueLogicInputEvent>,
+        evw_queue_logic_output: &mut MessageWriter<QueueLogicOutputEvent>,
+        evw_queue_logic_input: &mut MessageWriter<QueueLogicInputEvent>,
     ) -> bool {
         if visited.contains(&Port::new(coords, encountered_from_direction)) {
             // Renaming on this portion already completed.
@@ -617,7 +617,7 @@ impl LogicGraph {
         &mut self,
         port: Port,
         signal: i32,
-        evw_queue_logic_input: &mut EventWriter<QueueLogicInputEvent>,
+        evw_queue_logic_input: &mut MessageWriter<QueueLogicInputEvent>,
         entity: Entity,
     ) {
         self.mut_group_of(&port, PortType::Output)

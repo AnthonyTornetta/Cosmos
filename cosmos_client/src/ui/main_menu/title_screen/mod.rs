@@ -225,7 +225,7 @@ fn trigger_connection(
     state.set(GameState::Connecting);
 }
 
-fn quit_game(_trigger: Trigger<ButtonEvent>, mut evw_app_exit: EventWriter<AppExit>) {
+fn quit_game(_trigger: Trigger<ButtonEvent>, mut evw_app_exit: MessageWriter<AppExit>) {
     info!("Triggering quit game!");
     evw_app_exit.write(AppExit::Success);
 }

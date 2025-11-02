@@ -9,7 +9,7 @@ use cosmos_core::{
             PlayerLeaveFactionEvent,
         },
     },
-    netty::{client::LocalPlayer, sync::events::client_event::NettyEventWriter},
+    netty::{client::LocalPlayer, sync::events::client_event::NettyMessageWriter},
     state::GameState,
 };
 
@@ -372,7 +372,7 @@ fn on_create_faction_click(_trigger: Trigger<ButtonEvent>, q_faction_box: Query<
             },
         ))
         .observe(
-            |ev: Trigger<TextModalComplete>, mut nevw_create_faction: NettyEventWriter<PlayerCreateFactionEvent>| {
+            |ev: Trigger<TextModalComplete>, mut nevw_create_faction: NettyMessageWriter<PlayerCreateFactionEvent>| {
                 nevw_create_faction.write(PlayerCreateFactionEvent {
                     faction_name: ev.text.clone(),
                 });
@@ -385,7 +385,7 @@ fn on_create_faction_click(_trigger: Trigger<ButtonEvent>, q_faction_box: Query<
 fn get_faction_response(
     mut nevr_create_response: EventReader<PlayerCreateFactionEventResponse>,
     q_faction_name_box: Query<Entity, With<FactionNameBox>>,
-    mut errors: EventWriter<ShowInfoPopup>,
+    mut errors: MessageWriter<ShowInfoPopup>,
     mut commands: Commands,
 ) {
     for ev in nevr_create_response.read() {
@@ -425,7 +425,7 @@ fn on_leave_faction(_trigger: Trigger<ButtonEvent>, mut commands: Commands) {
             },
         ))
         .observe(
-            |ev: Trigger<ConfirmModalComplete>, mut nevw_leave_faction: NettyEventWriter<PlayerLeaveFactionEvent>| {
+            |ev: Trigger<ConfirmModalComplete>, mut nevw_leave_faction: NettyMessageWriter<PlayerLeaveFactionEvent>| {
                 if !ev.confirmed {
                     return;
                 }
@@ -481,8 +481,8 @@ fn on_invite_to_faction(_trigger: Trigger<ButtonEvent>, mut commands: Commands) 
         .observe(
             |trigger: Trigger<TextModalComplete>,
              q_players: Query<(Entity, &Player, Has<FactionId>), Without<LocalPlayer>>,
-             mut nevw_invite: NettyEventWriter<PlayerInviteToFactionEvent>,
-             mut popups: EventWriter<ShowInfoPopup>| {
+             mut nevw_invite: NettyMessageWriter<PlayerInviteToFactionEvent>,
+             mut popups: MessageWriter<ShowInfoPopup>| {
                 let player_name = trigger.text.trim();
                 let lower = player_name.to_lowercase();
 
@@ -503,7 +503,7 @@ fn on_invite_to_faction(_trigger: Trigger<ButtonEvent>, mut commands: Commands) 
 fn on_accept_invite(
     ev: Trigger<ButtonEvent>,
     q_fac_id: Query<&FactionId>,
-    mut nevw_accept_invite: NettyEventWriter<PlayerAcceptFactionInvitation>,
+    mut nevw_accept_invite: NettyMessageWriter<PlayerAcceptFactionInvitation>,
 ) {
     let Ok(fac) = q_fac_id.get(ev.0) else {
         return;
@@ -515,7 +515,7 @@ fn on_accept_invite(
 fn on_decline_invite(
     ev: Trigger<ButtonEvent>,
     q_fac_id: Query<&FactionId>,
-    mut nevw_accept_invite: NettyEventWriter<PlayerAcceptFactionInvitation>,
+    mut nevw_accept_invite: NettyMessageWriter<PlayerAcceptFactionInvitation>,
 ) {
     let Ok(fac) = q_fac_id.get(ev.0) else {
         return;

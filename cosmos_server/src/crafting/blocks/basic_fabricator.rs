@@ -22,7 +22,7 @@ use cosmos_core::{
     item::Item,
     netty::{
         server::ServerLobby,
-        sync::events::server_event::{NettyEventReceived, NettyEventWriter},
+        sync::events::server_event::{NettyMessageReceived, NettyMessageWriter},
     },
     prelude::{Structure, StructureBlock},
     registry::{Registry, identifiable::Identifiable},
@@ -46,7 +46,7 @@ pub struct BasicFabricatorCraftEvent {
 
 fn monitor_basic_fabricator_interactions(
     mut evr_block_interact: EventReader<BlockInteractEvent>,
-    mut nevw_open_basic_fabricator: NettyEventWriter<OpenBasicFabricatorEvent>,
+    mut nevw_open_basic_fabricator: NettyMessageWriter<OpenBasicFabricatorEvent>,
     q_player: Query<&Player>,
     q_structure: Query<&Structure>,
     blocks: Res<Registry<Block>>,
@@ -70,7 +70,7 @@ fn monitor_basic_fabricator_interactions(
 }
 
 fn monitor_craft_event(
-    mut nevr_craft_event: EventReader<NettyEventReceived<CraftBasicFabricatorRecipeEvent>>,
+    mut nevr_craft_event: EventReader<NettyMessageReceived<CraftBasicFabricatorRecipeEvent>>,
     q_structure: Query<&Structure>,
     // Separate queries to please borrow checker
     mut q_player_inventory: Query<&mut Inventory, With<Player>>,
@@ -81,7 +81,7 @@ fn monitor_craft_event(
     recipes: Res<BasicFabricatorRecipes>,
     mut commands: Commands,
     needs_data: Res<ItemShouldHaveData>,
-    mut evw_craft: EventWriter<BasicFabricatorCraftEvent>,
+    mut evw_craft: MessageWriter<BasicFabricatorCraftEvent>,
     items: Res<Registry<Item>>,
 ) {
     let bd_params = Rc::new(RefCell::new(bd_params));

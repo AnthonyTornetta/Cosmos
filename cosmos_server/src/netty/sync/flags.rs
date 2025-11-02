@@ -257,7 +257,7 @@ fn update_sync_players(
 struct PreviousSyncTo(SyncTo);
 
 fn generate_request_entity_events_for_new_sync_tos(
-    mut evr_request_entity: EventWriter<RequestedEntityEvent>,
+    mut evr_request_entity: MessageWriter<RequestedEntityEvent>,
     mut q_sync_to: Query<(Entity, &SyncTo, &mut PreviousSyncTo)>,
     mut server: ResMut<RenetServer>,
 ) {

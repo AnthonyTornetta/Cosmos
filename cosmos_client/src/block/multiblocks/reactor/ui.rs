@@ -7,7 +7,7 @@ use cosmos_core::{
     netty::{
         client::LocalPlayer,
         sync::{
-            events::client_event::NettyEventWriter,
+            events::client_event::NettyMessageWriter,
             mapping::{Mappable, NetworkMapping},
         },
     },
@@ -204,7 +204,7 @@ fn on_click_toggle(
     q_active: Query<(), With<ReactorActive>>,
     q_structure: Query<&Structure>,
     q_ref: Query<&ReactorBlockReference>,
-    mut nevw: NettyEventWriter<ClientRequestChangeReactorStatus>,
+    mut nevw: NettyMessageWriter<ClientRequestChangeReactorStatus>,
     mapping: Res<NetworkMapping>,
 ) {
     let Ok(reference) = q_ref.get(ev.0) else {

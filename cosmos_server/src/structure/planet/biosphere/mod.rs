@@ -198,7 +198,7 @@ pub fn register_biosphere<T: BiosphereMarkerComponent + Default + Clone, E: Send
 
 fn add_biosphere(
     query: Query<(Entity, &Location), (Added<Structure>, Without<BiosphereMarker>, With<Planet>)>,
-    mut event_writer: EventWriter<NeedsBiosphereEvent>,
+    mut event_writer: MessageWriter<NeedsBiosphereEvent>,
     biosphere_registry: Res<Registry<Biosphere>>,
     system: Res<UniverseSystems>,
     mut commands: Commands,

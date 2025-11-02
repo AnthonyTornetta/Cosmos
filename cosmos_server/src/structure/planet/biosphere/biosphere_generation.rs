@@ -5,7 +5,7 @@ use bevy::{platform::collections::HashSet, prelude::*};
 use bevy_app_compute::prelude::*;
 use cosmos_core::{
     block::{Block, block_events::BlockEventsSet, block_face::BlockFace},
-    ecs::mut_events::{EventWriterCustomSend, MutEvent, MutEventsCommand},
+    ecs::mut_events::{MessageWriterCustomSend, MutEvent, MutEventsCommand},
     physics::location::Location,
     registry::{Registry, identifiable::Identifiable},
     state::GameState,
@@ -57,7 +57,7 @@ pub(crate) struct DoneGeneratingChunkEvent {
 
 fn read_gpu_data(
     worker: ResMut<AppComputeWorker<BiosphereShaderWorker>>,
-    mut ev_writer: EventWriter<MutEvent<DoneGeneratingChunkEvent>>,
+    mut ev_writer: MessageWriter<MutEvent<DoneGeneratingChunkEvent>>,
     mut currently_generating_chunks: ResMut<GeneratingChunks>,
     mut chunk_data: ResMut<ChunkData>,
 
@@ -102,7 +102,7 @@ pub(crate) fn generate_chunks_from_gpu_data<T: BiosphereMarkerComponent>(
     chunk_data: Res<ChunkData>,
     biosphere_biomes: Res<Registry<BiosphereBiomesRegistry>>,
     biospheres: Res<Registry<Biosphere>>,
-    mut ev_writer: EventWriter<GenerateChunkFeaturesEvent>,
+    mut ev_writer: MessageWriter<GenerateChunkFeaturesEvent>,
     mut q_structure: Query<&mut Structure>,
     biome_registry: Res<Registry<Biome>>,
     blocks: Res<Registry<Block>>,
@@ -221,7 +221,7 @@ pub(crate) fn generate_chunks_from_gpu_data<T: BiosphereMarkerComponent>(
 ///
 /// This is because during this set, the chunk features should be being generated,
 /// so by the end of this set the chunk is ready to go.
-fn send_chunk_init_event(mut chunk_init_event_writer: EventWriter<ChunkInitEvent>, mut ev_reader: EventReader<GenerateChunkFeaturesEvent>) {
+fn send_chunk_init_event(mut chunk_init_event_writer: MessageWriter<ChunkInitEvent>, mut ev_reader: EventReader<GenerateChunkFeaturesEvent>) {
     for generate_chunk_features_event_reader in ev_reader.read() {
         chunk_init_event_writer.write(ChunkInitEvent {
             coords: generate_chunk_features_event_reader.chunk,

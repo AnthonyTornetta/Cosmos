@@ -9,8 +9,8 @@ use super::{Item, ItemBuilder};
 fn add_cosmos_items(
     mut items: ResMut<Registry<Item>>,
     mut loading: ResMut<LoadingManager>,
-    mut end_writer: EventWriter<DoneLoadingEvent>,
-    mut start_writer: EventWriter<AddLoadingEvent>,
+    mut end_writer: MessageWriter<DoneLoadingEvent>,
+    mut start_writer: MessageWriter<AddLoadingEvent>,
 ) {
     let id = loading.register_loader(&mut start_writer);
 

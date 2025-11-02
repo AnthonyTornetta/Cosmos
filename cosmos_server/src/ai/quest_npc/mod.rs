@@ -304,15 +304,15 @@ fn combat_merchant_ai(mut commands: Commands, q_merchant: Query<(Entity, &Mercha
 struct SaidNoList(Vec<Entity>);
 
 fn on_change_coms(
-    mut evw_send_coms: EventWriter<NpcSendComsMessage>,
+    mut evw_send_coms: MessageWriter<NpcSendComsMessage>,
     q_create_coms: Query<(Entity, &ChildOf, &ComsChannel), Changed<ComsChannel>>,
     factions: Res<Factions>,
     q_faction: Query<&FactionId>,
     q_entity_id: Query<&EntityId>,
     q_pilot: Query<&Pilot>,
     mut q_merchant: Query<&mut MerchantAiState, With<MerchantFederation>>,
-    mut evw_start_quest: EventWriter<AddQuestEvent>,
-    mut evw_end_coms: EventWriter<NpcRequestCloseComsEvent>,
+    mut evw_start_quest: MessageWriter<AddQuestEvent>,
+    mut evw_end_coms: MessageWriter<NpcRequestCloseComsEvent>,
 ) {
     enum ComsState {
         Intro,
@@ -404,7 +404,7 @@ fn on_change_coms(
 }
 
 fn talking_merchant_ai(
-    mut evw_send_coms: EventWriter<RequestHailFromNpc>,
+    mut evw_send_coms: MessageWriter<RequestHailFromNpc>,
     mut commands: Commands,
     mut q_merchant: Query<
         (

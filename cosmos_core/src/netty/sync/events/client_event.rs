@@ -19,7 +19,7 @@ use crate::{
     state::GameState,
 };
 
-use super::netty_event::{EventReceiver, NettyEvent, NettyEventMessage, RegisteredNettyEvent};
+use super::netty_event::{EventReceiver, NettyMessage, NettyMessageMessage, RegisteredNettyMessage};
 
 #[derive(Event)]
 pub(super) struct GotNetworkEvent {
@@ -30,27 +30,27 @@ pub(super) struct GotNetworkEvent {
 #[derive(Event, Default, Debug)]
 /// Send this event before the [`NetworkingSystemsSet::SyncComponents`] set to automatically have
 /// the inner event sent to the server.
-pub struct NettyEventToSend<T: NettyEvent>(pub T);
+pub struct NettyMessageToSend<T: NettyMessage>(pub T);
 
 /// An event received from the server.
 ///
-/// Read this via an [`EventReader<NettyEventReceived<T>>`].
-pub type NettyEventReceived<T> = T;
+/// Read this via an [`EventReader<NettyMessageReceived<T>>`].
+pub type NettyMessageReceived<T> = T;
 
-/// Send your [`NettyEvent`] via this before [`NetworkingSystemsSet::SyncComponents`] to have it
+/// Send your [`NettyMessage`] via this before [`NetworkingSystemsSet::SyncComponents`] to have it
 /// automatically sent to the server.
 #[derive(SystemParam)]
-pub struct NettyEventWriter<'w, T: NettyEvent> {
-    ev_writer: EventWriter<'w, NettyEventToSend<T>>,
+pub struct NettyMessageWriter<'w, T: NettyMessage> {
+    ev_writer: MessageWriter<'w, NettyMessageToSend<T>>,
 }
 
-impl<E: NettyEvent> NettyEventWriter<'_, E> {
+impl<E: NettyMessage> NettyMessageWriter<'_, E> {
     /// Sends an `event`, which can later be read by [`EventReader`]s.
     /// This method returns the [ID](`EventId`) of the sent `event`.
     ///
     /// See [`Events`] for details.
-    pub fn write(&mut self, event: E) -> EventId<NettyEventToSend<E>> {
-        self.ev_writer.write(NettyEventToSend(event))
+    pub fn write(&mut self, event: E) -> EventId<NettyMessageToSend<E>> {
+        self.ev_writer.write(NettyMessageToSend(event))
     }
 
     /// Sends a list of `events` all at once, which can later be read by [`EventReader`]s.
@@ -58,15 +58,15 @@ impl<E: NettyEvent> NettyEventWriter<'_, E> {
     /// This method returns the [IDs](`EventId`) of the sent `events`.
     ///
     /// See [`Events`] for details.
-    pub fn write_batch(&mut self, events: impl IntoIterator<Item = E>) -> SendBatchIds<NettyEventToSend<E>> {
-        self.ev_writer.write_batch(events.into_iter().map(|x| NettyEventToSend(x)))
+    pub fn write_batch(&mut self, events: impl IntoIterator<Item = E>) -> SendBatchIds<NettyMessageToSend<E>> {
+        self.ev_writer.write_batch(events.into_iter().map(|x| NettyMessageToSend(x)))
     }
 
     /// Sends the default value of the event. Useful when the event is an empty struct.
     /// This method returns the [ID](`EventId`) of the sent `event`.
     ///
     /// See [`Events`] for details.
-    pub fn write_default(&mut self) -> EventId<NettyEventToSend<E>>
+    pub fn write_default(&mut self) -> EventId<NettyMessageToSend<E>>
     where
         E: Default,
     {
@@ -74,10 +74,10 @@ impl<E: NettyEvent> NettyEventWriter<'_, E> {
     }
 }
 
-fn send_events<T: NettyEvent>(
+fn send_events<T: NettyMessage>(
     mut client: ResMut<RenetClient>,
-    mut evr: EventReader<NettyEventToSend<T>>,
-    netty_event_registry: Res<Registry<RegisteredNettyEvent>>,
+    mut evr: EventReader<NettyMessageToSend<T>>,
+    netty_event_registry: Res<Registry<RegisteredNettyMessage>>,
     mapping: Res<NetworkMapping>,
 ) {
     for ev in evr.read() {
@@ -106,8 +106,8 @@ fn send_events<T: NettyEvent>(
         };
 
         client.send_message(
-            NettyChannelClient::NettyEvent,
-            cosmos_encoder::serialize(&NettyEventMessage::SendNettyEvent {
+            NettyChannelClient::NettyMessage,
+            cosmos_encoder::serialize(&NettyMessageMessage::SendNettyMessage {
                 component_id: registered_event.id(),
                 raw_data: serialized,
             }),
@@ -115,30 +115,30 @@ fn send_events<T: NettyEvent>(
     }
 }
 
-fn receive_events(mut client: ResMut<RenetClient>, mut evw_got_event: EventWriter<GotNetworkEvent>) {
-    while let Some(message) = client.receive_message(NettyChannelServer::NettyEvent) {
-        let Some(msg) = cosmos_encoder::deserialize::<NettyEventMessage>(&message)
+fn receive_events(mut client: ResMut<RenetClient>, mut evw_got_event: MessageWriter<GotNetworkEvent>) {
+    while let Some(message) = client.receive_message(NettyChannelServer::NettyMessage) {
+        let Some(msg) = cosmos_encoder::deserialize::<NettyMessageMessage>(&message)
             .map(Some)
             .unwrap_or_else(|e| {
                 error!("Failed to parse netty event message from server!\nBytes: {message:?}\nError: {e:?}");
                 None
             })
         else {
-            error!("Error deserializing message into `NettyEventMessage`");
+            error!("Error deserializing message into `NettyMessageMessage`");
             continue;
         };
 
         match msg {
-            NettyEventMessage::SendNettyEvent { component_id, raw_data } => {
+            NettyMessageMessage::SendNettyMessage { component_id, raw_data } => {
                 evw_got_event.write(GotNetworkEvent { component_id, raw_data });
             }
         }
     }
 }
 
-fn parse_event<T: NettyEvent>(
-    events_registry: Res<Registry<RegisteredNettyEvent>>,
-    mut evw_custom_event: EventWriter<T>,
+fn parse_event<T: NettyMessage>(
+    events_registry: Res<Registry<RegisteredNettyMessage>>,
+    mut evw_custom_event: MessageWriter<T>,
     mut evr_need_parsed: EventReader<GotNetworkEvent>,
     netty_mapping: Res<NetworkMapping>,
 ) {
@@ -174,17 +174,17 @@ fn parse_event<T: NettyEvent>(
     }
 }
 
-pub(super) fn client_send_event<T: NettyEvent>(app: &mut App) {
+pub(super) fn client_send_event<T: NettyMessage>(app: &mut App) {
     app.add_systems(
         Update,
         send_events::<T>
             .in_set(NetworkingSystemsSet::SyncComponents)
             .run_if(resource_exists::<RenetClient>),
     );
-    app.add_event::<NettyEventToSend<T>>();
+    app.add_event::<NettyMessageToSend<T>>();
 }
 
-pub(super) fn client_receive_event<T: NettyEvent>(app: &mut App) {
+pub(super) fn client_receive_event<T: NettyMessage>(app: &mut App) {
     app.add_systems(
         Update,
         parse_event::<T>
@@ -195,7 +195,7 @@ pub(super) fn client_receive_event<T: NettyEvent>(app: &mut App) {
     .add_event::<T>();
 }
 
-pub(super) fn register_event<T: NettyEvent>(app: &mut App) {
+pub(super) fn register_event<T: NettyMessage>(app: &mut App) {
     if T::event_receiver() == EventReceiver::Client || T::event_receiver() == EventReceiver::Both {
         client_receive_event::<T>(app);
     }

@@ -5,7 +5,7 @@ use serde::*;
 
 use crate::{
     faction::FactionId,
-    netty::sync::events::netty_event::{IdentifiableEvent, NettyEvent, SyncedEventImpl},
+    netty::sync::events::netty_event::{IdentifiableEvent, NettyMessage, SyncedEventImpl},
 };
 
 #[derive(Debug, Serialize, Deserialize, Clone, Copy, PartialEq, Eq)]
@@ -39,7 +39,7 @@ impl IdentifiableEvent for PlayerCreateFactionEventResponse {
     }
 }
 
-impl NettyEvent for PlayerCreateFactionEventResponse {
+impl NettyMessage for PlayerCreateFactionEventResponse {
     fn event_receiver() -> crate::netty::sync::events::netty_event::EventReceiver {
         crate::netty::sync::events::netty_event::EventReceiver::Client
     }
@@ -58,7 +58,7 @@ impl IdentifiableEvent for PlayerCreateFactionEvent {
     }
 }
 
-impl NettyEvent for PlayerCreateFactionEvent {
+impl NettyMessage for PlayerCreateFactionEvent {
     fn event_receiver() -> crate::netty::sync::events::netty_event::EventReceiver {
         crate::netty::sync::events::netty_event::EventReceiver::Server
     }
@@ -74,7 +74,7 @@ impl IdentifiableEvent for PlayerLeaveFactionEvent {
     }
 }
 
-impl NettyEvent for PlayerLeaveFactionEvent {
+impl NettyMessage for PlayerLeaveFactionEvent {
     fn event_receiver() -> crate::netty::sync::events::netty_event::EventReceiver {
         crate::netty::sync::events::netty_event::EventReceiver::Server
     }
@@ -93,7 +93,7 @@ impl IdentifiableEvent for PlayerInviteToFactionEvent {
     }
 }
 
-impl NettyEvent for PlayerInviteToFactionEvent {
+impl NettyMessage for PlayerInviteToFactionEvent {
     fn event_receiver() -> crate::netty::sync::events::netty_event::EventReceiver {
         crate::netty::sync::events::netty_event::EventReceiver::Server
     }
@@ -125,7 +125,7 @@ impl IdentifiableEvent for PlayerAcceptFactionInvitation {
     }
 }
 
-impl NettyEvent for PlayerAcceptFactionInvitation {
+impl NettyMessage for PlayerAcceptFactionInvitation {
     fn event_receiver() -> crate::netty::sync::events::netty_event::EventReceiver {
         crate::netty::sync::events::netty_event::EventReceiver::Server
     }
@@ -147,7 +147,7 @@ impl IdentifiableEvent for PlayerDeclineFactionInvitation {
     }
 }
 
-impl NettyEvent for PlayerDeclineFactionInvitation {
+impl NettyMessage for PlayerDeclineFactionInvitation {
     fn event_receiver() -> crate::netty::sync::events::netty_event::EventReceiver {
         crate::netty::sync::events::netty_event::EventReceiver::Server
     }
@@ -168,7 +168,7 @@ impl IdentifiableEvent for SwapToPlayerFactionEvent {
     }
 }
 
-impl NettyEvent for SwapToPlayerFactionEvent {
+impl NettyMessage for SwapToPlayerFactionEvent {
     fn event_receiver() -> crate::netty::sync::events::netty_event::EventReceiver {
         crate::netty::sync::events::netty_event::EventReceiver::Server
     }

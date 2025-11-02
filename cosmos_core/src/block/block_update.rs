@@ -53,7 +53,7 @@ impl BlockUpdate {
 pub fn send_block_updates(
     structure_query: Query<&Structure>,
     mut block_chage_event: EventReader<BlockChangedEvent>,
-    mut event_writer: EventWriter<MutEvent<BlockUpdate>>,
+    mut event_writer: MessageWriter<MutEvent<BlockUpdate>>,
 ) {
     let block_updates = block_chage_event
         .read()

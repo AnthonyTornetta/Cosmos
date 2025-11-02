@@ -181,7 +181,7 @@ struct InBuildModeFlag(Entity);
 fn exit_build_mode_when_parent_dies(
     query: Query<Entity, (With<BuildMode>, Without<ChildOf>)>,
     changed_query: Query<(Entity, Option<&InBuildModeFlag>, &ChildOf), (With<BuildMode>, Changed<ChildOf>)>,
-    mut event_writer: EventWriter<ExitBuildModeEvent>,
+    mut event_writer: MessageWriter<ExitBuildModeEvent>,
     mut commands: Commands,
 ) {
     for entity in query.iter() {

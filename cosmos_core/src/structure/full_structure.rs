@@ -5,7 +5,7 @@
 use std::ops::{Deref, DerefMut};
 
 use bevy::{
-    prelude::{EventWriter, Vec3},
+    prelude::{MessageWriter, Vec3},
     reflect::Reflect,
 };
 use serde::{Deserialize, Serialize};
@@ -101,7 +101,7 @@ impl FullStructure {
         block: &Block,
         block_info: BlockInfo,
         blocks: &Registry<Block>,
-        event_writer: Option<&mut EventWriter<BlockChangedEvent>>,
+        event_writer: Option<&mut MessageWriter<BlockChangedEvent>>,
     ) {
         let old_block = self.block_id_at(coords);
         let old_block_info = self.block_info_at(coords);
@@ -134,7 +134,7 @@ impl FullStructure {
         block: &Block,
         block_rotation: BlockRotation,
         blocks: &Registry<Block>,
-        event_writer: Option<&mut EventWriter<BlockChangedEvent>>,
+        event_writer: Option<&mut MessageWriter<BlockChangedEvent>>,
     ) {
         self.base_structure.debug_assert_block_coords_within(coords);
 
@@ -199,7 +199,7 @@ impl FullStructure {
         &mut self,
         coords: BlockCoordinate,
         blocks: &Registry<Block>,
-        event_writer: Option<&mut EventWriter<BlockChangedEvent>>,
+        event_writer: Option<&mut MessageWriter<BlockChangedEvent>>,
     ) {
         self.set_block_at(
             coords,

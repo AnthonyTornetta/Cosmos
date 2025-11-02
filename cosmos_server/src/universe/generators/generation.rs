@@ -80,7 +80,7 @@ fn unload_universe_systems_without_players(q_players: Query<&Location, With<Play
 
 fn load_universe_systems_near_players(
     mut universe_systems: ResMut<UniverseSystems>,
-    mut evw_generate_system: EventWriter<GenerateSystemEvent>,
+    mut evw_generate_system: MessageWriter<GenerateSystemEvent>,
     q_players: Query<&Location, With<Player>>,
 ) {
     let mut sectors_todo = HashSet::new();

@@ -94,7 +94,7 @@ impl CommandSender {
     ///
     /// Player - logged in chat and logged in server console
     /// Server - logged in server console
-    pub fn write(&self, message: impl Into<String>, evw_send_message: &mut EventWriter<SendCommandMessageEvent>) {
+    pub fn write(&self, message: impl Into<String>, evw_send_message: &mut MessageWriter<SendCommandMessageEvent>) {
         match self {
             Self::Player(e) => {
                 evw_send_message.write(SendCommandMessageEvent {

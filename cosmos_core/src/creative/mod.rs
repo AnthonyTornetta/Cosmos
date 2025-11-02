@@ -5,7 +5,7 @@
 use bevy::prelude::*;
 use serde::{Deserialize, Serialize};
 
-use crate::netty::sync::events::netty_event::{IdentifiableEvent, NettyEvent, SyncedEventImpl};
+use crate::netty::sync::events::netty_event::{IdentifiableEvent, NettyMessage, SyncedEventImpl};
 
 #[derive(Event, Serialize, Deserialize, Clone, Debug)]
 /// The entity is trying to select an item to put into their creative inventory.
@@ -24,7 +24,7 @@ impl IdentifiableEvent for GrabCreativeItemEvent {
     }
 }
 
-impl NettyEvent for GrabCreativeItemEvent {
+impl NettyMessage for GrabCreativeItemEvent {
     fn event_receiver() -> crate::netty::sync::events::netty_event::EventReceiver {
         crate::netty::sync::events::netty_event::EventReceiver::Server
     }
@@ -40,7 +40,7 @@ impl IdentifiableEvent for CreativeTrashHeldItem {
     }
 }
 
-impl NettyEvent for CreativeTrashHeldItem {
+impl NettyMessage for CreativeTrashHeldItem {
     fn event_receiver() -> crate::netty::sync::events::netty_event::EventReceiver {
         crate::netty::sync::events::netty_event::EventReceiver::Server
     }

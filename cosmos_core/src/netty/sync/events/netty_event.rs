@@ -35,7 +35,7 @@ pub enum EventReceiver {
 /// This allows an event to be automatically sent to the server/client from the other.
 ///
 /// TODO: Properly document how to use this
-pub trait NettyEvent: std::fmt::Debug + IdentifiableEvent + Event + Clone + Serialize + DeserializeOwned {
+pub trait NettyMessage: std::fmt::Debug + IdentifiableEvent + Event + Clone + Serialize + DeserializeOwned {
     /// Returns how this component should be synced
     ///
     /// Either from `server -> client` or `client -> server`.
@@ -68,23 +68,23 @@ pub trait NettyEvent: std::fmt::Debug + IdentifiableEvent + Event + Clone + Seri
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
-pub(super) enum NettyEventMessage {
-    SendNettyEvent { component_id: u16, raw_data: Vec<u8> },
+pub(super) enum NettyMessageMessage {
+    SendNettyMessage { component_id: u16, raw_data: Vec<u8> },
 }
 
 /// `app.add_netty_event` implementation.
 pub trait SyncedEventImpl {
-    /// Adds a netty-synced event. See [`NettyEvent`].
-    fn add_netty_event<T: NettyEvent>(&mut self) -> &mut Self;
+    /// Adds a netty-synced event. See [`NettyMessage`].
+    fn add_netty_event<T: NettyMessage>(&mut self) -> &mut Self;
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub(super) struct RegisteredNettyEvent {
+pub(super) struct RegisteredNettyMessage {
     pub id: u16,
     pub unlocalized_name: String,
 }
 
-impl Identifiable for RegisteredNettyEvent {
+impl Identifiable for RegisteredNettyMessage {
     fn id(&self) -> u16 {
         self.id
     }
@@ -99,7 +99,7 @@ impl Identifiable for RegisteredNettyEvent {
 }
 
 impl SyncedEventImpl for App {
-    fn add_netty_event<T: NettyEvent>(&mut self) -> &mut Self {
+    fn add_netty_event<T: NettyMessage>(&mut self) -> &mut Self {
         #[cfg(feature = "client")]
         client_event::register_event::<T>(self);
 
@@ -111,6 +111,6 @@ impl SyncedEventImpl for App {
 }
 
 pub(super) fn register(app: &mut App) {
-    create_registry::<RegisteredNettyEvent>(app, "cosmos:netty_event");
-    sync_registry::<RegisteredNettyEvent>(app);
+    create_registry::<RegisteredNettyMessage>(app, "cosmos:netty_event");
+    sync_registry::<RegisteredNettyMessage>(app);
 }

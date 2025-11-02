@@ -5,7 +5,7 @@ use cosmos_core::{
     chat::{ClientSendChatMessageEvent, ServerSendChatMessageEvent},
     commands::ClientCommandEvent,
     ecs::NeedsDespawned,
-    netty::sync::events::client_event::{NettyEventReceived, NettyEventWriter},
+    netty::sync::events::client_event::{NettyMessageReceived, NettyMessageWriter},
     state::GameState,
 };
 
@@ -196,7 +196,7 @@ fn setup_chat_box(mut commands: Commands, default_font: Res<DefaultFont>) {
 
 fn display_messages(
     default_font: Res<DefaultFont>,
-    mut nevr_chat_msg: EventReader<NettyEventReceived<ServerSendChatMessageEvent>>,
+    mut nevr_chat_msg: EventReader<NettyMessageReceived<ServerSendChatMessageEvent>>,
     q_chat_box: Query<Entity, With<ReceivedMessagesContainer>>,
     q_display_box: Query<Entity, With<ChatDisplayReceivedMessagesContainer>>,
     mut commands: Commands,
@@ -251,8 +251,8 @@ fn send_chat_msg(
     inputs: InputChecker,
     mut q_value: Query<&mut InputValue, With<SendingChatMessageBox>>,
     q_chat_box: Query<&Visibility, With<ChatContainer>>,
-    mut nevw_chat: NettyEventWriter<ClientSendChatMessageEvent>,
-    mut nevw_command: NettyEventWriter<ClientCommandEvent>,
+    mut nevw_chat: NettyMessageWriter<ClientSendChatMessageEvent>,
+    mut nevw_command: NettyMessageWriter<ClientCommandEvent>,
 ) {
     if !inputs.check_just_pressed(CosmosInputs::SendChatMessage) {
         return;

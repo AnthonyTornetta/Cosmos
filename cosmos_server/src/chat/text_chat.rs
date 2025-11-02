@@ -5,14 +5,14 @@ use cosmos_core::{
     entities::player::Player,
     netty::{
         server::ServerLobby,
-        sync::events::server_event::{NettyEventReceived, NettyEventWriter},
+        sync::events::server_event::{NettyMessageReceived, NettyMessageWriter},
     },
     state::GameState,
 };
 
 fn receive_messages(
-    mut nevw_send_chat_msg: NettyEventWriter<ServerSendChatMessageEvent>,
-    mut nevr_chat_msg: EventReader<NettyEventReceived<ClientSendChatMessageEvent>>,
+    mut nevw_send_chat_msg: NettyMessageWriter<ServerSendChatMessageEvent>,
+    mut nevr_chat_msg: EventReader<NettyMessageReceived<ClientSendChatMessageEvent>>,
     clients: Res<ServerLobby>,
     q_player: Query<&Player>,
 ) {

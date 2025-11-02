@@ -31,7 +31,7 @@ use bevy::{
     app::App,
     ecs::{
         entity::Entity,
-        event::EventWriter,
+        event::MessageWriter,
         query::Changed,
         system::{Query, Res, ResMut},
     },
@@ -402,9 +402,9 @@ pub enum ClientReceiveComponents {
 
 fn client_receive_components(
     mut client: ResMut<RenetClient>,
-    mut ev_writer_sync: EventWriter<GotComponentToSyncEvent>,
-    mut ev_writer_remove: EventWriter<GotComponentToRemoveEvent>,
-    mut evw_block_data_changed: EventWriter<BlockDataChangedEvent>,
+    mut ev_writer_sync: MessageWriter<GotComponentToSyncEvent>,
+    mut ev_writer_remove: MessageWriter<GotComponentToRemoveEvent>,
+    mut evw_block_data_changed: MessageWriter<BlockDataChangedEvent>,
     q_structure_systems: Query<&StructureSystems>,
     mut q_inventory: Query<&mut Inventory>,
     mut network_mapping: ResMut<NetworkMapping>,
@@ -515,8 +515,8 @@ fn repl_comp_data(
     q_inventory: &mut Query<&mut Inventory, ()>,
     commands: &mut Commands,
     q_structure: &mut Query<&mut Structure>,
-    ev_writer_sync: &mut EventWriter<GotComponentToSyncEvent>,
-    evw_block_data_changed: &mut EventWriter<BlockDataChangedEvent>,
+    ev_writer_sync: &mut MessageWriter<GotComponentToSyncEvent>,
+    evw_block_data_changed: &mut MessageWriter<BlockDataChangedEvent>,
     component_id: ComponentId,
     c: ReplicatedComponentData,
 ) -> Option<ReplicatedComponentData> {
@@ -567,7 +567,7 @@ fn get_entity_identifier_info(
     q_structure_systems: &Query<&StructureSystems, ()>,
     q_inventory: &mut Query<&mut Inventory>,
     q_structure: &mut Query<&mut Structure>,
-    evw_block_data_changed: &mut EventWriter<BlockDataChangedEvent>,
+    evw_block_data_changed: &mut MessageWriter<BlockDataChangedEvent>,
     commands: &mut Commands,
 ) -> Option<(Entity, Entity)> {
     let identifier_entities = match entity_identifier {

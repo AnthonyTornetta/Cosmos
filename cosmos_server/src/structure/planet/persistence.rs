@@ -151,8 +151,8 @@ fn populate_chunks(
 fn load_chunk(
     q_chunk_needs_loaded: Query<(Entity, &SerializedData, &ChunkEntity), With<NeedsLoaded>>,
     mut q_structure: Query<&mut Structure>,
-    mut evw_chunk_init: EventWriter<ChunkInitEvent>,
-    mut evw_chunk_load_block_data: EventWriter<ChunkLoadBlockDataEvent>,
+    mut evw_chunk_init: MessageWriter<ChunkInitEvent>,
+    mut evw_chunk_load_block_data: MessageWriter<ChunkLoadBlockDataEvent>,
     mut commands: Commands,
 ) {
     for (entity, sd, ce) in q_chunk_needs_loaded.iter() {

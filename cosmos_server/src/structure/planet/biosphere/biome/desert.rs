@@ -28,7 +28,7 @@ const MAX_CACTUS_ITERATIONS_PER_FACE: i64 = 200;
 
 fn desert_generate_chunk_features(
     mut ev_reader: EventReader<GenerateChunkFeaturesEvent>,
-    mut ev_writer: EventWriter<BlockChangedEvent>,
+    mut ev_writer: MessageWriter<BlockChangedEvent>,
     mut q_structure: Query<(&Location, &mut Structure)>,
     biomes: Res<Registry<Biome>>,
     blocks: Res<Registry<Block>>,
@@ -51,7 +51,7 @@ fn desert_generate_chunk_features(
 }
 
 fn generate_chunk_features(
-    block_event_writer: &mut EventWriter<BlockChangedEvent>,
+    block_event_writer: &mut MessageWriter<BlockChangedEvent>,
     coords: ChunkCoordinate,
     structure: &mut Structure,
     location: &Location,

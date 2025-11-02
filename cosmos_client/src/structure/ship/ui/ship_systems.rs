@@ -1,6 +1,6 @@
 use bevy::{color::palettes::css, ecs::relationship::RelatedSpawnerCommands, prelude::*};
 use cosmos_core::{
-    netty::sync::events::client_event::NettyEventWriter,
+    netty::sync::events::client_event::NettyMessageWriter,
     prelude::{StructureSystem, StructureSystems},
     registry::Registry,
     state::GameState,
@@ -230,7 +230,7 @@ fn listen_button_inputs(
     q_systems: Query<&StructureSystemOrdering>,
     input_handler: InputChecker,
     q_active_system: Query<(Entity, &StructureSystemMarker), With<ActiveSystem>>,
-    mut nevw_change_system_slot: NettyEventWriter<ChangeSystemSlot>,
+    mut nevw_change_system_slot: NettyMessageWriter<ChangeSystemSlot>,
     mut commands: Commands,
 ) {
     let Ok((ent, active)) = q_active_system.single() else {

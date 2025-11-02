@@ -10,7 +10,7 @@ use cosmos_core::{
     entities::player::Player,
     netty::{
         server::ServerLobby,
-        sync::events::server_event::{NettyEventReceived, NettyEventWriter},
+        sync::events::server_event::{NettyMessageReceived, NettyMessageWriter},
         system_sets::NetworkingSystemsSet,
     },
     registry::{Registry, identifiable::Identifiable},
@@ -57,9 +57,9 @@ pub fn create_cosmos_command<T: CosmosCommandType, M>(
 
     let monitor_commands = move |commands: Res<Registry<ServerCommand>>,
                                  mut evr_command_sent: EventReader<CosmosCommandSent>,
-                                 mut evw_command: EventWriter<CommandEvent<T>>,
+                                 mut evw_command: MessageWriter<CommandEvent<T>>,
                                  q_operator: Query<&Operator>,
-                                 mut evw_send_message: EventWriter<SendCommandMessageEvent>| {
+                                 mut evw_send_message: MessageWriter<SendCommandMessageEvent>| {
         for ev in evr_command_sent.read() {
             if ev.name == unlocalized_name {
                 if T::requires_operator() && !ev.sender.is_operator(&q_operator) {
@@ -125,7 +125,7 @@ fn register_commands(app: &mut App) {
         app,
         |mut evr_command: EventReader<CommandEvent<HelpCommand>>,
          commands: Res<Registry<ServerCommand>>,
-         mut evw_send_message: EventWriter<SendCommandMessageEvent>| {
+         mut evw_send_message: MessageWriter<SendCommandMessageEvent>| {
             for ev in evr_command.read() {
                 if let Some(cmd) = &ev.command.0 {
                     display_help(&ev.sender, &mut evw_send_message, Some(cmd.as_str()), &commands);
@@ -139,7 +139,7 @@ fn register_commands(app: &mut App) {
 
 fn display_help(
     sender: &CommandSender,
-    evw_send_message: &mut EventWriter<SendCommandMessageEvent>,
+    evw_send_message: &mut MessageWriter<SendCommandMessageEvent>,
     command_name: Option<&str>,
     commands: &Registry<ServerCommand>,
 ) {
@@ -194,7 +194,7 @@ pub enum ArgumentError {
 fn warn_on_no_command_hit(
     commands: Res<Registry<ServerCommand>>,
     mut evr_command: EventReader<CosmosCommandSent>,
-    mut evw_send_message: EventWriter<SendCommandMessageEvent>,
+    mut evw_send_message: MessageWriter<SendCommandMessageEvent>,
 ) {
     for ev in evr_command.read() {
         if !commands.contains(&ev.name) {
@@ -208,7 +208,7 @@ fn warn_on_no_command_hit(
 #[derive(Resource, Debug, Default)]
 struct CurrentlyWriting(String);
 
-fn monitor_inputs(mut event_writer: EventWriter<CosmosCommandSent>, mut text: ResMut<CurrentlyWriting>) {
+fn monitor_inputs(mut event_writer: MessageWriter<CosmosCommandSent>, mut text: ResMut<CurrentlyWriting>) {
     while let Ok(event_available) = poll(Duration::ZERO) {
         if event_available {
             let x = read();
@@ -249,8 +249,8 @@ pub enum ProcessCommandsSet {
 }
 
 fn command_receiver(
-    mut event_writer: EventWriter<CosmosCommandSent>,
-    mut nevr_command: EventReader<NettyEventReceived<ClientCommandEvent>>,
+    mut event_writer: MessageWriter<CosmosCommandSent>,
+    mut nevr_command: EventReader<NettyMessageReceived<ClientCommandEvent>>,
     q_player: Query<&Player>,
     lobby: Res<ServerLobby>,
 ) {
@@ -272,7 +272,7 @@ fn command_receiver(
 }
 
 fn send_messages(
-    mut evw_chat_event: NettyEventWriter<ServerSendChatMessageEvent>,
+    mut evw_chat_event: NettyMessageWriter<ServerSendChatMessageEvent>,
     mut evr_send_message: EventReader<SendCommandMessageEvent>,
     q_player: Query<&Player>,
 ) {

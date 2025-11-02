@@ -72,7 +72,7 @@ pub(super) fn sync_resource<T: SyncableResource>(app: &mut App) {
 
 fn resources_listen_netty(
     mut client: ResMut<RenetClient>,
-    mut ev_writer: EventWriter<ReceivedResourceEvent>,
+    mut ev_writer: MessageWriter<ReceivedResourceEvent>,
     mut resource_count: Option<ResMut<ResourcesLeftToSync>>,
 ) {
     while let Some(message) = client.receive_message(NettyChannelServer::Resource) {

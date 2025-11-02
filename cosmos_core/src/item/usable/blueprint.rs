@@ -7,7 +7,7 @@ use uuid::Uuid;
 use crate::{
     netty::sync::{
         IdentifiableComponent, SyncableComponent,
-        events::netty_event::{IdentifiableEvent, NettyEvent, SyncedEventImpl},
+        events::netty_event::{IdentifiableEvent, NettyMessage, SyncedEventImpl},
         sync_component,
     },
     structure::blueprint::{Blueprint, BlueprintAuthor, BlueprintType},
@@ -62,7 +62,7 @@ impl IdentifiableEvent for DownloadBlueprint {
     }
 }
 
-impl NettyEvent for DownloadBlueprint {
+impl NettyMessage for DownloadBlueprint {
     fn event_receiver() -> crate::netty::sync::events::netty_event::EventReceiver {
         crate::netty::sync::events::netty_event::EventReceiver::Server
     }
@@ -83,7 +83,7 @@ impl IdentifiableEvent for DownloadBlueprintResponse {
     }
 }
 
-impl NettyEvent for DownloadBlueprintResponse {
+impl NettyMessage for DownloadBlueprintResponse {
     fn event_receiver() -> crate::netty::sync::events::netty_event::EventReceiver {
         crate::netty::sync::events::netty_event::EventReceiver::Client
     }
@@ -104,7 +104,7 @@ impl IdentifiableEvent for UploadBlueprint {
     }
 }
 
-impl NettyEvent for UploadBlueprint {
+impl NettyMessage for UploadBlueprint {
     fn event_receiver() -> crate::netty::sync::events::netty_event::EventReceiver {
         crate::netty::sync::events::netty_event::EventReceiver::Server
     }
@@ -124,7 +124,7 @@ impl IdentifiableEvent for ClearBlueprint {
     }
 }
 
-impl NettyEvent for ClearBlueprint {
+impl NettyMessage for ClearBlueprint {
     fn event_receiver() -> crate::netty::sync::events::netty_event::EventReceiver {
         crate::netty::sync::events::netty_event::EventReceiver::Server
     }
@@ -143,7 +143,7 @@ impl IdentifiableEvent for CopyBlueprint {
     }
 }
 
-impl NettyEvent for CopyBlueprint {
+impl NettyMessage for CopyBlueprint {
     fn event_receiver() -> crate::netty::sync::events::netty_event::EventReceiver {
         crate::netty::sync::events::netty_event::EventReceiver::Server
     }
@@ -162,7 +162,7 @@ impl IdentifiableEvent for RequestLoadBlueprint {
     }
 }
 
-impl NettyEvent for RequestLoadBlueprint {
+impl NettyMessage for RequestLoadBlueprint {
     fn event_receiver() -> crate::netty::sync::events::netty_event::EventReceiver {
         crate::netty::sync::events::netty_event::EventReceiver::Server
     }

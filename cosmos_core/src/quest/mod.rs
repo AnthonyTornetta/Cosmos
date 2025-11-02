@@ -10,7 +10,7 @@ use crate::{
     item::Item,
     netty::sync::{
         IdentifiableComponent, SyncableComponent,
-        events::netty_event::{IdentifiableEvent, NettyEvent, SyncedEventImpl},
+        events::netty_event::{IdentifiableEvent, NettyMessage, SyncedEventImpl},
         registry::sync_registry,
         sync_component,
     },
@@ -430,7 +430,7 @@ impl IdentifiableEvent for CompleteQuestEvent {
     }
 }
 
-impl NettyEvent for CompleteQuestEvent {
+impl NettyMessage for CompleteQuestEvent {
     fn event_receiver() -> crate::netty::sync::events::netty_event::EventReceiver {
         crate::netty::sync::events::netty_event::EventReceiver::Client
     }
@@ -483,7 +483,7 @@ impl IdentifiableEvent for SetActiveQuestEvent {
     }
 }
 
-impl NettyEvent for SetActiveQuestEvent {
+impl NettyMessage for SetActiveQuestEvent {
     fn event_receiver() -> crate::netty::sync::events::netty_event::EventReceiver {
         crate::netty::sync::events::netty_event::EventReceiver::Server
     }

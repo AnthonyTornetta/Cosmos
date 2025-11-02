@@ -41,9 +41,9 @@ fn load_structure(
     loc: Location,
     structure: Structure,
     s_data: &SerializedData,
-    chunk_load_block_data_event_writer: &mut EventWriter<ChunkLoadBlockDataEvent>,
-    chunk_set_event_writer: &mut EventWriter<ChunkInitEvent>,
-    structure_loaded_event_writer: &mut EventWriter<StructureLoadedEvent>,
+    chunk_load_block_data_event_writer: &mut MessageWriter<ChunkLoadBlockDataEvent>,
+    chunk_set_event_writer: &mut MessageWriter<ChunkInitEvent>,
+    structure_loaded_event_writer: &mut MessageWriter<StructureLoadedEvent>,
 ) {
     let mut entity_cmd = commands.entity(entity);
 
@@ -85,9 +85,9 @@ fn load_structure(
 fn on_load_ship_blueprint(
     query: Query<(Entity, &SerializedData, &NeedsBlueprintLoaded)>,
     mut commands: Commands,
-    mut chunk_load_block_data_event_writer: EventWriter<ChunkLoadBlockDataEvent>,
-    mut chunk_set_event_writer: EventWriter<ChunkInitEvent>,
-    mut structure_loaded_event_writer: EventWriter<StructureLoadedEvent>,
+    mut chunk_load_block_data_event_writer: MessageWriter<ChunkLoadBlockDataEvent>,
+    mut chunk_set_event_writer: MessageWriter<ChunkInitEvent>,
+    mut structure_loaded_event_writer: MessageWriter<StructureLoadedEvent>,
 ) {
     for (entity, s_data, needs_blueprinted) in query.iter() {
         if s_data.deserialize_data::<bool>("cosmos:is_ship").unwrap_or(false)
@@ -111,9 +111,9 @@ fn on_load_ship_blueprint(
 fn on_load_ship(
     query: Query<(Entity, &SerializedData), With<NeedsLoaded>>,
     mut commands: Commands,
-    mut chunk_load_block_data_event_writer: EventWriter<ChunkLoadBlockDataEvent>,
-    mut chunk_set_event_writer: EventWriter<ChunkInitEvent>,
-    mut structure_loaded_event_writer: EventWriter<StructureLoadedEvent>,
+    mut chunk_load_block_data_event_writer: MessageWriter<ChunkLoadBlockDataEvent>,
+    mut chunk_set_event_writer: MessageWriter<ChunkInitEvent>,
+    mut structure_loaded_event_writer: MessageWriter<StructureLoadedEvent>,
 ) {
     for (entity, s_data) in query.iter() {
         if s_data.deserialize_data::<bool>("cosmos:is_ship").unwrap_or(false)

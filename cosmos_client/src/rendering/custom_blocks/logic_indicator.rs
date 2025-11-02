@@ -50,7 +50,7 @@ fn on_render_logic_indicator(
     block_mesh_registry: Res<BlockMeshRegistry>,
     materials_registry: Res<Registry<MaterialDefinition>>,
     mut meshes: ResMut<Assets<Mesh>>,
-    mut evw_add_material: EventWriter<AddMaterialEvent>,
+    mut evw_add_material: MessageWriter<AddMaterialEvent>,
     rendering_modes: Res<BlockRenderingModes>,
 ) {
     for ev in ev_reader.read() {

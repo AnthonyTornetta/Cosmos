@@ -20,7 +20,7 @@ pub struct ChunksNeedLoaded {
 fn listen_chunk_done_loading(
     mut event: EventReader<ChunkSetEvent>,
     mut query: Query<&mut ChunksNeedLoaded>,
-    mut event_writer: EventWriter<StructureLoadedEvent>,
+    mut event_writer: MessageWriter<StructureLoadedEvent>,
     mut commands: Commands,
 ) {
     for ev in event.read() {

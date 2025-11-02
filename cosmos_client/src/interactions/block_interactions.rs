@@ -77,7 +77,7 @@ enum BlockEvent {
 }
 
 fn generate_input_events(
-    mut evr_block_ev: EventWriter<BlockEvent>,
+    mut evr_block_ev: MessageWriter<BlockEvent>,
     input_handler: InputChecker,
     q_piloting: Query<(), (With<LocalPlayer>, With<Pilot>)>,
 ) {
@@ -108,9 +108,9 @@ fn process_player_interaction(
     rapier_context_access: ReadRapierContext,
     q_chunk_physics_part: Query<&ChunkPhysicsPart>,
     q_structure: Query<(&Structure, &GlobalTransform, Option<&Planet>)>,
-    mut break_writer: EventWriter<RequestBlockBreakEvent>,
-    mut place_writer: EventWriter<RequestBlockPlaceEvent>,
-    mut interact_writer: EventWriter<BlockInteractEvent>,
+    mut break_writer: MessageWriter<RequestBlockBreakEvent>,
+    mut place_writer: MessageWriter<RequestBlockPlaceEvent>,
+    mut interact_writer: MessageWriter<BlockInteractEvent>,
     mut hotbar: Query<&mut Hotbar>,
     (items, blocks, block_items): (Res<Registry<Item>>, Res<Registry<Block>>, Res<BlockItems>),
     mut commands: Commands,

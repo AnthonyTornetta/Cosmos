@@ -23,7 +23,7 @@ fn create_ships(
     mut query: Query<(&mut Structure, Entity), With<ShipNeedsCreated>>,
     mut commands: Commands,
     blocks: Res<Registry<Block>>,
-    mut chunk_set_event_writer: EventWriter<ChunkInitEvent>,
+    mut chunk_set_event_writer: MessageWriter<ChunkInitEvent>,
 ) {
     for (mut structure, entity) in query.iter_mut() {
         info!("Got ship needs created!");

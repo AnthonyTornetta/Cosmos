@@ -11,7 +11,7 @@ use cosmos_core::{
     },
     netty::{
         server::ServerLobby,
-        sync::events::server_event::{NettyEventReceived, NettyEventWriter},
+        sync::events::server_event::{NettyMessageReceived, NettyMessageWriter},
     },
     prelude::{Ship, Station},
     state::GameState,
@@ -19,7 +19,7 @@ use cosmos_core::{
 };
 
 fn on_swap_faction_from_player(
-    mut nevr: EventReader<NettyEventReceived<SwapToPlayerFactionEvent>>,
+    mut nevr: EventReader<NettyMessageReceived<SwapToPlayerFactionEvent>>,
     q_can_set_faction: Query<(), Or<(With<Station>, With<Ship>)>>,
     q_faction: Query<&FactionId, Or<(With<Station>, With<Ship>)>>,
     lobby: Res<ServerLobby>,
@@ -66,12 +66,12 @@ fn on_swap_faction_from_player(
 }
 
 fn on_create_faction(
-    mut nevr_create_fac: EventReader<NettyEventReceived<PlayerCreateFactionEvent>>,
+    mut nevr_create_fac: EventReader<NettyMessageReceived<PlayerCreateFactionEvent>>,
     lobby: Res<ServerLobby>,
     q_player_not_in_faction: Query<(&EntityId, &Player), Without<FactionId>>,
     mut factions: ResMut<Factions>,
     mut commands: Commands,
-    mut nevw_response: NettyEventWriter<PlayerCreateFactionEventResponse>,
+    mut nevw_response: NettyMessageWriter<PlayerCreateFactionEventResponse>,
 ) {
     for ev in nevr_create_fac.read() {
         let Some(player_ent) = lobby.player_from_id(ev.client_id) else {
@@ -116,7 +116,7 @@ fn on_create_faction(
 }
 
 fn on_leave_faction(
-    mut nevr_leave_faction: EventReader<NettyEventReceived<PlayerLeaveFactionEvent>>,
+    mut nevr_leave_faction: EventReader<NettyMessageReceived<PlayerLeaveFactionEvent>>,
     lobby: Res<ServerLobby>,
     q_player_in_faction: Query<(&EntityId, &FactionId), With<Player>>,
     mut factions: ResMut<Factions>,
@@ -143,7 +143,7 @@ fn on_leave_faction(
 }
 
 fn on_invite_player(
-    mut nevr_leave_faction: EventReader<NettyEventReceived<PlayerInviteToFactionEvent>>,
+    mut nevr_leave_faction: EventReader<NettyMessageReceived<PlayerInviteToFactionEvent>>,
     lobby: Res<ServerLobby>,
     q_player_in_faction: Query<&FactionId, With<Player>>,
     mut q_player_not_in_faction: Query<Option<&mut FactionInvites>, (With<Player>, Without<FactionId>)>,
@@ -171,7 +171,7 @@ fn on_invite_player(
 }
 
 fn on_accept_invite(
-    mut nevr_leave_faction: EventReader<NettyEventReceived<PlayerAcceptFactionInvitation>>,
+    mut nevr_leave_faction: EventReader<NettyMessageReceived<PlayerAcceptFactionInvitation>>,
     lobby: Res<ServerLobby>,
     mut q_player_not_in_faction: Query<(&EntityId, &mut FactionInvites, &Player), Without<FactionId>>,
     mut factions: ResMut<Factions>,
@@ -201,7 +201,7 @@ fn on_accept_invite(
 }
 
 fn on_decline_invite(
-    mut nevr_leave_faction: EventReader<NettyEventReceived<PlayerDeclineFactionInvitation>>,
+    mut nevr_leave_faction: EventReader<NettyMessageReceived<PlayerDeclineFactionInvitation>>,
     lobby: Res<ServerLobby>,
     mut q_player: Query<&mut FactionInvites, With<Player>>,
 ) {

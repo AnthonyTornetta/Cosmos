@@ -19,7 +19,7 @@ pub struct ClientFinishedReceivingRegistriesEvent(pub ClientId);
 
 fn listen_for_done_syncing(
     mut server: ResMut<RenetServer>,
-    mut evw_finished_receiving_registries: EventWriter<ClientFinishedReceivingRegistriesEvent>,
+    mut evw_finished_receiving_registries: MessageWriter<ClientFinishedReceivingRegistriesEvent>,
     lobby: Res<ServerLobby>,
     mut commands: Commands,
 ) {

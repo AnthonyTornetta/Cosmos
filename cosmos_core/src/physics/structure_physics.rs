@@ -732,7 +732,7 @@ fn add_physics_parts(mut commands: Commands, query: Query<Entity, Added<Structur
 fn listen_for_structure_event(
     mut event: EventReader<BlockChangedEvent>,
     mut chunk_set_event: EventReader<ChunkSetEvent>,
-    mut event_writer: EventWriter<ChunkNeedsPhysicsEvent>,
+    mut event_writer: MessageWriter<ChunkNeedsPhysicsEvent>,
 ) {
     let mut to_do: HashSet<ChunkNeedsPhysicsEvent> = HashSet::new();
 

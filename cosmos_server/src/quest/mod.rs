@@ -5,7 +5,7 @@ use cosmos_core::{
     entities::player::Player,
     netty::{
         server::ServerLobby,
-        sync::events::server_event::{NettyEventReceived, NettyEventWriter},
+        sync::events::server_event::{NettyMessageReceived, NettyMessageWriter},
     },
     quest::{ActiveQuest, CompleteQuestEvent, OngoingQuestDetails, OngoingQuests, SetActiveQuestEvent},
 };
@@ -52,8 +52,8 @@ pub enum QuestsSet {
 
 fn on_complete_quest(
     mut q_ongoing: Query<(Entity, &Player, &mut OngoingQuests), Changed<OngoingQuests>>,
-    mut nevw_complete_quest_event: NettyEventWriter<CompleteQuestEvent>,
-    mut evw_complete_quest_event: EventWriter<CompleteQuestEvent>,
+    mut nevw_complete_quest_event: NettyMessageWriter<CompleteQuestEvent>,
+    mut evw_complete_quest_event: MessageWriter<CompleteQuestEvent>,
 ) {
     for (entity, player, mut ongoing_quests) in q_ongoing.iter_mut() {
         let all_completed = ongoing_quests
@@ -86,7 +86,7 @@ fn clear_invalid_active_quest(q_active: Query<(Entity, &OngoingQuests, &ActiveQu
 }
 
 fn on_set_ongoing(
-    mut nevr_ongoing_quest: EventReader<NettyEventReceived<SetActiveQuestEvent>>,
+    mut nevr_ongoing_quest: EventReader<NettyMessageReceived<SetActiveQuestEvent>>,
     lobby: Res<ServerLobby>,
     mut commands: Commands,
     q_ongoing: Query<&OngoingQuests>,

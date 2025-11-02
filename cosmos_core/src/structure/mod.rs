@@ -446,7 +446,7 @@ impl Structure {
         &mut self,
         coords: BlockCoordinate,
         blocks: &Registry<Block>,
-        event_writer: Option<&mut EventWriter<BlockChangedEvent>>,
+        event_writer: Option<&mut MessageWriter<BlockChangedEvent>>,
     ) {
         match self {
             Self::Full(fs) => fs.remove_block_at(coords, blocks, event_writer),
@@ -463,7 +463,7 @@ impl Structure {
         block: &Block,
         block_rotation: BlockRotation,
         blocks: &Registry<Block>,
-        event_writer: Option<&mut EventWriter<BlockChangedEvent>>,
+        event_writer: Option<&mut MessageWriter<BlockChangedEvent>>,
     ) {
         match self {
             Self::Full(fs) => fs.set_block_at(coords, block, block_rotation, blocks, event_writer),
@@ -480,7 +480,7 @@ impl Structure {
         block: &Block,
         block_info: BlockInfo,
         blocks: &Registry<Block>,
-        event_writer: Option<&mut EventWriter<BlockChangedEvent>>,
+        event_writer: Option<&mut MessageWriter<BlockChangedEvent>>,
     ) {
         match self {
             Self::Full(fs) => fs.set_block_and_info_at(coords, block, block_info, blocks, event_writer),
@@ -616,7 +616,7 @@ impl Structure {
         coords: BlockCoordinate,
         blocks: &Registry<Block>,
         amount: f32,
-        event_writers: Option<(&mut EventWriter<BlockTakeDamageEvent>, &mut EventWriter<BlockDestroyedEvent>)>,
+        event_writers: Option<(&mut MessageWriter<BlockTakeDamageEvent>, &mut MessageWriter<BlockDestroyedEvent>)>,
         causer: Option<Entity>,
     ) -> Option<f32> {
         match self {
@@ -838,7 +838,7 @@ impl Structure {
         &mut self,
         coords: BlockCoordinate,
         block_info: BlockInfo,
-        evw_block_data_changed: &mut EventWriter<BlockDataChangedEvent>,
+        evw_block_data_changed: &mut MessageWriter<BlockDataChangedEvent>,
     ) {
         match self {
             Self::Full(fs) => fs.set_block_info_at(coords, block_info, Some(evw_block_data_changed)),
@@ -948,9 +948,9 @@ fn add_chunks_system(
     mut chunk_init_reader: EventReader<ChunkInitEvent>,
     mut block_reader: EventReader<BlockChangedEvent>,
     mut structure_query: Query<(&mut Structure, Option<&RapierContextEntityLink>)>,
-    mut chunk_set_event_writer: EventWriter<ChunkSetEvent>,
+    mut chunk_set_event_writer: MessageWriter<ChunkSetEvent>,
     mut commands: Commands,
-    mut ev_writer: EventWriter<ChunkLoadBlockDataEvent>,
+    mut ev_writer: MessageWriter<ChunkLoadBlockDataEvent>,
 ) {
     let mut s_chunks = HashSet::new();
     let mut chunk_set_events = HashSet::new();

@@ -3,7 +3,7 @@
 use bevy::prelude::*;
 use serde::{Deserialize, Serialize};
 
-use crate::netty::sync::events::netty_event::{IdentifiableEvent, NettyEvent, SyncedEventImpl};
+use crate::netty::sync::events::netty_event::{IdentifiableEvent, NettyMessage, SyncedEventImpl};
 
 #[derive(Event, Debug, Serialize, Deserialize, Clone)]
 /// The client sends this to the server to request executing a command
@@ -18,7 +18,7 @@ impl IdentifiableEvent for ClientCommandEvent {
     }
 }
 
-impl NettyEvent for ClientCommandEvent {
+impl NettyMessage for ClientCommandEvent {
     fn event_receiver() -> crate::netty::sync::events::netty_event::EventReceiver {
         crate::netty::sync::events::netty_event::EventReceiver::Server
     }

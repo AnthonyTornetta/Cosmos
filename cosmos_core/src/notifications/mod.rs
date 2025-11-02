@@ -3,7 +3,7 @@
 use bevy::prelude::*;
 use serde::{Deserialize, Serialize};
 
-use crate::netty::sync::events::netty_event::{IdentifiableEvent, NettyEvent, SyncedEventImpl};
+use crate::netty::sync::events::netty_event::{IdentifiableEvent, NettyMessage, SyncedEventImpl};
 
 #[derive(Serialize, Deserialize, Event, Debug, PartialEq, Eq, Clone, Copy)]
 /// The type of notification this is
@@ -15,7 +15,7 @@ pub enum NotificationKind {
 }
 
 #[derive(Serialize, Deserialize, Event, Debug, PartialEq, Eq, Clone)]
-/// A message the player will see (Sent via [`NettyEventWriter<Notification>`])
+/// A message the player will see (Sent via [`NettyMessageWriter<Notification>`])
 pub struct Notification {
     message: String,
     kind: NotificationKind,
@@ -57,7 +57,7 @@ impl IdentifiableEvent for Notification {
     }
 }
 
-impl NettyEvent for Notification {
+impl NettyMessage for Notification {
     fn event_receiver() -> crate::netty::sync::events::netty_event::EventReceiver {
         crate::netty::sync::events::netty_event::EventReceiver::Client
     }

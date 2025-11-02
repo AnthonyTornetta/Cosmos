@@ -7,7 +7,7 @@ use crate::{
     ecs::name,
     netty::sync::{
         IdentifiableComponent, SyncableComponent,
-        events::netty_event::{IdentifiableEvent, NettyEvent, SyncedEventImpl},
+        events::netty_event::{IdentifiableEvent, NettyMessage, SyncedEventImpl},
         sync_component,
     },
     prelude::BlockCoordinate,
@@ -196,7 +196,7 @@ impl IdentifiableEvent for WarpCancelledEvent {
     }
 }
 
-impl NettyEvent for WarpCancelledEvent {
+impl NettyMessage for WarpCancelledEvent {
     fn event_receiver() -> crate::netty::sync::events::netty_event::EventReceiver {
         crate::netty::sync::events::netty_event::EventReceiver::Client
     }

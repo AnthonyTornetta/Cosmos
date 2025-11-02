@@ -53,7 +53,7 @@ fn on_render_tanks(
     block_mesh_registry: Res<BlockMeshRegistry>,
     materials_registry: Res<Registry<MaterialDefinition>>,
     mut meshes: ResMut<Assets<Mesh>>,
-    mut evw_add_material: EventWriter<AddMaterialEvent>,
+    mut evw_add_material: MessageWriter<AddMaterialEvent>,
     fluid_tank_blocks: Res<Registry<FluidTankBlock>>,
 ) {
     for ev in ev_reader.read() {

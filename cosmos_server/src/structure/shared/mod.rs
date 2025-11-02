@@ -16,11 +16,11 @@ pub mod melt_down;
 fn on_melting_down(
     mut commands: Commands,
     mut query: Query<(Entity, &mut Structure, &mut MeltingDown)>,
-    mut event_writer: EventWriter<BlockChangedEvent>,
+    mut event_writer: MessageWriter<BlockChangedEvent>,
     blocks: Res<Registry<Block>>,
     time: Res<Time>,
     pilot_query: Query<&Pilot>,
-    mut change_pilot_event: EventWriter<ChangePilotEvent>,
+    mut change_pilot_event: MessageWriter<ChangePilotEvent>,
 ) {
     for (entity, mut structure, mut melting_down) in query.iter_mut() {
         if pilot_query.contains(entity) {
