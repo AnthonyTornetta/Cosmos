@@ -29,11 +29,13 @@ use cosmos_core::{
     },
 };
 
-use crate::persistence::make_persistent::{DefaultPersistentComponent, make_persistent};
+use crate::{
+    persistence::make_persistent::{DefaultPersistentComponent, make_persistent},
+    structure::ship::speed::MaxShipSpeed,
+};
 
 use super::sync::register_structure_system;
 
-const MAX_SHIP_SPEED: f32 = 350.0;
 const MAX_BRAKE_DELTA_PER_THRUST: f32 = 300.0;
 const MAX_MATCH_SPEED_PER_THRUST: f32 = 10.0;
 
@@ -81,10 +83,6 @@ fn block_update_system(
     }
 }
 
-#[derive(Debug, Component, Reflect)]
-/// A multiplier that changes the maximum speed of a ship. 1.0 is the default.
-pub struct MaxShipSpeedModifier(pub f32);
-
 pub(super) fn update_ship_force_and_velocity(
     thrusters_query: Query<(&ThrusterSystem, &StructureSystem)>,
     mut query: Query<
@@ -97,8 +95,8 @@ pub(super) fn update_ship_force_and_velocity(
             &mut ExternalImpulse,
             &ReadMassProperties,
             Option<&Docked>,
-            Option<&MaxShipSpeedModifier>,
             Option<&PilotFocused>,
+            &MaxShipSpeed,
         ),
         (With<Pilot>, With<Ship>),
     >,
@@ -117,8 +115,8 @@ pub(super) fn update_ship_force_and_velocity(
             mut external_impulse,
             readmass,
             docked,
-            max_ship_speed_modifier,
             pilot_focused,
+            max_ship_speed_modifier,
         )) = query.get_mut(system.structure_entity())
         {
             // Rotation
@@ -152,7 +150,7 @@ pub(super) fn update_ship_force_and_velocity(
 
                 velocity.angvel = transform.rotation * torque.min(max).max(-max);
 
-                let max_speed = MAX_SHIP_SPEED * max_ship_speed_modifier.map(|x| x.0).unwrap_or(1.0);
+                let max_speed = max_ship_speed_modifier.max_speed();
                 velocity.linvel = velocity.linvel.clamp_length(0.0, max_speed);
             }
 
@@ -302,8 +300,7 @@ pub(super) fn register(app: &mut App) {
                 .in_set(StructureSystemsSet::UpdateSystems)
                 .in_set(StructureTypeSet::Ship),
         )
-        .register_type::<ThrusterSystem>()
-        .register_type::<MaxShipSpeedModifier>();
+        .register_type::<ThrusterSystem>();
 
     register_structure_system::<ThrusterSystem>(app, false, "cosmos:thruster");
 }

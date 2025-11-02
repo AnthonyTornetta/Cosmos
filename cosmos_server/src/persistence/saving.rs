@@ -295,8 +295,6 @@ fn done_saving(
         if save_file_identifier.is_none() {
             sfi = calculate_sfi(entity, &q_parent, &q_entity_id, &q_serialized_data);
             save_file_identifier = sfi.as_ref();
-        } else {
-            info!("Save file component already on entity ({entity:?})- {save_file_identifier:?}");
         }
 
         let Some(save_file_identifier) = save_file_identifier else {
@@ -323,8 +321,6 @@ fn done_saving(
             .insert(PreviousSaveFileIdentifier(save_file_identifier.clone()));
 
         let serialized: Vec<u8> = cosmos_encoder::serialize(&sd);
-
-        info!("WRITING TO DISK - {save_file_identifier:?}");
 
         if let Err(e) = write_file(save_file_identifier, &serialized) {
             error!("Unable to save {entity:?}\n{e}");

@@ -26,6 +26,7 @@ use super::query::MutBlockData;
 use super::structure_block::StructureBlock;
 
 pub mod netty;
+mod systems;
 
 /// The number of blocks a chunk can have in the x/y/z directions.
 ///
@@ -665,6 +666,8 @@ pub struct ChunkUnloadEvent {
 }
 
 pub(super) fn register(app: &mut App) {
+    systems::register(app);
+
     app.add_event::<ChunkUnloadEvent>().register_type::<Chunk>();
 }
 

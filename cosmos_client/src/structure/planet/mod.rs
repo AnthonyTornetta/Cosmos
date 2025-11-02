@@ -27,7 +27,7 @@ mod planet_skybox;
 mod rotate_around_planet;
 
 // #[cfg(debug_assertions)]
-const RENDER_DISTANCE: UnboundCoordinateType = 2;
+const RENDER_DISTANCE: UnboundCoordinateType = 4;
 // #[cfg(not(debug_assertions))]
 // const RENDER_DISTANCE: UnboundCoordinateType = 4;
 

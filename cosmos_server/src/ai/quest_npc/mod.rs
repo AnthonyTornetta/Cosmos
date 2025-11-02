@@ -35,7 +35,7 @@ use crate::{
         saving::NeverSave,
     },
     quest::AddQuestEvent,
-    structure::systems::thruster_system::MaxShipSpeedModifier,
+    structure::ship::speed::{MaxShipSpeed, ShipSpeedModifier},
 };
 
 use super::{
@@ -137,7 +137,7 @@ fn add_merchant_ai(
             .insert((
                 AiControlled,
                 ai,
-                MaxShipSpeedModifier(0.8),
+                MaxShipSpeed::new("cosmos:npc", ShipSpeedModifier::new(280.0, 1.0)),
                 SaidNoList::default(),
                 MerchantAiState::default(),
                 Hitters::default(),
