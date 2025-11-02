@@ -10,7 +10,7 @@ use crate::{
     prelude::{BlockCoordinate, StructureBlock},
     structure::chunk::BlockInfo,
 };
-use bevy::{ecs::component::HookContext, platform::collections::HashMap, prelude::*};
+use bevy::{ecs::lifecycle::HookContext, platform::collections::HashMap, prelude::*};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Component, Reflect, Serialize, Deserialize, PartialEq, Eq, Clone)]

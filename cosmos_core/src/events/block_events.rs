@@ -4,7 +4,7 @@ use crate::block::block_rotation::BlockRotation;
 use crate::events::structure::structure_event::StructureMessage;
 use crate::structure::chunk::BlockInfo;
 use crate::structure::structure_block::StructureBlock;
-use bevy::ecs::event::MessageWriter;
+use bevy::ecs::message::MessageWriter;
 use bevy::ecs::system::Commands;
 use bevy::ecs::system::SystemParam;
 use bevy::prelude::App;

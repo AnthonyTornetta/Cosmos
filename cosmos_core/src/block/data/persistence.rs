@@ -2,7 +2,7 @@
 
 use bevy::{
     app::App,
-    ecs::{entity::Entity, event::Message},
+    ecs::{entity::Entity, message::Message},
 };
 
 use crate::structure::{chunk::netty::SerializedChunkBlockData, coordinates::ChunkCoordinate};

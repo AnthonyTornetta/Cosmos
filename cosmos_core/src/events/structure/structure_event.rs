@@ -3,7 +3,7 @@
 use bevy::{
     ecs::{
         entity::Entity,
-        event::{Message, MessageIterator},
+        message::{Message, MessageIterator},
     },
     platform::collections::HashMap,
 };

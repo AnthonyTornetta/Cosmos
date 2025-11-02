@@ -3,7 +3,7 @@
 use std::sync::{Arc, RwLock, RwLockReadGuard, RwLockWriteGuard};
 
 use bevy::{
-    ecs::event::MessageWriter,
+    ecs::message::MessageWriter,
     prelude::{App, Message},
 };
 

@@ -275,7 +275,7 @@ impl ItemStack {
     }
 
     /// Queries this itemstack's data. Returns `None` if the requested query failed.
-    pub fn query_itemstack_data<'a, Q, F>(&'a self, query: &'a Query<Q, F>) -> Option<ROQueryItem<'a, Q>>
+    pub fn query_itemstack_data<'a, Q, F>(&'a self, query: &'a Query<Q, F>) -> Option<ROQueryItem<'a, 'a, Q>>
     where
         F: QueryFilter,
         Q: QueryData,
@@ -286,7 +286,7 @@ impl ItemStack {
     }
 
     /// Queries this itemstack's data mutibly. Returns `None` if the requested query failed.
-    pub fn query_itemstack_data_mut<'a, Q, F>(&'a self, query: &'a mut Query<Q, F>) -> Option<QueryItem<'a, Q>>
+    pub fn query_itemstack_data_mut<'a, Q, F>(&'a self, query: &'a mut Query<'a, 'a, Q, F>) -> Option<QueryItem<'a, 'a, Q>>
     where
         F: QueryFilter,
         Q: QueryData,

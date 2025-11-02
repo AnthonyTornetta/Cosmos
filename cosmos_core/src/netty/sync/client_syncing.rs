@@ -31,7 +31,7 @@ use bevy::{
     app::App,
     ecs::{
         entity::Entity,
-        event::MessageWriter,
+        message::MessageWriter,
         query::Changed,
         system::{Query, Res, ResMut},
     },
