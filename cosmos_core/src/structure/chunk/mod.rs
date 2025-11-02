@@ -520,13 +520,13 @@ impl Chunk {
     }
 
     /// Queries this block's data mutibly. Returns `None` if the requested query failed or if no block data exists for this block.
-    pub fn query_block_data_mut<'q, 'w, 's, Q, F>(
+    pub fn query_block_data_mut<'w, 's, Q, F>(
         &self,
         coords: ChunkBlockCoordinate,
-        query: &'q mut Query<'w, 's, Q, F>,
+        query: &'w mut Query<'w, 's, Q, F>,
         block_system_params: Rc<RefCell<BlockDataSystemParams<'w, 's>>>,
         structure_entity: Entity,
-    ) -> Option<MutBlockData<'q, 'w, 's, Q>>
+    ) -> Option<MutBlockData<'w, 's, Q>>
     where
         F: QueryFilter,
         Q: QueryData,

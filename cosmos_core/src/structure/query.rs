@@ -31,7 +31,7 @@ impl<'w, 's, Q: QueryData> MutBlockData<'w, 's, Q> {
     /// When this item goes out of scope, if a mutable reference has been gotten, an event will be sent indicating
     /// this block's data has been changed.
     pub fn new(
-        data: QueryItem<'q, 'q, Q>,
+        data: QueryItem<'w, 's, Q>,
         bs_params: Rc<RefCell<BlockDataSystemParams<'w, 's>>>,
         block: StructureBlock,
         data_entity: Entity,
@@ -46,20 +46,20 @@ impl<'w, 's, Q: QueryData> MutBlockData<'w, 's, Q> {
     }
 
     /// Returns a mutable reference to the data WITHOUT triggering change detection
-    pub fn bypass_change_detection(&mut self) -> &mut QueryItem<'q, 'q, Q> {
+    pub fn bypass_change_detection(&mut self) -> &mut QueryItem<'w, 's, Q> {
         &mut self.data
     }
 }
 
-impl<'q, Q: QueryData> Deref for MutBlockData<'q, '_, '_, Q> {
-    type Target = QueryItem<'q, 'q, Q>;
+impl<'w, 's, Q: QueryData> Deref for MutBlockData<'w, 's, Q> {
+    type Target = QueryItem<'w, 's, Q>;
 
     fn deref(&self) -> &Self::Target {
         &self.data
     }
 }
 
-impl<Q: QueryData> DerefMut for MutBlockData<'_, '_, '_, Q> {
+impl<'w, 's, Q: QueryData> DerefMut for MutBlockData<'w, 's, Q> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         self.changed = true;
 
@@ -67,7 +67,7 @@ impl<Q: QueryData> DerefMut for MutBlockData<'_, '_, '_, Q> {
     }
 }
 
-impl<Q: QueryData> Drop for MutBlockData<'_, '_, '_, Q> {
+impl<'w, 's, Q: QueryData> Drop for MutBlockData<'w, 's, Q> {
     fn drop(&mut self) {
         if !self.changed {
             return;
