@@ -1,7 +1,8 @@
 use std::{cell::RefCell, rc::Rc, time::Duration};
 
-use bevy::{ecs::component::HookContext, platform::collections::HashMap, prelude::*, time::common_conditions::on_timer};
+use bevy::{ecs::lifecycle::HookContext, platform::collections::HashMap, prelude::*, time::common_conditions::on_timer};
 use bevy_rapier3d::{
+    parry::shape::RoundShape,
     plugin::{RapierContextEntityLink, ReadRapierContext},
     prelude::{Collider, QueryFilter, RigidBody, Velocity},
 };
@@ -9,7 +10,7 @@ use cosmos_core::{
     block::{
         Block,
         block_direction::ALL_BLOCK_DIRECTIONS,
-        block_events::{BlockMessagesSet, BlockInteractMessage},
+        block_events::{BlockInteractMessage, BlockMessagesSet},
         blocks::AIR_BLOCK_ID,
         data::BlockData,
         multiblock::prelude::*,
@@ -314,10 +315,10 @@ fn on_set_blueprint(
 
         let mut hit_something = false;
 
-        context.intersections_with_shape(
+        context.intersect_shape(
             shipyard_world_pos,
             station_g_trans.rotation(),
-            &Collider::cuboid(half_size.x, half_size.y, half_size.z),
+            &bevy_rapier3d::parry::shape::Cuboid::new(Vec3::new(half_size.x, half_size.y, half_size.z).into()),
             QueryFilter {
                 exclude_rigid_body: Some(structure_ent),
                 ..Default::default()

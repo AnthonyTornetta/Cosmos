@@ -286,7 +286,7 @@ impl ItemStack {
     }
 
     /// Queries this itemstack's data mutibly. Returns `None` if the requested query failed.
-    pub fn query_itemstack_data_mut<'a, Q, F>(&'a self, query: &'a mut Query<'a, 'a, Q, F>) -> Option<QueryItem<'a, 'a, Q>>
+    pub fn query_itemstack_data_mut<'a, 's, Q, F>(&'a self, query: &'a mut Query<'_, 's, Q, F>) -> Option<QueryItem<'_, 's, Q>>
     where
         F: QueryFilter,
         Q: QueryData,

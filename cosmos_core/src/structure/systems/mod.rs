@@ -635,7 +635,7 @@ impl StructureSystems {
     }
 
     /// Queries all the systems of a structure with this specific query, or returns `Err(NoSystemFound)` if none matched this query.
-    pub fn query_mut<'a, Q, F>(&'a self, query: &'a mut Query<'a, 'a, Q, F>) -> Result<QueryItem<'a, 'a, Q>, NoSystemFound>
+    pub fn query_mut<'a, 's, Q, F>(&'a self, query: &'a mut Query<'_, 's, Q, F>) -> Result<QueryItem<'a, 's, Q>, NoSystemFound>
     where
         F: QueryFilter,
         Q: QueryData,

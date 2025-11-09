@@ -758,18 +758,18 @@ impl Structure {
             Self::Dynamic(ds) => ds.query_block_data(coords, query),
         }
     }
+    //    pub fn query_mut<'a, 's, Q, F>(&'a self, query: &'a mut Query<'_, 's, Q, F>) -> Result<QueryItem<'a, 's, Q>, NoSystemFound>
 
     /// Queries this block's data mutibly. Returns `None` if the requested query failed or if no block data exists for this block.
-    pub fn query_block_data_mut<'w, 's, Q, F>(
+    pub fn query_block_data_mut<'q, 'w, 's, Q, F>(
         &self,
         coords: BlockCoordinate,
-        query: &'w mut Query<'w, 's, Q, F>,
+        query: &'q mut Query<'q, 'q, Q, F>,
         block_system_params: Rc<RefCell<BlockDataSystemParams<'w, 's>>>,
-    ) -> Option<MutBlockData<'w, 's, Q>>
+    ) -> Option<MutBlockData<'q, 'w, 's, Q>>
     where
         F: QueryFilter,
         Q: QueryData,
-        's: 'w,
     {
         match self {
             Self::Full(fs) => fs.query_block_data_mut(coords, query, block_system_params),

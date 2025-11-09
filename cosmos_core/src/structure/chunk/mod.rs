@@ -520,13 +520,13 @@ impl Chunk {
     }
 
     /// Queries this block's data mutibly. Returns `None` if the requested query failed or if no block data exists for this block.
-    pub fn query_block_data_mut<'w, 's, Q, F>(
+    pub fn query_block_data_mut<'q, 'w, 's, Q, F>(
         &self,
         coords: ChunkBlockCoordinate,
-        query: &'w mut Query<'w, 's, Q, F>,
+        query: &'q mut Query<'q, 'q, Q, F>,
         block_system_params: Rc<RefCell<BlockDataSystemParams<'w, 's>>>,
         structure_entity: Entity,
-    ) -> Option<MutBlockData<'w, 's, Q>>
+    ) -> Option<MutBlockData<'q, 'w, 's, Q>>
     where
         F: QueryFilter,
         Q: QueryData,
@@ -535,18 +535,14 @@ impl Chunk {
 
         match query.get_mut(data_ent) {
             Ok(result) => {
-                // block_system_params.ev_writer.write(BlockDataChangedMessage {
-                //     block_data_entity: Some(data_ent),
-                //     block: StructureBlock::new(self.chunk_coordinates().first_structure_block() + coords),
-                //     structure_entity,
-                // });
-
                 let mut_block_data = MutBlockData::new(
                     result,
                     block_system_params.clone(),
                     StructureBlock::new(self.chunk_coordinates().first_structure_block() + coords, structure_entity),
                     data_ent,
                 );
+
+                // sddf
 
                 Some(mut_block_data)
             }

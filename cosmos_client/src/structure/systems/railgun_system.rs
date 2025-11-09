@@ -1,6 +1,6 @@
 use bevy::{
     asset::LoadState,
-    pbr::{NotShadowCaster, NotShadowReceiver},
+    light::{NotShadowCaster, NotShadowReceiver},
     prelude::*,
 };
 use bevy_kira_audio::{Audio, AudioControl, AudioInstance};
@@ -83,7 +83,7 @@ fn on_fire_railgun(
                 RailgunBlast::default(),
                 loc,
                 Transform::from_scale(Vec3::new(1.0, 1.0, railgun.length)).looking_to(railgun.direction, Vec3::Y),
-                Mesh3d(railgun_mesh.mesh.clone_weak()),
+                railgun_mesh.mesh.clone(),
                 NotShadowCaster,
                 NotShadowReceiver,
                 Name::new("Railgun Visual"),

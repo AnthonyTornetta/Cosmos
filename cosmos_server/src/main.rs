@@ -124,7 +124,7 @@ fn main() {
             ServerPlugin { port },
             // Used for diagnostics
             SystemInformationDiagnosticsPlugin,
-            EntityCountDiagnosticsPlugin,
+            EntityCountDiagnosticsPlugin::default(),
             FrameTimeDiagnosticsPlugin::default(),
             // PerfUiPlugin,
         ))

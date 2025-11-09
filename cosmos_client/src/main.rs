@@ -151,7 +151,7 @@ fn main() {
             HanabiPlugin,
             // Used for diagnostics
             SystemInformationDiagnosticsPlugin,
-            EntityCountDiagnosticsPlugin,
+            EntityCountDiagnosticsPlugin::default(),
             FrameTimeDiagnosticsPlugin::default(),
             TransformInterpolationPlugin::interpolate_all(),
             // PerfUiPlugin,

@@ -1,7 +1,6 @@
 //! Used to generate planets
 
 use bevy::{
-    ecs::event::Message,
     platform::collections::{HashMap, HashSet},
     prelude::*,
 };
