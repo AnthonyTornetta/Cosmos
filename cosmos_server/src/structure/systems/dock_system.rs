@@ -287,7 +287,7 @@ fn on_active(
 
         let mut hit_something_bad = false;
 
-        context.colliders_with_aabb_intersecting_aabb(aabb, |e| {
+        context.intersect_aabb_conservative(aabb, Default::default(), |e| {
             if let Ok(ce) = q_chunk_entity.get(e)
                 && ce.structure_entity != entity
                 && !check_docked_entities(&ce.structure_entity, &q_docked_list, &e)

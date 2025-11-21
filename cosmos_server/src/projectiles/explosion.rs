@@ -94,10 +94,10 @@ fn respond_to_explosion(
 
         let context = context_access.get(*physics_world);
 
-        context.intersections_with_shape(
+        context.intersect_shape(
             explosion_rapier_coordinates,
             Quat::IDENTITY,
-            &Collider::ball(max_radius),
+            &bevy_rapier3d::parry::shape::Ball::new(max_radius),
             QueryFilter::default().exclude_collider(ent).predicate(&|x| !q_excluded.contains(x)),
             |hit_entity| {
                 hits.push(hit_entity);
@@ -245,9 +245,9 @@ pub(super) fn register(app: &mut App) {
             .ambiguous_with(MeltingDownSet::ProcessMeltingDown)
             .in_set(ExplosionSystemSet::ProcessExplosions)
             .ambiguous_with(BlockMessagesSet::SendMessagesForNextFrame), // Order of blocks being updated doesn't matter
-                                                                     // .after(ShieldSet::RechargeShields)
-                                                                     // .after(FixedUpdateSet::LocationSyncing)
-                                                                     // .before(FixedUpdateSet::PrePhysics)
-                                                                     // .before(ShieldSet::OnShieldHit), // .in_set(BlockHealthSet::SendHealthChanges),
+                                                                         // .after(ShieldSet::RechargeShields)
+                                                                         // .after(FixedUpdateSet::LocationSyncing)
+                                                                         // .before(FixedUpdateSet::PrePhysics)
+                                                                         // .before(ShieldSet::OnShieldHit), // .in_set(BlockHealthSet::SendHealthChanges),
     );
 }
