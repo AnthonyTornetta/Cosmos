@@ -72,7 +72,7 @@ fn create_settings_screen(
         return;
     };
 
-    let cool_blue = Srgba::hex("00FFFF").unwrap().into();
+    let cool_blue = Srgba::hex("00FFFF").unwrap();
 
     let text_style = TextFont {
         font_size: 32.0,
@@ -126,7 +126,7 @@ fn create_settings_screen(
         })
         .with_children(|p| {
             p.spawn((
-                BorderColor(cool_blue),
+                BorderColor::all(cool_blue),
                 Node {
                     border: UiRect::all(Val::Px(2.0)),
                     width: Val::Px(500.0),
@@ -147,13 +147,13 @@ fn create_settings_screen(
                 },
             ))
             .observe(
-                |ev: Trigger<ButtonMessage>, mut evw_settings_cancel: MessageWriter<SettingsCancelButtonMessage>| {
+                |ev: On<ButtonMessage>, mut evw_settings_cancel: MessageWriter<SettingsCancelButtonMessage>| {
                     evw_settings_cancel.write(SettingsCancelButtonMessage(ev.0));
                 },
             );
 
             p.spawn((
-                BorderColor(cool_blue),
+                BorderColor::all(cool_blue),
                 Node {
                     border: UiRect::all(Val::Px(2.0)),
                     width: Val::Px(500.0),
@@ -276,7 +276,7 @@ fn create_general_tab(
                                     ..Default::default()
                                 },
                                 InputValue::new(input_value),
-                                BorderColor(Srgba::hex("555555").unwrap().into()),
+                                BorderColor::all(Srgba::hex("555555").unwrap()),
                                 BackgroundColor(Srgba::hex("111111").unwrap().into()),
                                 Node {
                                     border: UiRect::all(Val::Px(2.0)),
@@ -375,7 +375,7 @@ fn create_controls_tab(controls: &CosmosInputHandler, text_style: &TextFont, tex
                         input: *input,
                         value: *mapping,
                     },
-                    BorderColor(Srgba::hex("555555").unwrap().into()),
+                    BorderColor::all(Srgba::hex("555555").unwrap()),
                     BackgroundColor(Srgba::hex("111111").unwrap().into()),
                     Node {
                         border: UiRect::all(Val::Px(2.0)),
@@ -397,7 +397,7 @@ fn create_controls_tab(controls: &CosmosInputHandler, text_style: &TextFont, tex
 }
 
 fn click_settings_button(
-    ev: Trigger<ButtonMessage>,
+    ev: On<ButtonMessage>,
     mut commands: Commands,
     q_next_input: Query<(), With<ListeningNextInput>>,
     mut q_button: Query<&mut CosmosButton>,
@@ -452,7 +452,7 @@ fn on_change_setting_value(mut q_changed_setting: Query<(&mut CosmosButton, &Set
 }
 
 fn done_clicked(
-    ev: Trigger<ButtonMessage>,
+    ev: On<ButtonMessage>,
     mut settings: ResMut<Registry<Setting>>,
     q_written_settings: Query<&WrittenSetting>,
     q_setting: Query<&SettingControlValue>,

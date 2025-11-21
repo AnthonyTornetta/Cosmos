@@ -76,7 +76,7 @@ fn add_window(
 
         commands
             .entity(ent)
-            .insert((BorderColor(Srgba::hex("#111").unwrap().into()), GlobalZIndex(5)))
+            .insert((BorderColor::all(Srgba::hex("#111").unwrap()), GlobalZIndex(5)))
             .with_children(|parent| {
                 // Title bar
 
@@ -96,7 +96,7 @@ fn add_window(
                         ..default()
                     },
                     BackgroundColor(css::WHITE.into()),
-                    ImageNode::new(window_assets.title_bar_image.clone_weak()),
+                    ImageNode::new(window_assets.title_bar_image.clone()),
                 ));
 
                 title_bar.with_children(|parent| {
@@ -109,7 +109,7 @@ fn add_window(
                             ..Default::default()
                         },
                         TextLayout {
-                            justify: JustifyText::Center,
+                            justify: Justify::Center,
                             ..Default::default()
                         },
                     ));
@@ -131,7 +131,7 @@ fn add_window(
                                 ..Default::default()
                             },
                             CosmosButton {
-                                image: Some(ImageNode::new(window_assets.close_btn_image.clone_weak())),
+                                image: Some(ImageNode::new(window_assets.close_btn_image.clone())),
                                 text: Some((
                                     "X".into(),
                                     TextFont {
@@ -222,7 +222,7 @@ fn move_window(
 #[derive(Component, Debug)]
 struct CloseButton(Entity);
 
-fn close_event_listener(ev: Trigger<ButtonMessage>, mut commands: Commands, q_close_button: Query<&CloseButton>) {
+fn close_event_listener(ev: On<ButtonMessage>, mut commands: Commands, q_close_button: Query<&CloseButton>) {
     let Ok(close_btn) = q_close_button.get(ev.0) else {
         return;
     };

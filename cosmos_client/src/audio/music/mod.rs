@@ -56,7 +56,7 @@ fn adjust_volume(
         return;
     };
 
-    instance.set_volume(volume.percent() * master_volume.multiplier(), AudioTween::default());
+    instance.set_decibels((volume.percent() * master_volume.multiplier()) as f32, AudioTween::default());
 }
 
 #[derive(Message)]

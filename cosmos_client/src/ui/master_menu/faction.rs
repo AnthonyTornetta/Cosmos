@@ -354,7 +354,7 @@ fn render_faction_display(
 #[derive(Component)]
 struct FactionNameBox;
 
-fn on_create_faction_click(_trigger: Trigger<ButtonMessage>, q_faction_box: Query<Entity, With<FactionNameBox>>, mut commands: Commands) {
+fn on_create_faction_click(_trigger: On<ButtonMessage>, q_faction_box: Query<Entity, With<FactionNameBox>>, mut commands: Commands) {
     if q_faction_box.iter().next().is_some() {
         return;
     }
@@ -372,7 +372,7 @@ fn on_create_faction_click(_trigger: Trigger<ButtonMessage>, q_faction_box: Quer
             },
         ))
         .observe(
-            |ev: Trigger<TextModalComplete>, mut nevw_create_faction: NettyMessageWriter<PlayerCreateFactionMessage>| {
+            |ev: On<TextModalComplete>, mut nevw_create_faction: NettyMessageWriter<PlayerCreateFactionMessage>| {
                 nevw_create_faction.write(PlayerCreateFactionMessage {
                     faction_name: ev.text.clone(),
                 });
@@ -413,7 +413,7 @@ fn get_faction_response(
     }
 }
 
-fn on_leave_faction(_trigger: Trigger<ButtonMessage>, mut commands: Commands) {
+fn on_leave_faction(_trigger: On<ButtonMessage>, mut commands: Commands) {
     commands
         .spawn((
             Modal {
@@ -425,7 +425,7 @@ fn on_leave_faction(_trigger: Trigger<ButtonMessage>, mut commands: Commands) {
             },
         ))
         .observe(
-            |ev: Trigger<ConfirmModalComplete>, mut nevw_leave_faction: NettyMessageWriter<PlayerLeaveFactionMessage>| {
+            |ev: On<ConfirmModalComplete>, mut nevw_leave_faction: NettyMessageWriter<PlayerLeaveFactionMessage>| {
                 if !ev.confirmed {
                     return;
                 }
@@ -465,7 +465,7 @@ fn on_change_faction(
     }
 }
 
-fn on_invite_to_faction(_trigger: Trigger<ButtonMessage>, mut commands: Commands) {
+fn on_invite_to_faction(_trigger: On<ButtonMessage>, mut commands: Commands) {
     commands
         .spawn((
             Name::new("Faction Name Box"),
@@ -479,7 +479,7 @@ fn on_invite_to_faction(_trigger: Trigger<ButtonMessage>, mut commands: Commands
             },
         ))
         .observe(
-            |trigger: Trigger<TextModalComplete>,
+            |trigger: On<TextModalComplete>,
              q_players: Query<(Entity, &Player, Has<FactionId>), Without<LocalPlayer>>,
              mut nevw_invite: NettyMessageWriter<PlayerInviteToFactionMessage>,
              mut popups: MessageWriter<ShowInfoPopup>| {
@@ -501,7 +501,7 @@ fn on_invite_to_faction(_trigger: Trigger<ButtonMessage>, mut commands: Commands
 }
 
 fn on_accept_invite(
-    ev: Trigger<ButtonMessage>,
+    ev: On<ButtonMessage>,
     q_fac_id: Query<&FactionId>,
     mut nevw_accept_invite: NettyMessageWriter<PlayerAcceptFactionInvitation>,
 ) {
@@ -513,7 +513,7 @@ fn on_accept_invite(
 }
 
 fn on_decline_invite(
-    ev: Trigger<ButtonMessage>,
+    ev: On<ButtonMessage>,
     q_fac_id: Query<&FactionId>,
     mut nevw_accept_invite: NettyMessageWriter<PlayerAcceptFactionInvitation>,
 ) {

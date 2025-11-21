@@ -404,7 +404,7 @@ fn on_active(
                     continue;
                 };
 
-                let relative_ray_point = hit_g_trans.compute_matrix().inverse().transform_point3(abs_block_pos);
+                let relative_ray_point = hit_g_trans.to_matrix().inverse().transform_point3(abs_block_pos);
 
                 let relative_ray_dir = hit_g_trans.rotation().inverse() * ray_dir;
 

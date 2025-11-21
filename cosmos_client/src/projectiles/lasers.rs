@@ -101,8 +101,8 @@ fn lasers_netty(
                 )
                 .insert((
                     Visibility::default(),
-                    Mesh3d(laser_mesh.0.clone_weak()),
-                    MeshMaterial3d(material.clone_weak()),
+                    Mesh3d(laser_mesh.0.clone()),
+                    MeshMaterial3d(material.clone()),
                 ));
             }
             ServerStructureSystemMessages::LaserCannonSystemFired { ship_entity } => {

@@ -205,7 +205,7 @@ fn display_messages(
         let msg = &ev.message;
 
         let text_style = TextFont {
-            font: default_font.0.clone_weak(),
+            font: default_font.0.clone(),
             font_size: 24.0,
             ..Default::default()
         };

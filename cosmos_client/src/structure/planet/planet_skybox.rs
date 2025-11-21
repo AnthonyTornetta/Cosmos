@@ -1,6 +1,6 @@
 use bevy::{
     color::palettes::css,
-    pbr::{NotShadowCaster, NotShadowReceiver},
+    light::{NotShadowCaster, NotShadowReceiver},
     prelude::*,
 };
 use cosmos_core::{

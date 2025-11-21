@@ -4,9 +4,9 @@ use std::time::Duration;
 
 use bevy::{
     color::palettes::css,
-    pbr::NotShadowCaster,
+    light::NotShadowCaster,
+    mesh::{SphereKind, SphereMeshBuilder},
     prelude::*,
-    render::mesh::{SphereKind, SphereMeshBuilder},
 };
 use cosmos_core::structure::shields::Shield;
 

@@ -1,7 +1,7 @@
 //! Handles the build mode logic on the client-side
 
 use bevy::{
-    pbr::{NotShadowCaster, NotShadowReceiver},
+    light::{NotShadowCaster, NotShadowReceiver},
     prelude::*,
 };
 use bevy_rapier3d::prelude::Velocity;

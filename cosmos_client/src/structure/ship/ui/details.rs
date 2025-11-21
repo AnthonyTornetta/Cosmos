@@ -126,7 +126,7 @@ pub(super) fn attach_ui(
 }
 
 fn on_change_faction(
-    ev: Trigger<ButtonMessage>,
+    ev: On<ButtonMessage>,
     q_faction_id: Query<(), With<FactionId>>,
     mut nevw_set_faction: NettyMessageWriter<SwapToPlayerFactionMessage>,
     q_faction_button: Query<&FactionButton>,

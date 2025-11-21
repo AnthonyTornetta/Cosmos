@@ -57,9 +57,9 @@ fn apply_shooting_sound(
 
         let idx = rand::random::<u64>() as usize % audio_handles.0.len();
 
-        let handle = audio_handles.0[idx].clone_weak();
+        let handle = audio_handles.0[idx].clone();
 
-        let playing_sound: Handle<AudioInstance> = audio.play(handle.clone_weak()).handle();
+        let playing_sound: Handle<AudioInstance> = audio.play(handle.clone()).handle();
 
         commands.spawn((
             CosmosAudioEmitter {
@@ -240,7 +240,7 @@ fn render_lockon_status(
                         .spawn((
                             Name::new("Top left"),
                             ImageNode {
-                                image: lockon_graphic.0.clone_weak(),
+                                image: lockon_graphic.0.clone(),
                                 flip_x: false,
                                 flip_y: false,
                                 ..Default::default()
@@ -258,7 +258,7 @@ fn render_lockon_status(
                         .spawn((
                             Name::new("Bottom left"),
                             ImageNode {
-                                image: lockon_graphic.0.clone_weak(),
+                                image: lockon_graphic.0.clone(),
                                 flip_x: false,
                                 flip_y: true,
                                 ..Default::default()
@@ -288,7 +288,7 @@ fn render_lockon_status(
                         .spawn((
                             Name::new("Top right"),
                             ImageNode {
-                                image: lockon_graphic.0.clone_weak(),
+                                image: lockon_graphic.0.clone(),
                                 flip_x: true,
                                 flip_y: false,
                                 ..Default::default()
@@ -306,7 +306,7 @@ fn render_lockon_status(
                         .spawn((
                             Name::new("Bottom right"),
                             ImageNode {
-                                image: lockon_graphic.0.clone_weak(),
+                                image: lockon_graphic.0.clone(),
                                 flip_x: true,
                                 flip_y: true,
                                 ..Default::default()

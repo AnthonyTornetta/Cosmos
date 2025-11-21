@@ -190,11 +190,11 @@ fn check_assets_ready(
     mut texture_atlases: ResMut<Registry<CosmosTextureAtlas>>,
     mut images: ResMut<Assets<Image>>,
     mut event_writer: MessageWriter<AllTexturesDoneLoadingMessage>,
-    mut ev_asset_folder_event: MessageReader<AssetMessage<LoadedFolder>>,
+    mut ev_asset_folder_event: MessageReader<AssetEvent<LoadedFolder>>,
     loaded_folders: Res<Assets<LoadedFolder>>,
 ) {
     for ev in ev_asset_folder_event.read() {
-        if let AssetMessage::LoadedWithDependencies { id } = ev {
+        if let AssetEvent::LoadedWithDependencies { id } = ev {
             let asset = server.get_id_handle::<LoadedFolder>(*id).unwrap();
 
             if let Some(loaded_folder) = loaded_folders.get(&asset)

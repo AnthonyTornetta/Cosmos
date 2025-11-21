@@ -1,10 +1,6 @@
 //! Utilities for querying things within structures
 
-use std::{
-    cell::RefCell,
-    ops::{Deref, DerefMut},
-    rc::Rc,
-};
+use std::ops::{Deref, DerefMut};
 
 use bevy::{
     ecs::{

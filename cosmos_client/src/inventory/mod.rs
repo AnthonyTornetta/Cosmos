@@ -295,7 +295,7 @@ fn toggle_inventory_rendering(
 
         let priority_slots = inventory.priority_slots();
 
-        let border_color = BorderColor(Srgba::hex("222222").unwrap().into());
+        let border_color = BorderColor::all(Srgba::hex("222222").unwrap());
 
         let non_hotbar_height = (((inventory.len() as f32 - inventory.priority_slots().map(|x| x.len()).unwrap_or(0) as f32) / 9.0).ceil()
             * INVENTORY_SLOTS_DIMS)
@@ -306,14 +306,14 @@ fn toggle_inventory_rendering(
                 Name::new("Rendered Inventory"),
                 RenderedInventory { inventory_holder },
                 OpenMenu::new(0),
-                BorderColor(Color::BLACK),
+                BorderColor::all(Color::BLACK),
                 GuiWindow {
                     title: inventory.name().into(),
                     body_styles: Node {
                         flex_direction: FlexDirection::Column,
                         ..Default::default()
                     },
-                    window_background: BackgroundColor(border_color.0),
+                    window_background: BackgroundColor(border_color.left),
                 },
                 Node {
                     position_type: PositionType::Absolute,
@@ -334,8 +334,8 @@ fn toggle_inventory_rendering(
                         Name::new("Search Bar"),
                         GuiWindowTitleBar,
                         InventorySearchBar,
-                        BackgroundColor(border_color.0),
-                        BorderColor(css::GREY.into()),
+                        BackgroundColor(border_color.left),
+                        BorderColor::all(css::GREY),
                         Node {
                             display: Display::None,
                             flex_grow: 1.0,
@@ -349,7 +349,7 @@ fn toggle_inventory_rendering(
                             ..Default::default()
                         },
                         TextFont {
-                            font: font.clone_weak(),
+                            font: font.clone(),
                             font_size: 16.0,
                             ..Default::default()
                         },
@@ -365,7 +365,7 @@ fn toggle_inventory_rendering(
                             border: UiRect::new(Val::Px(0.0), Val::Px(2.0), Val::Px(2.0), Val::Px(2.0)),
                             ..Default::default()
                         },
-                        BorderColor(css::BLACK.into()),
+                        BorderColor::all(css::BLACK),
                     ))
                     .with_children(|p| {
                         let storage_id = items.from_id("cosmos:shop").map(|x| x.id()).unwrap_or_default();
@@ -396,7 +396,7 @@ fn toggle_inventory_rendering(
                             border: UiRect::new(Val::Px(2.0), Val::Px(0.0), Val::Px(2.0), Val::Px(2.0)),
                             ..Default::default()
                         },
-                        BorderColor(css::BLACK.into()),
+                        BorderColor::all(css::BLACK),
                     ))
                     .with_children(|p| {
                         let storage_id = items.from_id("cosmos:storage").map(|x| x.id()).unwrap_or_default();
@@ -700,7 +700,7 @@ fn create_creative_slot(slots: &mut ChildSpawnerCommands, item: &Item, text_styl
             height: Val::Px(INVENTORY_SLOTS_DIMS),
             ..default()
         },
-        BorderColor(Srgba::hex("222222").unwrap().into()),
+        BorderColor::all(Srgba::hex("222222").unwrap()),
         Interaction::None,
         CosmosButton::default(),
         CreativeItem { item_id: item.id() },
@@ -718,7 +718,7 @@ fn create_creative_slot(slots: &mut ChildSpawnerCommands, item: &Item, text_styl
 struct OpenTab;
 
 fn on_click_creative_category(
-    ev: Trigger<ButtonMessage>,
+    ev: On<ButtonMessage>,
     q_item_category_marker: Query<&ItemCategoryMarker>,
     mut q_unopen_tab: Query<(Entity, &mut Node, &SelectedTab), (Without<InventorySearchBar>, Without<OpenTab>)>,
     mut q_open_tab: Query<(Entity, &mut Node, &SelectedTab), (Without<InventorySearchBar>, With<OpenTab>)>,
@@ -773,7 +773,7 @@ fn create_inventory_slot(
             height: Val::Px(INVENTORY_SLOTS_DIMS),
             ..default()
         },
-        BorderColor(Srgba::hex("222222").unwrap().into()),
+        BorderColor::all(Srgba::hex("222222").unwrap()),
         Interaction::None,
         DisplayedItemFromInventory {
             inventory_holder,
@@ -1038,7 +1038,7 @@ enum InventorySet {
 }
 
 fn on_click_creative_item(
-    ev: Trigger<ButtonMessage>,
+    ev: On<ButtonMessage>,
     q_creative_item: Query<&CreativeItem>,
     inputs: InputChecker,
     items: Res<Registry<Item>>,
@@ -1131,7 +1131,7 @@ fn draw_held_item(
 
     let text_style = TextFont {
         font_size: 22.0,
-        font: default_font.0.clone_weak(),
+        font: default_font.0.clone(),
         ..Default::default()
     };
 

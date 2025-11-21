@@ -3,11 +3,12 @@
 use std::f32::consts::PI;
 
 use bevy::{
+    camera::visibility::RenderLayers,
     color::palettes::css,
-    core_pipeline::bloom::Bloom,
     input::mouse::{MouseScrollUnit, MouseWheel},
+    post_process::bloom::Bloom,
     prelude::*,
-    render::view::RenderLayers,
+    render::view::Hdr,
 };
 // use bevy_mod_billboard::{BillboardDepth, BillboardTextBundle};
 use cosmos_core::{
@@ -70,8 +71,8 @@ impl Default for MapCamera {
 
 fn create_map_camera(mut commands: Commands) {
     commands.spawn((
+        Hdr::default(),
         Camera {
-            hdr: true,
             msaa_writeback: false, // override all other cameras
             order: 20,
             is_active: false,

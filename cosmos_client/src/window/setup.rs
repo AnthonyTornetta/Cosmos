@@ -3,7 +3,7 @@
 use bevy::{
     input::mouse::MouseMotion,
     prelude::*,
-    window::{CursorGrabMode, PrimaryWindow, WindowFocused},
+    window::{CursorGrabMode, CursorOptions, PrimaryWindow, WindowFocused},
 };
 use cosmos_core::state::GameState;
 // use iyes_perf_ui::entries::PerfUiBundle;
@@ -54,12 +54,12 @@ pub struct DeltaCursorPosition {
     pub y: f32,
 }
 
-fn setup_window(mut primary_query: Query<&mut Window, With<PrimaryWindow>>) {
-    let mut window = primary_query.single_mut().expect("Missing primary window.");
+fn setup_window(mut primary_query: Query<(&mut Window, &mut CursorOptions), With<PrimaryWindow>>) {
+    let (mut window, mut cursor_options) = primary_query.single_mut().expect("Missing primary window.");
 
     window.title = "Cosmos".into();
-    window.cursor_options.visible = false;
-    window.cursor_options.grab_mode = CursorGrabMode::Locked;
+    cursor_options.visible = false;
+    cursor_options.grab_mode = CursorGrabMode::Locked;
 }
 
 fn update_mouse_deltas(mut delta: ResMut<DeltaCursorPosition>, mut ev_mouse_motion: MessageReader<MouseMotion>) {
@@ -73,48 +73,48 @@ fn update_mouse_deltas(mut delta: ResMut<DeltaCursorPosition>, mut ev_mouse_moti
 }
 
 fn window_focus_changed(
-    mut primary_query: Query<(Entity, &mut Window), With<PrimaryWindow>>,
+    mut primary_query: Query<(Entity, &mut CursorOptions), With<PrimaryWindow>>,
     mut ev_focus: MessageReader<WindowFocused>,
     cursor_flags: Res<CursorFlags>,
 ) {
-    let Ok((window_entity, mut window)) = primary_query.single_mut() else {
+    let Ok((window_entity, mut cursor_options)) = primary_query.single_mut() else {
         return;
     };
 
     if let Some(ev) = ev_focus.read().find(|e| e.window == window_entity) {
         if ev.focused {
-            apply_cursor_flags(&mut window, *cursor_flags);
+            apply_cursor_flags(&mut cursor_options, *cursor_flags);
         } else {
-            window.cursor_options.grab_mode = CursorGrabMode::None;
-            window.cursor_options.visible = true;
+            cursor_options.grab_mode = CursorGrabMode::None;
+            cursor_options.visible = true;
         }
     }
 }
 
-fn apply_cursor_flags(window: &mut Window, cursor_flags: CursorFlags) {
-    window.cursor_options.grab_mode = if cursor_flags.locked {
+fn apply_cursor_flags(cursor_options: &mut CursorOptions, cursor_flags: CursorFlags) {
+    cursor_options.grab_mode = if cursor_flags.locked {
         CursorGrabMode::Locked
     } else {
         CursorGrabMode::None
     };
-    window.cursor_options.visible = cursor_flags.visible;
+    cursor_options.visible = cursor_flags.visible;
 }
 
-fn apply_cursor_flags_on_change(cursor_flags: Res<CursorFlags>, mut primary_query: Query<&mut Window, With<PrimaryWindow>>) {
-    let Ok(mut window) = primary_query.single_mut() else {
+fn apply_cursor_flags_on_change(cursor_flags: Res<CursorFlags>, mut primary_query: Query<&mut CursorOptions, With<PrimaryWindow>>) {
+    let Ok(mut cursor_options) = primary_query.single_mut() else {
         return;
     };
 
-    apply_cursor_flags(&mut window, *cursor_flags);
+    apply_cursor_flags(&mut cursor_options, *cursor_flags);
 }
 
-fn show_cursor(mut primary_query: Query<&mut Window, With<PrimaryWindow>>) {
-    let Ok(mut window) = primary_query.single_mut() else {
+fn show_cursor(mut primary_query: Query<&mut CursorOptions, With<PrimaryWindow>>) {
+    let Ok(mut cursor_options) = primary_query.single_mut() else {
         return;
     };
 
     apply_cursor_flags(
-        &mut window,
+        &mut cursor_options,
         CursorFlags {
             locked: false,
             visible: true,

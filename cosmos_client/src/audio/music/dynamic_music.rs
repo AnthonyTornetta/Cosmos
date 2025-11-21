@@ -122,7 +122,7 @@ fn start_playing(
 
     let handle = audio
         .play(song.handle.clone())
-        .with_volume(volume.percent() * master_volume.multiplier())
+        .with_volume((volume.percent() * master_volume.multiplier()) as f32)
         .fade_in(AudioTween::new(Duration::from_secs(2), AudioEasing::InOutPowi(2)))
         .handle();
 

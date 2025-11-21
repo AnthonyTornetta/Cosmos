@@ -95,7 +95,7 @@ fn display_death_ui(
 
             let btn_font = TextFont {
                 font_size: 36.0,
-                font: font.0.clone_weak(),
+                font: font.0.clone(),
                 ..Default::default()
             };
 
@@ -118,7 +118,7 @@ fn display_death_ui(
                 },
                 TextFont {
                     font_size: 48.0,
-                    font: font.0.clone_weak(),
+                    font: font.0.clone(),
                     ..Default::default()
                 },
             ));
@@ -178,11 +178,11 @@ fn on_respawn(
     }
 }
 
-fn respawn_clicked(_trigger: Trigger<ButtonMessage>, mut nevw_respawn: NettyMessageWriter<RequestRespawnMessage>) {
+fn respawn_clicked(_trigger: On<ButtonMessage>, mut nevw_respawn: NettyMessageWriter<RequestRespawnMessage>) {
     nevw_respawn.write_default();
 }
 
-fn title_screen_clicked(_trigger: Trigger<ButtonMessage>, mut client: ResMut<RenetClient>) {
+fn title_screen_clicked(_trigger: On<ButtonMessage>, mut client: ResMut<RenetClient>) {
     client.disconnect();
 }
 

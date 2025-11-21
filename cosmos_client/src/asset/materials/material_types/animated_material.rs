@@ -10,9 +10,9 @@ use crate::{
     rendering::MeshInformation,
 };
 use bevy::{
+    mesh::{MeshVertexAttribute, VertexAttributeValues},
     platform::collections::HashMap,
     prelude::*,
-    render::mesh::{MeshVertexAttribute, VertexAttributeValues},
 };
 use cosmos_core::{
     registry::{Registry, identifiable::Identifiable},
@@ -47,23 +47,23 @@ fn respond_to_add_materials_event(
         match mat.unlocalized_name() {
             "cosmos:animated" => {
                 commands.entity(ev.entity).insert(MeshMaterial3d(match ev.material_type {
-                    MaterialType::Normal => default_material.0[idx].clone_weak(),
-                    MaterialType::Illuminated => unlit_material.0[idx].clone_weak(),
-                    MaterialType::FarAway => default_material.0[idx].clone_weak(),
+                    MaterialType::Normal => default_material.0[idx].clone(),
+                    MaterialType::Illuminated => unlit_material.0[idx].clone(),
+                    MaterialType::FarAway => default_material.0[idx].clone(),
                 }));
             }
             "cosmos:animated_illuminated" => {
                 commands.entity(ev.entity).insert(MeshMaterial3d(match ev.material_type {
-                    MaterialType::Normal => unlit_material.0[idx].clone_weak(),
-                    MaterialType::Illuminated => unlit_material.0[idx].clone_weak(),
-                    MaterialType::FarAway => unlit_material.0[idx].clone_weak(),
+                    MaterialType::Normal => unlit_material.0[idx].clone(),
+                    MaterialType::Illuminated => unlit_material.0[idx].clone(),
+                    MaterialType::FarAway => unlit_material.0[idx].clone(),
                 }));
             }
             "cosmos:animated_transparent" => {
                 commands.entity(ev.entity).insert(MeshMaterial3d(match ev.material_type {
-                    MaterialType::Normal => transparent_material.0[idx].clone_weak(),
-                    MaterialType::Illuminated => unlit_transparent_material.0[idx].clone_weak(),
-                    MaterialType::FarAway => default_material.0[idx].clone_weak(),
+                    MaterialType::Normal => transparent_material.0[idx].clone(),
+                    MaterialType::Illuminated => unlit_transparent_material.0[idx].clone(),
+                    MaterialType::FarAway => default_material.0[idx].clone(),
                 }));
             }
             _ => {}

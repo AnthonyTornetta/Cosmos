@@ -356,7 +356,7 @@ fn add_item_text(mut commands: Commands, default_font: Res<DefaultFont>) {
                     Text::new(""),
                     text_font,
                     TextLayout {
-                        justify: JustifyText::Center,
+                        justify: Justify::Center,
                         ..Default::default()
                     },
                 ))
@@ -507,7 +507,7 @@ fn add_hotbar(mut commands: Commands, default_font: Res<DefaultFont>, asset_serv
                                             ..Default::default()
                                         },
                                         TextLayout {
-                                            justify: JustifyText::Right,
+                                            justify: Justify::Right,
                                             ..Default::default()
                                         },
                                     ))

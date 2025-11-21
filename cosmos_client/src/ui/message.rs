@@ -160,7 +160,7 @@ fn display_hud_messages(
                         Text::new(first.text),
                         TextColor(first.color),
                         TextLayout {
-                            justify: JustifyText::Center,
+                            justify: Justify::Center,
                             ..Default::default()
                         },
                     ))

@@ -56,7 +56,7 @@ fn open_dye_ui(
             OpenDyeUi,
             OpenMenu::new(0),
             Name::new("Dye Machine Ui"),
-            BorderColor(Color::BLACK),
+            BorderColor::all(Color::BLACK),
             GuiWindow {
                 title: "Dye Machine".into(),
                 body_styles: Node {
@@ -148,7 +148,7 @@ fn open_dye_ui(
 }
 
 fn click_color_btn(
-    ev: Trigger<ButtonMessage>,
+    ev: On<ButtonMessage>,
     netty_mapping: Res<NetworkMapping>,
     q_btn_color: Query<&BtnColor>,
     mut nevw_dye_block: NettyMessageWriter<DyeBlock>,

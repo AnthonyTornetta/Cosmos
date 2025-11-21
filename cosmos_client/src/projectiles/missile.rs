@@ -1,7 +1,7 @@
 use std::time::Duration;
 
 use bevy::{asset::LoadState, color::palettes::css, platform::collections::HashMap, prelude::*};
-use bevy_hanabi::prelude::*;
+use bevy_hanabi::prelude::{Gradient, *};
 
 use bevy_kira_audio::{Audio, AudioControl, AudioInstance, AudioSource};
 use cosmos_core::{
@@ -61,8 +61,8 @@ fn on_add_missile(
     for ent in &q_added_missile {
         commands.entity(ent).insert((
             Visibility::default(),
-            Mesh3d(missile_rendering_info.0.clone_weak()),
-            MeshMaterial3d(missile_rendering_info.1.clone_weak()),
+            Mesh3d(missile_rendering_info.0.clone()),
+            MeshMaterial3d(missile_rendering_info.1.clone()),
         ));
     }
 }
@@ -125,7 +125,7 @@ fn respond_to_explosion(
             Transform::from_translation(transform.translation).looking_at(local_g_trans.translation(), Vec3::Y),
         ));
 
-        let audio_handle = audio_sources.0[rand::random::<u64>() as usize % audio_sources.0.len()].clone_weak();
+        let audio_handle = audio_sources.0[rand::random::<u64>() as usize % audio_sources.0.len()].clone();
 
         let playing_sound: Handle<AudioInstance> = audio.play(audio_handle.clone()).with_volume(0.0).handle();
 
@@ -175,7 +175,7 @@ fn create_particle_fx(color: Option<Color>, effects: &mut Assets<EffectAsset>) -
         color_gradient1.add_key(1.0, Vec4::new(4.0, 0.0, 0.0, 0.0));
     }
 
-    let mut size_gradient1 = Gradient::new();
+    let mut size_gradient1 = Gradient::default();
     size_gradient1.add_key(0.0, Vec3::splat(0.2));
     size_gradient1.add_key(0.3, Vec3::splat(0.2));
     size_gradient1.add_key(1.0, Vec3::splat(0.0));

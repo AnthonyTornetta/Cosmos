@@ -5,7 +5,7 @@ use std::f32::consts::PI;
 use bevy::prelude::*;
 use bevy_rapier3d::{
     plugin::{RapierContextEntityLink, ReadRapierContext},
-    prelude::{ActiveMessages, Collider, Sensor, Velocity},
+    prelude::{ActiveEvents, Collider, Sensor, Velocity},
 };
 use cosmos_core::{
     block::specific_blocks::gravity_well::GravityWell,
@@ -44,7 +44,7 @@ fn append_grounded_check(mut commands: Commands, q_player: Query<Entity, Added<L
             Name::new("Ground checker"),
             Collider::cuboid(0.1, 0.2, 0.1),
             Sensor,
-            ActiveMessages::COLLISION_EVENTS,
+            ActiveEvents::COLLISION_EVENTS,
         ));
     });
 }

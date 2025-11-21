@@ -5,10 +5,8 @@
 use std::sync::{Arc, Mutex};
 
 use bevy::{
-    color::palettes::css,
-    core_pipeline::{bloom::Bloom, oit::OrderIndependentTransparencySettings},
-    prelude::*,
-    window::PrimaryWindow,
+    color::palettes::css, core_pipeline::oit::OrderIndependentTransparencySettings, post_process::bloom::Bloom, prelude::*,
+    render::view::Hdr, window::PrimaryWindow,
 };
 use bevy_kira_audio::SpatialAudioReceiver;
 use bevy_rapier3d::prelude::*;
@@ -386,11 +384,8 @@ pub(crate) fn client_sync_players(
                         ))
                         .with_children(|parent| {
                             parent.spawn((
-                                Camera {
-                                    hdr: true,
-
-                                    ..Default::default()
-                                },
+                                Hdr::default(),
+                                Camera { ..Default::default() },
                                 Transform::from_translation(camera_offset),
                                 Projection::from(PerspectiveProjection {
                                     fov: (desired_fov.0 / 180.0) * std::f32::consts::PI,

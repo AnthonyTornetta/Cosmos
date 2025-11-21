@@ -2,7 +2,7 @@ use crate::asset::asset_loading::{BlockNeighbors, BlockTextureIndex};
 use crate::asset::materials::{BlockMaterialMapping, MaterialDefinition};
 use crate::block::lighting::{BlockLightProperties, BlockLighting};
 use crate::rendering::structure_renderer::{BlockRenderingModes, RenderingMode};
-use bevy::ecs::event::Message;
+use bevy::ecs::message::Message;
 use bevy::platform::collections::HashMap;
 use bevy::prelude::{App, Deref, DerefMut, Entity, Rect, Resource, Vec3};
 use bevy::tasks::Task;
@@ -353,5 +353,6 @@ impl PartialEq for ChunkNeedsCustomBlocksRendered {
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_message::<ChunkNeedsCustomBlocksRendered>().init_resource::<RenderingChunks>();
+    app.add_message::<ChunkNeedsCustomBlocksRendered>()
+        .init_resource::<RenderingChunks>();
 }

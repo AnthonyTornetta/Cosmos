@@ -111,7 +111,7 @@ fn render_tooltips(
             spawned = true;
 
             let text_style = TextFont {
-                font: font.0.clone_weak(),
+                font: font.0.clone(),
                 font_size: 24.0,
                 ..Default::default()
             };
@@ -246,7 +246,7 @@ fn render_items(
             Interaction::default(),
             ImageNode {
                 rect: Some(item_atlas.get_item_rect(items.from_numeric_id(render_item.item_id))),
-                image: item_atlas.get_atlas_handle().clone_weak(),
+                image: item_atlas.get_atlas_handle().clone(),
                 ..Default::default()
             },
         ));

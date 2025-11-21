@@ -208,7 +208,7 @@ fn on_active(
 
             let moved_point = intersection.point - intersection.normal * 0.01;
 
-            let point = hit_g_trans.compute_matrix().inverse().transform_point3(moved_point);
+            let point = hit_g_trans.to_matrix().inverse().transform_point3(moved_point);
 
             let Ok(hit_coords) = hit_structure.relative_coords_to_local_coords_checked(point.x, point.y, point.z) else {
                 return;

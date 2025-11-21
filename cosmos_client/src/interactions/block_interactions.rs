@@ -229,7 +229,7 @@ fn process_player_interaction(
                     let block = blocks.from_numeric_id(block_id);
 
                     let moved_point = looking_at_block.intersection.point + looking_at_block.intersection.normal * 0.75;
-                    let point = structure_g_transform.compute_matrix().inverse().transform_point3(moved_point);
+                    let point = structure_g_transform.to_matrix().inverse().transform_point3(moved_point);
 
                     let place_at_coords = structure.relative_coords_to_local_coords_checked(point.x, point.y, point.z).ok()?;
 
@@ -349,7 +349,7 @@ fn send_ray<'a>(
 
     let moved_point = intersection.point - intersection.normal * 0.01;
 
-    let point = g_trans.compute_matrix().inverse().transform_point3(moved_point);
+    let point = g_trans.to_matrix().inverse().transform_point3(moved_point);
 
     let coords = structure.relative_coords_to_local_coords_checked(point.x, point.y, point.z).ok()?;
 

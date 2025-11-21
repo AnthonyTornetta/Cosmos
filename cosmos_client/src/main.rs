@@ -42,6 +42,7 @@ pub mod window;
 
 use bevy::diagnostic::FrameTimeDiagnosticsPlugin;
 use bevy::diagnostic::{EntityCountDiagnosticsPlugin, SystemInformationDiagnosticsPlugin};
+use bevy::post_process::PostProcessPlugin;
 use bevy::prelude::*;
 use bevy::window::WindowMode;
 use bevy_hanabi::HanabiPlugin;
@@ -149,6 +150,7 @@ fn main() {
             SteamClientPlugin,
             ObjPlugin,
             HanabiPlugin,
+            PostProcessPlugin,
             // Used for diagnostics
             SystemInformationDiagnosticsPlugin,
             EntityCountDiagnosticsPlugin::default(),

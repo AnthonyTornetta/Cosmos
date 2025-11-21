@@ -35,14 +35,14 @@ fn play_warp_sound(
     audio_handle: Res<WarpSound>,
 ) {
     for entity in q_started_warping.iter() {
-        let playing_sound: Handle<AudioInstance> = audio.play(audio_handle.warp.clone_weak()).with_volume(0.0).handle();
+        let playing_sound: Handle<AudioInstance> = audio.play(audio_handle.warp.clone()).with_volume(0.0).handle();
 
         let stop_tween = AudioTween::new(Duration::from_millis(100), AudioEasing::Linear);
 
         commands.entity(entity).with_child((
             Transform::default(),
             DespawnOnNoEmissions,
-            WarpSoundMarker(playing_sound.clone_weak()),
+            WarpSoundMarker(playing_sound.clone()),
             // We do NOT want to despawn with structure - so omit the `DespawnWithStructure` here.
             // This way, if the ship warps away this sfx remains where the ship was.
             CosmosAudioEmitter {
@@ -51,7 +51,7 @@ fn play_warp_sound(
                     max_distance: 1000.0,
                     peak_volume: 0.3 * 4.0,
                     stop_tween,
-                    handle: audio_handle.warp.clone_weak(),
+                    handle: audio_handle.warp.clone(),
                 }],
             },
         ));
@@ -78,7 +78,7 @@ fn on_shutdown_warp(
                 audio_emitter.remove_and_stop(&sound_marker.0, &mut audio_instances, &mut stop_later);
                 commands.entity(child).remove::<WarpSoundMarker>();
 
-                let shutdown_sound: Handle<AudioInstance> = audio.play(audio_handle.shutdown.clone_weak()).with_volume(0.0).handle();
+                let shutdown_sound: Handle<AudioInstance> = audio.play(audio_handle.shutdown.clone()).with_volume(0.0).handle();
 
                 let stop_tween = AudioTween::new(Duration::from_millis(100), AudioEasing::Linear);
                 audio_emitter.add_emission(AudioEmission {
@@ -86,7 +86,7 @@ fn on_shutdown_warp(
                     max_distance: 1000.0,
                     peak_volume: 0.05 * 4.0,
                     stop_tween,
-                    handle: audio_handle.shutdown.clone_weak(),
+                    handle: audio_handle.shutdown.clone(),
                 });
 
                 break;

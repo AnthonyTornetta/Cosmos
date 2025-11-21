@@ -4,11 +4,12 @@ use std::f32::consts::PI;
 
 use bevy::{
     asset::RenderAssetUsages,
+    camera::ScalingMode,
+    camera::visibility::RenderLayers,
     prelude::*,
     render::{
-        camera::ScalingMode,
         render_resource::{Extent3d, TextureDimension, TextureFormat, TextureUsages},
-        view::RenderLayers,
+        view::Hdr,
     },
 };
 use cosmos_core::{
@@ -120,9 +121,9 @@ fn create_booth(
             order: 10,
             clear_color: ClearColorConfig::Custom(Color::NONE),
             target: image_handle.clone().into(),
-            hdr: true, // Transparent stuff fails to render properly if this is off - this may be a bevy bug?
             ..Default::default()
         },
+        Hdr::default(),
         Transform::from_xyz(0.0, 0.0, 1.0)
             .looking_at(Vec3::ZERO, Vec3::Y)
             .with_translation(Vec3::new(cam_w / 2.0 - 1.0, cam_h / 2.0 - 1.0, 1.0)),
@@ -174,7 +175,7 @@ fn create_booth(
                     .spawn((
                         Name::new(format!("Rendered item {}", item.unlocalized_name())),
                         RenderLayers::from_layers(&[PHOTO_BOOTH_RENDER_LAYER]),
-                        Mesh3d(item_mat_material.mesh_handle().clone_weak()),
+                        Mesh3d(item_mat_material.mesh_handle().clone()),
                         // h - y - 1 because we want low IDs at the top, and big IDs at the bottom (and +y
                         // is up in this context)
                         Transform::from_xyz(x as f32 * GAP, (h - y as f32 - 1.0) * GAP, 0.0).with_rotation(rot),

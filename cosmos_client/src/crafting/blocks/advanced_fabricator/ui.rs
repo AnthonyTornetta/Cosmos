@@ -96,7 +96,7 @@ fn populate_menu(
         let mut ecmds = commands.entity(ent);
 
         let text_style = TextFont {
-            font: font.0.clone_weak(),
+            font: font.0.clone(),
             font_size: 16.0,
             ..Default::default()
         };
@@ -386,7 +386,7 @@ fn on_change_inventory(
             let selected = q_selected_recipe.single().ok();
 
             let text_style = TextFont {
-                font: font.0.clone_weak(),
+                font: font.0.clone(),
                 font_size: 16.0,
                 ..Default::default()
             };
@@ -466,7 +466,7 @@ fn auto_insert_items(
 }
 
 fn on_select_item(
-    ev: Trigger<ButtonMessage>,
+    ev: On<ButtonMessage>,
     mut commands: Commands,
     q_selected_recipe: Query<Entity, With<SelectedRecipe>>,
     q_recipe: Query<&Recipe>,
@@ -526,7 +526,7 @@ fn on_select_item(
 }
 
 fn listen_create(
-    _trigger: Trigger<ButtonMessage>,
+    _trigger: On<ButtonMessage>,
     q_structure: Query<&Structure>,
     q_inventory: Query<&Inventory>,
     q_open_fab_menu: Query<&OpenAdvancedFabricatorMenu>,

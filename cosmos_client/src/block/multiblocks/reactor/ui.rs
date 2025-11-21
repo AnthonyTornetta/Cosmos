@@ -67,7 +67,7 @@ fn create_ui(
         let mut fuel_slot_ent = None;
 
         let font = TextFont {
-            font: font.0.clone_weak(),
+            font: font.0.clone(),
             font_size: 24.0,
             ..Default::default()
         };
@@ -76,7 +76,7 @@ fn create_ui(
             .spawn((
                 Name::new("Reactor UI"),
                 OpenMenu::new(0),
-                BorderColor(Color::BLACK),
+                BorderColor::all(Color::BLACK),
                 GuiWindow {
                     title: "Reactor".into(),
                     body_styles: Node {
@@ -200,7 +200,7 @@ fn create_ui(
 }
 
 fn on_click_toggle(
-    ev: Trigger<ButtonMessage>,
+    ev: On<ButtonMessage>,
     q_active: Query<(), With<ReactorActive>>,
     q_structure: Query<&Structure>,
     q_ref: Query<&ReactorBlockReference>,

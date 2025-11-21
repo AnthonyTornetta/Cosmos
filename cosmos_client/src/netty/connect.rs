@@ -54,7 +54,7 @@ pub fn establish_connection(
     //     User::NoAuth(name) => {}
     // }
 
-    let steam_transport = match new_steam_transport(client.client(), &host_config) {
+    let steam_transport = match new_steam_transport(client.client().clone(), &host_config) {
         Ok(t) => t,
         Err(e) => {
             error!("{e:?}");

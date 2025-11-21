@@ -40,7 +40,7 @@ fn render_physical_item(
 
         trans.scale = Vec3::splat(0.2);
 
-        ecmds.insert((Visibility::default(), Mesh3d(rendering_info.mesh_handle().clone_weak())));
+        ecmds.insert((Visibility::default(), Mesh3d(rendering_info.mesh_handle().clone())));
         evw_remove_material.write(RemoveAllMaterialsMessage { entity: ent });
         evw_add_material.write(AddMaterialMessage {
             entity: ent,

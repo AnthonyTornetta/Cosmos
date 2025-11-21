@@ -1,6 +1,6 @@
 //! The menu that first appears when you load into the game.
 
-use bevy::{core_pipeline::bloom::Bloom, picking::pointer::PointerPress, prelude::*, window::Monitor};
+use bevy::{picking::pointer::PointerPress, post_process::bloom::Bloom, prelude::*, render::view::Hdr, window::Monitor};
 use bevy_kira_audio::SpatialAudioReceiver;
 use bevy_rapier3d::plugin::DefaultRapierContext;
 use cosmos_core::state::GameState;
@@ -125,10 +125,8 @@ fn create_main_menu_camera(mut commands: Commands) {
     commands.spawn((
         DespawnOnSwitchState,
         MainMenuCamera,
-        Camera {
-            hdr: true,
-            ..Default::default()
-        },
+        Hdr::default(),
+        Camera { ..Default::default() },
         Transform::default(),
         Projection::from(PerspectiveProjection {
             fov: (90.0 / 180.0) * std::f32::consts::PI,

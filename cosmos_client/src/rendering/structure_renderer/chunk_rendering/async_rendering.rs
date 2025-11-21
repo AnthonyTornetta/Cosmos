@@ -3,10 +3,9 @@ use crate::asset::materials::{AddMaterialMessage, BlockMaterialMapping, Material
 use crate::block::lighting::{BlockLightProperties, BlockLighting};
 use crate::rendering::structure_renderer::{BlockRenderingModes, StructureRenderingSet};
 use crate::rendering::{CosmosMeshBuilder, ReadOnlyBlockMeshRegistry};
+use bevy::camera::primitives::{Aabb, MeshAabb};
 use bevy::platform::collections::HashMap;
 use bevy::prelude::*;
-use bevy::render::mesh::MeshAabb;
-use bevy::render::primitives::Aabb;
 use bevy::tasks::AsyncComputeTaskPool;
 use cosmos_core::block::Block;
 use cosmos_core::netty::client::LocalPlayer;

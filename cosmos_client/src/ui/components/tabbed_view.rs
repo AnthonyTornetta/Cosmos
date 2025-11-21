@@ -205,7 +205,7 @@ fn on_change_selected(
     }
 }
 
-fn on_click_tab(ev: Trigger<ButtonMessage>, q_parent: Query<&ChildOf>, q_tab: Query<&Tab>, mut q_selected_tab: Query<&mut SelectedTab>) {
+fn on_click_tab(ev: On<ButtonMessage>, q_parent: Query<&ChildOf>, q_tab: Query<&Tab>, mut q_selected_tab: Query<&mut SelectedTab>) {
     let Ok(tab) = q_tab.get(ev.0) else {
         error!("No tab component on tab!");
         return;

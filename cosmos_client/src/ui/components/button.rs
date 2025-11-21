@@ -12,8 +12,8 @@ use super::Disabled;
 use super::show_cursor::any_open_menus;
 
 /// An event that will be created and sent when a button is interacted with
-#[derive(Message, Debug)]
-#[event(traversal = &'static ChildOf, auto_propagate)]
+#[derive(EntityEvent, Debug)]
+#[entity_event(propagate = &'static ChildOf)]
 pub struct ButtonMessage(pub Entity);
 
 #[derive(Component, Debug, Default)]
@@ -130,7 +130,7 @@ fn on_interact_button(
         {
             // Click and still hovering the button, so they didn't move out while holding the mouse down,
             // which should cancel the mouse click
-            commands.entity(btn_entity).trigger(ButtonMessage(btn_entity));
+            commands.entity(btn_entity).trigger(|e| ButtonMessage(e));
         }
 
         button.last_interaction = *interaction;
@@ -251,6 +251,5 @@ pub(super) fn register(app: &mut App) {
                 .run_if(any_open_menus),
         )
             .chain(),
-    )
-    .add_message::<ButtonMessage>();
+    );
 }

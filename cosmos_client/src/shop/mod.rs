@@ -1,9 +1,6 @@
 //! Client logic for the shop
 
-use bevy::{
-    app::App,
-    ecs::{entity::Entity, event::Message},
-};
+use bevy::prelude::*;
 use cosmos_core::{
     shop::{
         Shop,

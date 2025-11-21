@@ -4,9 +4,10 @@ use bevy::{
     app::App,
     asset::Asset,
     math::Vec4,
+    mesh::MeshVertexBufferLayoutRef,
     pbr::{ExtendedMaterial, MaterialExtension, MaterialPlugin, StandardMaterial},
     reflect::TypePath,
-    render::{mesh::MeshVertexBufferLayoutRef, render_resource::AsBindGroup},
+    render::render_resource::AsBindGroup,
 };
 use bevy_app_compute::prelude::ShaderRef;
 

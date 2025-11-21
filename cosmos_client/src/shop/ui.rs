@@ -197,7 +197,11 @@ struct SelectedItem {
     entry: ShopEntry,
 }
 
-fn open_shop_ui(mut commands: Commands, mut ev_reader: MessageReader<MutMessage<OpenShopUiMessage>>, q_open_shops: Query<Entity, With<ShopUi>>) {
+fn open_shop_ui(
+    mut commands: Commands,
+    mut ev_reader: MessageReader<MutMessage<OpenShopUiMessage>>,
+    q_open_shops: Query<Entity, With<ShopUi>>,
+) {
     for ev in ev_reader.read() {
         let mut ev = ev.write();
         let shop = std::mem::take(&mut ev.shop);
@@ -236,13 +240,13 @@ fn render_shop_ui(
 
     let text_style = TextFont {
         font_size: 32.0,
-        font: default_font.clone_weak(),
+        font: default_font.clone(),
         ..Default::default()
     };
 
     let text_style_small = TextFont {
         font_size: 24.0,
-        font: default_font.clone_weak(),
+        font: default_font.clone(),
         ..Default::default()
     };
 
@@ -338,7 +342,7 @@ fn render_shop_ui(
 
             p.spawn((
                 Name::new("Body"),
-                BorderColor(Srgba::hex("1C1C1C").unwrap().into()),
+                BorderColor::all(Srgba::hex("1C1C1C").unwrap()),
                 Node {
                     border: UiRect {
                         bottom: Val::Px(4.0),
@@ -481,7 +485,7 @@ fn render_shop_ui(
                     body.spawn((
                         Name::new("Search Text Box"),
                         BindValues::<SearchItemQuery>::new(vec![BindValue::new(ui_variables_entity, ReactableFields::Value)]),
-                        BorderColor(Srgba::hex("111111").unwrap().into()),
+                        BorderColor::all(Srgba::hex("111111").unwrap()),
                         BackgroundColor(Srgba::hex("555555").unwrap().into()),
                         TextInput {
                             input_type: InputType::Text { max_length: Some(20) },
@@ -594,7 +598,7 @@ fn render_shop_ui(
                     });
 
                     p.spawn((
-                        BorderColor(Srgba::hex("555555").unwrap().into()),
+                        BorderColor::all(Srgba::hex("555555").unwrap()),
                         Node {
                             border: UiRect {
                                 top: Val::Px(5.0),
@@ -631,7 +635,7 @@ fn render_shop_ui(
                             Name::new("Amount Input"),
                             BindValues::<AmountSelected>::new(vec![BindValue::new(ui_variables_entity, ReactableFields::Value)]),
                             BindValues::<SelectedItemMaxQuantity>::new(vec![BindValue::new(ui_variables_entity, ReactableFields::Max)]),
-                            BorderColor(Srgba::hex("111111").unwrap().into()),
+                            BorderColor::all(Srgba::hex("111111").unwrap()),
                             BackgroundColor(Srgba::hex("555555").unwrap().into()),
                             Node {
                                 width: Val::Px(250.0),
@@ -735,7 +739,7 @@ struct PrevClickedEntity(Entity);
 struct ShopRenderedItem;
 
 fn click_item_event(
-    ev: Trigger<ButtonMessage>,
+    ev: On<ButtonMessage>,
     q_shop_entry: Query<(&ShopEntry, &ShopUiEntity)>,
     mut q_shop: Query<(&mut ShopUi, Option<&PrevClickedEntity>)>,
     mut q_background_color: Query<&mut BackgroundColor>,
@@ -1036,7 +1040,7 @@ fn enable_sell_button(
 }
 
 fn on_buy(
-    ev: Trigger<ButtonMessage>,
+    ev: On<ButtonMessage>,
     mut commands: Commands,
     mut client: ResMut<RenetClient>,
     q_shop_ui: Query<(&ShopUi, &AmountSelected)>,
@@ -1092,7 +1096,7 @@ fn on_buy(
     }
 }
 
-fn click_buy_tab(ev: Trigger<ButtonMessage>, mut q_shop_mode: Query<&mut ShopMode>, q_shop_ui_entity: Query<&ShopUiEntity>) {
+fn click_buy_tab(ev: On<ButtonMessage>, mut q_shop_mode: Query<&mut ShopMode>, q_shop_ui_entity: Query<&ShopUiEntity>) {
     let Ok(shop_ui_ent) = q_shop_ui_entity.get(ev.0) else {
         return;
     };
@@ -1106,7 +1110,7 @@ fn click_buy_tab(ev: Trigger<ButtonMessage>, mut q_shop_mode: Query<&mut ShopMod
     }
 }
 
-fn click_sell_tab(ev: Trigger<ButtonMessage>, mut q_shop_mode: Query<&mut ShopMode>, q_shop_ui_entity: Query<&ShopUiEntity>) {
+fn click_sell_tab(ev: On<ButtonMessage>, mut q_shop_mode: Query<&mut ShopMode>, q_shop_ui_entity: Query<&ShopUiEntity>) {
     let Ok(shop_ui_ent) = q_shop_ui_entity.get(ev.0) else {
         return;
     };

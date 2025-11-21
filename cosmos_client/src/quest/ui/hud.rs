@@ -208,7 +208,7 @@ fn on_quest_complete(
             ..Default::default()
         };
 
-        audio.play(sound.0.clone()).with_volume(master_volume.multiplier()).handle();
+        audio.play(sound.0.clone()).with_volume(master_volume.multiplier() as f32).handle();
 
         commands
             .spawn((

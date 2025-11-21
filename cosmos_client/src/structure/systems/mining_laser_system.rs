@@ -2,7 +2,7 @@
 
 use bevy::{
     asset::LoadState,
-    pbr::{NotShadowCaster, NotShadowReceiver},
+    light::{NotShadowCaster, NotShadowReceiver},
     platform::collections::HashMap,
     prelude::*,
 };
@@ -137,8 +137,8 @@ fn apply_mining_effects(
 
         let idx = rand::random::<u64>() as usize % audio_handles.0.len();
 
-        let handle = audio_handles.0[idx].clone_weak();
-        let playing_sound: Handle<AudioInstance> = audio.play(handle.clone_weak()).handle();
+        let handle = audio_handles.0[idx].clone();
+        let playing_sound: Handle<AudioInstance> = audio.play(handle.clone()).handle();
 
         commands.entity(structure_entity).with_children(|p| {
             p.spawn((
@@ -191,8 +191,8 @@ fn apply_mining_effects(
                 let beam_ent = p
                     .spawn((
                         Transform::from_translation(laser_start).looking_to(beam_direction, Vec3::Y),
-                        MeshMaterial3d(material.clone_weak()),
-                        Mesh3d(mesh.0.clone_weak()),
+                        MeshMaterial3d(material.clone()),
+                        Mesh3d(mesh.0.clone()),
                         NotShadowCaster,
                         NotShadowReceiver,
                         MiningLaser {
