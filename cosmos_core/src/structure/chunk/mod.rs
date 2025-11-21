@@ -310,7 +310,7 @@ impl Chunk {
         chunk_entity: Entity,
         structure_entity: Entity,
         data: T,
-        system_params: &mut BlockDataSystemParams,
+        commands: &mut Commands,
         q_block_data: &mut Query<&mut BlockData>,
         q_data: &Query<(), With<T>>,
     ) -> Entity {
@@ -320,13 +320,13 @@ impl Chunk {
                     bd.increment();
                 }
             } else {
-                system_params.commands.entity(data_ent).log_components();
+                commands.entity(data_ent).log_components();
                 error!("Block data entity missing BlockData component!");
             }
 
-            system_params.commands.entity(data_ent).insert(data);
+            commands.entity(data_ent).insert(data);
 
-            system_params.ev_writer.write(BlockDataChangedMessage {
+            commands.write_message(BlockDataChangedMessage {
                 block_data_entity: Some(data_ent),
                 block: StructureBlock::new(self.chunk_coordinates().first_structure_block() + coords, structure_entity),
             });
@@ -335,8 +335,7 @@ impl Chunk {
         } else {
             let id = self.block_at(coords);
 
-            let data_ent = system_params
-                .commands
+            let data_ent = commands
                 .spawn((
                     data,
                     BlockData {
@@ -363,7 +362,7 @@ impl Chunk {
 
             self.block_data.insert((id, coords), data_ent);
 
-            system_params.ev_writer.write(BlockDataChangedMessage {
+            commands.write_message(BlockDataChangedMessage {
                 block_data_entity: Some(data_ent),
                 block: StructureBlock::new(self.chunk_coordinates().first_structure_block() + coords, structure_entity),
             });

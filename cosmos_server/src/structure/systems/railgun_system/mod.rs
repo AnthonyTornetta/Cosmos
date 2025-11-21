@@ -28,7 +28,9 @@ use cosmos_core::{
         systems::{
             StructureSystemImpl, StructureSystemOrdering, StructureSystemType, StructureSystems, StructureSystemsSet, SystemActive,
             energy_storage_system::EnergyStorageSystem,
-            railgun_system::{InvalidRailgunReason, RailgunBlock, RailgunFiredMessage, RailgunFiredInfo, RailgunSystem, RailgunSystemEntry},
+            railgun_system::{
+                InvalidRailgunReason, RailgunBlock, RailgunFiredInfo, RailgunFiredMessage, RailgunSystem, RailgunSystemEntry,
+            },
         },
     },
     utils::ecs::MutOrMutRef,
@@ -330,7 +332,7 @@ fn on_active(
     mut nevw_railgun_fired: NettyMessageWriter<RailgunFiredMessage>,
     mut evw_shield_hit_event: MessageWriter<ShieldHitMessage>,
     mut q_railgun_data: Query<&mut RailgunBlock>,
-    bs_params: BlockDataSystemParams,
+    mut commands: Commands,
 ) {
     let bs_params = Rc::new(RefCell::new(bs_params));
     for (ss, railgun_system) in q_active.iter() {
@@ -346,8 +348,7 @@ fn on_active(
 
             let railgun_block_coords = railgun_entry.origin;
 
-            let Some(mut railgun_block) = structure.query_block_data_mut(railgun_block_coords, &mut q_railgun_data, bs_params.clone())
-            else {
+            let Some(mut railgun_block) = structure.query_block_data_mut(railgun_block_coords, &mut q_railgun_data, &mut commands) else {
                 error!("Desync between railgun and railgun block!");
                 continue;
             };

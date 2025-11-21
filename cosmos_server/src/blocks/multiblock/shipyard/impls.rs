@@ -656,11 +656,10 @@ fn consume_item(
             continue;
         }
 
-        if let Some(mut inv) = structure.query_block_data_mut(coord, q_inventory, commands) {
-            let inv = inv.as_mut();
-            if inv.take_and_remove_item(item, 1, commands).0 == 0 {
-                return true;
-            }
+        if let Some(mut inv) = structure.query_block_data_mut(coord, q_inventory, commands)
+            && inv.take_and_remove_item(item, 1, commands).0 == 0
+        {
+            return true;
         }
     }
     false
