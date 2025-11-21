@@ -1,13 +1,10 @@
 //! Logic behavior for "Or Gate", a block with left and right inputs and a front output.
 //! Outputs 0 if both inputs are zero or missing. Outputs 1 if either input is present and non-zero.
 
-use std::{cell::RefCell, rc::Rc};
-
 use bevy::prelude::*;
 
 use cosmos_core::{
     block::{Block, block_face::BlockFace, data::BlockData},
-    events::block_events::BlockDataSystemParams,
     registry::{Registry, identifiable::Identifiable},
     structure::Structure,
 };
@@ -39,11 +36,10 @@ fn or_gate_input_event_listener(
     mut q_logic_driver: Query<&mut LogicDriver>,
     mut q_structure: Query<&mut Structure>,
     mut q_logic_data: Query<&mut BlockLogicData>,
-    bs_params: BlockDataSystemParams,
-    q_has_data: Query<(), With<BlockLogicData>>,
     mut commands: Commands,
+    mut q_block_data: Query<&mut BlockData>,
+    q_has_data: Query<(), With<BlockLogicData>>,
 ) {
-    let bs_params = Rc::new(RefCell::new(bs_params));
     for ev in evr_logic_input.read() {
         let Ok(mut structure) = q_structure.get_mut(ev.block.structure()) else {
             continue;
@@ -65,7 +61,7 @@ fn or_gate_input_event_listener(
                 **logic_data = new_state;
             }
         } else if new_state.0 != 0 {
-            structure.insert_block_data(coords, new_state, &mut bs_params.borrow_mut(), &mut commands, &q_has_data);
+            structure.insert_block_data(coords, new_state, &mut commands, &mut q_block_data, &q_has_data);
         }
     }
 }

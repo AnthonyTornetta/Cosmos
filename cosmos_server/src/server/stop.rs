@@ -76,12 +76,12 @@ pub(super) fn register(app: &mut App) {
             on_stop_server
                 .after(ProcessCommandsSet::HandleCommands)
                 .in_set(StopServerSet::Stop)
-                .run_if(on_event::<StopServerMessage>),
+                .run_if(on_message::<StopServerMessage>),
         )
         .add_systems(
             First,
             shut_server_down
                 .in_set(StopServerSet::ShutDown)
-                .run_if(on_event::<CloseServerPostSaveMessage>),
+                .run_if(on_message::<CloseServerPostSaveMessage>),
         );
 }

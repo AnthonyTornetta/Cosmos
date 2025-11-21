@@ -7,7 +7,7 @@ use bevy::prelude::*;
 use cosmos_core::{
     block::{
         Block,
-        block_events::{BlockMessagesSet, BlockInteractMessage},
+        block_events::{BlockInteractMessage, BlockMessagesSet},
     },
     crafting::{
         blocks::basic_fabricator::{CraftBasicFabricatorRecipeMessage, OpenBasicFabricatorMessage},
@@ -17,7 +17,6 @@ use cosmos_core::{
         },
     },
     entities::player::Player,
-    events::block_events::BlockDataSystemParams,
     inventory::{Inventory, itemstack::ItemShouldHaveData},
     item::Item,
     netty::{
@@ -77,14 +76,13 @@ fn monitor_craft_event(
     mut q_not_player_inventory: Query<&mut Inventory, Without<Player>>,
     lobby: Res<ServerLobby>,
     blocks: Res<Registry<Block>>,
-    bd_params: BlockDataSystemParams,
     recipes: Res<BasicFabricatorRecipes>,
     mut commands: Commands,
+    mut block_data_commands: Commands,
     needs_data: Res<ItemShouldHaveData>,
     mut evw_craft: MessageWriter<BasicFabricatorCraftMessage>,
     items: Res<Registry<Item>>,
 ) {
-    let bd_params = Rc::new(RefCell::new(bd_params));
     for ev in nevr_craft_event.read() {
         let Some(player_ent) = lobby.player_from_id(ev.client_id) else {
             warn!("Bad player - cid: {}", ev.client_id);
@@ -111,7 +109,8 @@ fn monitor_craft_event(
             continue;
         }
 
-        let Some(mut fab_inv) = structure.query_block_data_mut(ev.block.coords(), &mut q_not_player_inventory, bd_params.clone()) else {
+        let Some(mut fab_inv) = structure.query_block_data_mut(ev.block.coords(), &mut q_not_player_inventory, &mut block_data_commands)
+        else {
             error!("Fabricator @ {:?} missing inventory block data!", ev.block);
             continue;
         };

@@ -252,7 +252,7 @@ pub(super) fn register(app: &mut App) {
         Update,
         (
             settings_done
-                .run_if(on_event::<SettingsDoneButtonMessage>.or(on_event::<SettingsCancelButtonMessage>))
+                .run_if(on_message::<SettingsDoneButtonMessage>.or(on_message::<SettingsCancelButtonMessage>))
                 .after(SettingsMenuSet::SettingsMenuInteractions),
             show_pause_if_no_settings,
         )

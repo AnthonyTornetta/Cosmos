@@ -3,7 +3,7 @@ use std::{cell::RefCell, rc::Rc};
 use bevy::prelude::*;
 use cosmos_core::{
     block::{Block, block_events::BlockMessagesSet},
-    events::block_events::{BlockChangedMessage, BlockDataSystemParams},
+    events::block_events::BlockChangedMessage,
     inventory::{Inventory, itemstack::ItemShouldHaveData},
     item::Item,
     prelude::{Structure, StructureBlock, StructureLoadingSet},
@@ -70,20 +70,18 @@ fn populate_loot_table_inventories(
     mut evr_populate_inventories: MessageReader<PopulateLootInventoriesMessage>,
     q_structure: Query<&Structure>,
     mut q_inventory: Query<&mut Inventory>,
-    bs_params: BlockDataSystemParams,
+    mut bs_params: Commands,
     mut commands: Commands,
     has_data: Res<ItemShouldHaveData>,
     items: Res<Registry<Item>>,
 ) {
-    let bs_params = Rc::new(RefCell::new(bs_params));
-
     for ev in evr_populate_inventories.read() {
         let Ok(structure) = q_structure.get(ev.0.structure()) else {
             error!("Invalid structure!");
             continue;
         };
 
-        let Some(mut inv) = structure.query_block_data_mut(ev.0.coords(), &mut q_inventory, bs_params.clone()) else {
+        let Some(mut inv) = structure.query_block_data_mut(ev.0.coords(), &mut q_inventory, &mut bs_params) else {
             error!("Invalid inventory!");
             continue;
         };

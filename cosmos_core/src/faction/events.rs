@@ -35,7 +35,7 @@ pub enum PlayerCreateFactionMessageResponse {
 
 impl IdentifiableMessage for PlayerCreateFactionMessageResponse {
     fn unlocalized_name() -> &'static str {
-        "cosmos:player_create_faction_event_response"
+        "cosmos:player_create_faction_message_response"
     }
 }
 
@@ -54,7 +54,7 @@ pub struct PlayerCreateFactionMessage {
 
 impl IdentifiableMessage for PlayerCreateFactionMessage {
     fn unlocalized_name() -> &'static str {
-        "cosmos:player_create_faction_event"
+        "cosmos:player_create_faction_message"
     }
 }
 
@@ -70,7 +70,7 @@ pub struct PlayerLeaveFactionMessage;
 
 impl IdentifiableMessage for PlayerLeaveFactionMessage {
     fn unlocalized_name() -> &'static str {
-        "cosmos:player_leave_faction_event"
+        "cosmos:player_leave_faction_message"
     }
 }
 

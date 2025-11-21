@@ -2,10 +2,8 @@
 //!
 //! Structures are the backbone of everything that contains blocks.
 
-use std::cell::RefCell;
 use std::fmt::Display;
 use std::ops::DerefMut;
-use std::rc::Rc;
 use std::sync::{Arc, Mutex};
 
 use crate::block::block_direction::BlockDirection;
@@ -13,7 +11,7 @@ use crate::block::data::BlockData;
 use crate::block::data::persistence::ChunkLoadBlockDataMessage;
 use crate::block::{Block, block_face::BlockFace, block_rotation::BlockRotation};
 use crate::ecs::NeedsDespawned;
-use crate::events::block_events::{BlockChangedMessage, BlockDataChangedMessage, BlockDataSystemParams};
+use crate::events::block_events::{BlockChangedMessage, BlockDataChangedMessage};
 use crate::netty::NoSendEntity;
 use crate::physics::location::Location;
 use crate::registry::Registry;
@@ -685,13 +683,13 @@ impl Structure {
         &mut self,
         coords: BlockCoordinate,
         data: T,
-        system_params: &mut Commands,
+        commands: &mut Commands,
         q_block_data: &mut Query<&mut BlockData>,
         q_has_data: &Query<(), With<T>>,
     ) -> Option<Entity> {
         match self {
-            Self::Full(fs) => fs.insert_block_data(coords, data, system_params, q_block_data, q_has_data),
-            Self::Dynamic(ds) => ds.insert_block_data(coords, data, system_params, q_block_data, q_has_data),
+            Self::Full(fs) => fs.insert_block_data(coords, data, commands, q_block_data, q_has_data),
+            Self::Dynamic(ds) => ds.insert_block_data(coords, data, commands, q_block_data, q_has_data),
         }
     }
 
@@ -734,7 +732,7 @@ impl Structure {
         &mut self,
         coords: BlockCoordinate,
         create_data_closure: F,
-        system_params: &mut BlockDataSystemParams,
+        system_params: &mut Commands,
         q_block_data: &mut Query<&mut BlockData>,
         q_data: &Query<(), With<T>>,
     ) -> Option<Entity>
@@ -765,9 +763,7 @@ impl Structure {
         &self,
         coords: BlockCoordinate,
         query: &'q mut Query<'_, 's, Q, F>,
-        commands: &'q mut Commands<'w, '_>, // query: &'q mut Query<'q, 's, Q, F>,
-                                            // block_system_params: Rc<RefCell<BlockDataSystemParams<'w, 's>>>,
-                                            // commands: Commands<'w, 'q>,
+        commands: &'q mut Commands<'w, '_>,
     ) -> Option<MutBlockData<'q, 'w, 's, Q>>
     where
         F: QueryFilter,
@@ -799,10 +795,10 @@ impl Structure {
 
     /// Despawns any block data that is no longer used by any blocks. This should be called every frame
     /// for general cleanup and avoid systems executing on dead block-data.
-    pub(crate) fn despawn_dead_block_data(&mut self, q_block_data: &mut Query<&mut BlockData>, bs_commands: &mut BlockDataSystemParams) {
+    pub(crate) fn despawn_dead_block_data(&mut self, q_block_data: &mut Query<&mut BlockData>, commands: &mut Commands) {
         match self {
-            Self::Full(fs) => fs.despawn_dead_block_data(q_block_data, bs_commands),
-            Self::Dynamic(ds) => ds.despawn_dead_block_data(q_block_data, bs_commands),
+            Self::Full(fs) => fs.despawn_dead_block_data(q_block_data, commands),
+            Self::Dynamic(ds) => ds.despawn_dead_block_data(q_block_data, commands),
         }
     }
 
@@ -812,7 +808,7 @@ impl Structure {
     pub fn remove_block_data<T: Component>(
         &mut self,
         coords: BlockCoordinate,
-        params: &mut BlockDataSystemParams,
+        params: &mut Commands,
         q_block_data: &mut Query<&mut BlockData>,
         q_data: &Query<(), With<T>>,
     ) -> Option<Entity> {

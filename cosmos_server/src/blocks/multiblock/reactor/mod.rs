@@ -7,13 +7,12 @@ use bevy_renet::renet::RenetServer;
 use cosmos_core::{
     block::{
         Block,
-        block_events::{BlockMessagesSet, BlockInteractMessage},
+        block_events::{BlockInteractMessage, BlockMessagesSet},
         block_face::BlockFace,
         data::BlockData,
         multiblock::reactor::{Reactor, ReactorActive, ReactorBounds, ReactorPowerGenerationBlock, Reactors},
     },
     entities::player::Player,
-    events::block_events::BlockDataSystemParams,
     inventory::{Inventory, itemstack::ItemShouldHaveData},
     item::{DEFAULT_MAX_STACK_SIZE, Item},
     netty::{NettyChannelServer, cosmos_encoder, server_reliable_messages::ServerReliableMessages},
@@ -364,7 +363,6 @@ fn on_piloted_by_ai(
     blocks_registry: Res<Registry<Block>>,
     reactor_blocks: Res<Registry<ReactorPowerGenerationBlock>>,
     mut q_structure: Query<(&mut Structure, &mut Reactors), (With<AiControlled>, Or<(Added<AiControlled>, Added<Reactors>)>)>,
-    bds_params: BlockDataSystemParams,
     mut q_block_data: Query<&mut BlockData>,
     q_has_data: Query<(), With<Reactor>>,
     q_has_active: Query<(), With<ReactorActive>>,
@@ -372,9 +370,8 @@ fn on_piloted_by_ai(
     items: Res<Registry<Item>>,
     mut commands: Commands,
     needs_data: Res<ItemShouldHaveData>,
+    mut block_data_commands: Commands,
 ) {
-    let bds_params = Rc::new(RefCell::new(bds_params));
-
     for (mut structure, mut reactors) in q_structure.iter_mut() {
         let reactor_block = blocks_registry
             .from_id("cosmos:reactor_controller")
@@ -393,15 +390,9 @@ fn on_piloted_by_ai(
                     ReactorValidity::Valid => {
                         let reactor = create_reactor(&structure, &blocks_registry, &reactor_blocks, bounds, block_here);
 
-                        structure.insert_block_data(block_here, reactor, &mut bds_params.borrow_mut(), &mut q_block_data, &q_has_data);
-                        structure.insert_block_data(
-                            block_here,
-                            ReactorActive,
-                            &mut bds_params.borrow_mut(),
-                            &mut q_block_data,
-                            &q_has_active,
-                        );
-                        if let Some(mut inv) = structure.query_block_data_mut(block_here, &mut q_inventory, bds_params.clone()) {
+                        structure.insert_block_data(block_here, reactor, &mut commands, &mut q_block_data, &q_has_data);
+                        structure.insert_block_data(block_here, ReactorActive, &mut commands, &mut q_block_data, &q_has_active);
+                        if let Some(mut inv) = structure.query_block_data_mut(block_here, &mut q_inventory, &mut block_data_commands) {
                             inv.insert_item_at(0, reactor_fuel_cell, DEFAULT_MAX_STACK_SIZE, &mut commands, &needs_data);
                         }
 
@@ -423,9 +414,9 @@ fn on_interact_reactor(
     mut interaction: MessageReader<BlockInteractMessage>,
     mut server: ResMut<RenetServer>,
     player_query: Query<&Player>,
-    mut bds_params: BlockDataSystemParams,
     mut q_block_data: Query<&mut BlockData>,
     q_has_data: Query<(), With<Reactor>>,
+    mut commands: Commands,
 ) {
     for ev in interaction.read() {
         let Some(s_block) = ev.block else {
@@ -472,7 +463,7 @@ fn on_interact_reactor(
                     ReactorValidity::Valid => {
                         let reactor = create_reactor(&structure, &blocks, &reactor_blocks, bounds, s_block.coords());
 
-                        structure.insert_block_data(s_block.coords(), reactor, &mut bds_params, &mut q_block_data, &q_has_data);
+                        structure.insert_block_data(s_block.coords(), reactor, &mut commands, &mut q_block_data, &q_has_data);
 
                         reactors.add_reactor_controller(s_block.coords());
                     }

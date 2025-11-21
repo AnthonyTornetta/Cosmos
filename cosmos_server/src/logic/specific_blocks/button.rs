@@ -6,10 +6,10 @@ use bevy::prelude::*;
 use cosmos_core::{
     block::{
         Block,
-        block_events::{BlockMessagesSet, BlockInteractMessage},
+        block_events::{BlockInteractMessage, BlockMessagesSet},
         data::BlockData,
     },
-    events::block_events::BlockDataSystemParams,
+    events::block_events::BlockDataChangedMessage,
     netty::sync::IdentifiableComponent,
     registry::{Registry, identifiable::Identifiable},
     state::GameState,
@@ -50,9 +50,10 @@ fn on_interact_with_button(
     mut evr_interact: MessageReader<BlockInteractMessage>,
     mut q_structure: Query<&mut Structure>,
     blocks: Res<Registry<Block>>,
-    mut bs_params: BlockDataSystemParams,
+    mut commands: Commands,
     mut q_block_data: Query<&mut BlockData>,
     q_has_data: Query<(), With<ButtonTimer>>,
+    mut mw_block_data_changed: MessageWriter<BlockDataChangedMessage>,
 ) {
     for ev in evr_interact.read() {
         let Some(block) = ev.block else {
@@ -69,8 +70,8 @@ fn on_interact_with_button(
         let mut data = structure.block_info_at(block.coords());
         data.0 |= LOGIC_BIT;
 
-        structure.set_block_info_at(block.coords(), data, &mut bs_params.ev_writer);
-        structure.insert_block_data(block.coords(), ButtonTimer(0), &mut bs_params, &mut q_block_data, &q_has_data);
+        structure.set_block_info_at(block.coords(), data, &mut mw_block_data_changed);
+        structure.insert_block_data(block.coords(), ButtonTimer(0), &mut commands, &mut q_block_data, &q_has_data);
     }
 }
 
@@ -78,8 +79,9 @@ fn tick_button_down(
     mut q_block_data: Query<&mut BlockData>,
     mut q_block_timer: Query<(Entity, &mut ButtonTimer)>,
     mut q_structure: Query<&mut Structure>,
-    mut bs_params: BlockDataSystemParams,
+    mut commands: Commands,
     q_data: Query<(), With<ButtonTimer>>,
+    mut mw_block_data_changed: MessageWriter<BlockDataChangedMessage>,
 ) {
     for (ent, mut timer) in q_block_timer.iter_mut() {
         let Ok(bd) = q_block_data.get(ent) else {
@@ -100,9 +102,9 @@ fn tick_button_down(
         structure.set_block_info_at(
             bd.identifier.block.coords(),
             BlockInfo(info.0 & !LOGIC_BIT),
-            &mut bs_params.ev_writer,
+            &mut mw_block_data_changed,
         );
-        structure.remove_block_data(bd.identifier.block.coords(), &mut bs_params, &mut q_block_data, &q_data);
+        structure.remove_block_data(bd.identifier.block.coords(), &mut commands, &mut q_block_data, &q_data);
     }
 }
 

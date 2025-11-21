@@ -4,7 +4,7 @@ use bevy::prelude::*;
 use cosmos_core::{
     block::{
         Block,
-        block_events::{BlockMessagesSet, BlockInteractMessage},
+        block_events::{BlockInteractMessage, BlockMessagesSet},
         data::BlockData,
         multiblock::reactor::{
             ClientRequestChangeReactorStatus, OpenReactorMessage, Reactor, ReactorActive, ReactorFuel, ReactorFuelConsumption,
@@ -13,7 +13,7 @@ use cosmos_core::{
     },
     ecs::sets::FixedUpdateSet,
     entities::player::Player,
-    events::block_events::{BlockChangedMessage, BlockDataSystemParams},
+    events::block_events::BlockChangedMessage,
     inventory::Inventory,
     item::Item,
     netty::sync::events::server_event::{NettyMessageReceived, NettyMessageWriter},
@@ -71,15 +71,13 @@ fn generate_power(
     mut energy_storage_system_query: Query<&mut EnergyStorageSystem>,
     mut q_reactor: Query<(&Reactor, Option<&mut ReactorFuelConsumption>, &mut Inventory), With<ReactorActive>>,
     time: Res<Time>,
-    bds_params: BlockDataSystemParams,
     fuels: Res<Registry<ReactorFuel>>,
     items: Res<Registry<Item>>,
     q_has_fuel_cons: Query<(), With<ReactorFuelConsumption>>,
     mut q_block_data: Query<&mut BlockData>,
     mut commands: Commands,
+    mut block_data_commands: Commands,
 ) {
-    let bds_params = Rc::new(RefCell::new(bds_params));
-
     for (reactors, structure_entity) in reactors.iter() {
         let Ok((mut structure, systems)) = q_structure.get_mut(structure_entity) else {
             continue;
@@ -90,7 +88,7 @@ fn generate_power(
         };
 
         for &c in reactors.iter() {
-            let Some(mut reactor) = structure.query_block_data_mut(c, &mut q_reactor, bds_params.clone()) else {
+            let Some(mut reactor) = structure.query_block_data_mut(c, &mut q_reactor, &mut block_data_commands) else {
                 continue;
             };
 
@@ -109,12 +107,7 @@ fn generate_power(
                         fuel_consumption.fuel_id = fuel.id();
                     } else {
                         delta -= over;
-                        structure.remove_block_data::<ReactorFuelConsumption>(
-                            c,
-                            &mut bds_params.borrow_mut(),
-                            &mut q_block_data,
-                            &q_has_fuel_cons,
-                        );
+                        structure.remove_block_data::<ReactorFuelConsumption>(c, &mut commands, &mut q_block_data, &q_has_fuel_cons);
                     }
                 }
             } else {
@@ -128,7 +121,7 @@ fn generate_power(
                         fuel_id: fuel.id(),
                         secs_spent: delta,
                     },
-                    &mut bds_params.borrow_mut(),
+                    &mut commands,
                     &mut q_block_data,
                     &q_has_fuel_cons,
                 );
@@ -166,11 +159,10 @@ fn on_modify_reactor(
     reactor_cells: Res<Registry<ReactorPowerGenerationBlock>>,
     mut q_reactor: Query<&mut Reactor>,
     mut q_structure: Query<&mut Structure>,
-    bds_params: BlockDataSystemParams,
+    mut commands: Commands,
     q_has_reactor: Query<(), With<Reactor>>,
     mut q_block_data: Query<&mut BlockData>,
 ) {
-    let bds_params = Rc::new(RefCell::new(bds_params));
     for ev in block_change_event.read() {
         let Ok(mut reactors) = reactors_query.get_mut(ev.block.structure()) else {
             continue;
@@ -184,7 +176,7 @@ fn on_modify_reactor(
         let mut to_remove = vec![];
 
         reactors.retain(|&reactor_controller| {
-            let Some(mut reactor) = structure.query_block_data_mut(reactor_controller, &mut q_reactor, bds_params.clone()) else {
+            let Some(mut reactor) = structure.query_block_data_mut(reactor_controller, &mut q_reactor, &mut commands) else {
                 // This can happen if the controller is destroyed.
                 return false;
             };
@@ -223,7 +215,7 @@ fn on_modify_reactor(
         });
 
         for controller_block in to_remove {
-            structure.remove_block_data::<Reactor>(controller_block, &mut bds_params.borrow_mut(), &mut q_block_data, &q_has_reactor);
+            structure.remove_block_data::<Reactor>(controller_block, &mut commands, &mut q_block_data, &q_has_reactor);
         }
     }
 }
@@ -232,7 +224,7 @@ fn process_activate_reactor(
     mut nevr: MessageReader<NettyMessageReceived<ClientRequestChangeReactorStatus>>,
     mut q_structure: Query<&mut Structure>,
     mut q_block_data: Query<&mut BlockData>,
-    mut bds_params: BlockDataSystemParams,
+    mut commands: Commands,
     q_is_active: Query<(), With<ReactorActive>>,
     q_reactor: Query<(), With<Reactor>>,
 ) {
@@ -247,9 +239,9 @@ fn process_activate_reactor(
         }
 
         if ev.active {
-            structure.insert_block_data(ev.block.coords(), ReactorActive, &mut bds_params, &mut q_block_data, &q_is_active);
+            structure.insert_block_data(ev.block.coords(), ReactorActive, &mut commands, &mut q_block_data, &q_is_active);
         } else {
-            structure.remove_block_data::<ReactorActive>(ev.block.coords(), &mut bds_params, &mut q_block_data, &q_is_active);
+            structure.remove_block_data::<ReactorActive>(ev.block.coords(), &mut commands, &mut q_block_data, &q_is_active);
         }
     }
 }

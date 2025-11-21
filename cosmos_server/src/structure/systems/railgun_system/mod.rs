@@ -9,10 +9,7 @@ use bevy_rapier3d::{
 use cosmos_core::{
     block::{Block, block_events::BlockMessagesSet, block_face::BlockFace, data::BlockData},
     entities::player::Player,
-    events::{
-        block_events::{BlockChangedMessage, BlockDataSystemParams},
-        structure::structure_event::StructureMessageIterator,
-    },
+    events::{block_events::BlockChangedMessage, structure::structure_event::StructureMessageIterator},
     netty::{sync::events::server_event::NettyMessageWriter, system_sets::NetworkingSystemsSet},
     physics::location::{Location, LocationPhysicsSet, SECTOR_DIMENSIONS},
     prelude::StructureSystem,
@@ -334,7 +331,6 @@ fn on_active(
     mut q_railgun_data: Query<&mut RailgunBlock>,
     mut commands: Commands,
 ) {
-    let bs_params = Rc::new(RefCell::new(bs_params));
     for (ss, railgun_system) in q_active.iter() {
         let mut fired = vec![];
 
@@ -375,7 +371,7 @@ fn on_active(
 
             let mut structures = vec![];
 
-            context.intersections_with_ray(
+            context.intersect_ray(
                 abs_block_pos,
                 ray_dir,
                 RAILGUN_TRAVEL_DISTANCE,

@@ -19,7 +19,7 @@ pub struct CreateStationMessage {
     pub rotation: Quat,
 }
 
-pub(crate) fn create_station_event_reader(mut event_reader: MessageReader<CreateStationMessage>, mut commands: Commands) {
+pub(crate) fn create_station_message_reader(mut event_reader: MessageReader<CreateStationMessage>, mut commands: Commands) {
     for ev in event_reader.read() {
         let mut entity = commands.spawn_empty();
 
@@ -38,7 +38,7 @@ pub(crate) fn create_station_event_reader(mut event_reader: MessageReader<Create
 pub(super) fn register(app: &mut App) {
     app.add_message::<CreateStationMessage>().add_systems(
         Update,
-        create_station_event_reader
+        create_station_message_reader
             .in_set(StructureLoadingSet::LoadStructure)
             .run_if(in_state(GameState::Playing)),
     );

@@ -155,7 +155,7 @@ pub(super) fn register(app: &mut App) {
 
     app.add_systems(
         Update,
-        (trigger_music_playing, start_playing.run_if(on_event::<PlayMusicMessage>))
+        (trigger_music_playing, start_playing.run_if(on_message::<PlayMusicMessage>))
             .chain()
             .run_if(in_state(GameState::Playing))
             .run_if(not(resource_exists::<PlayingBackgroundSong>)),

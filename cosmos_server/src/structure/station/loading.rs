@@ -13,7 +13,7 @@ use cosmos_core::{
     },
 };
 
-use super::events::create_station_event_reader;
+use super::events::create_station_message_reader;
 
 /// A flag that denotes that a station needs created
 #[derive(Component)]
@@ -71,7 +71,7 @@ pub(super) fn register(app: &mut App) {
             .in_set(StructureLoadingSet::LoadStructure)
             .in_set(StructureTypeSet::Station)
             .ambiguous_with(StructureLoadingSet::LoadStructure)
-            .after(create_station_event_reader)
+            .after(create_station_message_reader)
             .run_if(in_state(GameState::Playing)),
     );
 }

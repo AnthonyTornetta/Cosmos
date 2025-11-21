@@ -22,7 +22,7 @@ impl CosmosCommandType for BlueprintCommand {
             });
         };
 
-        let Ok(entity) = Entity::try_from_bits(index) else {
+        let Some(entity) = Entity::try_from_bits(index) else {
             return Err(ArgumentError::InvalidType {
                 arg_index: 0,
                 type_name: "Entity".into(),

@@ -58,7 +58,7 @@ fn server_listen_messages(
         mut block_interact_event,
         mut exit_build_mode_writer,
         mut create_ship_event_writer,
-        mut create_station_event_writer,
+        mut create_station_message_writer,
         mut request_chunk_event_writer,
     ): (
         Query<(&mut StructureSystems, &StructureSystemOrdering)>,
@@ -274,7 +274,7 @@ fn server_listen_messages(
 
                         info!("Creating ship {name}");
 
-                        create_station_event_writer.write(CreateStationMessage {
+                        create_station_message_writer.write(CreateStationMessage {
                             station_location,
                             rotation,
                         });

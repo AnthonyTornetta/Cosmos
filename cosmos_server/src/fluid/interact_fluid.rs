@@ -6,10 +6,9 @@ use bevy::prelude::*;
 use cosmos_core::{
     block::{
         Block,
-        block_events::{BlockMessagesSet, BlockInteractMessage},
+        block_events::{BlockInteractMessage, BlockMessagesSet},
         data::BlockData,
     },
-    events::block_events::BlockDataSystemParams,
     fluid::{
         data::{BlockFluidData, FluidHolder, FluidItemData, FluidTankBlock, StoredFluidData},
         registry::Fluid,
@@ -119,14 +118,12 @@ fn on_interact_with_tank(
     mut q_fluid_data_is: Query<&mut FluidItemData>,
     tank_registry: Res<Registry<FluidTankBlock>>,
     mut commands: Commands,
-    block_data_params: BlockDataSystemParams,
+    mut block_data_params: Commands,
     mut q_stored_fluid_block: Query<&mut BlockFluidData>,
     mut q_block_data: Query<&mut BlockData>,
     q_has_stored_fluid: Query<(), With<BlockFluidData>>,
     needs_data: Res<ItemShouldHaveData>,
 ) {
-    let block_data_params = Rc::new(RefCell::new(block_data_params));
-
     for ev in ev_reader.read() {
         let Some(s_block) = ev.block else {
             continue;
@@ -161,7 +158,7 @@ fn on_interact_with_tank(
         let Some(mut stored_fluid_item) = is.query_itemstack_data_mut(&mut q_fluid_data_is) else {
             // Attempt to take fluid from tank if no fluid in current item.
 
-            let Some(mut block_fluid_data) = structure.query_block_data_mut(coords, &mut q_stored_fluid_block, block_data_params.clone())
+            let Some(mut block_fluid_data) = structure.query_block_data_mut(coords, &mut q_stored_fluid_block, &mut block_data_params)
             else {
                 continue;
             };
@@ -228,11 +225,11 @@ fn on_interact_with_tank(
                     };
 
                     **structure
-                        .query_block_data_mut(coords, &mut q_stored_fluid_block, block_data_params.clone())
+                        .query_block_data_mut(coords, &mut q_stored_fluid_block, &mut block_data_params)
                         .expect("Checked above") = BlockFluidData::NoFluid;
                 } else {
                     let Some(mut stored_fluid_block) =
-                        structure.query_block_data_mut(coords, &mut q_stored_fluid_block, block_data_params.clone())
+                        structure.query_block_data_mut(coords, &mut q_stored_fluid_block, &mut block_data_params)
                     else {
                         continue;
                     };
@@ -289,13 +286,7 @@ fn on_interact_with_tank(
                         *stored_fluid_item = FluidItemData::Empty;
                     }
 
-                    structure.insert_block_data(
-                        coords,
-                        data,
-                        &mut block_data_params.borrow_mut(),
-                        &mut q_block_data,
-                        &q_has_stored_fluid,
-                    );
+                    structure.insert_block_data(coords, data, &mut block_data_params, &mut q_block_data, &q_has_stored_fluid);
 
                     if matches!(*stored_fluid_item, FluidItemData::Empty) && fluid_holder.convert_from_item_id() != is.item_id() {
                         if inventory.decrease_quantity_at(slot, 1, &mut commands) != 0 {
@@ -330,7 +321,7 @@ fn on_interact_with_tank(
 
                         info!("Removing fluid data because item removed it at {coords}.");
                         **structure
-                            .query_block_data_mut(coords, &mut q_stored_fluid_block, block_data_params.clone())
+                            .query_block_data_mut(coords, &mut q_stored_fluid_block, &mut block_data_params)
                             .expect("Checked above") = BlockFluidData::NoFluid;
                     } else {
                         let delta = fluid_holder.max_capacity() - fluid_stored;
@@ -343,7 +334,7 @@ fn on_interact_with_tank(
                             };
 
                             let mut data = structure
-                                .query_block_data_mut(coords, &mut q_stored_fluid_block, block_data_params.clone())
+                                .query_block_data_mut(coords, &mut q_stored_fluid_block, &mut block_data_params)
                                 .expect("Verified above");
 
                             let BlockFluidData::Fluid(stored_fluid_block) = data.as_mut() else {

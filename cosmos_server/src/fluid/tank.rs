@@ -9,7 +9,7 @@ use bevy::{
 use cosmos_core::{
     block::{Block, block_events::BlockMessagesSet, block_face::BlockFace, block_update::BlockUpdate, data::BlockData},
     ecs::mut_events::MutMessage,
-    events::block_events::{BlockChangedMessage, BlockDataChangedMessage, BlockDataSystemParams},
+    events::block_events::{BlockChangedMessage, BlockDataChangedMessage},
     fluid::data::{BlockFluidData, FluidTankBlock, StoredFluidData},
     registry::{Registry, identifiable::Identifiable},
     structure::{
@@ -26,7 +26,7 @@ fn balance_tanks(
     q_stored_fluids: &mut Query<&mut BlockFluidData>,
     // cached_tanks: &mut HashMap<BlockCoordinate, BlockFluidData>,
     done_tanks: &mut HashSet<BlockCoordinate>,
-    bd_params: Rc<RefCell<BlockDataSystemParams>>,
+    commands: &mut Commands,
 ) {
     let Some(origin_stored) = structure.query_block_data(origin, q_stored_fluids).copied() else {
         warn!("Called balance_tanks for block that has no fluid data.");
@@ -181,7 +181,7 @@ fn balance_tanks(
             };
 
             let mut data_here = structure
-                .query_block_data_mut(tank_coord, q_stored_fluids, bd_params.clone())
+                .query_block_data_mut(tank_coord, q_stored_fluids, commands)
                 .expect("To get here, this tank had to have had fluid data.");
 
             if **data_here != new_block_fluid_data {
@@ -207,7 +207,7 @@ fn on_add_tank(
     blocks: Res<Registry<Block>>,
     mut q_structure: Query<&mut Structure>,
     mut ev_reader: MessageReader<BlockChangedMessage>,
-    mut bs_params: BlockDataSystemParams,
+    mut commands: Commands,
     mut q_block_data: Query<&mut BlockData>,
     q_has_data: Query<(), With<BlockFluidData>>,
 ) {
@@ -226,7 +226,7 @@ fn on_add_tank(
                 continue;
             }
 
-            structure.insert_block_data(coords, BlockFluidData::NoFluid, &mut bs_params, &mut q_block_data, &q_has_data);
+            structure.insert_block_data(coords, BlockFluidData::NoFluid, &mut commands, &mut q_block_data, &q_has_data);
         }
     }
 }
@@ -278,7 +278,7 @@ fn call_balance_tanks(
     mut q_stored_fluids: Query<&mut BlockFluidData>,
     q_structure: Query<&Structure>,
     fluid_tank_blocks: Res<Registry<FluidTankBlock>>,
-    bd_params: BlockDataSystemParams,
+    mut commands: Commands,
     mut to_balance: ResMut<TanksToBalance>,
 ) {
     if to_balance.0.is_empty() {
@@ -291,8 +291,6 @@ fn call_balance_tanks(
     let Some(tank_fluid_block) = fluid_tank_blocks.from_id("cosmos:tank") else {
         return;
     };
-
-    let bd_params = Rc::new(RefCell::new(bd_params));
 
     for (s_ent, events) in std::mem::take(&mut to_balance.0) {
         let Ok(structure) = q_structure.get(s_ent) else {
@@ -314,7 +312,7 @@ fn call_balance_tanks(
                 coord,
                 &mut q_stored_fluids,
                 &mut done_tanks,
-                bd_params.clone(),
+                &mut commands,
             );
         }
     }

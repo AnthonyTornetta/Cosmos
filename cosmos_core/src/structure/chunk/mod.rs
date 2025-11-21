@@ -2,9 +2,6 @@
 //!
 //! These blocks can be updated.
 
-use std::cell::RefCell;
-use std::rc::Rc;
-
 use bevy::ecs::query::{QueryData, QueryFilter, ROQueryItem, With};
 use bevy::ecs::system::{Commands, Query};
 use bevy::platform::collections::HashMap;
@@ -14,7 +11,7 @@ use serde::{Deserialize, Serialize};
 use crate::block::data::{BlockData, BlockDataIdentifier};
 use crate::block::{Block, block_face::BlockFace, block_rotation::BlockRotation, block_rotation::BlockSubRotation};
 use crate::ecs::NeedsDespawned;
-use crate::events::block_events::{BlockDataChangedMessage, BlockDataSystemParams};
+use crate::events::block_events::BlockDataChangedMessage;
 use crate::registry::Registry;
 use crate::registry::identifiable::Identifiable;
 use crate::utils::ecs::MutOrMutRef;
@@ -278,7 +275,7 @@ impl Chunk {
 
     /// Despawns any block data that is no longer used by any blocks. This should be called every frame
     /// for general cleanup and avoid systems executing on dead block-data.
-    pub fn despawn_dead_block_data(&mut self, q_block_data: &mut Query<&mut BlockData>, bs_commands: &mut BlockDataSystemParams) {
+    pub fn despawn_dead_block_data(&mut self, q_block_data: &mut Query<&mut BlockData>, commands: &mut Commands) {
         for (cc, block_data) in std::mem::take(&mut self.block_data_components) {
             let Some(ent) = self.block_data(cc) else {
                 // It was removed
@@ -297,7 +294,7 @@ impl Chunk {
             // Don't send block data changed event here, since the only way this happens is if the block itself is changed
             // to another block.
 
-            if let Ok(mut ecmds) = bs_commands.commands.get_entity(ent) {
+            if let Ok(mut ecmds) = commands.get_entity(ent) {
                 ecmds.despawn();
             }
         }
@@ -437,7 +434,7 @@ impl Chunk {
         chunk_entity: Entity,
         structure_entity: Entity,
         create_data_closure: F,
-        system_params: &mut BlockDataSystemParams,
+        commands: &mut Commands,
         q_block_data: &mut Query<&mut BlockData>,
         q_data: &Query<(), With<T>>,
     ) -> Entity
@@ -460,13 +457,13 @@ impl Chunk {
                 bd.increment();
             }
 
-            system_params.commands.entity(data_ent).insert(data);
+            commands.entity(data_ent).insert(data);
 
             data_ent
         } else {
             let id = self.block_at(coords);
 
-            let mut ecmds = system_params.commands.spawn((
+            let mut ecmds = commands.spawn((
                 BlockData {
                     data_count: 1,
                     identifier: BlockDataIdentifier {
@@ -499,7 +496,7 @@ impl Chunk {
             data_ent
         };
 
-        system_params.ev_writer.write(BlockDataChangedMessage {
+        commands.write_message(BlockDataChangedMessage {
             block_data_entity: Some(data_ent),
             block: StructureBlock::new(self.chunk_coordinates().first_structure_block() + coords, structure_entity),
         });
@@ -524,7 +521,6 @@ impl Chunk {
         coords: ChunkBlockCoordinate,
         query: &'q mut Query<'_, 's, Q, F>,
         commands: &'q mut Commands<'w, '_>,
-        // block_system_params: Rc<RefCell<BlockDataSystemParams<'w, 's>>>,
         structure_entity: Entity,
     ) -> Option<MutBlockData<'q, 'w, 's, Q>>
     where
@@ -547,17 +543,13 @@ impl Chunk {
         ))
     }
 
-    // fn asdf<'w, 's>(q_x: &mut Query<'w, 's, Entity>, c: &Chunk, bs_params: Rc<RefCell<BlockDataSystemParams<'w, 's>>>) {
-    //     c.query_block_data_mut(Default::default(), q_x, bs_params, Entity::PLACEHOLDER);
-    // }
-
     /// Removes this type of data from the block here. Returns the entity that stores this blocks data
     /// if it will still exist.
     pub fn remove_block_data<T: Component>(
         &mut self,
         structure_entity: Entity,
         coords: ChunkBlockCoordinate,
-        system_params: &mut BlockDataSystemParams,
+        commands: &mut Commands,
         q_block_data: &mut Query<&mut BlockData>,
         q_data: &Query<(), With<T>>,
     ) -> Option<Entity> {
@@ -577,20 +569,20 @@ impl Chunk {
         }
 
         if bd.is_empty() {
-            system_params.commands.entity(ent).insert(NeedsDespawned);
+            commands.entity(ent).insert(NeedsDespawned);
             let id = self.block_at(coords);
             self.block_data.remove(&(id, coords));
 
-            system_params.ev_writer.write(BlockDataChangedMessage {
+            commands.write_message(BlockDataChangedMessage {
                 block_data_entity: None,
                 block: StructureBlock::new(self.chunk_coordinates().first_structure_block() + coords, structure_entity),
             });
 
             None
         } else {
-            system_params.commands.entity(ent).remove::<T>();
+            commands.entity(ent).remove::<T>();
 
-            system_params.ev_writer.write(BlockDataChangedMessage {
+            commands.write_message(BlockDataChangedMessage {
                 block_data_entity: Some(ent),
                 block: StructureBlock::new(self.chunk_coordinates().first_structure_block() + coords, structure_entity),
             });

@@ -14,7 +14,7 @@ use bevy::{
     prelude::Entity,
 };
 
-use crate::events::block_events::{BlockDataChangedMessage, BlockDataSystemParams};
+use crate::events::block_events::BlockDataChangedMessage;
 
 use super::structure_block::StructureBlock;
 
@@ -22,9 +22,7 @@ use super::structure_block::StructureBlock;
 /// events when a change is detected, preventing unexpected errors.
 pub struct MutBlockData<'q, 'w, 's, Q: QueryData> {
     data: QueryItem<'q, 's, Q>,
-    // A `Commands` + `EventWriter`
     commands: Commands<'w, 'q>,
-    // bs_params: Rc<RefCell<BlockDataSystemParams<'w, 'q>>>,
     changed: bool,
     block: StructureBlock,
     data_entity: Entity,
@@ -35,13 +33,7 @@ impl<'q, 'w, 's, Q: QueryData> MutBlockData<'q, 'w, 's, Q> {
     ///
     /// When this item goes out of scope, if a mutable reference has been gotten, an event will be sent indicating
     /// this block's data has been changed.
-    pub fn new(
-        data: QueryItem<'q, 's, Q>,
-        commands: Commands<'w, 'q>,
-        // bs_params: Rc<RefCell<BlockDataSystemParams<'w, 'q>>>,
-        block: StructureBlock,
-        data_entity: Entity,
-    ) -> Self {
+    pub fn new(data: QueryItem<'q, 's, Q>, commands: Commands<'w, 'q>, block: StructureBlock, data_entity: Entity) -> Self {
         Self {
             changed: false,
             data,
@@ -83,10 +75,5 @@ impl<'q, 'w, 's, Q: QueryData> Drop for MutBlockData<'q, 'w, 's, Q> {
             block: self.block,
             block_data_entity: Some(self.data_entity),
         });
-
-        // self.bs_params.borrow_mut().ev_writer.write(BlockDataChangedMessage {
-        // block: self.block,
-        // block_data_entity: Some(self.data_entity),
-        // });
     }
 }

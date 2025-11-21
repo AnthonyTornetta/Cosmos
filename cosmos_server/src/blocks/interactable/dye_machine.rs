@@ -1,15 +1,12 @@
-use std::{cell::RefCell, rc::Rc};
-
 use bevy::prelude::*;
 use cosmos_core::{
     block::{
         Block,
-        block_events::{BlockMessagesSet, BlockInteractMessage},
+        block_events::{BlockInteractMessage, BlockMessagesSet},
         blocks::{COLOR_VALUES, COLORS},
         specific_blocks::dye_machine::{DyeBlock, OpenDyeMachine},
     },
     entities::player::Player,
-    events::block_events::BlockDataSystemParams,
     inventory::{Inventory, itemstack::ItemShouldHaveData},
     item::Item,
     netty::sync::events::server_event::{NettyMessageReceived, NettyMessageWriter},
@@ -55,12 +52,12 @@ fn dye_block(
     mut q_inventory: Query<&mut Inventory>,
     q_structure: Query<&Structure>,
     mut nevr_dye: MessageReader<NettyMessageReceived<DyeBlock>>,
-    bs_params: BlockDataSystemParams,
+    mut bs_params: Commands,
     items: Res<Registry<Item>>,
     mut commands: Commands,
     has_data: Res<ItemShouldHaveData>,
 ) {
-    let bs_params = Rc::new(RefCell::new(bs_params));
+    // let bs_params = Rc::new(RefCell::new(bs_params));
 
     for ev in nevr_dye.read() {
         let Ok(structure) = q_structure.get(ev.block.structure()) else {
@@ -74,7 +71,7 @@ fn dye_block(
             continue;
         }
 
-        let Some(mut inv) = structure.query_block_data_mut(ev.block.coords(), &mut q_inventory, bs_params.clone()) else {
+        let Some(mut inv) = structure.query_block_data_mut(ev.block.coords(), &mut q_inventory, &mut bs_params) else {
             warn!("No inventory on dye block!");
             continue;
         };

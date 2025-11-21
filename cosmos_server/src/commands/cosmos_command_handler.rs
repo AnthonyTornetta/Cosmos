@@ -16,7 +16,7 @@ use cosmos_core::{
     registry::{Registry, identifiable::Identifiable},
     state::GameState,
 };
-use crossterm::event::{KeyCode, KeyMessage, KeyMessageKind, KeyModifiers, poll, read};
+use crossterm::event::{KeyCode, KeyEvent, KeyEventKind, KeyModifiers, poll, read};
 use thiserror::Error;
 
 use crate::persistence::loading::LoadingSystemSet;
@@ -90,7 +90,7 @@ pub fn create_cosmos_command<T: CosmosCommandType, M>(
 
     app.add_systems(
         FixedUpdate,
-        (monitor_commands, on_get_command.run_if(on_event::<CommandMessage<T>>))
+        (monitor_commands, on_get_command.run_if(on_message::<CommandMessage<T>>))
             .in_set(ProcessCommandsSet::HandleCommands)
             .chain(),
     )
@@ -213,8 +213,8 @@ fn monitor_inputs(mut event_writer: MessageWriter<CosmosCommandSent>, mut text: 
         if event_available {
             let x = read();
 
-            if let Ok(crossterm::event::Message::Key(KeyMessage { code, modifiers, kind, .. })) = x
-                && kind != KeyMessageKind::Release
+            if let Ok(crossterm::event::Event::Key(KeyEvent { code, modifiers, kind, .. })) = x
+                && kind != KeyEventKind::Release
             {
                 if let KeyCode::Char(mut c) = code {
                     if modifiers.intersects(KeyModifiers::SHIFT) {

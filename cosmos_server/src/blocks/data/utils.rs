@@ -5,7 +5,7 @@ use std::marker::PhantomData;
 use bevy::{platform::collections::HashMap, prelude::*};
 use cosmos_core::{
     block::{Block, block_events::BlockMessagesSet, data::BlockData},
-    events::block_events::{BlockChangedMessage, BlockDataSystemParams},
+    events::block_events::BlockChangedMessage,
     prelude::{BlockCoordinate, Structure, StructureLoadingSet},
     registry::{Registry, identifiable::Identifiable},
     state::GameState,
@@ -67,7 +67,7 @@ fn insert_block_data<T: Component>(
     mut evr_todo: MessageReader<InsertBlockDataMessage<T>>,
     mut q_structure: Query<&mut Structure>,
     mut q_block_data: Query<&mut BlockData>,
-    mut params: BlockDataSystemParams,
+    mut params: Commands,
     q_has_component: Query<(), With<T>>,
     initializers: Res<BlockDataInitializers<T>>,
     mut commands: Commands,
@@ -109,7 +109,7 @@ fn on_load_blueprint_storage<T: Component>(
     initializers: Res<BlockDataInitializers<T>>,
     mut q_block_data: Query<&mut BlockData>,
     q_has_component: Query<(), With<T>>,
-    mut params: BlockDataSystemParams,
+    mut params: Commands,
     mut commands: Commands,
 ) {
     for structure in needs_blueprint_loaded_structure.iter_mut() {
@@ -128,7 +128,7 @@ fn init_block_data<T: Component>(
     initializers: &BlockDataInitializers<T>,
     q_block_data: &mut Query<&mut BlockData>,
     q_has_component: &Query<(), With<T>>,
-    params: &mut BlockDataSystemParams,
+    params: &mut Commands,
     commands: &mut Commands,
     mut structure: Mut<Structure>,
 ) {

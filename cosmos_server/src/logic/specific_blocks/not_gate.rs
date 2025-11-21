@@ -7,7 +7,6 @@ use bevy::prelude::*;
 
 use cosmos_core::{
     block::{Block, block_face::BlockFace, data::BlockData},
-    events::block_events::BlockDataSystemParams,
     registry::{Registry, identifiable::Identifiable},
     structure::Structure,
 };
@@ -39,11 +38,10 @@ fn not_gate_input_event_listener(
     mut q_logic_driver: Query<&mut LogicDriver>,
     mut q_structure: Query<&mut Structure>,
     mut q_logic_data: Query<&mut BlockLogicData>,
-    bs_params: BlockDataSystemParams,
+    mut commands: Commands,
     q_has_data: Query<(), With<BlockLogicData>>,
     mut q_block_data: Query<&mut BlockData>,
 ) {
-    let bs_params = Rc::new(RefCell::new(bs_params));
     for ev in evr_logic_input.read() {
         let Ok(mut structure) = q_structure.get_mut(ev.block.structure()) else {
             continue;
@@ -60,12 +58,12 @@ fn not_gate_input_event_listener(
         let input = logic_driver.read_input(coords, rotation.direction_of(BlockFace::Back)) != 0;
         let new_state = BlockLogicData(!input as i32);
 
-        if let Some(mut logic_data) = structure.query_block_data_mut(ev.block.coords(), &mut q_logic_data, bs_params.clone()) {
+        if let Some(mut logic_data) = structure.query_block_data_mut(ev.block.coords(), &mut q_logic_data, &mut commands) {
             if **logic_data != new_state {
                 **logic_data = new_state;
             }
         } else if new_state.0 != 0 {
-            structure.insert_block_data(coords, new_state, &mut bs_params.borrow_mut(), &mut q_block_data, &q_has_data);
+            structure.insert_block_data(coords, new_state, &mut commands, &mut q_block_data, &q_has_data);
         }
     }
 }

@@ -325,7 +325,7 @@ fn finish_loading_player(
             },
             ReadMassProperties::default(),
             LoadingDistance::new(2, 9999),
-            ActiveMessages::COLLISION_EVENTS,
+            ActiveEvents::COLLISION_EVENTS,
             Name::new(format!("Player ({})", load_player.name())),
             Anchor,
             SetPosition::Transform,

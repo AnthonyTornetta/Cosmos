@@ -5,7 +5,6 @@ use std::ops::Range;
 use bevy::prelude::*;
 use cosmos_core::{
     block::data::{BlockData, persistence::ChunkLoadBlockDataMessage},
-    events::block_events::BlockDataSystemParams,
     inventory::{
         Inventory,
         itemstack::{ItemShouldHaveData, ItemStack, ItemStackData},
@@ -179,7 +178,7 @@ fn serialize_inventory_block_data(
 fn deserialize_inventory_block_data(
     mut q_structure: Query<&mut Structure>,
     mut q_block_data: Query<&mut BlockData>,
-    mut block_data_system_params: BlockDataSystemParams,
+    mut block_data_commands: Commands,
     mut ev_reader: MessageReader<ChunkLoadBlockDataMessage>,
     mut commands: Commands,
     q_has_component: Query<(), With<Inventory>>,
@@ -211,7 +210,7 @@ fn deserialize_inventory_block_data(
             structure.insert_block_data_with_entity(
                 first + *data_coord,
                 |e| create_deserialized_inventory(&mut commands, &is_should_have_data, &items, e, component_save_data),
-                &mut block_data_system_params,
+                &mut block_data_commands,
                 &mut q_block_data,
                 &q_has_component,
             );

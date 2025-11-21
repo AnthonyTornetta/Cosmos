@@ -14,7 +14,7 @@ impl CosmosCommandType for DespawnCommand {
         }
 
         if let Ok(index) = ev.args[0].parse::<u64>() {
-            if let Ok(entity) = Entity::try_from_bits(index) {
+            if let Some(entity) = Entity::try_from_bits(index) {
                 Ok(DespawnCommand(entity))
             } else {
                 Err(ArgumentError::InvalidType {

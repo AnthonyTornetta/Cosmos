@@ -14,7 +14,7 @@ use cosmos_core::{
         blocks::COLORS,
         data::BlockData,
     },
-    events::block_events::{BlockChangedMessage, BlockDataChangedMessage, BlockDataSystemParams},
+    events::block_events::{BlockChangedMessage, BlockDataChangedMessage},
     logic::BlockLogicData,
     netty::system_sets::NetworkingSystemsSet,
     prelude::StructureLoadedMessage,
@@ -319,7 +319,7 @@ fn logic_block_changed_event_listener(
     mut q_structure: Query<(&mut Structure, &mut LogicDriver)>,
     q_has_data: Query<(), With<BlockLogicData>>,
     mut q_block_data: Query<&mut BlockData>,
-    mut bs_params: BlockDataSystemParams,
+    mut bs_params: Commands,
     mut evw_queue_logic_output: MessageWriter<QueueLogicOutputMessage>,
     mut evw_queue_logic_input: MessageWriter<QueueLogicInputMessage>,
 ) {

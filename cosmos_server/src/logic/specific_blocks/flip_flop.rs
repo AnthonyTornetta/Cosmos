@@ -1,12 +1,10 @@
 //! Logic behavior for the switch, a block that outputs a logic signal on all 6 faces when on.
 
-use std::{cell::RefCell, rc::Rc};
-
 use bevy::prelude::*;
 
 use cosmos_core::{
     block::{Block, block_face::BlockFace, data::BlockData},
-    events::block_events::BlockDataSystemParams,
+    events::block_events::BlockDataChangedMessage,
     logic::BlockLogicData,
     registry::{Registry, identifiable::Identifiable},
     state::GameState,
@@ -44,11 +42,11 @@ fn flip_flop_input_event_listener(
     mut q_logic_driver: Query<&mut LogicDriver>,
     mut q_structure: Query<&mut Structure>,
     mut q_logic_data: Query<&mut BlockLogicData>,
-    bs_params: BlockDataSystemParams,
+    mut commands: Commands,
     q_has_data: Query<(), With<BlockLogicData>>,
     mut q_block_data: Query<&mut BlockData>,
+    mut mw_block_data_changed: MessageWriter<BlockDataChangedMessage>,
 ) {
-    let bs_params = Rc::new(RefCell::new(bs_params));
     for ev in evr_logic_input.read() {
         let Ok(mut structure) = q_structure.get_mut(ev.block.structure()) else {
             continue;
@@ -91,16 +89,16 @@ fn flip_flop_input_event_listener(
             }
         }
 
-        if let Some(mut old_data) = structure.query_block_data_mut(ev.block.coords(), &mut q_logic_data, bs_params.clone()) {
+        if let Some(mut old_data) = structure.query_block_data_mut(ev.block.coords(), &mut q_logic_data, &mut commands) {
             if **old_data != new_state {
                 **old_data = new_state;
             }
         } else if logic_data.0 != 0 {
-            structure.insert_block_data(coords, logic_data, &mut bs_params.borrow_mut(), &mut q_block_data, &q_has_data);
+            structure.insert_block_data(coords, logic_data, &mut commands, &mut q_block_data, &q_has_data);
         }
 
         if og_data != data {
-            structure.set_block_info_at(ev.block.coords(), data, &mut bs_params.borrow_mut().ev_writer);
+            structure.set_block_info_at(ev.block.coords(), data, &mut mw_block_data_changed);
         }
     }
 }

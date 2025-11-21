@@ -1,13 +1,14 @@
 //! Handles client connecting and disconnecting
 
 use bevy::prelude::*;
-use bevy_renet::renet::{ClientId, RenetServer, ServerMessage};
+use bevy_renet::renet::{ClientId, RenetServer};
 use bevy_renet::steam::steamworks::SteamId;
 use cosmos_core::ecs::NeedsDespawned;
 use cosmos_core::entities::player::Player;
 use cosmos_core::netty::server::ServerLobby;
 use cosmos_core::netty::server_reliable_messages::ServerReliableMessages;
 use cosmos_core::netty::{NettyChannelServer, cosmos_encoder};
+use renet::ServerEvent;
 use renet_visualizer::RenetServerVisualizer;
 
 use crate::entities::player::persistence::LoadPlayer;
@@ -29,7 +30,7 @@ pub struct PlayerConnectedMessage {
 pub(super) fn handle_server_events(
     mut commands: Commands,
     mut server: ResMut<RenetServer>,
-    mut server_events: MessageReader<ServerMessage>,
+    mut server_events: MessageReader<ServerEvent>,
     mut lobby: ResMut<ServerLobby>,
     mut client_ticks: ResMut<ClientTicks>,
     mut visualizer: ResMut<RenetServerVisualizer<200>>,
@@ -38,7 +39,7 @@ pub(super) fn handle_server_events(
 ) {
     for event in server_events.read() {
         match event {
-            ServerMessage::ClientConnected { client_id } => {
+            ServerEvent::ClientConnected { client_id } => {
                 let client_id = *client_id;
                 info!("Client {client_id} connected");
 
@@ -72,7 +73,7 @@ pub(super) fn handle_server_events(
                 visualizer.add_client(client_id);
                 commands.spawn(LoadPlayer { name, client_id });
             }
-            ServerMessage::ClientDisconnected { client_id, reason } => {
+            ServerEvent::ClientDisconnected { client_id, reason } => {
                 info!("Client {client_id} disconnected: {reason}");
                 visualizer.remove_client(*client_id);
                 client_ticks.ticks.remove(client_id);

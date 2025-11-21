@@ -1,7 +1,5 @@
 //! Internally used common logic between dynamic + full structures.
 
-use std::{cell::RefCell, rc::Rc};
-
 use bevy::{
     ecs::{
         component::Component,
@@ -22,7 +20,7 @@ use crate::{
 };
 
 use super::{
-    BlockDataSystemParams, Structure,
+    Structure,
     block_health::events::{BlockDestroyedMessage, BlockTakeDamageMessage},
     block_storage::BlockStorer,
     chunk::{BlockInfo, CHUNK_DIMENSIONS, Chunk},
@@ -550,7 +548,7 @@ impl BaseStructure {
 
     /// Despawns any block data that is no longer used by any blocks. This should be called every frame
     /// for general cleanup and avoid systems executing on dead block-data.
-    pub fn despawn_dead_block_data(&mut self, q_block_data: &mut Query<&mut BlockData>, bs_commands: &mut BlockDataSystemParams) {
+    pub fn despawn_dead_block_data(&mut self, q_block_data: &mut Query<&mut BlockData>, bs_commands: &mut Commands) {
         for (_, chunk) in &mut self.chunks {
             chunk.despawn_dead_block_data(q_block_data, bs_commands);
         }
@@ -563,7 +561,7 @@ impl BaseStructure {
         &mut self,
         coords: BlockCoordinate,
         data: T,
-        system_params: &mut Commands,
+        commands: &mut Commands,
         q_block_data: &mut Query<&mut BlockData>,
         q_data: &Query<(), With<T>>,
     ) -> Option<Entity> {
@@ -576,7 +574,7 @@ impl BaseStructure {
             chunk_entity,
             self_entity,
             data,
-            system_params,
+            commands,
             q_block_data,
             q_data,
         ))
@@ -632,7 +630,7 @@ impl BaseStructure {
         &mut self,
         coords: BlockCoordinate,
         create_data_closure: F,
-        system_params: &mut BlockDataSystemParams,
+        system_params: &mut Commands,
         q_block_data: &mut Query<&mut BlockData>,
         q_data: &Query<(), With<T>>,
     ) -> Option<Entity>
@@ -673,7 +671,6 @@ impl BaseStructure {
         coords: BlockCoordinate,
         query: &'q mut Query<'_, 's, Q, F>,
         commands: &'q mut Commands<'w, '_>,
-        // block_system_params: Rc<RefCell<BlockDataSystemParams<'w, 's>>>,
     ) -> Option<MutBlockData<'q, 'w, 's, Q>>
     where
         F: QueryFilter,
@@ -693,7 +690,7 @@ impl BaseStructure {
     pub fn remove_block_data<T: Component>(
         &mut self,
         coords: BlockCoordinate,
-        params: &mut BlockDataSystemParams,
+        commands: &mut Commands,
         q_block_data: &mut Query<&mut BlockData>,
         q_data: &Query<(), With<T>>,
     ) -> Option<Entity> {
@@ -703,7 +700,7 @@ impl BaseStructure {
         chunk.remove_block_data::<T>(
             self_entity,
             ChunkBlockCoordinate::for_block_coordinate(coords),
-            params,
+            commands,
             q_block_data,
             q_data,
         )
