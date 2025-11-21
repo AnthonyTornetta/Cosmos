@@ -588,6 +588,7 @@ fn on_change_shipyard_state(
     mut q_block_data: Query<&mut BlockData>,
     q_has_shipyard_state_data: Query<(), With<ShipyardState>>,
     q_has_shipyard_client_data: Query<(), With<ClientFriendlyShipyardState>>,
+    mut commands: Commands,
 ) {
     let bs_params = Rc::new(RefCell::new(bs_params));
     for ev in nevr_change_shipyard_state.read() {
@@ -596,7 +597,7 @@ fn on_change_shipyard_state(
             continue;
         };
 
-        let Some(mut cur_state) = structure.query_block_data_mut(controller.coords(), &mut q_shipyard_state, bs_params.clone()) else {
+        let Some(mut cur_state) = structure.query_block_data_mut(controller.coords(), &mut q_shipyard_state, &mut commands) else {
             continue;
         };
 
@@ -655,10 +656,11 @@ fn consume_item(
             continue;
         }
 
-        if let Some(mut inv) = structure.query_block_data_mut(coord, q_inventory, bs_params.clone())
-            && inv.take_and_remove_item(item, 1, commands).0 == 0
-        {
-            return true;
+        if let Some(mut inv) = structure.query_block_data_mut(coord, q_inventory, commands) {
+            let inv = inv.as_mut();
+            if inv.take_and_remove_item(item, 1, commands).0 == 0 {
+                return true;
+            }
         }
     }
     false

@@ -523,8 +523,9 @@ impl Chunk {
     pub fn query_block_data_mut<'q, 'w, 's, Q, F>(
         &self,
         coords: ChunkBlockCoordinate,
-        query: &'q mut Query<'q, 'q, Q, F>,
-        block_system_params: Rc<RefCell<BlockDataSystemParams<'w, 's>>>,
+        query: &'q mut Query<'_, 's, Q, F>,
+        commands: &'q mut Commands<'w, '_>,
+        // block_system_params: Rc<RefCell<BlockDataSystemParams<'w, 's>>>,
         structure_entity: Entity,
     ) -> Option<MutBlockData<'q, 'w, 's, Q>>
     where
@@ -533,22 +534,23 @@ impl Chunk {
     {
         let data_ent = self.block_data(coords)?;
 
-        match query.get_mut(data_ent) {
-            Ok(result) => {
-                let mut_block_data = MutBlockData::new(
-                    result,
-                    block_system_params.clone(),
-                    StructureBlock::new(self.chunk_coordinates().first_structure_block() + coords, structure_entity),
-                    data_ent,
-                );
+        let result = query.get_mut(data_ent).ok()?;
 
-                // sddf
+        // let result_shrunk = Q::shrink::<'w, 'q, 's>(result);
 
-                Some(mut_block_data)
-            }
-            Err(_) => None,
-        }
+        Some(MutBlockData::new(
+            result,
+            commands.reborrow(),
+            // todo!(),
+            // block_system_params.clone(),
+            StructureBlock::new(self.chunk_coordinates().first_structure_block() + coords, structure_entity),
+            data_ent,
+        ))
     }
+
+    // fn asdf<'w, 's>(q_x: &mut Query<'w, 's, Entity>, c: &Chunk, bs_params: Rc<RefCell<BlockDataSystemParams<'w, 's>>>) {
+    //     c.query_block_data_mut(Default::default(), q_x, bs_params, Entity::PLACEHOLDER);
+    // }
 
     /// Removes this type of data from the block here. Returns the entity that stores this blocks data
     /// if it will still exist.

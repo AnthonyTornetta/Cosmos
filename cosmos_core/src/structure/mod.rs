@@ -764,16 +764,18 @@ impl Structure {
     pub fn query_block_data_mut<'q, 'w, 's, Q, F>(
         &self,
         coords: BlockCoordinate,
-        query: &'q mut Query<'q, 'q, Q, F>,
-        block_system_params: Rc<RefCell<BlockDataSystemParams<'w, 's>>>,
+        query: &'q mut Query<'_, 's, Q, F>,
+        commands: &'q mut Commands<'w, '_>, // query: &'q mut Query<'q, 's, Q, F>,
+                                            // block_system_params: Rc<RefCell<BlockDataSystemParams<'w, 's>>>,
+                                            // commands: Commands<'w, 'q>,
     ) -> Option<MutBlockData<'q, 'w, 's, Q>>
     where
         F: QueryFilter,
         Q: QueryData,
     {
         match self {
-            Self::Full(fs) => fs.query_block_data_mut(coords, query, block_system_params),
-            Self::Dynamic(ds) => ds.query_block_data_mut(coords, query, block_system_params),
+            Self::Full(fs) => fs.query_block_data_mut(coords, query, commands),
+            Self::Dynamic(ds) => ds.query_block_data_mut(coords, query, commands),
         }
     }
 

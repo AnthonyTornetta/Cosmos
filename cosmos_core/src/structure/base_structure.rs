@@ -671,8 +671,9 @@ impl BaseStructure {
     pub fn query_block_data_mut<'q, 'w, 's, Q, F>(
         &self,
         coords: BlockCoordinate,
-        query: &'q mut Query<'q, 'q, Q, F>,
-        block_system_params: Rc<RefCell<BlockDataSystemParams<'w, 's>>>,
+        query: &'q mut Query<'_, 's, Q, F>,
+        commands: &'q mut Commands<'w, '_>,
+        // block_system_params: Rc<RefCell<BlockDataSystemParams<'w, 's>>>,
     ) -> Option<MutBlockData<'q, 'w, 's, Q>>
     where
         F: QueryFilter,
@@ -681,7 +682,7 @@ impl BaseStructure {
         let chunk = self.chunk_at_block_coordinates(coords)?;
 
         if let Some(e) = self.get_entity() {
-            chunk.query_block_data_mut(ChunkBlockCoordinate::for_block_coordinate(coords), query, block_system_params, e)
+            chunk.query_block_data_mut(ChunkBlockCoordinate::for_block_coordinate(coords), query, commands, e)
         } else {
             None
         }
