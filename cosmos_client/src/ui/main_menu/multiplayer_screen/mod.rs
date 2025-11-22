@@ -1,10 +1,13 @@
-use std::net::SocketAddr;
+use std::{
+    net::SocketAddr,
+    sync::{Arc, Mutex},
+};
 
 use bevy::{
     ecs::relationship::{RelatedSpawner, RelatedSpawnerCommands},
     prelude::*,
 };
-use bevy_renet::steam::steamworks::SteamId;
+use bevy_renet::steam::steamworks::{ServerListCallbacks, ServerListRequest, ServerResponse, SteamId};
 use cosmos_core::state::GameState;
 
 use crate::{
@@ -100,15 +103,70 @@ fn create_menu(p: &mut RelatedSpawnerCommands<ChildOf>, default_font: &DefaultFo
     ))
     .observe(trigger_connection);
 
-    client.client().matchmaking().request_lobby_list(|res| match res {
-        Ok(list) => {
-            info!("{list:?}");
-        }
-        Err(e) => {
-            error!("{e:?}");
-        }
-    });
+    // Box<(dyn std::ops::Fn(std::sync::Arc<std::sync::Mutex<ServerListRequest>>, i32)
+    let requests = client.client().matchmaking_servers().internet_server_list(
+        client.client().utils().app_id(),
+        &Default::default(),
+        ServerListCallbacks::new(
+            Box::new(|req: Arc<Mutex<ServerListRequest>>, server: i32| {
+                let req = req.lock().unwrap();
+                let Ok(details) = req.get_server_details(server) else {
+                    error!("Bad details!");
+                    return;
+                };
 
+                //             pub appid: u32,
+                // pub players: i32,
+                // pub do_not_refresh: bool,
+                // pub successful_response: bool,
+                // pub have_password: bool,
+                // pub secure: bool,
+                // pub bot_players: i32,
+                // pub ping: Duration,
+                // pub max_players: i32,
+                // pub server_version: i32,
+                // pub steamid: u64,
+                // pub last_time_played: Duration,
+                // pub addr: Ipv4Addr,
+                // pub query_port: u16,
+                // pub connection_port: u16,
+                // pub game_description: String,
+                // pub server_name: String,
+                // pub game_dir: String,
+                // pub map: String,
+                // pub tags: String,
+
+                info!(
+                    "{} - {} ({}/{})",
+                    details.server_name, details.game_description, details.players, details.max_players
+                );
+            }),
+            Box::new(|_: Arc<Mutex<ServerListRequest>>, _: i32| {
+                // let req = req.lock().unwrap();
+                // let details = req.get_server_details(num);
+            }),
+            Box::new(|_: Arc<Mutex<ServerListRequest>>, server_res: ServerResponse| {
+                info!("{server_res:?}");
+            }),
+        ),
+    );
+
+    /*
+        * |res| {
+    match res {
+                Ok(list) => {
+                    info!("{list:?}");
+                }
+                Err(e) => {
+                    error!("{e:?}");
+                }
+
+            }, |f| {
+
+                }, |r| {
+
+                })         ;
+    */
     let vars_entity = p.spawn((ConnectionString("localhost".into()), ErrorMessage::default())).id();
 
     p.spawn((

@@ -88,14 +88,13 @@ pub fn init(app: &mut App, port: u16) {
 
     info!("Created server!");
 
-    steam_server.log_on_anonymous();
-
-    info!("Login Anon!");
-
-    steam_server.set_product("Cosmos");
+    steam_server.set_product(steam_server.utils().app_id().0.to_string().as_str());
     steam_server.set_game_description("Vanilla Cosmos Server");
     steam_server.set_max_players(32);
     steam_server.set_server_name("My Cool Cosmos Server");
+    steam_server.set_dedicated_server(true);
+
+    steam_server.log_on_anonymous();
     steam_server.set_advertise_server_active(true);
 
     // let steam_client = Client::init().unwrap();
