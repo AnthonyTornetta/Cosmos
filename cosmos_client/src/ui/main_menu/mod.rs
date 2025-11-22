@@ -11,7 +11,9 @@ use super::components::show_cursor::ShowCursor;
 
 mod disconnect_screen;
 mod menu_panorama;
+mod multiplayer_screen;
 mod settings_screen;
+mod singleplayer_screen;
 mod title_screen;
 mod triggers;
 
@@ -34,7 +36,7 @@ struct MainMenuTime(f32);
 /// This component prevents something from being despawned when a transition to the main menu happens.
 pub struct SurviveMainMenu;
 
-#[derive(Debug, Resource, Default, Clone, PartialEq, Eq)]
+#[derive(Debug, Resource, Default, Clone, Copy, PartialEq, Eq)]
 /// The "substate" of the menu we are in -- will be redone when bevy 0.14 is integrated.
 pub enum MainMenuSubState {
     #[default]
@@ -44,6 +46,8 @@ pub enum MainMenuSubState {
     Settings,
     /// When the player is disconnected from a server, this will display the latest disconnect message.
     Disconnect,
+    Singleplayer,
+    Multiplayer,
 }
 
 fn despawn_all_main_menu_ents<T: Component>(mut commands: Commands, q_main_menu_entities: Query<Entity, With<T>>) {
@@ -194,6 +198,8 @@ pub(super) fn register(app: &mut App) {
     disconnect_screen::register(app);
     triggers::register(app);
     settings_screen::register(app);
+    multiplayer_screen::register(app);
+    singleplayer_screen::register(app);
 
     app.configure_sets(
         Update,

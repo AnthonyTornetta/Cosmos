@@ -2,6 +2,7 @@
 
 #[cfg(feature = "client")]
 pub mod client;
+pub mod client_preconnect_messages;
 pub mod client_registry;
 pub mod client_reliable_messages;
 pub mod client_unreliable_messages;
@@ -82,6 +83,8 @@ pub enum NettyChannelClient {
     Registry,
     /// Automatic syncing of resources
     Resource,
+    /// Information sent before the player fully connects
+    PreConnect,
 }
 
 impl From<NettyChannelClient> for u8 {
@@ -95,6 +98,7 @@ impl From<NettyChannelClient> for u8 {
             NettyChannelClient::NettyMessage => 5,
             NettyChannelClient::Registry => 6,
             NettyChannelClient::Resource => 7,
+            NettyChannelClient::PreConnect => 8,
         }
     }
 }
@@ -155,6 +159,13 @@ impl NettyChannelClient {
             },
             ChannelConfig {
                 channel_id: Self::Resource.into(),
+                max_memory_usage_bytes: MB,
+                send_type: SendType::ReliableOrdered {
+                    resend_time: Duration::from_millis(1000),
+                },
+            },
+            ChannelConfig {
+                channel_id: Self::PreConnect.into(),
                 max_memory_usage_bytes: MB,
                 send_type: SendType::ReliableOrdered {
                     resend_time: Duration::from_millis(1000),
@@ -270,11 +281,6 @@ impl NettyChannelServer {
         ]
     }
 }
-
-/// In the future, this should be based off the game version.
-///
-/// Must have the same protocol to connect to something
-pub const PROTOCOL_ID: u64 = 7;
 
 /// Assembles the configuration for a renet connection
 pub fn connection_config() -> ConnectionConfig {

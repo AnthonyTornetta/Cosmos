@@ -310,7 +310,7 @@ mod test {
             negative_most_coord: BlockCoordinate::new(s2 * CHUNK_DIMENSIONS, s2 * CHUNK_DIMENSIONS, s2 * CHUNK_DIMENSIONS),
         };
 
-        assert!(true);
+        // assert!(true);
 
         // for z in 0..CHUNK_DIMENSIONS {
         //     for y in 0..CHUNK_DIMENSIONS {

@@ -7,7 +7,7 @@ use bevy::prelude::*;
 use bevy_renet::{
     renet::RenetServer,
     steam::steamworks::{
-        Client,
+        Client, Server,
         networking_types::{NetworkingConfigEntry, NetworkingConfigValue},
     },
 };
@@ -20,12 +20,18 @@ use crate::netty::network_helpers::{ClientTicks, NetworkTick};
 /// Stores the steam [`Client`] used by the server
 pub struct ServerSteamClient {
     client: Client,
+    server: Server,
 }
 
 impl ServerSteamClient {
     /// Returns the steam [`Client`] used by the server
     pub fn client(&self) -> &Client {
         &self.client
+    }
+
+    /// Returns the steam [`Server`] used by the server
+    pub fn server(&self) -> &Server {
+        &self.server
     }
 }
 
@@ -67,8 +73,33 @@ pub fn init(app: &mut App, port: u16) {
     //
     //     commands.insert_resource(AuthenticationServer::Steam(steam_server));
 
-    let steam_client = Client::init().unwrap();
-    info!("Server steam id: {:?}", steam_client.user().steam_id());
+    let (steam_server, steam_client) = match Server::init(
+        "0.0.0.0".parse().unwrap(),
+        port,
+        port + 1,
+        bevy_renet::steam::steamworks::ServerMode::Authentication,
+        "0.0.9",
+    ) {
+        Ok((server, client)) => (server, client),
+        Err(e) => {
+            panic!("Couldn't start server! {e:?}");
+        }
+    };
+
+    info!("Created server!");
+
+    steam_server.log_on_anonymous();
+
+    info!("Login Anon!");
+
+    steam_server.set_product("Cosmos");
+    steam_server.set_game_description("Vanilla Cosmos Server");
+    steam_server.set_max_players(32);
+    steam_server.set_server_name("My Cool Cosmos Server");
+    steam_server.set_advertise_server_active(true);
+
+    // let steam_client = Client::init().unwrap();
+    info!("Server steam id: {:?}", steam_server.steam_id());
     let netty = steam_client.networking_utils();
     netty.init_relay_network_access();
 
@@ -95,7 +126,9 @@ pub fn init(app: &mut App, port: u16) {
             ));
     */
 
-    let transport = SteamServerTransport::new(steam_client.clone(), setup_config, socket_options).unwrap();
+    info!("Making transport!");
+    let transport = SteamServerTransport::new_server(steam_server.clone(), steam_client.clone(), setup_config, socket_options).unwrap();
+    info!("Made transport!");
     let server = RenetServer::new(connection_config());
 
     app.insert_resource(ServerLobby::default())
@@ -103,16 +136,20 @@ pub fn init(app: &mut App, port: u16) {
         .insert_resource(ClientTicks::default())
         .insert_resource(server)
         .insert_non_send_resource(transport)
-        .insert_resource(ServerSteamClient { client: steam_client });
+        .insert_resource(ServerSteamClient {
+            client: steam_client,
+            server: steam_server,
+        });
 
     info!("Steam server created!");
 
     // info!("Public address: {public_addr}");
 }
 
-fn steam_callbacks(client: Option<Res<ServerSteamClient>>) {
-    if let Some(client) = client {
-        client.client.run_callbacks();
+fn steam_callbacks(steam: Option<Res<ServerSteamClient>>) {
+    if let Some(steam) = steam {
+        steam.client.run_callbacks();
+        steam.server.run_callbacks();
     }
 }
 

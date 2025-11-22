@@ -52,7 +52,7 @@ pub struct BlockHealthUpdate {
     pub causer: Option<Entity>,
 }
 
-#[derive(Debug, Serialize, Deserialize, Component)]
+#[derive(Debug, Serialize, Deserialize)]
 /// A mash of a bunch of different packets the server reliably sends.
 pub enum ServerReliableMessages {
     /// A player has been created, and the client should add them.

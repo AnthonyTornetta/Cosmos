@@ -17,7 +17,7 @@ bevy_rapier3d = { git = "https://github.com/AnthonyTornetta/bevy_rapier", versio
 bevy_app_compute = { git = "https://github.com/AnthonyTornetta/bevy_app_compute", branch = "no-build-worker", version = "0.17" }
 
 renet = { git = "https://github.com/AnthonyTornetta/renet", branch = "cosmos", version = "1.2.0" }
-renet_steam = { git = "https://github.com/AnthonyTornetta/renet", branch = "cosmos", version = "2.1.0" }
+renet_steam = { git = "https://github.com/AnthonyTornetta/renet", branch = "cosmos", version = "2.2.0" }
 bevy_renet = { git = "https://github.com/AnthonyTornetta/renet", branch = "cosmos", version="3.0.0" }
 renet_visualizer = { git = "https://github.com/AnthonyTornetta/renet", branch = "cosmos", version="1.1.0" }
 # steamworks = "0.12"

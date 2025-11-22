@@ -46,7 +46,6 @@ impl SyncableComponent for Missile {
 pub const MISSILE_COLLISION_GROUP: Group = Group::GROUP_5;
 
 fn on_add_missile(q_added_missile: Query<Entity, Added<Missile>>, mut commands: Commands) {
-    #[cfg(feature = "client")]
     for missile_ent in q_added_missile.iter() {
         #[cfg(feature = "client")]
         use bevy::light::{NotShadowCaster, NotShadowReceiver};
