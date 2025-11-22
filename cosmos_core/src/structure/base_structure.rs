@@ -1,7 +1,5 @@
 //! Internally used common logic between dynamic + full structures.
 
-use std::{cell::RefCell, rc::Rc};
-
 use bevy::{
     ecs::{
         component::Component,
@@ -9,12 +7,12 @@ use bevy::{
         system::{Commands, Query},
     },
     platform::collections::HashMap,
-    prelude::{Entity, EventWriter, GlobalTransform, Vec3},
+    prelude::{Entity, GlobalTransform, MessageWriter, Vec3},
     reflect::Reflect,
 };
 use serde::{Deserialize, Serialize};
 
-use crate::{block::block_direction::ALL_BLOCK_DIRECTIONS, events::block_events::BlockDataChangedEvent};
+use crate::{block::block_direction::ALL_BLOCK_DIRECTIONS, events::block_events::BlockDataChangedMessage};
 use crate::{
     block::{Block, block_rotation::BlockRotation, blocks::AIR_BLOCK_ID, data::BlockData},
     physics::location::Location,
@@ -22,8 +20,8 @@ use crate::{
 };
 
 use super::{
-    BlockDataSystemParams, Structure,
-    block_health::events::{BlockDestroyedEvent, BlockTakeDamageEvent},
+    Structure,
+    block_health::events::{BlockDestroyedMessage, BlockTakeDamageMessage},
     block_storage::BlockStorer,
     chunk::{BlockInfo, CHUNK_DIMENSIONS, Chunk},
     coordinates::{
@@ -485,7 +483,10 @@ impl BaseStructure {
         coords: BlockCoordinate,
         blocks: &Registry<Block>,
         amount: f32,
-        event_writers: Option<(&mut EventWriter<BlockTakeDamageEvent>, &mut EventWriter<BlockDestroyedEvent>)>,
+        event_writers: Option<(
+            &mut MessageWriter<BlockTakeDamageMessage>,
+            &mut MessageWriter<BlockDestroyedMessage>,
+        )>,
         causer: Option<Entity>,
     ) -> Option<f32> {
         if let Some(chunk) = self.mut_chunk_at_block_coordinates(coords) {
@@ -496,14 +497,14 @@ impl BaseStructure {
             {
                 let block = StructureBlock::new(coords, structure_entity);
 
-                take_damage_event_writer.write(BlockTakeDamageEvent {
+                take_damage_event_writer.write(BlockTakeDamageMessage {
                     structure_entity,
                     block,
                     new_health: health_left,
                     causer,
                 });
                 if health_left <= 0.0 {
-                    destroyed_event_writer.write(BlockDestroyedEvent { structure_entity, block });
+                    destroyed_event_writer.write(BlockDestroyedMessage { structure_entity, block });
                 }
             }
 
@@ -518,7 +519,7 @@ impl BaseStructure {
         self.chunk_entities.remove(&self.flatten(coords));
     }
 
-    /// This should be used in response to a `BlockTakeDamageEvent`
+    /// This should be used in response to a `BlockTakeDamageMessage`
     ///
     /// This will NOT delete the block if the health is 0.0
     pub(crate) fn set_block_health(&mut self, coords: BlockCoordinate, amount: f32, blocks: &Registry<Block>) {
@@ -547,7 +548,7 @@ impl BaseStructure {
 
     /// Despawns any block data that is no longer used by any blocks. This should be called every frame
     /// for general cleanup and avoid systems executing on dead block-data.
-    pub fn despawn_dead_block_data(&mut self, q_block_data: &mut Query<&mut BlockData>, bs_commands: &mut BlockDataSystemParams) {
+    pub fn despawn_dead_block_data(&mut self, q_block_data: &mut Query<&mut BlockData>, bs_commands: &mut Commands) {
         for (_, chunk) in &mut self.chunks {
             chunk.despawn_dead_block_data(q_block_data, bs_commands);
         }
@@ -560,7 +561,7 @@ impl BaseStructure {
         &mut self,
         coords: BlockCoordinate,
         data: T,
-        system_params: &mut BlockDataSystemParams,
+        commands: &mut Commands,
         q_block_data: &mut Query<&mut BlockData>,
         q_data: &Query<(), With<T>>,
     ) -> Option<Entity> {
@@ -573,7 +574,7 @@ impl BaseStructure {
             chunk_entity,
             self_entity,
             data,
-            system_params,
+            commands,
             q_block_data,
             q_data,
         ))
@@ -629,7 +630,7 @@ impl BaseStructure {
         &mut self,
         coords: BlockCoordinate,
         create_data_closure: F,
-        system_params: &mut BlockDataSystemParams,
+        system_params: &mut Commands,
         q_block_data: &mut Query<&mut BlockData>,
         q_data: &Query<(), With<T>>,
     ) -> Option<Entity>
@@ -652,7 +653,7 @@ impl BaseStructure {
     }
 
     /// Queries this block's data. Returns `None` if the requested query failed or if no block data exists for this block.
-    pub fn query_block_data<'a, Q, F>(&self, coords: BlockCoordinate, query: &'a Query<Q, F>) -> Option<ROQueryItem<'a, Q>>
+    pub fn query_block_data<'a, Q, F>(&self, coords: BlockCoordinate, query: &'a Query<Q, F>) -> Option<ROQueryItem<'a, 'a, Q>>
     where
         F: QueryFilter,
         Q: QueryData,
@@ -662,12 +663,14 @@ impl BaseStructure {
         chunk.query_block_data(ChunkBlockCoordinate::for_block_coordinate(coords), query)
     }
 
+    //    pub fn query_mut<'a, 's, Q, F>(&'a self, query: &'a mut Query<'_, 's, Q, F>) -> Result<QueryItem<'a, 's, Q>, NoSystemFound>
+
     /// Queries this block's data mutibly. Returns `None` if the requested query failed or if no block data exists for this block.
     pub fn query_block_data_mut<'q, 'w, 's, Q, F>(
         &self,
         coords: BlockCoordinate,
-        query: &'q mut Query<Q, F>,
-        block_system_params: Rc<RefCell<BlockDataSystemParams<'w, 's>>>,
+        query: &'q mut Query<'_, 's, Q, F>,
+        commands: &'q mut Commands<'w, '_>,
     ) -> Option<MutBlockData<'q, 'w, 's, Q>>
     where
         F: QueryFilter,
@@ -676,7 +679,7 @@ impl BaseStructure {
         let chunk = self.chunk_at_block_coordinates(coords)?;
 
         if let Some(e) = self.get_entity() {
-            chunk.query_block_data_mut(ChunkBlockCoordinate::for_block_coordinate(coords), query, block_system_params, e)
+            chunk.query_block_data_mut(ChunkBlockCoordinate::for_block_coordinate(coords), query, commands, e)
         } else {
             None
         }
@@ -687,7 +690,7 @@ impl BaseStructure {
     pub fn remove_block_data<T: Component>(
         &mut self,
         coords: BlockCoordinate,
-        params: &mut BlockDataSystemParams,
+        commands: &mut Commands,
         q_block_data: &mut Query<&mut BlockData>,
         q_data: &Query<(), With<T>>,
     ) -> Option<Entity> {
@@ -697,7 +700,7 @@ impl BaseStructure {
         chunk.remove_block_data::<T>(
             self_entity,
             ChunkBlockCoordinate::for_block_coordinate(coords),
-            params,
+            commands,
             q_block_data,
             q_data,
         )
@@ -850,7 +853,7 @@ impl BaseStructure {
         &mut self,
         coords: BlockCoordinate,
         block_info: BlockInfo,
-        evw_block_data_changed: Option<&mut EventWriter<BlockDataChangedEvent>>,
+        evw_block_data_changed: Option<&mut MessageWriter<BlockDataChangedMessage>>,
     ) {
         if let Some(chunk) = self.mut_chunk_at_block_coordinates(coords) {
             let c = ChunkBlockCoordinate::for_block_coordinate(coords);
@@ -864,7 +867,7 @@ impl BaseStructure {
             if let Some(evw_block_data_changed) = evw_block_data_changed
                 && let Some(structure_entity) = self.get_entity()
             {
-                evw_block_data_changed.write(BlockDataChangedEvent {
+                evw_block_data_changed.write(BlockDataChangedMessage {
                     block_data_entity: self.block_data(coords),
                     block: StructureBlock::new(coords, structure_entity),
                 });

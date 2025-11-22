@@ -25,7 +25,7 @@ use cosmos_core::{
 };
 
 use crate::{
-    netty::server_events::PlayerConnectedEvent,
+    netty::server_events::PlayerConnectedMessage,
     persistence::{
         SerializedData,
         loading::{LoadingSystemSet, NeedsLoaded},
@@ -57,21 +57,21 @@ pub trait BiosphereMarkerComponent: Component + Default + Clone + Copy + TypePat
     fn unlocalized_name() -> &'static str;
 }
 
-#[derive(Debug, Event)]
+#[derive(Debug, Message)]
 /// This event is generated whenever a structure needs a biosphere
-struct NeedsBiosphereEvent {
+struct NeedsBiosphereMessage {
     biosphere_id: String,
     entity: Entity,
 }
 
 #[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
 enum NeedsBiosphereSet {
-    SendEvent,
+    SendMessage,
     AddBiosphere,
 }
 
 /// This has to be redone.
-pub trait TGenerateChunkEvent: Event {
+pub trait TGenerateChunkMessage: Message {
     /// Creates the generate chunk event.
     fn new(coords: ChunkCoordinate, structure_entity: Entity) -> Self;
 
@@ -118,7 +118,7 @@ enum BiosphereRegistrationSet {
 ///
 /// T: The biosphere's marker component type
 /// E: The biosphere's generate chunk event type
-pub fn register_biosphere<T: BiosphereMarkerComponent + Default + Clone, E: Send + Sync + 'static + TGenerateChunkEvent>(
+pub fn register_biosphere<T: BiosphereMarkerComponent + Default + Clone, E: Send + Sync + 'static + TGenerateChunkMessage>(
     app: &mut App,
     temperature_range: TemperatureRange,
     sea_level_percent: f32,
@@ -138,7 +138,7 @@ pub fn register_biosphere<T: BiosphereMarkerComponent + Default + Clone, E: Send
             temperature_registry.register(biosphere_id.to_owned(), temperature_range);
         };
 
-    app.add_event::<E>()
+    app.add_message::<E>()
         .add_systems(
             Startup,
             register_biosphere_system
@@ -149,7 +149,7 @@ pub fn register_biosphere<T: BiosphereMarkerComponent + Default + Clone, E: Send
             SAVING_SCHEDULE,
             (
                 // Adds this biosphere's marker component to anything that needs generated
-                (move |mut event_reader: EventReader<NeedsBiosphereEvent>, mut commands: Commands| {
+                (move |mut event_reader: MessageReader<NeedsBiosphereMessage>, mut commands: Commands| {
                     for ev in event_reader.read() {
                         if ev.biosphere_id == biosphere_id {
                             commands.entity(ev.entity).insert(T::default());
@@ -193,12 +193,12 @@ pub fn register_biosphere<T: BiosphereMarkerComponent + Default + Clone, E: Send
             ),
         )
         .init_resource::<GeneratingChunks<T>>();
-    // .add_event::<GenerateChunkFeaturesEvent<T>>();
+    // .add_message::<GenerateChunkFeaturesMessage<T>>();
 }
 
 fn add_biosphere(
     query: Query<(Entity, &Location), (Added<Structure>, Without<BiosphereMarker>, With<Planet>)>,
-    mut event_writer: EventWriter<NeedsBiosphereEvent>,
+    mut event_writer: MessageWriter<NeedsBiosphereMessage>,
     biosphere_registry: Res<Registry<Biosphere>>,
     system: Res<UniverseSystems>,
     mut commands: Commands,
@@ -229,7 +229,7 @@ fn add_biosphere(
 
         commands.entity(entity).insert(BiosphereMarker::new(biosphere.unlocalized_name()));
 
-        event_writer.write(NeedsBiosphereEvent {
+        event_writer.write(NeedsBiosphereMessage {
             biosphere_id: biosphere.unlocalized_name().to_owned(),
             entity,
         });
@@ -285,7 +285,7 @@ impl BiosphereTemperatureRegistry {
 
 fn on_connect(
     mut server: ResMut<RenetServer>,
-    mut ev_reader: EventReader<PlayerConnectedEvent>,
+    mut ev_reader: MessageReader<PlayerConnectedMessage>,
     permutation_table: Res<GpuPermutationTable>,
     shaders: Res<CachedShaders>,
 ) {
@@ -317,13 +317,13 @@ pub(super) fn register(app: &mut App) {
     app.configure_sets(Startup, BiosphereRegistrationSet::RegisterBiospheres);
     app.configure_sets(OnEnter(GameState::PostLoading), RegisterBiomesSet::RegisterBiomes);
 
-    app.add_event::<NeedsBiosphereEvent>()
+    app.add_message::<NeedsBiosphereMessage>()
         .insert_resource(BiosphereTemperatureRegistry::default())
         .add_systems(
             FixedUpdate,
             (
                 on_connect.in_set(NetworkingSystemsSet::SyncComponents),
-                add_biosphere.in_set(NeedsBiosphereSet::SendEvent),
+                add_biosphere.in_set(NeedsBiosphereSet::SendMessage),
             )
                 .run_if(in_state(GameState::Playing)),
         );
@@ -331,7 +331,7 @@ pub(super) fn register(app: &mut App) {
     app.configure_sets(
         FixedUpdate,
         (
-            NeedsBiosphereSet::SendEvent.in_set(StructureLoadingSet::AddStructureComponents),
+            NeedsBiosphereSet::SendMessage.in_set(StructureLoadingSet::AddStructureComponents),
             NeedsBiosphereSet::AddBiosphere.in_set(LoadingSystemSet::DoLoading),
         )
             .chain(),

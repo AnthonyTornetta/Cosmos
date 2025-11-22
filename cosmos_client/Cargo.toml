@@ -25,7 +25,8 @@ default = [
     "bevy/bevy_render",
     "bevy/bevy_sprite",
     "bevy/bevy_text",
-    "bevy/bevy_ui",
+    "bevy/bevy_post_process",
+    "bevy/bevy_ui_render",
     "bevy/multi_threaded",
     "bevy/png",
     "bevy/hdr",
@@ -87,5 +88,6 @@ bevy_hanabi = { workspace = true }
 uuid = { workspace = true }
 bevy_transform_interpolation = { workspace = true }
 rfd = { workspace = true }
+cosmic-text = { workspace = true }
 # iyes_perf_ui = { workspace = true }
 # bevy_mod_billboard = { workspace = true }

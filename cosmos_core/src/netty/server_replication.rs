@@ -1,4 +1,4 @@
-//! Eventually used to replicate entities from the server -> client.
+//! Messageually used to replicate entities from the server -> client.
 ///
 /// For now this is just for structure system replication
 use bevy::ecs::entity::Entity;
@@ -10,7 +10,7 @@ use crate::{
 };
 
 #[derive(Debug, Serialize, Deserialize)]
-/// Eventually used to replicate entities from the server -> client.
+/// Messageually used to replicate entities from the server -> client.
 ///
 /// For now this is just for structure system replication
 pub enum ReplicationMessage {

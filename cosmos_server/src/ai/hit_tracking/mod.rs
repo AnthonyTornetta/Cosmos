@@ -3,11 +3,11 @@
 
 use bevy::{platform::collections::HashMap, prelude::*};
 use cosmos_core::{
-    block::block_events::BlockEventsSet,
+    block::block_events::BlockMessagesSet,
     entities::EntityId,
     faction::{FactionId, FactionRelation, Factions},
     state::GameState,
-    structure::{block_health::events::BlockTakeDamageEvent, shared::MeltingDown, ship::pilot::Pilot},
+    structure::{block_health::events::BlockTakeDamageMessage, shared::MeltingDown, ship::pilot::Pilot},
 };
 use serde::{Deserialize, Serialize};
 
@@ -36,7 +36,7 @@ impl Hitters {
 #[derive(Component, Default, Reflect, Debug, Serialize, Deserialize, Clone, Copy)]
 pub struct DifficultyIncreaseOnKill(pub f32);
 
-fn process_hit_events(mut q_hitters: Query<&mut Hitters>, q_pilot: Query<&Pilot>, mut evr_hit_block: EventReader<BlockTakeDamageEvent>) {
+fn process_hit_events(mut q_hitters: Query<&mut Hitters>, q_pilot: Query<&Pilot>, mut evr_hit_block: MessageReader<BlockTakeDamageMessage>) {
     for ev in evr_hit_block.read() {
         let Some(causer) = ev.causer else {
             continue;
@@ -107,11 +107,11 @@ fn add_hitters(mut commands: Commands, q_needs_hitter: Query<Entity, (With<AiCon
     }
 }
 
-#[derive(Event)]
+#[derive(Message)]
 /// Sent whenever a player destroys an NPC ship by causing it to melt down
 ///
 /// Multiple players can be credited with destroying the same ship if they all hit it recently
-pub struct PlayerDestroyedNpcShipEvent {
+pub struct PlayerDestroyedNpcShipMessage {
     /// The player being creidted with the destruction
     pub player: Entity,
     /// The NPC ship that has now started to melt down
@@ -123,7 +123,7 @@ pub struct PlayerDestroyedNpcShipEvent {
 fn on_melt_down(
     mut q_players: Query<&mut PlayerStrength>,
     q_melting_down: Query<(Entity, &Hitters, &DifficultyIncreaseOnKill), Added<MeltingDown>>,
-    mut evw_player_destroyed_npc_ship: EventWriter<PlayerDestroyedNpcShipEvent>,
+    mut evw_player_destroyed_npc_ship: MessageWriter<PlayerDestroyedNpcShipMessage>,
 ) {
     for (melting_down_ent, hitters, difficulty_increase) in q_melting_down.iter() {
         let dmg_total = hitters.0.iter().map(|(_, hits)| *hits).sum::<u64>();
@@ -138,7 +138,7 @@ fn on_melt_down(
             let old = player_strength.0;
             player_strength.0 += percent * difficulty_increase.0;
             player_strength.0 = player_strength.0.clamp(0.0, 100.0);
-            evw_player_destroyed_npc_ship.write(PlayerDestroyedNpcShipEvent {
+            evw_player_destroyed_npc_ship.write(PlayerDestroyedNpcShipMessage {
                 difficulty_increase: player_strength.0 - old,
                 player: hitter_ent,
                 ship: melting_down_ent,
@@ -155,7 +155,7 @@ pub(super) fn register(app: &mut App) {
             .after(PlayerStrengthSystemSet::UpdatePlayerStrength)
             .after(tick_down_hitters)
             .run_if(in_state(GameState::Playing))
-            .in_set(BlockEventsSet::ProcessEvents),
+            .in_set(BlockMessagesSet::ProcessMessages),
     )
     .add_systems(
         FixedUpdate,
@@ -164,5 +164,5 @@ pub(super) fn register(app: &mut App) {
     .add_systems(FixedUpdate, tick_down_hitters.run_if(in_state(GameState::Playing)))
     .register_type::<Hitters>()
     .register_type::<DifficultyIncreaseOnKill>()
-    .add_event::<PlayerDestroyedNpcShipEvent>();
+    .add_message::<PlayerDestroyedNpcShipMessage>();
 }

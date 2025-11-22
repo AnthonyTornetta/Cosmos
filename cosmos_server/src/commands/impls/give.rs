@@ -54,7 +54,7 @@ pub(super) fn register(app: &mut App) {
             "Gives the player that item with the specified quantity",
         ),
         app,
-        |mut evr_blueprint: EventReader<CommandEvent<GiveCommand>>,
+        |mut evr_blueprint: MessageReader<CommandMessage<GiveCommand>>,
          mut q_inventory: Query<(&Player, &mut Inventory)>,
          items: Res<Registry<Item>>,
          mut commands: Commands,

@@ -3,13 +3,13 @@
 use bevy::prelude::*;
 
 use cosmos_core::{
-    block::{Block, block_events::BlockEventsSet},
-    events::block_events::BlockChangedEvent,
+    block::{Block, block_events::BlockMessagesSet},
+    events::block_events::BlockChangedMessage,
     registry::Registry,
     state::GameState,
     structure::{
         Structure,
-        events::StructureLoadedEvent,
+        events::StructureLoadedMessage,
         systems::{
             StructureSystemType, StructureSystems, StructureSystemsSet,
             energy_storage_system::{EnergyStorageBlocks, EnergyStorageProperty, EnergyStorageSystem},
@@ -32,7 +32,7 @@ fn register_energy_blocks(blocks: Res<Registry<Block>>, mut storage: ResMut<Ener
 }
 
 fn block_update_system(
-    mut event: EventReader<BlockChangedEvent>,
+    mut event: MessageReader<BlockChangedMessage>,
     energy_storage_blocks: Res<EnergyStorageBlocks>,
     blocks: Res<Registry<Block>>,
     mut system_query: Query<&mut EnergyStorageSystem>,
@@ -54,7 +54,7 @@ fn block_update_system(
 }
 
 fn structure_loaded_event(
-    mut event_reader: EventReader<StructureLoadedEvent>,
+    mut event_reader: MessageReader<StructureLoadedMessage>,
     mut structure_query: Query<(&Structure, &mut StructureSystems)>,
     blocks: Res<Registry<Block>>,
     mut commands: Commands,
@@ -95,7 +95,7 @@ pub(super) fn register(app: &mut App) {
                     .in_set(StructureSystemsSet::InitSystems)
                     .ambiguous_with(StructureSystemsSet::InitSystems),
                 block_update_system
-                    .in_set(BlockEventsSet::ProcessEvents)
+                    .in_set(BlockMessagesSet::ProcessMessages)
                     .in_set(StructureSystemsSet::UpdateSystemsBlocks),
             )
                 .run_if(in_state(GameState::Playing)),

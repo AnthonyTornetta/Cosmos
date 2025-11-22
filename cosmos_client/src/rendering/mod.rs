@@ -3,12 +3,10 @@
 use std::fs;
 
 use bevy::{
+    asset::RenderAssetUsages,
+    mesh::{Indices, MeshVertexAttribute, VertexAttributeValues},
     prelude::*,
-    render::{
-        mesh::{Indices, MeshVertexAttribute, VertexAttributeValues},
-        render_asset::RenderAssetUsages,
-        render_resource::PrimitiveTopology,
-    },
+    render::render_resource::PrimitiveTopology,
 };
 use cosmos_core::{
     block::{Block, block_direction::BlockDirection, block_face::BlockFace},

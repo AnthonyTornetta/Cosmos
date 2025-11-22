@@ -5,14 +5,14 @@ use cosmos_core::{
     structure::shields::Shield,
 };
 
-use crate::projectiles::explosion::ExplosionHitEvent;
+use crate::projectiles::explosion::ExplosionHitMessage;
 
-use super::{ShieldHitEvent, ShieldSet};
+use super::{ShieldHitMessage, ShieldSet};
 
 fn respond_to_explosion_damage(
-    mut ev_reader: EventReader<ExplosionHitEvent>,
+    mut ev_reader: MessageReader<ExplosionHitMessage>,
     mut q_shield: Query<(&mut Shield, &Location)>,
-    mut ev_writer: EventWriter<ShieldHitEvent>,
+    mut ev_writer: MessageWriter<ShieldHitMessage>,
     mut q_health: Query<(&mut Health, &Location)>,
 ) {
     for ev in ev_reader.read() {
@@ -23,7 +23,7 @@ fn respond_to_explosion_damage(
             let relative_position = (ev.explosion_location - *shield_location).absolute_coords_f32();
 
             shield.take_damage(damage * 2.0);
-            ev_writer.write(ShieldHitEvent {
+            ev_writer.write(ShieldHitMessage {
                 relative_position,
                 shield_entity: ev.hit_entity,
             });

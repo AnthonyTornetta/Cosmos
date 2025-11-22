@@ -2,10 +2,10 @@
 
 use bevy::{input_focus::InputFocus, prelude::*};
 use cosmos_core::{
-    chat::{ClientSendChatMessageEvent, ServerSendChatMessageEvent},
-    commands::ClientCommandEvent,
+    chat::{ClientSendChatMessageMessage, ServerSendChatMessageMessage},
+    commands::ClientCommandMessage,
     ecs::NeedsDespawned,
-    netty::sync::events::client_event::{NettyEventReceived, NettyEventWriter},
+    netty::sync::events::client_event::{NettyMessageReceived, NettyMessageWriter},
     state::GameState,
 };
 
@@ -196,7 +196,7 @@ fn setup_chat_box(mut commands: Commands, default_font: Res<DefaultFont>) {
 
 fn display_messages(
     default_font: Res<DefaultFont>,
-    mut nevr_chat_msg: EventReader<NettyEventReceived<ServerSendChatMessageEvent>>,
+    mut nevr_chat_msg: MessageReader<NettyMessageReceived<ServerSendChatMessageMessage>>,
     q_chat_box: Query<Entity, With<ReceivedMessagesContainer>>,
     q_display_box: Query<Entity, With<ChatDisplayReceivedMessagesContainer>>,
     mut commands: Commands,
@@ -205,7 +205,7 @@ fn display_messages(
         let msg = &ev.message;
 
         let text_style = TextFont {
-            font: default_font.0.clone_weak(),
+            font: default_font.0.clone(),
             font_size: 24.0,
             ..Default::default()
         };
@@ -251,8 +251,8 @@ fn send_chat_msg(
     inputs: InputChecker,
     mut q_value: Query<&mut InputValue, With<SendingChatMessageBox>>,
     q_chat_box: Query<&Visibility, With<ChatContainer>>,
-    mut nevw_chat: NettyEventWriter<ClientSendChatMessageEvent>,
-    mut nevw_command: NettyEventWriter<ClientCommandEvent>,
+    mut nevw_chat: NettyMessageWriter<ClientSendChatMessageMessage>,
+    mut nevw_command: NettyMessageWriter<ClientCommandMessage>,
 ) {
     if !inputs.check_just_pressed(CosmosInputs::SendChatMessage) {
         return;
@@ -272,11 +272,11 @@ fn send_chat_msg(
     }
 
     if let Some(stripped) = value.strip_prefix("/") {
-        nevw_command.write(ClientCommandEvent {
+        nevw_command.write(ClientCommandMessage {
             command_text: stripped.to_owned(),
         });
     } else {
-        nevw_chat.write(ClientSendChatMessageEvent::Global(value.to_owned()));
+        nevw_chat.write(ClientSendChatMessageMessage::Global(value.to_owned()));
     }
 
     // Set val to "" in case toggle chat box and send message are bound to different keys

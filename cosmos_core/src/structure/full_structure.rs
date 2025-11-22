@@ -5,14 +5,14 @@
 use std::ops::{Deref, DerefMut};
 
 use bevy::{
-    prelude::{EventWriter, Vec3},
+    prelude::{MessageWriter, Vec3},
     reflect::Reflect,
 };
 use serde::{Deserialize, Serialize};
 
 use crate::{
     block::{Block, block_rotation::BlockRotation, blocks::AIR_BLOCK_ID},
-    events::block_events::BlockChangedEvent,
+    events::block_events::BlockChangedMessage,
     registry::{Registry, identifiable::Identifiable},
 };
 
@@ -92,7 +92,7 @@ impl FullStructure {
     }
 
     /// Sets the block at the given block coordinates.
-    /// Also sets its block_info. This does NOT send a [`BlockDataChangedEvent`] event!
+    /// Also sets its block_info. This does NOT send a [`BlockDataChangedMessage`] event!
     ///
     /// * `event_writer` If this is `None`, no event will be generated. A valid usecase for this being `None` is when you are initially loading/generating everything and you don't want a billion events being generated.
     pub fn set_block_and_info_at(
@@ -101,7 +101,7 @@ impl FullStructure {
         block: &Block,
         block_info: BlockInfo,
         blocks: &Registry<Block>,
-        event_writer: Option<&mut EventWriter<BlockChangedEvent>>,
+        event_writer: Option<&mut MessageWriter<BlockChangedMessage>>,
     ) {
         let old_block = self.block_id_at(coords);
         let old_block_info = self.block_info_at(coords);
@@ -115,7 +115,7 @@ impl FullStructure {
             let Some(self_entity) = self.base_structure.self_entity else {
                 return;
             };
-            event_writer.write(BlockChangedEvent {
+            event_writer.write(BlockChangedMessage {
                 new_block: block.id(),
                 old_block,
                 block: StructureBlock::new(coords, self_entity),
@@ -134,7 +134,7 @@ impl FullStructure {
         block: &Block,
         block_rotation: BlockRotation,
         blocks: &Registry<Block>,
-        event_writer: Option<&mut EventWriter<BlockChangedEvent>>,
+        event_writer: Option<&mut MessageWriter<BlockChangedMessage>>,
     ) {
         self.base_structure.debug_assert_block_coords_within(coords);
 
@@ -183,7 +183,7 @@ impl FullStructure {
             return;
         };
 
-        event_writer.write(BlockChangedEvent {
+        event_writer.write(BlockChangedMessage {
             new_block: block.id(),
             old_block,
             block: StructureBlock::new(coords, self_entity),
@@ -199,7 +199,7 @@ impl FullStructure {
         &mut self,
         coords: BlockCoordinate,
         blocks: &Registry<Block>,
-        event_writer: Option<&mut EventWriter<BlockChangedEvent>>,
+        event_writer: Option<&mut MessageWriter<BlockChangedMessage>>,
     ) {
         self.set_block_at(
             coords,

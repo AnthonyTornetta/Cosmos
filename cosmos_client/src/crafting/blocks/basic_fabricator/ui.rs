@@ -4,7 +4,7 @@ use bevy::{color::palettes::css, prelude::*};
 use cosmos_core::{
     block::data::{BlockData, BlockDataIdentifier},
     crafting::{
-        blocks::basic_fabricator::CraftBasicFabricatorRecipeEvent,
+        blocks::basic_fabricator::CraftBasicFabricatorRecipeMessage,
         recipes::{
             RecipeItem,
             basic_fabricator::{BasicFabricatorRecipe, BasicFabricatorRecipes},
@@ -21,7 +21,7 @@ use cosmos_core::{
         client::LocalPlayer,
         cosmos_encoder,
         sync::{
-            events::client_event::NettyEventWriter,
+            events::client_event::NettyMessageWriter,
             mapping::{Mappable, NetworkMapping},
         },
     },
@@ -39,7 +39,7 @@ use crate::{
     ui::{
         OpenMenu, UiSystemSet,
         components::{
-            button::{ButtonEvent, ButtonStyles, CosmosButton},
+            button::{ButtonMessage, ButtonStyles, CosmosButton},
             scollable_container::ScrollBox,
             window::GuiWindow,
         },
@@ -99,7 +99,7 @@ fn populate_menu(
         let mut ecmds = commands.entity(ent);
 
         let text_style = TextFont {
-            font: font.0.clone_weak(),
+            font: font.0.clone(),
             font_size: 16.0,
             ..Default::default()
         };
@@ -389,7 +389,7 @@ fn on_change_inventory(
             let selected = q_selected_recipe.single().ok();
 
             let text_style = TextFont {
-                font: font.0.clone_weak(),
+                font: font.0.clone(),
                 font_size: 16.0,
                 ..Default::default()
             };
@@ -469,7 +469,7 @@ fn auto_insert_items(
 }
 
 fn on_select_item(
-    ev: Trigger<ButtonEvent>,
+    ev: On<ButtonMessage>,
     mut commands: Commands,
     q_selected_recipe: Query<Entity, With<SelectedRecipe>>,
     q_recipe: Query<&Recipe>,
@@ -529,12 +529,12 @@ fn on_select_item(
 }
 
 fn listen_create(
-    _trigger: Trigger<ButtonEvent>,
+    _trigger: On<ButtonMessage>,
     q_structure: Query<&Structure>,
     q_inventory: Query<&Inventory>,
     q_open_fab_menu: Query<&OpenBasicFabricatorMenu>,
     q_selected_recipe: Query<&Recipe, With<SelectedRecipe>>,
-    mut nevw_craft_event: NettyEventWriter<CraftBasicFabricatorRecipeEvent>,
+    mut nevw_craft_event: NettyMessageWriter<CraftBasicFabricatorRecipeMessage>,
     network_mapping: Res<NetworkMapping>,
     input_handler: InputChecker,
 ) {
@@ -568,7 +568,7 @@ fn listen_create(
 
         info!("Sending craft {quantity} event!");
 
-        nevw_craft_event.write(CraftBasicFabricatorRecipeEvent {
+        nevw_craft_event.write(CraftBasicFabricatorRecipeMessage {
             block,
             recipe: recipe.0.clone(),
             quantity,

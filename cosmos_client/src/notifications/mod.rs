@@ -5,7 +5,7 @@ use cosmos_core::notifications::{Notification, NotificationKind};
 
 use crate::ui::message::{HudMessage, HudMessages};
 
-fn on_recv_notification(mut hud_msgs: ResMut<HudMessages>, mut evr_notification: EventReader<Notification>) {
+fn on_recv_notification(mut hud_msgs: ResMut<HudMessages>, mut evr_notification: MessageReader<Notification>) {
     for not in evr_notification.read() {
         hud_msgs.display_message(HudMessage::with_colored_string(
             not.message(),

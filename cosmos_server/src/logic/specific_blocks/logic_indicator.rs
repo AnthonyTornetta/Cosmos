@@ -4,13 +4,13 @@ use bevy::prelude::*;
 
 use cosmos_core::{
     block::Block,
-    events::block_events::BlockDataChangedEvent,
+    events::block_events::BlockDataChangedMessage,
     logic::{BlockLogicData, HasOnOffInfo},
     registry::{Registry, identifiable::Identifiable},
     structure::Structure,
 };
 
-use crate::logic::{LogicBlock, LogicConnection, LogicInputEvent, LogicSystemSet, PortType, logic_driver::LogicDriver};
+use crate::logic::{LogicBlock, LogicConnection, LogicInputMessage, LogicSystemSet, PortType, logic_driver::LogicDriver};
 
 fn register_logic_ports(blocks: Res<Registry<Block>>, mut registry: ResMut<Registry<LogicBlock>>) {
     if let Some(logic_indicator) = blocks.from_id("cosmos:logic_indicator") {
@@ -19,10 +19,10 @@ fn register_logic_ports(blocks: Res<Registry<Block>>, mut registry: ResMut<Regis
 }
 
 fn logic_indicator_input_event_listener(
-    mut evr_logic_input: EventReader<LogicInputEvent>,
+    mut evr_logic_input: MessageReader<LogicInputMessage>,
     blocks: Res<Registry<Block>>,
     mut q_structure: Query<(&mut Structure, &LogicDriver)>,
-    mut evw_block_data_changed: EventWriter<BlockDataChangedEvent>,
+    mut evw_block_data_changed: MessageWriter<BlockDataChangedMessage>,
 ) {
     for ev in evr_logic_input.read() {
         let Ok((mut structure, logic_driver)) = q_structure.get_mut(ev.block.structure()) else {

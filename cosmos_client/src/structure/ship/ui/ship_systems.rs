@@ -1,6 +1,6 @@
 use bevy::{color::palettes::css, ecs::relationship::RelatedSpawnerCommands, prelude::*};
 use cosmos_core::{
-    netty::sync::events::client_event::NettyEventWriter,
+    netty::sync::events::client_event::NettyMessageWriter,
     prelude::{StructureSystem, StructureSystems},
     registry::Registry,
     state::GameState,
@@ -12,7 +12,7 @@ use crate::{
     lang::Lang,
     ui::{
         components::{
-            button::{ButtonEvent, CosmosButton},
+            button::{ButtonMessage, CosmosButton},
             scollable_container::ScrollBox,
         },
         font::DefaultFont,
@@ -213,7 +213,7 @@ fn on_remove_active_system(mut removed: RemovedComponents<ActiveSystem>, mut q_b
 #[derive(Component)]
 struct ActiveSystem;
 
-fn on_system_clicked(ev: Trigger<ButtonEvent>, mut commands: Commands, q_active: Query<Entity, With<ActiveSystem>>) {
+fn on_system_clicked(ev: On<ButtonMessage>, mut commands: Commands, q_active: Query<Entity, With<ActiveSystem>>) {
     if let Ok(active) = q_active.single() {
         commands.entity(active).remove::<ActiveSystem>();
 
@@ -230,7 +230,7 @@ fn listen_button_inputs(
     q_systems: Query<&StructureSystemOrdering>,
     input_handler: InputChecker,
     q_active_system: Query<(Entity, &StructureSystemMarker), With<ActiveSystem>>,
-    mut nevw_change_system_slot: NettyEventWriter<ChangeSystemSlot>,
+    mut nevw_change_system_slot: NettyMessageWriter<ChangeSystemSlot>,
     mut commands: Commands,
 ) {
     let Ok((ent, active)) = q_active_system.single() else {
@@ -281,7 +281,7 @@ fn listen_button_inputs(
 
     commands.entity(ent).remove::<ActiveSystem>();
 
-    info!("Sending Event!");
+    info!("Sending Message!");
     nevw_change_system_slot.write(ChangeSystemSlot {
         slot,
         system_id: Some(active.system_id),

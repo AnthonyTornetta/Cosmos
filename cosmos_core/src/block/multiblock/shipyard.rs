@@ -4,13 +4,13 @@ use crate::{
     block::{data::BlockData, multiblock::rectangle::RectangleMultiblockBounds},
     netty::sync::{
         IdentifiableComponent, SyncableComponent,
-        events::netty_event::{IdentifiableEvent, NettyEvent, SyncedEventImpl},
+        events::netty_event::{IdentifiableMessage, NettyMessage, SyncedMessageImpl},
         sync_component,
     },
     prelude::{BlockCoordinate, StructureBlock},
     structure::chunk::BlockInfo,
 };
-use bevy::{ecs::component::HookContext, platform::collections::HashMap, prelude::*};
+use bevy::{ecs::lifecycle::HookContext, platform::collections::HashMap, prelude::*};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Component, Reflect, Serialize, Deserialize, PartialEq, Eq, Clone)]
@@ -170,7 +170,7 @@ impl SyncableComponent for ClientFriendlyShipyardState {
     }
 }
 
-#[derive(Debug, Event, Serialize, Deserialize, Clone, Copy)]
+#[derive(Debug, Message, Serialize, Deserialize, Clone, Copy)]
 /// Client->Server to request setting a shipyards state.
 pub enum ClientSetShipyardState {
     /// Sets the state to paused (if building - otherwise does nothing)
@@ -207,15 +207,15 @@ impl ClientSetShipyardState {
     }
 }
 
-impl IdentifiableEvent for ClientSetShipyardState {
+impl IdentifiableMessage for ClientSetShipyardState {
     fn unlocalized_name() -> &'static str {
         "cosmos:set_shipyard_state"
     }
 }
 
-impl NettyEvent for ClientSetShipyardState {
-    fn event_receiver() -> crate::netty::sync::events::netty_event::EventReceiver {
-        crate::netty::sync::events::netty_event::EventReceiver::Server
+impl NettyMessage for ClientSetShipyardState {
+    fn event_receiver() -> crate::netty::sync::events::netty_event::MessageReceiver {
+        crate::netty::sync::events::netty_event::MessageReceiver::Server
     }
 
     #[cfg(feature = "client")]
@@ -236,7 +236,7 @@ impl NettyEvent for ClientSetShipyardState {
     }
 }
 
-#[derive(Event, Debug, Serialize, Deserialize, Clone, Copy)]
+#[derive(Message, Debug, Serialize, Deserialize, Clone, Copy)]
 /// Server->client
 ///
 /// Triggers the client to display a shipyard's UI
@@ -244,15 +244,15 @@ pub struct ShowShipyardUi {
     /// The shipyard controller block
     pub shipyard_block: StructureBlock,
 }
-impl IdentifiableEvent for ShowShipyardUi {
+impl IdentifiableMessage for ShowShipyardUi {
     fn unlocalized_name() -> &'static str {
         "cosmos:show_shipyard_ui"
     }
 }
 
-impl NettyEvent for ShowShipyardUi {
-    fn event_receiver() -> crate::netty::sync::events::netty_event::EventReceiver {
-        crate::netty::sync::events::netty_event::EventReceiver::Client
+impl NettyMessage for ShowShipyardUi {
+    fn event_receiver() -> crate::netty::sync::events::netty_event::MessageReceiver {
+        crate::netty::sync::events::netty_event::MessageReceiver::Client
     }
 
     #[cfg(feature = "client")]
@@ -271,7 +271,7 @@ impl NettyEvent for ShowShipyardUi {
     }
 }
 
-#[derive(Event, Debug, Serialize, Deserialize, Clone, Copy)]
+#[derive(Message, Debug, Serialize, Deserialize, Clone, Copy)]
 /// Client->Server
 ///
 /// Requests the server to set the shipyard's blueprint based on the given item in the player's
@@ -283,15 +283,15 @@ pub struct SetShipyardBlueprint {
     pub blueprint_slot: u32,
 }
 
-impl IdentifiableEvent for SetShipyardBlueprint {
+impl IdentifiableMessage for SetShipyardBlueprint {
     fn unlocalized_name() -> &'static str {
         "cosmos:set_shipyard_blueprint"
     }
 }
 
-impl NettyEvent for SetShipyardBlueprint {
-    fn event_receiver() -> crate::netty::sync::events::netty_event::EventReceiver {
-        crate::netty::sync::events::netty_event::EventReceiver::Server
+impl NettyMessage for SetShipyardBlueprint {
+    fn event_receiver() -> crate::netty::sync::events::netty_event::MessageReceiver {
+        crate::netty::sync::events::netty_event::MessageReceiver::Server
     }
 
     #[cfg(feature = "client")]

@@ -57,7 +57,7 @@ fn open_config_menu(
                 ..Default::default()
             },
             OpenMenu::new(0),
-            BorderColor(css::DARK_GREY.into()),
+            BorderColor::all(css::DARK_GREY),
             Node {
                 margin: UiRect::all(Val::Auto),
                 position_type: PositionType::Absolute,

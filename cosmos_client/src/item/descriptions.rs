@@ -2,7 +2,8 @@
 
 use std::fs;
 
-use bevy::{platform::collections::HashMap, prelude::*, text::FontStyle};
+use bevy::{platform::collections::HashMap, prelude::*};
+use cosmic_text::Style;
 use cosmos_core::{
     item::Item,
     registry::{Registry, identifiable::Identifiable},
@@ -17,7 +18,7 @@ pub struct StyledText {
     /// The color
     pub color: Color,
     /// The style
-    pub style: FontStyle,
+    pub style: Style,
 }
 
 #[derive(Debug)]
@@ -68,7 +69,7 @@ fn load_descriptions(mut descriptions: ResMut<ItemDescriptions>, items: Res<Regi
             ItemDescription(vec![ItemDescriptionTextEntry::Normal(StyledText {
                 text: desc,
                 color: Color::WHITE,
-                style: FontStyle::Normal,
+                style: Style::Normal,
             })]),
         );
     }

@@ -90,7 +90,7 @@ impl<T: ReactableValue> BindValues<T> {
     }
 }
 
-#[derive(Event)]
+#[derive(Message)]
 /// If this component is on a UI component, then it needs its values fetched from the variable entities it is bound to.
 ///
 /// The entity stored is the entity that holds the values that need fetched.
@@ -99,7 +99,7 @@ pub struct NeedsValueFetched(pub Entity);
 fn listen_changes_to_reactors<T: ReactableValue>(
     q_bound_listeners: Query<(Entity, &BindValues<T>)>,
     mut q_changed_reactors: Query<Entity, Changed<T>>,
-    mut ev_writer: EventWriter<NeedsValueFetched>,
+    mut ev_writer: MessageWriter<NeedsValueFetched>,
 ) {
     for ent in q_changed_reactors.iter_mut() {
         for (bound_ent, bound_value) in q_bound_listeners.iter() {
@@ -141,7 +141,7 @@ pub enum ReactiveUiSystemSet {
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_event::<NeedsValueFetched>();
+    app.add_message::<NeedsValueFetched>();
 
     app.configure_sets(
         Update,

@@ -1,9 +1,9 @@
-//! Event & its processing for when a player wants to create a ship
+//! Message & its processing for when a player wants to create a ship
 
 use bevy::prelude::*;
 use bevy_renet::renet::RenetClient;
 use cosmos_core::{
-    block::block_events::BlockEventsSet,
+    block::block_events::BlockMessagesSet,
     inventory::Inventory,
     item::Item,
     netty::{NettyChannelClient, client::LocalPlayer, client_reliable_messages::ClientReliableMessages, cosmos_encoder},
@@ -17,9 +17,9 @@ use crate::{
     ui::components::show_cursor::no_open_menus,
 };
 
-#[derive(Debug, Event)]
+#[derive(Debug, Message)]
 /// Sent when the client wants the server to create a ship
-pub struct CreateShipEvent {
+pub struct CreateShipMessage {
     name: String,
 }
 
@@ -27,7 +27,7 @@ fn listener(
     q_inventory: Query<&Inventory, (With<LocalPlayer>, Without<BuildMode>, Without<Pilot>)>,
     items: Res<Registry<Item>>,
     input_handler: InputChecker,
-    mut event_writer: EventWriter<CreateShipEvent>,
+    mut event_writer: MessageWriter<CreateShipMessage>,
 ) {
     // Don't create ships while in build mode
     let Ok(inventory) = q_inventory.single() else {
@@ -42,14 +42,14 @@ fn listener(
 
         if inventory.can_take_item(ship_core, 1) {
             info!("Sending create ship event!");
-            event_writer.write(CreateShipEvent { name: "Cool name".into() });
+            event_writer.write(CreateShipMessage { name: "Cool name".into() });
         } else {
             info!("Does not have ship core");
         }
     }
 }
 
-fn event_handler(mut event_reader: EventReader<CreateShipEvent>, mut client: ResMut<RenetClient>) {
+fn event_handler(mut event_reader: MessageReader<CreateShipMessage>, mut client: ResMut<RenetClient>) {
     for ev in event_reader.read() {
         info!("Got create ship event!");
         client.send_message(
@@ -60,10 +60,10 @@ fn event_handler(mut event_reader: EventReader<CreateShipEvent>, mut client: Res
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_event::<CreateShipEvent>().add_systems(
+    app.add_message::<CreateShipMessage>().add_systems(
         Update,
         (listener.run_if(no_open_menus), event_handler)
-            .in_set(BlockEventsSet::SendEventsForNextFrame)
+            .in_set(BlockMessagesSet::SendMessagesForNextFrame)
             .chain()
             .run_if(in_state(GameState::Playing)),
     );

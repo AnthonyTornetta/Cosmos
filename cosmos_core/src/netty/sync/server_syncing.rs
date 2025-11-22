@@ -1,6 +1,6 @@
 //! Server-side automatic component syncing logic
 
-use super::server_entity_syncing::RequestedEntityEvent;
+use super::server_entity_syncing::RequestedEntityMessage;
 use super::{
     ClientAuthority, ComponentEntityIdentifier, ComponentId, ComponentReplicationMessage, ComponentSyncingSet, RegisterComponentSet,
     ReplicatedComponentData, SyncType, SyncableComponent, SyncedComponentId,
@@ -9,7 +9,7 @@ use crate::block::data::BlockData;
 use crate::entities::player::Player;
 use crate::inventory::itemstack::ItemStackData;
 use crate::netty::server::ServerLobby;
-use crate::netty::sync::{GotComponentToRemoveEvent, GotComponentToSyncEvent};
+use crate::netty::sync::{GotComponentToRemoveMessage, GotComponentToSyncMessage};
 use crate::netty::system_sets::NetworkingSystemsSet;
 use crate::netty::{NettyChannelClient, NettyChannelServer, NoSendEntity, cosmos_encoder};
 use crate::physics::location::LocationPhysicsSet;
@@ -18,7 +18,7 @@ use crate::structure::ship::pilot::Pilot;
 use crate::structure::systems::{StructureSystem, StructureSystems};
 use crate::utils::ecs::{FixedUpdateRemovedComponents, register_fixed_update_removed_component};
 use bevy::app::FixedUpdate;
-use bevy::ecs::event::EventReader;
+use bevy::ecs::message::MessageReader;
 use bevy::ecs::query::Without;
 use bevy::ecs::schedule::common_conditions::resource_exists;
 use bevy::ecs::system::Commands;
@@ -30,7 +30,7 @@ use bevy::{
     app::{App, Startup},
     ecs::{
         entity::Entity,
-        event::EventWriter,
+        message::MessageWriter,
         query::Changed,
         system::{Query, Res, ResMut},
     },
@@ -42,7 +42,7 @@ use renet::ClientId;
 #[derive(Component, Debug, Reflect)]
 /// This is a flag placed onto players that are ready to receive components from the server.
 ///
-/// This mean the player has already triggered a [`ClientFinishedReceivingRegistriesEvent`].
+/// This mean the player has already triggered a [`ClientFinishedReceivingRegistriesMessage`].
 pub struct ReadyForSyncing;
 
 #[derive(Component, Debug, Reflect, Clone, Default)]
@@ -68,7 +68,7 @@ impl SyncTo {
 
 fn server_remove_component<T: SyncableComponent>(
     components_registry: Res<Registry<SyncedComponentId>>,
-    mut ev_reader: EventReader<GotComponentToRemoveEvent>,
+    mut ev_reader: MessageReader<GotComponentToRemoveMessage>,
     mut commands: Commands,
     lobby: Res<ServerLobby>,
     q_piloting: Query<&Pilot>,
@@ -129,7 +129,7 @@ fn server_remove_component<T: SyncableComponent>(
 
 fn server_deserialize_component<T: SyncableComponent>(
     components_registry: Res<Registry<SyncedComponentId>>,
-    mut ev_reader: EventReader<GotComponentToSyncEvent>,
+    mut ev_reader: MessageReader<GotComponentToSyncMessage>,
     mut commands: Commands,
     lobby: Res<ServerLobby>,
     q_piloting: Query<&Pilot>,
@@ -341,7 +341,7 @@ fn server_sync_removed_components<T: SyncableComponent>(
 
 fn on_request_component<T: SyncableComponent>(
     q_t: Query<(&T, Option<&StructureSystem>, Option<&ItemStackData>, Option<&BlockData>), Without<NoSendEntity>>,
-    mut ev_reader: EventReader<RequestedEntityEvent>,
+    mut ev_reader: MessageReader<RequestedEntityMessage>,
     id_registry: Res<Registry<SyncedComponentId>>,
     mut server: ResMut<RenetServer>,
 ) {
@@ -401,8 +401,8 @@ fn on_request_component<T: SyncableComponent>(
 
 fn server_receive_components(
     mut server: ResMut<RenetServer>,
-    mut ev_writer_sync: EventWriter<GotComponentToSyncEvent>,
-    mut ev_writer_remove: EventWriter<GotComponentToRemoveEvent>,
+    mut ev_writer_sync: MessageWriter<GotComponentToSyncMessage>,
+    mut ev_writer_remove: MessageWriter<GotComponentToRemoveMessage>,
     q_structure_systems: Query<&StructureSystems>,
 ) {
     for client_id in server.clients_id().into_iter() {
@@ -453,7 +453,7 @@ fn server_receive_components(
                             }
                         };
 
-                        ev_writer_sync.write(GotComponentToSyncEvent {
+                        ev_writer_sync.write(GotComponentToSyncMessage {
                             client_id,
                             component_id,
                             entity,
@@ -500,7 +500,7 @@ fn server_receive_components(
                         }
                     };
 
-                    ev_writer_remove.write(GotComponentToRemoveEvent {
+                    ev_writer_remove.write(GotComponentToRemoveMessage {
                         client_id,
                         component_id,
                         entity,
@@ -535,7 +535,7 @@ pub(super) fn setup_server(app: &mut App) {
         FixedUpdate,
         server_receive_components.in_set(ComponentSyncingSet::PreComponentSyncing),
     )
-    .add_event::<RequestedEntityEvent>();
+    .add_message::<RequestedEntityMessage>();
 }
 
 fn register_component<T: SyncableComponent>(mut registry: ResMut<Registry<SyncedComponentId>>) {

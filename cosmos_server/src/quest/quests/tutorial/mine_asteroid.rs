@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 use cosmos_core::{
-    block::{Block, block_events::BlockBreakEvent},
+    block::{Block, block_events::BlockBreakMessage},
     item::Item,
     quest::{ActiveQuest, OngoingQuests, Quest, QuestBuilder},
     registry::{Registry, identifiable::Identifiable},
@@ -105,7 +105,7 @@ fn on_change_tutorial_state(
 fn resolve_quests(
     quests: Res<Registry<Quest>>,
     mut q_ongoing_quests: Query<&mut OngoingQuests>,
-    mut evr_block_break: EventReader<BlockBreakEvent>,
+    mut evr_block_break: MessageReader<BlockBreakMessage>,
     q_pilot: Query<&Pilot>,
     blocks: Res<Registry<Block>>,
 ) {

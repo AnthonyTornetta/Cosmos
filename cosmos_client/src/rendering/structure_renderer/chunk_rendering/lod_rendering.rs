@@ -174,7 +174,7 @@ impl ChunkRendererBackend<LodChunk> for LodChunkRenderingChecker<'_> {
 
 #[cfg(test)]
 mod test {
-    use cosmos_core::{block::block_direction::ALL_BLOCK_DIRECTIONS, structure::chunk::CHUNK_DIMENSIONS};
+    use cosmos_core::structure::chunk::CHUNK_DIMENSIONS;
 
     use super::*;
 

@@ -36,8 +36,8 @@ impl LookingAtTooltip {
     }
 }
 
-#[derive(Event)]
-pub struct GenerateLookingAtTooltipEvent {
+#[derive(Message)]
+pub struct GenerateLookingAtTooltipMessage {
     pub tooltip_entity: Entity,
     pub looking_at: StructureBlock,
     pub block_id: u16,
@@ -48,7 +48,7 @@ fn on_change_looking_at(
     q_tooltip: Query<Entity, With<LookingAtTooltip>>,
     q_looking_at: Query<&LookingAt, (Changed<LookingAt>, With<LocalPlayer>)>,
     q_structure: Query<&Structure>,
-    mut evw_generate_tooltip: EventWriter<GenerateLookingAtTooltipEvent>,
+    mut evw_generate_tooltip: MessageWriter<GenerateLookingAtTooltipMessage>,
 ) {
     let Ok(looking_at) = q_looking_at.single() else {
         return;
@@ -90,7 +90,7 @@ fn on_change_looking_at(
         .despawn_related::<Children>()
         .id();
 
-    evw_generate_tooltip.write(GenerateLookingAtTooltipEvent {
+    evw_generate_tooltip.write(GenerateLookingAtTooltipMessage {
         looking_at: block.block,
         tooltip_entity: ent,
         block_id,
@@ -128,7 +128,7 @@ fn on_finish_tooltip_text(
             };
 
             let font = TextFont {
-                font: font.0.clone_weak(),
+                font: font.0.clone(),
                 font_size: 18.0,
                 ..Default::default()
             };
@@ -150,7 +150,7 @@ fn on_finish_tooltip_text(
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_event::<GenerateLookingAtTooltipEvent>();
+    app.add_message::<GenerateLookingAtTooltipMessage>();
 
     app.configure_sets(
         Update,

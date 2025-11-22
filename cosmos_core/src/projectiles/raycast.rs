@@ -52,7 +52,7 @@ fn raycast(
                         .inverse()
                         .mul_vec3(pos - transform.translation());
 
-                    event_writer.write(LaserCollideEvent {
+                    event_writer.write(LaserCollideMessage {
                         entity_hit: parent.parent(),
                         local_position_hit: lph,
                         laser_strength: laser.strength,
@@ -64,7 +64,7 @@ fn raycast(
                     .inverse()
                     .mul_vec3(pos - transform.translation());
 
-                event_writer.write(LaserCollideEvent {
+                event_writer.write(LaserCollideMessage {
                     entity_hit: entity,
                     local_position_hit: lph,
                     laser_strength: laser.strength,

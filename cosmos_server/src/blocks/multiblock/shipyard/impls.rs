@@ -1,15 +1,15 @@
-use std::{cell::RefCell, rc::Rc, time::Duration};
+use std::time::Duration;
 
-use bevy::{ecs::component::HookContext, platform::collections::HashMap, prelude::*, time::common_conditions::on_timer};
+use bevy::{ecs::lifecycle::HookContext, platform::collections::HashMap, prelude::*, time::common_conditions::on_timer};
 use bevy_rapier3d::{
     plugin::{RapierContextEntityLink, ReadRapierContext},
-    prelude::{Collider, QueryFilter, RigidBody, Velocity},
+    prelude::{QueryFilter, RigidBody, Velocity},
 };
 use cosmos_core::{
     block::{
         Block,
         block_direction::ALL_BLOCK_DIRECTIONS,
-        block_events::{BlockEventsSet, BlockInteractEvent},
+        block_events::{BlockInteractMessage, BlockMessagesSet},
         blocks::AIR_BLOCK_ID,
         data::BlockData,
         multiblock::prelude::*,
@@ -17,15 +17,12 @@ use cosmos_core::{
     blockitems::BlockItems,
     ecs::{NeedsDespawned, sets::FixedUpdateSet},
     entities::player::Player,
-    events::{
-        block_events::{BlockChangedEvent, BlockDataSystemParams},
-        structure::structure_event::StructureEventIterator,
-    },
+    events::{block_events::BlockChangedMessage, structure::structure_event::StructureMessageIterator},
     inventory::Inventory,
     item::{Item, usable::blueprint::BlueprintItemData},
     netty::{
         server::ServerLobby,
-        sync::events::server_event::{NettyEventReceived, NettyEventWriter},
+        sync::events::server_event::{NettyMessageReceived, NettyMessageWriter},
     },
     notifications::Notification,
     physics::{
@@ -43,15 +40,15 @@ use crate::{
 };
 
 fn on_place_blocks_impacting_shipyard(
-    mut evr_block_changed_event: EventReader<BlockChangedEvent>,
+    mut evr_block_changed_event: MessageReader<BlockChangedMessage>,
     // blocks: Res<Registry<Block>>,
     mut q_shipyards: Query<(&Shipyards, &mut Structure)>,
     q_shipyard: Query<(&Shipyard, Entity)>,
     mut q_block_data: Query<&mut BlockData>,
-    mut bs_params: BlockDataSystemParams,
     q_has_shipyard_data: Query<(), With<Shipyard>>,
     q_has_shipyard_state_data: Query<(), With<ShipyardState>>,
     q_has_shipyard_client_data: Query<(), With<ClientFriendlyShipyardState>>,
+    mut commands: Commands,
 ) {
     for (structure, bce) in evr_block_changed_event.read().group_by_structure() {
         let Ok((shipyards, mut structure)) = q_shipyards.get_mut(structure) else {
@@ -70,11 +67,11 @@ fn on_place_blocks_impacting_shipyard(
                 };
                 let block_coords = block_coords.identifier.block.coords();
 
-                structure.remove_block_data::<Shipyard>(block_coords, &mut bs_params, &mut q_block_data, &q_has_shipyard_data);
-                structure.remove_block_data::<ShipyardState>(block_coords, &mut bs_params, &mut q_block_data, &q_has_shipyard_state_data);
+                structure.remove_block_data::<Shipyard>(block_coords, &mut commands, &mut q_block_data, &q_has_shipyard_data);
+                structure.remove_block_data::<ShipyardState>(block_coords, &mut commands, &mut q_block_data, &q_has_shipyard_state_data);
                 structure.remove_block_data::<ClientFriendlyShipyardState>(
                     block_coords,
-                    &mut bs_params,
+                    &mut commands,
                     &mut q_block_data,
                     &q_has_shipyard_client_data,
                 );
@@ -162,14 +159,14 @@ fn compute_shipyard(structure: &Structure, controller: BlockCoordinate, frame_id
 fn interact_with_shipyard(
     mut q_structure: Query<&mut Structure>,
     q_shipyard: Query<&Shipyard>,
-    mut evr_interact: EventReader<BlockInteractEvent>,
+    mut evr_interact: MessageReader<BlockInteractMessage>,
     blocks: Res<Registry<Block>>,
-    mut bs_params: BlockDataSystemParams,
+    mut commands: Commands,
     mut q_block_data: Query<&mut BlockData>,
     q_has_data: Query<(), With<Shipyard>>,
-    mut nevw_open_ui: NettyEventWriter<ShowShipyardUi>,
+    mut nevw_open_ui: NettyMessageWriter<ShowShipyardUi>,
     q_player: Query<&Player>,
-    mut nevw_notification: NettyEventWriter<Notification>,
+    mut nevw_notification: NettyMessageWriter<Notification>,
 ) {
     for ev in evr_interact.read() {
         let Some(b) = ev.block else {
@@ -232,7 +229,7 @@ fn interact_with_shipyard(
             Ok(shipyard) => shipyard,
         };
 
-        structure.insert_block_data(b.coords(), shipyard, &mut bs_params, &mut q_block_data, &q_has_data);
+        structure.insert_block_data(b.coords(), shipyard, &mut commands, &mut q_block_data, &q_has_data);
 
         nevw_open_ui.write(ShowShipyardUi { shipyard_block: b }, player.client_id());
     }
@@ -242,7 +239,7 @@ fn on_set_blueprint(
     players: Res<ServerLobby>,
     items: Res<Registry<Item>>,
     blocks: Res<Registry<Block>>,
-    mut nevr_set_shipyard_blueprint: EventReader<NettyEventReceived<SetShipyardBlueprint>>,
+    mut nevr_set_shipyard_blueprint: MessageReader<NettyMessageReceived<SetShipyardBlueprint>>,
     mut q_structure: Query<(&GlobalTransform, &mut Structure, &RapierContextEntityLink)>,
     mut q_block_data: Query<&mut BlockData>,
     q_has_shipyard_data: Query<(), With<ShipyardState>>,
@@ -254,12 +251,10 @@ fn on_set_blueprint(
         Query<&ChunkPhysicsPart>,
     ),
     mut commands: Commands,
-    bs_params: BlockDataSystemParams,
-    mut nevw_notification: NettyEventWriter<Notification>,
+    mut block_data_commands: Commands,
+    mut nevw_notification: NettyMessageWriter<Notification>,
     read_context: ReadRapierContext,
 ) {
-    let bs_params = Rc::new(RefCell::new(bs_params));
-
     for ev in nevr_set_shipyard_blueprint.read() {
         let structure_ent = ev.shipyard_block.structure();
         let Ok((station_g_trans, mut shipyard_structure, world)) = q_structure.get_mut(structure_ent) else {
@@ -314,10 +309,10 @@ fn on_set_blueprint(
 
         let mut hit_something = false;
 
-        context.intersections_with_shape(
+        context.intersect_shape(
             shipyard_world_pos,
             station_g_trans.rotation(),
-            &Collider::cuboid(half_size.x, half_size.y, half_size.z),
+            &bevy_rapier3d::parry::shape::Cuboid::new(Vec3::new(half_size.x, half_size.y, half_size.z).into()),
             QueryFilter {
                 exclude_rigid_body: Some(structure_ent),
                 ..Default::default()
@@ -384,7 +379,7 @@ fn on_set_blueprint(
             ev.shipyard_block.coords(),
             &shipyard_structure,
             ship_core_item,
-            bs_params.clone(),
+            &mut block_data_commands,
             &mut commands,
         ) {
             nevw_notification.write(
@@ -441,7 +436,7 @@ fn on_set_blueprint(
                 total_blocks_count: totals_count,
                 creating: entity,
             }),
-            &mut bs_params.borrow_mut(),
+            &mut commands,
             &mut q_block_data,
             &q_has_shipyard_data,
         );
@@ -460,14 +455,12 @@ fn manage_shipyards(
     mut q_structure: Query<&mut Structure, (With<Ship>, With<StructureBeingBuilt>)>,
     q_building: Query<&Structure, Without<StructureBeingBuilt>>,
     blocks: Res<Registry<Block>>,
-    mut evw_block_change: EventWriter<BlockChangedEvent>,
-    bs_params: BlockDataSystemParams,
+    mut evw_block_change: MessageWriter<BlockChangedMessage>,
+    mut block_data_commands: Commands,
     items: Res<Registry<Item>>,
     block_items: Res<BlockItems>,
     mut q_inventory: Query<&mut Inventory, With<BlockData>>,
 ) {
-    let bs_params = Rc::new(RefCell::new(bs_params));
-
     for (ent, mut state, block_data) in q_shipyard_state.iter_mut() {
         match state.as_mut() {
             ShipyardState::Paused(_) => {
@@ -523,7 +516,7 @@ fn manage_shipyards(
                     block_data.coords(),
                     shipyard_structure,
                     block_item,
-                    bs_params.clone(),
+                    &mut block_data_commands,
                     &mut commands,
                 ) {
                     doing_bp.blocks_todo.insert(0, (coords, block.id(), info));
@@ -580,22 +573,23 @@ fn add_shipyard_state_hooks(world: &mut World) {
 }
 
 fn on_change_shipyard_state(
-    mut nevr_change_shipyard_state: EventReader<NettyEventReceived<ClientSetShipyardState>>,
+    mut nevr_change_shipyard_state: MessageReader<NettyMessageReceived<ClientSetShipyardState>>,
     mut q_structure: Query<&mut Structure>,
     mut q_shipyard_state: Query<&mut ShipyardState>,
-    bs_params: BlockDataSystemParams,
     mut q_block_data: Query<&mut BlockData>,
     q_has_shipyard_state_data: Query<(), With<ShipyardState>>,
     q_has_shipyard_client_data: Query<(), With<ClientFriendlyShipyardState>>,
+    mut block_data_commands: Commands,
+    mut commands: Commands,
 ) {
-    let bs_params = Rc::new(RefCell::new(bs_params));
     for ev in nevr_change_shipyard_state.read() {
         let controller = ev.controller();
         let Ok(mut structure) = q_structure.get_mut(controller.structure()) else {
             continue;
         };
 
-        let Some(mut cur_state) = structure.query_block_data_mut(controller.coords(), &mut q_shipyard_state, bs_params.clone()) else {
+        let Some(mut cur_state) = structure.query_block_data_mut(controller.coords(), &mut q_shipyard_state, &mut block_data_commands)
+        else {
             continue;
         };
 
@@ -616,13 +610,13 @@ fn on_change_shipyard_state(
             ClientSetShipyardState::Stop { controller: _ } => {
                 structure.remove_block_data::<ShipyardState>(
                     controller.coords(),
-                    &mut bs_params.borrow_mut(),
+                    &mut commands,
                     &mut q_block_data,
                     &q_has_shipyard_state_data,
                 );
                 structure.remove_block_data::<ClientFriendlyShipyardState>(
                     controller.coords(),
-                    &mut bs_params.borrow_mut(),
+                    &mut commands,
                     &mut q_block_data,
                     &q_has_shipyard_client_data,
                 );
@@ -642,8 +636,8 @@ fn consume_item(
     center: BlockCoordinate,
     structure: &Structure,
     item: &Item,
-    bs_params: Rc<RefCell<BlockDataSystemParams>>,
     commands: &mut Commands,
+    block_data_commands: &mut Commands,
 ) -> bool {
     for dir in ALL_BLOCK_DIRECTIONS.iter() {
         let Ok(coord) = BlockCoordinate::try_from(dir.to_coordinates() + center) else {
@@ -654,7 +648,7 @@ fn consume_item(
             continue;
         }
 
-        if let Some(mut inv) = structure.query_block_data_mut(coord, q_inventory, bs_params.clone())
+        if let Some(mut inv) = structure.query_block_data_mut(coord, q_inventory, block_data_commands)
             && inv.take_and_remove_item(item, 1, commands).0 == 0
         {
             return true;
@@ -674,7 +668,7 @@ pub(super) fn register(app: &mut App) {
             create_client_friendly_state,
         )
             .chain()
-            .in_set(BlockEventsSet::ProcessEvents)
+            .in_set(BlockMessagesSet::ProcessMessages)
             .before(FixedUpdateSet::PrePhysics),
     )
     .add_systems(

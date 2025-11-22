@@ -133,9 +133,7 @@ impl<T: States + Clone + Copy + FreelyMutableState> PluginGroup for CosmosCorePl
     fn build(self) -> PluginGroupBuilder {
         let mut pg = PluginGroupBuilder::start::<Self>();
 
-        pg = pg.add(EguiPlugin {
-            enable_multipass_for_primary_context: false,
-        });
+        pg = pg.add(EguiPlugin::default());
 
         #[cfg(feature = "client")]
         {

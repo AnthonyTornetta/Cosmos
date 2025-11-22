@@ -1,13 +1,13 @@
 use bevy::{color::palettes::css, prelude::*};
 use cosmos_core::{
     block::multiblock::reactor::{
-        ClientRequestChangeReactorStatus, OpenReactorEvent, Reactor, ReactorActive, ReactorFuel, ReactorFuelConsumption,
+        ClientRequestChangeReactorStatus, OpenReactorMessage, Reactor, ReactorActive, ReactorFuel, ReactorFuelConsumption,
     },
     inventory::Inventory,
     netty::{
         client::LocalPlayer,
         sync::{
-            events::client_event::NettyEventWriter,
+            events::client_event::NettyMessageWriter,
             mapping::{Mappable, NetworkMapping},
         },
     },
@@ -21,7 +21,7 @@ use crate::{
     ui::{
         OpenMenu, UiSystemSet,
         components::{
-            button::{ButtonEvent, ButtonStyles, CosmosButton},
+            button::{ButtonMessage, ButtonStyles, CosmosButton},
             window::GuiWindow,
         },
         font::DefaultFont,
@@ -39,7 +39,7 @@ pub struct ReactorPowerGenStats;
 
 fn create_ui(
     mut commands: Commands,
-    mut evr_open_reactor: EventReader<OpenReactorEvent>,
+    mut evr_open_reactor: MessageReader<OpenReactorMessage>,
     q_structure: Query<&Structure>,
     q_reactor_active: Query<&ReactorActive>,
     q_inventory: Query<Entity, (With<LocalPlayer>, With<Inventory>)>,
@@ -67,7 +67,7 @@ fn create_ui(
         let mut fuel_slot_ent = None;
 
         let font = TextFont {
-            font: font.0.clone_weak(),
+            font: font.0.clone(),
             font_size: 24.0,
             ..Default::default()
         };
@@ -76,7 +76,7 @@ fn create_ui(
             .spawn((
                 Name::new("Reactor UI"),
                 OpenMenu::new(0),
-                BorderColor(Color::BLACK),
+                BorderColor::all(Color::BLACK),
                 GuiWindow {
                     title: "Reactor".into(),
                     body_styles: Node {
@@ -200,11 +200,11 @@ fn create_ui(
 }
 
 fn on_click_toggle(
-    ev: Trigger<ButtonEvent>,
+    ev: On<ButtonMessage>,
     q_active: Query<(), With<ReactorActive>>,
     q_structure: Query<&Structure>,
     q_ref: Query<&ReactorBlockReference>,
-    mut nevw: NettyEventWriter<ClientRequestChangeReactorStatus>,
+    mut nevw: NettyMessageWriter<ClientRequestChangeReactorStatus>,
     mapping: Res<NetworkMapping>,
 ) {
     let Ok(reference) = q_ref.get(ev.0) else {

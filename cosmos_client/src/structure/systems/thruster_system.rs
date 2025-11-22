@@ -53,19 +53,19 @@ fn apply_thruster_sound(
                 commands.entity(entity).remove::<ThrusterSoundInstace>();
             }
         } else if !thrusters_off && thruster_sound_instance.is_none() {
-            let playing_sound: Handle<AudioInstance> = audio.play(audio_handle.0.clone_weak()).with_volume(0.0).looped().handle();
+            let playing_sound: Handle<AudioInstance> = audio.play(audio_handle.0.clone()).with_volume(0.0).looped().handle();
 
             let stop_tween = AudioTween::new(Duration::from_millis(400), AudioEasing::Linear);
 
             commands.entity(entity).insert((
-                ThrusterSoundInstace(playing_sound.clone_weak()),
+                ThrusterSoundInstace(playing_sound.clone()),
                 CosmosAudioEmitter {
                     emissions: vec![AudioEmission {
                         instance: playing_sound,
                         max_distance: 100.0,
                         peak_volume: 0.3 * 5.0,
                         stop_tween,
-                        handle: audio_handle.0.clone_weak(),
+                        handle: audio_handle.0.clone(),
                     }],
                 },
             ));

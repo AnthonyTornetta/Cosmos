@@ -18,7 +18,7 @@ use crate::{
 /// The ordering that a system should be generated in a galaxy
 pub enum SystemGenerationSet {
     /// The events to generate a system are sent
-    SendEvents,
+    SendMessages,
     /// Add stars to the system
     Star,
     /// Add planets to the system
@@ -35,12 +35,12 @@ pub enum SystemGenerationSet {
     ComputeDanger,
 }
 
-#[derive(Event, Debug)]
+#[derive(Message, Debug)]
 /// Sent whenever a [`UniverseSystem`] needs to be generated.
 ///
 /// Generate it via accessing the [`UniverseSystems`] resource. Make sure to order your system
 /// within the [`SystemGenerationSet`] in the proper set.
-pub struct GenerateSystemEvent {
+pub struct GenerateSystemMessage {
     /// The system's coordinate - used to access the system via the resource [`UniverseSystems`]
     pub system: SystemCoordinate,
 }
@@ -80,7 +80,7 @@ fn unload_universe_systems_without_players(q_players: Query<&Location, With<Play
 
 fn load_universe_systems_near_players(
     mut universe_systems: ResMut<UniverseSystems>,
-    mut evw_generate_system: EventWriter<GenerateSystemEvent>,
+    mut evw_generate_system: MessageWriter<GenerateSystemMessage>,
     q_players: Query<&Location, With<Player>>,
 ) {
     let mut sectors_todo = HashSet::new();
@@ -110,10 +110,10 @@ fn load_universe_systems_near_players(
     }
 
     info!("Triggering system generation for {sectors_todo:?}");
-    evw_generate_system.write_batch(sectors_todo.into_iter().map(|system| GenerateSystemEvent { system }));
+    evw_generate_system.write_batch(sectors_todo.into_iter().map(|system| GenerateSystemMessage { system }));
 }
 
-fn recompute_sector_danger(mut evr_generate_system: EventReader<GenerateSystemEvent>, mut systems: ResMut<UniverseSystems>) {
+fn recompute_sector_danger(mut evr_generate_system: MessageReader<GenerateSystemMessage>, mut systems: ResMut<UniverseSystems>) {
     for ev in evr_generate_system.read() {
         let Some(system) = systems.system_mut(ev.system) else {
             continue;
@@ -131,7 +131,7 @@ pub(super) fn register(app: &mut App) {
     app.configure_sets(
         FixedUpdate,
         (
-            SystemGenerationSet::SendEvents,
+            SystemGenerationSet::SendMessages,
             SystemGenerationSet::Star,
             SystemGenerationSet::Planet,
             SystemGenerationSet::Asteroid,
@@ -152,7 +152,7 @@ pub(super) fn register(app: &mut App) {
             save_universe_systems.run_if(on_timer(Duration::from_secs(10))),
         )
             .run_if(in_state(GameState::Playing))
-            .in_set(SystemGenerationSet::SendEvents),
+            .in_set(SystemGenerationSet::SendMessages),
     )
     .add_systems(
         FixedUpdate,
@@ -161,5 +161,5 @@ pub(super) fn register(app: &mut App) {
             .run_if(in_state(GameState::Playing)),
     )
     .init_resource::<UniverseSystems>()
-    .add_event::<GenerateSystemEvent>();
+    .add_message::<GenerateSystemMessage>();
 }

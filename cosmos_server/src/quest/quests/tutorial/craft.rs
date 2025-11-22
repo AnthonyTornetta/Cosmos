@@ -2,9 +2,9 @@ use bevy::prelude::*;
 use cosmos_core::{
     block::{
         Block,
-        block_events::{BlockInteractEvent, BlockPlaceEvent},
+        block_events::{BlockInteractMessage, BlockPlaceMessage},
     },
-    ecs::mut_events::MutEvent,
+    ecs::mut_events::MutMessage,
     item::Item,
     prelude::Structure,
     quest::{ActiveQuest, OngoingQuests, Quest, QuestBuilder},
@@ -12,7 +12,7 @@ use cosmos_core::{
     state::GameState,
 };
 
-use crate::{crafting::blocks::basic_fabricator::BasicFabricatorCraftEvent, quest::QuestsSet};
+use crate::{crafting::blocks::basic_fabricator::BasicFabricatorCraftMessage, quest::QuestsSet};
 
 use super::TutorialState;
 
@@ -110,12 +110,12 @@ fn on_change_tutorial_state(
 }
 
 fn resolve_quests(
-    mut evr_placed_block: EventReader<MutEvent<BlockPlaceEvent>>,
-    mut evr_interact_event: EventReader<BlockInteractEvent>,
+    mut evr_placed_block: MessageReader<MutMessage<BlockPlaceMessage>>,
+    mut evr_interact_event: MessageReader<BlockInteractMessage>,
     quests: Res<Registry<Quest>>,
     mut q_ongoing_quests: Query<&mut OngoingQuests>,
     items: Res<Registry<Item>>,
-    mut evr_craft: EventReader<BasicFabricatorCraftEvent>,
+    mut evr_craft: MessageReader<BasicFabricatorCraftMessage>,
     q_structure: Query<&Structure>,
     blocks: Res<Registry<Block>>,
 ) {
@@ -126,7 +126,7 @@ fn resolve_quests(
     for (player, block) in evr_placed_block
         .read()
         .flat_map(|ev| match *ev.read() {
-            BlockPlaceEvent::Event(e) => Some((e.placer, blocks.from_numeric_id(e.block_id))),
+            BlockPlaceMessage::Message(e) => Some((e.placer, blocks.from_numeric_id(e.block_id))),
             _ => None,
         })
         .chain(evr_interact_event.read().flat_map(|ev| {

@@ -5,11 +5,10 @@
 use std::sync::{Arc, Mutex};
 
 use bevy::{
-    color::palettes::css,
-    core_pipeline::{bloom::Bloom, oit::OrderIndependentTransparencySettings},
-    prelude::*,
-    window::PrimaryWindow,
+    color::palettes::css, core_pipeline::oit::OrderIndependentTransparencySettings, post_process::bloom::Bloom, prelude::*,
+    render::view::Hdr, window::PrimaryWindow,
 };
+use bevy_inspector_egui::bevy_egui::PrimaryEguiContext;
 use bevy_kira_audio::SpatialAudioReceiver;
 use bevy_rapier3d::prelude::*;
 use bevy_renet::renet::RenetClient;
@@ -18,8 +17,8 @@ use cosmos_core::{
     ecs::{NeedsDespawned, compute_totally_accurate_global_transform},
     entities::player::{Player, render_distance::RenderDistance},
     events::{
-        block_events::{BlockChangedEvent, BlockDataChangedEvent},
-        structure::change_pilot_event::ChangePilotEvent,
+        block_events::{BlockChangedMessage, BlockDataChangedMessage},
+        structure::change_pilot_event::ChangePilotMessage,
     },
     inventory::{Inventory, held_item_slot::HeldItemSlot},
     netty::{
@@ -45,8 +44,8 @@ use cosmos_core::{
     registry::Registry,
     state::GameState,
     structure::{
-        ChunkInitEvent, Structure,
-        block_health::events::BlockTakeDamageEvent,
+        ChunkInitMessage, Structure,
+        block_health::events::BlockTakeDamageMessage,
         block_storage::BlockStorer,
         chunk::Chunk,
         dynamic_structure::DynamicStructure,
@@ -184,11 +183,11 @@ pub(crate) fn client_sync_players(
         mut set_terrain_data_ev_writer,
         mut evw_block_data_changed,
     ): (
-        EventWriter<ChunkInitEvent>,
-        EventWriter<BlockChangedEvent>,
-        EventWriter<BlockTakeDamageEvent>,
-        EventWriter<SetTerrainGenData>,
-        EventWriter<BlockDataChangedEvent>,
+        MessageWriter<ChunkInitMessage>,
+        MessageWriter<BlockChangedMessage>,
+        MessageWriter<BlockTakeDamageMessage>,
+        MessageWriter<SetTerrainGenData>,
+        MessageWriter<BlockDataChangedMessage>,
     ),
     (q_default_rapier_context, query_player, q_structure_systems, mut q_inventory, mut q_structure): (
         Query<Entity, With<DefaultRapierContext>>,
@@ -215,7 +214,7 @@ pub(crate) fn client_sync_players(
     desired_fov: Res<DesiredFov>,
     q_parent: Query<&ChildOf>,
     blocks: Res<Registry<Block>>,
-    mut pilot_change_event_writer: EventWriter<ChangePilotEvent>,
+    mut pilot_change_event_writer: MessageWriter<ChangePilotMessage>,
 
     mut hud_messages: ResMut<HudMessages>,
 ) {
@@ -386,11 +385,8 @@ pub(crate) fn client_sync_players(
                         ))
                         .with_children(|parent| {
                             parent.spawn((
-                                Camera {
-                                    hdr: true,
-
-                                    ..Default::default()
-                                },
+                                Hdr,
+                                Camera { ..Default::default() },
                                 Transform::from_translation(camera_offset),
                                 Projection::from(PerspectiveProjection {
                                     fov: (desired_fov.0 / 180.0) * std::f32::consts::PI,
@@ -402,6 +398,8 @@ pub(crate) fn client_sync_players(
                                 Name::new("Main Camera"),
                                 OrderIndependentTransparencySettings::default(),
                                 MainCamera,
+                                // https://github.com/jakobhellermann/bevy-inspector-egui/issues/286
+                                PrimaryEguiContext,
                                 IsDefaultUiCamera,
                                 Msaa::Off,
                                 SpatialAudioReceiver,
@@ -517,7 +515,7 @@ pub(crate) fn client_sync_players(
 
                     structure.set_chunk(chunk);
 
-                    set_chunk_event_writer.write(ChunkInitEvent {
+                    set_chunk_event_writer.write(ChunkInitMessage {
                         coords: chunk_coords,
                         structure_entity: s_entity,
                         serialized_block_data: serialized_block_data.map(|x| Arc::new(Mutex::new(x))),
@@ -530,7 +528,7 @@ pub(crate) fn client_sync_players(
                 {
                     structure.set_to_empty_chunk(coords);
 
-                    set_chunk_event_writer.write(ChunkInitEvent {
+                    set_chunk_event_writer.write(ChunkInitMessage {
                         coords,
                         structure_entity: s_entity,
                         serialized_block_data: None,
@@ -591,7 +589,7 @@ pub(crate) fn client_sync_players(
                     continue;
                 };
 
-                pilot_change_event_writer.write(ChangePilotEvent {
+                pilot_change_event_writer.write(ChangePilotMessage {
                     structure_entity,
                     pilot_entity,
                 });
@@ -645,7 +643,7 @@ pub(crate) fn client_sync_players(
                 take_damage_event_writer.write_batch(changes.into_iter().filter_map(|ev| {
                     network_mapping
                         .client_from_server(&ev.structure_entity)
-                        .map(|structure_entity| BlockTakeDamageEvent {
+                        .map(|structure_entity| BlockTakeDamageMessage {
                             structure_entity,
                             block: ev.block,
                             new_health: ev.new_health,
@@ -672,7 +670,7 @@ fn get_entity_identifier_entity_for_despawning(
     q_structure_systems: &Query<&StructureSystems, ()>,
     q_inventory: &mut Query<&mut Inventory>,
     q_structure: &mut Query<&mut Structure>,
-    block_data_changed: &mut EventWriter<BlockDataChangedEvent>,
+    block_data_changed: &mut MessageWriter<BlockDataChangedMessage>,
 ) -> Option<Entity> {
     let identifier_entities = match entity_identifier {
         ComponentEntityIdentifier::Entity(entity) => network_mapping.client_from_server(&entity),
@@ -730,7 +728,7 @@ fn get_entity_identifier_entity_for_despawning(
 
                     structure.set_block_data_entity(identifier.block.coords(), None);
 
-                    block_data_changed.write(BlockDataChangedEvent {
+                    block_data_changed.write(BlockDataChangedMessage {
                         block: identifier.block,
                         block_data_entity: None,
                     });

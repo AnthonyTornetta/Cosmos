@@ -1,13 +1,13 @@
 //! Handles the build mode logic on the client-side
 
 use bevy::{
-    pbr::{NotShadowCaster, NotShadowReceiver},
+    light::{NotShadowCaster, NotShadowReceiver},
     prelude::*,
 };
 use bevy_rapier3d::prelude::Velocity;
 use bevy_renet::renet::RenetClient;
 use cosmos_core::{
-    block::block_events::BlockEventsSet,
+    block::block_events::BlockMessagesSet,
     netty::{NettyChannelClient, client::LocalPlayer, client_reliable_messages::ClientReliableMessages, cosmos_encoder},
     state::GameState,
     structure::{
@@ -350,7 +350,7 @@ pub(super) fn register(app: &mut App) {
                     control_build_mode.in_set(PlayerMovementSet::ProcessPlayerMovement),
                 )
                     .chain()
-                    .in_set(BlockEventsSet::ProcessEvents)
+                    .in_set(BlockMessagesSet::ProcessMessages)
                     .run_if(no_open_menus),
                 change_visuals,
                 clear_visuals.after(BuildModeSet::ExitBuildMode),

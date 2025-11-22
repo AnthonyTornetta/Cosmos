@@ -2,15 +2,15 @@ use bevy::{color::palettes::css, ecs::relationship::RelatedSpawnerCommands, prel
 use cosmos_core::{
     faction::{
         Faction, FactionId, Factions,
-        events::{FactionSwapAction, SwapToPlayerFactionEvent},
+        events::{FactionSwapAction, SwapToPlayerFactionMessage},
     },
-    netty::{client::LocalPlayer, sync::events::client_event::NettyEventWriter},
+    netty::{client::LocalPlayer, sync::events::client_event::NettyMessageWriter},
     prelude::Ship,
     state::GameState,
 };
 
 use crate::ui::{
-    components::button::{ButtonEvent, CosmosButton},
+    components::button::{ButtonMessage, CosmosButton},
     font::DefaultFont,
 };
 
@@ -126,9 +126,9 @@ pub(super) fn attach_ui(
 }
 
 fn on_change_faction(
-    ev: Trigger<ButtonEvent>,
+    ev: On<ButtonMessage>,
     q_faction_id: Query<(), With<FactionId>>,
-    mut nevw_set_faction: NettyEventWriter<SwapToPlayerFactionEvent>,
+    mut nevw_set_faction: NettyMessageWriter<SwapToPlayerFactionMessage>,
     q_faction_button: Query<&FactionButton>,
 ) {
     let fac_button = q_faction_button.get(ev.0).unwrap();
@@ -140,7 +140,7 @@ fn on_change_faction(
 
     info!("Change faction for {:?} ({action:?})", fac_button.ship_ent);
 
-    nevw_set_faction.write(SwapToPlayerFactionEvent {
+    nevw_set_faction.write(SwapToPlayerFactionMessage {
         action,
         to_swap: fac_button.ship_ent,
     });

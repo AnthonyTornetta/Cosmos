@@ -3,8 +3,9 @@
 use std::f32::consts::PI;
 
 use bevy::{
+    light::NotShadowCaster,
     math::primitives::Sphere,
-    pbr::{MeshMaterial3d, NotShadowCaster},
+    pbr::MeshMaterial3d,
     prelude::{
         Added, App, Assets, Commands, DirectionalLight, Entity, EulerRot, Mesh, Mesh3d, Name, OnEnter, Quat, Query, ResMut,
         StandardMaterial, Transform, Update, Vec3, With, Without,

@@ -1,14 +1,12 @@
 //! Similar to bevy's default texture atlas, but the order they are inserted matters and assumes every texture is the same size and a square.
 
 use bevy::{
+    asset::RenderAssetUsages,
     image::TextureFormatPixelInfo,
     platform::collections::HashMap,
     prelude::{Assets, Handle, Image},
     reflect::Reflect,
-    render::{
-        render_asset::RenderAssetUsages,
-        render_resource::{Extent3d, TextureDimension, TextureFormat},
-    },
+    render::render_resource::{Extent3d, TextureDimension, TextureFormat},
 };
 
 /// Similar to bevy's default texture atlas, but the order they are inserted matters and assumes every texture is the same size and a square.
@@ -110,7 +108,7 @@ impl SquareTextureAtlasBuilder {
                 let image = textures.get(image_handle).expect("Given invalid image");
                 total_height += image.size().y;
 
-                indices.insert(image_handle.clone_weak(), current_index);
+                indices.insert(image_handle.clone(), current_index);
 
                 let img_ratio = image.size().y as f32 / self.texture_dimensions as f32;
 
@@ -138,7 +136,7 @@ impl SquareTextureAtlasBuilder {
 
         let format = TextureFormat::Rgba8UnormSrgb;
 
-        let format_size = format.pixel_size();
+        let format_size = format.pixel_size().expect("couldn't get pixel size ;(((( (dies of sadness)");
 
         let mut atlas_texture = Image::new(
             Extent3d {

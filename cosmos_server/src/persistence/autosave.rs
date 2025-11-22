@@ -15,11 +15,11 @@ use super::{backup::CreateWorldBackup, saving::NeedsSaved};
 
 const AUTOSAVE_INTERVAL: Duration = Duration::from_mins(10);
 
-#[derive(Event, Default)]
+#[derive(Message, Default)]
 /// Send this event to save every savable entity in the game
 pub struct SaveEverything;
 
-fn backup_before_saving(mut evw_create_backup: EventWriter<CreateWorldBackup>, mut evr_save_everything: EventReader<SaveEverything>) {
+fn backup_before_saving(mut evw_create_backup: MessageWriter<CreateWorldBackup>, mut evr_save_everything: MessageReader<SaveEverything>) {
     if evr_save_everything.is_empty() {
         return;
     }
@@ -30,7 +30,7 @@ fn backup_before_saving(mut evw_create_backup: EventWriter<CreateWorldBackup>, m
 fn save_everything(
     mut commands: Commands,
     q_needs_saved: Query<Entity, (Without<NeedsDespawned>, With<DataFor>, With<Location>, With<LoadingDistance>)>,
-    mut evr_save_everything: EventReader<SaveEverything>,
+    mut evr_save_everything: MessageReader<SaveEverything>,
 ) {
     if evr_save_everything.is_empty() {
         return;
@@ -43,7 +43,7 @@ fn save_everything(
     }
 }
 
-fn trigger_autosave(mut evw_create_backup: EventWriter<SaveEverything>, q_players: Query<(), With<Player>>) {
+fn trigger_autosave(mut evw_create_backup: MessageWriter<SaveEverything>, q_players: Query<(), With<Player>>) {
     if q_players.is_empty() {
         return;
     }
@@ -63,5 +63,5 @@ pub(super) fn register(app: &mut App) {
             .in_set(NetworkingSystemsSet::SyncComponents)
             .chain(),
     )
-    .add_event::<SaveEverything>();
+    .add_message::<SaveEverything>();
 }

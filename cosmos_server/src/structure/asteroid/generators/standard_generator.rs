@@ -21,7 +21,7 @@ use crate::{
     init::init_world::{ReadOnlyNoise, ServerSeed},
     rng::get_rng_for_sector,
     structure::{
-        asteroid::generator::{AsteroidGenerationSet, GenerateAsteroidEvent, GeneratingAsteroids},
+        asteroid::generator::{AsteroidGenerationSet, GenerateAsteroidMessage, GeneratingAsteroids},
         planet::biosphere::TemperatureRange,
     },
 };
@@ -62,7 +62,7 @@ pub fn register_standard_asteroid_generation<T: AsteroidGeneratorComponent>(
     register_asteroid_generator::<T>(app, id, temperature_range);
 
     let start_generating_asteroid = move |q_asteroids: Query<(Entity, &Structure, &Location), With<T>>,
-                                          mut ev_reader: EventReader<GenerateAsteroidEvent>,
+                                          mut ev_reader: MessageReader<GenerateAsteroidMessage>,
                                           noise: Res<ReadOnlyNoise>,
                                           blocks: Res<ReadOnlyRegistry<Block>>,
                                           server_seed: Res<ServerSeed>,

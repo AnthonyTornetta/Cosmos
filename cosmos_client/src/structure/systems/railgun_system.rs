@@ -1,6 +1,6 @@
 use bevy::{
     asset::LoadState,
-    pbr::{NotShadowCaster, NotShadowReceiver},
+    light::{NotShadowCaster, NotShadowReceiver},
     prelude::*,
 };
 use bevy_kira_audio::{Audio, AudioControl, AudioInstance};
@@ -11,7 +11,7 @@ use cosmos_core::{
     physics::location::Location,
     prelude::{DespawnWithStructure, Structure},
     state::GameState,
-    structure::systems::railgun_system::{RailgunFiredEvent, RailgunSystem},
+    structure::systems::railgun_system::{RailgunFiredMessage, RailgunSystem},
 };
 
 use crate::{
@@ -43,7 +43,7 @@ const TTL: f32 = 1.5;
 fn on_fire_railgun(
     mut commands: Commands,
     q_structure: Query<(&Location, &GlobalTransform, &Structure, &Velocity)>,
-    mut nevr_railgun_fired: EventReader<RailgunFiredEvent>,
+    mut nevr_railgun_fired: MessageReader<RailgunFiredMessage>,
     railgun_mesh: Res<RailgunRendering>,
     mut materials: ResMut<Assets<StandardMaterial>>,
     railgun_sound: Res<RailgunSound>,
@@ -83,7 +83,7 @@ fn on_fire_railgun(
                 RailgunBlast::default(),
                 loc,
                 Transform::from_scale(Vec3::new(1.0, 1.0, railgun.length)).looking_to(railgun.direction, Vec3::Y),
-                Mesh3d(railgun_mesh.mesh.clone_weak()),
+                railgun_mesh.mesh.clone(),
                 NotShadowCaster,
                 NotShadowReceiver,
                 Name::new("Railgun Visual"),

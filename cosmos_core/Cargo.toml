@@ -26,7 +26,7 @@ default = [
     "bevy/bevy_render",
     "bevy/bevy_sprite",
     "bevy/bevy_text",
-    "bevy/bevy_ui",
+    "bevy/bevy_ui_render",
     "bevy/multi_threaded",
     "bevy/png",
     "bevy/hdr",

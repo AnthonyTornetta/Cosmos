@@ -1,9 +1,9 @@
 use crate::input::inputs::{CosmosInputs, InputChecker, InputHandler};
 use bevy::prelude::*;
 use cosmos_core::coms::ComsChannel;
-use cosmos_core::coms::events::{AcceptComsEvent, RequestComsEvent};
+use cosmos_core::coms::events::{AcceptComsMessage, RequestComsMessage};
 use cosmos_core::netty::client::LocalPlayer;
-use cosmos_core::netty::sync::events::client_event::NettyEventWriter;
+use cosmos_core::netty::sync::events::client_event::NettyMessageWriter;
 use cosmos_core::prelude::Ship;
 use cosmos_core::structure::ship::pilot::{Pilot, PilotFocused};
 
@@ -16,7 +16,7 @@ fn initiate_coms_request(
     q_local_pilot: Query<&Pilot, With<LocalPlayer>>,
     q_focused: Query<&PilotFocused>,
     q_coms: Query<(&ChildOf, &ComsChannel)>,
-    mut nevw_request_coms: NettyEventWriter<RequestComsEvent>,
+    mut nevw_request_coms: NettyMessageWriter<RequestComsMessage>,
 ) {
     let Ok(pilot) = q_local_pilot.single() else {
         return;
@@ -44,16 +44,16 @@ fn initiate_coms_request(
     }
 
     info!("Sending coms request!");
-    nevw_request_coms.write(RequestComsEvent(pilot_focused.0));
+    nevw_request_coms.write(RequestComsMessage(pilot_focused.0));
 }
 
 fn read_coms_request(
     q_local_player: Query<Entity, With<LocalPlayer>>,
     q_local_pilot: Query<&Pilot, With<LocalPlayer>>,
     q_coms: Query<(&ChildOf, &ComsChannel)>,
-    mut nevr_request_coms: EventReader<RequestComsEvent>,
-    mut nevw_accept_coms: NettyEventWriter<AcceptComsEvent>,
-    mut evw_open_req_coms_ui: EventWriter<OpenRequestComsUi>,
+    mut nevr_request_coms: MessageReader<RequestComsMessage>,
+    mut nevw_accept_coms: NettyMessageWriter<AcceptComsMessage>,
+    mut evw_open_req_coms_ui: MessageWriter<OpenRequestComsUi>,
 ) {
     for ev in nevr_request_coms.read() {
         let Ok(pilot) = q_local_pilot.single() else {
@@ -70,7 +70,7 @@ fn read_coms_request(
 
         if all_coms.any(|(parent, coms)| coms.with == requester && parent.parent() == pilot.entity) {
             info!("There is already an active coms session with this ship - auto-accepting coms.");
-            nevw_accept_coms.write(AcceptComsEvent(requester));
+            nevw_accept_coms.write(AcceptComsMessage(requester));
             return;
         }
 

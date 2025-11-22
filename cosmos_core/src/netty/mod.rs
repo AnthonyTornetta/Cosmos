@@ -57,7 +57,7 @@ pub enum NettyChannelServer {
     /// Generalized component syncing
     ComponentReplication,
     /// Automatic syncing of events
-    NettyEvent,
+    NettyMessage,
     /// Syncing of resource data
     Resource,
 }
@@ -77,7 +77,7 @@ pub enum NettyChannelClient {
     /// Generalized component syncing
     ComponentReplication,
     /// Automatic syncing of events
-    NettyEvent,
+    NettyMessage,
     /// Automatic syncing of registries
     Registry,
     /// Automatic syncing of resources
@@ -92,7 +92,7 @@ impl From<NettyChannelClient> for u8 {
             NettyChannelClient::Inventory => 2,
             NettyChannelClient::Shop => 3,
             NettyChannelClient::ComponentReplication => 4,
-            NettyChannelClient::NettyEvent => 5,
+            NettyChannelClient::NettyMessage => 5,
             NettyChannelClient::Registry => 6,
             NettyChannelClient::Resource => 7,
         }
@@ -140,7 +140,7 @@ impl NettyChannelClient {
                 },
             },
             ChannelConfig {
-                channel_id: Self::NettyEvent.into(),
+                channel_id: Self::NettyMessage.into(),
                 max_memory_usage_bytes: 5 * MB,
                 send_type: SendType::ReliableOrdered {
                     resend_time: Duration::from_millis(1000),
@@ -177,7 +177,7 @@ impl From<NettyChannelServer> for u8 {
             NettyChannelServer::Registry => 7,
             NettyChannelServer::Shop => 8,
             NettyChannelServer::ComponentReplication => 9,
-            NettyChannelServer::NettyEvent => 10,
+            NettyChannelServer::NettyMessage => 10,
             NettyChannelServer::Resource => 11,
         }
     }
@@ -254,7 +254,7 @@ impl NettyChannelServer {
                 },
             },
             ChannelConfig {
-                channel_id: Self::NettyEvent.into(),
+                channel_id: Self::NettyMessage.into(),
                 max_memory_usage_bytes: 5 * MB,
                 send_type: SendType::ReliableOrdered {
                     resend_time: Duration::from_millis(1000),

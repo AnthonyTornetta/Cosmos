@@ -1,9 +1,13 @@
 use bevy::{
     asset::RenderAssetUsages,
     color::palettes::css,
-    core_pipeline::{bloom::Bloom, oit::OrderIndependentTransparencySettings},
+    core_pipeline::oit::OrderIndependentTransparencySettings,
+    post_process::bloom::Bloom,
     prelude::*,
-    render::render_resource::{Extent3d, TextureDimension, TextureFormat, TextureUsages},
+    render::{
+        render_resource::{Extent3d, TextureDimension, TextureFormat, TextureUsages},
+        view::Hdr,
+    },
 };
 use cosmos_core::{
     ecs::compute_totally_accurate_global_transform,
@@ -59,8 +63,8 @@ fn setup_camera(mut commands: Commands, images: ResMut<Assets<Image>>) {
     commands.insert_resource(FocusCamImage(image_handle.clone()));
 
     commands.spawn((
+        Hdr,
         Camera {
-            hdr: true,
             target: image_handle.clone().into(),
             is_active: false,
             ..Default::default()
@@ -71,8 +75,8 @@ fn setup_camera(mut commands: Commands, images: ResMut<Assets<Image>>) {
             fov: (90.0 / 180.0) * std::f32::consts::PI,
             ..default()
         }),
+        Bloom::default(),
         Camera3d::default(),
-        Bloom { ..Default::default() },
         Name::new("Focused Camera"),
         OrderIndependentTransparencySettings::default(),
         FocusedCam,
@@ -92,7 +96,7 @@ fn create_focused_ui(mut commands: Commands, handle: Res<FocusCamImage>) {
     commands
         .spawn((
             Name::new("Focused Camera Display"),
-            BorderColor(css::AQUA.into()),
+            BorderColor::all(css::AQUA),
             FocusedUi,
             hidden,
             Visibility::Hidden,
@@ -108,7 +112,7 @@ fn create_focused_ui(mut commands: Commands, handle: Res<FocusCamImage>) {
         ))
         .with_children(|p| {
             p.spawn((ImageNode {
-                image: handle.0.clone_weak(),
+                image: handle.0.clone(),
                 ..Default::default()
             },));
         });

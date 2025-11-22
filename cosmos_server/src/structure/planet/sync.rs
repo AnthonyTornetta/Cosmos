@@ -3,7 +3,7 @@ use bevy_renet::renet::RenetServer;
 use cosmos_core::{
     netty::{
         NettyChannelServer, cosmos_encoder, server_reliable_messages::ServerReliableMessages,
-        sync::server_entity_syncing::RequestedEntityEvent, system_sets::NetworkingSystemsSet,
+        sync::server_entity_syncing::RequestedEntityMessage, system_sets::NetworkingSystemsSet,
     },
     structure::{
         Structure,
@@ -12,7 +12,7 @@ use cosmos_core::{
 };
 
 fn on_request_planet(
-    mut event_reader: EventReader<RequestedEntityEvent>,
+    mut event_reader: MessageReader<RequestedEntityMessage>,
     query: Query<(&Structure, &Planet, &BiosphereMarker)>,
     mut server: ResMut<RenetServer>,
 ) {

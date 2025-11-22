@@ -2,7 +2,7 @@
 
 use crate::ui::{
     components::{
-        button::{ButtonEvent, CosmosButton},
+        button::{ButtonMessage, CosmosButton},
         modal::{Modal, ModalBody},
     },
     font::DefaultFont,
@@ -81,15 +81,16 @@ fn on_add_text_modal(
                             },
                             BackgroundColor(css::DARK_GREY.into()),
                         ))
-                        .observe(
-                            |ev: Trigger<ButtonEvent>, q_value: Query<&ModalEntity>, mut commands: Commands| {
-                                let modal_ent = q_value.get(ev.0).expect("Missing modal entity?");
-                                commands
-                                    .entity(modal_ent.0)
-                                    .trigger(ConfirmModalComplete { confirmed: false })
-                                    .insert(NeedsDespawned);
-                            },
-                        );
+                        .observe(|ev: On<ButtonMessage>, q_value: Query<&ModalEntity>, mut commands: Commands| {
+                            let modal_ent = q_value.get(ev.0).expect("Missing modal entity?");
+                            commands
+                                .entity(modal_ent.0)
+                                .trigger(|e| ConfirmModalComplete {
+                                    entity: e,
+                                    confirmed: false,
+                                })
+                                .insert(NeedsDespawned);
+                        });
 
                         p.spawn((
                             BackgroundColor(css::AQUA.into()),
@@ -112,15 +113,16 @@ fn on_add_text_modal(
                                 ..Default::default()
                             },
                         ))
-                        .observe(
-                            |ev: Trigger<ButtonEvent>, q_value: Query<&ModalEntity>, mut commands: Commands| {
-                                let modal_ent = q_value.get(ev.0).expect("Missing input?");
-                                commands
-                                    .entity(modal_ent.0)
-                                    .trigger(ConfirmModalComplete { confirmed: true })
-                                    .insert(NeedsDespawned);
-                            },
-                        );
+                        .observe(|ev: On<ButtonMessage>, q_value: Query<&ModalEntity>, mut commands: Commands| {
+                            let modal_ent = q_value.get(ev.0).expect("Missing input?");
+                            commands
+                                .entity(modal_ent.0)
+                                .trigger(|e| ConfirmModalComplete {
+                                    entity: e,
+                                    confirmed: true,
+                                })
+                                .insert(NeedsDespawned);
+                        });
                     }
                 });
             });
@@ -128,10 +130,11 @@ fn on_add_text_modal(
     }
 }
 
-#[derive(Event, Debug)]
-#[event(traversal = &'static ChildOf, auto_propagate)]
+#[derive(EntityEvent, Debug)]
+#[entity_event(propagate = &'static ChildOf)]
 /// Sent whenever the user clicks the Yes/No modal button
 pub struct ConfirmModalComplete {
+    entity: Entity,
     /// If the user clicked the confirm option or not
     pub confirmed: bool,
 }

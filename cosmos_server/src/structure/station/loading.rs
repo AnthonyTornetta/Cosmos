@@ -6,14 +6,14 @@ use cosmos_core::{
     registry::Registry,
     state::GameState,
     structure::{
-        ChunkInitEvent, Structure, StructureTypeSet,
+        ChunkInitMessage, Structure, StructureTypeSet,
         coordinates::BlockCoordinate,
         loading::{ChunksNeedLoaded, StructureLoadingSet},
         structure_iterator::ChunkIteratorResult,
     },
 };
 
-use super::events::create_station_event_reader;
+use super::events::create_station_message_reader;
 
 /// A flag that denotes that a station needs created
 #[derive(Component)]
@@ -23,7 +23,7 @@ fn create_stations(
     mut query: Query<(&mut Structure, Entity), With<StationNeedsCreated>>,
     mut commands: Commands,
     blocks: Res<Registry<Block>>,
-    mut chunk_set_event_writer: EventWriter<ChunkInitEvent>,
+    mut chunk_set_event_writer: MessageWriter<ChunkInitMessage>,
 ) {
     for (mut structure, entity) in query.iter_mut() {
         let station_core = blocks.from_id("cosmos:station_core").expect("Station core block missing!");
@@ -54,7 +54,7 @@ fn create_stations(
                 chunk: _,
             } = res
             {
-                chunk_set_event_writer.write(ChunkInitEvent {
+                chunk_set_event_writer.write(ChunkInitMessage {
                     structure_entity: entity,
                     coords,
                     serialized_block_data: None,
@@ -71,7 +71,7 @@ pub(super) fn register(app: &mut App) {
             .in_set(StructureLoadingSet::LoadStructure)
             .in_set(StructureTypeSet::Station)
             .ambiguous_with(StructureLoadingSet::LoadStructure)
-            .after(create_station_event_reader)
+            .after(create_station_message_reader)
             .run_if(in_state(GameState::Playing)),
     );
 }

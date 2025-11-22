@@ -14,7 +14,7 @@ pub(super) fn register(app: &mut App) {
     create_cosmos_command::<PingCommand, _>(
         ServerCommand::new("cosmos:ping", "", "Pong!"),
         app,
-        |mut evr_command: EventReader<CommandEvent<PingCommand>>| {
+        |mut evr_command: MessageReader<CommandMessage<PingCommand>>| {
             for _ in evr_command.read() {
                 info!("Pong!");
             }

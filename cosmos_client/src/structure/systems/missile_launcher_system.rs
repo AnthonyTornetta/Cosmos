@@ -30,9 +30,9 @@ use super::{
     sync::sync_system,
 };
 
-#[derive(Event)]
+#[derive(Message)]
 /// This event is fired whenever a laser cannon system is fired
-pub struct MissileLauncherSystemFiredEvent(pub Entity);
+pub struct MissileLauncherSystemFiredMessage(pub Entity);
 
 #[derive(Resource)]
 struct MissileLauncherFireHandles(Vec<Handle<bevy_kira_audio::prelude::AudioSource>>);
@@ -45,7 +45,7 @@ fn apply_shooting_sound(
     mut commands: Commands,
     audio: Res<Audio>,
     audio_handles: Res<MissileLauncherFireHandles>,
-    mut event_reader: EventReader<MissileLauncherSystemFiredEvent>,
+    mut event_reader: MessageReader<MissileLauncherSystemFiredMessage>,
 ) {
     for entity in event_reader.read() {
         let Ok((ship_location, ship_global_transform)) = query.get(entity.0) else {
@@ -57,9 +57,9 @@ fn apply_shooting_sound(
 
         let idx = rand::random::<u64>() as usize % audio_handles.0.len();
 
-        let handle = audio_handles.0[idx].clone_weak();
+        let handle = audio_handles.0[idx].clone();
 
-        let playing_sound: Handle<AudioInstance> = audio.play(handle.clone_weak()).handle();
+        let playing_sound: Handle<AudioInstance> = audio.play(handle.clone()).handle();
 
         commands.spawn((
             CosmosAudioEmitter {
@@ -240,7 +240,7 @@ fn render_lockon_status(
                         .spawn((
                             Name::new("Top left"),
                             ImageNode {
-                                image: lockon_graphic.0.clone_weak(),
+                                image: lockon_graphic.0.clone(),
                                 flip_x: false,
                                 flip_y: false,
                                 ..Default::default()
@@ -258,7 +258,7 @@ fn render_lockon_status(
                         .spawn((
                             Name::new("Bottom left"),
                             ImageNode {
-                                image: lockon_graphic.0.clone_weak(),
+                                image: lockon_graphic.0.clone(),
                                 flip_x: false,
                                 flip_y: true,
                                 ..Default::default()
@@ -288,7 +288,7 @@ fn render_lockon_status(
                         .spawn((
                             Name::new("Top right"),
                             ImageNode {
-                                image: lockon_graphic.0.clone_weak(),
+                                image: lockon_graphic.0.clone(),
                                 flip_x: true,
                                 flip_y: false,
                                 ..Default::default()
@@ -306,7 +306,7 @@ fn render_lockon_status(
                         .spawn((
                             Name::new("Bottom right"),
                             ImageNode {
-                                image: lockon_graphic.0.clone_weak(),
+                                image: lockon_graphic.0.clone(),
                                 flip_x: true,
                                 flip_y: true,
                                 ..Default::default()
@@ -336,7 +336,7 @@ fn update_corner_styles(q_style: &mut Query<(&mut Node, &mut ImageNode)>, entity
     img.color = color;
 }
 
-fn listen_for_errors_firing(mut evr_missile_launcher_failer: EventReader<MissileSystemFailure>, mut hud_messages: ResMut<HudMessages>) {
+fn listen_for_errors_firing(mut evr_missile_launcher_failer: MessageReader<MissileSystemFailure>, mut hud_messages: ResMut<HudMessages>) {
     for ev in evr_missile_launcher_failer.read() {
         match ev {
             MissileSystemFailure::NoAmmo => {
@@ -373,7 +373,7 @@ pub(super) fn register(app: &mut App) {
         },
     );
 
-    app.add_event::<MissileLauncherSystemFiredEvent>().add_systems(
+    app.add_message::<MissileLauncherSystemFiredMessage>().add_systems(
         Update,
         (
             focus_looking_at,

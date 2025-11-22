@@ -5,7 +5,7 @@ use serde::*;
 
 use crate::{
     faction::FactionId,
-    netty::sync::events::netty_event::{IdentifiableEvent, NettyEvent, SyncedEventImpl},
+    netty::sync::events::netty_event::{IdentifiableMessage, NettyMessage, SyncedMessageImpl},
 };
 
 #[derive(Debug, Serialize, Deserialize, Clone, Copy, PartialEq, Eq)]
@@ -19,8 +19,8 @@ pub enum FactionSwapAction {
 }
 
 /// The responses the server can have when the player tries to create a new faction
-#[derive(Event, Debug, Serialize, Deserialize, Clone)]
-pub enum PlayerCreateFactionEventResponse {
+#[derive(Message, Debug, Serialize, Deserialize, Clone)]
+pub enum PlayerCreateFactionMessageResponse {
     /// The faction's name is already taken
     NameTaken,
     /// Something went wrong on the server
@@ -33,69 +33,69 @@ pub enum PlayerCreateFactionEventResponse {
     Success,
 }
 
-impl IdentifiableEvent for PlayerCreateFactionEventResponse {
+impl IdentifiableMessage for PlayerCreateFactionMessageResponse {
     fn unlocalized_name() -> &'static str {
-        "cosmos:player_create_faction_event_response"
+        "cosmos:player_create_faction_message_response"
     }
 }
 
-impl NettyEvent for PlayerCreateFactionEventResponse {
-    fn event_receiver() -> crate::netty::sync::events::netty_event::EventReceiver {
-        crate::netty::sync::events::netty_event::EventReceiver::Client
+impl NettyMessage for PlayerCreateFactionMessageResponse {
+    fn event_receiver() -> crate::netty::sync::events::netty_event::MessageReceiver {
+        crate::netty::sync::events::netty_event::MessageReceiver::Client
     }
 }
 
 /// Requests to create a new faction with the player within it
-#[derive(Event, Debug, Serialize, Deserialize, Clone)]
-pub struct PlayerCreateFactionEvent {
+#[derive(Message, Debug, Serialize, Deserialize, Clone)]
+pub struct PlayerCreateFactionMessage {
     /// The name of the faction to create
     pub faction_name: String,
 }
 
-impl IdentifiableEvent for PlayerCreateFactionEvent {
+impl IdentifiableMessage for PlayerCreateFactionMessage {
     fn unlocalized_name() -> &'static str {
-        "cosmos:player_create_faction_event"
+        "cosmos:player_create_faction_message"
     }
 }
 
-impl NettyEvent for PlayerCreateFactionEvent {
-    fn event_receiver() -> crate::netty::sync::events::netty_event::EventReceiver {
-        crate::netty::sync::events::netty_event::EventReceiver::Server
+impl NettyMessage for PlayerCreateFactionMessage {
+    fn event_receiver() -> crate::netty::sync::events::netty_event::MessageReceiver {
+        crate::netty::sync::events::netty_event::MessageReceiver::Server
     }
 }
 
 /// Requests to leave the faction the player is within
-#[derive(Event, Debug, Serialize, Deserialize, Clone, Default)]
-pub struct PlayerLeaveFactionEvent;
+#[derive(Message, Debug, Serialize, Deserialize, Clone, Default)]
+pub struct PlayerLeaveFactionMessage;
 
-impl IdentifiableEvent for PlayerLeaveFactionEvent {
+impl IdentifiableMessage for PlayerLeaveFactionMessage {
     fn unlocalized_name() -> &'static str {
-        "cosmos:player_leave_faction_event"
+        "cosmos:player_leave_faction_message"
     }
 }
 
-impl NettyEvent for PlayerLeaveFactionEvent {
-    fn event_receiver() -> crate::netty::sync::events::netty_event::EventReceiver {
-        crate::netty::sync::events::netty_event::EventReceiver::Server
+impl NettyMessage for PlayerLeaveFactionMessage {
+    fn event_receiver() -> crate::netty::sync::events::netty_event::MessageReceiver {
+        crate::netty::sync::events::netty_event::MessageReceiver::Server
     }
 }
 
 /// Invites a player to your faction
-#[derive(Event, Debug, Serialize, Deserialize, Clone)]
-pub struct PlayerInviteToFactionEvent {
+#[derive(Message, Debug, Serialize, Deserialize, Clone)]
+pub struct PlayerInviteToFactionMessage {
     /// Must be another player you are inviting to your faction
     pub inviting: Entity,
 }
 
-impl IdentifiableEvent for PlayerInviteToFactionEvent {
+impl IdentifiableMessage for PlayerInviteToFactionMessage {
     fn unlocalized_name() -> &'static str {
         "cosmos:player_invite_to_faction"
     }
 }
 
-impl NettyEvent for PlayerInviteToFactionEvent {
-    fn event_receiver() -> crate::netty::sync::events::netty_event::EventReceiver {
-        crate::netty::sync::events::netty_event::EventReceiver::Server
+impl NettyMessage for PlayerInviteToFactionMessage {
+    fn event_receiver() -> crate::netty::sync::events::netty_event::MessageReceiver {
+        crate::netty::sync::events::netty_event::MessageReceiver::Server
     }
 
     #[cfg(feature = "client")]
@@ -112,65 +112,65 @@ impl NettyEvent for PlayerInviteToFactionEvent {
 /// Accepts an invitation to this faction
 ///
 /// This does nothing if the player is not currently invited to this faction
-#[derive(Event, Debug, Serialize, Deserialize, Clone)]
+#[derive(Message, Debug, Serialize, Deserialize, Clone)]
 pub struct PlayerAcceptFactionInvitation {
     /// Accepts the invitation to join this faction. There must be a valid invite for this to do
     /// anything.
     pub faction_id: FactionId,
 }
 
-impl IdentifiableEvent for PlayerAcceptFactionInvitation {
+impl IdentifiableMessage for PlayerAcceptFactionInvitation {
     fn unlocalized_name() -> &'static str {
         "cosmos:player_accept_faction_invite"
     }
 }
 
-impl NettyEvent for PlayerAcceptFactionInvitation {
-    fn event_receiver() -> crate::netty::sync::events::netty_event::EventReceiver {
-        crate::netty::sync::events::netty_event::EventReceiver::Server
+impl NettyMessage for PlayerAcceptFactionInvitation {
+    fn event_receiver() -> crate::netty::sync::events::netty_event::MessageReceiver {
+        crate::netty::sync::events::netty_event::MessageReceiver::Server
     }
 }
 
 /// Declines an invitation to this faction
 ///
 /// This does nothing if the player is not currently invited to this faction
-#[derive(Event, Debug, Serialize, Deserialize, Clone)]
+#[derive(Message, Debug, Serialize, Deserialize, Clone)]
 pub struct PlayerDeclineFactionInvitation {
     /// Declines the invitation to join this faction. There must be a valid invite for this to do
     /// anything.
     pub faction_id: FactionId,
 }
 
-impl IdentifiableEvent for PlayerDeclineFactionInvitation {
+impl IdentifiableMessage for PlayerDeclineFactionInvitation {
     fn unlocalized_name() -> &'static str {
         "cosmos:player_decline_faction_invite"
     }
 }
 
-impl NettyEvent for PlayerDeclineFactionInvitation {
-    fn event_receiver() -> crate::netty::sync::events::netty_event::EventReceiver {
-        crate::netty::sync::events::netty_event::EventReceiver::Server
+impl NettyMessage for PlayerDeclineFactionInvitation {
+    fn event_receiver() -> crate::netty::sync::events::netty_event::MessageReceiver {
+        crate::netty::sync::events::netty_event::MessageReceiver::Server
     }
 }
 
-#[derive(Event, Debug, Serialize, Deserialize, Clone)]
+#[derive(Message, Debug, Serialize, Deserialize, Clone)]
 /// Changes a structure to the player's faction or removes the faction
-pub struct SwapToPlayerFactionEvent {
+pub struct SwapToPlayerFactionMessage {
     /// The structure we are swapping
     pub to_swap: Entity,
     /// The type of swap we are doing (swap/remove)
     pub action: FactionSwapAction,
 }
 
-impl IdentifiableEvent for SwapToPlayerFactionEvent {
+impl IdentifiableMessage for SwapToPlayerFactionMessage {
     fn unlocalized_name() -> &'static str {
         "cosmos:swap_to_player_faction"
     }
 }
 
-impl NettyEvent for SwapToPlayerFactionEvent {
-    fn event_receiver() -> crate::netty::sync::events::netty_event::EventReceiver {
-        crate::netty::sync::events::netty_event::EventReceiver::Server
+impl NettyMessage for SwapToPlayerFactionMessage {
+    fn event_receiver() -> crate::netty::sync::events::netty_event::MessageReceiver {
+        crate::netty::sync::events::netty_event::MessageReceiver::Server
     }
 
     #[cfg(feature = "client")]
@@ -190,12 +190,12 @@ impl NettyEvent for SwapToPlayerFactionEvent {
 pub(super) fn register(app: &mut App) {
     app
         // Client -> Server
-        .add_netty_event::<SwapToPlayerFactionEvent>()
+        .add_netty_event::<SwapToPlayerFactionMessage>()
         .add_netty_event::<PlayerAcceptFactionInvitation>()
         .add_netty_event::<PlayerDeclineFactionInvitation>()
-        .add_netty_event::<PlayerInviteToFactionEvent>()
-        .add_netty_event::<PlayerCreateFactionEvent>()
-        .add_netty_event::<PlayerLeaveFactionEvent>()
+        .add_netty_event::<PlayerInviteToFactionMessage>()
+        .add_netty_event::<PlayerCreateFactionMessage>()
+        .add_netty_event::<PlayerLeaveFactionMessage>()
         // Server -> Client
-        .add_netty_event::<PlayerCreateFactionEventResponse>();
+        .add_netty_event::<PlayerCreateFactionMessageResponse>();
 }

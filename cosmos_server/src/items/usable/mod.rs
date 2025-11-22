@@ -4,20 +4,20 @@ use bevy::prelude::*;
 use cosmos_core::{
     entities::player::Player,
     inventory::{Inventory, held_item_slot::HeldItemSlot},
-    item::usable::{PlayerRequestUseHeldItemEvent, UseHeldItemEvent, UseItemSet},
+    item::usable::{PlayerRequestUseHeldItemMessage, UseHeldItemMessage, UseItemSet},
     netty::{
         server::ServerLobby,
-        sync::events::server_event::{NettyEventReceived, NettyEventWriter},
+        sync::events::server_event::{NettyMessageReceived, NettyMessageWriter},
     },
 };
 
 mod blueprint;
 
 fn on_use_item(
-    mut nevr_req_use_item: EventReader<NettyEventReceived<PlayerRequestUseHeldItemEvent>>,
+    mut nevr_req_use_item: MessageReader<NettyMessageReceived<PlayerRequestUseHeldItemMessage>>,
     lobby: Res<ServerLobby>,
-    mut evw_use_item: EventWriter<UseHeldItemEvent>,
-    mut nevw_use_item: NettyEventWriter<UseHeldItemEvent>,
+    mut evw_use_item: MessageWriter<UseHeldItemMessage>,
+    mut nevw_use_item: NettyMessageWriter<UseHeldItemMessage>,
     q_inventory: Query<(&Inventory, &HeldItemSlot), With<Player>>,
 ) {
     for n_ev in nevr_req_use_item.read() {
@@ -29,7 +29,7 @@ fn on_use_item(
             continue;
         };
 
-        let ev = UseHeldItemEvent {
+        let ev = UseHeldItemMessage {
             player,
             looking_at_block: n_ev.looking_at_block,
             looking_at_any: n_ev.looking_at_any,
@@ -46,6 +46,6 @@ fn on_use_item(
 pub(super) fn register(app: &mut App) {
     blueprint::register(app);
 
-    app.add_systems(FixedUpdate, on_use_item.in_set(UseItemSet::SendUseItemEvents))
-        .add_event::<UseHeldItemEvent>();
+    app.add_systems(FixedUpdate, on_use_item.in_set(UseItemSet::SendUseItemMessages))
+        .add_message::<UseHeldItemMessage>();
 }

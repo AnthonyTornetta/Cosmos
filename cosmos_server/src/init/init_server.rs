@@ -95,7 +95,7 @@ pub fn init(app: &mut App, port: u16) {
             ));
     */
 
-    let transport = SteamServerTransport::new(&steam_client, setup_config, socket_options).unwrap();
+    let transport = SteamServerTransport::new(steam_client.clone(), setup_config, socket_options).unwrap();
     let server = RenetServer::new(connection_config());
 
     app.insert_resource(ServerLobby::default())

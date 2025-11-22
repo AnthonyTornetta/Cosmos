@@ -9,7 +9,7 @@ use crate::{
     settings::{Setting, SettingCategory, SettingConstraint, SettingData},
     ui::{
         components::{
-            button::{ButtonEvent, ButtonStyles, CosmosButton},
+            button::{ButtonMessage, ButtonStyles, CosmosButton},
             text_input::{InputType, InputValue, TextInput},
         },
         reactivity::{BindValue, BindValues, ReactableFields, ReactableValue},
@@ -72,7 +72,7 @@ fn create_settings_screen(
         return;
     };
 
-    let cool_blue = Srgba::hex("00FFFF").unwrap().into();
+    let cool_blue = Srgba::hex("00FFFF").unwrap();
 
     let text_style = TextFont {
         font_size: 32.0,
@@ -126,7 +126,7 @@ fn create_settings_screen(
         })
         .with_children(|p| {
             p.spawn((
-                BorderColor(cool_blue),
+                BorderColor::all(cool_blue),
                 Node {
                     border: UiRect::all(Val::Px(2.0)),
                     width: Val::Px(500.0),
@@ -147,13 +147,13 @@ fn create_settings_screen(
                 },
             ))
             .observe(
-                |ev: Trigger<ButtonEvent>, mut evw_settings_cancel: EventWriter<SettingsCancelButtonEvent>| {
-                    evw_settings_cancel.write(SettingsCancelButtonEvent(ev.0));
+                |ev: On<ButtonMessage>, mut evw_settings_cancel: MessageWriter<SettingsCancelButtonMessage>| {
+                    evw_settings_cancel.write(SettingsCancelButtonMessage(ev.0));
                 },
             );
 
             p.spawn((
-                BorderColor(cool_blue),
+                BorderColor::all(cool_blue),
                 Node {
                     border: UiRect::all(Val::Px(2.0)),
                     width: Val::Px(500.0),
@@ -276,7 +276,7 @@ fn create_general_tab(
                                     ..Default::default()
                                 },
                                 InputValue::new(input_value),
-                                BorderColor(Srgba::hex("555555").unwrap().into()),
+                                BorderColor::all(Srgba::hex("555555").unwrap()),
                                 BackgroundColor(Srgba::hex("111111").unwrap().into()),
                                 Node {
                                     border: UiRect::all(Val::Px(2.0)),
@@ -375,7 +375,7 @@ fn create_controls_tab(controls: &CosmosInputHandler, text_style: &TextFont, tex
                         input: *input,
                         value: *mapping,
                     },
-                    BorderColor(Srgba::hex("555555").unwrap().into()),
+                    BorderColor::all(Srgba::hex("555555").unwrap()),
                     BackgroundColor(Srgba::hex("111111").unwrap().into()),
                     Node {
                         border: UiRect::all(Val::Px(2.0)),
@@ -397,7 +397,7 @@ fn create_controls_tab(controls: &CosmosInputHandler, text_style: &TextFont, tex
 }
 
 fn click_settings_button(
-    ev: Trigger<ButtonEvent>,
+    ev: On<ButtonMessage>,
     mut commands: Commands,
     q_next_input: Query<(), With<ListeningNextInput>>,
     mut q_button: Query<&mut CosmosButton>,
@@ -452,12 +452,12 @@ fn on_change_setting_value(mut q_changed_setting: Query<(&mut CosmosButton, &Set
 }
 
 fn done_clicked(
-    ev: Trigger<ButtonEvent>,
+    ev: On<ButtonMessage>,
     mut settings: ResMut<Registry<Setting>>,
     q_written_settings: Query<&WrittenSetting>,
     q_setting: Query<&SettingControlValue>,
     mut inputs: ResMut<CosmosInputHandler>,
-    mut evw_done: EventWriter<SettingsDoneButtonEvent>,
+    mut evw_done: MessageWriter<SettingsDoneButtonMessage>,
 ) {
     for written_setting in q_written_settings.iter() {
         let setting = settings.from_numeric_id_mut(written_setting.setting_id);
@@ -491,7 +491,7 @@ fn done_clicked(
         }
     }
 
-    evw_done.write(SettingsDoneButtonEvent(ev.0));
+    evw_done.write(SettingsDoneButtonMessage(ev.0));
 }
 
 #[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
@@ -499,12 +499,12 @@ pub(super) enum SettingsMenuSet {
     SettingsMenuInteractions,
 }
 
-#[derive(Event, Debug)]
+#[derive(Message, Debug)]
 /// Sent when the Settings Cancel button is clicked
-pub struct SettingsCancelButtonEvent(pub Entity);
-#[derive(Event, Debug)]
+pub struct SettingsCancelButtonMessage(pub Entity);
+#[derive(Message, Debug)]
 /// Sent when the Settings Done button is clicked
-pub struct SettingsDoneButtonEvent(pub Entity);
+pub struct SettingsDoneButtonMessage(pub Entity);
 
 pub(super) fn register(app: &mut App) {
     add_reactable_type::<WrittenSetting>(app);
@@ -521,6 +521,6 @@ pub(super) fn register(app: &mut App) {
         ),
     )
     .register_type::<WrittenSetting>()
-    .add_event::<SettingsDoneButtonEvent>()
-    .add_event::<SettingsCancelButtonEvent>();
+    .add_message::<SettingsDoneButtonMessage>()
+    .add_message::<SettingsCancelButtonMessage>();
 }

@@ -5,9 +5,9 @@ use cosmos_core::{
     entities::player::Player,
     netty::{
         server::ServerLobby,
-        sync::events::server_event::{NettyEventReceived, NettyEventWriter},
+        sync::events::server_event::{NettyMessageReceived, NettyMessageWriter},
     },
-    quest::{ActiveQuest, CompleteQuestEvent, OngoingQuestDetails, OngoingQuests, SetActiveQuestEvent},
+    quest::{ActiveQuest, CompleteQuestMessage, OngoingQuestDetails, OngoingQuests, SetActiveQuestMessage},
 };
 
 use crate::persistence::{
@@ -17,11 +17,11 @@ use crate::persistence::{
 
 mod quests;
 
-#[derive(Event)]
+#[derive(Message)]
 /// Is this needed?
 ///
 /// Send this event to add a new quest
-pub struct AddQuestEvent {
+pub struct AddQuestMessage {
     /// The unlocalized name of the quest
     pub unlocalized_name: String,
     /// The player entity that should get this quest
@@ -46,14 +46,14 @@ pub enum QuestsSet {
     AddOngoingQuestsComponent,
     /// Creates new [`cosmos_core::quest::OngoingQuest`]s and adds them to the [`OngoingQuests`] component.
     CreateNewQuests,
-    /// Quests are checked for completion, and if finished the [`CompleteQuestEvent`] is sent out
+    /// Quests are checked for completion, and if finished the [`CompleteQuestMessage`] is sent out
     CompleteQuests,
 }
 
 fn on_complete_quest(
     mut q_ongoing: Query<(Entity, &Player, &mut OngoingQuests), Changed<OngoingQuests>>,
-    mut nevw_complete_quest_event: NettyEventWriter<CompleteQuestEvent>,
-    mut evw_complete_quest_event: EventWriter<CompleteQuestEvent>,
+    mut nevw_complete_quest_event: NettyMessageWriter<CompleteQuestMessage>,
+    mut evw_complete_quest_event: MessageWriter<CompleteQuestMessage>,
 ) {
     for (entity, player, mut ongoing_quests) in q_ongoing.iter_mut() {
         let all_completed = ongoing_quests
@@ -67,7 +67,7 @@ fn on_complete_quest(
                 .remove_ongoing_quest(&completed)
                 .expect("This was proven to exist above");
 
-            let complete_quest_event = CompleteQuestEvent::new(entity, completed);
+            let complete_quest_event = CompleteQuestMessage::new(entity, completed);
 
             nevw_complete_quest_event.write(complete_quest_event.clone(), player.client_id());
             evw_complete_quest_event.write(complete_quest_event);
@@ -86,7 +86,7 @@ fn clear_invalid_active_quest(q_active: Query<(Entity, &OngoingQuests, &ActiveQu
 }
 
 fn on_set_ongoing(
-    mut nevr_ongoing_quest: EventReader<NettyEventReceived<SetActiveQuestEvent>>,
+    mut nevr_ongoing_quest: MessageReader<NettyMessageReceived<SetActiveQuestMessage>>,
     lobby: Res<ServerLobby>,
     mut commands: Commands,
     q_ongoing: Query<&OngoingQuests>,
@@ -147,5 +147,5 @@ pub(super) fn register(app: &mut App) {
         ),
     );
 
-    app.add_event::<AddQuestEvent>().add_event::<CompleteQuestEvent>();
+    app.add_message::<AddQuestMessage>().add_message::<CompleteQuestMessage>();
 }

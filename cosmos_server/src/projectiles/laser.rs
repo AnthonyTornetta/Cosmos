@@ -5,13 +5,13 @@ use cosmos_core::{
     prelude::BlockCoordinate,
     projectiles::{
         causer::Causer,
-        laser::{Laser, LaserCollideEvent, LaserSystemSet},
+        laser::{Laser, LaserCollideMessage, LaserSystemSet},
     },
     registry::Registry,
     state::GameState,
     structure::{
         Structure,
-        block_health::events::{BlockDestroyedEvent, BlockTakeDamageEvent},
+        block_health::events::{BlockDestroyedMessage, BlockTakeDamageMessage},
     },
 };
 
@@ -28,8 +28,8 @@ fn on_laser_hit_structure(
     structure: &mut Structure,
     coords: BlockCoordinate,
     blocks: &Registry<Block>,
-    block_take_damage_event_writer: &mut EventWriter<BlockTakeDamageEvent>,
-    block_destroy_event_writer: &mut EventWriter<BlockDestroyedEvent>,
+    block_take_damage_event_writer: &mut MessageWriter<BlockTakeDamageMessage>,
+    block_destroy_event_writer: &mut MessageWriter<BlockDestroyedMessage>,
     strength: f32,
     causer: Option<&Causer>,
 ) {
@@ -43,11 +43,11 @@ fn on_laser_hit_structure(
 }
 
 fn respond_laser_hit_event(
-    mut reader: EventReader<LaserCollideEvent>,
+    mut reader: MessageReader<LaserCollideMessage>,
     mut structure_query: Query<&mut Structure>,
     blocks: Res<Registry<Block>>,
-    mut block_take_damage_event_writer: EventWriter<BlockTakeDamageEvent>,
-    mut block_destroy_event_writer: EventWriter<BlockDestroyedEvent>,
+    mut block_take_damage_event_writer: MessageWriter<BlockTakeDamageMessage>,
+    mut block_destroy_event_writer: MessageWriter<BlockDestroyedMessage>,
     mut q_health: Query<&mut Health>,
 ) {
     for ev in reader.read() {
@@ -88,7 +88,7 @@ pub(super) fn register(app: &mut App) {
         FixedUpdate,
         respond_laser_hit_event
             .in_set(BlockHealthSet::SendHealthChanges)
-            .after(LaserSystemSet::SendHitEvents)
+            .after(LaserSystemSet::SendHitMessages)
             .after(ShieldSet::OnShieldHit)
             .run_if(in_state(GameState::Playing)),
     )

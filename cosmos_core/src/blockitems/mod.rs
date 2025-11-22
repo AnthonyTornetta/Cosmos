@@ -4,14 +4,14 @@
 
 use bevy::{
     platform::collections::HashMap,
-    prelude::{App, EventWriter, Res, ResMut, Resource, States},
+    prelude::{App, MessageWriter, Res, ResMut, Resource, States},
     state::state::OnExit,
 };
 
 use crate::{
     block::Block,
     item::{DEFAULT_MAX_STACK_SIZE, Item},
-    loader::{AddLoadingEvent, DoneLoadingEvent, LoadingManager},
+    loader::{AddLoadingMessage, DoneLoadingMessage, LoadingManager},
     registry::{Registry, identifiable::Identifiable},
 };
 
@@ -71,8 +71,8 @@ fn create_links(
     blocks: Res<Registry<Block>>,
     mut items: ResMut<Registry<Item>>,
     mut loader: ResMut<LoadingManager>,
-    mut event_writer: EventWriter<AddLoadingEvent>,
-    mut done_event_writer: EventWriter<DoneLoadingEvent>,
+    mut event_writer: MessageWriter<AddLoadingMessage>,
+    mut done_event_writer: MessageWriter<DoneLoadingMessage>,
 ) {
     let id = loader.register_loader(&mut event_writer);
 

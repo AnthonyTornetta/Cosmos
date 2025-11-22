@@ -3,14 +3,14 @@ use bevy_renet::renet::RenetServer;
 use cosmos_core::{
     netty::{
         NettyChannelServer, cosmos_encoder, server_reliable_messages::ServerReliableMessages,
-        sync::server_entity_syncing::RequestedEntityEvent, system_sets::NetworkingSystemsSet,
+        sync::server_entity_syncing::RequestedEntityMessage, system_sets::NetworkingSystemsSet,
     },
     state::GameState,
     structure::{Structure, ship::Ship},
 };
 
 fn on_request_ship(
-    mut event_reader: EventReader<RequestedEntityEvent>,
+    mut event_reader: MessageReader<RequestedEntityMessage>,
     query: Query<&Structure, With<Ship>>,
     mut server: ResMut<RenetServer>,
 ) {

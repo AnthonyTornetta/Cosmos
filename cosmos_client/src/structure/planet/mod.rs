@@ -12,7 +12,7 @@ use cosmos_core::{
     state::GameState,
     structure::{
         ChunkState, Structure,
-        chunk::{Chunk, ChunkUnloadEvent},
+        chunk::{Chunk, ChunkUnloadMessage},
         coordinates::{UnboundChunkCoordinate, UnboundCoordinateType},
         planet::Planet,
         structure_iterator::ChunkIteratorResult,
@@ -120,7 +120,7 @@ fn load_planet_chunks(
 pub(crate) fn unload_chunks_far_from_players(
     q_player: Query<&Location, With<LocalPlayer>>,
     mut q_planets: Query<(&Location, &mut Structure, &GlobalTransform), With<Planet>>,
-    mut event_writer: EventWriter<ChunkUnloadEvent>,
+    mut event_writer: MessageWriter<ChunkUnloadMessage>,
     mut commands: Commands,
 ) {
     let Ok(player) = q_player.single() else {

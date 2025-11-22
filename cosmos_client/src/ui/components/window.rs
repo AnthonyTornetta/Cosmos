@@ -10,7 +10,7 @@ use crate::{
 };
 
 use super::{
-    button::{ButtonEvent, CosmosButton},
+    button::{ButtonMessage, CosmosButton},
     show_cursor::{ShowCursor, any_open_menus},
 };
 
@@ -76,7 +76,7 @@ fn add_window(
 
         commands
             .entity(ent)
-            .insert((BorderColor(Srgba::hex("#111").unwrap().into()), GlobalZIndex(5)))
+            .insert((BorderColor::all(Srgba::hex("#111").unwrap()), GlobalZIndex(5)))
             .with_children(|parent| {
                 // Title bar
 
@@ -96,7 +96,7 @@ fn add_window(
                         ..default()
                     },
                     BackgroundColor(css::WHITE.into()),
-                    ImageNode::new(window_assets.title_bar_image.clone_weak()),
+                    ImageNode::new(window_assets.title_bar_image.clone()),
                 ));
 
                 title_bar.with_children(|parent| {
@@ -109,7 +109,7 @@ fn add_window(
                             ..Default::default()
                         },
                         TextLayout {
-                            justify: JustifyText::Center,
+                            justify: Justify::Center,
                             ..Default::default()
                         },
                     ));
@@ -131,7 +131,7 @@ fn add_window(
                                 ..Default::default()
                             },
                             CosmosButton {
-                                image: Some(ImageNode::new(window_assets.close_btn_image.clone_weak())),
+                                image: Some(ImageNode::new(window_assets.close_btn_image.clone())),
                                 text: Some((
                                     "X".into(),
                                     TextFont {
@@ -222,7 +222,7 @@ fn move_window(
 #[derive(Component, Debug)]
 struct CloseButton(Entity);
 
-fn close_event_listener(ev: Trigger<ButtonEvent>, mut commands: Commands, q_close_button: Query<&CloseButton>) {
+fn close_event_listener(ev: On<ButtonMessage>, mut commands: Commands, q_close_button: Query<&CloseButton>) {
     let Ok(close_btn) = q_close_button.get(ev.0) else {
         return;
     };
@@ -235,8 +235,8 @@ fn close_event_listener(ev: Trigger<ButtonEvent>, mut commands: Commands, q_clos
 pub enum UiWindowSystemSet {
     /// Creates the window
     CreateWindow,
-    /// Events such as closing and moving the window are performed
-    SendWindowEvents,
+    /// Messages such as closing and moving the window are performed
+    SendWindowMessages,
 }
 
 pub(super) fn register(app: &mut App) {
@@ -257,7 +257,7 @@ pub(super) fn register(app: &mut App) {
 
     app.configure_sets(
         Update,
-        (UiWindowSystemSet::CreateWindow, UiWindowSystemSet::SendWindowEvents).in_set(UiSystemSet::DoUi),
+        (UiWindowSystemSet::CreateWindow, UiWindowSystemSet::SendWindowMessages).in_set(UiSystemSet::DoUi),
     );
 
     app.add_systems(
@@ -266,7 +266,7 @@ pub(super) fn register(app: &mut App) {
             add_window
                 .in_set(UiWindowSystemSet::CreateWindow)
                 .run_if(resource_exists::<WindowAssets>),
-            move_window.run_if(any_open_menus).in_set(UiWindowSystemSet::SendWindowEvents),
+            move_window.run_if(any_open_menus).in_set(UiWindowSystemSet::SendWindowMessages),
         ),
     );
 }

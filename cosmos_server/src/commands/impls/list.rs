@@ -18,7 +18,7 @@ pub(super) fn register(app: &mut App) {
     create_cosmos_command::<ListCommand, _>(
         ServerCommand::new("cosmos:list", "", "Lists all the savable entity ids"),
         app,
-        |mut evr_command: EventReader<CommandEvent<ListCommand>>,
+        |mut evr_command: MessageReader<CommandMessage<ListCommand>>,
          all_blueprintable_entities: Query<(Entity, &Name, &Location), With<Blueprintable>>| {
             for _ in evr_command.read() {
                 println!("All blueprintable entities: ");

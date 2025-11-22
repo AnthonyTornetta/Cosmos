@@ -2,7 +2,7 @@
 
 use crate::ui::{
     components::{
-        button::{ButtonEvent, CosmosButton},
+        button::{ButtonMessage, CosmosButton},
         modal::{Modal, ModalBody},
         text_input::{InputType, InputValue, TextInput},
     },
@@ -129,7 +129,7 @@ fn on_add_text_modal(
                             BackgroundColor(css::DARK_GREY.into()),
                         ))
                         .observe(
-                            |ev: Trigger<ButtonEvent>, q_modal_ent: Query<&ModalEntity>, mut commands: Commands| {
+                            |ev: On<ButtonMessage>, q_modal_ent: Query<&ModalEntity>, mut commands: Commands| {
                                 let modal_ent = q_modal_ent.get(ev.0).expect("Missing modal entity?");
                                 commands.entity(modal_ent.0).insert(NeedsDespawned);
                             },
@@ -157,7 +157,7 @@ fn on_add_text_modal(
                             BackgroundColor(css::AQUA.into()),
                         ))
                         .observe(
-                            |ev: Trigger<ButtonEvent>,
+                            |ev: On<ButtonMessage>,
                              q_text_ent: Query<&TextValueEnt>,
                              q_modal_value: Query<(&InputValue, &ModalEntity)>,
                              mut commands: Commands| {
@@ -166,7 +166,8 @@ fn on_add_text_modal(
                                 };
                                 let ent = tv.0;
                                 let (text, modal_ent) = q_modal_value.get(ent).expect("Missing input?");
-                                commands.entity(ent).trigger(TextModalComplete {
+                                commands.entity(ent).trigger(|e| TextModalComplete {
+                                    entity: e,
                                     text: text.value().to_owned(),
                                 });
 
@@ -183,10 +184,11 @@ fn on_add_text_modal(
 #[derive(Component)]
 struct TextValueEnt(Entity);
 
-#[derive(Event, Debug)]
-#[event(traversal = &'static ChildOf, auto_propagate)]
+#[derive(EntityEvent, Debug)]
+#[entity_event(propagate = &'static ChildOf)]
 /// Sent whenever a text modal has its `ok` button pressed
 pub struct TextModalComplete {
+    entity: Entity,
     /// The value of text the user input
     pub text: String,
 }

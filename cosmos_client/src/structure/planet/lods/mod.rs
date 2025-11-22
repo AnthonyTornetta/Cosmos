@@ -7,7 +7,7 @@ use bevy::prelude::*;
 use bevy_app_compute::prelude::{AppComputeWorker, BevyEasyComputeSet};
 use cosmos_core::{
     block::{Block, block_face::BlockFace},
-    ecs::mut_events::{EventWriterCustomSend, MutEvent, MutEventsCommand},
+    ecs::mut_events::{MessageWriterCustomSend, MutMessage, MutMessagesCommand},
     physics::location::Location,
     registry::Registry,
     state::GameState,
@@ -406,15 +406,15 @@ fn send_chunks_to_gpu(
     }
 }
 
-#[derive(Event)]
-pub(crate) struct DoneGeneratingChunkEvent {
+#[derive(Message)]
+pub(crate) struct DoneGeneratingChunkMessage {
     needs_generated_chunk: Option<NeedsGeneratedChunk>,
     chunk_data_slice: ChunkDataSlice,
 }
 
 fn read_gpu_data(
     worker: ResMut<AppComputeWorker<BiosphereShaderWorker>>,
-    mut ev_writer: EventWriter<MutEvent<DoneGeneratingChunkEvent>>,
+    mut ev_writer: MessageWriter<MutMessage<DoneGeneratingChunkMessage>>,
     mut currently_generating_chunks: ResMut<GeneratingLodChunks>,
     mut chunk_data: ResMut<ChunkData>,
     timer: Res<ChunkGenerationTimer>,
@@ -460,7 +460,7 @@ fn read_gpu_data(
         //     )
         // );
 
-        ev_writer.send_mut(DoneGeneratingChunkEvent {
+        ev_writer.send_mut(DoneGeneratingChunkMessage {
             chunk_data_slice,
             needs_generated_chunk: Some(needs_generated_chunk),
         });
@@ -537,13 +537,13 @@ fn generate_player_lods(
 }
 
 pub(crate) fn generate_chunks_from_gpu_data(
-    mut ev_reader: EventReader<MutEvent<DoneGeneratingChunkEvent>>,
+    mut ev_reader: MessageReader<MutMessage<DoneGeneratingChunkMessage>>,
     chunk_data: Res<ChunkData>,
     biosphere_biomes: Res<Registry<BiosphereBiomesRegistry>>,
     biomes: Res<Registry<Biome>>,
     biospheres: Res<Registry<Biosphere>>,
     // sea_level: Option<Res<BiosphereSeaLevel<T>>>,
-    // mut ev_writer: EventWriter<GenerateChunkFeaturesEvent<T>>,
+    // mut ev_writer: MessageWriter<GenerateChunkFeaturesMessage<T>>,
     q_lod: Query<&mut LodBeingGenerated>,
     blocks: Res<Registry<Block>>,
 ) {
@@ -818,7 +818,7 @@ pub(super) fn register(app: &mut App) {
             .chain()
             .run_if(in_state(GameState::Playing).or(in_state(GameState::LoadingWorld))),
     )
-    .add_mut_event::<DoneGeneratingChunkEvent>()
+    .add_mut_event::<DoneGeneratingChunkMessage>()
     .init_resource::<NeedGeneratedLodChunks>()
     .init_resource::<GeneratingLodChunks>();
 }

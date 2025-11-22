@@ -2,7 +2,7 @@
 
 use std::time::Duration;
 
-use crate::logic::{LogicInputEvent, LogicSystemSet, logic_driver::LogicDriver};
+use crate::logic::{LogicInputMessage, LogicSystemSet, logic_driver::LogicDriver};
 use bevy::prelude::*;
 use bevy_rapier3d::{
     geometry::{CollisionGroups, Group},
@@ -17,7 +17,7 @@ use cosmos_core::{
     item::Item,
     netty::{
         NettyChannelServer, cosmos_encoder, server_laser_cannon_system_messages::ServerStructureSystemMessages,
-        sync::events::server_event::NettyEventWriter,
+        sync::events::server_event::NettyMessageWriter,
     },
     persistence::LoadingDistance,
     physics::{
@@ -197,7 +197,7 @@ fn update_missile_system(
     mut server: ResMut<RenetServer>,
     mut q_inventory: Query<(&mut Inventory, &BlockData)>,
     items: Res<Registry<Item>>,
-    mut nevw_system_failure: NettyEventWriter<MissileSystemFailure>,
+    mut nevw_system_failure: NettyMessageWriter<MissileSystemFailure>,
 ) {
     for (missile_launcher_system, focus, system, mut cooldown, system_active) in query.iter_mut() {
         let Ok((ship_entity, systems, structure, global_transform, ship_velocity, pilot)) = q_systems.get(system.structure_entity()) else {
@@ -311,7 +311,7 @@ fn update_missile_system(
 }
 
 fn missile_launcher_input_event_listener(
-    mut evr_logic_input: EventReader<LogicInputEvent>,
+    mut evr_logic_input: MessageReader<LogicInputMessage>,
     blocks: Res<Registry<Block>>,
     mut q_logic_driver: Query<&mut LogicDriver>,
     q_structure: Query<(&Structure, &StructureSystems)>,

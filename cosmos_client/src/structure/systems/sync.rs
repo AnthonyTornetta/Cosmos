@@ -23,7 +23,7 @@ use serde::{Serialize, de::DeserializeOwned};
 
 use crate::structure::planet::align_player::{self, PlayerAlignment};
 
-#[derive(Event, Debug, Clone)]
+#[derive(Message, Debug, Clone)]
 struct StructureSystemNeedsUpdated {
     system_id: StructureSystemId,
     structure_entity: Entity,
@@ -54,7 +54,7 @@ impl<T> Default for SystemsQueue<T> {
 fn replication_listen_netty(
     mut client: ResMut<RenetClient>,
     mapping: Res<NetworkMapping>,
-    mut event_writer: EventWriter<StructureSystemNeedsUpdated>,
+    mut event_writer: MessageWriter<StructureSystemNeedsUpdated>,
     q_systems: Query<&StructureSystems>,
     mut commands: Commands,
     q_is_active: Query<(), With<SystemActive>>,
@@ -145,7 +145,7 @@ fn replication_listen_netty(
 
 fn sync<T: Component<Mutability = Mutable> + StructureSystemImpl + Serialize + DeserializeOwned>(
     system_types: Res<Registry<StructureSystemType>>,
-    mut ev_reader: EventReader<StructureSystemNeedsUpdated>,
+    mut ev_reader: MessageReader<StructureSystemNeedsUpdated>,
     mut systems_query: Query<&mut StructureSystems>,
     mut q_system: Query<(&mut T, &StructureSystem)>,
     mut commands: Commands,
@@ -233,5 +233,5 @@ pub(super) fn register(app: &mut App) {
             .run_if(in_state(GameState::Playing))
             .after(StructureLoadingSet::StructureLoaded),
     )
-    .add_event::<StructureSystemNeedsUpdated>();
+    .add_message::<StructureSystemNeedsUpdated>();
 }

@@ -8,7 +8,7 @@ use cosmos_core::{
     coms::{AiComsType, ComsChannel, RequestedComs},
     ecs::{NeedsDespawned, sets::FixedUpdateSet},
     entities::EntityId,
-    events::structure::StructureEventListenerSet,
+    events::structure::StructureMessageListenerSet,
     faction::{Faction, FactionId, FactionRelation, Factions},
     netty::sync::IdentifiableComponent,
     physics::location::Location,
@@ -28,13 +28,13 @@ use cosmos_core::{
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    coms::{NpcRequestCloseComsEvent, NpcSendComsMessage, RequestHailFromNpc},
+    coms::{NpcRequestCloseComsMessage, NpcSendComsMessage, RequestHailFromNpc},
     persistence::{
         loading::LoadingSystemSet,
         make_persistent::{DefaultPersistentComponent, make_persistent},
         saving::NeverSave,
     },
-    quest::AddQuestEvent,
+    quest::AddQuestMessage,
     structure::ship::speed::{MaxShipSpeed, ShipSpeedModifier},
 };
 
@@ -304,15 +304,15 @@ fn combat_merchant_ai(mut commands: Commands, q_merchant: Query<(Entity, &Mercha
 struct SaidNoList(Vec<Entity>);
 
 fn on_change_coms(
-    mut evw_send_coms: EventWriter<NpcSendComsMessage>,
+    mut evw_send_coms: MessageWriter<NpcSendComsMessage>,
     q_create_coms: Query<(Entity, &ChildOf, &ComsChannel), Changed<ComsChannel>>,
     factions: Res<Factions>,
     q_faction: Query<&FactionId>,
     q_entity_id: Query<&EntityId>,
     q_pilot: Query<&Pilot>,
     mut q_merchant: Query<&mut MerchantAiState, With<MerchantFederation>>,
-    mut evw_start_quest: EventWriter<AddQuestEvent>,
-    mut evw_end_coms: EventWriter<NpcRequestCloseComsEvent>,
+    mut evw_start_quest: MessageWriter<AddQuestMessage>,
+    mut evw_end_coms: MessageWriter<NpcRequestCloseComsMessage>,
 ) {
     enum ComsState {
         Intro,
@@ -364,7 +364,7 @@ fn on_change_coms(
             ComsState::SaidNo => ("I understand. I, too, value my life.", true),
             ComsState::Accepted => {
                 if let Ok(pilot) = q_pilot.get(coms.with) {
-                    evw_start_quest.write(AddQuestEvent {
+                    evw_start_quest.write(AddQuestMessage {
                         unlocalized_name: "cosmos:fight_pirate".into(),
                         to: pilot.entity,
                         details: OngoingQuestDetails {
@@ -385,7 +385,7 @@ fn on_change_coms(
         let message = response.to_owned();
 
         if end_coms {
-            evw_end_coms.write(NpcRequestCloseComsEvent {
+            evw_end_coms.write(NpcRequestCloseComsMessage {
                 npc_ship: parent.parent(),
                 coms_entity,
             });
@@ -404,7 +404,7 @@ fn on_change_coms(
 }
 
 fn talking_merchant_ai(
-    mut evw_send_coms: EventWriter<RequestHailFromNpc>,
+    mut evw_send_coms: MessageWriter<RequestHailFromNpc>,
     mut commands: Commands,
     mut q_merchant: Query<
         (
@@ -555,7 +555,7 @@ pub(super) fn register(app: &mut App) {
             .before(CombatAiSystemSet::CombatAiLogic)
             .in_set(StructureTypeSet::Ship)
             .after(LoadingSystemSet::DoneLoading)
-            .after(StructureEventListenerSet::ChangePilotListener),
+            .after(StructureMessageListenerSet::ChangePilotListener),
     )
     .add_systems(
         FixedUpdate,

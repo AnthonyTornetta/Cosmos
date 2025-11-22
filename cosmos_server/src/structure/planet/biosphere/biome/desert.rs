@@ -3,7 +3,7 @@
 use bevy::prelude::*;
 use cosmos_core::{
     block::{Block, block_face::BlockFace},
-    events::block_events::BlockChangedEvent,
+    events::block_events::BlockChangedMessage,
     physics::location::Location,
     registry::{Registry, identifiable::Identifiable},
     state::GameState,
@@ -21,14 +21,14 @@ use crate::{
     structure::planet::biosphere::biosphere_generation::BiosphereGenerationSet,
 };
 
-use super::{Biome, GenerateChunkFeaturesEvent, RegisterBiomesSet};
+use super::{Biome, GenerateChunkFeaturesMessage, RegisterBiomesSet};
 
 const MAX_CACTUS_HEIGHT: CoordinateType = 3;
 const MAX_CACTUS_ITERATIONS_PER_FACE: i64 = 200;
 
 fn desert_generate_chunk_features(
-    mut ev_reader: EventReader<GenerateChunkFeaturesEvent>,
-    mut ev_writer: EventWriter<BlockChangedEvent>,
+    mut ev_reader: MessageReader<GenerateChunkFeaturesMessage>,
+    mut ev_writer: MessageWriter<BlockChangedMessage>,
     mut q_structure: Query<(&Location, &mut Structure)>,
     biomes: Res<Registry<Biome>>,
     blocks: Res<Registry<Block>>,
@@ -51,7 +51,7 @@ fn desert_generate_chunk_features(
 }
 
 fn generate_chunk_features(
-    block_event_writer: &mut EventWriter<BlockChangedEvent>,
+    block_event_writer: &mut MessageWriter<BlockChangedMessage>,
     coords: ChunkCoordinate,
     structure: &mut Structure,
     location: &Location,

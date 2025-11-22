@@ -12,8 +12,8 @@ use bevy::{
     ecs::{
         component::Component,
         entity::Entity,
+        lifecycle::RemovedComponents,
         query::{Changed, With},
-        removal_detection::RemovedComponents,
         system::{Commands, Query, ResMut},
     },
     platform::collections::HashMap,
@@ -156,8 +156,8 @@ fn run_spacial_audio(
             let volume = (emission.peak_volume * (1.0 - sound_path.length() / emission.max_distance).clamp(0., 1.).powi(2) as f64)
                 * master_volume.multiplier();
 
-            instance.set_volume(volume, AudioTween::default());
-            instance.set_panning(panning, AudioTween::default());
+            instance.set_decibels(volume as f32, AudioTween::default());
+            instance.set_panning(panning as f32, AudioTween::default());
 
             if let PlaybackState::Playing { position } = instance.state() {
                 let pos_hashable = (position * 100.0).round() as u32;
@@ -175,7 +175,7 @@ fn run_spacial_audio(
                     }
                 }
 
-                num_audios_of_same_source.insert((emission.handle.id(), pos_hashable), (emission.instance.clone_weak(), this_dist));
+                num_audios_of_same_source.insert((emission.handle.id(), pos_hashable), (emission.instance.clone(), this_dist));
             }
         }
     }
@@ -197,7 +197,7 @@ fn monitor_attached_audio_sources(
         let new_items = audio_emitter
             .emissions
             .iter()
-            .map(|x| (x.instance.clone_weak(), x.stop_tween.clone()))
+            .map(|x| (x.instance.clone(), x.stop_tween.clone()))
             .collect::<AttachedAudioSourcesType>();
 
         let mut remove_vec = vec![];
@@ -303,7 +303,7 @@ pub(super) fn register(app: &mut App) {
         )
         .insert_resource(AudioSettings {
             sound_capacity: 8192,
-            command_capacity: 4096,
+            // command_capacity: 4096,
         })
         .register_type::<CosmosAudioEmitter>()
         .init_resource::<AttachedAudioSources>()

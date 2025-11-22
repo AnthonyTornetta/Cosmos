@@ -2,7 +2,7 @@ use bevy::prelude::*;
 use bevy_kira_audio::{Audio, AudioControl, AudioInstance, AudioSource};
 use cosmos_core::{
     state::GameState,
-    structure::{Structure, block_health::events::BlockTakeDamageEvent, shared::DespawnWithStructure},
+    structure::{Structure, block_health::events::BlockTakeDamageMessage, shared::DespawnWithStructure},
 };
 
 use crate::{
@@ -11,7 +11,7 @@ use crate::{
 };
 
 fn play_block_damage_sound(
-    mut event_reader: EventReader<BlockTakeDamageEvent>,
+    mut event_reader: MessageReader<BlockTakeDamageMessage>,
     engine_idle_sound: Res<BlockDamageSound>,
     structure_query: Query<&Structure>,
     audio: Res<Audio>,

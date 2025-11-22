@@ -1,13 +1,14 @@
 //! Handles client connecting and disconnecting
 
 use bevy::prelude::*;
-use bevy_renet::renet::{ClientId, RenetServer, ServerEvent};
+use bevy_renet::renet::{ClientId, RenetServer};
 use bevy_renet::steam::steamworks::SteamId;
 use cosmos_core::ecs::NeedsDespawned;
 use cosmos_core::entities::player::Player;
 use cosmos_core::netty::server::ServerLobby;
 use cosmos_core::netty::server_reliable_messages::ServerReliableMessages;
 use cosmos_core::netty::{NettyChannelServer, cosmos_encoder};
+use renet::ServerEvent;
 use renet_visualizer::RenetServerVisualizer;
 
 use crate::entities::player::persistence::LoadPlayer;
@@ -17,9 +18,9 @@ use crate::persistence::saving::NeedsSaved;
 
 // use super::auth::AuthenticationServer;
 
-#[derive(Event, Debug)]
+#[derive(Message, Debug)]
 /// Sent whenever a player just connected
-pub struct PlayerConnectedEvent {
+pub struct PlayerConnectedMessage {
     /// The player's entity
     pub player_entity: Entity,
     /// Player's client id
@@ -29,7 +30,7 @@ pub struct PlayerConnectedEvent {
 pub(super) fn handle_server_events(
     mut commands: Commands,
     mut server: ResMut<RenetServer>,
-    mut server_events: EventReader<ServerEvent>,
+    mut server_events: MessageReader<ServerEvent>,
     mut lobby: ResMut<ServerLobby>,
     mut client_ticks: ResMut<ClientTicks>,
     mut visualizer: ResMut<RenetServerVisualizer<200>>,
@@ -92,5 +93,5 @@ pub(super) fn handle_server_events(
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_event::<PlayerConnectedEvent>();
+    app.add_message::<PlayerConnectedMessage>();
 }

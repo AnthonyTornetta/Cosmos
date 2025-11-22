@@ -3,13 +3,13 @@
 use bevy::prelude::*;
 
 use cosmos_core::{
-    block::{Block, block_events::BlockEventsSet},
-    events::block_events::BlockChangedEvent,
+    block::{Block, block_events::BlockMessagesSet},
+    events::block_events::BlockChangedMessage,
     registry::Registry,
     state::GameState,
     structure::{
         Structure,
-        events::StructureLoadedEvent,
+        events::StructureLoadedMessage,
         systems::{
             StructureSystemType, StructureSystems, StructureSystemsSet,
             camera_system::{CameraBlocks, CameraSystem},
@@ -28,7 +28,7 @@ fn register_camera_blocks(blocks: Res<Registry<Block>>, mut camera_blocks: ResMu
 }
 
 fn camera_block_update_system(
-    mut event: EventReader<BlockChangedEvent>,
+    mut event: MessageReader<BlockChangedMessage>,
     camera_blocks: Res<CameraBlocks>,
     blocks: Res<Registry<Block>>,
     mut system_query: Query<&mut CameraSystem>,
@@ -54,7 +54,7 @@ fn camera_block_update_system(
 }
 
 fn camera_structure_loaded_event_processor(
-    mut event_reader: EventReader<StructureLoadedEvent>,
+    mut event_reader: MessageReader<StructureLoadedMessage>,
     mut structure_query: Query<(&Structure, &mut StructureSystems)>,
     blocks: Res<Registry<Block>>,
     mut commands: Commands,
@@ -95,7 +95,7 @@ pub(super) fn register(app: &mut App) {
                     .in_set(StructureSystemsSet::InitSystems)
                     .ambiguous_with(StructureSystemsSet::InitSystems),
                 camera_block_update_system
-                    .in_set(BlockEventsSet::ProcessEvents)
+                    .in_set(BlockMessagesSet::ProcessMessages)
                     .in_set(StructureSystemsSet::UpdateSystemsBlocks),
             )
                 .run_if(in_state(GameState::Playing)),

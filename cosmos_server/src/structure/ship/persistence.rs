@@ -1,11 +1,11 @@
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::Velocity;
 use cosmos_core::{
-    block::data::persistence::ChunkLoadBlockDataEvent,
+    block::data::persistence::ChunkLoadBlockDataMessage,
     physics::location::Location,
     prelude::StructureLoadingSet,
     structure::{
-        ChunkInitEvent, Structure, StructureTypeSet, blueprint::BlueprintType, events::StructureLoadedEvent, ship::Ship,
+        ChunkInitMessage, Structure, StructureTypeSet, blueprint::BlueprintType, events::StructureLoadedMessage, ship::Ship,
         structure_iterator::ChunkIteratorResult,
     },
 };
@@ -41,9 +41,9 @@ fn load_structure(
     loc: Location,
     structure: Structure,
     s_data: &SerializedData,
-    chunk_load_block_data_event_writer: &mut EventWriter<ChunkLoadBlockDataEvent>,
-    chunk_set_event_writer: &mut EventWriter<ChunkInitEvent>,
-    structure_loaded_event_writer: &mut EventWriter<StructureLoadedEvent>,
+    chunk_load_block_data_event_writer: &mut MessageWriter<ChunkLoadBlockDataMessage>,
+    chunk_set_event_writer: &mut MessageWriter<ChunkInitMessage>,
+    structure_loaded_event_writer: &mut MessageWriter<StructureLoadedMessage>,
 ) {
     let mut entity_cmd = commands.entity(entity);
 
@@ -59,7 +59,7 @@ fn load_structure(
         } = res
         {
             // Maybe wait till block data is set for this?
-            chunk_set_event_writer.write(ChunkInitEvent {
+            chunk_set_event_writer.write(ChunkInitMessage {
                 structure_entity: entity,
                 coords,
                 serialized_block_data: None,
@@ -69,11 +69,11 @@ fn load_structure(
 
     entity_cmd.insert((structure, loc, vel, Ship));
 
-    structure_loaded_event_writer.write(StructureLoadedEvent { structure_entity: entity });
+    structure_loaded_event_writer.write(StructureLoadedMessage { structure_entity: entity });
 
     if let Ok(block_data) = s_data.deserialize_data::<AllBlockData>("cosmos:block_data") {
         for (chunk_coord, data) in block_data.0 {
-            chunk_load_block_data_event_writer.write(ChunkLoadBlockDataEvent {
+            chunk_load_block_data_event_writer.write(ChunkLoadBlockDataMessage {
                 data,
                 chunk: chunk_coord,
                 structure_entity: entity,
@@ -85,9 +85,9 @@ fn load_structure(
 fn on_load_ship_blueprint(
     query: Query<(Entity, &SerializedData, &NeedsBlueprintLoaded)>,
     mut commands: Commands,
-    mut chunk_load_block_data_event_writer: EventWriter<ChunkLoadBlockDataEvent>,
-    mut chunk_set_event_writer: EventWriter<ChunkInitEvent>,
-    mut structure_loaded_event_writer: EventWriter<StructureLoadedEvent>,
+    mut chunk_load_block_data_event_writer: MessageWriter<ChunkLoadBlockDataMessage>,
+    mut chunk_set_event_writer: MessageWriter<ChunkInitMessage>,
+    mut structure_loaded_event_writer: MessageWriter<StructureLoadedMessage>,
 ) {
     for (entity, s_data, needs_blueprinted) in query.iter() {
         if s_data.deserialize_data::<bool>("cosmos:is_ship").unwrap_or(false)
@@ -111,9 +111,9 @@ fn on_load_ship_blueprint(
 fn on_load_ship(
     query: Query<(Entity, &SerializedData), With<NeedsLoaded>>,
     mut commands: Commands,
-    mut chunk_load_block_data_event_writer: EventWriter<ChunkLoadBlockDataEvent>,
-    mut chunk_set_event_writer: EventWriter<ChunkInitEvent>,
-    mut structure_loaded_event_writer: EventWriter<StructureLoadedEvent>,
+    mut chunk_load_block_data_event_writer: MessageWriter<ChunkLoadBlockDataMessage>,
+    mut chunk_set_event_writer: MessageWriter<ChunkInitMessage>,
+    mut structure_loaded_event_writer: MessageWriter<StructureLoadedMessage>,
 ) {
     for (entity, s_data) in query.iter() {
         if s_data.deserialize_data::<bool>("cosmos:is_ship").unwrap_or(false)

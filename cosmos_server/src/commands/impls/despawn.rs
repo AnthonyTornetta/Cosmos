@@ -14,7 +14,7 @@ impl CosmosCommandType for DespawnCommand {
         }
 
         if let Ok(index) = ev.args[0].parse::<u64>() {
-            if let Ok(entity) = Entity::try_from_bits(index) {
+            if let Some(entity) = Entity::try_from_bits(index) {
                 Ok(DespawnCommand(entity))
             } else {
                 Err(ArgumentError::InvalidType {
@@ -35,7 +35,7 @@ pub(super) fn register(app: &mut App) {
     create_cosmos_command::<DespawnCommand, _>(
         ServerCommand::new("cosmos:despawn", "[entity_id]", "Despawns the given entity."),
         app,
-        |mut commands: Commands, mut evr_command: EventReader<CommandEvent<DespawnCommand>>| {
+        |mut commands: Commands, mut evr_command: MessageReader<CommandMessage<DespawnCommand>>| {
             for ev in evr_command.read() {
                 if let Ok(mut entity_commands) = commands.get_entity(ev.command.0) {
                     entity_commands.insert(NeedsDespawned);

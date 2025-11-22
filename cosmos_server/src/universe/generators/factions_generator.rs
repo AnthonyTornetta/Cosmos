@@ -19,7 +19,7 @@ use crate::{
     universe::{SystemItem, SystemItemNpcFaction, UniverseSystems},
 };
 
-use super::generation::{GenerateSystemEvent, SystemGenerationSet};
+use super::generation::{GenerateSystemMessage, SystemGenerationSet};
 
 // #[derive(Debug, Clone, Copy)]
 // struct NpcFactionId(Uuid);
@@ -36,7 +36,7 @@ use super::generation::{GenerateSystemEvent, SystemGenerationSet};
 // }
 
 fn generate_factions(
-    mut evr_generate_system: EventReader<GenerateSystemEvent>,
+    mut evr_generate_system: MessageReader<GenerateSystemMessage>,
     server_seed: Res<ServerSeed>,
     mut systems: ResMut<UniverseSystems>,
     mut factions: ResMut<Factions>,

@@ -5,7 +5,7 @@ use std::fs;
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::*;
 use cosmos_core::{
-    chat::ServerSendChatMessageEvent,
+    chat::ServerSendChatMessageMessage,
     economy::Credits,
     ecs::sets::FixedUpdateSet,
     entities::{
@@ -20,7 +20,7 @@ use cosmos_core::{
         netty_rigidbody::{NettyRigidBody, NettyRigidBodyLocation},
         server::ServerLobby,
         server_reliable_messages::ServerReliableMessages,
-        sync::{IdentifiableComponent, events::server_event::NettyEventWriter, registry::server::SyncRegistriesEvent},
+        sync::{IdentifiableComponent, events::server_event::NettyMessageWriter, registry::server::SyncRegistriesMessage},
     },
     persistence::LoadingDistance,
     physics::location::{Location, LocationPhysicsSet, Sector, SetPosition, systems::Anchor},
@@ -31,7 +31,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     entities::player::spawn_player::find_new_player_location,
-    netty::{server_events::PlayerConnectedEvent, sync::flags::SyncReason},
+    netty::{server_events::PlayerConnectedMessage, sync::flags::SyncReason},
     persistence::{
         SaveFileIdentifier, SerializedData,
         loading::{LOADING_SCHEDULE, LoadingSystemSet, NeedsLoaded},
@@ -43,7 +43,7 @@ use crate::{
     universe::UniverseSystems,
 };
 
-use super::{PlayerLooking, spawn_player::CreateNewPlayerEvent};
+use super::{PlayerLooking, spawn_player::CreateNewPlayerMessage};
 
 #[derive(Debug, Serialize, Deserialize)]
 struct PlayerIdentifier {
@@ -256,7 +256,7 @@ fn create_new_player(
     needs_data: Res<ItemShouldHaveData>,
     q_player_needs_loaded: Query<(Entity, &LoadPlayer)>,
     universe_systems: Res<UniverseSystems>,
-    mut evw_create_new_player: EventWriter<CreateNewPlayerEvent>,
+    mut evw_create_new_player: MessageWriter<CreateNewPlayerMessage>,
 ) {
     for (player_entity, load_player) in q_player_needs_loaded.iter() {
         let Some((location, rot)) = find_new_player_location(&universe_systems) else {
@@ -275,7 +275,7 @@ fn create_new_player(
 
         let starting_health = MaxHealth::new(20);
 
-        evw_create_new_player.write(CreateNewPlayerEvent::new(player_entity));
+        evw_create_new_player.write(CreateNewPlayerMessage::new(player_entity));
 
         commands
             .entity(player_entity)
@@ -303,11 +303,11 @@ fn finish_loading_player(
     mut commands: Commands,
     mut server: ResMut<RenetServer>,
     mut lobby: ResMut<ServerLobby>,
-    mut evw_player_join: EventWriter<PlayerConnectedEvent>,
-    mut evw_sync_registries: EventWriter<SyncRegistriesEvent>,
+    mut evw_player_join: MessageWriter<PlayerConnectedMessage>,
+    mut evw_sync_registries: MessageWriter<SyncRegistriesMessage>,
     server_settings: Res<ServerSettings>,
     q_player_finished_loading: Query<(Entity, &Player, &Location, &Velocity, Option<&ChildOf>, Option<&Transform>), Added<Player>>,
-    mut nevw_send_chat_msg: NettyEventWriter<ServerSendChatMessageEvent>,
+    mut nevw_send_chat_msg: NettyMessageWriter<ServerSendChatMessageMessage>,
     q_held_item: Query<&Inventory, With<HeldItemStack>>,
     q_children: Query<&Children>,
 ) {
@@ -375,17 +375,17 @@ fn finish_loading_player(
 
         server.broadcast_message(NettyChannelServer::Reliable, msg);
 
-        nevw_send_chat_msg.broadcast(ServerSendChatMessageEvent {
+        nevw_send_chat_msg.broadcast(ServerSendChatMessageMessage {
             sender: None,
             message: format!("{} joined the game.", load_player.name()),
         });
 
-        evw_player_join.write(PlayerConnectedEvent {
+        evw_player_join.write(PlayerConnectedMessage {
             player_entity,
             client_id: load_player.client_id(),
         });
 
-        evw_sync_registries.write(SyncRegistriesEvent { player_entity });
+        evw_sync_registries.write(SyncRegistriesMessage { player_entity });
     }
 }
 

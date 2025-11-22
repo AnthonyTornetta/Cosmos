@@ -12,12 +12,12 @@ use crate::{
     universe::{SectorDanger, SystemItem, SystemItemPirateStation, UniverseSystems},
 };
 
-use super::generation::{GenerateSystemEvent, SystemGenerationSet};
+use super::generation::{GenerateSystemMessage, SystemGenerationSet};
 
 const PIRATE_STATION_MIN_DANGER: SectorDanger = SectorDanger::MIDDLE;
 
 fn generate_pirate_stations(
-    mut evr_generate_system: EventReader<GenerateSystemEvent>,
+    mut evr_generate_system: MessageReader<GenerateSystemMessage>,
     server_seed: Res<ServerSeed>,
     mut systems: ResMut<UniverseSystems>,
 ) {

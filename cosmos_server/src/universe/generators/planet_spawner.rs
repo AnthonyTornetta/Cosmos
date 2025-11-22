@@ -1,7 +1,7 @@
 //! Responsible for spawning planets near stars, but for now just spawns a planet at 0, 0, 0.
 
 use super::{
-    generation::{GenerateSystemEvent, SystemGenerationSet},
+    generation::{GenerateSystemMessage, SystemGenerationSet},
     star::calculate_temperature_at,
 };
 use crate::{
@@ -85,7 +85,7 @@ fn monitor_planets_to_spawn(q_players: Query<&Location, With<Player>>, mut comma
 fn spawn_planets(
     server_seed: Res<ServerSeed>,
     mut systems: ResMut<UniverseSystems>,
-    mut evr_generate_system: EventReader<GenerateSystemEvent>,
+    mut evr_generate_system: MessageReader<GenerateSystemMessage>,
 
     registry: Res<BiosphereTemperatureRegistry>,
     biosphere_registry: Res<Registry<Biosphere>>,

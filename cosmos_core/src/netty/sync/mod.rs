@@ -4,7 +4,7 @@
 
 use bevy::{
     app::{App, Startup},
-    ecs::{component::Component, entity::Entity, event::Event, schedule::SystemSet},
+    ecs::{component::Component, entity::Entity, message::Message, schedule::SystemSet},
     prelude::States,
     state::state::FreelyMutableState,
 };
@@ -75,7 +75,7 @@ pub mod client_syncing;
 #[cfg(feature = "server")]
 pub mod server_syncing;
 
-/// Events that are synced from server->client and client->server.
+/// Messages that are synced from server->client and client->server.
 pub mod events;
 /// Syncing of registries from server -> client
 pub mod registry;
@@ -251,9 +251,9 @@ pub trait SyncableComponent: Serialize + DeserializeOwned + Clone + std::fmt::De
     }
 }
 
-#[derive(Event, Debug)]
+#[derive(Message, Debug)]
 /// When a component needs to be synced with this instance of the game, this event will be sent.
-pub struct GotComponentToSyncEvent {
+pub struct GotComponentToSyncMessage {
     #[allow(dead_code)]
     /// **Server**: The client that is trying to sync this component with you.
     /// **Client**: This is unused and is meaningless.
@@ -271,11 +271,11 @@ pub struct GotComponentToSyncEvent {
     pub raw_data: Vec<u8>,
 }
 
-#[derive(Event, Debug)]
+#[derive(Message, Debug)]
 /// A component should be removed from the specified entity. On the server, the
 /// [`Self::authority_entity`] should be checked for authority first in addition to any other
 /// checks required.
-pub struct GotComponentToRemoveEvent {
+pub struct GotComponentToRemoveMessage {
     #[allow(dead_code)]
     /// *Server*: The client ID that removed this component.
     /// *Client*: On client this is unused
@@ -332,7 +332,8 @@ pub(super) fn register<T: States + Clone + Copy + FreelyMutableState>(app: &mut 
     resources::register(app);
     events::register(app);
 
-    app.add_event::<GotComponentToSyncEvent>().add_event::<GotComponentToRemoveEvent>();
+    app.add_message::<GotComponentToSyncMessage>()
+        .add_message::<GotComponentToRemoveMessage>();
 
     app.configure_sets(Startup, RegisterComponentSet::RegisterComponent);
 

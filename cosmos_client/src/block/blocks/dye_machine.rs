@@ -7,7 +7,7 @@ use cosmos_core::{
     netty::{
         client::LocalPlayer,
         sync::{
-            events::client_event::NettyEventWriter,
+            events::client_event::NettyMessageWriter,
             mapping::{Mappable, NetworkMapping},
         },
     },
@@ -20,7 +20,7 @@ use crate::{
     ui::{
         OpenMenu, UiSystemSet,
         components::{
-            button::{ButtonEvent, ButtonStyles, CosmosButton},
+            button::{ButtonMessage, ButtonStyles, CosmosButton},
             window::GuiWindow,
         },
     },
@@ -32,7 +32,7 @@ struct OpenDyeUi;
 fn open_dye_ui(
     q_local_player: Query<Entity, With<LocalPlayer>>,
     mut commands: Commands,
-    mut evr_open_ui: EventReader<OpenDyeMachine>,
+    mut evr_open_ui: MessageReader<OpenDyeMachine>,
     q_structure: Query<&Structure>,
 ) {
     let Some(ev) = evr_open_ui.read().next() else {
@@ -56,7 +56,7 @@ fn open_dye_ui(
             OpenDyeUi,
             OpenMenu::new(0),
             Name::new("Dye Machine Ui"),
-            BorderColor(Color::BLACK),
+            BorderColor::all(Color::BLACK),
             GuiWindow {
                 title: "Dye Machine".into(),
                 body_styles: Node {
@@ -148,10 +148,10 @@ fn open_dye_ui(
 }
 
 fn click_color_btn(
-    ev: Trigger<ButtonEvent>,
+    ev: On<ButtonMessage>,
     netty_mapping: Res<NetworkMapping>,
     q_btn_color: Query<&BtnColor>,
-    mut nevw_dye_block: NettyEventWriter<DyeBlock>,
+    mut nevw_dye_block: NettyMessageWriter<DyeBlock>,
 ) {
     let Ok(btn_color) = q_btn_color.get(ev.0) else {
         error!("No button color componnet!");

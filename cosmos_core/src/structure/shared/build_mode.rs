@@ -10,7 +10,7 @@ use bevy_rapier3d::{
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    block::block_events::BlockEventsSet,
+    block::block_events::BlockMessagesSet,
     ecs::sets::FixedUpdateSet,
     netty::sync::{IdentifiableComponent, SyncableComponent, sync_component},
     prelude::StructureBlock,
@@ -102,9 +102,9 @@ impl BuildMode {
     }
 }
 
-#[derive(Event)]
+#[derive(Message)]
 /// This event is sent when a player is entering build mode
-pub struct EnterBuildModeEvent {
+pub struct EnterBuildModeMessage {
     /// The player that's entering build mode
     pub player_entity: Entity,
     /// The structure they are entering build mode for
@@ -115,14 +115,14 @@ pub struct EnterBuildModeEvent {
     pub block: StructureBlock,
 }
 
-#[derive(Event)]
+#[derive(Message)]
 /// This event is sent when a player is done being in build mode
-pub struct ExitBuildModeEvent {
+pub struct ExitBuildModeMessage {
     /// The player done being in build mode
     pub player_entity: Entity,
 }
 
-fn enter_build_mode_listener(mut commands: Commands, mut event_reader: EventReader<EnterBuildModeEvent>) {
+fn enter_build_mode_listener(mut commands: Commands, mut event_reader: MessageReader<EnterBuildModeMessage>) {
     for ev in event_reader.read() {
         let Ok(mut ecmds) = commands.get_entity(ev.player_entity) else {
             continue;
@@ -159,7 +159,7 @@ fn on_remove_build_mode(mut commands: Commands, removed_components: FixedUpdateR
     }
 }
 
-fn exit_build_mode_listener(mut commands: Commands, mut event_reader: EventReader<ExitBuildModeEvent>) {
+fn exit_build_mode_listener(mut commands: Commands, mut event_reader: MessageReader<ExitBuildModeMessage>) {
     for ev in event_reader.read() {
         let Ok(mut ecmds) = commands.get_entity(ev.player_entity) else {
             continue;
@@ -181,17 +181,17 @@ struct InBuildModeFlag(Entity);
 fn exit_build_mode_when_parent_dies(
     query: Query<Entity, (With<BuildMode>, Without<ChildOf>)>,
     changed_query: Query<(Entity, Option<&InBuildModeFlag>, &ChildOf), (With<BuildMode>, Changed<ChildOf>)>,
-    mut event_writer: EventWriter<ExitBuildModeEvent>,
+    mut event_writer: MessageWriter<ExitBuildModeMessage>,
     mut commands: Commands,
 ) {
     for entity in query.iter() {
-        event_writer.write(ExitBuildModeEvent { player_entity: entity });
+        event_writer.write(ExitBuildModeMessage { player_entity: entity });
     }
 
     for (entity, in_build_mode, child_of) in changed_query.iter() {
         if let Some(in_build_mode) = in_build_mode {
             if in_build_mode.0 != child_of.parent() {
-                event_writer.write(ExitBuildModeEvent { player_entity: entity });
+                event_writer.write(ExitBuildModeMessage { player_entity: entity });
             }
         } else {
             commands.entity(entity).insert(InBuildModeFlag(child_of.parent()));
@@ -203,11 +203,11 @@ fn exit_build_mode_when_parent_dies(
 /// Build mode interactions
 pub enum BuildModeSet {
     /// When the player attempts to enter build mode, their event will be sent here
-    SendEnterBuildModeEvent,
+    SendEnterBuildModeMessage,
     /// The player will enter build mode
     EnterBuildMode,
     /// When the player attempts to exit build mode, their event will be sent here
-    SendExitBuildModeEvent,
+    SendExitBuildModeMessage,
     /// The player will exit build mode
     ExitBuildMode,
 }
@@ -226,9 +226,9 @@ pub(super) fn register(app: &mut App) {
     app.configure_sets(
         FixedUpdate,
         (
-            BuildModeSet::SendEnterBuildModeEvent,
+            BuildModeSet::SendEnterBuildModeMessage,
             BuildModeSet::EnterBuildMode,
-            BuildModeSet::SendExitBuildModeEvent,
+            BuildModeSet::SendExitBuildModeMessage,
             BuildModeSet::ExitBuildMode,
         )
             .chain(),
@@ -240,16 +240,16 @@ pub(super) fn register(app: &mut App) {
             (enter_build_mode_listener, on_add_build_mode, adjust_transform_build_mode)
                 .chain()
                 .in_set(BuildModeSet::EnterBuildMode),
-            exit_build_mode_when_parent_dies.in_set(BuildModeSet::SendExitBuildModeEvent),
+            exit_build_mode_when_parent_dies.in_set(BuildModeSet::SendExitBuildModeMessage),
             (exit_build_mode_listener, on_remove_build_mode)
                 .chain()
                 .in_set(BuildModeSet::ExitBuildMode),
         )
             .chain()
             .in_set(FixedUpdateSet::Main)
-            .in_set(BlockEventsSet::ProcessEvents),
+            .in_set(BlockMessagesSet::ProcessMessages),
     )
-    .add_event::<EnterBuildModeEvent>()
-    .add_event::<ExitBuildModeEvent>()
+    .add_message::<EnterBuildModeMessage>()
+    .add_message::<ExitBuildModeMessage>()
     .register_type::<BuildMode>();
 }

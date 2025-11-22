@@ -5,7 +5,7 @@ use bevy_renet::renet::RenetServer;
 use cosmos_core::{
     block::{
         Block,
-        block_events::{BlockEventsSet, BlockInteractEvent},
+        block_events::{BlockMessagesSet, BlockInteractMessage},
         data::BlockDataIdentifier,
     },
     entities::player::Player,
@@ -17,9 +17,9 @@ use cosmos_core::{
     structure::Structure,
 };
 
-#[derive(Debug, Event, Clone, Copy)]
+#[derive(Debug, Message, Clone, Copy)]
 /// Sent whenever the player opens a storage container
-pub struct OpenStorageEvent {
+pub struct OpenStorageMessage {
     /// The block the player interacted with to open the storage
     pub block: StructureBlock,
     /// The player's entity
@@ -27,12 +27,12 @@ pub struct OpenStorageEvent {
 }
 
 fn handle_block_event(
-    mut interact_events: EventReader<BlockInteractEvent>,
+    mut interact_events: MessageReader<BlockInteractMessage>,
     s_query: Query<&Structure>,
     blocks: Res<Registry<Block>>,
     q_player: Query<&Player>,
     mut server: ResMut<RenetServer>,
-    mut evw_open_storage: EventWriter<OpenStorageEvent>,
+    mut evw_open_storage: MessageWriter<OpenStorageMessage>,
 ) {
     for ev in interact_events.read() {
         let Some(s_block) = ev.block else {
@@ -54,7 +54,7 @@ fn handle_block_event(
         let block_id = s_block.block_id(structure);
 
         if block_id == block.id() {
-            evw_open_storage.write(OpenStorageEvent {
+            evw_open_storage.write(OpenStorageMessage {
                 block: s_block,
                 player_ent: ev.interactor,
             });
@@ -74,8 +74,8 @@ pub(super) fn register(app: &mut App) {
     app.add_systems(
         FixedUpdate,
         handle_block_event
-            .in_set(BlockEventsSet::ProcessEvents)
+            .in_set(BlockMessagesSet::ProcessMessages)
             .run_if(in_state(GameState::Playing)),
     )
-    .add_event::<OpenStorageEvent>();
+    .add_message::<OpenStorageMessage>();
 }

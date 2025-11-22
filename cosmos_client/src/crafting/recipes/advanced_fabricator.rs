@@ -1,10 +1,10 @@
 use bevy::prelude::*;
 use cosmos_core::{
-    crafting::recipes::advanced_fabricator::SyncAdvancedFabricatorRecipesEvent, ecs::sets::FixedUpdateSet,
-    netty::sync::events::client_event::NettyEventReceived,
+    crafting::recipes::advanced_fabricator::SyncAdvancedFabricatorRecipesMessage, ecs::sets::FixedUpdateSet,
+    netty::sync::events::client_event::NettyMessageReceived,
 };
 
-fn sync_recipes(mut commands: Commands, mut nevr: EventReader<NettyEventReceived<SyncAdvancedFabricatorRecipesEvent>>) {
+fn sync_recipes(mut commands: Commands, mut nevr: MessageReader<NettyMessageReceived<SyncAdvancedFabricatorRecipesMessage>>) {
     for ev in nevr.read() {
         let recipes = ev.0.clone();
         commands.insert_resource(recipes);
