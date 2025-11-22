@@ -8,6 +8,7 @@ use bevy::{
     color::palettes::css, core_pipeline::oit::OrderIndependentTransparencySettings, post_process::bloom::Bloom, prelude::*,
     render::view::Hdr, window::PrimaryWindow,
 };
+use bevy_inspector_egui::bevy_egui::PrimaryEguiContext;
 use bevy_kira_audio::SpatialAudioReceiver;
 use bevy_rapier3d::prelude::*;
 use bevy_renet::renet::RenetClient;
@@ -397,6 +398,8 @@ pub(crate) fn client_sync_players(
                                 Name::new("Main Camera"),
                                 OrderIndependentTransparencySettings::default(),
                                 MainCamera,
+                                // https://github.com/jakobhellermann/bevy-inspector-egui/issues/286
+                                PrimaryEguiContext,
                                 IsDefaultUiCamera,
                                 Msaa::Off,
                                 SpatialAudioReceiver,
