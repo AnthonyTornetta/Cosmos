@@ -6,7 +6,7 @@ members = ["cosmos_client", "cosmos_core", "cosmos_server"]
 resolver = "2"
 
 [workspace.dependencies]
-bevy = { version = "0.17.2", default-features = false, features = [
+bevy = { version = "0.17.3", default-features = false, features = [
     "reflect_auto_register"
 ] }
 bevy_rapier3d = { git = "https://github.com/AnthonyTornetta/bevy_rapier", version = "0.31.0", branch = "master", features = [
