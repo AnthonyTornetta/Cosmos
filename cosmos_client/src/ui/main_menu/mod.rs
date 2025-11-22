@@ -125,7 +125,7 @@ fn create_main_menu_camera(mut commands: Commands) {
     commands.spawn((
         DespawnOnSwitchState,
         MainMenuCamera,
-        Hdr::default(),
+        Hdr,
         Camera { ..Default::default() },
         Transform::default(),
         Projection::from(PerspectiveProjection {

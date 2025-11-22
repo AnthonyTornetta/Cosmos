@@ -71,7 +71,7 @@ impl Default for MapCamera {
 
 fn create_map_camera(mut commands: Commands) {
     commands.spawn((
-        Hdr::default(),
+        Hdr,
         Camera {
             msaa_writeback: false, // override all other cameras
             order: 20,

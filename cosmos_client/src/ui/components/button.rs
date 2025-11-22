@@ -130,7 +130,7 @@ fn on_interact_button(
         {
             // Click and still hovering the button, so they didn't move out while holding the mouse down,
             // which should cancel the mouse click
-            commands.entity(btn_entity).trigger(|e| ButtonMessage(e));
+            commands.entity(btn_entity).trigger(ButtonMessage);
         }
 
         button.last_interaction = *interaction;

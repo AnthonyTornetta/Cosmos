@@ -385,7 +385,7 @@ pub(crate) fn client_sync_players(
                         ))
                         .with_children(|parent| {
                             parent.spawn((
-                                Hdr::default(),
+                                Hdr,
                                 Camera { ..Default::default() },
                                 Transform::from_translation(camera_offset),
                                 Projection::from(PerspectiveProjection {

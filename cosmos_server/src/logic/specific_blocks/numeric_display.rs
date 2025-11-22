@@ -1,6 +1,5 @@
 //! Logic behavior for "Numeric Display", a block that displays a digit 0-9 representing the logic signal it's recieving.
 
-use std::{cell::RefCell, rc::Rc};
 
 use bevy::prelude::*;
 

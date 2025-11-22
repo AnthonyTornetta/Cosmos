@@ -1,7 +1,6 @@
 //! Logic behavior for "Or Gate", a block with left and right inputs and a front output.
 //! Outputs 0 if both inputs are zero or missing. Outputs 1 if either input is present and non-zero.
 
-use std::{cell::RefCell, rc::Rc};
 
 use bevy::prelude::*;
 

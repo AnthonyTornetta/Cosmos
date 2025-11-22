@@ -1,6 +1,5 @@
 //! Handles interactions to fluids
 
-use std::{cell::RefCell, rc::Rc};
 
 use bevy::prelude::*;
 use cosmos_core::{

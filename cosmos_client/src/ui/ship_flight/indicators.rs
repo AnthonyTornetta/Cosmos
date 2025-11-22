@@ -130,7 +130,7 @@ fn create_indicator(
 
             let color_hash = u32::from_be_bytes([r, g, b, 0]);
 
-            let handle = indicator_images.0.get(&color_hash).map(|x| x.clone()).unwrap_or_else(|| {
+            let handle = indicator_images.0.get(&color_hash).cloned().unwrap_or_else(|| {
                 let mut img = images.get(&base_texture).expect("Waypoint diamond image removed?").clone();
 
                 for [img_r, img_g, img_b, img_a] in img.data.as_mut().expect("Invalid image data").iter_mut().array_chunks::<4>() {

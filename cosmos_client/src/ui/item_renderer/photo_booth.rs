@@ -123,7 +123,7 @@ fn create_booth(
             target: image_handle.clone().into(),
             ..Default::default()
         },
-        Hdr::default(),
+        Hdr,
         Transform::from_xyz(0.0, 0.0, 1.0)
             .looking_at(Vec3::ZERO, Vec3::Y)
             .with_translation(Vec3::new(cam_w / 2.0 - 1.0, cam_h / 2.0 - 1.0, 1.0)),

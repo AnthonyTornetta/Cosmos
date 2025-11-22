@@ -63,7 +63,7 @@ fn setup_camera(mut commands: Commands, images: ResMut<Assets<Image>>) {
     commands.insert_resource(FocusCamImage(image_handle.clone()));
 
     commands.spawn((
-        Hdr::default(),
+        Hdr,
         Camera {
             target: image_handle.clone().into(),
             is_active: false,
